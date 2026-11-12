@@ -13,6 +13,7 @@ const apply = args.includes('--apply');
 const index = args.indexOf('--source-dir');
 const local = index === -1 ? null : args[index + 1];
 const sourceRepo = 'marcusflow1-arch/atom-x-eve-os';
+const sourceCommitPin = 'c073fc3be90b7013b1b5dae2da7f802b902675e2';
 const protectedPaths = new Set([
   'src/server.js','src/start.js','src/router.jsx','src/routeTree.gen.ts',
   'src/api/base44Client.js','src/lib/AuthContext.jsx',
@@ -36,10 +37,16 @@ try {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(),'game3d-book-'));
     source = path.join(tmp,'source');
     execFileSync('gh',['repo','clone',sourceRepo,source,'--','--depth=1'],{stdio:'inherit'});
+    // A moving source main can silently change the migration inventory.
+    execFileSync('git',['fetch','--depth=1','origin',sourceCommitPin],{cwd:source,stdio:'inherit'});
+    execFileSync('git',['checkout','--detach',sourceCommitPin],{cwd:source,stdio:'inherit'});
   }
   const exists = p => fs.existsSync(path.join(source,p));
   if (!exists('src/pages/GameView.jsx') || !exists('server/game3d'))
     throw Error('Invalid source: expected original GameView and server/game3d.');
+  const sourceCommit = execFileSync('git',['rev-parse','HEAD'],{cwd:source,encoding:'utf8'}).trim();
+  if (sourceCommit !== sourceCommitPin)
+    throw Error('Source checkout must be pinned to '+sourceCommitPin+'; found '+sourceCommit);
   const files = new Set();
   const omitted = new Set();
   const add = p => {
@@ -145,27 +152,43 @@ try {
     "  component:()=> <Outlet/>",
     "});",""
   ].join('\n');
-  const sourceCommit=execFileSync('git',['rev-parse','HEAD'],{cwd:source,encoding:'utf8'}).trim();
   const report={sourceRepo,sourceCommit,target:'marcusflow1-arch/gitsync-pro',fileCount:files.size,
     dependenciesAdded,omittedCrossAppImports:[...omitted].sort(),
     note:'Code, local game models and sound are copied, but live player records, secrets, server deployment and Base44 app binding are not automatically migrated.'};
   console.log(JSON.stringify({sourceCommit,files:files.size,dependenciesAdded:dependenciesAdded.length,
     omittedImports:omitted.size,mode:apply?'apply':'dry-run'},null,2));
   if (apply) {
+    const preservedDivergentPaths=[];
+    let newlyCopied=0;
     for (const p of files) {
       const destination=path.join(target,p);
+      const origin=path.join(source,p);
+      if (fs.existsSync(destination)) {
+        if (!fs.readFileSync(destination).equals(fs.readFileSync(origin)))
+          preservedDivergentPaths.push(p);
+        continue; // Preserve destination edits, including newer gameplay patches.
+      }
       fs.mkdirSync(path.dirname(destination),{recursive:true});
-      fs.copyFileSync(path.join(source,p),destination);
+      fs.copyFileSync(origin,destination); // Byte-for-byte, including .glb/.mp3.
+      newlyCopied++;
     }
-    fs.writeFileSync(path.join(target,'package.json'),JSON.stringify(pkg,null,2)+'\n');
-    fs.writeFileSync(path.join(target,'src/routes/_authed/index.jsx'),homepage);
-    fs.writeFileSync(path.join(target,'src/routes/_authed.jsx'),layout);
-    for (const p of ['src/routes/_authed/issues.jsx','src/routes/_authed/repositories.jsx',
-      'src/routes/_authed/pull-requests.jsx']) fs.rmSync(path.join(target,p),{force:true});
+    if (dependenciesAdded.length)
+      fs.writeFileSync(path.join(target,'package.json'),JSON.stringify(pkg,null,2)+'\n');
+    // Do not rewrite existing TanStack/Cloudflare routes on a repeated import.
+    for (const [p,body] of [['src/routes/_authed/index.jsx',homepage],
+      ['src/routes/_authed.jsx',layout]]) {
+      if (!fs.existsSync(path.join(target,p))) {
+        fs.mkdirSync(path.dirname(path.join(target,p)),{recursive:true});
+        fs.writeFileSync(path.join(target,p),body);
+      }
+    }
+    report.newlyCopied=newlyCopied;
+    report.preservedDivergentPaths=preservedDivergentPaths;
     fs.mkdirSync(path.join(target,'docs'),{recursive:true});
     fs.writeFileSync(path.join(target,'docs/game3d-source-snapshot.json'),
       JSON.stringify(report,null,2)+'\n');
-    console.log('Imported source. Run npm install, npm run build, and signed-in game and multiplayer tests BEFORE merging to main.');
+    console.log('Copied '+newlyCopied+' missing files; preserved '+preservedDivergentPaths.length+' divergent existing files.');
+    console.log('Run npm install, npm run build, and signed-in game and multiplayer tests BEFORE merging to main.');
   } else console.log('Dry run. Use --apply to transfer the full Game 3D files and replace GitSync-only pages.');
 } finally {
   if (tmp) fs.rmSync(tmp,{recursive:true,force:true});

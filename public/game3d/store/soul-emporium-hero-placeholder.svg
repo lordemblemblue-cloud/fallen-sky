@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-label="Moonlit fantasy samurai and spectral wolf placeholder artwork">
+ <defs>
+  <linearGradient id="night" x2="1" y2="1"><stop stop-color="#142946"/><stop offset=".47" stop-color="#203c57"/><stop offset="1" stop-color="#06101d"/></linearGradient>
+  <radialGradient id="moon"><stop stop-color="#fff7db"/><stop offset=".6" stop-color="#cee5ef"/><stop offset="1" stop-color="#b5cfe9"/></radialGradient>
+  <linearGradient id="cloth" x2="1" y2=".7"><stop stop-color="#edf3f5"/><stop offset=".5" stop-color="#8ba4b8"/><stop offset="1" stop-color="#182f45"/></linearGradient>
+  <linearGradient id="steel" x1=".1" y1=".1" x2=".9" y2="1"><stop stop-color="#f9e6bd"/><stop offset=".2" stop-color="#8ca9c7"/><stop offset=".52" stop-color="#24364b"/><stop offset=".78" stop-color="#d0e4f2"/><stop offset="1" stop-color="#24354c"/></linearGradient>
+  <radialGradient id="aura"><stop stop-color="#baf6ff" stop-opacity=".8"/><stop offset=".6" stop-color="#55aafa" stop-opacity=".45"/><stop offset="1" stop-color="#173f79" stop-opacity="0"/></radialGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="8"/></filter>
+ </defs>
+ <rect width="1200" height="675" fill="url(#night)"/>
+ <circle cx="260" cy="170" r="118" fill="url(#moon)" opacity=".95"/>
+ <circle cx="260" cy="170" r="148" fill="#cfe9fc" opacity=".09" filter="url(#glow)"/>
+ <g fill="#edf1f7" opacity=".55"><circle cx="60" cy="65" r="2"/><circle cx="390" cy="100" r="1.3"/><circle cx="640" cy="145" r="1.8"/><circle cx="1070" cy="46" r="2"/><circle cx="830" cy="210" r="1.5"/></g>
+ <path d="M0 397L165 217 300 356 450 235 540 366 700 199 850 349 966 227 1200 388v287H0z" fill="#30465d" opacity=".63"/>
+ <path d="M0 447L190 343 376 443 620 312 808 448 1010 301 1200 449v226H0z" fill="#17283b" opacity=".8"/>
+ <g stroke="#7cbfe7" opacity=".5" fill="#162a41"><path d="M720 309l52-31 56 31v11H720z"/><path d="M738 321h72v90h-72z"/><path d="M708 344h133v11H708z"/><path d="M758 276h34v-26h-34z"/><path d="M735 271l40-24 42 24v8h-82z"/></g>
+ <path d="M0 544Q340 484 630 554t570-6v127H0z" fill="#081724"/>
+ <path d="M0 565Q230 495 458 573t742-8" stroke="#89bedc" stroke-width="7" opacity=".2" fill="none"/>
+ <g opacity=".9">
+  <path d="M24 0q118 55 144 136-62 13-155 5M20 0q60 122 193 173" fill="none" stroke="#152334" stroke-width="19"/>
+  <g fill="#efcfdb"><circle cx="97" cy="85" r="7"/><circle cx="126" cy="111" r="9"/><circle cx="149" cy="120" r="6"/><circle cx="55" cy="56" r="10"/><circle cx="179" cy="153" r="6"/></g>
+ </g>
+ <!-- silhouette: original placeholder warrior with brown skin and braided high ponytail -->
+ <g transform="translate(76,72)">
+  <path d="M123 276Q49 315 0 543l87 9 136-171 199 171 73-29Q379 288 295 260z" fill="url(#cloth)" stroke="#b8d1e6" stroke-width="4"/>
+  <path d="M114 275Q123 222 177 214l88 7 46 54-25 259H119z" fill="#132538" stroke="#bbd0df" stroke-width="5"/>
+  <path d="M137 275l56 12 63-8-8 229-129 2z" fill="url(#steel)" opacity=".8"/>
+  <path d="M149 284l14 205m32-211v227m28-219l13 210" stroke="#ebd6a0" opacity=".7" stroke-width="4"/>
+  <path d="M134 240Q104 219 103 185l28-31 24-51q49-55 95 8l10 55-25 53-36 31z" fill="#80563b" stroke="#311d1b" stroke-width="5"/>
+  <path d="M130 155Q123 94 148 63q81-26 115 47-29-32-49-18-43-1-84 63z" fill="#0a1119"/>
+  <path d="M161 71Q122 14 176-24 264-50 274 70q-67-31-113 1" fill="#0a111b" stroke="#2a3441" stroke-width="4"/>
+  <g stroke="#111923" stroke-width="10" fill="none"><path d="M174 33Q102-40 81 45"/><path d="M185 30Q97-66 51 25"/><path d="M204 22Q136-44 99-11"/><path d="M225 28Q164-75 125-18"/></g>
+  <path d="M146 176q30-13 45-5" stroke="#191e24" stroke-width="7"/><path d="M148 194l37 7" stroke="#130f10" stroke-width="3"/>
+  <path d="M208 215l30-4-29 22-26-9" fill="#201a1c"/>
+  <path d="M116 279l-36 132 60 11 39-106zm171 5 49 133-63 9-38-120z" fill="url(#steel)" stroke="#e6cc94" stroke-width="4"/>
+  <path d="M107 413l31 15-13 143-54-18zM278 427l48-12 22 146-55 17z" fill="#1a2d41"/>
+  <path d="M172 492l-22 182 65 0 17-180zm67-1 31 182 65-2-42-185z" fill="#1b2636" stroke="#c3d7e5" stroke-width="4"/>
+  <path d="M98 348l192 31" stroke="#d5ac69" stroke-width="9"/>
+  <path d="M268 377Q346 255 395 214" stroke="#def8ff" stroke-width="10" fill="none"/>
+  <path d="M269 383Q359 246 403 205" stroke="#79c9fb" stroke-width="4" fill="none" filter="url(#glow)"/>
+  <path d="M256 392l37 13" stroke="#f7dba0" stroke-width="12"/>
+ </g>
+ <!-- original spirit wolf silhouette: visually distinct, replaceable art layer -->
+ <g transform="translate(440,318)">
+  <ellipse cx="163" cy="181" rx="225" ry="146" fill="url(#aura)" opacity=".85"/>
+  <path d="M25 174l-56 130 76-61-11 75 97-49 105 41-39-90 42-36-37-103-69 32-58-82-26 107-68 18z" fill="#e4f2ff" stroke="#61b7f6" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M38 178l58 47 69-36 55 39-28-66-27-53-68 20-30-46-13 57z" fill="#718ba6" opacity=".85"/>
+  <path d="M31 177l84 45 50-28 58-6-39-37-31-10-72 22z" fill="#f6f8f9" opacity=".83"/>
+  <path d="M154 158l26 7-8 13-23-5z" fill="#138de8"/><path d="M228 185l-21 13 12 8 18-9z" fill="#254363"/>
+  <path d="M28 234l-70 62m110-31l-43 73m125-75l40 65m29-82l75 35" stroke="#a7ebff" stroke-width="10" stroke-linecap="round" opacity=".74"/>
+  <path d="M-13 180q-82-71-44-113 33 45 94 58" stroke="#83c4f7" stroke-width="21" fill="none" opacity=".74"/>
+  <path d="M-62 94q15 116 96 133" stroke="#b9ebff" stroke-width="7" fill="none" opacity=".8"/>
+  <path d="M-3 225q95 94 221 21" stroke="#32b0ff" stroke-width="7" opacity=".65" fill="none"/>
+ </g>
+ <path d="M0 602q194-66 326 3 194-68 412-23 254-21 462 26v67H0z" fill="#a4d5ed" opacity=".08"/>
+</svg>
