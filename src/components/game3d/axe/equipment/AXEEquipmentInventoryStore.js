@@ -1,0 +1,481 @@
+// Canonical AXE equipment inventory backend.
+// This is the single runtime ownership/equip source used by Gear UI, Services,
+// combat-stat recomputation, combine consumption and future loot/economy paths.
+//
+// inventoryData.jsx remains a template/seed catalog only. The player's actual
+// owned item instances live here and are persisted per user + per character.
+
+import { INVENTORY } from '../../equipment/inventoryData';
+import { previewAXEWeaponLegacyForge } from './AXEWeaponLegacyForge';
+import { characterScopedStorage, subscribeCharacterChange } from '../../characterStorage';
+import {
+  AXE_EQUIPMENT_SLOT_DEFS,
+  migrateLegacyEquipmentItem,
+  validateAXEEquip,
+} from './AXEEquipmentSystem';
+
+const storage = characterScopedStorage('axe_equipment_inventory_v2');
+const CURRENT_STARTER_CATALOG_VERSION = 1;
+
+function seedItems() {
+  return Object.entries(INVENTORY).flatMap(([category, items]) =>
+    (items || []).map((raw) => {
+      const item = migrateLegacyEquipmentItem(raw, category);
+      return {
+        ...raw,
+        ...item,
+        id: raw.id || item.templateId,
+        instanceId: item.instanceId || raw.id,
+        templateId: item.templateId || raw.id,
+        category,
+        equipped: !!raw.equipped,
+        locked: !!raw.locked,
+        acquiredAt: 0,
+        source: 'starter',
+      };
+    }),
+  );
+}
+
+function normalizeItem(raw = {}, fallbackCategory = null) {
+  const category = raw.category || fallbackCategory || raw.slot || 'misc';
+  const migrated = migrateLegacyEquipmentItem(raw, category);
+  return {
+    ...raw,
+    ...migrated,
+    id: raw.id || migrated.templateId,
+    instanceId: raw.instanceId || migrated.instanceId || raw.id,
+    templateId: raw.templateId || migrated.templateId || raw.id,
+    category,
+    equipped: !!raw.equipped,
+    locked: !!raw.locked,
+    acquiredAt: Number(raw.acquiredAt || Date.now()),
+    source: raw.source || 'owned',
+  };
+}
+
+function chooseActiveWeaponInstanceId(items = [], preferred = null) {
+  const equippedWeapons = items.filter((item) => item.category === 'weapon' && item.equipped);
+  if (preferred && equippedWeapons.some((item) => item.instanceId === preferred)) return preferred;
+  return equippedWeapons[0]?.instanceId || null;
+}
+
+function buildDefault() {
+  const items = seedItems();
+  return {
+    items,
+    activeWeaponInstanceId: chooseActiveWeaponInstanceId(items),
+    starterCatalogVersion: CURRENT_STARTER_CATALOG_VERSION,
+  };
+}
+
+function load() {
+  try {
+    const raw = storage.get();
+    if (!raw) return buildDefault();
+    const parsed = JSON.parse(raw);
+    const owned = Array.isArray(parsed.items)
+      ? parsed.items.map((item) => normalizeItem(item, item.category)).filter((item) => item.instanceId)
+      : [];
+
+    // Starter content is migrated ONCE per catalog version. Previously a consumed
+    // starter item was silently re-created on every reload, which made combine /
+    // destruction non-persistent. Existing starter instances still receive safe
+    // metadata updates, but missing/consumed instances stay missing after the
+    // catalog migration has been recorded.
+    const byId = new Map(owned.map((item) => [item.instanceId, item]));
+    const starters = seedItems();
+    const shouldAddNewStarters =
+      Number(parsed.starterCatalogVersion || 0) < CURRENT_STARTER_CATALOG_VERSION;
+
+    for (const starter of starters) {
+      const existing = byId.get(starter.instanceId);
+      if (!existing) {
+        if (shouldAddNewStarters) byId.set(starter.instanceId, starter);
+        continue;
+      }
+
+      byId.set(starter.instanceId, {
+        ...starter,
+        ...existing,
+        masteryWeaponId: existing.masteryWeaponId || starter.masteryWeaponId || null,
+        axeWeaponRole: existing.axeWeaponRole || starter.axeWeaponRole || null,
+        templateId: existing.templateId || starter.templateId,
+      });
+    }
+
+    const items = [...byId.values()];
+    return {
+      items,
+      activeWeaponInstanceId: chooseActiveWeaponInstanceId(
+        items,
+        parsed.activeWeaponInstanceId || null,
+      ),
+      // Undefined preserves the old affinity-store history until the first draw.
+      previousWeaponInstanceId: typeof parsed.previousWeaponInstanceId === 'string'
+        ? parsed.previousWeaponInstanceId : parsed.previousWeaponInstanceId === null ? null : undefined,
+      starterCatalogVersion: CURRENT_STARTER_CATALOG_VERSION,
+    };
+  } catch {
+    return buildDefault();
+  }
+}
+
+let state = load();
+const listeners = new Set();
+
+function snapshot() {
+  return {
+    items: state.items.map((item) => ({
+      ...item,
+      baseStats: { ...(item.baseStats || {}) },
+      rolledStats: { ...(item.rolledStats || {}) },
+      sockets: Array.isArray(item.sockets) ? item.sockets.map((s) => ({ ...s })) : [],
+    })),
+    activeWeaponInstanceId: state.activeWeaponInstanceId || null,
+    previousWeaponInstanceId: state.previousWeaponInstanceId,
+    starterCatalogVersion: Number(state.starterCatalogVersion || CURRENT_STARTER_CATALOG_VERSION),
+  };
+}
+
+function publish() {
+  const snap = snapshot();
+  listeners.forEach((fn) => fn(snap));
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('axeEquipmentInventoryChanged', { detail: snap }));
+  }
+}
+
+function emit() {
+  storage.set(JSON.stringify(state));
+  publish();
+}
+
+// Read-only compatibility bridge for saves created before switch history moved
+// into the same document as the equipped and active weapon.
+export function getPreviousAXEWeaponInstanceId() {
+  return state.previousWeaponInstanceId;
+}
+
+// A weapon draw is one inventory transaction. No subscriber sees an intermediate
+// unequip (which used to heal the player through max-HP recalculation).
+export function switchAXEInventoryWeapon(instanceId, context = {}) {
+  const target = state.items.find(item => item.instanceId === instanceId || item.id === instanceId);
+  if (!target || target.category !== 'weapon') return { ok: false, reason: 'WEAPON_NOT_OWNED' };
+  const current = getActiveEquippedAXEWeapon();
+  if (current?.instanceId === target.instanceId) {
+    return { ok: true, reason: 'ALREADY_ACTIVE', item: structuredClone(current) };
+  }
+  const validation = validateAXEEquip(target, context);
+  if (!validation.ok) return validation;
+  if (target.slot !== 'weapon') return { ok: false, reason: 'INVALID_SLOT' };
+
+  const removed = state.items.filter(item => item.category === 'weapon' && item.equipped &&
+    item.instanceId !== target.instanceId && item.instanceId !== current?.instanceId);
+  const removeIds = new Set(removed.map(item => item.instanceId));
+  const next = { ...state,
+    items: state.items.map(item => item.instanceId === target.instanceId ? { ...item, equipped: true }
+      : removeIds.has(item.instanceId) ? { ...item, equipped: false } : item),
+    activeWeaponInstanceId: target.instanceId,
+    previousWeaponInstanceId: current?.instanceId || null,
+  };
+  if (!storage.setChecked(JSON.stringify(next))) {
+    return { ok: false, reason: 'SAVE_FAILED', message: 'Could not save the weapon switch. Your equipment is unchanged. Free device storage and retry.' };
+  }
+  state = next;
+  publish();
+  return { ok: true, item: structuredClone(getActiveEquippedAXEWeapon()), autoUnequippedIds: [...removeIds] };
+}
+
+// Preserve main's explicit save entrypoint for server-side upgrade requests.
+// It serializes the same state as the atomic weapon transaction.
+export function persistAXEEquipmentInventory() {
+  storage.set(JSON.stringify(state));
+}
+
+function emitItemRemoved(item, reason) {
+  if (typeof window === 'undefined' || !item?.instanceId) return;
+  window.dispatchEvent(new CustomEvent('axeEquipmentItemRemoved', {
+    detail: {
+      instanceId: item.instanceId,
+      templateId: item.templateId || item.id || null,
+      reason: reason || 'removed',
+    },
+  }));
+}
+
+subscribeCharacterChange(() => {
+  state = load();
+  const snap = snapshot();
+  listeners.forEach((fn) => fn(snap));
+});
+
+export function getAXEEquipmentInventoryState() {
+  return snapshot();
+}
+
+export function subscribeAXEEquipmentInventory(fn) {
+  listeners.add(fn);
+  fn(snapshot());
+  return () => listeners.delete(fn);
+}
+
+export function getAllAXEEquipmentItems() {
+  return state.items.map((item) => ({ ...item }));
+}
+
+export function getAXEEquipmentItem(instanceId) {
+  const item = state.items.find((entry) => entry.instanceId === instanceId || entry.id === instanceId);
+  return item ? { ...item } : null;
+}
+
+export function getAXEInventoryItemsByCategory(categoryId) {
+  return state.items
+    .filter((item) => item.category === categoryId)
+    .map((item) => ({ ...item }));
+}
+
+export function getEquippedAXEItems() {
+  return state.items.filter((item) => item.equipped).map((item) => ({ ...item }));
+}
+
+export function getEquippedAXEItemsByCategory(categoryId) {
+  return state.items
+    .filter((item) => item.category === categoryId && item.equipped)
+    .map((item) => ({ ...item }));
+}
+
+export function getEquippedAXEItemInCategory(categoryId) {
+  return getEquippedAXEItemsByCategory(categoryId)[0] || null;
+}
+
+export function getActiveEquippedAXEWeapon() {
+  const activeId = state.activeWeaponInstanceId;
+  const active = state.items.find(
+    (item) =>
+      item.instanceId === activeId &&
+      item.category === 'weapon' &&
+      item.equipped,
+  );
+  if (active) return { ...active };
+
+  const fallback = state.items.find((item) => item.category === 'weapon' && item.equipped) || null;
+  return fallback ? { ...fallback } : null;
+}
+
+export function setActiveAXEWeapon(instanceId) {
+  const target = state.items.find(
+    (item) =>
+      (item.instanceId === instanceId || item.id === instanceId) &&
+      item.category === 'weapon',
+  );
+  if (!target) return { ok: false, reason: 'WEAPON_NOT_OWNED' };
+  if (!target.equipped) return { ok: false, reason: 'WEAPON_NOT_EQUIPPED' };
+
+  if (state.activeWeaponInstanceId === target.instanceId) {
+    return { ok: true, reason: 'ALREADY_ACTIVE', item: { ...target } };
+  }
+
+  state = { ...state, activeWeaponInstanceId: target.instanceId };
+  emit();
+  return { ok: true, item: getActiveEquippedAXEWeapon() };
+}
+
+export function equipAXEInventoryItem(instanceId, context = {}) {
+  const index = state.items.findIndex((item) => item.instanceId === instanceId || item.id === instanceId);
+  if (index < 0) return { ok: false, reason: 'ITEM_MISSING' };
+
+  const target = state.items[index];
+  const validation = validateAXEEquip(target, context);
+  if (!validation.ok) return validation;
+  if (target.equipped) {
+    if (target.category === 'weapon' && state.activeWeaponInstanceId !== target.instanceId) {
+      state = { ...state, activeWeaponInstanceId: target.instanceId };
+      emit();
+      return { ok: true, reason: 'ALREADY_EQUIPPED_NOW_ACTIVE', item: getActiveEquippedAXEWeapon() };
+    }
+    return { ok: true, reason: 'ALREADY_EQUIPPED', item: { ...target } };
+  }
+
+  const slotDef = AXE_EQUIPMENT_SLOT_DEFS[target.slot];
+  if (!slotDef) return { ok: false, reason: 'INVALID_SLOT' };
+
+  const sameSlotEquipped = state.items.filter(
+    (item) => item.equipped && item.slot === target.slot && item.instanceId !== target.instanceId,
+  );
+
+  const removeIds = new Set(
+    sameSlotEquipped
+      .slice(0, Math.max(0, sameSlotEquipped.length - slotDef.maxEquipped + 1))
+      .map((item) => item.instanceId),
+  );
+
+  const nextItems = state.items.map((item) => {
+    if (removeIds.has(item.instanceId)) return { ...item, equipped: false };
+    if (item.instanceId === target.instanceId) return { ...item, equipped: true };
+    return item;
+  });
+  state = {
+    ...state,
+    items: nextItems,
+    activeWeaponInstanceId: target.category === 'weapon'
+      ? target.instanceId
+      : chooseActiveWeaponInstanceId(nextItems, state.activeWeaponInstanceId),
+  };
+  emit();
+  return { ok: true, item: getAXEEquipmentItem(target.instanceId), autoUnequippedIds: [...removeIds] };
+}
+
+export function unequipAXEInventoryItem(instanceId) {
+  const index = state.items.findIndex((item) => item.instanceId === instanceId || item.id === instanceId);
+  if (index < 0) return { ok: false, reason: 'ITEM_MISSING' };
+  if (!state.items[index].equipped) return { ok: true, reason: 'ALREADY_UNEQUIPPED' };
+
+  const nextItems = state.items.map((item, i) => i === index ? { ...item, equipped: false } : item);
+  state = {
+    ...state,
+    items: nextItems,
+    activeWeaponInstanceId: chooseActiveWeaponInstanceId(nextItems, state.activeWeaponInstanceId),
+  };
+  emit();
+  return { ok: true };
+}
+
+export function setAXEInventoryItemLocked(instanceId, locked) {
+  const index = state.items.findIndex((item) => item.instanceId === instanceId || item.id === instanceId);
+  if (index < 0) return { ok: false, reason: 'ITEM_MISSING' };
+  state = {
+    ...state,
+    items: state.items.map((item, i) => i === index ? { ...item, locked: !!locked } : item),
+  };
+  emit();
+  return { ok: true };
+}
+
+export function addAXEEquipmentItem(rawItem, {
+  source = 'loot',
+  equipped = false,
+} = {}) {
+  if (!rawItem) return { ok: false, reason: 'ITEM_MISSING' };
+  const category = rawItem.category || rawItem.slot;
+  const uniqueInstanceId =
+    rawItem.instanceId ||
+    rawItem.instance_id ||
+    `${rawItem.id || rawItem.templateId || 'axe_item'}_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+
+  if (state.items.some((item) => item.instanceId === uniqueInstanceId)) {
+    return { ok: false, reason: 'DUPLICATE_INSTANCE' };
+  }
+
+  const item = normalizeItem({
+    ...rawItem,
+    instanceId: uniqueInstanceId,
+    category,
+    source,
+    equipped: false,
+    acquiredAt: Date.now(),
+  }, category);
+
+  state = { ...state, items: [...state.items, item] };
+  emit();
+
+  if (equipped) return equipAXEInventoryItem(item.instanceId);
+  return { ok: true, item: getAXEEquipmentItem(item.instanceId) };
+}
+
+export function canConsumeAXEEquipmentItem(instanceId, {
+  allowEquipped = false,
+  allowLocked = false,
+} = {}) {
+  const item = state.items.find((entry) => entry.instanceId === instanceId || entry.id === instanceId);
+  if (!item) return { ok: false, reason: 'ITEM_MISSING' };
+  if (item.equipped && !allowEquipped) return { ok: false, reason: 'ITEM_EQUIPPED', item: { ...item } };
+  if (item.locked && !allowLocked) return { ok: false, reason: 'ITEM_LOCKED', item: { ...item } };
+  return { ok: true, item: { ...item } };
+}
+
+export function consumeAXEEquipmentItem(instanceId, options = {}) {
+  const check = canConsumeAXEEquipmentItem(instanceId, options);
+  if (!check.ok) return check;
+  const nextItems = state.items.filter((item) => item.instanceId !== check.item.instanceId);
+  state = {
+    ...state,
+    items: nextItems,
+    activeWeaponInstanceId: chooseActiveWeaponInstanceId(nextItems, state.activeWeaponInstanceId),
+  };
+  emit();
+  emitItemRemoved(check.item, 'consumed');
+  return { ok: true, consumed: check.item };
+}
+
+export function destroyAXEEquipmentItem(instanceId, reason = 'destroyed') {
+  const item = state.items.find((entry) => entry.instanceId === instanceId || entry.id === instanceId);
+  if (!item) return { ok: false, reason: 'ITEM_MISSING' };
+  const nextItems = state.items.filter((entry) => entry.instanceId !== item.instanceId);
+  state = {
+    ...state,
+    items: nextItems,
+    activeWeaponInstanceId: chooseActiveWeaponInstanceId(nextItems, state.activeWeaponInstanceId),
+  };
+  emit();
+  emitItemRemoved(item, reason || 'destroyed');
+  return { ok: true, destroyed: { ...item }, destroyReason: reason };
+}
+
+export function resetAXEEquipmentInventoryToStarter() {
+  state = buildDefault();
+  emit();
+}
+
+// Consume a complete legacy-forge recipe and update the selected instance in
+// one checked inventory save. Individual donor removals could otherwise
+// partially debit a twelve-piece recipe if a later save failed.
+export function applyAXEWeaponLegacyInventoryTransaction({
+  itemId, donorIds = [], operation = 'prepare',
+  combineCount = 0, reinforcementPercent = 0, playerLevel = 1,
+} = {}) {
+  const item = state.items.find(entry => entry.instanceId === itemId);
+  if (!item) return { ok: false, reason: 'ITEM_NOT_OWNED' };
+  const ids = Array.isArray(donorIds) ? donorIds : [];
+  if (ids.some(id => typeof id !== 'string' || id === itemId)) {
+    return { ok: false, reason: 'INVALID_DONOR_IDS' };
+  }
+  const donorMap = new Map(state.items.map(entry => [entry.instanceId, entry]));
+  const donors = ids.map(id => donorMap.get(id));
+  if (donors.some(donor => !donor)) return { ok: false, reason: 'DONOR_NOT_OWNED' };
+  const preview = previewAXEWeaponLegacyForge({
+    item, donors, operation, combineCount, reinforcementPercent, playerLevel,
+  });
+  if (!preview.ok) return preview;
+  const legacy = item.legacyForge || {};
+  const updatedLegacy = operation === 'claim'
+    ? { ...legacy, pendingLevel: null, rank: Math.max(0, Number(legacy.rank) || 0) + 1 }
+    : preview.mode === 'set_echo'
+      ? { ...legacy, echoPct: preview.projectedEchoDamagePct, echoSetId: String(item.setId || item.set_id || item.setBonusId || '').trim().toLowerCase(), echoPieces: ids.length }
+      : { ...legacy, pendingLevel: preview.nextLevel, damageBonusPct: preview.projectedDamageBonusPct,
+        preparations: Math.max(0, Number(legacy.preparations) || 0) + 1 };
+  const nextTarget = {
+    ...item,
+    ...(operation === 'claim' ? { itemLevel: preview.pendingLevel, level: preview.pendingLevel } : {}),
+    legacyForge: updatedLegacy,
+  };
+  const removeIds = new Set(operation === 'prepare' ? ids : []);
+  const next = {
+    ...state,
+    items: state.items.filter(entry => !removeIds.has(entry.instanceId))
+      .map(entry => entry.instanceId === itemId ? nextTarget : entry),
+  };
+  // No inventory mutation and no free reward when checked persistence fails.
+  if (!storage.setChecked(JSON.stringify(next))) {
+    return { ok: false, reason: 'SAVE_FAILED' };
+  }
+  state = next;
+  publish();
+  donors.forEach(donor => emitItemRemoved(donor, 'weapon_legacy_forge'));
+  return {
+    ok: true, outcome: operation === 'claim' ? 'level_claimed' :
+      preview.mode === 'set_echo' ? 'echo_unlocked' : 'level_prepared',
+    itemId, itemLevel: nextTarget.itemLevel, legacyForge: { ...updatedLegacy },
+    donorConsumed: removeIds.size, mode: preview.mode,
+  };
+}
