@@ -1,0 +1,82 @@
+/* Combat / Quest 51.0–51.2: private curated constellation stars.
+   Uses existing Echo Chronicle gold/violet palette and book structure. */
+.axe-echo-star-pin{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:6px 9px;margin-left:auto;min-width:89px;
+ border:1px solid #ae827f;border-radius:6px;
+ color:#724060;background:#f9dfb89e;
+ font:11px Georgia,serif;
+}
+.axe-echo-star-pin[aria-pressed=true]{
+ background:linear-gradient(115deg,#f1d6a6,#eebebc);
+ color:#824968;border-color:#b48965;
+ box-shadow:0 0 9px #bc83b774,inset 0 1px #fff6de;
+}
+.axe-echo-star-pin:hover,.axe-echo-star-pin:focus-visible{
+ border-color:#8d5a87;outline-offset:2px;
+}
+.axe-echo-month-highlight-count{
+ display:inline-flex;align-items:center;gap:4px;
+ color:#ffdeaa!important;font-size:10px!important;
+}
+.axe-echo-month-highlight-count svg{color:#fbe9a3}
+.axe-echo-month-archive{
+ max-height:270px;overflow-y:auto;
+ scrollbar-width:thin;scrollbar-color:#d6b4e48e transparent;
+}
+.axe-echo-month-curated{
+ padding:5px 0 7px;border-top:1px solid #eac59b6a;
+}
+.axe-echo-month-curated header{
+ display:flex;align-items:center;gap:7px;
+ color:#ffe1b4;font:normal 13px Georgia,serif;margin:1px 0 7px;
+}
+.axe-echo-month-curated header small{
+ margin-left:auto;color:#dfc6eb;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-month-chosen-strip{
+ display:flex;align-items:stretch;gap:8px;overflow-x:auto;
+ padding:2px 2px 6px;min-height:46px;
+ scrollbar-width:thin;scrollbar-color:#e2b8e6a3 transparent;
+}
+.axe-echo-month-chosen-strip p{
+ margin:6px;color:#d8c0e5;
+ font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-month-chosen-star{
+ display:flex;align-items:center;gap:7px;flex:none;
+ max-width:230px;min-width:170px;
+ padding:6px 9px;background:#4a2465d9;
+ color:#f5dbf5;border:1px solid #b890c6b0;border-radius:8px;
+ box-shadow:inset 0 1px #fff3f129;
+}
+.axe-echo-month-chosen-star:hover,
+.axe-echo-month-chosen-star:focus-visible{
+ border-color:#ffe2aa;background:#6e3488;
+ box-shadow:0 0 9px #c87ee7ba;
+}
+.axe-echo-month-chosen-star svg{
+ flex:none;color:#ffd49d;
+}
+.axe-echo-month-chosen-star img{
+ width:33px;height:33px;flex:none;object-fit:cover;
+ border-radius:5px;border:1px solid #efc4dc;
+}
+.axe-echo-month-chosen-star span{
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ color:#ffeac4;font:12px Georgia,serif;
+}
+.axe-echo-month-chosen-star small{
+ white-space:nowrap;color:#cdb1e1;font:9px "Segoe UI",sans-serif;
+}
+@media(max-width:900px){
+ .axe-echo-month-archive{max-height:225px}
+ .axe-echo-month-chosen-star{min-width:145px;max-width:180px}
+ .axe-echo-month-chosen-star span{max-width:75px}
+}
+@media(max-width:650px){
+ .axe-echo-month-archive{max-height:190px;overflow-y:auto}
+ .axe-echo-month-chosen-star{min-width:132px;max-width:165px;padding:5px}
+ .axe-echo-month-chosen-star img{width:26px;height:26px}
+ .axe-echo-star-pin{padding:5px;min-width:0;font-size:10px}
+}

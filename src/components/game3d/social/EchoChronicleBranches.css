@@ -1,0 +1,169 @@
+/* Combat / Quest 46.9–48.0: private story branches inside the approved
+   cosmic Chronicle. No replacement Services HUD or unrelated navigation. */
+.axe-echo-record-open{
+  display:flex;gap:7px;align-items:center;justify-content:center;
+  padding:8px 10px;flex:none;border-radius:7px;
+  border:1px solid #edce99;background:linear-gradient(110deg,#773985,#36205a);
+  box-shadow:0 0 10px #b659ef75;color:#ffe7c1;
+  font:12px Georgia,serif;white-space:nowrap;
+}
+.axe-echo-record-open:hover,.axe-echo-record-open[aria-expanded=true]{
+  background:linear-gradient(110deg,#9a40b3,#502478);
+  border-color:#ffe8cd;box-shadow:0 0 16px #cb81f9ba;
+}
+.axe-echo-record-form{
+  display:flex;flex-direction:column;gap:9px;flex:none;
+  max-height:325px;overflow-y:auto;margin:0 0 14px;padding:12px;
+  border-radius:9px;border:1px solid #f5d8a8d0;
+  background:linear-gradient(140deg,#4b286bdc,#1e124ed9);
+  box-shadow:inset 0 0 17px #efbfff30,0 0 16px #ad5ce052;
+  scrollbar-width:thin;scrollbar-color:#e5b4eb8a transparent;
+}
+.axe-echo-record-form h3{
+  display:flex;align-items:center;gap:7px;margin:0;
+  color:#f8dbac;font:normal 17px Georgia,serif;
+}
+.axe-echo-record-form p{
+  margin:0;color:#e5d2ef;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-record-form label{
+  display:flex;flex-direction:column;gap:4px;min-width:0;
+  color:#f4e5f6;font:11px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-record-form input,.axe-echo-record-form select,
+.axe-echo-record-form textarea{
+  width:100%;min-width:0;box-sizing:border-box;padding:7px;
+  border:1px solid #dbb0e5b5;border-radius:5px;
+  background:#1c123ddc;color:#fff3df;
+  font:12px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-record-form textarea{resize:vertical;min-height:50px}
+.axe-echo-record-form input::placeholder,.axe-echo-record-form textarea::placeholder{
+  color:#c8b4d1;
+}
+.axe-echo-record-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.axe-echo-record-actions{display:flex;gap:9px;flex-wrap:wrap}
+.axe-echo-record-actions button{
+  display:flex;align-items:center;gap:7px;padding:7px 12px;
+  border:1px solid #dbbadc;border-radius:6px;
+  color:#fce9cc;background:#493066;font:11px Georgia,serif;
+}
+.axe-echo-record-actions button[type=submit]{
+  background:linear-gradient(100deg,#8a488a,#5e3677);
+  border-color:#ffe4b7;
+}
+.axe-echo-record-error{color:#ffc1c1!important}
+.axe-echo-star-node.is-personal{
+  border-color:#f6d3ab;
+  background:radial-gradient(circle,#ae6d5e,#63235a 72%);
+}
+.axe-echo-star-node.is-personal span{
+  border-color:#ecc399;background:#3e153dcc;
+}
+.axe-echo-star-pages{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:5px;padding:8px;color:#d9c6ed;
+  border-top:1px solid #d7ace46b;
+  font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-star-pages button{
+  display:flex;align-items:center;gap:4px;padding:5px 7px;
+  border:1px solid #d0abdc91;border-radius:5px;
+  background:#46225f95;color:#f9e3c0;font-size:10px;
+}
+.axe-echo-star-pages button:disabled{opacity:.37;cursor:default}
+.axe-echo-star-pages button:hover:not(:disabled){background:#754496c7}
+.axe-echo-personal-controls{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:8px;flex-wrap:wrap;margin:9px 0;color:#71576b;
+  font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-personal-controls button{
+  padding:5px 9px;border:1px solid #aa7280;border-radius:5px;
+  background:#fcdfc7;color:#903c4b;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-personal-controls button:hover{background:#f5c5ba}
+.axe-echo-chronicle-previous svg{vertical-align:middle;margin-right:4px}
+@media(max-width:1100px){
+ .axe-echo-chronicle-toolbar{flex-wrap:wrap}
+ .axe-echo-record-open{order:-1}
+ .axe-echo-record-form{max-height:300px}
+}
+@media(max-width:650px){
+ .axe-echo-record-fields{grid-template-columns:1fr}
+ .axe-echo-record-form{max-height:325px}
+ .axe-echo-record-open{padding:7px}
+ .axe-echo-star-node{width:43px;height:43px}
+ .axe-echo-star-node span{max-width:70px;min-width:55px;font-size:9px}
+ .axe-echo-star-pages{padding:7px 3px}
+}
+
+.axe-echo-journal-title{
+  display:flex;flex-direction:column;gap:5px;
+  margin:5px 0 11px;color:#72536b;
+  font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-journal-title input{
+  padding:7px 9px;border:1px solid #af8a7a;border-radius:6px;
+  background:#fff2d8;color:#53334f;font:14px Georgia,serif;
+}
+.axe-echo-journal-title input:focus-visible{outline:2px solid #ae78b0}
+
+/* Combat / Quest 48.5–48.9: visible parent/child navigation in the
+   existing parchment page. Shared memories stay read-only except notes. */
+.axe-echo-branch-navigation{
+  margin:8px 0 12px;padding:10px;border:1px solid #ac847fae;
+  border-radius:9px;background:linear-gradient(135deg,#fff0d3,#ebc99e);
+  color:#543e53;box-shadow:inset 0 1px #fff8dd;
+}
+.axe-echo-branch-navigation header{
+  display:flex;align-items:center;gap:7px;
+  color:#78436d;font:normal 16px Georgia,serif;
+}
+.axe-echo-branch-navigation p{
+  color:#745b62;font:11px/1.5 "Segoe UI",sans-serif;margin:5px 0 10px;
+}
+.axe-echo-branch-actions{display:flex;flex-wrap:wrap;gap:7px}
+.axe-echo-branch-actions button,
+.axe-echo-branch-children button{
+  display:flex;align-items:center;gap:7px;min-width:0;
+  padding:8px 9px;border:1px solid #ad8290;border-radius:6px;
+  background:linear-gradient(125deg,#f8e2c5,#e2b7b8);
+  color:#5d3554;font:11px Georgia,serif;
+}
+.axe-echo-branch-actions button:hover,
+.axe-echo-branch-children button:hover{
+  background:#eabddd;border-color:#9252a2;
+}
+.axe-echo-branch-actions button svg,
+.axe-echo-branch-children button svg{flex:none;color:#98518f}
+.axe-echo-branch-children{
+  display:flex;flex-direction:column;gap:5px;margin-top:10px;
+  padding-top:9px;border-top:1px solid #b395878c;
+}
+.axe-echo-branch-children strong{color:#714468;font:12px Georgia,serif}
+.axe-echo-branch-children button{text-align:left}
+.axe-echo-branch-children button span{
+  font:10px "Segoe UI",sans-serif;color:#866979;margin-left:auto;
+}
+.axe-echo-star-offpage{
+  display:flex;flex-direction:column;gap:3px;padding:7px;
+  max-height:75px;overflow:auto;background:#220f3bc2;
+}
+.axe-echo-star-offpage button{
+  display:flex;align-items:center;gap:6px;text-align:left;
+  border:1px solid #d2a4d779;border-radius:6px;
+  color:#ffdfa9;background:#45245f;font:11px Georgia,serif;
+  padding:5px 7px;
+}
+.axe-echo-star-offpage button:hover{background:#6d347e}
+.axe-echo-star-offpage button svg{flex:none}
+.axe-echo-annotation-error{
+  border-left:3px solid #9a4b5a;padding:6px 8px;
+  color:#873d49!important;background:#f7d4cf9e;
+  font:11px "Segoe UI",sans-serif;
+}
+@media(max-width:650px){
+ .axe-echo-branch-actions{flex-direction:column}
+ .axe-echo-branch-actions button{width:100%}
+}
