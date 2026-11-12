@@ -1,0 +1,185 @@
+/* Game 3D Appearance > Wings. Unlike the old 288px sidebar + 80px
+   padding, this fits inside the actual narrow Appearance inventory panel.
+   The live game world remains visible through gold-edged frost-blue glass. */
+.axe-wings-workspace {
+  box-sizing:border-box;display:grid;
+  grid-template-columns:clamp(105px,25%,155px) 1px minmax(0,1fr);
+  gap:10px;width:100%;height:100%;min-height:0;min-width:0;
+  overflow:hidden;color:#f5e8d4;
+  background:linear-gradient(110deg,rgba(33,47,65,.17),rgba(23,36,52,.08));
+  font:12px/1.4 Georgia,serif;
+  container-type:inline-size;
+}
+.axe-wings-workspace * {box-sizing:border-box;}
+.axe-wings-workspace button {cursor:pointer;}
+.axe-wings-workspace button:disabled {cursor:not-allowed;opacity:.43;}
+.axe-wings-workspace button:focus-visible,
+.axe-wings-workspace summary:focus-visible {
+  outline:2px solid #ffe0a2;outline-offset:1px;
+}
+.axe-wings-selector {
+  display:flex;flex-direction:column;justify-content:flex-start;
+  gap:7px;min-height:0;min-width:0;overflow-y:auto;
+  padding:8px 0 14px 2px;scrollbar-width:thin;
+}
+.axe-wings-selector h3 {font:normal 10px/1.2 Georgia,serif;letter-spacing:.1em;
+  text-transform:uppercase;color:#e9cb99;margin:1px 0 5px;padding:0 4px;}
+.axe-wings-selector>button {
+  position:relative;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;gap:4px;flex-shrink:0;
+  width:100%;min-width:0;min-height:80px;padding:9px 3px 6px;
+  color:#f3e5d2;background:linear-gradient(145deg,rgba(42,61,82,.52),rgba(28,46,65,.33));
+  border:1px solid rgba(232,201,151,.55);border-radius:7px;
+  box-shadow:inset 0 0 8px #f3e2bb14;
+}
+.axe-wings-selector>button[aria-pressed="true"] {
+  border-color:#ffe0a7;box-shadow:inset 0 0 12px #ffe1a231,0 0 12px #ebc68c67;
+  background:linear-gradient(120deg,rgba(91,82,73,.51),rgba(46,64,82,.66));
+}
+.axe-wings-type-icon {display:grid;place-items:center;color:#f7ddaa;max-height:29px;}
+.axe-wings-type-icon svg {width:27px;height:27px;filter:drop-shadow(0 0 6px #ffdeab7a);}
+.axe-wings-type-name {font:normal clamp(11px,1.3vw,14px)/1.15 Georgia,serif;
+  text-align:center;color:#ffe5b6;white-space:normal;overflow-wrap:anywhere;}
+.axe-wings-selector button small {color:#d6cfbd;font:10px Georgia,serif;}
+.axe-wings-type-equipped {position:absolute;right:3px;top:3px;color:#b8f1cb;}
+.axe-wings-divider {width:1px;align-self:stretch;min-height:100%;
+  background:linear-gradient(180deg,transparent 0%,rgba(252,226,177,.34) 25%,
+    rgba(255,228,165,.94) 50%,rgba(252,226,177,.34) 75%,transparent 100%);
+  box-shadow:0 0 6px #edc68a47;
+}
+.axe-wings-details {
+  display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;
+  overflow-y:auto;overflow-x:hidden;padding:6px 4px 14px 0;
+  overscroll-behavior:contain;scrollbar-width:thin;
+}
+.axe-wings-selected {display:flex;gap:7px;align-items:center;min-width:0;}
+.axe-wings-selected-icon {display:grid;place-items:center;flex:0 0 39px;height:40px;
+  border:1px solid #ecd4a280;border-radius:9px;background:rgba(56,79,101,.4);color:#f9dfa6;}
+.axe-wings-selected-icon svg {width:27px;height:27px;}
+.axe-wings-selected h3 {margin:0;color:#ffe2ad;font:normal clamp(13px,1.5vw,20px)/1.1 Georgia,serif;
+  overflow-wrap:anywhere;}
+.axe-wings-selected p {margin:4px 0 0;color:#ded1b5;font:10px Georgia,serif;}
+.axe-wings-description {font:11px/1.4 Georgia,serif;color:#e4dbcc;margin:0;}
+.axe-wings-level-meter {height:7px;flex:0 0 7px;border-radius:9px;
+  border:1px solid rgba(246,213,162,.54);background:rgba(15,30,44,.58);overflow:hidden;}
+.axe-wings-level-meter>span {display:block;height:100%;
+  background:linear-gradient(90deg,#b18b5d,#ffdea6);border-radius:9px;}
+.axe-wings-section-label {display:flex;align-items:center;gap:6px;color:#ffdeac;
+  border-bottom:1px solid #e8cc9b76;padding:7px 0 6px;
+  font:normal clamp(12px,1.4vw,16px) Georgia,serif;}
+.axe-wings-presets {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;}
+.axe-wings-presets>button {min-width:0;min-height:34px;
+  padding:5px 1px;border:1px solid rgba(224,197,151,.72);border-radius:5px;
+  background:linear-gradient(130deg,rgba(41,61,78,.78),rgba(29,47,64,.57));
+  color:#f5dfb8;font:12px Georgia,serif;white-space:nowrap;}
+.axe-wings-presets>button[aria-pressed="true"] {
+  background:linear-gradient(95deg,#d1a86c,#ffe2ac,#c19860);
+  color:#32261a;border-color:#fff0c4;box-shadow:0 0 10px #eed2a063;
+  text-shadow:none;}
+.axe-wings-presets>button:last-child {grid-column:span 2;}
+.axe-wings-costs {border:1px solid rgba(219,202,167,.31);border-radius:5px;
+  background:rgba(16,32,47,.28);padding:5px 7px;}
+.axe-wings-stat-row {display:flex;align-items:start;justify-content:space-between;
+  gap:7px;min-width:0;padding:5px 1px;border-bottom:1px solid rgba(212,203,187,.24);
+  color:#e8dfd1;font:10px/1.25 Georgia,serif;}
+.axe-wings-stat-row:last-child {border-bottom:0;}
+.axe-wings-stat-row span {min-width:0;overflow-wrap:anywhere;}
+.axe-wings-stat-row strong {font-weight:normal;color:#baf2d1;
+  flex-shrink:0;text-align:right;font-variant-numeric:tabular-nums;}
+.axe-wings-attempt-note {font:10px/1.4 Georgia,serif;color:#dcd0b8;margin:0;}
+.axe-wings-enchant-button {display:flex;gap:8px;align-items:center;justify-content:center;
+  width:100%;min-height:43px;padding:8px 6px;
+  border:1px solid #ffe7b7;border-radius:7px;
+  background:linear-gradient(100deg,#c69b5e,#ffe1a5,#c59a62);
+  color:#302418;font:normal 16px Georgia,serif;
+  text-shadow:none;box-shadow:0 0 12px #eacc8b6b,inset 0 0 10px #fff7d778;}
+.axe-wings-confirm {border:1px solid #f3d5a6;border-radius:6px;padding:8px;
+  background:rgba(36,50,67,.84);}
+.axe-wings-confirm p {margin:0 0 7px;color:#ffe6c0;font:11px/1.4 Georgia,serif;}
+.axe-wings-confirm button {border:1px solid #e4c99b;border-radius:5px;
+  background:rgba(33,53,70,.84);color:#f3dcac;
+  padding:7px;margin-right:4px;font:11px Georgia,serif;}
+.axe-wings-result {padding:8px;border:1px solid #b7e2c6a0;border-radius:6px;
+  background:rgba(35,64,62,.49);color:#c7f3d8;font:11px/1.4 Georgia,serif;margin:0;}
+.axe-wings-stats {display:flex;flex-direction:column;min-width:0;}
+.axe-wings-stat-heading {margin:6px 0 2px;padding:5px 0;color:#edd0a5;
+  text-transform:uppercase;letter-spacing:.09em;font:10px Georgia,serif;}
+.axe-wings-equip {display:flex;align-items:center;justify-content:center;gap:7px;
+  min-height:33px;border:1px solid #e3cd9e;border-radius:5px;
+  color:#f6dfa8;background:rgba(31,52,68,.71);font:12px Georgia,serif;}
+.axe-wings-reinforcement {border:1px solid #e1cba174;border-radius:6px;
+  padding:8px;background:rgba(27,45,65,.46);
+  color:#e8ddc7;font:11px/1.45 Georgia,serif;}
+.axe-wings-reinforcement summary {cursor:pointer;color:#f6dbad;font:12px Georgia,serif;}
+.axe-wings-reinforcement p {margin:6px 0;overflow-wrap:anywhere;}
+.axe-wings-reinforce-actions {display:flex;flex-wrap:wrap;gap:5px;}
+.axe-wings-reinforce-actions button {flex:1 1 85px;padding:8px 4px;
+  color:#f8e2b9;background:rgba(35,56,75,.7);
+  border:1px solid #d7bc8c;border-radius:5px;font:10px Georgia,serif;}
+@container(max-width:330px) {
+  .axe-wings-workspace {grid-template-columns:minmax(82px,34%) 1px minmax(0,1fr);gap:7px;}
+  .axe-wings-selector>button {min-height:72px;}
+  .axe-wings-selected-icon {flex-basis:30px;height:32px;}
+  .axe-wings-selected-icon svg {width:23px;height:23px;}
+  .axe-wings-presets {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .axe-wings-presets>button:last-child {grid-column:span 2;}
+  .axe-wings-details {padding-right:0;}
+}
+@media(max-width:700px) {
+  .axe-wings-details {gap:6px;}
+  .axe-wings-selector {gap:5px;}
+}
+@media(prefers-reduced-motion:reduce) {.axe-wings-workspace * {animation:none!important;transition:none!important;}}
+
+.axe-wings-sr-only {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+
+/* The same champagne-gold pill / hairline-guide scrollbar used by Blacksmith.
+   Scoped to Wings so browsers do not fall back to the wide white native bar
+   visible in the old nested Appearance panel. Also style the wing-type rail. */
+.axe-wings-workspace .axe-wings-details,
+.axe-wings-workspace .axe-wings-selector {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(222,185,120,.8) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .axe-wings-workspace .axe-wings-details,
+  .axe-wings-workspace .axe-wings-selector {
+    scrollbar-width:auto;
+    scrollbar-color:auto;
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar {
+    width:9px;
+    height:9px;
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar-track,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar-track {
+    border:0;
+    box-shadow:none;
+    background:linear-gradient(90deg,transparent 46%,
+      rgba(223,182,112,.43) 49%,rgba(223,182,112,.43) 51%,transparent 54%);
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar-thumb,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar-thumb {
+    min-height:24px;
+    border:2px solid transparent;
+    border-radius:999px;
+    background:linear-gradient(180deg,#f4dfb5,#bc915b) padding-box;
+    box-shadow:none;
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar-thumb:hover,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar-thumb:hover {
+    background:linear-gradient(180deg,#ffedc8,#dbad6f) padding-box;
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar-button,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar-button {
+    display:none;
+    height:0;
+    width:0;
+  }
+  .axe-wings-workspace .axe-wings-details::-webkit-scrollbar-corner,
+  .axe-wings-workspace .axe-wings-selector::-webkit-scrollbar-corner {
+    background:transparent;
+  }
+}
