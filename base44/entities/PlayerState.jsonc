@@ -1,0 +1,103 @@
+{
+  "name": "PlayerState",
+  "type": "object",
+  "properties": {
+    "player_id": {
+      "type": "string"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "avatar_url": {
+      "type": "string"
+    },
+    "model_url": {
+      "type": "string"
+    },
+    "channel_id": {
+      "type": "string"
+    },
+    "x": {
+      "type": "number"
+    },
+    "y": {
+      "type": "number"
+    },
+    "z": {
+      "type": "number"
+    },
+    "yaw": {
+      "type": "number"
+    },
+    "anim": {
+      "type": "string"
+    },
+    "env_url": {
+      "type": "string"
+    },
+    "last_update": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "default": "online"
+    },
+    "preferred_genres": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Genres the player chooses to share for online discovery."
+    },
+    "appearance": {
+      "type": "object"
+    },
+    "dashboard_joined_at": {
+      "type": "number"
+    },
+    "active_match_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "player_id",
+    "channel_id",
+    "last_update"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "id": "{{user.id}}"
+      }
+    },
+    "create": {
+      "$or": [
+        {
+          "data.player_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "update": {
+      "$or": [
+        {
+          "data.player_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
