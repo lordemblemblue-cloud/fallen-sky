@@ -1,0 +1,1026 @@
+/*
+ * Quest Logbook — approved 3-panel MMORPG reference layout.
+ * All the geometry is real CSS/React. No static screenshot, simulated quests,
+ * cloned franchise assets, or second quest progress store.
+ * Atom X Eve liquid glass: navy / mineral silver / champagne gold / cyan.
+ */
+.axe-service-workspace--quest-logbook {
+  inset:max(78px,calc(var(--axe-service-navigation-actual-bottom,92px) + 7px)) 11px 8px;
+  gap:0;
+}
+.axe-service-workspace--quest-logbook .axe-service-heading,
+.axe-service-workspace--quest-logbook .axe-service-operations,
+.axe-service-workspace--quest-logbook .axe-service-operation-help,
+.axe-service-workspace--quest-logbook .axe-service-operation-select,
+.axe-service-workspace--quest-logbook .axe-service-notice { display:none; }
+.axe-service-workspace--quest-logbook .axe-service-progression,
+.axe-service-workspace--panel.axe-service-workspace--quest-logbook .axe-service-progression {
+  width:min(1560px,100%);
+  flex:1 1 auto;
+  min-height:0;
+  height:100%;
+  padding:0;
+  border:0;
+  overflow:visible;
+  background:none;
+  box-shadow:none;
+  backdrop-filter:none;
+  -webkit-backdrop-filter:none;
+}
+.axe-quest-logbook-root {
+  --ql-navy:#101e2f;
+  --ql-blue:#1b344b;
+  --ql-gold:#f4d59c;
+  --ql-gold-border:rgba(242,210,147,.77);
+  --ql-silver:rgba(165,201,222,.69);
+  --ql-cream:#f5e9d7;
+  --ql-cyan:#6adeee;
+  --ql-muted:#c9ced1;
+  --ql-panel:linear-gradient(115deg,rgba(22,38,56,.9),rgba(16,30,46,.85));
+  --ql-inset:linear-gradient(110deg,rgba(16,32,50,.82),rgba(13,27,44,.69));
+  display:flex;
+  flex-direction:column;
+  width:100%;
+  height:100%;
+  min-height:0;
+  min-width:0;
+  box-sizing:border-box;
+  color:var(--ql-cream);
+  font:13px/1.4 "Segoe UI",system-ui,sans-serif;
+  text-shadow:0 1px 3px rgba(0,0,0,.58);
+  position:relative;
+  isolation:isolate;
+}
+.axe-quest-logbook-root *,
+.axe-quest-logbook-root *:before,
+.axe-quest-logbook-root *:after { box-sizing:border-box; }
+.axe-quest-logbook-root button { font:inherit; cursor:pointer; color:inherit; }
+.axe-quest-logbook-root button:disabled { cursor:default; }
+.axe-quest-logbook-root button:focus-visible,
+.axe-quest-logbook-root input:focus-visible,
+.axe-quest-logbook-root select:focus-visible {
+  outline:2px solid #ffe4ac;
+  outline-offset:2px;
+}
+.axe-quest-topbar {
+  position:relative;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 56px;
+  margin:0 clamp(9px,2vw,30px);
+  padding:0 63px 0;
+  border:1px solid var(--ql-gold-border);
+  border-radius:19px 19px 0 0;
+  background:linear-gradient(180deg,rgba(46,64,80,.94),rgba(13,28,44,.97) 50%,rgba(13,32,50,.87));
+  box-shadow:0 3px 15px #0007,inset 0 2px 0 rgba(238,240,238,.25),0 -2px 12px rgba(245,209,144,.16);
+  clip-path:polygon(0 21%,6% 21%,7.5% 0,40% 0,42% 14%,58% 14%,60% 0,92.5% 0,94% 21%,100% 21%,100% 100%,0 100%);
+}
+.axe-quest-topbar:after {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  inset:6px 9px 0;
+  border-top:1px solid rgba(184,221,235,.46);
+  border-inline:1px solid rgba(184,221,235,.28);
+  pointer-events:none;
+}
+.axe-quest-topbar h1 {
+  margin:0;
+  color:#f8e7c7;
+  font:600 clamp(22px,2vw,34px)/1.1 Georgia,serif;
+  white-space:nowrap;
+  text-align:center;
+  text-shadow:0 2px 8px #000c,0 0 14px rgba(255,228,181,.25);
+}
+.axe-quest-topbar-crest {
+  position:absolute;
+  left:calc(50% - 14px);
+  top:-3px;
+  transform:translateY(-3px);
+  color:var(--ql-gold);
+  opacity:.65;
+  pointer-events:none;
+}
+.axe-quest-topbar-crest svg { width:18px;height:18px; }
+.axe-quest-topbar-wing { position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,rgba(244,215,152,.15) 27%,transparent 42%,transparent 58%,rgba(244,215,152,.15) 73%,transparent 100%); }
+.axe-quest-close {
+  position:absolute;
+  right:15px;
+  top:13px;
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border:1px solid transparent;
+  border-radius:7px;
+  color:#f7dfb3!important;
+  background:rgba(18,39,57,.34);
+}
+.axe-quest-close:hover { border-color:var(--ql-gold-border);background:rgba(87,93,89,.44); }
+.axe-quest-book {
+  display:grid;
+  grid-template-columns:minmax(116px,12.5%) minmax(270px,33.25%) minmax(0,1fr);
+  flex:1 1 auto;
+  min-height:0;
+  overflow:hidden;
+  position:relative;
+  border:2px solid rgba(226,200,159,.88);
+  border-top:1px solid rgba(162,204,231,.72);
+  border-radius:16px;
+  background:linear-gradient(125deg,rgba(16,33,52,.86),rgba(15,30,47,.89));
+  box-shadow:inset 0 0 0 2px rgba(24,55,78,.9),
+    inset 0 0 25px rgba(167,205,233,.14),
+    0 14px 37px rgba(0,0,0,.5),0 0 0 3px rgba(232,194,141,.16);
+  -webkit-backdrop-filter:blur(15px) saturate(110%);
+  backdrop-filter:blur(15px) saturate(110%);
+}
+.axe-quest-book:after {
+  position:absolute;
+  content:"";
+  pointer-events:none;
+  z-index:8;
+  inset:8px;
+  border:1px solid rgba(172,209,235,.32);
+  border-radius:9px;
+  box-shadow:0 0 4px rgba(89,191,235,.18);
+}
+.axe-quest-sidebar {
+  display:flex;
+  flex-direction:column;
+  gap:0;
+  padding:23px 7px 16px;
+  border-right:1px solid rgba(132,192,217,.49);
+  background:linear-gradient(130deg,rgba(36,57,74,.56),rgba(11,29,48,.78) 34%,rgba(15,32,49,.92));
+  min-width:0;
+  min-height:0;
+  overflow-y:auto;
+}
+.axe-quest-sidebar-crest {
+  height:64px;
+  margin:0 auto 13px;
+  width:55px;
+  display:grid;
+  place-items:center;
+  color:#f8d99b;
+  filter:drop-shadow(0 0 10px rgba(244,214,150,.47));
+  border-bottom:1px solid rgba(242,210,147,.43);
+}
+.axe-quest-sidebar-link {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex:0 0 55px;
+  min-width:0;
+  padding:9px 9px;
+  text-align:left;
+  border:1px solid transparent;
+  border-bottom:1px solid rgba(161,192,214,.19);
+  border-radius:0;
+  background:transparent;
+  color:#e5eefa;
+  font-weight:500!important;
+  text-shadow:0 1px 4px #0008;
+}
+.axe-quest-sidebar-link svg { flex:0 0 23px;color:#b9e6f4; }
+.axe-quest-sidebar-link span { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.axe-quest-sidebar-link:hover { background:rgba(96,139,169,.27);border-color:rgba(165,213,244,.25); }
+.axe-quest-sidebar-link[aria-pressed="true"] {
+  border-color:#f9d99b;
+  color:#ffe7b6;
+  background:linear-gradient(105deg,rgba(116,82,45,.82),rgba(71,69,65,.6) 60%,rgba(154,128,81,.45));
+  box-shadow:inset 0 0 13px rgba(253,227,170,.35),0 0 12px rgba(247,207,139,.2);
+}
+.axe-quest-sidebar-link[aria-pressed="true"] svg { color:#ffe1a9; }
+.axe-quest-sidebar-end { margin:auto auto 4px;color:rgba(230,194,132,.31);padding-top:15px; }
+.axe-quest-journal {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  padding:18px 12px 14px;
+  border-right:1px solid rgba(152,207,230,.39);
+  background:linear-gradient(110deg,rgba(15,33,53,.86),rgba(18,38,58,.76));
+}
+.axe-quest-journal-tabs {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  min-height:40px;
+  flex:0 0 auto;
+}
+.axe-quest-journal-tabs button {
+  min-width:0;
+  border:1px solid rgba(123,172,201,.57);
+  border-radius:7px;
+  color:#e9ecf3;
+  background:linear-gradient(180deg,rgba(39,63,85,.84),rgba(21,43,65,.83));
+  box-shadow:inset 0 1px rgba(215,238,249,.17),0 3px 5px rgba(2,13,26,.4);
+  font-size:clamp(11px,.88vw,14px);
+}
+.axe-quest-journal-tabs button[aria-pressed="true"] {
+  color:#fff2d5;
+  border-color:#f7d695;
+  background:linear-gradient(155deg,rgba(105,77,47,.95),rgba(57,61,62,.88) 55%,rgba(107,82,48,.86));
+  box-shadow:inset 0 0 12px rgba(252,214,152,.36),0 0 10px rgba(241,199,138,.32);
+}
+.axe-quest-journal-tools {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  flex:0 0 auto;
+  min-width:0;
+  min-height:35px;
+}
+.axe-quest-sort {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  flex:0 0 auto;
+  color:#d3dfed;
+  white-space:nowrap;
+  font-size:11px;
+}
+.axe-quest-sort select {
+  appearance:none;
+  min-width:0;
+  width:95px;
+  padding:5px 14px 5px 5px;
+  background:rgba(23,44,65,.94);
+  border:1px solid rgba(121,184,209,.37);
+  border-radius:4px;
+  color:#f5f1eb;
+  cursor:pointer;
+}
+.axe-quest-sort svg { margin-left:-23px;pointer-events:none;color:#e2d0ad; }
+.axe-quest-search {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex:1 1 auto;
+  min-width:0;
+  padding:6px 9px;
+  border:1px solid rgba(131,192,218,.49);
+  border-radius:5px;
+  background:rgba(10,28,47,.66);
+  color:#deeeff;
+}
+.axe-quest-search input {
+  background:transparent;
+  border:0;
+  outline:none;
+  min-width:0;
+  flex:1;
+  width:100%;
+  color:#f8efdd;
+  font-size:12px;
+  text-shadow:0 1px 3px #0009;
+}
+.axe-quest-search input::placeholder { color:#b7c7d5;opacity:.85; }
+.axe-quest-list-scroll {
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:0 4px 4px 0;
+}
+.axe-quest-list-group { margin:0 0 10px; }
+.axe-quest-group-toggle {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  width:100%;
+  min-height:31px;
+  padding:5px 8px;
+  text-align:left;
+  border:1px solid rgba(111,167,193,.35);
+  border-radius:3px;
+  color:#f0e9dc;
+  background:linear-gradient(180deg,rgba(28,53,74,.94),rgba(20,40,60,.92));
+  font-weight:600!important;
+  font-size:13px!important;
+}
+.axe-quest-group-toggle svg { flex:0 0 auto;color:#cce5fa; }
+.axe-quest-group-entries { display:flex;flex-direction:column;gap:5px;margin:4px 0 0; }
+.axe-quest-entry {
+  display:flex;
+  align-items:center;
+  min-height:65px;
+  gap:12px;
+  width:100%;
+  min-width:0;
+  padding:8px 9px;
+  text-align:left;
+  border:1px solid rgba(96,152,184,.53);
+  border-radius:5px;
+  background:linear-gradient(90deg,rgba(20,44,66,.93),rgba(14,36,57,.81));
+  box-shadow:inset 0 1px rgba(185,222,238,.06);
+}
+.axe-quest-entry:hover {
+  border-color:rgba(215,206,162,.86);
+  background:linear-gradient(100deg,rgba(65,79,77,.68),rgba(27,55,73,.77));
+}
+.axe-quest-entry[aria-pressed="true"] {
+  border-color:#f7d398;
+  background:linear-gradient(115deg,rgba(105,88,68,.95),rgba(46,54,64,.93) 70%,rgba(28,45,61,.93));
+  box-shadow:inset 0 0 14px rgba(253,213,143,.34),0 0 11px rgba(255,216,145,.41);
+}
+.axe-quest-entry-badge {
+  flex:0 0 37px;
+  width:37px;
+  height:37px;
+  display:grid;
+  place-items:center;
+  color:#b7e5fa;
+  border:1px solid rgba(149,195,224,.34);
+  border-radius:50%;
+  background:rgba(14,32,50,.45);
+}
+.axe-quest-entry[aria-pressed="true"] .axe-quest-entry-badge { color:#ffdf9e;border-color:rgba(248,211,155,.5); }
+.axe-quest-entry-content {
+  flex:1 1 auto;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.axe-quest-entry-content strong {
+  font-weight:600;
+  color:#f8f3e8;
+  font-size:clamp(12px,.94vw,14px);
+  overflow-wrap:anywhere;
+}
+.axe-quest-entry-content small { font-size:10px;color:#cad4dc;line-height:1.3; }
+.axe-quest-entry-content small span { color:#e8c68f;margin:0 2px; }
+.axe-quest-entry-metric { width:81px;flex:0 0 81px;display:flex;align-items:flex-end;flex-direction:column;gap:7px; }
+.axe-quest-entry-metric b { font-size:12px;font-weight:500;color:#f9f1e5; }
+.axe-quest-meter {
+  display:block;
+  position:relative;
+  width:100%;
+  height:7px;
+  overflow:hidden;
+  background:rgba(12,29,47,.91);
+  border:1px solid rgba(136,179,210,.65);
+  border-radius:100px;
+  box-shadow:inset 0 1px 3px #0009;
+}
+.axe-quest-meter i {
+  display:block;
+  height:100%;
+  background:linear-gradient(90deg,#32bfd6,#6af5fc 67%,#d1fdff);
+  box-shadow:0 0 6px rgba(83,224,247,.65);
+  transition:width .16s ease;
+}
+.axe-quest-empty,
+.axe-quest-no-selection {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:11px;
+  min-height:190px;
+  padding:20px;
+  text-align:center;
+  color:#b8cedb;
+}
+.axe-quest-empty svg,.axe-quest-no-selection svg { color:#edcf98; }
+.axe-quest-empty strong,.axe-quest-no-selection h2 { color:#ffe0ab;font:22px Georgia,serif;margin:0; }
+.axe-quest-empty p,.axe-quest-no-selection p { max-width:320px;margin:0;font:12px/1.5 "Segoe UI",sans-serif; }
+.axe-quest-detail {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:0;
+  overflow:hidden;
+  background:linear-gradient(110deg,rgba(18,39,58,.89),rgba(13,29,48,.85));
+}
+.axe-quest-detail-hero {
+  display:flex;
+  align-items:center;
+  position:relative;
+  flex:0 0 110px;
+  min-height:0;
+  gap:16px;
+  padding:15px 23px;
+  isolation:isolate;
+  overflow:hidden;
+  border-bottom:1px solid rgba(177,214,232,.45);
+  background:linear-gradient(90deg,rgba(10,29,50,.91),rgba(13,32,51,.57) 55%,rgba(20,43,57,.35));
+}
+.axe-quest-hero-landscape {
+  position:absolute;
+  z-index:-1;
+  inset:0;
+  overflow:hidden;
+  opacity:.84;
+  background:
+    radial-gradient(ellipse at 87% 48%,rgba(176,217,232,.49),transparent 26%),
+    linear-gradient(95deg,rgba(10,29,48,.84) 12%,rgba(9,25,42,.28) 82%),
+    repeating-linear-gradient(90deg,transparent 0 96px,rgba(208,228,242,.045) 97px 99px,transparent 100px 118px),
+    linear-gradient(170deg,#476b7b,#1d3a54 48%,#101f37);
+}
+.axe-quest-hero-landscape:before {
+  content:"";
+  position:absolute;
+  right:-4%;
+  bottom:-10px;
+  height:84%;
+  width:87%;
+  background:linear-gradient(0deg,rgba(5,20,33,.84),rgba(79,102,113,.7));
+  clip-path:polygon(0 100%,12% 74%,23% 89%,34% 27%,39% 70%,49% 39%,57% 77%,66% 13%,75% 52%,81% 6%,91% 67%,100% 35%,100% 100%);
+  box-shadow:0 0 21px #0a1725;
+}
+.axe-quest-hero-landscape:after {
+  content:"";
+  position:absolute;
+  right:9%;
+  top:2%;
+  width:16%;
+  height:113%;
+  border:8px solid rgba(166,204,220,.36);
+  border-bottom:0;
+  border-radius:55% 55% 0 0;
+  transform:skewX(-7deg);
+  box-shadow:0 0 24px rgba(139,198,226,.15);
+}
+.axe-quest-hero-mountain { display:none; }
+.axe-quest-hero-spire {
+  position:absolute;
+  right:32%;
+  top:7%;
+  width:2px;
+  height:105%;
+  background:rgba(178,210,221,.45);
+  box-shadow:10px 5px 0 rgba(174,213,233,.24),-6px 9px 0 rgba(170,210,231,.24);
+}
+.axe-quest-hero-symbol {
+  flex:0 0 60px;
+  width:60px;
+  height:60px;
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(247,213,152,.48);
+  border-radius:50%;
+  background:rgba(9,27,45,.55);
+  color:#f7d59a;
+  box-shadow:inset 0 0 15px rgba(245,212,155,.1),0 0 18px rgba(247,217,157,.2);
+}
+.axe-quest-hero-copy { min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px; }
+.axe-quest-hero-copy h2 {
+  margin:0;
+  font:600 clamp(17px,1.66vw,29px)/1.13 Georgia,serif;
+  color:#ffedcb;
+  text-shadow:0 2px 8px #000e;
+  overflow-wrap:anywhere;
+}
+.axe-quest-status-pill {
+  display:inline-flex;
+  align-items:center;
+  min-height:25px;
+  padding:3px 12px;
+  border:1px solid #66dff2;
+  border-radius:5px;
+  color:#93f0fa;
+  background:rgba(5,36,58,.77);
+  font:600 12px "Segoe UI",sans-serif;
+  letter-spacing:.03em;
+  box-shadow:0 0 10px rgba(33,196,236,.26);
+}
+.axe-quest-status-pill.is-complete { color:#f9ddae;border-color:#e6bd82;background:rgba(74,58,38,.76);box-shadow:none; }
+.axe-quest-detail-scroll { flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;padding:0 21px 9px; }
+.axe-quest-meta-row {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  margin:0 -21px 12px;
+  padding:10px 18px;
+  border-bottom:1px solid rgba(145,194,221,.36);
+  background:rgba(7,24,43,.34);
+}
+.axe-quest-meta-row>div {
+  display:grid;
+  align-content:center;
+  grid-template-columns:26px auto minmax(0,1fr);
+  gap:3px 7px;
+  padding:3px 8px;
+  min-width:0;
+  font-size:11px;
+}
+.axe-quest-meta-row>div+div { border-left:1px solid rgba(162,210,227,.38);padding-left:16px; }
+.axe-quest-meta-row svg { grid-row:1/3;align-self:center;color:#c0edfa; }
+.axe-quest-meta-row span { white-space:nowrap;color:#dce4ee; }
+.axe-quest-meta-row strong { color:#f2d398;font-weight:600;overflow-wrap:anywhere; }
+.axe-quest-meta-row small { grid-column:2/4;color:#cad6e2;font-size:10px; }
+.axe-quest-description {
+  padding:0 8px;
+  margin:10px 0 17px;
+  color:#eaf1f4;
+  font:13px/1.58 "Segoe UI",sans-serif;
+  overflow-wrap:anywhere;
+}
+.axe-quest-objectives,
+.axe-quest-rewards { margin:0 0 16px; }
+.axe-quest-objectives h3,
+.axe-quest-rewards h3 {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:0 0 10px;
+  padding:5px 3px 9px;
+  border-bottom:1px solid rgba(158,208,228,.48);
+  color:#f5d99f;
+  font:600 clamp(15px,1.12vw,19px) Georgia,serif;
+}
+.axe-quest-objectives h3 svg,.axe-quest-rewards h3 svg { color:#f4d093; }
+.axe-quest-objective {
+  display:flex;
+  align-items:center;
+  min-height:37px;
+  gap:11px;
+  margin:4px 0;
+  padding:6px 10px;
+  border:1px solid rgba(119,166,197,.5);
+  border-radius:4px;
+  background:linear-gradient(95deg,rgba(27,53,74,.88),rgba(19,40,60,.87));
+}
+.axe-quest-check {
+  display:grid;
+  flex:0 0 20px;
+  width:20px;
+  height:20px;
+  place-items:center;
+  border:1px solid rgba(186,224,238,.81);
+  border-radius:3px;
+  color:#f8ddaa;
+  background:rgba(7,27,43,.5);
+}
+.axe-quest-check.is-done { border-color:#e9c389;background:rgba(165,127,72,.42); }
+.axe-quest-objective-name { display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 auto; }
+.axe-quest-objective-name>span:first-child { min-width:0;overflow-wrap:anywhere;flex:1 1 auto;color:#e6ebef;font-size:12px; }
+.axe-quest-objective-name>.axe-quest-meter { flex:0 1 30%;width:30%;min-width:48px;max-width:150px; }
+.axe-quest-objective b { flex:0 0 auto;min-width:35px;text-align:right;font-weight:500;color:#e9edf1;font-size:12px; }
+.axe-quest-overall-progress {
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:4px;
+  font-size:10px;
+  color:#b7d0dc;
+  margin:7px 3px 0;
+}
+.axe-quest-overall-progress .axe-quest-meter { grid-column:1/3;height:4px;opacity:.9; }
+.axe-quest-overall-progress strong { font-weight:600;color:#e9d19d; }
+.axe-quest-reward-tiles {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(102px,1fr));
+  gap:8px;
+  padding:1px 5px;
+}
+.axe-quest-reward {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  padding:7px 4px;
+  border-right:1px solid rgba(168,202,221,.35);
+}
+.axe-quest-reward:last-child { border-right:0; }
+.axe-quest-reward-icon {
+  display:grid;
+  flex:0 0 44px;
+  height:44px;
+  place-items:center;
+  border:1px solid rgba(214,186,131,.65);
+  border-radius:5px;
+  color:#77e6f9;
+  background:radial-gradient(ellipse at 30% 20%,rgba(52,130,151,.65),rgba(16,37,59,.93));
+  box-shadow:inset 0 0 13px rgba(114,220,246,.21);
+}
+.axe-quest-reward:nth-child(2n) .axe-quest-reward-icon { color:#f8d8a0;background:radial-gradient(ellipse at 30% 20%,rgba(143,112,61,.7),rgba(32,37,56,.9)); }
+.axe-quest-reward>span:last-child { display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere; }
+.axe-quest-reward strong { color:#fbf0da;font-size:14px;line-height:1.18; }
+.axe-quest-reward small { color:#e3c48b;font-size:10px; }
+.axe-quest-void { padding:8px 4px;color:#b5c4d0;font-size:11px; }
+.axe-quest-actions {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:69px;
+  flex:0 0 auto;
+  gap:15px;
+  padding:10px 14px;
+  border-top:1px solid rgba(152,193,213,.38);
+  background:linear-gradient(180deg,rgba(13,31,49,.65),rgba(12,28,46,.93));
+}
+.axe-quest-track {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:11px;
+  min-width:min(235px,65%);
+  min-height:44px;
+  padding:8px 20px;
+  border:1px solid #fbe1a9;
+  border-radius:5px;
+  color:#ffebc4!important;
+  background:linear-gradient(180deg,rgba(111,87,56,.9),rgba(66,57,51,.97));
+  font:600 17px Georgia,serif!important;
+  box-shadow:inset 0 0 15px rgba(245,207,143,.37),0 0 17px rgba(249,208,145,.37);
+}
+.axe-quest-track:hover:not(:disabled) { background:linear-gradient(180deg,rgba(157,117,70,.98),rgba(95,77,58,.98)); }
+.axe-quest-track:disabled { opacity:.65;box-shadow:none; }
+.axe-quest-abandon,
+.axe-quest-cancel,
+.axe-quest-abandon-confirm {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:36px;
+  padding:7px 15px;
+  border:1px solid rgba(163,193,214,.65);
+  border-radius:5px;
+  color:#e7ebee!important;
+  background:rgba(30,45,61,.85);
+}
+.axe-quest-abandon-confirm { border-color:#eeb58a;color:#ffe0c8!important; }
+.axe-quest-confirm-text { max-width:230px;font-size:11px;color:#fff1d0; }
+.axe-quest-notice { min-height:16px;flex:0 0 auto;color:#f5d89d;font-size:11px;text-align:center; }
+.axe-quest-list-scroll,.axe-quest-detail-scroll,.axe-quest-sidebar {
+  scrollbar-width:thin;scrollbar-color:rgba(233,193,127,.92) transparent;
+}
+.axe-quest-list-scroll::-webkit-scrollbar,
+.axe-quest-detail-scroll::-webkit-scrollbar,
+.axe-quest-sidebar::-webkit-scrollbar { width:8px; }
+.axe-quest-list-scroll::-webkit-scrollbar-track,
+.axe-quest-detail-scroll::-webkit-scrollbar-track,
+.axe-quest-sidebar::-webkit-scrollbar-track {
+  background:linear-gradient(90deg,transparent 46%,rgba(206,173,124,.53) 49%,rgba(206,173,124,.53) 51%,transparent 54%);
+}
+.axe-quest-list-scroll::-webkit-scrollbar-thumb,
+.axe-quest-detail-scroll::-webkit-scrollbar-thumb,
+.axe-quest-sidebar::-webkit-scrollbar-thumb {
+  border-radius:999px;
+  background:linear-gradient(#ffebc6,#b58c52) padding-box;
+  border:2px solid transparent;
+}
+@media(max-width:1150px) {
+  .axe-quest-book { grid-template-columns:minmax(92px,12%) minmax(230px,35%) minmax(0,1fr); }
+  .axe-quest-sidebar-link { gap:6px;padding:8px 5px;font-size:11px!important; }
+  .axe-quest-journal { padding:12px 8px; }
+  .axe-quest-journal-tools { flex-wrap:wrap;gap:3px; }
+  .axe-quest-search { min-height:27px; }
+  .axe-quest-entry { gap:6px;padding:7px; }
+  .axe-quest-entry-metric { width:60px;flex-basis:60px; }
+  .axe-quest-entry-badge { flex-basis:27px;width:27px;height:27px; }
+  .axe-quest-detail-hero { padding:12px 10px;gap:7px; }
+  .axe-quest-hero-symbol { width:40px;flex-basis:40px;height:40px; }
+  .axe-quest-meta-row { grid-template-columns:1fr;gap:7px; }
+  .axe-quest-meta-row>div+div { border-left:0;border-top:1px solid rgba(162,210,227,.2);padding-left:8px; }
+  .axe-quest-detail-scroll { padding-inline:12px; }
+  .axe-quest-meta-row { margin-inline:-12px; }
+  .axe-quest-objective-name { flex-wrap:wrap;gap:6px; }
+  .axe-quest-objective-name>.axe-quest-meter { flex-basis:100%;max-width:none;width:100%; }
+  .axe-quest-reward-tiles { grid-template-columns:repeat(auto-fit,minmax(100px,1fr)); }
+}
+@media(max-width:760px) {
+  .axe-service-workspace--quest-logbook { inset:max(75px,calc(var(--axe-service-navigation-actual-bottom,92px) + 5px)) 4px 4px; }
+  .axe-quest-topbar { flex-basis:48px;margin-inline:3px;clip-path:none;border-radius:8px 8px 0 0; }
+  .axe-quest-topbar h1 { font-size:23px; }
+  .axe-quest-book {
+    grid-template-columns:1fr;
+    grid-template-rows:54px minmax(175px,37%) minmax(240px,1fr);
+    overflow-y:auto;
+    overflow-x:hidden;
+  }
+  .axe-quest-sidebar {
+    flex-direction:row;
+    align-items:stretch;
+    padding:3px 5px;
+    gap:4px;
+    overflow:auto hidden;
+    border-right:0;
+    border-bottom:1px solid rgba(173,210,226,.5);
+  }
+  .axe-quest-sidebar-crest,.axe-quest-sidebar-end { display:none; }
+  .axe-quest-sidebar-link { flex:0 0 auto;gap:5px;padding:5px 9px;border-radius:4px; }
+  .axe-quest-sidebar-link svg { width:18px;height:18px;flex-basis:18px; }
+  .axe-quest-journal { border-right:0;border-bottom:1px solid rgba(173,210,226,.5);padding:8px; }
+  .axe-quest-journal-tabs { min-height:32px; }
+  .axe-quest-journal-tools { flex-wrap:nowrap; }
+  .axe-quest-group-toggle { min-height:28px; }
+  .axe-quest-detail-hero { flex-basis:80px; }
+  .axe-quest-detail-scroll { padding-bottom:18px; }
+  .axe-quest-actions { min-height:57px; }
+}
+@media(max-width:420px) {
+  .axe-quest-sidebar-link { flex:0 0 auto;font-size:10px!important; }
+  .axe-quest-journal-tabs button { font-size:11px; }
+  .axe-quest-entry-content small { font-size:9px; }
+  .axe-quest-entry-metric { width:50px;flex-basis:50px; }
+  .axe-quest-objective { gap:6px; }
+  .axe-quest-track { min-width:0;font-size:13px!important;padding:8px; }
+  .axe-quest-abandon { padding:7px; }
+  .axe-quest-confirm-text { max-width:145px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-quest-logbook-root * { transition:none!important; }
+}
+
+
+/* --------------------------------------------------------------------------
+   Shared Services palette pass — COLOR / MATERIAL ONLY.
+   Quest Logbook keeps its approved 3-column MMO layout, proportions, spacing,
+   search, filters, objective rows and reward placement. The original treatment
+   used saturated cyan, almost-opaque midnight-blue blocks and chrome-blue
+   outlines that did not match Appearance, Character or the Skill Book.
+   Reuse the same tokens supplied by AXEServiceWorkspace.css (Appearance's
+   approved mineral-blue liquid glass + champagne gold). Do not add sizing or
+   layout declarations to this block.
+   -------------------------------------------------------------------------- */
+.axe-quest-logbook-root {
+  --ql-gold:var(--axe-ui-gold,rgba(242,210,147,.76));
+  --ql-gold-border:var(--axe-ui-gold,rgba(242,210,147,.76));
+  --ql-cream:var(--axe-ui-text,#f5e9d7);
+  --ql-heading:var(--axe-ui-heading,#f8e5c8);
+  --ql-muted:var(--axe-ui-subtext,#d6cabb);
+  --ql-gold-text:var(--axe-ui-gold-text,#f4d19c);
+  --ql-panel:var(--axe-ui-glass,linear-gradient(115deg,rgba(32,44,58,.51),rgba(26,35,48,.39)));
+  --ql-inset:var(--axe-ui-highlight,rgba(32,44,58,.51));
+  --ql-selected:var(--axe-ui-selected,linear-gradient(95deg,#f2d398,#ffedc1 58%,#cda16b));
+  --ql-selected-text:var(--axe-ui-selected-text,#30241d);
+  --ql-subtle-edge:rgba(242,210,147,.34);
+  --ql-soft-silver:rgba(213,224,229,.38);
+  color:var(--ql-cream);
+  text-shadow:0 1px 4px #000b;
+}
+
+/* All primary structural surfaces use Appearance's SAME transparent glass.
+   The game environment remains visible through the service, as on the other
+   subpages, rather than being hidden behind opaque navy slabs. */
+.axe-quest-book {
+  background:var(--ql-panel);
+  border-color:var(--ql-gold-border);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 8px 20px #0003,0 0 0 3px #d8ad6538;
+  -webkit-backdrop-filter:blur(13px) saturate(104%);
+  backdrop-filter:blur(13px) saturate(104%);
+}
+.axe-quest-book:after { border-color:rgba(233,200,147,.28);box-shadow:none; }
+.axe-quest-topbar,
+.axe-quest-sidebar,
+.axe-quest-journal,
+.axe-quest-detail {
+  background:var(--ql-panel);
+  border-color:var(--ql-subtle-edge);
+}
+.axe-quest-topbar {
+  box-shadow:inset 0 0 15px #e7d7b31a,0 4px 12px #0003;
+}
+.axe-quest-topbar:after { border-color:var(--ql-subtle-edge); }
+.axe-quest-topbar-wing {
+  background:linear-gradient(90deg,transparent 0%,rgba(242,210,147,.1) 27%,transparent 42%,transparent 58%,rgba(242,210,147,.1) 73%,transparent 100%);
+}
+.axe-quest-topbar h1,
+.axe-quest-hero-copy h2 { color:var(--ql-heading); }
+.axe-quest-topbar-crest,
+.axe-quest-sidebar-crest,
+.axe-quest-sidebar-end,
+.axe-quest-close { color:var(--ql-gold-text); }
+.axe-quest-topbar-crest,
+.axe-quest-sidebar-crest { filter:drop-shadow(0 0 5px #f5cf844c); }
+.axe-quest-sidebar-crest { border-color:var(--ql-subtle-edge); }
+.axe-quest-close {
+  background:var(--ql-panel);
+  border-color:var(--ql-subtle-edge);
+}
+.axe-quest-close:hover {
+  background:rgba(184,143,80,.27);
+  border-color:var(--ql-gold-border);
+}
+
+/* Ordinary controls: warm mineral grey instead of saturated cold blue.
+   Active tabs use precisely the gold fill + dark lettering of Appearance. */
+.axe-quest-sidebar-link {
+  color:var(--ql-cream);
+  border-bottom-color:var(--ql-subtle-edge);
+}
+.axe-quest-sidebar-link svg { color:var(--ql-gold-text); }
+.axe-quest-sidebar-link:hover {
+  background:var(--ql-inset);
+  border-color:var(--ql-subtle-edge);
+}
+.axe-quest-sidebar-link[aria-pressed="true"] {
+  background:var(--ql-selected);
+  color:var(--ql-selected-text);
+  border-color:#f4d391aa;
+  box-shadow:0 0 12px #f4d99b5c,inset 0 1px 8px #fff5;
+  text-shadow:none;
+}
+.axe-quest-sidebar-link[aria-pressed="true"] svg { color:var(--ql-selected-text); }
+.axe-quest-journal-tabs button,
+.axe-quest-sort select,
+.axe-quest-search,
+.axe-quest-group-toggle,
+.axe-quest-entry,
+.axe-quest-objective,
+.axe-quest-reward-icon,
+.axe-quest-actions,
+.axe-quest-abandon,
+.axe-quest-cancel,
+.axe-quest-abandon-confirm {
+  background:var(--ql-panel);
+  border-color:var(--ql-subtle-edge);
+  color:var(--ql-cream);
+  box-shadow:inset 0 0 12px #e7d7b312;
+}
+.axe-quest-journal-tabs button[aria-pressed="true"] {
+  background:var(--ql-selected);
+  color:var(--ql-selected-text);
+  border-color:#f4d391aa;
+  box-shadow:0 0 12px #f4d99b5c,inset 0 1px 8px #fff5;
+  text-shadow:none;
+}
+.axe-quest-journal-tabs button:hover:not([aria-pressed="true"]),
+.axe-quest-group-toggle:hover,
+.axe-quest-entry:hover:not([aria-pressed="true"]) {
+  background:var(--ql-inset);
+  border-color:var(--ql-gold-border);
+}
+.axe-quest-journal-tools,
+.axe-quest-sort,
+.axe-quest-search,
+.axe-quest-search input,
+.axe-quest-sort select { color:var(--ql-cream); }
+.axe-quest-sort svg,
+.axe-quest-search svg { color:var(--ql-gold-text); }
+.axe-quest-search input::placeholder { color:var(--ql-muted); }
+.axe-quest-group-toggle { color:var(--ql-heading); }
+.axe-quest-group-toggle svg { color:var(--ql-gold-text); }
+.axe-quest-entry[aria-pressed="true"] {
+  background:linear-gradient(95deg,rgba(184,143,80,.27),rgba(32,44,58,.51));
+  border-color:#f4d391aa;
+  box-shadow:inset 0 0 13px #f4d99b33,0 0 12px #f4d99b33;
+}
+.axe-quest-entry-badge {
+  color:var(--ql-gold-text);
+  border-color:var(--ql-subtle-edge);
+  background:var(--ql-inset);
+}
+.axe-quest-entry[aria-pressed="true"] .axe-quest-entry-badge {
+  color:var(--ql-heading);
+  border-color:var(--ql-gold-border);
+}
+.axe-quest-entry-content strong,
+.axe-quest-entry-metric b { color:var(--ql-cream); }
+.axe-quest-entry-content small { color:var(--ql-muted); }
+.axe-quest-entry-content small span { color:var(--ql-gold-text); }
+.axe-quest-meter {
+  background:rgba(19,36,53,.42);
+  border-color:var(--ql-subtle-edge);
+  box-shadow:none;
+}
+/* Progress matches the champagne-gold meters in Spiritual and Skill Book;
+   pale silver highlights remain an accent, not a competing neon-blue theme. */
+.axe-quest-meter i {
+  background:linear-gradient(90deg,#bc9257,#f2d398 68%,#ffecc4);
+  box-shadow:0 0 5px rgba(242,210,147,.35);
+}
+.axe-quest-empty,
+.axe-quest-no-selection { color:var(--ql-muted); }
+.axe-quest-empty svg,
+.axe-quest-no-selection svg { color:var(--ql-gold-text); }
+.axe-quest-empty strong,
+.axe-quest-no-selection h2 { color:var(--ql-heading); }
+
+/* Detail art keeps the approved scenic silhouette, only removes its
+   competing cyan/blue tint and overly dark vignette. */
+.axe-quest-detail-hero {
+  border-color:var(--ql-subtle-edge);
+  background:linear-gradient(90deg,rgba(32,44,58,.51),rgba(26,35,48,.39));
+}
+.axe-quest-hero-landscape {
+  background:
+    radial-gradient(ellipse at 87% 48%,rgba(218,209,190,.23),transparent 26%),
+    linear-gradient(95deg,rgba(32,44,58,.66) 12%,rgba(26,35,48,.27) 82%),
+    repeating-linear-gradient(90deg,transparent 0 96px,rgba(238,225,203,.05) 97px 99px,transparent 100px 118px),
+    linear-gradient(170deg,rgba(93,101,102,.45),rgba(45,55,65,.33) 48%,rgba(27,35,48,.46));
+}
+.axe-quest-hero-landscape:before {
+  background:linear-gradient(0deg,rgba(26,35,48,.46),rgba(127,119,105,.3));
+  box-shadow:0 0 18px rgba(26,35,48,.35);
+}
+.axe-quest-hero-landscape:after {
+  border-color:rgba(224,213,194,.28);
+  box-shadow:0 0 17px rgba(224,213,194,.12);
+}
+.axe-quest-hero-spire {
+  background:rgba(239,221,189,.34);
+  box-shadow:10px 5px 0 rgba(239,221,189,.15),-6px 9px 0 rgba(239,221,189,.13);
+}
+.axe-quest-hero-symbol {
+  background:var(--ql-panel);
+  border-color:var(--ql-gold-border);
+  color:var(--ql-gold-text);
+  box-shadow:inset 0 0 13px #e7d7b31a,0 0 11px #f4d99b33;
+}
+.axe-quest-status-pill {
+  border-color:var(--ql-gold-border);
+  background:var(--ql-panel);
+  color:var(--ql-heading);
+  box-shadow:inset 0 0 9px #e7d7b31a;
+}
+.axe-quest-status-pill.is-complete {
+  color:var(--ql-gold-text);
+  background:rgba(184,143,80,.22);
+  border-color:var(--ql-gold-border);
+}
+.axe-quest-meta-row {
+  background:var(--ql-inset);
+  border-color:var(--ql-subtle-edge);
+}
+.axe-quest-meta-row>div+div { border-color:var(--ql-subtle-edge); }
+.axe-quest-meta-row svg { color:var(--ql-gold-text); }
+.axe-quest-meta-row span,
+.axe-quest-meta-row small { color:var(--ql-muted); }
+.axe-quest-meta-row strong { color:var(--ql-heading); }
+.axe-quest-description,
+.axe-quest-objective-name>span:first-child { color:var(--ql-cream); }
+.axe-quest-objectives h3,
+.axe-quest-rewards h3 {
+  color:var(--ql-heading);
+  border-color:var(--ql-subtle-edge);
+}
+.axe-quest-objectives h3 svg,
+.axe-quest-rewards h3 svg { color:var(--ql-gold-text); }
+.axe-quest-check {
+  border-color:var(--ql-gold-border);
+  background:var(--ql-inset);
+  color:var(--ql-heading);
+}
+.axe-quest-check.is-done { background:rgba(184,143,80,.35);border-color:var(--ql-gold-border); }
+.axe-quest-objective b { color:var(--ql-heading); }
+.axe-quest-overall-progress { color:var(--ql-muted); }
+.axe-quest-overall-progress strong { color:var(--ql-gold-text); }
+.axe-quest-reward { border-color:var(--ql-subtle-edge); }
+.axe-quest-reward-icon,
+.axe-quest-reward:nth-child(2n) .axe-quest-reward-icon {
+  background:var(--ql-panel);
+  color:var(--ql-gold-text);
+  border-color:var(--ql-gold-border);
+}
+.axe-quest-reward strong { color:var(--ql-heading); }
+.axe-quest-reward small { color:var(--ql-muted); }
+.axe-quest-void { color:var(--ql-muted); }
+.axe-quest-actions { border-color:var(--ql-subtle-edge); }
+.axe-quest-track {
+  background:var(--ql-selected);
+  color:var(--ql-selected-text)!important;
+  border-color:#f4d391aa;
+  box-shadow:0 0 12px #f4d99b5c,inset 0 1px 8px #fff5;
+  text-shadow:none;
+}
+.axe-quest-track:hover:not(:disabled) {
+  background:linear-gradient(95deg,#ffdfab,#fff1cc 58%,#e5b77b);
+}
+.axe-quest-track:disabled { opacity:.62; }
+.axe-quest-abandon,
+.axe-quest-cancel { color:var(--ql-cream)!important; }
+.axe-quest-abandon-confirm {
+  color:var(--ql-heading)!important;
+  border-color:var(--ql-gold-border);
+}
+.axe-quest-confirm-text { color:var(--ql-heading); }
+.axe-quest-notice { color:var(--ql-gold-text); }
+
+
+/* 16.9: optional authenticated, read-only Questbook mode. */
+.axe-quest-trust-status {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-inline:auto 8px;
+  padding:5px 9px;
+  border:1px solid rgba(153,208,229,.5);
+  border-radius:10px;
+  background:rgba(10,24,36,.75);
+  color:var(--ql-cream);
+  font-size:11px;
+  max-width:58%;
+  min-width:0;
+}
+.axe-quest-trust-status span {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.axe-quest-trust-status button {
+  border:1px solid var(--ql-silver);
+  border-radius:7px;
+  padding:3px 8px;
+  background:rgba(50,80,100,.7);
+  flex:none;
+}
