@@ -29,6 +29,7 @@ import './CharacterSelectionPanorama.css';
 import './CharacterLivingChronicle.css';
 import './CharacterCrossline.css';
 import './CharacterSelectionRefinement.css';
+import './CharacterCreatorLayoutFix.css';
 
 function displayField(value, fallback) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
