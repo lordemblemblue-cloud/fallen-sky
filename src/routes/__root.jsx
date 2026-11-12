@@ -12,8 +12,8 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Game 3D / Book · Atom × Eve" },
-      { name: "description", content: "The living 3D world of Adam and Eve, with factions, companions, characters, and quests." },
+      { title: "GitSync Pro" },
+      { name: "description", content: "Your GitHub repositories, pull requests and issues in one dashboard." },
     ],
     // No icon link: the platform adds the app's logo when serving.
     links: [
