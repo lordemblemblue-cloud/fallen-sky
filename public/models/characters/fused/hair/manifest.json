@@ -1,0 +1,142 @@
+{
+  "female": [
+    {
+      "id": "female_wig",
+      "label": "Long Braided",
+      "url": "/models/characters/fused/hair/female_wig.glb",
+      "slot": "hair",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_wig",
+        "Hair_wig_Cap"
+      ],
+      "springs": true
+    },
+    {
+      "id": "female_braided",
+      "label": "Side Braid",
+      "url": "/models/characters/fused/hair/female_braided.glb",
+      "slot": "hair",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_braided",
+        "Hair_braided_Cap"
+      ],
+      "springs": true
+    },
+    {
+      "id": "female_silver",
+      "label": "Long Straight",
+      "url": "/models/characters/fused/hair/female_silver.glb",
+      "slot": "hair",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_silver",
+        "Hair_silver_Cap"
+      ],
+      "springs": true
+    }
+  ],
+  "male": [
+    {
+      "id": "male_undercut",
+      "label": "Undercut",
+      "url": "/models/characters/fused/hair/male_undercut.glb",
+      "slot": "hair",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_undercut",
+        "Hair_undercut_Cap"
+      ],
+      "springs": false
+    },
+    {
+      "id": "male_spiky",
+      "label": "Spiky",
+      "url": "/models/characters/fused/hair/male_spiky.glb",
+      "slot": "hair",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_spiky",
+        "Hair_spiky_Cap"
+      ],
+      "springs": false
+    },
+    {
+      "id": "male_anime",
+      "label": "Red-Brown Anime",
+      "url": "/models/characters/fused/hair/male_anime.glb",
+      "slot": "hair",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_anime",
+        "Hair_anime_Cap"
+      ],
+      "springs": false
+    },
+    {
+      "id": "male_ponytail",
+      "label": "Ponytail",
+      "url": "/models/characters/fused/hair/male_ponytail.glb",
+      "slot": "hair",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_ponytail",
+        "Hair_ponytail_Cap"
+      ],
+      "springs": false
+    },
+    {
+      "id": "male_ponytail_real",
+      "label": "Long Ponytail",
+      "url": "/models/characters/fused/hair/male_ponytail_real.glb",
+      "slot": "hair",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "skinned",
+      "hide_meshes": [
+        "Hair_Default"
+      ],
+      "tint_materials": [
+        "Hair_ponytail_real",
+        "Hair_ponytail_real_Cap"
+      ],
+      "springs": false
+    }
+  ]
+}
