@@ -1,0 +1,353 @@
+// ─── Loot Store — Drop definitions, RNG, and inventory state ─────────────────
+import { SKILLS_DATABASE } from './equipment/skillData';
+import { finalizeAXEDrop } from './axe/loot/AXELootQuality';
+import { characterScopedStorage, subscribeCharacterChange } from './characterStorage';
+import { tryStoreOverflowLoot } from './storage/game3dStorageStore';
+import { countBagItems, GAME3D_LOOT_BAG_CAPACITY } from './storage/game3dStorageModel.mjs';
+
+export const LOOT_RARITIES = {
+  common:    { color: '#9ca3af', hex: 0x9ca3af, glow: 0x9ca3af, label: 'Common'    },
+  uncommon:  { color: '#4ade80', hex: 0x4ade80, glow: 0x4ade80, label: 'Uncommon'  },
+  rare:      { color: '#60a5fa', hex: 0x60a5fa, glow: 0x60a5fa, label: 'Rare'      },
+  elite:     { color: '#a78bfa', hex: 0xa78bfa, glow: 0xa78bfa, label: 'Elite'     },
+  epic:      { color: '#a78bfa', hex: 0xa78bfa, glow: 0xa78bfa, label: 'Epic'      },
+  legendary: { color: '#f59e0b', hex: 0xf59e0b, glow: 0xf59e0b, label: 'Legendary' },
+  heroic:    { color: '#fb7185', hex: 0xfb7185, glow: 0xfb7185, label: 'Heroic'    },
+  mythic:    { color: '#f43f5e', hex: 0xf43f5e, glow: 0xf43f5e, label: 'Mythic'    },
+  divine:    { color: '#e879f9', hex: 0xe879f9, glow: 0xe879f9, label: 'Divine'    },
+};
+
+// All possible loot items that can drop from enemies
+export const LOOT_TABLE = [
+  // ── Skills ────────────────────────────────────────────────────────────────
+  { id: 'skill_berserker_slash', name: 'Berserker Slash',  category: 'skill',     rarity: 'epic',      icon: '⚔️',  weight: 8  },
+  { id: 'skill_flame_cleave',    name: 'Flame Cleave',     category: 'skill',     rarity: 'rare',      icon: '🔥',  weight: 12 },
+  { id: 'skill_void_strike',     name: 'Void Strike',      category: 'skill',     rarity: 'legendary', icon: '🌑',  weight: 3  },
+  { id: 'skill_iron_fortress',   name: 'Iron Fortress',    category: 'skill',     rarity: 'rare',      icon: '🏰',  weight: 10 },
+  { id: 'skill_phantom_shot',    name: 'Phantom Shot',     category: 'skill',     rarity: 'epic',      icon: '👻',  weight: 7  },
+  { id: 'skill_counter_pulse',       name: 'Counter Pulse',        category: 'skill',     rarity: 'epic',      icon: '🔄',  weight: 6  },
+  { id: 'skill_storm_rounds',        name: 'Storm Rounds',         category: 'skill',     rarity: 'legendary', icon: '⛈️',  weight: 2  },
+  { id: 'repulsion',                 name: 'Repulsion',            category: 'skill',     rarity: 'legendary', icon: '⚡',  weight: 3  },
+  { id: 'barrier_aura',              name: 'Barrier',              category: 'skill',     rarity: 'epic',      icon: '🛡️', weight: 5  },
+  { id: 'heavens_destruction',       name: "Heaven's Destruction", category: 'skill',     rarity: 'mythic',    icon: '🌑',  weight: 2  },
+  { id: 'power_charge',              name: 'Power Charge',         category: 'skill',     rarity: 'epic',      icon: '🔥',  weight: 6  },
+  // ── Active Ability Scrolls (must be learned to equip in Q/E/R/F slots) ─
+  { id: 'lightning_strike',          name: 'Lightning Strike',     category: 'skill',     rarity: 'rare',      icon: '⚡',  weight: 6  },
+  { id: 'shadow_teleport',           name: 'Shadow Teleport',      category: 'skill',     rarity: 'epic',      icon: '🌀',  weight: 4  },
+  { id: 'frost_tornado',             name: 'Frost Tornado',        category: 'skill',     rarity: 'rare',      icon: '🌪️', weight: 6  },
+  // ── Equipment service materials (real inventory items) ────────────────────
+  { id: 'mat_essence',          name: 'Essence Shard',          category: 'material', rarity: 'common',    icon: '◈',  weight: 30 },
+  { id: 'mat_crystal',          name: 'Spirit Crystal',         category: 'material', rarity: 'rare',      icon: '◆',  weight: 20 },
+  { id: 'mat_starlight',        name: 'Starlight Dust',         category: 'material', rarity: 'epic',      icon: '✦',  weight: 10 },
+  { id: 'mat_reinforce',        name: 'Reinforcement Stone',    category: 'material', rarity: 'uncommon',  icon: '⬟',  weight: 24 },
+  { id: 'mat_over_enchant',     name: 'Over-Enchant Catalyst',  category: 'material', rarity: 'elite',     icon: '✧',  weight: 9  },
+  { id: 'mat_protection',       name: 'Stabilizer',             category: 'material', rarity: 'heroic',    icon: '⬢',  weight: 4  },
+  // ── Other Enchanting Materials ─────────────────────────────────────────────
+  { id: 'mat_soul_fragment',     name: 'Soul Fragment',    category: 'material',  rarity: 'rare',      icon: '💠',  weight: 25 },
+  { id: 'mat_void_crystal',      name: 'Void Crystal',     category: 'material',  rarity: 'epic',      icon: '🔮',  weight: 15 },
+  { id: 'mat_divine_essence',    name: 'Divine Essence',   category: 'material',  rarity: 'legendary', icon: '✨',  weight: 5  },
+  { id: 'mat_aura_shard',        name: 'Aura Shard',       category: 'material',  rarity: 'rare',      icon: '🌟',  weight: 20 },
+  { id: 'mat_elite_temper',       name: 'Elite Tempering Stone', category: 'material', rarity: 'elite', icon: '🔷', weight: 4 },
+  { id: 'mat_heroic_core',        name: 'Heroic Core',       category: 'material',  rarity: 'heroic',    icon: '💎',  weight: 1 },
+  // ── Socket Gems (real owned inventory) ───────────────────────────────────
+  { id: 'gem_ruby_i',     name: 'Ruby I',          category: 'gem', rarity: 'common',   icon: '🔴', weight: 14 },
+  { id: 'gem_sapphire_i', name: 'Sapphire I',      category: 'gem', rarity: 'common',   icon: '🔵', weight: 14 },
+  { id: 'gem_jade_i',     name: 'Jade I',          category: 'gem', rarity: 'uncommon', icon: '🟢', weight: 10 },
+  { id: 'gem_spirit_i',   name: 'Spirit Gem I',    category: 'gem', rarity: 'uncommon', icon: '🟣', weight: 9  },
+  { id: 'gem_crit_i',     name: 'Critical Gem I',  category: 'gem', rarity: 'rare',     icon: '💎', weight: 5  },
+  // ── Crafting Resources ────────────────────────────────────────────────────
+  { id: 'craft_bone',            name: 'Creature Bone',    category: 'crafting',  rarity: 'common',    icon: '🦴',  weight: 40 },
+  { id: 'craft_fang',            name: 'Toxic Fang',       category: 'crafting',  rarity: 'common',    icon: '🦷',  weight: 35 },
+  { id: 'craft_hide',            name: 'Beast Hide',       category: 'crafting',  rarity: 'common',    icon: '🎭',  weight: 38 },
+  { id: 'craft_essence',         name: 'Dark Essence',     category: 'crafting',  rarity: 'rare',      icon: '🫧',  weight: 18 },
+  // ── Evolution Materials ────────────────────────────────────────────────────
+  { id: 'evo_ancient_relic',     name: 'Ancient Relic',    category: 'evolution', rarity: 'legendary', icon: '🏺',  weight: 4  },
+  { id: 'evo_boss_fragment',     name: 'Boss Fragment',    category: 'evolution', rarity: 'mythic',    icon: '💀',  weight: 2  },
+  { id: 'evo_upgrade_stone',     name: 'Upgrade Stone',    category: 'evolution', rarity: 'rare',      icon: '🪨',  weight: 16 },
+  // ── Companion Materials ────────────────────────────────────────────────────
+  { id: 'comp_treat',            name: 'Companion Treat',  category: 'companion', rarity: 'common',    icon: '🍖',  weight: 30 },
+  { id: 'comp_bond_crystal',     name: 'Bond Crystal',     category: 'companion', rarity: 'rare',      icon: '💎',  weight: 14 },
+  // ── Misc ──────────────────────────────────────────────────────────────────
+  { id: 'misc_coin_bag',         name: 'Gold Coins',       category: 'misc',      rarity: 'common',    icon: '🪙',  weight: 50 },
+  { id: 'misc_potion',           name: 'Health Potion',    category: 'misc',      rarity: 'common',    icon: '🧪',  weight: 45 },
+  { id: 'misc_event_token',      name: 'Event Token',      category: 'misc',      rarity: 'epic',      icon: '🎫',  weight: 8  },
+];
+
+// ── Drop-rate logic ────────────────────────────────────────────────────────
+// Base 35% chance per kill. Boss/elite enemies have higher multipliers.
+const BASE_SKILL_DROP_CHANCE = 0.35;
+const TIER_MULTIPLIERS = { normal: 1.0, elite: 2.0, champion: 3.5, boss: 8.0 };
+const BOSS_LEGENDARY_BOOST = 3.0; // multiplies legendary/mythic/divine weights for bosses
+
+/**
+ * Roll loot drops from a dead enemy.
+ * Returns an array of 0–3 loot items (can be empty).
+ */
+export function rollEnemyDrops(enemyTier = 'normal', isBoss = false, ctx = {}) {
+  const drops = [];
+  const rng = typeof ctx.rng === 'function' ? ctx.rng : Math.random;
+  const authorityTag = ctx.authorityTag || 'host-authoritative';
+  const generatedAt = Number(ctx.generatedAt || Date.now());
+
+  const makeDrop = (item) => item ? finalizeAXEDrop({
+    ...item,
+    dropId: `drop_${generatedAt}_${Math.floor(rng() * 0xFFFFFF).toString(36)}`,
+  }, { rng, enemyTier, isBoss, authorityTag, generatedAt }) : null;
+
+  const mult = TIER_MULTIPLIERS[enemyTier] || 1.0;
+  if (rng() <= Math.min(0.92, BASE_SKILL_DROP_CHANCE * mult)) {
+    const drop = makeDrop(weightedSample(buildWeightedTable(isBoss), rng));
+    if (drop) drops.push(drop);
+  }
+
+  if ((['elite','champion','miniBoss','caveBoss','gateBoss','worldBoss','boss'].includes(enemyTier) || isBoss) && rng() < 0.45) {
+    const drop = makeDrop(weightedSample(buildWeightedTable(isBoss), rng));
+    if (drop) drops.push(drop);
+  }
+
+  if (isBoss && drops.length < 3) {
+    const rareTable = LOOT_TABLE.filter((i) => ['legendary','heroic','mythic','divine'].includes(i.rarity));
+    const drop = makeDrop(rareTable[Math.floor(rng() * rareTable.length)]);
+    if (drop) drops.push(drop);
+  }
+
+  return drops;
+}
+
+function buildWeightedTable(isBoss) {
+  if (!isBoss) return LOOT_TABLE;
+  return LOOT_TABLE.map((item) => {
+    const high = ['legendary','heroic','mythic','divine'].includes(item.rarity);
+    return high ? { ...item, weight: item.weight * BOSS_LEGENDARY_BOOST } : item;
+  });
+}
+
+function weightedSample(table, rng = Math.random) {
+  const total = table.reduce((s, i) => s + i.weight, 0);
+  let r = rng() * total;
+  for (const item of table) {
+    r -= item.weight;
+    if (r <= 0) return item;
+  }
+  return table[table.length - 1];
+}
+
+// ── Character-scoped collected loot inventory ─────────────────────────────
+// Materials/skills now survive reloads and never leak between characters.
+const lootStorage = characterScopedStorage('game_loot_inventory_v2');
+const learnedStorage = characterScopedStorage('game_learned_skills_v2');
+
+function loadLootInventory() {
+  try {
+    const raw = lootStorage.get();
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistLootInventory() {
+  lootStorage.set(JSON.stringify(_lootInventory));
+}
+
+let _lootInventory = loadLootInventory();
+const _listeners = new Set();
+
+function emitLootInventory() {
+  persistLootInventory();
+  _listeners.forEach((fn) => fn(_lootInventory));
+}
+
+export function getLootInventory() { return _lootInventory; }
+
+export function addLootToInventory(item) {
+  if (!item) return null;
+  const cat = item.category || 'misc';
+  const stored = {
+    ...item,
+    collectedAt: item.collectedAt || Date.now(),
+    dropId: item.dropId || `inv_${Date.now()}_${Math.random().toString(36).slice(2,8)}`,
+  };
+  // Farming while carrying 200 loot units automatically redirects the next
+  // collected unit to this character's protected personal storage.
+  if (countBagItems(_lootInventory) >= GAME3D_LOOT_BAG_CAPACITY) {
+    const overflow = tryStoreOverflowLoot(stored);
+    if (overflow.ok) {
+      if (typeof window !== 'undefined')
+        window.dispatchEvent(new CustomEvent('game3dLootStored', { detail: { item:stored } }));
+      return { ...stored, storageLocation:'vault' };
+    }
+    // Both containers full (or save quota exceeded) means NO pickup. The
+    // world drop stays available; never fake an item award that was not saved.
+    return null;
+  }
+  const next = { ..._lootInventory, [cat]: [...(_lootInventory[cat] || []), stored] };
+  if (!lootStorage.setChecked(JSON.stringify(next))) return null;
+  _lootInventory = next;
+  _listeners.forEach((fn) => fn(_lootInventory));
+  return stored;
+}
+
+export function getLootItemCount(itemId, category = null) {
+  const categories = category ? [category] : Object.keys(_lootInventory);
+  return categories.reduce((sum, cat) =>
+    sum + (_lootInventory[cat] || []).filter((item) => item.id === itemId).length
+  , 0);
+}
+
+export function consumeLootItemById(itemId, count = 1, category = null) {
+  let remaining = Math.max(0, Math.floor(Number(count) || 0));
+  if (!itemId || remaining <= 0) return { ok: false, reason: 'INVALID_CONSUME' };
+
+  const categories = category ? [category] : Object.keys(_lootInventory);
+  const next = { ..._lootInventory };
+  let consumed = 0;
+
+  for (const cat of categories) {
+    if (remaining <= 0) break;
+    const source = [...(next[cat] || [])];
+    const kept = [];
+    for (const item of source) {
+      if (remaining > 0 && item.id === itemId) {
+        remaining -= 1;
+        consumed += 1;
+      } else {
+        kept.push(item);
+      }
+    }
+    next[cat] = kept;
+  }
+
+  if (consumed < Math.max(0, Math.floor(Number(count) || 0))) {
+    return { ok: false, reason: 'INSUFFICIENT_ITEMS', itemId, have: consumed };
+  }
+
+  _lootInventory = next;
+  emitLootInventory();
+  return { ok: true, itemId, consumed };
+}
+
+export function grantLootItemById(itemId, count = 1) {
+  const def = LOOT_TABLE.find((item) => item.id === itemId);
+  if (!def) return { ok: false, reason: 'LOOT_DEFINITION_MISSING' };
+  const n = Math.max(1, Math.floor(Number(count) || 1));
+  for (let i = 0; i < n; i += 1) addLootToInventory({ ...def });
+  return { ok: true, itemId, count: n };
+}
+
+// Pays a server-rolled upgrade (docs/game3d/SERVER_UPGRADES.md): removes the exact units the
+// server spent. A unit this device already used for something else is replaced by another
+// unit of the same material, so the cost is paid in full either way.
+export function consumeLootUnits(dropIds = [], cost = {}) {
+  const left = new Map();
+  for (const id of dropIds || []) left.set(String(id), (left.get(String(id)) || 0) + 1);
+  const taken = {};
+  _lootInventory = Object.fromEntries(Object.entries(_lootInventory).map(([cat, list]) => [cat, (list || []).filter((unit) => {
+    const n = left.get(String(unit?.dropId)) || 0;
+    if (n <= 0) return true;
+    left.set(String(unit.dropId), n - 1);
+    taken[unit.id] = (taken[unit.id] || 0) + 1;
+    return false;
+  })]));
+  emitLootInventory();
+  for (const [id, count] of Object.entries(cost || {})) {
+    const short = Math.max(0, Math.floor(Number(count) || 0)) - (taken[id] || 0);
+    const have = getLootItemCount(id);
+    if (short > 0 && have > 0) consumeLootItemById(id, Math.min(short, have));
+  }
+  return { ok: true, taken };
+}
+
+export function subscribeLootInventory(fn) {
+  _listeners.add(fn);
+  fn(_lootInventory);
+  return () => _listeners.delete(fn);
+}
+
+// ── Learned skills — character scoped ─────────────────────────────────────
+function loadLearned() {
+  try {
+    const raw = learnedStorage.get();
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch { return new Set(); }
+}
+
+// In the editor/preview environment only, auto-grant ALL skills so devs can
+// test every passive + active without needing to farm them. The live/published
+// app keeps the normal loot-driven learning flow.
+function isEditorEnv() {
+  try {
+    const h = window.location.hostname;
+    return h === 'localhost' || h.includes('base44.app') || h.includes('preview');
+  } catch { return false; }
+}
+
+function loadInitialLearned() {
+  const base = loadLearned();
+  if (isEditorEnv()) {
+    // 1. Grant every skill loot-table id (matches inventory-based detection)
+    LOOT_TABLE.forEach((item) => { if (item.category === 'skill') base.add(item.id); });
+    // 2. Also grant every SKILLS_DATABASE id directly so the Skills Book shows
+    //    every chapter skill (including passives like iron_fortress, counter_pulse
+    //    that aren't in the loot table).
+    SKILLS_DATABASE.forEach((s) => base.add(s.id));
+  }
+  return base;
+}
+
+let _learnedSkillIds = loadInitialLearned();
+const _learnListeners = new Set();
+
+function persistLearned() {
+  learnedStorage.set(JSON.stringify([..._learnedSkillIds]));
+}
+
+// IDs in this set are ACTIVE abilities (matches abilityStore ABILITY_DEFINITIONS.id)
+// and should auto-equip to the first empty Q/E/R/F slot when learned.
+const ACTIVE_ABILITY_IDS = new Set(['lightning_strike', 'shadow_teleport', 'frost_tornado']);
+
+export function getLearnedSkillIds() { return _learnedSkillIds; }
+
+export function learnSkill(lootItem) {
+  if (_learnedSkillIds.has(lootItem.id)) return; // already learned
+  _learnedSkillIds = new Set([..._learnedSkillIds, lootItem.id]);
+  persistLearned();
+  _learnListeners.forEach((fn) => fn(_learnedSkillIds));
+
+  // If this is an active ability, auto-equip it into the first empty Q/E/R/F slot
+  // so it instantly appears on the player's hotkey bar.
+  if (ACTIVE_ABILITY_IDS.has(lootItem.id)) {
+    // Lazy import to avoid circular dep at module init
+    import('./abilityStore').then(({ getAbilityState, equipAbility }) => {
+      const equipped = getAbilityState().equipped || [];
+      const emptyIdx = equipped.findIndex((v) => !v);
+      if (emptyIdx !== -1 && !equipped.includes(lootItem.id)) {
+        equipAbility(emptyIdx, lootItem.id);
+      }
+    }).catch(() => {});
+  }
+
+  // Remove the scroll from the skill inventory so it can't be used again
+  const skills = _lootInventory['skill'] || [];
+  const idx = skills.findIndex(
+    (s) => s.dropId === lootItem.dropId || (s.id === lootItem.id && s.collectedAt === lootItem.collectedAt)
+  );
+  if (idx !== -1) {
+    const updated = [...skills];
+    updated.splice(idx, 1);
+    _lootInventory = { ..._lootInventory, skill: updated };
+    emitLootInventory();
+  }
+}
+
+export function subscribeLearnedSkills(fn) {
+  _learnListeners.add(fn);
+  return () => _learnListeners.delete(fn);
+}
+
+subscribeCharacterChange(() => {
+  _lootInventory = loadLootInventory();
+  _learnedSkillIds = loadInitialLearned();
+  _listeners.forEach((fn) => fn(_lootInventory));
+  _learnListeners.forEach((fn) => fn(_learnedSkillIds));
+});

@@ -1,0 +1,644 @@
+// Central player progression store.
+// GameWorld3D publishes XP/level/stats here; HUD + Progression menu read from it.
+// allocateStat() is callable from the menu and feeds back into the world's stats.
+// Persists level/xp/baseStats/unspentPoints/hp to localStorage so progression
+// survives logout and page reloads.
+import { DEFAULT_PLAYER_STATS, computeDerivedStats, migrateBaseStats } from './statsSystem';
+import { getHaloBonuses, subscribeHalo } from './progression/haloStore';
+import { isAnyPreviewMaxActive } from './progression/previewMaxMode';
+import { getAuraBonuses, subscribeAura } from './progression/auraStore';
+import {
+  getEquippedWingsMultiplierBonuses,
+  getEquippedWingsFlatBonuses,
+  subscribeWings,
+} from './progression/wingsStore';
+import { getEquippedTitleAttributeBonuses, getEquippedTitleBonuses, subscribeTitles } from './progression/titleStore';
+import { consumeRestedForGain } from './restedXPStore';
+import { xpForLevel } from './gameWorldConfig';
+import { characterScopedStorage, getActiveId, getStorageUser, subscribeCharacterChange } from './characterStorage';
+import { AXE_PRIMARY_STATS, createDefaultAXEPowerProgression, normalizeAXEPowerProgression } from './axe/progression/AXECharacterProgressionConfig';
+import { getRegisteredAXECoreBonuses, subscribeAXECores } from './axe/progression/AXECoreStore';
+import { getEquippedAXECostumeBonuses, subscribeAXECostumes } from './axe/progression/AXECostumeStore';
+import { getEquippedAXECapeBonuses, subscribeAXECapes } from './axe/progression/AXECapeStore';
+import { getAXEElixirAttributeBonuses, subscribeAXEElixirs } from './axe/progression/AXEElixirStore';
+import { getRegisteredAXEPetBonuses, subscribeAXEPets } from './axe/progression/AXEPetStore';
+import { getAXESoulRegaliaBonuses, subscribeAXESoulRegalia } from './axe/progression/AXESoulRegaliaStore';
+import { getAXEMountFusionState, getRegisteredAXEMountBonuses, subscribeAXEMounts } from './axe/progression/AXEMountStore';
+import { scaleAXEGearForFusion } from './axe/progression/AXEMountFusionSystem';
+import { getEquippedAXEVanityActivationProfile, getEquippedAXEVanityBaseBonuses, subscribeAXEVanity } from './axe/progression/AXEVanityStore';
+import { getAXEVanitySpiritVirtualBonus } from './axe/progression/AXEVanitySystem';
+import { getAXEEquipmentRuntimeBonuses } from './axe/equipment/AXEEquipmentRuntimeStats';
+import { applyAXEPercentPool, sumAXEPercentPools } from './axe/balance/AXEStatPool';
+import { getAXEEnemyStats, getAXEHitChancePct } from './axe/balance/AXEPowerBudget';
+import { subscribeAXEEquipmentInventory } from './axe/equipment/AXEEquipmentInventoryStore';
+import { subscribeEnchantments } from './equipment/enchantmentStore';
+import { subscribeAXEItemAdvancement } from './axe/equipment/AXEItemAdvancementStore';
+import { subscribeAXESockets } from './axe/equipment/AXESocketGemStore';
+import { subscribeAXEAura } from './axe/equipment/AXEEquipmentAuraStore';
+import { subscribeAXEEquipmentRunes } from './axe/equipment/AXEEquipmentRuneStore';
+import { getActiveAXEAdvancedClassRuntime, applyAXEAdvancedClassDerivedMultipliers } from './talents/AXEAdvancedClassRuntime';
+import { subscribeAdvancedClass } from './talents/advancedClassStore';
+import { getAXEWeaponAffinityProfile, subscribeAXEWeaponAffinity } from './axe/weapons/AXEWeaponAffinityStore';
+import { applyAXEWeaponAffinityToDerived } from './axe/weapons/AXEWeaponArchetypes';
+import { getAXEAscensionFlatBonuses, getAXEAscensionProfile, subscribeAXEAscension } from './axe/progression/AXEAscensionStore';
+import { applyAXEAscensionToDerived } from './axe/progression/AXEAscensionSystem';
+import { applyAXEBuildEffectsToDerived, getAXEBuildCombatEffects } from './axe/balance/AXEBuildEffects';
+import { AXE_BUILD_CAPS } from './axe/balance/AXEPowerBudget';
+import { subscribeMastery } from './progression/weaponMasteryStore';
+import { subscribeWeaponBuffs } from './weaponClassBuffStore';
+import { subscribeMasteryTree } from './progression/weaponMastery/weaponMasteryTreeStore';
+
+const storage = characterScopedStorage('wwm_player_progression_v1');
+const STAT_POINTS_PER_LEVEL = 3;
+
+// Pull current halo+aura+wings+title bonuses for every derived-stat recompute.
+// Halo + Aura + equipped-wing multiplier are all VIRTUAL ATTRIBUTE POINTS —
+// they pass through the same statsSystem formulas as allocated points
+// (e.g. +1 STR → +3 phys dmg). Equipped-wing specialization + title are FLAT
+// FINAL stats applied after the formulas.
+// Providers name Vitality and Spirit either way (constitution / vitality, focus / spirit),
+// and statsSystem reads `vitality` and `spirit` first. Each provider's value is read under
+// whichever name it used and written to both, so none is dropped and none counts twice.
+const canonicalAttr = (o) => ({
+  ...o,
+  constitution: o.constitution || o.vitality || 0,
+  vitality: o.vitality || o.constitution || 0,
+  focus: o.focus || o.spirit || 0,
+  spirit: o.spirit || o.focus || 0,
+});
+const sumAttr = (...objs) => {
+  const out = {
+    strength: 0, constitution: 0, dexterity: 0, intelligence: 0, focus: 0,
+    vitality: 0, spirit: 0, criticalChance: 0, criticalDefense: 0, criticalDamage: 0,
+  };
+  objs.forEach((o) => { if (!o) return; const c = canonicalAttr(o); Object.keys(out).forEach((k) => { out[k] += c[k] || 0; }); });
+  return out;
+};
+const sumFlat = (...objs) => {
+  const out = {
+    hp: 0, chi: 0, damage: 0, defense: 0,
+    critChance: 0, critDamage: 0, criticalDefense: 0,
+    attributionAttack: 0, attributionDefense: 0,
+    attackSuccess: 0, attackBlock: 0,
+  };
+  objs.forEach((o) => { if (!o) return; Object.keys(out).forEach((k) => { out[k] += o[k] || 0; }); });
+  return out;
+};
+
+const normalizeCostumeBonuses = (raw = {}) => ({
+  attr: {
+    strength: raw.strength || 0,
+    dexterity: raw.dexterity || raw.agility || 0,
+    constitution: raw.constitution || raw.vitality || 0,
+    focus: raw.focus || raw.spirit || 0,
+  },
+  flat: {
+    hp: raw.hp || raw.maxHP || 0,
+    chi: raw.chi || raw.maxChi || 0,
+    damage: raw.damage || raw.attack || 0,
+    defense: raw.defense || 0,
+    critChance: raw.critChance || raw.criticalChance || 0,
+    critDamage: (raw.critDamage || raw.criticalDamage || 0) / 100, // costume data is in percentage points
+    criticalDefense: (raw.criticalDefense || raw.critDefense || 0) / 100,
+    attributionAttack: raw.attributionAttack || raw.attributeAttack || 0,
+    attributionDefense: raw.attributionDefense || raw.attributeDefense || 0,
+  },
+});
+
+const getBonuses = () => {
+  const soulRegalia = getAXESoulRegaliaBonuses();
+  const rawEquipment = getAXEEquipmentRuntimeBonuses();
+  // Mount Soul Fusion: while a mount is absorbed its combination share multiplies the equipment stats
+  const fusion = getAXEMountFusionState();
+  const equipment = fusion.active
+    ? { ...rawEquipment, attr: scaleAXEGearForFusion(rawEquipment.attr, fusion.share), flat: scaleAXEGearForFusion(rawEquipment.flat, fusion.share) }
+    : rawEquipment;
+  const advancedClass = getActiveAXEAdvancedClassRuntime();
+  const core = getRegisteredAXECoreBonuses();
+  const pet = getRegisteredAXEPetBonuses();
+  const mount = getRegisteredAXEMountBonuses();
+  const costume = normalizeCostumeBonuses(getEquippedAXECostumeBonuses());
+  const vanity = getEquippedAXEVanityBaseBonuses();
+  const vanityActivation = getEquippedAXEVanityActivationProfile();
+  const cape = getEquippedAXECapeBonuses();
+  const capeFlat = {
+    hp: cape.hp || cape.maxHP || 0,
+    chi: cape.chi || cape.maxChi || 0,
+    damage: cape.damage || cape.attack || 0,
+    defense: cape.defense || 0,
+    critChance: cape.critChance || cape.criticalChance || 0,
+    critDamage: (cape.critDamage || cape.criticalDamage || 0) / 100, // cape data is in percentage points
+    criticalDefense: (cape.criticalDefense || cape.critDefense || 0) / 100,
+  };
+  const coreFlat = {
+    ...core,
+    critDamage: (core.critDamage || 0) / 100, // core data is in percentage points
+    criticalDefense: (core.criticalDefense || 0) / 100,
+    attributionAttack: core.attributeAttack || core.attributionAttack || 0,
+    attributionDefense: core.attributeDefense || core.attributionDefense || 0,
+  };
+  return {
+    halo: sumAttr(
+      getHaloBonuses(),
+      getAuraBonuses(),
+      getEquippedWingsMultiplierBonuses(),
+      getEquippedTitleAttributeBonuses(),
+      getAXEElixirAttributeBonuses(),
+      costume.attr,
+      vanity.attr,
+      equipment.attr,
+      soulRegalia.capeAttributes,
+    ),
+    title: sumFlat(
+      getAuraBonuses(), // attribute attack / defense (its attributes go in the sum above)
+      getEquippedTitleBonuses(),
+      getEquippedWingsFlatBonuses(),
+      coreFlat,
+      costume.flat,
+      vanity.flat,
+      capeFlat,
+      pet,
+      mount,
+      equipment.flat,
+      advancedClass.flat,
+      getAXEAscensionFlatBonuses(), // the Angel Cloak (Taurus Chosen Ascension)
+    ),
+    vanityActivation,
+    equipmentMultipliers: equipment.multipliers,
+    advancedClassMultipliers: advancedClass.multipliers,
+    advancedClassCombat: advancedClass.combat,
+    weaponAffinity: getAXEWeaponAffinityProfile(),
+    build: getAXEBuildCombatEffects(), // weapon class, weapon mastery, advanced class combat (docs/game3d/BUILD_BALANCE.md)
+    soulRegalia,
+    mountFusion: { active: fusion.active, share: fusion.share },
+    ascension: getAXEAscensionProfile(),
+    equipmentDebug: equipment,
+    advancedClassDebug: advancedClass,
+  };
+};
+
+const computeDerivedWithVanity = (baseStats, bonuses) => {
+  const preliminary = computeDerivedStats(baseStats, [], bonuses.halo, bonuses.title);
+  const extraSpirit = getAXEVanitySpiritVirtualBonus(preliminary, bonuses.vanityActivation);
+  const withSpirit = extraSpirit > 0
+    ? computeDerivedStats(
+        baseStats,
+        [],
+        {
+          ...bonuses.halo,
+          spirit: Number(bonuses.halo?.spirit || 0) + extraSpirit,
+        },
+        bonuses.title,
+      )
+    : preliminary;
+  // Every percentage bonus (vanity activation, gear %, advanced class, weapon affinity) joins
+  // one pool per stat and is applied once, so systems add to each other instead of compounding.
+  const va = bonuses.vanityActivation || {};
+  const em = bonuses.equipmentMultipliers || {};
+  const cm = bonuses.advancedClassMultipliers || {};
+  const aff = bonuses.weaponAffinity || {};
+  const build = bonuses.build || {};
+  const pool = sumAXEPercentPools(
+    { damagePct: va.damagePct, defensePct: va.defensePct, hpPct: va.hpPct },
+    em,
+    { hpPct: cm.hpPct, defensePct: cm.defensePct },
+    { damagePct: (aff.damagePct || 0) * 100, defensePct: (aff.defensePct || 0) * 100 },
+    // the weapon's class passive and mastery, capped
+    { damagePct: Math.min(AXE_BUILD_CAPS.damagePct, build.damagePct || 0), defensePct: Math.min(AXE_BUILD_CAPS.defensePct, build.defensePct || 0) },
+    // Soul Regalia is a permanent endgame set tier, not the capped weapon-build passive.
+    // Its percentages enter ONCE in the same additive pool, without multiplying itself.
+    { damagePct: bonuses.soulRegalia?.allStatsPct || 0, defensePct: bonuses.soulRegalia?.allStatsPct || 0,
+      hpPct: bonuses.soulRegalia?.allStatsPct || 0, chiPct: bonuses.soulRegalia?.allStatsPct || 0 },
+  );
+  // the stages below only add what is not a percentage of the sheet, and the labels the hub shows
+  const withPool = {
+    ...applyAXEPercentPool(withSpirit, pool),
+    vanityActivation: {
+      spiritPct: Number(va.spiritPct || 0), hpPct: Number(va.hpPct || 0), defensePct: Number(va.defensePct || 0),
+      damagePct: Number(va.damagePct || 0), activePieces: [...(va.activePieces || [])],
+    },
+    soulRegalia: bonuses.soulRegalia,
+    equipmentMultipliers: {
+      damagePct: Number(em.damagePct || 0), defensePct: Number(em.defensePct || 0), hpPct: Number(em.hpPct || 0), chiPct: Number(em.chiPct || 0),
+    },
+  };
+  const withClass = applyAXEAdvancedClassDerivedMultipliers(withPool, { elementalDamagePct: cm.elementalDamagePct });
+  if (withClass?.advancedClass) withClass.advancedClass = { ...withClass.advancedClass, hpPct: Number(cm.hpPct || 0), defensePct: Number(cm.defensePct || 0) };
+  // the weapon in hand's archetype passive: its damage and defense are in the pool, dodge and crit dodge apply here
+  const withAffinity = applyAXEWeaponAffinityToDerived(withClass, aff.archetype ? { ...aff, damagePct: 0, defensePct: 0 } : aff);
+  const withAscension = applyAXEAscensionToDerived(withAffinity, bonuses.ascension); // the Nature: the one true multiplier
+  // crit, avoidance, block, reduction, reflect, life steal, execute: on the sheet, each capped
+  const withBuild = applyAXEBuildEffectsToDerived(withAscension, build);
+  return bonuses.mountFusion ? { ...withBuild, mountFusion: bonuses.mountFusion } : withBuild;
+};
+
+// The hero's level rides on the derived stats (the combat maths reads both sides' levels),
+// and Hit % / Evasion % are shown against an even-level enemy, the way combat rolls them.
+// (computeDerivedStats compared the hero's Accuracy with the hero's own Block.)
+const withCombatLevel = (derived, level) => {
+  if (!derived) return derived;
+  const lv = Math.max(1, Number(level) || 1);
+  const foe = getAXEEnemyStats(lv, 'normal');
+  return {
+    ...derived,
+    level: lv,
+    hitChance: getAXEHitChancePct(derived.attackSuccess, foe.attackBlock),
+    evasionPct: 100 - getAXEHitChancePct(foe.attackSuccess, derived.attackBlock),
+  };
+};
+
+const buildDefault = () => {
+  const b = getBonuses();
+  const derived = computeDerivedWithVanity(DEFAULT_PLAYER_STATS, b);
+  return {
+    level: 1,
+    xp: 0,
+    xpForNext: 5,
+    baseStats: { ...DEFAULT_PLAYER_STATS },
+    unspentPoints: 0,
+    hp: derived.maxHP,
+    maxHP: derived.maxHP,
+    derived: withCombatLevel(derived, 1),
+    powerProgression: createDefaultAXEPowerProgression(),
+  };
+};
+
+const loadState = () => {
+  try {
+    const saved = storage.get();
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Migrate legacy stat keys (hp/spirit/elemental) → new NW keys.
+      const base = migrateBaseStats(parsed.baseStats);
+      const b = getBonuses();
+      const derived = computeDerivedWithVanity(base, b);
+      return {
+        level: parsed.level || 1,
+        xp: parsed.xp || 0,
+        xpForNext: parsed.xpForNext || xpForLevel(parsed.level || 1), // Infinity is saved as null at the cap
+        baseStats: base,
+        unspentPoints: parsed.unspentPoints || 0,
+        maxHP: derived.maxHP,
+        hp: Math.min(derived.maxHP, parsed.hp ?? derived.maxHP),
+        derived: withCombatLevel(derived, parsed.level || 1),
+        powerProgression: normalizeAXEPowerProgression(parsed.powerProgression),
+      };
+    }
+  } catch {}
+  return buildDefault();
+};
+
+// Which character the in-memory state belongs to. On a switch every progression store
+// reloads and notifies this one before this store's own reload runs; without this guard
+// that recompute saved the PREVIOUS character's level, points and stats into the new
+// character's slot (and a brand-new character inherited them).
+const characterIdentity = () => `${getStorageUser()}::${getActiveId()}`;
+let state = loadState();
+let stateOwner = characterIdentity();
+let previewHPBefore = null;
+
+const listeners = new Set();
+const persist = () => {
+  // Never sync a test-boosted HP snapshot to the local or remote Character Vault.
+  if (isAnyPreviewMaxActive()) return;
+  if (characterIdentity() !== stateOwner) return; // never write one character into another's slot
+  storage.set(JSON.stringify({
+    level: state.level,
+    xp: state.xp,
+    xpForNext: state.xpForNext,
+    baseStats: state.baseStats,
+    unspentPoints: state.unspentPoints,
+    hp: state.hp,
+    powerProgression: state.powerProgression,
+  }));
+};
+const emit = () => {
+  state = { ...state, derived: withCombatLevel(state.derived, state.level) };
+  persist();
+  listeners.forEach((fn) => fn(state));
+};
+
+// When the active character changes, reload that character's progression.
+function reloadFromSave() {
+  previewHPBefore = null;
+  state = loadState();
+  stateOwner = characterIdentity();
+  listeners.forEach((fn) => fn(state));
+}
+subscribeCharacterChange(reloadFromSave);
+
+// The same character's save was replaced in storage (the server's copy arrived:
+// character/characterVault.js). Call BEFORE notifyCharacterChange(): the other stores
+// reload first and ping this one, and its recompute would otherwise save the old
+// in-memory level over the new save (the identity guard only catches a switch).
+export function reloadPlayerHUDFromSave() {
+  reloadFromSave();
+}
+
+// Used by GameWorld3D to seed/sync hud snapshots. Persists too.
+export function setPlayerHUD(next) {
+  state = { ...state, ...next };
+  emit();
+}
+
+// Called by GameWorld3D when player gains XP. Handles level-ups and awards points.
+//
+// Rested XP integration:
+//   The caller computes its result (newLevel/newXP/xpForNext/levelsGained) using
+//   only the BASE xp that was earned. This function then pulls a matching
+//   amount of bonus XP out of the rested pool (1:1 with the base gain, so the
+//   player effectively earns 2× while rested) and re-runs the level-up loop
+//   with that bonus on top. Any rested pool left over rolls naturally into
+//   future XP gains — there is nothing to carry across the level-up boundary
+//   beyond the pool itself, which the rested store already preserves.
+export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints = 0, xpGained = 0 }) {
+  // Pull rested bonus matching the BASE gain. The bonus is applied at the
+  // CURRENT level's xpForNext (the gain happened at that level).
+  const restedBonus = xpGained > 0
+    ? consumeRestedForGain(xpGained, state.xpForNext || xpForNext)
+    : 0;
+
+  let level = newLevel;
+  let xp = newXP;
+  let next = xpForNext;
+  let extraLevels = 0;
+
+  if (restedBonus > 0) {
+    xp += restedBonus;
+    let need = xpForLevel(level);
+    next = need;
+    while (xp >= need) {
+      xp -= need;
+      level += 1;
+      extraLevels += 1;
+      need = xpForLevel(level);
+      next = need;
+    }
+  }
+
+  const totalLevels = Math.max(0, levelsGained || 0) + extraLevels;
+  const points = totalLevels * STAT_POINTS_PER_LEVEL + Math.max(0, bonusPoints);
+
+  state = {
+    ...state,
+    level,
+    xp,
+    xpForNext: next,
+    unspentPoints: state.unspentPoints + points,
+  };
+  emit();
+}
+
+// Player allocates 1 point into a stat (called from progression menu).
+// Returns true on success.
+export function allocateStat(statKey) {
+  if (state.unspentPoints <= 0) return false;
+  if (!(statKey in state.baseStats)) return false;
+  const newBase = { ...state.baseStats, [statKey]: state.baseStats[statKey] + 1 };
+  const b = getBonuses();
+  const newDerived = computeDerivedWithVanity(newBase, b);
+  // Heal by the maxHP increase (so investing in vitality feels rewarding)
+  const hpGain = newDerived.maxHP - state.maxHP;
+  state = {
+    ...state,
+    baseStats: newBase,
+    unspentPoints: state.unspentPoints - 1,
+    derived: newDerived,
+    maxHP: newDerived.maxHP,
+    hp: Math.min(newDerived.maxHP, state.hp + Math.max(0, hpGain)),
+  };
+  emit();
+  return true;
+}
+
+// Atomic attribute allocation used by the C Character Hub. The UI may preview
+// several points, but committed state changes only once after validation.
+export function applyAttributeAllocationPlan(plan = {}) {
+  const allowed = new Set(['strength', 'dexterity', 'constitution', 'focus']);
+  const normalized = {};
+  let total = 0;
+
+  for (const [key, raw] of Object.entries(plan || {})) {
+    if (!allowed.has(key)) return { ok: false, reason: 'INVALID_ATTRIBUTE', statKey: key };
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 0) {
+      return { ok: false, reason: 'INVALID_ATTRIBUTE_DELTA', statKey: key };
+    }
+    normalized[key] = value;
+    total += value;
+  }
+
+  if (total <= 0) return { ok: false, reason: 'NO_PENDING_POINTS' };
+  if (total > state.unspentPoints) {
+    return { ok: false, reason: 'NOT_ENOUGH_ATTRIBUTE_POINTS', need: total, have: state.unspentPoints };
+  }
+
+  const newBase = { ...state.baseStats };
+  for (const [key, value] of Object.entries(normalized)) {
+    newBase[key] = Number(newBase[key] || 0) + value;
+  }
+
+  const b = getBonuses();
+  const newDerived = computeDerivedWithVanity(newBase, b);
+  const hpGain = newDerived.maxHP - state.maxHP;
+
+  state = {
+    ...state,
+    baseStats: newBase,
+    unspentPoints: state.unspentPoints - total,
+    derived: newDerived,
+    maxHP: newDerived.maxHP,
+    hp: Math.min(newDerived.maxHP, state.hp + Math.max(0, hpGain)),
+  };
+  emit();
+  return {
+    ok: true,
+    spent: total,
+    plan: { ...normalized },
+    baseStats: { ...newBase },
+    unspentPoints: state.unspentPoints,
+  };
+}
+
+export function respecAttributes({ confirmed = false } = {}) {
+  if (!confirmed) return { ok: false, reason: 'CONFIRMATION_REQUIRED' };
+
+  const current = state.baseStats || {};
+  const refund = Object.keys(DEFAULT_PLAYER_STATS).reduce(
+    (sum, key) => sum + Math.max(0, Number(current[key] || 0) - Number(DEFAULT_PLAYER_STATS[key] || 0)),
+    0,
+  );
+
+  if (refund <= 0) return { ok: false, reason: 'NOTHING_TO_RESPEC' };
+
+  const newBase = { ...DEFAULT_PLAYER_STATS };
+  const b = getBonuses();
+  const newDerived = computeDerivedWithVanity(newBase, b);
+
+  state = {
+    ...state,
+    baseStats: newBase,
+    unspentPoints: Number(state.unspentPoints || 0) + refund,
+    derived: newDerived,
+    maxHP: newDerived.maxHP,
+    hp: Math.min(newDerived.maxHP, state.hp),
+  };
+  emit();
+
+  return {
+    ok: true,
+    refunded: refund,
+    baseStats: { ...newBase },
+    unspentPoints: state.unspentPoints,
+  };
+}
+
+export function refundStat(statKey) {
+  const current = Number(state.baseStats?.[statKey] || 0);
+  if (current <= 1 || !(statKey in state.baseStats)) return false;
+  const newBase = { ...state.baseStats, [statKey]: current - 1 };
+  const b = getBonuses();
+  const newDerived = computeDerivedWithVanity(newBase, b);
+  state = {
+    ...state,
+    baseStats: newBase,
+    unspentPoints: state.unspentPoints + 1,
+    derived: newDerived,
+    maxHP: newDerived.maxHP,
+    hp: Math.min(newDerived.maxHP, state.hp),
+  };
+  emit();
+  return true;
+}
+
+// Real-time recompute: when Halo level changes (or equipped title changes),
+// re-run computeDerivedStats with the new virtual attribute points so the
+// HUD, damage formulas, and UI all reflect the new bonuses instantly.
+// Heals the player by any maxHP increase so leveling up Halo feels rewarding.
+let recomputingBonuses = false;
+// One store's notification can arrive from inside this recompute (a bonus getter
+// touching another store that then notifies back). Re-entering would recurse until
+// the call stack overflows, and the run in flight already finishes with the newest
+// state, so a nested call simply returns.
+function recomputeFromBonuses() {
+  if (recomputingBonuses) return;
+  recomputingBonuses = true;
+  try {
+    recomputeFromBonusesNow();
+  } finally {
+    recomputingBonuses = false;
+  }
+}
+
+function recomputeFromBonusesNow() {
+  if (characterIdentity() !== stateOwner) {
+    previewHPBefore = null; // mid-switch: load the new character's own save (no write)
+    state = loadState();
+    stateOwner = characterIdentity();
+    listeners.forEach((fn) => fn(state));
+    return;
+  }
+  const boosted = isAnyPreviewMaxActive();
+  if (boosted && previewHPBefore === null) previewHPBefore = state.hp;
+  if (!boosted && previewHPBefore !== null) {
+    state = { ...state, hp: previewHPBefore };
+    previewHPBefore = null;
+  }
+  const b = getBonuses();
+  const newDerived = computeDerivedWithVanity(state.baseStats, b);
+  const hpGain = newDerived.maxHP - state.maxHP;
+  state = {
+    ...state,
+    derived: newDerived,
+    maxHP: newDerived.maxHP,
+    hp: Math.min(newDerived.maxHP, state.hp + Math.max(0, hpGain)),
+  };
+  emit();
+}
+subscribeHalo(recomputeFromBonuses);
+subscribeAura(recomputeFromBonuses);
+subscribeWings(recomputeFromBonuses);
+subscribeTitles(recomputeFromBonuses);
+subscribeAXECores(recomputeFromBonuses);
+subscribeAXECostumes(recomputeFromBonuses);
+subscribeAXECapes(recomputeFromBonuses);
+subscribeAXEElixirs(recomputeFromBonuses);
+subscribeAXEPets(recomputeFromBonuses);
+subscribeAXEMounts(recomputeFromBonuses);
+subscribeAXEVanity(recomputeFromBonuses);
+subscribeAXEEquipmentInventory(recomputeFromBonuses);
+subscribeEnchantments(recomputeFromBonuses);
+subscribeAXEItemAdvancement(recomputeFromBonuses);
+subscribeAXESockets(recomputeFromBonuses);
+subscribeAXEAura(recomputeFromBonuses);
+subscribeAXEEquipmentRunes(recomputeFromBonuses);
+subscribeAdvancedClass(recomputeFromBonuses);
+subscribeAXEWeaponAffinity(recomputeFromBonuses);
+subscribeAXEAscension(recomputeFromBonuses);
+subscribeAXESoulRegalia(recomputeFromBonuses);
+subscribeMastery(recomputeFromBonuses);
+subscribeWeaponBuffs(recomputeFromBonuses);
+subscribeMasteryTree(recomputeFromBonuses);
+
+// World pushes live HP (e.g. when player takes damage in the future).
+export function setHP(hp) {
+  state = { ...state, hp: Math.max(0, Math.min(state.maxHP, hp)) };
+  emit();
+}
+
+// Called once per frame from the game loop. Regenerates HP based on derived hpRegen.
+// Skipped if dead or at full HP. Internal accumulator avoids re-rendering every frame.
+let regenAccumulator = 0;
+export function tickRegen(delta) {
+  if (!state.derived?.hpRegen) return;
+  if (state.hp <= 0 || state.hp >= state.maxHP) return;
+  regenAccumulator += state.derived.hpRegen * delta;
+  if (regenAccumulator >= 1) {
+    const gain = Math.floor(regenAccumulator);
+    regenAccumulator -= gain;
+    state = { ...state, hp: Math.min(state.maxHP, state.hp + gain) };
+    emit();
+  }
+}
+
+export function getPlayerHUD() {
+  return state;
+}
+
+export function subscribePlayerHUD(fn) {
+  listeners.add(fn);
+  fn(state);
+  return () => listeners.delete(fn);
+}
+
+// AXE Prompt 011 — canonical stat aliases + post-level power progression.
+export function allocateAXEStat(statName) {
+  const key = AXE_PRIMARY_STATS[statName] || statName;
+  return allocateStat(key);
+}
+
+export function setAXEPowerProgression(patch = {}) {
+  state = {
+    ...state,
+    powerProgression: normalizeAXEPowerProgression({
+      ...(state.powerProgression || createDefaultAXEPowerProgression()),
+      ...patch,
+    }),
+  };
+  emit();
+  return state.powerProgression;
+}
+
+export function getAXEPowerProgression() {
+  return normalizeAXEPowerProgression(state.powerProgression);
+}
+
+export function getAXEPrimaryStats() {
+  const base = migrateBaseStats(state.baseStats);
+  return {
+    Strength: base.strength,
+    Agility: base.dexterity,
+    Vitality: base.constitution,
+    Spirit: base.focus,
+  };
+}
