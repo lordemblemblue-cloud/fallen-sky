@@ -1,0 +1,243 @@
+/* Game 3D character gateway. The wallpaper is UI art, not the playable world.
+   GameWorld3D stays mounted underneath and is only revealed after Enter World. */
+.axe-login--arcane {
+  background:#080f29;
+  pointer-events:auto;
+  color:#f8ecd9;
+  font-family:Georgia,"Times New Roman",serif;
+}
+.axe-login--arcane .axe-login-scene {
+  z-index:0;inset:0;
+  background-image:
+    linear-gradient(180deg,rgba(5,8,27,.18) 0%,rgba(8,11,34,.05) 49%,rgba(5,10,31,.92) 100%),
+    url("https://media.base44.com/images/public/6876751a602125f45f1861b9/d7ac89b95_a_widescreen_cinematic_game_entry_screen_clean_p_1.png");
+  background-size:cover;background-position:center;
+  transition:filter .5s ease,opacity .5s ease;
+}
+.axe-login--arcane .axe-login-scrim {
+  background:linear-gradient(180deg,rgba(2,6,25,.14),transparent 40%,rgba(5,8,25,.83) 85%,#070d27 100%);
+}
+.axe-login--arcane .axe-login-scene::after {
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse 49% 65% at 50% 43%,transparent 27%,rgba(2,8,29,.32) 100%);
+  pointer-events:none;opacity:1;
+}
+.axe-login--arcane .axe-login-glyph {
+  position:absolute;z-index:1;top:48%;left:50%;
+  width:min(78vh,75vw);aspect-ratio:1;border:1px solid rgba(240,197,122,.23);
+  border-radius:50%;box-shadow:0 0 65px rgba(123,81,234,.08),inset 0 0 40px rgba(235,184,108,.06);
+  transform:translate(-50%,-50%);
+  animation:axe-arcane-rotate 75s linear infinite;pointer-events:none;
+}
+.axe-login--arcane .axe-login-glyph::before,.axe-login--arcane .axe-login-glyph::after {
+  content:"";position:absolute;inset:7%;border:1px dashed rgba(240,193,125,.27);border-radius:50%;
+}
+.axe-login--arcane .axe-login-glyph::after {inset:20%;border-style:solid;opacity:.6}
+@keyframes axe-arcane-rotate {
+  to{transform:translate(-50%,-50%) rotate(360deg)}
+}
+.axe-login--arcane[data-motion="off"] .axe-login-glyph{animation:none}
+.axe-login--arcane[data-entry-step="start"] .axe-login-glyph{opacity:.13}
+.axe-login--arcane[data-entry-step="select"] .axe-login-scene {
+  filter:brightness(.72);
+}
+.axe-login--arcane[data-entry-step="select"] .axe-login-scrim {
+  background:linear-gradient(180deg,rgba(5,9,28,.19),transparent 35%,rgba(5,9,28,.71) 84%,#070d27 100%);
+}
+.axe-login--arcane .axe-login-header,.axe-login--arcane .axe-login-back,
+.axe-login--arcane .axe-login-world-card,.axe-login--arcane .axe-login-footer {
+  display:none;
+}
+.axe-login--arcane .axe-login-bottom-action {
+  position:absolute;z-index:15;left:50%;right:auto;bottom:5.7vh;
+  transform:translateX(-50%);width:min(660px,75vw);text-align:center;
+  pointer-events:auto;
+}
+.axe-login--arcane .axe-login-play {
+  width:100%;min-height:76px;padding:14px 25px;
+  background:linear-gradient(180deg,rgba(20,29,67,.97),rgba(10,17,42,.98));
+  border:1px solid #f5d29c;
+  border-radius:14px;clip-path:none;box-shadow:
+    inset 0 1px 0 #fff4cd88,0 0 0 5px #8b659238,0 0 37px #d2a16c66,0 14px 32px #000a;
+  color:#fff3dc;font:400 clamp(20px,2.4vw,34px)/1.2 Georgia,serif;
+  letter-spacing:.045em;text-shadow:0 1px 6px #000;
+  transition:transform .2s ease,box-shadow .2s ease,background .2s ease;
+}
+.axe-login--arcane .axe-login-play:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:inset 0 1px 0 #fff4cd88,0 0 0 5px #8b659238,0 0 55px #e6b47a88,0 18px 35px #000b;
+}
+.axe-login--arcane .axe-login-play span{color:#edc583;padding-right:12px}
+.axe-login--arcane .axe-login-entrance-settings {
+  position:absolute;z-index:20;right:3.4vw;bottom:6vh;width:70px;height:70px;
+  display:grid;place-items:center;color:#f5dfbd;pointer-events:auto;
+  border:1px solid rgba(235,195,135,.66);border-radius:12px;
+  background:linear-gradient(150deg,#25305a,#0b1636);box-shadow:0 10px 29px #0009;
+}
+.axe-login--arcane .axe-login-entrance-settings:hover{border-color:#fff2cf}
+.axe-login--arcane .axe-login-arcane-settings {
+  position:absolute;z-index:30;right:3.4vw;top:auto;bottom:calc(6vh + 83px);
+  width:min(340px,calc(100vw - 25px));padding:21px;
+  background:rgba(11,19,47,.97);border:1px solid #bf9468;border-radius:11px;
+  box-shadow:0 18px 60px #000a;pointer-events:auto;
+}
+.axe-login--arcane .axe-login-arcane-settings .axe-login-setting-field {
+  margin:20px 0;display:flex;align-items:center;justify-content:space-between;gap:18px;
+  color:#f1e3cd;font:14px system-ui,sans-serif;
+}
+.axe-login--arcane .axe-login-arcane-settings input{accent-color:#d7af78}
+.axe-login--arcane .axe-login-arcane-settings input[type="range"]{width:145px}
+.axe-login--arcane .axe-login-arcane-settings p{color:#afbbd7;font:12px/1.5 system-ui,sans-serif}
+.axe-login--arcane .axe-login-page-title {
+  z-index:8;position:absolute;top:5%;left:50%;right:auto;
+  width:auto;margin:0;transform:translateX(-50%);
+  font:400 clamp(27px,3vw,45px)/1.2 Georgia,serif;letter-spacing:.09em;
+  white-space:nowrap;text-align:center;text-shadow:0 2px 14px #020716;
+}
+.axe-login--arcane .axe-login-page-title::after {
+  content:"✧";display:block;margin-top:10px;color:#e6be86;font-size:16px;
+}
+.axe-login--arcane .axe-login-stats-panel,
+.axe-login--arcane .axe-login-character-panel {
+  position:absolute;z-index:10;top:19%;bottom:19%;left:3.1%;right:auto;
+  width:24%;max-width:none;max-height:none;overflow-y:auto;overflow-x:hidden;
+  padding:clamp(15px,1.8vw,29px);background:linear-gradient(135deg,rgba(14,22,51,.95),rgba(13,22,54,.89));
+  border:1px solid rgba(231,187,128,.68);border-radius:12px;
+  box-shadow:inset 0 1px 0 #fff5d025,0 15px 45px #0009;
+  scrollbar-width:thin;scrollbar-color:#9e805d transparent;backdrop-filter:blur(13px);
+}
+.axe-login--arcane .axe-login-character-panel {left:auto;right:3.1%;width:25%}
+.axe-login--arcane .axe-login-panel-kicker {
+  color:#e9ca99;font:600 12px/1.6 system-ui,sans-serif;letter-spacing:.22em;
+  border-bottom:1px solid rgba(233,195,141,.31);padding-bottom:18px;margin-bottom:17px;
+}
+.axe-login--arcane .axe-login-stats-panel h2 {
+  font:400 clamp(21px,1.9vw,32px) Georgia,serif;margin:12px 0 3px;
+}
+.axe-login--arcane .axe-login-stats-level {margin:0 0 22px;color:#c8cce1;font:13px system-ui,sans-serif}
+.axe-login--arcane .axe-login-stats-panel h3 {
+  margin:25px 0 9px;padding-top:12px;border-top:1px solid #af8e694c;
+  color:#e9ca99;font:600 12px system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;
+}
+.axe-login--arcane .axe-login-character-details {
+  display:block;margin:0;font:13px/1.7 system-ui,sans-serif;
+}
+.axe-login--arcane .axe-login-character-details > div {
+  display:flex;justify-content:space-between;align-items:baseline;gap:13px;
+  padding:5px 0;border-bottom:1px solid rgba(176,195,224,.09);
+}
+.axe-login--arcane .axe-login-character-details dt {color:#c2c8dd}
+.axe-login--arcane .axe-login-character-details dd {
+  color:#f7e1bc;text-align:right;margin:0;overflow-wrap:anywhere;
+}
+.axe-login--arcane .axe-login-roster {display:flex;flex-direction:column;gap:10px;}
+.axe-login--arcane .axe-login-roster-entry {
+  min-height:66px;padding:10px;border-radius:7px;
+  background:rgba(31,42,82,.49);border:1px solid rgba(204,207,232,.18);
+  transition:border-color .15s,background .15s;
+}
+.axe-login--arcane .axe-login-roster-entry.is-selected {
+  border:1px solid #e5bf82;background:linear-gradient(135deg,#4c436bce,#293d6bd4);
+  box-shadow:inset 0 0 0 1px #ad8a7199,0 0 16px #dfb07733;
+}
+.axe-login--arcane .axe-login-roster-entry:hover{border-color:#e8c38baa}
+.axe-login--arcane .axe-login-create {
+  min-height:55px;margin-top:12px;border:1px solid rgba(211,187,148,.48);
+  border-radius:8px;background:#283050bb;color:#fff0d3;
+}
+.axe-login--arcane .axe-login-avatar-stage {
+  display:block;z-index:7;position:absolute;top:13%;bottom:17%;
+  left:29%;right:30%;width:auto;height:auto;pointer-events:auto;
+  border-radius:12px;filter:drop-shadow(0 20px 33px #0006);
+}
+.axe-login--arcane .axe-login-avatar-stage .creator-canvas,
+.axe-login--arcane .axe-login-avatar-stage .genesis-preview-stage,
+.axe-login--arcane .axe-login-avatar-stage .genesis-canvas {
+  display:block;width:100%;height:100%;min-height:0;overflow:visible;
+  background:transparent;
+}
+.axe-login--arcane .axe-login-avatar-stage .creator-canvas-mount {width:100%;height:100%}
+.axe-login--arcane .axe-login-avatar-stage .creator-stage-gaits {display:none}
+.axe-login--arcane .axe-login-no-character {
+  display:grid;place-items:center;width:100%;height:100%;
+  font:120px Georgia,serif;color:#f4d4a17a;text-shadow:0 0 60px #ba9be8bb;
+}
+.axe-login--arcane .axe-login-faction-panel {
+  display:block;z-index:12;left:50%;right:auto;top:17%;bottom:17%;
+  width:min(500px,78vw);max-width:none;max-height:none;
+  transform:translateX(-50%);overflow-y:auto;
+}
+.axe-login--arcane .axe-login-faction-panel .axe-login-create {width:100%}
+.axe-login--arcane .axe-login-creator-inworld {
+  z-index:50;position:fixed;inset:0;overflow:hidden;pointer-events:auto;
+  background:rgba(3,7,25,.72);backdrop-filter:blur(3px);
+}
+.axe-login--arcane .axe-login-creator-inworld .creator-shell.creator-embedded {
+  position:fixed;inset:0;width:100%;height:100vh;min-height:100vh;
+  background:rgba(9,13,32,.15);
+}
+.axe-login--arcane .axe-login-creator-inworld .creator-panel {
+  left:clamp(65px,6vw,100px);right:auto;top:0;bottom:0;
+  height:100vh;max-height:none;width:min(430px,33vw);
+  border-radius:0;overflow:hidden;
+  background:linear-gradient(160deg,rgba(18,26,56,.98),rgba(11,18,44,.95));
+}
+.axe-login--arcane .axe-login-creator-inworld .creator-stage {
+  left:35%;right:0;top:0;bottom:0;height:100vh;
+}
+.axe-login--arcane .axe-login-creator-inworld .creator-rail {left:8px;top:13%}
+.axe-login--arcane .axe-login-creator-inworld .creator-topline{padding-left:clamp(20px,4vw,70px)}
+.axe-login--arcane[data-entry-step="creator"] .axe-login-scene {filter:brightness(.57) blur(2px)}
+.axe-login--arcane[data-entry-step="creator"] .axe-login-scrim{opacity:1}
+.axe-login--arcane .axe-login-error {background:rgba(42,14,32,.9);color:#ffb8b4}
+.axe-login--arcane .axe-login-live-status {
+  z-index:21;left:50%;right:auto;bottom:0;transform:translateX(-50%);
+}
+.axe-login--arcane.axe-login--entering .axe-login-scene {
+  opacity:0;transition:opacity .65s ease;
+}
+.axe-login--arcane.axe-login--entering .axe-login-avatar-stage,
+.axe-login--arcane.axe-login--entering .axe-login-stats-panel,
+.axe-login--arcane.axe-login--entering .axe-login-faction-panel {
+  opacity:0;pointer-events:none;transition:opacity .65s ease;
+}
+@media(max-width:950px){
+  .axe-login--arcane .axe-login-stats-panel {left:2%;width:29%}
+  .axe-login--arcane .axe-login-character-panel {right:2%;width:30%}
+  .axe-login--arcane .axe-login-avatar-stage {left:31%;right:32%}
+  .axe-login--arcane .axe-login-creator-inworld .creator-panel {width:min(430px,48vw)}
+  .axe-login--arcane .axe-login-creator-inworld .creator-stage {left:42%}
+}
+@media(max-width:680px){
+  .axe-login--arcane{overflow-y:auto}
+  .axe-login--arcane .axe-login-page-title{top:25px;font-size:25px}
+  .axe-login--arcane .axe-login-stats-panel {
+    top:34%;bottom:auto;left:3%;width:44%;height:46%;padding:12px;
+  }
+  .axe-login--arcane .axe-login-character-panel {
+    top:34%;bottom:auto;right:3%;width:44%;height:46%;padding:12px;
+  }
+  .axe-login--arcane .axe-login-avatar-stage {
+    top:10%;bottom:65%;left:28%;right:28%;
+  }
+  .axe-login--arcane .axe-login-bottom-action{
+    position:fixed;bottom:3vh;width:75vw;
+  }
+  .axe-login--arcane .axe-login-play {min-height:60px;font-size:19px}
+  .axe-login--arcane .axe-login-entrance-settings{width:52px;height:52px;right:3vw;bottom:3vh}
+  .axe-login--arcane .axe-login-arcane-settings {right:3vw;bottom:calc(3vh + 62px)}
+  .axe-login--arcane .axe-login-faction-panel {top:17%;bottom:17%;left:5%;transform:none;width:90%}
+  .axe-login--arcane .axe-login-creator-inworld .creator-panel {
+    left:8px;right:8px;top:auto;bottom:0;height:55vh;width:auto;
+    max-height:55vh;border-radius:10px 10px 0 0;
+  }
+  .axe-login--arcane .axe-login-creator-inworld .creator-stage{
+    left:0;right:0;top:0;bottom:45%;height:auto;
+  }
+  .axe-login--arcane .axe-login-creator-inworld .creator-rail{top:10%;left:8px}
+}
+@media(prefers-reduced-motion:reduce){
+  .axe-login--arcane .axe-login-glyph{animation:none}
+  .axe-login--arcane .axe-login-scene,
+  .axe-login--arcane.axe-login--entering .axe-login-scene {transition:none}
+}
