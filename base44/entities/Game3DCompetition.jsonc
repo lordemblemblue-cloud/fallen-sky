@@ -1,0 +1,93 @@
+{
+  "name": "Game3DCompetition",
+  "type": "object",
+  "properties": {
+    "challenger_id": {
+      "type": "string"
+    },
+    "opponent_id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "race",
+        "arm_wrestle",
+        "kill_contest",
+        "checkpoint_sprint",
+        "survival",
+        "treasure_rush"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "awaiting_setup",
+        "declined",
+        "cancelled",
+        "expired",
+        "finished"
+      ]
+    },
+    "arena_id": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "responded_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "winner_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "challenger_id",
+    "opponent_id",
+    "kind",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.challenger_id": "{{user.id}}"
+        },
+        {
+          "data.opponent_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
