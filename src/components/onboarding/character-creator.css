@@ -1,0 +1,86 @@
+/* Appearance editor controls inside the creator panel */
+.cc-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cc-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(231, 240, 248, 0.75);
+}
+
+.cc-row-label {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 10px;
+  color: rgba(231, 240, 248, 0.55);
+}
+
+.cc-row input[type='range'] {
+  flex: 1;
+  max-width: 160px;
+  accent-color: #7db8ff;
+}
+
+.cc-row select,
+.cc-row input[type='color'] {
+  min-width: 120px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid rgba(148, 197, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-size: 12px;
+}
+
+.cc-row input[type='color'] {
+  padding: 2px;
+  height: 32px;
+  cursor: pointer;
+}
+
+.cc-toggle {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.cc-chip {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 197, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(231, 240, 248, 0.75);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.cc-chip:hover {
+  background: rgba(148, 197, 255, 0.12);
+  color: #ffffff;
+}
+
+.cc-chip.is-active {
+  border-color: rgba(160, 214, 255, 0.6);
+  background: rgba(148, 197, 255, 0.16);
+  color: #ffffff;
+}
+
+.cc-expression-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cc-hint {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: rgba(231, 240, 248, 0.42);
+}

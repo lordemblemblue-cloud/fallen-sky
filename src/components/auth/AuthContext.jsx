@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { setStorageUser } from '@/components/game3d/characterStorage';
-import { useOptionalAuth as useRootAuth } from '@/lib/AuthContext';
+import { useOptionalAuth as useRootAuth } from '@/lib/rootAuthOptional';
 import { POST_GENESIS_DESTINATION } from '@/config/onboardingEntry.mjs';
 
 const AuthContext = createContext(null);

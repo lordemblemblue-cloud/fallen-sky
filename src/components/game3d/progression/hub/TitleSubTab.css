@@ -47,7 +47,7 @@
 .axe-title-hero-emblem { width:60px; height:60px; flex:0 0 60px; }
 .axe-title-hero-copy { flex:1 1 160px; min-width:0; overflow-wrap:anywhere; }
 .axe-title-hero-copy .text-xl { font-size:clamp(16px,1.5vw,22px); }
-.axe-title-hero-copy .tracking-\\[0\\.3em\\] { letter-spacing:.14em; }
+.axe-title-hero-copy [class*="tracking-"] { letter-spacing:.14em; }
 .axe-title-hero-controls {
   flex:1 1 100%; display:flex; flex-direction:row; flex-wrap:wrap;
   gap:7px; align-items:stretch; min-width:0;
@@ -64,7 +64,7 @@
 .axe-title-list-heading { padding:0 0 7px; }
 .axe-title-option { display:block; width:100%; min-width:0; margin:0 0 7px; padding:10px; }
 .axe-title-option .truncate { overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
-.axe-title-option .tracking-\\[0\\.2em\\] { letter-spacing:.09em; overflow-wrap:anywhere; }
+.axe-title-option [class*="tracking-"] { letter-spacing:.09em; overflow-wrap:anywhere; }
 .axe-title-option[aria-pressed="true"] {
   border-color:rgba(245,217,161,.86)!important;
   background:linear-gradient(110deg,rgba(106,80,43,.37),rgba(45,78,96,.32))!important;
