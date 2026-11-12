@@ -1,0 +1,93 @@
+/* Combat / Quest 60.7–61.0: local, keyboard-accessible Story Thread discovery.
+   Remains scoped to the existing Echo Chronicle purple/gold Services theme. */
+.axe-echo-thread-explorer{
+ display:flex;flex-direction:column;gap:9px;padding:10px;
+ border:1px solid #cda6db9e;border-radius:9px;
+ background:linear-gradient(130deg,#371e5ba8,#1e183dd5);
+}
+.axe-echo-thread-search{
+ display:flex;align-items:center;gap:7px;min-height:35px;
+ border:1px solid #bf95d4;border-radius:7px;
+ padding:2px 8px;color:#ffdfa9;background:#1a1038e5;
+}
+.axe-echo-thread-search:focus-within{
+ border-color:#ffe4ba;box-shadow:0 0 0 2px #f5d6ff3b;
+}
+.axe-echo-thread-search>svg{flex:none}
+.axe-echo-thread-search input{
+ display:block;min-width:0;flex:1;
+ padding:7px 2px;border:0;outline:none;
+ color:#fcebdc;background:transparent;
+ font:12px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-search input::placeholder{color:#ceb6d5}
+.axe-echo-thread-search button{
+ display:grid;place-items:center;
+ border:1px solid #bd9dd5;border-radius:5px;
+ padding:4px;color:#fce5be;background:#4c276b;
+}
+.axe-echo-thread-filter-options{
+ display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+}
+.axe-echo-thread-filter-options button{
+ display:inline-flex;align-items:center;gap:6px;
+ padding:6px 8px;border:1px solid #b38bc78d;
+ border-radius:6px;color:#ead8e8;
+ background:linear-gradient(110deg,#4a2862,#2c1a48);
+ font:11px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-thread-filter-options button span{
+ padding:1px 5px;border-radius:8px;
+ color:#f9e8d7;background:#a86bc262;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-filter-options button[aria-pressed=true],
+.axe-echo-thread-filter-options button:hover,
+.axe-echo-thread-filter-options button:focus-visible{
+ border-color:#ffe3b4;color:#fff0cd;
+ background:linear-gradient(110deg,#85459a,#4f2a73);
+ box-shadow:0 0 9px #d197ef76;
+}
+.axe-echo-thread-sort-row{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:8px;flex-wrap:wrap;
+}
+.axe-echo-thread-sort-row label{
+ display:inline-flex;align-items:center;gap:7px;
+ color:#eed9e6;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-sort-row select{
+ max-width:160px;padding:6px 7px;
+ border:1px solid #c29dd8;border-radius:6px;
+ color:#ffe4b8;background:#342055;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-sort-row>span{
+ color:#d9c7e1;font:10px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-thread-pager{
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+ padding:7px 5px;border:1px solid #b18ec880;border-radius:8px;
+ background:#302049a6;
+}
+.axe-echo-thread-pager button{
+ display:inline-flex;align-items:center;gap:5px;
+ padding:6px 8px;border:1px solid #d4b0d7;border-radius:6px;
+ color:#ffe3b2;background:#603278;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-pager button:hover:not(:disabled),
+.axe-echo-thread-pager button:focus-visible:not(:disabled){
+ border-color:#ffe4b8;background:#81469b;
+}
+.axe-echo-thread-pager button:disabled{opacity:.42;cursor:default}
+.axe-echo-thread-pager span{
+ text-align:center;color:#e2d1e8;font:10px "Segoe UI",sans-serif;
+}
+@media(max-width:720px){
+ .axe-echo-thread-explorer{padding:7px}
+ .axe-echo-thread-filter-options button{font-size:10px;padding:5px}
+ .axe-echo-thread-sort-row select{max-width:125px}
+ .axe-echo-thread-pager{padding:5px 3px}
+ .axe-echo-thread-pager button{font-size:10px;padding:5px}
+}
