@@ -1,0 +1,168 @@
+/* Combat / Quest 53.9–54.4. A real private Book of Skies inside the
+   established translucent gold/violet Game 3D Services Chronicle. */
+.axe-echo-atlas {
+ display:flex;flex-direction:column;gap:7px;
+ padding:10px 0 8px;margin-top:6px;
+ border-top:1px solid #e7c19b67;
+}
+.axe-echo-atlas-heading{
+ display:flex;align-items:center;gap:9px;color:#ffe1ae;
+}
+.axe-echo-atlas-heading>svg{
+ flex:none;color:#f5cd9a;filter:drop-shadow(0 0 6px #d5a2e9);
+}
+.axe-echo-atlas-heading>div{
+ flex:1;min-width:0;
+}
+.axe-echo-atlas-heading h3{
+ color:#ffe0b4;font:normal 16px Georgia,serif;margin:0 0 2px;
+}
+.axe-echo-atlas-heading p{
+ color:#dcc8e7;font:10px/1.4 "Segoe UI",sans-serif;margin:0;
+}
+.axe-echo-atlas-heading small{
+ display:flex;align-items:center;gap:5px;
+ color:#d0b6d6;font:10px "Segoe UI",sans-serif;white-space:nowrap;
+}
+.axe-echo-atlas-months {
+ display:flex;align-items:stretch;gap:7px;
+ min-height:62px;padding:2px 1px 7px;
+ overflow-x:auto;overflow-y:hidden;
+ scrollbar-width:thin;scrollbar-color:#dda7ed9e transparent;
+}
+.axe-echo-atlas-month {
+ display:flex;gap:7px;align-items:center;text-align:left;flex:none;
+ min-width:205px;max-width:280px;min-height:61px;
+ padding:8px 10px;border:1px solid #c59ed5a3;border-radius:8px;
+ background:linear-gradient(120deg,#4c246bb8,#201947e3 80%);
+ color:#f8e7d9;
+ box-shadow:inset 0 1px #f2d2ff24,0 2px 8px #08041875;
+}
+.axe-echo-atlas-month:hover,
+.axe-echo-atlas-month:focus-visible,
+.axe-echo-atlas-month[aria-pressed=true]{
+ border-color:#f4d39c;background:linear-gradient(130deg,#7a398f,#432460);
+ box-shadow:inset 0 0 9px #ffd9ed22,0 0 14px #cb7af37b;
+}
+.axe-echo-atlas-month-icon {
+ display:grid;place-items:center;flex:none;width:28px;height:28px;
+ color:#f9d3ab;background:#67337aa1;border:1px solid #daabdd;
+ border-radius:50%;
+}
+.axe-echo-atlas-month-copy {
+ display:flex;flex-direction:column;align-items:flex-start;
+ flex:1;min-width:0;gap:3px;
+}
+.axe-echo-atlas-month-copy strong {
+ color:#ffe9bd;font:normal 13px Georgia,serif;
+ display:block;max-width:210px;white-space:nowrap;
+ overflow:hidden;text-overflow:ellipsis;
+}
+.axe-echo-atlas-month-copy small {
+ color:#e2cfe5;font:10px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-atlas-month-copy em {
+ color:#ead1ec;font:italic 10px/1.3 Georgia,serif;
+ overflow:hidden;display:-webkit-box;
+ -webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+.axe-echo-atlas-unavailable {
+ color:#f7d09b!important;
+}
+.axe-echo-atlas-month>svg {flex:none;color:#e9d2e5}
+.axe-echo-atlas-empty {
+ margin:8px 0;color:#d9c2e5;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-storyboard {
+ display:flex;flex-direction:column;gap:8px;
+ border-top:1px solid #bba0dc79;
+ padding:12px 6px 7px;
+ color:#f0dcee;
+}
+.axe-echo-storyboard>header {
+ display:flex;gap:8px;align-items:center;
+ color:#f7d9a9;
+}
+.axe-echo-storyboard>header>svg {flex:none}
+.axe-echo-storyboard>header h4 {
+ margin:0 0 3px;color:#ffe6ae;font:normal 16px Georgia,serif;
+}
+.axe-echo-storyboard>header small{
+ color:#d5c4df;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-storyboard-grid {
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+ gap:8px;
+}
+.axe-echo-storyboard-card{
+ min-width:0;display:flex;flex-direction:column;gap:4px;
+ text-align:left;border:1px solid #bb94cd9a;border-radius:8px;
+ padding:6px;background:linear-gradient(145deg,#502562e0,#22163fe0);
+ color:#f4dfef;
+ box-shadow:inset 0 1px #f4deee27;
+}
+.axe-echo-storyboard-card:hover,
+.axe-echo-storyboard-card:focus-visible {
+ border-color:#f7d9ab;background:#733d88;
+ box-shadow:0 0 12px #bb74e9ac;
+}
+.axe-echo-storyboard-image {
+ width:100%;height:72px;min-height:72px;
+ border-radius:5px;display:grid;place-items:center;
+ color:#ebd0a9;overflow:hidden;
+ border:1px solid #caa0ca82;
+ background:radial-gradient(ellipse at center,#9c55b657,#261642);
+}
+.axe-echo-storyboard-image img{
+ display:block;width:100%;height:100%;object-fit:cover;
+}
+.axe-echo-storyboard-card strong{
+ font:12px/1.3 Georgia,serif;color:#ffe1b9;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.axe-echo-storyboard-card small {
+ display:flex;align-items:center;gap:4px;color:#d4bfdf;
+ font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-storyboard-card small svg {flex:none}
+.axe-echo-storyboard-card em {
+ display:flex;align-items:center;gap:3px;color:#f7da9e;
+ font:italic 10px Georgia,serif;
+}
+.axe-echo-storyboard-empty {
+ grid-column:1/-1;margin:0;padding:14px;
+ text-align:center;font:12px/1.5 "Segoe UI",sans-serif;
+ color:#dbc7df;border:1px dashed #caade5a1;border-radius:8px;
+}
+.axe-echo-storyboard-pager {
+ display:flex;justify-content:space-between;align-items:center;gap:8px;
+}
+.axe-echo-storyboard-pager span {
+ font:10px "Segoe UI",sans-serif;color:#d9cbe2;
+}
+.axe-echo-storyboard-pager button {
+ display:flex;gap:5px;align-items:center;
+ border:1px solid #ceb4e0;border-radius:6px;padding:6px 8px;
+ color:#ffe2bc;background:#4d286a;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-storyboard-pager button:hover:not(:disabled){
+ background:#7e4792;border-color:#ffe3b1;
+}
+.axe-echo-storyboard-pager button:disabled {opacity:.38;cursor:default}
+.axe-echo-storyboard footer {
+ display:flex;gap:6px;align-items:start;
+ color:#d6c2dc;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-storyboard footer svg {flex:none;color:#ecc59e}
+@media(max-width:900px){
+ .axe-echo-atlas-month {min-width:175px;max-width:240px}
+ .axe-echo-storyboard-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:650px){
+ .axe-echo-atlas-heading p,.axe-echo-atlas-heading small{display:none}
+ .axe-echo-atlas-month {min-width:154px;max-width:190px;padding:6px}
+ .axe-echo-storyboard-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ .axe-echo-storyboard-image {height:58px;min-height:58px}
+ .axe-echo-storyboard-card strong {font-size:11px}
+ .axe-echo-storyboard-card small {font-size:9px}
+}

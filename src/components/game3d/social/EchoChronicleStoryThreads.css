@@ -1,0 +1,82 @@
+/* Combat / Quest 59.7–60.0: original saved-story threads.
+   Scoped violet/gold layout within the existing Game 3D Echo Chronicle. */
+.axe-echo-thread-list{display:flex;flex-direction:column;gap:9px;
+ max-height:375px;overflow-y:auto;padding:2px 5px 5px 1px;
+ scrollbar-width:thin;scrollbar-color:#c391d2 transparent}
+.axe-echo-thread-intro{margin:0;color:#e4cde8;
+ font:11px/1.45 "Segoe UI",sans-serif}
+.axe-echo-thread{display:flex;flex-direction:column;gap:8px;
+ padding:10px;border:1px solid #cfa5e18f;border-radius:9px;
+ background:linear-gradient(130deg,#4f286fb5,#28183fe5);
+ box-shadow:inset 0 1px #f3d8ed25}
+.axe-echo-thread>header{display:flex;align-items:center;gap:8px;
+ color:#ffe2b1}
+.axe-echo-thread>header svg{flex:none}
+.axe-echo-thread>header strong{flex:1;min-width:0;
+ font:normal 14px/1.3 Georgia,serif;overflow-wrap:anywhere}
+.axe-echo-thread>header small{color:#dcc7e4;
+ font:10px "Segoe UI",sans-serif;white-space:nowrap}
+.axe-echo-thread-nodes{list-style:none;display:flex;
+ flex-direction:column;gap:6px;margin:0;padding:0 0 0 8px;
+ border-left:2px solid #c89ce1a6}
+.axe-echo-thread-nodes li{display:flex;align-items:center;gap:8px;
+ padding:6px 7px;border:1px solid #be93d184;border-radius:7px;
+ background:#1b1239c4;color:#f4dcee}
+.axe-echo-thread-step{display:grid;place-items:center;
+ width:21px;height:21px;flex:none;border:1px solid #f0cdaa;
+ border-radius:50%;color:#ffdda7;background:#683a86;
+ font:11px Georgia,serif}
+.axe-echo-thread-node{display:flex;flex-direction:column;gap:3px;
+ min-width:0;flex:1}
+.axe-echo-thread-node strong{color:#ffe4bf;overflow-wrap:anywhere;
+ font:12px/1.3 Georgia,serif}
+.axe-echo-thread-node small{color:#d8bfdc;
+ font:10px/1.4 "Segoe UI",sans-serif}
+.axe-echo-thread-nodes button,
+.axe-echo-thread-continue,
+.axe-echo-thread-forks button,
+.axe-echo-thread-unavailable button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:6px 8px;border:1px solid #d3b2dd;border-radius:6px;
+ background:#5e337d;color:#ffe3b5;text-align:left;
+ font:10px/1.4 "Segoe UI",sans-serif}
+.axe-echo-thread-nodes button:hover,
+.axe-echo-thread-nodes button:focus-visible,
+.axe-echo-thread-continue:hover,
+.axe-echo-thread-continue:focus-visible,
+.axe-echo-thread-forks button:hover,
+.axe-echo-thread-forks button:focus-visible,
+.axe-echo-thread-unavailable button:hover,
+.axe-echo-thread-unavailable button:focus-visible{
+ background:#854e9c;border-color:#ffe5b0}
+.axe-echo-thread-status{margin:0;color:#dac9e5;
+ font:10px/1.5 "Segoe UI",sans-serif}
+.axe-echo-thread-continue{align-self:flex-start;
+ color:#fff0d1;border-color:#efd4ad}
+.axe-echo-thread-forks{display:flex;flex-direction:column;gap:6px;
+ padding:9px;border:1px solid #d6b2d38e;
+ border-radius:8px;background:#32204ec4}
+.axe-echo-thread-forks h5{margin:0;color:#ffe2af;
+ font:normal 14px Georgia,serif}
+.axe-echo-thread-forks>div{display:flex;flex-direction:column;
+ align-items:flex-start;gap:6px;border-top:1px solid #c299cf5c;
+ padding-top:7px}
+.axe-echo-thread-forks>div>span{color:#d5bfe2;
+ font:10px "Segoe UI",sans-serif}
+.axe-echo-thread-forks>div>div{display:flex;flex-wrap:wrap;gap:5px}
+.axe-echo-thread-unavailable{display:flex;flex-direction:column;
+ align-items:flex-start;gap:7px;padding:10px;
+ border:1px solid #d9aa9ea8;border-radius:8px;
+ background:linear-gradient(110deg,#593052,#302246)}
+.axe-echo-thread-unavailable strong{color:#fbe0b9;
+ font:12px Georgia,serif}
+.axe-echo-thread-unavailable p{margin:0;color:#ead3dc;
+ font:10px/1.45 "Segoe UI",sans-serif}
+@media(max-width:720px){
+ .axe-echo-thread-list{max-height:285px}
+ .axe-echo-thread{padding:7px}
+ .axe-echo-thread-nodes li{flex-wrap:wrap;padding:5px}
+ .axe-echo-thread-node{flex:1 1 calc(100% - 42px)}
+ .axe-echo-thread-nodes button{margin-left:29px}
+ .axe-echo-thread>header strong{font-size:12px}
+}
