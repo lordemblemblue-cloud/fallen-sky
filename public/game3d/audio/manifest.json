@@ -1,0 +1,970 @@
+{
+  "name": "Game 3D default sound pack",
+  "tool": "tools/game3d/sound-pack/build_sound_pack.py",
+  "toolVersion": 1,
+  "encoder": "Blender 5.2.3 LTS aud/FFmpeg MP3 (CBR), 44.1 kHz",
+  "note": "Played when no admin upload overrides the key. Source files are the owner's recordings; only their file names and hashes are recorded here.",
+  "keys": {
+    "player_melee_swing": [
+      "swing-sword-01.mp3",
+      "swing-sword-02.mp3",
+      "swing-whoosh-01.mp3",
+      "swing-whoosh-02.mp3",
+      "swing-whoosh-03.mp3",
+      "swing-whoosh-04.mp3",
+      "swing-whoosh-05.mp3"
+    ],
+    "enemy_hit": [
+      "impact-blade-01.mp3",
+      "impact-blade-02.mp3",
+      "impact-slash-01.mp3",
+      "impact-slash-02.mp3"
+    ],
+    "enemy_critical_hit": [
+      "impact-heavy-01.mp3"
+    ],
+    "combo_finisher": [
+      "combo-finisher-01.mp3"
+    ],
+    "enemy_death": [
+      "monster-death-01.mp3",
+      "monster-death-02.mp3"
+    ],
+    "armor_break": [
+      "armor-break-01.mp3"
+    ],
+    "chest_open": [
+      "chest-open-01.mp3"
+    ],
+    "level_up": [
+      "level-up-01.mp3"
+    ],
+    "victory": [
+      "victory-01.mp3"
+    ],
+    "ambience_water_flow": [
+      "ambience-water-loop.mp3"
+    ],
+    "ambience_nature": [
+      "ambience-nature-loop.mp3"
+    ]
+  },
+  "files": [
+    {
+      "id": "swing-sword-01",
+      "file": "swing-sword-01.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Sword swing. Source swing at 0.40-0.64 s; cut before the low thud at 0.80 s; LF rumble removed.",
+      "source": {
+        "file": "Sword attack sound.mp3",
+        "sha256": "36161a6a069afdba29b0974b90429c664829714c1467ffcf4bb522d090b2b3ae",
+        "sampleRate": 24000,
+        "channels": 2,
+        "seconds": 1.152,
+        "cutStart": 0.4022,
+        "cutEnd": 0.72,
+        "cutWindow": [
+          0.38,
+          0.72
+        ]
+      },
+      "processing": {
+        "highpassHz": 160,
+        "fadeInMs": 2.0,
+        "fadeOutMs": 70,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 10.73,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -26.73
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3396,
+        "samples": 14976,
+        "bytes": 4747,
+        "sha256": "f0e2b19ee0c02e96570fc055296aad39c7b165b6e7d0c779795f59b28d3bcbb7",
+        "loudnessLufs": -16.45,
+        "peakDbfs": -2.81,
+        "decodeSnrDb": 21.0
+      }
+    },
+    {
+      "id": "swing-sword-02",
+      "file": "swing-sword-02.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Sword swing variant: same cut, 12 % faster/higher.",
+      "source": {
+        "file": "Sword attack sound.mp3",
+        "sha256": "36161a6a069afdba29b0974b90429c664829714c1467ffcf4bb522d090b2b3ae",
+        "sampleRate": 24000,
+        "channels": 2,
+        "seconds": 1.152,
+        "cutStart": 0.4014,
+        "cutEnd": 0.72,
+        "cutWindow": [
+          0.38,
+          0.72
+        ]
+      },
+      "processing": {
+        "pitch": 1.12,
+        "highpassHz": 160,
+        "fadeInMs": 2.0,
+        "fadeOutMs": 60,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 11.13,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -27.13
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.2873,
+        "samples": 12672,
+        "bytes": 4120,
+        "sha256": "b0aa0a7e5ae454ad69ca3354447eb435cabc34c791a2915efc5915542409c337",
+        "loudnessLufs": -16.47,
+        "peakDbfs": -2.1,
+        "decodeSnrDb": 19.5
+      }
+    },
+    {
+      "id": "swing-whoosh-01",
+      "file": "swing-whoosh-01.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Attack whoosh, high register (hit 1 of 15 in the break-up file).",
+      "source": {
+        "file": "break up for different sound for attack or reuse to make new ones.mp3",
+        "sha256": "f7f1907548fb15fb01201343d00bec99cda00a716744fc26c9283919e0750026",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 18.416,
+        "cutStart": 0.028,
+        "cutEnd": 0.349,
+        "cutWindow": [
+          0.0,
+          0.36
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 50,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 4.61,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -20.61
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3396,
+        "samples": 14976,
+        "bytes": 4747,
+        "sha256": "5f0945f0db3513f7a2d99fcc3b95df10a58f80b5bc3e61ca75904623bb808f9a",
+        "loudnessLufs": -16.43,
+        "peakDbfs": -2.2,
+        "decodeSnrDb": 21.8
+      }
+    },
+    {
+      "id": "swing-whoosh-02",
+      "file": "swing-whoosh-02.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Attack whoosh, high register, sharpest attack (hit 3 of 15).",
+      "source": {
+        "file": "break up for different sound for attack or reuse to make new ones.mp3",
+        "sha256": "f7f1907548fb15fb01201343d00bec99cda00a716744fc26c9283919e0750026",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 18.416,
+        "cutStart": 2.1852,
+        "cutEnd": 2.4922,
+        "cutWindow": [
+          2.16,
+          2.51
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 50,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 2.63,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -18.63
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3135,
+        "samples": 13824,
+        "bytes": 4433,
+        "sha256": "5a0e3b937b3abfadf2570138651139b643fa6cc39c27861347274d920c35ea13",
+        "loudnessLufs": -16.43,
+        "peakDbfs": -3.22,
+        "decodeSnrDb": 22.0
+      }
+    },
+    {
+      "id": "swing-whoosh-03",
+      "file": "swing-whoosh-03.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Attack whoosh, high register (hit 5 of 15).",
+      "source": {
+        "file": "break up for different sound for attack or reuse to make new ones.mp3",
+        "sha256": "f7f1907548fb15fb01201343d00bec99cda00a716744fc26c9283919e0750026",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 18.416,
+        "cutStart": 4.3489,
+        "cutEnd": 4.6415,
+        "cutWindow": [
+          4.33,
+          4.65
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 50,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 5.78,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -21.78
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3135,
+        "samples": 13824,
+        "bytes": 4433,
+        "sha256": "e9b42d37fe245a3471aee316529cd7f57604426536b98cdf9b67d71380157a7a",
+        "loudnessLufs": -16.42,
+        "peakDbfs": -3.89,
+        "decodeSnrDb": 21.6
+      }
+    },
+    {
+      "id": "swing-whoosh-04",
+      "file": "swing-whoosh-04.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Attack whoosh, mid register (hit 7 of 15).",
+      "source": {
+        "file": "break up for different sound for attack or reuse to make new ones.mp3",
+        "sha256": "f7f1907548fb15fb01201343d00bec99cda00a716744fc26c9283919e0750026",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 18.416,
+        "cutStart": 6.5165,
+        "cutEnd": 6.8929,
+        "cutWindow": [
+          6.49,
+          6.9
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 60,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 4.89,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -20.89
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3918,
+        "samples": 17280,
+        "bytes": 5374,
+        "sha256": "5392d0fd67b271ff7a71de197f55fc271030f65793a463e3554ae6cddeab1c37",
+        "loudnessLufs": -16.43,
+        "peakDbfs": -3.82,
+        "decodeSnrDb": 25.1
+      }
+    },
+    {
+      "id": "swing-whoosh-05",
+      "file": "swing-whoosh-05.mp3",
+      "keys": [
+        "player_melee_swing"
+      ],
+      "kind": "oneshot",
+      "use": "Attack whoosh, mid register (hit 9 of 15).",
+      "source": {
+        "file": "break up for different sound for attack or reuse to make new ones.mp3",
+        "sha256": "f7f1907548fb15fb01201343d00bec99cda00a716744fc26c9283919e0750026",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 18.416,
+        "cutStart": 8.6796,
+        "cutEnd": 9.0461,
+        "cutWindow": [
+          8.65,
+          9.05
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 60,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -16,
+        "gainDb": 1.53,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -17.53
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3918,
+        "samples": 17280,
+        "bytes": 5374,
+        "sha256": "81c3a6ad34646a2dfc318e3ab9ee5f0fb8312e80f5049d06db330b91b6451945",
+        "loudnessLufs": -16.45,
+        "peakDbfs": -4.07,
+        "decodeSnrDb": 24.7
+      }
+    },
+    {
+      "id": "impact-blade-01",
+      "file": "impact-blade-01.mp3",
+      "keys": [
+        "enemy_hit"
+      ],
+      "kind": "oneshot",
+      "use": "Blade impact: slash body peaking 0.20-0.40 s.",
+      "source": {
+        "file": "Use for sword attack or use to make a new sound.mp3",
+        "sha256": "2e4742e14585772e8f0c2ea0834150df95f0c973f97b540a88370e109b0135e5",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 1.584,
+        "cutStart": 0.06,
+        "cutEnd": 0.8,
+        "cutWindow": [
+          0.06,
+          0.8
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 150,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": -4.18,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -10.82
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.7576,
+        "samples": 33408,
+        "bytes": 9762,
+        "sha256": "120caf2a5a24a5a39caf4bc0a12d65ca8ee3c1c47d70bbcbbbb4fe120910d4e5",
+        "loudnessLufs": -15.23,
+        "peakDbfs": -5.46,
+        "decodeSnrDb": 15.1
+      }
+    },
+    {
+      "id": "impact-blade-02",
+      "file": "impact-blade-02.mp3",
+      "keys": [
+        "enemy_hit"
+      ],
+      "kind": "oneshot",
+      "use": "Lighter blade impact: shorter cut, 12 % higher.",
+      "source": {
+        "file": "Use for sword attack or use to make a new sound.mp3",
+        "sha256": "2e4742e14585772e8f0c2ea0834150df95f0c973f97b540a88370e109b0135e5",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 1.584,
+        "cutStart": 0.06,
+        "cutEnd": 0.62,
+        "cutWindow": [
+          0.06,
+          0.62
+        ]
+      },
+      "processing": {
+        "pitch": 1.12,
+        "fadeInMs": 2.0,
+        "fadeOutMs": 120,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": -3.76,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -11.24
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.5224,
+        "samples": 23040,
+        "bytes": 6941,
+        "sha256": "20005068b3d1c2bb645a5e117aa8282fa847a65417264fda2308c8104928197a",
+        "loudnessLufs": -15.27,
+        "peakDbfs": -5.06,
+        "decodeSnrDb": 14.6
+      }
+    },
+    {
+      "id": "impact-slash-01",
+      "file": "impact-slash-01.mp3",
+      "keys": [
+        "enemy_hit"
+      ],
+      "kind": "oneshot",
+      "use": "Metallic slash impact: hit 1 of the 3-hit combo file.",
+      "source": {
+        "file": "3 hit combo.mp3",
+        "sha256": "0f66d65bcff35ad7c7e8ab6a6048aafccdae47fca092085e7e6c1deb77ce0fdd",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 2.664,
+        "cutStart": 0.4018,
+        "cutEnd": 0.86,
+        "cutWindow": [
+          0.38,
+          0.86
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 80,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": 8.71,
+        "limiterDb": 3.05,
+        "measuredLufsBefore": -23.71
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.4702,
+        "samples": 20736,
+        "bytes": 6314,
+        "sha256": "819a8b5684de68bacbac03ed4813fa418d95811cd490785a6cb8cd11993d10eb",
+        "loudnessLufs": -16.92,
+        "peakDbfs": -1.78,
+        "decodeSnrDb": 24.1
+      }
+    },
+    {
+      "id": "impact-slash-02",
+      "file": "impact-slash-02.mp3",
+      "keys": [
+        "enemy_hit"
+      ],
+      "kind": "oneshot",
+      "use": "Metallic slash impact: hit 2 of the 3-hit combo file (cut before the hit-3 wind-up).",
+      "source": {
+        "file": "3 hit combo.mp3",
+        "sha256": "0f66d65bcff35ad7c7e8ab6a6048aafccdae47fca092085e7e6c1deb77ce0fdd",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 2.664,
+        "cutStart": 0.85,
+        "cutEnd": 1.24,
+        "cutWindow": [
+          0.85,
+          1.24
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 80,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": 6.61,
+        "limiterDb": 2.1,
+        "measuredLufsBefore": -21.61
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.3918,
+        "samples": 17280,
+        "bytes": 5374,
+        "sha256": "73f665425f4e6e52ca7169be1ca594963a25132b69fc57c95a54c02dfb40a50a",
+        "loudnessLufs": -16.33,
+        "peakDbfs": -1.71,
+        "decodeSnrDb": 19.1
+      }
+    },
+    {
+      "id": "impact-heavy-01",
+      "file": "impact-heavy-01.mp3",
+      "keys": [
+        "enemy_critical_hit"
+      ],
+      "kind": "oneshot",
+      "use": "Critical impact: full blade hit with its tail, 10 % lower and louder.",
+      "source": {
+        "file": "Use for sword attack or use to make a new sound.mp3",
+        "sha256": "2e4742e14585772e8f0c2ea0834150df95f0c973f97b540a88370e109b0135e5",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 1.584,
+        "cutStart": 0.0531,
+        "cutEnd": 1.2382,
+        "cutWindow": [
+          0.04,
+          1.25
+        ]
+      },
+      "processing": {
+        "pitch": 0.9,
+        "fadeInMs": 2.0,
+        "fadeOutMs": 300,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -13,
+        "gainDb": -2.54,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -10.46
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 1.3322,
+        "samples": 58752,
+        "bytes": 16658,
+        "sha256": "5178c5a1b67723f608dd91bc286cc4b9ddc3eb27a623f012f00ddf168a6d3e5a",
+        "loudnessLufs": -13.34,
+        "peakDbfs": -3.63,
+        "decodeSnrDb": 16.1
+      }
+    },
+    {
+      "id": "combo-finisher-01",
+      "file": "combo-finisher-01.mp3",
+      "keys": [
+        "combo_finisher"
+      ],
+      "kind": "oneshot",
+      "use": "Combo finisher: hit 3 (the loudest) of the 3-hit combo file, ~60 ms of its wind-up kept.",
+      "source": {
+        "file": "3 hit combo.mp3",
+        "sha256": "0f66d65bcff35ad7c7e8ab6a6048aafccdae47fca092085e7e6c1deb77ce0fdd",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 2.664,
+        "cutStart": 1.5,
+        "cutEnd": 2.2776,
+        "cutWindow": [
+          1.5,
+          2.3
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 250,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -13,
+        "gainDb": -2.5,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -10.5
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.7837,
+        "samples": 34560,
+        "bytes": 10076,
+        "sha256": "d42f336af0bbd673e6bff7f4918adea7e20410385b20e4bdd14c29051c81ff2c",
+        "loudnessLufs": -13.35,
+        "peakDbfs": -3.81,
+        "decodeSnrDb": 13.4
+      }
+    },
+    {
+      "id": "monster-death-01",
+      "file": "monster-death-01.mp3",
+      "keys": [
+        "enemy_death"
+      ],
+      "kind": "oneshot",
+      "use": "Monster death variant 1: violent slice and body hit.",
+      "source": {
+        "file": "Moster sound for being killed.mp3",
+        "sha256": "13ec02f66b3dcfd89656830a0133831dde0a1519461c9c9deb7604aad7df849d",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 2.194,
+        "cutStart": 0.0524,
+        "cutEnd": 1.0,
+        "cutWindow": [
+          0.03,
+          1.0
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 200,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": -4.03,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -10.97
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.9665,
+        "samples": 42624,
+        "bytes": 12270,
+        "sha256": "d73a383b18d613eb0347356d0ec82476daa809d9a93343948399bd50ecdae69a",
+        "loudnessLufs": -15.43,
+        "peakDbfs": -5.04,
+        "decodeSnrDb": 12.9
+      }
+    },
+    {
+      "id": "monster-death-02",
+      "file": "monster-death-02.mp3",
+      "keys": [
+        "enemy_death"
+      ],
+      "kind": "oneshot",
+      "use": "Monster death variant 2: death crunch.",
+      "source": {
+        "file": "death sound for mosters.mp3",
+        "sha256": "84214e1fbb9316c3c50134f8145a6140ab6dcff338a3a778326619700cfcd12b",
+        "sampleRate": 24000,
+        "channels": 2,
+        "seconds": 0.72,
+        "cutStart": 0.0407,
+        "cutEnd": 0.7,
+        "cutWindow": [
+          0.03,
+          0.7
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 120,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": -8.55,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -6.45
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.6792,
+        "samples": 29952,
+        "bytes": 8822,
+        "sha256": "6107c1624d82988802e30d3b471c950f63a92a393e45f351ac740a76531d8b70",
+        "loudnessLufs": -15.44,
+        "peakDbfs": -8.93,
+        "decodeSnrDb": 23.7
+      }
+    },
+    {
+      "id": "armor-break-01",
+      "file": "armor-break-01.mp3",
+      "keys": [
+        "armor_break"
+      ],
+      "kind": "oneshot",
+      "use": "Armor/shield break. Starts 0.10 s before the crash (source 0.50 s) so it lands on the event; the 0.15-0.45 s build-up is dropped.",
+      "source": {
+        "file": "Armor Break.mp3",
+        "sha256": "f1e3e03228a80e0184dce30f0e6cca42593a677ea92678777ad290c52483d397",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 2.16,
+        "cutStart": 0.4,
+        "cutEnd": 2.12,
+        "cutWindow": [
+          0.4,
+          2.12
+        ]
+      },
+      "processing": {
+        "fadeInMs": 10,
+        "fadeOutMs": 400,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -13,
+        "gainDb": -9.74,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -3.26
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 2,
+        "bitrate": 128000,
+        "seconds": 1.7241,
+        "samples": 76032,
+        "bytes": 28465,
+        "sha256": "79d2f9a8b162e165b32b87f62ef83f44fd0b0613c60491013fe48e6963442b05",
+        "loudnessLufs": -13.29,
+        "peakDbfs": -5.64,
+        "decodeSnrDb": 12.7
+      }
+    },
+    {
+      "id": "chest-open-01",
+      "file": "chest-open-01.mp3",
+      "keys": [
+        "chest_open"
+      ],
+      "kind": "oneshot",
+      "use": "Chest or loot container opening. Source starts abruptly; 3 ms fade-in added.",
+      "source": {
+        "file": "Open Chest.mp3",
+        "sha256": "94c2f82aaa3b36e1e7e70b52f4d7ca24de537010e89fe0ea29a8cfa2d86773ac",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 1.032,
+        "cutStart": 0.0094,
+        "cutEnd": 0.8,
+        "cutWindow": [
+          0.0,
+          0.8
+        ]
+      },
+      "processing": {
+        "fadeInMs": 3,
+        "fadeOutMs": 200,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -17,
+        "gainDb": 0.93,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -17.93
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 1,
+        "bitrate": 96000,
+        "seconds": 0.8098,
+        "samples": 35712,
+        "bytes": 10389,
+        "sha256": "a48e5fb1dad0cdc34a0c7e833891e84c793bac398189e1bf84eec3b687923959",
+        "loudnessLufs": -17.46,
+        "peakDbfs": -8.99,
+        "decodeSnrDb": 21.8
+      }
+    },
+    {
+      "id": "level-up-01",
+      "file": "level-up-01.mp3",
+      "keys": [
+        "level_up"
+      ],
+      "kind": "oneshot",
+      "use": "Level up chime (source peaks at -14.5 dBFS; brought up to target).",
+      "source": {
+        "file": "Levling up.mp3",
+        "sha256": "92d67368d3c35114476d767edc8836a64c55d920bd6750a4402304c7be491fb0",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 2.52,
+        "cutStart": 0.1751,
+        "cutEnd": 1.75,
+        "cutWindow": [
+          0.15,
+          1.75
+        ]
+      },
+      "processing": {
+        "fadeInMs": 2.0,
+        "fadeOutMs": 250,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": 10.54,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -25.54
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 2,
+        "bitrate": 128000,
+        "seconds": 1.5935,
+        "samples": 70272,
+        "bytes": 26375,
+        "sha256": "f54423bcd6c78d7c70a1c20e46df2811e94739fb2d81a7b53ab0467909bc72b6",
+        "loudnessLufs": -15.4,
+        "peakDbfs": -4.45,
+        "decodeSnrDb": 20.3
+      }
+    },
+    {
+      "id": "victory-01",
+      "file": "victory-01.mp3",
+      "keys": [
+        "victory"
+      ],
+      "kind": "oneshot",
+      "use": "Victory sting: boss defeated, duel or faction war won, milestone quest completed.",
+      "source": {
+        "file": "War winning.mp3",
+        "sha256": "f4b7dc9ec874e07223ba327fce5b13c46b3e13c4a3f5c23b3af124eb6b27f3b0",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 6.72,
+        "cutStart": 0.0,
+        "cutEnd": 6.72,
+        "cutWindow": [
+          0.0,
+          6.72
+        ]
+      },
+      "processing": {
+        "fadeInMs": 5,
+        "fadeOutMs": 600,
+        "loudnessMeasure": "max momentary (400 ms, BS.1770)",
+        "targetLufs": -15,
+        "gainDb": -0.92,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -14.08
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 2,
+        "bitrate": 128000,
+        "seconds": 6.7396,
+        "samples": 297216,
+        "bytes": 108713,
+        "sha256": "408fa817371598ea935eb3ff831468445cdc1b6cbfacbf2b4000aa110567b93f",
+        "loudnessLufs": -15.39,
+        "peakDbfs": -6.01,
+        "decodeSnrDb": 16.4
+      }
+    },
+    {
+      "id": "ambience-water-loop",
+      "file": "ambience-water-loop.mp3",
+      "keys": [
+        "ambience_water_flow"
+      ],
+      "kind": "loop",
+      "use": "Water near rivers/lakes. 30 s loop from the steadiest part of the 128 s file (58-91 s; avoids the 52-54 s burst and the fades), 3 s equal-power seam.",
+      "source": {
+        "file": "Water.mp3",
+        "sha256": "0a7f781758ee35c966e8a5aff013524126d639087d4e9aa237c4eaa8f1c302de",
+        "sampleRate": 48000,
+        "channels": 2,
+        "seconds": 128.04,
+        "cutStart": 58.0,
+        "cutEnd": 90.9886
+      },
+      "loop": {
+        "lengthSamples": 1322496,
+        "lengthSeconds": 29.9886,
+        "crossfadeSeconds": 3.0,
+        "crossfade": "equal-power (sin/cos) tail into head",
+        "wrapJump": 0.0217,
+        "p99Step": 0.06197,
+        "seamLoudnessDeltaLU": -0.06
+      },
+      "processing": {
+        "highpassHz": 30,
+        "loudnessMeasure": "integrated (BS.1770 gated)",
+        "targetLufs": -21,
+        "gainDb": -10.71,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -10.29
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 2,
+        "bitrate": 128000,
+        "seconds": 29.9886,
+        "samples": 1322496,
+        "bytes": 480697,
+        "sha256": "3f1f24a94ab82255ab2cf1ecfd730095ca85e8f75b5f8749b9f784afc7d790aa",
+        "loudnessLufs": -21.27,
+        "peakDbfs": -10.33,
+        "decodeSnrDb": 12.9
+      }
+    },
+    {
+      "id": "ambience-nature-loop",
+      "file": "ambience-nature-loop.mp3",
+      "keys": [
+        "ambience_nature"
+      ],
+      "kind": "loop",
+      "use": "Outdoor nature bed. 60 s loop from the calmest part of the 593 s file (406-472 s), 6 s equal-power seam.",
+      "source": {
+        "file": "zehendrew-calm-nature-ambience-379478.mp3",
+        "sha256": "54e1c408ffe5346d0eee0da834dd5824afae76b8741197b1e105638790871782",
+        "sampleRate": 44100,
+        "channels": 2,
+        "seconds": 593.058,
+        "cutStart": 406.0,
+        "cutEnd": 472.0033
+      },
+      "loop": {
+        "lengthSamples": 2646144,
+        "lengthSeconds": 60.0033,
+        "crossfadeSeconds": 6.0,
+        "crossfade": "equal-power (sin/cos) tail into head",
+        "wrapJump": 0.01114,
+        "p99Step": 0.03622,
+        "seamLoudnessDeltaLU": -0.1
+      },
+      "processing": {
+        "highpassHz": 30,
+        "loudnessMeasure": "integrated (BS.1770 gated)",
+        "targetLufs": -26,
+        "gainDb": 23.48,
+        "limiterDb": 0.0,
+        "measuredLufsBefore": -49.48
+      },
+      "output": {
+        "sampleRate": 44100,
+        "channels": 2,
+        "bitrate": 112000,
+        "seconds": 60.0033,
+        "samples": 2646144,
+        "bytes": 840821,
+        "sha256": "cfb6e04279d876d51c6aa1b22101d11d22e9e47e817fb33ab07f3f6de318b727",
+        "loudnessLufs": -26.38,
+        "peakDbfs": -6.54,
+        "decodeSnrDb": 15.3
+      }
+    }
+  ]
+}
