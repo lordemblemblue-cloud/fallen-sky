@@ -1,0 +1,71 @@
+/* Combine Stage: 25% compatible donors / 75% owned equipment.
+   Keep the central forge circle, live item detail card and two equipment slots untouched. */
+.axe-combine-inventory {
+  position:absolute;z-index:5;left:3.4%;top:15%;width:28.8%;height:81%;
+  display:grid;grid-template-columns:minmax(0,25%) minmax(0,75%);
+  overflow:hidden;min-width:0;min-height:0;
+  border:1px solid var(--axe-ui-gold);border-radius:11px;
+  color:var(--axe-ui-text);background:var(--axe-ui-glass);
+  -webkit-backdrop-filter:blur(13px);backdrop-filter:blur(13px);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 3px 16px #0005;
+}
+.axe-combine-compatible,.axe-combine-owned {
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  padding:9px 6px;gap:6px;
+}
+.axe-combine-compatible {
+  position:relative;border-right:1px solid var(--axe-ui-gold);
+  background:rgba(32,44,58,.16);
+}
+.axe-combine-compatible::after {
+  content:'';position:absolute;top:25%;bottom:25%;right:-1px;
+  width:2px;background:linear-gradient(to bottom,transparent,var(--axe-ui-gold),transparent);
+  pointer-events:none;
+}
+.axe-combine-inventory-title {
+  display:flex;gap:4px;align-items:center;flex-wrap:wrap;
+  font:600 clamp(10px,.95cqw,15px)/1.2 Georgia,serif;color:var(--axe-ui-heading);
+}
+.axe-combine-inventory-title small {font:clamp(9px,.72cqw,11px)/1.2 Georgia,serif;color:var(--axe-ui-subtext);}
+.axe-combine-compatible p,.axe-combine-owned p {
+  margin:0;color:var(--axe-ui-subtext);font:clamp(9px,.75cqw,12px)/1.25 Georgia,serif;
+  overflow-wrap:anywhere;
+}
+.axe-combine-compatible > small {font:clamp(8px,.72cqw,11px)/1.2 Georgia,serif;color:var(--axe-ui-heading);}
+.axe-combine-compatible-grid,.axe-combine-owned-grid {
+  min-height:0;flex:1 1 auto;overflow-y:auto;overflow-x:hidden;
+  display:grid;grid-auto-rows:max-content;align-content:start;gap:5px;
+  padding:3px 2px;
+}
+.axe-combine-compatible-grid {grid-template-columns:1fr;}
+.axe-combine-owned-grid {grid-template-columns:repeat(4,minmax(0,1fr));}
+.axe-combine-inventory-item {
+  position:relative;min-width:0;min-height:0;aspect-ratio:1;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;
+  border:1px solid rgba(242,210,147,.35);border-radius:7px;
+  padding:2px;color:var(--axe-ui-heading);background:rgba(32,44,58,.35);
+}
+.axe-combine-inventory-item:hover,.axe-combine-inventory-item[aria-pressed="true"] {
+  border-color:var(--axe-ui-gold);background:rgba(84,96,111,.70);
+  box-shadow:inset 0 0 12px #e7d7b326,0 0 8px #ecce9855;
+}
+.axe-combine-inventory-item img {height:49%;max-width:83%;object-fit:contain;}
+.axe-combine-inventory-item small {
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font:clamp(8px,.66cqw,11px)/1.15 Georgia,serif;
+}
+.axe-combine-inventory-item em {position:absolute;right:1px;top:1px;
+  border-radius:3px;background:#1d3041c9;padding:1px 2px;font:8px Georgia,serif;}
+.axe-combine-inventory-filters {display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
+.axe-combine-inventory-filters select {min-width:0;max-width:46%;flex:1 1 65px;
+  border:1px solid rgba(242,210,147,.4);border-radius:5px;
+  background:rgba(32,44,58,.65);color:var(--axe-ui-text);padding:3px 1px;
+  font:clamp(9px,.75cqw,12px)/1.1 Georgia,serif;}
+@media(max-width:760px) {
+ .axe-combine-owned-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+ .axe-combine-inventory {left:2%;width:32%;}
+}
+
+/* Legacy split-pane stylesheet is retained for older layouts. The modern
+   Blacksmith uses the shared .axe-blacksmith-inventory-shell for Combine Stage,
+   Enchant and Over-Enchant; do not hide it here. */

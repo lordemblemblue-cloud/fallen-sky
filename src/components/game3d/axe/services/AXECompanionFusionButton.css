@@ -1,0 +1,40 @@
+/* A single soul-fusion action inside each Companion model/viewer stage. */
+.axe-comp-fusion-control {
+  position:absolute;
+  z-index:12;
+  bottom:54px;
+  left:50%;
+  transform:translateX(-50%);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+  min-width:110px;
+  max-width:calc(100% - 24px);
+  min-height:37px;
+  padding:7px 13px;
+  border:1px solid rgba(247,215,156,.85);
+  border-radius:9px;
+  color:#fce6b6;
+  background:linear-gradient(115deg,rgba(34,51,64,.92),rgba(48,65,78,.84));
+  backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 7px rgba(248,223,174,.16),0 4px 15px rgba(0,0,0,.4);
+  font:600 12px Georgia,serif;
+  white-space:nowrap;
+  cursor:pointer;
+  pointer-events:auto;
+}
+.axe-comp-fusion-control:hover:not(:disabled) {
+  border-color:#ffe8ad;
+  background:linear-gradient(115deg,rgba(67,77,80,.94),rgba(85,78,68,.90));
+}
+.axe-comp-fusion-control[aria-pressed="true"] {
+  color:#302419;
+  background:linear-gradient(105deg,#d8bc89,#ffecb9,#cfa06b);
+}
+.axe-comp-fusion-control:disabled {opacity:.6;cursor:not-allowed;}
+.axe-comp-fusion-control:focus-visible {outline:2px solid #fff0c6;outline-offset:3px;}
+.axe-comp-scene .axe-comp-fusion-control {pointer-events:auto;}
+@media(max-width:650px) {
+  .axe-comp-fusion-control {min-width:85px;padding:6px 8px;font-size:11px;}
+}
