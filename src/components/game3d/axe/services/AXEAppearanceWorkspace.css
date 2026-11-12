@@ -1,0 +1,674 @@
+/*
+ * Game 3D Appearance — the approved fantasy-gold / liquid-glass composition,
+ * built from real interactive layers. The running Game 3D world is the backdrop,
+ * never another game's screenshot, model, tiles, or hard-coded wardrobe items.
+ */
+.axe-app-root {
+  --axe-app-gold:rgba(242,210,147,.76);
+  --axe-app-text:#f5e9d7;
+  --axe-app-glass:linear-gradient(115deg,rgba(32,44,58,.51),rgba(26,35,48,.39));
+  pointer-events:auto; isolation:isolate; flex:1 1 auto; width:min(1672px,100%);
+  min-width:0; min-height:0; height:100%; display:flex; flex-direction:column;
+  gap:8px; padding:6px 12px 12px; margin-inline:auto; color:var(--axe-app-text);
+  font:13px/1.4 Georgia,'Segoe UI',serif; overflow:auto; scrollbar-width:thin;
+}
+.axe-app-root button { cursor:pointer; color:inherit; }
+.axe-app-root button:disabled { opacity:.43; cursor:default; }
+.axe-app-root button:focus-visible { outline:2px solid #ffe4aa; outline-offset:1px; }
+.axe-app-brand {
+  flex:0 0 auto; display:flex; align-items:center; gap:16px; min-height:76px; padding:0 12px;
+  color:#f4deaf; text-shadow:0 2px 6px #000c;
+}
+.axe-app-brand h2 { margin:0; font:normal clamp(26px,2.9vw,44px)/1.07 Georgia,serif; }
+.axe-app-brand p { margin:4px 0 0; font:clamp(12px,1vw,16px) Georgia,serif; color:#f5e6cb; }
+.axe-app-banner {
+  display:grid; place-items:center; width:72px; height:77px; flex-shrink:0;
+  border:1px solid #f9d48e8c; border-bottom:3px solid #e2b55f;
+  background:linear-gradient(145deg,rgba(29,42,63,.9),rgba(30,47,68,.5));
+  color:#f0d39e; font:38px Georgia,serif; box-shadow:0 0 19px #0005;
+}
+.axe-app-tabs {
+  flex:0 0 55px; min-height:55px; display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px;
+  padding:4px 7px; border:1px solid var(--axe-app-gold);
+  border-radius:22px 10px 10px 22px;
+  background:rgba(37,48,62,.46);
+  box-shadow:inset 0 1px 4px #f1dba138,0 7px 15px #0003;
+  backdrop-filter:blur(13px) saturate(110%); -webkit-backdrop-filter:blur(13px);
+}
+.axe-app-tabs button {
+  min-width:0; display:flex; align-items:center; justify-content:center; gap:12px;
+  border:1px solid transparent; border-right-color:#d9bb8c26;
+  border-radius:18px; background:transparent;
+  color:#f9ecda; text-shadow:0 1px 4px #000b;
+  font:clamp(13px,1.1vw,18px) Georgia,serif; padding:5px 10px;
+}
+.axe-app-tabs button svg { color:#efc888; flex:0 0 auto; }
+.axe-app-tabs button[aria-pressed="true"] {
+  color:#30241d; text-shadow:none; border-color:#f4d391aa;
+  background:linear-gradient(95deg,#f2d398,#ffedc1 58%,#cda16b);
+  box-shadow:0 0 20px #f4d99b7c,inset 0 1px 8px #fff5;
+}
+.axe-app-tabs button[aria-pressed="true"] svg { color:#654c31; }
+.axe-app-layout {
+  flex:1 1 auto; min-height:400px; min-width:0;
+  display:grid; grid-template-columns: minmax(62px,6.5%) minmax(235px,31%)
+    minmax(310px,1.35fr) minmax(230px,.95fr); gap:12px;
+}
+.axe-app-rail {
+  min-width:0; display:flex; flex-direction:column; align-items:center;
+  justify-content:flex-start; gap:13px; padding:13px 4px; overflow:auto;
+  border:1px solid rgba(243,211,161,.59); border-radius:17px;
+  background:var(--axe-app-glass); backdrop-filter:blur(11px);
+  box-shadow:inset 0 0 15px #fbdda11f;
+}
+.axe-app-rail-glyph { color:#f5d4a3; }
+.axe-app-rail button {
+  flex:0 0 auto; position:relative; display:grid; place-items:center;
+  width:clamp(46px,4.8vw,70px); aspect-ratio:1; border:2px solid #e0c5969e;
+  border-radius:50%; background:rgba(20,36,56,.65); color:#f4e6d3;
+}
+.axe-app-rail button[aria-pressed="true"] {
+  box-shadow:0 0 15px #ffe0a697,inset 0 0 11px #faf0d321;
+  border:3px solid #ffe4a6; color:#fff2c9;
+}
+.axe-app-rail-name {
+  position:absolute; bottom:-8px; left:50%; transform:translateX(-50%);
+  max-width:84px; padding:2px 4px; overflow:hidden; white-space:nowrap;
+  text-overflow:ellipsis; border-radius:4px; color:#f7e5c8;
+  background:#15232dcf; font:9px 'Segoe UI',sans-serif; pointer-events:none;
+}
+.axe-app-rail small { font:10px 'Segoe UI',sans-serif; text-align:center; }
+.axe-app-model-stage {
+  position:relative; min-width:0; min-height:0; isolation:isolate;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:linear-gradient(to bottom,rgba(34,46,60,.05),rgba(29,35,45,.13) 60%,rgba(15,31,47,.26));
+  border:1px solid rgba(241,218,173,.16); border-radius:9px; overflow:hidden;
+}
+.axe-app-model-glow {
+  position:absolute; z-index:-1; left:7%; right:7%; bottom:11%; height:7%;
+  border:2px solid #f4c479a8; border-radius:50%;
+  background:radial-gradient(ellipse,#fff0bc55,transparent 72%);
+  box-shadow:0 0 18px #f5c67e78,0 0 26px #f5c67e38 inset;
+}
+.axe-app-model-host { flex:1 1 auto; min-height:160px; width:100%; max-width:100%; overflow:hidden; }
+.axe-app-model-host > * { width:100%; height:100%; min-height:0; }
+.axe-app-loading { color:#f8ebd3; padding:30px; }
+.axe-app-model-caption {
+  flex:0 0 auto; width:94%; display:flex; flex-direction:column; align-items:center;
+  gap:3px; text-align:center; padding:9px 11px; margin-bottom:3%;
+  border-radius:9px; background:#0e18228f; border:1px solid #e4cd9e43;
+  backdrop-filter:blur(9px); color:#f7e6c9;
+}
+.axe-app-model-caption strong { font:16px Georgia,serif; }
+.axe-app-model-caption span { color:#d6d2cacc; font:11px/1.25 'Segoe UI',sans-serif; }
+.axe-app-main-stack,.axe-app-right-stack {
+  min-width:0; min-height:0; display:flex; flex-direction:column; gap:11px;
+  overflow-y:auto; scrollbar-width:thin; scrollbar-color:#ecc89177 transparent;
+}
+.axe-app-card {
+  position:relative; display:flex; flex-direction:column; min-width:0;
+  border:1px solid rgba(230,209,166,.75); border-radius:8px;
+  background:var(--axe-app-glass);
+  backdrop-filter:blur(13px) saturate(104%); -webkit-backdrop-filter:blur(13px);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 1px 10px #0002;
+  padding:11px 13px; overflow:hidden;
+}
+.axe-app-card:before,.axe-app-card:after {
+  content:'✦'; position:absolute; color:#f8e0aa8c; pointer-events:none;
+  font:13px Georgia,serif;
+}
+.axe-app-card:before { left:4px; top:3px; }
+.axe-app-card:after { right:4px; bottom:3px; }
+.axe-app-card-heading {
+  display:flex; flex:0 0 auto; align-items:center; gap:10px;
+  padding:2px 8px 9px; margin-bottom:8px;
+  border-bottom:1px solid #ecdcbb4b; color:#f8e5c8;
+}
+.axe-app-card-heading svg { color:#f4d19c; }
+.axe-app-card-heading h3 { flex:1 1 auto; min-width:0; margin:0;
+  font:normal clamp(14px,1.24vw,21px) Georgia,serif; }
+.axe-app-card-heading small {
+  flex:0 0 auto; font:11px Georgia,serif; color:#e5d5bc; text-align:right;
+}
+.axe-app-card-content { flex:1 1 auto; min-width:0; min-height:0; overflow:auto; }
+.axe-app-gear { flex:0 0 25%; min-height:142px; }
+.axe-app-wardrobe { flex:1 1 38%; min-height:169px; }
+.axe-app-vanity { flex:1 1 32%; min-height:160px; }
+.axe-app-subpanel { flex:1 1 auto; min-height:220px; }
+.axe-app-equipped-slots {
+  display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:5px;
+  justify-items:stretch; height:100%;
+}
+.axe-app-equipped-slot {
+  min-width:0; display:flex; flex-direction:column; align-items:center;
+  justify-content:flex-start; gap:5px; padding:0 1px;
+  border:0; background:transparent; font:11px Georgia,serif;
+  text-align:center; color:#ece3d5;
+}
+.axe-app-gear-icon {
+  display:grid; place-items:center; width:100%; flex:1 1 auto;
+  min-height:52px; max-height:83px; border-radius:5px;
+  border:1px solid #bd9bd77e; color:#f3d9b8;
+  background:linear-gradient(125deg,rgba(45,29,63,.35),rgba(27,36,53,.42));
+}
+.axe-app-equipped-slot small {
+  max-width:100%; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  color:#d6cabb; font:9px 'Segoe UI',sans-serif;
+}
+.axe-app-carousel { display:grid; grid-template-columns:24px minmax(0,1fr) 24px;
+  align-items:center; gap:5px; }
+.axe-app-carousel > button {
+  height:31px; width:24px; display:grid; place-items:center; padding:0;
+  border:1px solid #efc98e89; border-radius:50%; background:#19283a7c;
+}
+.axe-app-carousel > button svg { width:17px; height:17px; }
+.axe-app-tiles { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
+.axe-app-tile {
+  min-width:0; position:relative; display:flex; flex-direction:column;
+  align-items:center; justify-content:space-evenly; gap:4px;
+  min-height:102px; padding:7px 3px;
+  border:1px solid #d5b5a576; border-radius:6px;
+  background:linear-gradient(155deg,rgba(48,42,64,.60),rgba(16,35,48,.48));
+  color:#e9d8c4; text-shadow:0 1px 4px #000a;
+}
+.axe-app-tile[aria-pressed="true"] {
+  border:2px solid #ffd89b; box-shadow:0 0 12px #ebc78b89,inset 0 0 11px #ffe2ac33;
+}
+.axe-app-tile > span {
+  font:10px/1.15 'Segoe UI',sans-serif; text-align:center;
+  overflow:hidden; text-overflow:ellipsis; display:-webkit-box;
+  -webkit-line-clamp:2; -webkit-box-orient:vertical;
+}
+.axe-app-tile > svg { flex:0 0 auto; }
+.axe-app-equipped-check {
+  position:absolute; right:2px; top:2px; border-radius:50%;
+  background:#f0c77f; color:#2a261e; padding:2px;
+}
+.axe-app-card-actions { display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+  justify-content:space-between; padding-top:9px; }
+.axe-app-card-actions button,.axe-app-manage,.axe-app-back,.axe-app-row-actions button,.axe-app-review button {
+  padding:6px 9px; background:rgba(37,55,69,.74); color:#f5e4c2;
+  border:1px solid #e9c89395; border-radius:6px; font:11px Georgia,serif;
+}
+.axe-app-manage { display:inline-flex; align-items:center; justify-content:center; gap:8px; margin-top:10px; }
+.axe-app-ellipsis { flex:1 1 110px; min-width:0; overflow:hidden;
+  white-space:nowrap; text-overflow:ellipsis; font:11px Georgia,serif; color:#f3dfbd; }
+.axe-app-bonus { flex:0 0 41%; min-height:236px; }
+.axe-app-attributes { flex:1 1 50%; min-height:260px; }
+.axe-app-set-head { display:flex; align-items:center; gap:11px; }
+.axe-app-set-medallion { flex:0 0 55px; height:55px; display:grid; place-items:center;
+  border:1px solid #edc78b99; border-radius:10px; background:#35425277; color:#f5d09a; }
+.axe-app-set-head strong { display:block; color:#f4d18f; font:16px Georgia,serif; }
+.axe-app-capital { text-transform:capitalize; }
+.axe-app-set-head span { display:block; margin-top:2px; color:#dfdddc; font:11px 'Segoe UI',sans-serif; }
+.axe-app-description { color:#d5d9da; margin:8px 0 11px;
+  font:11px/1.45 'Segoe UI',sans-serif; }
+.axe-app-bonus-row { display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:6px 4px; border-bottom:1px solid #e4ceab2a;
+  font:11px/1.2 Georgia,serif; }
+.axe-app-bonus-row b { font-weight:400; text-align:right; color:#acf6c9; }
+.axe-app-active { color:#b7efc9; font:11px/1.5 'Segoe UI',sans-serif; }
+.axe-app-stat-row { display:grid; grid-template-columns:19px 1fr auto;
+  align-items:center; gap:9px; min-height:28px;
+  border-bottom:1px solid #e1d4bd22; font:12px Georgia,serif; }
+.axe-app-stat-row svg { color:#f7d6aa; }
+.axe-app-stat-row b { font-weight:400; font-variant-numeric:tabular-nums; color:#f5eddf; }
+.axe-app-owned-vanity { display:grid; gap:9px; }
+.axe-app-vanity-row { display:flex; flex-wrap:wrap; align-items:center; gap:5px 12px;
+  padding:8px; border:1px solid #eedbb83e; border-radius:6px; background:#1e2e3a6e;
+  font:11px 'Segoe UI',sans-serif; }
+.axe-app-vanity-row strong { color:#f5deb6; }
+.axe-app-vanity-row small { color:#a5dcb9; }
+.axe-app-row-actions { width:100%; display:flex; flex-wrap:wrap; gap:6px; }
+.axe-app-review { padding:10px; margin-top:10px; border:1px solid #f0cf966e;
+  border-radius:6px; background:#223b4cca; }
+.axe-app-review > div { display:flex; gap:6px; margin:9px 0; }
+.axe-app-review button[aria-pressed="true"] { background:#eaca8d; color:#29231d; }
+.axe-app-embedded { width:100%; height:100%; min-height:310px; overflow:auto; }
+.axe-app-embedded > div { height:100%; padding:7px; }
+.axe-app-notice { padding:10px; display:flex; justify-content:space-between; align-items:start;
+  border:1px solid #c2d8be99; border-radius:7px; background:#1a3733b5;
+  font:11px 'Segoe UI',sans-serif; color:#e5ffe6; }
+.axe-app-notice button { background:none; border:0; color:#fff; }
+.axe-app-root .axe-app-card p { color:#ebdfca; }
+.axe-app-root .axe-app-card h4 { color:#f0d49e; margin:9px 0; }
+/* Keep original game environment behind translucent UI. Don't draw a second
+ * generic progression pane, top service-operation row, or controller prompt bar. */
+.axe-service-workspace--appearance { align-items:center; }
+.axe-service-workspace--appearance .axe-service-operations,
+.axe-service-workspace--appearance .axe-service-operation-help,
+.axe-service-workspace--appearance .axe-service-operation-select { display:none; }
+.axe-service-workspace--appearance .axe-service-heading {
+  width:min(1672px,100%); flex:0 0 0; position:relative; z-index:5;
+  background:transparent; border:0; box-shadow:none; padding:0; min-height:0; margin:0;
+}
+.axe-service-workspace--appearance .axe-service-heading > div { display:none; }
+.axe-service-workspace--appearance .axe-service-heading button {
+  position:absolute; right:5px; top:12px; z-index:15;
+  padding:6px 12px; border:1px solid #e8c889;
+  border-radius:8px; color:#f9e5c6; background:#1a2939bb;
+}
+.axe-service-workspace--appearance .axe-service-progression {
+  width:min(1672px,100%); height:100%; max-width:100%;
+  border:0; box-shadow:none; border-radius:0; background:transparent;
+  backdrop-filter:none; overflow:auto; display:flex; align-self:center; padding:0;
+}
+/* Don't show the screenshot's bottom Preview / Equip / Save / Close bar. It is
+ * purposefully absent from AXEAppearanceWorkspace and no pseudo-content draws it. */
+@media(max-width:1150px) {
+  .axe-app-layout { grid-template-columns:65px minmax(210px,31%) minmax(285px,1fr); grid-template-rows:auto auto; }
+  .axe-app-rail { grid-row:1/3; }.axe-app-model-stage { grid-row:1/3; }
+  .axe-app-main-stack { grid-column:3; grid-row:1; }
+  .axe-app-right-stack { grid-column:3; grid-row:2; }
+  .axe-app-main-stack,.axe-app-right-stack { overflow:visible; }
+  .axe-app-bonus,.axe-app-attributes { min-height:190px; }
+}
+@media(max-width:780px) {
+  .axe-app-root { padding:4px; width:100%; }
+  .axe-app-brand { min-height:62px; gap:9px; padding:0 4px; }
+  .axe-app-banner { width:48px; height:55px; font-size:26px; }
+  .axe-app-brand h2 { font-size:26px; }
+  .axe-app-brand p { font-size:11px; }
+  .axe-app-tabs { flex:0 0 47px; min-height:47px; }
+  .axe-app-tabs button { font-size:11px; padding:4px; gap:5px; }
+  .axe-app-tabs button svg { width:16px; height:16px; }
+  .axe-app-layout { grid-template-columns:55px minmax(0,1fr); grid-template-rows:minmax(250px,41vh) auto auto; gap:7px; }
+  .axe-app-rail { grid-column:1; grid-row:1; }
+  .axe-app-rail button { width:43px; }
+  .axe-app-model-stage { grid-column:2; grid-row:1; }
+  .axe-app-main-stack { grid-column:1/3; grid-row:2; }
+  .axe-app-right-stack { grid-column:1/3; grid-row:3; }
+  .axe-app-card { padding:9px; }
+  .axe-app-card-heading h3 { font-size:17px; }
+  .axe-app-gear,.axe-app-wardrobe,.axe-app-vanity { min-height:145px; }
+}
+@media(max-width:470px) {
+  .axe-app-tabs button { flex-direction:column; gap:2px; }
+  .axe-app-tiles { gap:3px; }
+  .axe-app-tile { min-height:85px; }
+  .axe-app-tile span { font-size:9px; }
+  .axe-app-equipped-slots { gap:2px; }
+  .axe-app-equipped-slot { font-size:9px; }
+  .axe-app-card-heading small { font-size:9px; }
+}
+@media(prefers-reduced-motion:reduce) { .axe-app-root * { animation:none!important; transition:none!important; } }
+
+/* Information density adapts to actual room while keeping the original
+ * translucent wardrobe composition and real game character preview. */
+.axe-app-card { min-width:0; }
+.axe-app-card-content { overflow-x:hidden; overflow-y:auto; overscroll-behavior:contain; }
+.axe-app-main-stack,.axe-app-right-stack { overscroll-behavior:contain; }
+.axe-app-set-head > div:last-child { min-width:0; overflow-wrap:anywhere; }
+.axe-app-stat-row,.axe-app-bonus-row { min-width:0; overflow-wrap:anywhere; }
+.axe-app-stat-row { grid-template-columns:19px minmax(0,1fr) auto; }
+.axe-app-card-heading { flex-wrap:wrap; }
+.axe-app-card-heading small { max-width:100%; overflow-wrap:anywhere; }
+.axe-app-tile > span { overflow-wrap:anywhere; }
+.axe-app-embedded { overflow-x:hidden; overflow-y:auto; }
+@media(max-width:1150px) {
+  .axe-app-layout { align-content:start; min-height:0; grid-auto-rows:max-content; }
+  .axe-app-model-stage { align-self:start; height:clamp(320px,66vh,690px); }
+  .axe-app-main-stack,.axe-app-right-stack { overflow:visible; }
+  .axe-app-main-stack > .axe-app-card,.axe-app-right-stack > .axe-app-card { flex:0 0 auto; }
+  .axe-app-card-content { max-height:none; overflow:visible; }
+  .axe-app-embedded { max-height:60vh; overflow:auto; }
+}
+@media(max-width:780px) {
+  .axe-app-layout { grid-template-rows:minmax(240px,40vh) auto auto; }
+  .axe-app-model-stage { height:100%; }
+  .axe-app-tiles { grid-template-columns:repeat(auto-fit,minmax(min(100%,61px),1fr)); }
+  .axe-app-equipped-slots { grid-template-columns:repeat(3,minmax(0,1fr)); height:auto; }
+  .axe-app-gear { min-height:240px; }
+  .axe-app-card-content { overflow:visible; }
+}
+
+
+/* Appearance inventory redesign — real owned Vanity + Costumes only.
+ * The model and both equipment columns remain one persistent viewer across
+ * Overview, Vanity, Costumes and Wings. The outfit rail stays to its far left.
+ * Keep translucency so the actual Game 3D world is visible through each pane. */
+.axe-app-layout {
+  grid-template-columns:minmax(60px,6.2%) minmax(330px,39%) minmax(285px,1.2fr) minmax(255px,.82fr);
+  grid-template-rows:minmax(0,1fr);gap:10px;
+}
+.axe-app-rail {grid-column:1;grid-row:1;justify-content:flex-start;}
+.axe-app-rail-glyph {display:flex;flex-direction:column;align-items:center;gap:4px;}
+.axe-app-rail-glyph span {font:10px Georgia,serif;color:#f8d9a1;}
+.axe-app-rail-check {position:absolute;right:0;top:0;color:#ffdd9b;}
+.axe-app-model-stage {
+  grid-column:2;grid-row:1;position:relative;
+  display:grid;grid-template-columns:minmax(65px,17%) minmax(0,1fr) minmax(65px,17%);
+  grid-template-rows:minmax(0,1fr) auto;gap:5px;align-items:stretch;
+  padding:10px 8px 12px;overflow:hidden;
+  border:1px solid #e8cd9eab;border-radius:18px;
+  background:linear-gradient(115deg,rgba(28,47,65,.17),rgba(24,34,49,.05) 46%,rgba(24,43,58,.18));
+  box-shadow:inset 0 0 18px #f7dda01f;
+}
+.axe-app-model-glow {z-index:0;pointer-events:none;}
+.axe-app-model-center {grid-column:2;grid-row:1;min-width:0;min-height:0;
+  position:relative;display:flex;overflow:hidden;}
+.axe-app-model-center .axe-app-model-host {flex:1;min-height:240px;width:100%;}
+.axe-app-model-center .axe-app-model-host > * {width:100%;height:100%;}
+.axe-app-viewer-gear {
+  display:flex;flex-direction:column;align-items:stretch;justify-content:center;
+  gap:9px;min-width:0;min-height:0;z-index:2;
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
+}
+.axe-app-viewer-gear--left {grid-column:1;grid-row:1;}
+.axe-app-viewer-gear--right {grid-column:3;grid-row:1;}
+.axe-app-viewer-slot {
+  flex:0 1 auto;min-width:0;min-height:65px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:5px 2px;gap:3px;position:relative;
+  background:linear-gradient(140deg,rgba(39,53,66,.52),rgba(20,37,54,.48));
+  border:1px solid rgba(247,210,147,.81);border-radius:7px;
+  box-shadow:inset 0 0 10px rgba(252,219,153,.13),0 0 10px #12192477;
+  color:#ffe3ad;
+}
+.axe-app-viewer-slot:hover,.axe-app-viewer-slot:focus-visible {
+  border-color:#ffe8b6;box-shadow:inset 0 0 12px #f9d8a94b,0 0 13px #eccb898c;
+}
+.axe-app-viewer-slot-art {display:grid;place-items:center;flex:0 0 auto;max-height:48px;}
+.axe-app-viewer-slot-art svg {filter:drop-shadow(0 0 5px #eac58a85);}
+.axe-app-viewer-slot small {color:#f9e7c9;font:11px/1.2 Georgia,serif;text-align:center;}
+.axe-app-viewer-item-name {max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  color:#c9d4dd;font:9px/1.15 'Segoe UI',sans-serif;}
+.axe-app-model-caption {grid-column:1 / 4;grid-row:2;margin:0 auto 1px;max-width:96%;z-index:2;
+  background:rgba(18,34,48,.58);backdrop-filter:blur(7px);}
+.axe-app-main-stack {grid-column:3;grid-row:1;overflow:hidden;}
+.axe-app-right-stack {grid-column:4;grid-row:1;overflow-y:auto;}
+.axe-app-inventory {height:100%;min-height:0;flex:1 1 100%;border-radius:14px;}
+.axe-app-inventory>.axe-app-card-content {display:flex;flex-direction:column;min-height:0;overflow:hidden;gap:7px;}
+.axe-app-inventory-filters {display:flex;flex-wrap:wrap;gap:5px;flex-shrink:0;
+  border-bottom:1px solid #d3c19959;padding:4px 0 10px;}
+.axe-app-inventory-filters button {padding:6px 12px;flex:1 0 auto;min-width:65px;
+  color:#f2e5cc;background:rgba(17,37,52,.43);border:1px solid rgba(217,191,145,.44);
+  font:12px Georgia,serif;border-radius:14px;}
+.axe-app-inventory-filters button[aria-pressed=true] {
+  color:#352c20;text-shadow:none;border-color:#ffe6b6;
+  background:linear-gradient(100deg,#c69e65,#ffe2a8,#d8b176);
+  box-shadow:0 0 11px #f7c98a72;}
+.axe-app-inventory-grid {flex:1;min-height:0;display:grid;align-content:start;
+  grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:105px;
+  gap:7px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;
+  scrollbar-color:#dfbf8588 transparent;padding:4px 2px;}
+.axe-app-inventory-tile {position:relative;min-width:0;display:flex;flex-direction:column;gap:4px;
+  padding:7px 3px;align-items:center;justify-content:center;text-align:center;
+  border-radius:6px;border:1px solid #cfb68d9b;
+  background:linear-gradient(150deg,rgba(41,56,73,.55),rgba(23,39,56,.43));
+  box-shadow:inset 0 0 10px #f2deb11c;color:#f4e5cb;}
+.axe-app-inventory-tile[aria-pressed=true],.axe-app-inventory-tile:hover {
+  border:2px solid #ffe0a3;
+  box-shadow:0 0 11px #ffce7988,inset 0 0 12px #efc88c37;}
+.axe-app-inventory-art {flex:1;min-height:35px;display:grid;place-items:center;color:#f4d399;}
+.axe-app-inventory-art img {max-width:100%;max-height:50px;object-fit:contain;}
+.axe-app-inventory-art svg {filter:drop-shadow(0 0 5px #9db8d699);}
+.axe-app-inventory-name {max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;color:#ffe4b5;font:10px/1.2 Georgia,serif;}
+.axe-app-inventory-tile>small {color:#c9d4dc;font:9px 'Segoe UI',sans-serif;}
+.axe-app-inventory-empty {grid-column:1 / -1;text-align:center;padding:24px 5px;
+  color:#e4d4bd;font:13px Georgia,serif;}
+.axe-app-inventory-note {margin:0;padding:6px 3px;border-top:1px solid #dfc89348;
+  color:#e6d9c2;font:11px/1.35 Georgia,serif;flex-shrink:0;}
+.axe-app-item-details {flex:1 1 58%;min-height:220px;overflow:auto;}
+.axe-app-summary {flex:1 1 42%;min-height:200px;overflow:auto;}
+.axe-app-item-details>.axe-app-card-content,.axe-app-summary>.axe-app-card-content {
+  overflow-y:auto;scrollbar-width:thin;}
+.axe-app-selected-medallion {width:70px;height:70px;display:grid;place-items:center;margin:5px 0 8px;
+  background:rgba(54,78,96,.48);border:1px solid #f2d8a59b;border-radius:10px;color:#f7db9f;}
+.axe-app-selected-medallion img {max-width:90%;max-height:90%;object-fit:contain;}
+.axe-app-selected-rarity {margin:3px 0 10px;color:#e9d0a5;font:12px Georgia,serif;text-transform:capitalize;}
+.axe-app-detail-heading {padding:9px 2px 7px;color:#ffe1ac;font:14px Georgia,serif;
+  border-bottom:1px solid #d9ba8659;}
+.axe-app-summary-stats {margin-top:14px;}
+.axe-app-right-stack .axe-app-card-actions button {min-width:80px;}
+.axe-app-right-stack .axe-app-card-actions {justify-content:flex-start;}
+.axe-app-inventory .axe-app-card-heading h3,.axe-app-item-details .axe-app-card-heading h3 {
+  font-size:clamp(16px,1.35vw,21px);}
+.axe-app-main-stack>.axe-app-card:not(.axe-app-inventory) {min-height:0;flex:1;}
+@media(max-width:1250px) {
+  .axe-app-layout {grid-template-columns:60px minmax(260px,36%) minmax(235px,1fr) minmax(215px,.87fr);
+    grid-template-rows:minmax(0,1fr);}
+  .axe-app-main-stack {grid-column:3;grid-row:1;overflow:hidden;}
+  .axe-app-right-stack {grid-column:4;grid-row:1;overflow:auto;}
+  .axe-app-model-stage {grid-column:2;grid-row:1;}
+  .axe-app-rail {grid-column:1;grid-row:1;}
+  .axe-app-inventory-grid {grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:102px;}
+  .axe-app-viewer-slot {min-height:61px;}
+}
+@media(max-width:960px) {
+  .axe-app-layout {grid-template-columns:56px minmax(0,1fr) minmax(0,1.1fr);
+    grid-template-rows:minmax(330px,45vh) auto;min-height:0;}
+  .axe-app-rail {grid-column:1;grid-row:1;}
+  .axe-app-model-stage {grid-column:2;grid-row:1;}
+  .axe-app-main-stack {grid-column:3;grid-row:1/3;overflow:auto;}
+  .axe-app-right-stack {grid-column:1/3;grid-row:2;overflow:visible;}
+  .axe-app-inventory {min-height:330px;}
+  .axe-app-right-stack .axe-app-card {min-height:160px;}
+}
+@media(max-width:650px) {
+  .axe-app-layout {grid-template-columns:53px minmax(0,1fr);
+    grid-template-rows:minmax(310px,47vh) minmax(290px,auto) auto;gap:7px;}
+  .axe-app-rail {grid-column:1;grid-row:1;}
+  .axe-app-model-stage {grid-column:2;grid-row:1;}
+  .axe-app-main-stack {grid-column:1/3;grid-row:2;overflow:visible;}
+  .axe-app-right-stack {grid-column:1/3;grid-row:3;overflow:visible;}
+  .axe-app-inventory-grid {grid-template-columns:repeat(4,minmax(0,1fr));max-height:310px;}
+  .axe-app-viewer-slot {min-height:58px;padding:3px 1px;}
+  .axe-app-viewer-slot svg {width:22px;height:22px;}
+  .axe-app-viewer-item-name {font-size:8px;}
+  .axe-app-model-center .axe-app-model-host {min-height:160px;}
+}
+
+
+/* Reference pass: one continuous Vanity detail panel, to the right of
+   Inventory, with live stats, the actual four-piece set and Equip/Enchant. */
+.axe-service-workspace.axe-service-workspace--appearance {
+  /* Move closer to the actual Services row, but never cross its measured
+     bottom. The separate HUD clearance may be 17px taller than needed. */
+  top:max(
+    68px,
+    calc(var(--axe-service-navigation-actual-bottom,72px) + 7px),
+    calc(var(--axe-service-navigation-bottom,128px) - 17px)
+  );
+  bottom:4px;
+}
+.axe-app-brand {flex-wrap:wrap;min-height:65px;gap:9px;padding:0 9px;}
+.axe-app-placement-note {
+  display:inline-flex;align-items:center;gap:6px;
+  width:max-content;max-width:min(680px,100%);
+  padding:6px 10px;margin:0 0 0 9px;flex:0 1 auto;
+  border:1px solid rgba(242,210,147,.68);border-radius:7px;
+  background:linear-gradient(110deg,rgba(32,44,58,.63),rgba(26,35,48,.49));
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  color:#f5e7ce;font:11px/1.3 Georgia,serif;
+  white-space:normal;text-align:left;box-shadow:0 1px 9px #0003;
+}
+.axe-app-placement-note>span {color:#ffd999;font-size:15px;flex-shrink:0;}
+.axe-app-right-stack {overflow-y:auto;gap:0;}
+.axe-app-unified-details {width:100%;flex:1 1 100%;min-height:0;
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;gap:10px;
+  padding:13px;background:var(--axe-app-glass);border-radius:15px;
+  border:1px solid var(--axe-app-gold);
+  backdrop-filter:blur(13px) saturate(104%);
+  -webkit-backdrop-filter:blur(13px) saturate(104%);
+}
+.axe-app-unified-header {display:grid;grid-template-columns:68px minmax(0,1fr) auto;
+  gap:10px;align-items:start;padding-bottom:10px;
+  border-bottom:1px solid rgba(246,216,162,.45);}
+.axe-app-unified-header .axe-app-selected-medallion {width:63px;height:65px;margin:0;}
+.axe-app-unified-identity {min-width:0;display:flex;flex-direction:column;gap:5px;}
+.axe-app-unified-identity h3 {font:normal clamp(16px,1.5vw,23px)/1.1 Georgia,serif;color:#ffe1ae;
+  margin:0;overflow-wrap:anywhere;}
+.axe-app-unified-identity span {font:12px Georgia,serif;color:#ecd9bd;}
+.axe-app-unified-identity small {font:10px 'Segoe UI',sans-serif;color:#abd9b9;}
+.axe-app-rarity {align-self:start;justify-self:end;white-space:nowrap;
+  padding:3px 9px;font:11px Georgia,serif;text-transform:capitalize;
+  border:1px solid #c8a37f;border-radius:99px;color:#ffe0b6;background:#273e51a3;}
+.axe-app-rarity--rare {background:#214b6cb8;border-color:#88c9f1;}
+.axe-app-rarity--epic {background:#613078bb;border-color:#b787e9;}
+.axe-app-rarity--legendary {background:#735226be;border-color:#ffdd84;}
+.axe-app-unified-stats {padding:3px 0 9px;border-bottom:1px solid #e6d3ae57;}
+.axe-app-unified-stats .axe-app-bonus-row {padding:6px 3px;}
+.axe-app-unified-stats .axe-app-bonus-row b {color:#abeec5;white-space:nowrap;}
+.axe-app-unified-set {margin:7px 0 4px;border-bottom:1px solid #e7d7b566;padding-bottom:10px;}
+.axe-app-unified-set-heading {display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:5px;}
+.axe-app-unified-set-heading strong {font:11px Georgia,serif;color:#b6f3c5;}
+.axe-app-set-description {margin:9px 0;color:#e9dfcd;font:11px/1.45 Georgia,serif;}
+.axe-app-unified-set-slots {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+.axe-app-unified-set-slots button {position:relative;min-width:0;min-height:75px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  border:1px solid #d9bb879e;border-radius:5px;color:#f4e3c6;
+  background:linear-gradient(130deg,rgba(53,75,93,.56),rgba(26,44,61,.46));}
+.axe-app-unified-set-slots button[aria-pressed=true] {border-color:#ffe4ab;
+  box-shadow:0 0 11px #ffd38f71,inset 0 0 12px #ffdda82b;}
+.axe-app-unified-set-slots button:disabled {opacity:.39;}
+.axe-app-unified-set-slots small {font:9px Georgia,serif;max-width:95%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.axe-app-unified-set-check {position:absolute;top:2px;right:2px;color:#b8f7cc;}
+.axe-app-unified-set-benefits {margin-top:10px;display:flex;flex-direction:column;gap:2px;}
+.axe-app-unified-set-benefits .axe-app-bonus-row {padding:5px 0;gap:6px;}
+.axe-app-unified-set-benefits .axe-app-bonus-row b {font-size:10px;color:#bcf4c9;
+  text-align:right;overflow-wrap:anywhere;}
+.axe-app-set-reward-note {color:#dbd2bf;font:10px/1.42 Georgia,serif;margin:7px 1px;}
+.axe-app-unified-actions {display:grid;grid-template-columns:1fr 1fr;gap:10px;
+  margin:14px 0 8px;}
+.axe-app-unified-actions button {display:inline-flex;align-items:center;
+  justify-content:center;gap:6px;padding:11px 6px;min-width:0;border-radius:7px;
+  font:normal 15px Georgia,serif;}
+.axe-app-unified-equip {color:#2b261c!important;text-shadow:none!important;
+  border:1px solid #ffedbd!important;
+  background:linear-gradient(95deg,#edc989,#ffe4ab,#d9a65f)!important;
+  box-shadow:0 0 13px #ffdb9b65,inset 0 0 8px #fff5ce8a;}
+.axe-app-unified-enchant {color:#ffe3b7!important;
+  border:1px solid #d9bc86!important;
+  background:linear-gradient(105deg,rgba(25,47,64,.73),rgba(32,48,61,.83))!important;}
+.axe-app-unified-extras {display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+.axe-app-unified-extras button,.axe-app-unified-visibility {display:inline-flex;align-items:center;gap:5px;
+  padding:7px 10px;border:1px solid rgba(235,198,139,.6);background:rgba(27,43,59,.65);
+  color:#f9e4c0;border-radius:6px;font:11px Georgia,serif;}
+.axe-app-unified-overview {border-top:1px solid #e6cca17d;margin:12px 0 0;}
+.axe-app-unified-empty {display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;text-align:center;gap:12px;color:#e4d4b9;padding:20px 4px;}
+.axe-app-unified-empty h3 {margin:0;color:#ffe1ae;font:19px Georgia,serif;}
+.axe-app-unified-empty p {font:12px/1.6 Georgia,serif;}
+@media(max-width:1120px) {
+  .axe-app-unified-header {grid-template-columns:52px minmax(0,1fr);}
+  .axe-app-unified-header .axe-app-selected-medallion {width:48px;height:50px;}
+  .axe-app-rarity {grid-column:2;justify-self:start;}
+  .axe-app-unified-details {padding:10px;}
+}
+@media(max-width:650px) {
+  .axe-app-brand {min-height:52px;}
+  .axe-app-placement-note {margin:0;width:max-content;max-width:100%;font-size:10px;}
+  .axe-app-unified-details {min-height:320px;}
+}
+
+
+/* Wings takes the two information columns to the right of the permanent 3D
+   preview. The old far-right "Spiritual Wings" placeholder is removed.
+   This keeps the four vertical path cards and their actual Enchant/stats
+   legible instead of clipping a 700px subtab into a 370px panel. */
+.axe-app-main-stack--wings {min-height:0;overflow:hidden;}
+.axe-app-wings-wide {flex:1 1 auto;min-width:0;min-height:0;height:100%;overflow:hidden;
+  background:var(--axe-app-glass);border-color:var(--axe-app-gold);}
+.axe-app-wings-wide>.axe-app-card-content {flex:1 1 auto;display:flex;flex-direction:column;
+  min-width:0;min-height:0;overflow:hidden;padding:0;}
+.axe-app-embedded--wings {flex:1 1 auto;width:100%;min-width:0;min-height:0;height:100%;
+  max-height:none;overflow:hidden;}
+@media(min-width:961px) {
+  .axe-app-main-stack--wings {grid-column:3 / 5;grid-row:1;}
+}
+@media(min-width:651px) and (max-width:960px) {
+  .axe-app-main-stack--wings {grid-column:3;grid-row:1 / 3;}
+  .axe-app-wings-wide {height:min(70vh,750px);min-height:340px;}
+}
+@media(max-width:650px) {
+  .axe-app-main-stack--wings {grid-column:1 / 3;grid-row:2;min-height:460px;}
+  .axe-app-wings-wide {height:min(70vh,700px);min-height:460px;}
+}
+
+
+/* Taller Appearance in live Game 3D: begin as high as practical without
+   covering the measured Services navigation, and keep extra room at bottom.
+   The banner and four subpage tabs are compressed slightly, NOT removed. */
+.axe-service-workspace--appearance .axe-service-progression {min-height:0;overflow:hidden;}
+.axe-service-workspace--appearance .axe-app-root {
+  min-height:0;
+  gap:5px;
+  padding:2px 10px 5px;
+}
+.axe-service-workspace--appearance .axe-app-brand {
+  min-height:55px;
+  padding:0 7px;
+  gap:8px;
+}
+.axe-service-workspace--appearance .axe-app-banner {
+  width:54px;height:54px;font-size:29px;
+}
+.axe-service-workspace--appearance .axe-app-tabs {
+  flex-basis:47px;
+  min-height:47px;
+}
+.axe-service-workspace--appearance .axe-app-layout {
+  min-height:0;
+  height:100%;
+  flex:1 1 auto;
+}
+@media(max-width:780px) {
+  .axe-service-workspace--appearance .axe-app-brand {min-height:48px;}
+  .axe-service-workspace--appearance .axe-app-banner {width:43px;height:45px;font-size:23px;}
+  .axe-service-workspace--appearance .axe-app-tabs {flex-basis:44px;min-height:44px;}
+  .axe-service-workspace--appearance .axe-app-root {padding:2px 5px 5px;}
+}
+@media(max-height:600px) {
+  .axe-service-workspace.axe-service-workspace--appearance {
+    top:max(
+      64px,
+      calc(var(--axe-service-navigation-actual-bottom,72px) + 6px),
+      calc(var(--axe-service-navigation-bottom,100px) - 10px)
+    );
+  }
+}
+
+/* New Equipment tab between Overview and Vanity. Five equally sized controls
+   retain the existing gold-glass look and never overlap service navigation. */
+.axe-app-tabs {grid-template-columns:repeat(5,minmax(0,1fr));}
+.axe-app-tabs button {gap:6px;padding:5px 6px;}
+@media(max-width:650px) {
+  .axe-app-tabs button {gap:3px;padding:3px 1px;font-size:11px;}
+  .axe-app-tabs button svg {width:15px;height:15px;}
+}
+
+/* Aura is the sixth Appearance subpage, immediately right of Wings.
+   Viewer contains four proportional slots on each side: +Customs and +Aura. */
+.axe-app-tabs {grid-template-columns:repeat(6,minmax(0,1fr));}
+.axe-app-model-stage .axe-app-viewer-gear {gap:clamp(4px,.7vh,9px);}
+.axe-app-model-stage .axe-app-viewer-slot {
+  flex:1 1 0;min-height:0;max-height:22%;
+  padding:clamp(2px,.3vw,5px) 1px;gap:2px;
+}
+.axe-app-model-stage .axe-app-viewer-slot-art {max-height:40px;}
+.axe-app-model-stage .axe-app-viewer-slot-art svg {width:clamp(17px,1.8vw,26px);
+  height:clamp(17px,1.8vw,26px);}
+.axe-app-model-stage .axe-app-viewer-slot small {font-size:clamp(9px,.7vw,11px);}
+.axe-app-model-stage .axe-app-viewer-item-name {font-size:clamp(8px,.6vw,10px);}
+.axe-app-model-stage--aura .axe-app-model-center::before {
+  content:'';position:absolute;z-index:1;pointer-events:none;
+  left:6%;right:6%;top:4%;bottom:5%;
+  border-radius:48% 48% 36% 36%;
+  background:radial-gradient(ellipse at 50% 50%,rgba(173,213,247,.10),transparent 53%),
+    radial-gradient(ellipse at 50% 62%,rgba(166,208,247,.13),transparent 74%);
+  box-shadow:inset 0 0 22px rgba(205,238,255,.14),0 0 19px rgba(138,206,246,.24);
+  filter:blur(14px);
+  animation:axe-app-aura-breathe 4.8s ease-in-out infinite alternate;
+}
+@keyframes axe-app-aura-breathe {
+  from {opacity:.62;transform:scale(.98);}
+  to {opacity:1;transform:scale(1.03);}
+}
+@media(prefers-reduced-motion:reduce) {
+ .axe-app-model-stage--aura .axe-app-model-center::before {animation:none;}
+}
