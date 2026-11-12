@@ -6,6 +6,61 @@ import {companionModel,applyCompanionAppearance} from './genesisAssets';
 import {creatorBody} from './avatarCustomization';
 import {characterBodyBounds,FUSED_FEMALE_CHARACTER_MODEL_URL,FUSED_MALE_CHARACTER_MODEL_URL} from '@/lib/characterModelOverrides';
 const customizations=new WeakMap();
+
+/**
+ * The GitHub-to-Base44 migration initially copied Game 3D code without the
+ * large private GLB files in public/models/characters. The existing hosted
+ * platform bodies can keep a character visible while the exact files are
+ * transferred. Never replace a successfully loaded authored local body.
+ */
+const MALE_HOSTED_BODY = 'https://base44.app/api/apps/6876751a602125f45f1861b9/files/mp/public/6876751a602125f45f1861b9/d646be928_Getsuga_Tensho_Character.glb';
+const FEMALE_HOSTED_BODY = 'https://base44.app/api/apps/6876751a602125f45f1861b9/files/mp/public/6876751a602125f45f1861b9/96bb872db_Artemis_Character.glb';
+const missingBodyWarnings = new Set();
+
+function legacyBodyFallback(url) {
+ const path = String(url || '').split(/[?#]/)[0];
+ if (!path.startsWith('/models/characters/') &&
+     !path.startsWith('https://base44.app/api/apps/6876751a602125f45f1861b9/files/')) return null;
+ const name = path.split('/').pop();
+ const male = new Set([
+  'Male_Fused_v1.glb', 'Male_Fused_v2.glb',
+  'Getsuga_Tensho_Character_v2.glb', 'Getsuga_Tensho_Character_v3.glb',
+  'Getsuga_Tensho_Character_v5.glb', 'd646be928_Getsuga_Tensho_Character.glb',
+ ]);
+ const female = new Set([
+  'Female_Fused_v1.glb', 'Female_Fused_v2.glb',
+  'Artemis_Character_v2.glb', 'Artemis_Character_v3.glb',
+  'Artemis_Character_v5.glb', '96bb872db_Artemis_Character.glb',
+ ]);
+ if (male.has(name)) return MALE_HOSTED_BODY;
+ if (female.has(name)) return FEMALE_HOSTED_BODY;
+ return null;
+}
+
+async function loadWithHostedFallback(url) {
+ try {
+  const asset = String(url).split(/[?#]/)[0].toLowerCase().endsWith('.fbx')
+    ? await new FBXLoader().loadAsync(url)
+    : await new GLTFLoader().loadAsync(url);
+  return {asset, usedFallback:false};
+ } catch (primaryError) {
+  const hosted = legacyBodyFallback(url);
+  if (!hosted) throw primaryError;
+  try {
+   // The default Three.js LoadingManager rewrites the hosted URL back to the
+   // missing local v5 body. A fresh manager bypasses that global redirect.
+   const asset = await new GLTFLoader(new THREE.LoadingManager()).loadAsync(hosted);
+   if (!missingBodyWarnings.has(url)) {
+    missingBodyWarnings.add(url);
+    console.warn('[Game 3D] Local character GLB is unavailable; using the older hosted body until the original asset is imported.', url, primaryError);
+   }
+   return {asset, usedFallback:true};
+  } catch (fallbackError) {
+   throw new Error('Character model missing: the local 3D file and its hosted fallback could not load. Restore public/models/characters assets.', {cause:fallbackError});
+  }
+ }
+}
+
 // Fused Eve/Adam creator bodies are painted and recoloured by the creator
 // runtime. Do NOT run them through applyCompanionAppearance: that older
 // platform-avatar pass adds a second colour/style shader (including saturation,
@@ -36,7 +91,7 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
  const allowedWorldUrl=localBody?.gender==='female'?FUSED_FEMALE_CHARACTER_MODEL_URL:localBody?.gender==='male'?FUSED_MALE_CHARACTER_MODEL_URL:null;
  const fusedWorldBody=Boolean(allowedWorldUrl && game3dModelUrl===allowedWorldUrl && typeof config!=='string');
  const url=typeof config==='string'?config:fusedWorldBody?game3dModelUrl:companionModel(config);
- const asset=/\.fbx(?:\?|$)/i.test(url)?await new FBXLoader().loadAsync(url):await new GLTFLoader().loadAsync(url);
+ const {asset, usedFallback}=await loadWithHostedFallback(url);
  const model=asset.scene||asset;model.animations=asset.animations||[];
  // glTF animation extras (clip speed, events) and the file's rig id; GLTFLoader keeps neither on its own.
  const json=asset.parser?.json;if(json){model.animations.forEach((clip,i)=>{const extras=json.animations?.[i]?.extras;if(extras&&typeof extras==='object')clip.userData={...clip.userData,...extras};});const rigId=json.extras?.rigId;if(typeof rigId==='string'){model.userData.rigId=rigId;model.userData.fusedCharacter=/^fused-/.test(rigId);}}
@@ -45,8 +100,9 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
  model.traverse(n=>{if(n.isSkinnedMesh)n.frustumCulled=false;});
  // The in-world fused body must match the creator-stage pigment pipeline.
  // Shared platform avatars still use their original styling path.
- model.userData.game3dFusedCreatorBody=fusedWorldBody;
- if(fusedWorldBody)applyFusedWorldProportions(model,config);
+ model.userData.game3dFusedCreatorBody=fusedWorldBody && !usedFallback;
+ if(usedFallback) model.userData.game3dLegacyCharacterFallback = true;
+ if(fusedWorldBody && !usedFallback)applyFusedWorldProportions(model,config);
  else applyCompanionAppearance(model,typeof config==='string'?{}:config);
  if(typeof config!=='string'){const customization=new AvatarCustomizationRuntime(model,{gender:config.gender,rigId:localBody?.rig_id||model.userData.rigId});customizations.set(model,customization);await customization.update(config);}
  return model;
