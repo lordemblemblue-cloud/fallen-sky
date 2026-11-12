@@ -1,0 +1,102 @@
+{
+  "female": [
+    {
+      "id": "female_forearm_band",
+      "label": "Forearm lattice",
+      "url": "/models/characters/fused/tattoos/female_forearm_band.png",
+      "slot": "tattoo",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "female_back_sigil",
+      "label": "Back sigil",
+      "url": "/models/characters/fused/tattoos/female_back_sigil.png",
+      "slot": "tattoo",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "female_thigh_vine",
+      "label": "Thigh vine",
+      "url": "/models/characters/fused/tattoos/female_thigh_vine.png",
+      "slot": "tattoo",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "female_collar_script",
+      "label": "Collar script",
+      "url": "/models/characters/fused/tattoos/female_collar_script.png",
+      "slot": "tattoo",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    }
+  ],
+  "male": [
+    {
+      "id": "male_forearm_band",
+      "label": "Forearm lattice",
+      "url": "/models/characters/fused/tattoos/male_forearm_band.png",
+      "slot": "tattoo",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "male_back_sigil",
+      "label": "Back sigil",
+      "url": "/models/characters/fused/tattoos/male_back_sigil.png",
+      "slot": "tattoo",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "male_thigh_vine",
+      "label": "Thigh vine",
+      "url": "/models/characters/fused/tattoos/male_thigh_vine.png",
+      "slot": "tattoo",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    },
+    {
+      "id": "male_collar_script",
+      "label": "Collar script",
+      "url": "/models/characters/fused/tattoos/male_collar_script.png",
+      "slot": "tattoo",
+      "gender": "male",
+      "rig_id": "fused-male-v1",
+      "binding": "surface",
+      "target_materials": [
+        "Skin_Body"
+      ]
+    }
+  ]
+}
