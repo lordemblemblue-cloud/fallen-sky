@@ -1,0 +1,124 @@
+// Shared contract for the creator, appearance saves, and uploaded asset catalog.
+export const CUSTOMIZATION_SLOTS = ['body','hair','eyebrows','facial_hair','outfit','top','bottom','footwear','accessory','tattoo','complexion'];
+// min -1: two-sided (0 is the original shape, -1 the opposite of +1)
+export const SHAPE_CONTROLS = [
+// (face_width, face_height, jaw_width, eye_spacing, nose_width, nose_length and mouth_width are also what "Match from a
+// photo" measures, see src/components/onboarding/avatarAppearanceData.js FACE_CONTROLS)
+ {id:'face_width',label:'Face width',morph:'CC_FaceWidth',section:'face',min:-1},
+ {id:'face_height',label:'Face length',morph:'CC_FaceHeight',section:'face',min:-1},
+ {id:'jaw_width',label:'Jaw width',morph:'CC_JawWidth',section:'face',min:-1},
+ {id:'brow_size',label:'Brow ridge',morph:'CC_BrowSize',section:'face',min:-1},
+ {id:'eye_size',label:'Eye size',morph:'CC_EyeSize',section:'face',min:-1},
+ {id:'eye_spacing',label:'Eye spacing',morph:'CC_EyeSpacing',section:'face',min:-1},
+ {id:'nose_width',label:'Nose width',morph:'CC_NoseWidth',section:'face',min:-1},
+ {id:'nose_length',label:'Nose length',morph:'CC_NoseLength',section:'face',min:-1},
+ {id:'mouth_width',label:'Mouth width',morph:'CC_MouthWidth',section:'face',min:-1},
+ {id:'chest_size',label:'Chest size',morph:'CC_ChestSize',section:'body',min:-.5},
+ {id:'glute_size',label:'Glute size',morph:'CC_GluteSize',section:'body',min:-1},
+ {id:'shoulder_width',label:'Shoulder width',morph:'CC_ShoulderWidth',section:'body',min:-1},
+ {id:'muscle_definition',label:'Muscle',morph:'CC_MuscleDefinition',section:'body',min:-1},
+ // fused characters (tools/avatar-fuse): absent on older bodies, where the runtime skips them
+ {id:'body_weight',label:'Body weight',morph:'CC_BodyWeight',section:'body',min:-1},
+ {id:'waist',label:'Waist',morph:'CC_Waist',section:'body',min:-1},
+ {id:'cheek_puff',label:'Cheeks',morph:'CC_CheekPuff',section:'face',min:-1},
+ // detail sculpting (tools/avatar-fuse shapes.py): skipped on bodies without the CC_ key
+ {id:'forehead_height',label:'Forehead height',morph:'CC_ForeheadHeight',section:'face',min:-1},
+ {id:'forehead_slope',label:'Forehead slope',morph:'CC_ForeheadSlope',section:'face',min:-1},
+ {id:'brow_height',label:'Brow height',morph:'CC_BrowHeight',section:'face',min:-1},
+ {id:'brow_angle',label:'Brow angle',morph:'CC_BrowAngle',section:'face',min:-1},
+ {id:'eye_height',label:'Eye height',morph:'CC_EyeHeight',section:'face',min:-1},
+ {id:'eye_tilt',label:'Eye tilt',morph:'CC_EyeTilt',section:'face',min:-1},
+ {id:'eye_depth',label:'Eye depth',morph:'CC_EyeDepth',section:'face',min:-1},
+ {id:'nose_bridge',label:'Nose bridge',morph:'CC_NoseBridge',section:'face',min:-1},
+ {id:'nose_tip',label:'Nose tip',morph:'CC_NoseTip',section:'face',min:-1},
+ {id:'nose_projection',label:'Nose projection',morph:'CC_NoseProjection',section:'face',min:-1},
+ {id:'cheek_bone',label:'Cheekbones',morph:'CC_CheekBone',section:'face',min:-1},
+ {id:'cheek_height',label:'Cheek height',morph:'CC_CheekHeight',section:'face',min:-1},
+ {id:'jaw_angle',label:'Jaw angle',morph:'CC_JawAngle',section:'face',min:-1},
+ {id:'chin_length',label:'Chin length',morph:'CC_ChinLength',section:'face',min:-1},
+ {id:'chin_width',label:'Chin width',morph:'CC_ChinWidth',section:'face',min:-1},
+ {id:'chin_projection',label:'Chin projection',morph:'CC_ChinProjection',section:'face',min:-1},
+ {id:'mouth_height',label:'Mouth height',morph:'CC_MouthHeight',section:'face',min:-1},
+ {id:'lip_upper',label:'Upper lip',morph:'CC_LipUpper',section:'face',min:-1},
+ {id:'lip_lower',label:'Lower lip',morph:'CC_LipLower',section:'face',min:-1},
+ {id:'ear_size',label:'Ear size',morph:'CC_EarSize',section:'face',min:-1},
+ {id:'ear_angle',label:'Ear angle',morph:'CC_EarAngle',section:'face',min:-1},
+ {id:'neck_width',label:'Neck width',morph:'CC_NeckWidth',section:'body',min:-1},
+ {id:'chest_height',label:'Chest height',morph:'CC_ChestHeight',section:'chest',min:-1},
+ {id:'chest_spacing',label:'Chest spacing',morph:'CC_ChestSpacing',section:'chest',min:-1},
+ {id:'glute_lift',label:'Glute lift',morph:'CC_GluteLift',section:'glutes',min:-1},
+ {id:'hip_width',label:'Hip width',morph:'CC_HipWidth',section:'glutes',min:-1},
+ {id:'belly',label:'Belly',morph:'CC_Belly',section:'body',min:-1},
+ {id:'arm_size',label:'Arms',morph:'CC_ArmSize',section:'body',min:-1},
+ {id:'thigh_size',label:'Thighs',morph:'CC_ThighSize',section:'body',min:-1},
+ {id:'calf_size',label:'Calves',morph:'CC_CalfSize',section:'body',min:-1},
+ {id:'age',label:'Age appearance',morph:'CC_Age',section:'skin',min:0},
+];
+export const RIG_IDS = {male:'getsuga-v1',female:'artemis-v1'};
+const bound=(v,min,max,f)=>Number.isFinite(Number(v))?Math.max(min,Math.min(max,Number(v))):f;
+const color=(v,f)=>/^#[a-f0-9]{6}$/i.test(String(v||''))?v:f;
+export function normalizeCustomization(value={}) {
+ const a=value&&typeof value==='object'?value:{};
+ const chosen=a.selected_assets&&typeof a.selected_assets==='object'?a.selected_assets:{};
+ return {
+  customization_version:1,
+  selected_assets:Object.fromEntries(CUSTOMIZATION_SLOTS.filter(s=>/^[a-zA-Z0-9_-]{1,100}$/.test(String(chosen[s]||''))).map(s=>[s,String(chosen[s])])),
+  shape_controls:Object.fromEntries(SHAPE_CONTROLS.map(c=>[c.id,bound(a.shape_controls?.[c.id],c.min??0,1,0)])),
+  // Pigment controls remain distinct from gloss and are normalized on both
+  // client and server, including characters saved across sessions.
+  makeup_enabled:a.makeup_enabled===true,
+  makeup_strength:bound(a.makeup_strength,0,1,.55),
+  makeup_lip_color:color(a.makeup_lip_color,'#a4495c'),
+  makeup_blush_color:color(a.makeup_blush_color,'#c47776'),
+  makeup_eye_color:color(a.makeup_eye_color,'#66516b'),
+  skin_finish:bound(a.skin_finish,0,1,.35),
+  skin_finish_enabled:a.skin_finish_enabled===true,
+  skin_highlight_color:color(a.skin_highlight_color,'#fff3e5'),
+  skin_highlight_enabled:a.skin_highlight_enabled===true,
+  layer_colors:Object.fromEntries(CUSTOMIZATION_SLOTS.filter(s=>/^#[a-f0-9]{6}$/i.test(String(a.layer_colors?.[s]||''))).map(s=>[s,a.layer_colors[s]])),
+  layer_opacity:Object.fromEntries(['tattoo','complexion'].map(s=>[s,bound(a.layer_opacity?.[s],0,1,s==='tattoo'?.75:1)])),
+ };
+}
+export function isAvatarAssetUrl(value) {
+ const s=String(value||'');
+ return /^https:\/\/base44\.app\/api\/apps\/6876751a602125f45f1861b9\/files\//.test(s)
+  || /^\/models\/[a-zA-Z0-9_./-]+$/.test(s)&&!s.includes('..');
+}
+const names=value=>Array.isArray(value)?[...new Set(value.filter(v=>typeof v==='string'&&v.length>0&&v.length<=100))].slice(0,32):[];
+export function normalizeCustomizationAsset(input={}) {
+ const a=input&&typeof input==='object'?input:{};
+ const fail=message=>{throw new Error(message);};
+ if(!String(a.name||'').trim()||String(a.name).length>70)fail('Enter an asset name up to 70 characters.');
+ if(!CUSTOMIZATION_SLOTS.includes(a.slot))fail('Choose a supported customization slot.');
+ if(!['male','female'].includes(a.gender))fail('Choose the body this asset was authored for.');
+ const binding=['skinned','socket','surface'].includes(a.binding)?a.binding:'skinned';
+ if(!isAvatarAssetUrl(a.file_url))fail('Upload this asset to the app first.');
+ if(binding==='surface'&&!['tattoo','complexion'].includes(a.slot))fail('Surface layers must use the tattoo or complexion slot.');
+ if(binding==='surface'&&!/\.(png|webp)(?:[?#].*)?$/i.test(a.file_url))fail('Use a transparent PNG or WebP exported for the body UVs.');
+ if(binding!=='surface'&&!/\.glb(?:[?#].*)?$/i.test(a.file_url))fail('Use a self-contained GLB.');
+ if(binding==='socket'&&!String(a.attach_bone||'').trim())fail('A rigid attachment needs its exact bone name.');
+ const target_meshes=names(a.target_meshes);
+ if(binding==='surface'&&!target_meshes.length)fail('Specify the exact body mesh names for the surface layer.');
+ return {
+  name:String(a.name).trim(),slot:a.slot,gender:a.gender,rig_id:RIG_IDS[a.gender],binding,file_url:String(a.file_url).slice(0,1200),
+  thumbnail_url:isAvatarAssetUrl(a.thumbnail_url)?a.thumbnail_url:'',
+  description:String(a.description||'').trim().slice(0,300),published:a.published===true,
+  attach_bone:binding==='socket'?String(a.attach_bone).trim().slice(0,100):'',
+  hide_meshes:binding==='surface'?[]:names(a.hide_meshes),target_meshes,
+  tint_materials:names(a.tint_materials),
+  // Skin/hair masks can be supplied in a model's glTF extras; no guessed body regions.
+ };
+}
+export async function resolveCustomizationAssets(service,appearance) {
+ const selected=appearance.selected_assets||{};
+ const entries=Object.entries(selected);
+ if(entries.length===0)return {...appearance,customization_assets:[]};
+ const ids=[...new Set(entries.map(([,id])=>id))];
+ const rows=(await Promise.all(ids.map(id=>service.AvatarCustomizationAsset.filter({id,published:true},'created_date',1)))).flat();
+ const resolved=entries.map(([slot,id])=>{
+  const row=rows.find(r=>r.id===id);
+  if(!row||row.slot!==slot||row.gender!==appearance.gender||row.rig_id!==RIG_IDS[appearance.gender])throw new Error('A selected layer is unavailable for this body. Refresh the creator and choose another.');
+  return {id:row.id,...normalizeCustomizationAsset(row)};
+ });
+ return {...appearance,customization_assets:resolved};
+}

@@ -1,0 +1,285 @@
+/* Character shares Appearance's actual 3D viewer, ten equipment slots and
+   mineral-blue glass. There is no wardrobe column or item inventory. */
+.axe-service-workspace--character {align-items:center;}
+.axe-service-workspace--character .axe-service-operations,
+.axe-service-workspace--character .axe-service-operation-help,
+.axe-service-workspace--character .axe-service-operation-select {display:none;}
+.axe-service-workspace--character .axe-service-heading {
+  width:min(1672px,100%);flex:0 0 auto;position:relative;z-index:5;
+  background:transparent;border:0;box-shadow:none;padding:0;
+  min-height:0;
+}
+.axe-service-workspace--character .axe-service-heading > div:first-child {display:none;}
+.axe-char-root {height:100%;width:min(1672px,100%);overflow:auto;}
+.axe-char-root .axe-app-brand {min-height:72px;flex-shrink:0;}
+.axe-char-level {margin-left:auto;display:flex;flex-direction:column;text-align:right;
+  font:600 clamp(16px,1.35vw,22px)/1.1 Georgia,serif;color:#f3d399;white-space:nowrap;}
+.axe-char-level span {margin-top:5px;font:clamp(10px,.82vw,14px)/1.1 Georgia,serif;color:#e4d5bb;}
+.axe-char-layout {flex:1 1 auto;min-height:0;min-width:0;
+  display:grid;grid-template-columns:minmax(380px,57%) minmax(280px,1fr);gap:12px;
+  overflow:hidden;}
+.axe-char-root .axe-char-model-stage {
+  grid-column:1;grid-row:1;min-height:0;height:100%;
+  background:linear-gradient(115deg,rgba(28,47,65,.17),rgba(24,34,49,.05) 46%,rgba(24,43,58,.18));
+}
+.axe-char-root .axe-char-viewer-slot {
+  cursor:default;min-height:57px;pointer-events:auto;
+}
+.axe-char-root .axe-char-viewer-slot:hover {
+  border-color:rgba(247,210,147,.81);
+  box-shadow:inset 0 0 10px rgba(252,219,153,.13),0 0 10px #12192477;
+}
+.axe-char-stats-column {display:flex;flex-direction:column;min-width:0;min-height:0;gap:10px;overflow:auto;
+  scrollbar-width:thin;scrollbar-color:#ecc89177 transparent;}
+/* The 3D model is an unobstructed presentation space. Attribute upgrade
+   controls live exclusively in the right Character Stats panel. */
+.axe-char-root .axe-char-model-center {overflow:visible;}
+
+.axe-char-explanation {margin:1px 0 8px;color:#d9d5cf!important;
+  font:clamp(10px,.80vw,13px)/1.35 Georgia,serif;}
+.axe-char-attributes {display:flex;flex-direction:column;gap:5px;}
+.axe-char-attribute {
+  min-width:0;display:flex;gap:8px;align-items:center;padding:7px 5px;
+  border:1px solid #e8d1a742;border-radius:8px;background:rgba(25,42,57,.35);
+}
+.axe-char-attribute-icon {flex:0 0 28px;display:grid;place-items:center;color:#f4d19a;}
+.axe-char-attribute-label {flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.axe-char-attribute-label strong {font:600 clamp(11px,.92vw,15px)/1.1 Georgia,serif;color:#f7e7c9;}
+.axe-char-attribute-label small {font:clamp(9px,.7vw,12px)/1.15 Georgia,serif;color:#d4d1cb;}
+.axe-char-pending {flex:0 0 auto;color:#c8ffeb;font:600 13px Georgia,serif;}
+.axe-char-attribute-buttons {display:flex;flex:0 0 auto;align-items:center;gap:4px;}
+.axe-char-attribute-buttons button,.axe-char-allocation-footer button,
+.axe-char-review button {padding:6px 7px;border:1px solid #e7c88c99;border-radius:6px;
+  background:rgba(31,48,64,.65);color:#f8e8c8;font:600 clamp(10px,.79vw,13px)/1 Georgia,serif;}
+.axe-char-attribute-buttons button:hover:not(:disabled),
+.axe-char-allocation-footer button:hover:not(:disabled),.axe-char-review button:hover {
+  background:linear-gradient(120deg,#c69e65,#ffe2a8,#d8b176);color:#352c20;text-shadow:none;}
+.axe-char-allocation-footer {display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end;
+  margin-top:10px;padding-top:9px;border-top:1px solid #e4c99255;}
+.axe-char-allocation-footer span {margin-right:auto;color:#efd6aa;font:12px Georgia,serif;}
+.axe-char-allocation-footer button:last-child {display:flex;gap:5px;align-items:center;}
+.axe-char-notice {padding:5px;border:1px solid #e8ce9477;border-radius:6px;color:#f3deaf;}
+.axe-char-live-stats {flex:1 1 auto;min-height:0;}
+.axe-char-profile {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-bottom:11px;}
+.axe-char-profile > div {display:flex;flex-direction:column;gap:2px;min-width:0;
+  padding:8px;border:1px solid #e6cc994f;border-radius:7px;background:rgba(31,48,64,.38);}
+.axe-char-profile span {color:#e5ddcd;font:11px Georgia,serif;}
+.axe-char-profile strong {color:#ffe5b7;font:600 13px Georgia,serif;overflow-wrap:anywhere;}
+.axe-char-root .axe-char-section-title {margin:12px 0 7px;font:600 14px Georgia,serif;color:#f0d49e;}
+
+.axe-char-live-stats .axe-app-card-content {min-height:0;overflow:auto;}
+.axe-char-primary-stats {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.axe-char-primary-stats > div {min-width:0;display:flex;justify-content:space-between;gap:5px;
+  padding:8px;border:1px solid #e6cc994f;border-radius:7px;background:rgba(31,48,64,.38);}
+.axe-char-primary-stats span {color:#e5ddcd;font:11px Georgia,serif;}
+.axe-char-primary-stats b {color:#ffe5b7;font:600 13px Georgia,serif;}
+.axe-char-stat-list {margin:9px 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 13px;}
+.axe-char-stat-row {display:flex;justify-content:space-between;align-items:center;gap:5px;min-width:0;
+  padding:7px 0;border-bottom:1px solid #e7d1a634;font:clamp(10px,.8vw,13px)/1.1 Georgia,serif;}
+.axe-char-stat-row span {min-width:0;color:#e1d6c5;}
+.axe-char-stat-row b {flex:0 0 auto;font-weight:500;color:#fae1b2;}
+.axe-char-review-backdrop {position:absolute;z-index:19;inset:0;display:grid;place-items:center;
+  background:rgba(7,16,28,.7);backdrop-filter:blur(5px);}
+.axe-char-review {display:flex;flex-direction:column;gap:13px;width:min(490px,90%);
+  padding:20px;border:1px solid #edd0a2;border-radius:12px;
+  background:linear-gradient(110deg,rgba(36,53,71,.98),rgba(22,39,56,.98));
+  box-shadow:0 10px 36px #000a;}
+.axe-char-review h3 {color:#ffe2b4;font:22px Georgia,serif;margin:0;}
+.axe-char-review p {margin:0;color:#e5dbcd;font:14px/1.4 Georgia,serif;}
+.axe-char-review > div {display:flex;gap:8px;justify-content:flex-end;}
+@media(max-width:1100px){
+  .axe-char-layout {grid-template-columns:minmax(320px,54%) minmax(280px,1fr);gap:8px;}
+  .axe-char-attribute {flex-wrap:wrap;}
+  .axe-char-attribute-buttons {margin-left:auto;}
+}
+@media(max-width:830px){
+  .axe-char-layout {display:flex;flex-direction:column;overflow:visible;}
+  .axe-char-root .axe-char-model-stage {height:clamp(490px,75vh,780px);min-height:490px;flex:0 0 auto;}
+  .axe-char-stats-column {overflow:visible;}
+  .axe-char-live-stats {min-height:360px;}
+}
+@media(max-width:500px){
+  .axe-char-inline-attribute {flex-wrap:wrap;}
+  .axe-char-inline-attribute .axe-char-attribute-buttons {margin-left:auto;}
+  .axe-char-stat-list {grid-template-columns:1fr;}
+  .axe-char-root .axe-app-brand {gap:8px;}
+  .axe-char-root .axe-app-banner {width:42px;height:53px;font-size:28px;}
+}
+
+
+/* Character fullscreen wrapper: borrow the same seamless Appearance shell
+   rather than compressing the viewer into the generic 1180px service card. */
+.axe-service-workspace--character .axe-service-progression {
+  width:min(1672px,100%);
+  max-width:100%;
+  height:100%;
+  padding:0;
+  display:flex;
+  align-self:center;
+  overflow:auto;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+.axe-service-workspace--character .axe-service-heading {
+  flex:0 0 0;
+  margin:0;
+}
+.axe-service-workspace--character .axe-service-heading button {
+  position:absolute;
+  right:5px;
+  top:12px;
+  z-index:15;
+  padding:6px 12px;
+  border:1px solid #e8c889;
+  border-radius:8px;
+  color:#f9e5c6;
+  background:#1a2939bb;
+}
+/* Equip positions are actual slots, not stretchable tiles. Both lists can
+   scroll through all supported slots without flattening the avatar model. */
+.axe-char-root .axe-app-viewer-gear {
+  justify-content:flex-start;
+  align-items:stretch;
+  gap:6px;
+  padding:2px;
+  min-height:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+.axe-char-root .axe-char-viewer-slot {
+  flex:0 0 66px;
+  min-height:66px;
+  max-height:none;
+  padding:4px 2px;
+}
+.axe-char-root .axe-char-viewer-slot-art {
+  max-height:25px;
+}
+.axe-char-root .axe-char-viewer-slot-art img {
+  display:block;
+  height:24px;
+  max-width:100%;
+  object-fit:contain;
+}
+@media(max-width:830px) {
+  .axe-service-workspace--character .axe-service-progression {height:100%;}
+  .axe-char-root .axe-char-model-stage {min-height:420px;}
+  .axe-char-root .axe-char-viewer-slot {flex-basis:62px;min-height:62px;}
+}
+
+/* Right-side point spending replaces the old Final Attributes readout. */
+.axe-char-allocation-section {margin:6px 0 14px;min-width:0;}
+.axe-char-alloc-heading {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.axe-char-alloc-heading .axe-char-section-title {margin:5px 0 7px;}
+.axe-char-alloc-heading small {color:#e7ca9b;font:clamp(10px,.72vw,12px) Georgia,serif;white-space:nowrap;}
+.axe-char-primary-stats {grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 8px;}
+.axe-char-primary-stats .axe-char-inline-attribute {
+  display:flex;align-items:center;min-width:0;min-height:42px;gap:5px;
+  padding:5px 7px;border:1px solid #e6cc9949;border-radius:7px;
+  background:rgba(31,48,64,.33);
+}
+.axe-char-inline-attribute > span {flex:1 1 auto;min-width:48px;font:clamp(10px,.8vw,12px) Georgia,serif;}
+.axe-char-inline-attribute > b {flex:0 0 auto;min-width:17px;text-align:right;color:#ffe4b5;font:600 13px Georgia,serif;}
+.axe-char-inline-pending {flex:0 0 auto;color:#a8efd7;font:600 10px Georgia,serif;font-style:normal;}
+.axe-char-inline-attribute .axe-char-attribute-buttons {display:flex;flex:0 0 auto;gap:3px;margin-left:auto;}
+.axe-char-inline-attribute .axe-char-attribute-buttons button {
+  min-width:24px;padding:5px 4px;border-color:#e7c88c6e;
+  font:600 clamp(9px,.66vw,11px) Georgia,serif;
+}
+.axe-char-inline-attribute .axe-char-attribute-buttons button:disabled {opacity:.38;cursor:not-allowed;}
+.axe-char-allocation-section .axe-char-allocation-footer {
+  border-top:0;margin-top:5px;padding-top:3px;gap:5px;
+}
+.axe-char-allocation-section .axe-char-allocation-footer span {font-size:10px;}
+.axe-char-allocation-section .axe-char-allocation-footer button {padding:5px 7px;font-size:10px;}
+.axe-char-allocation-section .axe-char-notice {font-size:10px;}
+@media(max-width:1200px) {
+  .axe-char-primary-stats {grid-template-columns:1fr;}
+}
+@media(max-width:830px) {
+  .axe-char-primary-stats {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(max-width:530px) {
+  .axe-char-primary-stats {grid-template-columns:1fr;}
+}
+
+/* Character point spending: attribute label | − + +5 +10 Max | total box.
+   One continuous horizontal row per attribute preserves space for the avatar. */
+.axe-char-root .axe-char-primary-stats {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:6px;
+}
+.axe-char-root .axe-char-primary-stats .axe-char-inline-attribute {
+  display:grid;
+  grid-template-columns:minmax(68px,1fr) auto minmax(45px,max-content);
+  align-items:center;
+  justify-content:stretch;
+  column-gap:clamp(5px,.58cqw,9px);
+  min-height:42px;
+  padding:5px 7px;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-name {
+  min-width:0;
+  color:#f6e4ca;
+  font:600 clamp(10px,.76vw,12px)/1.15 Georgia,serif;
+  overflow-wrap:anywhere;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons {
+  display:flex;flex:0 0 auto;
+  align-items:center;justify-content:center;
+  gap:clamp(2px,.25cqw,4px);
+  margin:0;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons button {
+  min-width:25px;
+  min-height:26px;
+  padding:4px 5px;
+  border:1px solid #e7c88c67;
+  border-radius:5px;
+  background:rgba(27,44,63,.67);
+  color:#f6e3be;
+  font:600 clamp(10px,.7cqw,11px)/1 Georgia,serif;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons button:last-child {
+  min-width:36px;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons button:disabled {
+  opacity:.35;
+  cursor:not-allowed;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-total {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  min-width:45px;min-height:29px;
+  padding:3px 5px;
+  border:1px solid #efd19b88;
+  border-radius:5px;
+  background:linear-gradient(145deg,rgba(34,53,70,.85),rgba(23,37,55,.81));
+  text-align:center;
+  font:600 clamp(11px,.82vw,13px)/1 Georgia,serif;
+  color:#ffe6b4;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-total b {
+  display:block;color:#ffe6b4;font:inherit;
+}
+.axe-char-root .axe-char-inline-attribute .axe-char-attribute-total small {
+  display:block;color:#b6ead3;font:9px/1.1 Georgia,serif;
+}
+@media(max-width:1000px) {
+  .axe-char-root .axe-char-primary-stats .axe-char-inline-attribute {
+    grid-template-columns:minmax(60px,1fr) auto minmax(42px,max-content);
+    padding:4px;
+    column-gap:4px;
+  }
+  .axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons button {padding:4px;min-width:23px}
+}
+@media(max-width:430px) {
+  .axe-char-root .axe-char-primary-stats .axe-char-inline-attribute {
+    grid-template-columns:minmax(54px,1fr) auto minmax(40px,max-content);
+    gap:3px;
+  }
+  .axe-char-root .axe-char-inline-attribute .axe-char-attribute-buttons button {min-width:21px;padding:4px 2px;font-size:10px}
+}

@@ -1,0 +1,149 @@
+/* Shared Titles presentation: two complete glass panels, one for actions,
+ * one for live stats/bonuses. Never compress every control into one rail. */
+.axe-title-container {
+  width:100%; min-width:0; min-height:0; height:auto;
+  container-type:inline-size;
+  font-family:Georgia,'Times New Roman',serif;
+}
+.axe-title-layout {
+  display:grid; grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);
+  align-items:start; gap:clamp(9px,1.2vw,17px);
+  width:100%; height:auto; min-width:0; min-height:0;
+  color:#f3e9d7;
+}
+.axe-title-control-panel,.axe-title-stats-panel {
+  position:relative; display:flex; flex-direction:column;
+  min-width:0; min-height:0; padding:clamp(12px,1.3vw,21px);
+  border:1px solid rgba(219,185,125,.75); border-radius:15px;
+  background:linear-gradient(145deg,rgba(17,30,40,.76),rgba(29,43,53,.62) 55%,rgba(12,25,34,.72));
+  box-shadow:inset 0 1px rgba(255,229,177,.14),inset 0 0 23px rgba(233,193,122,.06),0 9px 24px rgba(0,0,0,.26);
+  backdrop-filter:blur(12px) saturate(110%);
+  -webkit-backdrop-filter:blur(12px) saturate(110%);
+}
+.axe-title-control-panel::before,.axe-title-stats-panel::before {
+  content:''; pointer-events:none; position:absolute;
+  top:6px; left:12px; right:12px; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(247,217,159,.75),transparent);
+}
+.axe-title-panel-heading {
+  display:flex; align-items:baseline; flex-wrap:wrap; justify-content:space-between;
+  gap:3px 10px; border-bottom:1px solid rgba(221,194,142,.34);
+  padding:6px 0 13px; margin-bottom:14px; min-width:0;
+}
+.axe-title-panel-heading h3 {
+  margin:0; color:#f2d7a5;
+  font:normal clamp(15px,1.25vw,21px)/1.3 Georgia,serif;
+  letter-spacing:.04em;
+}
+.axe-title-panel-heading span {
+  min-width:0; font:10px/1.45 'Segoe UI',sans-serif;
+  letter-spacing:.04em; color:#cfc5b3; overflow-wrap:anywhere;
+}
+.axe-title-hero {
+  display:flex; flex-wrap:wrap; align-items:flex-start; gap:11px;
+  padding-bottom:13px; border-bottom:1px solid rgba(221,194,142,.2);
+  min-width:0;
+}
+.axe-title-hero-emblem { width:60px; height:60px; flex:0 0 60px; }
+.axe-title-hero-copy { flex:1 1 160px; min-width:0; overflow-wrap:anywhere; }
+.axe-title-hero-copy .text-xl { font-size:clamp(16px,1.5vw,22px); }
+.axe-title-hero-copy .tracking-\\[0\\.3em\\] { letter-spacing:.14em; }
+.axe-title-hero-controls {
+  flex:1 1 100%; display:flex; flex-direction:row; flex-wrap:wrap;
+  gap:7px; align-items:stretch; min-width:0;
+}
+.axe-title-hero-controls button,.axe-title-actions button {
+  flex:1 1 136px; white-space:normal; overflow-wrap:anywhere;
+  padding:9px 10px; line-height:1.35; letter-spacing:.08em;
+  min-width:0;
+}
+.axe-title-list { width:100%; min-width:0; min-height:0; margin-top:16px;
+  padding:0 3px 0 0; max-height:min(38vh,440px); overflow-x:hidden; overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.axe-title-list-heading { padding:0 0 7px; }
+.axe-title-option { display:block; width:100%; min-width:0; margin:0 0 7px; padding:10px; }
+.axe-title-option .truncate { overflow:visible; text-overflow:clip; white-space:normal; overflow-wrap:anywhere; }
+.axe-title-option .tracking-\\[0\\.2em\\] { letter-spacing:.09em; overflow-wrap:anywhere; }
+.axe-title-option[aria-pressed="true"] {
+  border-color:rgba(245,217,161,.86)!important;
+  background:linear-gradient(110deg,rgba(106,80,43,.37),rgba(45,78,96,.32))!important;
+  box-shadow:inset 0 0 12px rgba(245,211,158,.09);
+}
+.axe-title-actions {
+  margin-top:13px; padding-top:13px;
+  border-top:1px solid rgba(221,194,142,.2);
+  display:flex; align-items:stretch; flex-wrap:wrap; gap:8px;
+}
+.axe-title-actions > span { flex:1 1 100%; overflow-wrap:anywhere; }
+.axe-title-metrics {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr));
+  gap:8px; margin-top:0;
+}
+.axe-title-metrics > * { min-width:0; padding:10px; border:1px solid rgba(234,204,156,.19);
+  background:rgba(31,48,60,.42); }
+.axe-title-metrics .text-xl { font-size:clamp(15px,1.45vw,22px); overflow-wrap:anywhere; }
+.axe-title-bonuses {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,195px),1fr));
+  gap:16px; margin-top:23px; min-width:0;
+}
+.axe-title-bonuses > div { min-width:0; }
+.axe-title-bonuses .flex.justify-between {
+  gap:8px; flex-wrap:wrap; overflow-wrap:anywhere;
+}
+.axe-title-bonuses .flex.justify-between > :last-child { margin-left:auto; }
+@container (max-width:770px) {
+  .axe-title-layout { grid-template-columns:minmax(0,1fr); gap:11px; }
+  .axe-title-control-panel,.axe-title-stats-panel { width:100%; padding:13px; }
+  .axe-title-list { max-height:230px; }
+}
+@media(max-width:760px) {
+  .axe-title-layout { grid-template-columns:minmax(0,1fr); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-title-layout * { transition:none!important; }
+}
+
+/* Compact Titles layout; the existing spiritual detail frame keeps its size. */
+.axe-title-compact {display:flex;flex-direction:column;gap:11px;min-width:0;color:#f4e7cf;padding:12px;}
+.axe-title-compact-header {display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid #ddbd8057;padding-bottom:10px;}
+.axe-title-kicker,.axe-title-points small,.axe-title-cost small {display:block;color:#dbbd82;font:10px/1.4 'Segoe UI',sans-serif;letter-spacing:.07em;}
+.axe-title-compact-header h3 {margin:3px 0;font:23px Georgia,serif;color:#f3d4a1;}
+.axe-title-compact-header p {margin:4px 0 0;color:#dbd4ca;font:11px/1.35 'Segoe UI',sans-serif;}
+.axe-title-points {flex:0 0 auto;text-align:right;padding:5px 0;}
+.axe-title-points strong {display:block;font:20px Georgia,serif;color:#ffe2a1;}
+.axe-title-paths {display:flex;flex-wrap:wrap;gap:5px;}
+.axe-title-paths button {display:flex;flex:1 1 95px;min-width:0;flex-direction:column;align-items:center;gap:3px;padding:7px 4px;border:1px solid transparent;border-radius:6px;background:transparent;color:#e4d6be;font:11px Georgia,serif;}
+.axe-title-paths button svg {width:19px;height:19px;color:#e9bf78;}
+.axe-title-paths button[aria-pressed=true],.axe-title-paths button:hover {border-color:#dbb77376;background:#d7a65a20;color:#ffe5a4;}
+.axe-title-paths small,.axe-title-paths em {font:9px/1.2 'Segoe UI',sans-serif;color:#ccb48a;text-align:center;}
+.axe-title-selection {display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #d7b78036;border-bottom:1px solid #d7b78036;}
+.axe-title-selection b {display:block;color:#f3d4a1;}
+.axe-title-selection small {display:block;color:#c2b39e;font-size:10px;}
+.axe-title-selection p {margin:3px 0;font-size:10px;color:#ddd3c3;}
+.axe-title-equipment-actions {display:flex;flex-wrap:wrap;gap:5px;}
+.axe-title-equipment-actions button {border:1px solid #e8c68b66;border-radius:5px;padding:5px 8px;background:#dfb26a12;color:#f5d69e;font-size:10px;}
+.axe-title-progress-label {display:flex;justify-content:space-between;color:#d8bc8d;font-size:11px;}
+.axe-title-progress {height:5px;border-radius:8px;background:#131e27;border:1px solid #ad89555a;overflow:hidden;}
+.axe-title-progress span {height:100%;display:block;background:linear-gradient(90deg,#ac7a3b,#ffe5a5);border-radius:8px;}
+.axe-title-enhance-row {display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.axe-title-cost {flex:1 1 100px;}
+.axe-title-cost b {color:#ffe0a0;}
+.axe-title-batch {display:flex;align-items:center;gap:3px;}
+.axe-title-batch button {border:0;border-radius:4px;background:transparent;color:#dbc8a8;padding:6px 8px;font:12px Georgia,serif;}
+.axe-title-batch button[aria-pressed=true],.axe-title-batch button:hover {color:#ffe3a4;background:#e4b96630;box-shadow:inset 0 -2px #e6bd78;}
+.axe-title-enhance-action {border:1px solid #e2b96f8c;border-radius:5px;background:linear-gradient(115deg,#8d642b,#bb9050);color:#fff1ca;padding:8px 14px;font:12px Georgia,serif;}
+.axe-title-enhance-action:disabled {opacity:.45;cursor:not-allowed;}
+.axe-title-cost-note,.axe-title-result {margin:0;color:#d0bd9e;font-size:10px;}
+.axe-title-bonuses {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:5px 0 0;}
+.axe-title-stat-group {min-width:0;}
+.axe-title-stat-group h4 {color:#f1cb89;font:13px Georgia,serif;margin:0 0 7px;border-bottom:1px solid #e6bc7b47;padding-bottom:4px;}
+.axe-title-stat-group > div {display:grid;grid-template-columns:1fr;gap:2px;}
+.axe-title-stat-group > div > div {display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #cdb0861e;font-size:11px;}
+.axe-title-stat-group b {font-weight:500;color:#e7d7ba;}
+/* An unboxed pill thumb on a fine vertical gold guide, fading at both ends. */
+.axe-spiritual-title-embed,.axe-title-compact {scrollbar-width:thin;scrollbar-color:#d3a35b transparent;}
+.axe-spiritual-title-embed::-webkit-scrollbar,.axe-title-compact::-webkit-scrollbar {width:7px;}
+.axe-spiritual-title-embed::-webkit-scrollbar-track,.axe-title-compact::-webkit-scrollbar-track {background:linear-gradient(to bottom,transparent,rgba(219,175,103,.35) 50%,transparent);background-size:1px 100%;background-position:center;background-repeat:no-repeat;}
+.axe-spiritual-title-embed::-webkit-scrollbar-thumb,.axe-title-compact::-webkit-scrollbar-thumb {border-radius:999px;background:linear-gradient(#f5ddaa,#b58340);border:2px solid transparent;background-clip:padding-box;}
+@media(max-width:570px) {.axe-title-compact-header {flex-wrap:wrap;}.axe-title-points {margin-left:auto;}.axe-title-bonuses {grid-template-columns:1fr;}.axe-title-selection {flex-wrap:wrap;}}

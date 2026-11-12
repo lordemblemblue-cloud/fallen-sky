@@ -1,0 +1,77 @@
+/* Ultimate Runes: separate 1-rune-per-item loadout, same Blacksmith glass. */
+.axe-runes-workspace {position:absolute;z-index:8;inset:0;pointer-events:none;color:var(--axe-ui-text);font-family:Georgia,serif;}
+.axe-runes-inventory,.axe-runes-equipment,.axe-runes-details,.axe-runes-confirm-backdrop {pointer-events:auto;}
+.axe-runes-inventory,.axe-runes-equipment,.axe-runes-details {position:absolute;display:flex;flex-direction:column;gap:9px;
+  border:1px solid var(--axe-ui-gold);border-radius:11px;background:var(--axe-ui-glass);
+  -webkit-backdrop-filter:blur(13px);backdrop-filter:blur(13px);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 3px 14px #0005;padding:10px;overflow:hidden;min-height:0;min-width:0;}
+.axe-runes-inventory {left:3.4%;top:15%;width:28.8%;height:81%;}
+.axe-runes-equipment {left:35%;top:27%;width:36%;height:68%;}
+.axe-runes-details {left:74%;top:27.5%;width:22%;height:64%;overflow-y:auto;}
+.axe-runes-inventory header {display:flex;gap:6px;align-items:center;color:var(--axe-ui-heading);}
+.axe-runes-inventory header h3,.axe-runes-equipment h3,.axe-runes-details h3 {
+  margin:0;color:var(--axe-ui-heading);font:600 clamp(14px,1.2cqw,20px)/1.2 Georgia,serif;}
+.axe-runes-inventory header small {margin-left:auto;color:var(--axe-ui-subtext);}
+.axe-runes-inventory p,.axe-runes-equipment p,.axe-runes-details p {
+  margin:0;color:var(--axe-ui-subtext);font:clamp(10px,.8cqw,13px)/1.3 Georgia,serif;}
+.axe-runes-tabs {display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.axe-runes-tabs button,.axe-runes-actions button,.axe-runes-confirm button {
+  padding:8px;border-radius:7px;border:1px solid var(--axe-ui-gold);
+  background:rgba(32,44,58,.4);color:var(--axe-ui-text);font:clamp(10px,.83cqw,13px)/1.2 Georgia,serif;}
+.axe-runes-tabs button[aria-selected="true"],.axe-runes-tabs button:hover,.axe-runes-actions button:hover:not(:disabled),.axe-runes-confirm button:hover {
+  background:var(--axe-ui-selected);color:var(--axe-ui-selected-text);}
+.axe-runes-grid,.axe-runes-gear-grid {flex:1 1 auto;min-height:0;overflow-y:auto;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-auto-rows:max-content;align-content:start;gap:6px;padding:4px;}
+.axe-runes-grid button,.axe-runes-gear-grid button {
+  min-width:0;aspect-ratio:1;position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:3px;padding:3px;
+  border:1px solid rgba(242,210,147,.33);border-radius:7px;
+  background:rgba(32,44,58,.37);color:var(--axe-ui-heading);}
+.axe-runes-grid button:hover,.axe-runes-grid button[aria-pressed="true"],
+.axe-runes-gear-grid button:hover,.axe-runes-gear-grid button[aria-pressed="true"] {
+  border-color:var(--axe-ui-gold);background:rgba(84,96,111,.7);}
+.axe-runes-grid button > span {font:clamp(18px,1.5cqw,26px)/1 sans-serif;}
+.axe-runes-grid button small,.axe-runes-gear-grid button small {max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;font:clamp(8px,.66cqw,11px)/1.15 Georgia,serif;}
+.axe-runes-grid button em {position:absolute;bottom:2px;right:3px;font:10px sans-serif;}
+.axe-runes-gear-grid {grid-template-columns:repeat(5,minmax(0,1fr));}
+.axe-runes-gear-grid button img {height:45%;width:75%;object-fit:contain;}
+.axe-runes-gear-grid button span {font-size:16px;}
+.axe-runes-actions {margin-top:auto;border-top:1px solid rgba(242,210,147,.25);padding-top:10px;
+  display:flex;gap:6px;justify-content:space-between;}
+.axe-runes-actions button {flex:1 1 auto;}
+.axe-runes-actions button:disabled {opacity:.45;cursor:not-allowed;}
+.axe-runes-fusion {flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:6px;}
+.axe-runes-fusion > span {width:28%;max-width:100px;min-height:90px;display:flex;flex-direction:column;
+  gap:8px;align-items:center;justify-content:center;text-align:center;
+  background:rgba(32,44,58,.34);border:1px solid var(--axe-ui-gold);border-radius:8px;
+  font:clamp(20px,2cqw,32px)/1 sans-serif;}
+.axe-runes-fusion small {font:clamp(9px,.69cqw,12px)/1.2 Georgia,serif;}
+.axe-runes-details > small {color:var(--axe-ui-gold-text);}
+.axe-runes-details h4 {margin:7px 0 0;color:var(--axe-ui-heading);
+  border-bottom:1px solid rgba(242,210,147,.28);font:600 clamp(11px,.9cqw,14px)/1.2 Georgia,serif;}
+.axe-runes-row {display:flex;gap:7px;justify-content:space-between;
+  border-bottom:1px solid rgba(242,210,147,.17);padding:5px 0;
+  font:clamp(10px,.8cqw,13px)/1.2 Georgia,serif;}
+.axe-runes-row span {display:flex;gap:4px;align-items:center;color:var(--axe-ui-subtext);}
+.axe-runes-row b {text-align:right;color:var(--axe-ui-heading);font-weight:500;}
+.axe-runes-notice {padding:7px;border:1px solid var(--axe-ui-gold);border-radius:7px;}
+.axe-runes-confirm-backdrop {position:absolute;z-index:21;inset:0;display:grid;place-items:center;
+  background:rgba(7,16,27,.76);backdrop-filter:blur(5px);}
+.axe-runes-confirm {width:min(520px,84%);display:flex;flex-direction:column;gap:14px;
+  padding:20px;background:linear-gradient(115deg,rgba(32,44,58,.99),rgba(24,37,53,.98));
+  border:1px solid var(--axe-ui-gold);border-radius:12px;}
+.axe-runes-confirm h3 {color:var(--axe-ui-heading);margin:0;font:20px Georgia,serif;}
+.axe-runes-confirm p {font:13px/1.5 Georgia,serif;}
+.axe-runes-confirm > div {display:flex;gap:9px;justify-content:flex-end;}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-inventory-shell,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-operation-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-progression-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-center-preview,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-begin-forge,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="runes"] .axe-blacksmith-forge-ring {display:none;}
+@media(max-width:760px) {
+  .axe-runes-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+  .axe-runes-gear-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+}

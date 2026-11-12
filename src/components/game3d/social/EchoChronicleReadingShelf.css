@@ -1,0 +1,290 @@
+/* Combat / Quest 64.1–64.3 — original Echo Chronicle Reading Shelf.
+   Scoped to the translucent violet/gold Game 3D Services design. */
+.axe-echo-reading-shelf{
+ display:flex;flex-direction:column;gap:9px;padding:11px;
+ border:1px solid #d6b4d99c;border-radius:10px;
+ background:linear-gradient(145deg,#4b2568c2,#25183ecd);
+ box-shadow:inset 0 1px #ffe6ef33;color:#f1dfeb;
+}
+.axe-echo-reading-shelf>header{
+ display:flex;align-items:center;gap:8px;
+ border-bottom:1px solid #cda4d675;padding-bottom:8px;
+}
+.axe-echo-reading-shelf>header>svg{
+ flex:none;color:#ffe1b7;
+}
+.axe-echo-reading-shelf>header>div{flex:1;min-width:0}
+.axe-echo-reading-shelf>header h4{
+ margin:0 0 3px;color:#ffe6b3;font:normal 17px Georgia,serif;
+}
+.axe-echo-reading-shelf>header p{
+ margin:0;color:#d9c6e1;font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-reading-shelf>header small{
+ display:inline-flex;align-items:center;gap:4px;
+ color:#dbc5df;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-summary,.axe-echo-shelf-stale-note{
+ margin:0;color:#dfcde6;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-summary span{color:#f0dcb9}
+.axe-echo-shelf-stale-note{
+ padding:7px;border-left:2px solid #e6b79c;
+ background:#673c5b94;color:#f6dfd1;
+}
+.axe-echo-shelf-items{
+ display:flex;flex-direction:column;gap:7px;
+ max-height:400px;overflow-y:auto;padding-right:3px;
+ scrollbar-width:thin;scrollbar-color:#c49ad8 transparent;
+}
+.axe-echo-shelf-item{
+ display:flex;flex-direction:column;gap:7px;
+ padding:9px;border:1px solid #cba8d695;border-radius:8px;
+ background:linear-gradient(115deg,#51316cc2,#24183de0);
+}
+.axe-echo-shelf-item>div:first-child{
+ display:flex;flex-direction:column;gap:4px;
+}
+.axe-echo-shelf-item strong{
+ color:#ffe7bd;font:normal 14px Georgia,serif;
+ overflow-wrap:anywhere;
+}
+.axe-echo-shelf-item small{
+ color:#d6c1e4;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-item>div:first-child>span{
+ color:#f1d9de;font:11px/1.35 Georgia,serif;
+}
+.axe-echo-shelf-item>nav,.axe-echo-shelf-pager{
+ display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+}
+.axe-echo-shelf-item>nav button,.axe-echo-shelf-pager button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:7px 9px;border:1px solid #d1aed8;border-radius:6px;
+ background:#643a7d;color:#ffead1;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-item>nav button:first-child{
+ border-color:#f1d7ae;background:#744b89;
+}
+.axe-echo-shelf-item>nav button:hover,
+.axe-echo-shelf-item>nav button:focus-visible,
+.axe-echo-shelf-pager button:hover:not(:disabled),
+.axe-echo-shelf-pager button:focus-visible:not(:disabled){
+ border-color:#fff0cc;background:#8d59a4;
+}
+.axe-echo-shelf-pager{justify-content:space-between}
+.axe-echo-shelf-pager button:disabled{opacity:.4;cursor:default}
+.axe-echo-shelf-pager span{
+ color:#e4d2e8;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-empty{
+ padding:10px;margin:0;border:1px dashed #c19bd1;
+ border-radius:7px;color:#e4d1e9;
+ font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-feedback{
+ padding:7px 9px;margin:0;
+ border-left:2px solid #efd1a4;background:#6439679e;
+ color:#f4e0d1;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-reading-shelf>footer{
+ display:flex;align-items:flex-start;gap:6px;
+ padding-top:7px;border-top:1px solid #c1a1d070;
+ color:#d5c1dc;font:10px/1.45 "Segoe UI",sans-serif;
+}
+.axe-echo-reading-shelf>footer svg{
+ flex:none;color:#f1d0a4;
+}
+@media(max-width:720px){
+ .axe-echo-reading-shelf{padding:8px}
+ .axe-echo-reading-shelf>header small{display:none}
+ .axe-echo-shelf-items{max-height:320px}
+ .axe-echo-shelf-item{padding:7px}
+ .axe-echo-shelf-item>nav button{font-size:10px;flex:1 1 auto}
+}
+
+/* 65.2–65.4: local searchable saved-place organization controls. */
+.axe-echo-shelf-discovery{
+ display:flex;flex-direction:column;gap:8px;
+ padding:10px;border:1px solid #c8a2d6a6;border-radius:8px;
+ background:linear-gradient(125deg,#30204ab5,#20173bc4);
+}
+.axe-echo-shelf-search{
+ display:flex;align-items:center;gap:7px;padding:3px 7px;
+ border:1px solid #b996d3;border-radius:7px;
+ color:#ffe5b6;background:#1b1335e5;
+}
+.axe-echo-shelf-search:focus-within{
+ border-color:#ffe6b8;box-shadow:0 0 0 2px #dcb4e944;
+}
+.axe-echo-shelf-search svg{flex:none}
+.axe-echo-shelf-search input{
+ flex:1;min-width:0;padding:6px 2px;border:0;outline:none;
+ color:#f8e3ed;background:transparent;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-search input::placeholder{color:#cbbad4}
+.axe-echo-shelf-search button{
+ display:grid;place-items:center;padding:4px;
+ border:1px solid #b995c6;border-radius:5px;
+ background:#502a70;color:#ffe4b9;
+}
+.axe-echo-shelf-filters{
+ display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+}
+.axe-echo-shelf-filters button{
+ display:inline-flex;align-items:center;gap:6px;
+ padding:6px 8px;border:1px solid #b694cf9e;
+ border-radius:6px;background:#493068bd;color:#ecd9e5;
+ font:10px/1.35 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-filters button span{
+ padding:1px 5px;border-radius:7px;color:#ffe8ce;
+ background:#a37eb64b;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-filters button[aria-pressed=true],
+.axe-echo-shelf-filters button:hover,
+.axe-echo-shelf-filters button:focus-visible{
+ color:#fff2ce;border-color:#ffe5b6;
+ background:#8752a1;
+}
+.axe-echo-shelf-sort{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:8px;
+}
+.axe-echo-shelf-sort label{
+ display:inline-flex;align-items:center;gap:7px;
+ color:#ebd6e7;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-sort select{
+ padding:6px 7px;max-width:150px;
+ background:#3d285a;color:#ffe8c1;
+ border:1px solid #cba9d6;border-radius:6px;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-sort>span{
+ color:#dac8e2;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-clear{
+ align-self:flex-start;padding:5px 8px;
+ background:#583879;color:#ffe7bd;
+ border:1px solid #ccabd4;border-radius:6px;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-search button:hover,
+.axe-echo-shelf-clear:hover,
+.axe-echo-shelf-search button:focus-visible,
+.axe-echo-shelf-clear:focus-visible{
+ background:#8b58a4;border-color:#ffedcc;
+}
+@media(max-width:720px){
+ .axe-echo-shelf-discovery{padding:8px 6px}
+ .axe-echo-shelf-filters button{padding:5px 6px}
+ .axe-echo-shelf-sort select{max-width:125px}
+}
+
+/* Combat / Quest 66.3–66.4: chosen monthly sky navigation within private shelf. */
+.axe-echo-shelf-sky-index{
+ display:flex;flex-direction:column;gap:8px;
+ padding:10px;border:1px solid #d5b6cfaa;border-radius:8px;
+ background:linear-gradient(125deg,#512a6aa8,#241944e0);
+}
+.axe-echo-shelf-sky-index>header{
+ display:flex;align-items:center;gap:7px;
+ color:#ffe8be;
+}
+.axe-echo-shelf-sky-index>header svg{flex:none;color:#ffe0a8}
+.axe-echo-shelf-sky-index>header strong{
+ flex:1;font:normal 14px Georgia,serif;
+}
+.axe-echo-shelf-sky-index>header small{
+ color:#e1cce2;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-sky-index>p{
+ margin:0;color:#e2d0e5;
+ font:10px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-sky-links{
+ display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+ gap:6px;max-height:210px;overflow-y:auto;
+ scrollbar-width:thin;scrollbar-color:#bd9bd6 transparent;
+}
+.axe-echo-shelf-sky-links button{
+ display:flex;flex-wrap:wrap;gap:5px;align-items:center;
+ min-width:0;padding:9px;border:1px solid #b993d2b3;
+ border-radius:7px;background:linear-gradient(130deg,#593377,#2b2054);
+ color:#e9d6e7;text-align:left;
+ font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-shelf-sky-links button svg{flex:none;color:#f7d8a7}
+.axe-echo-shelf-sky-links button strong{
+ flex:1 1 calc(100% - 23px);color:#ffe5b7;
+ font:normal 12px Georgia,serif;
+ overflow-wrap:anywhere;
+}
+.axe-echo-shelf-sky-links button span{
+ flex:1 1 100%;color:#ebd7e8;
+}
+.axe-echo-shelf-sky-links button small{
+ color:#f4d9b8;
+}
+.axe-echo-shelf-sky-links button em{
+ margin-left:auto;color:#ffeac5;
+ font:italic 10px Georgia,serif;
+}
+.axe-echo-shelf-sky-links button:hover:not(:disabled),
+.axe-echo-shelf-sky-links button:focus-visible:not(:disabled){
+ border-color:#ffebc0;
+ background:linear-gradient(130deg,#8650a7,#42245f);
+}
+.axe-echo-shelf-sky-links button:disabled{
+ border-color:#dcbdad;opacity:.8;cursor:default;
+ background:linear-gradient(130deg,#653e76,#38295d);
+}
+@media(max-width:720px){
+ .axe-echo-shelf-sky-index{padding:8px 6px}
+ .axe-echo-shelf-sky-links{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
+ .axe-echo-shelf-sky-index>header strong{font-size:12px}
+}
+
+/* Combat / Quest 67.5: direct month-to-shelf arrival feedback. */
+.axe-echo-reading-shelf{
+ scroll-margin-top:14px;
+}
+.axe-echo-reading-shelf.is-reading-shelf-destination{
+ border-color:#f4d8a7;
+ box-shadow:inset 0 1px #ffe9d655,0 0 13px #a775d75e;
+}
+.axe-echo-reading-shelf:focus{
+ outline:2px solid #f2d2ad;
+ outline-offset:3px;
+}
+.axe-echo-shelf-arrival{
+ margin:0;padding:8px 9px;
+ border-left:3px solid #f5d29d;
+ border-radius:4px;
+ background:#63397c8c;color:#ffebcb;
+ font:11px/1.5 "Segoe UI",sans-serif;
+}
+@media(max-width:720px){
+ .axe-echo-shelf-arrival{padding:6px;font-size:10px}
+}
+
+/* Combat / Quest 69.7–69.8: next real saved memory, not quest progress. */
+.axe-echo-shelf-item>nav .axe-echo-shelf-read-next{
+ border-color:#eacfa0;
+ background:linear-gradient(120deg,#805394,#522f70);
+ color:#fff0ca;
+}
+.axe-echo-shelf-item>nav .axe-echo-shelf-read-next:hover,
+.axe-echo-shelf-item>nav .axe-echo-shelf-read-next:focus-visible{
+ border-color:#fff3d1;
+ background:linear-gradient(120deg,#a471af,#754d95);
+ box-shadow:0 0 0 2px #eacdb549;
+}
+@media(max-width:720px){
+ .axe-echo-shelf-item>nav .axe-echo-shelf-read-next{
+  flex:1 1 100%;font-size:10px;
+ }
+}

@@ -1,0 +1,173 @@
+// TwelveSky-style equipped skill loadout.
+// Active keys are 1..9 plus 0 for slot 10. Passives remain separate.
+
+import { canEquipToSlot } from './slotValidator';
+import { SLOT_KIND } from './skillTypes';
+import { getSkillById } from './skillRegistry';
+import { SPRINT_SKILL_ID } from './sprintRules.mjs';
+import { getMasteryCDR } from '../progression/weaponMastery/WeaponScalingPipeline';
+
+export const ACTIVE_SLOTS = 10;
+const PASSIVE_SLOTS = 6;
+const LS_KEY = 'game_loadout_v5';
+const LEGACY_KEY = 'game_loadout_v4';
+const PRESET_KEY = 'game_weapon_skill_presets_v1';
+const PRESET_COUNT = 3;
+const listeners = new Set();
+
+function normalize(arr, len) {
+  const out = new Array(len).fill(null);
+  if (Array.isArray(arr)) {
+    for (let i = 0; i < Math.min(arr.length, len); i += 1) {
+      const value = arr[i];
+      if (typeof value === 'string' && getSkillById(value)) out[i] = value;
+    }
+  }
+  return out;
+}
+
+function read(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function loadFromStorage() {
+  const parsed = read(LS_KEY) || read(LEGACY_KEY);
+  if (!parsed?.activeSlots || !parsed?.passivePanel) return null;
+  return {
+    activeSlots: normalize(parsed.activeSlots, ACTIVE_SLOTS),
+    passivePanel: normalize(parsed.passivePanel, PASSIVE_SLOTS),
+  };
+}
+
+function saveToStorage(snapshot) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      activeSlots: snapshot.activeSlots,
+      passivePanel: snapshot.passivePanel,
+    }));
+  } catch {}
+}
+
+// Seed Sprint once for new and existing players, without overwriting owned
+// passive slots or re-equipping after the player deliberately removes it.
+const SPRINT_SEED_KEY = 'game3d_sprint_passive_seed_v1';
+function seedSprint(initial) {
+  if (read(SPRINT_SEED_KEY) === true) return initial;
+  const passivePanel = [...initial.passivePanel];
+  if (!passivePanel.includes(SPRINT_SKILL_ID)) {
+    const free = passivePanel.indexOf(null);
+    if (free !== -1) passivePanel[free] = SPRINT_SKILL_ID;
+  }
+  const seeded = { ...initial, passivePanel };
+  saveToStorage(seeded);
+  try { localStorage.setItem(SPRINT_SEED_KEY, 'true'); } catch {}
+  return seeded;
+}
+const initial = seedSprint(loadFromStorage() || {
+  activeSlots: new Array(ACTIVE_SLOTS).fill(null),
+  passivePanel: new Array(PASSIVE_SLOTS).fill(null),
+});
+
+let state = { ...initial, cooldowns: new Array(ACTIVE_SLOTS).fill(0) };
+const emit = () => listeners.forEach((fn) => fn(state));
+
+export function getLoadout() { return state; }
+export function subscribeLoadout(fn) { listeners.add(fn); fn(state); return () => listeners.delete(fn); }
+
+export function equipActive(slotIndex, skillId) {
+  if (slotIndex < 0 || slotIndex >= ACTIVE_SLOTS) return { ok: false, reason: 'bad_slot' };
+  if (skillId) {
+    const check = canEquipToSlot(skillId, SLOT_KIND.ACTIVE);
+    if (!check.ok) return check;
+  }
+  const activeSlots = [...state.activeSlots];
+  activeSlots[slotIndex] = skillId || null;
+  state = { ...state, activeSlots };
+  saveToStorage(state);
+  emit();
+  return { ok: true };
+}
+
+export function unequipActive(slotIndex) { return equipActive(slotIndex, null); }
+
+export function equipPassive(slotIndex, skillId) {
+  if (slotIndex < 0 || slotIndex >= PASSIVE_SLOTS) return { ok: false, reason: 'bad_slot' };
+  if (skillId) {
+    const check = canEquipToSlot(skillId, SLOT_KIND.PASSIVE);
+    if (!check.ok) return check;
+  }
+  const passivePanel = [...state.passivePanel];
+  passivePanel[slotIndex] = skillId || null;
+  state = { ...state, passivePanel };
+  saveToStorage(state);
+  emit();
+  return { ok: true };
+}
+
+export function unequipPassive(slotIndex) { return equipPassive(slotIndex, null); }
+
+export function getActiveSkillAt(slotIndex) {
+  const id = state.activeSlots[slotIndex];
+  return id ? getSkillById(id) : null;
+}
+
+export function startCooldown(slotIndex) {
+  const skill = getActiveSkillAt(slotIndex);
+  if (!skill) return;
+  const cooldowns = [...state.cooldowns];
+  const baseCooldown = Math.max(0, Number(skill.cooldown || 0));
+  const cdr = Math.max(0, Math.min(0.35, Number(getMasteryCDR() || 0)));
+  cooldowns[slotIndex] = baseCooldown * (1 - cdr);
+  state = { ...state, cooldowns };
+  emit();
+}
+
+export function tickCooldowns(delta) {
+  let changed = false;
+  const cooldowns = state.cooldowns.map((cd) => {
+    const next = Math.max(0, cd - delta);
+    if (next !== cd) changed = true;
+    return next;
+  });
+  if (changed) { state = { ...state, cooldowns }; emit(); }
+}
+
+export function isOnCooldown(slotIndex) { return (state.cooldowns[slotIndex] || 0) > 0; }
+
+// Presets intentionally store only skills. Weapon ownership and equipped state
+// stay authoritative in AXEEquipmentInventoryStore; switching presets cannot
+// equip a weapon or bypass a skill's weapon requirement.
+const presetDefault = () => ({ index: 0, sets: Array.from({ length: PRESET_COUNT }, () => new Array(ACTIVE_SLOTS).fill(null)) });
+function loadPresets() {
+  const parsed = read(PRESET_KEY);
+  if (!parsed?.sets) return presetDefault();
+  return { index: Number.isInteger(parsed.index) && parsed.index >= 0 && parsed.index < PRESET_COUNT ? parsed.index : 0,
+    sets: Array.from({ length: PRESET_COUNT }, (_, i) => normalize(parsed.sets[i], ACTIVE_SLOTS)) };
+}
+let presets = loadPresets();
+export function getSkillPresets() { return { index: presets.index, sets: presets.sets.map(set => [...set]) }; }
+export function saveSkillPreset(index = presets.index) {
+  if (!Number.isInteger(index) || index < 0 || index >= PRESET_COUNT) return { ok: false, reason: 'bad_preset' };
+  const next = { ...presets, sets: presets.sets.map((set, i) => i === index ? [...state.activeSlots] : set) };
+  try { localStorage.setItem(PRESET_KEY, JSON.stringify(next)); } catch { return { ok: false, reason: 'save_failed' }; }
+  presets = next;
+  return { ok: true, index };
+}
+export function selectSkillPreset(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= PRESET_COUNT) return { ok: false, reason: 'bad_preset' };
+  // Save the current edits before leaving the preset; preserve all cooldowns.
+  const next = { index, sets: presets.sets.map((set, i) => i === presets.index ? [...state.activeSlots] : set) };
+  const slots = normalize(next.sets[index], ACTIVE_SLOTS);
+  try {
+    localStorage.setItem(PRESET_KEY, JSON.stringify(next));
+    saveToStorage({ ...state, activeSlots: slots });
+  } catch { return { ok: false, reason: 'save_failed' }; }
+  presets = next;
+  state = { ...state, activeSlots: slots };
+  emit();
+  return { ok: true, index };
+}
+export function cycleSkillPreset() { return selectSkillPreset((presets.index + 1) % PRESET_COUNT); }

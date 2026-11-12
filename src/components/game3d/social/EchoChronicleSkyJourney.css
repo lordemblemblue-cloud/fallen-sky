@@ -1,0 +1,122 @@
+/* Combat / Quest 51.9–52.3: private star arranging and stargazing.
+   Inherits the existing Chronicle/Services celestial gold and violet look. */
+.axe-echo-month-archive.is-sky-expanded {
+ max-height:min(57vh,520px);overflow-y:auto;
+}
+.axe-echo-month-curated header .axe-echo-sky-toggle {
+ margin-left:auto;display:inline-flex;align-items:center;gap:5px;
+ padding:4px 8px;border:1px solid #e6c3e1;border-radius:6px;
+ background:linear-gradient(130deg,#773b94,#3d205f);
+ color:#ffe4b8;font:10px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-toggle:hover,.axe-echo-sky-toggle:focus-visible {
+ border-color:#fff0c8;background:#7a4096;
+}
+.axe-echo-chosen-entry {
+ display:flex;flex:none;align-items:stretch;gap:3px;
+ border:1px solid #b77ed6a1;border-radius:8px;
+ background:#21123abb;
+}
+.axe-echo-chosen-entry .axe-echo-month-chosen-star {
+ border:0;border-radius:8px 0 0 8px;
+ min-width:143px;max-width:200px;
+}
+.axe-echo-chosen-entry .axe-echo-star-actions {
+ display:flex;flex-direction:column;justify-content:space-around;
+ padding:3px 4px;gap:2px;
+}
+.axe-echo-star-actions button {
+ display:grid;place-items:center;min-width:28px;min-height:21px;
+ padding:2px;border:1px solid #b38fc391;border-radius:5px;
+ color:#f7d5ef;background:#3a1f56;
+}
+.axe-echo-star-actions button:hover,.axe-echo-star-actions button:focus-visible{
+ color:#ffe5b6;border-color:#f6dca9;background:#71418c;
+}
+.axe-echo-private-sky {
+ border:1px solid #d8b1ea8c;border-radius:9px;
+ background:radial-gradient(ellipse at center,#6029a85b,#0b0f2de8 78%);
+ padding:8px;margin:5px 0 8px;
+}
+.axe-echo-private-sky>header {
+ display:flex;align-items:center;gap:7px;color:#ffe4b6;
+ font:normal 14px Georgia,serif;padding:3px 5px 7px;
+}
+.axe-echo-private-sky>header span {
+ margin-left:auto;font:10px "Segoe UI",sans-serif;color:#dec8ec;
+}
+.axe-echo-private-sky-field {
+ position:relative;min-height:165px;isolation:isolate;
+ overflow:hidden;border-radius:8px;
+ background:
+  radial-gradient(circle at 33% 35%,#be77ed78,transparent 25%),
+  radial-gradient(circle at 77% 68%,#824ec668,transparent 26%),
+  radial-gradient(circle at 14% 88%,#d6b2e7a5 0 1px,transparent 2px),
+  radial-gradient(circle at 90% 18%,#ffdc9aad 0 1px,transparent 2px),
+  radial-gradient(circle at 52% 14%,#fffff5a8 0 1px,transparent 2px),
+  linear-gradient(115deg,#170b36,#241047 62%,#111530);
+ box-shadow:inset 0 0 28px #06020c;
+}
+.axe-echo-private-sky-field svg {
+ position:absolute;inset:0;width:100%;height:100%;pointer-events:none;
+ filter:drop-shadow(0 0 2px #c482ec);
+}
+.axe-echo-private-sky-node {
+ position:absolute;z-index:2;transform:translate(-50%,-50%);
+ display:flex;align-items:center;flex-direction:column;justify-content:center;
+ gap:3px;width:34px;height:34px;min-width:34px;min-height:34px;
+ padding:0;border:2px solid #f6d9ad;border-radius:50%;
+ color:#fff1cd;background:radial-gradient(circle,#ba74dba7,#3a1d65 80%);
+ box-shadow:0 0 12px #bb70f4b1;
+}
+.axe-echo-private-sky-node:hover,.axe-echo-private-sky-node:focus-visible {
+ border-color:#fff0cf;background:#9851ae;
+ box-shadow:0 0 20px #d8a4f9;
+}
+.axe-echo-private-sky-node span {
+ position:absolute;top:100%;max-width:102px;min-width:54px;
+ padding:2px 4px;border:1px solid #b391dc85;border-radius:4px;
+ background:#1b0c39e0;color:#fce7ff;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+ font:9px Georgia,serif;
+}
+.axe-echo-private-sky-empty {
+ position:absolute;inset:0;display:flex;
+ align-items:center;justify-content:center;gap:8px;
+ color:#efdbf5;font:12px Georgia,serif;
+}
+.axe-echo-private-sky-empty svg{width:25px}
+.axe-echo-sky-note {
+ margin:6px 3px 2px;color:#d8c5e6;font:10px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-unavailable {
+ display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+ border:1px solid #c9a3dc80;border-radius:6px;
+ padding:7px;margin:6px 0;background:#382053ca;color:#f6e6d7;
+}
+.axe-echo-sky-unavailable>svg{flex:none;color:#f7d4a7}
+.axe-echo-sky-unavailable p {
+ margin:0;flex:1 1 170px;font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-unavailable button{
+ padding:5px 9px;border:1px solid #edc1da;border-radius:5px;
+ background:#6c3477;color:#ffe2c4;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-sky-unavailable button:hover{background:#854993}
+.axe-echo-curated-error {
+ padding:7px;border-left:3px solid #ef9d98;
+ background:#48213aca;color:#ffd9d1;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+@media(max-width:1050px){
+ .axe-echo-month-curated header{flex-wrap:wrap}
+ .axe-echo-chosen-entry .axe-echo-month-chosen-star{min-width:130px}
+}
+@media(max-width:650px){
+ .axe-echo-month-archive.is-sky-expanded{max-height:min(57vh,420px)}
+ .axe-echo-private-sky-field{min-height:150px}
+ .axe-echo-private-sky-node{width:30px;height:30px;min-width:30px;min-height:30px}
+ .axe-echo-private-sky-node span{max-width:62px;font-size:8px}
+ .axe-echo-sky-unavailable{padding:6px}
+ .axe-echo-sky-unavailable button{width:100%}
+}

@@ -1,0 +1,185 @@
+{
+  "name": "DuelSession",
+  "type": "object",
+  "properties": {
+    "challenger_id": {
+      "type": "string",
+      "description": "User ID of the player who issued the duel"
+    },
+    "challenger_name": {
+      "type": "string"
+    },
+    "opponent_id": {
+      "type": "string",
+      "description": "User ID of the player who was challenged"
+    },
+    "opponent_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "active",
+        "finished",
+        "declined",
+        "expired"
+      ],
+      "default": "pending",
+      "description": "pending = challenge sent; active = accepted and fighting; finished = someone won, forfeited or the duel timed out"
+    },
+    "winner_id": {
+      "type": "string",
+      "description": "User ID of the winner (set when status=finished)"
+    },
+    "loser_id": {
+      "type": "string"
+    },
+    "finish_reason": {
+      "type": "string",
+      "description": "knockout | forfeit | timeout"
+    },
+    "challenger_hp": {
+      "type": "number",
+      "default": 100
+    },
+    "opponent_hp": {
+      "type": "number",
+      "default": 100
+    },
+    "max_hp": {
+      "type": "number",
+      "default": 100,
+      "description": "Legacy single pool size; duels now use each duelist's own max HP"
+    },
+    "challenger_max_hp": {
+      "type": "number"
+    },
+    "opponent_max_hp": {
+      "type": "number"
+    },
+    "challenger_character_id": {
+      "type": "string",
+      "description": "Optional character ID selected by challenger; the backend verifies ownership against Game3DCharacterSave. NOT proof of earned stats."
+    },
+    "opponent_character_id": {
+      "type": "string",
+      "description": "Optional character ID selected by opponent; the backend verifies ownership against Game3DCharacterSave. NOT proof of earned equipment."
+    },
+    "challenger_stats": {
+      "type": "object",
+      "description": "The challenger's combat stats for this duel, clamped by the server (axePowerBudget clampAXEDuelStats)"
+    },
+    "opponent_stats": {
+      "type": "object",
+      "description": "The opponent's combat stats for this duel, clamped by the server"
+    },
+    "last_hit_at": {
+      "type": "object",
+      "description": "user id -> epoch ms of that duelist's last accepted hit (the server's rate limit)"
+    },
+    "duel_skill_casts": {
+      "type": "object",
+      "description": "Server-owned per-duelist active cast receipts, indexed by cast ID with expected next hit and expiration"
+    },
+    "duel_skill_cooldowns": {
+      "type": "object",
+      "description": "Server-owned skill cooldown timestamps per duelist and allowed skill ID"
+    },
+    "duel_charge_holds": {
+      "type": "object",
+      "description": "Short-lived, server-timestamped hold records per duelist; not mastery or damage authorization"
+    },
+    "duel_shields": {
+      "type": "object",
+      "description": "Service-owned AEGIS shield current HP and expiry by authenticated duelist user ID"
+    },
+    "challenger_position": {
+      "type": "object",
+      "description": "Latest server-stamped, speed-screened challenger location; source is client movement"
+    },
+    "opponent_position": {
+      "type": "object",
+      "description": "Latest server-stamped, speed-screened opponent location; source is client movement"
+    },
+    "duel_combat_seq": {
+      "type": "number",
+      "description": "Best-effort monotonic duel combat event order (not atomic across concurrent writes)"
+    },
+    "duel_combat_event": {
+      "type": "object",
+      "description": "Most recent server-resolved strike outcome used by both clients for defensive feedback"
+    },
+    "duel_protocol_version": {
+      "type": "number",
+      "description": "New duels require v3 ordered strike intents; preexisting duels use v2 until finished"
+    },
+    "duel_intent_seq": {
+      "type": "object",
+      "description": "Highest accepted intent sequence for each authenticated duelist"
+    },
+    "duel_recent_intents": {
+      "type": "object",
+      "description": "Bounded replay cache of accepted strike result IDs and responses per duelist"
+    },
+    "dedicated_mode": {
+      "type": "string",
+      "description": "legacy, preparing (combat paused), or dedicated (worker owns combat)"
+    },
+    "dedicated_votes": {
+      "type": "object",
+      "description": "Authenticated two-player consent votes"
+    },
+    "dedicated_vote_expires": { "type": "number" },
+    "dedicated_epoch": {
+      "type": "string",
+      "description": "Server-issued handoff nonce binding tickets and reports to this duel"
+    },
+    "dedicated_sequence": {
+      "type": "number",
+      "description": "Last saved checkpoint event sequence"
+    },
+    "dedicated_checkpoint": {
+      "type": "object",
+      "description": "Last worker-reported snapshot and restore state, not browser-submitted data"
+    },
+    "dedicated_result_id": {
+      "type": "string",
+      "description": "Stable worker terminal result identifier for idempotent settlement"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "A pending challenge expires at this time"
+    },
+    "last_action_at": {
+      "type": "string",
+      "description": "An active duel with no hit for two minutes times out"
+    }
+  },
+  "required": [
+    "challenger_id",
+    "opponent_id"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "id": "{{user.id}}"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

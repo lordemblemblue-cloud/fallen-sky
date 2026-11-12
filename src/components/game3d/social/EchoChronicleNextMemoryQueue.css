@@ -1,0 +1,319 @@
+/* Combat / Quest 70.8–70.9: private Next Recorded Memories queue.
+   Uses the existing Echo Chronicle violet/gold translucent design. */
+.axe-echo-next-memory-queue{
+ display:flex;flex-direction:column;gap:9px;padding:11px;
+ border:1px solid #d6b0d9af;border-radius:9px;
+ background:linear-gradient(135deg,#4d2e70b8,#211943ed);
+ color:#f2deeb;box-shadow:inset 0 1px #fde8f339;
+}
+.axe-echo-next-memory-queue>header{
+ display:flex;align-items:center;gap:8px;
+ border-bottom:1px solid #cea7d77a;padding-bottom:8px;
+}
+.axe-echo-next-memory-queue>header>svg{
+ color:#f8ddb0;flex:none;
+}
+.axe-echo-next-memory-queue>header>div{flex:1;min-width:0}
+.axe-echo-next-memory-queue>header h4{
+ margin:0 0 3px;color:#ffe7b5;font:normal 16px Georgia,serif;
+}
+.axe-echo-next-memory-queue>header p{
+ margin:0;color:#e6d1e7;font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-memory-queue>header small{
+ display:inline-flex;align-items:center;gap:4px;
+ color:#e9d3df;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-summary,.axe-echo-next-queue-empty{
+ margin:0;color:#e9d6e5;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-summary span{color:#f4d8bb}
+.axe-echo-next-queue-items{
+ display:flex;flex-direction:column;gap:7px;
+ max-height:440px;overflow-y:auto;
+ padding-right:3px;scrollbar-width:thin;
+ scrollbar-color:#c59bdc transparent;
+}
+.axe-echo-next-queue-item{
+ display:flex;flex-direction:column;gap:8px;padding:9px;
+ border:1px solid #cca7d5a5;border-radius:8px;
+ background:linear-gradient(120deg,#4d2c69c4,#271c47e0);
+}
+.axe-echo-next-queue-item>div:first-child{
+ display:flex;flex-direction:column;gap:4px;
+}
+.axe-echo-next-queue-item strong{
+ color:#ffe7bf;font:normal 14px Georgia,serif;
+ overflow-wrap:anywhere;
+}
+.axe-echo-next-queue-item span{
+ color:#d8c6e5;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-item p{
+ display:flex;align-items:center;gap:6px;
+ margin:0;color:#f2dce2;font:11px/1.4 Georgia,serif;
+}
+.axe-echo-next-queue-item p svg{flex:none;color:#f5d7aa}
+.axe-echo-next-queue-item small{
+ color:#f0d1c3;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-item>button,.axe-echo-next-queue-pager button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ align-self:flex-start;padding:8px 10px;
+ border:1px solid #e5cca6;border-radius:6px;
+ background:#6b4082;color:#ffebc8;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-item>button:hover,
+.axe-echo-next-queue-item>button:focus-visible,
+.axe-echo-next-queue-pager button:hover:not(:disabled),
+.axe-echo-next-queue-pager button:focus-visible:not(:disabled){
+ background:#9557aa;border-color:#fff1d1;
+}
+.axe-echo-next-queue-empty{
+ padding:9px;border:1px dashed #c19ad3;border-radius:7px;
+}
+.axe-echo-next-queue-pager{
+ display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.axe-echo-next-queue-pager button:disabled{opacity:.4;cursor:default}
+.axe-echo-next-queue-pager span{
+ color:#decce8;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-feedback{
+ margin:0;padding:8px;border-left:2px solid #f9d2ad;
+ background:#643a739b;color:#ffe6cc;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-memory-queue>footer{
+ display:flex;align-items:flex-start;gap:6px;
+ padding-top:7px;border-top:1px solid #c29ccf83;
+ color:#dcc6e0;font:10px/1.45 "Segoe UI",sans-serif;
+}
+.axe-echo-next-memory-queue>footer svg{
+ color:#f2d2a6;flex:none;
+}
+@media(max-width:720px){
+ .axe-echo-next-memory-queue{padding:8px;gap:7px}
+ .axe-echo-next-memory-queue>header h4{font-size:14px}
+ .axe-echo-next-memory-queue>header small{display:none}
+ .axe-echo-next-queue-items{max-height:310px}
+ .axe-echo-next-queue-item{padding:7px}
+ .axe-echo-next-queue-item>button{width:100%;font-size:10px}
+ .axe-echo-next-queue-pager button{font-size:10px;padding:6px}
+}
+
+/* Combat / Quest 71.8–72.0: local, keyboard-operable queue discovery. */
+.axe-echo-next-queue-discovery{
+ display:flex;flex-direction:column;gap:8px;padding:9px;
+ border:1px solid #caa8d7b0;border-radius:8px;
+ background:linear-gradient(125deg,#33234fc9,#20173ac9);
+}
+.axe-echo-next-queue-search{
+ display:flex;align-items:center;gap:7px;padding:3px 7px;
+ border:1px solid #b995c9;border-radius:7px;
+ color:#ffe6b9;background:#211738e8;
+}
+.axe-echo-next-queue-search:focus-within{
+ border-color:#ffe6b9;box-shadow:0 0 0 2px #deb8f14d;
+}
+.axe-echo-next-queue-search svg{flex:none}
+.axe-echo-next-queue-search input{
+ min-width:0;flex:1;padding:7px 2px;
+ border:0;outline:none;background:transparent;color:#f7e1ec;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-search input::placeholder{color:#cbbbd4}
+.axe-echo-next-queue-search button{
+ display:grid;place-items:center;padding:4px;
+ border:1px solid #bf9ccd;border-radius:5px;
+ color:#ffe3bd;background:#563278;
+}
+.axe-echo-next-queue-filters{
+ display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+}
+.axe-echo-next-queue-filters button{
+ display:inline-flex;align-items:center;gap:6px;
+ padding:6px 8px;border:1px solid #bda0d0b0;border-radius:6px;
+ background:#493068;color:#ecdaea;
+ font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-filters button span{
+ padding:1px 5px;border-radius:8px;
+ color:#fce2c6;background:#916cac66;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-filters button[aria-pressed=true],
+.axe-echo-next-queue-filters button:hover,
+.axe-echo-next-queue-filters button:focus-visible{
+ color:#fff2d0;border-color:#ffe6b8;
+ background:#8752a1;
+}
+.axe-echo-next-queue-sort{
+ display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:8px;
+}
+.axe-echo-next-queue-sort label{
+ display:inline-flex;align-items:center;gap:7px;
+ color:#e9d5e5;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-sort select{
+ max-width:160px;padding:6px;
+ border:1px solid #cda8d6;border-radius:6px;
+ background:#402a61;color:#ffe9c3;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-sort>span{
+ color:#decee5;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-clear{
+ align-self:flex-start;padding:6px 9px;
+ border:1px solid #c8a6d3;border-radius:6px;
+ color:#ffe8c7;background:#59367a;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-search button:hover,
+.axe-echo-next-queue-search button:focus-visible,
+.axe-echo-next-queue-clear:hover,
+.axe-echo-next-queue-clear:focus-visible{
+ border-color:#ffecca;background:#8651a2;
+}
+@media(max-width:720px){
+ .axe-echo-next-queue-discovery{padding:7px}
+ .axe-echo-next-queue-filters button{padding:5px 6px}
+ .axe-echo-next-queue-sort select{max-width:130px}
+}
+
+/* Combat / Quest 73.0–73.1: bounded, read-only remaining saved pages. */
+.axe-echo-next-queue-actions{
+ display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+}
+.axe-echo-next-queue-actions button,
+.axe-echo-next-queue-preview-page>button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:7px 9px;border:1px solid #e1c79f;border-radius:6px;
+ background:#633a80;color:#ffebca;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-actions button:hover,
+.axe-echo-next-queue-actions button:focus-visible,
+.axe-echo-next-queue-preview-page>button:hover,
+.axe-echo-next-queue-preview-page>button:focus-visible{
+ border-color:#fff1d1;background:#945cb0;
+ box-shadow:0 0 0 2px #ead0f13b;
+}
+.axe-echo-next-queue-preview{
+ display:flex;flex-direction:column;gap:6px;
+ padding:9px;border:1px solid #d5afd4a3;border-radius:8px;
+ background:linear-gradient(135deg,#4b3169cb,#261c45df);
+}
+.axe-echo-next-queue-preview>p{
+ margin:0 0 3px;color:#ebd7e5;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-preview-page{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ padding:8px;border:1px solid #b795cfa6;border-radius:7px;
+ background:#301f4cbd;
+}
+.axe-echo-next-queue-preview-page>div{
+ flex:1 1 180px;min-width:0;
+ display:flex;flex-direction:column;gap:3px;
+}
+.axe-echo-next-queue-preview-page strong{
+ font:normal 12px/1.4 Georgia,serif;
+ color:#ffe4b9;overflow-wrap:anywhere;
+}
+.axe-echo-next-queue-preview-page small{
+ display:flex;align-items:center;gap:5px;
+ font:10px/1.4 "Segoe UI",sans-serif;color:#e4d0e7;
+}
+.axe-echo-next-queue-preview-page small svg{
+ color:#f1d2aa;flex:none;
+}
+.axe-echo-next-queue-preview-page>button[aria-current=step]{
+ border-color:#fff0ca;background:#8850a4;
+}
+@media(max-width:720px){
+ .axe-echo-next-queue-actions button{
+  flex:1 1 auto;font-size:10px;
+ }
+ .axe-echo-next-queue-preview{padding:6px}
+ .axe-echo-next-queue-preview-page>button{
+  width:100%;font-size:10px;
+ }
+}
+
+/* Combat / Quest 74.1–74.2: explicit private bookmark checkpoint action. */
+.axe-echo-next-queue-preview-actions{
+ display:flex;align-items:center;justify-content:flex-end;
+ flex-wrap:wrap;gap:6px;
+}
+.axe-echo-next-queue-preview-actions>button{
+ display:inline-flex;align-items:center;justify-content:center;
+ padding:7px 9px;border:1px solid #dac09f;border-radius:6px;
+ background:#643e82;color:#ffe9c4;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-preview-actions>button:hover,
+.axe-echo-next-queue-preview-actions>button:focus-visible{
+ border-color:#fff0d0;background:#8e56aa;
+ box-shadow:0 0 0 2px #f3d9f054;
+}
+.axe-echo-next-queue-preview-actions>.axe-echo-next-queue-save-place{
+ border-color:#f1dbb7;background:#6f497c;
+}
+.axe-echo-next-queue-preview-actions>button[aria-current=step]{
+ border-color:#fff2c4;background:#9a61af;
+}
+@media(max-width:720px){
+ .axe-echo-next-queue-preview-actions{
+  flex:1 1 100%;
+ }
+ .axe-echo-next-queue-preview-actions>button{
+  flex:1 1 100%;font-size:10px;
+ }
+}
+
+/* Combat / Quest 75.2: one-time local checkpoint reversal in original glass UI. */
+.axe-echo-next-queue-undo{
+ display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+ padding:9px;border:1px solid #d7b4d9a8;border-radius:8px;
+ background:linear-gradient(120deg,#53356ed1,#302348de);
+}
+.axe-echo-next-queue-undo button{
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;
+ padding:8px 10px;border:1px solid #f2dfb4;border-radius:6px;
+ background:#754988;color:#fff0ca;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-undo button:hover,
+.axe-echo-next-queue-undo button:focus-visible{
+ background:#9659a8;border-color:#fff4d4;
+ box-shadow:0 0 0 2px #e5c9e64d;
+}
+.axe-echo-next-queue-undo small{
+ flex:1 1 160px;color:#e9d4e5;
+ font:10px/1.45 "Segoe UI",sans-serif;
+}
+@media(max-width:720px){
+ .axe-echo-next-queue-undo{padding:7px}
+ .axe-echo-next-queue-undo button{
+  width:100%;font-size:10px;
+ }
+}
+
+/* Combat / Quest 78.0: unavailable-source notice, original violet/gold style. */
+.axe-echo-next-queue-unavailable{
+ padding:9px;border:1px solid #d8b6d8a8;border-radius:8px;
+ background:linear-gradient(125deg,#53396bba,#30244bdc);
+ color:#f4e0e9;font:11px/1.45 "Segoe UI",sans-serif;
+}
+.axe-echo-next-queue-unavailable strong{
+ display:flex;align-items:center;gap:6px;color:#ffe5bd;
+ font:normal 13px Georgia,serif;
+}
+.axe-echo-next-queue-unavailable ul{margin:7px 0;padding-left:18px}
+.axe-echo-next-queue-unavailable li{margin:4px 0;overflow-wrap:anywhere}
+.axe-echo-next-queue-unavailable li span{color:#fce4bc}
+.axe-echo-next-queue-unavailable small{color:#e6d1e5}

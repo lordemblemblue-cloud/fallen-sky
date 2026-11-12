@@ -1,0 +1,152 @@
+/* Combat / Quest 61.8–62.1: true saved-memory thread reading.
+   Scoped to existing celestial violet/gold Echo Chronicle Services glass. */
+.axe-echo-thread-buttons{
+ display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+}
+.axe-echo-thread-buttons .axe-echo-thread-read{
+ display:inline-flex;align-items:center;justify-content:center;gap:6px;
+ padding:7px 9px;border:1px solid #ecd0a6;border-radius:6px;
+ background:linear-gradient(115deg,#73438f,#4e2c6f);color:#fff0c8;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-thread-buttons .axe-echo-thread-read:hover,
+.axe-echo-thread-buttons .axe-echo-thread-read:focus-visible{
+ border-color:#fff3cf;background:#8851aa;
+}
+.axe-echo-thread-reader{
+ display:flex;flex-direction:column;gap:10px;
+ border:1px solid #e4c3acb8;border-radius:9px;padding:12px;
+ background:
+ radial-gradient(ellipse at 68% 0%,#a260bc5b,transparent 66%),
+ linear-gradient(145deg,#3d1d5bdc,#1b1636ef);
+ color:#f8e3e5;box-shadow:inset 0 1px #f7daed4f;
+}
+.axe-echo-thread-reader>header{
+ display:flex;align-items:center;gap:8px;
+ padding-bottom:8px;border-bottom:1px solid #cda7d68f;
+}
+.axe-echo-thread-reader>header>svg{flex:none;color:#ffe1ae}
+.axe-echo-thread-reader>header>div{min-width:0;flex:1}
+.axe-echo-thread-reader>header h4{
+ margin:0 0 3px;color:#ffe8b8;font:normal 17px Georgia,serif;
+}
+.axe-echo-thread-reader>header p{
+ margin:0;color:#e2c8e3;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-thread-reader>header>button{
+ display:grid;place-items:center;flex:none;
+ padding:5px;border:1px solid #bda0cf;border-radius:5px;
+ background:#502b69;color:#ffe2bd;
+}
+.axe-echo-reader-dots{
+ display:flex;flex-wrap:wrap;align-items:center;gap:5px;
+}
+.axe-echo-reader-dots button{
+ display:grid;place-items:center;width:26px;height:26px;min-width:26px;
+ padding:0;border:1px solid #b795ca;border-radius:50%;
+ background:#4b286a;color:#e9d7e7;
+ font:11px Georgia,serif;
+}
+.axe-echo-reader-dots button[aria-current=step],
+.axe-echo-reader-dots button:hover,
+.axe-echo-reader-dots button:focus-visible{
+ color:#fff1bf;border-color:#ffe3b3;
+ background:radial-gradient(circle,#9960bd,#59377c);
+ box-shadow:0 0 10px #c58de5ab;
+}
+.axe-echo-reader-page{
+ display:flex;flex-direction:column;gap:8px;
+ padding:12px;border:1px solid #c9add09a;border-radius:8px;
+ background:linear-gradient(135deg,#42285ca8,#251b3eb9);
+}
+.axe-echo-reader-index{
+ color:#e8d5b5;font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-reader-page h5{
+ margin:0;color:#ffe4b2;font:normal 20px Georgia,serif;
+ overflow-wrap:anywhere;
+}
+.axe-echo-reader-page p{
+ display:flex;align-items:center;gap:6px;
+ margin:0;color:#e6d2e6;font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-reader-page p svg{flex:none;color:#f8d8a6}
+.axe-echo-reader-warning{
+ display:block;padding:8px;border-left:2px solid #f6cba1;
+ background:#6c3a6b8c;color:#f6dbd6;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-reader-actions{
+ display:flex;align-items:center;justify-content:space-between;
+ gap:6px;flex-wrap:wrap;
+}
+.axe-echo-reader-actions button,
+.axe-echo-reader-continue{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:8px 10px;border:1px solid #d8b4d1;border-radius:6px;
+ background:#52306f;color:#ffe4be;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-reader-actions .axe-echo-reader-open{
+ border-color:#f6d9a5;background:#74478d;color:#fff0c8;
+}
+.axe-echo-reader-actions button:hover:not(:disabled),
+.axe-echo-reader-actions button:focus-visible:not(:disabled),
+.axe-echo-reader-continue:hover,
+.axe-echo-reader-continue:focus-visible{
+ border-color:#ffedcc;background:#8650a2;
+}
+.axe-echo-reader-actions button:disabled{opacity:.4;cursor:default}
+.axe-echo-reader-continue{
+ align-self:flex-start;background:#603b7d;
+}
+.axe-echo-thread-reader>footer{
+ display:flex;align-items:flex-start;gap:6px;
+ color:#d9c6e0;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-thread-reader>footer svg{flex:none;color:#f6d6ae}
+@media(max-width:720px){
+ .axe-echo-thread-reader{padding:8px;gap:8px}
+ .axe-echo-thread-reader>header h4{font-size:15px}
+ .axe-echo-reader-page{padding:9px}
+ .axe-echo-reader-page h5{font-size:17px}
+ .axe-echo-reader-actions button{padding:7px;font-size:10px}
+ .axe-echo-reader-actions .axe-echo-reader-open{order:3;flex:1 1 100%}
+ .axe-echo-reader-continue{width:100%;font-size:10px}
+}
+
+/* Combat / Quest 63.1–63.3: private, explicit save/resume/forget controls. */
+.axe-echo-reader-mark{
+ display:flex;flex-direction:column;gap:8px;
+ padding:10px;border:1px solid #d6b1db9e;border-radius:8px;
+ color:#e9d4ec;
+ background:linear-gradient(120deg,#502969b5,#2c1b4cc7);
+}
+.axe-echo-reader-mark-heading{
+ display:flex;align-items:flex-start;gap:7px;
+ color:#ffe1b3;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-reader-mark-heading svg{flex:none;color:#f6cc9b}
+.axe-echo-reader-mark-buttons{
+ display:flex;align-items:center;flex-wrap:wrap;gap:6px;
+}
+.axe-echo-reader-mark-buttons button{
+ display:inline-flex;align-items:center;justify-content:center;gap:5px;
+ padding:7px 9px;border:1px solid #d3aad6;border-radius:6px;
+ color:#ffe8bf;background:#643780;
+ font:11px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-reader-mark-buttons button:hover:not(:disabled),
+.axe-echo-reader-mark-buttons button:focus-visible:not(:disabled){
+ border-color:#fff0c9;background:#8b52a1;
+}
+.axe-echo-reader-mark-buttons button:disabled{opacity:.38;cursor:default}
+.axe-echo-reader-mark>p{
+ margin:0;color:#f3d9db;font:11px/1.4 "Segoe UI",sans-serif;
+}
+@media(max-width:720px){
+ .axe-echo-reader-mark{padding:8px}
+ .axe-echo-reader-mark-buttons button{
+  flex:1 1 auto;padding:7px;font-size:10px;
+ }
+}

@@ -1,0 +1,90 @@
+/* A subtle, compass-mounted scanner rather than an extra full HUD window. */
+.axe-horizon {
+  position:absolute;top:4px;right:-55px;z-index:5;width:auto;
+  color:#dceaf3;font:11px/1.3 system-ui,-apple-system,sans-serif;
+  text-shadow:0 1px 4px #071827;pointer-events:auto;
+}
+.axe-horizon button {font:inherit;color:inherit;cursor:pointer;}
+.axe-horizon button:focus-visible,.axe-horizon input:focus-visible,
+.axe-horizon summary:focus-visible {outline:2px solid #a4e3fb;outline-offset:2px;}
+.axe-horizon-activate {
+  height:23px;min-width:56px;padding:0 7px;border-radius:5px;
+  border:1px solid rgba(166,211,233,.36);
+  color:#d9ecf8!important;letter-spacing:.07em;font-size:9px!important;
+  background:linear-gradient(180deg,rgba(37,64,82,.8),rgba(14,34,49,.8));
+  box-shadow:inset 0 1px rgba(242,252,255,.12),0 2px 8px #0004;
+  backdrop-filter:blur(6px);
+}
+.axe-horizon-activate span {color:#9fdefa;font-size:13px;vertical-align:-1px;margin-right:2px;}
+.axe-horizon-activate:hover {border-color:rgba(189,229,247,.8);background:#345d75;}
+.axe-horizon[data-expanded="true"] {
+  top:36px;right:-55px;width:min(308px,calc(100vw - 40px));
+  padding:8px;border:1px solid rgba(144,190,212,.44);border-radius:9px;
+  background:linear-gradient(160deg,rgba(24,43,60,.94),rgba(12,29,44,.94));
+  box-shadow:inset 0 1px rgba(230,248,255,.12),0 9px 25px #0007;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+}
+.axe-horizon-top {display:flex;align-items:center;gap:8px;min-height:19px;}
+.axe-horizon-heading {display:inline-flex;align-items:center;gap:4px;
+  color:#eaf6fc;font-size:10px;font-weight:700;letter-spacing:.15em;white-space:nowrap;}
+.axe-horizon-heading>span {color:#9cdef6;font-size:15px;font-weight:400;}
+.axe-horizon-state {margin-right:auto;color:#90aec0;letter-spacing:.05em;font-size:9px;white-space:nowrap;}
+.axe-horizon-pin {display:flex;align-items:center;gap:3px;white-space:nowrap;
+  color:#b2c5d2;font-size:9px;cursor:pointer;}
+.axe-horizon-pin input {width:12px;height:12px;margin:0;accent-color:#85c8e6;}
+.axe-horizon-close {border:0;background:none;font-size:18px!important;
+  line-height:14px;padding:0 2px;color:#d3e6f3!important;}
+.axe-horizon-controls {display:flex;align-items:center;gap:6px;margin-top:7px;}
+.axe-horizon-modes,.axe-horizon-scans {display:flex;align-items:center;gap:3px;min-width:0;}
+.axe-horizon-modes button,.axe-horizon-scans button {
+  border:1px solid transparent;border-radius:4px;background:rgba(134,173,198,.12);
+  padding:4px 6px;white-space:nowrap;font-size:10px;line-height:1;
+}
+.axe-horizon-modes button[aria-pressed="true"],
+.axe-horizon-scans button[aria-pressed="true"] {
+  background:rgba(91,163,205,.29);border-color:rgba(157,213,238,.56);
+  color:#f2faff;
+}
+.axe-horizon-modes {flex-shrink:0;border-right:1px solid rgba(149,185,203,.26);padding-right:5px;}
+.axe-horizon-scans {flex:1;justify-content:space-between;}
+.axe-horizon-scans button {padding-inline:5px;}
+.axe-horizon-feed {
+  position:relative;overflow:hidden;height:93px;width:100%;margin-top:7px;
+  border:1px solid rgba(140,187,210,.35);border-radius:5px;
+  background:linear-gradient(180deg,#263d4f,#10293a);
+}
+.axe-horizon-feed canvas {display:block;width:100%;height:100%;object-fit:cover;}
+.axe-horizon-feed::after {content:"";position:absolute;inset:55% 0 0;
+  background:linear-gradient(180deg,transparent,rgba(4,17,29,.75));pointer-events:none;}
+.axe-horizon-empty {position:absolute;inset:0;display:grid;place-items:center;
+  font-size:10px;color:#b3ccd9;background:rgba(13,29,43,.87);}
+.axe-horizon-range {position:absolute;z-index:1;bottom:5px;left:7px;
+  max-width:72%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:#f1f8fd;font-size:10px;}
+.axe-horizon-status {position:absolute;z-index:1;bottom:5px;right:6px;
+  font-size:9px;font-weight:600;letter-spacing:.08em;color:#c5e6f8;}
+.axe-horizon-primary {display:flex;align-items:center;justify-content:space-between;
+  gap:7px;min-width:0;margin-top:6px;padding-inline:1px;font-size:10px;}
+.axe-horizon-primary span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dceef7;}
+.axe-horizon-primary small {flex-shrink:0;font-size:9px;color:#9dbfd2;}
+.axe-horizon-quests {margin-top:5px;border-top:1px solid rgba(151,195,213,.24);
+  font-size:10px;color:#b9d3e3;}
+.axe-horizon-quests summary {cursor:pointer;padding:5px 1px 0;list-style:none;}
+.axe-horizon-quests summary::-webkit-details-marker {display:none;}
+.axe-horizon-quests summary>span {float:right;opacity:.8;}
+.axe-horizon-quest-list {display:flex;flex-direction:column;gap:3px;margin-top:6px;}
+.axe-horizon-quest-list button {
+  display:flex;align-items:center;justify-content:space-between;gap:6px;
+  width:100%;border:1px solid rgba(154,192,214,.18);border-radius:4px;
+  padding:5px 6px;background:rgba(122,166,191,.09);text-align:left;
+}
+.axe-horizon-quest-list button:hover {background:rgba(95,153,185,.27);}
+.axe-horizon-quest-list button span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.axe-horizon-quest-list button small {white-space:nowrap;color:#acd0e4;font-size:9px;}
+@media(max-width:640px) {
+  .axe-horizon {right:-35px;}
+  .axe-horizon[data-expanded="true"] {right:-35px;width:min(285px,calc(100vw - 40px));}
+  .axe-horizon-activate {min-width:43px;padding-inline:4px;font-size:8px!important;}
+  .axe-horizon-controls {flex-wrap:wrap;}
+}
+@media(prefers-reduced-motion:reduce){.axe-horizon *{transition:none!important;}}

@@ -1,0 +1,237 @@
+import { consumeForcedCriticalHit } from './combat/forcedCriticalBridge';
+import { resolveAXEHit, AXE_COMBAT_MODE, getAXECriticalChance } from './axe/combat/AXECombatMath';
+import { AXE_COMBAT_RULES, getAXEHitChancePct } from './axe/balance/AXEPowerBudget';
+
+// TwelveSky-style combat stat model for Mines.
+// Canonical player attributes are Strength, Agility, Vitality and Spirit.
+// Legacy aliases remain exposed so older Atom X Eve systems keep working during
+// the migration.
+
+export const STAT_RATES = Object.freeze({
+  strengthAttack: 3.5, // a point of Strength is worth about a point of Vitality (docs/game3d/BUILD_BALANCE.md; was 2.65)
+  strengthAttackSuccess: 1.71,
+  agilityDefense: 1.63,
+  agilityEvasion: 1.67,
+  vitalityHP: 15, // was 20
+  vitalityEvasion: 0.90,
+  spiritAttack: 2.2, // was 1.43
+  spiritChi: 15.31,
+});
+
+export const SECONDARY_RATES = Object.freeze({
+  hpRegenPerVitality: 0.12,
+  chiRegenPerSpirit: 0.22,
+  critPerAgility: 0.05, // was 0.08
+  attackSpeedPerAgility: 0.05, // was 0.10: speed was nearly free for every build
+  criticalDefensePerVitality: 0.0007,
+});
+
+export const DEFAULT_PLAYER_STATS = Object.freeze({
+  strength: 3,
+  dexterity: 2,
+  constitution: 5,
+  focus: 2,
+});
+
+export function migrateBaseStats(stats) {
+  if (!stats || typeof stats !== 'object') return { ...DEFAULT_PLAYER_STATS };
+  const strength = Number.isFinite(stats.strength) ? stats.strength : DEFAULT_PLAYER_STATS.strength;
+  const agility = Number.isFinite(stats.agility)
+    ? stats.agility
+    : Number.isFinite(stats.dexterity) ? stats.dexterity : DEFAULT_PLAYER_STATS.dexterity;
+  const vitality = Number.isFinite(stats.vitality)
+    ? stats.vitality
+    : Number.isFinite(stats.constitution) ? stats.constitution
+      : Number.isFinite(stats.hp) ? stats.hp : DEFAULT_PLAYER_STATS.constitution;
+  const legacySpirit = Number.isFinite(stats.spirit)
+    ? stats.spirit
+    : Number.isFinite(stats.focus) ? stats.focus : DEFAULT_PLAYER_STATS.focus;
+  const oldInt = Number.isFinite(stats.intelligence) ? Math.max(0, stats.intelligence) : 0;
+  return {
+    strength: Math.max(0, strength),
+    dexterity: Math.max(0, agility),
+    constitution: Math.max(0, vitality),
+    focus: Math.max(0, legacySpirit + oldInt),
+  };
+}
+
+function normalizeAttributeBonuses(input = {}) {
+  return {
+    strength: input.strength || 0,
+    agility: input.agility ?? input.dexterity ?? 0,
+    vitality: input.vitality ?? input.constitution ?? 0,
+    spirit: input.spirit ?? input.focus ?? 0,
+    critChance: input.criticalChance || input.critChance || 0,
+    criticalDefense: input.criticalDefense || 0,
+    criticalDamage: input.criticalDamage || input.critDamage || 0,
+    attributionAttackPct: input.attributionAttackPct || 0,
+    attributionDefensePct: input.attributionDefensePct || 0,
+  };
+}
+
+function aggregateEquipment(equipment = []) {
+  const out = {
+    strengthMult: 0,
+    agilityMult: 0,
+    vitalityMult: 0,
+    spiritMult: 0,
+    flatAttack: 0,
+    flatDefense: 0,
+    flatHP: 0,
+    flatChi: 0,
+    hit: 0,
+    block: 0,
+    critical: 0,
+  };
+  equipment.forEach((eq) => {
+    if (!eq) return;
+    out.strengthMult += eq.strength_mult || 0;
+    out.agilityMult += eq.agility_mult || eq.dexterity_mult || 0;
+    out.vitalityMult += eq.vitality_mult || eq.constitution_mult || eq.hp_mult || 0;
+    out.spiritMult += eq.spirit_mult || eq.focus_mult || eq.intelligence_mult || 0;
+    out.flatAttack += eq.attackPower || eq.attack_power || eq.damage || 0;
+    out.flatDefense += eq.defensePower || eq.defense_power || eq.defense || 0;
+    out.flatHP += eq.hp || eq.maxHP || 0;
+    out.flatChi += eq.chi || eq.mana || 0;
+    out.hit += eq.attackSuccess || eq.attack_success || 0;
+    out.block += eq.attackBlock || eq.attack_block || 0;
+    out.critical += eq.critical || eq.critChance || 0;
+  });
+  return out;
+}
+
+export function computeDerivedStats(baseStats, equipment = [], attributeBonuses = null, flatBonuses = null) {
+  const base = migrateBaseStats(baseStats);
+  const bonus = normalizeAttributeBonuses(attributeBonuses || {});
+  const flat = flatBonuses || {};
+  const gear = aggregateEquipment(equipment);
+
+  const rawStrength = base.strength + bonus.strength;
+  const rawAgility = base.dexterity + bonus.agility;
+  const rawVitality = base.constitution + bonus.vitality;
+  const rawSpirit = base.focus + bonus.spirit;
+
+  const strength = rawStrength * (1 + gear.strengthMult);
+  const agility = rawAgility * (1 + gear.agilityMult);
+  const vitality = rawVitality * (1 + gear.vitalityMult);
+  const spirit = rawSpirit * (1 + gear.spiritMult);
+
+  const baseAttack = strength * STAT_RATES.strengthAttack
+    + spirit * STAT_RATES.spiritAttack
+    + gear.flatAttack
+    + (flat.damage || 0);
+  const attributionAttackPct = bonus.attributionAttackPct || 0;
+  const attributionDefensePct = bonus.attributionDefensePct || 0;
+  const attributionAttack = flat.attributionAttack || 0;
+  const attributionDefense = flat.attributionDefense || 0;
+  const totalDamage = Math.max(1, Math.round(baseAttack * (1 + attributionAttackPct / 100)));
+
+  const rawDefense = agility * STAT_RATES.agilityDefense + gear.flatDefense + (flat.defense || 0);
+  const defense = Math.max(0, rawDefense * (1 + attributionDefensePct / 100));
+  const maxHP = Math.max(1, Math.round(vitality * STAT_RATES.vitalityHP + gear.flatHP + (flat.hp || 0)));
+  const chi = Math.max(0, Math.round(spirit * STAT_RATES.spiritChi + gear.flatChi + (flat.chi || 0)));
+
+  const attackSuccess = strength * STAT_RATES.strengthAttackSuccess + gear.hit + (flat.attackSuccess || 0);
+  const attackBlock = agility * STAT_RATES.agilityEvasion + vitality * STAT_RATES.vitalityEvasion + gear.block + (flat.attackBlock || 0);
+  const hitChance = Math.max(5, Math.min(98, 75 + (attackSuccess - attackBlock) * 0.12));
+  const evasionPct = Math.max(0, Math.min(70, attackBlock * 0.08));
+  const critChance = Math.max(0, Math.min(AXE_COMBAT_RULES.critChanceCapPct,
+    5 + agility * SECONDARY_RATES.critPerAgility + gear.critical + bonus.critChance + (flat.critChance || 0)));
+  const criticalDefense = Math.max(0,
+    bonus.criticalDefense + (flat.criticalDefense || 0) + vitality * SECONDARY_RATES.criticalDefensePerVitality);
+  const criticalDamage = Math.max(0, bonus.criticalDamage + (flat.critDamage || 0));
+
+  const hpRegen = vitality * SECONDARY_RATES.hpRegenPerVitality;
+  const manaRegen = spirit * SECONDARY_RATES.chiRegenPerSpirit;
+  const attackSpeedPct = agility * SECONDARY_RATES.attackSpeedPerAgility;
+
+  return {
+    physicalDamage: totalDamage,
+    elementalDamage: 0,
+    totalDamage,
+    damage: totalDamage,
+    maxHP,
+    chi,
+    defense,
+    attackSuccess,
+    attackBlock,
+    hitChance,
+    critChance,
+    attackRange: 2.0,
+    attackSpeedPct,
+    evasionPct,
+    hpRegen,
+    manaRegen,
+    skillPowerPct: spirit * 0.05, // every skill's damage, about +14% at level 100 (in skillDamagePct; was 0.35, and only two legacy spells read it)
+    cooldownReductionPct: 0,
+    spellDamagePct: spirit * 0.35,
+    dotDamagePct: 0,
+    elementalDefense: attributionDefensePct,
+    damageRollBonus: strength * 0.10,
+    criticalDefense,
+    criticalDamage,
+    attributionAttackPct,
+    attributionDefensePct,
+    attributionAttack,
+    attributionDefense,
+    effective: {
+      strength: Math.round(strength),
+      agility: Math.round(agility),
+      vitality: Math.round(vitality),
+      spirit: Math.round(spirit),
+      dexterity: Math.round(agility),
+      constitution: Math.round(vitality),
+      focus: Math.round(spirit),
+      intelligence: 0,
+    },
+  };
+}
+
+export const CRIT_MULTIPLIER = AXE_COMBAT_RULES.critMultiplier;
+
+// A forced critical (Critical Focus) always lands; otherwise crit chance is capped and the
+// defender's crit dodge applies (getAXECriticalChance).
+function rollCrit(attackerStats, defenderStats = {}) {
+  if (consumeForcedCriticalHit()) return { critical: true, forced: true };
+  return { critical: Math.random() * 100 < getAXECriticalChance(attackerStats, defenderStats), forced: false };
+}
+
+// The hit roll: the attacker's Accuracy against the defender's Block (getAXEHitChancePct).
+function rollAXEHit(attackerStats = {}, defenderStats = {}) {
+  return Math.random() * 100 < getAXEHitChancePct(attackerStats.attackSuccess, defenderStats.attackBlock);
+}
+
+// One swing: rolls the hit (unless context.hitRoll === false) and the crit, then resolves it.
+// A forced critical never misses.
+export function calculateAXEHitOutcome(attackerStats, defenderStats, context = {}) {
+  const crit = context.critical != null ? { critical: !!context.critical, forced: false } : rollCrit(attackerStats, defenderStats);
+  if (context.hitRoll !== false && !crit.forced && !rollAXEHit(attackerStats, defenderStats)) {
+    return { damage: 0, critical: false, missed: true };
+  }
+  const result = resolveAXEHit({
+    attackerStats,
+    defenderStats,
+    mode: context.mode || AXE_COMBAT_MODE.PVE,
+    baseDamage: context.baseDamage,
+    skillCoefficient: context.skillCoefficient ?? 1,
+    weaponCoefficient: context.weaponCoefficient ?? 1,
+    outgoingMultiplier: context.outgoingMultiplier ?? 1,
+    critical: crit.critical,
+    criticalAllowed: context.criticalAllowed !== false,
+    flatMitigation: context.flatMitigation || 0,
+    percentMitigation: context.percentMitigation,
+    shield: context.shield || 0,
+    reflected: context.reflected || false,
+    reflectedDamageMultiplier: context.reflectedDamageMultiplier || 0,
+  });
+  return { ...result, missed: false };
+}
+
+// Damage of one swing; 0 when it misses.
+export function calculateHit(attackerStats, defenderStats, context = {}) {
+  return calculateAXEHitOutcome(attackerStats, defenderStats, context).damage;
+}
+
+
+// (removed) ENEMY_STAT_TEMPLATES: seven fixed enemy stat blocks from before the enemy curve
+// (getAXEEnemyStats in AXEPowerBudget); nothing read them.

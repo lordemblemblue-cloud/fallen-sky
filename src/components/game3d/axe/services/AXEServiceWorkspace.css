@@ -1,0 +1,172 @@
+.axe-service-workspace {
+  position:absolute; z-index:70; inset: max(86px, calc(var(--axe-service-navigation-bottom, 128px) + 10px)) 12px 12px;
+  display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; pointer-events:none;
+  color:#e7f3fa; font:12px/1.45 "Segoe UI",system-ui,sans-serif;
+  animation:axe-service-in .18s ease;
+}
+.axe-service-workspace * { box-sizing:border-box; }
+.axe-service-workspace button, .axe-service-workspace input, .axe-service-workspace select { font:inherit; }
+.axe-service-workspace button { cursor:pointer; }
+.axe-service-workspace button:focus-visible, .axe-service-workspace input:focus-visible,
+.axe-service-workspace select:focus-visible { outline:2px solid #9bd5ee; outline-offset:2px; }
+.axe-service-heading, .axe-service-operations, .axe-service-notice, .axe-service-progression,
+.axe-service-inspection, .axe-service-error, .axe-service-loading, .axe-service-mobile-panes { pointer-events:auto; }
+.axe-service-heading { display:flex; align-items:center; justify-content:space-between; gap:16px;
+  align-self:center; width:min(1180px,100%); padding:9px 14px; border:1px solid #a0badb42; border-radius:5px;
+  background:linear-gradient(105deg,#101c29e8,#111b23d9); box-shadow:0 5px 18px #0004; }
+.axe-service-heading h1 { margin:1px 0 0; font:600 17px Georgia,serif; letter-spacing:.025em; }
+.axe-service-kicker { color:#94aebd; font-size:9px; text-transform:uppercase; letter-spacing:.14em; }
+.axe-service-heading button, .axe-service-operations button, .axe-service-inspection button,
+.axe-service-mobile-panes button, .axe-service-error button {
+  color:#e3f1fa; background:#142431d9; border:1px solid #96b4cd55; border-radius:4px; padding:7px 10px;
+}
+.axe-service-workspace button:hover { border-color:#c6e8ff99; }
+.axe-service-operations { align-self:center; display:flex; flex-wrap:wrap; justify-content:flex-start; gap:5px;
+  width:min(1180px,100%); min-width:0; max-width:100%; }
+.axe-service-operations button { padding:5px 9px; font-size:11px; }
+.axe-service-operations [aria-pressed="true"], .axe-service-mobile-panes [aria-pressed="true"] {
+  background:#2a4657ed; border-color:#b9dcee; color:white;
+}
+.axe-service-operation-help { align-self:center; flex:0 0 auto; width:min(1180px,100%); margin:0;
+  padding:8px 12px; pointer-events:auto; color:#d7e6ef; font-size:11px; line-height:1.4;
+  border:1px solid #aec4d13d; border-radius:4px; background:#14212dcc; }
+.axe-service-notice { align-self:center; width:min(1180px,100%); padding:8px 12px; margin:0;
+  background:#14212dee; border:1px solid #c0cbd447; border-radius:4px; color:#d3e5f0; }
+/* Subservices always render BELOW the compact top navigation and their
+   operation tabs, not inside the old 660px right-side flyout. Give progression,
+   appearance, mount and title screens the remaining viewport area. */
+.axe-service-progression {
+  align-self:center; min-width:0; min-height:0; flex:1 1 auto;
+  width:min(1180px,100%); max-width:100%; overflow:auto;
+  overscroll-behavior:contain;
+  border:1px solid #acc2d247; border-radius:5px;
+  background:rgba(16,26,37,.84); backdrop-filter:blur(8px);
+}
+.axe-service-workspace--panel { align-items:center; }
+.axe-service-workspace--panel .axe-service-progression { align-self:center; width:min(1180px,100%); }
+.axe-service-progression > div { min-width:0; max-width:100%; }
+.axe-service-inspection { position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+  text-align:center; max-width:32%; color:#c1d5df; text-shadow:0 1px 3px #000; font-size:10px; }
+.axe-service-inspection div { margin-top:8px; display:flex; justify-content:center; gap:6px; }
+.axe-service-loading, .axe-service-error { align-self:center; padding:18px; background:#101a25eb; border:1px solid #acc2d247; }
+.axe-service-error button { display:block; margin-top:12px; }
+.axe-service-mobile-panes { display:none; }
+.axe-service-operation-select { display:none; }
+.axe-service-session-notice { position:absolute; z-index:80; left:50%; bottom:24px; transform:translateX(-50%);
+  width:max-content; max-width:calc(100% - 32px); padding:10px 14px; border:1px solid #adc3d04d;
+  border-radius:4px; background:#101a25ed; color:#e2eff5; font:12px/1.5 "Segoe UI",system-ui,sans-serif; }
+@keyframes axe-service-in { from {opacity:0; transform:translateY(4px)} to {opacity:1; transform:none} }
+@media(max-width:760px) {
+  .axe-service-workspace { left:8px; right:8px; bottom:8px; }
+  .axe-service-progression { width:100%; min-height:0; margin-top:0; max-height:none; flex:1 1 auto; }
+  .axe-service-mobile-panes { display:flex; justify-content:center; gap:6px; }
+  .axe-service-operations { display:none; }
+  .axe-service-operation-select { display:flex; align-items:center; justify-content:space-between; gap:10px;
+    pointer-events:auto; padding:5px 9px; border:1px solid #acc2d247; border-radius:4px; background:#101a25e8; }
+  .axe-service-operation-select select { min-width:0; flex:1; padding:6px; border:1px solid #adc3d04d;
+    border-radius:3px; background:#142431; color:#e3f1fa; }
+  .axe-service-inspection { position:static; transform:none; align-self:center; max-width:100%; font-size:9px; }
+  .axe-service-inspection span { display:none; }
+  .axe-service-workspace .axe-equipment-workspace { display:flex; width:min(420px,100%); align-self:flex-end; }
+  .axe-service-workspace--world .axe-equipment-workspace { height:40vh; max-height:40vh; flex:none; margin-top:auto; }
+  .axe-service-workspace .axe-equipment-workspace > aside,
+  .axe-service-workspace .axe-equipment-workspace > section { width:100%; min-width:0; }
+  .axe-service-workspace[data-mobile-pane='inventory'] .axe-service-actions { display:none; }
+  .axe-service-workspace[data-mobile-pane='controls'] .axe-service-inventory { display:none; }
+}
+@media(max-height:600px) {
+  .axe-service-workspace { top:max(78px,calc(var(--axe-service-navigation-bottom,80px) + 8px)); gap:4px; }
+  .axe-service-heading { padding:4px 10px; }
+  .axe-service-heading h1 { font-size:14px; }
+  .axe-service-kicker { display:none; }
+  .axe-service-operations button { padding:3px 7px; }
+}
+@media(prefers-reduced-motion:reduce) { .axe-service-workspace { animation:none; } }
+
+/* Companion owns the old Stable subpages internally. Do not show a second
+   Pets/Mounts operations strip above its reference screenshot-like layout. */
+.axe-service-workspace--companion .axe-service-operations,
+.axe-service-workspace--companion .axe-service-operation-help,
+.axe-service-workspace--companion .axe-service-operation-select { display:none; }
+
+/* Shared service scroll treatment: visible floating champagne-gold pill with
+ * a hairline guide, never a rectangular browser scrollbar trough.
+ * Applies to nested Titles, Companion, Appearance, Blacksmith and Core panels. */
+.axe-service-workspace,
+.axe-service-workspace * {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(222,185,120,.8) transparent;
+}
+@supports selector(::-webkit-scrollbar) {
+  .axe-service-workspace,
+  .axe-service-workspace * { scrollbar-width:auto; scrollbar-color:auto; }
+  .axe-service-workspace ::-webkit-scrollbar { width:9px; height:9px; }
+  .axe-service-workspace ::-webkit-scrollbar-track {
+    background:transparent; border:0; box-shadow:none;
+  }
+  .axe-service-workspace ::-webkit-scrollbar-track:vertical {
+    background:linear-gradient(90deg,transparent 46%,rgba(223,182,112,.43) 49%,rgba(223,182,112,.43) 51%,transparent 54%);
+  }
+  .axe-service-workspace ::-webkit-scrollbar-track:horizontal {
+    background:linear-gradient(0deg,transparent 46%,rgba(223,182,112,.43) 49%,rgba(223,182,112,.43) 51%,transparent 54%);
+  }
+  .axe-service-workspace ::-webkit-scrollbar-thumb {
+    border:2px solid transparent; border-radius:999px;
+    background:linear-gradient(180deg,#f4dfb5,#bc915b) padding-box;
+    box-shadow:none; min-height:24px;
+  }
+  .axe-service-workspace ::-webkit-scrollbar-thumb:hover {
+    background:linear-gradient(180deg,#ffedc8,#dbad6f) padding-box;
+  }
+  .axe-service-workspace ::-webkit-scrollbar-button { display:none; width:0; height:0; }
+  .axe-service-workspace ::-webkit-scrollbar-corner { background:transparent; }
+}
+
+
+/* Single source of truth for Game 3D Services: exact approved Appearance
+   liquid-glass color tokens. Color-only: does not alter dimensions or layout. */
+.axe-service-workspace {
+  --axe-ui-glass:linear-gradient(115deg,rgba(32,44,58,.51),rgba(26,35,48,.39));
+  --axe-ui-gold:rgba(242,210,147,.76);
+  --axe-ui-text:#f5e9d7;
+  --axe-ui-heading:#f8e5c8;
+  --axe-ui-subtext:#d6cabb;
+  --axe-ui-gold-text:#f4d19c;
+  --axe-ui-selected:linear-gradient(95deg,#f2d398,#ffedc1 58%,#cda16b);
+  --axe-ui-selected-text:#30241d;
+  --axe-ui-highlight:rgba(32,44,58,.51);
+  color:var(--axe-ui-text);
+}
+.axe-service-workspace .axe-service-heading,
+.axe-service-workspace .axe-service-operation-help,
+.axe-service-workspace .axe-service-operation-select,
+.axe-service-workspace .axe-service-notice,
+.axe-service-workspace .axe-service-progression,
+.axe-service-workspace .axe-service-loading,
+.axe-service-workspace .axe-service-error {
+  color:var(--axe-ui-text);
+  background:var(--axe-ui-glass);
+  border-color:var(--axe-ui-gold);
+  -webkit-backdrop-filter:blur(13px) saturate(104%);
+  backdrop-filter:blur(13px) saturate(104%);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 1px 10px #0002;
+}
+.axe-service-workspace .axe-service-heading button,
+.axe-service-workspace .axe-service-operations button,
+.axe-service-workspace .axe-service-mobile-panes button,
+.axe-service-workspace .axe-service-error button {
+  background:var(--axe-ui-glass);
+  border-color:var(--axe-ui-gold);
+  color:var(--axe-ui-text);
+  text-shadow:0 1px 4px #000b;
+}
+.axe-service-workspace .axe-service-operations button[aria-pressed="true"],
+.axe-service-workspace .axe-service-mobile-panes button[aria-pressed="true"] {
+  color:var(--axe-ui-selected-text);
+  background:var(--axe-ui-selected);
+  border-color:#f4d391aa;
+  text-shadow:none;
+}
+.axe-service-workspace button:focus-visible {
+  outline-color:#ffe4aa;
+}

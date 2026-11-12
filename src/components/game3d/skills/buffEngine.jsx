@@ -1,0 +1,199 @@
+// ─── Buff Engine — Active Buff Lifecycle ───────────────────────────────
+// Owns the 5 ACTIVE_BUFF skills:
+//   • heavens_riposte    — reflect chance (duration)
+//   • aegis_shield       — temp HP shield (duration)
+//   • decisive_blow      — crit chance bonus (duration)
+//   • focus              — damage bonus for next N hits (duration OR until N consumed)
+//   • gods_deflection    — crit damage reduction + crit resist (duration)
+//
+// State shape (singleton):
+//   {
+//     buffs: {
+//       [skill_id]: {
+//         skill_id, level, startedAt, expiresAt,
+//         hitsRemaining?,   // focus only
+//         values: { ...computed numeric values for this cast }
+//       }
+//     }
+//   }
+//
+// Subscribers get the full buffs map. Subscribe from HUD / damage layer.
+
+import { getSkillById, scaleStat } from './skillRegistry';
+
+const _listeners = new Set();
+let _state = { buffs: {} };
+
+const now = () => performance.now();
+const emit = () => _listeners.forEach((fn) => fn(_state));
+
+export function getBuffs() { return _state.buffs; }
+export function subscribeBuffs(fn) {
+  _listeners.add(fn);
+  fn(_state);
+  return () => _listeners.delete(fn);
+}
+
+/**
+ * Activate a buff skill at the given level. Replaces any existing instance.
+ * Returns the computed buff record.
+ */
+export function activateBuff(skill_id, level = 1, ctx = {}) {
+  const skill = getSkillById(skill_id);
+  if (!skill || skill.skill_type !== 'ACTIVE_BUFF') return null;
+
+  const startedAt = now();
+  const expiresAt = startedAt + (skill.duration || 0) * 1000;
+
+  // Compute per-skill values up front so the consumer never has to look back
+  // at the skill registry to figure out what the buff means right now.
+  const values = {};
+  switch (skill_id) {
+    case 'heavens_riposte':
+      values.reflect_chance = scaleStat(skill, 'reflect_chance', level);
+      break;
+    case 'aegis_shield': {
+      const pct = scaleStat(skill, 'shield_pct_max_hp', level);
+      values.shield_pct_max_hp = pct;
+      values.shield_amount = Math.round((ctx.maxHP || 100) * pct);
+      break;
+    }
+    case 'decisive_blow':
+      values.crit_chance_flat = scaleStat(skill, 'crit_chance_flat', level);
+      break;
+    case 'focus':
+      values.damage_bonus_pct = scaleStat(skill, 'damage_bonus_pct', level);
+      break;
+    case 'gods_deflection':
+      values.crit_damage_reduction_pct = scaleStat(skill, 'crit_damage_reduction_pct', level);
+      values.crit_resist_pct           = scaleStat(skill, 'crit_resist_pct', level);
+      break;
+    case 'axe_power_charge':
+      values.next_hit_multiplier = scaleStat(skill, 'next_hit_multiplier', level);
+      break;
+    case 'axe_anti_reflection':
+      values.reflection_reduction_pct = scaleStat(skill, 'reflection_reduction_pct', level);
+      break;
+    case 'axe_control_protection':
+      values.control_resist_pct = scaleStat(skill, 'control_resist_pct', level);
+      break;
+    default:
+      break;
+  }
+
+  const record = {
+    skill_id,
+    level,
+    startedAt,
+    expiresAt,
+    values,
+    ...(skill_id === 'focus' ? { hitsRemaining: skill.hit_count } : {}),
+  };
+
+  _state = { buffs: { ..._state.buffs, [skill_id]: record } };
+  emit();
+  return record;
+}
+
+/** Remove a buff explicitly (e.g. focus consumed its last hit). */
+export function clearBuff(skill_id) {
+  if (!_state.buffs[skill_id]) return;
+  const next = { ..._state.buffs };
+  delete next[skill_id];
+  _state = { buffs: next };
+  emit();
+}
+
+/** Is the buff currently active? (not expired and present) */
+export function isBuffActive(skill_id) {
+  const b = _state.buffs[skill_id];
+  return !!b && b.expiresAt > now();
+}
+
+/** Consume one hit on Focus. Returns the damage multiplier to apply (or 1). */
+export function consumeFocusHit() {
+  const b = _state.buffs.focus;
+  if (!b || b.expiresAt < now() || b.hitsRemaining <= 0) return 1;
+  const mult = 1 + (b.values.damage_bonus_pct || 0);
+  const hitsRemaining = b.hitsRemaining - 1;
+  if (hitsRemaining <= 0) {
+    clearBuff('focus');
+  } else {
+    _state = { buffs: { ..._state.buffs, focus: { ...b, hitsRemaining } } };
+    emit();
+  }
+  return mult;
+}
+
+/** Consume AXE Power Charge on the next eligible outgoing hit. */
+export function consumeAXEPowerCharge() {
+  const b = _state.buffs.axe_power_charge;
+  if (!b || b.expiresAt < now()) return 1;
+  const mult = Math.max(1, Number(b.values.next_hit_multiplier || 1));
+  clearBuff('axe_power_charge');
+  return mult;
+}
+
+/** Reduce reflected damage while Divine Reflection Guard is active. */
+export function applyAXEReflectionProtection(reflectedDamage) {
+  const b = _state.buffs.axe_anti_reflection;
+  if (!b || b.expiresAt < now()) return Math.max(0, Number(reflectedDamage) || 0);
+  const reduction = Math.max(0, Math.min(1, Number(b.values.reflection_reduction_pct || 0)));
+  return Math.max(0, Math.round((Number(reflectedDamage) || 0) * (1 - reduction)));
+}
+
+/** Current stun/control resistance from Divine Control Guard, 0..1. */
+export function getAXEControlResistance() {
+  const b = _state.buffs.axe_control_protection;
+  if (!b || b.expiresAt < now()) return 0;
+  return Math.max(0, Math.min(1, Number(b.values.control_resist_pct || 0)));
+}
+
+export function rollAXEControlProtection() {
+  return Math.random() < getAXEControlResistance();
+}
+
+
+/** Returns the Aegis Shield's current absorb pool, or 0. */
+export function getAegisShield() {
+  const b = _state.buffs.aegis_shield;
+  if (!b || b.expiresAt < now()) return 0;
+  return b.values.shield_amount || 0;
+}
+
+/** Subtract damage from Aegis shield. Returns amount absorbed. */
+export function absorbAegis(incoming) {
+  const b = _state.buffs.aegis_shield;
+  if (!b || b.expiresAt < now()) return 0;
+  const absorbed = Math.min(b.values.shield_amount || 0, incoming);
+  const remaining = (b.values.shield_amount || 0) - absorbed;
+  if (remaining <= 0) {
+    clearBuff('aegis_shield');
+  } else {
+    _state = {
+      buffs: {
+        ..._state.buffs,
+        aegis_shield: { ...b, values: { ...b.values, shield_amount: remaining } },
+      },
+    };
+    emit();
+  }
+  return absorbed;
+}
+
+// Decisive Blow (crit chance), God's Deflection (crit resist and crit damage reduction) and
+// Heaven's Riposte (turning hits back) act in the one hit resolution, axe/combat/AXEStrikeRuntime.js.
+// The old Decisive Blow and God's Deflection helpers here were never called, so those two
+// skills did nothing; Riposte's roll was folded into the capped deflect.
+
+/** Tick — drop expired buffs. Call every frame. */
+export function tickBuffEngine() {
+  const t = now();
+  const next = {};
+  let changed = false;
+  for (const [id, b] of Object.entries(_state.buffs)) {
+    if (b.expiresAt > t) next[id] = b;
+    else changed = true;
+  }
+  if (changed) { _state = { buffs: next }; emit(); }
+}

@@ -1,0 +1,407 @@
+import {resolveCustomizationAssets} from '../../shared/avatarCustomization.ts';
+import {normalizeAvatarAppearance} from '../../shared/normalizeAvatarAppearance.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.51';
+import { validateGenesis } from '../../shared/validateGenesis.ts';
+import { grantAchievement } from '../../shared/rewardEngine.ts';
+
+type AnyObj = Record<string, any>;
+const GLOBAL_AVATAR_MODEL = '/models/luna-hi3d/warrior.glb';
+const FEMALE_ARTEMIS_MODEL = 'https://base44.app/api/apps/6876751a602125f45f1861b9/files/mp/public/6876751a602125f45f1861b9/96bb872db_Artemis_Character.glb';
+const LEGACY_DEFAULT_MODELS = new Set([
+    '/models/artemis.gltf',
+    '/models/ybot.fbx',
+    '/models/eve.glb',
+]);
+
+function normalizeAvatarModel(value: unknown, gender: 'male' | 'female' = 'male', _femaleVariant = '') {
+    if (gender === 'female') return FEMALE_ARTEMIS_MODEL;
+    const requested = String(value || '').trim();
+    return !requested || requested === GLOBAL_AVATAR_MODEL || LEGACY_DEFAULT_MODELS.has(requested.toLowerCase())
+        ? GLOBAL_AVATAR_MODEL
+        : requested;
+}
+
+export default async function(req) {
+    try {
+        const base44 = createClientFromRequest(req);
+        const user = await base44.auth.me();
+        
+        if (!user) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const requestBody = await req.json();
+        const { action } = requestBody;
+
+        switch (action) {
+            case 'completeSetup': {
+                if (requestBody.preview && user.role !== 'admin') return Response.json({error:'Admin access required'}, {status:403});
+                let validated;
+                try { validated = validateGenesis(requestBody); } catch(error) { return Response.json({success:false,error:error.message}, {status:400}); }
+                const profile = validated.profile;
+                const companion = await resolveCustomizationAssets(base44.asServiceRole.entities, validated.companion);
+                const environment = requestBody.preview ? 'preview' : 'live';
+
+                // A legacy Avatar row is not proof that onboarding was completed.
+                // Only skip first-time setup when BOTH the avatar and the live
+                // onboarding profile carry explicit completion markers.
+                let existingProfiles: AnyObj[] = [];
+                if (environment === 'live') {
+                    const existing = await base44.entities.Avatar.filter({user_id:user.id}, 'created_date', 1);
+                    existingProfiles = await base44.entities.OnboardingProfile.filter({user_id:user.id,environment}, 'created_date', 1);
+                    if (existing[0]?.setup_status === 'complete' && existingProfiles[0]?.completed === true) {
+                        return Response.json({success:true,avatar:existing[0],profile:existingProfiles[0],alreadyInitialized:true});
+                    }
+                }
+
+                const rows = environment === 'live'
+                    ? existingProfiles
+                    : await base44.entities.OnboardingProfile.filter({user_id:user.id,environment}, 'created_date', 1);
+                const values = {...profile,user_id:user.id,environment,companion,completed:environment === 'preview'};
+                let savedProfile = rows[0] ? await base44.entities.OnboardingProfile.update(rows[0].id,values) : await base44.entities.OnboardingProfile.create(values);
+                if (environment === 'preview') return Response.json({success:true,preview:true,profile:savedProfile,avatar:companion});
+                const initialized = await initializeAvatar(base44,user,{...companion,setup:true});
+                await base44.entities.Avatar.update(initialized.avatar.id,{...companion,setup_status:'pending'});
+                // Appearance/personality choices in Genesis do not pre-write the AI's mind.
+                // Every avatar begins from the same neutral seed and earns its identity from
+                // gameplay, conversations, reflection answers and opt-in observation.
+                await base44.asServiceRole.entities.AIBehaviorState.update(initialized.behaviorState.id,{
+                    moral_alignment:0,
+                    aggression_tendency:50,
+                    risk_tolerance:50,
+                    empathy_level:50,
+                    behavioral_traits:{loyalty:50,curiosity:50,caution:50,humor:50,wisdom:50,impulsiveness:50},
+                    current_mood:'neutral'
+                });
+                await base44.auth.updateMe({username:profile.username,onboarding_complete:true,is_first_time:false});
+                savedProfile = await base44.entities.OnboardingProfile.update(savedProfile.id,{completed:true,avatar_id:initialized.avatar.id});
+                const avatar = await base44.entities.Avatar.update(initialized.avatar.id,{setup_status:'complete',setup_version:companion.setup_version || 1});
+                return Response.json({success:true,avatar,profile:savedProfile});
+            }
+            case 'initializeAvatar': {
+                const initialized = await initializeAvatar(base44, user, requestBody);
+                return Response.json(initialized);
+            }
+
+            case 'saveAppearance': {
+                const { appearance } = requestBody;
+                const updatedAvatar = await saveAvatarAppearance(base44, user.id, appearance);
+                return Response.json({
+                    success: true,
+                    avatar: updatedAvatar,
+                    message: 'Avatar appearance saved successfully!'
+                });
+            }
+
+            case 'loadAvatar': {
+                const avatarData = await loadUserAvatar(base44, user.id);
+                return Response.json({
+                    success: true,
+                    avatar: avatarData
+                });
+            }
+
+            case 'equipItem': {
+                const { itemId, slot } = requestBody;
+                const equipped = await equipItemToAvatar(base44, user.id, itemId, slot);
+                return Response.json(equipped);
+            }
+
+            case 'unequipItem': {
+                const { equipmentSlot } = requestBody;
+                const unequipped = await unequipItemFromAvatar(base44, user.id, equipmentSlot);
+                return Response.json(unequipped);
+            }
+
+            case 'updateMorphTargets': {
+                const { morphTargets } = requestBody;
+                const updated = await updateAvatarMorphs(base44, user.id, morphTargets);
+                return Response.json(updated);
+            }
+
+            case 'getAvatarStats': {
+                const stats = await getAvatarStats(base44, user.id);
+                return Response.json(stats);
+            }
+
+            default:
+                return Response.json({ error: 'Invalid action' }, { status: 400 });
+        }
+    } catch (error) {
+        console.error('Avatar system error:', error);
+        return Response.json({ 
+            error: error.message, 
+            success: false 
+        }, { status: 500 });
+    }
+}
+
+async function grantPlatformEvent(base44, userId, eventKey) {
+    const svc = base44.asServiceRole.entities;
+    const achievements = await svc.Achievement.list('title', 5000).catch(() => []);
+    const matches = achievements.filter((row:any) => row.event_rule?.event_key === eventKey);
+    for (const achievement of matches) await grantAchievement(svc, userId, achievement.id, 'platform', { progress: { event_key: eventKey } });
+}
+
+async function initializeAvatar(base44, user, requestBody) {
+    const gender = requestBody.gender === 'female' ? 'female' : 'male';
+    const femaleVariant = gender === 'female' ? 'artemis_archer' : '';
+    const defaultName = gender === 'female' ? 'Eve' : 'Atum';
+    const name = String(requestBody.name || defaultName).trim().slice(0, 40) || defaultName;
+
+    const existing = await base44.asServiceRole.entities.Avatar.filter({ user_id: user.id }, 'created_date', 1);
+    let avatar = existing[0];
+    const savedFemaleVariant = gender === 'female' ? 'artemis_archer' : '';
+    if (avatar && (normalizeAvatarModel(avatar.model_url, gender, savedFemaleVariant) !== avatar.model_url || avatar.gender !== gender || avatar.female_model_variant !== savedFemaleVariant)) {
+        avatar = await base44.asServiceRole.entities.Avatar.update(avatar.id, {
+            gender,
+            female_model_variant: savedFemaleVariant,
+            model_url: normalizeAvatarModel(avatar.model_url, gender, savedFemaleVariant),
+            base_body_gender: gender,
+            base_body_model_url: normalizeAvatarModel('', gender, savedFemaleVariant),
+            appearance_version: Math.max(3, Number(avatar.appearance_version || 0)),
+        });
+    }
+    if (!avatar) {
+        avatar = await base44.asServiceRole.entities.Avatar.create({
+            user_id: user.id,
+            name,
+            gender,
+            level: 1,
+            experience: 0,
+            social_influence: 0,
+            reputation_badges: [],
+            female_model_variant: femaleVariant,
+            model_url: requestBody.setup ? normalizeAvatarModel(requestBody.model_url, gender, femaleVariant) : normalizeAvatarModel('', gender, femaleVariant),
+            base_body_gender: gender,
+            base_body_model_url: normalizeAvatarModel('', gender, femaleVariant),
+            ...(requestBody.setup ? {setup_status:'pending'} : {}),
+            equipped_items: [],
+            unlocked_abilities: [],
+            active_companions: [],
+            morph_targets: {},
+            current_mode: 'Adaptive'
+        });
+    }
+
+    const homes = await base44.asServiceRole.entities.AvatarHomeState.filter({ avatarId: avatar.id }, '-created_date', 1);
+    const home = homes[0] || await base44.asServiceRole.entities.AvatarHomeState.create({
+        avatarId: avatar.id,
+        level: 1,
+        mood: 'calm',
+        catchphrase: 'I am learning who we are.',
+        achievements: [],
+        games: [],
+        vehicles: [],
+        activityLog: [],
+        preferences: { initialized_blank: true }
+    });
+
+    const states = await base44.asServiceRole.entities.AIBehaviorState.filter({ user_id: user.id, avatar_id: avatar.id }, '-created_date', 1);
+    const behaviorState = states[0] || await base44.asServiceRole.entities.AIBehaviorState.create({
+        user_id: user.id,
+        avatar_id: avatar.id,
+        current_mood: 'neutral',
+        mood_intensity: 50,
+        energy_level: 75,
+        moral_alignment: 0,
+        aggression_tendency: 50,
+        risk_tolerance: 50,
+        empathy_level: 50,
+        environmental_factors: { last_weather: 'clear', last_temperature: 'mild', time_of_day_preference: 'afternoon', seasonal_mood_modifier: 0 },
+        behavioral_traits: { loyalty: 50, curiosity: 50, caution: 50, humor: 50, wisdom: 50, impulsiveness: 50 },
+        mood_history: []
+    });
+
+    const seedRows = await base44.asServiceRole.entities.AvatarMindSeed.filter({ user_id: user.id, avatar_id: avatar.id }, '-created_date', 1);
+    const mindSeed = seedRows[0] || await base44.asServiceRole.entities.AvatarMindSeed.create({
+        user_id:user.id, avatar_id:avatar.id, seed_version:1, development_stage:'blank', identity_summary:'',
+        values:{}, preferences:{}, aspirations:[], playstyle:{}, social_style:{}, emotional_patterns:{},
+        confidence:0, observation_count:0, reflection_count:0, answered_question_count:0, created_from_blank_seed:true
+    });
+
+    const settingRows = await base44.asServiceRole.entities.AvatarObservationSettings.filter({ user_id:user.id, avatar_id:avatar.id }, '-created_date', 1);
+    if (!settingRows[0]) await base44.asServiceRole.entities.AvatarObservationSettings.create({
+        user_id:user.id, avatar_id:avatar.id, game_event_learning:true, screen_observation_enabled:false,
+        screen_sample_seconds:15, store_frames:false, coach_feedback_enabled:true,
+        reflection_questions_enabled:true, reflection_frequency:'normal', last_updated_at:new Date().toISOString()
+    });
+
+    const mindAgents = [
+      ['observer','Quiet, precise and nonjudgmental.','Observe gameplay and describe what the player actually did without inventing motives.'],
+      ['mirror','Evidence-driven and slow to label.','Turn repeated choices into personality, values and playstyle signals while preserving uncertainty.'],
+      ['historian','Faithful archivist.','Preserve significant experiences in chronological order so the avatar has a durable personal history.'],
+      ['reflection','Curious, warm and concise.','Ask one useful question at a time when the avatar has a real reason to understand the player better.'],
+      ['coach','Supportive performance analyst.','Notice gameplay mistakes, strengths and improvement opportunities without changing the player identity model.'],
+      ['storyteller','Grounded autobiographer.','Compress many memories into a short evolving identity narrative without rewriting what actually happened.']
+    ];
+    const existingAgents = await base44.asServiceRole.entities.AvatarMindAgentState.filter({ user_id:user.id, avatar_id:avatar.id }, 'agent_key', 30);
+    const haveAgents = new Set((existingAgents || []).map((row:any) => row.agent_key));
+    for (const [agent_key,persona,job] of mindAgents) if (!haveAgents.has(agent_key)) {
+      await base44.asServiceRole.entities.AvatarMindAgentState.create({user_id:user.id,avatar_id:avatar.id,agent_key,persona,job,enabled:true,run_count:0,confidence:0,state:{}});
+    }
+
+    await base44.asServiceRole.entities.User.update(user.id, {
+        onboarding_complete: true,
+        avatar_id: avatar.id,
+        avatar_archetype: gender === 'female' ? 'eve' : 'atum'
+    });
+    await grantPlatformEvent(base44, user.id, 'platform.first_login');
+
+    return { success: true, avatar, home, behaviorState, mindSeed };
+}
+
+async function saveAvatarAppearance(base44, userId, appearance = {}) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    // An explicit male selection must win over a previously saved female body.
+    const gender = ['male','female'].includes(appearance.gender) ? appearance.gender : (avatars[0]?.gender || 'male');
+    const normalized = await resolveCustomizationAssets(base44.asServiceRole.entities, normalizeAvatarAppearance({...appearance,gender}));
+    if (typeof appearance.name === 'string' && appearance.name.trim()) normalized.name = appearance.name.trim().slice(0,40);
+
+    if (gender === 'female') {
+        normalized.gender = 'female';
+        normalized.female_model_variant = 'artemis_archer';
+        normalized.model_url = FEMALE_ARTEMIS_MODEL;
+        normalized.base_body_gender = 'female';
+        normalized.base_body_model_url = FEMALE_ARTEMIS_MODEL;
+    }
+
+    if (avatars.length === 0) {
+        return base44.entities.Avatar.create({
+            user_id: userId,
+            name: appearance.name || 'Player Avatar',
+            gender,
+            level: 1,
+            experience: 0,
+            model_url: gender === 'female' ? FEMALE_ARTEMIS_MODEL : (normalized.model_url || GLOBAL_AVATAR_MODEL),
+            ...normalized,
+        });
+    }
+    return base44.entities.Avatar.update(avatars[0].id, normalized);
+}
+
+async function loadUserAvatar(base44, userId) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    
+    if (avatars.length === 0) {
+        return null;
+    }
+
+    const avatar = avatars[0];
+    
+    const equippedItems = avatar.equipped_items || [];
+    const equipment = [];
+    
+    for (const itemId of equippedItems) {
+        try {
+            const equipmentItems = await base44.entities.Equipment.filter({ id: itemId });
+            if (equipmentItems.length > 0) {
+                equipment.push(equipmentItems[0]);
+            }
+        } catch (e) {
+            console.warn(`Could not load equipment item ${itemId}:`, e);
+        }
+    }
+
+    return {
+        ...avatar,
+        equipment
+    };
+}
+
+async function equipItemToAvatar(base44, userId, itemId, slot) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    if (avatars.length === 0) {
+        throw new Error('Avatar not found');
+    }
+
+    const avatar = avatars[0];
+    const currentEquipment = avatar.equipped_items || [];
+    
+    const items = await base44.entities.Equipment.filter({ id: itemId });
+    if (items.length === 0) {
+        throw new Error('Equipment item not found');
+    }
+
+    const item = items[0];
+    
+    const filteredEquipment = currentEquipment.filter(id => id !== itemId);
+    filteredEquipment.push(itemId);
+
+    const updatedAvatar = await base44.entities.Avatar.update(avatar.id, {
+        equipped_items: filteredEquipment
+    });
+
+    return {
+        success: true,
+        avatar: updatedAvatar,
+        message: `${item.name} equipped successfully!`
+    };
+}
+
+async function unequipItemFromAvatar(base44, userId, slot) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    if (avatars.length === 0) {
+        throw new Error('Avatar not found');
+    }
+
+    const avatar = avatars[0];
+    
+    return {
+        success: true,
+        avatar: avatar,
+        message: 'Item unequipped successfully!'
+    };
+}
+
+async function updateAvatarMorphs(base44, userId, morphTargets) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    if (avatars.length === 0) {
+        throw new Error('Avatar not found');
+    }
+
+    const avatar = avatars[0];
+    const updatedAvatar = await base44.entities.Avatar.update(avatar.id, {
+        morph_targets: morphTargets
+    });
+
+    return {
+        success: true,
+        avatar: updatedAvatar,
+        message: 'Avatar expressions updated!'
+    };
+}
+
+async function getAvatarStats(base44, userId) {
+    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
+    if (avatars.length === 0) {
+        return { level: 1, experience: 0, equipment: [] };
+    }
+
+    const avatar = avatars[0];
+    const equippedItems = avatar.equipped_items || [];
+    let totalPower = 0;
+    
+    for (const itemId of equippedItems) {
+        try {
+            const items = await base44.entities.Equipment.filter({ id: itemId });
+            if (items.length > 0) {
+                const item = items[0];
+                if (item.stats) {
+                    totalPower += Object.values(item.stats).reduce((sum, stat) => 
+                        sum + (typeof stat === 'number' ? stat : 0), 0);
+                }
+            }
+        } catch (e) {
+            console.warn(`Could not calculate power for equipment item ${itemId}`, e);
+        }
+    }
+    
+    return {
+        level: avatar.level || 1,
+        experience: avatar.experience || 0,
+        totalPower,
+        equippedItems: equippedItems.length,
+        name: avatar.name
+    };
+}

@@ -1,0 +1,17 @@
+.axe-weapon-legacy-pane{margin:12px 0 4px;padding:10px;border:1px solid var(--axe-ui-gold,#8d795b);border-radius:10px;background:rgba(5,15,19,.55);color:var(--axe-ui-text,#e6e6e6);font-size:11px;line-height:1.45}
+.axe-weapon-legacy-pane summary{cursor:pointer;font-size:13px;font-weight:700;color:var(--axe-ui-heading,#efd7ab)}
+.axe-weapon-legacy-pane summary span{display:block;font-size:10px;font-weight:400;color:var(--axe-ui-subtext,#bac7c3)}
+.axe-weapon-legacy-pane p{margin:9px 0;line-height:1.55}
+.axe-legacy-metrics{display:grid;gap:5px;margin-top:8px}
+.axe-legacy-metrics span{display:flex;justify-content:space-between;gap:8px}
+.axe-legacy-metrics b{color:var(--axe-ui-heading,#efd7ab);text-align:right}
+.axe-legacy-donors{margin:8px 0}
+.axe-legacy-donor-list{display:grid;gap:4px;max-height:185px;overflow-y:auto;margin-top:5px}
+.axe-legacy-donor-list label{display:flex;gap:7px;align-items:center;padding:5px;border:1px solid rgba(255,255,255,.12);border-radius:5px;cursor:pointer}
+.axe-legacy-donor-list small{display:block;color:var(--axe-ui-subtext,#aebebc);font-size:9px}
+.axe-legacy-donor-list input{accent-color:#d0a56b;flex:none}
+.axe-weapon-legacy-pane button{background:rgba(156,114,57,.27);border:1px solid #b89d6a;border-radius:6px;padding:7px;color:#fff;margin-right:5px;margin-top:5px}
+.axe-weapon-legacy-pane button:disabled{opacity:.42}
+.axe-weapon-legacy-pane .axe-legacy-cancel{background:transparent}
+.axe-legacy-requirement{color:var(--axe-ui-subtext,#aebebc)}
+.axe-legacy-notice{font-weight:600;color:#e9d3a8}

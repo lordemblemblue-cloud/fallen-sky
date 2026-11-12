@@ -1,0 +1,20 @@
+{
+  "name": "DuelCombatEvent",
+  "type": "object",
+  "properties": {
+    "duel_id": { "type": "string", "description": "DuelSession ID" },
+    "receipt_id": { "type": "string", "description": "Unique server-created combat result ID" },
+    "sequence": { "type": "number", "description": "Best-effort duel sequence; use receipt_id for dedupe" },
+    "attacker_id": { "type": "string" },
+    "defender_id": { "type": "string" },
+    "occurred_at": { "type": "number", "description": "Server UTC epoch milliseconds" },
+    "payload": { "type": "object", "description": "Server-resolved hit, shield, and damage receipt" }
+  },
+  "required": ["duel_id", "receipt_id", "attacker_id", "defender_id", "payload"],
+  "rls": {
+    "read": { "user_condition": { "role": "admin" } },
+    "create": { "user_condition": { "role": "admin" } },
+    "update": { "user_condition": { "role": "admin" } },
+    "delete": { "user_condition": { "role": "admin" } }
+  }
+}

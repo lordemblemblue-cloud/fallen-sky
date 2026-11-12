@@ -1,0 +1,304 @@
+/* Soul Emporium / Game 3D
+ * Reuse the Services appearance material language, ~30% darker:
+ * Services glass: (32,44,58) / (26,35,48).
+ * Store glass: (22,31,41) / (18,25,34).
+ * The catalog is real responsive DOM; no text or buttons are baked into artwork.
+ */
+.soul-emporium {
+  --soul-glass:linear-gradient(115deg,rgba(22,31,41,.92),rgba(18,25,34,.94));
+  --soul-glass-high:linear-gradient(135deg,rgba(30,43,55,.92),rgba(14,23,33,.96));
+  --soul-glass-low:rgba(9,17,25,.91);
+  --soul-stroke:rgba(242,210,147,.49);
+  --soul-stroke-soft:rgba(195,203,210,.22);
+  --soul-text:#f5e9d7;
+  --soul-heading:#f8e5c8;
+  --soul-muted:#c3cbd2;
+  --soul-gold:#f4d19c;
+  --soul-focus:#a7d4ed;
+  --soul-selected:linear-gradient(100deg,#243c50,#1c3144 72%,#152736);
+  position:fixed;inset:0;z-index:900;display:grid;place-items:center;isolation:isolate;
+  padding:clamp(0px,.8vh,10px);
+  color:var(--soul-text);
+  background:rgba(4,9,15,.98);
+  font:13px/1.42 "Segoe UI",system-ui,sans-serif;
+}
+.soul-emporium[data-theme="frost"] {--soul-focus:#9fd7eb;}
+.soul-emporium[data-theme="violet"] {--soul-focus:#b6c0df;}
+.soul-emporium[data-theme="turquoise"] {--soul-focus:#91d8d3;}
+.soul-emporium[data-theme="sage"] {--soul-focus:#b8d2c2;}
+.soul-emporium[data-theme="ember"] {--soul-focus:#e8be99;}
+.soul-emporium[data-theme="gold"] {--soul-focus:#e1d19d;}
+.soul-emporium[data-theme="amber"] {--soul-focus:#dfbc9b;}
+.soul-emporium[data-theme="crystal"] {--soul-focus:#9ccbe7;}
+.soul-emporium * {box-sizing:border-box;min-width:0;}
+.soul-emporium button,.soul-emporium select {cursor:pointer;}
+.soul-emporium button:disabled {cursor:not-allowed;opacity:.48;}
+.soul-emporium button:focus-visible,.soul-emporium input:focus-visible,
+.soul-emporium select:focus-visible {outline:2px solid #a7d4ed;outline-offset:2px;}
+.soul-store-shell {
+  width:min(1700px,100%);height:min(1050px,100dvh);display:flex;flex-direction:column;
+  overflow:hidden;position:relative;min-height:0;
+  border:1px solid var(--soul-stroke);
+  background:
+    linear-gradient(180deg,rgba(4,10,18,.91),rgba(6,13,21,.99) 47%,rgba(4,8,14,.99)),
+    url('/game3d/store/soul-emporium-hero-placeholder.svg') center 16%/cover no-repeat,
+    #08111a;
+  box-shadow:0 0 0 3px rgba(3,10,16,.95),0 24px 85px #000b;
+}
+.soul-store-top {
+  display:flex;align-items:center;justify-content:space-between;gap:18px;flex:0 0 auto;
+  min-height:57px;padding:7px 20px;
+  background:linear-gradient(95deg,rgba(10,19,28,.98),rgba(18,29,39,.98),rgba(6,13,22,.98));
+  border-bottom:1px solid var(--soul-stroke);
+}
+.soul-store-brand {display:flex;align-items:center;gap:12px;}
+.soul-store-brand>span {font:33px Georgia,serif;color:var(--soul-gold);line-height:1;}
+.soul-store-brand h1 {font:400 clamp(18px,2.15vw,30px)/1 Georgia,serif;letter-spacing:.12em;color:var(--soul-heading);white-space:nowrap;margin:0;}
+.soul-store-brand small {display:block;margin-top:4px;color:#b0c1ce;letter-spacing:.25em;font-size:9px;}
+.soul-store-account {display:flex;align-items:center;gap:8px;}
+.soul-store-account button {color:#eaf1f4;background:rgba(17,31,42,.9);border:1px solid #abc0cc60;min-height:34px;
+  border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:6px 12px;}
+.soul-store-account button:hover {border-color:var(--soul-gold);}
+.soul-store-balance svg {color:#80c4f4;}
+.soul-store-balance span {font-size:10px;color:#a7b6c3;}
+.soul-store-top-nav {
+  display:flex;align-items:stretch;flex:none;overflow-x:auto;overscroll-behavior-x:contain;
+  min-height:45px;border-bottom:1px solid #708b9b77;
+  background:rgba(9,18,27,.94);
+}
+.soul-store-top-nav button {
+  flex:1 0 auto;min-width:105px;display:flex;align-items:center;justify-content:center;
+  gap:8px;padding:9px 14px;white-space:nowrap;
+  border:0;border-right:1px solid #bac1c33b;background:transparent;color:#d8e3ea;
+  font:600 12px "Segoe UI",sans-serif;
+}
+.soul-store-top-nav button span {font-size:17px;color:#b8d3e6;}
+.soul-store-top-nav button:hover,.soul-store-top-nav .is-active {
+  background:var(--soul-selected);color:#fff;
+  box-shadow:inset 0 -2px var(--soul-focus),inset 0 2px 12px #a1d3e124;
+}
+.soul-store-layout {flex:1;min-height:0;display:grid;grid-template-columns:clamp(240px,25%,385px) minmax(0,1fr);gap:11px;padding:11px;}
+.soul-store-sidebar,.soul-store-catalog {
+  min-height:0;min-width:0;overflow-y:auto;overscroll-behavior:contain;
+  scrollbar-width:thin;scrollbar-color:#bfa77b transparent;
+}
+.soul-store-sidebar {display:flex;flex-direction:column;gap:8px;padding-right:2px;}
+.soul-shelf-hero {
+  position:relative;flex:0 0 auto;min-height:245px;overflow:hidden;
+  border-radius:5px;border:1px solid var(--soul-stroke);
+  background:linear-gradient(140deg,#172e40,#071420);
+}
+.soul-shelf-backdrop {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.57;}
+.soul-shelf-figure {position:absolute;left:-8%;bottom:-6%;width:90%;height:116%;object-fit:cover;object-position:30% center;
+  -webkit-mask-image:linear-gradient(90deg,#000 0%,#000 55%,transparent 100%);
+  mask-image:linear-gradient(90deg,#000 0%,#000 55%,transparent 100%);}
+.soul-shelf-hero--companions .soul-shelf-figure,.soul-shelf-hero--mounts .soul-shelf-figure {
+  left:-9%;bottom:-6%;width:92%;height:104%;object-fit:contain;
+}
+.soul-shelf-wolf {position:absolute;bottom:-2%;left:31%;width:43%;height:53%;object-fit:contain;
+  -webkit-mask-image:radial-gradient(ellipse,#000 30%,transparent 75%);
+  mask-image:radial-gradient(ellipse,#000 30%,transparent 75%);}
+.soul-shelf-object {position:absolute;left:-4%;bottom:0;width:82%;height:100%;object-fit:contain;
+  -webkit-mask-image:linear-gradient(90deg,#000 50%,transparent 95%);
+  mask-image:linear-gradient(90deg,#000 50%,transparent 95%);}
+.soul-shelf-hero-shade {position:absolute;inset:0;background:linear-gradient(90deg,rgba(3,12,22,.06),rgba(5,13,23,.50) 46%,rgba(3,10,19,.9) 82%);}
+.soul-shelf-hero-copy {position:absolute;right:10px;top:50%;transform:translateY(-50%);width:49%;text-align:center;text-shadow:0 2px 8px #000;}
+.soul-shelf-hero-copy>span {font-size:9px;font-weight:700;letter-spacing:.1em;color:#edc78e;}
+.soul-shelf-hero-copy h2 {font:400 clamp(19px,2.05vw,30px)/1.02 Georgia,serif;text-transform:uppercase;color:#f8e2c4;margin:9px 0;}
+.soul-shelf-hero-copy p {font:italic 12px Georgia,serif;color:#deeaf1;margin:9px 0 12px;}
+.soul-shelf-hero-copy button {background:linear-gradient(#20394c,#101e2b);border:1px solid #a7c7dc80;border-radius:4px;
+  padding:6px 11px;color:#e5edf4;display:inline-flex;gap:6px;align-items:center;font-size:11px;}
+.soul-shelf-hero-copy button:hover {border-color:#f2d298;}
+.soul-store-side-nav {display:flex;flex-direction:column;gap:4px;}
+.soul-store-side-nav button {
+  min-height:42px;width:100%;display:flex;align-items:center;gap:12px;padding:5px 12px;
+  border:1px solid var(--soul-stroke-soft);border-radius:5px;text-align:left;
+  background:var(--soul-glass);color:#f2e8d9;
+}
+.soul-store-side-nav button:hover,.soul-store-side-nav button.is-active {
+  border-color:var(--soul-stroke);background:var(--soul-selected);
+}
+.soul-store-side-nav button>span:nth-child(2) {flex:1;font-size:12px;font-weight:700;text-transform:uppercase;}
+.soul-store-side-nav button small {display:block;color:#afc1cb;font-weight:400;font-size:10px;text-transform:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.soul-side-icon {font-size:23px;width:27px;display:inline-flex;justify-content:center;color:#d6e6ec;}
+.soul-store-side-nav button>svg {color:var(--soul-gold);flex:none;}
+.soul-store-filters {border:1px solid var(--soul-stroke-soft);border-radius:6px;background:var(--soul-glass);
+  padding:12px;display:grid;gap:9px;}
+.soul-store-filters-heading {display:flex;align-items:center;justify-content:space-between;gap:9px;}
+.soul-store-filters-heading h3 {display:flex;align-items:center;gap:9px;margin:0;font:600 16px Georgia,serif;color:var(--soul-gold);}
+.soul-store-filters-heading button {display:flex;gap:4px;align-items:center;font:11px "Segoe UI",sans-serif;
+  background:transparent;border:0;color:#c4d8e7;padding:5px;}
+.soul-store-filters label {display:grid;gap:4px;font-size:11px;color:#bfcfdb;}
+.soul-store-filters select,.soul-store-summary select {background:#101e2a;color:#e8f0f4;border:1px solid #8eafc067;border-radius:4px;
+  width:100%;min-height:33px;padding:6px 9px;font:12px "Segoe UI",sans-serif;}
+.soul-store-catalog {
+  padding:11px 10px 30px;border:1px solid var(--soul-stroke-soft);border-radius:7px;
+  background:linear-gradient(135deg,rgba(10,19,28,.96),rgba(8,15,24,.91));
+}
+.soul-store-catalog-head {display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  border-bottom:1px solid var(--soul-stroke);padding:0 1px 10px;margin-bottom:8px;}
+.soul-store-kicker {font-size:9px;letter-spacing:.17em;color:#c5dbe7;}
+.soul-store-catalog-head h2 {font:400 clamp(20px,2vw,30px)/1.06 Georgia,serif;color:var(--soul-heading);margin:3px 0 4px;}
+.soul-store-catalog-head p {font-size:11px;color:var(--soul-muted);margin:0;}
+.soul-store-summary {display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.soul-store-summary>span {font-size:10px;white-space:nowrap;color:#c4cccb;}
+.soul-store-search {display:flex;align-items:center;gap:7px;min-height:32px;width:min(185px,100%);
+  border:1px solid #8eafc067;border-radius:4px;padding:5px 8px;background:#101e2a;color:#bed6e3;}
+.soul-store-search input {background:transparent;outline:0;border:0;color:#e8eef4;flex:1;width:100%;min-width:0;font:12px "Segoe UI",sans-serif;}
+.soul-store-search input::placeholder {color:#95a8b4;}
+.soul-store-summary select {width:auto;max-width:154px;min-height:32px;}
+.soul-store-demo-notice {font:10px/1.4 "Segoe UI",sans-serif;color:#b4c7d4;margin:8px 0 12px;
+  display:flex;gap:6px;align-items:center;}
+.soul-store-demo-notice svg {flex:none;color:#a7d4ed;}
+.soul-store-products {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:11px;align-content:start;}
+.soul-shelf-card {
+  min-width:0;min-height:258px;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--soul-glass-high);border:1px solid #acc4d14d;border-radius:7px;
+  box-shadow:inset 0 1px rgba(222,236,241,.08),0 4px 10px #0007;
+}
+.soul-shelf-card:hover {border-color:#ebd3a1a8;box-shadow:0 0 0 1px #9cc8e42e,0 8px 20px #0009;}
+.soul-card-view {display:flex;flex:1;flex-direction:column;align-items:stretch;text-align:center;
+  border:0;background:transparent;color:var(--soul-text);padding:0;}
+.soul-card-art {height:125px;width:100%;overflow:hidden;position:relative;flex:none;
+  background:radial-gradient(circle at 45% 38%,#28455c 0%,#13283b 38%,#0b1724 100%);
+  border-bottom:1px solid #c1b08c55;}
+.soul-card-art img {width:100%;height:100%;display:block;object-fit:cover;object-position:center 40%;opacity:.91;}
+.soul-card-art--frost,.soul-card-art--crystal {background:radial-gradient(circle,#285c76,#0e2538 65%,#0c1520);}
+.soul-card-art--violet {background:radial-gradient(circle,#414066,#1c243a 65%,#0c1520);}
+.soul-card-art--gold,.soul-card-art--amber {background:radial-gradient(circle,#61513a,#2c2b32 62%,#111a23);}
+.soul-card-art--ember {background:radial-gradient(circle,#5c392b,#2d2631 60%,#111a23);}
+.soul-card-art--turquoise {background:radial-gradient(circle,#286365,#163c45 55%,#0d1927);}
+.soul-card-art--sage {background:radial-gradient(circle,#3a594c,#22393a 58%,#111d28);}
+.soul-item-illustration {height:100%;display:grid;place-items:center;position:relative;}
+.soul-item-illustration>span {font:60px/1 Georgia,serif;color:#d1e7f0;text-shadow:0 0 18px #7bb5dcaa;}
+.soul-art-watermark {position:absolute;right:7px;bottom:6px;opacity:.18;color:#c5d9ea;}
+.soul-card-rarity {position:absolute;top:7px;left:7px;padding:3px 6px;font:700 9px "Segoe UI",sans-serif;
+  color:#f8e7c9;background:#08111cd9;border:1px solid #dfc08e6c;border-radius:4px;text-transform:uppercase;}
+.soul-card-view>strong {font:600 14px/1.17 Georgia,serif;color:#f9edda;min-height:32px;
+  display:flex;align-items:center;justify-content:center;padding:7px 8px 2px;}
+.soul-card-view p {font:11px/1.35 "Segoe UI",sans-serif;color:#bfced7;margin:0;
+  padding:4px 8px 9px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  min-height:42px;}
+.soul-card-actions {margin-top:auto;display:flex;align-items:center;gap:4px;padding:7px 7px 8px;border-top:1px solid #a5b9ca29;
+  background:#091521a9;}
+.soul-card-actions button {border-radius:4px;min-height:27px;display:flex;align-items:center;justify-content:center;
+  padding:5px 7px;white-space:nowrap;font:600 10px "Segoe UI",sans-serif;}
+.soul-card-preview {border:1px solid #abc2d17d;background:linear-gradient(#223648,#132232);color:#e7f2f7;gap:4px;}
+.soul-card-price {display:flex;align-items:center;justify-content:center;gap:3px;flex:1;color:#e7e9ed;white-space:nowrap;
+  font:600 11px/1 "Segoe UI",sans-serif;min-width:0;}
+.soul-card-price svg {color:#94d8ff;flex:none;}
+.soul-card-buy {
+  color:#262017 !important;
+  background:linear-gradient(110deg,#f0d49d,#c8a16b 76%,#dfbd81) !important;
+  border:1px solid #ffe1aa !important;
+  box-shadow:inset 0 1px rgba(255,255,255,.45);
+  font-weight:700 !important;
+}
+.soul-card-buy:hover {filter:brightness(1.1);}
+.soul-store-end {display:flex;gap:8px;align-items:center;justify-content:center;
+  border-top:1px solid #9bb1bf33;padding:19px 8px 2px;margin-top:19px;
+  color:#91a4b3;font-size:11px;}
+.soul-store-no-results {padding:65px 20px;text-align:center;color:#bacbd4;}
+.soul-store-no-results h3 {font:21px Georgia,serif;color:#efdec3;}
+.soul-store-no-results button {background:#172d3d;border:1px solid var(--soul-stroke);color:#e9f4fa;padding:9px 13px;}
+.soul-store-footer {flex:none;min-height:35px;padding:6px 14px;border-top:1px solid #8eaabb57;
+  background:#07121be8;display:flex;align-items:center;justify-content:space-between;gap:15px;}
+.soul-store-footer span {display:flex;align-items:center;gap:7px;color:#aabbc6;font-size:10px;}
+.soul-store-footer button {display:flex;align-items:center;gap:4px;background:transparent;border:0;color:var(--soul-gold);font-size:11px;}
+.soul-shop-curtain {position:fixed;z-index:50;inset:0;background:rgba(0,4,10,.79);backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;padding:15px;}
+.soul-shop-modal {width:min(510px,100%);max-height:91vh;overflow:auto;padding:20px;border-radius:7px;
+  background:linear-gradient(140deg,#1b2b39,#0a131d 82%);border:1px solid var(--soul-stroke);
+  box-shadow:0 22px 95px #000e;}
+.soul-shop-modal header {display:flex;justify-content:space-between;align-items:center;gap:9px;
+  font-size:10px;letter-spacing:.12em;color:var(--soul-gold);}
+.soul-shop-modal header button {background:transparent;border:0;color:#f0f2f5;padding:6px;}
+.soul-shop-modal h2 {font:30px/1.1 Georgia,serif;color:var(--soul-heading);margin:16px 0 8px;}
+.soul-shop-modal>p {font-size:12px;line-height:1.5;color:#c4d3de;}
+.soul-shop-detail-art {height:165px;margin-top:13px;border:1px solid #bbcbcc4d;
+  background:radial-gradient(circle,#284d63,#101d2a 72%);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.soul-shop-detail-art img {width:100%;height:100%;object-fit:cover;}
+.soul-shop-detail-art>span {font:100px Georgia,serif;color:#d1e9f6;}
+.soul-shop-detail-info {display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.soul-shop-detail-info span {display:flex;flex-direction:column;gap:5px;padding:11px;border:1px solid #9bb4bf3b;color:#aabcc9;font-size:11px;}
+.soul-shop-detail-info strong {font-size:14px;color:#f5d8a9;}
+.soul-shop-effect {margin:12px 0;padding:13px;background:#081723;border:1px solid #bcc5cc4b;}
+.soul-shop-effect strong {color:#ead09c;font:600 14px Georgia,serif;}
+.soul-shop-effect p {font-size:12px;color:#d1dce4;line-height:1.5;margin-bottom:0;}
+.soul-shop-warning {display:flex;gap:7px;align-items:flex-start;color:#c3d6e1!important;font-size:11px!important;}
+.soul-shop-warning svg {flex:none;color:#bbd8e8;}
+.soul-shop-modal-actions {display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+.soul-shop-modal-actions button {padding:9px 12px;border-radius:4px;}
+.soul-shop-disabled {background:#101e2a;color:#9aa9b5;border:1px solid #8d9ba85c;}
+.soul-shop-bag {margin-left:auto;align-self:stretch;max-height:100%;width:min(440px,100%);}
+.soul-shop-bag-row {border-bottom:1px solid #a8bac63b;padding:13px 0;display:flex;align-items:center;gap:12px;}
+.soul-bag-icon {width:37px;font-size:26px;text-align:center;}
+.soul-shop-bag-row>div {flex:1;}
+.soul-shop-bag-row strong {display:block;font-size:13px;color:#f2dfbb;}
+.soul-shop-bag-row small {display:block;font-size:11px;color:#b4c7d3;}
+.soul-shop-bag-row button {background:transparent;color:#efc88f;border:0;font-size:11px;}
+.soul-bag-empty {padding:28px;text-align:center;}
+.soul-bag-checkout {display:block;width:100%;margin-top:15px;padding:12px;border-radius:4px;}
+/* The store has five truly readable columns on wide desktops, not a giant
+   graphic showing pretend cards. Sidebars and product rows scroll independently. */
+@media (max-width:1480px) {
+  .soul-store-layout {grid-template-columns:clamp(240px,25%,330px);}
+  .soul-store-products {gap:8px;}
+  .soul-shelf-card {min-height:250px;}
+  .soul-card-art {height:112px;}
+  .soul-card-actions {gap:3px;padding:6px 5px;}
+  .soul-card-actions button {padding:5px;}
+}
+@media (max-width:1260px) {
+  .soul-store-products {grid-template-columns:repeat(4,minmax(0,1fr));}
+  .soul-store-layout {grid-template-columns:245px minmax(0,1fr);}
+  .soul-store-summary {width:100%;justify-content:flex-start;}
+}
+@media (max-width:900px) {
+  .soul-store-products {grid-template-columns:repeat(3,minmax(0,1fr));}
+  .soul-store-layout {grid-template-columns:215px minmax(0,1fr);gap:7px;padding:7px;}
+  .soul-shelf-hero {min-height:190px;}
+  .soul-shelf-hero-copy h2 {font-size:21px;}
+  .soul-store-brand small {display:none;}
+  .soul-store-top {min-height:48px;padding:6px 10px;}
+}
+@media (max-width:680px) {
+  .soul-store-shell {height:100dvh;}
+  .soul-store-layout {display:flex;flex-direction:column;}
+  .soul-store-sidebar {flex:none;overflow:visible;padding:0;gap:6px;}
+  .soul-shelf-hero {min-height:145px;}
+  .soul-shelf-figure {width:55%;height:130%;left:0;}
+  .soul-shelf-hero-copy {width:58%;}
+  .soul-shelf-hero-copy h2 {font-size:24px;}
+  .soul-shelf-hero-copy p {font-size:11px;}
+  .soul-store-side-nav {flex-direction:row;overflow-x:auto;scrollbar-width:thin;}
+  .soul-store-side-nav button {min-width:116px;width:auto;flex:0 0 auto;min-height:39px;padding:5px 8px;gap:5px;}
+  .soul-store-side-nav button>svg,.soul-store-side-nav button small {display:none;}
+  .soul-side-icon {font-size:17px;width:20px;}
+  .soul-store-side-nav button>span:nth-child(2) {font-size:10px;}
+  .soul-store-filters {display:flex;flex-direction:row;align-items:flex-end;gap:7px;padding:8px;flex-wrap:wrap;}
+  .soul-store-filters-heading {width:100%;}
+  .soul-store-filters label {flex:1;min-width:100px;}
+  .soul-store-catalog {flex:1;min-height:0;padding:9px;}
+  .soul-store-products {grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .soul-card-art {height:110px;}
+  .soul-store-top-nav {min-height:39px;}
+  .soul-store-top-nav button {min-width:95px;font-size:10px;padding:7px 8px;}
+  .soul-store-brand>span {font-size:22px;}
+  .soul-store-brand h1 {font-size:16px;letter-spacing:.04em;}
+  .soul-store-balance span {display:none;}
+  .soul-store-account {gap:4px;}
+  .soul-store-account button {padding:5px 7px;min-height:29px;}
+  .soul-store-footer {min-height:28px;padding:4px 8px;}
+  .soul-store-footer span {font-size:9px;}
+}
+@media (max-width:360px) {
+  .soul-store-products {grid-template-columns:1fr;}
+  .soul-card-art {height:160px;}
+  .soul-store-products .soul-shelf-card {min-height:278px;}
+  .soul-store-brand h1 {font-size:14px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .soul-emporium * {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+}

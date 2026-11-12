@@ -1,0 +1,67 @@
+.axe-constellations {
+  grid-column:2 / -1; display:grid; grid-template-columns:minmax(0,1.6fr) minmax(230px,1fr);
+  min-width:0; min-height:0; overflow:auto; color:var(--ql-cream,#f5e9d7);
+  background:var(--ql-panel,rgba(16,30,46,.88));
+}
+.axe-constellation-map-panel { padding:22px clamp(16px,3vw,36px); min-width:0; }
+.axe-constellations h2 { font-size:clamp(19px,2vw,28px); margin:5px 0 12px; color:var(--ql-gold,#f4d59c); }
+.axe-constellations h3 { font-size:20px; margin:10px 0 20px; }
+.axe-constellations p { line-height:1.6; }
+.axe-constellation-kicker { text-transform:uppercase; letter-spacing:.14em; font-size:11px; color:var(--ql-cyan,#6adeee); }
+.axe-constellation-progress { margin:16px 0; color:var(--ql-gold,#f4d59c); }
+.axe-constellation-sky {
+  position:relative; width:100%; aspect-ratio:1.2; min-height:280px; max-height:520px;
+  border:1px solid rgba(165,201,222,.26); border-radius:18px;
+  background:radial-gradient(ellipse at 50% 45%,rgba(82,143,172,.18),transparent 65%),rgba(8,19,33,.35);
+}
+.axe-constellation-sky svg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+.axe-constellation-sky line { stroke:rgba(165,201,222,.25); stroke-width:.35; stroke-dasharray:1 1.4; }
+.axe-constellation-sky line.is-lit { stroke:var(--ql-gold,#f4d59c); stroke-width:.6; stroke-dasharray:none; }
+.axe-constellation-star {
+  position:absolute; transform:translate(-50%,-50%); width:44px; height:44px;
+  display:grid; place-items:center; border:1px solid transparent; border-radius:50%;
+  background:rgba(13,27,44,.9); color:var(--ql-muted,#c9ced1); cursor:pointer;
+}
+.axe-constellation-star span { font-size:26px; line-height:1; opacity:.55; }
+.axe-constellation-star small { position:absolute; top:39px; font-size:10px; color:var(--ql-muted,#c9ced1); }
+.axe-constellation-star.is-completed span { color:var(--ql-gold,#f4d59c); opacity:1; text-shadow:0 0 15px #f4d59c; }
+.axe-constellation-star.is-active span,.axe-constellation-star.is-turn_in span { color:var(--ql-cyan,#6adeee); opacity:.9; }
+.axe-constellation-star[aria-pressed=true] { border-color:var(--ql-gold,#f4d59c); }
+.axe-constellation-star:focus-visible { outline:2px solid #ffe4ac; outline-offset:3px; }
+.axe-constellation-memory { padding:28px; border-left:1px solid rgba(165,201,222,.3); background:rgba(8,18,30,.3); }
+.axe-constellation-memory dl { border-top:1px solid rgba(165,201,222,.3); padding-top:18px; }
+.axe-constellation-memory dt { color:var(--ql-muted,#c9ced1); margin-top:16px; font-size:12px; }
+.axe-constellation-memory dd { margin:5px 0; overflow-wrap:anywhere; }
+.axe-constellation-note,.axe-constellation-legend { color:var(--ql-muted,#c9ced1); font-size:12px; }
+.axe-constellation-note { margin-top:32px; }
+.axe-constellation-hint { padding:16px; border:1px solid rgba(165,201,222,.25); border-radius:8px; }
+.axe-constellation-complete { color:var(--ql-gold,#f4d59c); }
+.axe-constellation-story { border-left:2px solid var(--ql-gold,#f4d59c); padding-left:14px; color:var(--ql-muted,#c9ced1); }
+.axe-constellation-next { margin-top:28px; }
+.axe-constellation-next h4 { color:var(--ql-gold,#f4d59c); }
+.axe-constellation-next button {
+  display:block; width:100%; text-align:left; border:1px solid rgba(165,201,222,.25);
+  background:rgba(8,18,30,.3); border-radius:8px; padding:12px; margin:10px 0; color:inherit;
+}
+.axe-constellation-next small { display:block; margin-top:6px; color:var(--ql-muted,#c9ced1); }
+.axe-constellation-sky.is-complete { animation:axe-constellation-breathe 5s ease-in-out infinite alternate; }
+@keyframes axe-constellation-breathe { to { box-shadow:inset 0 0 50px rgba(106,222,238,.13); } }
+@media (prefers-reduced-motion:reduce) { .axe-constellation-sky.is-complete { animation:none; } }
+@media (max-width:900px) {
+  .axe-constellations { grid-template-columns:minmax(0,1fr); }
+  .axe-constellation-memory { border-left:0; border-top:1px solid rgba(165,201,222,.3); }
+}
+@media (max-width:760px) {
+  .axe-quest-logbook-root[data-quest-section=constellations] .axe-quest-topbar {
+    flex-basis:82px; flex-wrap:wrap; padding:4px 34px; gap:0;
+  }
+  .axe-quest-logbook-root[data-quest-section=constellations] .axe-quest-topbar h1 {
+    width:100%; text-align:center; font-size:20px; margin:0;
+  }
+  .axe-quest-logbook-root[data-quest-section=constellations] .axe-quest-trust-status {
+    margin:0; max-width:100%; padding:2px 5px; font-size:10px;
+  }
+  .axe-quest-book.has-constellations { grid-template-rows:54px minmax(0,1fr); }
+  .axe-constellations { grid-column:1; grid-row:2; }
+  .axe-constellation-map-panel,.axe-constellation-memory { padding:20px; }
+}

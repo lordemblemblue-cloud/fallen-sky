@@ -1,0 +1,66 @@
+/* Combat / Quest 56.3–56.5: accessible journey discovery controls.
+   Local translucent gold / violet presentation; no new global HUD. */
+.axe-echo-journey-discovery{
+ display:flex;flex-direction:column;gap:8px;
+ padding:10px;border:1px solid #d8b3de8e;border-radius:10px;
+ background:linear-gradient(125deg,#362051dd,#1b163dbb);
+}
+.axe-echo-journey-search{
+ display:flex;align-items:center;gap:8px;
+ min-height:35px;padding:2px 8px;
+ border:1px solid #cbaaeb9c;border-radius:7px;
+ background:#180b32c7;color:#f6d9a9;
+}
+.axe-echo-journey-search:focus-within{
+ border-color:#ffddab;box-shadow:0 0 0 2px #eac3ff43;
+}
+.axe-echo-journey-search>svg{flex:none}
+.axe-echo-journey-search input{
+ min-width:0;width:100%;padding:7px 2px;border:0;outline:none;
+ background:transparent;color:#ffecdd;
+ font:12px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-journey-search input::placeholder{color:#c6b6d2}
+.axe-echo-journey-search button{
+ display:grid;place-items:center;flex:none;
+ padding:4px;border:1px solid #a582bc75;border-radius:5px;
+ background:#4e2868;color:#f6daaf;
+}
+.axe-echo-journey-search button:hover{background:#754395}
+.axe-echo-journey-filters{
+ display:flex;align-items:center;flex-wrap:wrap;gap:5px;
+}
+.axe-echo-journey-filters button{
+ display:inline-flex;align-items:center;gap:6px;
+ padding:6px 8px;border:1px solid #b898d585;border-radius:6px;
+ color:#e6d1f0;background:linear-gradient(120deg,#46245f,#30204e);
+ font:11px/1.3 "Segoe UI",sans-serif;
+}
+.axe-echo-journey-filters button:hover,
+.axe-echo-journey-filters button:focus-visible,
+.axe-echo-journey-filters button[aria-pressed=true]{
+ border-color:#ffe2b8;color:#fff1cc;
+ background:linear-gradient(120deg,#8a4a9f,#50306d);
+ box-shadow:0 0 9px #c68af87c;
+}
+.axe-echo-journey-filters button span{
+ min-width:16px;padding:1px 4px;border-radius:8px;
+ text-align:center;background:#b17fb85c;color:#f5e4df;
+ font:10px "Segoe UI",sans-serif;
+}
+.axe-echo-journey-results{
+ display:flex;align-items:center;gap:10px;justify-content:space-between;
+ color:#d9c5e6;font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-journey-results button{
+ color:#ffe1b1;background:#502c6ebf;
+ border:1px solid #c79bd6;border-radius:6px;
+ padding:4px 8px;font-size:10px;
+}
+.axe-echo-journey-results button:hover{background:#784690}
+@media(max-width:720px){
+ .axe-echo-journey-discovery{padding:8px 6px}
+ .axe-echo-journey-filters{gap:4px}
+ .axe-echo-journey-filters button{padding:5px 6px;font-size:10px}
+ .axe-echo-journey-search input{font-size:11px}
+}

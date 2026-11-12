@@ -1,0 +1,98 @@
+/* Combat / Quest 53.2–53.4: private player-authored celestial chapters.
+   Reuse the approved Echo Chronicle gold/violet Services visual language. */
+.axe-echo-sky-chapter {
+ margin:0 0 12px;padding:10px 12px;
+ background:linear-gradient(115deg,#231244dd,#381953bd 55%,#1e1940e2);
+ border:1px solid #d4b2e087;border-radius:10px;
+ box-shadow:inset 0 1px #efcef133,0 0 13px #9f57ca55;
+ color:#f4e0ee;
+}
+.axe-echo-sky-chapter-heading {
+ display:flex;align-items:center;gap:9px;min-width:0;
+}
+.axe-echo-sky-chapter-heading>svg {
+ color:#f5d3a1;flex:none;
+}
+.axe-echo-sky-chapter-heading>div{flex:1;min-width:0}
+.axe-echo-sky-chapter-heading h4 {
+ margin:0;color:#ffe4ac;
+ font:normal 18px/1.2 Georgia,serif;
+ overflow-wrap:anywhere;
+}
+.axe-echo-sky-chapter-heading small {
+ display:block;color:#d3b9df;margin-top:3px;
+ font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-heading>button {
+ display:inline-flex;align-items:center;gap:6px;flex:none;
+ padding:7px 10px;border-radius:6px;
+ border:1px solid #e4b9cd;background:#5c296e;
+ color:#ffe5c5;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-heading>button:hover:not(:disabled),
+.axe-echo-sky-chapter-heading>button:focus-visible {
+ border-color:#fff0cf;background:#7d3f93;
+}
+.axe-echo-sky-chapter-heading>button:disabled{opacity:.42;cursor:not-allowed}
+.axe-echo-sky-chapter-reflection {
+ margin:10px 0 0;padding:8px 10px;
+ border-left:2px solid #e9c5a0;
+ color:#f0d7ed;
+ background:linear-gradient(90deg,#43205986,transparent);
+ font:13px/1.6 Georgia,serif;
+ white-space:pre-wrap;overflow-wrap:anywhere;
+}
+.axe-echo-sky-chapter-form {
+ display:flex;flex-direction:column;gap:10px;
+ padding:12px 0 4px;
+}
+.axe-echo-sky-chapter-form label {
+ display:flex;flex-direction:column;gap:4px;
+ color:#f6dfb9;font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-form input,
+.axe-echo-sky-chapter-form textarea {
+ width:100%;max-width:100%;box-sizing:border-box;
+ border:1px solid #c99bcb;border-radius:6px;padding:9px;
+ background:#201039;color:#fff0e1;
+ font:12px/1.45 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-form textarea {
+ resize:vertical;min-height:62px;
+}
+.axe-echo-sky-chapter-form>div{display:flex;flex-wrap:wrap;gap:7px}
+.axe-echo-sky-chapter-form button {
+ display:inline-flex;align-items:center;gap:5px;
+ border-radius:6px;border:1px solid #dbb7d9;
+ background:#4b275e;color:#fce3bf;padding:7px 10px;
+ font:11px "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-form button[type=submit] {
+ background:#704089;border-color:#ffe1ab;
+}
+.axe-echo-sky-chapter-form button:hover {background:#824b93}
+.axe-echo-sky-chapter-form button.axe-echo-sky-chapter-delete {
+ color:#ffdbd9;border-color:#d5a0aa;
+}
+.axe-echo-sky-chapter-warning{
+ margin:8px 0;color:#d6bfd9;font:11px/1.5 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter-error {
+ margin:7px 0 0;padding:7px 9px;
+ border-left:3px solid #e99599;
+ color:#ffe1dc;background:#5b233fc9;
+ font:11px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter footer {
+ display:flex;gap:6px;align-items:flex-start;
+ margin-top:9px;padding-top:8px;
+ border-top:1px solid #c496d755;
+ color:#d5bee3;font:10px/1.4 "Segoe UI",sans-serif;
+}
+.axe-echo-sky-chapter footer svg{flex:none;color:#e4bbab}
+@media(max-width:720px){
+ .axe-echo-sky-chapter-heading{flex-wrap:wrap}
+ .axe-echo-sky-chapter-heading>button{margin-left:25px}
+ .axe-echo-sky-chapter-heading h4{font-size:16px}
+ .axe-echo-sky-chapter{padding:8px}
+}

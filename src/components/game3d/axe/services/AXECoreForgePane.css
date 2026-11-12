@@ -1,0 +1,94 @@
+/* The existing Blacksmith art, circle and glass colors remain; Core
+   replaces only the inventory/data widgets with live character Core stores. */
+.axe-core-forge {position:absolute;z-index:7;inset:0;pointer-events:none;color:var(--axe-ui-text);font-family:Georgia,serif;}
+.axe-core-owned,.axe-core-details,.axe-core-progression,.axe-core-enhance,.axe-core-review-backdrop {pointer-events:auto;}
+.axe-core-owned,.axe-core-details,.axe-core-progression {
+  position:absolute;min-width:0;min-height:0;display:flex;flex-direction:column;
+  border:1px solid var(--axe-ui-gold);border-radius:11px;background:var(--axe-ui-glass);
+  -webkit-backdrop-filter:blur(13px) saturate(104%);backdrop-filter:blur(13px) saturate(104%);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 3px 14px #0004;
+}
+.axe-core-owned {left:3.4%;top:15%;width:28.8%;height:81%;overflow:hidden;padding:11px 9px;gap:9px;}
+.axe-core-owned header {display:flex;align-items:center;gap:5px;color:var(--axe-ui-heading);}
+.axe-core-owned h3 {margin:0;font:600 clamp(13px,1.3cqw,19px)/1.1 Georgia,serif;}
+.axe-core-owned header small {margin-left:auto;color:var(--axe-ui-subtext);font-size:11px;}
+.axe-core-owned p {margin:0;color:var(--axe-ui-subtext);font:clamp(10px,.85cqw,13px)/1.4 Georgia,serif;}
+.axe-core-grid {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-auto-rows:max-content;align-content:start;gap:6px;min-height:0;overflow-y:auto;padding:4px;}
+.axe-core-grid button {position:relative;aspect-ratio:1;min-width:0;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;
+  padding:3px;border:1px solid rgba(242,210,147,.35);border-radius:7px;
+  background:rgba(32,44,58,.3);color:var(--axe-ui-heading);}
+.axe-core-grid button[aria-pressed="true"],.axe-core-grid button:hover {
+  border-color:var(--axe-ui-gold);background:rgba(84,96,111,.7);
+  box-shadow:inset 0 0 12px #e7d7b326,0 0 9px #ecce9855;}
+.axe-core-grid button span {max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:clamp(8px,.7cqw,11px)/1.1 Georgia,serif;}
+.axe-core-grid button small {font:clamp(8px,.7cqw,11px)/1 Georgia,serif;}
+.axe-core-grid button em {position:absolute;top:1px;right:1px;font:9px Georgia,serif;color:var(--axe-ui-heading);}
+.axe-core-center {position:absolute;left:44%;top:30%;width:24.6%;height:35%;
+  display:flex;justify-content:center;align-items:center;flex-direction:column;gap:6px;
+  text-align:center;pointer-events:none;color:var(--axe-ui-heading);overflow:hidden;}
+.axe-core-center h3 {margin:0;font:600 clamp(14px,1.3cqw,21px)/1.15 Georgia,serif;}
+.axe-core-center small {font-size:11px;color:var(--axe-ui-subtext);}
+.axe-core-center p {margin:0;font-size:12px;}
+.axe-core-progression {left:40.9%;top:74.6%;width:30.7%;height:22.4%;
+  padding:7px 10px;gap:7px;justify-content:space-between;}
+.axe-core-progression h3 {margin:0;padding-bottom:4px;text-align:center;
+  border-bottom:1px solid rgba(242,210,147,.35);font:600 clamp(12px,1cqw,16px)/1.1 Georgia,serif;color:var(--axe-ui-heading);}
+.axe-core-progression p {margin:0;color:var(--axe-ui-subtext);font-size:11px;}
+.axe-core-progression-row {display:flex;gap:7px;align-items:center;justify-content:space-between;
+  font:clamp(10px,.85cqw,13px)/1.1 Georgia,serif;color:var(--axe-ui-text);}
+.axe-core-xp-track {height:7px;border-radius:99px;background:rgba(20,33,45,.53);overflow:hidden;
+  border:1px solid rgba(242,210,147,.22);}
+.axe-core-xp-track i {height:100%;display:block;background:linear-gradient(to right,#85c3d7,#f1d6a6);border-radius:99px;}
+.axe-core-details {left:74%;top:27.5%;width:22%;height:53.7%;
+  padding:clamp(8px,.85cqw,13px);gap:5px;overflow-y:auto;}
+.axe-core-details > small {font:clamp(9px,.74cqw,12px)/1.1 Georgia,serif;color:var(--axe-ui-gold-text);}
+.axe-core-details h3 {margin:0;font:600 clamp(15px,1.3cqw,21px)/1.2 Georgia,serif;color:var(--axe-ui-heading);}
+.axe-core-details p {margin:0;font:clamp(10px,.8cqw,12px)/1.3 Georgia,serif;color:var(--axe-ui-subtext);}
+.axe-core-divider {margin-top:8px;padding-bottom:3px;border-bottom:1px solid rgba(242,210,147,.4);
+  color:var(--axe-ui-heading);font:600 clamp(11px,.9cqw,14px)/1.1 Georgia,serif;}
+.axe-core-row {display:flex;align-items:center;justify-content:space-between;gap:7px;
+  font:clamp(10px,.8cqw,13px)/1.2 Georgia,serif;padding:4px 1px;
+  border-bottom:1px solid rgba(242,210,147,.17);}
+.axe-core-row span {color:var(--axe-ui-subtext);}
+.axe-core-row b {color:var(--axe-ui-heading);font-weight:500;text-align:right;}
+.axe-core-options {display:flex;flex-wrap:wrap;gap:4px;}
+.axe-core-options button,.axe-core-register {border:1px solid rgba(242,210,147,.55);
+  border-radius:6px;background:rgba(32,44,58,.4);color:var(--axe-ui-heading);
+  padding:6px 7px;font:clamp(10px,.81cqw,13px)/1.2 Georgia,serif;}
+.axe-core-options button[aria-pressed="true"],.axe-core-options button:hover,.axe-core-register:hover {
+  background:var(--axe-ui-selected);color:var(--axe-ui-selected-text);}
+.axe-core-register {margin-top:5px;}
+.axe-core-notice {padding:6px;border:1px solid rgba(242,210,147,.4);border-radius:6px;}
+.axe-core-enhance {position:absolute;left:74%;top:83%;width:22%;height:8.4%;min-height:42px;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  border:1px solid var(--axe-ui-gold);border-radius:9px;
+  background:var(--axe-ui-glass);color:var(--axe-ui-heading);
+  font:600 clamp(13px,1cqw,17px)/1.1 Georgia,serif;}
+.axe-core-enhance:hover:not(:disabled) {background:var(--axe-ui-selected);color:var(--axe-ui-selected-text);}
+.axe-core-enhance:disabled {opacity:.5;cursor:not-allowed;}
+.axe-core-review-backdrop {position:absolute;z-index:20;inset:0;display:grid;place-items:center;
+  background:rgba(8,17,28,.74);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);}
+.axe-core-review {width:min(520px,78%);display:flex;flex-direction:column;gap:14px;padding:20px;
+  border:1px solid var(--axe-ui-gold);border-radius:12px;
+  background:linear-gradient(110deg,rgba(32,44,58,.99),rgba(26,35,48,.98));color:var(--axe-ui-text);}
+.axe-core-review h3 {margin:0;font:600 22px Georgia,serif;color:var(--axe-ui-heading);}
+.axe-core-review p {margin:0;font:14px/1.5 Georgia,serif;}
+.axe-core-review > div {display:flex;gap:9px;justify-content:flex-end;}
+.axe-core-review button {padding:9px 14px;border:1px solid var(--axe-ui-gold);border-radius:8px;
+  background:rgba(32,44,58,.5);color:var(--axe-ui-heading);}
+.axe-core-review button:hover {background:var(--axe-ui-selected);color:var(--axe-ui-selected-text);}
+.axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-inventory-shell,
+.axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-operation-panel,
+.axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-progression-panel,
+.axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-center-preview,
+.axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-begin-forge {display:none;}
+/* Keep the gold ring in Core; its old rule hid it with ASC. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage[data-forge-tab="core"] .axe-blacksmith-forge-ring {
+  visibility:visible;pointer-events:none;}
+@media(max-width:760px) {
+ .axe-core-grid {grid-template-columns:repeat(3,minmax(0,1fr));}
+ .axe-core-details {left:74%;width:24%;}
+ .axe-core-owned {left:2%;width:31%;}
+}
