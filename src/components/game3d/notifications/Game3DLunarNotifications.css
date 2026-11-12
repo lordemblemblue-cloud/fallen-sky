@@ -1,0 +1,311 @@
+/* Luna 3D — original moonlit celestial notifications.
+ * Soft directional fade, fitted glass, Japanese-inspired pennants, Egyptian
+ * geometry and authored per-quest vector illustration. No sampled concept art.
+ * Scoped to this HUD overlay; never recolors the game or obscures controls. */
+.axe-lunar-notifications{
+  position:fixed;z-index:75;pointer-events:none;
+  width:min(760px,78vw);color:#f4f4ff;isolation:isolate;
+  font-family:Georgia,'Times New Roman',serif;
+  filter:drop-shadow(0 14px 26px rgba(1,7,20,.34));
+  animation:axe-lunar-appear .4s cubic-bezier(.16,.85,.27,1) both;
+}
+.axe-lunar-notifications--message{
+  top:clamp(62px,10vh,130px);right:clamp(16px,3vw,62px);
+  width:min(630px,58vw);
+}
+.axe-lunar-notifications--level{
+  left:50%;top:clamp(110px,23vh,280px);
+  transform:translateX(-50%);
+  animation-name:axe-lunar-level-appear;
+}
+.axe-lunar-notifications--story{
+  left:50%;bottom:clamp(75px,12vh,165px);
+  transform:translateX(-50%);
+  animation-name:axe-lunar-level-appear;
+}
+.axe-lunar-notice{
+  position:relative;isolation:isolate;min-width:0;
+  pointer-events:auto;
+  border:1px solid rgba(223,233,249,.25);
+  color:#f4f4ff;
+  background:
+    radial-gradient(ellipse 95% 120% at 50% 50%,rgba(99,140,191,.17),transparent 76%),
+    linear-gradient(90deg,rgba(6,14,34,0) 0%,rgba(13,24,52,.72) 12%,
+      rgba(15,31,62,.85) 48%,rgba(14,29,58,.72) 83%,rgba(7,14,32,0) 100%);
+  box-shadow:inset 0 1px 0 rgba(249,253,255,.18),0 8px 38px rgba(3,8,32,.3);
+  backdrop-filter:blur(15px) saturate(135%);
+  -webkit-backdrop-filter:blur(15px) saturate(135%);
+  clip-path:polygon(4% 0,96% 0,100% 19%,100% 81%,96% 100%,4% 100%,0 81%,0 19%);
+}
+/* Do not crop wing flourishes, hanging pennants, or the sun/moon crest.
+ * The fitted silhouette is drawn by the inner decorative border, not by
+ * clipping actual interactive content. */
+.axe-lunar-level,.axe-lunar-story{
+  clip-path:none;border-radius:24px 24px 28px 28px;
+  border-left-color:rgba(210,230,255,.07);
+  border-right-color:rgba(210,230,255,.07);
+}
+.axe-lunar-story .axe-lunar-scene{
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 24%,#000 88%,transparent);
+  mask-image:linear-gradient(90deg,transparent 0%,#000 24%,#000 88%,transparent);
+}
+.axe-lunar-notice::after{
+  content:"";position:absolute;inset:2px;z-index:-1;pointer-events:none;
+  border-top:1px solid rgba(234,243,255,.27);
+  border-bottom:1px solid rgba(146,200,244,.22);
+  clip-path:polygon(2% 0,98% 0,100% 24%,100% 76%,98% 100%,2% 100%,0 76%,0 24%);
+}
+.axe-lunar-notice button{
+  font:500 12px/1.4 system-ui,sans-serif;
+  cursor:pointer;color:#e7eefc;
+}
+.axe-lunar-close{
+  position:absolute;z-index:5;right:16px;top:11px;
+  width:28px;height:28px;display:grid;place-items:center;
+  padding:0;border:0;border-radius:50%;
+  background:rgba(8,21,43,.26);
+  color:#dce7fa;opacity:.76;
+}
+.axe-lunar-close:hover{opacity:1;background:rgba(185,210,239,.16)}
+.axe-lunar-notice button:focus-visible{
+  outline:2px solid #f7daa6;outline-offset:2px;
+}
+.axe-lunar-daycrest{
+  position:relative;display:grid;place-items:center;
+  width:43px;height:43px;margin:auto;
+  color:#f3ddad;filter:drop-shadow(0 0 8px rgba(205,219,249,.45));
+}
+.axe-lunar-daycrest::before{
+  content:"";position:absolute;inset:1px;border:1px solid rgba(222,228,248,.52);
+  border-radius:50%;box-shadow:inset 0 0 10px rgba(213,225,252,.12);
+}
+.axe-lunar-daycrest.is-day{color:#f5d6a1}
+.axe-lunar-daycrest.is-night{color:#b9d2fb}
+.axe-lunar-crescent{
+  position:absolute;right:5px;bottom:8px;transform:rotate(-25deg);
+  color:#d3e2fa;filter:drop-shadow(0 0 2px #162040);
+}
+.axe-lunar-sun{filter:drop-shadow(0 0 5px rgba(250,216,145,.65))}
+.axe-lunar-topcrest{
+  position:absolute;left:50%;top:-24px;transform:translateX(-50%);
+  width:75px;display:grid;place-items:center;z-index:4;
+}
+.axe-lunar-notifications--level .axe-lunar-notice{overflow:visible}
+.axe-lunar-level{
+  min-height:248px;text-align:center;
+  padding:34px clamp(35px,7vw,75px) 29px;
+  border-color:rgba(178,211,255,.38);
+  background:
+    linear-gradient(100deg,transparent,rgba(28,49,85,.64) 9%,rgba(15,30,63,.90) 50%,rgba(28,49,85,.64) 91%,transparent),
+    radial-gradient(ellipse at 50% 0,rgba(210,227,255,.21),transparent 76%);
+}
+.axe-lunar-level::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:
+    linear-gradient(120deg,transparent 3%,rgba(196,224,250,.22) 20%,transparent 33%),
+    linear-gradient(240deg,transparent 3%,rgba(196,224,250,.19) 20%,transparent 33%);
+  clip-path:polygon(0 36%,13% 10%,38% 16%,50% 0,62% 16%,87% 10%,100% 36%,96% 93%,50% 100%,4% 93%);
+  pointer-events:none;
+}
+.axe-lunar-wing{
+  position:absolute;z-index:0;top:-18px;width:28%;height:112px;
+  background:linear-gradient(170deg,rgba(240,236,246,.24),rgba(143,189,238,.07) 58%,transparent);
+  border-top:1px solid rgba(237,232,221,.45);
+  clip-path:polygon(0 44%,23% 22%,65% 0,100% 32%,69% 63%,29% 75%);
+  pointer-events:none;
+}
+.axe-lunar-wing-left{left:-1%;transform:rotate(-8deg)}
+.axe-lunar-wing-right{right:-1%;transform:scaleX(-1) rotate(-8deg)}
+.axe-lunar-level-heading{
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:center;
+  gap:17px;color:#f6dfb5;text-shadow:0 0 19px rgba(243,205,132,.32);
+}
+.axe-lunar-level-heading h2{
+  margin:0;font:500 clamp(33px,4vw,57px)/1.08 Georgia,serif;
+  letter-spacing:.13em;
+}
+.axe-lunar-level-number{
+  position:relative;z-index:2;margin:16px auto 17px;
+  font:italic clamp(23px,3vw,39px)/1.2 Georgia,serif;
+  color:#d2e6ff;text-shadow:0 0 15px rgba(148,210,255,.48);
+}
+.axe-lunar-level-number strong{font-size:1.25em;font-weight:500;color:#fff4e0}
+.axe-lunar-increase{
+  position:relative;z-index:2;display:flex;align-items:center;
+  justify-content:center;flex-wrap:wrap;gap:0;
+  border-top:1px solid rgba(229,238,255,.23);
+  padding-top:12px;font:500 13px/1.5 system-ui,sans-serif;
+}
+.axe-lunar-stat{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  padding:5px clamp(8px,1.3vw,19px);
+  color:#e0e5f0;
+}
+.axe-lunar-stat+.axe-lunar-stat{border-left:1px solid rgba(234,244,255,.18)}
+.axe-lunar-stat svg{color:#d0e6ff;flex:none}
+.axe-lunar-stat strong{color:#a7f6d4;font-weight:650;white-space:nowrap}
+.axe-lunar-previous{color:#c4d4e8;white-space:nowrap}
+.axe-lunar-level-subtitle{font:13px/1.5 system-ui,sans-serif;color:#d9e3f4;margin:3px auto}
+
+/* Message — translucent ribbon, real sender portrait, real name and reply. */
+.axe-lunar-message{
+  min-height:119px;padding:17px 74px 15px 25px;
+  display:flex;align-items:center;gap:17px;
+}
+.axe-lunar-message-badge{
+  position:absolute;top:-5px;left:48%;z-index:1;opacity:.78;
+  transform:translateX(-50%) scale(.68);
+  pointer-events:none;
+}
+.axe-lunar-face{
+  position:relative;flex:0 0 68px;width:68px;height:68px;
+  display:grid;place-items:center;overflow:hidden;
+  border-radius:50%;border:2px solid rgba(240,215,171,.68);
+  color:#f5eee7;font:500 28px/1 Georgia,serif;
+  background:linear-gradient(145deg,#40547d,#14243f);
+  box-shadow:0 0 0 4px rgba(9,21,42,.30),0 0 16px rgba(188,208,240,.15);
+}
+.axe-lunar-face img{width:100%;height:100%;object-fit:cover}
+.axe-lunar-message-copy{min-width:0;flex:1;text-align:left}
+.axe-lunar-message-meta{
+  display:flex;align-items:center;gap:7px;
+  font:500 10px/1.3 system-ui,sans-serif;letter-spacing:.16em;
+  color:#c1daee;
+}
+.axe-lunar-message-meta>span{
+  margin-left:auto;font:11px/1 system-ui,sans-serif;
+  letter-spacing:0;color:#bac7e2;
+}
+.axe-lunar-message-copy h2{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  margin:5px 0 3px;font:500 clamp(20px,2.15vw,29px)/1.18 Georgia,serif;
+  color:#fff0df;
+}
+.axe-lunar-message-copy p{
+  margin:0;color:rgba(240,243,251,.9);font:13px/1.45 system-ui,sans-serif;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow-wrap:anywhere;
+}
+.axe-lunar-message-actions{
+  position:absolute;right:16px;bottom:18px;display:flex;align-items:center;
+  gap:4px;
+}
+.axe-lunar-message-actions .axe-lunar-close{top:-78px;right:0}
+.axe-lunar-reply{
+  display:flex;align-items:center;gap:5px;
+  min-height:35px;padding:5px 11px;
+  border:1px solid rgba(185,223,246,.64);
+  background:linear-gradient(120deg,rgba(49,103,144,.34),rgba(39,72,111,.28));
+  clip-path:polygon(13px 0,calc(100% - 13px) 0,100% 50%,calc(100% - 13px) 100%,13px 100%,0 50%);
+  box-shadow:inset 0 0 12px rgba(175,227,255,.15);
+  white-space:nowrap;
+}
+.axe-lunar-reply:hover{background:rgba(72,147,194,.36)}
+.axe-lunar-message::before{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(90deg,transparent,rgba(177,206,236,.06) 48%,rgba(214,226,240,.14) 76%,transparent);
+  pointer-events:none;
+}
+
+/* Chapter/quest — fitted enchanted scroll, distinct image per quest, fading
+ * artwork at the right and original hanging tracker pennant at the left. */
+.axe-lunar-story{
+  display:flex;justify-content:center;align-items:center;
+  min-height:178px;padding:27px clamp(38px,7vw,95px) 20px;
+  border-color:rgba(184,209,239,.34);
+  overflow:visible;
+}
+.axe-lunar-scene{
+  position:absolute;inset:0 0 0 auto;z-index:-2;
+  width:64%;height:100%;object-fit:cover;opacity:.82;
+  pointer-events:none;
+}
+.axe-lunar-scene-photo{background-position:center;background-size:cover}
+.axe-lunar-story-fade{
+  position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(90deg,
+    rgba(10,22,44,.94) 0%,rgba(14,30,53,.87) 37%,
+    rgba(15,34,64,.39) 72%,rgba(16,33,56,.17) 100%);
+}
+.axe-lunar-story-copy{position:relative;z-index:1;width:100%;text-align:center}
+.axe-lunar-story-heading{
+  display:flex;justify-content:center;align-items:center;
+  gap:10px;margin:0 0 12px;color:#fbefd9;
+  font:italic clamp(17px,2.15vw,29px)/1.22 Georgia,serif;
+  text-shadow:0 2px 8px #0b1833;
+}
+.axe-lunar-story-heading svg{color:#ecd9b5;flex:none}
+.axe-lunar-story h2{
+  display:inline-block;max-width:100%;margin:0 auto 10px;
+  padding:7px clamp(18px,4vw,44px);
+  color:#d4f2ff;letter-spacing:.035em;
+  font:italic clamp(22px,2.7vw,39px)/1.18 Georgia,serif;
+  text-shadow:0 0 14px rgba(163,227,255,.48);
+  border-top:1px solid rgba(199,221,248,.5);
+  border-bottom:1px solid rgba(199,221,248,.5);
+  background:linear-gradient(90deg,transparent,rgba(27,74,112,.58) 27%,rgba(27,74,112,.58) 72%,transparent);
+}
+.axe-lunar-story-caption{
+  margin:0;color:rgba(235,240,250,.9);
+  font:12px/1.5 system-ui,sans-serif;letter-spacing:.04em;
+  text-shadow:0 1px 5px #071027;
+}
+.axe-lunar-story-crest{
+  position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  pointer-events:none;z-index:2;
+}
+.axe-lunar-pennant{
+  position:absolute;z-index:2;left:clamp(10px,2vw,25px);top:7px;
+  display:flex;flex-direction:column;align-items:center;gap:9px;
+  width:45px;height:130px;padding:19px 6px 8px;
+  color:#eacb92;background:linear-gradient(140deg,#2a4a7a,#142c5a 78%);
+  border:1px solid rgba(234,204,142,.85);
+  box-shadow:0 5px 16px rgba(5,14,25,.45);
+  clip-path:polygon(0 0,100% 0,100% 78%,50% 100%,0 78%);
+}
+.axe-lunar-pennant span{font-size:25px;line-height:1}
+.axe-lunar-pennant::after{
+  content:"";position:absolute;left:7px;right:7px;top:8px;bottom:21px;
+  border-left:1px solid rgba(245,214,159,.4);
+  border-right:1px solid rgba(245,214,159,.4);pointer-events:none;
+}
+
+@keyframes axe-lunar-appear{
+  from{opacity:0;translate:20px -10px;filter:blur(5px)}
+  to{opacity:1;translate:0 0;filter:blur(0)}
+}
+@keyframes axe-lunar-level-appear{
+  from{opacity:0;translate:0 -15px;filter:blur(5px)}
+  to{opacity:1;translate:0 0;filter:blur(0)}
+}
+@media(max-width:850px){
+  .axe-lunar-notifications--message{
+    top:58px;right:2vw;width:min(560px,92vw);
+  }
+  .axe-lunar-notifications--level,.axe-lunar-notifications--story{
+    width:min(620px,94vw);
+  }
+  .axe-lunar-level-heading h2{font-size:clamp(28px,6vw,46px)}
+  .axe-lunar-level-number{font-size:clamp(23px,4vw,33px)}
+}
+@media(max-width:550px){
+  .axe-lunar-notifications--level{top:clamp(100px,17vh,178px)}
+  .axe-lunar-notifications--story{bottom:clamp(74px,16vh,145px)}
+  .axe-lunar-message{padding:12px 58px 48px 14px;min-height:134px;gap:9px}
+  .axe-lunar-face{flex-basis:52px;width:52px;height:52px;font-size:22px}
+  .axe-lunar-message-copy h2{font-size:20px}
+  .axe-lunar-message-copy p{font-size:11px}
+  .axe-lunar-message-actions{right:18px;bottom:8px}
+  .axe-lunar-level{min-height:195px;padding:37px 20px 21px}
+  .axe-lunar-stat{padding:5px 7px;font-size:11px}
+  .axe-lunar-previous{font-size:10px}
+  .axe-lunar-story{padding:29px 22px 19px 54px;min-height:155px}
+  .axe-lunar-pennant{left:7px;width:34px;height:105px}
+  .axe-lunar-story-heading{font-size:clamp(16px,4vw,22px)}
+  .axe-lunar-story h2{font-size:clamp(19px,5vw,28px);padding:6px 5px}
+  .axe-lunar-story-caption{font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){
+  .axe-lunar-notifications{animation:none!important;filter:none}
+  .axe-lunar-notice,.axe-lunar-notice *{animation:none!important;transition:none!important}
+}
