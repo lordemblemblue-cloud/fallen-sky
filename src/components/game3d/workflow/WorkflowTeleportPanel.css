@@ -1,0 +1,50 @@
+.axe-workflow-backdrop{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:16px;background:#02070de8;backdrop-filter:blur(10px);}
+.axe-workflow-panel{width:min(560px,100%);max-height:min(88dvh,780px);overflow-y:auto;border:1px solid #a8c9dc75;border-radius:12px;background:linear-gradient(155deg,#10283cee,#061320f7);box-shadow:0 24px 70px #000c;color:#eaf4f8;padding:24px;font:13px system-ui,sans-serif;}
+.axe-workflow-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;border-bottom:1px solid #b0d8e938;padding-bottom:17px;}
+.axe-workflow-kicker{font-size:10px;letter-spacing:.19em;color:#cfba8d;font-weight:700;}
+.axe-workflow-header h2{font:26px Georgia,serif;margin:6px 0 5px;color:#fff1d5;}
+.axe-workflow-header p{font-size:12px;color:#b8cad8;margin:0;}
+.axe-workflow-close{display:grid;place-items:center;border:1px solid #a9cbdc50;border-radius:7px;background:#ffffff10;color:#e9f3fc;min-width:36px;min-height:36px;}
+.axe-workflow-search{display:flex;flex-direction:column;gap:8px;margin:20px 0 18px;}
+.axe-workflow-search label{font-size:12px;font-weight:600;color:#dfeefa;}
+.axe-workflow-inputrow{display:flex;align-items:center;gap:8px;padding:0 11px;border:1px solid #90c4d566;border-radius:7px;background:#030e1bad;}
+.axe-workflow-inputrow input{width:100%;min-width:0;height:43px;background:transparent;border:0;outline:0;color:#fff;font:13px system-ui;}
+.axe-workflow-inputrow:focus-within{border-color:#b4e9ff;box-shadow:0 0 0 2px #72cfff22;}
+.axe-workflow-inputrow input::placeholder{color:#93aabd;}
+.axe-workflow-search>small,.axe-workflow-footnote{color:#9eb5c6;font-size:11px;line-height:1.5;}
+.axe-workflow-direct button{width:100%;display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:11px 12px;text-align:left;border-radius:6px;border:1px solid #c7d99f8f;background:#54705850;color:#ebf9e2;}
+.axe-workflow-direct button span{margin-left:auto;font:11px monospace;color:#c2e4ce;}
+.axe-workflow-direct p{margin:0;color:#ffbcb7;font-size:12px;}
+.axe-workflow-sectionhead{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:9px;border-bottom:1px solid #95bed236;}
+.axe-workflow-sectionhead strong{font:16px Georgia,serif;color:#f9e6c6;}
+.axe-workflow-sectionhead span{font-size:11px;color:#abc2d1;}
+.axe-workflow-list{max-height:250px;overflow:auto;display:flex;flex-direction:column;gap:7px;margin:12px 0;}
+.axe-workflow-item{display:flex;align-items:center;gap:12px;text-align:left;background:#b6d9f00b;border:1px solid #a1c8de39;border-radius:8px;padding:12px;color:#d4eef6;cursor:pointer;}
+.axe-workflow-item:hover:not(:disabled),.axe-workflow-item:focus-visible{border-color:#a6dcee;background:#87bfd52a;outline:none;}
+.axe-workflow-item>span:nth-child(2){display:flex;flex:1;flex-direction:column;gap:3px;}
+.axe-workflow-item strong{font-size:13px;color:#fff;}
+.axe-workflow-item small{font-size:11px;color:#abbfcf;}
+.axe-workflow-go{display:flex;align-items:center;gap:5px;color:#e8d3a8;font-weight:700;font-size:11px;}
+.axe-workflow-empty{font-size:12px;color:#bfced9;line-height:1.5;}
+.axe-workflow-footnote{padding-top:12px;border-top:1px solid #95bed236;margin:8px 0 0;}
+.axe-workflow-item:disabled,.axe-workflow-direct button:disabled{opacity:.5;cursor:wait;}
+@media(max-width:600px){.axe-workflow-panel{padding:17px;max-height:92dvh}.axe-workflow-backdrop{padding:8px;}}
+
+
+.axe-workflow-filter{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 4px;color:#cbdce8;font-size:12px;}
+.axe-workflow-filter select{min-height:36px;max-width:72%;padding:5px 9px;border:1px solid #90c4d566;border-radius:6px;background:#0a2334;color:#f1f7fa;font:12px system-ui,sans-serif;}
+.axe-workflow-filter select:focus-visible{outline:2px solid #b4e9ff;outline-offset:2px;}
+
+/* The second quick destination has a self-contained preview illustration. */
+.axe-workflow-direct .axe-workflow-moonfall{
+  display:flex;align-items:center;gap:13px;margin-top:10px;flex-wrap:nowrap;
+  background:linear-gradient(115deg,#22214a,#0d1a38);
+  border-color:#9a9ed7a1;color:#edf2ff;padding:8px;text-align:left;
+}
+.axe-workflow-moonfall-art{width:104px;height:94px;flex:none;border-radius:7px;}
+.axe-workflow-moonfall-copy{display:flex!important;flex:1;flex-direction:column;gap:5px;min-width:0;margin:0!important;}
+.axe-workflow-moonfall-copy strong{color:#f6ecff;font-size:13px;}
+.axe-workflow-moonfall-copy small{font-size:11px;line-height:1.35;color:#bfceed;}
+.axe-workflow-moonfall:hover:not(:disabled),
+.axe-workflow-moonfall:focus-visible{border-color:#d2c4ff;box-shadow:0 0 16px #7475c136;outline:none;}
+@media(max-width:430px){.axe-workflow-moonfall-art{width:80px;height:74px}.axe-workflow-moonfall-copy strong{font-size:12px}}
