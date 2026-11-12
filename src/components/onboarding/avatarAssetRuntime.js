@@ -19,14 +19,27 @@ const missingBodyWarnings = new Set();
 
 function legacyBodyFallback(url) {
  const path = String(url || '').split(/[?#]/)[0];
- if (/\\/(?:models\\/characters\\/(?:fused\\/Male_Fused_v[12]|Getsuga_Tensho_Character_v[235])|d646be928_Getsuga_Tensho_Character)\\.glb$/i.test(path)) return MALE_HOSTED_BODY;
- if (/\\/(?:models\\/characters\\/(?:fused\\/Female_Fused_v[12]|Artemis_Character_v[235])|96bb872db_Artemis_Character)\\.glb$/i.test(path)) return FEMALE_HOSTED_BODY;
+ if (!path.startsWith('/models/characters/') &&
+     !path.startsWith('https://base44.app/api/apps/6876751a602125f45f1861b9/files/')) return null;
+ const name = path.split('/').pop();
+ const male = new Set([
+  'Male_Fused_v1.glb', 'Male_Fused_v2.glb',
+  'Getsuga_Tensho_Character_v2.glb', 'Getsuga_Tensho_Character_v3.glb',
+  'Getsuga_Tensho_Character_v5.glb', 'd646be928_Getsuga_Tensho_Character.glb',
+ ]);
+ const female = new Set([
+  'Female_Fused_v1.glb', 'Female_Fused_v2.glb',
+  'Artemis_Character_v2.glb', 'Artemis_Character_v3.glb',
+  'Artemis_Character_v5.glb', '96bb872db_Artemis_Character.glb',
+ ]);
+ if (male.has(name)) return MALE_HOSTED_BODY;
+ if (female.has(name)) return FEMALE_HOSTED_BODY;
  return null;
 }
 
 async function loadWithHostedFallback(url) {
  try {
-  const asset = /\\.fbx(?:[?#]|$)/i.test(url)
+  const asset = String(url).split(/[?#]/)[0].toLowerCase().endsWith('.fbx')
     ? await new FBXLoader().loadAsync(url)
     : await new GLTFLoader().loadAsync(url);
   return {asset, usedFallback:false};
