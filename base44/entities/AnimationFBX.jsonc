@@ -1,0 +1,57 @@
+{
+  "name": "AnimationFBX",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Clip name, used to match an action (idle, walk, run, attack\u2026)"
+    },
+    "folder": {
+      "type": "string",
+      "description": "companion \u00b7 player character"
+    },
+    "animation_type": {
+      "type": "string",
+      "description": "Preferred match for the loader, e.g. idle / walk / run"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "Uploaded FBX clip"
+    }
+  },
+  "required": [
+    "name",
+    "file_url"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

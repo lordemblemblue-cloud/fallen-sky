@@ -1,0 +1,69 @@
+{
+  "name": "VoiceSignal",
+  "type": "object",
+  "properties": {
+    "channel_id": {
+      "type": "string",
+      "description": "game_voice_main"
+    },
+    "sender_id": {
+      "type": "string"
+    },
+    "target_id": {
+      "type": "string",
+      "description": "Peer this signal is addressed to"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "offer",
+        "answer",
+        "ice-candidate",
+        "talking"
+      ]
+    },
+    "payload": {
+      "type": "object",
+      "description": "WebRTC session description, ICE candidate, or talking flag"
+    }
+  },
+  "required": [
+    "channel_id",
+    "sender_id",
+    "type"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "user_condition": {
+            "role": "user"
+          }
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "data.sender_id": "{{user.id}}"
+    },
+    "update": {
+      "data.sender_id": "{{user.id}}"
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
+}
