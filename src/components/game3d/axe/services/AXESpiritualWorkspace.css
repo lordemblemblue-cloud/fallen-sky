@@ -1,0 +1,810 @@
+/* Game 3D Spiritual: translucent ink-wash panels, warm realistic gold,
+   and a clear central aperture for the EXISTING running 3D world. */
+.axe-service-workspace--spiritual .axe-service-heading,
+.axe-service-workspace--spiritual .axe-service-operations,
+.axe-service-workspace--spiritual .axe-service-operation-help,
+.axe-service-workspace--spiritual .axe-service-operation-select {
+  display:none;
+}
+.axe-service-workspace--spiritual { inset:max(86px,calc(var(--axe-service-navigation-bottom,128px) + 9px)) 14px 14px; }
+.axe-service-workspace--spiritual .axe-service-progression {
+  width:min(1480px,100%); min-height:0; max-height:none; flex:1;
+  overflow:hidden; align-self:center; background:none; border:0; backdrop-filter:none;
+}
+.axe-spiritual-root { display:grid; grid-template-columns:minmax(205px,24%) minmax(150px,1fr) minmax(290px,35%);
+  height:100%; min-height:0; width:100%; font-family:Georgia,'Times New Roman',serif;
+  color:#f5eee0; pointer-events:auto; filter:drop-shadow(0 7px 16px #070c14a8); }
+.axe-spiritual-sidebar,.axe-spiritual-details { position:relative; min-height:0; min-width:0; overflow-y:auto; scrollbar-width:thin;
+  border:1px solid #bba073a3; background:linear-gradient(160deg,rgba(9,17,23,.89),rgba(17,27,31,.78) 55%,rgba(8,16,21,.85));
+  backdrop-filter:blur(7px); box-shadow:inset 0 0 28px #d9b87b0e; }
+.axe-spiritual-sidebar { border-radius:19px 2px 2px 19px; }
+.axe-spiritual-details { border-radius:3px 19px 19px 3px; padding:17px 17px 10px; display:flex; flex-direction:column; }
+.axe-spiritual-sidebar::before,.axe-spiritual-details::before { content:''; position:absolute; top:5px; left:7px; right:7px; height:1px;
+  background:linear-gradient(90deg,transparent,#ddba7b,transparent); pointer-events:none; }
+.axe-spiritual-brand { display:flex; align-items:center; gap:13px; padding:22px 12px 22px; border-bottom:1px solid #bba07348; }
+.axe-spirit-brand-mark { font-size:42px; line-height:1; color:#d6bd89; text-shadow:0 0 20px #f5d7964c; }
+.axe-spiritual-brand h2,.axe-spiritual-details h2 { margin:0; font-size:clamp(17px,2vw,27px); text-transform:uppercase;
+  font-weight:500; letter-spacing:.065em; color:#f4e3c1; }
+.axe-spiritual-brand p { margin:5px 0 0; color:#b5c2c2; font-size:11px; }
+.axe-spiritual-choices { padding:11px 8px; display:flex; flex-direction:column; gap:6px; }
+.axe-spiritual-choices button,.axe-spiritual-coming { padding:13px 11px; display:flex; align-items:center; gap:13px; text-align:left;
+  border:1px solid #a894723e; background:linear-gradient(105deg,#16232aa8,#131f268a); color:#eddfc6;
+  border-radius:3px; min-height:63px; width:100%; }
+.axe-spiritual-coming { opacity:.5; cursor:not-allowed; }
+.axe-spiritual-choices button[aria-pressed="true"] { border-color:#87c8fd; background:linear-gradient(100deg,#174263d8,#1d3141b6);
+  box-shadow:0 0 15px #76bbff4a,inset 0 0 13px #65b9ff25; }
+.axe-spiritual-choices button:hover { border-color:#cdb88c; }
+.axe-spiritual-choices svg { flex-shrink:0; color:#e7c68e; filter:drop-shadow(0 0 6px #e7bb6a70); }
+.axe-spiritual-choices b { display:block; font-size:clamp(12px,1.25vw,17px); font-weight:500; }
+.axe-spiritual-choices small { display:block; font:11px/1.35 'Segoe UI',sans-serif; margin-top:3px; color:#bac8cb; }
+.axe-spirit-soon { font:9px 'Segoe UI',sans-serif; margin-left:auto; color:#aa9674; }
+.axe-spirit-ink-scene { pointer-events:none; position:sticky; top:100%; margin-top:35px; padding:12px 20px;
+  min-height:78px; border-top:1px solid #bbac7447; color:#b49c6b36; font-size:35px; display:flex; justify-content:space-between;
+  background:radial-gradient(ellipse at bottom,#a39f7b22,transparent 65%); }
+.axe-spiritual-vision { position:relative; pointer-events:none; display:flex; align-items:center; justify-content:center; min-width:0; overflow:hidden;
+  background:linear-gradient(90deg,#07101824,transparent 20%,transparent 80%,#09151d33); }
+.axe-spiritual-circle { position:absolute; width:min(84%,330px); aspect-ratio:1; border-radius:50%;
+  border:1px solid #f0cb8b8c; box-shadow:0 0 26px #ecca7a53,inset 0 0 30px #ffdc9644;
+  background:repeating-conic-gradient(from 15deg,#efca9444 0deg 1deg,transparent 1deg 27deg); mask-image:radial-gradient(circle,transparent 58%,black 60%); }
+.axe-spiritual-illustration { position:relative; width:min(90%,300px); height:270px; display:grid; place-items:center;
+  filter:drop-shadow(0 0 17px #d4c5a69e); }
+.axe-spiritual-illustration--halo .axe-spirit-ring { width:72%; height:53px; border:9px solid #f9dba6; border-radius:50%; position:absolute; top:28px;
+  transform:rotate(-12deg); box-shadow:0 0 12px 5px #e7c896a6,inset 0 0 20px #e9d8b4; }
+.axe-spirit-aura-body { position:absolute; width:105px; height:160px; top:107px;
+  border-radius:55px 55px 35px 35px; background:radial-gradient(ellipse at 45% 15%,#a7e6fc7d,#142f46a9 60%,transparent);
+  border:1px solid #9bdfff69; box-shadow:0 0 34px #8fd8ff6e; }
+.axe-spirit-wing { position:absolute; width:40%; height:230px; top:10px; background:linear-gradient(115deg,#f0dbb9bb,#9bbfeeeb 42%,#436a9fe2 80%,transparent);
+  clip-path:polygon(95% 100%,63% 85%,10% 45%,0 13%,43% 35%,20% 4%,72% 28%,98% 65%);
+  filter:drop-shadow(0 0 8px #bde9ff); }
+.axe-spirit-wing--left { left:10%; transform:rotate(-16deg); }
+.axe-spirit-wing--right { right:10%; transform:scaleX(-1) rotate(-16deg); }
+.axe-spirit-aura-core { width:57px; height:108px; background:radial-gradient(ellipse,#e1faffc9,#568bbc81,transparent);
+  border-radius:35px; box-shadow:0 0 40px #7ec4ff9d; }
+.axe-spirit-orb { width:165px; height:200px; border-radius:43% 43% 48% 48%; border:2px solid #e3c28b;
+  background:radial-gradient(circle at 40% 32%,#d4f8ffad,#3c93becf 25%,#144169cc 65%,#0f1a31bd);
+  box-shadow:0 0 37px #8acbffb2,inset 0 0 36px #fff4c56e; }
+.axe-spirit-orb-symbol { position:absolute; font-size:75px; color:#fae9cb; text-shadow:0 0 32px #d5e8f7; }
+.axe-spiritual-vision-note { position:absolute; bottom:18px; background:#0b1824b0; padding:6px 12px; border-top:1px solid #e3c78d99;
+  letter-spacing:.09em; text-align:center; font-size:11px; color:#f3ddbb; }
+.axe-spiritual-details-head { display:flex; justify-content:space-between; align-items:start; gap:9px; }
+.axe-spiritual-details-head h2 { font-size:clamp(17px,2vw,25px); }
+.axe-spiritual-details-head p { margin:4px 0 10px; font:11px/1.45 'Segoe UI',sans-serif; color:#c6c8c6; }
+.axe-spiritual-eyebrow { color:#c5a977; letter-spacing:.2em; font:9px 'Segoe UI',sans-serif; text-transform:uppercase; }
+.axe-spiritual-close { width:29px;height:29px; flex-shrink:0; display:grid;place-items:center; border:1px solid #ad915e;
+  border-radius:50%; color:#eddbb7; font-size:24px; background:#0f1b2299; }
+.axe-spiritual-tabs { display:flex; gap:2px; margin:7px 0 12px; overflow-x:auto; flex-shrink:0; }
+.axe-spiritual-tabs button { flex:1; min-width:max-content; padding:9px 7px; text-transform:uppercase; border:1px solid #b9a47c57;
+  background:#111e278f; color:#d3d5d0; font:10px 'Segoe UI',sans-serif; letter-spacing:.04em; }
+.axe-spiritual-tabs button[aria-pressed="true"] { border-color:#86c7ed; color:#f0f8ff; background:#20466dd6;
+  box-shadow:inset 0 -2px #89d0ff,0 0 10px #4d9bd85c; }
+.axe-spiritual-detail-scroll { min-height:0; overflow:auto; flex:1; scrollbar-width:thin; padding:0 3px 10px; }
+.axe-spiritual-detail-scroll h3 { font-size:18px; font-weight:500; color:#efd6aa; margin:4px 0 10px; }
+.axe-spiritual-description { color:#c4c9cb; font:12px/1.6 'Segoe UI',sans-serif; margin:7px 0 15px; }
+.axe-spirit-indicator { border-top:1px solid #c7aa7469; padding:9px 3px; display:flex; justify-content:space-between;
+  gap:10px; color:#c6c8cc; font:12px 'Segoe UI',sans-serif; }
+.axe-spirit-indicator strong { font:bold 17px Georgia,serif; color:#e8ca94; }
+.axe-spirit-meter { margin:10px 0 15px; }
+.axe-spirit-meter-label { display:flex; justify-content:space-between; gap:10px; color:#cfc9bd; font:11px 'Segoe UI',sans-serif; }
+.axe-spirit-track { width:100%; height:11px; background:#070d14b9; border:1px solid #c8a67470; margin-top:7px; overflow:hidden; }
+.axe-spirit-track>span { display:block; height:100%; background:linear-gradient(90deg,#957344,#f3d598); }
+.axe-spirit-stats { margin:12px 0; display:grid; gap:4px; grid-template-columns:1fr 1fr; }
+.axe-spirit-stats>div { display:flex; flex-direction:column; gap:6px; padding:9px; background:#101b23ac;
+  border-bottom:1px solid #cbb48a45; min-width:0; }
+.axe-spirit-stats span { font:10px 'Segoe UI',sans-serif; color:#bdc5c7; }
+.axe-spirit-stats strong { font:14px Georgia,serif; color:#f3d4a7; }
+.axe-spiritual-primary,.axe-spiritual-secondary { display:block; width:100%; padding:12px 11px; margin:16px 0 6px;
+  border:1px solid #e5c78f; background:linear-gradient(115deg,#997846,#edcf92,#947246);
+  color:#17212a; font:bold 14px Georgia,serif; letter-spacing:.035em; }
+.axe-spiritual-primary:disabled { opacity:.45; filter:grayscale(.8); cursor:not-allowed; }
+.axe-spiritual-secondary { background:#162634b8; color:#e6cfa0; font-size:12px; }
+.axe-spiritual-warning,.axe-spiritual-message { background:#32271cc9; border:1px solid #cf9e5782; padding:11px; font:12px/1.5 'Segoe UI',sans-serif; }
+.axe-spiritual-message { color:#bde9cf; background:#16322aaf; border-color:#69a8928b; }
+.axe-spiritual-paths { display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; }
+.axe-spiritual-paths button { flex:0 0 auto; padding:7px 9px; color:#e9d8ba; border:1px solid #bb9c6957;
+  background:#142430d9; font:10px 'Segoe UI',sans-serif; }
+.axe-spiritual-paths button[aria-pressed="true"] { background:#24435b; border-color:#89caff; }
+.axe-spiritual-evolve { display:grid; place-items:center; gap:13px; padding:30px 8px; border:1px dashed #c5b48b69; color:#d2c9bc; }
+.axe-spiritual-resource-blank { border-top:1px solid #b8a47887; margin-top:13px; padding:12px 3px; color:#c4c0b6; }
+.axe-spiritual-resource-blank strong { display:block; font-size:24px; color:#ecdcbd; margin-top:9px; }
+.axe-spiritual-resource-blank p { font:11px 'Segoe UI',sans-serif; }
+.axe-spiritual-essence-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.axe-spiritual-essence-grid button { display:flex; gap:10px; padding:10px; align-items:center; text-align:left;
+  border:1px solid #bca47870; background:#172b33ba; color:#f1d9b6; }
+.axe-spiritual-essence-grid small { display:block; color:#b8c5ce; margin-top:4px; font:10px 'Segoe UI',sans-serif; }
+.axe-spiritual-current { display:flex; align-items:center; gap:9px; color:#ebc991; }
+.axe-spiritual-current h3 { margin:0; }
+@media(max-width:850px) {
+  .axe-spiritual-root { grid-template-columns:minmax(160px,34%) minmax(0,1fr); }
+  .axe-spiritual-vision { display:none; }
+  .axe-spiritual-sidebar { border-radius:11px 0 0 11px; }
+  .axe-spiritual-details { border-radius:0 11px 11px 0; }
+}
+@media(max-width:500px) {
+  .axe-service-workspace--spiritual { inset:max(82px,calc(var(--axe-service-navigation-bottom,128px) + 7px)) 6px 6px; }
+  .axe-spiritual-root { grid-template-columns:1fr; grid-template-rows:auto minmax(0,1fr); }
+  .axe-spiritual-sidebar { overflow:visible; border-radius:10px 10px 0 0; }
+  .axe-spiritual-brand { padding:7px 10px; }
+  .axe-spirit-brand-mark { font-size:23px; }
+  .axe-spiritual-brand h2 { font-size:15px; }
+  .axe-spiritual-choices { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:3px; padding:5px; }
+  .axe-spiritual-choices button,.axe-spiritual-coming { min-height:58px; padding:5px 2px; flex-direction:column; gap:3px; text-align:center; }
+  .axe-spiritual-choices svg { width:18px; height:18px; }
+  .axe-spiritual-choices b { font:10px Georgia,serif; }
+  .axe-spiritual-choices small,.axe-spirit-soon,.axe-spirit-ink-scene { display:none; }
+  .axe-spiritual-details { padding:10px; border-radius:0 0 10px 10px; }
+  .axe-spiritual-essence-grid { grid-template-columns:1fr 1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-spiritual-root,.axe-spiritual-illustration { animation:none; transition:none; }
+}
+
+/* Titles share the existing Spiritual glass screen and its scroll viewport.
+   Keep the title specialization equipment buttons functional and readable. */
+.axe-spiritual-title-embed { height:100%; min-height:360px; overflow:auto; }
+.axe-spiritual-title-embed > div { height:100%; min-height:340px; }
+.axe-spiritual-title-embed > div > div:first-child { width:36%; min-width:140px; flex-shrink:0; padding:6px; }
+.axe-spiritual-title-embed > div > div:last-child { flex:1 1 auto; min-width:0; padding:8px; }
+.axe-spiritual-title-embed .text-xl { font-size:clamp(14px,1.4vw,20px); }
+@media(max-width:650px) {
+  .axe-spiritual-title-embed > div { display:block; overflow:auto; }
+  .axe-spiritual-title-embed > div > div:first-child,
+  .axe-spiritual-title-embed > div > div:last-child { width:100%; min-width:0; }
+}
+
+/* Ascension is its own Spirituality subpage, backed by the original
+ * character progression component and persisted state. */
+.axe-spiritual-ascension-embed { height:100%; min-height:320px; overflow:auto;
+  border:1px solid rgba(220,190,140,.18); border-radius:8px;
+  background:rgba(12,22,31,.18);
+}
+.axe-spiritual-ascension-embed > div { min-height:100%; }
+.axe-spiritual-illustration--ascension .axe-spirit-orb { box-shadow:0 0 40px rgba(251,210,143,.24); }
+
+/* Readability pass: Titles and Ascension need a genuine work area, not a
+ * complex editor squeezed into the decorative one-third-width summary rail. */
+.axe-spiritual-root[data-progression-panel="title"],
+.axe-spiritual-root[data-progression-panel="ascension"] {
+  grid-template-columns:minmax(190px,20%) minmax(90px,.3fr) minmax(0,1.7fr);
+}
+.axe-spiritual-details { overflow:hidden; }
+.axe-spiritual-detail-scroll { overflow-x:hidden; overflow-y:auto; min-width:0; }
+.axe-spiritual-details-head > div { min-width:0; }
+.axe-spirit-stats { grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr)); }
+.axe-spiritual-essence-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr)); }
+.axe-spiritual-tabs,.axe-spiritual-paths { max-width:100%; }
+
+/* A single vertical scroll region owns the nested progression editor. The
+ * inherited TitleSubTab columns formerly clipped controls and set bonuses. */
+.axe-spiritual-title-embed,.axe-spiritual-ascension-embed {
+  height:auto; min-height:0; max-width:100%; overflow:visible;
+}
+.axe-spiritual-title-embed { container-type:inline-size; }
+.axe-spiritual-title-embed > .axe-title-layout {
+  display:grid; grid-template-columns:minmax(140px,27%) minmax(0,1fr);
+  gap:0; align-items:start; min-width:0; min-height:0; height:auto;
+}
+.axe-spiritual-title-embed .axe-title-list {
+  width:auto; min-width:0; overflow:visible; padding:10px 10px 12px 2px;
+}
+.axe-spiritual-title-embed .axe-title-detail {
+  min-width:0; overflow:visible; padding:10px 4px 24px 15px;
+}
+.axe-spiritual-title-embed .axe-title-hero { flex-wrap:wrap; min-width:0; align-items:flex-start; }
+.axe-spiritual-title-embed .axe-title-hero-copy { min-width:170px; flex:1 1 180px; overflow-wrap:anywhere; }
+.axe-spiritual-title-embed .axe-title-hero-emblem { width:60px; height:60px; flex:0 0 60px; }
+.axe-spiritual-title-embed .axe-title-hero-controls {
+  flex:1 1 150px; flex-direction:row; flex-wrap:wrap; align-items:start;
+}
+.axe-spiritual-title-embed .axe-title-hero-controls button {
+  flex:1 1 140px; min-width:0; padding:9px; white-space:normal;
+  letter-spacing:.08em; overflow-wrap:anywhere;
+}
+.axe-spiritual-title-embed .axe-title-metrics {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,120px),1fr)); gap:8px; margin-top:16px;
+}
+.axe-spiritual-title-embed .axe-title-metrics > * { min-width:0; padding:9px; }
+.axe-spiritual-title-embed .axe-title-metrics .text-xl { font-size:clamp(14px,1.4vw,20px); overflow-wrap:anywhere; }
+.axe-spiritual-title-embed .axe-title-actions { flex-wrap:wrap; align-items:flex-start; }
+.axe-spiritual-title-embed .axe-title-actions > * { max-width:100%; white-space:normal; }
+.axe-spiritual-title-embed .axe-title-bonuses {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr)); gap:14px; margin-top:18px;
+}
+.axe-spiritual-title-embed .axe-title-bonuses > * { min-width:0; }
+.axe-spiritual-title-embed .axe-title-bonuses .flex.justify-between { gap:8px; }
+.axe-spiritual-ascension-embed { container-type:inline-size; }
+.axe-spiritual-ascension-embed .grid.grid-cols-1 {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));
+}
+@container (max-width:650px) {
+  .axe-spiritual-title-embed .axe-title-layout {
+    display:flex; flex-direction:column; align-items:stretch; min-height:0;
+  }
+  .axe-spiritual-title-embed .axe-title-list {
+    display:flex; align-items:stretch; gap:7px; padding:8px 0;
+    width:100%; overflow-x:auto; overflow-y:hidden;
+    border-right:0; border-bottom:1px solid rgba(221,191,137,.38);
+  }
+  .axe-spiritual-title-embed .axe-title-list > div:first-child { display:none; }
+  .axe-spiritual-title-embed .axe-title-list > button {
+    flex:0 0 170px; width:170px; min-width:0; margin:0; padding:8px;
+  }
+  .axe-spiritual-title-embed .axe-title-detail { width:100%; padding:12px 0 22px; }
+}
+@media(max-width:1100px) {
+  .axe-spiritual-root[data-progression-panel="title"],
+  .axe-spiritual-root[data-progression-panel="ascension"] {
+    grid-template-columns:minmax(175px,25%) minmax(0,1fr);
+  }
+  .axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-vision,
+  .axe-spiritual-root[data-progression-panel="ascension"] .axe-spiritual-vision { display:none; }
+}
+@media(max-width:640px) {
+  .axe-spiritual-root { grid-template-columns:minmax(0,1fr)!important; grid-template-rows:auto minmax(0,1fr); }
+  .axe-spiritual-vision { display:none; }
+  .axe-spiritual-sidebar { overflow:visible; border-radius:10px 10px 0 0; }
+  .axe-spiritual-brand { padding:6px 9px; }
+  .axe-spirit-brand-mark { font-size:22px; }
+  .axe-spiritual-brand h2 { font-size:15px; }
+  .axe-spiritual-choices { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; padding:5px; }
+  .axe-spiritual-choices button,.axe-spiritual-coming {
+    min-width:0; min-height:48px; gap:3px; padding:5px 2px;
+    flex-direction:column; text-align:center;
+  }
+  .axe-spiritual-choices svg { width:17px; height:17px; }
+  .axe-spiritual-choices b { font:10px/1.2 Georgia,serif; overflow-wrap:anywhere; }
+  .axe-spiritual-choices small,.axe-spirit-soon,.axe-spirit-ink-scene { display:none; }
+  .axe-spiritual-details { border-radius:0 0 10px 10px; padding:10px; }
+  .axe-spiritual-tabs button { padding:7px 8px; }
+}
+
+/* Titles: one independent glass box owns title selection/equip/enhance;
+ * the other owns live stats, stage costs and every current/next bonus. */
+.axe-spiritual-title-embed > .axe-title-container {
+  width:100%; height:auto; min-height:0; max-width:100%;
+}
+.axe-spiritual-title-embed .axe-title-container .axe-title-layout {
+  display:grid; grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);
+  align-items:start; gap:clamp(9px,1.15vw,17px); height:auto; min-height:0;
+}
+.axe-spiritual-title-embed .axe-title-control-panel,
+.axe-spiritual-title-embed .axe-title-stats-panel.axe-title-detail {
+  padding:clamp(12px,1.25vw,19px); width:100%; min-width:0;
+  border:1px solid rgba(219,185,125,.75); border-radius:15px;
+}
+.axe-spiritual-title-embed .axe-title-control-panel .axe-title-list {
+  display:block; width:100%; max-height:min(38vh,440px);
+  min-width:0; overflow-x:hidden; overflow-y:auto;
+  padding:0 3px 0 0; margin:15px 0 0; border:0;
+}
+.axe-spiritual-title-embed .axe-title-metrics { margin-top:0; }
+.axe-spiritual-title-embed .axe-title-bonuses { margin-top:22px; }
+.axe-spiritual-title-embed .axe-title-hero-controls {
+  flex:1 1 100%; flex-direction:row; flex-wrap:wrap; min-width:0;
+}
+@container (max-width:770px) {
+  .axe-spiritual-title-embed .axe-title-container .axe-title-layout {
+    grid-template-columns:minmax(0,1fr); gap:11px;
+  }
+}
+@container (max-width:650px) {
+  .axe-spiritual-title-embed .axe-title-control-panel .axe-title-list {
+    display:flex; gap:7px; width:100%; max-height:none;
+    overflow-x:auto; overflow-y:hidden;
+    padding:5px 0 10px; margin:12px 0 0;
+  }
+  .axe-spiritual-title-embed .axe-title-control-panel .axe-title-list > button {
+    flex:0 0 175px; width:175px; min-width:0; margin:0;
+  }
+  .axe-spiritual-title-embed .axe-title-control-panel .axe-title-list-heading {
+    display:none;
+  }
+}
+
+/* Foundation Titles final layout: same outside Spirituality frame, but use
+ * its full right-hand work area rather than a tiny panel beside an empty orb.
+ * The compact TitleSubTab owns the heading, points, selection, costs and stats. */
+.axe-spiritual-root[data-progression-panel="title"] {
+  grid-template-columns:minmax(175px,20%) minmax(0,1fr);
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-vision {
+  display:none;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-details {
+  position:relative;
+  grid-column:2;
+  padding:9px 12px 12px;
+  min-width:0;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-details-head {
+  position:absolute;
+  z-index:3;
+  right:10px;
+  top:10px;
+  margin:0;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-tabs {
+  display:none;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-detail-scroll {
+  flex:1 1 auto;
+  overflow-x:hidden;
+  overflow-y:auto;
+  padding:0 5px 12px 0;
+  min-width:0;
+  min-height:0;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-title-embed {
+  overflow:visible;
+  height:auto;
+  min-height:0;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-title-compact {
+  padding:7px 8px 12px;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-title-compact-header {
+  padding-right:35px;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-title-bonuses {
+  padding-top:11px;
+  border-top:1px solid rgba(222,188,130,.35);
+}
+/* The real scroll owner is the outer detail pane, not the nested Titles div. */
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-detail-scroll::-webkit-scrollbar {
+  width:8px;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-detail-scroll::-webkit-scrollbar-track {
+  background:linear-gradient(to bottom,transparent 0%,rgba(215,171,100,.47) 50%,transparent 100%) center/1px 100% no-repeat;
+}
+.axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-detail-scroll::-webkit-scrollbar-thumb {
+  border:2px solid transparent;
+  border-radius:999px;
+  background:linear-gradient(#f4dba9,#b58d53) padding-box;
+}
+@media(max-width:640px) {
+  .axe-spiritual-root[data-progression-panel="title"] {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .axe-spiritual-root[data-progression-panel="title"] .axe-spiritual-details {
+    grid-column:1;
+    min-height:0;
+  }
+  .axe-spiritual-root[data-progression-panel="title"] .axe-title-compact-header {
+    padding-right:32px;
+  }
+}
+
+
+/* Liquid-glass color pass — match Appearance's champagne gold and Companion's
+ * mineral-blue translucent surfaces, without replacing the live Game 3D world.
+ * A pale tinted inner shade makes dark ink labels readable across lighting. */
+.axe-service-workspace--spiritual {
+  --axe-frost-edge:rgba(240,211,161,.8);
+  --axe-frost-ink:#20303f;
+  --axe-frost-muted:#34495a;
+  --axe-frost-gold:#654821;
+  --axe-frost-glow:rgba(247,220,169,.21);
+  --axe-frost-shade:linear-gradient(142deg,rgba(179,200,212,.74),rgba(129,156,175,.7) 52%,rgba(105,138,158,.74));
+}
+.axe-service-workspace--spiritual .axe-spiritual-sidebar,
+.axe-service-workspace--spiritual .axe-spiritual-details {
+  color:var(--axe-frost-ink);
+  border:1px solid var(--axe-frost-edge);
+  background:var(--axe-frost-shade);
+  -webkit-backdrop-filter:blur(16px) saturate(112%);
+  backdrop-filter:blur(16px) saturate(112%);
+  box-shadow:inset 0 1px rgba(255,255,255,.38),
+    inset 0 -15px 25px rgba(33,56,73,.09),0 9px 26px rgba(8,17,26,.38);
+}
+.axe-service-workspace--spiritual .axe-spiritual-sidebar::before,
+.axe-service-workspace--spiritual .axe-spiritual-details::before {
+  background:linear-gradient(90deg,transparent,rgba(255,238,201,.95),transparent);
+}
+.axe-service-workspace--spiritual .axe-spiritual-brand h2,
+.axe-service-workspace--spiritual .axe-spiritual-details h2,
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll h3,
+.axe-service-workspace--spiritual .axe-spiritual-current,
+.axe-service-workspace--spiritual .axe-spirit-indicator strong,
+.axe-service-workspace--spiritual .axe-spirit-stats strong,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank strong {
+  color:var(--axe-frost-gold);
+  text-shadow:0 1px rgba(255,248,232,.36);
+}
+.axe-service-workspace--spiritual .axe-spiritual-brand p,
+.axe-service-workspace--spiritual .axe-spiritual-details-head p,
+.axe-service-workspace--spiritual .axe-spiritual-description,
+.axe-service-workspace--spiritual .axe-spirit-indicator,
+.axe-service-workspace--spiritual .axe-spirit-stats span,
+.axe-service-workspace--spiritual .axe-spirit-meter-label,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank p {
+  color:var(--axe-frost-muted);
+  text-shadow:none;
+}
+.axe-service-workspace--spiritual .axe-spiritual-eyebrow,
+.axe-service-workspace--spiritual .axe-spirit-soon {
+  color:var(--axe-frost-gold);
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button,
+.axe-service-workspace--spiritual .axe-spiritual-coming,
+.axe-service-workspace--spiritual .axe-spiritual-tabs button,
+.axe-service-workspace--spiritual .axe-spiritual-paths button,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid button {
+  color:var(--axe-frost-ink);
+  border-color:rgba(239,212,166,.56);
+  background:linear-gradient(135deg,rgba(231,240,244,.31),rgba(105,142,166,.28));
+  box-shadow:inset 0 1px rgba(255,255,255,.2);
+  -webkit-backdrop-filter:blur(8px) saturate(112%);
+  backdrop-filter:blur(8px) saturate(112%);
+  text-shadow:none;
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button small,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid small {
+  color:#344b5c;
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-tabs button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-paths button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid button:hover {
+  background:linear-gradient(145deg,rgba(255,237,197,.49),rgba(176,207,223,.45));
+  border-color:rgba(254,234,187,.92);
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-spiritual-tabs button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-spiritual-paths button[aria-pressed="true"] {
+  color:#312b25;
+  background:linear-gradient(115deg,rgba(251,232,188,.92),rgba(211,229,232,.75));
+  border-color:#e0ad62;
+  box-shadow:inset 0 -2px rgba(174,120,53,.68),0 0 13px rgba(255,226,170,.28);
+}
+.axe-service-workspace--spiritual .axe-spirit-stats > div {
+  background:linear-gradient(132deg,rgba(231,239,240,.36),rgba(91,125,145,.20));
+  border:1px solid rgba(227,204,163,.43);
+  border-radius:7px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-primary,
+.axe-service-workspace--spiritual .axe-spiritual-secondary {
+  color:#2e302d;
+  background:linear-gradient(120deg,rgba(248,225,183,.91),rgba(184,208,217,.72));
+  border:1px solid #d4a971;
+  border-radius:8px;
+  box-shadow:inset 0 1px rgba(255,250,233,.57),0 2px 8px rgba(24,35,43,.18);
+}
+.axe-service-workspace--spiritual .axe-spiritual-secondary {
+  background:linear-gradient(145deg,rgba(222,233,237,.56),rgba(117,155,179,.39));
+  color:#243647;
+}
+.axe-service-workspace--spiritual .axe-spiritual-close {
+  color:#493826;
+  background:rgba(242,230,203,.69);
+  border-color:rgba(161,117,59,.72);
+  box-shadow:inset 0 1px rgba(255,255,255,.55);
+}
+.axe-service-workspace--spiritual .axe-spiritual-warning,
+.axe-service-workspace--spiritual .axe-spiritual-message {
+  color:#402b23;
+  background:rgba(245,216,173,.58);
+  border:1px solid rgba(168,120,61,.57);
+  border-radius:7px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-message {
+  color:#1d4b3b;
+  background:rgba(188,228,204,.65);
+  border-color:rgba(75,136,101,.6);
+}
+
+/* Titles: keep the user's compact one-pane structure and real contribution
+ * data; shade individual rows without adding a large solid backdrop. */
+.axe-service-workspace--spiritual .axe-title-compact {
+  color:var(--axe-frost-ink);
+  background:linear-gradient(150deg,rgba(219,233,238,.20),rgba(107,141,163,.14));
+  border:1px solid rgba(247,222,179,.27);
+  border-radius:12px;
+}
+.axe-service-workspace--spiritual .axe-title-compact-header,
+.axe-service-workspace--spiritual .axe-title-selection {
+  border-color:rgba(123,96,58,.35);
+}
+.axe-service-workspace--spiritual .axe-title-compact-header h3,
+.axe-service-workspace--spiritual .axe-title-points strong,
+.axe-service-workspace--spiritual .axe-title-selection b,
+.axe-service-workspace--spiritual .axe-title-cost b,
+.axe-service-workspace--spiritual .axe-title-stat-group h4 {
+  color:var(--axe-frost-gold);
+  text-shadow:0 1px rgba(255,252,242,.35);
+}
+.axe-service-workspace--spiritual .axe-title-compact-header p,
+.axe-service-workspace--spiritual .axe-title-selection p,
+.axe-service-workspace--spiritual .axe-title-selection small,
+.axe-service-workspace--spiritual .axe-title-cost-note,
+.axe-service-workspace--spiritual .axe-title-result,
+.axe-service-workspace--spiritual .axe-title-paths small,
+.axe-service-workspace--spiritual .axe-title-paths em {
+  color:var(--axe-frost-muted);
+}
+.axe-service-workspace--spiritual .axe-title-kicker,
+.axe-service-workspace--spiritual .axe-title-points small,
+.axe-service-workspace--spiritual .axe-title-cost small,
+.axe-service-workspace--spiritual .axe-title-progress-label {
+  color:#604726;
+}
+.axe-service-workspace--spiritual .axe-title-paths button,
+.axe-service-workspace--spiritual .axe-title-batch button {
+  color:#293f4c;
+}
+.axe-service-workspace--spiritual .axe-title-paths button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-title-paths button:hover,
+.axe-service-workspace--spiritual .axe-title-batch button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-title-batch button:hover {
+  color:#503b22;
+  background:rgba(248,231,193,.65);
+  border-color:rgba(195,150,78,.73);
+}
+.axe-service-workspace--spiritual .axe-title-equipment-actions button,
+.axe-service-workspace--spiritual .axe-title-enhance-action {
+  color:#3d2d20;
+  background:linear-gradient(125deg,rgba(246,225,184,.83),rgba(167,196,211,.69));
+  border:1px solid rgba(199,155,87,.74);
+  box-shadow:inset 0 1px rgba(255,255,255,.4);
+}
+.axe-service-workspace--spiritual .axe-title-stat-group {
+  padding:10px 12px;
+  border:1px solid rgba(242,215,175,.58);
+  background:linear-gradient(140deg,rgba(233,242,243,.38),rgba(139,168,186,.30));
+  border-radius:9px;
+  box-shadow:inset 0 1px rgba(255,255,255,.24);
+}
+.axe-service-workspace--spiritual .axe-title-stat-group > div > div {
+  color:#304353;
+  border-bottom-color:rgba(80,107,128,.17);
+}
+.axe-service-workspace--spiritual .axe-title-stat-group b {color:#263c4a;}
+
+/* Ascension is an existing Tailwind-based progression component. Keep its
+ * light labels on darker glass within the pale Spirituality outer frame. */
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed {
+  background:linear-gradient(145deg,rgba(34,53,67,.56),rgba(26,46,61,.42));
+  border:1px solid rgba(246,218,167,.55);
+  border-radius:11px;
+  -webkit-backdrop-filter:blur(12px) saturate(108%);
+  backdrop-filter:blur(12px) saturate(108%);
+}
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed section {
+  border-color:rgba(231,209,169,.4);
+  background:linear-gradient(138deg,rgba(36,55,72,.79),rgba(48,73,92,.72));
+  box-shadow:inset 0 1px rgba(250,243,226,.14),0 3px 12px rgba(0,0,0,.17);
+  -webkit-backdrop-filter:blur(9px);
+  backdrop-filter:blur(9px);
+}
+
+/* Shared champagne pill and fading hairline, including the REAL scroll
+ * owner in the Titles panel (not the non-scrolling inner title wrapper). */
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll,
+.axe-service-workspace--spiritual .axe-spiritual-sidebar,
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(158,109,56,.95) transparent;
+}
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll::-webkit-scrollbar-track:vertical,
+.axe-service-workspace--spiritual .axe-spiritual-sidebar::-webkit-scrollbar-track:vertical {
+  background:linear-gradient(to bottom,transparent,rgba(153,112,64,.46) 48%,transparent) center/1px 100% no-repeat;
+}
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll::-webkit-scrollbar-thumb,
+.axe-service-workspace--spiritual .axe-spiritual-sidebar::-webkit-scrollbar-thumb {
+  background:linear-gradient(#f8e4b9,#bd905d) padding-box;
+  border:2px solid transparent;
+  border-radius:999px;
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-service-workspace--spiritual .axe-spiritual-choices button {transition:none;}
+}
+
+
+/* Uniform Appearance palette, replacing the previous bright mineral/frost pass.
+ * All pages now inherit the APPROVED Appearance glass stops and warm cream ink.
+ * Nested subcards use a nearly-clear shade so glass opacity is not doubled. */
+.axe-service-workspace--spiritual {
+  --axe-frost-edge:var(--axe-ui-gold);
+  --axe-frost-ink:var(--axe-ui-text);
+  --axe-frost-muted:var(--axe-ui-subtext);
+  --axe-frost-gold:var(--axe-ui-gold-text);
+  --axe-frost-shade:var(--axe-ui-glass);
+  color:var(--axe-ui-text);
+}
+.axe-service-workspace--spiritual .axe-spiritual-sidebar,
+.axe-service-workspace--spiritual .axe-spiritual-details,
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed {
+  color:var(--axe-ui-text);
+  background:var(--axe-ui-glass);
+  border-color:var(--axe-ui-gold);
+  -webkit-backdrop-filter:blur(13px) saturate(104%);
+  backdrop-filter:blur(13px) saturate(104%);
+  box-shadow:inset 0 0 18px #e7d7b31a,0 1px 10px #0002;
+}
+.axe-service-workspace--spiritual .axe-spiritual-brand h2,
+.axe-service-workspace--spiritual .axe-spiritual-details h2,
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll h3,
+.axe-service-workspace--spiritual .axe-spiritual-current,
+.axe-service-workspace--spiritual .axe-spirit-indicator strong,
+.axe-service-workspace--spiritual .axe-spirit-stats strong,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank strong,
+.axe-service-workspace--spiritual .axe-title-compact-header h3,
+.axe-service-workspace--spiritual .axe-title-stat-group h4 {
+  color:var(--axe-ui-heading);
+  text-shadow:0 1px 4px #000b;
+}
+.axe-service-workspace--spiritual .axe-spiritual-brand p,
+.axe-service-workspace--spiritual .axe-spiritual-details-head p,
+.axe-service-workspace--spiritual .axe-spiritual-description,
+.axe-service-workspace--spiritual .axe-spirit-indicator,
+.axe-service-workspace--spiritual .axe-spirit-stats span,
+.axe-service-workspace--spiritual .axe-spirit-meter-label,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank,
+.axe-service-workspace--spiritual .axe-spiritual-resource-blank p,
+.axe-service-workspace--spiritual .axe-spiritual-choices button small,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid small,
+.axe-service-workspace--spiritual .axe-title-compact-header p,
+.axe-service-workspace--spiritual .axe-title-selection p,
+.axe-service-workspace--spiritual .axe-title-selection small,
+.axe-service-workspace--spiritual .axe-title-cost-note,
+.axe-service-workspace--spiritual .axe-title-result,
+.axe-service-workspace--spiritual .axe-title-paths small,
+.axe-service-workspace--spiritual .axe-title-paths em {
+  color:var(--axe-ui-subtext);
+  text-shadow:0 1px 3px #0008;
+}
+.axe-service-workspace--spiritual .axe-spiritual-eyebrow,
+.axe-service-workspace--spiritual .axe-spirit-soon,
+.axe-service-workspace--spiritual .axe-title-kicker,
+.axe-service-workspace--spiritual .axe-title-points small,
+.axe-service-workspace--spiritual .axe-title-cost small,
+.axe-service-workspace--spiritual .axe-title-progress-label {
+  color:var(--axe-ui-gold-text);
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button,
+.axe-service-workspace--spiritual .axe-spiritual-coming,
+.axe-service-workspace--spiritual .axe-spiritual-tabs button,
+.axe-service-workspace--spiritual .axe-spiritual-paths button,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid button,
+.axe-service-workspace--spiritual .axe-spiritual-secondary,
+.axe-service-workspace--spiritual .axe-spiritual-close,
+.axe-service-workspace--spiritual .axe-title-equipment-actions button,
+.axe-service-workspace--spiritual .axe-title-paths button,
+.axe-service-workspace--spiritual .axe-title-batch button {
+  color:var(--axe-ui-text);
+  border-color:rgba(242,210,147,.35);
+  background:rgba(32,44,58,.14);
+  text-shadow:0 1px 4px #000b;
+  box-shadow:none;
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-tabs button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-paths button:hover,
+.axe-service-workspace--spiritual .axe-spiritual-essence-grid button:hover,
+.axe-service-workspace--spiritual .axe-title-paths button:hover,
+.axe-service-workspace--spiritual .axe-title-batch button:hover {
+  color:var(--axe-ui-text);
+  background:rgba(242,210,147,.16);
+  border-color:var(--axe-ui-gold);
+}
+.axe-service-workspace--spiritual .axe-spiritual-choices button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-spiritual-tabs button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-spiritual-paths button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-title-paths button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-title-batch button[aria-pressed="true"],
+.axe-service-workspace--spiritual .axe-spiritual-primary,
+.axe-service-workspace--spiritual .axe-title-enhance-action {
+  color:var(--axe-ui-selected-text);
+  background:var(--axe-ui-selected);
+  border-color:#f4d391aa;
+  text-shadow:none;
+  box-shadow:0 0 20px #f4d99b7c,inset 0 1px 8px #fff5;
+}
+.axe-service-workspace--spiritual .axe-spirit-stats > div,
+.axe-service-workspace--spiritual .axe-spiritual-warning,
+.axe-service-workspace--spiritual .axe-spiritual-message,
+.axe-service-workspace--spiritual .axe-spiritual-evolve,
+.axe-service-workspace--spiritual .axe-title-compact,
+.axe-service-workspace--spiritual .axe-title-stat-group {
+  color:var(--axe-ui-text);
+  background:rgba(32,44,58,.10);
+  border-color:rgba(242,210,147,.32);
+  text-shadow:0 1px 4px #000a;
+  box-shadow:inset 0 1px rgba(247,224,177,.09);
+}
+.axe-service-workspace--spiritual .axe-spiritual-message {color:#b8f0cc;}
+.axe-service-workspace--spiritual .axe-spiritual-warning {color:#f8d5a7;}
+.axe-service-workspace--spiritual .axe-title-points strong,
+.axe-service-workspace--spiritual .axe-title-selection b,
+.axe-service-workspace--spiritual .axe-title-cost b,
+.axe-service-workspace--spiritual .axe-title-stat-group b {
+  color:var(--axe-ui-heading);
+  text-shadow:0 1px 4px #000a;
+}
+.axe-service-workspace--spiritual .axe-title-selection,
+.axe-service-workspace--spiritual .axe-title-compact-header,
+.axe-service-workspace--spiritual .axe-title-stat-group > div > div {
+  color:var(--axe-ui-text);
+  border-color:rgba(242,210,147,.25);
+}
+.axe-service-workspace--spiritual .axe-title-compact-header,
+.axe-service-workspace--spiritual .axe-title-selection {
+  background:transparent;
+}
+.axe-service-workspace--spiritual .axe-title-stat-group {
+  box-shadow:inset 0 1px rgba(247,224,177,.10);
+}
+/* Ascension has Tailwind light labels: the same low-opacity Appearance glass
+   covers the full pane, so its internal cards must not add another dark veil. */
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed section {
+  color:var(--axe-ui-text);
+  background:rgba(32,44,58,.10);
+  border-color:rgba(242,210,147,.4);
+  -webkit-backdrop-filter:blur(13px) saturate(104%);
+  backdrop-filter:blur(13px) saturate(104%);
+  box-shadow:inset 0 1px rgba(247,224,177,.10);
+}
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed .text-white,
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed .text-white\/80 {
+  color:var(--axe-ui-text);
+}
+
+
+/* Wings and Mind (Halo) use 20% more detail-panel width: 35% → 42%.
+ * Reclaim the space from the central illustration, never from the left menu.
+ * Keep the existing two-column/tablet and stacked/mobile layouts intact. */
+@media(min-width:851px) {
+  .axe-spiritual-root:is([data-progression-panel="wings"],[data-progression-panel="halo"]) {
+    grid-template-columns:minmax(205px,24%) minmax(150px,1fr) minmax(350px,42%);
+  }
+}
+
+/* The wing-path chooser remains a left/right scroll rail, without pushing
+ * the stats or enhancement button out of the right-hand panel. */
+.axe-spiritual-root[data-progression-panel="wings"] .axe-spiritual-paths {
+  overflow-x:auto;
+  overflow-y:hidden;
+  flex-wrap:nowrap;
+  padding:0 2px 8px;
+  scroll-snap-type:x proximity;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(158,109,56,.95) transparent;
+}
+.axe-spiritual-root[data-progression-panel="wings"] .axe-spiritual-paths button {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:4px;
+  min-width:138px;
+  min-height:54px;
+  padding:8px 11px;
+  scroll-snap-align:start;
+  text-align:left;
+  border-radius:8px;
+}
+.axe-spiritual-paths button span,
+.axe-spiritual-paths button small {display:block;max-width:100%;white-space:nowrap;}
+.axe-spiritual-paths button small {font:10px/1.3 'Segoe UI',sans-serif;opacity:.85;}
+.axe-spiritual-bonus-section {
+  margin:14px 0 10px;
+  padding:11px 11px 7px;
+  min-width:0;
+  border:1px solid rgba(242,210,147,.37);
+  border-radius:10px;
+  background:rgba(32,44,58,.12);
+  box-shadow:inset 0 1px rgba(247,224,177,.08);
+}
+.axe-spiritual-detail-scroll .axe-spiritual-bonus-section h3 {
+  margin:0 0 7px;
+  font:500 15px Georgia,serif;
+  color:var(--axe-ui-heading,#f2dab0);
+}
+.axe-spiritual-bonus-section .axe-spiritual-description {margin:0 0 9px;}
+.axe-spiritual-bonus-section .axe-spirit-stats {margin:0;gap:6px;}
+.axe-spiritual-bonus-section .axe-spirit-stats > div {min-width:0;overflow-wrap:anywhere;}
+.axe-spiritual-bonus-section .axe-spirit-stats strong {font-size:13px;font-variant-numeric:tabular-nums;}
+@media(max-width:850px) {
+  .axe-spiritual-root[data-progression-panel="wings"] .axe-spiritual-paths button {min-width:116px;}
+}
