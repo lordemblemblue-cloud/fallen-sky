@@ -1,0 +1,7 @@
+/* Preserve the original game creator's left control sheet and full-height actor. */
+.axe-login--arcane .axe-login-creator-inworld .creator-rail{top:50%;transform:translateY(-50%);max-height:calc(100dvh - 32px);overflow-y:auto;scrollbar-width:none}
+.axe-login--arcane .axe-login-creator-inworld .creator-panel-head{padding-top:76px}
+.axe-login--arcane .axe-login-creator-inworld .creator-stage{height:100dvh;min-height:0}
+.axe-login--arcane .axe-login-creator-inworld .creator-canvas{min-height:0}
+.axe-login--arcane .axe-game3d-name-preview{bottom:auto;height:auto}
+@media(max-width:840px){.axe-login--arcane .axe-login-creator-inworld .creator-rail{top:auto;bottom:8px;transform:none;max-height:50px;left:8px;right:8px;border-radius:16px;overflow-x:auto}.axe-login--arcane .axe-login-creator-inworld .creator-navigation{flex-direction:row;width:max-content}.axe-login--arcane .axe-login-creator-inworld .creator-panel{left:8px;right:8px;top:auto;bottom:62px;width:auto;height:42dvh;max-height:42dvh;border-radius:20px}.axe-login--arcane .axe-login-creator-inworld .creator-panel-head{padding-top:14px}.axe-login--arcane .axe-login-creator-inworld .creator-stage{left:0;right:0;top:0;bottom:calc(42dvh + 62px);height:auto}.axe-login--arcane .axe-login-creator-inworld .creator-brand{max-width:48vw}.axe-login--arcane .axe-login-creator-inworld .creator-rail-label{display:none}}

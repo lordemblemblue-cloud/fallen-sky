@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createAvatarScene } from './avatarPreviewScene';
+import { readCreatorCapabilities } from '@/components/onboarding/creatorCapabilities';
 
 // The authored preview for the animated platform bodies (v5). The fused creator
 // bodies use creatorStageScene instead.
@@ -22,11 +23,10 @@ export default function GenesisModelPreview({
       config,
       portrait: focus === 'face',
       orbit: true,
-      onReady: () => {
+      onReady: model => {
+        setFailed(false);
         onCustomizationState?.({ loading: false, error: '' });
-        // Shape controls are authored on the fused bodies; the platform bodies
-        // expose colour and proportion controls only.
-        onCapabilities?.({ customization: { shapes: [] } });
+        onCapabilities?.(readCreatorCapabilities(model));
       },
       onError: () => {
         setFailed(true);

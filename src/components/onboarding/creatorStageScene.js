@@ -1,4 +1,5 @@
 import { createAvatarScene } from './avatarPreviewScene';
+import { readCreatorCapabilities } from '@/components/onboarding/creatorCapabilities';
 
 // Stage for the fused creator bodies (Eve / Adam): per-category camera framing,
 // drag-to-rotate and live expression preview on top of the shared avatar scene.
@@ -9,9 +10,9 @@ export function createCreatorStage(mount, options = {}) {
     url,
     config: {},
     orbit: true,
-    onReady: () => {
+    onReady: model => {
       onState?.({ loading: false, error: '' });
-      onCapabilities?.({ customization: { shapes: [] } });
+      onCapabilities?.(readCreatorCapabilities(model));
       onReady?.();
     },
     onError: () => {
@@ -27,7 +28,7 @@ export function createCreatorStage(mount, options = {}) {
       scene.setAppearance(config);
     },
     focus(shot) {
-      scene.setShot(shot === 'face' || shot === 'head' ? 'face' : 'body');
+      scene.setShot(shot);
     },
     expression(morphs) {
       scene.setExpression(morphs || {});

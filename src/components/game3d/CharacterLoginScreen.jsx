@@ -29,6 +29,7 @@ import './CharacterSelectionPanorama.css';
 import './CharacterLivingChronicle.css';
 import './CharacterCrossline.css';
 import './CharacterSelectionRefinement.css';
+import './CharacterCreatorOriginalLayout.css';
 
 
 function displayField(value, fallback) {

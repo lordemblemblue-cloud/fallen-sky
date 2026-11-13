@@ -71,14 +71,16 @@ export function createAvatarScene(mount, options = {}) {
   resize();
 
   const frameCamera = () => {
+    const targets={face:[1.62,1.66,1.15],upper:[1.35,1.4,1.7],hips:[.83,.9,1.8],body:[1.05,1.35,3.2],back:[1.05,1.35,3.2]};
+    const [targetY,eyeY,distance]=targets[shot]||targets.body;
     if (controls) {
-      controls.target.set(0, shot === 'face' ? 1.62 : 1.05, 0);
-      camera.position.set(Math.sin(spin) * 1.2, shot === 'face' ? 1.66 : 1.35, shot === 'face' ? 1.15 : 3.2);
+      controls.target.set(0, targetY, 0);
+      camera.position.set(Math.sin(spin) * 1.2, eyeY, distance);
       controls.update();
       return;
     }
-    camera.position.set(Math.sin(spin) * 0.9, shot === 'face' ? 1.63 : 1.25, shot === 'face' ? 1.0 : 3.05);
-    camera.lookAt(0, shot === 'face' ? 1.6 : 1.0, 0);
+    camera.position.set(Math.sin(spin) * 0.9, eyeY, distance);
+    camera.lookAt(0, targetY, 0);
   };
   frameCamera();
 
@@ -101,6 +103,7 @@ export function createAvatarScene(mount, options = {}) {
     }
     try {
       const loaded = await loadAvatarModel(url || config, 1.8);
+      if (url) await applyPlayerAppearance(loaded, latestAppearance);
       if (disposed) {
         disposeAvatarModel(loaded);
         return;
@@ -123,7 +126,8 @@ export function createAvatarScene(mount, options = {}) {
       if (model) applyPlayerAppearance(model, latestAppearance);
     },
     setShot(next) {
-      if (next) shot = next;
+      if (next) shot = ['head','face'].includes(next) ? 'face' : next;
+      if (model) model.rotation.y = next === 'back' ? Math.PI : 0;
       frameCamera();
     },
     setExpression(morphs) {

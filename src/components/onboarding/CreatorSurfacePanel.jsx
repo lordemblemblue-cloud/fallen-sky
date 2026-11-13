@@ -4,7 +4,7 @@ import CreatorLayerPanel from '@/components/onboarding/CreatorLayerPanel';
 import { SKIN_COLORS, HAIR_COLORS, EYE_COLORS } from '@/components/onboarding/creatorOptions';
 export default function CreatorSurfacePanel({config,setConfig,section,capabilities}) {
  const set=patch=>setConfig(current=>({...current,...patch}));
- const color=(label,field,enabled,choices)=><CreatorColors label={label} choices={choices} value={config[enabled]?config[field]:''} onChange={value=>set({[field]:value,[enabled]:true})} onReset={()=>set({[enabled]:false})}/>;
+ const color=(label,field,enabled,choices)=><CreatorColors label={label} choices={choices} value={config[enabled]?config[field]:''} disabled={field==='eye_color'&&!capabilities.customization?.iris} onChange={value=>set({[field]:value,[enabled]:true})} onReset={()=>set({[enabled]:false})}/>;
  if(section==='face')return color('Eye color','eye_color','eye_tint_enabled',EYE_COLORS);
  if(section==='skin')return <section className="creator-group">{color('Complexion','skin_tone','skin_tint_enabled',SKIN_COLORS)}{config.skin_tint_enabled&&<CreatorRange label="Tint" value={config.skin_tint_strength??1} onChange={value=>set({skin_tint_strength:value})}/>}</section>;
  if(section==='hair')return <><CreatorLayerPanel config={config} setConfig={setConfig} slot="hair"/>{color('Hair color','hair_color','hair_tint_enabled',HAIR_COLORS)}</>;

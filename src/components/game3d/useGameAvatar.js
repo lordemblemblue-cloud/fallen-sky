@@ -9,5 +9,7 @@ export function useGameAvatar(){
  const appearance=playerAppearance(localCharacter||saved);
  // playerAppearance intentionally pins the platform avatar to v5. Only Game 3D
  // opts into the selected local creator body for actual world rendering.
- return localCharacter?{...appearance,model_url:game3dCharacterModel(localCharacter)}:appearance;
+ // Readiness compares the requested body for every roster slot, including
+ // Dev Test. Leaving its model URL undefined made Enter World wait forever.
+ return {...appearance,model_url:game3dCharacterModel(localCharacter||appearance)};
 }
