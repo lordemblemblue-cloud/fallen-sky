@@ -75,19 +75,10 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
     // removing the box faces also removes them from the subsequent collision bake.
     // Preserve the real top polygons so houses, feet and NPCs remain grounded.
     if (isTile) removeWolfveilTownRaisedTileBodies(n);
-    // Other paving is NOT a Tile_* body; preserve intentional canal kerbs.
-    else if (isPaving) {
-      const pos = n.geometry.attributes.position;
-      const minAllowedWorldY = floorY - 0.55;
-      for (let i = 0; i < pos.count; i++) {
-        const wy = pos.getY(i) * townRoot.scale.y + townRoot.position.y;
-        if (wy < minAllowedWorldY)
-          pos.setY(i, (minAllowedWorldY - townRoot.position.y) / townRoot.scale.y);
-      }
-      pos.needsUpdate = true;
-      n.geometry.computeBoundingBox();
-      n.geometry.computeBoundingSphere();
-    }
+    // Other paving is NOT a Tile_* body; its kerbs and canal banks are left
+    // exactly as authored. Squashing its buried vertices up toward the top
+    // dragged whole kerb faces into view as thin raised slivers, so the paving
+    // keeps its own shape and only the water is settled beneath it.
 
     // Recompute smooth vertex normals from Blender's indexed smooth groups
     n.geometry.computeVertexNormals();

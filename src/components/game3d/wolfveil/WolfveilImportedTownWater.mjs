@@ -2,9 +2,16 @@
 // Smooth normal-perturbed reflections, subsurface jade-cerulean depth gradient,
 // animated riverbed caustics, current ribbons, and waterfall plunge foam.
 import * as THREE from 'three';
-import {WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y} from './WolfveilImportedTownLayout.mjs';
+import {WOLFVEIL_IMPORTED_TOWN,WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y}
+  from './WolfveilImportedTownLayout.mjs';
 
 const BOX_VERTICES=24;
+// The canal boxes were authored ~5cm ABOVE the town paving, so every surface
+// they pass under read as a pale slab lying on the stone and fought the kerbs
+// for the same pixels. Settle the water strictly below the pavers instead.
+const WATER_DROP_BELOW_FLOOR=.014;
+const PAVED_SURFACE_Y=WOLFVEIL_IMPORTED_TOWN.floorSourceY;
+const WATER_SURFACE_Y=PAVED_SURFACE_Y-WATER_DROP_BELOW_FLOOR;
 
 const CANAL_VERTEX=`
 attribute vec3 townFlow;
@@ -108,7 +115,7 @@ export function createWolfveilTownWater(){
       const position=mesh.geometry.attributes.position,count=position.count;
       const flow=new Float32Array(count*3);
       const group=count%BOX_VERTICES===0?BOX_VERTICES:count;
-      const surface=WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y+(isFoam?.003:0);
+      const surface=WATER_SURFACE_Y+(isFoam?.002:0);
       for(let start=0;start<count;start+=group){
         let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,minZ=Infinity,maxZ=-Infinity;
         for(let i=start;i<start+group;i++){
@@ -123,9 +130,10 @@ export function createWolfveilTownWater(){
         else if(dz>dx*1.3)fz=dz<2&&minZ+maxZ<0?-1:1;
         for(let i=start;i<start+group;i++){
           flow[i*3]=fx;flow[i*3+1]=fy;flow[i*3+2]=fz;
-          if(position.getY(i)>.699)position.setY(i,surface);
+          if(position.getY(i)>WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y-.01)position.setY(i,surface);
           // Trim deep underside water box faces so they never poke below town embankments
-          else if(position.getY(i)<.64 && maxY-minY<=.2)position.setY(i,.65);
+          else if(position.getY(i)<WATER_SURFACE_Y-.03 &&
+            maxY-minY<=.2)position.setY(i,Math.min(position.getY(i),WATER_SURFACE_Y-.03));
         }
       }
       position.needsUpdate=true;

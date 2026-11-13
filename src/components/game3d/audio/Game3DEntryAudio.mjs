@@ -17,6 +17,12 @@ export const game3DOutdoorRegion=region=>region==='wolfveil'||region==='forest';
 const clamp=value=>Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
 const ease=t=>t*t*(3-2*t);
 
+// One title/world soundtrack at a time. The character login and the world
+// share a single element; if another host mounts (a re-entry, a second game
+// instance, a remount race) it takes the transport over instead of starting a
+// duplicate copy of the same track on top of the one already playing.
+let liveTransport=null;
+
 export function createGame3DEntryAudio({
   themeUrl=GAME3D_LOGIN_THEME_URL,
   natureUrl=GAME3D_NATURE_AMBIENCE_URL,
@@ -28,6 +34,8 @@ export function createGame3DEntryAudio({
   initialVolume=.5,
   initialRegion='wolfveil',
 }={}){
+  // A previous transport must go silent before this one starts.
+  try{liveTransport?.dispose();}catch{}
   const intro=createAudio(themeUrl),nature=createAudio(natureUrl);
   intro.loop=false;
   nature.loop=true;
@@ -123,7 +131,10 @@ export function createGame3DEntryAudio({
     }else{
       intro.loop=true;
       natureWasSuppressed=false;
-      if(introFinished){
+      // Continue the same track from where it is. Only a finished (and thus
+      // silent) title restarts, so entry never plays a second copy alongside
+      // the one already running behind the character menu.
+      if(introFinished&&intro.paused){
         introFinished=false;
         try{intro.currentTime=0;}catch{}
       }
@@ -159,6 +170,7 @@ export function createGame3DEntryAudio({
   function dispose(){
     if(disposed)return;
     disposed=true;
+    if(liveTransport===api)liveTransport=null;
     clearFade();
     if(heartbeat!==null)clearTick(heartbeat);
     intro.removeEventListener?.('ended',onIntroEnded);
@@ -167,11 +179,12 @@ export function createGame3DEntryAudio({
       try{audio.pause();audio.removeAttribute?.('src');audio.load?.();}catch{}
     }
   }
-  return {
-    start,setPhase,setRegion,setVolume,unlock,dispose,
-    getWorldAudio:()=>intro,
+  const api = {
+    start,setPhase,setRegion,setVolume,unlock,dispose,    getWorldAudio:()=>intro,
     getNatureAudio:()=>nature,
     getStatus:()=>({phase,region,introFinished,volume,disposed,
       titlePlaying:!intro.paused,naturePlaying:!nature.paused}),
   };
+  liveTransport=api;
+  return api;
 }

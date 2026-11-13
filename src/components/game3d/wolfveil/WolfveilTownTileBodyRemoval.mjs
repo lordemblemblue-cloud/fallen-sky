@@ -76,7 +76,27 @@ export function removeWolfveilTownRaisedTileBodies(mesh) {
     return {changed:false,removedFaces:0,keptFaces:0};
   const geometry=mesh.geometry;
   const plan=planWolfveilTownTileTop(geometry,mesh.matrixWorld);
-  geometry.setIndex(plan.indices);
+  if(!plan.indices.length)return {changed:false,removedFaces:plan.removedFaces,keptFaces:0};
+  // Rebuild the buffer from the surviving top vertices only. Dropping the
+  // index alone left every skirt/wall vertex in the file: the model kept a
+  // phantom 6m-deep silhouette (wrong bounds, and loose vertices the collision
+  // pass could see), while the renderer only had the flat top.
+  const keep=[],remap=new Map();
+  for(const index of plan.indices){
+    if(!remap.has(index)){remap.set(index,keep.length);keep.push(index);}
+  }
+  for(const attribute of Object.values(geometry.attributes)){
+    const size=attribute.itemSize;
+    const out=new attribute.array.constructor(keep.length*size);
+    for(let i=0;i<keep.length;i++){
+      const from=keep[i]*size;
+      for(let c=0;c<size;c++)out[i*size+c]=attribute.array[from+c];
+    }
+    attribute.array=out;
+    attribute.count=keep.length;
+    attribute.needsUpdate=true;
+  }
+  geometry.setIndex(plan.indices.map(index=>remap.get(index)));
   geometry.clearGroups();
   for(const group of plan.groups)
     geometry.addGroup(group.start,group.count,group.materialIndex);
