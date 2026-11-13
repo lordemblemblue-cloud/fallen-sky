@@ -17,7 +17,7 @@ const color=(points)=>{
     setXYZ(i,x,y,z){values[i]=[x,y,z];}};
 };
 test('forest mapping affects original western routes, not unrelated biomes',()=>{
-  assert.deepEqual(WOLFVEIL_FOREST_TRAIL_STUDY.routes.sort(),[
+  assert.deepEqual([...WOLFVEIL_FOREST_TRAIL_STUDY.routes].sort(),[
     'training_forest','west_woodland_fork']);
   assert(forestTrailShoulderWeight(-320,73)>.1);
   assert(forestTrailDistanceFromEdge(-320,65)<0);
