@@ -3,6 +3,7 @@
 // A reserve/portal defined in the future-world manifest is CHARTED only,
 // not a usable entry point while its runtime mount is paused.
 import { QUESTS, QUEST_NPCS } from '../questData';
+import { WOLFVEIL_TOWN_QUEST_NPC_SPOTS } from '../wolfveil/WolfveilImportedTownLayout.mjs';
 import { AXE_QUESTS } from '../axe/quests/AXEQuestFramework';
 import { ENEMY_ZONES } from '../enemySpawnConfig';
 import { AXE_FIRST_REGION } from '../axe/world/AXEFirstRegionLayout';
@@ -47,8 +48,11 @@ export function getMapMarkers(region) {
     {id:'dungeon:exit',name:'Dungeon return portal',type:'portal',x:LUNAR_CAVE_WATER_END.x,
       z:LUNAR_CAVE_WATER_END.returnPortalZ,live:true,description:'Return to Wolfveil'},
   ];
+  // Wolfveil's quest givers stand at their own places around the town.
+  const townSpots = region === 'wolfveil' ? WOLFVEIL_TOWN_QUEST_NPC_SPOTS : {};
   const markers = QUEST_NPCS.map(npc => ({
-    id: 'npc:'+npc.id, name:npc.name, type:'npc', x:npc.pos[0], z:npc.pos[2], live:true,
+    id: 'npc:'+npc.id, name:npc.name, type:'npc',
+    x:townSpots[npc.id]?.x ?? npc.pos[0], z:townSpots[npc.id]?.z ?? npc.pos[2], live:true,
     description:'Quest giver',
   }));
   if (!isForest(region)) return markers;

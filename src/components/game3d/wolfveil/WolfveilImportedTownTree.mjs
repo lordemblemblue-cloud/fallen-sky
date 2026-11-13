@@ -2,7 +2,7 @@
 // planter and stands the owner's ancient tree there instead.
 import * as THREE from 'three';
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js';
-import {WOLFVEIL_OWNER_LANDSCAPE_ASSETS} from './WolfveilOwnerLandscapeAssets.mjs';
+import {WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS} from './WolfveilOwnerLandscapeAssets.mjs';
 import {WOLFVEIL_IMPORTED_TOWN_TREE as TREE,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y} from './WolfveilImportedTownLayout.mjs';
 
 /** Meshes of the town model that the old plaza tree was merged into. */
@@ -22,7 +22,7 @@ export function removeWolfveilTownCentreTree(mesh){
 }
 
 export function installWolfveilTownTree(parent){
-  const asset=WOLFVEIL_OWNER_LANDSCAPE_ASSETS.tree;
+  const asset=WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS.tree;
   const holder=new THREE.Group();holder.name='Wolfveil_Town_Plaza_Ancient_Tree';
   holder.position.set(TREE.x,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y+.1,TREE.z);
   parent.add(holder);

@@ -574,7 +574,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // the highest ridge, otherwise walking can find no floor and appear to fall.
       groundRaycaster.set(new THREE.Vector3(x, region === 'wolfveil' ? 1500 : 50, z), downVec);
       const hits = groundRaycaster.intersectObjects(groundMeshes, true);
-      return hits.length > 0 ? hits[0].point.y : null;
+      return hits.length > 0 ? Math.max(hits[0].point.y, importedSpawnTown?.groundY(x, z) ?? -Infinity) : null;
     };
     // Aerial reports sample from above the highest peaks rather than the
     // regular player-foot 50m ray origin; this preserves mountain elevations.
