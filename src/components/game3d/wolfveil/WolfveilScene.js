@@ -17,6 +17,8 @@ import {buildWolfveilVegetation,buildWolfveilWaterfall} from './WolfveilNature.j
 import {buildWolfveilGroundCover} from './WolfveilGroundCover.js';
 import {installWolfveilOwnerGrassTile} from './WolfveilGrassTileReplacement.js';
 import {applyWolfveilPrecisionForestGroundPigment} from './WolfveilPrecisionForestTile.mjs';
+import {applyWolfveilForestTrailPigment} from './WolfveilForestTrailLandscape.mjs';
+import {wolfveilIsProtectedSWTile} from './WolfveilSWQuarterQuality.mjs';
 // LAND-WS05 #1282: tile-exclusive pigment; never another scene or collision floor.
 import {applyWolfveilSquareR08C10GroundPigment} from '../axe/world/landscaping/WolfveilSquareR08C10.mjs';
 import {clearOf,wolfveilTreePlacements,wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
@@ -80,6 +82,14 @@ export function createWolfveilVillage(scene,options={}){
       paintableAt:(x,z)=>clearOf({x,z},.75),
       routeDistance:wolfveilRouteClearance,
       riverDistance:wolfveilDistanceToRiver,
+    });
+  // Forest-edge tonal depth inspired by public trail references, never map
+  // imagery or physical height data. Modify existing vertex pigments only;
+  // protected 5m/100m squares and Game 1 retain their authored appearance.
+  if(options.originAtMarket&&options.groundCover)
+    applyWolfveilForestTrailPigment(geometry,{
+      enabled:true,riverDistance:wolfveilDistanceToRiver,
+      reservedAt:(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r),
     });
   const ground=world.mesh(new THREE.Mesh(geometry,terrainMaterial));
   // The real Game 1 renderer casts a downward ray every frame for player,
