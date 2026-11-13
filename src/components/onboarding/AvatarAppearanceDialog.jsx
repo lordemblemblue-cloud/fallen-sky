@@ -12,6 +12,7 @@ import {creatorBody} from './avatarCustomization';
 import {validateAXECharacterName} from '@/components/game3d/axe/characters/AXECharacterEntry';
 import './genesis.css';
 import './character-creator.css';
+import '@/components/onboarding/creator-viewport-fix.css';
 
 // localOnly: the Game 3D "Create character" overlay. It saves an additional Game 3D
 // character through onSaved (the local roster) and never touches the account's
