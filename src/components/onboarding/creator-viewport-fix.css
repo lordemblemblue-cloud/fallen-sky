@@ -1,0 +1,75 @@
+/* Game 3D Adam / Eve visibility: the original creator is an absolute
+   full-height WebGL viewport. A migrated legacy .creator-stage/.creator-canvas
+   rule in genesis.css changed them to position:relative with a 420px minimum,
+   so the canvas could escape its parent or be clipped under selection panels.
+   Scope this correction to WebGL stage areas, not the UI controls. */
+.creator-studio .creator-stage {
+  position: absolute;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.creator-studio .creator-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.creator-studio .creator-canvas-mount {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+.creator-studio .creator-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.axe-login--arcane .axe-login-avatar-stage .creator-canvas,
+.axe-login--arcane .axe-login-avatar-stage .genesis-preview {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: hidden;
+}
+.axe-login--arcane .axe-login-avatar-stage .creator-canvas-mount {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.axe-login--arcane .axe-login-avatar-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Keep preview errors legible rather than a blank black viewport. */
+.creator-studio .creator-canvas-status,
+.axe-login--arcane .axe-login-avatar-stage .creator-canvas-status {
+  z-index: 2;
+  padding: 12px;
+  text-align: center;
+  color: rgba(236,245,255,.84);
+}
