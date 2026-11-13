@@ -29,6 +29,9 @@ import { preloadActionSounds } from './combatAudioStore';
 import { isInCombat } from './combatMusicController';
 import { faceMoodsFor } from '@/components/onboarding/faceMoods';
 import { setPlayerPosition } from './playerPositionStore';
+import { MAP_SPAWN_POINTS, getRespawnPoint } from './mapSpawnPoints';
+import { findSafeNearbyRespawn, NEARBY_RESPAWN_ID } from './death/nearbyRespawnRules.mjs';
+import { createWorldRespawnShrines } from './death/WorldRespawnShrines';
 import { worldCheckpointStore } from './worldCheckpointStore';
 import { getActiveId, getStorageUser } from './characterStorage';
 import { CREATURE_MODEL_URL, CREATURE_ANIMATION_URLS } from './creatureAssets';
@@ -237,6 +240,29 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   const [activeQuestDialogue, setActiveQuestDialogue] = useState(null); // { npcName, quest, mode, progress }
   const spawnQuestEnemiesRef = useRef(null); // set inside useEffect once scene is ready
   const [questState, setQuestState] = useState(getQuestState());
+  // Quest and NPC dialogues release the cursor and own A/D/F/R input.
+  useEffect(() => {
+    const open = !!(activeDialogue || activeQuestDialogue);
+    window.__axeDialogueOpen = open;
+    if (open) {
+      if (document.pointerLockElement) document.exitPointerLock?.();
+      window.dispatchEvent(new Event('axeDialogueOpened'));
+    }
+    return () => { if (window.__axeDialogueOpen === open) window.__axeDialogueOpen = false; };
+  }, [activeDialogue, activeQuestDialogue]);
+  useEffect(() => {
+    if (!activeDialogue || activeQuestDialogue) return;
+    const onDialogueKey = event => {
+      const key = event.key.toLowerCase();
+      if (!event.repeat && (key === 'escape' || key === 'f' || key === 'enter')) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setActiveDialogue(null);
+      }
+    };
+    window.addEventListener('keydown', onDialogueKey, true);
+    return () => window.removeEventListener('keydown', onDialogueKey, true);
+  }, [activeDialogue, activeQuestDialogue]);
   const [playerMenu, setPlayerMenu] = useState(null); const remoteManagerRef = useRef(null);
   const [localMicOn, setLocalMicOn] = useState(false);
   const [talkingPeers, setTalkingPeers] = useState({});
@@ -1323,6 +1349,39 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         return false;
     };
+    // Resolve a death-local landing against actual ground, world bounds,
+    // water, colliders and nearby threats; never accept an arbitrary offset.
+    const resolveSafeNearbyRespawn = deathPosition => {
+      if (region !== 'wolfveil' || dedicatedMode || !deathPosition) return null;
+      const actor = modelRef.current;
+      if (!actor || Math.hypot(actor.position.x - deathPosition.x,
+        actor.position.z - deathPosition.z) > 4) return null;
+      return findSafeNearbyRespawn(deathPosition, {
+        sampleGroundY,
+        isInBounds: (x,z) => insideWolfveilClientGround(x,z,.9),
+        isDangerous: ({x,z}) => enemies.some(enemy =>
+          enemy?.alive && !enemy?.dying && enemy?.group &&
+          Math.hypot(enemy.group.position.x-x,enemy.group.position.z-z) < 5),
+        isBlocked: ({x,y,z},radius) => {
+          if (wolfveilDistanceToRiver(x,z-70) < 13+radius) return true;
+          if (wolfveilVillage?.colliders?.some(b =>
+            Math.abs(x-b.x) < b.w/2 + radius+.5 &&
+            Math.abs(z-(b.z+70)) < b.d/2 + radius+.5)) return true;
+          const probe = new THREE.Vector3(x,y,z);
+          const previous = {x,y,z};
+          forestBiome?.resolveCollision(probe,radius);
+          importedSpawnTown?.resolveCollision(probe,radius,previous);
+          wolfveilVillage?.resolveBuildingCollision(probe,radius,previous,{player:true});
+          stationRuntime.resolveCollision(probe,radius);
+          return Math.hypot(probe.x-x,probe.z-z) > .1;
+        },
+      });
+    };
+    const respawnShrines = region === 'wolfveil'
+      ? createWorldRespawnShrines({
+          scene, points: MAP_SPAWN_POINTS, sampleGroundY,
+          isInBounds: (x,z) => insideWolfveilClientGround(x,z,.7),
+        }) : null;
     const stationRuntime = createAXEServiceStationRuntime({
       scene, camera, renderer,
       onChanged: () => { renderer.shadowMap.needsUpdate = true; },
@@ -1662,7 +1721,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       if (entryModeRef.current || entryCamera.isActive()) return; // no movement/combat during camera handoff
       if (window.__axeTileInspectionEditing) return;
-      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen) return;
+      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       if (e.target?.matches?.('input, textarea')) return;
       const k = e.key.toLowerCase();
       if (e.code === 'F1') {
@@ -1833,7 +1892,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       keys.current[k] = false;
       // Release of a charged/held input while navigating the ESC menu must
       // never cast a queued skill when the player returns to the world.
-      if (window.__axePauseMenuOpen) return;
+      if (window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       if (k === 'q') crouchTogglePressed.current = false;
       const aoeHeld = heldAOEKeys.get(k);
       if (aoeHeld) {
@@ -1896,7 +1955,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const onMouseDown = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
-      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen) return;
+      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       // Left click = attack, middle click = Lock-On, right click = camera drag (+ block if no drag)
       if (e.button === 0) {
         if (altCursorHeld.current) { e.preventDefault(); return; }
@@ -1941,7 +2000,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const onMouseUp = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
-      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen) { drag.current.active = false; rightDragMoved.current = false; return; }
+      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) { drag.current.active = false; rightDragMoved.current = false; return; }
       if (e.button === 2) {
         const startedOnWorldCanvas = drag.current.active;
         drag.current.active = false;
@@ -1967,7 +2026,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const onMouseMove = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
-          window.__axeWorldMapOpen || window.__axePauseMenuOpen) {
+          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
         drag.current.active = false;
         return;
       }
@@ -1988,22 +2047,31 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const onWheel = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
-          window.__axeWorldMapOpen || window.__axePauseMenuOpen) return;
+          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       orbit.current.distance = game3dGame2Zoom(orbit.current.distance, e.deltaY);
       e.preventDefault();
     };
     const onContext = (e) => e.preventDefault();
 
-    // Respawn: teleport the player to the map spawn point they chose on the
-    // death screen and snap them to the terrain there.
+    const onNearbyRespawnQuery = event => {
+      if (typeof event.detail?.respond !== 'function') return;
+      event.detail.respond(resolveSafeNearbyRespawn(event.detail.deathPosition));
+    };
+    window.addEventListener('axeNearbyRespawnQuery', onNearbyRespawnQuery);
+    // Recheck the temporary landing at the moment of respawn. If terrain or
+    // hostiles changed, fall back to the registered character checkpoint.
     const onPlayerRespawn = (e) => {
       const target = e.detail;
       const m = modelRef.current || playerModelRef.current;
       if (!m || !target) return;
-      m.position.x = target.x;
-      m.position.z = target.z;
-      const gy = sampleGroundY(target.x, target.z);
-      m.position.y = gy ?? 0;
+      const point = target.source === NEARBY_RESPAWN_ID
+        ? (resolveSafeNearbyRespawn(target.deathPosition) || getRespawnPoint())
+        : target;
+      if (!Number.isFinite(point?.x) || !Number.isFinite(point?.z)) return;
+      m.position.x = point.x;
+      m.position.z = point.z;
+      const gy = sampleGroundY(point.x, point.z);
+      m.position.y = Number.isFinite(gy) ? gy : 0;
       m.visible = true;
       playerAnim?.revive?.();
       clickToMove.cancel('respawn');
@@ -2014,6 +2082,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     window.addEventListener('playerRespawn', onPlayerRespawn);
 
     window.addEventListener('axeWorldMapOpened', clearWorldMapMovement);
+    window.addEventListener('axeDialogueOpened', clearWorldMapMovement);
     window.addEventListener('axePauseMenuOpened', clearWorldMapMovement);
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
@@ -2302,7 +2371,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Opening the C Character Hub immediately releases movement input. This
         // prevents a held W/Shift/Ctrl key from continuing to move the character
         // behind a full-screen UI.
-        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen) {
+        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
           keys.current = {};
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
@@ -3383,7 +3452,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
       // Menu transitions, death and PvP cancel held pulses immediately.
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
-          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__activeDuel ||
+          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen || window.__activeDuel ||
           getPlayerHUD().hp <= 0) {
         for (const held of heldAOEKeys.values()) {
           window.dispatchEvent(new CustomEvent('axeAoeChannelStop',
@@ -3394,7 +3463,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Master-rank AOE is held for 260ms to begin a real, bounded channel;
       // a quick tap still produces the original single AOE strike.
       if (!window.__activeDuel && getPlayerHUD().hp > 0 &&
-          !window.__axeUiModalOpen && !window.__axeServiceModeOpen && !window.__axePauseMenuOpen) {
+          !window.__axeUiModalOpen && !window.__axeServiceModeOpen && !window.__axePauseMenuOpen && !window.__axeDialogueOpen) {
         for (const held of heldAOEKeys.values()) {
           if (!held.started && Date.now() - held.at >= AXE_AOE_CHANNEL.holdStartMs &&
               getLoadout().activeSlots[held.slotIndex] === held.skillId &&
@@ -3864,8 +3933,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.removeEventListener('game3dDedicatedPose',onDedicatedPose);
       inkLook.dispose(); if (window.__gw3dInkLook === inkLook) window.__gw3dInkLook = null;
       clearInterval(weatherInterval);
+      window.removeEventListener('axeNearbyRespawnQuery', onNearbyRespawnQuery);
       window.removeEventListener('playerRespawn', onPlayerRespawn);
+      respawnShrines?.dispose();
       window.removeEventListener('axeWorldMapOpened', clearWorldMapMovement);
+      window.removeEventListener('axeDialogueOpened', clearWorldMapMovement);
       window.removeEventListener('axePauseMenuOpened', clearWorldMapMovement);
       window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur',onInputBlur);
