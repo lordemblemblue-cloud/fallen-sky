@@ -15,9 +15,9 @@ export function createCreatorStage(mount, options = {}) {
       onCapabilities?.(readCreatorCapabilities(model));
       onReady?.();
     },
-    onError: () => {
+    onError: (error) => {
       onState?.({ loading: false, error: 'This device could not load the 3D preview.' });
-      onError?.();
+      onError?.(error);
     },
   });
 

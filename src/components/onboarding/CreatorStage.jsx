@@ -9,14 +9,14 @@ import {creatorBody,expressionMorphs} from './avatarCustomization';
 const FusedStage=forwardRef(function FusedStage({config,shot,expression,livingIdle=false,onCapabilities,onCustomizationState},ref) {
  const mount=useRef(null),stage=useRef(null),latest=useRef({config,onCapabilities,onCustomizationState});
  latest.current={config,onCapabilities,onCustomizationState};
- const [status,setStatus]=useState('loading');
+ const [status,setStatus]=useState('loading'),[error,setError]=useState('');
  const body=creatorBody(config);
  useEffect(()=>{
   setStatus('loading');
   let instance;
   try {
    instance=createCreatorStage(mount.current,{url:body.url,gender:body.gender,rigId:body.rig_id,
-    onReady:()=>setStatus('ready'),onError:()=>setStatus('error'),
+    onReady:()=>setStatus('ready'),onError:e=>{setError(e?.message||'');setStatus('error');},
     onState:s=>latest.current.onCustomizationState?.(s),
     onCapabilities:c=>latest.current.onCapabilities?.(c),ambientGaze:livingIdle});
    stage.current=instance;instance.appearance(latest.current.config);
@@ -27,7 +27,7 @@ const FusedStage=forwardRef(function FusedStage({config,shot,expression,livingId
  useEffect(()=>{stage.current?.focus(shot);},[shot,status]);
  useEffect(()=>{stage.current?.expression(expressionMorphs(expression?.values,expression?.morphs));},[expression]);
  useImperativeHandle(ref,()=>({rotate:a=>stage.current?.rotate(a),resetView:()=>stage.current?.resetView()}),[]);
- return <div className="creator-canvas" data-model-url={body.url} data-model-ready={status==='ready'} data-stage="fused"><div ref={mount} className="creator-canvas-mount"/>{status!=='ready'&&<span className="creator-canvas-status" role="status">{status==='error'?'3D preview unavailable on this device':'Loading character…'}</span>}</div>;
+ return <div className="creator-canvas" data-model-url={body.url} data-model-ready={status==='ready'} data-stage="fused"><div ref={mount} className="creator-canvas-mount"/>{status!=='ready'&&<span className="creator-canvas-status" role="status">{status==='error'?`3D preview unavailable${error?`: ${error}`:''}`:'Loading character…'}</span>}</div>;
 });
 
 const CreatorStage=forwardRef(function CreatorStage({config,shot='body',expression,livingIdle=false,onCapabilities,onCustomizationState,resetKey=0},ref) {

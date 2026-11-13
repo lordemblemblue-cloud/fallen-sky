@@ -61,9 +61,11 @@ export const RIG_IDS = FUSED_CHARACTERS_ENABLED ? FUSED_RIG_IDS : V5_RIG_IDS;
 // resolves uploaded catalog layers for RIG_IDS, so built-in fused layers are
 // kept client-side (see saveAppearance.js). Game 3D keeps the v5 bodies until
 // the fused bodies have retargeted animation clips.
+// The creator previews the SAME animated body the world renders (v2), so a
+// saved Eve/Adam never changes shape or rig between the studio and Game 3D.
 export const CREATOR_BODIES = {
- 'fused-female-v1':{id:'fused-female-v1',gender:'female',label:'Eve',detail:'Fused female',url:'/models/characters/fused/Female_Fused_v1.glb',rig_id:'fused-female-v1'},
- 'fused-male-v1':{id:'fused-male-v1',gender:'male',label:'Adam',detail:'Fused male',url:'/models/characters/fused/Male_Fused_v1.glb',rig_id:'fused-male-v1'},
+ 'fused-female-v1':{id:'fused-female-v1',gender:'female',label:'Eve',detail:'Fused female',url:'/models/characters/fused/Female_Fused_v2.glb',rig_id:'fused-female-v1'},
+ 'fused-male-v1':{id:'fused-male-v1',gender:'male',label:'Adam',detail:'Fused male',url:'/models/characters/fused/Male_Fused_v2.glb',rig_id:'fused-male-v1'},
 };
 export const FUSED_MANIFESTS = {hair:'/models/characters/fused/hair/manifest.json',tattoo:'/models/characters/fused/tattoos/manifest.json'};
 export function creatorBody(appearance={}) {

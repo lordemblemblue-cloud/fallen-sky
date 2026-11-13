@@ -22,13 +22,14 @@ function legacyBodyFallback(url) {
  if (!path.startsWith('/models/characters/') &&
      !path.startsWith('https://base44.app/api/apps/6876751a602125f45f1861b9/files/')) return null;
  const name = path.split('/').pop();
+ // Fused Eve/Adam bodies have no hosted substitute: substituting Getsuga or
+ // Artemis made a failed Eve/Adam load look like the wrong character, so they
+ // report the real error instead.
  const male = new Set([
-  'Male_Fused_v1.glb', 'Male_Fused_v2.glb',
   'Getsuga_Tensho_Character_v2.glb', 'Getsuga_Tensho_Character_v3.glb',
   'Getsuga_Tensho_Character_v5.glb', 'd646be928_Getsuga_Tensho_Character.glb',
  ]);
  const female = new Set([
-  'Female_Fused_v1.glb', 'Female_Fused_v2.glb',
   'Artemis_Character_v2.glb', 'Artemis_Character_v3.glb',
   'Artemis_Character_v5.glb', '96bb872db_Artemis_Character.glb',
  ]);
