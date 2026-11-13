@@ -15,7 +15,7 @@ import {
 } from './AXEEquipmentSystem';
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
-const CURRENT_STARTER_CATALOG_VERSION = 1;
+const CURRENT_STARTER_CATALOG_VERSION = 2;
 
 function seedItems() {
   return Object.entries(INVENTORY).flatMap(([category, items]) =>
@@ -31,7 +31,7 @@ function seedItems() {
         equipped: !!raw.equipped,
         locked: !!raw.locked,
         acquiredAt: 0,
-        source: 'starter',
+        source: raw.source || 'starter',
       };
     }),
   );
@@ -85,13 +85,15 @@ function load() {
     // catalog migration has been recorded.
     const byId = new Map(owned.map((item) => [item.instanceId, item]));
     const starters = seedItems();
-    const shouldAddNewStarters =
-      Number(parsed.starterCatalogVersion || 0) < CURRENT_STARTER_CATALOG_VERSION;
+    const previousCatalogVersion = Number(parsed.starterCatalogVersion || 0);
 
     for (const starter of starters) {
       const existing = byId.get(starter.instanceId);
       if (!existing) {
-        if (shouldAddNewStarters) byId.set(starter.instanceId, starter);
+        // Introduce ONLY new catalog versions; V1 consumed or discarded props
+        // must not resurrect when the V2 test bow is issued.
+        if (previousCatalogVersion < Number(starter.introducedVersion || 1))
+          byId.set(starter.instanceId, starter);
         continue;
       }
 
@@ -101,6 +103,8 @@ function load() {
         masteryWeaponId: existing.masteryWeaponId || starter.masteryWeaponId || null,
         axeWeaponRole: existing.axeWeaponRole || starter.axeWeaponRole || null,
         templateId: existing.templateId || starter.templateId,
+        modelUrl: existing.modelUrl || starter.modelUrl || null,
+        modelFormat: existing.modelFormat || starter.modelFormat || null,
       });
     }
 

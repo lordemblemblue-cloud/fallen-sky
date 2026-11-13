@@ -55,6 +55,7 @@ import { loadCompanionFolderClips } from './companionAnimationLoader';
 import { prepareMountAnimationClips } from './character/mountAnimations.mjs';
 import { createMountedRiderPose } from './player/mountedRiderPose.mjs';
 import { createMountedWeaponPresentation } from './player/mountedWeaponPresentation.mjs';
+import { createEquippedBowGLBPresentation } from './player/equippedBowGLBPresentation.mjs';
 import { inferAXEMasteryWeaponId } from './axe/weapons/AXEWeaponIdentity';
 import { getAbilityState, tickCooldowns as tickLegacyAbilityCooldowns, startCooldown as startLegacyAbilityCooldown, clearTarget, updateTargetHP, ABILITY_DEFINITIONS } from './abilityStore';
 import { getLoadout, cycleSkillPreset, startCooldown as startSkillCooldown, tickCooldowns as tickSkillCooldowns } from './skills/loadoutStore';
@@ -713,6 +714,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let companionAssetDisposed = false;
     let mountedRider = null;
     let mountedWeapon = null;
+    let heldBowPresentation = null;
+    let heldBowPlayer = null;
     let mountedRiderPlayer = null;
     let mountedRiderMount = null;
     let mountAppearanceSeconds = 0, mountedAttackSeconds = 0; // weapon is drawn while riding only briefly after an attack
@@ -3774,6 +3777,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       avatarDrawCalls?.update(); // after everything that poses the avatar this frame
       // Light bone gestures run after the base animation pose, with no input lock.
       echoGestureRuntime.update();
+      // A real inventory-backed GLB bow follows the active Adam/Eve hand.
+      // It yields to the existing mounted weapon renderer when riding.
+      if (model && heldBowPlayer !== model) {
+        heldBowPresentation?.dispose();
+        heldBowPlayer = model;
+        heldBowPresentation = createEquippedBowGLBPresentation({ player: model });
+      }
+      heldBowPresentation?.update({ item: getActiveEquippedAXEWeapon(), mounted: !!isMountedRef.current });
       // Seat and hand constraints win over base clips, gestures and recoil.
       if (isMountedRef.current && model && companionGroupRef.current) {
         if (mountedRiderPlayer !== model || mountedRiderMount !== companionGroupRef.current) {
@@ -3857,6 +3868,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.removeEventListener('pagehide', flushCheckpoint);
       window.removeEventListener('game3dCheckpointFlush', flushCheckpoint);
       checkpointTeleporterRef.current = null;
+      heldBowPresentation?.dispose();
+      heldBowPresentation = null;
+      heldBowPlayer = null;
       restoreMountedRider();
       companionAssetDisposed = true;
       ++companionAssetVersion;
