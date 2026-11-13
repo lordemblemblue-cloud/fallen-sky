@@ -37,18 +37,22 @@ export function wolfveilLivingInkFamily(mesh){
 
 const VERTEX_COMMON=`
 varying vec3 vLivingSumiWorld;
+varying vec3 vLivingSumiWorldNormal;
 varying float vLivingSumiTip;`;
 const PROJECT=`
 #ifdef USE_INSTANCING
   vec4 livingInkWorld=modelMatrix*instanceMatrix*vec4(transformed,1.0);
+  vLivingSumiWorldNormal=normalize(mat3(modelMatrix)*mat3(instanceMatrix)*objectNormal);
 #else
   vec4 livingInkWorld=modelMatrix*vec4(transformed,1.0);
+  vLivingSumiWorldNormal=normalize(mat3(modelMatrix)*objectNormal);
 #endif
 vLivingSumiWorld=livingInkWorld.xyz;
 vLivingSumiTip=position.y;
 #include <project_vertex>`;
 const FRAGMENT_COMMON=`
 varying vec3 vLivingSumiWorld;
+varying vec3 vLivingSumiWorldNormal;
 varying float vLivingSumiTip;
 uniform float uLivingSumiClock,uLivingSumiLevel;
 uniform vec2 uLivingSumiWind;
@@ -98,8 +102,12 @@ const makeFragment=kind=>{
                   tip*.12*granulation);
 `;
   code+=`
+  // Grazing Sumi-e brush contour wash along silhouettes & folded rock edges
+  vec3 viewVec=normalize(cameraPosition-vLivingSumiWorld);
+  float rimContour=pow(1.0-clamp(abs(dot(normalize(vLivingSumiWorldNormal),viewVec)),0.0,1.0),3.2);
+  materialInk=mix(materialInk,basePigment*0.52,rimContour*0.34*(0.55+0.45*granulation));
   diffuseColor.rgb=mix(basePigment,materialInk,
-        clamp(uLivingSumiLevel*${strength}*(.52+.48*pressure),0.,.86));
+        clamp(uLivingSumiLevel*${strength}*(.56+.44*pressure),0.,.88));
 }`;
   return code;
 };
@@ -165,6 +173,9 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
   refresh();
   return {
     refresh,
+    addRoot(root){
+      if(root&&!rootList.includes(root)){rootList.push(root);refresh();}
+    },
     setLevel(next){
       if(Number.isFinite(next))uniforms.level.value=Math.max(0,Math.min(1,next/4));
     },

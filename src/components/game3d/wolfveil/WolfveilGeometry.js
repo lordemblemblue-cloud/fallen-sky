@@ -13,6 +13,9 @@ import {WOLFVEIL_PALETTE as PAL,wolfveilHeight,wolfveilDistanceToRiver,
 } from './WolfveilLayout.js';
 import {wolfveilTrailBreakAt} from './WolfveilTrailBreaks.mjs';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
+import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
+import {isWolfveilCaveMouthCutout} from './WolfveilCaveLayout.mjs';
+import {getWolfveilSumiETextures,cloneRepeatedTexture} from './WolfveilSumiETextures.mjs';
 const TAU=Math.PI*2;
 export const clamp=(a,min,max)=>Math.max(min,Math.min(max,a));
 export const smooth=(a,b,t)=>{const q=clamp((t-a)/(b-a),0,1);return q*q*(3-2*q);};
@@ -89,7 +92,7 @@ export class WolfveilBuilder {
         }
       });
     }
-    for(const m of this.ownedMaterials){m.map?.dispose?.();m.dispose();}
+    for(const m of this.ownedMaterials){m.map?.dispose?.();m.bumpMap?.dispose?.();m.dispose();}
     this.group.parent?.remove(this.group);
   }
 }
@@ -115,7 +118,7 @@ export class WolfveilTriangles{
     g.computeVertexNormals();return g;
   }
 }
-export function buildWolfveilTerrain({span=1100,segments=310}={}){
+export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false}={}){
   const g=new THREE.BufferGeometry(),v=[],c=[],uv=[],idx=[];
   const rand=Math.sin;
   // Heights first, so each vertex can read its neighbours' slope for free.
@@ -174,6 +177,10 @@ export function buildWolfveilTerrain({span=1100,segments=310}={}){
     }
   }
   for(let z=0;z<segments;z++)for(let x=0;x<segments;x++){
+    if(caveCutouts){
+      const cx=((x+.5)/segments-.5)*span,cz=((z+.5)/segments-.5)*span;
+      if(isWolfveilCaveMouthCutout(cx,cz))continue;
+    }
     const p=z*(segments+1)+x,q=p+segments+1;
     idx.push(p,q,p+1,q,q+1,p+1);
   }
@@ -186,65 +193,108 @@ export function buildWolfveilTerrain({span=1100,segments=310}={}){
 }
 export function makeRidgeGeometry(center,depth=340,seed=98){
   const rand=mulberry32(seed);
-  const triangles=new WolfveilTriangles();
-  const [x,z]=center;
-  // Five broad fractured belts and a serrated summit replace the former
-  // four giant flat triangles. Major crags show stratified rock faces, long
-  // erosion grooves and snow/mineral shelves from multiple viewing angles.
-  const sections=29,levels=[1,.83,.59,.36,.17,.045],rings=[];
-  // Peak height follows the ridge's footprint, so every flank climbs at
-  // roughly 25-30 degrees instead of the former near-vertical spikes.
-  const peakY=wolfveilHeight(x,z)+depth*(.16+rand()*.04);
-  const profile=Array.from({length:sections},(_,i)=>.74+.28*rand()+
-    .21*Math.sin(i/sections*TAU*3)+.10*Math.sin(i/sections*TAU*7));
-  for(let tier=0;tier<levels.length;tier++){
-    const w=levels[tier],ratio=tier/(levels.length-1);
-    rings[tier]=Array.from({length:sections},(_,i)=>{
-      const a=i/sections*TAU,
-        r=depth*.53*w*profile[i]*(.82+.17*Math.sin(i*12.3+tier*4.13));
-      const xx=x+Math.cos(a)*r+(rand()-.5)*w*2.5,
-        zz=z+Math.sin(a)*r+(rand()-.5)*w*2.5;
-      const ground=wolfveilHeight(xx,zz);
-      const y=(1-ratio)*Math.max(ground-3,ground+ratio*34)+
-        ratio*peakY+(rand()-.5)*(1.5+ratio*4);
-      return [xx,y,zz];
-    });
-  }
-  const summit=[x+(rand()-.5)*10,peakY+4,z+(rand()-.5)*10];
-  for(let tier=0;tier<levels.length-1;tier++){
+  const [cx,cz]=center;
+  const sections=64,tiers=16;
+  const pos=[],col=[],uvs=[],indices=[];
+  const basePeak=wolfveilHeight(cx,cz)+depth*(.22+rand()*.06);
+  const lobePhaseA=rand()*TAU,lobePhaseB=rand()*TAU,areteCount=4+Math.floor(rand()*3);
+  const azimuthProfile=Array.from({length:sections},(_,i)=>{
+    const a=i/sections*TAU;
+    const ridgeSpur=Math.pow(Math.abs(Math.cos(a*areteCount*.5+lobePhaseA)),.68);
+    const flute=1-.24*Math.pow(Math.abs(Math.sin(a*9+lobePhaseB)),1.6);
+    return (.72+.34*ridgeSpur+.14*Math.sin(a*3+lobePhaseA))*flute;
+  });
+
+  for(let t=0;t<=tiers;t++){
+    const ratio=t/tiers;
+    const radialScale=Math.pow(1-ratio,.88);
     for(let i=0;i<sections;i++){
-      const n=(i+1)%sections,
-        shade=.70+rand()*.34,
-        isSnow=tier>=4&&i%3===0;
-      const col=isSnow?[.67,.71,.73]:
-        [.31*shade+.06,.38*shade+.05,.43*shade+.03];
-      triangles.quad(rings[tier][i],rings[tier][n],
-        rings[tier+1][n],rings[tier+1][i],col);
+      const a=i/sections*TAU;
+      const couloir=Math.sin(a*11+ratio*3.6+lobePhaseB);
+      const couloirCut=(1-Math.abs(couloir))*smooth(.12,.85,ratio)*(1-smooth(.82,1.,ratio));
+      const strataStep=Math.sin(ratio*Math.PI*12)*.018*depth*(1-ratio*.4);
+      const r=depth*.55*radialScale*azimuthProfile[i]*(1-.16*couloirCut)+strataStep;
+      const spineDrift=(rand()-.5)*1.2*(1-ratio);
+      const xx=cx+Math.cos(a)*r+spineDrift;
+      const zz=cz+Math.sin(a)*r+spineDrift;
+      const ground=wolfveilHeight(xx,zz);
+      const areteCrest=Math.pow(Math.max(0,Math.cos(a*areteCount+lobePhaseA)),2)*depth*.035*smooth(.2,.9,ratio);
+      const elevation=(1-smooth(0,.22,ratio))*(ground-2.5)+
+        smooth(0,.22,ratio)*(ground*(1-ratio)+basePeak*ratio)+
+        areteCrest-couloirCut*depth*.028+
+        Math.sin(ratio*21+a*5)*1.15*smooth(.15,.9,ratio);
+      pos.push(xx,elevation,zz);
+      uvs.push(xx*.045,elevation*.055);
+
+      const footBlend=1-smooth(.04,.30,ratio);
+      const snowLine=smooth(.70,.93,ratio+.09*Math.cos(a*5+lobePhaseB)-couloirCut*.18);
+      const inkCrevice=clamp(couloirCut*1.15+(.5-.5*Math.sin(ratio*26))*.28,0,1);
+      const moss=[.29,.42,.30],slate=[.34,.41,.49],ochre=[.48,.44,.38],snow=[.84,.88,.91],ink=[.13,.18,.24];
+      const warmBand=smooth(.35,.65,.5+.5*Math.sin(ratio*9+a*2));
+      let rC=slate[0]*(1-warmBand*.32)+ochre[0]*warmBand*.32;
+      let gC=slate[1]*(1-warmBand*.32)+ochre[1]*warmBand*.32;
+      let bC=slate[2]*(1-warmBand*.32)+ochre[2]*warmBand*.32;
+      rC=rC*(1-inkCrevice*.58)+ink[0]*inkCrevice*.58;
+      gC=gC*(1-inkCrevice*.58)+ink[1]*inkCrevice*.58;
+      bC=bC*(1-inkCrevice*.58)+ink[2]*inkCrevice*.58;
+      rC=rC*(1-footBlend)+moss[0]*footBlend;
+      gC=gC*(1-footBlend)+moss[1]*footBlend;
+      bC=bC*(1-footBlend)+moss[2]*footBlend;
+      rC=rC*(1-snowLine)+snow[0]*snowLine;
+      gC=gC*(1-snowLine)+snow[1]*snowLine;
+      bC=bC*(1-snowLine)+snow[2]*snowLine;
+      col.push(rC,gC,bC);
     }
   }
-  for(let i=0;i<sections;i++)
-    triangles.tri(rings.at(-1)[i],rings.at(-1)[(i+1)%sections],
-      summit,[.62,.66,.67]);
-  return triangles.geometry();
+  for(let t=0;t<tiers;t++){
+    for(let i=0;i<sections;i++){
+      const next=(i+1)%sections;
+      const a=t*sections+i,b=t*sections+next;
+      const c2=(t+1)*sections+next,d=(t+1)*sections+i;
+      indices.push(a,b,c2,a,c2,d);
+    }
+  }
+  const g=new THREE.BufferGeometry();
+  g.setIndex(indices);
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  g.computeVertexNormals();
+  return g;
 }
 export function addWolfEarPeaks(world){
+  const suite=getWolfveilSumiETextures();
+  const rockMap=cloneRepeatedTexture(suite.caveRock.map,1,1);
+  const rockBump=cloneRepeatedTexture(suite.caveRock.bumpMap,1,1);
+  const ridgeMat=material(0xffffff,.89,{
+    vertexColors:true,side:THREE.DoubleSide,
+    map:rockMap,bumpMap:rockBump,bumpScale:.09,
+  });
+  ridgeMat.name='SWV_Sculpted_SumiE_MountainRock';
+  world.ownedMaterials.push(ridgeMat);
   const peaks=[
-    {name:'SWV_TwinWolfEarPeak_West',x:-76,z:477,size:185,seed:84},
-    {name:'SWV_TwinWolfEarPeak_East',x:52,z:502,size:160,seed:85},
-    {name:'SWV_RidgeSouth',x:-510,z:280,size:230,seed:93},
-    {name:'SWV_RidgeEast',x:480,z:275,size:215,seed:101},
-    {name:'SWV_SnowRidge',x:45,z:740,size:310,seed:75},
+    {name:'SWV_TwinWolfEarPeak_West',x:-76,z:477,size:195,seed:84},
+    {name:'SWV_TwinWolfEarPeak_East',x:52,z:502,size:172,seed:85},
+    {name:'SWV_RidgeSouth',x:-510,z:280,size:245,seed:93},
+    {name:'SWV_RidgeEast',x:480,z:275,size:235,seed:101},
+    {name:'SWV_SnowRidge',x:45,z:740,size:330,seed:75},
+    {name:'SWV_WestCedarCrag_North',x:-475,z:65,size:225,seed:112},
+    {name:'SWV_WestCedarCrag_South',x:-485,z:-195,size:215,seed:127},
+    {name:'SWV_EastQuarryMassif',x:485,z:-55,size:225,seed:139},
+    {name:'SWV_EastRavineSpire',x:465,z:-275,size:205,seed:151},
+    {name:'SWV_NorthHighlandShoulder_West',x:-265,z:560,size:250,seed:163},
+    {name:'SWV_NorthHighlandShoulder_East',x:285,z:545,size:245,seed:177},
   ];
   for(const p of peaks){
-    const rock=world.mesh(new THREE.Mesh(makeRidgeGeometry([p.x,p.z],p.size,p.seed),
-      material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide})));
-    rock.name=p.name;rock.receiveShadow=true;
+    const rock=world.mesh(new THREE.Mesh(makeRidgeGeometry([p.x,p.z],p.size,p.seed),ridgeMat));
+    rock.name=p.name;rock.receiveShadow=true;rock.castShadow=false;
+    rock.raycast=()=>{};
   }
 }
 export function addWolfveilPaths(world,routes,{
   excludePalaceApproach=false,swQuarterQuality=false,canonicalPlaySurface=false,
   terrainSpan=1100,terrainSegments=310,coalesceTerrainStrips=true,
-  trailBreaks=false,
+  trailBreaks=false,importedTownAtMarket=false,
 }={}){
   // The real Luna entrance already has seven physical stairs. On the live
   // palace map, the old road must not cover these or the hillside treads.
@@ -267,9 +317,11 @@ export function addWolfveilPaths(world,routes,{
         ((p[0]-x0)*dx+(p[2]-z0)*dz)/length2];
       for(const tri of projected)mesh.tri(...tri,pathTint,tri.map(uv));
     }else{
+      const segLen=Math.max(.5,Math.hypot(x1-x0,z1-z0));
       const vertex=p=>[p[0],surface(p[0],p[1])+.10,p[1]];
       mesh.quad(vertex(corners[0]),vertex(corners[1]),
-        vertex(corners[2]),vertex(corners[3]),pathTint);
+        vertex(corners[2]),vertex(corners[3]),pathTint,
+        [[0,0],[1,0],[1,segLen*.28],[0,segLen*.28]]);
     }
   }
   const samePoint=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1])<1e-8;
@@ -301,6 +353,7 @@ export function addWolfveilPaths(world,routes,{
         }
         const x0=a[0]+(b[0]-a[0])*t0,z0=a[1]+(b[1]-a[1])*t0;
         const x1=a[0]+(b[0]-a[0])*t1,z1=a[1]+(b[1]-a[1])*t1;
+        if(importedTownAtMarket&&insideWolfveilImportedTown((x0+x1)*.5,(z0+z1)*.5,-1.5))continue;
         if(wolfveilDistanceToRiver((x0+x1)/2,(z0+z1)/2)<12)continue;
         // Washed-out stretch: the dirt ribbon stops and resumes further on.
         if(trailBreaks&&wolfveilTrailBreakAt(route.id,segmentStart+dist*(t0+t1)*.5))continue;
@@ -343,8 +396,10 @@ export function addWolfveilPaths(world,routes,{
           continue;
         }
         const y0=wolfveilHeight(x0,z0)+.10,y1=wolfveilHeight(x1,z1)+.10;
+        const segLen=Math.max(.5,Math.hypot(x1-x0,z1-z0));
         mesh.quad([x0-nx,y0,z0-nz],[x0+nx,y0,z0+nz],
-          [x1+nx,y1,z1+nz],[x1-nx,y1,z1-nz],pathTint);
+          [x1+nx,y1,z1+nz],[x1-nx,y1,z1-nz],pathTint,
+          [[0,0],[1,0],[1,segLen*.28],[0,segLen*.28]]);
       }
       emit(pending);
     }
@@ -358,6 +413,7 @@ export function addWolfveilPaths(world,routes,{
       const sign=Math.sign(turn),[nx,nz]=prior.normal;
       const bevel=[b,[b[0]+sign*nx,b[1]+sign*nz],
         [b[0]+sign*bz/length*route.width*.5,b[1]-sign*bx/length*route.width*.5]];
+      if(importedTownAtMarket&&bevel.some(p=>insideWolfveilImportedTown(p[0],p[1],-1.5)))continue;
       if(bevel.some(p=>wolfveilDistanceToRiver(p[0],p[1])<12))continue;
       if(excludePalaceApproach&&route.id==='public_gate_market_sanctuary'&&
         bevel.some(p=>p[1]>WOLFVEIL_PALACE_APPROACH.fromZ&&
@@ -368,8 +424,17 @@ export function addWolfveilPaths(world,routes,{
       for(const tri of projected)mesh.tri(...tri,prior.tint,tri.map(uv));
     }
   }
-  const obj=world.mesh(new THREE.Mesh(mesh.geometry(),
-    material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide})));
+  const dirtSuite=getWolfveilSumiETextures().dirt;
+  const dirtMap=cloneRepeatedTexture(dirtSuite.map,1,1);
+  const dirtBump=cloneRepeatedTexture(dirtSuite.bumpMap,1,1);
+  const pathMat=material(0xffffff,.93,{
+    vertexColors:true,side:THREE.DoubleSide,
+    map:dirtMap,bumpMap:dirtBump,bumpScale:.048,
+    polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1,
+  });
+  pathMat.name='SWV_SumiE_TexturedDirtTrailNetwork';
+  world.ownedMaterials.push(pathMat);
+  const obj=world.mesh(new THREE.Mesh(mesh.geometry(),pathMat));
   obj.name='SWV_PhysicalTraversablePathNetwork';obj.receiveShadow=true;
   return obj;
 }

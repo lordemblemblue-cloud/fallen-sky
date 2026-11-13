@@ -10,6 +10,7 @@ import {WolfveilTriangles,WolfveilBuilder,mulberry32,material} from './WolfveilG
 import {buildHeroResidenceExterior} from './WolfveilHeroExterior.js';
 import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
 import {planWolfveilBridgeDeck} from './WolfveilBridgeProfile.mjs';
+import {getWolfveilSumiETextures,cloneRepeatedTexture} from './WolfveilSumiETextures.mjs';
 const twopi=Math.PI*2;
 const color=(hex)=>new THREE.Color(hex);
 const heightAt=(p)=>wolfveilHeight(p.x,p.z);
@@ -279,42 +280,121 @@ function gates(world){
     world.box('spirit',side*10,y+5.1,189,.22,1.4,.24);
   }
 }
+function addRopeTube(tris,p0,p1,radius=.042,col=[.86,.74,.56],sides=6){
+  const dx=p1[0]-p0[0],dy=p1[1]-p0[1],dz=p1[2]-p0[2];
+  const len=Math.hypot(dx,dy,dz)||.001;
+  // Orthonormal frame around the rope segment
+  let ux=-dz,uy=0,uz=dx;
+  const uLen=Math.hypot(ux,uy,uz);
+  if(uLen<1e-4){ux=1;uy=0;uz=0;}else{ux/=uLen;uz/=uLen;}
+  const vx=(dy*uz-dz*uy)/len,vy=(dz*ux-dx*uz)/len,vz=(dx*uy-dy*ux)/len;
+  const vRepeat=Math.max(1,len*3.2);
+  for(let s=0;s<sides;s++){
+    const a0=s/sides*twopi,a1=(s+1)/sides*twopi;
+    const c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
+    const q00=[p0[0]+(ux*c0+vx*s0)*radius,p0[1]+(uy*c0+vy*s0)*radius,p0[2]+(uz*c0+vz*s0)*radius];
+    const q01=[p0[0]+(ux*c1+vx*s1)*radius,p0[1]+(uy*c1+vy*s1)*radius,p0[2]+(uz*c1+vz*s1)*radius];
+    const q11=[p1[0]+(ux*c1+vx*s1)*radius,p1[1]+(uy*c1+vy*s1)*radius,p1[2]+(uz*c1+vz*s1)*radius];
+    const q10=[p1[0]+(ux*c0+vx*s0)*radius,p1[1]+(uy*c0+vy*s0)*radius,p1[2]+(uz*c0+vz*s0)*radius];
+    tris.quad(q00,q01,q11,q10,col,[[s/sides,0],[(s+1)/sides,0],[(s+1)/sides,vRepeat],[s/sides,vRepeat]]);
+  }
+}
+
 function bridges(world,{terrainSpan=1100,terrainSegments=310}={}){
   const receipts=[];
-  // Sample the exact 310x310 triangle terrain that is used by the live
-  // Game 3D ground raycast. The old high-bank constant deck Y left the
-  // opposite shoreline floating by as much as a dozen metres.
   const surface=createWolfveilTerrainSurfaceSampler({
     span:terrainSpan,segments:terrainSegments,
   });
-  const plankMat=material(0xffffff,.87,{vertexColors:true,side:THREE.DoubleSide});
+  const suite=getWolfveilSumiETextures();
+  const woodMap=cloneRepeatedTexture(suite.wood.map,1,1);
+  const woodBump=cloneRepeatedTexture(suite.wood.bumpMap,1,1);
+  const stoneMap=cloneRepeatedTexture(suite.stone.map,1,1);
+  const stoneBump=cloneRepeatedTexture(suite.stone.bumpMap,1,1);
+  const ropeMap=cloneRepeatedTexture(suite.rope.map,1,1);
+  const ropeBump=cloneRepeatedTexture(suite.rope.bumpMap,1,1);
+
+  const plankMat=material(0xffffff,.80,{
+    vertexColors:true,side:THREE.DoubleSide,
+    map:woodMap,bumpMap:woodBump,bumpScale:.038,
+  });
+  plankMat.name='SWV_Bridge_SumiE_CedarPlanks';
+  const stoneDeckMat=material(0xffffff,.86,{
+    vertexColors:true,side:THREE.DoubleSide,
+    map:stoneMap,bumpMap:stoneBump,bumpScale:.042,
+  });
+  stoneDeckMat.name='SWV_Bridge_SumiE_AshlarStone';
+  const ropeMat=material(0xffffff,.89,{
+    vertexColors:true,side:THREE.DoubleSide,
+    map:ropeMap,bumpMap:ropeBump,bumpScale:.05,
+  });
+  ropeMat.name='SWV_Bridge_SumiE_TwistedHempRope';
   const floorProbeMat=new THREE.MeshBasicMaterial({
     side:THREE.DoubleSide,colorWrite:false,depthWrite:false,
   });
-  world.ownedMaterials.push(plankMat,floorProbeMat);
+  world.ownedMaterials.push(plankMat,stoneDeckMat,ropeMat,floorProbeMat);
   world.walkableSurfaces??=[];
+
   for(const b of BRIDGES){
+    const isStone=b.kind==='stone';
+    const isRope=b.kind==='rope';
     const deck=planWolfveilBridgeDeck(b,surface);
     const visual=new WolfveilTriangles(),footing=new WolfveilTriangles();
-    const planks=Math.ceil(deck.len/1.12);
+    const ropeTris=new WolfveilTriangles();
+    const plankStep=isStone?1.35:(isRope?.46:.58);
+    const planks=Math.ceil(deck.len/plankStep);
     const side=deck.width/2;
-    // Individual planks preserve a visible wood grain/board rhythm. The
-    // collision probe forms ONE continuous surface across the 2cm seams.
     const edgeOffsets=deck.offsets;
+    const dx=b.to[0]-b.from[0],dz=b.to[1]-b.from[1];
+    const nx=-dz/deck.len,nz=dx/deck.len;
+
+    // 1. 3D Beveled Planks / Ashlar Slabs with true board thickness, grain UVs & micro-variation
     for(let i=0;i<planks;i++){
       const t0=i/planks,t1=(i+1)/planks;
-      const inset=Math.min(.009,1/planks*.15);
-      const shade=.70+(i%6)*.028,shadeColor=[shade,shade*.98,shade*.88];
+      const gap=isStone?.004:(isRope?.022:.014);
+      const inset=Math.min(gap,1/planks*.22);
+      const boardVar=((i*37+11)%9)/9;
+      const jitterY=isStone?0:(boardVar-.5)*.005;
+      const shade=isStone?(.84+boardVar*.12):(.76+boardVar*.18);
+      const shadeColor=isStone
+        ?[shade*.98,shade*.99,shade*.96]
+        :[shade*1.04,shade*.92,shade*.78];
+      const thick=isStone?.16:.075;
+
       for(let j=0;j<edgeOffsets.length-1;j++){
         const left=edgeOffsets[j],right=edgeOffsets[j+1];
+        const u0=(left+side)/(deck.width||1),u1=(right+side)/(deck.width||1);
         const p00=deck.pointAt(t0+inset,left),
           p01=deck.pointAt(t0+inset,right),
           p11=deck.pointAt(t1-inset,right),
           p10=deck.pointAt(t1-inset,left);
-        for(const p of [p00,p01,p11,p10])p[1]+=.005;
-        visual.quad(p00,p01,p11,p10,shadeColor);
+        for(const p of [p00,p01,p11,p10])p[1]+=.005+jitterY;
+        // Board grain runs across bridge width on timber planks, stone courses on stone bridge
+        const uvQuad=isStone
+          ?[[u0*2,t0*deck.len*.3],[u1*2,t0*deck.len*.3],[u1*2,t1*deck.len*.3],[u0*2,t1*deck.len*.3]]
+          :[[t0*deck.len*1.6,u0*2.4],[t0*deck.len*1.6,u1*2.4],[t1*deck.len*1.6,u1*2.4],[t1*deck.len*1.6,u0*2.4]];
+        visual.quad(p00,p01,p11,p10,shadeColor,uvQuad);
+
+        // Front/back plank thickness risers so planks read as solid 3D boards, never paper sheets
+        if(!isStone){
+          const sideCol=[shade*.66,shade*.56,shade*.45];
+          const b00=[p00[0],p00[1]-thick,p00[2]],b01=[p01[0],p01[1]-thick,p01[2]];
+          const b11=[p11[0],p11[1]-thick,p11[2]],b10=[p10[0],p10[1]-thick,p10[2]];
+          visual.quad(p00,p01,b01,b00,sideCol,[[0,0],[1,0],[1,.2],[0,.2]]);
+          visual.quad(p11,p10,b10,b11,sideCol,[[0,0],[1,0],[1,.2],[0,.2]]);
+        }
+      }
+      // Outer end-grain caps on each 3D plank
+      if(!isStone){
+        for(const lat of [-side,side]){
+          const e0=deck.pointAt(t0+inset,lat),e1=deck.pointAt(t1-inset,lat);
+          e0[1]+=.005+jitterY;e1[1]+=.005+jitterY;
+          const eb0=[e0[0],e0[1]-thick,e0[2]],eb1=[e1[0],e1[1]-thick,e1[2]];
+          visual.quad(e0,e1,eb1,eb0,[shade*.62,shade*.52,shade*.42]);
+        }
       }
     }
+
+    // Continuous walkable collision probe (unchanged height/profile contract)
     for(let i=0;i<deck.steps;i++){
       const a=i/deck.steps,c=(i+1)/deck.steps;
       for(let j=0;j<edgeOffsets.length-1;j++){
@@ -326,93 +406,146 @@ function bridges(world,{terrainSpan=1100,terrainSegments=310}={}){
         footing.quad(p00,p01,p11,p10);
       }
     }
-    // Full-thickness cedar fascias follow the contoured plank edges, while
-    // two shallow stone abutments physically seat the end planks into BOTH
-    // natural shore profiles. They are visual supports, not extra foot floors.
+
+    // Under-deck longitudinal stringer beams / stone arch spandrels + shore abutments
     const fascia=new WolfveilTriangles(),abutments=new WolfveilTriangles();
+    const stringerOffsets=isStone?[-side,0,side]:[-side*.78,side*.78];
     for(let i=0;i<deck.steps;i++){
       const t0=i/deck.steps,t1=(i+1)/deck.steps;
-      for(const lateral of [-side,side]){
+      for(const lateral of stringerOffsets){
         const a=deck.pointAt(t0,lateral),d=deck.pointAt(t1,lateral);
-        const aa=[a[0],a[1]-.21,a[2]],dd=[d[0],d[1]-.21,d[2]];
-        fascia.quad(a,d,dd,aa,[.40,.33,.26]);
+        const archDrop=isStone?(.28+.55*Math.sin(Math.PI*.5*(t0+t1))):.24;
+        const aa=[a[0],a[1]-archDrop,a[2]],dd=[d[0],d[1]-archDrop,d[2]];
+        const col=isStone?[.66,.66,.63]:[.52,.41,.31];
+        fascia.quad(a,d,dd,aa,col,[[t0*6,0],[t1*6,0],[t1*6,.5],[t0*6,.5]]);
+      }
+      // Rope bridge under-deck twin suspension cables
+      if(isRope){
+        for(const sSign of [-1,1]){
+          const uA=deck.pointAt(t0,sSign*(side-.18)),uB=deck.pointAt(t1,sSign*(side-.18));
+          uA[1]-=.09;uB[1]-=.09;
+          addRopeTube(ropeTris,uA,uB,.036,[.78,.66,.48],5);
+        }
       }
     }
     for(const t of [0,1])for(let j=0;j<edgeOffsets.length-1;j++){
       const l=deck.pointAt(t,edgeOffsets[j]),
         r=deck.pointAt(t,edgeOffsets[j+1]);
-      const lowerL=[l[0],surface(l[0],l[2])-.10,l[2]],
-        lowerR=[r[0],surface(r[0],r[2])-.10,r[2]];
-      abutments.quad(l,r,lowerR,lowerL,[.48,.49,.43]);
+      const lowerL=[l[0],surface(l[0],l[2])-.15,l[2]],
+        lowerR=[r[0],surface(r[0],r[2])-.15,r[2]];
+      abutments.quad(l,r,lowerR,lowerL,[.68,.67,.63],[[0,0],[1,0],[1,1],[0,1]]);
     }
-    const fasciaMat=material(0xffffff,.93,{
-      vertexColors:true,side:THREE.DoubleSide,
-    });
-    world.ownedMaterials.push(fasciaMat);
-    const edgeObj=world.mesh(new THREE.Mesh(fascia.geometry(),fasciaMat));
+
+    const edgeObj=world.mesh(new THREE.Mesh(fascia.geometry(),isStone?stoneDeckMat:plankMat));
     edgeObj.name='SWV_Bridge_SolidWoodEdgeFascia_'+b.id;
-    const shoreObj=world.mesh(new THREE.Mesh(abutments.geometry(),fasciaMat));
+    const shoreObj=world.mesh(new THREE.Mesh(abutments.geometry(),stoneDeckMat));
     shoreObj.name='SWV_Bridge_EmbeddedStoneShoreAbutments_'+b.id;
     edgeObj.receiveShadow=true;shoreObj.receiveShadow=true;
-    const deckObj=world.mesh(new THREE.Mesh(visual.geometry(),plankMat));
+    const deckObj=world.mesh(new THREE.Mesh(visual.geometry(),isStone?stoneDeckMat:plankMat));
     deckObj.name='SWV_Bridge_SeatedWoodPlanks_'+b.id;
-    deckObj.receiveShadow=true;
+    deckObj.receiveShadow=true;deckObj.castShadow=true;
+
     const walkable=world.mesh(new THREE.Mesh(footing.geometry(),floorProbeMat));
     walkable.name='SWV_Bridge_ContinuousWalkableDeck_'+b.id;
     walkable.userData={
       walkable:true,bridgeDeck:true,bridgeId:b.id,
       clientGroundRaycast:true,notServerAuthority:true,
     };
-    // The EXISTING GameWorld3D foot/click groundMeshes list reads this same
-    // walkableSurfaces array. It must not raycast decorative rocks as a floor.
     world.walkableSurfaces.push(walkable);
-    const dx=b.to[0]-b.from[0],dz=b.to[1]-b.from[1];
-    const every=Math.max(1,Math.round(2.3/(deck.len/deck.steps)));
-    for(let i=0;i<=deck.steps;i+=every){
-      const t=i/deck.steps;
-      for(const lateral of [-side-.16,side+.16]){
-        const p=deck.pointAt(t,lateral<0?-side:side);
-        const x=p[0],z=p[2],y=p[1];
-        const delta=lateral<0?-1:1;
-        const nx=-dz/deck.len,nz=dx/deck.len;
-        world.box('cedar',x+nx*delta*.16,y+.58,z+nz*delta*.16,.21,1.15,.21);
-      }
-    }
-    // A single joined rail mesh follows every grade change continuously;
-    // ordinary yaw-only timber boxes leave visible breaks on a steep bridge.
-    const railGeometry=new WolfveilTriangles();
-    for(let i=0;i<deck.steps;i++){
-      const t0=i/deck.steps,t1=(i+1)/deck.steps;
+
+    // 2. Bridge Stanchion Posts, Rope Lashing Collars, Catenary Twisted Ropes & Entry Lanterns
+    const every=Math.max(1,Math.round(2.35/(deck.len/deck.steps)));
+    const postIndices=[];
+    for(let i=0;i<=deck.steps;i+=every)postIndices.push(i);
+    if(postIndices.at(-1)!==deck.steps)postIndices.push(deck.steps);
+
+    for(let pIdx=0;pIdx<postIndices.length;pIdx++){
+      const t=postIndices[pIdx]/deck.steps;
+      const isEndPost=pIdx===0||pIdx===postIndices.length-1;
       for(const sideSign of [-1,1]){
-        // pointAt() already includes half the bridge width; only add a
-        // 14cm outward offset to the visible rail ribbon.
-        const lateral=sideSign*.14;
-        const nx=-dz/deck.len,nz=dx/deck.len;
-        const a=deck.pointAt(t0,sideSign*side),
-          c=deck.pointAt(t1,sideSign*side);
-        for(const p of [a,c]){
-          p[0]+=nx*lateral;p[2]+=nz*lateral;
+        const p=deck.pointAt(t,sideSign*side);
+        const px=p[0]+nx*sideSign*.15,pz=p[2]+nz*sideSign*.15,py=p[1];
+        const postH=isEndPost?1.65:1.22;
+        world.box(isStone?'granite':'cedar',px,py+postH*.5-.05,pz,isStone?.30:.21,postH,isStone?.30:.21);
+        if(isStone){
+          world.box('basalt',px,py+postH-.02,pz,.38,.12,.38);
+        }else{
+          // 3D wrapped rope lashing collars around each cedar post (top & mid)
+          for(const wrapH of [.54,1.02]){
+            const w0=[px-nx*.13,py+wrapH,pz-nz*.13],w1=[px+nx*.13,py+wrapH,pz+nz*.13];
+            addRopeTube(ropeTris,w0,w1,.135,[.80,.66,.46],6);
+          }
         }
-        const aBottom=[a[0],a[1]+.97,a[2]],
-          cBottom=[c[0],c[1]+.97,c[2]],
-          cTop=[c[0],c[1]+1.14,c[2]],
-          aTop=[a[0],a[1]+1.14,a[2]];
-        railGeometry.quad(aBottom,cBottom,cTop,aTop,[.68,.58,.44]);
+        // Warm glowing paper lanterns on the 4 bridge-head posts
+        if(isEndPost){
+          world.box('darkCedar',px-nx*sideSign*.22,py+1.58,pz-nz*sideSign*.22,.48,.10,.10,Math.atan2(nx,nz));
+          world.box('lantern',px-nx*sideSign*.36,py+1.34,pz-nz*sideSign*.36,.28,.40,.28);
+        }
+      }
+
+      // Span catenary twisted hemp ropes + diagonal suspender lines between adjacent posts!
+      if(pIdx<postIndices.length-1){
+        const tNext=postIndices[pIdx+1]/deck.steps;
+        for(const sideSign of [-1,1]){
+          const subSegs=5;
+          const sagDepth=isRope?.11:(isStone?.045:.075);
+          const railPt=(u,baseH,sag)=>{
+            const pt=deck.pointAt(t+(tNext-t)*u,sideSign*side);
+            return [
+              pt[0]+nx*sideSign*.15,
+              pt[1]+baseH-Math.sin(u*Math.PI)*sag,
+              pt[2]+nz*sideSign*.15,
+            ];
+          };
+          for(let s=0;s<subSegs;s++){
+            const u0=s/subSegs,u1=(s+1)/subSegs;
+            // Upper handrail rope (thick braided hemp)
+            addRopeTube(ropeTris,railPt(u0,1.06,sagDepth),railPt(u1,1.06,sagDepth),isStone?.048:.052,[.88,.76,.56],6);
+            // Mid safety rope
+            addRopeTube(ropeTris,railPt(u0,.56,sagDepth*.75),railPt(u1,.56,sagDepth*.75),.036,[.82,.69,.50],5);
+            // Vertical/diagonal rope net ties on timber & rope bridges
+            if(!isStone&&(s===1||s===3)){
+              const um=(u0+u1)*.5;
+              const topTie=railPt(um,1.06,sagDepth);
+              const deckTie=railPt(um,.04,0);
+              addRopeTube(ropeTris,topTie,deckTie,.020,[.76,.64,.46],4);
+            }
+          }
+        }
       }
     }
-    const railMat=material(0xffffff,.88,{
-      vertexColors:true,side:THREE.DoubleSide,
-    });
-    world.ownedMaterials.push(railMat);
-    const railObject=world.mesh(new THREE.Mesh(railGeometry.geometry(),railMat));
-    railObject.name='SWV_Bridge_ContinuousGradeMatchedRails_'+b.id;
-    railObject.receiveShadow=true;
+
+    // Stone bridge retains a carved upper stone coping rail alongside its ceremonial rope swags
+    if(isStone){
+      const railGeometry=new WolfveilTriangles();
+      for(let i=0;i<deck.steps;i++){
+        const t0=i/deck.steps,t1=(i+1)/deck.steps;
+        for(const sideSign of [-1,1]){
+          const a=deck.pointAt(t0,sideSign*side),c=deck.pointAt(t1,sideSign*side);
+          for(const p of [a,c]){p[0]+=nx*sideSign*.15;p[2]+=nz*sideSign*.15;}
+          railGeometry.quad(
+            [a[0],a[1]+1.08,a[2]],[c[0],c[1]+1.08,c[2]],
+            [c[0],c[1]+1.22,c[2]],[a[0],a[1]+1.22,a[2]],
+            [.76,.76,.73],[[t0*8,0],[t1*8,0],[t1*8,.3],[t0*8,.3]],
+          );
+        }
+      }
+      const railObject=world.mesh(new THREE.Mesh(railGeometry.geometry(),stoneDeckMat));
+      railObject.name='SWV_Bridge_ContinuousGradeMatchedRails_'+b.id;
+      railObject.receiveShadow=true;
+    }
+
+    const ropeObj=world.mesh(new THREE.Mesh(ropeTris.geometry(),ropeMat));
+    ropeObj.name=isStone?'SWV_Bridge_TwistedRopeSwags_'+b.id:'SWV_Bridge_ContinuousGradeMatchedRails_'+b.id;
+    ropeObj.receiveShadow=true;ropeObj.castShadow=false;
+    ropeObj.raycast=()=>{};
+
     for(const t of [.16,.40,.65,.87]){
       const p=deck.pointAt(t,0);
       const ground=surface(p[0],p[2]);
       const h=Math.max(.2,p[1]-ground-.20);
-      if(h>.3)world.box(b.kind==='stone'?'basalt':'darkCedar',
-        p[0],ground+h*.5,p[2],1.05,h,1.05);
+      if(h>.3&&!isRope)world.box(isStone?'basalt':'darkCedar',
+        p[0],ground+h*.5,p[2],isStone?1.25:.85,h,isStone?1.25:.85);
     }
     receipts.push({
       id:b.id,kind:b.kind,deckLength:deck.len,
@@ -462,7 +595,10 @@ function quarry(world){
   world.box('darkCedar',X+9,H+11,Z,.20,6,.20);
   return {id:'wolfveil_quarry_visual',hostileAiConnected:false};
 }
-function cavePortals(world){
+function cavePortals(world,{explorableCaves=false}={}){
+  if(explorableCaves){
+    return {count:4,traversable:true,reason:'four_explorable_caves_with_interconnected_tunnels'};
+  }
   const portals=[
     {name:'waterfall',x:163,z:155,w:9,h:7},
     {name:'western_root',x:-324,z:140,w:8,h:6},
@@ -496,7 +632,7 @@ export function buildWolfveilTown(world,terrainOptions={}){
   const housing=[]; // remove every unused house-plot foundation and fence
   const trainingInfo=training(world);
   const quarryInfo=quarry(world);
-  const caveInfo=cavePortals(world);
+  const caveInfo=cavePortals(world,{explorableCaves:Boolean(terrainOptions.explorableCaves)});
   const roof=world.mesh(new THREE.Mesh(world.roofWriter.geometry(),material(0xffffff,.55,{
     vertexColors:true,side:THREE.DoubleSide})));
   roof.name='SWV_IndividualCurvedIndigoRoofTileGeometry';

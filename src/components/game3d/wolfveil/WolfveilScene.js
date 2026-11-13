@@ -31,6 +31,8 @@ import {addWolfveilTerrainEdgeSkirt} from './WolfveilTerrainEdgeSkirt.js';
 import {installShadowWolfHouseModels} from './ShadowWolfHouseGLB.js';
 import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
+import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
+import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
@@ -39,8 +41,10 @@ export function createWolfveilVillage(scene,options={}){
   // put the market at spawn; preserve unshifted master layout coordinates.
   const offsetZ=options.originAtMarket?70:0;
   world.group.position.z=offsetZ;
+  const enableCaves=Boolean(options.originAtMarket);
   const geometry=buildWolfveilTerrain({
     span:options.span||1100,segments:options.segments||310,
+    caveCutouts:enableCaves,
   });
   const terrainMaterial=material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide});
   // Game 3D opt-in: replace flat ground pigment inside the first spawn square.
@@ -105,6 +109,7 @@ export function createWolfveilVillage(scene,options={}){
     swQuarterQuality:Boolean(options.originAtMarket&&options.groundCover),
     canonicalPlaySurface:Boolean(options.originAtMarket&&options.groundCover),
     trailBreaks:Boolean(options.originAtMarket&&options.groundCover),
+    importedTownAtMarket:Boolean(options.importedTownAtMarket),
     terrainSpan:options.span||1100,terrainSegments:options.segments||310,
   });
   // Valley-wide stones, grass tufts and washed-out trail rubble (Game 3D only).
@@ -125,7 +130,9 @@ export function createWolfveilVillage(scene,options={}){
     terrainSpan:options.span||1100,terrainSegments:options.segments||310,
     hideMarketStalls:Boolean(options.hideMarketStalls),
     importedTownAtMarket:Boolean(options.importedTownAtMarket),
+    explorableCaves:enableCaves,
   });
+  const caveSystem=enableCaves?createWolfveilCaveSystem(world,{offsetZ}):null;
   // This shared Wolfveil valley retires all legacy/fountain housing and
   // fallback silhouettes. The Luna Dashboard architecture is the ONLY home.
   // Source GLB files stay archived in the project, but do not spawn.
@@ -152,6 +159,13 @@ export function createWolfveilVillage(scene,options={}){
         terrainSegments:options.segments||310,
         precisionTileWorldOffsetZ:options.originAtMarket?offsetZ:null,
         removeBlueCyanOvals:quietEntryDecor,
+        importedTownAtMarket:Boolean(options.importedTownAtMarket),
+      })
+    :null;
+  const individualGrass=options.groundCover
+    ?buildWolfveilIndividualGrassField(world,{
+        terrainSpan:options.span||1100,
+        terrainSegments:options.segments||310,
         importedTownAtMarket:Boolean(options.importedTownAtMarket),
       })
     :null;
@@ -231,7 +245,7 @@ export function createWolfveilVillage(scene,options={}){
       interiors:palace.sourceStatus==='luna_exact'
         ?'luna_palace_original_architecture_reused; gameplay collision QA pending'
         :'luna_palace_missing_no_placeholder; physical and worker wall boundaries remain',
-      caves:'entrances_visual_interior_unbuilt',
+      caves:enableCaves?'four_explorable_caves_with_interconnected_tunnels':'entrances_visual_interior_unbuilt',
       waterfall:'animated_visual_sheet_not_fluid_simulation',
       enemyAi:'existing_game1_ai_only_no_new_wolfveil_spawns',
       traversal:'local_preview_exploration_only_outside_gameplay_bounds',
@@ -245,7 +259,7 @@ export function createWolfveilVillage(scene,options={}){
   // valley's local geometry is offset 70m into the real game's coordinates.
   world.group.updateMatrixWorld(true);
   const sceneState={
-    ground,world,scene,info,geometry,town,river,waterfall,vegetation,
+    ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,individualGrass,
     get uploadedLandscapeModels(){return ownerModels?.status()??null;},
     grassTileReplacement:ownerGrassTiles,
     get grassTileStatus(){return ownerGrassTiles?.status()??null;},
@@ -266,7 +280,7 @@ export function createWolfveilVillage(scene,options={}){
       return resolveWolfveilBridgeRailing(
         position,previous,WOLFVEIL_BRIDGES,radius,offsetZ);
     },
-    playerPalaceGroundY(position){return palace.playerGroundY(position);},
+    playerPalaceGroundY(position){return palace.playerGroundY(position)??caveSystem?.playerGroundY(position)??null;},
     interactPalace(position){return palace.interact(position);},
     resetPalaceNavigation(){palace.resetNavigation();},
     update(dt,weather={},playerPosition=null){
@@ -285,7 +299,9 @@ export function createWolfveilVillage(scene,options={}){
       };
       vegetation.update(frame);
       palace.update(dt);
+      caveSystem?.update(dt,playerPosition);
       groundCover?.update(dt,frame,playerPosition); // bent footsteps relax over time; no new collider
+      individualGrass?.update(frame,playerPosition?{x:playerPosition.x,z:playerPosition.z-offsetZ}:null);
       ownerModels?.update(frame); // uploaded foliage, no new authoritative collision
       ownerGrassTiles?.update(); // remove late-loading outdated grass accents
       waterfall.update(frame);
@@ -303,6 +319,7 @@ export function createWolfveilVillage(scene,options={}){
       // The 62 authored hillside stones are not Luna interior stairs. Their
       // own tread-top support catches feet; a high side riser blocks motion.
       let pushed=!!(player&&previous&&palace.resolveApproachCollision?.(position,previous,radius));
+      if(previous&&caveSystem?.resolveCollision(position,previous,radius))pushed=true;
       for(const b of colliders){
         const actualZ=b.z+offsetZ;
         if(b.kind==='palace'){
@@ -402,6 +419,7 @@ export function createWolfveilVillage(scene,options={}){
       houseModels?.dispose();
       fountainHomes.dispose();
       palace.dispose();
+      caveSystem?.dispose();
       vegetation.dispose();
       ownerGrassTiles?.dispose();
       ownerModels?.dispose();

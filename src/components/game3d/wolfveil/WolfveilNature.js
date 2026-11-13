@@ -194,45 +194,83 @@ export function buildWolfveilWaterfall(world){
   const waterMat=new THREE.ShaderMaterial({
     transparent:true,side:THREE.DoubleSide,depthWrite:false,
     uniforms:{uTime:{value:0},uStorm:{value:0}},
-    vertexShader:`varying vec2 vUV;varying vec3 vP;
-      void main(){vUV=uv;vP=position;
-        vec4 p=modelMatrix*vec4(position,1.);
-        gl_Position=projectionMatrix*viewMatrix*p;}`,
-    fragmentShader:`precision highp float;
-      varying vec2 vUV;varying vec3 vP;
-      uniform float uTime,uStorm;
+    vertexShader:`varying vec2 vUV;varying vec3 vWorld;
       void main(){
-        float n=sin(vUV.x*36.+vUV.y*25.-uTime*8.)*.5+.5;
-        float b=sin(vUV.x*93.-vUV.y*15.+uTime*6.)*.5+.5;
-        float mist=smoothstep(.85,1.,vUV.y);
-        vec3 col=mix(vec3(.19,.46,.58),vec3(.85,.96,.99),
-          .29+.31*n+.28*b+mist*.18);
-        float opacity=.77+.19*n;
+        vUV=uv;
+        vec4 p=modelMatrix*vec4(position,1.);
+        vWorld=p.xyz;
+        gl_Position=projectionMatrix*viewMatrix*p;
+      }`,
+    fragmentShader:`precision highp float;
+      varying vec2 vUV;varying vec3 vWorld;
+      uniform float uTime,uStorm;
+      float wfHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+      float wfNoise(vec2 p){
+        vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+        return mix(mix(wfHash(i),wfHash(i+vec2(1.,0.)),f.x),
+                   mix(wfHash(i+vec2(0.,1.)),wfHash(i+vec2(1.,1.)),f.x),f.y);
+      }
+      void main(){
+        float edge=1.-smoothstep(.36,.50,abs(vUV.x-.5));
+        float streamA=wfNoise(vec2(vUV.x*16.,vUV.y*7.-uTime*4.2));
+        float streamB=wfNoise(vec2(vUV.x*38.+sin(vUV.y*6.)*.4,vUV.y*13.-uTime*6.8));
+        float crest=smoothstep(.0,.14,vUV.y)*(1.-smoothstep(.0,.06,vUV.y))*.35;
+        float plungeMist=smoothstep(.76,1.0,vUV.y);
+        float threads=smoothstep(.42,.88,streamA*.55+streamB*.52);
+        vec3 deepJade=vec3(.07,.31,.42);
+        vec3 cyanCore=vec3(.22,.58,.68);
+        vec3 whiteSpray=vec3(.92,.97,.99);
+        vec3 col=mix(deepJade,cyanCore,.35+.55*streamA);
+        col=mix(col,whiteSpray,clamp(threads*(.58+.18*uStorm)+plungeMist*.55+crest,0.,.96));
+        float opacity=clamp((.58+.36*threads+plungeMist*.22)*(.55+.45*edge),0.,.95);
         gl_FragColor=vec4(col,opacity);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
   });
-  world.ownedMaterials.push(waterMat);
+  const mistMat=new THREE.ShaderMaterial({
+    transparent:true,side:THREE.DoubleSide,depthWrite:false,
+    uniforms:{uTime:{value:0}},
+    vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader:`precision highp float;varying vec2 vUv;uniform float uTime;
+      void main(){
+        vec2 p=vUv*2.-1.;
+        float r=length(p);
+        if(r>1.)discard;
+        float ang=atan(p.y,p.x);
+        float ringA=exp(-pow((r-(.42+.18*fract(uTime*.35)))/.16,2.));
+        float ringB=exp(-pow((r-(.62+.22*fract(uTime*.35+.5)))/.18,2.));
+        float swirl=.65+.35*sin(ang*7.-uTime*2.4+r*9.);
+        float alpha=clamp(((1.-r)*.38+(ringA+ringB)*.34)*swirl,0.,.72);
+        gl_FragColor=vec4(vec3(.88,.95,.98),alpha);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+  });
+  world.ownedMaterials.push(waterMat,mistMat);
   const {waterfallRange}=WOLFVEIL_RIVER;
   const pts=WOLFVEIL_RIVER.points.filter(p=>p[1]>=waterfallRange[0]-1&&p[1]<=waterfallRange[1]+1);
   const top=pts.find(p=>p[1]>180)||[142,184,45];
   const bottom=pts.find(p=>p[1]<171)||[132,166,19];
-  const width=17,dx=bottom[0]-top[0],dz=bottom[1]-top[1];
-  const h=top[2]-bottom[2],steps=18;
+  const width=17.6,dx=bottom[0]-top[0],dz=bottom[1]-top[1];
+  const h=top[2]-bottom[2],steps=26,cols=10;
   const v=[],uv=[],ids=[];
   for(let j=0;j<=steps;j++){
     const t=j/steps;
-    for(let side of [-1,1]){
-      const x=top[0]+dx*t+side*width*.5+Math.sin(t*19+side)*.2;
-      const z=top[1]+dz*t;
-      const y=top[2]-h*t;
-      v.push(x,y,z);uv.push((side+1)/2,t);
+    // Slight parabolic lip curve + mid-cliff rock ledge bulge so it reads in 3D
+    const lipArc=Math.sin(t*Math.PI)*1.35+Math.sin(t*Math.PI*3)*.28;
+    for(let c=0;c<=cols;c++){
+      const u=c/cols,side=u*2-1;
+      const x=top[0]+dx*t+side*width*.5*(1+.08*t)+Math.sin(t*14+u*5)*.18;
+      const z=top[1]+dz*t-lipArc*.45;
+      const y=top[2]-h*Math.pow(t,1.08)+Math.cos(u*Math.PI)*.32*(1-t);
+      v.push(x,y,z);uv.push(u,t);
     }
   }
-  for(let j=0;j<steps;j++){
-    const i=2*j;
-    ids.push(i,i+2,i+1,i+1,i+2,i+3);
+  const stride=cols+1;
+  for(let j=0;j<steps;j++)for(let c=0;c<cols;c++){
+    const a=j*stride+c,b=a+stride;
+    ids.push(a,b,a+1,a+1,b,b+1);
   }
   const g=new THREE.BufferGeometry();
   g.setIndex(ids);
@@ -241,17 +279,19 @@ export function buildWolfveilWaterfall(world){
   g.computeVertexNormals();
   const obj=world.mesh(new THREE.Mesh(g,waterMat));
   obj.name='SWV_Waterfall_ContinuousSource_FallingSheet_Outlet';
-  const bubbles=new THREE.Mesh(
-    new THREE.TorusGeometry(8.4,1.15,8,40),
-    material(0xd7f2ef,.55,{transparent:true,opacity:.7,side:THREE.DoubleSide}));
-  bubbles.rotation.x=Math.PI/2;
-  bubbles.position.set(bottom[0],bottom[2]+.10,bottom[1]);
+  obj.raycast=()=>{};
+  const bubbles=new THREE.Mesh(new THREE.PlaneGeometry(21,21),mistMat);
+  bubbles.rotation.x=-Math.PI/2;
+  bubbles.position.set(bottom[0],bottom[2]+.14,bottom[1]);
+  bubbles.renderOrder=3;
+  bubbles.raycast=()=>{};
   bubbles.name='SWV_Waterfall_LandingFoam';world.mesh(bubbles);
   return {
     object:obj,segments:steps,
     update(frame){
       waterMat.uniforms.uTime.value=frame.time;
       waterMat.uniforms.uStorm.value=frame.rain;
+      mistMat.uniforms.uTime.value=frame.time;
     },
   };
 }

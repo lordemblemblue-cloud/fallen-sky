@@ -653,37 +653,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     groundMeshes.push(grassGround);
     // The owner's 80-tile assembled town is on the SAME authoritative terrain.
     // Loading errors never block the character or remove Wolfveil's ground.
-    const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene,{onReady:()=>{for(const npc of questNPCs)snapToGround(npc.group,0);}}):null; // quest givers step up onto the loaded town floor
-    // Actual 3D arch beside the already-running waterfall; never replace the
-    // original Wolfveil terrain or Luna mansion with a static image plane.
+    const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene,{onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
     const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
     const astralGate = region==='wolfveil' ? createAstralMountainGate(scene,{sampleGroundY}) : null;
-    // The featured hillside home has a raised natural earth approach and an
-    // interior floor. Include their actual meshes in foot/contact raycasts.
-    if(wolfveilVillage?.walkableSurfaces?.length){
-      groundMeshes.push(...wolfveilVillage.walkableSurfaces);
-    }
-    // Original Wolfveil ground stops at +/-550m. Add solid streamed meadow
-    // tiles outside it, plus instanced grass within the playable meadow.
-    // Nearby streamed floor meshes join the same player-foot/click raycasts;
-    // far horizon tiles stay lightweight visual LOD only.
+    if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
+    // Streamed outer meadow + map-wide Sumi-e brushwork across terrain, mountains, caves & town.
     const livingMeadow=wolfveilVillage?createWolfveilLivingMeadow({
-      scene,
-      offsetZ:70,
-      grassTileReplacement:wolfveilVillage.grassTileReplacement,
+      scene, offsetZ:70, grassTileReplacement:wolfveilVillage.grassTileReplacement,
       addGroundMesh(mesh){groundMeshes.push(mesh);},
-      removeGroundMesh(mesh){
-        const index=groundMeshes.indexOf(mesh);
-        if(index>=0)groundMeshes.splice(index,1);
-      },
+      removeGroundMesh(mesh){const index=groundMeshes.indexOf(mesh);if(index>=0)groundMeshes.splice(index,1);},
     }):null;
     livingMeadow?.update(0,{}, {x:0,z:0}, []);
-    // Map-wide intrinsic Sumi-e materials. This wraps existing Three.js
-    // opaque landscape surface shaders: no extra energy meshes, changed
-    // terrain heights, collider edits, or overlay ribbons. Streamed meadow
-    // materials and async scenery are discovered by the same bounded pass.
     livingInkWorld = wolfveilVillage ? createWolfveilLivingSumiEMaterials({
-      roots:[wolfveilVillage.world.group,livingMeadow?.root],
+      roots:[wolfveilVillage.world.group,livingMeadow?.root,importedSpawnTown?.root],
       level:resolveInkLevel(),
     }) : null;
     mapReady = true;

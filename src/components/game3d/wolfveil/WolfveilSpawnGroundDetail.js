@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { WOLFVEIL_SPAWN_TILE } from './WolfveilSpawnTile.js';
 import { wolfveilRouteClearance } from './WolfveilLayout.js';
 import { clearOf } from './WolfveilForestLayout.js';
+import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const clamp01 = n => Math.max(0,Math.min(1,n));
 const smoothstep = (a,b,n) => {
@@ -15,29 +16,28 @@ const smoothstep = (a,b,n) => {
   return t*t*(3-2*t);
 };
 const TAU=Math.PI*2;
-const SIZE=96;
+const SIZE=256;
 
 export function makeWolfveilInkGrassTexture() {
   const pixels=new Uint8Array(SIZE*SIZE*4);
   for(let y=0;y<SIZE;y++)for(let x=0;x<SIZE;x++){
-    // All harmonics have integer periods: the tile repeats without seams.
+    // Multi-harmonic seamless Sumi-e soil clod, moss wash & dry-brush fiber relief.
     const u=x/SIZE,v=y/SIZE,at=(y*SIZE+x)*4;
-    const wash=.5+.22*Math.sin(TAU*(3*u+2*v))+
-      .16*Math.sin(TAU*(7*u-5*v));
-    const fibers=Math.pow(Math.max(0,Math.sin(TAU*29*u+
-      .38*Math.sin(TAU*4*v))),18);
-    const stipple=Math.pow(Math.max(0,Math.sin(TAU*(17*u+19*v))),22);
-    // Neutral ink-fiber relief is tinted by the real grass/soil vertex color;
-    // applying a green texture to the entire terrain had discolored dirt.
-    const shade=18*(wash-.5)-17*fibers-7*stipple;
-    const pigment=Math.round(Math.max(188,Math.min(250,238+shade)));
+    const wash=.5+.20*Math.sin(TAU*(3*u+2*v))+
+      .15*Math.sin(TAU*(7*u-5*v))+.10*Math.cos(TAU*(13*u+11*v));
+    const clod=.5+.5*Math.sin(TAU*(19*u-17*v))*Math.cos(TAU*(23*u+13*v));
+    const fibers=Math.pow(Math.max(0,Math.sin(TAU*37*u+.42*Math.sin(TAU*5*v))),14);
+    const crossFibers=Math.pow(Math.max(0,Math.sin(TAU*31*v-.36*Math.cos(TAU*6*u))),16);
+    const stipple=Math.pow(Math.max(0,Math.sin(TAU*(43*u+41*v))),18);
+    const shade=28*(wash-.5)+14*(clod-.5)-22*fibers-12*crossFibers-10*stipple;
+    const pigment=Math.round(Math.max(168,Math.min(252,232+shade)));
     pixels[at]=pigment;
-    pixels[at+1]=Math.min(255,pigment+1);
-    pixels[at+2]=Math.max(0,pigment-2);
-    pixels[at+3]=255; // never alpha-cut the walkable terrain
+    pixels[at+1]=Math.min(255,pigment+2);
+    pixels[at+2]=Math.max(0,pigment-3);
+    pixels[at+3]=255;
   }
   const texture=new THREE.DataTexture(pixels,SIZE,SIZE,THREE.RGBAFormat);
-  texture.name='Wolfveil_SumiE_SeamlessGrassPigment';
+  texture.name='Wolfveil_SumiE_SeamlessGrassAndSoilPigment';
   texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
   texture.magFilter=THREE.LinearFilter;
   texture.minFilter=THREE.LinearMipmapLinearFilter;
@@ -94,6 +94,8 @@ export function applyWolfveilSpawnGroundDetail(material, geometry) {
   // Importantly, NO custom terrain shader is used, so the physical ground
   // remains visible if a decorative shader cannot compile on the device.
   material.map=makeWolfveilInkGrassTexture();
+  material.bumpMap=cloneRepeatedTexture(getWolfveilSumiETextures().turf.bumpMap,1,1);
+  material.bumpScale=0.036;
   material.vertexColors=true;
   material.transparent=false;
   material.opacity=1;

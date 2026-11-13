@@ -78,7 +78,7 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      minZ:p.z+70-p.depth/2-2,maxZ:p.z+70+p.depth/2+2,
      circles:[WOLFVEIL_IMPORTED_TOWN_TREE]});
    model=town;emit('ready');onReady?.();
- },undefined,error=>{if(active){emit('error',error?.message||'Asset network error');console.warn('[Game 3D town] GLB load failed; Wolfveil remains walkable',error);}});
+ },undefined,error=>{if(active){emit('error',error?.message||'Asset network error');globalThis.console?.warn('[Game 3D town] GLB load failed; Wolfveil remains walkable',error);}});
  return {root,get status(){return state;},get model(){return model;},
    /** Town floor height at a point, or null off the town / before it loads. */
    groundY(x,z){return collision?collision.groundAt(x,z):null;},
