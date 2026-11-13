@@ -89,7 +89,11 @@ function Shot() {
             meadow.update(0.05, weather, focus, []); inkWorld.update(0.05, weather);
           }
           if (s.ortho || !inkLevel) renderer.render(scene, cam); else ink.render(scene, cam);
+          renderer.getContext().finish();
+          outs[i].clearRect(0, 0, W, H);
           outs[i].drawImage(gl, 0, 0);
+          outs[i].fillStyle = '#ff0'; outs[i].font = '14px monospace';
+          outs[i].fillText(`c${cycle + 1} glerr ${renderer.getContext().getError()} lost ${renderer.getContext().isContextLost()}`, 6, H - 8);
         });
         cycle++;
         let dbg = '';
@@ -113,7 +117,7 @@ function Shot() {
       };
       draw();
     } catch (e) { setLog('ERROR ' + (e?.stack || e)); }
-    return () => { stop = true; clearTimeout(timer); };
+    return () => { stop = true; clearTimeout(timer); console.error = origError; console.warn = origWarn; el.replaceChildren(); };
   }, [view]);
   return (
     <div style={{ position: 'fixed', inset: 0, background: '#000' }}>
