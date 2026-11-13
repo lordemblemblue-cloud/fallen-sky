@@ -46,7 +46,14 @@ export default function RespawnMapOverlay() {
     : null;
 
   // Saved checkpoint (or the map default) is the starting selection.
-  const [selected, setSelected] = useState(() => getRespawnPoint().id);
+  const [selected, setSelected] = useState(() => {
+    const deathPosition = getDeathState().deathPosition;
+    if (!deathPosition || !Number.isFinite(deathPosition.x) || !Number.isFinite(deathPosition.z)) return getRespawnPoint().id;
+    return MAP_SPAWN_POINTS.reduce((nearest, candidate) =>
+      Math.hypot(candidate.x - deathPosition.x, candidate.z - deathPosition.z) <
+      Math.hypot(nearest.x - deathPosition.x, nearest.z - deathPosition.z) ? candidate : nearest,
+      getRespawnPoint()).id;
+  });
   const points = useMemo(() => MAP_SPAWN_POINTS, []);
   const selectedPoint = points.find((p) => p.id === selected) || getRespawnPoint();
 
@@ -84,7 +91,7 @@ export default function RespawnMapOverlay() {
         <div className="text-center">
           <div className="text-red-400 text-xs uppercase tracking-[0.4em] mb-2">You Died</div>
           <h2 className="text-white text-3xl font-bold tracking-wider">Choose a Respawn Point</h2>
-          <p className="text-white/50 text-sm mt-1">Your last checkpoint is selected by default</p>
+          <p className="text-white/50 text-sm mt-1">The nearest registered spawn is selected by default</p>
         </div>
 
         {dungeonCheckpoint && (
