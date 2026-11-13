@@ -118,16 +118,20 @@ function addPlatform(ground,root,pad){
     a.position.set(pad.x+offset,5.5,pad.z);root.add(a);
   }
 }
+// Light only ever occupies the open run between two landing pads: it starts at
+// one circle's rim and stops at the next one, never crossing onto a deck.
+const openSpan=len=>Math.max(0,len-2*ASTRAL_PAD_RADIUS);
 function addBridge(ground,root,b){
   const dx=b.bx-b.ax,dz=b.bz-b.az,len=Math.hypot(dx,dz);
   const angle=Math.atan2(dx,dz),x=(b.ax+b.bx)/2,z=(b.az+b.bz)/2;
+  const span=openSpan(len);
   const deck=new THREE.Mesh(new THREE.BoxGeometry(ASTRAL_BRIDGE_HALF_WIDTH*2,
     .7,len+.4),standard(0x56677d,.77,.3));
   deck.position.set(x,-.35,z);deck.rotation.y=angle;deck.receiveShadow=true;
   ground.add(deck);
   const accent=new THREE.MeshBasicMaterial({color:0x9bdaff});
-  for(const side of [-1,1]){
-    const strip=new THREE.Mesh(new THREE.BoxGeometry(.16,.085,len),accent);
+  if(span>0.01)for(const side of [-1,1]){
+    const strip=new THREE.Mesh(new THREE.BoxGeometry(.16,.085,span),accent);
     strip.rotation.y=angle;
     strip.position.set(x+side*Math.cos(angle)*(ASTRAL_BRIDGE_HALF_WIDTH-.45),
       .09,z-side*Math.sin(angle)*(ASTRAL_BRIDGE_HALF_WIDTH-.45));
@@ -209,8 +213,12 @@ function createBoundaryEnergy(root){
     const dx=bridge.bx-bridge.ax,dz=bridge.bz-bridge.az;
     const len=Math.hypot(dx,dz),nx=dz/len,nz=-dx/len;
     const cx=(bridge.ax+bridge.bx)/2,cz=(bridge.az+bridge.bz)/2;
+    // The ribbons bridge the two wall gaps and stop at each rim, so the energy
+    // outline reads as circle, bridge, circle instead of lying across the decks.
+    const span=openSpan(len);
+    if(span<=0.01)continue;
     for(const side of [-1,1]){
-      const ribbon=new THREE.Mesh(new THREE.PlaneGeometry(len,ENERGY_WALL_HEIGHT),
+      const ribbon=new THREE.Mesh(new THREE.PlaneGeometry(span,ENERGY_WALL_HEIGHT),
         material);
       ribbon.rotation.y=Math.atan2(-dz,dx);
       ribbon.position.set(cx+side*nx*(ASTRAL_BRIDGE_HALF_WIDTH+.12),

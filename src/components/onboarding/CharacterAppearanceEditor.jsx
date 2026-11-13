@@ -1,6 +1,6 @@
 import {Check, Layers3} from 'lucide-react';
 import CreatorExpressionPanel from './CreatorExpressionPanel';
-import {SHAPE_CONTROLS,CREATOR_BODIES,creatorBody} from '@/components/onboarding/avatarCustomization';
+import {SHAPE_CONTROLS,CREATOR_BODIES,creatorBody,EXPRESSION_CONTROLS} from '@/components/onboarding/avatarCustomization';
 import { CREATOR_BODY_PRESETS, CREATOR_BODY_SHAPE_IDS, applyCreatorBodyPreset } from './creatorBodyQuality.mjs';
 import {AVATAR_STYLE_PRESETS,COMPANION_MODELS,DEFAULT_AVATAR_APPEARANCE} from './genesisAssets';
 import {useCustomizationCatalog} from './useCustomizationCatalog';
