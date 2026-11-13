@@ -18,7 +18,7 @@ const mulberry32=(seed)=>()=>{let t=seed+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);
 const smooth=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
 
 // Keep plazas, the palace, the river and the map edge free of scatter.
-function openGround(x,z,half){
+export function openGround(x,z,half){
   if(Math.abs(x)>half||Math.abs(z)>half)return false;
   if(wolfveilDistanceToRiver(x,z)<16)return false;
   if(Math.abs(x-WOLFVEIL_PALACE.x)<WOLFVEIL_PALACE.width/2+12&&

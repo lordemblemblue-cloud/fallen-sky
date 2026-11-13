@@ -12,7 +12,7 @@ const MOSS=new THREE.Color(0x5a6b44);
 const REGION=275; // metres per culling region
 
 // 20 flat facets, pushed in and out so the silhouette reads as broken stone.
-function rockGeometry(){
+export function rockGeometry(){
   const geometry=new THREE.IcosahedronGeometry(1,0),p=geometry.attributes.position;
   for(let i=0;i<p.count;i++){
     const x=p.getX(i),y=p.getY(i),z=p.getZ(i);
@@ -44,7 +44,7 @@ function tuftGeometry(){
   return geometry;
 }
 
-function byRegion(items){
+export function byRegion(items){
   const regions=new Map();
   for(const item of items){
     const key=Math.floor(item.x/REGION)+':'+Math.floor(item.z/REGION);
@@ -89,6 +89,6 @@ export function buildWolfveilTrailLandscaping(world,{terrainSpan=1100,terrainSeg
     const tones=t.dry?DRY_TONES:GREEN_TONES;
     tint.set(tones[Math.floor(t.tone*tones.length)%tones.length]);
   });
-  return {rocks:plan.rocks.length,tufts:plan.tufts.length,triangles:plan.triangles,
+  return {heightAt,rocks:plan.rocks.length,tufts:plan.tufts.length,triangles:plan.triangles,
     plantAnchors:plan.plantAnchors,grassAnchors:plan.grassAnchors};
 }

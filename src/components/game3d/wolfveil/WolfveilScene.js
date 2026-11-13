@@ -22,6 +22,7 @@ import {applyWolfveilSquareR08C10GroundPigment} from '../axe/world/landscaping/W
 import {clearOf,wolfveilTreePlacements,wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
 import {installWolfveilOwnerLandscapeModels} from './WolfveilOwnerLandscapeModels.js';
 import {buildWolfveilTrailLandscaping} from './WolfveilTrailLandscaping.js';
+import {buildWolfveilLivingLandscape} from './WolfveilLivingLandscape.js';
 import {applyWolfveilSpawnGroundDetail} from './WolfveilSpawnGroundDetail.js';
 import {addWolfveilWestHillsideLandscaping} from './WolfveilWestHillsideGround.js';
 import {WOLFVEIL_SPAWN_TILE} from './WolfveilSpawnTile.js';
@@ -112,6 +113,10 @@ export function createWolfveilVillage(scene,options={}){
         terrainSpan:options.span||1100,terrainSegments:options.segments||310,
       })
     :null;
+  // Wildflowers, shrubs, ferns, fallen logs and riverbank reeds (Game 3D only).
+  const livingLandscape=trailLandscaping
+    ?buildWolfveilLivingLandscape(world,{heightAt:trailLandscaping.heightAt})
+    :null;
   const river=addWolfveilWater(world,WOLFVEIL_RIVER,{
     silverWater:Boolean(options.silverWater),
   });
@@ -195,6 +200,7 @@ export function createWolfveilVillage(scene,options={}){
     plantedTrees:vegetation.trees.length,
     trailLandscaping:trailLandscaping?{rocks:trailLandscaping.rocks,
       tufts:trailLandscaping.tufts,triangles:trailLandscaping.triangles}:null,
+    livingLandscape,
     spawnGroundTile:options.spawnGroundTile?WOLFVEIL_SPAWN_TILE:null,
     groundCover:groundCover?{
       grassPatches:groundCover.grassPatches,
