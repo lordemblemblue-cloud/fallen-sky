@@ -31,8 +31,16 @@ export const WOLFVEIL_IMPORTED_TOWN_TREE=Object.freeze({
 // Canal water sits just above the lawn instead of standing proud of it.
 export const WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y=.703;
 // Render coordinates. Each one is on open, reachable street.
-export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-12,z:12});
-export const WOLFVEIL_TOWN_QUEST_NPC_SPOTS=Object.freeze({});
+export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-29,z:32});
+// Quest givers by id: the first one greets new players, the rest stand in
+// the four quarters of the town.
+export const WOLFVEIL_TOWN_QUEST_NPC_SPOTS=Object.freeze({
+ archer_lyra:Object.freeze({x:-27,z:35}),
+ archer_vex:Object.freeze({x:-61,z:-59}),
+ archer_kira:Object.freeze({x:15,z:-60}),
+ archer_noor:Object.freeze({x:-62,z:45}),
+ archer_zephyr:Object.freeze({x:20,z:54}),
+});
 export function insideWolfveilImportedTown(x,z,margin=0){
  const p=WOLFVEIL_IMPORTED_TOWN;
  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x-p.x)<=p.width/2+margin&&Math.abs(z-p.z)<=p.depth/2+margin;
