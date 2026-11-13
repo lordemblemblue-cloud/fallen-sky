@@ -80,6 +80,21 @@ export const INVENTORY = {
   ],
 };
 
+// Owner-approved ranged testing item. This adds to, and never replaces,
+// existing inventory props, category contents or character-owned objects.
+// The same item identifier and model path are used in main Game 3D.
+INVENTORY.weapon.push(gear({
+  id: 'test_training_bow', name: 'Training Bow',
+  type: 'Weapon — Bow', slot: 'weapon', category: 'weapon',
+  masteryWeaponId: 'bow', weaponFamily: 'bow', axeWeaponRole: 'ranged',
+  iconUrl: '/game3d/test-gear/training-bow.svg',
+  modelUrl: '/game3d/test-gear/training-bow.glb', modelFormat: 'glb',
+  rarity: 'common', mastery: 1, tier: 1, level: 1,
+  atk: '2-4', baseStats: { attack: 3 },
+  durability: '100/100', introducedVersion: 2,
+  source: 'test_loadout', tradeable: false, equipped: false,
+}));
+
 // Armor pack (fitted armor layers): loot-only templates, deliberately NOT part of INVENTORY above, so
 // new and existing characters are never granted them as starters. They drop from monsters
 // (axe/loot/AXEArmorLootSystem.js) and enter AXEEquipmentInventoryStore on pickup.
