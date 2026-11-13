@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import { useNavigate } from '@tanstack/react-router';
 import { base44 } from '@/api/base44Client';
 import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
@@ -461,7 +460,7 @@ export default function GameView() {
     <div className="game3d-view fixed inset-0 bg-black overflow-hidden" data-service-mode={services.active ? 'true' : 'false'} data-services-open={services.active || services.expanded ? 'true' : 'false'}>
       {/* PREVIEW-BRANCH ONLY: no part of this feature is merged/published. */}
       {isAnimationsPreviewHost() && phase==='world' && <button type="button" data-testid="preview-animations-nav"
-        onClick={()=>navigate('/Animations')}
+        onClick={()=>navigate({to:'/Animations'})}
         className="absolute top-5 left-[310px] z-[1400] rounded-xl border border-cyan-400/40 bg-slate-950/85 px-4 py-2 text-sm font-semibold tracking-wide text-cyan-100 shadow-lg shadow-cyan-950/30 backdrop-blur hover:bg-cyan-950/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-200"
         title="Animations · MoCapAnything V2 preview workspace">
         Animations
@@ -530,7 +529,7 @@ export default function GameView() {
               setWorkflowSpawn(nextRegion==='wolfveil' && user?.role==='admin'?target:null);
               setPhase('world');
             }}
-            onBack={()=>navigate(createPageUrl('LunaTemplate'))} />
+            onBack={()=>navigate({to:'/'})} />
           
         </>
       ) : (

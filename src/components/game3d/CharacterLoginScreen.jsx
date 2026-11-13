@@ -29,6 +29,8 @@ import './CharacterSelectionPanorama.css';
 import './CharacterLivingChronicle.css';
 import './CharacterCrossline.css';
 import './CharacterSelectionRefinement.css';
+import './CharacterCreatorOriginalLayout.css';
+
 
 function displayField(value, fallback) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
@@ -214,7 +216,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     rail.addEventListener('wheel', onCharacterWheel, { passive:false });
     return () => rail.removeEventListener('wheel', onCharacterWheel);
   }, [step, selectableCharacters.length]);
-  const startJourney=()=>setStep('select');
+  const startJourney=()=>setStep(playableCount?'select':'faction');
   // Destructive action runs only after explicit confirmation and the server's
   // owned-character tombstone acknowledgement. Failed/offline requests keep the
   // character untouched so it cannot reappear from a newer cloud copy.

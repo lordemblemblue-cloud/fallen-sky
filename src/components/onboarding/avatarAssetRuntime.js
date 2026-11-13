@@ -118,16 +118,19 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
  model.traverse(n=>{if(n.isSkinnedMesh)n.frustumCulled=false;});
  // The in-world fused body must match the creator-stage pigment pipeline.
  // Shared platform avatars still use their original styling path.
- model.userData.game3dFusedCreatorBody=fusedWorldBody && !usedFallback;
+ const previewFused=typeof config==='string' && /^\/models\/characters\/fused\/(Female|Male)_Fused_v[12]\.glb$/.test(config);
+ const appearance=typeof config==='string'?{}:config;
+ model.userData.game3dFusedCreatorBody=(fusedWorldBody||previewFused) && !usedFallback;
  if(usedFallback) model.userData.game3dLegacyCharacterFallback = true;
- if(fusedWorldBody && !usedFallback)applyFusedWorldProportions(model,config);
- else applyCompanionAppearance(model,typeof config==='string'?{}:config);
- if(typeof config!=='string'){const customization=new AvatarCustomizationRuntime(model,{gender:config.gender,rigId:localBody?.rig_id||model.userData.rigId});customizations.set(model,customization);await customization.update(config);}
+ if(model.userData.game3dFusedCreatorBody)applyFusedWorldProportions(model,appearance);
+ else applyCompanionAppearance(model,appearance);
+ const customization=new AvatarCustomizationRuntime(model,{gender:appearance.gender,rigId:localBody?.rig_id||model.userData.rigId});
+ customizations.set(model,customization);await customization.update(appearance);
  return model;
 }
 export function disposeAvatarModel(model){customizations.get(model)?.dispose();customizations.delete(model);const textures=new Set(),materials=new Set(),geometries=new Set();model?.traverse(n=>{if(n.geometry)geometries.add(n.geometry);if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>materials.add(m));n.skeleton?.dispose();});for(const m of materials){Object.values(m).forEach(t=>{if(t?.isTexture)textures.add(t);});m.dispose();}textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());}
 export function applyPlayerAppearance(model,appearance){
  if(model?.userData?.game3dFusedCreatorBody)applyFusedWorldProportions(model,appearance);
  else applyCompanionAppearance(model,appearance);
- customizations.get(model)?.update(appearance);
-}
+ return customizations.get(model)?.update(appearance);
+ }

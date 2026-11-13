@@ -1,0 +1,6 @@
+import { EXPRESSION_PRESETS, EXPRESSION_CONTROLS } from '@/components/onboarding/avatarCustomization';
+import CreatorRange from '@/components/onboarding/CreatorRange';
+export default function CreatorExpressionPanel({capabilities,expression={},onExpressionChange}) {
+ const supported=new Set(capabilities.expressions||[]),controls=EXPRESSION_CONTROLS.filter(c=>c.morphs.every(m=>supported.has(m)));
+ return <>{controls.length?<><div className="creator-chips" role="group" aria-label="Expression presets">{EXPRESSION_PRESETS.map(preset=><button type="button" key={preset.id} aria-pressed={expression.preset===preset.id} onClick={()=>onExpressionChange({preset:preset.id,values:{...preset.values},morphs:{...preset.morphs}})}>{preset.label}</button>)}</div><section className="creator-group">{controls.map(c=><CreatorRange key={c.id} label={c.label} value={expression.values?.[c.id]||0} onChange={value=>onExpressionChange({preset:'',values:{...expression.values,[c.id]:value},morphs:{}})}/>)}</section></>:<p className="creator-hint">This body has no expression keys. Choose Eve or Adam under Body to preview expressions.</p>}<p className="creator-microcopy">Preview only · not saved</p></>;
+}

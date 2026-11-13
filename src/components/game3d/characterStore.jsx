@@ -211,11 +211,10 @@ export function mergeCharactersFromServer(entries = []) {
 export async function activateAndSyncToHUD(id) {
   const character=state.roster.find(c=>c.id===id);
   if (!character) throw new Error('This character is no longer in your Game 3D roster. Refresh Character Select.');
-  // Enter World is a local selection, not an account-avatar save. Calling
-  // saveAppearance here blocked Play if the original application's Base44
-  // endpoint was unavailable in the migrated app, and could strip creator-only
-  // settings from a selected Adam/Eve character. Appearance changes are saved
-  // explicitly in the creator, not as an implicit side effect of Play.
+  // Entering the world is a local character selection, not an implicit
+  // account-avatar save. The previous remote write could fail on the migrated
+  // app and block Play before the existing 3D scene could be entered.
+  // Customizations are saved explicitly through the character creator.
   setActiveCharacter(id);
   window.dispatchEvent(new CustomEvent('axeCharacterActivated',{detail:{characterId:id,character}}));
 }
