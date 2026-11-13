@@ -238,7 +238,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
       </div>
       <footer className="axe-world-map-foot">
         <span>{isDungeon?'North-up cave chart · corridors, rooms and living monsters update as you move.':'Silver-blue navigation trail follows your tracked quest when a valid objective location is known.'}</span>
-        <span>Click a marker for details · Esc to close</span>
+        <span>Click a marker for details · M / Esc to close</span>
       </footer>
     </section>
   </div>;
