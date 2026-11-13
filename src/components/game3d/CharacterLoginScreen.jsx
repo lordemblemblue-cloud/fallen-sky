@@ -30,6 +30,7 @@ import './CharacterLivingChronicle.css';
 import './CharacterCrossline.css';
 import './CharacterSelectionRefinement.css';
 import './CharacterCreatorOriginalLayout.css';
+import '@/components/onboarding/creator-viewport-fix.css';
 
 
 function displayField(value, fallback) {
