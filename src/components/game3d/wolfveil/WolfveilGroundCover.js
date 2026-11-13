@@ -8,6 +8,7 @@ import {mulberry32} from './WolfveilGeometry.js';
 import {isInsideWolfveilSpawnTile} from './WolfveilSpawnTile.js';
 import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
 import {planWolfveilFlowPlanting,wolfveilGrassCurrent} from './WolfveilFlowPlanting.mjs';
+import {refineWolfveilForestTrailPlanting,planWolfveilForestTrailAccents} from './WolfveilForestTrailLandscape.mjs';
 import {wolfveilIsProtectedSWTile,wolfveilSWDecorFootprintRadius,wolfveilThinSWDecorations,wolfveilPlanSWGrassDrawBatch,WOLFVEIL_SW_QUALITY} from './WolfveilSWQuarterQuality.mjs';
 import {auditWolfveilSWDecorMeshes,wolfveilNoDecorRaycast} from './WolfveilSWDecorAudit.mjs';
 import {planWolfveilPrecisionForestTile,WOLFVEIL_FOREST_DETAIL_STYLE} from './WolfveilPrecisionForestTile.mjs';
@@ -164,6 +165,14 @@ export function buildWolfveilGroundCover(world,options={}){
        distanceToRiver:wolfveilDistanceToRiver,trees:forestTrees,
      })
     :null;
+  // Reference-driven western forest verges: original route anchors only.
+  // Game 1 never opts in; all changes are decorative and tile-owner guarded.
+  const geoForestEnabled=options.precisionTileWorldOffsetZ===70&&
+    options.squareHalfExtent!=null;
+  const geoForestReserved=(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r);
+  const geoForestGrass=geoForestEnabled&&flow
+    ?refineWolfveilForestTrailPlanting(flow,{reservedAt:geoForestReserved})
+    :null;
   // Independent R06-C02 forest-floor style pass, never a new collision writer.
   const forestSquare=forestTrees
     ?planWolfveilSquareR06C02({trees:forestTrees,heightAt:sampleVisibleGround,
@@ -245,8 +254,16 @@ export function buildWolfveilGroundCover(world,options={}){
     if(westRockPocketClumps)
       patches.push({id:'WestRock_ScatteredGrassIslands',plants:westRockPockets});
   }
+  const geoForestStones=geoForestEnabled
+    ?planWolfveilForestTrailAccents({
+       heightAt:sampleVisibleGround,clearOf,
+       riverDistance:wolfveilDistanceToRiver,
+       trees:forestTrees??[],reservedAt:geoForestReserved,
+     })
+    :[];
   const stoneSpecs=[
     ...planWolfveilPathStones(options),
+    ...geoForestStones,
     ...(forestSquare?.stones??[]).map(p=>({...p,forestSquareArt:true})),
     ...(precisionTile?.stones??[]).map(p=>({...p,precisionTileId:precisionTile.id})),
     ...(flow?.stones??[]).map(p=>({x:p.x,y:p.y,z:p.z,yaw:p.yaw,
@@ -648,6 +665,13 @@ for(int j=0;j<6;j++){
       understory:x40Counts.understory,
       decorativeOnly:true,collidersAdded:0,worldZOffsetHandledByParent:true,
       canonicalTriangleSampler:true,
+    }:null,
+    forestTrailStudy:geoForestEnabled?{
+      styledGrass:flow?.grass.filter(p=>p.forestReferenceStyle).length??0,
+      plannedStyledGrass:geoForestGrass?.styled??0,
+      pathEdgeStones:stoneSpecs.filter(p=>p.forestReferenceStyle).length,
+      target:'western woodland and training forest routes',
+      decorativeOnly:true,collidersAdded:0,terrainHeightsChanged:false,
     }:null,
     flowPlan:flow, // reuse coordinates for optional uploaded model instancing
     grassMeshes,flowShrubs,stones,decorativeOnly:true,
