@@ -19,6 +19,12 @@ export const CULTURAL_INSPIRATIONS = [
   { id: 'polynesian', label: 'Polynesian', description: 'Ocean voyaging, tattoo and carved wood.' },
   { id: 'slavic', label: 'Slavic', description: 'Birch forest, embroidery and household spirits.' },
   { id: 'celtic', label: 'Celtic', description: 'Hill forts, knotwork and misted coastlines.' },
+  { id: 'egyptian', label: 'Egyptian', description: 'Lapis blue, warm gold and celestial ornament', accent: '#d6ae63' },
+  { id: 'greek', label: 'Greek', description: 'Marble, bronze and laurel motifs', accent: '#b9d5db' },
+  { id: 'roman', label: 'Roman', description: 'Oxide red, bronze and mosaic forms', accent: '#cb9178' },
+  { id: 'american', label: 'American', description: 'Modern streetwear and expressive textiles', accent: '#b4c8e2' },
+  { id: 'korean', label: 'Korean', description: 'Elegant folds, textiles and knotwork', accent: '#c6b5e9' },
+  { id: 'spiritual', label: 'Spiritual fantasy', description: 'Blue-silver energy, halos and aura design', accent: '#9bbdff' },
 ];
 
 const GENRE_IDS = new Set(GENRE_DIRECTIONS.map((item) => item.id));
@@ -37,3 +43,7 @@ export function normalizeCulturalInspirations(value) {
     .map((id) => String(id || '').toLowerCase())
     .filter((id) => INSPIRATION_IDS.has(id) && !seen.has(id) && seen.add(id));
 }
+// Editor art-direction accent is decorative; it never changes appearance ancestry or stats.
+export const MAX_CULTURAL_INSPIRATIONS=7;
+export function toggleCulturalInspiration(current,id){const a=normalizeCulturalInspirations(current);if(!INSPIRATION_IDS.has(id))return a;return a.includes(id)?a.filter(x=>x!==id):[...a,id].slice(0,MAX_CULTURAL_INSPIRATIONS);}
+export function creatorCultureAccent(value){const id=normalizeCulturalInspirations(value)[0];return CULTURAL_INSPIRATIONS.find(x=>x.id===id)?.accent||'#b7d2ed';}
