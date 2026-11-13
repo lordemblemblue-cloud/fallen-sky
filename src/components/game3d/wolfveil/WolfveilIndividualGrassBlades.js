@@ -9,6 +9,7 @@ import { isWolfveilCaveMouthCutout } from './WolfveilCaveLayout.mjs';
 import { clearOf } from './WolfveilForestLayout.js';
 import { mulberry32 } from './WolfveilGeometry.js';
 import { createWolfveilTerrainSurfaceSampler } from './WolfveilTerrainSurfaceSampler.mjs';
+import { createWolfveilNearGrassStream } from './WolfveilNearGrassStream.js';
 
 const TAU = Math.PI * 2;
 const noRaycast = () => {};
@@ -248,7 +249,14 @@ export function buildWolfveilIndividualGrassField(world, {
     meshes.push(inst);
   }
 
+  const nearGrass = createWolfveilNearGrassStream({
+    group: world.group, geometry, material, palette: VALLEY_BLADE_PALETTE,
+    accept: (x, z) => acceptSpot(x, z, 0.3),
+  });
+
   return {
+    nearGrass,
+    dispose() { nearGrass.dispose(); },
     bladeInstances: spots.length,
     totalIndividualShoots: spots.length * 3,
     chunks: meshes.length,
@@ -263,6 +271,7 @@ export function buildWolfveilIndividualGrassField(world, {
       }
       if (playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
         uniforms.player.value.set(playerPosition.x, playerPosition.z, 0, 1);
+        nearGrass.update(playerPosition);
       } else {
         uniforms.player.value.set(99999, 99999, 0, 0);
       }

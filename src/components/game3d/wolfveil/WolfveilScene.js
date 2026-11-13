@@ -420,6 +420,7 @@ export function createWolfveilVillage(scene,options={}){
       fountainHomes.dispose();
       palace.dispose();
       caveSystem?.dispose();
+      individualGrass?.dispose();
       vegetation.dispose();
       ownerGrassTiles?.dispose();
       ownerModels?.dispose();
