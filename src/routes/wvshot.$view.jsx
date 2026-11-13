@@ -22,10 +22,11 @@ function Shot() {
     console.error = (...a) => { errs.push('E:' + a.map(String).join(' ').slice(0, 700)); origError(...a); };
     console.warn = (...a) => { errs.push('W:' + a.map(String).join(' ').slice(0, 300)); origWarn(...a); };
     try {
-      let inkLevel = 3;
+      let inkLevel = 3; const flags = new Set();
       const specs = [];
       for (const t of decodeURIComponent(view).split('_')) {
         if (/^ink\d$/.test(t)) { inkLevel = Number(t[3]); continue; }
+        if (/^[a-z]{4,}$/.test(t)) { flags.add(t); continue; }
         const ortho = t[0] === 'o';
         specs.push({ ortho, n: (ortho ? t.slice(1) : t).split(',').map(Number) });
       }
@@ -57,10 +58,17 @@ function Shot() {
         el.appendChild(c); return c.getContext('2d');
       });
       el.style.gridTemplateColumns = `repeat(${cols},1fr)`;
-      let cycle = 0;
+      let cycle = 0, applied = false;
+      const applyFlags = () => {
+        if (applied || !town.model) return; applied = true;
+        if (flags.has('nomeadow')) meadow.root.visible = false;
+        if (flags.has('novillage')) village.world.group.visible = false;
+        if (flags.has('basic')) town.model.traverse(o => { if (o.isMesh) o.material = new THREE.MeshBasicMaterial({ color: 0xff0000 + (o.id * 977 % 255) }); });
+        if (flags.has('nocull')) town.model.traverse(o => { o.frustumCulled = false; });
+      };
       const draw = () => {
         if (stop) return;
-        const t0 = performance.now();
+        const t0 = performance.now(); applyFlags();
         specs.forEach((s, i) => {
           let cam, focus;
           if (s.ortho) {
