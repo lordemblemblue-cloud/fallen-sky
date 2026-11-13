@@ -152,6 +152,7 @@ export function createWolfveilVillage(scene,options={}){
         terrainSegments:options.segments||310,
         precisionTileWorldOffsetZ:options.originAtMarket?offsetZ:null,
         removeBlueCyanOvals:quietEntryDecor,
+        importedTownAtMarket:Boolean(options.importedTownAtMarket),
       })
     :null;
   // Optional high-detail uploaded models are a small, bounded accent layer.
