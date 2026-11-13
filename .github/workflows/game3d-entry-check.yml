@@ -1,0 +1,28 @@
+name: Game 3D avatar and world-entry verification
+on:
+  push:
+    branches: [main, 'fix/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  game3d:
+    name: Models, contracts and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify exact Adam and Eve GLB assets
+        run: npm run verify:game3d-characters
+      - name: Verify character routes and entry contracts
+        run: node --test scripts/game3d-entry-contract.test.mjs
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Build complete Game 3D application
+        run: npm run build
