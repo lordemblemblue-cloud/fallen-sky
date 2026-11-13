@@ -1,15 +1,21 @@
 import { useEffect } from 'react';
 import { createGame3DSceneWarmup } from './SceneWarmup.mjs';
 
-// A more specific /game3d/ service-worker scope cannot intercept auth,
-// navigation, private Base44 endpoints, player saves or other games.
+// GameView is outside /game3d/, so its browser client requires a root
+// service-worker scope to cache its /game3d/ requests. Never replace another
+// app's existing root service worker; the worker itself only handles PUBLIC
+// /game3d/ static files and ignores every other request.
 let registrationAttempted = false;
-function registerPublicGameAssetCache() {
+async function registerPublicGameAssetCache() {
   if (registrationAttempted || typeof navigator === 'undefined' ||
       !('serviceWorker' in navigator) || !window.isSecureContext) return;
   registrationAttempted = true;
-  navigator.serviceWorker.register('/game3d/game3d-asset-sw.js', { scope: '/game3d/' })
-    .catch(() => {}); // Cache is optional; network-only play remains valid.
+  try {
+    const existing = await navigator.serviceWorker.getRegistration('/');
+    const script = existing?.active?.scriptURL || existing?.installing?.scriptURL || '';
+    if (existing && !script.endsWith('/game3d-asset-sw.js')) return;
+    await navigator.serviceWorker.register('/game3d-asset-sw.js', { scope: '/' });
+  } catch { /* Optional cache: network-only play remains valid. */ }
 }
 
 export default function Game3DPerformanceBootstrap({ region }) {
