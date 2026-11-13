@@ -17,6 +17,11 @@ const FLOOR = WOLFVEIL_IMPORTED_TOWN.floorSourceY;
 // Ground-level tops only: walls, roofs, lanterns and house interiors are above.
 const GROUND_BAND_MIN = 0.6;
 const GROUND_BAND_MAX = 0.8;
+// Some paving/park landing pieces were authored ABOVE the common town floor,
+// outside the legacy 0.6–0.8 band. Their flat upper faces must be seated too,
+// or they appear as floating square stages where the bridge meets the park.
+const RAISED_TOP_MAX = 1.08;
+const RAISED_TOP_MIN_FLATNESS = 0.84;
 // Anything at or below this is the canal bed, which must stay below the water.
 const CANAL_BED_MAX = 0.7;
 // A lawn sits a hair proud of the paving so the two never fight for the same
@@ -29,6 +34,33 @@ const PAVING_MESH = /^(paving$|Expansion_paving$|stone$)/;
 
 const FLOOR_MESH = /^(Tile_|paving$|Expansion_paving$|grass$|Expansion_grass$|stone$)/;
 const LAWN_MESH = /^(grass|Expansion_grass)$/;
+const TILE_MESH = /^Tile_/i;
+const RAISED_TOP_MESH = /^(paving|Expansion_paving|grass|Expansion_grass|stone)$/i;
+
+// Only move genuinely flat, raised ground-plane faces. Roofs, railings,
+// stair risers, canal retaining walls and arbitrary high geometry are not floors.
+function raisedWalkableFaceVertices(node) {
+  const p = node.geometry?.attributes?.position;
+  if (!p || !RAISED_TOP_MESH.test(node.name)) return new Set();
+  const index = node.geometry.index;
+  const count = index?.count ?? p.count;
+  const vertex = (i) => index ? index.getX(i) : i;
+  const raised = new Set();
+  for (let i = 0; i + 2 < count; i += 3) {
+    const a = vertex(i), b = vertex(i + 1), c = vertex(i + 2);
+    const ay = p.getY(a), by = p.getY(b), cy = p.getY(c);
+    if (Math.min(ay,by,cy) <= GROUND_BAND_MAX ||
+        Math.max(ay,by,cy) > RAISED_TOP_MAX) continue;
+    const ux=p.getX(b)-p.getX(a),uy=by-ay,uz=p.getZ(b)-p.getZ(a);
+    const vx=p.getX(c)-p.getX(a),vy=cy-ay,vz=p.getZ(c)-p.getZ(a);
+    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    const length=Math.hypot(nx,ny,nz);
+    if (length > 1e-12 && Math.abs(ny)/length >= RAISED_TOP_MIN_FLATNESS) {
+      raised.add(a); raised.add(b); raised.add(c);
+    }
+  }
+  return raised;
+}
 // Walls that were built one storey-terrace higher than the floor. Dropping the
 // whole small piece seats every wall on the ground instead of leaving a gap.
 const ARCHITECTURE_MAX_JUMP = 0.06;
@@ -93,6 +125,8 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
   let settled = 0;
   let canalBed = 0;
   let seated = 0;
+  let tileVertices = 0;
+  let raisedSurfaceVertices = 0;
   townRoot?.traverse?.((node) => {
     if (!node.isMesh) return;
     if (/water|foam/i.test(node.name)) return;
@@ -102,25 +136,37 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
     }
     const position = node.geometry?.attributes?.position;
     if (!position) return;
-    // The tile grid is the walkable reference. Paving and stone sit a hair
-    // below it and lawns a hair above, so no two ground surfaces ever share a
-    // plane (which would flicker) and no step is visible to the eye.
+    // All Tile_* solids have already been stripped to their REAL upper face.
+    // Previous flattening only covered Y 0.6–0.8; three raised park squares
+    // above this range therefore survived unchanged. Every remaining tile
+    // vertex is now walkable and must sit at the town's single floor datum.
+    // Other paving retains its separate material and only moves genuinely
+    // horizontal elevated landing faces, not high architectural surfaces.
+    const isTile = TILE_MESH.test(node.name);
+    const raisedFaces = isTile ? new Set() : raisedWalkableFaceVertices(node);
     const target = FLOOR + (LAWN_MESH.test(node.name) ? LAWN_LIFT
       : PAVING_MESH.test(node.name) ? -PAVING_DROP : 0);
+    let changedThisMesh = 0;
     for (let i = 0; i < position.count; i++) {
       const y = position.getY(i);
-      if (y < GROUND_BAND_MIN || y > GROUND_BAND_MAX) continue;
+      const raisedFace = raisedFaces.has(i);
+      if (!isTile && !raisedFace && (y < GROUND_BAND_MIN || y > GROUND_BAND_MAX)) continue;
       const x = position.getX(i), z = position.getZ(i);
       const inCanal = x > WOLFVEIL_IMPORTED_TOWN_CANAL.minX && x < WOLFVEIL_IMPORTED_TOWN_CANAL.maxX
         && z > WOLFVEIL_IMPORTED_TOWN_CANAL.minZ && z < WOLFVEIL_IMPORTED_TOWN_CANAL.maxZ;
       if (inCanal && y <= CANAL_BED_MAX) { canalBed++; continue; }
-      if (Math.abs(y - target) > 1e-6) { position.setY(i, target); settled++; }
+      if (Math.abs(y - target) > 1e-6) {
+        position.setY(i, target);
+        settled++; changedThisMesh++;
+        if (isTile) tileVertices++;
+        if (raisedFace) raisedSurfaceVertices++;
+      }
     }
-    if (settled) position.needsUpdate = true;
+    if (changedThisMesh) position.needsUpdate = true;
     node.geometry.computeVertexNormals();
     node.geometry.computeBoundingBox();
     node.geometry.computeBoundingSphere();
     node.userData.wolfveilFloorLevel = FLOOR;
   });
-  return { floor: FLOOR, settled, canalBed, seated };
+  return { floor: FLOOR, settled, canalBed, seated, tileVertices, raisedSurfaceVertices };
 }
