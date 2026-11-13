@@ -1,6 +1,7 @@
 // Wolfveil reference-driven close-range 3D grass and weathered path edge stones.
 // Pure decoration: the original terrain remains the only walkable/collision mesh.
 import * as THREE from 'three';
+import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {WOLFVEIL_ROUTES,WOLFVEIL_SITES,wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
 import {clearOf,wolfveilTreePlacements} from './WolfveilForestLayout.js';
 import {mulberry32} from './WolfveilGeometry.js';
@@ -251,6 +252,24 @@ export function buildWolfveilGroundCover(world,options={}){
     ...(flow?.stones??[]).map(p=>({x:p.x,y:p.y,z:p.z,yaw:p.yaw,
       size:p.scale,shade:Math.floor(Math.abs(p.x*13+p.z*5))%rockPalette.length})),
   ];
+  // The imported assembled town already has its own paved streets, parks and
+  // foliage. Remove *only* the old Game 3D spawn square's small grass and
+  // loose path stones from this precise footprint, so they cannot poke
+  // through the owner's tile roads. Do not change world terrain or owners'
+  // independent landscaping squares outside the town.
+  if(options.importedTownAtMarket){
+    const clearTown=p=>!insideWolfveilImportedTown(p.x,p.z,1.5);
+    for(let i=patches.length-1;i>=0;i--){
+      patches[i].plants=patches[i].plants.filter(clearTown);
+      if(!patches[i].plants.length)patches.splice(i,1);
+    }
+    for(let i=stoneSpecs.length-1;i>=0;i--)
+      if(!clearTown(stoneSpecs[i]))stoneSpecs.splice(i,1);
+    if(flow){
+      flow.grass=flow.grass.filter(clearTown);
+      flow.shrubs=flow.shrubs.filter(clearTown);
+    }
+  }
   // 25% southwest-quarter quality pass: keep the strong shapes, halve the
   // anonymous grass/shrub/path-stone instances. No tree or collision changes.
   // Independent tile-owner patches are excluded; the other teams can continue.
