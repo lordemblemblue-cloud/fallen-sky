@@ -12,7 +12,7 @@ const FusedStage=forwardRef(function FusedStage({config,shot,expression,livingId
  const [status,setStatus]=useState('loading'),[error,setError]=useState('');
  const body=creatorBody(config);
  useEffect(()=>{
-  setStatus('loading');
+  setStatus('loading');setError('');
   let instance;
   try {
    instance=createCreatorStage(mount.current,{url:body.url,gender:body.gender,rigId:body.rig_id,
@@ -20,7 +20,11 @@ const FusedStage=forwardRef(function FusedStage({config,shot,expression,livingId
     onState:s=>latest.current.onCustomizationState?.(s),
     onCapabilities:c=>latest.current.onCapabilities?.(c),ambientGaze:livingIdle});
    stage.current=instance;instance.appearance(latest.current.config);
-  }catch{setStatus('error');}
+  }catch(e){
+   const detail=e?.message||'Could not initialize WebGL for the character preview.';
+   setError(detail);setStatus('error');
+   latest.current.onCustomizationState?.({loading:false,error:detail});
+  }
   return()=>{instance?.dispose();stage.current=null;};
  },[body.url,body.gender,body.rig_id,livingIdle]);
  useEffect(()=>{stage.current?.appearance(config);},[config]);
