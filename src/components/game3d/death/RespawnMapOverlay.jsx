@@ -1,14 +1,14 @@
 // ─── Respawn Map Overlay ───────────────────────────────────────────────
 // Shown after the death tips screen. Top-down map of the world's real spawn
-// points, with the player's saved checkpoint pre-selected. The player picks
-// one of the map's valid spawn points — never an arbitrary offset from where
-// they died, and never another player's location.
+// points. When the current world finds safe ground a few meters from the
+// character's death, offer that temporary landing too. All world collisions
+// are rechecked when the player respawns; a remote player is never a target.
 //
 // On confirm: saves the chosen point as this character's checkpoint (scoped
 // to the logged-in user), dispatches `playerRespawn` so the world teleports
 // and revives the player, then clears the death phase.
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { MapPin, Heart, Skull } from 'lucide-react';
 import { getDeathState, setDeathPhase } from './deathStore';
 import { setHP, getPlayerHUD } from '../playerHUDStore';
@@ -18,14 +18,24 @@ import {
   saveCheckpointId,
 } from '../mapSpawnPoints';
 import { exitAXEDungeon, getAXEDungeonCheckpointPosition, getAXEDungeonState } from '../axe/dungeons/AXEDungeonStore';
+import { NEARBY_RESPAWN_ID } from './nearbyRespawnRules.mjs';
 import { getAXEDungeonDefinition, getAXEDungeonRoom } from '../axe/dungeons/AXEDungeonSystem';
 
 const MAP_PX = 480;
 const WORLD_EXTENT = 45; // half-size of the mapped world area, in world units
 
-function worldToScreen(x, z) {
-  const px = ((x + WORLD_EXTENT) / (WORLD_EXTENT * 2)) * MAP_PX;
-  const py = ((z + WORLD_EXTENT) / (WORLD_EXTENT * 2)) * MAP_PX;
+function mapBounds(points, deathPos) {
+  const xs = [deathPos.x, ...points.map(point => point.x)];
+  const zs = [deathPos.z, ...points.map(point => point.z)];
+  const centerX = (Math.min(...xs) + Math.max(...xs)) / 2;
+  const centerZ = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const extent = Math.max(WORLD_EXTENT, (Math.max(...xs) - Math.min(...xs)) * .62,
+    (Math.max(...zs) - Math.min(...zs)) * .62);
+  return { centerX, centerZ, extent };
+}
+function worldToScreen(x, z, bounds) {
+  const px = ((x - bounds.centerX + bounds.extent) / (bounds.extent * 2)) * MAP_PX;
+  const py = ((z - bounds.centerZ + bounds.extent) / (bounds.extent * 2)) * MAP_PX;
   return { px, py };
 }
 
@@ -45,7 +55,10 @@ export default function RespawnMapOverlay() {
       )
     : null;
 
-  // Saved checkpoint (or the map default) is the starting selection.
+  const [nearbyPoint, setNearbyPoint] = useState(null);
+  const [selectionTouched, setSelectionTouched] = useState(false);
+  // Registered checkpoint remains available until the terrain-based nearby
+  // resolver confirms a valid landing spot.
   const [selected, setSelected] = useState(() => {
     const deathPosition = getDeathState().deathPosition;
     if (!deathPosition || !Number.isFinite(deathPosition.x) || !Number.isFinite(deathPosition.z)) return getRespawnPoint().id;
@@ -54,17 +67,38 @@ export default function RespawnMapOverlay() {
       Math.hypot(nearest.x - deathPosition.x, nearest.z - deathPosition.z) ? candidate : nearest,
       getRespawnPoint()).id;
   });
-  const points = useMemo(() => MAP_SPAWN_POINTS, []);
+  useEffect(() => {
+    if (!death.deathPosition || dungeonSession) return;
+    let active = true;
+    window.dispatchEvent(new CustomEvent('axeNearbyRespawnQuery', {
+      detail: {
+        deathPosition: death.deathPosition,
+        respond: point => {
+          if (!active || !point || point.id !== NEARBY_RESPAWN_ID) return;
+          setNearbyPoint(point);
+          if (!selectionTouched) setSelected(NEARBY_RESPAWN_ID);
+        },
+      },
+    }));
+    return () => { active = false; };
+  }, [deathPos.x, deathPos.z, dungeonSession, selectionTouched]);
+  const points = useMemo(() => nearbyPoint ? [nearbyPoint, ...MAP_SPAWN_POINTS] : MAP_SPAWN_POINTS, [nearbyPoint]);
   const selectedPoint = points.find((p) => p.id === selected) || getRespawnPoint();
+  const bounds = useMemo(() => mapBounds(points, deathPos), [points, deathPos.x, deathPos.z]);
+  const selectPoint = id => { setSelectionTouched(true); setSelected(id); };
 
   const handleRespawn = () => {
     const point = selectedPoint;
     if (dungeonSession) exitAXEDungeon({ failed: true });
-    saveCheckpointId(point.id);
+    // A temporary nearby landing must not overwrite the character's saved
+    // permanent checkpoint. The world re-validates it against live collision.
+    if (!point.temporary) saveCheckpointId(point.id);
     const { maxHP } = getPlayerHUD();
     setHP(maxHP);
     window.dispatchEvent(new CustomEvent('playerRespawn', {
-      detail: { x: point.x, z: point.z, spawnId: point.id },
+      detail: point.temporary
+        ? { source: NEARBY_RESPAWN_ID, spawnId: point.id, deathPosition: death.deathPosition }
+        : { x: point.x, z: point.z, spawnId: point.id },
     }));
     setDeathPhase('alive', { deathPosition: null });
   };
@@ -83,7 +117,7 @@ export default function RespawnMapOverlay() {
     setDeathPhase('alive', { deathPosition: null });
   };
 
-  const deathMarker = worldToScreen(deathPos.x, deathPos.z);
+  const deathMarker = worldToScreen(deathPos.x, deathPos.z, bounds);
 
   return (
     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center">
@@ -91,7 +125,7 @@ export default function RespawnMapOverlay() {
         <div className="text-center">
           <div className="text-red-400 text-xs uppercase tracking-[0.4em] mb-2">You Died</div>
           <h2 className="text-white text-3xl font-bold tracking-wider">Choose a Respawn Point</h2>
-          <p className="text-white/50 text-sm mt-1">The nearest registered spawn is selected by default</p>
+          <p className="text-white/50 text-sm mt-1">Choose nearby safe ground or a registered checkpoint</p>
         </div>
 
         {dungeonCheckpoint && (
@@ -111,6 +145,16 @@ export default function RespawnMapOverlay() {
           </button>
         )}
 
+        {nearbyPoint && (
+          <button
+            onClick={() => selectPoint(NEARBY_RESPAWN_ID)}
+            aria-pressed={selected === NEARBY_RESPAWN_ID}
+            className={`w-full max-w-[480px] rounded-xl border px-4 py-3 text-left transition ${selected === NEARBY_RESPAWN_ID ? 'border-cyan-300 bg-cyan-400/20' : 'border-cyan-300/30 bg-cyan-300/10 hover:bg-cyan-300/15'}`}
+          >
+            <div className="text-xs uppercase tracking-widest font-semibold text-cyan-200">Respawn nearby</div>
+            <div className="text-sm text-white/80 mt-1">Safe ground about {nearbyPoint.distance}m from where you fell</div>
+          </button>
+        )}
         <div
           className="relative rounded-2xl overflow-hidden border border-white/15"
           style={{
@@ -139,12 +183,12 @@ export default function RespawnMapOverlay() {
 
           {/* Valid map spawn points */}
           {points.map((p) => {
-            const { px, py } = worldToScreen(p.x, p.z);
+            const { px, py } = worldToScreen(p.x, p.z, bounds);
             const isSelected = selected === p.id;
             return (
               <button
                 key={p.id}
-                onClick={() => setSelected(p.id)}
+                onClick={() => selectPoint(p.id)}
                 className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group"
                 style={{ left: px, top: py }}
               >
