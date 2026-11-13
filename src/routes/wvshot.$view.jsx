@@ -17,6 +17,10 @@ function Shot() {
   useEffect(() => {
     const el = host.current;
     let stop = false, timer = 0;
+    const errs = [];
+    const origError = console.error, origWarn = console.warn;
+    console.error = (...a) => { errs.push('E:' + a.map(String).join(' ').slice(0, 700)); origError(...a); };
+    console.warn = (...a) => { errs.push('W:' + a.map(String).join(' ').slice(0, 300)); origWarn(...a); };
     try {
       let inkLevel = 3;
       const specs = [];
@@ -80,7 +84,23 @@ function Shot() {
           outs[i].drawImage(gl, 0, 0);
         });
         cycle++;
-        setLog(`cycle ${cycle} · ${Math.round(performance.now() - t0)}ms · town ${townState} · ink ${inkLevel}`);
+        let dbg = '';
+        if (town.model) {
+          const b = new THREE.Box3().setFromObject(town.model); let n = 0, vis = 0;
+          town.model.traverse(o => { if (o.isMesh) { n++; if (o.visible) vis++; } });
+          const rows = []; let chain = '';
+          for (let o = town.model; o; o = o.parent) chain += `${o.name || o.type}:${o.visible ? 1 : 0}>`;
+          town.model.traverse(o => {
+            if (!o.isMesh || rows.length >= 14) return;
+            const m = Array.isArray(o.material) ? o.material[0] : o.material, g = o.geometry;
+            const wb = new THREE.Box3().setFromObject(o);
+            rows.push(`${o.name} v${g.attributes.position.count} i${g.index?.count ?? '-'} dr${g.drawRange.start},${g.drawRange.count} box ${[wb.min.x, wb.min.y, wb.min.z, wb.max.x, wb.max.y, wb.max.z].map(v => v.toFixed(0)).join(',')} ${m.type} ${m.name} op${m.opacity} tr${m.transparent} vis${m.visible} col${m.color?.getHexString()} side${m.side} layers${o.layers.mask}`);
+          });
+          errs.length = 0; errs.push(chain, ...rows);
+          dbg = ` meshes ${n}/${vis} box ${[b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z].map(v => v.toFixed(1)).join(',')} floorY ${floor(0, 0).toFixed(2)} terr ${village.worldHeight(0, 0).toFixed(2)}`;
+        }
+        const bad = renderer.info.programs?.filter(p => p.diagnostics && !p.diagnostics.runnable).length;
+        setLog(`cycle ${cycle} · ${Math.round(performance.now() - t0)}ms · town ${townState} · ink ${inkLevel}${dbg} · badPrograms ${bad} · calls ${renderer.info.render.calls}\n${errs.slice(0, 16).join('\n')}`);
         timer = setTimeout(draw, 1500);
       };
       draw();

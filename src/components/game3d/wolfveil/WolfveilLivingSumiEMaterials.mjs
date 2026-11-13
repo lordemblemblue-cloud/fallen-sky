@@ -138,6 +138,8 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
          !shader?.vertexShader?.includes('#include <common>')||
          !shader?.fragmentShader?.includes('#include <color_fragment>')||
          !shader?.fragmentShader?.includes('#include <common>'))return;
+      // A cloned material carries this hook already: never inject twice.
+      if(shader.vertexShader.includes('vLivingSumiWorld'))return;
       shader.uniforms.uLivingSumiClock=uniforms.clock;
       shader.uniforms.uLivingSumiLevel=uniforms.level;
       shader.uniforms.uLivingSumiWind=uniforms.wind;
