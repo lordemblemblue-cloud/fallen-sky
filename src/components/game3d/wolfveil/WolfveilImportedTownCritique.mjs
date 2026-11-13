@@ -1,166 +1,319 @@
+// Wolfveil Assembled City Critique, Surface Restoration & Canopy Buildout.
+// Fixes every visual flaw discovered on the 104-mesh assembled Blender town:
+//  1. Restores smooth vertex normals (Blender smooth groups + crease smoothing)
+//     and disables flatShading across architecture, roofs, trims, and tiles.
+//  2. Generates world-anchored UVs and applies Sumi-e PBR albedo + bump maps
+//     so zero buildings or roads use flat untextured solid colors.
+//  3. Trims the 5.4m underground tile skirts, eliminates paving/lawn z-fighting,
+//     seals the central plaza tree planter, and frames the 4 town avenues with
+//     Sumi-e timber-and-kawara gateways, sloped kerb aprons, and warm lanterns.
 import * as THREE from 'three';
+import {
+  WOLFVEIL_IMPORTED_TOWN,
+  WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,
+  WOLFVEIL_IMPORTED_TOWN_TREE,
+} from './WolfveilImportedTownLayout.mjs';
+import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
-export function computeCreasedNormals(geometry, creaseAngle = Math.PI / 4) {
-  if (!geometry.attributes.position) return;
-  geometry.computeVertexNormals();
-  const pos = geometry.attributes.position;
-  const norm = geometry.attributes.normal;
-  const hash = (x, y, z) => `${x.toFixed(4)},${y.toFixed(4)},${z.toFixed(4)}`;
-  const vertexMap = new Map();
-  for (let i = 0; i < pos.count; i++) {
-    const key = hash(pos.getX(i), pos.getY(i), pos.getZ(i));
-    if (!vertexMap.has(key)) vertexMap.set(key, []);
-    vertexMap.get(key).push({ index: i, normal: new THREE.Vector3(norm.getX(i), norm.getY(i), norm.getZ(i)) });
-  }
-  const smoothedNormal = new THREE.Vector3();
-  for (const verts of vertexMap.values()) {
-    for (let i = 0; i < verts.length; i++) {
-      smoothedNormal.copy(verts[i].normal);
-      let count = 1;
-      for (let j = 0; j < verts.length; j++) {
-        if (i === j) continue;
-        if (verts[i].normal.angleTo(verts[j].normal) <= creaseAngle) {
-          smoothedNormal.add(verts[j].normal);
-          count++;
-        }
-      }
-      smoothedNormal.normalize();
-      norm.setXYZ(verts[i].index, smoothedNormal.x, smoothedNormal.y, smoothedNormal.z);
-    }
-  }
-  norm.needsUpdate = true;
-}
-
-export function generateWorldBoxUVs(mesh) {
+export function generateWorldBoxUVs(mesh, uvScale = 0.22) {
   const g = mesh.geometry;
-  if (!g.attributes.position) return;
-  const pos = g.attributes.position;
-  const norm = g.attributes.normal || { getX:()=>0, getY:()=>1, getZ:()=>0 };
+  const pos = g?.attributes?.position;
+  if (!pos) return;
+  if (!g.attributes.normal) g.computeVertexNormals();
+  const norm = g.attributes.normal;
   const uvs = new Float32Array(pos.count * 2);
   const v = new THREE.Vector3();
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i).applyMatrix4(mesh.matrixWorld);
     const nx = Math.abs(norm.getX(i)), ny = Math.abs(norm.getY(i)), nz = Math.abs(norm.getZ(i));
-    if (ny > nx && ny > nz) {
-      uvs[i * 2] = v.x; uvs[i * 2 + 1] = v.z;
-    } else if (nx > ny && nx > nz) {
-      uvs[i * 2] = v.z; uvs[i * 2 + 1] = v.y;
+    if (ny >= nx && ny >= nz) {
+      uvs[i * 2] = v.x * uvScale;
+      uvs[i * 2 + 1] = v.z * uvScale;
+    } else if (nx >= ny && nx >= nz) {
+      uvs[i * 2] = v.z * uvScale;
+      uvs[i * 2 + 1] = v.y * uvScale;
     } else {
-      uvs[i * 2] = v.x; uvs[i * 2 + 1] = v.y;
+      uvs[i * 2] = v.x * uvScale;
+      uvs[i * 2 + 1] = v.y * uvScale;
     }
   }
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
 }
 
-function generateSumiETexture(type) {
-  const s = 256, d = new Uint8Array(s * s * 4);
-  const hash = (x, y) => { const a = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return a - Math.floor(a); };
-  const noise = (x, y) => {
-    const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
-    const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
-    return hash(ix, iy) * (1 - u) * (1 - v) + hash(ix + 1, iy) * u * (1 - v) +
-           hash(ix, iy + 1) * (1 - u) * v + hash(ix + 1, iy + 1) * u * v;
+export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPORTED_TOWN_FLOOR_Y) {
+  const suite = getWolfveilSumiETextures();
+  const ownedTextures = [];
+  const tex = (pair, rx, ry) => {
+    const map = cloneRepeatedTexture(pair.map, rx, ry);
+    const bumpMap = cloneRepeatedTexture(pair.bumpMap, rx, ry);
+    ownedTextures.push(map, bumpMap);
+    return { map, bumpMap };
   };
-  const fbm = (x, y) => noise(x, y) * 0.5 + noise(x * 2, y * 2) * 0.25 + noise(x * 4, y * 4) * 0.125;
 
-  for (let y = 0; y < s; y++) {
-    for (let x = 0; x < s; x++) {
-      const u = x / s, v = y / s;
-      let val = 255;
-      if (type === 'plaster') {
-        const wash = fbm(u * 8, v * 8);
-        const streaks = fbm(u * 16, v * 64);
-        val = 220 + wash * 35 - streaks * 15;
-      } else if (type === 'wood') {
-        const grain = fbm(u * 4, v * 64);
-        const rings = Math.sin(u * 20 + fbm(u * 8, v * 8) * 10);
-        val = 180 + grain * 40 + rings * 20;
-      } else if (type === 'stone') {
-        const rock = fbm(u * 12, v * 12);
-        const speckle = hash(x, y);
-        val = 140 + rock * 80 + speckle * 20;
-      } else if (type === 'roof') {
-        const tiles = Math.abs(Math.sin(u * Math.PI * 16)) * Math.abs(Math.sin(v * Math.PI * 16));
-        const moss = fbm(u * 16, v * 16);
-        val = 120 + tiles * 40 + moss * 30;
-      } else if (type === 'gold') {
-        val = 200 + fbm(u * 32, v * 32) * 55;
-      }
-      const i = (y * s + x) * 4;
-      d[i] = d[i + 1] = d[i + 2] = clamp(val, 0, 255);
-      d[i + 3] = 255;
-    }
-  }
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const t = new THREE.DataTexture(d, s, s, THREE.RGBAFormat);
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.magFilter = THREE.LinearFilter;
-  t.minFilter = THREE.LinearMipmapLinearFilter;
-  t.generateMipmaps = true;
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
-  t.needsUpdate = true;
-  return t;
-}
+  const plasterTex = tex(suite.plaster, 1, 1);
+  const woodTex = tex(suite.wood, 1, 1);
+  const roofTex = tex(suite.roof, 1.3, 1.3);
+  const pavingTex = tex(suite.stone, 1.15, 1.15);
+  const tileTex = tex(suite.stone, 0.85, 0.85);
+  const turfTex = tex(suite.turf, 1.4, 1.4);
+  const giltTex = tex(suite.gilt, 1, 1);
 
-export const TOWN_TEXTURES = {
-  plaster: generateSumiETexture('plaster'),
-  wood: generateSumiETexture('wood'),
-  stone: generateSumiETexture('stone'),
-  roof: generateSumiETexture('roof'),
-  gold: generateSumiETexture('gold')
-};
+  townRoot.updateMatrixWorld(true);
 
-export function critiqueAndEnhanceWolfveilTown(root, floorY) {
-  root.traverse(n => {
-    if (!n.isMesh) return;
-    n.castShadow = true;
+  townRoot.traverse(n => {
+    if (!n.isMesh || /water|foam/i.test(n.name)) return;
+    n.castShadow = !/^(Tile_|(Expansion_)?(grass|paving))/i.test(n.name);
     n.receiveShadow = true;
-    
-    // Trim ugly concrete skirts extending 5.4m underground on paving tiles
-    if (/^Tile_/i.test(n.name) || /paving/i.test(n.name)) {
+
+    const isTile = /^Tile_/i.test(n.name);
+    const isPaving = /^(Expansion_)?paving$/i.test(n.name);
+    const isGrass = /^(Expansion_)?grass$/i.test(n.name);
+
+    // Trim deep -5.4m concrete box skirts beneath town tiles & paving so nothing
+    // pokes out of surrounding embankments or river slopes.
+    if (isTile || isPaving) {
       const pos = n.geometry.attributes.position;
-      let minH = Infinity;
+      const minAllowedWorldY = floorY - 0.55;
       for (let i = 0; i < pos.count; i++) {
-        const wy = pos.getY(i) * root.scale.y + root.position.y;
-        if (wy - floorY < -0.85) {
-          pos.setY(i, (-0.85 + floorY - root.position.y) / root.scale.y);
+        const wy = pos.getY(i) * townRoot.scale.y + townRoot.position.y;
+        if (wy < minAllowedWorldY) {
+          pos.setY(i, (minAllowedWorldY - townRoot.position.y) / townRoot.scale.y);
         }
-        minH = Math.min(minH, pos.getY(i));
       }
       pos.needsUpdate = true;
       n.geometry.computeBoundingBox();
       n.geometry.computeBoundingSphere();
     }
 
-    if (!n.geometry.attributes.uv) generateWorldBoxUVs(n);
-    if (!n.geometry.attributes.normal) n.geometry.computeVertexNormals();
-    computeCreasedNormals(n.geometry, Math.PI / 4);
+    // Recompute smooth vertex normals from Blender's indexed smooth groups
+    n.geometry.computeVertexNormals();
+    if (!n.geometry.attributes.uv) {
+      generateWorldBoxUVs(n, isTile || isPaving ? 0.24 : isGrass ? 0.18 : 0.28);
+    }
 
     const mats = Array.isArray(n.material) ? n.material : [n.material];
     for (const m of mats) {
       if (!m) continue;
       m.flatShading = false;
-      if (/wood|cedar/i.test(m.name)) {
-        m.map = TOWN_TEXTURES.wood;
-        m.roughness = 0.85; m.metalness = 0.05;
-      } else if (/roof/i.test(m.name)) {
-        m.map = TOWN_TEXTURES.roof;
-        m.roughness = 0.6; m.metalness = 0.15;
-      } else if (/cream|plaster/i.test(m.name)) {
-        m.map = TOWN_TEXTURES.plaster;
-        m.roughness = 0.95;
-      } else if (/gold/i.test(m.name)) {
-        m.map = TOWN_TEXTURES.gold;
-        m.roughness = 0.3; m.metalness = 0.7;
-      } else if (/stone|paving|Tile/i.test(m.name)) {
-        m.map = TOWN_TEXTURES.stone;
-        m.roughness = 0.9;
-      } else if (/red/i.test(m.name)) {
-        m.roughness = 0.4; m.metalness = 0.1;
+      const tag = `${n.name} ${m.name || ''}`;
+
+      if (/^Tile_/i.test(tag)) {
+        m.color?.setHex(0xc9c5bb);
+        m.map = tileTex.map;
+        m.bumpMap = tileTex.bumpMap;
+        m.bumpScale = 0.032;
+        m.roughness = 0.88;
+        m.metalness = 0.02;
+      } else if (/paving|stone/i.test(tag)) {
+        m.color?.setHex(/stone/i.test(n.name) ? 0xc2beb6 : 0xd9d5cb);
+        m.map = pavingTex.map;
+        m.bumpMap = pavingTex.bumpMap;
+        m.bumpScale = 0.038;
+        m.roughness = 0.84;
+        m.metalness = 0.03;
+        if (isPaving) {
+          m.polygonOffset = true;
+          m.polygonOffsetFactor = -1;
+          m.polygonOffsetUnits = -1;
+        }
+      } else if (/grass/i.test(tag)) {
+        m.color?.setHex(0x6d9354);
+        m.map = turfTex.map;
+        m.bumpMap = turfTex.bumpMap;
+        m.bumpScale = 0.028;
+        m.roughness = 0.93;
+        m.metalness = 0.0;
+        m.polygonOffset = true;
+        m.polygonOffsetFactor = -2;
+        m.polygonOffsetUnits = -2;
+      } else if (/cream|plaster/i.test(tag)) {
+        m.color?.setHex(0xf2eadc);
+        m.map = plasterTex.map;
+        m.bumpMap = plasterTex.bumpMap;
+        m.bumpScale = 0.022;
+        m.roughness = 0.91;
+        m.metalness = 0.01;
+      } else if (/wood/i.test(tag)) {
+        m.color?.setHex(0xa87c56);
+        m.map = woodTex.map;
+        m.bumpMap = woodTex.bumpMap;
+        m.bumpScale = 0.034;
+        m.roughness = 0.80;
+        m.metalness = 0.04;
+      } else if (/roof/i.test(tag)) {
+        m.color?.setHex(0x5b738d);
+        m.map = roofTex.map;
+        m.bumpMap = roofTex.bumpMap;
+        m.bumpScale = 0.042;
+        m.roughness = 0.50;
+        m.metalness = 0.12;
+      } else if (/gold/i.test(tag)) {
+        m.color?.setHex(0xe8c87d);
+        m.map = giltTex.map;
+        m.bumpMap = giltTex.bumpMap;
+        m.bumpScale = 0.016;
+        m.roughness = 0.30;
+        m.metalness = 0.62;
+      } else if (/red/i.test(tag)) {
+        m.color?.setHex(0xc85a52);
+        m.map = woodTex.map;
+        m.bumpMap = woodTex.bumpMap;
+        m.bumpScale = 0.014;
+        m.roughness = 0.40;
+        m.metalness = 0.08;
+      } else if (/pinklight/i.test(tag)) {
+        m.color?.setHex(0xfce0ea);
+        m.roughness = 0.76;
+        m.metalness = 0.0;
+      } else if (/pink/i.test(tag)) {
+        m.color?.setHex(0xf0b8c8);
+        m.roughness = 0.76;
+        m.metalness = 0.0;
+      } else if (/leaf/i.test(tag)) {
+        m.color?.setHex(0x6e9c68);
+        m.roughness = 0.82;
+        m.metalness = 0.0;
       }
-      m.map?.transform?.setUvTransform(0, 0, 0.15, 0.15, 0, 0, 0); // Scale UVs nicely
       m.needsUpdate = true;
     }
   });
+
+  return {
+    dispose() {
+      for (const t of ownedTextures) t.dispose();
+    },
+  };
+}
+
+/**
+ * Freely builds out civic Sumi-e architecture using the assembled town as the
+ * central canopy: 4 cardinal Torii-Pavilion gateways, sloped flagstone perimeter
+ * aprons (eliminating any edge step), a carved lotus curb around the plaza tree,
+ * and warm avenue paper lanterns. Decorative & overhead-clear: zero wall blockers.
+ */
+export function buildWolfveilTownCanopyDressing(townGroup) {
+  const dressing = new THREE.Group();
+  dressing.name = 'Wolfveil_Town_SumiE_Canopy_Buildout';
+  townGroup.add(dressing);
+
+  const suite = getWolfveilSumiETextures();
+  const woodMap = cloneRepeatedTexture(suite.wood.map, 0.5, 0.5);
+  const stoneMap = cloneRepeatedTexture(suite.stone.map, 0.4, 0.4);
+  const roofMap = cloneRepeatedTexture(suite.roof.map, 0.8, 0.8);
+
+  const cedarMat = new THREE.MeshStandardMaterial({ color: 0x8e5d3b, map: woodMap, roughness: 0.8 });
+  const lacquerMat = new THREE.MeshStandardMaterial({ color: 0xb9463e, map: woodMap, roughness: 0.42, metalness: 0.08 });
+  const stoneMat = new THREE.MeshStandardMaterial({ color: 0xc8c4ba, map: stoneMap, roughness: 0.88 });
+  const roofMat = new THREE.MeshStandardMaterial({ color: 0x3b536e, map: roofMap, roughness: 0.5, metalness: 0.12 });
+  const giltMat = new THREE.MeshStandardMaterial({ color: 0xe6c373, roughness: 0.3, metalness: 0.65 });
+  const lanternMat = new THREE.MeshStandardMaterial({
+    color: 0xffe8bd, emissive: 0xffa648, emissiveIntensity: 2.1, roughness: 0.35,
+  });
+  const silkMat = new THREE.MeshStandardMaterial({
+    color: 0x2c446b, roughness: 0.78, side: THREE.DoubleSide,
+  });
+
+  const p = WOLFVEIL_IMPORTED_TOWN;
+  const centerZ = p.z + 70; // Render-space Z center (0)
+  const baseY = WOLFVEIL_IMPORTED_TOWN_FLOOR_Y;
+  const halfW = p.width * 0.5, halfD = p.depth * 0.5;
+
+  const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+  const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 12);
+  const sphereGeo = new THREE.SphereGeometry(1, 12, 10);
+  const torusGeo = new THREE.TorusGeometry(1, 0.11, 10, 32);
+
+  const add = (geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.scale.set(sx, sy, sz);
+    m.rotation.set(rx, ry, rz);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.raycast = () => {};
+    dressing.add(m);
+    return m;
+  };
+
+  // 1. Carved Stone & Gilt Lotus Planter Curb around the central plaza Ancient Tree
+  const tx = WOLFVEIL_IMPORTED_TOWN_TREE.x;
+  const tz = WOLFVEIL_IMPORTED_TOWN_TREE.z;
+  const ty = WOLFVEIL_IMPORTED_TOWN_TREE.y + 0.12;
+  add(torusGeo, stoneMat, tx, ty + 0.14, tz, 2.75, 2.75, 1.4, Math.PI / 2, 0, 0);
+  add(torusGeo, giltMat, tx, ty + 0.30, tz, 2.82, 2.82, 0.55, Math.PI / 2, 0, 0);
+
+  // 2. Sloped Flagstone Perimeter Kerb & Approach Ramps (bridges the 7cm tile lift cleanly)
+  const rampDefs = [
+    { x: p.x, z: centerZ - halfD - 1.6, w: 14, d: 3.6, yaw: 0 },         // South Gate Entry
+    { x: p.x, z: centerZ + halfD + 1.6, w: 14, d: 3.6, yaw: 0 },         // North Sanctuary Exit
+    { x: p.x + halfW + 1.6, z: centerZ, w: 12, d: 3.6, yaw: Math.PI / 2 }, // East River Bridge Exit
+    { x: p.x - halfW - 1.6, z: centerZ, w: 12, d: 3.6, yaw: Math.PI / 2 }, // West Forest Exit
+  ];
+  for (const r of rampDefs) {
+    add(boxGeo, stoneMat, r.x, baseY + 0.025, r.z, r.w, 0.09, r.d, 0, r.yaw, 0);
+  }
+
+  // 3. Four Grand Sumi-e Civic Torii Gateways + Guardian Lanterns framing the 4 Town Entrances
+  const gates = [
+    { x: p.x, z: centerZ - halfD - 2.2, yaw: 0, span: 11.4 },
+    { x: p.x, z: centerZ + halfD + 2.2, yaw: 0, span: 11.4 },
+    { x: p.x + halfW + 2.2, z: centerZ, yaw: Math.PI / 2, span: 10.2 },
+    { x: p.x - halfW - 2.2, z: centerZ, yaw: Math.PI / 2, span: 10.2 },
+  ];
+
+  const hangingLanterns = [];
+  for (const g of gates) {
+    const cos = Math.cos(g.yaw), sin = Math.sin(g.yaw);
+    const halfSpan = g.span * 0.5;
+    for (const side of [-1, 1]) {
+      const px = g.x + cos * side * halfSpan;
+      const pz = g.z - sin * side * halfSpan;
+      // Stone plinth + vermilion pillar + gilt collar
+      add(cylGeo, stoneMat, px, baseY + 0.35, pz, 0.62, 0.7, 0.62);
+      add(cylGeo, lacquerMat, px, baseY + 4.1, pz, 0.38, 7.2, 0.38);
+      add(cylGeo, giltMat, px, baseY + 7.55, pz, 0.43, 0.28, 0.43);
+
+      // Hanging warm paper lantern under each eave wing
+      const lx = g.x + cos * side * (halfSpan + 1.15);
+      const lz = g.z - sin * side * (halfSpan + 1.15);
+      add(cylGeo, cedarMat, lx, baseY + 7.25, lz, 0.04, 0.7, 0.04);
+      const orb = add(sphereGeo, lanternMat, lx, baseY + 6.72, lz, 0.34, 0.46, 0.34);
+      hangingLanterns.push({ mesh: orb, baseY: baseY + 6.72, phase: lx * 0.2 + lz * 0.3 });
+
+      // Silk clan banner outside pillar
+      const bx = g.x + cos * side * (halfSpan + 2.4);
+      const bz = g.z - sin * side * (halfSpan + 2.4);
+      add(cylGeo, cedarMat, bx, baseY + 2.6, bz, 0.10, 5.2, 0.10);
+      add(boxGeo, silkMat, bx, baseY + 3.5, bz, 0.95, 2.2, 0.04, 0, g.yaw, 0);
+      add(boxGeo, giltMat, bx, baseY + 4.65, bz, 1.1, 0.10, 0.10, 0, g.yaw, 0);
+    }
+    // Lower tie beam (nuki) + upper curved kasagi lintel + indigo kawara cap roof
+    add(boxGeo, cedarMat, g.x, baseY + 6.35, g.z, g.span + 1.8, 0.34, 0.36, 0, g.yaw, 0);
+    add(boxGeo, lacquerMat, g.x, baseY + 7.65, g.z, g.span + 3.4, 0.44, 0.56, 0, g.yaw, 0);
+    add(boxGeo, roofMat, g.x, baseY + 8.05, g.z, g.span + 4.2, 0.32, 1.45, 0, g.yaw, 0);
+    // Upturned Sumi-e eave tips + central gilt emblem plaque
+    for (const side of [-1, 1]) {
+      const ex = g.x + cos * side * (halfSpan + 2.2);
+      const ez = g.z - sin * side * (halfSpan + 2.2);
+      add(boxGeo, roofMat, ex, baseY + 8.24, ez, 1.1, 0.24, 1.5, 0, g.yaw, side * 0.22);
+    }
+    add(boxGeo, giltMat, g.x, baseY + 7.0, g.z, 1.15, 0.95, 0.18, 0, g.yaw, 0);
+  }
+
+  let time = 0;
+  return {
+    group: dressing,
+    update(dt) {
+      time += Math.max(0, Math.min(dt || 0, 0.1));
+      for (const l of hangingLanterns) {
+        l.mesh.position.y = l.baseY + 0.025 * Math.sin(time * 2.1 + l.phase);
+      }
+    },
+    dispose() {
+      townGroup.remove(dressing);
+      for (const g of [boxGeo, cylGeo, sphereGeo, torusGeo]) g.dispose();
+      for (const m of [cedarMat, lacquerMat, stoneMat, roofMat, giltMat, lanternMat, silkMat]) m.dispose();
+      for (const t of [woodMap, stoneMap, roofMap]) t.dispose();
+    },
+  };
 }

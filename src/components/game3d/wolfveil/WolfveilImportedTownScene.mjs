@@ -1,4 +1,6 @@
 // 104-mesh GLB converted from the user's actual .blend; 80 tiles remain separate.
+// Enhanced with smooth normals, Sumi-e architectural/ground textures, manicured
+// park grass blades, canal water shaders, and 4 cardinal gateway canopies.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {WOLFVEIL_IMPORTED_TOWN,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,WOLFVEIL_IMPORTED_TOWN_SCALE,
@@ -6,6 +8,8 @@ import {WOLFVEIL_IMPORTED_TOWN,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,WOLFVEIL_IMPORTED_
 import {bakeWolfveilTownCollision} from './WolfveilImportedTownCollision.mjs';
 import {createWolfveilTownWater} from './WolfveilImportedTownWater.mjs';
 import {installWolfveilTownTree,isWolfveilTownTreeMesh,removeWolfveilTownCentreTree} from './WolfveilImportedTownTree.mjs';
+import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './WolfveilImportedTownCritique.mjs';
+import {plantTownLawnGrassBlades} from './WolfveilIndividualGrassBlades.js';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
 // How each mesh of the model takes part in collision, by its Blender name.
@@ -30,8 +34,10 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
  const root=new THREE.Group();root.name='Wolfveil_Imported_Player_Spawn_Town';
  root.userData.townId=p.id;scene.add(root);
  let active=true,model=null,state='loading',collision=null;
+ let critiquePass=null,lawnGrass=null;
  const water=createWolfveilTownWater();
  const tree=installWolfveilTownTree(root);
+ const canopyDressing=buildWolfveilTownCanopyDressing(root);
  const emit=(next,reason)=>{state=next;onStatus?.({state:next,reason});};
  const disposeModel=(object)=>{
    const geometries=new Set(),materials=new Set();
@@ -40,7 +46,7 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      for(const m of (Array.isArray(node.material)?node.material:[node.material]))if(m)materials.add(m);
    });
    for(const g of geometries)g.dispose();
-   for(const m of materials){for(const key of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap'])m[key]?.dispose?.();m.dispose();}
+   for(const m of materials){for(const key of ['map','normalMap','bumpMap','roughnessMap','metalnessMap','emissiveMap'])m[key]?.dispose?.();m.dispose();}
  };
  new GLTFLoader().load(url,gltf=>{
    if(!active){disposeModel(gltf.scene);return;}
@@ -56,8 +62,10 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      if(WATER.test(node.name))water.apply(node);
      else if(isWolfveilTownTreeMesh(node.name))removeWolfveilTownCentreTree(node);
    });
-   import('./WolfveilImportedTownCritique.mjs').then(c => c.critiqueAndEnhanceWolfveilTown(town, WOLFVEIL_IMPORTED_TOWN_FLOOR_Y));
    town.name='Blender_Assembled_Town_80_Separate_Tiles';root.add(town);root.updateMatrixWorld(true);
+   // Smooth architectural/tile normals, apply Sumi-e textures & trim deep skirts.
+   critiquePass=critiqueAndEnhanceWolfveilTown(town,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y);
+   lawnGrass=plantTownLawnGrassBlades(town,root);
    // Bake floors and walls from the placed triangles themselves.
    const meshes=[];
    town.traverse(node=>{
@@ -78,6 +86,6 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
    isSolid(x,z){return collision?collision.isSolid(x,z):false;},
    /** Keeps a moving character out of the town's walls. True when it was stopped. */
    resolveCollision(position,previous){return collision?collision.resolve(position,previous):false;},
-   update(dt){water.update(dt);},
-   dispose(){if(!active)return;active=false;scene.remove(root);tree.dispose();disposeModel(model);water.dispose();root.clear();model=null;collision=null;state='disposed';}};
+   update(dt){water.update(dt);canopyDressing.update(dt);lawnGrass?.update(dt);},
+   dispose(){if(!active)return;active=false;scene.remove(root);lawnGrass?.dispose();canopyDressing.dispose();critiquePass?.dispose();tree.dispose();disposeModel(model);water.dispose();root.clear();model=null;collision=null;state='disposed';}};
 }
