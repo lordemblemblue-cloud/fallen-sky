@@ -12,6 +12,11 @@ export const MAP_SPAWN_POINTS = [
   { id: 'spawn_north',   label: 'North Ridge',  x: 6,   z: -22 },
   { id: 'spawn_forest',  label: 'Forest Edge',  x: 24,  z: -13 },
   { id: 'spawn_ruins',   label: 'Old Ruins',    x: -26, z: 18 },
+  { id: 'spawn_plaza_east', label: 'Town East', x: -8, z: 12 },
+  { id: 'spawn_plaza_west', label: 'Town West', x: -16, z: 12 },
+  { id: 'spawn_north_approach', label: 'Ridge Approach', x: 6, z: -18 },
+  { id: 'spawn_forest_path', label: 'Forest Path', x: 20, z: -13 },
+  { id: 'spawn_ruins_path', label: 'Ruins Approach', x: -22, z: 18 },
 ];
 
 const store = characterScopedStorage('wwm_checkpoint_v1');
