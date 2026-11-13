@@ -30,13 +30,13 @@ test('selected avatar loading and world entry use matching canonical models',()=
   assert.match(game,/FUSED_MALE_CHARACTER_MODEL_URL/);
   // The fused bodies use the original independent Three.js renderer,
   // not the generic post-migration preview that dropped the character stage.
-  assert.match(viewer,/new THREE\\.WebGLRenderer/);
-  assert.match(viewer,/new GLTFLoader\\(\\)\\.load\\(url/);
+  assert.match(viewer,/new THREE\.WebGLRenderer/);
+  assert.match(viewer,/new GLTFLoader\(\)\.load\(url/);
   assert.match(viewer,/prepareFusedCreatorGeometry/);
   assert.match(viewer,/featherFusedNeckTone/);
   const css=source('src/components/onboarding/creator-viewport-fix.css');
-  assert.match(css,/\\.creator-studio \\.creator-stage\\s*\\{[\\s\\S]*position: absolute/);
-  assert.match(css,/\\.axe-login--arcane \\.axe-login-avatar-stage \\.creator-canvas/);
+  assert.match(css,/\.creator-studio \.creator-stage\s*\{[\s\S]*position: absolute/);
+  assert.match(css,/\.axe-login--arcane \.axe-login-avatar-stage \.creator-canvas/);
 
   assert.match(world,/game3dWorldAvatarReady/);
   assert.match(entry,/game3dWorldAvatarReady/);
