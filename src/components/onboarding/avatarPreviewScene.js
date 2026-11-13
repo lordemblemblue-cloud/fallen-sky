@@ -49,6 +49,10 @@ export function createAvatarScene(mount, options = {}) {
   }
 
   let model = null;
+  let latestAppearance = config;
+  let latestExpression = {};
+  let mixer = null;
+  const clock = new THREE.Clock();
   let disposed = false;
   let frame = 0;
   let shot = portrait ? 'face' : 'body';
@@ -80,6 +84,10 @@ export function createAvatarScene(mount, options = {}) {
 
   const tick = () => {
     if (disposed) return;
+    mixer?.update(Math.min(clock.getDelta(), .1));
+    if (model) {
+      model.traverse(node => { if (node.morphTargetDictionary) for (const [name,index] of Object.entries(node.morphTargetDictionary)) if (name.startsWith('FX_')) node.morphTargetInfluences[index] = latestExpression[name] || 0; });
+    }
     controls?.update();
     renderer.render(scene, camera);
     frame = requestAnimationFrame(tick);
@@ -99,6 +107,9 @@ export function createAvatarScene(mount, options = {}) {
       }
       model = loaded;
       scene.add(model);
+      applyPlayerAppearance(model, latestAppearance);
+      const idle = model.animations?.find(clip => /^(stand|idle)$/i.test(clip.name));
+      if (idle) { mixer = new THREE.AnimationMixer(model); mixer.clipAction(idle).play(); }
       frameCamera();
       onReady?.(model);
     } catch (error) {
@@ -108,14 +119,16 @@ export function createAvatarScene(mount, options = {}) {
 
   return {
     setAppearance(next) {
-      if (model && next) applyPlayerAppearance(model, next);
+      latestAppearance = next || {};
+      if (model) applyPlayerAppearance(model, latestAppearance);
     },
     setShot(next) {
       if (next) shot = next;
       frameCamera();
     },
     setExpression(morphs) {
-      if (model) applyMorphs(model, morphs);
+      latestExpression = morphs || {};
+      if (model) applyMorphs(model, latestExpression);
     },
     rotate(amount) {
       spin += Number(amount) || 0;
@@ -131,6 +144,7 @@ export function createAvatarScene(mount, options = {}) {
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls?.dispose();
+      mixer?.stopAllAction();
       if (model) {
         scene.remove(model);
         disposeAvatarModel(model);
