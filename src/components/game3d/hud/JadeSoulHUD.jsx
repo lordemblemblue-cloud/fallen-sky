@@ -13,7 +13,7 @@ import {
 import {
   getAXERoleWeapon, getOwnedWeaponsForAXERole,
   drawAXEHUDWeaponRole, assignAXEHUDWeaponRole, subscribeAXEHUDWeaponRoles,
-} from '../axe/weapons/AXEWeaponRoleSlots';
+} from '../axe/weapons/AXEWeaponRoleSlots.js';
 import { subscribeCharacterChange } from '../characterStorage';
 import './JadeSoulHUD.css';
 import AXEServicesNavigation from '../axe/services/AXEServicesNavigation';
