@@ -9,7 +9,12 @@ export const CREATOR_SECTIONS = [
  {id:'wardrobe',label:'Outfit',icon:Shirt,shot:'body'}, {id:'inspiration',label:'Influences',icon:Globe2,shot:'body'},
  {id:'style',label:'Art style',icon:Palette,shot:'body'},
 ];
-export const BASE_CHOICES = [{key:'male',gender:'male',creator_body:'',label:'Getsuga',detail:'Male · animated'}, {key:'female',gender:'female',creator_body:'',label:'Artemis',detail:'Female · animated'}, ...Object.values(CREATOR_BODIES).map(b=>({key:b.id,gender:b.gender,creator_body:b.id,label:b.label,detail:b.detail+' · full sculpt'}))];
+export const BASE_CHOICES = [
+ // Game 3D's original playable pair should be the first visible options.
+ ...Object.values(CREATOR_BODIES).sort((a,b)=>a.gender==='female'?-1:b.gender==='female'?1:0).map(b=>({key:b.id,gender:b.gender,creator_body:b.id,label:b.label,detail:b.detail+' · animated full sculpt'})),
+ {key:'male',gender:'male',creator_body:'',label:'Getsuga',detail:'Legacy male · animated'},
+ {key:'female',gender:'female',creator_body:'',label:'Artemis',detail:'Legacy female · animated'},
+];
 export const SKIN_COLORS=['#f5dccb','#e7c3a3','#d2a080','#b97855','#976441','#714b35','#503326','#32211b'];
 export const HAIR_COLORS=['#17191d','#3a281e','#704630','#a36a3b','#d4b278','#e9dfcd','#b64039','#d79aa4','#8670bc','#3e8791','#ececf0','#747d87'];
 export const EYE_COLORS=['#4b3527','#98663b','#627342','#41937c','#7aa2c2','#697083','#ac83bf','#dda847'];
