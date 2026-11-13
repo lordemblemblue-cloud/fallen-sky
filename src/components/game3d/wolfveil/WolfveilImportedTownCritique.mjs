@@ -15,6 +15,7 @@ import {
 } from './WolfveilImportedTownLayout.mjs';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 import { removeWolfveilTownRaisedTileBodies } from './WolfveilTownTileBodyRemoval.mjs';
+import { flattenWolfveilTownFloorLevels } from './WolfveilTownFloorLevel.mjs';
 
 export function generateWorldBoxUVs(mesh, uvScale = 0.22) {
   const g = mesh.geometry;
@@ -60,6 +61,15 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
   const giltTex = tex(suite.gilt, 1, 1);
 
   townRoot.updateMatrixWorld(true);
+
+  // ONE floor for the whole town. The 80 Tile_* squares were authored 36cm
+  // (world) below the paving, lawns, terraces and the bases of the town's own
+  // houses and trees, so every wall and trunk hovered over the floor the player
+  // walks on and each terrace edge cut a dark line across the stone. Settle all
+  // walkable tops on the single floor the architecture was built for, and seat
+  // any small wall piece that still floats. Runs before the collision bake, so
+  // feet, NPCs and mounts follow the settled floor.
+  const floorLevel = flattenWolfveilTownFloorLevels(townRoot);
 
   townRoot.traverse(n => {
     if (!n.isMesh || /water|foam/i.test(n.name)) return;
@@ -174,6 +184,7 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
   });
 
   return {
+    floorLevel,
     dispose() {
       for (const t of ownedTextures) t.dispose();
     },
@@ -210,7 +221,8 @@ export function buildWolfveilTownCanopyDressing(townGroup) {
 
   const p = WOLFVEIL_IMPORTED_TOWN;
   const centerZ = p.z + 70; // Render-space Z center (0)
-  const baseY = WOLFVEIL_IMPORTED_TOWN_FLOOR_Y;
+  // The town itself sits one lift above the terrain, so its dressing must too.
+  const baseY = WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + WOLFVEIL_IMPORTED_TOWN.floorLiftMeters;
   const halfW = p.width * 0.5, halfD = p.depth * 0.5;
 
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -237,7 +249,8 @@ export function buildWolfveilTownCanopyDressing(townGroup) {
   add(torusGeo, stoneMat, tx, ty + 0.14, tz, 2.75, 2.75, 1.4, Math.PI / 2, 0, 0);
   add(torusGeo, giltMat, tx, ty + 0.30, tz, 2.82, 2.82, 0.55, Math.PI / 2, 0, 0);
 
-  // 2. Sloped Flagstone Perimeter Kerb & Approach Ramps (bridges the 7cm tile lift cleanly)
+  // 2. Flagstone Perimeter Kerb & Approach Ramps: the apron top meets the town
+  // floor and its base reaches the terrain, so the perimeter never shows a step.
   const rampDefs = [
     { x: p.x, z: centerZ - halfD - 1.6, w: 14, d: 3.6, yaw: 0 },         // South Gate Entry
     { x: p.x, z: centerZ + halfD + 1.6, w: 14, d: 3.6, yaw: 0 },         // North Sanctuary Exit
@@ -245,7 +258,7 @@ export function buildWolfveilTownCanopyDressing(townGroup) {
     { x: p.x - halfW - 1.6, z: centerZ, w: 12, d: 3.6, yaw: Math.PI / 2 }, // West Forest Exit
   ];
   for (const r of rampDefs) {
-    add(boxGeo, stoneMat, r.x, baseY + 0.025, r.z, r.w, 0.09, r.d, 0, r.yaw, 0);
+    add(boxGeo, stoneMat, r.x, baseY - 0.015, r.z, r.w, 0.09, r.d, 0, r.yaw, 0);
   }
 
   // 3. Four Grand Sumi-e Civic Torii Gateways + Guardian Lanterns framing the 4 Town Entrances

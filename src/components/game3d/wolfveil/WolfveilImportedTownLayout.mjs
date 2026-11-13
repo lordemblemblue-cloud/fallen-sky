@@ -4,7 +4,12 @@
 export const WOLFVEIL_IMPORTED_TOWN=Object.freeze({
  id:'wolfveil-assembled-town',name:'Wolfveil Town Plaza',
  x:0,z:-70,width:130,depth:141,blendMeters:38,
- floorSourceY:0.690998,floorLiftMeters:0.025, // rest town houses/pavers close to the actual terrain
+ // The one height every walkable surface of the town is settled onto. The 80
+ // Tile_* squares were authored 0.029 units below the paving, lawns, terraces,
+ // house bases and tree trunks, which is a 36cm step at world scale: the whole
+ // town hovered above the floor the player walks on. The floor is the level the
+ // model's own houses and trunks were built for (0.720-0.722).
+ floorSourceY:0.72,floorLiftMeters:0.025, // rest town houses/pavers close to the actual terrain
  // Size of the GLB in its own units; the model is centred on its origin.
  sourceWidth:10.423466,sourceDepth:11.330666,
 });
@@ -26,8 +31,8 @@ export const WOLFVEIL_IMPORTED_TOWN_FLOOR_Y=80*smooth(155/445)+.3;
 // in its place, rooted on the plaza paving (model height .77).
 export const WOLFVEIL_IMPORTED_TOWN_TREE=Object.freeze({
  ...wolfveilImportedTownPoint(-.63,-.02),
- y:WOLFVEIL_IMPORTED_TOWN_FLOOR_Y+WOLFVEIL_IMPORTED_TOWN.floorLiftMeters-.2+
-   (.77-WOLFVEIL_IMPORTED_TOWN.floorSourceY)*WOLFVEIL_IMPORTED_TOWN_SCALE,
+ // Rooted exactly on the settled town floor, never on the old raised terrace.
+ y:WOLFVEIL_IMPORTED_TOWN_FLOOR_Y+WOLFVEIL_IMPORTED_TOWN.floorLiftMeters,
  sourceX:-.63,sourceZ:-.02,sourceRadius:.74,trunkSourceRadius:.47,
  // About the size of the tree it replaces; radius is the trunk and its roots.
  radius:2.4,height:14,maxWidth:14,
@@ -35,6 +40,12 @@ export const WOLFVEIL_IMPORTED_TOWN_TREE=Object.freeze({
 // Canal water lies 5cm above the lawn (model height .7042) instead of
 // standing half a metre proud of it. Any lower and the lawn hides it.
 export const WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y=.708;
+// The canal channel inside the town, in the model's own units. Everything here
+// at or below the bed height stays recessed so the water still has somewhere to
+// sit once the town floor is settled to one level.
+export const WOLFVEIL_IMPORTED_TOWN_CANAL=Object.freeze({
+ minX:-2.78,maxX:3.78,minZ:-4.48,maxZ:4.48,
+});
 // Render coordinates, each checked against the baked collision: open,
 // reachable ground with at least 4m clear on every side.
 export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-7,z:8});
