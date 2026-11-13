@@ -25,7 +25,13 @@ export function createGame3DSceneWarmup({
 
   function queueMesh(mesh, urgent = false) {
     if (!mesh || !(mesh.isMesh || mesh.isSkinnedMesh || mesh.isPoints || mesh.isLine || mesh.isSprite) ||
-        !mesh.material || seenMeshes.has(mesh) || meshQueue.length >= QUEUE_LIMIT) return;
+        !mesh.material || seenMeshes.has(mesh)) return;
+    if (meshQueue.length >= QUEUE_LIMIT) {
+      if (!urgent) return;
+      // Combat always gets a slot; displaced scenery can be rediscovered.
+      const displaced = meshQueue.pop();
+      if (displaced) seenMeshes.delete(displaced);
+    }
     seenMeshes.add(mesh);
     if (urgent) meshQueue.unshift(mesh); else meshQueue.push(mesh);
     for (const mat of (Array.isArray(mesh.material) ? mesh.material : [mesh.material])) {
@@ -41,10 +47,15 @@ export function createGame3DSceneWarmup({
 
   function prioritize(root) {
     if (disposed || !root?.traverse) return;
+    const pending = [root];
     let visited = 0;
-    root.traverse((child) => {
-      if (visited++ < 150) queueMesh(child, true);
-    });
+    while (pending.length && visited++ < 150) {
+      const child = pending.pop();
+      queueMesh(child, true);
+      for (let i = (child.children?.length || 0) - 1; i >= 0; i--) {
+        pending.push(child.children[i]);
+      }
+    }
   }
 
   function prioritizeNearbyCombat() {
@@ -133,7 +144,7 @@ export function createGame3DSceneWarmup({
   // Event for game systems adding a boss/portal/effect: they can prioritize
   // without a manifest, but even without the event the next scene scan finds it.
   const onPrime = (event) => prioritize(event?.detail?.root);
-  const onAvatar = () => prioritize(host.__gw3dScene);
+  const onAvatar = () => { stack = [scene]; nextScanAt = 0; };
   host.addEventListener?.('game3dPerformancePrime', onPrime);
   host.addEventListener?.('game3dWorldAvatarReady', onAvatar);
   schedule();
