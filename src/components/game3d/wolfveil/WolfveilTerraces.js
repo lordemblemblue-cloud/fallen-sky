@@ -114,6 +114,8 @@ export function addWolfveilTerraces(world,{excludePalaceApproach=false,swQuarter
              z<=WOLFVEIL_PALACE.z+WOLFVEIL_PALACE.depth/2+1)continue;
           const key=Math.round(x/7)+':'+Math.round(z/7);
           if(added.has(key)||wolfveilDistanceToRiver(x,z)<16)continue;
+          // Prevent lights from spawning inside the town's buildings and canals.
+          if(Math.abs(x) < 70 && z > -150 && z < -5) continue;
           // Keep landmark/turn lights; halve repeat lamps in the southwest.
           // Each skipped lamp saves four unique box meshes/drawable objects.
           const landmark=WOLFVEIL_ROUTES.some(r=>r.points.some(pt=>

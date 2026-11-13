@@ -53,10 +53,10 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      WOLFVEIL_IMPORTED_TOWN_FLOOR_Y-p.floorSourceY*scale+p.floorLiftMeters,p.z+70);
    town.traverse(node=>{
      if(!node.isMesh)return;
-     node.castShadow=true;node.receiveShadow=true;
      if(WATER.test(node.name))water.apply(node);
      else if(isWolfveilTownTreeMesh(node.name))removeWolfveilTownCentreTree(node);
    });
+   import('./WolfveilImportedTownCritique.mjs').then(c => c.critiqueAndEnhanceWolfveilTown(town, WOLFVEIL_IMPORTED_TOWN_FLOOR_Y));
    town.name='Blender_Assembled_Town_80_Separate_Tiles';root.add(town);root.updateMatrixWorld(true);
    // Bake floors and walls from the placed triangles themselves.
    const meshes=[];
