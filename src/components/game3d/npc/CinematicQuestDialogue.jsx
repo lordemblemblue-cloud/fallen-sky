@@ -31,6 +31,10 @@ export default function CinematicQuestDialogue() {
   const [open, setOpen] = useState(false);
   const [beatId, setBeatId] = useState(FIRST_BEAT);
   const [questError, setQuestError] = useState('');
+  const [choiceIndex, setChoiceIndex] = useState(0);
+  const choiceIndexRef = useRef(0);
+  const choose = (index) => { choiceIndexRef.current = index; setChoiceIndex(index); };
+
   const audioRef = useRef(null);
   const beat = BEATS[beatId];
 
@@ -38,9 +42,11 @@ export default function CinematicQuestDialogue() {
   useEffect(() => {
     const onOpen = () => {
       setBeatId(FIRST_BEAT);
+      choose(0);
       setQuestError('');
       setOpen(true);
       startCinematicCamera();
+      document.exitPointerLock?.();
       window.dispatchEvent(new CustomEvent('cinematicDialogueStart'));
     };
     window.addEventListener('openLivingQuest', onOpen);
@@ -78,7 +84,7 @@ export default function CinematicQuestDialogue() {
   const display = useTypewriter(spokenText || '');
   const color = QUEST_GIVER.color;
 
-  const goTo = (id) => { if (id) setBeatId(id); };
+  const goTo = (id) => { if (id) { choose(0); setBeatId(id); } };
 
   const acceptQuest = () => {
     // The cinematic may preview XP, but it must never award XP, loot or AGP.
@@ -123,6 +129,33 @@ export default function CinematicQuestDialogue() {
     }));
     close();
   };
+
+  // Capture dialogue keys before world movement/combat handlers.
+  useEffect(() => {
+    if (!open || !beat) return;
+    const onKey = (e) => {
+      if (e.repeat || e.altKey || e.ctrlKey || e.metaKey ||
+          e.target?.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+      const k = e.key.toLowerCase();
+      const count = beat.type === 'dialogue' ? (beat.choices?.length || 0) : beat.type === 'quest' ? 2 : 1;
+      if (['a', 'd', 'arrowleft', 'arrowright'].includes(k)) {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (count > 1) choose((choiceIndexRef.current + (k === 'a' || k === 'arrowleft' ? -1 : 1) + count) % count);
+      } else if (k === 'r') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        close();
+      } else if (k === 'f' || k === 'enter') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (beat.type === 'quest') {
+          if (choiceIndexRef.current === 0) acceptQuest();
+          else close();
+        } else if (beat.type === 'dialogue') goTo(beat.choices?.[choiceIndexRef.current]?.next);
+        else close();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, beat, close]);
 
   if (!open || !beat) return null;
 
@@ -175,15 +208,17 @@ export default function CinematicQuestDialogue() {
                 <div className="flex gap-3">
                   <button
                     onClick={acceptQuest}
+                    onMouseEnter={() => choose(0)}
                     className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-bold text-white transition-all"
-                    style={{ background: `${color}30`, border: `1px solid ${color}70` }}
+                    style={{ background: `${color}30`, border: `1px solid ${color}70`, boxShadow: choiceIndex === 0 ? `0 0 0 2px ${color}` : 'none' }}
                   >
                     <Check className="w-4 h-4" /> Accept the Hunt
                   </button>
                   <button
                     onClick={close}
+                    onMouseEnter={() => choose(1)}
                     className="px-5 py-3 rounded-xl text-sm font-medium text-white/70 transition-all"
-                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: choiceIndex === 1 ? '0 0 0 2px #bae6fd' : 'none' }}
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -215,8 +250,9 @@ export default function CinematicQuestDialogue() {
                       whileHover={{ x: 5 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => goTo(choice.next)}
+                      onMouseEnter={() => choose(i)}
                       className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/85 font-medium transition-all"
-                      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      style={{ background: choiceIndex === i ? 'rgba(255,255,255,0.13)' : 'rgba(255,255,255,0.03)', border: choiceIndex === i ? '1px solid #bae6fd' : '1px solid rgba(255,255,255,0.08)' }}
                     >
                       {choice.label}
                     </motion.button>
