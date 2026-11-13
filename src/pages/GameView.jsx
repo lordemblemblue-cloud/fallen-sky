@@ -14,6 +14,7 @@ import CharacterProgressionMenu from '../components/game3d/CharacterProgressionM
 import useAXEServiceMode from '../components/game3d/axe/services/useAXEServiceMode';
 import AXEServiceWorkspace from '../components/game3d/axe/services/AXEServiceWorkspace';
 import { getAXEServiceGroupForService } from '../components/game3d/axe/services/AXEServiceGroups.js';
+import { getGame3DMenuShortcut } from '../components/game3d/axe/services/game3dMenuHotkeys.mjs';
 import { normalizeAXEServiceRequest } from '../components/game3d/axe/services/AXEServiceRegistry';
 import MultiplayerSystem from '../components/game/MultiplayerSystem';
 import GameWorldServerManager from '../components/game3d/GameWorldServerManager';
@@ -402,9 +403,61 @@ export default function GameView() {
     localStorage.setItem('game_theme_volume', String(themeVolume));
   }, [themeVolume]);
 
-  // Hotkeys while in-game:
-  // TAB = Soul Emporium, C = unified Character Hub, ESC = close overlay / pause.
-  // V remains reserved for the companion combat loadout.
+  // The eight owner-assigned keys are captured before GameWorld3D's movement,
+  // weapon and quest-debug listeners. Only one service/map/character menu lives
+  // at a time; pressing the current key again closes it.
+  useEffect(() => {
+    if (phase !== 'world') return undefined;
+    const onServiceKey = (event) => {
+      const destination = getGame3DMenuShortcut(event);
+      if (!destination || pauseMenuOpen || window.__axeDialogueOpen ||
+        window.__axeTileInspectionEditing) return;
+      event.preventDefault();
+      event.stopImmediatePropagation?.();
+      const currentGroup = services.controller.getSnapshot().groupId;
+      const mapWasOpen = !!window.__axeWorldMapOpen;
+      // The map is a separate HUD portal, not a station workspace.
+      window.dispatchEvent(new Event('axeCloseWorldMap'));
+      setStoreOpen(false);
+      setFriendsListOpen(false);
+      setClanOverlayOpen(false);
+
+      if (destination === 'map') {
+        services.controller.close();
+        setProgressionOpen(false);
+        setRequestedService(null);
+        setRequestedServiceItemId(null);
+        setRequestedCharacterTab(null);
+        if (!mapWasOpen) {
+          window.dispatchEvent(new CustomEvent('axeOpenWorldMap', { detail: { force: true } }));
+        }
+        return;
+      }
+
+      if (destination === 'character') {
+        const closingCharacter = progressionOpen && !currentGroup;
+        services.controller.close();
+        setProgressionOpen(!closingCharacter);
+        setRequestedService(null);
+        setRequestedServiceItemId(null);
+        setRequestedCharacterTab(closingCharacter ? null : 'attributes');
+        return;
+      }
+
+      setProgressionOpen(false);
+      setRequestedService(null);
+      setRequestedServiceItemId(null);
+      setRequestedCharacterTab(null);
+      if (currentGroup === destination) services.controller.close();
+      else void services.controller.open(destination);
+    };
+    window.addEventListener('keydown', onServiceKey, true);
+    return () => window.removeEventListener('keydown', onServiceKey, true);
+  }, [phase, pauseMenuOpen, progressionOpen, services.controller]);
+
+  // Other in-world controls: TAB = Soul Emporium, G = Clan,
+  // Shift+L = Friends, ESC = close overlay / pause.
+  // Shift+C still cycles owned weapon roles; V is a companion combat ability.
   useEffect(() => {
     if (phase !== 'world') return;
     const onKey = (e) => {
@@ -425,17 +478,15 @@ export default function GameView() {
         }
         return;
       }
-      if (e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (window.__axeDialogueOpen ||
+        e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
       if (e.key === 'Tab') {
         e.preventDefault();
         setStoreOpen(true);
-      } else if (e.key.toLowerCase() === 'c') {
-        setRequestedService(null);
-        setRequestedCharacterTab(null);
-        setProgressionOpen((v) => !v);
-      } else if (e.key.toLowerCase() === 'l') {
+      } else if (e.shiftKey && e.code === 'KeyL') {
+        e.preventDefault();
         setFriendsListOpen((v) => !v);
-      } else if (e.key.toLowerCase() === 'g') {
+      } else if (!e.shiftKey && e.key.toLowerCase() === 'g') {
         setClanOverlayOpen((v) => !v);
       } else if (e.key === 'Escape') {
         // Close any open sub-panels first; otherwise toggle pause menu.
