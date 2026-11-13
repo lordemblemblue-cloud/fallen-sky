@@ -13,6 +13,7 @@ import { normalizeCreatorGazePointer, computeCreatorCursorGaze } from './creator
 import { creatorStageLook } from './creatorStyleLighting.mjs';
 import { sampleLivingChronicleGaze } from '../game3d/character/livingChronicleIdentity.mjs';
 import {originalGame3DModelUrl} from './legacyModelMirror.mjs';
+import {characterBodyBounds} from '@/lib/characterModelOverrides';
 
 const HEIGHT = 1.72; // the stage normalises every body to this height
 const damp = (current, target, lambda, dt) => THREE.MathUtils.lerp(current, target, 1 - Math.exp(-lambda * dt));
@@ -202,12 +203,20 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
   };
 
   const acceptLoadedModel = (gltf) => {
+    try {
     if (disposed) { gltf.scene.traverse((n) => { n.geometry?.dispose?.(); }); return; }
     model = gltf.scene;
     relaxArms(model);
     model.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(model, true);
-    const s = HEIGHT / Math.max(0.01, box.max.y - box.min.y);
+    // Only the actual skinned actor contributes to camera framing; off-axis
+    // animation/VFX nodes can make the full GLB bounds enormous and invisible.
+    const box = characterBodyBounds(model);
+    const bodyHeight = box.max.y - box.min.y;
+    const meshCount = (()=>{let n=0;model.traverse(node=>{if(node.isMesh)n++;});return n;})();
+    if(!meshCount||box.isEmpty()||!Number.isFinite(bodyHeight)||bodyHeight<0.05){
+      throw new Error('The original Eve/Adam GLB loaded without usable visible character geometry.');
+    }
+    const s = HEIGHT / bodyHeight;
     modelBounds = { factor:s, floorY:box.min.y,
       centerX:(box.min.x+box.max.x)*0.5,
       centerZ:(box.min.z+box.max.z)*0.5 };
@@ -237,17 +246,39 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     runtime.update(appearance);
     onCapabilities(capabilities(inspectCustomization(model)));
     onReady();
+    } catch(error) {
+      if(!disposed) {
+        console.error('[Game 3D Creator] The original character model could not be prepared for rendering:',error);
+        onError(error);
+      }
+    }
   };
   // Use the original authored GLB as a read-only mirror when migration omitted
   // the local binary. Never fall back to a generic primitive replacement.
   const onLocalLoadError = error => {
     if (disposed) return;
-    const mirror = originalGame3DModelUrl(url);
-    if (!mirror) { onError(error); return; }
-    new GLTFLoader(new THREE.LoadingManager()).load(mirror, gltf => {
-      console.warn('[Game 3D Creator] Authored model was loaded from the original published site:', url);
-      acceptLoadedModel(gltf);
-    }, undefined, mirrorError => { if (!disposed) onError(mirrorError); });
+    // Use only the owner's exact authored models. When the animated v2 model
+    // is unavailable in a Base44 preview, its v1 creator body is a legitimate
+    // last-resort visible model; never substitute a generic mannequin.
+    const previewV1 = url==='/models/characters/fused/Female_Fused_v2.glb'
+      ? '/models/characters/fused/Female_Fused_v1.glb'
+      : url==='/models/characters/fused/Male_Fused_v2.glb'
+      ? '/models/characters/fused/Male_Fused_v1.glb' : null;
+    const candidates=[originalGame3DModelUrl(url),previewV1,originalGame3DModelUrl(previewV1)]
+      .filter(Boolean);
+    const attempt = (index,lastError) => {
+      if(disposed)return;
+      if(index>=candidates.length){
+        onError(new Error('Original Eve/Adam model could not load: '+url+'. Check whether Base44 deployed the GLB files.',{cause:lastError||error}));
+        return;
+      }
+      const candidate=candidates[index];
+      new GLTFLoader(new THREE.LoadingManager()).load(candidate, gltf=>{
+        console.warn('[Game 3D Creator] Using a source-authored backup for:',url,candidate);
+        acceptLoadedModel(gltf);
+      },undefined,nextError=>attempt(index+1,nextError));
+    };
+    attempt(0,error);
   };
   new GLTFLoader().load(url, acceptLoadedModel, undefined, onLocalLoadError);
 
