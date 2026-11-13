@@ -255,6 +255,37 @@ subscribeCharacterChange(() => {
   scheduleFusionExpiry();
 });
 
+// A player can join a faction AFTER their initial character creation.
+// Only replace the untouched, character-scoped starter pet; never delete a
+// trained, crafted or purchased mount and never grant new power on repeat
+// faction selection. The faction starter keeps its existing companion ID,
+// so the gear menu, following pet and mount stay in sync.
+const adoptFactionStarterIfPristine = factionId => {
+  const desired=getGame3DStarterMountDefinitionId(factionId);
+  if(desired==='axe_mount_war_wolf'||state.mounts.length!==1||state.ridingMountId||state.fusion)return false;
+  const old=state.mounts[0];
+  if(old.definitionId===desired)return false;
+  if(old.instanceId!==starterMountId(old.definitionId))return false;
+  if(state.activeMountId!==old.instanceId||state.registeredMountId!==old.instanceId)return false;
+  if(old.totalXp!==0||old.growthPercent!==0||old.legendary||old.spiritualWeapon?.level>0)return false;
+  if(Object.values(old.sourceStats||{}).some(x=>Number(x)!==0))return false;
+  if(old.registered!==true||old.active!==true||old.riding)return false;
+  const next=starterMount(desired);
+  state={...state,mounts:[next],registeredMountId:next.instanceId,
+    activeMountId:next.instanceId,ridingMountId:null};
+  if(!emit())return false;
+  syncOwnedFactionMountVisual();
+  return true;
+};
+
+// The character roster emits this for a same-character faction choice, without
+// changing the character-scoped storage key (so subscribeCharacterChange alone
+// would not see it).
+if(typeof window!=='undefined')window.addEventListener('axeCharacterFactionChanged',event=>{
+  if(event.detail?.characterId!==getActiveCharacter()?.id)return;
+  adoptFactionStarterIfPristine(event.detail.factionId);
+});
+
 // Sync the selected faction creature for a character already active on boot.
 syncOwnedFactionMountVisual();
 
