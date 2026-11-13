@@ -52,6 +52,19 @@ test('raised bridge-adjacent flat paving is seated; bridge rails and canal bed a
   assert.equal(redBridge.geometry.attributes.position.getY(4),1.16);
   assert.equal(canalBed.geometry.attributes.position.getY(4),0.68);
 });
+test('only real water-covered tiles remain recessed inside the broad canal rectangle',()=>{
+  const water=box('water',0.708,0.705,0,0);
+  const submerged=box('Tile_01',0.691,0.662,0,0);
+  const dryPark=box('Tile_02',0.691,0.662,2,0);
+  const root=scene(water,submerged,dryPark);
+  removeWolfveilTownRaisedTileBodies(submerged);
+  removeWolfveilTownRaisedTileBodies(dryPark);
+  const result=flattenWolfveilTownFloorLevels(root);
+  assert.equal(result.verifiedWaterFootprint,true);
+  assert.equal(result.protectedWaterTileVertices,4);
+  assert.ok(Math.abs(submerged.geometry.attributes.position.getY(0)-0.691)<1e-5);
+  assert.ok(Math.abs(dryPark.geometry.attributes.position.getY(0)-F)<1e-5);
+});
 test('already-grounded park lawn remains just above paving',()=>{
   const lawn=box('grass',0.719,0.50,6,6),paving=box('paving',0.72,0.5,8,6);
   flattenWolfveilTownFloorLevels(scene(lawn,paving));

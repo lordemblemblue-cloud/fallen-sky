@@ -14,8 +14,8 @@ const readComponent = (attribute, index, component) => (
 const arrayTypeOf = (attribute) => attribute.array?.constructor
   || attribute.data?.array?.constructor || Float32Array;
 export const WOLFVEIL_TOWN_TILE_CLEANUP = Object.freeze({
-  // Raw tile top is about 0.36m above the buried bottom face. A 0.40m band
-  // accidentally kept BOTH horizontal faces; keep only the highest skin.
+  // Keep only the very highest paving skin; a 0.40m band can also preserve
+  // near-top secondary horizontal faces if the model contains shallow layers.
   topBandMeters: 0.06,
   minFlatness: 0.72,
 });

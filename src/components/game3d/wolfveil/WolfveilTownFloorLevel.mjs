@@ -69,6 +69,50 @@ const ARCHITECTURE_MAX_HEIGHT = 1.0;
 const ARCHITECTURE_BAND_MIN = 0.755;
 const ARCHITECTURE_BAND_MAX = 0.8;
 
+// The old rectangular canal exclusion covers much of the central park, not
+// just the real water. Build a mask from the LOADED model's actual water faces:
+// dry park tiles inside that rectangle must still be flattened. If there is no
+// water geometry available, fail conservatively to the older canal protection.
+function vertexWorldXZ(node, position, index) {
+  const x=position.getX(index),y=position.getY(index),z=position.getZ(index);
+  const m=node.matrixWorld?.elements;
+  return m ? {
+    x:m[0]*x+m[4]*y+m[8]*z+m[12],
+    z:m[2]*x+m[6]*y+m[10]*z+m[14],
+  } : {x,z};
+}
+function actualWaterFootprint(townRoot) {
+  const faces=[];
+  townRoot?.traverse?.(node=>{
+    if (!node.isMesh || !/water/i.test(node.name)) return;
+    const p=node.geometry?.attributes?.position,index=node.geometry?.index;
+    if (!p) return;
+    const count=index?.count??index?.array?.length??p.count;
+    const vi=i=>index?(index.getX?index.getX(i):index.array[i]):i;
+    for(let i=0;i+2<count;i+=3){
+      const a=vertexWorldXZ(node,p,vi(i));
+      const b=vertexWorldXZ(node,p,vi(i+1));
+      const c=vertexWorldXZ(node,p,vi(i+2));
+      const det=(b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x);
+      if(!Number.isFinite(det)||Math.abs(det)<1e-8)continue;
+      faces.push({a,b,c,det,
+        minX:Math.min(a.x,b.x,c.x),maxX:Math.max(a.x,b.x,c.x),
+        minZ:Math.min(a.z,b.z,c.z),maxZ:Math.max(a.z,b.z,c.z)});
+    }
+  });
+  if(!faces.length)return null;
+  return (node,p,i)=>{
+    const q=vertexWorldXZ(node,p,i);
+    for(const f of faces){
+      if(q.x<f.minX-1e-4||q.x>f.maxX+1e-4||q.z<f.minZ-1e-4||q.z>f.maxZ+1e-4)continue;
+      const dx=q.x-f.a.x,dz=q.z-f.a.z;
+      const u=(dx*(f.c.z-f.a.z)-dz*(f.c.x-f.a.x))/f.det;
+      const v=((f.b.x-f.a.x)*dz-(f.b.z-f.a.z)*dx)/f.det;
+      if(u>=-1e-4&&v>=-1e-4&&u+v<=1+1e-4)return true;
+    }
+    return false;
+  };
+}
 function geometryBounds(position) {
   let min = Infinity, max = -Infinity;
   for (let i = 0; i < position.count; i++) {
@@ -127,6 +171,8 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
   let seated = 0;
   let tileVertices = 0;
   let raisedSurfaceVertices = 0;
+  let protectedWaterTileVertices = 0;
+  const coversActualWater = actualWaterFootprint(townRoot);
   townRoot?.traverse?.((node) => {
     if (!node.isMesh) return;
     if (/water|foam/i.test(node.name)) return;
@@ -154,7 +200,12 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
       const x = position.getX(i), z = position.getZ(i);
       const inCanal = x > WOLFVEIL_IMPORTED_TOWN_CANAL.minX && x < WOLFVEIL_IMPORTED_TOWN_CANAL.maxX
         && z > WOLFVEIL_IMPORTED_TOWN_CANAL.minZ && z < WOLFVEIL_IMPORTED_TOWN_CANAL.maxZ;
-      if (inCanal && y <= CANAL_BED_MAX) { canalBed++; continue; }
+      if (inCanal && y <= CANAL_BED_MAX &&
+          (!isTile || !coversActualWater || coversActualWater(node,position,i))) {
+        canalBed++;
+        if(isTile)protectedWaterTileVertices++;
+        continue;
+      }
       if (Math.abs(y - target) > 1e-6) {
         position.setY(i, target);
         settled++; changedThisMesh++;
@@ -168,5 +219,7 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
     node.geometry.computeBoundingSphere();
     node.userData.wolfveilFloorLevel = FLOOR;
   });
-  return { floor: FLOOR, settled, canalBed, seated, tileVertices, raisedSurfaceVertices };
+  return { floor: FLOOR, settled, canalBed, seated, tileVertices,
+    raisedSurfaceVertices, protectedWaterTileVertices,
+    verifiedWaterFootprint: Boolean(coversActualWater) };
 }
