@@ -12,6 +12,7 @@ import { featherFusedNeckTone } from './creatorNeckTone';
 import { normalizeCreatorGazePointer, computeCreatorCursorGaze } from './creatorCursorGaze.mjs';
 import { creatorStageLook } from './creatorStyleLighting.mjs';
 import { sampleLivingChronicleGaze } from '../game3d/character/livingChronicleIdentity.mjs';
+import {originalGame3DModelUrl} from './legacyModelMirror.mjs';
 
 const HEIGHT = 1.72; // the stage normalises every body to this height
 const damp = (current, target, lambda, dt) => THREE.MathUtils.lerp(current, target, 1 - Math.exp(-lambda * dt));
@@ -200,7 +201,7 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     }
   };
 
-  new GLTFLoader().load(url, (gltf) => {
+  const acceptLoadedModel = (gltf) => {
     if (disposed) { gltf.scene.traverse((n) => { n.geometry?.dispose?.(); }); return; }
     model = gltf.scene;
     relaxArms(model);
@@ -236,7 +237,19 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     runtime.update(appearance);
     onCapabilities(capabilities(inspectCustomization(model)));
     onReady();
-  }, undefined, (error) => { if (!disposed) onError(error); });
+  };
+  // Use the original authored GLB as a read-only mirror when migration omitted
+  // the local binary. Never fall back to a generic primitive replacement.
+  const onLocalLoadError = error => {
+    if (disposed) return;
+    const mirror = originalGame3DModelUrl(url);
+    if (!mirror) { onError(error); return; }
+    new GLTFLoader(new THREE.LoadingManager()).load(mirror, gltf => {
+      console.warn('[Game 3D Creator] Authored model was loaded from the original published site:', url);
+      acceptLoadedModel(gltf);
+    }, undefined, mirrorError => { if (!disposed) onError(mirrorError); });
+  };
+  new GLTFLoader().load(url, acceptLoadedModel, undefined, onLocalLoadError);
 
   const capabilities = (customization) => {
     const expressions = new Set();
