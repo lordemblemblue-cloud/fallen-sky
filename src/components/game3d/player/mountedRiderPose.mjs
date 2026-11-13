@@ -165,7 +165,7 @@ function moveWeapons(rightHand, leftHand) {
   });
   for (const object of candidates) {
     if (candidates.some(other => other !== object && other.getObjectById(object.id))) continue;
-    attachments.push({ object, parent: object.parent, position: object.position.clone(), quaternion: object.quaternion.clone(), scale: object.scale.clone() });
+    attachments.push({ object, visible: object.visible, parent: object.parent, position: object.position.clone(), quaternion: object.quaternion.clone(), scale: object.scale.clone() });
     leftHand.add(object); // Preserve its authored grip-local transform.
   }
   return attachments;
@@ -200,8 +200,9 @@ export function createMountedRiderPose({ player, mount, definition = {} } = {}) 
   let restored = false;
   const status = { supported: true, halfWidth: saddle.halfWidth, weaponAttached: attachments.length > 0, leftHand: limbs.Left.hand, rightHand: limbs.Right.hand, seat: new THREE.Vector3(), rightGrip: new THREE.Vector3() };
 
-  function update() {
+  function update({ weaponHand = false } = {}) {
     if (restored) return false;
+    for (const saved of attachments) saved.object.visible = weaponHand && saved.visible;
     applyTransforms(rest);
     player.updateWorldMatrix(true, true); mount.updateWorldMatrix(true, true);
     const seat = saddle.anchor.localToWorld(saddle.offset.clone());
@@ -237,7 +238,11 @@ export function createMountedRiderPose({ player, mount, definition = {} } = {}) 
       }
     }
     const rightGrip = saddle.anchor.localToWorld(saddle.gripOffset.clone());
-    const leftGrip = seat.clone().addScaledVector(left, .26).addScaledVector(forward, .16).addScaledVector(up, .26);
+    // The left hand rests beside the right on the mount, and lifts clear
+    // only while a weapon is being used.
+    const leftGrip = weaponHand
+      ? seat.clone().addScaledVector(left, .26).addScaledVector(forward, .16).addScaledVector(up, .26)
+      : rightGrip.clone().addScaledVector(left, .08);
     for (const [side, target] of [['Right', rightGrip], ['Left', leftGrip]]) {
       const limb = limbs[side], sign = side === 'Left' ? 1 : -1;
       const elbowPole = seat.clone().addScaledVector(left, sign * .8).addScaledVector(up, .35);
@@ -258,7 +263,7 @@ export function createMountedRiderPose({ player, mount, definition = {} } = {}) 
     if (restored) return;
     applyTransforms(entry);
     for (const saved of attachments) {
-      saved.parent.add(saved.object);
+      saved.parent.add(saved.object); saved.object.visible = saved.visible;
       saved.object.position.copy(saved.position); saved.object.quaternion.copy(saved.quaternion); saved.object.scale.copy(saved.scale);
     }
     player.updateWorldMatrix(true, true); restored = true;

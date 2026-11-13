@@ -701,7 +701,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let mountedWeapon = null;
     let mountedRiderPlayer = null;
     let mountedRiderMount = null;
-    let mountAppearanceSeconds = 0;
+    let mountAppearanceSeconds = 0, mountedAttackSeconds = 0; // weapon is drawn while riding only briefly after an attack
     const restoreMountedRider = () => {
       mountedWeapon?.dispose();
       mountedWeapon = null;
@@ -2072,7 +2072,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const weaponTrails = createCombatWeaponTrails({ scene });
     const hasCombatSound = (key) => !!getActionSound(key);
     const playSynchronizedSwing = (weaponPath, skillId) => {
-      const sound = selectCombatSwingSound({ weaponPath, skillId, hasSound: hasCombatSound });
+      mountedAttackSeconds = 0.9; const sound = selectCombatSwingSound({ weaponPath, skillId, hasSound: hasCombatSound });
       // Authored skill tracks retain their own swing. Standard melee swings
       // combine original swing, cutting wind and optional metallic resonance.
       if(sound||(weaponPath!=='ranged'&&!AUTHORED_SKILL_SOUNDS.has(skillId)))
@@ -3744,8 +3744,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             mount: mountedRiderMount, definition: companionDefRef.current });
           mountedWeapon = createMountedWeaponPresentation({ player: model });
         }
-        mountedRider.update();
-        const equippedWeapon = getActiveEquippedAXEWeapon();
+        mountedAttackSeconds = Math.max(0, mountedAttackSeconds - delta); mountedRider.update({ weaponHand: mountedAttackSeconds > 0 });
+        const equippedWeapon = mountedAttackSeconds > 0 ? getActiveEquippedAXEWeapon() : null; // both hands hold the mount unless attacking
         mountedWeapon.update({ item: equippedWeapon,
           family: inferAXEMasteryWeaponId(equippedWeapon) });
         mountAppearanceSeconds = Math.max(0, mountAppearanceSeconds - delta);
