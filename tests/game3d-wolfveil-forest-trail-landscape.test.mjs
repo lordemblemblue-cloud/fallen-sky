@@ -19,7 +19,7 @@ const color=(points)=>{
 test('forest mapping affects original western routes, not unrelated biomes',()=>{
   assert.deepEqual([...WOLFVEIL_FOREST_TRAIL_STUDY.routes].sort(),[
     'training_forest','west_woodland_fork']);
-  assert(forestTrailShoulderWeight(-320,73)>.1);
+  assert(forestTrailShoulderWeight(-312,73)>.1);
   assert(forestTrailDistanceFromEdge(-320,65)<0);
   assert.equal(forestTrailShoulderWeight(350,200),0);
   assert.equal(WOLFVEIL_FOREST_TRAIL_STUDY.collidersAdded,0);
@@ -28,10 +28,10 @@ test('owned 5m squares and 100m owner callbacks remain excluded',()=>{
   for(const point of [[-348,68],[-303,17],[-228,102],[-318,32],[-205,115]])
     assert(forestTrailIsProtected(...point));
   assert(forestTrailIsProtected(-405,0,2,()=>true));
-  assert(!forestTrailIsProtected(-320,73,1,()=>false));
+  assert(!forestTrailIsProtected(-312,73,1,()=>false));
 });
 test('muted forest pigment changes only the original terrain color channel',()=>{
-  const points=[[-320,73],[-348,68],[360,200]];
+  const points=[[-312,73],[-348,68],[360,200]];
   const c=color(points),g={getAttribute:key=>key==='position'?pos(points):c};
   const result=applyWolfveilForestTrailPigment(g,{enabled:true,
     riverDistance:()=>100});
@@ -48,7 +48,7 @@ test('muted forest pigment changes only the original terrain color channel',()=>
 });
 test('existing grass roots are unchanged; trailing blades stay short',()=>{
   const raw={grass:[
-    {x:-320,y:17,z:73,height:1.0,width:.95,shade:4,route:'west_woodland_fork'},
+    {x:-312,y:17,z:73,height:1.0,width:.95,shade:4,route:'west_woodland_fork'},
     {x:330,y:10,z:200,height:1,width:.95,shade:0,route:'quarry_approach'},
     {x:-348,y:3,z:68,height:1,width:.95,shade:2,route:'west_woodland_fork'},
   ]};
