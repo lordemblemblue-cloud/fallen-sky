@@ -69,7 +69,19 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
   // walkable tops on the single floor the architecture was built for, and seat
   // any small wall piece that still floats. Runs before the collision bake, so
   // feet, NPCs and mounts follow the settled floor.
+  // Geometry order matters. Cut every imported tile BOX down to its raw top
+  // BEFORE changing vertex heights. Flattening first could turn secondary
+  // near-surface polygons into top-height candidates in the old wide filter.
+  let tilesCleaned = 0, tileFacesRemoved = 0;
+  townRoot.traverse(node => {
+    if (!node.isMesh || !/^Tile_/i.test(node.name)) return;
+    const result = removeWolfveilTownRaisedTileBodies(node);
+    if (result.changed) { tilesCleaned++; tileFacesRemoved += result.removedFaces; }
+  });
   const floorLevel = flattenWolfveilTownFloorLevels(townRoot);
+  townRoot.userData.wolfveilWalkwayRepair = {
+    tilesCleaned, tileFacesRemoved, ...floorLevel,
+  };
 
   townRoot.traverse(n => {
     if (!n.isMesh || /water|foam/i.test(n.name)) return;
@@ -80,15 +92,10 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
     const isPaving = /^(Expansion_)?paving$/i.test(n.name);
     const isGrass = /^(Expansion_)?grass$/i.test(n.name);
 
-    // ALL 80 Blender Tile_* pieces: retain their top paving polygons only.
-    // The former 0.55m-deep clipped boxes still showed as raised slab walls;
-    // removing the box faces also removes them from the subsequent collision bake.
-    // Preserve the real top polygons so houses, feet and NPCs remain grounded.
-    if (isTile) removeWolfveilTownRaisedTileBodies(n);
-    // Other paving is NOT a Tile_* body; its kerbs and canal banks are left
-    // exactly as authored. Squashing its buried vertices up toward the top
-    // dragged whole kerb faces into view as thin raised slivers, so the paving
-    // keeps its own shape and only the water is settled beneath it.
+    // All tile bodies are already gone and the highest walkable faces were
+    // settled before texturing and baking physical collision. Paving/kerbs
+    // retain their intentional canal structure; raised flat landing faces
+    // at bridge approaches have been pulled into the same seamless floor.
 
     // Recompute smooth vertex normals from Blender's indexed smooth groups
     n.geometry.computeVertexNormals();
