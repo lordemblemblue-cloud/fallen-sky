@@ -82,12 +82,11 @@ export function createWolfveilVillage(scene,options={}){
   // Forest-edge tonal depth inspired by public trail references, never map
   // imagery or physical height data. Modify existing vertex pigments only;
   // protected 5m/100m squares and Game 1 retain their authored appearance.
-  const geoForestPigment=options.originAtMarket&&options.groundCover
-    ?applyWolfveilForestTrailPigment(geometry,{
-       enabled:true,riverDistance:wolfveilDistanceToRiver,
-       reservedAt:(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r),
-     })
-    :null;
+  if(options.originAtMarket&&options.groundCover)
+    applyWolfveilForestTrailPigment(geometry,{
+      enabled:true,riverDistance:wolfveilDistanceToRiver,
+      reservedAt:(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r),
+    });
   const ground=world.mesh(new THREE.Mesh(geometry,terrainMaterial));
   // The real Game 1 renderer casts a downward ray every frame for player,
   // mount, companions, enemies, and NPCs. Accelerate this 190K-triangle
