@@ -41,7 +41,7 @@ export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-7,z:8});
 // Quest givers by id: the first one greets new players on the plaza, the
 // rest stand on the lawns of the four quarters of the town.
 export const WOLFVEIL_TOWN_QUEST_NPC_SPOTS=Object.freeze({
- archer_lyra:Object.freeze({x:-11,z:10}),
+ archer_lyra:Object.freeze({x:-4,z:10}),
  archer_vex:Object.freeze({x:-32,z:-52}),
  archer_kira:Object.freeze({x:28,z:-45}),
  archer_noor:Object.freeze({x:-32,z:39}),
@@ -60,8 +60,10 @@ export function insideWolfveilImportedTown(x,z,margin=0){
 export function gradeWolfveilImportedTown(x,z,previousHeight){
  if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(previousHeight))return previousHeight;
  const p=WOLFVEIL_IMPORTED_TOWN;
- const dx=Math.max(0,Math.abs(x-p.x)-p.width/2);
- const dz=Math.max(0,Math.abs(z-p.z)-p.depth/2);
+ // The level ground runs 4m past the model so the terrain never pokes up
+ // through the outermost tiles.
+ const dx=Math.max(0,Math.abs(x-p.x)-p.width/2-4);
+ const dz=Math.max(0,Math.abs(z-p.z)-p.depth/2-4);
  const distance=Math.hypot(dx,dz);
  if(distance>=p.blendMeters)return previousHeight;
  const naturalWeight=smooth(distance/p.blendMeters);

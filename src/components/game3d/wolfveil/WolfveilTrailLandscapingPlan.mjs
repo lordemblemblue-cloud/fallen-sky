@@ -6,6 +6,7 @@
 import {WOLFVEIL_ROUTES,WOLFVEIL_SITES,wolfveilRouteClearance,
   wolfveilDistanceToRiver} from './WolfveilLayout.js';
 import {WOLFVEIL_PALACE} from './WolfveilPalaceLayout.mjs';
+import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {WOLFVEIL_TRAIL_BREAKS,wolfveilTrailBreakAt,wolfveilRoutePointAt,
   wolfveilRouteLength} from './WolfveilTrailBreaks.mjs';
 
@@ -21,6 +22,7 @@ const smooth=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3
 export function openGround(x,z,half){
   if(Math.abs(x)>half||Math.abs(z)>half)return false;
   if(wolfveilDistanceToRiver(x,z)<16)return false;
+  if(insideWolfveilImportedTown(x,z,2))return false; // nothing grows through the town's paving
   if(Math.abs(x-WOLFVEIL_PALACE.x)<WOLFVEIL_PALACE.width/2+12&&
      Math.abs(z-WOLFVEIL_PALACE.z)<WOLFVEIL_PALACE.depth/2+16)return false;
   const {market,sanctuary,southGate}=WOLFVEIL_SITES;
