@@ -5,6 +5,7 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
+import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
 import {game3dCharacterModel} from '../components/game3d/game3dCharacterModel';
 import GameHUD from '../components/game3d/hud/GameHUD';
 import AXEQuestTrailMount from '../components/game3d/hud/AXEQuestTrailMount';
@@ -526,6 +527,7 @@ export default function GameView() {
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn}
         resumeCheckpoint={resumeCheckpoint} />
+      <Game3DPerformanceBootstrap region={worldRegion} />
       {phase==='login' ? (
         <>
           <CharacterLoginScreen liveWorld worldReady={worldReady} worldError={worldEntryError}
