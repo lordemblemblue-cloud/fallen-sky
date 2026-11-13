@@ -74,6 +74,8 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
  return {root,get status(){return state;},get model(){return model;},
    /** Town floor height at a point, or null off the town / before it loads. */
    groundY(x,z){return collision?collision.groundAt(x,z):null;},
+   /** True where the town's own walls, ledges or plaza tree stand. */
+   isSolid(x,z){return collision?collision.isSolid(x,z):false;},
    /** Keeps a moving character out of the town's walls. True when it was stopped. */
    resolveCollision(position,previous){return collision?collision.resolve(position,previous):false;},
    update(dt){water.update(dt);},

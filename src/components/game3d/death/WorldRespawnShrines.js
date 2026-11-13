@@ -2,7 +2,14 @@
 // These are visual markers; the real landing spot is kept clear beside them.
 import * as THREE from 'three';
 
-export function createWorldRespawnShrines({ scene, points = [], sampleGroundY, isInBounds = () => true } = {}) {
+// Ground patches beside a landing spot, nearest first. The marker never stands
+// on the exact landing position and never inside a wall.
+const SHRINE_OFFSETS = Object.freeze([
+  [1.7, 0], [1.2, 1.2], [0, 1.7], [-1.2, 1.2], [-1.7, 0], [-1.2, -1.2], [0, -1.7], [1.2, -1.2],
+  [2.3, 0], [1.7, 1.7], [0, 2.3], [-1.7, 1.7], [-2.3, 0], [-1.7, -1.7], [0, -2.3], [1.7, -1.7],
+]);
+
+export function createWorldRespawnShrines({ scene, points = [], sampleGroundY, isInBounds = () => true, isBlocked = () => false } = {}) {
   const root = new THREE.Group();
   root.name = 'AXE World Respawn Shrines';
   const stone = new THREE.MeshStandardMaterial({ color: 0x273441, roughness: 0.78, metalness: 0.24 });
@@ -18,9 +25,23 @@ export function createWorldRespawnShrines({ scene, points = [], sampleGroundY, i
     // Keep the visual away from the exact feet landing position and avoid
     // a forest of nearly overlapping beacons around the town plaza.
     if (occupied.some(p => Math.hypot(p.x - point.x, p.z - point.z) < 7)) continue;
-    const x = point.x + 1.5, z = point.z + 0.8;
-    const y = sampleGroundY?.(x, z);
-    if (!Number.isFinite(y) || !isInBounds(x, z)) continue;
+    // A fixed offset put four of these markers inside town walls, so the
+    // marker now takes the first open patch of ground around the landing.
+    const landingY = sampleGroundY?.(point.x, point.z);
+    let spot = null;
+    for (const [offsetX, offsetZ] of SHRINE_OFFSETS) {
+      const x = point.x + offsetX, z = point.z + offsetZ;
+      if (!isInBounds(x, z) || isBlocked(x, z)) continue;
+      const y = sampleGroundY?.(x, z);
+      if (!Number.isFinite(y)) continue;
+      // A wall or a rooftop is metres above the landing ground; only a patch
+      // on the same walkable level can carry the marker.
+      if (Number.isFinite(landingY) && Math.abs(y - landingY) > 1.2) continue;
+      spot = { x, y, z };
+      break;
+    }
+    if (!spot) continue;
+    const { x, y, z } = spot;
     const shrine = new THREE.Group();
     shrine.name = 'Respawn Shrine: ' + point.label;
     shrine.position.set(x, y, z);

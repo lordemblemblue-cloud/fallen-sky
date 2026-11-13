@@ -1349,39 +1349,27 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         return false;
     };
-    // Resolve a death-local landing against actual ground, world bounds,
-    // water, colliders and nearby threats; never accept an arbitrary offset.
+    // Landings and their markers ask one question: is the point inside real
+    // world geometry? The town's baked walls are not in the footprint guard.
+    const respawnSpotBlocked = (x, y, z, radius) => {
+      const probe = new THREE.Vector3(x, y, z);
+      importedSpawnTown?.resolveCollision(probe, { x, z }); // town walls and ledges
+      stationRuntime?.resolveCollision(probe, radius);
+      return Math.hypot(probe.x - x, probe.z - z) > .1 || isRuntimeFootprintBlocked({ x, y, z }, radius);
+    };
     const resolveSafeNearbyRespawn = deathPosition => {
-      if (region !== 'wolfveil' || dedicatedMode || !deathPosition) return null;
       const actor = modelRef.current;
-      if (!actor || Math.hypot(actor.position.x - deathPosition.x,
-        actor.position.z - deathPosition.z) > 4) return null;
+      if (region !== 'wolfveil' || dedicatedMode || !deathPosition || !actor ||
+        Math.hypot(actor.position.x - deathPosition.x, actor.position.z - deathPosition.z) > 4) return null;
       return findSafeNearbyRespawn(deathPosition, {
-        sampleGroundY,
-        isInBounds: (x,z) => insideWolfveilClientGround(x,z,.9),
-        isDangerous: ({x,z}) => enemies.some(enemy =>
-          enemy?.alive && !enemy?.dying && enemy?.group &&
-          Math.hypot(enemy.group.position.x-x,enemy.group.position.z-z) < 5),
-        isBlocked: ({x,y,z},radius) => {
-          if (wolfveilDistanceToRiver(x,z-70) < 13+radius) return true;
-          if (wolfveilVillage?.colliders?.some(b =>
-            Math.abs(x-b.x) < b.w/2 + radius+.5 &&
-            Math.abs(z-(b.z+70)) < b.d/2 + radius+.5)) return true;
-          const probe = new THREE.Vector3(x,y,z);
-          const previous = {x,y,z};
-          forestBiome?.resolveCollision(probe,radius);
-          importedSpawnTown?.resolveCollision(probe,radius,previous);
-          wolfveilVillage?.resolveBuildingCollision(probe,radius,previous,{player:true});
-          stationRuntime.resolveCollision(probe,radius);
-          return Math.hypot(probe.x-x,probe.z-z) > .1;
-        },
+        sampleGroundY, isInBounds: (x,z) => insideWolfveilClientGround(x,z,.9),
+        isDangerous: ({x,z}) => enemies.some(enemy => enemy?.alive && !enemy?.dying && enemy?.group && Math.hypot(enemy.group.position.x-x, enemy.group.position.z-z) < 5),
+        isBlocked: ({x,y,z},radius) => respawnSpotBlocked(x,y,z,radius),
       });
     };
     const respawnShrines = region === 'wolfveil'
-      ? createWorldRespawnShrines({
-          scene, points: MAP_SPAWN_POINTS, sampleGroundY,
-          isInBounds: (x,z) => insideWolfveilClientGround(x,z,.7),
-        }) : null;
+      ? createWorldRespawnShrines({ scene, points: MAP_SPAWN_POINTS, sampleGroundY,
+          isInBounds: (x,z) => insideWolfveilClientGround(x,z,.7) && !importedSpawnTown?.isSolid(x,z) }) : null;
     const stationRuntime = createAXEServiceStationRuntime({
       scene, camera, renderer,
       onChanged: () => { renderer.shadowMap.needsUpdate = true; },
