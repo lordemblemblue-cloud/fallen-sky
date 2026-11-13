@@ -39,8 +39,9 @@ test('removes 10 vertical/underground faces, leaves two top walkable faces',()=>
   const result=removeWolfveilTownRaisedTileBodies(mesh);
   assert.equal(result.removedFaces,10);
   assert.equal(result.keptFaces,2);
-  assert.deepEqual(mesh.geometry.index.array,[4,5,6,4,6,7]);
-  assert.equal(mesh.geometry.attributes.position.getY(4),2);
+  // The surviving top faces are re-indexed onto their own four vertices.
+  assert.deepEqual(mesh.geometry.index.array,[0,1,2,0,2,3]);
+  assert.equal(mesh.geometry.attributes.position.count,4);
   assert.equal(mesh.userData.tileTopY,2);
 });
 

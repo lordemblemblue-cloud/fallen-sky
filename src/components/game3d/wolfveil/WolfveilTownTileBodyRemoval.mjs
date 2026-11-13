@@ -1,6 +1,18 @@
 // Clone Game 3D assembled town: keep the actual walkable paver TOPS, remove
-// Blender's deep square-tile box sides and undersides. Pure vertex math;
-// no alternate visual floor, physics mesh, imported asset rewrite, or THREE dependency.
+// Blender's deep square-tile box sides and undersides. No alternate visual
+// floor, physics mesh or imported asset rewrite.
+import * as THREE from 'three';
+
+// glTF often delivers attributes as interleaved views, which have no .array of
+// their own. Reading them as flat buffers used to throw and abandon the whole
+// town cleanup, so every read goes through this helper.
+const readComponent = (attribute, index, component) => (
+  attribute.isInterleavedBufferAttribute
+    ? attribute.data.array[index * attribute.data.stride + attribute.offset + component]
+    : attribute.array[index * attribute.itemSize + component]
+);
+const arrayTypeOf = (attribute) => attribute.array?.constructor
+  || attribute.data?.array?.constructor || Float32Array;
 export const WOLFVEIL_TOWN_TILE_CLEANUP = Object.freeze({
   topBandMeters: 0.40,
   minFlatness: 0.72,
@@ -76,7 +88,15 @@ export function removeWolfveilTownRaisedTileBodies(mesh) {
     return {changed:false,removedFaces:0,keptFaces:0};
   const geometry=mesh.geometry;
   const plan=planWolfveilTownTileTop(geometry,mesh.matrixWorld);
-  if(!plan.indices.length)return {changed:false,removedFaces:plan.removedFaces,keptFaces:0};
+  if(!plan.indices.length){
+    // A body with no walkable top is decorative clutter that only ever showed
+    // its walls; drop it entirely instead of leaving them standing.
+    geometry.setIndex?.([]);
+    if(geometry.index)geometry.index.array=[];
+    geometry.clearGroups?.();
+    mesh.userData.tileFacesKept=0;
+    return {changed:true,removedFaces:plan.removedFaces,keptFaces:0};
+  }
   // Rebuild the buffer from the surviving top vertices only. Dropping the
   // index alone left every skirt/wall vertex in the file: the model kept a
   // phantom 6m-deep silhouette (wrong bounds, and loose vertices the collision
@@ -85,16 +105,16 @@ export function removeWolfveilTownRaisedTileBodies(mesh) {
   for(const index of plan.indices){
     if(!remap.has(index)){remap.set(index,keep.length);keep.push(index);}
   }
-  for(const attribute of Object.values(geometry.attributes)){
+  for(const [name,attribute] of Object.entries(geometry.attributes)){
     const size=attribute.itemSize;
-    const out=new attribute.array.constructor(keep.length*size);
-    for(let i=0;i<keep.length;i++){
-      const from=keep[i]*size;
-      for(let c=0;c<size;c++)out[i*size+c]=attribute.array[from+c];
-    }
-    attribute.array=out;
-    attribute.count=keep.length;
-    attribute.needsUpdate=true;
+    const ArrayType=arrayTypeOf(attribute);
+    const out=new ArrayType(keep.length*size);
+    for(let i=0;i<keep.length;i++)
+      for(let c=0;c<size;c++)out[i*size+c]=readComponent(attribute,keep[i],c);
+    if(typeof geometry.setAttribute==='function')
+      geometry.setAttribute(name,
+        new THREE.BufferAttribute(out,size,attribute.normalized));
+    else{attribute.array=out;attribute.count=keep.length;attribute.needsUpdate=true;}
   }
   geometry.setIndex(plan.indices.map(index=>remap.get(index)));
   geometry.clearGroups();
