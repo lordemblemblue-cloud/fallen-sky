@@ -2,7 +2,7 @@
 // triangles into a grid. Pure data (no THREE) so it can be checked offline.
 export const WOLFVEIL_TOWN_COLLISION=Object.freeze({
   cell:.5,       // metres per grid cell
-  stepUp:1,      // tallest ledge a character can step onto
+  stepUp:1.1,    // tallest ledge a character can step onto (the plaza kerbs are just under 1m)
   headroom:2.2,  // geometry between stepUp and this height is a wall
   bodyPad:1,     // cells added around walls for the character's body
 });

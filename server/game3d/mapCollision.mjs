@@ -118,7 +118,7 @@ export const WOLFVEIL_MAP_FINGERPRINT=createHash('sha256').update(JSON.stringify
   bridgeBankTerrainGradeSource:String(wolfveilBridgeBankTerrainGrade),
   bridgeBankTerrainLandingData:wolfveilBridgeBankTerrainGrade.bearings,
   removedLegacyFountainHousesRevision:'game3d-only-mansion-v1',
-  townPlateauGradeRevision:'imported-owner-town-80-tiles-169x183m-v2',
+  townPlateauGradeRevision:'imported-owner-town-80-tiles-130x141m-v3',
 })).digest('hex');
 const insideRect=(x,z,r,b)=>{
   const closeX=Math.max(b.x0,Math.min(x,b.x1));

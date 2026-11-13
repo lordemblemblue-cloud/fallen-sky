@@ -1,10 +1,9 @@
 // The user's assembled Blender town, on the canonical Wolfveil heightfield.
 // Positions are local Wolfveil coordinates; Game 3D renders them at +70m Z.
-// 30% larger than the first install (130 x 141m). It grows westward so the
-// east edge stays where it was, clear of the river and its bridge landing.
+// Its original size: 130 x 141m, centred on the old market.
 export const WOLFVEIL_IMPORTED_TOWN=Object.freeze({
  id:'wolfveil-assembled-town',name:'Wolfveil Town Plaza',
- x:-19.5,z:-70,width:169,depth:183.3,blendMeters:38,
+ x:0,z:-70,width:130,depth:141,blendMeters:38,
  floorSourceY:0.690998,floorLiftMeters:0.07,
  // Size of the GLB in its own units; the model is centred on its origin.
  sourceWidth:10.423466,sourceDepth:11.330666,
@@ -21,25 +20,32 @@ export function wolfveilImportedTownPoint(sourceX,sourceZ){
 const clamp01=n=>Math.max(0,Math.min(1,n));
 const smooth=t=>{const u=clamp01(t);return u*u*(3-2*u);};
 export const WOLFVEIL_IMPORTED_TOWN_FLOOR_Y=80*smooth(155/445)+.3;
-// The gold-ringed planter in the plaza. The model's own blossom tree inside
-// sourceRadius is removed and the owner's ancient tree stands in its place.
+// The raised round plaza. The model's own blossom tree is removed (blossom
+// inside sourceRadius, trunk and branches inside trunkSourceRadius, which
+// stops short of the canal-side posts) and the owner's ancient tree stands
+// in its place, rooted on the plaza paving (model height .77).
 export const WOLFVEIL_IMPORTED_TOWN_TREE=Object.freeze({
  ...wolfveilImportedTownPoint(-.63,-.02),
- sourceX:-.63,sourceZ:-.02,sourceRadius:.74,
- radius:2.2,height:24,maxWidth:26,
+ y:WOLFVEIL_IMPORTED_TOWN_FLOOR_Y+WOLFVEIL_IMPORTED_TOWN.floorLiftMeters-.2+
+   (.77-WOLFVEIL_IMPORTED_TOWN.floorSourceY)*WOLFVEIL_IMPORTED_TOWN_SCALE,
+ sourceX:-.63,sourceZ:-.02,sourceRadius:.74,trunkSourceRadius:.47,
+ // About the size of the tree it replaces; radius is the trunk and its roots.
+ radius:2.4,height:14,maxWidth:14,
 });
-// Canal water sits just above the lawn instead of standing proud of it.
-export const WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y=.703;
-// Render coordinates. Each one is on open, reachable street.
-export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-29,z:32});
-// Quest givers by id: the first one greets new players, the rest stand in
-// the four quarters of the town.
+// Canal water lies 5cm above the lawn (model height .7042) instead of
+// standing half a metre proud of it. Any lower and the lawn hides it.
+export const WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y=.708;
+// Render coordinates, each checked against the baked collision: open,
+// reachable ground with at least 4m clear on every side.
+export const WOLFVEIL_PLAYER_TOWN_SPAWN=Object.freeze({x:-7,z:8});
+// Quest givers by id: the first one greets new players on the plaza, the
+// rest stand on the lawns of the four quarters of the town.
 export const WOLFVEIL_TOWN_QUEST_NPC_SPOTS=Object.freeze({
- archer_lyra:Object.freeze({x:-27,z:35}),
- archer_vex:Object.freeze({x:-61,z:-59}),
- archer_kira:Object.freeze({x:15,z:-60}),
- archer_noor:Object.freeze({x:-62,z:45}),
- archer_zephyr:Object.freeze({x:20,z:54}),
+ archer_lyra:Object.freeze({x:-11,z:10}),
+ archer_vex:Object.freeze({x:-32,z:-52}),
+ archer_kira:Object.freeze({x:28,z:-45}),
+ archer_noor:Object.freeze({x:-32,z:39}),
+ archer_zephyr:Object.freeze({x:27,z:45}),
 });
 /** Where a quest giver stands and faces: around the town in Wolfveil, its own spot elsewhere. */
 export function wolfveilQuestNpcSpot(region,npc){

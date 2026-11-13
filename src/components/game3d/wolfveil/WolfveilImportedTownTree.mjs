@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import {FBXLoader} from 'three/examples/jsm/loaders/FBXLoader.js';
 import {WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS} from './WolfveilOwnerLandscapeAssets.mjs';
-import {WOLFVEIL_IMPORTED_TOWN_TREE as TREE,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y} from './WolfveilImportedTownLayout.mjs';
+import {WOLFVEIL_IMPORTED_TOWN_TREE as TREE} from './WolfveilImportedTownLayout.mjs';
 
 /** Meshes of the town model that the old plaza tree was merged into. */
 export const isWolfveilTownTreeMesh=name=>/^(pink|pinklight|wood)$/.test(name);
@@ -12,11 +12,11 @@ export const isWolfveilTownTreeMesh=name=>/^(pink|pinklight|wood)$/.test(name);
 export function removeWolfveilTownCentreTree(mesh){
   const geometry=mesh.geometry,position=geometry.attributes.position;
   const index=geometry.index?geometry.index.array:Uint32Array.from({length:position.count},(_,i)=>i);
-  const kept=[];
+  const kept=[],radius=mesh.name==='wood'?TREE.trunkSourceRadius:TREE.sourceRadius;
   for(let t=0;t<index.length;t+=3){
     let x=0,z=0;
     for(let k=0;k<3;k++){x+=position.getX(index[t+k])/3;z+=position.getZ(index[t+k])/3;}
-    if(Math.hypot(x-TREE.sourceX,z-TREE.sourceZ)>TREE.sourceRadius)kept.push(index[t],index[t+1],index[t+2]);
+    if(Math.hypot(x-TREE.sourceX,z-TREE.sourceZ)>radius)kept.push(index[t],index[t+1],index[t+2]);
   }
   geometry.setIndex(kept);
 }
@@ -24,7 +24,7 @@ export function removeWolfveilTownCentreTree(mesh){
 export function installWolfveilTownTree(parent){
   const asset=WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS.tree;
   const holder=new THREE.Group();holder.name='Wolfveil_Town_Plaza_Ancient_Tree';
-  holder.position.set(TREE.x,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y+.1,TREE.z);
+  holder.position.set(TREE.x,TREE.y,TREE.z);
   parent.add(holder);
   let active=true;
   const textures=[];
@@ -42,8 +42,20 @@ export function installWolfveilTownTree(parent){
     tree.updateMatrixWorld(true);
     const box=new THREE.Box3().setFromObject(tree),size=box.getSize(new THREE.Vector3());
     if(!(size.y>0))return;
-    const centre=box.getCenter(new THREE.Vector3());
-    tree.position.x-=centre.x;tree.position.y-=box.min.y;tree.position.z-=centre.z;
+    // Stand the trunk, not the lopsided canopy, on the centre of the plaza.
+    const centre=box.getCenter(new THREE.Vector3()),v=new THREE.Vector3();
+    let trunkX=0,trunkZ=0,count=0;
+    tree.traverse(node=>{
+      if(!node.isMesh)return;
+      const p=node.geometry.attributes.position;
+      for(let i=0;i<p.count;i++){
+        v.fromBufferAttribute(p,i).applyMatrix4(node.matrixWorld);
+        const up=(v.y-box.min.y)/size.y;
+        if(up>.1&&up<.25){trunkX+=v.x;trunkZ+=v.z;count++;}
+      }
+    });
+    tree.position.x-=count?trunkX/count:centre.x;tree.position.y-=box.min.y;
+    tree.position.z-=count?trunkZ/count:centre.z;
     holder.scale.setScalar(Math.min(TREE.height/size.y,TREE.maxWidth/Math.max(size.x,size.z,1e-5)));
     holder.add(tree);
   };
