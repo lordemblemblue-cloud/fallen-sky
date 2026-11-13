@@ -41,6 +41,12 @@ export const WOLFVEIL_TOWN_QUEST_NPC_SPOTS=Object.freeze({
  archer_noor:Object.freeze({x:-62,z:45}),
  archer_zephyr:Object.freeze({x:20,z:54}),
 });
+/** Where a quest giver stands and faces: around the town in Wolfveil, its own spot elsewhere. */
+export function wolfveilQuestNpcSpot(region,npc){
+ const spot=region==='wolfveil'?WOLFVEIL_TOWN_QUEST_NPC_SPOTS[npc.id]:null;
+ if(!spot)return {x:npc.pos[0],z:npc.pos[2],facing:Math.atan2(-npc.pos[0],-npc.pos[2])};
+ return {x:spot.x,z:spot.z,facing:Math.atan2(WOLFVEIL_PLAYER_TOWN_SPAWN.x-spot.x,WOLFVEIL_PLAYER_TOWN_SPAWN.z-spot.z)};
+}
 export function insideWolfveilImportedTown(x,z,margin=0){
  const p=WOLFVEIL_IMPORTED_TOWN;
  return Number.isFinite(x)&&Number.isFinite(z)&&Math.abs(x-p.x)<=p.width/2+margin&&Math.abs(z-p.z)<=p.depth/2+margin;

@@ -12,6 +12,7 @@ import {
   planWolfveilBridgeDeck,projectWolfveilBridgePoint,
 } from '../../src/components/game3d/wolfveil/WolfveilBridgeProfile.mjs';
 import { wolfveilForestTrunkColliders } from '../../src/components/game3d/wolfveil/WolfveilForestLayout.js';
+import { WOLFVEIL_IMPORTED_TOWN_TREE } from '../../src/components/game3d/wolfveil/WolfveilImportedTownLayout.mjs';
 import { createHash } from 'node:crypto';
 
 export const WOLFVEIL_MAP_ID='wolfveil-v1';
@@ -62,8 +63,8 @@ for(const b of WOLFVEIL_ACTIVE_TOWN_BUILDINGS){
 // The old fountain is replaced by the imported town's central tree;
 // retain the same radius around the central trunk so movement stays safe.
 // Per-building mesh collision remains a separate gameplay QA task.
-const circles=[Object.freeze({x:WOLFVEIL_SITES.wolfFountain.x,
-  z:WOLFVEIL_SITES.wolfFountain.z+WOLFVEIL_RENDER_OFFSET_Z,radius:4.47}),
+const circles=[Object.freeze({x:WOLFVEIL_IMPORTED_TOWN_TREE.x,
+  z:WOLFVEIL_IMPORTED_TOWN_TREE.z,radius:WOLFVEIL_IMPORTED_TOWN_TREE.radius}), // already render coordinates
   // Static, authored tree trunks only. All terrain + tree placements are
   // deterministic and shared with WolfveilNature's visual renderer.
   ...wolfveilForestTrunkColliders().map(t=>Object.freeze({
@@ -117,7 +118,7 @@ export const WOLFVEIL_MAP_FINGERPRINT=createHash('sha256').update(JSON.stringify
   bridgeBankTerrainGradeSource:String(wolfveilBridgeBankTerrainGrade),
   bridgeBankTerrainLandingData:wolfveilBridgeBankTerrainGrade.bearings,
   removedLegacyFountainHousesRevision:'game3d-only-mansion-v1',
-  townPlateauGradeRevision:'imported-owner-town-80-tiles-130x141m-v1',
+  townPlateauGradeRevision:'imported-owner-town-80-tiles-169x183m-v2',
 })).digest('hex');
 const insideRect=(x,z,r,b)=>{
   const closeX=Math.max(b.x0,Math.min(x,b.x1));

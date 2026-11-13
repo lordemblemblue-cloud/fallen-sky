@@ -4,6 +4,7 @@
 import {WOLFVEIL_ACTIVE_TOWN_BUILDINGS,WOLFVEIL_HOUSING_PLOTS,WOLFVEIL_ROUTES,
   wolfveilHeight,wolfveilDistanceToRiver} from './WolfveilLayout.js';
 import {WOLFVEIL_PALACE,isInsideVillageBuildLimit} from './WolfveilPalaceLayout.mjs';
+import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {isInsideWolfveilFountainHomeClearance} from './WolfveilFountainHomesLayout.mjs';
 import {isWolfveilWestHillsideForest,WOLFVEIL_WEST_HILLSIDE} from './WolfveilWestHillside.mjs';
 const mulberry32=(seed)=>()=>{let t=seed+=0x6D2B79F5;
@@ -23,6 +24,7 @@ export const clearOf=({x,z},r=8)=>{
   if(WOLFVEIL_ACTIVE_TOWN_BUILDINGS.some(b=>Math.abs(x-b.x)<b.w*.5+r&&Math.abs(z-b.z)<b.d*.5+r))return false;
   // No invisible exclusions around retired 4-home pads or editor-only lots.
   if(wolfveilDistanceToRiver(x,z)<16+r)return false;
+  if(insideWolfveilImportedTown(x,z,r))return false; // no trunks inside the assembled town
   for(const route of WOLFVEIL_ROUTES)for(let i=0;i<route.points.length-1;i++)
     if(distanceSegment(x,z,route.points[i],route.points[i+1])<route.width*.5+r) return false;
   return true;

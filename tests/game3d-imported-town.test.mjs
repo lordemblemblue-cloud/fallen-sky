@@ -8,7 +8,7 @@ import {
 const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 test('imported assembled town has playable scale and a safe first spawn',()=>{
  assert(WOLFVEIL_IMPORTED_TOWN.width>=110&&WOLFVEIL_IMPORTED_TOWN.width<=180);
- assert(WOLFVEIL_IMPORTED_TOWN.depth>=110&&WOLFVEIL_IMPORTED_TOWN.depth<=180);
+ assert(WOLFVEIL_IMPORTED_TOWN.depth>=110&&WOLFVEIL_IMPORTED_TOWN.depth<=200);
  assert(insideWolfveilImportedTown(WOLFVEIL_PLAYER_TOWN_SPAWN.x,
    WOLFVEIL_PLAYER_TOWN_SPAWN.z-70));
  assert(Math.hypot(WOLFVEIL_PLAYER_TOWN_SPAWN.x,WOLFVEIL_PLAYER_TOWN_SPAWN.z)>4.47);

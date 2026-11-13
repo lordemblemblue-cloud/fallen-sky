@@ -131,7 +131,7 @@ import { createInkWashLook, resolveInkLevel, resolveInkPalette } from './render/
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
 import {installWolfveilImportedTown} from './wolfveil/WolfveilImportedTownScene.mjs';
-import {WOLFVEIL_PLAYER_TOWN_SPAWN} from './wolfveil/WolfveilImportedTownLayout.mjs';
+import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot} from './wolfveil/WolfveilImportedTownLayout.mjs';
 import {createWolfveilLivingMeadow} from './wolfveil/WolfveilLivingMeadow';
 import {createWolfveilLivingSumiEMaterials} from './wolfveil/WolfveilLivingSumiEMaterials.mjs';
 import { insideWolfveilClientGround } from './wolfveil/WolfveilTravelSafety.mjs';
@@ -627,7 +627,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     groundMeshes.push(grassGround);
     // The owner's 80-tile assembled town is on the SAME authoritative terrain.
     // Loading errors never block the character or remove Wolfveil's ground.
-    const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene):null;
+    const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene,{onReady:()=>{for(const npc of questNPCs)snapToGround(npc.group,0);}}):null; // quest givers step up onto the loaded town floor
     // Actual 3D arch beside the already-running waterfall; never replace the
     // original Wolfveil terrain or Luna mansion with a static image plane.
     const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
@@ -1440,9 +1440,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const npcMaxDim = Math.max(.001,npcSize.x, npcSize.y, npcSize.z);
           const npcScale = 1.7 / npcMaxDim;
           npcFbx.scale.setScalar(npcScale);
-          npcFbx.position.set(npcDef.pos[0], npcDef.pos[1], npcDef.pos[2]);
-          // Face toward player spawn (0,0,0)
-          const ang = Math.atan2(-npcDef.pos[0], -npcDef.pos[2]);
+          const npcSpot = wolfveilQuestNpcSpot(region, npcDef); // around the town in Wolfveil
+          npcFbx.position.set(npcSpot.x, npcDef.pos[1], npcSpot.z);
+          const ang = npcSpot.facing; // toward where players arrive
           npcFbx.rotation.y = ang;
 
           // Apply the NPC's tint color so each archer looks distinct
@@ -2111,7 +2111,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // forest mesh; this does not pretend to replace server pathfinding.
     forestBiome?.resolveCollision(model.position, .62);
     wolfveilVillage?.resolveBuildingCollision(model.position,.62,
-      {x:fromX,y:model.position.y,z:fromZ},{player:true});
+      {x:fromX,y:model.position.y,z:fromZ},{player:true});importedSpawnTown?.resolveCollision(model.position,{x:fromX,z:fromZ}); // town walls and ledges
     lunarDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
@@ -2161,7 +2161,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
-        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);
+        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
         livingInkWorld?.update(delta,envSystem.getState());
         playerAnim?.updateAnimation?.(delta);
         if(mixer)mixer.update(delta);
@@ -2189,7 +2189,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
-      wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);
+      wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
       if(lunarGate?.update(delta,modelRef.current?.position))
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:{target:LUNAR_CAVE_REGION}}));
       if(astralGate?.update(delta,modelRef.current?.position))
@@ -2994,7 +2994,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               enemy.group.position.z = nextZ;
               enemy.group.position.y = nextGround;
               forestBiome?.resolveCollision(enemy.group.position, 0.55);
-              wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });
+              wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });
             }
             if (enemy.idleAction?.isRunning?.()) enemy.idleAction.fadeOut(0.2);
             const motionAction=enemy.aiEngaged&&!returning&&enemy.runAction
@@ -3033,7 +3033,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 if (ground !== null && ground !== undefined) {
                   enemy.group.position.set(nextX, ground, nextZ);
                   forestBiome?.resolveCollision(enemy.group.position, 0.55);
-                  wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });
+                  wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });
                 }
                 const faceQ = new THREE.Quaternion().setFromAxisAngle(
                   new THREE.Vector3(0, 1, 0), Math.atan2(dx, dz),
