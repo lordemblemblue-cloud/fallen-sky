@@ -23,7 +23,7 @@ function box(name,top,bottom,x=6,z=6) {
 }
 const scene=(...meshes)=>{const root=new THREE.Group();for(const m of meshes)root.add(m);root.updateMatrixWorld(true);return root;};
 
-test('a 36cm Blender tile underside cannot survive the narrow top-skin filter',()=>{
+test('a synthetic shallow secondary face cannot survive the narrow top-skin filter',()=>{
   assert.ok(WOLFVEIL_TOWN_TILE_CLEANUP.topBandMeters<0.029*12.44);
   const m=box('Tile_12',0.691,0.662);
   m.scale.setScalar(12.44);m.updateMatrixWorld(true);

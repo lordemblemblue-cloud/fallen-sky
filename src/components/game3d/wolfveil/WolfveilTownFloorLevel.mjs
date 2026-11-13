@@ -183,8 +183,8 @@ export function flattenWolfveilTownFloorLevels(townRoot) {
     const position = node.geometry?.attributes?.position;
     if (!position) return;
     // All Tile_* solids have already been stripped to their REAL upper face.
-    // Previous flattening only covered Y 0.6–0.8; three raised park squares
-    // above this range therefore survived unchanged. Every remaining tile
+    // Previous flattening only covered Y 0.6–0.8; raised park squares
+    // above this range could survive unchanged. Every remaining tile
     // vertex is now walkable and must sit at the town's single floor datum.
     // Other paving retains its separate material and only moves genuinely
     // horizontal elevated landing faces, not high architectural surfaces.

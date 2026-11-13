@@ -70,8 +70,8 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
   // any small wall piece that still floats. Runs before the collision bake, so
   // feet, NPCs and mounts follow the settled floor.
   // Geometry order matters. Cut every imported tile BOX down to its raw top
-  // BEFORE changing vertex heights. Flattening first made the buried underside
-  // coplanar with the walkway, defeating the earlier 0.40m top-face filter.
+  // BEFORE changing vertex heights. Flattening first could turn secondary
+  // near-surface polygons into top-height candidates in the old wide filter.
   let tilesCleaned = 0, tileFacesRemoved = 0;
   townRoot.traverse(node => {
     if (!node.isMesh || !/^Tile_/i.test(node.name)) return;
