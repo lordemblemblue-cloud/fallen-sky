@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
 import {
   WOLFVEIL_TOWN_TILE_CLEANUP, planWolfveilTownTileTop,
   removeWolfveilTownRaisedTileBodies, wolfveilImportedTownHouseOverlapsTree,
@@ -24,13 +25,9 @@ function cube(name='Tile_01'){
     4,5,6,4,6,7, 0,1,2,0,2,3,
     0,1,5,0,5,4, 1,2,6,1,6,5, 2,3,7,2,7,6, 3,0,4,3,4,7,
   ];
-  const geom={
-    attributes:{position:position(points)},index:{array:faces},groups:[],
-    setIndex(indices){this.index={array:indices};},
-    clearGroups(){this.groups=[];},
-    addGroup(start,count,materialIndex){this.groups.push({start,count,materialIndex});},
-    computeVertexNormals(){},computeBoundingBox(){},computeBoundingSphere(){},
-  };
+  const geom=new THREE.BufferGeometry();
+  geom.setAttribute('position',new THREE.Float32BufferAttribute(points.flat(),3));
+  geom.setIndex(faces);
   return {isMesh:true,name,geometry:geom,matrixWorld:IDENTITY,userData:{}};
 }
 
@@ -40,7 +37,7 @@ test('removes 10 vertical/underground faces, leaves two top walkable faces',()=>
   assert.equal(result.removedFaces,10);
   assert.equal(result.keptFaces,2);
   // The surviving top faces are re-indexed onto their own four vertices.
-  assert.deepEqual(mesh.geometry.index.array,[0,1,2,0,2,3]);
+  assert.deepEqual(Array.from(mesh.geometry.index.array),[0,1,2,0,2,3]);
   assert.equal(mesh.geometry.attributes.position.count,4);
   assert.equal(mesh.userData.tileTopY,2);
 });
@@ -57,7 +54,7 @@ test('cleanup applies to every Tile_* mesh, never to house architecture',()=>{
 
 test('top selection works when normals/winding are inverted and when a tile is offset',()=>{
   const mesh=cube();
-  mesh.geometry.index.array.splice(0,6,6,5,4,7,6,4);
+  mesh.geometry.setIndex([6,5,4,7,6,4,...Array.from(mesh.geometry.index.array).slice(6)]);
   mesh.matrixWorld={elements:[1,0,0,0,0,1,0,0,0,0,1,0,3,7,9,1]};
   const out=planWolfveilTownTileTop(mesh.geometry,mesh.matrixWorld);
   assert.equal(out.keptFaces,2);
@@ -66,7 +63,7 @@ test('top selection works when normals/winding are inverted and when a tile is o
 
 test('zero-top decorative body becomes empty rather than leaving raised wall polygons',()=>{
   const mesh=cube();
-  mesh.geometry.index.array=[0,1,5,0,5,4]; // vertical-only wall
+  mesh.geometry.setIndex([0,1,5,0,5,4]); // vertical-only wall
   const out=removeWolfveilTownRaisedTileBodies(mesh);
   assert.equal(out.keptFaces,0);
   assert.equal(mesh.geometry.index.array.length,0);

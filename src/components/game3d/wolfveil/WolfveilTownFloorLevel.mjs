@@ -43,8 +43,8 @@ function raisedWalkableFaceVertices(node) {
   const p = node.geometry?.attributes?.position;
   if (!p || !RAISED_TOP_MESH.test(node.name)) return new Set();
   const index = node.geometry.index;
-  const count = index?.count ?? p.count;
-  const vertex = (i) => index ? index.getX(i) : i;
+  const count = index?.count ?? index?.array?.length ?? p.count;
+  const vertex = (i) => index ? (index.getX ? index.getX(i) : index.array[i]) : i;
   const raised = new Set();
   for (let i = 0; i + 2 < count; i += 3) {
     const a = vertex(i), b = vertex(i + 1), c = vertex(i + 2);
