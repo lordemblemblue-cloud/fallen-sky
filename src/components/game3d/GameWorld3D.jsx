@@ -3761,15 +3761,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(region==='wolfveil'){
           // The actual Wolfveil river is authored at local Z; only once add
           // the existing +70 world transform used by the visible river mesh.
-          const riverDistance=Math.max(0,wolfveilDistanceToRiver(soundPos.x,soundPos.z-70)-10);
-          worldSoundscape.setBed('ambience_water_flow',{
-            distance:riverDistance,near:3,far:105,power:1.7,volume:.65,
+          const riverRaw=wolfveilDistanceToRiver(soundPos.x,soundPos.z-70),riverDistance=Math.max(0,riverRaw-10);
+          worldSoundscape.setBed('ambience_water_flow',{ // half the old level on the bank, up to 20% more once in the water
+            distance:riverDistance,near:3,far:105,power:1.7,volume:.325*(1+.2*Math.max(0,Math.min(1,(12-riverRaw)/7))),
             policy:'duck',duckVolume:.75,fadeSeconds:.65,
           });
           const waterfallDistance=Math.hypot(
             soundPos.x-LUNAR_CAVE_ENTRANCE.x,soundPos.z-LUNAR_CAVE_ENTRANCE.z);
           worldSoundscape.setBed('ambience_waterfall',{
-            distance:waterfallDistance,near:10,far:105,volume:.48,
+            distance:waterfallDistance,near:10,far:105,volume:.24,
             policy:'duck',duckVolume:.75,fadeSeconds:.9,
           });
           // Wind / non-combat world beds pause during battle then resume at
