@@ -36,7 +36,7 @@ test('assignment always respects identity and ownership, with active and one-own
   assert.equal(eligibleRoleWeapons([weapon('fake','Fake Bow','offensive')],'ranged',role).length,0);
 });
 
-test('wheel and C-key cycle all three roles predictably',()=>{
+test('wheel and Shift+C cycle all three roles predictably',()=>{
   const roles=AXE_HUD_WEAPON_ROLES.map(r=>r.role);
   assert.equal(roleForCycle(roles,'offensive',1),'defensive');
   assert.equal(roleForCycle(roles,'defensive',1),'ranged');

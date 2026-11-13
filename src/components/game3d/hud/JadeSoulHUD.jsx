@@ -144,11 +144,11 @@ function WeaponStack({ playerLevel }) {
     return ()=>el.removeEventListener('wheel',onWheel);
   },[cycleAvailable]);
 
-  // C cycles through owned, assigned roles; the 1–0 keys remain skills.
-  // This is the same inventory-backed draw path used by the three buttons.
+  // Shift+C retains the old inventory-backed weapon role cycle; plain C
+  // belongs exclusively to the Character/Stats menu. 1–0 remain combat skills.
   useEffect(()=>{
     const handler=e=>{
-      if(e.code!=='KeyC'||e.repeat||e.defaultPrevented||e.ctrlKey||e.altKey||e.metaKey||
+      if(e.code!=='KeyC'||!e.shiftKey||e.repeat||e.defaultPrevented||e.ctrlKey||e.altKey||e.metaKey||
         window.__axeServiceModeOpen||window.__axeWorldMapOpen||
         e.target?.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
       e.preventDefault();
@@ -256,17 +256,27 @@ export default function JadeSoulHUD({
   const [mapOpen, setMapOpen] = useState(false);
   const navigationHidden = serviceMode || (servicesExpanded ?? localExpanded);
   useEffect(() => {
-    const open = () => {
-      if (navigationHidden) return;
+    const open = event => {
+      // The M shortcut can switch directly from another service to the map.
+      // Expanded Services navigation by itself must not block opening the map.
+      if (serviceMode && !event?.detail?.force) return;
       document.exitPointerLock?.();
       window.__axeWorldMapOpen = true;
       window.dispatchEvent(new CustomEvent('axeWorldMapOpened'));
       setMapOpen(true);
     };
+    const close = () => {
+      window.__axeWorldMapOpen = false;
+      setMapOpen(false);
+    };
     window.addEventListener('axeOpenWorldMap', open);
-    return () => window.removeEventListener('axeOpenWorldMap', open);
-  }, [navigationHidden]);
-  useEffect(() => { if (navigationHidden) setMapOpen(false); }, [navigationHidden]);
+    window.addEventListener('axeCloseWorldMap', close);
+    return () => {
+      window.removeEventListener('axeOpenWorldMap', open);
+      window.removeEventListener('axeCloseWorldMap', close);
+    };
+  }, [serviceMode]);
+  useEffect(() => { if (serviceMode) setMapOpen(false); }, [serviceMode]);
   useEffect(() => {
     window.__axeWorldMapOpen = mapOpen;
     return () => { window.__axeWorldMapOpen = false; };
@@ -345,7 +355,7 @@ export default function JadeSoulHUD({
         <span className="jade-xp-level">LV. {fmt(hud?.level || 1)}</span>
       </div>
       </div>
-      {mapOpen && !navigationHidden && createPortal(<AXEWorldMapOverlay region={region} onClose={() => setMapOpen(false)} />, document.body)}
+      {mapOpen && !serviceMode && createPortal(<AXEWorldMapOverlay region={region} onClose={() => setMapOpen(false)} />, document.body)}
     </div>
   );
 }
