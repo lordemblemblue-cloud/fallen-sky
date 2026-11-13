@@ -18,7 +18,7 @@ import './character-creator.css';
 // main avatar, which only the account creator and first-login setup change.
 export default function AvatarAppearanceDialog({onClose,onSaved,create=false,localOnly=false,initialAvatar,embedded=false,title}) {
  const saved=useCompanionIdentity(),catalog=useCustomizationCatalog();
- const [config,setConfig]=useState(()=>playerAppearance(initialAvatar||(localOnly?{gender:'male'}:saved))),[caps,setCaps]=useState({});
+ const [config,setConfig]=useState(()=>playerAppearance(initialAvatar||(localOnly?{gender:'male',creator_body:'fused-male-v1'}:saved))),[caps,setCaps]=useState({});
  const [section,setSection]=useState('body'),[name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [layers,setLayers]=useState({loading:false,error:''}),[workshop,setWorkshop]=useState(false);
  const [expression,setExpression]=useState({preset:'neutral',values:{},morphs:{}});
