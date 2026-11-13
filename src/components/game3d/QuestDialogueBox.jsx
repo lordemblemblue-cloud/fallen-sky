@@ -24,6 +24,37 @@ export default function QuestDialogueBox({
   // Hooks must run unconditionally — call them before any early return.
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [selectedAction, setSelectedAction] = useState('accept');
+  const selectedRef = useRef('accept');
+  const callbacks = useRef({});
+  callbacks.current = { onAccept, onDecline, onClose, onClaim };
+  const chooseAction = (action) => { selectedRef.current = action; setSelectedAction(action); };
+
+  useEffect(() => {
+    if (!quest) return;
+    chooseAction(mode === 'offer' ? 'accept' : mode === 'turn_in' ? 'claim' : 'close');
+    if (document.pointerLockElement) document.exitPointerLock?.();
+    const onKey = (event) => {
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey ||
+        event.target?.closest?.('input,textarea,select,[contenteditable="true"]')) return;
+      const key = event.key.toLowerCase();
+      if (mode === 'offer' && ['a', 'd', 'arrowleft', 'arrowright'].includes(key)) {
+        event.preventDefault(); event.stopImmediatePropagation();
+        chooseAction(selectedRef.current === 'accept' ? 'decline' : 'accept');
+      } else if (mode === 'offer' && key === 'r') {
+        event.preventDefault(); event.stopImmediatePropagation();
+        callbacks.current.onDecline?.();
+      } else if (key === 'f' || key === 'enter') {
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (mode === 'offer') (selectedRef.current === 'accept' ? callbacks.current.onAccept : callbacks.current.onDecline)?.();
+        else if (mode === 'turn_in') callbacks.current.onClaim?.();
+        else callbacks.current.onClose?.();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [quest?.id, mode]);
+
   const audioUrl = quest ? getQuestAudio(quest.id) : null;
 
   useEffect(() => {
@@ -197,19 +228,24 @@ export default function QuestDialogueBox({
         </div>
       </div>
 
+      <div className="text-[10px] text-white/50 mb-2 text-right">A / D select · F confirm · R decline · mouse click</div>
       {/* Actions */}
       <div className="flex justify-end gap-2">
         {mode === 'offer' && (
           <>
             <button
               onClick={onDecline}
-              className="px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-white/70 text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5"
+              onMouseEnter={() => chooseAction('decline')}
+              aria-selected={selectedAction === 'decline'}
+              className={selectedAction === 'decline' ? 'px-4 py-2 rounded-lg bg-white/10 border border-cyan-300 ring-2 ring-cyan-300 text-white text-xs font-bold tracking-wider uppercase flex items-center gap-1.5' : 'px-4 py-2 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 text-white/70 text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5'}
             >
               <X className="w-3.5 h-3.5" /> Decline
             </button>
             <button
               onClick={onAccept}
-              className="px-5 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/50 text-yellow-200 text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5"
+              onMouseEnter={() => chooseAction('accept')}
+              aria-selected={selectedAction === 'accept'}
+              className={selectedAction === 'accept' ? 'px-5 py-2 rounded-lg bg-yellow-500/30 border border-yellow-200 ring-2 ring-yellow-200 text-yellow-100 text-xs font-bold tracking-wider uppercase flex items-center gap-1.5' : 'px-5 py-2 rounded-lg bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-400/50 text-yellow-200 text-xs font-bold tracking-wider uppercase transition-all flex items-center gap-1.5'}
               style={{ boxShadow: '0 0 16px rgba(250, 204, 21, 0.2)' }}
             >
               <Check className="w-3.5 h-3.5" /> Accept Quest
