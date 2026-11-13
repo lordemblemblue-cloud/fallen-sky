@@ -9,7 +9,9 @@ import {createWolfveilSilverRiverMaterial} from './WolfveilSilverRiverMaterial.j
 import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
 import {createWolfveilPathSurface} from './WolfveilPathSurface.mjs';
 import {WOLFVEIL_PALETTE as PAL,wolfveilHeight,wolfveilDistanceToRiver,
+  wolfveilRouteClearance,
 } from './WolfveilLayout.js';
+import {wolfveilTrailBreakAt} from './WolfveilTrailBreaks.mjs';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
 const TAU=Math.PI*2;
 export const clamp=(a,min,max)=>Math.max(min,Math.min(max,a));
@@ -116,15 +118,20 @@ export class WolfveilTriangles{
 export function buildWolfveilTerrain({span=1100,segments=310}={}){
   const g=new THREE.BufferGeometry(),v=[],c=[],uv=[],idx=[];
   const rand=Math.sin;
+  // Heights first, so each vertex can read its neighbours' slope for free.
+  const row=segments+1,step=span/segments,heights=new Float32Array(row*row);
+  for(let zi=0;zi<=segments;zi++)for(let xi=0;xi<=segments;xi++)
+    heights[zi*row+xi]=wolfveilHeight((xi/segments-.5)*span,(zi/segments-.5)*span);
+  const heightOf=(xi,zi)=>heights[clamp(zi,0,segments)*row+clamp(xi,0,segments)];
   for(let zi=0;zi<=segments;zi++){
     const z=(zi/segments-.5)*span;
     for(let xi=0;xi<=segments;xi++){
-      const x=(xi/segments-.5)*span,y=wolfveilHeight(x,z);
+      const x=(xi/segments-.5)*span,y=heights[zi*row+xi];
       v.push(x,y,z);uv.push(x/7,z/7);
       const riverDistance=wolfveilDistanceToRiver(x,z);
       const moist=Math.max(0,1-riverDistance/70);
       const woodland=smooth(90,350,-x);
-      const altitude=smooth(95,260,y);
+      const altitude=smooth(70,150,y);
       const noise=.5+.5*rand(x*.071+rand(z*.034))*rand(z*.053-x*.061);
       const dry=[.44,.58,.30],wood=[.26,.42,.29],stone=[.58,.60,.58];
       const soil=[.56,.46,.34];
@@ -134,6 +141,22 @@ export function buildWolfveilTerrain({span=1100,segments=310}={}){
         sample[k]=sample[k]*(1-altitude*.80)+stone[k]*altitude*.80;
         sample[k]=sample[k]*(1-moist*.39)+soil[k]*moist*.39;
         sample[k]*=.84+t*.30;
+      }
+      // Landscaping painted into the ONE physical terrain: bare rock where the
+      // ground tilts, sun-dried grass in drifting patches, worn soil on trail
+      // shoulders and a fine speckle so flat colour never reads as plastic.
+      const slope=Math.hypot(heightOf(xi+1,zi)-heightOf(xi-1,zi),
+        heightOf(xi,zi+1)-heightOf(xi,zi-1))/(2*step);
+      const rocky=smooth(.24,.52,slope)*.85;
+      const dryGrass=smooth(.5,.82,.5+.5*rand(x*.021+1.7)*rand(z*.027-.6)+
+        .25*rand(x*.063-z*.049))*.6*(1-moist);
+      const shoulder=(1-smooth(0,3.6,wolfveilRouteClearance(x,z)))*.5;
+      const speckle=.94+.12*Math.abs(rand(x*12.9898+z*78.233)*43758.5453%1);
+      const rockTone=[.47,.46,.43],dryTone=[.60,.52,.30],soilTone=[.50,.41,.30];
+      for(let k=0;k<3;k++){
+        sample[k]=sample[k]*(1-dryGrass)+dryTone[k]*dryGrass;
+        sample[k]=sample[k]*(1-shoulder)+soilTone[k]*shoulder;
+        sample[k]=(sample[k]*(1-rocky)+rockTone[k]*(.86+.3*noise)*rocky)*speckle;
       }
       // Earth/gravel shoreline is part of the ONE physical terrain,
       // never a second floating overlay. Break up the old featureless bank
@@ -169,7 +192,9 @@ export function makeRidgeGeometry(center,depth=340,seed=98){
   // four giant flat triangles. Major crags show stratified rock faces, long
   // erosion grooves and snow/mineral shelves from multiple viewing angles.
   const sections=29,levels=[1,.83,.59,.36,.17,.045],rings=[];
-  const peakY=wolfveilHeight(x,z)+160+rand()*53;
+  // Peak height follows the ridge's footprint, so every flank climbs at
+  // roughly 25-30 degrees instead of the former near-vertical spikes.
+  const peakY=wolfveilHeight(x,z)+depth*(.16+rand()*.04);
   const profile=Array.from({length:sections},(_,i)=>.74+.28*rand()+
     .21*Math.sin(i/sections*TAU*3)+.10*Math.sin(i/sections*TAU*7));
   for(let tier=0;tier<levels.length;tier++){
@@ -181,11 +206,11 @@ export function makeRidgeGeometry(center,depth=340,seed=98){
         zz=z+Math.sin(a)*r+(rand()-.5)*w*2.5;
       const ground=wolfveilHeight(xx,zz);
       const y=(1-ratio)*Math.max(ground-3,ground+ratio*34)+
-        ratio*peakY+(rand()-.5)*(2+ratio*11);
+        ratio*peakY+(rand()-.5)*(1.5+ratio*4);
       return [xx,y,zz];
     });
   }
-  const summit=[x+(rand()-.5)*10,peakY+12,z+(rand()-.5)*10];
+  const summit=[x+(rand()-.5)*10,peakY+4,z+(rand()-.5)*10];
   for(let tier=0;tier<levels.length-1;tier++){
     for(let i=0;i<sections;i++){
       const n=(i+1)%sections,
@@ -219,6 +244,7 @@ export function addWolfEarPeaks(world){
 export function addWolfveilPaths(world,routes,{
   excludePalaceApproach=false,swQuarterQuality=false,canonicalPlaySurface=false,
   terrainSpan=1100,terrainSegments=310,coalesceTerrainStrips=true,
+  trailBreaks=false,
 }={}){
   // The real Luna entrance already has seven physical stairs. On the live
   // palace map, the old road must not cover these or the hillside treads.
@@ -254,8 +280,10 @@ export function addWolfveilPaths(world,routes,{
   for(const route of routes){
     const pts=route.points;
     const caps=[];
+    let walked=0; // metres along this route before the current segment
     for(let k=0;k<pts.length-1;k++){
       const a=pts[k],b=pts[k+1],dist=Math.hypot(b[0]-a[0],b[1]-a[1]);
+      const segmentStart=walked;walked+=dist;
       const steps=Math.ceil(dist/1.5);
       const cap={start:false,end:false,normal:null,tint:null};caps.push(cap);
       let pending=null;
@@ -274,6 +302,8 @@ export function addWolfveilPaths(world,routes,{
         const x0=a[0]+(b[0]-a[0])*t0,z0=a[1]+(b[1]-a[1])*t0;
         const x1=a[0]+(b[0]-a[0])*t1,z1=a[1]+(b[1]-a[1])*t1;
         if(wolfveilDistanceToRiver((x0+x1)/2,(z0+z1)/2)<12)continue;
+        // Washed-out stretch: the dirt ribbon stops and resumes further on.
+        if(trailBreaks&&wolfveilTrailBreakAt(route.id,segmentStart+dist*(t0+t1)*.5))continue;
         // Each strip follows the UNIT route tangent. Dividing a 1.5m strip
         // by the entire route length shrank long Play roads into hairlines.
         // Keep the legacy non-Play rendering opt-out unchanged.

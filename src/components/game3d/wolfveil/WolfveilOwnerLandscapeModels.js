@@ -8,6 +8,7 @@ import {
  WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS as ASSETS,
  chooseWolfveilOwnerAssetAnchors,
 } from './WolfveilOwnerLandscapeAssets.mjs';
+import {decimateGeometry} from '../render/decimateGeometry.js';
 
 function acceptableSource(mesh){
  return mesh?.isMesh===true && mesh.geometry?.isBufferGeometry===true &&
@@ -24,9 +25,12 @@ function normalizedGeometry(source,bounds,asset){
  geometry.translate(-bounds.getCenter(new THREE.Vector3()).x,
    -bounds.min.y,-bounds.getCenter(new THREE.Vector3()).z);
  geometry.scale(scale,scale,scale);
- geometry.computeBoundingSphere();
- geometry.computeVertexNormals();
- return geometry;
+ // Hold every copy to its triangle budget; shape and fullness are kept.
+ const light=decimateGeometry(geometry,asset.maxTriangles);
+ if(light!==geometry)geometry.dispose();
+ light.computeBoundingSphere();
+ light.computeVertexNormals();
+ return light;
 }
 function sourceMaterial(mesh,wind,kind,sourceHeight){
  const safeHeight=Math.max(.1,sourceHeight);
@@ -120,11 +124,11 @@ function applyTreeAtlas(root,texture){
 }
 
 export function installWolfveilOwnerLandscapeModels(world,{
- flowPlan,forestTrees=[],onStatus=()=>{},
+ flowPlan,forestTrees=[],trail,onStatus=()=>{},
 }={}){
  if(!world?.group||!flowPlan)return null;
  const anchorSets=chooseWolfveilOwnerAssetAnchors({
-  grass:flowPlan.grass,shrubs:flowPlan.shrubs,forestTrees,
+  grass:flowPlan.grass,shrubs:flowPlan.shrubs,forestTrees,trail,
  });
  const group=new THREE.Group();
  group.name='SWV_OwnerUploaded_RouteSide_Models';

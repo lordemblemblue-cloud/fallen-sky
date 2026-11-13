@@ -211,9 +211,11 @@ export function wolfveilNaturalHeight(x,z){
   const northRise=z< -225?0:z>220?80:80*smooth((z+225)/445);
   const plazaGrade=2.8*Math.sin(x*.014+z*.027)+1.2*Math.cos(x*.042-z*.012);
   const outward=Math.max(0,(Math.abs(x)-145)/150);
-  const sideHills=72*smooth(outward)*(.68+.32*Math.cos(z*.009));
-  const farNorth=110*smooth((z-250)/290);
-  const cliffBands=11*Math.sin(x*.058+z*.023)*smooth((Math.abs(x)-160)/170);
+  // Walkable relief: the valley rim and northern highlands are long, gentle
+  // climbs (mostly under 20 degrees) rather than steep up-and-down walls.
+  const sideHills=30*smooth(outward)*(.68+.32*Math.cos(z*.009));
+  const farNorth=44*smooth((z-250)/290);
+  const cliffBands=3.5*Math.sin(x*.058+z*.023)*smooth((Math.abs(x)-160)/170);
   let y=northRise+plazaGrade+sideHills+farNorth+cliffBands;
   // Feather the western mountain flank into an explorable, rolling hillside.
   // Terrain BVH, worker height contract and planting all read this one grade.

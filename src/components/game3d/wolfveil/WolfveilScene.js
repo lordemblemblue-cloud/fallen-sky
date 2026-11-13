@@ -21,6 +21,7 @@ import {applyWolfveilPrecisionForestGroundPigment} from './WolfveilPrecisionFore
 import {applyWolfveilSquareR08C10GroundPigment} from '../axe/world/landscaping/WolfveilSquareR08C10.mjs';
 import {clearOf,wolfveilTreePlacements,wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
 import {installWolfveilOwnerLandscapeModels} from './WolfveilOwnerLandscapeModels.js';
+import {buildWolfveilTrailLandscaping} from './WolfveilTrailLandscaping.js';
 import {applyWolfveilSpawnGroundDetail} from './WolfveilSpawnGroundDetail.js';
 import {addWolfveilWestHillsideLandscaping} from './WolfveilWestHillsideGround.js';
 import {WOLFVEIL_SPAWN_TILE} from './WolfveilSpawnTile.js';
@@ -102,8 +103,15 @@ export function createWolfveilVillage(scene,options={}){
     excludePalaceApproach:true,
     swQuarterQuality:Boolean(options.originAtMarket&&options.groundCover),
     canonicalPlaySurface:Boolean(options.originAtMarket&&options.groundCover),
+    trailBreaks:Boolean(options.originAtMarket&&options.groundCover),
     terrainSpan:options.span||1100,terrainSegments:options.segments||310,
   });
+  // Valley-wide stones, grass tufts and washed-out trail rubble (Game 3D only).
+  const trailLandscaping=options.originAtMarket&&options.groundCover
+    ?buildWolfveilTrailLandscaping(world,{
+        terrainSpan:options.span||1100,terrainSegments:options.segments||310,
+      })
+    :null;
   const river=addWolfveilWater(world,WOLFVEIL_RIVER,{
     silverWater:Boolean(options.silverWater),
   });
@@ -145,6 +153,8 @@ export function createWolfveilVillage(scene,options={}){
   const ownerModels=groundCover?.flowPlan
     ?installWolfveilOwnerLandscapeModels(world,{
        flowPlan:groundCover.flowPlan,forestTrees:vegetation.trees,
+       trail:trailLandscaping?{grass:trailLandscaping.grassAnchors,
+         plants:trailLandscaping.plantAnchors}:undefined,
        onStatus(status){
          // Keep fallback trees visible if the FBX or blue atlas is unavailable.
          // Hide only after all owner tree meshes were successfully installed.
@@ -183,6 +193,8 @@ export function createWolfveilVillage(scene,options={}){
     fountainHomes:{count:fountainHomes.count,locations:fountainHomes.colliders},
     get fountainHomeAssetStatus(){return fountainHomes.state;},
     plantedTrees:vegetation.trees.length,
+    trailLandscaping:trailLandscaping?{rocks:trailLandscaping.rocks,
+      tufts:trailLandscaping.tufts,triangles:trailLandscaping.triangles}:null,
     spawnGroundTile:options.spawnGroundTile?WOLFVEIL_SPAWN_TILE:null,
     groundCover:groundCover?{
       grassPatches:groundCover.grassPatches,
