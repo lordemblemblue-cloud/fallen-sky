@@ -1848,14 +1848,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
         }
       }
-      if (k === 'i') {
-        window.dispatchEvent(new CustomEvent('axeOpenCharacterHub', { detail: { tab: 'inventory' } }));
-        e.preventDefault();
-      }
-      // No F9 boss encounter in the systems test scene.
-      // = = toggle all non-boss entities (quest NPCs, mutant enemies, companion)
-      //      on/off the map. Hidden by default so only the boss remains.
-      if (k === '=' && !e.repeat) {
+      // GameView owns I/C/L/K/P/M/J/= menu keys before gameplay listeners.
+      // Preserve the old test-scene NPC visibility diagnostic on Shift+F9
+      // rather than stealing the Blacksmith '=' shortcut.
+      if (e.code === 'F9' && e.shiftKey && !e.repeat) {
         npcsVisibleRef.current = !npcsVisibleRef.current;
         e.preventDefault();
       }
