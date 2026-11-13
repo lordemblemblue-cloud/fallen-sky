@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {FACTION_PET_RIG_PROFILES,combineNativeFactionPetClips,proceduralFactionPetGait}
+  from './factionPetAnimationRigs.mjs';
 
 // Inspected the owner's original baby_wolf Take 001 (439 keys, 30fps),
 // including rendered frames and repeated-pose comparisons. These are complete
@@ -101,8 +103,8 @@ const saveTransforms = root => {
 };
 
 /** Bake source world-space rest deltas into each target's own local bind axes. */
-export function retargetDogMountClips(sourceRoot, sourceClips, targetRoot, companionId) {
-  const mapping = DOG_MOUNT_RIG_MAPS[companionId];
+export function retargetDogMountClips(sourceRoot, sourceClips, targetRoot, companionId, mappingOverride = null) {
+  const mapping = mappingOverride || DOG_MOUNT_RIG_MAPS[companionId];
   if (!mapping) throw new Error(`No inspected mount rig map for ${companionId}`);
   const clips = splitDogMountClips(sourceClips);
   sourceRoot.updateMatrixWorld(true); targetRoot.updateMatrixWorld(true);
@@ -183,6 +185,23 @@ function loadDogSource(definition) {
 export async function prepareMountAnimationClips(root, embeddedClips = [], definition = {}) {
   if (definition.animationSource === 'baby-wolf-bundled') return splitDogMountClips(embeddedClips);
   if (definition.animationSource !== 'baby-wolf-retarget') return embeddedClips;
+  // The newly uploaded faction 2/3 models contain their own genuine idle
+  // animation (tail + wings). Preserve it, retarget the existing baby wolf
+  // WALK/RUN tracks onto their inspected joint maps, and include the native
+  // wing/tail motion in both movement cycles. Faction 1 and legacy models
+  // retain their original, previously verified animation paths.
+  if (definition.animationRigProfile) {
+    const profile=FACTION_PET_RIG_PROFILES[definition.animationRigProfile];
+    if(!profile)throw new Error('Unknown faction pet animation rig: '+definition.animationRigProfile);
+    try {
+      const source=await loadDogSource(definition);
+      const gait=retargetDogMountClips(source.scene,source.animations||[],root,definition.id,profile.map);
+      return combineNativeFactionPetClips(embeddedClips,gait,definition.animationRigProfile);
+    } catch(error) {
+      console.warn('Faction pet baby-wolf gait unavailable; using native idle and local gait',error);
+      return proceduralFactionPetGait(root,embeddedClips,definition.animationRigProfile);
+    }
+  }
   const source = await loadDogSource(definition);
   return retargetDogMountClips(source.scene, source.animations || [], root, definition.id);
 }
