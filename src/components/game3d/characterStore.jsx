@@ -1,4 +1,3 @@
-import {saveAppearance} from '@/components/onboarding/saveAppearance';
 import {game3dCharacterModel} from './game3dCharacterModel';
 // ─── Character Roster Store ────────────────────────────────────────────
 // Persistent multi-character roster. Each character has:
@@ -211,12 +210,13 @@ export function mergeCharactersFromServer(entries = []) {
 // automatically reload from that character's namespaced slot.
 export async function activateAndSyncToHUD(id) {
   const character=state.roster.find(c=>c.id===id);
-  // Local Game 3D creations are independent of the account avatar. Playing one
-  // must not save it to the platform's v5-only avatar service (or strip its
-  // fused creator body/hair layers before the world starts).
-  const localSlot=character?.id?.startsWith('char_');
-  const avatar=character&&!character.isDevTest&&!localSlot?await saveAppearance(character,{broadcast:false}):null;
-  setActiveCharacter(id);if(avatar)window.dispatchEvent(new CustomEvent('avatarAppearanceSaved',{detail:{avatar}}));
+  if (!character) throw new Error('This character is no longer in your Game 3D roster. Refresh Character Select.');
+  // Enter World is a local selection, not an account-avatar save. Calling
+  // saveAppearance here blocked Play if the original application's Base44
+  // endpoint was unavailable in the migrated app, and could strip creator-only
+  // settings from a selected Adam/Eve character. Appearance changes are saved
+  // explicitly in the creator, not as an implicit side effect of Play.
+  setActiveCharacter(id);
   window.dispatchEvent(new CustomEvent('axeCharacterActivated',{detail:{characterId:id,character}}));
 }
 window.addEventListener('avatarAppearanceSaved', event => {
