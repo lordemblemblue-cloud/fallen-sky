@@ -66,7 +66,7 @@ import { isMaxMasteryChargeUnlocked, canAcceptFinisherChain, skillCombatFamily }
 import { createKillFlowCounter, isKillFlowCastEligible } from './combat/KillFlowCounter.mjs';
 import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from './combat/ContinuousAOERules.mjs';
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
-import { selectCameraBowTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
+import { BOW_PVE_RANGE, selectCameraBowTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
@@ -3246,11 +3246,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               ?selectCameraBowTarget({
                 camera,origin:model.position,
                 enemies:[...enemies,...(window.__gw3dRogues||[])],bosses:bossEntities,
-                maxRange:RANGED_ATTACK_RANGE,
+                maxRange:BOW_PVE_RANGE,
                 lockedEnemyId:lockOnTargetRef.current?.id,
                 groundMeshes:otsCameraColliders(),
               }):null;
-            const attackConsumedByPriorityTarget = dispatchRogueAttack(playerDerivedRef, strikeMultiplier);
+            // The bridge and normal enemy damage use exactly this SAME resolved
+            // hitbox; a second independent raycast must not select another AI.
+            const attackConsumedByPriorityTarget = dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             // Basic swings use attack-speed timing. Timed skill combo hits
             // have their own scheduled spacing and bypass this basic cooldown.
             if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
@@ -3272,10 +3274,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             });
             if(activeWeaponPath==='ranged'){
               bowVisuals.fire({origin:model.position,
-                target:bowAimTarget?.point||cameraBowImpactPoint(camera,groundMeshes)});
+                target:bowAimTarget?.point||cameraBowImpactPoint(camera,otsCameraColliders(),BOW_PVE_RANGE)});
             }
-            const attackRange = isRangedClickAttack || activeWeaponPath === 'ranged' ||
-              pendingSkillStrike?.weaponType === 'ranged' ? RANGED_ATTACK_RANGE : ENEMY_ATTACK_RANGE;
+            // PvE bow target range matches the actual reticle trace. Duel
+            // validation and its shorter authoritative weapon range stay as is.
+            const attackRange = activeWeaponPath === 'ranged' ? BOW_PVE_RANGE :
+              isRangedClickAttack || pendingSkillStrike?.weaponType === 'ranged'
+                ? RANGED_ATTACK_RANGE : ENEMY_ATTACK_RANGE;
             const aoeRadius = isSkillStrike && !pendingSkillStrike.soulEcho
               ? Math.max(0, Number(pendingSkillStrike.aoeRadius) || 0) : 0;
             // Ranged single shots now resolve against the same small camera

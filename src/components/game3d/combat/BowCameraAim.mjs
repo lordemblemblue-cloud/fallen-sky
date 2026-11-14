@@ -1,97 +1,170 @@
 import * as THREE from 'three';
 
-// Game 3D bow shots use the same tiny centre dot that the player sees.
-// This resolver runs on an attack, never every frame. It chooses only living
-// hostiles in the camera ray or its small edge-grace radius; it does not roll
-// damage, grant rewards, alter lock state or accept remote players.
-export const BOW_AIM_SETTINGS=Object.freeze({
-  maxRange:70,
-  edgeNdc:0.055,
-  lockedEdgeNdc:0.09,
-  blockPadding:0.45,
-  markerRadiusPx:3,
+// An arrow is a straight ray from the on-screen centre point. Actor hitboxes
+// are separate from thin animated mesh triangles and decorative effects.
+// Only actual in-range, visible hostiles behind unobstructed shot paths can
+// receive damage. Damage/loot/authority stay in the existing combat engine.
+export const BOW_PVE_RANGE = 40; // AI encounters only; PvP/server range is unchanged.
+export const BOW_AIM_SETTINGS = Object.freeze({
+  maxRange: BOW_PVE_RANGE,
+  edgeNdc: 0.014,
+  lockedEdgeNdc: 0.018,
+  blockPadding: 0.15,
+  markerRadiusPx: 3,
 });
-const box=new THREE.Box3();
-const center=new THREE.Vector3();
-const projected=new THREE.Vector3();
-const ray=new THREE.Raycaster();
-const blockerRay=new THREE.Raycaster();
-const temp=new THREE.Vector3();
 
-function visibleHostile(t){
-  return Boolean(t?.id && t.group?.position &&
-    t.group.visible!==false && t.alive!==false &&
-    !t.dying && !t.defeated && Number(t.hp??1)>0);
-}
-function actorPoint(t){
-  // Actual mesh center is more faithful for tall bosses than the pivot on
-  // their feet; use the pivot if this model has not loaded geometry yet.
-  try{
-    box.setFromObject(t.group);
-    if(!box.isEmpty())return box.getCenter(new THREE.Vector3());
-  }catch{/* still loading */}
-  return new THREE.Vector3(t.group.position.x,t.group.position.y+1.1,t.group.position.z);
-}
-function blocked(camera,point,groundMeshes){
-  if(!Array.isArray(groundMeshes)||!groundMeshes.length)return false;
-  temp.copy(point).sub(camera.position);
-  const distance=temp.length();
-  if(distance<.6)return false;
-  blockerRay.set(camera.position,temp.multiplyScalar(1/distance));
-  blockerRay.near=.35;
-  blockerRay.far=distance-BOW_AIM_SETTINGS.blockPadding;
-  return blockerRay.intersectObjects(groundMeshes,true).some(h=>
-    h.object?.visible!==false && Number.isFinite(h.distance) &&
-    h.distance<distance-BOW_AIM_SETTINGS.blockPadding);
+const rawBounds = new THREE.Box3();
+const bodyBounds = new THREE.Box3();
+const center = new THREE.Vector3();
+const size = new THREE.Vector3();
+const projected = new THREE.Vector3();
+const worldPos = new THREE.Vector3();
+const aimRay = new THREE.Raycaster();
+const blockerRay = new THREE.Raycaster();
+const muzzleRay = new THREE.Raycaster();
+const hitPoint = new THREE.Vector3();
+const direction = new THREE.Vector3();
+const muzzle = new THREE.Vector3();
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const finitePoint = p => p && [p.x, p.y, p.z].every(Number.isFinite);
+
+function visibleHostile(target) {
+  return Boolean(target?.id && target.group?.position &&
+    target.group.visible !== false && target.alive !== false &&
+    !target.dying && !target.defeated && Number(target.hp ?? 1) > 0);
 }
 
-export function selectCameraBowTarget({camera,origin,enemies=[],bosses=[],
-  maxRange=BOW_AIM_SETTINGS.maxRange,lockedEnemyId=null,groundMeshes=[]}={}){
-  if(!camera?.isCamera||!origin||!(maxRange>0))return null;
-  camera.updateMatrixWorld(true);
-  ray.setFromCamera({x:0,y:0},camera);
-  ray.near=.25;
-  ray.far=maxRange+20;
-  const candidates=[];
-  for(const target of [...enemies,...bosses]){
-    if(!visibleHostile(target))continue;
-    const distance=Math.hypot(
-      target.group.position.x-origin.x,
-      target.group.position.y-origin.y,
-      target.group.position.z-origin.z);
-    if(distance>maxRange||distance<.05)continue;
-    target.group.updateMatrixWorld(true);
-    const intersection=ray.intersectObject(target.group,true)[0];
-    const point=intersection?.point?.clone()||actorPoint(target);
-    projected.copy(point).project(camera);
-    if(!(projected.z>-1&&projected.z<1))continue;
-    const error=Math.hypot(projected.x,projected.y);
-    const threshold=String(target.id)===String(lockedEnemyId)
-      ?BOW_AIM_SETTINGS.lockedEdgeNdc:BOW_AIM_SETTINGS.edgeNdc;
-    if(!intersection&&error>threshold)continue;
-    if(blocked(camera,point,groundMeshes))continue;
-    candidates.push({target,distance,locked:String(target.id)===String(lockedEnemyId),
-      point,error,rayHit:!!intersection,rayDistance:intersection?.distance??Infinity});
+// The bounding volume is intentionally limited to the actor's body; a huge
+// weapon swing, particle mesh, or invisible animation prop must not make a
+// target hittable across half the screen. Unloaded models get a small capsule-
+// like volume, so a valid AI can still be hit while its mesh loads.
+export function getBowEnemyHitbox(target, out = new THREE.Box3()) {
+  if (!target?.group) return null;
+  target.group.updateWorldMatrix?.(true, true);
+  target.group.getWorldPosition?.(worldPos);
+  if (!finitePoint(worldPos)) worldPos.copy(target.group.position);
+  const isBoss = !!(target.isBoss || /boss/i.test(String(target.tier || '')));
+  let valid = false;
+  try {
+    rawBounds.setFromObject(target.group);
+    if (!rawBounds.isEmpty()) {
+      rawBounds.getCenter(center);
+      rawBounds.getSize(size);
+      valid = finitePoint(center) && finitePoint(size);
+    }
+  } catch { /* Model has not decoded yet. */ }
+  if (!valid) {
+    center.copy(worldPos).add(new THREE.Vector3(0, 1.05, 0));
+    size.set(1.2, 2.1, 1.2);
+  } else {
+    const offset = isBoss ? 3 : 0.6;
+    center.x = clamp(center.x, worldPos.x - offset, worldPos.x + offset);
+    center.y = clamp(center.y, worldPos.y - 0.25, worldPos.y + (isBoss ? 5 : 2.1));
+    center.z = clamp(center.z, worldPos.z - offset, worldPos.z + offset);
+    // Hold this to a solid, reasonable torso. Extremely wide decorative
+    // mesh bounds cannot be used as a free target acquisition zone.
+    size.set(
+      clamp(size.x + 0.3, 0.85, isBoss ? 10 : 2.35),
+      clamp(size.y + 0.3, 1.3, isBoss ? 11 : 3.4),
+      clamp(size.z + 0.3, 0.85, isBoss ? 10 : 2.35),
+    );
   }
-  candidates.sort((a,b)=>Number(b.rayHit)-Number(a.rayHit) ||
-    (a.rayHit&&b.rayHit?a.rayDistance-b.rayDistance:0) ||
-    a.error-b.error || Number(b.locked)-Number(a.locked) || a.distance-b.distance);
-  return candidates[0]||null;
+  return out.setFromCenterAndSize(center, size);
 }
 
-export function cameraBowImpactPoint(camera,groundMeshes=[],maxDistance=52){
-  if(!camera?.isCamera)return null;
+function firstSolidHit(raycaster, meshes = []) {
+  if (!Array.isArray(meshes) || !meshes.length) return null;
+  return raycaster.intersectObjects(meshes.filter(Boolean), true)
+    .find(hit => Number.isFinite(hit.distance) && hit.object?.visible !== false &&
+      !hit.object?.userData?.otsCameraIgnore) || null;
+}
+
+function clearMuzzlePath(origin, point, meshes) {
+  muzzle.copy(origin);
+  muzzle.y += 1.45;
+  direction.copy(point).sub(muzzle);
+  const length = direction.length();
+  if (!Number.isFinite(length) || length < 0.3) return false;
+  muzzleRay.set(muzzle, direction.divideScalar(length));
+  muzzleRay.near = 0.3;
+  muzzleRay.far = Math.max(0.31, length - BOW_AIM_SETTINGS.blockPadding);
+  const obstruction = firstSolidHit(muzzleRay, meshes);
+  return !obstruction || obstruction.distance >= length - BOW_AIM_SETTINGS.blockPadding;
+}
+
+export function selectCameraBowTarget({
+  camera, origin, enemies = [], bosses = [], maxRange = BOW_PVE_RANGE,
+  lockedEnemyId = null, groundMeshes = [],
+} = {}) {
+  if (!camera?.isCamera || !finitePoint(origin) || !(maxRange > 0)) return null;
   camera.updateMatrixWorld(true);
-  const caster=new THREE.Raycaster();
-  caster.setFromCamera({x:0,y:0},camera);
-  caster.near=.3;caster.far=maxDistance;
-  const ground=Array.isArray(groundMeshes)
-    ?caster.intersectObjects(groundMeshes,true).find(h=>h.object?.visible!==false)
-    :null;
-  return ground?.point?.clone()||caster.ray.at(maxDistance,new THREE.Vector3());
+  aimRay.setFromCamera({ x: 0, y: 0 }, camera);
+  aimRay.near = 0.2;
+  aimRay.far = maxRange + 12;
+  // Do this expensive world raycast once, not once for each enemy in a horde.
+  blockerRay.set(aimRay.ray.origin, aimRay.ray.direction);
+  blockerRay.near = 0.2;
+  blockerRay.far = aimRay.far;
+  const worldBlock = firstSolidHit(blockerRay, groundMeshes);
+  const obstructionDistance = worldBlock?.distance ?? Infinity;
+
+  const candidates = [];
+  const seen = new Set();
+  for (const target of [...enemies, ...bosses]) {
+    if (!visibleHostile(target) || seen.has(target)) continue;
+    seen.add(target);
+    const box = getBowEnemyHitbox(target, bodyBounds);
+    if (!box) continue;
+    const intersection = aimRay.ray.intersectBox(box, hitPoint);
+    const locked = String(target.id) === String(lockedEnemyId);
+    let point;
+    let rayDistance = Infinity;
+    if (intersection && finitePoint(intersection)) {
+      point = intersection.clone();
+      rayDistance = point.distanceTo(aimRay.ray.origin);
+    } else {
+      // A tiny grace for clipped animation bodies, never the old broad
+      // auto-aim cone. Project the hitbox centre rather than the feet.
+      box.getCenter(center);
+      projected.copy(center).project(camera);
+      if (!(projected.z > -1 && projected.z < 1)) continue;
+      const error = Math.hypot(projected.x, projected.y);
+      if (error > (locked ? BOW_AIM_SETTINGS.lockedEdgeNdc : BOW_AIM_SETTINGS.edgeNdc)) continue;
+      point = center.clone();
+      rayDistance = point.distanceTo(aimRay.ray.origin);
+    }
+    if (!finitePoint(point) || rayDistance > aimRay.far) continue;
+    const distance = Math.hypot(point.x - origin.x, point.y - origin.y, point.z - origin.z);
+    if (!Number.isFinite(distance) || distance > maxRange || distance < 0.2) continue;
+    // Neither a camera ray through a wall nor a muzzle behind a rock can
+    // award an AI hit. The muzzle converges on this exact reticle hit point.
+    if (obstructionDistance < rayDistance - BOW_AIM_SETTINGS.blockPadding) continue;
+    candidates.push({ target, distance, locked, point, rayHit: !!intersection, rayDistance });
+  }
+
+  candidates.sort((a, b) => a.rayDistance - b.rayDistance || Number(b.rayHit) - Number(a.rayHit));
+  // Try the closest unobstructed hitbox first; don't auto-hit a farther
+  // creature if a nearer visible creature occupies the actual crosshair.
+  for (const candidate of candidates) {
+    if (!clearMuzzlePath(origin, candidate.point, groundMeshes)) continue;
+    return candidate;
+  }
+  return null;
 }
 
-export function pickCameraBowCombatTargets(args={}){
-  const hit=selectCameraBowTarget(args);
-  return hit?[{target:hit.target,distance:hit.distance,locked:hit.locked,point:hit.point}]:[];
+export function cameraBowImpactPoint(camera, groundMeshes = [], maxDistance = BOW_PVE_RANGE) {
+  if (!camera?.isCamera) return null;
+  camera.updateMatrixWorld(true);
+  const caster = new THREE.Raycaster();
+  caster.setFromCamera({ x: 0, y: 0 }, camera);
+  caster.near = 0.25;
+  caster.far = maxDistance;
+  const wall = firstSolidHit(caster, groundMeshes);
+  return wall?.point?.clone() || caster.ray.at(maxDistance, new THREE.Vector3());
+}
+
+export function pickCameraBowCombatTargets(args = {}) {
+  const hit = selectCameraBowTarget(args);
+  return hit ? [{ target: hit.target, distance: hit.distance, locked: hit.locked, point: hit.point }] : [];
 }
