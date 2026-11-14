@@ -3248,6 +3248,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               }));
             }
           } else {
+            const bowAimStartedAt=activeWeaponPath==='ranged'?performance.now():0;
             const bowAimTarget=activeWeaponPath==='ranged'
               ?selectCameraBowTarget({
                 camera,origin:model.position,
@@ -3256,6 +3257,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 lockedEnemyId:lockOnTargetRef.current?.id,
                 groundMeshes:otsCameraColliders(),
               }):null;
+            if(activeWeaponPath==='ranged')bowVisuals.noteAimTime(performance.now()-bowAimStartedAt);
             // The bridge and normal enemy damage use exactly this SAME resolved
             // hitbox; a second independent raycast must not select another AI.
             // Melee keeps its original synchronous priority resolution. Bow
