@@ -7,7 +7,7 @@ import {
   switchAXEInventoryWeapon, subscribeAXEEquipmentInventory,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { inferAXEWeaponRole } from './AXEWeaponIdentity';
-import { AXE_HUD_WEAPON_ROLES, isAXEHUDWeaponRole, eligibleRoleWeapons, selectRoleWeapon } from './AXEWeaponRoleSlots.mjs';
+import { AXE_HUD_WEAPON_ROLES, isAXEHUDWeaponRole, selectRoleWeapon } from './AXEWeaponRoleSlots.mjs';
 
 const storage=characterScopedStorage('axe_hud_weapon_roles_v1');
 const empty=()=>({offensive:null,defensive:null,ranged:null});
@@ -32,10 +32,19 @@ export function subscribeAXEHUDWeaponRoles(fn){
   listeners.add(fn);fn(getAXEHUDWeaponRoles());return ()=>listeners.delete(fn);
 }
 export function getOwnedWeaponsForAXERole(role){
-  return eligibleRoleWeapons(getAXEInventoryItemsByCategory('weapon'),role,inferAXEWeaponRole);
+  if(!isAXEHUDWeaponRole(role))return [];
+  // Any genuinely owned weapon may be assigned to any one of the three
+  // visible socket templates. Role identity is a helpful DEFAULT, not a ban.
+  return getAXEInventoryItemsByCategory('weapon')
+    .filter(item=>item?.slot==='weapon' && !!item.instanceId);
 }
 export function getAXERoleWeapon(role){
-  const inventory=getAXEInventoryItemsByCategory('weapon');
+  // An item assigned to another panel must not reappear as a default
+  // fallback in this one. This keeps all three visual sockets independent.
+  const reserved=new Set(Object.entries(assignments)
+    .filter(([other])=>other!==role).map(([,id])=>id).filter(Boolean));
+  const inventory=getAXEInventoryItemsByCategory('weapon')
+    .filter(item=>!reserved.has(item.instanceId)||item.instanceId===assignments[role]);
   return selectRoleWeapon(inventory,role,assignments[role],
     getActiveEquippedAXEWeapon()?.instanceId,inferAXEWeaponRole);
 }
@@ -44,6 +53,11 @@ export function assignAXEHUDWeaponRole(role,instanceId){
   if(instanceId!==null && !getOwnedWeaponsForAXERole(role).some(item=>item.instanceId===instanceId))
     return {ok:false,reason:'WEAPON_NOT_OWNED_OR_WRONG_ROLE'};
   const next={...assignments,[role]:instanceId};
+  // Moving a weapon to a new slot clears its previous visual assignment,
+  // without unequipping or duplicating the underlying owned item.
+  if(instanceId!==null)for(const other of AXE_HUD_WEAPON_ROLES){
+    if(other.role!==role && next[other.role]===instanceId)next[other.role]=null;
+  }
   if(!storage.setChecked(JSON.stringify(next)))return {ok:false,reason:'SAVE_FAILED'};
   assignments=next;emit();
   return {ok:true,role,instanceId};

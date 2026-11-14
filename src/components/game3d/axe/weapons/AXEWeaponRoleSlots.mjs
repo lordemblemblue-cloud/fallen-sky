@@ -16,14 +16,21 @@ export function eligibleRoleWeapons(items, role, resolver) {
   );
 }
 export function selectRoleWeapon(items, role, assignedId, activeId, resolver) {
-  const eligible=eligibleRoleWeapons(items,role,resolver);
-  const assigned=eligible.find(item=>item.instanceId===assignedId);
+  if(!isAXEHUDWeaponRole(role))return null;
+  const owned=(Array.isArray(items)?items:[]).filter(item=>
+    item?.category==='weapon' && item.slot==='weapon' && Boolean(item.instanceId));
+  // The three HUD panels are player-customizable sockets, not role-locked
+  // weapons. A specifically assigned bow may be shown in the Damage panel.
+  const assigned=owned.find(item=>item.instanceId===assignedId);
+  if(assigned)return assigned;
+  const eligible=eligibleRoleWeapons(owned,role,resolver);
   const active=eligible.find(item=>item.instanceId===activeId);
-  // An explicitly assigned weapon takes precedence; if none, the one already
-  // in the player's hand is reflected. Auto-pick only if exactly one qualifies.
-  return assigned||active||(eligible.length===1?eligible[0]:null);
+  // Only use a role-specific fallback if the player has not made a choice.
+  return active||(eligible.length===1?eligible[0]:null);
 }
 export function roleForCycle(roles,current,direction){
+  if(!Array.isArray(roles)||!roles.length)return null;
   const index=roles.indexOf(current);
-  return roles[(Math.max(0,index)+(direction<0?-1:1)+roles.length)%roles.length];
+  if(index<0)return direction<0?roles[roles.length-1]:roles[0];
+  return roles[(index+(direction<0?-1:1)+roles.length)%roles.length];
 }
