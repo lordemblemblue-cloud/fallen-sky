@@ -44,3 +44,14 @@ export function getAXEFullSetAuraRank(items = [], requiredSlots = []) {
   if (!requiredSlots.every(slot => bySlot.has(slot))) return 0;
   return Math.min(...requiredSlots.map(slot => getAXESetAscensionRank(bySlot.get(slot))));
 }
+
+// Rare set collectors gain both their stage's normal item stat imprint and
+// the growing set bonus, helping a long-kept Rare remain useful. Elite and
+// above set Ascension improves the SET instead; ordinary reinforcement still
+// improves the individual weapon/armor at its rarity-specific percent cap.
+// Non-set items keep the existing normal stage imprint system.
+export function doesAXEStageIncreaseItemStats(item = {}) {
+  if (!item?.setId) return true;
+  const rarity=String(item.rarity || '').toLowerCase();
+  return ['common','uncommon','unique','rare','rare_elite'].includes(rarity);
+}
