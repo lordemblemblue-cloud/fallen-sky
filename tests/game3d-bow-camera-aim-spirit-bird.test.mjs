@@ -128,3 +128,13 @@ test('nearer enemy hitbox receives the arrow, not an enemy behind it',()=>{
  const selected=selectCameraBowTarget({...base(),maxRange:40,enemies:[behind,close]});
  assert.equal(selected?.target,close);
 });
+
+test('the muzzle cannot shoot through cover even when the camera can see a target',()=>{
+ const ai=enemy('visible-to-camera');
+ const muzzleWall=new THREE.Mesh(new THREE.BoxGeometry(.5,3,.5),new THREE.MeshBasicMaterial());
+ muzzleWall.position.set(1.1,1.4,3.15);muzzleWall.updateMatrixWorld(true);
+ const fromSide=new THREE.Vector3(2,0,5);
+ const hit=selectCameraBowTarget({camera:makeCamera(),origin:fromSide,
+   enemies:[ai],maxRange:40,groundMeshes:[muzzleWall]});
+ assert.equal(hit,null);
+});
