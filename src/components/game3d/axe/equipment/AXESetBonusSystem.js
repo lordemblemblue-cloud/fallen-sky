@@ -106,7 +106,11 @@ export function evaluateAXESetBonuses(items = []) {
       equippedPieces: group.count,
       itemIds: group.itemIds,
       activeThresholds,
-      nextThreshold: [2, 3, 4, 5].find((n) => n > group.count) || null,
+      conditionalBonuses: Object.fromEntries(Object.entries(group.definition.conditionalThresholds || {})
+        .filter(([threshold]) => group.count >= Number(threshold))
+        .flatMap(([, effects]) => Object.entries(effects))),
+      nextThreshold: [2, 3, 4, 5].find((n) => n > group.count &&
+        (group.definition.thresholds[n] || group.definition.conditionalThresholds?.[n])) || null,
     });
   }
 
