@@ -90,4 +90,6 @@ test('the original and clone avatar loaders use one shared runtime retargeting p
  assert.match(store,/axeCharacterFactionChanged/);
  assert.match(store,/adoptFactionStarterIfPristine/);
  assert.match(store,/old\.totalXp!==0/);
+ assert.match(store,/old\.spiritualWeapon\?\.mode==='utility'/);
+ assert.match(store,/Object\.values\(old\.gear\|\|\{\}\)\.some/);
 });
