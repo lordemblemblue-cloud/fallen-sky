@@ -1316,8 +1316,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const bowOccluders=otsCameraColliders;
     window.__gw3dBowOccluders=bowOccluders;
     const bowVisuals=createGame3DBowAimVisuals({scene,container,showDot:false});
-    const onBowVerifiedHit=()=>bowVisuals.confirmHit();
+    const onBowVerifiedHit=(event)=>bowVisuals.confirmHit(event?.detail?.damage);
+    const onBowVerifiedMiss=(event)=>bowVisuals.confirmMiss(event?.detail?.reason);
     window.addEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
+    window.addEventListener('game3dVerifiedBowMiss',onBowVerifiedMiss);
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
     const lastDirectionTap = { current: {} };
@@ -3252,7 +3254,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               }):null;
             // The bridge and normal enemy damage use exactly this SAME resolved
             // hitbox; a second independent raycast must not select another AI.
-            const attackConsumedByPriorityTarget = dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
+            // Melee keeps its original synchronous priority resolution. Bow
+            // resolution is delayed only until AFTER the shot tracer exists,
+            // so a same-frame boss/rogue hit paints that exact tracer green.
+            let attackConsumedByPriorityTarget = activeWeaponPath==='ranged'
+              ? false : dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             // Basic swings use attack-speed timing. Timed skill combo hits
             // have their own scheduled spacing and bypass this basic cooldown.
             if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
@@ -3275,6 +3281,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if(activeWeaponPath==='ranged'){
               bowVisuals.fire({origin:model.position,
                 target:bowAimTarget?.point||cameraBowImpactPoint(camera,otsCameraColliders(),BOW_PVE_RANGE)});
+              // The hit event arrives synchronously and colors the just-fired
+              // arrow. The bridge must never do its own separate target test.
+              attackConsumedByPriorityTarget=dispatchRogueAttack(playerDerivedRef,strikeMultiplier,bowAimTarget);
             }
             // PvE bow target range matches the actual reticle trace. Duel
             // validation and its shorter authoritative weapon range stay as is.
@@ -3297,6 +3306,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               lockedEnemyId: lockOnTargetRef.current?.id || pendingSkillStrike?.targetId || null,
               allowEdgeGrace: isSkillStrike,
             });
+            // A failed selection is a real MISS, not a silent shot or a
+            // fabricated hit. Boss/rogue outcomes come from their bridge.
+            if(activeWeaponPath==='ranged'&&aoeRadius===0&&
+               !attackConsumedByPriorityTarget&&targetChoices.length===0)
+              bowVisuals.confirmMiss('MISS');
             // Single-target attacks pick only the leading foe in front of the
             // model; AoE may hit up to 12 living enemies in its radius.
             // Never select a remote player in this PvE path.
@@ -3320,7 +3334,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               !!pendingSkillStrike?.isAerialAttack || !!pendingSkillStrike?.aerial,
             isSkillStrike,
           }) : null;
-          if (strike && strike.kind !== 'hit') spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });
+          if (strike && strike.kind !== 'hit') {
+            spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });
+            if(activeWeaponPath==='ranged'&&aoeRadius===0)
+              bowVisuals.confirmMiss(strike.kind==='dodge'?'DODGED':'MISS');
+          }
           if (strike && strike.kind === 'hit') {
             const dmg = strike.damage;
             const feedbackKind = feedbackKindFromStrike(strike);
@@ -3338,8 +3356,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               sound: selectCombatImpactSound({ kind: feedbackKind, hasSound: hasCombatSound }),
               crit: !!strike.critical, lethal: !!strike.lethal,
             });
-            if(appliedDamage>0&&activeWeaponPath==='ranged')
-              bowVisuals.confirmHit();
+            if(activeWeaponPath==='ranged'&&aoeRadius===0){
+              if(appliedDamage>0)bowVisuals.confirmHit(appliedDamage);
+              else bowVisuals.confirmMiss('MISS');
+            }
             // Additional cutting texture triggers only after the existing
             // combat resolver actually reduces the enemy's HP.
             if(appliedDamage>0&&activeWeaponPath!=='ranged'&&!isRangedClickAttack)
@@ -3986,6 +4006,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(window.__gw3dBowOccluders===bowOccluders)
         window.__gw3dBowOccluders=null;
       window.removeEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
+      window.removeEventListener('game3dVerifiedBowMiss',onBowVerifiedMiss);
       bowVisuals.dispose();
       weaponTrails.dispose();
       enemyTelegraphs.dispose();
