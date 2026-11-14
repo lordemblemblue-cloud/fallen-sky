@@ -66,3 +66,14 @@ test('phone service previews lazy mount to prevent invisible WebGL contexts',()=
   assert.match(source,/observer\.disconnect\(\)/);
   assert.match(source,/visible && \(body/);
 });
+
+test('roster preview uses selected character inventory without switching accounts or characters',()=>{
+  const source=read('src/components/game3d/equipment/SelectedCharacterArmorPreview.jsx');
+  const login=read('src/components/game3d/CharacterLoginScreen.jsx');
+  assert.match(login,/SelectedCharacterArmorPreview key=\{selected\.id\} character=\{selected\}/);
+  assert.match(source,/axe_equipment_inventory_v2::/);
+  assert.match(source,/getStorageUser\(\)/);
+  assert.match(source,/readSelectedCharacterArmor\(character\?\.id\)/);
+  assert.match(source,/reconcileInventoryArmorOverrides/);
+  assert.doesNotMatch(source,/activateAndSyncToHUD\(|equipAXEInventoryItem\(|setStorageUser\(/);
+});
