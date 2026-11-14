@@ -9,8 +9,6 @@ const clamp01=v=>Math.max(0,Math.min(1,v));
 const vec=v=>new THREE.Vector3(v?.x||0,v?.y||0,v?.z||0);
 const tmp=new THREE.Vector3();
 const axis=new THREE.Vector3(0,0,1);
-const next=new THREE.Vector3();
-const prev=new THREE.Vector3();
 
 function featherShape(right){
   const side=right?1:-1;
@@ -55,16 +53,9 @@ function makeBird(){
   return {root,wings,materials:[bodyMaterial,wingMaterial,edgeMaterial,glowMaterial]};
 }
 function releaseBird(item,scene){
-  scene.remove(item.bird.root);
-  item.bird.root.traverse(node=>{if(node.geometry)node.geometry.dispose();});
-  for(const material of item.bird.materials)material.dispose();
-}
-function bezier(p0,p1,p2,p3,t,out){
-  const k=1-t;
-  return out.copy(p0).multiplyScalar(k*k*k)
-    .addScaledVector(p1,3*k*k*t)
-    .addScaledVector(p2,3*k*t*t)
-    .addScaledVector(p3,t*t*t);
+  scene.remove(item.root);
+  item.root.traverse(node=>{if(node.geometry)node.geometry.dispose();});
+  for(const material of [...item.bird.materials,item.traceMaterial])material.dispose();
 }
 function pointLike(position){
   return position&&[position.x,position.y,position.z].every(Number.isFinite);
@@ -110,30 +101,43 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
-  let hitSeconds=0,disposed=false,serial=0;
+  let hitSeconds=0,disposed=false;
   const fire=({origin,target}={})=>{
     if(disposed||!pointLike(origin)||!pointLike(target))return false;
     if(birds.length>=MAX_BIRDS)releaseBird(birds.shift(),scene);
     const p0=vec(origin),p3=vec(target);
     p0.y+=1.45;
-    // The spirit rises into a short swoop, then dives over the final third.
+    // An illuminated trajectory exposes the direct hit test, even on a miss.
     const distance=p0.distanceTo(p3);
     if(distance<.3)return false;
+    // The physical arrow and visual spirit now follow EXACTLY one straight
+    // segment from shoulder-height muzzle to the combat resolver's hit point.
+    // The tracing line is not a separate weapon and cannot grant damage.
     const direction=tmp.copy(p3).sub(p0).normalize();
-    const side=(++serial%2?1:-1)*Math.min(1.1,distance*.045);
-    const p1=p0.clone().lerp(p3,.22).add(new THREE.Vector3(side,Math.min(3,1.1+distance*.075),0));
-    const p2=p0.clone().lerp(p3,.70).add(new THREE.Vector3(-side*.46,Math.min(4,1.7+distance*.035),0));
-    // Favor a quick movement cue rather than a slow enemy-hunting projectile.
     const duration=Math.max(.36,Math.min(.75,distance/75+.28));
     const bird=makeBird();
-    bird.root.position.copy(p0);bird.root.scale.setScalar(.63);
-    scene.add(bird.root);
-    birds.push({bird,p0,p1,p2,p3,duration,elapsed:0});
+    const root=new THREE.Group();
+    bird.root.position.copy(p0);
+    bird.root.quaternion.setFromUnitVectors(axis,direction);
+    bird.root.scale.setScalar(.63);
+    root.add(bird.root);
+    const traceMaterial=new THREE.LineBasicMaterial({
+      color:hitSeconds>0?0x81f6b1:0xffd375,
+      transparent:true,opacity:.93,depthWrite:false,
+      blending:THREE.AdditiveBlending,
+    });
+    const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p0,p3]),traceMaterial);
+    trace.frustumCulled=false;
+    root.add(trace);
+    scene.add(root);
+    birds.push({bird,root,traceMaterial,p0,p3,duration,elapsed:0});
     return true;
   };
   const confirmHit=()=>{
     if(disposed)return;
     hitSeconds=.23;
+    const current=birds[birds.length-1];
+    if(current)current.traceMaterial.color.setHex(0x81f6b1);
   };
   const update=(dt,{active=false,blocked=false}={})=>{
     if(disposed)return;
@@ -149,11 +153,10 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
       const b=birds[i];
       b.elapsed+=delta;
       const t=clamp01(b.elapsed/b.duration);
-      bezier(b.p0,b.p1,b.p2,b.p3,t,b.bird.root.position);
-      bezier(b.p0,b.p1,b.p2,b.p3,Math.min(1,t+.015),next);
-      bezier(b.p0,b.p1,b.p2,b.p3,Math.max(0,t-.015),prev);
-      const tangent=next.sub(prev);
-      if(tangent.lengthSq()>1e-8)b.bird.root.quaternion.setFromUnitVectors(axis,tangent.normalize());
+      b.bird.root.position.lerpVectors(b.p0,b.p3,t);
+      // The whole visible flight remains linear: no Bezier arc, sideways
+      // steer, gravity drop, or curved dive that disagrees with the reticle.
+      b.traceMaterial.opacity=.93*Math.min(1,(1-t)*4);
       b.bird.wings[0].rotation.z=Math.sin(b.elapsed*27)*.38;
       b.bird.wings[1].rotation.z=-Math.sin(b.elapsed*27)*.38;
       b.bird.root.scale.setScalar((.65+.18*Math.sin(Math.PI*t))*Math.min(1,(1-t)*8));
