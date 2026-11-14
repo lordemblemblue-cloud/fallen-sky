@@ -74,6 +74,7 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
   const rarityLabel=rarity==='uncommon'?'Unique':rarity[0].toUpperCase()+rarity.slice(1);
   const displayPrefix=evolutionPath==='rare_elite'?'Rare Elite'
     : evolutionPath==='elite_legendary'?'Elite Legendary'
+    : evolutionPath==='elite_mythic'?'Elite Mythic'
     : evolutionPath==='legendary_mythic'?'Legendary Mythic'
     : rarityLabel;
   const displayName=`${displayPrefix} ${family?family.name+' ':''}${template.name}`;
