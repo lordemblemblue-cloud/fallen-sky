@@ -27,7 +27,7 @@ Run `node --test tests/game3d-clone-adaptive-graphics.test.mjs` and the complete
 
 ## Verification evidence at branch creation
 
-- Six focused source-logic tests executed against the exact committed module in an isolated V8 check: **6 passed / 0 failed** (with URLSearchParams stub matching browser behavior). This is NOT a native Node/npm build, production WebGL render, signed-in Play, or FPS benchmark.
+- Seven focused source-logic tests executed against the exact committed module in an isolated V8 check: **7 passed / 0 failed** (with URLSearchParams stub matching browser behavior). This is NOT a native Node/npm build, production WebGL render, signed-in Play, or FPS benchmark.
 - New JSX wiring and source references were reviewed against clone `main`; new component is mounted by the existing GameView and warmup lifecycle. **Build, GitHub CI, signed-in gameplay, GPU FPS improvement and publishing are not yet verified.**
 - Safe fallback: select **Off (original rendering)** in the GPU/FPS box; browser cache and warmup remain unchanged. If the integration itself fails, revert/close this draft without touching the main or other feature branches.
 
