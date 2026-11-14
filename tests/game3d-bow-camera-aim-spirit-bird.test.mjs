@@ -199,3 +199,26 @@ test('boss/rogue outcomes are explicit and the projectile is created before stri
  assert.match(vfx,/game3dBowResult/);
  assert.match(vfx,/const shotStats=\{fired:0,hits:0,misses:0,lastResolutionMs:null\}/);
 });
+
+test('rapid fire reuses six GPU objects instead of allocating new meshes per arrow',()=>{
+ const scene=new THREE.Scene();
+ const visuals=createGame3DBowAimVisuals({scene,container:{},showDot:false});
+ const origin={x:0,y:0,z:5};
+ const target={x:0,y:1,z:-5};
+ visuals.fire({origin,target});
+ const firstRoot=scene.children[0];
+ const firstLine=firstRoot.children.find(child=>child.isLine);
+ const firstLineGeometry=firstLine.geometry;
+ for(let frame=0;frame<16;frame++)visuals.update(.08,{active:true});
+ assert.equal(scene.children.length,0);
+ visuals.fire({origin,target:{x:.3,y:1,z:-7}});
+ assert.equal(scene.children[0],firstRoot,'expired tracer group should be recycled');
+ assert.equal(scene.children[0].children.find(child=>child.isLine).geometry,firstLineGeometry,
+   'the same GPU vertex buffer must be updated, not replaced');
+ for(let i=0;i<50;i++)visuals.fire({origin,target:{x:(i%3)*.1,y:1,z:-5}});
+ assert.ok(scene.children.length<=6);
+ const before=visuals.stats();
+ assert.equal(before.fired,52);
+ visuals.dispose();
+ assert.equal(scene.children.length,0,'all pooled and active geometry is disposed');
+});
