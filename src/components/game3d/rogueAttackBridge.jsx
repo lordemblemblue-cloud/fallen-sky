@@ -13,10 +13,10 @@ import { computeAXESwing, getAXEEnemyStats } from './axe/balance/AXEPowerBudget'
 import { AXE_TEMPORARY_BONUS_CAP, resolveAXEHeroStrike } from './axe/combat/AXEStrikeRuntime';
 import { getAbilityState, updateTargetHP } from './abilityStore';
 import { updateBoss } from './bossStore';
-import { selectCameraBowTarget } from './combat/BowCameraAim.mjs';
+import { BOW_PVE_RANGE, selectCameraBowTarget } from './combat/BowCameraAim.mjs';
 import { RANGED_ATTACK_RANGE } from './gameWorldConfig';
 
-const BRIDGE_VERSION = 'world-boss-bow-reticle-v5';
+const BRIDGE_VERSION = 'world-boss-straight-bow-tracer-v6';
 const bossShotRaycaster = new THREE.Raycaster();
 const bossAimBox = new THREE.Box3();
 const bossAimCenter = new THREE.Vector3();
@@ -272,7 +272,7 @@ function findBossUnderArrowAim(event) {
   return findBossInCameraAimCone();
 }
 
-function resolveBowPriorityTarget() {
+function resolveBowPriorityTarget(preselectedBowTarget) {
   // One exact crosshair decision for normal enemies, rogues and world bosses.
   // Otherwise the old priority code could damage a distant boss through an
   // enemy directly in front of the bow, or auto-hit a rogue behind the dot.
@@ -285,11 +285,13 @@ function resolveBowPriorityTarget() {
   const enemies=Array.isArray(global?.__gw3dEnemies)?global.__gw3dEnemies:[];
   const occluders=typeof global?.__gw3dBowOccluders==='function'
     ?global.__gw3dBowOccluders():global?.__gw3dBowOccluders||[];
-  const result=selectCameraBowTarget({
+  // GameWorld3D passes its shot result for the whole attack frame. Do not
+  // recompute a different camera ray for the boss/rogue bridge.
+  const result=preselectedBowTarget===undefined ? selectCameraBowTarget({
     camera,origin,enemies:[...enemies,...rogues],bosses,
-    maxRange:RANGED_ATTACK_RANGE,groundMeshes:occluders,
+    maxRange:BOW_PVE_RANGE,groundMeshes:occluders,
     lockedEnemyId:getAbilityState().target?.id,
-  });
+  }) : preselectedBowTarget;
   if(!result)return null;
   if(bosses.includes(result.target))return {kind:'boss',target:result.target};
   if(rogues.includes(result.target))return {kind:'rogue',target:result.target};
@@ -416,11 +418,11 @@ installBossAndBowBridge();
  * camera aim cone, or explicit lock), apply damage to that boss immediately.
  * Otherwise preserve the existing rogue-AI event path and normal enemy combat.
  */
-export function dispatchRogueAttack(playerDerivedRef, skillStrikeMult = 1.0) {
+export function dispatchRogueAttack(playerDerivedRef, skillStrikeMult = 1.0, preselectedBowTarget) {
   lastRangedSkillMultiplier = skillStrikeMult;
 
   const ranged=isRangedWeapon();
-  const bowPriority=ranged?resolveBowPriorityTarget():null;
+  const bowPriority=ranged?resolveBowPriorityTarget(preselectedBowTarget):null;
   const boss=bowPriority?.kind==='boss'?bowPriority.target:null;
   if (boss) {
     const strike = heroStrike(playerDerivedRef, boss, skillStrikeMult, 'boss');
