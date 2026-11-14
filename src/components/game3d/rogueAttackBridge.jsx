@@ -430,8 +430,20 @@ export function dispatchRogueAttack(playerDerivedRef, skillStrikeMult = 1.0, pre
       const applied=applyBossDamage(boss.id,strike.damage,'arrow');
       if(applied>0){
         bossDamagedThisPressId=boss.id;
-        window.dispatchEvent(new CustomEvent('game3dVerifiedBowHit',{detail:{targetId:boss.id}}));
+        window.dispatchEvent(new CustomEvent('game3dVerifiedBowHit',{
+          detail:{targetId:boss.id,damage:applied},
+        }));
+      }else{
+        lastRangedBaseDamage=0;
+        window.dispatchEvent(new CustomEvent('game3dVerifiedBowMiss',{
+          detail:{targetId:boss.id,reason:'MISS'},
+        }));
       }
+    }else{
+      lastRangedBaseDamage=0;
+      window.dispatchEvent(new CustomEvent('game3dVerifiedBowMiss',{
+        detail:{targetId:boss.id,reason:strike.kind==='dodge'?'DODGED':'MISS'},
+      }));
     }
     return true;
   }
@@ -446,8 +458,20 @@ export function dispatchRogueAttack(playerDerivedRef, skillStrikeMult = 1.0, pre
       const applied=applyLockedRogueDamage(rogue.id,strike.damage,'player_attack');
       if(applied>0&&ranged){
         rogueDamagedThisPressId=rogue.id;
-        window.dispatchEvent(new CustomEvent('game3dVerifiedBowHit',{detail:{targetId:rogue.id}}));
+        window.dispatchEvent(new CustomEvent('game3dVerifiedBowHit',{
+          detail:{targetId:rogue.id,damage:applied},
+        }));
+      }else if(ranged){
+        lastRangedBaseDamage=0;
+        window.dispatchEvent(new CustomEvent('game3dVerifiedBowMiss',{
+          detail:{targetId:rogue.id,reason:'MISS'},
+        }));
       }
+    }else if(ranged){
+      lastRangedBaseDamage=0;
+      window.dispatchEvent(new CustomEvent('game3dVerifiedBowMiss',{
+        detail:{targetId:rogue.id,reason:strike.kind==='dodge'?'DODGED':'MISS'},
+      }));
     }
     return true;
   }
