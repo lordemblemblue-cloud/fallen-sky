@@ -220,7 +220,7 @@ export const canAffordMaterials = (cost) => canAfford(cost);
 // The server's record for an item's reinforcement or over-enchant (itemUpgrade,
 // docs/game3d/SERVER_UPGRADES.md): the game rolls on it and keeps the server's result.
 export function setServerUpgradeRecord(service, itemId, record) {
-  if (!itemId || !record) return false;
+  if (!itemId || !record || !getAXEEquipmentItem(itemId)) return false;
   if (service === 'reinforcement') reinforcementState = { ...reinforcementState, [itemId]: { ...record } };
   else if (service === 'over_enchant') overEnchantState = { ...overEnchantState, [itemId]: { ...record } };
   else return false;
