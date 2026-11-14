@@ -111,7 +111,7 @@ function buildReticle(container){
 }
 
 export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
-  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},showNotice:()=>{},stats:()=>({fired:0,hits:0,misses:0,pending:0,lastResolutionMs:null}),update:()=>{},dispose:()=>{}};
+  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},showNotice:()=>{},noteAimTime:()=>{},stats:()=>({fired:0,hits:0,misses:0,pending:0,lastResolutionMs:null}),update:()=>{},dispose:()=>{}};
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
