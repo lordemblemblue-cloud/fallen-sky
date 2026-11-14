@@ -21,7 +21,9 @@ export function layerBodyMask(layerRoot) {
 }
 
 const decoded = { bits: new WeakMap(), band: new WeakMap() };
-const fromBase64 = (b64) => (typeof atob === 'function' ? atob(b64) : Buffer.from(b64, 'base64').toString('binary'));
+const fromBase64 = (b64) => (typeof atob === 'function'
+  ? atob(b64)
+  : globalThis.Buffer.from(b64, 'base64').toString('binary'));
 
 /** One byte per vertex (1 = set) for a mask primitive's `bits` (default) or `band`. */
 export function decodeMaskBits(primitive, key = 'bits') {

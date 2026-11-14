@@ -54,7 +54,7 @@ export const COMPANION_DEFINITIONS = [
   ...Object.values(GAME3D_FACTION_MOUNTS).map(asset => ({
     id: asset.companionId,
     name: asset.name,
-    description: 'Faction-bound rigged pet and rideable companion, using the owner-uploaded skinned GLB.'
+    description: 'Faction-bound rigged pet and rideable companion, using the owner-uploaded skinned GLB.',
     factionId: asset.factionId,
     rarity: 'rare',
     modelUrl: asset.modelUrl,
