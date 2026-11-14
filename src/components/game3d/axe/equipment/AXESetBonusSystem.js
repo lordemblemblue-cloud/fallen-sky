@@ -1,6 +1,7 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
 import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
 import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
+import { AXE_CHOSEN_SET_ID, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
 // Set identity, grade and activation thresholds are separate concepts so Rare,
 // Elite and Heroic versions can share a family without sharing balance values.
 
@@ -37,6 +38,14 @@ const BASE_AXE_SET_DEFINITIONS = Object.freeze({
 // unique contextual effect; four provide a small ordinary stat bonus.
 export const AXE_SET_DEFINITIONS = Object.freeze({
   ...BASE_AXE_SET_DEFINITIONS,
+  [AXE_CHOSEN_SET_ID]: Object.freeze({
+    id: AXE_CHOSEN_SET_ID,
+    name: 'Chosen',
+    allowedGrades: Object.freeze(['chosen']),
+    allowMixedGrades: false,
+    thresholds: Object.freeze({6:Object.freeze({})}),
+    description: 'Six unique Chosen armor pieces: +100% core stats. All six Ascension +4: +200%.',
+  }),
   ...Object.fromEntries(AXE_ARMOR_PACK_SETS.filter(set=>set.pieces.length>=5 &&
     ['rare','elite','legendary'].includes(set.rarity)).map((set,i)=>[
     'AXE_Set_Armor_'+set.id,Object.freeze({
@@ -77,6 +86,9 @@ export function evaluateAXESetBonuses(items = []) {
 
   for (const item of items) {
     if (!item?.equipped || !item.setId) continue;
+    // Chosen is evaluated separately by distinct canonical armor slots and
+    // actual stage records, not by a raw count (six duplicate helms must fail).
+    if (item.setId === AXE_CHOSEN_SET_ID) continue;
     const def = getAXESetDefinition(item.setId);
     if (!def) continue;
 
@@ -128,7 +140,22 @@ export function evaluateAXESetBonuses(items = []) {
     });
   }
 
-  return { stats, activeSets, conditional };
+  const chosen = getAXEChosenSetStatus(items);
+  if (chosen.equippedPieces) activeSets.push({
+    setId: AXE_CHOSEN_SET_ID,
+    setName: 'Chosen',
+    grade: 'chosen',
+    equippedPieces: chosen.equippedPieces,
+    requiredPieces: chosen.requiredPieces,
+    ascendedPieces: chosen.ascendedPieces,
+    missingSlots: chosen.missingSlots,
+    itemIds: chosen.itemIds,
+    activeThresholds: chosen.complete ? [6] : [],
+    conditionalBonuses: {},
+    chosenBonusPct: chosen.bonusPct,
+    nextThreshold: chosen.complete ? null : 6,
+  });
+  return { stats, activeSets, conditional, chosen };
 }
 
 // Contextual modifiers are applied at strike resolution, NEVER as a global
