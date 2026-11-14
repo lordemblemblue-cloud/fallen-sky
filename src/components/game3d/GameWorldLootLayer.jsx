@@ -58,9 +58,10 @@ export default function GameWorldLootLayer() {
   // 2. `multiplayerLocalAction` with kind=enemy_killed (fallback: look up pos in scene)
   useEffect(() => {
     const handleDrop = (e) => {
-      const { enemyId, tier, isBoss, x, y, z } = e.detail || {};
+      const { enemyId, tier, isBoss, x, y, z, enemyLevel, level } = e.detail || {};
       if (!enemyId) return;
-      spawnDrops(tier || 'normal', !!isBoss, x ?? 0, y ?? 0, z ?? 0, enemyId);
+      spawnDrops(tier || 'normal', !!isBoss, x ?? 0, y ?? 0, z ?? 0, enemyId,
+        enemyLevel ?? level ?? null);
     };
 
     const handleMultiplayer = (e) => {
@@ -76,7 +77,8 @@ export default function GameWorldLootLayer() {
           }
         });
       }
-      spawnDrops('normal', false, ex, ey, ez, d.enemy_id);
+      spawnDrops('normal', false, ex, ey, ez, d.enemy_id,
+        d.enemy_level ?? d.enemyLevel ?? null);
     };
 
     window.addEventListener('enemyLootDrop', handleDrop);
@@ -87,7 +89,7 @@ export default function GameWorldLootLayer() {
     };
   }, []);
 
-  const spawnDrops = (tier, isBoss, x, y, z, enemyId = 'unknown') => {
+  const spawnDrops = (tier, isBoss, x, y, z, enemyId = 'unknown', enemyLevel = null) => {
     const hostState = getHostState();
     const authorityTag = hostState.myId
       ? (isHost() ? `host:${hostState.myId}` : `replica:${hostState.hostId || 'pending'}`)
@@ -96,16 +98,17 @@ export default function GameWorldLootLayer() {
     // remains the authoritative source when multiplayer identity is available.
     const rng = createAXESeededRng(`${enemyId}:${tier}:${isBoss ? 'boss' : 'mob'}`);
     const rolled = rollEnemyDrops(tier, isBoss, { rng, authorityTag });
+    const playerLevel = getPlayerHUD()?.level || 1;
+    // Prefer the killed mob's actual level when present. Legacy events don't
+    // always include it; their existing player-level fallback is preserved.
+    const dropLevel = Number.isFinite(Number(enemyLevel)) && Number(enemyLevel) >= 1
+      ? Math.floor(Number(enemyLevel)) : playerLevel;
     const gearDrop = rollAXEEquipmentDrop(tier, isBoss, {
-      rng,
-      playerLevel: getPlayerHUD()?.level || 1,
-      sourceId: enemyId,
+      rng, playerLevel, enemyLevel: dropLevel, sourceId: enemyId,
     });
     // One extra, rarer roll for an armor-pack piece (table in axe/loot/AXEArmorLootSystem.js), same seeded rng.
     const armorDrop = rollAXEArmorDrop(tier, isBoss, {
-      rng,
-      playerLevel: getPlayerHUD()?.level || 1,
-      sourceId: enemyId,
+      rng, playerLevel, enemyLevel: dropLevel, sourceId: enemyId,
     });
     const combined = [...rolled, ...(gearDrop ? [gearDrop] : []), ...(armorDrop ? [armorDrop] : [])];
     if (combined.length === 0) return;
