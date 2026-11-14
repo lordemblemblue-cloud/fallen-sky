@@ -111,7 +111,7 @@ function buildReticle(container){
 }
 
 export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
-  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},stats:()=>({fired:0,hits:0,misses:0,pending:0,lastResolutionMs:null}),update:()=>{},dispose:()=>{}};
+  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},showNotice:()=>{},stats:()=>({fired:0,hits:0,misses:0,pending:0,lastResolutionMs:null}),update:()=>{},dispose:()=>{}};
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
@@ -194,6 +194,14 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     const label=['DODGED','BLOCKED','OUT OF RANGE','NO TARGET'].includes(reason)?reason:'MISS';
     setResult(label,0xff5d65);
   };
+  const showNotice=(message)=>{
+    if(disposed||!overlay)return;
+    // No arrow was fired; do not recolor the previous shot or add a MISS.
+    const label=['COOLDOWN','NO STAMINA'].includes(message)?message:'WAIT';
+    resultSeconds=.65;
+    overlay.result.textContent=label;
+    overlay.result.style.color='#ffdda0';
+  };
   const update=(dt,{active=false,blocked=false}={})=>{
     if(disposed)return;
     const delta=Math.max(0,Math.min(Number(dt)||0,.08));
@@ -230,7 +238,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     birds.splice(0).forEach(item=>releaseBird(item,scene));
     overlay?.host.remove();
   };
-  return {fire,confirmHit,confirmMiss,update,dispose,
+  return {fire,confirmHit,confirmMiss,showNotice,update,dispose,
     stats:()=>({
       ...shotStats,
       pending:Math.max(0,shotStats.fired-shotStats.hits-shotStats.misses),
