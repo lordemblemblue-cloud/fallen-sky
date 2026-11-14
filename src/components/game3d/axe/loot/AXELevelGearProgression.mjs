@@ -64,7 +64,9 @@ export function getAXELevelRarityWeights(level = 1, { enemyTier = 'normal', isBo
   const ranks = ['common','uncommon','rare','elite','legendary','mythic'];
   for (const grade of Object.keys(weights)) weights[grade] *= Math.pow(threat, ranks.indexOf(grade));
   if (l >= 180 && threat > 1) {
-    weights.mythic = isBoss || enemyTier === 'boss' || enemyTier === 'worldBoss' ? 3 : 0.6;
+    // ~8% of high-level boss equipment rolls, before the much smaller
+    // per-kill equipment-drop chance; rare enough for collection farming.
+    weights.mythic = isBoss || enemyTier === 'boss' || enemyTier === 'worldBoss' ? 48 : 12;
   }
   return weights;
 }
