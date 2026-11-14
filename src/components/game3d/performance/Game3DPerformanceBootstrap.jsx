@@ -1,4 +1,6 @@
 import { useEffect } from 'react';
+import { createCloneAdaptiveGraphics } from './AdaptiveGraphics.mjs';
+import CloneHardwarePanel from './CloneHardwarePanel.jsx';
 import { createGame3DSceneWarmup } from './SceneWarmup.mjs';
 
 // GameView is outside /game3d/, so its browser client requires a root
@@ -18,22 +20,31 @@ async function registerPublicGameAssetCache() {
   } catch { /* Optional cache: network-only play remains valid. */ }
 }
 
-export default function Game3DPerformanceBootstrap({ region }) {
+export default function Game3DPerformanceBootstrap({ region, showPanel = false }) {
   useEffect(() => {
     registerPublicGameAssetCache();
     let activeScene = null;
+    let activeRenderer = null;
     let warmup = null;
+    let adaptive = null;
     let stopped = false;
     const attach = () => {
       if (stopped) return;
       const { __gw3dScene: scene, __gw3dRenderer: renderer, __gw3dCamera: camera } = window;
-      if (scene === activeScene && warmup) return;
+      if (scene === activeScene && renderer === activeRenderer && warmup && adaptive) return;
       warmup?.dispose();
+      adaptive?.dispose();
+      if (window.__axe3dCloneGovernor === adaptive) window.__axe3dCloneGovernor = null;
       warmup = null;
+      adaptive = null;
       activeScene = null;
+      activeRenderer = null;
       if (!scene || !renderer || !camera) return;
       activeScene = scene;
+      activeRenderer = renderer;
       warmup = createGame3DSceneWarmup({ scene, camera, renderer });
+      adaptive = createCloneAdaptiveGraphics({ renderer });
+      window.__axe3dCloneGovernor = adaptive;
     };
     const interval = window.setInterval(attach, 900);
     window.addEventListener('gw3dSceneReady', attach);
@@ -45,7 +56,9 @@ export default function Game3DPerformanceBootstrap({ region }) {
       window.removeEventListener('gw3dSceneReady', attach);
       window.removeEventListener('gw3dSceneTeardown', attach);
       warmup?.dispose();
+      adaptive?.dispose();
+      if (window.__axe3dCloneGovernor === adaptive) window.__axe3dCloneGovernor = null;
     };
   }, [region]);
-  return null;
+  return <CloneHardwarePanel visible={showPanel} />;
 }
