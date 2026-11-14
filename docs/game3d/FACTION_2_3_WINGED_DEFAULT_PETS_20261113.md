@@ -26,6 +26,7 @@ New character faction assignment uses `getGame3DStarterMountDefinitionId(faction
 - `factionPetAnimationRigs.mjs` contains anatomy-specific mappings for all four quadruped legs, pelvis, spine, neck and head. Runtime `mountAnimations.mjs` uses the **existing inspected baby-wolf `Take 001` walking and running sections**, retargeted in world/bind-pose space, and retains each new model's embedded idle animation for tail/head/wing movement.
 - The native tail/wing quaternion tracks are overlaid onto retargeted walk/run actions, so wings and tail can still move during locomotion. The fallback is a bounded procedural quadruped gait with native idle if the baby-wolf source cannot load.
 - Both local Play and remote-player companion managers already use `prepareMountAnimationClips`. Each remote player gets an independent skeleton clone and mixer.
+- If either new Base44 GLB URL fails to load, the local world and remote-player manager use the retained `previousModelUrl` and the original animation-rig profile instead of leaving that player's creature invisible. This is a network/asset fallback, not a claim that the new clips failed verification.
 
 ## Verification
 
