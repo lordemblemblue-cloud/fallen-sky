@@ -97,7 +97,7 @@ import {selectWolfveilGroundedEnemySpawns} from './wolfveil/WolfveilEnemySpawns.
 import {createWolfveilZombieHordeRuntime} from './wolfveil/WolfveilZombieHordeRuntime.js';
 import {zombieAttackLevel} from './wolfveil/WolfveilZombieCamps.mjs';
 import {WOLFVEIL_ADMIN_C1_MODEL,WOLFVEIL_ADMIN_C1_ANIMATIONS} from './wolfveil/WolfveilEnemyAssets.mjs';
-import {clone as cloneSkinnedEnemy} from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
 import { broadcastEnemyKill } from './enemyRespawnManager';
 import PlayerInteractionMenu from './PlayerInteractionMenu';
 import { handleMiddleClick } from './middleClickHandler';
@@ -691,6 +691,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     // Shared FBX loader (used for player + enemies + quest NPCs)
     const loader = new FBXLoader();
+    // One reusable FBX source per world; each actor gets its own skeleton.
+    const creatureSource = createSharedSkinnedFBXSpawner(loader, CREATURE_MODEL_URL);
+    // Load ahead of later quest spawns, without blocking the first frame.
+    if (region === 'wolfveil') {
+      const warm = () => { void creatureSource.warm().catch(() => {}); };
+      if (typeof requestIdleCallback === 'function') requestIdleCallback(warm, { timeout: 3000 });
+      else setTimeout(warm, 1500);
+    }
     const clock = new THREE.Clock();
     const playerModelRef = { current: null };
 
@@ -1138,18 +1146,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           fbx=>resolve(fbx.animations?.[0]||null),undefined,
           error=>{console.warn('C1 '+role+' FBX animation unavailable',error);resolve(null);}))
       ])):null;
-    // One owner FBX load, cloned per enemy by SkeletonUtils to retain bones.
-    const wolfveilEnemyModelPromise=region==='wolfveil'&&enemySpawnDefinitions.length
-      ?new Promise(resolve=>loader.load(WOLFVEIL_ADMIN_C1_MODEL.modelUrl,resolve,undefined,
-        error=>{console.warn('Wolfveil C1 enemy model unavailable',error);resolve(null);}))
+    // C1's owner-approved rig is reused independently of the legacy creature.
+    const wolfveilEnemySource=region==='wolfveil'&&enemySpawnDefinitions.length
+      ?createSharedSkinnedFBXSpawner(loader,WOLFVEIL_ADMIN_C1_MODEL.modelUrl)
       :null;
-    const loadVisibleCreature=onLoaded=>{
-      if(wolfveilEnemyModelPromise){
-        wolfveilEnemyModelPromise.then(fbx=>{
-          if(fbx)onLoaded(cloneSkinnedEnemy(fbx));
-        });
-      }else loader.load(CREATURE_MODEL_URL,onLoaded);
-    };
+    const loadVisibleCreature=onLoaded=>
+      (wolfveilEnemySource||creatureSource).spawn(onLoaded,
+        error=>console.warn('Game 3D enemy model unavailable',error));
     enemySpawnDefinitions.forEach((spawn) => {
       loadVisibleCreature((fbx) => {
         const enemyModel = fbx;
@@ -1176,10 +1179,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if (node.material) {
               // Skinned-geometry clones can share materials by default.
               // Give each Wolfveil enemy independent fade/appearance state.
-              if(region==='wolfveil'){
-                node.material=Array.isArray(node.material)
-                  ?node.material.map(m=>m.clone()):node.material.clone();
-              }
+              // Cloned enemies share geometry but not mutable death-fade materials.
+              node.material=Array.isArray(node.material)
+                ?node.material.map(m=>m.clone()):node.material.clone();
               const mats = Array.isArray(node.material) ? node.material : [node.material];
               mats.forEach((m) => tintMaterials.push(m));
             }
@@ -1526,7 +1528,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       });
 
       // Wire up the quest enemy spawner — set on the ref so the React layer can call it
-      spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount });
+      spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource });
       window.__gw3dSpawnQuestEnemies = spawnQuestEnemiesRef.current;
 
       // Load player animation clips once — bind to player AND reuse for quest NPC idle
@@ -3891,6 +3893,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       weaponTrails.dispose();
       enemyTelegraphs.dispose();
       avatarLoadDisposed=true;
+      creatureSource.dispose();
+      wolfveilEnemySource?.dispose();
       haloVisualRuntime?.dispose?.();
       haloVisualRuntime = null;
       fusionVisualRuntime?.dispose?.();
