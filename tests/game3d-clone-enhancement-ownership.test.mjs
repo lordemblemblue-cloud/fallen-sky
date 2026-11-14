@@ -40,3 +40,43 @@ test('a delayed server reply cannot reintroduce enhancement state for a deleted 
   assert.equal(setServerUpgradeRecord('reinforcement', 'unowned', { percent: 5 }), false);
   assert.equal(setServerUpgradeRecord('over_enchant', 'unowned', { level: 1 }), false);
 });
+
+test('an owned Crescent Moon piece can still reinforce and persist its 5% bonus', () => {
+  const name = 'reinforceItem';
+  const start = code.indexOf(`export const ${name} = `);
+  const end = code.indexOf('\n};', start);
+  assert.ok(start >= 0 && end > start);
+  const declaration = code.slice(start, end + 3).replace(/^export const /, 'const ');
+  const item = {
+    instanceId: 'dev_crescent_moon_chest',
+    baseStats: { defense: 4, maxHP: 24 },
+  };
+  let charges = 0;
+  let notifications = 0;
+  const create = new Function(
+    'getAXEEquipmentItem', 'getReinforcementCost', 'canAfford', 'getItemReinforcement',
+    'resolveReinforcement', 'consume', 'reinforcementState', 'emit',
+    `${declaration}\nreturn { run: reinforceItem, state: () => reinforcementState };`,
+  );
+  const api = create(
+    (id) => id === item.instanceId ? item : null,
+    () => ({ mat_reinforce: 1 }),
+    () => true,
+    () => ({ percent: 0 }),
+    (previous, { item: selected }) => {
+      assert.equal(selected, item);
+      assert.equal(previous.percent, 0);
+      return { ok: true, outcome: 'success', record: { percent: 5 } };
+    },
+    () => { charges++; return { ok: true }; },
+    {},
+    () => { notifications++; },
+  );
+  const result = api.run(item.instanceId, { roll: 0 });
+  assert.equal(result.ok, true);
+  assert.equal(result.record.percent, 5);
+  assert.equal(api.state()[item.instanceId].percent, 5);
+  assert.equal(charges, 1);
+  assert.equal(notifications, 1);
+  assert.equal(item.baseStats.defense * (1 + result.record.percent / 100), 4.2);
+});
