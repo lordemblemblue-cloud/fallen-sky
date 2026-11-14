@@ -111,11 +111,16 @@ function buildReticle(container){
 }
 
 export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
-  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},update:()=>{},dispose:()=>{}};
+  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},stats:()=>({fired:0,hits:0,misses:0,pending:0,lastResolutionMs:null}),update:()=>{},dispose:()=>{}};
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
   let hitSeconds=0,resultSeconds=0,disposed=false;
+  // Local-only diagnostic counters: no uploads, console spam or new per-shot
+  // timers. A shot resolves on the same combat frame or remains pending.
+  const shotStats={fired:0,hits:0,misses:0,lastResolutionMs:null};
+  let shotStartedAt=null,shotSerial=0,resolvedSerial=0;
+  const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
   const fire=({origin,target}={})=>{
     if(disposed||!pointLike(origin)||!pointLike(target))return false;
     if(birds.length>=MAX_BIRDS)releaseBird(birds.shift(),scene);
@@ -155,11 +160,20 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     root.add(shaft);
     scene.add(root);
     birds.push({bird,root,traceMaterial,shaftMaterial,p0,p3,duration,elapsed:0});
+    shotStartedAt=now();
+    shotSerial+=1;
+    shotStats.fired+=1;
     return true;
   };
   const setResult=(label,color)=>{
     if(disposed)return;
     resultSeconds=.9;
+    if(shotSerial>resolvedSerial){
+      resolvedSerial=shotSerial;
+      if(color===0x81f6b1)shotStats.hits+=1;
+      else shotStats.misses+=1;
+      shotStats.lastResolutionMs=shotStartedAt===null?null:Math.max(0,now()-shotStartedAt);
+    }
     const current=birds[birds.length-1];
     if(current){
       current.traceMaterial.color.setHex(color);
@@ -216,5 +230,10 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     birds.splice(0).forEach(item=>releaseBird(item,scene));
     overlay?.host.remove();
   };
-  return {fire,confirmHit,confirmMiss,update,dispose};
+  return {fire,confirmHit,confirmMiss,update,dispose,
+    stats:()=>({
+      ...shotStats,
+      pending:Math.max(0,shotStats.fired-shotStats.hits-shotStats.misses),
+    }),
+  };
 }
