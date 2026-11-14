@@ -58,6 +58,7 @@ export const COMPANION_DEFINITIONS = [
     factionId: asset.factionId,
     rarity: 'rare',
     modelUrl: asset.modelUrl,
+    previousModelUrl: asset.previousModelUrl || null,
     modelFormat: 'glb',
     // Faction 1 still uses the verified original dog-cycle retarget. Uploaded
     // Faction 2/3 winged pets preserve native idle/tail/wing animation and
