@@ -426,3 +426,17 @@
 }
 .axe-service-workspace--companion .axe-comp-header-favorite:disabled {opacity:.35;cursor:not-allowed;}
 .axe-service-workspace--companion .axe-comp-header-close {margin-left:0;}
+
+/* Companion's left/right section rail uses the same gold-glass scrollbar. */
+.axe-service-workspace--companion .axe-comp-tabs {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(225,188,125,.88) transparent;
+  overscroll-behavior-x:contain;
+}
+.axe-service-workspace--companion .axe-comp-tabs::-webkit-scrollbar {height:6px;}
+.axe-service-workspace--companion .axe-comp-tabs::-webkit-scrollbar-track {background:transparent;}
+.axe-service-workspace--companion .axe-comp-tabs::-webkit-scrollbar-thumb {
+  background:linear-gradient(90deg,#d6ae72,#f5dfad,#d6ae72);
+  border:1px solid transparent; border-radius:999px;
+}
+.axe-service-workspace--companion .axe-comp-tabs::-webkit-scrollbar-button {display:none;}
