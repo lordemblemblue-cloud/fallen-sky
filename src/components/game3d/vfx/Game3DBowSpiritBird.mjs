@@ -55,7 +55,7 @@ function makeBird(){
 function releaseBird(item,scene){
   scene.remove(item.root);
   item.root.traverse(node=>{if(node.geometry)node.geometry.dispose();});
-  for(const material of [...item.bird.materials,item.traceMaterial])material.dispose();
+  for(const material of [...item.bird.materials,item.traceMaterial,item.shaftMaterial])material.dispose();
 }
 function pointLike(position){
   return position&&[position.x,position.y,position.z].every(Number.isFinite);
@@ -129,15 +129,28 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p0,p3]),traceMaterial);
     trace.frustumCulled=false;
     root.add(trace);
+    // WebGL often renders wide lines as a single pixel. A faint narrow tube
+    // makes the same straight debug path visible on high-density displays.
+    const shaftMaterial=new THREE.MeshBasicMaterial({
+      color:hitSeconds>0?0x81f6b1:0xffd375,transparent:true,
+      opacity:.38,depthWrite:false,blending:THREE.AdditiveBlending,
+    });
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,distance,5,1),shaftMaterial);
+    shaft.position.copy(p0).add(p3).multiplyScalar(.5);
+    shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
+    root.add(shaft);
     scene.add(root);
-    birds.push({bird,root,traceMaterial,p0,p3,duration,elapsed:0});
+    birds.push({bird,root,traceMaterial,shaftMaterial,p0,p3,duration,elapsed:0});
     return true;
   };
   const confirmHit=()=>{
     if(disposed)return;
     hitSeconds=.23;
     const current=birds[birds.length-1];
-    if(current)current.traceMaterial.color.setHex(0x81f6b1);
+    if(current){
+      current.traceMaterial.color.setHex(0x81f6b1);
+      current.shaftMaterial.color.setHex(0x81f6b1);
+    }
   };
   const update=(dt,{active=false,blocked=false}={})=>{
     if(disposed)return;
@@ -157,6 +170,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
       // The whole visible flight remains linear: no Bezier arc, sideways
       // steer, gravity drop, or curved dive that disagrees with the reticle.
       b.traceMaterial.opacity=.93*Math.min(1,(1-t)*4);
+      b.shaftMaterial.opacity=.38*Math.min(1,(1-t)*4);
       b.bird.wings[0].rotation.z=Math.sin(b.elapsed*27)*.38;
       b.bird.wings[1].rotation.z=-Math.sin(b.elapsed*27)*.38;
       b.bird.root.scale.setScalar((.65+.18*Math.sin(Math.PI*t))*Math.min(1,(1-t)*8));
