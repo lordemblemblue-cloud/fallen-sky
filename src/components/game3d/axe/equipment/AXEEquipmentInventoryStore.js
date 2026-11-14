@@ -15,7 +15,7 @@ import {
 } from './AXEEquipmentSystem';
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
-const CURRENT_STARTER_CATALOG_VERSION = 2;
+const CURRENT_STARTER_CATALOG_VERSION = 3;
 
 function seedItems() {
   return Object.entries(INVENTORY).flatMap(([category, items]) =>
