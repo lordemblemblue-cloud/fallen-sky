@@ -5,6 +5,9 @@ import {
   equipAXEInventoryItem, unequipAXEInventoryItem,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
+import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
+import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
+import { subscribeEnchantments } from '../../equipment/enchantmentStore';
 import { getCompanionState, subscribeCompanion, equipCompanionGear, unequipCompanionGear }
   from '../../companionStore';
 import { COMPANION_GEAR, getCompanionById } from '../../companionData';
@@ -24,8 +27,6 @@ export const PLAYER_DISPLAY_SLOTS = Object.freeze([
 ]);
 const fmt = value => Number(value || 0).toLocaleString('en-US',{maximumFractionDigits:2});
 const caption = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g, m=>m.toUpperCase());
-const values = item => Object.entries({...(item?.baseStats || item?.stats || {}),
-  ...(item?.rolledStats || {})}).filter(([,v]) => Number.isFinite(Number(v)) && Number(v));
 function useLive(subscribe, get) {
   const [state,setState] = useState(get);
   useEffect(() => subscribe(setState), [subscribe]);
@@ -44,6 +45,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
   const companion = useLive(subscribeCompanion,getCompanionState);
+  // This snapshot notifies Appearance immediately when Blacksmith finishes an
+  // upgrade and rehydrates on a character switch.
+  const enhancements = useLive(subscribeEnchantments, () => ({
+    reinforcement: {}, enchantments: {}, overEnchant: {},
+  }));
   const [selectedId,setSelectedId] = useState(null);
   const [filter,setFilter] = useState('All');
   const [focusedSlot,setFocusedSlot] = useState('');
@@ -65,6 +71,14 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const selected = visible.find(item => (item.instanceId || item.id) === selectedId) || visible[0] || null;
   const isEquipped = selected && (isPlayer ? !!selected.equipped
     : companion.gear?.[activeCompanion?.id]?.[selected.slot] === selected.id);
+  const selectedInstanceId = selected?.instanceId;
+  const enhancementMultiplier = isPlayer && selectedInstanceId
+    ? getAXEEnhancementStatMultiplier({
+      reinforcement: enhancements?.reinforcement?.[selectedInstanceId],
+      enchantments: enhancements?.enchantments?.[selectedInstanceId],
+      overEnchant: enhancements?.overEnchant?.[selectedInstanceId],
+    }) : 1;
+  const itemStats = getAXEEquipmentDisplayStats(selected, enhancementMultiplier);
   const displaySlots = isPlayer ? PLAYER_DISPLAY_SLOTS :
     (activeCompanion?.gearSlots || []).map(slot => [slot,0]);
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
@@ -173,10 +187,17 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             <div className="axe-glass-item-hero"><IconFor item={selected} size={43}/>
               <div><strong>{selected.name}</strong><small>{caption(selected.slot)} · {caption(selected.rarity || 'common')}</small></div>
             </div>
-            <h4>Item Stats</h4>
-            {values(selected).map(([key,value])=><div className="axe-app-bonus-row" key={key}>
-              <span>{caption(key)}</span><b>+{fmt(value)}</b></div>)}
-            {!values(selected).length && <p className="axe-app-description">No stat modifiers on this piece.</p>}
+            <h4>Item Stats <small>{isPlayer ? 'Reinforcement + enchantments' : 'Base stats'}</small></h4>
+            {itemStats.map(({stat,base,current,difference})=><div className="axe-app-bonus-row" key={stat}>
+              <span>{caption(stat)}</span><b>+{fmt(current)}
+                {difference !== 0 && <small className="axe-glass-base-stat" title="Value before reinforcement, enchantment and over-enchant">Base +{fmt(base)}</small>}
+              </b>
+            </div>)}
+            {!itemStats.length && <p className="axe-app-description">No stat modifiers on this piece.</p>}
+            {isPlayer && enhancementMultiplier > 1 && <p className="axe-app-description axe-glass-upgrade-preview">
+              Equipment enhancement ×{fmt(enhancementMultiplier)} applied to flat item stats.
+              Other bonuses (gems, soul, sets and advancement) are calculated separately in combat.
+            </p>}
             {isPlayer && <div className="axe-glass-set-display">
               <h4>Equipment Set <small>{equipped.length} equipped</small></h4>
               <div className="axe-glass-ten-slots">
