@@ -63,3 +63,14 @@
   .axe-glass-loadout>.axe-app-main-stack {grid-column:1/3;grid-row:2;min-height:300px;}
   .axe-glass-loadout>.axe-app-right-stack {grid-column:1/3;grid-row:3;}
 }
+
+/* The equipment details panel reflects the same local upgrade records that
+   Blacksmith uses, without pretending to include full character-wide bonuses. */
+.axe-glass-loadout-details .axe-app-bonus-row b {text-align:right;}
+.axe-glass-base-stat {display:block;margin-top:2px;
+  color:#c2cbd1;font:10px/1.3 Georgia,serif;white-space:nowrap;}
+.axe-glass-upgrade-preview {
+  margin:8px 0 5px;padding:8px 9px;border:1px solid #c8a97961;
+  background:rgba(31,55,63,.42);border-radius:7px;
+  color:#ddedcf;font:11px/1.45 Georgia,serif;
+}
