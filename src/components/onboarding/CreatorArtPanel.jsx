@@ -1,7 +1,0 @@
-import { GENRE_DIRECTIONS, CULTURAL_INSPIRATIONS } from '@/components/onboarding/creatorCultures';
-import { AVATAR_STYLE_PRESETS } from '@/components/onboarding/genesisAssets';
-export default function CreatorArtPanel({config,setConfig,section}) {
- const set=patch=>setConfig(current=>({...current,...patch}));
- if(section==='style')return <div className="creator-style-grid">{AVATAR_STYLE_PRESETS.map(style=><button type="button" key={style.id} aria-pressed={config.style_preset===style.id} onClick={()=>set({style_preset:style.id})}><span><strong>{style.name}</strong><small>{style.short}</small></span></button>)}</div>;
- return <><section className="creator-group"><h3>World direction</h3><div className="creator-chips">{GENRE_DIRECTIONS.map(item=><button type="button" key={item.id} aria-pressed={config.genre_direction===item.id} onClick={()=>set({genre_direction:item.id})}>{item.label}</button>)}</div></section><section className="creator-group"><h3>Cultural inspirations</h3><div className="creator-base-grid">{CULTURAL_INSPIRATIONS.map(item=><button type="button" key={item.id} aria-pressed={config.cultural_inspirations?.includes(item.id)||false} onClick={()=>setConfig(current=>({...current,cultural_inspirations:current.cultural_inspirations?.includes(item.id)?current.cultural_inspirations.filter(id=>id!==item.id):[...(current.cultural_inspirations||[]),item.id]}))}><strong>{item.label}</strong></button>)}</div></section></>;
-}

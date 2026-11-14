@@ -13,11 +13,11 @@ test('Game 3D host provides legacy navigation context inside TanStack client bou
 
 test('Eve and Adam are the canonical local Game 3D creator choices',()=>{
   const creator=source('src/components/onboarding/avatarCustomization.js');
-  const options=source('src/components/onboarding/creatorOptions.js');
   const dialog=source('src/components/onboarding/AvatarAppearanceDialog.jsx');
   assert.match(creator,/'fused-female-v1':[\s\S]*?Female_Fused_v2\.glb/);
   assert.match(creator,/'fused-male-v1':[\s\S]*?Male_Fused_v2\.glb/);
-  assert.match(options,/\.\.\.Object\.values\(CREATOR_BODIES\)/);
+  assert.match(creator,/'fused-female-v1':\{[\s\S]*?label:'Eve'/);
+  assert.match(creator,/'fused-male-v1':\{[\s\S]*?label:'Adam'/);
   assert.match(dialog,/localOnly\?\{gender:'male',creator_body:'fused-male-v1'\}/);
 });
 
