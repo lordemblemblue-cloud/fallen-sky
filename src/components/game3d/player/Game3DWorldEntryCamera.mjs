@@ -27,7 +27,9 @@ export function createGame3DWorldEntryCamera({
   const arc=Number.isFinite(arcRadians)?arcRadians:Math.PI*.78;
   return {
     isActive:()=>active,
-    start:()=>{elapsed=0;from=previewPose;active=true;},
+    // Movement, combat and click-to-move are all refused while this camera is
+    // active, so a handoff that was never requested must never engage it.
+    start:()=>{if(!enabled)return;elapsed=0;from=previewPose;active=true;},
     cancel:()=>{active=false;elapsed=0;from=null;previewPose=null;},
     // Start/Faction: wider distant angle under the fading right-side shade.
     // Create: smoothly dolly to a flattering frontal body view.
@@ -64,8 +66,14 @@ export function createGame3DWorldEntryCamera({
     // final behind-player pose; interpolate from the EXACT previous portrait,
     // terrain-clipping every shot. On completion leave that normal pose intact.
     update(delta,{camera,model,clipAgainstTerrain}={}) {
-      if(!active||!camera?.position||!model?.position)return false;
+      if(!active)return false;
       elapsed+=deltaTime(delta);
+      // With no actor to frame the handoff still has to finish: input stays
+      // blocked for as long as it reports active.
+      if(!camera?.position||!model?.position){
+        if(elapsed>=seconds){active=false;from=null;previewPose=null;}
+        return false;
+      }
       const progress=clamp01(elapsed/seconds);
       if(progress>=1){active=false;from=null;previewPose=null;return false;}
       const eased=smooth(progress),player=model.position;

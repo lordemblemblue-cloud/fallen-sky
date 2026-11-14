@@ -199,6 +199,22 @@ export default function GameView() {
   },[phase]);
   useEffect(()=>{entryAudioRef.current?.setRegion(worldRegion);},[worldRegion]);
   useEffect(()=>{if(phase==='login')teardownCombatMusic();},[phase]);
+  // Returning to character selection must not carry an open in-world panel back
+  // into the next world entry. Services, Character, the store, friends, clan and
+  // the pause menu all keep the game's input flags set, so the re-entered world
+  // ignored WASD until that panel was clicked closed again.
+  useEffect(()=>{
+    if(phase!=='login')return;
+    services.controller.close();
+    setPauseMenuOpen(false);
+    setStoreOpen(false);
+    setProgressionOpen(false);
+    setRequestedService(null);
+    setRequestedServiceItemId(null);
+    setRequestedCharacterTab(null);
+    setFriendsListOpen(false);
+    setClanOverlayOpen(false);
+  },[phase,services.controller]);
 
   // Tear down combat audio when leaving GameView entirely.
   useEffect(() => () => teardownCombatMusic(), []);

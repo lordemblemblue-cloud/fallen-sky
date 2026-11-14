@@ -23,6 +23,32 @@ const ease=t=>t*t*(3-2*t);
 // duplicate copy of the same track on top of the one already playing.
 let liveTransport=null;
 
+// The title/world theme is ONE pair of media elements for the whole app, so a
+// re-entry can never start a second copy of the same track beside one that is
+// already playing.
+let sharedMedia=null;
+
+function releaseSharedMedia(){
+  if(!sharedMedia)return;
+  for(const audio of [sharedMedia.intro,sharedMedia.nature]){
+    try{audio.pause();audio.removeAttribute?.('src');audio.load?.();}catch{}
+  }
+  sharedMedia=null;
+}
+
+function acquireSharedMedia(themeUrl,natureUrl,createAudio){
+  if(sharedMedia&&sharedMedia.themeUrl===themeUrl&&sharedMedia.natureUrl===natureUrl)
+    return sharedMedia;
+  releaseSharedMedia();
+  const intro=createAudio(themeUrl),nature=createAudio(natureUrl);
+  intro.loop=false;
+  nature.loop=true;
+  intro.preload='auto';nature.preload='auto';
+  intro.volume=0;nature.volume=0;
+  sharedMedia={themeUrl,natureUrl,intro,nature};
+  return sharedMedia;
+}
+
 export function createGame3DEntryAudio({
   themeUrl=GAME3D_LOGIN_THEME_URL,
   natureUrl=GAME3D_NATURE_AMBIENCE_URL,
@@ -36,11 +62,9 @@ export function createGame3DEntryAudio({
 }={}){
   // A previous transport must go silent before this one starts.
   try{liveTransport?.dispose();}catch{}
-  const intro=createAudio(themeUrl),nature=createAudio(natureUrl);
-  intro.loop=false;
-  nature.loop=true;
-  intro.preload='auto';nature.preload='auto';
-  intro.volume=0;nature.volume=0;
+  // Reuse the one shared pair: a re-entry inherits the same element instead of
+  // layering a second copy of the track over the first.
+  const {intro,nature}=acquireSharedMedia(themeUrl,natureUrl,createAudio);
   let volume=clamp(initialVolume),phase='login',region=initialRegion;
   let introFinished=false,disposed=false,timer=null,heartbeat=null,transition=0;
   let natureWasSuppressed=false;
@@ -170,14 +194,15 @@ export function createGame3DEntryAudio({
   function dispose(){
     if(disposed)return;
     disposed=true;
-    if(liveTransport===api)liveTransport=null;
+    const owner=liveTransport===api;
+    if(owner)liveTransport=null;
     clearFade();
     if(heartbeat!==null)clearTick(heartbeat);
     intro.removeEventListener?.('ended',onIntroEnded);
+    // A stale transport must never silence the track a newer one now owns.
+    if(!owner)return;
     stopNatureImmediately();
-    for(const audio of [intro,nature]){
-      try{audio.pause();audio.removeAttribute?.('src');audio.load?.();}catch{}
-    }
+    releaseSharedMedia();
   }
   const api = {
     start,setPhase,setRegion,setVolume,unlock,dispose,    getWorldAudio:()=>intro,
