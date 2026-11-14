@@ -12,7 +12,13 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ARMOR_SLOTS, creatorBody } from '@/components/onboarding/avatarCustomization';
 import { loadBuiltinLayers } from '@/components/onboarding/creatorBuiltinLayers';
 import { getActiveCharacter } from '../characterStore';
-import { armorSlotOf as slotOf, withEquippedArmor as mergeArmor } from './armorEquipCore.js';
+import { getEquippedAXEItems, subscribeAXEEquipmentInventory } from '../axe/equipment/AXEEquipmentInventoryStore';
+import { equippedAXEArmorPieces } from '../axe/equipment/AXEArmorPackCatalog';
+import {
+  armorSlotOf as slotOf,
+  withEquippedArmor as mergeArmor,
+  reconcileInventoryArmorOverrides,
+} from './armorEquipCore.js';
 
 export const ARMOR_EQUIP_EVENT = 'game3d:armor-equip';
 // Fired once when the bridge is first used in a page, so an inventory that loaded earlier
@@ -76,6 +82,16 @@ export function useArmoredAppearance(appearance, characterId) {
   const id = characterId || 'default';
   const body = creatorBody(appearance);
   const equipped = useSyncExternalStore(subscribeArmor, () => store[id] || EMPTY, () => EMPTY);
+  // Inventory stays authoritative even when equipment is changed outside the
+  // world, when the event bridge is not mounted. Character switching is
+  // propagated by subscribeAXEEquipmentInventory.
+  const [inventoryWorn, setInventoryWorn] = useState(
+    () => equippedAXEArmorPieces(getEquippedAXEItems()),
+  );
+  useEffect(() => subscribeAXEEquipmentInventory((snapshot) => {
+    const next = equippedAXEArmorPieces(snapshot?.items || []);
+    setInventoryWorn((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
+  }), []);
   const [pieces, setPieces] = useState([]);
   useEffect(() => {
     if (syncRequested || typeof window === 'undefined') return;
@@ -90,7 +106,11 @@ export function useArmoredAppearance(appearance, characterId) {
       .catch(() => { if (alive) setPieces([]); });
     return () => { alive = false; };
   }, [body?.id]);
-  return useMemo(() => withEquippedArmor(appearance, equipped, pieces), [appearance, equipped, pieces]);
+  const resolved = useMemo(
+    () => reconcileInventoryArmorOverrides(equipped, inventoryWorn),
+    [equipped, inventoryWorn],
+  );
+  return useMemo(() => withEquippedArmor(appearance, resolved, pieces), [appearance, resolved, pieces]);
 }
 
 if (typeof window !== 'undefined' && !window.__axeArmorEquipBridge) {
