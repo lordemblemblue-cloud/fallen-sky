@@ -110,7 +110,7 @@ export function proceduralFactionPetGait(root,embeddedClips,profileId) {
       const rest=bone.quaternion.clone(),axis=new THREE.Vector3(1,0,0);
       const phase=index===0||index===3?0:Math.PI;
       const values=ts.flatMap((_,i)=>{
-        const swing=Math.sin(2*Math.PI*i/frames+phase)*amount;
+        const swing=Math.sin(2*Math.PI*(i===frames?0:i)/frames+phase)*amount;
         return rest.clone().multiply(new THREE.Quaternion().setFromAxisAngle(axis,swing)).normalize().toArray();
       });
       return new THREE.QuaternionKeyframeTrack(bone.uuid+'.quaternion',ts,values);
