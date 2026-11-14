@@ -133,7 +133,6 @@ export function getAXESetCombatMultiplier(items = [], {
   // Cap the combined situational boost independently of temporary skill buffs.
   return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct))/100;
 }
-}
 
 export function describeAXESetProgress(item, equippedItems = []) {
   if (!item?.setId) return null;
