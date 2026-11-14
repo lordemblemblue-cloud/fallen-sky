@@ -45,8 +45,14 @@ const unit = rng => Math.max(0, Math.min(0.999999999, Number(rng()) || 0));
 export function getAXELevelGearBand(level = 1) {
   const l = boundedLevel(level);
   const bracket = AXE_GEAR_LEVEL_TIERS.find(b => l >= b.min && l <= b.max) || AXE_GEAR_LEVEL_TIERS[0];
-  const min = l < 150 ? (l < 51 ? Math.floor((l - 1) / 10) * 10 + 1 : Math.floor((l - 1) / 10) * 10 + 1) : Math.floor((l - 1) / 10) * 10 + 1;
-  return { min, max: min + 9, stage: bracket.min, weights: {...bracket.weights} };
+  // The two unlock edges are intentional: 51 begins Rare farming and 120
+  // begins Elite farming. Each later Elite/Legendary interval starts at 120,
+  // 130, 140, 150... rather than hiding 120 in the 111–120 band.
+  const min = l <= 50 ? 1 + Math.floor((l - 1) / 10) * 10
+    : l < 120 ? 51 + Math.floor((l - 51) / 10) * 10
+      : 120 + Math.floor((l - 120) / 10) * 10;
+  const max = Math.min(min + 9, l < 120 ? 119 : Number.POSITIVE_INFINITY);
+  return { min, max, stage: bracket.min, weights: {...bracket.weights} };
 }
 export function getAXELevelRarityWeights(level = 1, { enemyTier = 'normal', isBoss = false } = {}) {
   const l = boundedLevel(level);
