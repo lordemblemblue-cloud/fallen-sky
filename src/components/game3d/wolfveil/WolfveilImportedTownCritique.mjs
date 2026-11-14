@@ -57,7 +57,10 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
   const roofTex = tex(suite.roof, 1.3, 1.3);
   const pavingTex = tex(suite.stone, 1.15, 1.15);
   const tileTex = tex(suite.stone, 0.85, 0.85);
-  const turfTex = tex(suite.turf, 1.4, 1.4);
+  // No imported green checkerboard lawn in the cleared plaza; its former
+  // 3D grass mesh becomes real textured stone. Exterior Wolfveil grass is
+  // owned by the separate terrain runtime and stays untouched.
+  const turfTex = tex(suite.stone, 1.4, 1.4);
   const giltTex = tex(suite.gilt, 1, 1);
 
   townRoot.updateMatrixWorld(true);
@@ -129,12 +132,14 @@ export function critiqueAndEnhanceWolfveilTown(townRoot, floorY = WOLFVEIL_IMPOR
           m.polygonOffsetUnits = -1;
         }
       } else if (/grass/i.test(tag)) {
-        m.color?.setHex(0x6d9354);
+        // User-confirmed stone in place of the green checkerboard within the
+        // imported town; keep the same walkable mesh and collision footprint.
+        m.color?.setHex(0xc6c1b6);
         m.map = turfTex.map;
         m.bumpMap = turfTex.bumpMap;
-        m.bumpScale = 0.028;
-        m.roughness = 0.93;
-        m.metalness = 0.0;
+        m.bumpScale = 0.036;
+        m.roughness = 0.88;
+        m.metalness = 0.015;
         m.polygonOffset = true;
         m.polygonOffsetFactor = -2;
         m.polygonOffsetUnits = -2;
@@ -268,12 +273,12 @@ export function buildWolfveilTownCanopyDressing(townGroup) {
     add(boxGeo, stoneMat, r.x, baseY - 0.015, r.z, r.w, 0.09, r.d, 0, r.yaw, 0);
   }
 
-  // 3. Four Grand Sumi-e Civic Torii Gateways + Guardian Lanterns framing the 4 Town Entrances
+  // Retain only the owner's entrance gate at the southern approach. The
+  // previous four-gate embellishment created extra freestanding black beams
+  // around the border that were mistaken for unfinished house framing.
+  // Its two warm hanging lanterns remain; no blue ground pedestals added.
   const gates = [
     { x: p.x, z: centerZ - halfD - 2.2, yaw: 0, span: 11.4 },
-    { x: p.x, z: centerZ + halfD + 2.2, yaw: 0, span: 11.4 },
-    { x: p.x + halfW + 2.2, z: centerZ, yaw: Math.PI / 2, span: 10.2 },
-    { x: p.x - halfW - 2.2, z: centerZ, yaw: Math.PI / 2, span: 10.2 },
   ];
 
   const hangingLanterns = [];
