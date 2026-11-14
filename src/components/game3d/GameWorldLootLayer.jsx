@@ -25,6 +25,9 @@ export default function GameWorldLootLayer() {
   const [scene, setScene] = useState(null);
   const [camera, setCamera] = useState(null);
   const [drops, setDrops] = useState([]);
+  // A local kill broadcasts both multiplayerLocalAction and enemyLootDrop.
+  // The same death must never roll two equipment inventories of loot.
+  const lastRolledKillRef = useRef(new Map());
 
   // Proxy player object that reads live position from global
   const playerProxyRef = useRef({
@@ -77,8 +80,10 @@ export default function GameWorldLootLayer() {
           }
         });
       }
-      spawnDrops('normal', false, ex, ey, ez, d.enemy_id,
-        d.enemy_level ?? d.enemyLevel ?? null);
+      // The detailed enemyLootDrop event is dispatched in this same tick for
+      // local kills. Allow it to win; on remote clients this remains fallback.
+      queueMicrotask(() => spawnDrops(d.enemy_tier || 'normal', !!d.is_boss,
+        ex, ey, ez, d.enemy_id, d.enemy_level ?? d.enemyLevel ?? null));
     };
 
     window.addEventListener('enemyLootDrop', handleDrop);
@@ -90,6 +95,16 @@ export default function GameWorldLootLayer() {
   }, []);
 
   const spawnDrops = (tier, isBoss, x, y, z, enemyId = 'unknown', enemyLevel = null) => {
+    const now = Date.now();
+    const last = lastRolledKillRef.current.get(enemyId);
+    // Respawn is 10s; suppress duplicate reports of the SAME kill for 9s.
+    if (last != null && now - last < 9000) return;
+    lastRolledKillRef.current.set(enemyId, now);
+    if (lastRolledKillRef.current.size > 512) {
+      for (const [id, at] of lastRolledKillRef.current) {
+        if (now - at > 9000) lastRolledKillRef.current.delete(id);
+      }
+    }
     const hostState = getHostState();
     const authorityTag = hostState.myId
       ? (isHost() ? `host:${hostState.myId}` : `replica:${hostState.hostId || 'pending'}`)
