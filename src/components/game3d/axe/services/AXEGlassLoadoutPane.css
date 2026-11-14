@@ -35,8 +35,14 @@
   white-space:nowrap;text-overflow:ellipsis;max-width:100%;}
 .axe-glass-equip {display:flex;align-items:center;justify-content:center;gap:8px;
   min-height:45px;width:100%;border-radius:7px;margin-top:13px;}
-.axe-glass-loadout .axe-app-inventory-filters {overflow-x:auto;flex-wrap:nowrap;scrollbar-width:thin;}
-.axe-glass-loadout .axe-app-inventory-filters button {flex:0 0 auto;min-width:70px;}
+/* Appearance equipment uses the same side-mounted, vertically fading filters
+   as Vanity and Costumes. No horizontal category scrolling. */
+.axe-glass-loadout .axe-app-inventory-browser>.axe-app-inventory-filters {
+  overflow-x:hidden;overflow-y:auto;flex-wrap:nowrap;
+}
+.axe-glass-loadout .axe-app-inventory-browser>.axe-app-inventory-filters button {
+  flex:0 0 auto;min-width:0;width:100%;
+}
 @media(max-width:1150px) {
   .axe-glass-loadout {grid-template-columns:55px minmax(250px,37%) minmax(210px,1fr) minmax(225px,.9fr);}
   .axe-glass-ten-slots button {min-height:52px;}

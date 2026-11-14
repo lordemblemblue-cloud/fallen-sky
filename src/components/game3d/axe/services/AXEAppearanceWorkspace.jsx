@@ -2,9 +2,9 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
   Check, Crown, Feather, Gem, Shield, Shirt, Sparkles, UserRound, X,
 } from 'lucide-react';
-import { getAXEVanityState, subscribeAXEVanity } from '../progression/AXEVanityStore';
+import { getAXEVanityState, subscribeAXEVanity, equipAXEVanityPiece } from '../progression/AXEVanityStore';
 import { AXE_VANITY_PIECES, AXE_VANITY_SLOTS } from '../progression/AXEVanitySystem';
-import { getAXECostumeState, subscribeAXECostumes } from '../progression/AXECostumeStore';
+import { getAXECostumeState, subscribeAXECostumes, equipAXECostume } from '../progression/AXECostumeStore';
 import { AXE_COSTUME_DEFINITIONS } from '../progression/AXECostumeSystem';
 import { getAXECapeState, subscribeAXECapes } from '../progression/AXECapeStore';
 import { getAXECapeBonuses, getAXECapeDefinition } from '../progression/AXECapeSystem';
@@ -117,6 +117,17 @@ export default function AXEAppearanceWorkspace({ serviceId = 'cape', stationMess
     setSelected({kind:item.kind,id:item.id});
     if (tab === 'Wings') setTab(item.kind === 'costume' ? 'Costumes' : 'Vanity');
   };
+  // One click inspects; double-click equips exactly the clicked owned item.
+  // Do not rely on the selected state: React may not have committed the
+  // second click before the double-click event arrives.
+  const equipFromInventory = item => {
+    selectItem(item);
+    const result = item.kind === 'vanity' ? equipAXEVanityPiece(item.id)
+      : item.kind === 'costume' ? equipAXECostume(item.id)
+      : {ok:false,reason:'Unsupported appearance item'};
+    setNotice(result.ok ? (result.message || item.name + ' equipped.')
+      : (result.message || result.reason || 'Unable to equip appearance.'));
+  };
   const selectOutfit = def => {
     setSelected({kind:'costume',id:def.id}); showTab('Costumes');
   };
@@ -215,6 +226,7 @@ export default function AXEAppearanceWorkspace({ serviceId = 'cape', stationMess
         </GlassCard> : <GlassCard title="Inventory" icon={Gem}
           extra={visibleInventory.length + ' shown · ' + inventory.length + ' owned'}
           className="axe-app-inventory">
+          <div className="axe-app-inventory-browser">
           <div className="axe-app-inventory-filters" role="group" aria-label="Inventory filter">
             {['All','Vanity','Costumes'].map(kind => <button type="button" key={kind}
               aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{kind}</button>)}
@@ -224,11 +236,7 @@ export default function AXEAppearanceWorkspace({ serviceId = 'cape', stationMess
               key={item.kind + ':' + item.id} className="axe-app-inventory-tile"
               aria-pressed={selected?.kind === item.kind && selected.id === item.id}
               aria-label={item.name + ' · ' + item.kind} onClick={() => selectItem(item)}
-              onDoubleClick={() => {
-                selectItem(item);
-                // Equipment actions are handled in the live item-details pane.
-                // Double click selects the entry, never calls an undefined placeholder.
-              }}>
+              onDoubleClick={() => equipFromInventory(item)}>
               <span className="axe-app-inventory-art"><ItemSymbol item={item}/></span>
               <span className="axe-app-inventory-name">{item.name}</span>
               <small>{item.kind === 'vanity' ? AXE_VANITY_SLOTS[item.slot]?.label || 'Vanity'
@@ -238,6 +246,7 @@ export default function AXEAppearanceWorkspace({ serviceId = 'cape', stationMess
                 <Check className="axe-app-equipped-check" size={17} aria-label="Equipped"/>}
             </button>)}
             {!visibleInventory.length && <p className="axe-app-inventory-empty">No owned items in this category.</p>}
+          </div>
           </div>
           {tab === 'Overview' && <p className="axe-app-inventory-note">
             Overview combines your owned Vanity pieces and Costumes. Select a piece to inspect it.</p>}

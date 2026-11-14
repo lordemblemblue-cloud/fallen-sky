@@ -688,3 +688,50 @@
   border:1px solid transparent; border-radius:999px;
 }
 .axe-app-root .axe-app-inventory-filters::-webkit-scrollbar-button {display:none;}
+
+/* Appearance inventory: a vertical filter column at ~10% alongside the 90%
+   inventory area. Center filters vertically and fade only the scroll edges;
+   remove sideways category navigation altogether. 15% smaller card footprint
+   than the previous 105px-high / 4-column tiles. */
+.axe-app-inventory-browser {
+  flex:1 1 auto;min-width:0;min-height:0;
+  display:grid;grid-template-columns:minmax(38px,10%) minmax(0,1fr);
+  gap:6px;overflow:hidden;
+}
+.axe-app-inventory-browser>.axe-app-inventory-filters {
+  grid-column:1;grid-row:1;min-width:0;min-height:0;max-height:100%;
+  display:flex;flex-direction:column;flex-wrap:nowrap;
+  align-items:stretch;justify-content:safe center;
+  gap:5px;padding:6px 1px;overflow-x:hidden;overflow-y:auto;
+  border-bottom:0;border-right:1px solid #d3c19959;
+  scrollbar-width:thin;overscroll-behavior-y:contain;
+  -webkit-mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent);
+  mask-image:linear-gradient(to bottom,transparent,#000 9%,#000 91%,transparent);
+}
+.axe-app-inventory-browser>.axe-app-inventory-filters button {
+  flex:0 0 auto;min-width:0;width:100%;min-height:51px;
+  padding:6px 2px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  writing-mode:vertical-rl;transform:rotate(180deg);
+  font:11px/1 Georgia,serif;letter-spacing:.02em;
+}
+.axe-app-inventory-browser>.axe-app-inventory-grid {
+  grid-column:2;grid-row:1;min-width:0;min-height:0;height:100%;
+}
+.axe-app-inventory-grid {
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,60px),1fr));
+  grid-auto-rows:89px;gap:5px;
+}
+.axe-app-inventory-tile {gap:3px;padding:6px 2px;}
+.axe-app-inventory-art {min-height:29px;}
+.axe-app-inventory-art img {max-height:43px;}
+.axe-app-inventory-art svg {width:28px;height:28px;}
+.axe-app-root .axe-app-inventory-filters::-webkit-scrollbar {width:4px;height:0;}
+@media(max-width:1250px) {
+  .axe-app-inventory-grid {grid-template-columns:repeat(auto-fill,minmax(min(100%,58px),1fr));grid-auto-rows:87px;}
+}
+@media(max-width:650px) {
+  .axe-app-inventory-browser {grid-template-columns:minmax(38px,11%) minmax(0,1fr);gap:5px;}
+  .axe-app-inventory-browser>.axe-app-inventory-filters button {min-height:47px;font-size:10px;}
+  .axe-app-inventory-grid {grid-template-columns:repeat(auto-fill,minmax(min(100%,57px),1fr));}
+}
