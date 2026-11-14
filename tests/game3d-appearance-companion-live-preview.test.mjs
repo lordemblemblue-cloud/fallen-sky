@@ -4,16 +4,20 @@ import { readFileSync } from 'node:fs';
 
 const read = path => readFileSync(path, 'utf8');
 
-test('Appearance preview reads canonical character equipment even before world mount', () => {
-  const source = read('src/components/game3d/equipment/EquipmentPreview3D.jsx');
-  assert.match(source, /subscribeAXEEquipmentInventory/);
-  assert.match(source, /equippedAXEArmorPieces\(items\)/);
-  assert.match(source, /loadBuiltinLayers\('armor'\)/);
-  assert.match(source, /withEquippedArmor\(worldAvatar, overrides, armorAssets, ARMOR_SLOTS\)/);
-  assert.match(source, /equipped\[slot\] \|\| ''/);
-  assert.match(source, /modelUrlOverride=\{config\.model_url\}/);
+test('Appearance and Character previews consume the same live inventory-owned armor as Play', () => {
+  const viewer = read('src/components/game3d/equipment/EquipmentPreview3D.jsx');
+  const bridge = read('src/components/game3d/armor/armorEquipBridge.js');
+  const world = read('src/components/game3d/GameWorld3D.jsx');
+  assert.match(viewer, /const config = useGameAvatar\(\)/);
+  assert.match(viewer, /<CreatorStage/);
+  assert.match(viewer, /creatorBody\(config\)/);
+  assert.match(viewer, /IntersectionObserver/);
+  assert.match(viewer, /modelUrlOverride=\{config\.model_url\}/);
+  assert.match(bridge, /subscribeAXEEquipmentInventory/);
+  assert.match(bridge, /equippedAXEArmorPieces/);
+  assert.match(bridge, /reconcileInventoryArmorOverrides\(equipped, inventoryWorn, PACK_SET_IDS\)/);
+  assert.match(world, /applyPlayerAppearance\(modelRef\.current,avatarConfig\)/);
 });
-
 test('Companion preview responds to active companion and equipped gear snapshots', () => {
   const source = read('src/components/game3d/equipment/CompanionPreview3D.jsx');
   assert.match(source, /useState\(getCompanionState\)/);
