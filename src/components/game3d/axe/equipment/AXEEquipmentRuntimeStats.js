@@ -16,6 +16,7 @@ import { getAXEEquipmentRune, getAXEEquipmentRuneStats } from './AXEEquipmentRun
 import { getAXEItemAura } from './AXEEquipmentAuraStore';
 import { collectAXEAuraStats } from './AXEEquipmentAuraSystem';
 import { evaluateAXESetBonuses } from './AXESetBonusSystem';
+import { doesAXEStageIncreaseItemStats, getAXESetAscensionRank } from './AXESetAscensionRules.mjs';
 import { evaluateAXEAuxiliaryBonuses } from './AXEAuxiliaryGearSystem';
 
 // Provisional balance only. The important backend contract is that each
@@ -27,10 +28,10 @@ export const AXE_ADVANCEMENT_STAT_CONFIG = Object.freeze({
   ultimatePerLevel: 0.04,
 });
 
-function advancementMultiplier(record = {}) {
+function advancementMultiplier(record = {}, includeStageImprint = true) {
   return 1
     + Math.max(0, Number(record.combine?.count || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.combinePerSuccess
-    + getAXEEquipmentAscensionBonus(record.stage)
+    + (includeStageImprint ? getAXEEquipmentAscensionBonus(record.stage) : 0)
     + Math.max(0, Number(record.refine?.level || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.refinePerLevel
     + Math.max(0, Number(record.ultimate?.level || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.ultimatePerLevel;
 }
@@ -182,9 +183,10 @@ export function getAXEEquipmentRuntimeBonuses() {
       enchantments,
       overEnchant,
     });
-    const advancementMult = advancementMultiplier(advancement);
+    const stageItemImprintEnabled = doesAXEStageIncreaseItemStats(item);
+    const advancementMult = advancementMultiplier(advancement, stageItemImprintEnabled);
     const coreScale = enhancementMult * advancementMult;
-    const rateBonus = getAXEEquipmentAscensionRateBonus(advancement.stage);
+    const rateBonus = stageItemImprintEnabled ? getAXEEquipmentAscensionRateBonus(advancement.stage) : 0;
     const socketState = getAXESocketState(itemId);
     const aura = getAXEItemAura(itemId);
 
@@ -225,7 +227,9 @@ export function getAXEEquipmentRuntimeBonuses() {
       enhancementMultiplier: enhancementMult,
       advancementMultiplier: advancementMult,
       finalCoreMultiplier: coreScale,
-      ascensionImprintBonus: getAXEEquipmentAscensionBonus(advancement.stage),
+      ascensionImprintBonus: stageItemImprintEnabled ? getAXEEquipmentAscensionBonus(advancement.stage) : 0,
+      setAscensionRank: getAXESetAscensionRank(liveItem),
+      stageItemImprintEnabled,
       ascensionRateBonus: rateBonus,
       soulInfusionPct: Number(soul.itemInfusion?.[itemId] || 0),
       legacyWeaponDamageBonusPct: Math.round((getAXEWeaponLegacyDamageMultiplier(item) - 1) * 10000) / 100,

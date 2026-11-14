@@ -205,6 +205,12 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             {selected.setId && getAXESetDefinition(selected.setId) && <p className="axe-app-description">
               Set: {getAXESetDefinition(selected.setId).name} · Equip matching pieces for set effects.
             </p>}
+            {isPlayer && selected.instanceId && getAXEAdvancementState(selected.instanceId)?.stage?.rank > 0 &&
+              <p className="axe-app-description">
+                Ascension +{getAXEAdvancementState(selected.instanceId).stage.rank}/4 ·
+                {selected.slot === 'weapon' ? ' Spiritual weapon aura unlocked.' :
+                  ' Set bonus grows when matching pieces are ascended.'}
+              </p>}
             {selected.evolutionPath && <p className="axe-app-description">
               Evolution potential: {caption(selected.evolutionPath)} · future Blacksmith recipe required.
             </p>}
@@ -246,6 +252,15 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
                 {Object.keys(set.conditionalBonuses || {}).length > 0 &&
                   <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>}
+                {set.setId !== AXE_CHOSEN_SET_ID && (set.activeThresholds || []).map(threshold => {
+                  const tier = set.ascensionByThreshold?.[threshold];
+                  return tier ? <small key={threshold} className="axe-glass-set-special">
+                    {threshold}-piece set bonus: Ascension +{tier.rank}/4 · +{tier.bonusPct}% of its original value
+                  </small> : null;
+                })}
+                {set.fullAuraRank > 0 && <small className="axe-glass-set-special">
+                  Spiritual full-set aura unlocked · Ascension +{set.fullAuraRank}
+                </small>}
                 {set.setId === AXE_CHOSEN_SET_ID && <small className="axe-glass-set-special">
                   Chosen {set.equippedPieces}/{set.requiredPieces} pieces · {set.ascendedPieces}/{set.requiredPieces}
                   {' '}at Ascension +4 · {set.chosenBonusPct

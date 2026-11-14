@@ -10,6 +10,7 @@ import {
   resolveUltimate,
 } from './AXEItemAdvancementSystem';
 import { getItemReinforcement } from '../../equipment/enchantmentStore';
+import { getAXEReinforcementCap } from './AXEItemEnhancementSystem';
 import { getAXEEquipmentItem } from './AXEEquipmentInventoryStore';
 
 const storage = characterScopedStorage('axe_item_advancement_v2');
@@ -118,7 +119,12 @@ export function applyAXEStage(itemId, options = {}) {
   const current = getAXEAdvancementState(itemId);
   const item = getAXEEquipmentItem(itemId);
   if (!item) return { ok: false, reason: 'ITEM_NOT_OWNED' };
-  const reinforcementPercent = Number(getItemReinforcement(itemId)?.percent || 0);
+  const savedReinforcementPercent = Math.max(0, Number(getItemReinforcement(itemId)?.percent || 0));
+  // Pre-existing Rare/Elite equipment can legitimately have a reinforcement
+  // record above the newly lowered rarity ceiling. Preserve that old stat
+  // record but cap only the NEW Ascension imprint input; otherwise these
+  // cherished legacy items would be permanently blocked from Stage +1..+4.
+  const reinforcementPercent = Math.min(savedReinforcementPercent, getAXEReinforcementCap(item));
   const result = resolveStageAdvance(current.stage, {
     successChance: 1, item, reinforcementPercent,
   });

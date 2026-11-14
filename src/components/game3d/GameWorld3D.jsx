@@ -120,6 +120,7 @@ import { getHaloState } from './progression/haloStore';
 import { createAXEMountFusionVisualRuntime } from './axe/progression/AXEMountFusionVisualRuntime';
 import { createAXEAscensionVisualRuntime } from './axe/progression/AXEAscensionVisualRuntime';
 import { createAXEArmorEquipSync } from './axe/equipment/AXEArmorEquipSync';
+import { createAXEAscendedGearVisualRuntime } from './axe/equipment/AXEAscendedGearVisualRuntime';
 import { bankAXEAscensionDamage, getAXEAscensionProfile } from './axe/progression/AXEAscensionStore';
 import { createAXEHaloVisualRuntime } from './axe/progression/AXEHaloVisualRuntime'; import { addGold } from './shop/shopStore'; import { dispatchRogueAttack } from './rogueAttackBridge';
 
@@ -1303,6 +1304,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let fusionVisualRuntime = null; // Mount Soul Fusion aura
     let ascensionVisualRuntime = null; // Taurus Chosen Ascension: levitation, Angel Cloak, Destroyer shockwave, Defensive shield
     let armorEquipSync = null; // equipped armor-pack items -> the armor bridge ('game3d:armor-equip')
+    let ascendedGearVisualRuntime = null; // original procedural spiritual aura for ascended equipped gear
     let avatarDrawCalls = null; // skips the avatar's parked skill-effect meshes (docs/game3d/AVATAR_DRAW_CALLS.md)
     const playerStateMachine = new CorePlayerStateMachine();
     let coreAnimationController = null;
@@ -1457,6 +1459,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       haloVisualRuntime = createAXEHaloVisualRuntime({ model: fbx, initialState: getHaloState() });
       fusionVisualRuntime = createAXEMountFusionVisualRuntime({ model: fbx, initialState: getAXEMountFusionState() });
       ascensionVisualRuntime = createAXEAscensionVisualRuntime({ model: fbx, initialState: getAXEAscensionProfile() });
+      ascendedGearVisualRuntime = createAXEAscendedGearVisualRuntime({ model: fbx });
       // After the avatar loads, so the armor bridge (mounted with the page) hears the start-up equips.
       armorEquipSync = createAXEArmorEquipSync();
       // Workflow already uses the live ground height; normal Play keeps its market snap.
@@ -2263,6 +2266,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       haloVisualRuntime?.update?.(delta);
       fusionVisualRuntime?.update?.(delta);
       ascensionVisualRuntime?.update?.(delta);
+      ascendedGearVisualRuntime?.update?.(delta);
       bossEncounter.update(delta);
       charLights.update(delta, envSystem.getState, modelRef.current, camera);
       playerAnim?.setMounted?.(isMountedRef.current);
@@ -2284,6 +2288,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
       ascensionVisualRuntime?.lateUpdate?.(); // levitation lifts the posed skeleton
+      ascendedGearVisualRuntime?.lateUpdate?.(); // animated hand socket placement
       if (dodgeVanish.active) {
         dodgeVanish.timer += delta;
         if (dodgeVanish.timer >= dodgeVanish.duration) {
@@ -3921,6 +3926,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       fusionVisualRuntime = null;
       ascensionVisualRuntime?.dispose?.();
       ascensionVisualRuntime = null;
+      ascendedGearVisualRuntime?.dispose?.();
+      ascendedGearVisualRuntime = null;
       armorEquipSync?.dispose();
       armorEquipSync = null;
       avatarDrawCalls?.dispose();

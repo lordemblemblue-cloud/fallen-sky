@@ -30,16 +30,19 @@ export const AXE_OVER_ENCHANT_CONFIG = Object.freeze({
   fractureStartsAt: 4,
 });
 
-// Item-specific ceiling: Rare 120%, Elite 150%, Elite set 180%, Chosen /
-// Ascendant endgame 200%. Other established rarities keep the legacy 120% cap.
-// A set item is only considered Elite Set if its actual rarity is Elite.
+// Percentage-based enhancement ceilings for the clone progression.
+// Regular enhancement improves an ITEM'S stats; Ascension stage +1..+4 is
+// a separate Blacksmith record that improves the matching SET BONUS.
 export function getAXEReinforcementCap(item: Rec | null | undefined): number {
   const rarity = String(item?.rarity || '').trim().toLowerCase();
   if (rarity === 'chosen' || rarity === 'ascendant') return 200;
-  if (rarity === 'elite_set' || (rarity === 'elite' &&
-    Boolean(item?.setId || item?.set_id || item?.setBonusId))) return 180;
-  if (rarity === 'elite') return 150;
-  return 120;
+  if (rarity === 'legendary' || rarity === 'mythic' || rarity === 'mystical' ||
+    rarity === 'heroic') return 120;
+  if (rarity === 'elite' || rarity === 'elite_set') return 80;
+  if (rarity === 'rare' || rarity === 'rare_elite') return 50;
+  if (rarity === 'uncommon' || rarity === 'unique') return 45;
+  if (rarity === 'common') return 40;
+  return 120; // old/custom event grades stay compatible until classified
 }
 
 export function reinforcementSuccessChance(currentPercent: unknown, maxPercent: number = 120): number {
