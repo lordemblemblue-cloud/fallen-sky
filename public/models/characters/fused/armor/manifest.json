@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "slots": [
+    "helmet",
+    "chest",
+    "pants",
+    "gloves",
+    "boots",
+    "cape"
+  ],
+  "sets": [
+    {
+      "id": "crescent_moon",
+      "label": "Crescent Moon",
+      "rarity": "legendary"
+    }
+  ],
+  "female": [
+    {
+      "id": "crescent_moon_helmet",
+      "set": "crescent_moon",
+      "label": "Crescent Moon Helmet",
+      "slot": "helmet",
+      "url": "/models/characters/fused/armor/crescent_moon/female_helmet.glb",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [],
+      "hides_hair": false,
+      "tint_materials": [],
+      "springs": false,
+      "thumbnail": "/models/characters/fused/armor/crescent_moon/female_helmet.jpg"
+    },
+    {
+      "id": "crescent_moon_gloves",
+      "set": "crescent_moon",
+      "label": "Crescent Moon Gloves",
+      "slot": "gloves",
+      "url": "/models/characters/fused/armor/crescent_moon/female_gloves.glb",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [],
+      "hides_hair": false,
+      "tint_materials": [],
+      "springs": false,
+      "thumbnail": "/models/characters/fused/armor/crescent_moon/female_gloves.jpg"
+    },
+    {
+      "id": "crescent_moon_cape",
+      "set": "crescent_moon",
+      "label": "Crescent Moon Cape",
+      "slot": "cape",
+      "url": "/models/characters/fused/armor/crescent_moon/female_cape.glb",
+      "gender": "female",
+      "rig_id": "fused-female-v1",
+      "binding": "skinned",
+      "hide_meshes": [],
+      "hides_hair": false,
+      "tint_materials": [],
+      "springs": true,
+      "thumbnail": "/models/characters/fused/armor/crescent_moon/female_cape.jpg"
+    }
+  ],
+  "male": []
+}
