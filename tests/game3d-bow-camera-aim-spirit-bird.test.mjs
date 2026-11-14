@@ -108,8 +108,8 @@ test('tracer and spirit projectile travel the exact same world-space straight se
  const first=new THREE.Vector3().fromBufferAttribute(trace.geometry.attributes.position,0);
  const last=new THREE.Vector3().fromBufferAttribute(trace.geometry.attributes.position,1);
  const bird=root.children.find(child=>child.isGroup);
- assert.deepEqual(first.toArray(),[0,1.45,5]);
- assert.deepEqual(last.toArray(),[0,1.3,-12]);
+ assert.ok(first.distanceTo(new THREE.Vector3(0,1.45,5))<1e-5);
+ assert.ok(last.distanceTo(new THREE.Vector3(0,1.3,-12))<1e-5);
  fx.update(.2,{active:true});
  const progress=bird.position.clone().sub(first);
  const shot=last.clone().sub(first);
