@@ -3245,7 +3245,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             criticalAllowed: pendingSkillStrike?.criticalAllowed !== false,
             // An attack executed while physically airborne qualifies for
             // Skyrend's aerial PvE set effect, not ordinary grounded attacks.
-            isAerialAttack: !playerStateMachine.current.grounded,
+            isAerialAttack: !playerStateMachine.current.grounded ||
+              !!pendingSkillStrike?.isAerialAttack || !!pendingSkillStrike?.aerial,
+            isSkillStrike,
           }) : null;
           if (strike && strike.kind !== 'hit') spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });
           if (strike && strike.kind === 'hit') {
