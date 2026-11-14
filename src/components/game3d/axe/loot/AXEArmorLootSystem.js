@@ -7,7 +7,7 @@
 // Normal enemies never drop elite or legendary pieces. The item enters AXEEquipmentInventoryStore on
 // pickup like any other gear drop (WorldLootDrops.jsx).
 import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../equipment/AXEArmorPackCatalog.js';
-import { getAXELevelRarityWeights, rollAXEEvolutionPath } from './AXELevelGearProgression.mjs';
+import { getAXELevelRarityWeights, rollAXEEvolutionPath, rollAXELevelAffixes } from './AXELevelGearProgression.mjs';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -98,6 +98,9 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   const statScale = rarityScale * (1 + (level - 1) * AXE_ARMOR_DROP_CONFIG.levelScalePerLevel) * (1 + qualityBand / 100);
   const template = makeAXEArmorTemplate(set, piece);
   const evolutionPath = rollAXEEvolutionPath(rarity, level, rng);
+  const rolledStats = rollAXELevelAffixes({slot:piece.slot,rarity,level,qualityBand,rng});
+  const setId = set.pieces.length >= 5 && ['rare','elite','legendary'].includes(set.rarity)
+    ? 'AXE_Set_Armor_'+set.id : null;
   const baseStats = Object.fromEntries(Object.entries(template.baseStats).map(([key, value]) => [
     key, Number((Number(value) * (isRate(key) ? rarityScale : statScale)).toFixed(Math.abs(Number(value)) < 2 ? 2 : 0)),
   ]));
@@ -118,7 +121,7 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
       qualityBand,
       itemLevel: level,
       level,
-      baseStats,
+      baseStats, rolledStats, setId,
       evolutionPath, rarityVariant: evolutionPath,
     },
   };
