@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { applyPlayerAppearance, disposeAvatarModel, loadAvatarModel } from './avatarAssetRuntime';
+import { creatorBody } from './avatarCustomization';
 
 export function applyMorphs(model, morphs = {}) {
   if (!model || !morphs) return;
@@ -21,7 +22,9 @@ export function createAvatarScene(mount, options = {}) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(portrait ? 26 : 38, 1, 0.05, 60);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+  // Compact Game 3D viewers may coexist on phones. Keep the draw buffer
+  // smaller than the full world and avoid multiple 2x offscreen canvases.
+  renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.domElement.style.display = 'block';
   renderer.domElement.style.width = '100%';
@@ -102,21 +105,30 @@ export function createAvatarScene(mount, options = {}) {
       return;
     }
     try {
-      const loaded = await loadAvatarModel(url || config, 1.8);
-      if (url) await applyPlayerAppearance(loaded, latestAppearance);
+      const activeAppearance = latestAppearance || config;
+      const fused = creatorBody(activeAppearance);
+      // Loading by URL string alone loses the female/Adam rig identity and
+      // leaves fitted armor detached. Pass the WHOLE appearance and approved
+      // world GLB URL when rendering a saved fused Game 3D character.
+      const isFused = Boolean(fused && url && url === activeAppearance.model_url);
+      const loaded = await loadAvatarModel(
+        isFused ? activeAppearance : (url || activeAppearance),
+        1.8, isFused ? url : null,
+      );
       if (disposed) {
         disposeAvatarModel(loaded);
         return;
       }
       model = loaded;
       scene.add(model);
+      // Honor equipment changes made while the body was still loading.
       applyPlayerAppearance(model, latestAppearance);
       const idle = model.animations?.find(clip => /^(stand|idle)$/i.test(clip.name));
       if (idle) { mixer = new THREE.AnimationMixer(model); mixer.clipAction(idle).play(); }
       frameCamera();
       onReady?.(model);
     } catch (error) {
-      onError?.(error);
+      if (!disposed) onError?.(error);
     }
   })();
 
