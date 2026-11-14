@@ -9,8 +9,7 @@ import {bakeWolfveilTownCollision} from './WolfveilImportedTownCollision.mjs';
 import {createWolfveilTownWater} from './WolfveilImportedTownWater.mjs';
 import {installWolfveilTownTree,isWolfveilTownTreeMesh,removeWolfveilTownCentreTree} from './WolfveilImportedTownTree.mjs';
 import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './WolfveilImportedTownCritique.mjs';
-import {plantTownLawnGrassBlades} from './WolfveilIndividualGrassBlades.js';
-import {wolfveilImportedTownHouseOverlapsTree} from './WolfveilTownTileBodyRemoval.mjs';
+import {clearWolfveilImportedTownInterior} from './WolfveilImportedTownInteriorClearance.mjs';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
 // How each mesh of the model takes part in collision, by its Blender name.
@@ -65,13 +64,16 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      else if(isWolfveilTownTreeMesh(node.name))removeWolfveilTownCentreTree(node);
    });
    town.name='Blender_Assembled_Town_80_Separate_Tiles';root.add(town);root.updateMatrixWorld(true);
-   // Inspect the actual loaded architectural geometry before keeping the
-   // owner tree: houses win over trunks/roots that overlap their footprint.
-   plazaTreeClearOfHouses=!wolfveilImportedTownHouseOverlapsTree(town,WOLFVEIL_IMPORTED_TOWN_TREE);
-   if(!plazaTreeClearOfHouses)tree.dispose();
+   // Remove interior buildings, bridges and extra tree geometry in the clone
+   // BEFORE the floor repair and collision bake. The outer square, paving,
+   // centre tree and centre planter are explicitly protected.
+   const clearance=clearWolfveilImportedTownInterior(town);
+   root.userData.cloneTownInteriorClearance=clearance;
+   plazaTreeClearOfHouses=true;
    // Keep walkable tile tops, remove protruding box walls and undersides.
    critiquePass=critiqueAndEnhanceWolfveilTown(town,WOLFVEIL_IMPORTED_TOWN_FLOOR_Y);
-   lawnGrass=plantTownLawnGrassBlades(town,root);
+   // Clean-town preview: keep Blender lawn surfaces, but not decorative 3D
+   // blade instances growing from the interior ground.
    // Bake floors and walls from the placed triangles themselves.
    const meshes=[];
    town.traverse(node=>{
