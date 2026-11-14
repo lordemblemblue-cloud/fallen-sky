@@ -1,10 +1,11 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
+import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
 // Set identity, grade and activation thresholds are separate concepts so Rare,
 // Elite and Heroic versions can share a family without sharing balance values.
 
 export const AXE_SET_GRADES = Object.freeze(['rare', 'elite', 'heroic']);
 
-export const AXE_SET_DEFINITIONS = Object.freeze({
+const BASE_AXE_SET_DEFINITIONS = Object.freeze({
   AXE_Set_StarterVanguard: Object.freeze({
     id: 'AXE_Set_StarterVanguard',
     name: 'Vanguard',
@@ -29,6 +30,19 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
       5: Object.freeze({ attackPct: 8, defensePct: 8 }),
     }),
   }),
+});
+
+// Procedural pieces have no required 3D model. Two matching pieces unlock a
+// unique contextual effect; four provide a small ordinary stat bonus.
+export const AXE_SET_DEFINITIONS = Object.freeze({
+  ...BASE_AXE_SET_DEFINITIONS,
+  ...Object.fromEntries(AXE_PROCEDURAL_SET_FAMILIES.map(family => [family.id,Object.freeze({
+    id:family.id,name:family.name,
+    allowedGrades:Object.freeze(['rare','elite','legendary','mythic']),
+    allowMixedGrades:false,
+    thresholds:Object.freeze({2:Object.freeze({}),4:Object.freeze({defense:2})}),
+    conditionalThresholds:Object.freeze({2:family.uniqueEffect}),
+  })])),
 });
 
 export function getAXESetDefinition(setId) {
@@ -71,6 +85,7 @@ export function evaluateAXESetBonuses(items = []) {
 
   const activeSets = [];
   const stats = {};
+  const conditional = {};
 
   for (const group of groups.values()) {
     const activeThresholds = [];
@@ -79,6 +94,9 @@ export function evaluateAXESetBonuses(items = []) {
       if (group.count >= threshold && bonus) {
         activeThresholds.push(threshold);
         addStats(stats, bonus);
+      }
+      if (group.count >= threshold && group.definition.conditionalThresholds?.[threshold]) {
+        addStats(conditional, group.definition.conditionalThresholds[threshold]);
       }
     }
     activeSets.push({
@@ -92,7 +110,25 @@ export function evaluateAXESetBonuses(items = []) {
     });
   }
 
-  return { stats, activeSets };
+  return { stats, activeSets, conditional };
+}
+
+// Contextual modifiers are applied at strike resolution, NEVER as a global
+// permanent damage stat (that would incorrectly buff PvP, bosses and ground
+// attacks). +3 virtual skill points = +9% skill damage at 3% per point;
+// this is not three spendable points in the skill tree.
+export function getAXESetCombatMultiplier(items = [], {
+  pve=false, targetTier='', isAerialAttack=false, isSkill=false,
+} = {}) {
+  const {conditional} = evaluateAXESetBonuses(items);
+  if (!pve) return 1;
+  const isOrdinaryMob=['normal','elite','champion'].includes(String(targetTier));
+  const mobPct=isOrdinaryMob ? Number(conditional.mobDamagePct||0) : 0;
+  const aerialPct=isAerialAttack ? Number(conditional.aerialDamagePct||0) : 0;
+  const skillPct=isSkill ? Number(conditional.virtualAbilityPoints||0)*3 : 0;
+  // Cap the combined situational boost independently of temporary skill buffs.
+  return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct))/100;
+}
 }
 
 export function describeAXESetProgress(item, equippedItems = []) {
