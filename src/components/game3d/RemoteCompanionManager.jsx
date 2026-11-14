@@ -34,14 +34,28 @@ const loadCompanionAssets = async (companionDef) => {
   const pending = (async () => {
     const manager = createCompanionLoadingManager(THREE, companionDef);
     const gltfLoader = manager ? new GLTFLoader(manager) : new GLTFLoader();
-    const { root, embeddedClips } = await new Promise((resolve, reject) => {
-      gltfLoader.load(companionDef.modelUrl, (gltf) => resolve({
-        root: gltf.scene || gltf.scenes?.[0],
-        embeddedClips: gltf.animations || [],
-      }), undefined, reject);
+    const loadGLB = url => new Promise((resolve,reject)=>{
+      gltfLoader.load(url,gltf=>resolve({
+        root:gltf.scene||gltf.scenes?.[0],
+        embeddedClips:gltf.animations||[],
+      }),undefined,reject);
     });
-    if (!root) throw new Error('Companion has no scene');
-    let clips = await prepareMountAnimationClips(root, embeddedClips, companionDef);
+    let effectiveDefinition=companionDef,asset;
+    try {
+      asset=await loadGLB(companionDef.modelUrl);
+      if(!asset.root)throw new Error('Companion has no scene');
+    } catch(error) {
+      if(!companionDef.previousModelUrl)throw error;
+      console.warn('Remote faction pet GLB unavailable; using its previous rig',error);
+      effectiveDefinition={
+        ...companionDef,modelUrl:companionDef.previousModelUrl,
+        previousModelUrl:null,animationRigProfile:null,
+      };
+      asset=await loadGLB(effectiveDefinition.modelUrl);
+    }
+    const {root,embeddedClips}=asset;
+    if(!root)throw new Error('Companion has no scene');
+    let clips=await prepareMountAnimationClips(root,embeddedClips,effectiveDefinition);
     // Preserve only the legacy unconfigured animation-library path. Explicit
     // source/retarget failures never inject an unrelated FBX onto a new rig.
     if (!clips.length && !companionDef.animationSource) {
