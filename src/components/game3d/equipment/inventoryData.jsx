@@ -3,6 +3,7 @@
 // for the AXE equipment adapter to validate/evaluate item instances.
 
 import { Swords, Shield, Shirt, HardHat, Footprints, Hand, Gem, Sparkles, Wind, Layers3 } from 'lucide-react';
+import { makeAXEDevArmorItems } from '../axe/equipment/AXEArmorPackCatalog.js';
 
 export const CATEGORY_ICONS = {
   weapon: Swords,
@@ -94,6 +95,22 @@ INVENTORY.weapon.push(gear({
   durability: '100/100', introducedVersion: 2,
   source: 'test_loadout', tradeable: false, equipped: false,
 }));
+
+// Clone preview only: the six *original* Crescent Moon pieces are seeded as
+// ordinary, unequipped, nontradeable equipment. A V3 migration grants them ONCE
+// to existing clone characters; normal upgrade/enchant stores work by instanceId.
+// They never enter drops or the main/live repository. No automatic re-grants
+// after a consumed/discarded item.
+for (const item of makeAXEDevArmorItems()) {
+  INVENTORY[item.slot].push(gear({
+    ...item,
+    source: 'clone_crescent_moon_preview',
+    devGrant: false,
+    introducedVersion: 3,
+    equipped: false,
+    tradeable: false,
+  }));
+}
 
 // Armor pack (fitted armor layers): loot-only templates, deliberately NOT part of INVENTORY above, so
 // new and existing characters are never granted them as starters. They drop from monsters
