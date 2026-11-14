@@ -82,11 +82,15 @@ test('the original and clone avatar loaders use one shared runtime retargeting p
  const remote=read('src/components/game3d/RemoteCompanionManager.jsx');
  const store=read('src/components/game3d/axe/progression/AXEMountStore.js');
  assert.match(defs,/animationRigProfile: asset\.animationRigProfile \|\| null/);
+ assert.match(defs,/previousModelUrl: asset\.previousModelUrl \|\| null/);
  assert.match(defs,/animationSource: 'baby-wolf-retarget'/);
  assert.match(animation,/retargetDogMountClips\(source\.scene,source\.animations\|\|\[\],root,definition\.id,profile\.map\)/);
  assert.match(animation,/combineNativeFactionPetClips\(embeddedClips,gait,definition\.animationRigProfile\)/);
  assert.match(world,/prepareMountAnimationClips\(companionModel, embeddedClips, companionDef\)/);
- assert.match(remote,/prepareMountAnimationClips\(root, embeddedClips, companionDef\)/);
+ assert.match(remote,/prepareMountAnimationClips\(root,embeddedClips,effectiveDefinition\)/);
+ assert.match(remote,/if\(!companionDef\.previousModelUrl\)throw error/);
+ assert.match(world,/failToPreviousModel/);
+ assert.match(world,/animationRigProfile: null/);
  assert.match(store,/axeCharacterFactionChanged/);
  assert.match(store,/adoptFactionStarterIfPristine/);
  assert.match(store,/old\.totalXp!==0/);
