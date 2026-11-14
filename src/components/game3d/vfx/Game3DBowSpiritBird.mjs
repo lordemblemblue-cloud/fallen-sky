@@ -5,6 +5,7 @@ import * as THREE from 'three';
 // copyrighted animation. VFX does not create hitboxes or apply any damage.
 const WING='#a7f0fc',BODY='#f5d690',EDGE='#56bbd4';
 const MAX_BIRDS=6;
+const TRACE_HOLD_SECONDS=1.2; // keep the debug path visible after the projectile lands
 const clamp01=v=>Math.max(0,Math.min(1,v));
 const vec=v=>new THREE.Vector3(v?.x||0,v?.y||0,v?.z||0);
 const tmp=new THREE.Vector3();
@@ -169,12 +170,15 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
       b.bird.root.position.lerpVectors(b.p0,b.p3,t);
       // The whole visible flight remains linear: no Bezier arc, sideways
       // steer, gravity drop, or curved dive that disagrees with the reticle.
-      b.traceMaterial.opacity=.93*Math.min(1,(1-t)*4);
-      b.shaftMaterial.opacity=.38*Math.min(1,(1-t)*4);
+      // Leave the straight trace onscreen long enough to inspect the shot.
+      const traceFade=clamp01((TRACE_HOLD_SECONDS-b.elapsed)/.35);
+      b.traceMaterial.opacity=.93*traceFade;
+      b.shaftMaterial.opacity=.38*traceFade;
       b.bird.wings[0].rotation.z=Math.sin(b.elapsed*27)*.38;
       b.bird.wings[1].rotation.z=-Math.sin(b.elapsed*27)*.38;
       b.bird.root.scale.setScalar((.65+.18*Math.sin(Math.PI*t))*Math.min(1,(1-t)*8));
-      if(t>=1){releaseBird(b,scene);birds.splice(i,1);}
+      if(t>=1)b.bird.root.visible=false;
+      if(b.elapsed>=TRACE_HOLD_SECONDS){releaseBird(b,scene);birds.splice(i,1);}
     }
   };
   const dispose=()=>{
