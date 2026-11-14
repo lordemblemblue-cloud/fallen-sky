@@ -111,3 +111,13 @@ test('hidden/lost-context frames cannot trigger adaptation; settings change is b
   assert.equal(h.ratio(), .75);
   c.dispose();
 });
+
+test('browser requestAnimationFrame alone is not treated as game rendering', () => {
+  const h = makeHarness();
+  h.renderer.info = { render: { frame: 0 } };
+  const c = createCloneAdaptiveGraphics({ renderer: h.renderer, host: h.host, documentRef: h.doc });
+  h.step(300, 34); // browser keeps ticking, while Three.js never renders a frame
+  assert.equal(c.getSnapshot().frames, 0);
+  assert.equal(h.ratio(), 1.5);
+  c.dispose();
+});
