@@ -1,0 +1,72 @@
+/* Over-the-shoulder aim reticle. Hidden while exploring; fades in with the aim
+   blend and slides a hair toward the active shoulder. */
+.ots-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.12);
+  transition: opacity 160ms ease, transform 160ms ease;
+  z-index: 60;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.75));
+}
+
+.ots-reticle.is-active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.ots-reticle-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.ots-reticle-tick {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 1px;
+}
+
+.ots-reticle-top,
+.ots-reticle-bottom {
+  left: 50%;
+  width: 1.5px;
+  height: 9px;
+  margin-left: -0.75px;
+  transition: transform 180ms ease;
+}
+
+.ots-reticle-top { top: 0; }
+.ots-reticle-bottom { bottom: 0; }
+
+.ots-reticle-left,
+.ots-reticle-right {
+  top: 50%;
+  height: 1.5px;
+  width: 9px;
+  margin-top: -0.75px;
+}
+
+.ots-reticle-left { left: 0; }
+.ots-reticle-right { right: 0; }
+
+/* The reticle itself stays dead centre (that is the shot ray); the tick gap
+   hints at which shoulder the camera sits over. */
+.ots-reticle.is-left .ots-reticle-top { transform: translateX(-3px); }
+.ots-reticle.is-left .ots-reticle-bottom { transform: translateX(3px); }
+.ots-reticle.is-active.is-left { transform: scale(1) translateX(-1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ots-reticle,
+  .ots-reticle-tick { transition: none; }
+}

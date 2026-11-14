@@ -5,6 +5,7 @@ import {
   manorGame2EaseCameraClip,
 } from '../../dashboard/lakesideManor/manorGame2Controls.mjs';
 import {GAME3D_GAME2_CAMERA,game3dToGame2Yaw} from './Game3DGame2Camera.mjs';
+import {OTS_AIM,computeOTSAimPose,clipAimBoom} from './otsAim.mjs';
 import {getActiveCharacter} from '../characterStore';
 import {isAXEAutoTargetNearbyEnabled} from '../axe/player/AXEControlSettingsStore';
 import {getAbilityState,setTarget,clearTarget} from '../abilityStore';
@@ -21,12 +22,25 @@ const tmpBoom=new THREE.Vector3();
 const tmpRayStart=new THREE.Vector3();
 const tmpRayDirection=new THREE.Vector3();
 
+const smooth01=t=>{const u=Math.max(0,Math.min(1,t));return u*u*(3-2*u);};
+const lerpV=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t,z:a.z+(b.z-a.z)*t});
+
 export class PlayerCameraSystem {
-  constructor({camera,orbit,modelRef,lockOnTargetRef,groundMeshes=[]}){
+  constructor({camera,orbit,modelRef,lockOnTargetRef,groundMeshes=[],
+    aim=null,cameraColliders=null}){
     this.camera=camera;
     this.orbit=orbit;
     this.modelRef=modelRef;
     this.lockOnTargetRef=lockOnTargetRef;
+    // Over-the-shoulder aiming. `aim` is createOTSAimState(); the pose blends
+    // out of this follow camera while it is held, so exploration is unchanged.
+    this.aim=aim;
+    // Solid world meshes (terrain, floors, roofs, walls, town buildings) used by
+    // the OTS spring arm. A function is re-read every aim frame so late-loaded
+    // town meshes are included without rebuilding the camera.
+    this.cameraColliders=cameraColliders;
+    this.aimRaycaster=new THREE.Raycaster();
+    this.baseFov=Number.isFinite(camera?.fov)?camera.fov:55;
     // Shared actual player-foot/terrain meshes. No cosmetic grass or foliage,
     // custom gameplay colliders, or server authority changes.
     this.groundMeshes=groundMeshes;
@@ -186,6 +200,25 @@ export class PlayerCameraSystem {
     });
   }
 
+  resolveColliders(){
+    const source=this.cameraColliders;
+    if(typeof source==='function'){
+      const list=source();
+      return Array.isArray(list)?list:[];
+    }
+    return Array.isArray(source)?source:[];
+  }
+
+  // Aiming zooms in; letting go returns to the scene FOV. Smoothed so the
+  // projection matrix never jumps.
+  applyFov(nextFov,dt){
+    if(!this.camera||!Number.isFinite(nextFov))return;
+    if(Math.abs(this.camera.fov-nextFov)<.01)return;
+    this.camera.fov+=(nextFov-this.camera.fov)*(1-Math.exp(-OTS_AIM.fovLerp*dt));
+    if(Math.abs(this.camera.fov-nextFov)<.01)this.camera.fov=nextFov;
+    this.camera.updateProjectionMatrix();
+  }
+
   update(delta,movementIntent={}){
     const model=this.modelRef.current;
     if(!model)return;
@@ -193,7 +226,9 @@ export class PlayerCameraSystem {
     this.updateEveAdamAutoLock(dt,model);
     const o=this.orbit.current;
     const lockedTarget=this.lockOnTargetRef.current;
-    if(lockedTarget?.group&&(!lockedTarget.aliveRef||lockedTarget.aliveRef())){
+    const aimBlend=this.aim?this.aim.update(dt):0;
+    // Aiming owns the framing, so lock-on framing steps aside while it is held.
+    if(lockedTarget?.group&&(!lockedTarget.aliveRef||lockedTarget.aliveRef())&&aimBlend<=.0001){
       const targetPos=lockedTarget.group.position;
       tmpToTarget.set(targetPos.x-model.position.x,0,
         targetPos.z-model.position.z);
@@ -227,12 +262,14 @@ export class PlayerCameraSystem {
         this.camera.position.copy(tmpCamera);
       }
       this.camera.lookAt(tmpTarget);
+      this.applyFov(this.baseFov,dt);
       this.followTarget=null;
       this.clipDistance=null;
       return;
     }
 
-    if(lockedTarget)this.lockOnTargetRef.current=null;
+    // An aiming player keeps their selected target; it resumes on release.
+    if(lockedTarget&&aimBlend<=.0001)this.lockOnTargetRef.current=null;
     if(!Number.isFinite(o.yaw))o.yaw=0;
     if(!Number.isFinite(o.pitch))o.pitch=GAME3D_GAME2_CAMERA.pitch;
     const pos=model.position;
@@ -259,9 +296,28 @@ export class PlayerCameraSystem {
     const clipped=this.clipAgainstTerrain(pose);
     const eased=manorGame2EaseCameraClip(clipped,this.clipDistance,dt,12);
     this.clipDistance=eased.distance;
-    this.camera.position.set(
-      eased.pose.eye.x,eased.pose.eye.y,eased.pose.eye.z);
-    this.camera.lookAt(
-      eased.pose.target.x,eased.pose.target.y,eased.pose.target.z);
+    let eye={x:eased.pose.eye.x,y:eased.pose.eye.y,z:eased.pose.eye.z};
+    let target={x:eased.pose.target.x,y:eased.pose.target.y,z:eased.pose.target.z};
+    let fov=this.baseFov;
+    if(aimBlend>.0001&&this.aim){
+      // Same follow target the exploration camera uses, so the hand-off into
+      // the shoulder pose never pops on stairs, bridges or a moving mount.
+      const aimPose=computeOTSAimPose({
+        x:this.followTarget.x,y:this.followTarget.y,z:this.followTarget.z,
+        yaw:o.yaw,pitch:o.pitch,side:this.aim.sideBlend,
+      });
+      const aimEye=clipAimBoom({
+        anchor:aimPose.anchor,eye:aimPose.eye,
+        meshes:this.resolveColliders(),raycaster:this.aimRaycaster,
+        margin:OTS_AIM.collisionMargin,minBoom:OTS_AIM.minBoom,
+      });
+      const t=smooth01(aimBlend);
+      eye=lerpV(eye,aimEye,t);
+      target=lerpV(target,aimPose.target,t);
+      fov=this.baseFov+(OTS_AIM.fov-this.baseFov)*t;
+    }
+    this.camera.position.set(eye.x,eye.y,eye.z);
+    this.camera.lookAt(target.x,target.y,target.z);
+    this.applyFov(fov,dt);
   }
 }

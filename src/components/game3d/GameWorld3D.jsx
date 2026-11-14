@@ -145,7 +145,7 @@ import { syncFusedLocomotion } from './player/fusedLocomotionSync';
 import { createLunaDashboardPlayerController as createPlayerAnimationController } from './player/LunaDashboardPlayerController';
 import { CorePlayerStateMachine } from './player/CorePlayerStateMachine';
 import { CoreAnimationController } from './player/CoreAnimationController';
-import { PlayerCameraSystem } from './player/PlayerCameraSystem';
+import { PlayerCameraSystem } from './player/PlayerCameraSystem'; import { OTS_AIM, createOTSAimState, applyOTSAimFacing } from './player/otsAim.mjs'; import { createOTSCameraColliders } from './player/otsCameraColliders.mjs'; import { updateOTSAimFrame } from './player/otsAimRuntime'; import OTSAimReticle from './hud/OTSAimReticle';
 import { createGame3DWorldEntryCamera } from './player/Game3DWorldEntryCamera.mjs';
 import {
   GAME3D_GAME2_CAMERA,applyGame3DGame2MouseLook,
@@ -328,7 +328,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   const abilityKeyPressed = useRef(-1); // slot index pressed this frame (-1 = none)
   const companionAbilityPressed = useRef(null);
   const activeEffects = useRef([]); // { alive: fn, update: fn }
-  const orbit = useRef({ yaw: 0, pitch: GAME3D_GAME2_CAMERA.pitch, distance: GAME3D_GAME2_CAMERA.distance });
+  const orbit = useRef({ yaw: 0, pitch: GAME3D_GAME2_CAMERA.pitch, distance: GAME3D_GAME2_CAMERA.distance }); const otsAim = useRef(null); if (!otsAim.current) otsAim.current = createOTSAimState();
   const nearbyNPCRef = useRef(null);
   const interactPressed = useRef(false);
   const attackPressed = useRef(false);
@@ -1306,7 +1306,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let avatarDrawCalls = null; // skips the avatar's parked skill-effect meshes (docs/game3d/AVATAR_DRAW_CALLS.md)
     const playerStateMachine = new CorePlayerStateMachine();
     let coreAnimationController = null;
-    const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes });
+    const otsCameraColliders = createOTSCameraColliders({ groundMeshes, roots: () => [wolfveilVillage?.world?.group, importedSpawnTown?.root] }); const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes, aim: otsAim.current, cameraColliders: otsCameraColliders });
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
     const lastDirectionTap = { current: {} };
@@ -1713,7 +1713,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (window.__axeTileInspectionEditing) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       if (e.target?.matches?.('input, textarea')) return;
-      const k = e.key.toLowerCase();
+      const k = e.key.toLowerCase(); if (k === 'v' && !e.repeat && otsAim.current.aiming) otsAim.current.toggleShoulder(); // shoulder swap
       if (e.code === 'F1') {
         e.preventDefault();
         if (!e.repeat) {
@@ -1980,18 +1980,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         drag.current.active = true;
         drag.current.x = e.clientX;
         drag.current.y = e.clientY;
-        rightDragMoved.current = false;
+        rightDragMoved.current = false; otsAim.current.beginHold(performance.now()); // hold = OTS aim, tap = guard
         e.preventDefault();
       }
     };
     const onMouseUp = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
-      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) { drag.current.active = false; rightDragMoved.current = false; return; }
+      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) { drag.current.active = false; rightDragMoved.current = false; otsAim.current.endHold(performance.now()); return; }
       if (e.button === 2) {
-        const startedOnWorldCanvas = drag.current.active;
+        const startedOnWorldCanvas = drag.current.active; const aimHeldMs = otsAim.current.endHold(performance.now());
         drag.current.active = false;
-        // Only guard a genuine right-click begun on the world canvas.
-        if (startedOnWorldCanvas && !rightDragMoved.current) {
+        // Only a quick right-click that never dragged still guards; holding aims.
+        if (startedOnWorldCanvas && !rightDragMoved.current && aimHeldMs < OTS_AIM.tapGuardMs) {
           const guardSpend = spendCombatResource('guard');
           if (guardSpend.ok) {
             playerStateMachine.setIntent({ blockHeld: true });
@@ -2372,7 +2372,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           crouchTogglePressed.current = false;
           drag.current.active = false;
           rightDragMoved.current = false;
-          playerStateMachine.setIntent({ blockHeld: false, aimHeld: false });
+          playerStateMachine.setIntent({ blockHeld: false, aimHeld: false }); otsAim.current.endHold(performance.now()); otsAim.current.setPadAim(false);
           playerAnim?.setBlocking(false);
           clickToMove.cancel('ui');
           if (document.pointerLockElement === renderer.domElement)
@@ -2485,7 +2485,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const isMoving = move.lengthSq() > 0;
         const isRunning = !!keys.current['shift'] && isMoving;
         const isSprinting = !!keys.current['control'] && isMoving;
-        const isAiming = !!playerAnim?.getIsAiming?.();
+        if (playerAnim?.setAiming && otsAim.current.appliedAim !== otsAim.current.aiming) { otsAim.current.appliedAim = otsAim.current.aiming; playerAnim.setAiming(otsAim.current.appliedAim); } const isAiming = !!playerAnim?.getIsAiming?.();
         // Locked on, the hero keeps facing the target, so a click move can be a strafe.
         const moveDirection = clickSteer && combatAxes ? directionRelativeToFacing(clickSteer, combatAxes.forward)
           : keys.current['s'] ? 'backward' : keys.current['a'] ? 'left' : keys.current['d'] ? 'right' : 'forward';
@@ -2520,7 +2520,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               Math.hypot(model.position.x-fromX,model.position.z-fromZ) > .05) {
             noteSprintTravel(delta);
           }
-          if (!combatAxes) {
+          if (!combatAxes && !otsAim.current.aiming) {
             const angle = Math.atan2(move.x, move.z);
             const targetQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
             model.quaternion.slerp(targetQ, ROT_SMOOTH);
@@ -2608,7 +2608,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           setNearbyCompanion(false);
         }
 
-        updateLockOnRotation(delta);
+        updateLockOnRotation(delta); applyOTSAimFacing(model, orbit.current.yaw, otsAim.current, delta);
 
         // Core player state machine drives locomotion/combat intent, while legacy animation clips remain preserved.
         playerStateMachine.setIntent({
@@ -2699,7 +2699,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }));
 
         // Smooth camera system: damped lock-on yaw, combat distance, and sprint pullback without per-frame object spam.
-        playerCameraSystem.update(delta, playerStateMachine.intent);
+        playerCameraSystem.update(delta, playerStateMachine.intent); updateOTSAimFrame({ camera, aim: otsAim.current, colliders: otsCameraColliders(), extraMeshes: enemies.map(e => e.group) });
         stationRuntime.focusCamera(delta);
         // Sweep from character-front three-quarter portrait to real Game 2
         // follow camera, clipping against the same actual terrain geometry.
@@ -4017,7 +4017,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />
+      <div ref={containerRef} className="w-full h-full" />{!entryMode && <OTSAimReticle />}
       {!entryMode && import.meta.env.DEV && <WorldTileEditor worldId="game3d" title="Game 3D · World Terrain"
         bounds={region === 'wolfveil' ? WOLFVEIL_TILE_BOUNDS : ARENA_TILE_BOUNDS} tileSize={5}
         describeTile={region === 'wolfveil' ? describeWolfveilTile : undefined}
