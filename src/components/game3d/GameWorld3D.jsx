@@ -142,6 +142,8 @@ import {isInsideMeadowCircle,meadowGroundHeight}
 import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
+import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
+import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
 import {installWolfveilImportedTown} from './wolfveil/WolfveilImportedTownScene.mjs';
 import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTown} from './wolfveil/WolfveilImportedTownLayout.mjs';
 import {createWolfveilLivingMeadow} from './wolfveil/WolfveilLivingMeadow';
@@ -672,6 +674,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // The owner's 80-tile assembled town is on the SAME authoritative terrain.
     // Loading errors never block the character or remove Wolfveil's ground.
     const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene,{onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
+    const vortexLake=region==='wolfveil'
+      ?createVortexLakeLandmark(scene,{
+        sampleGroundY,
+        addGroundMesh:mesh=>groundMeshes.push(mesh),
+        removeGroundMesh:mesh=>{
+          const i=groundMeshes.indexOf(mesh);
+          if(i>=0)groundMeshes.splice(i,1);
+        },
+      }):null;
+    window.__gw3dVortexLake=vortexLake;
     const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
     const astralGate = region==='wolfveil' ? createAstralMountainGate(scene,{sampleGroundY}) : null;
     if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
@@ -704,6 +716,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         isInsideMeadowCircle(x,z-70)&&
         !insideWolfveilImportedTown(x,z,3)&&
         wolfveilDistanceToRiver(x,z-70)>4&&
+        !isVortexLakeWetSurface(x,z-70,2)&&
         wolfveilRouteClearance(x,z-70)>4,
       biomeAt:({x,z})=>region==='wolfveil'?'meadow':
         classifyBlazeBiome({region}),
@@ -1139,6 +1152,36 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
       },
     }) : null;
+    // A SECOND instance of the same real GLB dragon watches the new lake
+    // from the eastern mountain rim. It loads only when a player explores
+    // nearby; the old quarry encounter, boss HP system and animations stay.
+    const lakeStormDragon=region==='wolfveil'?createQuarryDragonBoss({
+      loader:worldGltfLoader,scene,bossEntities,setBosses,
+      sampleGroundY:sampleTileGroundY,
+      instanceId:'wolfveil_living_lake_storm_dragon',
+      encounterName:'Dragon of Living Perspectives',
+      site:'vortex_lake',
+      spawnPosition:{
+        x:VORTEX_LAKE.centerX+58,
+        z:VORTEX_LAKE.centerZ+70+30,
+      },
+      getPlayerPosition:()=>{
+        const p=modelRef.current?.position;
+        return p?{x:p.x,z:p.z,alive:getPlayerHUD().hp>0}:null;
+      },
+      applyPlayerDamage:(incoming)=>{
+        const player=getPlayerHUD();
+        if(!player||player.hp<=0)return;
+        const damage=Math.max(0,incoming-absorbShield(incoming));
+        if(damage>0)setHP(Math.max(0,player.hp-damage));
+      },
+      onEngage:boss=>{
+        if(!bossEncounter.isActive()){
+          bossEncounter.start({bossId:boss.id});
+          bossEncounter.beginCombat();
+        }
+      },
+    }):null;
     const pendingAXEDungeonBossSpawns = new Set();
     window.__gw3dSpawnAXEDungeonBoss = ({
       bossDef,
@@ -1479,9 +1522,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             isBlocked: (x,z) => isRuntimeFootprintBlocked({x,y:sampleGroundY(x,z) ?? 0,z},.75),
           }) : null;
       const returnSite=portalReturn==='astral'?ASTRAL_DUNGEON_ENTRANCE:LUNAR_CAVE_ENTRANCE;
+      const vortexReturn=portalReturn==='vortex'?VORTEX_LAKE.safeReturn:null;
       const returnPosition=region==='wolfveil'&&portalReturn ? {
-        x:returnSite.approachX,z:returnSite.approachZ,
-        y:sampleGroundY(returnSite.approachX,returnSite.approachZ) ?? 0.3,
+        x:vortexReturn?.x??returnSite.approachX,
+        z:vortexReturn?.z??returnSite.approachZ,
+        y:vortexReturn?.y??sampleGroundY(returnSite.approachX,returnSite.approachZ)??0.3,
       }:null;
       fbx.position.set(returnPosition?.x ?? workflowSpawn?.x ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.x:0),
         returnPosition?.y ?? workflowSpawn?.y ?? 0.3,
@@ -2276,6 +2321,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
+        vortexLake?.update(delta,null);
         livingInkWorld?.update(delta,envSystem.getState());
         playerAnim?.updateAnimation?.(delta);
         if(mixer)mixer.update(delta);
@@ -2305,6 +2351,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
       wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
+      const vortexTravel=vortexLake?.update(delta,modelRef.current?.position);
+      if(vortexTravel)
+        window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
       if(lunarGate?.update(delta,modelRef.current?.position))
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:{target:LUNAR_CAVE_REGION}}));
       if(astralGate?.update(delta,modelRef.current?.position))
@@ -2817,6 +2866,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Move + animate each world boss (chase/wander/idle).
         updateBossMovement(delta, bossEntities, model, mapReady, sampleGroundY);
         quarryDragon?.update(delta);
+        lakeStormDragon?.update(delta);
 
         // ─── NPC proximity & interaction (generic npcs array is empty) ───
         let closestNPC = null;
@@ -3794,7 +3844,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const dungeonBossForUI = bossEntities.find((b) =>
           b?.dungeonBoss && b.alive && !b.dying && !b.defeated && b.group?.visible
         );
-        setBossHeadUI(projectBossHead(dungeonBossForUI || bossEntities[0], camera, w, h));
+        const encounterId=bossEncounter.getState().bossId;
+        const engagedBoss=bossEntities.find(b=>b.id===encounterId &&
+          b.alive && !b.dying && !b.defeated);
+        const nearestBoss=bossEntities
+          .filter(b=>b.alive&&!b.dying&&!b.defeated&&b.group?.visible)
+          .sort((a,b)=>{
+            const p=model?.position||{x:0,z:0};
+            const da=Math.hypot(a.group.position.x-p.x,a.group.position.z-p.z);
+            const db=Math.hypot(b.group.position.x-p.x,b.group.position.z-p.z);
+            return da-db;
+          })[0];
+        setBossHeadUI(projectBossHead(
+          dungeonBossForUI||engagedBoss||nearestBoss,camera,w,h));
 
         // ─── Project quest NPC heads → screen-space for floating "QUEST" labels ───
         const qs = getQuestState();
@@ -4098,6 +4160,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       forestBiome?.dispose();
       waterContact?.dispose();
       quarryDragon?.dispose();
+      lakeStormDragon?.dispose();
+      vortexLake?.dispose();
+      if(window.__gw3dVortexLake===vortexLake)window.__gw3dVortexLake=null;
       livingInkWorld?.dispose();
       livingMeadow?.dispose();
       zombieCamps?.dispose();
