@@ -90,7 +90,7 @@ export function createCloneAdaptiveGraphics({
   let ceiling = rendererPixelRatioLimit({ profile, quality, devicePixelRatio: dpr });
   let slowWindows = 0, fastWindows = 0;
   let lastChangeAt = -Infinity;
-  let lastFrameAt = 0, lastSampleAt = 0, raf = null;
+  let lastFrameAt = 0, lastSampleAt = 0, lastObservedRenderFrame = null, raf = null;
   let sample = { ...empty, profile, ratio };
   let batch = [];
 
@@ -135,8 +135,15 @@ export function createCloneAdaptiveGraphics({
     if (disposed) return;
     raf = host.requestAnimationFrame(tick);
     if (documentRef?.hidden || renderer.getContext?.()?.isContextLost?.()) {
-      lastFrameAt = 0; lastSampleAt = now; batch = [];
+      lastFrameAt = 0; lastSampleAt = now; lastObservedRenderFrame = null; batch = [];
       return;
+    }
+    // Three.js increments render.frame on actual render submissions. If the
+    // game loop stops but the browser continues rAF, do not invent game FPS.
+    const renderedFrame = renderer.info?.render?.frame;
+    if (Number.isFinite(renderedFrame)) {
+      if (renderedFrame === lastObservedRenderFrame) return;
+      lastObservedRenderFrame = renderedFrame;
     }
     if (lastFrameAt && now > lastFrameAt) {
       const delta = now - lastFrameAt;
@@ -163,7 +170,7 @@ export function createCloneAdaptiveGraphics({
         slowWindows = 0; fastWindows = 0;
       }
     }
-    sample = { ...frame, ratio, profile };
+    sample = { ...frame, ratio, profile, sampledAt: now };
     try { onSample(sample); } catch { /* UI cannot disrupt gameplay */ }
   }
 
