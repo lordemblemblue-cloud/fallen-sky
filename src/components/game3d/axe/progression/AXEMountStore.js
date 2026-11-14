@@ -267,7 +267,11 @@ const adoptFactionStarterIfPristine = factionId => {
   if(old.definitionId===desired)return false;
   if(old.instanceId!==starterMountId(old.definitionId))return false;
   if(state.activeMountId!==old.instanceId||state.registeredMountId!==old.instanceId)return false;
-  if(old.totalXp!==0||old.growthPercent!==0||old.legendary||old.spiritualWeapon?.level>0)return false;
+  if(old.totalXp!==0||old.growthPercent!==0||old.legendary||
+     Number(old.spiritualWeapon?.rank||0)>0||old.spiritualWeapon?.mode==='utility')return false;
+  // Mount Soul Fusion can refine gear without gaining XP. Do not overwrite
+  // even a single paid refinement stage when a faction is selected later.
+  if(Object.values(old.gear||{}).some(piece=>Number(piece?.stage||0)>0))return false;
   if(Object.values(old.sourceStats||{}).some(x=>Number(x)!==0))return false;
   if(old.registered!==true||old.active!==true||old.riding)return false;
   const next=starterMount(desired);
