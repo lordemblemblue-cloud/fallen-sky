@@ -51,6 +51,7 @@ test('Rare Elite, Elite Legendary and Legendary Mythic are future paths, not fre
   assert.equal(rollAXEEvolutionPath('rare',44,()=>0),null);
   assert.equal(rollAXEEvolutionPath('rare',45,()=>0),'rare_elite');
   assert.equal(rollAXEEvolutionPath('elite',120,()=>0),'elite_legendary');
+  assert.equal(rollAXEEvolutionPath('elite',150,()=>0.01),'elite_mythic');
   assert.equal(rollAXEEvolutionPath('legendary',150,()=>0),'legendary_mythic');
   assert.equal(rollAXEEvolutionPath('mythic',180,()=>0),'mythic_chosen');
   assert.equal(rollAXEEvolutionPath('common',150,()=>0),null);
