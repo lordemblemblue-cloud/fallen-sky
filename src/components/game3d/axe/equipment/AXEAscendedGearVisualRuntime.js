@@ -105,7 +105,9 @@ export function createAXEAscendedGearVisualRuntime({model} = {}) {
     // weapon socket rather than remaining at a fixed world-space coordinate.
     lateUpdate(){
       if(!weapon.visible||!hand||disposed)return;
-      model.updateWorldMatrix(true,true);
+      // Update this socket's ancestry only; never traverse the whole skinned
+      // avatar on every frame in a crowded combat scene.
+      hand.updateWorldMatrix(true,false);
       hand.getWorldPosition(handWorld);
       weapon.position.copy(model.worldToLocal(handWorld));
     },
