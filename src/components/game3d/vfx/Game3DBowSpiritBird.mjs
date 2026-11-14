@@ -115,6 +115,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
+  const spare=[]; // Up to six reusable render objects; no new GPU assets per repeat shot.
   let hitSeconds=0,resultSeconds=0,disposed=false;
   // Local-only diagnostic counters: no uploads, console spam or new per-shot
   // timers. A shot resolves on the same combat frame or remains pending.
@@ -123,7 +124,6 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
   const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
   const fire=({origin,target}={})=>{
     if(disposed||!pointLike(origin)||!pointLike(target))return false;
-    if(birds.length>=MAX_BIRDS)releaseBird(birds.shift(),scene);
     const p0=vec(origin),p3=vec(target);
     p0.y+=1.45;
     // An illuminated trajectory exposes the direct hit test, even on a miss.
@@ -134,32 +134,55 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     // The tracing line is not a separate weapon and cannot grant damage.
     const direction=tmp.copy(p3).sub(p0).normalize();
     const duration=Math.max(.36,Math.min(.75,distance/75+.28));
-    const bird=makeBird();
-    const root=new THREE.Group();
+    let item=birds.length>=MAX_BIRDS?birds.shift():spare.pop();
+    if(item){
+      scene.remove(item.root);
+    }else{
+      const bird=makeBird();
+      const root=new THREE.Group();
+      root.add(bird.root);
+      const traceMaterial=new THREE.LineBasicMaterial({
+        color:0xffd375,transparent:true,opacity:.93,depthWrite:false,
+        blending:THREE.AdditiveBlending,
+      });
+      // The same two-vertex GPU line buffer is edited in-place each shot.
+      const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(),new THREE.Vector3(),
+      ]),traceMaterial);
+      trace.frustumCulled=false;
+      root.add(trace);
+      const shaftMaterial=new THREE.MeshBasicMaterial({
+        color:0xffd375,transparent:true,opacity:.38,depthWrite:false,
+        blending:THREE.AdditiveBlending,
+      });
+      // Unit cylinder scales along its length: do not allocate a new geometry
+      // or shader material for each fired arrow.
+      const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,1,5,1),shaftMaterial);
+      root.add(shaft);
+      item={bird,root,trace,shaft,traceMaterial,shaftMaterial};
+    }
+    const {bird,root,trace,shaft,traceMaterial,shaftMaterial}=item;
+    bird.root.visible=true;
     bird.root.position.copy(p0);
     bird.root.quaternion.setFromUnitVectors(axis,direction);
     bird.root.scale.setScalar(.63);
-    root.add(bird.root);
-    const traceMaterial=new THREE.LineBasicMaterial({
-      color:0xffd375,
-      transparent:true,opacity:.93,depthWrite:false,
-      blending:THREE.AdditiveBlending,
-    });
-    const trace=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p0,p3]),traceMaterial);
-    trace.frustumCulled=false;
-    root.add(trace);
-    // WebGL often renders wide lines as a single pixel. A faint narrow tube
-    // makes the same straight debug path visible on high-density displays.
-    const shaftMaterial=new THREE.MeshBasicMaterial({
-      color:0xffd375,transparent:true,
-      opacity:.38,depthWrite:false,blending:THREE.AdditiveBlending,
-    });
-    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,distance,5,1),shaftMaterial);
+    const position=trace.geometry.getAttribute('position');
+    position.setXYZ(0,p0.x,p0.y,p0.z);
+    position.setXYZ(1,p3.x,p3.y,p3.z);
+    position.needsUpdate=true;
+    traceMaterial.color.setHex(0xffd375);
+    traceMaterial.opacity=.93;
+    shaftMaterial.color.setHex(0xffd375);
+    shaftMaterial.opacity=.38;
+    shaft.scale.y=distance;
     shaft.position.copy(p0).add(p3).multiplyScalar(.5);
     shaft.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction);
-    root.add(shaft);
+    item.p0=p0;
+    item.p3=p3;
+    item.duration=duration;
+    item.elapsed=0;
     scene.add(root);
-    birds.push({bird,root,traceMaterial,shaftMaterial,p0,p3,duration,elapsed:0});
+    birds.push(item);
     shotStartedAt=now();
     shotSerial+=1;
     shotStats.fired+=1;
@@ -229,13 +252,14 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
       b.bird.wings[1].rotation.z=-Math.sin(b.elapsed*27)*.38;
       b.bird.root.scale.setScalar((.65+.18*Math.sin(Math.PI*t))*Math.min(1,(1-t)*8));
       if(t>=1)b.bird.root.visible=false;
-      if(b.elapsed>=TRACE_HOLD_SECONDS){releaseBird(b,scene);birds.splice(i,1);}
+      if(b.elapsed>=TRACE_HOLD_SECONDS){scene.remove(b.root);birds.splice(i,1);spare.push(b);}
     }
   };
   const dispose=()=>{
     if(disposed)return;
     disposed=true;
     birds.splice(0).forEach(item=>releaseBird(item,scene));
+    spare.splice(0).forEach(item=>releaseBird(item,scene));
     overlay?.host.remove();
   };
   return {fire,confirmHit,confirmMiss,showNotice,update,dispose,
