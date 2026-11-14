@@ -95,13 +95,13 @@ test('named armor pack drops use the same level gate and never include Crescent 
 test('ordinary drop adapter uses the canonical equipment pickup schema with no manufactured model',()=>{
   const path='src/components/game3d/axe/loot/AXEEquipmentLootSystem.js';
   const src=fs.readFileSync(path,'utf8')
-    .replace(/import[\\s\\S]*?from\\s*'[^']+';\\n/g,'')
+    .replace(/import[\s\S]*?from\s*'[^']+';\n/g,'')
     .replace(/^export /gm,'');
   // The pure roll adapter can be evaluated without loading React/JSX inventory.
   const roll=new Function('INVENTORY','isAXERateStat','AXE_GEAR_RARITY_SCALE',
     'AXE_PROCEDURAL_SET_FAMILIES','getAXELevelGearBand','rollAXELevelAffixes',
     'rollAXELevelRarity','rollAXEEvolutionPath',
-    src+'\\nreturn rollAXEEquipmentDrop;',
+    src+'\nreturn rollAXEEquipmentDrop;',
   )({chest:[{id:'ch_plain',name:'Plain Chest',slot:'chest',baseStats:{defense:3,maxHP:20}}]},
     key=>['critChance','critDefense','critDamage','attackPct','damagePct'].includes(key),
     AXE_GEAR_RARITY_SCALE,AXE_PROCEDURAL_SET_FAMILIES,
