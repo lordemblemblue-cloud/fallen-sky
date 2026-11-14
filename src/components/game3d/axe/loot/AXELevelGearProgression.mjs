@@ -110,7 +110,8 @@ export function rollAXELevelAffixes({slot='chest',rarity='common',level=1,qualit
   const count = {common:0,uncommon:1,rare:1,elite:2,legendary:3,mythic:3}[rarity] ?? 0;
   const chosen = {};
   const l = boundedLevel(level);
-  for (let i=0;i<Math.min(count,pools.length);i++) {
+  const rolls = Math.min(count,pools.length);
+  for (let i=0;i<rolls;i++) {
     const pick = Math.floor(unit(rng)*pools.length);
     const stat = pools.splice(pick,1)[0];
     const roll = 0.55 + 0.45*unit(rng);
