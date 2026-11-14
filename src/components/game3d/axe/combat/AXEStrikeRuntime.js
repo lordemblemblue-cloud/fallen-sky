@@ -71,7 +71,7 @@ export function resetAXEMomentum() {
 export function resolveAXEHeroStrike(hero, target, {
   skillMultiplier = 1, targetHp = null, targetMaxHp = null, tier = null, pve = true, distance = null, roll = Math.random(),
   chargedCritBonusPct = 0, chargedFatalBonusPct = 0, defensePiercePct = 0,
-  criticalAllowed = true, isAerialAttack = false,
+  criticalAllowed = true, isAerialAttack = false, isSkillStrike = false,
 } = {}) {
   const temp = peekTemporaryBonus(hero);
   const far = Number.isFinite(Number(distance)) ? Number(distance) : 0;
@@ -84,7 +84,7 @@ export function resolveAXEHeroStrike(hero, target, {
   // ability-point bonus is effective damage, not spendable skill-tree points.
   const setMultiplier = getAXESetCombatMultiplier(getEquippedAXEItems(), {
     pve, targetTier: tier || target?.tier,
-    isAerialAttack, isSkill: skillMultiplier !== 1,
+    isAerialAttack, isSkill: isSkillStrike || skillMultiplier !== 1,
   });
   const rangeCrit = n(hero.rangeUnit) > 0 && far > n(hero.rangeUnit) ? n(hero.rangeCritPct) : 0;
   const attacker = { ...hero, critChance: criticalAllowed ? Math.min(AXE_COMBAT_RULES.critChanceCapPct,
