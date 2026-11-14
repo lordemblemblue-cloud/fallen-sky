@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { getAXEEnemyStats } from './axe/balance/AXEPowerBudget';
 import { getPlayerHUD } from './playerHUDStore';
 import { CREATURE_MODEL_URL } from './creatureAssets';
+import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
 
 const QUEST_TIER_MAP = {
   normal:   { name: 'normal',   scale: 1.0,  ringColor: 0xff3030, tintColor: null     },
@@ -16,14 +17,15 @@ const QUEST_TIER_MAP = {
  * @param {{ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount }} ctx
  * @returns {Function} spawnQuestEnemies({ count, tierName, playerPos, metadata })
  */
-export function createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount }) {
+export function createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource }) {
+  const modelSource = creatureSource || createSharedSkinnedFBXSpawner(loader, CREATURE_MODEL_URL);
   return function spawnQuestEnemies({ count, tierName, playerPos, metadata = null }) {
     const tierDef = QUEST_TIER_MAP[tierName] || QUEST_TIER_MAP.normal;
     // quest targets match the hero's level: the quest is offered where the hero is
     const derived = getAXEEnemyStats(getPlayerHUD().level || 1, tierDef.name);
 
     for (let i = 0; i < count; i++) {
-      loader.load(CREATURE_MODEL_URL, (fbx) => {
+      modelSource.spawn((fbx) => {
         const b = new THREE.Box3().setFromObject(fbx);
         const s = b.getSize(new THREE.Vector3());
         const sc = (1.7 / Math.max(s.x, s.y, s.z)) * tierDef.scale;
@@ -43,6 +45,10 @@ export function createQuestEnemySpawner({ scene, enemies, loader, snapToGround, 
             node.castShadow = !node.isSkinnedMesh;
             node.receiveShadow = true;
             if (node.material) {
+              // Clones share source materials unless we detach them. Quest
+              // tier tints and death fades must never recolor every enemy.
+              node.material = Array.isArray(node.material)
+                ? node.material.map(mat => mat.clone()) : node.material.clone();
               const mats = Array.isArray(node.material) ? node.material : [node.material];
               mats.forEach((m) => {
                 if (tierDef.tintColor) m.color?.setHex(tierDef.tintColor);
@@ -110,7 +116,7 @@ export function createQuestEnemySpawner({ scene, enemies, loader, snapToGround, 
           if (wc) { const wa = em.clipAction(wc); wa.setEffectiveTimeScale(0.55); entry.walkAction = wa; }
           if (ic) { entry.idleAction = em.clipAction(ic); entry.idleAction.reset().fadeIn(0.2).play(); }
         });
-      });
+      }, error => console.warn('[Game3D] quest creature could not spawn', error));
     }
   };
 }
