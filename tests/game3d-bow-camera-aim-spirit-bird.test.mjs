@@ -52,7 +52,9 @@ test('the spirit-bird is VFX only, animates, caps allocations and disposes clean
  assert.equal(vfx.fire({origin:{x:0,y:0,z:5},target:{x:0,y:1,z:0}}),true);
  assert.equal(scene.children.length,1);
  for(let i=0;i<16;i++)vfx.update(.05,{active:true});
- assert.equal(scene.children.length,0);
+ assert.equal(scene.children.length,1,'straight trace remains after projectile arrival');
+ for(let i=0;i<10;i++)vfx.update(.05,{active:true});
+ assert.equal(scene.children.length,0,'tracer must dispose after 1.2 seconds');
  for(let i=0;i<9;i++)vfx.fire({origin:{x:0,y:0,z:5},target:{x:i*.1,y:1,z:0}});
  assert.ok(scene.children.length<=6);
  vfx.confirmHit();vfx.dispose();
