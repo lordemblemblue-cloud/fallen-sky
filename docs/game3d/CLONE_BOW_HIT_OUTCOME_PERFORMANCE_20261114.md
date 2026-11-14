@@ -32,3 +32,9 @@ Scope: Game 3D **clone** only, based on main after prior straight-tracer PR #42 
 5. Scope excludes direct Base44 editor publication: GitHub PR merge does not automatically update the live Base44 preview. Do not merge/publish until review and QA are complete.
 
 Safe rollback: revert this PR. Other feature branches and Game 3D main remain unchanged.
+
+## Latest CI and QA note
+
+Pull request #44 triggered the standard Game 3D avatar/world-entry workflow and the bow-aim workflow; **both GitHub Actions runs reported failure**. Their individual jobs also report failure, but GitHub's log-fetch endpoint returns BlobNotFound (404) instead of test output. The reason for either failure is therefore **unknown**, and they must not be reported as passing. As of this note, no actual browser FPS, HP-delta, or end-to-end shot latency claim can be made.
+
+The seven dependency-free contract test bodies were re-executed after the final code changes against their exact latest GitHub branch files using an isolated JS harness: **7 passed, 0 failed**. The two modified standalone JavaScript modules parsed successfully in V8. These are limited source checks, **not** a substitute for native Node/npm tests, a Three.js/WebGL render or signed-in gameplay. The draft remains unmerged for safe regression review.
