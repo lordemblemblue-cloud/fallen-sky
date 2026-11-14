@@ -88,12 +88,14 @@ test('world and combat wire the aura lifecycle and current advancement records',
   const combat=fs.readFileSync('src/components/game3d/axe/combat/AXEStrikeRuntime.js','utf8');
   const runtime=fs.readFileSync('src/components/game3d/axe/equipment/AXEEquipmentRuntimeStats.js','utf8');
   const visual=fs.readFileSync('src/components/game3d/axe/equipment/AXEAscendedGearVisualRuntime.js','utf8');
+  const advancement=fs.readFileSync('src/components/game3d/axe/equipment/AXEItemAdvancementStore.js','utf8');
   assert.match(world,/createAXEAscendedGearVisualRuntime\(\{ model: fbx \}\)/);
   assert.match(world,/ascendedGearVisualRuntime\?\.update/);
   assert.match(world,/ascendedGearVisualRuntime\?\.lateUpdate/);
   assert.match(world,/ascendedGearVisualRuntime\?\.dispose/);
   assert.match(combat,/getEquippedAXEItems\(\)\.map\(item/);
   assert.match(runtime,/doesAXEStageIncreaseItemStats\(item\)/);
+  assert.match(advancement,/Math\.min\(savedReinforcementPercent, getAXEReinforcementCap\(item\)\)/);
   assert.match(visual,/subscribeAXEItemAdvancement/);
   assert.match(visual,/subscribeAXEEquipmentInventory/);
   assert.match(visual,/Spiritual_Ascended_Weapon_Aura/);
