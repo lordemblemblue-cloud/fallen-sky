@@ -54,15 +54,17 @@ export const COMPANION_DEFINITIONS = [
   ...Object.values(GAME3D_FACTION_MOUNTS).map(asset => ({
     id: asset.companionId,
     name: asset.name,
-    description: 'Faction-exclusive rigged quadruped mount and follower. Uses the updated owner-uploaded skinned GLB.',
+    description: 'Faction-bound rigged pet and rideable companion, using the owner-uploaded skinned GLB.'
     factionId: asset.factionId,
     rarity: 'rare',
     modelUrl: asset.modelUrl,
+    previousModelUrl: asset.previousModelUrl || null,
     modelFormat: 'glb',
-    // Their skins have no native clips. Transfer the inspected dog montage
-    // through anatomical maps and world-space bind-pose corrections, never
-    // attach foreign local FBX tracks directly to these different skeletons.
+    // Faction 1 still uses the verified original dog-cycle retarget. Uploaded
+    // Faction 2/3 winged pets preserve native idle/tail/wing animation and
+    // remap the existing baby-wolf walk/run to their own named bone skeleton.
     animationSource: 'baby-wolf-retarget',
+    animationRigProfile: asset.animationRigProfile || null,
     animationModelUrl: BABY_WOLF_GLTF,
     animationBundleManifest: BABY_WOLF_BUNDLE,
     idleClipName: 'idle',

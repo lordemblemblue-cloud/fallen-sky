@@ -12,13 +12,20 @@ export const GAME3D_FACTION_MOUNTS = Object.freeze({
   AXE_Faction_2: Object.freeze({
     factionId: 'AXE_Faction_2', companionId: 'faction_armored_wolf',
     mountDefinitionId: 'axe_mount_faction_wolf', name: 'Armored Wolf',
-    modelUrl: 'https://media.base44.com/files/public/6876751a602125f45f1861b9/238bac526_fantasy_armored_wolf_3d_model__1_.glb',
+    modelUrl: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/c474d5f03_9_fantasy_armor_and_clothing_equipment____158.glb',
+    // User GLB #158: 30-joint winged quadruped; native Idle + Tail_Idle.
+    // Retarget the existing baby-wolf walk/run instead of assuming these clips exist.
+    animationRigProfile: 'winged_faction_2_158',
+    previousModelUrl: 'https://media.base44.com/files/public/6876751a602125f45f1861b9/238bac526_fantasy_armored_wolf_3d_model__1_.glb',
     scale: 1.4,
   }),
   AXE_Faction_3: Object.freeze({
     factionId: 'AXE_Faction_3', companionId: 'faction_tiger',
     mountDefinitionId: 'axe_mount_faction_tiger', name: 'Fantasy Tiger',
-    modelUrl: 'https://media.base44.com/files/public/6876751a602125f45f1861b9/43581b070_fantasy_tiger_3d_model__1_.glb',
+    modelUrl: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/d58217bc6_9_fantasy_armor_and_clothing_equipment____160.glb',
+    // User GLB #160: 28-joint winged quadruped; native Idle_Relaxed_Tail.
+    animationRigProfile: 'winged_faction_3_160',
+    previousModelUrl: 'https://media.base44.com/files/public/6876751a602125f45f1861b9/43581b070_fantasy_tiger_3d_model__1_.glb',
     scale: 1.4,
   }),
 });
