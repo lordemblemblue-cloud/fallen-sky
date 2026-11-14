@@ -12,6 +12,21 @@ export default function CloneHardwarePanel({ visible = false }) {
 
   useEffect(() => {
     if (!open || !visible) return;
+    let longTasks = null;
+    let longestTaskMs = null;
+    let longTaskObserver = null;
+    try {
+      if (window.PerformanceObserver?.supportedEntryTypes?.includes('longtask')) {
+        longTasks = 0; longestTaskMs = 0;
+        longTaskObserver = new window.PerformanceObserver(list => {
+          for (const entry of list.getEntries()) {
+            longTasks++;
+            longestTaskMs = Math.max(longestTaskMs, entry.duration);
+          }
+        });
+        longTaskObserver.observe({ entryTypes: ['longtask'] });
+      }
+    } catch { longTasks = null; longestTaskMs = null; }
     const update = () => {
       const controller = window.__axe3dCloneGovernor;
       const renderer = window.__gw3dRenderer;
@@ -23,12 +38,12 @@ export default function CloneHardwarePanel({ visible = false }) {
       setDetails({
         measurement: controller?.getSnapshot?.() || null,
         draw: readRendererInfo(renderer),
-        maxTextureSize,
+        maxTextureSize, longTasks, longestTaskMs,
       });
     };
     update();
     const interval = window.setInterval(update, 1000);
-    return () => window.clearInterval(interval);
+    return () => { window.clearInterval(interval); longTaskObserver?.disconnect?.(); };
   }, [open, visible]);
 
   if (!visible) return null;
@@ -74,7 +89,8 @@ export default function CloneHardwarePanel({ visible = false }) {
           <div>Render pixel ratio: {format(frame?.ratio, 2)}</div>
           <div>Draw calls: {draw?.calls ?? '—'} · Triangles: {draw?.triangles?.toLocaleString?.() ?? '—'}</div>
           <div>GPU textures: {draw?.textures ?? '—'} · Geometry: {draw?.geometries ?? '—'}</div>
-          <div>Max texture dimension: {maxTextureSize ?? '—'}</div>
+          <div>Max texture dimension: {details?.maxTextureSize ?? '—'}</div>
+          <div>CPU long tasks: {details?.longTasks ?? 'Unavailable'} · longest: {format(details?.longestTaskMs)} ms</div>
           <div>GPU memory: not exposed by browser</div>
         </div>
         <p style={{ color: '#aec9d9', margin: '10px 0 0', fontSize: 11 }}>
