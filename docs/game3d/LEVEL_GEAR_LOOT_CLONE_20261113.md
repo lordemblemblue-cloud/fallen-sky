@@ -16,13 +16,13 @@
 | 130–139 | — | — | 25 | 75 | — | — |
 | 140–149 | — | — | 15 | 85 | — | — |
 | 150–179 | — | — | — | 28 | 72 | — |
-| 180+ | — | — | — | 20 | 80 | boss/elite-only tiny chance |
+| 180+ | — | — | — | 20 | 80 | boss/elite-only rare chance |
 
 Weights are **relative**, not guaranteed drop odds. The existing kill-based *equipment drop chance* remains unchanged (normal mob 3.5%, elite 12%, etc.); these weights apply only **after a gear drop succeeds**. Boss/elite modifiers favor already-eligible higher grades without releasing grades early. Named armor pack drops retain their separate chance and pool but now honor the same minimum-level rarity gates.
 
 *Unique is displayed as Unique but stored as the pre-existing engine rarity `uncommon` for compatibility with inventory, loot visuals and reinforcement rules. Rarity variants are additional fields, not new hard-coded combat rarities.*
 
-The drop level uses `enemyLevel` / `level` from the killed mob when the death message provides it. Existing death messages without a mob level retain their previous player-level fallback; they require follow-up instrumentation for perfect mob-level accuracy in all scenes.
+The GameWorld3D kill broadcast now forwards the defeated enemy's derived level and tier to both loot events, so actual mob levels drive the new tables. Older or external death events without a mob level retain the previous player-level fallback. Local multiplayer/death-event duplicates are suppressed for nine seconds (normal respawn is ten seconds) before rolling loot.
 
 ## Generation
 
@@ -43,15 +43,15 @@ The drop level uses `enemyLevel` / `level` from the killed mob when the death me
 
 ## Rare set families
 
-At monster level 45+, eligible Rare/Elite/Legendary/Mythic generic armor can roll one of three shared set families. Set pieces are matched by `setId` AND **actual rarity**, so mismatched grades do not accidentally complete a set. Two equipped pieces activate one signature effect; four pieces also grant +2 ordinary Defense.
+At monster level 45+, eligible Rare/Elite/Legendary/Mythic generic armor can roll one of three shared set families. Existing named Rare/Elite/Legendary fitted-armor pack drops (Nightscale, Frostwarden, Crimson Drake, Ravenfeather and Silver Seraph) also receive rarity-matched set identities, one contextual two-piece effect, a four-piece +2 Defense threshold and one/two/three random affixes appropriate to rarity. Set pieces are matched by `setId` AND **actual rarity**, so mismatched grades do not accidentally complete a set. Two equipped pieces activate one signature effect; four pieces also grant +2 ordinary Defense.
 
 | Set | Two-piece bonus | Where applied |
 | --- | --- | --- |
-| Skyrend | +20% aerial strike damage | PvE combat resolver **when caller identifies an aerial attack**; the main GameWorld3D caller still needs to pass `isAerialAttack` from grounded/animation state |
+| Skyrend | +20% aerial strike damage | PvE combat resolver when the player attacks while airborne; GameWorld3D passes its player-state grounded flag |
 | Wildhunt | +15% damage to ordinary mobs | PvE, tiers normal/elite/champion; no boss/PvP boost |
 | Arcanist | +3 virtual ability-damage points = +9% skill damage | PvE skill strike (3% per point); does **not** grant three spendable skill-tree points |
 
-The new combat resolver reads equipped canonical items and applies the conditional damage modifier inside its existing temporary-bonus cap. It does not permanently multiply the player's sheet damage or grant effects in PvP. Actual 3D effect models and VFX can be added later.
+The new combat resolver reads equipped canonical items and applies the conditional damage modifier inside its existing temporary-bonus cap. GameWorld3D now passes its actual grounded/airborne player state to the strike resolver for the Skyrend bonus. It does not permanently multiply the player's sheet damage or grant effects in PvP. Actual 3D effect models and VFX can be added later.
 
 ## Chosen (locked blueprint)
 
@@ -61,5 +61,5 @@ Eligibility helper requires **level 150+**, **Halo 200** (current max), **at lea
 
 - Isolated V8 contract checks exercised key level boundaries, Rare Elite evolution, set thresholds, PvP/boss isolation, regular gear drops, named armor pack drops and new 3-affix Legendary rolls. Additive stat values were confirmed as real `equipmentItem.rolledStats`.
 - Run from repo root: `node --test tests/game3d-clone-level-gear-progression.test.mjs`, then `npm run build`.
-- **Still needs browser QA**: mob-level event payload coverage, real world pickup/persistence, item fitting once GLBs are available, true Blacksmith evolution recipes, skill-tree treatment of virtual ability points, Skyrend grounded/airborne event wiring and server-authoritative anti-tamper before competitive multiplayer.
+- **Still needs browser QA**: mob-level event payload coverage, real world pickup/persistence, item fitting once GLBs are available, true Blacksmith evolution recipes, skill-tree representation of virtual ability points, Skyrend airborne-attack visual QA, named-armor fit and server-authoritative anti-tamper before competitive multiplayer.
 - Clone-first; do not copy to main Game 3D until balance and the equipped/set impact are approved.
