@@ -28,6 +28,7 @@ import { scaleAXEGearForFusion } from './axe/progression/AXEMountFusionSystem';
 import { getEquippedAXEVanityActivationProfile, getEquippedAXEVanityBaseBonuses, subscribeAXEVanity } from './axe/progression/AXEVanityStore';
 import { getAXEVanitySpiritVirtualBonus } from './axe/progression/AXEVanitySystem';
 import { getAXEEquipmentRuntimeBonuses } from './axe/equipment/AXEEquipmentRuntimeStats';
+import { applyAXEChosenSetToDerived } from './axe/equipment/AXEChosenSetRules.mjs';
 import { applyAXEPercentPool, sumAXEPercentPools } from './axe/balance/AXEStatPool';
 import { getAXEEnemyStats, getAXEHitChancePct } from './axe/balance/AXEPowerBudget';
 import { subscribeAXEEquipmentInventory } from './axe/equipment/AXEEquipmentInventoryStore';
@@ -165,6 +166,7 @@ const getBonuses = () => {
     ),
     vanityActivation,
     equipmentMultipliers: equipment.multipliers,
+    chosenSet: equipment.chosenSet,
     advancedClassMultipliers: advancedClass.multipliers,
     advancedClassCombat: advancedClass.combat,
     weaponAffinity: getAXEWeaponAffinityProfile(),
@@ -229,7 +231,11 @@ const computeDerivedWithVanity = (baseStats, bonuses) => {
   const withAscension = applyAXEAscensionToDerived(withAffinity, bonuses.ascension); // the Nature: the one true multiplier
   // crit, avoidance, block, reduction, reflect, life steal, execute: on the sheet, each capped
   const withBuild = applyAXEBuildEffectsToDerived(withAscension, build);
-  return bonuses.mountFusion ? { ...withBuild, mountFusion: bonuses.mountFusion } : withBuild;
+  // Chosen is the singular best-in-game full-set effect: +100% core stats,
+  // +200% only when all six Chosen pieces are genuinely Ascension +4.
+  // Apply ONCE at the end, not as both virtual attributes and equipment %.
+  const withChosen = applyAXEChosenSetToDerived(withBuild, bonuses.chosenSet?.bonusPct);
+  return bonuses.mountFusion ? { ...withChosen, mountFusion: bonuses.mountFusion } : withChosen;
 };
 
 // The hero's level rides on the derived stats (the combat maths reads both sides' levels),

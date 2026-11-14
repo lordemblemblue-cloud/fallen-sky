@@ -9,6 +9,8 @@ import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
 import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
+import { getAXEAdvancementState, subscribeAXEItemAdvancement } from '../equipment/AXEItemAdvancementStore';
+import { AXE_CHOSEN_SET_ID } from '../equipment/AXEChosenSetRules.mjs';
 import { getCompanionState, subscribeCompanion, equipCompanionGear, unequipCompanionGear }
   from '../../companionStore';
 import { COMPANION_GEAR, getCompanionById } from '../../companionData';
@@ -56,6 +58,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const enhancements = useLive(subscribeEnchantments, () => ({
     reinforcement: {}, enchantments: {}, overEnchant: {},
   }));
+  // Set progress must read the same item Ascension records as combat. An
+  // inventory item alone does not carry a fresh stage rank after Blacksmith.
+  const advancements = useLive(subscribeAXEItemAdvancement, () => ({state:{}}));
   const [selectedId,setSelectedId] = useState(null);
   const [filter,setFilter] = useState('All');
   const [focusedSlot,setFocusedSlot] = useState('');
@@ -112,7 +117,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       (result.message || caption(result.reason) || 'Unable to equip') :
       (worn ? 'Equipment removed.' : 'Equipment equipped.'));
   };
-  const setState = isPlayer ? getAXEEquipmentSetState(items) : null;
+  const setState = isPlayer ? getAXEEquipmentSetState(items.map(item => ({
+    ...item,
+    advancement: advancements?.state?.[item.instanceId] ||
+      getAXEAdvancementState(item.instanceId),
+  }))) : null;
 
   return <div className="axe-app-layout axe-glass-loadout" data-equipment-actor={actor}>
     <aside className="axe-app-rail axe-glass-loadout-rail" aria-label="Equipment slot filters">
@@ -237,6 +246,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
                 {Object.keys(set.conditionalBonuses || {}).length > 0 &&
                   <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>}
+                {set.setId === AXE_CHOSEN_SET_ID && <small className="axe-glass-set-special">
+                  Chosen {set.equippedPieces}/{set.requiredPieces} pieces · {set.ascendedPieces}/{set.requiredPieces}
+                  {' '}at Ascension +4 · {set.chosenBonusPct
+                    ? '+'+set.chosenBonusPct+'% core stats active' : 'Complete all six for +100% core stats'}
+                </small>}
               </div>)}
             </div>}
             <button type="button" className="axe-app-unified-equip axe-glass-equip" onClick={()=>performItem(selected,true)}>

@@ -65,6 +65,7 @@ const makeOutput = () => ({
   items: [],
   activeSets: [],
   activeAuxSets: [],
+  chosenSet: null,
 });
 
 function addStat(out, key, rawValue, scale = 1) {
@@ -237,6 +238,9 @@ export function getAXEEquipmentRuntimeBonuses() {
   const sets = evaluateAXESetBonuses(liveItems);
   addStats(out, sets.stats, 1);
   out.activeSets = sets.activeSets || [];
+  // This is informational until the derived-stat pipeline applies the
+  // Chosen full-set multiplier exactly once. Do not multiply items here too.
+  out.chosenSet = sets.chosen || null;
 
   const auxiliary = evaluateAXEAuxiliaryBonuses(liveItems);
   addStats(out, auxiliary.setStats, 1);
