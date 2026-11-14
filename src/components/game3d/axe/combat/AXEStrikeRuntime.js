@@ -12,6 +12,7 @@ import { consumeForcedCriticalHit } from '../../combat/forcedCriticalBridge';
 import { consumeAXEPowerCharge, consumeFocusHit, getBuffs, isBuffActive } from '../../skills/buffEngine';
 import { consumeShopCritBuff, consumeShopDamageBuff, getShopBuffSnapshot } from '../../shop/shopEffectsBridge';
 import { getEquippedAXEItems } from '../equipment/AXEEquipmentInventoryStore';
+import { getAXEAdvancementState } from '../equipment/AXEItemAdvancementStore';
 import { getAXESetCombatMultiplier } from '../equipment/AXESetBonusSystem';
 
 // all temporary bonuses on one swing (Focus, Power Charge, a shop elixir, a momentum chain) together
@@ -82,7 +83,9 @@ export function resolveAXEHeroStrike(hero, target, {
     * (1 + (fromStealth ? n(hero.stealthDamagePct) : 0) / 100);
   // Rare procedural sets apply only to matching PvE strike contexts. Their
   // ability-point bonus is effective damage, not spendable skill-tree points.
-  const setMultiplier = getAXESetCombatMultiplier(getEquippedAXEItems(), {
+  const setMultiplier = getAXESetCombatMultiplier(getEquippedAXEItems().map(item => ({
+    ...item, advancement: getAXEAdvancementState(item.instanceId),
+  })), {
     pve, targetTier: tier || target?.tier,
     isAerialAttack, isSkill: isSkillStrike || skillMultiplier !== 1,
   });
