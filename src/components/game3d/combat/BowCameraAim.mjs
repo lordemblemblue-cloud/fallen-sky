@@ -60,6 +60,7 @@ export function getBowEnemyHitbox(target, out = new THREE.Box3()) {
   } else {
     const offset = isBoss ? 3 : 0.6;
     center.x = clamp(center.x, worldPos.x - offset, worldPos.x + offset);
+    center.y = clamp(center.y, worldPos.y - 0.25, worldPos.y + (isBoss ? 5 : 2.1));
     center.z = clamp(center.z, worldPos.z - offset, worldPos.z + offset);
     // Hold this to a solid, reasonable torso. Extremely wide decorative
     // mesh bounds cannot be used as a free target acquisition zone.
