@@ -7,6 +7,7 @@
 // Normal enemies never drop elite or legendary pieces. The item enters AXEEquipmentInventoryStore on
 // pickup like any other gear drop (WorldLootDrops.jsx).
 import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../equipment/AXEArmorPackCatalog.js';
+import { getAXELevelRarityWeights, rollAXEEvolutionPath } from './AXELevelGearProgression.mjs';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -44,17 +45,23 @@ function tierOf(enemyTier, isBoss) {
   return AXE_ARMOR_DROP_CONFIG.chanceByTier[enemyTier] != null ? enemyTier : 'normal';
 }
 
-function weightsFor(tier) {
+function weightsFor(tier, monsterLevel) {
   const w = AXE_ARMOR_DROP_CONFIG.rarityWeightsByTier;
   const raw = BOSS_TIERS.has(tier) ? w.boss : (w[tier] || w.normal);
-  return Object.entries(raw).filter(([rarity, weight]) => weight > 0 && PIECES_BY_RARITY[rarity]?.length);
+  const allowed = getAXELevelRarityWeights(monsterLevel, {
+    enemyTier:tier,isBoss:BOSS_TIERS.has(tier),
+  });
+  // Keep original per-enemy armor-pack odds, but never let an early-level mob
+  // drop Rare/Elite/Legendary armor before that rarity becomes eligible.
+  return Object.entries(raw).filter(([rarity, weight]) =>
+    weight > 0 && allowed[rarity] > 0 && PIECES_BY_RARITY[rarity]?.length);
 }
 
 // Probability of each piece (by template id) dropping from ONE kill of this tier; for docs and tests.
-export function getAXEArmorDropOdds(enemyTier = 'normal', isBoss = false) {
+export function getAXEArmorDropOdds(enemyTier = 'normal', isBoss = false, enemyLevel = 1) {
   const tier = tierOf(enemyTier, isBoss);
   const chance = AXE_ARMOR_DROP_CONFIG.chanceByTier[tier];
-  const weights = weightsFor(tier);
+  const weights = weightsFor(tier, enemyLevel);
   const total = weights.reduce((t, [, w]) => t + w, 0);
   const odds = {};
   for (const [rarity, w] of weights) {
@@ -67,12 +74,13 @@ export function getAXEArmorDropOdds(enemyTier = 'normal', isBoss = false) {
 export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   rng = Math.random,
   playerLevel = 1,
+  enemyLevel = null,
   sourceId = 'enemy',
 } = {}) {
   const tier = tierOf(enemyTier, isBoss);
   if (clampRng(rng()) > AXE_ARMOR_DROP_CONFIG.chanceByTier[tier]) return null;
-
-  const weights = weightsFor(tier);
+  const monsterLevel = Math.max(1, Math.floor(Number(enemyLevel ?? playerLevel) || 1));
+  const weights = weightsFor(tier, monsterLevel);
   const total = weights.reduce((t, [, w]) => t + w, 0);
   if (!total) return null;
   let roll = clampRng(rng()) * total;
@@ -85,10 +93,11 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   const { set, piece } = pool[Math.floor(clampRng(rng()) * pool.length)];
   const bands = AXE_ARMOR_DROP_CONFIG.qualityBands;
   const qualityBand = bands[Math.floor(clampRng(rng()) * bands.length)];
-  const level = Math.max(1, Math.floor(Number(playerLevel) || 1));
+  const level = monsterLevel;
   const rarityScale = RARITY_SCALE[set.rarity] || 1;
   const statScale = rarityScale * (1 + (level - 1) * AXE_ARMOR_DROP_CONFIG.levelScalePerLevel) * (1 + qualityBand / 100);
   const template = makeAXEArmorTemplate(set, piece);
+  const evolutionPath = rollAXEEvolutionPath(rarity, level, rng);
   const baseStats = Object.fromEntries(Object.entries(template.baseStats).map(([key, value]) => [
     key, Number((Number(value) * (isRate(key) ? rarityScale : statScale)).toFixed(Math.abs(Number(value)) < 2 ? 2 : 0)),
   ]));
@@ -110,6 +119,7 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
       itemLevel: level,
       level,
       baseStats,
+      evolutionPath, rarityVariant: evolutionPath,
     },
   };
 }
