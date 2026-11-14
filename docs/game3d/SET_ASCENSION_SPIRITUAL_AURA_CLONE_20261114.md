@@ -33,7 +33,7 @@ Each activated set tier's bonus is scaled by `1 + minStageRank × 0.25`. `minSta
 
 The existing engine stores percent-based reinforcement separately from ten-level over-enchantment. Updated reinforcement ceilings: Common 40%, Unique 45%, Rare 50%, Elite 80%, Legendary/Mythical 120%, Chosen/Ascendant 200%. Actual over-enchantment has its own ten-level rules, which were **not** quietly replaced by percent progression. The owner can choose to unify or rename the two systems later.
 
-Old items whose saved reinforcement is already above the newly lowered rarity cap remain owned; this change blocks further advancement, rather than altering or silently downgrading saved progress.
+Old items whose saved reinforcement is already above the newly lowered rarity cap remain owned; this change blocks further **reinforcement**, rather than altering or silently downgrading saved progress. Their new stage Ascension remains available: only the new imprint input is bounded to the revised rarity ceiling, so treasured old Rare gear is never locked out of the four stage progression levels.
 
 ### Original, model-independent VFX
 
