@@ -37,6 +37,7 @@ The GameWorld3D kill broadcast now forwards the defeated enemy's derived level a
 
 - From level **45**, some Rare drops are tagged **Rare Elite** (`rare_elite`): future Rare → Elite pathway.
 - From level **120**, some Elite drops are tagged **Elite Legendary** (`elite_legendary`): future Elite → Legendary pathway.
+- From level **150**, a small subset of Elite drops can instead be tagged **Elite Mythic** (`elite_mythic`): alternate future Elite → Mythic pathway.
 - From level **150**, some Legendary drops are tagged **Legendary Mythic** (`legendary_mythic`): future Legendary → Mythic pathway.
 - Mythic is eligible for a **Mythic → Chosen** prestige path, but Chosen is **never rolled from mobs**.
 - Tagged items stay their **real current rarity** and its enhancement ceilings. A later Blacksmith recipe must define material costs, requirements, server authority and transactional save; this implementation does **not** silently mutate rarity or grant free power.
