@@ -672,3 +672,19 @@
 @media(prefers-reduced-motion:reduce) {
  .axe-app-model-stage--aura .axe-app-model-center::before {animation:none;}
 }
+
+/* Match the Appearance horizontal filter rail to the champagne-gold glass UI.
+ * Keep horizontal scrolling inside the filter chips, not the entire screen. */
+.axe-service-workspace--appearance .axe-app-root { overflow-x:hidden; }
+.axe-app-root .axe-app-inventory-filters {
+  scrollbar-width:thin;
+  scrollbar-color:rgba(225,188,125,.88) transparent;
+  overscroll-behavior-x:contain;
+}
+.axe-app-root .axe-app-inventory-filters::-webkit-scrollbar { height:6px; }
+.axe-app-root .axe-app-inventory-filters::-webkit-scrollbar-track { background:transparent; }
+.axe-app-root .axe-app-inventory-filters::-webkit-scrollbar-thumb {
+  background:linear-gradient(90deg,#d6ae72,#f5dfad,#d6ae72);
+  border:1px solid transparent; border-radius:999px;
+}
+.axe-app-root .axe-app-inventory-filters::-webkit-scrollbar-button {display:none;}
