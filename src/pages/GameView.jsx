@@ -543,7 +543,7 @@ export default function GameView() {
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn}
         resumeCheckpoint={resumeCheckpoint} />
-      <Game3DPerformanceBootstrap region={worldRegion} />
+      <Game3DPerformanceBootstrap region={worldRegion} showPanel={phase==='world'} />
       {phase==='login' ? (
         <>
           <CharacterLoginScreen liveWorld worldReady={worldReady} worldError={worldEntryError}
