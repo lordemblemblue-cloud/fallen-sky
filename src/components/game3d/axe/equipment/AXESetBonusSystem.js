@@ -1,7 +1,10 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
 import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
 import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
-import { AXE_CHOSEN_SET_ID, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
+import { AXE_CHOSEN_SET_ID, AXE_CHOSEN_REQUIRED_SLOTS, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
+import {
+  getAXESetAscensionTier, scaleAXESetBonus, getAXEFullSetAuraRank,
+} from './AXESetAscensionRules.mjs';
 // Set identity, grade and activation thresholds are separate concepts so Rare,
 // Elite and Heroic versions can share a family without sharing balance values.
 
@@ -44,6 +47,7 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
     allowedGrades: Object.freeze(['chosen']),
     allowMixedGrades: false,
     thresholds: Object.freeze({6:Object.freeze({})}),
+    fullSetSlots: AXE_CHOSEN_REQUIRED_SLOTS,
     description: 'Six unique Chosen armor pieces: +100% core stats. All six Ascension +4: +200%.',
   }),
   ...Object.fromEntries(AXE_ARMOR_PACK_SETS.filter(set=>set.pieces.length>=5 &&
@@ -51,6 +55,7 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
     'AXE_Set_Armor_'+set.id,Object.freeze({
       id:'AXE_Set_Armor_'+set.id,name:set.label,
       allowedGrades:Object.freeze([set.rarity]),
+      fullSetSlots:Object.freeze(set.pieces.map(piece => piece.slot)),
       allowMixedGrades:false,
       thresholds:Object.freeze({2:Object.freeze({}),4:Object.freeze({defense:2})}),
       conditionalThresholds:Object.freeze({2:Object.freeze(
@@ -62,6 +67,7 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
   ...Object.fromEntries(AXE_PROCEDURAL_SET_FAMILIES.map(family => [family.id,Object.freeze({
     id:family.id,name:family.name,
     allowedGrades:Object.freeze(['rare','elite','legendary','mythic']),
+    fullSetSlots:Object.freeze(['helm','chest','gloves','legs','boots','cape']),
     allowMixedGrades:false,
     thresholds:Object.freeze({2:Object.freeze({}),4:Object.freeze({defense:2})}),
     conditionalThresholds:Object.freeze({2:family.uniqueEffect}),
@@ -101,11 +107,13 @@ export function evaluateAXESetBonuses(items = []) {
       grade: def.allowMixedGrades ? 'mixed' : grade,
       count: 0,
       itemIds: [],
+      items: [],
       definition: def,
     };
 
     current.count += 1;
     current.itemIds.push(item.instanceId || item.id);
+    current.items.push(item);
     groups.set(key, current);
   }
 
@@ -115,16 +123,26 @@ export function evaluateAXESetBonuses(items = []) {
 
   for (const group of groups.values()) {
     const activeThresholds = [];
+    const ascensionByThreshold = {};
+    const activeConditional = {};
     for (const threshold of [2, 3, 4, 5]) {
       const bonus = group.definition.thresholds[threshold];
-      if (group.count >= threshold && bonus) {
-        activeThresholds.push(threshold);
-        addStats(stats, bonus);
-      }
-      if (group.count >= threshold && group.definition.conditionalThresholds?.[threshold]) {
-        addStats(conditional, group.definition.conditionalThresholds[threshold]);
+      const conditionalBonus = group.definition.conditionalThresholds?.[threshold];
+      if (group.count < threshold || (!bonus && !conditionalBonus)) continue;
+      // Only upgrades completed on EACH required piece increase this tier.
+      // +1/+2/+3/+4 = 1.25/1.50/1.75/2.00 x BASE set bonus.
+      const tier = getAXESetAscensionTier(group.items, threshold);
+      ascensionByThreshold[threshold] = tier;
+      activeThresholds.push(threshold);
+      if (bonus) addStats(stats, scaleAXESetBonus(bonus, tier));
+      if (conditionalBonus) {
+        const boosted = scaleAXESetBonus(conditionalBonus, tier);
+        addStats(conditional, boosted);
+        addStats(activeConditional, boosted);
       }
     }
+    const fullAuraRank = getAXEFullSetAuraRank(group.items,
+      group.definition.fullSetSlots || ['helm','chest','gloves','legs','boots','cape']);
     activeSets.push({
       setId: group.setId,
       setName: group.definition.name,
@@ -132,15 +150,19 @@ export function evaluateAXESetBonuses(items = []) {
       equippedPieces: group.count,
       itemIds: group.itemIds,
       activeThresholds,
-      conditionalBonuses: Object.fromEntries(Object.entries(group.definition.conditionalThresholds || {})
-        .filter(([threshold]) => group.count >= Number(threshold))
-        .flatMap(([, effects]) => Object.entries(effects))),
+      ascensionByThreshold,
+      fullAuraRank,
+      conditionalBonuses: activeConditional,
       nextThreshold: [2, 3, 4, 5].find((n) => n > group.count &&
         (group.definition.thresholds[n] || group.definition.conditionalThresholds?.[n])) || null,
     });
   }
 
   const chosen = getAXEChosenSetStatus(items);
+  // Chosen retains its exclusive all-core-stat 100/200% rule; generic set
+  // ascension never multiplies it again.
+  const chosenPieces = items.filter(item => item?.equipped &&
+    item?.setId === AXE_CHOSEN_SET_ID && item?.rarity === 'chosen');
   if (chosen.equippedPieces) activeSets.push({
     setId: AXE_CHOSEN_SET_ID,
     setName: 'Chosen',
@@ -153,6 +175,7 @@ export function evaluateAXESetBonuses(items = []) {
     activeThresholds: chosen.complete ? [6] : [],
     conditionalBonuses: {},
     chosenBonusPct: chosen.bonusPct,
+    fullAuraRank: getAXEFullSetAuraRank(chosenPieces, AXE_CHOSEN_REQUIRED_SLOTS),
     nextThreshold: chosen.complete ? null : 6,
   });
   return { stats, activeSets, conditional, chosen };
