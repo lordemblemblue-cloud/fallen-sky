@@ -14,7 +14,6 @@ import { AXE_TEMPORARY_BONUS_CAP, resolveAXEHeroStrike } from './axe/combat/AXES
 import { getAbilityState, updateTargetHP } from './abilityStore';
 import { updateBoss } from './bossStore';
 import { BOW_PVE_RANGE, selectCameraBowTarget } from './combat/BowCameraAim.mjs';
-import { RANGED_ATTACK_RANGE } from './gameWorldConfig';
 
 const BRIDGE_VERSION = 'world-boss-straight-bow-tracer-v6';
 const bossShotRaycaster = new THREE.Raycaster();
