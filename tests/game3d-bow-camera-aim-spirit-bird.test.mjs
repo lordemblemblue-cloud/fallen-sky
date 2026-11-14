@@ -82,10 +82,12 @@ test('the verified damage path is separate from reticle and bird visuals',()=>{
 
 test('AI bow range covers a real archery distance without changing duel range',()=>{
  const mid=enemy('mid',0,-22),far=enemy('far',0,-62);
+ const midCamera=makeCamera(); midCamera.lookAt(0,1.4,-22); midCamera.updateMatrixWorld(true);
+ const farCamera=makeCamera(); farCamera.lookAt(0,1.4,-62); farCamera.updateMatrixWorld(true);
  const args={...base(),maxRange:BOW_PVE_RANGE};
  assert.equal(BOW_PVE_RANGE,40);
- assert.equal(selectCameraBowTarget({...args,enemies:[mid]})?.target,mid);
- assert.equal(selectCameraBowTarget({...args,enemies:[far]}),null);
+ assert.equal(selectCameraBowTarget({...args,camera:midCamera,enemies:[mid]})?.target,mid);
+ assert.equal(selectCameraBowTarget({...args,camera:farCamera,enemies:[far]}),null);
  const world=read('src/components/game3d/GameWorld3D.jsx');
  assert.match(world,/maxRange:BOW_PVE_RANGE/);
  assert.match(world,/dispatchRogueAttack\(playerDerivedRef, strikeMultiplier, bowAimTarget\)/);
