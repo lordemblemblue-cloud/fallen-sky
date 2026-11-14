@@ -3167,6 +3167,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // A click during cooldown should not abort the animation frame.
         const canProcessBasicStrike = attackPressed.current && playerAttackCooldown.current <= 0;
         if (attackPressed.current && !canProcessBasicStrike && !pendingSkillStrike) {
+          if(rangedClickAttackPressed.current)bowVisuals.showNotice('COOLDOWN');
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
         }
@@ -3193,6 +3194,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             : spendCombatResource('basic');
           if (!basicBudget.ok) {
             showCombatNotice('Not enough stamina to attack');
+            if(activeWeaponPath==='ranged')bowVisuals.showNotice('NO STAMINA');
           } else if (activeDuel) {
             const pvpCheck = validateLockedPvpTarget({
               attackerPosition: model.position,
