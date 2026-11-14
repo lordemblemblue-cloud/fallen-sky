@@ -34,6 +34,8 @@ export default function CloneHardwarePanel({ visible = false }) {
   if (!visible) return null;
   const format = (value, digits = 1) => Number.isFinite(value) ? value.toFixed(digits) : '—';
   const frame = details?.measurement;
+  const renderStopped = frame?.frames > 0 && Number.isFinite(frame.sampledAt) &&
+    typeof performance !== 'undefined' && performance.now() - frame.sampledAt > 6000;
   const draw = details?.draw;
   return (
     <div style={{ position: 'fixed', left: 12, bottom: 70, zIndex: 1180, fontFamily: 'system-ui,sans-serif',
@@ -67,7 +69,7 @@ export default function CloneHardwarePanel({ visible = false }) {
           </option>)}
         </select>
         <div style={{ lineHeight: 1.85, fontVariantNumeric: 'tabular-nums' }}>
-          <div>Frame rate: <strong>{format(frame?.fps, 0)} FPS</strong></div>
+          <div>Rendered frames: <strong>{renderStopped ? 'No recent renders' : frame?.frames ? format(frame.fps, 0) + ' FPS' : 'Measuring…'}</strong></div>
           <div>Frame p95 / p99: {format(frame?.p95Ms)} / {format(frame?.p99Ms)} ms</div>
           <div>Render pixel ratio: {format(frame?.ratio, 2)}</div>
           <div>Draw calls: {draw?.calls ?? '—'} · Triangles: {draw?.triangles?.toLocaleString?.() ?? '—'}</div>
