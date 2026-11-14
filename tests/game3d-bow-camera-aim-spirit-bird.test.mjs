@@ -66,7 +66,7 @@ test('the verified damage path is separate from reticle and bird visuals',()=>{
  const vfx=read('src/components/game3d/vfx/Game3DBowSpiritBird.mjs');
  assert.match(world,/selectCameraBowTarget\(\{/);
  assert.match(world,/activeWeaponPath==='ranged' && aoeRadius===0/);
- assert.match(world,/if\(appliedDamage>0&&activeWeaponPath==='ranged'\)/);
+ assert.match(world,/if\(appliedDamage>0\)bowVisuals\.confirmHit\(appliedDamage\)/);
  assert.match(world,/bowVisuals\.fire/);
  assert.match(world,/bowVisuals\.dispose/);
  assert.match(world,/rangedClickAttackPressed\.current = (?:bowClick|getActiveWeaponPath\(\)==='ranged')/);
@@ -90,7 +90,7 @@ test('AI bow range covers a real archery distance without changing duel range',(
  assert.equal(selectCameraBowTarget({...args,camera:farCamera,enemies:[far]}),null);
  const world=read('src/components/game3d/GameWorld3D.jsx');
  assert.match(world,/maxRange:BOW_PVE_RANGE/);
- assert.match(world,/dispatchRogueAttack\(playerDerivedRef, strikeMultiplier, bowAimTarget\)/);
+ assert.match(world,/dispatchRogueAttack\(playerDerivedRef,\s*strikeMultiplier,\s*bowAimTarget\)/);
  assert.match(world,/isRangedClickAttack \|\| pendingSkillStrike\?\.weaponType === 'ranged'/);
 });
 test('a hittable AI root without decoded triangles gets a bounded fallback body hitbox',()=>{
