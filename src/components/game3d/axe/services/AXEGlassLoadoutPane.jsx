@@ -72,17 +72,25 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     setFocusedSlot(value=>value===slot?'':slot);
     setSelectedId(null);
   };
-  const perform = () => {
-    if (!selected) return;
-    const result = isPlayer ? (isEquipped
-      ? unequipAXEInventoryItem(selected.instanceId)
-      : equipAXEInventoryItem(selected.instanceId,{level:getPlayerHUD().level}))
+  const performItem = (item, allowUnequip = false) => {
+    if (!item) return;
+    // Double-click always equips the clicked tile; the details button may toggle.
+    // Resolve against item itself, not a selected state which may be stale.
+    const worn = isPlayer ? !!item.equipped
+      : companion.gear?.[activeCompanion?.id]?.[item.slot] === item.id;
+    if (worn && !allowUnequip) {
+      onNotice('Already equipped.');
+      return;
+    }
+    const result = isPlayer ? (worn
+      ? unequipAXEInventoryItem(item.instanceId)
+      : equipAXEInventoryItem(item.instanceId,{level:getPlayerHUD().level}))
       : !activeCompanion ? {ok:false,reason:'NO_COMPANION'}
-      : isEquipped ? unequipCompanionGear(activeCompanion.id,selected.slot)
-        : equipCompanionGear(activeCompanion.id,selected.slot,selected.id);
+      : worn ? unequipCompanionGear(activeCompanion.id,item.slot)
+        : equipCompanionGear(activeCompanion.id,item.slot,item.id);
     onNotice(result?.ok === false ?
       (result.message || caption(result.reason) || 'Unable to equip') :
-      (isEquipped ? 'Equipment removed.' : 'Equipment equipped.'));
+      (worn ? 'Equipment removed.' : 'Equipment equipped.'));
   };
   const setState = isPlayer ? getAXEEquipmentSetState(items) : null;
 
@@ -130,7 +138,8 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         <header className="axe-app-card-heading"><Package size={20}/><h3>Inventory</h3>
           <small>{visible.length} / {list.length}</small></header>
         <div className="axe-app-card-content">
-          <div className="axe-app-inventory-filters" aria-label="Equipment inventory filter">
+          <div className="axe-app-inventory-browser">
+          <div className="axe-app-inventory-filters" role="group" aria-label="Equipment inventory filter">
             <button type="button" aria-pressed={filter==='All'} onClick={()=>{setFilter('All');setFocusedSlot('');}}>All</button>
             {categories.map(slot=><button type="button" key={slot} aria-pressed={filter===slot}
               onClick={()=>{setFilter(slot);setFocusedSlot('');}}>{caption(slot)}</button>)}
@@ -139,7 +148,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             {visible.map(item=><button type="button" role="listitem"
               className="axe-app-inventory-tile" key={item.instanceId || item.id}
               aria-pressed={selected?.instanceId===item.instanceId}
-              onClick={()=>setSelectedId(item.instanceId || item.id)}>
+              onClick={()=>setSelectedId(item.instanceId || item.id)}
+              onDoubleClick={()=>{setSelectedId(item.instanceId || item.id);performItem(item);}}
+              title={'Double-click to equip '+item.name}>
               <span className="axe-app-inventory-art"><IconFor item={item}/></span>
               <span className="axe-app-inventory-name">{item.name}</span>
               <small>{caption(item.slot)}</small>
@@ -148,6 +159,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   <Check size={15} className="axe-app-equipped-check"/>}
             </button>)}
             {!visible.length && <p className="axe-app-inventory-empty">No available equipment in this category.</p>}
+          </div>
           </div>
         </div>
       </section>
@@ -188,7 +200,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   ? 'Active tiers '+set.activeThresholds.join(', ') : 'No active set tier'}</span>
               </div>)}
             </div>}
-            <button type="button" className="axe-app-unified-equip axe-glass-equip" onClick={perform}>
+            <button type="button" className="axe-app-unified-equip axe-glass-equip" onClick={()=>performItem(selected,true)}>
               <Shirt size={18}/>{isEquipped ? 'Unequip' : 'Equip'}
             </button>
             {!isPlayer && <p className="axe-app-description">
