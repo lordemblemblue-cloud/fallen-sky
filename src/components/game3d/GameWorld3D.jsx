@@ -3349,7 +3349,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               // but NOT a server-owned enemy seed yet. Do not let the local
               // browser mint rewards, quest credit, loot or peer kill claims.
               if(!closestEnemy.wolfveilVisualSpawn&&!closestEnemy.dungeonTrainingSpawn&&!closestEnemy.wolfveilZombieCampSpawn)
-                broadcastEnemyKill(closestEnemy.id, { tier: closestEnemy.tier || 'normal', isBoss: !!closestEnemy.isBoss, x: closestEnemy.group.position.x, y: closestEnemy.group.position.y, z: closestEnemy.group.position.z });
+                broadcastEnemyKill(closestEnemy.id, { tier: closestEnemy.tier || closestEnemy.derived?.tier || 'normal', isBoss: !!closestEnemy.isBoss, enemyLevel: closestEnemy.derived?.level || closestEnemy.level || getPlayerHUD().level || 1, x: closestEnemy.group.position.x, y: closestEnemy.group.position.y, z: closestEnemy.group.position.z });
               if (!pendingCinematicHunt && !closestEnemy.wolfveilVisualSpawn && !closestEnemy.dungeonTrainingSpawn) {
                 // Locally animated zombie kills award XP only. They cannot
                 // claim unverified network kills, gold, mastery or quest credit.
