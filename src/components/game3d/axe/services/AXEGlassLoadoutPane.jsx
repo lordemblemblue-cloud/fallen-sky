@@ -27,7 +27,7 @@ export const PLAYER_DISPLAY_SLOTS = Object.freeze([
   ['boots', 0], ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
 ]);
 const fmt = value => Number(value || 0).toLocaleString('en-US',{maximumFractionDigits:2});
-const caption = value => String(value || '').replaceAll('_',' ').replace(/\\b\\w/g, m=>m.toUpperCase());
+const caption = value => String(value || '').replaceAll('_',' ').split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
 const setEffectCaption = (effects = {}) => Object.entries(effects).map(([key,value]) =>
   key==='aerialDamagePct' ? '+'+value+'% aerial PvE damage' :
   key==='mobDamagePct' ? '+'+value+'% normal mob damage' :
