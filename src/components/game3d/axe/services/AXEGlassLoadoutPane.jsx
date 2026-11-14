@@ -236,7 +236,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   ? 'Active tiers '+set.activeThresholds.join(', ') : 'No active set tier'}
                   {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
                 {Object.keys(set.conditionalBonuses || {}).length > 0 &&
-                  <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>
+                  <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>}
               </div>)}
             </div>}
             <button type="button" className="axe-app-unified-equip axe-glass-equip" onClick={()=>performItem(selected,true)}>
