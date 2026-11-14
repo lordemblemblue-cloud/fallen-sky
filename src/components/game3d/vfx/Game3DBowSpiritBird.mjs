@@ -119,9 +119,14 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
   let hitSeconds=0,resultSeconds=0,disposed=false;
   // Local-only diagnostic counters: no uploads, console spam or new per-shot
   // timers. A shot resolves on the same combat frame or remains pending.
-  const shotStats={fired:0,hits:0,misses:0,lastResolutionMs:null};
+  const shotStats={fired:0,hits:0,misses:0,lastResolutionMs:null,lastAimMs:null,maxAimMs:0};
   let shotStartedAt=null,shotSerial=0,resolvedSerial=0;
   const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
+  const noteAimTime=ms=>{
+    if(!Number.isFinite(ms)||ms<0)return;
+    shotStats.lastAimMs=ms;
+    shotStats.maxAimMs=Math.max(shotStats.maxAimMs,ms);
+  };
   const fire=({origin,target}={})=>{
     if(disposed||!pointLike(origin)||!pointLike(target))return false;
     const p0=vec(origin),p3=vec(target);
@@ -262,7 +267,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     spare.splice(0).forEach(item=>releaseBird(item,scene));
     overlay?.host.remove();
   };
-  return {fire,confirmHit,confirmMiss,showNotice,update,dispose,
+  return {fire,confirmHit,confirmMiss,showNotice,noteAimTime,update,dispose,
     stats:()=>({
       ...shotStats,
       pending:Math.max(0,shotStats.fired-shotStats.hits-shotStats.misses),
