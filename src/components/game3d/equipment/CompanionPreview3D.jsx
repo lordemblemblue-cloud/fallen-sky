@@ -1,24 +1,30 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
-import { getActiveCompanion } from './companionFusionStore';
-import { createCompanionLoadingManager } from '../companionData';
+import { COMPANION_GEAR, getCompanionById, createCompanionLoadingManager } from '../companionData';
+import { getCompanionState, subscribeCompanion } from '../companionStore';
 
 /**
  * Self-contained live 3D preview of the active companion — used in the equipment
  * menu in place of the static portrait box. Loads the companion's GLB mesh and
  * plays its idle animation (either embedded clips or pulled from the externalAnimUrl).
  */
-export default function CompanionPreview3D() {
+export default function CompanionPreview3D({ companionId = null }) {
   const containerRef = useRef(null);
+  const [loadout, setLoadout] = useState(getCompanionState);
+  useEffect(() => subscribeCompanion(setLoadout), []);
+  const companion = getCompanionById(companionId || loadout.activeCompanionId);
+  const equipped = loadout.gear?.[companion?.id] || {};
+  const worn = (companion?.gearSlots || []).map(slot => ({
+    slot,
+    item: (COMPANION_GEAR[slot] || []).find(entry => entry.id === equipped[slot]),
+  })).filter(entry => entry.item);
 
   useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
-
-    const companion = getActiveCompanion();
-    if (!companion) return;
+    if (!container || !companion) return undefined;
+    let disposed = false;
 
     const scene = new THREE.Scene();
     scene.background = null;
@@ -58,6 +64,7 @@ export default function CompanionPreview3D() {
     let frameId;
 
     const setupModel = (root, clips) => {
+      if (disposed) return;
       const box = new THREE.Box3().setFromObject(root);
       const size = box.getSize(new THREE.Vector3());
       const maxDim = Math.max(size.x, size.y, size.z);
@@ -98,6 +105,7 @@ export default function CompanionPreview3D() {
       const compManager = createCompanionLoadingManager(THREE, companion);
       const gltfLoader = compManager ? new GLTFLoader(compManager) : new GLTFLoader();
       gltfLoader.load(companion.modelUrl, (gltf) => {
+        if (disposed) return;
         const root = gltf.scene || gltf.scenes?.[0];
         if (!root) return;
         // Embedded clips first; fall back to external animation source
@@ -107,9 +115,9 @@ export default function CompanionPreview3D() {
           const extLoader = new GLTFLoader();
           extLoader.load(
             companion.externalAnimUrl,
-            (extGltf) => setupModel(root, extGltf.animations || []),
+            (extGltf) => { if (!disposed) setupModel(root, extGltf.animations || []); },
             undefined,
-            () => setupModel(root, []),
+            () => { if (!disposed) setupModel(root, []); },
           );
         } else {
           setupModel(root, []);
@@ -124,6 +132,7 @@ export default function CompanionPreview3D() {
     }
 
     const animate = () => {
+      if (disposed) return;
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
       if (mixer) mixer.update(delta);
@@ -142,12 +151,28 @@ export default function CompanionPreview3D() {
     window.addEventListener('resize', onResize);
 
     return () => {
+      disposed = true;
       cancelAnimationFrame(frameId);
+      mixer?.stopAllAction();
       window.removeEventListener('resize', onResize);
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
       renderer.dispose();
     };
-  }, []);
+  }, [companion?.id, companion?.modelUrl]);
 
-  return <div ref={containerRef} className="w-full h-full" />;
+  // The current saddle/barding/charm catalog contains stat data, but no
+  // wearable GLBs or fitting/bone metadata. Show only the actually saved gear;
+  // never fabricate a mesh or imply that a stat icon is armor on the animal.
+  return <div className="w-full h-full" style={{ position: 'relative' }}
+    data-companion-id={companion?.id || ''}
+    data-companion-gear={worn.map(({slot,item}) => slot + ':' + item.id).join(',')}>
+    <div ref={containerRef} style={{ width: '100%', height: '100%' }}/>
+    <div aria-live="polite" aria-label="Current companion equipment"
+      style={{position:'absolute',left:8,right:8,bottom:4,display:'flex',flexWrap:'wrap',justifyContent:'center',gap:4,pointerEvents:'none'}}>
+      {worn.map(({slot,item}) => <span key={slot}
+        style={{font:'10px Georgia,serif',color:'#f5dfb6',background:'rgba(22,35,49,.77)',border:'1px solid rgba(230,197,144,.45)',borderRadius:5,padding:'2px 5px'}}>
+        {item.name}
+      </span>)}
+    </div>
+  </div>;
 }
