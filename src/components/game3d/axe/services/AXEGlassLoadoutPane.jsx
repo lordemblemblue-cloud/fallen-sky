@@ -5,6 +5,7 @@ import {
   equipAXEInventoryItem, unequipAXEInventoryItem,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
+import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
 import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
@@ -26,7 +27,12 @@ export const PLAYER_DISPLAY_SLOTS = Object.freeze([
   ['boots', 0], ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
 ]);
 const fmt = value => Number(value || 0).toLocaleString('en-US',{maximumFractionDigits:2});
-const caption = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g, m=>m.toUpperCase());
+const caption = value => String(value || '').replaceAll('_',' ').split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
+const setEffectCaption = (effects = {}) => Object.entries(effects).map(([key,value]) =>
+  key==='aerialDamagePct' ? '+'+value+'% aerial PvE damage' :
+  key==='mobDamagePct' ? '+'+value+'% normal mob damage' :
+  key==='virtualAbilityPoints' ? '+'+value+' virtual skill points ('+(value*3)+'% skill damage)' :
+  caption(key)+' +'+value).join(' · ');
 function useLive(subscribe, get) {
   const [state,setState] = useState(get);
   useEffect(() => subscribe(setState), [subscribe]);
@@ -181,12 +187,21 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     <aside className="axe-app-right-stack" aria-label="Equipment details and set progress">
       <section className="axe-app-card axe-glass-loadout-details">
         <header className="axe-app-card-heading"><Gem size={20}/><h3>{selected?.name || 'Equipment Details'}</h3>
-          <small>{selected?.rarity || '—'}</small></header>
+          <small>{selected?.rarityLabel || caption(selected?.rarity || '—')}</small></header>
         <div className="axe-app-card-content">
           {selected ? <>
             <div className="axe-glass-item-hero"><IconFor item={selected} size={43}/>
-              <div><strong>{selected.name}</strong><small>{caption(selected.slot)} · {caption(selected.rarity || 'common')}</small></div>
+              <div><strong>{selected.name}</strong><small>{caption(selected.slot)} · {selected.rarityLabel || caption(selected.rarity || 'common')} · Level {selected.itemLevel || 1}</small></div>
             </div>
+            {selected.setId && getAXESetDefinition(selected.setId) && <p className="axe-app-description">
+              Set: {getAXESetDefinition(selected.setId).name} · Equip matching pieces for set effects.
+            </p>}
+            {selected.evolutionPath && <p className="axe-app-description">
+              Evolution potential: {caption(selected.evolutionPath)} · future Blacksmith recipe required.
+            </p>}
+            {selected.visualPending && <p className="axe-app-description">
+              3D model pending · equipment stats, ownership and set progress are active.
+            </p>}
             <h4>Item Stats <small>{isPlayer ? 'Reinforcement + enchantments' : 'Base stats'}</small></h4>
             {itemStats.map(({stat,base,current,difference})=><div className="axe-app-bonus-row" key={stat}>
               <span>{caption(stat)}</span><b>+{fmt(current)}
@@ -218,7 +233,10 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                 className="axe-glass-set-progress">
                 <strong>{set.setName}</strong>
                 <span>{set.equippedPieces} equipped · {set.activeThresholds.length
-                  ? 'Active tiers '+set.activeThresholds.join(', ') : 'No active set tier'}</span>
+                  ? 'Active tiers '+set.activeThresholds.join(', ') : 'No active set tier'}
+                  {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
+                {Object.keys(set.conditionalBonuses || {}).length > 0 &&
+                  <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>
               </div>)}
             </div>}
             <button type="button" className="axe-app-unified-equip axe-glass-equip" onClick={()=>performItem(selected,true)}>

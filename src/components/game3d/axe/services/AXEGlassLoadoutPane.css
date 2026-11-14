@@ -74,3 +74,8 @@
   background:rgba(31,55,63,.42);border-radius:7px;
   color:#ddedcf;font:11px/1.45 Georgia,serif;
 }
+
+/* Generated set bonuses are functional before the armor's 3D asset ships. */
+.axe-glass-set-special {display:block;margin:4px 0 8px;
+  color:#b3efcc;font:11px/1.45 Georgia,serif;overflow-wrap:anywhere;
+}

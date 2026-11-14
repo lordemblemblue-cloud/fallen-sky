@@ -87,7 +87,12 @@ export function respawnEnemy(enemy, ctx) {
  */
 export function broadcastEnemyKill(enemyId, lootCtx) {
   window.dispatchEvent(new CustomEvent('multiplayerLocalAction', {
-    detail: { kind: 'enemy_killed', enemy_id: enemyId },
+    detail: {
+      kind: 'enemy_killed', enemy_id: enemyId,
+      enemy_level: lootCtx?.enemyLevel ?? null,
+      enemy_tier: lootCtx?.tier || 'normal',
+      is_boss: !!lootCtx?.isBoss,
+    },
   }));
   // Fire loot drop event so GameWorldLootLayer can roll drops
   if (lootCtx) {
@@ -96,6 +101,7 @@ export function broadcastEnemyKill(enemyId, lootCtx) {
         enemyId,
         tier: lootCtx.tier || 'normal',
         isBoss: !!lootCtx.isBoss,
+        enemyLevel: lootCtx.enemyLevel ?? null,
         x: lootCtx.x ?? 0,
         y: lootCtx.y ?? 0,
         z: lootCtx.z ?? 0,

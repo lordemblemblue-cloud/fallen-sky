@@ -11,6 +11,8 @@ import { axeStrikeOutcomes, rollAXEStrike, AXE_COMBAT_RULES } from '../balance/A
 import { consumeForcedCriticalHit } from '../../combat/forcedCriticalBridge';
 import { consumeAXEPowerCharge, consumeFocusHit, getBuffs, isBuffActive } from '../../skills/buffEngine';
 import { consumeShopCritBuff, consumeShopDamageBuff, getShopBuffSnapshot } from '../../shop/shopEffectsBridge';
+import { getEquippedAXEItems } from '../equipment/AXEEquipmentInventoryStore';
+import { getAXESetCombatMultiplier } from '../equipment/AXESetBonusSystem';
 
 // all temporary bonuses on one swing (Focus, Power Charge, a shop elixir, a momentum chain) together
 export const AXE_TEMPORARY_BONUS_CAP = 2;
@@ -69,7 +71,7 @@ export function resetAXEMomentum() {
 export function resolveAXEHeroStrike(hero, target, {
   skillMultiplier = 1, targetHp = null, targetMaxHp = null, tier = null, pve = true, distance = null, roll = Math.random(),
   chargedCritBonusPct = 0, chargedFatalBonusPct = 0, defensePiercePct = 0,
-  criticalAllowed = true,
+  criticalAllowed = true, isAerialAttack = false, isSkillStrike = false,
 } = {}) {
   const temp = peekTemporaryBonus(hero);
   const far = Number.isFinite(Number(distance)) ? Number(distance) : 0;
@@ -78,6 +80,12 @@ export function resolveAXEHeroStrike(hero, target, {
   const situational = (1 + (temp.charged ? n(hero.chargeDamagePct) : 0) / 100)
     * (1 + (far >= AXE_WEAKSPOT_RANGE_M ? n(hero.weakspotDamagePct) : 0) / 100)
     * (1 + (fromStealth ? n(hero.stealthDamagePct) : 0) / 100);
+  // Rare procedural sets apply only to matching PvE strike contexts. Their
+  // ability-point bonus is effective damage, not spendable skill-tree points.
+  const setMultiplier = getAXESetCombatMultiplier(getEquippedAXEItems(), {
+    pve, targetTier: tier || target?.tier,
+    isAerialAttack, isSkill: isSkillStrike || skillMultiplier !== 1,
+  });
   const rangeCrit = n(hero.rangeUnit) > 0 && far > n(hero.rangeUnit) ? n(hero.rangeCritPct) : 0;
   const attacker = { ...hero, critChance: criticalAllowed ? Math.min(AXE_COMBAT_RULES.critChanceCapPct,
     n(hero.critChance) + temp.critBonus + rangeCrit + Math.max(0, Math.min(10, n(chargedCritBonusPct)))) : 0 };
@@ -88,7 +96,7 @@ export function resolveAXEHeroStrike(hero, target, {
   const targetHpPct = targetMaxHp ? Math.max(0, n(targetHp) / Math.max(1, n(targetMaxHp))) : 1;
   const forcedCritical = criticalAllowed ? consumeForcedCriticalHit() : false;
   const strike = rollAXEStrike(axeStrikeOutcomes(attacker, defender, {
-    skillMultiplier, isSkill: skillMultiplier !== 1, bonusMultiplier: Math.min(AXE_TEMPORARY_BONUS_CAP, temp.multiplier * situational), targetHpPct, forcedCritical,
+    skillMultiplier, isSkill: skillMultiplier !== 1, bonusMultiplier: Math.min(AXE_TEMPORARY_BONUS_CAP, temp.multiplier * situational * setMultiplier), targetHpPct, forcedCritical,
   }), roll);
   markCombat();
   if (strike.kind !== 'hit') return { ...strike, lethal: false, charged: false };
