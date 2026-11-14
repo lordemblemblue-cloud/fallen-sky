@@ -1,0 +1,32 @@
+name: Game 3D Town Video Clearance
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownInteriorClearance.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownCritique.mjs'
+      - 'tests/game3d-clone-town-interior-clearance.test.mjs'
+      - '.github/workflows/game3d-town-video-clearance.yml'
+  push:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownInteriorClearance.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownCritique.mjs'
+      - 'tests/game3d-clone-town-interior-clearance.test.mjs'
+      - '.github/workflows/game3d-town-video-clearance.yml'
+permissions:
+  contents: read
+jobs:
+  town-clearance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Verify protected tree, main gate, low brick perimeter and removed collision triangles
+        run: node --test tests/game3d-clone-town-interior-clearance.test.mjs
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Frontend build
+        run: npm run build
