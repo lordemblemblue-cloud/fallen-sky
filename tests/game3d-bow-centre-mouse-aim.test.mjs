@@ -48,5 +48,5 @@ test('bow hits use exact camera centre independently of melee target fan',()=>{
  assert.match(bow,/setFromCamera\(\{x:0,y:0\},camera\)/);
  assert.match(world,/selectCameraBowTarget\(\{/);
  assert.match(world,/activeWeaponPath==='ranged' && aoeRadius===0/);
- assert.match(world,/if\(appliedDamage>0&&activeWeaponPath==='ranged'\)/);
+ assert.match(world,/if\(appliedDamage>0\)bowVisuals\.confirmHit\(appliedDamage\)/);
 });
