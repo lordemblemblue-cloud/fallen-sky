@@ -36,3 +36,11 @@ When the centre bow reticle is on an enemy, an arrow travels in a straight line 
 **Truthful status:** code committed in isolated clone branch, regression test source committed, but native Node tests, complete build, signed-in WebGL Play, server parity, actual FPS and owner acceptance are not verified. A GitHub merge does not independently publish Base44.
 
 Rollback by closing/reverting this draft PR; clone main and other ongoing branches remain unchanged.
+
+## Actual source-only checks completed
+
+- Both modified pure JavaScript modules were parsed successfully as ordinary JS after stripping their module headers in an isolated V8 check. This does not prove the JSX/full app builds.
+- Exact committed spirit-bird/tracer source was executed with minimal synthetic Three.js math/scene objects. Observed start (0, 1.45, 5), end (0, 1.2, -22), straight-flight cross-product error about 4.44e-16, green confirmed-hit color 0x81f6b1, and effect cleanup. This is NOT a genuine Three.js browser render.
+- Exact AI hitbox/selection source was exercised with synthetic world-box math: nearest target, off-axis rejection, camera wall occlusion, 27m target and beyond-range rejection, and no-geometry fallback behaved as intended in these cases. Muzzle-obstruction still needs an actual Three.js/scene test.
+- GitHub Actions runs for this PR reported failure. Their job-step details are not returned, and downloaded logs fail with BlobNotFound (404); **the cause is unknown**, and none of those runs counts as a passing build or passing native test.
+- A draft PR is deliberately held for independent native Node and signed-in clone browser QA before it can be considered working or safe to deploy.
