@@ -837,14 +837,29 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // whose URLModifier maps relative paths to absolute Base44 URLs.
         const compManager = createCompanionLoadingManager(THREE, companionDef);
         const gltfLoader = compManager ? new GLTFLoader(compManager) : new GLTFLoader();
+        const failToPreviousModel = err => {
+          if (companionAssetDisposed || assetVersion !== companionAssetVersion) return;
+          if (companionDef.previousModelUrl) {
+            console.warn('Faction pet asset unavailable; restoring previous rig', err);
+            // Incrementing the asset generation invalidates any still-pending
+            // callbacks. The old rig needs its original dog retarget profile.
+            loadCompanionAsset({
+              ...companionDef,
+              modelUrl: companionDef.previousModelUrl,
+              previousModelUrl: null,
+              animationRigProfile: null,
+            });
+          } else console.error('Companion GLB load error:', err);
+        };
         gltfLoader.load(
           companionDef.modelUrl,
           (gltf) => {
             const root = gltf.scene || gltf.scenes?.[0];
             if (root) setupCompanion(root, gltf.animations || []);
+            else failToPreviousModel(new Error('Companion GLB has no scene'));
           },
           undefined,
-          (err) => console.error('Companion GLB load error:', err),
+          failToPreviousModel,
         );
       } else {
         loader.load(companionDef.modelUrl, (fbx) => setupCompanion(fbx, []));
