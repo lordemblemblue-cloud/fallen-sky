@@ -21,6 +21,7 @@ export const AXE_GEAR_LEVEL_TIERS = Object.freeze([
 export const AXE_EVOLUTION_PATHS = Object.freeze({
   rare_elite: Object.freeze({ current: 'rare', next: 'elite', minLevel: 45, recipe: 'unreleased' }),
   elite_legendary: Object.freeze({ current: 'elite', next: 'legendary', minLevel: 120, recipe: 'unreleased' }),
+  elite_mythic: Object.freeze({ current: 'elite', next: 'mythic', minLevel: 150, recipe: 'unreleased' }),
   legendary_mythic: Object.freeze({ current: 'legendary', next: 'mythic', minLevel: 150, recipe: 'unreleased' }),
   mythic_chosen: Object.freeze({ current: 'mythic', next: 'chosen', minLevel: 150, recipe: 'prestige_locked' }),
 });
@@ -85,6 +86,7 @@ export function rollAXEEvolutionPath(rarity, level, rng = Math.random) {
   const l = boundedLevel(level);
   const chance = unit(rng);
   if (rarity === 'rare' && l >= 45 && chance < 0.16) return 'rare_elite';
+  if (rarity === 'elite' && l >= 150 && chance < 0.02) return 'elite_mythic';
   if (rarity === 'elite' && l >= 120 && chance < 0.12) return 'elite_legendary';
   if (rarity === 'legendary' && l >= 150 && chance < 0.08) return 'legendary_mythic';
   if (rarity === 'mythic') return 'mythic_chosen';
