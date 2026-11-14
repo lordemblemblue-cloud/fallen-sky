@@ -1316,6 +1316,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const bowOccluders=otsCameraColliders;
     window.__gw3dBowOccluders=bowOccluders;
     const bowVisuals=createGame3DBowAimVisuals({scene,container,showDot:false});
+    // Read-only, local timing and HIT/MISS counters for repeatable bow QA.
+    window.__axe3dBowShotStats=bowVisuals.stats;
     const onBowVerifiedHit=(event)=>bowVisuals.confirmHit(event?.detail?.damage);
     const onBowVerifiedMiss=(event)=>bowVisuals.confirmMiss(event?.detail?.reason);
     window.addEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
@@ -4007,6 +4009,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         window.__gw3dBowOccluders=null;
       window.removeEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
       window.removeEventListener('game3dVerifiedBowMiss',onBowVerifiedMiss);
+      if(window.__axe3dBowShotStats===bowVisuals.stats)window.__axe3dBowShotStats=null;
       bowVisuals.dispose();
       weaponTrails.dispose();
       enemyTelegraphs.dispose();
