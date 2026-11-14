@@ -1,5 +1,6 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
 import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
+import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
 // Set identity, grade and activation thresholds are separate concepts so Rare,
 // Elite and Heroic versions can share a family without sharing balance values.
 
@@ -36,6 +37,19 @@ const BASE_AXE_SET_DEFINITIONS = Object.freeze({
 // unique contextual effect; four provide a small ordinary stat bonus.
 export const AXE_SET_DEFINITIONS = Object.freeze({
   ...BASE_AXE_SET_DEFINITIONS,
+  ...Object.fromEntries(AXE_ARMOR_PACK_SETS.filter(set=>set.pieces.length>=5 &&
+    ['rare','elite','legendary'].includes(set.rarity)).map((set,i)=>[
+    'AXE_Set_Armor_'+set.id,Object.freeze({
+      id:'AXE_Set_Armor_'+set.id,name:set.label,
+      allowedGrades:Object.freeze([set.rarity]),
+      allowMixedGrades:false,
+      thresholds:Object.freeze({2:Object.freeze({}),4:Object.freeze({defense:2})}),
+      conditionalThresholds:Object.freeze({2:Object.freeze(
+        i%3===0 ? {mobDamagePct:15} :
+        i%3===1 ? {aerialDamagePct:20} : {virtualAbilityPoints:3},
+      )}),
+    }),
+  ])),
   ...Object.fromEntries(AXE_PROCEDURAL_SET_FAMILIES.map(family => [family.id,Object.freeze({
     id:family.id,name:family.name,
     allowedGrades:Object.freeze(['rare','elite','legendary','mythic']),
