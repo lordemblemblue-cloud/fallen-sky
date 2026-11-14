@@ -66,6 +66,8 @@ import { isMaxMasteryChargeUnlocked, canAcceptFinisherChain, skillCombatFamily }
 import { createKillFlowCounter, isKillFlowCastEligible } from './combat/KillFlowCounter.mjs';
 import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from './combat/ContinuousAOERules.mjs';
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
+import { selectCameraBowTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
+import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
 import { tickCompanionCooldowns } from './companionAbilityStore';
@@ -1309,6 +1311,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const playerStateMachine = new CorePlayerStateMachine();
     let coreAnimationController = null;
     const otsCameraColliders = createOTSCameraColliders({ groundMeshes, roots: () => [wolfveilVillage?.world?.group, importedSpawnTown?.root] }); const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes, aim: otsAim.current, cameraColliders: otsCameraColliders });
+    // Clone already owns the tiny OTS aim dot. Add only the confirmed-hit
+    // brackets and original spirit-bird animation, not a second crosshair.
+    const bowOccluders=otsCameraColliders;
+    window.__gw3dBowOccluders=bowOccluders;
+    const bowVisuals=createGame3DBowAimVisuals({scene,container,showDot:false});
+    const onBowVerifiedHit=()=>bowVisuals.confirmHit();
+    window.addEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
     const lastDirectionTap = { current: {} };
@@ -1948,8 +1957,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Left click = attack, middle click = Lock-On, right click = camera drag (+ block if no drag)
       if (e.button === 0) {
         if (altCursorHeld.current) { e.preventDefault(); return; }
-        if (isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
-        rangedClickAttackPressed.current = true;
+        if (getActiveWeaponPath()!=='ranged' && isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
+        // Melee clicks never borrow the bow's 12m range or attack montage.
+        // The clone's existing over-the-shoulder reticle stays independent.
+        rangedClickAttackPressed.current = getActiveWeaponPath()==='ranged';
         attackPressed.current = true;
         // Like Luna's Game 2 exploration: a click in the 3D viewport locks
         // free-look. Keep left attack and optional click-to-move intact.
@@ -1984,6 +1995,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         drag.current.x = e.clientX;
         drag.current.y = e.clientY;
         rightDragMoved.current = false; otsAim.current.beginHold(performance.now()); // hold = OTS aim, tap = guard
+        // A browser cannot move its OS cursor programmatically. Pointer lock
+        // uses relative mouse deltas and hides the cursor so the reticle stays
+        // at the exact centre while the camera follows the mouse.
+        if (getActiveWeaponPath()==='ranged' && !altCursorHeld.current &&
+            document.pointerLockElement!==renderer.domElement) {
+          try { renderer.domElement.requestPointerLock?.()?.catch?.(()=>{}); }
+          catch { /* Right-drag remains available in restricted previews. */ }
+        }
         e.preventDefault();
       }
     };
@@ -2613,6 +2632,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           setNearbyCompanion(false);
         }
 
+        // Keep the active bow's centre reticle and player facing aligned to
+        // mouse-controlled camera direction, even when RMB is not held.
+        otsAim.current.bowEquipped=getActiveWeaponPath()==='ranged'&&!isMountedRef.current;
         updateLockOnRotation(delta); applyOTSAimFacing(model, orbit.current.yaw, otsAim.current, delta);
 
         // Core player state machine drives locomotion/combat intent, while legacy animation clips remain preserved.
@@ -2704,7 +2726,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }));
 
         // Smooth camera system: damped lock-on yaw, combat distance, and sprint pullback without per-frame object spam.
-        playerCameraSystem.update(delta, playerStateMachine.intent); updateOTSAimFrame({ camera, aim: otsAim.current, colliders: otsCameraColliders(), extraMeshes: enemies.map(e => e.group) });
+        playerCameraSystem.update(delta, playerStateMachine.intent);
+        updateOTSAimFrame({camera,aim:otsAim.current,colliders:otsCameraColliders(),
+          extraMeshes:[...enemies,...bossEntities].map(e=>e.group).filter(Boolean),
+          bowEquipped:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
+          blocked:entryModeRef.current||window.__axeUiModalOpen||
+            window.__axeServiceModeOpen||window.__axeWorldMapOpen||
+            window.__axePauseMenuOpen||window.__axeDialogueOpen||
+            window.__axeTileInspectionEditing});
+        bowVisuals.update(delta,{
+          active:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
+          blocked:entryModeRef.current||window.__axeUiModalOpen||
+            window.__axeServiceModeOpen||window.__axeWorldMapOpen||
+            window.__axePauseMenuOpen||window.__axeDialogueOpen,
+        });
         stationRuntime.focusCamera(delta);
         // Sweep from character-front three-quarter portrait to real Game 2
         // follow camera, clipping against the same actual terrain geometry.
@@ -3183,6 +3218,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 actor: model, weaponPath: activeWeaponPath,
                 hitIndex: pendingSkillStrike?.hitIndex ?? 0,
               });
+              if(activeWeaponPath==='ranged'){
+                const aimEnemy=lockOnTargetRef.current?.group?.position;
+                bowVisuals.fire({
+                  origin:model.position,
+                  target:aimEnemy||cameraBowImpactPoint(camera,groundMeshes),
+                });
+              }
               window.dispatchEvent(new CustomEvent('duelAttack', {
                 detail: {
                   targetPlayerId: pvpCheck.targetId,
@@ -3200,6 +3242,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               }));
             }
           } else {
+            const bowAimTarget=activeWeaponPath==='ranged'
+              ?selectCameraBowTarget({
+                camera,origin:model.position,
+                enemies:[...enemies,...(window.__gw3dRogues||[])],bosses:bossEntities,
+                maxRange:RANGED_ATTACK_RANGE,
+                lockedEnemyId:lockOnTargetRef.current?.id,
+                groundMeshes:otsCameraColliders(),
+              }):null;
             const attackConsumedByPriorityTarget = dispatchRogueAttack(playerDerivedRef, strikeMultiplier);
             // Basic swings use attack-speed timing. Timed skill combo hits
             // have their own scheduled spacing and bypass this basic cooldown.
@@ -3220,11 +3270,22 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               actor: model, weaponPath: activeWeaponPath,
               hitIndex: pendingSkillStrike?.hitIndex ?? 0,
             });
+            if(activeWeaponPath==='ranged'){
+              bowVisuals.fire({origin:model.position,
+                target:bowAimTarget?.point||cameraBowImpactPoint(camera,groundMeshes)});
+            }
             const attackRange = isRangedClickAttack || activeWeaponPath === 'ranged' ||
               pendingSkillStrike?.weaponType === 'ranged' ? RANGED_ATTACK_RANGE : ENEMY_ATTACK_RANGE;
             const aoeRadius = isSkillStrike && !pendingSkillStrike.soulEcho
               ? Math.max(0, Number(pendingSkillStrike.aoeRadius) || 0) : 0;
-            const targetChoices = attackConsumedByPriorityTarget ? [] : pickForwardCombatTargets({
+            // Ranged single shots now resolve against the same small camera
+            // dot that is drawn on screen, not the old 150-degree melee fan.
+            // AoE skills preserve their original multi-target rules.
+            const targetChoices = attackConsumedByPriorityTarget ? [] :
+              activeWeaponPath==='ranged' && aoeRadius===0
+              ?(bowAimTarget?[{target:bowAimTarget.target,
+                distance:bowAimTarget.distance,locked:bowAimTarget.locked}]:[])
+              :pickForwardCombatTargets({
               enemies, bosses: bossEntities, origin: model.position,
               yaw: model.rotation.y, maxRange: attackRange,
               radius: aoeRadius,
@@ -3272,6 +3333,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               sound: selectCombatImpactSound({ kind: feedbackKind, hasSound: hasCombatSound }),
               crit: !!strike.critical, lethal: !!strike.lethal,
             });
+            if(appliedDamage>0&&activeWeaponPath==='ranged')
+              bowVisuals.confirmHit();
             // Additional cutting texture triggers only after the existing
             // combat resolver actually reduces the enemy's HP.
             if(appliedDamage>0&&activeWeaponPath!=='ranged'&&!isRangedClickAttack)
@@ -3915,6 +3978,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       impactFeedback.dispose();
       window.removeEventListener('axeDuelDefenseResolved', onDuelDefenseResolved);
       duelDefenseFeedback.dispose();
+      if(window.__gw3dBowOccluders===bowOccluders)
+        window.__gw3dBowOccluders=null;
+      window.removeEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
+      bowVisuals.dispose();
       weaponTrails.dispose();
       enemyTelegraphs.dispose();
       avatarLoadDisposed=true;

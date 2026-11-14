@@ -12,14 +12,14 @@ import * as THREE from 'three';
 
 export const OTS_AIM = Object.freeze({
   // Aim framing
-  fov: 34,              // zoomed aim FOV (exploration keeps the scene FOV)
+  fov: 46,              // modest ~4-degree aim zoom from Game 3D's 50-degree follow FOV
   fovLerp: 11,          // per-second smoothing of the FOV change
   anchorHeight: 1.5,    // eye height of the pivot above the character's feet
-  boom: 1.35,           // camera distance behind the pivot
-  lateral: 0.62,        // shoulder offset (right = +, left = -)
+  boom: 3.0,            // maintain third-person framing, not an extreme close-up
+  lateral: 0.62,        // shoulder offset keeps the bow clear of centre reticle
   forwardNudge: 0.2,    // small push toward the aim direction
   eyeRise: 0.06,        // keeps the eye just above the shoulder line
-  lookAhead: 40,        // convergence point of the aim axis, in metres
+  lookAhead: 40,        // camera-centre convergence: shot ray uses this view
   blendSpeed: 9,        // aim in/out smoothing
   shoulderSpeed: 10,    // shoulder swap smoothing
   // Spring arm
@@ -111,7 +111,8 @@ const _aimAxis = new THREE.Vector3(0, 1, 0);
  * from the crosshair.
  */
 export function applyOTSAimFacing(model, orbitYaw, aim, delta = 0) {
-  if (!model || !aim?.aiming || aim.blend <= 0.02) return false;
+  if (!model || !aim || (!aim.aiming && !aim.bowEquipped) ||
+      (aim.blend <= 0.02 && !aim.bowEquipped)) return false;
   const yaw = finite(orbitYaw, 0) + Math.PI;
   _aimFacing.setFromAxisAngle(_aimAxis, yaw);
   const rate = 1 - Math.exp(-14 * clamp(finite(delta, 0), 0, 0.05));
