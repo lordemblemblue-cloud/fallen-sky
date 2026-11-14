@@ -10,7 +10,7 @@ import {
 const root='public/models/characters/fused/armor/crescent_moon/';
 const manifest=JSON.parse(fs.readFileSync('public/models/characters/fused/armor/manifest.json','utf8'));
 const slots=['helmet','chest','pants','gloves','boots','cape'];
-const actualVisuals=['helmet','gloves','cape'];
+const actualVisuals=['helmet','chest','pants','gloves','boots','cape'];
 const read=path=>fs.readFileSync(path,'utf8');
 
 test('Crescent Moon is six independent legendary armor items with real stats',()=>{
@@ -76,7 +76,7 @@ test('real upgrade algorithm increases ordinary armor piece stats after success'
  assert.equal(enchant,1.06);
 });
 
-test('clone manifest refuses missing binaries rather than pointing renderer at 404',()=>{
+test('clone manifest ships all six original 3D models and excludes Adam-only fallback',()=>{
  assert.deepEqual(manifest.sets.map(s=>s.id),['crescent_moon']);
  assert.deepEqual(manifest.female.map(e=>e.slot).sort(),actualVisuals.slice().sort());
  assert.deepEqual(manifest.male,[]);
@@ -88,7 +88,6 @@ test('clone manifest refuses missing binaries rather than pointing renderer at 4
   assert.equal(data.subarray(0,4).toString(),'glTF');
   assert.ok(data.length>10000);
  }
- for(const slot of slots.filter(s=>!actualVisuals.includes(s))){
-  assert.ok(!fs.existsSync(root+'female_'+slot+'.glb'),'unavailable original model must not be faked');
- }
+ assert.equal(manifest.female.length,6);
+ for(const slot of slots) assert.ok(fs.existsSync(root+'female_'+slot+'.glb'));
 });
