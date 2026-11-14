@@ -186,6 +186,8 @@ const consume = (cost) => {
 export const enchantSlot = (itemId, slotIndex) => {
   if (!itemId) return { ok: false, reason: 'no_item' };
   if (slotIndex < 0 || slotIndex >= ENCH_SLOTS) return { ok: false, reason: 'bad_slot' };
+  // Never consume materials or create upgrade records for deleted / unowned items.
+  if (!getAXEEquipmentItem(itemId)) return { ok: false, reason: 'item_not_owned' };
 
   const current = getItemEnchantments(itemId);
   const level = current[slotIndex] || 0;
@@ -218,7 +220,7 @@ export const canAffordMaterials = (cost) => canAfford(cost);
 // The server's record for an item's reinforcement or over-enchant (itemUpgrade,
 // docs/game3d/SERVER_UPGRADES.md): the game rolls on it and keeps the server's result.
 export function setServerUpgradeRecord(service, itemId, record) {
-  if (!itemId || !record) return false;
+  if (!itemId || !record || !getAXEEquipmentItem(itemId)) return false;
   if (service === 'reinforcement') reinforcementState = { ...reinforcementState, [itemId]: { ...record } };
   else if (service === 'over_enchant') overEnchantState = { ...overEnchantState, [itemId]: { ...record } };
   else return false;
@@ -228,6 +230,8 @@ export function setServerUpgradeRecord(service, itemId, record) {
 
 export const reinforceItem = (itemId, { protectedAttempt = false, roll } = {}) => {
   if (!itemId) return { ok: false, reason: 'no_item' };
+  const ownedItem = getAXEEquipmentItem(itemId);
+  if (!ownedItem) return { ok: false, reason: 'item_not_owned' };
 
   const cost = getReinforcementCost(itemId, { protectedAttempt });
   if (!canAfford(cost)) {
@@ -235,7 +239,7 @@ export const reinforceItem = (itemId, { protectedAttempt = false, roll } = {}) =
   }
 
   const result = resolveReinforcement(getItemReinforcement(itemId), {
-    item: getAXEEquipmentItem(itemId),
+    item: ownedItem,
     protectedAttempt,
     ...(Number.isFinite(roll) ? { roll } : {}),
   });
@@ -252,6 +256,7 @@ export const reinforceItem = (itemId, { protectedAttempt = false, roll } = {}) =
 
 export const overEnchantItem = (itemId, { protectedAttempt = false, roll } = {}) => {
   if (!itemId) return { ok: false, reason: 'no_item' };
+  if (!getAXEEquipmentItem(itemId)) return { ok: false, reason: 'item_not_owned' };
 
   const cost = getOverEnchantCost(itemId, { protectedAttempt });
   if (!canAfford(cost)) {
