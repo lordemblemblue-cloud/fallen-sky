@@ -93,16 +93,29 @@ function buildReticle(container){
     marker.appendChild(dash);
   }
   host.appendChild(marker);
+  // One small status below the OTS crosshair, never a second targeting dot.
+  const result=document.createElement('div');
+  result.dataset.game3dBowResult='true';
+  result.setAttribute('role','status');
+  Object.assign(result.style,{
+    position:'absolute',top:'41px',left:'50%',
+    transform:'translateX(-50%)',whiteSpace:'nowrap',
+    font:'bold 13px/1.2 system-ui, sans-serif',letterSpacing:'.08em',
+    color:'#fff',textShadow:'0 1px 5px #000',
+    opacity:'0',transition:'opacity 90ms ease-out',
+    pointerEvents:'none',
+  });
+  host.appendChild(result);
   container.appendChild(host);
-  return {host,marker};
+  return {host,marker,result};
 }
 
 export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
-  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},update:()=>{},dispose:()=>{}};
+  if(!scene||!container)return {fire:()=>false,confirmHit:()=>{},confirmMiss:()=>{},update:()=>{},dispose:()=>{}};
   const overlay=typeof document!=='undefined'?buildReticle(container):null;
   if(overlay&&!showDot){overlay.host.firstChild.style.display='none';overlay.host.style.zIndex='61';}
   const birds=[];
-  let hitSeconds=0,disposed=false;
+  let hitSeconds=0,resultSeconds=0,disposed=false;
   const fire=({origin,target}={})=>{
     if(disposed||!pointLike(origin)||!pointLike(target))return false;
     if(birds.length>=MAX_BIRDS)releaseBird(birds.shift(),scene);
@@ -123,7 +136,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     bird.root.scale.setScalar(.63);
     root.add(bird.root);
     const traceMaterial=new THREE.LineBasicMaterial({
-      color:hitSeconds>0?0x81f6b1:0xffd375,
+      color:0xffd375,
       transparent:true,opacity:.93,depthWrite:false,
       blending:THREE.AdditiveBlending,
     });
@@ -133,7 +146,7 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     // WebGL often renders wide lines as a single pixel. A faint narrow tube
     // makes the same straight debug path visible on high-density displays.
     const shaftMaterial=new THREE.MeshBasicMaterial({
-      color:hitSeconds>0?0x81f6b1:0xffd375,transparent:true,
+      color:0xffd375,transparent:true,
       opacity:.38,depthWrite:false,blending:THREE.AdditiveBlending,
     });
     const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.024,.024,distance,5,1),shaftMaterial);
@@ -144,24 +157,40 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     birds.push({bird,root,traceMaterial,shaftMaterial,p0,p3,duration,elapsed:0});
     return true;
   };
-  const confirmHit=()=>{
+  const setResult=(label,color)=>{
     if(disposed)return;
-    hitSeconds=.23;
+    resultSeconds=.9;
     const current=birds[birds.length-1];
     if(current){
-      current.traceMaterial.color.setHex(0x81f6b1);
-      current.shaftMaterial.color.setHex(0x81f6b1);
+      current.traceMaterial.color.setHex(color);
+      current.shaftMaterial.color.setHex(color);
     }
+    if(overlay){
+      overlay.result.textContent=label;
+      overlay.result.style.color=color===0x81f6b1?'#8cffa8':'#ff9c96';
+    }
+  };
+  const confirmHit=(damage)=>{
+    hitSeconds=.23;
+    const amount=Number(damage);
+    setResult(Number.isFinite(amount)&&amount>0?'HIT '+Math.round(amount):'HIT',0x81f6b1);
+  };
+  const confirmMiss=(reason='MISS')=>{
+    hitSeconds=0;
+    const label=['DODGED','BLOCKED','OUT OF RANGE','NO TARGET'].includes(reason)?reason:'MISS';
+    setResult(label,0xff5d65);
   };
   const update=(dt,{active=false,blocked=false}={})=>{
     if(disposed)return;
     const delta=Math.max(0,Math.min(Number(dt)||0,.08));
     hitSeconds=Math.max(0,hitSeconds-delta);
+    resultSeconds=Math.max(0,resultSeconds-delta);
     if(overlay){
       overlay.host.style.opacity=active&&!blocked?'1':'0';
       const t=hitSeconds/.23;
       overlay.marker.style.opacity=active&&!blocked?String(clamp01(t)):'0';
       overlay.marker.style.transform='scale('+(1+.5*(1-t)).toFixed(3)+')';
+      overlay.result.style.opacity=active&&!blocked?String(clamp01(resultSeconds/.28)):'0';
     }
     for(let i=birds.length-1;i>=0;i--){
       const b=birds[i];
@@ -187,5 +216,5 @@ export function createGame3DBowAimVisuals({scene,container,showDot=true}={}){
     birds.splice(0).forEach(item=>releaseBird(item,scene));
     overlay?.host.remove();
   };
-  return {fire,confirmHit,update,dispose};
+  return {fire,confirmHit,confirmMiss,update,dispose};
 }
