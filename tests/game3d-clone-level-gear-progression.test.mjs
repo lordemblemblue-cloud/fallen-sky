@@ -86,8 +86,14 @@ test('low-tier rare set triggers only for two matching equipped pieces; PvP and 
 
 test('named armor pack drops use the same level gate and never include Crescent Moon dev armor',()=>{
   assert.equal(rollAXEArmorDrop('boss',true,{rng:seq(0),enemyLevel:1}),null);
-  assert.equal(rollAXEArmorDrop('boss',true,{rng:seq(0,0,0,0),enemyLevel:45})?.rarity,'rare');
-  assert.equal(rollAXEArmorDrop('boss',true,{rng:seq(0,0.99,0,0),enemyLevel:150})?.rarity,'legendary');
+  const rare=rollAXEArmorDrop('boss',true,{rng:seq(0,0,0,0),enemyLevel:45});
+  assert.equal(rare?.rarity,'rare');
+  assert.equal(rare?.equipmentItem.setId,'AXE_Set_Armor_nightscale');
+  assert.equal(Object.keys(rare?.equipmentItem.rolledStats||{}).length,1);
+  const legendary=rollAXEArmorDrop('boss',true,{rng:seq(0,0.99,0,0),enemyLevel:150});
+  assert.equal(legendary?.rarity,'legendary');
+  assert.equal(legendary?.equipmentItem.setId,'AXE_Set_Armor_silver_seraph');
+  assert.equal(Object.keys(legendary?.equipmentItem.rolledStats||{}).length,3);
   assert.ok(Object.keys(getAXEArmorDropOdds('boss',true,45).odds).every(k=>!k.includes('seraph')));
   assert.ok(Object.keys(getAXEArmorDropOdds('boss',true,150).odds).every(k=>!k.includes('crescent_moon')));
 });
@@ -134,7 +140,13 @@ test('Chosen is never loot RNG: max Halo, full mythical set and explicit trials 
 test('world drop integration and actual PvE strike hook remain wired',()=>{
   const world=fs.readFileSync('src/components/game3d/GameWorldLootLayer.jsx','utf8');
   const combat=fs.readFileSync('src/components/game3d/axe/combat/AXEStrikeRuntime.js','utf8');
+  const killing=fs.readFileSync('src/components/game3d/enemyRespawnManager.jsx','utf8');
+  const scene=fs.readFileSync('src/components/game3d/GameWorld3D.jsx','utf8');
   assert.match(world,/enemyLevel: dropLevel/);
+  assert.match(world,/lastRolledKillRef/);
+  assert.match(world,/queueMicrotask/);
+  assert.match(killing,/enemy_level: lootCtx\?\.enemyLevel/);
+  assert.match(scene,/enemyLevel: closestEnemy\.derived\?\.level/);
   assert.match(world,/rollAXEEquipmentDrop/);
   assert.match(world,/rollAXEArmorDrop/);
   assert.match(combat,/getAXESetCombatMultiplier\(getEquippedAXEItems\(\)/);
