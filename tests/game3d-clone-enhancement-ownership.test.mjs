@@ -14,7 +14,7 @@ function unownedUpgrade(name) {
   const end = code.indexOf('\n};', start);
   assert.notEqual(end, -1, `Could not isolate ${name}`);
   const declaration = code.slice(start, end + 3).replace(/^export const /, 'const ');
-  return new Function('getAXEEquipmentItem', `${declaration}\nreturn ${name};`)(() => null);
+  return new Function('getAXEEquipmentItem', 'ENCH_SLOTS', `${declaration}\nreturn ${name};`)(() => null, 4);
 }
 
 test('Crescent Moon Blacksmith must reject a missing item before any material debit', () => {
