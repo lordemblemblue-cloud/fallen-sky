@@ -1,0 +1,37 @@
+name: Clone Game 3D Living Town
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterLayout.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownDialogueBrain.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'tests/game3d-clone-town-living-quarter.test.mjs'
+      - '.github/workflows/game3d-clone-living-town.yml'
+  push:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterLayout.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownDialogueBrain.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'tests/game3d-clone-town-living-quarter.test.mjs'
+permissions:
+  contents: read
+jobs:
+  living-quarter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify plot safety, 3D houses, patrols, dialogue and authorized quests
+        run: node --test tests/game3d-clone-town-living-quarter.test.mjs
+      - name: Build Game 3D clone
+        run: npm run build
