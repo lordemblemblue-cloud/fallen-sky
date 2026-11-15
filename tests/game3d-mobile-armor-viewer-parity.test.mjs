@@ -57,7 +57,8 @@ test('Appearance, Character and world Play share one inventory-owned armor appea
   assert.match(world,/applyPlayerAppearance\(modelRef\.current,avatarConfig\)/);
   assert.match(bridge,/subscribeAXEEquipmentInventory/);
   assert.match(bridge,/reconcileInventoryArmorOverrides\(/);
-  assert.match(bridge,/\.\.\.creatorSelected,\.\.\.equipped/);
+  assert.match(bridge,/\.\.\.creatorSelected,\.\.\.legacyOverride/);
+  assert.match(bridge,/PACK_SET_IDS.some/);
   assert.match(bridge,/inventoryWorn,PACK_SET_IDS/);
   assert.match(world,/applyPlayerAppearance\(fbx,appearanceRef\.current\)/);
   assert.match(world,/game3dArmorRenderStatus/);
