@@ -235,6 +235,12 @@ export function createFactionThreeMountRig(root,definition={}) {
   const helpers=isolateFactionThreeIcoHelpers(root,{tail,wings,span:wingPlacement.span||1});
   const tailRest=tail.map(node=>node.quaternion.clone());
   const wingRest=wings.map(node=>node.quaternion.clone());
+  // The head/neck may retain a subtle native idle, but do not let a bad
+  // tail/helper track yank the real head backwards into the tail.
+  const headGuards=[['neck',.20],['head',.28]]
+    .map(([name,limit])=>{const bone=findBone(root,name);
+      return bone?{bone,limit,rest:bone.quaternion.clone()}:null;})
+    .filter(Boolean);
   const axis=new THREE.Vector3(0,0,1),wingAxis=new THREE.Vector3(1,0,0);
   const oldPos=root.getWorldPosition(new THREE.Vector3());
   const oldYaw=root.getWorldQuaternion(new THREE.Quaternion());
@@ -264,6 +270,12 @@ export function createFactionThreeMountRig(root,definition={}) {
       sway=clamp(sway+velocity*step,-.14,.14);
       if(teleported){velocity=0;sway=0;speed=0;}
       oldPos.copy(current);oldYaw.copy(rotation);
+      headGuards.forEach(({bone,limit,rest})=>{
+        const deviation=rest.angleTo(bone.quaternion);
+        if(deviation>limit)
+          bone.quaternion.slerpQuaternions(
+            rest,bone.quaternion,limit/deviation);
+      });
       tail.forEach((bone,index)=>{
         const rest=tailRest[index];
         const angle=rest.angleTo(bone.quaternion);
@@ -297,6 +309,7 @@ export function createFactionThreeMountRig(root,definition={}) {
       wingPlacement.restore?.();
       tail.forEach((node,i)=>node.quaternion.copy(tailRest[i]));
       wings.forEach((node,i)=>node.quaternion.copy(wingRest[i]));
+      headGuards.forEach(({bone,rest})=>bone.quaternion.copy(rest));
     },
   };
 }
