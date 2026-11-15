@@ -1921,6 +1921,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       playerAnim.playOneShot(name, timeScale);
     };
 
+    // Selection is owned by explicit user click/middle-lock. Never rebind it
+    // when an enemy dies or another target enters range.
+    const selectedPvETarget=() => {
+      const id=lockOnTargetRef.current?.id;
+      if(id==null||lockOnTargetRef.current?.kind==='player')return null;
+      return [...enemies,...bossEntities,...(window.__gw3dRogues||[])].find(enemy=>
+        String(enemy?.id)===String(id)&&enemy.alive===true&&!enemy.dying&&
+        !enemy.defeated&&enemy.group?.visible!==false&&enemy.group?.position) || null;
+    };
     const getLockOnTargetPosition = () => {
       const target = lockOnTargetRef.current;
       if (!target?.group || (target.aliveRef && !target.aliveRef())) return null;
@@ -2861,13 +2870,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // No movement occurs on kill, lock-on, or selection alone. Existing
         // collision and terrain constraints apply to every pursuit step.
         let skillApproaching=false;
-        const selectedPvETarget=() => {
-          const id=lockOnTargetRef.current?.id;
-          if(id==null||lockOnTargetRef.current?.kind==='player')return null;
-          return [...enemies,...bossEntities,...(window.__gw3dRogues||[])].find(enemy=>
-            String(enemy?.id)===String(id)&&enemy.alive===true&&!enemy.dying&&
-            !enemy.defeated&&enemy.group?.visible!==false&&enemy.group?.position) || null;
-        };
         if(pendingAbilityApproach){
           const request=pendingAbilityApproach;
           const opponent=selectedPvETarget();
@@ -4078,7 +4080,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               target:{position:selected.group.position,alive:selected.alive,
                 dying:selected.dying,defeated:selected.defeated,
                 visible:selected.group.visible},
-              weaponPath:path,meleeReach:ENEMY_ATTACK_RANGE-.15,mounted,
+              weaponPath:path,meleeReach:ENEMY_ATTACK_RANGE-.15,mounted:isMountedRef.current,
             });
             if(plan.kind==='out_of_range'||plan.kind==='mounted'){
               abilityKeyPressed.current=-1;
