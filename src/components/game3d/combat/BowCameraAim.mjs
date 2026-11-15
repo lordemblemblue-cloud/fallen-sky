@@ -188,6 +188,25 @@ export function selectCameraBowTarget({
   return null;
 }
 
+// An explicitly clicked/locked target receives ranged ABILITIES at up to
+// 40m, without forcing the player to turn their camera reticle to the enemy.
+// It still needs a clear real muzzle->body path. Basic arrows remain reticle
+// shots and cannot use this opt-in acquisition. No fabricated headshot.
+export function selectLockedBowAbilityTarget({
+  origin,target,groundMeshes=[],maxRange=BOW_PVE_RANGE,
+}={}){
+  if(!origin||!visibleHostile(target)||!target.group?.position)return null;
+  const root=target.group.position;
+  if(Math.hypot(root.x-origin.x,root.z-origin.z)>maxRange)return null;
+  const bounds=getBowEnemyHitbox(target,new THREE.Box3());
+  if(!bounds)return null;
+  const aim=bounds.getCenter(new THREE.Vector3());
+  const distance=aim.distanceTo(origin);
+  if(!(distance>0.2)||distance>maxRange)return null;
+  if(!clearMuzzlePath(origin,aim,groundMeshes))return null;
+  return {target,distance,locked:true,point:aim,headshot:false,rayHit:false};
+}
+
 export function cameraBowImpactPoint(camera, groundMeshes = [], maxDistance = BOW_PVE_RANGE) {
   if (!camera?.isCamera) return null;
   camera.updateMatrixWorld(true);
