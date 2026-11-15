@@ -234,6 +234,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
   const [envSystem, setEnvSystem] = useState(null);
   const [activeDialogue, setActiveDialogue] = useState(null); // { name, text }
+  const [armorLayerError,setArmorLayerError]=useState('');
+  useEffect(()=>{
+    const handle=e=>setArmorLayerError(e.detail?.error||'');
+    window.addEventListener('game3dArmorRenderStatus',handle);
+    return ()=>window.removeEventListener('game3dArmorRenderStatus',handle);
+  },[]);
   // Boss encounter — suppresses quest NPCs + gates boss music/dialogue while active.
   const [questNPCSuppressed, setQuestNPCSuppressed] = useState(false);
   const [nearbyNPC, setNearbyNPC] = useState(null);
@@ -1518,6 +1524,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       model = fbx;
       modelRef.current = fbx;
       playerModelRef.current = fbx;
+      // Character appearance can change while asynchronous GLB loading is
+      // pending. Apply canonical equipped armor immediately to the live actor
+      // before the first frame; viewers follow the same inventory state.
+      void applyPlayerAppearance(fbx,appearanceRef.current);
       window.__gw3dPlayerHeight=1.7*(appearanceRef.current.height_scale||1);
       // A chosen workflow location replaces only this character's initial Play spawn.
       // The real terrain raycast and existing tree/building/river guard reject unsafe spots.
@@ -4265,7 +4275,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full" />{!entryMode && <OTSAimReticle />}
+      <div ref={containerRef} className="w-full h-full" />
+      {!entryMode&&(armorLayerError||avatarConfig.game3d_armor_visual_warnings?.length>0)&&(
+        <div role="status" aria-live="polite"
+          className="absolute bottom-28 left-3 z-[22] max-w-[min(360px,82vw)] rounded-lg border border-amber-300/35 bg-slate-950/85 px-3 py-2 text-xs text-amber-100 pointer-events-none">
+          Equipped armor cannot be displayed: {String(armorLayerError||
+            avatarConfig.game3d_armor_visual_warnings?.join(' · ')||'').slice(0,220)}
+        </div>
+      )}{!entryMode && <OTSAimReticle />}
       {!entryMode && import.meta.env.DEV && <WorldTileEditor worldId="game3d" title="Game 3D · World Terrain"
         bounds={region === 'wolfveil' ? WOLFVEIL_TILE_BOUNDS : ARENA_TILE_BOUNDS} tileSize={5}
         describeTile={region === 'wolfveil' ? describeWolfveilTile : undefined}

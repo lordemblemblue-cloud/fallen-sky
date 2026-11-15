@@ -94,24 +94,84 @@ export function useArmoredAppearance(appearance, characterId) {
     setInventoryWorn((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
   }), []);
   const [pieces, setPieces] = useState([]);
+  const [manifestState, setManifestState] = useState({bodyId:null,ready:false,error:''});
+  const equippedPieceIds = Object.values(inventoryWorn).filter(Boolean).sort().join('|');
   useEffect(() => {
     if (syncRequested || typeof window === 'undefined') return;
     syncRequested = true;
     window.dispatchEvent(new CustomEvent(ARMOR_SYNC_REQUEST_EVENT));
   }, []);
   useEffect(() => {
-    if (!body) { setPieces([]); return undefined; }
+    if (!body) {
+      setPieces([]);
+      setManifestState({bodyId:null,ready:true,error:''});
+      return undefined;
+    }
     let alive = true;
-    loadBuiltinLayers('armor')
-      .then((manifest) => { if (alive) setPieces((manifest[body.gender] || []).filter((p) => p.rig_id === body.rig_id)); })
-      .catch(() => { if (alive) setPieces([]); });
+    setManifestState({bodyId:body.id,ready:false,error:''});
+    loadBuiltinLayers('armor',{equippedIds:equippedPieceIds.split('|').filter(Boolean)})
+      .then((manifest) => {
+        if (!alive) return;
+        setPieces((manifest[body.gender] || []).filter((p) => p.rig_id === body.rig_id));
+        setManifestState({bodyId:body.id,ready:true,error:''});
+      })
+      .catch(error => {
+        if (!alive) return;
+        setPieces([]);
+        setManifestState({bodyId:body.id,ready:false,error:error?.message||'Armor manifest could not load'});
+      });
     return () => { alive = false; };
-  }, [body?.id]);
-  const resolved = useMemo(
-    () => reconcileInventoryArmorOverrides(equipped, inventoryWorn, PACK_SET_IDS),
-    [equipped, inventoryWorn],
-  );
-  return useMemo(() => withEquippedArmor(appearance, resolved, pieces), [appearance, resolved, pieces]);
+  }, [body?.id,equippedPieceIds]);
+  const resolved = useMemo(() => {
+    // Some old creator saves still contain a fitted armor pick even after the
+    // actual equipment instance was unequipped. Reconcile both sources of
+    // saved cosmetics against the canonical per-character inventory, not
+    // merely the bridge's legacy override map.
+    const creatorSelected = Object.fromEntries(ARMOR_SLOTS
+      .filter(slot=>appearance?.selected_assets?.[slot])
+      .map(slot=>[slot,appearance.selected_assets[slot]]));
+    // A stale empty pack-unequip event must not erase an unrelated creator
+    // customization (e.g. a user-authored cosmetic helmet). Still clear old
+    // Nightscale/Frostwarden/Crescent pieces and favor currently worn items.
+    const legacyOverride=Object.fromEntries(Object.entries(equipped)
+      .filter(([slot,id])=>Boolean(id)||!creatorSelected[slot]||
+        PACK_SET_IDS.some(set=>creatorSelected[slot].startsWith(set+'_'))));
+    return reconcileInventoryArmorOverrides(
+      {...creatorSelected,...legacyOverride},inventoryWorn,PACK_SET_IDS,
+    );
+  },[appearance?.selected_assets,equipped,inventoryWorn]);
+  return useMemo(() => {
+    // When someone equips a piece without a fitted model, do not show the
+    // PREVIOUS set's old creator asset as though it were the new equipment.
+    // Clean only old inventory-pack visuals, never custom creator cosmetics.
+    const unrenderableSlots=new Set(Object.entries(inventoryWorn)
+      .filter(([slot,id])=>Boolean(id)&&
+        !pieces.some(piece=>piece.slot===slot&&piece.id===id))
+      .map(([slot])=>slot));
+    const safeSelection={...(appearance?.selected_assets||{})};
+    for(const slot of unrenderableSlots)
+      if(PACK_SET_IDS.some(set=>String(safeSelection[slot]||'').startsWith(set+'_')))
+        delete safeSelection[slot];
+    const safeAppearance=unrenderableSlots.size
+      ?{...appearance,selected_assets:safeSelection}:appearance;
+    const result=withEquippedArmor(safeAppearance,resolved,pieces);
+    // The inventory owns the equipment. If a GLB was never authored for a
+    // particular armor set/body, report that specific gap instead of silently
+    // showing an unchanged character in the world and every 3D viewer.
+    const equippedParts=Object.entries(inventoryWorn).filter(([,id])=>Boolean(id));
+    if(!equippedParts.length)return result;
+    let warnings=[];
+    if(!body){
+      warnings=['Equipped fitted armor needs a compatible fused Eve/Adam body.'];
+    }else if(manifestState.error){
+      warnings=['Armor assets unavailable: '+manifestState.error];
+    }else if(manifestState.bodyId===body.id&&manifestState.ready){
+      warnings=equippedParts.filter(([slot,id])=>!
+        pieces.some(piece=>piece.slot===slot&&piece.id===id))
+        .map(([slot,id])=>slot+': no fitted 3D model for '+id);
+    }
+    return warnings.length?{...result,game3d_armor_visual_warnings:warnings}:result;
+  },[appearance,resolved,pieces,inventoryWorn,body,manifestState]);
 }
 
 if (typeof window !== 'undefined' && !window.__axeArmorEquipBridge) {

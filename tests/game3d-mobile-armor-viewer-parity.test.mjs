@@ -56,7 +56,13 @@ test('Appearance, Character and world Play share one inventory-owned armor appea
   assert.match(world,/const avatarConfig=useGameAvatar\(\)/);
   assert.match(world,/applyPlayerAppearance\(modelRef\.current,avatarConfig\)/);
   assert.match(bridge,/subscribeAXEEquipmentInventory/);
-  assert.match(bridge,/reconcileInventoryArmorOverrides\(equipped, inventoryWorn, PACK_SET_IDS\)/);
+  assert.match(bridge,/reconcileInventoryArmorOverrides\(/);
+  assert.match(bridge,/\.\.\.creatorSelected,\.\.\.legacyOverride/);
+  assert.match(bridge,/PACK_SET_IDS.some/);
+  assert.match(bridge,/inventoryWorn,PACK_SET_IDS/);
+  assert.match(world,/applyPlayerAppearance\(fbx,appearanceRef\.current\)/);
+  assert.match(world,/game3dArmorRenderStatus/);
+  assert.match(viewer,/game3d_armor_visual_warnings/);
 });
 
 test('phone service previews lazy mount to prevent invisible WebGL contexts',()=>{
