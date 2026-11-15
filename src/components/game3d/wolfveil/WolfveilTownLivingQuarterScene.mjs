@@ -15,7 +15,7 @@ const mat=(hex,roughness=.8,extra={})=>new THREE.MeshStandardMaterial({
 });
 const noop=()=>{};
 function writeLabel(label,{width=384,height=100,background='#101c2b',
-  color='#f5e6c9',fontSize=28}={}){
+  color='#f5e6c9',fontSize=28,speechBubble=false}={}){
  if(typeof document==='undefined')return null;
  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
  const ctx=canvas.getContext('2d');
@@ -24,18 +24,34 @@ function writeLabel(label,{width=384,height=100,background='#101c2b',
   ctx.clearRect(0,0,width,height);
   ctx.fillStyle=background;
   ctx.beginPath();
-  ctx.roundRect(5,7,width-10,height-14,20);
-  ctx.fill();
-  ctx.lineWidth=3;ctx.strokeStyle='#c9aa72';ctx.stroke();
+  ctx.roundRect(7,5,width-14,height-(speechBubble?37:10),speechBubble?29:20);
+  ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#c9aa72';ctx.stroke();
+  if(speechBubble){
+    // The little tail makes a true comic speech *bubble*, not a health bar.
+    ctx.beginPath();ctx.moveTo(width*.49,height-34);
+    ctx.lineTo(width*.53,height-7);
+    ctx.lineTo(width*.58,height-34);ctx.closePath();
+    ctx.fill();ctx.stroke();
+  }
   ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
   ctx.font='600 '+fontSize+'px system-ui, sans-serif';
-  const txt=String(text||'').replace(/[\r\n]/g,' ').slice(0,52);
-  // Long lines are scaled down rather than overflowing or creating huge bars.
-  const widthPx=ctx.measureText(txt).width;
-  ctx.save();
-  ctx.translate(width/2,height/2);
-  if(widthPx>width-36)ctx.scale((width-36)/widthPx,1);
-  ctx.fillText(txt,0,0);ctx.restore();
+  const txt=String(text||'').replace(/[\r\n]/g,' ').slice(0,speechBubble?70:52);
+  const words=txt.split(/\s+/);const lines=[''];
+  if(speechBubble){
+    for(const word of words){
+      const last=lines.length-1;
+      const joined=(lines[last]+' '+word).trim();
+      if(ctx.measureText(joined).width>width-42&&lines.length<2)
+        lines.push(word);
+      else lines[last]=joined;
+    }
+  }else lines[0]=txt;
+  for(let i=0;i<lines.length;i++){
+    ctx.save();ctx.translate(width/2,speechBubble?39+i*29:height/2);
+    const measured=ctx.measureText(lines[i]).width;
+    if(measured>width-35)ctx.scale((width-35)/measured,1);
+    ctx.fillText(lines[i],0,0);ctx.restore();
+  }
  };
  paint(label);
  const texture=new THREE.CanvasTexture(canvas);
@@ -203,8 +219,8 @@ function makeCitizen(agent,materials){
   const staff=new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,2,8),materials.timber);
   staff.position.set(.48,1.03,-.04);actor.add(staff);
  }
- const speech=newSprite('',[2.9,.76],{width:384,height:94,fontSize:29,
-   background:'#0d182bdc',color:'#f8eee2'});
+ const speech=newSprite('',[2.65,1.05],{width:320,height:128,fontSize:23,
+   speechBubble:true,background:'#0d182bdc',color:'#f8eee2'});
  if(speech.sprite){
   speech.sprite.position.set(0,2.13,0);
   speech.sprite.visible=false;actor.add(speech.sprite);
