@@ -161,3 +161,24 @@
   .jade-quest-tracker { width: min(43vw, 210px); top: clamp(132px, 18vh, 172px); }
   .jade-quest-tracker-open { font-size: 11px; padding: 8px 9px; }
 }
+
+/* Put the live Questbook a quarter-card lower; preserve its scrolling and click target.
+   The HUD launchers use the same shared anchor, so they remain just above it. */
+.game3d-view {
+  --axe-quest-left:clamp(14px,2.1vw,40px);
+  --axe-quest-top:calc(clamp(148px,20vh,220px) + clamp(48px,7vh,72px));
+  --axe-hud-launcher-size:42px;
+}
+.game3d-view .jade-quest-tracker {
+  top:var(--axe-quest-top);left:var(--axe-quest-left);
+}
+@media(max-width:720px) {
+  .game3d-view {
+    --axe-quest-top:calc(clamp(132px,18vh,170px) + 38px);
+    --axe-hud-launcher-size:36px;
+  }
+}
+@media(max-height:470px) {
+  .game3d-view { --axe-quest-top:134px; }
+  .game3d-view .jade-quest-tracker { max-height:26vh; }
+}
