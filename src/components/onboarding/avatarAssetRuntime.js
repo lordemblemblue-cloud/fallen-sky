@@ -115,6 +115,14 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
    (/female/i.test(String(model.userData.rigId||''))?'female':'male');
  const customization=new AvatarCustomizationRuntime(model,{
    gender:resolvedGender,rigId:localBody?.rig_id||model.userData.rigId,
+   onState:state=>{
+     // Only the playable actor dispatches this event. Independent character
+     // preview canvases must not overwrite the world's armor status.
+     if(typeof game3dModelUrl==='string'&&typeof window!=='undefined')
+       window.dispatchEvent(new CustomEvent('game3dArmorRenderStatus',{
+         detail:{loading:!!state?.loading,error:state?.error||''},
+       }));
+   },
  });
  customizations.set(model,customization);await customization.update(appearance);
  return model;
