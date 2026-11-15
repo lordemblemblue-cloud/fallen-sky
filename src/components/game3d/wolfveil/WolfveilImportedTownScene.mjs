@@ -11,7 +11,7 @@ import {installWolfveilTownTree,isWolfveilTownTreeMesh,removeWolfveilTownCentreT
 import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './WolfveilImportedTownCritique.mjs';
 import {clearWolfveilImportedTownInterior} from './WolfveilImportedTownInteriorClearance.mjs';
 import {clearWolfveilTownCenterRisers} from './WolfveilTownCenterRiserRemoval.mjs';
-import {buildWolfveilTownLivingQuarter} from './WolfveilTownLivingQuarterScene.mjs';
+import {purgeWolfveilTownLegacyStructures} from './WolfveilTownLegacyMeshPurge.mjs';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
 // How each mesh of the model takes part in collision, by its Blender name.
@@ -78,6 +78,11 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
    // Run AFTER tile-top repair but BEFORE collision is baked; the floor,
    // central planter and town square perimeter must remain untouched.
    root.userData.cloneTownCenterRiserCleanup=clearWolfveilTownCenterRisers(town);
+   // The previous two cleanups exempted floor-named meshes and outer-attached
+   // building triangles. The final per-face purge eliminates ALL elevated
+   // old-town structures that touch the interior, even those attached to
+   // paving / Tile_* / stone, leaving only actual low flat walking surfaces.
+   root.userData.cloneTownLegacyPurge=purgeWolfveilTownLegacyStructures(town);
    // Clean-town preview: keep Blender lawn surfaces, but not decorative 3D
    // blade instances growing from the interior ground.
    // Bake floors and walls from the placed triangles themselves.
@@ -91,14 +96,13 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      minX:p.x-p.width/2-2,maxX:p.x+p.width/2+2,
      minZ:p.z+70-p.depth/2-2,maxZ:p.z+70+p.depth/2+2,
      circles:plazaTreeClearOfHouses?[WOLFVEIL_IMPORTED_TOWN_TREE]:[]});
-   // Houses and residents enter only AFTER imported mesh repair + terrain
-   // collision sampling. A failing plot is skipped rather than sinking into
-   // water/bridge/raised tile geometry. No new floor plate is created.
-   livingQuarter=buildWolfveilTownLivingQuarter(root,{
-     collision,onStatus:report=>{
-       root.userData.cloneTownLivingQuarter=report;
-     },
-   });
+   // The owner explicitly requested an EMPTY town interior. Do not re-create
+   // the procedural nine-house living quarter AFTER the imported wall purge:
+   // that was reintroducing buildings and their collision every time.
+   // Independent quest NPCs, town tree, perimeter and actual walking floor
+   // are not part of this housing system.
+   root.userData.cloneTownLivingQuarter={houses:0,guards:0,
+     state:'disabled_for_owner_empty_town'};
    model=town;emit('ready');onReady?.();
  },undefined,error=>{if(active){emit('error',error?.message||'Asset network error');globalThis.console?.warn('[Game 3D town] GLB load failed; Wolfveil remains walkable',error);}});
  return {root,get status(){return state;},get model(){return model;},
