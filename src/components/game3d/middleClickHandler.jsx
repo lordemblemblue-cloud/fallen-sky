@@ -9,7 +9,7 @@ const raycaster = new THREE.Raycaster();
  *   2. Hits on an enemy → lock camera/combat target.
  *   3. Empty space → clear current target.
  */
-export function handleMiddleClick({ event, renderer, camera, enemies, remoteManager, setPlayerMenu, rogues = [], bosses = [] }) {
+export function handleMiddleClick({ event, renderer, camera, enemies, remoteManager, setPlayerMenu, rogues = [], bosses = [], clearOnMiss = true }) {
   const rect = renderer.domElement.getBoundingClientRect();
   const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -104,7 +104,9 @@ export function handleMiddleClick({ event, renderer, camera, enemies, remoteMana
     }
   }
 
-  // 3. Empty space → clear
+  // A normal left click on empty terrain must never clear a deliberate lock.
+  if (!clearOnMiss) return null;
+  // 3. Empty middle click → clear
   clearTarget();
   setPlayerMenu?.(null);
   return null;
