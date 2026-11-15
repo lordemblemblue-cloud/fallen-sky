@@ -74,19 +74,35 @@ export function chooseTownPlots(collision,{
  maxGrade=.65,allowUnsafe=false,
 }={}){
  const accepted=[],rejected=[];
- for(const h of CLONE_TOWN_HOUSES){
-  if(!inTownBuildablePlot(h)){rejected.push({id:h.id,reason:'protected zone'});continue;}
-  const points=[[h.x,h.z],
-   [h.x-h.w*.48,h.z-h.d*.48],[h.x+h.w*.48,h.z-h.d*.48],
-   [h.x-h.w*.48,h.z+h.d*.48],[h.x+h.w*.48,h.z+h.d*.48]];
-  const heights=points.map(([x,z])=>collision?.groundAt?.(x,z));
-  // A visual build on empty or water-channel floor would overlap the scene.
-  if(!allowUnsafe&&(!heights.every(Number.isFinite)||
-      Math.max(...heights)-Math.min(...heights)>maxGrade||
-      points.some(([x,z])=>collision?.isSolid?.(x,z)))){
-   rejected.push({id:h.id,reason:'uneven, missing or blocked floor'});continue;
+ const offsets=[[0,0],[-2,0],[2,0],[0,-2],[0,2],
+  [-4,0],[4,0],[0,-4],[0,4],[-2,-2],[2,-2],[-2,2],[2,2]];
+ for(const authored of CLONE_TOWN_HOUSES){
+  if(!inTownBuildablePlot(authored)){
+   rejected.push({id:authored.id,reason:'protected zone'});continue;
   }
-  accepted.push({...h,y:heights.every(Number.isFinite)?Math.max(...heights):0});
+  let picked=null;
+  for(const [dx,dz] of offsets){
+   const h={...authored,x:authored.x+dx,z:authored.z+dz};
+   if(!inTownBuildablePlot(h)||
+     accepted.some(other=>rectanglesOverlap(other,h,1.2))||
+     CLONE_TOWN_HOUSES.some(other=>other!==authored&&rectanglesOverlap(other,h,1.2)))
+     continue;
+   const points=[[h.x,h.z],
+     [h.x-h.w*.48,h.z-h.d*.48],[h.x+h.w*.48,h.z-h.d*.48],
+     [h.x-h.w*.48,h.z+h.d*.48],[h.x+h.w*.48,h.z+h.d*.48]];
+   const heights=points.map(([x,z])=>collision?.groundAt?.(x,z));
+   // Never bridge water, place atop old stair risers, or tilt a building
+   // across two conflicting tile elevations. Try a nearby safe location,
+   // but never move a shop into the main plaza/path or another house.
+   if(!allowUnsafe&&(!heights.every(Number.isFinite)||
+     Math.max(...heights)-Math.min(...heights)>maxGrade||
+     points.some(([x,z])=>collision?.isSolid?.(x,z))))continue;
+   picked={...h,y:heights.every(Number.isFinite)?Math.max(...heights):0,
+     shiftedMeters:Math.hypot(dx,dz)};
+   break;
+  }
+  if(picked)accepted.push(picked);
+  else rejected.push({id:authored.id,reason:'no level collision-safe foundation within 4m'});
  }
  return {accepted,rejected};
 }
