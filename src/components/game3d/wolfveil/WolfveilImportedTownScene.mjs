@@ -11,6 +11,7 @@ import {installWolfveilTownTree,isWolfveilTownTreeMesh,removeWolfveilTownCentreT
 import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './WolfveilImportedTownCritique.mjs';
 import {clearWolfveilImportedTownInterior} from './WolfveilImportedTownInteriorClearance.mjs';
 import {clearWolfveilTownCenterRisers} from './WolfveilTownCenterRiserRemoval.mjs';
+import {purgeWolfveilTownLegacyStructures} from './WolfveilTownLegacyMeshPurge.mjs';
 import {buildWolfveilTownLivingQuarter} from './WolfveilTownLivingQuarterScene.mjs';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
@@ -78,6 +79,11 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
    // Run AFTER tile-top repair but BEFORE collision is baked; the floor,
    // central planter and town square perimeter must remain untouched.
    root.userData.cloneTownCenterRiserCleanup=clearWolfveilTownCenterRisers(town);
+   // The previous two cleanups exempted floor-named meshes and outer-attached
+   // building triangles. The final per-face purge eliminates ALL elevated
+   // old-town structures that touch the interior, even those attached to
+   // paving / Tile_* / stone, leaving only actual low flat walking surfaces.
+   root.userData.cloneTownLegacyPurge=purgeWolfveilTownLegacyStructures(town);
    // Clean-town preview: keep Blender lawn surfaces, but not decorative 3D
    // blade instances growing from the interior ground.
    // Bake floors and walls from the placed triangles themselves.
@@ -91,11 +97,10 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      minX:p.x-p.width/2-2,maxX:p.x+p.width/2+2,
      minZ:p.z+70-p.depth/2-2,maxZ:p.z+70+p.depth/2+2,
      circles:plazaTreeClearOfHouses?[WOLFVEIL_IMPORTED_TOWN_TREE]:[]});
-   // Houses and residents enter only AFTER imported mesh repair + terrain
-   // collision sampling. A failing plot is skipped rather than sinking into
-   // water/bridge/raised tile geometry. No new floor plate is created.
+   // Preserve the patrolling town NPCs, but do not re-create any buildings,
+   // pitched roofs, house collision, or stair footings after the purge.
    livingQuarter=buildWolfveilTownLivingQuarter(root,{
-     collision,onStatus:report=>{
+     collision,architectureEnabled:false,onStatus:report=>{
        root.userData.cloneTownLivingQuarter=report;
      },
    });
