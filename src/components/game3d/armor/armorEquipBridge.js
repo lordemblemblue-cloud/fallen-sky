@@ -148,7 +148,7 @@ export function useArmoredAppearance(appearance, characterId) {
       .filter(([slot,id])=>Boolean(id)&&
         !pieces.some(piece=>piece.slot===slot&&piece.id===id))
       .map(([slot])=>slot));
-    const safeSelection={...(appearance.selected_assets||{})};
+    const safeSelection={...(appearance?.selected_assets||{})};
     for(const slot of unrenderableSlots)
       if(PACK_SET_IDS.some(set=>String(safeSelection[slot]||'').startsWith(set+'_')))
         delete safeSelection[slot];
