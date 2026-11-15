@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Activity, Check, Crown, Feather, Gem, HeartPulse, Shield, Shirt, Sparkles, Sword, Wind } from 'lucide-react';
+import { Activity, Check, Crown, Eye, Feather, Gem, HeartPulse, Shield, Shirt, Sparkles, Sword, Wind } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD, applyAttributeAllocationPlan } from '../../playerHUDStore';
+import { computeDerivedStats, migrateBaseStats } from '../../statsSystem';
 import { getAllAXEEquipmentItems, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
 import { subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter, subscribeCharacters } from '../../characterStore';
@@ -43,7 +44,23 @@ const METRICS = [
   ['Chi Regen','manaRegen'], ['Attack Success','attackSuccess'], ['Attack Block','attackBlock'],
   ['Skill Power','skillPowerPct','%'], ['Cooldown Reduction','cooldownReductionPct','%'],
 ];
+// These are the actual base-attribute derivative keys from statsSystem; no gear,
+// equipment percentages, wings, cosmetics, titles or other bonus providers enter the preview.
+const BASE_GROWTH_METRICS = Object.freeze([
+  ['Maximum HP','maxHP'], ['Chi / Will','chi'], ['Damage','damage'],
+  ['Defense','defense'], ['Attack success','attackSuccess'],
+  ['Attack block','attackBlock'], ['HP regeneration','hpRegen'],
+  ['Chi regeneration','manaRegen'], ['Critical chance','critChance','%'],
+  ['Critical defense','criticalDefense'], ['Evasion','evasionPct','%'],
+  ['Attack speed','attackSpeedPct','%'], ['Skill power','skillPowerPct','%'],
+  ['Spell damage','spellDamagePct','%'], ['Damage roll','damageRollBonus'],
+]);
 const num = value => Number(value || 0);
+const formatGrowth = (value, unit='') => {
+  const n = num(value);
+  const places = Number.isInteger(n) ? 0 : Math.abs(n) < .01 ? 4 : 2;
+  return (n >= 0 ? '+' : '') + n.toLocaleString('en-US', { maximumFractionDigits:places }) + unit;
+};
 const display = value => num(value).toLocaleString('en-US',{maximumFractionDigits:2});
 const caption = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 function GearIcon({item}) {
@@ -65,6 +82,7 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
   const [vanity,setVanity]=useState(getAXEVanityState);
   const [costumes,setCostumes]=useState(getAXECostumeState);
   const [plan,setPlan]=useState({});
+  const [selectedAttribute,setSelectedAttribute]=useState('constitution');
   const [review,setReview]=useState(false);
   const [notice,setNotice]=useState('');
   useEffect(()=>subscribePlayerHUD(setHud),[]);
@@ -76,7 +94,7 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
   useEffect(()=>subscribeAXEVanity(setVanity),[]);
   useEffect(()=>subscribeAXECostumes(setCostumes),[]);
   useEffect(()=>subscribeCharacterChange(()=>{
-    setPlan({});setReview(false);setNotice('');
+    setPlan({});setSelectedAttribute('constitution');setReview(false);setNotice('');
   }),[]);
   const spent=ATTRIBUTES.reduce((n,{key})=>n+num(plan[key]),0);
   const points=Math.max(0,num(hud.unspentPoints));
@@ -110,19 +128,32 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
   };
   const equippedDisplayCount=CHARACTER_DISPLAY_SLOTS.filter(([slot,index])=>slotItem(slot,index)).length;
   const derived=hud.derived||{};
-  const effective=derived.effective||{};
-  const totalAttr={
-    constitution:effective.vitality ?? effective.constitution ?? hud.baseStats?.constitution,
-    strength:effective.strength ?? hud.baseStats?.strength,
-    dexterity:effective.agility ?? effective.dexterity ?? hud.baseStats?.dexterity,
-    focus:effective.spirit ?? effective.focus ?? hud.baseStats?.focus,
-  };
+  // Display allocatable base points here, not equipment-inflated effective totals.
+  const totalAttr=migrateBaseStats(hud.baseStats);
+  const selectedName=ATTRIBUTES.find(attribute=>attribute.key===selectedAttribute)?.name || 'Vitals';
+  const selectedPending=num(plan[selectedAttribute]);
+  const preview=useMemo(()=>{
+    const base=migrateBaseStats(hud.baseStats);
+    // Use the same combat formula as actual allocation, but pass NO bonus inputs.
+    // Compute the delta against the currently committed base stats, so armor is
+    // excluded from both sides of the comparison rather than merely subtracted at display time.
+    const before=computeDerivedStats(base);
+    const one=computeDerivedStats({...base,[selectedAttribute]:base[selectedAttribute]+1});
+    const staged=computeDerivedStats({...base,[selectedAttribute]:base[selectedAttribute]+num(plan[selectedAttribute])});
+    return BASE_GROWTH_METRICS.map(([label,key,unit])=>({
+      label,key,unit,
+      one:num(one[key])-num(before[key]),
+      planned:num(staged[key])-num(before[key]),
+    })).filter(metric=>Math.abs(metric.one)>0.0000001 || Math.abs(metric.planned)>0.0000001);
+  },[hud.baseStats,selectedAttribute,plan]);
   const add=(key,count)=>{
+    setSelectedAttribute(key);
     if(count<=0||remaining<=0)return;
     setPlan(current=>({...current,[key]:num(current[key])+Math.min(count,remaining)}));
     setReview(false);setNotice('');
   };
   const subtract=(key)=>{
+    setSelectedAttribute(key);
     // Remove one UNSAVED planned point only; committed stats are immutable here.
     if(num(plan[key])<=0)return;
     setPlan(current=>({...current,[key]:Math.max(0,num(current[key])-1)}));
@@ -186,41 +217,59 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
               {(activeCharacter?.factionName || activeCharacter?.faction) && <div><span>Faction</span>
                 <strong>{activeCharacter.factionName || activeCharacter.faction}</strong></div>}
             </div>
-            <div className="axe-char-allocation-section" aria-label="Spend character attribute points">
-              <div className="axe-char-alloc-heading">
-                <h4 className="axe-char-section-title">Increase Attributes</h4>
-                <small>{display(remaining)} points available</small>
+            <div className="axe-char-attribute-split" aria-label="Base attribute allocation and live growth preview">
+              <div className="axe-char-allocation-section" aria-label="Spend character attribute points">
+                <div className="axe-char-alloc-heading">
+                  <h4 className="axe-char-section-title">Increase Attributes</h4>
+                  <small>{display(remaining)} points available</small>
+                </div>
+                <div className="axe-char-primary-stats">
+                  {ATTRIBUTES.map(({key,name,Icon,info})=><div key={key}
+                    className={'axe-char-inline-attribute'+(selectedAttribute===key?' axe-char-inline-attribute--selected':'')}>
+                    <button type="button" className="axe-char-attribute-select" title={info}
+                      aria-pressed={selectedAttribute===key} aria-label={'Preview '+name+' base attribute growth'}
+                      onClick={()=>setSelectedAttribute(key)}><Icon size={14}/><span>{name}</span></button>
+                    <span className="axe-char-attribute-total" aria-label={name+' allocated base value (no equipment)'}>
+                      <b>{display(totalAttr[key])}</b>
+                      {num(plan[key])>0 && <small>+{display(plan[key])}</small>}
+                    </span>
+                    <div className="axe-char-attribute-buttons" role="group" aria-label={name+' point allocation'}>
+                      <button type="button" aria-label={'Remove one pending point from '+name}
+                        title={'Undo one pending '+name+' point'} disabled={num(plan[key])<=0}
+                        onClick={()=>subtract(key)}>−</button>
+                      <button type="button" aria-label={'Add one point to '+name}
+                        disabled={!remaining} onClick={()=>add(key,1)}>+</button>
+                      <button type="button" aria-label={'Add five points to '+name}
+                        disabled={!remaining} onClick={()=>add(key,5)}>+5</button>
+                      <button type="button" aria-label={'Add ten points to '+name}
+                        disabled={!remaining} onClick={()=>add(key,10)}>+10</button>
+                      <button type="button" aria-label={'Assign all remaining points to '+name}
+                        disabled={!remaining} onClick={()=>add(key,remaining)}>Max</button>
+                    </div>
+                  </div>)}
+                </div>
               </div>
-              <div className="axe-char-primary-stats">
-                {ATTRIBUTES.map(({key,name,info})=><div key={key} className="axe-char-inline-attribute">
-                  <span className="axe-char-attribute-name" title={info}>{name}</span>
-                  <div className="axe-char-attribute-buttons" role="group" aria-label={name + ' point allocation'}>
-                    <button type="button" aria-label={'Remove one pending point from '+name}
-                      title={'Undo one pending '+name+' point'} disabled={num(plan[key])<=0}
-                      onClick={()=>subtract(key)}>−</button>
-                    <button type="button" aria-label={'Add one point to '+name}
-                      disabled={!remaining} onClick={()=>add(key,1)}>+</button>
-                    <button type="button" aria-label={'Add five points to '+name}
-                      disabled={!remaining} onClick={()=>add(key,5)}>+5</button>
-                    <button type="button" aria-label={'Add ten points to '+name}
-                      disabled={!remaining} onClick={()=>add(key,10)}>+10</button>
-                    <button type="button" aria-label={'Assign all remaining points to '+name}
-                      disabled={!remaining} onClick={()=>add(key,remaining)}>Max</button>
-                  </div>
-                  <span className="axe-char-attribute-total" aria-label={name + ' current total'}>
-                    <b>{display(totalAttr[key])}</b>
-                    {num(plan[key])>0 && <small>+{display(plan[key])}</small>}
-                  </span>
-                </div>)}
-              </div>
-              <div className="axe-char-allocation-footer">
-                <span>{display(spent)} pending · {display(remaining)} remaining</span>
-                <button type="button" disabled={!spent} onClick={()=>setPlan({})}>Reset</button>
-                <button type="button" disabled={!spent} onClick={()=>setReview(true)}>
-                  <Check size={14}/> Apply Points</button>
-              </div>
-              {notice && <p className="axe-char-notice" role="status">{notice}</p>}
+              <section className="axe-char-preview" aria-label={selectedName+' base attribute increases'} aria-live="polite">
+                <h4 className="axe-char-section-title"><Eye size={17}/> Attribute Preview</h4>
+                <p className="axe-char-preview-subtitle">{selectedName} · +1 point (base growth)</p>
+                <div className="axe-char-preview-list">
+                  {preview.map(({key,label,unit,one,planned})=><div key={key} className="axe-char-preview-stat">
+                    <span>{label}</span><strong>{formatGrowth(one,unit)}</strong>
+                    {selectedPending>0 && <small>Pending {formatGrowth(planned,unit)}</small>}
+                  </div>)}
+                  {!preview.length && <p className="axe-char-preview-empty">No change to derived base stats.</p>}
+                </div>
+                <p className="axe-char-preview-note">Base attribute growth only. Armor, equipment and other bonuses are excluded.</p>
+              </section>
             </div>
+            <div className="axe-char-section-divider" aria-hidden="true"/>
+            <div className="axe-char-allocation-footer">
+              <span>{display(spent)} pending · {display(remaining)} remaining</span>
+              <button type="button" disabled={!spent} onClick={()=>setPlan({})}>Reset</button>
+              <button type="button" disabled={!spent} onClick={()=>setReview(true)}>
+                <Check size={14}/> Apply Points</button>
+            </div>
+            {notice && <p className="axe-char-notice" role="status">{notice}</p>}
             <h4 className="axe-char-section-title">Combat &amp; Secondary Stats</h4>
             <div className="axe-char-stat-list">
               {METRICS.map(([label,key,unit])=><div className="axe-char-stat-row" key={key}>
