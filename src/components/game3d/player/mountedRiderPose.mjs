@@ -98,7 +98,9 @@ function measureMount(mount, definition) {
   const points = [], bounds = new THREE.Box3();
   mount.traverse(node => {
     const attribute = node.geometry?.attributes?.position;
-    if (!attribute || !node.isMesh || (!node.isSkinnedMesh && node.geometry.type === 'RingGeometry')) return;
+    if (!attribute || !node.isMesh || node.visible===false ||
+        node.userData?.factionThreeSecondaryHelper ||
+        (!node.isSkinnedMesh && node.geometry.type === 'RingGeometry')) return;
     node.skeleton?.update();
     const stride = Math.max(1, Math.ceil(attribute.count / 24000));
     for (let i = 0; i < attribute.count; i += stride) {
