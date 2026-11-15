@@ -1,0 +1,26 @@
+name: Clone town final legacy walls purge
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilTownLegacyMeshPurge.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'tests/game3d-clone-town-final-legacy-purge.test.mjs'
+      - '.github/workflows/game3d-clone-town-final-legacy-purge.yml'
+  push:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilTownLegacyMeshPurge.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'tests/game3d-clone-town-final-legacy-purge.test.mjs'
+permissions:
+  contents: read
+jobs:
+  final-town-geometry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify attached walls removed and town floor/perimeter retained
+        run: node --test tests/game3d-clone-town-final-legacy-purge.test.mjs
