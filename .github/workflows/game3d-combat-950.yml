@@ -4,6 +4,12 @@ on:
     paths:
       # Include authority, authentication, quest, and persistence modules too.
       - 'server/game3d/**'
+      # Client world entry can alter authenticated Questbook/reconnect flows.
+      # Watch only the reviewed world-entry surface, not all visual assets.
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/worlds/WolfveilWorldVariants.mjs'
+      - 'src/components/game3d/worlds/loadSuigenWorld.mjs'
+      - 'tests/game3d-suigen-map-variant.test.mjs'
       - 'server/game3d/privateCombatQuestScheduler844.mjs'
       - 'server/game3d/tests/combat*.test.mjs'
       - 'server/game3d/tools/verifyCombatQuest851.mjs'
@@ -13,6 +19,12 @@ on:
     paths:
       # Include authority, authentication, quest, and persistence modules too.
       - 'server/game3d/**'
+      # Client world entry can alter authenticated Questbook/reconnect flows.
+      # Watch only the reviewed world-entry surface, not all visual assets.
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/worlds/WolfveilWorldVariants.mjs'
+      - 'src/components/game3d/worlds/loadSuigenWorld.mjs'
+      - 'tests/game3d-suigen-map-variant.test.mjs'
       - 'server/game3d/privateCombatQuestScheduler844.mjs'
       - 'server/game3d/tests/combat*.test.mjs'
       - 'server/game3d/tools/verifyCombatQuest851.mjs'
