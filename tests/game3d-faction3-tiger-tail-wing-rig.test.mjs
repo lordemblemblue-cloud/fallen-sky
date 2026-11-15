@@ -10,7 +10,7 @@ import {
 
 const faction3={id:'faction_tiger',animationRigProfile:FACTION_THREE_RIG};
 const faction2={id:'faction_armored_wolf',animationRigProfile:'winged_faction_2_158'};
-const source=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const source=path=>readFileSync(new URL('../src/components/game3d/'+path,import.meta.url),'utf8');
 
 function mockTiger(){
   const root=new THREE.Group();root.name='Owner Tiger Mount';
