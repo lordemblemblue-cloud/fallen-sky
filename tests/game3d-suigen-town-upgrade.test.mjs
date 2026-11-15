@@ -64,7 +64,7 @@ test('Potion trade uses existing character Silver and real healing bridge',()=>{
    'kind:\'heal\'','game3dSuigenMerchantOpen',
    'window.__axeUiModalOpen=true','window.__axeUiModalOpen=false'])
    assert(merchants.includes(marker),marker);
- assert(view.includes('<SuigenTownMerchants />'));
+ assert(!view.includes('<SuigenTownMerchants />'), 'archived Suigen shops must not mount in Classic');
  assert(view.includes('<ShopEffectsBridge />'));
  assert(world.includes("new CustomEvent('game3dSuigenMerchantOpen'"));
  // No fake player equipment sales, server-free weapons, or premium checkout.
@@ -81,7 +81,7 @@ test('Underground abyss descent has accessible fine stone steps and a clear tren
  assert(SUIGEN_QUEST_POIS.length>=8);
 });
 
-test('Mountain vortex and both real dungeon portal destinations are connected',()=>{
+test('Archived Suigen world retains mountain vortex and both portal destinations in source',()=>{
  assert(SUIGEN_CAVE_PORTALS.some(p=>p.id==='abyss-entry'&&p.target==='lunar-cave'));
  assert(SUIGEN_CAVE_PORTALS.some(p=>p.id==='astral-trial'&&p.target==='astral-dungeon'));
  assert(SUIGEN_CAVE_PORTALS.some(p=>p.id==='vortex-lake'));
@@ -92,7 +92,7 @@ test('Mountain vortex and both real dungeon portal destinations are connected',(
  assert(world.includes('!suigenActive&&astralGate?.update'));
 });
 
-test('Procedural upgrade is optional and can never remove the source GLB or Classic',()=>{
+test('Archived procedural upgrade remains available in source but cannot replace Classic',()=>{
  assert(loader.includes('district=createSuigenTownDistrict('));
  assert(loader.includes('mountains=createSuigenMountainWayfinding('));
  assert(loader.includes('walkables.push(...district.walkables)'));
@@ -102,4 +102,5 @@ test('Procedural upgrade is optional and can never remove the source GLB or Clas
  assert(loader.includes('district?.dispose()'));
  assert(loader.includes('mountains?.dispose()'));
  assert(world.includes('suigenRuntime?.setVisible(false)'));
+ assert(!world.includes('loadSuigenWorld('));
 });
