@@ -148,10 +148,8 @@ import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
-import {loadSuigenWorld} from './worlds/loadSuigenWorld.mjs';
 import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
-import {readWolfveilWorldVariant,saveWolfveilWorldVariant,
-  normalizeWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,WORLD_VARIANT_SUIGEN,
+import {saveWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
 import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
@@ -768,18 +766,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     });
     window.__gw3dAtomicLook=atomicLook;
 
-    // Clone's visual-world switch. The old terrain and imported houses remain
-    // intact in memory as an instant backup. Quest, NPC, player, multiplayer,
-    // inventory, region and portal state continue on their original systems.
+    // Owner-required rollback: Classic Wolfveil is the actual live Game 3D
+    // world. The complete Suigen map is preserved as an offline/archive asset,
+    // NOT mounted into this renderer or even fetched from the network.
+    // Selected real Suigen trees/bamboo/boulders load below as cosmetic GLBs.
+    // Original terrain, NPCs, portals, player saves and collision stay Classic.
     const classicWorldRoots=[
       wolfveilVillage?.world?.group,importedSpawnTown?.root,livingMeadow?.root,
       // The Classic vortex and gates have different elevation than Suigen.
       vortexLake?.root,lunarGate?.root,astralGate?.root,
     ].filter(Boolean);
     const originalVisibility=new Map(classicWorldRoots.map(root=>[root,root.visible]));
-    let suigenRuntime=null,suigenLoadPromise=null;
-    let worldMapSwitchNumber=0,worldMapUnloaded=false;
-    const worldMapAbort=new AbortController();
+    let suigenRuntime=null; // legacy branch compatibility only, never loaded
+    let worldMapUnloaded=false;
 
     // Genuine source trees, bamboo and boulders are now SMALL isolated GLB
     // prefabs on Classic Wolfveil. Never import Suigen's 2400m terrain into
@@ -830,48 +829,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const worldVariantStatus=detail=>{
       window.dispatchEvent(new CustomEvent(WORLD_VARIANT_STATUS_EVENT,{detail}));
     };
-    const applyWorldVariant=async choice=>{
-      if(region!=='wolfveil')return;
-      const variant=normalizeWolfveilWorldVariant(choice);
-      const request=++worldMapSwitchNumber;
-      if(variant===WORLD_VARIANT_CLASSIC){
-        showClassic();
-        worldVariantStatus({variant,ready:true});
-        return;
-      }
-      try{
-        if(!suigenRuntime){
-          if(!suigenLoadPromise){
-            suigenLoadPromise=loadSuigenWorld({scene,signal:worldMapAbort.signal})
-              .catch(error=>{suigenLoadPromise=null;throw error;});
-          }
-          const loaded=await suigenLoadPromise;
-          if(worldMapUnloaded){loaded.dispose();return;}
-          suigenRuntime=loaded;
-        }
-        if(worldMapUnloaded||request!==worldMapSwitchNumber)return;
-        // The NEW 2400m GLB is the visible terrain; hide old ground, town
-        // and meadows only AFTER both scene shards are ready to render.
-        suigenGroundMeshes=suigenRuntime.walkables;
-        suigenRuntime.setVisible(true);
-        if(suigenRuntime.upgradeError)
-          showCombatNotice('Dominion loaded, but its new town failed to build; Classic remains available.');
-        for(const root of classicWorldRoots)root.visible=false;
-        classicSuigenAccents?.setVisible(false);
-        suigenActive=true;
-        atomicLook?.setEnabled(false); // avoid overlapping old grass
-        worldVariantStatus({variant:WORLD_VARIANT_SUIGEN,ready:true});
-      }catch(error){
-        if(worldMapUnloaded||request!==worldMapSwitchNumber)return;
-        showClassic();
-        saveWolfveilWorldVariant(WORLD_VARIANT_CLASSIC);
-        worldVariantStatus({variant:WORLD_VARIANT_CLASSIC,ready:false,
-          error:error?.message||'The Dominion map assets could not be loaded'});
-      }
+    // We previously changed only the default, but a persisted v2 Suigen
+    // choice still selected the entire new map. Ignore ALL such selections.
+    // The only world shown in Play is Classic Wolfveil + selected old Suigen
+    // vegetation assets. No full-map loader can run from this code path.
+    const applyWorldVariant=()=>{
+      if(region!=='wolfveil'||worldMapUnloaded)return;
+      showClassic();
+      saveWolfveilWorldVariant(WORLD_VARIANT_CLASSIC);
+      worldVariantStatus({variant:WORLD_VARIANT_CLASSIC,ready:true});
     };
-    const onWorldVariantChange=event=>{
-      void applyWorldVariant(event?.detail?.variant);
-    };
+    const onWorldVariantChange=()=>applyWorldVariant();
     const townPrompt=document.createElement('div');
     townPrompt.setAttribute('role','status');
     townPrompt.className='suigen-town-interaction-hint';
@@ -879,7 +847,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     renderer.domElement.parentElement?.appendChild(townPrompt);
     let previousTownPrompt='';
     window.addEventListener(WORLD_VARIANT_EVENT,onWorldVariantChange);
-    void applyWorldVariant(readWolfveilWorldVariant(window.localStorage));
+    applyWorldVariant();
     // Explicit, opt-in clone map export. Captures the SAME assembled scene
     // seen in play; it never repositions or detaches world objects.
     const exportLiveGame3DMap = async ({allowPartialAssets=false,...options}={}) => {
@@ -4545,8 +4513,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.removeEventListener('game3dDedicatedMode',onDedicatedMode);
       window.removeEventListener('game3dDedicatedPose',onDedicatedPose);
       worldMapUnloaded=true;
-      worldMapSwitchNumber++;
-      worldMapAbort.abort();
       classicAccentAbort.abort();
       classicSuigenAccents?.dispose();
       classicSuigenAccents=null;
