@@ -149,8 +149,10 @@ test('independent tail reacts to its own mount travel and ignores camera/rider-o
  // Faction 3 tail will not fold toward the head even if a source clip
  // writes an extreme rotation every frame.
  m.tail[0].quaternion.setFromAxisAngle(new THREE.Vector3(0,0,1),2.9);
+ m.head.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),2.6);
  guard.update(.016);
  assert(m.tail[0].quaternion.angleTo(new THREE.Quaternion())<.43);
+ assert(m.head.quaternion.angleTo(new THREE.Quaternion())<.35);
  guard.dispose();
  assert.equal(guard.status().active,false);
  m.root.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});
