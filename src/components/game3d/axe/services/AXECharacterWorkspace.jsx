@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Activity, Check, Crown, Eye, Feather, Gem, HeartPulse, Shield, Shirt, Sparkles, Sword, Wind } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD, applyAttributeAllocationPlan } from '../../playerHUDStore';
 import { computeDerivedStats, migrateBaseStats } from '../../statsSystem';
+import { getBaseAttributeGrowthPreview, formatAttributeGrowth } from './AXEAttributeGrowthPreview.mjs';
 import { getAllAXEEquipmentItems, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
 import { subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter, subscribeCharacters } from '../../characterStore';
@@ -44,23 +45,7 @@ const METRICS = [
   ['Chi Regen','manaRegen'], ['Attack Success','attackSuccess'], ['Attack Block','attackBlock'],
   ['Skill Power','skillPowerPct','%'], ['Cooldown Reduction','cooldownReductionPct','%'],
 ];
-// These are the actual base-attribute derivative keys from statsSystem; no gear,
-// equipment percentages, wings, cosmetics, titles or other bonus providers enter the preview.
-const BASE_GROWTH_METRICS = Object.freeze([
-  ['Maximum HP','maxHP'], ['Chi / Will','chi'], ['Damage','damage'],
-  ['Defense','defense'], ['Attack success','attackSuccess'],
-  ['Attack block','attackBlock'], ['HP regeneration','hpRegen'],
-  ['Chi regeneration','manaRegen'], ['Critical chance','critChance','%'],
-  ['Critical defense','criticalDefense'], ['Evasion','evasionPct','%'],
-  ['Attack speed','attackSpeedPct','%'], ['Skill power','skillPowerPct','%'],
-  ['Spell damage','spellDamagePct','%'], ['Damage roll','damageRollBonus'],
-]);
 const num = value => Number(value || 0);
-const formatGrowth = (value, unit='') => {
-  const n = num(value);
-  const places = Number.isInteger(n) ? 0 : Math.abs(n) < .01 ? 4 : 2;
-  return (n >= 0 ? '+' : '') + n.toLocaleString('en-US', { maximumFractionDigits:places }) + unit;
-};
 const display = value => num(value).toLocaleString('en-US',{maximumFractionDigits:2});
 const caption = value => String(value || '').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 function GearIcon({item}) {
@@ -132,20 +117,9 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
   const totalAttr=migrateBaseStats(hud.baseStats);
   const selectedName=ATTRIBUTES.find(attribute=>attribute.key===selectedAttribute)?.name || 'Vitals';
   const selectedPending=num(plan[selectedAttribute]);
-  const preview=useMemo(()=>{
-    const base=migrateBaseStats(hud.baseStats);
-    // Use the same combat formula as actual allocation, but pass NO bonus inputs.
-    // Compute the delta against the currently committed base stats, so armor is
-    // excluded from both sides of the comparison rather than merely subtracted at display time.
-    const before=computeDerivedStats(base);
-    const one=computeDerivedStats({...base,[selectedAttribute]:base[selectedAttribute]+1});
-    const staged=computeDerivedStats({...base,[selectedAttribute]:base[selectedAttribute]+num(plan[selectedAttribute])});
-    return BASE_GROWTH_METRICS.map(([label,key,unit])=>({
-      label,key,unit,
-      one:num(one[key])-num(before[key]),
-      planned:num(staged[key])-num(before[key]),
-    })).filter(metric=>Math.abs(metric.one)>0.0000001 || Math.abs(metric.planned)>0.0000001);
-  },[hud.baseStats,selectedAttribute,plan]);
+  const preview=useMemo(()=>getBaseAttributeGrowthPreview(
+    migrateBaseStats(hud.baseStats),selectedAttribute,plan[selectedAttribute],computeDerivedStats,
+  ),[hud.baseStats,selectedAttribute,plan]);
   const add=(key,count)=>{
     setSelectedAttribute(key);
     if(count<=0||remaining<=0)return;
@@ -254,8 +228,8 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
                 <p className="axe-char-preview-subtitle">{selectedName} · +1 point (base growth)</p>
                 <div className="axe-char-preview-list">
                   {preview.map(({key,label,unit,one,planned})=><div key={key} className="axe-char-preview-stat">
-                    <span>{label}</span><strong>{formatGrowth(one,unit)}</strong>
-                    {selectedPending>0 && <small>Pending {formatGrowth(planned,unit)}</small>}
+                    <span>{label}</span><strong>{formatAttributeGrowth(one,unit)}</strong>
+                    {selectedPending>0 && <small>Pending {formatAttributeGrowth(planned,unit)}</small>}
                   </div>)}
                   {!preview.length && <p className="axe-char-preview-empty">No change to derived base stats.</p>}
                 </div>
