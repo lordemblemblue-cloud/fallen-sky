@@ -499,6 +499,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       livingInkWorld?.setLevel(resolveInkLevel());
       const g={...cloneUltraGraphics,...readGraphicsSettings()};
       atomicLook?.setQuality(g.quality||'high');
+      ambientBirds?.setQuality(g.quality||'high');
       atomicLook?.setEnabled(g.artStyle==='atomic-ultra-sumi');
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
