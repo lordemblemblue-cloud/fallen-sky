@@ -107,7 +107,15 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
  if(usedFallback) model.userData.game3dLegacyCharacterFallback = true;
  if(model.userData.game3dFusedCreatorBody)applyFusedWorldProportions(model,appearance);
  else applyCompanionAppearance(model,appearance);
- const customization=new AvatarCustomizationRuntime(model,{gender:appearance.gender,rigId:localBody?.rig_id||model.userData.rigId});
+ // Small preview cards may still request the fused GLB by URL. Infer the
+ // body identity from that approved filename rather than defaulting Eve to
+ // male, which rejects every female skinned armor layer.
+ const previewGender=previewFused?(String(config).includes('/Female_Fused_')?'female':'male'):null;
+ const resolvedGender=appearance.gender||localBody?.gender||previewGender||
+   (/female/i.test(String(model.userData.rigId||''))?'female':'male');
+ const customization=new AvatarCustomizationRuntime(model,{
+   gender:resolvedGender,rigId:localBody?.rig_id||model.userData.rigId,
+ });
  customizations.set(model,customization);await customization.update(appearance);
  return model;
 }
