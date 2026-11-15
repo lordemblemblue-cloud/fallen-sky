@@ -64,11 +64,12 @@ import { getLoadout, cycleSkillPreset, startCooldown as startSkillCooldown, tick
 import { castSkill } from './skills/skillExecutor';
 import { getSkillById } from './skills/skillRegistry';
 import { getSkillMasteryLevel } from './skills/skillMasteryStore';
-import { isMaxMasteryChargeUnlocked, canAcceptFinisherChain, skillCombatFamily } from './combat/ChargedSkillRules';
+import { isChargeableCombatSkill, getSkillChargeStatus, canAcceptFinisherChain, skillCombatFamily } from './combat/ChargedSkillRules';
 import { createKillFlowCounter, isKillFlowCastEligible } from './combat/KillFlowCounter.mjs';
 import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from './combat/ContinuousAOERules.mjs';
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
 import { BOW_PVE_RANGE, selectCameraBowTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
+import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryChargeRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
@@ -1455,15 +1456,57 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const bowVisuals=createGame3DBowAimVisuals({scene,container,showDot:false});
     // Read-only, local timing and HIT/MISS counters for repeatable bow QA.
     window.__axe3dBowShotStats=bowVisuals.stats;
-    const onBowVerifiedHit=(event)=>bowVisuals.confirmHit(event?.detail?.damage);
+    const onBowVerifiedHit=(event)=>{
+      bowVisuals.confirmHit(event?.detail?.damage);
+      if(event?.detail?.headshot)bowVisuals.showHeadshot?.(event?.detail?.damage);
+    };
     const onBowVerifiedMiss=(event)=>bowVisuals.confirmMiss(event?.detail?.reason);
     window.addEventListener('game3dVerifiedBowHit',onBowVerifiedHit);
     window.addEventListener('game3dVerifiedBowMiss',onBowVerifiedMiss);
+    // Lightweight abilities progress meter. Charges tick in 10% increments;
+    // this text is updated in the existing animation frame, not by React
+    // rerenders, new intervals or network events.
+    const skillChargeHud=document.createElement('div');
+    skillChargeHud.dataset.game3dSkillCharge='true';
+    skillChargeHud.setAttribute('role','progressbar');
+    skillChargeHud.setAttribute('aria-label','Charged ability progress');
+    skillChargeHud.setAttribute('aria-valuemin','0');
+    skillChargeHud.setAttribute('aria-valuemax','100');
+    Object.assign(skillChargeHud.style,{
+      position:'absolute',bottom:'15%',left:'50%',transform:'translateX(-50%)',
+      zIndex:'64',width:'156px',padding:'6px 9px',borderRadius:'8px',
+      pointerEvents:'none',textAlign:'center',font:'bold 11px system-ui,sans-serif',
+      color:'#d8efff',background:'rgba(5,25,45,.78)',
+      border:'1px solid rgba(128,218,252,.62)',opacity:'0',
+    });
+    const skillChargeLabel=document.createElement('div');
+    skillChargeLabel.textContent='SKILL CHARGE 0%';
+    const skillChargeTrack=document.createElement('div');
+    Object.assign(skillChargeTrack.style,{
+      height:'5px',marginTop:'5px',background:'rgba(13,51,72,.95)',
+      borderRadius:'4px',overflow:'hidden',
+    });
+    const skillChargeFill=document.createElement('div');
+    Object.assign(skillChargeFill.style,{
+      height:'100%',width:'0%',background:'linear-gradient(90deg,#4aaee2,#ffe4a5)',
+    });
+    skillChargeTrack.appendChild(skillChargeFill);
+    skillChargeHud.appendChild(skillChargeLabel);
+    skillChargeHud.appendChild(skillChargeTrack);
+    container.appendChild(skillChargeHud);
+    const hideSkillCharge=()=>{skillChargeHud.style.opacity='0';};
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
     const lastDirectionTap = { current: {} };
     const DOUBLE_TAP_MS = 280;
     const chargedKeys = new Map();
+    // Draw on canvas down, fire one resolved arrow only on window release.
+    const heldBow={active:false,startedAt:0};
+    let pendingBowShotCharge=null;
+    const cancelBowCharge=()=>{
+      heldBow.active=false;pendingBowShotCharge=null;
+      bowVisuals.setCharge?.(null);
+    };
     const heldAOEKeys = new Map();
     const killFlowCounter = createKillFlowCounter();
     let killFlowPursuit = null;
@@ -1980,7 +2023,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               isAOEChannelUnlocked(skill, getSkillMasteryLevel(skillId))) {
             heldAOEKeys.set(k, { slotIndex, skillId,
               token: 'axe_aoe_' + Date.now() + '_' + k, at: Date.now(), started: false });
-          } else if (isMaxMasteryChargeUnlocked(skill, getSkillMasteryLevel(skillId))) {
+          } else if (isChargeableCombatSkill(skill, getSkillMasteryLevel(skillId))) {
             const activeDuel = window.__activeDuel;
             const chargeId = activeDuel && skill?.skill_type === 'ACTIVE_ATTACK'
               ? `axech${Date.now().toString(36)}_${Math.random().toString(36).slice(2,12)}`
@@ -2014,6 +2057,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const clearWorldMapMovement = () => {
       keys.current = {};
       chargedKeys.clear();
+      cancelBowCharge();
+      hideSkillCharge();
       for (const held of heldAOEKeys.values()) {
         window.dispatchEvent(new CustomEvent('axeAoeChannelStop', { detail: { token: held.token } }));
       }
@@ -2107,8 +2152,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if (getActiveWeaponPath()!=='ranged' && isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
         // Melee clicks never borrow the bow's 12m range or attack montage.
         // The clone's existing over-the-shoulder reticle stays independent.
-        rangedClickAttackPressed.current = getActiveWeaponPath()==='ranged';
-        attackPressed.current = true;
+        if(getActiveWeaponPath()==='ranged'){
+          if(!heldBow.active){
+            heldBow.active=true;heldBow.startedAt=performance.now();
+            bowVisuals.setCharge?.(getBowChargeStatus(0));
+          }
+        }else{
+          rangedClickAttackPressed.current=false;
+          attackPressed.current=true;
+        }
         // Like Luna's Game 2 exploration: a click in the 3D viewport locks
         // free-look. Keep left attack and optional click-to-move intact.
         // Embedded previews can refuse pointer lock; right-drag still works.
@@ -2154,8 +2206,23 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
     };
     const onMouseUp = (e) => {
-      if (entryModeRef.current || entryCamera.isActive()) return;
-      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) { drag.current.active = false; rightDragMoved.current = false; otsAim.current.endHold(performance.now()); return; }
+      if (entryModeRef.current || entryCamera.isActive()) {cancelBowCharge();return;}
+      if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
+        cancelBowCharge();drag.current.active=false;rightDragMoved.current=false;
+        otsAim.current.endHold(performance.now());return;
+      }
+      if(e.button===0&&heldBow.active){
+        const status=getBowChargeStatus(Math.max(0,performance.now()-heldBow.startedAt));
+        heldBow.active=false;
+        bowVisuals.setCharge?.(null);
+        if(getActiveWeaponPath()==='ranged'&&!isMountedRef.current&&
+          getPlayerHUD().hp>0&&!entryModeRef.current){
+          pendingBowShotCharge=status;
+          rangedClickAttackPressed.current = getActiveWeaponPath()==='ranged';
+          attackPressed.current=true;
+        }
+        return;
+      }
       if (e.button === 2) {
         const startedOnWorldCanvas = drag.current.active; const aimHeldMs = otsAim.current.endHold(performance.now());
         drag.current.active = false;
@@ -2547,6 +2614,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           keys.current = {};
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
+          cancelBowCharge();
+          hideSkillCharge();
           skillStrikeQueue.clear();
           interactPressed.current = false;
           abilityKeyPressed.current = -1;
@@ -2901,6 +2970,25 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             window.__axeServiceModeOpen||window.__axeWorldMapOpen||
             window.__axePauseMenuOpen||window.__axeDialogueOpen||
             window.__axeTileInspectionEditing});
+        if(heldBow.active&&(getActiveWeaponPath()!=='ranged'||
+          isMountedRef.current||getPlayerHUD().hp<=0))cancelBowCharge();
+        if(heldBow.active)bowVisuals.setCharge?.(
+          getBowChargeStatus(performance.now()-heldBow.startedAt));
+        const heldSkill=chargedKeys.values().next().value;
+        if(heldSkill && !window.__axeUiModalOpen &&
+          !window.__axeServiceModeOpen && !window.__axeWorldMapOpen &&
+          !window.__axePauseMenuOpen && !window.__axeDialogueOpen &&
+          getPlayerHUD().hp>0) {
+          const charge=getSkillChargeStatus(getSkillById(heldSkill.skillId),
+            Date.now()-heldSkill.startAt);
+          if(skillChargeHud.getAttribute('aria-valuenow')!==String(charge.percent)){
+            skillChargeHud.setAttribute('aria-valuenow',String(charge.percent));
+            skillChargeLabel.textContent=charge.full
+              ?'ABILITY FULL · 100%': 'ABILITY CHARGE · '+charge.percent+'%';
+            skillChargeFill.style.width=charge.percent+'%';
+          }
+          skillChargeHud.style.opacity='1';
+        } else hideSkillCharge();
         bowVisuals.update(delta,{
           active:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
           blocked:entryModeRef.current||window.__axeUiModalOpen||
@@ -3365,6 +3453,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(rangedClickAttackPressed.current)bowVisuals.showNotice('COOLDOWN');
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
+          pendingBowShotCharge=null;
         }
         if (canProcessBasicStrike || pendingSkillStrike) {
           // A skill strike consumes one queued skill hit. A simultaneous basic
@@ -3372,7 +3461,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const isSkillStrike = !!pendingSkillStrike;
           if (!isSkillStrike) attackPressed.current = false;
           const isRangedClickAttack = !isSkillStrike && rangedClickAttackPressed.current;
-          if (!isSkillStrike) rangedClickAttackPressed.current = false;
+          const bowShot=isRangedClickAttack?pendingBowShotCharge:null;
+          if(!isSkillStrike){
+            rangedClickAttackPressed.current=false;
+            pendingBowShotCharge=null;
+          }
           const strikeMultiplier = isSkillStrike ? pendingSkillStrike.multiplier : 1;
 
           const activeDuel = typeof window !== 'undefined' ? window.__activeDuel : null;
@@ -3444,7 +3537,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             }
           } else {
             const bowAimStartedAt=activeWeaponPath==='ranged'?performance.now():0;
-            const bowAimTarget=activeWeaponPath==='ranged'
+            let bowAimTarget=activeWeaponPath==='ranged'
               ?selectCameraBowTarget({
                 camera,origin:model.position,
                 enemies:[...enemies,...(window.__gw3dRogues||[])],bosses:bossEntities,
@@ -3452,6 +3545,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 lockedEnemyId:lockOnTargetRef.current?.id,
                 groundMeshes:otsCameraColliders(),
               }):null;
+            if(bowAimTarget&&!isSkillStrike)bowAimTarget={
+              ...bowAimTarget,chargeMultiplier:bowShot?.multiplier||1,
+            };
             if(activeWeaponPath==='ranged')bowVisuals.noteAimTime(performance.now()-bowAimStartedAt);
             // The bridge and normal enemy damage use exactly this SAME resolved
             // hitbox; a second independent raycast must not select another AI.
@@ -3541,7 +3637,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               bowVisuals.confirmMiss(strike.kind==='dodge'?'DODGED':'MISS');
           }
           if (strike && strike.kind === 'hit') {
-            const dmg = strike.damage;
+            // The hit, avoidance, block, crit and armor rules run ONCE before
+            // archery's post-hit charge/headshot multiplier applies.
+            const dmg=activeWeaponPath==='ranged'&&aoeRadius===0
+              ?applyBowImpactDamage(strike.damage,{
+                  chargeMultiplier:!isSkillStrike?bowShot?.multiplier||1:1,
+                  headshot:!!bowAimTarget?.headshot,pve:true,
+                })
+              :strike.damage;
             const feedbackKind = feedbackKindFromStrike(strike);
             impactFeedback.hit(closestEnemy, {
               critical: feedbackKind === 'critical', lethal: feedbackKind === 'lethal',
@@ -3560,6 +3663,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if(activeWeaponPath==='ranged'&&aoeRadius===0){
               if(appliedDamage>0)bowVisuals.confirmHit(appliedDamage);
               else bowVisuals.confirmMiss('MISS');
+              if(appliedDamage>0&&bowAimTarget?.headshot)bowVisuals.showHeadshot?.(appliedDamage);
             }
             // Additional cutting texture triggers only after the existing
             // combat resolver actually reduces the enemy's HP.
@@ -4277,6 +4381,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
       heldAOEKeys.clear();
       chargedKeys.clear();
+      cancelBowCharge();
+      hideSkillCharge();
+      skillChargeHud.remove();
       killFlowCounter.reset();
       skillStrikeQueue.clear();
       window.removeEventListener('axeMountForceDismount', handleForceDismount);
