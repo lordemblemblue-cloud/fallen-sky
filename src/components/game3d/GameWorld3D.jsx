@@ -237,6 +237,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   // Boss encounter — suppresses quest NPCs + gates boss music/dialogue while active.
   const [questNPCSuppressed, setQuestNPCSuppressed] = useState(false);
   const [nearbyNPC, setNearbyNPC] = useState(null);
+  const [nearbyTownResident, setNearbyTownResident] = useState(null);
   const [enemyCount, setEnemyCount] = useState(region==='wolfveil'?0:region===LUNAR_CAVE_REGION?LUNAR_CAVE_TRAINING_SPAWNS.length:region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS.length:ENEMY_SPAWNS.length);
   const [score, setScore] = useState(0);
   const [playerLevel, setPlayerLevel] = useState(1);
@@ -340,6 +341,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   const activeEffects = useRef([]); // { alive: fn, update: fn }
   const orbit = useRef({ yaw: 0, pitch: GAME3D_GAME2_CAMERA.pitch, distance: GAME3D_GAME2_CAMERA.distance }); const otsAim = useRef(null); if (!otsAim.current) otsAim.current = createOTSAimState();
   const nearbyNPCRef = useRef(null);
+  const nearbyTownResidentRef = useRef(null);
   const interactPressed = useRef(false);
   const attackPressed = useRef(false);
   const rangedClickAttackPressed = useRef(false);
@@ -2320,7 +2322,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
-        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
+        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
         vortexLake?.update(delta,null);
         livingInkWorld?.update(delta,envSystem.getState());
         playerAnim?.updateAnimation?.(delta);
@@ -2350,7 +2352,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
-      wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta);
+      wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
       const vortexTravel=vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
@@ -2868,6 +2870,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         quarryDragon?.update(delta);
         lakeStormDragon?.update(delta);
 
+        // Clone town residents use the repaired imported town's own floor
+        // and separate non-combat AI actor loop. Only publish React proximity
+        // when its nearest resident changes, never 60 state writes/second.
+        const townNeighbor=(!bossEncounter.isNPCSuppressed()&&npcsVisible)
+          ?importedSpawnTown?.nearestResident(model.position):null;
+        if(townNeighbor?.id!==nearbyTownResidentRef.current?.id){
+          nearbyTownResidentRef.current=townNeighbor||null;
+          setNearbyTownResident(townNeighbor?{
+            id:townNeighbor.id,name:townNeighbor.name,role:townNeighbor.role,
+          }:null);
+        }
         // ─── NPC proximity & interaction (generic npcs array is empty) ───
         let closestNPC = null;
         // ─── Quest NPC proximity ───
@@ -2926,6 +2939,26 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 name: closestQuestNPC.name,
                 text: "I've nothing for you right now, traveler. Return when you've grown stronger.",
               });
+            }
+          } else if (townNeighbor) {
+            const conversation=importedSpawnTown?.interactResident(model.position);
+            if(conversation){
+              // Ambient language may suggest work but cannot forge inventory
+              // grants. Only the existing quest handoff validates a real quest
+              // and the QuestDialogueBox's completion path can pay rewards.
+              const handoff=conversation.questNpcId?getAXENPCQuestHandoff({
+                npcId:conversation.questNpcId,
+                playerLevel:playerLevelStateRef.current,
+                questState:getQuestState(),
+                factionId:getActiveCharacter()?.factionId||null,
+              }):null;
+              if(handoff?.quest&&
+                (handoff.mode==='turn_in'||
+                (conversation.questOffer&&handoff.mode==='offer'))){
+                setActiveQuestDialogue({npcName:conversation.name,...handoff});
+              }else{
+                setActiveDialogue({name:conversation.name,text:conversation.text});
+              }
             }
           } else if (closestNPC) {
             setActiveDialogue({ name: closestNPC.name, text: closestNPC.dialogue });
@@ -4271,8 +4304,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         />
       )}
 
+      {/* Local AI town residents: same E-interact action as existing quests. */}
+      {!loading && nearbyTownResident && !nearbyQuestNPC &&
+        !activeDialogue && !activeQuestDialogue && (
+        <div className="absolute left-1/2 bottom-52 -translate-x-1/2 px-3 py-1.5 rounded-full bg-[#0c1923]/85 backdrop-blur-md border border-amber-200/35 pointer-events-none">
+          <div className="flex items-center gap-2 text-xs text-stone-100">
+            <span className="px-1.5 py-0.5 rounded bg-amber-200/15 border border-amber-200/40 font-mono">E</span>
+            <span>Talk to <span className="text-amber-100 font-semibold">{nearbyTownResident.name}</span></span>
+          </div>
+        </div>
+      )}
       {/* NPC interact prompt (generic NPCs) */}
-      {!loading && nearbyNPC && !nearbyQuestNPC && !activeDialogue && !activeQuestDialogue && (
+      {!loading && nearbyNPC && !nearbyQuestNPC && !nearbyTownResident && !activeDialogue && !activeQuestDialogue && (
         <div className="absolute left-1/2 bottom-52 -translate-x-1/2 px-5 py-2.5 rounded-full bg-black/70 backdrop-blur-md border border-cyan-400/50 pointer-events-none">
           <div className="flex items-center gap-2 text-sm text-white">
             <span className="px-2 py-0.5 rounded bg-cyan-500/30 border border-cyan-400/40 font-mono text-xs">E</span>
