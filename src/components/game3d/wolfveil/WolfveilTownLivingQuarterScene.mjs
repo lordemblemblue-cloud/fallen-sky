@@ -306,10 +306,12 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
   const dt=Math.max(0,Math.min(Number(delta)||0,.08));now+=dt;
   for(const a of agents){
    const oldX=a.x,oldZ=a.z;
+   a.pairedTalkLeft=Math.max(0,(a.pairedTalkLeft||0)-dt);
    if(a.route&&Array.isArray(a.route)&&a.route.length===2){
     const [[ax,az],[bx,bz]]=a.route;
     const length=Math.hypot(bx-ax,bz-az);
-    a.progress=(a.progress+dt*a.speed)%(2*length);
+    // Patrols stop briefly when greeting a fellow guard.
+    if(a.pairedTalkLeft<=0)a.progress=(a.progress+dt*a.speed)%(2*length);
     const ratio=a.progress<length?a.progress/length:2-a.progress/length;
     const nx=ax+(bx-ax)*ratio,nz=az+(bz-az)*ratio;
     if(Number.isFinite(ground(nx,nz))&&!collision.isSolid(nx,nz)&&
@@ -343,6 +345,12 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
       // When two guards cross paths, briefly face one another and trade
       // two short, asynchronous lines rather than repeating solo chatter.
       a.actor.rotation.y=Math.atan2(friend.x-a.x,friend.z-a.z);
+      if(a.role==='guard'&&friend.role==='guard'){
+        a.pairedTalkLeft=2.9;
+        friend.pairedTalkLeft=2.9;
+        a.pairedWithId=friend.id;
+        friend.pairedWithId=a.id;
+      }
       if(!replying&&!friend.pendingReply&&friend.chatLeft<=0){
         friend.pendingReply=a.role==='guard'?
           'All clear. I will take the next watch.':
@@ -351,6 +359,9 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
       }
     }
    }
+   const partner=a.pairedTalkLeft>0&&a.pairedWithId
+     ?agents.find(v=>v.id===a.pairedWithId):null;
+   if(partner)a.actor.rotation.y=Math.atan2(partner.x-a.x,partner.z-a.z);
    // Wide-area avatar visibility culling to avoid the 100+ NPC actor draw
    // calls when no player is nearby; ambient patrol logic still advances.
    const away=playerPosition?
