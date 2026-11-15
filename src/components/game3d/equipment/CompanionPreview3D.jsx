@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { COMPANION_GEAR, getCompanionById, createCompanionLoadingManager } from '../companionData';
 import { getCompanionState, subscribeCompanion } from '../companionStore';
+import {createFactionThreeMountRig,sanitizeFactionThreeNativeClips} from '../character/factionThreeMountRig.mjs';
 
 /**
  * Self-contained live 3D preview of the active companion — used in the equipment
@@ -61,6 +62,7 @@ export default function CompanionPreview3D({ companionId = null }) {
 
     const clock = new THREE.Clock();
     let mixer = null;
+    let secondaryRig = null;
     let frameId;
 
     const setupModel = (root, clips) => {
@@ -86,15 +88,18 @@ export default function CompanionPreview3D({ companionId = null }) {
         }
       });
       pivot.add(root);
+      secondaryRig?.dispose();
+      secondaryRig=createFactionThreeMountRig(root,companion);
+      const safeClips=sanitizeFactionThreeNativeClips(root,clips,companion);
 
-      if (clips && clips.length > 0) {
+      if (safeClips && safeClips.length > 0) {
         mixer = new THREE.AnimationMixer(root);
         const findClip = (substr) => {
           if (!substr) return null;
           const lc = substr.toLowerCase();
-          return clips.find((c) => (c.name || '').toLowerCase().includes(lc)) || null;
+          return safeClips.find((c) => (c.name || '').toLowerCase().includes(lc)) || null;
         };
-        const idleClip = findClip(companion.idleClipName) || clips[0];
+        const idleClip = findClip(companion.idleClipName) || safeClips[0];
         if (idleClip) mixer.clipAction(idleClip).reset().fadeIn(0.3).play();
       }
     };
@@ -136,6 +141,7 @@ export default function CompanionPreview3D({ companionId = null }) {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
       if (mixer) mixer.update(delta);
+      secondaryRig?.update(delta);
       // No auto-rotate — companion faces forward (toward camera), idling like the player preview.
       pivot.rotation.y = 0;
       renderer.render(scene, camera);
@@ -154,6 +160,7 @@ export default function CompanionPreview3D({ companionId = null }) {
       disposed = true;
       cancelAnimationFrame(frameId);
       mixer?.stopAllAction();
+      secondaryRig?.dispose();
       window.removeEventListener('resize', onResize);
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
       renderer.dispose();
