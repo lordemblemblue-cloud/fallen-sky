@@ -77,17 +77,27 @@ test('real upgrade algorithm increases ordinary armor piece stats after success'
 });
 
 test('clone manifest ships all six original 3D models and excludes Adam-only fallback',()=>{
- assert.deepEqual(manifest.sets.map(s=>s.id),['crescent_moon']);
- assert.deepEqual(manifest.female.map(e=>e.slot).sort(),actualVisuals.slice().sort());
- assert.deepEqual(manifest.male,[]);
- for(const entry of manifest.female){
+ const enabled=new Set(manifest.sets.map(s=>s.id));
+ for(const set of ['crescent_moon','nightscale','frostwarden','moonfeather'])
+  assert.ok(enabled.has(set),'clone must retain '+set);
+ const crescent=manifest.female.filter(e=>e.set==='crescent_moon');
+ assert.deepEqual(crescent.map(e=>e.slot).sort(),actualVisuals.slice().sort());
+ assert.equal(manifest.male.some(e=>e.set==='crescent_moon'),false);
+ for(const entry of crescent){
   assert.equal(entry.gender,'female');
   assert.equal(entry.rig_id,'fused-female-v1');
-  assert.equal(entry.dev_only,undefined);
+  assert.equal(entry.dev_only,true,'clone preserves existing development only policy');
   const data=fs.readFileSync('public'+entry.url);
   assert.equal(data.subarray(0,4).toString(),'glTF');
   assert.ok(data.length>10000);
  }
- assert.equal(manifest.female.length,6);
- for(const slot of slots) assert.ok(fs.existsSync(root+'female_'+slot+'.glb'));
+ assert.equal(crescent.length,6);
+ for(const gender of ['female','male'])for(const set of ['nightscale','frostwarden'])
+  for(const slot of slots){
+   const entry=manifest[gender].find(x=>x.id===set+'_'+slot);
+   assert.ok(entry,set+' '+gender+' '+slot+' must have a GLB entry');
+   assert.ok(fs.existsSync('public'+entry.url));
+   assert.ok(fs.existsSync('public'+entry.thumbnail));
+  }
+ for(const slot of slots)assert.ok(fs.existsSync(root+'female_'+slot+'.glb'));
 });
