@@ -26,9 +26,9 @@ export const SUIGEN_WORLD_METADATA=Object.freeze({
 });
 
 // The user requested an actual rollback, not just another default change.
- // The 2.4 km Suigen source remains stored in the repository/CDN as an archive,
- // but no saved preference, stale v2 setting, or event can activate it in Play.
-export function normalizeWolfveilWorldVariant(_value){
+// The 2.4 km Suigen source remains stored in the repository/CDN as an archive,
+// but no saved preference, stale v2 setting, or event can activate it in Play.
+export function normalizeWolfveilWorldVariant(){
   return WORLD_VARIANT_CLASSIC;
 }
 export function readWolfveilWorldVariant(storage=globalThis?.localStorage){
