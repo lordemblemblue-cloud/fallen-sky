@@ -108,7 +108,11 @@ test('town tree and perimeter are outside purge, and no houses respawn afterward
   assert.ok(repair>=0&&final>repair&&bake>final);
   assert.match(source,/const tree=installWolfveilTownTree\(root\)/);
   assert.match(source,/const canopyDressing=buildWolfveilTownCanopyDressing\(root\)/);
-  assert.doesNotMatch(source,/livingQuarter=buildWolfveilTownLivingQuarter\(/);
-  assert.match(source,/state:'disabled_for_owner_empty_town'/);
+  assert.match(source,/livingQuarter=buildWolfveilTownLivingQuarter\(root/);
+  assert.match(source,/architectureEnabled:false/);
+  const housing=readFileSync(
+    new URL('../src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs',import.meta.url),'utf8');
+  assert.match(housing,/const layout=architectureEnabled\?planned:\{\.\.\.planned,accepted:\[\]\}/);
+  assert.match(housing,/for\(const def of CLONE_TOWN_GUARDS\)/);
   assert.ok(WOLFVEIL_TOWN_LEGACY_PURGE.perimeterBandMeters>0);
 });
