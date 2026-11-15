@@ -35,8 +35,8 @@ test('Extracted Suigen GLB has six authentic source prefab families',()=>{
     assert(WOLFVEIL_SUIGEN_REUSE_TYPES[type],type);
 });
 
-test('The 26 world-space accents stay optional, original and bounded',()=>{
-  assert.equal(WOLFVEIL_SUIGEN_REUSE_PLACEMENTS.length,26);
+test('The 30 world-space accents stay optional, original and bounded',()=>{
+  assert.equal(WOLFVEIL_SUIGEN_REUSE_PLACEMENTS.length,30);
   const ids=new Set(WOLFVEIL_SUIGEN_REUSE_PLACEMENTS.map(x=>x.id));
   assert.equal(ids.size,26);
   for(const candidate of WOLFVEIL_SUIGEN_REUSE_PLACEMENTS){
