@@ -6,26 +6,30 @@ import {
   WORLD_VARIANT_STORAGE_KEY,WORLD_VARIANT_LEGACY_STORAGE_KEY,
   SUIGEN_ASSET_PARTS,SUIGEN_WORLD_METADATA,
   readWolfveilWorldVariant,saveWolfveilWorldVariant,
+  normalizeWolfveilWorldVariant,
 } from '../src/components/game3d/worlds/WolfveilWorldVariants.mjs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('Classic is restored by default without mutating existing characters or the archived map',()=>{
-  const data=new Map();
-  const storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
-  data.set('game3d_saved_character','unchanged');
-  data.set(WORLD_VARIANT_LEGACY_STORAGE_KEY,'suigen');
+test('All saved old map selections are overridden by an actual Classic-only rollback',()=>{
+  const data=new Map([
+    ['game3d_saved_character','unchanged'],
+    [WORLD_VARIANT_LEGACY_STORAGE_KEY,'suigen'],
+    ['game3d_clone_world_variant_v2','suigen'],
+    [WORLD_VARIANT_STORAGE_KEY,'suigen'],
+  ]);
+  const storage={getItem:key=>data.get(key)??null,setItem:(key,val)=>data.set(key,val)};
+  for(const v of [null,undefined,'classic','suigen','Dominion','bad-value'])
+    assert.equal(normalizeWolfveilWorldVariant(v),WORLD_VARIANT_CLASSIC);
   assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
-  assert.equal(saveWolfveilWorldVariant('classic',storage),WORLD_VARIANT_CLASSIC);
+  assert.equal(saveWolfveilWorldVariant(WORLD_VARIANT_SUIGEN,storage),WORLD_VARIANT_CLASSIC);
   assert.equal(data.get(WORLD_VARIANT_STORAGE_KEY),'classic');
+  assert.equal(data.get(WORLD_VARIANT_LEGACY_STORAGE_KEY),'suigen');
+  assert.equal(data.get('game3d_clone_world_variant_v2'),'suigen');
   assert.equal(data.get('game3d_saved_character'),'unchanged');
-  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
-  assert.equal(saveWolfveilWorldVariant('suigen',storage),WORLD_VARIANT_SUIGEN);
-  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_SUIGEN);
-  assert.equal(saveWolfveilWorldVariant('bad-value',storage),WORLD_VARIANT_CLASSIC);
 });
 
-test('Original 2400m GLB geometry is distributed across two registered URLs',()=>{
+test('Complete original 2400 m Suigen GLBs are still archived, not deleted',()=>{
   assert.equal(SUIGEN_ASSET_PARTS.length,2);
   assert.equal(new Set(SUIGEN_ASSET_PARTS).size,2);
   for(const url of SUIGEN_ASSET_PARTS){
@@ -36,36 +40,42 @@ test('Original 2400m GLB geometry is distributed across two registered URLs',()=
   assert.equal(SUIGEN_WORLD_METADATA.sourceMeshCount,928);
   assert.deepEqual([SUIGEN_WORLD_METADATA.bounds.minX,
     SUIGEN_WORLD_METADATA.bounds.maxX],[-1200,1200]);
+  const archivedLoader=read('src/components/game3d/worlds/loadSuigenWorld.mjs');
+  assert(archivedLoader.includes('Promise.all(SUIGEN_ASSET_PARTS.map'));
 });
 
-test('Escape Graphics settings expose both maps and persist changes',()=>{
+test('Escape graphics settings cannot reactivate the new Dominion scene',()=>{
   const menu=read('src/components/game3d/PauseMenu.jsx');
-  for(const expected of ['label="World map"','Dominion of Suigen · Archive',
-    'Classic Wolfveil · Main Map','saveWolfveilWorldVariant(next)',
-    'WORLD_VARIANT_EVENT','WORLD_VARIANT_STATUS_EVENT'])assert(menu.includes(expected),expected);
+  assert(menu.includes('label="World map"'));
+  assert(menu.includes('Classic Wolfveil · Restored'));
+  assert(!menu.includes("id:'suigen',text:"));
+  assert(menu.includes('saved character'));
 });
 
-test('Main Wolfveil scene switches while preserving its existing geometry for backup',()=>{
+test('Active Game 3D renderer contains NO full Suigen map loader or scene switch',()=>{
   const world=read('src/components/game3d/GameWorld3D.jsx');
-  for(const expected of ['loadSuigenWorld({scene,signal:worldMapAbort.signal})',
-    'suigenRuntime.setVisible(true)','classicWorldRoots)root.visible=false',
-    'root.visible=originalVisibility.get(root)??true',
-    'const activeGroundMeshes=()=>suigenActive',
-    'saveWolfveilWorldVariant(WORLD_VARIANT_CLASSIC)',
-    'removeEventListener(WORLD_VARIANT_EVENT,onWorldVariantChange)',
-    'createVortexLakeLandmark(scene','createLunarMountainEntrance(scene',
+  assert(!world.includes("from './worlds/loadSuigenWorld.mjs'"));
+  assert(!world.includes('loadSuigenWorld('));
+  assert(!world.includes('suigenRuntime.setVisible(true)'));
+  assert(!world.includes('root.visible=false'));
+  assert(!world.includes('for(const root of classicWorldRoots)root.visible=false'));
+  assert(world.includes('const applyWorldVariant=()=>'));
+  assert(world.includes('showClassic()'));
+  assert(world.includes('saveWolfveilWorldVariant(WORLD_VARIANT_CLASSIC)'));
+  assert(world.includes('root.visible=originalVisibility.get(root)??true'));
+  assert(world.includes('const activeGroundMeshes=()=>suigenActive'));
+  assert(world.includes('removeEventListener(WORLD_VARIANT_EVENT,onWorldVariantChange)'));
+  for(const expected of ['createVortexLakeLandmark(scene','createLunarMountainEntrance(scene',
     'createAstralMountainGate(scene','createWolfveilVillage(scene'])
     assert(world.includes(expected),expected);
 });
 
-test('Never hide the existing world until both GLB shards successfully load',()=>{
-  const loader=read('src/components/game3d/worlds/loadSuigenWorld.mjs');
+test('Only the source-derived trees, rocks and bamboo enter Classic Wolfveil',()=>{
   const world=read('src/components/game3d/GameWorld3D.jsx');
-  assert(loader.includes('Promise.all(SUIGEN_ASSET_PARTS.map'));
-  assert(loader.includes('if(signal?.aborted)'));
-  assert(loader.includes('scene.add(root)'));
-  assert(world.indexOf('const loaded=await suigenLoadPromise')<
-    world.indexOf('for(const root of classicWorldRoots)root.visible=false'));
-  for(const expected of ['Map_Terrain_2400m','Canal_Bridge_Deck','Abyss_Stair_'])
-    assert(loader.includes(expected));
+  const accents=read('src/components/game3d/worlds/WolfveilSuigenReuseAssets.mjs');
+  assert(world.includes('loadClassicWolfveilSuigenAccents({'));
+  assert(world.includes('classicSuigenAccents?.setVisible(true)'));
+  assert(accents.includes("root.userData.decorativeOnly=true"));
+  assert(accents.includes("root.userData.noGameplayCollision=true"));
+  assert(!accents.includes('Map_Terrain_2400m'));
 });
