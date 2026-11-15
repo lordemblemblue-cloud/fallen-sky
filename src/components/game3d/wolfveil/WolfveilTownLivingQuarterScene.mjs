@@ -263,7 +263,8 @@ export function buildWolfveilTownLivingQuarter(parent,{
  };
  const houseGroups=layout.accepted.map(h=>houseModel(h,materials));
  for(const house of houseGroups)root.add(house);
- const architectureBatched=mergeStaticTownHouses(root,houseGroups,materials);
+ const architectureBatched=houseGroups.length>0
+   ?mergeStaticTownHouses(root,houseGroups,materials):false;
  const houses=new Map(layout.accepted.map(h=>[h.id,h]));
  const agents=[];
  const ground=(x,z)=>collision.groundAt(x,z);
