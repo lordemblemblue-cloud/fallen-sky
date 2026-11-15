@@ -6,6 +6,7 @@ on:
       - 'src/components/game3d/GameWorld3D.jsx'
       - 'src/pages/GameView.jsx'
       - 'tests/game3d-suigen-*.test.mjs'
+      - 'tests/game3d-classic-suigen-*.test.mjs'
       - '.github/workflows/game3d-suigen-town-native.yml'
   push:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - 'src/components/game3d/GameWorld3D.jsx'
       - 'src/pages/GameView.jsx'
       - 'tests/game3d-suigen-*.test.mjs'
+      - 'tests/game3d-classic-suigen-*.test.mjs'
       - '.github/workflows/game3d-suigen-town-native.yml'
   workflow_dispatch:
 permissions:
@@ -37,8 +39,10 @@ jobs:
           node --check src/components/game3d/worlds/SuigenTerrainHeight.mjs
           node --check src/components/game3d/worlds/SuigenMountainWayfinding.mjs
           node --check src/components/game3d/worlds/loadSuigenWorld.mjs
+          node --check src/components/game3d/worlds/WolfveilSuigenReusePlan.mjs
+          node --check src/components/game3d/worlds/WolfveilSuigenReuseAssets.mjs
       - name: Test original world fallback and new town/dungeon contracts
         run: |
-          node --test tests/game3d-suigen-map-variant.test.mjs tests/game3d-suigen-town-upgrade.test.mjs tests/game3d-suigen-terrain-height.test.mjs
+          node --test tests/game3d-suigen-map-variant.test.mjs tests/game3d-suigen-town-upgrade.test.mjs tests/game3d-suigen-terrain-height.test.mjs tests/game3d-classic-suigen-asset-reuse.test.mjs
       - name: Build complete clone client
         run: npm run build

@@ -1,7 +1,10 @@
 // Clone-only Wolfveil map version switch. Never delete the original world.
 // The uploader's two 30,327,245-byte .mjs copies contain the same 22,742,008-byte
 // glTF2 asset. The geometry-preserving scene shards below were exported from it.
-export const WORLD_VARIANT_STORAGE_KEY='game3d_clone_world_variant_v1';
+// A new setting generation intentionally resets old v1 Suigen defaults.
+// The old key is left intact for historical recovery; never delete assets.
+export const WORLD_VARIANT_LEGACY_STORAGE_KEY='game3d_clone_world_variant_v1';
+export const WORLD_VARIANT_STORAGE_KEY='game3d_clone_world_variant_v2';
 export const WORLD_VARIANT_EVENT='game3dWorldVariantChanged';
 export const WORLD_VARIANT_STATUS_EVENT='game3dWorldVariantStatus';
 export const WORLD_VARIANT_CLASSIC='classic';
@@ -23,11 +26,11 @@ export const SUIGEN_WORLD_METADATA=Object.freeze({
 });
 
 export function normalizeWolfveilWorldVariant(value){
-  return value===WORLD_VARIANT_CLASSIC?WORLD_VARIANT_CLASSIC:WORLD_VARIANT_SUIGEN;
+  return value===WORLD_VARIANT_SUIGEN?WORLD_VARIANT_SUIGEN:WORLD_VARIANT_CLASSIC;
 }
 export function readWolfveilWorldVariant(storage=globalThis?.localStorage){
   try{return normalizeWolfveilWorldVariant(storage?.getItem?.(WORLD_VARIANT_STORAGE_KEY));}
-  catch{return WORLD_VARIANT_SUIGEN;}
+  catch{return WORLD_VARIANT_CLASSIC;}
 }
 export function saveWolfveilWorldVariant(value,storage=globalThis?.localStorage){
   const variant=normalizeWolfveilWorldVariant(value);
