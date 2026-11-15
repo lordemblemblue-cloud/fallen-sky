@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {CLONE_TOWN_HOUSES,CLONE_TOWN_GUARDS,CLONE_TOWN_CITIZENS,
-  chooseTownPlots,rectanglesOverlap}
+  chooseTownPlots}
   from './WolfveilTownLivingQuarterLayout.mjs';
 import {makeTownDialogueBrain,makeTownSentence,townConversationResult}
   from './WolfveilTownDialogueBrain.mjs';
@@ -284,10 +284,23 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
    if(a.timer<=0){
     const friend=agents.find(v=>v!==a&&v.side===a.side&&
       Math.hypot(v.x-a.x,v.z-a.z)<7.5);
-    const text=makeTownSentence(a,a.rand,{friend});
+    const replying=typeof a.pendingReply==='string';
+    const text=replying?a.pendingReply:makeTownSentence(a,a.rand,{friend});
+    a.pendingReply=null;
     a.speech.draw(text);
     a.chatLeft=3.6+a.rand()*1.9;
     a.timer=11+a.rand()*16;
+    if(friend){
+      // When two guards cross paths, briefly face one another and trade
+      // two short, asynchronous lines rather than repeating solo chatter.
+      a.actor.rotation.y=Math.atan2(friend.x-a.x,friend.z-a.z);
+      if(!replying&&!friend.pendingReply&&friend.chatLeft<=0){
+        friend.pendingReply=a.role==='guard'?
+          'All clear. I will take the next watch.':
+          'Thanks. The market has been peaceful.';
+        friend.timer=Math.min(friend.timer,1.65);
+      }
+    }
    }
    if(a.speech.sprite){
     const visible=playerPosition&&
