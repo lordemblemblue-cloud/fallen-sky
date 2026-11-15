@@ -130,8 +130,14 @@ export function useArmoredAppearance(appearance, characterId) {
     const creatorSelected = Object.fromEntries(ARMOR_SLOTS
       .filter(slot=>appearance?.selected_assets?.[slot])
       .map(slot=>[slot,appearance.selected_assets[slot]]));
+    // A stale empty pack-unequip event must not erase an unrelated creator
+    // customization (e.g. a user-authored cosmetic helmet). Still clear old
+    // Nightscale/Frostwarden/Crescent pieces and favor currently worn items.
+    const legacyOverride=Object.fromEntries(Object.entries(equipped)
+      .filter(([slot,id])=>Boolean(id)||!creatorSelected[slot]||
+        PACK_SET_IDS.some(set=>creatorSelected[slot].startsWith(set+'_'))));
     return reconcileInventoryArmorOverrides(
-      {...creatorSelected,...equipped},inventoryWorn,PACK_SET_IDS,
+      {...creatorSelected,...legacyOverride},inventoryWorn,PACK_SET_IDS,
     );
   },[appearance?.selected_assets,equipped,inventoryWorn]);
   return useMemo(() => {
