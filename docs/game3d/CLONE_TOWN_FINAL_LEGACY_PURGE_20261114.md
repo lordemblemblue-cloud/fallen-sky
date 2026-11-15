@@ -20,10 +20,12 @@ index buffers and material groups, hides fully depleted objects, and includes
 face removal totals for debugging. Shared geometry is cloned before repeated
 edits.
 
-The `CloneTown_LivingQuarter` house rebuild is disabled to honor the
-owner's current empty-town instruction. The *separately generated* ancient
-tree and circular planter, perimeter dressing, terrain, independent quest NPCs,
-and existing water remain intact. No change to main Game 3D.
+The `CloneTown_LivingQuarter` **house creation is disabled** to honor the
+owner's current empty-town instruction. Patrolling guards and their dialogues
+can still operate independently, without any procedural house footprints or
+house collision. The *separately generated* ancient tree and circular
+planter, perimeter dressing, terrain, independent quest NPCs, and existing
+water remain intact. No change to main Game 3D.
 
 Important: if the uploaded screenshots depict geometry outside the imported
 town or if the Base44 instance is serving stale code, further source-level
