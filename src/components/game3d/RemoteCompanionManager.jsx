@@ -19,6 +19,7 @@ import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { getCompanionById, createCompanionLoadingManager } from './companionData';
 import { loadCompanionFolderClips } from './companionAnimationLoader';
 import { prepareMountAnimationClips } from './character/mountAnimations.mjs';
+import {createFactionThreeMountRig} from './character/factionThreeMountRig.mjs';
 import { createMountedRiderPose } from './player/mountedRiderPose.mjs';
 
 // Cache the loaded companion model + clips per-definition so we don't re-fetch
@@ -97,6 +98,9 @@ export function createRemoteCompanionManager(scene, {
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
     const compScale = (1.7 / maxDim) * (def.scale || 1.0);
     group.scale.setScalar(compScale);
+    // Each remote rider gets an INDEPENDENT cloned skeleton and secondary
+    // spring. Never mutate the cached GLB or attach to the remote player.
+    const secondaryRig=createFactionThreeMountRig(group,def);
 
     group.traverse((node) => {
       if (node.isMesh) {
@@ -133,7 +137,7 @@ export function createRemoteCompanionManager(scene, {
     if (idleAction) idleAction.reset().fadeIn(0.2).play();
 
     return {
-      group, mixer, idleAction, walkAction, runAction, definition: def, ring,
+      group, mixer, idleAction, walkAction, runAction, secondaryRig, definition: def, ring,
       current: 'idle',
       hasNetworkPosition: false,
       targetPos: new THREE.Vector3(),
@@ -159,6 +163,7 @@ export function createRemoteCompanionManager(scene, {
     if (!inst?.group) return;
     scene.remove(inst.group);
     inst.mixer.stopAllAction();
+    inst.secondaryRig?.dispose();
     // Geometry/materials in the cached skinned asset are shared by clones.
     // Only the ring is owned by this particular remote instance.
     inst.ring?.geometry.dispose();
@@ -258,6 +263,7 @@ export function createRemoteCompanionManager(scene, {
       inst.group.position.lerp(inst.targetPos, 0.5);
       const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), inst.targetYaw);
       inst.group.quaternion.slerp(q, 0.4);
+      inst.secondaryRig?.update(delta); // post-network, post-mixer mount-space only
     });
   };
 

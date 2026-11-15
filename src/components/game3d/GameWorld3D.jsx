@@ -53,6 +53,7 @@ import { getActiveCharacter } from './characterStore';
 import { getCompanionById, createCompanionLoadingManager } from './companionData';
 import { loadCompanionFolderClips } from './companionAnimationLoader';
 import { prepareMountAnimationClips } from './character/mountAnimations.mjs';
+import {createFactionThreeMountRig} from './character/factionThreeMountRig.mjs';
 import { createMountedRiderPose } from './player/mountedRiderPose.mjs';
 import { createMountedWeaponPresentation } from './player/mountedWeaponPresentation.mjs';
 import { createEquippedBowGLBPresentation } from './player/equippedBowGLBPresentation.mjs';
@@ -781,6 +782,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // COMPANION SPAWN — rideable mount (GLB w/ embedded clips OR FBX w/ separate idle+walk anim files).
     let companionAssetVersion = 0;
     let companionAssetDisposed = false;
+    let companionSecondaryRig = null; // actual Faction 3 mount, never rider/camera
     let mountedRider = null;
     let mountedWeapon = null;
     let heldBowPresentation = null;
@@ -812,6 +814,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           companionDef.spawnPos[1],
           companionDef.spawnPos[2],
         );
+        // Run the one-time #160 shoulder/wing anchor repair before the
+        // mount's own mixer starts; the appendage spring updates after BOTH
+        // mount animation and world navigation, never from the rider pose.
+        companionSecondaryRig?.dispose();
+        companionSecondaryRig=createFactionThreeMountRig(companionModel,companionDef);
 
         companionModel.traverse((node) => {
           if (node.isMesh) {
@@ -954,6 +961,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if (modelRef.current) modelRef.current.visible = true;
       }
       const previous = companionGroupRef.current;
+      companionSecondaryRig?.dispose();
+      companionSecondaryRig=null;
       companionGroupRef.current = null;
       companionMixerRef.current?.stopAllAction?.();
       companionMixerRef.current = null;
@@ -2720,6 +2729,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           companionSystem.update(delta, { ownerMoving: isMoving, ownerRunning: isRunning, ownerYaw: orbit.current.yaw });
         }
 
+        companionSecondaryRig?.update(delta); // mount-owned tail/wing motion, after locomotion
         if (compGroup) compGroup.visible = mounted || npcsVisible;
         // ─── Companion proximity prompt ───
         if (compGroup && !mounted) {
@@ -4140,6 +4150,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       heldBowPlayer = null;
       restoreMountedRider();
       companionAssetDisposed = true;
+      companionSecondaryRig?.dispose();
+      companionSecondaryRig=null;
       ++companionAssetVersion;
       unsubCompanionAsset();
       container.removeEventListener('pointerdown',unlockWorldSound);

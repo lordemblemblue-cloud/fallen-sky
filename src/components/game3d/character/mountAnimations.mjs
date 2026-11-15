@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {FACTION_PET_RIG_PROFILES,combineNativeFactionPetClips,proceduralFactionPetGait}
   from './factionPetAnimationRigs.mjs';
+import {sanitizeFactionThreeNativeClips} from './factionThreeMountRig.mjs';
 
 // Inspected the owner's original baby_wolf Take 001 (439 keys, 30fps),
 // including rendered frames and repeated-pose comparisons. These are complete
@@ -184,7 +185,8 @@ function loadDogSource(definition) {
 /** Shared by local Play and remote-player companions; unknown models retain native clips. */
 export async function prepareMountAnimationClips(root, embeddedClips = [], definition = {}) {
   if (definition.animationSource === 'baby-wolf-bundled') return splitDogMountClips(embeddedClips);
-  if (definition.animationSource !== 'baby-wolf-retarget') return embeddedClips;
+  if (definition.animationSource !== 'baby-wolf-retarget')
+    return sanitizeFactionThreeNativeClips(root,embeddedClips,definition);
   // The newly uploaded faction 2/3 models contain their own genuine idle
   // animation (tail + wings). Preserve it, retarget the existing baby wolf
   // WALK/RUN tracks onto their inspected joint maps, and include the native
@@ -196,10 +198,10 @@ export async function prepareMountAnimationClips(root, embeddedClips = [], defin
     try {
       const source=await loadDogSource(definition);
       const gait=retargetDogMountClips(source.scene,source.animations||[],root,definition.id,profile.map);
-      return combineNativeFactionPetClips(embeddedClips,gait,definition.animationRigProfile);
+      return combineNativeFactionPetClips(sanitizeFactionThreeNativeClips(root,embeddedClips,definition),gait,definition.animationRigProfile);
     } catch(error) {
       console.warn('Faction pet baby-wolf gait unavailable; using native idle and local gait',error);
-      return proceduralFactionPetGait(root,embeddedClips,definition.animationRigProfile);
+      return proceduralFactionPetGait(root,sanitizeFactionThreeNativeClips(root,embeddedClips,definition),definition.animationRigProfile);
     }
   }
   const source = await loadDogSource(definition);

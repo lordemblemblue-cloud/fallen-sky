@@ -1,0 +1,315 @@
+// Faction 3 owner's #160 GLB — mount-owned secondary motion and anchor repair.
+//
+// The uploaded 28-bone GLB has an Idle_Relaxed_Tail animation but no authored
+// walk/run clip. A separate baby-wolf retarget drives the mount locomotion.
+// Never parent appendage helpers to the rider, use player/camera animation
+// deltas, or rewrite a SkinnedMesh's bone weights / inverse bind matrices.
+//
+// This is a reversible visual rig pass, not rigid-body physics. Only the
+// faction_tiger / winged_faction_3_160 is affected.
+import * as THREE from 'three';
+
+const norm = name => String(name||'').replace(/[^a-z0-9]/gi,'').toLowerCase();
+const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
+export const FACTION_THREE_RIG = 'winged_faction_3_160';
+
+export function isFactionThreeMount(definition) {
+  return definition?.animationRigProfile===FACTION_THREE_RIG;
+}
+export function classifyFactionThreeBone(name) {
+  const s=norm(name);
+  if(/^tail\d+/.test(s))return 'tail';
+  if(/^wing[lr](?:base|root|\d+)/.test(s))return 'wing';
+  if(/^front[lr]upper$/.test(s))return 'shoulder';
+  return null;
+}
+
+function getNodes(root) {
+  const nodes=new Map();
+  root.traverse(node=>{
+    nodes.set(norm(node.name),node);
+    nodes.set(node.uuid,node);
+  });
+  return nodes;
+}
+function trackTarget(root,track,cache) {
+  if(!track?.name)return null;
+  const dot=track.name.lastIndexOf('.');
+  if(dot<0)return null;
+  const target=track.name.slice(0,dot);
+  return cache.get(target)||cache.get(norm(target))||null;
+}
+function trackProperty(track) {
+  return String(track?.name||'').slice(String(track?.name||'').lastIndexOf('.')+1);
+}
+function helperName(name) {
+  return /(?:^|[._-])(?:ico(?:sphere)?|physics[_-]?helper|spring[_-]?control)(?:[._-]|\d|$)/i
+    .test(String(name||''));
+}
+
+/**
+ * A native clip can legally contain motion tracks for unweighted Icosphere
+ * nodes, the root transform and positional animation of a tail helper. Those
+ * translations fight the already world-driven mount pose. Keep genuine bone
+ * quaternion animation; reject unskinned helper tracks and animated
+ * tail/wing/root translations. Do not edit the source AnimationClip in place.
+ */
+export function sanitizeFactionThreeNativeClips(root, clips=[], definition={}) {
+  if(!isFactionThreeMount(definition))return clips;
+  const cache=getNodes(root);
+  return (clips||[]).map(clip=>{
+    const tracks=(clip.tracks||[]).filter(track=>{
+      const node=trackTarget(root,track,cache);
+      const targetName=String(track.name||'').slice(0,String(track.name||'').lastIndexOf('.'));
+      const prop=trackProperty(track);
+      if(helperName(targetName)||helperName(node?.name))return false;
+      // Non-bone spatial controls are not allowed to drive the mount rig.
+      // Preserve non-transform morph weights on the original visual mesh.
+      if(node&&!node.isBone&&['position','quaternion','scale'].includes(prop))
+        return false;
+      if(prop==='position'||prop==='scale'){
+        if(node===root||classifyFactionThreeBone(node?.name))return false;
+        if(!node&&/(?:root|armature|scene|tail|wing)/i.test(targetName))
+          return false;
+      }
+      return true;
+    }).map(track=>track.clone());
+    return new THREE.AnimationClip(clip.name,clip.duration,tracks,clip.blendMode);
+  });
+}
+
+function sortedBoneChain(root,family) {
+  const bones=[];
+  root.traverse(node=>{
+    if(node.isBone&&classifyFactionThreeBone(node.name)===family)
+      bones.push(node);
+  });
+  if(family==='tail')bones.sort((a,b)=>{
+    const n=name=>Number(String(name).match(/(\d+)(?!.*\d)/)?.[1]||0);
+    return n(a.name)-n(b.name);
+  });
+  return bones;
+}
+function findBone(root,wanted) {
+  let found=null;
+  const key=norm(wanted);
+  root.traverse(node=>{
+    if(!found&&node.isBone&&norm(node.name)===key)found=node;
+  });
+  return found;
+}
+function world(bone) {
+  return bone.getWorldPosition(new THREE.Vector3());
+}
+function wingSide(name) {
+  const n=norm(name);
+  return n.startsWith('wingl')?'L':n.startsWith('wingr')?'R':null;
+}
+function isMiniUnweightedIco(node,span) {
+  if(!node?.isMesh||node.isSkinnedMesh||!helperName(node.name))return false;
+  const geometry=node.geometry;
+  if(!geometry)return false;
+  geometry.computeBoundingSphere?.();
+  const radius=geometry.boundingSphere?.radius||0;
+  const scale=node.getWorldScale(new THREE.Vector3());
+  const worldRadius=radius*Math.max(Math.abs(scale.x),Math.abs(scale.y),Math.abs(scale.z));
+  return worldRadius>0&&worldRadius<Math.max(.075,span*.29);
+}
+
+/**
+ * Repair a genuine paired wing-base bone only when the source joint sits
+ * away from the front-shoulder/neck area. The desired point is inferred from
+ * this GLB's real shoulder + chest + neck bones, not a guessed rider joint.
+ *
+ * Preserve bone parents, existing skeleton/weights, and authored rotations.
+ * Translation is written in the wing's original parent-local bone frame,
+ * once before its mixer starts and before the rider is attached.
+ */
+export function alignFactionThreeWingBases(root) {
+  if(!root)return {corrected:0,span:0,anchors:[]};
+  root.updateWorldMatrix(true,true);
+  const chest=findBone(root,'chest')||findBone(root,'spine');
+  const neck=findBone(root,'neck');
+  const left=findBone(root,'front.L.upper');
+  const right=findBone(root,'front.R.upper');
+  const wings=sortedBoneChain(root,'wing');
+  if(!chest||!neck||!left||!right||wings.length<2)
+    return {corrected:0,span:0,anchors:[]};
+  const shoulderSpan=world(left).distanceTo(world(right));
+  if(!(shoulderSpan>1e-5))return {corrected:0,span:0,anchors:[]};
+  const anchors=[],restores=[];
+  for(const wing of wings){
+    const side=wingSide(wing.name);
+    const shoulder=side==='L'?left:side==='R'?right:null;
+    if(!shoulder||!wing.parent)continue;
+    // Back/upper shoulder close to the base of the neck; both sides use
+    // the same anatomical construction and retain the source left/right.
+    const target=world(shoulder).lerp(world(chest),.28)
+      .lerp(world(neck),.16);
+    target.y+=clamp(shoulderSpan*.14,.025,.30);
+    const current=world(wing);
+    const distance=current.distanceTo(target);
+    // If the original GLB anchor is already anatomically sensible, do not
+    // rewrite the bind pose. Otherwise cap the one-time correction.
+    // One-time load-time repair: a widely displaced wing must actually land
+    // at the anatomical shoulder, not remain half-way across the back.
+    // Bound extreme malformed assets to three shoulder-widths of correction.
+    const maxOffset=clamp(shoulderSpan*3,.6,3);
+    const tolerance=Math.max(.05,shoulderSpan*.22);
+    if(distance>tolerance){
+      const before=wing.position.clone();
+      const next=current.clone().lerp(target,Math.min(1,maxOffset/distance));
+      wing.position.copy(wing.parent.worldToLocal(next));
+      wing.updateWorldMatrix(false,true);
+      restores.push(()=>wing.position.copy(before));
+    }
+    anchors.push({bone:wing,side,target});
+  }
+  root.updateWorldMatrix(true,true);
+  return {corrected:restores.length,span:shoulderSpan,anchors,
+    restore:()=>{for(const fn of restores)fn();root.updateWorldMatrix(true,true);}};
+}
+
+/**
+ * Locate tiny, UNSKINNED Icosphere helpers only. Preserve visible skin mesh
+ * sections (never detach skinned wings/tail). Reparent helpers in the mount
+ * frame to their nearest authentic tail/wing bone; hide stray tiny markers
+ * which are not close to either appendage. Do not create colliders.
+ */
+export function isolateFactionThreeIcoHelpers(root,{tail=[],wings=[],span=1}={}) {
+  root.updateWorldMatrix(true,true);
+  const anchors=[...tail,...wings];
+  const restores=[];
+  let attached=0,hidden=0;
+  const candidates=[];
+  root.traverse(node=>{
+    if(isMiniUnweightedIco(node,span))candidates.push(node);
+  });
+  for(const node of candidates){
+    if(!node.parent)continue;
+    const initial={
+      parent:node.parent,position:node.position.clone(),
+      quaternion:node.quaternion.clone(),scale:node.scale.clone(),
+      visible:node.visible,raycast:node.raycast,
+    };
+    const pos=world(node);
+    let closest=null,dist=Infinity;
+    for(const bone of anchors){
+      const d=world(bone).distanceTo(pos);
+      if(d<dist){dist=d;closest=bone;}
+    }
+    if(closest&&dist<Math.max(.20,span*.9)&&closest!==node.parent){
+      closest.attach(node); // preserves visual world position during reparent
+      attached++;
+    } else if(!closest||dist>=Math.max(.20,span*.9)){
+      node.visible=false;
+      hidden++;
+    }
+    node.userData.factionThreeSecondaryHelper=true;
+    node.raycast=()=>{};
+    restores.push(()=>{
+      initial.parent.attach(node);
+      node.position.copy(initial.position);
+      node.quaternion.copy(initial.quaternion);
+      node.scale.copy(initial.scale);
+      node.visible=initial.visible;
+      node.raycast=initial.raycast;
+      delete node.userData.factionThreeSecondaryHelper;
+    });
+  }
+  return {attached,hidden,restore:()=>restores.forEach(fn=>fn())};
+}
+
+/**
+ * Advance after AnimationMixer.update() AND after the mount root has moved.
+ * This prevents 1-frame lag and never samples the rider/camera transform.
+ * Bind quaternions are the owner's own authored mount pose; each animated
+ * tail joint is softly limited so no segment can fold forward into the head.
+ */
+export function createFactionThreeMountRig(root,definition={}) {
+  if(!root||!isFactionThreeMount(definition))
+    return {active:false,update(){},dispose(){},status(){return {active:false}}};
+  const tail=sortedBoneChain(root,'tail');
+  const wings=sortedBoneChain(root,'wing');
+  const wingPlacement=alignFactionThreeWingBases(root);
+  const helpers=isolateFactionThreeIcoHelpers(root,{tail,wings,span:wingPlacement.span||1});
+  const tailRest=tail.map(node=>node.quaternion.clone());
+  const wingRest=wings.map(node=>node.quaternion.clone());
+  // The head/neck may retain a subtle native idle, but do not let a bad
+  // tail/helper track yank the real head backwards into the tail.
+  const headGuards=[['neck',.20],['head',.28]]
+    .map(([name,limit])=>{const bone=findBone(root,name);
+      return bone?{bone,limit,rest:bone.quaternion.clone()}:null;})
+    .filter(Boolean);
+  const axis=new THREE.Vector3(0,0,1),wingAxis=new THREE.Vector3(1,0,0);
+  const oldPos=root.getWorldPosition(new THREE.Vector3());
+  const oldYaw=root.getWorldQuaternion(new THREE.Quaternion());
+  let speed=0,sway=0,velocity=0,elapsed=0,disposed=false;
+  return {
+    active:true,
+    update(dt){
+      if(disposed)return;
+      const step=clamp(Number(dt)||0,0,.08);
+      if(step<=0)return;
+      elapsed+=step;
+      const current=root.getWorldPosition(new THREE.Vector3());
+      const rotation=root.getWorldQuaternion(new THREE.Quaternion());
+      const worldDelta=current.clone().sub(oldPos);
+      const teleported=worldDelta.length()>4;
+      const localDelta=worldDelta.clone().applyQuaternion(rotation.clone().invert());
+      const distance=teleported?0:worldDelta.length();
+      speed=THREE.MathUtils.damp(speed,clamp(distance/step,0,8),8,step);
+      const yawAngle=teleported?0:oldYaw.angleTo(rotation);
+      // A spring driven only by *mount* local movement/yaw; camera orbit or
+      // rider animation never enters this computation.
+      const desired=teleported?0:clamp(
+        -localDelta.x/step*.028+
+        Math.sign(localDelta.x||1)*yawAngle*.055,-.12,.12);
+      const accel=(desired-sway)*23-velocity*9;
+      velocity+=accel*step;
+      sway=clamp(sway+velocity*step,-.14,.14);
+      if(teleported){velocity=0;sway=0;speed=0;}
+      oldPos.copy(current);oldYaw.copy(rotation);
+      headGuards.forEach(({bone,limit,rest})=>{
+        const deviation=rest.angleTo(bone.quaternion);
+        if(deviation>limit)
+          bone.quaternion.slerpQuaternions(
+            rest,bone.quaternion,limit/deviation);
+      });
+      tail.forEach((bone,index)=>{
+        const rest=tailRest[index];
+        const angle=rest.angleTo(bone.quaternion);
+        const maxBend=index===0?.26:Math.min(.52,.31+index*.042);
+        if(angle>maxBend)
+          bone.quaternion.slerpQuaternions(rest,bone.quaternion,maxBend/angle);
+        // A small elastic reaction, not a tail translation or head collider.
+        bone.quaternion.multiply(new THREE.Quaternion()
+          .setFromAxisAngle(axis,sway*(1+index*.13))).normalize();
+      });
+      wings.forEach((bone,index)=>{
+        const rest=wingRest[index];
+        const angle=rest.angleTo(bone.quaternion);
+        if(angle>.28)bone.quaternion.slerpQuaternions(
+          rest,bone.quaternion,.28/angle);
+        // Mirror the left/right shoulder flutter, based on mount travel only.
+        const sign=wingSide(bone.name)==='R'?-1:1;
+        const flutter=sign*Math.sin(elapsed*3.1)*Math.min(.045,speed*.008);
+        bone.quaternion.multiply(new THREE.Quaternion()
+          .setFromAxisAngle(wingAxis,flutter)).normalize();
+      });
+    },
+    status(){return {active:!disposed,tailBones:tail.length,
+      wingBones:wings.length,wingCorrections:wingPlacement.corrected,
+      helpersAttached:helpers.attached,helpersHidden:helpers.hidden,
+      speed,sway};},
+    dispose(){
+      if(disposed)return;
+      disposed=true;
+      helpers.restore();
+      wingPlacement.restore?.();
+      tail.forEach((node,i)=>node.quaternion.copy(tailRest[i]));
+      wings.forEach((node,i)=>node.quaternion.copy(wingRest[i]));
+      headGuards.forEach(({bone,rest})=>bone.quaternion.copy(rest));
+    },
+  };
+}
