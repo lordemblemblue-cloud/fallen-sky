@@ -68,7 +68,7 @@ import { isChargeableCombatSkill, getSkillChargeStatus, canAcceptFinisherChain, 
 import { createKillFlowCounter, isKillFlowCastEligible } from './combat/KillFlowCounter.mjs';
 import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from './combat/ContinuousAOERules.mjs';
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
-import { BOW_PVE_RANGE, selectCameraBowTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
+import { BOW_PVE_RANGE, selectCameraBowTarget, selectLockedBowAbilityTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
 import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryChargeRules.mjs';
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
@@ -84,6 +84,8 @@ import { createRemotePlayersManager } from './RemotePlayersManager';
 import { createEchoGestureRuntime } from './social/echoGestureRuntime';
 import { createRemoteCompanionManager } from './RemoteCompanionManager';
 import { CompanionAISystem } from './ai/CompanionAISystem';
+import { createCompanionCameraFade } from './ai/CompanionCameraFade.mjs';
+import { planSelectedAbility, SELECTED_ABILITY_RANGES } from './combat/SelectedAbilityApproach.mjs';
 import {
   combatEnemyProfile, enemyHomeDistance, horizontalDistance,
   shouldEnemyEngage, planEnemyStrike, isWithinEnemyStrike, enemyPursuitVector,
@@ -923,6 +925,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let companionAssetVersion = 0;
     let companionAssetDisposed = false;
     let companionSecondaryRig = null; // actual Faction 3 mount, never rider/camera
+    let companionCameraFade = null; // restore materials when switching pets/regions
     let factionThreeLastRunAt = -Infinity; // absorb tiny follower/terrain state flickers
     let mountedRider = null;
     let mountedWeapon = null;
@@ -982,6 +985,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         companionWorldRoot.add(ring);
 
         scene.add(companionWorldRoot);
+        companionCameraFade?.dispose();
+        companionCameraFade=createCompanionCameraFade(companionWorldRoot);
         snapToGround(companionWorldRoot, 0);
         // Anchor repair is calculated after placement, before animation;
         // spring motion remains driven only by the mount's own transform.
@@ -1108,6 +1113,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const previous = companionGroupRef.current;
       companionSecondaryRig?.dispose();
       companionSecondaryRig=null;
+      companionCameraFade?.dispose();
+      companionCameraFade=null;
       factionThreeLastRunAt=-Infinity;
       companionGroupRef.current = null;
       companionMixerRef.current?.stopAllAction?.();
@@ -1614,7 +1621,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const heldAOEKeys = new Map();
     const killFlowCounter = createKillFlowCounter();
-    let killFlowPursuit = null;
+    // Never auto-pursue/retarget from a kill. An ability press owns the pursuit.
+    let pendingAbilityApproach = null;
     const castInputMeta = { current: null };
     let chargedFinisherWindow = null;
     const onChargedFinisherWindow = (event) => {
@@ -1992,9 +2000,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       isMountedRef.current ? null : companionGroupRef.current,
       ...(remoteManagerRef.current?.getMeshes?.() || []),
     ];
-    // A left click on walkable ground nearer than any enemy, NPC or player sets the move target.
-    // Anything else (an enemy, the sky, a click while a WASD key is held) stays the click attack.
-    // Whether clicking an enemy should also lock on and attack is owner decision D9 (not built).
+    // Ground clicks can still move; actor clicks now select a deliberate
+    // ability target without turning selection alone into damage or a dash.
     const tryClickToMove = (e) => {
       if (!model || AXE_CLICK_TO_MOVE_CONFIG.movementKeys.some((k) => keys.current[k])) return false;
       const pick = pickAXEClickToMoveGround({ event: e, element: renderer.domElement, camera, groundMeshes, entityRoots: getClickEntityRoots() });
@@ -2188,7 +2195,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       heldAOEKeys.clear();
       killFlowCounter.reset();
-      killFlowPursuit = null;
+      pendingAbilityApproach = null;
       castInputMeta.current = null;
       // Release captured look whenever map or ESC overlays take focus.
       if (document.pointerLockElement === renderer.domElement)
@@ -2272,8 +2279,23 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       // Left click = attack, middle click = Lock-On, right click = camera drag (+ block if no drag)
       if (e.button === 0) {
-        if (altCursorHeld.current) { e.preventDefault(); return; }
+        if (altCursorHeld.current) {
+          // Free cursor: select a visible enemy or remote player, but do not attack.
+          const selected=handleMiddleClick({event:e,renderer,camera,enemies,
+            remoteManager:remoteManagerRef.current,setPlayerMenu,
+            rogues:window.__gw3dRogues||[],bosses:bossEntities,clearOnMiss:false});
+          if(selected){lockOnTargetRef.current=selected;pendingAbilityApproach=null;}
+          e.preventDefault();return;
+        }
         if (getActiveWeaponPath()!=='ranged' && isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
+        // A click directly on a hostile chooses it for the NEXT ability.
+        // Basic click damage remains a separate explicit action.
+        if(document.pointerLockElement!==renderer.domElement){
+          const selected=handleMiddleClick({event:e,renderer,camera,enemies,
+            remoteManager:remoteManagerRef.current,setPlayerMenu,
+            rogues:window.__gw3dRogues||[],bosses:bossEntities,clearOnMiss:false});
+          if(selected){lockOnTargetRef.current=selected;pendingAbilityApproach=null;}
+        }
         // Melee clicks never borrow the bow's 12m range or attack montage.
         // The clone's existing over-the-shoulder reticle stays independent.
         if(getActiveWeaponPath()==='ranged'){
@@ -2300,6 +2322,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         e.preventDefault();
         const target = handleMiddleClick({ event: e, renderer, camera, enemies, remoteManager: remoteManagerRef.current, setPlayerMenu, rogues: window.__gw3dRogues || [], bosses: bossEntities });
         lockOnTargetRef.current = target && lockOnTargetRef.current?.id !== target.id ? target : null;
+        pendingAbilityApproach=null;
       } else if (e.button === 2) {
         // Right-click a visible player or your mount with the cursor freed.
         // On empty space, retain the existing right-drag camera / short guard.
@@ -2821,52 +2844,64 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // airborne state without introducing a second gravity simulation.
         playerStateMachine.setAirborneState({ grounded: !bossFallActive && tornadoRes.liftY <= 0,
           verticalVelocity: bossFallActive ? -1 : tornadoRes.liftY > 0 ? 1 : 0 });
-        if (combatAxes) {
-          if (keys.current['w']) move.add(combatAxes.forward);
-          if (keys.current['s']) move.add(combatAxes.forward.clone().multiplyScalar(-1));
-          if (keys.current['a']) move.add(combatAxes.cameraRight.clone().multiplyScalar(-1));
-          if (keys.current['d']) move.add(combatAxes.cameraRight);
-        } else {
-          // Camera-relative movement on a correct planar basis (right is derived
-          // from forward, so A/D can never skew into a diagonal).
-          const { forward, right } = getPlanarBasisFromYaw(yaw);
-          if (keys.current['w']) move.add(forward);
-          if (keys.current['s']) move.sub(forward);
-          if (keys.current['a']) move.sub(right);
-          if (keys.current['d']) move.add(right);
-        }
+        // One camera-yaw movement basis for ALL WASD states. A lock controls
+        // facing/skill selection, not a separate W/S axis that fights the camera.
+        const { forward, right } = getPlanarBasisFromYaw(yaw);
+        if (keys.current['w']) move.add(forward);
+        if (keys.current['s']) move.sub(forward);
+        if (keys.current['a']) move.sub(right);
+        if (keys.current['d']) move.add(right);
         // Click-to-move steers only while no WASD key moves the hero (a key cancels it), through the
         // same vector, so speed, Shift run / Ctrl sprint, animation and collision match WASD.
         if (window.__axeTileInspectionEditing) clickToMove.cancel('tile-editor');
         const clickSteer = clickToMove.steer({ position: model.position, delta, keyMoving: move.lengthSq() > 0 });
         if (clickSteer) move.set(clickSteer.x, 0, clickSteer.z);
         const clickMoveFrom = clickSteer ? { x: model.position.x, z: model.position.z } : null;
-        // Kill Flow follows the next LIVE NPC using the same collision-checked
-        // movement path as walking. It never teleports/snap-dashes or moves
-        // through a wall. Manual WASD always cancels this brief assist.
-        let counterAssisting = false;
-        const availableCounter = killFlowCounter.peek(Date.now());
-        if (!availableCounter || !killFlowPursuit || window.__activeDuel ||
-            getPlayerHUD().hp <= 0 || mounted || dedicatedMode ||
-            window.__axeUiModalOpen || window.__axeServiceModeOpen) {
-          killFlowPursuit = null;
-        } else if (move.lengthSq() > 0 || clickSteer) {
-          killFlowPursuit = null;
-        } else {
-          const follow = enemies.find(target =>
-            target.id === killFlowPursuit.targetId && target.alive && !target.dying &&
-            target.group?.position && target.group.visible !== false);
-          const dx = follow ? follow.group.position.x - model.position.x : 0;
-          const dz = follow ? follow.group.position.z - model.position.z : 0;
-          const dist = Math.hypot(dx, dz);
-          if (!follow || dist > 10 || !Number.isFinite(dist)) {
-            killFlowPursuit = null;
-          } else if (dist > Math.max(1.5, ENEMY_ATTACK_RANGE - 0.25)) {
-            move.set(dx / dist, 0, dz / dist);
-            counterAssisting = true;
+        // A short, deliberate melee ability press can approach a selected foe.
+        // No movement occurs on kill, lock-on, or selection alone. Existing
+        // collision and terrain constraints apply to every pursuit step.
+        let skillApproaching=false;
+        const selectedPvETarget=() => {
+          const id=lockOnTargetRef.current?.id;
+          if(id==null||lockOnTargetRef.current?.kind==='player')return null;
+          return [...enemies,...bossEntities,...(window.__gw3dRogues||[])].find(enemy=>
+            String(enemy?.id)===String(id)&&enemy.alive===true&&!enemy.dying&&
+            !enemy.defeated&&enemy.group?.visible!==false&&enemy.group?.position) || null;
+        };
+        if(pendingAbilityApproach){
+          const request=pendingAbilityApproach;
+          const opponent=selectedPvETarget();
+          const invalid=!opponent||String(opponent.id)!==String(request.targetId)||
+            keys.current['w']||keys.current['a']||keys.current['s']||keys.current['d']||
+            clickSteer||window.__activeDuel||mounted||dedicatedMode||
+            window.__axeUiModalOpen||window.__axeServiceModeOpen||window.__axeWorldMapOpen||
+            window.__axePauseMenuOpen||window.__axeDialogueOpen||
+            getPlayerHUD().hp<=0||Date.now()>request.deadline;
+          if(invalid){
+            if(Date.now()>request.deadline)showCombatNotice('Target approach timed out');
+            pendingAbilityApproach=null;
+          }else{
+            const approach=planSelectedAbility({
+              origin:model.position,target:{position:opponent.group.position,alive:opponent.alive,
+                dying:opponent.dying,defeated:opponent.defeated,visible:opponent.group.visible},
+              meleeReach:ENEMY_ATTACK_RANGE-.15,
+            });
+            if(approach.kind==='fire'){
+              // Skill executes ONLY after a collision-safe walk closes distance.
+              abilityKeyPressed.current=request.slotIndex;
+              castInputMeta.current={...request.inputMeta,slotIndex:request.slotIndex};
+              pendingAbilityApproach=null;
+            }else if(approach.kind!=='approach'){
+              pendingAbilityApproach=null;
+              showCombatNotice('Target is no longer in melee ability range');
+            }else{
+              const dx=opponent.group.position.x-model.position.x;
+              const dz=opponent.group.position.z-model.position.z;
+              move.set(dx/approach.distance,0,dz/approach.distance);
+              skillApproaching=true;
+            }
           }
         }
-
         const isMoving = move.lengthSq() > 0;
         const isRunning = !!keys.current['shift'] && isMoving;
         const isSprinting = !!keys.current['control'] && isMoving;
@@ -2897,7 +2932,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
         const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
-          (counterAssisting ? (availableCounter?.chosen ? 1.75 : 1.4) : 1);
+          (skillApproaching ? 2.2 : 1);
         const canMove = isMoving && !window.__axeTileInspectionEditing && !dedicatedMode && !movementOverridden &&
           !tornadoRes.lockMovement && !bossSpecialLock;
         if(dedicatedMode)clickToMove.cancel('dedicated');
@@ -3103,6 +3138,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
         // Smooth camera system: damped lock-on yaw, combat distance, and sprint pullback without per-frame object spam.
         playerCameraSystem.update(delta, playerStateMachine.intent);
+        companionCameraFade?.update({camera,player:model,mounted,delta});
         updateOTSAimFrame({camera,aim:otsAim.current,colliders:otsCameraColliders(),
           extraMeshes:[...enemies,...bossEntities].map(e=>e.group).filter(Boolean),
           bowEquipped:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
@@ -3691,14 +3727,22 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             }
           } else {
             const bowAimStartedAt=activeWeaponPath==='ranged'?performance.now():0;
+            const aimedSkillTarget=isSkillStrike&&pendingSkillStrike?.targetId
+              ?[...enemies,...bossEntities,...(window.__gw3dRogues||[])].find(enemy=>
+                String(enemy?.id)===String(pendingSkillStrike.targetId)&&
+                enemy.alive&&!enemy.dying&&!enemy.defeated) : null;
             let bowAimTarget=activeWeaponPath==='ranged'
-              ?selectCameraBowTarget({
-                camera,origin:model.position,
-                enemies:[...enemies,...(window.__gw3dRogues||[])],bosses:bossEntities,
-                maxRange:BOW_PVE_RANGE,
-                lockedEnemyId:lockOnTargetRef.current?.id,
-                groundMeshes:otsCameraColliders(),
-              }):null;
+              ?isSkillStrike&&pendingSkillStrike?.targetId
+                ?selectLockedBowAbilityTarget({origin:model.position,
+                  target:aimedSkillTarget,groundMeshes:otsCameraColliders(),
+                  maxRange:BOW_PVE_RANGE})
+                :selectCameraBowTarget({
+                  camera,origin:model.position,
+                  enemies:[...enemies,...(window.__gw3dRogues||[])],bosses:bossEntities,
+                  maxRange:BOW_PVE_RANGE,
+                  lockedEnemyId:lockOnTargetRef.current?.id,
+                  groundMeshes:otsCameraColliders(),
+                }):null;
             if(bowAimTarget&&!isSkillStrike)bowAimTarget={
               ...bowAimTarget,chargeMultiplier:bowShot?.multiplier||1,
             };
@@ -3868,14 +3912,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 });
                 if (opportunity) {
                   const nextEnemy = enemies.find(target => target.id === opportunity.targetId);
-                  if (nextEnemy) {
-                    lockOnTargetRef.current = nextEnemy;
-                    clickToMove.cancel('kill_flow');
-                    killFlowPursuit = { targetId: nextEnemy.id, until: opportunity.expiresAt };
-                    showCombatNotice('COUNTER READY · Single or Three-Hit → ' + (nextEnemy.name || 'Next enemy'));
-                    window.dispatchEvent(new CustomEvent('axeKillFlowReady', {
-                      detail: { targetId: nextEnemy.id, expiresAt: opportunity.expiresAt,
-                        criticalKill: opportunity.criticalKill },
+                  if(nextEnemy){
+                    // A kill offers the original timed counter bonus but does
+                    // NOT change selected target, camera bearing or movement.
+                    showCombatNotice('COUNTER READY · Select '+(nextEnemy.name||'an enemy')+' and cast');
+                    window.dispatchEvent(new CustomEvent('axeKillFlowReady',{
+                      detail:{targetId:nextEnemy.id,expiresAt:opportunity.expiresAt,
+                        criticalKill:opportunity.criticalKill},
                     }));
                   }
                 }
@@ -4018,7 +4061,44 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
         }
       }
-            // ─── Ability firing (1..8 keys) ───
+            // An offensive ability against a manually clicked/middle-locked PvE
+      // target may begin ONE collision-safe approach. Selection/kill never does.
+      // PvP uses its existing authenticated duel movement and attack limits.
+      if(abilityKeyPressed.current!==-1 && model && !pendingAbilityApproach &&
+         !window.__activeDuel){
+        const slot=abilityKeyPressed.current;
+        const skillId=getLoadout().activeSlots[slot];
+        const skill=getSkillById(skillId);
+        if(skill?.skill_type===SKILL_TYPE.ACTIVE_ATTACK){
+          const selected=selectedPvETarget();
+          if(selected){
+            const path=getActiveWeaponPath();
+            const plan=planSelectedAbility({
+              origin:model.position,
+              target:{position:selected.group.position,alive:selected.alive,
+                dying:selected.dying,defeated:selected.defeated,
+                visible:selected.group.visible},
+              weaponPath:path,meleeReach:ENEMY_ATTACK_RANGE-.15,mounted,
+            });
+            if(plan.kind==='out_of_range'||plan.kind==='mounted'){
+              abilityKeyPressed.current=-1;
+              castInputMeta.current=null;
+              showCombatNotice(path==='ranged'?'Bow ability target exceeds 40m':
+                plan.kind==='mounted'?'Dismount to rush with melee ability':
+                'Melee ability target exceeds 30m');
+            }else if(plan.kind==='approach'){
+              clickToMove.cancel('ability_approach');
+              pendingAbilityApproach={slotIndex:slot,targetId:selected.id,
+                inputMeta:castInputMeta.current||{heldMs:0},
+                deadline:Date.now()+SELECTED_ABILITY_RANGES.approachSeconds*1000};
+              abilityKeyPressed.current=-1;
+              castInputMeta.current=null;
+              showCombatNotice('Approaching selected target · ability queued');
+            }
+          }
+        }
+      }
+      // ─── Ability firing (1..8 keys) ───
       // NEW PIPELINE: Input → loadoutStore → skillExecutor (validates weapon
       // lock, runs buff/attack via the new system). Falls back to the LEGACY
       // targeted-ability path ONLY for skills not yet in the new registry
@@ -4115,7 +4195,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                   pvp: !!activeDuel,
                 });
                 if (consumed) {
-                  killFlowPursuit = null;
                   showCombatNotice('KILL FLOW · Instant charged ' +
                     (skillCombatFamily(skill) === 'single' ? 'Single' : 'Three-Hit'));
                 }
@@ -4464,6 +4543,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       companionAssetDisposed = true;
       companionSecondaryRig?.dispose();
       companionSecondaryRig=null;
+      companionCameraFade?.dispose();
+      companionCameraFade=null;
       ++companionAssetVersion;
       unsubCompanionAsset();
       container.removeEventListener('pointerdown',unlockWorldSound);
