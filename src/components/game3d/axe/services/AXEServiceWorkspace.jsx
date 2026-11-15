@@ -12,7 +12,6 @@ const BlacksmithImageWorkspace = lazy(() => import('./AXEBlacksmithImageWorkspac
 const SpiritualWorkspace = lazy(() => import('./AXESpiritualWorkspace'));
 const CompanionWorkspace = lazy(() => import('./AXECompanionWorkspace'));
 const AppearanceWorkspace = lazy(() => import('./AXEAppearanceWorkspace'));
-const CharacterWorkspace = lazy(() => import('./AXECharacterWorkspace'));
 const SkillBookWorkspace = lazy(() => import('./AXESkillBookWorkspace'));
 const QuestLogbookWorkspace = lazy(() => import('./AXEQuestLogbookWorkspace'));
 
@@ -55,7 +54,7 @@ export default function AXEServiceWorkspace({ mode, onClose }) {
     setAXEStationPreviewRotation(next);
   };
   return (
-    <section ref={root} className={`axe-service-workspace ${world ? 'axe-service-workspace--world' : 'axe-service-workspace--panel'} ${group.id === 'blacksmith' ? 'axe-service-workspace--blacksmith' : group.id === 'spiritual' ? 'axe-service-workspace--spiritual' : group.id === 'companion' ? 'axe-service-workspace--companion' : group.id === 'appearance' ? 'axe-service-workspace--appearance' : group.id === 'character' ? 'axe-service-workspace--character' : group.id === 'skills' ? 'axe-service-workspace--skills' : group.id === 'quest_logbook' ? 'axe-service-workspace--quest-logbook' : ''}`}
+    <section ref={root} className={`axe-service-workspace ${world ? 'axe-service-workspace--world' : 'axe-service-workspace--panel'} ${group.id === 'blacksmith' ? 'axe-service-workspace--blacksmith' : group.id === 'spiritual' ? 'axe-service-workspace--spiritual' : group.id === 'companion' ? 'axe-service-workspace--companion' : group.id === 'appearance' ? 'axe-service-workspace--appearance' : group.id === 'character' ? 'axe-service-workspace--character axe-service-workspace--appearance' : group.id === 'skills' ? 'axe-service-workspace--skills' : group.id === 'quest_logbook' ? 'axe-service-workspace--quest-logbook' : ''}`}
       data-service-ui="true" data-service-extent="viewport-top" data-mobile-pane={mobilePane} aria-label={`${group.label} workspace`}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); onClose(); }
@@ -63,7 +62,7 @@ export default function AXEServiceWorkspace({ mode, onClose }) {
         event.stopPropagation();
       }} onPointerDown={event => event.stopPropagation()} onMouseDown={event => event.stopPropagation()}
       onWheel={event => event.stopPropagation()}>
-      {group.id !== 'blacksmith' && group.id !== 'skills' && group.id !== 'quest_logbook' && <header className="axe-service-heading">
+      {group.id !== 'blacksmith' && group.id !== 'skills' && group.id !== 'quest_logbook' && group.id !== 'character' && <header className="axe-service-heading">
         <div><span className="axe-service-kicker">{world ? (mode.shared ? 'Shared workstation' : 'Personal workstation') : 'Services'}</span>
           <h1>{group.label}</h1></div>
         <div className="axe-service-header-actions">
@@ -100,9 +99,7 @@ export default function AXEServiceWorkspace({ mode, onClose }) {
             </div> : group.id === 'quest_logbook' ? <div className="axe-service-progression">
               <QuestLogbookWorkspace onClose={onClose} verifiedQuestbookReader={verifiedQuestbookReader170} />
             </div> : group.id === 'character' ? <div className="axe-service-progression">
-              <CharacterWorkspace />
-            </div> : group.id === 'appearance' ? <div className="axe-service-progression">
-              <AppearanceWorkspace serviceId={mode.serviceId} stationMessage={mode.message} />
+              <AppearanceWorkspace serviceId={mode.serviceId} stationMessage={mode.message} onClose={onClose} />
             </div> : group.id === 'blacksmith' ? <>
               <nav className="axe-service-mobile-panes" aria-label="Workspace panels">
                 <button type="button" aria-pressed={mobilePane === 'inventory'} onClick={() => setMobilePane('inventory')}>Inventory</button>
