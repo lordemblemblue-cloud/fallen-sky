@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {SUIGEN_ASSET_PARTS,SUIGEN_WORLD_METADATA} from './WolfveilWorldVariants.mjs';
+import {createSuigenTownDistrict} from './SuigenTownDistrict.mjs';
+import {createSuigenMountainWayfinding} from './SuigenMountainWayfinding.mjs';
 
 const WALKABLE_NAME=/^(?:Map_Terrain_2400m|Canal_Bridge_Deck|Abyss_Stair_\d+|Abyss_Vault_Floor)$/;
 const INTERIOR_FLOOR_MATERIAL=/^SUI_Woven_Tatami_Mat$/;
@@ -58,19 +60,40 @@ export async function loadSuigenWorld({scene,signal}={}){
     disposeScene(root);
     throw new Error('Suigen map load was cancelled');
   }
+  // Phase 2: original architecture around the preserved historic precinct.
+  // Town loads as a child so a single world-variant visibility toggle applies
+  // to old terrain, new interiors, walkable stairs and their collision.
+  // A failed town procedural pass should not discard either original GLB.
+  let district=null,mountains=null,upgradeError=null;
+  try {
+    district=createSuigenTownDistrict({worldRoot:root,terrainRoot:root});
+    walkables.push(...district.walkables);
+  } catch(error) {
+    upgradeError=error;
+    console.error('[Suigen] Living town failed to generate; source map retained:',error);
+  }
+  try {
+    mountains=createSuigenMountainWayfinding({worldRoot:root,terrainRoot:root});
+    walkables.push(...mountains.walkables);
+  } catch(error) {
+    upgradeError=upgradeError||error;
+    console.error('[Suigen] Mountain trails failed; original Abyss is preserved:',error);
+  }
   // No spatial offsets or scaling: imported geometry keeps the source's
   // precise world coordinates for the 2400m terrain and underground vault.
   scene.add(root);
   root.updateMatrixWorld(true);
   let disposed=false;
   return {
-    root, walkables,
+    root, walkables, district, mountains, upgradeError,
     get visible(){return root.visible;},
     setVisible(visible){if(!disposed)root.visible=!!visible;},
     dispose(){
       if(disposed)return;
       disposed=true;
       scene.remove(root);
+      district?.dispose();
+      mountains?.dispose();
       disposeScene(root);
     },
   };
