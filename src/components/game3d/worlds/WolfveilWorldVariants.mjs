@@ -4,7 +4,7 @@
 // A new setting generation intentionally resets old v1 Suigen defaults.
 // The old key is left intact for historical recovery; never delete assets.
 export const WORLD_VARIANT_LEGACY_STORAGE_KEY='game3d_clone_world_variant_v1';
-export const WORLD_VARIANT_STORAGE_KEY='game3d_clone_world_variant_v2';
+export const WORLD_VARIANT_STORAGE_KEY='game3d_clone_world_variant_v3_classic_locked';
 export const WORLD_VARIANT_EVENT='game3dWorldVariantChanged';
 export const WORLD_VARIANT_STATUS_EVENT='game3dWorldVariantStatus';
 export const WORLD_VARIANT_CLASSIC='classic';
@@ -25,8 +25,11 @@ export const SUIGEN_WORLD_METADATA=Object.freeze({
   referenceStyle:'original painterly fantasy with physically-based materials',
 });
 
-export function normalizeWolfveilWorldVariant(value){
-  return value===WORLD_VARIANT_SUIGEN?WORLD_VARIANT_SUIGEN:WORLD_VARIANT_CLASSIC;
+// The user requested an actual rollback, not just another default change.
+// The 2.4 km Suigen source remains stored in the repository/CDN as an archive,
+// but no saved preference, stale v2 setting, or event can activate it in Play.
+export function normalizeWolfveilWorldVariant(){
+  return WORLD_VARIANT_CLASSIC;
 }
 export function readWolfveilWorldVariant(storage=globalThis?.localStorage){
   try{return normalizeWolfveilWorldVariant(storage?.getItem?.(WORLD_VARIANT_STORAGE_KEY));}

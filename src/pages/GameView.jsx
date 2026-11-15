@@ -36,7 +36,6 @@ import WorldChatPanel from '../components/game3d/social/WorldChatPanel';
 import EchoChronicleOverlay from '../components/game3d/social/EchoChronicleOverlay';
 import ChronicleBlueprintLibrary from '../components/game3d/chronicle/ChronicleBlueprintLibrary';
 import MiniGamesHub from '../components/game3d/minigames/MiniGamesHub';
-import SuigenTownMerchants from '../components/game3d/worlds/SuigenTownMerchants';
 import CharacterVaultSync from '../components/game3d/character/CharacterVaultSync';
 import DuelSystem from '../components/game3d/social/DuelSystem';
 import DuelMarkers from '../components/game3d/social/DuelMarkers';
@@ -755,8 +754,6 @@ export default function GameView() {
 
       {/* Shop consumable effects — applies buffs/heals when items are used from the shop */}
       <ShopEffectsBridge />
-      {/* Clone-only, character-scoped trading: uses the existing Silver/shop store. */}
-      <SuigenTownMerchants />
 
       {/* Passive skill aura visual effects rendered over the player */}
       <PassiveSkillAuraEffects activeSkillIds={[...learnedSkillIds]} />

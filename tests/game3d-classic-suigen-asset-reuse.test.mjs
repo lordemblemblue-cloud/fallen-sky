@@ -20,7 +20,7 @@ test('Classic defaults again, even for users who previously opted into Suigen v1
   assert.notEqual(WORLD_VARIANT_LEGACY_STORAGE_KEY,WORLD_VARIANT_STORAGE_KEY);
   assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
   saveWolfveilWorldVariant('suigen',storage);
-  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_SUIGEN);
+  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
   saveWolfveilWorldVariant('classic',storage);
   assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
   assert.equal(data.get(WORLD_VARIANT_LEGACY_STORAGE_KEY),'suigen');
@@ -38,7 +38,7 @@ test('Extracted Suigen GLB has six authentic source prefab families',()=>{
 test('The 30 world-space accents stay optional, original and bounded',()=>{
   assert.equal(WOLFVEIL_SUIGEN_REUSE_PLACEMENTS.length,30);
   const ids=new Set(WOLFVEIL_SUIGEN_REUSE_PLACEMENTS.map(x=>x.id));
-  assert.equal(ids.size,26);
+  assert.equal(ids.size,30);
   for(const candidate of WOLFVEIL_SUIGEN_REUSE_PLACEMENTS){
     assert(WOLFVEIL_SUIGEN_REUSE_TYPES[candidate.type]);
     assert(candidate.scale>.5&&candidate.scale<2);
@@ -76,15 +76,15 @@ test('The imported asset layer has NO terrain, building, nav or collision replac
   assert(!runtime.includes("Map_Terrain_2400m"));
 });
 
-test('Game World selects Classic with source accents and retains full Suigen option',()=>{
+test('Game World uses Classic plus source accents and cannot render whole Suigen map',()=>{
   const world=read('src/components/game3d/GameWorld3D.jsx');
   assert(world.includes("loadClassicWolfveilSuigenAccents({"));
   assert(world.includes("classicSuigenAccents?.setVisible(true)"));
-  assert(world.includes("classicSuigenAccents?.setVisible(false)"));
+  assert(!world.includes("suigenRuntime.setVisible(true)"));
   assert(world.includes("classicAccentAbort.abort()"));
   assert(world.includes("classicSuigenAccents?.dispose()"));
-  assert(world.includes("loadSuigenWorld({scene,signal:worldMapAbort.signal})"));
-  assert(world.includes("for(const root of classicWorldRoots)root.visible=false"));
+  assert(!world.includes("loadSuigenWorld("));
+  assert(!world.includes("for(const root of classicWorldRoots)root.visible=false"));
   assert(world.includes("originalVisibility.get(root)??true"));
   assert(world.includes("wolfveilIsProtectedSWTile"));
   assert(world.includes("insideWolfveilImportedTown"));
@@ -92,10 +92,11 @@ test('Game World selects Classic with source accents and retains full Suigen opt
   assert(world.includes("wolfveilRouteClearance"));
 });
 
-test('Settings describe Classic as primary while retaining Suigen as archive',()=>{
+test('Settings expose restored Classic only; Suigen archive stays outside Play',()=>{
   const pause=read('src/components/game3d/PauseMenu.jsx');
-  assert(pause.includes('Classic Wolfveil · Main Map'));
-  assert(pause.includes('Dominion of Suigen · Archive'));
+  assert(pause.includes('Classic Wolfveil · Restored'));
+  assert(!pause.includes("id:'suigen',text:"));
+  assert(pause.includes('archived separately'));
   assert(pause.includes('selected'));
   assert(pause.includes('saveWolfveilWorldVariant(next)'));
 });
