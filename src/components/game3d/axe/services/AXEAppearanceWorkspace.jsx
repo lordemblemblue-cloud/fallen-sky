@@ -19,8 +19,7 @@ import './AXEAppearanceWorkspace.css';
 const GameCharacterPreview = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CharacterWorkspace = lazy(() => import('./AXECharacterWorkspace'));
 const CapeSubTab = lazy(() => import('../../progression/hub/CapeSubTab'));
-const WingsSubTab = lazy(() => import('../../progression/hub/WingsSubTab'));
-const TAB_NAMES = ['Character', 'Equipment', 'Vanity', 'Costumes', 'Wings', 'Aura'];
+const TAB_NAMES = ['Character', 'Equipment', 'Vanity', 'Aura'];
 // Eight viewer slots (four on each side) remain visible on every Appearance tab.
 // Arms has no separate Vanity slot in the current equipment rules; render its
 // actual empty state instead of inventing an item to match concept artwork.
@@ -46,10 +45,10 @@ function useLive(subscribe, read) {
   useEffect(() => subscribe(setValue), [subscribe]);
   return value;
 }
-function GlassCard({ title, icon: Icon, extra, className = '', children }) {
+function GlassCard({ title, icon: Icon, extra, headingAction, className = '', children }) {
   return <section className={'axe-app-card ' + className}>
     <header className="axe-app-card-heading">{Icon && <Icon size={21} aria-hidden="true"/>}
-      <h3>{title}</h3>{extra && <small>{extra}</small>}</header>
+      <h3>{title}</h3>{headingAction}{extra && <small>{extra}</small>}</header>
     <div className="axe-app-card-content">{children}</div>
   </section>;
 }
@@ -70,16 +69,16 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
   useEffect(()=>subscribeAXEEquipmentInventory(state=>setAllEquipment(state?.items||getAllAXEEquipmentItems())),[]);
   useEffect(()=>subscribeAXEAura(setAuraRecords),[]);
   useEffect(()=>subscribeAppearanceAuraSource(setAuraSource),[]);
-  const [tab, setTab] = useState(() => initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Costumes' : 'Character');
+  const [tab, setTab] = useState(() => initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character');
   const [selected, setSelected] = useState(null); // {kind: 'vanity'|'costume', id}
   const [detail, setDetail] = useState('');
   const [notice, setNotice] = useState('');
   const [filter, setFilter] = useState('All');
 
   useEffect(() => {
-    const destination = initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Costumes' : 'Character';
+    const destination = initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character';
     setTab(destination);
-    setFilter(destination === 'Character' ? 'All' : destination);
+    setFilter(serviceId === 'costume' ? 'Costumes' : 'All');
     setSelected(null); setDetail('');
   }, [serviceId, initialTab]);
   useEffect(() => subscribeCharacterChange(() => {
@@ -111,12 +110,12 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
     .filter(row => row.piece?.slot === row.slot);
 
   const showTab = next => {
-    setTab(next); setFilter(next === 'Character' ? 'All' : next === 'Vanity' || next === 'Costumes' ? next : 'All');
+    setTab(next); setFilter('All');
     setDetail(''); setNotice('');
   };
   const selectItem = item => {
     setSelected({kind:item.kind,id:item.id});
-    if (tab === 'Wings') setTab(item.kind === 'costume' ? 'Costumes' : 'Vanity');
+    
   };
   // One click inspects; double-click equips exactly the clicked owned item.
   // Do not rely on the selected state: React may not have committed the
@@ -138,12 +137,12 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
       const result=equipAXECostume(def.id);
       setNotice(result.ok?(result.message||def.name+' equipped.') :
         (result.message||result.reason||'Unable to equip outfit.'));
-    }else showTab('Costumes');
+    }else { showTab('Vanity'); setFilter('Costumes'); }
   };
   const handleSlot = slot => {
     if (slot === 'cape') { setDetail('cape'); return; }
     if (slot === 'aura') { showTab('Aura');return; }
-    if (slot === 'customs') { showTab('Costumes');return; }
+    if (slot === 'customs') { showTab('Vanity');setFilter('Costumes');return; }
     const id = vanity.equippedBySlot?.[slot];
     setTab('Vanity'); setFilter('Vanity'); setDetail('');
     setSelected(id ? {kind:'vanity',id} : null);
@@ -188,7 +187,7 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
     <nav className="axe-app-tabs" aria-label="Character and appearance tabs">
       {TAB_NAMES.map(name => <button type="button" key={name} aria-pressed={tab === name}
         onClick={() => showTab(name)}>{name === 'Character' ? <UserRound size={20}/> :
-          name === 'Equipment' ? <Shield size={20}/> : name === 'Vanity' ? <Gem size={20}/> : name === 'Costumes' ? <Shirt size={20}/> : name === 'Aura' ? <Sparkles size={20}/> : <Feather size={20}/>}
+          name === 'Equipment' ? <Shield size={20}/> : name === 'Vanity' ? <Gem size={20}/> : name === 'Aura' ? <Sparkles size={20}/> : <Feather size={20}/>}
         <span>{name}</span></button>)}
     </nav>
 
@@ -227,15 +226,10 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
         </div>
       </section>
 
-      <main className={tab === 'Wings' ? "axe-app-main-stack axe-app-main-stack--wings" : "axe-app-main-stack"} aria-label="Appearance inventory">
+      <main className="axe-app-main-stack" aria-label="Appearance inventory">
         {detail === 'cape' ? <GlassCard title="Capes" icon={Feather} extra="Owned cape progression">
           <button type="button" className="axe-app-back" onClick={() => setDetail('')}>← Back to Inventory</button>
           <div className="axe-app-embedded"><Suspense fallback={<p>Loading capes…</p>}><CapeSubTab/></Suspense></div>
-        </GlassCard> : tab === 'Wings' ? <GlassCard title="Wings" icon={Feather}
-          extra="Spiritual progression" className="axe-app-wings-wide">
-          <div className="axe-app-embedded axe-app-embedded--wings">
-            <Suspense fallback={<p>Loading wings…</p>}><WingsSubTab/></Suspense>
-          </div>
         </GlassCard> : tab === 'Aura' ? <GlassCard title="Inventory Aura" icon={Sparkles}
           extra={ownedAuras.length+' owned'} className="axe-app-inventory">
           <p className="axe-app-inventory-note">Auras already attached to your owned equipment. Selecting one changes the visible player Aura, not its underlying equipment stats.</p>
@@ -254,6 +248,14 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
           </div>
         </GlassCard> : <GlassCard title="Inventory" icon={Gem}
           extra={visibleInventory.length + ' shown · ' + inventory.length + ' owned'}
+          headingAction={<label className="axe-app-inventory-filter-select">
+            <span className="sr-only">Filter inventory</span>
+            <select aria-label="Filter inventory" value={filter}
+              onChange={event => setFilter(event.target.value)}>
+              <option value="All">All</option><option value="Vanity">Vanity</option>
+              <option value="Costumes">Costumes</option>
+            </select>
+          </label>}
           className="axe-app-inventory">
           <div className="axe-app-inventory-browser">
           <div className="axe-app-inventory-filters" role="group" aria-label="Inventory filter">
@@ -285,7 +287,7 @@ export default function AXEAppearanceWorkspace({ serviceId = 'character', statio
           <h4>{equippedCape?.name || 'No cape equipped'}</h4>
           <p>{equippedCape ? bonusText(getAXECapeBonuses(capes.equippedCapeId)) : 'No cape bonuses'}</p>
           <button className="axe-app-manage" type="button" onClick={() => setDetail('')}>Back to Inventory</button>
-        </GlassCard> : tab === 'Wings' ? null : tab === 'Aura' ? <GlassCard title="Aura Details" icon={Sparkles}
+        </GlassCard> : tab === 'Aura' ? <GlassCard title="Aura Details" icon={Sparkles}
           extra="Equipped appearance">
           {(()=>{
             const chosen=ownedAuras.find(aura=>aura.id===selected?.id)||equippedAura||ownedAuras[0];
