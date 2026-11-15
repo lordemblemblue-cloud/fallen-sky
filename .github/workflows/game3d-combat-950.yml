@@ -7,6 +7,7 @@ on:
       # Client world entry can alter authenticated Questbook/reconnect flows.
       # Watch only the reviewed world-entry surface, not all visual assets.
       - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/PauseMenu.jsx'
       - 'src/components/game3d/worlds/WolfveilWorldVariants.mjs'
       - 'src/components/game3d/worlds/loadSuigenWorld.mjs'
       - 'tests/game3d-suigen-map-variant.test.mjs'
@@ -22,6 +23,7 @@ on:
       # Client world entry can alter authenticated Questbook/reconnect flows.
       # Watch only the reviewed world-entry surface, not all visual assets.
       - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/PauseMenu.jsx'
       - 'src/components/game3d/worlds/WolfveilWorldVariants.mjs'
       - 'src/components/game3d/worlds/loadSuigenWorld.mjs'
       - 'tests/game3d-suigen-map-variant.test.mjs'
@@ -68,6 +70,9 @@ jobs:
       - name: Clone 95.2 native verifier repository-scope and pinned-evidence regressions
         run: |
           node --test server/game3d/tests/combat952.clone-native-verifier.test.mjs
+      - name: Clone world-entry and rollback trigger regression guard
+        run: |
+          node --test server/game3d/tests/combat953.world-entry-trigger.test.mjs
       - name: Execute all original 85.1 offline source regressions
         run: |
           node server/game3d/tools/verifyCombatQuest851.mjs
