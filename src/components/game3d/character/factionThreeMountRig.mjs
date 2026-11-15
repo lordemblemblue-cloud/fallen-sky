@@ -151,8 +151,11 @@ export function alignFactionThreeWingBases(root) {
     const distance=current.distanceTo(target);
     // If the original GLB anchor is already anatomically sensible, do not
     // rewrite the bind pose. Otherwise cap the one-time correction.
-    const maxOffset=clamp(shoulderSpan*.95,.12,1.2);
-    const tolerance=Math.max(.05,shoulderSpan*.29);
+    // One-time load-time repair: a widely displaced wing must actually land
+    // at the anatomical shoulder, not remain half-way across the back.
+    // Bound extreme malformed assets to three shoulder-widths of correction.
+    const maxOffset=clamp(shoulderSpan*3,.6,3);
+    const tolerance=Math.max(.05,shoulderSpan*.22);
     if(distance>tolerance){
       const before=wing.position.clone();
       const next=current.clone().lerp(target,Math.min(1,maxOffset/distance));
