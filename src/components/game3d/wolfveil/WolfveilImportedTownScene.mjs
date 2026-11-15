@@ -11,6 +11,7 @@ import {installWolfveilTownTree,isWolfveilTownTreeMesh,removeWolfveilTownCentreT
 import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './WolfveilImportedTownCritique.mjs';
 import {clearWolfveilImportedTownInterior} from './WolfveilImportedTownInteriorClearance.mjs';
 import {clearWolfveilTownCenterRisers} from './WolfveilTownCenterRiserRemoval.mjs';
+import {buildWolfveilTownLivingQuarter} from './WolfveilTownLivingQuarterScene.mjs';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
 // How each mesh of the model takes part in collision, by its Blender name.
@@ -34,7 +35,7 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
  const p=WOLFVEIL_IMPORTED_TOWN,scale=WOLFVEIL_IMPORTED_TOWN_SCALE;
  const root=new THREE.Group();root.name='Wolfveil_Imported_Player_Spawn_Town';
  root.userData.townId=p.id;scene.add(root);
- let active=true,model=null,state='loading',collision=null;
+ let active=true,model=null,state='loading',collision=null,livingQuarter=null;
  let critiquePass=null,lawnGrass=null;
  const water=createWolfveilTownWater();
  const tree=installWolfveilTownTree(root);
@@ -90,15 +91,37 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      minX:p.x-p.width/2-2,maxX:p.x+p.width/2+2,
      minZ:p.z+70-p.depth/2-2,maxZ:p.z+70+p.depth/2+2,
      circles:plazaTreeClearOfHouses?[WOLFVEIL_IMPORTED_TOWN_TREE]:[]});
+   // Houses and residents enter only AFTER imported mesh repair + terrain
+   // collision sampling. A failing plot is skipped rather than sinking into
+   // water/bridge/raised tile geometry. No new floor plate is created.
+   livingQuarter=buildWolfveilTownLivingQuarter(root,{
+     collision,onStatus:report=>{
+       root.userData.cloneTownLivingQuarter=report;
+     },
+   });
    model=town;emit('ready');onReady?.();
  },undefined,error=>{if(active){emit('error',error?.message||'Asset network error');globalThis.console?.warn('[Game 3D town] GLB load failed; Wolfveil remains walkable',error);}});
  return {root,get status(){return state;},get model(){return model;},
    /** Town floor height at a point, or null off the town / before it loads. */
    groundY(x,z){return collision?collision.groundAt(x,z):null;},
    /** True where the town's own walls, ledges or plaza tree stand. */
-   isSolid(x,z){return collision?collision.isSolid(x,z):false;},
+   isSolid(x,z){return Boolean(collision?.isSolid(x,z)||livingQuarter?.isSolid(x,z));},
+   nearestResident(position){return livingQuarter?.nearestResident(position)||null;},
+   interactResident(position){return livingQuarter?.interact(position)||null;},
+   get livingQuarterReport(){return livingQuarter?.report||null;},
    /** Keeps a moving character out of the town's walls. True when it was stopped. */
-   resolveCollision(position,previous){return collision?collision.resolve(position,previous):false;},
-   update(dt){water.update(dt);canopyDressing.update(dt);lawnGrass?.update(dt);},
-   dispose(){if(!active)return;active=false;scene.remove(root);lawnGrass?.dispose();canopyDressing.dispose();critiquePass?.dispose();tree.dispose();disposeModel(model);water.dispose();root.clear();model=null;collision=null;state='disposed';}};
+   resolveCollision(position,previous){
+     const floorBlocked=collision?.resolve(position,previous)||false;
+     const houseBlocked=livingQuarter?.resolveCollision(position,previous)||false;
+     return floorBlocked||houseBlocked;
+   },
+   update(dt,playerPosition){
+     water.update(dt);canopyDressing.update(dt);lawnGrass?.update(dt);
+     livingQuarter?.update(dt,playerPosition);
+   },
+   dispose(){if(!active)return;active=false;scene.remove(root);
+     livingQuarter?.dispose();livingQuarter=null;
+     lawnGrass?.dispose();canopyDressing.dispose();critiquePass?.dispose();
+     tree.dispose();disposeModel(model);water.dispose();
+     root.clear();model=null;collision=null;state='disposed';}};
 }
