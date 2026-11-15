@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {CLONE_TOWN_HOUSES,CLONE_TOWN_GUARDS,CLONE_TOWN_CITIZENS,
   chooseTownPlots}
   from './WolfveilTownLivingQuarterLayout.mjs';
@@ -126,6 +127,51 @@ function houseModel(h,materials){
  }
  return root;
 }
+// Merge all static house boxes by PBR material: 9 buildings become a handful
+// of draw calls, not hundreds of separate meshes. Keep each house parent and
+// its independent name sign. If a Three.js attribute mismatch prevents a
+// merge, leave the original buildings visible rather than losing the town.
+function mergeStaticTownHouses(townRoot,houseGroups,materials){
+ const buckets=new Map(),copies=[];
+ for(const h of houseGroups){
+  h.updateWorldMatrix(true,true);
+  h.traverse(node=>{
+   if(!node.isMesh)return;
+   const geometry=node.geometry.clone();
+   geometry.applyMatrix4(node.matrixWorld);
+   copies.push(geometry);
+   if(!buckets.has(node.material))buckets.set(node.material,[]);
+   buckets.get(node.material).push(geometry);
+  });
+ }
+ const mergedMeshes=[];
+ try{
+  for(const [material,geometries] of buckets){
+   const combined=mergeGeometries(geometries,false);
+   if(!combined)throw Error('Different vertex attributes in town meshes');
+   const mesh=new THREE.Mesh(combined,material);
+   mesh.name='CloneTown_BatchedArchitecture';
+   mesh.castShadow=true;mesh.receiveShadow=true;
+   mergedMeshes.push(mesh);
+  }
+ }catch(err){
+  for(const mesh of mergedMeshes)mesh.geometry.dispose();
+  for(const g of copies)g.dispose();
+  console.warn('Wolfveil town geometry batching unavailable; using separate houses',err);
+  return false;
+ }
+ // Only remove the original meshes when every merged group exists.
+ for(const h of houseGroups){
+  const list=[];
+  h.traverse(node=>{if(node.isMesh)list.push(node);});
+  for(const node of list){
+   node.parent?.remove(node);node.geometry.dispose();
+  }
+ }
+ for(const mesh of mergedMeshes)townRoot.add(mesh);
+ for(const g of copies)g.dispose();
+ return true;
+}
 function makeCitizen(agent,materials){
  const actor=new THREE.Group();
  actor.name='CloneTownNPC_'+agent.id;
@@ -194,7 +240,9 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
   guardHelm:mat(0x9d895e,.42),vendor:mat(0x7d7060),
   resident:mat(0x5d7970),smith:mat(0x634d46),trousers:mat(0x393940),
  };
- for(const h of layout.accepted)root.add(houseModel(h,materials));
+ const houseGroups=layout.accepted.map(h=>houseModel(h,materials));
+ for(const house of houseGroups)root.add(house);
+ const architectureBatched=mergeStaticTownHouses(root,houseGroups,materials);
  const houses=new Map(layout.accepted.map(h=>[h.id,h]));
  const agents=[];
  const ground=(x,z)=>collision.groundAt(x,z);
@@ -228,6 +276,7 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
  }
  const placed=layout.accepted.length;
  const report={plannedHouses:CLONE_TOWN_HOUSES.length,houses:placed,
+   architectureBatched,
    shops:layout.accepted.filter(h=>h.role==='shop').length,
    citizens:agents.length,guards:agents.filter(a=>a.role==='guard').length,
    rejected:layout.rejected};
@@ -302,6 +351,11 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
       }
     }
    }
+   // Wide-area avatar visibility culling to avoid the 100+ NPC actor draw
+   // calls when no player is nearby; ambient patrol logic still advances.
+   const away=playerPosition?
+     Math.hypot(playerPosition.x-a.x,playerPosition.z-a.z):Infinity;
+   a.actor.visible=away<65;
    if(a.speech.sprite){
     const visible=playerPosition&&
       Math.hypot(playerPosition.x-a.x,playerPosition.z-a.z)<24&&
