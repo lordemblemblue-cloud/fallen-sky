@@ -44,7 +44,7 @@ test('reject hazardous house foundations, rather than bridging water or protrudi
  const chosen=chooseTownPlots(noFloor);
  assert.ok(chosen.rejected.some(x=>x.id.startsWith('east_')));
  assert.ok(chosen.accepted.some(x=>x.id.startsWith('west_')));
- const uneven={groundAt:(x,z)=>x>20?floorY+1.5:floorY,isSolid:()=>false};
+ const uneven={groundAt:(x,z)=>x>40?floorY+1.5:floorY,isSolid:()=>false};
  assert.ok(chooseTownPlots(uneven).rejected.length>0);
  assert.equal(chooseTownPlots(mockCollision).accepted.length,9);
 });
