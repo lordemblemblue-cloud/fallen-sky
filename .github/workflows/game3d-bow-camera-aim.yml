@@ -8,6 +8,7 @@ on:
       - 'src/components/game3d/vfx/Game3DBowSpiritBird.mjs'
       - 'tests/game3d-bow-camera-aim-spirit-bird.test.mjs'
       - 'tests/game3d-bow-centre-mouse-aim.test.mjs'
+      - 'tests/game3d-bow-feedback-contract.test.mjs'
       - 'src/components/game3d/player/**'
       - 'src/components/game3d/hud/OTSAimReticle.*'
       - '.github/workflows/game3d-bow-camera-aim.yml'
@@ -19,6 +20,7 @@ on:
       - 'src/components/game3d/vfx/Game3DBowSpiritBird.mjs'
       - 'tests/game3d-bow-camera-aim-spirit-bird.test.mjs'
       - 'tests/game3d-bow-centre-mouse-aim.test.mjs'
+      - 'tests/game3d-bow-feedback-contract.test.mjs'
       - 'src/components/game3d/player/**'
       - 'src/components/game3d/hud/OTSAimReticle.*'
 permissions:
@@ -34,7 +36,7 @@ jobs:
         with:
           node-version: '22'
       - name: Verify mouse centre, visible bow reticle and modest aim framing
-        run: node --test tests/game3d-bow-centre-mouse-aim.test.mjs
+        run: node --test tests/game3d-bow-centre-mouse-aim.test.mjs tests/game3d-bow-feedback-contract.test.mjs
   bow-aim:
     runs-on: ubuntu-latest
     timeout-minutes: 15

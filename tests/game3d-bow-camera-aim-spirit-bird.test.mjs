@@ -66,7 +66,7 @@ test('the verified damage path is separate from reticle and bird visuals',()=>{
  const vfx=read('src/components/game3d/vfx/Game3DBowSpiritBird.mjs');
  assert.match(world,/selectCameraBowTarget\(\{/);
  assert.match(world,/activeWeaponPath==='ranged' && aoeRadius===0/);
- assert.match(world,/if\(appliedDamage>0&&activeWeaponPath==='ranged'\)/);
+ assert.match(world,/if\(appliedDamage>0\)bowVisuals\.confirmHit\(appliedDamage\)/);
  assert.match(world,/bowVisuals\.fire/);
  assert.match(world,/bowVisuals\.dispose/);
  assert.match(world,/rangedClickAttackPressed\.current = (?:bowClick|getActiveWeaponPath\(\)==='ranged')/);
@@ -90,7 +90,7 @@ test('AI bow range covers a real archery distance without changing duel range',(
  assert.equal(selectCameraBowTarget({...args,camera:farCamera,enemies:[far]}),null);
  const world=read('src/components/game3d/GameWorld3D.jsx');
  assert.match(world,/maxRange:BOW_PVE_RANGE/);
- assert.match(world,/dispatchRogueAttack\(playerDerivedRef, strikeMultiplier, bowAimTarget\)/);
+ assert.match(world,/dispatchRogueAttack\(playerDerivedRef,\s*strikeMultiplier,\s*bowAimTarget\)/);
  assert.match(world,/isRangedClickAttack \|\| pendingSkillStrike\?\.weaponType === 'ranged'/);
 });
 test('a hittable AI root without decoded triangles gets a bounded fallback body hitbox',()=>{
@@ -137,4 +137,88 @@ test('the muzzle cannot shoot through cover even when the camera can see a targe
  const hit=selectCameraBowTarget({camera:makeCamera(),origin:fromSide,
    enemies:[ai],maxRange:40,groundMeshes:[muzzleWall]});
  assert.equal(hit,null);
+});
+
+test('every fired PvE arrow reports visible HIT or MISS, never an inherited green tracer',()=>{
+ const scene=new THREE.Scene(),visual=createGame3DBowAimVisuals({scene,container:{},showDot:false});
+ const shot={origin:{x:0,y:0,z:5},target:{x:0,y:1.3,z:0}};
+ const trace=()=>scene.children.at(-1)?.children.find(child=>child.isLine);
+ visual.fire(shot);
+ assert.equal(trace()?.material?.color?.getHex(),0xffd375);
+ visual.confirmMiss('MISS');
+ assert.equal(trace()?.material?.color?.getHex(),0xff5d65);
+ const first=visual.stats();
+ assert.equal(first.fired,1); assert.equal(first.misses,1); assert.equal(first.hits,0);
+ assert.ok(first.lastResolutionMs>=0 && Number.isFinite(first.lastResolutionMs));
+ visual.fire(shot);
+ assert.equal(trace()?.material?.color?.getHex(),0xffd375,'new arrow must start gold, not inherit old hit/miss');
+ visual.confirmHit(42);
+ assert.equal(trace()?.material?.color?.getHex(),0x81f6b1);
+ const second=visual.stats();
+ assert.equal(second.fired,2); assert.equal(second.hits,1); assert.equal(second.misses,1);
+ assert.equal(second.pending,0);
+ visual.dispose();
+ assert.equal(scene.children.length,0);
+});
+
+test('horde shot-selection uses cheap broadphase and cached actor bounds',()=>{
+ const original=THREE.Box3.prototype.setFromObject;
+ let expensiveBounds=0;
+ THREE.Box3.prototype.setFromObject=function(...args){
+   expensiveBounds++;
+   return original.apply(this,args);
+ };
+ try{
+   const centerEnemy=enemy('center-ai');
+   const farSide=Array.from({length:70},(_,i)=>enemy('outside-'+i,9+(i%12),i%10));
+   const args={...base(),maxRange:40,enemies:[...farSide,centerEnemy]};
+   for(let index=0;index<30;index++){
+     const selected=selectCameraBowTarget(args);
+     assert.equal(selected?.target,centerEnemy);
+   }
+   assert.ok(expensiveBounds<=3,
+     'each shot must not traverse 70+ detailed FBX trees for hitbox bounds');
+ }finally{
+   THREE.Box3.prototype.setFromObject=original;
+ }
+});
+
+test('boss/rogue outcomes are explicit and the projectile is created before strike resolution',()=>{
+ const world=read('src/components/game3d/GameWorld3D.jsx');
+ const bridge=read('src/components/game3d/rogueAttackBridge.jsx');
+ const vfx=read('src/components/game3d/vfx/Game3DBowSpiritBird.mjs');
+ assert.ok(world.indexOf('bowVisuals.fire({origin:model.position')<
+   world.indexOf('attackConsumedByPriorityTarget=dispatchRogueAttack('),
+   'shot tracer must exist when bridge verifies boss/rogue damage');
+ assert.match(world,/game3dVerifiedBowMiss/);
+ assert.match(world,/bowVisuals\.confirmMiss\('MISS'\)/);
+ assert.match(world,/bowVisuals\.confirmMiss\(strike\.kind==='dodge'\?'DODGED':'MISS'\)/);
+ assert.match(bridge,/game3dVerifiedBowMiss/);
+ assert.match(bridge,/game3dVerifiedBowHit/);
+ assert.match(bridge,/damage:applied/);
+ assert.match(vfx,/game3dBowResult/);
+ assert.match(vfx,/const shotStats=\{fired:0,hits:0,misses:0,lastResolutionMs:null\}/);
+});
+
+test('rapid fire reuses six GPU objects instead of allocating new meshes per arrow',()=>{
+ const scene=new THREE.Scene();
+ const visuals=createGame3DBowAimVisuals({scene,container:{},showDot:false});
+ const origin={x:0,y:0,z:5};
+ const target={x:0,y:1,z:-5};
+ visuals.fire({origin,target});
+ const firstRoot=scene.children[0];
+ const firstLine=firstRoot.children.find(child=>child.isLine);
+ const firstLineGeometry=firstLine.geometry;
+ for(let frame=0;frame<16;frame++)visuals.update(.08,{active:true});
+ assert.equal(scene.children.length,0);
+ visuals.fire({origin,target:{x:.3,y:1,z:-7}});
+ assert.equal(scene.children[0],firstRoot,'expired tracer group should be recycled');
+ assert.equal(scene.children[0].children.find(child=>child.isLine).geometry,firstLineGeometry,
+   'the same GPU vertex buffer must be updated, not replaced');
+ for(let i=0;i<50;i++)visuals.fire({origin,target:{x:(i%3)*.1,y:1,z:-5}});
+ assert.ok(scene.children.length<=6);
+ const before=visuals.stats();
+ assert.equal(before.fired,52);
+ visuals.dispose();
+ assert.equal(scene.children.length,0,'all pooled and active geometry is disposed');
 });
