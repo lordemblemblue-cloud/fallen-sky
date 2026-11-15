@@ -301,9 +301,9 @@ export default function JadeSoulHUD({
 
   return (
     <div className="jade-hud" data-testid="game3d-jade-default-hud" data-service-mode={serviceMode ? 'true' : 'false'}>
-      <div className="jade-status" aria-label="Character status">
-        <div className="jade-status-portrait" aria-hidden="true" />
-      </div>
+      {/* Clone HUD has no ornamental top-left circle. Retain the status anchor
+          for Services layout measurements without mounting a visible portrait. */}
+      <div className="jade-status" aria-label="Character status" />
 
       {/* Original HP and Will tanks, relocated directly above the EXP rail. */}
       <div className="jade-status-bars">
