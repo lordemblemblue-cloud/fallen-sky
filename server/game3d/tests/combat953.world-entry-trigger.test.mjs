@@ -19,7 +19,7 @@ export const CLIENT_WORLD_ENTRY_PATHS_953=Object.freeze([
 export function eventPaths953(workflow,event){
   if(typeof workflow!=='string'||!['pull_request','push'].includes(event))
     return [];
-  const header = new RegExp('^  '+event+':\\s*;
+  const header = new RegExp('^  '+event+':\\s*$','m');
   const hit=header.exec(workflow);
   if(!hit)return [];
   const rest=workflow.slice(hit.index+hit[0].length);
