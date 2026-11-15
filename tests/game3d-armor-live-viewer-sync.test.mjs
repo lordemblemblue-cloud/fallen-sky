@@ -71,6 +71,9 @@ test('the first game frame and Character/Appearance/roster viewers share equippe
  assert.match(world,/game3dArmorRenderStatus/);
  assert.match(bridge,/subscribeAXEEquipmentInventory/);
  assert.match(bridge,/game3d_armor_visual_warnings/);
+ assert.match(bridge,/const unrenderableSlots=new Set/);
+ assert.match(bridge,/delete safeSelection\[slot\]/);
+ assert.match(bridge,/const safeAppearance=unrenderableSlots\.size/);
  assert.match(runtime,/game3dArmorRenderStatus/);
  assert.match(viewer,/const config = useGameAvatar\(\)/);
  assert.match(viewer,/<CreatorStage/);
