@@ -42,7 +42,7 @@ export const CLONE_TOWN_CITIZENS=Object.freeze([
 export function inTownBuildablePlot(h,{
   treeX=TREE.x,treeZ=TREE.z,
   maxX=T.width/2-5,maxZ=T.depth/2-5,
-  centerCorridorHalfWidth:17,
+  centerCorridorHalfWidth=17,
 }={}){
  if(!h||![h.x,h.z,h.w,h.d].every(Number.isFinite)||h.w<7||h.d<7)return false;
  if(Math.abs(h.x)+h.w/2>maxX||Math.abs(h.z)+h.d/2>maxZ)return false;
