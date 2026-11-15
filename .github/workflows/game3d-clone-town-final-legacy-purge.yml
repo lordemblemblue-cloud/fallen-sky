@@ -4,12 +4,14 @@ on:
     paths:
       - 'src/components/game3d/wolfveil/WolfveilTownLegacyMeshPurge.mjs'
       - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
       - 'tests/game3d-clone-town-final-legacy-purge.test.mjs'
       - '.github/workflows/game3d-clone-town-final-legacy-purge.yml'
   push:
     paths:
       - 'src/components/game3d/wolfveil/WolfveilTownLegacyMeshPurge.mjs'
       - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
       - 'tests/game3d-clone-town-final-legacy-purge.test.mjs'
 permissions:
   contents: read
