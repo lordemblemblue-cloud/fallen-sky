@@ -63,9 +63,14 @@ export function sanitizeFactionThreeNativeClips(root, clips=[], definition={}) {
       const targetName=String(track.name||'').slice(0,String(track.name||'').lastIndexOf('.'));
       const prop=trackProperty(track);
       if(helperName(targetName)||helperName(node?.name))return false;
-      if(node && !node.isBone) return false;
+      // Non-bone spatial controls are not allowed to drive the mount rig.
+      // Preserve non-transform morph weights on the original visual mesh.
+      if(node&&!node.isBone&&['position','quaternion','scale'].includes(prop))
+        return false;
       if(prop==='position'||prop==='scale'){
-        if(!node||node===root||classifyFactionThreeBone(node.name))return false;
+        if(node===root||classifyFactionThreeBone(node?.name))return false;
+        if(!node&&/(?:root|armature|scene|tail|wing)/i.test(targetName))
+          return false;
       }
       return true;
     }).map(track=>track.clone());
