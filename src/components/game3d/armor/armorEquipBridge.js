@@ -141,7 +141,20 @@ export function useArmoredAppearance(appearance, characterId) {
     );
   },[appearance?.selected_assets,equipped,inventoryWorn]);
   return useMemo(() => {
-    const result=withEquippedArmor(appearance,resolved,pieces);
+    // When someone equips a piece without a fitted model, do not show the
+    // PREVIOUS set's old creator asset as though it were the new equipment.
+    // Clean only old inventory-pack visuals, never custom creator cosmetics.
+    const unrenderableSlots=new Set(Object.entries(inventoryWorn)
+      .filter(([slot,id])=>Boolean(id)&&
+        !pieces.some(piece=>piece.slot===slot&&piece.id===id))
+      .map(([slot])=>slot));
+    const safeSelection={...(appearance.selected_assets||{})};
+    for(const slot of unrenderableSlots)
+      if(PACK_SET_IDS.some(set=>String(safeSelection[slot]||'').startsWith(set+'_')))
+        delete safeSelection[slot];
+    const safeAppearance=unrenderableSlots.size
+      ?{...appearance,selected_assets:safeSelection}:appearance;
+    const result=withEquippedArmor(safeAppearance,resolved,pieces);
     // The inventory owns the equipment. If a GLB was never authored for a
     // particular armor set/body, report that specific gap instead of silently
     // showing an unchanged character in the world and every 3D viewer.
