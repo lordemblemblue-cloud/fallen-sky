@@ -68,6 +68,8 @@ test('Three.js houses, 4 guard patrols, merchants and non-combat sprites attach 
  assert.equal(town.report.guards,5); // four patrols and the longhouse warden
  assert.equal(town.report.citizens,13);
  assert.equal(town.report.shops,6);
+ assert.equal(town.report.rejected.length,0);
+ assert.equal(typeof town.report.architectureBatched,'boolean');
  assert.equal(scene.children.length,1);
  assert.equal(town.root.children.filter(n=>n.name.startsWith('CloneTownHouse_')).length,9);
  assert.equal(town.root.children.filter(n=>n.name.startsWith('CloneTownNPC_')).length,13);
@@ -95,6 +97,8 @@ test('clone world hooks town updates, E interaction, legitimate handoff, and cle
  assert.ok(importer.indexOf('collision=bakeWolfveilTownCollision')<
    importer.indexOf('buildWolfveilTownLivingQuarter(root'));
  assert.match(importer,/livingQuarter\?\.resolveCollision/);
+ assert.match(source('src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'),/mergeGeometries/);
+ assert.match(source('src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'),/pendingReply/);
  assert.match(importer,/livingQuarter\?\.dispose/);
  assert.match(importer,/nearestResident\(position\)/);
  assert.match(world,/importedSpawnTown\?\.nearestResident\(model\.position\)/);
