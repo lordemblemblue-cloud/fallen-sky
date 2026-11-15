@@ -12,6 +12,7 @@ import {critiqueAndEnhanceWolfveilTown,buildWolfveilTownCanopyDressing} from './
 import {clearWolfveilImportedTownInterior} from './WolfveilImportedTownInteriorClearance.mjs';
 import {clearWolfveilTownCenterRisers} from './WolfveilTownCenterRiserRemoval.mjs';
 import {purgeWolfveilTownLegacyStructures} from './WolfveilTownLegacyMeshPurge.mjs';
+import {buildWolfveilTownLivingQuarter} from './WolfveilTownLivingQuarterScene.mjs';
 export const DEFAULT_WOLFVEIL_TOWN_ASSET='https://media.base44.com/files/public/6ab42219a52fd34656a53b37/461493b8c_game3d_town_assembled.glb';
 
 // How each mesh of the model takes part in collision, by its Blender name.
@@ -96,13 +97,13 @@ export function installWolfveilImportedTown(scene,{url=DEFAULT_WOLFVEIL_TOWN_ASS
      minX:p.x-p.width/2-2,maxX:p.x+p.width/2+2,
      minZ:p.z+70-p.depth/2-2,maxZ:p.z+70+p.depth/2+2,
      circles:plazaTreeClearOfHouses?[WOLFVEIL_IMPORTED_TOWN_TREE]:[]});
-   // The owner explicitly requested an EMPTY town interior. Do not re-create
-   // the procedural nine-house living quarter AFTER the imported wall purge:
-   // that was reintroducing buildings and their collision every time.
-   // Independent quest NPCs, town tree, perimeter and actual walking floor
-   // are not part of this housing system.
-   root.userData.cloneTownLivingQuarter={houses:0,guards:0,
-     state:'disabled_for_owner_empty_town'};
+   // Preserve the patrolling town NPCs, but do not re-create any buildings,
+   // pitched roofs, house collision, or stair footings after the purge.
+   livingQuarter=buildWolfveilTownLivingQuarter(root,{
+     collision,architectureEnabled:false,onStatus:report=>{
+       root.userData.cloneTownLivingQuarter=report;
+     },
+   });
    model=town;emit('ready');onReady?.();
  },undefined,error=>{if(active){emit('error',error?.message||'Asset network error');globalThis.console?.warn('[Game 3D town] GLB load failed; Wolfveil remains walkable',error);}});
  return {root,get status(){return state;},get model(){return model;},
