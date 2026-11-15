@@ -243,9 +243,14 @@ function slideAgainstHouses(plots,position,previous,pad){
  * Each accepted house is an explicit 3D mesh with bounded collision. NPC
  * motion and dialogue are purely client presentation; rewards never minted.
  */
-export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
+export function buildWolfveilTownLivingQuarter(parent,{
+  collision,onStatus,architectureEnabled=true,
+}={}){
  if(!parent||!collision)return null;
- const layout=chooseTownPlots(collision);
+ // Clean-town mode preserves patrol guards/dialogue, but prevents every
+ // procedural house, wall, roof, footing and house collider from spawning.
+ const planned=chooseTownPlots(collision);
+ const layout=architectureEnabled?planned:{...planned,accepted:[]};
  const root=new THREE.Group();root.name='CloneTown_LivingQuarter';
  parent.add(root);
  const materials={
@@ -293,6 +298,7 @@ export function buildWolfveilTownLivingQuarter(parent,{collision,onStatus}={}){
  const placed=layout.accepted.length;
  const report={plannedHouses:CLONE_TOWN_HOUSES.length,houses:placed,
    architectureBatched,
+   architectureEnabled,
    shops:layout.accepted.filter(h=>h.role==='shop').length,
    citizens:agents.length,guards:agents.filter(a=>a.role==='guard').length,
    rejected:layout.rejected};
