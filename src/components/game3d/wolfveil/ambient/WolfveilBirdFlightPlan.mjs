@@ -16,7 +16,7 @@ export function birdRandom(seed=0xB1D05){let s=seed>>>0;return()=>{
 export function birdBudget(quality='medium',frameMs=16.7,mobile=false){
  const p=BIRD_QUALITY[quality]??BIRD_QUALITY.medium;
  // At 35 FPS, shed detail before touching terrain, quests or combat assets.
- const load=mobile?.72:1;
+ const load=mobile?0.72:1;
  const fps=finite(frameMs)&&frameMs>28?clamp(28/frameMs,.35,1):1;
  return {near:Math.max(2,Math.floor(p.near*load*fps)),
    far:Math.max(4,Math.floor(p.far*load*fps)),maxNear:p.near,maxFar:p.far};
@@ -24,7 +24,7 @@ export function birdBudget(quality='medium',frameMs=16.7,mobile=false){
 export function makeBird(index,center,terrainY,random){
  const a=random()*TAU,r=35+random()*110;
  const x=center.x+Math.cos(a)*r,z=center.z+Math.sin(a)*r;
- const y=(terrainY(x,z)??center.y??0)+12+random()*15;
+ const y=(terrainY(x,z)??center.y??0)+24+random()*9;
  return {id:index,x,y,z,heading:a+Math.PI*.5,
    phase:random()*TAU,speed:2.8+random()*2.5,
    mode:'flight',time:0,flightFor:7+random()*11,
@@ -67,7 +67,7 @@ export function advanceBird(b,dt,{
    b.x+=(Math.cos(b.heading)*b.speed+windX*.035)*step;
    b.z+=(Math.sin(b.heading)*b.speed+windZ*.035)*step;
    const floor=typeof terrainY==='function'?terrainY(b.x,b.z):null;
-   const targetY=(finite(floor)?floor:b.flightY-18)+15+
+   const targetY=(finite(floor)?floor:b.flightY-25)+23+
      4*Math.sin(b.phase+b.time*.29);
    b.y+=(targetY-b.y)*Math.min(1,step*.85);
    if(b.time>=b.flightFor){
@@ -99,7 +99,7 @@ export function advanceBird(b,dt,{
      b.mode='flight';b.time=0;b.target=null;
    }
  }
- b.wing=b.mode==='landed'?.025:
-   (b.mode==='descending'?.48:b.mode==='takeoff'?.85:.62);
+ b.wing=b.mode==='landed'?0.025:
+   (b.mode==='descending'?0.48:b.mode==='takeoff'?0.85:0.62);
  return b;
 }
