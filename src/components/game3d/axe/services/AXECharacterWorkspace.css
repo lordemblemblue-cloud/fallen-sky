@@ -332,3 +332,121 @@
     overflow:visible;flex:0 0 auto;
   }
 }
+
+
+/* 2026-11-15 clone attribute preview.
+ * A single existing glass surface holds the whole Character sheet. Profile,
+ * control rows, and preview are unboxed, with an even split and fading rules. */
+.axe-char-root .axe-char-live-stats {container-type:inline-size;}
+.axe-char-root .axe-char-live-stats .axe-app-card-content {padding:9px clamp(9px,1.05vw,16px) 13px;}
+.axe-char-root .axe-char-profile {
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;
+  margin:0 0 12px;padding:1px 0 11px;position:relative;
+}
+.axe-char-root .axe-char-profile::after {
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(to right,transparent,rgba(237,208,155,.7),transparent);
+}
+.axe-char-root .axe-char-profile>div {
+  min-width:0;padding:3px 9px;display:flex;flex-direction:column;gap:3px;
+  border:0;border-radius:0;background:transparent;box-shadow:none;
+}
+.axe-char-root .axe-char-profile>div:not(:first-child) {border-left:1px solid rgba(237,208,155,.32);}
+.axe-char-root .axe-char-profile span {font-size:clamp(9px,.74vw,11px);letter-spacing:.01em;}
+.axe-char-root .axe-char-profile strong {font-size:clamp(11px,.91vw,14px);}
+.axe-char-root .axe-char-attribute-split {
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:clamp(12px,1.25vw,20px);position:relative;min-width:0;
+  align-items:start;margin:5px 0 9px;
+}
+.axe-char-root .axe-char-attribute-split::before {
+  content:'';position:absolute;top:1px;bottom:0;left:50%;width:1px;
+  transform:translateX(-.5px);pointer-events:none;
+  background:linear-gradient(to bottom,transparent,rgba(244,213,158,.73) 15%,rgba(244,213,158,.73) 85%,transparent);
+}
+.axe-char-root .axe-char-allocation-section {margin:0;min-width:0;}
+.axe-char-root .axe-char-alloc-heading {min-height:30px;align-items:center;gap:3px;}
+.axe-char-root .axe-char-alloc-heading .axe-char-section-title {margin:3px 0;font-size:clamp(12px,.92vw,14px);}
+.axe-char-root .axe-char-alloc-heading small {font-size:10px;white-space:normal;text-align:right;}
+.axe-char-root .axe-char-primary-stats {display:flex;flex-direction:column;gap:2px;margin-top:7px;}
+.axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute {
+  display:grid;grid-template-columns:minmax(58px,1fr) 29px auto;
+  column-gap:3px;row-gap:0;align-items:center;min-height:41px;
+  padding:5px 0 6px;border:0;border-bottom:1px solid rgba(233,202,150,.19);
+  border-radius:0;background:transparent;box-shadow:none;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute--selected {
+  background:linear-gradient(to right,rgba(234,191,108,.17),rgba(234,191,108,.05),transparent);
+  border-bottom-color:rgba(244,206,138,.67);
+}
+.axe-char-root .axe-char-attribute-select {
+  min-width:0;display:flex;align-items:center;gap:4px;padding:4px 0;
+  border:0;background:transparent;box-shadow:none;color:#f6e5c9;
+  text-align:left;font:600 clamp(10px,.75vw,12px)/1.15 Georgia,serif;cursor:pointer;
+}
+.axe-char-root .axe-char-attribute-select svg {color:#f1cb88;flex:none;}
+.axe-char-root .axe-char-attribute-select span {overflow:hidden;text-overflow:ellipsis;}
+.axe-char-root .axe-char-attribute-select:focus-visible {outline:2px solid #f1d19c;outline-offset:2px;}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-total {
+  min-width:0;min-height:0;padding:1px;text-align:center;
+  border:0;border-radius:0;background:none;box-shadow:none;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons {
+  min-width:0;gap:2px;justify-content:flex-end;display:flex;flex-wrap:nowrap;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons button {
+  min-width:20px;min-height:25px;padding:4px 2px;
+  font-size:clamp(9px,.61vw,10px);border-color:rgba(232,197,136,.49);
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons button:last-child {
+  min-width:29px;
+}
+.axe-char-root .axe-char-preview {min-width:0;padding-left:1px;}
+.axe-char-root .axe-char-preview .axe-char-section-title {
+  display:flex;align-items:center;gap:7px;margin:3px 0 6px;font-size:clamp(12px,.96vw,15px);
+}
+.axe-char-root .axe-char-preview .axe-char-section-title svg {color:#f3d397;flex-shrink:0;}
+.axe-char-root .axe-char-preview-subtitle {
+  display:inline-block;margin:2px 0 8px;color:#f0d5a7;
+  font:600 10px/1.4 Georgia,serif;letter-spacing:.01em;
+}
+.axe-char-root .axe-char-preview-list {display:flex;flex-direction:column;gap:0;}
+.axe-char-root .axe-char-preview-stat {
+  display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;
+  column-gap:5px;padding:5px 1px;border-bottom:1px solid rgba(241,210,155,.21);
+  font:11px/1.2 Georgia,serif;
+}
+.axe-char-root .axe-char-preview-stat span {min-width:0;color:#e5ddce;overflow-wrap:anywhere;}
+.axe-char-root .axe-char-preview-stat strong {color:#a6f4c6;white-space:nowrap;font-size:11px;}
+.axe-char-root .axe-char-preview-stat small {grid-column:1/-1;text-align:right;color:#c4e7cf;font:10px/1.25 Georgia,serif;margin-top:2px;}
+.axe-char-root .axe-char-preview-empty {color:#e0d6c8;font:11px Georgia,serif;}
+.axe-char-root .axe-char-preview-note {margin:11px 0 6px;color:#dfd5c6;font:10px/1.35 Georgia,serif;}
+.axe-char-root .axe-char-section-divider {
+  width:100%;height:1px;margin:10px 0;
+  background:linear-gradient(to right,transparent,rgba(241,205,142,.69),transparent);
+}
+.axe-char-root .axe-char-allocation-footer {
+  display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;
+  padding:4px 0 5px;margin:0 0 8px;border:0;gap:6px;
+}
+.axe-char-root .axe-char-allocation-footer span {font-size:10px;margin-right:auto;}
+.axe-char-root .axe-char-allocation-footer button {font-size:11px;padding:6px 9px;}
+/* On narrow in-game viewports, preserve usable controls instead of letting two
+ * 50% columns overflow; keep the split at desktop sizes as designed. */
+@container (max-width: 555px) {
+  .axe-char-root .axe-char-attribute-split {grid-template-columns:minmax(0,1fr);gap:12px;}
+  .axe-char-root .axe-char-attribute-split::before {display:none;}
+  .axe-char-root .axe-char-preview {
+    padding-top:9px;border-top:1px solid rgba(239,202,145,.4);
+  }
+  .axe-char-root .axe-char-primary-stats .axe-char-inline-attribute {min-height:39px;}
+  .axe-char-root .axe-char-profile>div {padding:3px 5px;}
+}
+@container (max-width: 350px) {
+  .axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute {
+    grid-template-columns:minmax(0,1fr) 34px;row-gap:2px;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons {
+    grid-column:1/-1;justify-content:flex-start;
+  }
+}
