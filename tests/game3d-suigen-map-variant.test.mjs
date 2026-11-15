@@ -3,22 +3,26 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
   WORLD_VARIANT_CLASSIC,WORLD_VARIANT_SUIGEN,
-  WORLD_VARIANT_STORAGE_KEY,SUIGEN_ASSET_PARTS,SUIGEN_WORLD_METADATA,
+  WORLD_VARIANT_STORAGE_KEY,WORLD_VARIANT_LEGACY_STORAGE_KEY,
+  SUIGEN_ASSET_PARTS,SUIGEN_WORLD_METADATA,
   readWolfveilWorldVariant,saveWolfveilWorldVariant,
 } from '../src/components/game3d/worlds/WolfveilWorldVariants.mjs';
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('Suigen defaults and the Classic fallback persists without mutating a character',()=>{
+test('Classic is restored by default without mutating existing characters or the archived map',()=>{
   const data=new Map();
   const storage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};
   data.set('game3d_saved_character','unchanged');
-  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_SUIGEN);
+  data.set(WORLD_VARIANT_LEGACY_STORAGE_KEY,'suigen');
+  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
   assert.equal(saveWolfveilWorldVariant('classic',storage),WORLD_VARIANT_CLASSIC);
   assert.equal(data.get(WORLD_VARIANT_STORAGE_KEY),'classic');
   assert.equal(data.get('game3d_saved_character'),'unchanged');
   assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_CLASSIC);
-  assert.equal(saveWolfveilWorldVariant('bad-value',storage),WORLD_VARIANT_SUIGEN);
+  assert.equal(saveWolfveilWorldVariant('suigen',storage),WORLD_VARIANT_SUIGEN);
+  assert.equal(readWolfveilWorldVariant(storage),WORLD_VARIANT_SUIGEN);
+  assert.equal(saveWolfveilWorldVariant('bad-value',storage),WORLD_VARIANT_CLASSIC);
 });
 
 test('Original 2400m GLB geometry is distributed across two registered URLs',()=>{
@@ -36,8 +40,8 @@ test('Original 2400m GLB geometry is distributed across two registered URLs',()=
 
 test('Escape Graphics settings expose both maps and persist changes',()=>{
   const menu=read('src/components/game3d/PauseMenu.jsx');
-  for(const expected of ['label="World map"','Dominion of Suigen · New',
-    'Wolfveil · Classic Backup','saveWolfveilWorldVariant(next)',
+  for(const expected of ['label="World map"','Dominion of Suigen · Archive',
+    'Classic Wolfveil · Main Map','saveWolfveilWorldVariant(next)',
     'WORLD_VARIANT_EVENT','WORLD_VARIANT_STATUS_EVENT'])assert(menu.includes(expected),expected);
 });
 
