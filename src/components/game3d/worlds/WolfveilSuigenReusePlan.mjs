@@ -19,6 +19,11 @@ export const WOLFVEIL_SUIGEN_REUSE_TYPES=Object.freeze({
 // existing gameplay POIs and current playable boundaries at runtime.
 // No permanent edit is made to any of the tile-ownership or terrain systems.
 export const WOLFVEIL_SUIGEN_REUSE_PLACEMENTS=Object.freeze([
+  // Near the western woodland route so source art can actually be seen.
+  {id:'cherry-woodland-01',type:'CherryTree',x:-260,z:205,scale:.70,yaw:1.82},
+  {id:'maple-woodland-01',type:'MapleTree',x:-255,z:270,scale:.69,yaw:2.34},
+  {id:'moss-woodland-01',type:'MossRock',x:-242,z:218,scale:.71,yaw:1.37},
+  {id:'bamboo-east-grove',type:'Bamboo',x:285,z:160,scale:.66,yaw:1.64},
   {id:'cherry-nw-01',type:'CherryTree',x:-464,z:287,scale:.66,yaw:.45},
   {id:'cherry-nw-02',type:'CherryTree',x:-414,z:405,scale:.73,yaw:2.15},
   {id:'cherry-east-01',type:'CherryTree',x:465,z:235,scale:.69,yaw:1.65},
