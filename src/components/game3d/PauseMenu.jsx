@@ -427,14 +427,15 @@ export default function PauseMenu({
               {view==='graphics'&&<div className="axe3d-pause__settings-grid">
                 <div className="axe3d-pause__surface" data-testid="game3d-world-variant-settings">
                   <OptionButtons label="World map" value={worldVariant}
-                    items={[{id:'suigen',text:'Dominion of Suigen · New'},
-                      {id:'classic',text:'Wolfveil · Classic Backup'}]}
+                    items={[{id:'classic',text:'Classic Wolfveil · Main Map'},
+                      {id:'suigen',text:'Dominion of Suigen · Archive'}]}
                     onPick={changeWorldVariant}/>
                   <p className="axe3d-pause__help">
-                    Select the upgraded 2,400 m Dominion map, or return to the
-                    unchanged classic Wolfveil environment at any time.
-                    Your saved character, equipment and quest progress are retained.
-                    The new environment loads before the old one is hidden.
+                    Classic Wolfveil is the main world again, with selected
+                    original Suigen cherry, oak, maple, bamboo and stone assets
+                    added to its existing landscape. The full 2,400 m Dominion
+                    remains a separate optional world you can revisit. Your
+                    saved character, equipment and quest progress are retained.
                   </p>
                   {worldVariantError&&<p role="alert" className="axe3d-pause__help">
                     Dominion load failed. Classic Wolfveil is still available: {worldVariantError}
