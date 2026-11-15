@@ -73,3 +73,31 @@
   .game3d-view .game3d-world-chat{bottom:126px;}
   .game3d-view .game3d-world-chat .game3d-chat-messages{max-height:48px;}
 }
+
+/* Native Game 3D HUD: align chat bottom with the ACTUAL XP rail baseline,
+   rather than the old elevated chat dock. Keep the sizing and game state intact. */
+.game3d-view { --axe-hud-xp-bottom:clamp(26px,4.8vh,48px); }
+.game3d-view .jade-xp,
+.game3d-view .game3d-world-chat { bottom:var(--axe-hud-xp-bottom); }
+@media(max-width:1180px){ .game3d-view { --axe-hud-xp-bottom:27px; } }
+@media(max-width:860px){ .game3d-view { --axe-hud-xp-bottom:15px; } }
+@media(max-width:620px){ .game3d-view { --axe-hud-xp-bottom:13px; } }
+@media(max-height:540px){ .game3d-view { --axe-hud-xp-bottom:11px; } }
+
+/* Three small launchers sit in a single left-to-right row ABOVE the Questbook.
+   Their existing click handlers, modals and suppression controls are unchanged. */
+.game3d-view[data-services-open] .axe-echo-launch,
+.game3d-view[data-services-open] .axe-chronicle-vault-launch,
+.game3d-view[data-services-open] .axe-minigames-launch {
+  top:calc(var(--axe-quest-top) - var(--axe-hud-launcher-size) - 8px);
+  right:auto;bottom:auto;
+}
+.game3d-view[data-services-open] .axe-echo-launch {
+  left:var(--axe-quest-left);
+}
+.game3d-view[data-services-open] .axe-chronicle-vault-launch {
+  left:calc(var(--axe-quest-left) + var(--axe-hud-launcher-size) + 7px);
+}
+.game3d-view[data-services-open] .axe-minigames-launch {
+  left:calc(var(--axe-quest-left) + 2 * (var(--axe-hud-launcher-size) + 7px));
+}
