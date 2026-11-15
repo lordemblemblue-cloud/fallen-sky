@@ -149,6 +149,7 @@ import {createWolfveilVillage} from './wolfveil/WolfveilScene';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {loadSuigenWorld} from './worlds/loadSuigenWorld.mjs';
+import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
 import {readWolfveilWorldVariant,saveWolfveilWorldVariant,
   normalizeWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,WORLD_VARIANT_SUIGEN,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
@@ -159,6 +160,7 @@ import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTo
 import {createWolfveilLivingMeadow} from './wolfveil/WolfveilLivingMeadow';
 import {createWolfveilLivingSumiEMaterials} from './wolfveil/WolfveilLivingSumiEMaterials.mjs';
 import { insideWolfveilClientGround } from './wolfveil/WolfveilTravelSafety.mjs';
+import {wolfveilIsProtectedSWTile} from './wolfveil/WolfveilSWQuarterQuality.mjs';
 import { findWorkflowSpawn } from './workflow/workflowDestinations.mjs';
 import { initialPlayerAnimationClips, loadPlayerAnimationClips } from './player/playerAnimationLibrary';
 import { syncFusedLocomotion } from './player/fusedLocomotionSync';
@@ -778,12 +780,51 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let suigenRuntime=null,suigenLoadPromise=null;
     let worldMapSwitchNumber=0,worldMapUnloaded=false;
     const worldMapAbort=new AbortController();
+
+    // Genuine source trees, bamboo and boulders are now SMALL isolated GLB
+    // prefabs on Classic Wolfveil. Never import Suigen's 2400m terrain into
+    // this display mode. Collision, quests, roads and player saves unchanged.
+    let classicSuigenAccents=null,classicSuigenAccentPromise=null;
+    const classicAccentAbort=new AbortController();
+    const ensureClassicSuigenAccents=()=>{
+      if(worldMapUnloaded||region!=='wolfveil'||!wolfveilVillage)return;
+      if(classicSuigenAccents||classicSuigenAccentPromise)return;
+      classicSuigenAccentPromise=loadClassicWolfveilSuigenAccents({
+        scene,signal:classicAccentAbort.signal,
+        // Classic village includes the actual +70m map placement and
+        // authoritative style terrain grading, unlike imported Suigen.
+        sampleGroundY:(x,z)=>wolfveilVillage.worldHeight(x,z),
+        insideTravel:insideWolfveilClientGround,
+        routeDistance:wolfveilRouteClearance,
+        riverDistance:wolfveilDistanceToRiver,
+        protectedTile:wolfveilIsProtectedSWTile,
+        insideTown:insideWolfveilImportedTown,
+        nearGameplaySite:(x,z,radius)=>
+          isVortexLakeWetSurface(x,z-70,radius+10)||
+          Object.values(WOLFVEIL_SITES).some(site=>
+            Math.hypot(x-site.x,z-(site.z+70))<radius+18),
+      }).then(layer=>{
+        if(worldMapUnloaded){layer.dispose();return;}
+        classicSuigenAccents=layer;
+        layer.setVisible(!suigenActive);
+        window.dispatchEvent(new CustomEvent('game3dClassicSuigenAssetsReady',
+          {detail:layer.status}));
+      }).catch(error=>{
+        // Cosmetic network failure MUST NOT stop Classic Wolfveil or
+        // replace the original trees with blank terrain.
+        if(!worldMapUnloaded)
+          console.warn('[Game3D Classic] Suigen accent pack unavailable; existing landscape retained.',error);
+        classicSuigenAccentPromise=null;
+      });
+    };
     const showClassic=()=>{
       suigenActive=false;
       suigenGroundMeshes=[];
       suigenRuntime?.setVisible(false);
       for(const root of classicWorldRoots)
         root.visible=originalVisibility.get(root)??true;
+      classicSuigenAccents?.setVisible(true);
+      ensureClassicSuigenAccents();
       atomicLook?.setEnabled(readGraphicsSettings().artStyle==='atomic-ultra-sumi');
     };
     const worldVariantStatus=detail=>{
@@ -816,6 +857,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(suigenRuntime.upgradeError)
           showCombatNotice('Dominion loaded, but its new town failed to build; Classic remains available.');
         for(const root of classicWorldRoots)root.visible=false;
+        classicSuigenAccents?.setVisible(false);
         suigenActive=true;
         atomicLook?.setEnabled(false); // avoid overlapping old grass
         worldVariantStatus({variant:WORLD_VARIANT_SUIGEN,ready:true});
@@ -4505,6 +4547,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       worldMapUnloaded=true;
       worldMapSwitchNumber++;
       worldMapAbort.abort();
+      classicAccentAbort.abort();
+      classicSuigenAccents?.dispose();
+      classicSuigenAccents=null;
       townPrompt.remove();
       window.removeEventListener(WORLD_VARIANT_EVENT,onWorldVariantChange);
       suigenRuntime?.dispose();
