@@ -16,6 +16,8 @@ export const WOLFVEIL_OWNER_BIRD_ASSET=
   'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/d9fad7809_tripo_convert_bdd73c28-af44-45e3-b758-1d783314f872.glb';
 
 const noop=()=>{};
+const FLAP_AXIS=new THREE.Vector3(0,0,1);
+const FLAP_ROTATION=new THREE.Quaternion();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 function makeFarGeometry(){
@@ -65,8 +67,8 @@ function updateRig(actor,bird){
   for(const w of actor.wings){
     // Additive flap, never alter joint position/skin weights/root translation.
     w.bone.quaternion.copy(w.base);
-    w.bone.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(
-      new THREE.Vector3(0,0,1),beat*amp*w.sign));
+    w.bone.quaternion.multiply(FLAP_ROTATION.setFromAxisAngle(
+      FLAP_AXIS,beat*amp*w.sign));
   }
 }
 /** Optional visual-only wildlife system for the clone's existing Wolfveil scene.
@@ -188,8 +190,8 @@ export function createWolfveilAmbientBirds({
       item.actor.position.set(b.x,b.y,b.z);
       // Uploaded bird faces local -X, so orient that axis along travel.
       item.actor.rotation.y=Math.atan2(Math.sin(b.heading),-Math.cos(b.heading));
-      item.actor.rotation.z=b.mode==='flight'?.06*Math.sin(b.phase+elapsed):
-        b.mode==='descending'?.02:0;
+      item.actor.rotation.z=b.mode==='flight'?0.06*Math.sin(b.phase+elapsed):
+        b.mode==='descending'?0.02:0;
       updateRig(item.rig,b);
     }
     // Distant low-geometry flock, one draw call, amortized matrices.
