@@ -143,6 +143,7 @@ import {isInsideMeadowCircle,meadowGroundHeight}
 import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
+import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
 import {installWolfveilImportedTown} from './wolfveil/WolfveilImportedTownScene.mjs';
@@ -498,6 +499,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       livingInkWorld?.setLevel(resolveInkLevel());
       const g={...cloneUltraGraphics,...readGraphicsSettings()};
       atomicLook?.setQuality(g.quality||'high');
+      ambientBirds?.setQuality(g.quality||'high');
       atomicLook?.setEnabled(g.artStyle==='atomic-ultra-sumi');
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
@@ -668,6 +670,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             scene.updateMatrixWorld(true);
           },
         }) : null;
+    // Clone-only ambient wildlife: one owner bird GLB, cosmetic flight only.
+    const ambientBirds=wolfveilVillage?createWolfveilAmbientBirds({
+      scene,quality:readGraphicsSettings().quality||'high',
+      mobile:window.matchMedia?.('(pointer: coarse)')?.matches??false,
+    }):null;
     const waterContact=wolfveilVillage
       ?createGame3DWaterContact(wolfveilVillage.river.water,{originZ:70,fog:scene.fog})
       :null;
@@ -2346,6 +2353,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
+        ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         vortexLake?.update(delta,null);
         livingInkWorld?.update(delta,envSystem.getState());
         playerAnim?.updateAnimation?.(delta);
@@ -2376,6 +2384,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
       wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
+      ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       const vortexTravel=vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
@@ -4251,6 +4260,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       zombieCamps?.dispose();
       if(window.__gw3dZombieCamps===zombieCamps)window.__gw3dZombieCamps=null;
       importedSpawnTown?.dispose();
+      ambientBirds?.dispose();
       wolfveilVillage?.dispose();
       lunarGate?.dispose();
       astralGate?.dispose();
