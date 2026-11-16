@@ -41,3 +41,10 @@ export function skillMatchesBookFilter(skill,{view='skills',filter='all',search=
   const text=String(search).trim().toLowerCase();
   return !text||String(skill.skill_name+' '+(skill.description||'')).toLowerCase().includes(text);
 }
+
+// Shared presentation helper: keep all dynamic labels safe on first render.
+// Was missing from the v2 inspector and caused ReferenceError: titleize is
+// not defined as soon as a registered skill was selected.
+export function titleizeSkillStat(value){
+  return String(value??'').replaceAll('_',' ').replace(/\b\w/g,character=>character.toUpperCase());
+}
