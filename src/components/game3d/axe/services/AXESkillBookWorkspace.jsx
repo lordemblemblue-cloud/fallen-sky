@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import AXESkillBookRedesign from './AXESkillBookRedesign';
 import { BookOpen, Gem, Shield, Sparkles, Swords, WandSparkles, X } from 'lucide-react';
 import { getAllSkills, getSkillById } from '../../skills/skillRegistry';
 import { CAST_TYPE, SKILL_TYPE, WEAPON_TYPE } from '../../skills/skillTypes';
@@ -300,88 +301,18 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
   const changeView = next => { setView(next); setSelected(null); setStatus(''); };
   const chooseSkill = skill => { setSelected(skill); setStatus(''); };
 
-  return <div className="axe-skill-book-root" data-progression-panel={currentPage}>
-    <header className="axe-skill-book-header">
-      <span className="axe-skill-book-crest"><BookOpen size={30}/></span>
-      <div className="axe-skill-book-heading"><h2>Skills &amp; Services</h2>
-        <p>Damage, Range &amp; Defense weapon bars · real equipped abilities</p></div>
-      <nav className="axe-skill-book-mode" aria-label="Skills subpages">
-        {[['skills_character','Character'],['skills_companion','Companion']].map(([id,label]) =>
-          <button key={id} type="button" aria-pressed={currentPage === id}
-            onClick={() => onSelect ? onSelect(id) : setLocalPage(id)}>{label}</button>)}
-      </nav>
-      <nav className="axe-skill-book-view-nav" aria-label="Skills, buffs and advancement">
-        {['skills','buffs','advance'].map(id => <button type="button" key={id}
-          aria-pressed={view === id} onClick={() => changeView(id)}>
-          {id === 'skills' ? 'Skills' : id === 'buffs' ? 'Buffs' : 'Advance'}
-        </button>)}
-      </nav>
-      {onClose && <button type="button" data-service-close className="axe-skill-book-close"
-        onClick={onClose} aria-label="Close Skills"><X size={19}/></button>}
-    </header>
-    <div className="axe-skill-book-layout" data-weapon-slots={companion?'companion':'character'}>
-      {!companion&&<SkillBookWeaponRail items={ownedWeapons}
-        activeMode={activeMode.id} onChoose={chooseWeaponMode}/>}
-      <div className="axe-skill-book-volume">
-        <SkillBookStanceStrip companion={companion}
-          activeIndex={companion?banks.companionIndex:playerPresets.index}
-          onChoose={i=>companion?changePreset('right',i):
-            chooseWeaponMode(SKILL_BOOK_WEAPON_MODES[i].id)}
-          onSave={()=>savePreset('right')}/>
-        <div className="axe-skill-book-spread">
-          <section className="axe-skill-book-page axe-skill-book-page--left" aria-label="Buffs and passive skills">
-            <div className="axe-skill-book-page-title"><Sparkles size={17}/><h2>{view==='skills'?'Skill Details':view==='advance'?'Skill Mastery':(companion?'Support & Abilities':'Buffs & Passives')}</h2></div>
-            {view==='buffs' && <FilterBar options={companion?COMPANION_LEFT:LEFT_FILTERS} value={leftFilter}
-              onChange={x=>{setLeftFilter(x);setSelected(null);}} />}
-            {view==='buffs'&&!companion&&passiveIds.some(Boolean)&&
-              <nav className="axe-book-passive-chips" aria-label="Equipped passive skills">
-                {passiveIds.map((id,i)=>id&&<button key={i} type="button"
-                  title={'Remove '+skillLabel(getSkillById(id))}
-                  onClick={()=>removePassive(i)}>
-                  {skillLabel(getSkillById(id))}<X size={11}/></button>)}
-              </nav>}
-            <div className="axe-skill-book-page-content">
-              {view==='skills' ? <AXESkillMasteryDetail skill={currentSkill} companion={companion}/>
-                : <SkillGrid side="left" filter={view==='advance'?'advance':leftFilter} isCompanion={companion}
-                  skills={view==='advance'?advancementSkills:leftSkills} selected={currentSkill}
-                  equipped={[...activeIds,...passiveIds]} onSelect={chooseSkill} onQuickEquip={quickEquip}/>}
-
-            </div>
-          </section>
-          <div className="axe-skill-book-binding" aria-hidden="true"><Gem size={23}/></div>
-          <section className="axe-skill-book-page axe-skill-book-page--right" aria-label="Active combat skills">
-            <div className="axe-skill-book-page-title"><Swords size={19}/><h2>{view==='skills'?'Skills':view==='buffs'?'Buff Details':'Advance Details'}</h2></div>
-            {view==='skills' && <FilterBar options={companion?COMPANION_RIGHT:RIGHT_FILTERS} value={rightFilter}
-              onChange={x=>{setRightFilter(x);setSelected(null);}} />}
-            <div className="axe-skill-book-page-content">
-              {view==='skills'
-                ? <SkillGrid side="right" filter={rightFilter} isCompanion={companion}
-                    skills={rightSkills} selected={currentSkill} equipped={activeIds}
-                    onSelect={chooseSkill} onQuickEquip={quickEquip} />
-                : <AXESkillMasteryDetail skill={currentSkill} companion={companion}/>}
-
-            </div>
-          </section>
-        </div>
-        <footer className="axe-skill-book-hotbar" aria-label="Equipped skill bar">
-          <span className="axe-skill-book-hotbar-ornament"><Shield size={20}/></span>
-          <div className="axe-skill-book-hotbar-slots">
-            {activeIds.map((id,i) => <SlotButton key={i} id={id} index={i} compact
-              label={companion?COMPANION_SLOT_KEYS[i]:String(i+1)}
-              selected={!!selected && (companion||selected.skill_type!==SKILL_TYPE.PASSIVE)}
-              getSkill={companion?getCompanionSkillById:getSkillById}
-              onEquip={placeActive} onRemove={removeActive}/>)}
-          </div>
-          <span className="axe-skill-book-hotbar-ornament"><WandSparkles size={20}/></span>
-        </footer>
-      </div>
-    </div>
-    <footer className="axe-skill-book-foot">
-      <span role="status">{status || (selected
-        ? 'Selected '+skillLabel(selected)+'. Inspect mastery and equip a compatible slot.'
-        : view==='advance' ? 'Select a skill to view earned XP, level and the next upgrade.'
-        : 'Select a skill to inspect it, or double-click to equip an empty slot.')}</span>
-      <span>{currentSkill && <><strong>{skillLabel(currentSkill)}</strong> · {currentSkill.description}</>}</span>
-    </footer>
-  </div>;
+  // Keep the existing combat data, loadout presets, weapon inventory and
+  // equip methods authoritative. Only the view has been replaced.
+  return <AXESkillBookRedesign
+    currentPage={currentPage} companion={companion}
+    onPageChange={id=>onSelect?onSelect(id):setLocalPage(id)}
+    view={view} onChangeView={changeView}
+    selected={currentSkill} onSelect={chooseSkill}
+    ownedWeapons={ownedWeapons} activeMode={activeMode}
+    activeIds={activeIds} passiveIds={passiveIds}
+    onQuickEquip={quickEquip} onEquipActive={placeActive}
+    onRemoveActive={removeActive} onRemovePassive={removePassive}
+    onSavePreset={()=>savePreset('right')}
+    onClose={onClose} status={status}
+  />;
 }
