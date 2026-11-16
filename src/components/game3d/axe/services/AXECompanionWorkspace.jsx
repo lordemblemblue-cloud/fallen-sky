@@ -3,20 +3,18 @@ import {Compass} from 'lucide-react';
 import AXECompanionMasteryPanel from './AXECompanionMasteryPanel';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
 import AXECompanionStylePane from './AXECompanionStylePane';
-import AXECompanionOverviewClone from './AXECompanionOverviewClone';
 import './AXECompanionCollectionPages.css';
 import './AXECompanionWorkspace.css';
 import './AXECompanionProfileRedesign.css';
 
-// My Companion leads the Equipment area. The old standalone mount-upgrade
-// destination is gone: gear belongs in Equipment, growth in the model-side panel.
+// My Companion's owned-mount roster and gear are one Equipment screen.
+// Mastery stays immediately to the right; growth is toggled above the 3D viewer.
 const TABS=['Equipment','Vanity','Imbuement'];
 const EQUIPMENT_VIEWS=[
-  {id:'profile',label:'My Companion'},
   {id:'companion',label:'Equipment'},
   {id:'mastery',label:'Mastery'},
 ];
-const equipmentViewForService=serviceId=>serviceId==='pet'?'mastery':'profile';
+const equipmentViewForService=serviceId=>serviceId==='pet'?'mastery':'companion';
 export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
   const [tab,setTab]=useState('Equipment');
   const [equipmentView,setEquipmentView]=useState(()=>equipmentViewForService(serviceId));
@@ -50,10 +48,8 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
               onClick={()=>switchView(view.id)}>{view.label}</button>)}
           </nav>
           <div className="axe-comp-equipment-content" data-equipment-section={equipmentView}>
-            {equipmentView==='profile'?<AXECompanionOverviewClone
-              onNotice={setResult} onEquipment={()=>switchView('companion')}/>
-              :equipmentView==='mastery'?<AXECompanionMasteryPanel
-                onNotice={setResult} onMyCompanion={()=>switchView('profile')}/>
+            {equipmentView==='mastery'?<AXECompanionMasteryPanel
+                onNotice={setResult} onMyCompanion={()=>switchView('companion')}/>
               :<AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>}
           </div>
         </div>:<AXECompanionStylePane page={tab} onNotice={setResult}
