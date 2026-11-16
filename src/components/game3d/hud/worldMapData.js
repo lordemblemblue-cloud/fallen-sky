@@ -12,14 +12,15 @@ import { getAXEQuestObjectives } from '../axe/quests/AXEQuestFramework';
 import { LUNAR_CAVE_CHAMBERS, LUNAR_CAVE_WATER_END } from '../dungeons/LunarCaveLayout.mjs';
 import { ASTRAL_PADS,ASTRAL_RETURN_PORTAL,ASTRAL_DUNGEON_TITLE } from '../dungeons/AstralDungeonLayout.mjs';
 import { WOLFVEIL_MAP_WORLD_BOUNDS, wolfveilMapZoneAt } from '../wolfveil/WolfveilMapDesign.mjs';
+import {WOLFVEIL_CAVE_APPROACHES} from '../wolfveil/WolfveilCaveAccessPlan.mjs';
 
 const FUTURE_WORLD = createAXEInitialWorldManifest();
 const normalize = value => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 const isForest = region => region === 'forest';
 export const MAP_SCALE = Object.freeze({
   forest: Object.freeze({ name: 'First Territory', minX: -1200, maxX: 1200, minZ: -1200, maxZ: 1200 }),
-  // The whole 1,100 m Classic Wolfveil valley (Play coordinates).
-  wolfveil: Object.freeze({ name: 'Wolfveil Valley', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
+  // Preserve the complete Wolfveil map extent while exposing cave approaches.
+  wolfveil: Object.freeze({ name: 'Wolfveil Valley · Cave Approaches', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
   'lunar-cave': Object.freeze({ name: 'Lunar Cave Dungeon', minX: -390, maxX: 390, minZ: -40, maxZ: 740 }),
   'astral-dungeon': Object.freeze({ name: ASTRAL_DUNGEON_TITLE, minX: -200, maxX: 200, minZ: -60, maxZ: 340 }),
 });
@@ -57,6 +58,17 @@ export function getMapMarkers(region) {
     x:townSpots[npc.id]?.x ?? npc.pos[0], z:townSpots[npc.id]?.z ?? npc.pos[2], live:true,
     description:'Quest giver',
   }));
+  // The four caves are actual walk-in Wolfveil destinations, not reserve
+  // portal labels. Their center coords use the same +70m world-Z as Game 3D.
+  if(region==='wolfveil'){
+    for(const access of WOLFVEIL_CAVE_APPROACHES){
+      markers.push({
+        id:'cave:'+access.caveId,name:access.label,type:'cave',
+        x:access.entrance.x,z:access.entrance.z+70,live:true,
+        description:access.trailName+' · physical walk-in descent, connected underground',
+      });
+    }
+  }
   if (!isForest(region)) return markers;
   for (const zone of ENEMY_ZONES) {
     markers.push({id:'mob:'+zone.id,name:zone.id.replace(/^axe_/,'').replaceAll('_',' '),

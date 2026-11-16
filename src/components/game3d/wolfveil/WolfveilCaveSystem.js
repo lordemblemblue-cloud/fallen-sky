@@ -15,6 +15,8 @@ import {
 } from './WolfveilCaveLayout.mjs';
 import { WOLFVEIL_CAVE_ENTRANCE_FRAMES, caveEntranceAt } from './WolfveilCaveEntrancePlan.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
+import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
+import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
 
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
@@ -289,6 +291,21 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             addHangingLantern(rx, ry + cor.ceiling * 0.78, rz, warmLanternMat, 0xffaa55);
           }
         }
+      } else if (cor.kind === 'entry' && sIdx > 0) {
+        // Ramped descent/return lanterns keep the way to daylight legible.
+        // They add no damage, loot or new movement authority.
+        const marks=Math.max(1,Math.floor(seg.lenXZ/9));
+        for(let j=1;j<=marks;j++){
+          const t=j/(marks+1),px=seg.ax+seg.dx*t,
+            py=seg.ay+seg.dy*t,pz=seg.az+seg.dz*t;
+          for(const side of [-1,1]){
+            const lx=px+nx*side*(cor.halfWidth+.35),
+              lz=pz+nz*side*(cor.halfWidth+.35);
+            addProp(boxGeo,timberMat,lx,py+.76,lz,.17,1.45,.17);
+            addProp(boxGeo,bronzeMat,lx,py+1.5,lz,.32,.17,.32);
+          }
+          addHangingLantern(px,py+cor.ceiling*.72,pz,warmLanternMat,0xffc588);
+        }
       }
       distAcc += seg.lenXZ;
     }
@@ -311,6 +328,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     }
   }
+
+  // Four real stone approach tracks; mountain/roof polygons remain SEALED.
+  // The final outdoor apron leads to the existing E-activated arch, while
+  // the internal ramp is still the only legal way down after entry.
+  const caveAccessStats=appendWolfveilCaveAccessFloor(floorTris);
+  const caveAccessProps=appendWolfveilCaveAccessProps({
+    addProp,addBrazier,stoneGeo:boxGeo,beamGeo:boxGeo,
+    stoneMat:floorMat,timberMat,bronzeMat,
+  });
 
   // 2. Cave entrances. Each rock mouth gets a jagged stone face around a genuinely
   // dark throat, boulder frames and a packed-earth apron, so the hillside reads as
@@ -713,6 +739,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     hub: WOLFVEIL_CAVE_HUB,
     corridors: WOLFVEIL_CAVE_CORRIDORS,
     navigationGraph,
+    approaches:WOLFVEIL_CAVE_APPROACHES,
+    approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
     lightAnchorCount: lightAnchors.length,
     isActive(){return activeCaveId!==null;},
     walkIn: enterFromMouth,
@@ -737,21 +765,27 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       return {action:travel.action,name:travel.name,caveId:travel.caveId};
     },
     resolveCollision(worldPos, prevWorldPos, radius = 0.62) {
-      if (!activeCaveId || !worldPos || !prevWorldPos) return false;
+      if (!worldPos || !prevWorldPos) return false;
       const localNow = { x: worldPos.x, y: worldPos.y, z: worldPos.z - offsetZ };
       const localPrev = {
-        x: prevWorldPos.x,y:prevWorldPos.y ?? worldPos.y,z:prevWorldPos.z-offsetZ,
+        x:prevWorldPos.x,y:prevWorldPos.y??worldPos.y,z:prevWorldPos.z-offsetZ,
       };
-      let hit=resolveWolfveilCaveWallCollision(localNow,localPrev,radius);
-      // Forced knockbacks/rolls may put the entire previous point at an invalid
-      // wall: never let that accidentally open a free exit under the mountain.
+      // Outside: only the actual trail's stone side rails collide. Neither
+      // raycasts nor decoration can open an unauthorized cave session.
+      const railHit=resolveWolfveilCaveEntranceRailCollision(localNow,localPrev,radius);
+      if(!activeCaveId){
+        if(railHit){worldPos.x=localNow.x;worldPos.z=localNow.z+offsetZ;}
+        return railHit;
+      }
+      let hit=resolveWolfveilCaveWallCollision(localNow,localPrev,radius)||railHit;
+      // Keep the currently authored E-required underground exit. Even a
+      // knockback from an invalid corridor point cannot pass through the
+      // solid overworld roof into daylight.
       if(!sampleWolfveilCaveSpace(localNow.x,localNow.z,radius)){
         localNow.x=localPrev.x;localNow.z=localPrev.z;
         hit=true;
       }
-      if(hit){
-        worldPos.x=localNow.x;worldPos.z=localNow.z+offsetZ;
-      }
+      if(hit){worldPos.x=localNow.x;worldPos.z=localNow.z+offsetZ;}
       return hit;
     },
     update(dt, playerWorldPos = null) {

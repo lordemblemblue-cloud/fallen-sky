@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
 import { clearOf } from './WolfveilForestLayout.js';
+import {isWolfveilCaveApproachReserved} from './WolfveilCaveAccessPlan.mjs';
 import {isVortexLakeWetSurface} from './VortexLakeLayout.mjs';
 import { buildWolfveilGrassClumpGeometry } from './WolfveilGroundCover.js';
 import {wolfveilGrassCurrent} from './WolfveilFlowPlanting.mjs';
@@ -196,6 +197,7 @@ function createGrassTile(ix, iz, count, geometry, material, ownerTile=false) {
     const x = minX + rng() * size, z = minZ + rng() * size;
     if (!isInsideMeadowCircle(x,z) || !wolfveilWestRockGrassAllowed(x,z)) continue;
     if (!wolfveilLandscapeAllowsTallGrass(x,z)) continue;
+    if(isWolfveilCaveApproachReserved(x,z,1.3))continue;
     if(isVortexLakeWetSurface(x,z,.75))continue; // no clumps through new water
     if (Math.abs(x - FIELD.centerX) < 105 && Math.abs(z - FIELD.centerZ) < 105) continue;
     if (insideOriginalWolfveilGround(x,z) && !clearOf({x,z},.28)) continue;
