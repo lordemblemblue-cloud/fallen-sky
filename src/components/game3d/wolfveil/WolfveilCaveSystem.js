@@ -284,6 +284,22 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             addHangingLantern(rx, ry + cor.ceiling * 0.78, rz, warmLanternMat, 0xffaa55);
           }
         }
+      } else if (cor.kind === 'entry' && sIdx > 0) {
+        // A readable, bidirectional DESCENT/EXIT trail: stone path remains
+        // continuous, while spaced posts and warm overhead lamps show the
+        // way back to daylight without a teleport, minimap or scripted exit.
+        const marks=Math.max(1,Math.floor(seg.lenXZ/9));
+        for(let j=1;j<=marks;j++){
+          const t=j/(marks+1),px=seg.ax+seg.dx*t,
+            py=seg.ay+seg.dy*t,pz=seg.az+seg.dz*t;
+          for(const side of [-1,1]){
+            const lx=px+nx*side*(cor.halfWidth+.35),
+              lz=pz+nz*side*(cor.halfWidth+.35);
+            addProp(boxGeo,timberMat,lx,py+.76,lz,.17,1.45,.17);
+            addProp(boxGeo,bronzeMat,lx,py+1.5,lz,.32,.17,.32);
+          }
+          addHangingLantern(px,py+cor.ceiling*.72,pz,warmLanternMat,0xffc588);
+        }
       }
       distAcc += seg.lenXZ;
     }
