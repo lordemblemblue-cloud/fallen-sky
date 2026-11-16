@@ -81,8 +81,20 @@ export function nearestWolfveilCaveApproach(x,z){
   return best;
 }
 export function isWolfveilCaveApproachReserved(x,z,padding=0){
+  if(!Number.isFinite(x)||!Number.isFinite(z))return false;
+  const extra=Math.max(0,Number(padding)||0);
   const near=nearestWolfveilCaveApproach(x,z);
-  return near?near.distance<=WOLFVEIL_CAVE_APPROACH_WIDTH/2+Math.max(0,padding):false;
+  if(near&&near.distance<=WOLFVEIL_CAVE_APPROACH_WIDTH/2+extra)return true;
+  // The last 7m of the path expands to the wider cave floor. Preserve the
+  // full side apron around the carved entrance and the seven-foot rim guard.
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+    const rx=x-cave.mouth[0],rz=z-cave.mouth[1];
+    const f=rx*cave.dir[0]+rz*cave.dir[1],
+      lateral=Math.abs(-rx*cave.dir[1]+rz*cave.dir[0]);
+    if(f>=-12&&f<=12&&lateral<=WOLFVEIL_CAVE_APRON_HALF_WIDTH+extra)
+      return true;
+  }
+  return false;
 }
 export function getWolfveilCaveApproach(caveId){
   return WOLFVEIL_CAVE_APPROACHES.find(a=>a.caveId===caveId)||null;
