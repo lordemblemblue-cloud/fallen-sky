@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {
   WOLFVEIL_CAVE_APPROACHES, WOLFVEIL_CAVE_APRON_HALF_WIDTH,
   getWolfveilCaveApproach,isWolfveilCaveApproachReserved,
+  resolveWolfveilCaveEntranceRailCollision,
 } from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 import {
   WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,
@@ -107,6 +108,26 @@ test('7-foot cave-edge guard blocks voids but not legal gradual walks on the act
     fromGroundY:15,toGroundY:null,variant:'classic'}),true);
   assert.equal(shouldRejectCaveGroundStep({from:at,to:at,
     fromGroundY:15,toGroundY:14.65,variant:'classic'}),false);
+});
+test('approach side rail stops sideways cliff slips without blocking descent or exit',()=>{
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+    const nx=-cave.dir[1],nz=cave.dir[0],
+      base={x:cave.mouth[0],z:cave.mouth[1]};
+    const at=(f,side)=>({x:base.x+cave.dir[0]*f+nx*side,
+      z:base.z+cave.dir[1]*f+nz*side});
+    const centerStart=at(-2,0),centerEnd=at(2,0);
+    assert.equal(resolveWolfveilCaveEntranceRailCollision(
+      {...centerEnd},centerStart,.62),false);
+    assert.equal(resolveWolfveilCaveEntranceRailCollision(
+      {...centerStart},centerEnd,.62),false,'walk out is permitted');
+    const outside=at(3,5.7),inside=at(3,4.1);
+    const blocked={...outside};
+    assert.equal(resolveWolfveilCaveEntranceRailCollision(blocked,inside,.62),true);
+    assert.ok(Math.hypot(blocked.x-inside.x,blocked.z-inside.z)<1e-6);
+    const far=at(-18,5.7);
+    assert.equal(resolveWolfveilCaveEntranceRailCollision(
+      {...far},at(-18,4.1),.62),false,'outside cliff is not an infinite invisible wall');
+  }
 });
 test('enclosed cave floor remains sampleable at each chamber and entrance ramp',()=>{
   for(const c of WOLFVEIL_EXPLORABLE_CAVES){
