@@ -97,6 +97,7 @@ export function CompanionGrowthPanel({mount,snapshot}) {
           {[
             ['PvE Battles','pveXp',Swords],
             ['PvP Battles','pvpXp',Shield],
+            ['Quest Rewards','questXp',Sparkles],
             ['Riding','ridingXp',Wind],
           ].map(([label,key,Icon])=><div className="axe-comp-insight-stat" key={key}>
             <Icon size={16}/><span>{label}</span><strong>{fmt(mount.sourceStats?.[key])} XP</strong>
@@ -109,7 +110,10 @@ export function CompanionGrowthPanel({mount,snapshot}) {
             </p>)
           :<p className="axe-comp-insight-footnote">No unlocked mount abilities recorded yet.</p>}
         <p className="axe-comp-insight-footnote">
-          Earn XP from eligible combat and riding. Each completed 20-level cycle unlocks
+          Your active companion gains 50% of the XP you actually receive from
+          combat (including rested XP) and quests, with fractions saved for later rewards.
+          It also earns XP through riding. Higher-level enemy rewards automatically count
+          because the companion shares your awarded XP. Each completed 20-level cycle unlocks
           a companion stat-contribution milestone: +10%, +15%, +20%, then +25%.
           Progression is read from this companion's saved experience, not granted here.
         </p>
