@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronLeft, ChevronRight, CircleHelp, Crown, Feather, Gem, Search, Shield, Sparkles, Swords, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Search, Shield, Sparkles, Swords, X } from 'lucide-react';
 import { CAST_TYPE, SKILL_TYPE } from '../../skills/skillTypes';
 import { getAllSkills, getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getAllCompanionSkills, getCompanionSkillById } from '../../skills/companionSkillRegistry';
@@ -8,25 +8,13 @@ import { getWeaponForSkillBookMode } from './SkillBookWeaponModes.mjs';
 import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMasteryStore';
 import { isWeaponSkillUnlocked, getWeaponSkillChargeBonusPct, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
+import AXESkillPathHorizontal from './AXESkillPathHorizontal';
 import {
   CLONE_SKILL_TREE_CATEGORIES, createCloneSkillTreePaths, resolveCloneSkillTreeTier,
   cloneSkillTreeIsAvailable,
 } from '../skills/AXECloneSkillTreeModel.mjs';
 import './AXECloneSkillTree.css';
 
-const tierTitles = ['Root', 'Branch', 'Mastery'];
-const displayNames = {
-  damage: {
-    single: ['Single Hit', 'Heavy Slash', 'Execution Cut'],
-    three: ['Three-Hit', 'Rising Flurry', 'Storm Flurry'],
-    aerial: ['Aerial Effect', 'Sky Burst', 'Heaven Crash'],
-  },
-};
-const passiveDescription = {
-  single: 'Focused strike damage',
-  three: 'Consecutive-hit damage',
-  aerial: 'Circular blast and aerial damage',
-};
 const formatStatName = name => name.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
 const valueAt = (skill, stat, level) => {
   const amount = scaleStat(skill, stat, level);
@@ -62,69 +50,6 @@ function TreeIcon({ kind = 'single', size = 48 }) {
       <path d="M17 52Q30 31 46 22" strokeWidth="3"/></>}
     {kind === 'burst' && <><path d="M32 3L39 23 60 32 39 39 32 61 24 39 4 32 24 24Z" strokeWidth="3"/></>}
   </svg>;
-}
-function TierConnector() {
-  return <svg className="axe-ct-connector" viewBox="0 0 200 35" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M100 0V9Q100 14 90 14H50Q43 14 43 22V31M100 9Q100 14 110 14H150Q157 14 157 22V31"
-      fill="none" stroke="#efca87" strokeWidth="1.9"/>
-    <path d="M39 27L43 33 47 27M153 27L157 33 161 27" stroke="#efca87"
-      strokeWidth="2" fill="none" strokeLinejoin="round"/>
-  </svg>;
-}
-function TreeNode({ icon, title, tier, skill, passive, locked, selected, equipped, requirement, onClick }) {
-  const mastery = skill ? getSkillMastery(skill.skill_id) : null;
-  return <button type="button" className={['axe-ct-node',selected?'axe-ct-node--selected':'',
-    locked?'axe-ct-node--locked':'', passive?'axe-ct-node--passive':''].join(' ')}
-    onClick={onClick} aria-pressed={selected} aria-label={title + (locked ? ': Locked, '+requirement : '')}
-    title={skill?.skill_name || passive?.label || title}>
-    <span className="axe-ct-node-icon"><TreeIcon kind={icon} size={37}/></span>
-    <span className="axe-ct-node-title">{title}</span>
-    <small>{passive ? '+' + (passive.bonusPct*100).toFixed(0) + '% charged'
-      : skill ? 'Lv. ' + mastery.level + ' / ' + mastery.maxLevel : ''}</small>
-    {tier === 1 && <span className="axe-ct-node-tier">T1</span>}
-    {locked && <span className="axe-ct-locked-note">◆ Tier locked</span>}
-    {equipped && <span className="axe-ct-equipped-note">Equipped</span>}
-  </button>;
-}
-function BranchLane({ path, category, selected, onSelect, equipped, search, filter }) {
-  const names = path.titles;
-  const skills = path.active.map(id => getSkillById(id));
-  const tiers = [1,2,3].map(n => resolveCloneSkillTreeTier(path,n,isWeaponSkillUnlocked));
-  const title = (tier) => names?.[tier-1] || (tier === 1 ? path.label : skills[tier-1]?.skill_name || path.label);
-  const matches = !search || [path.label,...(names||[]),...skills.map(s=>s?.skill_name||''),
-    ...path.passives.map(p=>p.label)].join(' ').toLowerCase().includes(search);
-  const faded = (filter !== 'all' && filter !== path.id) || !matches;
-  const current = (kind,id) => selected?.kind===kind && selected?.id===id;
-  const selectActive = tier => onSelect({ kind:'skill', id:path.active[tier-1], category, lane:path.id, tier });
-  const selectPassive = passive => onSelect({kind:'passive',id:passive.id,category,lane:path.id,tier:passive.tier});
-  const passiveCard = tier => {
-    const passive = path.passives[tier-2];
-    return <TreeNode key={passive.id} icon={passive.icon} title={passive.label} tier={tier}
-      passive={passive} locked={!tiers[tier-1].unlocked} selected={current('passive',passive.id)}
-      requirement={'Complete prerequisite paid weapon skill stage'}
-      onClick={()=>selectPassive(passive)}/>;
-  };
-  return <div className={'axe-ct-lane'+(faded?' axe-ct-lane--faded':'')} data-path={path.id}>
-    <TreeNode icon={path.icon} title={title(1)} tier={1} skill={skills[0]}
-      selected={current('skill',path.active[0])} equipped={equipped.includes(path.active[0])}
-      onClick={()=>selectActive(1)}/>
-    <TierConnector/>
-    <div className="axe-ct-pair">
-      <TreeNode icon={path.icon} title={title(2)} tier={2} skill={skills[1]}
-        locked={!tiers[1].unlocked} selected={current('skill',path.active[1])}
-        equipped={equipped.includes(path.active[1])} requirement={'Complete prerequisite paid weapon skill stage'}
-        onClick={()=>selectActive(2)}/>
-      {passiveCard(2)}
-    </div>
-    <TierConnector/>
-    <div className="axe-ct-pair">
-      <TreeNode icon={path.icon} title={title(3)} tier={3} skill={skills[2]}
-        locked={!tiers[2].unlocked} selected={current('skill',path.active[2])}
-        equipped={equipped.includes(path.active[2])} requirement={'Complete prerequisite paid weapon skill stage'}
-        onClick={()=>selectActive(3)}/>
-      {passiveCard(3)}
-    </div>
-  </div>;
 }
 function SkillDetails({ node, category, paths, companion, activeIds, onEquip }) {
   const path = paths.find(p=>p.id===node?.lane);
@@ -217,12 +142,14 @@ export default function AXECloneSkillTreeWorkspace({
 }) {
   const [,setMasteryRevision] = useState(0);
   const [category,setCategory] = useState(activeMode?.id||'damage');
+  const [activePathId,setActivePathId] = useState('single');
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
   const [selected,setSelected] = useState(()=>{
     if(companion)return null;
-    const role=activeMode?.id==='range'?'ranged':activeMode?.id==='defense'?'defensive':'offensive';
-    return {kind:'skill',id:'axe_'+role+'_skill_5',category:activeMode?.id||'damage',lane:'three',tier:2};
+    const mode=activeMode?.id||'damage';
+    const initial=createCloneSkillTreePaths(mode)[0];
+    return {kind:'skill',id:initial.active[0],category:mode,lane:'single',tier:1};
   });
   const [feedback,setFeedback] = useState('');
   const paths = useMemo(()=>createCloneSkillTreePaths(category),[category]);
@@ -233,9 +160,10 @@ export default function AXECloneSkillTreeWorkspace({
     if(companion){setCategory('combat');setSelected(null);}
     else if(activeMode?.id){
       setCategory(activeMode.id);
-      const role=activeMode.id==='range'?'ranged':activeMode.id==='defense'?'defensive':'offensive';
-      setSelected({kind:'skill',id:'axe_'+role+'_skill_5',
-        category:activeMode.id,lane:'three',tier:2});
+      setActivePathId('single');
+      const first=createCloneSkillTreePaths(activeMode.id)[0];
+      setSelected({kind:'skill',id:first.active[0],
+        category:activeMode.id,lane:'single',tier:1});
     }
   },[activeMode?.id,companion]);
   // The Game 3D controller owns selection, saves, unlocks, and loadout transactions.
@@ -272,8 +200,19 @@ export default function AXECloneSkillTreeWorkspace({
     setFeedback('');
   };
   const selectCategory = id => {
-    setCategory(id);setSelected(null);onSelectSkill?.(null);
+    setCategory(id);
+    setActivePathId('single');
+    const first=['damage','range','defense'].includes(id)?createCloneSkillTreePaths(id)[0]:null;
+    const next=first?{kind:'skill',id:first.active[0],lane:'single',category:id,tier:1}:null;
+    setSelected(next);
+    onSelectSkill?.(next?getSkillById(next.id):null);
     setSearch('');setFilter('all');setFeedback('');
+  };
+  const changePath = id => {
+    const next=paths.find(item=>item.id===id);
+    if(!next)return;
+    setActivePathId(id);
+    selectNode({kind:'skill',id:next.active[0],lane:id,category,tier:1});
   };
   const resolveNodeForDetail = () => {
     if(!selected) return null;
@@ -297,53 +236,44 @@ export default function AXECloneSkillTreeWorkspace({
         {onClose && <button className="axe-ct-close" type="button" aria-label="Close Skill Book"
           onClick={onClose}><X size={20}/></button>}</div>
     </header>
-    <div className="axe-ct-content">
+    <div className={'axe-ct-content'+(collection?' axe-ct-content--horizontal':'')}>
       <aside className="axe-ct-categories" aria-label="Weapon Category">
         {displayCategories.map(item=><button key={item.id} type="button"
           aria-pressed={category===item.id} onClick={()=>selectCategory(item.id)}>
           <TreeIcon kind={item.icon} size={27}/><span>{item.label}</span></button>)}
       </aside>
-      <main className="axe-ct-main">
-        <div className="axe-ct-main-heading">
-          <div className="axe-ct-main-icon"><Swords size={29}/></div>
-          <div><h2>{collection?'Combat Skill Tree':companion?'Companion Skills':category==='passive'?'Passive Skills':'Combat Skills'}</h2>
-            <p>{collection?'Branching combat skills · Build your fighting style':'Your registered skill collection and mastery'}</p></div>
-          {collection && <button type="button" className="axe-ct-activate-weapon"
-            aria-label={'Activate '+category+' weapon skill bar'}
-            onClick={()=>onActivateWeapon?.(category)}
-            title="Draw an owned weapon and activate its saved skill set">
-            {activeMode?.id===category?'Active':'Activate'} {category==='range'?'Range':category==='defense'?'Defense':'Damage'} Bar
-            {selectedWeapon?.name && <small>{selectedWeapon.name}</small>}
-          </button>}
-        </div>
-        <div className="axe-ct-toolbar">
-          <select aria-label="Filter skill tree" value={filter} onChange={e=>setFilter(e.target.value)}>
-            <option value="all">{collection?'All '+category[0].toUpperCase()+category.slice(1)+' Skills':'All Skills'}</option>
-            {collection && paths.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-          <label className="axe-ct-search"><BookOpen size={16}/>
-            <input type="search" aria-label="Search Skill" placeholder="Search Skill"
-              value={search} onChange={e=>setSearch(e.target.value)}/>
-            <Search size={17}/></label>
-          <nav className="axe-ct-view" aria-label="Skill, buff and advancement">
-            {[['skills','Skill'],['buffs','Buff'],['advance','Advance']].map(([id,label])=>
-              <button key={id} type="button" aria-pressed={view===id}
-                onClick={()=>{onChangeView?.(id);setSearch('');setFilter('all');setSelected(null);}}>{label}</button>)}
-          </nav>
-        </div>
-        {view==='advance' && !companion ? <div className="axe-ct-tree-scroll axe-ct-advance"><AXEWeaponSkillPointsPanel/></div> : collection ? <div className="axe-ct-tree-scroll" aria-label="Three branch combat skill tree">
-          <div className="axe-ct-tree-canvas">
-            <div className="axe-ct-tier-axis">
-              {tierTitles.map((label,i)=><div key={label}><b>T{i+1}</b><span>{label}</span></div>)}
-            </div>
-            <div className="axe-ct-lanes">
-              {paths.map(path=><BranchLane key={path.id} path={path} category={category}
-                selected={selected} onSelect={selectNode} equipped={activeIds}
-                filter={filter} search={normalizedSearch}/>)}
-            </div>
+      <main className={'axe-ct-main'+(collection?' axe-ct-main--horizontal':'')}>
+        {collection ? <AXESkillPathHorizontal category={category} paths={paths}
+          activePathId={activePathId} onChangePath={changePath}
+          selected={selected} onSelect={selectNode} activeIds={activeIds}
+          onFeedback={setFeedback}/> : <>
+          <div className="axe-ct-main-heading">
+            <div className="axe-ct-main-icon"><Swords size={29}/></div>
+            <div><h2>{companion?'Companion Skills':category==='passive'?'Passive Skills':'Universal Skills'}</h2>
+              <p>Your registered skill collection and mastery</p></div>
           </div>
-        </div> : <FlatSkillCatalog skills={filteredFlat} selected={selected} equipped={activeIds}
-          companion={companion} search={normalizedSearch} onSelect={selectNode}/>}
+          <div className="axe-ct-toolbar">
+            <select aria-label="Filter available skills" value={filter}
+              onChange={event=>setFilter(event.target.value)}>
+              <option value="all">All Skills</option>
+            </select>
+            <label className="axe-ct-search"><BookOpen size={16}/>
+              <input type="search" aria-label="Search Skill" placeholder="Search Skill"
+                value={search} onChange={event=>setSearch(event.target.value)}/>
+              <Search size={17}/>
+            </label>
+            <nav className="axe-ct-view" aria-label="Skill, buff and advancement">
+              {[['skills','Skill'],['buffs','Buff'],['advance','Advance']].map(([id,label])=>
+                <button key={id} type="button" aria-pressed={view===id}
+                  onClick={()=>{onChangeView?.(id);setSearch('');setFilter('all');setSelected(null);}}>
+                  {label}</button>)}
+            </nav>
+          </div>
+          {view==='advance'&&!companion
+            ? <div className="axe-ct-tree-scroll axe-ct-advance"><AXEWeaponSkillPointsPanel/></div>
+            : <FlatSkillCatalog skills={filteredFlat} selected={selected} equipped={activeIds}
+                companion={companion} search={normalizedSearch} onSelect={selectNode}/>}
+        </>}
         <div className="axe-ct-equipped" aria-label="Equipped skills">
           <div className="axe-ct-equipped-heading">
             <button type="button" onClick={()=>switchPreset(currentPresetIndex-1)} aria-label="Previous skill set">
@@ -372,8 +302,8 @@ export default function AXECloneSkillTreeWorkspace({
           </div>
         </div>
       </main>
-      <SkillDetails node={resolveNodeForDetail()} category={category} paths={paths}
-        companion={companion} activeIds={activeIds} onEquip={equipSkill}/>
+      {!collection && <SkillDetails node={resolveNodeForDetail()} category={category} paths={paths}
+        companion={companion} activeIds={activeIds} onEquip={equipSkill}/>}
     </div>
     <footer className="axe-ct-footer">
       <span role="status">{feedback||status||'Choose a category to browse skills, equip them to a loadout, and master your combat style.'}</span>
