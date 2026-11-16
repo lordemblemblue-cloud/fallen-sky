@@ -157,14 +157,18 @@ export function getAXEBlacksmithReadout(item, operation = 'enchant', donor = nul
   } else if (operation === 'over_enchant' && preview.canAdvance) {
     projectedOver = { ...overEnchant, level: Number(overEnchant.level || 0) + 1 };
   } else if ((operation === 'stage' || operation === 'ascend') && preview.canAdvance) {
-    const next = getNextStage(advancement.stage);
-    const pct = Number(reinforcement.percent || 0);
-    const imprint = next && { rank: next.rank, reinforcementPercent: pct,
-      bonus: getAXEAscensionImprintBonus(next.rank, pct),
-      ruleVersion: AXE_EQUIPMENT_ASCENSION_CONFIG.ruleVersion };
-    projectedAdvancement = { ...advancement,
-      stage: next ? { ...advancement.stage, ...next,
-        imprints: [...(advancement.stage?.imprints || []), imprint] } : advancement.stage };
+    const projectedRank=preview.feedPreview?.nextRank??(Number(advancement.stage?.rank||0)+1);
+    const pct = Math.min(Number(reinforcement.percent||0),getAXEReinforcementCap(item));
+    let stage=advancement.stage;
+    for(let rank=Number(stage?.rank||0)+1;rank<=projectedRank;rank++){
+      const next=getNextStage(stage);
+      if(!next)break;
+      const imprint={rank:next.rank,reinforcementPercent:pct,
+        bonus:getAXEAscensionImprintBonus(next.rank,pct),
+        ruleVersion:AXE_EQUIPMENT_ASCENSION_CONFIG.ruleVersion};
+      stage={...stage,...next,imprints:[...(stage?.imprints||[]),imprint]};
+    }
+    projectedAdvancement={...advancement,stage};
   } else if (operation === 'combine' || operation === 'sockets') {
     // Donor/gem/ascension effects are not calculated from made-up numbers.
     canProject = false;
@@ -319,6 +323,7 @@ export default function AXEBlacksmithImageWorkspace({
   const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, tab === 'ascend' ? 'stage' : tab,
     tab === 'combine' || tab === 'ascend' ? donorItem : null) : null;
   const progressState = selectedItem ? getAXEAdvancementState(selectedItem.instanceId) : null;
+  const prestigeStyle=selectedItem ? getAXEFarmingAscendedIdentity(selectedItem,progressState?.stage?.rank) : null;
   const socketState = selectedItem ? getAXESocketState(selectedItem.instanceId) : null;
   const materials = readout ? Object.entries(readout.cost || {}).slice(0, 4) : [];
   const workflowMode = ['combine', 'enchant', 'over_enchant'].includes(tab);
@@ -711,9 +716,11 @@ export default function AXEBlacksmithImageWorkspace({
         selectedItem ? 'Selected equipment in forge: ' + selectedItem.name : 'Forge is empty'}>
         {selectedItem && <>
           <div className="axe-blacksmith-item-rarity">{selectedItem.rarity || selectedItem.tier || 'Equipment'}</div>
-          <h3>{selectedItem.name || 'Equipment'}</h3>
+          <h3 className={prestigeStyle?'axe-forge-ascended-name':''}
+            style={prestigeStyle?{'--prestige-a':prestigeStyle.primary,'--prestige-b':prestigeStyle.secondary}:undefined}>
+            {prestigeStyle?.displayName||selectedItem.name||'Equipment'}</h3>
           <div className="axe-blacksmith-item-level">Lv. {fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1)}</div>
-          <div className="axe-blacksmith-center-art">
+          <div className={'axe-blacksmith-center-art'+(prestigeStyle?' axe-forge-ascended-art':'')}>
             {itemArt(selectedItem) ? <img src={itemArt(selectedItem)} alt="" /> : <InventorySymbol item={selectedItem} />}
           </div>
         </>}
@@ -754,7 +761,9 @@ export default function AXEBlacksmithImageWorkspace({
             </div>;
           }) : <p>{!selectedItem ? 'Select owned equipment to display its real costs.'
             : tab === 'combine' ? 'Choose a matching donor in the second slot.'
-            : 'No materials listed for this operation.'}</p>}
+            : tab === 'ascend' && selectedItem && isAXEFarmingRarity(selectedItem.rarity)
+              ? 'Choose a matching equipment donor below. No separate forge materials.'
+              : 'No materials listed for this operation.'}</p>}
         </div>
         <div className="axe-blacksmith-success">
           <span>Success Rate</span>
@@ -767,6 +776,25 @@ export default function AXEBlacksmithImageWorkspace({
           <div><span>Current Reinforcement</span><b>{fmt(readout?.reinforcementPercent)}%</b></div>
           <div><span>Rarity reinforcement maximum</span><b>{fmt(readout?.reinforcementCap)}%</b></div>
           <div><span>Ascensions used</span><b>{fmt(readout?.stageRank)} / 4</b></div>
+          {selectedItem && isAXEFarmingRarity(selectedItem.rarity) && <>
+            <label className="axe-blacksmith-feed-selector">
+              Sacrifice equipment
+              <select value={ascensionDonors.some(item=>item.instanceId===donorId)?donorId:''}
+                aria-label="Select equipment to feed into Ascension"
+                onChange={event=>{setDonorId(event.target.value);setConfirmCombine(false);}}>
+                <option value="">Choose same rarity and equipment slot…</option>
+                {ascensionDonors.map(item=><option key={item.instanceId} value={item.instanceId}>
+                  {item.name} · Lv. {fmt(item.itemLevel??item.level)} 
+                </option>)}
+              </select>
+            </label>
+            <div><span>Current feed progress</span><b>{fmt(progressState?.stage?.feedProgress||0)} / {Math.min(4,Number(progressState?.stage?.rank||0)+1)}</b></div>
+            <div><span>Compatible donors owned</span><b>{ascensionDonors.length}</b></div>
+            <div><span>Selected donor result</span><b>{readout?.preview?.feedPreview?.ok
+              ?('Stage '+readout.preview.feedPreview.currentRank+' → '+readout.preview.feedPreview.nextRank)
+              :'Choose donor'}</b></div>
+            <p>Same rarity and slot only. +1 needs one donor, +2 needs two, +3 needs three, +4 needs four. Higher-level donors can skip ranks. Legendary needs just one per rank.</p>
+          </>}
           <div><span>Locked flat-stat bonus</span><b>+{((readout?.ascensionBonus || 0) * 100).toFixed(2)}%</b></div>
           <div><span>Next imprint adds</span><b>{readout?.nextAscensionBonus == null ? 'MAX'
             : '+' + (readout.nextAscensionBonus * 100).toFixed(2) + '%'}</b></div>
