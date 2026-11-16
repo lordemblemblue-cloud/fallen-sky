@@ -1,7 +1,7 @@
 import {useEffect, useMemo, useState} from 'react';
 import {
   ArrowUpRight, BookOpen, Check, ChevronRight, Clock, LockKeyhole,
-  Save, Search, Shield, Sparkles, Swords, Target, WandSparkles, X,
+  Save, Search, Shield, Sparkles, Swords, Target, X,
 } from 'lucide-react';
 import {getAllSkills, getSkillById, scaleStat} from '../../skills/skillRegistry';
 import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
@@ -34,8 +34,8 @@ const subtitle = skill => skill?.skill_type===SKILL_TYPE.PASSIVE ? 'Passive'
 const titleize = name => String(name).replaceAll('_',' ').replace(/\b\w/g, m=>m.toUpperCase());
 const statValue = (key,value) => {
   if (!Number.isFinite(value)) return '—';
-  if (key.includes('pct')||key.includes('chance')||key.includes('reflect')) {
-    return Math.abs(value)<=1 ? (value*100).toFixed(1)+'%' : Number(value).toFixed(1)+'%';
+  if (key.includes('pct')||key.includes('reflect')||(key.includes('chance')&&!key.includes('flat'))) {
+    return (value*100).toFixed(1)+'%';
   }
   return Number(value).toFixed(Number.isInteger(value)?0:2);
 };
