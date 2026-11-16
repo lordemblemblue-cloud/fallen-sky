@@ -81,7 +81,10 @@ test('Walking through a cave wall no longer grants free exit past its threshold'
   assert.match(cs,/const travel=planWolfveilCaveInteraction/);
   assert.match(cs,/activeCaveId=travel\.action==='enter'\?travel\.caveId:null/);
   assert.match(cs,/if\(!activeCaveId \|\| !worldPos \|\| !prevWorldPos\) return false/);
-  assert.match(cs,/restoreUndergroundCheckpoint\(playerWorldPos\)/);
+  // A previously bugged below-ground checkpoint must not silently reactivate
+  // a cave session. Only the explicit E entrance establishes that state.
+  assert.doesNotMatch(cs,/restoreUndergroundCheckpoint/);
+  assert.match(cs,/let activeCaveId = null/);
   assert.doesNotMatch(source('wolfveil/WolfveilCaveLayout.mjs'),
     /if \(along < 0\.5 && lateral < 4\.2\) return false/);
 });
