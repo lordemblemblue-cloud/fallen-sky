@@ -31,7 +31,7 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   }),
 });
 export const WOLFVEIL_CAVE_APPROACH_WIDTH=3.4; // pedestrian path, ~2.5 body widths
-export const WOLFVEIL_CAVE_APRON_HALF_WIDTH=5.5; // guard the formerly open tile edges
+export const WOLFVEIL_CAVE_APRON_HALF_WIDTH=6.8; // guard the formerly open tile edges
 export const WOLFVEIL_CAVE_RIM_GUARD_METRES=7*0.3048;
 
 // Returns a surface trail ending exactly at the existing cave ramp threshold.
