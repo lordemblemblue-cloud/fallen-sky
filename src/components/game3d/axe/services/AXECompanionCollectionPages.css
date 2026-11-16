@@ -203,3 +203,22 @@
   .axe-mounts-roster-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));max-height:190px;}
   .axe-mounts-profile {overflow:visible;}
 }
+
+
+/* Equipment now owns the profile, mastery and mount workspaces. Keep their
+   responsive sections full-height without swallowing the global Services rail. */
+.axe-comp-equipment-content[data-equipment-section="profile"] {
+  display: flex; min-height: 0; overflow: hidden;
+}
+.axe-comp-equipment-content[data-equipment-section="profile"] > .axe-comp-redesign {
+  flex: 1 1 auto; min-height: 0; width: 100%;
+}
+.axe-comp-equipment-content[data-equipment-section="mastery"] {
+  display: flex; min-height: 0; overflow-x: hidden; overflow-y: auto;
+}
+.axe-comp-equipment-content[data-equipment-section="mastery"] > .axe-collection-page {
+  flex: 1 1 auto; min-height: 0; width: 100%;
+}
+@media (max-width: 800px) {
+  .axe-comp-equipment-content[data-equipment-section="profile"] { overflow-y: auto; }
+}
