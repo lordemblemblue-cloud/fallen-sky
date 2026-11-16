@@ -48,7 +48,7 @@ test('Game 3D clone route renders approved tree by default and keeps classic QA 
     'subscribeSkillMastery','subscribeWeaponSkillPoints','isWeaponSkillUnlocked']){
     assert(tree.includes(term),'missing '+term);
   }
-  for(const term of ['Active Skill Path','Passive Path','Single, Multi and Aerial paths',
+  for(const term of ['Skills / Buffs & Passives','Progression · Upgrade Strength','Single, Multi and Aerial paths',
     'Skill Information','investWeaponSkillPoint(category,stageIndex,1)']){
     assert(horizontal.includes(term),'missing new horizontal layout: '+term);
   }
