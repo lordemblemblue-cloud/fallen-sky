@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AXESkillBookRedesign from './AXESkillBookRedesign';
+import AXECloneSkillTreeWorkspace from './AXECloneSkillTreeWorkspace';
 import { getSkillById } from '../../skills/skillRegistry';
 import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import { SKILL_TYPE } from '../../skills/skillTypes';
@@ -52,7 +53,7 @@ function saveBanks(state) {
   try { localStorage.setItem(BOOK_PRESET_KEY, JSON.stringify(state)); return true; }
   catch { return false; }
 }
-export default function AXESkillBookWorkspace({ serviceId = 'skills_character', onSelect, onClose }) {
+export default function AXESkillBookWorkspace({ serviceId = 'skills_character', onSelect, onClose, cloneClassic = false }) {
   // Character Hub can also open this component without the world-mode router.
   const [localPage, setLocalPage] = useState(serviceId);
   const currentPage = onSelect ? serviceId : localPage;
@@ -185,8 +186,13 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
   const changeView = next => { setView(next); setSelected(null); setStatus(''); };
   const chooseSkill = skill => { setSelected(skill); setStatus(''); };
 
-  // Keep the existing combat data, loadout presets, weapon inventory and
-  // equip methods authoritative. Only the view has been replaced.
+  // The real clone route now renders the approved native three-branch layout.
+  // A classic fallback remains available for explicit legacy QA only.
+  if (!cloneClassic) return <AXECloneSkillTreeWorkspace
+    serviceId={currentPage}
+    onSelect={page => onSelect ? onSelect(page) : setLocalPage(page)}
+    onClose={onClose}/>;
+
   return <AXESkillBookRedesign
     currentPage={currentPage} companion={companion}
     onPageChange={id=>onSelect?onSelect(id):setLocalPage(id)}
