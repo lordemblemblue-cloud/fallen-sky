@@ -148,6 +148,7 @@ import {isInsideMeadowCircle,meadowGroundHeight}
 import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
+import {createWolfveilFourRegionRuntime} from './wolfveil/streaming/WolfveilFourRegionRuntime.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
@@ -700,6 +701,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             scene.updateMatrixWorld(true);
           },
         }) : null;
+    // Four player-centric render regions share the SAME physical Wolfveil.
+    // Keep original BVH floor, river, server collision and world coordinates.
+    const regionStream=wolfveilVillage?createWolfveilFourRegionRuntime({
+      world:wolfveilVillage.world,position:{x:0,z:70},
+      onTransition(detail){
+        window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
+      },
+      onStats(stats){window.__gw3dRegionStreamingStatus=stats;},
+    }):null;
+    if(regionStream)window.__gw3dRegionStreamer=regionStream;
     // Clone-only ambient wildlife: one owner bird GLB, cosmetic flight only.
     const ambientBirds=wolfveilVillage?createWolfveilAmbientBirds({
       scene,quality:readGraphicsSettings().quality||'high',
@@ -871,7 +882,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           throw Error('Wolfveil imported town GLB not ready: refusing incomplete full-map export');
       }
       const {exportGame3DFullMap} = await import('./mapExport/Game3DFullMapExporter.mjs');
-      return exportGame3DFullMap({...options,scene,region});
+      const performExport=()=>exportGame3DFullMap({...options,scene,region});
+      // Export ALL original static meshes, not only today's loaded chunks.
+      return regionStream?regionStream.withFullMapExport(performExport):performExport();
     };
     window.exportGame3DMap = exportLiveGame3DMap;
     mapReady = true;
@@ -2623,6 +2636,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
+        regionStream?.update(modelRef.current?.position||{x:0,z:70},
+          {paused:entryModeRef.current});
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
         ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         if(!suigenActive)vortexLake?.update(delta,null);
@@ -2654,7 +2669,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
-      wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
+      regionStream?.update(modelRef.current?.position||{x:0,z:70},
+          {paused:entryModeRef.current});
+        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       const vortexTravel=suigenActive?null:vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
@@ -4669,6 +4686,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(window.__gw3dZombieCamps===zombieCamps)window.__gw3dZombieCamps=null;
       importedSpawnTown?.dispose();
       ambientBirds?.dispose();
+      regionStream?.dispose();
+      if(window.__gw3dRegionStreamer===regionStream)window.__gw3dRegionStreamer=null;
+      window.__gw3dRegionStreamingStatus=null;
       wolfveilVillage?.dispose();
       lunarGate?.dispose();
       astralGate?.dispose();
