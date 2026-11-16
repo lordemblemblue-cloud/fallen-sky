@@ -184,10 +184,28 @@ export function createWolfveilFourRegionRuntime({
     finally{
       exportDepth--;
       if(!exportDepth&&!disposed){
-        for(const {mesh} of sources)mesh.visible=false;
-        for(const entry of active.values())for(const mesh of entry.meshes)mesh.visible=true;
+        for(const {mesh,wasVisible} of sources)mesh.visible=disabled?wasVisible:false;
+        for(const entry of active.values())for(const mesh of entry.meshes)mesh.visible=!disabled;
       }
     }
+  }
+  // In-game QA/rollback switch: disable only this optional render partition.
+  // The owner can compare FPS/draw calls with world.__gw3dRegionStreamer.
+  // All real world terrain, doors, AI and saved position remain untouched.
+  function setEnabled(enabled){
+    if(disposed||exportDepth)return false;
+    const next=Boolean(enabled);
+    if(next===!disabled)return true;
+    disabled=!next;
+    if(disabled){
+      for(const id of [...active.keys()])unloadRegion(id);
+      for(const {mesh,wasVisible} of sources)mesh.visible=wasVisible;
+    }else{
+      for(const {mesh} of sources)mesh.visible=false;
+      loadNext(currentRegion,Infinity);
+    }
+    onStats(getStats());
+    return true;
   }
   function dispose(){
     if(disposed)return;
@@ -199,5 +217,6 @@ export function createWolfveilFourRegionRuntime({
   return {update,getStats,withFullMapExport,dispose,
     getRegion:()=>currentRegion,
     getGateways:()=>WOLFVEIL_STREAM_GATEWAYS,
+    setEnabled,
   };
 }
