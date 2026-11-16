@@ -194,7 +194,7 @@ export function evaluateAXESetBonuses(items = []) {
 // attacks). +3 virtual skill points = +9% skill damage at 3% per point;
 // this is not three spendable points in the skill tree.
 export function getAXESetCombatMultiplier(items = [], {
-  pve=false, targetTier='', isAerialAttack=false, isSkill=false,
+  pve=false, targetTier='', isAerialAttack=false, isSkill=false, isRanged=false,
 } = {}) {
   const {conditional} = evaluateAXESetBonuses(items);
   if (!pve) return 1;
@@ -202,8 +202,9 @@ export function getAXESetCombatMultiplier(items = [], {
   const mobPct=isOrdinaryMob ? Number(conditional.mobDamagePct||0) : 0;
   const aerialPct=isAerialAttack ? Number(conditional.aerialDamagePct||0) : 0;
   const skillPct=isSkill ? Number(conditional.virtualAbilityPoints||0)*3 : 0;
+  const rangedPct=isRanged ? Number(conditional.rangedDamagePct||0) : 0;
   // Cap the combined situational boost independently of temporary skill buffs.
-  return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct))/100;
+  return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct+rangedPct))/100;
 }
 
 export function describeAXESetProgress(item, equippedItems = []) {
