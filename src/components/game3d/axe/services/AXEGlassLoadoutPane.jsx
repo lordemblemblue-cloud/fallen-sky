@@ -225,8 +225,8 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       </button>)}
       <button type="button" aria-label="Show all equipment" onClick={() => {
         setFocusedSlot(''); setFilter('All'); }}>All</button>
-    </aside> : <aside className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster"
-      aria-label="My Companion - owned mounts">
+    </aside> : <aside className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster axe-comp-owned-roster--classic"
+      aria-label="Companions - owned mounts" data-companion-roster-layout="classic">
       <header className="axe-comp-roster-title">
         <div className="axe-comp-roster-heading"><Compass size={18} aria-hidden="true"/>
           <strong>Companions</strong></div>
