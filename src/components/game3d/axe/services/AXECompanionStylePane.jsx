@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Check, Feather, Gem, Heart, Shield, Shirt, Sparkles, UserRound } from 'lucide-react';
+import { Check, Feather, Gem, Search, Shield, Shirt, Sparkles, UserRound } from 'lucide-react';
 import { subscribeAXEVanity,getAXEVanityState } from '../progression/AXEVanityStore';
 import { subscribeAXECostumes,getAXECostumeState } from '../progression/AXECostumeStore';
 import { AXE_VANITY_PIECES,AXE_VANITY_SLOTS } from '../progression/AXEVanitySystem';
@@ -7,7 +7,7 @@ import { AXE_COSTUME_DEFINITIONS } from '../progression/AXECostumeSystem';
 import { getAXESoulRegaliaState,subscribeAXESoulRegalia,getAXESoulRegaliaBonuses }
   from '../progression/AXESoulRegaliaStore';
 import { getCompanionState,subscribeCompanion,setActiveCompanion } from '../../companionStore';
-import { getCompanionById, COMPANION_DEFINITIONS, COMPANION_GEAR } from '../../companionData';
+import { getCompanionById, COMPANION_DEFINITIONS } from '../../companionData';
 import './AXEGlassLoadoutPane.css';
 import './AXECompanionStylePane.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
@@ -25,9 +25,9 @@ function useLive(subscribe,get) {
   useEffect(()=>subscribe(setValue),[subscribe]);
   return value;
 }
-function Pane({name,children,className=''}) {
+function Pane({name,children,className='',controls=null}) {
   return <section className={'axe-app-card '+className}>
-    <header className="axe-app-card-heading"><Sparkles size={20}/><h3>{name}</h3></header>
+    <header className="axe-app-card-heading"><Sparkles size={20}/><h3>{name}</h3>{controls}</header>
     <div className="axe-app-card-content">{children}</div>
   </section>;
 }
@@ -43,21 +43,37 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
   const soul=useLive(subscribeAXESoulRegalia,getAXESoulRegaliaState);
   const [selected,setSelected]=useState(null);
   const [target,setTarget]=useState('hands');
-  const [filter,setFilter]=useState('All');
-  useEffect(()=>{setSelected(null);setTarget('hands');setFilter('All');},[page,companion.activeCompanionId]);
+  const [typeFilter,setTypeFilter]=useState('All');
+  const [rarityFilter,setRarityFilter]=useState('All');
+  const [search,setSearch]=useState('');
+  useEffect(()=>{
+    setSelected(null);setTarget('hands');setTypeFilter('All');setRarityFilter('All');setSearch('');
+  },[page,companion.activeCompanionId]);
   const isImbue=page==='Imbuement';
   const currentTarget=IMBUE_TARGETS.find(item=>item.id===target)||IMBUE_TARGETS[0];
   const selectedModel=getCompanionById(companion.activeCompanionId);
-  // The existing costume and vanity catalogs are PLAYER cosmetics, not wolf
-  // attachments. We can inspect real owned items in the matching layout, but
-  // we must not apply human meshes/stat bonuses to a companion or fake equip.
-  const owned=page==='Vanity'
-    ? (vanity.ownedPieceIds||[]).map(id=>AXE_VANITY_PIECES[id]).filter(Boolean)
-    : (costumes.owned||[]).map(id=>AXE_COSTUME_DEFINITIONS[id]).filter(Boolean);
-  const shown=owned.filter(item=>filter==='All' ||
-    (page==='Vanity' ? item.slot===filter : item.rarity===filter));
-  const item=shown.find(row=>row.id===selected)||shown[0]||null;
-  const categories=[...new Set(owned.map(row=>page==='Vanity'?row.slot:row.rarity||'common'))];
+  // One read-only collection combines both owned player Vanity sets and
+  // Costume outfits. They are NOT eligible companion attachments.
+  // Use typed keys even when two catalogs contain matching item IDs.
+  const owned=[
+    ...(vanity.ownedPieceIds||[]).map(id=>AXE_VANITY_PIECES[id]).filter(Boolean)
+      .map(piece=>({...piece, kind:'vanity', itemKey:'vanity:'+piece.id,
+        equipped:vanity.equippedBySlot?.[piece.slot]===piece.id})),
+    ...(costumes.owned||[]).map(id=>AXE_COSTUME_DEFINITIONS[id]).filter(Boolean)
+      .map(piece=>({...piece, kind:'costume', itemKey:'costume:'+piece.id,
+        equipped:costumes.equippedCostumeId===piece.id})),
+  ];
+  const rarityOptions=[...new Set(owned.map(piece=>piece.rarity||'common'))].sort();
+  const term=search.trim().toLowerCase();
+  const shown=owned.filter(piece=>
+    (typeFilter==='All'||piece.kind===typeFilter)
+    &&(rarityFilter==='All'||(piece.rarity||'common')===rarityFilter)
+    &&(!term||[
+      piece.name,piece.rarity,piece.slot,piece.setId,piece.kind,
+    ].filter(Boolean).join(' ').toLowerCase().includes(term))
+  );
+  const item=shown.find(row=>row.itemKey===selected)||shown[0]||null;
+  const itemStats=item?.kind==='costume'?item.statPackage:item?.baseBonus;
   const fusion=getAXESoulRegaliaBonuses();
   const percent=Number(soul.infusion?.[currentTarget.slot]||0);
   const selectCompanion=id=>{
@@ -78,19 +94,6 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
     <section className={'axe-app-model-stage axe-comp-style-stage'+(isImbue?' axe-comp-imbue-stage':'')}
       aria-label={isImbue?'Player imbue target viewer':'Companion appearance viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
-      {!isImbue&&['left','right'].map(side=><div key={side}
-        className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
-        {(selectedModel?.gearSlots||[]).filter((_,i)=>side==='left'?i<2:i>=2).map(slot=>{
-          const itemId=companion.gear?.[selectedModel.id]?.[slot];
-          const item=COMPANION_GEAR[slot]?.find(piece=>piece.id===itemId);
-          return <button key={slot} type="button" className="axe-app-viewer-slot"
-            title={item?.name||slot+' slot'} onClick={()=>onPageChange('Equipment')}>
-            <span className="axe-app-viewer-slot-art"><Shield size={25}/></span>
-            <small>{slot.replaceAll('_',' ')}</small>
-            <span className="axe-app-viewer-item-name">{item?.name||'—'}</span>
-          </button>;
-        })}
-      </div>)}
       {isImbue&&IMBUE_TARGETS.map((entry,i)=><button key={entry.id} type="button"
         className={'axe-comp-imbue-corner axe-comp-imbue-corner--'+i}
         aria-pressed={target===entry.id} onClick={()=>setTarget(entry.id)}>
@@ -115,22 +118,44 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
           type="button" aria-pressed={target===entry.id} onClick={()=>setTarget(entry.id)}>
           <Sparkles size={18}/><span>{entry.label}</span>
           <b>{soul.infusion?.[entry.slot]||0}%</b></button>)}</div>
-      </Pane>:<Pane name={page==='Vanity'?'Vanity Inventory':'Costume Inventory'}
-        className="axe-app-inventory">
-        <div className="axe-app-inventory-filters" aria-label="Cosmetic inventory filters">
-          {['All',...categories].map(category=><button type="button" key={category}
-            aria-pressed={filter===category} onClick={()=>{setFilter(category);setSelected(null);}}>
-            {category==='All'?'All':category.replaceAll('_',' ')}</button>)}
-        </div>
+      </Pane>:<Pane name="Vanity Collection" className="axe-app-inventory"
+        controls={<div className="axe-comp-collection-controls">
+          <select aria-label="Filter cosmetic type" value={typeFilter}
+            onChange={event=>{setTypeFilter(event.target.value);setSelected(null);}}>
+            <option value="All">All Items</option>
+            <option value="vanity">Vanity Sets</option>
+            <option value="costume">Costumes</option>
+          </select>
+          <select aria-label="Filter cosmetic rarity" value={rarityFilter}
+            onChange={event=>{setRarityFilter(event.target.value);setSelected(null);}}>
+            <option value="All">All Rarities</option>
+            {rarityOptions.map(value=><option key={value} value={value}>
+              {value.charAt(0).toUpperCase()+value.slice(1)}
+            </option>)}
+          </select>
+          <label className="axe-comp-collection-search">
+            <Search size={15} aria-hidden="true"/>
+            <input type="search" aria-label="Search vanity and costumes"
+              placeholder="Search" value={search}
+              onChange={event=>setSearch(event.target.value)}/>
+          </label>
+        </div>}>
         <div className="axe-app-inventory-grid" role="list">
           {shown.map(piece=><button type="button" role="listitem"
-            key={piece.id} className="axe-app-inventory-tile"
-            aria-pressed={item?.id===piece.id} onClick={()=>setSelected(piece.id)}>
+            key={piece.itemKey} className="axe-app-inventory-tile"
+            aria-pressed={item?.itemKey===piece.itemKey}
+            onClick={()=>setSelected(piece.itemKey)}>
             <span className="axe-app-inventory-art">{icon(piece)}</span>
             <span className="axe-app-inventory-name">{piece.name}</span>
-            <small>{piece.rarity||AXE_VANITY_SLOTS[piece.slot]?.label||'Vanity'}</small>
+            <small>{piece.kind==='costume'?'Costume':'Vanity Set'} · {piece.rarity||'common'}</small>
+            {piece.equipped&&<span className="axe-comp-equipped-label">Player equipped</span>}
           </button>)}
-          {!shown.length&&<p className="axe-app-inventory-empty">No owned {page.toLowerCase()} pieces.</p>}
+          {!shown.length&&<p className="axe-app-inventory-empty">
+            No matching owned vanity pieces or costumes.
+          </p>}
+        </div>
+        <div className="axe-comp-collection-count" aria-live="polite">
+          {shown.length} shown · {owned.length} owned
         </div>
       </Pane>}
     </main>
@@ -148,19 +173,29 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
         <button type="button" className="axe-app-unified-enchant axe-comp-imbue-button"
           disabled title="No manual infusion transaction is currently configured">
           <Sparkles size={18}/>Imbue</button>
-      </Pane>:<Pane name={item?.name||page+' Details'} className="axe-comp-style-detail">
+      </Pane>:<Pane name={item?.name||'Vanity Details'} className="axe-comp-style-detail">
         {item?<><div className="axe-app-selected-medallion">{icon(item)}</div>
-          <p className="axe-app-description">{item.rarity||'Cosmetic'} ·
-            {item.slot?AXE_VANITY_SLOTS[item.slot]?.label||item.slot:' Outfit'}</p>
+          <p className="axe-app-description">{item.kind==='costume'?'Costume':'Vanity Set Piece'} ·
+            {' '}{item.rarity||'common'}</p>
+          <div className="axe-app-bonus-row"><span>Owned by</span><b>Player wardrobe</b></div>
+          <div className="axe-app-bonus-row"><span>Player equipped</span>
+            <b>{item.equipped?'Yes':'No'}</b></div>
+          {item.slot&&<div className="axe-app-bonus-row"><span>Slot</span>
+            <b>{AXE_VANITY_SLOTS[item.slot]?.label||item.slot}</b></div>}
+          {item.setId&&<div className="axe-app-bonus-row"><span>Set</span>
+            <b>{item.setId.replaceAll('axe_vanity_','').replaceAll('_',' ')}</b></div>}
           <div className="axe-app-detail-heading">Item Stats</div>
-          {Object.entries(item.baseBonus||{}).filter(([,v])=>Number(v)).map(([key,value])=>
-            <div className="axe-app-bonus-row" key={key}><span>{key}</span><b>+{value}</b></div>)}
-          <p className="axe-app-description">This is an owned player cosmetic.
-            Companion-specific mesh attachments and equip rules are not yet configured.
-            It cannot be equipped on the companion without an approved compatible asset.</p>
+          {Object.entries(itemStats||{}).filter(([,value])=>Number(value)).map(([key,value])=>
+            <div className="axe-app-bonus-row" key={key}><span>{key}</span>
+              <b>{Number(value)>0?'+':''}{value}</b></div>)}
+          {!Object.entries(itemStats||{}).some(([,value])=>Number(value))&&
+            <p className="axe-app-description">Cosmetic appearance only; no stat modifiers.</p>}
+          <p className="axe-app-description">Both cosmetic collections are available here for
+            browsing. These are player-owned cosmetics, not companion attachments.
+            Companion equip remains unavailable without compatible companion assets.</p>
           <button type="button" className="axe-app-unified-enchant axe-comp-imbue-button" disabled>
             <Shirt size={18}/>Equip to Companion</button>
-        </>:<p className="axe-app-description">Select an owned {page.toLowerCase()} item to inspect it.</p>}
+        </>:<p className="axe-app-description">Select an owned vanity piece or costume to inspect it.</p>}
       </Pane>}
     </aside>
   </div>;
