@@ -5,22 +5,27 @@ import { readFileSync } from 'node:fs';
 const services = 'src/components/game3d/axe/services/';
 const src = name => readFileSync(services + name, 'utf8');
 
-test('My Companion leads Equipment and renders the actual active owned mount', () => {
+test('Equipment owns the live My Companion roster and switches both right panels', () => {
   const workspace=src('AXECompanionWorkspace.jsx');
-  const profile=src('AXECompanionOverviewClone.jsx');
+  const loadout=src('AXEGlassLoadoutPane.jsx');
+  const insights=src('AXECompanionInsights.jsx');
   const preview=readFileSync('src/components/game3d/equipment/CompanionPreview3D.jsx','utf8');
   assert.match(workspace,/const TABS=\['Equipment','Vanity','Imbuement'\]/);
-  assert.match(workspace,/\{id:'profile',label:'My Companion'\}/);
-  assert.match(workspace,/equipmentView==='profile'\?<AXECompanionOverviewClone/);
-  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory/);
-  assert.match(profile,/subscribeAXEMounts/);
-  assert.match(profile,/mounts.activeMountId/);
-  assert.match(profile,/getAXEMountDefinition\(mount.definitionId\)/);
-  assert.match(profile,/CompanionPreview3D key=\{modelId\} companionId=\{modelId\}/);
-  assert.match(profile,/Growth & XP/);
-  assert.match(profile,/axe-comp-model-gear/);
-  assert.match(profile,/axe-char-stat-row/);
-  assert.doesNotMatch(profile,/getAXEPetDefinition|summonAXEPet/);
+  assert.match(workspace,/\{id:'companion',label:'Equipment'\}/);
+  assert.match(workspace,/\{id:'mastery',label:'Mastery'\}/);
+  assert.doesNotMatch(workspace,/AXECompanionOverviewClone|label:'My Companion'/);
+  assert.match(loadout,/className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster"/);
+  assert.match(loadout,/aria-label="My Companion - owned mounts"/);
+  assert.match(loadout,/mounts.activeMountId/);
+  assert.match(loadout,/getAXEMountDefinition\(selectedMount.definitionId\)/);
+  assert.match(loadout,/companionId=\{activeCompanion.id\}/);
+  assert.match(loadout,/className="axe-comp-insights-toggle"/);
+  assert.match(loadout,/setInsightsOpen\(value=>!value\)/);
+  assert.match(loadout,/<CompanionAttributesPanel mount=\{selectedMount\} snapshot=\{mounts\}\/>/);
+  assert.match(loadout,/<CompanionGrowthPanel mount=\{selectedMount\} snapshot=\{mounts\}\/>/);
+  assert.match(insights,/applyCompanionRoleBonus/);
+  assert.match(insights,/getCompanionGrowthView/);
+  assert.match(insights,/getCompanionMasteryProgress/);
   assert.match(preview,/companionId = null/);
 });
 
@@ -38,10 +43,13 @@ test('Vanity collection shows actually owned pieces, costumes and rarity filters
   assert.match(css, /axe-comp-collection-controls/);
 });
 
-test('Companion gear uses one left-side rail and a header search; player view remains unchanged', () => {
+test('Companion left rail is owned mounts; player equipment remains unchanged', () => {
   const loadout = src('AXEGlassLoadoutPane.jsx');
   const css = src('AXEGlassLoadoutPane.css');
   assert.match(loadout, /isPlayer && \['left','right'\]\.map/);
+  assert.match(loadout, /isPlayer \? <aside className="axe-app-rail/);
+  assert.match(loadout, /axe-comp-owned-roster/);
+  assert.match(loadout, /!isPlayer&&\['left','right'\]\.map/);
   assert.match(loadout, /isPlayer && inventoryToolbar/);
   assert.match(loadout, /!isPlayer && inventoryToolbar/);
   assert.match(loadout, /isPlayer \? focusedSlot===slot : filter===slot/);
