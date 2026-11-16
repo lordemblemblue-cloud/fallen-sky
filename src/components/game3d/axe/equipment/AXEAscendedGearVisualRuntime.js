@@ -70,14 +70,19 @@ export function createAXEAscendedGearVisualRuntime({model} = {}) {
       ...i,advancement:getAXEAdvancementState(i.instanceId),
     }));
     const status=evaluateAXESetBonuses(worn);
-    const fullSetRank=Math.max(0,...status.activeSets.map(s=>Number(s.fullAuraRank)||0));
+    // The new farmed Rare/Elite/Legendary armor earns its VISIBLE prestige
+    // aura at Ascension IV, not the first imprint. Preserve existing Chosen
+    // prestige effects on their own progression track.
+    const legacySetRank=Math.max(0,...status.activeSets
+      .filter(set=>['chosen','mythic'].includes(String(set.grade||'').toLowerCase()))
+      .map(set=>Number(set.fullAuraRank)||0));
     const armorAscended=worn.filter(i=>i.slot!=='weapon'&&getAXESetAscensionRank(i)>=4);
     const priority={legendary:3,elite:2,rare:1};
     armorAscended.sort((a,b)=>(priority[String(b.rarity).toLowerCase()]||0)-
       (priority[String(a.rarity).toLowerCase()]||0));
     const highestArmor=armorAscended[0]||null;
     bodyPrestige=highestArmor?getAXEFarmingAscendedIdentity(highestArmor,4):null;
-    bodyAuraRank=Math.max(fullSetRank,highestArmor?4:0);
+    bodyAuraRank=Math.max(legacySetRank,highestArmor?4:0);
     const item=getActiveEquippedAXEWeapon();
     weaponId=item?.instanceId||null;
     weaponAuraRank=item ? getAXESetAscensionRank({
