@@ -73,6 +73,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const [insightsOpen,setInsightsOpen] = useState(false);
   const [selectedMountId,setSelectedMountId] = useState(null);
   const [rosterQuery,setRosterQuery] = useState('');
+  const [rosterFocused,setRosterFocused] = useState(false);
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
   const [focusedSlot,setFocusedSlot] = useState('');
@@ -226,12 +227,19 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         setFocusedSlot(''); setFilter('All'); }}>All</button>
     </aside> : <aside className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster"
       aria-label="My Companion - owned mounts">
-      <header className="axe-comp-roster-title"><Compass size={18}/><strong>My Companion</strong>
-        <small>{ownedMounts.length} owned</small></header>
-      <label className="axe-comp-roster-search"><Search size={15}/>
-        <input type="search" aria-label="Search owned companions"
-          placeholder="Search companions" value={rosterQuery}
-          onChange={event=>setRosterQuery(event.target.value)}/></label>
+      <header className="axe-comp-roster-title">
+        <div className="axe-comp-roster-heading"><Compass size={18} aria-hidden="true"/>
+          <strong>Companions</strong></div>
+        <label className="axe-comp-roster-search" aria-label="Search companion">
+          <Search size={16} aria-hidden="true"/>
+          <input type="search" autoComplete="off" aria-label="Search companion"
+            placeholder={rosterFocused?'':'Search companion'}
+            value={rosterQuery}
+            onFocus={()=>setRosterFocused(true)}
+            onBlur={()=>setRosterFocused(false)}
+            onChange={event=>setRosterQuery(event.target.value)}/>
+        </label>
+      </header>
       <div className="axe-comp-roster-list">
         {filteredMounts.map(mount=>{
           const isActive=mount.instanceId===mounts.activeMountId;
