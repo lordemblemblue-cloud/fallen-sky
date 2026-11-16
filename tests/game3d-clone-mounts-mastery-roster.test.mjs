@@ -40,20 +40,18 @@ test('Mounts collection never invents an owned mount when save is empty', () => 
   assert.deepEqual(buildOwnedMountRoster({ mounts: [{ definitionId: 'catalog-only' }] }), []);
 });
 
-test('Mastery replaces feed panel with three independent combat roles; Armory is a viewer toggle', () => {
+test('Mastery is immediately right of unified Equipment and role training remains separate',()=>{
   const root='src/components/game3d/axe/services/';
   const workspace=readFileSync(root+'AXECompanionWorkspace.jsx','utf8');
-  const profile=readFileSync(root+'AXECompanionOverviewClone.jsx','utf8');
+  const loadout=readFileSync(root+'AXEGlassLoadoutPane.jsx','utf8');
   const mastery=readFileSync(root+'AXECompanionMasteryPanel.jsx','utf8');
   const store=readFileSync('src/components/game3d/axe/progression/AXEMountStore.js','utf8');
-  assert.match(workspace,/\{id:'profile',label:'My Companion'\}/);
-  assert.match(workspace,/\{id:'companion',label:'Equipment'\}/);
-  assert.match(workspace,/\{id:'mastery',label:'Mastery'\}/);
-  assert.doesNotMatch(workspace,/Mount Armory|MountSubTab/);
-  assert.match(profile,/rightView==='stats'\?'Growth & XP':'View Stats'/);
-  assert.match(profile,/getCompanionGrowthView/);
-  assert.match(profile,/subscribeAXEMounts/);
-  assert.match(profile,/axe-comp-model-gear/);
+  assert.match(workspace,/const EQUIPMENT_VIEWS=\[\s*\{id:'companion',label:'Equipment'\},\s*\{id:'mastery',label:'Mastery'\}/);
+  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory|AXECompanionOverviewClone/);
+  assert.match(workspace,/onMyCompanion=\{\(\)=>switchView\('companion'\)\}/);
+  assert.match(loadout,/axe-comp-owned-roster/);
+  assert.match(loadout,/axe-comp-insights-toggle/);
+  assert.match(loadout,/AXE_MOUNT_GEAR_SLOTS/);
   assert.match(mastery,/COMPANION_MASTERY_PATHS/);
   assert.match(mastery,/data-companion-page="role-mastery"/);
   assert.match(mastery,/getActiveWeaponPath/);
