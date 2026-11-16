@@ -16,7 +16,9 @@ let lastLevel = Math.max(1, Number(getPlayerHUD().level) || 1);
 function read() {
   try {
     const saved = JSON.parse(storage.get() || 'null');
-    if (saved && checkWeaponSkillPoints(saved, lastLevel).length === 0) return saved;
+    // Validate shape against the cap, not a possibly stale level during character
+    // switch / server restore. The current-level budget is enforced when spending.
+    if (saved && checkWeaponSkillPoints(saved, 100).length === 0) return saved;
   } catch { /* no existing character allocation */ }
   return blankWeaponSkillPoints();
 }
