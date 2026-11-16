@@ -24,7 +24,7 @@ test('seven-foot cave-rim safety is bounded to actual cave approaches',()=>{
   assert(nearSuigenCaveGround(171,222));
   assert(!nearSuigenCaveGround(0,0));
   assert(nearClassicCaveRim(171,225));
-  assert(nearClassicCaveRim(-216,146));
+  assert(nearClassicCaveRim(-360,-330));
   assert(!nearClassicCaveRim(0,0));
 });
 

@@ -12,18 +12,19 @@ const smooth = t => {
   return u * u * (3 - 2 * u);
 };
 
-// Four distinct surface caverns + one deep interconnecting rotunda hub.
+// Four distinct surface caverns at the FAR edges of Wolfveil, plus one deep
+// interconnecting rotunda under the valley. The underground layer is a second
+// map: each mouth is a hike apart, and the tunnels run beneath the whole valley.
 const RAW_ENTRANCES = [
   {
     id: 'jade_lantern_grotto',
     name: 'Jade Lantern Grotto',
     theme: 'lantern_shrine',
-    mouth: [-216, 76],
-    inwardDir: [-0.82, 0.57], // NW into the Western Cedar foothill
-    chamberOffset: 24,
-    chamberDrop: 7.5,
-    chamberRadius: 14.5,
-    ceilingHeight: 9.2,
+    mouth: [-360, -400],
+    inwardDir: [-0.55, -0.84], // further SW, away from the south road
+    chamberOffset: 30,
+    chamberRadius: 15.0,
+    ceilingHeight: 8.4,
     lightColor: 0xffb35c,
     accentColor: 0x4fd4a8,
   },
@@ -32,12 +33,11 @@ const RAW_ENTRANCES = [
     name: 'Whispering Root Hollow',
     nameShort: 'Root Hollow',
     theme: 'skylight_roots',
-    mouth: [-312, 148],
-    inwardDir: [-0.88, 0.47], // WNW into the ancient forest ridge
-    chamberOffset: 25,
-    chamberDrop: 8.2,
-    chamberRadius: 15.5,
-    ceilingHeight: 10.6,
+    mouth: [-500, 300],
+    inwardDir: [-0.70, 0.71], // NW into the high cedar ridge
+    chamberOffset: 32,
+    chamberRadius: 16.0,
+    ceilingHeight: 8.6,
     lightColor: 0x8de8a8,
     accentColor: 0xd9f59d,
   },
@@ -45,12 +45,11 @@ const RAW_ENTRANCES = [
     id: 'sunken_inkstone_cistern',
     name: 'Sunken Inkstone Cistern',
     theme: 'ink_spring',
-    mouth: [-82, 312],
-    inwardDir: [-0.32, 0.95], // NNW into the Hot Spring highland cliff
-    chamberOffset: 26,
-    chamberDrop: 8.8,
-    chamberRadius: 16.0,
-    ceilingHeight: 9.8,
+    mouth: [-40, 548],
+    inwardDir: [-0.34, 0.94], // north into the high peaks
+    chamberOffset: 34,
+    chamberRadius: 16.5,
+    ceilingHeight: 8.8,
     lightColor: 0x6ad4e8,
     accentColor: 0xf4c078,
   },
@@ -58,12 +57,11 @@ const RAW_ENTRANCES = [
     id: 'echoing_crystal_vault',
     name: 'Echoing Crystal Vault',
     theme: 'crystal_geode',
-    mouth: [122, 198],
-    inwardDir: [0.36, 0.93], // NNE into the Upper Falls cliffside (clear of Lunar/Astral gates)
-    chamberOffset: 25,
-    chamberDrop: 8.0,
-    chamberRadius: 15.0,
-    ceilingHeight: 10.2,
+    mouth: [500, -36],
+    inwardDir: [0.86, 0.25], // east into the quarry cliffs
+    chamberOffset: 30,
+    chamberRadius: 15.5,
+    ceilingHeight: 8.6,
     lightColor: 0x8fb8ff,
     accentColor: 0xc084fc,
   },
@@ -75,10 +73,14 @@ export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
     const len = Math.hypot(cave.inwardDir[0], cave.inwardDir[1]) || 1;
     const dx = cave.inwardDir[0] / len, dz = cave.inwardDir[1] / len;
     const mouthY = wolfveilHeight(mx, mz);
-    const cx = mx + dx * cave.chamberOffset;
-    const cz = mz + dz * cave.chamberOffset;
-    const floorY = mouthY - cave.chamberDrop;
-    // Short exterior threshold apron so players walk smoothly off the hillside
+    const chamberOffset = cave.chamberOffset;
+    const cx = mx + dx * chamberOffset;
+    const cz = mz + dz * chamberOffset;
+    const surf = wolfveilHeight(cx, cz);
+    // A real drop from the mouth, still under a rock roof. The long grade
+    // down to the valley basement happens once, in the tunnel, not as a
+    // second stair stacked on the same footprint.
+    const floorY = Math.min(mouthY - 14, surf - 16);
     const thresholdX = mx - dx * 3.5;
     const thresholdZ = mz - dz * 3.5;
     const thresholdY = wolfveilHeight(thresholdX, thresholdZ);
@@ -95,25 +97,23 @@ export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
         radius: cave.chamberRadius,
         ceiling: cave.ceilingHeight,
         theme: cave.theme,
+        along: chamberOffset,
       }),
     });
   }),
 );
 
-// Central underground hub where the 4 caves' tunnels meet beneath the valley.
-const avgHubFloor =
-  WOLFVEIL_EXPLORABLE_CAVES.reduce((s, c) => s + c.chamber.y, 0) /
-    WOLFVEIL_EXPLORABLE_CAVES.length - 3.5;
-
+// Basement hub under the valley floor, below the river bed, so every
+// cross-map tunnel can pass under the lowland instead of floating in the air.
 export const WOLFVEIL_CAVE_HUB = Object.freeze({
   id: 'subterranean_wolf_rotunda',
   name: 'Subterranean Wolf-Spirit Rotunda',
   theme: 'ancient_rotunda',
-  x: -138,
-  y: avgHubFloor,
-  z: 196,
-  radius: 17.5,
-  ceiling: 11.2,
+  x: -6,
+  y: -4,
+  z: 24,
+  radius: 18,
+  ceiling: 7.4,
   lightColor: 0xf5b869,
   accentColor: 0x67e8f9,
 });
@@ -172,73 +172,149 @@ function bendWaypoints(a, b, bendLateral = 16, midDrop = -1.8) {
   ];
 }
 
-// Entry ramp corridors (threshold -> mouth -> chamber) + 5 interconnecting tunnels!
+// Entry ramps (a real stair, switchbacked when the mountain is tall)
+// plus five tunnels buried under the terrain, plus two side alcoves.
+const BURY_DEPTH = 12;
+const BURY_SLOPE = 0.72;
+
+function rimPoint(room, tx, tz) {
+  const dx = tx - room.x, dz = tz - room.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const extent = Math.min(Math.max(3, (room.radius || 15) - 2.2), len * 0.45);
+  return [room.x + dx / len * extent, room.y, room.z + dz / len * extent];
+}
+
+function entryWaypoints(c) {
+  const [dx, dz] = c.dir;
+  const lipY = c.mouthY - 0.3;
+  const endAlong = Math.max(10, (c.chamber.along || 30) - c.chamber.radius + 1.5);
+  const pts = [
+    [c.threshold[0], c.threshold[1], c.threshold[2]],
+    [c.mouth[0], lipY, c.mouth[1]],
+  ];
+  const steps = 6;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    pts.push([
+      c.mouth[0] + dx * endAlong * t,
+      lipY + (c.chamber.y - lipY) * t,
+      c.mouth[1] + dz * endAlong * t,
+    ]);
+  }
+  pts.push([c.chamber.x, c.chamber.y, c.chamber.z]);
+  return pts;
+}
+
+function buryWaypoints(xz, y0, y1) {
+  const pts = [[xz[0][0], xz[0][1]]];
+  for (let i = 1; i < xz.length; i++) {
+    const [ax, az] = pts[pts.length - 1];
+    const [bx, bz] = xz[i];
+    const len = Math.hypot(bx - ax, bz - az);
+    const n = Math.max(1, Math.ceil(len / 18));
+    for (let k = 1; k <= n; k++) pts.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+  }
+  let total = 0;
+  const acc = [0];
+  for (let i = 1; i < pts.length; i++) {
+    total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    acc.push(total);
+  }
+  const y = pts.map((p, i) => {
+    const t = total ? acc[i] / total : 0;
+    const lerp = y0 + (y1 - y0) * t;
+    return Math.min(lerp, wolfveilHeight(p[0], p[1]) - BURY_DEPTH);
+  });
+  y[0] = y0;
+  y[y.length - 1] = y1;
+  const limit = (forward) => {
+    const order = forward ? y.map((_, i) => i) : y.map((_, i) => i).reverse();
+    for (let n = 1; n < order.length; n++) {
+      const i = order[n], prev = order[n - 1];
+      const d = Math.hypot(pts[i][0] - pts[prev][0], pts[i][1] - pts[prev][1]) || 0.001;
+      const lo = y[prev] - BURY_SLOPE * d, hi = y[prev] + BURY_SLOPE * d;
+      if (y[i] < lo) y[i] = lo;
+      else if (y[i] > hi) y[i] = hi;
+    }
+  };
+  limit(true);
+  y[y.length - 1] = y1;
+  limit(false);
+  y[0] = y0;
+  limit(true);
+  return pts.map((p, i) => [p[0], y[i], p[1]]);
+}
+
+function exitPoint(room, tx, tz) {
+  const dx = tx - room.x, dz = tz - room.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const extent = (room.radius || 15) + 1.6;
+  return [room.x + dx / len * extent, room.z + dz / len * extent];
+}
+
+function tunnelWaypoints(a, b, lateral) {
+  const dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz) || 1;
+  const nx = -dz / len, nz = dx / len;
+  const p1 = [a.x + dx * 0.36 + nx * lateral, a.z + dz * 0.36 + nz * lateral];
+  const p2 = [a.x + dx * 0.68 - nx * lateral * 0.45, a.z + dz * 0.68 - nz * lateral * 0.45];
+  const start = exitPoint(a, p1[0], p1[1]);
+  const end = exitPoint(b, p2[0], p2[1]);
+  const buried = buryWaypoints([start, p1, p2, end], a.y, b.y);
+  return [
+    [a.x, a.y, a.z],
+    [start[0], a.y, start[1]],
+    ...buried.slice(1),
+    [b.x, b.y, b.z],
+  ];
+}
+
+function sideAlcove(anchor, nx, nz, length, id) {
+  const end = [anchor.x + nx * length, anchor.y, anchor.z + nz * length];
+  const mid = [anchor.x + nx * length * 0.55, anchor.y, anchor.z + nz * length * 0.55];
+  return makePolylineCorridor(id, [
+    [anchor.x, anchor.y, anchor.z],
+    mid,
+    end,
+  ], 3.4, 5.6, 'alcove');
+}
+
 export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
-  ...WOLFVEIL_EXPLORABLE_CAVES.map(c => {
-    // A cave chamber begins BEFORE its centre, about one chamber radius from
-    // it. The old entry ramp descended all the way to centre; the chamber
-    // floor won the collision query halfway through and caused a 3–4m DROP.
-    // Bring the full ramp to chamber grade at its OUTER threshold, then
-    // continue level into the room. The existing floor meshes and the foot
-    // collision sampler share these exact same waypoints.
-    const joinAlong=Math.max(5,c.chamberOffset-c.chamberRadius+1.25);
-    return makePolylineCorridor(
-      `entry_${c.id}`,
-      [
-        c.threshold,
-        [c.mouth[0],c.mouthY-0.35,c.mouth[1]],
-        [
-          c.mouth[0]+c.dir[0]*(joinAlong*0.5),
-          c.mouthY-c.chamberDrop*0.54,
-          c.mouth[1]+c.dir[1]*(joinAlong*0.5),
-        ],
-        [
-          c.mouth[0]+c.dir[0]*joinAlong,
-          c.chamber.y,
-          c.mouth[1]+c.dir[1]*joinAlong,
-        ],
-        [c.chamber.x,c.chamber.y,c.chamber.z],
-      ],
-      3.9,
-      6.2,
-      'entry',
-    );
-  }),
-  // Tunnel 1: Jade Lantern Grotto <-> Whispering Root Hollow (western ring)
+  ...WOLFVEIL_EXPLORABLE_CAVES.map(c => makePolylineCorridor(
+    `entry_${c.id}`,
+    entryWaypoints(c),
+    3.3,
+    6.0,
+    'entry',
+  )),
   makePolylineCorridor(
     'tunnel_grotto_to_roots',
-    bendWaypoints(byId.jade_lantern_grotto.chamber, byId.whispering_root_hollow.chamber, -18, -1.6),
-    3.6,
-    5.8,
+    tunnelWaypoints(byId.jade_lantern_grotto.chamber, byId.whispering_root_hollow.chamber, -28),
+    3.5, 6.0,
   ),
-  // Tunnel 2: Jade Lantern Grotto <-> Subterranean Rotunda
   makePolylineCorridor(
     'tunnel_grotto_to_rotunda',
-    bendWaypoints(byId.jade_lantern_grotto.chamber, WOLFVEIL_CAVE_HUB, 15, -1.4),
-    3.8,
-    6.0,
+    tunnelWaypoints(byId.jade_lantern_grotto.chamber, WOLFVEIL_CAVE_HUB, 18),
+    3.6, 6.0,
   ),
-  // Tunnel 3: Whispering Root Hollow <-> Subterranean Rotunda
   makePolylineCorridor(
     'tunnel_roots_to_rotunda',
-    bendWaypoints(byId.whispering_root_hollow.chamber, WOLFVEIL_CAVE_HUB, 14, -1.5),
-    3.6,
-    5.8,
+    tunnelWaypoints(byId.whispering_root_hollow.chamber, WOLFVEIL_CAVE_HUB, -18),
+    3.5, 6.0,
   ),
-  // Tunnel 4: Subterranean Rotunda <-> Sunken Inkstone Cistern
   makePolylineCorridor(
     'tunnel_rotunda_to_cistern',
-    bendWaypoints(WOLFVEIL_CAVE_HUB, byId.sunken_inkstone_cistern.chamber, -16, -1.4),
-    3.8,
-    6.0,
+    tunnelWaypoints(WOLFVEIL_CAVE_HUB, byId.sunken_inkstone_cistern.chamber, 16),
+    3.6, 6.0,
   ),
-  // Tunnel 5: Subterranean Rotunda <-> Echoing Crystal Vault (deep cross-valley gallery)
   makePolylineCorridor(
     'tunnel_rotunda_to_crystal',
-    bendWaypoints(WOLFVEIL_CAVE_HUB, byId.echoing_crystal_vault.chamber, 22, -2.4),
-    4.0,
-    6.2,
+    tunnelWaypoints(WOLFVEIL_CAVE_HUB, byId.echoing_crystal_vault.chamber, 20),
+    3.7, 6.2,
   ),
+  // Quiet side rooms off the rotunda. Not part of the travel graph — places
+  // to stand, look, and find by walking, not a teleport or a loot button.
+  sideAlcove(WOLFVEIL_CAVE_HUB, -1, 0.15, 36, 'alcove_west_quiet_basin'),
+  sideAlcove(WOLFVEIL_CAVE_HUB, 0.2, 1, 34, 'alcove_north_offering'),
 ]);
 
 /**

@@ -35,10 +35,10 @@ export const CLASSIC_CAVE_MOUTHS=Object.freeze([
   Object.freeze({id:'lunar-gate',x:171,z:225,radius:5.5}),
   Object.freeze({id:'astral-gate',x:197,z:225,radius:5.2}),
   // Wolfveil local-Z sites translate +70 to Game 3D world coordinates.
-  Object.freeze({id:'jade-lantern',x:-216,z:146,radius:5}),
-  Object.freeze({id:'whispering-root',x:-312,z:218,radius:5}),
-  Object.freeze({id:'inkstone-cistern',x:-82,z:382,radius:5}),
-  Object.freeze({id:'crystal-vault',x:122,z:268,radius:5}),
+  Object.freeze({id:'jade-lantern',x:-360,z:-330,radius:5}),
+  Object.freeze({id:'whispering-root',x:-500,z:370,radius:5}),
+  Object.freeze({id:'inkstone-cistern',x:-40,z:618,radius:5}),
+  Object.freeze({id:'crystal-vault',x:500,z:34,radius:5}),
 ]);
 export function nearClassicCaveRim(x,z,radius=0){
   if(![x,z,radius].every(Number.isFinite)||radius<0)return false;

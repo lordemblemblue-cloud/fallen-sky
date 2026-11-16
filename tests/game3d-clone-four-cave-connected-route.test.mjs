@@ -61,7 +61,7 @@ test('all four cave chambers are truly connected by the five rendered tunnels an
 });
 
 test('ramps and connected tunnels have contiguous walkable floors without multi-metre handoff drops',()=>{
-  assert.equal(WOLFVEIL_CAVE_CORRIDORS.length,9); // four entries + five connections
+  assert.equal(WOLFVEIL_CAVE_CORRIDORS.length,11); // four entries + five tunnels + two quiet alcoves
   for(const corridor of WOLFVEIL_CAVE_CORRIDORS){
     let previous=null,steps=0;
     for(const seg of corridor.segments){

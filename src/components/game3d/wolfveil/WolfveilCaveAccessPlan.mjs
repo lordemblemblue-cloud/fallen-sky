@@ -6,27 +6,27 @@ import { wolfveilHeight } from './WolfveilLayout.js';
 
 export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   jade_lantern_grotto:Object.freeze({
-    trailName:'Training Forest Trail',
-    junction:Object.freeze([-230,65]),
-    bend:Object.freeze([-193,56]),
+    trailName:'South Residential Trail',
+    junction:Object.freeze([-235,-280]),
+    bend:Object.freeze([-300,-340]),
     style:'cedar_lantern',waymark:'JADE GROTTO',
   }),
   whispering_root_hollow:Object.freeze({
     trailName:'Western Woodland Fork',
-    junction:Object.freeze([-335,145]),
-    bend:Object.freeze([-286,128]),
+    junction:Object.freeze([-325,235]),
+    bend:Object.freeze([-410,268]),
     style:'root_steps',waymark:'ROOT HOLLOW',
   }),
   sunken_inkstone_cistern:Object.freeze({
     trailName:'Northern Ridge Path',
-    junction:Object.freeze([-55,265]),
-    bend:Object.freeze([-65,283]),
+    junction:Object.freeze([0,470]),
+    bend:Object.freeze([-18,512]),
     style:'hot_spring_stone',waymark:'INKSTONE CISTERN',
   }),
   echoing_crystal_vault:Object.freeze({
-    trailName:'Outrider Bridge Approach',
-    junction:Object.freeze([87,205]),
-    bend:Object.freeze([100,184]),
+    trailName:'Quarry Approach',
+    junction:Object.freeze([350,-40]),
+    bend:Object.freeze([430,-38]),
     style:'crystal_ridge',waymark:'CRYSTAL VAULT',
   }),
 });
