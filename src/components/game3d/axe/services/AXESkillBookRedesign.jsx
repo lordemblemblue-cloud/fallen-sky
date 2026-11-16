@@ -167,7 +167,7 @@ export default function AXESkillBookRedesign({
       </nav>
       <nav className="axe-tome-tabset axe-tome-main-tabs" aria-label="Skill Book pages">
         {[['skills','Skills'],['buffs','Buffs'],['advance','Advance']].map(([id,label])=>
-          <button type="button" key={id} aria-pressed={view===id} onClick={()=>{onChangeView(id);setFilter('all');}}>{label}</button>)}
+          <button type="button" key={id} aria-pressed={view===id} onClick={()=>{onChangeView(id);if(id==='buffs'&&!companion)setCategory('universal');setFilter('all');}}>{label}</button>)}
       </nav>
       <label className="axe-tome-search"><Search size={18}/><input type="search" value={search}
         onChange={e=>setSearch(e.target.value)} placeholder="Search skills…" aria-label="Search skills"/></label>
@@ -180,7 +180,7 @@ export default function AXESkillBookRedesign({
             const count=categoryCount(item.id);
             const realWeapon=item.mode?getWeaponForSkillBookMode(ownedWeapons,item.mode):null;
             return <button key={item.id} type="button" aria-pressed={category===item.id}
-              onClick={()=>{setCategory(item.id);setFilter('all');setSearch('');onSelect(null);}}>
+              onClick={()=>{setCategory(item.id);onChangeView('skills');setFilter('all');setSearch('');onSelect(null);}}>
               <span className="axe-tome-category-symbol" aria-hidden="true">{item.icon}</span>
               <span><strong>{item.name}</strong><small>{realWeapon?.name||(companion?'Companion skills':item.mode?'Weapon skills':'Combat skills')}</small></span>
               <em>{count}</em><ChevronRight size={15}/>
@@ -204,7 +204,7 @@ export default function AXESkillBookRedesign({
           <small>{weapon?.equipped?'Equipped weapon':'Browsing only — does not change your weapon'}</small>
           <button type="button" onClick={()=>onActivateWeapon(equipMode)}>Activate {currentCategory.name} bar</button>
         </div>}
-        <nav className="axe-tome-filters" aria-label="Skill filters">{FILTERS.map(item=>
+        <nav className="axe-tome-filters" aria-label="Skill filters">{FILTERS.filter(item=>!companion||['all','locked'].includes(item.id)).map(item=>
           <button type="button" key={item.id} aria-pressed={filter===item.id}
             onClick={()=>setFilter(item.id)}>{item.label}</button>)}</nav>
         <div className="axe-tome-card-scroll">
