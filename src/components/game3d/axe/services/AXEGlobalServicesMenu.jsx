@@ -79,7 +79,7 @@ const PROGRESSION_PANELS = {
   core: CoreSubTab,
   elixir: ElixirSubTab,
   pet: PetSubTab,
-  mount: MountSubTab,
+  mount: AXECompanionWorkspace,
   ascension: AscensionSubTab,
   vanity: VanitySubTab,
   costume: CostumeSubTab,

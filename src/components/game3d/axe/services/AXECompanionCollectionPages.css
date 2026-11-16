@@ -1,0 +1,110 @@
+/* Owned Mounts and Companion Mastery share the existing AXE gold-on-glass style.
+   These pages have independent scroll containers; they do not cover the Services rail. */
+.axe-collection-page {
+  flex: 1 1 auto; min-height: 0; min-width: 0; height: 100%;
+  box-sizing: border-box; overflow-x: hidden; overflow-y: auto;
+  padding: clamp(12px, 1.5vw, 24px); color: #f1e9dc;
+  scrollbar-width: thin; scrollbar-color: #caa66b8a transparent;
+  background: linear-gradient(124deg,rgba(53,76,94,.24),rgba(19,35,48,.42));
+}
+.axe-collection-page-header { display: flex; flex-wrap: wrap; justify-content: space-between;
+  align-items: center; gap: 12px; border-bottom: 1px solid #dfcfa72c; padding-bottom: 15px; }
+.axe-collection-page-header > div { flex: 1 1 350px; min-width: 0; }
+.axe-collection-eyebrow { font-size: 10px; letter-spacing: .28em; text-transform: uppercase;
+  color: #e9c78f; }
+.axe-collection-page h2 { margin: 5px 0 6px; font: 27px/1.2 Georgia,serif; color: #ffe1ae; }
+.axe-collection-page h2 span { margin-left: 9px; font: 11px/1.4 system-ui,sans-serif;
+  letter-spacing: .05em; color: #ccd5dc; white-space: nowrap; }
+.axe-collection-page-header p { margin: 0; max-width: 780px; font: 12px/1.55 system-ui,sans-serif; color: #d3dce2; }
+.axe-collection-armory-button { display: inline-flex; align-items: center; justify-content: center;
+  gap: 8px; border: 1px solid #d5b57892; background: #364956a8; color: #ffe1ab;
+  border-radius: 9px; padding: 9px 11px; font-size: 12px; white-space: nowrap; }
+.axe-collection-armory-button:hover,.axe-collection-armory-button:focus-visible {
+  background: #d5b57838; outline-color: #f6ce86; }
+.axe-collection-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between;
+  align-items: center; gap: 10px; margin: 13px 0; color: #bfccd6; font-size: 11px; }
+.axe-collection-search { min-width: 0; max-width: 440px; width: 100%;
+  display: flex; align-items: center; gap: 8px; padding: 9px 11px; border: 1px solid #c4d6e159;
+  background: #1023329f; border-radius: 10px; color: #efdeb9; }
+.axe-collection-search input { background: none; border: 0; outline: 0; color: #fff; min-width: 0; width: 100%; font-size: 12px; }
+.axe-collection-search input::placeholder { color: #adbdc9; }
+.axe-collection-empty { margin: 22px 0; padding: 22px; border: 1px solid #c4d6e13c;
+  background: #0c1c2875; border-radius: 12px; font-size: 13px; color: #d3dce2; }
+.axe-collection-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr));
+  align-items: stretch; gap: 13px; padding-bottom: 16px; }
+.axe-collection-card, .axe-collection-mastery-detail { min-width: 0; background: linear-gradient(147deg,#5e7b914e,#142b3fbc);
+  border: 1px solid #dfceaa68; box-shadow: inset 0 1px 9px #ffffff12; border-radius: 13px; padding: 15px; }
+.axe-collection-card-heading { display: flex; align-items: center; gap: 11px; min-height: 63px; }
+.axe-collection-card-emblem { flex: 0 0 44px; width: 44px; height: 44px;
+  border: 1px solid #e1bd808c; border-radius: 50%; background: #c19d6233;
+  color: #f1d7a7; display: grid; place-items: center; }
+.axe-collection-card-name { flex: 1 1 auto; min-width: 0; }
+.axe-collection-card-kicker { font-size: 10px; letter-spacing: .12em;
+  text-transform: uppercase; color: #e9c68d; }
+.axe-collection-card h3,.axe-collection-mastery-detail h3 { margin: 4px 0 5px;
+  font: 20px/1.25 Georgia,serif; color: #f6e5c7; overflow-wrap: anywhere; }
+.axe-collection-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.axe-collection-badges span,.axe-collection-ready,.axe-collection-training {
+  font-size: 10px; border-radius: 999px; color: #f3dbac;
+  background: #dcb66d24; border: 1px solid #dcb66d56; padding: 3px 7px; }
+.axe-collection-primary-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0 11px; }
+.axe-collection-primary-stats > div { flex: 1 1 125px; display: flex; justify-content: space-between;
+  align-items: center; gap: 7px; border-radius: 7px; padding: 9px 10px; background: #0c2232a1;
+  font-size: 11px; color: #d0dce4; }
+.axe-collection-primary-stats strong { color: #f5e1ba; white-space: nowrap; }
+.axe-collection-progress { height: 7px; border-radius: 999px; background: #0008; overflow: hidden; }
+.axe-collection-progress span { display: block; height: 100%; background: linear-gradient(90deg,#7aade6,#ebc57c); }
+.axe-collection-progress-caption { display: flex; flex-wrap: wrap; justify-content: space-between;
+  gap: 4px; margin-top: 7px; color: #cbd3da; font-size: 10px; }
+.axe-collection-page h4 { margin: 16px 0 8px; font: 13px Georgia,serif; color: #f3d5a3; }
+.axe-collection-stat-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; margin: 0; }
+.axe-collection-stat-grid > div { min-width: 0; display: flex; align-items: center; gap: 4px;
+  justify-content: space-between; padding: 8px; background: #cce3ec0e; border: 1px solid #cce3ec18;
+  border-radius: 6px; font-size: 11px; }
+.axe-collection-stat-grid dt { color: #c7d7e1; overflow-wrap: anywhere; }
+.axe-collection-stat-grid dd { margin: 0; color: #f8e0b0; font-weight: 600; white-space: nowrap; }
+.axe-collection-detail-footer { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 13px;
+  padding-top: 11px; border-top: 1px solid #e1cba028; color: #bcd0db; font-size: 10px; }
+.axe-collection-detail-footer span { display: inline-flex; gap: 4px; }
+.axe-collection-detail-footer b { color: #f1e1c6; }
+.axe-collection-abilities { font-size: 11px; color: #d2bbec; line-height: 1.4; }
+.axe-collection-mastery-layout { display: grid; grid-template-columns: minmax(220px,30%) minmax(0,1fr);
+  min-height: 0; gap: 13px; margin-top: 14px; }
+.axe-collection-mastery-roster { min-width: 0; border: 1px solid #d5c69a65; border-radius: 12px;
+  padding: 10px; background: #0d2636ab; }
+.axe-collection-mastery-roster .axe-collection-search { max-width: none; box-sizing: border-box; }
+.axe-collection-mastery-scroll { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.axe-collection-mastery-scroll > button { display: flex; align-items: center; gap: 8px; width: 100%;
+  text-align: left; border: 1px solid #d9c69e33; border-radius: 8px; padding: 8px;
+  background: #b6cddd0e; color: #e7e7ec; }
+.axe-collection-mastery-scroll > button[aria-pressed=true] {
+  background: #e3bf8041; border-color: #e6c284; }
+.axe-collection-mastery-roster-text { flex: 1 1 auto; min-width: 0; }
+.axe-collection-mastery-roster-text strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.axe-collection-mastery-roster-text small { display: block; font-size: 10px; color: #c9d2d8; }
+.axe-collection-mastery-detail { min-width: 0; }
+.axe-collection-mastery-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.axe-collection-training { color: #cce2f2; border-color: #bfd4ea72; background: #6d96ba24; }
+.axe-collection-training-panel { margin-top: 16px; padding: 11px;
+  border: 1px solid #d6c49d62; border-radius: 9px; background: #102e40b5; }
+.axe-collection-training-panel h4 { display: flex; gap: 7px; align-items: center; margin: 0 0 5px; }
+.axe-collection-training-panel p { margin: 0; font-size: 11px; line-height: 1.5; color: #c5d2db; }
+.axe-collection-training-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+.axe-collection-training-actions button { padding: 8px 10px; border: 1px solid #e3c38a76;
+  border-radius: 6px; background: #e3bf8026; color: #f5e1bd; font-size: 11px; }
+.axe-collection-training-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.axe-collection-training-actions button:not(:disabled):hover { background: #e3bf8048; }
+.axe-comp-equipment-shell { display: flex; flex-direction: column; height: 100%; min-height: 0; overflow: hidden; }
+.axe-comp-equipment-subnav { flex: 0 0 auto; display: flex; flex-wrap: wrap;
+  gap: 7px; padding: 7px 13px; background: #102535c4; border-bottom: 1px solid #d9c69456; }
+.axe-comp-equipment-subnav button { padding: 6px 11px; border: 1px solid #d5bf9473;
+  border-radius: 8px; color: #dfd9ca; font-size: 11px; background: #b6cfda11; }
+.axe-comp-equipment-subnav button[aria-pressed=true] { background: #dfbb79a8; border-color: #f4d59c; color: #1e2934; }
+.axe-comp-equipment-content { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.axe-comp-equipment-content > .axe-comp-mounts-pane { height: 100%; }
+@media(max-width:840px) {
+  .axe-collection-mastery-layout { grid-template-columns: 1fr; }
+  .axe-collection-mastery-scroll { display: grid; grid-template-columns: repeat(auto-fit,minmax(175px,1fr)); }
+  .axe-collection-card-grid { grid-template-columns: 1fr; }
+  .axe-collection-page { padding: 10px; }
+}

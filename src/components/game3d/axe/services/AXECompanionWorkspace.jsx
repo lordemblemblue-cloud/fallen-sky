@@ -13,6 +13,9 @@ import { getCompanionById, COMPANION_GEAR } from '../../companionData';
 import { getAXEVanityState, subscribeAXEVanity } from '../progression/AXEVanityStore';
 import { getAXECostumeState, subscribeAXECostumes } from '../progression/AXECostumeStore';
 import MountSubTab from '../../progression/hub/MountSubTab';
+import AXEOwnedMountsPanel from './AXEOwnedMountsPanel';
+import AXECompanionMasteryPanel from './AXECompanionMasteryPanel';
+import './AXECompanionCollectionPages.css';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
 import AXECompanionStylePane from './AXECompanionStylePane';
 import AXECompanionOverviewClone from './AXECompanionOverviewClone';
@@ -64,6 +67,7 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
   const costumes = useLive(subscribeAXECostumes, getAXECostumeState);
   const [tab, setTab] = useState(serviceId === 'mount' ? 'Mounts' : serviceId === 'pet' ? 'Mastery' : 'Overview');
   useEffect(() => { if (serviceId === 'mount') setTab('Mounts'); else if (serviceId === 'pet') setTab('Mastery'); }, [serviceId]);
+  const [equipmentView, setEquipmentView] = useState('companion');
   const [selected, setSelected] = useState(null);
   const [result, setResult] = useState('');
   const [pending, setPending] = useState(null);
@@ -176,38 +180,6 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
       <Property label="All-Stats Bonus" value={`+${Number(bonuses.allStatsPct || 0).toFixed(1)}%`}/>
     </Glass>
   </>;
-  const makeMastery = () => <>
-    <Glass title="Companion Mastery" extra={selectedName} className="axe-comp-section-wide">
-      {selectedPet ? <>
-        <Property label="Level" value={`${level} / ${AXE_PET_CONFIG.maxLevel}`}/>
-        <Meter value={xp} max={xpForAXEPetLevel(Math.max(level, 1))}/>
-        <Property label="Over-Enchantment" value={`${selectedPet.overEnchantPercent || 0}% / ${AXE_PET_CONFIG.maxOverEnchantPercent}%`}/>
-        <Property label="Feed Owned" value={pets.materials?.pet_feed || 0}/>
-        <Property label="Catalysts Owned" value={pets.materials?.pet_catalyst || 0}/>
-        <div className="axe-comp-actions">
-          <Action disabled={!(pets.materials?.pet_feed > 0) || level >= AXE_PET_CONFIG.maxLevel}
-            onClick={() => onAction('Feed companion', () => feedAXEPet(selectedPet.instanceId, 1))}>Feed (+25 XP)</Action>
-          <Action disabled={!(pets.materials?.pet_catalyst > 0)}
-            onClick={() => onAction('Over-enchant companion', () => overEnchantAXEPet(selectedPet.instanceId), true)}>Over-Enchant</Action>
-          <Action disabled={registered?.instanceId === selectedPet.instanceId}
-            onClick={() => onAction('Register companion', () => registerAXEPet(selectedPet.instanceId))}>Register</Action>
-          <Action onClick={() => onAction('Summon companion', () => summonAXEPet(selectedPet.instanceId))}>Summon</Action>
-        </div>
-      </> : <p>No owned companion can be advanced.</p>}
-    </Glass>
-    <Glass title="Mastery Requirements" className="axe-comp-section-side">
-      <Property label="Companion Mastered" value={isSoulCompanionMastered(selectedPet) ? 'Yes' : 'No'}/>
-      <Property label="Rank" value={selectedPet ? titleCase(selectedPet.tierId || 'base') : null}/>
-      <p className="axe-comp-description">True Soul Fusion requires Level 200 and Over-Enchantment 200% on the registered companion.</p>
-    </Glass>
-  </>;
-  // Stable is folded into this companion menu. The existing MountSubTab
-  // preserves all registered-mount actions, including pill-based absorption,
-  // instead of creating an incompatible second fusion or mount economy.
-  const makeMounts = () => <div className="axe-comp-mounts-pane" aria-label="Companion mounts and absorption">
-    <MountSubTab />
-  </div>;
-
   const makeCosmetics = () => <>
     <Glass title={tab === 'Vanity' ? 'Companion Vanity' : 'Companion Costumes'} className="axe-comp-section-wide">
       <p className="axe-comp-description">The game currently provides a character Vanity and Costume inventory, but not a separate validated companion cosmetic loadout. This page preserves the reference design without applying player-only cosmetics to your companion.</p>
@@ -222,16 +194,16 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
   </>;
   const details = tab === 'Overview' ? makeOverview() : tab === 'Equipment' ? makeEquipment()
     : tab === 'Imbuement' ? makeImbuement()
-    : tab === 'Mastery' ? makeMastery() : tab === 'Mounts' ? makeMounts() : makeCosmetics();
+    : makeCosmetics();
 
-  return <div className={["Overview","Equipment","Vanity","Imbuement"].includes(tab)
+  return <div className={["Overview","Equipment","Vanity","Imbuement","Mounts","Mastery"].includes(tab)
     ? "axe-comp-root axe-comp-root--modern" : "axe-comp-root"} data-progression-panel="companion">
     <div className="axe-comp-header"><Compass size={42} strokeWidth={1.2}/><h2>Companion</h2><span className="axe-comp-star">✧</span>
-      <button type="button" className="axe-comp-header-favorite"
+      {tab !== "Mounts" && <button type="button" className="axe-comp-header-favorite"
         aria-label={selectedPet ? (favorites.includes(selectedPet.instanceId)?'Unfavorite companion':'Favorite companion') : 'No companion selected'}
         disabled={!selectedPet} onClick={toggleFavorite} title="Favorite companion">
         <Star size={17} fill={selectedPet && favorites.includes(selectedPet.instanceId) ? 'currentColor' : 'none'}/>
-      </button>
+      </button>}
       <button type="button" className="axe-comp-header-close" data-service-close
         onClick={onClose} aria-label="Close Companion">×</button></div>
     <div className="axe-comp-shell">
@@ -244,12 +216,32 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
       {tab === 'Overview' ? <AXECompanionOverviewClone
         pets={pets} soul={soul} loadout={loadout} favorites={favorites}
         selectedPetId={selected} onSelectPet={setSelected}
-        onNotice={setResult} onEquipment={()=>setTab('Equipment')} bonuses={bonuses}/>
+        onNotice={setResult} onEquipment={() => { setEquipmentView('companion'); setTab('Equipment'); }} bonuses={bonuses}/>
+      : tab === 'Mounts' ? <AXEOwnedMountsPanel onOpenArmory={() => {
+          setEquipmentView('mount');
+          setTab('Equipment');
+          setResult('');
+          setPending(null);
+        }}/>
+      : tab === 'Mastery' ? <AXECompanionMasteryPanel pets={pets}
+          selectedPet={selectedPet} onSelectPet={(id) => { setSelected(id); setPending(null); setResult(''); }} onAction={onAction}/>
       : ['Equipment','Vanity','Imbuement'].includes(tab) ?
         <div className="axe-comp-modern">
-          {tab === 'Equipment'
-            ? <AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>
-            : <AXECompanionStylePane page={tab} onNotice={setResult} onPageChange={setTab}/>}
+          {tab === 'Equipment' ? <div className="axe-comp-equipment-shell">
+            <nav className="axe-comp-equipment-subnav" aria-label="Companion equipment sections">
+              <button type="button" aria-pressed={equipmentView === 'companion'}
+                onClick={() => setEquipmentView('companion')}>Companion Gear</button>
+              <button type="button" aria-pressed={equipmentView === 'mount'}
+                onClick={() => setEquipmentView('mount')}>Mount Armory</button>
+            </nav>
+            <div className="axe-comp-equipment-content">
+              {equipmentView === 'mount'
+                ? <div className="axe-comp-mounts-pane" aria-label="Mount armory and advancement">
+                  <MountSubTab />
+                </div>
+                : <AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>}
+            </div>
+          </div> : <AXECompanionStylePane page={tab} onNotice={setResult} onPageChange={setTab}/>}
         </div>
         : <div className="axe-comp-body">
         <aside className="axe-comp-roster" aria-label="Owned companions">

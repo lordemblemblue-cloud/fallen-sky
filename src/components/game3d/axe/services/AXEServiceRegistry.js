@@ -47,7 +47,7 @@ export const AXE_SERVICE_REGISTRY = Object.freeze([
   service({ id: 'elixir', label: 'Buddha Essence', description: "Grow Vitals, Strengthening, Dexterity and Spirituality from combat-earned experience; convert earned XP into permanent levels.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
   service({ id: 'companion', label: 'Companion', description: "Manage owned companions in the reference glass UI, including their real equipment, soul fusion, mastery, imbuement and cosmetic availability.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
   service({ id: 'pet', label: 'Pets', description: "Register and advance pets or companions. Companion soul infusion is accessed from the Companion hub.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
-  service({ id: 'mount', label: 'Mounts', description: "Manage mount registration and advancement separately from pet soul fusion.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
+  service({ id: 'mount', label: 'Mounts', description: "Browse every owned mount and its current stats; open the Mount Armory for equipment and advanced progression.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
   service({ id: 'ascension', label: 'Ascension', description: "Advance character Ascension using its own progression rules, not Blacksmith item stages.", category: AXE_SERVICE_CATEGORIES.PROGRESSION, kind: 'progression_panel' }),
 
   service({ id: 'vanity', label: 'Vanity', description: "Equip eligible vanity appearances through the existing customization system.", category: AXE_SERVICE_CATEGORIES.APPEARANCE, kind: 'progression_panel' }),
