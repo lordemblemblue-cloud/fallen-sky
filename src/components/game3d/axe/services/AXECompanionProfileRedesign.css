@@ -150,3 +150,29 @@
   .axe-mastery-role-grid {grid-template-columns:1fr;gap:8px;}
   .axe-mastery-role-card {min-height:108px;}
 }
+
+
+/* Mount gear remains under Equipment, while progression is relocated to the
+   companion head toggle. Keep refinement collapsed to protect the 3D stage. */
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-app-right-stack {overflow-y:auto;}
+.axe-comp-mount-refinement {border:1px solid #d9bf8d8c;border-radius:10px;
+  background:rgba(25,43,59,.77);margin:9px 0 3px;color:#eadfcb;}
+.axe-comp-mount-refinement>summary {cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:6px;padding:11px 12px;
+  color:#f8ddb0;font:14px Georgia,serif;list-style:none;}
+.axe-comp-mount-refinement>summary::-webkit-details-marker {display:none;}
+.axe-comp-mount-refinement>summary>span {font:10px Georgia,serif;color:#bacfda;}
+.axe-comp-refinement-content {padding:8px 10px 12px;border-top:1px solid #d9bf8d57;}
+.axe-comp-refinement-content p {font:11px/1.5 Georgia,serif;color:#cbd8df;margin:2px 0 11px;}
+.axe-comp-refinement-gold {color:#f4d79e;font:12px Georgia,serif;margin-bottom:7px;}
+.axe-comp-refinement-row {display:flex;align-items:center;justify-content:space-between;
+  gap:8px;padding:8px 0;border-bottom:1px solid #d9bf8d30;}
+.axe-comp-refinement-row>div {display:flex;flex-direction:column;min-width:0;gap:3px;}
+.axe-comp-refinement-row strong {font:11px Georgia,serif;}
+.axe-comp-refinement-row small {font:10px Georgia,serif;color:#baccd6;}
+.axe-comp-refinement-row button,.axe-comp-refinement-cancel {padding:7px 9px;
+  border:1px solid #e4c79291;border-radius:7px;background:#c9a46d42;
+  color:#f8e0b6;font:11px Georgia,serif;flex-shrink:0;}
+.axe-comp-refinement-row button:disabled {opacity:.46;cursor:not-allowed;}
+.axe-comp-refinement-row button:not(:disabled):hover {background:#d9bd8b8a;color:#262e35;}
+.axe-comp-refinement-cancel {margin-top:10px;background:#1d3549;}
