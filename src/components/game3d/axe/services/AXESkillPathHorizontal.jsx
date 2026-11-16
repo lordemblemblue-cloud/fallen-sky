@@ -55,7 +55,7 @@ function BranchCard({ icon, title, subtitle, locked=false, selected=false, equip
 
 export default function AXESkillPathHorizontal({
   category, paths, activePathId, onChangePath, selected, onSelect, activeIds=[],
-  onFeedback, onEquipSkill,
+  onFeedback, onEquipSkill, onActivateWeapon, activeMode,
 }) {
   const [points,setPoints]=useState(getWeaponSkillPoints);
   const sharedScrollRef=useRef(null);
@@ -165,6 +165,11 @@ export default function AXESkillPathHorizontal({
         <div className="axe-hp-feature-copy">
           <h2>{path.id==='three'?'Multi':path.id==='single'?'Single':'Aerial'} / {WEAPON_LABELS[category]}</h2>
           <p>{path.label} path — {description}</p>
+          <button type="button" className="axe-hp-activate-bar"
+            onClick={()=>onActivateWeapon?.(category)}
+            title="Switch to this weapon's saved skill bar">
+            {activeMode?.id===category?'Active ':'Activate '}{WEAPON_LABELS[category]} Bar
+          </button>
         </div>
         <div className="axe-hp-feature-selected">
           <div><strong>{displayTitle}</strong>
