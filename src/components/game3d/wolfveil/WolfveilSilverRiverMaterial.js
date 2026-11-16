@@ -1,11 +1,14 @@
-// Game 3D opt-in: Immersive Sumi-e River Water Shader.
+// Game 3D opt-in: Immersive Sumi-e River Water Shader (natural flow-map surface).
 // Replaces the old neon triangle wireframe grid with authentic multi-layered
 // current waves, bank eddies, depth absorption (pebble shallows -> jade -> deep
 // sumi-indigo), riverbed caustics, ink-brush foam ribbons, raindrop rings, and
 // Fresnel sky / sun specular reflections. Preserves all uniform & contact contracts.
 import * as THREE from 'three';
 import {resolveWolfveilRiverWeather} from './WolfveilSilverRiverFlow.mjs';
-import {WOLFVEIL_GLASS_RIPPLES} from './WolfveilGlassRippleProfile.mjs';
+// Natural river surface (2026-11-16): flow-mapped ripples replace the former
+// evenly spaced "glass ripple" crest train (WolfveilGlassRippleProfile.mjs
+// stays available for reference).
+export const WOLFVEIL_RIVER_SHADER=Object.freeze({width:19,flowPeriod:2.6,style:'flow-map-natural-v1'});
 
 const vertexShader=`
 attribute vec3 riverFlow; // downstream unit X/Z and local cascade roughness
@@ -34,18 +37,8 @@ varying vec2 vBankUv;
 varying vec3 vRiverFlow;
 varying float vRiverTravel;
 
-const float WAVE_SPACING=${WOLFVEIL_GLASS_RIPPLES.spacing.toFixed(2)};
-const float WAVE_SPEED=${WOLFVEIL_GLASS_RIPPLES.downstreamSpeed.toFixed(2)};
-const float WAVE_WIDTH=${WOLFVEIL_GLASS_RIPPLES.lateralWidth.toFixed(2)};
-const float WAVE_BEND=${WOLFVEIL_GLASS_RIPPLES.bendAmplitude.toFixed(2)};
-const float WAVE_BEND_FREQ=${WOLFVEIL_GLASS_RIPPLES.bendFrequency.toFixed(2)};
-const float WAVE_BEND2=${WOLFVEIL_GLASS_RIPPLES.secondBendAmplitude.toFixed(2)};
-const float WAVE_BEND_FREQ2=${WOLFVEIL_GLASS_RIPPLES.secondBendFrequency.toFixed(2)};
-const float WAVE_POWER=${WOLFVEIL_GLASS_RIPPLES.crestPower.toFixed(2)};
-const float WAVE_TRAIL_POWER=${WOLFVEIL_GLASS_RIPPLES.trailingPower.toFixed(2)};
-const float WAVE_TRAIL_OFFSET=${WOLFVEIL_GLASS_RIPPLES.trailingOffset.toFixed(2)};
-const float WAVE_TRAIL_WEIGHT=${WOLFVEIL_GLASS_RIPPLES.trailingWeight.toFixed(2)};
-const float WAVE_NORMAL=${WOLFVEIL_GLASS_RIPPLES.normalStrength.toFixed(3)};
+const float RIVER_WIDTH=${WOLFVEIL_RIVER_SHADER.width.toFixed(1)};
+const float FLOW_PERIOD=${WOLFVEIL_RIVER_SHADER.flowPeriod.toFixed(2)};
 
 float riverHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);}
 float riverNoise(vec2 p){
@@ -53,58 +46,38 @@ float riverNoise(vec2 p){
   return mix(mix(riverHash(i),riverHash(i+vec2(1.,0.)),f.x),
              mix(riverHash(i+vec2(0.,1.)),riverHash(i+vec2(1.,1.)),f.x),f.y);
 }
-float riverFbm(vec2 p){
-  return riverNoise(p)*.52+riverNoise(p*2.17+vec2(3.7,-1.9))*.31+riverNoise(p*4.63)*.17;
+// Small capillary/wind wave heights: four octaves, no periodic train.
+float riverWaves(vec2 p){
+  return riverNoise(p)*.50+riverNoise(p*2.13+vec2(1.7,9.2))*.28+
+    riverNoise(p*4.37+vec2(8.3,2.8))*.14+riverNoise(p*8.91+vec2(3.1,7.7))*.08;
 }
-
-vec3 wigglyCurrentWave(float travel,float bank){
-  float cross=(bank-.5)*WAVE_WIDTH;
-  float forward=travel-uFlowTime*WAVE_SPEED;
-  float phaseA=cross*WAVE_BEND_FREQ+forward*.018+uFlowTime*.10;
-  float phaseB=cross*WAVE_BEND_FREQ2-forward*.012+uFlowTime*.13;
-  float bend=WAVE_BEND*sin(phaseA)+WAVE_BEND2*sin(phaseB);
-  float phase=6.2831853*(forward+bend)/WAVE_SPACING;
-  float base=.5+.5*cos(phase);
-  float secondBase=.5+.5*cos(phase-WAVE_TRAIL_OFFSET);
-  float primary=pow(base,WAVE_POWER);
-  float trailing=pow(secondBase,WAVE_TRAIL_POWER)*WAVE_TRAIL_WEIGHT;
-  float variation=.72+.28*(.5+.5*sin(travel*.047+cross*.16));
-  float dPrimary=-.5*WAVE_POWER*pow(base,WAVE_POWER-1.)*sin(phase);
-  float dTrailing=-.5*WAVE_TRAIL_POWER*WAVE_TRAIL_WEIGHT*
-    pow(secondBase,WAVE_TRAIL_POWER-1.)*sin(phase-WAVE_TRAIL_OFFSET);
-  float phaseAlong=6.2831853/WAVE_SPACING*
-    (1.+WAVE_BEND*cos(phaseA)*.018-WAVE_BEND2*cos(phaseB)*.012);
-  float phaseAcross=6.2831853/WAVE_SPACING*
-    (WAVE_BEND*WAVE_BEND_FREQ*cos(phaseA)+
-      WAVE_BEND2*WAVE_BEND_FREQ2*cos(phaseB));
-  float crest=clamp((primary+trailing)*variation,0.,1.);
-  float slope=(dPrimary+dTrailing)*variation;
-  return vec3(crest,clamp(slope*phaseAlong,-1.,1.),
-    clamp(slope*phaseAcross,-1.,1.));
+vec2 riverSlope(vec2 p){
+  float e=.07,h=riverWaves(p);
+  return vec2(riverWaves(p+vec2(e,0.))-h,riverWaves(p+vec2(0.,e))-h)/e;
 }
 
 void main(){
   vec2 downstream=normalize(vRiverFlow.xy+vec2(.00001));
   vec2 across=vec2(-downstream.y,downstream.x);
   float bankDist=abs(vBankUv.x*2.-1.); // 0 at center channel, 1 at shoreline
-  float depthFactor=1.-smoothstep(.35,.98,bankDist);
+  float depthFactor=1.-smoothstep(.22,.97,bankDist);
+  float cascade=clamp(vRiverFlow.z,0.,1.);
 
-  vec3 wave=wigglyCurrentWave(vRiverTravel,vBankUv.x);
-  float cascade=vRiverFlow.z;
-
-  // Multi-scale advected flow ripples + swirling shoreline eddies
-  vec2 flowCoord=vec2((vBankUv.x-.5)*9.5,vRiverTravel*.24-uFlowTime*1.35);
-  vec2 flowCoordFine=vec2((vBankUv.x-.5)*21.0+sin(vRiverTravel*.15)*.6,vRiverTravel*.58-uFlowTime*2.15);
-  float ripA=riverFbm(flowCoord);
-  float ripB=riverFbm(flowCoordFine);
-  float eps=.08;
-  float dRx=riverFbm(flowCoord+vec2(eps,0.))-ripA;
-  float dRz=riverFbm(flowCoord+vec2(0.,eps))-ripA;
-
-  float windPhase=dot(vWaterWorld.xz,uWind)*.24-uFlowTime*(.32+.55*uWindStrength);
-  vec2 tilt=downstream*(wave.y*WAVE_NORMAL+dRz*.14)+
-            across*(wave.z*WAVE_NORMAL+dRx*.14)+
-            uWind*sin(windPhase)*(.005+.012*uWindStrength);
+  // Flow-map advection in channel metres: two layers half a cycle apart are
+  // cross-faded, so ripples travel downstream without stretching, seams or
+  // the old evenly spaced crest stripes. Fastest mid-channel, slow at banks.
+  float speed=(.45+1.35*depthFactor)*(1.+1.6*cascade);
+  vec2 channel=vec2((vBankUv.x-.5)*RIVER_WIDTH,vRiverTravel)*.34;
+  float phaseA=fract(uFlowTime/FLOW_PERIOD),phaseB=fract(uFlowTime/FLOW_PERIOD+.5);
+  float weightA=1.-abs(phaseA*2.-1.);
+  vec2 slopeA=riverSlope(channel-vec2(0.,phaseA*FLOW_PERIOD*speed*.34));
+  vec2 slopeB=riverSlope(channel-vec2(0.,phaseB*FLOW_PERIOD*speed*.34)+vec2(.43,.71));
+  vec2 slope=mix(slopeB,slopeA,weightA);
+  // Wind ruffle in world space, stronger in gusts.
+  vec2 windSlope=riverSlope(vWaterWorld.xz*.85+uWind*uFlowTime*.55+vec2(5.3,1.9));
+  float roughness=.11+.10*(1.-depthFactor)+.16*cascade;
+  vec2 tilt=(across*slope.x+downstream*slope.y)*roughness+
+    windSlope*(.035+.09*uWindStrength);
 
   // Raindrop micro-rings during rain/storm
   if(uRain>.02){
@@ -133,49 +106,56 @@ void main(){
     }
   }
 
-  vec3 normal=normalize(vec3(tilt.x,1.,tilt.y));
+  vec3 normal=normalize(vec3(-tilt.x,1.,-tilt.y));
   vec3 viewDir=normalize(cameraPosition-vWaterWorld);
   float ndv=clamp(dot(normal,viewDir),0.,1.);
-  float fresnel=.035+.965*pow(1.-ndv,4.6);
+  float fresnel=.02+.98*pow(1.-ndv,5.);
 
-  // Depth-based Sumi-e absorption: clear mineral shallows -> luminous jade -> deep sumi indigo
-  vec3 shallowTint=vec3(.14,.44,.47);
-  vec3 midJade=vec3(.055,.26,.34);
-  vec3 deepIndigo=vec3(.020,.095,.185);
-  vec3 body=mix(shallowTint,midJade,smoothstep(.0,.55,depthFactor));
-  body=mix(body,deepIndigo,smoothstep(.45,1.0,depthFactor));
+  // Water body: clear green-brown shallows over a pebbly bed, deepening to
+  // dark teal mid-channel (no glassy jade, no flat plastic colour).
+  vec3 shallowTint=vec3(.105,.170,.120);
+  vec3 midTint=vec3(.040,.120,.120);
+  vec3 deepTint=vec3(.016,.060,.075);
+  vec3 body=mix(shallowTint,midTint,smoothstep(0.,.5,depthFactor));
+  body=mix(body,deepTint,smoothstep(.45,1.,depthFactor));
+  float bed=riverNoise(vWaterWorld.xz*.65)*.6+riverNoise(vWaterWorld.xz*2.4+slope*.15)*.4;
+  body=mix(body,vec3(.17,.15,.10)*(.65+.55*bed),(1.-depthFactor)*.42);
+  // Soft dappled light on the bed in the shallows (follows the moving ripples).
+  float dapple=smoothstep(.55,.95,riverWaves(channel*1.9-vec2(0.,uFlowTime*.6*speed)));
+  body+=vec3(.05,.07,.05)*dapple*(1.-depthFactor)*clamp(uSunStrength,0.,1.);
 
-  // Subsurface sunlit riverbed caustics in shallow & mid-depth water
-  float causticFade=(1.-smoothstep(45.,190.,length(cameraPosition-vWaterWorld)))*(1.-depthFactor*.55);
-  float caustic=smoothstep(.56,.89,ripA*.48+ripB*.58);
-  body+=vec3(.19,.46,.49)*caustic*causticFade*(.42+.35*clamp(uSunStrength,0.,1.));
+  // Sky reflection with a real horizon-to-zenith gradient.
+  vec3 reflected=reflect(-viewDir,normal);
+  vec3 zenith=mix(vec3(.16,.30,.48),uSkyTint,.45);
+  vec3 horizon=mix(vec3(.58,.68,.76),uFogTint,.35);
+  vec3 sky=mix(horizon,zenith,smoothstep(0.,.55,reflected.y));
+  vec3 color=mix(body,sky,clamp(fresnel*.92,0.,1.));
 
-  vec3 sky=mix(vec3(.12,.30,.44),uSkyTint,.32);
-  vec3 color=mix(body,sky,clamp(.06+.64*fresnel,0.,1.));
-  color+=vec3(.025,.058,.072)*wave.x;
+  // Broken lace foam only along the banks and over cascades / footsteps.
+  float lace=riverWaves(channel*1.6+vec2(2.1,-uFlowTime*.5*speed));
+  float bankFoam=smoothstep(.88,.99,bankDist)*smoothstep(.48,.78,lace)*(.55+.3*uRain);
+  float cascadeFoam=cascade*cascade*smoothstep(.52,.84,lace);
+  float totalFoam=clamp(bankFoam*.5+cascadeFoam*.6+wake*.35,0.,.8);
+  color=mix(color,vec3(.84,.89,.91),totalFoam);
 
-  // Hand-brushed Sumi-e whitewater foam ribbons, shoreline meniscus & cascade spray
-  float bankFoam=smoothstep(.80,.992,bankDist)*(.32+.45*ripB+.28*uRain);
-  float currentRibbon=smoothstep(.74,.96,ripA*.55+ripB*.52)*(.18+.55*cascade);
-  float crestFoam=cascade*smoothstep(.48,.88,wave.x)*.45;
-  float totalFoam=clamp(bankFoam*.52+currentRibbon*.38+crestFoam+wake*.35,0.,.88);
-  vec3 foamPigment=mix(vec3(.76,.88,.91),vec3(.93,.97,.99),clamp(ripB+.25,0.,1.));
-  color=mix(color,foamPigment,totalFoam);
-
-  // Crisp solar & lunar specular glints
-  vec3 reflected=reflect(-normalize(uSunDirection),normal);
-  float specTight=pow(max(dot(reflected,viewDir),0.),130.)*clamp(uSunStrength,0.,1.6);
-  float specBroad=pow(max(dot(reflected,viewDir),0.),24.)*clamp(uSunStrength,0.,1.4);
-  color+=uSunColor*(specTight*.52+specBroad*.09);
+  // Sun glints: tight sparkle plus a soft sheen.
+  vec3 halfVector=normalize(normalize(uSunDirection)+viewDir);
+  float specTight=pow(max(dot(normal,halfVector),0.),240.)*1.4;
+  float specBroad=pow(max(dot(normal,halfVector),0.),38.)*.10;
+  color+=uSunColor*(specTight+specBroad)*clamp(uSunStrength,0.,1.5);
+  color=mix(color,vec3(.46,.34,.24)*.5+color*.5,uWet*.06);
   color=mix(color,color*vec3(.45,.61,.80),uNight*.72);
 
-  float alpha=clamp(.34+.38*depthFactor+.26*fresnel+totalFoam*.32+.04*wake,.28,.88);
+  // Feathered waterline: the shore graded into the bank shows through.
+  float alpha=mix(.50,.90,depthFactor)+fresnel*.30+totalFoam*.30+.04*wake;
+  alpha*=smoothstep(1.,.92,bankDist);
+  alpha=clamp(alpha,0.,.95);
   float underwater=1.-step(0.,viewDir.y);
-  color=mix(color,vec3(.04,.18,.28)+uSunColor*min(uSunStrength,.8)*.03,underwater*.74);
+  color=mix(color,vec3(.04,.16,.20)+uSunColor*min(uSunStrength,.8)*.03,underwater*.74);
   alpha=mix(alpha,.10,underwater);
 
   float fog=smoothstep(uFogNearFar.x,uFogNearFar.y,length(cameraPosition-vWaterWorld));
-  color=mix(color,uFogTint,fog*.22);
+  color=mix(color,uFogTint,fog*.35);
   alpha=mix(alpha,.42,fog*.18);
 
   gl_FragColor=vec4(color,alpha);

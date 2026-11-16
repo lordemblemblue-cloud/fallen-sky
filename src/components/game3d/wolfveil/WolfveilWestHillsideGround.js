@@ -4,6 +4,30 @@
 import * as THREE from 'three';
 import {WOLFVEIL_WEST_HILLSIDE} from './WolfveilWestHillside.mjs';
 import {wolfveilRockSideBlend} from './WolfveilWestRockGrassPockets.mjs';
+import {wolfveilLandscapeSurface,wolfveilNoise2} from './WolfveilLandscapeDesign.mjs';
+import {wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
+
+// Game 3D landscape design: the owner's dirt/stone shows where the design puts
+// soil or rock (trails, camps, riverbank patches, rock faces, patchy cedar
+// forest floor) instead of blanketing the whole western meadow.
+export function wolfveilWestOwnerSoilCoverage(x,z,y,upright=1){
+  const ny=Math.max(.05,Math.min(1,Math.abs(upright)));
+  const slope=Math.sqrt(Math.max(0,1-ny*ny))/ny;
+  const woodland=Math.max(0,Math.min(1,(-x-90)/260));
+  const s=wolfveilLandscapeSurface(x,z,y,slope,{
+    riverDistance:wolfveilDistanceToRiver(x,z),routeClearance:wolfveilRouteClearance(x,z),
+    west:woodland,
+  });
+  return wolfveilWestOwnerSoilFromSurface(x,z,s);
+}
+// Same rule from an already computed landscape surface (streamed meadow tiles).
+export function wolfveilWestOwnerSoilFromSurface(x,z,s){
+  const woodland=Math.max(0,Math.min(1,(-x-90)/260));
+  const n=wolfveilNoise2(x*.021+4.1,z*.021-2.3);
+  const forestFloor=Math.max(0,Math.min(1,(n+.05)/.5))*.5*woodland;
+  // Rock faces keep the sculpted mountain rock; the owner textures cover soil.
+  return Math.max(0,Math.min(1,Math.max(s.dirt*.95,forestFloor)-s.snow-s.rock*.6));
+}
 
 export const WOLFVEIL_WEST_LANDSCAPE_TEXTURES=Object.freeze({
   // User's actual uploaded image from their Base44 asset library.
@@ -18,7 +42,7 @@ function flatTexture(r,g,b){
   t.needsUpdate=true;
   return t;
 }
-export function addWolfveilWestHillsideLandscaping(world,baseGeometry,{span=1100,segments=310}={}){
+export function addWolfveilWestHillsideLandscaping(world,baseGeometry,{span=1100,segments=310,landscape=false}={}){
   if(!world?.mesh||!baseGeometry?.getAttribute||!Number.isInteger(segments)||segments<8)
     throw new TypeError('Western landscaping requires the existing Wolfveil ground geometry');
   const original=baseGeometry.getAttribute('position');
@@ -44,7 +68,10 @@ export function addWolfveilWestHillsideLandscaping(world,baseGeometry,{span=1100
       // The owner dirt/stone treatment now spans the ENTIRE west side
       // (including north and south), rather than the limited hill-grade zone.
       // It uses the same sourced material family as the streamed far west.
-      masks.push(wolfveilRockSideBlend(x,z));
+      masks.push(wolfveilRockSideBlend(x,z)*(landscape
+        ?wolfveilWestOwnerSoilCoverage(x,z,original.getY(index),
+          normals?normals.getY(index):1)
+        :1));
       slopes.push(normals?Math.max(0,Math.min(1,Math.abs(normals.getY(index)))):1);
       grid.set(index,positions.length/3-1);
     }
@@ -117,8 +144,10 @@ vec2 soilUV=vSoilUV;
 float tone=sin(soilUV.x*2.37+cos(soilUV.y*1.8))*
   sin(soilUV.y*2.81-soilUV.x*.63);
 float grit=smoothstep(.1,.82,.48+.39*tone+.35*(1.0-vUpright));
-vec3 ownerSoil=texture2D(uDirt,soilUV).rgb;
-vec3 ownerRock=texture2D(uStone,soilUV*1.13).rgb;
+vec3 ownerSoil=mix(texture2D(uDirt,soilUV).rgb,
+  texture2D(uDirt,soilUV*.29+vec2(.37,.11)).rgb,.5);
+vec3 ownerRock=mix(texture2D(uStone,soilUV*1.13).rgb,
+  texture2D(uStone,soilUV*.33+vec2(.21,.63)).rgb,.5);
 vec3 ownerColor=mix(ownerSoil,ownerRock,grit*.80);
 diffuseColor.rgb*=mix(ownerColor,ownerColor*vec3(.82,.92,.94),.13);
 diffuseColor.a*=clamp(vLandMask*.98,0.,.98);`);

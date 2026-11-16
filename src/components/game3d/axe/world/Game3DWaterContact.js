@@ -45,11 +45,18 @@ uniform vec2 uWind,uFogNearFar;
 uniform vec4 uRipples[${RIPPLE_SLOTS}];
 varying vec3 vWorld;
 varying vec2 vRiverUv;
+float contactHash(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float contactNoise(vec2 p){
+  vec2 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);
+  return mix(mix(contactHash(i),contactHash(i+vec2(1.0,0.0)),f.x),
+    mix(contactHash(i+vec2(0.0,1.0)),contactHash(i+vec2(1.0,1.0)),f.x),f.y);
+}
 void main(){
-  float bank=smoothstep(.79,.98,abs(vRiverUv.x*2.0-1.0));
-  float current=sin(vWorld.x*.41+vWorld.z*.27-uTime*1.9+dot(uWind,vWorld.xz)*.015);
-  float cross=sin(vWorld.z*.73-vWorld.x*.19+uTime*1.3);
-  float foam=bank*pow(max(0.0,.48+.34*current+.18*cross),2.0)*(.65+uRain*.55);
+  // Faint, broken shoreline lace (noise, not parallel sine stripes).
+  float bank=smoothstep(.86,.99,abs(vRiverUv.x*2.0-1.0));
+  float lace=contactNoise(vWorld.xz*.9+vec2(uTime*.35,-uTime*.22)+uWind*uTime*.2)*.65+
+    contactNoise(vWorld.xz*2.3-vec2(uTime*.5,0.0))*.35;
+  float foam=bank*smoothstep(.58,.86,lace)*(.45+uRain*.55);
   float rings=0.0;
   for(int i=0;i<${RIPPLE_SLOTS};i++){
     float age=uTime-uRipples[i].z;
@@ -62,7 +69,7 @@ void main(){
       rings+=uRipples[i].w*(outer+inner)*exp(-age*1.25);
     }
   }
-  float alpha=clamp(foam*.28+rings*.48,0.0,.63);
+  float alpha=clamp(foam*.20+rings*.48,0.0,.63);
   float fog=1.0-smoothstep(uFogNearFar.x,uFogNearFar.y,
     length(cameraPosition-vWorld));
   alpha*=fog;
