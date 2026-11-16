@@ -305,9 +305,13 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
     .every(Number.isFinite)||radius<=0)return null;
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    // Entry lands safely past the rock arch, while the return interaction
+    // is INSIDE that same arch. A player walks back toward daylight and uses
+    // E there instead of finding a teleport button 13 metres inside a room.
     const insideX=mx+dx*13,insideZ=mz+dz*13;
+    const exitX=mx+dx*3,exitZ=mz+dz*3;
     if(insideCave){
-      if(Math.hypot(localPosition.x-insideX,localPosition.z-insideZ)>radius)
+      if(Math.hypot(localPosition.x-exitX,localPosition.z-exitZ)>radius)
         continue;
       return {
         action:'exit',caveId:cave.id,name:cave.name,
