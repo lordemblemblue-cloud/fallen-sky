@@ -1,27 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Activity, ArrowRight, Compass, Heart, Search, Shield, Sparkles, Swords, Wind } from 'lucide-react';
 import { getAllCompanionSkills } from '../../skills/companionSkillRegistry';
+import { companionCombatPaths } from './AXECompanionSkillModel.mjs';
 import './AXESkillCollections.css';
 
-// Presentation labels only — the real registry and loadout remain authoritative.
-// The current companion runtime has two single attacks, one multi attack,
-// one area attack and one teleport movement attack. No separate speed-buff
-// or companion passive is registered, so this UI must not award either.
-const COMBAT_PATHS = [
-  {id:'single',label:'Single',accept:skill=>['companion_bite','companion_life_drain'].includes(skill.skill_id),icon:Swords},
-  {id:'multi',label:'Multi',accept:skill=>skill.skill_id==='companion_soul_triple',icon:Activity},
-  {id:'area',label:'Area',accept:skill=>skill.skill_id==='companion_soul_wave',icon:Sparkles},
-];
+// Skill paths are projected from the real companion registry; unknown
+// future combat attacks appear in Other rather than being omitted.
+const COMBAT_ICONS={single:Swords,multi:Activity,area:Sparkles,other:Shield};
 const CATEGORIES=[
   {id:'combat',title:'Combat',subtitle:'Single, multi-hit and area attacks',icon:Swords},
   {id:'mobility',title:'Mobility',subtitle:'Registered movement and repositioning skills',icon:Wind},
   {id:'support',title:'Support',subtitle:'Restoration and recovery',icon:Heart},
   {id:'fusion',title:'Fusion',subtitle:'Transformation skills and current readiness',icon:Sparkles},
 ];
-export function companionCombatPaths(skills=getAllCompanionSkills()) {
-  return COMBAT_PATHS.map(path=>({...path,skills:skills.filter(skill=>
-    skill.category==='combat'&&path.accept(skill))}));
-}
 export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) {
   const [category,setCategory]=useState('combat');
   const [pathId,setPathId]=useState('single');
@@ -54,7 +45,10 @@ export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) 
       {category==='combat'?<nav className="axe-sk-combat-paths" aria-label="Companion combat paths">
         {paths.map(path=><button type="button" key={path.id} aria-pressed={pathId===path.id}
           onClick={()=>{setPathId(path.id);setSelectedId(null);}}>
-          <path.icon size={19}/>{path.label}</button>)}
+          {(()=>{
+            const PathIcon=COMBAT_ICONS[path.id]||Shield;
+            return <PathIcon size={19}/>;
+          })()}{path.label}</button>)}
       </nav>:<div className="axe-sk-path-caption">{categoryData.title} · Registered abilities</div>}
       <label className="axe-sk-search"><Search size={16}/><input type="search"
         value={query} onChange={event=>setQuery(event.target.value)}
