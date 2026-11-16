@@ -1,0 +1,25 @@
+{
+ "id": "energy_sword",
+ "class": "sword",
+ "length": 0.98,
+ "sourceTris": 1961272,
+ "droppedParts": [],
+ "guardY": 0.12,
+ "guardLowerY": 0.05,
+ "pommelY": -0.245,
+ "handleBottomY": -0.19,
+ "tip": [
+  -0.0001,
+  0.735,
+  -0.0005
+ ],
+ "handleRadius": 0.0276,
+ "handleLength": 0.24,
+ "tris": 24000,
+ "verts": 18769,
+ "grip": [
+  0,
+  0,
+  0
+ ]
+}

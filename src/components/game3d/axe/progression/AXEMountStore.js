@@ -3,7 +3,11 @@
 import { characterScopedStorage, subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter } from '../../characterStore';
 import { getGame3DStarterMountDefinitionId } from '../factions/AXEFactionMountAssets.mjs';
-import { setActiveCompanion, setMounted } from '../../companionStore';
+import { getCompanionState, setActiveCompanion, setMounted } from '../../companionStore';
+import { getActiveWeaponPath } from '../../weaponClassBuffStore';
+import { awardCompanionRoleMasteryXP, applyCompanionRoleBonus } from './AXECompanionRoleMastery.mjs';
+import { applyCompanionGrowthBonus, getCompanionGrowthView } from './AXECompanionGrowthView.mjs';
+import { splitAXECompanionPlayerXP } from './AXEMountSharedXP.mjs';
 import { advanceMountSpiritualWeapon, getMountSpiritualProfile } from './AXEMountSpiritualSystem';
 import {
   AXE_MOUNT_FUSION_CONFIG,
@@ -244,6 +248,9 @@ const syncOwnedFactionMountVisual = () => {
     setActiveCompanion(definition.modelRef);
   }
 };
+// Sync the first loaded character as well as later switches so the world
+// companion and the UI both use the faction's real mount on initial entry.
+syncOwnedFactionMountVisual();
 
 subscribeCharacterChange(() => {
   state = load();
@@ -303,6 +310,7 @@ export function getAXEMountState() {
       combination: getAXEMountCombinationShare(mount),
       speedMultiplier: getAXEMountSpeedMultiplier(mount),
       spiritualProfile: getMountSpiritualProfile(mount),
+      progression: getCompanionGrowthView(mount.totalXp),
     })),
     pvpVictimCooldowns: { ...state.pvpVictimCooldowns },
     materials: { ...(state.materials || {}) },
@@ -327,7 +335,12 @@ export function getRegisteredAXEMount() {
 
 export function getRegisteredAXEMountBonuses() {
   const mount = getRegisteredAXEMount();
-  return mount ? getAXEMountBonuses(mount) : { hp: 0, damage: 0, defense: 0, attributionAttack: 0, attributionDefense: 0 };
+  if (!mount) return { hp: 0, damage: 0, defense: 0, attributionAttack: 0, attributionDefense: 0 };
+  // Apply unlocked bond milestones first, then only the role matching the
+  // player's active weapon. All bonuses are anchored to earned mount stats.
+  return applyCompanionRoleBonus(
+    applyCompanionGrowthBonus(getAXEMountBonuses(mount),mount.totalXp),
+    mount,getActiveWeaponPath());
 }
 
 export function getActiveAXEMountSpeedMultiplier() {
@@ -423,12 +436,49 @@ export function awardAXEMountXP(instanceId, amount, source = 'pve', context = {}
     };
   }
 
+  // Specialization trains alongside the player, from actual combat rewards
+  // only after the mount has completed its first 20-level growth cycle.
+  // Riding XP and menu interactions cannot level a mastery role.
+  const weaponRole=getActiveWeaponPath();
+  const fightingAlongside=(source==='pve'||source==='pvp')
+    && state.activeMountId===instanceId
+    && !getCompanionState().isMounted
+    && getCompanionState().activeCompanionId===getAXEMountDefinition(result.mount.definitionId)?.modelRef;
+  const advancedMount=fightingAlongside&&result.mount.totalXp>=5000
+    ? awardCompanionRoleMasteryXP(result.mount,result.xpGained,weaponRole)
+    : result.mount;
+  // Store fractional player-XP carry in the same atomic save as whole XP.
+  const awardedMount=context.sharedRemainder===undefined?advancedMount:
+    {...advancedMount,xpCarry:context.sharedRemainder};
   state = {
     ...state,
-    mounts: state.mounts.map((mount, i) => i === index ? result.mount : mount),
+    mounts: state.mounts.map((mount, i) => i === index ? awardedMount : mount),
   };
   if (!emit()) return saveFailure();
-  return structuredClone(result);
+  return structuredClone({...result,mount:awardedMount});
+}
+
+// The canonical player progression award calls this ONCE per earned XP event.
+// It uses the full actual player reward, including any rested bonus and the
+// enemy's own level-adjusted XP, rather than the old fixed mount PvE reward.
+// Half-XP fractions carry between events and persist per owned mount.
+export function awardActiveAXEMountSharedXP(playerAwardedXP,{source='pve'}={}) {
+  const mount=state.mounts.find(entry=>entry.instanceId===state.activeMountId);
+  if(!mount)return {ok:false,reason:'NO_ACTIVE_MOUNT'};
+  const creditedSource=source==='quest'?'quest':'pve';
+  const playerAmount=Number(playerAwardedXP);
+  if(!Number.isFinite(playerAmount)||playerAmount<=0)
+    return {ok:false,reason:'NO_PLAYER_XP'};
+  const split=splitAXECompanionPlayerXP(playerAmount,mount.xpCarry);
+  if(split.xp<=0){
+    state={...state,mounts:state.mounts.map(entry=>entry.instanceId===mount.instanceId
+      ? {...entry,xpCarry:split.remainder}:entry)};
+    if(!emit())return saveFailure();
+    return {ok:true,xpGained:0,remainder:split.remainder,mountId:mount.instanceId};
+  }
+  const result=awardAXEMountXP(mount.instanceId,split.xp,creditedSource,
+    {sharedRemainder:split.remainder});
+  return result.ok?{...result,remainder:split.remainder,mountId:mount.instanceId}:result;
 }
 
 export function setAXEMountSpiritualMode(instanceId, mode) {

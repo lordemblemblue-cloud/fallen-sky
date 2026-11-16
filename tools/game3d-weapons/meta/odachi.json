@@ -1,0 +1,30 @@
+{
+ "id": "odachi",
+ "class": "greatsword",
+ "length": 1.45,
+ "sourceTris": 1506550,
+ "droppedParts": [],
+ "guardY": 0.11,
+ "guardLowerY": 0.1,
+ "pommelY": -0.28,
+ "handleBottomY": -0.24,
+ "tip": [
+  -0.0417,
+  1.17,
+  -0.0035
+ ],
+ "handleRadius": 0.0286,
+ "handleLength": 0.34,
+ "secondaryGrip": [
+  -0.0006,
+  -0.17,
+  0.0003
+ ],
+ "tris": 19999,
+ "verts": 15515,
+ "grip": [
+  0,
+  0,
+  0
+ ]
+}

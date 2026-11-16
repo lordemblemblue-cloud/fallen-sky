@@ -4,6 +4,7 @@
 // imported town's green park lawns. Pure visual decoration: zero colliders.
 import * as THREE from 'three';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './WolfveilLayout.js';
+import { wolfveilFrontierTrailClearance } from './WolfveilLandscapeDesign.mjs';
 import { insideWolfveilImportedTown } from './WolfveilImportedTownLayout.mjs';
 import { isWolfveilCaveMouthCutout } from './WolfveilCaveLayout.mjs';
 import {isWolfveilCaveApproachReserved} from './WolfveilCaveAccessPlan.mjs';
@@ -158,6 +159,8 @@ export function buildWolfveilIndividualGrassField(world, {
         (importedTownAtMarket&&isWolfveilCaveApproachReserved(x,z,1.0))) return false;
     if (wolfveilDistanceToRiver(x, z) < 11.2) return false;
     if (wolfveilRouteClearance(x, z) < minRouteClear) return false;
+    // Landscape design frontier trails (Hunter's Loop etc.) stay clear too.
+    if (wolfveilFrontierTrailClearance(x, z) < minRouteClear + 0.5) return false;
     if (!clearOf({ x, z }, 0.35)) return false;
     const y = sampleY(x, z);
     if (!Number.isFinite(y) || y > 118) return false;

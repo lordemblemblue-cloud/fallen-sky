@@ -188,9 +188,11 @@ function materialBody(kind){
 `:'')+
  (grass?`
   float tip=smoothstep(.21,.72,max(0.,vBlazeLocal.y));
+  // Natural meadow profile keeps owner grass its own green, uneroded.
+  float blazeNatural=1.-step(2.5,uBlazeProfile);
   diffuseColor.rgb=mix(diffuseColor.rgb,pigment,
-     tip*(.25+safeFusion*.38)*strength*(.45+.55*wave));
-  float erosion=smoothstep(.60,1.,tip)*(.31+.26*uBlazeWind);
+     tip*(.25+safeFusion*.38)*strength*(.45+.55*wave)*blazeNatural);
+  float erosion=smoothstep(.60,1.,tip)*(.31+.26*uBlazeWind)*blazeNatural;
   diffuseColor.a*=1.-erosion*smoothstep(.34,.91,.5+.5*lift);
 `:'')+'}\n';
 }
@@ -364,7 +366,7 @@ export function createBlazeOfGrassWorld({scene,renderer,guard,
  const onImportedTreeReady=()=>{if(active)decorator.refresh(scene);};
  if(typeof window!=='undefined')
    window.addEventListener('axe:owner-tree-ready',onImportedTreeReady);
- let targetPalette=0,targetProfile=0;
+ let targetPalette=0,targetProfile=0,styleInitialised=false;
  let composer=null,paper=null,bloom=null;
  let shaderFailed=false;
  const priorShaderError=renderer.debug?.onShaderError;
@@ -420,6 +422,11 @@ export function createBlazeOfGrassWorld({scene,renderer,guard,
   // Match the standalone prototype's gentle 6x palette/5.5x style easing.
   targetPalette=blazePaletteIndex(config.blazePalette);
   targetProfile=blazeProfileIndex(config.blazeProfile);
+  // Start in the chosen style; easing is only for later live switches.
+  if(!styleInitialised){
+   styleInitialised=true;
+   shared.uPalette.value=targetPalette;shared.uArtProfile.value=targetProfile;
+  }
   shared.uFlameSpeed.value=config.blazeFlameSpeed;
   shared.uStructFlameRatio.value=config.blazePerimeterRatio;
   shared.uBuildingSway.value=config.blazeBuildingSway;

@@ -203,3 +203,42 @@
   .axe-mounts-roster-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));max-height:190px;}
   .axe-mounts-profile {overflow:visible;}
 }
+
+
+/* Equipment now owns the profile, mastery and mount workspaces. Keep their
+   responsive sections full-height without swallowing the global Services rail. */
+.axe-comp-equipment-content[data-equipment-section="profile"] {
+  display: flex; min-height: 0; overflow: hidden;
+}
+.axe-comp-equipment-content[data-equipment-section="profile"] > .axe-comp-redesign {
+  flex: 1 1 auto; min-height: 0; width: 100%;
+}
+.axe-comp-equipment-content[data-equipment-section="mastery"] {
+  display: flex; min-height: 0; overflow-x: hidden; overflow-y: auto;
+}
+.axe-comp-equipment-content[data-equipment-section="mastery"] > .axe-collection-page {
+  flex: 1 1 auto; min-height: 0; width: 100%;
+}
+@media (max-width: 800px) {
+  .axe-comp-equipment-content[data-equipment-section="profile"] { overflow-y: auto; }
+}
+
+
+/* Companion Equipment and Mastery are now siblings in the PRIMARY tab bar.
+   Previously the nested equipment shell supplied the full-height flex host.
+   Keep that sizing contract even without the old nested subnavigation. */
+.axe-service-workspace--companion .axe-comp-modern>.axe-comp-equipment-content {
+  display:flex;
+  flex:1 1 auto;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:0;
+  overflow:auto;
+}
+.axe-service-workspace--companion .axe-comp-modern>.axe-comp-equipment-content>.axe-glass-loadout,
+.axe-service-workspace--companion .axe-comp-modern>.axe-comp-equipment-content>.axe-mastery-rebuild {
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+}

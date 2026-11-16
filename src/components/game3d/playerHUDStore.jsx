@@ -4,6 +4,8 @@
 // Persists level/xp/baseStats/unspentPoints/hp to localStorage so progression
 // survives logout and page reloads.
 import { DEFAULT_PLAYER_STATS, computeDerivedStats, migrateBaseStats } from './statsSystem';
+import { awardCompanionXP } from './companionProgressionStore';
+import { getAXEMountDefinition } from './axe/progression/AXEMountSystem';
 import { getHaloBonuses, subscribeHalo } from './progression/haloStore';
 import { isAnyPreviewMaxActive } from './progression/previewMaxMode';
 import { getAuraBonuses, subscribeAura } from './progression/auraStore';
@@ -23,7 +25,7 @@ import { getEquippedAXECapeBonuses, subscribeAXECapes } from './axe/progression/
 import { getAXEElixirAttributeBonuses, subscribeAXEElixirs } from './axe/progression/AXEElixirStore';
 import { getRegisteredAXEPetBonuses, subscribeAXEPets } from './axe/progression/AXEPetStore';
 import { getAXESoulRegaliaBonuses, subscribeAXESoulRegalia } from './axe/progression/AXESoulRegaliaStore';
-import { getAXEMountFusionState, getRegisteredAXEMountBonuses, subscribeAXEMounts } from './axe/progression/AXEMountStore';
+import { getAXEMountFusionState, getRegisteredAXEMountBonuses, subscribeAXEMounts, awardActiveAXEMountSharedXP } from './axe/progression/AXEMountStore';
 import { scaleAXEGearForFusion } from './axe/progression/AXEMountFusionSystem';
 import { getEquippedAXEVanityActivationProfile, getEquippedAXEVanityBaseBonuses, subscribeAXEVanity } from './axe/progression/AXEVanityStore';
 import { getAXEVanitySpiritVirtualBonus } from './axe/progression/AXEVanitySystem';
@@ -357,7 +359,7 @@ export function setPlayerHUD(next) {
 //   with that bonus on top. Any rested pool left over rolls naturally into
 //   future XP gains — there is nothing to carry across the level-up boundary
 //   beyond the pool itself, which the rested store already preserves.
-export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints = 0, xpGained = 0 }) {
+export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints = 0, xpGained = 0, xpSource = 'combat' }) {
   // Pull rested bonus matching the BASE gain. The bonus is applied at the
   // CURRENT level's xpForNext (the gain happened at that level).
   const restedBonus = xpGained > 0
@@ -393,6 +395,21 @@ export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints 
     unspentPoints: state.unspentPoints + points,
   };
   emit();
+  // Share half of the SAME XP awarded by the canonical player progression,
+  // including rested XP. The enemy's level is already accounted for by its
+  // player reward. The active mount store handles live UI/persistence once.
+  const actualAwardedXP=Math.max(0,Number(xpGained)||0)+Math.max(0,Number(restedBonus)||0);
+  if(actualAwardedXP>0){
+    const shared=awardActiveAXEMountSharedXP(actualAwardedXP,
+      {source:xpSource==='quest'?'quest':'pve'});
+    // The older world companion HP/level HUD reads its own progression store.
+    // Credit the SAME whole half-XP amount, rather than a second full mob
+    // reward or an extra rested bonus. Only do so after the mount saved.
+    if(shared?.ok&&shared.xpGained>0){
+      const modelId=getAXEMountDefinition(shared.mount?.definitionId)?.modelRef;
+      if(modelId)awardCompanionXP(modelId,shared.xpGained,{alreadyRested:true});
+    }
+  }
 }
 
 // Player allocates 1 point into a stat (called from progression menu).

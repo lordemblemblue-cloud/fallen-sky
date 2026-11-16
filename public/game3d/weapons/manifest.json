@@ -1,0 +1,572 @@
+{
+ "version": 1,
+ "generatedBy": "tools/game3d-weapons/build-weapons.mjs",
+ "convention": "Weapon GLB: origin at the main grip, +Y to the tip / upper limb, +Z blade edge / arrow flight, metres for a 1.7 m body. Grip: the weapon root as a child of the hand bone (position, quaternion xyzw, uniform scale) in that bone's local space; \"carry\" while idle or moving, \"combat\" while attacking or aiming. Bone names are glTF names (three.js strips \":\").",
+ "rigs": {
+  "fused-female-v1": {
+   "match": {
+    "rigId": "fused-female-v1"
+   },
+   "unitsPerMetre": 0.659776,
+   "hideWhenArmed": [],
+   "hands": {
+    "right": {
+     "bone": "mixamorig:RightHand",
+     "fist": {
+      "mixamorig:RightHandIndex1": [-0.382206, 0.200601, 0.301955, 0.85],
+      "mixamorig:RightHandIndex2": [-0.579486, -0.035776, 0.24346, 0.776945],
+      "mixamorig:RightHandIndex3": [-0.344011, -0.014603, 0.167003, 0.92388],
+      "mixamorig:RightHandMiddle1": [-0.424881, 0.182235, 0.306365, 0.83211],
+      "mixamorig:RightHandMiddle2": [-0.389326, -0.355963, 0.576831, 0.623684],
+      "mixamorig:RightHandMiddle3": [-0.030082, -0.013073, 0.405412, 0.913545],
+      "mixamorig:RightHandRing1": [-0.231449, -0.283337, 0.513949, 0.775892],
+      "mixamorig:RightHandRing2": [0.311758, -0.227438, 0.625255, 0.678333],
+      "mixamorig:RightHandRing3": [0.287834, -0.002685, 0.287368, 0.913545],
+      "mixamorig:RightHandPinky1": [-0.418159, 0.782505, -0.459514, -0.040938],
+      "mixamorig:RightHandPinky2": [0.124565, -0.24259, -0.632478, 0.724987],
+      "mixamorig:RightHandPinky3": [-0.050506, -0.002694, -0.387444, 0.920505],
+      "mixamorig:RightHandThumb1": [0.000713, -0.373639, 0.239615, 0.896091],
+      "mixamorig:RightHandThumb2": [-0.159675, -0.132747, 0.282163, 0.936625],
+      "mixamorig:RightHandThumb3": [-0.074369, 0, 0.212302, 0.97437]
+     }
+    },
+    "left": {
+     "bone": "mixamorig:LeftHand",
+     "fist": {
+      "mixamorig:LeftHandIndex1": [-0.477167, 0.006046, -0.07995, 0.875147],
+      "mixamorig:LeftHandIndex2": [-0.634404, -0.005622, -0.10931, 0.765213],
+      "mixamorig:LeftHandIndex3": [-0.377695, -0.004658, -0.061404, 0.92388],
+      "mixamorig:LeftHandMiddle1": [-0.532358, -0.028951, -0.03879, 0.845134],
+      "mixamorig:LeftHandMiddle2": [-0.685308, -0.003092, -0.103974, 0.720786],
+      "mixamorig:LeftHandMiddle3": [-0.402394, -0.000148, -0.059279, 0.913545],
+      "mixamorig:LeftHandRing1": [-0.561276, -0.065409, 0.003954, 0.82503],
+      "mixamorig:LeftHandRing2": [-0.687077, 0.001864, -0.096665, 0.720124],
+      "mixamorig:LeftHandRing3": [-0.402593, 0.003195, -0.057824, 0.913546],
+      "mixamorig:LeftHandPinky1": [-0.611813, -0.118173, 0.051105, 0.780454],
+      "mixamorig:LeftHandPinky2": [-0.660396, 0.00501, -0.082385, 0.746368],
+      "mixamorig:LeftHandPinky3": [-0.387241, 0.006492, -0.051703, 0.920505],
+      "mixamorig:LeftHandThumb1": [-0.176978, 0.311127, -0.177655, 0.916688],
+      "mixamorig:LeftHandThumb2": [-0.31913, -0.021145, -0.020277, 0.947258],
+      "mixamorig:LeftHandThumb3": [-0.2249, 0, -0.004792, 0.97437]
+     }
+    }
+   }
+  },
+  "fused-male-v1": {
+   "match": {
+    "rigId": "fused-male-v1"
+   },
+   "unitsPerMetre": 0.63966,
+   "hideWhenArmed": [],
+   "hands": {
+    "right": {
+     "bone": "mixamorig:RightHand",
+     "fist": {
+      "mixamorig:RightHandIndex1": [-0.480158, -0.00311, 0.226639, 0.847392],
+      "mixamorig:RightHandIndex2": [-0.583768, -0.154051, 0.328529, 0.726328],
+      "mixamorig:RightHandIndex3": [-0.287752, 0.00746, 0.25217, 0.92388],
+      "mixamorig:RightHandMiddle1": [-0.530284, 0.265727, -0.000202, 0.805101],
+      "mixamorig:RightHandMiddle2": [-0.442153, -0.634912, 0.568798, 0.279027],
+      "mixamorig:RightHandMiddle3": [0.192761, -0.018095, 0.357702, 0.913545],
+      "mixamorig:RightHandRing1": [-0.041935, -0.734045, 0.611343, 0.292711],
+      "mixamorig:RightHandRing2": [0.70466, -0.081607, 0.086914, 0.699458],
+      "mixamorig:RightHandRing3": [0.406554, -0.011876, 0.002772, 0.913545],
+      "mixamorig:RightHandPinky1": [-0.520132, 0.586834, -0.331926, 0.524322],
+      "mixamorig:RightHandPinky2": [-0.083366, 0.241581, -0.726316, 0.638086],
+      "mixamorig:RightHandPinky3": [0.097603, -0.032132, -0.376974, 0.920506],
+      "mixamorig:RightHandThumb1": [-0.083182, -0.498331, 0.239614, 0.829055],
+      "mixamorig:RightHandThumb2": [-0.226219, -0.139165, 0.202437, 0.942591],
+      "mixamorig:RightHandThumb3": [-0.108653, -0.000001, 0.196971, 0.97437]
+     }
+    },
+    "left": {
+     "bone": "mixamorig:LeftHand",
+     "fist": {
+      "mixamorig:LeftHandIndex1": [-0.478674, 0.042629, -0.2086, 0.851786],
+      "mixamorig:LeftHandIndex2": [-0.650516, -0.011655, -0.178266, 0.738183],
+      "mixamorig:LeftHandIndex3": [-0.370563, 0.00251, -0.095517, 0.92388],
+      "mixamorig:LeftHandMiddle1": [-0.521462, -0.043645, -0.079175, 0.848472],
+      "mixamorig:LeftHandMiddle2": [-0.692961, -0.015232, -0.202233, 0.691863],
+      "mixamorig:LeftHandMiddle3": [-0.392695, -0.008223, -0.105641, 0.913544],
+      "mixamorig:LeftHandRing1": [-0.606674, -0.081147, -0.072841, 0.787436],
+      "mixamorig:LeftHandRing2": [-0.67444, -0.003468, -0.18078, 0.715847],
+      "mixamorig:LeftHandRing3": [-0.393378, -0.000718, -0.103385, 0.913545],
+      "mixamorig:LeftHandPinky1": [-0.6184, -0.123086, -0.022185, 0.775847],
+      "mixamorig:LeftHandPinky2": [-0.698951, 0.02757, -0.148611, 0.699015],
+      "mixamorig:LeftHandPinky3": [-0.377246, 0.036222, -0.0951, 0.920505],
+      "mixamorig:LeftHandThumb1": [-0.131969, 0.301072, -0.200549, 0.922887],
+      "mixamorig:LeftHandThumb2": [-0.332126, -0.061397, 0.003433, 0.941228],
+      "mixamorig:LeftHandThumb3": [-0.223183, 0, -0.028143, 0.97437]
+     }
+    }
+   }
+  },
+  "artemis-v5": {
+   "match": {
+    "bones": [
+     "hand_r",
+     "bow_string"
+    ]
+   },
+   "unitsPerMetre": 0.999903,
+   "hideWhenArmed": [
+    "Bow",
+    "Bow_Glow"
+   ],
+   "hands": {
+    "right": {
+     "bone": "hand_r",
+     "fist": {
+      "fingers_r": [0.00806, 0.117377, 0.649604, 0.751114]
+     }
+    },
+    "left": {
+     "bone": "hand_l",
+     "fist": {
+      "fingers_l": [-0.009796, -0.119685, -0.658267, 0.743145]
+     }
+    }
+   }
+  },
+  "getsuga-v5": {
+   "match": {
+    "bones": [
+     "hand_r",
+     "weapon_r"
+    ]
+   },
+   "unitsPerMetre": 1.058793,
+   "hideWhenArmed": [
+    "SK_Sword",
+    "SK_EnergyBlade",
+    "SK_EnergyBladeGlow"
+   ],
+   "hands": {
+    "right": {
+     "bone": "hand_r",
+     "fist": {
+      "fingers_r": [-0.57813, 0.019783, -0.019454, 0.815473]
+     }
+    },
+    "left": {
+     "bone": "hand_l",
+     "fist": {
+      "fingers_l": [-0.596298, -0.008169, 0.007528, 0.802686]
+     }
+    }
+   }
+  }
+ },
+ "weapons": [
+  {
+   "id": "energy_sword",
+   "label": "Energy Sword",
+   "class": "sword",
+   "url": "/game3d/weapons/energy_sword.glb",
+   "bytes": 1674664,
+   "tris": 24000,
+   "length": 0.98,
+   "hand": "right",
+   "points": {
+    "tip": [-0.0001, 0.735, -0.0005],
+    "bladeBase": [0, 0.08, 0]
+   },
+   "handleRadius": 0.0276,
+   "emissive": {
+    "color": "#6fd3ff",
+    "intensity": 0.9
+   },
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [-0.024793, 0.06581, -0.018253],
+      "quaternion": [0.160219, -0.82327, -0.454384, -0.300152],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [-0.024793, 0.06581, -0.018253],
+      "quaternion": [0.200433, -0.75202, -0.564539, -0.274933],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [-0.014873, 0.061914, -0.025614],
+      "quaternion": [0.279824, -0.711321, -0.417283, -0.491524],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [-0.014873, 0.061914, -0.025614],
+      "quaternion": [0.345507, -0.646324, -0.512218, -0.447797],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [0.022787, -0.070163, 0.009355],
+      "quaternion": [0.842833, -0.117524, -0.052824, 0.522524],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [0.022787, -0.070163, 0.009355],
+      "quaternion": [0.761909, -0.109028, -0.068666, 0.634738],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [0.044664, 0.077207, 0],
+      "quaternion": [-0.469471, 0, 0, 0.882948],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [0.044664, 0.077207, 0],
+      "quaternion": [-0.587785, 0, 0, 0.809017],
+      "scale": 1.058793
+     }
+    }
+   }
+  },
+  {
+   "id": "odachi",
+   "label": "Odachi",
+   "class": "greatsword",
+   "url": "/game3d/weapons/odachi.glb",
+   "bytes": 1327488,
+   "tris": 19999,
+   "length": 1.45,
+   "hand": "right",
+   "points": {
+    "tip": [-0.0417, 1.17, -0.0035],
+    "secondaryGrip": [-0.0006, -0.17, 0.0003],
+    "bladeBase": [0, 0.13, 0]
+   },
+   "handleRadius": 0.0286,
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [-0.0253, 0.065816, -0.018675],
+      "quaternion": [0.214547, -0.721443, -0.603123, -0.264067],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [-0.0253, 0.065816, -0.018675],
+      "quaternion": [0.223632, -0.699955, -0.627934, -0.256418],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [-0.015104, 0.061921, -0.026211],
+      "quaternion": [0.36847, -0.618631, -0.545343, -0.4291],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [-0.015104, 0.061921, -0.026211],
+      "quaternion": [0.383221, -0.599222, -0.5666, -0.41598],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [0.023754, -0.070416, 0.009389],
+      "quaternion": [0.727645, -0.105285, -0.074278, 0.673744],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [0.023754, -0.070416, 0.009389],
+      "quaternion": [0.703689, -0.102629, -0.077907, 0.698728],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [0.045723, 0.077207, 0],
+      "quaternion": [-0.62932, 0, 0, 0.777146],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [0.045723, 0.077207, 0],
+      "quaternion": [-0.656059, 0, 0, 0.75471],
+      "scale": 1.058793
+     }
+    }
+   }
+  },
+  {
+   "id": "fantasy_sword",
+   "label": "Fantasy Sword",
+   "class": "sword",
+   "url": "/game3d/weapons/fantasy_sword.glb",
+   "bytes": 1494160,
+   "tris": 19357,
+   "length": 0.92,
+   "hand": "right",
+   "points": {
+    "tip": [-0.0059, 0.81, 0.0058],
+    "bladeBase": [0, 0.025, 0]
+   },
+   "handleRadius": 0.0128,
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [-0.017289, 0.065723, -0.012005],
+      "quaternion": [0.160219, -0.82327, -0.454384, -0.300152],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [-0.017289, 0.065723, -0.012005],
+      "quaternion": [0.200433, -0.75202, -0.564539, -0.274933],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [-0.011463, 0.061799, -0.016783],
+      "quaternion": [0.279824, -0.711321, -0.417283, -0.491524],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [-0.011463, 0.061799, -0.016783],
+      "quaternion": [0.345507, -0.646324, -0.512218, -0.447797],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [0.00848, -0.066414, 0.008855],
+      "quaternion": [0.842833, -0.117524, -0.052824, 0.522524],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [0.00848, -0.066414, 0.008855],
+      "quaternion": [0.761909, -0.109028, -0.068666, 0.634738],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [0.028994, 0.077207, 0],
+      "quaternion": [-0.469471, 0, 0, 0.882948],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [0.028994, 0.077207, 0],
+      "quaternion": [-0.587785, 0, 0, 0.809017],
+      "scale": 1.058793
+     }
+    }
+   }
+  },
+  {
+   "id": "fantasy_bow",
+   "label": "Fantasy Bow",
+   "class": "bow",
+   "url": "/game3d/weapons/fantasy_bow.glb",
+   "bytes": 1610840,
+   "tris": 19999,
+   "length": 1.3,
+   "hand": "left",
+   "points": {
+    "nock": [-0.0017, 0.03, -0.2812],
+    "stringTop": [-0.0015, 0.5795, -0.2832],
+    "stringBottom": [-0.0019, -0.5674, -0.279],
+    "limbTop": [-0.0004, 0.645, -0.3263],
+    "limbBottom": [-0.0002, -0.6451, -0.3266]
+   },
+   "handleRadius": 0.0618,
+   "dynamicString": true,
+   "stringSource": "stripped",
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [0.00604, 0.060216, -0.030171],
+      "quaternion": [0.077621, -0.00788, -0.975479, 0.2058],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [0.00604, 0.060216, -0.030171],
+      "quaternion": [-0.460259, -0.527534, -0.546851, 0.459155],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [0.014032, 0.061343, -0.028072],
+      "quaternion": [-0.140211, 0.019713, 0.975138, -0.170462],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [0.014032, 0.061343, -0.028072],
+      "quaternion": [-0.44065, -0.537167, -0.592906, 0.407114],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [-0.035196, -0.068919, 0.021537],
+      "quaternion": [0.007937, 0.719448, 0.086188, 0.689132],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [-0.035196, -0.068919, 0.021537],
+      "quaternion": [0.591293, 0.047809, 0.035149, 0.804271],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [-0.047234, 0.077352, 0],
+      "quaternion": [-0.690346, 0.153046, -0.690346, 0.153046],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [-0.047234, 0.077352, 0],
+      "quaternion": [-0.707107, 0, 0, 0.707107],
+      "scale": 1.058793
+     }
+    }
+   }
+  },
+  {
+   "id": "violet_bow",
+   "label": "Violet Fantasy Bow",
+   "class": "bow",
+   "url": "/game3d/weapons/violet_bow.glb",
+   "bytes": 843604,
+   "tris": 623,
+   "length": 1.25,
+   "hand": "left",
+   "points": {
+    "nock": [0.0125, 0.03, -0.2334],
+    "stringTop": [0.011, 0.625, -0.2093],
+    "stringBottom": [0.0142, -0.625, -0.2598],
+    "limbTop": [0.011, 0.625, -0.2093],
+    "limbBottom": [0.0142, -0.625, -0.2598]
+   },
+   "handleRadius": 0.0252,
+   "dynamicString": true,
+   "stringSource": "tips",
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [0.00555, 0.060163, -0.027042],
+      "quaternion": [0.077621, -0.00788, -0.975479, 0.2058],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [0.00555, 0.060163, -0.027042],
+      "quaternion": [-0.460259, -0.527534, -0.546851, 0.459155],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [0.013172, 0.061315, -0.025125],
+      "quaternion": [-0.140211, 0.019713, 0.975138, -0.170462],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [0.013172, 0.061315, -0.025125],
+      "quaternion": [-0.44065, -0.537167, -0.592906, 0.407114],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [-0.030431, -0.068376, 0.021368],
+      "quaternion": [0.007937, 0.719448, 0.086188, 0.689132],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [-0.030431, -0.068376, 0.021368],
+      "quaternion": [0.591293, 0.047809, 0.035149, 0.804271],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [-0.042152, 0.077352, 0],
+      "quaternion": [-0.690346, 0.153046, -0.690346, 0.153046],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [-0.042152, 0.077352, 0],
+      "quaternion": [-0.707107, 0, 0, 0.707107],
+      "scale": 1.058793
+     }
+    }
+   }
+  },
+  {
+   "id": "ornate_bow",
+   "label": "Ornate Bow",
+   "class": "bow",
+   "url": "/game3d/weapons/ornate_bow.glb",
+   "bytes": 1451936,
+   "tris": 23999,
+   "length": 1.28,
+   "hand": "left",
+   "points": {
+    "nock": [0.0157, 0.03, -0.2436],
+    "stringTop": [0.0151, 0.6346, -0.2495],
+    "stringBottom": [0.0163, -0.6345, -0.2371],
+    "limbTop": [0.0151, 0.6346, -0.2495],
+    "limbBottom": [0.0163, -0.6345, -0.2371]
+   },
+   "handleRadius": 0.046,
+   "dynamicString": true,
+   "stringSource": "tips",
+   "grips": {
+    "fused-female-v1": {
+     "carry": {
+      "position": [0.00604, 0.060216, -0.030171],
+      "quaternion": [0.077621, -0.00788, -0.975479, 0.2058],
+      "scale": 0.659776
+     },
+     "combat": {
+      "position": [0.00604, 0.060216, -0.030171],
+      "quaternion": [-0.460259, -0.527534, -0.546851, 0.459155],
+      "scale": 0.659776
+     }
+    },
+    "fused-male-v1": {
+     "carry": {
+      "position": [0.014032, 0.061343, -0.028072],
+      "quaternion": [-0.140211, 0.019713, 0.975138, -0.170462],
+      "scale": 0.639661
+     },
+     "combat": {
+      "position": [0.014032, 0.061343, -0.028072],
+      "quaternion": [-0.44065, -0.537167, -0.592906, 0.407114],
+      "scale": 0.639661
+     }
+    },
+    "artemis-v5": {
+     "carry": {
+      "position": [-0.035196, -0.068919, 0.021537],
+      "quaternion": [0.007937, 0.719448, 0.086188, 0.689132],
+      "scale": 0.999903
+     },
+     "combat": {
+      "position": [-0.035196, -0.068919, 0.021537],
+      "quaternion": [0.591293, 0.047809, 0.035149, 0.804271],
+      "scale": 0.999903
+     }
+    },
+    "getsuga-v5": {
+     "carry": {
+      "position": [-0.047234, 0.077352, 0],
+      "quaternion": [-0.690346, 0.153046, -0.690346, 0.153046],
+      "scale": 1.058793
+     },
+     "combat": {
+      "position": [-0.047234, 0.077352, 0],
+      "quaternion": [-0.707107, 0, 0, 0.707107],
+      "scale": 1.058793
+     }
+    }
+   }
+  }
+ ]
+}

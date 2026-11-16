@@ -1,0 +1,159 @@
+{
+ "id": "violet_bow",
+ "class": "bow",
+ "length": 1.25,
+ "sourceTris": 686,
+ "droppedParts": [
+  {
+   "name": "violet_bow.066",
+   "verts": 19,
+   "extent": [
+    0.1647,
+    0.1127,
+    0.4252
+   ]
+  },
+  {
+   "name": "violet_bow.067",
+   "verts": 4,
+   "extent": [
+    0.0753,
+    0.0343,
+    0.1007
+   ]
+  },
+  {
+   "name": "violet_bow.069",
+   "verts": 4,
+   "extent": [
+    0.1053,
+    0.0507,
+    0.2428
+   ]
+  },
+  {
+   "name": "violet_bow.070",
+   "verts": 4,
+   "extent": [
+    0.0961,
+    0.0602,
+    0.2068
+   ]
+  },
+  {
+   "name": "violet_bow.071",
+   "verts": 9,
+   "extent": [
+    0.1111,
+    0.0402,
+    0.1528
+   ]
+  },
+  {
+   "name": "violet_bow.072",
+   "verts": 5,
+   "extent": [
+    0.0507,
+    0.0499,
+    0.0855
+   ]
+  },
+  {
+   "name": "violet_bow.073",
+   "verts": 3,
+   "extent": [
+    0.0263,
+    0.0094,
+    0.023
+   ]
+  },
+  {
+   "name": "violet_bow.074",
+   "verts": 7,
+   "extent": [
+    0.0725,
+    0.0409,
+    0.0899
+   ]
+  },
+  {
+   "name": "violet_bow.075",
+   "verts": 7,
+   "extent": [
+    0.0574,
+    0.054,
+    0.1368
+   ]
+  },
+  {
+   "name": "violet_bow.076",
+   "verts": 3,
+   "extent": [
+    0.0418,
+    0.0141,
+    0.1368
+   ]
+  },
+  {
+   "name": "violet_bow.077",
+   "verts": 3,
+   "extent": [
+    0.0466,
+    0.0239,
+    0.1368
+   ]
+  },
+  {
+   "name": "violet_bow.078",
+   "verts": 4,
+   "extent": [
+    0.0389,
+    0.0477,
+    0.088
+   ]
+  },
+  {
+   "name": "violet_bow.079",
+   "verts": 4,
+   "extent": [
+    0.08,
+    0.0174,
+    0.111
+   ]
+  }
+ ],
+ "handleRadius": 0.0252,
+ "limbTop": [
+  0.011,
+  0.625,
+  -0.2093
+ ],
+ "limbBottom": [
+  0.0142,
+  -0.625,
+  -0.2598
+ ],
+ "stringTop": [
+  0.011,
+  0.625,
+  -0.2093
+ ],
+ "stringBottom": [
+  0.0142,
+  -0.625,
+  -0.2598
+ ],
+ "stringSource": "tips",
+ "nock": [
+  0.0125,
+  0.03,
+  -0.2334
+ ],
+ "tris": 623,
+ "verts": 674,
+ "grip": [
+  0,
+  0,
+  0
+ ]
+}

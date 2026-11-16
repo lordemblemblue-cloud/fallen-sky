@@ -65,16 +65,19 @@ export function getCompanionProgression(companionId) {
   return state[companionId];
 }
 
-// Award XP to a specific companion. Handles multi-level-ups.
-// Rested bonus: while the player has rested XP, the companion earns
-// an extra 50% (1.5× total). Bonus is drawn from the shared rested pool.
-export function awardCompanionXP(companionId, amount) {
+// Award XP to a specific legacy companion combat-level record. For modern
+// active mounts, playerHUDStore passes the EXACT 50% amount already processed
+// by the mount system and includes rested XP (so do not drain rested twice).
+// Older callers without the flag retain the original behavior for compatibility.
+export function awardCompanionXP(companionId, amount, { alreadyRested = false } = {}) {
   if (!companionId || amount <= 0) return;
   const cur = getCompanionProgression(companionId);
 
-  // Pull a 0.5× bonus from the rested pool, capped by what's available.
-  const desiredBonus = amount * COMPANION_RESTED_MULT;
-  const restedBonus = consumeRestedForGain(desiredBonus, cur.xpForNext || companionXpForLevel(cur.level));
+  // Only legacy direct callers use the old companion-specific rested boost;
+  // finalized player XP is never allowed to consume the shared pool again.
+  const desiredBonus = alreadyRested ? 0 : amount * COMPANION_RESTED_MULT;
+  const restedBonus = alreadyRested ? 0 : consumeRestedForGain(desiredBonus,
+    cur.xpForNext || companionXpForLevel(cur.level));
   const totalGain = amount + restedBonus;
 
   let newXP = cur.xp + totalGain;

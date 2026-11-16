@@ -12,6 +12,8 @@ import {WOLFVEIL_PALETTE as PAL,wolfveilHeight,wolfveilDistanceToRiver,
   wolfveilRouteClearance,
 } from './WolfveilLayout.js';
 import {wolfveilTrailBreakAt} from './WolfveilTrailBreaks.mjs';
+import {wolfveilLandscapeSurface,wolfveilNoise2,WOLFVEIL_SUMMITS} from './WolfveilLandscapeDesign.mjs';
+import {makeWolfveilTrailDirtTextures,makeWolfveilTrailEdgeAlpha,applyWolfveilTrailUVs} from './WolfveilTrailSurface.js';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 
@@ -118,7 +120,7 @@ export class WolfveilTriangles{
     g.computeVertexNormals();return g;
   }
 }
-export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false}={}){
+export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false,landscape=false}={}){
   const g=new THREE.BufferGeometry(),v=[],c=[],uv=[],idx=[];
   const rand=Math.sin;
   // Heights first, so each vertex can read its neighbours' slope for free.
@@ -132,6 +134,18 @@ export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false}=
       const x=(xi/segments-.5)*span,y=heights[zi*row+xi];
       v.push(x,y,z);uv.push(x/7,z/7);
       const riverDistance=wolfveilDistanceToRiver(x,z);
+      if(landscape){
+        // Game 3D landscape design (WolfveilLandscapeDesign.mjs): one palette
+        // for meadow, riverbank, trails, fighting grounds, camps and ranges.
+        const slope=Math.hypot(heightOf(xi+1,zi)-heightOf(xi-1,zi),
+          heightOf(xi,zi+1)-heightOf(xi,zi-1))/(2*step);
+        const surface=wolfveilLandscapeSurface(x,z,y,slope,{
+          riverDistance,routeClearance:wolfveilRouteClearance(x,z),
+          west:smooth(90,350,-x),
+        });
+        c.push(surface.color[0],surface.color[1],surface.color[2]);
+        continue;
+      }
       const moist=Math.max(0,1-riverDistance/70);
       const woodland=smooth(90,350,-x);
       const altitude=smooth(70,150,y);
@@ -267,7 +281,59 @@ export function makeRidgeGeometry(center,depth=340,seed=98){
   g.computeVertexNormals();
   return g;
 }
-export function addWolfEarPeaks(world){
+// A pointed, fluted rock spire ("wolf ear") seated on a terrain summit:
+// sharp aretes, couloirs, strata ledges and a leaning tip. Visual only.
+export function makeWolfEarSpireGeometry([cx,cz],{height=64,radius=34,leanX=0,leanZ=0,seed=1}={}){
+  const sections=48,tiers=22;
+  const pos=[],col=[],uvs=[],indices=[];
+  let baseY=Infinity;
+  for(let i=0;i<sections;i++){
+    const a=i/sections*TAU;
+    baseY=Math.min(baseY,wolfveilHeight(cx+Math.cos(a)*radius,cz+Math.sin(a)*radius));
+  }
+  baseY-=5;
+  const crest=wolfveilHeight(cx,cz);
+  const top=Math.max(crest,baseY)+height;
+  for(let t=0;t<=tiers;t++){
+    const ratio=t/tiers;
+    const lean=Math.pow(ratio,1.7);
+    const ox=cx+leanX*lean,oz=cz+leanZ*lean;
+    const taper=Math.pow(1-ratio,.92)*(1-.12*Math.sin(ratio*Math.PI));
+    const ledge=Math.sin(ratio*Math.PI*9+seed)*.045*(1-ratio);
+    const y=baseY+(top-baseY)*ratio;
+    for(let i=0;i<sections;i++){
+      const a=i/sections*TAU;
+      const arete=Math.pow(Math.abs(Math.cos(a*2.5+seed)),.6);
+      const flute=1-.22*Math.pow(Math.abs(wolfveilNoise2(a*3.1+seed,ratio*4.2)),1.4);
+      const r=Math.max(.15,radius*taper*(.74+.30*arete)*flute*(1+ledge));
+      const x=ox+Math.cos(a)*r,z=oz+Math.sin(a)*r;
+      // The lowest ring is buried in the summit so no seam shows.
+      const yy=t===0?Math.min(y,wolfveilHeight(x,z)-3):y+wolfveilNoise2(a*2+seed,ratio*6)*1.4*(1-ratio);
+      pos.push(x,yy,z);
+      uvs.push(a*radius*.09,yy*.07);
+      const strata=.5+.5*Math.sin(yy*.55+wolfveilNoise2(a,seed)*2.2);
+      const crevice=1-flute;
+      let r0=.27+.08*strata,g0=.27+.075*strata,b0=.28+.07*strata;
+      r0*=1-crevice*1.6;g0*=1-crevice*1.6;b0*=1-crevice*1.5;
+      // Snow only collects on the gentler ledges near the top.
+      const snow=Math.max(0,Math.min(1,(ratio-.55)/.3))*(.35+.65*(1-arete))*(.55+.45*strata);
+      col.push(r0+(.86-r0)*snow,g0+(.88-g0)*snow,b0+(.92-b0)*snow);
+    }
+  }
+  for(let t=0;t<tiers;t++)for(let i=0;i<sections;i++){
+    const next=(i+1)%sections,a=t*sections+i,b=t*sections+next;
+    const c2=(t+1)*sections+next,d=(t+1)*sections+i;
+    indices.push(a,b,c2,a,c2,d);
+  }
+  const g=new THREE.BufferGeometry();
+  g.setIndex(indices);
+  g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+  g.computeVertexNormals();
+  return g;
+}
+export function addWolfEarPeaks(world,{landscape=false}={}){
   const suite=getWolfveilSumiETextures();
   const rockMap=cloneRepeatedTexture(suite.caveRock.map,1,1);
   const rockBump=cloneRepeatedTexture(suite.caveRock.bumpMap,1,1);
@@ -277,6 +343,23 @@ export function addWolfEarPeaks(world){
   });
   ridgeMat.name='SWV_Sculpted_SumiE_MountainRock';
   world.ownedMaterials.push(ridgeMat);
+  if(landscape){
+    // The boundary ranges are now sculpted into the shared terrain itself
+    // (WolfveilLandscapeDesign.mjs). Only the two "wolf ear" spires remain as
+    // separate rock: they crown the two Wolf-Ear summits and lean apart.
+    const west=WOLFVEIL_SUMMITS.find(s=>s.id==='west_ear');
+    const east=WOLFVEIL_SUMMITS.find(s=>s.id==='east_ear');
+    const ears=[
+      {name:'SWV_TwinWolfEarPeak_West',at:[west.x,west.z],height:72,radius:36,leanX:-18,leanZ:6,seed:84},
+      {name:'SWV_TwinWolfEarPeak_East',at:[east.x,east.z],height:66,radius:33,leanX:17,leanZ:8,seed:85},
+    ];
+    for(const ear of ears){
+      const rock=world.mesh(new THREE.Mesh(makeWolfEarSpireGeometry(ear.at,ear),ridgeMat));
+      rock.name=ear.name;rock.receiveShadow=true;rock.castShadow=false;
+      rock.raycast=()=>{};
+    }
+    return;
+  }
   const peaks=[
     {name:'SWV_TwinWolfEarPeak_West',x:-76,z:477,size:195,seed:84},
     {name:'SWV_TwinWolfEarPeak_East',x:52,z:502,size:172,seed:85},
@@ -299,8 +382,10 @@ export function addWolfEarPeaks(world){
 export function addWolfveilPaths(world,routes,{
   excludePalaceApproach=false,swQuarterQuality=false,canonicalPlaySurface=false,
   terrainSpan=1100,terrainSegments=310,coalesceTerrainStrips=true,
-  trailBreaks=false,importedTownAtMarket=false,
+  trailBreaks=false,importedTownAtMarket=false,landscape=false,
 }={}){
+  // Landscape trails are 1.4 m wider: the extra margin is the feathered verge.
+  const verge=landscape&&canonicalPlaySurface?1.4:0;
   // The real Luna entrance already has seven physical stairs. On the live
   // palace map, the old road must not cover these or the hillside treads.
   const mesh=new WolfveilTriangles();
@@ -365,9 +450,13 @@ export function addWolfveilPaths(world,routes,{
         // Each strip follows the UNIT route tangent. Dividing a 1.5m strip
         // by the entire route length shrank long Play roads into hairlines.
         // Keep the legacy non-Play rendering opt-out unchanged.
-        const nx=(canonicalPlaySurface?b[1]-a[1]:z1-z0)/dist*route.width*.5;
-        const nz=-(canonicalPlaySurface?b[0]-a[0]:x1-x0)/dist*route.width*.5;
-        const tint=route.kind==='primary'?[.63,.61,.54]:
+        const nx=(canonicalPlaySurface?b[1]-a[1]:z1-z0)/dist*(route.width+verge)*.5;
+        const nz=-(canonicalPlaySurface?b[0]-a[0]:x1-x0)/dist*(route.width+verge)*.5;
+        const tint=verge
+          // Warm packed earth; the dirt texture carries the detail.
+          ?(route.kind==='primary'?[.98,.94,.86]:route.kind==='residential'?[.94,.86,.76]:
+            route.kind==='ridge'?[.90,.88,.84]:route.kind==='frontier'?[.86,.76,.64]:[.88,.80,.70])
+          :route.kind==='primary'?[.63,.61,.54]:
           route.kind==='residential'?[.61,.53,.43]:[.46,.43,.35];
         const pathTint=swQuarterQuality
           ?wolfveilSWDirtPathTint((x0+x1)*.5,(z0+z1)*.5,tint,route.width*.5+1.6):tint;
@@ -417,7 +506,7 @@ export function addWolfveilPaths(world,routes,{
       if(length<1e-8||Math.abs(turn)<1e-8)continue;
       const sign=Math.sign(turn),[nx,nz]=prior.normal;
       const bevel=[b,[b[0]+sign*nx,b[1]+sign*nz],
-        [b[0]+sign*bz/length*route.width*.5,b[1]-sign*bx/length*route.width*.5]];
+        [b[0]+sign*bz/length*(route.width+verge)*.5,b[1]-sign*bx/length*(route.width+verge)*.5]];
       if(importedTownAtMarket&&bevel.some(p=>insideWolfveilImportedTown(p[0],p[1],-1.5)))continue;
       if(bevel.some(p=>wolfveilDistanceToRiver(p[0],p[1])<12))continue;
       if(excludePalaceApproach&&route.id==='public_gate_market_sanctuary'&&
@@ -425,9 +514,34 @@ export function addWolfveilPaths(world,routes,{
           p[1]<WOLFVEIL_PALACE.z+WOLFVEIL_PALACE.depth/2))continue;
       const projected=project(bevel);
       if(!projected)continue; // outer meadow representation stays unchanged
-      const uv=p=>[(p[0]-b[0])/route.width+.5,(p[2]-b[1])/route.width+.5];
+      const uv=verge
+        // Corner fan: the verge coordinate is the distance from the bend point.
+        ?p=>[.5-.5*Math.min(1,Math.hypot(p[0]-b[0],p[2]-b[1])/((route.width+verge)*.5)),.5]
+        :p=>[(p[0]-b[0])/route.width+.5,(p[2]-b[1])/route.width+.5];
       for(const tri of projected)mesh.tri(...tri,prior.tint,tri.map(uv));
     }
+  }
+  if(verge){
+    // Real packed dirt with pebbles in world space + a feathered, ragged verge.
+    const geometry=mesh.geometry();
+    const strip=geometry.getAttribute('uv');
+    applyWolfveilTrailUVs(geometry,i=>strip.getX(i));
+    const dirt=makeWolfveilTrailDirtTextures();
+    const edge=makeWolfveilTrailEdgeAlpha();
+    edge.channel=1;
+    const pathMat=material(0xffffff,.95,{
+      vertexColors:true,side:THREE.DoubleSide,
+      map:dirt.map,bumpMap:dirt.bumpMap,bumpScale:.065,alphaMap:edge,
+      transparent:true,depthWrite:false,
+      polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
+    });
+    pathMat.name='SWV_SumiE_TexturedDirtTrailNetwork';
+    world.ownedMaterials.push(pathMat);
+    const obj=world.mesh(new THREE.Mesh(geometry,pathMat));
+    obj.name='SWV_PhysicalTraversablePathNetwork';obj.receiveShadow=true;
+    // Drawn after the translucent west soil overlay so trails stay on top.
+    obj.renderOrder=2;
+    return obj;
   }
   const dirtSuite=getWolfveilSumiETextures().dirt;
   const dirtMap=cloneRepeatedTexture(dirtSuite.map,1,1);

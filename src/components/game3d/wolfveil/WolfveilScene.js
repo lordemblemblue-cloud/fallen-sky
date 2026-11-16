@@ -35,6 +35,8 @@ import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
 import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
+import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
+import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
@@ -47,6 +49,8 @@ export function createWolfveilVillage(scene,options={}){
   const geometry=buildWolfveilTerrain({
     span:options.span||1100,segments:options.segments||310,
     caveCutouts:enableCaves,
+    // Game 3D: authored landscape palette (ranges, trails, fields, camps).
+    landscape:Boolean(options.originAtMarket),
   });
   const terrainMaterial=material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide});
   // Game 3D opt-in: replace flat ground pigment inside the first spawn square.
@@ -109,12 +113,17 @@ export function createWolfveilVillage(scene,options={}){
   const westLandscaping=options.groundCover
     ?addWolfveilWestHillsideLandscaping(world,geometry,{
         span:options.span||1100,segments:options.segments||310,
+        landscape:Boolean(options.originAtMarket),
       })
     :null;
   // Decorative underside only: no terrain/collision shrink, no extra raycast floor.
   addWolfveilTerrainEdgeSkirt(world,{span:options.span||1100});
-  addWolfEarPeaks(world);
-  const routes=addWolfveilPaths(world,WOLFVEIL_ROUTES,{
+  addWolfEarPeaks(world,{landscape:Boolean(options.originAtMarket)});
+  // Game 3D also draws the landscape design's frontier trails (Hunter's Loop,
+  // fighting-ground spurs) with the same textured, feathered trail surface.
+  const routes=addWolfveilPaths(world,options.originAtMarket
+    ?[...WOLFVEIL_ROUTES,...WOLFVEIL_FRONTIER_TRAILS]:WOLFVEIL_ROUTES,{
+    landscape:Boolean(options.originAtMarket),
     excludePalaceApproach:true,
     swQuarterQuality:Boolean(options.originAtMarket&&options.groundCover),
     canonicalPlaySurface:Boolean(options.originAtMarket&&options.groundCover),
@@ -132,6 +141,9 @@ export function createWolfveilVillage(scene,options={}){
   const livingLandscape=trailLandscaping
     ?buildWolfveilLivingLandscape(world,{heightAt:trailLandscaping.heightAt})
     :null;
+  // Wayfinding stones: fighting-ground rings, Hunter's Loop cairns, camp
+  // gateways and riverbank rock spots (decorative, no colliders).
+  const landscapeMarkers=options.originAtMarket?buildWolfveilLandscapeMarkers(world):null;
   const river=addWolfveilWater(world,WOLFVEIL_RIVER,{
     silverWater:Boolean(options.silverWater),
   });
@@ -227,6 +239,7 @@ export function createWolfveilVillage(scene,options={}){
     trailLandscaping:trailLandscaping?{rocks:trailLandscaping.rocks,
       tufts:trailLandscaping.tufts,triangles:trailLandscaping.triangles}:null,
     livingLandscape,
+    landscapeMarkers:landscapeMarkers?{count:landscapeMarkers.count,...landscapeMarkers.counts}:null,
     spawnGroundTile:options.spawnGroundTile?WOLFVEIL_SPAWN_TILE:null,
     groundCover:groundCover?{
       grassPatches:groundCover.grassPatches,

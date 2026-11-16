@@ -10,8 +10,10 @@ import {
   sampleWolfveilPlayerCaveFloorY,
   sampleWolfveilCaveSpace,
   planWolfveilCaveInteraction,
+  buildWolfveilCaveTravelGraph,
   resolveWolfveilCaveWallCollision,
 } from './WolfveilCaveLayout.mjs';
+import { WOLFVEIL_CAVE_ENTRANCE_FRAMES, caveEntranceAt } from './WolfveilCaveEntrancePlan.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
 import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
 import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
@@ -157,6 +159,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   );
 
   const floorTris = new WolfveilTriangles();
+  const navigationGraph=buildWolfveilCaveTravelGraph();
   const shellTris = new WolfveilTriangles();
   const lightAnchors = [];
   const animatedFlames = [];
@@ -173,6 +176,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const sphereGeo = new THREE.SphereGeometry(1, 10, 8);
   const octaGeo = new THREE.OctahedronGeometry(1, 0);
   const torusGeo = new THREE.TorusGeometry(1, 0.18, 7, 18);
+  const rockGeo = new THREE.DodecahedronGeometry(1, 0);
 
   const addProp = (geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => {
     const m = new THREE.Mesh(geo, mat);
@@ -334,43 +338,108 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     stoneMat:floorMat,timberMat,bronzeMat,
   });
 
-  // 2. Existing rock arches and E-activated surface entries
-  for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
-    const [mx, mz] = cave.mouth;
-    const [dx, dz] = cave.dir;
-    const nx = -dz, nz = dx;
-    const my = cave.mouthY;
-    const yaw = Math.atan2(dx, dz);
+  // 2. Cave entrances. Each rock mouth gets a jagged stone face around a genuinely
+  // dark throat, boulder frames and a packed-earth apron, so the hillside reads as
+  // a cave you can step into rather than an arch drawn over intact rock.
+  const throatMat = new THREE.MeshStandardMaterial({
+    color: 0x0b0f15,
+    roughness: 1,
+    metalness: 0,
+    side: THREE.DoubleSide,
+  });
+  throatMat.name = 'SWV_Cave_EntranceThroat';
+  const throatCapMat = new THREE.MeshBasicMaterial({
+    color: 0x03060b,
+    side: THREE.DoubleSide,
+  });
+  world.ownedMaterials.push(throatMat, throatCapMat);
+  // The dark sleeve reads as a cave mouth from outside and is switched off once
+  // the player is underground so it never blocks the view back out.
+  const entranceOccluders = [];
+  let occludersHidden = false;
 
-    // Sculpted rock arch hood & side buttresses framing the open mouth
-    const archSteps = 14;
-    const spanR = 5.4, depthR = 9.8;
-    for (let s = 0; s < 5; s++) {
-      const f0 = -1.6 + (s / 5) * depthR;
-      const f1 = -1.6 + ((s + 1) / 5) * depthR;
-      for (let i = 0; i < archSteps; i++) {
-        const a0 = (i / archSteps) * Math.PI;
-        const a1 = ((i + 1) / archSteps) * Math.PI;
-        const pt = (f, a) => {
-          const c = Math.cos(a), sn = Math.sin(a);
-          const w = spanR + (f > 2 ? 0.6 : 1.35);
-          const h = 6.6 - f * 0.12;
-          const px = mx + dx * f + nx * c * w;
-          const pz = mz + dz * f + nz * c * w;
-          const py = my - 1.4 + sn * h + (sn > 0.2 ? rockDisplacement(px, my + sn * h, pz) * 0.55 : 0);
-          return [px, py, pz];
-        };
-        shellTris.quad(pt(f0, a0), pt(f0, a1), pt(f1, a1), pt(f1, a0), [0.58, 0.62, 0.66]);
-      }
+  for (const frame of WOLFVEIL_CAVE_ENTRANCE_FRAMES) {
+    const cave = WOLFVEIL_EXPLORABLE_CAVES.find(item => item.id === frame.caveId);
+    const [mx, my, mz] = frame.mouth;
+    const [dx, dz] = frame.dir;
+    const [nx, nz] = frame.side;
+    const yaw = frame.yaw;
+    const hw = frame.openingHalfWidth, hh = frame.openingHeight;
+    const faceX = mx - dx * 0.9, faceZ = mz - dz * 0.9;
+
+    // Stone face: the inner edge IS the archway, the outer edge is the hillside.
+    // The outer mass leans back into the slope so it never floats in the air.
+    const facePoint = (ang, spread, lean) => {
+      const c = Math.cos(ang), s = Math.sin(ang);
+      const lat = c * hw * spread;
+      const up = s * hh * spread - 0.9;
+      const px = faceX + nx * lat + dx * lean;
+      const pz = faceZ + nz * lat + dz * lean;
+      const jag = rockDisplacement(px, my + up, pz) * (spread > 1.05 ? 0.9 : 0.2);
+      return [px + nx * jag, my + up + (s > 0.15 ? jag * 0.6 : 0), pz + nz * jag];
+    };
+    const leanAt = ang => 1.1 + 2.4 * Math.sin(ang);
+    const faceSteps = 18;
+    for (let i = 0; i < faceSteps; i++) {
+      const a0 = (i / faceSteps) * Math.PI, a1 = ((i + 1) / faceSteps) * Math.PI;
+      const s0 = 2.35 + 0.4 * Math.sin(i * 2.1);
+      const s1 = 2.35 + 0.4 * Math.sin((i + 1) * 2.1);
+      shellTris.quad(
+        facePoint(a0, 1, 0), facePoint(a1, 1, 0),
+        facePoint(a1, s1, leanAt(a1)), facePoint(a0, s0, leanAt(a0)),
+        [0.46, 0.50, 0.57],
+      );
+    }
+    // Broken rock teeth hanging along the rim of the mouth.
+    for (let t = 1; t < 7; t++) {
+      const ang = (t / 7) * Math.PI;
+      const lip = facePoint(ang, 1, 0);
+      addProp(coneGeo, wallMat, lip[0], lip[1] + 0.35, lip[2],
+        0.32, 0.9 + (t % 3) * 0.45, 0.32, Math.PI, ang, 0);
     }
 
-    // Sumi-e Cedar Torii Lintel + Paired Entrance Stone Lanterns outside each cave mouth
+    // Dark throat: the mouth is a cave interior, never a window through the hill.
+    const axis = new THREE.Vector3(dx, -0.2, dz).normalize();
+    const throatStart = new THREE.Vector3(mx - dx * 0.7, my + hh * 0.42, mz - dz * 0.7);
+    const throat = new THREE.Mesh(
+      new THREE.CylinderGeometry(frame.throatEndRadius, frame.throatRadius,
+        frame.throatDepth, 16, 1, true),
+      throatMat,
+    );
+    throat.position.copy(throatStart).addScaledVector(axis, frame.throatDepth * 0.5);
+    throat.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
+    throat.receiveShadow = true;
+    throat.raycast = () => {};
+    group.add(throat);
+    entranceOccluders.push(throat);
+    const throatCap = new THREE.Mesh(
+      new THREE.CircleGeometry(frame.throatEndRadius * 1.08, 16), throatCapMat);
+    throatCap.position.copy(throatStart).addScaledVector(axis, frame.throatDepth);
+    throatCap.quaternion.setFromUnitVectors(
+      new THREE.Vector3(0, 0, 1), axis.clone().negate());
+    throatCap.raycast = () => {};
+    group.add(throatCap);
+    entranceOccluders.push(throatCap);
+
+    // Boulders framing the mouth, wide of the walking line, plus a worn apron.
+    for (const boulder of frame.boulders) {
+      addProp(rockGeo, wallMat,
+        mx + nx * boulder[0] + dx * boulder[1], my + boulder[2] * 0.55 - 0.15,
+        mz + nz * boulder[0] + dz * boulder[1],
+        boulder[2] * 1.5, boulder[2], boulder[2] * 1.3,
+        boulder[3], boulder[3] * 1.7, 0);
+    }
+    addProp(cylGeo, floorMat, frame.apron[0], frame.apron[1] - 0.14, frame.apron[2],
+      frame.apron[3], 0.14, frame.apron[3]);
+    // A warm glow just inside the opening: the mouth reads as a lit cavern.
+    registerLight(mx + dx * 1.8, my + 2.6, mz + dz * 1.8, frame.lightColor, 24, 24);
+
+    // Sumi-e cedar torii lintel + paired entrance stone lanterns outside the mouth.
     const frontX = mx - dx * 1.4, frontZ = mz - dz * 1.4;
     for (const side of [-1, 1]) {
       const px = frontX + nx * side * 4.4, pz = frontZ + nz * side * 4.4;
       addProp(cylGeo, timberMat, px, my + 2.5, pz, 0.28, 5.4, 0.28);
       addProp(torusGeo, ropeMat, px, my + 4.4, pz, 0.32, 0.32, 0.35, Math.PI / 2, 0, 0);
-      // Exterior stone lantern welcoming explorers
       const lx = mx - dx * 3.4 + nx * side * 5.2;
       const lz = mz - dz * 3.4 + nz * side * 5.2;
       addBrazier(lx, my - 0.1, lz, cave.lightColor, cave.theme === 'crystal_geode');
@@ -552,6 +621,57 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     }
   }
 
+  // Lightweight, camera-facing cave wayfinding: the stone arches now have
+  // deliberate E entry/exit and the central rotunda signs point to EACH
+  // of the four physically connected corridors. Sprites never raycast and
+  // do not create additional walkable/collision floors.
+  const wayfindingMaterials=[];
+  const addWayfinding=(label,x,y,z,width=8.2)=>{
+    if(typeof document==='undefined')return;
+    const canvas=document.createElement('canvas');
+    canvas.width=768;canvas.height=128;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    ctx.fillStyle='rgba(9,27,43,.92)';
+    ctx.fillRect(6,7,756,112);
+    ctx.strokeStyle='#e5bf83';ctx.lineWidth=5;ctx.strokeRect(10,10,748,108);
+    ctx.fillStyle='#ffe1ab';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='bold 39px Georgia,serif';
+    ctx.fillText(label,384,65,712);
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    ownedTextures.push(texture);
+    const mat=new THREE.SpriteMaterial({map:texture,transparent:true,
+      depthWrite:false,depthTest:true});
+    wayfindingMaterials.push(mat);
+    const sprite=new THREE.Sprite(mat);
+    sprite.name='SWV_CaveWayfinding_'+label.replace(/[^a-z0-9]/gi,'_');
+    sprite.position.set(x,y,z);sprite.scale.set(width,1.45,1);
+    sprite.raycast=()=>{};
+    group.add(sprite);
+    return sprite;
+  };
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES) {
+    const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    addWayfinding('E · '+cave.name,
+      cave.threshold[0],cave.threshold[1]+3.4,cave.threshold[2],10.2);
+    const ix=mx+dx*3,iz=mz+dz*3;
+    const inside=sampleWolfveilCaveSpace(ix,iz,.62);
+    if(inside)addWayfinding('E · Return Outside',ix,inside.floorY+3,iz,9);
+  }
+  const rotunda=WOLFVEIL_CAVE_HUB;
+  for(const edge of navigationGraph.edges) {
+    if(edge.from!==rotunda.id&&edge.to!==rotunda.id)continue;
+    const nextId=edge.from===rotunda.id?edge.to:edge.from;
+    const next=navigationGraph.nodes.find(node=>node.id===nextId);
+    if(!next)continue;
+    const dx=next.x-rotunda.x,dz=next.z-rotunda.z;
+    const len=Math.hypot(dx,dz)||1;
+    addWayfinding(next.name,rotunda.x+dx/len*7,
+      rotunda.y+3.3,rotunda.z+dz/len*7,10.2);
+  }
+
   const floorMesh = new THREE.Mesh(floorTris.geometry(), floorMat);
   floorMesh.name = 'SWV_CaveSystem_WalkableStoneFloor';
   floorMesh.receiveShadow = true;
@@ -584,7 +704,33 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   // A fresh login never implicitly authorizes an underground cave session:
   // old fall-through checkpoints are rescued onto the intact surface instead
   // of restoring the very collision bug the owner is reporting.
-  let activeCaveId = null; // set ONLY by pressing E at an actual cave arch
+  let activeCaveId = null; // set by pressing E at an arch, or by walking into the mouth
+  // The four entrances are real openings: stepping into a stone mouth descends
+  // into that cave. The E prompt still works for every approach angle.
+  const enterFromMouth = (worldPos) => {
+    if (activeCaveId || !worldPos) return null;
+    if (![worldPos.x, worldPos.y, worldPos.z].every(Number.isFinite)) return null;
+    const cave = caveEntranceAt(worldPos.x, worldPos.y, worldPos.z - offsetZ);
+    if (!cave) return null;
+    const travel = planWolfveilCaveInteraction(
+      { x: cave.mouth[0], y: cave.mouthY, z: cave.mouth[1] });
+    if (!travel) return null;
+    // Land just inside the rock, not 13 m in: the player walks the descending
+    // entry ramp themselves instead of being dropped at the chamber door.
+    const insideX = cave.mouth[0] + cave.dir[0] * 5.5;
+    const insideZ = cave.mouth[1] + cave.dir[1] * 5.5;
+    const space = sampleWolfveilCaveSpace(insideX, insideZ, 0.5);
+    activeCaveId = cave.id;
+    worldPos.x = space ? insideX : travel.x;
+    worldPos.y = space ? space.floorY + 0.1 : travel.y;
+    worldPos.z = (space ? insideZ : travel.z) + offsetZ;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('skillActivatedToast', {
+        detail: { text: 'Descending into ' + cave.name + ' · E at the arch to leave' },
+      }));
+    }
+    return { action: 'enter', name: cave.name, caveId: cave.id };
+  };
   return {
     group,
     floorMesh,
@@ -592,10 +738,12 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     caves: WOLFVEIL_EXPLORABLE_CAVES,
     hub: WOLFVEIL_CAVE_HUB,
     corridors: WOLFVEIL_CAVE_CORRIDORS,
+    navigationGraph,
     approaches:WOLFVEIL_CAVE_APPROACHES,
     approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
     lightAnchorCount: lightAnchors.length,
     isActive(){return activeCaveId!==null;},
+    walkIn: enterFromMouth,
     playerGroundY(worldPos) {
       if (!worldPos) return null;
       // Outdoor players must NEVER be snapped to the cave floor merely
@@ -651,6 +799,14 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
         f.mesh.position.y = f.baseY + (f.gentle ? 0.03 * Math.sin(elapsed * 1.9 + f.phase) : 0);
       }
 
+      // Server-authoritative duel play owns the body position; never teleport it.
+      if (playerWorldPos && !(typeof window !== 'undefined' && window.__game3dDedicatedMode))
+        enterFromMouth(playerWorldPos);
+      const hideOccluders = activeCaveId !== null;
+      if (hideOccluders !== occludersHidden) {
+        occludersHidden = hideOccluders;
+        for (const mesh of entranceOccluders) mesh.visible = !hideOccluders;
+      }
       if (!playerWorldPos || !Number.isFinite(playerWorldPos.x) || !Number.isFinite(playerWorldPos.z)) {
         for (const l of lightPool) l.intensity = 0;
         return;
@@ -676,6 +832,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     },
     dispose() {
+      for (const mat of wayfindingMaterials) mat.dispose();
       for (const t of ownedTextures) t.dispose();
       boxGeo.dispose();
       cylGeo.dispose();
@@ -683,6 +840,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       sphereGeo.dispose();
       octaGeo.dispose();
       torusGeo.dispose();
+      rockGeo.dispose();
     },
   };
 }

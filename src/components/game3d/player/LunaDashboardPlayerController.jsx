@@ -3,6 +3,13 @@ import { blocksBowMovement, shouldBlendBowFootwork } from './BowMovementRules.mj
 import { PLAYER_AFK_DELAY_SECONDS } from './playerNativeAnimationClips';
 import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, resolvePlayerAnimationKey } from './playerAnimationActions.mjs';
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
+import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
+
+// 3-hit weapon combos (weapons/weaponComboClips.js, baked per held weapon). A press inside the chain window
+// continues the chain; a press during a swing is buffered and starts the next hit at that swing's cancel point.
+const WEAPON_COMBO_STATE_SET = new Set(Object.values(WEAPON_COMBO_STATES).flat());
+export const WEAPON_COMBO_CHAIN_GRACE_SECONDS = 0.55; // after a swing ends, the next press still continues the chain
+export const WEAPON_COMBO_BUFFER_SECONDS = 0.6; // how long a buffered press waits for the cancel point
 
 const STATES = {
   IDLE: 'idle',
@@ -93,11 +100,15 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
   let jumpPhaseSeconds=0;
   const GRAVITY=18;
   const JUMP_SPEED=5.4;
+  const extraClips = {}; // weapon combo clips: kept across bindClips
+  let comboChain = { kind: null, index: -1, until: -Infinity };
+  let activeCombo = null; // { state, kind, index, sweepSent, hitSent }
+  let queuedCombo = null; // { kind, config, at, from }
 
   const ATTACK_STATES = new Set([
     STATES.DRAW_ARROW, STATES.MELEE_ATTACK, STATES.MELEE_COMBO_2,
     STATES.MELEE_COMBO_3, STATES.HEAVY_ATTACK,
-    'kick', 'punch', 'aimRecoil',
+    'kick', 'punch', 'aimRecoil', ...WEAPON_COMBO_STATE_SET,
   ]);
   const now = () => performance.now() / 1000;
   const hasAction = (state) => !!actions[resolvePlayerAnimationKey(state)];
@@ -114,6 +125,105 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
       for (const action of weights.keys()) if (action !== target) action.stop();
       blendTransition = null;
     }
+  };
+
+  // ---- weapon combos ----
+  const comboAction = () => (activeCombo && currentState === activeCombo.state ? actions[activeCombo.state] || null : null);
+  const comboCancelAt = (state) => {
+    const clip = actions[state]?.getClip();
+    return clip ? clip.userData?.cancel ?? clip.duration : 0;
+  };
+  const startWeaponCombo = (kind, config, at) => {
+    const states = WEAPON_COMBO_STATES[kind];
+    const hitIndex = config.hitIndex;
+    const explicit = hitIndex !== undefined && hitIndex !== null && Number.isFinite(Number(hitIndex));
+    const index = config.heavy ? states.length - 1
+      : explicit ? Math.abs(Math.trunc(Number(hitIndex))) % states.length
+        : comboChain.kind === kind && at <= comboChain.until ? (comboChain.index + 1) % states.length : 0;
+    const state = states[index];
+    const speed = Math.max(0.7, Math.min(2.2, Number(config.speed) || 1));
+    queuedCombo = null;
+    if (!playState(state, { force: true, fade: 0.06, timeScale: speed })) return false;
+    const duration = durationFor(state, speed);
+    isBusy = true;
+    lastAttackAt = at;
+    busyResetAt = at + duration;
+    if (oneShotRef) oneShotRef.current = true;
+    comboChain = { kind, index, until: at + duration + WEAPON_COMBO_CHAIN_GRACE_SECONDS };
+    activeCombo = { state, kind, index, sweepSent: false, hitSent: false };
+    return true;
+  };
+  // null: no combo clips for this kind (the caller falls back to the regular attack montage)
+  const requestWeaponCombo = (kind, config) => {
+    const states = WEAPON_COMBO_STATES[kind];
+    if (!states || !states.every(hasAction)) return null;
+    if (isDead || isMounted) return false;
+    const at = now();
+    if (isBusy) {
+      const swing = comboAction();
+      if (swing && swing.time < comboCancelAt(currentState)) {
+        queuedCombo = { kind, config, at, from: currentState };
+        return true;
+      }
+      if (!swing && currentState !== STATES.RUN_STOP && !(config.combo && ATTACK_STATES.has(currentState))) return false;
+    }
+    return startWeaponCombo(kind, config, at);
+  };
+  // Starts a buffered press once the current swing reaches its cancel point (or ends).
+  const pumpWeaponCombo = () => {
+    if (!queuedCombo) return false;
+    const at = now();
+    if (isDead || isMounted || at - queuedCombo.at > WEAPON_COMBO_BUFFER_SECONDS || currentState !== queuedCombo.from) {
+      queuedCombo = null; // expired, or a dodge / hit / jump took over
+      return false;
+    }
+    if (isBusy && (actions[currentState]?.time ?? 0) < comboCancelAt(currentState)) return false;
+    const { kind, config } = queuedCombo;
+    return startWeaponCombo(kind, config, at);
+  };
+  // Combo clips are baked per held weapon (weapons/weaponComboBinder.js) and survive bindClips. Returns false,
+  // changing nothing, while a combo swing is still playing or fading out; the caller retries later.
+  const setWeaponComboClips = (clipsByKey = {}) => {
+    const entries = Object.entries(clipsByKey).filter(([key, clip]) => WEAPON_COMBO_STATE_SET.has(key) && clip);
+    if ([...WEAPON_COMBO_STATE_SET].some((key) => actions[key]?.isScheduled() && actions[key].getEffectiveWeight() > 0)) return false;
+    for (const [key, clip] of entries) {
+      const old = actions[key];
+      if (old?.getClip() === clip) continue;
+      if (old) { old.stop(); mixer.uncacheClip(old.getClip()); }
+      extraClips[key] = clip;
+      const action = mixer.clipAction(clip);
+      action.enabled = true;
+      action.setEffectiveWeight(1);
+      actions[key] = action;
+    }
+    return true;
+  };
+  const getComboState = () => {
+    const action = comboAction();
+    if (!action) return null;
+    const { hit = 0, cancel = action.getClip().duration, sweep = null } = action.getClip().userData || {};
+    return { state: activeCombo.state, kind: activeCombo.kind, index: activeCombo.index, time: action.time,
+      duration: action.getClip().duration, hit, cancel, sweep, queued: !!queuedCombo };
+  };
+  // Presentation cues of the swing in progress, each once: 'sweep' when the blade starts its cutting arc
+  // (seconds = how long it lasts at the current speed) and 'hit' at the strike / arrow release.
+  const pollComboEvents = () => {
+    const action = comboAction();
+    if (!action) return [];
+    const events = [];
+    const { hit = 0, sweep = null } = action.getClip().userData || {};
+    const speed = action.getEffectiveTimeScale() || 1;
+    const t = action.time;
+    const base = { kind: activeCombo.kind, index: activeCombo.index, state: activeCombo.state };
+    if (sweep && !activeCombo.sweepSent && t >= sweep[0]) {
+      activeCombo.sweepSent = true;
+      events.push({ type: 'sweep', ...base, seconds: Math.max(0.05, (sweep[1] - Math.max(t, sweep[0])) / speed) });
+    }
+    if (!activeCombo.hitSent && t >= hit) {
+      activeCombo.hitSent = true;
+      events.push({ type: 'hit', ...base });
+    }
+    return events;
   };
 
   const playState = (state, options = {}) => {
@@ -207,6 +317,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     specialMoveTimer=0;
     specialMoveVelocity=null;
     if (oneShotRef) oneShotRef.current = false;
+    if (pumpWeaponCombo()) return;
     if (pendingEquipmentTransition) {
       const transition = pendingEquipmentTransition;
       pendingEquipmentTransition = null;
@@ -219,6 +330,10 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     const wasRunning = lastMovement.running;
     lastMovement = { moving: !!moving, running: !!running || !!sprinting, sprinting: !!sprinting, direction, aiming: !!aiming, blocking: !!blocking };
     if (currentState === STATES.RUN_STOP && moving) { isBusy = false; busyResetAt = 0; if (oneShotRef) oneShotRef.current = false; }
+    // Movement may cancel only the recovery, never a live weapon strike or queued follow-up.
+    if (moving && isBusy && !queuedCombo && comboAction() && comboAction().time >= comboCancelAt(currentState)) {
+      isBusy = false; busyResetAt = 0; if (oneShotRef) oneShotRef.current = false;
+    }
     if (isDead || isMounted) return;
     if (isBusy) {
       // A bow release may keep its short recoil pose while the PLAYER ROOT
@@ -259,7 +374,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     blendTransition = null;
     for (const key of Object.keys(actions)) delete actions[key];
     currentState = null;
-    Object.entries(clipsByKey).forEach(([key, clip]) => {
+    Object.entries({ ...clipsByKey, ...extraClips }).forEach(([key, clip]) => {
       const action = mixer.clipAction(clip);
       action.enabled = true;
       action.setEffectiveWeight(1);
@@ -312,6 +427,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     const requested = resolvePlayerAnimationKey(kind);
     const state = isDeathState(requested) ? requested : /back/i.test(kind) ? 'deathBackward' : 'deathForward';
     const available = hasAction(state) ? state : PLAYER_DEATH_ACTIONS.find(hasAction);
+    queuedCombo = null;
     isBusy = false;
     bowAttackAllowsMovement = false;
     busyResetAt = 0;
@@ -352,6 +468,9 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     pendingEquipmentTransition = null;
     isAiming = false;
     isBlocking = false;
+    queuedCombo = null;
+    activeCombo = null;
+    comboChain = { kind: null, index: -1, until: -Infinity };
     if (oneShotRef) oneShotRef.current = false;
     handleMovement({ moving: false, running: false, aiming: false, blocking: false });
     return true;
@@ -407,6 +526,12 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
   // every 90ms; regular clicks still obey the ordinary busy/cooldown gates.
   const requestAttack = (kind = 'attack', options = {}) => {
     const config = typeof options === 'number' ? { speed: options } : (options || {});
+    // 'swordCombo' / 'bowCombo': the held weapon's 3-hit combo; without its clips, the regular attack below
+    if (WEAPON_COMBO_STATES[kind]) {
+      const combo = requestWeaponCombo(kind, config);
+      if (combo !== null) return combo;
+      kind = kind === 'bowCombo' ? 'attack' : 'kick';
+    }
     const melee = ['kick', 'punch', 'melee', 'meleeAttack'].includes(kind);
     const comboIndex = Math.max(0, Number(config.hitIndex) || 0);
     const heavy = melee && (config.heavy === true);
@@ -550,6 +675,8 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     pendingEquipmentTransition = null;
     previousMoving = false;
     idleStartedAt = null;
+    queuedCombo = null;
+    activeCombo = null;
     if (oneShotRef) oneShotRef.current = false;
     if (!isMounted) handleMovement(lastMovement);
   };
@@ -594,7 +721,10 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     setMounted,
     updateActionState: handleMovement,
     updateMotion,
-    updateAnimation: (delta = 0) => advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)),
+    updateAnimation: (delta = 0) => { pumpWeaponCombo(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
+    setWeaponComboClips,
+    getComboState,
+    pollComboEvents,
     getCurrent: () => isMounted ? 'mounted' : currentState || STATES.IDLE,
     getIsAiming: () => isAiming,
     getIsBlocking: () => isBlocking,

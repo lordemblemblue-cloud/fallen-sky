@@ -156,29 +156,54 @@ function bendWaypoints(a, b, bendLateral = 16, midDrop = -1.8) {
     a.y + (b.y - a.y) * 0.67 + midDrop * 0.85,
     a.z + dz * 0.67 - nz * bendLateral * 0.65,
   ];
-  return [[a.x, a.y, a.z], p1, p2, [b.x, b.y, b.z]];
+  // The room's floor exists from its perimeter inward. The old curved
+  // connector began descending at the room centre, causing an invisible
+  // floor handoff at its doorway (up to metres for the western ring).
+  // Hold each connector at its adjoining room's Y until almost the rim;
+  // then blend grades over the real, long tunnel instead of inside the room.
+  const apron=(room,toward)=>{
+    const dx=toward[0]-room.x,dz=toward[2]-room.z;
+    const len=Math.hypot(dx,dz)||1;
+    const extent=Math.min(Math.max(3,(room.radius||15)-2.0),len*.56);
+    return [room.x+dx/len*extent,room.y,room.z+dz/len*extent];
+  };
+  return [
+    [a.x,a.y,a.z],apron(a,p1),p1,p2,apron(b,p2),[b.x,b.y,b.z],
+  ];
 }
 
 // Entry ramp corridors (threshold -> mouth -> chamber) + 5 interconnecting tunnels!
 export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
-  ...WOLFVEIL_EXPLORABLE_CAVES.map(c =>
-    makePolylineCorridor(
+  ...WOLFVEIL_EXPLORABLE_CAVES.map(c => {
+    // A cave chamber begins BEFORE its centre, about one chamber radius from
+    // it. The old entry ramp descended all the way to centre; the chamber
+    // floor won the collision query halfway through and caused a 3–4m DROP.
+    // Bring the full ramp to chamber grade at its OUTER threshold, then
+    // continue level into the room. The existing floor meshes and the foot
+    // collision sampler share these exact same waypoints.
+    const joinAlong=Math.max(5,c.chamberOffset-c.chamberRadius+1.25);
+    return makePolylineCorridor(
       `entry_${c.id}`,
       [
         c.threshold,
-        [c.mouth[0], c.mouthY - 0.35, c.mouth[1]],
+        [c.mouth[0],c.mouthY-0.35,c.mouth[1]],
         [
-          c.mouth[0] + c.dir[0] * (c.chamberOffset * 0.52),
-          c.mouthY - c.chamberDrop * 0.55,
-          c.mouth[1] + c.dir[1] * (c.chamberOffset * 0.52),
+          c.mouth[0]+c.dir[0]*(joinAlong*0.5),
+          c.mouthY-c.chamberDrop*0.54,
+          c.mouth[1]+c.dir[1]*(joinAlong*0.5),
         ],
-        [c.chamber.x, c.chamber.y, c.chamber.z],
+        [
+          c.mouth[0]+c.dir[0]*joinAlong,
+          c.chamber.y,
+          c.mouth[1]+c.dir[1]*joinAlong,
+        ],
+        [c.chamber.x,c.chamber.y,c.chamber.z],
       ],
       3.9,
       6.2,
       'entry',
-    ),
-  ),
+    );
+  }),
   // Tunnel 1: Jade Lantern Grotto <-> Whispering Root Hollow (western ring)
   makePolylineCorridor(
     'tunnel_grotto_to_roots',
@@ -300,7 +325,7 @@ export function sampleWolfveilPlayerCaveFloorY(localX, currentY, localZ,
 // Closed 2.5D surface + E-interaction at the existing modeled cave arch.
 // The existing subterranean rooms and connected corridors stay on their
 // original coordinates; entry/exit never needs a missing terrain polygon.
-export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radius=5.1}={}) {
+export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radius=7.0}={}) {
   if(!localPosition||![localPosition.x,localPosition.y,localPosition.z,radius]
     .every(Number.isFinite)||radius<=0)return null;
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
@@ -318,11 +343,18 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
         x:cave.threshold[0],y:cave.threshold[1]+0.12,z:cave.threshold[2],
       };
     }
-    if(Math.hypot(localPosition.x-cave.threshold[0],
-      localPosition.z-cave.threshold[2])>radius)continue;
-    // The opening is an interaction at walking height, not a vertical trigger
-    // that a character on a cliff far above/below can activate.
-    if(Math.abs(localPosition.y-cave.threshold[1])>2.25)continue;
+    // Some entrances are embedded in steep waterfall rock. The player may
+    // press E beside the actual stone mouth rather than standing behind it
+    // at the exact exterior threshold: accept either grounded approach.
+    const nearThreshold=Math.hypot(localPosition.x-cave.threshold[0],
+      localPosition.z-cave.threshold[2])<=radius;
+    const nearMouth=Math.hypot(localPosition.x-mx,localPosition.z-mz)
+      <=Math.min(radius,5.25);
+    if(!nearThreshold&&!nearMouth)continue;
+    const validHeight=(nearThreshold &&
+      Math.abs(localPosition.y-cave.threshold[1])<=3.5)
+      ||(nearMouth&&Math.abs(localPosition.y-cave.mouthY)<=3.5);
+    if(!validHeight)continue;
     const space=sampleWolfveilCaveSpace(insideX,insideZ,0.75);
     if(!space)continue;
     return {
@@ -361,4 +393,35 @@ export function resolveWolfveilCaveWallCollision(localPos, prevLocalPos, radius 
   localPos.x = prevLocalPos.x;
   localPos.z = prevLocalPos.z;
   return true;
+}
+
+/**
+ * Explorable underground travel graph, derived from the same corridor nodes
+ * used to build REAL tunnel floor meshes. No fake map-only teleport links.
+ * Each of four caves is connected to the Wolf-Spirit Rotunda by tunnel routes.
+ */
+export function buildWolfveilCaveTravelGraph() {
+  const nodes=[
+    ...WOLFVEIL_EXPLORABLE_CAVES.map(c=>({
+      id:c.chamber.id,name:c.name,x:c.chamber.x,y:c.chamber.y,z:c.chamber.z,
+      caveId:c.id,kind:'cave',
+    })),
+    {id:WOLFVEIL_CAVE_HUB.id,name:WOLFVEIL_CAVE_HUB.name,
+      x:WOLFVEIL_CAVE_HUB.x,y:WOLFVEIL_CAVE_HUB.y,
+      z:WOLFVEIL_CAVE_HUB.z,kind:'hub'},
+  ];
+  const nearest=(x,z)=>nodes.reduce((best,n)=>{
+    const d=Math.hypot(x-n.x,z-n.z);
+    return !best||d<best.distance?{id:n.id,distance:d}:best;
+  },null);
+  const edges=[];
+  for(const corridor of WOLFVEIL_CAVE_CORRIDORS) {
+    if(corridor.kind!=='tunnel')continue;
+    const a=corridor.waypoints[0],b=corridor.waypoints.at(-1);
+    const from=nearest(a[0],a[2]),to=nearest(b[0],b[2]);
+    if(!from||!to||from.distance>1||to.distance>1||from.id===to.id)continue;
+    edges.push({id:corridor.id,from:from.id,to:to.id,
+      length:corridor.totalLength});
+  }
+  return {nodes,edges,hubId:WOLFVEIL_CAVE_HUB.id};
 }

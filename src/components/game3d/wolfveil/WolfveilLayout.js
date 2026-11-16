@@ -4,6 +4,8 @@ import {gradeWolfveilRiverbank} from './WolfveilRiverBanks.mjs';
 import {gradeVortexLakeBasin} from './VortexLakeLayout.mjs';
 import {createWolfveilBridgeBankTerrainGrade} from './WolfveilBridgeBankTerrain.mjs';
 import {gradeWolfveilWestHillside} from './WolfveilWestHillside.mjs';
+import {gradeWolfveilLandscapeFeatures,gradeWolfveilRoadBeds,wolfveilMountainLift,
+  wolfveilTrailNetworkClearance,WOLFVEIL_LANDSCAPE_REVISION} from './WolfveilLandscapeDesign.mjs';
 // Shadow Wolf Homeland — Wolfveil Valley master blockout.
 //
 // Reference: docs/game3d/WOLFVEIL_REFERENCE_PLAN.md, written from
@@ -187,9 +189,10 @@ export function wolfveilRouteClearance(x,z){
 // with finer rough pockets. Never affect a roadbed, stream bank or the Luna
 // palace foundations/steps. Everyone samples this same analytical height:
 // walkable geometry, planting, client feet and shared physics remain aligned.
-export function wolfveilGroundUndulation(x,z,riverDistance=wolfveilDistanceToRiver(x,z)){
+export function wolfveilGroundUndulation(x,z,riverDistance=wolfveilDistanceToRiver(x,z),
+  routeClearance=wolfveilRouteClearance(x,z)){
   if(!Number.isFinite(x)||!Number.isFinite(z))return 0;
-  const routeFade=smooth((wolfveilRouteClearance(x,z)-.6)/5.5);
+  const routeFade=smooth((routeClearance-.6)/5.5);
   const waterFade=smooth((riverDistance-14)/20);
   const palaceX=Math.max(0,Math.abs(x)-26.5);
   const palaceZ=Math.max(0,Math.abs(z-115)-16.5);
@@ -210,7 +213,11 @@ export function gradeWolfveilLunarCaveApproach(x,z,height,riverDistance=wolfveil
   const protectWater=smooth((riverDistance-12)/18);
   return height-8.5*sideways*front*rear*protectWater;
 }
-export function wolfveilNaturalHeight(x,z){
+// Valley macro form: the long south-to-north rise, side hills, the western
+// hillside grade and fine undulation. Fields and camp hollows level
+// themselves against THIS height (WolfveilLandscapeDesign.mjs).
+export function wolfveilValleyHeight(x,z,river=wolfveilDistanceToRiver(x,z),
+  routeClearance=wolfveilRouteClearance(x,z)){
   // Town rises approximately 80m from entrance to sanctuary while the
   // broader plateau rim climbs toward the split high ridges.
   const northRise=z< -225?0:z>220?80:80*smooth((z+225)/445);
@@ -225,9 +232,30 @@ export function wolfveilNaturalHeight(x,z){
   // Feather the western mountain flank into an explorable, rolling hillside.
   // Terrain BVH, worker height contract and planting all read this one grade.
   y=gradeWolfveilWestHillside(x,z,y,sideHills);
-  // Expose a carved, lower riverbed along the eastern edge of the basin.
+  return y+wolfveilGroundUndulation(x,z,river,routeClearance);
+}
+// Route clearance including the landscape design's frontier trails, exact to
+// 40 m (wolfveilRouteClearance stops measuring ~11 m from a route).
+export function wolfveilAnyTrailClearance(x,z){
+  return wolfveilTrailNetworkClearance(x,z,WOLFVEIL_ROUTES);
+}
+// Masked mountain-range lift at any point (inside or beyond the 1,100m core).
+// The streamed meadow adds this same lift so ranges continue past the edge.
+export function wolfveilLandscapeLiftAt(x,z){
+  return wolfveilMountainLift(x,z,wolfveilDistanceToRiver(x,z),wolfveilAnyTrailClearance(x,z));
+}
+// Everything except the trail road beds (their levelling samples this).
+export function wolfveilSculptedHeight(x,z){
   const river=wolfveilDistanceToRiver(x,z);
-  y+=wolfveilGroundUndulation(x,z,river);
+  const routes=wolfveilRouteClearance(x,z);
+  let y=wolfveilValleyHeight(x,z,river,routes);
+  // Authored landscape (2026-11-16): boundary mountain ranges, open fighting
+  // grounds and mob-camp hollows. Protected sites (town, palace, sanctuary,
+  // caves, gates, vortex lake, waterfall, river corridor) are masked to 0.
+  y=gradeWolfveilLandscapeFeatures(x,z,y,wolfveilValleyHeight,{
+    riverDistance:river,routeClearance:wolfveilAnyTrailClearance(x,z),
+  });
+  // Expose a carved, lower riverbed along the eastern edge of the basin.
   // One continuous sculpted channel: the terrain, player-foot BVH and
   // server-authoritative map all sample this exact shared elevation.
   // Unlike a Z-only approximation, the waterline follows river bends.
@@ -250,6 +278,20 @@ export function wolfveilNaturalHeight(x,z){
   }
   return y;
 }
+// Trails get a levelled, benched road bed (cut uphill, fill downhill, shallow
+// swale) so every path reads as built. Palace, town and cave grades excluded.
+const ROAD_BED_EXCLUDED=[[0,115,70],[4,220,40],[0,-70,95],[0,-225,26],
+  [-216,76,40],[-312,148,40],[-82,312,40],[122,198,40],[-138,196,44],
+  [142,179,48],[163,155,44],[171,152,36],[197,154,36],[205,320,64]];
+const roadBedExcluded=(x,z)=>ROAD_BED_EXCLUDED.some(([cx,cz,r])=>
+  (x-cx)*(x-cx)+(z-cz)*(z-cz)<r*r);
+export function wolfveilNaturalHeight(x,z){
+  const sculpted=wolfveilSculptedHeight(x,z);
+  return gradeWolfveilRoadBeds(x,z,sculpted,wolfveilSculptedHeight,WOLFVEIL_ROUTES,{
+    riverDistance:wolfveilDistanceToRiver(x,z),excludeAt:roadBedExcluded,
+  });
+}
+export const WOLFVEIL_TERRAIN_LANDSCAPE_REVISION=WOLFVEIL_LANDSCAPE_REVISION;
 // The same shared graded elevation is sampled by the rendered BVH, player
 // feet, landscaping, and multiplayer worker; keep the previous micro-contours.
 const palaceNaturalCenterY=wolfveilNaturalHeight(0,115);
@@ -263,7 +305,12 @@ export function wolfveilPreBridgeHeight(x,z){
   // The manor pad and its SOUTH entrance stairs are graded afterwards and
   // therefore retain exact ground/foundation contact.
   const natural=wolfveilNaturalHeight(x,z);
-  const rearReference=wolfveilNaturalHeight(x,WOLFVEIL_PALACE_REAR_MOUNTAIN.startZ);
+  // gradeWolfveilPalaceRearMountain returns the natural height outside its
+  // own box; only sample the reference row where it can actually apply.
+  const rear$=WOLFVEIL_PALACE_REAR_MOUNTAIN;
+  const rearReference=z>rear$.startZ&&z<rear$.endZ&&
+    Math.abs(x)<rear$.coreHalfWidth+rear$.sideFeather
+    ?wolfveilNaturalHeight(x,rear$.startZ):natural;
   const rear=gradeWolfveilPalaceRearMountain(x,z,natural,rearReference);
   return gradeWolfveilPalaceTerrain(
     x,z,rear,palaceNaturalCenterY,palaceNaturalJoinY);

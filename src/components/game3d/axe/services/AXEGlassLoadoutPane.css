@@ -146,3 +146,264 @@
     flex-basis:100%;justify-content:flex-start;
   }
 }
+
+
+/* Unified Companion Equipment: owned roster replaces the gear-category rail.
+ * Star over the center model swaps BOTH right-side panels together. Player
+ * equipment keeps its unchanged four-column grid and ten equipment slots. */
+.axe-glass-loadout[data-equipment-actor="companion"] {
+  grid-template-columns:minmax(165px,20%) minmax(280px,34%) minmax(220px,1fr) minmax(218px,.93fr);
+  grid-template-rows:minmax(0,1fr);
+  min-width:0;min-height:0;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
+  grid-column:1;grid-row:1;display:flex;flex-direction:column;
+  gap:9px;min-width:0;min-height:0;overflow:hidden;
+  border:1px solid #e6ca9c80;border-radius:10px;
+  background:linear-gradient(135deg,#233c4bbd,#13283acc);
+  padding:10px;color:#f2e1c4;
+}
+.axe-comp-owned-roster .axe-comp-roster-title {
+  display:flex;align-items:center;gap:6px;padding-bottom:10px;
+  border-bottom:1px solid #e5c69370;color:#ffe0aa;
+}
+.axe-comp-owned-roster .axe-comp-roster-title strong {
+  flex:1;font:clamp(14px,1.13vw,19px) Georgia,serif;
+}
+.axe-comp-owned-roster .axe-comp-roster-title small {
+  color:#cdd7dc;font:10px Georgia,serif;white-space:nowrap;
+}
+.axe-comp-owned-roster .axe-comp-roster-search {
+  display:flex;align-items:center;gap:7px;flex:0 0 auto;
+  padding:8px;border:1px solid #d6b7837f;border-radius:8px;
+  background:#162d3dbf;color:#e9cb91;
+}
+.axe-comp-owned-roster .axe-comp-roster-search input {
+  flex:1;min-width:0;width:100%;border:0;background:none;outline:0;
+  color:#f6e6cd;font:12px Georgia,serif;
+}
+.axe-comp-owned-roster .axe-comp-roster-list {
+  display:flex;flex-direction:column;flex:1;min-height:0;gap:6px;
+  overflow-y:auto;scrollbar-width:thin;scrollbar-color:#d7b47f80 transparent;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list>button {
+  width:100%;min-height:66px;flex-shrink:0;display:flex;align-items:center;gap:8px;
+  padding:8px;border:1px solid #d8bd8975;border-radius:8px;
+  background:rgba(20,42,59,.72);text-align:left;color:#f5e1bb;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list>button[aria-pressed=true] {
+  background:#c2a16e40;border-color:#ffe0a7;box-shadow:inset 0 0 13px #f4d9a32c;
+}
+.axe-comp-roster-sigil {display:grid;place-items:center;flex:0 0 29px;
+  height:29px;border:1px solid #e0c49380;border-radius:50%;color:#e6c591;}
+.axe-comp-roster-entry {display:flex;flex:1;flex-direction:column;gap:5px;min-width:0;}
+.axe-comp-roster-entry strong {font:12px Georgia,serif;overflow-wrap:anywhere;}
+.axe-comp-roster-entry small {font:10px Georgia,serif;color:#bcd5d5;}
+.axe-comp-roster-actions {display:flex;flex-direction:column;gap:6px;
+  border-top:1px solid #e1c29355;padding-top:9px;}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-actions>button {
+  width:100%;font:11px Georgia,serif;min-height:32px;
+  border:1px solid #dab7838c;border-radius:7px;padding:7px;
+  background:#bc99663d;color:#f9dfa9;
+}
+.axe-comp-roster-actions small {font:10px/1.4 Georgia,serif;color:#c8d5d9;}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage {
+  grid-column:2;grid-row:1;position:relative;overflow:hidden;
+  grid-template-columns:minmax(58px,21%) minmax(0,1fr) minmax(58px,21%);
+  grid-template-rows:minmax(0,1fr) auto;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-model-center {
+  grid-column:2;grid-row:1;width:100%;height:100%;min-height:0;min-width:0;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-gear--left {
+  grid-column:1;grid-row:1;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-gear--right {
+  grid-column:3;grid-row:1;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-slot {
+  width:100%;min-width:0;min-height:77px;overflow:hidden;
+  padding:6px 3px;white-space:normal;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-item-name {
+  white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:9px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-model-caption {
+  grid-column:1/-1;grid-row:2;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-insights-toggle {
+  position:absolute;z-index:8;top:9px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  white-space:nowrap;min-height:35px;padding:7px 11px;border-radius:999px;
+  border:1px solid #f3d49ed1;background:rgba(23,41,54,.91);
+  color:#fae1b2;box-shadow:0 3px 14px #07121bb0;
+  font:12px Georgia,serif;cursor:pointer;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-insights-toggle[aria-pressed=true] {
+  background:linear-gradient(120deg,#af915c,#edcd96,#bd9b67);color:#24323e;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-insights-toggle:focus-visible {
+  outline:2px solid #f8e3ae;outline-offset:3px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]>.axe-app-main-stack,
+.axe-glass-loadout[data-equipment-actor="companion"]>.axe-app-right-stack {
+  min-width:0;min-height:0;
+}
+.axe-comp-insights-card {height:100%;min-height:0;display:flex;flex-direction:column;}
+.axe-comp-insights-card>.axe-app-card-content {overflow-y:auto;min-height:0;}
+.axe-comp-insights-body {display:flex;flex-direction:column;gap:10px;color:#e8dfd0;}
+.axe-comp-insight-summary {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;}
+.axe-comp-insight-summary>div {display:flex;flex-direction:column;gap:5px;min-width:0;
+  padding:10px;border:1px solid #d6bd8b5a;border-radius:8px;background:#1d374bb2;}
+.axe-comp-insight-summary small,.axe-comp-insight-level small {font:10px Georgia,serif;color:#d3d3cf;}
+.axe-comp-insight-summary strong {font:16px Georgia,serif;color:#f3d4a0;overflow-wrap:anywhere;}
+.axe-comp-insight-heading {border-bottom:1px solid #dfbf8966;padding:10px 0 6px;
+  display:flex;align-items:baseline;gap:6px;justify-content:space-between;flex-wrap:wrap;}
+.axe-comp-insight-heading h4 {margin:0;color:#f6d8a6;font:14px Georgia,serif;}
+.axe-comp-insight-heading span {font:10px Georgia,serif;color:#acd9c3;}
+.axe-comp-insight-metrics {display:flex;flex-direction:column;}
+.axe-comp-insight-stat {display:flex;align-items:center;gap:8px;padding:9px 3px;
+  border-bottom:1px solid #dfc18b34;font:12px Georgia,serif;}
+.axe-comp-insight-stat svg {flex:0 0 auto;color:#e2c392;}
+.axe-comp-insight-stat span {flex:1;min-width:0;}
+.axe-comp-insight-stat strong {color:#bcebd1;white-space:nowrap;}
+.axe-comp-insight-footnote {font:11px/1.5 Georgia,serif;color:#beced4;margin:5px 0;}
+.axe-comp-insight-level {display:flex;justify-content:space-between;gap:10px;
+  border:1px solid #dbbf8b64;border-radius:9px;background:#2942569e;padding:12px;}
+.axe-comp-insight-level>div {display:flex;flex-direction:column;gap:4px;}
+.axe-comp-insight-level strong {font:30px Georgia,serif;color:#fbe1af;}
+.axe-comp-insight-level strong span {font-size:15px;color:#dacaa5;}
+.axe-comp-insight-ability {display:flex;align-items:center;gap:7px;
+  padding:7px;margin:0;border:1px solid #d9c18854;border-radius:7px;
+  font:11px Georgia,serif;color:#ddf0d8;}
+@media(max-width:1160px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:minmax(135px,20%) minmax(210px,32%) minmax(190px,1fr) minmax(190px,1fr);
+  }
+}
+@media(max-width:980px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:minmax(148px,30%) minmax(0,1fr);
+    grid-template-rows:minmax(330px,47vh) minmax(280px,auto) minmax(270px,auto);
+    height:auto;overflow-y:auto;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
+    grid-column:1;grid-row:1;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage {
+    grid-column:2;grid-row:1;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"]>.axe-app-main-stack {
+    grid-column:1/-1;grid-row:2;min-height:280px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"]>.axe-app-right-stack {
+    grid-column:1/-1;grid-row:3;min-height:270px;
+  }
+}
+@media(max-width:590px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:minmax(107px,36%) minmax(0,1fr);
+    grid-template-rows:minmax(320px,44vh) auto auto;gap:5px;padding:4px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
+    padding:5px;gap:5px;
+  }
+  .axe-comp-owned-roster .axe-comp-roster-title {flex-wrap:wrap;}
+  .axe-comp-owned-roster .axe-comp-roster-title strong {font-size:13px;}
+  .axe-comp-owned-roster .axe-comp-roster-search {padding:5px;}
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list>button {
+    padding:5px;gap:3px;min-height:57px;
+  }
+  .axe-comp-roster-sigil {display:none;}
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage {
+    grid-template-columns:minmax(39px,18%) minmax(0,1fr) minmax(39px,18%);
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-insights-toggle {
+    padding:6px 8px;font-size:10px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-insights-toggle span {display:none;}
+}
+
+
+/* Restore the original My Companion rail rhythm: one header row with the
+ * Compass/Companions title left and a minimal underlined search on the right.
+ * The icon is always visible; the prompt disappears immediately on focus. */
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
+  background:linear-gradient(145deg,rgba(32,47,64,.58),rgba(16,28,43,.54));
+  border:1px solid rgba(232,205,159,.66);
+  border-radius:9px;
+  padding:10px;
+  gap:7px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title {
+  display:flex;justify-content:space-between;align-items:center;
+  flex:0 0 auto;gap:7px;min-width:0;
+  padding:5px 0 10px;
+  border-bottom:1px solid rgba(225,197,147,.53);
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading {
+  display:flex;align-items:center;justify-content:flex-start;gap:6px;
+  flex:0 0 auto;min-width:0;margin:0;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading svg {
+  color:#edd0a2;flex:0 0 auto;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading strong {
+  color:#ffe4ac;font:clamp(12px,1vw,16px)/1.1 Georgia,serif;
+  letter-spacing:0;white-space:nowrap;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search {
+  display:flex;flex:1 1 90px;min-width:0;max-width:145px;
+  align-items:center;gap:5px;
+  margin:0;padding:3px 0 5px;
+  border:0;border-bottom:1px solid rgba(246,215,166,.76);border-radius:0;
+  background:transparent;box-shadow:none;
+  color:#e9ce9b;transition:border-color .16s ease;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search:focus-within {
+  border-bottom:2px solid #ffe3af;
+  padding-bottom:4px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search svg {
+  flex:0 0 14px;height:14px;color:#ead4ae;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search input {
+  border:0;outline:0;background:none;box-shadow:none;
+  width:100%;min-width:0;padding:0;
+  font:11px/1.3 Georgia,serif;color:#fff0d5;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search input::placeholder {
+  color:#d7c7b1;opacity:1;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list {
+  display:flex;flex-direction:column;align-items:stretch;gap:7px;
+  overflow-y:auto;overflow-x:hidden;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list>button {
+  min-height:60px;padding:6px;border-radius:6px;
+  border:1px solid #cdb28777;background:rgba(21,41,57,.54);
+  box-shadow:none;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-list>button[aria-pressed=true] {
+  background:rgba(198,160,97,.30);border-color:#ffe3a5;
+  box-shadow:inset 0 0 11px #ffdaaf55;
+}
+@media(max-width:1170px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading {
+    gap:3px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading strong {
+    font-size:12px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search input {
+    font-size:10px;
+  }
+}
+@media(max-width:700px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title {
+    flex-wrap:wrap;align-content:start;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-title .axe-comp-roster-search {
+    flex-basis:100%;max-width:none;
+  }
+}

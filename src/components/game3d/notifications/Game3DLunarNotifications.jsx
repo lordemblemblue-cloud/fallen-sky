@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { BookOpen, ChevronRight, Mail, Moon, Send, Shield, Sparkles, Sun, Sword, X } from 'lucide-react';
+import { BookOpen, ChevronRight, Mail, Moon, Send, Sun, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getQuestState, subscribeQuests } from '../useQuestStore';
@@ -8,10 +8,11 @@ import { AXE_QUESTS } from '../axe/quests/AXEQuestFramework';
 import { friendsStore } from '../social/socialStores';
 import FriendMessengerPanel from '@/components/friends/FriendMessengerPanel';
 import { incomingDirectMessage, levelMilestone, questMilestones } from './lunarNoticeModel.mjs';
+import { LEVEL_UP_NOTICE_AUTO_CLOSE_MS, LEVEL_UP_NOTICE_ATTRIBUTES_SERVICE, shouldDismissLevelUpOnEscape } from './levelUpNoticeRules.mjs';
 import './Game3DLunarNotifications.css';
 
 const LIMIT = 8;
-const PAUSE = {message:8500, level:8500, story:9500};
+const PAUSE = {message:8500, level:LEVEL_UP_NOTICE_AUTO_CLOSE_MS, story:9500};
 const trim = (value, limit=100) => typeof value === 'string' ? value.trim().slice(0,limit) : '';
 const photoURL = value => typeof value === 'string' &&
   (/^https:\/\//i.test(value) || /^\/assets\/[\w./-]+\.(png|webp|jpe?g)$/i.test(value))
@@ -116,25 +117,45 @@ function DayCrest({day}) {
   </div>;
 }
 
-function LevelNotice({notice, onClose, day}) {
-  return <section className="axe-lunar-notice axe-lunar-level" aria-label={`Level up to level ${notice.level}`}>
-    <span className="axe-lunar-wing axe-lunar-wing-left" aria-hidden="true"/>
-    <span className="axe-lunar-wing axe-lunar-wing-right" aria-hidden="true"/>
-    <span className="axe-lunar-topcrest" aria-hidden="true"><DayCrest day={day}/></span>
-    <button type="button" className="axe-lunar-close" aria-label="Dismiss level-up" onClick={onClose}><X size={16}/></button>
-    <div className="axe-lunar-level-heading"><Sparkles size={18}/><h2>LEVEL UP</h2><Sparkles size={18}/></div>
-    <p className="axe-lunar-level-number">Level <strong>{notice.level}</strong></p>
-    <div className="axe-lunar-increase" aria-label="Attributes gained">
-      {notice.stats.map(stat=><div className="axe-lunar-stat" key={stat.label}>
-        {stat.label==='HP'?<span aria-hidden="true">♥</span>:stat.label==='ATK'?<Sword size={15}/>:<Shield size={15}/>}
-        <span>{stat.label}</span><span className="axe-lunar-previous">{stat.before} → {stat.after}</span>
-        <strong>+{stat.gain}</strong>
-      </div>)}
-      {notice.pointsGained>0 && <div className="axe-lunar-stat"><Sparkles size={14}/>
-        <span>Stat points</span><strong>+{notice.pointsGained}</strong></div>}
-      {!notice.stats.length && !notice.pointsGained &&
-        <p className="axe-lunar-level-subtitle">Your character has reached a new level.</p>}
-    </div>
+function LevelNotice({notice, onClose, onAllocate}) {
+  const earned = Math.max(0, Number(notice.pointsGained) || 0);
+  const gains = (notice.stats || []).filter(stat => stat.gain > 0).map(stat =>
+    `${stat.label} +${stat.gain}`).join(' · ');
+  return <section className="axe-lunar-notice axe-lunar-level"
+    aria-label={`Level up to level ${notice.level}`}
+    onMouseDown={event => event.stopPropagation()}
+    onPointerDown={event => event.stopPropagation()}>
+    {/* Decorative metalwork is a vector, not a large opaque image or backdrop. */}
+    <svg className="axe-lunar-level-filigree" viewBox="0 0 500 80" preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true" focusable="false">
+      <g fill="none" stroke="#e9bf72" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 48 Q65 48 91 31 Q118 10 166 35 Q189 48 218 32" strokeWidth="1.7"/>
+        <path d="M490 48 Q435 48 409 31 Q382 10 334 35 Q311 48 282 32" strokeWidth="1.7"/>
+        <path d="M45 56 Q97 56 118 40 Q138 27 172 43" strokeWidth=".9" opacity=".66"/>
+        <path d="M455 56 Q403 56 382 40 Q362 27 328 43" strokeWidth=".9" opacity=".66"/>
+        <path d="M216 32 Q236 26 250 10 Q264 26 284 32" strokeWidth="1.45"/>
+        <path d="M250 8 L263 23 L250 39 L237 23 Z" strokeWidth="1.5"/>
+        <path d="M250 14 L257 23 L250 32 L243 23 Z" strokeWidth=".8"/>
+        <path d="M165 35 Q178 17 193 20 M335 35 Q322 17 307 20" strokeWidth=".9" opacity=".78"/>
+      </g>
+      <circle cx="250" cy="23" r="2.6" fill="#ffe5a5"/>
+      <circle cx="216" cy="32" r="2" fill="#edc77e"/>
+      <circle cx="284" cy="32" r="2" fill="#edc77e"/>
+    </svg>
+    <button type="button" className="axe-lunar-level-card" onClick={onAllocate}
+      aria-label={`Level ${notice.level}. Open Character attributes to spend points`}
+      title="Open Character attributes">
+      <span className="axe-lunar-level-heading">LEVEL UP</span>
+      <span className="axe-lunar-level-number">Level <strong>{notice.level}</strong></span>
+      <span className="axe-lunar-level-award">
+        {earned > 0 ? `✧ +${earned} Attribute Point${earned === 1 ? '' : 's'}`
+          : '✧ Your character has grown stronger'}
+      </span>
+      {gains && <span className="axe-lunar-level-gains">{gains}</span>}
+      <span className="axe-lunar-level-allocate">Open Attributes</span>
+    </button>
+    <button type="button" className="axe-lunar-close" aria-label="Dismiss level-up"
+      onClick={onClose}><X size={14}/></button>
   </section>;
 }
 
@@ -196,6 +217,14 @@ export default function Game3DLunarNotifications({environmentSystem}) {
     });
   },[]);
   const dismiss = useCallback(()=>setQueue(previous=>previous.slice(1)),[]);
+  const openLevelUpAttributes = useCallback(() => {
+    dismiss();
+    // GameView already routes this existing event to the actual Character
+    // service. No duplicate attribute panel or client-side stat allocation.
+    window.dispatchEvent(new CustomEvent('axeServiceRequested', {
+      detail: { service: LEVEL_UP_NOTICE_ATTRIBUTES_SERVICE, source: 'level_up_notice' },
+    }));
+  }, [dismiss]);
   const active=queue[0] || null;
 
   useEffect(()=>{
@@ -203,6 +232,20 @@ export default function Game3DLunarNotifications({environmentSystem}) {
     const timeout=setTimeout(dismiss, PAUSE[active.kind] || 8000);
     return ()=>clearTimeout(timeout);
   },[active?.notificationId,dismiss]);
+
+  useEffect(() => {
+    if (active?.kind !== 'level') return undefined;
+    const onEscape = event => {
+      if (!shouldDismissLevelUpOnEscape(active.kind, event)) return;
+      // Capture before the in-world Escape handler, so dismissing the 1.5s
+      // toast does not accidentally open the pause/settings screen.
+      event.preventDefault();
+      event.stopImmediatePropagation?.();
+      dismiss();
+    };
+    window.addEventListener('keydown', onEscape, true);
+    return () => window.removeEventListener('keydown', onEscape, true);
+  }, [active?.notificationId, active?.kind, dismiss]);
 
   useEffect(()=>{
     if(!environmentSystem) return undefined;
@@ -320,7 +363,7 @@ export default function Game3DLunarNotifications({environmentSystem}) {
   return <>
     {active && <div className={`axe-lunar-notifications axe-lunar-notifications--${active.kind}`}
       data-daytime={day?'day':'night'} role="status" aria-live="polite" aria-atomic="true">
-      {active.kind==='level' && <LevelNotice notice={active} day={day} onClose={dismiss}/>}
+      {active.kind==='level' && <LevelNotice notice={active} onClose={dismiss} onAllocate={openLevelUpAttributes}/>}
       {active.kind==='story' && <StoryNotice notice={active} day={day} onClose={dismiss}/>}
       {active.kind==='message' && <MessageNotice notice={active} day={day}
         onClose={dismiss} onReply={openReply}/>}

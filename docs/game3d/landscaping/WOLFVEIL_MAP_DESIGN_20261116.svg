@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1320 1000" width="1320" height="1000">
+<rect width="1320" height="1000" fill="#0f1a23"/>
+<image href="../../../public/game3d/maps/wolfveil-landscape-v1.png" xlink:href="../../../public/game3d/maps/wolfveil-landscape-v1.png" x="0" y="0" width="1000" height="1000"/>
+<polyline points="-100.0,72.7 54.5,25.5 190.9,7.3 318.2,0.0 423.6,16.4 470.9,34.5" fill="none" stroke="#e7ecef" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+<polyline points="529.1,34.5 570.9,10.9 677.3,-5.5 795.5,1.8 913.6,14.5 1100.0,63.6" fill="none" stroke="#e7ecef" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+<polyline points="-100.0,72.7 -27.3,200.0 -14.5,327.3 -27.3,463.6 -14.5,600.0 -23.6,736.4 -41.8,881.8 -81.8,1027.3" fill="none" stroke="#e7ecef" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+<polyline points="1100.0,63.6 1027.3,172.7 1018.2,300.0 1027.3,427.3 1014.5,554.5 1023.6,681.8 1038.2,809.1 1081.8,1027.3" fill="none" stroke="#e7ecef" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+<polyline points="-81.8,1027.3 72.7,1049.1 218.2,1056.4 363.6,1063.6 509.1,1069.1 645.5,1056.4 781.8,1054.5 918.2,1045.5 1081.8,1027.3" fill="none" stroke="#e7ecef" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
+<circle cx="500" cy="563.6363636363636" r="136.36363636363635" fill="#7fd18a" fill-opacity=".10" stroke="#7fd18a" stroke-width="2" stroke-dasharray="6 6"/>
+<circle cx="350" cy="420" r="59.090909090909086" fill="#7fd18a" fill-opacity=".10" stroke="#7fd18a" stroke-width="2" stroke-dasharray="6 6"/>
+<circle cx="503.6363636363637" cy="300" r="45.45454545454545" fill="#7fd18a" fill-opacity=".10" stroke="#7fd18a" stroke-width="2" stroke-dasharray="6 6"/>
+<polyline points="706.4,172.7 686.4,209.1 663.6,256.4 637.3,301.8 629.1,332.7 620.0,349.1 610.0,395.5 611.8,431.8 608.2,469.1 600.9,500.0 595.5,545.5 593.6,589.1 617.3,630.9 637.3,672.7 659.1,722.7 684.5,804.5 715.5,909.1" fill="none" stroke="#6fb7d8" stroke-width="17.3" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="500.0,704.5 500.0,636.4 500.0,563.6 500.0,481.8 501.8,395.5 503.6,300.0" fill="none" stroke="#d8c3a0" stroke-width="7.6"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="500.0,563.6 440.9,580.0 377.3,595.5 313.6,602.7 260.9,584.5" fill="none" stroke="#d8c3a0" stroke-width="4.6"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="500.0,640.9 436.4,681.8 368.2,718.2 286.4,754.5" fill="none" stroke="#d8c3a0" stroke-width="4.6"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="507.3,640.9 560.9,633.6 580.9,577.3 594.5,500.0 592.7,395.5 629.1,337.3" fill="none" stroke="#d8c3a0" stroke-width="4.2"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="500.0,613.6 565.5,595.5 626.4,610.9 686.4,587.3 713.6,531.8 672.7,468.2 594.5,500.0" fill="none" stroke="#d8c3a0" stroke-width="4.5"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="377.3,595.5 290.9,531.8 209.1,440.9 195.5,368.2 204.5,286.4" fill="none" stroke="#d8c3a0" stroke-width="3.4"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="472.7,443.6 350.0,420.0 290.9,440.9 209.1,440.9" fill="none" stroke="#d8c3a0" stroke-width="3.6"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="686.4,587.3 752.7,559.1 818.2,536.4 809.1,650.0" fill="none" stroke="#d8c3a0" stroke-width="4.1"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="503.6,300.0 450.0,259.1 404.5,200.0 500.0,72.7 531.8,-118.2" fill="none" stroke="#d8c3a0" stroke-width="3.6"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="592.7,395.5 629.1,337.3 648.2,359.1 672.7,363.6" fill="none" stroke="#d8c3a0" stroke-width="2.9"  stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="686.4,587.3 716.4,645.5 747.3,698.2 781.8,729.1 820.0,718.2 854.5,701.8 876.4,645.5 881.8,594.5 856.4,563.6 818.2,536.4 838.2,492.7 850.0,456.4 861.8,400.0 847.3,347.3 820.0,289.1 776.4,247.3" fill="none" stroke="#e9c9a0" stroke-width="4.3" stroke-dasharray="9 6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="776.4,247.3 763.6,186.4 743.6,127.3 694.5,110.0 636.4,110.9 563.6,109.1 501.8,107.3 436.4,114.5 363.6,125.5 281.8,136.4 218.2,163.6 161.8,227.3" fill="none" stroke="#e9c9a0" stroke-width="4.1" stroke-dasharray="9 6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="161.8,227.3 125.5,285.5 110.9,343.6 100.0,418.2 107.3,489.1 114.5,572.7 143.6,665.5 200.0,681.8 260.9,584.5" fill="none" stroke="#e9c9a0" stroke-width="4.1" stroke-dasharray="9 6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="500.0,704.5 507.3,738.2 514.5,772.7" fill="none" stroke="#e9c9a0" stroke-width="5.3" stroke-dasharray="9 6" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="313.6,602.7 305.5,574.5" fill="none" stroke="#e9c9a0" stroke-width="4.6" stroke-dasharray="9 6" stroke-linejoin="round" stroke-linecap="round"/>
+<line x1="557.2727272727273" y1="589.0909090909091" x2="621.8181818181819" y2="589.0909090909091" stroke="#a37a52" stroke-width="5"/>
+<line x1="574.5454545454546" y1="468.1818181818182" x2="632.7272727272727" y2="468.1818181818182" stroke="#a37a52" stroke-width="5"/>
+<line x1="579.0909090909091" y1="313.6363636363637" x2="657.2727272727273" y2="313.6363636363637" stroke="#a37a52" stroke-width="5"/>
+<circle cx="313.6363636363637" cy="527.2727272727273" r="41.81818181818182" fill="#f2c46b" fill-opacity=".16" stroke="#f2c46b" stroke-width="3"/>
+<text x="313.6363636363637" y="534.2727272727273" font-size="22" text-anchor="middle" fill="#f2c46b">⚔</text>
+<text x="313.6" y="477.5" font-size="15" fill="#ffe2a6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Moonlit Commons</text>
+<circle cx="522.7272727272727" cy="854.5454545454545" r="77.27272727272727" fill="#f2c46b" fill-opacity=".16" stroke="#f2c46b" stroke-width="3"/>
+<text x="522.7272727272727" y="861.5454545454545" font-size="22" text-anchor="middle" fill="#f2c46b">⚔</text>
+<text x="522.7" y="769.3" font-size="15" fill="#ffe2a6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Southern Gate Fields</text>
+<circle cx="281.8181818181818" cy="136.36363636363635" r="47.27272727272727" fill="#f2c46b" fill-opacity=".16" stroke="#f2c46b" stroke-width="3"/>
+<text x="281.8181818181818" y="143.36363636363635" font-size="22" text-anchor="middle" fill="#f2c46b">⚔</text>
+<text x="281.8" y="81.1" font-size="15" fill="#ffe2a6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Howling Plateau</text>
+<circle cx="809.0909090909091" cy="650" r="30.54545454545454" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="809.1" y="695.5" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Shadow Ravine · Lv 2–5</text>
+<circle cx="769.090909090909" cy="686.3636363636364" r="17.272727272727273" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="769.1" y="718.6" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Ruined Watch · Lv 4–6</text>
+<circle cx="204.54545454545456" cy="286.3636363636364" r="16.363636363636363" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="204.5" y="317.7" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Wolfstone Outskirts · Lv 5–8</text>
+<circle cx="781.8181818181819" cy="736.3636363636364" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="781.8" y="773.2" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Scarred South · Lv 3</text>
+<circle cx="854.5454545454545" cy="709.0909090909091" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="854.5" y="745.9" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Fallen Gate · Lv 10</text>
+<circle cx="881.8181818181819" cy="586.3636363636363" r="30.54545454545454" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="881.8" y="631.9" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Red Ravine · Lv 15</text>
+<circle cx="850" cy="450" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="850.0" y="486.8" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">East Quarry · Lv 20</text>
+<circle cx="845.4545454545455" cy="340.9090909090909" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="845.5" y="377.7" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Hidden Falls Outskirts · Lv 25</text>
+<circle cx="772.7272727272727" cy="240.9090909090909" r="30.54545454545454" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="772.7" y="286.5" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Northern Rift · Lv 30</text>
+<circle cx="154.54545454545453" cy="231.8181818181818" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="154.5" y="268.6" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Wolfstone Reach · Lv 35</text>
+<circle cx="109.09090909090908" cy="350" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="109.1" y="386.8" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Western Cedar · Lv 40</text>
+<circle cx="109.09090909090908" cy="495.4545454545455" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="109.1" y="532.3" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Bluewood Hollow · Lv 45</text>
+<circle cx="145.45454545454544" cy="672.7272727272727" r="21.818181818181817" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="145.5" y="709.5" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Southwest Ruins · Lv 50</text>
+<circle cx="818.1818181818182" cy="536.3636363636364" r="27.272727272727273" fill="#e5675f" fill-opacity=".22" stroke="#e5675f" stroke-width="2.5"/>
+<text x="818.2" y="578.6" font-size="12" fill="#ffd0c9" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Abandoned Stone Quarry · Lv 12</text>
+<circle cx="500" cy="704.5454545454546" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="503.6363636363637" cy="300" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="629.0909090909091" cy="337.27272727272725" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="686.3636363636364" cy="209.09090909090907" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="404.54545454545456" cy="200" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="204.54545454545456" cy="286.3636363636364" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="209.09090909090907" cy="440.90909090909093" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="655.4545454545454" cy="361.8181818181818" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="679.0909090909091" cy="360" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="303.6363636363636" cy="430.90909090909093" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="216.36363636363637" cy="365.4545454545455" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="425.4545454545455" cy="216.36363636363637" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<circle cx="610.909090909091" cy="320" r="4.5" fill="#b4d9e9" stroke="#13202b" stroke-width="1.5"/>
+<text x="500.0" y="445.3" font-size="14" fill="#c9f3cf" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Wolfveil Town</text>
+<text x="350.0" y="378.9" font-size="14" fill="#c9f3cf" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Training Grounds</text>
+<text x="503.6" y="272.5" font-size="14" fill="#c9f3cf" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Wolf Sanctuary</text>
+<text x="500.0" y="54.5" font-size="17" fill="#eef3f6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Wolf-Ear Range</text>
+<text x="72.7" y="481.8" font-size="17" fill="#eef3f6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Cedar Spine</text>
+<text x="934.5" y="436.4" font-size="17" fill="#eef3f6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Highfall Range</text>
+<text x="390.9" y="972.7" font-size="17" fill="#eef3f6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Southern Downs</text>
+<text x="636.4" y="754.5" font-size="14" fill="#bfe6f6" text-anchor="middle" stroke="#13202b" stroke-width="4" paint-order="stroke" font-family="Georgia,serif">Silverrun River</text>
+<rect x="1016" y="16" width="288" height="968" rx="10" fill="#15222d" stroke="#3c5568"/>
+<text x="1032" y="52" font-size="22" fill="#f5ead6" font-family="Georgia,serif">Wolfveil · Landscape Map</text>
+<text x="1032" y="76" font-size="12" fill="#9fb5c4" font-family="Georgia,serif">wolfveil-landscape-design-v1-20261116</text>
+<rect x="1032" y="97" width="18" height="18" rx="3" fill="#7fd18a"/>
+<text x="1060" y="111" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Safe town &amp; training</text>
+<rect x="1032" y="131" width="18" height="18" rx="3" fill="#f2c46b"/>
+<text x="1060" y="145" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Open fighting grounds (level, no mobs)</text>
+<rect x="1032" y="165" width="18" height="18" rx="3" fill="#e5675f"/>
+<text x="1060" y="179" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Mob areas &amp; camps (levels shown)</text>
+<rect x="1032" y="199" width="18" height="18" rx="3" fill="#e9c9a0"/>
+<text x="1060" y="213" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Hunter's Loop trail (camps in level order)</text>
+<rect x="1032" y="233" width="18" height="18" rx="3" fill="#d8c3a0"/>
+<text x="1060" y="247" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Roads &amp; paths</text>
+<rect x="1032" y="267" width="18" height="18" rx="3" fill="#6fb7d8"/>
+<text x="1060" y="281" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Silverrun River &amp; bridges</text>
+<rect x="1032" y="301" width="18" height="18" rx="3" fill="#9aa3a9"/>
+<text x="1060" y="315" font-size="13" fill="#e6edf2" font-family="Georgia,serif">Mountain ranges (map edge)</text>
+<text x="1032" y="380" font-size="13" fill="#c7d5df" font-family="Georgia,serif">North is up. 1,100 m playable square.</text>
+<text x="1032" y="402" font-size="13" fill="#c7d5df" font-family="Georgia,serif">Ranges ring the valley: the edge</text>
+<text x="1032" y="424" font-size="13" fill="#c7d5df" font-family="Georgia,serif">of the world is a mountain wall.</text>
+<text x="1032" y="446" font-size="13" fill="#c7d5df" font-family="Georgia,serif">Hunter's Loop: Lv 3 (south-east)</text>
+<text x="1032" y="468" font-size="13" fill="#c7d5df" font-family="Georgia,serif">→ east → highlands → Lv 50 (south-west).</text>
+<text x="1032" y="490" font-size="13" fill="#c7d5df" font-family="Georgia,serif">Fighting grounds: level, open,</text>
+<text x="1032" y="512" font-size="13" fill="#c7d5df" font-family="Georgia,serif">framed by berms &amp; standing stones.</text>
+<text x="1032" y="534" font-size="13" fill="#c7d5df" font-family="Georgia,serif">Mob camps: rocky hollows with one</text>
+<text x="1032" y="556" font-size="13" fill="#c7d5df" font-family="Georgia,serif">open mouth facing their trail.</text>
+</svg>

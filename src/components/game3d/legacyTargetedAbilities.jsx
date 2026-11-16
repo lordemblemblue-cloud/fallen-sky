@@ -31,7 +31,7 @@ export function castLegacyTargetedAbility(args) {
     ab, target, enemies, scene, model, activeEffectsRef,
     playActionSound, spawnDamageFloat, spawnXPFloat,
     getPlayerHUD, playerDerivedRef, cachedDeathClip,
-    awardCompanionXP, companionDefRef, reportEnemyKill, QUESTS,
+    companionDefRef, reportEnemyKill, QUESTS,
     setScore, setPlayerXP, setPlayerLevel, awardXP,
     playerXPRef, playerLevelRef, xpForLevel,
     clearTarget, updateTargetHP, getAbilityState,
@@ -53,7 +53,6 @@ export function castLegacyTargetedAbility(args) {
     if (getAbilityState().target?.id === en.id) clearTarget();
     setScore((p) => p + 100 * (en.xpReward || 1));
     spawnXPFloat(en.xpReward || 1);
-    awardCompanionXP(companionDefRef.current?.id, en.xpReward || 1);
     reportEnemyKill(QUESTS, en.tier);
     let nXP = playerXPRef.current + (en.xpReward || 1);
     let nLv = playerLevelRef.current;

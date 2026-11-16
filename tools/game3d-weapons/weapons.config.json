@@ -1,0 +1,45 @@
+{
+  "comment": "Source list for tools/game3d-weapons/build-weapons.mjs. Hints are in the SOURCE file's glTF axes (x right, y up, z toward the viewer). tipHint: rough direction from grip to tip (bows: to the upper limb). edgeHint: rough direction of the blade edge (bows: the arrow's flight, from string to riser). length is the finished overall length in metres for a 1.7 m character.",
+  "sourceDir": "C:/Users/marcu/Downloads",
+  "outDir": "public/game3d/weapons",
+  "weapons": [
+    {
+      "id": "energy_sword", "label": "Energy Sword", "class": "sword",
+      "source": "futuristic energy sword 3d model.glb",
+      "length": 0.98, "targetTris": 24000, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [1, 1, 0], "edgeHint": [-1, 1, 0],
+      "emissive": { "color": "#6fd3ff", "intensity": 0.9 }
+    },
+    {
+      "id": "odachi", "label": "Odachi", "class": "greatsword",
+      "source": "stylized odachi sword 3d model.glb",
+      "length": 1.45, "targetTris": 20000, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [0, 1, 0], "edgeHint": "curve",
+      "gripFromPommel": 0.28, "secondaryFromPommel": 0.11
+    },
+    {
+      "id": "fantasy_sword", "label": "Fantasy Sword", "class": "sword",
+      "source": "fantasy sword 3d model.glb",
+      "length": 0.92, "targetTris": 19400, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [0, -1, 0], "edgeHint": [1, 0, 0]
+    },
+    {
+      "id": "fantasy_bow", "label": "Fantasy Bow", "class": "bow",
+      "source": "fantasy bow 3d model.glb",
+      "length": 1.3, "targetTris": 20000, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [0, 1, 0], "edgeHint": [-1, 0, 0]
+    },
+    {
+      "id": "violet_bow", "label": "Violet Fantasy Bow", "class": "bow",
+      "source": "fantasy bow 3d model (1).glb",
+      "length": 1.25, "targetTris": 2000, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [-0.3, 1, 0], "edgeHint": "auto", "keepLargestCluster": true
+    },
+    {
+      "id": "ornate_bow", "label": "Ornate Bow", "class": "bow",
+      "source": "ornate bow 3d model.glb",
+      "length": 1.28, "targetTris": 24000, "texture": 1024, "baseColorTexture": 2048,
+      "tipHint": [0, 1, 0], "edgeHint": "auto"
+    }
+  ]
+}

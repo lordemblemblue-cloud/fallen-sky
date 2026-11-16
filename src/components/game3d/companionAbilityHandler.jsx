@@ -14,7 +14,6 @@ import { createLifeDrainEffect } from './LifeDrainEffect';
 import { createCompanionTeleportDash } from './CompanionTeleportDashEffect';
 import { createHealEffect } from './HealEffect';
 import { playActionSound } from './combatAudioStore';
-import { awardCompanionXP } from './companionProgressionStore';
 import { reportEnemyKill } from './useQuestStore';
 import { QUESTS } from './questData';
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
@@ -48,7 +47,6 @@ function handleEnemyKill(ctx) {
   if (getAbilityState().target?.id === en.id) clearTarget();
   setScore((prev) => prev + 100 * (en.xpReward || 1));
   spawnXPFloat(en.xpReward || 1);
-  awardCompanionXP(companionDefId, en.xpReward || 1);
   reportEnemyKill(QUESTS, en.tier);
   let newXP = playerXPRef.current + (en.xpReward || 1);
   let newLevel = playerLevelRef.current;

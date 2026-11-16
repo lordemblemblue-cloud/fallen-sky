@@ -1,7 +1,7 @@
 // Pure deterministic geography for the streamed Wolfveil meadow.
 // Layout coordinates are unshifted: the Game 3D scene adds +70m Z.
 // Never replace the authoritative 1,100m Wolfveil terrain or server movement.
-import { wolfveilHeight, WOLFVEIL_SITES } from './WolfveilLayout.js';
+import { wolfveilHeight, wolfveilLandscapeLiftAt, WOLFVEIL_SITES } from './WolfveilLayout.js';
 
 export const WOLFVEIL_MEADOW_FIELD = Object.freeze({
   radiusMeters: 4 * 1609.344,
@@ -37,6 +37,18 @@ export function insideOriginalWolfveilGround(x, z) {
     Math.abs(z) <= WOLFVEIL_MEADOW_FIELD.coreHalfSpan;
 }
 
+const EDGE_CACHE = new Map();
+function meadowEdgeBase(edgeX, edgeZ) {
+  const key = Math.round(edgeX * 100) + ':' + Math.round(edgeZ * 100);
+  let value = EDGE_CACHE.get(key);
+  if (value === undefined) {
+    value = wolfveilHeight(edgeX, edgeZ) - wolfveilLandscapeLiftAt(edgeX, edgeZ);
+    if (EDGE_CACHE.size > 20000) EDGE_CACHE.clear();
+    EDGE_CACHE.set(key, value);
+  }
+  return value;
+}
+
 export function meadowGroundHeight(x, z) {
   if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
   // Inside the old terrain use the exact same authored height. Do not invent
@@ -45,7 +57,10 @@ export function meadowGroundHeight(x, z) {
   const half = WOLFVEIL_MEADOW_FIELD.coreHalfSpan;
   const edgeX = clampMeadow(x, -half, half);
   const edgeZ = clampMeadow(z, -half, half);
-  const base = wolfveilHeight(edgeX, edgeZ);
+  // The boundary mountain ranges straddle the 1,100m edge. Remove their lift
+  // from the edge sample and re-add the lift at THIS point, so the ranges and
+  // the distant snow skyline continue seamlessly beyond the playable core.
+  const base = meadowEdgeBase(edgeX, edgeZ);
   const outside = Math.max(Math.abs(x) - half, Math.abs(z) - half, 0);
   // C1-continuous transition from the old authored terrain into rolling
   // grassland and lower wetland, rather than a floating horizontal plane.
@@ -53,7 +68,16 @@ export function meadowGroundHeight(x, z) {
   const wave = 3.4 * Math.sin(x * .0047 + z * .0024) +
     2.1 * Math.cos(z * .0061 - x * .0037) +
     1.2 * Math.sin(z * .016 + x * .012);
-  return base * (1 - blend) + (13 + wave) * blend;
+  return base * (1 - blend) + (13 + wave) * blend + wolfveilLandscapeLiftAt(x, z);
+}
+
+// Streamed tiles that contain mountains need more vertices than flat meadow.
+export function meadowTileHasMountains(ix, iz, unit = WOLFVEIL_MEADOW_FIELD.terrainTileMeters) {
+  if (!Number.isInteger(ix) || !Number.isInteger(iz)) return false;
+  for (let sz = 0; sz <= 4; sz++) for (let sx = 0; sx <= 4; sx++) {
+    if (wolfveilLandscapeLiftAt((ix + sx / 4) * unit, (iz + sz / 4) * unit) > 6) return true;
+  }
+  return false;
 }
 
 export function shouldStreamMeadowTerrainTile(ix, iz) {

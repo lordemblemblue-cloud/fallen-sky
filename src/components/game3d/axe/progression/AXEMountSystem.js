@@ -2,6 +2,7 @@ import { collectAXELegendaryMountBonuses } from './AXELegendaryMountSystem';
 import { GAME3D_FACTION_MOUNTS } from '../factions/AXEFactionMountAssets.mjs';
 import { normalizeAXEMountGear } from './AXEMountFusionSystem';
 import { finiteMountXP, getMountSpiritualProfile, normalizeMountSpiritualWeapon } from './AXEMountSpiritualSystem';
+import { normalizeCompanionRoleMastery } from './AXECompanionRoleMastery.mjs';
 
 // AXE Prompt 034 — Mount foundation: riding, EXP, PvP growth and stat percentages.
 // Mount progression is separate from Pet progression even when a placeholder
@@ -132,7 +133,9 @@ export function createAXEMountInstance(definitionId, instanceId = null) {
     registered: false,
     active: false,
     riding: false,
-    sourceStats: { ridingXp: 0, pveXp: 0, pvpXp: 0 },
+    sourceStats: { ridingXp: 0, pveXp: 0, pvpXp: 0, questXp: 0 },
+    xpCarry: 0,
+    roleMastery: normalizeCompanionRoleMastery(),
     tradeable: true,
     bound: false,
   };
@@ -147,8 +150,11 @@ export function normalizeAXEMountInstance(mount = {}) {
     ...mount,
     totalXp,
     spiritualWeapon: normalizeMountSpiritualWeapon(mount.spiritualWeapon, totalXp),
+    roleMastery: normalizeCompanionRoleMastery(mount.roleMastery),
     gear: normalizeAXEMountGear(mount.gear), // Mount Soul Fusion gear slots (old saves: all Stage 0)
     growthPercent: resolveAXEMountGrowthPercent(totalXp),
+    xpCarry: Number.isFinite(Number(mount.xpCarry))
+      ? Math.max(0,Math.min(0.999999,Number(mount.xpCarry))) : 0,
     registered: !!mount.registered,
     active: !!mount.active,
     riding: !!mount.riding,
@@ -156,6 +162,7 @@ export function normalizeAXEMountInstance(mount = {}) {
       ridingXp: 0,
       pveXp: 0,
       pvpXp: 0,
+      questXp: 0,
       ...(mount.sourceStats || {}),
     },
     tradeable: mount.tradeable !== false,
@@ -204,7 +211,8 @@ export function addAXEMountXP(mount, amount, source = 'pve') {
   if (gain <= 0) return { ok: false, reason: 'NO_XP', mount: m };
   if (!Number.isSafeInteger(m.totalXp + gain)) return { ok: false, reason: 'XP_LIMIT', mount: m };
 
-  const sourceKey = source === 'pvp' ? 'pvpXp' : source === 'riding' ? 'ridingXp' : 'pveXp';
+  const sourceKey = source === 'pvp' ? 'pvpXp' : source === 'riding' ? 'ridingXp'
+    : source === 'quest' ? 'questXp' : 'pveXp';
   const next = normalizeAXEMountInstance({
     ...m,
     totalXp: m.totalXp + gain,

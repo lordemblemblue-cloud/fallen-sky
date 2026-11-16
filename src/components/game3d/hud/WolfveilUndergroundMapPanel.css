@@ -1,0 +1,37 @@
+/* Underground layer for the M-key world map. Reuses the surface map chrome; only
+   the legend swatches and the tab strip are new. */
+.axe-underground-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 11px;
+  border: 1px solid #b6d8ea69;
+  border-radius: 8px;
+  background: rgba(17, 36, 54, .55);
+}
+.axe-underground-legend span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  color: #e6eef2;
+}
+.axe-underground-legend i {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #a8c8d8;
+}
+.axe-ug-known { background: #274055; border-color: #d8c08a !important; }
+.axe-ug-unknown { background: #1a2836; border-color: #5a7286 !important; border-style: dashed !important; }
+.axe-ug-exit { background: #10303f; border-color: #a8e2c4 !important; }
+.axe-ug-route {
+  width: 18px !important;
+  height: 0 !important;
+  border: none !important;
+  border-top: 2px dashed #f0c983 !important;
+  border-radius: 0 !important;
+}
+.axe-underground-map .axe-map-dot-point { width: 11px; height: 11px; }

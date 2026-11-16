@@ -40,20 +40,24 @@ test('Mounts collection never invents an owned mount when save is empty', () => 
   assert.deepEqual(buildOwnedMountRoster({ mounts: [{ definitionId: 'catalog-only' }] }), []);
 });
 
-test('Mounts is no longer the fusion UI; armory still keeps old progression controls', () => {
-  const root = 'src/components/game3d/axe/services/';
-  const mounts = readFileSync(root + 'AXEOwnedMountsPanel.jsx', 'utf8');
-  const workspace = readFileSync(root + 'AXECompanionWorkspace.jsx', 'utf8');
-  const globalMenu = readFileSync(root + 'AXEGlobalServicesMenu.jsx', 'utf8');
-  const mastery = readFileSync(root + 'AXECompanionMasteryPanel.jsx', 'utf8');
-  assert.match(mounts, /data-companion-page="owned-mounts"/);
-  assert.match(mounts, /buildOwnedMountRoster/);
-  assert.doesNotMatch(mounts, /MountSoulFusionPanel|absorbAXEMount|refineAXEMountGear|releaseAXEMount/);
-  assert.match(workspace, /tab === 'Mounts' \? <AXEOwnedMountsPanel/);
-  assert.match(workspace, /onOpenArmory/);
-  assert.match(workspace, /equipmentView === 'mount'/);
-  assert.match(workspace, /<MountSubTab \/>/);
-  assert.match(workspace, /tab === 'Mastery' \? <AXECompanionMasteryPanel/);
-  assert.match(mastery, /data-companion-page="mastery"/);
-  assert.match(globalMenu, /mount: AXECompanionWorkspace/);
+test('Mastery is immediately right of unified Equipment and role training remains separate',()=>{
+  const root='src/components/game3d/axe/services/';
+  const workspace=readFileSync(root+'AXECompanionWorkspace.jsx','utf8');
+  const loadout=readFileSync(root+'AXEGlassLoadoutPane.jsx','utf8');
+  const mastery=readFileSync(root+'AXECompanionMasteryPanel.jsx','utf8');
+  const store=readFileSync('src/components/game3d/axe/progression/AXEMountStore.js','utf8');
+  assert.match(workspace,/const TABS=\['Equipment','Mastery','Vanity','Imbuement'\]/);
+  assert.doesNotMatch(workspace,/EQUIPMENT_VIEWS|axe-comp-equipment-subnav/);
+  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory|AXECompanionOverviewClone/);
+  assert.match(workspace,/onMyCompanion=\{\(\)=>switchTab\('Equipment'\)\}/);
+  assert.match(workspace,/tab==='Mastery'/);
+  assert.match(loadout,/axe-comp-owned-roster/);
+  assert.match(loadout,/axe-comp-insights-toggle/);
+  assert.match(loadout,/AXE_MOUNT_GEAR_SLOTS/);
+  assert.match(mastery,/COMPANION_MASTERY_PATHS/);
+  assert.match(mastery,/data-companion-page="role-mastery"/);
+  assert.match(mastery,/getActiveWeaponPath/);
+  assert.doesNotMatch(mastery,/feedAXEPet|overEnchantAXEPet/);
+  assert.match(store,/awardCompanionRoleMasteryXP/);
+  assert.match(store,/getRegisteredAXEMountBonuses/);
 });
