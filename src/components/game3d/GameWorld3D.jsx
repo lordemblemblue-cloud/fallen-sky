@@ -97,6 +97,7 @@ import { addDamageFeedback, feedbackKindFromStrike } from './combat/CombatFeedba
 import { createCombatImpactFeedback } from './vfx/CombatImpactFeedback';
 import { createDuelDefenseFeedback } from './vfx/DuelDefenseFeedback';
 import { createCombatWeaponTrails } from './vfx/CombatWeaponTrails';
+import { createWeaponComboBinder } from './weapons/weaponComboBinder.js';
 import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources } from './combat/combatResourcesStore';
 import { selectCombatSwingSound, selectCombatImpactSound, AUTHORED_SKILL_SOUNDS } from './combat/CombatSoundRouter';
 import { AbilitySystem } from './skills/AbilitySystem';
@@ -949,6 +950,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let mountedRider = null;
     let mountedWeapon = null;
     let heldBowPresentation = null;
+    let weaponCombos = null; // Claude's rig-fitted sword and bow attack clips; cosmetic only.
     let heldBowPlayer = null;
     let mountedRiderPlayer = null;
     let mountedRiderMount = null;
@@ -1805,6 +1807,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Native clips are ready with the GLB. Optional admin FBXs must never
       // hold the playable actor in its bind pose while a request is pending.
       playerAnim.bindClips(initialPlayerAnimationClips(fbx));
+      // Capture the actual player rig's rest pose before the first mixer update.
+      // The weapon pack GLBs are not shipped by this clone transfer; use
+      // default grips while preserving the existing equipment/weapon visuals.
+      try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim,
+        bodyHeight: window.__gw3dPlayerHeight || 1.7 }); }
+      catch (error) { console.warn('[Game 3D clone] weapon combo rig bake unavailable', error); weaponCombos = null; }
       coreAnimationController = new CoreAnimationController({ legacyController: playerAnim });
 
       // ─── Spawn all 5 Quest NPCs as individual archer model copies ───
@@ -2755,6 +2763,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
+      weaponCombos?.update();
+      // Claude combo presentation cues; avoid duplicate bow arrows. Existing
+      // charged-shot hit resolution and bowVisuals remain authoritative.
+      for (const cue of playerAnim?.pollComboEvents?.() || []) {
+        if (cue.kind === 'swordCombo' && cue.type === 'sweep') {
+          weaponTrails.emit({ actor: model, weaponPath: 'melee', hitIndex: cue.index, record: cue.seconds });
+        }
+      }
       ascensionVisualRuntime?.lateUpdate?.(); // levitation lifts the posed skeleton
       ascendedGearVisualRuntime?.lateUpdate?.(); // animated hand socket placement
       if (dodgeVanish.active) {
@@ -3761,7 +3777,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               // PvP is strictly one locked target. No cones, cleaves, nearest-target
               // fallback, or collateral hits are allowed.
               if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
-              const montage = activeWeaponPath === 'ranged' ? 'attack' : 'kick';
+              const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
+                : ['damage', 'melee'].includes(activeWeaponPath) ? 'swordCombo' : null);
+              const montage = comboKind || (activeWeaponPath === 'ranged' ? 'attack' : 'kick');
               if (playerAnim?.HandleCombat) {
                 playerAnim.HandleCombat(montage, {
                   combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
@@ -3772,7 +3790,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 playOneShot(montage, 1.4);
               }
               playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
-              weaponTrails.emit({
+              // Claude's sword combo draws at its actual cutting arc; bow keeps
+              // the existing one-arrow-per-cast feedback and hit/miss registration.
+              if (!(comboKind === 'swordCombo' && playerAnim?.getComboState?.())) weaponTrails.emit({
                 actor: model, weaponPath: activeWeaponPath,
                 hitIndex: pendingSkillStrike?.hitIndex ?? 0,
               });
@@ -3832,7 +3852,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // have their own scheduled spacing and bypass this basic cooldown.
             if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
             // Attack montage is manually gated by the animation state machine.
-            const montage = isRangedClickAttack || activeWeaponPath === 'ranged' ? 'attack' : 'kick';
+            const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
+              : ['damage', 'melee'].includes(activeWeaponPath) && !isRangedClickAttack ? 'swordCombo' : null);
+            const montage = comboKind || (isRangedClickAttack || activeWeaponPath === 'ranged' ? 'attack' : 'kick');
             if (playerAnim?.HandleCombat) {
               playerAnim.HandleCombat(montage, {
                 combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
@@ -3843,7 +3865,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playOneShot(montage, 1.4);
             }
             playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
-            weaponTrails.emit({
+            if (!(comboKind === 'swordCombo' && playerAnim?.getComboState?.())) weaponTrails.emit({
               actor: model, weaponPath: activeWeaponPath,
               hitIndex: pendingSkillStrike?.hitIndex ?? 0,
             });
@@ -4619,6 +4641,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       heldBowPresentation?.dispose();
       heldBowPresentation = null;
       heldBowPlayer = null;
+      weaponCombos = null;
       restoreMountedRider();
       companionAssetDisposed = true;
       companionSecondaryRig?.dispose();
