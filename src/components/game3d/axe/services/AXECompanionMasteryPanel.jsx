@@ -58,7 +58,7 @@ export default function AXECompanionMasteryPanel({onNotice=()=>{},onMyCompanion=
         {!shown.length&&<p>No matching owned mounts.</p>}
       </div>
       <button className="axe-mastery-return" type="button" onClick={onMyCompanion}>
-        <Compass size={15}/>My Companion</button>
+        <Compass size={15}/>Back to Equipment</button>
     </aside>
     <main className="axe-mastery-center">
       <header className="axe-mastery-hero">
