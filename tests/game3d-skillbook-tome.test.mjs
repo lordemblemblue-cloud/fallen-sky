@@ -75,9 +75,9 @@ test('Skill Book v2 stat and companion labels use imported formatter (crash regr
   assert.equal(titleizeSkillStat('mobility'),'Mobility');
   assert.equal(titleizeSkillStat(null),'');
   const view=readFileSync(new URL('../src/components/game3d/axe/services/AXESkillBookRedesign.jsx',import.meta.url),'utf8');
-  assert.match(view,/import \\{[^}]*\\btitleizeSkillStat\\b[^}]*\\} from '\\.\\/AXESkillBookModel\\.mjs'/);
-  assert.equal((view.match(/titleizeSkillStat\\(/g)||[]).length,3,
+  assert.match(view,/import \{[^}]*\btitleizeSkillStat\b[^}]*\} from '\.\/AXESkillBookModel\.mjs'/);
+  assert.equal((view.match(/titleizeSkillStat\(/g)||[]).length,3,
     'stat keys, equipped weapon and companion labels must resolve the helper');
-  assert.doesNotMatch(view,/\\btitleize\\s*\\(/,
+  assert.doesNotMatch(view,/\btitleize\s*\(/,
     'Undefined titleize helper caused Skill Book first-select React crash');
 });
