@@ -3,10 +3,8 @@ import { BookOpen, ChevronLeft, ChevronRight, CircleHelp, Crown, Feather, Gem, S
 import { CAST_TYPE, SKILL_TYPE } from '../../skills/skillTypes';
 import { getAllSkills, getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getAllCompanionSkills, getCompanionSkillById } from '../../skills/companionSkillRegistry';
-import { getLoadout, subscribeLoadout, equipActive, unequipActive,
-  getSkillPresets, saveSkillPreset, selectSkillPreset } from '../../skills/loadoutStore';
-import { getCompanionLoadout, subscribeCompanionLoadout,
-  equipCompanionSkill, unequipCompanionSkill, COMPANION_SLOT_KEYS } from '../../skills/companionLoadoutStore';
+import { COMPANION_SLOT_KEYS } from '../../skills/companionLoadoutStore';
+import { getWeaponForSkillBookMode } from './SkillBookWeaponModes.mjs';
 import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMasteryStore';
 import { isWeaponSkillUnlocked, getWeaponSkillChargeBonusPct, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
@@ -16,11 +14,6 @@ import {
 } from '../skills/AXECloneSkillTreeModel.mjs';
 import './AXECloneSkillTree.css';
 
-const useGameStore = (read, subscribe) => {
-  const [state, setState] = useState(read);
-  useEffect(() => subscribe(setState), [subscribe]);
-  return state;
-};
 const tierTitles = ['Root', 'Branch', 'Mastery'];
 const displayNames = {
   damage: {
@@ -214,28 +207,27 @@ function FlatSkillCatalog({ skills, selected, equipped, onSelect, companion, sea
     <span>{equipped.includes(skill.skill_id)?'Equipped':'Available'}</span>
   </button>)}{!items.length && <p>No skills match the selected filters.</p>}</div>;
 }
-export default function AXECloneSkillTreeWorkspace({ serviceId='skills_character', onSelect, onClose }) {
-  const [localPage, setLocalPage] = useState(serviceId);
-  const currentPage = onSelect ? serviceId : localPage;
-  const companion = currentPage === 'skills_companion';
-  const loadout = useGameStore(getLoadout,subscribeLoadout);
-  const companionLoadout = useGameStore(getCompanionLoadout,subscribeCompanionLoadout);
+export default function AXECloneSkillTreeWorkspace({
+  currentPage='skills_character', companion=false, onPageChange,
+  view='skills', onChangeView, selected: selectedSkill, onSelect: onSelectSkill,
+  ownedWeapons=[], activeMode, activeIds=[], passiveIds=[],
+  onQuickEquip, onEquipActive, onRemoveActive, onRemovePassive,
+  onSavePreset, onChoosePreset, currentPresetIndex=0,
+  onActivateWeapon, status='', onClose,
+}) {
   const [,setMasteryRevision] = useState(0);
-  const [category,setCategory] = useState('damage');
-  const [view,setView] = useState('skills');
+  const [category,setCategory] = useState(activeMode?.id||'damage');
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
   const [selected,setSelected] = useState({kind:'skill',id:'axe_offensive_skill_5',
     category:'damage',lane:'three',tier:2});
   const [feedback,setFeedback] = useState('');
-  const [presetRevision,setPresetRevision]=useState(0);
-  const activeIds = companion ? companionLoadout.activeSlots : loadout.activeSlots;
-  const presets = getSkillPresets();
   const paths = useMemo(()=>createCloneSkillTreePaths(category),[category]);
   const normalizedSearch = search.trim().toLowerCase();
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
   useEffect(()=>subscribeWeaponSkillPoints(()=>setMasteryRevision(v=>v+1)),[]);
-  // Keep the featured Three-Hit selection visible on first open.
+  useEffect(()=>{if(!companion && activeMode?.id)setCategory(activeMode.id);},[activeMode?.id,companion]);
+  // The Game 3D controller owns selection, saves, unlocks, and loadout transactions.
   const registry = companion ? getAllCompanionSkills() : getAllSkills();
   const filteredFlat = companion ? registry : category==='passive' ?
     registry.filter(s=>s.skill_type===SKILL_TYPE.PASSIVE) :
@@ -243,33 +235,37 @@ export default function AXECloneSkillTreeWorkspace({ serviceId='skills_character
   const collection = view==='skills'&&!companion&&['damage','range','defense'].includes(category);
   const getSkill = companion ? getCompanionSkillById : getSkillById;
   const switchPreset = next => {
-    if (companion) {setFeedback('Companion Z/X/V/B slots are saved separately.');return;}
-    const result=selectSkillPreset((next+3)%3);
-    setPresetRevision(n=>n+1);
-    setFeedback(result.ok?'Equipped skill set '+((next+3)%3+1)+' selected.':'Could not switch equipped skill set.');
+    if (!onChoosePreset) {setFeedback('Skill set switching is unavailable.');return;}
+    onChoosePreset((next+3)%3);
+    setFeedback('');
   };
   const equipSkill = (skill,index=null) => {
-    if (!skill) return;
-    if (!companion && !cloneSkillTreeIsAvailable(skill.skill_id,isWeaponSkillUnlocked)) {
-      setFeedback('Complete the weapon-skill point prerequisite before equipping this skill.');return;
+    if(!skill) return;
+    if(!companion && !cloneSkillTreeIsAvailable(skill.skill_id,isWeaponSkillUnlocked)) {
+      setFeedback('Complete the weapon skill point stage before equipping this ability.');
+      return;
     }
-    const slot=index===null?activeIds.indexOf(null):index;
-    if(slot<0){setFeedback('All skill slots are full. Select a slot to replace a skill.');return;}
-    const result=companion?equipCompanionSkill(slot,skill.skill_id):equipActive(slot,skill.skill_id);
-    if(result?.ok&&!companion){saveSkillPreset();setPresetRevision(n=>n+1);}
-    setFeedback(result?.ok?'Skill equipped.':'This skill cannot be equipped in that slot.');
+    if(index===null) onQuickEquip?.(skill);
+    else onEquipActive?.(index,skill);
+    setFeedback('');
+  };
+  const selectNode = node => {
+    setSelected(node);
+    onSelectSkill?.(node?.kind==='skill' ? getSkill(node.id) : null);
+    setFeedback('');
   };
   const selectCategory = id => {
-    setCategory(id);setSelected(null);setSearch('');setFilter('all');setFeedback('');
+    setCategory(id);setSelected(null);onSelectSkill?.(null);
+    setSearch('');setFilter('all');setFeedback('');
   };
   const resolveNodeForDetail = () => {
     if(!selected) return null;
-    if (selected.kind==='passive') return selected;
-    const skill=getSkill(selected.id);
-    if(!skill) return null;
-    return selected;
+    if(selected.kind==='passive') return selected;
+    return getSkill(selected.id)?selected:null;
   };
-  void presetRevision;
+  const selectedWeapon = ['damage','range','defense'].includes(category)
+    ? getWeaponForSkillBookMode(ownedWeapons,category) : null;
+  void selectedSkill;void passiveIds;void onRemovePassive;void onSavePreset;
   return <div className="axe-clone-skill-root" data-progression-panel={currentPage}>
     <header className="axe-ct-header">
       <BookOpen size={34} aria-hidden="true"/>
