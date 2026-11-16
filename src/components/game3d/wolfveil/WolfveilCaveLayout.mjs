@@ -312,7 +312,7 @@ export function sampleWolfveilPlayerCaveFloorY(localX, currentY, localZ,
 // Closed 2.5D surface + E-interaction at the existing modeled cave arch.
 // The existing subterranean rooms and connected corridors stay on their
 // original coordinates; entry/exit never needs a missing terrain polygon.
-export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radius=5.1}={}) {
+export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radius=7.0}={}) {
   if(!localPosition||![localPosition.x,localPosition.y,localPosition.z,radius]
     .every(Number.isFinite)||radius<=0)return null;
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
@@ -334,7 +334,10 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
       localPosition.z-cave.threshold[2])>radius)continue;
     // The opening is an interaction at walking height, not a vertical trigger
     // that a character on a cliff far above/below can activate.
-    if(Math.abs(localPosition.y-cave.threshold[1])>2.25)continue;
+    // Actual triangle-interpolated feet and the analytical threshold can
+    // differ on steep waterfall banks; allow a small vertical margin while
+    // still rejecting cave activation from the cliffs far above.
+    if(Math.abs(localPosition.y-cave.threshold[1])>3.5)continue;
     const space=sampleWolfveilCaveSpace(insideX,insideZ,0.75);
     if(!space)continue;
     return {
@@ -373,4 +376,35 @@ export function resolveWolfveilCaveWallCollision(localPos, prevLocalPos, radius 
   localPos.x = prevLocalPos.x;
   localPos.z = prevLocalPos.z;
   return true;
+}
+
+/**
+ * Explorable underground travel graph, derived from the same corridor nodes
+ * used to build REAL tunnel floor meshes. No fake map-only teleport links.
+ * Each of four caves is connected to the Wolf-Spirit Rotunda by tunnel routes.
+ */
+export function buildWolfveilCaveTravelGraph() {
+  const nodes=[
+    ...WOLFVEIL_EXPLORABLE_CAVES.map(c=>({
+      id:c.chamber.id,name:c.name,x:c.chamber.x,y:c.chamber.y,z:c.chamber.z,
+      caveId:c.id,kind:'cave',
+    })),
+    {id:WOLFVEIL_CAVE_HUB.id,name:WOLFVEIL_CAVE_HUB.name,
+      x:WOLFVEIL_CAVE_HUB.x,y:WOLFVEIL_CAVE_HUB.y,
+      z:WOLFVEIL_CAVE_HUB.z,kind:'hub'},
+  ];
+  const nearest=(x,z)=>nodes.reduce((best,n)=>{
+    const d=Math.hypot(x-n.x,z-n.z);
+    return !best||d<best.distance?{id:n.id,distance:d}:best;
+  },null);
+  const edges=[];
+  for(const corridor of WOLFVEIL_CAVE_CORRIDORS) {
+    if(corridor.kind!=='tunnel')continue;
+    const a=corridor.waypoints[0],b=corridor.waypoints.at(-1);
+    const from=nearest(a[0],a[2]),to=nearest(b[0],b[2]);
+    if(!from||!to||from.distance>1||to.distance>1||from.id===to.id)continue;
+    edges.push({id:corridor.id,from:from.id,to:to.id,
+      length:corridor.totalLength});
+  }
+  return {nodes,edges,hubId:WOLFVEIL_CAVE_HUB.id};
 }
