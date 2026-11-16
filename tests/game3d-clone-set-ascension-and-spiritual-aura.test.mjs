@@ -49,10 +49,10 @@ test('set aura requires the whole unique authored set with at least one real Asc
   assert.equal(getAXEFullSetAuraRank(mixed,slots),0);
 });
 
-test('Rare set Stage upgrades preserve their individual item imprint; Elite and above focus on set bonuses',()=>{
+test('Rare, Elite, Legendary Stage upgrades strengthen individual items AND matching set bonuses',()=>{
   assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'rare'}),true);
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'elite'}),false);
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'legendary'}),false);
+  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'elite'}),true);
+  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'legendary'}),true);
   assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Chosen',rarity:'chosen'}),false);
   assert.equal(doesAXEStageIncreaseItemStats({rarity:'elite'}),true);
 });
