@@ -1,5 +1,6 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
 import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
+import {AXE_FARMING_SET_PROFILES} from './AXEFarmingSetProfiles.mjs';
 import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
 import { AXE_CHOSEN_SET_ID, AXE_CHOSEN_REQUIRED_SLOTS, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
 import {
@@ -64,6 +65,13 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
       )}),
     }),
   ])),
+  ...Object.fromEntries(AXE_FARMING_SET_PROFILES.map(profile=>[profile.id,Object.freeze({
+    id:profile.id,name:profile.name,
+    allowedGrades:Object.freeze([profile.rarity]),allowMixedGrades:false,
+    fullSetSlots:Object.freeze(['helm','chest','gloves','legs','boots','cape']),
+    thresholds:profile.thresholds,
+    conditionalThresholds:profile.conditionalThresholds||{},
+  })])),
   ...Object.fromEntries(AXE_PROCEDURAL_SET_FAMILIES.map(family => [family.id,Object.freeze({
     id:family.id,name:family.name,
     allowedGrades:Object.freeze(['rare','elite','legendary','mythic']),
