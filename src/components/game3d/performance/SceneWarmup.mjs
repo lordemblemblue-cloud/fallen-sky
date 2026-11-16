@@ -4,6 +4,36 @@ const TEXTURES = ['map','normalMap','roughnessMap','metalnessMap','aoMap','emiss
 const SCAN_BUDGET = 320;
 const QUEUE_LIMIT = 32;
 
+// These are caps on speculative GPU uploads, not caps on visible gameplay
+// textures. WebGL must upload a texture normally if a visible mesh needs it.
+// The browser does not disclose actual dedicated VRAM capacity or usage.
+const SPECULATIVE_TEXTURE_PIXELS = Object.freeze({
+  performance: 1024 * 1024,
+  balanced: 2048 * 2048,
+  auto: 4096 * 4096,
+});
+
+export function shouldPrewarmGame3DTexture(texture, profile = 'auto') {
+  if (!texture?.isTexture) return false;
+  if (texture.isCompressedTexture || profile === 'quality' || profile === 'off') return true;
+  const image = texture.image || texture.source?.data;
+  if (!image) return false;
+  const width = Number(image.videoWidth || image.naturalWidth || image.width);
+  const height = Number(image.videoHeight || image.naturalHeight || image.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    return true; // Unknown dimensions: preserve the original warmup behavior.
+  }
+  return width * height <= (SPECULATIVE_TEXTURE_PIXELS[profile] ?? SPECULATIVE_TEXTURE_PIXELS.auto);
+}
+
+// Never add optional GPU work to a sustained frame-time spike. A stale sample,
+// one isolated hitch, or an inactive governor cannot suppress preparation.
+export function shouldDeferGame3DWarmup(sample, now) {
+  return Number.isFinite(now) && Number.isFinite(sample?.sampledAt) &&
+    sample.frames >= 20 && now >= sample.sampledAt && now - sample.sampledAt <= 6500 &&
+    (sample.p95Ms >= 32 || sample.p99Ms >= 140);
+}
+
 export function createGame3DSceneWarmup({
   scene, camera, renderer, host = typeof window === 'undefined' ? null : window,
   documentRef = typeof document === 'undefined' ? null : document,
@@ -114,13 +144,24 @@ export function createGame3DSceneWarmup({
       schedule();
       return;
     }
+    let gpuSample = null;
+    try { gpuSample = host.__axe3dCloneGovernor?.getSnapshot?.() || null; }
+    catch { /* Optional diagnostics may be unavailable. */ }
+    const now = host.performance?.now?.() ??
+      (typeof performance === 'undefined' ? 0 : performance.now());
+    if (shouldDeferGame3DWarmup(gpuSample, now)) {
+      schedule(); // Still retry; no speculative upload while the game is struggling.
+      return;
+    }
     try {
       prioritizeNearbyCombat();
       scanSlice();
       const texture = textureQueue.shift();
       if (texture && typeof renderer.initTexture === 'function') {
         if (texture.image || texture.source?.data) {
-          renderer.initTexture(texture);
+          // Avoid allocating very large unseen scenery textures into GPU
+          // memory just for warmup. They still load on normal render.
+          if (shouldPrewarmGame3DTexture(texture, gpuSample?.profile)) renderer.initTexture(texture);
         } else {
           textureQueue.push(texture); // asynchronous asset has not decoded yet
         }
