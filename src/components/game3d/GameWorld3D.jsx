@@ -2064,6 +2064,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // E operates its genuine front, balcony sliders and attic door; if no
       // mansion door is nearby, the existing NPC/loot interaction is unchanged.
       if(k==='e'&&!e.repeat&&model){
+        // Discover the actual chamber treasure cache with E; no client loot
+        // or XP is granted. Server ledger validation is a separate gate.
+        if(region===LUNAR_CAVE_REGION){
+          const cache=lunarDungeon?.inspectTreasure(model.position);
+          if(cache){
+            e.preventDefault();
+            showCombatNotice(cache.name+' discovered · Rewards require verified dungeon completion');
+            return;
+          }
+        }
         if(suigenActive){
           const action=suigenRuntime?.district?.interact(model.position);
           if(action){
