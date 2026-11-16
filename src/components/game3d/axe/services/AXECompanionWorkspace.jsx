@@ -8,8 +8,8 @@ import './AXECompanionCollectionPages.css';
 import './AXECompanionWorkspace.css';
 import './AXECompanionProfileRedesign.css';
 
-// My Companion leads the Equipment area. Mount Armory has no independent
-// destination: gear belongs in Equipment, growth sits in the model-side panel.
+// My Companion leads the Equipment area. The old standalone mount-upgrade
+// destination is gone: gear belongs in Equipment, growth in the model-side panel.
 const TABS=['Equipment','Vanity','Imbuement'];
 const EQUIPMENT_VIEWS=[
   {id:'profile',label:'My Companion'},
