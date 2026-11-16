@@ -8,7 +8,8 @@ export const COMPANION_GROWTH_TIER_BONUSES=Object.freeze([0,10,15,20,25]);
 export const COMPANION_GROWTH_MAX_XP=COMPANION_GROWTH_XP_PER_CYCLE*4;
 const clamp=x=>Math.max(0,Math.min(COMPANION_GROWTH_MAX_XP,Math.floor(Number(x)||0)));
 export function getCompanionGrowthView(totalXp=0) {
-  const xp=clamp(totalXp);
+  const actualXp=Math.max(0,Math.floor(Number(totalXp)||0));
+  const xp=clamp(actualXp);
   const completed=Math.min(4,Math.floor(xp/COMPANION_GROWTH_XP_PER_CYCLE));
   const capped=completed===4;
   const inCycle=capped?COMPANION_GROWTH_XP_PER_CYCLE:xp%COMPANION_GROWTH_XP_PER_CYCLE;
@@ -19,7 +20,7 @@ export function getCompanionGrowthView(totalXp=0) {
   const bonusPct=COMPANION_GROWTH_TIER_BONUSES[completed];
   const nextBonusPct=capped?null:COMPANION_GROWTH_TIER_BONUSES[completed+1];
   const nextMilestoneXP=capped?null:(completed+1)*COMPANION_GROWTH_XP_PER_CYCLE;
-  return {level,maxLevel:20,totalXp:xp,cycle:Math.min(completed+1,4),
+  return {level,maxLevel:20,totalXp:actualXp,cycle:Math.min(completed+1,4),
     completedCycles:completed,bonusPct,nextBonusPct,nextMilestoneXP,
     currentLevelXP,levelXPRequired:step,nextLevelXP,
     percent:capped?100:Math.max(0,Math.min(100,currentLevelXP/step*100)),
