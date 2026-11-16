@@ -200,6 +200,10 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
     onQuickEquip={quickEquip} onEquipActive={placeActive}
     onRemoveActive={removeActive} onRemovePassive={removePassive}
     onSavePreset={()=>savePreset('right')}
+    currentPresetIndex={companion ? banks.companionIndex : playerPresets.index}
+    onChoosePreset={index=>companion
+      ? changePreset('right',index)
+      : chooseWeaponMode(SKILL_BOOK_WEAPON_MODES[index]?.id)}
     onActivateWeapon={chooseWeaponMode}
     onClose={onClose} status={status}
   />;
