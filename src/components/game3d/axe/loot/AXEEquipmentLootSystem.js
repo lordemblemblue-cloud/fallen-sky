@@ -4,6 +4,7 @@
 // Item definitions are model-independent; a later armor asset may be attached
 // without rerolling any owned gear or changing its instance id.
 import { INVENTORY } from '../../equipment/inventoryData';
+import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
 import { isAXERateStat } from '../equipment/AXEEquipmentRuntimeStats';
 import {
   AXE_GEAR_RARITY_SCALE, AXE_PROCEDURAL_SET_FAMILIES,
@@ -53,31 +54,29 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
   const monsterLevel = Math.max(1,Math.floor(Number(enemyLevel ?? playerLevel)||1));
   const template = pool[Math.floor(unit(rng)*pool.length)];
   const rarity = rollAXELevelRarity(monsterLevel, {enemyTier:tier,isBoss,rng});
+  const gearLevel=getAXEFarmingGearLevel(rarity,monsterLevel)??monsterLevel;
   const bands = AXE_EQUIPMENT_DROP_CONFIG.qualityBands;
   const qualityBand=bands[Math.floor(unit(rng)*bands.length)];
   const rarityScale=AXE_GEAR_RARITY_SCALE[rarity]||1;
-  const statScale=rarityScale*getAXELootLevelScale(monsterLevel)*(1+qualityBand/100);
+  const statScale=rarityScale*getAXELootLevelScale(gearLevel)*(1+qualityBand/100);
   const baseStats=Object.fromEntries(Object.entries(template.baseStats||{}).map(([key,value])=>[
     key,Number((Number(value||0)*(isAXERateStat(key)?rarityScale:statScale)).toFixed(
       Math.abs(Number(value||0))<2?2:0,
     )),
   ]));
   const rolledStats=rollAXELevelAffixes({
-    slot:template.slot,rarity,level:monsterLevel,qualityBand,rng,
+    slot:template.slot,rarity,level:gearLevel,qualityBand,rng,
   });
   const evolutionPath=rollAXEEvolutionPath(rarity,monsterLevel,rng);
-  const setEligible=monsterLevel>=45 && ['rare','elite','legendary','mythic'].includes(rarity)
+  const setEligible=monsterLevel>=50 && ['rare','elite','legendary','mythic'].includes(rarity)
     && ['helm','chest','gloves','legs','boots','cape'].includes(template.slot);
   const family=setEligible && unit(rng)<0.25
     ? AXE_PROCEDURAL_SET_FAMILIES[Math.floor(unit(rng)*AXE_PROCEDURAL_SET_FAMILIES.length)]
     : null;
   const rarityLabel=rarity==='uncommon'?'Unique':rarity[0].toUpperCase()+rarity.slice(1);
-  const displayPrefix=evolutionPath==='rare_elite'?'Rare Elite'
-    : evolutionPath==='elite_legendary'?'Elite Legendary'
-    : evolutionPath==='elite_mythic'?'Elite Mythic'
-    : evolutionPath==='legendary_mythic'?'Legendary Mythic'
-    : rarityLabel;
-  const displayName=`${displayPrefix} ${family?family.name+' ':''}${template.name}`;
+  // Evolution flags are NOT earned ranks. Rare Elite / Elite Legendary names
+  // and blended item glow must only appear after genuine Ascension +4.
+  const displayName=`${rarityLabel} ${family?family.name+' ':''}${template.name}`;
   const templateId=template.templateId||template.id;
   const sourceTag=String(sourceId).replace(/[^a-zA-Z0-9_-]/g,'_');
   return {
@@ -88,7 +87,7 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
     equipmentItem:{
       ...template,
       id:template.id,templateId,category:template.sourceCategory,
-      name:displayName,rarity,qualityBand,level:monsterLevel,itemLevel:monsterLevel,
+      name:displayName,rarity,qualityBand,level:gearLevel,itemLevel:gearLevel,monsterLevelAtDrop:monsterLevel,
       dropBand:getAXELevelGearBand(monsterLevel).min,
       rarityLabel,rarityVariant:evolutionPath,evolutionPath,
       setId:family?.id||null,
