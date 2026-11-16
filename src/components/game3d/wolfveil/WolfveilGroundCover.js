@@ -291,7 +291,8 @@ export function buildWolfveilGroundCover(world,options={}){
   // Only remove grass growing through the new cave access lanes. Original
   // authored LAND tile vegetation and approved landscaping outside these
   // narrow paths are never moved or re-graded.
-  const clearCavePath=p=>!isWolfveilCaveApproachReserved(p.x,p.z,.95);
+  const clearCavePath=p=>!options.importedTownAtMarket ||
+    !isWolfveilCaveApproachReserved(p.x,p.z,.95);
   for(let i=patches.length-1;i>=0;i--){
     patches[i].plants=patches[i].plants.filter(clearCavePath);
     if(!patches[i].plants.length)patches.splice(i,1);
