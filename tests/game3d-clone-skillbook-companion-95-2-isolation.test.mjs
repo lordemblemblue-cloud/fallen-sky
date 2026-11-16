@@ -68,6 +68,9 @@ test('Companion combat groups every supported real attack; no invented speed or 
   assert.deepEqual(companionCombatPaths([...skills,future]).at(-1).skills,[future]);
   const hub=service('AXECompanionSkillHub.jsx');
   assert.match(hub,/companionCombatPaths\(registry\)/);
+  assert.match(hub,/axe-sk-companion-tree/);
+  assert.match(hub,/axe-sk-combat-connector/);
+  assert.match(hub,/COMBAT_ICONS\[path\.id\]/);
   assert.match(hub,/Teleport Dash is the available repositioning ability/);
   assert.match(hub,/speed-increase buff is not yet implemented/);
   assert.doesNotMatch(hub,/awardSkillXp|equipPassive\(|grantSpeedBuff\(/);
