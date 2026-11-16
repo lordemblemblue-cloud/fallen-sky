@@ -94,7 +94,7 @@ export function crossedWolfveilGateway(before,after,{zOffset=WOLFVEIL_REGION_Z_O
     const t=(gate.coordinate-source)/(destination-source);
     if(t<0||t>1)continue;
     const along=gate.axis==='x'?a.z+(b.z-a.z)*t:a.x+(b.x-a.x)*t;
-    if(Math.abs(along-gate.along)>gate.halfWidth)return null;
+    if(Math.abs(along-gate.along)>gate.halfWidth)continue;
     return {id:gate.id,label:gate.label,into:gate.into};
   }
   return null;
