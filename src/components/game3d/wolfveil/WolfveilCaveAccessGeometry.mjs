@@ -50,13 +50,13 @@ export function appendWolfveilCaveAccessFloor(floorTris){
         const t0=i/steps,t1=(i+1)/steps;
         const p0=at(a,b,t0),p1=at(a,b,t1);
         // Widen smoothly near the enclosed cave entrance rather than forcing
-        // a narrow track into an 8.9m cave mouth floor.
+        // a narrow track into the existing 8.9m cave mouth floor.
         const remaining=(1-t0)*distance;
         const w0=(WOLFVEIL_CAVE_APPROACH_WIDTH+
-          2*clamp(1-remaining/7,0,1)*.95)/2;
+          2*clamp(1-remaining/7,0,1)*2.75)/2;
         const remaining1=(1-t1)*distance;
         const w1=(WOLFVEIL_CAVE_APPROACH_WIDTH+
-          2*clamp(1-remaining1/7,0,1)*.95)/2;
+          2*clamp(1-remaining1/7,0,1)*2.75)/2;
         const e0=createEdge(p0,tangent,w0,
           k===pts.length-2?remaining:Infinity,k===pts.length-2);
         const e1=createEdge(p1,tangent,w1,
