@@ -2300,12 +2300,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if (getActiveWeaponPath()!=='ranged' && isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
         // A click directly on a hostile chooses it for the NEXT ability.
         // Basic click damage remains a separate explicit action.
-        if(document.pointerLockElement!==renderer.domElement){
-          const selected=handleMiddleClick({event:e,renderer,camera,enemies,
-            remoteManager:remoteManagerRef.current,setPlayerMenu,
-            rogues:window.__gw3dRogues||[],bosses:bossEntities,clearOnMiss:false});
-          if(selected){lockOnTargetRef.current=selected;pendingAbilityApproach=null;}
-        }
+        const selected=handleMiddleClick({event:e,renderer,camera,enemies,
+          remoteManager:remoteManagerRef.current,setPlayerMenu,
+          rogues:window.__gw3dRogues||[],bosses:bossEntities,clearOnMiss:false});
+        if(selected){lockOnTargetRef.current=selected;pendingAbilityApproach=null;}
         // Melee clicks never borrow the bow's 12m range or attack montage.
         // The clone's existing over-the-shoulder reticle stays independent.
         if(getActiveWeaponPath()==='ranged'){
@@ -4071,12 +4069,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // An offensive ability against a manually clicked/middle-locked PvE
       // target may begin ONE collision-safe approach. Selection/kill never does.
       // PvP uses its existing authenticated duel movement and attack limits.
+      if(abilityKeyPressed.current!==-1 && pendingAbilityApproach)
+        pendingAbilityApproach=null; // a new deliberate cast cancels the old rush
       if(abilityKeyPressed.current!==-1 && model && !pendingAbilityApproach &&
          !window.__activeDuel){
         const slot=abilityKeyPressed.current;
         const skillId=getLoadout().activeSlots[slot];
         const skill=getSkillById(skillId);
-        if(skill?.skill_type===SKILL_TYPE.ACTIVE_ATTACK){
+        if(skill?.skill_type===SKILL_TYPE.ACTIVE_ATTACK &&
+           getLoadout().cooldowns[slot]<=0 &&
+           (getActiveWeaponPath()==='ranged' ||
+             ['single','three_hit'].includes(skillCombatFamily(skill)))){
           const selected=selectedPvETarget();
           if(selected){
             const path=getActiveWeaponPath();
