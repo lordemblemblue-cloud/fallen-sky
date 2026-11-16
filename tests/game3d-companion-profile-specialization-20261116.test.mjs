@@ -64,7 +64,7 @@ test('unified equipment binds owned mount instead of the legacy pet and role XP 
   assert.match(store,/applyCompanionGrowthBonus/);
   assert.match(store,/applyCompanionRoleBonus/);
   assert.doesNotMatch(workspace,/MountSubTab|Mount Armory|AXECompanionOverviewClone/);
-  assert.match(workspace,/\{id:'companion',label:'Equipment'\}/);
+  assert.match(workspace,/const TABS=\['Equipment','Mastery','Vanity','Imbuement'\]/);
   assert.match(legacy,/name: 'Legacy War Wolf'/);
   assert.match(legacy,/modelUrl: GAME3D_FACTION_MOUNTS.AXE_Faction_2.modelUrl/);
 });
