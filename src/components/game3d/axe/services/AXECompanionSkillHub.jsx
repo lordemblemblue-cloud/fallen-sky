@@ -55,7 +55,8 @@ export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) 
         aria-label="Search companion abilities" placeholder="Search abilities"/></label>
     </div>
     <div className="axe-sk-columns">
-      <div className={'axe-sk-skill-list axe-sk-companion-list'+
+      <div className="axe-sk-companion-left">
+        <div className={'axe-sk-skill-list axe-sk-companion-list'+
         (category==='combat'?' axe-sk-companion-tree':'')} role="list"
         aria-label={'Companion '+categoryData.title+' abilities'}>
         {shown.map((skill,i)=>{
@@ -79,6 +80,7 @@ export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) 
           </div>;
         })}
         {!shown.length&&<p className="axe-sk-empty">No registered {categoryData.title.toLowerCase()} skills match this selection.</p>}
+        </div>
         {category==='combat'&&<div className="axe-sk-combat-rule">
           <span>Skill progression</span>
           <p>Abilities shown here come from the actual combat registry. Companion skill levels and automatic passives are not separately recorded yet, so no invented upgrades are displayed.</p>
