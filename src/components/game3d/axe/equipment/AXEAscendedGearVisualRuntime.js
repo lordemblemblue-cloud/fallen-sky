@@ -5,6 +5,7 @@ import {
 import { getAXEAdvancementState, subscribeAXEItemAdvancement } from './AXEItemAdvancementStore';
 import { evaluateAXESetBonuses } from './AXESetBonusSystem';
 import { getAXESetAscensionRank } from './AXESetAscensionRules.mjs';
+import {getAXEFarmingAscendedIdentity,isAXEFarmingRarity} from '../loot/AXEFarmingGearTiers.mjs';
 
 // An original silver-and-cyan spiritual aura, created procedurally. No anime
 // character artwork, copied visual assets, or missing GLB is needed. Minimal
@@ -62,20 +63,47 @@ export function createAXEAscendedGearVisualRuntime({model} = {}) {
   tip.rotation.x=1.1;
 
   let elapsed=0,bodyAuraRank=0,weaponAuraRank=0,weaponId=null,disposed=false;
+  let bodyPrestige=null,weaponPrestige=null;
   const refresh=()=>{
     if(disposed)return;
     const worn=getEquippedAXEItems().map(i=>({
       ...i,advancement:getAXEAdvancementState(i.instanceId),
     }));
     const status=evaluateAXESetBonuses(worn);
-    bodyAuraRank=Math.max(0,...status.activeSets.map(s=>Number(s.fullAuraRank)||0));
+    const fullSetRank=Math.max(0,...status.activeSets.map(s=>Number(s.fullAuraRank)||0));
+    const armorAscended=worn.filter(i=>i.slot!=='weapon'&&getAXESetAscensionRank(i)>=4);
+    const priority={legendary:3,elite:2,rare:1};
+    armorAscended.sort((a,b)=>(priority[String(b.rarity).toLowerCase()]||0)-
+      (priority[String(a.rarity).toLowerCase()]||0));
+    const highestArmor=armorAscended[0]||null;
+    bodyPrestige=highestArmor?getAXEFarmingAscendedIdentity(highestArmor,4):null;
+    bodyAuraRank=Math.max(fullSetRank,highestArmor?4:0);
     const item=getActiveEquippedAXEWeapon();
     weaponId=item?.instanceId||null;
     weaponAuraRank=item ? getAXESetAscensionRank({
       ...item,advancement:getAXEAdvancementState(item.instanceId),
     }) : 0;
+    weaponPrestige=item?getAXEFarmingAscendedIdentity(item,weaponAuraRank):null;
     body.visible=bodyAuraRank>0;
-    weapon.visible=weaponAuraRank>0 && !!hand;
+    weapon.visible=weaponAuraRank>=(item&&isAXEFarmingRarity(item.rarity)?4:1) && !!hand;
+    if(bodyPrestige){
+      shell.material.color.set(bodyPrestige.primary);
+      waist.material.color.set(bodyPrestige.secondary);
+      shoulders.material.color.set(bodyPrestige.primary);
+    }else{
+      shell.material.color.set(0x9adfff);
+      waist.material.color.set(0xe7f9ff);
+      shoulders.material.color.set(0x83cfff);
+    }
+    if(weaponPrestige){
+      core.material.color.set(weaponPrestige.primary);
+      ring.material.color.set(weaponPrestige.secondary);
+      tip.material.color.set(weaponPrestige.primary);
+    }else{
+      core.material.color.set(0x74d4ff);
+      ring.material.color.set(0xe4fbff);
+      tip.material.color.set(0x83e7ff);
+    }
   };
   const unsubscribeInventory=subscribeAXEEquipmentInventory(refresh);
   const unsubscribeAdvancement=subscribeAXEItemAdvancement(refresh);
@@ -111,7 +139,8 @@ export function createAXEAscendedGearVisualRuntime({model} = {}) {
       hand.getWorldPosition(handWorld);
       weapon.position.copy(model.worldToLocal(handWorld));
     },
-    getStatus:()=>({bodyAuraRank,weaponAuraRank,weaponId,hasHand:!!hand}),
+    getStatus:()=>({bodyAuraRank,weaponAuraRank,weaponId,hasHand:!!hand,
+      bodyPrestige:bodyPrestige?.title||null,weaponPrestige:weaponPrestige?.title||null}),
     dispose(){
       if(disposed)return;
       disposed=true;
