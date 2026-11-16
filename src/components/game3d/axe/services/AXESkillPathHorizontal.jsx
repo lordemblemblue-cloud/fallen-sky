@@ -10,6 +10,7 @@ import {
   WEAPON_SKILL_TIERS, weaponSkillTierForId, weaponTierUnlocked,
 } from '../../../../../base44/shared/weaponSkillPoints.mjs';
 import './AXESkillPathHorizontal.css';
+import { horizontalSkillWheelOffset } from './AXESkillWheel.mjs';
 
 const PATH_ORDER = ['single', 'three', 'aerial'];
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
@@ -68,11 +69,10 @@ export default function AXESkillPathHorizontal({
     const viewport=sharedScrollRef.current;
     if(!viewport)return undefined;
     const onWheel=event=>{
-      const amount=Math.abs(event.deltaY)>=Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-      if(!amount || viewport.scrollWidth<=viewport.clientWidth)return;
+      const offset=horizontalSkillWheelOffset(event.deltaY,event.deltaX);
+      if(!offset || viewport.scrollWidth<=viewport.clientWidth)return;
       event.preventDefault();
-      // Owner's controls: scroll DOWN => LEFT, scroll UP => RIGHT.
-      viewport.scrollLeft-=amount;
+      viewport.scrollLeft+=offset;
     };
     viewport.addEventListener('wheel',onWheel,{passive:false});
     return ()=>viewport.removeEventListener('wheel',onWheel);
