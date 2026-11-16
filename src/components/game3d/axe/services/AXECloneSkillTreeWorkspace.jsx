@@ -122,12 +122,15 @@ function SkillDetails({ node, category, paths, companion, activeIds, onEquip }) 
     </button>}
   </aside>;
 }
-function FlatSkillCatalog({ skills, selected, equipped, onSelect, companion, search }) {
+function FlatSkillCatalog({ skills, selected, equipped, onSelect, companion, search, onEquipSkill }) {
   const items=skills.filter(skill=>!search ||
     [skill.skill_name,skill.description,skill.category].filter(Boolean).join(' ').toLowerCase().includes(search));
   return <div className="axe-ct-flat-catalog">{items.map(skill=><button key={skill.skill_id} type="button"
     className={selected?.id===skill.skill_id?'axe-ct-flat-selected':''}
-    onClick={()=>onSelect({kind:'skill',id:skill.skill_id,tier:0})}>
+    onClick={()=>onSelect({kind:'skill',id:skill.skill_id,tier:0})}
+    onDoubleClick={()=>onEquipSkill?.(skill.skill_id)}
+    onContextMenu={event=>{event.preventDefault();onEquipSkill?.(skill.skill_id);}}
+    title={skill.skill_name+' — Double-click or right-click to equip'}>
     <TreeIcon kind={skill.aerial?'aerial':classify(skill)==='Multi-Hit'?'triple':'single'} size={38}/>
     <strong>{skill.skill_name}</strong><small>{companion?skill.category:classify(skill)}</small>
     <span>{equipped.includes(skill.skill_id)?'Equipped':'Available'}</span>
@@ -211,6 +214,15 @@ export default function AXECloneSkillTreeWorkspace({
     const skill=getSkillById(skillId);
     if(!skill) { setFeedback('This entry is a progression bonus, not an equippable skill.');return; }
     equipSkill(skill,targetEquipSlot);
+    setManualSkillSelected(false);
+    setTargetEquipSlot(null);
+  };
+  const equipFromCatalog = skillId => {
+    const skill=getSkill(skillId);
+    if(!skill)return;
+    // Real passive skills use passive slots rather than the targeted active slot.
+    const destination=skill.skill_type===SKILL_TYPE.PASSIVE?null:targetEquipSlot;
+    equipSkill(skill,destination);
     setManualSkillSelected(false);
     setTargetEquipSlot(null);
   };
@@ -305,7 +317,8 @@ export default function AXECloneSkillTreeWorkspace({
           {view==='advance'&&!companion
             ? <div className="axe-ct-tree-scroll axe-ct-advance"><AXEWeaponSkillPointsPanel/></div>
             : <FlatSkillCatalog skills={filteredFlat} selected={selected} equipped={activeIds}
-                companion={companion} search={normalizedSearch} onSelect={selectNode}/>}
+                companion={companion} search={normalizedSearch} onSelect={selectNode}
+                onEquipSkill={equipFromCatalog}/>}
         </>}
         <div className="axe-ct-equipped" aria-label="Equipped skills">
           <div className="axe-ct-equipped-heading">
