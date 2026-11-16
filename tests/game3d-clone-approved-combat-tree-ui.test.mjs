@@ -42,12 +42,18 @@ test('Game 3D clone route renders approved tree by default and keeps classic QA 
   assert.match(route,/cloneClassic = false/);
   assert.match(route,/const SkillBookView = cloneClassic \? AXESkillBookRedesign : AXECloneSkillTreeWorkspace/);
   assert.match(route,/return <SkillBookView/);
-  for(const term of ['Combat Skill Tree','Equipped Skills','TierConnector','Three branch combat skill tree',
-    'SkillDetails','Search Skill','Previous skill set','Next skill set','AXEWeaponSkillPointsPanel',
+  const horizontal=read('AXESkillPathHorizontal.jsx');
+  for(const term of ['AXESkillPathHorizontal','Equipped Skills','SkillDetails','Search Skill',
+    'Previous skill set','Next skill set','AXEWeaponSkillPointsPanel',
     'subscribeSkillMastery','subscribeWeaponSkillPoints','isWeaponSkillUnlocked']){
     assert(tree.includes(term),'missing '+term);
   }
-  assert.match(css,/\.axe-ct-lanes/);
+  for(const term of ['Active Skill Path','Passive Path','Single, Multi and Aerial paths',
+    'Skill Information','investWeaponSkillPoint(category,stageIndex,1)']){
+    assert(horizontal.includes(term),'missing new horizontal layout: '+term);
+  }
+  assert.doesNotMatch(tree,/function BranchLane\(/);
+  assert.match(read('AXESkillPathHorizontal.css'),/\.axe-hp-wheel::after/);
   assert.match(css,/\.axe-ct-node--selected/);
   assert.match(css,/\.jade-services-navigation/);
   assert.doesNotMatch(css,/background-image:\s*url\(/);
