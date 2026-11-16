@@ -2329,7 +2329,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       } else if (e.button === 1) {
         e.preventDefault();
         const target = handleMiddleClick({ event: e, renderer, camera, enemies, remoteManager: remoteManagerRef.current, setPlayerMenu, rogues: window.__gw3dRogues || [], bosses: bossEntities });
-        lockOnTargetRef.current = target && lockOnTargetRef.current?.id !== target.id ? target : null;
+        const toggledOff=target&&String(lockOnTargetRef.current?.id)===String(target.id);
+        lockOnTargetRef.current=toggledOff?null:target;
+        if(toggledOff)clearTarget(); // handler selected the same actor first
         pendingAbilityApproach=null;
       } else if (e.button === 2) {
         // Right-click a visible player or your mount with the cursor freed.
