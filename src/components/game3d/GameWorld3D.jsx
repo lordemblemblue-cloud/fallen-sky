@@ -45,7 +45,7 @@ import { castLegacyTargetedAbility } from './legacyTargetedAbilities';
 import CompanionMountHUD from './CompanionMountHUD';
 import { getCompanionState, subscribeCompanion, setMounted, getEffectiveSpeedMultiplier } from './companionStore';
 import { getActiveAXEMountSpeedMultiplier, getAXEMountFusionState, setAXEMountRiding, tickAXEMountRideActivity } from './axe/progression/AXEMountStore';
-import { awardCompanionXP, getCompanionProgression, subscribeCompanionProgression } from './companionProgressionStore';
+import { getCompanionProgression, subscribeCompanionProgression } from './companionProgressionStore';
 import CompanionHealthBar from './CompanionHealthBar';
 import PlayerNameTag from './PlayerNameTag';
 import { base44 } from '@/api/base44Client';
@@ -4056,7 +4056,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 }
                 setScore(prev => prev + 100 * closestEnemy.xpReward);
               spawnXPFloat(closestEnemy.xpReward);
-              awardCompanionXP(companionDefRef.current?.id, closestEnemy.xpReward);
               if(!closestEnemy.wolfveilZombieCampSpawn)
                 reportEnemyKill(QUESTS, closestEnemy.tier);
               // Presentation-only combat hint. Does not change quest progress.
@@ -4364,7 +4363,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 activeEffectsRef: activeEffects,
                 playActionSound, spawnDamageFloat, spawnXPFloat,
                 getPlayerHUD, playerDerivedRef, cachedDeathClip,
-                awardCompanionXP, companionDefRef, reportEnemyKill, QUESTS,
+                companionDefRef, reportEnemyKill, QUESTS,
                 setScore, setPlayerXP, setPlayerLevel, awardXP,
                 playerXPRef, playerLevelRef, xpForLevel,
                 clearTarget, updateTargetHP, getAbilityState,
@@ -5004,6 +5003,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               levelsGained,
               bonusPoints: rewardPoints,
               xpGained: rewardXP,
+              xpSource: 'quest',
             });
             const hudProgression = getPlayerHUD();
             playerXPRef.current = hudProgression.xp;
