@@ -8,7 +8,7 @@ import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
-import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
+import { isWeaponSkillUnlocked, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
 import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter,titleizeSkillStat} from './AXESkillBookModel.mjs';
 import './AXESkillBookRedesign.css';
@@ -128,6 +128,8 @@ export default function AXESkillBookRedesign({
   onEquipActive,onRemoveActive,onRemovePassive,onSavePreset,onActivateWeapon,status,onClose,
 }) {
   useMasteryRefresh();
+  const [weaponRevision,setWeaponRevision]=useState(0);
+  useEffect(()=>subscribeWeaponSkillPoints(()=>setWeaponRevision(n=>n+1)),[]);
   const [category,setCategory]=useState(()=>legacyCategory(activeMode?.id));
   const [filter,setFilter]=useState('all');
   const [search,setSearch]=useState('');
@@ -141,9 +143,11 @@ export default function AXESkillBookRedesign({
   const related=useMemo(()=>all.filter(skill=>{
     return skillBelongsToCategory(skill,category,companion);
   }),[all,companion,category]);
-  const listed=useMemo(()=>related.filter(skill=>
-    skillMatchesBookFilter(skill,{view,filter,search,companion})),
-    [related,view,filter,search,companion]);
+  const listed=useMemo(()=>related.filter(skill=>{
+    const matches=skillMatchesBookFilter(skill,{view,filter:filter==='locked'?'all':filter,search,companion});
+    return matches && (filter!=='locked' || skillMarkedLocked(skill) ||
+      (!companion && !isWeaponSkillUnlocked(skill.skill_id)));
+  }),[related,view,filter,search,companion,weaponRevision]);
   useEffect(()=>{
     if(!listed.length){if(selected)onSelect(null);return;}
     if(!selected||!listed.some(skill=>skill.skill_id===selected.skill_id))
