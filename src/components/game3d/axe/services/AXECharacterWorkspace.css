@@ -450,3 +450,120 @@
     grid-column:1/-1;justify-content:flex-start;
   }
 }
+
+
+/* Character correction: always keep Increase Attributes and Attribute Preview
+ * directly BESIDE one another. The previous <=555px container query stacked
+ * the preview under the allocation controls in the actual embedded viewport.
+ * Restore the original clear bordered attribute rows/total chips inside the
+ * left half, without putting another outer panel around either half. */
+.axe-char-root .axe-char-attribute-split {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:start;
+  gap:clamp(8px,1vw,16px);
+  min-width:0;
+}
+.axe-char-root .axe-char-attribute-split::before {
+  display:block;
+  left:50%;
+  background:linear-gradient(to bottom,transparent,rgba(244,213,158,.77) 14%,rgba(244,213,158,.77) 86%,transparent);
+}
+.axe-char-root .axe-char-attribute-split .axe-char-primary-stats {
+  min-width:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:6px;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:center;
+  gap:4px 6px;
+  padding:7px 6px;
+  border:1px solid rgba(230,204,153,.48);
+  border-radius:7px;
+  background:rgba(31,48,64,.38);
+  min-height:0;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute--selected {
+  border-color:rgba(247,211,142,.9);
+  background:linear-gradient(100deg,rgba(209,158,83,.22),rgba(35,50,66,.39));
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-select {
+  grid-column:1;
+  white-space:normal;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-total {
+  grid-column:2;
+  min-width:38px;
+  min-height:26px;
+  padding:3px 5px;
+  border:1px solid rgba(239,209,155,.54);
+  border-radius:5px;
+  background:rgba(21,38,56,.72);
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons {
+  grid-column:1/-1;
+  display:flex;
+  justify-content:space-between;
+  gap:3px;
+  min-width:0;
+  flex-wrap:wrap;
+  overflow:visible;
+}
+
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons button {
+  flex:1 0 auto;
+  min-width:20px;
+  padding:5px 3px;
+  border-radius:5px;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons button:last-child {min-width:30px;}
+.axe-char-root .axe-char-attribute-split .axe-char-preview {
+  min-width:0;
+  padding:0 0 0 2px;
+  border:0;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-preview .axe-char-section-title {
+  flex-wrap:wrap;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-alloc-heading {
+  flex-wrap:wrap;
+  align-content:start;
+}
+.axe-char-root .axe-char-attribute-split .axe-char-alloc-heading small {
+  text-align:left;
+}
+@container (max-width:555px) {
+  .axe-char-root .axe-char-attribute-split {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:9px;
+  }
+  .axe-char-root .axe-char-attribute-split::before {display:block;}
+  .axe-char-root .axe-char-attribute-split .axe-char-preview {
+    padding:0 0 0 2px;border:0;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-primary-stats .axe-char-inline-attribute {
+    grid-template-columns:minmax(0,1fr) auto;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-inline-attribute .axe-char-attribute-buttons {
+    grid-column:1/-1;
+  }
+}
+@container (max-width:350px) {
+  .axe-char-root .axe-char-attribute-split {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    gap:7px;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-preview-stat {
+    grid-template-columns:minmax(0,1fr);
+    gap:2px;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-preview-stat strong {
+    justify-self:start;
+  }
+  .axe-char-root .axe-char-attribute-split .axe-char-preview-stat small {
+    text-align:left;
+  }
+}

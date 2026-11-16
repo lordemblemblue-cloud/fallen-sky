@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Check, Crown, Gem, Package, Shield, Shirt, Sword } from 'lucide-react';
+import { Check, Crown, Gem, Package, Search, Shield, Shirt, Sword, X } from 'lucide-react';
 import {
   getAllAXEEquipmentItems, subscribeAXEEquipmentInventory,
   equipAXEInventoryItem, unequipAXEInventoryItem,
@@ -8,6 +8,7 @@ import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/A
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
 import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
+import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
 import { getAXEAdvancementState, subscribeAXEItemAdvancement } from '../equipment/AXEItemAdvancementStore';
 import { AXE_CHOSEN_SET_ID } from '../equipment/AXEChosenSetRules.mjs';
@@ -63,10 +64,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const advancements = useLive(subscribeAXEItemAdvancement, () => ({state:{}}));
   const [selectedId,setSelectedId] = useState(null);
   const [filter,setFilter] = useState('All');
+  const [search,setSearch] = useState('');
   const [focusedSlot,setFocusedSlot] = useState('');
   const activeCompanion = getCompanionById(companion.activeCompanionId);
   useEffect(() => subscribeAXEEquipmentInventory(state => setItems(state.items)), []);
-  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); }, [actor,companion.activeCompanionId]);
+  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId]);
 
   const list = useMemo(() => isPlayer
     ? items.filter(item => AXE_EQUIPMENT_SLOT_DEFS[item.slot])
@@ -77,8 +79,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const equipped = isPlayer ? list.filter(item=>item.equipped) : list.filter(item =>
     companion.gear?.[activeCompanion?.id]?.[item.slot] === item.id);
   const categories = [...new Set(list.map(item => item.slot))];
-  const visible = list.filter(item => (filter === 'All' || filter === item.slot)
-    && (!focusedSlot || item.slot === focusedSlot));
+  const visible = filterInventoryWithSearch(list, {
+    category:focusedSlot || filter, categoryKey:'slot', search,
+  });
   const selected = visible.find(item => (item.instanceId || item.id) === selectedId) || visible[0] || null;
   const isEquipped = selected && (isPlayer ? !!selected.equipped
     : companion.gear?.[activeCompanion?.id]?.[selected.slot] === selected.id);
@@ -95,6 +98,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
   const chooseSlot = slot => {
     setFocusedSlot(value=>value===slot?'':slot);
+    setFilter('All');
     setSelectedId(null);
   };
   const performItem = (item, allowUnequip = false) => {
@@ -168,10 +172,28 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
           <small>{visible.length} / {list.length}</small></header>
         <div className="axe-app-card-content">
           <div className="axe-app-inventory-browser">
-          <div className="axe-app-inventory-filters" role="group" aria-label="Equipment inventory filter">
-            <button type="button" aria-pressed={filter==='All'} onClick={()=>{setFilter('All');setFocusedSlot('');}}>All</button>
-            {categories.map(slot=><button type="button" key={slot} aria-pressed={filter===slot}
-              onClick={()=>{setFilter(slot);setFocusedSlot('');}}>{caption(slot)}</button>)}
+          <div className="axe-app-inventory-toolbar" role="search" aria-label="Search and filter owned equipment">
+            <div className="axe-app-inventory-search">
+              <Search size={16} aria-hidden="true"/>
+              <label htmlFor={'axe-equipment-search-'+actor} className="sr-only">Search equipment</label>
+              <input id={'axe-equipment-search-'+actor} type="search" value={search}
+                onChange={event=>setSearch(event.target.value)}
+                placeholder="Search equipment…" aria-label="Search equipment by name or rarity"/>
+              {search && <button type="button" onClick={()=>setSearch('')}
+                aria-label="Clear equipment search"><X size={14}/></button>}
+            </div>
+            <label className="axe-app-inventory-category">
+              <span className="sr-only">Equipment category</span>
+              <select aria-label="Equipment category" value={focusedSlot||filter}
+                onChange={event=>{
+                  setFilter(event.target.value);
+                  setFocusedSlot('');
+                  setSelectedId(null);
+                }}>
+                <option value="All">All Equipment</option>
+                {categories.map(slot=><option key={slot} value={slot}>{caption(slot)}</option>)}
+              </select>
+            </label>
           </div>
           <div className="axe-app-inventory-grid" role="list">
             {visible.map(item=><button type="button" role="listitem"
@@ -187,7 +209,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                 companion.gear?.[activeCompanion?.id]?.[item.slot]===item.id) &&
                   <Check size={15} className="axe-app-equipped-check"/>}
             </button>)}
-            {!visible.length && <p className="axe-app-inventory-empty">No available equipment in this category.</p>}
+            {!visible.length && <p className="axe-app-inventory-empty">No equipment matches the current search or category.</p>}
           </div>
           </div>
         </div>

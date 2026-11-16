@@ -813,3 +813,61 @@
   .axe-app-inventory .axe-app-card-heading { gap:5px; }
   .axe-app-inventory-filter-select select { max-width:108px; min-height:29px; }
 }
+
+
+/* Clone Equipment & Vanity: search and category selector replace old
+ * horizontal filter strips, within the original shared inventory surface. */
+.axe-app-inventory-browser {display:flex;flex-direction:column;min-height:0;flex:1 1 auto;}
+.axe-app-inventory .axe-app-inventory-toolbar {
+  display:flex;flex:0 0 auto;align-items:center;gap:7px;
+  min-width:0;margin:0;padding:5px 1px 11px;
+  border-bottom:1px solid rgba(211,193,153,.36);
+}
+.axe-app-inventory .axe-app-inventory-search {
+  flex:1 1 auto;min-width:0;height:35px;
+  display:flex;align-items:center;gap:7px;padding:0 9px;
+  border:1px solid rgba(220,195,151,.62);
+  background:rgba(13,29,44,.52);
+  border-radius:7px;color:#efd5a6;
+}
+.axe-app-inventory .axe-app-inventory-search:focus-within {
+  border-color:#f4d09b;box-shadow:0 0 0 1px rgba(244,208,155,.25);
+}
+.axe-app-inventory .axe-app-inventory-search>svg {flex-shrink:0;}
+.axe-app-inventory .axe-app-inventory-search input {
+  display:block;min-width:0;width:100%;height:100%;
+  border:0;outline:none;background:transparent;box-shadow:none;
+  color:#ffe4bb;font:12px/1.2 Georgia,serif;
+}
+.axe-app-inventory .axe-app-inventory-search input::placeholder {
+  color:rgba(225,213,192,.72);
+}
+.axe-app-inventory .axe-app-inventory-search input::-webkit-search-cancel-button {display:none;}
+.axe-app-inventory .axe-app-inventory-search button {
+  border:0;background:transparent;color:#f0d8ad;
+  display:grid;place-items:center;cursor:pointer;padding:3px;
+}
+.axe-app-inventory .axe-app-inventory-category {
+  flex:0 1 130px;min-width:103px;
+}
+.axe-app-inventory .axe-app-inventory-category select {
+  width:100%;height:35px;min-width:0;padding:0 23px 0 8px;
+  border:1px solid rgba(220,195,151,.62);
+  border-radius:7px;
+  color:#ffe4bb;background:rgba(13,29,44,.88);
+  font:11px/1.2 Georgia,serif;
+  color-scheme:dark;cursor:pointer;
+}
+.axe-app-inventory .axe-app-inventory-category select:focus-visible {
+  outline:2px solid #efd09d;outline-offset:1px;
+}
+.axe-app-inventory .axe-app-inventory-toolbar+.axe-app-inventory-grid {
+  min-height:0;flex:1 1 auto;overflow-y:auto;
+}
+@media (max-width:1090px) {
+  .axe-app-inventory .axe-app-inventory-toolbar {flex-wrap:wrap;}
+  .axe-app-inventory .axe-app-inventory-search {flex:1 1 100%;}
+  .axe-app-inventory .axe-app-inventory-category {
+    flex:1 1 100%;max-width:none;
+  }
+}
