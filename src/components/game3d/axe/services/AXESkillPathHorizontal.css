@@ -432,3 +432,13 @@
 @media(max-width:720px) {
   .axe-hp-track-item {flex-basis:108px;min-width:108px;max-width:108px;}
 }
+
+/* Preserve the canonical weapon bar control without taking another toolbar row. */
+.axe-hp-activate-bar {
+  display:inline-flex;align-items:center;justify-content:center;
+  margin-top:6px;padding:4px 9px;min-height:25px;
+  border:1px solid #dcb47c;border-radius:8px;
+  background:rgba(22,42,59,.84);color:#f5dcae;
+  font:11px Georgia,serif;white-space:nowrap;
+}
+.axe-hp-activate-bar:hover {border-color:#ffe3ac;background:rgba(94,71,43,.7);}
