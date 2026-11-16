@@ -197,7 +197,7 @@ import { getAXEDungeonState } from './axe/dungeons/AXEDungeonStore';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './wolfveil/WolfveilLayout';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
-import { shouldRejectCaveGroundStep } from './dungeons/CaveRimSafety.mjs';
+import { shouldRejectCaveGroundStep,nearSuigenCaveGround } from './dungeons/CaveRimSafety.mjs';
 import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/LunarCaveScene';
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
@@ -658,6 +658,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(suigenActive&&Number.isFinite(referenceY)){
         const reachable=hits.find(hit=>hit.point.y<=referenceY+.72);
         if(reachable)return reachable.point.y;
+        // Underground cave feet must never snap UP to an overlying mountain
+        // roof merely because a ray found no reachable tread. A null contact
+        // is blocked by the seven-foot cave edge movement guard instead.
+        if(nearSuigenCaveGround(x,z,.85))return null;
       }
       // The old town's analytic floor belongs ONLY to the Classic map; it
       // would otherwise make the new import's roads float above the ground.
