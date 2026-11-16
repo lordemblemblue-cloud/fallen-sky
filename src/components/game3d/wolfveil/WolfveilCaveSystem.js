@@ -13,7 +13,7 @@ import {
   resolveWolfveilCaveWallCollision,
 } from './WolfveilCaveLayout.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
-import { wolfveilHeight } from './WolfveilLayout.js';
+
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const TAU = Math.PI * 2;
@@ -555,16 +555,10 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   });
 
   let elapsed = 0;
-  let activeCaveId = null; // explicit E-entry or validated underground checkpoint
-  const restoreUndergroundCheckpoint=position=>{
-    if(activeCaveId||!position||!Number.isFinite(position.y))return;
-    const lx=position.x,lz=position.z-offsetZ;
-    const floor=sampleWolfveilCaveSpace(lx,lz,.75);
-    if(!floor)return;
-    const outsideY=wolfveilHeight(lx,lz);
-    if(Number.isFinite(outsideY)&&position.y<outsideY-2.5&&
-      Math.abs(position.y-floor.floorY)<=2.5)activeCaveId='checkpoint';
-  };
+  // A fresh login never implicitly authorizes an underground cave session:
+  // old fall-through checkpoints are rescued onto the intact surface instead
+  // of restoring the very collision bug the owner is reporting.
+  let activeCaveId = null; // set ONLY by pressing E at an actual cave arch
   return {
     group,
     floorMesh,
@@ -613,7 +607,6 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       return hit;
     },
     update(dt, playerWorldPos = null) {
-      restoreUndergroundCheckpoint(playerWorldPos);
       elapsed += Math.max(0, Math.min(dt || 0, 0.1));
       cisternUniforms.uTime.value = elapsed;
       for (const f of animatedFlames) {
