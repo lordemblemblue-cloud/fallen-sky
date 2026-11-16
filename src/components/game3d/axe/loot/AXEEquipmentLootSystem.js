@@ -5,6 +5,7 @@
 // without rerolling any owned gear or changing its instance id.
 import { INVENTORY } from '../../equipment/inventoryData';
 import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
+import {AXE_FARMING_SET_BY_GRADE} from '../equipment/AXEFarmingSetProfiles.mjs';
 import { isAXERateStat } from '../equipment/AXEEquipmentRuntimeStats';
 import {
   AXE_GEAR_RARITY_SCALE, AXE_PROCEDURAL_SET_FAMILIES,
@@ -70,8 +71,11 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
   const evolutionPath=rollAXEEvolutionPath(rarity,monsterLevel,rng);
   const setEligible=monsterLevel>=50 && ['rare','elite','legendary','mythic'].includes(rarity)
     && ['helm','chest','gloves','legs','boots','cape'].includes(template.slot);
-  const family=setEligible && unit(rng)<0.25
-    ? AXE_PROCEDURAL_SET_FAMILIES[Math.floor(unit(rng)*AXE_PROCEDURAL_SET_FAMILIES.length)]
+  const families=AXE_FARMING_SET_BY_GRADE[rarity]||AXE_PROCEDURAL_SET_FAMILIES;
+  // Most farmed Rare/Elite/Legendary armor is set-eligible, but not every
+  // piece comes from a set. A family can only match its actual rarity.
+  const family=setEligible && unit(rng)<0.62
+    ? families[Math.floor(unit(rng)*families.length)]
     : null;
   const rarityLabel=rarity==='uncommon'?'Unique':rarity[0].toUpperCase()+rarity.slice(1);
   // Evolution flags are NOT earned ranks. Rare Elite / Elite Legendary names
