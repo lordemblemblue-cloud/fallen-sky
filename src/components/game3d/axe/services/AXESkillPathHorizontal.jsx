@@ -249,7 +249,7 @@ export default function AXESkillPathHorizontal({
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
                   <BranchCard icon={i%2?'precision':'passive'}
                     title={path.label+' Upgrade '+ROMAN[i]}
-                    subtitle={allocated+' / '+cost+' pts · '+Math.round(100*allocated/cost)+'% stage power'}
+                    subtitle={allocated+' / '+cost+' pts · '+Math.round(100*allocated/cost)+'% charged bonus'}
                     locked={!unlocked} selected={node.id===id}
                     onClick={()=>select('stage',id,i+1,i)}/>
                   {i<WEAPON_SKILL_TIERS.length-1&&
