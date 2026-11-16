@@ -292,3 +292,49 @@
   .axe-ct-node-title {font-size:12px;}
   .axe-ct-main {padding:9px;}
 }
+
+/* Keep the approved reference proportions while restoring actual equipment
+   actions that were displaced by the temporary isolated tree component. */
+.axe-ct-activate-weapon {
+  margin-left:auto;flex:0 0 auto;max-width:170px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  border:1px solid rgba(239,194,118,.8);border-radius:9px;
+  padding:7px 10px;background:rgba(27,44,61,.84);color:#f8dba7;
+  font:12px Georgia,serif;white-space:nowrap;
+}
+.axe-ct-activate-weapon:hover {border-color:#ffe1a9;background:rgba(98,76,45,.65);}
+.axe-ct-activate-weapon small {max-width:140px;overflow:hidden;text-overflow:ellipsis;
+  color:#e8d6b6;font:10px Georgia,serif;}
+.axe-ct-equipped-heading>.axe-ct-save-preset {
+  display:inline-flex;align-items:center;justify-content:center;
+  width:auto;min-width:39px;height:27px;border-radius:7px;padding:4px 8px;
+  font:11px Georgia,serif;color:#f2d5a2;
+  border:1px solid #d5ae73;background:rgba(35,54,69,.72);
+}
+.axe-ct-equipped-heading>.axe-ct-save-preset:hover {background:#5b4936;}
+@media(max-width:620px){
+ .axe-ct-main-heading {flex-wrap:wrap;}
+ .axe-ct-activate-weapon {margin-left:0;max-width:100%;padding:5px 8px;}
+ .axe-ct-activate-weapon small {max-width:100%;}
+}
+
+/* The legacy Redesign stylesheet is still imported for the QA fallback.
+   Its [data-service-extent="viewport-top"] rule sets top:0!important, which
+   would cover the game's Services switcher even when the tree is selected.
+   Override that rule only for the actual branching tree presentation. */
+.game3d-view .axe-service-workspace--skills[data-service-extent="viewport-top"]:has(.axe-clone-skill-root) {
+  inset:max(94px,calc(var(--axe-service-navigation-actual-bottom,92px) + 12px)) 8px 8px !important;
+  top:max(94px,calc(var(--axe-service-navigation-actual-bottom,92px) + 12px)) !important;
+  left:8px !important;
+  right:8px !important;
+  bottom:8px !important;
+  padding:0 !important;
+  background:transparent !important;
+}
+@media(max-width:620px) {
+  .game3d-view .axe-service-workspace--skills[data-service-extent="viewport-top"]:has(.axe-clone-skill-root) {
+    inset:max(87px,calc(var(--axe-service-navigation-actual-bottom,83px) + 9px)) 4px 4px !important;
+    top:max(87px,calc(var(--axe-service-navigation-actual-bottom,83px) + 9px)) !important;
+    left:4px !important;right:4px !important;bottom:4px !important;
+  }
+}
