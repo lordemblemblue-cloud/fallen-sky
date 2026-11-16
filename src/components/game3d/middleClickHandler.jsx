@@ -11,8 +11,10 @@ const raycaster = new THREE.Raycaster();
  */
 export function handleMiddleClick({ event, renderer, camera, enemies, remoteManager, setPlayerMenu, rogues = [], bosses = [], clearOnMiss = true }) {
   const rect = renderer.domElement.getBoundingClientRect();
-  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  // A pointer-locked game has no movable cursor: select the reticle center.
+  const locked=typeof document!=='undefined'&&document.pointerLockElement===renderer.domElement;
+  const ndcX = locked ? 0 : ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = locked ? 0 : -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
 
   // 1. Remote players first
