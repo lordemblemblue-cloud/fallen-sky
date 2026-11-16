@@ -21,6 +21,8 @@ test('Equipment owns the live My Companion roster and switches both right panels
   assert.match(loadout,/companionId=\{activeCompanion.id\}/);
   assert.match(loadout,/className="axe-comp-insights-toggle"/);
   assert.match(loadout,/setInsightsOpen\(value=>!value\)/);
+  assert.match(loadout,/!isPlayer&&insightsOpen \? <CompanionAttributesPanel/);
+  assert.match(loadout,/!isPlayer&&insightsOpen \? <CompanionGrowthPanel/);
   assert.match(loadout,/<CompanionAttributesPanel mount=\{selectedMount\} snapshot=\{mounts\}\/>/);
   assert.match(loadout,/<CompanionGrowthPanel mount=\{selectedMount\} snapshot=\{mounts\}\/>/);
   assert.match(insights,/applyCompanionRoleBonus/);
