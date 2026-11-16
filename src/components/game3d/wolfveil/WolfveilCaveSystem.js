@@ -532,6 +532,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   // deliberate E entry/exit and the central rotunda signs point to EACH
   // of the four physically connected corridors. Sprites never raycast and
   // do not create additional walkable/collision floors.
+  const wayfindingMaterials=[];
   const addWayfinding=(label,x,y,z,width=8.2)=>{
     if(typeof document==='undefined')return;
     const canvas=document.createElement('canvas');
@@ -550,6 +551,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     ownedTextures.push(texture);
     const mat=new THREE.SpriteMaterial({map:texture,transparent:true,
       depthWrite:false,depthTest:true});
+    wayfindingMaterials.push(mat);
     const sprite=new THREE.Sprite(mat);
     sprite.name='SWV_CaveWayfinding_'+label.replace(/[^a-z0-9]/gi,'_');
     sprite.position.set(x,y,z);sprite.scale.set(width,1.45,1);
@@ -694,6 +696,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     },
     dispose() {
+      for (const mat of wayfindingMaterials) mat.dispose();
       for (const t of ownedTextures) t.dispose();
       boxGeo.dispose();
       cylGeo.dispose();
