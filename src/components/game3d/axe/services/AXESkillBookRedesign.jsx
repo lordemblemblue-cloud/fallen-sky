@@ -123,7 +123,7 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
 export default function AXESkillBookRedesign({
   companion,currentPage,onPageChange,view,onChangeView,selected,onSelect,
   ownedWeapons,activeMode,activeIds,passiveIds,onQuickEquip,
-  onEquipActive,onRemoveActive,onRemovePassive,onSavePreset,status,onClose,
+  onEquipActive,onRemoveActive,onRemovePassive,onSavePreset,onActivateWeapon,status,onClose,
 }) {
   useMasteryRefresh();
   const [category,setCategory]=useState(()=>legacyCategory(activeMode?.id));
@@ -202,6 +202,7 @@ export default function AXESkillBookRedesign({
         {equipMode&&<div className="axe-tome-equipped-weapon">
           <span>{weapon?.name||'No owned '+currentCategory.name.toLowerCase()+' weapon selected'}</span>
           <small>{weapon?.equipped?'Equipped weapon':'Browsing only — does not change your weapon'}</small>
+          <button type="button" onClick={()=>onActivateWeapon(equipMode)}>Activate {currentCategory.name} bar</button>
         </div>}
         <nav className="axe-tome-filters" aria-label="Skill filters">{FILTERS.map(item=>
           <button type="button" key={item.id} aria-pressed={filter===item.id}
