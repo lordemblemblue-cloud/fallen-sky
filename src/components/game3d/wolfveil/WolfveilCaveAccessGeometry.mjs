@@ -114,7 +114,9 @@ export function appendWolfveilCaveAccessFloor(floorTris){
         f<-1?.75:f>8?.50:.67)};
     };
     for(const side of [-1,1]){
-      const start=-2.7,end=9.0,steps=10;
+      // The rendered terrain grid has ~3.55m cells. Full cutout-cell edges
+      // project ~2.5m beyond mouth sample points, so seal that entire rim.
+      const start=-3.9,end=12.0,steps=14;
       for(let i=0;i<steps;i++){
         const a=alongAt(mix(start,end,i/steps),side),
           b=alongAt(mix(start,end,(i+1)/steps),side);
