@@ -197,6 +197,7 @@ import { getAXEDungeonState } from './axe/dungeons/AXEDungeonStore';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './wolfveil/WolfveilLayout';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
+import { shouldRejectCaveGroundStep } from './dungeons/CaveRimSafety.mjs';
 import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/LunarCaveScene';
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
@@ -2586,6 +2587,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       wolfveilVillage?.resolveBuildingCollision(model.position,.62,
         {x:fromX,y:model.position.y,z:fromZ},{player:true});
       importedSpawnTown?.resolveCollision(model.position,{x:fromX,z:fromZ});
+    }
+    // Cave cliff/void protection uses the SAME ground raycast as player feet.
+    // Seven-foot rim band prevents lateral fall-through without flattening
+    // the mountain, falsifying a floor or changing the official cave portals.
+    if(region==='wolfveil' && !dedicatedMode && mapReady &&
+       (model.position.x!==fromX || model.position.z!==fromZ) &&
+       shouldRejectCaveGroundStep({
+         from:{x:fromX,z:fromZ},
+         to:{x:model.position.x,z:model.position.z},
+         fromGroundY:sampleGroundY(fromX,fromZ,model.position.y),
+         toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+         variant:suigenActive?'suigen':'classic',actorRadius:mounted?.85:.62,
+       })){
+      model.position.x=fromX;model.position.z=fromZ;
     }
     lunarDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
