@@ -45,12 +45,24 @@ export function nearClassicCaveRim(x,z,radius=0){
   return CLASSIC_CAVE_MOUTHS.some(site=>
     Math.hypot(x-site.x,z-site.z)<=site.radius+CAVE_RIM_BUFFER_METRES+radius);
 }
+// The selected Suigen copy also has Lunar/Celestial mountain gate sites.
+// Their required E-portal interaction is handled by the existing world code.
+export const SUIGEN_CAVE_MOUTHS=Object.freeze([
+  Object.freeze({id:'moonstone-gate',x:171,z:222,radius:5.2}),
+  Object.freeze({id:'celestial-gate',x:197,z:224,radius:5.2}),
+]);
+export function nearSuigenCaveGround(x,z,radius=0){
+  if(nearSuigenAbyssRim(x,z,radius))return true;
+  if(![x,z,radius].every(Number.isFinite)||radius<0)return false;
+  return SUIGEN_CAVE_MOUTHS.some(site=>
+    Math.hypot(x-site.x,z-site.z)<=site.radius+CAVE_RIM_BUFFER_METRES+radius);
+}
 export function shouldRejectCaveGroundStep({
   from,to,fromGroundY,toGroundY,variant='classic',actorRadius=.62,
 }={}){
   if(!from||!to||![from.x,from.z,to.x,to.z].every(Number.isFinite))return false;
   const close=variant==='suigen'
-    ?nearSuigenAbyssRim(to.x,to.z,actorRadius)||nearSuigenAbyssRim(from.x,from.z,actorRadius)
+    ?nearSuigenCaveGround(to.x,to.z,actorRadius)||nearSuigenCaveGround(from.x,from.z,actorRadius)
     :nearClassicCaveRim(to.x,to.z,actorRadius)||nearClassicCaveRim(from.x,from.z,actorRadius);
   if(!close)return false;
   // A missing hit is a void, not a second legitimate floor. Never step into it.
