@@ -161,24 +161,36 @@ function bendWaypoints(a, b, bendLateral = 16, midDrop = -1.8) {
 
 // Entry ramp corridors (threshold -> mouth -> chamber) + 5 interconnecting tunnels!
 export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
-  ...WOLFVEIL_EXPLORABLE_CAVES.map(c =>
-    makePolylineCorridor(
+  ...WOLFVEIL_EXPLORABLE_CAVES.map(c => {
+    // A cave chamber begins BEFORE its centre, about one chamber radius from
+    // it. The old entry ramp descended all the way to centre; the chamber
+    // floor won the collision query halfway through and caused a 3–4m DROP.
+    // Bring the full ramp to chamber grade at its OUTER threshold, then
+    // continue level into the room. The existing floor meshes and the foot
+    // collision sampler share these exact same waypoints.
+    const joinAlong=Math.max(5,c.chamberOffset-c.chamberRadius+1.25);
+    return makePolylineCorridor(
       `entry_${c.id}`,
       [
         c.threshold,
-        [c.mouth[0], c.mouthY - 0.35, c.mouth[1]],
+        [c.mouth[0],c.mouthY-0.35,c.mouth[1]],
         [
-          c.mouth[0] + c.dir[0] * (c.chamberOffset * 0.52),
-          c.mouthY - c.chamberDrop * 0.55,
-          c.mouth[1] + c.dir[1] * (c.chamberOffset * 0.52),
+          c.mouth[0]+c.dir[0]*(joinAlong*0.5),
+          c.mouthY-c.chamberDrop*0.54,
+          c.mouth[1]+c.dir[1]*(joinAlong*0.5),
         ],
-        [c.chamber.x, c.chamber.y, c.chamber.z],
+        [
+          c.mouth[0]+c.dir[0]*joinAlong,
+          c.chamber.y,
+          c.mouth[1]+c.dir[1]*joinAlong,
+        ],
+        [c.chamber.x,c.chamber.y,c.chamber.z],
       ],
       3.9,
       6.2,
       'entry',
-    ),
-  ),
+    );
+  }),
   // Tunnel 1: Jade Lantern Grotto <-> Whispering Root Hollow (western ring)
   makePolylineCorridor(
     'tunnel_grotto_to_roots',
