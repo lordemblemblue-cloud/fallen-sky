@@ -69,7 +69,9 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
   const rolledStats=rollAXELevelAffixes({
     slot:template.slot,rarity,level:gearLevel,qualityBand,rng,
   });
-  const evolutionPath=rollAXEEvolutionPath(rarity,monsterLevel,rng);
+  const latentEvolution=rollAXEEvolutionPath(rarity,monsterLevel,rng);
+  const evolutionPath=['rare_elite','elite_legendary'].includes(latentEvolution)
+    ?null:latentEvolution;
   const setEligible=monsterLevel>=50 && ['rare','elite','legendary','mythic'].includes(rarity)
     && ['helm','chest','gloves','legs','boots','cape'].includes(template.slot);
   const families=AXE_FARMING_SET_BY_GRADE[rarity]||AXE_PROCEDURAL_SET_FAMILIES;
