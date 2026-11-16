@@ -3852,6 +3852,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             isAerialAttack: !playerStateMachine.current.grounded ||
               !!pendingSkillStrike?.isAerialAttack || !!pendingSkillStrike?.aerial,
             isSkillStrike, isRangedAttack:activeWeaponPath==='ranged',
+            skillFamily:isSkillStrike?skillCombatFamily(getSkillById(pendingSkillStrike?.skillId)):'single',
           }) : null;
           if (strike && strike.kind !== 'hit') {
             spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });
