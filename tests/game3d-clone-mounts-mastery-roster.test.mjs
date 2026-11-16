@@ -46,9 +46,11 @@ test('Mastery is immediately right of unified Equipment and role training remain
   const loadout=readFileSync(root+'AXEGlassLoadoutPane.jsx','utf8');
   const mastery=readFileSync(root+'AXECompanionMasteryPanel.jsx','utf8');
   const store=readFileSync('src/components/game3d/axe/progression/AXEMountStore.js','utf8');
-  assert.match(workspace,/const EQUIPMENT_VIEWS=\[\s*\{id:'companion',label:'Equipment'\},\s*\{id:'mastery',label:'Mastery'\}/);
+  assert.match(workspace,/const TABS=\['Equipment','Mastery','Vanity','Imbuement'\]/);
+  assert.doesNotMatch(workspace,/EQUIPMENT_VIEWS|axe-comp-equipment-subnav/);
   assert.doesNotMatch(workspace,/MountSubTab|Mount Armory|AXECompanionOverviewClone/);
-  assert.match(workspace,/onMyCompanion=\{\(\)=>switchView\('companion'\)\}/);
+  assert.match(workspace,/onMyCompanion=\{\(\)=>switchTab\('Equipment'\)\}/);
+  assert.match(workspace,/tab==='Mastery'/);
   assert.match(loadout,/axe-comp-owned-roster/);
   assert.match(loadout,/axe-comp-insights-toggle/);
   assert.match(loadout,/AXE_MOUNT_GEAR_SLOTS/);
