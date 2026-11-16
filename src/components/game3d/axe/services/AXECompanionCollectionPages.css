@@ -108,3 +108,98 @@
   .axe-collection-card-grid { grid-template-columns: 1fr; }
   .axe-collection-page { padding: 10px; }
 }
+
+/* One-at-a-time, controller-friendly Mount roster. Reuses the exact current
+   owned inventory data without duplicating mount upgrades or equipment. */
+.axe-mounts-redesign {
+  display:flex;flex-direction:column;gap:12px;
+  overflow:hidden;
+}
+.axe-mounts-redesign .axe-collection-page-header {flex:0 0 auto;}
+.axe-mounts-workspace {
+  display:grid;grid-template-columns:minmax(185px,28%) minmax(0,1fr);
+  gap:12px;flex:1;min-height:0;min-width:0;
+}
+.axe-mounts-roster,.axe-mounts-profile {
+  min-height:0;min-width:0;
+  border:1px solid #dbb67990;border-radius:14px;
+  background:linear-gradient(135deg,#193347e5,#0c2436d9);
+  box-shadow:inset 0 0 19px #ffffff0c;
+}
+.axe-mounts-roster {
+  display:flex;flex-direction:column;gap:9px;padding:11px;
+}
+.axe-mounts-roster-heading {
+  display:flex;align-items:center;gap:8px;
+  color:#f3d3a0;
+}
+.axe-mounts-roster-heading strong {font:normal 19px Georgia,serif;flex:1;}
+.axe-mounts-roster-heading small {font:11px Georgia,serif;color:#cdd6d7;}
+.axe-mounts-roster .axe-collection-search {max-width:none;}
+.axe-mounts-active-filter {
+  display:flex;align-items:center;gap:8px;
+  color:#e1d0b2;font:11px Georgia,serif;
+}
+.axe-mounts-active-filter input {accent-color:#ecc77c;}
+.axe-mounts-roster-list {
+  display:flex;flex-direction:column;gap:6px;
+  overflow-y:auto;flex:1;min-height:0;scrollbar-width:thin;
+}
+.axe-mounts-roster-list button {
+  display:flex;align-items:center;gap:9px;flex:0 0 auto;
+  min-height:64px;text-align:left;padding:8px;
+  border:1px solid #9caaa885;border-radius:11px;
+  background:linear-gradient(120deg,#203950,#162c3c);
+  color:#f2ddbc;
+}
+.axe-mounts-roster-list button[aria-pressed=true] {
+  border-color:#ffe1a3;
+  box-shadow:0 0 11px #eec17a88;
+  background:linear-gradient(120deg,#4b4c56,#203951);
+}
+.axe-mounts-roster-list button>span:nth-child(2) {flex:1;min-width:0;}
+.axe-mounts-roster-list strong {
+  display:block;color:#ffdfaa;font:normal 16px Georgia,serif;
+}
+.axe-mounts-roster-list small {
+  display:block;margin-top:4px;color:#c8d0d0;font:11px Georgia,serif;
+}
+.axe-mounts-roster-icon {
+  display:grid;place-items:center;
+  flex:0 0 40px;width:40px;height:40px;
+  border:1px solid #d6b47e;border-radius:50%;color:#f6d59d;
+}
+.axe-mounts-active-check {color:#a3dcb8;flex-shrink:0;}
+.axe-mounts-profile {
+  overflow-y:auto;padding:15px;scrollbar-width:thin;scrollbar-color:#bc9969 transparent;
+}
+.axe-mounts-profile-banner {
+  display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid #c8a97791;padding-bottom:12px;
+}
+.axe-mounts-profile-emblem {
+  display:grid;place-items:center;
+  flex:0 0 68px;width:68px;height:68px;
+  color:#ffda9c;border:1px solid #e9bd7f;border-radius:15px;
+  background:linear-gradient(145deg,#483e59,#1f3447);
+}
+.axe-mounts-profile-banner>div:nth-child(2) {flex:1;min-width:0;}
+.axe-mounts-profile-banner small {font:10px Georgia,serif;color:#e7bf80;}
+.axe-mounts-profile-banner h3 {margin:5px 0;font:normal 28px Georgia,serif;color:#ffe0a6;}
+.axe-mounts-profile-banner p {font:12px Georgia,serif;color:#cdd8d8;margin:0;}
+.axe-mounts-status {
+  color:#b4efc4;font:11px Georgia,serif;padding:6px 10px;
+  border:1px solid #74ae83;border-radius:18px;
+}
+.axe-mounts-secondary-action {
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;margin-top:16px;padding:10px;
+  border:1px solid #f4d39a;border-radius:9px;
+  background:#ebc88c;color:#2c281d;font:14px Georgia,serif;
+}
+@media(max-width:840px) {
+  .axe-mounts-redesign {overflow-y:auto;}
+  .axe-mounts-workspace {grid-template-columns:minmax(0,1fr);}
+  .axe-mounts-roster-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));max-height:190px;}
+  .axe-mounts-profile {overflow:visible;}
+}
