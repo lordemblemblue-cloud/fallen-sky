@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import {createSuigenTerrainHeightSampler} from './SuigenTerrainHeight.mjs';
+import {shouldCarveSuigenAbyssTriangle} from '../dungeons/CaveRimSafety.mjs';
 
 export const SUIGEN_QUEST_POIS=Object.freeze([
   {id:'suigen-keep-council',name:'Acropolis Council',x:0,z:-105,category:'story',chapter:1},
@@ -48,8 +49,10 @@ export function createSuigenMountainWayfinding({worldRoot,terrainRoot}={}){
   terrainRoot?.updateMatrixWorld(true);
   // The owner's historic 26 steps disappear beneath an intact imported
   // terrain surface (at z≈328 the uncut ground is ~34m ABOVE the -25m vault).
-  // Carve only this narrow canyon corridor in the clone's loaded copy of the
-  // 2400m mesh. The source GLB and Classic world remain immutable.
+  // Remove only triangles FULLY contained in the authored canyon. The old
+  // any-vertex rule deleted large triangles crossing the canyon boundary,
+  // opening walk-through/fall-through holes around the cave's surface rim.
+  // The source GLB, bank triangles and Classic terrain remain immutable.
   let carvedTriangles=0;
   for(const mesh of terrain){
     const geometry=mesh.geometry;
@@ -57,22 +60,24 @@ export function createSuigenMountainWayfinding({worldRoot,terrainRoot}={}){
     const indices=geometry?.index;
     if(!position||!indices)continue;
     const keep=[];
-    const inside=(v)=>{
-      const x=position.getX(v),z=position.getZ(v);
-      return Math.abs(x+440)<12.5&&z>=320&&z<=427;
-    };
+    let localCarved=0;
+    const vertex=v=>({x:position.getX(v),z:position.getZ(v)});
     for(let i=0;i<indices.count;i+=3){
       const a=indices.getX(i),b=indices.getX(i+1),c=indices.getX(i+2);
-      // Remove full crossing triangles, not a tiny hole between vertices.
-      if(inside(a)||inside(b)||inside(c)){carvedTriangles++;continue;}
+      // Keep ALL boundary-crossing triangles. Removing any-vertex crossings
+      // exposed a multi-metre open strip beyond the real cave trench.
+      if(shouldCarveSuigenAbyssTriangle([vertex(a),vertex(b),vertex(c)])){
+        localCarved++;continue;
+      }
       keep.push(a,b,c);
     }
-    if(carvedTriangles){
+    carvedTriangles+=localCarved;
+    if(localCarved){
       const carved=geometry.clone();
       carved.setIndex(keep);
       mesh.geometry=carved;
       geometry.dispose();
-      mesh.userData.suigenAbyssCarvedTriangles=carvedTriangles;
+      mesh.userData.suigenAbyssCarvedTriangles=localCarved;
     }
   }
   const addCollider=(x,y,z,w,d)=>{

@@ -197,6 +197,7 @@ import { getAXEDungeonState } from './axe/dungeons/AXEDungeonStore';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './wolfveil/WolfveilLayout';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
+import { shouldRejectCaveGroundStep,nearSuigenCaveGround } from './dungeons/CaveRimSafety.mjs';
 import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/LunarCaveScene';
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
@@ -657,6 +658,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(suigenActive&&Number.isFinite(referenceY)){
         const reachable=hits.find(hit=>hit.point.y<=referenceY+.72);
         if(reachable)return reachable.point.y;
+        // Underground cave feet must never snap UP to an overlying mountain
+        // roof merely because a ray found no reachable tread. A null contact
+        // is blocked by the seven-foot cave edge movement guard instead.
+        if(nearSuigenCaveGround(x,z,.85))return null;
       }
       // The old town's analytic floor belongs ONLY to the Classic map; it
       // would otherwise make the new import's roads float above the ground.
@@ -2063,6 +2068,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // E operates its genuine front, balcony sliders and attic door; if no
       // mansion door is nearby, the existing NPC/loot interaction is unchanged.
       if(k==='e'&&!e.repeat&&model){
+        // Discover the actual chamber treasure cache with E; no client loot
+        // or XP is granted. Server ledger validation is a separate gate.
+        if(region===LUNAR_CAVE_REGION){
+          const cache=lunarDungeon?.inspectTreasure(model.position);
+          if(cache){
+            e.preventDefault();
+            showCombatNotice(cache.name+' discovered · Rewards require verified dungeon completion');
+            return;
+          }
+        }
         if(suigenActive){
           const action=suigenRuntime?.district?.interact(model.position);
           if(action){
@@ -2587,6 +2602,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         {x:fromX,y:model.position.y,z:fromZ},{player:true});
       importedSpawnTown?.resolveCollision(model.position,{x:fromX,z:fromZ});
     }
+    // Cave cliff/void protection uses the SAME ground raycast as player feet.
+    // Seven-foot rim band prevents lateral fall-through without flattening
+    // the mountain, falsifying a floor or changing the official cave portals.
+    if(region==='wolfveil' && !dedicatedMode && mapReady &&
+       (model.position.x!==fromX || model.position.z!==fromZ) &&
+       shouldRejectCaveGroundStep({
+         from:{x:fromX,z:fromZ},
+         to:{x:model.position.x,z:model.position.z},
+         fromGroundY:sampleGroundY(fromX,fromZ,model.position.y),
+         toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+         variant:suigenActive?'suigen':'classic',actorRadius:mounted?.85:.62,
+       })){
+      model.position.x=fromX;model.position.z=fromZ;
+    }
     lunarDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
@@ -3008,7 +3037,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // A collision impulse must not push a player out of the rendered
         // terrain even if normal WASD movement was previously accepted.
         if(region==='wolfveil' &&
-           !insideWolfveilClientGround(model.position.x,model.position.z,.65)){
+          (!insideWolfveilClientGround(model.position.x,model.position.z,.65) ||
+           (!dedicatedMode && mapReady && shouldRejectCaveGroundStep({
+             from:beforeRoguePush,
+             to:{x:model.position.x,z:model.position.z},
+             fromGroundY:sampleGroundY(beforeRoguePush.x,beforeRoguePush.z,model.position.y),
+             toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+             variant:suigenActive?'suigen':'classic',
+             actorRadius:mounted?.85:.62,
+           })))){
           model.position.x=beforeRoguePush.x;
           model.position.z=beforeRoguePush.z;
         }

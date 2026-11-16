@@ -6,7 +6,7 @@ import {addVortexDungeonEcho} from './VortexDungeonEcho.mjs';
 import {
   LUNAR_CAVE_ENTRANCE,LUNAR_CAVE_CHAMBERS,LUNAR_CAVE_WATER_END,
   LUNAR_CAVE_ROOM_RADIUS,LUNAR_CAVE_PASSAGE_HALF_WIDTH,LUNAR_CAVE_PASSAGES,
-  isInsideDungeonWalkway,
+  LUNAR_CAVE_TREASURE_SITES,isInsideDungeonWalkway,
 } from './LunarCaveLayout.mjs';
 
 const TAU=Math.PI*2;
@@ -376,6 +376,43 @@ function addDungeonCeilingLamp(root,kit,x,z,{illuminated=true}={}){
   }
   root.add(g);
 }
+// Decorative physical treasure caches: they can be discovered with E, but
+// never grant items/currency/XP locally. A trusted dungeon clear and the
+// server's receipt/ledger must authorize any actual reward transaction.
+function addLunarTreasureCaches(root){
+  const wood=new THREE.MeshStandardMaterial({color:0x4b3240,roughness:.88,metalness:.06});
+  const trim=new THREE.MeshStandardMaterial({color:0xcba66d,metalness:.62,roughness:.38});
+  const jewel=new THREE.MeshStandardMaterial({color:0x6faad8,emissive:0x2f6fbc,
+    emissiveIntensity:.8,roughness:.18,metalness:.25});
+  const caches=[];
+  for(const site of LUNAR_CAVE_TREASURE_SITES){
+    const chest=new THREE.Group();
+    chest.name='AXE_LunarCave_SealedTreasure_'+site.id;
+    chest.position.set(site.x,.05,site.z);
+    const base=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.15,1.55),wood);
+    base.position.y=.65;base.castShadow=base.receiveShadow=true;chest.add(base);
+    for(const side of [-1,1]){
+      const band=new THREE.Mesh(new THREE.BoxGeometry(.15,1.3,1.66),trim);
+      band.position.set(side*1.05,.68,0);chest.add(band);
+    }
+    const lidPivot=new THREE.Group();lidPivot.position.set(0,1.18,-.7);
+    const lid=new THREE.Mesh(new THREE.BoxGeometry(2.7,.42,1.7),wood);
+    lid.position.z=.7;lid.position.y=.22;lid.castShadow=true;lidPivot.add(lid);
+    const crest=new THREE.Mesh(new THREE.OctahedronGeometry(.34,0),jewel);
+    crest.position.set(0,.47,1.2);lidPivot.add(crest);
+    chest.add(lidPivot);
+    const seal=new THREE.Mesh(new THREE.TorusGeometry(.58,.075,8,32),
+      new THREE.MeshBasicMaterial({color:0xa4d4ff,transparent:true,opacity:.6}));
+    seal.rotation.x=-Math.PI/2;seal.position.y=.12;chest.add(seal);
+    chest.userData.axeDungeonTreasure={
+      id:site.id,chamberId:site.chamberId,requiredLevel:site.level,
+      rewardAuthority:'server-required',rewardStatus:'sealed',
+    };
+    root.add(chest);
+    caches.push({site,root:chest,lidPivot,discovered:false});
+  }
+  return caches;
+}
 export function createLunarCaveDungeon(scene){
   const mats=materialSet(),root=new THREE.Group();
   root.name='AXE_LunarCaveSeparateDungeonScene';scene.add(root);
@@ -393,6 +430,7 @@ export function createLunarCaveDungeon(scene){
   ground.receiveShadow=true;ground.userData.isTerrain=true;
   ground.name='AXE_LunarCave_CollidableFloor';root.add(ground);
   addClosedCavernShell(root,mats);
+  const treasureCaches=addLunarTreasureCaches(root);
   // Strong, soft dungeon-only fill exposes monster silhouettes, equipment and
   // painted stone across dark corners. Wall and ceiling fixtures remain the
   // dominant directional accents, not the outdoor sky or sun.
@@ -479,13 +517,32 @@ export function createLunarCaveDungeon(scene){
   const startPortal=portal(root,mats,0,4,-21,.85);
   const finalPortal=portal(root,mats,LUNAR_CAVE_WATER_END.x,4,LUNAR_CAVE_WATER_END.returnPortalZ,.9);
   let time=0,last=null,triggered=false;
+  let lastSafe={x:0,z:0};
   return {
     root,ground,entry:{x:0,y:0,z:0},chambers:LUNAR_CAVE_CHAMBERS,
+    treasureCaches:LUNAR_CAVE_TREASURE_SITES,
+    // Only a genuine server dungeon settlement may award treasure.
+    // Inspecting a chest is a visual discovery, not a reward claim.
+    inspectTreasure(position,radius=3.1){
+      if(!position)return null;
+      const cache=treasureCaches.find(c=>
+        Math.hypot(position.x-c.site.x,position.z-c.site.z)<=radius);
+      if(!cache)return null;
+      cache.discovered=true;
+      cache.lidPivot.rotation.x=-.54;
+      return {id:cache.site.id,name:cache.site.name,
+        chamberId:cache.site.chamberId,rewardAuthority:'server-required',
+        rewardStatus:'sealed'};
+    },
     isWalkable:isInsideDungeonWalkway,
     resolveCollision(position,previous,radius=.62){
-      if(isInsideDungeonWalkway(position.x,position.z,radius))return false;
-      if(previous){position.x=previous.x;position.z=previous.z;return true;}
-      return false;
+      if(isInsideDungeonWalkway(position.x,position.z,radius)){
+        lastSafe={x:position.x,z:position.z};return false;
+      }
+      const safe=previous&&isInsideDungeonWalkway(previous.x,previous.z,radius)
+        ?previous:lastSafe;
+      position.x=safe.x;position.z=safe.z;
+      return true;
     },
     update(dt,position){
       time+=Math.min(.09,Math.max(0,dt||0));
@@ -493,6 +550,14 @@ export function createLunarCaveDungeon(scene){
       vortexMemory.update(dt);
       water.material.opacity=.75+.05*Math.sin(time*1.7);
       if(!position){last=null;return false;}
+      // Knockback, teleport, rogue pushes and scripted movement can bypass
+      // normal WASD resolution: protect those paths too. Only the two actual
+      // portal triggers may leave this separate cave region.
+      if(isInsideDungeonWalkway(position.x,position.z,.62)){
+        lastSafe={x:position.x,z:position.z};
+      }else{
+        position.x=lastSafe.x;position.z=lastSafe.z;
+      }
       const now={x:position.x,z:position.z};
       const nearStart=Math.abs(now.x)<2.6&&Math.abs(now.z+21)<2.2;
       const nearEnd=Math.abs(now.x-LUNAR_CAVE_WATER_END.x)<2.6&&
