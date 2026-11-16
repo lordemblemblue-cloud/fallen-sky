@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mountShoulderPoint } from './MountFollowRules.mjs';
 
 const desired = new THREE.Vector3();
 const toTarget = new THREE.Vector3();
@@ -14,8 +15,9 @@ export class CompanionAISystem {
     this.getMounted = getMounted;
     this.state = 'idle';
     this.velocity = new THREE.Vector3();
-    this.followDistance = 2.5;
-    this.deadZone = 0.35;
+    // Park on the owner's camera-relative right, rather than directly behind.
+    this.followDistance = 1.85;
+    this.deadZone = 0.20;
     this.catchUpDistance = 5.5;
     this.teleportDistance = 25;
     this.moveSpeed = 5;
@@ -38,11 +40,10 @@ export class CompanionAISystem {
       return;
     }
 
-    desired.set(
-      owner.position.x + Math.sin(ownerYaw) * this.followDistance,
-      companion.position.y,
-      owner.position.z + Math.cos(ownerYaw) * this.followDistance,
-    );
+    const shoulder=mountShoulderPoint(owner.position,ownerYaw, {
+      rightMeters:this.followDistance,aheadMeters:.65,
+    });
+    desired.set(shoulder.x,companion.position.y,shoulder.z);
 
     toTarget.subVectors(desired, companion.position);
     toTarget.y = 0;
@@ -74,7 +75,7 @@ export class CompanionAISystem {
       this.setState(distance > this.catchUpDistance ? 'return_to_player' : 'follow');
       this.playAnimation?.('run');
     } else {
-      this.velocity.lerp(new THREE.Vector3(), Math.min(1, 6 * delta));
+      this.velocity.multiplyScalar(Math.max(0, 1 - Math.min(1, 6 * delta)));
       this.setState('idle');
       this.playAnimation?.('idle');
     }

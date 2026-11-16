@@ -9,10 +9,12 @@ const raycaster = new THREE.Raycaster();
  *   2. Hits on an enemy → lock camera/combat target.
  *   3. Empty space → clear current target.
  */
-export function handleMiddleClick({ event, renderer, camera, enemies, remoteManager, setPlayerMenu, rogues = [], bosses = [] }) {
+export function handleMiddleClick({ event, renderer, camera, enemies, remoteManager, setPlayerMenu, rogues = [], bosses = [], clearOnMiss = true }) {
   const rect = renderer.domElement.getBoundingClientRect();
-  const ndcX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  const ndcY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  // A pointer-locked game has no movable cursor: select the reticle center.
+  const locked=typeof document!=='undefined'&&document.pointerLockElement===renderer.domElement;
+  const ndcX = locked ? 0 : ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  const ndcY = locked ? 0 : -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
 
   // 1. Remote players first
@@ -47,64 +49,50 @@ export function handleMiddleClick({ event, renderer, camera, enemies, remoteMana
     }
   }
 
-  // 2. Enemies + hostile rogue-AI + world bosses (all targetable via lock-on)
-  const enemyMeshes = [];
-  enemies.forEach((en) => {
-    if (!en.alive || en.dying) return;
-    en.group.traverse((node) => { if (node.isMesh) enemyMeshes.push(node); });
-  });
-  rogues.forEach((r) => {
-    if (!r.alive || r.dying || !r.group?.visible) return;
-    r.group.traverse((node) => { if (node.isMesh) enemyMeshes.push(node); });
-  });
-  bosses.forEach((b) => {
-    if (!b.alive || b.dying || !b.group?.visible) return;
-    b.group.traverse((node) => { if (node.isMesh) enemyMeshes.push(node); });
-  });
-  const hits = raycaster.intersectObjects(enemyMeshes, false);
-  if (hits.length > 0) {
-    const hitMesh = hits[0].object;
-    let foundEnemy = null;
-    for (const en of enemies) {
-      en.group.traverse((node) => { if (node === hitMesh) foundEnemy = en; });
-      if (foundEnemy) break;
+  // 2. Hostile AI and bosses. Raycast the roots once and walk the winning
+  // hit's parent chain, instead of building every skinned submesh list and
+  // traversing every enemy again on EVERY held basic-attack click.
+  const byRoot=new Map();
+  for(const en of [...enemies,...rogues,...bosses]){
+    if(!en?.alive||en.dying||en.defeated||en.group?.visible===false||!en.group)continue;
+    byRoot.set(en.group,en);
+  }
+  const hits=byRoot.size?raycaster.intersectObjects([...byRoot.keys()],true):[];
+  if(hits.length){
+    let node=hits[0].object;
+    let foundEnemy=null;
+    while(node&&!foundEnemy){
+      foundEnemy=byRoot.get(node)||null;
+      node=node.parent;
     }
-    if (!foundEnemy) {
-      for (const b of bosses) {
-        b.group.traverse((node) => { if (node === hitMesh) foundEnemy = b; });
-        if (foundEnemy) break;
-      }
-    }
-    if (!foundEnemy) {
-      for (const r of rogues) {
-        r.group.traverse((node) => { if (node === hitMesh) foundEnemy = r; });
-        if (foundEnemy) break;
-      }
-    }
-    if (foundEnemy) {
-      const isWorldBoss = !!foundEnemy.isBoss;
-      const targetKind = isWorldBoss ? 'boss' : (foundEnemy.color !== undefined ? 'rogue' : 'enemy');
+    if(foundEnemy){
+      const isWorldBoss=!!foundEnemy.isBoss;
+      const targetKind=isWorldBoss?'boss':
+        foundEnemy.color!==undefined?'rogue':'enemy';
       setTarget({
-        id: foundEnemy.id,
-        name: foundEnemy.name || foundEnemy.bossName || (foundEnemy.tier ? `${foundEnemy.tier.charAt(0).toUpperCase() + foundEnemy.tier.slice(1)} Enemy` : 'Enemy'),
-        kind: targetKind,
-        hp: foundEnemy.hp,
-        maxHp: foundEnemy.maxHp,
-        level: foundEnemy.level,
-        tier: isWorldBoss ? 'boss' : (foundEnemy.tier || (foundEnemy.color !== undefined ? 'rogue' : 'normal')),
-        bossName: foundEnemy.bossName || foundEnemy.name || null,
+        id:foundEnemy.id,
+        name:foundEnemy.name || foundEnemy.bossName ||
+          (foundEnemy.tier?foundEnemy.tier.charAt(0).toUpperCase()+
+            foundEnemy.tier.slice(1)+' Enemy':'Enemy'),
+        kind:targetKind,hp:foundEnemy.hp,maxHp:foundEnemy.maxHp,
+        level:foundEnemy.level,
+        tier:isWorldBoss?'boss':(foundEnemy.tier||
+          (foundEnemy.color!==undefined?'rogue':'normal')),
+        bossName:foundEnemy.bossName||foundEnemy.name||null,
       });
       return {
-        id: foundEnemy.id,
-        group: foundEnemy.group,
-        name: foundEnemy.name || foundEnemy.bossName || 'Enemy',
-        kind: targetKind,
-        aliveRef: () => !!foundEnemy.alive && !foundEnemy.dying && foundEnemy.group?.visible !== false,
+        id:foundEnemy.id,group:foundEnemy.group,
+        name:foundEnemy.name||foundEnemy.bossName||'Enemy',
+        kind:targetKind,
+        aliveRef:()=>!!foundEnemy.alive&&!foundEnemy.dying&&
+          foundEnemy.group?.visible!==false,
       };
     }
   }
 
-  // 3. Empty space → clear
+  // A normal left click on empty terrain must never clear a deliberate lock.
+  if (!clearOnMiss) return null;
+  // 3. Empty middle click → clear
   clearTarget();
   setPlayerMenu?.(null);
   return null;
