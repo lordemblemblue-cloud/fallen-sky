@@ -224,7 +224,7 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
           setPending(null);
         }}/>
       : tab === 'Mastery' ? <AXECompanionMasteryPanel pets={pets}
-          selectedPet={selectedPet} onSelectPet={setSelected} onAction={onAction}/>
+          selectedPet={selectedPet} onSelectPet={(id) => { setSelected(id); setPending(null); setResult(''); }} onAction={onAction}/>
       : ['Equipment','Vanity','Imbuement'].includes(tab) ?
         <div className="axe-comp-modern">
           {tab === 'Equipment' ? <div className="axe-comp-equipment-shell">
