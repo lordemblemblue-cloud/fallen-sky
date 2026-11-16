@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronLeft, ChevronRight, CircleHelp, Crown, Feather, Gem, Search, Shield, Sparkles, Swords, X } from 'lucide-react';
+import { BookOpen, ChevronLeft, ChevronRight, Search, Shield, Sparkles, Swords, X } from 'lucide-react';
 import { CAST_TYPE, SKILL_TYPE } from '../../skills/skillTypes';
 import { getAllSkills, getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getAllCompanionSkills, getCompanionSkillById } from '../../skills/companionSkillRegistry';
@@ -15,19 +15,6 @@ import {
 } from '../skills/AXECloneSkillTreeModel.mjs';
 import './AXECloneSkillTree.css';
 
-const tierTitles = ['Root', 'Branch', 'Mastery'];
-const displayNames = {
-  damage: {
-    single: ['Single Hit', 'Heavy Slash', 'Execution Cut'],
-    three: ['Three-Hit', 'Rising Flurry', 'Storm Flurry'],
-    aerial: ['Aerial Effect', 'Sky Burst', 'Heaven Crash'],
-  },
-};
-const passiveDescription = {
-  single: 'Focused strike damage',
-  three: 'Consecutive-hit damage',
-  aerial: 'Circular blast and aerial damage',
-};
 const formatStatName = name => name.replaceAll('_', ' ').replace(/\b\w/g, c => c.toUpperCase());
 const valueAt = (skill, stat, level) => {
   const amount = scaleStat(skill, stat, level);
@@ -63,69 +50,6 @@ function TreeIcon({ kind = 'single', size = 48 }) {
       <path d="M17 52Q30 31 46 22" strokeWidth="3"/></>}
     {kind === 'burst' && <><path d="M32 3L39 23 60 32 39 39 32 61 24 39 4 32 24 24Z" strokeWidth="3"/></>}
   </svg>;
-}
-function TierConnector() {
-  return <svg className="axe-ct-connector" viewBox="0 0 200 35" preserveAspectRatio="none" aria-hidden="true">
-    <path d="M100 0V9Q100 14 90 14H50Q43 14 43 22V31M100 9Q100 14 110 14H150Q157 14 157 22V31"
-      fill="none" stroke="#efca87" strokeWidth="1.9"/>
-    <path d="M39 27L43 33 47 27M153 27L157 33 161 27" stroke="#efca87"
-      strokeWidth="2" fill="none" strokeLinejoin="round"/>
-  </svg>;
-}
-function TreeNode({ icon, title, tier, skill, passive, locked, selected, equipped, requirement, onClick }) {
-  const mastery = skill ? getSkillMastery(skill.skill_id) : null;
-  return <button type="button" className={['axe-ct-node',selected?'axe-ct-node--selected':'',
-    locked?'axe-ct-node--locked':'', passive?'axe-ct-node--passive':''].join(' ')}
-    onClick={onClick} aria-pressed={selected} aria-label={title + (locked ? ': Locked, '+requirement : '')}
-    title={skill?.skill_name || passive?.label || title}>
-    <span className="axe-ct-node-icon"><TreeIcon kind={icon} size={37}/></span>
-    <span className="axe-ct-node-title">{title}</span>
-    <small>{passive ? '+' + (passive.bonusPct*100).toFixed(0) + '% charged'
-      : skill ? 'Lv. ' + mastery.level + ' / ' + mastery.maxLevel : ''}</small>
-    {tier === 1 && <span className="axe-ct-node-tier">T1</span>}
-    {locked && <span className="axe-ct-locked-note">◆ Tier locked</span>}
-    {equipped && <span className="axe-ct-equipped-note">Equipped</span>}
-  </button>;
-}
-function BranchLane({ path, category, selected, onSelect, equipped, search, filter }) {
-  const names = path.titles;
-  const skills = path.active.map(id => getSkillById(id));
-  const tiers = [1,2,3].map(n => resolveCloneSkillTreeTier(path,n,isWeaponSkillUnlocked));
-  const title = (tier) => names?.[tier-1] || (tier === 1 ? path.label : skills[tier-1]?.skill_name || path.label);
-  const matches = !search || [path.label,...(names||[]),...skills.map(s=>s?.skill_name||''),
-    ...path.passives.map(p=>p.label)].join(' ').toLowerCase().includes(search);
-  const faded = (filter !== 'all' && filter !== path.id) || !matches;
-  const current = (kind,id) => selected?.kind===kind && selected?.id===id;
-  const selectActive = tier => onSelect({ kind:'skill', id:path.active[tier-1], category, lane:path.id, tier });
-  const selectPassive = passive => onSelect({kind:'passive',id:passive.id,category,lane:path.id,tier:passive.tier});
-  const passiveCard = tier => {
-    const passive = path.passives[tier-2];
-    return <TreeNode key={passive.id} icon={passive.icon} title={passive.label} tier={tier}
-      passive={passive} locked={!tiers[tier-1].unlocked} selected={current('passive',passive.id)}
-      requirement={'Complete prerequisite paid weapon skill stage'}
-      onClick={()=>selectPassive(passive)}/>;
-  };
-  return <div className={'axe-ct-lane'+(faded?' axe-ct-lane--faded':'')} data-path={path.id}>
-    <TreeNode icon={path.icon} title={title(1)} tier={1} skill={skills[0]}
-      selected={current('skill',path.active[0])} equipped={equipped.includes(path.active[0])}
-      onClick={()=>selectActive(1)}/>
-    <TierConnector/>
-    <div className="axe-ct-pair">
-      <TreeNode icon={path.icon} title={title(2)} tier={2} skill={skills[1]}
-        locked={!tiers[1].unlocked} selected={current('skill',path.active[1])}
-        equipped={equipped.includes(path.active[1])} requirement={'Complete prerequisite paid weapon skill stage'}
-        onClick={()=>selectActive(2)}/>
-      {passiveCard(2)}
-    </div>
-    <TierConnector/>
-    <div className="axe-ct-pair">
-      <TreeNode icon={path.icon} title={title(3)} tier={3} skill={skills[2]}
-        locked={!tiers[2].unlocked} selected={current('skill',path.active[2])}
-        equipped={equipped.includes(path.active[2])} requirement={'Complete prerequisite paid weapon skill stage'}
-        onClick={()=>selectActive(3)}/>
-      {passiveCard(3)}
-    </div>
-  </div>;
 }
 function SkillDetails({ node, category, paths, companion, activeIds, onEquip }) {
   const path = paths.find(p=>p.id===node?.lane);
