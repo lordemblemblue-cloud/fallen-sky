@@ -4,6 +4,7 @@ import { getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMasteryStore';
 import {
   getWeaponSkillPoints, investWeaponSkillPoint, subscribeWeaponSkillPoints,
+  isWeaponSkillUnlocked,
 } from '../../skills/weaponSkillPointsStore';
 import {
   WEAPON_SKILL_TIERS, weaponSkillTierForId, weaponTierUnlocked,
