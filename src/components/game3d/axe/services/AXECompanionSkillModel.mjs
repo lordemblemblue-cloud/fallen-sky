@@ -8,9 +8,11 @@ export const COMPANION_COMBAT_PATHS = Object.freeze([
 export function companionCombatPaths(skills=[]) {
   const byId=new Map(skills.filter(skill=>skill?.category==='combat')
     .map(skill=>[skill.skill_id,skill]));
-  return COMPANION_COMBAT_PATHS.map(path=>({
+  const grouped=COMPANION_COMBAT_PATHS.map(path=>({
     ...path,skills:path.ids.map(id=>byId.get(id)).filter(Boolean),
   }));
+  const unmatched=getUnassignedCompanionCombatSkills(skills);
+  return unmatched.length?[...grouped,{id:'other',label:'Other',skills:unmatched}]:grouped;
 }
 export function getUnassignedCompanionCombatSkills(skills=[]) {
   const covered=new Set(COMPANION_COMBAT_PATHS.flatMap(path=>path.ids));
