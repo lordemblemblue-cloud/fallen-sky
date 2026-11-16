@@ -330,14 +330,18 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
         x:cave.threshold[0],y:cave.threshold[1]+0.12,z:cave.threshold[2],
       };
     }
-    if(Math.hypot(localPosition.x-cave.threshold[0],
-      localPosition.z-cave.threshold[2])>radius)continue;
-    // The opening is an interaction at walking height, not a vertical trigger
-    // that a character on a cliff far above/below can activate.
-    // Actual triangle-interpolated feet and the analytical threshold can
-    // differ on steep waterfall banks; allow a small vertical margin while
-    // still rejecting cave activation from the cliffs far above.
-    if(Math.abs(localPosition.y-cave.threshold[1])>3.5)continue;
+    // Some entrances are embedded in steep waterfall rock. The player may
+    // press E beside the actual stone mouth rather than standing behind it
+    // at the exact exterior threshold: accept either grounded approach.
+    const nearThreshold=Math.hypot(localPosition.x-cave.threshold[0],
+      localPosition.z-cave.threshold[2])<=radius;
+    const nearMouth=Math.hypot(localPosition.x-mx,localPosition.z-mz)
+      <=Math.min(radius,5.25);
+    if(!nearThreshold&&!nearMouth)continue;
+    const validHeight=(nearThreshold &&
+      Math.abs(localPosition.y-cave.threshold[1])<=3.5)
+      ||(nearMouth&&Math.abs(localPosition.y-cave.mouthY)<=3.5);
+    if(!validHeight)continue;
     const space=sampleWolfveilCaveSpace(insideX,insideZ,0.75);
     if(!space)continue;
     return {
