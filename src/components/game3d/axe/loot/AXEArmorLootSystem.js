@@ -8,6 +8,7 @@
 // pickup like any other gear drop (WorldLootDrops.jsx).
 import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../equipment/AXEArmorPackCatalog.js';
 import { getAXELevelRarityWeights, rollAXEEvolutionPath, rollAXELevelAffixes } from './AXELevelGearProgression.mjs';
+import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -93,7 +94,7 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   const { set, piece } = pool[Math.floor(clampRng(rng()) * pool.length)];
   const bands = AXE_ARMOR_DROP_CONFIG.qualityBands;
   const qualityBand = bands[Math.floor(clampRng(rng()) * bands.length)];
-  const level = monsterLevel;
+  const level = getAXEFarmingGearLevel(rarity,monsterLevel)??monsterLevel;
   const rarityScale = RARITY_SCALE[set.rarity] || 1;
   const statScale = rarityScale * (1 + (level - 1) * AXE_ARMOR_DROP_CONFIG.levelScalePerLevel) * (1 + qualityBand / 100);
   const template = makeAXEArmorTemplate(set, piece);
@@ -121,6 +122,7 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
       qualityBand,
       itemLevel: level,
       level,
+      monsterLevelAtDrop: monsterLevel,
       baseStats, rolledStats, setId,
       evolutionPath, rarityVariant: evolutionPath,
     },
