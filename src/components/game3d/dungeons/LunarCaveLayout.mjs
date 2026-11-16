@@ -21,6 +21,20 @@ export const LUNAR_CAVE_CHAMBERS = Object.freeze([
 ]);
 export const LUNAR_CAVE_WATER_END = Object.freeze({x:-26,z:624,returnPortalZ:649});
 
+// One discoverable cache in each genuine chamber. Visual discovery does NOT
+// grant Silver/items/XP; trusted server completion and chest settlement are
+// required before any persistent reward may be claimed.
+export const LUNAR_CAVE_TREASURE_SITES = Object.freeze(
+  LUNAR_CAVE_CHAMBERS.map((chamber,i)=>Object.freeze({
+    id:'moonstone-cache-'+(i+1),
+    name:['Threshold Reliquary','Echo Cache','Shadow Chest','Runebound Trove',
+      'Eclipse Treasury'][i],
+    chamberId:chamber.id,level:chamber.level,
+    x:chamber.x+(i%2===0?29:-29),y:0,z:chamber.z+6,
+    rewardAuthority:'server-required',
+  }))
+);
+
 // Linked axis-aligned sections make visible 90-degree bends. Their caps overlap
 // the arena floors, leaving no dead-end gaps in collision or geometry.
 const segment=(ax,az,bx,bz)=>Object.freeze({ax,az,bx,bz});
