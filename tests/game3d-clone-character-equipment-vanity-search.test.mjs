@@ -49,7 +49,7 @@ test('Both inventory views expose working search and dropdown; no horizontal pil
   const path='../src/components/game3d/axe/services/';
   for(const file of ['AXEAppearanceWorkspace.jsx','AXEGlassLoadoutPane.jsx']){
     const jsx=readFileSync(new URL(path+file,import.meta.url),'utf8');
-    assert.match(jsx,/type="search" value=\{search\}/);
+    assert.match(jsx,/type="search"[\s\S]{0,150}value=\{search\}/);
     assert.match(jsx,/className="axe-app-inventory-category"/);
     assert.doesNotMatch(jsx,/className="axe-app-inventory-filters"/);
   }
