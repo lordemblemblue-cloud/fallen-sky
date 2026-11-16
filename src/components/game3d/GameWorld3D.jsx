@@ -5004,6 +5004,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               levelsGained,
               bonusPoints: rewardPoints,
               xpGained: rewardXP,
+              xpSource: 'quest',
             });
             const hudProgression = getPlayerHUD();
             playerXPRef.current = hudProgression.xp;
