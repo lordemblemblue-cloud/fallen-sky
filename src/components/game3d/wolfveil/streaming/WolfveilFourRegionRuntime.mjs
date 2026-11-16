@@ -6,7 +6,10 @@ import {
 } from './WolfveilFourRegionPlan.mjs';
 
 const VALID_REGIONS=new Set(WOLFVEIL_STREAM_REGIONS.map(entry=>entry.id));
-const STREAMABLE_STATIC_NAME=/^SWV_Instanced_/;
+// Safe static world instance sources. Keep separately swapped owner-tree
+// fallbacks, live grass replacement batches, and physics/water OUT of this
+// list: their owning systems change visibility/geometry asynchronously.
+const STREAMABLE_STATIC_NAME=/^(?:SWV_Instanced_|SWV_CedarPineMaple_Trunks$|SWV_Pine_Cedar_RealLayeredBoughs$|SWV_Autumn_Coral_CourtyardMapleLeaves$|SWV_VisibleCedarBranches$|SWV_FlexibleBambooStems$|SWV_FernAndShrub_Patches$|SWV_Natural_Path_Edge_Weathered_Stones$)/;
 // IMPORTANT: This only manages static instanced architecture/decor. Terrain,
 // BVH, water, cave floors, all collision, AI, NPCs, GLBs and character state
 // stay owned by their existing runtime. Discarding those resources would make
@@ -29,6 +32,7 @@ export function createWolfveilFourRegionRuntime({
   const local=new THREE.Matrix4(),color=new THREE.Color();
   let totalInstances=0,disabled=false,disposed=false,exportDepth=0;
   const originalRegion=stableWolfveilStreamRegion(position)||'town';
+  let pendingGateway=null;
   let currentRegion=originalRegion,lastPosition=position&&{
     x:Number(position.x),z:Number(position.z),
   };
@@ -136,14 +140,22 @@ export function createWolfveilFourRegionRuntime({
     const next=stableWolfveilStreamRegion(playerPosition,currentRegion,{zOffset:offsetZ});
     if(!next)return getStats();
     const crossing=lastPosition&&crossedWolfveilGateway(lastPosition,playerPosition,{zOffset:offsetZ});
+    if(crossing)pendingGateway={
+      ...crossing,at:{x:Number(playerPosition.x),z:Number(playerPosition.z)},
+    };
+    if(pendingGateway&&Math.hypot(
+      Number(playerPosition.x)-pendingGateway.at.x,
+      Number(playerPosition.z)-pendingGateway.at.z)>36)pendingGateway=null;
     if(next!==currentRegion){
       const previous=currentRegion;
       currentRegion=next;
       // No empty frame after a fast run or workflow teleport. This allocates
       // only destination instance buffers, never a second terrain.
       loadNext(currentRegion,Infinity);
-      if(!paused)onTransition({from:previous,to:next,gateway:crossing?.id||null,
-        gatewayLabel:crossing?.label||null});
+      const gate=(crossing||pendingGateway);
+      if(!paused)onTransition({from:previous,to:next,gateway:gate?.id||null,
+        gatewayLabel:gate?.label||null});
+      pendingGateway=null;
     }
     lastPosition={x:Number(playerPosition.x),z:Number(playerPosition.z)};
     const desired=new Set(nearWolfveilStreamRegions(playerPosition,currentRegion,
