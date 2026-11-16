@@ -43,6 +43,14 @@ test('player HUD is sole source of half-XP sharing; actual rested bonus and ques
   assert.match(system,/questXp/);
   assert.match(system,/xpCarry/);
   assert.match(insights,/\['Quest Rewards','questXp',Sparkles\]/);
+  const legacy=read('companionProgressionStore.jsx');
+  const ability=read('companionAbilityHandler.jsx');
+  const attack=read('legacyTargetedAbilities.jsx');
+  assert.match(hud,/awardCompanionXP\(modelId,shared\.xpGained,\{alreadyRested:true\}\)/);
+  assert.match(legacy,/alreadyRested \? 0 : consumeRestedForGain/);
+  assert.doesNotMatch(world,/awardCompanionXP/);
+  assert.doesNotMatch(ability,/awardCompanionXP/);
+  assert.doesNotMatch(attack,/awardCompanionXP/);
   // Quest rewards contribute XP but must not train the combat-only mastery ranks.
   assert.match(store,/source==='pve'\|\|source==='pvp'/);
 });
