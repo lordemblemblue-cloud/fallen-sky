@@ -3783,7 +3783,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               if (playerAnim?.HandleCombat) {
                 playerAnim.HandleCombat(montage, {
                   combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
-                  hitIndex: pendingSkillStrike?.hitIndex ?? 0,
+                  hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                   heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
                 });
               } else {
@@ -3858,7 +3858,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if (playerAnim?.HandleCombat) {
               playerAnim.HandleCombat(montage, {
                 combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
-                hitIndex: pendingSkillStrike?.hitIndex ?? 0,
+                hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                 heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
               });
             } else {
