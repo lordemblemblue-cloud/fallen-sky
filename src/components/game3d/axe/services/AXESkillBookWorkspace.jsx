@@ -186,14 +186,11 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
   const changeView = next => { setView(next); setSelected(null); setStatus(''); };
   const chooseSkill = skill => { setSelected(skill); setStatus(''); };
 
-  // The real clone route now renders the approved native three-branch layout.
-  // A classic fallback remains available for explicit legacy QA only.
-  if (!cloneClassic) return <AXECloneSkillTreeWorkspace
-    serviceId={currentPage}
-    onSelect={page => onSelect ? onSelect(page) : setLocalPage(page)}
-    onClose={onClose}/>;
-
-  return <AXESkillBookRedesign
+  // Both presentations use the SAME authoritative Skill Book controller.
+  // The clone's approved three-lane UI must never bypass these real equipment,
+  // weapon bar, skill unlock, point investment and saved preset callbacks.
+  const SkillBookView = cloneClassic ? AXESkillBookRedesign : AXECloneSkillTreeWorkspace;
+  return <SkillBookView
     currentPage={currentPage} companion={companion}
     onPageChange={id=>onSelect?onSelect(id):setLocalPage(id)}
     view={view} onChangeView={changeView}
