@@ -23,10 +23,16 @@ export default function AXECompanionOverviewClone({
   const [collectionKind,setCollectionKind] = useState('mount');
   const [selectedMountId,setSelectedMountId] = useState(null);
   const [search,setSearch] = useState('');
+  const [quickSearch,setQuickSearch] = useState('');
   useEffect(() => subscribeAXEMounts(setMounts), []);
 
   const allPets = pets.pets || [];
   const allMounts = mounts.mounts || [];
+  const filteredPets=allPets.filter(pet=>{
+    const name=getAXEPetDefinition(pet.definitionId)?.name||pet.definitionId;
+    return !quickSearch||[name,pet.definitionId,pet.tierId]
+      .filter(Boolean).join(' ').toLowerCase().includes(quickSearch.trim().toLowerCase());
+  });
   const selectedPet = allPets.find(p=>p.instanceId===selectedPetId)
     || allPets.find(p=>p.instanceId===pets.activeRegisteredPetId)
     || allPets[0] || null;
@@ -74,8 +80,12 @@ export default function AXECompanionOverviewClone({
   return <div className="axe-comp-redesign" aria-label="Companion profile">
     <aside className="axe-comp-quick-list" aria-label="Owned companion quick select">
       <h3>My Companions <small>{allPets.length} owned</small></h3>
+      <label className="axe-comp-quick-search"><Search size={15}/>
+        <input type="search" aria-label="Search my companions" placeholder="Find companion"
+          value={quickSearch} onChange={event=>setQuickSearch(event.target.value)}/>
+      </label>
       <div className="axe-comp-quick-scroll">
-        {allPets.map(pet => {
+        {filteredPets.map(pet => {
           const petDef = getAXEPetDefinition(pet.definitionId);
           const chosen = !isMount && selectedPet?.instanceId===pet.instanceId;
           return <button type="button" key={pet.instanceId}
@@ -87,10 +97,11 @@ export default function AXECompanionOverviewClone({
           </button>;
         })}
         {!allPets.length && <p>No owned companions.</p>}
+        {!!allPets.length&&!filteredPets.length&&<p>No companions match your search.</p>}
       </div>
       <button className="axe-comp-mount-inventory-toggle" type="button" onClick={()=>{
         setShowCollection(value=>!value);setCollectionKind('mount');setSearch('');
-      }}>{showCollection?'Back to Companion':'Mount Inventory'}</button>
+      }}>{showCollection?'Back to Companion 3D':'Browse Companions & Mounts'}</button>
     </aside>
 
     <section className="axe-comp-profile-center" aria-label={showCollection?'Owned companions and mounts':'Companion 3D viewer'}>

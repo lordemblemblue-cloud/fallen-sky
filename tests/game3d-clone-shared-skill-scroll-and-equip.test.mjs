@@ -25,18 +25,14 @@ test('one reverse horizontal wheel drives both skill rows in the requested direc
   assert.match(css,/scrollbar-width:none/);
 });
 
-test('upper row shows registered skills and linked buffs; lower row has five paid strengthening stages',()=>{
+test('top row shows all active skills; bottom row shows five free staged passives',()=>{
   const tree=read('AXESkillPathHorizontal.jsx');
-  assert.match(tree,/Skills \/ Buffs & Passives/);
-  assert.match(tree,/Progression · Upgrade Strength/);
-  assert.match(tree,/const topCards=\[/);
-  assert.match(tree,/\{skillId:path\.active\[0\]/);
-  assert.match(tree,/\{skillId:path\.active\[1\]/);
-  assert.match(tree,/\{skillId:path\.active\[2\]/);
-  assert.match(tree,/\{passive:path\.passives\[0\]/);
-  assert.match(tree,/\{passive:path\.passives\[1\]/);
+  assert.match(tree,/Skills · \{path\.label\}/);
+  assert.match(tree,/Passives · \{path\.label\} \(automatic\)/);
+  assert.match(tree,/topCards=path\.active\.map/);
+  assert.doesNotMatch(tree,/\{passive:path\.passives\[0\]/);
   assert.match(tree,/WEAPON_SKILL_TIERS\.map\(\(cost,i\)=>/);
-  assert.match(tree,/Math\.round\(100\*allocated\/cost\)/);
+  assert.match(tree,/title=\{'Charge Focus '\+ROMAN\[i\]\}/);
   assert.equal(WEAPON_SKILL_TIERS.length,5);
   assert.match(tree,/investWeaponSkillPoint\(category,stageIndex,1\)/);
 });

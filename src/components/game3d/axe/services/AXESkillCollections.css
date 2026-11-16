@@ -1,0 +1,229 @@
+/* Unified Game 3D clone skill collections — gold-glass theme shared by
+   Universal, Character passives and Companion combat/mobility. */
+.axe-clone-skill-root .axe-ct-content--collection {
+  grid-template-columns:clamp(125px,13%,210px) minmax(0,1fr);
+}
+.axe-clone-skill-root .axe-ct-main--collection {
+  min-width:0;min-height:0;padding:10px 11px;
+  background:linear-gradient(140deg,rgba(5,21,37,.97),rgba(10,30,49,.95));
+}
+.axe-sk-hub {
+  flex:1 1 auto;display:flex;flex-direction:column;
+  min-width:0;min-height:0;overflow:hidden;gap:10px;
+  font-family:Georgia,serif;color:#f4e4ce;
+}
+.axe-sk-hero {
+  display:flex;align-items:center;gap:13px;
+  border:1px solid #dbb479;border-radius:15px;
+  background:linear-gradient(130deg,#17314bab,#102339f2);
+  padding:12px 14px;min-height:90px;flex-shrink:0;
+}
+.axe-sk-hero-symbol {
+  display:grid;place-items:center;flex:0 0 56px;
+  width:56px;height:56px;border-radius:13px;
+  background:linear-gradient(145deg,#544269,#1b334a);
+  color:#f7d38b;border:1px solid #e4ba73;
+  box-shadow:0 0 13px #f6ca7d54;
+}
+.axe-sk-hero>div:nth-child(2) {min-width:0;flex:1;}
+.axe-sk-hero small {
+  font:10px Georgia,serif;letter-spacing:.06em;color:#efcd94;
+}
+.axe-sk-hero h2 {
+  font:normal clamp(23px,2.25vw,34px)/1.1 Georgia,serif;
+  color:#ffe2a9;margin:3px 0;
+}
+.axe-sk-hero p {
+  font:12px/1.5 Georgia,serif;color:#dcd5c6;margin:4px 0;
+}
+.axe-sk-hero>span {
+  flex-shrink:0;border:1px solid #af996f;border-radius:18px;
+  color:#e9d6b7;padding:6px 11px;font:11px Georgia,serif;
+}
+.axe-sk-toolbar {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:2px 0 8px;border-bottom:1px solid #ad8a5a7a;min-width:0;
+}
+.axe-sk-filters,.axe-sk-companion-tabs,.axe-sk-combat-paths {
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.axe-sk-filters button,.axe-sk-companion-tabs button,.axe-sk-combat-paths button {
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:7px 13px;min-height:32px;
+  border:1px solid #b89b71;border-radius:19px;
+  background:#112840;color:#e8d5b8;font:13px Georgia,serif;
+}
+.axe-sk-filters button[aria-pressed=true],
+.axe-sk-companion-tabs button[aria-pressed=true],
+.axe-sk-combat-paths button[aria-pressed=true] {
+  color:#33291a;background:linear-gradient(90deg,#dbb374,#ffe2a2);
+  box-shadow:0 0 12px #e3b66e88;border-color:#ffe2a2;
+}
+.axe-sk-companion-tabs {
+  gap:6px;padding-bottom:6px;border-bottom:1px solid #a68b6055;
+}
+.axe-sk-search {
+  display:flex;align-items:center;gap:7px;min-width:130px;
+  width:clamp(160px,24%,265px);padding:7px 10px;
+  border:1px solid #b79b76;border-radius:10px;
+  background:#13273be5;color:#edcf98;
+}
+.axe-sk-search input {
+  border:0;outline:none;background:transparent;color:#ffe9c4;
+  min-width:0;width:100%;font:12px Georgia,serif;
+}
+.axe-sk-search:focus-within {outline:2px solid #f6d69d;outline-offset:2px;}
+.axe-sk-columns {
+  flex:1;min-height:0;min-width:0;
+  display:grid;grid-template-columns:minmax(0,1.48fr) minmax(230px,1fr);gap:10px;
+}
+.axe-sk-skill-list {
+  min-height:0;min-width:0;overflow-y:auto;
+  display:flex;flex-direction:column;gap:7px;
+  padding:5px;scrollbar-width:thin;scrollbar-color:#c6a27380 transparent;
+}
+.axe-sk-skill {
+  flex:0 0 auto;display:flex;align-items:center;gap:12px;text-align:left;
+  min-height:68px;padding:10px 12px;
+  background:linear-gradient(120deg,#1d3246,#10273b);
+  border:1px solid #7f8d95;border-radius:13px;color:#f6dec0;
+}
+.axe-sk-skill--selected,.axe-sk-skill:hover {
+  border-color:#ffe0a0;box-shadow:0 0 13px #f6b76e45;
+}
+.axe-sk-skill>span:nth-child(2) {min-width:0;flex:1;}
+.axe-sk-skill strong {display:block;font:normal 18px/1.1 Georgia,serif;}
+.axe-sk-skill small {display:block;margin-top:5px;font:11px/1.4 Georgia,serif;color:#c6d1d6;}
+.axe-sk-skill-mark {
+  display:grid;place-items:center;flex-shrink:0;width:43px;height:43px;
+  border:1px solid #d9b580;border-radius:11px;color:#eac18b;
+  background:linear-gradient(130deg,#2c3553,#152f47);
+}
+.axe-sk-skill-end {color:#b8e8cc;font:11px Georgia,serif;white-space:nowrap;}
+.axe-sk-inspector {
+  min-height:0;min-width:0;overflow-y:auto;
+  padding:16px;border:1px solid #d4a86d;border-radius:16px;
+  background:linear-gradient(145deg,#112b43,#0b1e31);
+}
+.axe-sk-inspector-kicker {
+  text-transform:uppercase;letter-spacing:.09em;font:10px Georgia,serif;color:#f3c681;
+}
+.axe-sk-inspector h3 {font:normal 27px Georgia,serif;color:#faddaa;margin:7px 0 12px;}
+.axe-sk-inspector p {font:13px/1.5 Georgia,serif;color:#e7ddce;margin:6px 0 13px;}
+.axe-sk-inspector h4 {
+  display:flex;align-items:center;gap:8px;margin:16px 0 8px;
+  border-bottom:1px solid #b59664aa;padding-bottom:8px;
+  font:normal 18px Georgia,serif;color:#ffdfab;
+}
+.axe-sk-metrics {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;
+}
+.axe-sk-metrics span {
+  background:#192e41;border:1px solid #647c8990;border-radius:9px;
+  padding:9px;font:11px Georgia,serif;color:#b9c9d1;
+}
+.axe-sk-metrics strong {display:block;margin-top:5px;color:#f0e5cf;font-size:14px;}
+.axe-sk-stat {
+  display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px solid #70838b44;padding:7px 0;
+  font:12px Georgia,serif;
+}
+.axe-sk-stat strong {color:#c2eacb;text-align:right;}
+.axe-sk-equip {
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;margin-top:16px;padding:11px 9px;
+  border:1px solid #f0d19a;border-radius:9px;
+  background:linear-gradient(90deg,#e0bb7a,#ffe1a4,#c89b5d);
+  color:#302313;font:16px Georgia,serif;
+}
+.axe-sk-equip:disabled {opacity:.5;cursor:not-allowed;}
+.axe-sk-caption,.axe-sk-inspector .axe-sk-caption {font-size:11px;color:#b4c2c4;}
+.axe-sk-path-caption {
+  font:13px Georgia,serif;color:#d8c19c;padding:8px;
+}
+.axe-sk-combat-rule {
+  flex:0 0 auto;margin:8px 0 0;padding:12px;
+  border:1px solid #8b9f9b99;border-radius:12px;background:#172d3c;
+}
+.axe-sk-combat-rule span {display:flex;align-items:center;gap:7px;color:#f5d49b;font-size:15px;}
+.axe-sk-combat-rule p {color:#cad5d9;font:12px/1.5 Georgia,serif;margin:6px 0 0;}
+.axe-sk-empty {padding:15px;color:#d7c7ab;font:13px/1.5 Georgia,serif;}
+@media(max-width:1150px) {
+  .axe-sk-columns {grid-template-columns:minmax(0,1fr) minmax(210px,.8fr);}
+}
+@media(max-width:760px) {
+  .axe-sk-columns {grid-template-columns:minmax(0,1fr);overflow-y:auto;}
+  .axe-sk-inspector {min-height:230px;overflow:visible;}
+  .axe-sk-hero {padding:8px;gap:8px;}
+  .axe-sk-hero-symbol {width:40px;height:40px;flex-basis:40px;}
+  .axe-sk-hero>span {display:none;}
+  .axe-sk-skill-list {min-height:160px;overflow:visible;}
+  .axe-sk-toolbar {flex-wrap:wrap;}
+  .axe-sk-search {width:100%;}
+}
+
+/* Companion skill owner has its own explicit subpages, not a duplicate
+   Weapon Category rail inherited from the old Character combat iteration. */
+.axe-clone-skill-root .axe-ct-content--companion {
+  grid-template-columns:minmax(0,1fr);
+}
+.axe-clone-skill-root .axe-ct-content--companion>.axe-ct-main {
+  grid-column:1;min-width:0;min-height:0;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-main--collection {
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-equipped {
+  margin-top:9px;flex:0 0 auto;min-height:0;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-equipped-slots {
+  min-height:0;
+}
+
+/* Companion Combat uses connected horizontal skill-tree nodes like the
+   character Single/Multi/Aerial tree, never the old unrelated list layout. */
+.axe-sk-companion-tree {
+  flex-direction:row;
+  align-items:stretch;
+  overflow-x:auto;
+  overflow-y:hidden;
+  min-height:165px;
+  max-height:210px;
+  gap:0;
+  padding:16px 8px;
+  scrollbar-width:thin;
+  scrollbar-color:#edc17b66 transparent;
+}
+.axe-sk-combat-node {
+  display:flex;align-items:center;gap:5px;
+  flex:0 0 auto;min-height:100%;width:auto;
+}
+.axe-sk-combat-node>.axe-sk-skill {
+  flex:0 0 195px;max-width:195px;min-height:112px;
+  flex-direction:column;align-items:flex-start;justify-content:center;
+  background:linear-gradient(145deg,#273951,#13263d);
+  box-shadow:inset 0 0 12px #e7c48417;
+}
+.axe-sk-combat-node>.axe-sk-skill strong {font-size:15px;}
+.axe-sk-combat-connector {
+  display:flex;align-items:center;justify-content:center;
+  color:#f5c67f;filter:drop-shadow(0 0 4px #eeb879);
+  flex:0 0 37px;min-width:37px;
+}
+.axe-sk-list-row {min-width:0;flex:0 0 auto;}
+.axe-sk-list-row>.axe-sk-skill {width:100%;}
+@media(max-width:760px) {
+  .axe-sk-companion-tree {min-height:148px;overflow-x:auto;overflow-y:hidden;}
+  .axe-sk-combat-node>.axe-sk-skill {flex-basis:165px;max-width:165px;}
+  .axe-sk-combat-connector {min-width:24px;flex-basis:24px;}
+}
+
+.axe-sk-companion-left {
+  min-width:0;min-height:0;display:flex;flex-direction:column;gap:9px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:#bda17366 transparent;
+}
+.axe-sk-companion-left>.axe-sk-companion-list:not(.axe-sk-companion-tree) {
+  min-height:120px;flex:0 1 auto;overflow-y:auto;
+}
+.axe-sk-companion-left>.axe-sk-companion-tree {flex:0 0 auto;}
+.axe-sk-companion-left>.axe-sk-combat-rule {flex:0 0 auto;}

@@ -9,6 +9,8 @@ import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMaster
 import { isWeaponSkillUnlocked, getWeaponSkillChargeBonusPct, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
 import AXESkillPathHorizontal from './AXESkillPathHorizontal';
+import AXEUniversalSkillHub from './AXEUniversalSkillHub';
+import AXECompanionSkillHub from './AXECompanionSkillHub';
 import AXESkillTreeErrorBoundary from './AXESkillTreeErrorBoundary';
 import {
   CLONE_SKILL_TREE_CATEGORIES, createCloneSkillTreePaths, resolveCloneSkillTreeTier,
@@ -186,6 +188,7 @@ export default function AXECloneSkillTreeWorkspace({
     registry.filter(s=>s.skill_type===SKILL_TYPE.PASSIVE) :
     registry.filter(s=>s.skill_type===(view==='buffs'||category==='universal'?SKILL_TYPE.ACTIVE_BUFF:SKILL_TYPE.ACTIVE_ATTACK));
   const collection = view==='skills'&&!companion&&['damage','range','defense'].includes(category);
+  const modernCollection=companion||['universal','passive'].includes(category);
   const getSkill = companion ? getCompanionSkillById : getSkillById;
   const switchPreset = next => {
     if (!onChoosePreset) {setFeedback('Skill set switching is unavailable.');return;}
@@ -216,6 +219,13 @@ export default function AXECloneSkillTreeWorkspace({
     equipSkill(skill,targetEquipSlot);
     setManualSkillSelected(false);
     setTargetEquipSlot(null);
+  };
+  const equipFromModernHub = skill => {
+    if(!skill)return;
+    const destination=skill.skill_type===SKILL_TYPE.PASSIVE?null:targetEquipSlot;
+    equipSkill(skill,destination);
+    setTargetEquipSlot(null);
+    setManualSkillSelected(false);
   };
   const equipFromCatalog = skillId => {
     const skill=getSkill(skillId);
@@ -263,7 +273,7 @@ export default function AXECloneSkillTreeWorkspace({
   };
   const selectedWeapon = ['damage','range','defense'].includes(category)
     ? getWeaponForSkillBookMode(ownedWeapons,category) : null;
-  void selectedSkill;void passiveIds;void onRemovePassive;
+  void selectedSkill;void onRemovePassive;
   return <div className="axe-clone-skill-root" data-progression-panel={currentPage}>
     <header className="axe-ct-header">
       <BookOpen size={34} aria-hidden="true"/>
@@ -278,20 +288,32 @@ export default function AXECloneSkillTreeWorkspace({
         {onClose && <button className="axe-ct-close" type="button" aria-label="Close Skill Book"
           onClick={onClose}><X size={20}/></button>}</div>
     </header>
-    <div className={'axe-ct-content'+(collection?' axe-ct-content--horizontal':'')}>
-      <aside className="axe-ct-categories" aria-label="Weapon Category">
+    <div className={'axe-ct-content'+(collection?' axe-ct-content--horizontal':'')+
+      (modernCollection?' axe-ct-content--collection':'')+
+      (companion?' axe-ct-content--companion':'')}>
+      {!companion && <aside className="axe-ct-categories" aria-label="Weapon Category">
         {displayCategories.map(item=><button key={item.id} type="button"
           aria-pressed={category===item.id} onClick={()=>selectCategory(item.id)}>
           <TreeIcon kind={item.icon} size={27}/><span>{item.label}</span></button>)}
-      </aside>
-      <main className={'axe-ct-main'+(collection?' axe-ct-main--horizontal':'')}>
+      </aside>}
+      <main className={'axe-ct-main'+(collection?' axe-ct-main--horizontal':'')+
+        (modernCollection?' axe-ct-main--collection':'')}>
         {collection ? <AXESkillTreeErrorBoundary resetKey={category+':'+activePathId}>
           <AXESkillPathHorizontal category={category} paths={paths}
             activePathId={activePathId} onChangePath={changePath}
             selected={selected} onSelect={selectNode} activeIds={activeIds}
             onEquipSkill={equipFromTree} onFeedback={setFeedback}
             onActivateWeapon={onActivateWeapon} activeMode={activeMode}/>
-        </AXESkillTreeErrorBoundary> : <>
+        </AXESkillTreeErrorBoundary> : companion
+          ? <AXECompanionSkillHub activeIds={activeIds}
+              onEquip={equipFromModernHub}
+              onSelected={skill=>selectNode({kind:'skill',id:skill.skill_id,tier:0})}/>
+          : ['universal','passive'].includes(category)
+          ? <AXEUniversalSkillHub key={category} passiveOnly={category==='passive'}
+              activeIds={activeIds} passiveIds={passiveIds}
+              onEquip={equipFromModernHub}
+              onSelected={skill=>selectNode({kind:'skill',id:skill.skill_id,tier:0})}/>
+          : <>
           <div className="axe-ct-main-heading">
             <div className="axe-ct-main-icon"><Swords size={29}/></div>
             <div><h2>{companion?'Companion Skills':category==='passive'?'Passive Skills':'Universal Skills'}</h2>
@@ -356,7 +378,7 @@ export default function AXECloneSkillTreeWorkspace({
           </div>
         </div>
       </main>
-      {!collection && <SkillDetails node={resolveNodeForDetail()} category={category} paths={paths}
+      {!collection && !modernCollection && <SkillDetails node={resolveNodeForDetail()} category={category} paths={paths}
         companion={companion} activeIds={activeIds} onEquip={equipSkill}/>}
     </div>
     <footer className="axe-ct-footer">
