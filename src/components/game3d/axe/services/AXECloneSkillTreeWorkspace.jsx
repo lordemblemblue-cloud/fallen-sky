@@ -122,12 +122,15 @@ function SkillDetails({ node, category, paths, companion, activeIds, onEquip }) 
     </button>}
   </aside>;
 }
-function FlatSkillCatalog({ skills, selected, equipped, onSelect, companion, search }) {
+function FlatSkillCatalog({ skills, selected, equipped, onSelect, companion, search, onEquipSkill }) {
   const items=skills.filter(skill=>!search ||
     [skill.skill_name,skill.description,skill.category].filter(Boolean).join(' ').toLowerCase().includes(search));
   return <div className="axe-ct-flat-catalog">{items.map(skill=><button key={skill.skill_id} type="button"
     className={selected?.id===skill.skill_id?'axe-ct-flat-selected':''}
-    onClick={()=>onSelect({kind:'skill',id:skill.skill_id,tier:0})}>
+    onClick={()=>onSelect({kind:'skill',id:skill.skill_id,tier:0})}
+    onDoubleClick={()=>onEquipSkill?.(skill.skill_id)}
+    onContextMenu={event=>{event.preventDefault();onEquipSkill?.(skill.skill_id);}}
+    title={skill.skill_name+' — Double-click or right-click to equip'}>
     <TreeIcon kind={skill.aerial?'aerial':classify(skill)==='Multi-Hit'?'triple':'single'} size={38}/>
     <strong>{skill.skill_name}</strong><small>{companion?skill.category:classify(skill)}</small>
     <span>{equipped.includes(skill.skill_id)?'Equipped':'Available'}</span>
@@ -153,6 +156,10 @@ export default function AXECloneSkillTreeWorkspace({
     return {kind:'skill',id:initial.active[0],category:mode,lane:'single',tier:1};
   });
   const [feedback,setFeedback] = useState('');
+  // Optional target slot for gestures: right-click or double-click a skill
+  // to equip to the selected slot, otherwise use the next empty slot.
+  const [targetEquipSlot,setTargetEquipSlot] = useState(null);
+  const [manualSkillSelected,setManualSkillSelected] = useState(false);
   const paths = useMemo(()=>createCloneSkillTreePaths(category),[category]);
   const normalizedSearch = search.trim().toLowerCase();
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
@@ -197,12 +204,43 @@ export default function AXECloneSkillTreeWorkspace({
   };
   const selectNode = node => {
     setSelected(node);
+    setManualSkillSelected(node?.kind==='skill');
     onSelectSkill?.(node?.kind==='skill' ? getSkill(node.id) : null);
     setFeedback('');
+  };
+  const equipFromTree = skillId => {
+    // Only registered active attacks can be equipped from this weapon tree;
+    // visual charged-strike passives and paid stages are not castable items.
+    const skill=getSkillById(skillId);
+    if(!skill) { setFeedback('This entry is a progression bonus, not an equippable skill.');return; }
+    equipSkill(skill,targetEquipSlot);
+    setManualSkillSelected(false);
+    setTargetEquipSlot(null);
+  };
+  const equipFromCatalog = skillId => {
+    const skill=getSkill(skillId);
+    if(!skill)return;
+    // Real passive skills use passive slots rather than the targeted active slot.
+    const destination=skill.skill_type===SKILL_TYPE.PASSIVE?null:targetEquipSlot;
+    equipSkill(skill,destination);
+    setManualSkillSelected(false);
+    setTargetEquipSlot(null);
+  };
+  const clickEquipSlot = index => {
+    if(manualSkillSelected&&selected?.kind==='skill'){
+      equipSkill(getSkill(selected.id),index);
+      setManualSkillSelected(false);
+      setTargetEquipSlot(null);
+    } else {
+      setTargetEquipSlot(index);
+      setFeedback('Skill slot '+(index===9?'0':index+1)+' selected. Right-click or double-click a skill to equip it here.');
+    }
   };
   const selectCategory = id => {
     setCategory(id);
     setActivePathId('single');
+    setTargetEquipSlot(null);
+    setManualSkillSelected(false);
     const first=['damage','range','defense'].includes(id)?createCloneSkillTreePaths(id)[0]:null;
     const next=first?{kind:'skill',id:first.active[0],lane:'single',category:id,tier:1}:null;
     setSelected(next);
@@ -213,7 +251,10 @@ export default function AXECloneSkillTreeWorkspace({
     const next=paths.find(item=>item.id===id);
     if(!next)return;
     setActivePathId(id);
-    selectNode({kind:'skill',id:next.active[0],lane:id,category,tier:1});
+    setTargetEquipSlot(null);
+    setManualSkillSelected(false);
+    setSelected({kind:'skill',id:next.active[0],lane:id,category,tier:1});
+    onSelectSkill?.(getSkillById(next.active[0]));
   };
   const resolveNodeForDetail = () => {
     if(!selected) return null;
@@ -248,7 +289,8 @@ export default function AXECloneSkillTreeWorkspace({
           <AXESkillPathHorizontal category={category} paths={paths}
             activePathId={activePathId} onChangePath={changePath}
             selected={selected} onSelect={selectNode} activeIds={activeIds}
-            onFeedback={setFeedback}/>
+            onEquipSkill={equipFromTree} onFeedback={setFeedback}
+            onActivateWeapon={onActivateWeapon} activeMode={activeMode}/>
         </AXESkillTreeErrorBoundary> : <>
           <div className="axe-ct-main-heading">
             <div className="axe-ct-main-icon"><Swords size={29}/></div>
@@ -275,7 +317,8 @@ export default function AXECloneSkillTreeWorkspace({
           {view==='advance'&&!companion
             ? <div className="axe-ct-tree-scroll axe-ct-advance"><AXEWeaponSkillPointsPanel/></div>
             : <FlatSkillCatalog skills={filteredFlat} selected={selected} equipped={activeIds}
-                companion={companion} search={normalizedSearch} onSelect={selectNode}/>}
+                companion={companion} search={normalizedSearch} onSelect={selectNode}
+                onEquipSkill={equipFromCatalog}/>}
         </>}
         <div className="axe-ct-equipped" aria-label="Equipped skills">
           <div className="axe-ct-equipped-heading">
@@ -289,14 +332,22 @@ export default function AXECloneSkillTreeWorkspace({
             </button>
             <button type="button" onClick={()=>switchPreset(currentPresetIndex+1)} aria-label="Next skill set">
               <ChevronRight size={20}/></button>
-            <small>Select a skill, then choose a slot.</small>
+            <small>Select a slot, then right-click or double-click a skill to equip.</small>
           </div>
           <div className="axe-ct-equipped-slots">
-            {activeIds.map((id,i)=><button type="button" key={i} onClick={()=>{
-                if(selected?.kind==='skill')equipSkill(getSkill(selected.id),i);
-                else if(id)onRemoveActive?.(i);
-              }} title={id ? getSkill(id)?.skill_name || 'Equipped skill' : 'Empty skill slot'}
-              aria-label={(companion?COMPANION_SLOT_KEYS[i]:String(i+1))+': '+(getSkill(id)?.skill_name||'Empty')}>
+            {activeIds.map((id,i)=><button type="button" key={i}
+              className={targetEquipSlot===i?'axe-ct-equipped-target':''}
+              aria-pressed={targetEquipSlot===i}
+              onClick={()=>clickEquipSlot(i)}
+              onContextMenu={event=>{
+                event.preventDefault();
+                if(id)onRemoveActive?.(i);
+                setTargetEquipSlot(null);
+              }}
+              title={(id ? getSkill(id)?.skill_name || 'Equipped skill' : 'Empty skill slot')+
+                ' — Click to target for skill gestures; right-click a filled slot to unequip'}
+              aria-label={(companion?COMPANION_SLOT_KEYS[i]:String(i+1))+': '+(getSkill(id)?.skill_name||'Empty')+
+                (targetEquipSlot===i?' — selected destination':'')}>
               {id?<TreeIcon kind={classify(getSkill(id))==='Multi-Hit'?'triple':
                 classify(getSkill(id))==='Aerial Effect'?'aerial':'single'} size={34}/>
                 :<span className="axe-ct-slot-star">✦</span>}

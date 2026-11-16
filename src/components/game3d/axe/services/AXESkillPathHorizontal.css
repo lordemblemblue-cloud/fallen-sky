@@ -380,3 +380,65 @@
   color:#362719;background:#f4d79c;font:14px Georgia,serif;
 }
 .axe-hp-recovery button:focus-visible {outline:2px solid #ffe8aa;outline-offset:2px;}
+
+/* Both rows share ONE horizontal scroll viewport; no independent row scrollbars.
+   Scroll down moves LEFT; scroll up moves RIGHT. Touch-swipe and keyboard
+   retain native scrollability for mobile and accessibility. */
+.axe-hp-tree-branches {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+  overscroll-behavior:contain;
+  scroll-behavior:auto;
+  outline-offset:-3px;
+}
+.axe-hp-tree-branches::-webkit-scrollbar,
+.axe-hp-tree-track::-webkit-scrollbar {display:none;width:0;height:0;}
+.axe-hp-tree-track {
+  display:flex;
+  align-items:stretch;
+  flex:1 0 0;
+  width:max-content;
+  min-width:100%;
+  min-height:0;
+  overflow:visible;
+  scrollbar-width:none;
+}
+.axe-hp-track-item {
+  flex:0 0 clamp(107px,9.4vw,152px);
+  min-width:107px;
+  max-width:152px;
+}
+.axe-hp-track-caption {
+  background:rgba(9,26,42,.98);
+  box-shadow:0 1px 8px #0005;
+}
+.axe-hp-tree-branches:focus-visible {
+  outline:2px solid #f6cd86;
+}
+.axe-hp-wheel>button[aria-pressed=true] {border-radius:50%;}
+.axe-ct-equipped-slots>button.axe-ct-equipped-target {
+  border:2px solid #ffe5aa;
+  background:linear-gradient(145deg,#54432f,#192b40);
+  box-shadow:0 0 13px #f6c778a8,inset 0 0 7px #f6c7784f;
+}
+@media(max-width:1340px) {
+  .axe-hp-track-item {flex-basis:127px;min-width:127px;max-width:127px;}
+}
+@media(max-width:720px) {
+  .axe-hp-track-item {flex-basis:108px;min-width:108px;max-width:108px;}
+}
+
+/* Preserve the canonical weapon bar control without taking another toolbar row. */
+.axe-hp-activate-bar {
+  display:inline-flex;align-items:center;justify-content:center;
+  margin-top:6px;padding:4px 9px;min-height:25px;
+  border:1px solid #dcb47c;border-radius:8px;
+  background:rgba(22,42,59,.84);color:#f5dcae;
+  font:11px Georgia,serif;white-space:nowrap;
+}
+.axe-hp-activate-bar:hover {border-color:#ffe3ac;background:rgba(94,71,43,.7);}

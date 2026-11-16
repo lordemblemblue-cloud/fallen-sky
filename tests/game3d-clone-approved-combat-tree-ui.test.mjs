@@ -48,7 +48,7 @@ test('Game 3D clone route renders approved tree by default and keeps classic QA 
     'subscribeSkillMastery','subscribeWeaponSkillPoints','isWeaponSkillUnlocked']){
     assert(tree.includes(term),'missing '+term);
   }
-  for(const term of ['Active Skill Path','Passive Path','Single, Multi and Aerial paths',
+  for(const term of ['Skills / Buffs & Passives','Progression · Upgrade Strength','Single, Multi and Aerial paths',
     'Skill Information','investWeaponSkillPoint(category,stageIndex,1)']){
     assert(horizontal.includes(term),'missing new horizontal layout: '+term);
   }
@@ -75,10 +75,12 @@ test('approved visual remains hooked to the existing skill controller, not a dup
   for(const text of [
     'onQuickEquip?.(skill)', 'onEquipActive?.(index,skill)',
     'onRemoveActive?.(i)', 'onSavePreset?.()', 'onChoosePreset((next+3)%3)',
-    'onActivateWeapon?.(category)', 'onPageChange?.(id)', 'onChangeView?.(id)',
+    'onActivateWeapon={onActivateWeapon}', 'onPageChange?.(id)', 'onChangeView?.(id)',
     'onSelectSkill?.(', 'getWeaponForSkillBookMode(ownedWeapons,category)',
     'companionCategories', 'getAllCompanionSkills()', 'subscribeWeaponSkillPoints',
   ]) assert(tree.includes(text),'missing restored Skill Book behavior: '+text);
+  assert(read('AXESkillPathHorizontal.jsx').includes('onActivateWeapon?.(category)'),
+    'weapon-bar activation must remain available inside the horizontal tree');
   for(const old of ['const [view,setView]', 'const loadout = useGameStore',
     'selectSkillPreset((next+3)%3)', 'equipActive(slot,skill.skill_id)',
     'equipCompanionSkill(slot,skill.skill_id)']){

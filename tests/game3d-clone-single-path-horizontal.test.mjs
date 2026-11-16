@@ -15,7 +15,8 @@ test('only the selected Single, Multi or Aerial skill path is rendered',()=>{
   assert.doesNotMatch(main,/paths\.map\(path=><BranchLane/);
   assert.match(horizontal,/const path=paths\.find\(item=>item\.id===activePathId\)\|\|paths\[0\]/);
   assert.match(horizontal,/aria-label="Single, Multi and Aerial paths"/);
-  assert.match(horizontal,/onWheel=\{event=>/);
+  assert.match(horizontal,/viewport\.addEventListener\('wheel',onWheel,\{passive:false\}\)/);
+  assert.match(horizontal,/horizontalSkillWheelOffset\(event\.deltaY,event\.deltaX\)/);
   assert.match(horizontal,/event\.key==='ArrowDown'/);
   assert.match(horizontal,/onClick=\{\(\)=>onChangePath\(entry\.id\)\}/);
   assert.equal(createCloneSkillTreePaths('range').length,3);
@@ -26,12 +27,13 @@ test('reference composition uses horizontal root-to-active and root-to-passive f
   const css=read('AXESkillPathHorizontal.css');
   for(const label of [
     'axe-hp-feature','axe-hp-wheel','axe-hp-fork-lines','axe-hp-tree-root',
-    'axe-hp-tree-branches','axe-hp-track-caption','Active Skill Path',
-    'Passive Path','axe-hp-info','Skill Information','Passive Gain (Path)',
+    'axe-hp-tree-branches','axe-hp-track-caption','Skills / Buffs & Passives',
+    'Progression · Upgrade Strength','axe-hp-info','Skill Information','Passive Gain (Path)',
     'Next Level','Upgrade','Equipped',
   ]) assert(horizontal.includes(label)||css.includes(label),'missing feature: '+label);
   assert.match(css,/\.axe-hp-tree-branches\s*\{/);
-  assert.match(css,/grid-template-rows:minmax\(115px,1fr\) minmax\(115px,1fr\)/);
+  assert.match(css,/scrollbar-width:none/);
+  assert.match(css,/\.axe-hp-tree-track \{/);
   assert.match(css,/\.axe-hp-wheel::after/);
   assert.doesNotMatch(css,/background-image:\s*url\(/);
   assert.doesNotMatch(horizontal,/<img\b/);
