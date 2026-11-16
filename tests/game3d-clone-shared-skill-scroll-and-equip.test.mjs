@@ -60,6 +60,9 @@ test('right-click and double-click equip only real skill icons into a selected o
   assert.match(book,/onContextMenu=\{event=>\{event\.preventDefault\(\);onEquipSkill\?\.\(skill\.skill_id\);\}\}/);
   assert.match(book,/skill\.skill_type===SKILL_TYPE\.PASSIVE\?null:targetEquipSlot/);
   assert.match(book,/onClick=\{\(\)=>clickEquipSlot\(i\)\}/);
+  assert.match(book,/if\(id\)onRemoveActive\?\.\(i\)/);
+  assert.doesNotMatch(book,/onDoubleClick=\{\(\)=>\{if\(id\)onRemoveActive/,
+    'double-clicking a target slot must not undo the new equip');
   assert.match(controller,/onQuickEquip=\{quickEquip\} onEquipActive=\{placeActive\}/);
   assert.match(controller,/const slot = activeIds\.indexOf\(null\)/);
   assert.doesNotMatch(tree,/equipActive\(|equipPassive\(|awardSkillXp\(/);
