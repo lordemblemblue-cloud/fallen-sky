@@ -7,6 +7,7 @@
 // review, so an honest player is never blocked by a guess.
 import { AXE_LEVEL_CAP } from './axePowerBudget.ts';
 import { SKILL_MASTERY_KEY, checkSkillMasterySave, skillMasteryRateFlags } from './skillMastery.ts';
+import { WEAPON_SKILL_POINTS_KEY, checkWeaponSkillPoints } from './weaponSkillPoints.mjs';
 
 type Save = Record<string, string>;
 
@@ -62,6 +63,15 @@ export function checkCharacterSave(data: unknown, previous: Save | null = null, 
     const allowed = 12 + 3 * (Math.max(1, level) - 1) + 150;
     const spent = values.reduce((a, b) => a + (b || 0), 0) + (num(hero.unspentPoints) || 0);
     if (spent > allowed) errors.push(`${spent} attribute points at level ${level} (at most ${allowed})`);
+  }
+  // Character-level weapon skill point budget (independent of attribute and use-XP mastery).
+  // Existing saves without this optional key remain compatible until first investment.
+  const weaponSkillSave = parse(s[WEAPON_SKILL_POINTS_KEY]);
+  const oldWeaponSkillSave = previous ? parse(previous[WEAPON_SKILL_POINTS_KEY]) : null;
+  if (s[WEAPON_SKILL_POINTS_KEY] !== undefined) {
+    errors.push(...checkWeaponSkillPoints(weaponSkillSave, level, oldWeaponSkillSave));
+  } else if (oldWeaponSkillSave) {
+    errors.push('weapon skill point allocation cannot disappear from an existing character');
   }
   // prestige levels
   for (const [k, max] of [['halo_progression_v3', 200], ['aura_progression_v1', 200]] as const) {
