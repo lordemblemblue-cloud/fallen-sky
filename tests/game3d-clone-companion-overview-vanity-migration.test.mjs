@@ -5,14 +5,14 @@ import { readFileSync } from 'node:fs';
 const services = 'src/components/game3d/axe/services/';
 const src = name => readFileSync(services + name, 'utf8');
 
-test('Companion has one Vanity page and a live Overview with owned roster', () => {
+test('Companion keeps one Vanity page and nests the live owned profile in Equipment', () => {
   const workspace = src('AXECompanionWorkspace.jsx');
   const overview = src('AXECompanionOverviewClone.jsx');
   const preview = readFileSync('src/components/game3d/equipment/CompanionPreview3D.jsx','utf8');
-  assert.match(workspace, /const TABS = \['Overview', 'Equipment', 'Vanity', 'Imbuement', 'Mounts', 'Mastery'\]/);
+  assert.match(workspace, /const TABS = \['Equipment', 'Vanity', 'Imbuement'\]/);
   assert.doesNotMatch(workspace, /'Vanity', 'Costumes'/);
-  assert.match(workspace, /tab === 'Overview' \? <AXECompanionOverviewClone/);
-  for (const expected of ['My Companions', 'Mount Inventory', 'Select & Equip Mount',
+  assert.match(workspace, /equipmentView === 'profile' \? <AXECompanionOverviewClone/);
+  for (const expected of ['My Companions', 'Browse Companions & Mounts', 'Select & Equip Mount',
     'Select & Summon','CompanionPreview3D', 'Search owned companions and mounts']) {
     assert(overview.includes(expected), 'Missing Overview behavior: ' + expected);
   }

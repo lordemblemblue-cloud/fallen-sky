@@ -155,7 +155,7 @@ export default function AXECompanionOverviewClone({
       {gearRows.length ? gearRows.map(([slot,id])=><div className="axe-comp-profile-item" key={slot}>
         <Shield size={15}/><span>{pretty(slot)}</span><strong>{id ? pretty(id) : 'Empty'}</strong>
       </div>) : <p>No supported gear slots for this model.</p>}
-      <button type="button" className="axe-comp-profile-secondary" onClick={onEquipment}>Manage Equipment</button>
+      <button type="button" className="axe-comp-profile-secondary" onClick={() => onEquipment(isMount ? 'mount' : 'companion')}>Manage Equipment</button>
       <h4>Progression</h4>
       {isMount ? <>
         <div className="axe-comp-profile-item"><Wind size={15}/><span>Growth</span><strong>{textValue(entry?.growthPercent)}%</strong></div>
