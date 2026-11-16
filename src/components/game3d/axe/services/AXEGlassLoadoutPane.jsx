@@ -429,7 +429,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       {!isPlayer&&<details className="axe-comp-mount-refinement" aria-label="Mount gear refinement">
         <summary>Mount Gear Refinement <span>7 slots · Stage 0–20</span></summary>
         <div className="axe-comp-refinement-content">
-          <p>Refine actual mount gear here. Mount levels and growth XP are shown on My Companion.</p>
+          <p>Refine actual mount gear here. Use the star above the 3D viewer for mount attributes, growth and XP.</p>
           <div className="axe-comp-refinement-gold">Available gold: {fmt(mounts.materials?.gold||0)}</div>
           {AXE_MOUNT_GEAR_SLOTS.map(slot=>{
             const stage=Number(selectedMount?.gear?.[slot.id]?.stage||0);
