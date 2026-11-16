@@ -8,6 +8,7 @@ import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
+import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter} from './AXESkillBookModel.mjs';
 import './AXESkillBookRedesign.css';
 
 // Only registered skills are displayed. No concept-art dummy skills, fabricated
@@ -26,19 +27,6 @@ const FILTERS = Object.freeze([
 ]);
 const legacyCategory = id => ({damage:'sword',range:'bow',defense:'defense'})[id]||'sword';
 const levelFor = (skill, companion) => companion ? null : getSkillMastery(skill.skill_id);
-const hasRequirement = skill => skill?.locked===true || skill?.unlock_status==='locked';
-const subtitle = skill => skill?.skill_type===SKILL_TYPE.PASSIVE ? 'Passive'
-  :skill?.skill_type===SKILL_TYPE.ACTIVE_BUFF ? 'Buff'
-  :skill?.aoe_radius>0 ? 'AOE'
-  :skill?.hit_count>1 ? 'Multi-Hit' : 'Single-Hit';
-const titleize = name => String(name).replaceAll('_',' ').replace(/\b\w/g, m=>m.toUpperCase());
-const statValue = (key,value) => {
-  if (!Number.isFinite(value)) return '—';
-  if (key.includes('pct')||key.includes('reflect')||(key.includes('chance')&&!key.includes('flat'))) {
-    return (value*100).toFixed(1)+'%';
-  }
-  return Number(value).toFixed(Number.isInteger(value)?0:2);
-};
 function useMasteryRefresh() {
   const [,setRevision]=useState(0);
   useEffect(()=>subscribeSkillMastery(()=>setRevision(n=>n+1)),[]);
@@ -62,11 +50,11 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
   const mastery=levelFor(skill,companion);
   const level=mastery?.level??1, max=mastery?.maxLevel??skill.max_level??null;
   const next=max!=null?Math.min(max,level+1):null;
-  const locked=hasRequirement(skill), requirements=requirementsOf(skill);
+  const locked=skillMarkedLocked(skill), requirements=requirementsOf(skill);
   const scalings=Object.keys(skill.scaling||{});
   const stats=[
-    ...scalings.map(key=>({key, label:titleize(key), current:statValue(key,scaleStat(skill,key,level)),
-      upcoming:next!=null && level<max?statValue(key,scaleStat(skill,key,next)):null})),
+    ...scalings.map(key=>({key, label:titleize(key), current:formatSkillStat(key,scaleStat(skill,key,level)),
+      upcoming:next!=null && level<max?formatSkillStat(key,scaleStat(skill,key,next)):null})),
     ...(Number.isFinite(Number(skill.cooldown))?[{key:'cooldown',label:'Cooldown',current:skill.cooldown+' sec'}]:[]),
     ...(Number(skill.duration)>0?[{key:'duration',label:'Duration',current:skill.duration+' sec'}]:[]),
     ...(Number(skill.hit_count)>0?[{key:'hits',label:'Hits',current:String(skill.hit_count)}]:[]),
@@ -82,7 +70,7 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
       <div className="axe-tome-inspector-identity">
         <span className="axe-tome-kicker">Skill progression</span>
         <h3>{skill.skill_name}</h3>
-        <div className="axe-tome-pills"><span>{subtitle(skill)}</span>
+        <div className="axe-tome-pills"><span>{skillLabelType(skill)}</span>
           <span>{max!=null?'Lv. '+level+' / '+max:'Mastery not configured'}</span>
           {equipped && <span className="axe-tome-equipped-label"><Check size={12}/> Equipped</span>}
         </div>
@@ -148,21 +136,11 @@ export default function AXESkillBookRedesign({
   useEffect(()=>{setCategory(companion?categories[0]?.id||'combat':legacyCategory(activeMode?.id));
     setSearch('');setFilter('all');},[companion,activeMode?.id]);
   const related=useMemo(()=>all.filter(skill=>{
-    if(companion)return skill.category===category;
-    if(category==='passive')return skill.skill_type===SKILL_TYPE.PASSIVE;
-    if(category==='universal')return skill.weapon_type==null && skill.skill_type!==SKILL_TYPE.PASSIVE;
-    const item=CHARACTER_CATEGORIES.find(x=>x.id===category);
-    return skill.weapon_type===item?.weapon;
+    return skillBelongsToCategory(skill,category,companion);
   }),[all,companion,category]);
-  const listed=useMemo(()=>related.filter(skill=>{
-    if(view==='buffs'&&skill.skill_type!==SKILL_TYPE.ACTIVE_BUFF && skill.skill_type!==SKILL_TYPE.PASSIVE && !companion)return false;
-    if(filter==='active' && skill.skill_type!==SKILL_TYPE.ACTIVE_ATTACK && !companion)return false;
-    if(filter==='passive'&&skill.skill_type!==SKILL_TYPE.PASSIVE && !companion)return false;
-    if(filter==='buff'&&skill.skill_type!==SKILL_TYPE.ACTIVE_BUFF && !companion)return false;
-    if(filter==='locked'&&!hasRequirement(skill))return false;
-    const text=(skill.skill_name+' '+(skill.description||'')).toLowerCase();
-    return !search.trim()||text.includes(search.trim().toLowerCase());
-  }),[related,view,filter,search,companion]);
+  const listed=useMemo(()=>related.filter(skill=>
+    skillMatchesBookFilter(skill,{view,filter,search,companion})),
+    [related,view,filter,search,companion]);
   useEffect(()=>{
     if(!listed.length){if(selected)onSelect(null);return;}
     if(!selected||!listed.some(skill=>skill.skill_id===selected.skill_id))
@@ -170,10 +148,7 @@ export default function AXESkillBookRedesign({
   },[listed,selected?.skill_id,onSelect]);
   const current=selected&&(companion?getCompanionSkillById(selected.skill_id):getSkillById(selected.skill_id));
   const currentCategory=categories.find(x=>x.id===category);
-  const categoryCount=id=>all.filter(skill=>companion?skill.category===id
-    :id==='passive'?skill.skill_type===SKILL_TYPE.PASSIVE
-    :id==='universal'?skill.weapon_type==null&&skill.skill_type!==SKILL_TYPE.PASSIVE
-    :skill.weapon_type===CHARACTER_CATEGORIES.find(x=>x.id===id)?.weapon).length;
+  const categoryCount=id=>all.filter(skill=>skillBelongsToCategory(skill,id,companion)).length;
   const equipMode=currentCategory?.mode;
   const weapon=equipMode?getWeaponForSkillBookMode(ownedWeapons,equipMode):null;
   const allEquipped=[...activeIds,...passiveIds];
@@ -234,7 +209,7 @@ export default function AXESkillBookRedesign({
         <div className="axe-tome-card-scroll">
           {listed.length?<div className="axe-tome-card-grid">{listed.map(skill=>{
             const mastery=levelFor(skill,companion),isEquipped=allEquipped.includes(skill.skill_id);
-            const locked=hasRequirement(skill);
+            const locked=skillMarkedLocked(skill);
             return <button type="button" className="axe-tome-card" key={skill.skill_id}
               aria-pressed={current?.skill_id===skill.skill_id} onClick={()=>onSelect(skill)}
               title={skill.description||skill.skill_name}>
@@ -242,7 +217,7 @@ export default function AXESkillBookRedesign({
               <span className="axe-tome-card-body"><strong>{skill.skill_name}</strong>
                 <small>{mastery?'Lv. '+mastery.level+' / '+mastery.maxLevel
                   :skill.max_level?'Max Lv. '+skill.max_level:'Mastery not configured'}</small>
-                <span className="axe-tome-card-subtitle">{subtitle(skill)}</span></span>
+                <span className="axe-tome-card-subtitle">{skillLabelType(skill)}</span></span>
               <span className={'axe-tome-card-status'+(locked?' is-locked':'')}>
                 {locked?<LockKeyhole size={13}/>:isEquipped?<Check size={13}/>:null}
                 {locked?'Locked':isEquipped?'Equipped':'Available'}
