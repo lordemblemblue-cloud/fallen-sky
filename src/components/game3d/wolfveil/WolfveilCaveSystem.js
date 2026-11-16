@@ -10,6 +10,7 @@ import {
   sampleWolfveilPlayerCaveFloorY,
   sampleWolfveilCaveSpace,
   planWolfveilCaveInteraction,
+  buildWolfveilCaveTravelGraph,
   resolveWolfveilCaveWallCollision,
 } from './WolfveilCaveLayout.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
@@ -155,6 +156,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   );
 
   const floorTris = new WolfveilTriangles();
+  const navigationGraph=buildWolfveilCaveTravelGraph();
   const shellTris = new WolfveilTriangles();
   const lightAnchors = [];
   const animatedFlames = [];
@@ -526,6 +528,55 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     }
   }
 
+  // Lightweight, camera-facing cave wayfinding: the stone arches now have
+  // deliberate E entry/exit and the central rotunda signs point to EACH
+  // of the four physically connected corridors. Sprites never raycast and
+  // do not create additional walkable/collision floors.
+  const addWayfinding=(label,x,y,z,width=8.2)=>{
+    if(typeof document==='undefined')return;
+    const canvas=document.createElement('canvas');
+    canvas.width=768;canvas.height=128;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)return;
+    ctx.fillStyle='rgba(9,27,43,.92)';
+    ctx.fillRect(6,7,756,112);
+    ctx.strokeStyle='#e5bf83';ctx.lineWidth=5;ctx.strokeRect(10,10,748,108);
+    ctx.fillStyle='#ffe1ab';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font='bold 39px Georgia,serif';
+    ctx.fillText(label,384,65,712);
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    ownedTextures.push(texture);
+    const mat=new THREE.SpriteMaterial({map:texture,transparent:true,
+      depthWrite:false,depthTest:true});
+    const sprite=new THREE.Sprite(mat);
+    sprite.name='SWV_CaveWayfinding_'+label.replace(/[^a-z0-9]/gi,'_');
+    sprite.position.set(x,y,z);sprite.scale.set(width,1.45,1);
+    sprite.raycast=()=>{};
+    group.add(sprite);
+    return sprite;
+  };
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES) {
+    const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    addWayfinding('E · '+cave.name,
+      cave.threshold[0],cave.threshold[1]+3.4,cave.threshold[2],10.2);
+    const ix=mx+dx*3,iz=mz+dz*3;
+    const inside=sampleWolfveilCaveSpace(ix,iz,.62);
+    if(inside)addWayfinding('E · Return Outside',ix,inside.floorY+3,iz,9);
+  }
+  const rotunda=WOLFVEIL_CAVE_HUB;
+  for(const edge of navigationGraph.edges) {
+    if(edge.from!==rotunda.id&&edge.to!==rotunda.id)continue;
+    const nextId=edge.from===rotunda.id?edge.to:edge.from;
+    const next=navigationGraph.nodes.find(node=>node.id===nextId);
+    if(!next)continue;
+    const dx=next.x-rotunda.x,dz=next.z-rotunda.z;
+    const len=Math.hypot(dx,dz)||1;
+    addWayfinding(next.name,rotunda.x+dx/len*7,
+      rotunda.y+3.3,rotunda.z+dz/len*7,10.2);
+  }
+
   const floorMesh = new THREE.Mesh(floorTris.geometry(), floorMat);
   floorMesh.name = 'SWV_CaveSystem_WalkableStoneFloor';
   floorMesh.receiveShadow = true;
@@ -566,6 +617,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     caves: WOLFVEIL_EXPLORABLE_CAVES,
     hub: WOLFVEIL_CAVE_HUB,
     corridors: WOLFVEIL_CAVE_CORRIDORS,
+    navigationGraph,
     lightAnchorCount: lightAnchors.length,
     isActive(){return activeCaveId!==null;},
     playerGroundY(worldPos) {
