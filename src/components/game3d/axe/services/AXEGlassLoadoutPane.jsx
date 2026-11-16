@@ -16,6 +16,8 @@ import { AXE_CHOSEN_SET_ID } from '../equipment/AXEChosenSetRules.mjs';
 import { getCompanionState, subscribeCompanion, equipCompanionGear, unequipCompanionGear }
   from '../../companionStore';
 import { COMPANION_GEAR, getCompanionById } from '../../companionData';
+import { getAXEMountState, subscribeAXEMounts } from '../progression/AXEMountStore';
+import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getPlayerHUD } from '../../playerHUDStore';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
@@ -55,6 +57,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
   const companion = useLive(subscribeCompanion,getCompanionState);
+  const mounts = useLive(subscribeAXEMounts,getAXEMountState);
   // This snapshot notifies Appearance immediately when Blacksmith finishes an
   // upgrade and rehydrates on a character switch.
   const enhancements = useLive(subscribeEnchantments, () => ({
@@ -67,9 +70,14 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
   const [focusedSlot,setFocusedSlot] = useState('');
-  const activeCompanion = getCompanionById(companion.activeCompanionId);
+  // Equipment belongs to the actual active owned mount, not the legacy pet
+  // default (which previously showed a baby wolf irrespective of faction).
+  const selectedMount = mounts.mounts?.find(m=>m.instanceId===mounts.activeMountId);
+  const activeModelId = selectedMount
+    ? getAXEMountDefinition(selectedMount.definitionId)?.modelRef : null;
+  const activeCompanion = getCompanionById(isPlayer ? companion.activeCompanionId : activeModelId);
   useEffect(() => subscribeAXEEquipmentInventory(state => setItems(state.items)), []);
-  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId]);
+  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId,activeModelId]);
 
   const list = useMemo(() => isPlayer
     ? items.filter(item => AXE_EQUIPMENT_SLOT_DEFS[item.slot])
@@ -195,7 +203,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       </div>)}
       <div className="axe-app-model-center"><Suspense fallback={<p className="axe-app-loading">Loading model…</p>}>
         <div className="axe-app-model-host">{isPlayer ? <PlayerModel/> :
-          activeCompanion ? <CompanionModel key={activeCompanion.id}/> :
+          activeCompanion ? <CompanionModel key={activeCompanion.id} companionId={activeCompanion.id}/> :
             <p className="axe-app-loading">No active companion selected</p>}</div>
       </Suspense></div>
       {!isPlayer && <AXECompanionFusionButton onNotice={onNotice}/>}
