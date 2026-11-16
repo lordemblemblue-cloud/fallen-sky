@@ -194,6 +194,7 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
     onQuickEquip={quickEquip} onEquipActive={placeActive}
     onRemoveActive={removeActive} onRemovePassive={removePassive}
     onSavePreset={()=>savePreset('right')}
+    onActivateWeapon={chooseWeaponMode}
     onClose={onClose} status={status}
   />;
 }
