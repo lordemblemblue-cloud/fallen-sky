@@ -217,9 +217,9 @@ export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
 ]);
 
 /**
- * True when terrain grid point (x,z) in Wolfveil local space falls inside one
- * of the 4 cave portal throats — omits those few surface triangles so the cave
- * mouth opens cleanly into the mountain without altering vertex counts.
+ * Legacy cave mouth footprint used for decoration/QA ONLY. The overhead
+ * terrain must not remove triangles here: one heightfield cannot represent
+ * both an intact hillside roof and a separate underground cave floor.
  */
 export function isWolfveilCaveMouthCutout(x, z) {
   for (const c of WOLFVEIL_EXPLORABLE_CAVES) {
@@ -279,13 +279,56 @@ export function sampleWolfveilCaveSpace(x, z, margin = 0) {
  * actually travelling inside or entering a cave (never hijacks an actor walking
  * 25m overhead across the exterior mountain top).
  */
-export function sampleWolfveilPlayerCaveFloorY(localX, currentY, localZ) {
+export function sampleWolfveilPlayerCaveFloorY(localX, currentY, localZ,
+    {insideCave=false}={}) {
   const space = sampleWolfveilCaveSpace(localX, localZ, 0.15);
-  if (!space) return null;
-  if (!Number.isFinite(currentY)) return space.floorY;
-  // Inside entry ramps or underground when actor is below ceiling + 1.8m buffer
-  if (currentY <= space.ceilingY + 1.8 && currentY >= space.floorY - 6.0) {
+  if (!space || !Number.isFinite(currentY)) return null;
+  // Critical waterfall fix: the old ceiling-only test accepted OUTDOOR feet
+  // standing above some entrance passages as underground feet, causing an
+  // immediate snap from the surface down into the cave. Use the canonical
+  // terrain height as a distinct exterior layer, not just a cave ceiling.
+  const outsideY=wolfveilHeight(localX,localZ);
+  if(!insideCave && Number.isFinite(outsideY) &&
+     currentY >= outsideY-0.75)return null;
+  if (currentY <= space.ceilingY + 1.8 &&
+      currentY >= space.floorY - 6.0) {
     return space.floorY;
+  }
+  return null;
+}
+
+// Closed 2.5D surface + E-interaction at the existing modeled cave arch.
+// The existing subterranean rooms and connected corridors stay on their
+// original coordinates; entry/exit never needs a missing terrain polygon.
+export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radius=5.1}={}) {
+  if(!localPosition||![localPosition.x,localPosition.y,localPosition.z,radius]
+    .every(Number.isFinite)||radius<=0)return null;
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+    const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    // Entry lands safely past the rock arch, while the return interaction
+    // is INSIDE that same arch. A player walks back toward daylight and uses
+    // E there instead of finding a teleport button 13 metres inside a room.
+    const insideX=mx+dx*13,insideZ=mz+dz*13;
+    const exitX=mx+dx*3,exitZ=mz+dz*3;
+    if(insideCave){
+      if(Math.hypot(localPosition.x-exitX,localPosition.z-exitZ)>radius)
+        continue;
+      return {
+        action:'exit',caveId:cave.id,name:cave.name,
+        x:cave.threshold[0],y:cave.threshold[1]+0.12,z:cave.threshold[2],
+      };
+    }
+    if(Math.hypot(localPosition.x-cave.threshold[0],
+      localPosition.z-cave.threshold[2])>radius)continue;
+    // The opening is an interaction at walking height, not a vertical trigger
+    // that a character on a cliff far above/below can activate.
+    if(Math.abs(localPosition.y-cave.threshold[1])>2.25)continue;
+    const space=sampleWolfveilCaveSpace(insideX,insideZ,0.75);
+    if(!space)continue;
+    return {
+      action:'enter',caveId:cave.id,name:cave.name,
+      x:insideX,y:space.floorY+0.1,z:insideZ,
+    };
   }
   return null;
 }
@@ -296,17 +339,11 @@ export function sampleWolfveilPlayerCaveFloorY(localX, currentY, localZ) {
  */
 export function resolveWolfveilCaveWallCollision(localPos, prevLocalPos, radius = 0.62) {
   if (!localPos || !prevLocalPos) return false;
-  const prevFloor = sampleWolfveilPlayerCaveFloorY(prevLocalPos.x, localPos.y, prevLocalPos.z);
-  if (prevFloor === null) return false; // Actor was outdoors on the mountain surface
-
-  // Allow stepping cleanly out onto exterior ground past any cave's threshold
-  for (const c of WOLFVEIL_EXPLORABLE_CAVES) {
-    const rx = localPos.x - c.mouth[0], rz = localPos.z - c.mouth[1];
-    const along = rx * c.dir[0] + rz * c.dir[1];
-    const lateral = Math.abs(-rx * c.dir[1] + rz * c.dir[0]);
-    if (along < 0.5 && lateral < 4.2) return false;
-  }
-
+  // Called only for an active cave explorer. The outer mountain is sealed:
+  // leaving via a tunnel mouth is a deliberate E-portal, not free movement
+  // through the retained surface terrain. Check footprint, not ceiling Y,
+  // because entrance gradients can cross close to the natural hillside.
+  if(!sampleWolfveilCaveSpace(prevLocalPos.x,prevLocalPos.z,radius))return false;
   const nowSpace = sampleWolfveilCaveSpace(localPos.x, localPos.z, radius);
   if (nowSpace) return false;
 

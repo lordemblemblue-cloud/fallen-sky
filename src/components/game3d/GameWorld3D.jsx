@@ -2078,6 +2078,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             return;
           }
         }
+        if(region==='wolfveil'&&!suigenActive&&!dedicatedMode){
+          const caveTravel=wolfveilVillage?.interactCave(model.position);
+          if(caveTravel){
+            e.preventDefault();
+            showCombatNotice(
+              (caveTravel.action==='enter'?'Entered ':'Exited ')+caveTravel.name+
+              ' · Press E at the cave arch to '+(caveTravel.action==='enter'?'leave':'enter'));
+            return;
+          }
+        }
         if(suigenActive){
           const action=suigenRuntime?.district?.interact(model.position);
           if(action){
@@ -2606,6 +2616,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Seven-foot rim band prevents lateral fall-through without flattening
     // the mountain, falsifying a floor or changing the official cave portals.
     if(region==='wolfveil' && !dedicatedMode && mapReady &&
+       !wolfveilVillage?.caveSystem?.isActive?.() &&
        (model.position.x!==fromX || model.position.z!==fromZ) &&
        shouldRejectCaveGroundStep({
          from:{x:fromX,z:fromZ},
@@ -3038,7 +3049,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // terrain even if normal WASD movement was previously accepted.
         if(region==='wolfveil' &&
           (!insideWolfveilClientGround(model.position.x,model.position.z,.65) ||
-           (!dedicatedMode && mapReady && shouldRejectCaveGroundStep({
+           (!dedicatedMode && mapReady &&
+            !wolfveilVillage?.caveSystem?.isActive?.() &&
+            shouldRejectCaveGroundStep({
              from:beforeRoguePush,
              to:{x:model.position.x,z:model.position.z},
              fromGroundY:sampleGroundY(beforeRoguePush.x,beforeRoguePush.z,model.position.y),

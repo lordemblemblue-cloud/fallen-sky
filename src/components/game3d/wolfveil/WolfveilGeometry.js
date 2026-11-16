@@ -14,7 +14,7 @@ import {WOLFVEIL_PALETTE as PAL,wolfveilHeight,wolfveilDistanceToRiver,
 import {wolfveilTrailBreakAt} from './WolfveilTrailBreaks.mjs';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
-import {isWolfveilCaveMouthCutout} from './WolfveilCaveLayout.mjs';
+
 import {getWolfveilSumiETextures,cloneRepeatedTexture} from './WolfveilSumiETextures.mjs';
 const TAU=Math.PI*2;
 export const clamp=(a,min,max)=>Math.max(min,Math.min(max,a));
@@ -176,11 +176,16 @@ export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false}=
       c.push(...sample);
     }
   }
+  // A heightfield has only one surface at each X/Z. Removing WHOLE cells
+  // at the four cave mouths opened ~3.55m holes above the waterfall ridge:
+  // a surface walker could fall directly into the underground cave floor.
+  // Keep ALL two triangles in EVERY cell, including the cave approach sites.
+  // Actual cave entry/exit is via the explicitly activated stone-mouth
+  // interaction, never via a missing terrain polygon.
+  // Retain caveCutouts in the public signature for legacy callers; it no
+  // longer authorizes deleting an overworld floor.
+  void caveCutouts;
   for(let z=0;z<segments;z++)for(let x=0;x<segments;x++){
-    if(caveCutouts){
-      const cx=((x+.5)/segments-.5)*span,cz=((z+.5)/segments-.5)*span;
-      if(isWolfveilCaveMouthCutout(cx,cz))continue;
-    }
     const p=z*(segments+1)+x,q=p+segments+1;
     idx.push(p,q,p+1,q,q+1,p+1);
   }
