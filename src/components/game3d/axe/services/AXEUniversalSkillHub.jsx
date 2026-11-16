@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { BookOpen, ChevronRight, Search, Shield, Sparkles, Swords, Wind } from 'lucide-react';
 import { getAllSkills, scaleStat } from '../../skills/skillRegistry';
 import { SKILL_TYPE } from '../../skills/skillTypes';
+import { selectUniversalSkills } from './AXEUniversalSkillModel.mjs';
 import { getSkillMastery } from '../../skills/skillMasteryStore';
 import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import './AXESkillCollections.css';
@@ -10,9 +11,7 @@ const fmt=(number,key)=>/_pct$|^reflect_chance$|^crit_resist_pct$/.test(key)
   ?(Number(number)*100).toFixed(1)+'%':Number(number).toFixed(1);
 const label=value=>String(value||'').replaceAll('_',' ').replace(/\b\w/g,letter=>letter.toUpperCase());
 export function buildUniversalSkills(allSkills=getAllSkills()) {
-  // Actual weapon-independent abilities only. No fake passive or buff entries.
-  return allSkills.filter(skill=>skill.weapon_type===null
-    &&[SKILL_TYPE.PASSIVE,SKILL_TYPE.ACTIVE_BUFF].includes(skill.skill_type));
+  return selectUniversalSkills(allSkills);
 }
 export default function AXEUniversalSkillHub({
   passiveOnly=false, activeIds=[], passiveIds=[], onEquip, onSelected,
