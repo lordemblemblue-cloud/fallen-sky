@@ -21,7 +21,7 @@ const levelOf = level => Number.isInteger(level) ? Math.max(1, Math.min(WEAPON_S
 // percentage would not fund the owner's requested two-and-a-half weapon paths.
 export function weaponSkillPointsAtLevel(level) {
   const lv = levelOf(level);
-  return lv === 1 ? 0 : 3 + Math.floor(lv / 20);
+  return level > WEAPON_SKILL_CAP || lv === 1 ? 0 : 3 + Math.floor(lv / 20);
 }
 export function weaponSkillPointsEarned(level) {
   let points = 0;
@@ -100,6 +100,19 @@ export function weaponSkillTierForId(skillId) {
   if (!match) return null;
   const path = WEAPON_SKILL_PATHS.find(p => p.role === match[1]);
   return path ? { pathId: path.id, tierIndex: Math.floor((Number(match[2]) - 1) / 2) } : null;
+}
+// Paired passives are automatically granted with the five skill stages;
+// each contributes +1% to charged strikes for that weapon. The fifth
+// passive opens when stage four is finished, not as a bonus for maxing stage five.
+export function chargedWeaponSkillPassivePct(save, skillId) {
+  const tier = weaponSkillTierForId(skillId);
+  if (!tier) return 0;
+  let count = 0;
+  for (let i = 0; i < WEAPON_SKILL_TIERS.length; i++) {
+    if (weaponTierUnlocked(save, tier.pathId, i)) count++;
+    else break;
+  }
+  return count;
 }
 export function chargedWeaponSkillBonusPct(save, skillId) {
   const tier = weaponSkillTierForId(skillId);
