@@ -27,16 +27,30 @@
   box-shadow:none;
   overflow:hidden;
 }
-/* The service is a sibling of the Jade HUD, never its descendant.
- * Hiding the sibling HUD avoids the health/will/stamina/action-bar bleed-through
- * seen in the owner screenshot while preserving the live HUD data. */
-.game3d-view:has(.axe-service-workspace--skills) .jade-combat-hud,
-.game3d-view:has(.axe-service-workspace--skills) .jade-services-navigation {
+/* Services stays reachable while the Skill Book is open. The navigation
+ * is a direct child of .jade-hud, separate from this service workspace.
+ * Raise that HUD layer but expose only its navigation; HP, Will, Stamina,
+ * compass and combat controls remain behind the book (not destroyed). */
+.game3d-view:has(.axe-service-workspace--skills) .jade-hud {
+  z-index:170 !important;
+  pointer-events:none !important;
+}
+.game3d-view:has(.axe-service-workspace--skills) .jade-hud > :not(.jade-services-navigation) {
   visibility:hidden !important;
   pointer-events:none !important;
 }
-.game3d-view:has(.axe-service-workspace--skills) .jade-hud {
+.game3d-view:has(.axe-service-workspace--skills) .jade-combat-hud,
+.game3d-view:has(.axe-service-workspace--skills) .jade-status-bars {
+  visibility:hidden !important;
   pointer-events:none !important;
+}
+.game3d-view:has(.axe-service-workspace--skills) .jade-services-navigation {
+  visibility:visible !important;
+  pointer-events:auto !important;
+  z-index:171 !important;
+}
+.game3d-view:has(.axe-service-workspace--skills) .jade-services-navigation button {
+  pointer-events:auto !important;
 }
 .axe-tome {
   --tome-gold:var(--axe-ui-gold,rgba(229,193,128,.72));
@@ -287,3 +301,166 @@
   .axe-tome-details{flex:0 0 auto;min-height:480px;overflow:visible}
   .axe-tome-footer{display:none}
 }
+
+/* 2026-11-15 owner-approved compact presentation:
+ * keep the Services strip above the book, not behind an opaque overlay.
+ * The actual-bottom variable is measured from the real wrapped navigation
+ * (including narrower devices), avoiding fixed-y guesses and dead buttons. */
+.game3d-view .axe-service-workspace--skills[data-service-extent="viewport-top"] {
+  top:max(72px,calc(var(--axe-service-navigation-actual-bottom,110px) + 8px)) !important;
+  padding:5px clamp(6px,.8vw,14px) 8px;
+  background:linear-gradient(135deg,rgba(3,11,24,.94),rgba(8,20,37,.93));
+}
+.axe-tome {gap:6px;}
+.axe-tome-header {min-height:52px;padding:3px 8px 5px;gap:12px;}
+.axe-tome-brand {gap:10px;}
+.axe-tome-brand>svg {width:25px;height:25px;}
+.axe-tome-brand h2 {font-size:clamp(24px,2.2vw,34px);}
+.axe-tome-brand p {font-size:10px;margin:2px 0 0;}
+.axe-tome-head-note {font-size:10px;}
+.axe-tome-close {width:33px;height:33px;flex-basis:33px;}
+.axe-tome-columns {
+  grid-template-columns:minmax(144px,17%) minmax(330px,54%) minmax(255px,1fr);
+  gap:8px;
+}
+/* Weapon Category: one uninterrupted shaded/blurred rail, not tiled boxes. */
+.axe-tome-rail {
+  border:0;
+  border-radius:8px;
+  padding:9px 5px;
+  gap:6px;
+  background:rgba(14,31,48,.48);
+  backdrop-filter:blur(16px);
+  box-shadow:none;
+}
+.axe-tome-rail h3 {margin:2px 5px 7px;text-align:left;font-size:14px;}
+.axe-tome-character-switch {
+  display:flex;align-items:center;gap:5px;margin:0 3px 7px;padding:6px 7px;
+  border-bottom:1px solid #dab57b66;color:#ead0a3;font-size:11px;
+}
+.axe-tome-character-switch>span {color:#afc5cf;font-size:10px;}
+.axe-tome-character-switch select {
+  appearance:none;color:#ffe0a9;min-width:0;flex:1;
+  background:transparent;border:0;outline-offset:2px;cursor:pointer;font:inherit;
+}
+.axe-tome-character-switch select option,.axe-tome-view-select select option,
+.axe-tome-filter-select select option {color:#182738;background:#f7e6ca;}
+.axe-tome-character-switch svg,.axe-tome-view-select svg:last-child,
+.axe-tome-filter-select svg {pointer-events:none;flex:none;}
+.axe-tome-category-list {gap:2px;padding:0;}
+.axe-tome-category-list>button {
+  min-height:48px;padding:5px 7px;gap:7px;
+  background:transparent;border:1px solid transparent;border-radius:6px;
+}
+.axe-tome-category-list>button:hover {background:rgba(186,152,99,.14);}
+.axe-tome-category-list>button[aria-pressed="true"] {
+  background:linear-gradient(90deg,rgba(225,173,88,.28),rgba(19,39,55,.28));
+  border-color:rgba(248,210,145,.45);box-shadow:inset 2px 0 #f5d69c;
+}
+.axe-tome-category-symbol {
+  height:30px;flex-basis:30px;border:0;border-radius:4px;
+  background:transparent;font-size:19px;
+}
+.axe-tome-category-list strong {font-size:13px;}
+.axe-tome-category-list small {font-size:9px;line-height:1.1;}
+.axe-tome-category-list em {font-size:10px;}
+.axe-tome-category-list button>svg {width:12px;}
+.axe-tome-rail-foot {padding:8px 5px 0;font-size:10px;}
+/* Narrow info inspector, wider middle skill library, more real skills visible. */
+.axe-tome-library {gap:6px;padding:10px;}
+.axe-tome-library-head {gap:8px;}
+.axe-tome-library-title {gap:7px;}
+.axe-tome-library-title>span {font-size:21px;}
+.axe-tome-library-title h3 {font-size:clamp(17px,1.5vw,23px);}
+.axe-tome-library-title small {font-size:10px;}
+.axe-tome-library-actions {display:flex;align-items:center;gap:5px;}
+.axe-tome-view-select,.axe-tome-filter-select {
+  display:flex;align-items:center;gap:5px;
+  border:1px solid rgba(226,188,117,.45);border-radius:7px;
+  background:rgba(13,29,46,.72);padding:7px 8px;font-size:11px;
+  color:#f3dbb0;
+}
+.axe-tome-view-select select,.axe-tome-filter-select select {
+  appearance:none;border:0;background:transparent;color:inherit;
+  outline-offset:3px;cursor:pointer;font:inherit;
+}
+.axe-tome-save {padding:7px 8px;font-size:11px;}
+.axe-tome-equipped-weapon {padding:5px 8px;gap:4px;}
+.axe-tome-equipped-weapon button {padding:5px 7px;}
+.axe-tome-tools {display:flex;gap:7px;min-height:34px;align-items:center;}
+.axe-tome-search {
+  flex:1 1 auto;min-width:0;max-width:none;padding:6px 9px;
+  min-height:33px;gap:7px;border-radius:7px;
+}
+.axe-tome-search input {font-size:11px;}
+.axe-tome-filter-select {flex:0 0 auto;min-height:33px;}
+.axe-tome-filter-select>span {color:#a7c4d2;}
+.axe-tome-card-scroll {padding:1px 1px 5px;}
+.axe-tome-skill-list {display:flex;flex-direction:column;gap:3px;}
+.axe-tome-skill-list .axe-tome-card {
+  min-height:57px;padding:5px 10px;gap:10px;
+  border-radius:5px;background:rgba(13,29,45,.52);
+}
+.axe-tome-skill-list .axe-tome-card[aria-pressed="true"] {
+  background:linear-gradient(90deg,rgba(183,132,62,.26),rgba(19,35,54,.65));
+  box-shadow:inset 3px 0 #f4d39a;
+}
+.axe-tome-skill-list .axe-tome-card-icon {height:39px;flex-basis:39px;font-size:20px;border-radius:6px;}
+.axe-tome-skill-list .axe-tome-card-body {display:grid;grid-template-columns:1fr auto;column-gap:5px;row-gap:2px;}
+.axe-tome-skill-list .axe-tome-card-body strong {font-size:13px;grid-column:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.axe-tome-skill-list .axe-tome-card-body small {font-size:10px;grid-column:1;}
+.axe-tome-skill-list .axe-tome-card-subtitle {grid-column:2;grid-row:1 / span 2;align-self:center;font-size:10px;}
+.axe-tome-skill-list .axe-tome-card-status {position:static;min-width:66px;justify-content:flex-end;font-size:10px;}
+.axe-tome-bar {padding:5px 0 0;}
+.axe-tome-bar-heading {align-items:center;margin-bottom:4px;font-size:12px;}
+.axe-tome-slot-pages {display:flex;align-items:center;gap:5px;}
+.axe-tome-slot-pages button {
+  display:grid;place-items:center;min-width:25px;height:25px;
+  border:1px solid #d8b67c77;border-radius:5px;background:rgba(30,47,66,.7);
+}
+.axe-tome-slots {grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+.axe-tome-slot>button:first-child {height:43px;}
+.axe-tome-slot>button:first-child span {font-size:17px;}
+.axe-tome-details {padding:9px;gap:7px;}
+.axe-tome-inspector {gap:7px;}
+.axe-tome-inspector-hero {min-height:64px;gap:9px;padding:4px;}
+.axe-tome-inspector-icon {flex-basis:52px;height:52px;font-size:27px;border-radius:8px;}
+.axe-tome-inspector-identity h3 {font-size:clamp(16px,1.5vw,22px);margin:2px 0 4px;}
+.axe-tome-kicker {font-size:9px;}
+.axe-tome-pills {gap:3px;}
+.axe-tome-pills span {font-size:9px;padding:3px 6px;}
+.axe-tome-info-block {padding:7px 8px;border-radius:7px;}
+.axe-tome-info-block h4 {font-size:13px;margin-bottom:5px;}
+.axe-tome-info-block p {font-size:10px;line-height:1.35;}
+.axe-tome-block-heading button {font-size:9px;padding:4px;}
+.axe-tome-stat-head,.axe-tome-stat-row {grid-template-columns:minmax(63px,1fr) minmax(40px,.6fr) minmax(43px,.65fr);gap:3px;padding:4px 0;font-size:10px;}
+.axe-tome-inspector-bottom {grid-template-columns:1fr;gap:6px;}
+.axe-tome-inspector-action {gap:5px;}
+.axe-tome-inspector-action button {min-width:0;width:100%;padding:8px;font-size:12px;}
+.axe-tome-inspector-action p {font-size:9px;text-align:left;}
+.axe-tome-footer {min-height:17px;font-size:10px;}
+@media(max-width:1100px) and (min-width:881px) {
+  .axe-tome-columns {grid-template-columns:minmax(136px,18%) minmax(300px,52%) minmax(235px,1fr);}
+  .axe-tome-head-note {display:none;}
+  .axe-tome-brand p {display:none;}
+  .axe-tome-library-head {flex-wrap:wrap;}
+}
+@media(max-width:880px) {
+  .axe-tome-columns {grid-template-columns:minmax(120px,24%) minmax(0,1fr);}
+  .axe-tome-rail {grid-row:1 / span 2;}
+  .axe-tome-library {min-height:330px;}
+  .axe-tome-details {min-height:300px;}
+  .axe-tome-brand p {display:none;}
+}
+@media(max-width:580px) {
+  .axe-tome-columns {display:flex;flex-direction:column;}
+  .axe-tome-rail {min-height:107px;}
+  .axe-tome-category-list {flex-direction:row;overflow-x:auto;}
+  .axe-tome-category-list>button {min-width:104px;}
+  .axe-tome-category-list>button>svg,.axe-tome-category-list button em {display:none;}
+  .axe-tome-library {min-height:370px;}
+  .axe-tome-details {min-height:350px;}
+  .axe-tome-header {padding:2px 3px;}
+  .axe-tome-head-note {display:none;}
+}
+

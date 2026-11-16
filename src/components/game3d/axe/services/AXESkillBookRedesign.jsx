@@ -1,6 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {
-  ArrowUpRight, BookOpen, Check, ChevronRight, Clock, LockKeyhole,
+  ArrowUpRight, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, LockKeyhole,
   Save, Search, Shield, Sparkles, Swords, Target, X,
 } from 'lucide-react';
 import {getAllSkills, getSkillById, scaleStat} from '../../skills/skillRegistry';
@@ -8,7 +8,7 @@ import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
-import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
+import { isWeaponSkillUnlocked, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
 import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter,titleizeSkillStat} from './AXESkillBookModel.mjs';
 import './AXESkillBookRedesign.css';
@@ -16,8 +16,8 @@ import './AXESkillBookRedesign.css';
 // Only registered skills are displayed. No concept-art dummy skills, fabricated
 // damage values, invented skill points or client-side mastery transactions.
 const CHARACTER_CATEGORIES = Object.freeze([
-  {id:'sword', name:'Sword', icon:'⚔️', weapon:WEAPON_TYPE.SWORD, mode:'damage'},
-  {id:'bow', name:'Bow', icon:'🏹', weapon:WEAPON_TYPE.RANGED, mode:'range'},
+  {id:'sword', name:'Damage', icon:'⚔️', weapon:WEAPON_TYPE.SWORD, mode:'damage'},
+  {id:'bow', name:'Range', icon:'🏹', weapon:WEAPON_TYPE.RANGED, mode:'range'},
   {id:'defense', name:'Defense', icon:'🛡️', weapon:WEAPON_TYPE.GUARDIAN, mode:'defense'},
   {id:'universal', name:'Universal', icon:'✦', weapon:null},
   {id:'passive', name:'Passive', icon:'✧', passive:true},
@@ -128,9 +128,12 @@ export default function AXESkillBookRedesign({
   onEquipActive,onRemoveActive,onRemovePassive,onSavePreset,onActivateWeapon,status,onClose,
 }) {
   useMasteryRefresh();
+  const [weaponRevision,setWeaponRevision]=useState(0);
+  useEffect(()=>subscribeWeaponSkillPoints(()=>setWeaponRevision(n=>n+1)),[]);
   const [category,setCategory]=useState(()=>legacyCategory(activeMode?.id));
   const [filter,setFilter]=useState('all');
   const [search,setSearch]=useState('');
+  const [slotPage,setSlotPage]=useState(0);
   const all=useMemo(()=>companion?getAllCompanionSkills():getAllSkills(),[companion]);
   const categories=useMemo(()=>companion
     ? [...new Set(all.map(s=>s.category).filter(Boolean))].map(id=>({id,name:titleizeSkillStat(id),icon:'✧'}))
@@ -140,9 +143,11 @@ export default function AXESkillBookRedesign({
   const related=useMemo(()=>all.filter(skill=>{
     return skillBelongsToCategory(skill,category,companion);
   }),[all,companion,category]);
-  const listed=useMemo(()=>related.filter(skill=>
-    skillMatchesBookFilter(skill,{view,filter,search,companion})),
-    [related,view,filter,search,companion]);
+  const listed=useMemo(()=>related.filter(skill=>{
+    const matches=skillMatchesBookFilter(skill,{view,filter:filter==='locked'?'all':filter,search,companion});
+    return matches && (filter!=='locked' || skillMarkedLocked(skill) ||
+      (!companion && !isWeaponSkillUnlocked(skill.skill_id)));
+  }),[related,view,filter,search,companion,weaponRevision]);
   useEffect(()=>{
     if(!listed.length){if(selected)onSelect(null);return;}
     if(!selected||!listed.some(skill=>skill.skill_id===selected.skill_id))
@@ -154,6 +159,10 @@ export default function AXESkillBookRedesign({
   const equipMode=currentCategory?.mode;
   const weapon=equipMode?getWeaponForSkillBookMode(ownedWeapons,equipMode):null;
   const allEquipped=[...activeIds,...passiveIds];
+  const visibleSlotCount=5;
+  const slotPages=Math.max(1,Math.ceil(activeIds.length/visibleSlotCount));
+  const currentSlotPage=Math.min(slotPage,slotPages-1);
+  useEffect(()=>setSlotPage(0),[companion,activeMode?.id]);
   return <div className="axe-tome" data-progression-panel={currentPage}>
     <header className="axe-tome-header">
       <div className="axe-tome-brand"><BookOpen size={36}/><div><h2>Skill Book</h2>
@@ -162,21 +171,17 @@ export default function AXESkillBookRedesign({
       {onClose&&<button type="button" data-service-close className="axe-tome-close"
         aria-label="Close Skill Book" onClick={onClose}><X size={22}/></button>}
     </header>
-    <div className="axe-tome-toolbar">
-      <nav className="axe-tome-tabset" aria-label="Skill Book character">
-        {[['skills_character','Character'],['skills_companion','Companion']].map(([id,label])=>
-          <button type="button" key={id} aria-pressed={currentPage===id} onClick={()=>onPageChange(id)}>{label}</button>)}
-      </nav>
-      <nav className="axe-tome-tabset axe-tome-main-tabs" aria-label="Skill Book pages">
-        {[['skills','Skills'],['buffs','Buffs'],['advance','Advance']].map(([id,label])=>
-          <button type="button" key={id} aria-pressed={view===id} onClick={()=>{onChangeView(id);if(id==='buffs'&&!companion)setCategory('universal');setFilter('all');}}>{label}</button>)}
-      </nav>
-      <label className="axe-tome-search"><Search size={18}/><input type="search" value={search}
-        onChange={e=>setSearch(e.target.value)} placeholder="Search skills…" aria-label="Search skills"/></label>
-    </div>
+
     <div className="axe-tome-columns">
       <aside className="axe-tome-rail" aria-label={companion?'Companion categories':'Weapons and categories'}>
-        <h3>{companion?'Companion':'Weapon / Category'}</h3>
+        <h3>Weapon Category</h3>
+        <label className="axe-tome-character-switch" aria-label="Skill Book character or companion">
+          <span>Book</span><select value={currentPage}
+            onChange={event=>onPageChange(event.target.value)}>
+            <option value="skills_character">Character</option>
+            <option value="skills_companion">Companion</option>
+          </select><ChevronDown size={13} aria-hidden="true"/>
+        </label>
         <div className="axe-tome-category-list">
           {categories.map(item=>{
             const count=categoryCount(item.id);
@@ -198,19 +203,44 @@ export default function AXESkillBookRedesign({
             <div><h3>{currentCategory?.name||'Skills'} {view==='buffs'?'Buffs':view==='advance'?'Mastery':'Skills'}</h3>
               <small>{related.length} registered · {related.filter(s=>allEquipped.includes(s.skill_id)).length} equipped</small></div>
           </div>
-          <button type="button" className="axe-tome-save" onClick={onSavePreset}
-            title="Save the current equipped skill bar"><Save size={15}/> Save bar</button>
+          <div className="axe-tome-library-actions">
+            <label className="axe-tome-view-select" aria-label="Skill Book page">
+              <BookOpen size={15} aria-hidden="true"/>
+              <select value={view} onChange={event=>{
+                const next=event.target.value;
+                onChangeView(next);
+                if(next==='buffs'&&!companion)setCategory('universal');
+                setFilter('all');
+              }}>
+                <option value="skills">Skills</option>
+                <option value="buffs">Buffs</option>
+                <option value="advance">Advance</option>
+              </select><ChevronDown size={13} aria-hidden="true"/>
+            </label>
+            <button type="button" className="axe-tome-save" onClick={onSavePreset}
+              title="Save the current equipped skill bar"><Save size={15}/> Save</button>
+          </div>
         </div>
         {equipMode&&<div className="axe-tome-equipped-weapon">
           <span>{weapon?.name||'No owned '+currentCategory.name.toLowerCase()+' weapon selected'}</span>
           <small>{weapon?.equipped?'Equipped weapon':'Browsing only — does not change your weapon'}</small>
           <button type="button" onClick={()=>onActivateWeapon(equipMode)}>Activate {currentCategory.name} bar</button>
         </div>}
-        <nav className="axe-tome-filters" aria-label="Skill filters">{FILTERS.filter(item=>!companion||['all','locked'].includes(item.id)).map(item=>
-          <button type="button" key={item.id} aria-pressed={filter===item.id}
-            onClick={()=>setFilter(item.id)}>{item.label}</button>)}</nav>
+        <div className="axe-tome-tools" aria-label="Skill list controls">
+          <label className="axe-tome-search"><Search size={16} aria-hidden="true"/>
+            <input type="search" value={search} onChange={e=>setSearch(e.target.value)}
+              placeholder="Search skills…" aria-label="Search skills"/>
+          </label>
+          <label className="axe-tome-filter-select">
+            <span>Show</span>
+            <select value={filter} aria-label="Filter skills" onChange={event=>setFilter(event.target.value)}>
+              {FILTERS.filter(item=>!companion||['all','locked'].includes(item.id)).map(item=>
+                <option key={item.id} value={item.id}>{item.label}</option>)}
+            </select><ChevronDown size={13} aria-hidden="true"/>
+          </label>
+        </div>
         <div className="axe-tome-card-scroll">
-          {view==='advance' && !companion ? <AXEWeaponSkillPointsPanel /> : listed.length?<div className="axe-tome-card-grid">{listed.map(skill=>{
+          {view==='advance' && !companion ? <AXEWeaponSkillPointsPanel /> : listed.length?<div className="axe-tome-skill-list">{listed.map(skill=>{
             const mastery=levelFor(skill,companion),isEquipped=allEquipped.includes(skill.skill_id);
             const locked=skillMarkedLocked(skill) || (!companion && !isWeaponSkillUnlocked(skill.skill_id));
             return <button type="button" className="axe-tome-card" key={skill.skill_id}
@@ -232,8 +262,19 @@ export default function AXESkillBookRedesign({
               :'Try another category, page or search term.'}</p></div>}
         </div>
         <div className="axe-tome-bar" aria-label="Equipped active skill slots">
-          <div className="axe-tome-bar-heading"><span>Equipped skills</span><small>Select a skill, then choose a slot</small></div>
-          <div className="axe-tome-slots">{activeIds.map((id,i)=>{
+          <div className="axe-tome-bar-heading"><span>Equipped Skills</span>
+            <div className="axe-tome-slot-pages">
+              <small>{currentSlotPage*visibleSlotCount+1}–{Math.min(activeIds.length,(currentSlotPage+1)*visibleSlotCount)} of {activeIds.length}</small>
+              <button type="button" aria-label="Previous equipped skills"
+                disabled={currentSlotPage===0} onClick={()=>setSlotPage(page=>Math.max(0,page-1))}>
+                <ChevronLeft size={17}/></button>
+              <button type="button" aria-label="Next equipped skills"
+                disabled={currentSlotPage>=slotPages-1} onClick={()=>setSlotPage(page=>Math.min(slotPages-1,page+1))}>
+                <ChevronRight size={17}/></button>
+            </div>
+          </div>
+          <div className="axe-tome-slots">{activeIds.slice(currentSlotPage*visibleSlotCount,(currentSlotPage+1)*visibleSlotCount).map((id,j)=>{
+            const i=currentSlotPage*visibleSlotCount+j;
             const skill=id&&(companion?getCompanionSkillById(id):getSkillById(id));
             return <div className="axe-tome-slot" key={i}>
               <button type="button" title={skill?skill.skill_name:'Equip selected skill'}
