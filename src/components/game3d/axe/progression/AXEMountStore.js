@@ -441,6 +441,7 @@ export function awardAXEMountXP(instanceId, amount, source = 'pve', context = {}
   const weaponRole=getActiveWeaponPath();
   const fightingAlongside=(source==='pve'||source==='pvp')
     && state.activeMountId===instanceId
+    && !getCompanionState().isMounted
     && getCompanionState().activeCompanionId===getAXEMountDefinition(result.mount.definitionId)?.modelRef;
   const advancedMount=fightingAlongside&&result.mount.totalXp>=5000
     ? awardCompanionRoleMasteryXP(result.mount,result.xpGained,weaponRole)
