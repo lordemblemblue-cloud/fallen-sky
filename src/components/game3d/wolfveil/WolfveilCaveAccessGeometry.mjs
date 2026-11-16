@@ -95,7 +95,9 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     // holes extend beyond the central entry floor. Bridge ONLY those edges
     // with 2.15m basalt shoulders, tapering into the true hillside.
     const [dx,dz]=cave.dir,nx=-dz,nz=dx;
-    const half= corridor.halfWidth+.55;
+    // Start inside the actual 3.9m collision corridor (rather than outside
+    // its wider rendered floor), so no missing wedge remains between surfaces.
+    const half=Math.max(2,corridor.halfWidth-.25);
     const alongAt=(f,side)=>{
       const x=cave.mouth[0]+dx*f,z=cave.mouth[1]+dz*f;
       const seg=f<0?corridor.segments[0]:corridor.segments[1];
