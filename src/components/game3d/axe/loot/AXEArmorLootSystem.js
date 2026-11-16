@@ -9,6 +9,7 @@
 import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../equipment/AXEArmorPackCatalog.js';
 import { getAXELevelRarityWeights, rollAXEEvolutionPath, rollAXELevelAffixes } from './AXELevelGearProgression.mjs';
 import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
+import {makeAXEFarmingItemPerks} from '../equipment/AXEFarmingItemPerks.mjs';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -124,6 +125,7 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
       level,
       monsterLevelAtDrop: monsterLevel,
       baseStats, rolledStats, setId,
+      abilityPerks:makeAXEFarmingItemPerks({slot:piece.slot,rarity}),
       evolutionPath, rarityVariant: evolutionPath,
     },
   };
