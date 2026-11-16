@@ -238,6 +238,44 @@ export function getWolfveilSumiETextures() {
     },
   });
 
+  // Columnar cave basalt. Vertical cooling columns, a crack between each,
+  // and shorter blocks stacked inside the column. Vesicles pock the face.
+  // Pale mineral sits only in the joints. The pattern wraps on the unit square.
+  const columnarBasalt = buildPair({
+    size: 256, seed: 173, name: 'Wolfveil_SumiE_ColumnarBasalt', repeat: [0.72, 0.72],
+    sample(u, v, rng) {
+      const cols = 7;
+      const bow = (rng.fbm(u, v, 3) - 0.5) * 0.045;
+      const wrapped = (((u + bow) % 1) + 1) % 1;
+      const colF = wrapped * cols;
+      const col = Math.floor(colF);
+      const cu = colF - col;
+      const edge = Math.min(cu, 1 - cu);
+      const jointW = 0.035 + rng.fbm(u, v, 5) * 0.04;
+      const joint = edge < jointW ? Math.pow(1 - edge / jointW, 1.35) : 0;
+      const courses = 2 + (col % 4);
+      const jag = (rng.layer(u * 2, v, 7) - 0.5) * 0.16;
+      const cv = (v * courses + col * 0.31 + jag) % 1;
+      const crackBand = Math.min(cv, 1 - cv);
+      const crack = crackBand < 0.03 && rng.layer(u, v * 2, 6) > 0.22
+        ? 1 - crackBand / 0.03 : 0;
+      const n1 = rng.layer(u, v, 22);
+      const n2 = rng.layer(u + 0.17, v + 0.13, 30);
+      const vesicle = n1 > 0.8 && n2 > 0.62 ? (n1 - 0.8) / 0.2 : 0;
+      const mineral = joint > 0.72 && rng.layer(u * 3, v, 9) > 0.66 ? 1 : 0;
+      const grit = rng.fbm(u, v, 9);
+      const rust = Math.max(0, grit - 0.58) * (0.35 + joint);
+      const shade = Math.max(0.34, (0.62 + (grit - 0.5) * 0.22 + (1 - joint) * 0.08)
+        * (1 - joint * 0.5) * (1 - crack * 0.32) * (1 - Math.min(1, vesicle) * 0.35));
+      return {
+        r: 118 * shade + mineral * 24 + rust * 36,
+        g: 124 * shade + mineral * 28 + rust * 14,
+        b: 132 * shade + mineral * 16,
+        h: 142 + (1 - joint) * 28 - joint * 96 - crack * 78 - Math.min(1, vesicle) * 88,
+      };
+    },
+  });
+
   // 9. Brushed Gilt Bronze & Temple Lacquer
   const gilt = buildPair({
     size: 128, seed: 149, name: 'Wolfveil_SumiE_GiltBronze', repeat: [0.5, 0.5],
@@ -255,7 +293,7 @@ export function getWolfveilSumiETextures() {
   });
 
   cachedSuite = Object.freeze({
-    dirt, turf, plaster, wood, roof, stone, rope, caveRock, gilt,
+    dirt, turf, plaster, wood, roof, stone, rope, caveRock, columnarBasalt, gilt,
   });
   return cachedSuite;
 }

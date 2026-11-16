@@ -45,8 +45,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
 
   const texSuite = getWolfveilSumiETextures();
   const ownedTextures = [
-    cloneRepeatedTexture(texSuite.caveRock.map, 0.16, 0.16),
-    cloneRepeatedTexture(texSuite.caveRock.bumpMap, 0.16, 0.16),
+    cloneRepeatedTexture(texSuite.columnarBasalt.map, 0.72, 0.72),
+    cloneRepeatedTexture(texSuite.columnarBasalt.bumpMap, 0.72, 0.72),
     cloneRepeatedTexture(texSuite.stone.map, 0.28, 0.28),
     cloneRepeatedTexture(texSuite.stone.bumpMap, 0.28, 0.28),
     cloneRepeatedTexture(texSuite.wood.map, 0.4, 0.4),
@@ -58,7 +58,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     color: 0x6f7987,
     map: ownedTextures[0],
     bumpMap: ownedTextures[1],
-    bumpScale: 0.08,
+    bumpScale: 0.2,
     roughness: 0.91,
     metalness: 0.05,
     vertexColors: true,
