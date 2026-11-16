@@ -177,6 +177,7 @@ import { createAvatarDrawCalls } from './player/avatarDrawCalls';
 import { createWorldEnvironmentSystem } from './WorldEnvironmentSystem';
 import { createCharacterReadabilityLights } from './CharacterReadabilityLights';
 import { getCharacterDodge, getPlanarBasisFromYaw } from './player/characterDodgeVector';
+import { game3dInputKey, game3dMoveAxes } from './player/Game3DMovementInput.mjs';
 import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, directionRelativeToFacing } from './axe/player/AXEClickToMove';
 import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/player/AXEClickToMoveScene';
 import { isAXEClickToMoveEnabled } from './axe/player/AXEControlSettingsStore';
@@ -2035,8 +2036,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (entryModeRef.current || entryCamera.isActive()) return; // no movement/combat during camera handoff
       if (window.__axeTileInspectionEditing) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
-      if (e.target?.matches?.('input, textarea')) return;
-      const k = e.key.toLowerCase(); if (k === 'v' && !e.repeat && otsAim.current.aiming) otsAim.current.toggleShoulder(); // shoulder swap
+      if(e.isComposing || e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
+      const k = game3dInputKey(e); if (k === 'v' && !e.repeat && otsAim.current.aiming) otsAim.current.toggleShoulder(); // shoulder swap
       if (e.code === 'F1') {
         e.preventDefault();
         if (!e.repeat) {
@@ -2218,7 +2219,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const onKeyUp = (e) => {
       if (e.key === 'Alt') { altCursorHeld.current = false; return; }
-      const k = e.key.toLowerCase();
+      const k = game3dInputKey(e);
       keys.current[k] = false;
       // Release of a charged/held input while navigating the ESC menu must
       // never cast a queued skill when the player returns to the world.
@@ -3119,6 +3120,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           flushCheckpoint();
         }
 
+        // Camera-relative WASD is identical for local and duel worker intent.
+        // Duel actors still move only when the signed worker accepts the input.
+        const duelAxes=game3dMoveAxes(keys.current);
+        const duelBasis=getPlanarBasisFromYaw(orbit.current.yaw);
         // Broadcast to multiplayer presence system (used by MultiplayerSystem).
         window.dispatchEvent(new CustomEvent('multiplayerLocalUpdate', {
           detail: {
@@ -3129,10 +3134,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // Only directional input, never browser position, drives the
             // dedicated duel worker's separate authoritative arena.
             combatFacing: model.rotation.y,
-            duelMoveX: ((keys.current['d'] ? 1 : 0) - (keys.current['a'] ? 1 : 0)) * Math.cos(model.rotation.y) +
-              ((keys.current['w'] ? 1 : 0) - (keys.current['s'] ? 1 : 0)) * Math.sin(model.rotation.y),
-            duelMoveZ: ((keys.current['w'] ? 1 : 0) - (keys.current['s'] ? 1 : 0)) * Math.cos(model.rotation.y) -
-              ((keys.current['d'] ? 1 : 0) - (keys.current['a'] ? 1 : 0)) * Math.sin(model.rotation.y),
+            duelMoveX: duelAxes.sideways*duelBasis.right.x +
+              duelAxes.forward*duelBasis.forward.x,
+            duelMoveZ: duelAxes.sideways*duelBasis.right.z +
+              duelAxes.forward*duelBasis.forward.z,
             anim: mounted ? companionCurrentAnimRef.current
               : playerAnim?.getCurrent?.() || (isMoving ? (isSprinting ? 'sprint' : isRunning ? 'run' : 'walk') : 'idle'),
           },
