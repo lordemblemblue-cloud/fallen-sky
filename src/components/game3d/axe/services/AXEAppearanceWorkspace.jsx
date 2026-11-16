@@ -264,14 +264,15 @@ export default function AXEAppearanceWorkspace({
           className="axe-app-inventory">
           <div className="axe-app-inventory-browser">
           <div className="axe-app-inventory-toolbar" role="search" aria-label="Search and filter vanity and costumes">
-            <label className="axe-app-inventory-search">
+            <div className="axe-app-inventory-search">
               <Search size={16} aria-hidden="true"/>
-              <span className="sr-only">Search vanity and costumes</span>
-              <input type="search" value={search} onChange={event=>setSearch(event.target.value)}
+              <label htmlFor="axe-vanity-search" className="sr-only">Search vanity and costumes</label>
+              <input id="axe-vanity-search" type="search" value={search}
+                onChange={event=>setSearch(event.target.value)}
                 placeholder="Search vanity…" aria-label="Search vanity or costume by name"/>
               {search && <button type="button" onClick={()=>setSearch('')}
                 aria-label="Clear vanity search"><X size={14}/></button>}
-            </label>
+            </div>
             <label className="axe-app-inventory-category">
               <span className="sr-only">Vanity inventory category</span>
               <select aria-label="Vanity inventory category" value={filter}
