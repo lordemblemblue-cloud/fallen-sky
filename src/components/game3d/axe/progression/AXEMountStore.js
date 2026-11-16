@@ -247,6 +247,9 @@ const syncOwnedFactionMountVisual = () => {
     setActiveCompanion(definition.modelRef);
   }
 };
+// Sync the first loaded character as well as later switches so the world
+// companion and the UI both use the faction's real mount on initial entry.
+syncOwnedFactionMountVisual();
 
 subscribeCharacterChange(() => {
   state = load();
