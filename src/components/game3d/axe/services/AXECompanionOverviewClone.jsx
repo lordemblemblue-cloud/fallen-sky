@@ -5,7 +5,7 @@ import {getAXEMountDefinition,getAXEMountBonuses} from '../progression/AXEMountS
 import {getCompanionById,COMPANION_GEAR} from '../../companionData';
 import {getCompanionState,subscribeCompanion} from '../../companionStore';
 import {getActiveWeaponPath,subscribeWeaponBuffs} from '../../weaponClassBuffStore';
-import {getCompanionGrowthView} from '../progression/AXECompanionGrowthView.mjs';
+import {getCompanionGrowthView,applyCompanionGrowthBonus} from '../progression/AXECompanionGrowthView.mjs';
 import {getCompanionMasteryProgress,applyCompanionRoleBonus} from '../progression/AXECompanionRoleMastery.mjs';
 import './AXECompanionOverviewClone.css';
 import './AXECompanionProfileRedesign.css';
@@ -56,8 +56,7 @@ export default function AXECompanionOverviewClone({onNotice=()=>{},onEquipment=(
   const playerRole=role==='ranged'?'range':role;
   const mastered=getCompanionMasteryProgress(mount,playerRole);
   const contribution=applyCompanionRoleBonus(
-    Object.fromEntries(Object.entries(liveBonuses).map(([key,value])=>
-      [key,Number(value||0)*(1+growth.bonusPct/100)])),mount,playerRole);
+    applyCompanionGrowthBonus(liveBonuses,mount?.totalXp||0),mount,playerRole);
   const registered=mounts.registeredMountId===mount?.instanceId;
   const active=mounts.activeMountId===mount?.instanceId;
   const doAction=(action,word)=>{
