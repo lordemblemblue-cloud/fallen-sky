@@ -50,8 +50,9 @@ export function createCloneSkillTreePaths(category='damage') {
     id:lane.id,
     label:lane.id==='three'&&category!=='damage'?'Multi-Hit':lane.label,
     icon:lane.icon,
-    titles:lane.id==='three'&&category!=='damage'
-      ? ['Multi-Hit',...lane.titles.slice(1)] : lane.titles,
+    titles:lane.id==='three'
+      ? [category==='damage' ? 'Triple Slash' : 'Multi-Hit', ...lane.titles.slice(1)]
+      : lane.titles,
     active:lane.roleIds(role),
     passives:lane.passiveTitles.map((label,i)=>({
       id:role+'_'+lane.id+'_linked_passive_'+(i+1),
