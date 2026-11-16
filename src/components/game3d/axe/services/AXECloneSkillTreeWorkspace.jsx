@@ -9,6 +9,7 @@ import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMaster
 import { isWeaponSkillUnlocked, getWeaponSkillChargeBonusPct, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
 import AXESkillPathHorizontal from './AXESkillPathHorizontal';
+import AXESkillTreeErrorBoundary from './AXESkillTreeErrorBoundary';
 import {
   CLONE_SKILL_TREE_CATEGORIES, createCloneSkillTreePaths, resolveCloneSkillTreeTier,
   cloneSkillTreeIsAvailable,
@@ -243,10 +244,12 @@ export default function AXECloneSkillTreeWorkspace({
           <TreeIcon kind={item.icon} size={27}/><span>{item.label}</span></button>)}
       </aside>
       <main className={'axe-ct-main'+(collection?' axe-ct-main--horizontal':'')}>
-        {collection ? <AXESkillPathHorizontal category={category} paths={paths}
-          activePathId={activePathId} onChangePath={changePath}
-          selected={selected} onSelect={selectNode} activeIds={activeIds}
-          onFeedback={setFeedback}/> : <>
+        {collection ? <AXESkillTreeErrorBoundary resetKey={category+':'+activePathId}>
+          <AXESkillPathHorizontal category={category} paths={paths}
+            activePathId={activePathId} onChangePath={changePath}
+            selected={selected} onSelect={selectNode} activeIds={activeIds}
+            onFeedback={setFeedback}/>
+        </AXESkillTreeErrorBoundary> : <>
           <div className="axe-ct-main-heading">
             <div className="axe-ct-main-icon"><Swords size={29}/></div>
             <div><h2>{companion?'Companion Skills':category==='passive'?'Passive Skills':'Universal Skills'}</h2>
