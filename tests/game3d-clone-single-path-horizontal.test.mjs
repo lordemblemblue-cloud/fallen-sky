@@ -27,8 +27,8 @@ test('reference composition uses horizontal root-to-active and root-to-passive f
   const css=read('AXESkillPathHorizontal.css');
   for(const label of [
     'axe-hp-feature','axe-hp-wheel','axe-hp-fork-lines','axe-hp-tree-root',
-    'axe-hp-tree-branches','axe-hp-track-caption','Skills / Buffs & Passives',
-    'Progression · Upgrade Strength','axe-hp-info','Skill Information','Passive Gain (Path)',
+    'axe-hp-tree-branches','axe-hp-track-caption','Skills · {path.label}',
+    'Passives · {path.label} (automatic)','axe-hp-info','Skill Information','Passive Gain (Path)',
     'Next Level','Upgrade','Equipped',
   ]) assert(horizontal.includes(label)||css.includes(label),'missing feature: '+label);
   assert.match(css,/\.axe-hp-tree-branches\s*\{/);
@@ -66,7 +66,7 @@ test('Upgrade spends the actual weapon points, while mastery XP remains combat-e
 test('other Services and companion or universal skill pages stay wired',()=>{
   const main=read('AXECloneSkillTreeWorkspace.jsx');
   const css=read('AXECloneSkillTree.css');
-  assert.match(main,/\{!collection && <SkillDetails/);
+  assert.match(main,/\{!collection && !modernCollection && <SkillDetails/);
   assert.match(main,/onChangeView\?\.\(id\)/);
   assert.match(main,/companionCategories/);
   assert.match(main,/onPageChange\?\.\(id\)/);
