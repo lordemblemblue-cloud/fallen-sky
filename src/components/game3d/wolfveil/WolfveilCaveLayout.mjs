@@ -156,7 +156,20 @@ function bendWaypoints(a, b, bendLateral = 16, midDrop = -1.8) {
     a.y + (b.y - a.y) * 0.67 + midDrop * 0.85,
     a.z + dz * 0.67 - nz * bendLateral * 0.65,
   ];
-  return [[a.x, a.y, a.z], p1, p2, [b.x, b.y, b.z]];
+  // The room's floor exists from its perimeter inward. The old curved
+  // connector began descending at the room centre, causing an invisible
+  // floor handoff at its doorway (up to metres for the western ring).
+  // Hold each connector at its adjoining room's Y until almost the rim;
+  // then blend grades over the real, long tunnel instead of inside the room.
+  const apron=(room,toward)=>{
+    const dx=toward[0]-room.x,dz=toward[2]-room.z;
+    const len=Math.hypot(dx,dz)||1;
+    const extent=Math.min(Math.max(3,(room.radius||15)-2.0),len*.56);
+    return [room.x+dx/len*extent,room.y,room.z+dz/len*extent];
+  };
+  return [
+    [a.x,a.y,a.z],apron(a,p1),p1,p2,apron(b,p2),[b.x,b.y,b.z],
+  ];
 }
 
 // Entry ramp corridors (threshold -> mouth -> chamber) + 5 interconnecting tunnels!
