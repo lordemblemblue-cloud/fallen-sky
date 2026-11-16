@@ -8,9 +8,12 @@ import {
   WOLFVEIL_CAVE_HUB,
   WOLFVEIL_CAVE_CORRIDORS,
   sampleWolfveilPlayerCaveFloorY,
+  sampleWolfveilCaveSpace,
+  planWolfveilCaveInteraction,
   resolveWolfveilCaveWallCollision,
 } from './WolfveilCaveLayout.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
+import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const TAU = Math.PI * 2;
@@ -552,6 +555,16 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   });
 
   let elapsed = 0;
+  let activeCaveId = null; // explicit E-entry or validated underground checkpoint
+  const restoreUndergroundCheckpoint=position=>{
+    if(activeCaveId||!position||!Number.isFinite(position.y))return;
+    const lx=position.x,lz=position.z-offsetZ;
+    const floor=sampleWolfveilCaveSpace(lx,lz,.75);
+    if(!floor)return;
+    const outsideY=wolfveilHeight(lx,lz);
+    if(Number.isFinite(outsideY)&&position.y<outsideY-2.5&&
+      Math.abs(position.y-floor.floorY)<=2.5)activeCaveId='checkpoint';
+  };
   return {
     group,
     floorMesh,
@@ -560,22 +573,47 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     hub: WOLFVEIL_CAVE_HUB,
     corridors: WOLFVEIL_CAVE_CORRIDORS,
     lightAnchorCount: lightAnchors.length,
+    isActive(){return activeCaveId!==null;},
     playerGroundY(worldPos) {
       if (!worldPos) return null;
-      return sampleWolfveilPlayerCaveFloorY(worldPos.x, worldPos.y, worldPos.z - offsetZ);
+      // Outdoor players must NEVER be snapped to the cave floor merely
+      // because they are standing over the Crystal Vault/waterfall roof.
+      if(!activeCaveId)return null;
+      return sampleWolfveilPlayerCaveFloorY(
+        worldPos.x,worldPos.y,worldPos.z-offsetZ,{insideCave:true});
+    },
+    interact(worldPos) {
+      if(!worldPos)return null;
+      const travel=planWolfveilCaveInteraction({
+        x:worldPos.x,y:worldPos.y,z:worldPos.z-offsetZ,
+      },{insideCave:!!activeCaveId});
+      if(!travel)return null;
+      // A single committed X/Y/Z teleport never leaves half a frame on an
+      // unsupported cliff or samples the underside as the outdoor surface.
+      activeCaveId=travel.action==='enter'?travel.caveId:null;
+      worldPos.x=travel.x;worldPos.y=travel.y;worldPos.z=travel.z+offsetZ;
+      return {action:travel.action,name:travel.name,caveId:travel.caveId};
     },
     resolveCollision(worldPos, prevWorldPos, radius = 0.62) {
-      if (!worldPos || !prevWorldPos) return false;
+      if (!activeCaveId || !worldPos || !prevWorldPos) return false;
       const localNow = { x: worldPos.x, y: worldPos.y, z: worldPos.z - offsetZ };
-      const localPrev = { x: prevWorldPos.x, y: prevWorldPos.y ?? worldPos.y, z: prevWorldPos.z - offsetZ };
-      const hit = resolveWolfveilCaveWallCollision(localNow, localPrev, radius);
-      if (hit) {
-        worldPos.x = localNow.x;
-        worldPos.z = localNow.z + offsetZ;
+      const localPrev = {
+        x: prevWorldPos.x,y:prevWorldPos.y ?? worldPos.y,z:prevWorldPos.z-offsetZ,
+      };
+      let hit=resolveWolfveilCaveWallCollision(localNow,localPrev,radius);
+      // Forced knockbacks/rolls may put the entire previous point at an invalid
+      // wall: never let that accidentally open a free exit under the mountain.
+      if(!sampleWolfveilCaveSpace(localNow.x,localNow.z,radius)){
+        localNow.x=localPrev.x;localNow.z=localPrev.z;
+        hit=true;
+      }
+      if(hit){
+        worldPos.x=localNow.x;worldPos.z=localNow.z+offsetZ;
       }
       return hit;
     },
     update(dt, playerWorldPos = null) {
+      restoreUndergroundCheckpoint(playerWorldPos);
       elapsed += Math.max(0, Math.min(dt || 0, 0.1));
       cisternUniforms.uTime.value = elapsed;
       for (const f of animatedFlames) {
