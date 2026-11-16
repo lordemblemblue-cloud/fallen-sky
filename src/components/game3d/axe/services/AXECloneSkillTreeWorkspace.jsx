@@ -226,10 +226,19 @@ export default function AXECloneSkillTreeWorkspace({
   const normalizedSearch = search.trim().toLowerCase();
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
   useEffect(()=>subscribeWeaponSkillPoints(()=>setMasteryRevision(v=>v+1)),[]);
-  useEffect(()=>{if(!companion && activeMode?.id)setCategory(activeMode.id);},[activeMode?.id,companion]);
+  useEffect(()=>{
+    if(companion)setCategory('combat');
+    else if(activeMode?.id)setCategory(activeMode.id);
+  },[activeMode?.id,companion]);
   // The Game 3D controller owns selection, saves, unlocks, and loadout transactions.
   const registry = companion ? getAllCompanionSkills() : getAllSkills();
-  const filteredFlat = companion ? registry : category==='passive' ?
+  const companionCategories = useMemo(()=>[...new Set(getAllCompanionSkills()
+    .map(skill=>skill.category).filter(Boolean))].map(id=>({
+      id,label:id.charAt(0).toUpperCase()+id.slice(1),icon:'passive',
+    })),[]);
+  const displayCategories = companion ? companionCategories : CLONE_SKILL_TREE_CATEGORIES;
+  const filteredFlat = companion ? registry.filter(skill=>skill.category===category)
+    : category==='passive' ?
     registry.filter(s=>s.skill_type===SKILL_TYPE.PASSIVE) :
     registry.filter(s=>s.skill_type===(view==='buffs'||category==='universal'?SKILL_TYPE.ACTIVE_BUFF:SKILL_TYPE.ACTIVE_ATTACK));
   const collection = view==='skills'&&!companion&&['damage','range','defense'].includes(category);
@@ -265,7 +274,7 @@ export default function AXECloneSkillTreeWorkspace({
   };
   const selectedWeapon = ['damage','range','defense'].includes(category)
     ? getWeaponForSkillBookMode(ownedWeapons,category) : null;
-  void selectedSkill;void passiveIds;void onRemovePassive;void onSavePreset;
+  void selectedSkill;void passiveIds;void onRemovePassive;
   return <div className="axe-clone-skill-root" data-progression-panel={currentPage}>
     <header className="axe-ct-header">
       <BookOpen size={34} aria-hidden="true"/>
@@ -282,7 +291,7 @@ export default function AXECloneSkillTreeWorkspace({
     </header>
     <div className="axe-ct-content">
       <aside className="axe-ct-categories" aria-label="Weapon Category">
-        {CLONE_SKILL_TREE_CATEGORIES.map(item=><button key={item.id} type="button"
+        {displayCategories.map(item=><button key={item.id} type="button"
           aria-pressed={category===item.id} onClick={()=>selectCategory(item.id)}>
           <TreeIcon kind={item.icon} size={27}/><span>{item.label}</span></button>)}
       </aside>
@@ -333,6 +342,10 @@ export default function AXECloneSkillTreeWorkspace({
               <ChevronLeft size={20}/></button>
             <h3>Equipped Skills</h3>
             <span className="axe-ct-preset">Set {currentPresetIndex+1} / 3</span>
+            <button type="button" className="axe-ct-save-preset"
+              onClick={()=>onSavePreset?.()} aria-label="Save currently equipped skill bar">
+              Save
+            </button>
             <button type="button" onClick={()=>switchPreset(currentPresetIndex+1)} aria-label="Next skill set">
               <ChevronRight size={20}/></button>
             <small>Select a skill, then choose a slot.</small>
