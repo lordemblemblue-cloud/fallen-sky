@@ -274,7 +274,7 @@ export default function AXECloneSkillTreeWorkspace({
       <nav className="axe-ct-actor" aria-label="Skill owner">
         {[['skills_character','Character'],['skills_companion','Companion']].map(([id,label])=>
           <button key={id} type="button" aria-pressed={currentPage===id}
-            onClick={()=>{setSelected(null);setSearch('');if(onSelect)onSelect(id);else setLocalPage(id);}}>{label}</button>)}
+            onClick={()=>{setSelected(null);setSearch('');setFeedback('');onPageChange?.(id);}}>{label}</button>)}
       </nav>
       <div className="axe-ct-header-right"><span>✧ &nbsp; Live skill mastery · Game 3D</span>
         {onClose && <button className="axe-ct-close" type="button" aria-label="Close Skill Book"
@@ -291,6 +291,13 @@ export default function AXECloneSkillTreeWorkspace({
           <div className="axe-ct-main-icon"><Swords size={29}/></div>
           <div><h2>{collection?'Combat Skill Tree':companion?'Companion Skills':category==='passive'?'Passive Skills':'Combat Skills'}</h2>
             <p>{collection?'Branching combat skills · Build your fighting style':'Your registered skill collection and mastery'}</p></div>
+          {collection && <button type="button" className="axe-ct-activate-weapon"
+            aria-label={'Activate '+category+' weapon skill bar'}
+            onClick={()=>onActivateWeapon?.(category)}
+            title="Draw an owned weapon and activate its saved skill set">
+            {activeMode?.id===category?'Active':'Activate'} {category==='range'?'Range':category==='defense'?'Defense':'Damage'} Bar
+            {selectedWeapon?.name && <small>{selectedWeapon.name}</small>}
+          </button>}
         </div>
         <div className="axe-ct-toolbar">
           <select aria-label="Filter skill tree" value={filter} onChange={e=>setFilter(e.target.value)}>
@@ -304,7 +311,7 @@ export default function AXECloneSkillTreeWorkspace({
           <nav className="axe-ct-view" aria-label="Skill, buff and advancement">
             {[['skills','Skill'],['buffs','Buff'],['advance','Advance']].map(([id,label])=>
               <button key={id} type="button" aria-pressed={view===id}
-                onClick={()=>{setView(id);setSearch('');setFilter('all');setSelected(null);}}>{label}</button>)}
+                onClick={()=>{onChangeView?.(id);setSearch('');setFilter('all');setSelected(null);}}>{label}</button>)}
           </nav>
         </div>
         {view==='advance' && !companion ? <div className="axe-ct-tree-scroll axe-ct-advance"><AXEWeaponSkillPointsPanel/></div> : collection ? <div className="axe-ct-tree-scroll" aria-label="Three branch combat skill tree">
@@ -314,29 +321,26 @@ export default function AXECloneSkillTreeWorkspace({
             </div>
             <div className="axe-ct-lanes">
               {paths.map(path=><BranchLane key={path.id} path={path} category={category}
-                selected={selected} onSelect={setSelected} equipped={activeIds}
+                selected={selected} onSelect={selectNode} equipped={activeIds}
                 filter={filter} search={normalizedSearch}/>)}
             </div>
           </div>
         </div> : <FlatSkillCatalog skills={filteredFlat} selected={selected} equipped={activeIds}
-          companion={companion} search={normalizedSearch} onSelect={setSelected}/>}
+          companion={companion} search={normalizedSearch} onSelect={selectNode}/>}
         <div className="axe-ct-equipped" aria-label="Equipped skills">
           <div className="axe-ct-equipped-heading">
-            <button type="button" onClick={()=>switchPreset(presets.index-1)} aria-label="Previous skill set">
+            <button type="button" onClick={()=>switchPreset(currentPresetIndex-1)} aria-label="Previous skill set">
               <ChevronLeft size={20}/></button>
             <h3>Equipped Skills</h3>
-            <span className="axe-ct-preset">Set {companion?1:presets.index+1} / {companion?1:3}</span>
-            <button type="button" onClick={()=>switchPreset(presets.index+1)} aria-label="Next skill set">
+            <span className="axe-ct-preset">Set {currentPresetIndex+1} / 3</span>
+            <button type="button" onClick={()=>switchPreset(currentPresetIndex+1)} aria-label="Next skill set">
               <ChevronRight size={20}/></button>
             <small>Select a skill, then choose a slot.</small>
           </div>
           <div className="axe-ct-equipped-slots">
             {activeIds.map((id,i)=><button type="button" key={i} onClick={()=>{
                 if(selected?.kind==='skill')equipSkill(getSkill(selected.id),i);
-                else if(id){
-                  const result=companion?unequipCompanionSkill(i):unequipActive(i);
-                  setFeedback(result?.ok?'Skill unequipped.':'Could not unequip.');
-                }
+                else if(id)onRemoveActive?.(i);
               }} title={id ? getSkill(id)?.skill_name || 'Equipped skill' : 'Empty skill slot'}
               aria-label={(companion?COMPANION_SLOT_KEYS[i]:String(i+1))+': '+(getSkill(id)?.skill_name||'Empty')}>
               {id?<TreeIcon kind={classify(getSkill(id))==='Multi-Hit'?'triple':
@@ -351,7 +355,7 @@ export default function AXECloneSkillTreeWorkspace({
         companion={companion} activeIds={activeIds} onEquip={equipSkill}/>
     </div>
     <footer className="axe-ct-footer">
-      <span role="status">{feedback||'Choose a category to browse skills, equip them to a loadout, and master your combat style.'}</span>
+      <span role="status">{feedback||status||'Choose a category to browse skills, equip them to a loadout, and master your combat style.'}</span>
       <span>◉ Mastery is earned through gameplay</span>
     </footer>
   </div>;
