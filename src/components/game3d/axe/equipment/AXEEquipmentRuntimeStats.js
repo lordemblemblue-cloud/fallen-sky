@@ -184,8 +184,14 @@ export function getAXEEquipmentRuntimeBonuses() {
       overEnchant,
     });
     const stageItemImprintEnabled = doesAXEStageIncreaseItemStats(item);
-    const advancementMult = advancementMultiplier(advancement, stageItemImprintEnabled);
-    const coreScale = enhancementMult * advancementMult;
+    // Bounded extra base-stat credit for harder-to-farm Elite and Legendary
+    // donors; no rate multiplication, shared-item mutation or PvP bypass.
+    const extraPerRank=String(item.rarity||'').toLowerCase()==='elite'?0.015:
+      String(item.rarity||'').toLowerCase()==='legendary'?0.025:0;
+    const ascendedRank=Math.min(4,Math.max(0,Number(advancement.stage?.rank)||0));
+    const advancementMult=advancementMultiplier(advancement,stageItemImprintEnabled)
+      +(stageItemImprintEnabled ? ascendedRank*extraPerRank : 0);
+    const coreScale=enhancementMult*advancementMult;
     const rateBonus = stageItemImprintEnabled ? getAXEEquipmentAscensionRateBonus(advancement.stage) : 0;
     const socketState = getAXESocketState(itemId);
     const aura = getAXEItemAura(itemId);
