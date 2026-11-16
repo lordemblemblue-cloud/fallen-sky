@@ -12,7 +12,7 @@ import {
 } from './WolfveilCaveLayout.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
 import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
-import {WOLFVEIL_CAVE_APPROACHES} from './WolfveilCaveAccessPlan.mjs';
+import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const TAU = Math.PI * 2;
@@ -597,7 +597,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       if (!worldPos || !prevWorldPos) return false;
       const localNow = { x: worldPos.x, y: worldPos.y, z: worldPos.z - offsetZ };
       const localPrev = { x: prevWorldPos.x, y: prevWorldPos.y ?? worldPos.y, z: prevWorldPos.z - offsetZ };
-      const hit = resolveWolfveilCaveWallCollision(localNow, localPrev, radius);
+      const railHit=resolveWolfveilCaveEntranceRailCollision(localNow,localPrev,radius);
+      const hit=resolveWolfveilCaveWallCollision(localNow, localPrev, radius) || railHit;
       if (hit) {
         worldPos.x = localNow.x;
         worldPos.z = localNow.z + offsetZ;
