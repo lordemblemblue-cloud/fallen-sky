@@ -79,3 +79,22 @@
 .axe-glass-set-special {display:block;margin:4px 0 8px;
   color:#b3efcc;font:11px/1.45 Georgia,serif;overflow-wrap:anywhere;
 }
+
+
+/* True Ascension +4 prestige, read from the owned item's saved stage;
+ * glow is cosmetic, never a new rarity or stat roll. */
+.axe-glass-loadout .axe-inventory-prestige {
+  position:relative;
+  border-color:var(--prestige-a,#8d71ee);
+  box-shadow:inset 0 0 14px color-mix(in srgb,var(--prestige-a,#8d71ee) 22%,transparent),
+    0 0 12px color-mix(in srgb,var(--prestige-b,#4dabf0) 38%,transparent);
+}
+.axe-glass-loadout .axe-inventory-prestige .axe-app-inventory-name,
+.axe-glass-loadout .axe-inventory-prestige strong {
+  background:linear-gradient(110deg,var(--prestige-a,#8d71ee),var(--prestige-b,#4dabf0));
+  background-clip:text;-webkit-background-clip:text;color:transparent;
+  font-weight:700;
+}
+.axe-glass-loadout .axe-inventory-prestige .axe-app-inventory-art {
+  filter:drop-shadow(0 0 5px var(--prestige-b,#4dabf0));
+}
