@@ -716,6 +716,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       onStats(stats){window.__gw3dRegionStreamingStatus=stats;},
     }):null;
     if(regionStream)window.__gw3dRegionStreamer=regionStream;
+    // Use the physical cave-floor ray while already walking on a descending
+    // ramp. The generic sky-down sample can hit the OVERHEAD mountain first
+    // even when our feet are on an entirely different underground surface.
+    // Only prefer the cave when its floor is within one legal walk step;
+    // do not teleport surface walkers into a cave or bypass the void guard.
+    const caveAwareGroundY=(x,z,referenceY)=>{
+      const ordinary=sampleGroundY(x,z,referenceY);
+      if(region!=='wolfveil'||suigenActive||!wolfveilVillage?.caveSystem||
+         !Number.isFinite(referenceY))return ordinary;
+      const caveY=wolfveilVillage.caveSystem.playerGroundY({x,y:referenceY,z});
+      return Number.isFinite(caveY)&&Math.abs(caveY-referenceY)<=1.1
+        ?caveY:ordinary;
+    };
     // Clone-only ambient wildlife: one owner bird GLB, cosmetic flight only.
     const ambientBirds=wolfveilVillage?createWolfveilAmbientBirds({
       scene,quality:readGraphicsSettings().quality||'high',
@@ -2610,8 +2623,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
        shouldRejectCaveGroundStep({
          from:{x:fromX,z:fromZ},
          to:{x:model.position.x,z:model.position.z},
-         fromGroundY:sampleGroundY(fromX,fromZ,model.position.y),
-         toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+         fromGroundY:caveAwareGroundY(fromX,fromZ,model.position.y),
+         toGroundY:caveAwareGroundY(model.position.x,model.position.z,model.position.y),
          variant:suigenActive?'suigen':'classic',actorRadius:mounted?.85:.62,
        })){
       model.position.x=fromX;model.position.z=fromZ;
@@ -3041,8 +3054,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
            (!dedicatedMode && mapReady && shouldRejectCaveGroundStep({
              from:beforeRoguePush,
              to:{x:model.position.x,z:model.position.z},
-             fromGroundY:sampleGroundY(beforeRoguePush.x,beforeRoguePush.z,model.position.y),
-             toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+             fromGroundY:caveAwareGroundY(beforeRoguePush.x,beforeRoguePush.z,model.position.y),
+             toGroundY:caveAwareGroundY(model.position.x,model.position.z,model.position.y),
              variant:suigenActive?'suigen':'classic',
              actorRadius:mounted?.85:.62,
            })))){
