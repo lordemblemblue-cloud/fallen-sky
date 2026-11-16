@@ -47,6 +47,8 @@ import {
 import { getAXEServiceInventoryCost } from './AXEServiceEconomy';
 import { canAffordAXEServiceCost, consumeAXEServiceCost, getAXEServiceResourceCount, getAXEServiceResourceCategory } from './AXEServiceResources';
 import { getNextStage, AXE_REFINE_CONFIG, AXE_ULTIMATE_CONFIG } from '../equipment/AXEItemAdvancementSystem';
+import {isAXEFarmingRarity} from '../loot/AXEFarmingGearTiers.mjs';
+import {previewAXEAscensionFeed} from '../equipment/AXEAscensionFeedingRules.mjs';
 import { AXE_GEM_DEFINITIONS, canInsertAXEGem, getAXEGemUpgradePreview } from '../equipment/AXESocketGemSystem';
 import { getShopState, spendGold, addGold } from '../../shop/shopStore';
 import { getPlayerHUD } from '../../playerHUDStore';
@@ -151,21 +153,43 @@ const localHandlers = {
   }, 'weapon_legacy'),
 
   stage: (payload) => withOwnedItem(payload, (item) => {
-    const advancement = getAXEAdvancementState(item.instanceId);
-    if (!getNextStage(advancement.stage)) return { ok: false, reason: 'MAX_STAGE' };
-    // Validate before charging. The actual owned reinforcement is used in the
-    // store to capture the imprint; no value is accepted from the forge payload.
-    const currentPct = Number(getItemReinforcement(item.instanceId)?.percent || 0);
-    if (!Number.isFinite(currentPct) || currentPct < 0 ||
-        currentPct > getAXEReinforcementCap(item))
-      return { ok: false, reason: 'REINFORCEMENT_EXCEEDS_RARITY_CAP' };
-    const cost = getAXEServiceInventoryCost('stage', { advancement });
-    const paid = consumeCost(cost);
-    if (!paid.ok) return paid;
-
-    const result = applyAXEStage(item.instanceId);
-    return { ...result, cost };
-  }, 'stage'),
+    const advancement=getAXEAdvancementState(item.instanceId);
+    if(!getNextStage(advancement.stage))return {ok:false,reason:'MAX_STAGE'};
+    const currentPct=Number(getItemReinforcement(item.instanceId)?.percent||0);
+    if(!Number.isFinite(currentPct)||currentPct<0)
+      return {ok:false,reason:'REINFORCEMENT_INVALID'};
+    if(isAXEFarmingRarity(item.rarity)){
+      // The new Rare/Elite/Legendary ascension path requires a real owned,
+      // unlocked, unequipped same-rarity/same-slot donor. No forge materials
+      // or client-supplied rank/percent bypass. The transaction gateway already
+      // locks the item, donor and shared inventory until this finishes.
+      const donorId=payload.donorId||payload.donor?.instanceId;
+      const donorCheck=canConsumeAXEEquipmentItem(donorId);
+      if(!donorCheck.ok)return donorCheck;
+      const preview=previewAXEAscensionFeed(item,advancement.stage,donorCheck.item);
+      if(!preview.ok)return preview;
+      const previous={...advancement.stage};
+      const result=applyAXEStage(item.instanceId,{feedDonor:donorCheck.item});
+      if(!result.ok)return result;
+      const consumed=consumeAXEEquipmentItem(donorCheck.item.instanceId);
+      if(!consumed.ok){
+        // Never grant free ranks when inventory debit cannot complete.
+        setAXEAdvancementRecord(item.instanceId,'stage',previous);
+        return {ok:false,reason:'ASCENSION_DONOR_DEBIT_FAILED'};
+      }
+      return {...result,donorId:donorCheck.item.instanceId,
+        donorConsumed:true,required:preview.required,
+        progressAfter:preview.progressAfter,cost:{donors:1}};
+    }
+    // Preserve legacy materials-based stage upgrades for nonfarming grades.
+    if(currentPct>getAXEReinforcementCap(item))
+      return {ok:false,reason:'REINFORCEMENT_EXCEEDS_RARITY_CAP'};
+    const cost=getAXEServiceInventoryCost('stage',{advancement});
+    const paid=consumeCost(cost);
+    if(!paid.ok)return paid;
+    const result=applyAXEStage(item.instanceId);
+    return {...result,cost};
+  },'stage'),
 
   refine: (payload) => withOwnedItem(payload, (item) => {
     const advancement = getAXEAdvancementState(item.instanceId);
