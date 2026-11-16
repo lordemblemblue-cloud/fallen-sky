@@ -357,3 +357,26 @@
 @media(prefers-reduced-motion:reduce){
   .axe-hp-wheel>button {transition:none;}
 }
+
+/* Contain a tree-specific runtime error. Keep the native gold-glass design,
+   the equipped bar, and other Services available for retry or navigation. */
+.axe-hp-boundary-body {
+  display:flex;flex-direction:column;flex:1 1 auto;min-width:0;min-height:0;overflow:hidden;
+}
+.axe-hp-recovery {
+  display:flex;align-items:flex-start;justify-content:center;gap:18px;
+  flex:1 1 auto;min-height:180px;margin:10px;padding:25px;
+  border:1px solid #e1af79;border-radius:15px;
+  background:linear-gradient(145deg,rgba(27,44,60,.98),rgba(12,23,39,.98));
+  color:#f5dfb9;
+}
+.axe-hp-recovery>svg {color:#f3c37e;flex-shrink:0;}
+.axe-hp-recovery h3 {font:normal 23px Georgia,serif;color:#ffe2a9;margin:0 0 10px;}
+.axe-hp-recovery p {margin:6px 0;font:13px/1.4 Georgia,serif;color:#e2d2b9;}
+.axe-hp-recovery .axe-hp-recovery-detail {font:11px/1.5 ui-monospace,monospace;overflow-wrap:anywhere;opacity:.8;}
+.axe-hp-recovery button {
+  display:inline-flex;align-items:center;gap:7px;
+  margin-top:9px;padding:8px 14px;border:1px solid #f3d39d;border-radius:8px;
+  color:#362719;background:#f4d79c;font:14px Georgia,serif;
+}
+.axe-hp-recovery button:focus-visible {outline:2px solid #ffe8aa;outline-offset:2px;}

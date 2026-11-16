@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowUp, BookOpen, ChevronDown, ChevronUp, Shield, Sparkles } from 'lucide-react';
 import { getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMasteryStore';
@@ -55,6 +55,7 @@ export default function AXESkillPathHorizontal({
   onFeedback,
 }) {
   const [points,setPoints]=useState(getWeaponSkillPoints);
+  const lastWheelAt=useRef(0);
   const [,setMasteryRevision]=useState(0);
   useEffect(()=>subscribeWeaponSkillPoints(setPoints),[]);
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
@@ -93,12 +94,17 @@ export default function AXESkillPathHorizontal({
     count+(weaponTierUnlocked(points.save,category,i)?1:0),0);
   const handleUpgrade=()=>{
     if(!canUpgrade)return;
-    const result=investWeaponSkillPoint(category,stageIndex,1);
-    onFeedback?.(result.ok
-      ? 'Allocated one weapon skill point to '+WEAPON_LABELS[category]+' stage '+(stageIndex+1)+'.'
-      : ({NOT_ENOUGH_SKILL_POINTS:'Earn more skill points through character levels.',
-        PREVIOUS_TIER_LOCKED:'Complete the preceding weapon stage first.',
-        TIER_CAPPED:'This stage is already complete.'})[result.reason]||'Unable to invest skill points.');
+    try {
+      const result=investWeaponSkillPoint(category,stageIndex,1);
+      onFeedback?.(result.ok
+        ? 'Allocated one weapon skill point to '+WEAPON_LABELS[category]+' stage '+(stageIndex+1)+'.'
+        : ({NOT_ENOUGH_SKILL_POINTS:'Earn more skill points through character levels.',
+          PREVIOUS_TIER_LOCKED:'Complete the preceding weapon stage first.',
+          TIER_CAPPED:'This stage is already complete.'})[result.reason]||'Unable to invest skill points.');
+    } catch(error) {
+      console.error('[Game3D/SkillTree] Weapon point upgrade failed:',error);
+      onFeedback?.('Could not upgrade this stage. Your saved skill points were not changed by this screen.');
+    }
   };
   const choosePath=index=>{
     const id=PATH_ORDER[(index+PATH_ORDER.length)%PATH_ORDER.length];
@@ -114,7 +120,15 @@ export default function AXESkillPathHorizontal({
   return <div className="axe-hp-workspace">
     <nav className="axe-hp-wheel" aria-label="Single, Multi and Aerial paths"
       tabIndex={0}
-      onWheel={event=>{if(Math.abs(event.deltaY)>5)choosePath(currentIndex+(event.deltaY>0?1:-1));}}
+      onWheel={event=>{
+        if(Math.abs(event.deltaY)<=5)return;
+        const now=Date.now();
+        // Trackpads can fire dozens of wheel events in a single gesture.
+        // Only move once per deliberate step to prevent rapid render floods.
+        if(now-lastWheelAt.current<160)return;
+        lastWheelAt.current=now;
+        choosePath(currentIndex+(event.deltaY>0?1:-1));
+      }}
       onKeyDown={event=>{
         if(event.key==='ArrowDown'||event.key==='ArrowUp'){
           event.preventDefault();
