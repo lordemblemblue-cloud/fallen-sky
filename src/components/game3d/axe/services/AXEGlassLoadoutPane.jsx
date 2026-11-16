@@ -103,8 +103,13 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     (activeCompanion?.gearSlots || []).map(slot => [slot,0]);
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
   const chooseSlot = slot => {
-    setFocusedSlot(value=>value===slot?'':slot);
-    setFilter('All');
+    if (isPlayer) {
+      setFocusedSlot(value=>value===slot?'':slot);
+      setFilter('All');
+    } else {
+      setFilter(value=>value===slot?'All':slot);
+      setFocusedSlot('');
+    }
     setSelectedId(null);
   };
   const performItem = (item, allowUnequip = false) => {
@@ -133,10 +138,36 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       getAXEAdvancementState(item.instanceId),
   }))) : null;
 
+  const inventoryToolbar = (
+    <div className="axe-app-inventory-toolbar" role="search" aria-label="Search and filter owned equipment">
+            <div className="axe-app-inventory-search">
+              <Search size={16} aria-hidden="true"/>
+              <label htmlFor={'axe-equipment-search-'+actor} className="sr-only">Search equipment</label>
+              <input id={'axe-equipment-search-'+actor} type="search" value={search}
+                onChange={event=>setSearch(event.target.value)}
+                placeholder="Search equipment…" aria-label="Search equipment by name or rarity"/>
+              {search && <button type="button" onClick={()=>setSearch('')}
+                aria-label="Clear equipment search"><X size={14}/></button>}
+            </div>
+            <label className="axe-app-inventory-category">
+              <span className="sr-only">Equipment category</span>
+              <select aria-label="Equipment category" value={focusedSlot||filter}
+                onChange={event=>{
+                  setFilter(event.target.value);
+                  setFocusedSlot('');
+                  setSelectedId(null);
+                }}>
+                <option value="All">All Equipment</option>
+                {categories.map(slot=><option key={slot} value={slot}>{caption(slot)}</option>)}
+              </select>
+            </label>
+          </div>
+  );
+
   return <div className="axe-app-layout axe-glass-loadout" data-equipment-actor={actor}>
     <aside className="axe-app-rail axe-glass-loadout-rail" aria-label="Equipment slot filters">
       <div className="axe-app-rail-glyph"><Package size={21}/><small>Gear</small></div>
-      {categories.map(slot => <button type="button" key={slot} aria-pressed={focusedSlot===slot}
+      {categories.map(slot => <button type="button" key={slot} aria-pressed={isPlayer ? focusedSlot===slot : filter===slot}
         title={'Filter '+caption(slot)} onClick={()=>chooseSlot(slot)}>
         <IconFor item={{slot}} size={22}/>
         <span className="axe-app-rail-name">{caption(slot)}</span>
@@ -145,9 +176,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         setFocusedSlot(''); setFilter('All'); }}>All</button>
     </aside>
     <section className="axe-app-model-stage axe-glass-loadout-stage"
-      aria-label={isPlayer ? 'Player 3D viewer with equipment slots':'Companion 3D viewer with equipment slots'}>
+      aria-label={isPlayer ? 'Player 3D viewer with equipment slots':'Companion 3D viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
-      {['left','right'].map((side) => <div key={side}
+      {isPlayer && ['left','right'].map((side) => <div key={side}
         className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
         {displaySlots.filter((_,i)=>side==='left' ? i < Math.ceil(displaySlots.length/2)
           : i>=Math.ceil(displaySlots.length/2)).map(([slot,slotIndex])=>{
@@ -175,32 +206,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     <main className="axe-app-main-stack" aria-label={isPlayer ? "Owned equipment inventory" : "Available companion gear catalog"}>
       <section className="axe-app-card axe-app-inventory">
         <header className="axe-app-card-heading"><Package size={20}/><h3>Inventory</h3>
-          <small>{visible.length} / {list.length}</small></header>
+          <small>{visible.length} / {list.length}</small>
+          {!isPlayer && inventoryToolbar}</header>
         <div className="axe-app-card-content">
           <div className="axe-app-inventory-browser">
-          <div className="axe-app-inventory-toolbar" role="search" aria-label="Search and filter owned equipment">
-            <div className="axe-app-inventory-search">
-              <Search size={16} aria-hidden="true"/>
-              <label htmlFor={'axe-equipment-search-'+actor} className="sr-only">Search equipment</label>
-              <input id={'axe-equipment-search-'+actor} type="search" value={search}
-                onChange={event=>setSearch(event.target.value)}
-                placeholder="Search equipment…" aria-label="Search equipment by name or rarity"/>
-              {search && <button type="button" onClick={()=>setSearch('')}
-                aria-label="Clear equipment search"><X size={14}/></button>}
-            </div>
-            <label className="axe-app-inventory-category">
-              <span className="sr-only">Equipment category</span>
-              <select aria-label="Equipment category" value={focusedSlot||filter}
-                onChange={event=>{
-                  setFilter(event.target.value);
-                  setFocusedSlot('');
-                  setSelectedId(null);
-                }}>
-                <option value="All">All Equipment</option>
-                {categories.map(slot=><option key={slot} value={slot}>{caption(slot)}</option>)}
-              </select>
-            </label>
-          </div>
+          {isPlayer && inventoryToolbar}
           <div className="axe-app-inventory-grid" role="list">
             {visible.map(item=><button type="button" role="listitem"
               className={'axe-app-inventory-tile'+(prestigeFor(item)?' axe-inventory-prestige':'')}
