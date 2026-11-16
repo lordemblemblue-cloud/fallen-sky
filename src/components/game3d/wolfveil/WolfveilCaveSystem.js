@@ -344,7 +344,28 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   // Four real stone approach tracks; mountain/roof polygons remain SEALED.
   // The final outdoor apron leads to the existing E-activated arch, while
   // the internal ramp is still the only legal way down after entry.
-  const caveAccessStats=appendWolfveilCaveAccessFloor(floorTris);
+  // Outdoor flagstone is its own walk mesh. The cave floor stays underground,
+  // so a player on the hillside walks the pavement all the way to the arch.
+  const pavementTris = new WolfveilTriangles();
+  const caveAccessStats=appendWolfveilCaveAccessFloor(pavementTris);
+  const pavementMat = floorMat.clone();
+  pavementMat.name = 'SWV_CaveApproach_DressedFlagstone';
+  pavementMat.polygonOffset = true;
+  pavementMat.polygonOffsetFactor = -2;
+  pavementMat.polygonOffsetUnits = -2;
+  world.ownedMaterials.push(pavementMat);
+  const pavementMesh = new THREE.Mesh(pavementTris.geometry(), pavementMat);
+  pavementMesh.name = 'SWV_CaveApproach_FlagstonePavement';
+  pavementMesh.receiveShadow = true;
+  pavementMesh.userData = {
+    walkable: true,
+    approachPavement: true,
+    clientGroundRaycast: true,
+    notServerAuthority: true,
+  };
+  group.add(pavementMesh);
+  world.walkableSurfaces ??= [];
+  world.walkableSurfaces.push(pavementMesh);
   const caveAccessProps=appendWolfveilCaveAccessProps({
     addProp,addBrazier,stoneGeo:boxGeo,beamGeo:boxGeo,
     stoneMat:floorMat,timberMat,bronzeMat,
@@ -399,7 +420,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       shellTris.quad(
         facePoint(a0, 1, 0), facePoint(a1, 1, 0),
         facePoint(a1, s1, leanAt(a1)), facePoint(a0, s0, leanAt(a0)),
-        [0.46, 0.50, 0.57],
+        [0.62, 0.64, 0.68],
+        [[i * 0.55, 0], [(i + 1) * 0.55, 0], [(i + 1) * 0.55, 2.4], [i * 0.55, 2.4]],
       );
     }
     // Broken rock teeth hanging along the rim of the mouth.
@@ -467,6 +489,25 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       addProp(boxGeo, wallMat, px, base + 2.05, pz, 0.62, 4.1, 0.78, 0, yaw, 0);
     }
     addProp(boxGeo, wallMat, doorX, my + 3.95, doorZ, 4.5, 0.48, 0.72, 0, yaw, 0);
+    // A second rock course and low retaining walls, so the arch is a built
+    // mouth in the hill instead of a lintel standing on bare dirt.
+    addProp(boxGeo, wallMat, doorX - dx * 0.35, my + 4.55, doorZ - dz * 0.35, 5.1, 0.42, 1.05, 0, yaw, 0);
+    for (let i = 0; i < 6; i++) {
+      const f0 = -8.2 + i * 1.25, f1 = f0 + 1.25;
+      for (const side of [-1, 1]) {
+        const lat = side * 4.05;
+        const at = f => {
+          const x = mx + dx * f + nx * lat, z = mz + dz * f + nz * lat;
+          return [x, wolfveilHeight(x, z), z];
+        };
+        const a = at(f0), b = at(f1);
+        shellTris.quad(
+          a, b, [b[0], b[1] + 1.28, b[2]], [a[0], a[1] + 1.28, a[2]],
+          [0.55, 0.56, 0.58],
+          [[0, f0 * 0.4], [1.2, f0 * 0.4], [1.2, 1.3], [0, 1.3]],
+        );
+      }
+    }
 
     // Outdoor stair: the place you walk up to enter. Each tread sits on the
     // hillside, so it cannot float and drop you.
@@ -863,6 +904,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   return {
     group,
     floorMesh,
+    pavementMesh,
     shellMesh,
     caves: WOLFVEIL_EXPLORABLE_CAVES,
     hub: WOLFVEIL_CAVE_HUB,

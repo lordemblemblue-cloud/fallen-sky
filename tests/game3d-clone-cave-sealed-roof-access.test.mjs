@@ -48,6 +48,8 @@ test('outdoor stone ribbons are real finite triangles and meet each sealed-arch 
   assert.equal(stats.surfaceRoofIntact,true);
   assert.equal(stats.shoulderQuads,0,'no false floor covering the mountain roof');
   assert.ok(stats.walkQuads>200);
+  assert.ok(stats.curbQuads>40,'laid rock curbs flank the walk');
+  assert.ok(stats.mouthQuads>=8,'flagstone continues to the cave mouth');
   assert.ok(triangles.every(t=>t.every(p=>p.length===3&&p.every(Number.isFinite))));
   for(const a of WOLFVEIL_CAVE_APPROACHES){
     const cave=WOLFVEIL_EXPLORABLE_CAVES.find(c=>c.id===a.caveId);
@@ -117,7 +119,8 @@ test('full surface mountain is never cut away and E remains the sole cave sessio
   const map=read('../src/components/game3d/hud/AXEWorldMapOverlay.jsx');
   assert.match(terrain,/void caveCutouts;/);
   assert.match(terrain,/idx\.push\(p,q,p\+1,q,q\+1,p\+1\)/);
-  assert.match(cave,/appendWolfveilCaveAccessFloor\(floorTris\)/);
+  assert.match(cave,/appendWolfveilCaveAccessFloor\(pavementTris\)/);
+  assert.match(cave,/SWV_CaveApproach_FlagstonePavement/);
   assert.match(cave,/world\.walkableSurfaces\.push\(floorMesh\)/);
   assert.match(cave,/if\(!activeCaveId\)/);
   assert.match(cave,/activeCaveId=travel\.action==='enter'\?travel\.caveId:null/);
