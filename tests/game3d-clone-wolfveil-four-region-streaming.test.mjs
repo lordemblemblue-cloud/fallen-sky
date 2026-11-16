@@ -71,6 +71,13 @@ test('static GPU instance buffers load, prewarm, unload; original collision floo
   assert.deepEqual(runtime.getStats().loadedRegions,['east']);
   assert.equal(runtime.getStats().loadedInstances,2);
   assert.equal(ground.visible,true,'never stream away the real floor');
+  // A/B fallback restores the exact scene on demand without a map reload.
+  assert.equal(runtime.setEnabled(false),true);
+  assert.equal(original.visible,true);
+  assert.equal(runtime.getStats().loadedBatches,0);
+  assert.equal(runtime.setEnabled(true),true);
+  assert.equal(original.visible,false);
+  assert.equal(runtime.getStats().region,'east');
   runtime.dispose();
   assert.equal(original.visible,true);
   assert.equal(world.group.children.filter(n=>n.name.startsWith('WV_Stream_')).length,0);
