@@ -5,6 +5,49 @@ import * as THREE from 'three';
 const ARC_POINTS = 18;
 const MAX_TRAILS = 12;
 const HAND_PATTERN = /(righthand|right_hand|right hand|hand_r|mixamorigrighthand|hand\.r)/i;
+// With a weapon-pack blade in hand (weapons/playerWeaponRuntime.js), the trail is a ribbon swept by the
+// real blade (base -> tip) over the first RECORD_S of the swing (or the combo's own `record` seconds,
+// emitted as its cutting arc starts), instead of the generic arc.
+const BLADE_SAMPLES = 24;
+const RECORD_S = 0.2;
+
+function makeRibbon(color) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BLADE_SAMPLES * 6), 3));
+  geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(BLADE_SAMPLES * 6), 3));
+  const index = [];
+  for (let i = 0; i < BLADE_SAMPLES - 1; i++) {
+    const a = i * 2;
+    index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+  }
+  geometry.setIndex(index);
+  geometry.setDrawRange(0, 0);
+  const material = new THREE.MeshBasicMaterial({
+    color, vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+  });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+function writeRibbon(mesh, samples, fade) {
+  const pos = mesh.geometry.attributes.position;
+  const col = mesh.geometry.attributes.color;
+  const n = samples.length;
+  for (let i = 0; i < n; i++) {
+    const s = samples[i];
+    const age = n > 1 ? i / (n - 1) : 1; // 0 oldest .. 1 newest
+    const k = fade * age * age;
+    pos.setXYZ(i * 2, s.base.x, s.base.y, s.base.z);
+    pos.setXYZ(i * 2 + 1, s.tip.x, s.tip.y, s.tip.z);
+    col.setXYZ(i * 2, k * 0.35, k * 0.35, k * 0.35); // the base fades towards the hand
+    col.setXYZ(i * 2 + 1, k, k, k);
+  }
+  pos.needsUpdate = true;
+  col.needsUpdate = true;
+  mesh.geometry.setDrawRange(0, Math.max(0, n - 1) * 6);
+}
 
 function pickHand(actor) {
   let hand = null;
@@ -38,11 +81,21 @@ export function createCombatWeaponTrails({ scene, maxTrails = MAX_TRAILS } = {})
     });
   };
 
-  const emit = ({ actor, weaponPath = 'melee', critical = false, hitIndex = 0 } = {}) => {
+  const emit = ({ actor, weaponPath = 'melee', critical = false, hitIndex = 0, blade = null, record = RECORD_S } = {}) => {
     if (!actor?.position || !scene) return false;
     while (trails.length >= Math.max(1, maxTrails)) release(trails.shift());
     const ranged = weaponPath === 'ranged';
     const color = critical ? 0xffd6a1 : 0xa8dfff;
+    if (!ranged && blade?.base && blade?.tip) {
+      const group = new THREE.Group();
+      group.name = 'AXEBladeSweep';
+      const ribbon = makeRibbon(color);
+      group.add(ribbon);
+      scene.add(group);
+      const recordS = Math.max(0.05, Math.min(0.6, Number(record) || RECORD_S));
+      trails.push({ actor, blade, ribbon, samples: [], group, elapsed: 0, record: recordS, lifetime: recordS + 0.16 });
+      return true;
+    }
     const radius = critical ? 0.55 : 0.44;
     const phase = (hitIndex % 2 === 0) ? 1 : -1;
     const points = [];
@@ -81,6 +134,19 @@ export function createCombatWeaponTrails({ scene, maxTrails = MAX_TRAILS } = {})
       if (t >= 1 || !item.actor?.parent) {
         release(item);
         trails.splice(i, 1);
+        continue;
+      }
+      if (item.ribbon) {
+        if (item.elapsed <= item.record && item.blade.tip.parent) {
+          item.blade.tip.updateWorldMatrix(true, false);
+          item.blade.base.updateWorldMatrix(true, false);
+          item.samples.push({
+            base: item.blade.base.getWorldPosition(new THREE.Vector3()),
+            tip: item.blade.tip.getWorldPosition(new THREE.Vector3()),
+          });
+          if (item.samples.length > BLADE_SAMPLES) item.samples.shift();
+        }
+        writeRibbon(item.ribbon, item.samples, Math.max(0, (1 - t) ** 1.4));
         continue;
       }
       item.actor.updateWorldMatrix(true, true);
