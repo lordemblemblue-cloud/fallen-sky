@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  WOLFVEIL_REGION_Z_OFFSET,WOLFVEIL_STREAM_REGIONS,
+  WOLFVEIL_REGION_Z_OFFSET,WOLFVEIL_STREAM_REGIONS,WOLFVEIL_STREAM_GATEWAYS,
   WOLFVEIL_REGION_STREAM_OPTIONS,regionAtWolfveilLocal,
   stableWolfveilStreamRegion,nearWolfveilStreamRegions,crossedWolfveilGateway,
 } from './WolfveilFourRegionPlan.mjs';
@@ -132,7 +132,7 @@ export function createWolfveilFourRegionRuntime({
     };
   }
   function update(playerPosition,{paused=false}={}){
-    if(disposed||disabled||!playerPosition)return getStats();
+    if(disposed||disabled||exportDepth||!playerPosition)return getStats();
     const next=stableWolfveilStreamRegion(playerPosition,currentRegion,{zOffset:offsetZ});
     if(!next)return getStats();
     const crossing=lastPosition&&crossedWolfveilGateway(lastPosition,playerPosition,{zOffset:offsetZ});
@@ -186,6 +186,6 @@ export function createWolfveilFourRegionRuntime({
   }
   return {update,getStats,withFullMapExport,dispose,
     getRegion:()=>currentRegion,
-    getGateways:()=>WOLFVEIL_STREAM_REGIONS,
+    getGateways:()=>WOLFVEIL_STREAM_GATEWAYS,
   };
 }
