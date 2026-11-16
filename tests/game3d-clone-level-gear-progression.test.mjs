@@ -9,6 +9,9 @@ import {
 import {
   evaluateAXESetBonuses,getAXESetCombatMultiplier,
 } from '../src/components/game3d/axe/equipment/AXESetBonusSystem.js';
+import {getAXEFarmingGearLevel} from '../src/components/game3d/axe/loot/AXEFarmingGearTiers.mjs';
+import {AXE_FARMING_SET_BY_GRADE} from '../src/components/game3d/axe/equipment/AXEFarmingSetProfiles.mjs';
+import {makeAXEFarmingItemPerks} from '../src/components/game3d/axe/equipment/AXEFarmingItemPerks.mjs';
 import {
   rollAXEArmorDrop,getAXEArmorDropOdds,
 } from '../src/components/game3d/axe/loot/AXEArmorLootSystem.js';
@@ -111,11 +114,13 @@ test('ordinary drop adapter uses the canonical equipment pickup schema with no m
   const roll=new Function('INVENTORY','isAXERateStat','AXE_GEAR_RARITY_SCALE',
     'AXE_PROCEDURAL_SET_FAMILIES','getAXELevelGearBand','rollAXELevelAffixes',
     'rollAXELevelRarity','rollAXEEvolutionPath',
+    'getAXEFarmingGearLevel','AXE_FARMING_SET_BY_GRADE','makeAXEFarmingItemPerks',
     src+'\nreturn rollAXEEquipmentDrop;',
   )({chest:[{id:'ch_plain',name:'Plain Chest',slot:'chest',baseStats:{defense:3,maxHP:20}}]},
     key=>['critChance','critDefense','critDamage','attackPct','damagePct'].includes(key),
     AXE_GEAR_RARITY_SCALE,AXE_PROCEDURAL_SET_FAMILIES,
-    getAXELevelGearBand,rollAXELevelAffixes,rollAXELevelRarity,rollAXEEvolutionPath);
+    getAXELevelGearBand,rollAXELevelAffixes,rollAXELevelRarity,rollAXEEvolutionPath,
+    getAXEFarmingGearLevel,AXE_FARMING_SET_BY_GRADE,makeAXEFarmingItemPerks);
   const common=roll('normal',false,{rng:seq(0,0,0.999,0),enemyLevel:1});
   assert.equal(common.rarity,'common');
   const rare=roll('normal',false,{rng:seq(0,0,0.999,0),enemyLevel:50});
