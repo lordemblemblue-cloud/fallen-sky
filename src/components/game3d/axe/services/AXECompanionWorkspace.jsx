@@ -142,7 +142,7 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
               onAction={onAction}/>
             : equipmentView === 'mount'
               ? <div className="axe-comp-mounts-pane" aria-label="Mount armory and advancement">
-                  <MountSubTab/>
+                  <MountSubTab />
                 </div>
               : <AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>}
           </div>
