@@ -40,7 +40,8 @@ test('Game 3D clone route renders approved tree by default and keeps classic QA 
   const tree=read('AXECloneSkillTreeWorkspace.jsx');
   const css=read('AXECloneSkillTree.css');
   assert.match(route,/cloneClassic = false/);
-  assert.match(route,/if \(!cloneClassic\) return <AXECloneSkillTreeWorkspace/);
+  assert.match(route,/const SkillBookView = cloneClassic \? AXESkillBookRedesign : AXECloneSkillTreeWorkspace/);
+  assert.match(route,/return <SkillBookView/);
   for(const term of ['Combat Skill Tree','Equipped Skills','TierConnector','Three branch combat skill tree',
     'SkillDetails','Search Skill','Previous skill set','Next skill set','AXEWeaponSkillPointsPanel',
     'subscribeSkillMastery','subscribeWeaponSkillPoints','isWeaponSkillUnlocked']){
@@ -52,4 +53,29 @@ test('Game 3D clone route renders approved tree by default and keeps classic QA 
   assert.doesNotMatch(css,/background-image:\s*url\(/);
   assert.doesNotMatch(tree,/<img/);
   assert.doesNotMatch(tree,/awardSkillXp|award\(/);
+});
+
+test('approved visual remains hooked to the existing skill controller, not a duplicate store',()=>{
+  const route=read('AXESkillBookWorkspace.jsx');
+  const tree=read('AXECloneSkillTreeWorkspace.jsx');
+  for(const text of [
+    'onQuickEquip={quickEquip}', 'onEquipActive={placeActive}',
+    'onRemoveActive={removeActive}', 'onSavePreset={()=>savePreset',
+    'onActivateWeapon={chooseWeaponMode}', 'onChoosePreset={index=>companion',
+    'currentPresetIndex={companion ? banks.companionIndex : playerPresets.index}',
+    'ownedWeapons={ownedWeapons}', 'activeMode={activeMode}',
+    'view={view}', 'onChangeView={changeView}',
+  ]) assert(route.includes(text),'missing Game 3D controller connection '+text);
+  for(const text of [
+    'onQuickEquip?.(skill)', 'onEquipActive?.(index,skill)',
+    'onRemoveActive?.(i)', 'onSavePreset?.()', 'onChoosePreset((next+3)%3)',
+    'onActivateWeapon?.(category)', 'onPageChange?.(id)', 'onChangeView?.(id)',
+    'onSelectSkill?.(', 'getWeaponForSkillBookMode(ownedWeapons,category)',
+    'companionCategories', 'getAllCompanionSkills()', 'subscribeWeaponSkillPoints',
+  ]) assert(tree.includes(text),'missing restored Skill Book behavior: '+text);
+  for(const old of ['const [view,setView]', 'const loadout = useGameStore',
+    'selectSkillPreset((next+3)%3)', 'equipActive(slot,skill.skill_id)',
+    'equipCompanionSkill(slot,skill.skill_id)']){
+    assert(!tree.includes(old),'duplicate controller left in new book: '+old);
+  }
 });
