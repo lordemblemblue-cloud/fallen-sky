@@ -19,7 +19,7 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
     setResult('');
   },[serviceId]);
   const switchTab=id=>{setTab(id);setResult('');};
-  return <div className="axe-comp-root axe-comp-root--modern" data-progression-panel="companion">
+  return <div className="axe-comp-root axe-comp-root--modern" data-progression-panel="companion" data-companion-ui-revision="classic-roster-primary-mastery-20261116">
     <div className="axe-comp-header">
       <Compass size={42} strokeWidth={1.2}/><h2>Companion</h2>
       <span className="axe-comp-star">✧</span>
