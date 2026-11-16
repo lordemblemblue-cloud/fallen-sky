@@ -132,15 +132,12 @@ export default function AXESkillPathHorizontal({
     onChangePath(id);
   };
   const currentIndex=PATH_ORDER.indexOf(path.id);
-  // Top: newly available attacks and their linked passives/buffs.
-  // Bottom: five cumulative paid upgrades that strengthen this attack path.
-  const topCards=[
-    {skillId:path.active[0],title:path.titles[0],icon:path.icon,tier:1},
-    {passive:path.passives[0],icon:path.passives[0].icon,tier:2},
-    {skillId:path.active[1],title:path.titles[1],icon:path.icon,tier:2},
-    {passive:path.passives[1],icon:path.passives[1].icon,tier:3},
-    {skillId:path.active[2],title:path.titles[2],icon:path.icon,tier:3},
-  ];
+  // Canonical source is the registered weapon attacks; the paired free
+  // passives belong exclusively to the lower progression row. Never present
+  // a paid progression stage as an independently castable attack.
+  const topCards=path.active.map((skillId,i)=>({
+    skillId,title:path.titles[i],icon:path.icon,tier:i+1,
+  }));
   return <div className="axe-hp-workspace">
     <nav className="axe-hp-wheel" aria-label="Single, Multi and Aerial paths"
       tabIndex={0}
@@ -214,25 +211,21 @@ export default function AXESkillPathHorizontal({
                   event.key==='ArrowLeft'?-120:120;
               }
             }}>
-            <div className="axe-hp-tree-track" role="list" aria-label="Skills, buffs and passives">
-              <span className="axe-hp-track-caption">Skills / Buffs & Passives</span>
+            <div className="axe-hp-tree-track" role="list" aria-label="Active skills for the selected combat path">
+              <span className="axe-hp-track-caption">Skills · {path.label}</span>
               {topCards.map((card,i)=>{
                 const skill=card.skillId?getSkillById(card.skillId):null;
-                const isPassive=!!card.passive;
-                const id=card.skillId||card.passive.id;
-                const tierIndex=skill?weaponSkillTierForId(skill.skill_id)?.tierIndex:
-                  Math.min(4,card.tier-1);
-                const locked=skill?!isWeaponSkillUnlocked(skill.skill_id):
-                  !weaponTierUnlocked(points.save,category,tierIndex);
-                const name=card.title||card.passive?.label;
-                const sub=isPassive?'+1% charged (linked)':skill?
-                  'Lv. '+getSkillMastery(skill.skill_id).level+' / '+getSkillMastery(skill.skill_id).maxLevel:
-                  'Registered skill';
+                const id=card.skillId;
+                const locked=skill?!isWeaponSkillUnlocked(skill.skill_id):true;
+                const name=card.title||skill?.skill_name||'Unknown skill';
+                const sub=skill
+                  ? 'Lv. '+getSkillMastery(skill.skill_id).level+' / '+getSkillMastery(skill.skill_id).maxLevel
+                  : 'Unavailable in registry';
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
                   <BranchCard icon={card.icon} title={name} subtitle={sub}
                     locked={locked} selected={node.id===id}
                     equipped={activeIds.includes(id)}
-                    onClick={()=>select(isPassive?'passive':'skill',id,card.tier)}
+                    onClick={()=>select('skill',id,card.tier)}
                     onDoubleClick={skill?()=>onEquipSkill?.(skill.skill_id):undefined}
                     onContextMenu={skill?event=>{event.preventDefault();onEquipSkill?.(skill.skill_id);}:undefined}/>
                   {i<topCards.length-1&&<span className="axe-hp-track-arrow" aria-hidden="true">➜</span>}
@@ -240,16 +233,16 @@ export default function AXESkillPathHorizontal({
               })}
             </div>
             <div className="axe-hp-tree-track axe-hp-track-passive" role="list"
-              aria-label={path.label+' attack upgrade progression'}>
-              <span className="axe-hp-track-caption">{path.label} Progression · Upgrade Strength</span>
+              aria-label={path.label+' automatic passive progression'}>
+              <span className="axe-hp-track-caption">Passives · {path.label} (automatic)</span>
               {WEAPON_SKILL_TIERS.map((cost,i)=>{
                 const unlocked=weaponTierUnlocked(points.save,category,i);
                 const allocated=points.save?.nodes?.[category]?.[i]||0;
                 const id='stage_'+category+'_'+i;
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
                   <BranchCard icon={i%2?'precision':'passive'}
-                    title={path.label+' Upgrade '+ROMAN[i]}
-                    subtitle={allocated+' / '+cost+' pts · '+Math.round(100*allocated/cost)+'% charged bonus'}
+                    title={'Charge Focus '+ROMAN[i]}
+                    subtitle={unlocked?'+1% charged · '+allocated+'/'+cost+' pts':'Unlock previous stage'}
                     locked={!unlocked} selected={node.id===id}
                     onClick={()=>select('stage',id,i+1,i)}/>
                   {i<WEAPON_SKILL_TIERS.length-1&&
