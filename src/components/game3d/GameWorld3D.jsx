@@ -463,7 +463,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
     } catch (e) {
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
