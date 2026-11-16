@@ -19,7 +19,7 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
     setResult('');
   },[serviceId]);
   const switchTab=id=>{setTab(id);setResult('');};
-  return <div className="axe-comp-root axe-comp-root--modern" data-progression-panel="companion">
+  return <div className="axe-comp-root axe-comp-root--modern" data-progression-panel="companion" data-companion-ui-revision="classic-roster-primary-mastery-20261116">
     <div className="axe-comp-header">
       <Compass size={42} strokeWidth={1.2}/><h2>Companion</h2>
       <span className="axe-comp-star">✧</span>
@@ -27,10 +27,10 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
         onClick={onClose} aria-label="Close Companion">×</button>
     </div>
     <div className="axe-comp-shell">
-      <nav className="axe-comp-tabs" aria-label="Companion sections">
+      <nav className="axe-comp-tabs" aria-label="Companion primary sections" data-companion-nav="primary">
         <span className="axe-comp-key-hint">LB</span>
         {TABS.map(next=><button type="button" key={next} aria-pressed={tab===next}
-          onClick={()=>switchTab(next)}>{next==='Imbuement'?'Imbue':next}</button>)}
+          onClick={()=>switchTab(next)}>{next==='Vanity'?'Variety':next==='Imbuement'?'Imbue':next}</button>)}
         <span className="axe-comp-key-hint">RB</span>
       </nav>
       <div className="axe-comp-modern">

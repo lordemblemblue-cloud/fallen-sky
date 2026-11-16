@@ -407,3 +407,80 @@
     flex-basis:100%;max-width:none;
   }
 }
+
+/* Classic My Companion left-side box — a true vertical collection, never
+   an oversized square companion/portrait tile. Scoped to the real mount rail. */
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] {
+  background:linear-gradient(180deg,rgba(23,42,56,.96),rgba(18,34,49,.94));
+  border:1px solid rgba(216,184,130,.76);
+  box-shadow:inset 0 0 0 1px rgba(255,226,177,.07),0 10px 28px rgba(3,12,19,.25);
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-title {
+  flex-wrap:nowrap;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-search {
+  min-width:0;
+  flex:1 1 95px;
+  max-width:155px;
+  border:0;
+  border-bottom:1px solid rgba(237,206,150,.78);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-list {
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  gap:6px;
+  min-height:0;
+  overflow-y:auto;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-list>button {
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  width:100%;
+  height:auto;
+  min-height:52px;
+  max-height:none;
+  aspect-ratio:auto;
+  padding:8px 10px;
+  text-align:left;
+  border:1px solid rgba(213,185,139,.52);
+  border-radius:7px;
+  background:linear-gradient(90deg,rgba(34,56,68,.76),rgba(24,40,53,.66));
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-list>button:focus-visible {
+  outline:2px solid #ffe5b5;
+  outline-offset:2px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-entry {
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+}
+@media(max-width:700px) {
+  .axe-glass-loadout[data-equipment-actor="companion"]
+    .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-title {
+    flex-wrap:wrap;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"]
+    .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-search {
+    flex:1 1 100%;
+    max-width:none;
+  }
+}
