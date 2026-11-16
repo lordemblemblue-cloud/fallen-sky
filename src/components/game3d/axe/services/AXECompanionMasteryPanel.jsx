@@ -6,7 +6,7 @@ import {getActiveWeaponPath,subscribeWeaponBuffs} from '../../weaponClassBuffSto
 import {
   COMPANION_MASTERY_PATHS,getCompanionMasteryProgress,
 } from '../progression/AXECompanionRoleMastery.mjs';
-import {getCompanionGrowthView} from '../progression/AXECompanionGrowthView.mjs';
+import {getCompanionGrowthView,applyCompanionGrowthBonus} from '../progression/AXECompanionGrowthView.mjs';
 import './AXECompanionProfileRedesign.css';
 
 const ICONS={damage:Swords,defense:Shield,range:Target};
@@ -35,7 +35,7 @@ export default function AXECompanionMasteryPanel({onNotice=()=>{},onMyCompanion=
   const progress=getCompanionMasteryProgress(mount,role);
   const level=getCompanionGrowthView(mount?.totalXp||0);
   const eligible=level.completedCycles>=1;
-  const base=getAXEMountBonuses(mount);
+  const base=applyCompanionGrowthBonus(getAXEMountBonuses(mount),mount?.totalXp||0);
   const shown=mounts.filter(entry=>!search.trim()||
     [getAXEMountDefinition(entry.definitionId)?.name,entry.definitionId]
       .filter(Boolean).join(' ').toLowerCase().includes(search.trim().toLowerCase()));
