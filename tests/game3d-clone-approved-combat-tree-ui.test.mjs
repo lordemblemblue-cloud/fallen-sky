@@ -75,10 +75,12 @@ test('approved visual remains hooked to the existing skill controller, not a dup
   for(const text of [
     'onQuickEquip?.(skill)', 'onEquipActive?.(index,skill)',
     'onRemoveActive?.(i)', 'onSavePreset?.()', 'onChoosePreset((next+3)%3)',
-    'onActivateWeapon?.(category)', 'onPageChange?.(id)', 'onChangeView?.(id)',
+    'onActivateWeapon={onActivateWeapon}', 'onPageChange?.(id)', 'onChangeView?.(id)',
     'onSelectSkill?.(', 'getWeaponForSkillBookMode(ownedWeapons,category)',
     'companionCategories', 'getAllCompanionSkills()', 'subscribeWeaponSkillPoints',
   ]) assert(tree.includes(text),'missing restored Skill Book behavior: '+text);
+  assert(read('AXESkillPathHorizontal.jsx').includes('onActivateWeapon?.(category)'),
+    'weapon-bar activation must remain available inside the horizontal tree');
   for(const old of ['const [view,setView]', 'const loadout = useGameStore',
     'selectSkillPreset((next+3)%3)', 'equipActive(slot,skill.skill_id)',
     'equipCompanionSkill(slot,skill.skill_id)']){
