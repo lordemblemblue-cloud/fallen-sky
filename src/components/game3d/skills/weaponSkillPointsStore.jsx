@@ -6,6 +6,7 @@ import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import {
   WEAPON_SKILL_POINTS_KEY, blankWeaponSkillPoints, checkWeaponSkillPoints,
   investWeaponSkillPoints, weaponSkillState, chargedWeaponSkillBonusPct,
+  chargedWeaponSkillPassivePct, weaponSkillTierForId, weaponTierUnlocked,
 } from '../../../../base44/shared/weaponSkillPoints.mjs';
 
 const storage = characterScopedStorage(WEAPON_SKILL_POINTS_KEY);
@@ -31,15 +32,19 @@ export function getWeaponSkillPoints() {
   return { level, save, ...weaponSkillState(save, level) };
 }
 export function getWeaponSkillChargeBonusPct(skillId) {
-  return chargedWeaponSkillBonusPct(allocation, skillId);
+  return chargedWeaponSkillBonusPct(allocation, skillId) + chargedWeaponSkillPassivePct(allocation, skillId);
+}
+export function isWeaponSkillUnlocked(skillId) {
+  const tier = weaponSkillTierForId(skillId);
+  return !tier || weaponTierUnlocked(allocation, tier.pathId, tier.tierIndex);
 }
 export function investWeaponSkillPoint(pathId, tierIndex, amount = 1) {
   const level = Math.max(1, Math.floor(Number(getPlayerHUD().level) || 1));
   const result = investWeaponSkillPoints(allocation, level, pathId, tierIndex, amount);
   if (!result.ok) return result;
-  allocation = result.save;
-  try { storage.set(JSON.stringify(allocation)); }
+  try { storage.set(JSON.stringify(result.save)); }
   catch { return { ok: false, reason: 'SAVE_FAILED' }; }
+  allocation = result.save;
   notify();
   return { ok: true, ...getWeaponSkillPoints() };
 }
