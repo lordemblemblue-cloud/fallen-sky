@@ -64,6 +64,8 @@ test('floor void or cliff-height discontinuity is blocked but real cave stairs a
   }),true);
   assert.match(read('GameWorld3D.jsx'),/shouldRejectCaveGroundStep\(\{/);
   assert.match(read('GameWorld3D.jsx'),/!dedicatedMode && mapReady/);
+  assert.match(read('GameWorld3D.jsx'),/if\(nearSuigenCaveGround\(x,z,\.85\)\)return null/);
+  assert.match(read('GameWorld3D.jsx'),/const reachable=hits\.find\(hit=>hit\.point\.y<=referenceY\+\.72\)/);
 });
 
 test('five increasingly difficult Lunar Cave halls keep genuine enemies and one server-gated cache each',()=>{
