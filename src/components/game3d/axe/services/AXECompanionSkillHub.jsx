@@ -55,11 +55,14 @@ export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) 
         aria-label="Search companion abilities" placeholder="Search abilities"/></label>
     </div>
     <div className="axe-sk-columns">
-      <div className="axe-sk-skill-list axe-sk-companion-list" role="list"
+      <div className={'axe-sk-skill-list axe-sk-companion-list'+
+        (category==='combat'?' axe-sk-companion-tree':'')} role="list"
         aria-label={'Companion '+categoryData.title+' abilities'}>
         {shown.map((skill,i)=>{
           const equipped=activeIds.includes(skill.skill_id);
-          return <button key={skill.skill_id} role="listitem" type="button"
+          return <div key={skill.skill_id} role="listitem"
+            className={category==='combat'?'axe-sk-combat-node':'axe-sk-list-row'}>
+          <button type="button"
             className={'axe-sk-skill'+(selected?.skill_id===skill.skill_id?' axe-sk-skill--selected':'')}
             aria-pressed={selected?.skill_id===skill.skill_id}
             onClick={()=>{setSelectedId(skill.skill_id);onSelected?.(skill);}}
@@ -70,7 +73,10 @@ export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) 
             <span><strong>{skill.skill_name}</strong>
               <small>{skill.cooldown}s cooldown · {skill.requiresTarget?'Target required':'No target'}</small></span>
             <span className="axe-sk-skill-end">{equipped?'Equipped':<ArrowRight size={16}/>}</span>
-          </button>;
+          </button>
+          {category==='combat'&&i<shown.length-1&&<span className="axe-sk-combat-connector"
+            aria-hidden="true"><ArrowRight size={21}/></span>}
+          </div>;
         })}
         {!shown.length&&<p className="axe-sk-empty">No registered {categoryData.title.toLowerCase()} skills match this selection.</p>}
         {category==='combat'&&<div className="axe-sk-combat-rule">
