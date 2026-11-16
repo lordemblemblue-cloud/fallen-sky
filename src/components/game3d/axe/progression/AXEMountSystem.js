@@ -2,6 +2,7 @@ import { collectAXELegendaryMountBonuses } from './AXELegendaryMountSystem';
 import { GAME3D_FACTION_MOUNTS } from '../factions/AXEFactionMountAssets.mjs';
 import { normalizeAXEMountGear } from './AXEMountFusionSystem';
 import { finiteMountXP, getMountSpiritualProfile, normalizeMountSpiritualWeapon } from './AXEMountSpiritualSystem';
+import { normalizeCompanionRoleMastery } from './AXECompanionRoleMastery.mjs';
 
 // AXE Prompt 034 — Mount foundation: riding, EXP, PvP growth and stat percentages.
 // Mount progression is separate from Pet progression even when a placeholder
@@ -133,6 +134,7 @@ export function createAXEMountInstance(definitionId, instanceId = null) {
     active: false,
     riding: false,
     sourceStats: { ridingXp: 0, pveXp: 0, pvpXp: 0 },
+    roleMastery: normalizeCompanionRoleMastery(),
     tradeable: true,
     bound: false,
   };
@@ -147,6 +149,7 @@ export function normalizeAXEMountInstance(mount = {}) {
     ...mount,
     totalXp,
     spiritualWeapon: normalizeMountSpiritualWeapon(mount.spiritualWeapon, totalXp),
+    roleMastery: normalizeCompanionRoleMastery(mount.roleMastery),
     gear: normalizeAXEMountGear(mount.gear), // Mount Soul Fusion gear slots (old saves: all Stage 0)
     growthPercent: resolveAXEMountGrowthPercent(totalXp),
     registered: !!mount.registered,

@@ -40,24 +40,24 @@ test('Mounts collection never invents an owned mount when save is empty', () => 
   assert.deepEqual(buildOwnedMountRoster({ mounts: [{ definitionId: 'catalog-only' }] }), []);
 });
 
-test('Mounts and Mastery leave top-level tabs; their progression survives within Equipment', () => {
-  const root = 'src/components/game3d/axe/services/';
-  const mounts = readFileSync(root + 'AXEOwnedMountsPanel.jsx', 'utf8');
-  const workspace = readFileSync(root + 'AXECompanionWorkspace.jsx', 'utf8');
-  const globalMenu = readFileSync(root + 'AXEGlobalServicesMenu.jsx', 'utf8');
-  const mastery = readFileSync(root + 'AXECompanionMasteryPanel.jsx', 'utf8');
-  assert.match(mounts, /data-companion-page="owned-mounts"/);
-  assert.match(mounts, /buildOwnedMountRoster/);
-  assert.doesNotMatch(mounts, /MountSoulFusionPanel|absorbAXEMount|refineAXEMountGear|releaseAXEMount/);
-  assert.doesNotMatch(workspace, /tab === 'Mounts'|tab === 'Mastery'|tab === 'Overview'/);
-  assert.match(workspace, /id: 'profile', label: 'My Companions'/);
-  assert.match(workspace, /id: 'mount', label: 'Mount Armory'/);
-  assert.match(workspace, /id: 'mastery', label: 'Mastery'/);
-  assert.match(workspace, /equipmentView === 'mount'/);
-  assert.match(workspace, /<MountSubTab \/>/);
-  assert.match(workspace, /equipmentView === 'mastery' \? <AXECompanionMasteryPanel/);
-  assert.match(workspace, /equipmentView === 'profile' \? <AXECompanionOverviewClone/);
-  assert.match(workspace, /data-equipment-section=\{equipmentView\}/);
-  assert.match(mastery, /data-companion-page="mastery"/);
-  assert.match(globalMenu, /mount: AXECompanionWorkspace/);
+test('Mastery replaces feed panel with three independent combat roles; Armory is a viewer toggle', () => {
+  const root='src/components/game3d/axe/services/';
+  const workspace=readFileSync(root+'AXECompanionWorkspace.jsx','utf8');
+  const profile=readFileSync(root+'AXECompanionOverviewClone.jsx','utf8');
+  const mastery=readFileSync(root+'AXECompanionMasteryPanel.jsx','utf8');
+  const store=readFileSync('src/components/game3d/axe/progression/AXEMountStore.js','utf8');
+  assert.match(workspace,/\{id:'profile',label:'My Companion'\}/);
+  assert.match(workspace,/\{id:'companion',label:'Equipment'\}/);
+  assert.match(workspace,/\{id:'mastery',label:'Mastery'\}/);
+  assert.doesNotMatch(workspace,/Mount Armory|MountSubTab/);
+  assert.match(profile,/rightView==='stats'\?'Growth & XP':'View Stats'/);
+  assert.match(profile,/getCompanionGrowthView/);
+  assert.match(profile,/subscribeAXEMounts/);
+  assert.match(profile,/axe-comp-model-gear/);
+  assert.match(mastery,/COMPANION_MASTERY_PATHS/);
+  assert.match(mastery,/data-companion-page="role-mastery"/);
+  assert.match(mastery,/getActiveWeaponPath/);
+  assert.doesNotMatch(mastery,/feedAXEPet|overEnchantAXEPet/);
+  assert.match(store,/awardCompanionRoleMasteryXP/);
+  assert.match(store,/getRegisteredAXEMountBonuses/);
 });

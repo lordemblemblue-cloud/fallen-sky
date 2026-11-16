@@ -16,6 +16,9 @@ import { AXE_CHOSEN_SET_ID } from '../equipment/AXEChosenSetRules.mjs';
 import { getCompanionState, subscribeCompanion, equipCompanionGear, unequipCompanionGear }
   from '../../companionStore';
 import { COMPANION_GEAR, getCompanionById } from '../../companionData';
+import { getAXEMountState, subscribeAXEMounts, previewAXEMountGearRefine, refineAXEMountGear } from '../progression/AXEMountStore';
+import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
+import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getPlayerHUD } from '../../playerHUDStore';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
@@ -55,6 +58,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
   const companion = useLive(subscribeCompanion,getCompanionState);
+  const mounts = useLive(subscribeAXEMounts,getAXEMountState);
   // This snapshot notifies Appearance immediately when Blacksmith finishes an
   // upgrade and rehydrates on a character switch.
   const enhancements = useLive(subscribeEnchantments, () => ({
@@ -64,12 +68,38 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   // inventory item alone does not carry a fresh stage rank after Blacksmith.
   const advancements = useLive(subscribeAXEItemAdvancement, () => ({state:{}}));
   const [selectedId,setSelectedId] = useState(null);
+  const [refineReview,setRefineReview] = useState(null);
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
   const [focusedSlot,setFocusedSlot] = useState('');
-  const activeCompanion = getCompanionById(companion.activeCompanionId);
+  // Equipment belongs to the actual active owned mount, not the legacy pet
+  // default (which previously showed a baby wolf irrespective of faction).
+  const selectedMount = mounts.mounts?.find(m=>m.instanceId===mounts.activeMountId);
+  const activeModelId = selectedMount
+    ? getAXEMountDefinition(selectedMount.definitionId)?.modelRef : null;
+  const activeCompanion = getCompanionById(isPlayer ? companion.activeCompanionId : activeModelId);
+  useEffect(()=>setRefineReview(null),[selectedMount?.instanceId]);
+  const refineGear=slot=>{
+    if(!selectedMount)return;
+    const stage=Number(selectedMount.gear?.[slot.id]?.stage||0);
+    if(refineReview?.slotId===slot.id&&refineReview.stage===stage){
+      const response=refineAXEMountGear(selectedMount.instanceId,slot.id,
+        {confirmed:true,expectedStage:stage});
+      setRefineReview(null);
+      onNotice(response.ok?slot.label+' refined to Stage '+response.stage+'.':
+        caption(response.reason||'Refinement failed'));
+      return;
+    }
+    const preview=previewAXEMountGearRefine(selectedMount.instanceId,slot.id);
+    if(!preview.ok||!preview.canAfford){
+      setRefineReview(null);
+      onNotice(!preview.ok?caption(preview.reason):'Not enough gold to refine this slot.');
+      return;
+    }
+    setRefineReview({slotId:slot.id,stage,cost:preview.cost.gold});
+  };
   useEffect(() => subscribeAXEEquipmentInventory(state => setItems(state.items)), []);
-  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId]);
+  useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId,activeModelId]);
 
   const list = useMemo(() => isPlayer
     ? items.filter(item => AXE_EQUIPMENT_SLOT_DEFS[item.slot])
@@ -195,7 +225,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       </div>)}
       <div className="axe-app-model-center"><Suspense fallback={<p className="axe-app-loading">Loading model…</p>}>
         <div className="axe-app-model-host">{isPlayer ? <PlayerModel/> :
-          activeCompanion ? <CompanionModel key={activeCompanion.id}/> :
+          activeCompanion ? <CompanionModel key={activeCompanion.id} companionId={activeCompanion.id}/> :
             <p className="axe-app-loading">No active companion selected</p>}</div>
       </Suspense></div>
       {!isPlayer && <AXECompanionFusionButton onNotice={onNotice}/>}
@@ -322,6 +352,28 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
           </> : <p className="axe-app-description">Select owned equipment to see its stats and equip options.</p>}
         </div>
       </section>
+      {!isPlayer&&<details className="axe-comp-mount-refinement" aria-label="Mount gear refinement">
+        <summary>Mount Gear Refinement <span>7 slots · Stage 0–20</span></summary>
+        <div className="axe-comp-refinement-content">
+          <p>Refine actual mount gear here. Mount levels and growth XP are shown on My Companion.</p>
+          <div className="axe-comp-refinement-gold">Available gold: {fmt(mounts.materials?.gold||0)}</div>
+          {AXE_MOUNT_GEAR_SLOTS.map(slot=>{
+            const stage=Number(selectedMount?.gear?.[slot.id]?.stage||0);
+            const confirmed=refineReview?.slotId===slot.id&&refineReview.stage===stage;
+            const max=stage>=AXE_MOUNT_FUSION_CONFIG.maxGearStage;
+            const cost=previewAXEMountGearRefine(selectedMount?.instanceId,slot.id);
+            return <div className="axe-comp-refinement-row" key={slot.id}>
+              <div><strong>{slot.label}</strong><small>Stage {stage} / {AXE_MOUNT_FUSION_CONFIG.maxGearStage}</small></div>
+              <button type="button" disabled={!selectedMount||max||!cost?.canAfford}
+                onClick={()=>refineGear(slot)} aria-label={'Refine '+slot.label}>
+                {max?'Maxed':confirmed?'Confirm '+fmt(refineReview.cost)+' gold':'Refine · '+fmt(cost?.cost?.gold||0)+' gold'}
+              </button>
+            </div>;
+          })}
+          {refineReview&&<button type="button" className="axe-comp-refinement-cancel"
+            onClick={()=>setRefineReview(null)}>Cancel refinement</button>}
+        </div>
+      </details>}
     </aside>
   </div>;
 }
