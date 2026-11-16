@@ -1,10 +1,8 @@
 import { GAME3D_FACTION_MOUNTS } from './axe/factions/AXEFactionMountAssets.mjs';
 
 // Companion definitions — rideable mounts.
-// Active companion is the admin Model3D entity "companion" (baby_wolf bundle).
-// The bundle is a glTF + scene.bin + texture, so we provide a bundle manifest
-// keyed by the relative paths the .gltf references — the loader uses a
-// LoadingManager URL modifier to resolve those to absolute Base44 URLs.
+// The former baby wolf is no longer a live/selectable mesh. The original
+// glTF bundle remains below only as the already-used walk/run retarget source.
 
 // Resolved Base44 URLs for every file in the baby_wolf bundle.
 const BABY_WOLF_GLTF =
@@ -28,27 +26,27 @@ const BABY_WOLF_BUNDLE = {
 
 export const COMPANION_DEFINITIONS = [
   {
+    // Preserve the old shadow_wolf save ID and mount gear, but remove the
+    // old baby-wolf GLTF from live selection and display. Its animation source
+    // is retained ONLY for walk/run retargeting on the owner's faction GLBs.
     id: 'shadow_wolf',
-    name: 'Baby Wolf',
-    description: 'A nimble baby wolf companion that grants increased movement speed when ridden.',
+    name: 'Legacy War Wolf',
+    description: 'Legacy companion backed by the modern armored-wolf mount mesh.',
     rarity: 'rare',
-    // Admin Model3D entity "companion" — baby_wolf glTF bundle.
-    modelUrl: BABY_WOLF_GLTF,
-    modelFormat: 'glb', // GLTFLoader handles both .gltf and .glb
-    bundleManifest: BABY_WOLF_BUNDLE,
-    animationSource: 'baby-wolf-bundled',
-    // Embedded clip name hints (case-insensitive substring match).
-    walkClipName: 'walk',
+    modelUrl: GAME3D_FACTION_MOUNTS.AXE_Faction_2.modelUrl,
+    modelFormat: 'glb',
+    animationSource: 'baby-wolf-retarget',
+    animationRigProfile: GAME3D_FACTION_MOUNTS.AXE_Faction_2.animationRigProfile,
+    animationModelUrl: BABY_WOLF_GLTF,
+    animationBundleManifest: BABY_WOLF_BUNDLE,
     idleClipName: 'idle',
+    walkClipName: 'walk',
     runClipName: 'run',
-    // Fallback if the gltf has no embedded clips — pulls idle/walk from
-    // the admin AnimationFBX library (folder = "companion").
     externalAnimUrl: null,
-    scale: 0.91,
-    speedMultiplier: 1.8, // 80% faster while mounted
+    scale: GAME3D_FACTION_MOUNTS.AXE_Faction_2.scale,
+    speedMultiplier: 1.8,
     spawnPos: [4, 0.3, -3],
-    color: 0x9ca3af,
-    // Gear slots specific to companions
+    color: 0xb4d5ee,
     gearSlots: ['saddle', 'armor', 'charm'],
   },
   ...Object.values(GAME3D_FACTION_MOUNTS).map(asset => ({
