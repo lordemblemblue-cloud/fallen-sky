@@ -6,7 +6,7 @@ import { getSkillMastery } from '../../skills/skillMasteryStore';
 import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import './AXESkillCollections.css';
 
-const fmt=(number,key)=>/pct|chance|reflect|resist/i.test(key)
+const fmt=(number,key)=>/_pct$|^reflect_chance$|^crit_resist_pct$/.test(key)
   ?(Number(number)*100).toFixed(1)+'%':Number(number).toFixed(1);
 const label=value=>String(value||'').replaceAll('_',' ').replace(/\b\w/g,letter=>letter.toUpperCase());
 export function buildUniversalSkills(allSkills=getAllSkills()) {
@@ -21,8 +21,6 @@ export default function AXEUniversalSkillHub({
   const [query,setQuery]=useState('');
   const [selectedId,setSelectedId]=useState(null);
   const catalog=useMemo(()=>buildUniversalSkills(),[]);
-  const selected=catalog.find(skill=>skill.skill_id===selectedId)
-    ||catalog.find(skill=>passiveOnly?skill.skill_type===SKILL_TYPE.PASSIVE:true)||null;
   const filtered=catalog.filter(skill=>{
     if(passiveOnly&&skill.skill_type!==SKILL_TYPE.PASSIVE)return false;
     if(kind==='passives'&&skill.skill_type!==SKILL_TYPE.PASSIVE)return false;
@@ -30,6 +28,7 @@ export default function AXEUniversalSkillHub({
     return !query||[skill.skill_name,skill.description,skill.skill_id]
       .join(' ').toLowerCase().includes(query.trim().toLowerCase());
   });
+  const selected=filtered.find(skill=>skill.skill_id===selectedId)||filtered[0]||null;
   const mastery=selected?getSkillMastery(selected.skill_id):null;
   const equipped=selected&&(activeIds.includes(selected.skill_id)||passiveIds.includes(selected.skill_id));
   return <section className="axe-sk-hub" data-skill-hub="universal" aria-label="Universal mastery">
