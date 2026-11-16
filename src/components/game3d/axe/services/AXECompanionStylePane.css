@@ -37,8 +37,48 @@
 .axe-comp-imbue-list b {color:#bff1d2;}
 .axe-comp-imbue-button {width:100%;min-height:42px;margin:14px 0;display:flex;
   align-items:center;justify-content:center;gap:8px;}
-.axe-comp-style-layout .axe-app-inventory-filters {flex-wrap:wrap;}
-.axe-comp-style-layout .axe-app-inventory-filters button {min-width:66px;}
+/* Single joined Vanity + Costumes collection — the other tab is removed.
+   Header controls wrap on smaller screens rather than overlapping the grid. */
+.axe-comp-style-layout .axe-app-inventory > .axe-app-card-heading {
+  display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding-block:8px;
+}
+.axe-comp-collection-controls {
+  display:flex;align-items:center;justify-content:flex-end;flex:1 1 265px;
+  flex-wrap:wrap;gap:5px;min-width:0;margin-left:auto;
+}
+.axe-comp-collection-controls select,
+.axe-comp-collection-search {
+  min-height:32px;color:#f3e0c2;background:rgba(19,37,54,.76);
+  border:1px solid rgba(218,187,133,.77);border-radius:7px;
+  font:12px Georgia,serif;
+}
+.axe-comp-collection-controls select {
+  width:96px;max-width:100%;padding:5px 7px;cursor:pointer;
+}
+.axe-comp-collection-search {
+  display:flex;align-items:center;gap:5px;padding:0 7px;
+  min-width:90px;width:126px;max-width:100%;
+}
+.axe-comp-collection-search svg {color:#edcea0;flex-shrink:0;}
+.axe-comp-collection-search input {width:100%;min-width:0;outline:none;border:0;
+  background:transparent;color:#f8e7cd;font:12px Georgia,serif;}
+.axe-comp-collection-search input::placeholder {color:#e2cfb4;}
+.axe-comp-collection-controls select:focus-visible,
+.axe-comp-collection-search:focus-within {outline:2px solid #f7db9f;outline-offset:2px;}
+.axe-comp-collection-count {
+  flex-shrink:0;margin-top:auto;padding:7px 4px 2px;
+  border-top:1px solid #cfaf7959;
+  color:#d9c6a7;font:11px Georgia,serif;text-align:right;
+}
+.axe-comp-equipped-label {display:block;color:#b5e5c4;font:10px Georgia,serif;}
+@media(max-width:1320px) {
+  .axe-comp-collection-controls {flex-basis:100%;justify-content:flex-start;}
+}
+@media(max-width:610px) {
+  .axe-comp-collection-controls {justify-content:center;}
+  .axe-comp-collection-controls select {width:90px;}
+  .axe-comp-collection-search {width:125px;}
+}
 @media(max-width:1100px) {
   .axe-comp-modern .axe-app-layout {grid-template-columns:55px minmax(210px,38%) minmax(200px,1fr) minmax(190px,.8fr);}
   .axe-comp-imbue-corner {width:53px;min-height:53px;}
