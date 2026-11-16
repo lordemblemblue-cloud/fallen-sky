@@ -21,6 +21,7 @@ import {
   onDoubleShotCastEnd,
 } from './skillSoundEffects';
 import { getSkillMasteryLevel, noteBuffCast, noteSkillStrike } from './skillMasteryStore';
+import { getWeaponSkillChargeBonusPct, isWeaponSkillUnlocked } from './weaponSkillPointsStore';
 import { qualifyChargedCast, chargedStrikeModifiers, skillCombatFamily, FINISHER_CHAIN_LEAD_MS, FINISHER_CHAIN_GRACE_MS, chainedSingleDelay } from '../combat/ChargedSkillRules';
 import { counterChargeQualification } from '../combat/KillFlowCounter.mjs';
 import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from '../combat/ContinuousAOERules.mjs';
@@ -57,8 +58,11 @@ function dispatchStrike(skill, hitIndex, level, echo = null, castOptions = {}) {
   // Destroyer Nature (Taurus Chosen Ascension): skill damage x1.5, echoes included
   // Weapon mastery bonuses are already included in resolved stats; avoid applying twice.
   const charged = chargedStrikeModifiers(castOptions.qualification, hitIndex, skill.hit_count, !!echo);
+  const skillPointChargeBonusPct = !echo && castOptions.qualification?.charged
+    ? getWeaponSkillChargeBonusPct(skill.skill_id) : 0;
   const multiplier = baseMult * (echo?.multiplierScale ?? 1) *
-    getAXEAscensionSkillMultiplier() * charged.multiplier * (castOptions.channelPulse ? AXE_AOE_CHANNEL.pulseDamageScale : 1);
+    getAXEAscensionSkillMultiplier() * charged.multiplier * (1 + skillPointChargeBonusPct / 100) *
+    (castOptions.channelPulse ? AXE_AOE_CHANNEL.pulseDamageScale : 1);
   const criticalAllowed = skill.critical_allowed !== false;
   const forceCritical = !echo && criticalAllowed && skill.cast_type === CAST_TYPE.SINGLE_HIT
     ? consumeCriticalFocusForSingleHit()
@@ -75,6 +79,7 @@ function dispatchStrike(skill, hitIndex, level, echo = null, castOptions = {}) {
       hitsTotal,
       charged: charged.multiplier > 1 || charged.critBonusPct > 0 || charged.fatalBonusPct > 0,
       chargedCritBonusPct: charged.critBonusPct,
+      skillPointChargeBonusPct,
       chargedFatalBonusPct: charged.fatalBonusPct,
       defensePiercePct: castOptions.chainFrom ? 0.35 : 0,
       chainFrom: castOptions.chainFrom || null,
@@ -181,6 +186,10 @@ function scheduleRangedBarrage(skill, level, castOptions = {}) {
 export function castSkill(skillId, ctx = {}) {
   const skill = getSkillById(skillId);
   if (!skill) return { ok: false, reason: 'unknown_skill' };
+
+  // Registered core ladder skills beyond stage one require the previous
+  // paid weapon node. The paired passive is free; neither uses mastery XP.
+  if (!isWeaponSkillUnlocked(skillId)) return { ok: false, reason: 'weapon_skill_tier_locked' };
 
   if (skill.skill_type === SKILL_TYPE.PASSIVE) {
     toast('Passive skills activate automatically');

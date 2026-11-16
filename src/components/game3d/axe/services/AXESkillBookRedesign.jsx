@@ -7,6 +7,8 @@ import {getAllSkills, getSkillById, scaleStat} from '../../skills/skillRegistry'
 import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
+import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
+import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
 import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter,titleizeSkillStat} from './AXESkillBookModel.mjs';
 import './AXESkillBookRedesign.css';
@@ -50,7 +52,7 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
   const mastery=levelFor(skill,companion);
   const level=mastery?.level??1, max=mastery?.maxLevel??skill.max_level??null;
   const next=max!=null?Math.min(max,level+1):null;
-  const locked=skillMarkedLocked(skill), requirements=requirementsOf(skill);
+  const locked=skillMarkedLocked(skill) || !isWeaponSkillUnlocked(skill.skill_id), requirements=requirementsOf(skill);
   const scalings=Object.keys(skill.scaling||{});
   const stats=[
     ...scalings.map(key=>({key, label:titleizeSkillStat(key), current:formatSkillStat(key,scaleStat(skill,key,level)),
@@ -208,9 +210,9 @@ export default function AXESkillBookRedesign({
           <button type="button" key={item.id} aria-pressed={filter===item.id}
             onClick={()=>setFilter(item.id)}>{item.label}</button>)}</nav>
         <div className="axe-tome-card-scroll">
-          {listed.length?<div className="axe-tome-card-grid">{listed.map(skill=>{
+          {view==='advance' && !companion ? <AXEWeaponSkillPointsPanel /> : listed.length?<div className="axe-tome-card-grid">{listed.map(skill=>{
             const mastery=levelFor(skill,companion),isEquipped=allEquipped.includes(skill.skill_id);
-            const locked=skillMarkedLocked(skill);
+            const locked=skillMarkedLocked(skill) || (!companion && !isWeaponSkillUnlocked(skill.skill_id));
             return <button type="button" className="axe-tome-card" key={skill.skill_id}
               aria-pressed={current?.skill_id===skill.skill_id} onClick={()=>onSelect(skill)}
               title={skill.description||skill.skill_name}>
