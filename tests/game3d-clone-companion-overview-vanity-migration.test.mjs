@@ -5,19 +5,23 @@ import { readFileSync } from 'node:fs';
 const services = 'src/components/game3d/axe/services/';
 const src = name => readFileSync(services + name, 'utf8');
 
-test('Companion keeps one Vanity page and nests the live owned profile in Equipment', () => {
-  const workspace = src('AXECompanionWorkspace.jsx');
-  const overview = src('AXECompanionOverviewClone.jsx');
-  const preview = readFileSync('src/components/game3d/equipment/CompanionPreview3D.jsx','utf8');
-  assert.match(workspace, /const TABS = \['Equipment', 'Vanity', 'Imbuement'\]/);
-  assert.doesNotMatch(workspace, /'Vanity', 'Costumes'/);
-  assert.match(workspace, /equipmentView === 'profile' \? <AXECompanionOverviewClone/);
-  for (const expected of ['My Companions', 'Browse Companions & Mounts', 'Select & Equip Mount',
-    'Select & Summon','CompanionPreview3D', 'Search owned companions and mounts']) {
-    assert(overview.includes(expected), 'Missing Overview behavior: ' + expected);
-  }
-  assert.match(preview, /companionId = null/);
-  assert.match(overview, /companionId=\{modelId\}/);
+test('My Companion leads Equipment and renders the actual active owned mount', () => {
+  const workspace=src('AXECompanionWorkspace.jsx');
+  const profile=src('AXECompanionOverviewClone.jsx');
+  const preview=readFileSync('src/components/game3d/equipment/CompanionPreview3D.jsx','utf8');
+  assert.match(workspace,/const TABS=\['Equipment','Vanity','Imbuement'\]/);
+  assert.match(workspace,/\{id:'profile',label:'My Companion'\}/);
+  assert.match(workspace,/equipmentView==='profile'\?<AXECompanionOverviewClone/);
+  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory/);
+  assert.match(profile,/subscribeAXEMounts/);
+  assert.match(profile,/mounts.activeMountId/);
+  assert.match(profile,/getAXEMountDefinition\(mount.definitionId\)/);
+  assert.match(profile,/CompanionPreview3D key=\{modelId\} companionId=\{modelId\}/);
+  assert.match(profile,/Growth & XP/);
+  assert.match(profile,/axe-comp-model-gear/);
+  assert.match(profile,/axe-char-stat-row/);
+  assert.doesNotMatch(profile,/getAXEPetDefinition|summonAXEPet/);
+  assert.match(preview,/companionId = null/);
 });
 
 test('Vanity collection shows actually owned pieces, costumes and rarity filters', () => {
