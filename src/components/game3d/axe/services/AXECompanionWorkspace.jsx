@@ -7,24 +7,17 @@ import './AXECompanionCollectionPages.css';
 import './AXECompanionWorkspace.css';
 import './AXECompanionProfileRedesign.css';
 
-// My Companion's owned-mount roster and gear are one Equipment screen.
-// Mastery stays immediately to the right; growth is toggled above the 3D viewer.
-const TABS=['Equipment','Vanity','Imbuement'];
-const EQUIPMENT_VIEWS=[
-  {id:'companion',label:'Equipment'},
-  {id:'mastery',label:'Mastery'},
-];
-const equipmentViewForService=serviceId=>serviceId==='pet'?'mastery':'companion';
+// Mastery is a top-level Companion tab, immediately beside Equipment;
+// the owned mount roster, gear and in-view growth remain in Equipment.
+const TABS=['Equipment','Mastery','Vanity','Imbuement'];
+const tabForService=serviceId=>serviceId==='pet'?'Mastery':'Equipment';
 export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
-  const [tab,setTab]=useState('Equipment');
-  const [equipmentView,setEquipmentView]=useState(()=>equipmentViewForService(serviceId));
+  const [tab,setTab]=useState(()=>tabForService(serviceId));
   const [result,setResult]=useState('');
   useEffect(()=>{
-    setTab('Equipment');
-    setEquipmentView(equipmentViewForService(serviceId));
+    setTab(tabForService(serviceId));
     setResult('');
   },[serviceId]);
-  const switchView=id=>{setEquipmentView(id);setResult('');};
   const switchTab=id=>{setTab(id);setResult('');};
   return <div className="axe-comp-root axe-comp-root--modern" data-progression-panel="companion">
     <div className="axe-comp-header">
@@ -41,17 +34,10 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
         <span className="axe-comp-key-hint">RB</span>
       </nav>
       <div className="axe-comp-modern">
-        {tab==='Equipment'?<div className="axe-comp-equipment-shell">
-          <nav className="axe-comp-equipment-subnav" aria-label="Companion equipment subpages">
-            {EQUIPMENT_VIEWS.map(view=><button type="button" key={view.id}
-              aria-pressed={equipmentView===view.id}
-              onClick={()=>switchView(view.id)}>{view.label}</button>)}
-          </nav>
-          <div className="axe-comp-equipment-content" data-equipment-section={equipmentView}>
-            {equipmentView==='mastery'?<AXECompanionMasteryPanel
-                onNotice={setResult} onMyCompanion={()=>switchView('companion')}/>
-              :<AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>}
-          </div>
+        {tab==='Equipment'?<div className="axe-comp-equipment-content" data-equipment-section="companion">
+          <AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>
+        </div>:tab==='Mastery'?<div className="axe-comp-equipment-content axe-comp-mastery-top" data-equipment-section="mastery">
+          <AXECompanionMasteryPanel onNotice={setResult} onMyCompanion={()=>switchTab('Equipment')}/>
         </div>:<AXECompanionStylePane page={tab} onNotice={setResult}
           onPageChange={switchTab}/>}
       </div>
