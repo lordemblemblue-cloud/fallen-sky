@@ -6,6 +6,7 @@
 import { INVENTORY } from '../../equipment/inventoryData';
 import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
 import {AXE_FARMING_SET_BY_GRADE} from '../equipment/AXEFarmingSetProfiles.mjs';
+import {makeAXEFarmingItemPerks} from '../equipment/AXEFarmingItemPerks.mjs';
 import { isAXERateStat } from '../equipment/AXEEquipmentRuntimeStats';
 import {
   AXE_GEAR_RARITY_SCALE, AXE_PROCEDURAL_SET_FAMILIES,
@@ -95,6 +96,7 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
       dropBand:getAXELevelGearBand(monsterLevel).min,
       rarityLabel,rarityVariant:evolutionPath,evolutionPath,
       setId:family?.id||null,
+      abilityPerks:makeAXEFarmingItemPerks({slot:template.slot,rarity}),
       baseStats,rolledStats,
       appearance:null,visualPending:true, // no fabricated GLB assets
       modelUrl:null,modelFormat:null,
