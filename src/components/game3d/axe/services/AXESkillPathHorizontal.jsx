@@ -88,7 +88,7 @@ export default function AXESkillPathHorizontal({
       ? 'Linked passive display for the existing weapon-point system. Each newly unlocked paid stage grants +1% charged-strike damage across this weapon path.'
       :activeSkill?.description||'Select a registered ability to view its details.';
   const level=node.kind==='skill'?nodeLevel:null;
-  const effectKeys=activeSkill?Object.keys(activeSkill.scaling||{}):[];
+  const effectKeys=node.kind==='skill'&&activeSkill?Object.keys(activeSkill.scaling||{}):[];
   const unlockedStageCount=WEAPON_SKILL_TIERS.reduce((count,_,i)=>
     count+(weaponTierUnlocked(points.save,category,i)?1:0),0);
   const handleUpgrade=()=>{
@@ -219,8 +219,8 @@ export default function AXESkillPathHorizontal({
           <h3><BookOpen size={17}/> Skill Information</h3>
           <dl>
             <div><dt>Skill Type</dt><dd>{node.kind==='skill'?'Active':node.kind==='stage'?'Passive Stage':'Linked Passive'}</dd></div>
-            <div><dt>Hits</dt><dd>{activeSkill?.hit_count??'—'}</dd></div>
-            <div><dt>Cooldown</dt><dd>{activeSkill?activeSkill.cooldown+' sec':'—'}</dd></div>
+            <div><dt>Hits</dt><dd>{node.kind==='skill'?(activeSkill?.hit_count??'—'):'—'}</dd></div>
+            <div><dt>Cooldown</dt><dd>{node.kind==='skill'&&activeSkill?activeSkill.cooldown+' sec':'—'}</dd></div>
             <div><dt>Stage</dt><dd>{stageIndex+1} / {WEAPON_SKILL_TIERS.length}</dd></div>
             <div><dt>Points</dt><dd>{spent} / {cap}</dd></div>
           </dl>
@@ -236,9 +236,9 @@ export default function AXESkillPathHorizontal({
               <dd>{formatValue(activeSkill,key,level?.level||1)} → {formatValue(activeSkill,key,Math.min(activeSkill.max_level,(level?.level||1)+1))}</dd>
             </div>)}
           </dl>}
-          <p className="axe-hp-xp-copy">{level?.nextLevelXp!=null
+          <p className="axe-hp-xp-copy">{node.kind==='skill'&&level?.nextLevelXp!=null
             ? Math.max(0,Math.ceil(level.nextLevelXp-level.xp)).toLocaleString()+' mastery XP to next level'
-            : level?'Mastery maxed':'Mastery XP is earned through confirmed combat use.'}</p>
+            : node.kind==='skill'&&level?'Mastery maxed':'Mastery XP is earned through confirmed combat use.'}</p>
         </aside>
       </div>
     </div>
