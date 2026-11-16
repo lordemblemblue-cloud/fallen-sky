@@ -27,10 +27,10 @@ export default function AXECompanionWorkspace({onClose,serviceId='companion'}) {
         onClick={onClose} aria-label="Close Companion">×</button>
     </div>
     <div className="axe-comp-shell">
-      <nav className="axe-comp-tabs" aria-label="Companion sections">
+      <nav className="axe-comp-tabs" aria-label="Companion primary sections" data-companion-nav="primary">
         <span className="axe-comp-key-hint">LB</span>
         {TABS.map(next=><button type="button" key={next} aria-pressed={tab===next}
-          onClick={()=>switchTab(next)}>{next==='Imbuement'?'Imbue':next}</button>)}
+          onClick={()=>switchTab(next)}>{next==='Vanity'?'Variety':next==='Imbuement'?'Imbue':next}</button>)}
         <span className="axe-comp-key-hint">RB</span>
       </nav>
       <div className="axe-comp-modern">
