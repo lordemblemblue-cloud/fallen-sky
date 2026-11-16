@@ -56,7 +56,10 @@ const LIVE_REORDER_WINDOW_MS = 2000;
  * The model must not have been posed by a mixer: the combo clips are baked from its rest pose.
  * options.comboWeapons: false for no stand-in weapon, or options for createRemoteComboWeapon.
  */
-export function createRemotePlayersManager(scene, { loadAssets = loadArcherAssets, comboWeapons = {} } = {}) {
+// Clone's original optimized weapon GLBs are not in its repository yet.
+ // Disable missing stand-in downloads by default, while keeping the remote
+ // skeleton's actual combo clips active. Passing explicit comboWeapons opts in.
+export function createRemotePlayersManager(scene, { loadAssets = loadArcherAssets, comboWeapons = false } = {}) {
   const remotes = new Map(); // playerId -> { group, mixer, idleAction, runAction, current, comboClips, comboAction, comboWeapon, liveStamp, targetPos, targetYaw, lastUpdate, name }
   // Network presentation can be temporarily reverted per browser without touching combat.
   const smoothingEnabled = typeof window === 'undefined' || new URLSearchParams(window.location.search).get('g3netsmooth') !== '0';
