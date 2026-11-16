@@ -73,10 +73,11 @@ export default function MountSubTab() {
     <div className="h-full overflow-y-auto px-4 py-6 sm:px-8 text-white">
       <div className="mx-auto max-w-5xl">
         <div className="border-b border-white/10 pb-4">
-          <div className="text-xs uppercase tracking-[0.35em] text-amber-200/70">Ride & Registration</div>
-          <h2 className="mt-1 text-2xl font-semibold">Mounts</h2>
+          <div className="text-xs uppercase tracking-[0.35em] text-amber-200/70">Equipment · Progression · Soul Fusion</div>
+          <h2 className="mt-1 text-2xl font-semibold">Mount Armory</h2>
           <p className="mt-1 text-sm text-white/60">
-            Mount EXP grows through riding, PvE and PvP. Legendary crafting adds persistent random abilities and a high-end passive.
+            Refine mount armor and manage advanced progression, legendary crafting and soul fusion here.
+            The Mounts collection is the read-only page for your owned mounts and their stats.
           </p>
         </div>
 
