@@ -277,7 +277,8 @@ export default function AXECloneSkillTreeWorkspace({
           <AXESkillPathHorizontal category={category} paths={paths}
             activePathId={activePathId} onChangePath={changePath}
             selected={selected} onSelect={selectNode} activeIds={activeIds}
-            onEquipSkill={equipFromTree} onFeedback={setFeedback}/>
+            onEquipSkill={equipFromTree} onFeedback={setFeedback}
+            onActivateWeapon={onActivateWeapon} activeMode={activeMode}/>
         </AXESkillTreeErrorBoundary> : <>
           <div className="axe-ct-main-heading">
             <div className="axe-ct-main-icon"><Swords size={29}/></div>
