@@ -39,16 +39,23 @@ test('Damage Defense and Range mastery preserve independent path XP and never st
   assert.equal(original.roleMastery.damage.xp,150);
 });
 
-test('companion source uses active owned mount, not starter baby wolf model; mastery is combat-earned',()=>{
-  const profile=read('axe/services/AXECompanionOverviewClone.jsx');
+test('unified equipment binds owned mount instead of the legacy pet and role XP remains combat earned',()=>{
+  const loadout=read('axe/services/AXEGlassLoadoutPane.jsx');
+  const insights=read('axe/services/AXECompanionInsights.jsx');
   const mastery=read('axe/services/AXECompanionMasteryPanel.jsx');
   const workspace=read('axe/services/AXECompanionWorkspace.jsx');
   const store=read('axe/progression/AXEMountStore.js');
   const legacy=read('companionData.jsx');
-  assert.match(profile,/subscribeAXEMounts/);
-  assert.match(profile,/mounts.activeMountId/);
-  assert.match(profile,/Growth & XP/);
-  assert.match(profile,/axe-comp-model-gear/);
+  assert.match(loadout,/subscribeAXEMounts/);
+  assert.match(loadout,/mounts.activeMountId/);
+  assert.match(loadout,/axe-comp-owned-roster/);
+  assert.match(loadout,/axe-comp-insights-toggle/);
+  assert.match(loadout,/companionId=\{activeCompanion.id\}/);
+  assert.match(loadout,/AXE_MOUNT_GEAR_SLOTS/);
+  assert.match(insights,/Growth &amp; Experience/);
+  assert.match(insights,/getCompanionGrowthView/);
+  assert.match(insights,/getAXEMountBonuses/);
+  assert.match(insights,/applyCompanionRoleBonus/);
   assert.match(mastery,/COMPANION_MASTERY_PATHS/);
   assert.doesNotMatch(mastery,/feedAXEPet/);
   assert.match(store,/fightingAlongside/);
@@ -56,8 +63,8 @@ test('companion source uses active owned mount, not starter baby wolf model; mas
   assert.match(store,/result.mount.totalXp>=5000/);
   assert.match(store,/applyCompanionGrowthBonus/);
   assert.match(store,/applyCompanionRoleBonus/);
-  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory/);
-  assert.match(workspace,/\{id:'profile',label:'My Companion'\}/);
+  assert.doesNotMatch(workspace,/MountSubTab|Mount Armory|AXECompanionOverviewClone/);
+  assert.match(workspace,/\{id:'companion',label:'Equipment'\}/);
   assert.match(legacy,/name: 'Legacy War Wolf'/);
   assert.match(legacy,/modelUrl: GAME3D_FACTION_MOUNTS.AXE_Faction_2.modelUrl/);
 });
