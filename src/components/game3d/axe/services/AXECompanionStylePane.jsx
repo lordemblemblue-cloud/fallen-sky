@@ -7,7 +7,7 @@ import { AXE_COSTUME_DEFINITIONS } from '../progression/AXECostumeSystem';
 import { getAXESoulRegaliaState,subscribeAXESoulRegalia,getAXESoulRegaliaBonuses }
   from '../progression/AXESoulRegaliaStore';
 import { getCompanionState,subscribeCompanion,setActiveCompanion } from '../../companionStore';
-import { getCompanionById, COMPANION_DEFINITIONS, COMPANION_GEAR } from '../../companionData';
+import { getCompanionById, COMPANION_DEFINITIONS } from '../../companionData';
 import './AXEGlassLoadoutPane.css';
 import './AXECompanionStylePane.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
@@ -94,19 +94,6 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
     <section className={'axe-app-model-stage axe-comp-style-stage'+(isImbue?' axe-comp-imbue-stage':'')}
       aria-label={isImbue?'Player imbue target viewer':'Companion appearance viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
-      {!isImbue&&['left','right'].map(side=><div key={side}
-        className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
-        {(selectedModel?.gearSlots||[]).filter((_,i)=>side==='left'?i<2:i>=2).map(slot=>{
-          const itemId=companion.gear?.[selectedModel.id]?.[slot];
-          const item=COMPANION_GEAR[slot]?.find(piece=>piece.id===itemId);
-          return <button key={slot} type="button" className="axe-app-viewer-slot"
-            title={item?.name||slot+' slot'} onClick={()=>onPageChange('Equipment')}>
-            <span className="axe-app-viewer-slot-art"><Shield size={25}/></span>
-            <small>{slot.replaceAll('_',' ')}</small>
-            <span className="axe-app-viewer-item-name">{item?.name||'—'}</span>
-          </button>;
-        })}
-      </div>)}
       {isImbue&&IMBUE_TARGETS.map((entry,i)=><button key={entry.id} type="button"
         className={'axe-comp-imbue-corner axe-comp-imbue-corner--'+i}
         aria-pressed={target===entry.id} onClick={()=>setTarget(entry.id)}>
