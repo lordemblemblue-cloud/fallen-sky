@@ -1,7 +1,6 @@
-// Geometry for the four Wolfveil cave approach trails, entrance aprons and
-// guarded edges. Every walking surface is stitched into the same cave floor
-// mesh already registered for player foot rays. No second terrain mesh/portal,
-// changed LAND square, or fabricated colliders.
+// Walkable exterior cave approaches and guarded E-arch thresholds.
+// Four stone trails share the existing Wolfveil cave floor raycast geometry.
+// All overworld mountain/roof terrain cells stay completely sealed.
 import {wolfveilHeight} from './WolfveilLayout.js';
 import {
   WOLFVEIL_CAVE_APPROACHES,WOLFVEIL_CAVE_APPROACH_WIDTH,
@@ -10,7 +9,7 @@ import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
 
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const mix=(a,b,t)=>a+(b-a)*t;
-const COLOR_CENTER=[.60,.57,.50],COLOR_EDGE=[.40,.43,.40],COLOR_APRON=[.53,.54,.49];
+const COLOR_CENTER=[.60,.57,.50];
 const caveById=new Map(WOLFVEIL_EXPLORABLE_CAVES.map(c=>[c.id,c]));
 
 // The renderer creates the real geometry; this function is also usable in
@@ -18,24 +17,22 @@ const caveById=new Map(WOLFVEIL_EXPLORABLE_CAVES.map(c=>[c.id,c]));
 export function appendWolfveilCaveAccessFloor(floorTris){
   if(typeof floorTris?.quad!=='function')throw new TypeError('Cave floor triangle collector required');
   const stats={approaches:0,surfaceRoofIntact:true,walkQuads:0,shoulderQuads:0};
-  const lastPoint=(points)=>points[points.length-1];
   const at=(a,b,t)=>({x:mix(a.x,b.x,t),z:mix(a.z,b.z,t),
     y:mix(a.y,b.y,t)});
   const createEdge=(p,tangent,halfWidth,stepLength,blendToThreshold=false)=>{
     const length=Math.hypot(tangent.x,tangent.z)||1;
     const nx=-tangent.z/length,nz=tangent.x/length;
-    const pos=(side,scale=1)=>{
-      const x=p.x+nx*side*halfWidth*scale,z=p.z+nz*side*halfWidth*scale;
+    const pos=(side)=>{
+      const x=p.x+nx*side*halfWidth,z=p.z+nz*side*halfWidth;
       const terrainY=wolfveilHeight(x,z);
       const anchorWeight=blendToThreshold?clamp(stepLength/5,0,1):1;
       return [x,mix(p.y,terrainY,anchorWeight)+.10,z];
     };
-    return {left:pos(1),right:pos(-1),
-      outerLeft:pos(1,1.26),outerRight:pos(-1,1.26)};
+    return {left:pos(1),right:pos(-1)};
   };
   // One continuous rough-stone track from each authored valley trail to the
-  // original entry ramp. Surfaces are draped over the real hillside; the final
-  // 5m eases into exactly the same Y as its existing cave threshold.
+  // existing stone arch. Surfaces are draped over the real hillside; the
+  // last 5m meets the threshold's actual surface height.
   for(const approach of WOLFVEIL_CAVE_APPROACHES){
     const pts=approach.points;
     stats.approaches++;
@@ -101,12 +98,12 @@ export function appendWolfveilCaveAccessProps({
 }={}){
   if(typeof addProp!=='function')throw new TypeError('Existing cave prop factory required');
   const placements=[];
-  // Reuse existing meshes/materials and keep all props cosmetic; the TRUE
-  // collision floor comes from appendWolfveilCaveAccessFloor().
+  // Reuse existing meshes/materials; exterior rails collide through the
+  // pure threshold safety resolver, not by disabling the sealed roof.
   for(const approach of WOLFVEIL_CAVE_APPROACHES){
     const cave=caveById.get(approach.caveId),[dx,dz]=cave.dir;
     const nx=-dz,nz=dx;
-    // Low stone retaining edges and handrails flank the narrow final descent.
+    // Low stone retaining edges and handrails flank the outdoor approach.
     for(const side of [-1,1]){
       for(let j=0;j<5;j++){
         const f=-12+j*2.0;
@@ -130,8 +127,8 @@ export function appendWolfveilCaveAccessProps({
         addBrazier(bx,h,bz,cave.lightColor,cave.theme==='crystal_geode');
       }
     }
-    // Mountain rock shoulders at the top of the path, a visible ground-level
-    // opening instead of a doorway hovering in empty terrain.
+    // Terrain-anchored mountain rock shoulders make the arched entrance
+    // look settled in the real hillside without carving an overhead hole.
     const front=approach.points[2];
     for(const side of [-1,1]){
       const px=front.x+nx*side*4.3,pz=front.z+nz*side*4.3;
