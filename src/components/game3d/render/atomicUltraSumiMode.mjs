@@ -57,7 +57,9 @@ export function createAtomicUltraSumiMode({
   let active=false,disposed=false,selectedQuality=quality,lastPosition=null;
   const settings=()=>({
     quality:selectedQuality,
-    blazePalette:'jade',blazeProfile:'sumi',
+    // Natural meadow grass (2026-11-16 landscaping); 'sumi' restores the
+    // jade flame blades, the other profiles stay available.
+    blazePalette:'jade',blazeProfile:'meadow',
     blazeFlameSpeed:.58,blazePinch:1.28,
     blazeInkWeight:1.5,blazeCurl:1.16,
     blazeTreeSway:.72,blazeBrightness:.98,

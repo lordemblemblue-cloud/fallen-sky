@@ -32,12 +32,14 @@ export const BLAZE_GRASS_VERTEX = /* glsl */`
 attribute float aPhase;
 attribute float aScale;
 attribute float aBiomeIndex;
-uniform float uTime,uFlameSpeed,uCurlAmp,uWindStrength;
+uniform float uTime,uFlameSpeed,uCurlAmp,uWindStrength,uArtProfile;
+uniform vec2 uTreeDirection;
 uniform vec3 uPlayerPos;
 varying vec2 vUv;
 varying vec3 vWorldPos;
 varying float vPhase,vScale,vBiomeIndex;
 void main(){
+ float meadowV=step(2.5,uArtProfile);
  vUv=uv;vPhase=aPhase;vScale=aScale;vBiomeIndex=aBiomeIndex;
  float h=uv.y;
  vec3 local=position;
@@ -46,13 +48,17 @@ void main(){
  float breeze=sin(origin.x*.14+origin.z*.11-slowT*.9+aPhase*6.28);
  float s1=sin(h*4.8-slowT*2.6+aPhase*12.56);
  float s2=cos(h*8.2-slowT*3.9+aPhase*19.4);
- float swell=(s1*.031+s2*.012)*pow(h,1.25)*uCurlAmp;
+ float swell=(s1*.031+s2*.012)*pow(h,1.25)*uCurlAmp*(1.-.9*meadowV);
  local.x+=swell;
- local.z+=cos(h*4.2-slowT*2.2+aPhase*9.1)*.025*pow(h,1.3)*uCurlAmp;
+ local.z+=cos(h*4.2-slowT*2.2+aPhase*9.1)*.025*pow(h,1.3)*uCurlAmp*(1.-.9*meadowV);
  vec4 wp=modelMatrix*instanceMatrix*vec4(local,1.);
  wp.x+=breeze*.048*pow(h,1.35)*uCurlAmp*uWindStrength;
  wp.z+=cos(origin.z*.15-slowT*.75+aPhase*4.)*
     .035*pow(h,1.35)*uCurlAmp*uWindStrength;
+ // Meadow: tips lean downwind and bob in slow gusts; roots never move.
+ float gust=.55+.45*sin(slowT*.9+origin.x*.045+origin.z*.035);
+ float bend=pow(h,2.)*(.09+.07*sin(slowT*1.7+origin.x*.31+origin.z*.23+aPhase*6.28))*gust;
+ wp.xz+=normalize(uTreeDirection+vec2(.0001))*bend*uWindStrength*meadowV;
  vec2 away=wp.xz-uPlayerPos.xz;
  float dist=length(away);
  if(dist<2.6){
@@ -71,8 +77,56 @@ varying vec2 vUv;
 varying vec3 vWorldPos;
 varying float vPhase,vScale,vBiomeIndex;
 /* BLAZE_NOISE */
+// One tapered, curved blade of a three-blade tuft drawn on the card.
+void meadowBlade(float u,float h,float bu,float bh,float bl,float bw,float id,
+  inout float cover,inout float side,inout float along,inout float which){
+ if(h>=bh)return;
+ float t=h/bh;
+ float c=bu+bl*t*t;
+ float w=bw*pow(1.-t,.78)*(1.+.22*sin(t*3.14159));
+ float d=u-c;
+ if(abs(d)<w){cover=1.;side=d/w;along=t;which=id;}
+}
 void main(){
  float h=vUv.y,u=vUv.x*2.-1.;
+ if(uArtProfile>2.5){
+  // Natural meadow: three textured blades per card, opaque cut-out.
+  float p=vPhase,cover=0.,side=0.,along=0.,which=0.;
+  meadowBlade(u,h,-.50+.16*fract(p*7.3),.70+.28*fract(p*11.3),
+    -.30+.22*fract(p*13.7),.30,0.,cover,side,along,which);
+  meadowBlade(u,h,.62-.16*fract(p*5.7),.56+.30*fract(p*17.1),
+    .26+.24*fract(p*23.9),.27,2.,cover,side,along,which);
+  meadowBlade(u,h,.05+.18*(fract(p*3.1)-.5),.88+.12*fract(p*2.9),
+    (fract(p*19.3)-.5)*.46,.34,1.,cover,side,along,which);
+  if(cover<.5)discard;
+  float tone=fract(p*31.7+which*.37);
+  float field=bFbm2D(vWorldPos.xz*.032);
+  vec3 root=vec3(.030,.062,.018);
+  vec3 mid=mix(vec3(.085,.205,.040),vec3(.135,.250,.050),tone);
+  vec3 tip=mix(vec3(.190,.330,.070),vec3(.330,.360,.110),clamp(tone*.55+field*.55,0.,1.));
+  vec3 col=mix(root,mid,smoothstep(0.,.42,along));
+  col=mix(col,tip,smoothstep(.42,1.,along));
+  // A few sun-dried straw blades and drier drifts across the field.
+  float straw=step(.88,fract(p*53.1+which*.41));
+  col=mix(col,vec3(.40,.33,.15)*(.75+.25*along),straw*.85);
+  col=mix(col,col*vec3(1.18,1.05,.72),smoothstep(.55,.85,field)*.45);
+  // Leaf fold: midrib line, one half catching the light, darker edges.
+  float rib=1.-smoothstep(0.,.16,abs(side));
+  col*=(.80+.20*side)*(1.+.12*rib)*(1.-.22*smoothstep(.75,1.,abs(side)));
+  // Fine lengthwise veins break up flat colour.
+  col*=.92+.08*sin(side*13.+p*40.);
+  // Self-shadowed roots inside the tuft.
+  col*=mix(.42,1.,smoothstep(0.,.33,h));
+  vec3 L=normalize(uSunDir),V=normalize(cameraPosition-vWorldPos);
+  col*=.62+.38*clamp(L.y,0.,1.);
+  float back=pow(clamp(dot(-V,L),0.,1.),3.)*smoothstep(.35,1.,along);
+  col+=vec3(.22,.26,.06)*back*.55;
+  col=clamp(col*uBrightness*1.24,vec3(0.),vec3(1.));
+  gl_FragColor=vec4(col,1.);
+  #include <tonemapping_fragment>
+  #include <colorspace_fragment>
+  return;
+ }
  float slowT=uTime*uFlameSpeed*2.8;
  float biomePalette=step(2.5,vBiomeIndex)*3.0+
    (1.0-step(2.5,vBiomeIndex))*uPalette;
@@ -165,11 +219,13 @@ export const BLAZE_EMBER_VERTEX = /* glsl */`
 attribute vec3 aSpawn;
 attribute float aPhase;
 attribute float aBiomeIndex;
-uniform float uTime,uFlameSpeed,uWindStrength;
+uniform float uTime,uFlameSpeed,uWindStrength,uArtProfile;
 varying vec2 vUv;
 varying float vLife,vPhase,vBiomeIndex;
 void main(){
  vUv=uv;vPhase=aPhase;vBiomeIndex=aBiomeIndex;
+ // Natural meadow profile: no rising ink-droplet sparks over the grass.
+ if(uArtProfile>2.5){vLife=0.;gl_Position=vec4(0.,0.,2.,1.);return;}
  float t=uTime*uFlameSpeed*.55;
  float life=fract(aPhase+t);
  vLife=life;

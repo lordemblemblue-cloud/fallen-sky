@@ -9,7 +9,9 @@ import {BLAZE_TILE_METERS,blazeTileCoords,blazeTileKey,blazeTileSeed,
 // terrain. No new floor, trees, colliders, rigid hitboxes or per-frame CPU
 // reallocation. All tile geometry remains visual-only.
 function bladeGeometry(){
-  const vertices=[],uv=[],normals=[],ids=[],segments=16;
+  // Six segments: the fragment shader draws a curved three-blade tuft on
+  // each card, so the low-poly strip still reads as detailed grass.
+  const vertices=[],uv=[],normals=[],ids=[],segments=6;
   for(let i=0;i<=segments;i++){
     const h=i/segments;
     const y=1.41*h; // Clone-only 3x knee-height: 1.16–1.61m energy-grass body

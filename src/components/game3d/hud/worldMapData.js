@@ -11,13 +11,15 @@ import { createAXEInitialWorldManifest } from '../axe/world/AXEWorldStreamingSys
 import { getAXEQuestObjectives } from '../axe/quests/AXEQuestFramework';
 import { LUNAR_CAVE_CHAMBERS, LUNAR_CAVE_WATER_END } from '../dungeons/LunarCaveLayout.mjs';
 import { ASTRAL_PADS,ASTRAL_RETURN_PORTAL,ASTRAL_DUNGEON_TITLE } from '../dungeons/AstralDungeonLayout.mjs';
+import { WOLFVEIL_MAP_WORLD_BOUNDS, wolfveilMapZoneAt } from '../wolfveil/WolfveilMapDesign.mjs';
 
 const FUTURE_WORLD = createAXEInitialWorldManifest();
 const normalize = value => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 const isForest = region => region === 'forest';
 export const MAP_SCALE = Object.freeze({
   forest: Object.freeze({ name: 'First Territory', minX: -1200, maxX: 1200, minZ: -1200, maxZ: 1200 }),
-  wolfveil: Object.freeze({ name: 'Wolfveil Village', minX: -150, maxX: 150, minZ: -150, maxZ: 150 }),
+  // The whole 1,100 m Classic Wolfveil valley (Play coordinates).
+  wolfveil: Object.freeze({ name: 'Wolfveil Valley', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
   'lunar-cave': Object.freeze({ name: 'Lunar Cave Dungeon', minX: -390, maxX: 390, minZ: -40, maxZ: 740 }),
   'astral-dungeon': Object.freeze({ name: ASTRAL_DUNGEON_TITLE, minX: -200, maxX: 200, minZ: -60, maxZ: 340 }),
 });
@@ -136,6 +138,7 @@ export function getMapZone(region,position) {
     const nearby=LUNAR_CAVE_CHAMBERS.find(c=>Math.hypot((position?.x||0)-c.x,(position?.z||0)-c.z)<40);
     return nearby?nearby.name:'Lunar Cave · Stone Passage';
   }
+  if(region==='wolfveil')return wolfveilMapZoneAt(position?.x||0,position?.z||0).name;
   if(!isForest(region))return getMapScale(region).name;
   const found=AXE_FIRST_REGION.zones.filter(zone=>
     Math.hypot((position?.x||0)-zone.center[0],(position?.z||0)-zone.center[2])<=zone.radius)

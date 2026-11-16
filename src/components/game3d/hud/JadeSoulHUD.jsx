@@ -23,6 +23,7 @@ import JadeQuestTracker from './JadeQuestTracker';
 import AXEWorldMapOverlay from './AXEWorldMapOverlay';
 import LunarCaveMinimap from './LunarCaveMinimap';
 import AstralMinimap from './AstralMinimap';
+import WolfveilMinimap from './WolfveilMinimap';
 import { createPortal } from 'react-dom';
 
 // Purpose-built UI, not a screenshot painted over the 3D world.
@@ -220,8 +221,8 @@ function WeaponStack({ playerLevel }) {
 function Compass({region='wolfveil',hideTarget=false}) {
   const arrowRef = useRef(null);
   useEffect(() => subscribePlayerPosition(position => {
-    // The empty radar face is intentional. Facing is read from the game world,
-    // rather than displaying an unrelated screenshot's static map.
+    // Facing is read from the game world. Wolfveil's radar draws the real
+    // terrain/roads/zones (WolfveilMinimap), never an unrelated screenshot.
     if (arrowRef.current) {
       arrowRef.current.style.transform = `translate(-50%, -50%) rotate(${(Number(position.yaw) || 0)}rad)`;
     }
@@ -230,7 +231,8 @@ function Compass({region='wolfveil',hideTarget=false}) {
     <div className="jade-compass-block">
       <button type="button" className="jade-compass" aria-label="Open world map"
         title="Open full world map" onClick={() => window.dispatchEvent(new CustomEvent('axeOpenWorldMap'))}>
-        {region==='lunar-cave'?<LunarCaveMinimap />:region==='astral-dungeon'?<AstralMinimap />:<div className="jade-compass-grid" aria-hidden="true" />}
+        {region==='lunar-cave'?<LunarCaveMinimap />:region==='astral-dungeon'?<AstralMinimap />:
+          region==='wolfveil'?<WolfveilMinimap />:<div className="jade-compass-grid" aria-hidden="true" />}
         {['N', 'E', 'S', 'W'].map(d => <span key={d} className={`jade-compass-point jade-compass-point--${d.toLowerCase()}`}>{d}</span>)}
         <span className="jade-compass-needle" ref={arrowRef} aria-hidden="true">
           <svg viewBox="0 0 28 40" width="23" height="34" fill="none" aria-hidden="true">

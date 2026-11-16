@@ -10,7 +10,8 @@ export const BLAZE_GRASS = Object.freeze({
   bloom:Object.freeze({strength:.18,radius:.38,threshold:.88}),
 });
 export const BLAZE_PALETTES = Object.freeze(['jade','vermilion','cobalt']);
-export const BLAZE_PROFILES = Object.freeze(['sumi','anime','realistic']);
+// 'meadow' (index 3): natural, textured three-blade tufts on the same cards.
+export const BLAZE_PROFILES = Object.freeze(['sumi','anime','realistic','meadow']);
 export const BLAZE_DEFAULTS = Object.freeze({
   blazePalette:'jade',
   blazeProfile:'sumi',

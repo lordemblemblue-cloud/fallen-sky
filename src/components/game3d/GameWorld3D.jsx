@@ -195,6 +195,7 @@ import Game3DLunarNotifications from './notifications/Game3DLunarNotifications';
 import { createAXEServiceStationRuntime } from './axe/services/world/AXEServiceStationRuntime';
 import { getAXEDungeonState } from './axe/dungeons/AXEDungeonStore';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './wolfveil/WolfveilLayout';
+import { wolfveilLandscapeAllowsTallGrass } from './wolfveil/WolfveilLandscapeDesign.mjs';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
 import { shouldRejectCaveGroundStep,nearSuigenCaveGround } from './dungeons/CaveRimSafety.mjs';
@@ -779,7 +780,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         !insideWolfveilImportedTown(x,z,3)&&
         wolfveilDistanceToRiver(x,z-70)>4&&
         !isVortexLakeWetSurface(x,z-70,2)&&
-        wolfveilRouteClearance(x,z-70)>4,
+        wolfveilRouteClearance(x,z-70)>4&&
+        // Landscape design: trails, camp floors, fighting-ground turf and
+        // mountain rock/snow stay clear of tall streamed grass.
+        wolfveilLandscapeAllowsTallGrass(x,z-70),
       biomeAt:({x,z})=>region==='wolfveil'?'meadow':
         classifyBlazeBiome({region}),
     });
