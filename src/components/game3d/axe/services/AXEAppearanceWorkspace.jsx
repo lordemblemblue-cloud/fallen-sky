@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Check, Crown, Feather, Gem, Shield, Shirt, Sparkles, UserRound, X,
+  Check, Crown, Feather, Gem, Search, Shield, Shirt, Sparkles, UserRound, X,
 } from 'lucide-react';
 import { getAXEVanityState, subscribeAXEVanity, equipAXEVanityPiece } from '../progression/AXEVanityStore';
 import { AXE_VANITY_PIECES, AXE_VANITY_SLOTS } from '../progression/AXEVanitySystem';
@@ -14,6 +14,7 @@ import { subscribeAXEAura } from '../equipment/AXEEquipmentAuraStore';
 import { getAppearanceAuraSource, subscribeAppearanceAuraSource, selectAppearanceAuraSource } from './AXEAppearanceAuraSelection';
 import AXEAppearanceDetails from './AXEAppearanceDetails';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
+import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import './AXEAppearanceWorkspace.css';
 
 const GameCharacterPreview = lazy(() => import('../../equipment/EquipmentPreview3D'));
@@ -83,15 +84,17 @@ export default function AXEAppearanceWorkspace({
   const [detail, setDetail] = useState('');
   const [notice, setNotice] = useState('');
   const [filter, setFilter] = useState('All');
+  const [search,setSearch] = useState('');
 
   useEffect(() => {
     const destination = initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character';
     setTab(destination);
     setFilter(serviceId === 'costume' ? 'Costumes' : 'All');
+    setSearch('');
     setSelected(null); setDetail('');
   }, [serviceId, initialTab]);
   useEffect(() => subscribeCharacterChange(() => {
-    setSelected(null); setDetail(''); setNotice(''); setFilter('All');
+    setSelected(null); setDetail(''); setNotice(''); setFilter('All'); setSearch('');
   }), []);
 
   const ownedCostumes = useMemo(() => (costumes.owned || [])
@@ -106,9 +109,10 @@ export default function AXEAppearanceWorkspace({
     ...ownedVanity.map(piece => ({ ...piece, kind:'vanity' })),
     ...ownedCostumes.map(costume => ({ ...costume, kind:'costume' })),
   ], [ownedVanity, ownedCostumes]);
-  const visibleInventory = inventory.filter(item => filter === 'All' ||
-    (filter === 'Vanity' && item.kind === 'vanity') ||
-    (filter === 'Costumes' && item.kind === 'costume'));
+  const visibleInventory = filterInventoryWithSearch(inventory,{
+    search, category:filter==='Vanity'?'vanity':filter==='Costumes'?'costume':'All',
+    categoryKey:'kind',
+  });
   // Display real owned item details immediately, rather than an empty template.
   const selectedItem = visibleInventory.find(item => item.kind === selected?.kind && item.id === selected?.id)
     || visibleInventory[0] || null;
@@ -119,7 +123,7 @@ export default function AXEAppearanceWorkspace({
     .filter(row => row.piece?.slot === row.slot);
 
   const showTab = next => {
-    setTab(next); setFilter('All');
+    setTab(next); setFilter('All'); setSearch('');
     setDetail(''); setNotice('');
   };
   const selectItem = item => {
@@ -257,19 +261,26 @@ export default function AXEAppearanceWorkspace({
           </div>
         </GlassCard> : <GlassCard title="Inventory" icon={Gem}
           extra={visibleInventory.length + ' shown · ' + inventory.length + ' owned'}
-          headingAction={<label className="axe-app-inventory-filter-select">
-            <span className="sr-only">Filter inventory</span>
-            <select aria-label="Filter inventory" value={filter}
-              onChange={event => setFilter(event.target.value)}>
-              <option value="All">All</option><option value="Vanity">Vanity</option>
-              <option value="Costumes">Costumes</option>
-            </select>
-          </label>}
           className="axe-app-inventory">
           <div className="axe-app-inventory-browser">
-          <div className="axe-app-inventory-filters" role="group" aria-label="Inventory filter">
-            {['All','Vanity','Costumes'].map(kind => <button type="button" key={kind}
-              aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{kind}</button>)}
+          <div className="axe-app-inventory-toolbar" role="search" aria-label="Search and filter vanity and costumes">
+            <label className="axe-app-inventory-search">
+              <Search size={16} aria-hidden="true"/>
+              <span className="sr-only">Search vanity and costumes</span>
+              <input type="search" value={search} onChange={event=>setSearch(event.target.value)}
+                placeholder="Search vanity…" aria-label="Search vanity or costume by name"/>
+              {search && <button type="button" onClick={()=>setSearch('')}
+                aria-label="Clear vanity search"><X size={14}/></button>}
+            </label>
+            <label className="axe-app-inventory-category">
+              <span className="sr-only">Vanity inventory category</span>
+              <select aria-label="Vanity inventory category" value={filter}
+                onChange={event=>{setFilter(event.target.value);setSelected(null);}}>
+                <option value="All">All Appearance</option>
+                <option value="Vanity">Vanity Pieces</option>
+                <option value="Costumes">Costumes</option>
+              </select>
+            </label>
           </div>
           <div className="axe-app-inventory-grid" role="list" aria-label="Owned vanity pieces and costumes">
             {visibleInventory.map(item => <button type="button" role="listitem"
@@ -285,7 +296,7 @@ export default function AXEAppearanceWorkspace({
                 item.kind === 'costume' && costumes.equippedCostumeId === item.id) &&
                 <Check className="axe-app-equipped-check" size={17} aria-label="Equipped"/>}
             </button>)}
-            {!visibleInventory.length && <p className="axe-app-inventory-empty">No owned items in this category.</p>}
+            {!visibleInventory.length && <p className="axe-app-inventory-empty">No owned vanity or costume items match the current search.</p>}
           </div>
           </div>
         </GlassCard>}
