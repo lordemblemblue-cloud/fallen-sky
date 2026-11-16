@@ -339,9 +339,13 @@ export default function AXECloneSkillTreeWorkspace({
               className={targetEquipSlot===i?'axe-ct-equipped-target':''}
               aria-pressed={targetEquipSlot===i}
               onClick={()=>clickEquipSlot(i)}
-              onDoubleClick={()=>{if(id)onRemoveActive?.(i);setTargetEquipSlot(null);}}
+              onContextMenu={event=>{
+                event.preventDefault();
+                if(id)onRemoveActive?.(i);
+                setTargetEquipSlot(null);
+              }}
               title={(id ? getSkill(id)?.skill_name || 'Equipped skill' : 'Empty skill slot')+
-                ' — Click to target for skill gestures; double-click to unequip'}
+                ' — Click to target for skill gestures; right-click a filled slot to unequip'}
               aria-label={(companion?COMPANION_SLOT_KEYS[i]:String(i+1))+': '+(getSkill(id)?.skill_name||'Empty')+
                 (targetEquipSlot===i?' — selected destination':'')}>
               {id?<TreeIcon kind={classify(getSkill(id))==='Multi-Hit'?'triple':
