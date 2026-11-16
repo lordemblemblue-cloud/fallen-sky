@@ -179,3 +179,41 @@
 .axe-clone-skill-root .axe-ct-content--collection .axe-ct-equipped-slots {
   min-height:0;
 }
+
+/* Companion Combat uses connected horizontal skill-tree nodes like the
+   character Single/Multi/Aerial tree, never the old unrelated list layout. */
+.axe-sk-companion-tree {
+  flex-direction:row;
+  align-items:stretch;
+  overflow-x:auto;
+  overflow-y:hidden;
+  min-height:165px;
+  max-height:210px;
+  gap:0;
+  padding:16px 8px;
+  scrollbar-width:thin;
+  scrollbar-color:#edc17b66 transparent;
+}
+.axe-sk-combat-node {
+  display:flex;align-items:center;gap:5px;
+  flex:0 0 auto;min-height:100%;width:auto;
+}
+.axe-sk-combat-node>.axe-sk-skill {
+  flex:0 0 195px;max-width:195px;min-height:112px;
+  flex-direction:column;align-items:flex-start;justify-content:center;
+  background:linear-gradient(145deg,#273951,#13263d);
+  box-shadow:inset 0 0 12px #e7c48417;
+}
+.axe-sk-combat-node>.axe-sk-skill strong {font-size:15px;}
+.axe-sk-combat-connector {
+  display:flex;align-items:center;justify-content:center;
+  color:#f5c67f;filter:drop-shadow(0 0 4px #eeb879);
+  flex:0 0 37px;min-width:37px;
+}
+.axe-sk-list-row {min-width:0;flex:0 0 auto;}
+.axe-sk-list-row>.axe-sk-skill {width:100%;}
+@media(max-width:760px) {
+  .axe-sk-companion-tree {min-height:148px;overflow-x:auto;overflow-y:hidden;}
+  .axe-sk-combat-node>.axe-sk-skill {flex-basis:165px;max-width:165px;}
+  .axe-sk-combat-connector {min-width:24px;flex-basis:24px;}
+}
