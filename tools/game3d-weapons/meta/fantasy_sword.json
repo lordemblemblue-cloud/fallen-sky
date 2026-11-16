@@ -1,0 +1,25 @@
+{
+ "id": "fantasy_sword",
+ "class": "sword",
+ "length": 0.92,
+ "sourceTris": 19357,
+ "droppedParts": [],
+ "guardY": 0.1,
+ "guardLowerY": -0.005,
+ "pommelY": -0.11,
+ "handleBottomY": -0.04,
+ "tip": [
+  -0.0059,
+  0.81,
+  0.0058
+ ],
+ "handleRadius": 0.0128,
+ "handleLength": 0.035,
+ "tris": 19357,
+ "verts": 12719,
+ "grip": [
+  0,
+  0,
+  0
+ ]
+}

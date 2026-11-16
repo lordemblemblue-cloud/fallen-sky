@@ -1,0 +1,41 @@
+{
+ "id": "ornate_bow",
+ "class": "bow",
+ "length": 1.28,
+ "sourceTris": 1969555,
+ "droppedParts": [],
+ "handleRadius": 0.046,
+ "limbTop": [
+  0.0151,
+  0.6346,
+  -0.2495
+ ],
+ "limbBottom": [
+  0.0163,
+  -0.6345,
+  -0.2371
+ ],
+ "stringTop": [
+  0.0151,
+  0.6346,
+  -0.2495
+ ],
+ "stringBottom": [
+  0.0163,
+  -0.6345,
+  -0.2371
+ ],
+ "stringSource": "tips",
+ "nock": [
+  0.0157,
+  0.03,
+  -0.2436
+ ],
+ "tris": 23999,
+ "verts": 19299,
+ "grip": [
+  0,
+  0,
+  0
+ ]
+}
