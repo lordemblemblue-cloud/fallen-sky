@@ -15,6 +15,7 @@ import { getAXECostumeState, subscribeAXECostumes } from '../progression/AXECost
 import MountSubTab from '../../progression/hub/MountSubTab';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
 import AXECompanionStylePane from './AXECompanionStylePane';
+import AXECompanionOverviewClone from './AXECompanionOverviewClone';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
 import './AXECompanionWorkspace.css';
 
@@ -25,7 +26,7 @@ function loadFavorites() {
     return Array.isArray(ids) ? ids.filter(id => typeof id === 'string') : [];
   } catch { return []; }
 }
-const TABS = ['Overview', 'Equipment', 'Vanity', 'Costumes', 'Imbuement', 'Mounts', 'Mastery'];
+const TABS = ['Overview', 'Equipment', 'Vanity', 'Imbuement', 'Mounts', 'Mastery'];
 const ATTRIBUTES = [
   ['HP', Heart, 'hp'], ['Attack', Sword, 'damage'], ['Defense', Shield, 'defense'],
   ['Spirit', Flame, 'chi'], ['Dexterity', Feather, 'dexterity'],
@@ -223,7 +224,7 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
     : tab === 'Imbuement' ? makeImbuement()
     : tab === 'Mastery' ? makeMastery() : tab === 'Mounts' ? makeMounts() : makeCosmetics();
 
-  return <div className={["Equipment","Vanity","Costumes","Imbuement"].includes(tab)
+  return <div className={["Overview","Equipment","Vanity","Imbuement"].includes(tab)
     ? "axe-comp-root axe-comp-root--modern" : "axe-comp-root"} data-progression-panel="companion">
     <div className="axe-comp-header"><Compass size={42} strokeWidth={1.2}/><h2>Companion</h2><span className="axe-comp-star">✧</span>
       <button type="button" className="axe-comp-header-favorite"
@@ -240,7 +241,11 @@ export default function AXECompanionWorkspace({ onClose, serviceId = 'companion'
           onClick={() => { setTab(next); setResult(''); setPending(null); }}>{next === 'Imbuement' ? 'Imbue' : next}</button>)}
         <span className="axe-comp-key-hint">RB</span>
       </nav>
-      {['Equipment','Vanity','Costumes','Imbuement'].includes(tab) ?
+      {tab === 'Overview' ? <AXECompanionOverviewClone
+        pets={pets} soul={soul} loadout={loadout} favorites={favorites}
+        selectedPetId={selected} onSelectPet={setSelected}
+        onNotice={setResult} onEquipment={()=>setTab('Equipment')} bonuses={bonuses}/>
+      : ['Equipment','Vanity','Imbuement'].includes(tab) ?
         <div className="axe-comp-modern">
           {tab === 'Equipment'
             ? <AXEGlassLoadoutPane actor="companion" onNotice={setResult}/>
