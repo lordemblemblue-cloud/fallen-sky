@@ -20,6 +20,8 @@ import { isSafeCombineDonor, filterForgeInventory, runBlacksmithAutoBatch } from
 import AXEBlacksmithWorkflowPanel from './AXEBlacksmithWorkflowPanel';
 import AXEWeaponLegacyForgePane from './AXEWeaponLegacyForgePane';
 import { getAXEWeaponLegacyDamageMultiplier } from '../equipment/AXEWeaponLegacyForge';
+import {isAXEFarmingRarity,getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
+import {validateAXEAscensionFeed,previewAXEAscensionFeed} from '../equipment/AXEAscensionFeedingRules.mjs';
 import AXEGemForgePane from './AXEGemForgePane';
 import { AXE_GEM_DEFINITIONS } from '../equipment/AXESocketGemSystem';
 import AXECoreForgePane from './AXECoreForgePane';
@@ -75,7 +77,7 @@ const OPERATION_DESCRIPTIONS = {
   enchant: 'Strengthen individual enchantment slots on this equipment.',
   over_enchant: 'Further enhance equipment after every enchantment slot reaches its maximum.',
   combine: 'Combine Stage 1–12 remains unchanged. Weapon Legacy is a separate 4-weapon or 12-piece reward below.',
-  ascend: 'Four Ascensions. Each one permanently captures a stronger stat bonus from the equipment’s current Reinforcement percentage.',
+  ascend: 'Sacrifice same-rarity, same-slot equipment to grow Ascension I–IV. Higher-level donors can skip stages; each level records your Reinforcement.',
   sockets: 'Open a socket and insert a compatible owned gem using the existing forge controls.',
 };
 const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -315,7 +317,7 @@ export default function AXEBlacksmithImageWorkspace({
   // Ascend reuses the existing server-compatible Stage I-V transaction.
   const forgeTab = ['enchant','over_enchant','combine','sockets','ascend'].includes(tab);
   const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, tab === 'ascend' ? 'stage' : tab,
-    tab === 'combine' ? donorItem : null) : null;
+    tab === 'combine' || tab === 'ascend' ? donorItem : null) : null;
   const progressState = selectedItem ? getAXEAdvancementState(selectedItem.instanceId) : null;
   const socketState = selectedItem ? getAXESocketState(selectedItem.instanceId) : null;
   const materials = readout ? Object.entries(readout.cost || {}).slice(0, 4) : [];
@@ -324,6 +326,10 @@ export default function AXEBlacksmithImageWorkspace({
     ? items.filter(candidate => isSafeCombineDonor(selectedItem, candidate,
       (target, donor) => isAXECompatibleDonor(target, donor, progressState)))
     : [], [items, selectedId, tab, revision]);
+  const ascensionDonors=useMemo(()=>selectedItem && tab==='ascend' &&
+    isAXEFarmingRarity(selectedItem.rarity)
+      ? items.filter(candidate=>validateAXEAscensionFeed(selectedItem,candidate).ok)
+      :[],[items,selectedId,tab,revision]);
   useEffect(() => {
     if (tab !== 'combine' || !autoEnabled || !selectedItem || batchBusy) return;
     if (donorItem && compatibleDonors.some(item => item.instanceId === donorItem.instanceId)) return;
@@ -381,6 +387,7 @@ export default function AXEBlacksmithImageWorkspace({
   const status = !selectedItem ? 'Choose a piece of equipment from Inventory'
     : tab === 'over_enchant' && !overReady ? 'Finish standard Enchant before Over-Enchant'
     : tab === 'combine' && !donorItem ? 'Choose a separate matching donor in the second square'
+    : tab === 'ascend' && selectedItem && isAXEFarmingRarity(selectedItem.rarity) && !donorItem ? 'Choose matching equipment to sacrifice'
     : readout?.preview?.reason && !readout.preview.canAdvance ? readout.preview.reason
     : readout?.preview?.outcome || 'Ready to review forge requirements';
   const currentValue = tab === 'ascend' ? Math.min(4, asNumber(progressState?.stage?.rank))
@@ -388,7 +395,9 @@ export default function AXEBlacksmithImageWorkspace({
     : tab === 'sockets' ? asNumber(socketState?.sockets?.length)
     : tab === 'over_enchant' ? asNumber(getItemOverEnchant(selectedId)?.level)
     : readout?.enchantTotal || 0;
-  const nextValue = tab === 'ascend' || tab === 'combine' || tab === 'sockets' || tab === 'over_enchant'
+  const nextValue = tab === 'ascend'
+    ? (readout?.preview?.canAdvance ? (readout.preview.feedPreview?.nextRank ?? currentValue+1) : null)
+    : tab === 'combine' || tab === 'sockets' || tab === 'over_enchant'
     ? (readout?.preview?.canAdvance ? currentValue + 1 : null)
     : tab === 'enchant' ? readout?.projectedEnchant : null;
 
@@ -418,7 +427,9 @@ export default function AXEBlacksmithImageWorkspace({
           Object.hasOwn(inventoryRelevantCost, entry.id)) setSelectedMaterialId(entry.id);
       return;
     }
-    if (tab === 'combine' && selectedItem && entry.instanceId !== selectedId &&
+    if(tab==='ascend' && selectedItem && validateAXEAscensionFeed(selectedItem,entry).ok)
+      setDonorId(entry.instanceId);
+    else if (tab === 'combine' && selectedItem && entry.instanceId !== selectedId &&
         isSafeCombineDonor(selectedItem, entry, (target, donor) =>
           isAXECompatibleDonor(target, donor, progressState))) setDonorId(entry.instanceId);
     else {
@@ -460,9 +471,9 @@ export default function AXEBlacksmithImageWorkspace({
     && !!readout?.preview?.canAdvance;
   const beginForge = async () => {
     if (!canForge || forging || batchRunningRef.current) return;
-    if (tab === 'combine' && !confirmCombine) {
+    if ((tab === 'combine' || (tab==='ascend' && isAXEFarmingRarity(selectedItem.rarity))) && !confirmCombine) {
       setConfirmCombine(true);
-      setForgeNotice('A successful combine consumes the donor. Confirm to begin forging.');
+      setForgeNotice(tab === 'ascend' ? 'Ascension permanently sacrifices the selected donor. Press Forge again to confirm.' : 'A successful combine consumes the donor. Confirm to begin forging.');
       return;
     }
     setForging(true);
@@ -470,7 +481,7 @@ export default function AXEBlacksmithImageWorkspace({
     try {
       const result = await executeAXEServiceTransaction(tab === 'ascend' ? 'stage' : tab, {
         itemId: selectedItem.instanceId,
-        ...(tab === 'combine' ? { donorId: donorItem.instanceId } : {}),
+        ...(['combine','ascend'].includes(tab) && donorItem ? { donorId: donorItem.instanceId } : {}),
         ...(tab === 'enchant' ? { slotIndex: readout.enchantSlot } : {}),
       });
       onTransaction?.(result);
