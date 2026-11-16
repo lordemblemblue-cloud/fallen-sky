@@ -8,6 +8,7 @@ import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/A
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
 import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
+import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
 import { getAXEAdvancementState, subscribeAXEItemAdvancement } from '../equipment/AXEItemAdvancementStore';
@@ -93,6 +94,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       overEnchant: enhancements?.overEnchant?.[selectedInstanceId],
     }) : 1;
   const itemStats = getAXEEquipmentDisplayStats(selected, enhancementMultiplier);
+  const prestigeFor=item=>isPlayer&&item
+    ? getAXEFarmingAscendedIdentity(item,
+      (advancements?.state?.[item.instanceId]||getAXEAdvancementState(item.instanceId))?.stage?.rank)
+    :null;
+  const selectedPrestige=prestigeFor(selected);
   const displaySlots = isPlayer ? PLAYER_DISPLAY_SLOTS :
     (activeCompanion?.gearSlots || []).map(slot => [slot,0]);
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
@@ -197,13 +203,16 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
           </div>
           <div className="axe-app-inventory-grid" role="list">
             {visible.map(item=><button type="button" role="listitem"
-              className="axe-app-inventory-tile" key={item.instanceId || item.id}
+              className={'axe-app-inventory-tile'+(prestigeFor(item)?' axe-inventory-prestige':'')}
+              style={prestigeFor(item)?{
+                '--prestige-a':prestigeFor(item).primary,'--prestige-b':prestigeFor(item).secondary,
+              }:undefined} key={item.instanceId || item.id}
               aria-pressed={selected?.instanceId===item.instanceId}
               onClick={()=>setSelectedId(item.instanceId || item.id)}
               onDoubleClick={()=>{setSelectedId(item.instanceId || item.id);performItem(item);}}
               title={'Double-click to equip '+item.name}>
               <span className="axe-app-inventory-art"><IconFor item={item}/></span>
-              <span className="axe-app-inventory-name">{item.name}</span>
+              <span className="axe-app-inventory-name">{prestigeFor(item)?.displayName||item.name}</span>
               <small>{caption(item.slot)}</small>
               {(isPlayer ? item.equipped :
                 companion.gear?.[activeCompanion?.id]?.[item.slot]===item.id) &&
@@ -217,12 +226,15 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     </main>
     <aside className="axe-app-right-stack" aria-label="Equipment details and set progress">
       <section className="axe-app-card axe-glass-loadout-details">
-        <header className="axe-app-card-heading"><Gem size={20}/><h3>{selected?.name || 'Equipment Details'}</h3>
+        <header className="axe-app-card-heading"><Gem size={20}/><h3>{selectedPrestige?.displayName||selected?.name||'Equipment Details'}</h3>
           <small>{selected?.rarityLabel || caption(selected?.rarity || '—')}</small></header>
         <div className="axe-app-card-content">
           {selected ? <>
-            <div className="axe-glass-item-hero"><IconFor item={selected} size={43}/>
-              <div><strong>{selected.name}</strong><small>{caption(selected.slot)} · {selected.rarityLabel || caption(selected.rarity || 'common')} · Level {selected.itemLevel || 1}</small></div>
+            <div className={'axe-glass-item-hero'+(selectedPrestige?' axe-inventory-prestige':'')}
+              style={selectedPrestige?{
+                '--prestige-a':selectedPrestige.primary,'--prestige-b':selectedPrestige.secondary,
+              }:undefined}><IconFor item={selected} size={43}/>
+              <div><strong>{selectedPrestige?.displayName||selected.name}</strong><small>{caption(selected.slot)} · {selected.rarityLabel || caption(selected.rarity || 'common')} · Level {selected.itemLevel || 1}</small></div>
             </div>
             {selected.setId && getAXESetDefinition(selected.setId) && <p className="axe-app-description">
               Set: {getAXESetDefinition(selected.setId).name} · Equip matching pieces for set effects.
@@ -230,8 +242,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             {isPlayer && selected.instanceId && getAXEAdvancementState(selected.instanceId)?.stage?.rank > 0 &&
               <p className="axe-app-description">
                 Ascension +{getAXEAdvancementState(selected.instanceId).stage.rank}/4 ·
-                {selected.slot === 'weapon' ? ' Spiritual weapon aura unlocked.' :
-                  ' Set bonus grows when matching pieces are ascended.'}
+                {getAXEAdvancementState(selected.instanceId).stage.rank>=4
+                  ?' Prestige aura and enhanced item bonuses unlocked.'
+                  :' Additional sacrifices strengthen this equipment and its matching set.'}
               </p>}
             {selected.evolutionPath && <p className="axe-app-description">
               Evolution potential: {caption(selected.evolutionPath)} · future Blacksmith recipe required.
