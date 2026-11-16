@@ -317,3 +317,24 @@
  .axe-ct-activate-weapon {margin-left:0;max-width:100%;padding:5px 8px;}
  .axe-ct-activate-weapon small {max-width:100%;}
 }
+
+/* The legacy Redesign stylesheet is still imported for the QA fallback.
+   Its [data-service-extent="viewport-top"] rule sets top:0!important, which
+   would cover the game's Services switcher even when the tree is selected.
+   Override that rule only for the actual branching tree presentation. */
+.game3d-view .axe-service-workspace--skills[data-service-extent="viewport-top"]:has(.axe-clone-skill-root) {
+  inset:max(94px,calc(var(--axe-service-navigation-actual-bottom,92px) + 12px)) 8px 8px !important;
+  top:max(94px,calc(var(--axe-service-navigation-actual-bottom,92px) + 12px)) !important;
+  left:8px !important;
+  right:8px !important;
+  bottom:8px !important;
+  padding:0 !important;
+  background:transparent !important;
+}
+@media(max-width:620px) {
+  .game3d-view .axe-service-workspace--skills[data-service-extent="viewport-top"]:has(.axe-clone-skill-root) {
+    inset:max(87px,calc(var(--axe-service-navigation-actual-bottom,83px) + 9px)) 4px 4px !important;
+    top:max(87px,calc(var(--axe-service-navigation-actual-bottom,83px) + 9px)) !important;
+    left:4px !important;right:4px !important;bottom:4px !important;
+  }
+}
