@@ -39,6 +39,11 @@
   visibility:hidden !important;
   pointer-events:none !important;
 }
+.game3d-view:has(.axe-service-workspace--skills) .jade-combat-hud,
+.game3d-view:has(.axe-service-workspace--skills) .jade-status-bars {
+  visibility:hidden !important;
+  pointer-events:none !important;
+}
 .game3d-view:has(.axe-service-workspace--skills) .jade-services-navigation {
   visibility:visible !important;
   pointer-events:auto !important;
