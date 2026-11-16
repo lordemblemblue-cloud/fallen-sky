@@ -153,8 +153,8 @@ function SkillDetails({ node, category, paths, companion, activeIds, onEquip }) 
     </header>
     <section className="axe-ct-detail-section">
       <h3><BookOpen size={16}/> Description</h3>
-      <p>{passive ? passiveDescription[node.lane] + ' increases by ' +
-        (passive.bonusPct*100).toFixed(0) + '% while unlocked. This is the existing weapon-path charged bonus, not a separately castable skill.'
+      <p>{passive ? 'This branch displays a linked Charge Focus marker for the existing weapon-skill point progression. ' +
+        'The game grants +1% charged-strike damage per unlocked stage to the weapon path, not an independent skill.''
         : skill?.description || 'Select a combat skill or passive node to see its details.'}</p>
       {skill && title !== skill.skill_name && <small className="axe-ct-registered">Registry: {skill.skill_name}</small>}
     </section>
