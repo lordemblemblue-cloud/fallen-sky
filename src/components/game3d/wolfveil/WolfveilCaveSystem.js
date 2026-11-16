@@ -18,6 +18,7 @@ import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
 import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
 import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
 
+import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const TAU = Math.PI * 2;
@@ -228,7 +229,20 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
 
         // Walkable dressed-stone & packed-earth floor strip (3 lanes across width)
         const lanes = [-hw, -hw * 0.45, hw * 0.45, hw];
+        // Entry ramps used to pave the hillside in front of the mouth. That
+        // sheet sat above the slope, so outdoor feet landed on it and fell
+        // off. The mountain stays the outdoor floor. Stone starts underground.
+        let carve = true;
+        if (cor.kind === 'entry') {
+          const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
+          const mx = (x0 + x1) * 0.5, mz = (z0 + z1) * 0.5;
+          const along = (mx - cave.mouth[0]) * cave.dir[0]
+            + (mz - cave.mouth[1]) * cave.dir[1];
+          const floorY = (y0 + y1) * 0.5;
+          if (along < 0.55 || floorY > wolfveilHeight(mx, mz) + 0.35) carve = false;
+        }
         for (let l = 0; l < lanes.length - 1; l++) {
+          if (!carve) break;
           const la = lanes[l], lb = lanes[l + 1];
           const isCenter = l === 1;
           const col = isCenter ? [0.76, 0.73, 0.68] : [0.55, 0.54, 0.52];
@@ -242,6 +256,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
           );
         }
 
+        if (!carve) continue;
         // Sculpted vaulted rock arch enclosing both walls + ceiling
         const ringPoint = (cx, cy, cz, aIdx) => {
           const ang = archAngles[aIdx];
@@ -313,6 +328,14 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     // Seal corridor elbow bends so 35-degree turns never expose tiny corner cracks
     for (let w = 1; w < cor.waypoints.length - 1; w++) {
       const [wx, wy, wz] = cor.waypoints[w];
+      if (cor.kind === 'entry') {
+        const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
+        const along = (wx - cave.mouth[0]) * cave.dir[0]
+          + (wz - cave.mouth[1]) * cave.dir[1];
+        // A disk at the mouth hangs off the downhill slope and becomes
+        // the floor people fall through beside the entrance.
+        if (along < 6 || wy > wolfveilHeight(wx, wz) + 0.35) continue;
+      }
       const domeR = cor.halfWidth + 1.4;
       const segs = 12;
       for (let i = 0; i < segs; i++) {
@@ -434,18 +457,54 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     // A warm glow just inside the opening: the mouth reads as a lit cavern.
     registerLight(mx + dx * 1.8, my + 2.6, mz + dz * 1.8, frame.lightColor, 24, 24);
 
-    // Sumi-e cedar torii lintel + paired entrance stone lanterns outside the mouth.
-    const frontX = mx - dx * 1.4, frontZ = mz - dz * 1.4;
+    // Stone front: seated arch, dark veil, outdoor stair on the hillside.
+    // You walk the stair to the door; E at the arch enters. No floating sheet.
+    const veil = new THREE.Mesh(
+      new THREE.CircleGeometry(2.15, 18),
+      new THREE.MeshBasicMaterial({ color: 0x07090d, side: THREE.DoubleSide }),
+    );
+    veil.position.set(mx + dx * 0.15, my + 1.7, mz + dz * 0.15);
+    veil.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-dx, 0, -dz));
+    veil.raycast = () => {};
+    group.add(veil);
+    world.ownedMaterials.push(veil.material);
+
+    // Door jambs and lintel, seated on the ground in front of the arch.
+    const doorX = mx - dx * 0.85, doorZ = mz - dz * 0.85;
     for (const side of [-1, 1]) {
-      const px = frontX + nx * side * 4.4, pz = frontZ + nz * side * 4.4;
-      addProp(cylGeo, timberMat, px, my + 2.5, pz, 0.28, 5.4, 0.28);
-      addProp(torusGeo, ropeMat, px, my + 4.4, pz, 0.32, 0.32, 0.35, Math.PI / 2, 0, 0);
-      const lx = mx - dx * 3.4 + nx * side * 5.2;
-      const lz = mz - dz * 3.4 + nz * side * 5.2;
-      addBrazier(lx, my - 0.1, lz, cave.lightColor, cave.theme === 'crystal_geode');
+      const px = doorX + nx * side * 1.9, pz = doorZ + nz * side * 1.9;
+      const ground = wolfveilHeight(px, pz);
+      const base = Math.abs(ground - my) <= 1.3 ? ground : my;
+      addProp(boxGeo, wallMat, px, base + 2.05, pz, 0.62, 4.1, 0.78, 0, yaw, 0);
     }
-    addProp(boxGeo, timberMat, frontX, my + 5.15, frontZ, 10.4, 0.36, 0.42, 0, yaw, 0);
-    addHangingLantern(frontX, my + 4.95, frontZ, warmLanternMat, cave.lightColor);
+    addProp(boxGeo, wallMat, doorX, my + 3.95, doorZ, 4.5, 0.48, 0.72, 0, yaw, 0);
+
+    // Outdoor stair: the place you walk up to enter. Each tread sits on the
+    // hillside, so it cannot float and drop you.
+    for (let s = 0; s < 7; s++) {
+      const along = -5.6 + s * 0.68;
+      const sx = mx + dx * along, sz = mz + dz * along;
+      const sy = wolfveilHeight(sx, sz);
+      addProp(boxGeo, floorMat, sx, sy + 0.1, sz, 3.15, 0.16, 0.58, 0, yaw, 0);
+    }
+    // Interior stair: the same ramp you walk down after E, and back up to
+    // leave. Visual only. Feet still use the connected cave floor.
+    const entry = WOLFVEIL_CAVE_CORRIDORS.find(c => c.id === `entry_${cave.id}`);
+    if (entry) {
+      for (const seg of entry.segments) {
+        const count = Math.max(1, Math.floor(seg.lenXZ / 1.05));
+        for (let i = 0; i < count; i++) {
+          const t = (i + 0.5) / count;
+          const sx = seg.ax + seg.dx * t;
+          const sy = seg.ay + seg.dy * t;
+          const sz = seg.az + seg.dz * t;
+          const along = (sx - mx) * dx + (sz - mz) * dz;
+          if (along < 0.7 || along > 12) continue;
+          if (sy > wolfveilHeight(sx, sz) + 0.3) continue;
+          addProp(boxGeo, floorMat, sx, sy + 0.05, sz, 2.5, 0.12, 0.52, 0, Math.atan2(seg.dx, seg.dz), 0);
+        }
+      }
+    }
   }
 
   // 3. Build the 5 Domed Subterranean Chambers + Unique Themed Designs Inside!
@@ -629,16 +688,22 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const addWayfinding=(label,x,y,z,width=8.2)=>{
     if(typeof document==='undefined')return;
     const canvas=document.createElement('canvas');
-    canvas.width=768;canvas.height=128;
+    canvas.width=768;canvas.height=160; // fixed aspect, no squash
     const ctx=canvas.getContext('2d');
     if(!ctx)return;
     ctx.fillStyle='rgba(9,27,43,.92)';
-    ctx.fillRect(6,7,756,112);
-    ctx.strokeStyle='#e5bf83';ctx.lineWidth=5;ctx.strokeRect(10,10,748,108);
+    ctx.fillRect(6,7,756,146);
+    ctx.strokeStyle='#e5bf83';ctx.lineWidth=5;ctx.strokeRect(10,10,748,140);
     ctx.fillStyle='#ffe1ab';
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.font='bold 39px Georgia,serif';
-    ctx.fillText(label,384,65,712);
+    ctx.font='bold 36px Georgia,serif';
+    const parts = String(label).split(' · ');
+    if (parts.length > 1) {
+      ctx.fillText(parts[0], 384, 58);
+      ctx.fillText(parts.slice(1).join(' · '), 384, 108);
+    } else {
+      ctx.fillText(label, 384, 80);
+    }
     const texture=new THREE.CanvasTexture(canvas);
     texture.colorSpace=THREE.SRGBColorSpace;
     ownedTextures.push(texture);
@@ -647,7 +712,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     wayfindingMaterials.push(mat);
     const sprite=new THREE.Sprite(mat);
     sprite.name='SWV_CaveWayfinding_'+label.replace(/[^a-z0-9]/gi,'_');
-    sprite.position.set(x,y,z);sprite.scale.set(width,1.45,1);
+    sprite.position.set(x,y,z);sprite.scale.set(width,1.7,1);
     sprite.raycast=()=>{};
     group.add(sprite);
     return sprite;
@@ -777,6 +842,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
         if(railHit){worldPos.x=localNow.x;worldPos.z=localNow.z+offsetZ;}
         return railHit;
       }
+      if(!activeCaveId || !worldPos || !prevWorldPos) return false;
       let hit=resolveWolfveilCaveWallCollision(localNow,localPrev,radius)||railHit;
       // Keep the currently authored E-required underground exit. Even a
       // knockback from an invalid corridor point cannot pass through the

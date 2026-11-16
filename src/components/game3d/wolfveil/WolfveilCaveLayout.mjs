@@ -366,26 +366,34 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
 }
 
 /**
- * Keeps an underground explorer inside the union of chambers & tunnels, while
- * allowing free exit out through the 4 exterior cave thresholds.
+ * Keeps an underground explorer inside the chambers and tunnels.
+ * The hillside in front of a mouth is not a tunnel. Leaving is E at the
+ * inner arch, not a walk out through the mountain.
  */
+function isInFrontOfCaveMouth(x, z) {
+  for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
+    const rx = x - cave.mouth[0], rz = z - cave.mouth[1];
+    const along = rx * cave.dir[0] + rz * cave.dir[1];
+    const lateral = Math.abs(-rx * cave.dir[1] + rz * cave.dir[0]);
+    if (along < 0.45 && along > -14 && lateral <= 4.8) return true;
+  }
+  return false;
+}
 export function resolveWolfveilCaveWallCollision(localPos, prevLocalPos, radius = 0.62) {
   if (!localPos || !prevLocalPos) return false;
-  // Called only for an active cave explorer. The outer mountain is sealed:
-  // leaving via a tunnel mouth is a deliberate E-portal, not free movement
-  // through the retained surface terrain. Check footprint, not ceiling Y,
-  // because entrance gradients can cross close to the natural hillside.
   if(!sampleWolfveilCaveSpace(prevLocalPos.x,prevLocalPos.z,radius))return false;
-  const nowSpace = sampleWolfveilCaveSpace(localPos.x, localPos.z, radius);
-  if (nowSpace) return false;
+  if(isInFrontOfCaveMouth(prevLocalPos.x, prevLocalPos.z))return false;
+  const indoors = (x, z) => sampleWolfveilCaveSpace(x, z, radius)
+    && !isInFrontOfCaveMouth(x, z);
+  if (indoors(localPos.x, localPos.z)) return false;
 
   // Try axis slide before full revert so curved tunnel walls feel buttery smooth
-  const slideX = sampleWolfveilCaveSpace(localPos.x, prevLocalPos.z, radius);
+  const slideX = indoors(localPos.x, prevLocalPos.z);
   if (slideX) {
     localPos.z = prevLocalPos.z;
     return true;
   }
-  const slideZ = sampleWolfveilCaveSpace(prevLocalPos.x, localPos.z, radius);
+  const slideZ = indoors(prevLocalPos.x, localPos.z);
   if (slideZ) {
     localPos.x = prevLocalPos.x;
     return true;
