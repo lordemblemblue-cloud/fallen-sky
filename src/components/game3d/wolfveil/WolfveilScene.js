@@ -255,7 +255,7 @@ export function createWolfveilVillage(scene,options={}){
       interiors:palace.sourceStatus==='luna_exact'
         ?'luna_palace_original_architecture_reused; gameplay collision QA pending'
         :'luna_palace_missing_no_placeholder; physical and worker wall boundaries remain',
-      caves:enableCaves?'four_explorable_caves_with_interconnected_tunnels':'entrances_visual_interior_unbuilt',
+      caves:enableCaves?'four_interaction_entered_caves_with_solid_surface_roofs_and_tunnels':'entrances_visual_interior_unbuilt',
       waterfall:'animated_visual_sheet_not_fluid_simulation',
       enemyAi:'existing_game1_ai_only_no_new_wolfveil_spawns',
       traversal:'local_preview_exploration_only_outside_gameplay_bounds',
@@ -291,6 +291,9 @@ export function createWolfveilVillage(scene,options={}){
         position,previous,WOLFVEIL_BRIDGES,radius,offsetZ);
     },
     playerPalaceGroundY(position){return palace.playerGroundY(position)??caveSystem?.playerGroundY(position)??null;},
+    // The four physical cave arches are now deliberate E entrances. Their
+    // original underground floors/tunnels remain; the surface roof stays solid.
+    interactCave(position){return caveSystem?.interact(position)??null;},
     interactPalace(position){return palace.interact(position);},
     resetPalaceNavigation(){palace.resetNavigation();},
     update(dt,weather={},playerPosition=null){
