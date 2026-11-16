@@ -9,6 +9,9 @@ import {
 import {
   evaluateAXESetBonuses,getAXESetCombatMultiplier,
 } from '../src/components/game3d/axe/equipment/AXESetBonusSystem.js';
+import {getAXEFarmingGearLevel} from '../src/components/game3d/axe/loot/AXEFarmingGearTiers.mjs';
+import {AXE_FARMING_SET_BY_GRADE} from '../src/components/game3d/axe/equipment/AXEFarmingSetProfiles.mjs';
+import {makeAXEFarmingItemPerks} from '../src/components/game3d/axe/equipment/AXEFarmingItemPerks.mjs';
 import {
   rollAXEArmorDrop,getAXEArmorDropOdds,
 } from '../src/components/game3d/axe/loot/AXEArmorLootSystem.js';
@@ -24,18 +27,21 @@ test('progression boundaries never release a tier early',()=>{
   assert.deepEqual(Object.keys(getAXELevelRarityWeights(1)),['common']);
   assert.deepEqual(Object.keys(getAXELevelRarityWeights(10)),['common']);
   assert.ok(getAXELevelRarityWeights(11).uncommon>0);
-  assert.ok(getAXELevelRarityWeights(20).rare>0);
-  assert.ok(getAXELevelRarityWeights(45).rare>0);
-  assert.ok(!getAXELevelRarityWeights(119).elite);
+  assert.equal(getAXELevelRarityWeights(20).rare,undefined);
+  assert.equal(getAXELevelRarityWeights(49).rare,undefined);
+  assert.ok(getAXELevelRarityWeights(50).rare>0);
+  assert.equal(getAXELevelRarityWeights(109).elite,undefined);
+  assert.ok(getAXELevelRarityWeights(110).elite>0);
   assert.ok(getAXELevelRarityWeights(120).elite>0);
-  assert.ok(!getAXELevelRarityWeights(149).legendary);
+  assert.equal(getAXELevelRarityWeights(134).legendary,undefined);
+  assert.ok(getAXELevelRarityWeights(135).legendary>0);
   assert.ok(getAXELevelRarityWeights(150).legendary>0);
   assert.ok(!getAXELevelRarityWeights(179).mythic);
   assert.ok(!getAXELevelRarityWeights(180).mythic);
   assert.ok(getAXELevelRarityWeights(180,{isBoss:true}).mythic>0);
   assert.ok(!getAXELevelRarityWeights(1000).chosen);
   assert.deepEqual([getAXELevelGearBand(51).min,getAXELevelGearBand(119).max,
-    getAXELevelGearBand(120).min,getAXELevelGearBand(150).min],[51,119,120,150]);
+    getAXELevelGearBand(120).min,getAXELevelGearBand(150).min],[50,119,120,150]);
 });
 
 test('high monster threat improves only already-unlocked rarities',()=>{
@@ -48,8 +54,8 @@ test('high monster threat improves only already-unlocked rarities',()=>{
 });
 
 test('Rare Elite, Elite Legendary and Legendary Mythic are future paths, not free rarity promotion',()=>{
-  assert.equal(rollAXEEvolutionPath('rare',44,()=>0),null);
-  assert.equal(rollAXEEvolutionPath('rare',45,()=>0),'rare_elite');
+  assert.equal(rollAXEEvolutionPath('rare',49,()=>0),null);
+  assert.equal(rollAXEEvolutionPath('rare',50,()=>0),'rare_elite');
   assert.equal(rollAXEEvolutionPath('elite',120,()=>0),'elite_legendary');
   assert.equal(rollAXEEvolutionPath('elite',150,()=>0.01),'elite_mythic');
   assert.equal(rollAXEEvolutionPath('legendary',150,()=>0),'legendary_mythic');
@@ -87,7 +93,7 @@ test('low-tier rare set triggers only for two matching equipped pieces; PvP and 
 
 test('named armor pack drops use the same level gate and never include Crescent Moon dev armor',()=>{
   assert.equal(rollAXEArmorDrop('boss',true,{rng:seq(0),enemyLevel:1}),null);
-  const rare=rollAXEArmorDrop('boss',true,{rng:seq(0,0,0,0),enemyLevel:45});
+  const rare=rollAXEArmorDrop('boss',true,{rng:seq(0,0,0,0),enemyLevel:50});
   assert.equal(rare?.rarity,'rare');
   assert.equal(rare?.equipmentItem.setId,'AXE_Set_Armor_nightscale');
   assert.equal(Object.keys(rare?.equipmentItem.rolledStats||{}).length,1);
@@ -95,7 +101,7 @@ test('named armor pack drops use the same level gate and never include Crescent 
   assert.equal(legendary?.rarity,'legendary');
   assert.equal(legendary?.equipmentItem.setId,'AXE_Set_Armor_silver_seraph');
   assert.equal(Object.keys(legendary?.equipmentItem.rolledStats||{}).length,3);
-  assert.ok(Object.keys(getAXEArmorDropOdds('boss',true,45).odds).every(k=>!k.includes('seraph')));
+  assert.ok(Object.keys(getAXEArmorDropOdds('boss',true,50).odds).every(k=>!k.includes('seraph')));
   assert.ok(Object.keys(getAXEArmorDropOdds('boss',true,150).odds).every(k=>!k.includes('crescent_moon')));
 });
 
@@ -108,16 +114,18 @@ test('ordinary drop adapter uses the canonical equipment pickup schema with no m
   const roll=new Function('INVENTORY','isAXERateStat','AXE_GEAR_RARITY_SCALE',
     'AXE_PROCEDURAL_SET_FAMILIES','getAXELevelGearBand','rollAXELevelAffixes',
     'rollAXELevelRarity','rollAXEEvolutionPath',
+    'getAXEFarmingGearLevel','AXE_FARMING_SET_BY_GRADE','makeAXEFarmingItemPerks',
     src+'\nreturn rollAXEEquipmentDrop;',
   )({chest:[{id:'ch_plain',name:'Plain Chest',slot:'chest',baseStats:{defense:3,maxHP:20}}]},
     key=>['critChance','critDefense','critDamage','attackPct','damagePct'].includes(key),
     AXE_GEAR_RARITY_SCALE,AXE_PROCEDURAL_SET_FAMILIES,
-    getAXELevelGearBand,rollAXELevelAffixes,rollAXELevelRarity,rollAXEEvolutionPath);
+    getAXELevelGearBand,rollAXELevelAffixes,rollAXELevelRarity,rollAXEEvolutionPath,
+    getAXEFarmingGearLevel,AXE_FARMING_SET_BY_GRADE,makeAXEFarmingItemPerks);
   const common=roll('normal',false,{rng:seq(0,0,0.999,0),enemyLevel:1});
   assert.equal(common.rarity,'common');
-  const rare=roll('normal',false,{rng:seq(0,0,0.999,0),enemyLevel:45});
+  const rare=roll('normal',false,{rng:seq(0,0,0.999,0),enemyLevel:50});
   assert.equal(rare.rarity,'rare');
-  assert.equal(rare.equipmentItem.itemLevel,45);
+  assert.equal(rare.equipmentItem.itemLevel,50);
   assert.equal(rare.category,'equipment');
   assert.equal(rare.equipmentItem.category,'chest');
   assert.equal(rare.equipmentItem.visualPending,true);

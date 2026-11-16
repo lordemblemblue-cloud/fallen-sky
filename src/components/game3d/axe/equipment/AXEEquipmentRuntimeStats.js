@@ -16,6 +16,7 @@ import { getAXEEquipmentRune, getAXEEquipmentRuneStats } from './AXEEquipmentRun
 import { getAXEItemAura } from './AXEEquipmentAuraStore';
 import { collectAXEAuraStats } from './AXEEquipmentAuraSystem';
 import { evaluateAXESetBonuses } from './AXESetBonusSystem';
+import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import { doesAXEStageIncreaseItemStats, getAXESetAscensionRank } from './AXESetAscensionRules.mjs';
 import { evaluateAXEAuxiliaryBonuses } from './AXEAuxiliaryGearSystem';
 
@@ -184,14 +185,28 @@ export function getAXEEquipmentRuntimeBonuses() {
       overEnchant,
     });
     const stageItemImprintEnabled = doesAXEStageIncreaseItemStats(item);
-    const advancementMult = advancementMultiplier(advancement, stageItemImprintEnabled);
-    const coreScale = enhancementMult * advancementMult;
+    // Bounded extra base-stat credit for harder-to-farm Elite and Legendary
+    // donors; no rate multiplication, shared-item mutation or PvP bypass.
+    const extraPerRank=String(item.rarity||'').toLowerCase()==='elite'?0.015:
+      String(item.rarity||'').toLowerCase()==='legendary'?0.025:0;
+    const ascendedRank=Math.min(4,Math.max(0,Number(advancement.stage?.rank)||0));
+    const advancementMult=advancementMultiplier(advancement,stageItemImprintEnabled)
+      +(stageItemImprintEnabled ? ascendedRank*extraPerRank : 0);
+    const coreScale=enhancementMult*advancementMult;
     const rateBonus = stageItemImprintEnabled ? getAXEEquipmentAscensionRateBonus(advancement.stage) : 0;
     const socketState = getAXESocketState(itemId);
     const aura = getAXEItemAura(itemId);
 
     const infusionPct = Number(soul.itemInfusion?.[itemId] || 0);
-    addStats(out, soulEffectiveStats(item.baseStats, infusionPct), coreScale, rateBonus);
+    const ownDefPct=item.abilityPerks?.type==='armor_defense_pct'
+      ? Math.max(0,Math.min(12,Number(item.abilityPerks.basePct)||0))+
+        (ascendedRank>=4?Math.max(0,Math.min(6,Number(item.abilityPerks.ascendedBonusPct)||0)):0)
+      :0;
+    const ownStats=ownDefPct?{
+      ...item.baseStats,
+      defense:Number(item.baseStats?.defense||0)*(1+ownDefPct/100),
+    }:item.baseStats;
+    addStats(out, soulEffectiveStats(ownStats, infusionPct), coreScale, rateBonus);
     addStats(out, soulEffectiveStats(item.rolledStats, infusionPct), coreScale, rateBonus);
     // Weapon Legacy affects only the weapon's own flat ATK contribution,
     // not STR, crit rates, set bonuses or the character-wide damage multiplier.
@@ -222,7 +237,7 @@ export function getAXEEquipmentRuntimeBonuses() {
 
     out.items.push({
       itemId,
-      name: item.name,
+      name: getAXEFarmingAscendedIdentity(item,ascendedRank)?.displayName||item.name,
       slot: item.slot,
       enhancementMultiplier: enhancementMult,
       advancementMultiplier: advancementMult,

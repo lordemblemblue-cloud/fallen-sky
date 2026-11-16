@@ -8,6 +8,8 @@
 // pickup like any other gear drop (WorldLootDrops.jsx).
 import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../equipment/AXEArmorPackCatalog.js';
 import { getAXELevelRarityWeights, rollAXEEvolutionPath, rollAXELevelAffixes } from './AXELevelGearProgression.mjs';
+import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
+import {makeAXEFarmingItemPerks} from '../equipment/AXEFarmingItemPerks.mjs';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -93,11 +95,15 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   const { set, piece } = pool[Math.floor(clampRng(rng()) * pool.length)];
   const bands = AXE_ARMOR_DROP_CONFIG.qualityBands;
   const qualityBand = bands[Math.floor(clampRng(rng()) * bands.length)];
-  const level = monsterLevel;
+  const level = getAXEFarmingGearLevel(rarity,monsterLevel)??monsterLevel;
   const rarityScale = RARITY_SCALE[set.rarity] || 1;
   const statScale = rarityScale * (1 + (level - 1) * AXE_ARMOR_DROP_CONFIG.levelScalePerLevel) * (1 + qualityBand / 100);
   const template = makeAXEArmorTemplate(set, piece);
-  const evolutionPath = rollAXEEvolutionPath(rarity, level, rng);
+  const latentEvolution=rollAXEEvolutionPath(rarity,level,rng);
+  // Rare Elite and Elite Legendary are earned from equipment feeding,
+  // not a random evolution marker granted at drop.
+  const evolutionPath=['rare_elite','elite_legendary'].includes(latentEvolution)
+    ?null:latentEvolution;
   const rolledStats = rollAXELevelAffixes({slot:piece.slot,rarity,level,qualityBand,rng});
   const setId = set.pieces.length >= 5 && ['rare','elite','legendary'].includes(set.rarity)
     ? 'AXE_Set_Armor_'+set.id : null;
@@ -121,7 +127,9 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
       qualityBand,
       itemLevel: level,
       level,
+      monsterLevelAtDrop: monsterLevel,
       baseStats, rolledStats, setId,
+      abilityPerks:makeAXEFarmingItemPerks({slot:piece.slot,rarity}),
       evolutionPath, rarityVariant: evolutionPath,
     },
   };

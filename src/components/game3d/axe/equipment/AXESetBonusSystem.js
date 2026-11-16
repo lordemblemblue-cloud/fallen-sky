@@ -1,5 +1,6 @@
 // AXE Prompt 021 — Set 2 / Set 3 / Set 4 / Set 5 equipment bonuses.
 import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs';
+import {AXE_FARMING_SET_PROFILES} from './AXEFarmingSetProfiles.mjs';
 import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
 import { AXE_CHOSEN_SET_ID, AXE_CHOSEN_REQUIRED_SLOTS, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
 import {
@@ -64,6 +65,13 @@ export const AXE_SET_DEFINITIONS = Object.freeze({
       )}),
     }),
   ])),
+  ...Object.fromEntries(AXE_FARMING_SET_PROFILES.map(profile=>[profile.id,Object.freeze({
+    id:profile.id,name:profile.name,
+    allowedGrades:Object.freeze([profile.rarity]),allowMixedGrades:false,
+    fullSetSlots:Object.freeze(['helm','chest','gloves','legs','boots','cape']),
+    thresholds:profile.thresholds,
+    conditionalThresholds:profile.conditionalThresholds||{},
+  })])),
   ...Object.fromEntries(AXE_PROCEDURAL_SET_FAMILIES.map(family => [family.id,Object.freeze({
     id:family.id,name:family.name,
     allowedGrades:Object.freeze(['rare','elite','legendary','mythic']),
@@ -186,7 +194,7 @@ export function evaluateAXESetBonuses(items = []) {
 // attacks). +3 virtual skill points = +9% skill damage at 3% per point;
 // this is not three spendable points in the skill tree.
 export function getAXESetCombatMultiplier(items = [], {
-  pve=false, targetTier='', isAerialAttack=false, isSkill=false,
+  pve=false, targetTier='', isAerialAttack=false, isSkill=false, isRanged=false,
 } = {}) {
   const {conditional} = evaluateAXESetBonuses(items);
   if (!pve) return 1;
@@ -194,8 +202,9 @@ export function getAXESetCombatMultiplier(items = [], {
   const mobPct=isOrdinaryMob ? Number(conditional.mobDamagePct||0) : 0;
   const aerialPct=isAerialAttack ? Number(conditional.aerialDamagePct||0) : 0;
   const skillPct=isSkill ? Number(conditional.virtualAbilityPoints||0)*3 : 0;
+  const rangedPct=isRanged ? Number(conditional.rangedDamagePct||0) : 0;
   // Cap the combined situational boost independently of temporary skill buffs.
-  return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct))/100;
+  return 1+Math.min(50,Math.max(0,mobPct+aerialPct+skillPct+rangedPct))/100;
 }
 
 export function describeAXESetProgress(item, equippedItems = []) {

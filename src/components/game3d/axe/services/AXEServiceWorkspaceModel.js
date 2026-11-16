@@ -18,6 +18,8 @@ import {
   validateCombine,
 } from '../equipment/AXEItemAdvancementSystem';
 import { canInsertAXEGem, drillSuccessChance } from '../equipment/AXESocketGemSystem';
+import {isAXEFarmingRarity} from '../loot/AXEFarmingGearTiers.mjs';
+import {previewAXEAscensionFeed} from '../equipment/AXEAscensionFeedingRules.mjs';
 import {
   getAXEOverEnchantCost,
   getAXEReinforcementCost,
@@ -93,20 +95,31 @@ export function getAXEServiceOperationPreview(serviceId, {
       confirmation: donor ? `Combine ${item.name} with ${donor.name}? Success permanently consumes donor ${donor.instanceId}.` : null,
       reason: donor ? 'This donor cannot be combined with the target.' : 'Choose a separate, unlocked, unequipped matching donor.' };
   }
-  if (serviceId === 'stage') {
-    const next = getNextStage(advancement.stage || {});
-    const pct = Number(reinforcement.percent || 0);
-    const cap = getAXEReinforcementCap(item);
-    const validPct = Number.isFinite(pct) && pct >= 0 && pct <= cap;
-    const gain = next && validPct ? getAXEAscensionImprintBonus(next.rank, pct) : 0;
-    return { ...preview, canAdvance: !!next && validPct, chance: 1,
-      ascensionCap: cap, ascensionPercent: pct,
-      ascensionBonus: getAXEEquipmentAscensionBonus(advancement.stage),
-      nextAscensionGain: gain,
-      outcome: next ? (advancement.stage?.label || 'Base') + ' → ' + next.label + ' (+' + (gain * 100).toFixed(2) + '% core stats)'
-        : 'Maximum: four Ascensions',
-      risk: !validPct ? 'Reinforcement exceeds this rarity cap. This item cannot Ascend.'
-        : 'Each stage permanently locks its Reinforcement-based bonus. Reinforce before Ascending for a larger imprint.' };
+  if(serviceId==='stage'){
+    const next=getNextStage(advancement.stage||{});
+    const pct=Number(reinforcement.percent||0);
+    const cap=getAXEReinforcementCap(item);
+    const validPct=Number.isFinite(pct)&&pct>=0;
+    const farming=isAXEFarmingRarity(item.rarity);
+    const feeding=farming?previewAXEAscensionFeed(item,advancement.stage||{},donor):null;
+    const canAdvance=!!next&&validPct&&(!farming||!!feeding?.ok);
+    const gain=next&&validPct?getAXEAscensionImprintBonus(next.rank,Math.min(cap,pct)):0;
+    const targetRank=feeding?.ok?feeding.nextRank:next?.rank;
+    return {...preview,canAdvance,chance:canAdvance?1:null,
+      cost:farming?{}:preview.cost,ascensionCap:cap,ascensionPercent:pct,
+      ascensionBonus:getAXEEquipmentAscensionBonus(advancement.stage),
+      nextAscensionGain:gain,feedPreview:feeding,requiresDonor:farming,
+      nextRank:targetRank,
+      outcome:farming
+        ?(feeding?.ok
+          ?(feeding.grantedRanks
+            ?`Ascension ${feeding.currentRank} → ${feeding.nextRank} · consume ${donor.name}`
+            :`Feed ${feeding.progressAfter}/${feeding.required} · consume ${donor.name}`)
+          :'Select an unlocked, unequipped matching '+String(item.rarity||'')+' donor')
+        :next?(advancement.stage?.label||'Base')+' → '+next.label:'Maximum: four Ascensions',
+      risk:farming
+        ?'Consumes the selected donor even when progress is partial. Same-level donors cost 1, then 2, 3 and 4 per new stage. Higher-tier pieces can skip stages.'
+        :!validPct?'Invalid reinforcement value.':'Ascension imprint scales with the reinforcement already earned.'};
   }
   if (serviceId === 'refine') {
     const level = Number(advancement.refine?.level || 0);

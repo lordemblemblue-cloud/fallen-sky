@@ -2,20 +2,23 @@
 // 'uncommon' remains the existing engine rarity ID for user-facing Unique gear.
 // Evolution routes are POTENTIAL FUTURE CRAFTS, not a free upgrade on pickup.
 // No Chosen gear is rolled from ordinary enemies.
+import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
+// Rare farming starts at Lv50; Elite starts at Lv110; Legendary at Lv135.
 export const AXE_GEAR_LEVEL_TIERS = Object.freeze([
   { min: 1, max: 10, weights: {common: 100} },
-  { min: 11, max: 20, weights: {common: 72, uncommon: 24, rare: 4} },
-  { min: 21, max: 30, weights: {common: 48, uncommon: 42, rare: 10} },
-  { min: 31, max: 40, weights: {common: 30, uncommon: 48, rare: 22} },
-  { min: 41, max: 50, weights: {common: 15, uncommon: 25, rare: 60} },
-  { min: 51, max: 119, weights: {uncommon: 10, rare: 90} },
-  { min: 120, max: 129, weights: {rare: 35, elite: 65} },
-  { min: 130, max: 139, weights: {rare: 25, elite: 75} },
-  { min: 140, max: 149, weights: {rare: 15, elite: 85} },
-  { min: 150, max: 179, weights: {elite: 28, legendary: 72} },
-  // Mythical is only in the high-level boss/elite pool; ordinary mobs roll
-  // elite or legendary and cannot skip the prestige journey by RNG alone.
-  { min: 180, max: Infinity, weights: {elite: 20, legendary: 80} },
+  { min: 11, max: 20, weights: {common: 80, uncommon: 20} },
+  { min: 21, max: 30, weights: {common: 60, uncommon: 40} },
+  { min: 31, max: 40, weights: {common: 48, uncommon: 52} },
+  { min: 41, max: 49, weights: {common: 35, uncommon: 65} },
+  { min: 50, max: 79, weights: {uncommon: 23, rare: 77} },
+  { min: 80, max: 109, weights: {uncommon: 10, rare: 90} },
+  { min: 110, max: 119, weights: {rare: 76, elite: 24} },
+  { min: 120, max: 129, weights: {rare: 47, elite: 53} },
+  { min: 130, max: 134, weights: {rare: 35, elite: 65} },
+  { min: 135, max: 139, weights: {rare: 27, elite: 65, legendary: 8} },
+  { min: 140, max: 149, weights: {rare: 24, elite: 63, legendary: 13} },
+  { min: 150, max: 179, weights: {rare: 13, elite: 63, legendary: 24} },
+  { min: 180, max: Infinity, weights: {rare: 5, elite: 55, legendary: 40} },
 ].map(band => Object.freeze({...band, weights: Object.freeze(band.weights)})));
 
 export const AXE_EVOLUTION_PATHS = Object.freeze({
@@ -44,16 +47,14 @@ export const AXE_PROCEDURAL_SET_FAMILIES = Object.freeze([
 const boundedLevel = level => Math.max(1, Math.min(10000, Math.floor(Number(level) || 1)));
 const unit = rng => Math.max(0, Math.min(0.999999999, Number(rng()) || 0));
 export function getAXELevelGearBand(level = 1) {
-  const l = boundedLevel(level);
-  const bracket = AXE_GEAR_LEVEL_TIERS.find(b => l >= b.min && l <= b.max) || AXE_GEAR_LEVEL_TIERS[0];
-  // The two unlock edges are intentional: 51 begins Rare farming and 120
-  // begins Elite farming. Each later Elite/Legendary interval starts at 120,
-  // 130, 140, 150... rather than hiding 120 in the 111–120 band.
-  const min = l <= 50 ? 1 + Math.floor((l - 1) / 10) * 10
-    : l < 120 ? 51 + Math.floor((l - 51) / 10) * 10
-      : 120 + Math.floor((l - 120) / 10) * 10;
-  const max = Math.min(min + 9, l < 120 ? 119 : Number.POSITIVE_INFINITY);
-  return { min, max, stage: bracket.min, weights: {...bracket.weights} };
+  const l=boundedLevel(level);
+  const band=AXE_GEAR_LEVEL_TIERS.find(b=>l>=b.min&&l<=b.max) || AXE_GEAR_LEVEL_TIERS[0];
+  return {min:band.min,max:band.max,stage:band.min,weights:{...band.weights},
+    gearLevels:{
+      rare:getAXEFarmingGearLevel('rare',l),
+      elite:getAXEFarmingGearLevel('elite',l),
+      legendary:getAXEFarmingGearLevel('legendary',l),
+    }};
 }
 export function getAXELevelRarityWeights(level = 1, { enemyTier = 'normal', isBoss = false } = {}) {
   const l = boundedLevel(level);
@@ -85,10 +86,10 @@ export function rollAXELevelRarity(level = 1, options = {}) {
 export function rollAXEEvolutionPath(rarity, level, rng = Math.random) {
   const l = boundedLevel(level);
   const chance = unit(rng);
-  if (rarity === 'rare' && l >= 45 && chance < 0.16) return 'rare_elite';
+  if (rarity === 'rare' && l >= 50 && chance < 0.16) return 'rare_elite';
   if (rarity === 'elite' && l >= 150 && chance < 0.02) return 'elite_mythic';
-  if (rarity === 'elite' && l >= 120 && chance < 0.12) return 'elite_legendary';
-  if (rarity === 'legendary' && l >= 150 && chance < 0.08) return 'legendary_mythic';
+  if (rarity === 'elite' && l >= 110 && chance < 0.12) return 'elite_legendary';
+  if (rarity === 'legendary' && l >= 135 && chance < 0.08) return 'legendary_mythic';
   if (rarity === 'mythic') return 'mythic_chosen';
   return null;
 }

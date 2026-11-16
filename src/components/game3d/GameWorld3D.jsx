@@ -3851,7 +3851,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // Skyrend's aerial PvE set effect, not ordinary grounded attacks.
             isAerialAttack: !playerStateMachine.current.grounded ||
               !!pendingSkillStrike?.isAerialAttack || !!pendingSkillStrike?.aerial,
-            isSkillStrike,
+            isSkillStrike, isRangedAttack:activeWeaponPath==='ranged',
+            skillFamily:isSkillStrike?skillCombatFamily(getSkillById(pendingSkillStrike?.skillId)):'single',
           }) : null;
           if (strike && strike.kind !== 'hit') {
             spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });

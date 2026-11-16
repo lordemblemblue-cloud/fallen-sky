@@ -1728,3 +1728,29 @@
 .game3d-view .axe-service-workspace--blacksmith .axe-blacksmith-reference {
   pointer-events:none;
 }
+
+
+/* Ascension +4 prestige is a visual identity, not a random rarity promotion. */
+.axe-blacksmith-feed-selector {display:flex;flex-direction:column;gap:6px;min-width:0;
+  padding:7px 0;color:#e9d6bb;font:12px/1.4 Georgia,serif;}
+.axe-blacksmith-feed-selector select {min-height:34px;max-width:100%;width:100%;
+  color:#f9ddb1;background:#182638;border:1px solid #d9ac75bd;border-radius:7px;
+  padding:6px;font:12px Georgia,serif;color-scheme:dark;}
+.axe-blacksmith-feed-selector select:focus-visible {outline:2px solid #edd1a6;outline-offset:2px;}
+.axe-blacksmith .axe-forge-ascended-name,
+.axe-blacksmith-center-preview .axe-forge-ascended-name {
+  background:linear-gradient(95deg,var(--prestige-a,#8e70f7),var(--prestige-b,#4dabf0));
+  background-clip:text;-webkit-background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 5px var(--prestige-a,#8e70f7));
+}
+.axe-blacksmith-center-preview .axe-forge-ascended-art {
+  border-radius:10px;
+  box-shadow:0 0 14px 2px #8669e766,inset 0 0 13px #f6bd7d3e;
+  animation:axe-ascension-prestige-pulse 3.5s ease-in-out infinite;
+}
+@keyframes axe-ascension-prestige-pulse {
+  0%,100% {filter:brightness(1);} 50% {filter:brightness(1.15);}
+}
+@media (prefers-reduced-motion:reduce) {
+  .axe-blacksmith-center-preview .axe-forge-ascended-art {animation:none;}
+}
