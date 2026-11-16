@@ -3033,7 +3033,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // A collision impulse must not push a player out of the rendered
         // terrain even if normal WASD movement was previously accepted.
         if(region==='wolfveil' &&
-           !insideWolfveilClientGround(model.position.x,model.position.z,.65)){
+          (!insideWolfveilClientGround(model.position.x,model.position.z,.65) ||
+           (!dedicatedMode && mapReady && shouldRejectCaveGroundStep({
+             from:beforeRoguePush,
+             to:{x:model.position.x,z:model.position.z},
+             fromGroundY:sampleGroundY(beforeRoguePush.x,beforeRoguePush.z,model.position.y),
+             toGroundY:sampleGroundY(model.position.x,model.position.z,model.position.y),
+             variant:suigenActive?'suigen':'classic',
+             actorRadius:mounted?.85:.62,
+           })))){
           model.position.x=beforeRoguePush.x;
           model.position.z=beforeRoguePush.z;
         }
