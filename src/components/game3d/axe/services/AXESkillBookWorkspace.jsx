@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import AXESkillBookRedesign from './AXESkillBookRedesign';
 import { getSkillById } from '../../skills/skillRegistry';
+import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import { SKILL_TYPE } from '../../skills/skillTypes';
 import {
   equipActive, equipPassive, getLoadout, getSkillPresets,
@@ -84,6 +85,7 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
   const refreshBanks = next => { setBanks(next); saveBanks(next); };
   const placeActive = (index, skill = selected) => {
     if (!skill) return;
+    if (!companion && !isWeaponSkillUnlocked(skill.skill_id)) { setStatus('Unlock the preceding weapon skill stage first.'); return; }
     const result = companion ? equipCompanionSkill(index, skill.skill_id) : equipActive(index, skill.skill_id);
     feedback(result);
     if (result.ok && companion) refreshBanks({ ...banks, companionSets:
@@ -115,6 +117,7 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
       i === banks.passiveIndex ? getLoadout().passivePanel.slice() : set) });
   };
   const quickEquip = skill => {
+    if (!companion && !isWeaponSkillUnlocked(skill.skill_id)) { setStatus('Unlock the preceding weapon skill stage first.'); return; }
     if (!companion && skill.skill_type === SKILL_TYPE.PASSIVE) {
       const slot = passiveIds.indexOf(null);
       if (slot !== -1) placePassive(slot,skill);
