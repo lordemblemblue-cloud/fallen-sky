@@ -99,3 +99,33 @@ export function isWolfveilCaveApproachReserved(x,z,padding=0){
 export function getWolfveilCaveApproach(caveId){
   return WOLFVEIL_CAVE_APPROACHES.find(a=>a.caveId===caveId)||null;
 }
+
+/**
+ * Actual approach-side rail collision, local X/Z. Cosmetic posts at 5.9m
+ * from the threshold centerline are solid to player/mount capsules and stop
+ * lateral slips into missing cliff cells. The designated central ramp remains
+ * unobstructed in BOTH directions. No player teleport or vertical override.
+ */
+export function resolveWolfveilCaveEntranceRailCollision(now,previous,radius=.62){
+  if(!now||!previous||![now.x,now.z,previous.x,previous.z].every(Number.isFinite))
+    return false;
+  const capsule=Math.max(0,Math.min(1.4,Number(radius)||.62));
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+    const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    const along=p=>(p.x-mx)*dx+(p.z-mz)*dz;
+    const lateral=p=>-(p.x-mx)*dz+(p.z-mz)*dx;
+    const a=along(now),b=along(previous);
+    if(Math.min(a,b)<-4.4||Math.max(a,b)>9.4)continue;
+    const barrier=5.9-capsule,oldSide=lateral(previous),newSide=lateral(now);
+    if((oldSide<barrier&&newSide>=barrier)||
+       (oldSide>-barrier&&newSide<=-barrier)){
+      // Retain the old safe point: the broad 8.9m center passage still allows
+      // normal movement; this only catches a direct sideways rail crossing.
+      now.x=previous.x;
+      now.z=previous.z;
+      return true;
+    }
+  }
+  return false;
+}
+
