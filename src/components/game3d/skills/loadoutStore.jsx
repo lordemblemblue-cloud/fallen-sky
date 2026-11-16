@@ -5,6 +5,7 @@ import { canEquipToSlot } from './slotValidator';
 import { SLOT_KIND } from './skillTypes';
 import { getSkillById } from './skillRegistry';
 import { SPRINT_SKILL_ID } from './sprintRules.mjs';
+import { placeThreeHitSwordCombo } from './defaultComboSlot.mjs';
 import { getMasteryCDR } from '../progression/weaponMastery/WeaponScalingPipeline';
 
 export const ACTIVE_SLOTS = 10;
@@ -66,10 +67,22 @@ function seedSprint(initial) {
   try { localStorage.setItem(SPRINT_SEED_KEY, 'true'); } catch {}
   return seeded;
 }
-const initial = seedSprint(loadFromStorage() || {
+// Offer Triple Slash on the numbered skill bar once, using key 3 when free.
+// Preserve saved assignments, existing presets and intentional later unequips.
+const TRIPLE_SLASH_SEED_KEY = 'game3d_triple_slash_hotbar_seed_v1';
+function seedTripleSlash(initialLoadout) {
+  if (read(TRIPLE_SLASH_SEED_KEY) === true) return initialLoadout;
+  const activeSlots = placeThreeHitSwordCombo(initialLoadout.activeSlots);
+  const seeded = activeSlots === initialLoadout.activeSlots
+    ? initialLoadout : { ...initialLoadout, activeSlots };
+  if (seeded !== initialLoadout) saveToStorage(seeded);
+  try { localStorage.setItem(TRIPLE_SLASH_SEED_KEY, 'true'); } catch {}
+  return seeded;
+}
+const initial = seedTripleSlash(seedSprint(loadFromStorage() || {
   activeSlots: new Array(ACTIVE_SLOTS).fill(null),
   passivePanel: new Array(PASSIVE_SLOTS).fill(null),
-});
+}));
 
 let state = { ...initial, cooldowns: new Array(ACTIVE_SLOTS).fill(0) };
 const emit = () => listeners.forEach((fn) => fn(state));
