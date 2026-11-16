@@ -161,3 +161,21 @@
   .axe-sk-toolbar {flex-wrap:wrap;}
   .axe-sk-search {width:100%;}
 }
+
+/* Companion skill owner has its own explicit subpages, not a duplicate
+   Weapon Category rail inherited from the old Character combat iteration. */
+.axe-clone-skill-root .axe-ct-content--companion {
+  grid-template-columns:minmax(0,1fr);
+}
+.axe-clone-skill-root .axe-ct-content--companion>.axe-ct-main {
+  grid-column:1;min-width:0;min-height:0;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-main--collection {
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-equipped {
+  margin-top:9px;flex:0 0 auto;min-height:0;
+}
+.axe-clone-skill-root .axe-ct-content--collection .axe-ct-equipped-slots {
+  min-height:0;
+}
