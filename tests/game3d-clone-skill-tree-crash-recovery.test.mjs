@@ -21,10 +21,11 @@ test('Game 3D isolates the horizontal Skill Tree without hiding other Services o
   assert.match(css,/\.axe-hp-recovery/);
 });
 
-test('trackpad navigation is limited to deliberate steps and point spending has a recovery path',()=>{
+test('both progression rows share one reverse-direction scroll surface and point spending is recoverable',()=>{
   const sourceText=source('AXESkillPathHorizontal.jsx');
-  assert.match(sourceText,/useRef\(0\)/);
-  assert.match(sourceText,/now-lastWheelAt\.current<160/);
+  assert.match(sourceText,/useRef\(null\)/);
+  assert.match(sourceText,/viewport\.addEventListener\('wheel',onWheel,\{passive:false\}\)/);
+  assert.match(sourceText,/horizontalSkillWheelOffset\(event\.deltaY,event\.deltaX\)/);
   assert.match(sourceText,/try \{\s*const result=investWeaponSkillPoint\(category,stageIndex,1\)/);
   assert.match(sourceText,/catch\(error\)/);
   assert.match(sourceText,/onFeedback\?\.\('Could not upgrade this stage/);
