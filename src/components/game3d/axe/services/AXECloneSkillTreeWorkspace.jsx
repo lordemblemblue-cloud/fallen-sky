@@ -219,16 +219,24 @@ export default function AXECloneSkillTreeWorkspace({
   const [category,setCategory] = useState(activeMode?.id||'damage');
   const [filter,setFilter] = useState('all');
   const [search,setSearch] = useState('');
-  const [selected,setSelected] = useState({kind:'skill',id:'axe_offensive_skill_5',
-    category:'damage',lane:'three',tier:2});
+  const [selected,setSelected] = useState(()=>{
+    if(companion)return null;
+    const role=activeMode?.id==='range'?'ranged':activeMode?.id==='defense'?'defensive':'offensive';
+    return {kind:'skill',id:'axe_'+role+'_skill_5',category:activeMode?.id||'damage',lane:'three',tier:2};
+  });
   const [feedback,setFeedback] = useState('');
   const paths = useMemo(()=>createCloneSkillTreePaths(category),[category]);
   const normalizedSearch = search.trim().toLowerCase();
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
   useEffect(()=>subscribeWeaponSkillPoints(()=>setMasteryRevision(v=>v+1)),[]);
   useEffect(()=>{
-    if(companion)setCategory('combat');
-    else if(activeMode?.id)setCategory(activeMode.id);
+    if(companion){setCategory('combat');setSelected(null);}
+    else if(activeMode?.id){
+      setCategory(activeMode.id);
+      const role=activeMode.id==='range'?'ranged':activeMode.id==='defense'?'defensive':'offensive';
+      setSelected({kind:'skill',id:'axe_'+role+'_skill_5',
+        category:activeMode.id,lane:'three',tier:2});
+    }
   },[activeMode?.id,companion]);
   // The Game 3D controller owns selection, saves, unlocks, and loadout transactions.
   const registry = companion ? getAllCompanionSkills() : getAllSkills();
