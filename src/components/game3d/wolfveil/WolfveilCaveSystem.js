@@ -11,6 +11,8 @@ import {
   resolveWolfveilCaveWallCollision,
 } from './WolfveilCaveLayout.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
+import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
+import {WOLFVEIL_CAVE_APPROACHES} from './WolfveilCaveAccessPlan.mjs';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
 
 const TAU = Math.PI * 2;
@@ -305,6 +307,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     }
   }
 
+  // Actual walkable outdoor trails from existing valley paths and both
+  // guarded lips of every cave mouth, sharing the SAME registered cave floor
+  // mesh with the inner descending ramps. No extra collision height layer.
+  const caveAccessStats=appendWolfveilCaveAccessFloor(floorTris);
+  const caveAccessProps=appendWolfveilCaveAccessProps({
+    addProp,addBrazier,stoneGeo:boxGeo,beamGeo:boxGeo,
+    stoneMat:floorMat,timberMat,bronzeMat,
+  });
+
   // 2. Build SculptedExterior Cave Mouth Portals (sealing terrain cutouts cleanly!)
   for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
     const [mx, mz] = cave.mouth;
@@ -559,6 +570,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     caves: WOLFVEIL_EXPLORABLE_CAVES,
     hub: WOLFVEIL_CAVE_HUB,
     corridors: WOLFVEIL_CAVE_CORRIDORS,
+    approaches:WOLFVEIL_CAVE_APPROACHES,
+    approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
     lightAnchorCount: lightAnchors.length,
     playerGroundY(worldPos) {
       if (!worldPos) return null;
