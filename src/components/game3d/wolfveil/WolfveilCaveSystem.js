@@ -20,6 +20,13 @@ import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from 
 
 import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
+import {
+  WOLFVEIL_CAVE_FLOORS,
+  caveFloorByCaveId,
+  caveFloorIsAwake,
+  awakeCaveFloors,
+  paintSumiCaveMural,
+} from './WolfveilCaveNarrative.mjs';
 
 const TAU = Math.PI * 2;
 const LIGHT_POOL_SIZE = 6;
@@ -164,6 +171,9 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const shellTris = new WolfveilTriangles();
   const lightAnchors = [];
   const animatedFlames = [];
+  const sumiScrolls = [];
+  const sumiTorches = [];
+  const defeatedBosses = new Set();
   const rand = mulberry32(0xc47e2026);
 
   const registerLight = (x, y, z, color, intensity = 22, distance = 28) => {
@@ -588,6 +598,59 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       addProp(boxGeo, bronzeMat, ch.x, ch.y + 0.85, ch.z, 2.1, 0.28, 2.1);
     }
 
+    // Sumi-e scroll: grass strokes and fire strokes, the valley's old idea
+    // hung on the stone. Locked floors stay an unfinished grey painting.
+    const story = caveFloorByCaveId(ch.cave?.id || ch.id);
+    if (story && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+      const awake = caveFloorIsAwake(story, defeatedBosses);
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 288;
+      paintSumiCaveMural(canvas.getContext('2d'), canvas.width, canvas.height, story, awake);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      ownedTextures.push(texture);
+      const mat = new THREE.MeshBasicMaterial({
+        map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false,
+      });
+      mat.name = 'SWV_Cave_SumiScroll_' + story.order;
+      world.ownedMaterials.push(mat);
+      const scroll = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 3.5), mat);
+      const dir = ch.cave?.dir || [0, 1];
+      const back = (ch.radius || 14) * 0.62;
+      scroll.position.set(ch.x + dir[0] * back, ch.y + 2.6, ch.z + dir[1] * back);
+      scroll.lookAt(ch.x, ch.y + 2.6, ch.z);
+      scroll.raycast = () => {};
+      scroll.name = 'SWV_Cave_SumiMural_' + story.caveId;
+      group.add(scroll);
+      sumiScrolls.push({ mesh: scroll, floor: story, canvas, texture });
+      for (const side of [-1, 1]) {
+        const tx = ch.x + dir[0] * (back - 1.2) + (-dir[1]) * side * 2.4;
+        const tz = ch.z + dir[1] * (back - 1.2) + dir[0] * side * 2.4;
+        addProp(cylGeo, timberMat, tx, ch.y + 0.7, tz, 0.08, 1.4, 0.08);
+        const flameCanvas = document.createElement('canvas');
+        flameCanvas.width = 64;
+        flameCanvas.height = 96;
+        paintSumiCaveMural(flameCanvas.getContext('2d'), 64, 96, story, awake);
+        const flameTex = new THREE.CanvasTexture(flameCanvas);
+        flameTex.colorSpace = THREE.SRGBColorSpace;
+        ownedTextures.push(flameTex);
+        const flameMat = new THREE.SpriteMaterial({
+          map: flameTex, transparent: true, depthWrite: false,
+        });
+        flameMat.name = 'SWV_Cave_SumiTorch_' + story.order;
+        world.ownedMaterials.push(flameMat);
+        const flame = new THREE.Sprite(flameMat);
+        flame.position.set(tx, ch.y + 1.7, tz);
+        flame.scale.set(0.55, 0.8, 1);
+        flame.raycast = () => {};
+        flame.visible = awake;
+        group.add(flame);
+        sumiTorches.push({ mesh: flame, floor: story, phase: side + story.order });
+        if (awake) registerLight(tx, ch.y + 1.8, tz, 0xffb35c, 16, 14);
+      }
+    }
+
     // ─── UNIQUE INTERIOR DESIGN PER CAVERN ───
     if (ch.theme === 'lantern_shrine') {
       // Cave 1: Jade Lantern Grotto — overhead cedar rafters hung with warm & jade lanterns + Wolf-Spirit altar
@@ -808,6 +871,23 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     approaches:WOLFVEIL_CAVE_APPROACHES,
     approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
     lightAnchorCount: lightAnchors.length,
+    floors: WOLFVEIL_CAVE_FLOORS,
+    awakeFloors(){return awakeCaveFloors(defeatedBosses);},
+    noteBossDefeated(bossId) {
+      // Records the painting, never a reward. Combat still owns the kill.
+      if (!bossId) return awakeCaveFloors(defeatedBosses);
+      defeatedBosses.add(bossId);
+      for (const scroll of sumiScrolls) {
+        const awake = caveFloorIsAwake(scroll.floor, defeatedBosses);
+        const ctx = scroll.canvas.getContext('2d');
+        paintSumiCaveMural(ctx, scroll.canvas.width, scroll.canvas.height, scroll.floor, awake);
+        scroll.texture.needsUpdate = true;
+      }
+      for (const torch of sumiTorches) {
+        torch.mesh.visible = caveFloorIsAwake(torch.floor, defeatedBosses);
+      }
+      return awakeCaveFloors(defeatedBosses);
+    },
     isActive(){return activeCaveId!==null;},
     walkIn: enterFromMouth,
     playerGroundY(worldPos) {
@@ -864,6 +944,12 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
           : 0.88 + 0.18 * Math.sin(elapsed * 8.5 + f.phase);
         f.mesh.scale.y = Math.abs(f.mesh.scale.y) * (0.96 + 0.04 * s);
         f.mesh.position.y = f.baseY + (f.gentle ? 0.03 * Math.sin(elapsed * 1.9 + f.phase) : 0);
+      }
+      for (const torch of sumiTorches) {
+        if (!torch.mesh.visible) continue;
+        const lick = 0.82 + 0.18 * Math.sin(elapsed * 9.2 + torch.phase);
+        torch.mesh.scale.y = 0.8 * lick;
+        torch.mesh.material.opacity = 0.72 + 0.28 * lick;
       }
 
       // Server-authoritative duel play owns the body position; never teleport it.
