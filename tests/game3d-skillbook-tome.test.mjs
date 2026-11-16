@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
   skillBelongsToCategory, skillMarkedLocked, skillLabelType,
-  formatSkillStat, skillMatchesBookFilter,
+  formatSkillStat, skillMatchesBookFilter, titleizeSkillStat,
 } from '../src/components/game3d/axe/services/AXESkillBookModel.mjs';
 
 const bow={skill_id:'ranged_double_shot',skill_name:'Double Shot',
@@ -67,4 +67,17 @@ test('Skill Book uses existing transactions, source registry, and viewport HUD i
   assert.match(style,/jade-combat-hud/);
   assert.match(style,/jade-services-navigation/);
   assert.doesNotMatch(view,/setSkillMastery|setPlayerXP|grantReward|spendSkillPoints/);
+});
+
+test('Skill Book v2 stat and companion labels use imported formatter (crash regression)',()=>{
+  assert.equal(titleizeSkillStat('damage_pct'),'Damage Pct');
+  assert.equal(titleizeSkillStat('critical_chance'),'Critical Chance');
+  assert.equal(titleizeSkillStat('mobility'),'Mobility');
+  assert.equal(titleizeSkillStat(null),'');
+  const view=readFileSync(new URL('../src/components/game3d/axe/services/AXESkillBookRedesign.jsx',import.meta.url),'utf8');
+  assert.match(view,/import \{[^}]*\btitleizeSkillStat\b[^}]*\} from '\.\/AXESkillBookModel\.mjs'/);
+  assert.equal((view.match(/titleizeSkillStat\(/g)||[]).length,3,
+    'stat keys, equipped weapon and companion labels must resolve the helper');
+  assert.doesNotMatch(view,/\btitleize\s*\(/,
+    'Undefined titleize helper caused Skill Book first-select React crash');
 });

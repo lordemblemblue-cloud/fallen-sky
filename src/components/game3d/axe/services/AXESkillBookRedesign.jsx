@@ -8,7 +8,7 @@ import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
-import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter} from './AXESkillBookModel.mjs';
+import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter,titleizeSkillStat} from './AXESkillBookModel.mjs';
 import './AXESkillBookRedesign.css';
 
 // Only registered skills are displayed. No concept-art dummy skills, fabricated
@@ -53,7 +53,7 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
   const locked=skillMarkedLocked(skill), requirements=requirementsOf(skill);
   const scalings=Object.keys(skill.scaling||{});
   const stats=[
-    ...scalings.map(key=>({key, label:titleize(key), current:formatSkillStat(key,scaleStat(skill,key,level)),
+    ...scalings.map(key=>({key, label:titleizeSkillStat(key), current:formatSkillStat(key,scaleStat(skill,key,level)),
       upcoming:next!=null && level<max?formatSkillStat(key,scaleStat(skill,key,next)):null})),
     ...(Number.isFinite(Number(skill.cooldown))?[{key:'cooldown',label:'Cooldown',current:skill.cooldown+' sec'}]:[]),
     ...(Number(skill.duration)>0?[{key:'duration',label:'Duration',current:skill.duration+' sec'}]:[]),
@@ -109,7 +109,7 @@ function SkillInspector({skill,companion,onEquip,equipped}) {
         <h4><Shield size={15}/> Requirements</h4>
         {requirements.length ? requirements.map(item=><p key={item}><LockKeyhole size={14}/>{item}</p>)
           : <p><Check size={14}/> No unlock requirements recorded</p>}
-        {skill.weapon_type&&<p><Target size={14}/> {titleize(skill.weapon_type)} weapon required to cast</p>}
+        {skill.weapon_type&&<p><Target size={14}/> {titleizeSkillStat(skill.weapon_type)} weapon required to cast</p>}
       </section>
     </div>
     <div className="axe-tome-inspector-action">
@@ -131,7 +131,7 @@ export default function AXESkillBookRedesign({
   const [search,setSearch]=useState('');
   const all=useMemo(()=>companion?getAllCompanionSkills():getAllSkills(),[companion]);
   const categories=useMemo(()=>companion
-    ? [...new Set(all.map(s=>s.category).filter(Boolean))].map(id=>({id,name:titleize(id),icon:'✧'}))
+    ? [...new Set(all.map(s=>s.category).filter(Boolean))].map(id=>({id,name:titleizeSkillStat(id),icon:'✧'}))
     : CHARACTER_CATEGORIES,[companion,all]);
   useEffect(()=>{setCategory(companion?categories[0]?.id||'combat':legacyCategory(activeMode?.id));
     setSearch('');setFilter('all');},[companion,activeMode?.id]);
