@@ -119,3 +119,16 @@
 .axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-caption {
   grid-column:1/4;grid-row:2;
 }
+
+
+/* Clone Companion Vanity: preview no longer has redundant slot cards. */
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) {
+  grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto;
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-center {
+  grid-column:1;grid-row:1;min-width:0;min-height:0;
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-caption {
+  grid-column:1;grid-row:2;
+}
