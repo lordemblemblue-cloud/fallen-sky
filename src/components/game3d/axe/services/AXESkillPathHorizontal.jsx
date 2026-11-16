@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, BookOpen, ChevronDown, ChevronUp, Shield, Sparkles } from 'lucide-react';
+import { ArrowUp, BookOpen, Shield, Sparkles } from 'lucide-react';
 import { getSkillById, scaleStat } from '../../skills/skillRegistry';
 import { getSkillMastery, subscribeSkillMastery } from '../../skills/skillMasteryStore';
 import {
@@ -39,10 +39,11 @@ const skillIcon = (kind,size=34) => <svg viewBox="0 0 64 64" width={size} height
   </svg>;
 
 function BranchCard({ icon, title, subtitle, locked=false, selected=false, equipped=false,
-  onClick, className='' }) {
+  onClick, onDoubleClick, onContextMenu, className='' }) {
   return <button type="button" className={['axe-hp-node',className,selected?'axe-hp-node--selected':'',
     locked?'axe-hp-node--locked':''].join(' ')} aria-pressed={selected}
-    aria-label={title+(locked?' — locked':'')} title={title} onClick={onClick}>
+    aria-label={title+(locked?' — locked':'')} title={title+(onDoubleClick?' — Double-click or right-click to equip':'')}
+    onClick={onClick} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu}>
     <span className="axe-hp-node-glyph">{skillIcon(icon,34)}</span>
     <strong>{title}</strong>
     <small>{subtitle}</small>
@@ -53,14 +54,33 @@ function BranchCard({ icon, title, subtitle, locked=false, selected=false, equip
 
 export default function AXESkillPathHorizontal({
   category, paths, activePathId, onChangePath, selected, onSelect, activeIds=[],
-  onFeedback,
+  onFeedback, onEquipSkill,
 }) {
   const [points,setPoints]=useState(getWeaponSkillPoints);
-  const lastWheelAt=useRef(0);
+  const sharedScrollRef=useRef(null);
   const [,setMasteryRevision]=useState(0);
   useEffect(()=>subscribeWeaponSkillPoints(setPoints),[]);
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(v=>v+1)),[]);
   const path=paths.find(item=>item.id===activePathId)||paths[0];
+  // A single scroll viewport owns BOTH progression rows. The scrollbar is
+  // invisible, but horizontal dragging/swiping and keyboard access still work.
+  useEffect(()=>{
+    const viewport=sharedScrollRef.current;
+    if(!viewport)return undefined;
+    const onWheel=event=>{
+      const amount=Math.abs(event.deltaY)>=Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
+      if(!amount || viewport.scrollWidth<=viewport.clientWidth)return;
+      event.preventDefault();
+      // Owner's controls: scroll DOWN => LEFT, scroll UP => RIGHT.
+      viewport.scrollLeft-=amount;
+    };
+    viewport.addEventListener('wheel',onWheel,{passive:false});
+    return ()=>viewport.removeEventListener('wheel',onWheel);
+  },[path?.id,category]);
+  useEffect(()=>{
+    const viewport=sharedScrollRef.current;
+    if(viewport)viewport.scrollLeft=Math.max(0,(viewport.scrollWidth-viewport.clientWidth)/2);
+  },[path?.id,category]);
   if(!path)return null;
   const select=(kind,id,tier,stageIndex=null)=>{
     onSelect({kind,id,tier,stageIndex,lane:path.id,category});
@@ -112,32 +132,25 @@ export default function AXESkillPathHorizontal({
     onChangePath(id);
   };
   const currentIndex=PATH_ORDER.indexOf(path.id);
+  // Top: newly available attacks and their linked passives/buffs.
+  // Bottom: five cumulative paid upgrades that strengthen this attack path.
   const topCards=[
-    {skillId:path.active[1],title:path.titles[1],icon:path.icon,tier:2},
+    {skillId:path.active[0],title:path.titles[0],icon:path.icon,tier:1},
     {passive:path.passives[0],icon:path.passives[0].icon,tier:2},
-    {skillId:path.active[2],title:path.titles[2],icon:path.icon,tier:3},
+    {skillId:path.active[1],title:path.titles[1],icon:path.icon,tier:2},
     {passive:path.passives[1],icon:path.passives[1].icon,tier:3},
+    {skillId:path.active[2],title:path.titles[2],icon:path.icon,tier:3},
   ];
   return <div className="axe-hp-workspace">
     <nav className="axe-hp-wheel" aria-label="Single, Multi and Aerial paths"
       tabIndex={0}
-      onWheel={event=>{
-        if(Math.abs(event.deltaY)<=5)return;
-        const now=Date.now();
-        // Trackpads can fire dozens of wheel events in a single gesture.
-        // Only move once per deliberate step to prevent rapid render floods.
-        if(now-lastWheelAt.current<160)return;
-        lastWheelAt.current=now;
-        choosePath(currentIndex+(event.deltaY>0?1:-1));
-      }}
       onKeyDown={event=>{
         if(event.key==='ArrowDown'||event.key==='ArrowUp'){
           event.preventDefault();
           choosePath(currentIndex+(event.key==='ArrowDown'?1:-1));
         }
       }}>
-      <ChevronUp size={19} aria-hidden="true"/>
-      {paths.map((entry,index)=><button type="button" key={entry.id}
+      {paths.map(entry=><button type="button" key={entry.id}
         className={entry.id===path.id?'axe-hp-wheel-current':''}
         aria-pressed={entry.id===path.id}
         onClick={()=>onChangePath(entry.id)}
@@ -145,7 +158,6 @@ export default function AXESkillPathHorizontal({
         {skillIcon(entry.icon,34)}
         <span>{entry.id==='three'?'Multi':entry.id==='single'?'Single':'Aerial'}</span>
       </button>)}
-      <ChevronDown size={19} aria-hidden="true"/>
     </nav>
     <div className="axe-hp-stage">
       <header className="axe-hp-feature">
@@ -176,7 +188,9 @@ export default function AXESkillPathHorizontal({
               subtitle={root?'Lv. '+getSkillMastery(root.skill_id).level+' / '+getSkillMastery(root.skill_id).maxLevel:'Registered skill'}
               selected={node.kind==='skill'&&node.id===path.active[0]}
               equipped={activeIds.includes(path.active[0])}
-              onClick={()=>select('skill',path.active[0],1)}/>
+              onClick={()=>select('skill',path.active[0],1)}
+              onDoubleClick={()=>onEquipSkill?.(path.active[0])}
+              onContextMenu={event=>{event.preventDefault();onEquipSkill?.(path.active[0]);}}/>
             <span className="axe-hp-root-label">Base skill</span>
           </div>
           <svg className="axe-hp-fork-lines" viewBox="0 0 68 300" preserveAspectRatio="none"
@@ -186,9 +200,17 @@ export default function AXESkillPathHorizontal({
             <path d="M0 150H25Q34 150 34 163V228Q34 237 45 237H66"/>
             <path d="M58 63L67 69 58 75M58 231L67 237 58 243"/>
           </svg>
-          <div className="axe-hp-tree-branches">
-            <div className="axe-hp-tree-track" role="list" aria-label="Active skill path">
-              <span className="axe-hp-track-caption">Active Skill Path</span>
+          <div ref={sharedScrollRef} className="axe-hp-tree-branches" tabIndex={0}
+            aria-label="Shared horizontal skill progression; scroll down to move left and up to move right"
+            onKeyDown={event=>{
+              if(event.key==='ArrowLeft'||event.key==='ArrowRight'){
+                event.preventDefault();
+                if(sharedScrollRef.current)sharedScrollRef.current.scrollLeft+=
+                  event.key==='ArrowLeft'?-120:120;
+              }
+            }}>
+            <div className="axe-hp-tree-track" role="list" aria-label="Skills, buffs and passives">
+              <span className="axe-hp-track-caption">Skills / Buffs & Passives</span>
               {topCards.map((card,i)=>{
                 const skill=card.skillId?getSkillById(card.skillId):null;
                 const isPassive=!!card.passive;
@@ -205,22 +227,24 @@ export default function AXESkillPathHorizontal({
                   <BranchCard icon={card.icon} title={name} subtitle={sub}
                     locked={locked} selected={node.id===id}
                     equipped={activeIds.includes(id)}
-                    onClick={()=>select(isPassive?'passive':'skill',id,card.tier)}/>
+                    onClick={()=>select(isPassive?'passive':'skill',id,card.tier)}
+                    onDoubleClick={skill?()=>onEquipSkill?.(skill.skill_id):undefined}
+                    onContextMenu={skill?event=>{event.preventDefault();onEquipSkill?.(skill.skill_id);}:undefined}/>
                   {i<topCards.length-1&&<span className="axe-hp-track-arrow" aria-hidden="true">➜</span>}
                 </div>;
               })}
             </div>
             <div className="axe-hp-tree-track axe-hp-track-passive" role="list"
-              aria-label="Existing weapon stage passive progression">
-              <span className="axe-hp-track-caption">Passive Path</span>
+              aria-label={path.label+' attack upgrade progression'}>
+              <span className="axe-hp-track-caption">{path.label} Progression · Upgrade Strength</span>
               {WEAPON_SKILL_TIERS.map((cost,i)=>{
                 const unlocked=weaponTierUnlocked(points.save,category,i);
                 const allocated=points.save?.nodes?.[category]?.[i]||0;
                 const id='stage_'+category+'_'+i;
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
                   <BranchCard icon={i%2?'precision':'passive'}
-                    title={'Charge Focus '+ROMAN[i]}
-                    subtitle={allocated+' / '+cost+' pts · +1% charged'}
+                    title={path.label+' Upgrade '+ROMAN[i]}
+                    subtitle={allocated+' / '+cost+' pts · '+Math.round(100*allocated/cost)+'% stage power'}
                     locked={!unlocked} selected={node.id===id}
                     onClick={()=>select('stage',id,i+1,i)}/>
                   {i<WEAPON_SKILL_TIERS.length-1&&
