@@ -209,104 +209,85 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     registerLight(x, y - 0.3, z, lightHex, 20, 26);
   };
 
-  // 1. Build continuous tunnel corridors (walkable stone floor + vaulted ceiling + timber ribs)
-  const archAngles = Array.from({ length: 11 }, (_, i) => (i / 10) * Math.PI); // 0..PI vault
-
+  // 1. Low-poly galleries. Walls are vertical and the ceiling stays above the
+  // camera. The dense reference would be a 0.4m vault; this is the simplified mesh.
   for (const cor of WOLFVEIL_CAVE_CORRIDORS) {
     let distAcc = 0;
+    let nextRib = 80;
     for (let sIdx = 0; sIdx < cor.segments.length; sIdx++) {
       const seg = cor.segments[sIdx];
-      const steps = Math.max(2, Math.ceil(seg.lenXZ / 2.6));
       const nx = -seg.dz / seg.lenXZ, nz = seg.dx / seg.lenXZ;
-      const hw = cor.halfWidth + 0.55;
-      const ceil = cor.ceiling;
+      const slice = 8;
+      const steps = Math.max(1, Math.ceil(seg.lenXZ / slice));
+      const hw = cor.halfWidth;
+      const wallH = 3.85;
+      const ceilH = 4.45;
 
       for (let i = 0; i < steps; i++) {
-        const t0 = i / steps, t1 = (i + 1) / steps;
-        const x0 = seg.ax + seg.dx * t0, y0 = seg.ay + seg.dy * t0, z0 = seg.az + seg.dz * t0;
-        const x1 = seg.ax + seg.dx * t1, y1 = seg.ay + seg.dy * t1, z1 = seg.az + seg.dz * t1;
-        const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
-
-        // Walkable dressed-stone & packed-earth floor strip (3 lanes across width)
-        const lanes = [-hw, -hw * 0.45, hw * 0.45, hw];
-        // Entry ramps used to pave the hillside in front of the mouth. That
-        // sheet sat above the slope, so outdoor feet landed on it and fell
-        // off. The mountain stays the outdoor floor. Stone starts underground.
-        let carve = true;
-        if (cor.kind === 'entry') {
-          const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
-          const mx = (x0 + x1) * 0.5, mz = (z0 + z1) * 0.5;
-          const along = (mx - cave.mouth[0]) * cave.dir[0]
-            + (mz - cave.mouth[1]) * cave.dir[1];
-          const floorY = (y0 + y1) * 0.5;
-          if (along < 0.55 || floorY > wolfveilHeight(mx, mz) + 0.35) carve = false;
-        }
-        for (let l = 0; l < lanes.length - 1; l++) {
-          if (!carve) break;
-          const la = lanes[l], lb = lanes[l + 1];
-          const isCenter = l === 1;
-          const col = isCenter ? [0.76, 0.73, 0.68] : [0.55, 0.54, 0.52];
+          const t0 = i / steps, t1 = (i + 1) / steps;
+          const x0 = seg.ax + seg.dx * t0, y0 = seg.ay + seg.dy * t0, z0 = seg.az + seg.dz * t0;
+          const x1 = seg.ax + seg.dx * t1, y1 = seg.ay + seg.dy * t1, z1 = seg.az + seg.dz * t1;
+          const mx = (x0 + x1) * 0.5, my = (y0 + y1) * 0.5, mz = (z0 + z1) * 0.5;
+          if (cor.kind === 'entry') {
+            const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
+            const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
+            // Outside the mouth the hillside is the floor. Stone starts once
+            // the ramp is actually under the rock.
+            if (along < 0.6 || my > wolfveilHeight(mx, mz) + 0.2) continue;
+          }
+          const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
           floorTris.quad(
-            [x0 + nx * la, y0, z0 + nz * la],
-            [x0 + nx * lb, y0, z0 + nz * lb],
-            [x1 + nx * lb, y1, z1 + nz * lb],
-            [x1 + nx * la, y1, z1 + nz * la],
-            col,
-            [[la, d0], [lb, d0], [lb, d1], [la, d1]],
+            [x0 + nx * hw, y0, z0 + nz * hw],
+            [x0 - nx * hw, y0, z0 - nz * hw],
+            [x1 - nx * hw, y1, z1 - nz * hw],
+            [x1 + nx * hw, y1, z1 + nz * hw],
+            [0.62, 0.58, 0.52],
+            [[0, d0], [hw, d0], [hw, d1], [0, d1]],
+          );
+          // Entry reads as a stair: one tread per slice, same mesh, no extra draw.
+          if (cor.kind === 'entry') {
+            floorTris.quad(
+              [x0 + nx * (hw - 0.35), y0 + 0.08, z0 + nz * (hw - 0.35)],
+              [x0 - nx * (hw - 0.35), y0 + 0.08, z0 - nz * (hw - 0.35)],
+              [x0 - nx * (hw - 0.35) + seg.dx / steps * 0.42, y0 + 0.08, z0 - nz * (hw - 0.35) + seg.dz / steps * 0.42],
+              [x0 + nx * (hw - 0.35) + seg.dx / steps * 0.42, y0 + 0.08, z0 + nz * (hw - 0.35) + seg.dz / steps * 0.42],
+              [0.74, 0.7, 0.62],
+            );
+          }
+          const out = hw + 0.55;
+          for (const side of [-1, 1]) {
+            shellTris.quad(
+              [x0 + nx * out * side, y0, z0 + nz * out * side],
+              [x1 + nx * out * side, y1, z1 + nz * out * side],
+              [x1 + nx * out * side, y1 + wallH, z1 + nz * out * side],
+              [x0 + nx * out * side, y0 + wallH, z0 + nz * out * side],
+              side < 0 ? [0.46, 0.44, 0.4] : [0.4, 0.42, 0.46],
+            );
+          }
+          shellTris.quad(
+            [x0 + nx * out, y0 + ceilH, z0 + nz * out],
+            [x0 - nx * out, y0 + ceilH, z0 - nz * out],
+            [x1 - nx * out, y1 + ceilH, z1 - nz * out],
+            [x1 + nx * out, y1 + ceilH, z1 + nz * out],
+            [0.34, 0.36, 0.4],
           );
         }
 
-        if (!carve) continue;
-        // Sculpted vaulted rock arch enclosing both walls + ceiling
-        const ringPoint = (cx, cy, cz, aIdx) => {
-          const ang = archAngles[aIdx];
-          const c = Math.cos(ang), s = Math.sin(ang);
-          const rx = cx + nx * c * (hw + 0.35);
-          const rz = cz + nz * c * (hw + 0.35);
-          const ry = cy - 0.35 + s * (ceil + 0.45);
-          const jag = s > 0.15 ? rockDisplacement(rx, ry, rz) * 0.48 : 0;
-          return [rx + nx * c * jag, ry + s * jag * 0.65, rz + nz * c * jag];
-        };
-
-        for (let a = 0; a < archAngles.length - 1; a++) {
-          const p00 = ringPoint(x0, y0, z0, a);
-          const p01 = ringPoint(x0, y0, z0, a + 1);
-          const p11 = ringPoint(x1, y1, z1, a + 1);
-          const p10 = ringPoint(x1, y1, z1, a);
-          const crownShade = 0.52 + 0.34 * Math.sin(archAngles[a]);
-          const col = [crownShade * 0.88, crownShade * 0.93, crownShade];
-          shellTris.quad(p00, p01, p11, p10, col, [
-            [a * 1.4, d0 * 0.25],
-            [(a + 1) * 1.4, d0 * 0.25],
-            [(a + 1) * 1.4, d1 * 0.25],
-            [a * 1.4, d1 * 0.25],
-          ]);
+      // One stone pier and lantern about every 90m. Not a rib on every slice.
+      if (cor.kind === 'tunnel' && distAcc + seg.lenXZ >= nextRib) {
+        nextRib += 90;
+        const t = 0.5;
+        const rx = seg.ax + seg.dx * t;
+        const ry = seg.ay + seg.dy * t;
+        const rz = seg.az + seg.dz * t;
+        const yaw = Math.atan2(seg.dx, seg.dz);
+        for (const side of [-1, 1]) {
+          const px = rx + nx * side * (cor.halfWidth + 0.2);
+          const pz = rz + nz * side * (cor.halfWidth + 0.2);
+          addProp(boxGeo, wallMat, px, ry + 1.7, pz, 0.42, 3.4, 0.42, 0, yaw, 0);
         }
-      }
-
-      // Timber support ribs & rope lashings + tunnel sconces every ~18m
-      if (cor.kind === 'tunnel') {
-        const ribCount = Math.max(1, Math.floor(seg.lenXZ / 17));
-        for (let r = 1; r <= ribCount; r++) {
-          const t = r / (ribCount + 1);
-          const rx = seg.ax + seg.dx * t;
-          const ry = seg.ay + seg.dy * t;
-          const rz = seg.az + seg.dz * t;
-          const yaw = Math.atan2(seg.dx, seg.dz);
-          for (const side of [-1, 1]) {
-            const px = rx + nx * side * (cor.halfWidth + 0.15);
-            const pz = rz + nz * side * (cor.halfWidth + 0.15);
-            addProp(boxGeo, timberMat, px, ry + cor.ceiling * 0.42, pz, 0.32, cor.ceiling * 0.84, 0.32, 0, yaw, 0);
-            // Rope lashing collar near top of timber post
-            addProp(torusGeo, ropeMat, px, ry + cor.ceiling * 0.76, pz, 0.24, 0.24, 0.28, Math.PI / 2, 0, 0);
-          }
-          // Overhead crossbeam + hanging lantern
-          addProp(boxGeo, timberMat, rx, ry + cor.ceiling * 0.82, rz, cor.halfWidth * 2.05, 0.30, 0.30, 0, yaw + Math.PI / 2, 0);
-          if (r % 2 === 1) {
-            addHangingLantern(rx, ry + cor.ceiling * 0.78, rz, warmLanternMat, 0xffaa55);
-          }
-        }
-      } else if (cor.kind === 'entry' && sIdx > 0) {
+        addHangingLantern(rx, ry + 3.6, rz, warmLanternMat, 0xffaa55);
+      } else if (cor.kind === 'entry' && sIdx === 2) {
         // Ramped descent/return lanterns keep the way to daylight legible.
         // They add no damage, loot or new movement authority.
         const marks=Math.max(1,Math.floor(seg.lenXZ/9));
@@ -325,31 +306,29 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       distAcc += seg.lenXZ;
     }
 
-    // Seal corridor elbow bends so 35-degree turns never expose tiny corner cracks
+    // Floor-only corner fan. No vertical ring — those rings were walls you walked through.
     for (let w = 1; w < cor.waypoints.length - 1; w++) {
       const [wx, wy, wz] = cor.waypoints[w];
-      if (cor.kind === 'entry') {
-        const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
-        const along = (wx - cave.mouth[0]) * cave.dir[0]
-          + (wz - cave.mouth[1]) * cave.dir[1];
-        // A disk at the mouth hangs off the downhill slope and becomes
-        // the floor people fall through beside the entrance.
-        if (along < 6 || wy > wolfveilHeight(wx, wz) + 0.35) continue;
-      }
-      const domeR = cor.halfWidth + 1.4;
-      const segs = 12;
-      for (let i = 0; i < segs; i++) {
-        const a0 = (i / segs) * TAU, a1 = ((i + 1) / segs) * TAU;
-        const b0 = [wx + Math.cos(a0) * domeR, wy - 0.35, wz + Math.sin(a0) * domeR];
-        const b1 = [wx + Math.cos(a1) * domeR, wy - 0.35, wz + Math.sin(a1) * domeR];
-        const m0 = [wx + Math.cos(a0) * domeR * 0.92, wy + cor.ceiling * 0.72, wz + Math.sin(a0) * domeR * 0.92];
-        const m1 = [wx + Math.cos(a1) * domeR * 0.92, wy + cor.ceiling * 0.72, wz + Math.sin(a1) * domeR * 0.92];
-        const top = [wx, wy + cor.ceiling + 0.6, wz];
-        shellTris.quad(b0, b1, m1, m0, [0.52, 0.56, 0.62]);
-        shellTris.tri(m0, m1, top, [0.46, 0.50, 0.56]);
-        floorTris.tri([wx, wy, wz], [wx + Math.cos(a1) * domeR, wy, wz + Math.sin(a1) * domeR], [wx + Math.cos(a0) * domeR, wy, wz + Math.sin(a0) * domeR], [0.68, 0.66, 0.62]);
+      if (wy > wolfveilHeight(wx, wz) - 0.8) continue;
+      const fan = cor.halfWidth;
+      const spokes = 6;
+      for (let i = 0; i < spokes; i++) {
+        const a0 = (i / spokes) * TAU, a1 = ((i + 1) / spokes) * TAU;
+        floorTris.tri(
+          [wx, wy, wz],
+          [wx + Math.cos(a1) * fan, wy, wz + Math.sin(a1) * fan],
+          [wx + Math.cos(a0) * fan, wy, wz + Math.sin(a0) * fan],
+          [0.58, 0.55, 0.5],
+        );
       }
     }
+  }
+
+  for (const cor of WOLFVEIL_CAVE_CORRIDORS) {
+    if (cor.kind !== 'alcove') continue;
+    const end = cor.waypoints[cor.waypoints.length - 1];
+    addBrazier(end[0], end[1], end[2], 0xf4c078, false);
+    addProp(boxGeo, wallMat, end[0], end[1] + 0.85, end[2] + 1.6, 1.8, 1.4, 0.45);
   }
 
   // Four real stone approach tracks; mountain/roof polygons remain SEALED.
@@ -531,7 +510,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   for (const ch of allChambers) {
     const R = ch.radius + 0.9;
     const H = ch.ceiling;
-    const radialSegs = 28;
+    const radialSegs = 12;
     const rings = [
       { r: 1.02, y: -0.5 },
       { r: 1.04, y: H * 0.34 },
@@ -577,14 +556,36 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     }
 
-    // Hanging ceiling stalactites around every chamber perimeter
-    for (let s = 0; s < 12; s++) {
-      const ang = (s / 12) * TAU + 0.2;
-      const sr = R * (0.45 + (s % 3) * 0.16);
+    // A few short teeth at the wall, never down into the camera.
+    for (let s = 0; s < 5; s++) {
+      const ang = (s / 5) * TAU + 0.4;
+      const sr = R * 0.78;
       const sx = ch.x + Math.cos(ang) * sr;
       const sz = ch.z + Math.sin(ang) * sr;
-      const len = 1.4 + (s % 4) * 0.55;
-      addProp(coneGeo, wallMat, sx, ch.y + H * 0.88 - len * 0.5, sz, 0.36 + (s % 2) * 0.14, len, 0.36, Math.PI, ang, 0);
+      const len = 0.8 + (s % 3) * 0.25;
+      addProp(coneGeo, wallMat, sx, ch.y + H - len * 0.5 - 0.2, sz, 0.28, len, 0.28, Math.PI, ang, 0);
+    }
+
+    // Four cut-stone piers. Low-poly stand-ins for fluted columns.
+    if (ch.theme !== 'ancient_rotunda') {
+      for (let k = 0; k < 4; k++) {
+        const ang = (k / 4) * TAU + 0.4;
+        const pr = (ch.radius || R) * 0.62;
+        addProp(cylGeo, wallMat,
+          ch.x + Math.cos(ang) * pr, ch.y + 2.3, ch.z + Math.sin(ang) * pr,
+          0.42, 4.6, 0.42);
+        addProp(boxGeo, floorMat,
+          ch.x + Math.cos(ang) * pr, ch.y + 4.7, ch.z + Math.sin(ang) * pr,
+          0.7, 0.18, 0.7);
+      }
+    } else {
+      for (let k = 0; k < 6; k++) {
+        const ang = (k / 6) * TAU;
+        const pr = ch.radius * 0.55;
+        addProp(cylGeo, wallMat, ch.x + Math.cos(ang) * pr, ch.y + 2.6, ch.z + Math.sin(ang) * pr, 0.5, 5.2, 0.5);
+      }
+      addProp(boxGeo, floorMat, ch.x, ch.y + 0.35, ch.z, 3.2, 0.7, 3.2);
+      addProp(boxGeo, bronzeMat, ch.x, ch.y + 0.85, ch.z, 2.1, 0.28, 2.1);
     }
 
     // ─── UNIQUE INTERIOR DESIGN PER CAVERN ───
@@ -686,7 +687,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   // do not create additional walkable/collision floors.
   const wayfindingMaterials=[];
   const addWayfinding=(label,x,y,z,width=8.2)=>{
-    if(typeof document==='undefined')return;
+    if(typeof document==='undefined'||typeof document.createElement!=='function')return;
     const canvas=document.createElement('canvas');
     canvas.width=768;canvas.height=160; // fixed aspect, no squash
     const ctx=canvas.getContext('2d');

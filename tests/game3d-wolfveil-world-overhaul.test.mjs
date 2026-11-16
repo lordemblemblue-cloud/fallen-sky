@@ -33,9 +33,10 @@ test('Wolfveil overhaul builds 4 interconnected caves, individual grass blades, 
     if (prevPE === undefined) delete globalThis.ProgressEvent; else globalThis.ProgressEvent = prevPE;
   }
 
-  // 1. Terrain preserves exact (310+1)^2 vertex count while opening 4 cave mouths
+  // 1. Terrain keeps every surface triangle. Caves are a second layer under it,
+  // not holes punched through the one heightfield.
   assert.equal(village.geometry.attributes.position.count, 311 * 311);
-  assert.ok(village.geometry.index.count < 310 * 310 * 6, 'cave mouth cutouts open portals in terrain index buffer');
+  assert.equal(village.geometry.index.count, 310 * 310 * 6, 'surface heightfield stays intact over the caves');
 
   // 2. Four unique caves + central subterranean hub + 5 interconnecting tunnels
   assert.equal(WOLFVEIL_EXPLORABLE_CAVES.length, 4);
@@ -44,7 +45,15 @@ test('Wolfveil overhaul builds 4 interconnected caves, individual grass blades, 
   assert.ok(village.caveSystem.lightAnchorCount >= 20, 'caves and tunnels have interior lighting');
   assert.ok(village.walkableSurfaces.includes(village.caveSystem.floorMesh), 'cave stone floors registered for foot raycasts');
 
-  // Player underground inside each cave chamber resolves cave floor, never sky mountain top
+  // Player underground inside each cave chamber resolves cave floor, never sky mountain top.
+  // Outdoor feet stay on the hillside until E actually enters.
+  const first = WOLFVEIL_EXPLORABLE_CAVES[0];
+  assert.equal(village.playerPalaceGroundY({
+    x: first.chamber.x, y: first.chamber.y + 1.2, z: first.chamber.z + 70,
+  }), null);
+  village.caveSystem.interact({
+    x: first.threshold[0], y: first.threshold[1], z: first.threshold[2] + 70,
+  });
   for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
     const worldX = cave.chamber.x;
     const worldZ = cave.chamber.z + 70;
@@ -55,9 +64,9 @@ test('Wolfveil overhaul builds 4 interconnected caves, individual grass blades, 
   const hubFloor = village.playerPalaceGroundY({ x: WOLFVEIL_CAVE_HUB.x, y: WOLFVEIL_CAVE_HUB.y + 1, z: WOLFVEIL_CAVE_HUB.z + 70 });
   assert.ok(Number.isFinite(hubFloor), 'subterranean rotunda hub floor is walkable');
 
-  // Cave walls contain underground movement smoothly
-  const pos = { x: WOLFVEIL_CAVE_HUB.x + WOLFVEIL_CAVE_HUB.radius + 3, y: WOLFVEIL_CAVE_HUB.y + 0.5, z: WOLFVEIL_CAVE_HUB.z + 70 };
-  const prev = { x: WOLFVEIL_CAVE_HUB.x + WOLFVEIL_CAVE_HUB.radius - 2, y: WOLFVEIL_CAVE_HUB.y + 0.5, z: WOLFVEIL_CAVE_HUB.z + 70 };
+  // Cave walls contain underground movement. Step south, where no tunnel leaves the rotunda.
+  const pos = { x: WOLFVEIL_CAVE_HUB.x, y: WOLFVEIL_CAVE_HUB.y + 0.5, z: WOLFVEIL_CAVE_HUB.z - WOLFVEIL_CAVE_HUB.radius - 3 + 70 };
+  const prev = { x: WOLFVEIL_CAVE_HUB.x, y: WOLFVEIL_CAVE_HUB.y + 0.5, z: WOLFVEIL_CAVE_HUB.z - WOLFVEIL_CAVE_HUB.radius + 2 + 70 };
   assert.equal(village.resolveBuildingCollision(pos, 0.62, prev, { player: true }), true);
 
   // 3. Individual 3D swaying grass blades field

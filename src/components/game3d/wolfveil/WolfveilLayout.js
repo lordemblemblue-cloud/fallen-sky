@@ -134,13 +134,13 @@ export const WOLFVEIL_RIVER=Object.freeze({
   waterfallRange:[166,184],
 });
 export const WOLFVEIL_CAVES=Object.freeze([
-  {id:'jade_lantern_grotto',name:'Jade Lantern Grotto',entry:[-216,76],exit:[-138,196],
+  {id:'jade_lantern_grotto',name:'Jade Lantern Grotto',entry:[-360,-400],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
-  {id:'whispering_root_hollow',name:'Whispering Root Hollow',entry:[-312,148],exit:[-138,196],
+  {id:'whispering_root_hollow',name:'Whispering Root Hollow',entry:[-500,300],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
-  {id:'sunken_inkstone_cistern',name:'Sunken Inkstone Cistern',entry:[-82,312],exit:[-138,196],
+  {id:'sunken_inkstone_cistern',name:'Sunken Inkstone Cistern',entry:[-40,548],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
-  {id:'echoing_crystal_vault',name:'Echoing Crystal Vault',entry:[122,198],exit:[-138,196],
+  {id:'echoing_crystal_vault',name:'Echoing Crystal Vault',entry:[500,-36],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
 ]);
 export function wolfveilDistanceToRiver(x,z){

@@ -53,9 +53,9 @@ export const WOLFVEIL_CAVE_ENTRANCE_FRAMES = Object.freeze(
       yaw: Math.atan2(dx, dz),
       openingHalfWidth: 2.55,
       openingHeight: 5.35,
-      throatRadius: 2.72,
-      throatEndRadius: 1.1,
-      throatDepth: 8.4,
+      throatRadius: 2.55,
+      throatEndRadius: 2.4,
+      throatDepth: 2.05,
       boulders: BOULDERS,
       // Packed-earth apron: centre x/y/z plus radius.
       apron: Object.freeze([
