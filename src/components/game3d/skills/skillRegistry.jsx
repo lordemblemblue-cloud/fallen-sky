@@ -75,8 +75,8 @@ const SKILLS = [
     duration: 0,
     max_level: 10,
     scaling: { damage_pct: { min: 0.90, max: 1.20 } }, // per hit
-    icon: '⚔️',
-    description: 'Three consecutive sword strikes, each 0.5s apart.',
+    icon: '⚔️Ⅲ',
+    description: 'Three-hit sword combo: three consecutive slashes, each 0.5s apart. Requires a Damage/sword weapon.',
     animation_ref: 'sword_combo',
     vfx_ref: 'slash_combo',
   },
