@@ -7,6 +7,7 @@ import { ASTRAL_PADS,ASTRAL_BRIDGES,ASTRAL_PAD_RADIUS,ASTRAL_BRIDGE_HALF_WIDTH }
 import { getQuestState, subscribeQuests } from '../useQuestStore';
 import { AXE_FIRST_REGION } from '../axe/world/AXEFirstRegionLayout';
 import { getMapMarkers, getMapScale, getMapZone, getQuestNavigationTarget, projectMapPosition } from './worldMapData';
+import WolfveilUndergroundMapPanel from './WolfveilUndergroundMapPanel';
 import './AXEWorldMapOverlay.css';
 
 const FILTERS = [
@@ -29,6 +30,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const [focus,setFocus]=useState({x:500,y:500});
   const [flags,setFlags]=useState({quest:true,mob:true,cave:true,portal:true,npc:true});
   const [selected,setSelected]=useState(null);
+  const [view,setView]=useState('surface'); // surface chart or the Wolfveil cave network
   useEffect(()=>subscribeQuests(setQuests),[]);
   useEffect(()=>subscribeLunarCaveMapEnemies(setDungeonEnemies),[]);
   useEffect(()=>{
@@ -88,11 +90,20 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
     <section className="axe-world-map-dialog" role="dialog" aria-modal="true" aria-label="World map"
       onKeyDown={e=>e.stopPropagation()}>
       <header className="axe-world-map-heading">
-        <div><Map size={25}/><span><strong>WORLD MAP</strong><small>{regionText} · {getMapZone(region,position)}</small></span></div>
+        <div><Map size={25}/><span><strong>WORLD MAP</strong><small>{region==='wolfveil'&&view==='underground'
+          ? 'Wolfveil Underground · Cave Network'
+          : regionText+' · '+getMapZone(region,position)}</small></span></div>
+        {region==='wolfveil'&&<nav className="axe-world-map-views" aria-label="Map layer">
+          {[['surface','Surface'],['underground','Underground']].map(([id,label])=>
+            <button key={id} type="button" aria-pressed={view===id}
+              onClick={()=>{setView(id);setSelected(null);}}>{label}</button>)}
+        </nav>}
         <span className="axe-world-map-coordinates">X {Math.round(position.x)} · Z {Math.round(position.z)}</span>
         <button type="button" onClick={onClose} aria-label="Close world map"><X size={23}/></button>
       </header>
-      <div className="axe-world-map-main">
+      {region==='wolfveil'&&view==='underground'
+        ? <WolfveilUndergroundMapPanel position={position}/>
+        : <div className="axe-world-map-main">
         <nav className="axe-world-map-filters" aria-label="Map markers">
           <h3>SHOW ON MAP</h3>
           {FILTERS.map(({id,label,icon:Icon})=><button type="button" key={id}
@@ -235,9 +246,11 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
             <span><i className="axe-map-dot-point"/> Landmarks / travel</span>
           </div>
         </aside>
-      </div>
+      </div>}
       <footer className="axe-world-map-foot">
-        <span>{isDungeon?'North-up cave chart · corridors, rooms and living monsters update as you move.':'Silver-blue navigation trail follows your tracked quest when a valid objective location is known.'}</span>
+        <span>{region==='wolfveil'&&view==='underground'
+          ? 'Every chamber starts dimmed · explored rooms light up as you walk them.'
+          :isDungeon?'North-up cave chart · corridors, rooms and living monsters update as you move.':'Silver-blue navigation trail follows your tracked quest when a valid objective location is known.'}</span>
         <span>Click a marker for details · M / Esc to close</span>
       </footer>
     </section>

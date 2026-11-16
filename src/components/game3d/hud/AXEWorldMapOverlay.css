@@ -34,6 +34,14 @@
 .axe-world-map-heading small {display:block;color:#ccdfed;font-size:11px;margin-top:2px;}
 .axe-world-map-heading>button {display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid var(--map-gold);border-radius:8px;background:#1d3147;}
 .axe-world-map-coordinates {font:12px Georgia,serif;color:#dce8ee;white-space:nowrap;}
+.axe-world-map-views {display:flex;align-items:center;gap:6px;}
+.axe-world-map-views button {
+  padding:8px 14px;border:1px solid #c8dce041;border-radius:7px;
+  background:rgba(41,62,80,.55);font:600 12px Georgia,serif;letter-spacing:.08em;
+}
+.axe-world-map-views button[aria-pressed="true"] {
+  border-color:var(--map-gold);background:rgba(74,87,91,.62);color:#ffe9c4;
+}
 .axe-world-map-main {
   display:grid;grid-template-columns:minmax(160px,18%) minmax(0,1fr) minmax(210px,21%);
   flex:1;min-height:0;min-width:0;
