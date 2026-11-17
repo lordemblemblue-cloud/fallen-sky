@@ -29,7 +29,7 @@ export function getPreviewKillCount(realKills) {
   return isPreviewKillsActive() ? SPIRITUAL_PREVIEW_MAX_KILLS : realKills;
 }
 export function isAnyPreviewMaxActive() {
-  return systems.some(isPreviewMaxActive);
+  return systems.some(isPreviewMaxActive) || isPreviewKillsActive();
 }
 export function getPreviewMaxSnapshot() {
   return { ...Object.fromEntries(systems.map(id => [id, isPreviewMaxActive(id)])),
