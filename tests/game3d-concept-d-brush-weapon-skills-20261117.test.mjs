@@ -21,7 +21,7 @@ test('transparent artwork is ONLY the gray ink splash and angled gold edge',()=>
   // live game MUST show the user's literal first-image translucent raster.
   assert.doesNotMatch(css,/background:url\('\/game3d\/hud\/concept-d-ink-gold-only\.svg'\)/);
   assert.match(hud,/<img className="jade-concept-d-ornament"/);
-  assert.match(hud,/axe_original_left_splash_translucent\.webp/);
+  assert.match(hud,/axe_first_design_exact_splash_five_slots\.webp/);
   assert.match(css,/pointer-events:none/);
 });
 test('three roles are live owned-weapon circles, not artwork cutouts',()=>{
