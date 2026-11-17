@@ -14,9 +14,11 @@ import {isSoulCompanionMastered,soulInfusionItemBonusPct}
 import {IMBUE_TARGETS,imbuementTargetView,IMBUE_MATERIAL_RECIPE_STATUS}
   from './AXEImbuementPresentation.mjs';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
+import AXECompanionModelViewControl from './AXECompanionModelViewControl';
 import './AXECompanionImbuementPane.css';
 
 const PlayerModel=lazy(()=>import('../../equipment/EquipmentPreview3D'));
+const CompanionModel=lazy(()=>import('../../equipment/CompanionPreview3D'));
 const useLive=(subscribe,get)=>{
   const [state,setState]=useState(get);
   useEffect(()=>subscribe(setState),[subscribe]);
@@ -32,6 +34,7 @@ export default function AXECompanionImbuementPane({onNotice=()=>{}}) {
   const mounts=useLive(subscribeAXEMounts,getAXEMountState);
   useLive(subscribeAXEEquipmentInventory,getAXEEquipmentInventoryState);
   const [target,setTarget]=useState('hands');
+  const [previewOwner,setPreviewOwner]=useState('wardrobe');
   const [requirementsOpen,setRequirementsOpen]=useState(true);
   const selectedModel=getCompanionById(companion.activeCompanionId);
   const registered=pets.pets?.find(pet=>pet.instanceId===pets.activeRegisteredPetId)||null;
@@ -50,6 +53,7 @@ export default function AXECompanionImbuementPane({onNotice=()=>{}}) {
   const selectCompanion=id=>{
     const response=setActiveCompanion(id);
     if(response?.ok===false)onNotice(response.reason||'Unable to select companion');
+    else setPreviewOwner('companion');
   };
 
   return <div className="axe-app-layout axe-comp-style-layout axe-comp-imbue-layout"
@@ -70,12 +74,17 @@ export default function AXECompanionImbuementPane({onNotice=()=>{}}) {
           <span>Imbuement</span><small>Selected body points</small>
         </div>
         <div className="axe-comp-imbue-targets-and-model">
-          <div className="axe-comp-imbue-model" aria-label="Player model preview">
+          <div className="axe-comp-imbue-model" aria-label={previewOwner==='wardrobe'?'Player model preview':'Companion model preview'}>
+            <AXECompanionModelViewControl owner={previewOwner} onChange={setPreviewOwner}/>
             <Suspense fallback={<p className="axe-app-loading">Loading 3D preview…</p>}>
-              <div className="axe-comp-imbue-model-host"><PlayerModel/></div>
+              <div className="axe-comp-imbue-model-host">{previewOwner==='wardrobe'?<PlayerModel/>:
+                selectedModel?<CompanionModel key={selectedModel.id} companionId={selectedModel.id}/>:
+                  <p className="axe-app-loading">Select an active companion</p>}</div>
             </Suspense>
-            <div className="axe-comp-imbue-model-caption">Player Armor
-              <small>{selectedModel?.name||'Select a companion'} · Soul resonance</small>
+            <div className="axe-comp-imbue-model-caption">
+              {previewOwner==='wardrobe'?'Player Armor':selectedModel?.name||'Companion'}
+              <small>{previewOwner==='wardrobe'?'Equipped player armor · Soul resonance':
+                'Companion appearance preview · Infusion still applies to player gear'}</small>
             </div>
           </div>
           <div className="axe-comp-imbue-target-stack" role="group" aria-label="Imbuement slots">
