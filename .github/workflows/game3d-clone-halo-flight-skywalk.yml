@@ -1,0 +1,42 @@
+name: Game 3D Clone Halo Flight and Skywalk
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/player/AirWalkTraversal.mjs'
+      - 'src/components/game3d/player/haloWingFlightRules.mjs'
+      - 'src/components/game3d/player/playerHaloFlightClips.js'
+      - 'src/components/game3d/player/playerMovementFallbackClips.js'
+      - 'src/components/game3d/player/LunaDashboardPlayerController.jsx'
+      - 'src/components/game3d/combat/CombatResourceLedger.mjs'
+      - 'src/components/game3d/PlayerAngelWings.jsx'
+      - 'src/components/game3d/progression/hub/HaloSubTab.jsx'
+      - 'tests/game3d-halo-flight-skywalk-20261117.test.mjs'
+      - 'tests/game3d-air-walk-glide-backend-20261117.test.mjs'
+      - '.github/workflows/game3d-clone-halo-flight-skywalk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  halo-wing-flight:
+    name: Halo glide, stamina Skywalk, dash and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test new Halo flight plus existing Air Walk regressions
+        run: >
+          node --test
+          tests/game3d-halo-flight-skywalk-20261117.test.mjs
+          tests/game3d-air-walk-glide-backend-20261117.test.mjs
+      - name: Production Vite build
+        run: npm run build
