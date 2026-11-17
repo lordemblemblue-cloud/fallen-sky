@@ -101,7 +101,7 @@ export function getHaloState() {
     totalAttempts:   state.totalAttempts,
     totalSuccesses:  state.totalSuccesses,
     attemptCost:     HALO_ATTEMPT_COST,
-    canAttempt:      kills >= HALO_ATTEMPT_COST && level < MAX_HALO_LEVEL,
+    canAttempt:      !isPreviewKillsActive() && !isPreviewMaxActive('halo') && kills >= HALO_ATTEMPT_COST && level < MAX_HALO_LEVEL,
     successChance,                          // 0..1 for the NEXT attempt
     tier:            getTierForLevel(level),
     bonuses,
