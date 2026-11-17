@@ -51,7 +51,8 @@ export function classifyWolfveilBirdBone(name){
   const right=side?.[1]==='right'||shortSide?.[1]==='r';
   if(!(left||right))return null;
   if(!/(?:^|_)(?:wing|limb)(?:_|$)/.test(normalized))return null;
-  const segment=/(?:wing|limb)_(\d+)(?:_|$)/.exec(normalized);
+  const segment=/(?:wing|limb)_(\d+)(?:_|$)/.exec(normalized)||
+    /(?:wing|limb)_(?:left|right|l|r)_(\d+)(?:_|$)/.exec(normalized);
   const index=segment?Number(segment[1]):0;
   // 0 = shoulder; 1+ = wrist / outer flight feather chains.
   return {kind:'wing',sign:left?1:-1,segment:Math.min(3,index)};
