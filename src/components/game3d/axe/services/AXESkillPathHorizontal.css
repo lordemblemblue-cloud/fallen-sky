@@ -442,3 +442,164 @@
   font:11px Georgia,serif;white-space:nowrap;
 }
 .axe-hp-activate-bar:hover {border-color:#ffe3ac;background:rgba(94,71,43,.7);}
+
+/* Compact skill tree: the removed oversized Single/Bow feature panel and
+   duplicated root no longer consume the upper half of the book. Keep the
+   actual active/passive branches, weapon actions and earned-point controls. */
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-workspace {
+  gap:clamp(5px,.8vw,11px);
+  overflow:hidden;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-stage {
+  gap:0;
+  min-height:0;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-lanes-layout {
+  grid-template-columns:minmax(0,1fr) clamp(238px,28%,360px);
+  gap:clamp(7px,1vw,16px);
+  padding:0 0 5px;
+  align-items:stretch;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-fork-tree {
+  grid-template-columns:minmax(0,1fr);
+  min-height:0;
+  padding:7px 0;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-tree-branches {
+  gap:15px;
+  min-height:0;
+  height:100%;
+  padding:9px 0;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-tree-track {
+  padding-top:32px;
+  border-bottom:1px solid rgba(221,177,110,.17);
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-track-caption {
+  left:6px;
+  padding:3px 1px 5px;
+  border:0;
+  border-bottom:1px solid rgba(242,210,147,.45);
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  color:#f6d69c;
+  font:13px/1.2 Georgia,serif;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-track-passive .axe-hp-track-caption {
+  color:#ecd4b3;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-track-item {
+  flex-basis:clamp(116px,11.5vw,185px);
+  min-width:116px;
+  max-width:185px;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-node {
+  min-height:84px;
+  padding:7px 6px;
+  background:linear-gradient(120deg,rgba(28,42,57,.28),rgba(22,31,45,.22));
+  border:1px solid rgba(231,198,141,.36);
+  border-radius:8px;
+  box-shadow:none;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-node--selected {
+  border-color:rgba(255,219,153,.90);
+  background:linear-gradient(120deg,rgba(160,113,60,.18),rgba(28,42,57,.25));
+  box-shadow:inset 2px 0 #f7d399,0 0 10px #deb57425;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-node strong {
+  font:normal clamp(13px,1.12vw,17px)/1.2 Georgia,serif;
+  color:#ffedce;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-node small {
+  font:10px/1.2 Georgia,serif;
+  color:#d8c4a0;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info {
+  gap:4px;
+  padding:11px clamp(9px,.9vw,16px);
+  border:1px solid rgba(227,190,130,.62);
+  border-radius:9px;
+  background:linear-gradient(140deg,rgba(22,37,53,.40),rgba(11,25,40,.30));
+  box-shadow:none;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-identity {
+  padding:0 0 9px;
+  border-bottom:1px solid rgba(241,205,144,.47);
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-identity small {
+  display:block;
+  color:#d7bc8f;
+  font:10px/1.3 Georgia,serif;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-identity h2 {
+  margin:4px 0 6px;
+  color:#fbe5be;
+  font:normal clamp(19px,1.55vw,26px)/1.18 Georgia,serif;
+  overflow-wrap:anywhere;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-identity p {
+  margin:0 0 7px;
+  color:#e4d8c5;
+  font:11px/1.45 Georgia,serif;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-level {
+  display:inline-flex;
+  padding:3px 0;
+  color:#ffdd9c;
+  font:11px Georgia,serif;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-actions {
+  display:grid;
+  gap:7px;
+  margin-top:auto;
+  padding:7px 0 1px;
+  border-top:1px solid rgba(224,182,119,.43);
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-actions .axe-hp-activate-bar {
+  margin:0;
+  width:100%;
+  min-height:29px;
+  font-size:11px;
+  background:rgba(37,49,57,.38);
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-actions .axe-hp-upgrade-controls {
+  justify-content:space-between;
+  gap:6px;
+  flex-wrap:wrap;
+}
+.axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-actions .axe-hp-upgrade-controls button {
+  min-width:91px;
+  min-height:31px;
+  font-size:12px;
+  border-radius:7px;
+  box-shadow:none;
+}
+@media(max-width:1050px) {
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-lanes-layout {
+    grid-template-columns:minmax(0,1fr);
+    overflow-y:auto;
+  }
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-fork-tree {
+    min-height:230px;
+  }
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info {
+    display:flex;
+    flex-direction:column;
+    max-height:none;
+    min-height:195px;
+  }
+}
+@media(max-width:720px) {
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-tree-branches {
+    min-height:195px;
+  }
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-track-item {
+    flex-basis:115px;
+    min-width:115px;
+    max-width:115px;
+  }
+  .axe-clone-skill-root[data-skillbook-layout="simplified"] .axe-hp-info-identity h2 {
+    font-size:20px;
+  }
+}

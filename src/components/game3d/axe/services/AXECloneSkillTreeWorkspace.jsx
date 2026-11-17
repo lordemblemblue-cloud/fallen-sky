@@ -272,7 +272,8 @@ export default function AXECloneSkillTreeWorkspace({
   const selectedWeapon = ['damage','range','defense'].includes(category)
     ? getWeaponForSkillBookMode(ownedWeapons,category) : null;
   void selectedSkill;void onRemovePassive;
-  return <div className="axe-clone-skill-root" data-progression-panel={currentPage}>
+  return <div className="axe-clone-skill-root" data-progression-panel={currentPage}
+    data-skillbook-layout="simplified">
     <header className="axe-ct-header">
       <BookOpen size={34} aria-hidden="true"/>
       <div className="axe-ct-heading"><h1>Skill Book</h1>
@@ -282,7 +283,7 @@ export default function AXECloneSkillTreeWorkspace({
           <button key={id} type="button" aria-pressed={currentPage===id}
             onClick={()=>{setSelected(null);setSearch('');setFeedback('');onPageChange?.(id);}}>{label}</button>)}
       </nav>
-      <div className="axe-ct-header-right"><span>✧ &nbsp; Live skill mastery · Game 3D</span>
+      <div className="axe-ct-header-right">
         {onClose && <button className="axe-ct-close" type="button" aria-label="Close Skill Book"
           onClick={onClose}><X size={20}/></button>}</div>
     </header>
