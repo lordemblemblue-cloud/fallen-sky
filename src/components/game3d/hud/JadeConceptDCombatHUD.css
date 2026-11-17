@@ -17,7 +17,8 @@
   position:absolute;
   z-index:0;
   inset:-4% -1% -2% -1%;
-  background:url('/game3d/hud/concept-d-ink-gold-only.svg') center / 100% 100% no-repeat;
+  /* Exact supplied first-image pixels render as <img>, not a recreated SVG. */
+  background:none;
   opacity:.79;
   pointer-events:none;
   user-select:none;
@@ -436,4 +437,319 @@
 @media(prefers-reduced-motion:reduce) {
   .jade-hud .jade-combat-concept-d *,
   .jade-hud .jade-combat-concept-d *::before {transition:none!important;animation:none!important;}
+}
+
+
+
+/* OWNER 2026-11-17 — EXACT FIRST-IMAGE SPLASH, FIVE SKILLS.
+   Source artwork is the uploaded left reference, with baked controls
+   alpha-matted out, widened 25%, and served as a true translucent image.
+   This block only sizes/positions LIVE weapons, boxes, keys and actions.
+   No splash outline is drawn in CSS or SVG. */
+.jade-hud .jade-combat-concept-d {
+  right:clamp(6px,1.1vw,20px);
+  bottom:clamp(8px,1.6vh,20px);
+  width:clamp(425px,36vw,642px);
+  height:clamp(234px,31vh,335px);
+  max-width:calc(100vw - 12px);
+  max-height:calc(100vh - 24px);
+  overflow:visible;
+  isolation:isolate;
+}
+.jade-hud .jade-combat-concept-d > img.jade-concept-d-ornament {
+  display:block;
+  position:absolute;
+  z-index:0;
+  inset:0;
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:fill;
+  opacity:.87;
+  background:none;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+/* Exactly three live role circles ABOVE the five skill boxes, bracketed by
+   the real weapon-switch buttons. No weapon UI hangs off the screen right. */
+.jade-hud .jade-combat-concept-d > .jade-weapon-position {
+  position:absolute;
+  top:8%;
+  left:13%;
+  right:auto;
+  bottom:auto;
+  width:74%;
+  height:38%;
+  margin:0;
+  padding:0;
+  filter:none;
+  z-index:4;
+  pointer-events:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-weapon-template {
+  position:relative;
+  width:100%;
+  height:100%;
+  display:block;
+  pointer-events:auto;
+  touch-action:pan-y;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle {
+  position:relative;
+  left:auto;
+  bottom:auto;
+  right:auto;
+  top:auto;
+  width:100%;
+  height:100%;
+  display:grid;
+  grid-template-columns:clamp(26px,3vw,37px) minmax(0,1fr) clamp(26px,3vw,37px);
+  align-items:center;
+  justify-content:stretch;
+  gap:clamp(2px,.45vw,7px);
+  pointer-events:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-rail {
+  position:relative;
+  width:100%;
+  min-width:0;
+  height:100%;
+  min-height:0;
+  flex:none;
+  display:flex;
+  align-items:center;
+  justify-content:space-evenly;
+  flex-direction:row;
+  gap:clamp(1px,.35vw,6px);
+  pointer-events:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-role {
+  flex:1 1 0;
+  min-width:0;
+  max-height:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-weapon-circle {
+  width:clamp(43px,4.25vw,68px);
+  height:clamp(43px,4.25vw,68px);
+  max-width:100%;
+  flex:0 0 auto;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-role[data-active="true"] .jade-concept-d-weapon-circle {
+  transform:scale(1.13);
+  border-color:#f9d895;
+  color:#fff1cb;
+  box-shadow:0 0 13px #ffe5a5bb,inset 0 0 13px #e8ad5c6b;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button {
+  position:relative;
+  width:100%;
+  height:clamp(28px,3vw,38px);
+  display:grid;
+  place-items:center;
+  border:1.5px solid #e7bb6e;
+  border-radius:50%;
+  background:rgba(13,23,30,.79);
+  color:#ffe3a4;
+  box-shadow:0 0 9px #e4aa655c,inset 0 0 8px #0008;
+  padding:0;
+  pointer-events:auto;
+  cursor:pointer;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button:hover,
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button:focus-visible {
+  outline:2px solid #fff2c7;
+  outline-offset:2px;
+  background:rgba(78,60,35,.94);
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-assign {
+  top:auto;
+  left:auto;
+  right:0;
+  bottom:4%;
+  width:clamp(14px,1.1vw,19px);
+  height:clamp(14px,1.1vw,19px);
+  z-index:5;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-favorite {
+  position:absolute;
+  z-index:5;
+  top:4%;
+  right:0;
+  display:grid;
+  place-items:center;
+  width:clamp(19px,1.6vw,24px);
+  height:clamp(19px,1.6vw,24px);
+  border:1px solid #d7b375aa;
+  border-radius:50%;
+  background:rgba(7,17,26,.78);
+  color:#f5dca9;
+  pointer-events:auto;
+  cursor:pointer;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-favorite:hover,
+.jade-hud .jade-combat-concept-d .jade-concept-d-favorite:focus-visible {
+  outline:2px solid #ffeec0;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-q-key {display:none;}
+.jade-hud .jade-combat-concept-d .jade-weapon-chooser {
+  top:auto;
+  bottom:calc(100% + 5px);
+  left:auto;
+  right:0;
+  width:min(235px,72vw);
+  max-height:min(40vh,300px);
+  overflow-y:auto;
+  z-index:9;
+}
+.jade-hud .jade-combat-concept-d .jade-weapon-notice {
+  top:auto;
+  bottom:calc(100% + 6px);
+  right:0;
+  left:auto;
+}
+/* Five real skill frames placed ON the photograph's broad lower brush sweep.
+   Slot 6–0 remains available with the existing expandable secondary bank. */
+.jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+  position:absolute;
+  top:56%;
+  bottom:auto;
+  left:9%;
+  right:auto;
+  width:82%;
+  height:24%;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:1fr;
+  justify-items:center;
+  align-items:center;
+  column-gap:clamp(2px,.5vw,9px);
+  row-gap:clamp(4px,.6vh,8px);
+  padding:0;
+  pointer-events:none;
+  z-index:3;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+  width:clamp(37px,3.6vw,65px);
+  height:clamp(37px,3.6vw,65px);
+  max-width:100%;
+  border:1.5px solid rgba(241,208,143,.90);
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(30,35,40,.68),rgba(9,17,26,.88));
+  box-shadow:inset 0 0 11px #000c,0 0 7px #ffd08249;
+  backdrop-filter:blur(7px);
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-face {
+  display:grid;
+  place-items:center;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-glyph {
+  color:#f3eadb;
+  font:700 clamp(15px,1.6vw,26px)/1 Georgia,serif;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-key {
+  top:calc(100% + 3px);
+  left:50%;
+  min-width:clamp(18px,1.6vw,26px);
+  height:clamp(17px,1.6vw,23px);
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-more-skills {
+  bottom:calc(100% + 8px);
+  left:0;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+  top:34%;
+  height:46%;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] .jade-skill-slot--buff {
+  display:grid;
+  grid-row:1;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] .jade-skill-slot--combat {grid-row:2;}
+@media(max-width:1100px) {
+  .jade-hud .jade-combat-concept-d {
+    width:clamp(390px,43vw,515px);
+    height:clamp(221px,31vh,285px);
+    right:7px;
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-weapon-circle {
+    width:clamp(39px,4.4vw,53px);
+    height:clamp(39px,4.4vw,53px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(34px,3.8vw,53px);
+    height:clamp(34px,3.8vw,53px);
+  }
+}
+@media(max-width:680px) {
+  .jade-hud .jade-combat-concept-d {
+    width:min(95vw,460px);
+    height:clamp(171px,28vh,242px);
+    bottom:clamp(86px,16vh,135px);
+    right:3px;
+  }
+  .jade-hud .jade-combat-concept-d > .jade-weapon-position {
+    top:8%;
+    left:10%;
+    width:80%;
+    height:37%;
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-cycle {
+    grid-template-columns:clamp(20px,6vw,29px) minmax(0,1fr) clamp(20px,6vw,29px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button {
+    height:clamp(22px,6vw,28px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button svg {width:14px;height:14px;}
+  .jade-hud .jade-combat-concept-d .jade-concept-d-weapon-circle {
+    width:clamp(27px,7.1vw,43px);
+    height:clamp(27px,7.1vw,43px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-assign {
+    width:15px;
+    height:15px;
+  }
+  .jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+    left:8%;
+    width:84%;
+    top:56%;
+    bottom:auto;
+    height:25%;
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(24px,6vw,39px);
+    height:clamp(24px,6vw,39px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-glyph {font-size:clamp(12px,4vw,18px);}
+  .jade-hud .jade-combat-concept-d .jade-concept-d-favorite {
+    width:18px;
+    height:18px;
+    top:2%;
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-favorite svg {width:11px;height:11px;}
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+    top:34%;
+    height:46%;
+  }
+}
+@media(max-height:510px) and (orientation:landscape) {
+  .jade-hud .jade-combat-concept-d {
+    width:min(48vw,410px);
+    height:min(39vh,181px);
+    bottom:max(67px,var(--game3d-safe-bottom,0px));
+    right:max(3px,var(--game3d-safe-right,0px));
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-weapon-circle {
+    width:clamp(27px,3vw,36px);
+    height:clamp(27px,3vw,36px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(23px,3.3vw,35px);
+    height:clamp(23px,3.3vw,35px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-concept-d-favorite {display:none;}
 }
