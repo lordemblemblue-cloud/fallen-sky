@@ -1,0 +1,253 @@
+/* Companion Mastery only: narrow owned-mount circles, true selected 3D model,
+   explanatory combat paths and original full right-hand inspector. */
+.axe-mastery-rebuild.axe-mastery-rebuild--gallery {
+  display:grid;
+  grid-template-columns:72px minmax(215px,.88fr) minmax(265px,1.15fr) minmax(240px,1fr);
+  gap:9px;
+  padding:9px;
+  min-height:0;
+  min-width:0;
+  overflow:hidden;
+}
+.axe-mastery-rebuild--gallery>.axe-mastery-avatar-rail,
+.axe-mastery-rebuild--gallery>.axe-mastery-portrait {
+  min-width:0;
+  min-height:0;
+  color:#eee3d3;
+  background:linear-gradient(137deg,rgba(44,68,84,.68),rgba(17,32,45,.72));
+  border:1px solid rgba(230,202,151,.54);
+  border-radius:12px;
+  box-shadow:inset 0 0 15px rgba(235,222,183,.07);
+  backdrop-filter:blur(12px) saturate(108%);
+}
+.axe-mastery-rebuild--gallery>.axe-mastery-avatar-rail {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:10px 5px;
+  gap:11px;
+  overflow:hidden;
+}
+.axe-mastery-rail-heading,.axe-mastery-rail-count {
+  font:10px Georgia,serif;
+  color:#e7cda2;
+  text-align:center;
+}
+.axe-mastery-avatar-scroll {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  flex:1 1 auto;
+  min-height:0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.axe-mastery-avatar {
+  position:relative;
+  width:50px;
+  height:50px;
+  flex:0 0 50px;
+  display:grid;
+  place-items:center;
+  border:1px solid #d5bd9188;
+  border-radius:50%;
+  color:#f6d9a7;
+  background:linear-gradient(145deg,#344959,#172839);
+  cursor:pointer;
+}
+.axe-mastery-avatar[aria-pressed=true] {
+  border:2px solid #ffe4ac;
+  box-shadow:0 0 0 3px #e6c38530,inset 0 0 14px #edc28a22;
+}
+.axe-mastery-avatar:focus-visible {
+  outline:2px solid #ffe4ac;
+  outline-offset:3px;
+}
+.axe-mastery-avatar-active {
+  position:absolute;
+  right:-2px;
+  bottom:-3px;
+  display:grid;
+  place-items:center;
+  width:18px;
+  height:18px;
+  border:1px solid #efdaac;
+  border-radius:50%;
+  background:#235b49;
+  color:#d9f4de;
+}
+.axe-mastery-rail-count {margin-top:auto;color:#d6ccb8;}
+.axe-mastery-rebuild--gallery>.axe-mastery-portrait {
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.axe-mastery-portrait-head {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:12px;
+  border-bottom:1px solid #e2c08b54;
+}
+.axe-mastery-portrait-head small {
+  font:9px Georgia,serif;
+  letter-spacing:.12em;
+  color:#e3cb9f;
+}
+.axe-mastery-portrait-head strong {
+  font:19px Georgia,serif;
+  color:#ffe2b3;
+  overflow-wrap:anywhere;
+}
+.axe-mastery-portrait-stage {
+  position:relative;
+  flex:1 1 auto;
+  min-height:185px;
+  overflow:hidden;
+  isolation:isolate;
+}
+.axe-mastery-model-empty {
+  padding:25px 14px;
+  text-align:center;
+  font:12px/1.5 Georgia,serif;
+  color:#d2d9df;
+}
+.axe-mastery-portrait-foot {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  flex:0 0 auto;
+  padding:10px;
+  border-top:1px solid #e2c08b54;
+  background:#10253780;
+}
+.axe-mastery-growth-compact {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  gap:5px;
+  color:#cbd7dc;
+  font:11px Georgia,serif;
+}
+.axe-mastery-growth-compact strong {color:#ffdaa2;}
+.axe-mastery-portrait-foot>small {
+  font:10px/1.4 Georgia,serif;
+  color:#d5d9d1;
+}
+.axe-mastery-portrait-foot>.axe-mastery-return {margin:0;}
+.axe-mastery-rebuild--gallery>.axe-mastery-center,
+.axe-mastery-rebuild--gallery>.axe-mastery-inspector {
+  min-height:0;
+  padding:13px;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.axe-mastery-rebuild--gallery .axe-mastery-hero h2 {
+  font-size:clamp(19px,1.5vw,25px);
+}
+.axe-mastery-rebuild--gallery .axe-mastery-hero p {
+  margin:7px 0;
+  line-height:1.48;
+}
+.axe-mastery-rebuild--gallery .axe-mastery-role-grid {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:14px 0;
+}
+.axe-mastery-rebuild--gallery .axe-mastery-role-card {
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  min-height:110px;
+  gap:10px;
+  padding:10px;
+  text-align:left;
+}
+.axe-mastery-rebuild--gallery .axe-mastery-role-icon {
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+}
+.axe-mastery-role-copy {
+  display:flex;
+  flex:1 1 auto;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.axe-mastery-role-copy>strong {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:baseline;
+  gap:4px;
+}
+.axe-mastery-role-copy>strong small {
+  font:11px Georgia,serif;
+  color:#f0cfa5;
+}
+.axe-mastery-role-description {
+  font:11px/1.35 Georgia,serif;
+  color:#d1dce2;
+}
+.axe-mastery-role-copy>.axe-collection-progress {
+  margin:0;
+  width:100%;
+}
+.axe-mastery-role-copy>small {
+  font:10px/1.4 Georgia,serif;
+  color:#d2d5ca;
+}
+.axe-mastery-active-pill {
+  font:9px Georgia,serif;
+  color:#bdf0d4;
+  background:#24564288;
+  border:1px solid #84c4a17a;
+  border-radius:12px;
+  padding:4px 6px;
+  align-self:flex-start;
+}
+.axe-mastery-rebuild--gallery .axe-mastery-rules {padding:10px 2px;}
+.axe-mastery-rebuild--gallery .axe-mastery-rules h3 {margin:3px 0 8px;}
+.axe-mastery-rebuild--gallery .axe-mastery-rules p {
+  font-size:11px;
+  line-height:1.55;
+}
+@media(max-width:1180px) {
+  .axe-mastery-rebuild.axe-mastery-rebuild--gallery {
+    grid-template-columns:62px minmax(180px,.85fr) minmax(250px,1.15fr) minmax(220px,1fr);
+    gap:6px;
+    padding:6px;
+  }
+  .axe-mastery-avatar {width:45px;height:45px;flex-basis:45px;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-center,
+  .axe-mastery-rebuild--gallery>.axe-mastery-inspector {padding:10px;}
+}
+@media(max-width:960px) {
+  .axe-mastery-rebuild.axe-mastery-rebuild--gallery {
+    grid-template-columns:62px minmax(0,1fr) minmax(0,1.15fr);
+    grid-template-rows:minmax(330px,auto) auto;
+    overflow-y:auto;
+  }
+  .axe-mastery-rebuild--gallery>.axe-mastery-avatar-rail {grid-column:1;grid-row:1/3;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-portrait {grid-column:2;grid-row:1;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-center {grid-column:3;grid-row:1;min-height:330px;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-inspector {grid-column:2/4;grid-row:2;min-height:260px;}
+}
+@media(max-width:650px) {
+  .axe-mastery-rebuild.axe-mastery-rebuild--gallery {
+    grid-template-columns:56px minmax(0,1fr);
+    grid-template-rows:330px auto auto;
+    overflow-y:auto;
+  }
+  .axe-mastery-rebuild--gallery>.axe-mastery-avatar-rail {grid-column:1;grid-row:1/4;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-portrait {grid-column:2;grid-row:1;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-center {grid-column:2;grid-row:2;min-height:0;}
+  .axe-mastery-rebuild--gallery>.axe-mastery-inspector {grid-column:2;grid-row:3;min-height:0;}
+  .axe-mastery-rebuild--gallery .axe-mastery-role-card {min-height:100px;}
+  .axe-mastery-rebuild--gallery .axe-mastery-role-icon {width:34px;height:34px;flex-basis:34px;}
+  .axe-mastery-rebuild--gallery .axe-mastery-active-pill {font-size:8px;}
+}
