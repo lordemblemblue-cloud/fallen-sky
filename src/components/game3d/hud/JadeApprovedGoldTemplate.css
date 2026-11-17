@@ -321,8 +321,8 @@
   right:auto;
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will {
-  right:9%;
   left:auto;
+  right:9%;
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row::before {
   content:'';
