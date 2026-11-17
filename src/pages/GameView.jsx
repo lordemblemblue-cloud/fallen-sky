@@ -80,6 +80,7 @@ import SlashEffectLayer from '../components/game3d/SlashEffect';
 import PauseMenu from '../components/game3d/PauseMenu';
 import WindRunEffect from '../components/game3d/WindRunEffect';
 import SkillActivationToastListener from '../components/game3d/SkillActivationToastListener';
+import Game3DAreaNotice from '../components/game3d/Game3DAreaNotice';
 import GameStateProvider from '../components/game3d/state/GameStateProvider';
 import CombatMusicTrigger from '../components/game3d/CombatMusicTrigger';
 import DeathFlowController from '../components/game3d/death/DeathFlowController';
@@ -804,6 +805,8 @@ export default function GameView() {
 
       {/* Toast feedback when self-cast skills (Shield, Focus, Haste, etc.) activate */}
       <SkillActivationToastListener />
+      {/* Names the Wolfveil area the player has just walked into */}
+      {phase==='world' && <Game3DAreaNotice />}
 
       {/* Combat activity cannot start music or keep combat timers alive
           while the world remains mounted behind the character login menu. */}
