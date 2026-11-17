@@ -3,6 +3,16 @@ import { createHailLayer } from './weather/hailLayer';
 import { WORLD_SKY_RADIUS, WORLD_STAR_RADIUS, WORLD_CELESTIAL_RADIUS, WORLD_STAR_SIZE_SCALE, WORLD_CELESTIAL_SIZE_SCALE, worldSkyAnchor } from './sky/worldSkyCoverage.mjs';
 import { CLIMATE_PROFILES, CLIMATE_LIST, MONTH_LABELS, moonPhaseLabel } from './worldClimateData';
 
+function readGraphicsFogScale() {
+  const scale = Number(globalThis.__gw3dGraphicsBudget?.fogScale);
+  return Number.isFinite(scale) && scale > 0 ? scale : 1;
+}
+function scaledParticleCount(total) {
+  const scale = Number(globalThis.__gw3dGraphicsBudget?.particleScale);
+  const ratio = Number.isFinite(scale) ? Math.min(1, Math.max(0.15, scale)) : 1;
+  return Math.max(1, Math.floor(total * ratio));
+}
+
 /**
  * WorldEnvironmentSystem
  *
@@ -776,7 +786,7 @@ export function createWorldEnvironmentSystem({
     const baseFog = pal.fog.clone().lerp(new THREE.Color(season.fogTint), 0.35);
     baseFog.multiplyScalar(mod.fogMul);
     fog.color.copy(baseFog);
-    const far = 260 * mod.fogFar * (state.eclipse ? 0.6 : 1);
+    const far = 260 * mod.fogFar * (state.eclipse ? 0.6 : 1) * readGraphicsFogScale();
     fog.far = far;
     fog.near = Math.min(far * 0.35, 90);
 
@@ -848,8 +858,10 @@ export function createWorldEnvironmentSystem({
     const cx = camera.position.x, cz = camera.position.z;
 
     if (showRain > 0.02) {
+      const rainDraw = scaledParticleCount(RAIN_COUNT);
       rain.visible = true; rain.position.set(cx, 0, cz);
-      for (let i = 0; i < RAIN_COUNT; i++) {
+      rainGeo.setDrawRange(0, rainDraw * 2);
+      for (let i = 0; i < rainDraw; i++) {
         let y = rainPositions[i * 6 + 1];
         y -= rainVel[i] * dt;
         if (y < -4) {
@@ -866,8 +878,10 @@ export function createWorldEnvironmentSystem({
     } else rain.visible = false;
 
     if (showSnow > 0.02) {
+      const snowDraw = scaledParticleCount(SNOW_COUNT);
       snow.visible = true; snow.position.set(cx, 0, cz);
-      for (let i = 0; i < SNOW_COUNT; i++) {
+      snowGeo.setDrawRange(0, snowDraw);
+      for (let i = 0; i < snowDraw; i++) {
         let y = snowPos[i * 3 + 1];
         y -= snowVel[i] * dt;
         snowDrift[i] += dt * 0.8;
