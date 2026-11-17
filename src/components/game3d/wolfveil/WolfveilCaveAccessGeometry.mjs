@@ -16,7 +16,7 @@ const caveById=new Map(WOLFVEIL_EXPLORABLE_CAVES.map(c=>[c.id,c]));
 // pure tests with a triangle collector to verify no entrance floor gaps.
 export function appendWolfveilCaveAccessFloor(floorTris){
   if(typeof floorTris?.quad!=='function')throw new TypeError('Cave floor triangle collector required');
-  const stats={approaches:0,surfaceRoofIntact:true,walkQuads:0,shoulderQuads:0};
+  const stats={approaches:0,surfaceRoofIntact:true,walkQuads:0,shoulderQuads:0,curbQuads:0,mouthQuads:0};
   const at=(a,b,t)=>({x:mix(a.x,b.x,t),z:mix(a.z,b.z,t),
     y:mix(a.y,b.y,t)});
   const createEdge=(p,tangent,halfWidth,stepLength,blendToThreshold=false)=>{
@@ -24,11 +24,49 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     const nx=-tangent.z/length,nz=tangent.x/length;
     const pos=(side)=>{
       const x=p.x+nx*side*halfWidth,z=p.z+nz*side*halfWidth;
-      const terrainY=wolfveilHeight(x,z);
-      const anchorWeight=blendToThreshold?clamp(stepLength/5,0,1):1;
-      return [x,mix(p.y,terrainY,anchorWeight)+.10,z];
+      // The walk uses the graded path height. Raw hillside cliffs are not
+      // the floor, or the trail stops being something you can walk.
+      return [x,p.y+0.16,z];
     };
     return {left:pos(1),right:pos(-1)};
+  };
+  // Dressed ashlar. The center is the walk; the shoulders are the darker
+  // courses a mason would lay so the path reads as built, not painted on.
+  const mix3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
+  const layPavement=(e0,e1,v0,v1)=>{
+    const bands=[[0,.18],[.18,.82],[.82,1]];
+    const colors=[[.46,.43,.38],COLOR_CENTER,[.46,.43,.38]];
+    for(let b=0;b<3;b++){
+      const [s0,s1]=bands[b];
+      const a=mix3(e0.left,e0.right,s0);
+      const d=mix3(e1.left,e1.right,s0);
+      const c=mix3(e1.left,e1.right,s1);
+      const bp=mix3(e0.left,e0.right,s1);
+      floorTris.quad(a,d,c,bp,colors[b],[
+        [s0*4.2,v0],[s0*4.2,v1],[s1*4.2,v1],[s1*4.2,v0],
+      ]);
+      stats.walkQuads++;
+    }
+    const lip=(edge,side)=>{
+      const src=edge[side];
+      const other=edge[side==='left'?'right':'left'];
+      let ox=src[0]-other[0],oz=src[2]-other[2];
+      const len=Math.hypot(ox,oz)||1;
+      ox/=len;oz/=len;
+      return [src[0]+ox*.34,src[1]+.2,src[2]+oz*.34];
+    };
+    for(const side of ['left','right']){
+      const s0=e0[side],s1=e1[side],o0=lip(e0,side),o1=lip(e1,side);
+      const raised=[s0[0],s0[1]+.04,s0[2]],raised1=[s1[0],s1[1]+.04,s1[2]];
+      floorTris.quad(raised,raised1,o1,o0,[.36,.34,.31],[
+        [0,v0],[0,v1],[.4,v1],[.4,v0],
+      ]);
+      const drop0=[o0[0],o0[1]-.2,o0[2]],drop1=[o1[0],o1[1]-.2,o1[2]];
+      floorTris.quad(o0,o1,drop1,drop0,[.32,.30,.28],[
+        [0,v0],[0,v1],[.2,v1],[.2,v0],
+      ]);
+      stats.curbQuads+=2;
+    }
   };
   // One continuous rough-stone track from each authored valley trail to the
   // existing stone arch. Surfaces are draped over the real hillside; the
@@ -57,12 +95,11 @@ export function appendWolfveilCaveAccessFloor(floorTris){
           k===pts.length-2?remaining:Infinity,k===pts.length-2);
         const e1=createEdge(p1,tangent,w1,
           k===pts.length-2?remaining1:Infinity,k===pts.length-2);
-        // Left forward -> right forward -> right backward -> left backward:
-        // winding matches upward-facing ground for +Z, with DoubleSide
-        // material kept for arbitrary turns/terrain as with existing floors.
-        floorTris.quad(e0.left,e1.left,e1.right,e0.right,COLOR_CENTER,
-          [[0,travelled],[0,travelled+distance/steps],[3,travelled+distance/steps],[3,travelled]]);
-        stats.walkQuads++;
+        // Three laid courses: dark rock shoulders and a lighter flagstone
+        // walk. UVs are in metres so the ashlar texture stays stone-sized
+        // when the path widens at the cave.
+        const v0=travelled*0.92,v1=(travelled+distance/steps)*0.92;
+        layPavement(e0,e1,v0,v1);
       }
       travelled+=distance;
     }
@@ -70,18 +107,46 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     // elbows cannot open triangle gaps where separately drawn strips meet.
     for(let i=1;i<pts.length-1;i++){
       const p=pts[i],radius=2.25,slices=12;
-      const c=[p.x,wolfveilHeight(p.x,p.z)+.09,p.z];
+      const c=[p.x,p.y+.09,p.z];
       for(let k=0;k<slices;k++){
         const ang0=2*Math.PI*k/slices,ang1=2*Math.PI*(k+1)/slices;
         const ring=a=>{
           const x=p.x+radius*Math.cos(a),z=p.z+radius*Math.sin(a);
-          return [x,wolfveilHeight(x,z)+.08,z];
+          return [x,p.y+.08,z];
         };
         // Fan half-strip with degenerate radial edges: supports an elbow.
         const b0=ring(ang0),b1=ring(ang1);
         floorTris.tri(c,b1,b0,COLOR_CENTER);
         stats.walkQuads++;
       }
+    }
+
+    // The authored trail ends at the threshold. Continue the same flagstone
+    // to the arch so the walk actually arrives at the cave mouth.
+    const cave=caveById.get(approach.caveId);
+    const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
+    const nx=-dz,nz=dx;
+    const end=pts[pts.length-1];
+    const spanLen=Math.hypot(mx-end.x,mz-end.z);
+    const mouthSteps=Math.max(2,Math.ceil(spanLen/1.1));
+    let prevEdge=null,along=0;
+    for(let i=0;i<=mouthSteps;i++){
+      const t=i/mouthSteps;
+      const x=end.x+(mx-end.x)*t,z=end.z+(mz-end.z)*t;
+      const rise=wolfveilHeight(mx,mz)-end.y;
+      const capped=Math.sign(rise)*Math.min(Math.abs(rise),spanLen*0.3);
+      const y=end.y+capped*t;
+      const half=2.35;
+      const edge={
+        left:[x+nx*half,y,z+nz*half],
+        right:[x-nx*half,y,z-nz*half],
+      };
+      if(prevEdge){
+        layPavement(prevEdge,edge,along*.92,(along+spanLen/mouthSteps)*.92);
+        stats.mouthQuads++;
+      }
+      prevEdge=edge;
+      along+=spanLen/mouthSteps;
     }
 
     // The newer Wolfveil main restores ALL surface terrain triangles. Do

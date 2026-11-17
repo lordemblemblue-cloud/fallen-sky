@@ -212,6 +212,7 @@ import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
 import { clearLunarCaveMapEnemies, publishLunarCaveMapEnemies } from './dungeons/LunarCaveMapStore.mjs';
+import { clearWolfveilLiveMap, publishWolfveilLiveMap } from './hud/WolfveilLiveMapStore.mjs';
 
 const showCombatNotice = (text) => {
   if (!text || typeof window === 'undefined') return;
@@ -1275,7 +1276,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Enemy spawns — mutant model patrolling between waypoints
     const enemies = [];
     let lastDungeonMapSync=0;
+    let lastWolfveilMapSync=0;
     if(region===LUNAR_CAVE_REGION||region===ASTRAL_DUNGEON_REGION) clearLunarCaveMapEnemies();
+    if(region==='wolfveil') clearWolfveilLiveMap();
     // Keep all ordinary enemy AI in the existing GameWorld3D loop. Do not
     // update the separate legacy EnemyAISystem as a second, competing AI.
     const enemyTelegraphs = createEnemyAttackTelegraphs(scene);
@@ -4597,6 +4600,25 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           tier:e.tier,name:e.bossName||'Dungeon monster',
         })));
       }
+      if(region==='wolfveil' && performance.now()-lastWolfveilMapSync>=220){
+        lastWolfveilMapSync=performance.now();
+        const liveOf = (actor, extra) => actor?.group ? {
+          id: actor.id, name: extra.name, x: actor.group.position.x,
+          y: actor.group.position.y, z: actor.group.position.z,
+          level: actor.level ?? null, tier: extra.tier, alive: actor.alive !== false && !actor.dying,
+        } : null;
+        publishWolfveilLiveMap({
+          enemies: [
+            ...enemies.filter(e => e.alive && !e.dying && e.group).map(e => liveOf(e, {
+              name: e.bossName || (e.tier ? e.tier + ' enemy' : 'Enemy'), tier: e.tier || 'normal',
+            })),
+            ...bossEntities.filter(b => b && b.alive !== false && !b.dying && b.group).map(b => liveOf(b, {
+              name: b.encounterName || b.bossName || 'Boss', tier: 'boss',
+            })),
+          ].filter(Boolean).filter((entry, index, list) => list.findIndex(other => other.id === entry.id) === index),
+          npcs: questNPCs.filter(n => n.group).map(n => liveOf(n, { name: n.name || 'Quest NPC', tier: 'npc' })),
+        });
+      }
       if (uiFrameCounter % 3 === 0) {
         const w = container.clientWidth;
         const h = container.clientHeight;
@@ -4881,6 +4903,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       worldSoundscape.dispose();
       gameEventSounds.dispose();
       if(region===LUNAR_CAVE_REGION||region===ASTRAL_DUNGEON_REGION) clearLunarCaveMapEnemies();
+      clearWolfveilLiveMap();
       window.removeEventListener('echoGestureObserved', onEchoGestureObserved);
       window.removeEventListener('axeChargedFinisherWindow', onChargedFinisherWindow);
       chargedKeys.clear();
@@ -5016,6 +5039,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.__gw3dLegacyRemoteManager = null;
       if (window.__gw3dEnemies === enemies) window.__gw3dEnemies = null;
       if (window.__gw3dBosses === bossEntities) window.__gw3dBosses = null;
+      clearWolfveilLiveMap();
       window.dispatchEvent(new CustomEvent('gw3dSceneTeardown'));
     };
   }, [avatarConfig.model_url]);
