@@ -1514,3 +1514,167 @@
   .jade-hud .jade-stamina-popup,
   .jade-hud .jade-status-bars--refined .jade-status-fill {transition:none;}
 }
+
+
+/* Live Game 3D — screenshot-cut translucent PNG HUD artwork (2026-11-16).
+ * These are not CSS re-drawings of the approved gold trim. The approved
+ * screenshot's metalwork is stored separately as three optimized, transparent
+ * raster pictures. All numbers, fills, layout semantics and combat state remain
+ * real DOM driven by the HP, Will and EXP stores. */
+.jade-hud .jade-status-bars--refined .jade-status-row {
+  position:relative;
+  isolation:isolate;
+  padding-bottom:clamp(17px,2.6vh,25px);
+  overflow:visible;
+}
+.jade-hud .jade-status-bars--refined .jade-status-header {
+  position:relative;
+  z-index:3;
+}
+.jade-hud .jade-status-bars--refined .jade-status-track {
+  position:relative;
+  z-index:2;
+  height:7px;
+  background:linear-gradient(180deg,rgba(3,17,28,.72),rgba(10,25,36,.48));
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.64),0 0 5px rgba(240,191,107,.16);
+  overflow:hidden;
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill {
+  position:relative;
+  height:100%;
+  overflow:hidden;
+  box-shadow:0 0 9px currentColor;
+  transition:width .32s cubic-bezier(.2,.65,.3,1);
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.12) 44%,
+    rgba(255,255,255,.33) 50%,rgba(255,255,255,.10) 56%,transparent 75%);
+  transform:translateX(-130%);
+  animation:jade-hud-vitals-sweep 4.9s ease-in-out infinite;
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill--hp {
+  color:#ef435e;
+  background:linear-gradient(90deg,#8e1631,#df3553 57%,#ff6e78);
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill--will {
+  color:#39d4ff;
+  background:linear-gradient(90deg,#276eaa,#30b8e9 58%,#a3f6ff);
+}
+.jade-hud .jade-status-raster-trim {
+  display:block;
+  position:absolute;
+  z-index:1;
+  left:-12px;
+  right:-12px;
+  bottom:-3px;
+  height:clamp(40px,5.5vh,57px);
+  background-position:center bottom;
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  pointer-events:none;
+  opacity:.89;
+  filter:drop-shadow(0 0 3px rgba(249,188,92,.42));
+  animation:jade-hud-gold-breathe 5.8s ease-in-out infinite;
+}
+.jade-hud .jade-status-raster-trim--hp {
+  background-image:url('/game3d/hud/hp-gold-trim.png');
+}
+.jade-hud .jade-status-raster-trim--will {
+  background-image:url('/game3d/hud/will-gold-trim.png');
+}
+.jade-hud .jade-xp--compact {
+  /* Exact metal picture is the sole visible border; not another CSS octagon. */
+  background:transparent;
+  border:0;
+  clip-path:none;
+  box-shadow:none;
+  filter:none;
+  padding:0;
+  isolation:isolate;
+  overflow:visible;
+}
+.jade-hud .jade-xp--compact::before {
+  content:'';
+  position:absolute;
+  z-index:0;
+  inset:8%;
+  background:radial-gradient(ellipse at 50% 42%,rgba(7,25,35,.54),
+    rgba(2,12,23,.72) 70%,rgba(1,7,14,.28));
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,
+    23% 100%,0 77%,0 23%);
+}
+.jade-hud .jade-xp--compact .jade-xp-raster-frame {
+  position:absolute;
+  z-index:3;
+  inset:-5%;
+  display:block;
+  background:url('/game3d/hud/exp-gold-octagon.png') center/100% 100% no-repeat;
+  pointer-events:none;
+  opacity:.97;
+  filter:drop-shadow(0 0 4px rgba(255,197,104,.40));
+  animation:jade-hud-gold-breathe 5.8s ease-in-out infinite;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-face {
+  position:relative;
+  z-index:2;
+  width:100%;
+  height:100%;
+  clip-path:none;
+  background:transparent;
+  isolation:isolate;
+  overflow:visible;
+  padding:12% 7% 10%;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy {
+  z-index:-1;
+  left:10%;
+  width:80%;
+  bottom:9%;
+  max-height:82%;
+  background:linear-gradient(0deg,rgba(227,149,46,.4),rgba(238,182,89,.21) 55%,
+    rgba(255,219,160,.05));
+  clip-path:polygon(21% 0,79% 0,100% 21%,100% 79%,79% 100%,
+    21% 100%,0 79%,0 21%);
+  transition:height .44s cubic-bezier(.21,.6,.3,1);
+}
+.jade-hud .jade-xp--compact .jade-xp-agent,
+.jade-hud .jade-xp--compact .jade-xp-number,
+.jade-hud .jade-xp--compact .jade-xp-caption,
+.jade-hud .jade-xp--compact .jade-xp-readout {
+  position:relative;
+  z-index:2;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-rule {
+  /* The photograph carries the ornate central divider, not another line. */
+  opacity:0;
+  margin:1px 0;
+}
+@keyframes jade-hud-gold-breathe {
+  0%,100% {opacity:.82;filter:drop-shadow(0 0 2px rgba(239,176,72,.26));}
+  50% {opacity:1;filter:drop-shadow(0 0 6px rgba(254,205,118,.58));}
+}
+@keyframes jade-hud-vitals-sweep {
+  0%,62% {transform:translateX(-130%);}
+  88%,100% {transform:translateX(130%);}
+}
+@media (max-width:620px) {
+  .jade-hud .jade-status-raster-trim {
+    left:-5px;right:-5px;bottom:0;height:36px;
+  }
+  .jade-hud .jade-status-bars--refined .jade-status-row {padding-bottom:17px;}
+  .jade-hud .jade-xp--compact .jade-xp-octagon-face {padding:13% 5% 9%;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .jade-hud .jade-status-raster-trim,
+  .jade-hud .jade-xp--compact .jade-xp-raster-frame,
+  .jade-hud .jade-status-bars--refined .jade-status-fill::after {
+    animation:none;
+  }
+  .jade-hud .jade-xp--compact .jade-xp-octagon-energy,
+  .jade-hud .jade-status-bars--refined .jade-status-fill {
+    transition:none;
+  }
+}
