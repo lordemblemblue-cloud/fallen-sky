@@ -108,6 +108,7 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
         cutawayRoomId = roomId;
         town.setRoofsVisible(!roomId);
         town.setIndoorCutaway(roomId);
+        root.userData.otsCameraRevision = (root.userData.otsCameraRevision || 0) + 1;
       }
     },
     dispose() {
