@@ -53,7 +53,7 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     Number.isFinite(x) && Number.isFinite(z) &&
     Math.abs(x - town.group.position.x) <= layout.width / 2 &&
     Math.abs(z - town.group.position.z) <= layout.depth / 2
-      ? WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + .025
+      ? WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + (nav.roomAt({x,z}) ? .46 : .025)
       : null
   );
   const collision = {
