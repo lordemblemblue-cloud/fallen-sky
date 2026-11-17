@@ -149,6 +149,7 @@ export async function runWolfveilAreaLoadingReport({
   const {createWolfveilVillage}=await import(SOURCE+'wolfveil/WolfveilScene.js');
   const {createWolfveilAreaLoader}=await import(SOURCE+'wolfveil/streaming/WolfveilAreaLoader.mjs');
   const {createWolfveilAreaPortals}=await import(SOURCE+'wolfveil/WolfveilAreaPortals.js');
+  const {createWolfveilFarOutline}=await import(SOURCE+'wolfveil/WolfveilFarOutline.js');
   const {WOLFVEIL_AREA_PORTALS}=await import(SOURCE+'wolfveil/streaming/WolfveilAreaPortalPlan.mjs');
   const plan=await import(SOURCE+'wolfveil/streaming/WolfveilFiveAreaPlan.mjs');
   const {evaluateGame3DAreaBudget}=await import(SOURCE+'performance/Game3DAreaBudget.mjs');
@@ -273,9 +274,18 @@ export async function runWolfveilAreaLoadingReport({
   let groundDisposed=false;
   village.ground.geometry.addEventListener('dispose',()=>{groundDisposed=true;});
   started=performance.now();
+  // The outline builder GameWorld3D uses, timed: a bake happens while playing.
+  const farOutline=createWolfveilFarOutline({scene});
+  const bakeMs={};
   loader=createWolfveilAreaLoader({
     world,position:toWorld(0,-70),portals:WOLFVEIL_AREA_PORTALS,
     now:()=>clock.t,onTransition:event=>events.push(event),
+    farProxy:{...farOutline,build(area,sources){
+      const before=performance.now();
+      const built=farOutline.build(area,sources);
+      bakeMs[area]=Math.round((performance.now()-before)*10)/10;
+      return built;
+    }},
   });
   if(town?.root)loader.addUnits([town.root]);
   portals=createWolfveilAreaPortals(world);
@@ -484,13 +494,40 @@ export async function runWolfveilAreaLoadingReport({
       if(node.isInstancedMesh&&farKept.some(entry=>entry.name===node.name)&&
          !node.userData.wolfveilAreaClone)farObjects.push(node);
     });
-    const perArea={};
+    // A fallback tree that its owner switched off (the real model arrived)
+    // is the owner's business, not the loader's.
+    loader.setEnabled(false);
+    const ownerHidden=new Set(farObjects.filter(node=>node.visible===false));
+    loader.setEnabled(true);run(.3);
+    const perArea={},outlineShown={};
+    const outlineAreas=Object.keys(loader.getStats().farOutline.areas);
     for(const id of plan.WOLFVEIL_AREA_IDS){
-      moveTo(...spots[id]);run(1);
-      const hidden=farObjects.filter(node=>node.visible===false).map(node=>node.name);
+      moveTo(...spots[id]);run(1);settleBuilds();
+      const hidden=farObjects.filter(node=>node.visible===false&&!ownerHidden.has(node)).map(node=>node.name);
       check(!hidden.length,'far scenery hidden while standing in '+id+': '+hidden.slice(0,4).join(', '));
       perArea[id]=measure();
+      // Outlines: every unloaded area that has one shows it; a loaded area never does.
+      const state=loader.getStats();
+      outlineShown[id]=[...state.farOutline.shown].sort();
+      const expected=outlineAreas.filter(area=>!state.loadedAreas.includes(area)).sort();
+      check(outlineShown[id].join()===expected.join(),'standing in '+id+' the outlines shown were ['+
+        outlineShown[id]+'], expected ['+expected+']');
     }
+    const outline=loader.getStats().farOutline;
+    check(outline.enabled&&!outline.failed,'the far outline switched itself off: '+outline.failed);
+    for(const [area,info] of Object.entries(outline.areas)){
+      check(info.triangles>0&&info.triangles<=30000,
+        'the '+area+' outline must stay within 30,000 triangles ('+info.triangles+')');
+      check(info.triangles<info.sourceTriangles,
+        'the '+area+' outline must be lighter than what it stands for ('+info.triangles+' vs '+info.sourceTriangles+')');
+    }
+    let outlineBroken=0;
+    scene.traverse(node=>{
+      if(!node.userData?.wolfveilFarOutline)return;
+      const array=node.geometry.attributes.position.array;
+      for(let i=0;i<array.length;i++)if(!Number.isFinite(array[i])){outlineBroken++;break;}
+    });
+    check(!outlineBroken,outlineBroken+' far outlines contain unreadable positions');
     // The price of the horizon: the same spots with the rule switched off.
     loader.setOptions({farScenery:false});
     moveTo(...spots.town);run(8);settleBuilds();
@@ -501,7 +538,7 @@ export async function runWolfveilAreaLoadingReport({
     check(loader.getStats().farScenery.batches===farStats.batches,
       'switching far scenery off and on again must find the same batches ('+
       loader.getStats().farScenery.batches+' vs '+farStats.batches+')');
-    farResult={stats:farStats,kept:farKept,
+    farResult={stats:farStats,kept:farKept,outline:{...outline,bakeMs,shownFrom:outlineShown},
       cost:Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,{
         drawCalls:perArea[id].drawCalls-without[id].drawCalls,
         triangles:perArea[id].triangles-without[id].triangles}]))};
@@ -708,6 +745,12 @@ export function formatWolfveilAreaLoadingReport(result){
       String(entry.drawCalls).padStart(3)+' calls  '+entry.name);
     lines.push('  what the horizon costs against unloading it: '+Object.entries(f.cost)
       .map(([id,c])=>id+' '+(c.drawCalls>=0?'+':'')+c.drawCalls+' calls '+(c.triangles>=0?'+':'')+n(c.triangles)+' tris').join(', '));
+    lines.push('Far outline (tall scenery of an unloaded area as one coarse mesh, one draw call each):');
+    for(const [area,info] of Object.entries(f.outline.areas))lines.push('  '+area.padEnd(6)+
+      String(info.sources).padStart(4)+' tall objects  '+n(info.sourceTriangles).padStart(9)+' tris -> '+
+      n(info.triangles).padStart(7)+' tris at '+info.cellMeters+' m grid, baked in '+
+      (f.outline.bakeMs[area]??'?')+' ms');
+    if(!Object.keys(f.outline.areas).length)lines.push('  no area has tall scenery to outline');
   }else lines.push('Far scenery: switched off');
   lines.push('Tall instanced scenery that is still unloaded (4 m and taller, too heavy to keep whole):');
   for(const entry of result.tallScenery.splitBatches)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+

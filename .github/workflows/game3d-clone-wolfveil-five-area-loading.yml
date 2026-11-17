@@ -18,6 +18,7 @@ on:
       - 'tests/game3d-clone-platform-graphics.test.mjs'
       - 'tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs'
       - 'tests/game3d-clone-static-merging.test.mjs'
+      - 'tests/game3d-clone-far-proxy.test.mjs'
       - 'src/components/game3d/render/BlazeOfGrassWorld.mjs'
       - '.github/workflows/game3d-clone-wolfveil-five-area-loading.yml'
   workflow_dispatch:
@@ -40,7 +41,8 @@ jobs:
             tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-platform-graphics.test.mjs \
             tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs \
-            tests/game3d-clone-static-merging.test.mjs
+            tests/game3d-clone-static-merging.test.mjs \
+            tests/game3d-clone-far-proxy.test.mjs
 
   real-valley:
     name: Real valley under real Three.js, lint and production build
@@ -75,13 +77,16 @@ jobs:
             src/components/game3d/performance/Game3DAreaBudget.mjs \
             src/components/game3d/performance/Game3DStaticInstancing.mjs \
             src/components/game3d/performance/Game3DStaticMerging.mjs \
+            src/components/game3d/performance/Game3DFarProxy.mjs \
+            src/components/game3d/wolfveil/WolfveilFarOutline.js \
             src/components/game3d/wolfveil/WolfveilCaveDrawBudget.mjs \
             scripts/report-wolfveil-area-loading.mjs \
             tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs \
             tests/game3d-clone-platform-graphics.test.mjs \
             tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs \
-            tests/game3d-clone-static-merging.test.mjs
+            tests/game3d-clone-static-merging.test.mjs \
+            tests/game3d-clone-far-proxy.test.mjs
       - name: Lint the edited files (no more errors than main)
         run: |
           count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }

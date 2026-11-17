@@ -161,6 +161,7 @@ import {createWolfveilVillage} from './wolfveil/WolfveilScene';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
 import {createWolfveilAreaPortals} from './wolfveil/WolfveilAreaPortals';
+import {createWolfveilFarOutline} from './wolfveil/WolfveilFarOutline';
 import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
   activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
@@ -841,12 +842,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // unloaded until a portal is near. How much stays loaded is this
     // platform's own setting (browser, desktop app or mobile).
     const areaPlatform=activeGame3DPlatformProfile(window);
+    // Outlines of unloaded areas are decoration: without them the loader
+    // still works, the far side of a portal is just barer.
+    let farOutline=null;
+    try{farOutline=wolfveilVillage?createWolfveilFarOutline({scene}):null;}
+    catch(error){console.warn('Wolfveil far outline unavailable:',error);}
     const regionStream=wolfveilVillage?createWolfveilAreaLoader({
       world:wolfveilVillage.world,position:{x:0,z:70},portals:WOLFVEIL_AREA_PORTALS,
       mode:areaPlatform.profile.areaLoading,
       preloadMeters:areaPlatform.profile.preloadMeters,
       releaseGpuMemory:areaPlatform.profile.releaseGpuMemory,
       farScenery:areaPlatform.profile.farScenery,
+      farProxy:farOutline,
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
       },
@@ -5126,6 +5133,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
       areaPortals?.dispose();
       regionStream?.dispose();
+      farOutline?.disposeAll();
       if(window.__gw3dRegionStreamer===regionStream)window.__gw3dRegionStreamer=null;
       if(window.__gw3dAreaLoader===regionStream)window.__gw3dAreaLoader=null;
       window.__gw3dRegionStreamingStatus=null;
