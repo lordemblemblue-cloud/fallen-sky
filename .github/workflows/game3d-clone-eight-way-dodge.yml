@@ -1,0 +1,39 @@
+name: Game 3D Clone Eight-Way Dodge
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/player/characterDodgeVector.js'
+      - 'src/components/game3d/player/game3dEightWayDodge.mjs'
+      - 'src/components/game3d/player/playerEightWayDodgeClips.js'
+      - 'src/components/game3d/player/playerMovementFallbackClips.js'
+      - 'src/components/game3d/player/playerNativeAnimationClips.js'
+      - 'src/components/game3d/player/playerAnimationLibrary.jsx'
+      - 'src/components/game3d/player/LunaDashboardPlayerController.jsx'
+      - 'tests/game3d-eight-way-dodge-roll-20261117.test.mjs'
+      - '.github/workflows/game3d-clone-eight-way-dodge.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dodge-and-rolling:
+    name: Real 360-degree dodge clips, controls and Game 3D build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact dependency lockfile
+        run: npm ci
+      - name: Validate eight rig-authored directions, fallback clips and collision rules
+        run: >
+          node --test
+          tests/game3d-eight-way-dodge-roll-20261117.test.mjs
+      - name: Build Game 3D with eight-way dodge animations
+        run: npm run build
