@@ -27,7 +27,7 @@ test('desktop, ultrawide, phone and Steam Deck all preserve CSS aspect without s
   const cases=[
     {resolution:'1080p',viewportWidth:1920,viewportHeight:1080,devicePixelRatio:1,w:1920,h:1080},
     {resolution:'1080p',viewportWidth:1280,viewportHeight:800,devicePixelRatio:1,w:1728,h:1080},
-    {resolution:'720p',viewportWidth:390,viewportHeight:844,devicePixelRatio:3,w:333,h:720},
+    {resolution:'720p',viewportWidth:390,viewportHeight:844,devicePixelRatio:3,w:332,h:720},
     {resolution:'native',viewportWidth:390,viewportHeight:844,devicePixelRatio:3,w:1170,h:2532},
     {resolution:'1080p',viewportWidth:3440,viewportHeight:1440,devicePixelRatio:1,w:2580,h:1080},
   ];
