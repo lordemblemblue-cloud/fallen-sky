@@ -20,7 +20,11 @@ test('Variety uses the original player equip stores and live preview, never bind
   assert.match(jsx,/equipAXEVanityPiece\(piece\.id\)/);
   assert.match(jsx,/equipAXECostume\(piece\.id\)/);
   assert.match(jsx,/onDoubleClick=\{\(\)=>equipOwnedWardrobe\(piece\)\}/);
-  assert.match(jsx,/isImbue\|\|previewOwner==='wardrobe'\?<PlayerModel\/>/);
+  assert.match(jsx,/previewOwner==='wardrobe'\?<PlayerModel\/>/);
+  assert.match(jsx,/else setPreviewOwner\('companion'\)/);
+  assert.match(jsx,/setPreviewOwner\('wardrobe'\)/);
+  assert.doesNotMatch(jsx,/View Companion|View Player Wardrobe|axe-comp-variety-preview-toggle/);
+  assert.match(jsx,/if\(isImbue\)return <AXECompanionImbuementPane/);
   assert.match(jsx,/companionId=\{selectedModel\.id\}/);
   assert.match(jsx,/Compatible companion|Companion armor still needs compatible fitted meshes/);
   assert.doesNotMatch(jsx,/equipCompanionGear\(.+piece\.id/);
