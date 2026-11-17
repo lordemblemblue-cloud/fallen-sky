@@ -96,6 +96,8 @@ export default function PauseMenu({
     dpr:typeof window==='undefined'?1:window.devicePixelRatio||1,
   }));
   const [actualFramebuffer,setActualFramebuffer]=useState(null);
+  const [gpuInfo,setGpuInfo]=useState(()=>
+    typeof window==='undefined'?null:window.__gw3dGpuInfo||null);
   const [menuMotion,setMenuMotion]=useState(()=>{
     try{return localStorage.getItem('game3d_menu_motion')!=='false';}
     catch{return true;}
@@ -136,6 +138,8 @@ export default function PauseMenu({
       setActualFramebuffer(old=>
         old?.width===next?.width&&old?.height===next?.height&&
         old?.pixelRatio===next?.pixelRatio?old:next);
+      const info=window.__gw3dGpuInfo||null;
+      setGpuInfo(old=>old?.renderer===info?.renderer&&old?.deviceMemoryGb===info?.deviceMemoryGb?old:info);
     };
     update();
     window.addEventListener('resize',update,{passive:true});
@@ -568,7 +572,7 @@ export default function PauseMenu({
                   <OptionButtons label="GPU render profile" value={gpuProfile}
                     items={CLONE_GPU_PROFILES.map(id=>({id,text:id==='auto'?'Auto':id==='off'?'Disable adaptive scaling':id.charAt(0).toUpperCase()+id.slice(1)}))}
                     onPick={changeGpuProfile}/>
-                  <p className="axe3d-pause__help">Controls the clone renderer's adaptive resolution. No GPU model or VRAM total is inferred.</p>
+                  <p className="axe3d-pause__help">Performance and Balanced cut the drawing resolution, shadows, view distance and weather so this browser does less GPU work. The world asks for the high-performance GPU, which puts the framebuffer and textures on that GPU. {gpuInfo?.renderer?`Detected GPU: ${gpuInfo.renderer}. `:''}{gpuInfo?.deviceMemoryGb?`Device memory hint: ${gpuInfo.deviceMemoryGb} GB. `:''}Web pages cannot read a VRAM total, so this does not reserve a fixed amount of video memory. Antialiasing follows this profile the next time the world starts.</p>
                   <Switch label="Performance metrics (FPS / GPU / CPU)" checked={gpuStats}
                     description="Show the optional rendering diagnostics during gameplay. GPU timing is displayed only when the browser supports it."
                     onChange={()=>changeGpuStats(!gpuStats)}/>

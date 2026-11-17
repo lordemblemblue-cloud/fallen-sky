@@ -7,7 +7,7 @@ import {
 
 test('browser-only profile and quality caps never upscale beyond device DPR', () => {
   assert.equal(normalizeCloneGPUProfile('unexpected'), 'auto');
-  assert.equal(rendererPixelRatioLimit({ profile: 'performance', devicePixelRatio: 2 }), .75);
+  assert.equal(rendererPixelRatioLimit({ profile: 'performance', devicePixelRatio: 2 }), .5);
   assert.equal(rendererPixelRatioLimit({ profile: 'balanced', devicePixelRatio: 2 }), 1);
   assert.equal(rendererPixelRatioLimit({ profile: 'auto', quality: 'low', devicePixelRatio: 2 }), .75);
   assert.equal(rendererPixelRatioLimit({ profile: 'auto', quality: 'high', devicePixelRatio: 2 }), 1.5);

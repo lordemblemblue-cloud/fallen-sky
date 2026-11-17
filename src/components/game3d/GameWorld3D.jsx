@@ -144,6 +144,8 @@ import { attachContextGuard } from './webglContextGuard';
 import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSettings } from './render/inkWashLook';
 import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
 import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
+import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
+  createGame3DWebGLContext,describeGame3DGpu} from './performance/Game3DGpuEfficiency.mjs';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -472,7 +474,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      const gpuHints = readGame3DGpuHints(window);
+      const bootProfile = readCloneGPUProfile(window);
+      const attributes = game3dGpuContextAttributes({ profile: bootProfile, hints: gpuHints });
+      const gl = createGame3DWebGLContext(canvas, attributes);
+      renderer = gl
+        ? new THREE.WebGLRenderer({ canvas, context: gl })
+        : new THREE.WebGLRenderer({ canvas, antialias: attributes.antialias, powerPreference: 'high-performance' });
+      window.__gw3dGpuInfo = describeGame3DGpu(renderer.getContext(), gpuHints);
     } catch (e) {
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
@@ -537,7 +546,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     window.__gw3dInkLook = inkLook; // the bench and reviews read and set its level
     let worldSun = null;
     const applyWorldGraphicsBudget = () => {
-      const budget = game3dWorldGraphicsBudget(readGraphicsSettings());
+      const hints = readGame3DGpuHints(window);
+      const budget = game3dWorldGraphicsBudget(readGraphicsSettings(), {
+        tighten: game3dEfficiencyTighten({
+          profile: readCloneGPUProfile(window),
+          gpuClass: window.__gw3dGpuInfo?.gpuClass,
+          deviceMemoryGb: hints.deviceMemoryGb,
+        }),
+      });
       window.__gw3dGraphicsBudget = budget;
       renderer.shadowMap.enabled = budget.shadows;
       if (worldSun) {
@@ -571,6 +587,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       applyWorldGraphicsBudget();
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
+    const onGpuProfile = () => applyWorldGraphicsBudget();
+    window.addEventListener('game3dCloneGPUProfileChanged', onGpuProfile);
     // Apply fixed resolution changes synchronously to the already-mounted
     // WebGL canvas, even before the adaptive GPU governor finishes attaching.
     // When switching back to Adaptive the governor owns subsequent changes.
@@ -4826,6 +4844,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       cancelAnimationFrame(frameId);
       rendererGuard.dispose();
       window.removeEventListener('graphicsSettingsChanged', onGraphicsSettings);
+      window.removeEventListener('game3dCloneGPUProfileChanged', onGpuProfile);
       window.removeEventListener('game3dDedicatedMode',onDedicatedMode);
       window.removeEventListener('game3dDedicatedPose',onDedicatedPose);
       worldMapUnloaded=true;

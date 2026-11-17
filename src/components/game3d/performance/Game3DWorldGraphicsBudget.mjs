@@ -8,15 +8,33 @@ const PRESETS = Object.freeze({
   ultra: Object.freeze({ shadowSize: 2048, shadowExtent: 32, fogScale: 1.15, particleScale: 1 }),
 });
 
-export function game3dWorldGraphicsBudget(raw) {
+export function game3dWorldGraphicsBudget(raw, efficiency) {
   const quality = PRESETS[raw?.quality] ? raw.quality : 'high';
   const preset = PRESETS[quality];
+  let shadowSize = preset.shadowSize;
+  let shadowExtent = preset.shadowExtent;
+  let fogScale = preset.fogScale;
+  let particleScale = preset.particleScale;
+  const tighten = efficiency?.tighten === 'performance' || efficiency?.tighten === 'balanced'
+    ? efficiency.tighten : 'none';
+  if (tighten === 'performance') {
+    shadowSize = Math.min(shadowSize, 256);
+    shadowExtent = Math.min(shadowExtent, 14);
+    fogScale = Math.min(fogScale, 0.45);
+    particleScale = Math.min(particleScale, 0.2);
+  } else if (tighten === 'balanced') {
+    shadowSize = Math.min(shadowSize, 512);
+    shadowExtent = Math.min(shadowExtent, 18);
+    fogScale = Math.min(fogScale, 0.7);
+    particleScale = Math.min(particleScale, 0.5);
+  }
   return Object.freeze({
     quality,
     shadows: raw?.shadows !== false,
-    shadowSize: preset.shadowSize,
-    shadowExtent: preset.shadowExtent,
-    fogScale: preset.fogScale,
-    particleScale: preset.particleScale,
+    shadowSize,
+    shadowExtent,
+    fogScale,
+    particleScale,
+    tighten,
   });
 }
