@@ -2,7 +2,7 @@
 // to the four existing cave mouths. The final threshold, underground ramp,
 // chambers and existing exit belong to WolfveilCaveLayout.mjs.
 import { WOLFVEIL_EXPLORABLE_CAVES } from './WolfveilCaveLayout.mjs';
-import { wolfveilHeight } from './WolfveilLayout.js';
+import { wolfveilHeight, setWolfveilCaveApproachTerrainGrade } from './WolfveilLayout.js';
 
 export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   jade_lantern_grotto:Object.freeze({
@@ -108,6 +108,49 @@ const distanceToSegment=(x,z,a,b)=>{
   const t=len2>1e-6?Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/len2)):0;
   return Math.hypot(x-(a.x+dx*t),z-(a.z+dz*t));
 };
+const clamp01=v=>Math.max(0,Math.min(1,v));
+const smooth01=v=>{const t=clamp01(v);return t*t*(3-2*t);};
+const approachSegments=WOLFVEIL_CAVE_APPROACHES.flatMap(approach=>{
+  const segs=[];
+  for(let i=1;i<approach.points.length;i++){
+    const a=approach.points[i-1],b=approach.points[i];
+    const dx=b.x-a.x,dz=b.z-a.z,dy=b.y-a.y;
+    const len2=dx*dx+dz*dz;
+    if(len2<1e-4)continue;
+    const pad=40;
+    segs.push({
+      ax:a.x,az:a.z,ay:a.y,dx,dz,dy,len2,
+      minX:Math.min(a.x,b.x)-pad,maxX:Math.max(a.x,b.x)+pad,
+      minZ:Math.min(a.z,b.z)-pad,maxZ:Math.max(a.z,b.z)+pad,
+    });
+  }
+  return segs;
+});
+
+// The hillside itself becomes the trail bench, then feathers back to the
+// natural slope. The mouth is left alone so the arch stays where it was.
+export function gradeWolfveilCaveApproachTerrain(x,z,y){
+  if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(y))return y;
+  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+    if(Math.hypot(x-cave.mouth[0],z-cave.mouth[1])<6.5)return y;
+  }
+  let best=null;
+  for(const s of approachSegments){
+    if(x<s.minX||x>s.maxX||z<s.minZ||z>s.maxZ)continue;
+    const t=Math.max(0,Math.min(1,((x-s.ax)*s.dx+(z-s.az)*s.dz)/s.len2));
+    const py=s.ay+s.dy*t;
+    const d=Math.hypot(x-(s.ax+s.dx*t),z-(s.az+s.dz*t));
+    const feather=Math.min(34,7+Math.abs(py-y)*1.05);
+    if(d>feather)continue;
+    if(!best||d<best.d)best={d,py,feather};
+  }
+  if(!best)return y;
+  const inner=2.15;
+  const w=best.d<=inner?1:1-smooth01((best.d-inner)/Math.max(0.001,best.feather-inner));
+  return y+(best.py-y)*w;
+}
+setWolfveilCaveApproachTerrainGrade(gradeWolfveilCaveApproachTerrain);
+
 export function nearestWolfveilCaveApproach(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
   let best=null;
