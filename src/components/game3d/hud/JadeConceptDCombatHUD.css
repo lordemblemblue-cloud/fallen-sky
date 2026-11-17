@@ -163,6 +163,24 @@
   cursor:pointer;
   pointer-events:auto;
 }
+.jade-hud .jade-concept-d-q-key {
+  position:absolute;
+  z-index:4;
+  right:11%;
+  bottom:-30%;
+  display:grid;
+  place-items:center;
+  min-width:22px;
+  height:22px;
+  padding:0 4px;
+  border:1px solid rgba(245,206,138,.85);
+  border-radius:5px;
+  background:rgba(7,19,28,.91);
+  color:#ffdfaa;
+  font:600 10px/1 system-ui,sans-serif;
+  box-shadow:0 0 4px rgba(244,176,75,.22);
+  pointer-events:none;
+}
 .jade-hud .jade-concept-d-cycle button:hover,
 .jade-hud .jade-concept-d-cycle button:focus-visible {
   outline:1px solid #9feeff;
@@ -394,6 +412,7 @@
   .jade-hud .jade-concept-d-cycle {gap:2px;}
   .jade-hud .jade-concept-d-cycle button {width:18px;height:18px;}
   .jade-hud .jade-concept-d-cycle button svg {width:11px;height:11px;}
+  .jade-hud .jade-concept-d-q-key {height:16px;min-width:16px;font-size:8px;bottom:-27%;}
   .jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
     height:clamp(72px,18vh,100px);
     row-gap:7px;
