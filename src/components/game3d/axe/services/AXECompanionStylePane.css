@@ -132,3 +132,74 @@
 .axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-caption {
   grid-column:1;grid-row:2;
 }
+
+/* Variety: restore the viewer's corner-equipped cards. Five real player
+   wardrobe targets live in two balanced rails (3 left, 2 right), leaving the
+   center open for the appropriate live 3D player/companion preview. */
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) {
+  position:relative;
+  grid-template-columns:minmax(54px,20%) minmax(0,1fr) minmax(54px,20%);
+  grid-template-rows:minmax(0,1fr) auto;
+  column-gap:clamp(3px,.5vw,8px);
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-center {
+  grid-column:2;grid-row:1;min-width:0;min-height:0;
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-comp-variety-rail.axe-app-viewer-gear--left {
+  grid-column:1;grid-row:1;
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-comp-variety-rail.axe-app-viewer-gear--right {
+  grid-column:3;grid-row:1;
+}
+.axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-app-model-caption {
+  grid-column:1/-1;grid-row:2;
+}
+.axe-comp-style-stage:not(.axe-comp-imbue-stage) .axe-comp-variety-rail {
+  display:flex;flex-direction:column;justify-content:space-between;
+  align-items:stretch;gap:clamp(3px,.6vh,8px);overflow-y:auto;
+  min-height:0;padding:2px;z-index:5;
+}
+.axe-comp-style-stage .axe-comp-variety-slot {
+  flex:1 1 0;min-height:55px;max-height:125px;
+  padding:4px 2px;gap:3px;overflow:hidden;cursor:pointer;
+}
+.axe-comp-style-stage .axe-comp-variety-slot[aria-pressed=true] {
+  border-color:#ffe8b6;
+  background:linear-gradient(145deg,rgba(172,129,70,.67),rgba(78,69,59,.69));
+  box-shadow:inset 0 0 12px #f9d8a94b,0 0 11px #eccb898c;
+}
+.axe-comp-style-stage .axe-comp-variety-slot .axe-app-viewer-item-name {
+  font-size:9px;text-align:center;overflow-wrap:anywhere;white-space:normal;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+.axe-comp-variety-preview-toggle {
+  position:absolute;z-index:9;top:9px;left:50%;transform:translateX(-50%);
+  max-width:55%;padding:6px 9px;border:1px solid #e9ce9e;
+  border-radius:16px;color:#fce6ba;background:#1b3245eb;
+  font:11px Georgia,serif;cursor:pointer;
+}
+.axe-comp-variety-preview-toggle:focus-visible,.axe-comp-variety-preview-toggle:hover {
+  outline:1px solid #fff0c6;border-color:#fff0c6;
+}
+.axe-comp-variety-slot-heading {
+  display:flex;justify-content:space-between;align-items:center;gap:8px;
+  padding:4px 6px;font:11px Georgia,serif;color:#edd1a4;
+}
+.axe-comp-variety-slot-heading button {
+  border:1px solid #cfb18596;border-radius:5px;padding:3px 8px;
+  background:#273d4fe0;color:#f4e5cb;font:11px Georgia,serif;
+}
+@media(max-width:860px){
+  .axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) {
+    grid-template-columns:minmax(44px,19%) minmax(0,1fr) minmax(44px,19%);
+  }
+  .axe-comp-style-stage .axe-comp-variety-slot {min-height:50px;}
+  .axe-comp-style-stage .axe-comp-variety-slot .axe-app-viewer-slot-art svg {width:19px;height:19px;}
+  .axe-comp-style-stage .axe-comp-variety-slot small {font-size:9px;}
+}
+@media(max-width:610px){
+  .axe-comp-modern .axe-comp-style-stage:not(.axe-comp-imbue-stage) {
+    grid-template-columns:minmax(42px,20%) minmax(0,1fr) minmax(42px,20%);
+  }
+  .axe-comp-style-stage .axe-comp-variety-slot .axe-app-viewer-item-name {font-size:8px;}
+}

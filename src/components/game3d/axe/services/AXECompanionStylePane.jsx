@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Check, Feather, Gem, Search, Shield, Shirt, Sparkles, UserRound } from 'lucide-react';
-import { subscribeAXEVanity,getAXEVanityState } from '../progression/AXEVanityStore';
-import { subscribeAXECostumes,getAXECostumeState } from '../progression/AXECostumeStore';
+import { Check, Crown, Feather, Gem, Search, Shield, Shirt, Sparkles, UserRound } from 'lucide-react';
+import { subscribeAXEVanity,getAXEVanityState,equipAXEVanityPiece } from '../progression/AXEVanityStore';
+import { subscribeAXECostumes,getAXECostumeState,equipAXECostume } from '../progression/AXECostumeStore';
 import { AXE_VANITY_PIECES,AXE_VANITY_SLOTS } from '../progression/AXEVanitySystem';
 import { AXE_COSTUME_DEFINITIONS } from '../progression/AXECostumeSystem';
 import { getAXESoulRegaliaState,subscribeAXESoulRegalia,getAXESoulRegaliaBonuses }
@@ -19,6 +19,12 @@ export const IMBUE_TARGETS = Object.freeze([
   { id:'helmet', label:'Helmet', slot:'head', icon:'♕' },
   { id:'feet', label:'Feet', slot:'legs', icon:'◇' },
   { id:'armor', label:'Armor', slot:'chest', icon:'⬡' },
+]);
+// Existing five PLAYER wardrobe slots, not rigged companion armor.
+export const VARIETY_VIEWER_SLOTS=Object.freeze([
+  {id:'head',label:'Head',Icon:Crown},{id:'torso',label:'Torso',Icon:Shirt},
+  {id:'pelvis',label:'Waist',Icon:Gem},{id:'leggings',label:'Legs',Icon:Shield},
+  {id:'costume',label:'Outfit',Icon:Shirt},
 ]);
 function useLive(subscribe,get) {
   const [value,setValue]=useState(get);
@@ -42,12 +48,15 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
   const costumes=useLive(subscribeAXECostumes,getAXECostumeState);
   const soul=useLive(subscribeAXESoulRegalia,getAXESoulRegaliaState);
   const [selected,setSelected]=useState(null);
+  const [varietySlot,setVarietySlot]=useState('');
+  const [previewOwner,setPreviewOwner]=useState('wardrobe');
   const [target,setTarget]=useState('hands');
   const [typeFilter,setTypeFilter]=useState('All');
   const [rarityFilter,setRarityFilter]=useState('All');
   const [search,setSearch]=useState('');
   useEffect(()=>{
     setSelected(null);setTarget('hands');setTypeFilter('All');setRarityFilter('All');setSearch('');
+    setVarietySlot('');setPreviewOwner('wardrobe');
   },[page,companion.activeCompanionId]);
   const isImbue=page==='Imbuement';
   const currentTarget=IMBUE_TARGETS.find(item=>item.id===target)||IMBUE_TARGETS[0];
@@ -67,6 +76,8 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
   const term=search.trim().toLowerCase();
   const shown=owned.filter(piece=>
     (typeFilter==='All'||piece.kind===typeFilter)
+    &&(!varietySlot||(varietySlot==='costume'?piece.kind==='costume':
+      piece.kind==='vanity'&&piece.slot===varietySlot))
     &&(rarityFilter==='All'||(piece.rarity||'common')===rarityFilter)
     &&(!term||[
       piece.name,piece.rarity,piece.slot,piece.setId,piece.kind,
@@ -76,6 +87,35 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
   const itemStats=item?.kind==='costume'?item.statPackage:item?.baseBonus;
   const fusion=getAXESoulRegaliaBonuses();
   const percent=Number(soul.infusion?.[currentTarget.slot]||0);
+  const equipOwnedWardrobe=piece=>{
+    if(!piece)return;
+    setSelected(piece.itemKey);
+    // Canonical PLAYER equip path only, never invent companion wearable assets.
+    const result=piece.kind==='vanity'?equipAXEVanityPiece(piece.id):
+      piece.kind==='costume'?equipAXECostume(piece.id):
+        {ok:false,reason:'UNSUPPORTED_APPEARANCE'};
+    onNotice(result?.ok?(result.message||piece.name+' equipped on player.'):
+      (result?.message||result?.reason||'Unable to equip item.'));
+    if(result?.ok)setPreviewOwner('wardrobe');
+  };
+  const chooseVarietySlot=id=>{
+    setVarietySlot(current=>current===id?'':id);
+    setTypeFilter('All');setRarityFilter('All');setSearch('');setSelected(null);
+    setPreviewOwner('wardrobe');
+  };
+  const varietySlotCard=({id,label,Icon})=>{
+    const worn=id==='costume'?AXE_COSTUME_DEFINITIONS[costumes.equippedCostumeId]:
+      AXE_VANITY_PIECES[vanity.equippedBySlot?.[id]];
+    return <button key={id} type="button"
+      className="axe-app-viewer-slot axe-comp-variety-slot"
+      aria-pressed={varietySlot===id}
+      aria-label={label+' player wardrobe slot: '+(worn?.name||'Empty')}
+      title={'Player '+label+': '+(worn?.name||'Empty')+' · Filter owned items'}
+      onClick={()=>chooseVarietySlot(id)}>
+      <span className="axe-app-viewer-slot-art"><Icon size={23}/></span>
+      <small>{label}</small><span className="axe-app-viewer-item-name">{worn?.name||'Empty'}</span>
+    </button>;
+  };
   const selectCompanion=id=>{
     const res=setActiveCompanion(id);
     if(!res.ok)onNotice(res.reason||'Unable to select companion');
@@ -94,6 +134,14 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
     <section className={'axe-app-model-stage axe-comp-style-stage'+(isImbue?' axe-comp-imbue-stage':'')}
       aria-label={isImbue?'Player imbue target viewer':'Companion appearance viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
+      {!isImbue&&<div className="axe-app-viewer-gear axe-app-viewer-gear--left axe-comp-variety-rail"
+        aria-label="Equipped player wardrobe slots, left">
+        {VARIETY_VIEWER_SLOTS.slice(0,3).map(varietySlotCard)}
+      </div>}
+      {!isImbue&&<div className="axe-app-viewer-gear axe-app-viewer-gear--right axe-comp-variety-rail"
+        aria-label="Equipped player wardrobe slots, right">
+        {VARIETY_VIEWER_SLOTS.slice(3).map(varietySlotCard)}
+      </div>}
       {isImbue&&IMBUE_TARGETS.map((entry,i)=><button key={entry.id} type="button"
         className={'axe-comp-imbue-corner axe-comp-imbue-corner--'+i}
         aria-pressed={target===entry.id} onClick={()=>setTarget(entry.id)}>
@@ -101,15 +149,22 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
       </button>)}
       <div className="axe-app-model-center">
         <Suspense fallback={<p className="axe-app-loading">Loading 3D preview…</p>}>
-          <div className="axe-app-model-host">{isImbue?<PlayerModel/>:
-            selectedModel?<CompanionModel key={selectedModel.id}/>:
+          <div className="axe-app-model-host">{isImbue||previewOwner==='wardrobe'?<PlayerModel/>:
+            selectedModel?<CompanionModel key={selectedModel.id} companionId={selectedModel.id}/>:
               <p className="axe-app-loading">Select an active companion</p>}</div>
         </Suspense>
       </div>
-      <AXECompanionFusionButton onNotice={onNotice}/>
+      {!isImbue&&<button type="button" className="axe-comp-variety-preview-toggle"
+        onClick={()=>setPreviewOwner(value=>value==='wardrobe'?'companion':'wardrobe')}>
+        {previewOwner==='wardrobe'?'View Companion':'View Player Wardrobe'}
+      </button>}
+      {(isImbue||previewOwner==='companion')&&<AXECompanionFusionButton onNotice={onNotice}/>}
       <div className="axe-app-model-caption"><strong>
-        {isImbue?'Player Imbuement':selectedModel?.name||'Companion Appearance'}</strong>
-        <span>{isImbue?'Choose one of the four body points':page+' · companion preview'}</span>
+        {isImbue?'Player Imbuement':previewOwner==='wardrobe'?'Player Wardrobe':
+          selectedModel?.name||'Companion Appearance'}</strong>
+        <span>{isImbue?'Choose one of the four body points':
+          previewOwner==='wardrobe'?'Five equipped player appearance slots':
+            'Companion preview · player cosmetics do not apply'}</span>
       </div>
     </section>
     <main className="axe-app-main-stack" aria-label={isImbue?'Imbuement targets':'Companion cosmetic inventory'}>
@@ -118,7 +173,7 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
           type="button" aria-pressed={target===entry.id} onClick={()=>setTarget(entry.id)}>
           <Sparkles size={18}/><span>{entry.label}</span>
           <b>{soul.infusion?.[entry.slot]||0}%</b></button>)}</div>
-      </Pane>:<Pane name="Vanity Collection" className="axe-app-inventory"
+      </Pane>:<Pane name="Variety Collection" className="axe-app-inventory"
         controls={<div className="axe-comp-collection-controls">
           <select aria-label="Filter cosmetic type" value={typeFilter}
             onChange={event=>{setTypeFilter(event.target.value);setSelected(null);}}>
@@ -140,11 +195,17 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
               onChange={event=>setSearch(event.target.value)}/>
           </label>
         </div>}>
+        <div className="axe-comp-variety-slot-heading">
+          <span>{varietySlot?'Filtering '+(VARIETY_VIEWER_SLOTS.find(slot=>slot.id===varietySlot)?.label||'slot'):'All owned appearance'}</span>
+          {varietySlot&&<button type="button" onClick={()=>setVarietySlot('')}>Show all</button>}
+        </div>
         <div className="axe-app-inventory-grid" role="list">
           {shown.map(piece=><button type="button" role="listitem"
             key={piece.itemKey} className="axe-app-inventory-tile"
             aria-pressed={item?.itemKey===piece.itemKey}
-            onClick={()=>setSelected(piece.itemKey)}>
+            onClick={()=>setSelected(piece.itemKey)}
+            onDoubleClick={()=>equipOwnedWardrobe(piece)}
+            title={'Double-click to equip '+piece.name+' on player'}>
             <span className="axe-app-inventory-art">{icon(piece)}</span>
             <span className="axe-app-inventory-name">{piece.name}</span>
             <small>{piece.kind==='costume'?'Costume':'Vanity Set'} · {piece.rarity||'common'}</small>
@@ -190,11 +251,14 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
               <b>{Number(value)>0?'+':''}{value}</b></div>)}
           {!Object.entries(itemStats||{}).some(([,value])=>Number(value))&&
             <p className="axe-app-description">Cosmetic appearance only; no stat modifiers.</p>}
-          <p className="axe-app-description">Both cosmetic collections are available here for
-            browsing. These are player-owned cosmetics, not companion attachments.
-            Companion equip remains unavailable without compatible companion assets.</p>
-          <button type="button" className="axe-app-unified-enchant axe-comp-imbue-button" disabled>
-            <Shirt size={18}/>Equip to Companion</button>
+          <p className="axe-app-description">These cosmetics are player-owned.
+            Equipping them updates the player's wardrobe and its live 3D viewer.
+            Companion armor still needs compatible fitted meshes; these player
+            outfits never attach to the companion.</p>
+          <button type="button" className="axe-app-unified-enchant axe-comp-imbue-button"
+            disabled={!!item.equipped} onClick={()=>equipOwnedWardrobe(item)}>
+            {item.equipped?<Check size={18}/>:<Shirt size={18}/>}
+            {item.equipped?'Equipped on Player':'Equip on Player'}</button>
         </>:<p className="axe-app-description">Select an owned vanity piece or costume to inspect it.</p>}
       </Pane>}
     </aside>
