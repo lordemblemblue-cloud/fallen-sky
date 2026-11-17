@@ -5,6 +5,11 @@ on:
     paths:
       - 'src/components/game3d/hud/JadeSoulHUD.jsx'
       - 'src/components/game3d/hud/JadeSoulHUD.css'
+      - 'src/components/game3d/axe/services/AXEServicesNavigation.jsx'
+      - 'src/components/game3d/axe/services/AXEServicesNavigationLayout.js'
+      - 'src/components/game3d/notifications/Game3DLunarNotifications.css'
+      - 'tests/game3d-hud-map-services-weather-top-row.test.mjs'
+      - 'tests/game3d-level-up-glass-notice.test.mjs'
       - 'src/components/game3d/hud/JadeApprovedGoldTemplate.css'
       - 'tests/game3d-hud-compact-symmetric-20261116.test.mjs'
       - 'tests/game3d-clone-aaa-minimal-hud.test.mjs'
@@ -28,6 +33,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Check approved gold shell, live values, quest preservation and accessibility
-        run: node --test tests/game3d-hud-compact-symmetric-20261116.test.mjs tests/game3d-clone-aaa-minimal-hud.test.mjs tests/game3d-live-hud-transparent-raster-trims.test.mjs
+        run: node --test tests/game3d-hud-compact-symmetric-20261116.test.mjs tests/game3d-clone-aaa-minimal-hud.test.mjs tests/game3d-live-hud-transparent-raster-trims.test.mjs tests/game3d-hud-map-services-weather-top-row.test.mjs tests/game3d-level-up-glass-notice.test.mjs
       - name: Compile Game 3D
         run: npm run build
