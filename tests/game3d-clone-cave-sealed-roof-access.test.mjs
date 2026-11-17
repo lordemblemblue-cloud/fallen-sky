@@ -10,6 +10,7 @@ import {appendWolfveilCaveAccessFloor}
   from '../src/components/game3d/wolfveil/WolfveilCaveAccessGeometry.mjs';
 import {
   WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_CAVE_DROP,WOLFVEIL_DUNGEON_FLOOR_Y,
   sampleWolfveilPlayerCaveFloorY,planWolfveilCaveInteraction,
 } from '../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
 import {WOLFVEIL_ROUTES,WOLFVEIL_BRIDGES,wolfveilHeight}
@@ -58,7 +59,13 @@ test('outdoor stone ribbons are real finite triangles and meet each sealed-arch 
       threshold.z-cave.threshold[2])<1e-5);
     assert.ok(Math.abs(threshold.y-cave.threshold[1])<1e-5);
     const ramp=WOLFVEIL_CAVE_CORRIDORS.find(c=>c.id==='entry_'+cave.id);
-    assert.deepEqual(ramp.waypoints[0],cave.threshold);
+    const landing=[
+      cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
+      WOLFVEIL_DUNGEON_FLOOR_Y,
+      cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong,
+    ];
+    assert.deepEqual(ramp.waypoints[0],landing);
+    assert.ok(ramp.waypoints.every(point=>Math.abs(point[1]-WOLFVEIL_DUNGEON_FLOOR_Y)<1e-6));
     assert.deepEqual(ramp.waypoints.at(-1),[
       cave.chamber.x,cave.chamber.y,cave.chamber.z]);
     assert.ok(Math.abs(wolfveilHeight(cave.threshold[0],
@@ -76,8 +83,8 @@ test('a player cannot enter from the sealed roof; E at the arch lands inside the
     const insideFloor=sampleWolfveilPlayerCaveFloorY(
       entry.x,entry.y,entry.z,{insideCave:true});
     assert.ok(Number.isFinite(insideFloor));
-    const exitPoint={x:cave.mouth[0]+cave.dir[0]*3,
-      y:entry.y,z:cave.mouth[1]+cave.dir[1]*3};
+    const exitPoint={x:cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
+      y:entry.y,z:cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong};
     const exit=planWolfveilCaveInteraction(exitPoint,{insideCave:true});
     assert.equal(exit?.action,'exit');
     assert.ok(Math.hypot(exit.x-surface.x,exit.z-surface.z)<.0001);

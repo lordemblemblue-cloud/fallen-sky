@@ -58,8 +58,8 @@ test('E at every existing arch enters the same real connected cave and returns b
     assert(Number.isFinite(below),'Underground entry has real floor contact');
     assert.equal(planWolfveilCaveInteraction(enter,{insideCave:true}),null,
       'Cannot immediately exit at the underground landing');
-    const innerArch={x:cave.mouth[0]+cave.dir[0]*3,
-      y:enter.y,z:cave.mouth[1]+cave.dir[1]*3};
+    const innerArch={x:cave.mouth[0]+cave.dir[0]*6,
+      y:enter.y,z:cave.mouth[1]+cave.dir[1]*6};
     const leave=planWolfveilCaveInteraction(innerArch,{insideCave:true});
     assert.equal(leave?.action,'exit',cave.id);
     assert.equal(leave?.caveId,cave.id);

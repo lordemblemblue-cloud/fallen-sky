@@ -243,7 +243,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
             // Outside the mouth the hillside is the floor. Stone starts once
             // the ramp is actually under the rock.
-            if (along < 0.6 || my > wolfveilHeight(mx, mz) + 0.2) continue;
+            if (along < 6 || my > wolfveilHeight(mx, mz) - 4) continue;
           }
           const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
           // Mission path in the middle. The rock edges stay darker and a
@@ -614,53 +614,6 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
         );
       }
     }
-    // Stone lining just inside the arch, so the outdoor mouth meets the gallery.
-    for (let n = 0; n < 4; n++) {
-      const a0 = 1.1 + n * 1.7, a1 = a0 + 1.7;
-      const atIn = (along, lat, up) => {
-        const x = mx + dx * along + nx * lat;
-        const z = mz + dz * along + nz * lat;
-        const space = sampleWolfveilCaveSpace(x, z, 0.2);
-        if (!space) return null;
-        return [x, space.floorY + up, z];
-      };
-      for (const side of [-1, 1]) {
-        const p0 = atIn(a0, side * 3.15, 0), p1 = atIn(a1, side * 3.15, 0);
-        if (!p0 || !p1) continue;
-        shellTris.quad(
-          p0, p1, [p1[0], p1[1] + 3.6, p1[2]], [p0[0], p0[1] + 3.6, p0[2]],
-          [0.5, 0.52, 0.56],
-          [[0, 0], [1.6, 0], [1.6, 2.4], [0, 2.4]],
-        );
-      }
-    }
-
-    // Outdoor stair: the place you walk up to enter. Each tread sits on the
-    // hillside, so it cannot float and drop you.
-    for (let s = 0; s < 7; s++) {
-      const along = -5.6 + s * 0.68;
-      const sx = mx + dx * along, sz = mz + dz * along;
-      const sy = wolfveilHeight(sx, sz);
-      addProp(boxGeo, floorMat, sx, sy + 0.1, sz, 3.15, 0.16, 0.58, 0, yaw, 0);
-    }
-    // Interior stair: the same ramp you walk down after E, and back up to
-    // leave. Visual only. Feet still use the connected cave floor.
-    const entry = WOLFVEIL_CAVE_CORRIDORS.find(c => c.id === `entry_${cave.id}`);
-    if (entry) {
-      for (const seg of entry.segments) {
-        const count = Math.max(1, Math.floor(seg.lenXZ / 1.05));
-        for (let i = 0; i < count; i++) {
-          const t = (i + 0.5) / count;
-          const sx = seg.ax + seg.dx * t;
-          const sy = seg.ay + seg.dy * t;
-          const sz = seg.az + seg.dz * t;
-          const along = (sx - mx) * dx + (sz - mz) * dz;
-          if (along < 0.7 || along > 12) continue;
-          if (sy > wolfveilHeight(sx, sz) + 0.3) continue;
-          addProp(boxGeo, floorMat, sx, sy + 0.05, sz, 2.5, 0.12, 0.52, 0, Math.atan2(seg.dx, seg.dz), 0);
-        }
-      }
-    }
   }
 
   // 3. Build the 5 Domed Subterranean Chambers + Unique Themed Designs Inside!
@@ -954,7 +907,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
     addWayfinding('E · '+cave.name,
       cave.threshold[0],cave.threshold[1]+3.4,cave.threshold[2],10.2);
-    const ix=mx+dx*3,iz=mz+dz*3;
+    const ix = mx + dx * 6, iz = mz + dz * 6;
     const inside=sampleWolfveilCaveSpace(ix,iz,.62);
     if(inside)addWayfinding('E · Return Outside',ix,inside.floorY+3,iz,9);
   }
@@ -1013,15 +966,12 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     const travel = planWolfveilCaveInteraction(
       { x: cave.mouth[0], y: cave.mouthY, z: cave.mouth[1] });
     if (!travel) return null;
-    // Land just inside the rock, not 13 m in: the player walks the descending
-    // entry ramp themselves instead of being dropped at the chamber door.
-    const insideX = cave.mouth[0] + cave.dir[0] * 5.5;
-    const insideZ = cave.mouth[1] + cave.dir[1] * 5.5;
-    const space = sampleWolfveilCaveSpace(insideX, insideZ, 0.5);
+    // One drop onto the shared dungeon floor, in the first hall.
+    // Not a walk down a ramp, and not a skip to the far chamber.
     activeCaveId = cave.id;
-    worldPos.x = space ? insideX : travel.x;
-    worldPos.y = space ? space.floorY + 0.1 : travel.y;
-    worldPos.z = (space ? insideZ : travel.z) + offsetZ;
+    worldPos.x = travel.x;
+    worldPos.y = travel.y;
+    worldPos.z = travel.z + offsetZ;
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('skillActivatedToast', {
         detail: { text: 'Descending into ' + cave.name + ' · E at the arch to leave' },
