@@ -37,7 +37,7 @@ test('Universal retains actual registered search, selection, mastery and equippi
   assert.match(universal,/isWeaponSkillUnlocked\(selected\.skill_id\)/);
   assert.match(universal,/activeIds\.includes\(selected\.skill_id\)\|\|passiveIds\.includes\(selected\.skill_id\)/);
   assert.match(universal,/value=\{query\} onChange=\{event=>setQuery\(event\.target\.value\)\}/);
-  assert.match(service,/onEquip=\{equipFromModernHub\}/);
+  assert.match(tree,/onEquip=\{equipFromModernHub\}/);
   assert.match(tree,/AXEUniversalSkillHub/);
   const catalog=[
     {skill_id:'buff',weapon_type:null,skill_type:'ACTIVE_BUFF'},
