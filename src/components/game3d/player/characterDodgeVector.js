@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { game3dGame2MovementBasis } from './Game3DGame2Camera.mjs';
+import { dodgeDirectionFromAxes } from './game3dEightWayDodge.mjs';
 
 // Dodge direction is CHARACTER-relative, never camera-relative.
 // Camera yaw/pitch have ZERO influence here: forward/back come from the body's
@@ -49,24 +50,23 @@ export function getPlanarBasisFromYaw(yaw) {
 }
 
 // input: { forward, backward, left, right } booleans (WASD).
-// Returns { direction, vector } — vector is a fresh Vector3, safe to keep.
-export function getCharacterDodge(facingSource, input) {
+// A neutral R uses a backward shoulder roll; a neutral double-tap defaults
+// forward. Every diagonal has its OWN named animation, not a left/right alias.
+// All eight directions are flattened and normalized, so diagonals aren't
+// faster than forward/backward dodges. This does not rotate the player root.
+export function getCharacterDodge(facingSource, input = {}, { fallback = 'forward' } = {}) {
   const { forward, right } = getCharacterPlanarVectors(facingSource);
-
-  _dir.set(0, 0, 0);
-  if (input.forward) _dir.add(forward);
-  if (input.backward) _dir.sub(forward);
-  if (input.right) _dir.add(right);
-  if (input.left) _dir.sub(right);
-
-  _dir.y = 0;
-  if (_dir.lengthSq() === 0) _dir.copy(forward);
-  else _dir.normalize();
-
-  const direction = input.left ? 'left'
-    : input.right ? 'right'
-    : input.backward ? 'backward'
-    : 'forward';
-
-  return { direction, vector: _dir.clone() };
+  const advance = Number(!!input.forward) - Number(!!input.backward);
+  const strafe = Number(!!input.right) - Number(!!input.left);
+  const direction = dodgeDirectionFromAxes(advance, strafe, fallback);
+  _dir.copy(forward).multiplyScalar(advance).addScaledVector(right,strafe);
+  _dir.y=0;
+  if(_dir.lengthSq() === 0) {
+    if(direction.startsWith('backward'))_dir.copy(forward).negate();
+    else if(direction==='left')_dir.copy(right).negate();
+    else if(direction==='right')_dir.copy(right);
+    else _dir.copy(forward);
+  }
+  _dir.normalize();
+  return {direction,vector:_dir.clone()};
 }

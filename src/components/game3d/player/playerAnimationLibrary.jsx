@@ -25,6 +25,18 @@ const REQUESTED_ANIMATION_KEYS = [
   { key: 'dodgeLeft', names: ['standing dodge left'] },
   { key: 'dodgeForward', names: ['standing dodge forward'] },
   { key: 'dodgeBackward', names: ['standing dodge backward'] },
+  // Optional artist-made FBX overrides for each of the eight authored
+  // rig-local procedural moves. All eight animate even without uploads.
+  { key: 'dodgeRollForward', names: ['dodge roll forward','standing dodge roll forward'] },
+  { key: 'dodgeRollForwardLeft', names: ['dodge roll forward left','standing dodge roll forward left'] },
+  { key: 'dodgeRollForwardRight', names: ['dodge roll forward right','standing dodge roll forward right'] },
+  { key: 'dodgeStepLeft', names: ['dodge side step left','dodge step left'] },
+  { key: 'dodgeStepRight', names: ['dodge side step right','dodge step right'] },
+  { key: 'dodgeRollBackwardLeft', names: ['dodge roll backward left','standing dodge roll backward left'] },
+  { key: 'dodgeRollBackward', names: ['dodge roll backward','standing dodge roll backward'] },
+  { key: 'dodgeRollBackwardRight', names: ['dodge roll backward right','standing dodge roll backward right'] },
+  { key: 'dodgeRollLeft', names: ['dodge roll left','standing dodge roll left'] },
+  { key: 'dodgeRollRight', names: ['dodge roll right','standing dodge roll right'] },
   { key: 'diveForward', names: ['standing dive forward'] },
   { key: 'roll', names: ['front roll','forward roll','standing forward roll','standing roll forward','rolling forward','front roll animation'] },
   { key: 'jumpStart', names: ['jump start','standing jump start','standing jump','jump takeoff','jump take off'] },
@@ -45,7 +57,10 @@ const pickRequestedKey = (name = '') => {
 };
 
 const makeRunClipInPlace = (key, clip) => {
-  if (!['run', 'runBack'].includes(key)) return clip;
+  // Dodge travel is swept by GameWorld3D, NEVER by FBX root translation.
+  // Newly uploaded dodge mocap is made in-place like run clips to avoid
+  // teleporting through terrain, bridges or cave walls.
+  if (!['run','runBack'].includes(key) && !/^dodge(?:Roll|Step)/.test(key)) return clip;
 
   const inPlaceClip = clip.clone();
   inPlaceClip.tracks = inPlaceClip.tracks.filter((track) => {
