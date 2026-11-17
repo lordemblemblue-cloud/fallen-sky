@@ -68,6 +68,55 @@ test('returning to character select and re-entering keeps a single theme element
     're-entry reuses one theme element instead of creating another');
 });
 
+test('character-select song stops immediately on Play while world ambience remains separate', () => {
+  created.length = 0;
+  const audio = makeTransport();
+  audio.start();
+  const theme = audio.getWorldAudio();
+  const outdoor = audio.getNatureAudio();
+  assert.equal(theme.paused, false, 'the title may play while selecting a character');
+
+  theme.currentTime = 17;
+  audio.setPhase('world');
+  assert.equal(theme.paused, true, 'Play must stop the title song immediately');
+  assert.equal(theme.volume, 0, 'the intro must not remain audible under the world');
+  assert.equal(theme.loop, false, 'the title should never loop during gameplay');
+  assert.equal(outdoor.paused, false, 'independent wind and birds remain available');
+
+  audio.unlock();
+  audio.setVolume(.8);
+  assert.equal(theme.paused, true, 'unlock and volume changes must not restart the intro');
+  assert.equal(audio.getStatus().titlePlaying, false);
+
+  audio.setPhase('login');
+  assert.equal(theme.currentTime, 0, 'reopening character select starts at the song beginning');
+  assert.equal(theme.paused, false, 'only the menu may start the intro again');
+  assert.equal(outdoor.paused, true, 'outdoor ambience must not play over the menu');
+  audio.dispose();
+});
+
+test('combat state transitions cannot restart the stopped login theme', () => {
+  created.length = 0;
+  let fighting = false;
+  const audio = createGame3DEntryAudio({
+    createAudio: url => new FakeAudio(url),
+    clock: () => 0,
+    setTick: () => 1,
+    clearTick: () => {},
+    inCombat: () => fighting,
+  });
+  audio.start();
+  audio.setPhase('world');
+  fighting = true;
+  audio.unlock();
+  audio.setVolume(.9);
+  fighting = false;
+  audio.unlock();
+  assert.equal(audio.getWorldAudio().paused, true);
+  assert.equal(audio.getWorldAudio().volume, 0);
+  audio.dispose();
+});
+
 test('an entry camera that was never requested never claims input', () => {
   const camera = createGame3DWorldEntryCamera({ enabled: false });
   camera.start();
