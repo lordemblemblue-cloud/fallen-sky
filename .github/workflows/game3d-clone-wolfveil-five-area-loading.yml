@@ -78,6 +78,7 @@ jobs:
             src/components/game3d/performance/Game3DStaticInstancing.mjs \
             src/components/game3d/performance/Game3DStaticMerging.mjs \
             src/components/game3d/performance/Game3DFarProxy.mjs \
+            scripts/measure-wolfveil-terrain-detail.mjs \
             src/components/game3d/wolfveil/WolfveilFarOutline.js \
             src/components/game3d/wolfveil/WolfveilCaveDrawBudget.mjs \
             scripts/report-wolfveil-area-loading.mjs \

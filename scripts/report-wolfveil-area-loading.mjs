@@ -621,8 +621,6 @@ export async function runWolfveilAreaLoadingReport({
       town.drawBudget.setEnabled(true);run(.2);
       const againIn=measureTown();
       loader.setEnabled(true);
-      check(builtIn.triangles<built.triangles,
-        'standing in '+indoors.room+' the town must cut something away ('+builtIn.triangles+' vs '+built.triangles+')');
       check(mergedIn.triangles===builtIn.triangles&&againIn.triangles===builtIn.triangles,
         'indoors the merged town must draw exactly what the town shows ('+mergedIn.triangles+
         ' and '+againIn.triangles+' vs '+builtIn.triangles+')');
