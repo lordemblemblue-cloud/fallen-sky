@@ -1,0 +1,41 @@
+name: Game 3D Clone Responsive Resolution
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/performance/Game3DDisplaySettings.mjs'
+      - 'src/components/game3d/performance/AdaptiveGraphics.mjs'
+      - 'src/components/game3d/performance/Game3DResponsiveDisplay.css'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/PauseMenu.jsx'
+      - 'src/components/game3d/PauseMenu.css'
+      - 'src/pages/GameView.jsx'
+      - 'tests/game3d-clone-display-resolution.test.mjs'
+      - '.github/workflows/game3d-clone-responsive-resolution.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  responsive-resolution:
+    name: Device resolution policy and Vite production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Validate handheld/mobile/desktop resolution and graphics contracts
+        run: |
+          node --test \
+            tests/game3d-clone-display-resolution.test.mjs \
+            tests/game3d-clone-adaptive-graphics.test.mjs \
+            tests/game3d-clone-native-gpu-settings.test.mjs \
+            tests/game3d-console-settings-shared.test.mjs
+      - name: Compile real Game 3D application
+        run: npm run build
