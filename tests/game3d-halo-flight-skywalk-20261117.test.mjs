@@ -162,6 +162,9 @@ test('world hooks use Halo progression, real stamina, safe collision and origina
   assert.match(controller,/specialMoveTimer=HALO_FLIGHT_RULES\.initialAirJumpSeconds/);
   assert.match(wings,/subscribeHalo\(s=>\{haloSnapshot=s;updateWingVisual\(\);\}\)/);
   assert.match(wings,/halo_flight/);
+  assert.match(wings,/flightMode==='glide'/);
+  assert.match(wings,/wingAlpha=airborneWing\?Math.max\(\.87,alpha\):alpha/);
+  assert.match(world,/window\.__gw3dAirFlightMode=traversalAfterMotion\?\.mode\|\|'idle'/);
   assert.match(haloUI,/Halo Wing Flight/);
   assert.match(haloUI,/flight\.freeGlideSeconds\.toFixed\(1\)/);
 });
