@@ -7,8 +7,10 @@ import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './g
 import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
+  beginAirWalkFinisher,setAirWalkKickHeld,
   advanceAirWalk,releaseAirWalkGlide,isAirWalkInFlight,
 } from './AirWalkTraversal.mjs';
+import {HALO_FLIGHT_RULES,paidGlideSeconds} from './haloWingFlightRules.mjs';
 
 // 3-hit weapon combos (weapons/weaponComboClips.js, baked per held weapon). A press inside the chain window
 // continues the chain; a press during a swing is buffered and starts the next hit at that swing's cancel point.
@@ -49,7 +51,8 @@ const STATES = {
 const LOOP_STATES = new Set([
   STATES.IDLE, STATES.AFK, STATES.COMBAT_IDLE, STATES.WALK, STATES.RUN, STATES.SPRINT, STATES.RUN_BACK, STATES.JUMP_LOOP,
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
-  'fallLoop', // no glider model yet: preserve a looping airborne pose
+  'fallLoop', // regular falling still uses its existing pose
+  'wingGlide','airWalkLoop', // real rig-local flight motions
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
@@ -87,6 +90,8 @@ export function createLunaDashboardPlayerController({
   getAirWalkStamina=()=>0,
   spendAirWalkBoost=()=>({ok:false,reason:'unavailable'}),
   spendAirWalkGlide=()=>({ok:false,reason:'unavailable'}),
+  spendAirWalkRun=()=>({ok:false,reason:'unavailable'}),
+  spendAirWalkFinisher=()=>({ok:false,reason:'unavailable'}),
 }={}) {
   const actions = {};
   let currentState = null;
@@ -114,14 +119,17 @@ export function createLunaDashboardPlayerController({
   let jumpPhase=null;
   let jumpPhaseSeconds=0;
   let airWalk=createAirWalkState();
+  let airDashDirection=null;
   let lastAirWorldY=null;
   let lastAirGroundY=null;
   const cancelAirWalk=()=>{
     if(isAirWalkInFlight(airWalk)) airWalk=releaseAirWalkGlide(airWalk);
+    airDashDirection=null;
     return airWalk.mode;
   };
   const resetAirWalk=()=>{
     airWalk=createAirWalkState();lastAirWorldY=null;lastAirGroundY=null;
+    airDashDirection=null;
   };
   const GRAVITY=18;
   const JUMP_SPEED=5.4;
@@ -360,6 +368,11 @@ export function createLunaDashboardPlayerController({
       isBusy = false; busyResetAt = 0; if (oneShotRef) oneShotRef.current = false;
     }
     if (isDead || isMounted) return;
+    // While actual Halo flight owns the character, the ordinary walk/idle
+    // locomotion updater must not overwrite WingGlide / Skywalk animation
+    // every frame. We still remember the player's latest movement intent
+    // to restore locomotion once they land.
+    if(isAirWalkInFlight(airWalk)) return;
     if (isBusy) {
       // A bow release may keep its short recoil pose while the PLAYER ROOT
       // still walks. After 120ms, the normal aim-walk/strafe clip resumes.
@@ -547,7 +560,7 @@ export function createLunaDashboardPlayerController({
     return startSpecialMove(state,directionVector,move.speed,move.duration);
   }; 
 
-  const requestJump=()=>{
+  const requestJump=({haloPercent=0,directionVector=null}={})=>{
     if(isDead || isMounted || isBusy || jumpPhase || jumpOffset>0 || !hasAction(STATES.JUMP_START))return false;
     jumpOffset=0;
     jumpVelocity=JUMP_SPEED;
@@ -557,27 +570,56 @@ export function createLunaDashboardPlayerController({
     bowAttackAllowsMovement=false;
     busyResetAt=0;
     if(oneShotRef)oneShotRef.current=true;
-    return playState(STATES.JUMP_START,{force:true,fade:.05});
+    const played=playState(STATES.JUMP_START,{force:true,fade:.05});
+    if(played&&haloPercent>=HALO_FLIGHT_RULES.wingUnlockPercent&&directionVector?.lengthSq?.()>0){
+      if(hasAction('airJump'))playState('airJump',{force:true,fade:.08});
+      // Air Jump launches diagonally upward and forward. Its X/Z impulse
+      // uses the same swept world collision as roll/dodge, never rig root motion.
+      specialMoveVelocity=directionVector.clone().setY(0).normalize()
+        .multiplyScalar(HALO_FLIGHT_RULES.initialAirJumpForwardSpeed);
+      specialMoveTimer=HALO_FLIGHT_RULES.initialAirJumpSeconds;
+    }
+    return played;
   };
 
-  // Use the correct melee clip when available. The older bow clip remains
-  // Space: jump from ground, deploy an invisible glider once airborne,
-  // then pay stamina to Air Walk and resume gliding after the upward kick.
-  // Separate from equipped combat skills, mounts, K/Soulbook, and the Q crouch.
-  const requestAirWalkAction=()=>{
+  // Space: grounded Air Jump, midair wing glide, repeated upward Air Walk
+  // kicks, hold for continuous sky-run, double-tap the kick for the finishing
+  // forward dash. All charges use the canonical character stamina ledger.
+  const requestAirWalkAction=({haloPercent,directionVector,doubleTap=false}={})=>{
     if(isDead||isMounted)return {ok:false,reason:'unavailable'};
+    if((airWalk.mode==='boost'||airWalk.mode==='walk')&&doubleTap){
+      const planned=beginAirWalkFinisher(airWalk,{stamina:getAirWalkStamina()});
+      if(!planned.ok)return planned;
+      const paid=spendAirWalkFinisher();
+      if(!paid?.ok)return {ok:false,reason:paid?.reason||'not_enough_stamina'};
+      airWalk=planned.state;
+      const dir=directionVector?.clone?.();
+      airDashDirection=(dir&&dir.lengthSq()>0?dir:
+        new THREE.Vector3(0,0,1)).setY(0).normalize();
+      const finisher=hasAction('airWalkFinisher')?'airWalkFinisher':STATES.DIVE_FORWARD;
+      if(hasAction(finisher))playState(finisher,{force:true,fade:.07});
+      isBusy=true;
+      busyResetAt=now()+HALO_FLIGHT_RULES.finisherSeconds;
+      if(oneShotRef)oneShotRef.current=true;
+      return {ok:true,action:'air_walk_finisher'};
+    }
     if(airWalk.mode==='glide'){
       const planned=beginAirWalkBoost(airWalk,{stamina:getAirWalkStamina()});
       if(!planned.ok)return planned;
       const paid=spendAirWalkBoost();
       if(!paid?.ok)return {ok:false,reason:paid?.reason||'not_enough_stamina'};
-      airWalk=planned.state;
+      airWalk=setAirWalkKickHeld(planned.state,true);
+      const airKick=hasAction('airWalkKick')?'airWalkKick':STATES.JUMP_LOOP;
+      if(hasAction(airKick))playState(airKick,{force:true,fade:.07});
+      isBusy=true;busyResetAt=0;
+      if(oneShotRef)oneShotRef.current=true;
       return {ok:true,action:'air_walk'};
     }
     if(isAirWalkInFlight(airWalk))return {ok:false,reason:'boost_in_progress'};
     if(jumpPhase==='takeoff'||jumpPhase==='airborne'){
       const planned=deployAirWalkGlide(airWalk,{
         worldY:lastAirWorldY,floorY:lastAirGroundY,stamina:getAirWalkStamina(),
+        haloPercent,
       });
       if(!planned.ok)return planned;
       airWalk=planned.state;
@@ -588,13 +630,24 @@ export function createLunaDashboardPlayerController({
       busyResetAt=0;
       externallyAirborne=true;
       if(oneShotRef)oneShotRef.current=false;
-      const glideLoop=hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+      const glideLoop=hasAction('wingGlide')?'wingGlide':
+        hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
       if(hasAction(glideLoop))playState(glideLoop,{force:true,fade:.12});
-      return {ok:true,action:'glide'};
+      return {ok:true,action:'glide',freeSeconds:airWalk.freeGlideRemaining};
     }
     if(jumpPhase)return {ok:false,reason:'landing'};
-    const jumped=requestJump();
+    const jumped=requestJump({haloPercent,directionVector});
     return jumped?{ok:true,action:'jump'}:{ok:false,reason:'jump_unavailable'};
+  };
+  const setAirWalkHeld=held=>{
+    const before=airWalk.mode;
+    airWalk=setAirWalkKickHeld(airWalk,held);
+    if(before==='walk'&&airWalk.mode==='glide'){
+      const loop=hasAction('wingGlide')?'wingGlide':
+        hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+      if(hasAction(loop))playState(loop,{force:true,fade:.10});
+    }
+    return airWalk.mode;
   };
 
   // a fallback for existing avatars without a registered melee animation.
@@ -666,15 +719,54 @@ export function createLunaDashboardPlayerController({
     if(isAirWalkInFlight(airWalk)){
       // The single owner of vertical gliding height keeps absolute world Y.
       // Ordinary X/Z still goes through the collision-safe World3D callback.
-      const canGlide=airWalk.mode!=='glide' ||
-        (getAirWalkStamina()>0 && !!spendAirWalkGlide(dt)?.ok);
+      // Free Halo wing time is spent first. On a crossing frame bill only
+      // the exact fraction after expiry; no upfront stamina cost for gliding.
+      const paidSeconds=airWalk.mode==='glide'?paidGlideSeconds(airWalk,dt):0;
+      const canGlide=paidSeconds<=0||!!spendAirWalkGlide(paidSeconds)?.ok;
+      const entersAirRun=airWalk.mode==='boost'&&airWalk.kickHeld&&
+        (airWalk.kickHoldSeconds||0)+dt>=HALO_FLIGHT_RULES.airRunHoldThresholdSeconds;
+      const canAirWalk=(airWalk.mode==='walk'||entersAirRun)
+        ?!!spendAirWalkRun(dt)?.ok:true;
+      const before=airWalk.mode;
+      if(typeof moveWithCollision==='function'&&dt>0){
+        if(before==='walk'&&canAirWalk){
+          // Forward flight is collision swept, so buildings, cave walls
+          // and mountains cannot be passed by holding Space.
+          const yaw=model.rotation.y;
+          const x=Math.sin(yaw)*HALO_FLIGHT_RULES.airRunForwardSpeed*dt;
+          const z=Math.cos(yaw)*HALO_FLIGHT_RULES.airRunForwardSpeed*dt;
+          const corrected=moveWithCollision(x,z);
+          if(Number.isFinite(corrected))correctedGroundY=corrected;
+        }else if(before==='dash'){
+          const dir=airDashDirection||new THREE.Vector3(Math.sin(model.rotation.y),0,Math.cos(model.rotation.y));
+          const step=Math.min(dt,airWalk.dashRemaining||0);
+          const corrected=moveWithCollision(dir.x*HALO_FLIGHT_RULES.finisherForwardSpeed*step,
+            dir.z*HALO_FLIGHT_RULES.finisherForwardSpeed*step);
+          if(Number.isFinite(corrected))correctedGroundY=corrected;
+        }
+      }
       const next=advanceAirWalk(airWalk,dt,{
         floorY:correctedGroundY,
         ceilingY:typeof resolveCeilingY==='function'
           ?resolveCeilingY(airWalk.y):null,
-        canGlide,
+        canGlide,canAirWalk,
       });
       airWalk=next.state;
+      if(before!==airWalk.mode){
+        if(airWalk.mode==='walk'){
+          isBusy=false;busyResetAt=0;
+          if(oneShotRef)oneShotRef.current=false;
+          const run=hasAction('airWalkLoop')?'airWalkLoop':STATES.RUN;
+          if(hasAction(run))playState(run,{force:true,fade:.12});
+        }else if(['glide','fall'].includes(airWalk.mode)){
+          airDashDirection=null;
+          isBusy=false;busyResetAt=0;
+          if(oneShotRef)oneShotRef.current=false;
+          const loop=airWalk.mode==='glide'&&hasAction('wingGlide')?'wingGlide':
+            hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+          if(hasAction(loop))playState(loop,{force:true,fade:.12});
+        }
+      }
       if(next.landed){
         jumpOffset=0;
         jumpVelocity=0;
@@ -825,6 +917,7 @@ export function createLunaDashboardPlayerController({
     requestHitReact,
     requestJump,
     requestAirWalkAction,
+    setAirWalkHeld,
     cancelAirWalk,
     resetAirWalkMotion:()=>{
       resetAirWalk();jumpOffset=0;jumpVelocity=0;jumpPhase=null;

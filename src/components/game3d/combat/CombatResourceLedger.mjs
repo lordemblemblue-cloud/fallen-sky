@@ -6,6 +6,8 @@ export const COMBAT_RESOURCE_RULES = Object.freeze({
   dodgeStamina: 22,
   airWalkBoostStamina: 24,
   airWalkGlideStaminaPerSecond: 6.5,
+  airWalkRunStaminaPerSecond: 12,
+  airWalkFinisherStamina: 28,
   guardStamina: 12,
   skillStamina: 5,
   skillWillBase: 7,
@@ -51,6 +53,12 @@ export function combatActionCost(action, skill = null) {
   // Time is bounded by the frame simulation cap; invalid/malicious values can
   // never turn a negative cost into stamina restoration.
   if (action === 'air_walk') return { stamina: c.airWalkBoostStamina, will: 0 };
+  if (action === 'air_walk_finisher') return { stamina: c.airWalkFinisherStamina, will: 0 };
+  if (action === 'air_walk_run') {
+    const seconds=Number(skill?.seconds);
+    const safe=Number.isFinite(seconds)?Math.max(0,Math.min(.08,seconds)):0;
+    return {stamina:safe*c.airWalkRunStaminaPerSecond,will:0};
+  }
   if (action === 'glide') {
     const seconds = Number(skill?.seconds);
     const safeSeconds = Number.isFinite(seconds) ? Math.max(0,Math.min(.08,seconds)) : 0;

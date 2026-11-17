@@ -1,7 +1,8 @@
 // ─── PlayerAngelWings ──────────────────────────────────────────────────────
 // Detailed, sketched angel-wings visual that mounts behind the player's back
-// in the live 3D world. Renders ONLY when a Wing path is equipped and has a
-// level > 0. Visual detail (span, feather count, glow, trailing motes) tiers
+// in the live 3D world. Renders if a wing path is equipped and leveled OR
+// Halo reaches 10% (Lv20), awakening neutral spiritual flight wings.
+// Visual detail (span, feather count, glow, trailing motes) tiers
 // up with the equipped wing's level, and the plumage tints to the path's color.
 //
 // Anchoring:
@@ -29,6 +30,8 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { subscribeWings } from './progression/wingsStore';
+import { subscribeHalo } from './progression/haloStore';
+import { getHaloFlightProfile } from './player/haloWingFlightRules.mjs';
 import { getWingPathById } from './progression/wingsData';
 import { subscribePlayerPosition, getPlayerPosition } from './playerPositionStore';
 import { createSpineEnergyFlow } from './wings/spineEnergyFlow';
@@ -311,23 +314,36 @@ export default function PlayerAngelWings() {
       window.addEventListener('gw3dSceneReady', onReady);
     }
 
-    // Track equipped wing — rebuild visuals when path/level-tier changes.
-    const unsubWings = subscribeWings((s) => {
-      const eq = s.equippedPathId;
-      const lvl = eq ? (s.paths[eq]?.level || 0) : 0;
-      equippedRef.current = {
-        pathId: eq,
-        level: lvl,
-        color: eq ? (getWingPathById(eq)?.color || '#fff2a8') : '#fff2a8',
-        visualStyle: s.visualStyle || 'classic',
+    // Keep specialized equipped-wing artwork and bonuses intact. If a player
+    // awakens Halo flight without an equipped wing, grow a neutral visual-only
+    // spiritual wing pair from the SAME existing feather rig—no free stats.
+    let wingSnapshot=null;
+    let haloSnapshot=null;
+    const updateWingVisual=()=>{
+      if(!wingSnapshot)return;
+      const eq=wingSnapshot.equippedPathId;
+      const savedLevel=eq?(wingSnapshot.paths[eq]?.level||0):0;
+      const haloFlight=getHaloFlightProfile({level:haloSnapshot?.level||0});
+      const useHaloFallback=savedLevel<=0&&haloFlight.unlocked;
+      const pathId=savedLevel>0?eq:(useHaloFallback?'halo_flight':null);
+      const level=savedLevel>0?savedLevel:(useHaloFallback?haloFlight.level:0);
+      equippedRef.current={
+        pathId,level,
+        color:savedLevel>0?(getWingPathById(eq)?.color||'#fff2a8'):'#e7d7b5',
+        visualStyle:savedLevel>0?(wingSnapshot.visualStyle||'classic'):'classic',
       };
-      if (!group) return;
-      if (!eq || lvl <= 0 || s.visualStyle === 'blue_energy') { group.visible = false; return; }
-      const wantTier = tierForLevel(lvl);
-      if (wantTier !== currentTier || !currentColor || !currentColor.equals(new THREE.Color(equippedRef.current.color))) {
-        buildForTier(wantTier, equippedRef.current.color);
+      if(!group)return;
+      if(!pathId||level<=0||equippedRef.current.visualStyle==='blue_energy'){
+        group.visible=false;return;
       }
-    });
+      const wantTier=tierForLevel(level);
+      if(wantTier!==currentTier||!currentColor||
+         !currentColor.equals(new THREE.Color(equippedRef.current.color))){
+        buildForTier(wantTier,equippedRef.current.color);
+      }
+    };
+    const unsubWings=subscribeWings(s=>{wingSnapshot=s;updateWingVisual();});
+    const unsubHalo=subscribeHalo(s=>{haloSnapshot=s;updateWingVisual();});
 
     let last = performance.now();
     const tick = () => {
@@ -339,6 +355,7 @@ export default function PlayerAngelWings() {
       timeRef += dt;
 
       if (!group) return;
+      if(currentTier===0)updateWingVisual();
       const { pathId, level, visualStyle } = equippedRef.current;
       if (!pathId || level <= 0 || visualStyle === 'blue_energy') { group.visible = false; return; }
 
@@ -381,12 +398,21 @@ export default function PlayerAngelWings() {
       const dihedral = pose.dihedral + (nextPose.dihedral - pose.dihedral) * drift;
       const sweep = pose.sweep + (nextPose.sweep - pose.sweep) * drift;
       const lift = pose.lift + (nextPose.lift - pose.lift) * drift;
-
+      const flightMode=window.__gw3dAirFlightMode||'idle';
+      const airborneWing=flightMode==='glide'||flightMode==='boost'||
+        flightMode==='walk'||flightMode==='dash';
+      // Wings fan outward and stay clearly visible in flight instead of
+      // disappearing mid-flap. A finishing dash folds them back for speed.
+      // They return smoothly to their normal ornamental stroke on landing.
+      const spread=flightMode==='dash'?.05:flightMode==='walk'?.42:.22;
+      const wingRoll=airborneWing?THREE.MathUtils.lerp(dihedral,spread,.78):dihedral;
+      const wingSweep=airborneWing?THREE.MathUtils.lerp(sweep,-.10,.62):sweep;
+      const wingAlpha=airborneWing?Math.max(.87,alpha):alpha;
       if (leftWing && rightWing) {
-        leftWing.rotation.z = dihedral;
-        rightWing.rotation.z = -dihedral;
-        leftWing.rotation.y = sweep;
-        rightWing.rotation.y = -sweep;
+        leftWing.rotation.z = wingRoll;
+        rightWing.rotation.z = -wingRoll;
+        leftWing.rotation.y = wingSweep;
+        rightWing.rotation.y = -wingSweep;
         leftWing.position.y = lift;
         rightWing.position.y = lift;
       }
@@ -405,17 +431,17 @@ export default function PlayerAngelWings() {
         for (let i = 0; i < parts.feathers.length; i++) {
           const m = parts.feathers[i].material;
           if (!m) continue;
-          m.emissiveIntensity = (shimmer + pulse) * (0.25 + alpha * 0.75);
-          m.opacity = 0.94 * alpha;
+          m.emissiveIntensity = (shimmer + pulse) * (0.25 + wingAlpha * 0.75);
+          m.opacity = 0.94 * wingAlpha;
         }
       }
 
       // Spine energy conduit — streams out of the back, brightest mid-stroke.
-      if (parts?.spine) parts.spine.update(timeRef, dt, 0.45 + alpha * 0.55);
+      if (parts?.spine) parts.spine.update(timeRef, dt, 0.45 + wingAlpha * 0.55);
 
       // Root light pulses with the stroke.
       if (parts?.light) {
-        parts.light.intensity = (0.6 + currentTier * 0.12) * (0.4 + alpha * 0.6);
+        parts.light.intensity = (0.6 + currentTier * 0.12) * (0.4 + wingAlpha * 0.6);
       }
 
       // Trailing motes drift behind the wings.
@@ -446,6 +472,7 @@ export default function PlayerAngelWings() {
       mounted = false;
       if (frameId) cancelAnimationFrame(frameId);
       unsubWings();
+      unsubHalo();
       clearParts();
       if (group && group.parent) group.parent.remove(group);
       if (group) disposeNode(group);

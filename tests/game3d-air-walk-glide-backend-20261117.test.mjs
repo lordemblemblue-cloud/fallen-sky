@@ -146,11 +146,11 @@ test('combat ledger prevents underpayment, negative or oversized drain, and defe
 
 test('Space cycles jump→glide→Air Walk; G and Q remain Clan/Crouch',()=>{
   assert.match(world,/if\(k===' '\)\{/);
-  assert.match(world,/requestAirWalkAction\?\.\(\)/);
+  assert.match(world,/requestAirWalkAction\?\.\(\{/);
   assert.match(avatar,/if\(airWalk.mode==='glide'\)\{/);
   assert.match(avatar,/beginAirWalkBoost\(airWalk/);
   assert.match(avatar,/deployAirWalkGlide\(airWalk/);
-  assert.match(avatar,/const jumped=requestJump\(\)/);
+  assert.match(avatar,/const jumped=requestJump\(\{haloPercent,directionVector\}\)/);
   assert.match(world,/if \(k === 'q' && !crouchTogglePressed.current\)/);
   assert.match(inputView,/e\.key\.toLowerCase\(\) === 'g'/);
   assert.doesNotMatch(world,/if \(k === 'g'\).*AirWalk/);

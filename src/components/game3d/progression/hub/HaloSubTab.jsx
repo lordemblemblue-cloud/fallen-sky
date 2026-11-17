@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { subscribeHalo, attemptEnhancement, attemptEnhancementBatch, setHaloHidden, setHaloLowEffects } from '../haloStore';
 import { MAX_HALO_LEVEL } from '../haloData';
+import {getHaloFlightProfile} from '../../player/haloWingFlightRules.mjs';
 import MaxOutButton from './devMaxOut';
 import { setPreviewMax } from '../previewMaxMode';
 import { subscribeCharacterChange } from '../../characterStorage';
@@ -59,6 +60,7 @@ export default function HaloSubTab() {
 
   const tier = halo.tier;
   const chancePct = Math.round((halo.successChance || 0) * 100);
+  const flight=getHaloFlightProfile({level:halo.level,maxLevel:MAX_HALO_LEVEL});
 
   return (
     <div className="flex h-full flex-col overflow-y-auto md:flex-row">
@@ -109,6 +111,35 @@ export default function HaloSubTab() {
       {/* RIGHT — attempt + bonuses */}
       <div className="flex-1 min-w-0 px-4 py-6 md:px-8 md:overflow-y-auto">
         <h2 className="mb-4 text-2xl font-semibold text-white">Halo progression</h2>
+        <section aria-label="Halo wing flight progression"
+          className="mb-5 rounded-lg border border-amber-200/25 bg-slate-900/20 backdrop-blur-md px-4 py-3">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p className="text-[10px] tracking-[.17em] uppercase text-amber-200/85">Halo Wing Flight</p>
+              <p className="mt-1 text-xs text-white/85">
+                {flight.unlocked?'Spiritual wings awakened':'Unlocks at 10% Halo (Level 20)'}
+              </p>
+            </div>
+            <div className="text-right tabular-nums">
+              <strong className="text-lg text-amber-100">{Math.round(flight.haloPercent)}%</strong>
+              <p className="text-[10px] text-white/65">
+                {flight.unlocked?flight.freeGlideSeconds.toFixed(1)+'s free glide':'Flight locked'}
+              </p>
+            </div>
+          </div>
+          <div role="progressbar" aria-label="Halo flight percentage"
+            aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(flight.haloPercent)}
+            className="h-1.5 rounded-full bg-slate-700/40 mt-3 overflow-hidden">
+            <div className="h-full rounded-full bg-amber-300/70"
+              style={{width:flight.haloPercent+'%'}}/>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-white/65">
+            Space: Air Jump → Glide. Press again to kick upward; hold to Air Walk
+            until stamina runs low. Double-tap the kick for a final forward burst
+            before returning to glide. The free wing time is consumed first;
+            only additional gliding spends stamina.
+          </p>
+        </section>
         <ProgressionReview review={review} onCancel={() => setReview(null)} onConfirm={(pending) => {
           const summary = attemptEnhancementBatch(pending.count);
           setLastResult(summary.attempts > 0
