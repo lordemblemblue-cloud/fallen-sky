@@ -14,8 +14,8 @@ test('the original FIRST screenshot has its own translucent image in the ACTUAL 
   // The existing first-image splash stays the default compact layout;
   // optional Concept D vertical uses its original approved artwork instead.
   assert.match(hud,/hudCustomization\.layout==='vertical'/);
-  assert.match(hud,/clean-curl-splash-only\\.webp/);
-  assert.match(hud,/concept-d-original-ornament\\.avif/);
+  assert.match(hud,/clean-curl-splash-only\.webp/);
+  assert.match(hud,/concept-d-original-ornament\.avif/);
   assert.match(hud,/aria-hidden="true" draggable="false" loading="eager" decoding="async"/);
   assert.match(css,/\.jade-hud \.jade-combat-concept-d > img\.jade-concept-d-ornament/);
   assert.match(css,/object-fit:contain/);
