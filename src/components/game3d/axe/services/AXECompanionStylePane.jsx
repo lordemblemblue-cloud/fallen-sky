@@ -10,6 +10,7 @@ import './AXEGlassLoadoutPane.css';
 import './AXECompanionStylePane.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
 import AXECompanionImbuementPane from './AXECompanionImbuementPane';
+import AXECompanionModelViewControl from './AXECompanionModelViewControl';
 
 const PlayerModel = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CompanionModel = lazy(() => import('../../equipment/CompanionPreview3D'));
@@ -123,6 +124,7 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
     <section className="axe-app-model-stage axe-comp-style-stage"
       aria-label={previewOwner==='companion'?'Companion appearance viewer':'Player wardrobe viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
+      <AXECompanionModelViewControl owner={previewOwner} onChange={setPreviewOwner}/>
       <div className="axe-app-viewer-gear axe-app-viewer-gear--left axe-comp-variety-rail"
         aria-label="Equipped player wardrobe slots, left">
         {VARIETY_VIEWER_SLOTS.slice(0,3).map(varietySlotCard)}
