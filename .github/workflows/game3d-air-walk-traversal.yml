@@ -1,0 +1,33 @@
+name: Game 3D Air Walk Backend
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/player/AirWalkTraversal.mjs'
+      - 'src/components/game3d/player/LunaDashboardPlayerController.jsx'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/combat/CombatResourceLedger.mjs'
+      - 'tests/game3d-air-walk-glide-backend-20261117.test.mjs'
+      - '.github/workflows/game3d-air-walk-traversal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  air-walk:
+    name: Stamina Air Walk physics regression and full Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test glide, Air Walk, depletion, collisions and existing controls
+        run: node --test tests/game3d-air-walk-glide-backend-20261117.test.mjs tests/game3d-entry-audio-and-movement.test.mjs
+      - name: Compile Game 3D
+        run: npm run build
