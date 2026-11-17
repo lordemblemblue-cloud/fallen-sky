@@ -305,7 +305,7 @@ export default function AXECloneSkillTreeWorkspace({
             onEquipSkill={equipFromTree} onFeedback={setFeedback}
             onActivateWeapon={onActivateWeapon} activeMode={activeMode}/>
         </AXESkillTreeErrorBoundary> : companion
-          ? <AXECompanionSkillHub activeIds={activeIds}
+          ? <AXECompanionSkillHub activeIds={activeIds} targetEquipSlot={targetEquipSlot}
               onEquip={equipFromModernHub}
               onSelected={skill=>selectNode({kind:'skill',id:skill.skill_id,tier:0})}/>
           : ['universal','passive'].includes(category)

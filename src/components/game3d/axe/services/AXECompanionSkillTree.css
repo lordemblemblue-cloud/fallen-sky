@@ -1,0 +1,43 @@
+/* Game 3D clone Companion-only Assist/Damage skill tree; character tree stays unchanged. */
+.axe-comp-skillbook{gap:9px;min-height:0;min-width:0}
+.axe-comp-tree-hero{display:flex;align-items:center;gap:13px;flex:0 0 auto;padding:11px 15px;border:1px solid #d6b57da8;border-radius:12px;background:linear-gradient(130deg,#18334be0,#0b2437f2);color:#f5dfbe}
+.axe-comp-tree-brand{width:42px;height:42px;display:grid;place-items:center;flex:0 0 42px;border-radius:12px;background:#273c52;border:1px solid #d4ad76;color:#f8ce8e}
+.axe-comp-tree-hero>div:nth-child(2){flex:1;min-width:0}.axe-comp-tree-hero small{display:block;font:10px Georgia,serif;letter-spacing:.12em;color:#dbbd8f}
+.axe-comp-tree-hero h2{margin:2px 0;font:normal clamp(19px,1.85vw,27px) Georgia,serif;color:#ffe0a4}
+.axe-comp-tree-hero p{margin:2px 0;color:#cad8de;font:12px Georgia,serif}.axe-comp-tree-hero>span{white-space:nowrap;color:#dcd6c8;font:11px Georgia,serif}
+.axe-comp-tree-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.axe-comp-tree-tabs{display:flex;gap:7px;min-width:0}
+.axe-comp-tree-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;min-width:132px;border:1px solid #aa8e69;border-radius:9px;padding:8px 12px;background:#142c42;color:#eddabb;font:13px Georgia,serif;cursor:pointer}
+.axe-comp-tree-tabs button[aria-pressed="true"]{border-color:#ffe1a1;background:linear-gradient(100deg,#b68f55,#ecd0a0);color:#251f1b}
+.axe-comp-tree-tabs small{margin-left:auto;font-size:11px}
+.axe-comp-tree-search{display:flex;align-items:center;gap:7px;min-width:130px;width:min(255px,35%);padding:7px 10px;border:1px solid #ac9272;border-radius:8px;background:#0c2539;color:#efcf98}
+.axe-comp-tree-search input{min-width:0;width:100%;border:0;outline:0;color:#f4e5ce;background:transparent;font:12px Georgia,serif}
+.axe-comp-tree-search:focus-within{outline:2px solid #f2d7a9;outline-offset:1px}
+.axe-comp-tree-body{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(225px,1fr);gap:10px;min-width:0;min-height:0;flex:1 1 auto;overflow:hidden}
+.axe-comp-tree-map{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid #9c977c77;border-radius:12px;padding:12px;background:linear-gradient(160deg,#09223aee,#102c42cf)}
+.axe-comp-tree-map-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.axe-comp-tree-map-heading h3{margin:0;color:#ffdfaa;font:19px Georgia,serif}.axe-comp-tree-map-heading p{margin:4px 0;color:#bdcdd6;font:12px Georgia,serif}
+.axe-comp-tree-map-heading>span{white-space:nowrap;font:10px Georgia,serif;color:#d7c49f}
+.axe-comp-skillbook .axe-sk-companion-tree{flex:1 0 130px;display:flex;align-items:center;min-height:140px;max-height:none;margin:3px 0;padding:8px 2px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;overscroll-behavior-inline:contain}
+.axe-comp-skillbook .axe-sk-combat-node{height:100%;align-items:center}
+.axe-comp-skillbook .axe-comp-tree-node{min-height:120px;height:100%;flex:0 0 172px;max-width:172px;display:flex;align-items:stretch;flex-direction:column;justify-content:space-between;gap:6px;padding:10px 11px;cursor:pointer;border:1px solid #ae956e;border-radius:12px;color:#f1dfc9;background:linear-gradient(145deg,#1b354b,#102538)}
+.axe-comp-skillbook .axe-comp-tree-node[aria-pressed="true"]{border-color:#ffde9a;box-shadow:0 0 0 1px #ffe0a4a0}
+.axe-comp-skillbook .axe-comp-tree-node--future{border-style:dashed;opacity:.78}
+.axe-comp-tree-node-top{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.axe-comp-skillbook .axe-comp-tree-node .axe-sk-skill-mark{width:36px;height:36px}
+.axe-comp-tree-node-status{display:flex;align-items:center;gap:3px;font:10px Georgia,serif;color:#bce8c8}
+.axe-comp-tree-node-status--future{color:#e3ceaf}
+.axe-comp-skillbook .axe-comp-tree-node strong{font:normal 15px Georgia,serif;white-space:normal}
+.axe-comp-skillbook .axe-comp-tree-node small{margin:0;color:#c0cbd3;font:11px Georgia,serif}
+.axe-comp-tree-node-foot{display:flex;align-items:center;gap:5px;color:#d3baa0;font:10px Georgia,serif}
+.axe-comp-skillbook .axe-sk-combat-connector{flex:0 0 23px;min-width:23px}
+.axe-comp-tree-note{display:flex;gap:7px;align-items:flex-start;padding:10px 11px;border:1px solid #a18d6a66;border-radius:8px;background:#142b3b;flex:0 0 auto;color:#f0d59c}
+.axe-comp-tree-note svg{flex-shrink:0}
+.axe-comp-tree-note p,.axe-comp-tree-assist-note{font:11px/1.45 Georgia,serif;color:#cdd9df;margin:0}
+.axe-comp-tree-assist-note{padding:4px 8px}
+.axe-comp-tree-inspector{min-height:0;overflow:auto;overscroll-behavior:contain;padding:14px}
+.axe-comp-tree-slot-help{font:11px/1.45 Georgia,serif;color:#e4cbab}
+.axe-comp-tree-feedback{font:11px Georgia,serif;color:#f0cc93}
+@media(max-width:960px){.axe-comp-tree-body{grid-template-columns:minmax(0,1.2fr) minmax(195px,1fr)}.axe-comp-skillbook .axe-comp-tree-node{flex-basis:148px;max-width:148px}}
+@media(max-width:720px){.axe-comp-tree-hero>span{display:none}.axe-comp-tree-controls{flex-direction:column;align-items:stretch}.axe-comp-tree-tabs button{flex:1;min-width:0}.axe-comp-tree-search{width:100%}.axe-comp-tree-body{display:flex;flex-direction:column;overflow:auto}.axe-comp-tree-map,.axe-comp-tree-inspector{flex:0 0 auto;overflow:visible}.axe-comp-skillbook .axe-sk-companion-tree{min-height:150px;max-height:190px;overflow-x:auto}.axe-comp-tree-inspector{min-height:180px}}
+@media(prefers-reduced-motion:reduce){.axe-comp-skillbook *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
