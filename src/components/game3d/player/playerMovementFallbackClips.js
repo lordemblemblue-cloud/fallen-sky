@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createEightWayDodgeClips } from './playerEightWayDodgeClips';
 
 // Four playable Game 3D rigs are not identical: Adam/Eve use mixamorig bones;
 // Getsuga/Artemis use the original pelvis/thigh/clavicle hierarchy. When a
@@ -89,11 +90,14 @@ export function createPlayerMovementFallbackClips(model){
     ['leftThigh',[0,.24,.33,.15,0]],
     ['rightThigh',[0,-.12,-.24,-.1,0]],
   ]);
-  return Object.fromEntries(Object.entries({
+  const fallback=Object.fromEntries(Object.entries({
     jumpStart,jumpLoop,jumpLand,roll,
     dodgeLeft:makeDodge('game3d_dodge_left','z',1),
     dodgeRight:makeDodge('game3d_dodge_right','z',-1),
     dodgeForward:makeDodge('game3d_dodge_forward','x',-1),
     dodgeBackward:makeDodge('game3d_dodge_backward','x',1),
   }).filter(([,value])=>value));
+  // Full eight-direction acrobatic dodge set uses the exact same rig bind pose.
+  // Generated clips are in place; World3D alone owns collision-checked travel.
+  return {...fallback,...createEightWayDodgeClips(model)};
 }
