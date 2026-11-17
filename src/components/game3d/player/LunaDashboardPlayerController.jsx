@@ -3,6 +3,7 @@ import { blocksBowMovement, shouldBlendBowFootwork } from './BowMovementRules.mj
 import { PLAYER_AFK_DELAY_SECONDS } from './playerNativeAnimationClips';
 import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, resolvePlayerAnimationKey } from './playerAnimationActions.mjs';
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
+import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
@@ -68,9 +69,11 @@ const ONE_SHOT_DURATION = {
   [STATES.JUMP_START]: 0.24,
   [STATES.JUMP_LAND]: 0.22,
   [STATES.ROLL]: GAME3D_MOBILITY_SECONDS.roll,
+  ...Object.fromEntries([...EIGHT_WAY_DODGE_MOVES,...SIDE_ROLL_VARIANTS]
+    .map(move=>[move.key,move.duration])),
 };
 
-const DODGE_STATE_BY_DIRECTION = {
+const LEGACY_DODGE_STATE_BY_DIRECTION = {
   right: STATES.DODGE_RIGHT,
   left: STATES.DODGE_LEFT,
   forward: STATES.DODGE_FORWARD,
@@ -525,14 +528,24 @@ export function createLunaDashboardPlayerController({
   };
 
   const requestDodge = (directionVector, directionName = 'forward') => {
-    const state = DODGE_STATE_BY_DIRECTION[directionName] || STATES.DODGE_FORWARD;
-    if (hasAction(state)) return startSpecialMove(state, directionVector, 7.0, ONE_SHOT_DURATION[state]);
-    return startSpecialMove(STATES.DIVE_FORWARD, directionVector, 6.5, 0.52);
+    const move=getEightWayDodgeMove(directionName);
+    // All eight named generated clips exist from first render; if an old rig
+    // somehow cannot bind one, preserve its original dodge/dive behavior.
+    const state=hasAction(move.key)?move.key:
+      (LEGACY_DODGE_STATE_BY_DIRECTION[directionName] || STATES.DIVE_FORWARD);
+    if(!hasAction(state))return false;
+    return startSpecialMove(state,directionVector,move.speed,move.duration);
   };
 
-  const requestRoll=(directionVector)=>startSpecialMove(
-    hasAction(STATES.ROLL)?STATES.ROLL:STATES.DIVE_FORWARD,
-    directionVector,4.8,ONE_SHOT_DURATION[STATES.ROLL]); 
+  const requestRoll = (directionVector, directionName = 'backward') => {
+    const move=getEightWayDodgeMove(directionName,{roll:true});
+    const state=hasAction(move.key)?move.key:
+      hasAction(STATES.ROLL)?STATES.ROLL:STATES.DIVE_FORWARD;
+    if(!hasAction(state))return false;
+    // R + direction rolls on the same collision-safe 360-degree trajectory;
+    // R alone performs the distinct backward perfect-dodge-style shoulder roll.
+    return startSpecialMove(state,directionVector,move.speed,move.duration);
+  }; 
 
   const requestJump=()=>{
     if(isDead || isMounted || isBusy || jumpPhase || jumpOffset>0 || !hasAction(STATES.JUMP_START))return false;
