@@ -64,3 +64,11 @@ test('the stream swaps blade geometry by distance and keeps every blade planted'
   assert.match(blades,/lighterGeometries: lighterBlades,/);
   assert.match(blades,/for \(const blade of lighterBlades\) blade\.dispose\(\);/);
 });
+
+test('sparse far grass tiles share 64 m chunks; near tiles keep 32 m',()=>{
+  const tiles=source('src/components/game3d/wolfveil/WolfveilGrassTileReplacement.js');
+  assert.match(tiles,/const chunked=\(geometry,material,spots,label,size=32\)=>\{/);
+  assert.match(tiles,/Math\.floor\(root\.x\/size\)\+':'\+Math\.floor\(root\.z\/size\)/);
+  assert.match(tiles,/chunked\(near\.geometry,nearMat,nearRoots,'SWV_Owner_LongGrass_Tile_2m_Near'\),/);
+  assert.match(tiles,/chunked\(far\.geometry,farMat,farRoots,'SWV_Owner_LongGrass_Tile_2m_Far',64\),/);
+});

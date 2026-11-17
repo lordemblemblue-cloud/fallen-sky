@@ -95,6 +95,7 @@ jobs:
             src/components/game3d/GameWorld3D.jsx \
             src/components/game3d/wolfveil/WolfveilCaveSystem.js \
             src/components/game3d/wolfveil/WolfveilNearGrassStream.js \
+            src/components/game3d/wolfveil/WolfveilGrassTileReplacement.js \
             src/components/game3d/wolfveil/WolfveilIndividualGrassBlades.js \
             src/components/game3d/PauseMenu.jsx \
             src/components/game3d/debug/RenderStatsOverlay.jsx \
