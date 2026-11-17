@@ -16,6 +16,8 @@ import {readGame3DCommunityHUD,saveGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT
 import {RENDER_STATS_STORAGE_KEY,isRenderStatsEnabled} from './debug/renderStats';
 import {CLONE_GPU_PROFILE_KEY,CLONE_GPU_PROFILES,readCloneGPUProfile,
   normalizeCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
+import {readGame3DDesktopInstall,saveGame3DDesktopInstall}
+  from './performance/Game3DDesktopInstall.mjs';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_BUFFER_APPLIED_EVENT,
   GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
   readGame3DDisplaySettings,saveGame3DDisplaySettings,game3DResolutionTarget,
@@ -89,6 +91,7 @@ export default function PauseMenu({
       typeof window==='undefined'?null:window.localStorage));
   const [gpuProfile,setGpuProfile]=useState(()=>
     typeof window==='undefined'?'auto':readCloneGPUProfile(window));
+  const [desktopInstall,setDesktopInstall]=useState(()=>readGame3DDesktopInstall());
   const [displaySettings,setDisplaySettings]=useState(readGame3DDisplaySettings);
   const [displayViewport,setDisplayViewport]=useState(()=>({
     width:typeof window==='undefined'?1280:window.innerWidth,
@@ -270,6 +273,9 @@ export default function PauseMenu({
     try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{}
     window.__axe3dCloneGovernor?.setProfile?.(profile);
     window.dispatchEvent(new CustomEvent('game3dCloneGPUProfileChanged',{detail:{profile}}));
+  };
+  const changeDesktopInstall=target=>{
+    setDesktopInstall(saveGame3DDesktopInstall(target));
   };
   const displayPreview=game3DResolutionTarget({
     resolution:displaySettings.resolution,
@@ -577,6 +583,16 @@ export default function PauseMenu({
                     description="Show the optional rendering diagnostics during gameplay. GPU timing is displayed only when the browser supports it."
                     onChange={()=>changeGpuStats(!gpuStats)}/>
                   <p className="axe3d-pause__help">Graphics changes are saved and applied to the existing renderer.</p>
+                  <OptionButtons label="Install later" value={desktopInstall.target}
+                    items={[{id:'browser',text:'Keep using the browser'},{id:'windows-exe',text:'Windows 10 .exe'}]}
+                    onPick={changeDesktopInstall}/>
+                  <p className="axe3d-pause__help" data-testid="game3d-desktop-install">
+                    {desktopInstall.target==='windows-exe'
+                      ? 'Saved. You want the Windows 10 program when it exists. '
+                      : 'You are playing in the web browser. '}
+                    A browser page cannot turn itself into an .exe, and there is no installer to download yet.
+                    The Windows program is the later install, so the game can use the GPU outside the browser.
+                  </p>
                 </div>
               </div>}
               {view==='session'&&!entry&&<div className="axe3d-pause__surface">
