@@ -1,5 +1,5 @@
 // Concept D weapon rail: real owned weapons, real buttons, no baked icons.
-// The separate SVG backdrop carries ONLY the gray ink splash and gold angle.
+// The owner's actual first-image translucent raster sits BEHIND these live controls.
 import { ChevronLeft, ChevronRight, Crosshair, Settings2, Shield, Star, Swords } from 'lucide-react';
 import { getAXEWeaponHUDArtwork } from './AXECurvedWeaponTemplate';
 
@@ -24,7 +24,7 @@ export default function AXEConceptDWeaponTemplate({
           <ChevronLeft size={19} aria-hidden="true"/>
         </button>
         <div className="jade-concept-d-rail" role="group" aria-label="Weapon quick slots">
-        {DISPLAY_ORDER.map(role=>{
+          {DISPLAY_ORDER.map(role=>{
           const row=byRole[role];if(!row)return null;
           const item=getItem(role);
           const Icon=ROLE_ICONS[role];
@@ -52,7 +52,7 @@ export default function AXEConceptDWeaponTemplate({
               </button>
             </div>
           );
-        })}
+          })}
         </div>
         <button type="button" className="jade-concept-d-cycle-next"
           aria-label="Next equipped weapon" onClick={()=>onCycle(1)}
