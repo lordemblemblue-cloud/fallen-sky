@@ -168,21 +168,29 @@ export function appendWolfveilCaveAccessProps({
   for(const approach of WOLFVEIL_CAVE_APPROACHES){
     const cave=caveById.get(approach.caveId),[dx,dz]=cave.dir;
     const nx=-dz,nz=dx;
-    // Stones along the cut, not a fence. The uphill side gets the larger rock.
-    for(let i=1;i<approach.points.length-1;i+=2){
+    // Stones along the cut, not a fence. Sizes vary so the bank is not a row.
+    for(let i=1;i<approach.points.length-1;i++){
       const p=approach.points[i];
       const prev=approach.points[i-1];
       if(Math.hypot(p.x-cave.mouth[0],p.z-cave.mouth[1])<10)continue;
+      const n=Math.abs(Math.sin(p.x*0.17+p.z*0.11));
+      if(n<0.28&&i%2===0)continue;
       const tx=p.x-prev.x,tz=p.z-prev.z;
       const len=Math.hypot(tx,tz)||1;
       const sx=-tz/len,sz=tx/len;
-      const n=Math.abs(Math.sin(p.x*0.17+p.z*0.11));
-      const side=n>0.5?1:-1;
-      const lat=2.6+n*1.6;
+      const side=Math.sin(p.x*0.07+i)>0?1:-1;
+      const lat=2.7+n*2.1;
       const x=p.x+sx*side*lat,z=p.z+sz*side*lat;
       const y=wolfveilHeight(x,z);
-      const h=0.55+n*0.9;
-      addProp(stoneGeo,stoneMat,x,y+h*0.45,z,0.7+n*0.5,h,0.62+n*0.35,n,side*0.4,0);
+      const wide=n>0.72;
+      const h=wide?0.42+n*0.35:0.7+n*1.05;
+      addProp(stoneGeo,stoneMat,x,y+h*0.42,z,
+        wide?1.35:0.62+n*0.45,h,wide?0.7:0.55+n*0.4,n,side*0.5,n*0.2);
+      if(n>0.8){
+        const x2=p.x-sx*side*(lat+1.3),z2=p.z-sz*side*(lat+1.3);
+        const y2=wolfveilHeight(x2,z2);
+        addProp(stoneGeo,stoneMat,x2,y2+0.28,z2,0.85,0.38,0.55,0,n,0);
+      }
     }
     // A few rocks settle the arch. They stay outside the walk.
     for(const side of [-1,1]){

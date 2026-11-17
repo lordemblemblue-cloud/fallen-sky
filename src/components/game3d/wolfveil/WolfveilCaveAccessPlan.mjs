@@ -138,16 +138,25 @@ export function gradeWolfveilCaveApproachTerrain(x,z,y){
   for(const s of approachSegments){
     if(x<s.minX||x>s.maxX||z<s.minZ||z>s.maxZ)continue;
     const t=Math.max(0,Math.min(1,((x-s.ax)*s.dx+(z-s.az)*s.dz)/s.len2));
-    const py=s.ay+s.dy*t;
-    const d=Math.hypot(x-(s.ax+s.dx*t),z-(s.az+s.dz*t));
-    const feather=Math.min(34,7+Math.abs(py-y)*1.05);
+    const px=s.ax+s.dx*t,pz=s.az+s.dz*t,py=s.ay+s.dy*t;
+    const d=Math.hypot(x-px,z-pz);
+    const jag=0.84+0.16*Math.sin(px*0.37+pz*0.21);
+    const feather=Math.min(34,(7+Math.abs(py-y)*1.05)*jag);
     if(d>feather)continue;
-    if(!best||d<best.d)best={d,py,feather};
+    if(!best||d<best.d)best={d,py,feather,px,pz};
   }
   if(!best)return y;
   const inner=2.15;
   const w=best.d<=inner?1:1-smooth01((best.d-inner)/Math.max(0.001,best.feather-inner));
-  return y+(best.py-y)*w;
+  let out=y+(best.py-y)*w;
+  // Low, broken shoulders just outside the walk. The center stays the path.
+  if(best.d>2.45&&best.d<9){
+    const n=Math.sin(best.px*0.31+best.pz*0.23);
+    const berm=0.62*Math.exp(-(((best.d-4.2)/1.45)**2))*(0.62+0.38*n);
+    out+=Math.max(0,berm);
+    if(best.d>5.5)out+=0.28*Math.sin(x*0.19+z*0.27)*(best.d/best.feather);
+  }
+  return out;
 }
 setWolfveilCaveApproachTerrainGrade(gradeWolfveilCaveApproachTerrain);
 
