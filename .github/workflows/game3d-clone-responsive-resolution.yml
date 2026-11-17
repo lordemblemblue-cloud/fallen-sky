@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/components/game3d/performance/Game3DDisplaySettings.mjs'
+      - 'src/components/game3d/performance/Game3DFramePacing.mjs'
       - 'src/components/game3d/performance/AdaptiveGraphics.mjs'
       - 'src/components/game3d/performance/Game3DResponsiveDisplay.css'
       - 'src/components/game3d/GameWorld3D.jsx'
