@@ -452,6 +452,40 @@ export async function runWolfveilAreaLoadingReport({
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');
   loader.setOptions({releaseGpuMemory:false});
 
+  // ---- near grass: every blade planted, far cells drawn with fewer segments --
+  let grassResult=null;
+  const nearGrass=village.individualGrass?.nearGrass;
+  if(nearGrass?.setDetailLevels){
+    const lawn=()=>{
+      const out={cells:0,blades:0,triangles:0,perBlade:new Set()};
+      world.group.traverse(node=>{
+        if(!node.isInstancedMesh||!/^SWV_Near_GrassBlades_/.test(node.name)||node.visible===false)return;
+        const each=node.geometry.index.count/3;
+        out.cells++;out.blades+=node.count;out.triangles+=each*node.count;out.perBlade.add(each);
+      });
+      return out;
+    };
+    moveTo(...spots.south);run(6); // long enough for every cell around the player to be planted
+    const light=lawn(),levels=[...nearGrass.detail];
+    nearGrass.setDetailLevels(false);run(.2);
+    const full=lawn();
+    nearGrass.setDetailLevels(true);run(.2);
+    const again=lawn();
+    check(full.perBlade.size===1&&full.perBlade.has(21),
+      'with detail levels off every blade must be the full 21 triangles ('+[...full.perBlade]+')');
+    check([...light.perBlade].every(each=>[21,9,3].includes(each))&&light.perBlade.size===3,
+      'near grass must draw blades of 21, 9 and 3 triangles ('+[...light.perBlade].sort((a,b)=>b-a)+')');
+    check(light.blades===full.blades&&light.cells===full.cells,
+      'detail levels must not remove a single blade ('+light.blades+' vs '+full.blades+')');
+    check(light.triangles<full.triangles*.5,
+      'detail levels must at least halve the near grass ('+light.triangles+' vs '+full.triangles+')');
+    check(again.triangles===light.triangles,'switching grass detail off and on must give the same lawn');
+    check(levels.reduce((sum,count)=>sum+count,0)===light.cells&&levels[0]>0,
+      'cells per detail level must add up, with full detail around the player ('+levels+')');
+    grassResult={cells:light.cells,blades:light.blades,cellsPerLevel:levels,
+      triangles:light.triangles,fullTriangles:full.triangles};
+  }
+
   // ---- far scenery: what an unloaded area still shows on the horizon ------
   // Typical standing height of one instance (world Y extent), as the loader
   // measures it, and an inventory of everything tall the loader manages.
@@ -552,92 +586,11 @@ export async function runWolfveilAreaLoadingReport({
         triangles:perArea[id].triangles-without[id].triangles}]))};
   }
 
-  // ---- town: motionless parts merged into one draw per material ----------
+  // ---- town: owned by its own performance work on main -------------------
+  // The town batches itself, swaps far buildings for its own proxies and
+  // hides the rest: report what it hands the renderer from the square.
   let townResult=null;
-  if(town?.drawBudget?.stats()){
-    const byMaterial=node=>{
-      const list=Array.isArray(node.material)?node.material:[node.material];
-      return list.map(material=>material?.name||material?.uuid||'none').join('+');
-    };
-    const measureTown=()=>measureVisibleScene(town.root,{labelOf:byMaterial});
-    const boundsOf=()=>{
-      scene.updateMatrixWorld(true);
-      const box=new THREE.Box3();
-      // Only what is drawn: a switched-off original must not count.
-      // Vertex by vertex, so a turned part measures the same merged or not.
-      const one=new THREE.Box3();
-      town.root.traverse(node=>{
-        if(!isRenderable(node)||!node.isMesh)return;
-        one.makeEmpty();
-        const position=node.geometry.attributes.position,point=new THREE.Vector3();
-        for(let i=0;i<position.count;i++)
-          one.expandByPoint(point.fromBufferAttribute(position,i).applyMatrix4(node.matrixWorld));
-        box.union(one);
-      });
-      return [box.min.x,box.min.y,box.min.z,box.max.x,box.max.y,box.max.z];
-    };
-    moveTo(...spots.town);run(.5);
-    loader.setEnabled(false); // compare the town itself, not what the loader hides
-    const merged=measureTown(),mergedBounds=boundsOf(),mergedStats=town.drawBudget.stats();
-    town.drawBudget.setEnabled(false);
-    const built=measureTown(),builtBounds=boundsOf();
-    town.drawBudget.setEnabled(true);
-    const again=measureTown();
-    loader.setEnabled(true);run(.3);
-    check(mergedStats.built&&mergedStats.batches>0,'the town merged nothing: '+JSON.stringify(mergedStats));
-    check(merged.triangles===built.triangles,
-      'merging the town must not add or lose triangles ('+merged.triangles+' vs '+built.triangles+')');
-    const gap=[];
-    for(const label of new Set([...built.byLabel.keys(),...merged.byLabel.keys()])){
-      const was=built.byLabel.get(label)?.triangles||0,now=merged.byLabel.get(label)?.triangles||0;
-      if(Math.abs(was-now)>.5)gap.push(label+' '+now+' vs '+was);
-    }
-    check(!gap.length,'town triangles moved between materials: '+gap.slice(0,5).join(', '));
-    const drift=Math.max(...builtBounds.map((value,i)=>Math.abs(value-mergedBounds[i])));
-    check(drift<=.02,'the merged town must occupy the same space as built (bounds moved '+drift.toFixed(4)+' m)');
-    check(merged.drawCalls*1.5<built.drawCalls,
-      'merging must cut the town\'s draw calls by at least a third ('+merged.drawCalls+' vs '+built.drawCalls+')');
-    check(again.drawCalls===merged.drawCalls&&again.triangles===merged.triangles,
-      'switching the town merge off and on again must give the same result');
-    // Ten seconds of town life: nothing that was merged may turn out to move.
-    run(10);
-    const later=town.drawBudget.stats();
-    check(later.handedBack===0,later.handedBack+' merged town parts moved afterwards and had to be handed back: '+
-      JSON.stringify(later.leftAlone));
-    // Indoors the town cuts roofs and ceilings away. The merged meshes must
-    // show exactly what the town shows: same triangles merged or as built.
-    let indoors=null;
-    const model=town.model,reach=70;
-    search:for(let dx=-reach;dx<=reach;dx+=2)for(let dz=-reach;dz<=reach;dz+=2){
-      const spot={x:model.position.x+dx,z:model.position.z+dz};
-      const room=town.getRoomAt?.(spot);
-      if(room){indoors={room:room.id||room.label||'room',spot};break search;}
-    }
-    if(indoors){
-      position.x=indoors.spot.x;position.z=indoors.spot.z;run(.6);
-      loader.setEnabled(false);
-      const mergedIn=measureTown();
-      town.drawBudget.setEnabled(false);
-      const builtIn=measureTown();
-      town.drawBudget.setEnabled(true);run(.2);
-      const againIn=measureTown();
-      loader.setEnabled(true);
-      check(mergedIn.triangles===builtIn.triangles&&againIn.triangles===builtIn.triangles,
-        'indoors the merged town must draw exactly what the town shows ('+mergedIn.triangles+
-        ' and '+againIn.triangles+' vs '+builtIn.triangles+')');
-      indoors={room:indoors.room,asBuilt:{drawCalls:builtIn.drawCalls,triangles:builtIn.triangles},
-        merged:{drawCalls:mergedIn.drawCalls,triangles:mergedIn.triangles}};
-      moveTo(...spots.town);run(1);
-      check(town.drawBudget.stats().handedBack===0,
-        'a visit indoors made the merger hand parts back: '+JSON.stringify(town.drawBudget.stats().leftAlone));
-    }else noteOnce('no walk-in room found in the town: the indoor cutaway was not exercised');
-    townResult={asBuilt:{drawCalls:built.drawCalls,triangles:built.triangles},
-      merged:{drawCalls:merged.drawCalls,triangles:merged.triangles},indoors,
-      ownBatching:town.performanceStats||null,
-      boundsDriftMeters:drift,budget:town.drawBudget.stats()};
-  }else if(town){
-    // The town batches itself (AXETownPlaza) and hides far buildings: report
-    // what it hands the renderer from the square and from inside a home.
+  if(town){
     moveTo(...spots.town);run(1);
     loader.setEnabled(false);
     const fromSquare=measureVisibleScene(town.root);
@@ -742,7 +695,7 @@ export async function runWolfveilAreaLoadingReport({
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
     areas,portals:portalResults,caves:caveResult,town:townResult,
-    farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
+    nearGrass:grassResult,farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
       unitCount:tallUnits.length},
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
@@ -781,6 +734,13 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('');
   lines.push('Lights switched on (each one is paid for by every lit surface): '+
     Object.entries(result.areas).map(([id,area])=>id+' '+area.lights+' of '+area.wholeValleyHere.lights).join(', '));
+  if(result.nearGrass){
+    const g=result.nearGrass;
+    lines.push('');
+    lines.push('Grass that follows the player (standing in the south): '+g.cells+' cells, '+n(g.blades)+
+      ' blades. Every blade at full detail: '+n(g.fullTriangles)+' tris. By distance (21 / 9 / 3 triangles a blade, cells '+
+      g.cellsPerLevel.join(' / ')+'): '+n(g.triangles)+' tris.');
+  }
   lines.push('');
   if(result.farScenery){
     const f=result.farScenery;
@@ -807,22 +767,11 @@ export function formatWolfveilAreaLoadingReport(result){
   for(const entry of result.tallScenery.units)lines.push('  '+entry.area.padEnd(6)+
     entry.height.toFixed(1).padStart(6)+' m tall '+entry.width.toFixed(1).padStart(6)+' m wide  '+
     n(entry.triangles).padStart(8)+' tris '+String(entry.drawCalls).padStart(4)+' calls  '+entry.name);
-  if(result.town?.own!==undefined){
+  if(result.town){
     lines.push('');
-    lines.push('Town (artisan plaza, batched by its own code): from the square '+
+    lines.push('Town (artisan plaza, optimised by its own code on main): from the square '+
       result.town.fromSquare.drawCalls+' calls, '+n(result.town.fromSquare.triangles)+' tris; its own report '+
       JSON.stringify(result.town.own));
-  }else if(result.town){
-    const t=result.town;
-    lines.push('');
-    lines.push('Town (artisan plaza):');
-    lines.push('  as built   '+String(t.asBuilt.drawCalls).padStart(5)+' calls  '+n(t.asBuilt.triangles).padStart(8)+' tris');
-    lines.push('  merged     '+String(t.merged.drawCalls).padStart(5)+' calls  '+n(t.merged.triangles).padStart(8)+
-      ' tris   (bounds moved '+t.boundsDriftMeters.toFixed(4)+' m)');
-    if(t.indoors)lines.push('  inside '+t.indoors.room+': as built '+t.indoors.asBuilt.drawCalls+' calls '+
-      n(t.indoors.asBuilt.triangles)+' tris, merged '+t.indoors.merged.drawCalls+' calls '+n(t.indoors.merged.triangles)+' tris');
-    if(t.ownBatching)lines.push('  the town\'s own batching before this: '+JSON.stringify(t.ownBatching));
-    lines.push('  '+JSON.stringify(t.budget));
   }
   if(result.caves){
     const c=result.caves,row=entry=>entry?String(entry.drawCalls).padStart(4)+' calls  '+
