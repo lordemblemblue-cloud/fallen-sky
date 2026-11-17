@@ -12,9 +12,9 @@ test('reference silhouette is one UI shell, with live HP/WILL tracks INSIDE it',
   assert.match(hud,/viewBox="0 0 1200 270"/);
   assert.match(hud,/\['hp','will'\]\.map\(side=>/);
   assert.match(hud,/transform=\{side==='will'\?'translate\(1200 0\) scale\(-1 1\)'/);
-  assert.match(css,/width:min\(66vw,744px\)/);
-  assert.match(css,/\.jade-status-row--hp\s*\{\s*left:8\.2%/);
-  assert.match(css,/\.jade-status-row--will\s*\{\s*left:auto;\s*right:8\.2%/);
+  assert.match(css,/width:min\(70vw,800px\)/);
+  assert.match(css,/\.jade-status-row--hp\s*\{\s*left:9%/);
+  assert.match(css,/\.jade-status-row--will\s*\{\s*left:auto;\s*right:9%/);
   assert.doesNotMatch(hud,/jade-status-connector|jade-status-raster-trim/);
 });
 test('octagon frame holds live EXP water and text without a fixed ornamental divider',()=>{

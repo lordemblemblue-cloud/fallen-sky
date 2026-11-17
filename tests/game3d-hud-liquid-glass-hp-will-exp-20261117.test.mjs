@@ -27,8 +27,8 @@ test('transparent photos only accent the curved/shaded HP/WILL bars; not the sta
   assert.match(template,/background-image:url\('\/game3d\/hud\/will-gold-trim\.png'\)/);
   assert.match(template,/mask-image:linear-gradient\(90deg/);
   assert.match(template,/mask-image:linear-gradient\(270deg/);
-  assert.match(template,/border-top-right-radius:70% 90%/);
-  assert.match(template,/border-top-left-radius:70% 90%/);
+  assert.match(template,/clip-path:polygon\(0 0,calc\(100% - var\(--jade-vitals-tip\)\) 0,100% 100%,0 100%\)/);
+  assert.match(template,/clip-path:polygon\(var\(--jade-vitals-tip\) 0,100% 0,100% 100%,0 100%\)/);
   assert.match(template,/\.jade-status-fill--hp \{/);
   assert.match(template,/\.jade-status-fill--will \{/);
   assert.match(hud,/style=\{\{width:hpPct\+'%'\}\}/);
