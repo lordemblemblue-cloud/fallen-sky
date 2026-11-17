@@ -521,6 +521,8 @@ test('tall scenery that unloads with its area is baked into one outline per area
   assert.deepEqual(tower.matrices[0].slice(12,15),[20,30,-310],'world placement, valley offset included');
   const elms=south.sources.find(source=>source.mesh===v.elms);
   assert.equal(elms.matrices.length,1,'only the elm that stands in the south');
+  assert.ok(Array.isArray(elms.matrices[0])&&elms.matrices[0].length===16,'a full placement, not a number');
+  assert.deepEqual([elms.matrices[0][12],elms.matrices[0][14]],[SPOTS.south[0],SPOTS.south[1]+70]);
   assert.deepEqual(v.farProxy.built.map(entry=>entry.area).sort(),['east','north','south','town','west']);
   // Standing in town: every other area shows its outline, the town does not.
   assert.deepEqual(shownOutlines(v),['east','north','south','west']);

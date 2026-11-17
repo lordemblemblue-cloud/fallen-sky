@@ -760,7 +760,7 @@ export function createWolfveilAreaLoader({
       const mesh=record.source;
       if(!record.gate.intent||!solid(mesh)||instanceHeight(mesh)<farSceneryMeters)continue;
       for(const [area,indices] of record.lists)if(indices.length)
-        byArea.get(area).push({mesh,matrices:indices.map(i=>worldInstance(mesh,i)),
+        byArea.get(area).push({mesh,matrices:Array.from(indices,i=>worldInstance(mesh,i)),
           stamp:idOf(mesh)+':'+indices.length+':'+record.version});
     }
     return byArea;

@@ -70,6 +70,19 @@ test('the grid coarsens until the outline fits the triangle allowance',()=>{
   assert.equal(stuck.cellMeters,2,'never coarser than the limit');
 });
 
+test('cells stay distinct at the far corners of the map',()=>{
+  // Two small boxes one cell apart in z, 550 m out: with an inexact cell key
+  // they would fall into the same cells and collapse into each other.
+  const post={...box(1.2,1.2,1.2,1),color:[1,1,1]};
+  const near=bakeFarProxy([{...post,matrices:[at(0,0,0)]}],{cellMeters:.5});
+  const far=bakeFarProxy([{...post,matrices:[at(550,40,620)]}],{cellMeters:.5});
+  const pair=bakeFarProxy([{...post,matrices:[at(550,40,620),at(550,40,623)]}],{cellMeters:.5});
+  assert.equal(far.triangles,near.triangles);
+  assert.equal(pair.triangles,near.triangles*2);
+  // Bad placements (a number where a matrix belongs) add nothing.
+  assert.equal(bakeFarProxy([{...post,matrices:[7]}],{cellMeters:.5}).triangles,0);
+});
+
 test('colours blend where different objects meet; bad input is skipped, not fatal',()=>{
   const red={...box(4,4,4,1),matrices:[at(0,0,0)],color:[1,0,0]};
   const blue={...box(4,4,4,1),matrices:[at(4,0,0)],color:[0,0,1]};

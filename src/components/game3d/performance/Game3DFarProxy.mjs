@@ -10,7 +10,9 @@
 //
 // Pure arithmetic on typed arrays: no Three.js import.
 
-const OFFSET=1<<17,SPAN=1<<18; // cells per axis either side of the origin
+// Cells per axis either side of the origin. Three of these multiply into one
+// key, which must stay an exact integer: 2^17 cubed is 2^51, under 2^53.
+const OFFSET=1<<16,SPAN=1<<17;
 
 /**
  * @param {Array<{positions:ArrayLike<number>,index?:ArrayLike<number>|null,
