@@ -1,0 +1,31 @@
+name: Game 3D Clone Companion Mastery Gallery
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/axe/services/AXECompanionMasteryPanel.jsx'
+      - 'src/components/game3d/axe/services/AXECompanionMasteryGallery.css'
+      - 'tests/game3d-clone-companion-mastery-gallery.test.mjs'
+      - '.github/workflows/game3d-clone-mastery-gallery.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  companion-mastery-gallery:
+    name: Companion mastery logic and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Validate mastery navigation, viewer and real XP thresholds
+        run: node --test tests/game3d-clone-companion-mastery-gallery.test.mjs
+      - name: Compile Game 3D app
+        run: npm run build
