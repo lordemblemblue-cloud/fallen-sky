@@ -1906,3 +1906,72 @@
   .jade-hud .jade-status-bars--refined .jade-status-fill::after {animation:none;}
   .jade-hud .jade-xp--compact .jade-xp-octagon-energy {transition:none;}
 }
+
+/* HUD top row: MAP | SERVICES | WEATHER
+ * The real Wolfveil/Lunar/Astral minimap stays interactive on the far left;
+ * the measured Services control begins immediately after it and ends before
+ * the live weather widget at the far right. These overrides follow the legacy
+ * right-map styles and do not replace any underlying HUD components. */
+.jade-hud .jade-compass-block {
+  top:clamp(19px,3vh,37px);
+  left:clamp(14px,2.4vw,42px);
+  right:auto;
+  width:clamp(126px,11.2vw,184px);
+}
+.game3d-view .game3d-world-weather {
+  top:clamp(19px,3vh,37px);
+  left:auto;
+  right:clamp(14px,2.4vw,42px);
+  width:clamp(215px,19vw,306px);
+}
+/* Fallback before ResizeObserver computes the true map/weather boundaries.
+ * AXEServicesNavigation supplies pixel-accurate inline bounds afterward. */
+.jade-hud .jade-services-navigation {
+  top:clamp(19px,3vh,37px);
+  left:calc(clamp(14px,2.4vw,42px) + clamp(126px,11.2vw,184px) + 12px);
+  width:max(0px,calc(100% - clamp(14px,2.4vw,42px) - clamp(126px,11.2vw,184px) - clamp(14px,2.4vw,42px) - clamp(215px,19vw,306px) - 24px));
+}
+/* The quest box formerly began under an empty top-left portrait. The map and
+ * level-up notice now use that space: keep quests below them rather than
+ * placing a large quest panel over the minimap or the level-up toast. */
+.jade-hud .jade-quest-tracker {
+  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 50px + 115px + 26px);
+  max-height:min(30vh,240px);
+}
+.jade-hud .jade-compass-block .axe-target-lock {
+  width:min(100%,228px);
+  max-width:100%;
+}
+@media(max-width:620px) {
+  .jade-hud .jade-compass-block {
+    top:25px;left:12px;right:auto;width:106px;
+  }
+  .game3d-view .game3d-world-weather {
+    top:25px;right:12px;left:auto;width:144px;
+  }
+  .jade-hud .jade-services-navigation {
+    top:25px;left:126px;
+    width:max(0px,calc(100% - 12px - 106px - 8px - 144px - 12px - 8px));
+  }
+  .jade-hud .jade-quest-tracker {
+    top:calc(25px + 106px + 43px + 102px + 26px);
+    max-height:min(24vh,190px);
+  }
+}
+@media(max-width:420px) {
+  .jade-hud .jade-compass-block {
+    top:18px;left:12px;right:auto;width:80px;
+  }
+  .game3d-view .game3d-world-weather {
+    top:18px;right:8px;left:auto;width:120px;
+  }
+  .jade-hud .jade-services-navigation {
+    top:18px;left:100px;
+    width:max(0px,calc(100% - 12px - 80px - 8px - 120px - 8px - 8px));
+  }
+  .jade-hud .jade-quest-tracker {
+    top:calc(18px + 80px + 43px + 102px + 22px);
+    width:min(48vw,185px);
+    max-height:min(25vh,165px);
+  }
+}
