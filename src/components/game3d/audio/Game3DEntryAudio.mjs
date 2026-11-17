@@ -1,8 +1,7 @@
-// Single Game 3D title/world soundtrack with a quiet, independent outdoor bed.
-// Character login: ONLY the user's theme (no outdoor nature sounds).
-// World: the SAME theme continues at its exact position and loops, while the
-// soft wind/birds nature bed sits underneath. Combat owns the theme's music
-// transport, and ambience immediately pauses while fighting.
+// Game 3D character-select music and independent outdoor ambience.
+// The intro theme plays only in the login / character-selection menus.
+// On Play / world entry, stop that theme immediately; outdoor ambience and
+// combat SFX/music are separate and remain available in gameplay.
 export const GAME3D_LOGIN_THEME_URL=
   'https://media.base44.com/files/public/6876751a602125f45f1861b9/547573d26_character_login_theme.mp3';
 export const GAME3D_NATURE_AMBIENCE_URL=
@@ -17,15 +16,12 @@ export const game3DOutdoorRegion=region=>region==='wolfveil'||region==='forest';
 const clamp=value=>Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
 const ease=t=>t*t*(3-2*t);
 
-// One title/world soundtrack at a time. The character login and the world
-// share a single element; if another host mounts (a re-entry, a second game
-// instance, a remount race) it takes the transport over instead of starting a
-// duplicate copy of the same track on top of the one already playing.
+// One character-select soundtrack transport at a time. A host remount
+// cannot start another copy alongside the existing audio element.
 let liveTransport=null;
 
-// The title/world theme is ONE pair of media elements for the whole app, so a
-// re-entry can never start a second copy of the same track beside one that is
-// already playing.
+// The menu theme and nature ambience share one managed pair of audio elements
+// across host remounts, but the menu theme never plays in the world.
 let sharedMedia=null;
 
 function releaseSharedMedia(){
@@ -82,7 +78,7 @@ export function createGame3DEntryAudio({
   }
   function targets(){
     return {
-      intro:volume*(phase==='login'?1:GAME3D_WORLD_THEME_GAIN),
+      intro:phase==='login'?volume:0,
       nature:phase==='world'&&game3DOutdoorRegion(region)&&!inCombat()
         ?volume*GAME3D_AMBIENCE_GAIN:0,
     };
@@ -91,6 +87,13 @@ export function createGame3DEntryAudio({
     nature.volume=0;
     pause(nature);
     natureWasSuppressed=true;
+  }
+  function stopIntroImmediately(){
+    // A paused element with zero gain cannot bleed into gameplay. A pending
+    // fade is cancelled by setPhase before we stop the shared element.
+    intro.volume=0;
+    intro.loop=false;
+    pause(intro);
   }
   function fade({duration=850,introChannel=true,natureChannel=true}={}){
     if(disposed)return;
@@ -133,8 +136,8 @@ export function createGame3DEntryAudio({
   const onIntroEnded=()=>{
     if(disposed)return;
     introFinished=true;
-    // No wind/bird sounds on character-select even if the song ends.
-    // Game 3D world loops this same soundtrack, not an ambient replacement.
+    // Character selection stays silent after the title finishes naturally.
+    // Only another visit to the menu may restart it.
   };
   intro.addEventListener?.('ended',onIntroEnded);
 
@@ -153,18 +156,13 @@ export function createGame3DEntryAudio({
       try{intro.currentTime=0;}catch{}
       fade({duration:850,natureChannel:false});
     }else{
-      intro.loop=true;
+      // Playing the character's intro theme in the live world was accidental.
+      // Stop synchronously at the Play transition, not after a long crossfade.
+      // The world keeps only its own gentle wind/birds sound bed.
+      clearFade();
+      stopIntroImmediately();
       natureWasSuppressed=false;
-      // Continue the same track from where it is. Only a finished (and thus
-      // silent) title restarts, so entry never plays a second copy alongside
-      // the one already running behind the character menu.
-      if(introFinished&&intro.paused){
-        introFinished=false;
-        try{intro.currentTime=0;}catch{}
-      }
-      // Continue the same title track while entering the world; do not
-      // recreate the element or seek to the beginning if it was playing.
-      fade({duration:1900});
+      fade({duration:900,introChannel:false});
     }
   }
   function setRegion(next){
