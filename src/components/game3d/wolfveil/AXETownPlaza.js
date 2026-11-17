@@ -9,7 +9,8 @@
  * The host must supply its own Three.js instance, render loop, collision engine and lighting.
  * Do not call renderer.render() from this module.
  */
-export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1 } = {}) {
+export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1, quality = 'auto' } = {}) {
+    const lowDetail = quality === 'low' || (quality === 'auto' && typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: coarse)')?.matches));
     if (!THREE) throw new Error('createAXETownPlaza: Three.js namespace (THREE) is required');
     if (typeof document === 'undefined') throw new Error('createAXETownPlaza: browser canvas API is required for procedural textures');
 
@@ -735,6 +736,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             const gemPalette = [mats.gemVoid, mats.gemSolar, mats.gemFrost, mats.gemCrimson, mats.gemJade];
 
             const townGroup = new THREE.Group();
+            const shopInteriors = [];
+            const houseEntries = [];
+            const stoneRingGroups = [];
             // The host game decides where to attach this town group.
 
             const allRoofs = [];
@@ -834,6 +838,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     ringGrp.add(block);
                 }
                 fountainGroup.add(ringGrp);
+                stoneRingGroups.push(ringGrp);
                 return ringGrp;
             }
 
@@ -1232,7 +1237,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             ribbonConfigs.forEach(cfg => {
                 const curve = new THREE.CatmullRomCurve3(cfg.points);
-                const tubeGeo = new THREE.TubeGeometry(curve, 80, cfg.radius, 14, false);
+                const tubeGeo = new THREE.TubeGeometry(curve, lowDetail ? 24 : 48, cfg.radius, lowDetail ? 6 : 8, false);
                 // Flatten tube slightly so it looks like a sculpted flowing water ribbon
                 tubeGeo.scale(1.0, 0.58, 1.0);
                 const tubeMesh = new THREE.Mesh(tubeGeo, mats.spiralRibbon);
@@ -1307,19 +1312,20 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 slope.rotation.x = isFrontSlope ? pitchAngle : -pitchAngle;
                 addBox(slope, width, 0.18, length, mats.charredTimber, 0, 0, 0);
 
-                const rafterCount = Math.floor(width / 0.9);
+                const rafterCount = Math.floor(width / (lowDetail ? 1.8 : 1.2));
                 for (let r = -rafterCount / 2; r <= rafterCount / 2; r++) {
-                    addBox(slope, 0.14, 0.18, length * 0.96, mats.warmWood, r * 0.88, -0.16, 0);
+                    addBox(slope, 0.14, 0.18, length * 0.96, mats.warmWood, r * (lowDetail ? 1.76 : 1.16), -0.16, 0);
                 }
 
-                const tileCols = Math.floor(width / 0.42);
+                const ribGap = lowDetail ? 1.25 : 0.84;
+                const tileCols = Math.floor(width / ribGap);
                 for (let c = -tileCols / 2; c <= tileCols / 2; c++) {
                     const rib = new THREE.Mesh(
                         new THREE.CylinderGeometry(0.11, 0.11, length * 0.98, 8),
                         mats.kawaraTile
                     );
                     rib.rotation.x = Math.PI / 2;
-                    rib.position.set(c * 0.42, 0.14, 0);
+                    rib.position.set(c * ribGap, 0.14, 0);
                     rib.castShadow = true;
                     slope.add(rib);
                 }
@@ -1347,7 +1353,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // Shared Helper: Climbing Ivy Vines
             function createIvyCluster(parent, x, yStart, z, height = 3.0) {
-                for (let i = 0; i < 20; i++) {
+                for (let i = 0; i < (lowDetail ? 6 : 12); i++) {
                     const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.1, 0), mats.foliage);
                     leaf.position.set(
                         x + (Math.random() - 0.5) * 0.45,
@@ -1585,6 +1591,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 houseGroup.rotation.y = Math.PI * 0.25;
                 houseGroup.scale.setScalar(0.75);
                 innerShopsGroup.add(houseGroup);
+                shopInteriors.push({ id: 'blacksmith', label: 'Blacksmith', group: houseGroup });
 
                 // 4.1 FOUNDATION & FLOORS
                 addBox(houseGroup, 7.6, 0.5, 9.8, mats.flagstone, -5.8, 0.25, -0.6);
@@ -1774,7 +1781,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 midEave.position.set(3.15, 7.82, 2.38);
                 midEave.rotation.x = 0.35;
                 addBox(midEave, 11.4, 0.14, 1.05, mats.charredTimber, 0, 0, 0);
-                for (let tc = -5.4; tc <= 5.4; tc += 0.42) {
+                for (let tc = -5.4; tc <= 5.4; tc += (lowDetail ? 1.2 : 0.84)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.08, 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(tc, 0.1, 0);
@@ -2052,6 +2059,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 shopGroup.rotation.y = -Math.PI * 0.25;
                 shopGroup.scale.setScalar(0.75);
                 innerShopsGroup.add(shopGroup);
+                shopInteriors.push({ id: 'tailor', label: 'Tailor Atelier', group: shopGroup });
 
                 buildSingleStoryLShopShell(
                     shopGroup,
@@ -2193,6 +2201,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 shopGroup.rotation.y = -Math.PI * 0.75;
                 shopGroup.scale.setScalar(0.75);
                 innerShopsGroup.add(shopGroup);
+                shopInteriors.push({ id: 'potion', label: 'Potion Apothecary', group: shopGroup });
 
                 buildSingleStoryLShopShell(
                     shopGroup,
@@ -2354,6 +2363,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 shopGroup.rotation.y = Math.PI * 0.75;
                 shopGroup.scale.setScalar(0.75);
                 innerShopsGroup.add(shopGroup);
+                shopInteriors.push({ id: 'models', label: 'Model Showroom', group: shopGroup });
 
                 buildSingleStoryLShopShell(
                     shopGroup,
@@ -2392,7 +2402,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     mount.add(tailPivot);
                     addBox(tailPivot, 0.16, 0.75, 0.18, mats.gold, 0, -0.32, -0.15, 0.35, 0, 0);
 
-                    allAnimatedMounts.push({ neck: neckPivot, tail: tailPivot, phase: Math.random() * Math.PI * 2 });
+                    allAnimatedMounts.push({ root: mount, neck: neckPivot, tail: tailPivot, phase: Math.random() * Math.PI * 2 });
                     parent.add(mount);
                 }
 
@@ -2468,7 +2478,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 frontSlope.position.set(0, 0, depth * 0.26);
                 frontSlope.rotation.x = pitch;
                 addBox(frontSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
-                for (let c = -width * 0.46; c <= width * 0.46; c += 0.48) {
+                for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
@@ -2480,7 +2490,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 backSlope.position.set(0, 0, -depth * 0.26);
                 backSlope.rotation.x = -pitch;
                 addBox(backSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
-                for (let c = -width * 0.46; c <= width * 0.46; c += 0.48) {
+                for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
@@ -2519,11 +2529,23 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 addBox(house, 2.65, 0.06, 0.9, mats.sandstone, 0, 0.26, 3.55);
 
                 // 1F Coursed Sandstone & Timber Frame
-                addBox(house, 9.2, 3.2, 6.0, mats.sandstone, 0, 2.05, 0);
+                // Hollow room on the existing foundation: a 2.7m entrance replaces the solid block.
+                addBox(house, 9.2, 0.14, 6.0, mats.flagstone, 0, 0.52, 0);
+                addBox(house, 0.28, 3.2, 6.0, mats.sandstone, -4.46, 2.05, 0);
+                addBox(house, 0.28, 3.2, 6.0, mats.sandstone, 4.46, 2.05, 0);
+                addBox(house, 9.2, 3.2, 0.28, mats.sandstone, 0, 2.05, -2.92);
+                addBox(house, 3.25, 3.2, 0.28, mats.sandstone, -2.975, 2.05, 2.92);
+                addBox(house, 3.25, 3.2, 0.28, mats.sandstone, 2.975, 2.05, 2.92);
+                addBox(house, 2.7, 0.62, 0.28, mats.charredTimber, 0, 3.32, 2.92);
+                addBox(house, 1.3, 0.12, 0.9, mats.warmWood, -2.1, 0.87, -0.7);
+                addBox(house, 1.0, 0.38, 0.65, mats.tatami, 2.3, 0.73, -1.45);
                 addBox(house, 9.4, 0.45, 6.2, mats.frieze, 0, 3.75, 0);
                 // Glowing Front Shoji Windows & Genkan Lattice Door
-                addBox(house, 1.8, 2.2, 0.12, mats.charredTimber, 0, 1.6, 3.02);
-                addBox(house, 1.5, 1.6, 0.14, mats.shojiGlow, 0, 1.75, 3.03);
+                // Open genkan panels are parked to either side of the entrance.
+                addBox(house, 0.16, 2.8, 0.18, mats.charredTimber, -1.4, 1.9, 3.04);
+                addBox(house, 0.16, 2.8, 0.18, mats.charredTimber, 1.4, 1.9, 3.04);
+                addBox(house, 0.62, 1.65, 0.12, mats.shojiGlow, -1.75, 1.75, 3.04);
+                addBox(house, 0.62, 1.65, 0.12, mats.shojiGlow, 1.75, 1.75, 3.04);
                 addBox(house, 2.1, 1.4, 0.12, mats.shojiGlow, -2.8, 2.1, 3.02);
                 addBox(house, 2.1, 1.4, 0.12, mats.shojiGlow, 2.8, 2.1, 3.02);
 
@@ -2535,7 +2557,12 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 });
 
                 if (isTwoStory) {
-                    addBox(house, 8.8, 2.7, 5.6, mats.plaster, 0, 5.2, 0);
+                    // Upper level is an actual room shell, not an opaque solid slab.
+                    addBox(house, 8.8, 0.18, 5.6, mats.warmWood, 0, 4.02, 0);
+                    addBox(house, 0.26, 2.7, 5.6, mats.plaster, -4.25, 5.2, 0);
+                    addBox(house, 0.26, 2.7, 5.6, mats.plaster, 4.25, 5.2, 0);
+                    addBox(house, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, -2.72);
+                    addBox(house, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, 2.72);
                     addBox(house, 9.0, 0.38, 5.8, mats.frieze, 0, 6.6, 0);
                     addBox(house, 2.6, 1.35, 0.14, mats.shojiGlow, -2.1, 5.2, 2.82);
                     addBox(house, 2.6, 1.35, 0.14, mats.shojiGlow, 2.1, 5.2, 2.82);
@@ -2568,6 +2595,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 outerRingGroup.add(house);
+                houseEntries.push({ id: 'residence-' + (h + 1), group: house });
             }
 
             // ============================================================================
@@ -2594,7 +2622,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
     // Host controls replace standalone demo HTML buttons.
     let surgeTimer = 0;
-    let allDoorsAndHoistOpen = false;
+    let allDoorsAndHoistOpen = true; // permit entry at genkan side doors
     outerRingGroup.visible = Boolean(showOuterHomes);
     innerShopsGroup.visible = Boolean(showInnerShops);
     townGroup.scale.setScalar(worldScale);
@@ -2730,14 +2758,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     // register barriers without using every detailed mesh as an expensive collider.
     // Local coordinates relative to the town group; apply group matrix before use.
     const collisionZones = [
-        { id: 'fountain-basin', type: 'circle', x: 0, z: 0, radius: 6.55, minY: 0, maxY: 2.2 },
-        { id: 'blacksmith-building', type: 'box', x: -16.2, z: -16.2, halfWidth: 9.2, halfDepth: 8.5, minY: 0, maxY: 12 },
-        { id: 'clothing-building', type: 'box', x: 16.2, z: -16.2, halfWidth: 9.2, halfDepth: 8.5, minY: 0, maxY: 8 },
-        { id: 'augment-building', type: 'box', x: 16.2, z: 16.2, halfWidth: 9.2, halfDepth: 8.5, minY: 0, maxY: 8 },
-        { id: 'mount-building', type: 'box', x: -16.2, z: 16.2, halfWidth: 9.2, halfDepth: 8.5, minY: 0, maxY: 8 }
+        { id: 'fountain-basin', type: 'circle', x: 0, z: 0, radius: 6.55, minY: 0, maxY: 2.2 }
     ];
-    // NOTE: shop boxes are intentionally *coarse*. Refine entrances and use navmesh
-    // baking before shipping. They are not registered with physics automatically.
+    // Door-aware house/shop wall segments are registered by WolfveilArtisanTownScene.
 
     // Avoid double-disposing shared geometries, materials and textures.
     function dispose() {
@@ -2762,7 +2785,13 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         dispose,
         refs: { fountain: fountainGroup, shops: innerShopsGroup, homes: outerRingGroup, roofs: allRoofs },
         anchors: townAnchors,
+        rooms: { shops: shopInteriors, homes: houseEntries },
         collisionZones,
+        setShowroomModel(index = 0) {
+            const chosen = Math.max(0, Math.min(allAnimatedMounts.length - 1, Math.floor(index)));
+            allAnimatedMounts.forEach((m, i) => { m.root.visible = i === chosen; });
+            return chosen;
+        },
         surgeWaterfall(seconds = 3.5) { surgeTimer = Math.max(0, seconds); },
         setDoorsOpen(open) { allDoorsAndHoistOpen = Boolean(open); },
         setOuterHomesVisible(visible) { outerRingGroup.visible = Boolean(visible); },
