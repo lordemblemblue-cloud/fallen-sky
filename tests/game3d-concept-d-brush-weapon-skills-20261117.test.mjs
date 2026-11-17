@@ -38,6 +38,7 @@ test('original weapon transaction and wheel/arrow/touch switching are preserved'
   assert.match(hud,/getOwnedWeaponsForAXERole\(assigning\)/);
   assert.match(hud,/el\.addEventListener\('wheel',onWheel,\{passive:false\}\)/);
   assert.match(hud,/key==='ArrowLeft'\)cycleAvailable\(-1\)/);
+  assert.match(hud,/const roles=\['offensive','ranged','defensive'\]/);
   assert.match(hud,/key==='ArrowRight'\|\|key==='KeyC'\)cycleAvailable\(1\)/);
   assert.match(hud,/onTouchEnd=\{e=>/);
   assert.equal(roleForCycle(['offensive','defensive','ranged'],'ranged',1),'offensive');
@@ -75,6 +76,7 @@ test('concept D is scoped to bottom-right and leaves original player HP, WILL, E
   assert.match(hud,/<JadeQuestTracker/);
   assert.doesNotMatch(css,/\.jade-hud-template\s*\{|jade-quest-tracker|jade-status-bars--refined/);
   assert.match(css,/@media\(max-width:680px\)/);
+  assert.match(css,/bottom:clamp\(88px,16vh,125px\)/);
   assert.match(css,/@media\(max-height:510px\) and \(orientation:landscape\)/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
