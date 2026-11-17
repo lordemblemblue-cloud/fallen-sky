@@ -18,15 +18,15 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             function makeCanvasTexture(width, height, drawFn, repeatX = 1, repeatY = 1) {
                 const c = document.createElement('canvas');
-                c.width = width;
-                c.height = height;
+                c.width = lowDetail ? Math.max(64, Math.floor(width / 2)) : width;
+                c.height = lowDetail ? Math.max(64, Math.floor(height / 2)) : height;
                 const ctx = c.getContext('2d');
-                drawFn(ctx, width, height);
+                drawFn(ctx, c.width, c.height);
                 const tex = new THREE.CanvasTexture(c);
                 tex.wrapS = THREE.RepeatWrapping;
                 tex.wrapT = THREE.RepeatWrapping;
                 tex.repeat.set(repeatX, repeatY);
-                tex.anisotropy = renderer?.capabilities?.getMaxAnisotropy?.() ?? 1;
+                tex.anisotropy = Math.min(lowDetail ? 2 : 4, renderer?.capabilities?.getMaxAnisotropy?.() ?? 1);
                 return tex;
             }
 
@@ -2639,6 +2639,31 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
 
 
+    // Readable, low-cost shop signs are sprites rather than 3D text geometry.
+    for (const shop of shopInteriors) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 384; canvas.height = 92;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) continue;
+        ctx.fillStyle = '#13253a';
+        ctx.fillRect(0, 0, 384, 92);
+        ctx.strokeStyle = '#e4b966';
+        ctx.lineWidth = 5;
+        ctx.strokeRect(4, 4, 376, 84);
+        ctx.font = 'bold 31px serif';
+        ctx.fillStyle = '#ffe0a0';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(shop.label.toUpperCase(), 192, 47, 356);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const sign = new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:true,depthWrite:false}));
+        sign.position.set(3.2, 5.05, 2.55);
+        sign.scale.set(4.9, 1.18, 1);
+        sign.name = 'ArtisanShopSign_' + shop.id;
+        shop.group.add(sign);
+    }
+
     // Merge only genuinely static render geometry. Buildings retain their
     // separate rooms, doors, mount animations and model-showcase controls.
     // This lowers draw calls without changing the collision/walk-through shells.
@@ -2723,6 +2748,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     });
 
     // Host controls replace standalone demo HTML buttons.
+    let visibilityTimer = 0;
     let surgeTimer = 0;
     let allDoorsAndHoistOpen = true; // permit entry at genkan side doors
     outerRingGroup.visible = Boolean(showOuterHomes);
@@ -2747,11 +2773,27 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     const state = { active: true, lowEffects: false };
 
     /** Call once per host game frame with deltaSeconds and totalElapsedSeconds. */
-    function update(dt, elapsed) {
+    function update(dt, elapsed, playerPosition = null) {
         if (!state.active || !townGroup.visible) return;
         dt = Math.max(0, Math.min(0.1, Number(dt) || 0));
         elapsed = Number(elapsed) || 0;
         if (surgeTimer > 0) surgeTimer = Math.max(0, surgeTimer - dt);
+        // Cull distant home/shop groups only four times a second. The fountain
+        // and collision remain active, and a player inside keeps their room.
+        visibilityTimer += dt;
+        if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
+            visibilityTimer = 0;
+            const homeRange = lowDetail ? 62 : 90;
+            const shopRange = lowDetail ? 85 : 115;
+            for (const home of houseEntries) {
+                home.group.visible = Math.hypot(playerPosition.x - townGroup.position.x - home.group.position.x,
+                    playerPosition.z - townGroup.position.z - home.group.position.z) < homeRange;
+            }
+            for (const shop of shopInteriors) {
+                shop.group.visible = Math.hypot(playerPosition.x - townGroup.position.x - shop.group.position.x,
+                    playerPosition.z - townGroup.position.z - shop.group.position.z) < shopRange;
+            }
+        }
         const flowMult = surgeTimer > 0 ? 3.2 : 1;
                 // Animate Flowing Waterfall UV Scroll & Spiral Energy Ribbons
                 waterfallTex.offset.y += dt * 1.35 * flowMult;
