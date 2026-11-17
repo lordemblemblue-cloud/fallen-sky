@@ -997,7 +997,8 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             }
 
             // Stage 1: Main Upper Twin Chutes + Right Terraced Chute (falling from upper shelf onto lower ledge)
-            addWaterfallSheet(-1.15, 3.35, 1.92, 1.35, 0.48, 0.68, -0.15, 0.22);            addWaterfallSheet(0.45, 3.35, 1.92, 1.48, 0.38, 0.54, 0.08, 0.18);
+            addWaterfallSheet(-1.15, 3.35, 1.92, 1.35, 0.48, 0.68, -0.15, 0.22);
+            addWaterfallSheet(0.45, 3.35, 1.92, 1.48, 0.38, 0.54, 0.08, 0.18);
             addWaterfallSheet(1.85, 2.65, 1.85, 1.15, 0.46, 0.62, 0.45, 0.22);
             addWaterfallSheet(2.65, 2.45, 1.18, 0.45, 0.42, 0.64, 1.15, 0.26);
 
