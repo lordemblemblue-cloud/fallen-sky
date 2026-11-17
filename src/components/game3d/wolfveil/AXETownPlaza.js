@@ -12,7 +12,9 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * Do not call renderer.render() from this module.
  */
 export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1, quality = 'auto' } = {}) {
-    const lowDetail = quality === 'low' || (quality === 'auto' && typeof window !== 'undefined' && Boolean(window.matchMedia?.('(pointer: coarse)')?.matches));
+    // Default to the optimized low-poly town on desktop AND mobile.
+    // Quality 'balanced' / 'high' explicitly restores the denser meshes.
+    const lowDetail = quality !== 'balanced' && quality !== 'high';
     if (!THREE) throw new Error('createAXETownPlaza: Three.js namespace (THREE) is required');
     if (typeof document === 'undefined') throw new Error('createAXETownPlaza: browser canvas API is required for procedural textures');
 
@@ -740,8 +742,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             const townGroup = new THREE.Group();
             const shopInteriors = [];
             const houseEntries = [];
-            const stoneRingGroups = [];
-            // The host game decides where to attach this town group.
+                        // The host game decides where to attach this town group.
 
             const allRoofs = [];
 
@@ -759,7 +760,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             // 4. GRAND CIRCULAR TOWN PLAZA BASE, AVENUES & TORII-OBELISK GATEWAYS
             // ============================================================================
             const mainPlazaDisc = new THREE.Mesh(
-                new THREE.CylinderGeometry(58, 60, 0.8, 72),
+                new THREE.CylinderGeometry(58, 60, 0.8, lowDetail ? 28 : 72),
                 mats.plazaStone
             );
             mainPlazaDisc.position.y = -0.4;
@@ -767,7 +768,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             townGroup.add(mainPlazaDisc);
 
             const innerPlazaRing = new THREE.Mesh(
-                new THREE.RingGeometry(7.2, 8.2, 64),
+                new THREE.RingGeometry(7.2, 8.2, lowDetail ? 28 : 64),
                 mats.stairBrick
             );
             innerPlazaRing.rotation.x = -Math.PI / 2;
@@ -775,7 +776,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             townGroup.add(innerPlazaRing);
 
             const midAvenueRing = new THREE.Mesh(
-                new THREE.RingGeometry(31.5, 34.5, 64),
+                new THREE.RingGeometry(31.5, 34.5, lowDetail ? 28 : 64),
                 mats.stairBrick
             );
             midAvenueRing.rotation.x = -Math.PI / 2;
@@ -825,9 +826,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             function createChiseledStoneRing(radius, height, yPos, radialDepth, numBlocks, JitterScale = 1.0) {
                 const ringGrp = new THREE.Group();
                 ringGrp.position.y = yPos;
-                const arcLen = (Math.PI * 2 * radius) / numBlocks;
-                for (let i = 0; i < numBlocks; i++) {
-                    const ang = (i / numBlocks) * Math.PI * 2;
+                const segmentCount = lowDetail ? Math.max(16, Math.round(numBlocks * 0.55)) : numBlocks;
+                const arcLen = (Math.PI * 2 * radius) / segmentCount;
+                for (let i = 0; i < segmentCount; i++) {
+                    const ang = (i / segmentCount) * Math.PI * 2;
                     const bw = arcLen * 0.92;
                     const bh = height + ((i % 3 === 0) ? 0.025 : -0.015) * JitterScale;
                     const bd = radialDepth + ((i % 2 === 0) ? 0.03 : -0.02) * JitterScale;
@@ -840,8 +842,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     ringGrp.add(block);
                 }
                 fountainGroup.add(ringGrp);
-                stoneRingGroups.push(ringGrp);
-                return ringGrp;
+                                return ringGrp;
             }
 
             // Outer lower step ring + 2 courses of basin wall + chiseled bullnose coping ring
@@ -851,11 +852,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             createChiseledStoneRing(6.14, 0.24, 1.28, 0.86, 40, 0.8);
 
             // Dark basin interior liner & crystal-clear turquoise pool surface
-            const basinFloor = new THREE.Mesh(new THREE.CylinderGeometry(5.85, 5.85, 0.2, 48), mats.cragRock);
+            const basinFloor = new THREE.Mesh(new THREE.CylinderGeometry(5.85, 5.85, 0.2, lowDetail ? 20 : 48), mats.cragRock);
             basinFloor.position.y = 0.25;
             fountainGroup.add(basinFloor);
 
-            const poolSurface = new THREE.Mesh(new THREE.CylinderGeometry(5.82, 5.82, 0.12, 48), mats.poolWater);
+            const poolSurface = new THREE.Mesh(new THREE.CylinderGeometry(5.82, 5.82, 0.12, lowDetail ? 20 : 48), mats.poolWater);
             poolSurface.position.y = 1.12;
             fountainGroup.add(poolSurface);
 
@@ -915,8 +916,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 const fg = new THREE.Group();
                 fg.position.set(x, y, z);
                 fg.scale.setScalar(scale);
-                for (let i = 0; i < 9; i++) {
-                    const ang = (i / 9) * Math.PI * 2 + Math.random() * 0.3;
+                const frondCount = lowDetail ? 5 : 9;
+                for (let i = 0; i < frondCount; i++) {
+                    const ang = (i / frondCount) * Math.PI * 2 + Math.random() * 0.3;
                     const frond = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.04, 0.55), mats.mossFoliage);
                     frond.position.set(Math.cos(ang) * 0.22, 0.08 + (i % 3) * 0.05, Math.sin(ang) * 0.22);
                     frond.rotation.y = -ang + Math.PI / 2;
@@ -924,7 +926,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     fg.add(frond);
                 }
                 if (addPurpleFlowers) {
-                    for (let f = 0; f < 4; f++) {
+                    for (let f = 0; f < (lowDetail ? 2 : 4); f++) {
                         const fl = new THREE.Mesh(new THREE.DodecahedronGeometry(0.075, 0), mats.gemPurple);
                         fl.position.set((Math.random() - 0.5) * 0.38, 0.22 + Math.random() * 0.12, (Math.random() - 0.5) * 0.38);
                         fg.add(fl);
@@ -939,10 +941,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // 5.3 Two-Stage Tiered Craggy Rock Mound (Lower Curved Ledge + Upper Waterfall Shelf + Wolf Summit)
             // Lower wide curved rock shelf sitting in the turquoise pool
-            for (let i = 0; i < 24; i++) {
-                const ang = (i / 24) * Math.PI * 2;
+            const cragCount = lowDetail ? 12 : 24;
+            for (let i = 0; i < cragCount; i++) {
+                const ang = (i / cragCount) * Math.PI * 2;
                 const rad = 3.15 + Math.sin(ang * 3) * 0.28;
-                const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75, 1), mats.cragRock);
+                const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75, lowDetail ? 0 : 1), mats.cragRock);
                 rock.position.set(Math.cos(ang) * rad, 1.38, Math.sin(ang) * rad);
                 rock.scale.set(1.25, 0.85, 1.15);
                 rock.rotation.set(i * 0.4, ang, i * 0.2);
@@ -988,7 +991,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 const h = yTop - yBot;
                 const midY = (yTop + yBot) * 0.5;
                 const sheet = new THREE.Mesh(
-                    new THREE.CylinderGeometry(widthTop, widthBot, h, 12, 1, true, -Math.PI * 0.35, Math.PI * 0.7),
+                    new THREE.CylinderGeometry(widthTop, widthBot, h, lowDetail ? 7 : 12, 1, true, -Math.PI * 0.35, Math.PI * 0.7),
                     mats.waterfallStream
                 );
                 sheet.position.set(x, midY, z);
@@ -996,7 +999,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 sheet.rotation.x = tiltForward;
                 fountainGroup.add(sheet);
 
-                const foam = new THREE.Mesh(new THREE.RingGeometry(widthBot * 0.35, widthBot * 1.15, 20), mats.foamWhite);
+                const foam = new THREE.Mesh(new THREE.RingGeometry(widthBot * 0.35, widthBot * 1.15, lowDetail ? 10 : 20), mats.foamWhite);
                 foam.rotation.x = -Math.PI / 2;
                 foam.position.set(x + Math.sin(rotY) * 0.25, yBot + 0.04, z + Math.cos(rotY) * 0.25);
                 fountainGroup.add(foam);
@@ -1088,14 +1091,14 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 neckCore.rotation.x = 0.28;
                 wolf.add(neckCore);
 
-                for (let layer = 0; layer < 4; layer++) {
-                    const numTufts = 9 - layer;
+                for (let layer = 0; layer < (lowDetail ? 3 : 4); layer++) {
+                    const numTufts = (lowDetail ? 6 : 9) - layer;
                     const ly = 1.48 + layer * 0.21;
                     const lz = 0.30 + layer * 0.05;
                     const ringRad = 0.40 - layer * 0.045;
                     for (let t = 0; t < numTufts; t++) {
                         const ang = ((t / (numTufts - 1)) - 0.5) * Math.PI * 1.45;
-                        const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, 6), mats.wolfStone);
+                        const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, lowDetail ? 5 : 6), mats.wolfStone);
                         tuft.position.set(
                             Math.sin(ang) * ringRad,
                             ly,
@@ -1249,7 +1252,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // Rising Mist & Sparkle Particles around the Waterfall & Spiral Ribbons
             const mistParticles = [];
-            for (let m = 0; m < 48; m++) {
+            for (let m = 0; m < (lowDetail ? 16 : 48); m++) {
                 const pMat = (m % 2 === 0) ? mats.gemPurple : mats.foamWhite;
                 const droplet = new THREE.Mesh(new THREE.DodecahedronGeometry(0.065, 0), pMat);
                 const ang = Math.random() * Math.PI * 2;
@@ -1323,7 +1326,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 const tileCols = Math.floor(width / ribGap);
                 for (let c = -tileCols / 2; c <= tileCols / 2; c++) {
                     const rib = new THREE.Mesh(
-                        new THREE.CylinderGeometry(0.11, 0.11, length * 0.98, 8),
+                        new THREE.CylinderGeometry(0.11, 0.11, length * 0.98, lowDetail ? 5 : 8),
                         mats.kawaraTile
                     );
                     rib.rotation.x = Math.PI / 2;
@@ -1355,7 +1358,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // Shared Helper: Climbing Ivy Vines
             function createIvyCluster(parent, x, yStart, z, height = 3.0) {
-                for (let i = 0; i < (lowDetail ? 6 : 12); i++) {
+                for (let i = 0; i < (lowDetail ? 3 : 12); i++) {
                     const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.1, 0), mats.foliage);
                     leaf.position.set(
                         x + (Math.random() - 0.5) * 0.45,
@@ -1936,7 +1939,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 emberBed.position.set(-4.3, 1.42, -3.95);
                 houseGroup.add(emberBed);
 
-                for (let i = 0; i < 16; i++) {
+                for (let i = 0; i < (lowDetail ? 6 : 16); i++) {
                     const p = new THREE.Mesh(new THREE.DodecahedronGeometry(0.05, 0), mats.emberMat);
                     p.position.set(-4.3 + (Math.random() - 0.5) * 1.1, 1.45 + Math.random() * 0.9, -3.9 + (Math.random() - 0.5) * 0.8);
                     p.userData = { baseX: p.position.x, speed: 0.6 + Math.random() * 1.2, phase: Math.random() * Math.PI * 2 };
@@ -2497,7 +2500,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 frontSlope.rotation.x = pitch;
                 addBox(frontSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
                 for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
-                    const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, 8), mats.kawaraTile);
+                    const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, lowDetail ? 5 : 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
                     frontSlope.add(rib);
@@ -2509,7 +2512,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 backSlope.rotation.x = -pitch;
                 addBox(backSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
                 for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
-                    const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, 8), mats.kawaraTile);
+                    const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, lowDetail ? 5 : 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
                     backSlope.add(rib);
@@ -2595,10 +2598,12 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     house.add(createBuildingRoof(9.8, 6.8, 0.42, 4.5, mats.turquoise));
                 }
 
-                // Warm Lantern Point Light at each Townhouse Porch
-                const porchLight = new THREE.PointLight(0xffb357, 0.95, 8);
-                porchLight.position.set(0, 2.8, 4.0);
-                house.add(porchLight);
+                // In low-poly mode glowing windows replace eight costly porch lights.
+                if (!lowDetail) {
+                    const porchLight = new THREE.PointLight(0xffb357, 0.95, 8);
+                    porchLight.position.set(0, 2.8, 4.0);
+                    house.add(porchLight);
+                }
 
                 // Cypress & Palm Trees flanking each Outer Residence
                 for (let side = -1; side <= 1; side += 2) {
@@ -2607,10 +2612,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.4, 8), mats.charredTimber);
                     trunk.position.y = 1.2;
                     tree.add(trunk);
-                    const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, 1), mats.mossFoliage);
+                    const crown1 = new THREE.Mesh(new THREE.DodecahedronGeometry(1.15, lowDetail ? 0 : 1), mats.mossFoliage);
                     crown1.position.y = 2.6;
                     tree.add(crown1);
-                    const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, 1), mats.mossFoliage);
+                    const crown2 = new THREE.Mesh(new THREE.DodecahedronGeometry(0.85, lowDetail ? 0 : 1), mats.mossFoliage);
                     crown2.position.y = 3.6;
                     tree.add(crown2);
                     house.add(tree);
@@ -2675,7 +2680,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         ...spiralRibbons, ...foamRings.map(f=>f.mesh), ...mistParticles,
         ...allEmberParticles, ...allSwayingSilks.map(v=>v.mesh),
         ...allFloatingCrystals.map(v=>v.mesh), ...allFloatingSpellbooks.map(v=>v.mesh),
-        ...allLapidaryWheels, augmentFloorRune, augmentTopRune,
+        ...allLapidaryWheels, ...augmentOrbitingGems.map(v=>v.mesh), augmentFloorRune, augmentTopRune,
         augmentMasterGem, augmentRing1, augmentRing2,
         ...allSlidingShoji.map(v=>v.mesh), ...allSlidingDoors.map(v=>v.mesh),
     ].filter(Boolean));
@@ -2683,6 +2688,8 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         const buckets = new Map();
         for (const child of group.children) {
             if (!child.isMesh || !child.geometry || Array.isArray(child.material) || dynamicTownMeshes.has(child)) continue;
+            // Transparent mesh sorting and animation overrides are never merged.
+            if (child.material.transparent || child.userData?.noTownBatch) continue;
             const key = child.material;
             if (!buckets.has(key)) buckets.set(key, []);
             buckets.get(key).push(child);
@@ -2740,11 +2747,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         return { meshes, triangles: Math.round(triangles) };
     }
     const beforeOptimization = geometryStats();
-    stoneRingGroups.forEach(batchStaticDirect);
-    innerShopsGroup.children.forEach(batchStaticDirect);
-    outerRingGroup.children.forEach(batchStaticDirect);
-    houseEntries.forEach(home => batchStaticDirect(home.group.userData.interiorUpperShell));
-    allRoofs.forEach(batchRoofs);
+    // Keep batches under each building / animated parent to preserve cutaways,
+    // collision-independent shop access and individual room distance culling.
+    batchRoofs(fountainGroup);
+    batchRoofs(innerShopsGroup);
+    batchRoofs(outerRingGroup);
     const afterOptimization = geometryStats();
     const performanceStats = Object.freeze({
         quality: lowDetail ? 'low' : 'balanced',
@@ -2788,8 +2795,8 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         visibilityTimer += dt;
         if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
             visibilityTimer = 0;
-            const homeRange = lowDetail ? 62 : 90;
-            const shopRange = lowDetail ? 85 : 115;
+            const homeRange = lowDetail ? 48 : 90;
+            const shopRange = lowDetail ? 58 : 115;
             for (const home of houseEntries) {
                 home.group.visible = Math.hypot(playerPosition.x - townGroup.position.x - home.group.position.x,
                     playerPosition.z - townGroup.position.z - home.group.position.z) < homeRange;
