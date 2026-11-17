@@ -39,8 +39,8 @@ export default function AXEServicesNavigation({
       const bounds = hud.getBoundingClientRect();
       const statusBounds = hud.querySelector('.jade-status')?.getBoundingClientRect();
       // Opening Services hides the weather widget without unmounting its live
-      // forecast. Ignore its reserved width so the expanded navigation can
-      // spread toward the compass instead of staying squeezed to 55vw.
+      // forecast. The map remains the LEFT anchor, so expanded Services can
+      // grow toward the freed right side without covering the map.
       const weatherBounds = open ? null : weather?.getBoundingClientRect();
       const next = measureAXEServicesArea({
         bounds,
