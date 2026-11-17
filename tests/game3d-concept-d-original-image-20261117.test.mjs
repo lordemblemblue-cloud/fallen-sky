@@ -13,18 +13,19 @@ test('existing original Concept D raster remains byte-perfect as a historical as
   assert.equal(raw.subarray(4,12).toString('ascii'),'ftypavif');
   assert.equal(gitBlob(raw),'c4329d1a5633ea80ba0a8c40a9018e63ab372b8d');
   assert.equal(raw.length,4480);
-  assert.match(css,/concept-d-original-ornament\.avif/);
+  assert.doesNotMatch(css,/background:url\('\/game3d\/hud\/concept-d-original-ornament\.avif'\)/);
   assert.doesNotMatch(css,/background:url\('\/game3d\/hud\/concept-d-ink-gold-only\.svg'\)/);
 });
-test('the user-selected FIRST left raster now sits in a real image element as active backing',()=>{
+test('historical first raster is preserved, while the new CLEAN screenshot crop is the active backing',()=>{
   assert.equal(source.kind,'pixel-derived-raster-overlay');
   assert.equal(source.extraction.recreatedIllustration,false);
   assert.equal(source.dimensions.width,1140);
   assert.equal(source.dimensions.height,564);
   assert.match(source.imageUrl,/axe_first_design_exact_splash_five_slots\.webp$/);
   assert.match(ui,/<img className="jade-concept-d-ornament"/);
-  assert.ok(ui.includes(source.imageUrl));
-  assert.match(css,/> img\.jade-concept-d-ornament\s*\{[\s\S]*?object-fit:fill/);
+  assert.ok(!ui.includes(source.imageUrl));
+  assert.match(ui,/src="\/game3d\/hud\/clean-curl-splash-only\.webp"/);
+  assert.match(css,/object-fit:contain/);
   assert.match(css,/> img\.jade-concept-d-ornament\s*\{[\s\S]*?pointer-events:none/);
 });
 test('real weapon and skill controls align around enlarged first image and remain independent',()=>{

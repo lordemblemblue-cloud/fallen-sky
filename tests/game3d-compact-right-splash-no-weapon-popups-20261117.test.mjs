@@ -11,11 +11,12 @@ const section=css.slice(css.indexOf('owner correction: CLUMP controls'));
 
 test('keep the user FIRST picture as the sole original transparent background',()=>{
   assert.match(hud,/<img className="jade-concept-d-ornament"/);
-  assert.ok(hud.includes(original.imageUrl));
+  assert.ok(!hud.includes(original.imageUrl));
+  assert.match(hud,/clean-curl-splash-only\.webp/);
   assert.equal(original.extraction.recreatedIllustration,false);
   assert.match(section,/ORIGINAL\s*\n\s*unmodified first-image translucent splash/);
   assert.doesNotMatch(section,/background:url\(|<svg|paint|brushstroke:|clip-path:polygon/);
-  assert.match(css,/object-fit:fill/);
+  assert.match(css,/object-fit:contain/);
 });
 test('five skills are compact, clumped and right-aligned inside that image',()=>{
   assert.match(section,/--jade-dock-slot:clamp\(32px,3vw,49px\)/);
