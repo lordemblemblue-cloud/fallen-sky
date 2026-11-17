@@ -288,3 +288,83 @@
   border-radius:9px;
   background:linear-gradient(110deg,rgba(11,27,41,.22),rgba(24,42,57,.13));
 }
+
+/* Companion Skillbook: Character-matched mineral glass palette, not the
+ * old saturated navy companion cards. Reference: the actual Character
+ * simplified Skillbook's rgba(10,25,40,.17) central pane, faint transparent
+ * gold separators and cream text. Keep Assist/Damage skill trees untouched. */
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] {
+  --comp-skill-surface:rgba(10,25,40,.17);
+  --comp-skill-panel:rgba(22,38,52,.17);
+  --comp-skill-node:rgba(28,45,63,.14);
+  --comp-skill-line:rgba(229,186,126,.35);
+  --comp-skill-ivory:#f5e9d7;
+  --comp-skill-gold:rgba(242,210,147,.76);
+  background:transparent;
+  color:var(--comp-skill-ivory);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero {
+  background:linear-gradient(90deg,rgba(17,35,52,.16),rgba(16,32,49,.03));
+  border-bottom-color:rgba(240,202,140,.65);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-brand {
+  background:var(--comp-skill-panel);
+  color:#f6d69c;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-controls {
+  background:transparent;
+  border-bottom-color:var(--comp-skill-line);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-search {
+  background:rgba(17,34,51,.09);
+  border-bottom-color:var(--comp-skill-gold);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map {
+  background:var(--comp-skill-panel);
+  border-right-color:var(--comp-skill-line);
+  box-shadow:none;
+  backdrop-filter:blur(7px);
+  -webkit-backdrop-filter:blur(7px);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-companion-tree {
+  background:transparent;
+  box-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node {
+  background:var(--comp-skill-node);
+  border-color:rgba(242,210,147,.22);
+  box-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node:hover,
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node[aria-pressed="true"] {
+  background:rgba(214,171,99,.16);
+  border-color:#f0ca88ab;
+  box-shadow:inset 0 0 0 1px rgba(230,186,114,.18);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node .axe-sk-skill-mark {
+  background:rgba(40,62,81,.34);
+  color:#f0d39c;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector {
+  background:var(--comp-skill-surface);
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-info-title {
+  border-bottom-color:rgba(240,202,140,.50);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-metrics span {
+  background:transparent;
+  color:#d3c3aa;
+}
+@media(max-width:720px) {
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map {
+    border-right:0;
+    border-bottom:1px solid var(--comp-skill-line);
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector {
+    border-top:0;
+  }
+}
