@@ -18,6 +18,56 @@ const METRICS=[
 const fmt=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:2});
 const title=value=>String(value||'').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 
+/** Single read-only live summary for the Equipment page. Never creates a second progression state. */
+export function CompanionOverviewStrip({mount,snapshot}) {
+  const [weaponRole,setWeaponRole]=useState(getActiveWeaponPath);
+  useEffect(()=>subscribeWeaponBuffs(()=>setWeaponRole(getActiveWeaponPath())),[]);
+  const role=weaponRole==='ranged'?'range':weaponRole;
+  const growth=getCompanionGrowthView(mount?.totalXp||0);
+  const def=mount?getAXEMountDefinition(mount.definitionId):null;
+  const base=mount?getAXEMountBonuses(mount):{};
+  const stats=applyCompanionRoleBonus(applyCompanionGrowthBonus(base,mount?.totalXp||0),mount,role);
+  const masteryRoles=['damage','defense','range'].map(id=>({
+    id,rank:getCompanionMasteryProgress(mount,id).rank,
+  }));
+  const active=Boolean(mount?.instanceId&&snapshot?.activeMountId===mount.instanceId);
+  const registered=Boolean(mount?.instanceId&&snapshot?.registeredMountId===mount.instanceId);
+  const levelFraction=growth.maxed?100:growth.percent;
+  return <section className="axe-comp-unified-equipment-overview"
+    aria-label="Companion overview, attributes and experience"
+    data-companion-card="unified-equipment-overview">
+    <div className="axe-comp-unified-identity">
+      <small>COMPANION OVERVIEW</small>
+      <strong>{def?.name||'Select a Companion'}</strong>
+      <span>{mount?(active?'Active':'Owned')+' · '+(registered?'Bonded':'Not bonded')
+        :'Select an owned companion'}</span>
+    </div>
+    <div className="axe-comp-unified-progress">
+      <div className="axe-comp-unified-progress-title">
+        <strong>Level {growth.level}/{growth.maxLevel}</strong>
+        <span>Cycle {growth.cycle}/4 {growth.maxed?'· MAX LEVEL':''}</span>
+      </div>
+      <div className="axe-collection-progress" role="progressbar"
+        aria-label="Companion level experience" aria-valuemin={0}
+        aria-valuemax={100} aria-valuenow={levelFraction}>
+        <span style={{width:levelFraction+'%'}}/>
+      </div>
+      <small>{fmt(Math.min(growth.totalXp,20000))} / 20,000 companion XP</small>
+    </div>
+    <div className="axe-comp-unified-attributes">
+      {[['HP','hp'],['Attack','damage'],['Defense','defense']].map(([name,key])=><div key={key}>
+        <small>{name}</small><strong>+{fmt(stats[key])}</strong>
+      </div>)}
+    </div>
+    <div className="axe-comp-unified-mastery">
+      <small>MASTERY {growth.maxed?'· UNLOCKED':'· LOCKED UNTIL MAX LEVEL'}</small>
+      <div>{masteryRoles.map(({id,rank})=><span key={id}>
+        {title(id)} <b>{rank}/10</b>
+      </span>)}</div>
+    </div>
+  </section>;
+}
+
 export function CompanionAttributesPanel({mount,snapshot}) {
   const [weaponRole,setWeaponRole]=useState(getActiveWeaponPath);
   useEffect(()=>subscribeWeaponBuffs(()=>setWeaponRole(getActiveWeaponPath())),[]);
