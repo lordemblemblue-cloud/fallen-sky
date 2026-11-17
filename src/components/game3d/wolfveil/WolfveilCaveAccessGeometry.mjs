@@ -24,12 +24,9 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     const nx=-tangent.z/length,nz=tangent.x/length;
     const pos=(side)=>{
       const x=p.x+nx*side*halfWidth,z=p.z+nz*side*halfWidth;
-      const terrainY=wolfveilHeight(x,z);
-      const anchorWeight=blendToThreshold?clamp(stepLength/5,0,1):1;
-      // Sit the flagstones on the hillside, then let them flush into the
-      // arch so the last step is the cave threshold, not a floating lip.
-      const lift=blendToThreshold?0.16*clamp(stepLength/2.2,0,1):0.16;
-      return [x,mix(p.y,terrainY,anchorWeight)+lift,z];
+      // The walk uses the graded path height. Raw hillside cliffs are not
+      // the floor, or the trail stops being something you can walk.
+      return [x,p.y+0.16,z];
     };
     return {left:pos(1),right:pos(-1)};
   };
@@ -110,12 +107,12 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     // elbows cannot open triangle gaps where separately drawn strips meet.
     for(let i=1;i<pts.length-1;i++){
       const p=pts[i],radius=2.25,slices=12;
-      const c=[p.x,wolfveilHeight(p.x,p.z)+.09,p.z];
+      const c=[p.x,p.y+.09,p.z];
       for(let k=0;k<slices;k++){
         const ang0=2*Math.PI*k/slices,ang1=2*Math.PI*(k+1)/slices;
         const ring=a=>{
           const x=p.x+radius*Math.cos(a),z=p.z+radius*Math.sin(a);
-          return [x,wolfveilHeight(x,z)+.08,z];
+          return [x,p.y+.08,z];
         };
         // Fan half-strip with degenerate radial edges: supports an elbow.
         const b0=ring(ang0),b1=ring(ang1);
@@ -136,7 +133,9 @@ export function appendWolfveilCaveAccessFloor(floorTris){
     for(let i=0;i<=mouthSteps;i++){
       const t=i/mouthSteps;
       const x=end.x+(mx-end.x)*t,z=end.z+(mz-end.z)*t;
-      const y=wolfveilHeight(x,z)+(1-t)*.14;
+      const rise=wolfveilHeight(mx,mz)-end.y;
+      const capped=Math.sign(rise)*Math.min(Math.abs(rise),spanLen*0.3);
+      const y=end.y+capped*t;
       const half=2.35;
       const edge={
         left:[x+nx*half,y,z+nz*half],

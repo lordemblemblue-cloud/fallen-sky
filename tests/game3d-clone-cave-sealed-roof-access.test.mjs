@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
   WOLFVEIL_CAVE_APPROACHES,WOLFVEIL_CAVE_ACCESS_TRAILS,
+  WOLFVEIL_CAVE_APPROACH_MAX_GRADE,
   getWolfveilCaveApproach,isWolfveilCaveApproachReserved,
   resolveWolfveilCaveEntranceRailCollision,
 } from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -36,7 +37,15 @@ test('four physical cave approach tracks meet the original trails, with differen
   for(const a of WOLFVEIL_CAVE_APPROACHES){
     assert.ok(junctions.has([a.points[0].x,a.points[0].z].join(',')),
       'approach must connect to a real path, '+a.id);
-    assert.equal(a.points.length,4);
+    assert.ok(a.points.length>=4);
+    let worst=0;
+    for(let i=1;i<a.points.length;i++){
+      const dx=a.points[i].x-a.points[i-1].x,dz=a.points[i].z-a.points[i-1].z;
+      const dist=Math.hypot(dx,dz)||0.001;
+      worst=Math.max(worst,Math.abs(a.points[i].y-a.points[i-1].y)/dist);
+    }
+    assert.ok(worst<=WOLFVEIL_CAVE_APPROACH_MAX_GRADE+0.02,
+      a.id+' grade '+worst+' is too steep to walk');
     assert.equal(getWolfveilCaveApproach(a.caveId),a);
     assert.ok(a.points.every(point=>Number.isFinite(point.y)));
     assert.ok(isWolfveilCaveApproachReserved(a.points.at(-1).x,a.points.at(-1).z,1));
