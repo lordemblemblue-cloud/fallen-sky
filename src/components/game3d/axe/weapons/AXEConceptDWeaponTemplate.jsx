@@ -33,7 +33,7 @@ export default function AXEConceptDWeaponTemplate({
                 <Icon className="jade-concept-d-weapon-icon" size={25}
                   strokeWidth={1.65} aria-hidden="true"/>
                 {artwork && <img className="jade-concept-d-weapon-image"
-                  src={artwork} alt="" loading="lazy"
+                  key={artwork} src={artwork} alt="" loading="lazy"
                   onError={event=>{event.currentTarget.style.display='none';}}/>}
               </button>
               <button type="button" className="jade-concept-d-assign"
