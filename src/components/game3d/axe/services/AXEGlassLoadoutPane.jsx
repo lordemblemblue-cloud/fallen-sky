@@ -19,12 +19,12 @@ import { COMPANION_GEAR, getCompanionById } from '../../companionData';
 import { getAXEMountState, subscribeAXEMounts, activateAXEMount, registerAXEMount, previewAXEMountGearRefine, refineAXEMountGear } from '../progression/AXEMountStore';
 import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
-import { getCompanionGrowthView } from '../progression/AXECompanionGrowthView.mjs';
 import { getPlayerHUD } from '../../playerHUDStore';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
 import AXECompanionUnifiedInsights from './AXECompanionUnifiedInsights';
+import AXECompanionMountCircleRail from './AXECompanionMountCircleRail';
 
 const PlayerModel = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CompanionModel = lazy(() => import('../../equipment/CompanionPreview3D'));
@@ -73,8 +73,6 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const [refineReview,setRefineReview] = useState(null);
   const [insightsOpen,setInsightsOpen] = useState(false);
   const [selectedMountId,setSelectedMountId] = useState(null);
-  const [rosterQuery,setRosterQuery] = useState('');
-  const [rosterFocused,setRosterFocused] = useState(false);
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
   const [focusedSlot,setFocusedSlot] = useState('');
@@ -83,12 +81,6 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const ownedMounts = (mounts.mounts || []).filter(m=>m?.instanceId);
   const selectedMount = ownedMounts.find(m=>m.instanceId===selectedMountId)
     ||ownedMounts.find(m=>m.instanceId===mounts.activeMountId)||ownedMounts[0]||null;
-  const normalizedRosterQuery=rosterQuery.trim().toLowerCase();
-  const filteredMounts=ownedMounts.filter(m=>{
-    const definition=getAXEMountDefinition(m.definitionId);
-    const searchable=[definition?.name||m.definitionId,definition?.rarity,definition?.specialty];
-    return !normalizedRosterQuery||searchable.some(part=>String(part||'').toLowerCase().includes(normalizedRosterQuery));
-  });
   const selectedMountName = selectedMount
     ? getAXEMountDefinition(selectedMount.definitionId)?.name || caption(selectedMount.definitionId)
     : 'No Companion';
@@ -228,59 +220,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       </button>)}
       <button type="button" aria-label="Show all equipment" onClick={() => {
         setFocusedSlot(''); setFilter('All'); }}>All</button>
-    </aside> : <aside className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster axe-comp-owned-roster--classic"
-      aria-label="Companions - owned mounts" data-companion-roster-layout="classic">
-      <header className="axe-comp-roster-title">
-        <div className="axe-comp-roster-heading"><Compass size={17} aria-hidden="true"/>
-          <strong>Companions</strong><small>{ownedMounts.length} owned</small></div>
-        <label className="axe-comp-roster-search" aria-label="Search owned companions">
-          <Search size={16} aria-hidden="true"/>
-          <input type="search" autoComplete="off" aria-label="Search companion"
-            placeholder={rosterFocused?'':'Search companions'}
-            value={rosterQuery}
-            onFocus={()=>setRosterFocused(true)}
-            onBlur={()=>setRosterFocused(false)}
-            onChange={event=>setRosterQuery(event.target.value)}/>
-          {rosterQuery&&<button type="button" aria-label="Clear companion search"
-            onClick={()=>setRosterQuery('')}><X size={14}/></button>}
-        </label>
-      </header>
-      <div className="axe-comp-roster-list">
-        {filteredMounts.map(mount=>{
-          const isActive=mount.instanceId===mounts.activeMountId;
-          const isRegistered=mount.instanceId===mounts.registeredMountId;
-          const isSelected=mount.instanceId===selectedMount?.instanceId;
-          const definition=getAXEMountDefinition(mount.definitionId);
-          const name=definition?.name||caption(mount.definitionId);
-          const growth=getCompanionGrowthView(mount.totalXp||0);
-          const growthPct=Number(mount.growthPercent||0);
-          return <button key={mount.instanceId} type="button" aria-pressed={isSelected}
-            aria-label={name+', level '+growth.level+', '+growthPct+'% mount growth'+
-              (isActive?', active riding mount':'')+(isRegistered?', registered for stats':'')}
-            title={name+' · '+caption(definition?.rarity||'Mount')+' · '+caption(definition?.specialty||'Companion')+
-              ' · Level '+growth.level+' (cycle '+growth.cycle+') · '+growthPct+'% growth · '+
-              Number(mount.totalXp||0).toLocaleString()+' total XP'}
-            onClick={()=>{setSelectedMountId(mount.instanceId);setSelectedId(null);setFilter('All');setRefineReview(null);}}>
-            <span className="axe-comp-roster-sigil" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
-            <span className="axe-comp-roster-entry"><strong>{name}</strong>
-              <small>Lv {growth.level} · {growthPct}% growth</small>
-              {(isActive||isRegistered)&&<span className="axe-comp-roster-status">
-                {isActive?'Active':''}{isActive&&isRegistered?' · ':''}{isRegistered?'Registered':''}
-              </span>}</span>
-            {isActive&&<Check size={13} aria-hidden="true" className="axe-comp-roster-active-check"/>}
-          </button>;
-        })}
-        {!ownedMounts.length&&<p>No owned mounts on this character.</p>}
-        {!!ownedMounts.length&&!filteredMounts.length&&<p>No companions match your search.</p>}
-      </div>
-      <div className="axe-comp-roster-actions">
-        {selectedMount&&mounts.registeredMountId!==selectedMount.instanceId&&
-          <button type="button" onClick={()=>runMountAction(registerAXEMount,'Registered')}>Register Stats</button>}
-        {selectedMount&&mounts.activeMountId!==selectedMount.instanceId&&
-          <button type="button" onClick={()=>runMountAction(activateAXEMount,'Activated')}>Make Active</button>}
-        <small>Select a mount to preview its model, equipment and current stats.</small>
-      </div>
-    </aside>}
+    </aside> : <AXECompanionMountCircleRail
+      mounts={ownedMounts} selectedId={selectedMount?.instanceId}
+      activeId={mounts.activeMountId} registeredId={mounts.registeredMountId}
+      onSelect={id=>{setSelectedMountId(id);setSelectedId(null);setFilter('All');setRefineReview(null);}}
+    />}
     <section className="axe-app-model-stage axe-glass-loadout-stage"
       aria-label={isPlayer ? 'Player 3D viewer with equipment slots':'Companion 3D viewer'}>
       <div className="axe-app-model-glow" aria-hidden="true"/>
@@ -306,21 +250,31 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             </button>;
           })}
       </div>)}
-      {!isPlayer&&['left','right'].map(side=><div key={side}
-        className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
-        {displaySlots.filter((_,index)=>side==='left'?index<Math.ceil(displaySlots.length/2)
-          :index>=Math.ceil(displaySlots.length/2)).map(([slot,index])=>{
+      {!isPlayer&&<div className="axe-comp-viewer-corners"
+        aria-label="Companion equipment corner slots">
+        {displaySlots.map(([slot,index],position)=>{
           const wearing=slotItem(slot,index);
-          return <button type="button" key={slot+index} className="axe-app-viewer-slot"
+          const corner=['top-left','top-right','bottom-left','bottom-right'][position]||'bottom-right';
+          return <button key={slot+index} type="button"
+            className={'axe-app-viewer-slot axe-comp-viewer-corner axe-comp-viewer-corner--'+corner}
             aria-pressed={filter===slot&&!insightsOpen}
+            aria-label={caption(slot)+': '+(wearing?.name||'Empty')+'; browse matching equipment'}
             title={(wearing?.name||caption(slot))+' · '+(wearing?'Equipped':'Empty')}
             onClick={()=>chooseSlot(slot)}>
-            <span className="axe-app-viewer-slot-art"><IconFor item={wearing||{slot}} size={23}/></span>
+            <span className="axe-app-viewer-slot-art"><IconFor item={wearing||{slot}} size={30}/></span>
             <small>{caption(slot)}</small>
             <span className="axe-app-viewer-item-name">{wearing?.name||'Empty'}</span>
           </button>;
         })}
-      </div>)}
+        {displaySlots.length<4&&<button type="button"
+          className="axe-app-viewer-slot axe-comp-viewer-corner axe-comp-viewer-corner--bottom-right"
+          title="Show all companion gear in the equipment inventory"
+          aria-label="Show all companion gear in inventory"
+          onClick={()=>{setInsightsOpen(false);setFilter('All');setFocusedSlot('');setSelectedId(null);}}>
+          <span className="axe-app-viewer-slot-art"><Package size={30}/></span>
+          <small>All Gear</small><span className="axe-app-viewer-item-name">Browse inventory</span>
+        </button>}
+      </div>}
       <div className="axe-app-model-center"><Suspense fallback={<p className="axe-app-loading">Loading model…</p>}>
         <div className="axe-app-model-host">{isPlayer ? <PlayerModel/> :
           activeCompanion ? <CompanionModel key={activeCompanion.id} companionId={activeCompanion.id}/> :
@@ -329,7 +283,14 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       {!isPlayer && <AXECompanionFusionButton onNotice={onNotice}/>}
       <div className="axe-app-model-caption"><strong>
         {isPlayer ? 'Player Equipment' : selectedMountName}</strong>
-        <span>{equipped.length} pieces equipped</span></div>
+        <span>{equipped.length} pieces equipped</span>
+        {!isPlayer&&selectedMount&&<div className="axe-comp-viewer-mount-actions">
+          {mounts.registeredMountId!==selectedMount.instanceId&&
+            <button type="button" onClick={()=>runMountAction(registerAXEMount,'Registered')}>Register Stats</button>}
+          {mounts.activeMountId!==selectedMount.instanceId&&
+            <button type="button" onClick={()=>runMountAction(activateAXEMount,'Activated')}>Make Active</button>}
+        </div>}
+      </div>
     </section>
     <main className="axe-app-main-stack" aria-label={isPlayer ? "Owned equipment inventory" : insightsOpen ? "Companion overview, attributes and experience" : "Available companion gear catalog"}>
       {!isPlayer&&insightsOpen ? <AXECompanionUnifiedInsights mount={selectedMount} snapshot={mounts}/> : <section className="axe-app-card axe-app-inventory">
