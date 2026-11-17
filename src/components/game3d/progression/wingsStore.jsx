@@ -32,7 +32,7 @@ import {
   subscribeKillCount,
 } from '../killCountStore';
 import { characterScopedStorage, subscribeCharacterChange } from '../characterStorage';
-import { isPreviewMaxActive, subscribePreviewMax } from './previewMaxMode';
+import { getPreviewKillCount, isPreviewKillsActive, isPreviewMaxActive, subscribePreviewMax } from './previewMaxMode';
 import {
   AXE_WING_REINFORCEMENT_CONFIG,
   getAXEWingReinforcementChance,
@@ -118,7 +118,7 @@ const scaleWingBonuses = (bonuses = {}, percent = 0) => {
 export function getWingsState() {
   const preview = isPreviewMaxActive('wings');
   const selectedId = equippedId();
-  const kills = getKillCount();
+  const kills = getPreviewKillCount(getKillCount());
   const paths = {};
   WING_PATHS.forEach((def) => {
     const p = state.paths[def.id];
@@ -189,7 +189,7 @@ export function unequipWings() {
 
 // Attempt to enhance a specific wing path. Spends WING_ATTEMPT_COST kills.
 export function attemptWingEnhancement(pathId) {
-  if (isPreviewMaxActive('wings')) return { ok: false, reason: 'test_preview_read_only' };
+  if (isPreviewMaxActive('wings') || isPreviewKillsActive()) return { ok: false, reason: 'test_preview_read_only' };
   const p = state.paths[pathId];
   if (!p) return { ok: false, reason: 'no_path' };
   if (p.level >= MAX_WING_LEVEL) return { ok: false, reason: 'max_level' };
