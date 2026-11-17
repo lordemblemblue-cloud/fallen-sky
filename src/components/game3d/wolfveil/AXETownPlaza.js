@@ -2355,6 +2355,22 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 shopGroup.add(matrixLight);
             }
             buildExactAugmentShop();
+            // The former gem sanctum is now the village apothecary. Keep its
+            // existing magical decor, adding readable potion racks inside.
+            const potionRoom = shopInteriors.find(s => s.id === 'potion')?.group;
+            if (potionRoom) {
+                for (let row = 0; row < 2; row++) {
+                    const shelfY = 1.2 + row * 1.13;
+                    addBox(potionRoom, 3.85, 0.12, 0.65, mats.darkWood, -5.65, shelfY, -4.2);
+                    for (let i = 0; i < 6; i++) {
+                        const bottle = new THREE.Mesh(
+                            new THREE.CylinderGeometry(0.12, 0.17, 0.4, lowDetail ? 5 : 8),
+                            i % 2 ? mats.gemFrost : mats.gemCrimson);
+                        bottle.position.set(-7.2 + i * 0.6, shelfY + 0.26, -4.2);
+                        potionRoom.add(bottle);
+                    }
+                }
+            }
 
             // ============================================================================
             // 6.4 SW QUADRANT: EXACT MOUNT & BARDING STABLES (from uploaded mount_shop.html)
