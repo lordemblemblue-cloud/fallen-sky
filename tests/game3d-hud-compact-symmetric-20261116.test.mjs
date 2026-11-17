@@ -21,8 +21,8 @@ test('octagon frame is decorative only, with live level / EXP and no middle line
   assert.match(hud,/Complete octagon: no middle divider or ornamental horizontal wave/);
   assert.match(hud,/className="jade-xp jade-xp--compact"/);
   assert.match(hud,/aria-label=\{`Level \$\{hud\?\.level \|\| 1\} experience`\}/);
-  assert.match(hud,/className="jade-xp-number"\}>\{fmt\(hud\?\.level \|\| 1\)\}/);
-  assert.match(hud,/className="jade-xp-caption"\}>EXP/);
+  assert.match(hud,/className="jade-xp-number">\{fmt\(hud\?\.level \|\| 1\)\}/);
+  assert.match(hud,/className="jade-xp-caption">EXP/);
   assert.match(hud,/fmt\(hud\?\.xp\)/);
   assert.match(hud,/fmt\(hud\.xpForNext\)/);
   assert.doesNotMatch(hud,/jade-xp-octagon-energy|jade-xp-octagon-rule|jade-xp-raster-frame/);
