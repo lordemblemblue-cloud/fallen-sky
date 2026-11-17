@@ -58,6 +58,21 @@ export function nextClonePixelRatio({
   return clamp(current, minimum, ceiling);
 }
 
+export function normalizedCloneFrameCost({p95Ms=0,p99Ms=0,fpsCap=60}={}) {
+  // A deliberate 30 FPS cap yields ~33 ms between real rendered frames, but
+  // isn't by itself GPU pressure. Preserve the additional genuine delay.
+  const period=Math.max(1000/144,1000/([30,60,120,144].includes(fpsCap)?fpsCap:60));
+  const intentionalDelay=Math.max(0,period-1000/60);
+  return {p95Ms:Math.max(0,p95Ms-intentionalDelay),
+    p99Ms:Math.max(0,p99Ms-intentionalDelay)};
+}
+function readFpsCap(host) {
+  try {
+    const saved=JSON.parse(host?.localStorage?.getItem('game_graphics_settings')||'null');
+    return [30,60,120,144].includes(saved?.fpsCap)?saved.fpsCap:60;
+  } catch {return 60;}
+}
+
 function readQuality(host) {
   try {
     const saved = JSON.parse(host?.localStorage?.getItem('game_graphics_settings') || 'null');
@@ -204,16 +219,19 @@ export function createCloneAdaptiveGraphics({
 
     const frame = summarizeCloneFrames(batch);
     batch = []; lastSampleAt = now;
-    if (frame.p95Ms > 25) { slowWindows++; fastWindows = 0; }
-    else if (frame.p95Ms < 19 && frame.p99Ms < 24) { fastWindows++; slowWindows = 0; }
+    const adjusted=normalizedCloneFrameCost({
+      p95Ms:frame.p95Ms,p99Ms:frame.p99Ms,fpsCap:readFpsCap(host),
+    });
+    if (adjusted.p95Ms > 25) { slowWindows++; fastWindows = 0; }
+    else if (adjusted.p95Ms < 19 && adjusted.p99Ms < 24) { fastWindows++; slowWindows = 0; }
     else { slowWindows = 0; fastWindows = 0; }
 
     // Fixed 720p/900p/1080p/1440p/native modes are user controlled.
     // Auto mode alone uses the existing hysteresis-based governor.
     if (display.resolution === 'auto' && now - lastChangeAt > 9000) {
       const next = nextClonePixelRatio({
-        profile, current: ratio, ceiling, p95Ms: frame.p95Ms,
-        p99Ms: frame.p99Ms, slowWindows, fastWindows,
+        profile, current: ratio, ceiling, p95Ms: adjusted.p95Ms,
+        p99Ms: adjusted.p99Ms, slowWindows, fastWindows,
       });
       if (Math.abs(next - ratio) >= 0.01) {
         applyRatio(next);
