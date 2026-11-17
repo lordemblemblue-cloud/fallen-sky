@@ -143,6 +143,10 @@ import { xpForLevel, pickTier, getEnemyTierByName,
 import { attachContextGuard } from './webglContextGuard';
 import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSettings } from './render/inkWashLook';
 import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
+import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
+import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
+  game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
+  from './performance/Game3DDisplaySettings.mjs';
 import { createAtomicUltraSumiMode } from './render/atomicUltraSumiMode.mjs';
 import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
@@ -483,10 +487,24 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Width/height may be 0 on first paint inside hidden tabs — guard against that.
     const w0 = container.clientWidth || window.innerWidth;
     const h0 = container.clientHeight || window.innerHeight;
-    // Perf: cap pixel ratio at 1.5 — halves fragment-shader work on hi-DPI
-    // screens with virtually no visible quality loss.
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    renderer.setSize(w0, h0, false);
+    // Apply the player's saved framebuffer resolution on the very first frame.
+    // Previously this always started at DPR <=1.5 and waited for the optional
+    // async graphics bootstrap to discover the renderer. A slow scene could
+    // therefore ignore the user's selected 720p/1080p preset during loading.
+    const bootDisplay=readGame3DDisplaySettings(window);
+    const bootTarget=game3DResolutionTarget({
+      resolution:bootDisplay.resolution,viewportWidth:w0,viewportHeight:h0,
+      devicePixelRatio:window.devicePixelRatio||1,
+      autoRatio:rendererPixelRatioLimit({
+        profile:readCloneGPUProfile(window),quality:readGraphicsSettings().quality,
+        devicePixelRatio:window.devicePixelRatio||1,
+      }),maxTextureSize:renderer.capabilities?.maxTextureSize,
+    });
+    renderer.setPixelRatio(bootTarget.ratio);
+    renderer.setSize(w0,h0,false);
+    publishGame3DActualFramebuffer({
+      renderer,host:window,resolution:bootDisplay.resolution,limited:bootTarget.limited,
+    });
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     // Cave-specific exposure: protect readable monster colors and surfaces
@@ -527,6 +545,37 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       atomicLook?.setEnabled(g.artStyle==='atomic-ultra-sumi'&&!suigenActive);
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
+    // Apply fixed resolution changes synchronously to the already-mounted
+    // WebGL canvas, even before the adaptive GPU governor finishes attaching.
+    // When switching back to Adaptive the governor owns subsequent changes.
+    const onDisplayResolution = () => {
+      const saved=readGame3DDisplaySettings(window);
+      if(saved.resolution==='auto'&&window.__axe3dCloneGovernor?.syncViewport){
+        window.__axe3dCloneGovernor.syncViewport();
+        return;
+      }
+      const viewport=readGame3DRendererViewport(renderer,window);
+      const target=game3DResolutionTarget({
+        resolution:saved.resolution,
+        viewportWidth:viewport.width,viewportHeight:viewport.height,
+        devicePixelRatio:window.devicePixelRatio||1,
+        autoRatio:rendererPixelRatioLimit({
+          profile:readCloneGPUProfile(window),quality:readGraphicsSettings().quality,
+          devicePixelRatio:window.devicePixelRatio||1,
+        }),maxTextureSize:renderer.capabilities?.maxTextureSize,
+      });
+      try {
+        if(renderer.getContext?.()?.isContextLost?.())return;
+        if(Math.abs((renderer.getPixelRatio?.()||1)-target.ratio)>=.001)
+          renderer.setPixelRatio(target.ratio);
+        inkLook.setSize();
+        atomicLook?.resize();
+        publishGame3DActualFramebuffer({
+          renderer,host:window,resolution:saved.resolution,limited:target.limited,
+        });
+      }catch { /* Display changes must not stop combat or WebGL. */ }
+    };
+    window.addEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution);
 
     // Camera
     const camera = new THREE.PerspectiveCamera(GAME3D_GAME2_CAMERA.fov, (w0 || 1) / (h0 || 1), 0.1, 3200);
@@ -4676,7 +4725,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       camera.aspect=width/height;
       camera.updateProjectionMatrix();
       renderer.setSize(width,height,false); // Never overwrite canvas width:100%;height:100%.
-      window.__axe3dCloneGovernor?.syncViewport?.();
+      if(window.__axe3dCloneGovernor?.syncViewport)
+        window.__axe3dCloneGovernor.syncViewport();
+      else onDisplayResolution();
       inkLook.setSize();
       atomicLook?.resize();
     };
@@ -4773,6 +4824,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (document.pointerLockElement === renderer.domElement)
         document.exitPointerLock?.();
       window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('resize', handleResize);
+      window.removeEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution);
       canvasResizeObserver?.disconnect();
       window.removeEventListener('playerSkillStrike', handlePlayerSkillStrike);
       for (const held of heldAOEKeys.values()) {
