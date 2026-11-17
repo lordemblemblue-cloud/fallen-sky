@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { BookOpen, Compass, LocateFixed, Map, MapPin, Mountain, Swords, X } from 'lucide-react';
 import { getPlayerPosition, subscribePlayerPosition } from '../playerPositionStore';
 import { getLunarCaveMapEnemies, subscribeLunarCaveMapEnemies } from '../dungeons/LunarCaveMapStore.mjs';
+import { getWolfveilLiveMap, subscribeWolfveilLiveMap } from './WolfveilLiveMapStore.mjs';
 import { LUNAR_CAVE_CHAMBERS,LUNAR_CAVE_PASSAGES,LUNAR_CAVE_WATER_END,LUNAR_CAVE_ROOM_RADIUS,LUNAR_CAVE_PASSAGE_HALF_WIDTH } from '../dungeons/LunarCaveLayout.mjs';
 import { ASTRAL_PADS,ASTRAL_BRIDGES,ASTRAL_PAD_RADIUS,ASTRAL_BRIDGE_HALF_WIDTH } from '../dungeons/AstralDungeonLayout.mjs';
 import {WOLFVEIL_CAVE_APPROACHES} from '../wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -26,6 +27,7 @@ const MARKER_SHORT = {npc:'!',mob:'⚔',cave:'⌂',portal:'◇',landmark:'◆',o
 export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const [position,setPosition]=useState(getPlayerPosition);
   const [dungeonEnemies,setDungeonEnemies]=useState(getLunarCaveMapEnemies);
+  const [liveMap,setLiveMap]=useState(getWolfveilLiveMap);
   const [quests,setQuests]=useState(getQuestState);
   const [zoom,setZoom]=useState(1);
   const [follow,setFollow]=useState(true);
@@ -36,6 +38,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const [zoneDetail,setZoneDetail]=useState(null); // Wolfveil field / mob area chosen on the map
   useEffect(()=>subscribeQuests(setQuests),[]);
   useEffect(()=>subscribeLunarCaveMapEnemies(setDungeonEnemies),[]);
+  useEffect(()=>subscribeWolfveilLiveMap(setLiveMap),[]);
   useEffect(()=>{
     // Player position arrives every animation frame. Map rendering needs ~5fps.
     let last=0;
@@ -56,12 +59,23 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const isDungeon=region==='lunar-cave'||isAstral;
   const scale=getMapScale(region);
   const charted=getMapMarkers(region);
+  const liveNpcIds=new Set((region==='wolfveil'?liveMap.npcs:[]).map(npc=>'npc:'+npc.id));
   const target=getQuestNavigationTarget(region,quests,position);
-  const markers=[...charted,
+  const markers=[
+    ...charted.filter(marker=>!(marker.type==='npc'&&liveNpcIds.has(marker.id))),
     ...(isDungeon?dungeonEnemies.map(e=>({
       id:'live-mob:'+e.id,name:e.name,type:'mob',x:e.x,z:e.z,live:true,
       radius:0,levelRange:e.level===null?null:[e.level,e.level],
       description:'Live monster position · '+(e.level===null?'unknown level':'Level '+e.level),
+    })):[]),
+    ...(region==='wolfveil'?liveMap.enemies.map(e=>({
+      id:'live-mob:'+e.id,name:e.name,type:'mob',x:e.x,z:e.z,live:true,radius:0,
+      levelRange:e.level===null?null:[e.level,e.level],
+      description:(e.tier==='boss'?'Live boss':'Live enemy')+' · updated from the world',
+    })):[]),
+    ...(region==='wolfveil'?liveMap.npcs.map(npc=>({
+      id:'npc:'+npc.id,name:npc.name,type:'npc',x:npc.x,z:npc.z,live:true,
+      description:'Quest NPC · live position',
     })):[]),
     ...(target?[{...target,id:'objective:'+target.questId,type:'objective',name:target.navLabel,
       description:target.live?'Tracked quest objective':'Tracked objective — charted only'}]:[])];
@@ -88,7 +102,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const chartInfo=isAstral?'Four central metal platforms with eight interconnected side rings and flowing energy boundaries. All bridges and live high-level monsters appear here; loot requires server verification.':
     isDungeon?'The stone corridors, five battle halls and monster dots reflect this dungeon instance. Red markers show living enemies from Game 3D.':
     region==='forest'?'Caves and travel portals marked “charted” are mapped reserves, not active transport.':
-    'Gold rings are open fighting grounds (level, no monsters). Red rings are mob areas with their levels; the dashed Hunter’s Loop visits every camp in level order. Mountains ring the valley.';
+    'Gold rings are open fighting grounds (level, no monsters). Red rings are mob areas. Smaller red dots are living enemies, and quest NPCs use their real positions. Mountains ring the valley.';
   return <div className="axe-world-map-backdrop" role="presentation" onPointerDown={e=>e.stopPropagation()}>
     <section className="axe-world-map-dialog" role="dialog" aria-modal="true" aria-label="World map"
       onKeyDown={e=>e.stopPropagation()}>
@@ -189,6 +203,8 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
                 const end=projectMapPosition('wolfveil',
                   approach.entrance.x,approach.entrance.z+70);
                 return <g key={approach.id}>
+                  <polyline points={points} fill="none" stroke="#6a6258"
+                    strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" strokeOpacity=".9"/>
                   <polyline points={points} fill="none" stroke="#e2c58c"
                     strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
                   <line x1={projectMapPosition('wolfveil',approach.points.at(-1).x,
@@ -269,7 +285,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
           <div className="axe-world-map-legend">
             <span><i className="axe-map-dot-player"/> Player</span>
             <span><i className="axe-map-dot-quest"/> Objective</span>
-            <span><i className="axe-map-dot-mob"/> {isDungeon?'Living monsters':region==='wolfveil'?'Mob areas & camps (levels)':'Enemy level zones'}</span>
+            <span><i className="axe-map-dot-mob"/> {isDungeon?'Living monsters':region==='wolfveil'?'Mob areas and live enemies':'Enemy level zones'}</span>
             {region==='wolfveil'&&<span><i className="axe-map-dot-quest" style={{background:'#f2c46b'}}/> Open fighting grounds</span>}
             <span><i className="axe-map-dot-point"/> Landmarks / travel</span>
           </div>

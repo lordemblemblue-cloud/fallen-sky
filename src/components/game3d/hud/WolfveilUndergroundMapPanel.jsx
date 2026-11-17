@@ -4,6 +4,8 @@ import {
   UNDERGROUND_EXITS, UNDERGROUND_LINKS, UNDERGROUND_ROOMS,
   planUndergroundExitRoute, projectUnderground, undergroundMetresToMap,
 } from './undergroundMapModel.mjs';
+import { sampleWolfveilCaveSpace } from '../wolfveil/WolfveilCaveLayout.mjs';
+import { getWolfveilLiveMap, subscribeWolfveilLiveMap } from './WolfveilLiveMapStore.mjs';
 import {
   getDiscoveredRooms, revealRoomsNear, subscribeDiscoveredRooms,
 } from './wolfveilUndergroundDiscovery.mjs';
@@ -14,12 +16,14 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export default function WolfveilUndergroundMapPanel({ position }) {
   const [discovered, setDiscovered] = useState(getDiscoveredRooms);
+  const [liveMap, setLiveMap] = useState(getWolfveilLiveMap);
   const [selected, setSelected] = useState(null);
   const [zoom, setZoom] = useState(1.5);
   const [follow, setFollow] = useState(true);
   const [focus, setFocus] = useState({ x: 500, y: 500 });
 
   useEffect(() => subscribeDiscoveredRooms(setDiscovered), []);
+  useEffect(() => subscribeWolfveilLiveMap(setLiveMap), []);
 
   const localX = Number(position?.x) || 0;
   const localZ = (Number(position?.z) || 0) - WOLFVEIL_OFFSET_Z;
@@ -63,6 +67,7 @@ export default function WolfveilUndergroundMapPanel({ position }) {
         <span><i className="axe-ug-unknown"/> Not yet entered</span>
         <span><i className="axe-ug-exit"/> Surface exit</span>
         <span><i className="axe-ug-route"/> Route to nearest exit</span>
+        <span><i className="axe-ug-live"/> Living enemy in the caves</span>
       </div>
       <div className="axe-world-map-filter-note">
         <strong><Route size={17}/> Nearest surface exit</strong>
@@ -159,6 +164,13 @@ export default function WolfveilUndergroundMapPanel({ position }) {
               stroke="#122334" strokeWidth="4" paintOrder="stroke">Surface</text>
           </g>;
         })}
+        {liveMap.enemies.filter(enemy => sampleWolfveilCaveSpace(enemy.x, enemy.z - WOLFVEIL_OFFSET_Z, 0.4))
+          .map(enemy => {
+            const p = projectUnderground(enemy.x, enemy.z - WOLFVEIL_OFFSET_Z);
+            return <g key={'live-' + enemy.id} aria-label={enemy.name + ' — living enemy'}>
+              <circle cx={p.x} cy={p.y} r="7" fill="#e5675f" stroke="#2a1210" strokeWidth="2"/>
+            </g>;
+          })}
         {playerOnChart && <g aria-label="Your location">
           <circle cx={playerPoint.x} cy={playerPoint.y} r="19" fill="#e4f6ff" fillOpacity=".18"/>
           <g transform={'translate(' + playerPoint.x + ' ' + playerPoint.y + ') rotate(' + heading + ')'}>

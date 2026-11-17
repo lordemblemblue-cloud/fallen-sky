@@ -246,14 +246,24 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             if (along < 0.6 || my > wolfveilHeight(mx, mz) + 0.2) continue;
           }
           const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
-          floorTris.quad(
-            [x0 + nx * hw, y0, z0 + nz * hw],
-            [x0 - nx * hw, y0, z0 - nz * hw],
-            [x1 - nx * hw, y1, z1 - nz * hw],
-            [x1 + nx * hw, y1, z1 + nz * hw],
-            [0.62, 0.58, 0.52],
-            [[0, d0 * 0.85], [hw * 1.15, d0 * 0.85], [hw * 1.15, d1 * 0.85], [0, d1 * 0.85]],
-          );
+          // Mission path in the middle. The rock edges stay darker and a
+          // little mossy so the walk reads against the wall.
+          const mixEdge = (t, yLift = 0) => {
+            const a = [x0 + nx * hw, y0 + yLift, z0 + nz * hw];
+            const b = [x0 - nx * hw, y0 + yLift, z0 - nz * hw];
+            const c = [x1 - nx * hw, y1 + yLift, z1 - nz * hw];
+            const d = [x1 + nx * hw, y1 + yLift, z1 + nz * hw];
+            const at = (p, q) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+            return [at(a, b), at(d, c)];
+          };
+          const bands = [[0, 0.18, [0.4, 0.48, 0.36]], [0.18, 0.82, [0.74, 0.69, 0.56]], [0.82, 1, [0.4, 0.48, 0.36]]];
+          for (const [s0, s1, color] of bands) {
+            const [l0, r0] = mixEdge(s0, s0 > 0.2 && s1 < 0.9 ? 0.03 : 0);
+            const [l1, r1] = mixEdge(s1, s0 > 0.2 && s1 < 0.9 ? 0.03 : 0);
+            floorTris.quad(l0, r0, r1, l1, color, [
+              [s0 * hw, d0 * 0.85], [s1 * hw, d0 * 0.85], [s1 * hw, d1 * 0.85], [s0 * hw, d1 * 0.85],
+            ]);
+          }
           // Entry reads as a stair: one tread per slice, same mesh, no extra draw.
           if (cor.kind === 'entry') {
             floorTris.quad(
@@ -283,9 +293,34 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
               [x1 + nx * inn * side, y1, z1 + nz * inn * side],
               [x1 + nx * inn * side, y1 + 0.58, z1 + nz * inn * side],
               [x0 + nx * inn * side, y0 + 0.58, z0 + nz * inn * side],
-              [0.32, 0.3, 0.28],
+              [0.34, 0.52, 0.32],
               uv(d0 * 0.5, 0, d1 * 0.5, 0.45),
             );
+          }
+          // Ragged brick courses along the rock. Uneven, with gaps, so the
+          // wall is masonry that has started to fall in, not a flat panel.
+          if ((sIdx + i) % 2 === 0) {
+            for (let b = 0; b < 3; b++) {
+              const side = (sIdx + b) % 2 === 0 ? 1 : -1;
+              const jag = 0.15 + ((b * 5 + i) % 3) * 0.12;
+              const span = 0.55 + (b % 2) * 0.35;
+              const rise = 0.42 + ((b + sIdx) % 3) * 0.22;
+              const base = 0.85 + (b % 2) * 0.55;
+              const inset = out - 0.5;
+              const ox = nx * inset * side, oz = nz * inset * side;
+              const ax = mx + ox - seg.dx / steps * span * 0.5;
+              const az = mz + oz - seg.dz / steps * span * 0.5;
+              const bx = mx + ox + seg.dx / steps * span * 0.5;
+              const bz = mz + oz + seg.dz / steps * span * 0.5;
+              shellTris.quad(
+                [ax, my + base, az],
+                [bx, my + base + jag * 0.2, bz],
+                [bx + nx * side * jag, my + base + rise, bz + nz * side * jag],
+                [ax + nx * side * jag * 0.6, my + base + rise * 0.85, az + nz * side * jag * 0.6],
+                b === 1 ? [0.48, 0.58, 0.4] : [0.58, 0.52, 0.46],
+                [[0, 0], [span, 0], [span, rise], [0, rise]],
+              );
+            }
           }
           shellTris.quad(
             [x0 + nx * out, y0 + ceilH, z0 + nz * out],
