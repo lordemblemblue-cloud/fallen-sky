@@ -157,7 +157,7 @@ test('world hooks use Halo progression, real stamina, safe collision and origina
   assert.match(controller,/moveWithCollision\(dir.x\*HALO_FLIGHT_RULES\.finisherForwardSpeed\*step/);
   assert.match(controller,/moveWithCollision\(x,z\)/);
   assert.match(controller,/getAirWalkStamina\(\)/);
-  assert.match(controller,/if\(hasAction\('airWalkLoop'\)\)/);
+  assert.match(controller,/hasAction\('airWalkLoop'\)\?'airWalkLoop'/);
   assert.match(controller,/hasAction\('wingGlide'\)/);
   assert.match(controller,/specialMoveTimer=HALO_FLIGHT_RULES\.initialAirJumpSeconds/);
   assert.match(wings,/subscribeHalo\(s=>\{haloSnapshot=s;updateWingVisual\(\);\}\)/);
