@@ -61,6 +61,10 @@ test('four actual cave trails keep data-driven styles, positions and bounded det
     reservedAt:isWolfveilCaveApproachReserved,
   });
   assert(plan.length>0,'real cave environment must get actual landscaping');
+  for (const approach of WOLFVEIL_CAVE_APPROACHES) {
+    assert(plan.some(item => item.caveId === approach.caveId),
+      approach.caveId + ' has no actual scenic verge placements');
+  }
   assert(plan.length<=WOLFVEIL_CAVE_LANDSCAPE_LIMITS.maxPlacements);
   for(const p of plan){
     const cave=WOLFVEIL_CAVE_APPROACHES.find(a=>a.caveId===p.caveId);
