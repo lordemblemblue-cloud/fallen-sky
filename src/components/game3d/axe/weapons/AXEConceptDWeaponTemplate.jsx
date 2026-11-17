@@ -61,8 +61,11 @@ export default function AXEConceptDWeaponTemplate({
           <Star size={13} aria-hidden="true"/>
         </button>
       </div>
-      {/* Q is already reserved for crouch by GameWorld3D. Do not relabel
-          these actions Q or steal that key; inventory, arrow and wheel stay. */}
+      {/* Q remains the real crouch key in GameWorld3D; weapon selection
+          uses clickable circles, wheel, arrows and Shift+C instead. */}
+      <kbd className="jade-concept-d-q-key"
+        title="Q: crouch (weapon switching uses scroll, arrows or Shift+C)"
+        aria-label="Q key: crouch">Q</kbd>
     </div>
   );
 }
