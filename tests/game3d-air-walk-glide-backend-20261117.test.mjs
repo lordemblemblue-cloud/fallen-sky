@@ -112,6 +112,19 @@ test('ceiling collision stops upward Air Walk before passing through upper floor
   assert.equal(next.state.mode,'glide');
 });
 
+test('an overhead gallery is not mistaken for a landing floor',()=>{
+  const glide=startAt(12,10);
+  const next=advanceAirWalk(glide,.08,{floorY:18});
+  assert.equal(next.landed,false);
+  assert.equal(next.state.mode,'glide');
+  assert.ok(next.state.y<12);
+  assert.ok(next.state.y<18);
+  // Actual downward crossing of the lower surface still lands safely.
+  const lower=advanceAirWalk({...glide,y:10.09,velocityY:-2},.08,{floorY:10});
+  assert.equal(lower.landed,true);
+  assert.equal(lower.groundY,10);
+});
+
 test('combat ledger prevents underpayment, negative or oversized drain, and defers regen',()=>{
   assert.equal(combatActionCost('glide',{seconds:1}).stamina,.08*6.5);
   assert.equal(combatActionCost('glide',{seconds:-10}).stamina,0);
@@ -150,6 +163,8 @@ test('existing player, mount, duel, menu, respawn, world-floor and cave-ceiling 
   assert.match(world,/playerAnim\?\.cancelAirWalk\?\.\(\)/);
   assert.match(world,/playerAnim\?\.resetAirWalkMotion\?\.\(\)/);
   assert.match(world,/sampleAirWalkCeilingY/);
+  assert.match(world,/justLanded=wasAirborneLastFrame && !inFlight/);
+  assert.match(world,/airWalkCeilingOrigin\.set\(actor\.position\.x,footY\+\.2/);
   assert.match(world,/airWalkCeilingRay\.intersectObjects\(groundMeshes,true\)/);
   assert.match(world,/moveWorldActor\(model,move\.x\*speed\*delta,move\.z\*speed\*delta,mounted\)/);
   assert.match(world,/shouldRejectCaveGroundStep/);
