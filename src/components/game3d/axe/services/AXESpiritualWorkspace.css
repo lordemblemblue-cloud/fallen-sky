@@ -827,7 +827,7 @@
 .axe-service-workspace--spiritual .axe-spiritual-root::before {
   content:'';
   position:absolute;
-  left:calc(42% + clamp(9px,1vw,15px) / 2);
+  left:calc(42% + 6px);
   top:25%;
   height:50%;
   width:1px;
