@@ -15,7 +15,10 @@ import {readGame3DCommunityHUD,saveGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT
   from './hud/game3dCommunityHUDSettings.mjs';
 import {RENDER_STATS_STORAGE_KEY,isRenderStatsEnabled} from './debug/renderStats';
 import {CLONE_GPU_PROFILE_KEY,CLONE_GPU_PROFILES,readCloneGPUProfile,
-  normalizeCloneGPUProfile} from './performance/AdaptiveGraphics.mjs';
+  normalizeCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
+import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
+  readGame3DDisplaySettings,saveGame3DDisplaySettings,game3DResolutionTarget}
+  from './performance/Game3DDisplaySettings.mjs';
 import {readWolfveilWorldVariant,saveWolfveilWorldVariant,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
@@ -84,6 +87,12 @@ export default function PauseMenu({
       typeof window==='undefined'?null:window.localStorage));
   const [gpuProfile,setGpuProfile]=useState(()=>
     typeof window==='undefined'?'auto':readCloneGPUProfile(window));
+  const [displaySettings,setDisplaySettings]=useState(readGame3DDisplaySettings);
+  const [displayViewport,setDisplayViewport]=useState(()=>({
+    width:typeof window==='undefined'?1280:window.innerWidth,
+    height:typeof window==='undefined'?720:window.innerHeight,
+    dpr:typeof window==='undefined'?1:window.devicePixelRatio||1,
+  }));
   const [menuMotion,setMenuMotion]=useState(()=>{
     try{return localStorage.getItem('game3d_menu_motion')!=='false';}
     catch{return true;}
@@ -107,6 +116,16 @@ export default function PauseMenu({
 
   useEffect(()=>subscribeAXEControlSettings(setControls),[]);
   useEffect(()=>{
+    if(!open)return;
+    const update=()=>setDisplayViewport({
+      width:window.innerWidth,height:window.innerHeight,
+      dpr:window.devicePixelRatio||1,
+    });
+    update();
+    window.addEventListener('resize',update,{passive:true});
+    return ()=>window.removeEventListener('resize',update);
+  },[open]);
+  useEffect(()=>{
     const onPresence=event=>setPresence(event?.detail||{status:'unknown',count:null,max:20});
     window.addEventListener('game3dWorldPresence',onPresence);
     if(window.__game3dWorldPresence)setPresence(window.__game3dWorldPresence);
@@ -122,6 +141,7 @@ export default function PauseMenu({
     setCommunity(readGame3DCommunityHUD());
     setGpuStats(isRenderStatsEnabled(window.location.search,window.localStorage));
     setGpuProfile(readCloneGPUProfile(window));
+    setDisplaySettings(readGame3DDisplaySettings());
     setWorldVariant(readWolfveilWorldVariant());
     setWorldVariantError('');
     // Refresh the same graphics settings written from either entry or in-world.
@@ -212,6 +232,10 @@ export default function PauseMenu({
     try{localStorage.setItem(RENDER_STATS_STORAGE_KEY,enabled?'1':'0');}catch{}
     window.dispatchEvent(new CustomEvent('game3dRenderStatsChanged',{detail:{enabled}}));
   };
+  const changeDisplay=next=>{
+    const saved=saveGame3DDisplaySettings(next);
+    setDisplaySettings(saved);
+  };
   const changeGpuProfile=next=>{
     const profile=normalizeCloneGPUProfile(next);
     setGpuProfile(profile);
@@ -219,6 +243,21 @@ export default function PauseMenu({
     window.__axe3dCloneGovernor?.setProfile?.(profile);
     window.dispatchEvent(new CustomEvent('game3dCloneGPUProfileChanged',{detail:{profile}}));
   };
+  const displayPreview=game3DResolutionTarget({
+    resolution:displaySettings.resolution,
+    viewportWidth:displayViewport.width,
+    viewportHeight:displayViewport.height,
+    devicePixelRatio:displayViewport.dpr,
+    autoRatio:rendererPixelRatioLimit({
+      profile:gpuProfile,quality:graphics.quality,
+      devicePixelRatio:displayViewport.dpr,
+    }),
+  });
+  const actualBuffer=typeof window!=='undefined'
+    ?window.__axe3dCloneGovernor?.getSnapshot?.():null;
+  const displayedPixels=displaySettings.resolution==='auto'&&actualBuffer?.renderWidth
+    ?[actualBuffer.renderWidth,actualBuffer.renderHeight]
+    :[displayPreview.width,displayPreview.height];
   const changeVolume=value=>{
     const next=Math.max(0,Math.min(1,Number(value)||0));
     if(next>0)lastVolumeRef.current=next;
@@ -425,6 +464,34 @@ export default function PauseMenu({
                 </div>
               </div>}
               {view==='graphics'&&<div className="axe3d-pause__settings-grid">
+                <div className="axe3d-pause__surface" data-testid="game3d-display-resolution-settings">
+                  <div className="axe3d-pause__surface-heading"><Monitor size={22}/><div>
+                    <strong>Display Resolution &amp; Interface Fit</strong>
+                    <p>Change the 3D rendering workload, not the shape of your screen.</p>
+                  </div></div>
+                  <label className="axe3d-pause__display-selector">
+                    <span>3D render resolution</span>
+                    <select aria-label="3D render resolution" value={displaySettings.resolution}
+                      onChange={event=>changeDisplay({...displaySettings,resolution:event.target.value})}>
+                      {GAME3D_RENDER_RESOLUTIONS.map(option=>
+                        <option key={option.id} value={option.id}>{option.label}</option>)}
+                    </select>
+                  </label>
+                  <p className="axe3d-pause__help" role="status">
+                    Game viewport: {displayPreview.cssWidth} × {displayPreview.cssHeight} CSS pixels.
+                    {' '}3D framebuffer: approximately {displayedPixels[0]} × {displayedPixels[1]} pixels.
+                    {displayPreview.limited?' Limited to fit this browser’s safe texture/pixel budget.':''}
+                  </p>
+                  <OptionButtons label="Interface size" value={displaySettings.uiScale}
+                    items={GAME3D_UI_SCALES.map(option=>({id:option.id,text:option.label}))}
+                    onPick={uiScale=>changeDisplay({...displaySettings,uiScale})}/>
+                  <p className="axe3d-pause__help">
+                    Menus, buttons and HUD use the logical screen size and safe areas.
+                    On phones, Steam Deck and desktop screens, the interface reflows instead
+                    of stretching to the chosen 3D resolution. Native pixels uses device
+                    pixel density where the browser and GPU budget allow.
+                  </p>
+                </div>
                 <div className="axe3d-pause__surface" data-testid="game3d-world-variant-settings">
                   <OptionButtons label="World map" value={worldVariant}
                     items={[{id:'classic',text:'Classic Wolfveil · Restored'}]}

@@ -142,6 +142,7 @@ import { xpForLevel, pickTier, getEnemyTierByName,
 } from './gameWorldConfig';
 import { attachContextGuard } from './webglContextGuard';
 import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSettings } from './render/inkWashLook';
+import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
 import { createAtomicUltraSumiMode } from './render/atomicUltraSumiMode.mjs';
 import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
@@ -511,8 +512,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let livingInkWorld = null; // initialized only after the Game 3D Wolfveil roots exist
     let atomicLook = null; // clone-only safe global vegetation material style
     let suigenActive=false; // set before any Graphics listeners can fire
+    // A refresh-rate-independent rendering cap; game simulation still runs
+    // on every browser rAF, so movement and server authority are not throttled.
+    const renderPacer=createGame3DRenderFramePacer(readGraphicsSettings().fpsCap);
     window.__gw3dInkLook = inkLook; // the bench and reviews read and set its level
     const onGraphicsSettings = () => {
+      renderPacer.setFPSCap(readGraphicsSettings().fpsCap);
       inkLook.setPalette(resolveInkPalette());
       inkLook.setLevel(resolveInkLevel());
       livingInkWorld?.setLevel(resolveInkLevel());
@@ -2688,9 +2693,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Animation loop
     let frameId;
     let uiFrameCounter = 0;
-    const animate = () => {
+    const animate = (renderNow=performance.now()) => {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
+      const renderThisFrame=renderPacer.shouldRender(renderNow);
       // Character selection is a camera/UI state of this SAME Wolfveil scene.
       // Suspend combat, input, rewards and physics; keep scenery, idle animation
       // and real renderer alive. No second canvas or terrain is constructed.
@@ -2720,7 +2726,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             clipAgainstTerrain:pose=>playerCameraSystem.clipAgainstTerrain(pose)});
         }
         atomicLook?.update(delta,modelRef.current?.position,envSystem.getState());
-        if(!atomicLook?.render(camera))inkLook.render(scene,camera);
+        if(renderThisFrame&&!atomicLook?.render(camera))inkLook.render(scene,camera);
         return;
       }
       if(menuCameraHeld){
@@ -4654,18 +4660,31 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const activeCamera=window.__axeTileInspectionCamera?.worldId === 'game3d'
         ? window.__axeTileInspectionCamera.camera : camera;
       atomicLook?.update(delta,modelRef.current?.position,envSystem.getState());
-      if(!atomicLook?.render(activeCamera))inkLook.render(scene,activeCamera);
+      if(renderThisFrame&&!atomicLook?.render(activeCamera))inkLook.render(scene,activeCamera);
     };
     animate();
 
+    // Actual canvas container dimensions, not the screen's physical pixel
+    // resolution. Keeping camera aspect in CSS space prevents stretching and
+    // ensures mouse aiming and projected HUD positions stay aligned.
+    let lastCSSWidth=w0,lastCSSHeight=h0;
     const handleResize = () => {
-      camera.aspect = container.clientWidth / container.clientHeight;
+      const width=Math.round(container.clientWidth);
+      const height=Math.round(container.clientHeight);
+      if(!width||!height||(width===lastCSSWidth&&height===lastCSSHeight))return;
+      lastCSSWidth=width;lastCSSHeight=height;
+      camera.aspect=width/height;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(width,height,false); // Never overwrite canvas width:100%;height:100%.
+      window.__axe3dCloneGovernor?.syncViewport?.();
       inkLook.setSize();
       atomicLook?.resize();
     };
+    const canvasResizeObserver=typeof ResizeObserver!=='undefined'
+      ?new ResizeObserver(handleResize):null;
+    canvasResizeObserver?.observe(container);
     window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       flushCheckpoint();
@@ -4754,6 +4773,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (document.pointerLockElement === renderer.domElement)
         document.exitPointerLock?.();
       window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('resize', handleResize);
+      canvasResizeObserver?.disconnect();
       window.removeEventListener('playerSkillStrike', handlePlayerSkillStrike);
       for (const held of heldAOEKeys.values()) {
         window.dispatchEvent(new CustomEvent('axeAoeChannelStop',
