@@ -117,13 +117,13 @@ function WeaponStack({ playerLevel }) {
       const drawnRole=inferAXEWeaponRole(result.item||item);
       const index=drawnRole==='ranged'?1:drawnRole==='defensive'?2:
         drawnRole==='offensive'?0:null;
-      if(index!==null && getSkillPresets().index!==index){
-        const changed=selectSkillPreset(index);
-        if(!changed.ok)setNotice('Weapon drawn; skill preset could not be changed');
-      }
+      const presetChange=index!==null && getSkillPresets().index!==index
+        ? selectSkillPreset(index) : {ok:true};
       setAssigning(null);
       activeRoleRef.current=role;
-      setNotice(`${ROLE_TITLES[role]} · ${result.item?.name||item.name}`);
+      setNotice(presetChange.ok
+        ? `${ROLE_TITLES[role]} · ${result.item?.name||item.name}`
+        : `${ROLE_TITLES[role]} drawn · skill preset could not be changed`);
     } else {
       setNotice(result.message||result.reason?.replace(/_/g,' ')||'Weapon unavailable');
     }
