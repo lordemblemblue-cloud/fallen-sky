@@ -2184,7 +2184,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         return;
       }
-      if (entryModeRef.current || entryCamera.isActive()) return; // no movement/combat during camera handoff
+      if (entryModeRef.current || entryCamera.isActive() || window.__axeHudEditMode) return; // no movement/combat while arranging UI
       if (window.__axeTileInspectionEditing) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       if(e.isComposing || e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
@@ -3009,7 +3009,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Opening the C Character Hub immediately releases movement input. This
         // prevents a held W/Shift/Ctrl key from continuing to move the character
         // behind a full-screen UI.
-        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
+        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen || window.__axeHudEditMode) {
           keys.current = {};
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
