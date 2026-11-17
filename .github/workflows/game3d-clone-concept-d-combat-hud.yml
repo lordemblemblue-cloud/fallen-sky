@@ -1,0 +1,37 @@
+name: Game 3D Clone Concept D Combat HUD
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/hud/JadeSoulHUD.jsx'
+      - 'src/components/game3d/hud/JadeConceptDCombatHUD.css'
+      - 'src/components/game3d/axe/weapons/AXEConceptDWeaponTemplate.jsx'
+      - 'public/game3d/hud/concept-d-ink-gold-only.svg'
+      - 'tests/game3d-concept-d-brush-weapon-skills-20261117.test.mjs'
+      - '.github/workflows/game3d-clone-concept-d-combat-hud.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  concept-d:
+    name: Concept D live weapons/skills regression and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install reproducible dependencies
+        run: npm ci
+      - name: Test real weapon data, all skills, Q crouch, HP/WILL/quest isolation
+        run: >
+          node --test
+          tests/game3d-concept-d-brush-weapon-skills-20261117.test.mjs
+          tests/game3d-clone-curved-weapon-template.test.mjs
+          tests/game3d-hud-liquid-glass-hp-will-exp-20261117.test.mjs
+      - name: Build native Game 3D application
+        run: npm run build
