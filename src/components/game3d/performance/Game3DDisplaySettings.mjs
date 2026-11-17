@@ -41,16 +41,11 @@ export function publishedGame3DDisplayDefaults(host=null,buildEnv={}) {
   const height=Number(host?.innerHeight)||720;
   const coarse=Boolean(host?.matchMedia?.('(any-pointer: coarse)')?.matches)||
     (Number(host?.navigator?.maxTouchPoints)||0)>0;
-  const isLandscape=width>height;
-  const shortSide=Math.min(width,height);
-  const handheld=shortSide<700||
-    (coarse&&width<=1600&&height<=1100);
-  // Mobile/handheld builds may set VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION (e.g. 720p)
-  // so high-DPI small screens start with lower internal resolution. Players can always override.
-  // Landscape phones get compact UI by default so controls fit the short screen.
-  const chosen=handheld?(buildEnv?.VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION||'auto'):'auto';
+  const handheld=Math.min(width,height)<700||
+    (coarse&&width<=1450&&height<=1000);
+  const chosen=handheld?buildEnv?.VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION:'auto';
   return normalizeGame3DDisplaySettings({
-    resolution:chosen,uiScale:handheld?'compact':'auto',
+    resolution:chosen,uiScale:'auto',
   });
 }
 export function readGame3DDisplaySettings(
@@ -59,27 +54,27 @@ export function readGame3DDisplaySettings(
 ) {
   const defaults=publishedGame3DDisplayDefaults(host,buildEnv);
   try {
-    const raw=host?.localStorage?.getItem(GAME3D_DISPLAY_SETTINGS_KEY);
-    if(!raw) return defaults;
-    return normalizeGame3DDisplaySettings({...defaults,...JSON.parse(raw)});
-  } catch {
-    return defaults;
-  }
+    const saved=host?.localStorage?.getItem(GAME3D_DISPLAY_SETTINGS_KEY);
+    return saved ? normalizeGame3DDisplaySettings(JSON.parse(saved)) : defaults;
+  } catch { return defaults; }
 }
-export function saveGame3DDisplaySettings(next,host=typeof window!=='undefined'?window:null) {
-  const settings=normalizeGame3DDisplaySettings(next);
-  try { host?.localStorage?.setItem(GAME3D_DISPLAY_SETTINGS_KEY,JSON.stringify(settings)); } catch {}
-  host?.dispatchEvent?.(new CustomEvent(GAME3D_DISPLAY_SETTINGS_EVENT,{detail:settings}));
+export function saveGame3DDisplaySettings(raw,host=typeof window!=='undefined'?window:null) {
+  const settings=normalizeGame3DDisplaySettings(raw);
+  try { host?.localStorage?.setItem(GAME3D_DISPLAY_SETTINGS_KEY,JSON.stringify(settings)); }
+  catch { /* Browsers may disable local storage; in-session change still works. */ }
+  try {
+    host?.dispatchEvent?.(new (host.CustomEvent||CustomEvent)(
+      GAME3D_DISPLAY_SETTINGS_EVENT,{detail:settings}));
+  } catch { /* Non-browser test harness. */ }
   return settings;
 }
 export function getGame3DUIScale({uiScale='auto',width=1280,height=720}={}) {
   if(uiScale==='compact')return .9;
   if(uiScale==='large')return 1.15;
   if(uiScale==='standard')return 1;
-  // auto: slightly tighter on narrow phones so HUD fits landscape
-  if(Math.min(width,height)<480) return .85;
-  if(width<680) return .95;
-  return 1;
+  // CSS viewport, not physical phone resolution: an 1170x2532 phone is
+  // typically ~390x844 CSS px and needs an adaptive compact layout.
+  return (width<440||height<560) ? .9 : width<680 ? .95 : 1;
 }
 export function game3DViewportClass({width=1280,height=720}={}) {
   const min=Math.min(width,height);
