@@ -57,30 +57,51 @@ test('growth readout follows recorded XP, with no fabricated level grants', () =
   assert.equal(getCompanionGrowthView(20000).maxed,true);
 });
 
-test('compact Companion Equipment roster uses mount names, XP levels and current state', () => {
-  assert.match(equipment, /const ownedMounts = \(mounts\.mounts \|\| \[\]\)\.filter/);
-  assert.match(equipment, /getAXEMountDefinition\(mount.definitionId\)/);
-  assert.match(equipment, /getCompanionGrowthView\(mount.totalXp\|\|0\)/);
-  assert.match(equipment, /const isActive=mount.instanceId===mounts.activeMountId/);
-  assert.match(equipment, /const isRegistered=mount.instanceId===mounts.registeredMountId/);
-  assert.match(equipment, /Lv \{growth.level\} · \{growthPct\}% growth/);
-  assert.match(equipment, /aria-label=\{name\+', level '\+growth.level/);
-  assert.match(equipment, /const searchable=\[definition\?\.name\|\|m.definitionId,definition\?\.rarity,definition\?\.specialty\]/);
-  assert.match(equipment, /setRosterQuery\(''\)/);
-  assert.doesNotMatch(equipment, /<span className="axe-comp-roster-sigil"><Compass/);
+const circleRail = read('AXECompanionMountCircleRail.jsx');
+const circleStyles = read('AXECompanionMountCircleRail.css');
+const mastery = read('AXECompanionMasteryPanel.jsx');
+const masteryStyles = read('AXECompanionProfileRedesign.css');
+
+test('Companion Equipment and Mastery use one shared Variety-style circular owned-mount picker', () => {
+  assert.match(equipment, /<AXECompanionMountCircleRail/);
+  assert.match(mastery, /<AXECompanionMountCircleRail/);
+  assert.match(circleRail, /mounts\.map\(mount =>/);
+  assert.match(circleRail, /getAXEMountDefinition\(mount.definitionId\)/);
+  assert.match(circleRail, /getCompanionGrowthView\(mount.totalXp\|\|0\)/);
+  assert.match(circleRail, /data-companion-roster-layout="circles"/);
+  assert.match(circleStyles, /border-radius:50%/);
+  assert.match(equipment, /onSelect=\{id=>\{setSelectedMountId\(id\)/);
+  assert.match(mastery, /onSelect=\{id=>\{setSelectedId\(id\)/);
+  assert.doesNotMatch(equipment, /rosterQuery|rosterFocused|Search companions|axe-comp-owned-roster--classic/);
+  assert.doesNotMatch(mastery, /Find mount|<Search/);
 });
 
-test('far-left companion roster is narrower and search is directly below heading', () => {
-  const assertIncludes = token => assert.ok(styles.includes(token), 'Missing '+token);
-  assertIncludes('grid-template-columns:minmax(120px,11%)');
-  assertIncludes('grid-template-columns:minmax(116px,12%)');
-  assertIncludes('grid-template-columns:minmax(114px,19%)');
-  assertIncludes('grid-template-columns:minmax(100px,28%)');
-  assert.match(equipment, /<header className="axe-comp-roster-title">[\s\S]*<div className="axe-comp-roster-heading">[\s\S]*<label className="axe-comp-roster-search"/);
-  assert.match(styles, /\.axe-comp-roster-title \{[\s\S]*?flex-direction:column/);
-  assertIncludes('border-bottom:2px solid #e7c288');
-  assertIncludes('width:100%;max-width:none;min-width:0;');
-  assertIncludes('min-height:49px;gap:5px;');
-  // No changes to the character Equipment layout.
-  assert.match(equipment, /\{isPlayer \? <aside className="axe-app-rail/);
+test('three real gear slots plus All Gear action occupy all four 3D viewer corners', () => {
+  assert.match(equipment, /className="axe-comp-viewer-corners"/);
+  assert.match(equipment, /displaySlots\.map\(\(\[slot,index\],position\)=>/);
+  assert.match(equipment, /\['top-left','top-right','bottom-left','bottom-right'\]/);
+  assert.match(equipment, /displaySlots\.length<4&&<button/);
+  assert.match(equipment, /aria-label="Show all companion gear in inventory"/);
+  assert.match(equipment, /onClick=\{\(\)=>\{setInsightsOpen\(false\);setFilter\('All'\)/);
+  assert.match(equipment, /axe-comp-viewer-mount-actions/);
+  assert.match(styles, /\.axe-comp-viewer-corner--top-left/);
+  assert.match(styles, /\.axe-comp-viewer-corner--top-right/);
+  assert.match(styles, /\.axe-comp-viewer-corner--bottom-left/);
+  assert.match(styles, /\.axe-comp-viewer-corner--bottom-right/);
+  assert.match(styles, /min-height:95px/);
+});
+
+test('Mastery shows Damage, Defense, Range vertically and a separate broad stats detail pane', () => {
+  assert.match(mastery, /COMPANION_MASTERY_PATHS\.map\(path=>/);
+  assert.match(mastery, /className="axe-mastery-role-list"/);
+  assert.match(mastery, /className="axe-mastery-stat-breakdown"/);
+  assert.match(mastery, /className="axe-mastery-workbench"/);
+  assert.match(mastery, /progress\.nextXp-progress\.xp/);
+  assert.match(mastery, /getCompanionMasteryProgress\(mount,role\)/);
+  assert.match(mastery, /activateAXEMount\(mount.instanceId\)/);
+  assert.match(mastery, /onClick=\{onMyCompanion\}/);
+  assert.match(masteryStyles, /\.axe-mastery-workbench\s*\{[\s\S]*?grid-template-columns:minmax\(155px,26%\) minmax\(0,1fr\)/);
+  assert.match(masteryStyles, /border-right:2px solid #e1c38e91/);
+  assert.match(masteryStyles, /@media\(max-width:760px\)/);
+  assert.doesNotMatch(mastery, /axe-mastery-role-card|axe-mastery-hero/);
 });
