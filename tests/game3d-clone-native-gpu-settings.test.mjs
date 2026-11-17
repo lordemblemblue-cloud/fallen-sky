@@ -18,7 +18,7 @@ test('native shared Graphics settings expose all available clone GPU render prof
  assert.match(menu,/game3dCloneGPUProfileChanged/);
 });
 test('GPU profile controls real adaptive pixel ratio, never combat or terrain',()=>{
- assert.equal(rendererPixelRatioLimit({profile:'performance',devicePixelRatio:2}),.75);
+ assert.equal(rendererPixelRatioLimit({profile:'performance',devicePixelRatio:2}),.5);
  assert.equal(rendererPixelRatioLimit({profile:'balanced',devicePixelRatio:2}),1);
  assert.equal(rendererPixelRatioLimit({profile:'quality',devicePixelRatio:2}),1.5);
  assert.match(menu,/Performance metrics \(FPS \/ GPU \/ CPU\)/);

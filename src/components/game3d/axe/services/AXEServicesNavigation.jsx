@@ -25,6 +25,7 @@ export default function AXEServicesNavigation({
     let observedWeather = null;
     let previousClearance = null;
     let previousNavigationBottom = null;
+    let previousShortcutAnchor = null;
     const resize = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(schedule) : null;
 
     function update() {
@@ -39,8 +40,8 @@ export default function AXEServicesNavigation({
       const bounds = hud.getBoundingClientRect();
       const statusBounds = hud.querySelector('.jade-status')?.getBoundingClientRect();
       // Opening Services hides the weather widget without unmounting its live
-      // forecast. Ignore its reserved width so the expanded navigation can
-      // spread toward the compass instead of staying squeezed to 55vw.
+      // forecast. The map remains the LEFT anchor, so expanded Services can
+      // grow toward the freed right side without covering the map.
       const weatherBounds = open ? null : weather?.getBoundingClientRect();
       const next = measureAXEServicesArea({
         bounds,
@@ -53,6 +54,24 @@ export default function AXEServicesNavigation({
       const widths = Array.from(measurement.current.children, button => button.getBoundingClientRect().width);
       const nextRows = splitAXEServiceRows(widths, next.width);
       setRows(previous => JSON.stringify(previous) === JSON.stringify(nextRows) ? previous : nextRows);
+      // The Echo, Chronicle and Mini-games buttons belong directly UNDER
+      // the VISIBLE Services control, not the minimap or the bottom HUD.
+      // Measure the real button after responsive Services rows wrap.
+      const visibleButton = open
+        ? node.querySelector('.jade-services-options .jade-services-button')
+        : node.querySelector(':scope > .jade-services-button');
+      if(visibleButton){
+        const worldRect=world.getBoundingClientRect();
+        const buttonRect=visibleButton.getBoundingClientRect();
+        const shortcutLeft=Math.round(buttonRect.left-worldRect.left);
+        const shortcutTop=Math.round(buttonRect.bottom-worldRect.top+7);
+        const key=shortcutLeft+':'+shortcutTop;
+        if(key!==previousShortcutAnchor){
+          previousShortcutAnchor=key;
+          world.style.setProperty('--axe-services-shortcuts-left',shortcutLeft+'px');
+          world.style.setProperty('--axe-services-shortcuts-top',shortcutTop+'px');
+        }
+      }
       const navigationBottom = next.top + (open ? nextRows.length * 32 + (nextRows.length - 1) * 6 : 32);
       const actualNavigationBottom = Math.ceil(navigationBottom);
       // Expose the menu's real bottom separately from HP/weather clearance.
@@ -80,6 +99,7 @@ export default function AXEServicesNavigation({
     }
 
     resize?.observe(hud);
+    resize?.observe(node);
     const status = hud.querySelector('.jade-status');
     if (status) resize?.observe(status);
     const compass = hud.querySelector('.jade-compass-block');
@@ -101,6 +121,8 @@ export default function AXEServicesNavigation({
       if (frame) cancelAnimationFrame(frame);
       world.style.removeProperty('--axe-service-navigation-bottom');
       world.style.removeProperty('--axe-service-navigation-actual-bottom');
+      world.style.removeProperty('--axe-services-shortcuts-left');
+      world.style.removeProperty('--axe-services-shortcuts-top');
     };
   }, [open]);
 

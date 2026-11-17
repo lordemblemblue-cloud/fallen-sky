@@ -1,14 +1,19 @@
 // Coordinates are relative to the existing world/HUD, never to a second canvas.
+// The top row now runs left-to-right: real minimap, Services, live weather.
+// Use the minimap's RIGHT edge to start Services; the empty status anchor is
+// intentionally not a position reference for this row. Reserve weather's
+// LEFT edge when visible and let Services fill that space when it is hidden.
 export function measureAXEServicesArea({ bounds, status, weather, compass, gap = 12 }) {
-  const left = Math.max(gap, (status?.right ?? bounds.left) - bounds.left + gap);
-  const rightEdge = Math.min(
-    bounds.right - gap,
-    weather?.left ?? compass?.left ?? bounds.right - gap,
-  );
+  const viewportWidth = Math.max(0, bounds.right - bounds.left);
+  const clearance = viewportWidth <= 420 ? Math.min(8, gap) : gap;
+  const leftEdge = compass?.right ?? status?.right ?? bounds.left;
+  const left = Math.max(clearance, Math.ceil(leftEdge - bounds.left + clearance));
+  const rightEdge = Math.min(bounds.right - clearance, weather?.left ?? bounds.right - clearance);
+  const rowTop = compass?.top ?? weather?.top ?? status?.top ?? (bounds.top + 18);
   return {
-    left: Math.round(left),
-    width: Math.max(0, Math.floor(rightEdge - bounds.left - gap - left)),
-    top: Math.max(12, Math.round(Math.min(status?.top ?? bounds.top + 18, weather?.top ?? bounds.top + 18) - bounds.top)),
+    left,
+    width: Math.max(0, Math.floor(rightEdge - bounds.left - clearance - left)),
+    top: Math.max(12, Math.round(rowTop - bounds.top)),
   };
 }
 

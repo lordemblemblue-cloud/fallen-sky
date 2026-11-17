@@ -1,0 +1,41 @@
+/* Game 3D — player HUD editing overlay. No shader, world mesh or gameplay
+   element is reconstructed. It is an opt-in handle layer above the live UI. */
+.axe3d-hud-editor{position:fixed;inset:0;z-index:9999;pointer-events:none;color:#f6ebd4;font-family:Inter,system-ui,sans-serif}
+.axe3d-hud-editor__backdrop{position:absolute;inset:0;background:rgba(2,12,20,.20);pointer-events:auto;cursor:default}
+.axe3d-hud-editor__toolbar{position:absolute;left:50%;top:max(9px,env(safe-area-inset-top));transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px 9px;width:min(950px,calc(100% - 16px));
+  padding:10px 13px;border:1px solid rgba(240,193,117,.66);border-radius:10px;
+  backdrop-filter:blur(18px) saturate(130%);-webkit-backdrop-filter:blur(18px);
+  background:linear-gradient(140deg,rgba(13,30,43,.96),rgba(6,17,27,.94));
+  box-shadow:0 14px 42px #000a;pointer-events:auto;z-index:5}
+.axe3d-hud-editor__toolbar strong{display:inline-flex;gap:6px;align-items:center;color:#ffdc9c;font-size:13px;margin-right:8px}
+.axe3d-hud-editor__toolbar label{display:inline-flex;align-items:center;gap:7px;font-size:11px;color:#e6dfce}
+.axe3d-hud-editor__toolbar select,.axe3d-hud-editor__toolbar button{border:1px solid #baa37a77;background:#0a2134;color:#f6e9d5;
+  border-radius:6px;min-height:30px;padding:5px 8px;font-size:11px;cursor:pointer}
+.axe3d-hud-editor__toolbar button{display:inline-flex;gap:5px;align-items:center;justify-content:center}
+.axe3d-hud-editor__toolbar button:hover,.axe3d-hud-editor__toolbar select:hover{border-color:#dceeff}
+.axe3d-hud-editor__toolbar :is(button,select):focus-visible{outline:2px solid #94e9f9;outline-offset:2px}
+.axe3d-hud-editor__toolbar output{min-width:36px;text-align:center;font-size:11px;font-variant-numeric:tabular-nums}
+.axe3d-hud-editor__toolbar .axe3d-hud-editor__done{background:#2e645c;border-color:#8aceb3;color:#fff;font-weight:700}
+.axe3d-hud-editor__toolbar small{width:100%;text-align:center;color:#c8ced0;font-size:10px}
+.axe3d-hud-editor__drag{position:fixed;z-index:3;display:block;box-sizing:border-box;min-width:38px;min-height:26px;
+  padding:0!important;margin:0!important;border:2px dashed #eecb8a!important;
+  border-radius:8px;outline:1px solid rgba(2,16,27,.75);background:rgba(74,152,161,.10)!important;
+  box-shadow:0 0 0 4px rgba(8,25,35,.32),inset 0 0 16px rgba(51,156,191,.12);
+  cursor:grab;pointer-events:auto;touch-action:none;user-select:none}
+.axe3d-hud-editor__drag:active{cursor:grabbing}
+.axe3d-hud-editor__drag:focus-visible{outline:3px solid #aeecff}
+.axe3d-hud-editor__drag>span{position:absolute;top:-25px;left:0;display:inline-flex;gap:5px;align-items:center;
+  padding:3px 8px;border-radius:6px 6px 0 0;background:#142d3deF;color:#ffdea1;font:600 10px/1.2 system-ui,sans-serif;
+  white-space:nowrap;box-shadow:0 0 0 1px #e9c989}
+.axe3d-hud-editor__missing{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);
+  padding:14px 18px;border:1px solid #bd9976;background:#112638ee;border-radius:9px;font-size:12px;z-index:4;pointer-events:none}
+@media(max-width:690px){
+ .axe3d-hud-editor__toolbar{top:max(3px,env(safe-area-inset-top));padding:6px;gap:4px}
+ .axe3d-hud-editor__toolbar strong{width:100%;justify-content:center;font-size:11px}
+ .axe3d-hud-editor__toolbar label{font-size:10px}
+ .axe3d-hud-editor__toolbar select{max-width:145px;min-height:27px}
+ .axe3d-hud-editor__toolbar button{min-height:26px;font-size:10px;padding:3px 5px}
+ .axe3d-hud-editor__toolbar small{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){.axe3d-hud-editor *{transition:none!important;animation:none!important}}

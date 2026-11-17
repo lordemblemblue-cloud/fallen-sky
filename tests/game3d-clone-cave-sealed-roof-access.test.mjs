@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
   WOLFVEIL_CAVE_APPROACHES,WOLFVEIL_CAVE_ACCESS_TRAILS,
+  WOLFVEIL_CAVE_APPROACH_MAX_GRADE,
   getWolfveilCaveApproach,isWolfveilCaveApproachReserved,
   resolveWolfveilCaveEntranceRailCollision,
 } from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -10,6 +11,7 @@ import {appendWolfveilCaveAccessFloor}
   from '../src/components/game3d/wolfveil/WolfveilCaveAccessGeometry.mjs';
 import {
   WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_CAVE_DROP,WOLFVEIL_DUNGEON_FLOOR_Y,
   sampleWolfveilPlayerCaveFloorY,planWolfveilCaveInteraction,
 } from '../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
 import {WOLFVEIL_ROUTES,WOLFVEIL_BRIDGES,wolfveilHeight}
@@ -35,7 +37,15 @@ test('four physical cave approach tracks meet the original trails, with differen
   for(const a of WOLFVEIL_CAVE_APPROACHES){
     assert.ok(junctions.has([a.points[0].x,a.points[0].z].join(',')),
       'approach must connect to a real path, '+a.id);
-    assert.equal(a.points.length,4);
+    assert.ok(a.points.length>=4);
+    let worst=0;
+    for(let i=1;i<a.points.length;i++){
+      const dx=a.points[i].x-a.points[i-1].x,dz=a.points[i].z-a.points[i-1].z;
+      const dist=Math.hypot(dx,dz)||0.001;
+      worst=Math.max(worst,Math.abs(a.points[i].y-a.points[i-1].y)/dist);
+    }
+    assert.ok(worst<=WOLFVEIL_CAVE_APPROACH_MAX_GRADE+0.02,
+      a.id+' grade '+worst+' is too steep to walk');
     assert.equal(getWolfveilCaveApproach(a.caveId),a);
     assert.ok(a.points.every(point=>Number.isFinite(point.y)));
     assert.ok(isWolfveilCaveApproachReserved(a.points.at(-1).x,a.points.at(-1).z,1));
@@ -48,6 +58,8 @@ test('outdoor stone ribbons are real finite triangles and meet each sealed-arch 
   assert.equal(stats.surfaceRoofIntact,true);
   assert.equal(stats.shoulderQuads,0,'no false floor covering the mountain roof');
   assert.ok(stats.walkQuads>200);
+  assert.ok(stats.curbQuads>40,'laid rock curbs flank the walk');
+  assert.ok(stats.mouthQuads>=8,'flagstone continues to the cave mouth');
   assert.ok(triangles.every(t=>t.every(p=>p.length===3&&p.every(Number.isFinite))));
   for(const a of WOLFVEIL_CAVE_APPROACHES){
     const cave=WOLFVEIL_EXPLORABLE_CAVES.find(c=>c.id===a.caveId);
@@ -56,9 +68,11 @@ test('outdoor stone ribbons are real finite triangles and meet each sealed-arch 
       threshold.z-cave.threshold[2])<1e-5);
     assert.ok(Math.abs(threshold.y-cave.threshold[1])<1e-5);
     const ramp=WOLFVEIL_CAVE_CORRIDORS.find(c=>c.id==='entry_'+cave.id);
-    assert.deepEqual(ramp.waypoints[0],cave.threshold);
+    assert.deepEqual(ramp.waypoints[0],[cave.threshold[0],cave.threshold[1],cave.threshold[2]]);
     assert.deepEqual(ramp.waypoints.at(-1),[
       cave.chamber.x,cave.chamber.y,cave.chamber.z]);
+    assert.ok(cave.mouthY-cave.chamber.y<16,cave.name+' level 1 is still a deep drop');
+    assert.ok(cave.chamber.y>WOLFVEIL_DUNGEON_FLOOR_Y+4);
     assert.ok(Math.abs(wolfveilHeight(cave.threshold[0],
       cave.threshold[2])-cave.threshold[1])<1e-5);
   }
@@ -74,8 +88,8 @@ test('a player cannot enter from the sealed roof; E at the arch lands inside the
     const insideFloor=sampleWolfveilPlayerCaveFloorY(
       entry.x,entry.y,entry.z,{insideCave:true});
     assert.ok(Number.isFinite(insideFloor));
-    const exitPoint={x:cave.mouth[0]+cave.dir[0]*3,
-      y:entry.y,z:cave.mouth[1]+cave.dir[1]*3};
+    const exitPoint={x:cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
+      y:entry.y,z:cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong};
     const exit=planWolfveilCaveInteraction(exitPoint,{insideCave:true});
     assert.equal(exit?.action,'exit');
     assert.ok(Math.hypot(exit.x-surface.x,exit.z-surface.z)<.0001);
@@ -117,7 +131,8 @@ test('full surface mountain is never cut away and E remains the sole cave sessio
   const map=read('../src/components/game3d/hud/AXEWorldMapOverlay.jsx');
   assert.match(terrain,/void caveCutouts;/);
   assert.match(terrain,/idx\.push\(p,q,p\+1,q,q\+1,p\+1\)/);
-  assert.match(cave,/appendWolfveilCaveAccessFloor\(floorTris\)/);
+  assert.match(cave,/appendWolfveilCaveAccessFloor\(pavementTris\)/);
+  assert.match(cave,/SWV_CaveApproach_FlagstonePavement/);
   assert.match(cave,/world\.walkableSurfaces\.push\(floorMesh\)/);
   assert.match(cave,/if\(!activeCaveId\)/);
   assert.match(cave,/activeCaveId=travel\.action==='enter'\?travel\.caveId:null/);

@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {wolfveilHeight} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {
   WOLFVEIL_CAVE_HUB,WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_CAVE_DROP,WOLFVEIL_DUNGEON_FLOOR_Y,
   sampleWolfveilCaveSpace,planWolfveilCaveInteraction,
   buildWolfveilCaveTravelGraph,
 } from '../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
@@ -23,8 +24,8 @@ test('all four cave entrances work on BOTH approach and arch; no cliff teleport'
     }
     assert.equal(planWolfveilCaveInteraction({...outside,y:outside.y+14}),null,
       'surface portal cannot be activated from above the cave roof');
-    const insideArch={x:cave.mouth[0]+cave.dir[0]*3,
-      y:cave.chamber.y+2,z:cave.mouth[1]+cave.dir[1]*3};
+    const insideArch={x:cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
+      y:cave.chamber.y+2,z:cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong};
     const exit=planWolfveilCaveInteraction(insideArch,{insideCave:true});
     assert.equal(exit?.action,'exit',cave.name);
     assert.equal(exit?.caveId,cave.id);
@@ -79,6 +80,11 @@ test('ramps and connected tunnels have contiguous walkable floors without multi-
       }
     }
     assert(steps>15,corridor.id+' is unreasonably short');
+  }
+  assert.equal(WOLFVEIL_CAVE_HUB.y,WOLFVEIL_DUNGEON_FLOOR_Y);
+  for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
+    assert.ok(cave.mouthY - cave.chamber.y < 16, cave.name + ' should open on level 1');
+    assert.ok(cave.chamber.y > WOLFVEIL_CAVE_HUB.y + 4, cave.name + ' should sit above the deep floor');
   }
 });
 

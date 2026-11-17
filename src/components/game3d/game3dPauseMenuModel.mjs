@@ -6,6 +6,7 @@ export const GAME3D_PAUSE_SECTIONS=Object.freeze([
   {id:'audio',label:'Audio',description:'Theme volume'},
   {id:'controls',label:'Controls',description:'Movement and interactions'},
   {id:'graphics',label:'Graphics',description:'Rendering and art style'},
+  {id:'ui',label:'UI',description:'Resize, move HUD boxes and choose weapon layouts'},
   {id:'community',label:'HUD & Community',description:'Chat, Echo, online players and interface size'},
   {id:'session',label:'Session',description:'Character and account'},
 ]);

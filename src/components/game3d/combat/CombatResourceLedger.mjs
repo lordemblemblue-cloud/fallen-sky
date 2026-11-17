@@ -4,6 +4,8 @@ export const COMBAT_RESOURCE_RULES = Object.freeze({
   maxStamina: 100,
   basicStamina: 6,
   dodgeStamina: 22,
+  airWalkBoostStamina: 24,
+  airWalkGlideStaminaPerSecond: 6.5,
   guardStamina: 12,
   skillStamina: 5,
   skillWillBase: 7,
@@ -45,6 +47,15 @@ export function combatActionCost(action, skill = null) {
   const c = COMBAT_RESOURCE_RULES;
   if (action === 'basic') return { stamina: c.basicStamina, will: 0 };
   if (action === 'dodge') return { stamina: c.dodgeStamina, will: 0 };
+  // Both actions use the same atomic character-scoped stamina ledger as dodge.
+  // Time is bounded by the frame simulation cap; invalid/malicious values can
+  // never turn a negative cost into stamina restoration.
+  if (action === 'air_walk') return { stamina: c.airWalkBoostStamina, will: 0 };
+  if (action === 'glide') {
+    const seconds = Number(skill?.seconds);
+    const safeSeconds = Number.isFinite(seconds) ? Math.max(0,Math.min(.08,seconds)) : 0;
+    return { stamina: safeSeconds*c.airWalkGlideStaminaPerSecond, will: 0 };
+  }
   if (action === 'guard') return { stamina: c.guardStamina, will: 0 };
   if (action === 'skill') {
     if (skill?.skill_type === 'ACTIVE_BUFF') return { stamina: 0, will: c.buffWill };

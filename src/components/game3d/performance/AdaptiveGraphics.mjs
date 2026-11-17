@@ -4,6 +4,7 @@ import {
   readGame3DRendererViewport,readGame3DActualFramebuffer,
   publishGame3DActualFramebuffer,
 } from './Game3DDisplaySettings.mjs';
+import { readGame3DGpuHints } from './Game3DGpuEfficiency.mjs';
 
 // Clone Game 3D adaptive browser renderer. No WebAssembly, native hardware access,
 // gameplay changes, or assumed precise VRAM figures. Fails open to WebGL defaults.
@@ -19,13 +20,17 @@ export function normalizeCloneGPUProfile(value) {
 
 export function rendererPixelRatioLimit({
   profile = 'auto', quality = 'high', devicePixelRatio = 1,
+  deviceMemoryGb = null, gpuClass = 'unknown',
 } = {}) {
   const dpr = Number.isFinite(devicePixelRatio) && devicePixelRatio > 0
     ? Math.min(devicePixelRatio, 1.5) : 1;
-  if (profile === 'performance') return Math.min(dpr, 0.75);
+  if (profile === 'performance') return Math.min(dpr, 0.5);
   if (profile === 'balanced') return Math.min(dpr, 1);
   if (profile === 'quality' || profile === 'off') return dpr;
-  return Math.min(dpr, QUALITY_CAPS[quality] ?? QUALITY_CAPS.high);
+  const weak = gpuClass === 'software' || gpuClass === 'integrated' ||
+    (Number(deviceMemoryGb) > 0 && deviceMemoryGb <= 4);
+  const cap = QUALITY_CAPS[quality] ?? QUALITY_CAPS.high;
+  return Math.min(dpr, weak ? Math.min(cap, 1) : cap);
 }
 
 export function summarizeCloneFrames(deltasMs = []) {
@@ -118,8 +123,11 @@ export function createCloneAdaptiveGraphics({
   // aspect and logical CSS viewport remain independent of this ratio.
   const getTarget = () => {
     const viewport = readGame3DRendererViewport(renderer, host);
+    const hints = readGame3DGpuHints(host);
+    const gpuClass = host.__gw3dGpuInfo?.gpuClass || 'unknown';
     const autoCap = rendererPixelRatioLimit({
       profile, quality, devicePixelRatio: Number(host.devicePixelRatio) || 1,
+      deviceMemoryGb: hints.deviceMemoryGb, gpuClass,
     });
     return game3DResolutionTarget({
       resolution: display.resolution,

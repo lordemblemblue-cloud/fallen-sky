@@ -144,6 +144,8 @@ import { attachContextGuard } from './webglContextGuard';
 import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSettings } from './render/inkWashLook';
 import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
 import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
+import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
+  createGame3DWebGLContext,describeGame3DGpu} from './performance/Game3DGpuEfficiency.mjs';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -210,6 +212,7 @@ import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
 import { clearLunarCaveMapEnemies, publishLunarCaveMapEnemies } from './dungeons/LunarCaveMapStore.mjs';
+import { clearWolfveilLiveMap, publishWolfveilLiveMap } from './hud/WolfveilLiveMapStore.mjs';
 
 const showCombatNotice = (text) => {
   if (!text || typeof window === 'undefined') return;
@@ -472,7 +475,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+      const gpuHints = readGame3DGpuHints(window);
+      const bootProfile = readCloneGPUProfile(window);
+      const attributes = game3dGpuContextAttributes({ profile: bootProfile, hints: gpuHints });
+      const gl = createGame3DWebGLContext(canvas, attributes);
+      renderer = gl
+        ? new THREE.WebGLRenderer({ canvas, context: gl })
+        : new THREE.WebGLRenderer({ canvas, antialias: attributes.antialias, powerPreference: 'high-performance' });
+      window.__gw3dGpuInfo = describeGame3DGpu(renderer.getContext(), gpuHints);
     } catch (e) {
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
@@ -537,7 +547,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     window.__gw3dInkLook = inkLook; // the bench and reviews read and set its level
     let worldSun = null;
     const applyWorldGraphicsBudget = () => {
-      const budget = game3dWorldGraphicsBudget(readGraphicsSettings());
+      const hints = readGame3DGpuHints(window);
+      const budget = game3dWorldGraphicsBudget(readGraphicsSettings(), {
+        tighten: game3dEfficiencyTighten({
+          profile: readCloneGPUProfile(window),
+          gpuClass: window.__gw3dGpuInfo?.gpuClass,
+          deviceMemoryGb: hints.deviceMemoryGb,
+        }),
+      });
       window.__gw3dGraphicsBudget = budget;
       renderer.shadowMap.enabled = budget.shadows;
       if (worldSun) {
@@ -571,6 +588,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       applyWorldGraphicsBudget();
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
+    const onGpuProfile = () => applyWorldGraphicsBudget();
+    window.addEventListener('game3dCloneGPUProfileChanged', onGpuProfile);
     // Apply fixed resolution changes synchronously to the already-mounted
     // WebGL canvas, even before the adaptive GPU governor finishes attaching.
     // When switching back to Adaptive the governor owns subsequent changes.
@@ -1257,7 +1276,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Enemy spawns — mutant model patrolling between waypoints
     const enemies = [];
     let lastDungeonMapSync=0;
+    let lastWolfveilMapSync=0;
     if(region===LUNAR_CAVE_REGION||region===ASTRAL_DUNGEON_REGION) clearLunarCaveMapEnemies();
+    if(region==='wolfveil') clearWolfveilLiveMap();
     // Keep all ordinary enemy AI in the existing GameWorld3D loop. Do not
     // update the separate legacy EnemyAISystem as a second, competing AI.
     const enemyTelegraphs = createEnemyAttackTelegraphs(scene);
@@ -1729,6 +1750,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const hideSkillCharge=()=>{skillChargeHud.style.opacity='0';};
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
+    let wasAirborneLastFrame=false; // one-shot landing transition, not repeated montage
     const lastDirectionTap = { current: {} };
     const DOUBLE_TAP_MS = 280;
     const chargedKeys = new Map();
@@ -1902,7 +1924,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         detail: { id: workflowSpawn.id, x: workflowSpawn.x, y: workflowSpawn.y, z: workflowSpawn.z },
       }));
       mixer = new THREE.AnimationMixer(fbx);
-      playerAnim = createPlayerAnimationController({ mixer, blend: BLEND, oneShotRef: oneShotPlaying });
+      playerAnim = createPlayerAnimationController({
+        mixer,blend:BLEND,oneShotRef:oneShotPlaying,
+        // No duplicate stamina pool: the very same ledger powers dodge,
+        // blocking, combat abilities, gliding and Air Walk.
+        getAirWalkStamina:()=>getCombatResources().stamina,
+        spendAirWalkBoost:()=>spendCombatResource('air_walk'),
+        spendAirWalkGlide:seconds=>spendCombatResource('glide',{seconds}),
+      });
       // Native clips are ready with the GLB. Optional admin FBXs must never
       // hold the playable actor in its bind pose while a request is pending.
       playerAnim.bindClips(initialPlayerAnimationClips(fbx));
@@ -2158,7 +2187,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         return;
       }
-      if (entryModeRef.current || entryCamera.isActive()) return; // no movement/combat during camera handoff
+      if (entryModeRef.current || entryCamera.isActive() || window.__axeHudEditMode) return; // no movement/combat while arranging UI
       if (window.__axeTileInspectionEditing) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
       if(e.isComposing || e.target?.matches?.('input, textarea, select, [contenteditable="true"]')) return;
@@ -2243,11 +2272,23 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         lastDirectionTap.current[k] = nowMs;
       }
-      // Space = jump. R = forward roll, both using the selected character's
-      // own rig and the same world collision as normal movement.
+      // Space = ground jump, second press mid-jump deploys invisible glide,
+      // later presses during glide perform stamina-powered Air Walk boosts.
+      // G is already Clan, Q is crouch, R is roll: do not steal any of them.
       if(k===' '){
-        if(!e.repeat && !isMountedRef.current && playerAnim?.requestJump?.())
-          playActionSound('player_jump');
+        if(!e.repeat && !isMountedRef.current){
+          const allowAirWalk=!dedicatedMode && !window.__activeDuel &&
+            !tornado.getState().active && getPlayerHUD().hp>0;
+          const result=allowAirWalk
+            ?playerAnim?.requestAirWalkAction?.()
+            :{ok:!!playerAnim?.requestJump?.(),action:'jump'};
+          if(result?.ok && (result.action==='jump'||result.action==='air_walk'))
+            playActionSound('player_jump');
+          if(!result?.ok && result?.reason==='not_enough_stamina')
+            showCombatNotice('Air Walk needs more stamina');
+          else if(!result?.ok && result?.reason==='must_be_airborne')
+            showCombatNotice('Jump first, then press Space to glide');
+        }
         e.preventDefault();
       }
       if(k==='r'){
@@ -2341,6 +2382,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
     };
     const clearWorldMapMovement = () => {
+      // Disengage glide on overlays/blur, but descend physically rather
+      // than teleporting the player straight onto a cave roof or bridge.
+      playerAnim?.cancelAirWalk?.();
       keys.current = {};
       chargedKeys.clear();
       cancelBowCharge();
@@ -2598,6 +2642,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       m.position.y = Number.isFinite(gy) ? gy : 0;
       m.visible = true;
       playerAnim?.revive?.();
+      playerAnim?.resetAirWalkMotion?.();
+      wasAirborneLastFrame=false;
       clickToMove.cancel('respawn');
       playerInvulTimer.current = PLAYER_INVUL_AFTER_HIT;
       resetCombatResources();
@@ -2686,6 +2732,24 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         worldSoundscape.playSwing({baseKey:sound,melee:weaponPath!=='ranged'});
     };
     const abilitySystem = new AbilitySystem({ getLoadout, castSkill, startSkillCooldown, bindExtendedHotkeys: false });
+
+    // The same solid ground/roof meshes used by camera collisions also block
+    // the UPWARD Air Walk kick. A missing or unloaded ceiling does not invent
+    // a platform; the world still owns all X/Z boundary and ground checks.
+    const airWalkCeilingRay=new THREE.Raycaster();
+    const airWalkCeilingOrigin=new THREE.Vector3();
+    const airWalkUp=new THREE.Vector3(0,1,0);
+    const sampleAirWalkCeilingY=(actor,footY)=>{
+      if(!actor || !Number.isFinite(footY) || !groundMeshes?.length)return null;
+      // Start below head height so low cave arches are still detected.
+      airWalkCeilingOrigin.set(actor.position.x,footY+.2,actor.position.z);
+      airWalkCeilingRay.set(airWalkCeilingOrigin,airWalkUp);
+      airWalkCeilingRay.near=.2;
+      airWalkCeilingRay.far=3.8;
+      const hit=airWalkCeilingRay.intersectObjects(groundMeshes,true)
+        .find(entry=>entry.object?.visible!==false && Number.isFinite(entry.distance));
+      return hit?.point?.y ?? null;
+    };
 
     // One collision path for normal WASD and short roll/dodge impulses. This
     // is client presentation only; server-authoritative duel positions stay
@@ -2908,7 +2972,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           setIsMounted(false);
           setMounted(false);
           setAXEMountRiding(false);
-        } else if (compGroup && getPlayerHUD().hp > 0) {
+        } else if (compGroup && getPlayerHUD().hp > 0 &&
+                   playerAnim?.getAirWalkState?.().mode==='idle' &&
+                   !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase)) {
           // Only mount if close enough
           const dx = compGroup.position.x - model.position.x;
           const dz = compGroup.position.z - model.position.z;
@@ -2946,7 +3012,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Opening the C Character Hub immediately releases movement input. This
         // prevents a held W/Shift/Ctrl key from continuing to move the character
         // behind a full-screen UI.
-        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
+        if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen || window.__axeHudEditMode) {
           keys.current = {};
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
@@ -2966,6 +3032,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           playerStateMachine.setIntent({ blockHeld: false, aimHeld: false }); otsAim.current.endHold(performance.now()); otsAim.current.setPadAim(false);
           playerAnim?.setBlocking(false);
           clickToMove.cancel('ui');
+          playerAnim?.cancelAirWalk?.();
           if (document.pointerLockElement === renderer.domElement)
             document.exitPointerLock?.();
         }
@@ -3025,8 +3092,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         tornadoView.wasActive = tornadoActive;
         // Existing tornado/boss physics owns height. Animation consumes its
         // airborne state without introducing a second gravity simulation.
-        playerStateMachine.setAirborneState({ grounded: !bossFallActive && tornadoRes.liftY <= 0,
-          verticalVelocity: bossFallActive ? -1 : tornadoRes.liftY > 0 ? 1 : 0 });
+        const airNow=playerAnim?.getAirWalkState?.();
+        const jumpNow=playerAnim?.getDebugState?.()?.jumpPhase;
+        const regularJump=jumpNow==='takeoff'||jumpNow==='airborne';
+        playerStateMachine.setAirborneState({
+          grounded:!bossFallActive && tornadoRes.liftY<=0 &&
+            (airNow?.mode||'idle')==='idle' && !regularJump,
+          verticalVelocity:bossFallActive?-1:tornadoRes.liftY>0?1:
+            (airNow?.mode||'idle')!=='idle'?(airNow?.velocityY||-1):
+            regularJump?1:0,
+        });
         // One camera-yaw movement basis for ALL WASD states. A lock controls
         // facing/skill selection, not a separate W/S axis that fights the camera.
         const { forward, right } = getPlanarBasisFromYaw(yaw);
@@ -3103,9 +3178,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const movementOverridden = !!playerAnim?.isMovementOverridden?.();
         // Ctrl is the dedicated Sprint input. Its 2%-per-level passive affects
         // on-foot locomotion only; preserve the separate Shift run upgrade.
-        const baseMoveSpeed = isSprinting
-          ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
-          : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
+        const airMode=playerAnim?.getAirWalkState?.()?.mode||'idle';
+        const airTravel=airMode!=='idle';
+        const baseMoveSpeed=airTravel
+          ?WALK_SPEED*1.24 // limited steerable forward glide, never sprint XP
+          :isSprinting
+            ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
+            : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
         const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
           (skillApproaching ? 2.2 : 1);
@@ -3122,7 +3201,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
           // Award mastery only for actual on-foot movement after collision
           // resolution. Idle/key-hold against solid rocks earns no Sprint XP.
-          if (isSprinting && !mounted &&
+          if (isSprinting && !mounted && !airTravel &&
               Math.hypot(model.position.x-fromX,model.position.z-fromZ) > .05) {
             noteSprintTravel(delta);
           }
@@ -3146,14 +3225,32 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               moveWorldActor(model,dx,dz,mounted);
             return (suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position))
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
-          });
+          },footY=>sampleAirWalkCeilingY(model,footY));
         } else if (playerAnim && !bossFallActive) {
           playerAnim.updateMotion(model,delta,model.position.y-(playerAnim.getJumpOffset?.()||0),(dx,dz)=>{
             if(!dedicatedMode && !tornadoRes.lockMovement && !bossSpecialLock && !window.__axeTileInspectionEditing)
               moveWorldActor(model,dx,dz,mounted);
             return (suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position))
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
+          },footY=>sampleAirWalkCeilingY(model,footY));
+        }
+        // The world physics remains the single source of truth for grounded
+        // status; no new rigid body or secondary jump/gravity loop is created.
+        const traversalAfterMotion=playerAnim?.getAirWalkState?.();
+        const jumpAfterMotion=playerAnim?.getDebugState?.()?.jumpPhase;
+        if(!bossFallActive && tornadoRes.liftY<=0){
+          const inFlight=(traversalAfterMotion?.mode||'idle')!=='idle' ||
+            jumpAfterMotion==='takeoff'||jumpAfterMotion==='airborne';
+          const justLanded=wasAirborneLastFrame && !inFlight;
+          wasAirborneLastFrame=inFlight;
+          playerStateMachine.setAirborneState({
+            grounded:!inFlight,
+            verticalVelocity:(traversalAfterMotion?.mode||'idle')!=='idle'
+              ?(traversalAfterMotion?.velocityY||-1):inFlight?1:0,
+            justLanded,
           });
+        }else{
+          wasAirborneLastFrame=false;
         }
         // Tornado lift is applied after the feet-to-ground pass so the funnel
         // can actually carry the player up out of the storm.
@@ -4503,6 +4600,25 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           tier:e.tier,name:e.bossName||'Dungeon monster',
         })));
       }
+      if(region==='wolfveil' && performance.now()-lastWolfveilMapSync>=220){
+        lastWolfveilMapSync=performance.now();
+        const liveOf = (actor, extra) => actor?.group ? {
+          id: actor.id, name: extra.name, x: actor.group.position.x,
+          y: actor.group.position.y, z: actor.group.position.z,
+          level: actor.level ?? null, tier: extra.tier, alive: actor.alive !== false && !actor.dying,
+        } : null;
+        publishWolfveilLiveMap({
+          enemies: [
+            ...enemies.filter(e => e.alive && !e.dying && e.group).map(e => liveOf(e, {
+              name: e.bossName || (e.tier ? e.tier + ' enemy' : 'Enemy'), tier: e.tier || 'normal',
+            })),
+            ...bossEntities.filter(b => b && b.alive !== false && !b.dying && b.group).map(b => liveOf(b, {
+              name: b.encounterName || b.bossName || 'Boss', tier: 'boss',
+            })),
+          ].filter(Boolean).filter((entry, index, list) => list.findIndex(other => other.id === entry.id) === index),
+          npcs: questNPCs.filter(n => n.group).map(n => liveOf(n, { name: n.name || 'Quest NPC', tier: 'npc' })),
+        });
+      }
       if (uiFrameCounter % 3 === 0) {
         const w = container.clientWidth;
         const h = container.clientHeight;
@@ -4787,6 +4903,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       worldSoundscape.dispose();
       gameEventSounds.dispose();
       if(region===LUNAR_CAVE_REGION||region===ASTRAL_DUNGEON_REGION) clearLunarCaveMapEnemies();
+      clearWolfveilLiveMap();
       window.removeEventListener('echoGestureObserved', onEchoGestureObserved);
       window.removeEventListener('axeChargedFinisherWindow', onChargedFinisherWindow);
       chargedKeys.clear();
@@ -4826,6 +4943,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       cancelAnimationFrame(frameId);
       rendererGuard.dispose();
       window.removeEventListener('graphicsSettingsChanged', onGraphicsSettings);
+      window.removeEventListener('game3dCloneGPUProfileChanged', onGpuProfile);
       window.removeEventListener('game3dDedicatedMode',onDedicatedMode);
       window.removeEventListener('game3dDedicatedPose',onDedicatedPose);
       worldMapUnloaded=true;
@@ -4921,6 +5039,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.__gw3dLegacyRemoteManager = null;
       if (window.__gw3dEnemies === enemies) window.__gw3dEnemies = null;
       if (window.__gw3dBosses === bossEntities) window.__gw3dBosses = null;
+      clearWolfveilLiveMap();
       window.dispatchEvent(new CustomEvent('gw3dSceneTeardown'));
     };
   }, [avatarConfig.model_url]);

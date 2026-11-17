@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+
+const placement = readFileSync(new URL('../src/components/game3d/hud/Game3DHUDPlacement.css', import.meta.url), 'utf8');
+const view = readFileSync(new URL('../src/pages/GameView.jsx', import.meta.url), 'utf8');
+
+test('services, online count, quest and launchers no longer cover the left minimap', () => {
+  assert.match(view, /Game3DHUDPlacement\.css/);
+  assert.match(placement, /left: calc\(var\(--axe-map-left\) \+ var\(--axe-map-size\) \+ 22px\) !important/);
+  assert.match(placement, /\.game3d-online-pill[\s\S]*top: calc\(var\(--axe-map-bottom\) \+ 8px\) !important/);
+  assert.match(placement, /translateX\(-50%\)/);
+  assert.match(placement, /\.jade-quest-tracker[\s\S]*\/ 2\) !important/);
+  assert.match(placement, /\.game3d-world-chat[\s\S]*var\(--axe-launcher-row\)\) !important/);
+  assert.match(placement, /\.axe-echo-launch,\s*\.game3d-view \.axe-chronicle-vault-launch,\s*\.game3d-view \.axe-minigames-launch/);
+  assert.match(placement, /bottom: var\(--axe-hud-xp-bottom, 36px\) !important/);
+});

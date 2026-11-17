@@ -4,6 +4,8 @@ import {
   UNDERGROUND_EXITS, UNDERGROUND_LINKS, UNDERGROUND_ROOMS,
   planUndergroundExitRoute, projectUnderground, undergroundMetresToMap,
 } from './undergroundMapModel.mjs';
+import { sampleWolfveilCaveSpace } from '../wolfveil/WolfveilCaveLayout.mjs';
+import { getWolfveilLiveMap, subscribeWolfveilLiveMap } from './WolfveilLiveMapStore.mjs';
 import {
   getDiscoveredRooms, revealRoomsNear, subscribeDiscoveredRooms,
 } from './wolfveilUndergroundDiscovery.mjs';
@@ -14,12 +16,14 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
 export default function WolfveilUndergroundMapPanel({ position }) {
   const [discovered, setDiscovered] = useState(getDiscoveredRooms);
+  const [liveMap, setLiveMap] = useState(getWolfveilLiveMap);
   const [selected, setSelected] = useState(null);
   const [zoom, setZoom] = useState(1.5);
   const [follow, setFollow] = useState(true);
   const [focus, setFocus] = useState({ x: 500, y: 500 });
 
   useEffect(() => subscribeDiscoveredRooms(setDiscovered), []);
+  useEffect(() => subscribeWolfveilLiveMap(setLiveMap), []);
 
   const localX = Number(position?.x) || 0;
   const localZ = (Number(position?.z) || 0) - WOLFVEIL_OFFSET_Z;
@@ -63,6 +67,7 @@ export default function WolfveilUndergroundMapPanel({ position }) {
         <span><i className="axe-ug-unknown"/> Not yet entered</span>
         <span><i className="axe-ug-exit"/> Surface exit</span>
         <span><i className="axe-ug-route"/> Route to nearest exit</span>
+        <span><i className="axe-ug-live"/> Living enemy in the caves</span>
       </div>
       <div className="axe-world-map-filter-note">
         <strong><Route size={17}/> Nearest surface exit</strong>
@@ -120,8 +125,10 @@ export default function WolfveilUndergroundMapPanel({ position }) {
               strokeDasharray={known ? undefined : '9 9'}/>
             <circle cx={p.x} cy={p.y} r={r * 0.86} fill={known ? '#274055' : '#1a2836'}
               fillOpacity=".82" stroke={known ? '#9fd3e4' : '#46596b'} strokeWidth="2"/>
-            {room.kind === 'hub' && <circle cx={p.x} cy={p.y} r={r * 0.44} fill="none"
+            {room.kind === 'hub' && <circle cx={p.x} cy={p.y} r={r * 0.72} fill="none"
               stroke="#e7c489" strokeWidth="3"/>}
+            {room.kind === 'hub' && <text x={p.x} y={p.y + 26} textAnchor="middle" fontSize="15"
+              fill="#e7c489" stroke="#122334" strokeWidth="4" paintOrder="stroke">Open floor</text>}
             {chosen && <circle cx={p.x} cy={p.y} r={r + 9} fill="none" stroke="#eaf8ff"
               strokeWidth="3" strokeOpacity=".75"/>}
             <text x={p.x} y={p.y + 6} textAnchor="middle" fontSize="17" fontWeight="bold"
@@ -159,6 +166,13 @@ export default function WolfveilUndergroundMapPanel({ position }) {
               stroke="#122334" strokeWidth="4" paintOrder="stroke">Surface</text>
           </g>;
         })}
+        {liveMap.enemies.filter(enemy => sampleWolfveilCaveSpace(enemy.x, enemy.z - WOLFVEIL_OFFSET_Z, 0.4))
+          .map(enemy => {
+            const p = projectUnderground(enemy.x, enemy.z - WOLFVEIL_OFFSET_Z);
+            return <g key={'live-' + enemy.id} aria-label={enemy.name + ' — living enemy'}>
+              <circle cx={p.x} cy={p.y} r="7" fill="#e5675f" stroke="#2a1210" strokeWidth="2"/>
+            </g>;
+          })}
         {playerOnChart && <g aria-label="Your location">
           <circle cx={playerPoint.x} cy={playerPoint.y} r="19" fill="#e4f6ff" fillOpacity=".18"/>
           <g transform={'translate(' + playerPoint.x + ' ' + playerPoint.y + ') rotate(' + heading + ')'}>
@@ -186,7 +200,7 @@ export default function WolfveilUndergroundMapPanel({ position }) {
           : 'Drawn on the chart but not yet entered. Walk inside to reveal it.'}</span>
         <span>World position: {Math.round(selectedRoom.x)}, {Math.round(selectedRoom.z)}</span>
         <span>{selectedRoom.kind === 'hub'
-          ? 'Central hub where the four cavern tunnels meet.'
+          ? 'Open exploration floor. The five tunnels come in through the rim; the two side pockets are off the west and north edges.'
           : 'Connected by tunnel to the Subterranean Wolf-Spirit Rotunda.'}</span>
       </div> : selectedExit ? <div>
         <strong>{selectedExit.name}</strong>
