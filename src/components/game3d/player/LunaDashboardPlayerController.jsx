@@ -51,7 +51,8 @@ const STATES = {
 const LOOP_STATES = new Set([
   STATES.IDLE, STATES.AFK, STATES.COMBAT_IDLE, STATES.WALK, STATES.RUN, STATES.SPRINT, STATES.RUN_BACK, STATES.JUMP_LOOP,
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
-  'fallLoop', // no glider model yet: preserve a looping airborne pose
+  'fallLoop', // regular falling still uses its existing pose
+  'wingGlide','airWalkLoop', // real rig-local flight motions
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
@@ -566,6 +567,7 @@ export function createLunaDashboardPlayerController({
     if(oneShotRef)oneShotRef.current=true;
     const played=playState(STATES.JUMP_START,{force:true,fade:.05});
     if(played&&haloPercent>=HALO_FLIGHT_RULES.wingUnlockPercent&&directionVector?.lengthSq?.()>0){
+      if(hasAction('airJump'))playState('airJump',{force:true,fade:.08});
       // Air Jump launches diagonally upward and forward. Its X/Z impulse
       // uses the same swept world collision as roll/dodge, never rig root motion.
       specialMoveVelocity=directionVector.clone().setY(0).normalize()
@@ -589,7 +591,11 @@ export function createLunaDashboardPlayerController({
       const dir=directionVector?.clone?.();
       airDashDirection=(dir&&dir.lengthSq()>0?dir:
         new THREE.Vector3(0,0,1)).setY(0).normalize();
-      if(hasAction(STATES.DIVE_FORWARD))playState(STATES.DIVE_FORWARD,{force:true,fade:.07});
+      const finisher=hasAction('airWalkFinisher')?'airWalkFinisher':STATES.DIVE_FORWARD;
+      if(hasAction(finisher))playState(finisher,{force:true,fade:.07});
+      isBusy=true;
+      busyResetAt=now()+HALO_FLIGHT_RULES.finisherSeconds;
+      if(oneShotRef)oneShotRef.current=true;
       return {ok:true,action:'air_walk_finisher'};
     }
     if(airWalk.mode==='glide'){
@@ -598,7 +604,10 @@ export function createLunaDashboardPlayerController({
       const paid=spendAirWalkBoost();
       if(!paid?.ok)return {ok:false,reason:paid?.reason||'not_enough_stamina'};
       airWalk=setAirWalkKickHeld(planned.state,true);
-      if(hasAction(STATES.JUMP_LOOP))playState(STATES.JUMP_LOOP,{force:true,fade:.07});
+      const airKick=hasAction('airWalkKick')?'airWalkKick':STATES.JUMP_LOOP;
+      if(hasAction(airKick))playState(airKick,{force:true,fade:.07});
+      isBusy=true;busyResetAt=0;
+      if(oneShotRef)oneShotRef.current=true;
       return {ok:true,action:'air_walk'};
     }
     if(isAirWalkInFlight(airWalk))return {ok:false,reason:'boost_in_progress'};
@@ -616,7 +625,8 @@ export function createLunaDashboardPlayerController({
       busyResetAt=0;
       externallyAirborne=true;
       if(oneShotRef)oneShotRef.current=false;
-      const glideLoop=hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+      const glideLoop=hasAction('wingGlide')?'wingGlide':
+        hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
       if(hasAction(glideLoop))playState(glideLoop,{force:true,fade:.12});
       return {ok:true,action:'glide',freeSeconds:airWalk.freeGlideRemaining};
     }
@@ -628,7 +638,8 @@ export function createLunaDashboardPlayerController({
     const before=airWalk.mode;
     airWalk=setAirWalkKickHeld(airWalk,held);
     if(before==='walk'&&airWalk.mode==='glide'){
-      const loop=hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+      const loop=hasAction('wingGlide')?'wingGlide':
+        hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
       if(hasAction(loop))playState(loop,{force:true,fade:.10});
     }
     return airWalk.mode;
@@ -737,11 +748,17 @@ export function createLunaDashboardPlayerController({
       });
       airWalk=next.state;
       if(before!==airWalk.mode){
-        if(airWalk.mode==='walk'&&hasAction(STATES.RUN)){
-          playState(STATES.RUN,{force:true,fade:.12});
+        if(airWalk.mode==='walk'){
+          isBusy=false;busyResetAt=0;
+          if(oneShotRef)oneShotRef.current=false;
+          const run=hasAction('airWalkLoop')?'airWalkLoop':STATES.RUN;
+          if(hasAction(run))playState(run,{force:true,fade:.12});
         }else if(['glide','fall'].includes(airWalk.mode)){
           airDashDirection=null;
-          const loop=hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+          isBusy=false;busyResetAt=0;
+          if(oneShotRef)oneShotRef.current=false;
+          const loop=airWalk.mode==='glide'&&hasAction('wingGlide')?'wingGlide':
+            hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
           if(hasAction(loop))playState(loop,{force:true,fade:.12});
         }
       }
