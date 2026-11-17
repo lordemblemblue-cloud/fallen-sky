@@ -1,17 +1,16 @@
-// Clone town replacement: mount the owner's Japanese/Egyptian wolf fountain
-// on the existing, graded Wolfveil terrain. No second renderer or floor plate
-// from the retired Blender town; shared player/camera/HUD systems are untouched.
+// Emblem Blue Wolfveil artisan district — single-scene, enterable low-poly town.
+// This replaces the old whole-building AABB collision and keeps the canonical
+// Wolfveil terrain, floor sampling, patrol NPCs, quest handoff and player HUD.
 import * as THREE from 'three';
 import { createAXETownPlaza } from './AXETownPlaza.js';
+import { makeWolfveilTownNavigation } from './WolfveilTownInteriorNavigation.mjs';
 import {
   WOLFVEIL_IMPORTED_TOWN,
   WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,
 } from './WolfveilImportedTownLayout.mjs';
 import { buildWolfveilTownLivingQuarter } from './WolfveilTownLivingQuarterScene.mjs';
 
-const isFinitePoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.z);
-
-export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, onReady } = {}) {
+export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, onReady, quality = 'auto' } = {}) {
   if (!scene?.add) throw new Error('Artisan town requires an active Game 3D scene');
   const layout = WOLFVEIL_IMPORTED_TOWN;
   const root = new THREE.Group();
@@ -24,11 +23,8 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
   let livingQuarter = null;
   let town;
   try {
-    // The authored plaza is 120m across, fitting inside Wolfveil's existing
-    // 130 x 141m town footprint. Its own decorative stone paving is level
-    // with the shared Wolfveil terrain; never add a second collision floor.
     town = createAXETownPlaza({
-      THREE, renderer, includeLighting: false,
+      THREE, renderer, quality, includeLighting: false,
       showOuterHomes: true, showInnerShops: true, worldScale: 1,
     });
     town.group.position.set(layout.x, WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + .025, layout.z + 70);
@@ -39,104 +35,79 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     throw error;
   }
 
-  // Local authored town geometry is centered at the existing imported town
-  // anchor. Collision in world space needs to offset by this same anchor.
-  const toLocal = (x, z) => ({
-    x: x - town.group.position.x,
-    z: z - town.group.position.z,
+  // Child transforms are static and deliberately match the author's mesh
+  // placements. Use real placed centers/yaws, not approximate catalog anchors.
+  const asNavRoom = item => ({
+    id: item.id, label: item.label || item.id,
+    x: town.group.position.x + item.group.position.x,
+    z: town.group.position.z + item.group.position.z,
+    yaw: item.group.rotation.y,
+    scale: item.group.scale.x * town.group.scale.x,
   });
-  const zones = town.collisionZones;
-  const homes = town.refs.homes.children
-    .filter(h => h?.isGroup)
-    .map(h => ({ x: h.position.x, z: h.position.z, angle: h.rotation.y }));
-
-  function localBlocked(x, z, padding = 0) {
-    for (const zone of zones) {
-      if (zone.type === 'circle') {
-        if (Math.hypot(x - zone.x, z - zone.z) < zone.radius + padding) return true;
-      } else if (zone.type === 'box' &&
-        Math.abs(x - zone.x) < zone.halfWidth + padding &&
-        Math.abs(z - zone.z) < zone.halfDepth + padding) return true;
-    }
-    // Eight outer residences are not listed in the source's coarse collision
-    // zones. Use small oriented envelopes rather than their roof overhangs.
-    for (const h of homes) {
-      const dx = x - h.x, dz = z - h.z;
-      const c = Math.cos(h.angle), s = Math.sin(h.angle);
-      const hx = c * dx - s * dz, hz = s * dx + c * dz;
-      if (Math.abs(hx) < 4.8 + padding && Math.abs(hz) < 3.4 + padding) return true;
-    }
-    return false;
-  }
-
+  const nav = makeWolfveilTownNavigation({
+    shops: town.rooms.shops.map(asNavRoom),
+    homes: town.rooms.homes.map(asNavRoom),
+    fountain: {x: town.group.position.x, z: town.group.position.z, radius: 6.55},
+  });
+  const groundY = (x, z) => (
+    Number.isFinite(x) && Number.isFinite(z) &&
+    Math.abs(x - town.group.position.x) <= layout.width / 2 &&
+    Math.abs(z - town.group.position.z) <= layout.depth / 2
+      ? WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + .025
+      : null
+  );
   const collision = {
-    groundAt(x, z) {
-      if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
-      const pt = toLocal(x, z);
-      return Math.abs(pt.x) <= layout.width / 2 &&
-        Math.abs(pt.z) <= layout.depth / 2
-        ? WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + .025 : null;
-    },
-    isSolid(x, z) {
-      if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
-      const pt = toLocal(x, z);
-      return localBlocked(pt.x, pt.z, .3);
-    },
+    groundAt: groundY,
+    isSolid: nav.isSolid,
   };
-
-  // Keep the existing patrol/quest dialogue presentation; disable the old
-  // procedural house generator so it cannot duplicate the authored residences.
   livingQuarter = buildWolfveilTownLivingQuarter(root, {
     collision, architectureEnabled: false,
     onStatus(report) { root.userData.cloneTownLivingQuarter = report; },
   });
   root.userData.townReplacement = {
-    version: 'japanese-egyptian-wolf-fountain',
-    source: 'user-supplied-3d-diorama',
-    collision: 'coarse-static-envelopes',
+    version: 'walkable-artisan-town-v2',
+    source: 'owner-supplied-japanese-egyptian-diorama',
+    collision: 'oriented-wall-segments-with-open-doors',
+    roomReport: nav.report,
+    performance: town.performanceStats,
     oldBlenderTownLoaded: false,
   };
-
-  // Original GLB invoked onReady asynchronously. Preserve that contract:
-  // GameWorld3D's questNPCs and ink shader are initialized later in the effect.
   queueMicrotask(() => {
     if (!active) return;
-    onStatus?.({ state: 'ready', reason: 'Artisan town active on Wolfveil terrain' });
+    onStatus?.({state:'ready', reason:'Artisan plaza walkable interiors loaded'});
     onReady?.();
   });
-
-  function blocked(x, z) {
-    const pt = toLocal(x, z);
-    return localBlocked(pt.x, pt.z, .3);
-  }
-
+  let roofCutaway = false;
   return {
     root,
     get status() { return active ? 'ready' : 'disposed'; },
     get model() { return town.group; },
     get livingQuarterReport() { return livingQuarter?.report || null; },
-    groundY: collision.groundAt,
-    isSolid(x, z) { return blocked(x, z) || Boolean(livingQuarter?.isSolid(x, z)); },
+    get performanceStats() { return town.performanceStats; },
+    get interiorReport() { return nav.report; },
+    groundY,
+    isSolid(x,z) { return nav.isSolid(x,z) || Boolean(livingQuarter?.isSolid(x,z)); },
+    nearestShop(position) { return nav.nearestShop(position); },
+    getRoomAt(position) { return nav.roomAt(position); },
+    selectShowroomModel(index) { return town.setShowroomModel(index); },
     nearestResident(position) { return livingQuarter?.nearestResident(position) || null; },
     interactResident(position) { return livingQuarter?.interact(position) || null; },
-    resolveCollision(position, previous) {
-      if (!isFinitePoint(position) || !isFinitePoint(previous)) return false;
-      if (!blocked(position.x, position.z) || blocked(previous.x, previous.z)) {
-        return livingQuarter?.resolveCollision(position, previous) || false;
-      }
-      const nextX = position.x, nextZ = position.z;
-      if (!blocked(nextX, previous.z)) position.z = previous.z;
-      else if (!blocked(previous.x, nextZ)) position.x = previous.x;
-      else { position.x = previous.x; position.z = previous.z; }
-      livingQuarter?.resolveCollision(position, previous);
-      return true;
+    resolveCollision(position,previous) {
+      const wallHit = nav.resolveCollision(position,previous);
+      const residentHit = livingQuarter?.resolveCollision(position,previous) || false;
+      return wallHit || residentHit;
     },
-    update(dt, playerPosition) {
+    update(dt,playerPosition) {
       if (!active || !Number.isFinite(dt)) return;
-      const step = Math.min(Math.max(dt, 0), .1);
+      const step = Math.min(Math.max(dt,0),.1);
       elapsed += step;
-      town.update(step, elapsed);
-      livingQuarter?.update(step, playerPosition);
+      town.update(step,elapsed,playerPosition);
+      livingQuarter?.update(step,playerPosition);
+      const shouldCutAway = !!nav.roomAt(playerPosition);
+      if (shouldCutAway !== roofCutaway) {
+        roofCutaway = shouldCutAway;
+        town.setRoofsVisible(!shouldCutAway);
+      }
     },
     dispose() {
       if (!active) return;
