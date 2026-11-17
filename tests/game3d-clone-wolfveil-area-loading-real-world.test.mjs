@@ -21,10 +21,10 @@ test('real valley: every area and every portal, nothing lost, duplicated or wron
     assert.ok(result.loader.units.total>0,'no single-area scenery was found\n'+text);
     assert.equal(result.portals.length,11);
     assert.ok(result.portals.every(portal=>portal.ok),text);
-    // One loaded area always costs less than the whole valley.
+    // From the same spot, one loaded area always costs less than the whole valley.
     for(const [id,area] of Object.entries(result.areas)){
-      assert.ok(area.triangles<result.baseline.triangles,id+' saves no triangles\n'+text);
-      assert.ok(area.drawCalls<=result.baseline.drawCalls,id+' adds draw calls\n'+text);
+      assert.ok(area.triangles<area.wholeValleyHere.triangles,id+' saves no triangles\n'+text);
+      assert.ok(area.drawCalls<=area.wholeValleyHere.drawCalls,id+' adds draw calls\n'+text);
     }
     // Every area loaded again adds up to exactly the valley.
     assert.ok(Math.abs(result.allAreasLoaded.triangles-result.loaderOff.triangles)<=2,text);

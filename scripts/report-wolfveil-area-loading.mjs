@@ -211,6 +211,36 @@ export async function runWolfveilAreaLoadingReport({
   scene.updateMatrixWorld(true);
   run(1); // let owners settle before anything is measured
   const baseline=measure();
+  // What is inside anything that costs many draw calls, grouped by mesh and
+  // material name with the numbers stripped (Stair_12 and Stair_13 are one row).
+  const family=node=>{
+    const material=Array.isArray(node.material)?node.material[0]:node.material;
+    return ((node.name||node.type||'mesh')+' / '+(material?.name||material?.type||'material'))
+      .replace(/[-_ ]?\d+(?:[.:x]\d+)*/g,'#');
+  };
+  const breakdowns={};
+  const describe=(label,root)=>{
+    const rows=new Map();
+    let materials=new Set(),geometries=new Set();
+    root.traverse(node=>{
+      if(!isRenderable(node))return;
+      const cost=costOf(node),key=family(node);
+      const row=rows.get(key)||{family:key,objects:0,drawCalls:0,triangles:0,instanced:0};
+      row.objects++;row.drawCalls+=cost.drawCalls;row.triangles+=cost.triangles;
+      if(node.isInstancedMesh)row.instanced++;
+      rows.set(key,row);
+      for(const material of Array.isArray(node.material)?node.material:[node.material])materials.add(material);
+      geometries.add(node.geometry);
+    });
+    breakdowns[label]={materials:materials.size,geometries:geometries.size,
+      rows:[...rows.values()].sort((a,b)=>b.drawCalls-a.drawCalls).slice(0,18)
+        .map(row=>({...row,triangles:Math.round(row.triangles)}))};
+  };
+  for(const child of world.group.children){
+    const calls=measureVisibleScene(child).drawCalls;
+    if(calls>=20)describe('valley/'+(child.name||child.type),child);
+  }
+  if(town?.root)describe('scene/'+town.root.name,town.root);
   log('whole valley: '+baseline.drawCalls+' draw calls, '+baseline.triangles+' triangles');
 
   // ---- mount the loader and portals as GameWorld3D does ------------------------
@@ -253,6 +283,11 @@ export async function runWolfveilAreaLoadingReport({
     const stats=loader.getStats();
     const seen=measure();
     const snapshot=loader.inspect();
+    // Grass that streams around the player differs from spot to spot, so the
+    // fair comparison is the same spot, same frame, with the loader off.
+    loader.setEnabled(false);
+    const whole=measure();
+    loader.setEnabled(true);
     check(stats.area===id,'expected to stand in '+id+' but the loader says '+stats.area);
     check(stats.loadedAreas.length===1&&stats.loadedAreas[0]===id,
       'deep inside '+id+' only that area should be loaded, got '+stats.loadedAreas.join('+'));
@@ -275,11 +310,13 @@ export async function runWolfveilAreaLoadingReport({
       if(!floorsVisibleAtBaseline.has(floor)||areaOfNode(floor)!==id)continue;
       check(effectivelyVisible(floor),'a walkable floor in the loaded area '+id+' is hidden: '+(floor.name||'floor'));
     }
-    check(seen.triangles<=baseline.triangles,'more triangles in '+id+' than in the whole valley');
+    check(seen.triangles<=whole.triangles,'loading only '+id+' draws more triangles than the whole valley from the same spot');
+    check(seen.drawCalls<=whole.drawCalls,'loading only '+id+' issues more draw calls than the whole valley from the same spot');
     const budget=evaluateGame3DAreaBudget({platform:'browser',calls:seen.drawCalls,triangles:seen.triangles});
     areas[id]={
       drawCalls:seen.drawCalls,triangles:seen.triangles,objects:seen.objects,
-      drawCallShare:seen.drawCalls/baseline.drawCalls,triangleShare:seen.triangles/baseline.triangles,
+      wholeValleyHere:{drawCalls:whole.drawCalls,triangles:whole.triangles},
+      drawCallShare:seen.drawCalls/whole.drawCalls,triangleShare:seen.triangles/whole.triangles,
       browserBudget:{within:budget.within,over:[...budget.over],
         drawCallShare:budget.drawCallShare,triangleShare:budget.triangleShare},
       loader:{units:stats.units,batches:stats.batches,sceneryTriangles:stats.triangles,
@@ -383,6 +420,7 @@ export async function runWolfveilAreaLoadingReport({
     three:THREE.REVISION,withTown:Boolean(town),assets,timings,notes,failures,
     baseline:{drawCalls:baseline.drawCalls,triangles:baseline.triangles,objects:baseline.objects,
       largestByTriangles:top('triangles'),largestByDrawCalls:top('drawCalls')},
+    breakdowns,
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
     areas,portals:portalResults,
@@ -401,15 +439,24 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('assets: '+JSON.stringify(result.assets));
   lines.push('timings: '+JSON.stringify(result.timings));
   lines.push('');
-  lines.push('Everything handed to the renderer (all directions at once):');
-  lines.push('  whole valley          '+n(result.baseline.drawCalls).padStart(6)+' draw calls  '+
-    n(result.baseline.triangles).padStart(11)+' triangles');
+  lines.push('Everything handed to the renderer (all directions at once), standing deep inside each area:');
+  lines.push('  area     whole valley from here         only this area loaded          kept      browser budget (500 calls / 1.5 M tris)');
   for(const [id,area] of Object.entries(result.areas))
-    lines.push('  '+id.padEnd(6)+' only loaded    '+n(area.drawCalls).padStart(6)+' draw calls  '+
-      n(area.triangles).padStart(11)+' triangles   ('+pct(area.drawCallShare)+' / '+
-      pct(area.triangleShare)+' of the valley)  browser budget: '+
-      (area.browserBudget.within?'inside':'OVER '+area.browserBudget.over.join('+'))+
-      '   switch-in frame '+area.enterFrameMs+' ms');
+    lines.push('  '+id.padEnd(6)+
+      n(area.wholeValleyHere.drawCalls).padStart(7)+' calls '+n(area.wholeValleyHere.triangles).padStart(10)+' tris  '+
+      n(area.drawCalls).padStart(7)+' calls '+n(area.triangles).padStart(10)+' tris   '+
+      (pct(area.drawCallShare)+' / '+pct(area.triangleShare)).padEnd(10)+
+      (area.browserBudget.within?'inside':'OVER '+area.browserBudget.over.join('+')).padEnd(26)+
+      'switch-in frame '+area.enterFrameMs+' ms');
+  lines.push('  (whole valley at the spawn: '+n(result.baseline.drawCalls)+' draw calls, '+
+    n(result.baseline.triangles)+' triangles)');
+  lines.push('');
+  lines.push('Largest things on screen with only that area loaded:');
+  for(const [id,area] of Object.entries(result.areas)){
+    lines.push('  '+id+':');
+    for(const entry of area.largest)
+      lines.push('    '+n(entry.triangles).padStart(10)+' tris  '+String(entry.drawCalls).padStart(4)+' calls  '+entry.label);
+  }
   lines.push('');
   lines.push('Loader: '+JSON.stringify(result.loader));
   lines.push('');
@@ -419,6 +466,13 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('Largest in the whole valley by draw calls:');
   for(const entry of result.baseline.largestByDrawCalls)
     lines.push('  '+String(entry.drawCalls).padStart(4)+' calls  '+n(entry.triangles).padStart(11)+' tris  '+entry.label);
+  for(const [label,detail] of Object.entries(result.breakdowns||{})){
+    lines.push('');
+    lines.push('Inside '+label+' ('+detail.materials+' materials, '+detail.geometries+' geometries):');
+    for(const row of detail.rows)
+      lines.push('  '+String(row.drawCalls).padStart(4)+' calls  '+n(row.triangles).padStart(9)+' tris  '+
+        String(row.objects).padStart(4)+' objects'+(row.instanced?' ('+row.instanced+' instanced)':'')+'  '+row.family);
+  }
   lines.push('');
   lines.push('Still drawn in every area ('+result.report.alwaysLoaded.objects+' objects, '+
     n(result.report.alwaysLoaded.drawCalls)+' draw calls, '+n(result.report.alwaysLoaded.triangles)+' triangles):');
