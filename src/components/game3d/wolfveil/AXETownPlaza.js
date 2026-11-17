@@ -742,7 +742,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             const townGroup = new THREE.Group();
             const shopInteriors = [];
             const houseEntries = [];
-                        // The host game decides where to attach this town group.
+            // The host game decides where to attach this town group.
 
             const allRoofs = [];
 
@@ -844,7 +844,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     ringGrp.add(block);
                 }
                 fountainGroup.add(ringGrp);
-                                return ringGrp;
+                return ringGrp;
             }
 
             // Outer lower step ring + 2 courses of basin wall + chiseled bullnose coping ring
