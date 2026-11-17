@@ -7,9 +7,9 @@ const hud=read('hud/JadeSoulHUD.jsx');
 const css=read('hud/JadeSoulHUD.css');
 const world=read('GameWorld3D.jsx');
 
-test('Agent level and real XP are now inside one compact octagon',()=>{
+test('Level and real XP are now inside one compact octagon',()=>{
   assert.match(hud,/data-hud-agent-exp="octagon"/);
-  assert.match(hud,/aria-label=\{\x60Agent level/);
+  assert.match(hud,/aria-label=\{\x60Level /);
   assert.match(hud,/--jade-xp-progress/);
   assert.match(hud,/jade-xp-number/);
   assert.match(hud,/jade-xp-readout/);
