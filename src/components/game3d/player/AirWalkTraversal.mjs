@@ -93,7 +93,8 @@ export function advanceAirWalk(previous,delta,{
   if(finite(ceilingY) && velocityY>0){
     const allowedY=ceilingY-AIR_WALK_RULES.riderHeight-AIR_WALK_RULES.ceilingClearance;
     if(nextY>allowedY){
-      nextY=Math.min(previous.y,allowedY);
+      // A too-low ceiling cancels lift without snapping the feet down.
+      nextY=Math.max(previous.y,Math.min(nextY,allowedY));
       velocityY=0;
     }
   }
