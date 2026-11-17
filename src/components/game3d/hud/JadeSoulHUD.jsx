@@ -19,6 +19,9 @@ import AXEConceptDWeaponTemplate from '../axe/weapons/AXEConceptDWeaponTemplate'
 import './JadeSoulHUD.css';
 import './JadeApprovedGoldTemplate.css';
 import './JadeConceptDCombatHUD.css';
+import {GAME3D_HUD_CUSTOMIZATION_EVENT,readGame3DHudCustomization}
+  from './Game3DHudCustomization.mjs';
+import './Game3DHudLayoutVariants.css';
 import AXEServicesNavigation from '../axe/services/AXEServicesNavigation';
 import HUDCompassStrip from './HUDCompassStrip';
 import TargetDisplay from './TargetDisplay';
@@ -288,6 +291,12 @@ export default function JadeSoulHUD({
   onSelectServiceGroup,
 }) {
   const [hud, setHud] = useState(getPlayerHUD);
+  const [hudCustomization,setHudCustomization]=useState(readGame3DHudCustomization);
+  useEffect(()=>{
+    const onChange=e=>setHudCustomization(e?.detail||readGame3DHudCustomization());
+    window.addEventListener(GAME3D_HUD_CUSTOMIZATION_EVENT,onChange);
+    return ()=>window.removeEventListener(GAME3D_HUD_CUSTOMIZATION_EVENT,onChange);
+  },[]);
   const [resources, setResources] = useState(getCombatResources);
   const [loadout, setLoadout] = useState(getLoadout);
   const [localExpanded, setLocalExpanded] = useState(false);
@@ -538,7 +547,8 @@ export default function JadeSoulHUD({
       />
       <div className="jade-combat-hud" aria-hidden={serviceMode || undefined} inert={serviceMode ? '' : undefined}>
       <div className="jade-combat-concept-d" data-combat-hud="concept-d"
-        aria-label="L-corner weapon selector and skill slots">
+        data-weapon-layout={hudCustomization.layout}
+        aria-label="Weapon selector and combat skill slots">
         {/* Exact pixel-derived translucent copy of the owner's FIRST (left)
             splash image. No CSS/SVG recreation of its brush strokes.
             Interactive slots and weapon roles are layered above this image. */}
