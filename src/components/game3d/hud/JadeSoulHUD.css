@@ -1678,3 +1678,231 @@
     transition:none;
   }
 }
+
+
+/* 2026-11-16 owner screenshot correction: compact, symmetric HP/Will and liquid EXP.
+   The previous 76vw/1050px frame let the WILL tank invade the right hotbar.
+   All geometry below is scoped to the live HUD; the quest dock is untouched. */
+.jade-hud .jade-status-bars--refined {
+  width:min(52vw,655px);
+  grid-template-columns:minmax(0,1fr) clamp(98px,8.8vw,120px) minmax(0,1fr);
+  column-gap:clamp(11px,1.4vw,18px);
+  bottom:clamp(38px,5.4vh,55px);
+  align-items:end;
+}
+.jade-hud .jade-status-bars--refined .jade-status-row {
+  position:relative;
+  isolation:isolate;
+  width:100%;
+  padding-bottom:clamp(17px,2.3vh,22px);
+  overflow:visible;
+}
+.jade-hud .jade-status-bars--refined .jade-status-header {
+  min-height:17px;
+  font-size:clamp(9px,.74vw,11px);
+  padding:0 2px 4px;
+}
+.jade-hud .jade-status-bars--refined .jade-status-track {
+  height:6px;
+  border-radius:8px;
+  overflow:hidden;
+  box-shadow:inset 0 1px 2px #000b,0 0 0 1px rgba(216,181,121,.50);
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill {
+  box-shadow:0 0 5px currentColor;
+  transition:width .4s cubic-bezier(.2,.65,.3,1);
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill::after {
+  /* A subtle internal aura, never a bright line racing across the whole bar. */
+  animation:jade-hud-vitals-aura 12s ease-in-out infinite;
+  transform:none;
+  background:radial-gradient(ellipse at 42% 50%,rgba(255,255,255,.12),transparent 70%);
+}
+@keyframes jade-hud-vitals-aura {
+  0%,100% {opacity:.14;}
+  50% {opacity:.40;}
+}
+/* The translucent screenshot-cut metal stays as an accent; mirrored sides share
+   a single silhouette, while the SVG bridge paths guarantee equal geometry. */
+.jade-hud .jade-status-raster-trim {
+  left:-4px;
+  right:-4px;
+  bottom:0;
+  height:clamp(22px,3vh,30px);
+  opacity:.52;
+  animation:none;
+  background-size:100% 100%;
+  filter:drop-shadow(0 0 2px rgba(245,185,97,.24));
+}
+.jade-hud .jade-status-raster-trim--will {
+  background-image:url('/game3d/hud/hp-gold-trim.png');
+  transform:scaleX(-1);
+}
+.jade-hud .jade-status-connector {
+  position:absolute;
+  z-index:3;
+  top:calc(100% - 27px);
+  width:clamp(42px,4.4vw,61px);
+  height:25px;
+  overflow:visible;
+  pointer-events:none;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.jade-hud .jade-status-connector--hp {
+  right:calc(-1 * clamp(40px,4.1vw,57px));
+}
+.jade-hud .jade-status-connector--will {
+  left:calc(-1 * clamp(40px,4.1vw,57px));
+  transform:scaleX(-1);
+}
+.jade-hud .jade-status-connector-outline {
+  stroke:rgba(240,196,128,.91);
+  stroke-width:1.55;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 0 2px rgba(225,171,98,.33));
+}
+.jade-hud .jade-status-connector-highlight {
+  stroke:rgba(255,232,180,.29);
+  stroke-width:.8;
+  vector-effect:non-scaling-stroke;
+}
+/* EXP sits between the angled inner bridge ends, not below a long third line. */
+.jade-hud .jade-xp--compact {
+  width:clamp(94px,8.5vw,118px);
+  height:clamp(98px,11vh,118px);
+  bottom:clamp(15px,2.4vh,24px);
+}
+.jade-hud .jade-xp--compact::before {
+  inset:6%;
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,23% 100%,0 77%,0 23%);
+}
+.jade-hud .jade-xp--compact .jade-xp-raster-frame {
+  inset:-2%;
+  background-size:100% 100%;
+  opacity:.91;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-face {
+  isolation:isolate;
+  width:100%;
+  height:100%;
+  padding:15% 8% 13%;
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  justify-content:center;
+  align-items:center;
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,23% 100%,0 77%,0 23%);
+  background:linear-gradient(160deg,rgba(9,27,41,.9),rgba(3,14,25,.95));
+  overflow:hidden;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy {
+  position:absolute;
+  z-index:0;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:var(--jade-xp-progress,0%);
+  max-height:100%;
+  clip-path:none;
+  background:linear-gradient(to top,rgba(41,146,178,.55),rgba(72,173,197,.34) 70%,rgba(129,215,227,.20));
+  transition:height 1.3s cubic-bezier(.2,.8,.25,1);
+}
+/* Two gently opposing water surfaces rise with actual EXP values. */
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy::before,
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy::after {
+  content:'';
+  position:absolute;
+  top:-7px;
+  left:-20%;
+  width:140%;
+  height:17px;
+  border-radius:45% 55% 42% 52%;
+  background:rgba(138,230,237,.31);
+  animation:jade-exp-wave-left 13s ease-in-out infinite alternate;
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy::after {
+  top:-5px;
+  opacity:.50;
+  background:rgba(241,207,143,.36);
+  animation:jade-exp-wave-right 17s ease-in-out infinite alternate;
+}
+@keyframes jade-exp-wave-left {
+  from {transform:translateX(-8%) rotate(-1.8deg);}
+  to {transform:translateX(8%) rotate(1.8deg);}
+}
+@keyframes jade-exp-wave-right {
+  from {transform:translateX(10%) rotate(1.6deg);}
+  to {transform:translateX(-10%) rotate(-1.6deg);}
+}
+.jade-hud .jade-xp--compact .jade-xp-number {
+  font:400 clamp(31px,3vw,41px)/.97 Georgia,serif;
+  color:#fff0cf;
+}
+.jade-hud .jade-xp--compact .jade-xp-caption {
+  font-size:10px;
+  letter-spacing:.13em;
+}
+.jade-hud .jade-xp--compact .jade-xp-readout {
+  font-size:clamp(9px,.7vw,11px);
+  color:#f3e5c8;
+}
+/* A running silhouette, not a footprints glyph, for the contextual popup. */
+.jade-hud .jade-stamina-runner {color:#c8f1ff;flex:none;}
+@media(max-width:860px) {
+  .jade-hud .jade-status-bars--refined {
+    width:min(75vw,530px);
+    grid-template-columns:minmax(0,1fr) 94px minmax(0,1fr);
+    column-gap:9px;
+    bottom:36px;
+  }
+  .jade-hud .jade-xp--compact {width:88px;height:98px;bottom:12px;}
+  .jade-hud .jade-status-connector {width:45px;height:23px;}
+  .jade-hud .jade-status-connector--hp {right:-42px;}
+  .jade-hud .jade-status-connector--will {left:-42px;}
+}
+@media(max-width:620px) {
+  .jade-hud .jade-status-bars--refined {
+    width:calc(100% - 28px);
+    max-width:465px;
+    grid-template-columns:minmax(0,1fr) 78px minmax(0,1fr);
+    column-gap:5px;
+    bottom:38px;
+  }
+  .jade-hud .jade-status-bars--refined .jade-status-row {padding-bottom:17px;}
+  .jade-hud .jade-status-bars--refined .jade-status-header {
+    font-size:9px;
+    gap:3px;
+    padding:0 0 4px;
+  }
+  .jade-hud .jade-status-bars--refined .jade-status-header span:last-child {font-size:8px;}
+  .jade-hud .jade-status-connector {width:35px;height:18px;top:calc(100% - 21px);}
+  .jade-hud .jade-status-connector--hp {right:-31px;}
+  .jade-hud .jade-status-connector--will {left:-31px;}
+  .jade-hud .jade-xp--compact {width:75px;height:83px;bottom:17px;}
+  .jade-hud .jade-xp--compact .jade-xp-number {font-size:27px;}
+  .jade-hud .jade-xp--compact .jade-xp-octagon-face {padding:12% 5% 10%;}
+}
+@media(max-width:420px) {
+  .jade-hud .jade-status-bars--refined {
+    width:calc(100% - 16px);
+    grid-template-columns:minmax(0,1fr) 72px minmax(0,1fr);
+    column-gap:2px;
+  }
+  .jade-hud .jade-status-connector--hp {right:-25px;}
+  .jade-hud .jade-status-connector--will {left:-25px;}
+  .jade-hud .jade-status-connector {width:28px;}
+}
+@media(max-height:500px) and (orientation:landscape) {
+  .game3d-view .jade-hud .jade-status-bars--refined {
+    bottom:max(10px,var(--game3d-safe-bottom,0px));
+  }
+  .jade-hud .jade-xp--compact {bottom:4px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .jade-hud .jade-xp--compact .jade-xp-octagon-energy::before,
+  .jade-hud .jade-xp--compact .jade-xp-octagon-energy::after,
+  .jade-hud .jade-status-bars--refined .jade-status-fill::after {animation:none;}
+  .jade-hud .jade-xp--compact .jade-xp-octagon-energy {transition:none;}
+}
