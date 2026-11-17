@@ -1,136 +1,149 @@
-import {useEffect,useState} from 'react';
-import {ArrowRight,Check,Compass,Search,Shield,Swords,Target} from 'lucide-react';
-import {getAXEMountState,subscribeAXEMounts,activateAXEMount} from '../progression/AXEMountStore';
-import {getAXEMountDefinition,getAXEMountBonuses} from '../progression/AXEMountSystem';
-import {getActiveWeaponPath,subscribeWeaponBuffs} from '../../weaponClassBuffStore';
+import { useEffect, useState } from 'react';
+import { ArrowRight, Compass, Shield, Swords, Target } from 'lucide-react';
+import AXECompanionMountCircleRail from './AXECompanionMountCircleRail';
+import { getAXEMountState, subscribeAXEMounts, activateAXEMount } from '../progression/AXEMountStore';
+import { getAXEMountDefinition, getAXEMountBonuses } from '../progression/AXEMountSystem';
+import { getActiveWeaponPath, subscribeWeaponBuffs } from '../../weaponClassBuffStore';
 import {
-  COMPANION_MASTERY_PATHS,getCompanionMasteryProgress,
+  COMPANION_MASTERY_PATHS, getCompanionMasteryProgress, normalizeCompanionMasteryRole,
 } from '../progression/AXECompanionRoleMastery.mjs';
-import {getCompanionGrowthView,applyCompanionGrowthBonus} from '../progression/AXECompanionGrowthView.mjs';
+import { getCompanionGrowthView, applyCompanionGrowthBonus } from '../progression/AXECompanionGrowthView.mjs';
 import './AXECompanionProfileRedesign.css';
 
-const ICONS={damage:Swords,defense:Shield,range:Target};
-const label=value=>String(value||'').replaceAll('_',' ').replace(/\b\w/g,m=>m.toUpperCase());
-const format=value=>Number(value||0).toLocaleString('en-US',{maximumFractionDigits:1});
-const relevant={
-  damage:[['Damage','damage'],['Attribute Attack','attributionAttack']],
-  defense:[['HP','hp'],['Defense','defense'],['Attribute Defense','attributionDefense']],
-  range:[['Damage','damage'],['Attribute Attack','attributionAttack'],['Critical Chance','critChance']],
+const ICONS = { damage: Swords, defense: Shield, range: Target };
+const format = value => Number(value||0).toLocaleString('en-US',{maximumFractionDigits:1});
+const label = value => String(value||'').replaceAll('_',' ').replace(/\b\w/g,m=>m.toUpperCase());
+const relevant = {
+  damage: [['Damage','damage'],['Attribute Attack','attributionAttack']],
+  defense: [['HP','hp'],['Defense','defense'],['Attribute Defense','attributionDefense']],
+  range: [['Damage','damage'],['Attribute Attack','attributionAttack'],['Critical Chance','critChance']],
 };
+
 export default function AXECompanionMasteryPanel({onNotice=()=>{},onMyCompanion=()=>{}}) {
-  const [snapshot,setSnapshot]=useState(getAXEMountState);
-  const [weaponRole,setWeaponRole]=useState(getActiveWeaponPath);
-  const [selectedId,setSelectedId]=useState(null);
-  const [selectedRole,setSelectedRole]=useState(null);
-  const [search,setSearch]=useState('');
+  const [snapshot,setSnapshot] = useState(getAXEMountState);
+  const [weaponRole,setWeaponRole] = useState(getActiveWeaponPath);
+  const [selectedId,setSelectedId] = useState(null);
+  const [selectedRole,setSelectedRole] = useState(null);
   useEffect(()=>subscribeAXEMounts(setSnapshot),[]);
   useEffect(()=>subscribeWeaponBuffs(()=>setWeaponRole(getActiveWeaponPath())),[]);
   const mounts=snapshot.mounts||[];
-  const mount=mounts.find(m=>m.instanceId===selectedId)
-    ||mounts.find(m=>m.instanceId===snapshot.activeMountId)||mounts[0]||null;
+  const mount=mounts.find(entry=>entry.instanceId===selectedId)
+    ||mounts.find(entry=>entry.instanceId===snapshot.activeMountId)||mounts[0]||null;
   const def=mount?getAXEMountDefinition(mount.definitionId):null;
-  const activeRole=weaponRole==='ranged'?'range':weaponRole;
+  const activeRole=normalizeCompanionMasteryRole(weaponRole);
   const role=selectedRole||activeRole;
   const chosen=COMPANION_MASTERY_PATHS.find(path=>path.id===role)||COMPANION_MASTERY_PATHS[0];
   const progress=getCompanionMasteryProgress(mount,role);
-  const level=getCompanionGrowthView(mount?.totalXp||0);
-  const eligible=level.completedCycles>=1;
+  const growth=getCompanionGrowthView(mount?.totalXp||0);
+  const eligible=growth.completedCycles>=1;
   const base=applyCompanionGrowthBonus(getAXEMountBonuses(mount),mount?.totalXp||0);
-  const shown=mounts.filter(entry=>!search.trim()||
-    [getAXEMountDefinition(entry.definitionId)?.name,entry.definitionId]
-      .filter(Boolean).join(' ').toLowerCase().includes(search.trim().toLowerCase()));
+  const nextRank=progress.nextXp===null?progress.rank:Math.min(10,progress.rank+1);
+  const currentBonus=progress.rank*2;
+  const nextBonus=nextRank*2;
+  const remainingXP=progress.nextXp===null?0:Math.max(0,progress.nextXp-progress.xp);
 
-  return <div className="axe-mastery-rebuild" data-companion-page="role-mastery" aria-label="Companion combat mastery">
-    <aside className="axe-mastery-mount-list">
-      <h3>My Companion</h3>
-      <label className="axe-comp-quick-search"><Search size={15}/>
-        <input aria-label="Find owned mount for mastery" type="search" placeholder="Find mount"
-          value={search} onChange={event=>setSearch(event.target.value)}/></label>
-      <div className="axe-comp-quick-scroll">
-        {shown.map(entry=><button type="button" key={entry.instanceId}
-          aria-pressed={mount?.instanceId===entry.instanceId}
-          onClick={()=>{setSelectedId(entry.instanceId);setSelectedRole(null);}}>
-          <span className="axe-comp-quick-symbol">✧</span>
-          <span><strong>{getAXEMountDefinition(entry.definitionId)?.name||label(entry.definitionId)}</strong>
-            <small>{snapshot.activeMountId===entry.instanceId?'Active · ':''}{format(entry.growthPercent)}% growth</small></span>
-          {mount?.instanceId===entry.instanceId&&<Check size={15}/>}
-        </button>)}
-        {!shown.length&&<p>No matching owned mounts.</p>}
-      </div>
-      <button className="axe-mastery-return" type="button" onClick={onMyCompanion}>
-        <Compass size={15}/>Back to Equipment</button>
-    </aside>
+  return <div className="axe-mastery-rebuild axe-mastery-rebuild--compact" data-companion-page="role-mastery"
+    aria-label="Companion combat mastery">
+    <AXECompanionMountCircleRail mounts={mounts} selectedId={mount?.instanceId}
+      activeId={snapshot.activeMountId} registeredId={snapshot.registeredMountId}
+      label="My Companion" onSelect={id=>{setSelectedId(id);setSelectedRole(null);}}/>
     <main className="axe-mastery-center">
-      <header className="axe-mastery-hero">
-        <small>COMPANION SPECIALIZATION</small>
-        <h2>{def?.name||'Companion Mastery'}</h2>
-        <p>Damage, Defense and Range are three independent mastered paths.
-          Your equipped weapon automatically determines which earned companion
-          role strengthens your character.</p>
+      <header className="axe-mastery-compact-header">
+        <div><small>COMPANION MASTERY</small>
+          <h2>{def?.name||'Select a Companion'}</h2>
+          {mount&&<span>Lv {growth.level} · Growth {mount.growthPercent||0}% · {format(mount.totalXp)} XP</span>}
+        </div>
+        <button type="button" className="axe-mastery-return" onClick={onMyCompanion}>
+          <Compass size={15}/>Equipment</button>
       </header>
-      <div className="axe-mastery-role-grid" role="group" aria-label="Mastery paths">
-        {COMPANION_MASTERY_PATHS.map(path=>{
-          const Icon=ICONS[path.id];
-          const p=getCompanionMasteryProgress(mount,path.id);
-          return <button type="button" key={path.id} aria-pressed={role===path.id}
-            className="axe-mastery-role-card" onClick={()=>setSelectedRole(path.id)}>
-            <span className="axe-mastery-role-icon"><Icon size={27}/></span>
-            <strong>{path.label}</strong>
-            <small>Rank {p.rank} / 10</small>
-            {activeRole===path.id&&<em>Active weapon</em>}
-            <span className="axe-collection-progress"><span style={{width:p.percent+'%'}}/></span>
-            <small>+{p.rank*2}% matching stat contribution</small>
-          </button>;
-        })}
-      </div>
-      <div className="axe-mastery-rules">
-        <h3>How mastery works</h3>
-        <p>Fight with your active companion after its first growth cycle reaches
-          Level 20. Eligible battle XP trains the path matching the player's
-          current weapon: Damage, Defense or Range. All three can reach Rank 10.
-          Riding, feeding and opening this panel grant no mastery XP.</p>
-        <p>Switching weapons switches the active companion bonus automatically.
-          Training a second role never erases progress in another.</p>
-      </div>
+      {mount?<div className="axe-mastery-workbench">
+        <section className="axe-mastery-paths" aria-label="Damage, Defense and Range mastery paths">
+          <div className="axe-mastery-path-heading">
+            <strong>Mastery Paths</strong><small>Choose to inspect</small>
+          </div>
+          <div className="axe-mastery-role-list" role="group" aria-label="Mastery paths">
+            {COMPANION_MASTERY_PATHS.map(path=>{
+              const Icon=ICONS[path.id];
+              const p=getCompanionMasteryProgress(mount,path.id);
+              return <button type="button" key={path.id} className="axe-mastery-role-row"
+                aria-pressed={role===path.id} onClick={()=>setSelectedRole(path.id)}>
+                <Icon size={21} aria-hidden="true"/>
+                <span className="axe-mastery-role-text">
+                  <strong>{path.label}</strong>
+                  <small>Rank {p.rank} / 10 · +{p.rank*2}%</small>
+                  <span className="axe-collection-progress" aria-hidden="true">
+                    <span style={{width:p.percent+'%'}}/></span>
+                </span>
+                {activeRole===path.id&&<em title="Matches equipped weapon">Active</em>}
+              </button>;
+            })}
+          </div>
+          <details className="axe-mastery-how">
+            <summary>How mastery works</summary>
+            <p>After the companion completes its first 20-level growth cycle
+              (5,000 total XP), eligible combat XP trains the path matching
+              your equipped weapon. Each path reaches Rank 10 independently.
+              Riding, feeding and viewing this page grant no mastery XP.</p>
+          </details>
+        </section>
+        <section className="axe-mastery-inspector" aria-label={chosen.label+' mastery details'}>
+          <header className="axe-mastery-detail-header">
+            <div><small>{activeRole===role?'MATCHES EQUIPPED WEAPON':'PREVIEW ONLY · DIFFERENT WEAPON ROLE'}</small>
+              <h3>{chosen.label} Mastery</h3>
+              <p>{chosen.description}</p></div>
+          </header>
+          <div className="axe-mastery-summary-line">
+            <div><small>Rank</small><strong>{progress.rank} <span>/ 10</span></strong></div>
+            <div><small>Current bonus</small><strong>+{currentBonus}%</strong></div>
+            <div><small>Next bonus</small><strong>{progress.nextXp===null?'MAX':'+'+nextBonus+'%'}</strong></div>
+            <div><small>Earned XP</small><strong>{format(progress.xp)}</strong></div>
+          </div>
+          <div className="axe-mastery-progress-details">
+            <div className="axe-collection-progress" role="progressbar"
+              aria-label="Mastery rank progress" aria-valuenow={Math.round(progress.percent)}
+              aria-valuemin={0} aria-valuemax={100}>
+              <span style={{width:progress.percent+'%'}}/></div>
+            <div className="axe-collection-progress-caption">
+              <span>Rank {progress.rank} progress</span>
+              <span>{progress.nextXp===null?'Max rank reached':format(remainingXP)+' XP until Rank '+nextRank}</span>
+            </div>
+          </div>
+          <div className="axe-mastery-increase-heading">
+            <h4>Stat Increases</h4>
+            <span>Current <ArrowRight size={12}/> Next Rank</span>
+          </div>
+          <div className="axe-mastery-stat-breakdown">
+            {(relevant[role]||[]).map(([name,key])=>{
+              const available=Object.prototype.hasOwnProperty.call(base,key);
+              const raw=Number(base[key]||0);
+              const now=raw*progress.rank*.02;
+              const next=raw*nextRank*.02;
+              return <div key={key} className="axe-mastery-stat-row">
+                <div><strong>{name}</strong>
+                  <small>{available?'Base companion contribution: '+format(raw):
+                    'No '+name.toLowerCase()+' bonus recorded for this mount'}</small></div>
+                <div className="axe-mastery-stat-numbers">
+                  <span>{available?'+'+format(now):'—'}</span>
+                  <ArrowRight size={14} aria-hidden="true"/>
+                  <b>{available?'+'+format(next):'—'}</b>
+                  {available&&progress.nextXp!==null&&<small>+{format(Math.max(0,next-now))} next rank</small>}
+                </div>
+              </div>;
+            })}
+          </div>
+          <p className="axe-comp-detail-hint">Values are this mastery path's additional
+            contribution, calculated from real earned mount stats. They do not
+            include a second bonus from other mastery paths.</p>
+          {!eligible?<p className="axe-mastery-locked">Training unlocks after completing
+            the first growth cycle (Level 20, 5,000 total mount XP).</p>
+            :<p className="axe-mastery-ready">{progress.rank===10?'This role is fully mastered.':
+              'Train through combat with the matching weapon equipped.'}</p>}
+          {mount&&snapshot.activeMountId!==mount.instanceId&&
+            <button type="button" className="axe-mastery-return axe-mastery-activate"
+              onClick={()=>{const result=activateAXEMount(mount.instanceId);
+                onNotice(result?.ok?'Mount activated.':label(result?.reason));}}>Make Active Mount</button>}
+        </section>
+      </div>:<p className="axe-mastery-empty">No owned mount available for mastery.</p>}
     </main>
-    <aside className="axe-mastery-inspector">
-      <header><h3>{chosen.label} Mastery</h3>
-        <small>{activeRole===role?'Matches equipped weapon':'Preview role · not active'}</small></header>
-      <div className="axe-comp-stat-overview">
-        <div><small>Current Rank</small><strong>{progress.rank} / 10</strong></div>
-        <div><small>Role Bonus</small><strong>+{progress.rank*2}%</strong></div>
-        <div><small>Next Rank</small><strong>{progress.nextXp===null?'Max':progress.rank+1}</strong></div>
-        <div><small>Training XP</small><strong>{format(progress.xp)}</strong></div>
-      </div>
-      <div className="axe-collection-progress" aria-label="Mastery rank progress"
-        role="progressbar" aria-valuenow={progress.percent} aria-valuemin={0} aria-valuemax={100}>
-        <span style={{width:progress.percent+'%'}}/></div>
-      <div className="axe-collection-progress-caption">
-        <span>Rank progress</span><span>{progress.nextXp===null?'Complete':format(progress.nextXp)+' XP to next rank'}</span>
-      </div>
-      <h4>Current → Next Rank</h4>
-      <div className="axe-char-stat-list">
-        {(relevant[role]||[]).map(([name,key])=>{
-          const raw=Number(base[key]||0);
-          return <div className="axe-char-stat-row" key={key}>
-            <span>{name}</span>
-            <b>+{format(raw*progress.rank*.02)} <ArrowRight size={12}/>
-              +{format(raw*Math.min(10,progress.rank+1)*.02)}</b>
-          </div>;
-        })}
-      </div>
-      <p className="axe-comp-detail-hint">{chosen.description} Bonus figures show the
-        mastery portion of the mount's earned stats; ordinary growth is separate.</p>
-      {!eligible&&<div className="axe-mastery-locked">
-        Initial growth required: complete Level 20 (5,000 total mount XP) to unlock combat mastery training.
-      </div>}
-      {eligible&&<div className="axe-mastery-ready">
-        {progress.rank===10?'This role is fully mastered.':'Train this role through earned combat XP with a matching weapon.'}
-      </div>}
-      {mount&&snapshot.activeMountId!==mount.instanceId&&
-        <button type="button" className="axe-mastery-return"
-          onClick={()=>{const result=activateAXEMount(mount.instanceId);
-            onNotice(result?.ok?'Mount activated.':label(result?.reason));}}>Make Active Mount</button>}
-    </aside>
   </div>;
 }
