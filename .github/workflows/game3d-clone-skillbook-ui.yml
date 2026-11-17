@@ -1,0 +1,33 @@
+name: Game 3D Clone Skillbook UI
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/axe/services/AXECloneSkillTreeWorkspace.jsx'
+      - 'src/components/game3d/axe/services/AXECloneSkillTree.css'
+      - 'src/components/game3d/axe/services/AXESkillPathHorizontal.jsx'
+      - 'src/components/game3d/axe/services/AXESkillPathHorizontal.css'
+      - 'tests/game3d-clone-skillbook-simplified-gold-layout.test.mjs'
+      - '.github/workflows/game3d-clone-skillbook-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  skillbook-ui:
+    name: Skillbook logic and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact lockfile dependencies
+        run: npm ci
+      - name: Verify simplified Skillbook without unrelated town tests
+        run: node --test tests/game3d-clone-skillbook-simplified-gold-layout.test.mjs
+      - name: Compile the actual Game 3D application
+        run: npm run build
