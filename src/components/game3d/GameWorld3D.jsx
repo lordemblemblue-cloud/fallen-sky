@@ -846,6 +846,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       mode:areaPlatform.profile.areaLoading,
       preloadMeters:areaPlatform.profile.preloadMeters,
       releaseGpuMemory:areaPlatform.profile.releaseGpuMemory,
+      farScenery:areaPlatform.profile.farScenery,
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
       },
@@ -865,7 +866,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const onPlatformGraphics=event=>{
       const profile=event?.detail?.profile||activeGame3DPlatformProfile(window).profile;
       regionStream?.setOptions({mode:profile.areaLoading,
-        preloadMeters:profile.preloadMeters,releaseGpuMemory:profile.releaseGpuMemory});
+        preloadMeters:profile.preloadMeters,releaseGpuMemory:profile.releaseGpuMemory,
+        farScenery:profile.farScenery});
     };
     window.addEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
     // In an explicitly E-entered cave session, movement's ground-step guard

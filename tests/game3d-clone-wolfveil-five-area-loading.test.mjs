@@ -414,6 +414,71 @@ test('copies are built a few per frame and the stats say how many are still to c
   const stats=v.loader.getStats();
   assert.equal(stats.loadedInstances,stats.sourceInstances);
 });
+// ------------------------------------------------------------ far scenery
+const everyArea=[SPOTS.town,[30,-20],SPOTS.south,SPOTS.west,[-400,-100],SPOTS.east,SPOTS.north,[60,360]];
+function plant(v,{name='SWV_Forest_CedarCrowns',height=9,triangles=300,points=everyArea,geo=null}={}){
+  const forest=new Instanced(geo||geometry({height,triangles}),{map:texture()},points.length).place(points);
+  forest.name=name;v.root.add(forest);v.valley.meshes.push(forest);
+  return forest;
+}
+const copiesOf=(v,forest)=>v.clones().filter(node=>node.name.endsWith(forest.name));
+
+test('tall, cheap instanced scenery stays on the horizon of every area',()=>{
+  const v=mount();
+  const forest=plant(v),shrubs=plant(v,{name:'SWV_Living_Shrubs',height:1.2});
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,0,'the forest is never split into per-area copies');
+  assert.equal(copiesOf(v,shrubs).length,1,'low scenery is still split and unloaded');
+  for(const spot of Object.values(SPOTS)){
+    v.step(world(...spot),.2);v.step(world(...spot),.2);
+    assert.equal(forest.visible,true,'the whole forest is drawn from '+spot);
+    assert.equal(forest.count,8);
+  }
+  assert.deepEqual(v.loader.getStats().farScenery,{enabled:true,batches:1,instances:8,triangles:2400});
+  const kept=v.loader.getReport().alwaysLoaded.largest.find(entry=>entry.name===forest.name);
+  assert.match(kept.reason,/far scenery/);
+});
+
+test('far scenery must be tall and cheap; a grove inside one area counts too',()=>{
+  const v=mount({farSceneryMaxTriangles:5000});
+  const heavy=plant(v,{name:'SWV_Owner_Elms',height:17,triangles:900});       // 7,200 > 5,000
+  const grove=plant(v,{name:'SWV_Bamboo_Grove',height:8,points:[SPOTS.west,[-400,-100],[-330,40]]});
+  // Authored lying down (tall along z), stood upright by each instance matrix.
+  const lying=geometry({height:1,triangles:200});
+  lying.boundingBox={min:{x:-1,y:-.5,z:0},max:{x:1,y:.5,z:12}};
+  const elms=plant(v,{name:'SWV_ZUp_Elms',geo:lying});
+  for(let i=0;i<elms.count;i++)elms.instanceMatrix.array.set([1,0,0,0, 0,0,-1,0, 0,1,0,0],i*16);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,heavy).length,1,'too heavy to draw everywhere: split and unloaded');
+  assert.equal(copiesOf(v,elms).length,0);
+  v.step(world(...SPOTS.east),.2);v.step(world(...SPOTS.east),.2);
+  assert.equal(grove.visible,true,'the western grove still shows from the east');
+  assert.equal(heavy.visible,false);
+  assert.equal(v.loader.getStats().farScenery.batches,2);
+});
+
+test('far scenery can be switched off and on again while playing',()=>{
+  const v=mount();
+  const forest=plant(v);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,0);
+  assert.equal(v.loader.setOptions({farScenery:false}).farScenery,false);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,1,'with the rule off the forest is split like any batch');
+  assert.equal(forest.visible,false);
+  assert.equal(v.loader.getStats().farScenery.batches,0);
+  v.loader.setOptions({farScenery:true});
+  v.step(world(...SPOTS.town),.1);
+  assert.equal(copiesOf(v,forest).length,0,'the copies are removed at once');
+  assert.equal(forest.visible,true);
+  v.settle();
+  assert.equal(v.loader.getStats().farScenery.batches,1);
+  const off=mount({farScenery:false});
+  const second=plant(off);
+  off.settle();off.settle();
+  assert.equal(copiesOf(off,second).length,1);
+});
+
 test('the A/B switch restores the valley exactly as it was built',()=>{
   const v=mount();v.settle();
   assert.equal(v.loader.setEnabled(false),true);

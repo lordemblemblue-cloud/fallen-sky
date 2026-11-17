@@ -84,6 +84,8 @@ export function installHeadlessStubs(){
       this.loaded=init.loaded||0;this.total=init.total||0;
     }
   };
+  // Model loaders written for browsers and workers reach for `self`.
+  g.self??=g;
   // A model download that fails with nobody listening must not end the run.
   g.__wolfveilUnhandled=[];
   g.process?.on?.('unhandledRejection',error=>{
@@ -438,6 +440,73 @@ export async function runWolfveilAreaLoadingReport({
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');
   loader.setOptions({releaseGpuMemory:false});
 
+  // ---- far scenery: what an unloaded area still shows on the horizon ------
+  // Typical standing height of one instance (world Y extent), as the loader
+  // measures it, and an inventory of everything tall the loader manages.
+  const instanceHeightOf=mesh=>{
+    if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
+    const size=mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+    const w=mesh.matrixWorld.elements,a=mesh.instanceMatrix.array,heights=[];
+    const step=Math.max(1,Math.floor(mesh.count/24));
+    for(let i=0;i<mesh.count;i+=step){
+      const o=i*16,row=c=>w[1]*a[o+c*4]+w[5]*a[o+c*4+1]+w[9]*a[o+c*4+2];
+      heights.push(Math.abs(row(0))*size.x+Math.abs(row(1))*size.y+Math.abs(row(2))*size.z);
+    }
+    heights.sort((x,y)=>x-y);
+    return heights[heights.length>>1]||0;
+  };
+  const trianglesOf=mesh=>(mesh.geometry.index?mesh.geometry.index.count:
+    mesh.geometry.attributes.position.count)/3;
+  moveTo(...spots.town);run(.5);
+  const farStats=loader.getStats().farScenery;
+  const farKept=loader.getReport().alwaysLoaded.largest
+    .filter(entry=>/far scenery/.test(entry.reason||''));
+  const census=loader.inspect();
+  const tallSplit=census.batches.map(batch=>({name:batch.source.name||'(unnamed)',
+    instances:batch.count,height:instanceHeightOf(batch.source),
+    triangles:Math.round(trianglesOf(batch.source)*batch.count)}))
+    .filter(entry=>entry.height>=4).sort((x,y)=>y.triangles-x.triangles);
+  const tallUnits=[];
+  for(const unit of census.units){
+    const box=new THREE.Box3().setFromObject(unit.object);
+    if(box.isEmpty())continue;
+    const size=box.getSize(new THREE.Vector3());
+    if(size.y<4)continue;
+    tallUnits.push({name:unit.object.name||'(unnamed)',area:unit.area,height:size.y,
+      width:Math.max(size.x,size.z),triangles:Math.round(unit.triangles),drawCalls:unit.drawCalls});
+  }
+  tallUnits.sort((x,y)=>y.height*y.width-x.height*x.width);
+  // Far scenery is drawn from every area and never duplicated.
+  let farResult=null;
+  if(farStats?.enabled){
+    const farObjects=[];
+    scene.traverse(node=>{
+      if(node.isInstancedMesh&&farKept.some(entry=>entry.name===node.name)&&
+         !node.userData.wolfveilAreaClone)farObjects.push(node);
+    });
+    const perArea={};
+    for(const id of plan.WOLFVEIL_AREA_IDS){
+      moveTo(...spots[id]);run(1);
+      const hidden=farObjects.filter(node=>node.visible===false).map(node=>node.name);
+      check(!hidden.length,'far scenery hidden while standing in '+id+': '+hidden.slice(0,4).join(', '));
+      perArea[id]=measure();
+    }
+    // The price of the horizon: the same spots with the rule switched off.
+    loader.setOptions({farScenery:false});
+    moveTo(...spots.town);run(8);settleBuilds();
+    const without={};
+    for(const id of plan.WOLFVEIL_AREA_IDS){moveTo(...spots[id]);run(1);settleBuilds();without[id]=measure();}
+    loader.setOptions({farScenery:true});
+    moveTo(...spots.town);run(8);settleBuilds();
+    check(loader.getStats().farScenery.batches===farStats.batches,
+      'switching far scenery off and on again must find the same batches ('+
+      loader.getStats().farScenery.batches+' vs '+farStats.batches+')');
+    farResult={stats:farStats,kept:farKept,
+      cost:Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,{
+        drawCalls:perArea[id].drawCalls-without[id].drawCalls,
+        triangles:perArea[id].triangles-without[id].triangles}]))};
+  }
+
   // ---- town: motionless parts merged into one draw per material ----------
   let townResult=null;
   if(town?.drawBudget?.stats()){
@@ -591,6 +660,8 @@ export async function runWolfveilAreaLoadingReport({
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
     areas,portals:portalResults,caves:caveResult,town:townResult,
+    farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
+      unitCount:tallUnits.length},
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
     report,
@@ -628,6 +699,25 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('');
   lines.push('Lights switched on (each one is paid for by every lit surface): '+
     Object.entries(result.areas).map(([id,area])=>id+' '+area.lights+' of '+area.wholeValleyHere.lights).join(', '));
+  lines.push('');
+  if(result.farScenery){
+    const f=result.farScenery;
+    lines.push('Far scenery (tall, cheap instanced scenery drawn from every area): '+
+      f.stats.batches+' batches, '+n(f.stats.instances)+' instances, '+n(f.stats.triangles)+' triangles');
+    for(const entry of f.kept)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+
+      String(entry.drawCalls).padStart(3)+' calls  '+entry.name);
+    lines.push('  what the horizon costs against unloading it: '+Object.entries(f.cost)
+      .map(([id,c])=>id+' '+(c.drawCalls>=0?'+':'')+c.drawCalls+' calls '+(c.triangles>=0?'+':'')+n(c.triangles)+' tris').join(', '));
+  }else lines.push('Far scenery: switched off');
+  lines.push('Tall instanced scenery that is still unloaded (4 m and taller, too heavy to keep whole):');
+  for(const entry of result.tallScenery.splitBatches)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+
+    String(entry.instances).padStart(5)+' x '+entry.height.toFixed(1).padStart(5)+' m  '+entry.name);
+  if(!result.tallScenery.splitBatches.length)lines.push('  none');
+  lines.push('Tall single objects that are unloaded with their area ('+result.tallScenery.unitCount+
+    ' in all; largest by silhouette):');
+  for(const entry of result.tallScenery.units)lines.push('  '+entry.area.padEnd(6)+
+    entry.height.toFixed(1).padStart(6)+' m tall '+entry.width.toFixed(1).padStart(6)+' m wide  '+
+    n(entry.triangles).padStart(8)+' tris '+String(entry.drawCalls).padStart(4)+' calls  '+entry.name);
   if(result.town){
     const t=result.town;
     lines.push('');
