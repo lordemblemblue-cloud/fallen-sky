@@ -6,6 +6,10 @@ import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
+import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
+  getGame3DUIScale,game3DViewportClass}
+  from '../components/game3d/performance/Game3DDisplaySettings.mjs';
+import '../components/game3d/performance/Game3DResponsiveDisplay.css';
 import {game3dCharacterModel} from '../components/game3d/game3dCharacterModel';
 import GameHUD from '../components/game3d/hud/GameHUD';
 import {readGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
@@ -121,6 +125,26 @@ export default function GameView() {
   const [learnedSkillIds, setLearnedSkillIds] = useState(() => getLearnedSkillIds());
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
   const [communityHUD,setCommunityHUD]=useState(()=>readGame3DCommunityHUD());
+  const [displaySettings,setDisplaySettings]=useState(()=>readGame3DDisplaySettings());
+  const [cssViewport,setCSSViewport]=useState(()=>({
+    width:typeof window==='undefined'?1280:window.innerWidth,
+    height:typeof window==='undefined'?720:window.innerHeight,
+  }));
+  useEffect(()=>{
+    const onDisplay=event=>setDisplaySettings(event?.detail||readGame3DDisplaySettings());
+    const onViewport=()=>setCSSViewport(old=>{
+      const next={width:window.innerWidth,height:window.innerHeight};
+      return next.width===old.width&&next.height===old.height?old:next;
+    });
+    window.addEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplay);
+    window.addEventListener('resize',onViewport,{passive:true});
+    window.visualViewport?.addEventListener('resize',onViewport,{passive:true});
+    return ()=>{
+      window.removeEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplay);
+      window.removeEventListener('resize',onViewport);
+      window.visualViewport?.removeEventListener('resize',onViewport);
+    };
+  },[]);
   useEffect(()=>{
     const onCommunity=event=>setCommunityHUD(event?.detail||readGame3DCommunityHUD());
     window.addEventListener(GAME3D_COMMUNITY_HUD_EVENT,onCommunity);
@@ -564,9 +588,13 @@ export default function GameView() {
   }, [phase, storeOpen, progressionOpen, friendsListOpen, clanOverlayOpen, pauseMenuOpen, services.active, services.controller]);
 
 
+  const gameUIScale=getGame3DUIScale({...cssViewport,uiScale:displaySettings.uiScale});
   return (
     <div className="game3d-view fixed inset-0 bg-black overflow-hidden"
-      style={{'--game3d-community-scale':communityHUD.scale}}
+      style={{'--game3d-community-scale':communityHUD.scale*gameUIScale,
+        '--game3d-ui-scale':gameUIScale}}
+      data-display-class={game3DViewportClass(cssViewport)}
+      data-interface-size={displaySettings.uiScale}
       data-service-mode={services.active ? 'true' : 'false'} data-services-open={services.active || services.expanded ? 'true' : 'false'}>
       {/* Hybrid host-authoritative simulation layer.
           Owns enemies / loot / pvp damage / player hp.
