@@ -276,3 +276,15 @@
     transition:none!important;animation:none!important;
   }
 }
+
+
+/* Companion skill tree soft tint: a faint surface behind the existing nodes
+   improves legibility while keeping the previous compact gold layout. */
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map{
+  background:linear-gradient(135deg,rgba(18,36,52,.29),rgba(27,43,57,.19));
+  box-shadow:inset 0 1px rgba(241,205,147,.06);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-companion-tree{
+  border-radius:9px;
+  background:linear-gradient(110deg,rgba(11,27,41,.22),rgba(24,42,57,.13));
+}
