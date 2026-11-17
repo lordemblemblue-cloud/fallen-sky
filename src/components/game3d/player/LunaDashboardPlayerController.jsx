@@ -368,6 +368,11 @@ export function createLunaDashboardPlayerController({
       isBusy = false; busyResetAt = 0; if (oneShotRef) oneShotRef.current = false;
     }
     if (isDead || isMounted) return;
+    // While actual Halo flight owns the character, the ordinary walk/idle
+    // locomotion updater must not overwrite WingGlide / Skywalk animation
+    // every frame. We still remember the player's latest movement intent
+    // to restore locomotion once they land.
+    if(isAirWalkInFlight(airWalk)) return;
     if (isBusy) {
       // A bow release may keep its short recoil pose while the PLAYER ROOT
       // still walks. After 120ms, the normal aim-walk/strafe clip resumes.
