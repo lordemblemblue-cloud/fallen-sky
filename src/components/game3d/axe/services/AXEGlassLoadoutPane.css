@@ -152,7 +152,7 @@
  * Star over the center model swaps BOTH right-side panels together. Player
  * equipment keeps its unchanged four-column grid and ten equipment slots. */
 .axe-glass-loadout[data-equipment-actor="companion"] {
-  grid-template-columns:minmax(165px,20%) minmax(280px,34%) minmax(220px,1fr) minmax(218px,.93fr);
+  grid-template-columns:minmax(120px,11%) minmax(300px,40%) minmax(220px,1fr) minmax(218px,.93fr);
   grid-template-rows:minmax(0,1fr);
   min-width:0;min-height:0;
 }
@@ -278,12 +278,12 @@
   font:11px Georgia,serif;color:#ddf0d8;}
 @media(max-width:1160px) {
   .axe-glass-loadout[data-equipment-actor="companion"] {
-    grid-template-columns:minmax(135px,20%) minmax(210px,32%) minmax(190px,1fr) minmax(190px,1fr);
+    grid-template-columns:minmax(116px,12%) minmax(242px,36%) minmax(190px,1fr) minmax(190px,1fr);
   }
 }
 @media(max-width:980px) {
   .axe-glass-loadout[data-equipment-actor="companion"] {
-    grid-template-columns:minmax(148px,30%) minmax(0,1fr);
+    grid-template-columns:minmax(114px,19%) minmax(0,1fr);
     grid-template-rows:minmax(330px,47vh) minmax(280px,auto) minmax(270px,auto);
     height:auto;overflow-y:auto;
   }
@@ -302,7 +302,7 @@
 }
 @media(max-width:590px) {
   .axe-glass-loadout[data-equipment-actor="companion"] {
-    grid-template-columns:minmax(107px,36%) minmax(0,1fr);
+    grid-template-columns:minmax(100px,28%) minmax(0,1fr);
     grid-template-rows:minmax(320px,44vh) auto auto;gap:5px;padding:4px;
   }
   .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
@@ -594,6 +594,101 @@
 }
 @media(prefers-reduced-motion:reduce) {
   .axe-comp-unified-xp-track>span {transition:none;}
+}
+
+/* Companion Equipment left roster — 45% narrower at desktop widths,
+   search immediately below title with a strong underline.
+   The central 3D viewer receives the recovered horizontal space.
+   Character Equipment and Companion mastery panels are unaffected. */
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {
+  padding:8px 7px;gap:7px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-title {
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+  gap:7px;padding:2px 0 5px;min-width:0;border-bottom:0;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading {
+  display:flex;align-items:center;justify-content:flex-start;gap:5px;
+  min-width:0;padding:2px 1px 1px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading strong {
+  flex:1 1 auto;min-width:0;font:700 clamp(13px,1.05vw,17px)/1.2 Georgia,serif;
+  color:#ffe0aa;overflow-wrap:anywhere;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading small {
+  flex:0 0 auto;white-space:nowrap;font:10px Georgia,serif;color:#ccd9df;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-title .axe-comp-roster-search {
+  flex:0 0 auto;display:flex;align-items:center;gap:5px;
+  width:100%;max-width:none;min-width:0;margin:0;
+  padding:3px 2px 6px;background:transparent;
+  border:0;border-bottom:2px solid #e7c288;
+  border-radius:0;box-shadow:none;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-title .axe-comp-roster-search:focus-within {
+  border-bottom:2px solid #ffe4b3;padding-bottom:6px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-search input {
+  width:100%;min-width:0;font:11px/1.3 Georgia,serif;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-search>button {
+  flex:0 0 20px;display:grid;place-items:center;min-width:20px;min-height:22px;
+  border:0;background:transparent;color:#f4dbac;padding:0;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-search>button:focus-visible {
+  outline:2px solid #ffe4b3;outline-offset:2px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-list {
+  gap:5px;min-height:0;overflow-x:hidden;overflow-y:auto;
+}
+.axe-glass-loadout[data-equipment-actor="companion"]
+  .axe-comp-owned-roster[data-companion-roster-layout="classic"] .axe-comp-roster-list>button {
+  min-height:49px;gap:5px;padding:5px 4px;align-items:center;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-sigil {
+  width:22px;height:22px;flex:0 0 22px;
+  font:700 12px/1 Georgia,serif;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-entry {
+  gap:2px;min-width:0;overflow:hidden;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-entry strong {
+  font:700 11px/1.25 Georgia,serif;overflow-wrap:anywhere;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-entry small {
+  font:10px/1.25 Georgia,serif;white-space:normal;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-status {
+  font:9px/1.2 Georgia,serif;color:#e4c78e;overflow-wrap:anywhere;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-active-check {
+  flex-shrink:0;color:#c9edd9;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-actions {
+  gap:5px;padding-top:6px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-actions>button {
+  min-height:30px;padding:5px 4px;font-size:10px;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-actions small {
+  font-size:9px;line-height:1.35;
+}
+@media(max-width:980px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading svg {display:none;}
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading small {font-size:9px;}
+}
+@media(max-width:590px) {
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-owned-roster {padding:5px 4px;}
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-heading {
+    flex-wrap:wrap;gap:1px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-entry strong {font-size:10px;}
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-sigil,
+  .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-active-check {display:none;}
 }
 
 /* Equipment viewer: ten existing player slots are two equal-height vertical

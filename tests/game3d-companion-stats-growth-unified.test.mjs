@@ -56,3 +56,31 @@ test('growth readout follows recorded XP, with no fabricated level grants', () =
   assert.equal(getCompanionGrowthView(5000).completedCycles,1);
   assert.equal(getCompanionGrowthView(20000).maxed,true);
 });
+
+test('compact Companion Equipment roster uses mount names, XP levels and current state', () => {
+  assert.match(equipment, /const ownedMounts = \(mounts\.mounts \|\| \[\]\)\.filter/);
+  assert.match(equipment, /getAXEMountDefinition\(mount.definitionId\)/);
+  assert.match(equipment, /getCompanionGrowthView\(mount.totalXp\|\|0\)/);
+  assert.match(equipment, /const isActive=mount.instanceId===mounts.activeMountId/);
+  assert.match(equipment, /const isRegistered=mount.instanceId===mounts.registeredMountId/);
+  assert.match(equipment, /Lv \{growth.level\} · \{growthPct\}% growth/);
+  assert.match(equipment, /aria-label=\{name\+', level '\+growth.level/);
+  assert.match(equipment, /const searchable=\[definition\?\.name\|\|m.definitionId,definition\?\.rarity,definition\?\.specialty\]/);
+  assert.match(equipment, /setRosterQuery\(''\)/);
+  assert.doesNotMatch(equipment, /<span className="axe-comp-roster-sigil"><Compass/);
+});
+
+test('far-left companion roster is narrower and search is directly below heading', () => {
+  const assertIncludes = token => assert.ok(styles.includes(token), 'Missing '+token);
+  assertIncludes('grid-template-columns:minmax(120px,11%)');
+  assertIncludes('grid-template-columns:minmax(116px,12%)');
+  assertIncludes('grid-template-columns:minmax(114px,19%)');
+  assertIncludes('grid-template-columns:minmax(100px,28%)');
+  assert.match(equipment, /<header className="axe-comp-roster-title">[\s\S]*<div className="axe-comp-roster-heading">[\s\S]*<label className="axe-comp-roster-search"/);
+  assert.match(styles, /\.axe-comp-roster-title \{[\s\S]*?flex-direction:column/);
+  assertIncludes('border-bottom:2px solid #e7c288');
+  assertIncludes('width:100%;max-width:none;min-width:0;');
+  assertIncludes('min-height:49px;gap:5px;');
+  // No changes to the character Equipment layout.
+  assert.match(equipment, /\{isPlayer \? <aside className="axe-app-rail/);
+});
