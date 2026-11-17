@@ -2,7 +2,9 @@
 // on the existing, graded Wolfveil terrain. No second renderer or floor plate
 // from the retired Blender town; shared player/camera/HUD systems are untouched.
 import * as THREE from 'three';
+import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
 import { createAXETownPlaza } from './AXETownPlaza.js';
+import { createStaticMeshMerger } from '../performance/Game3DStaticMerging.mjs';
 import {
   WOLFVEIL_IMPORTED_TOWN,
   WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,
@@ -37,6 +39,41 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     scene.remove(root);
     onStatus?.({ state: 'error', reason: error?.message || String(error) });
     throw error;
+  }
+
+  // Draw budget: the plaza is built from about 3,500 small parts, one draw
+  // call each. Every part that stays still while the town plays its own
+  // animation (and while its doors open and close) is merged into one mesh
+  // per material; lanterns, doors, banners, water and effects keep moving as
+  // separate meshes. It fails open: on any error the town stays as built.
+  let merger = null;
+  try {
+    merger = createStaticMeshMerger({
+      root: town.group,
+      BufferGeometry: THREE.BufferGeometry,
+      BufferAttribute: THREE.BufferAttribute,
+      Mesh: THREE.Mesh,
+      tag: 'wolfveilTownMergedBatch',
+      // Aiming and the camera arm still collide with the merged walls.
+      accelerateRaycast(batch) {
+        batch.geometry.boundsTree = new MeshBVH(batch.geometry);
+        batch.raycast = acceleratedRaycast;
+      },
+    });
+    merger.snapshot();
+    for (const moment of [0.37, 1.31, 2.93, 4.77, 7.13, 9.59]) {
+      town.update(0.1, moment);
+      merger.markMoved();
+    }
+    town.setDoorsOpen(true);
+    for (let i = 0; i < 12; i++) { town.update(0.1, 11 + i * 0.1); merger.markMoved(); }
+    town.setDoorsOpen(false);
+    for (let i = 0; i < 90; i++) town.update(0.1, 12.2 + i * 0.1); // doors settle shut
+    merger.build();
+  } catch (error) {
+    globalThis.console?.warn('[Wolfveil town] draw budget unavailable; town left as built:', error);
+    try { merger?.dispose(); } catch { /* already as built */ }
+    merger = null;
   }
 
   // Local authored town geometry is centered at the existing imported town
@@ -115,6 +152,11 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     get status() { return active ? 'ready' : 'disposed'; },
     get model() { return town.group; },
     get livingQuarterReport() { return livingQuarter?.report || null; },
+    // Draw budget numbers and A/B switch (diagnostics).
+    drawBudget: {
+      stats() { return merger?.stats() ?? null; },
+      setEnabled(enabled) { return merger?.setEnabled(enabled) ?? false; },
+    },
     groundY: collision.groundAt,
     isSolid(x, z) { return blocked(x, z) || Boolean(livingQuarter?.isSolid(x, z)); },
     nearestResident(position) { return livingQuarter?.nearestResident(position) || null; },
@@ -136,6 +178,7 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
       const step = Math.min(Math.max(dt, 0), .1);
       elapsed += step;
       town.update(step, elapsed);
+      merger?.update(step);
       livingQuarter?.update(step, playerPosition);
     },
     dispose() {
@@ -143,6 +186,8 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
       active = false;
       livingQuarter?.dispose();
       livingQuarter = null;
+      merger?.dispose();
+      merger = null;
       town.dispose();
       scene.remove(root);
       root.clear();

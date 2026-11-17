@@ -1,6 +1,7 @@
 // Wolfveil caves: buried parts are only drawn underground, and identical
 // props share one draw. Runs without Three.js: small stand-in classes follow
 // the same contract (children, matrix.elements, geometry.boundingBox).
+/* global URL */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

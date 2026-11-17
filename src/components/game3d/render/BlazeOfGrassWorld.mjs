@@ -266,11 +266,15 @@ function createSurfaceDecorator(shared){
       // grass or tree plasma through another mesh's material reference.
       scene.traverse(mesh=>{
         if(!mesh?.isMesh&&!mesh?.isInstancedMesh&&!mesh?.isSkinnedMesh)return;
+        // A merged batch stands in for its original parts, which are still in
+        // the scene and already decide for this material.
+        if(mesh.userData?.game3dMergedBatch)return;
         if(familyOf(mesh))return;
         for(const m of Array.isArray(mesh.material)?mesh.material:[mesh.material])
           if(m)protectedMaterials.add(m);
       });
       scene.traverse(mesh=>{
+        if(mesh?.userData?.game3dMergedBatch)return;
         const kind=familyOf(mesh);if(!kind)return;
         for(const m of Array.isArray(mesh.material)?mesh.material:[mesh.material]){
           const specific=familyOf(mesh,m)||kind;
