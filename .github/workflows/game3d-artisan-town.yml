@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'src/components/game3d/wolfveil/AXETownPlaza.js'
+      - 'src/components/game3d/wolfveil/WolfveilTownPerformancePolicy.mjs'
       - 'src/components/game3d/wolfveil/WolfveilArtisanTownScene.mjs'
       - 'src/components/game3d/wolfveil/WolfveilTownInteriorNavigation.mjs'
       - 'src/components/game3d/wolfveil/WolfveilArtisanShopCatalog.mjs'
@@ -11,6 +12,7 @@ on:
       - 'src/components/game3d/GameWorld3D.jsx'
       - 'tests/wolfveil-artisan-town-navigation.test.mjs'
       - 'tests/wolfveil-town-cutaway-camera.test.mjs'
+      - 'tests/wolfveil-town-performance.test.mjs'
       - 'src/components/game3d/player/otsCameraColliders.mjs'
       - '.github/workflows/game3d-artisan-town.yml'
   workflow_dispatch:
@@ -26,7 +28,7 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Verify all home entrances, rotated shop openings and swept collision
-        run: node --test tests/wolfveil-artisan-town-navigation.test.mjs tests/wolfveil-town-cutaway-camera.test.mjs
+        run: node --test tests/wolfveil-artisan-town-navigation.test.mjs tests/wolfveil-town-cutaway-camera.test.mjs tests/wolfveil-town-performance.test.mjs
       - name: Install pinned dependencies
         run: npm ci
       - name: Validate artisan storefront and Game 3D bundle

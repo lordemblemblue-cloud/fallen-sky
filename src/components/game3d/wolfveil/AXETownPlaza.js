@@ -1,4 +1,5 @@
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { resolveTownQuality, townLODState } from './WolfveilTownPerformancePolicy.mjs';
 
 /**
  * AXE / Wolfveil - Japanese-Egyptian Grand Town Plaza (Three.js)
@@ -12,9 +13,12 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
  * Do not call renderer.render() from this module.
  */
 export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1, quality = 'auto' } = {}) {
-    // Default to the optimized low-poly town on desktop AND mobile.
-    // Quality 'balanced' / 'high' explicitly restores the denser meshes.
-    const lowDetail = quality !== 'balanced' && quality !== 'high';
+    // Desktop defaults to low poly; touch/mobile uses an even lighter tier.
+    // Both tiers keep the actual walk-in houses, shops and water fountain.
+    const coarsePointer = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches;
+    const activeQuality = resolveTownQuality(quality, coarsePointer);
+    const lowDetail = activeQuality === 'low' || activeQuality === 'ultra-low';
+    const ultraLow = activeQuality === 'ultra-low';
     if (!THREE) throw new Error('createAXETownPlaza: Three.js namespace (THREE) is required');
     if (typeof document === 'undefined') throw new Error('createAXETownPlaza: browser canvas API is required for procedural textures');
 
@@ -742,12 +746,27 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             const townGroup = new THREE.Group();
             const shopInteriors = [];
             const houseEntries = [];
+            const boxGeometryCache = new Map();
+            const sharedBoxGeometries = new Set();
+            const roomProxies = new Map();
+            // Reuse identical box meshes' vertex buffers across houses;
+            // 8 residences otherwise allocate thousands of duplicate buffers.
+            function boxGeometry(w, h, d) {
+                const key = w + '/' + h + '/' + d;
+                let geometry = boxGeometryCache.get(key);
+                if (!geometry) {
+                    geometry = new THREE.BoxGeometry(w, h, d);
+                    boxGeometryCache.set(key, geometry);
+                    sharedBoxGeometries.add(geometry);
+                }
+                return geometry;
+            }
             // The host game decides where to attach this town group.
 
             const allRoofs = [];
 
             function addBox(parent, w, h, d, mat, x, y, z, rx = 0, ry = 0, rz = 0) {
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+                const mesh = new THREE.Mesh(boxGeometry(w, h, d), mat);
                 mesh.position.set(x, y, z);
                 if (rx || ry || rz) mesh.rotation.set(rx, ry, rz);
                 // Keep large world shadows from hero props; hundreds of tiny trim
@@ -828,7 +847,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             function createChiseledStoneRing(radius, height, yPos, radialDepth, numBlocks, JitterScale = 1.0) {
                 const ringGrp = new THREE.Group();
                 ringGrp.position.y = yPos;
-                const segmentCount = lowDetail ? Math.max(16, Math.round(numBlocks * 0.55)) : numBlocks;
+                const segmentCount = ultraLow ? Math.max(12, Math.round(numBlocks * 0.38)) : lowDetail ? Math.max(16, Math.round(numBlocks * 0.50)) : numBlocks;
                 const arcLen = (Math.PI * 2 * radius) / segmentCount;
                 for (let i = 0; i < segmentCount; i++) {
                     const ang = (i / segmentCount) * Math.PI * 2;
@@ -902,7 +921,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 // In low detail retain the two front lantern lights; rear lanterns
                 // still glow using emissive material without extra light passes.
-                if (!lowDetail || z > 0) {
+                if (!ultraLow && (!lowDetail || z > 0)) {
                     const ptLight = new THREE.PointLight(0xffa52a, 1.35, 8.5);
                     ptLight.position.set(0, 1.15, 0);
                     lGroup.add(ptLight);
@@ -947,7 +966,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // 5.3 Two-Stage Tiered Craggy Rock Mound (Lower Curved Ledge + Upper Waterfall Shelf + Wolf Summit)
             // Lower wide curved rock shelf sitting in the turquoise pool
-            const cragCount = lowDetail ? 12 : 24;
+            const cragCount = ultraLow ? 8 : lowDetail ? 12 : 24;
             for (let i = 0; i < cragCount; i++) {
                 const ang = (i / cragCount) * Math.PI * 2;
                 const rad = 3.15 + Math.sin(ang * 3) * 0.28;
@@ -1258,7 +1277,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // Rising Mist & Sparkle Particles around the Waterfall & Spiral Ribbons
             const mistParticles = [];
-            for (let m = 0; m < (lowDetail ? 16 : 48); m++) {
+            for (let m = 0; m < (ultraLow ? 6 : lowDetail ? 12 : 48); m++) {
                 const pMat = (m % 2 === 0) ? mats.gemPurple : mats.foamWhite;
                 const droplet = new THREE.Mesh(new THREE.DodecahedronGeometry(0.065, 0), pMat);
                 const ang = Math.random() * Math.PI * 2;
@@ -1281,6 +1300,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             const ribbonVioletLight = new THREE.PointLight(0xa855f7, 2.5, 16);
             ribbonVioletLight.position.set(-1.8, 4.6, -1.2);
+            ribbonVioletLight.visible = !ultraLow;
             fountainGroup.add(ribbonVioletLight);
 
             // ============================================================================
@@ -1323,12 +1343,13 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 slope.rotation.x = isFrontSlope ? pitchAngle : -pitchAngle;
                 addBox(slope, width, 0.18, length, mats.charredTimber, 0, 0, 0);
 
-                const rafterCount = Math.floor(width / (lowDetail ? 1.8 : 1.2));
+                const rafterGap = ultraLow ? 3.0 : lowDetail ? 2.1 : 1.2;
+                const rafterCount = Math.floor(width / rafterGap);
                 for (let r = -rafterCount / 2; r <= rafterCount / 2; r++) {
-                    addBox(slope, 0.14, 0.18, length * 0.96, mats.warmWood, r * (lowDetail ? 1.76 : 1.16), -0.16, 0);
+                    addBox(slope, 0.14, 0.18, length * 0.96, mats.warmWood, r * rafterGap, -0.16, 0);
                 }
 
-                const ribGap = lowDetail ? 1.25 : 0.84;
+                const ribGap = ultraLow ? 2.25 : lowDetail ? 1.6 : 0.84;
                 const tileCols = Math.floor(width / ribGap);
                 for (let c = -tileCols / 2; c <= tileCols / 2; c++) {
                     const rib = new THREE.Mesh(
@@ -1364,7 +1385,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
             // Shared Helper: Climbing Ivy Vines
             function createIvyCluster(parent, x, yStart, z, height = 3.0) {
-                for (let i = 0; i < (lowDetail ? 3 : 12); i++) {
+                for (let i = 0; i < (ultraLow ? 1 : lowDetail ? 3 : 12); i++) {
                     const leaf = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12 + Math.random() * 0.1, 0), mats.foliage);
                     leaf.position.set(
                         x + (Math.random() - 0.5) * 0.45,
@@ -1792,7 +1813,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 midEave.position.set(3.15, 7.82, 2.38);
                 midEave.rotation.x = 0.35;
                 addBox(midEave, 11.4, 0.14, 1.05, mats.charredTimber, 0, 0, 0);
-                for (let tc = -5.4; tc <= 5.4; tc += (lowDetail ? 1.2 : 0.84)) {
+                for (let tc = -5.4; tc <= 5.4; tc += (ultraLow ? 2.4 : lowDetail ? 1.6 : 0.84)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.08, 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(tc, 0.1, 0);
@@ -2056,6 +2077,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 createIvyCluster(houseGroup, 9.1, 0.4, -4.4, 3.1);
 
                 smithForgeFireLight = new THREE.PointLight(0xff5e1a, 2.8, 14);
+                smithForgeFireLight.visible = !ultraLow;
                 smithForgeFireLight.position.set(-4.3, 1.85, -3.4);
                 houseGroup.add(smithForgeFireLight);
             }
@@ -2198,6 +2220,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 addBox(shopGroup, 0.64, 1.68, 0.1, mats.bronzeMirror, 7.25, 1.8, -3.19, 0, -0.55, 0);
 
                 const galleryLight = new THREE.PointLight(0xffc978, 2.0, 12);
+                galleryLight.visible = !ultraLow;
                 galleryLight.position.set(2.2, 3.7, -1.6);
                 shopGroup.add(galleryLight);
             }
@@ -2360,6 +2383,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 const matrixLight = new THREE.PointLight(0xc084fc, 2.6, 13.0);
+                matrixLight.visible = !ultraLow;
                 matrixLight.position.set(2.1, 3.1, -1.65);
                 shopGroup.add(matrixLight);
             }
@@ -2486,6 +2510,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 const rigLight = new THREE.PointLight(0x34d399, 2.1, 12.0);
+                rigLight.visible = !ultraLow;
                 rigLight.position.set(1.35, 3.6, -0.85);
                 shopGroup.add(rigLight);
             }
@@ -2505,7 +2530,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 frontSlope.position.set(0, 0, depth * 0.26);
                 frontSlope.rotation.x = pitch;
                 addBox(frontSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
-                for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
+                for (let c = -width * 0.46; c <= width * 0.46; c += (ultraLow ? 2.35 : lowDetail ? 1.6 : 0.9)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, lowDetail ? 5 : 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
@@ -2517,7 +2542,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 backSlope.position.set(0, 0, -depth * 0.26);
                 backSlope.rotation.x = -pitch;
                 addBox(backSlope, width, 0.18, depth * 0.62, mats.charredTimber, 0, 0, 0);
-                for (let c = -width * 0.46; c <= width * 0.46; c += (lowDetail ? 1.25 : 0.9)) {
+                for (let c = -width * 0.46; c <= width * 0.46; c += (ultraLow ? 2.35 : lowDetail ? 1.6 : 0.9)) {
                     const rib = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, depth * 0.64, lowDetail ? 5 : 8), mats.kawaraTile);
                     rib.rotation.x = Math.PI / 2;
                     rib.position.set(c, 0.12, 0);
@@ -2631,6 +2656,46 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 houseEntries.push({ id: 'residence-' + (h + 1), group: house });
             }
 
+            // Far-distance silhouette LOD. Full procedural houses and shops
+            // still exist for walking inside them; beyond the approach radius,
+            // only a handful of low-polygon meshes render per building.
+            // Collisions are analytical and never change with visual LOD.
+            function makeDistantProxy(room, isShop) {
+                const proxy = new THREE.Group();
+                proxy.name = 'TownProxy_' + room.id;
+                proxy.position.copy(room.group.position);
+                proxy.rotation.copy(room.group.rotation);
+                proxy.scale.copy(room.group.scale);
+                function silhouette(w, h, d, material, x, y, z, rx = 0) {
+                    const mesh = addBox(proxy, w, h, d, material, x, y, z, rx);
+                    mesh.castShadow = false;
+                    mesh.receiveShadow = false;
+                    mesh.userData.otsCameraIgnore = true; // camera must use real near walls
+                }
+                if (isShop) {
+                    silhouette(7.5, 3.8, 9.5, mats.sandstone, -5.8, 2.2, -0.6);
+                    silhouette(10.7, 3.8, 7.5, mats.plaster, 3.2, 2.2, -1.6);
+                    silhouette(8.0, .26, 10, mats.kawaraTile, -5.8, 4.3, -0.6, .28);
+                    silhouette(11.0, .26, 8, mats.kawaraTile, 3.2, 4.45, -1.6, -.28);
+                    if (room.id === 'blacksmith') {
+                        silhouette(10, 3.0, 7.0, mats.sandstone, 3.2, 6.15, -1.6);
+                        silhouette(11.0, .35, 8, mats.kawaraTile, 3.2, 8.0, -1.6, .3);
+                    }
+                } else {
+                    const twoStory = Number(room.id.split('-').pop()) % 2 === 1;
+                    silhouette(9.2, twoStory ? 6.6 : 3.8, 6.0, mats.sandstone, 0, twoStory ? 3.65 : 2.1, 0);
+                    const roofY = twoStory ? 7.2 : 4.4;
+                    silhouette(9.8, .27, 3.7, mats.kawaraTile, 0, roofY, 1.4, .32);
+                    silhouette(9.8, .27, 3.7, mats.kawaraTile, 0, roofY, -1.4, -.32);
+                    silhouette(2.0, 1.6, .08, mats.shojiGlow, 0, 2.3, 3.05);
+                }
+                proxy.visible = false;
+                room.group.parent.add(proxy);
+                roomProxies.set(room.id, proxy);
+            }
+            shopInteriors.forEach(room => makeDistantProxy(room, true));
+            houseEntries.forEach(room => makeDistantProxy(room, false));
+
             // ============================================================================
             // 8. SCENE LIGHTING
             // ============================================================================
@@ -2728,10 +2793,13 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                         mesh.castShadow = meshes.some(item => item.castShadow);
                         mesh.receiveShadow = meshes.some(item => item.receiveShadow);
                         mesh.name = 'AXE_StaticTownBatch';
+                        // Proxy meshes must not enter the OTS camera collider
+                        // list after static batching has replaced originals.
+                        mesh.userData.otsCameraIgnore = meshes.every(item => item.userData?.otsCameraIgnore);
                         group.add(mesh);
                         meshes.forEach(item => {
                             group.remove(item);
-                            item.geometry.dispose();
+                            if (!sharedBoxGeometries.has(item.geometry)) item.geometry.dispose();
                         });
                     }
                 }
@@ -2759,8 +2827,21 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     batchRoofs(innerShopsGroup);
     batchRoofs(outerRingGroup);
     const afterOptimization = geometryStats();
+    function visibleGeometryStats() {
+        let meshes = 0, triangles = 0;
+        function walk(node) {
+            if (!node.visible) return;
+            if (node.isMesh && node.geometry) {
+                meshes++;
+                triangles += (node.geometry.index?.count ?? node.geometry.getAttribute('position')?.count ?? 0) / 3;
+            }
+            for (const child of node.children) walk(child);
+        }
+        walk(townGroup);
+        return { visibleMeshes: meshes, visibleTriangles: Math.round(triangles), quality: activeQuality };
+    }
     const performanceStats = Object.freeze({
-        quality: lowDetail ? 'low' : 'balanced',
+        quality: activeQuality,
         before: beforeOptimization, after: afterOptimization,
         savedDrawCalls: Math.max(0, beforeOptimization.meshes - afterOptimization.meshes),
     });
@@ -2796,25 +2877,32 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         dt = Math.max(0, Math.min(0.1, Number(dt) || 0));
         elapsed = Number(elapsed) || 0;
         if (surgeTimer > 0) surgeTimer = Math.max(0, surgeTimer - dt);
-        // Cull distant home/shop groups only four times a second. The fountain
-        // and collision remain active, and a player inside keeps their room.
+        // Keep only the near rooms' full geometry active; distant roofs remain
+        // recognizable as 3-6 mesh proxies instead of a hundred roof ribs.
+        // Hysteresis prevents popping/flickering near storefront thresholds.
         visibilityTimer += dt;
+        let visualLODChanged = false;
         if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
             visibilityTimer = 0;
-            const homeRangeSq = (lowDetail ? 48 : 90) ** 2;
-            const shopRangeSq = (lowDetail ? 58 : 115) ** 2;
             const localX = playerPosition.x - townGroup.position.x;
             const localZ = playerPosition.z - townGroup.position.z;
-            for (const home of houseEntries) {
-                const dx = localX - home.group.position.x, dz = localZ - home.group.position.z;
-                home.group.visible = dx * dx + dz * dz < homeRangeSq;
-            }
-            for (const shop of shopInteriors) {
-                const dx = localX - shop.group.position.x, dz = localZ - shop.group.position.z;
-                shop.group.visible = dx * dx + dz * dz < shopRangeSq;
+            for (const [rooms, kind] of [[houseEntries, 'home'], [shopInteriors, 'shop']]) {
+                for (const room of rooms) {
+                    const dx = localX - room.group.position.x, dz = localZ - room.group.position.z;
+                    const oldState = room.group.userData.axeLODState || 'proxy';
+                    const nextState = townLODState(Math.hypot(dx, dz), kind, oldState, activeQuality);
+                    const proxy = roomProxies.get(room.id);
+                    const detailed = nextState === 'detail';
+                    const distant = nextState === 'proxy';
+                    if (room.group.visible !== detailed || proxy?.visible !== distant) visualLODChanged = true;
+                    room.group.visible = detailed;
+                    if (proxy) proxy.visible = distant;
+                    room.group.userData.axeLODState = nextState;
+                }
             }
         }
         const flowMult = surgeTimer > 0 ? 3.2 : 1;
+        const animateDetailedShops = shopInteriors.some(shop => shop.group.visible);
                 // Animate Flowing Waterfall UV Scroll & Spiral Energy Ribbons
                 waterfallTex.offset.y += dt * 1.35 * flowMult;
                 spiralRibbonTex.offset.x -= dt * 1.15 * flowMult;
@@ -2839,8 +2927,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     }
                 });
 
+        if (animateDetailedShops) {
                 // ------------------------------------------------------------------------
-                // ANIMATE ALL 4 FULL-DETAIL UPLOADED HOUSES IN THE INNER PLAZA RING
+                // Only animate the nearby shop meshes, not the offscreen
+                // full-detail rooms replaced by silhouette proxies.
                 // ------------------------------------------------------------------------
                 // 1. Slide Genkan Doors, VIP Fitting Room Shoji & Relic Vault Shoji
                 allSlidingDoors.forEach(d => {
@@ -2914,8 +3004,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 allLanterns.forEach(l => {
                     l.group.rotation.z = Math.sin(elapsed * 1.6 + l.phase) * 0.035;
                 });
+        }
 
-
+        return visualLODChanged;
     }
 
     // Exposes coarse static collider shapes, so the game's own collision system can
@@ -2940,6 +3031,8 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         });
         textures.forEach(t => t.dispose());
         geometries.forEach(g => g.dispose());
+        boxGeometryCache.forEach(geometry => geometry.dispose());
+        boxGeometryCache.clear();
         state.active = false;
     }
 
@@ -2951,6 +3044,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         anchors: townAnchors,
         rooms: { shops: shopInteriors, homes: houseEntries },
         performanceStats,
+        getVisibleGeometryStats: visibleGeometryStats,
         collisionZones,
         setShowroomModel(index = 0) {
             const chosen = Math.max(0, Math.min(allAnimatedMounts.length - 1, Math.floor(index)));
