@@ -1,0 +1,20 @@
+{
+  "kind": "pixel-derived-raster-overlay",
+  "description": "FIRST (left-hand) source screenshot splash, not the previously recreated Concept D vector",
+  "imageUrl": "https://media.base44.com/images/public/6876751a602125f45f1861b9/d85c9f639_axe_first_design_exact_splash_five_slots.webp",
+  "format": "image/webp",
+  "dimensions": {
+    "width": 1140,
+    "height": 564
+  },
+  "intendedPosition": "bottom-right live Game 3D combat HUD",
+  "originalSource": "user-supplied first screenshot with two candidate HUD designs, left variant only",
+  "extraction": {
+    "imageRegion": "first/left 3D fantasy ink brush",
+    "retained": "original brushstroke pixels, smoky gray textures, gold rim and sweep shape",
+    "removed": "baked skill and weapon icons/keycaps replaced by translucent charcoal matte so live UI can be overlaid",
+    "modified": "transparency and horizontal extension to accommodate five interactive skill slots",
+    "recreatedIllustration": false
+  },
+  "uiControls": "HTML buttons, keyboard icons, cooldowns and actual owned weapon states, not part of raster"
+}
