@@ -11,6 +11,8 @@ import {
 import {
   createCloneAdaptiveGraphics,normalizedCloneFrameCost,
 } from '../src/components/game3d/performance/AdaptiveGraphics.mjs';
+import {createGame3DRenderFramePacer,normalizeGame3DRenderFPSCap}
+  from '../src/components/game3d/performance/Game3DFramePacing.mjs';
 const root=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
 
 test('resolution settings have safe persistent defaults and reject invalid input',()=>{
@@ -143,7 +145,7 @@ test('Game 3D canvas stays CSS-sized, FPS limit only skips GPU submissions',()=>
   assert.match(world,/renderer\.setSize\(width,height,false\)/);
   assert.match(world,/camera\.aspect=width\/height/);
   assert.match(world,/canvasResizeObserver\?\.disconnect\(\)/);
-  assert.match(world,/const renderThisFrame=canRenderFrame\(renderNow\)/);
+  assert.match(world,/const renderThisFrame=renderPacer\.shouldRender\(renderNow\)/);
   assert.match(world,/if\(renderThisFrame&&!atomicLook\?\.render\(camera\)\)inkLook\.render\(scene,camera\)/);
   assert.match(world,/if\(renderThisFrame&&!atomicLook\?\.render\(activeCamera\)\)inkLook\.render\(scene,activeCamera\)/);
   assert.match(world,/const delta = clock\.getDelta\(\)/);
@@ -157,4 +159,29 @@ test('Game 3D canvas stays CSS-sized, FPS limit only skips GPU submissions',()=>
   assert.match(css,/max-width:100%;max-height:100dvh/);
   assert.doesNotMatch(css,/transform:\s*scaleX\(|transform:\s*scaleY\(/);
   assert.doesNotMatch(world,/screen\.width|screen\.height/);
+});
+
+test('render-only FPS caps pace 144 Hz, 60 Hz and 30 Hz without simulation throttling',()=>{
+  assert.equal(normalizeGame3DRenderFPSCap('144'),144);
+  assert.equal(normalizeGame3DRenderFPSCap('bad'),60);
+  for(const {monitor,cap} of [
+    {monitor:144,cap:120},{monitor:120,cap:60},{monitor:60,cap:30},
+    {monitor:60,cap:144},{monitor:90,cap:30},
+  ]){
+    const pacer=createGame3DRenderFramePacer(cap);
+    let count=0;
+    for(let frame=0;frame<monitor*2;frame++){
+      if(pacer.shouldRender(frame*1000/monitor))count++;
+    }
+    const expected=2*Math.min(cap,monitor);
+    assert(Math.abs(count-expected)<=3,
+      'FPS cap '+cap+' on '+monitor+' Hz measured '+count+' renders vs '+expected);
+  }
+  const pacer=createGame3DRenderFramePacer(30);
+  assert.equal(pacer.shouldRender(0),true);
+  assert.equal(pacer.shouldRender(8),false);
+  pacer.setFPSCap(120);
+  assert.equal(pacer.shouldRender(8),true,'changing FPS cap takes effect immediately');
+  assert.equal(pacer.shouldRender(Infinity),false);
+  assert.equal(pacer.getFPSCap(),120);
 });
