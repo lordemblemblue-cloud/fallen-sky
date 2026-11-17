@@ -6,8 +6,10 @@ const src=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const frame=src('src/components/game3d/hud/JadeApprovedGoldTemplate.css');
 const hud=src('src/components/game3d/hud/JadeSoulHUD.jsx');
 const base=src('src/components/game3d/hud/JadeSoulHUD.css');
-function lastRule(selector){
-  const index=frame.lastIndexOf(selector+' {');
+function frameFitRule(selector){
+  const start=frame.indexOf('/* Live HP/WILL frame-fit correction:');
+  assert.ok(start>=0,'missing actual frame-fit correction');
+  const index=frame.indexOf(selector+' {',start);
   assert.ok(index>=0,'missing style: '+selector);
   return frame.slice(index,frame.indexOf('}',index)+1);
 }
@@ -21,12 +23,12 @@ test('the actual 3D HUD increases the gold metalwork, not independent bar overla
   assert.doesNotMatch(hud,/jade-status-connector/);
 });
 test('HP and WILL sit within the actual gold housing footprint',()=>{
-  const row=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row');
+  const row=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row');
   assert.match(row,/top:47%/);
   assert.match(row,/width:25\.4%/);
   assert.match(row,/height:36%/);
-  const hp=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp');
-  const will=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will');
+  const hp=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp');
+  const will=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will');
   assert.match(hp,/left:9%/);
   assert.match(will,/right:9%/);
   // SVG uses viewBox width 1200, gold glass wing spans approx x=77..433.
@@ -37,9 +39,9 @@ test('HP and WILL sit within the actual gold housing footprint',()=>{
   assert.equal(1200-right,1200*(1-.09-.254));
 });
 test('exactly the inner ends receive matching 45-degree chamfer plus transparency',()=>{
-  const hp=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp .jade-status-track');
-  const will=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will .jade-status-track');
-  const track=lastRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-track');
+  const hp=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp .jade-status-track');
+  const will=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will .jade-status-track');
+  const track=frameFitRule('.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-track');
   assert.match(track,/--jade-vitals-tip:clamp\(7px,\.70vw,10px\)/);
   assert.match(hp,/clip-path:polygon\(0 0,calc\(100% - var\(--jade-vitals-tip\)\) 0,100% 100%,0 100%\)/);
   assert.match(will,/clip-path:polygon\(var\(--jade-vitals-tip\) 0,100% 0,100% 100%,0 100%\)/);
