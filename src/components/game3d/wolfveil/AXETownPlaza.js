@@ -2642,10 +2642,18 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     // Merge only genuinely static render geometry. Buildings retain their
     // separate rooms, doors, mount animations and model-showcase controls.
     // This lowers draw calls without changing the collision/walk-through shells.
+    const dynamicTownMeshes = new Set([
+        ...spiralRibbons, ...foamRings.map(f=>f.mesh), ...mistParticles,
+        ...allEmberParticles, ...allSwayingSilks.map(v=>v.mesh),
+        ...allFloatingCrystals.map(v=>v.mesh), ...allFloatingSpellbooks.map(v=>v.mesh),
+        ...allLapidaryWheels, augmentFloorRune, augmentTopRune,
+        augmentMasterGem, augmentRing1, augmentRing2,
+        ...allSlidingShoji.map(v=>v.mesh), ...allSlidingDoors.map(v=>v.mesh),
+    ].filter(Boolean));
     function batchStaticDirect(group) {
         const buckets = new Map();
         for (const child of group.children) {
-            if (!child.isMesh || !child.geometry || Array.isArray(child.material)) continue;
+            if (!child.isMesh || !child.geometry || Array.isArray(child.material) || dynamicTownMeshes.has(child)) continue;
             const key = child.material;
             if (!buckets.has(key)) buckets.set(key, []);
             buckets.get(key).push(child);
@@ -2704,6 +2712,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     }
     const beforeOptimization = geometryStats();
     stoneRingGroups.forEach(batchStaticDirect);
+    innerShopsGroup.children.forEach(batchStaticDirect);
     outerRingGroup.children.forEach(batchStaticDirect);
     allRoofs.forEach(batchRoofs);
     const afterOptimization = geometryStats();
