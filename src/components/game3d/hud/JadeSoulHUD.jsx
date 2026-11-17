@@ -372,6 +372,11 @@ export default function JadeSoulHUD({
           </defs>
           {['hp','will'].map(side=><g key={side}
             transform={side==='will'?'translate(1200 0) scale(-1 1)':undefined}>
+            {/* The dark glass header is part of the EMPTY metal frame, not a
+                screenshot caption: live resource labels float above it. */}
+            <path d="M 74 126 H 391 Q 412 126 422 150 L 433 196
+              H 107 L 77 163 Z" fill="url(#jade-template-glass)"
+              fillOpacity=".70" stroke="none"/>
             <path d="M 12 149 L 67 149 L 106 191 L 421 191 L 482 256
               L 442 220 L 97 220 L 50 171 Z"
               fill="url(#jade-template-wing)" stroke="#a85b08" strokeWidth="8"
