@@ -147,6 +147,7 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
+import {game3dWorldGraphicsBudget} from './performance/Game3DWorldGraphicsBudget.mjs';
 import { createAtomicUltraSumiMode } from './render/atomicUltraSumiMode.mjs';
 import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
@@ -534,6 +535,30 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // on every browser rAF, so movement and server authority are not throttled.
     const renderPacer=createGame3DRenderFramePacer(readGraphicsSettings().fpsCap);
     window.__gw3dInkLook = inkLook; // the bench and reviews read and set its level
+    let worldSun = null;
+    const applyWorldGraphicsBudget = () => {
+      const budget = game3dWorldGraphicsBudget(readGraphicsSettings());
+      window.__gw3dGraphicsBudget = budget;
+      renderer.shadowMap.enabled = budget.shadows;
+      if (worldSun) {
+        worldSun.castShadow = budget.shadows;
+        if (budget.shadows) {
+          if (worldSun.shadow.mapSize.x !== budget.shadowSize || worldSun.shadow.mapSize.y !== budget.shadowSize) {
+            worldSun.shadow.mapSize.set(budget.shadowSize, budget.shadowSize);
+            worldSun.shadow.map?.dispose?.();
+            worldSun.shadow.map = null;
+          }
+          const extent = budget.shadowExtent;
+          worldSun.shadow.camera.left = -extent;
+          worldSun.shadow.camera.right = extent;
+          worldSun.shadow.camera.top = extent;
+          worldSun.shadow.camera.bottom = -extent;
+          worldSun.shadow.camera.updateProjectionMatrix();
+        }
+      }
+      renderer.shadowMap.needsUpdate = true;
+      return budget;
+    };
     const onGraphicsSettings = () => {
       renderPacer.setFPSCap(readGraphicsSettings().fpsCap);
       inkLook.setPalette(resolveInkPalette());
@@ -543,6 +568,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       atomicLook?.setQuality(g.quality||'high');
       ambientBirds?.setQuality(g.quality||'high');
       atomicLook?.setEnabled(g.artStyle==='atomic-ultra-sumi'&&!suigenActive);
+      applyWorldGraphicsBudget();
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
     // Apply fixed resolution changes synchronously to the already-mounted
@@ -642,6 +668,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     sun.shadow.camera.bottom = -25;
     sun.shadow.camera.far = 80;
     scene.add(sun);
+    worldSun = sun;
+    applyWorldGraphicsBudget();
 
     // GLTF loader shared by runtime VFX (e.g. player cast beam).
     const worldGltfLoader = new GLTFLoader();

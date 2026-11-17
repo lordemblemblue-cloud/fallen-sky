@@ -1,0 +1,33 @@
+name: Game 3D Clone Approved Gold HUD Template
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/hud/JadeSoulHUD.jsx'
+      - 'src/components/game3d/hud/JadeSoulHUD.css'
+      - 'src/components/game3d/hud/JadeApprovedGoldTemplate.css'
+      - 'tests/game3d-hud-compact-symmetric-20261116.test.mjs'
+      - 'tests/game3d-clone-aaa-minimal-hud.test.mjs'
+      - '.github/workflows/game3d-clone-hud-short-tanks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compact-hud:
+    name: Approved gold shell, live vitals and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check approved gold shell, live values, quest preservation and accessibility
+        run: node --test tests/game3d-hud-compact-symmetric-20261116.test.mjs tests/game3d-clone-aaa-minimal-hud.test.mjs tests/game3d-live-hud-transparent-raster-trims.test.mjs
+      - name: Compile Game 3D
+        run: npm run build

@@ -5,6 +5,7 @@ import { setAXEStationPreview, setAXEStationPreviewRotation, playAXEStationTrans
   getAXEServiceStationSnapshot } from './world/AXEServiceStationStore.js';
 import {verifiedQuestbookReader170} from '../quests/AXEQuestbookRemoteReader170';
 import './AXEServiceWorkspace.css';
+import './AXEServiceLiquidGlass.css';
 
 const EquipmentPanel = lazy(() => import('./AXEGlobalServicesMenu').then(module => ({ default: module.EquipmentServicePanel })));
 const ProgressionPanel = lazy(() => import('./AXEGlobalServicesMenu').then(module => ({ default: module.AXEProgressionServicePanel })));

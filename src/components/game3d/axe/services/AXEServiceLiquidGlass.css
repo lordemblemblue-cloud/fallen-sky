@@ -1,0 +1,153 @@
+/*
+ * Game 3D / AXE Services — scoped readability pass.
+ * ONLY information-bearing panes. Never add blur to a player/companion
+ * 3D viewer, canvas, equipment model host, forge artwork, or world stage.
+ *
+ * Intent: subtle black shade + actual background blur + the existing
+ * champagne-edge, translucent 'liquid glass' language.
+ * This complements existing layouts; no geometry or equipment mutations.
+ */
+.axe-service-workspace {
+  --axe-reading-glass:
+    linear-gradient(125deg,rgba(3,8,15,.24),rgba(5,10,19,.16)),
+    var(--axe-ui-glass,linear-gradient(115deg,rgba(32,44,58,.51),rgba(26,35,48,.39)));
+  --axe-reading-glass-strong:
+    linear-gradient(125deg,rgba(3,8,15,.30),rgba(5,10,19,.22)),
+    linear-gradient(125deg,rgba(25,43,60,.68),rgba(12,27,43,.68));
+  --axe-reading-edge:rgba(242,210,147,.55);
+  --axe-reading-blur:blur(10px) saturate(108%);
+  --axe-reading-shadow:inset 0 1px 0 rgba(255,239,206,.08),
+    inset 0 0 16px rgba(241,216,160,.045),0 8px 20px rgba(0,0,0,.16);
+}
+
+/* Global service labels, status and loading panels. Intentionally do NOT
+ * target .axe-service-progression; it may contain the entire live 3D viewer. */
+.axe-service-workspace :is(
+  .axe-service-heading,.axe-service-operation-help,.axe-service-operation-select,
+  .axe-service-notice,.axe-service-error,.axe-service-loading
+) {
+  background:var(--axe-reading-glass);
+  border-color:var(--axe-reading-edge);
+  box-shadow:var(--axe-reading-shadow);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+
+/* Skills (Character & Companion): retain the simplified unboxed page chrome.
+ * Add glass only to actual library/tree, selected skill information and bars. */
+.axe-service-workspace--skills .axe-clone-skill-root .axe-ct-main--horizontal,
+.axe-service-workspace--skills .axe-clone-skill-root .axe-ct-details,
+.axe-service-workspace--skills .axe-clone-skill-root .axe-ct-equipped,
+.axe-service-workspace--skills .axe-sk-hero,
+.axe-service-workspace--skills .axe-sk-inspector,
+.axe-service-workspace--skills .axe-comp-tree-map,
+.axe-service-workspace--skills .axe-sk-combat-rule,
+.axe-service-workspace--skills .axe-sk-skill:not([aria-pressed="true"]),
+.axe-service-workspace--skills .axe-comp-tree-node:not([aria-pressed="true"]) {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+  box-shadow:var(--axe-reading-shadow);
+}
+/* The simplified Companion page explicitly removes inner blur: override
+ * ONLY its content panel, not the outer Skillbook or any 3D canvas. */
+.axe-service-workspace--skills .axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"]
+  .axe-ct-content--collection .axe-ct-main--collection {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+/* Character Universal/Passive collections share the same central library. */
+.axe-service-workspace--skills .axe-clone-skill-root .axe-ct-main--collection {
+  background:var(--axe-reading-glass-strong);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+/* Keep selected and locked skill states distinctive and untouched. */
+
+/* Questbook / Requests: journal, navigation and readable quest details.
+ * The quest artwork hero and constellation/star drawing remain untouched. */
+.axe-service-workspace--quest-logbook :is(
+  .axe-quest-topbar,.axe-quest-sidebar,.axe-quest-journal,.axe-quest-detail,
+  .axe-quest-entry:not([aria-pressed="true"]),.axe-quest-objectives,.axe-quest-rewards,
+  .axe-constellation-memory,.axe-constellation-hint,.axe-quest-no-selection
+) {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+.axe-service-workspace--quest-logbook :is(
+  .axe-quest-entry:not([aria-pressed="true"]),.axe-quest-objectives,.axe-quest-rewards,.axe-constellation-memory
+) { box-shadow:var(--axe-reading-shadow); }
+
+/* Companion: gear roster, stats/growth, mastery text, imbuement information.
+ * Deliberately EXCLUDE the companion portrait, model stage, model host and
+ * the left imbuement half (it contains a playable 3D equipment preview). */
+.axe-service-workspace--companion :is(
+  .axe-comp-owned-roster,.axe-comp-unified-card,.axe-comp-glass,
+  .axe-comp-mounts-pane,.axe-comp-imbue-right,.axe-comp-imbue-target:not([aria-pressed="true"]),
+  .axe-comp-style-detail,.axe-mastery-center,.axe-mastery-inspector,
+  .axe-mastery-avatar-rail
+) {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+  box-shadow:var(--axe-reading-shadow);
+}
+
+/* Character / Equipment / Appearance / Variety: improve legibility only on
+ * sidebar and item/detail cards, not the central wardrobe or armor viewer. */
+.axe-service-workspace--appearance :is(.axe-app-card,.axe-app-rail),
+.axe-service-workspace--character :is(.axe-app-card,.axe-app-rail),
+.axe-service-workspace--companion :is(.axe-app-card,.axe-app-rail),
+.axe-service-workspace--appearance .axe-glass-loadout-details,
+.axe-service-workspace--character .axe-glass-loadout-details {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+  box-shadow:var(--axe-reading-shadow);
+}
+
+/* Spirituality: the center vision stays clear; informational columns do not. */
+.axe-service-workspace--spiritual :is(
+  .axe-spiritual-sidebar,.axe-spiritual-details,.axe-spiritual-message,
+  .axe-spiritual-warning,.axe-spiritual-resource-blank
+) {
+  background:var(--axe-reading-glass);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+
+/* Blacksmith: readout panels only; NEVER the artwork, animated forge ring,
+ * central preview or transparent input hotspots. */
+.axe-service-workspace--blacksmith :is(
+  .axe-blacksmith-operation-panel,.axe-blacksmith-progression-panel,
+  .axe-blacksmith-projected-block,.axe-blacksmith-materials-block,
+  .axe-blacksmith-details,.axe-blacksmith-asc-page,.axe-blacksmith-core-page
+) {
+  background:var(--axe-reading-glass-strong);
+  -webkit-backdrop-filter:var(--axe-reading-blur);
+  backdrop-filter:var(--axe-reading-blur);
+}
+
+/* Small screens: avoid stacking costly multi-layer blur on each list item.
+ * Preserve the dark glass fill for readability without sacrificing scroll FPS. */
+@media (max-width:720px) {
+  .axe-service-workspace { --axe-reading-blur:blur(6px) saturate(105%); }
+  .axe-service-workspace--skills :is(.axe-sk-skill,.axe-comp-tree-node),
+  .axe-service-workspace--quest-logbook .axe-quest-entry,
+  .axe-service-workspace--companion .axe-comp-imbue-target {
+    -webkit-backdrop-filter:none;
+    backdrop-filter:none;
+  }
+}
+
+/* Respect an OS request to remove transparency; maintain readable darkness
+ * and the same panel dimensions (no blur-induced layout or contrast bugs). */
+@media (prefers-reduced-transparency:reduce) {
+  .axe-service-workspace {
+    --axe-reading-glass:linear-gradient(125deg,rgba(14,26,39,.97),rgba(12,22,35,.96));
+    --axe-reading-glass-strong:linear-gradient(125deg,rgba(14,26,39,.98),rgba(12,22,35,.97));
+    --axe-reading-blur:none;
+  }
+}

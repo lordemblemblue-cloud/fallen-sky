@@ -96,3 +96,29 @@
     scroll-behavior:auto;
   }
 }
+
+/* Phone landscape (common game orientation): keep HUD, menus and touch targets
+   inside the short screen without overflow. High-DPI phones report large
+   devicePixelRatio but small CSS pixels — UI is sized to CSS viewport. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game3d-view {
+    --game3d-ui-scale: 0.85;
+  }
+  .game3d-view .jade-status,
+  .game3d-view .jade-compass-block,
+  .game3d-view .jade-services-navigation {
+    font-size: clamp(8px, calc(9px * var(--game3d-ui-scale, 1)), 12px);
+  }
+  .game3d-view .axe-service-workspace {
+    max-height: calc(100dvh - 40px);
+  }
+  .game3d-view .jade-hud .jade-status-bars--refined {
+    bottom: max(4px, var(--game3d-safe-bottom));
+  }
+}
+@media (max-width: 420px) {
+  .game3d-view .jade-services-navigation .jade-services-button {
+    min-height: 32px;
+    padding: 2px 6px;
+  }
+}
