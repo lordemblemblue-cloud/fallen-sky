@@ -126,6 +126,7 @@ import { getAXEWeaponLegacyEchoDamage } from './axe/equipment/AXEWeaponLegacyFor
 import { reportWeaponHit, reportWeaponKill } from './progression/weaponMastery/WeaponMasteryEngine';
 import { getTitleState, recordTitleKill, subscribeTitles } from './progression/titleStore';
 import { getHaloState } from './progression/haloStore';
+import {getHaloFlightProfile,HALO_FLIGHT_RULES} from './player/haloWingFlightRules.mjs';
 import { createAXEMountFusionVisualRuntime } from './axe/progression/AXEMountFusionVisualRuntime';
 import { createAXEAscensionVisualRuntime } from './axe/progression/AXEAscensionVisualRuntime';
 import { createAXEArmorEquipSync } from './axe/equipment/AXEArmorEquipSync';
@@ -1754,6 +1755,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let wasAirborneLastFrame=false; // one-shot landing transition, not repeated montage
     const lastDirectionTap = { current: {} };
     const DOUBLE_TAP_MS = 280;
+    let lastAirKickTapMs=0;
     const chargedKeys = new Map();
     // Draw on canvas down, fire one resolved arrow only on window release.
     const heldBow={active:false,startedAt:0};
@@ -1932,6 +1934,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         getAirWalkStamina:()=>getCombatResources().stamina,
         spendAirWalkBoost:()=>spendCombatResource('air_walk'),
         spendAirWalkGlide:seconds=>spendCombatResource('glide',{seconds}),
+        spendAirWalkRun:seconds=>spendCombatResource('air_walk_run',{seconds}),
+        spendAirWalkFinisher:()=>spendCombatResource('air_walk_finisher'),
       });
       // Native clips are ready with the GLB. Optional admin FBXs must never
       // hold the playable actor in its bind pose while a request is pending.
@@ -2274,22 +2278,35 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         }
         lastDirectionTap.current[k] = nowMs;
       }
-      // Space = ground jump, second press mid-jump deploys invisible glide,
-      // later presses during glide perform stamina-powered Air Walk boosts.
-      // G is already Clan, Q is crouch, R is roll: do not steal any of them.
+      // Space: angled Air Jump -> earned wing glide -> kick/hold to Skywalk.
+      // Double-tap the kick button while boosting to finish in a forward
+      // burst, then return automatically to glide. G/Q/R remain untouched.
       if(k===' '){
         if(!e.repeat && !isMountedRef.current){
           const allowAirWalk=!dedicatedMode && !window.__activeDuel &&
             !tornado.getState().active && getPlayerHUD().hp>0;
+          const profile=getHaloFlightProfile({level:getHaloState().level});
+          const currentMode=playerAnim?.getAirWalkState?.().mode||'idle';
+          const nowMs=performance.now();
+          const kickDoubleTap=['boost','walk'].includes(currentMode)&&
+            lastAirKickTapMs>0 && nowMs-lastAirKickTapMs<=HALO_FLIGHT_RULES.doubleTapMilliseconds;
+          const vector=model?getDodgeVectorAndName('w').vector:new THREE.Vector3(0,0,1);
           const result=allowAirWalk
-            ?playerAnim?.requestAirWalkAction?.()
+            ?playerAnim?.requestAirWalkAction?.({
+              haloPercent:profile.haloPercent,directionVector:vector,doubleTap:kickDoubleTap,
+            })
             :{ok:!!playerAnim?.requestJump?.(),action:'jump'};
-          if(result?.ok && (result.action==='jump'||result.action==='air_walk'))
+          if(result?.ok && ['jump','air_walk','air_walk_finisher'].includes(result.action))
             playActionSound('player_jump');
+          if(result?.ok && result.action==='air_walk')lastAirKickTapMs=nowMs;
+          else if(result?.ok && result.action==='air_walk_finisher')lastAirKickTapMs=0;
+          else if(result?.ok && result.action==='jump')lastAirKickTapMs=0;
           if(!result?.ok && result?.reason==='not_enough_stamina')
             showCombatNotice('Air Walk needs more stamina');
           else if(!result?.ok && result?.reason==='must_be_airborne')
             showCombatNotice('Jump first, then press Space to glide');
+          else if(!result?.ok && result?.reason==='wings_not_awakened')
+            showCombatNotice('Halo Wings unlock at 10% (Halo Lv 20)');
         }
         e.preventDefault();
       }
@@ -2408,6 +2425,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const onInputBlur = () => {
       altCursorHeld.current = false;
+      playerAnim?.setAirWalkHeld?.(false);
+      lastAirKickTapMs=0;
       clearWorldMapMovement();
       drag.current.active = false;
       rightDragMoved.current = false;
@@ -2416,6 +2435,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (e.key === 'Alt') { altCursorHeld.current = false; return; }
       const k = game3dInputKey(e);
       keys.current[k] = false;
+      if(k===' ')playerAnim?.setAirWalkHeld?.(false);
       // Release of a charged/held input while navigating the ESC menu must
       // never cast a queued skill when the player returns to the world.
       if (window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
@@ -3038,7 +3058,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           playerStateMachine.setIntent({ blockHeld: false, aimHeld: false }); otsAim.current.endHold(performance.now()); otsAim.current.setPadAim(false);
           playerAnim?.setBlocking(false);
           clickToMove.cancel('ui');
+          playerAnim?.setAirWalkHeld?.(false);
           playerAnim?.cancelAirWalk?.();
+          lastAirKickTapMs=0;
           if (document.pointerLockElement === renderer.domElement)
             document.exitPointerLock?.();
         }
@@ -3194,7 +3216,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
           (skillApproaching ? 2.2 : 1);
-        const canMove = isMoving && !window.__axeTileInspectionEditing && !dedicatedMode && !movementOverridden &&
+        const canMove = isMoving && airMode!=='dash' &&
+          !window.__axeTileInspectionEditing && !dedicatedMode && !movementOverridden &&
           !tornadoRes.lockMovement && !bossSpecialLock;
         if(dedicatedMode)clickToMove.cancel('dedicated');
         if (canMove) {
