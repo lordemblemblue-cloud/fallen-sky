@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   clearPreviewMax, getPreviewMaxSnapshot, isSpiritualPreviewMode,
-  maxAllPreviewSystems, setPreviewMax, subscribePreviewMax,
+  maxAllPreviewSystems, setPreviewKills, setPreviewMax, subscribePreviewMax,
 } from '../previewMaxMode';
 
 const choices = [
@@ -23,6 +23,7 @@ export default function DevSpiritualMaxControls() {
         <strong className="text-[11px] uppercase tracking-widest text-sky-100">Test / Preview — Temporary Max Upgrades</strong>
         <span className="text-[10px] text-sky-100/70">Not saved · Test server only</span>
       </div>
+      <p className="mt-1 text-[11px] text-sky-100/80">Max Kills displays 999,999 test kills, not saved or spendable. Turn off to see real kills.</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {choices.map(([id, label]) => (
           <button key={id} type="button" aria-pressed={active[id]}
@@ -33,6 +34,11 @@ export default function DevSpiritualMaxControls() {
             {active[id] ? `${label} ✓` : label}
           </button>
         ))}
+        <button type="button" aria-pressed={active.kills}
+          onClick={() => setPreviewKills(!active.kills)}
+          className={`rounded border px-3 py-2 text-[11px] ${active.kills
+            ? 'border-cyan-300 bg-sky-900/60 text-white'
+            : 'border-white/20 bg-white/5 text-white/80'}`}>{active.kills ? 'Max Kills ✓' : 'Max Kills (Preview)'}</button>
         <button type="button" onClick={maxAllPreviewSystems}
           className="rounded border border-amber-300/50 bg-amber-300/10 px-3 py-2 text-[11px] text-amber-100">Max All</button>
         <button type="button" onClick={clearPreviewMax}

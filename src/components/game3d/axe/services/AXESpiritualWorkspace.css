@@ -808,3 +808,231 @@
 @media(max-width:850px) {
   .axe-spiritual-root[data-progression-panel="wings"] .axe-spiritual-paths button {min-width:116px;}
 }
+
+/* SPIRITUALITY TWO-PANE CHARACTER VIEWER (Game 3D, Nov 17).
+ * The real 3D character lives on the LEFT. The one information glass box on
+ * the RIGHT now owns BOTH the compact destinations and progression details.
+ * This scoped final override intentionally supersedes older 3-column rules. */
+.axe-service-workspace--spiritual .axe-spiritual-root,
+.axe-service-workspace--spiritual .axe-spiritual-root[data-progression-panel] {
+  position:relative;
+  display:grid;
+  grid-template-columns:minmax(255px,42%) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);
+  gap:clamp(9px,1vw,15px);
+  min-height:0;
+  width:100%;
+  max-width:100%;
+}
+.axe-service-workspace--spiritual .axe-spiritual-root::before {
+  content:'';
+  position:absolute;
+  left:calc(42% + 6px);
+  top:25%;
+  height:50%;
+  width:1px;
+  z-index:3;
+  pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(255,227,166,.7) 50%,transparent);
+}
+.axe-service-workspace--spiritual .axe-spiritual-root .axe-spiritual-vision {
+  grid-column:1;
+  grid-row:1;
+  display:flex;
+  pointer-events:auto;
+  min-height:0;
+  height:100%;
+  border:1px solid rgba(242,210,147,.43);
+  border-radius:16px;
+  background:linear-gradient(160deg,rgba(12,24,36,.31),rgba(12,27,42,.12));
+  overflow:hidden;
+}
+.axe-service-workspace--spiritual .axe-spiritual-player-model {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  min-height:0;
+  z-index:1;
+  touch-action:pan-y;
+}
+.axe-service-workspace--spiritual .axe-spiritual-viewer-loading,
+.axe-service-workspace--spiritual .axe-spiritual-model-error {
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:65px;
+  z-index:2;
+  padding:9px;
+  color:#f5dec1;
+  background:rgba(16,28,43,.8);
+  border-radius:6px;
+  font:12px/1.4 system-ui,sans-serif;
+  text-align:center;
+}
+.axe-service-workspace--spiritual .axe-spiritual-vision-note {
+  z-index:2;
+  width:calc(100% - 20px);
+  max-width:calc(100% - 20px);
+  pointer-events:none;
+  bottom:12px;
+  border-radius:9px;
+  background:rgba(12,25,39,.61);
+  backdrop-filter:blur(8px);
+  padding:8px 12px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-vision-note small {
+  display:block;
+  margin-top:3px;
+  font:10px/1.3 system-ui,sans-serif;
+  color:#e4edee;
+  letter-spacing:.01em;
+}
+.axe-service-workspace--spiritual .axe-spiritual-root .axe-spiritual-details {
+  grid-column:2;
+  grid-row:1;
+  min-width:0;
+  height:100%;
+  padding:clamp(11px,1.2vw,18px);
+  border-radius:16px;
+  overflow:hidden;
+}
+.axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices {
+  flex:none;
+  display:flex;
+  flex-flow:row wrap;
+  align-items:center;
+  gap:3px 5px;
+  padding:0 0 10px;
+  margin:0 0 9px;
+  border-bottom:1px solid rgba(242,210,147,.23);
+}
+.axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices button,
+.axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-coming {
+  flex:0 1 auto;
+  width:auto;
+  min-height:33px;
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  gap:5px;
+  padding:6px 9px;
+  margin:0;
+  border-radius:7px;
+  font:600 clamp(10px,.85vw,12px)/1.1 system-ui,sans-serif;
+  white-space:nowrap;
+  text-align:left;
+  background:transparent;
+  border:1px solid transparent;
+}
+.axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices button[aria-pressed="true"] {
+  border-color:rgba(242,210,147,.48);
+  background:rgba(95,139,180,.25);
+  color:var(--axe-ui-heading,#ffe6b7);
+  box-shadow:inset 0 -1px rgba(255,224,167,.35);
+}
+.axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices svg {
+  width:16px;
+  height:16px;
+  filter:none;
+}
+.axe-service-workspace--spiritual .axe-spiritual-details-head {
+  flex:0 0 auto;
+}
+.axe-service-workspace--spiritual .axe-spiritual-details-head h2 {
+  font-size:clamp(16px,1.5vw,22px);
+}
+.axe-service-workspace--spiritual .axe-spiritual-details-head p {
+  margin-bottom:5px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-tabs {
+  margin:5px 0 8px;
+  gap:5px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-tabs button {
+  flex:0 1 auto;
+  padding:7px 10px;
+  min-height:30px;
+  border-radius:7px;
+  background:transparent;
+}
+.axe-service-workspace--spiritual .axe-spiritual-detail-scroll {
+  flex:1;
+  padding:0 7px 14px 0;
+  min-height:0;
+  overflow:auto;
+}
+.axe-service-workspace--spiritual .axe-spirit-stats {
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,165px),1fr));
+  gap:0 14px;
+}
+.axe-service-workspace--spiritual .axe-spirit-stats > div,
+.axe-service-workspace--spiritual .axe-spiritual-bonus-section {
+  border:0;
+  border-bottom:1px solid rgba(242,210,147,.22);
+  border-radius:0;
+  padding:8px 3px;
+  background:transparent;
+  box-shadow:none;
+}
+.axe-service-workspace--spiritual .axe-spiritual-bonus-section {
+  margin:10px 0 8px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-bonus-section .axe-spirit-stats > div {
+  padding:7px 3px;
+}
+.axe-service-workspace--spiritual .axe-spiritual-title-embed,
+.axe-service-workspace--spiritual .axe-spiritual-ascension-embed {
+  max-width:100%;
+  min-width:0;
+}
+@media(max-width:900px) {
+  .axe-service-workspace--spiritual .axe-spiritual-root,
+  .axe-service-workspace--spiritual .axe-spiritual-root[data-progression-panel] {
+    grid-template-columns:minmax(205px,39%) minmax(0,1fr);
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-root::before {
+    left:calc(39% + 5px);
+  }
+}
+@media(max-width:700px) {
+  .axe-service-workspace--spiritual .axe-spiritual-root,
+  .axe-service-workspace--spiritual .axe-spiritual-root[data-progression-panel] {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(175px,34%) minmax(0,1fr);
+    gap:7px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-root::before {display:none;}
+  .axe-service-workspace--spiritual .axe-spiritual-root .axe-spiritual-vision {
+    display:flex;
+    grid-column:1;grid-row:1;
+    border-radius:12px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-root .axe-spiritual-details {
+    grid-column:1;grid-row:2;
+    padding:9px;
+    border-radius:12px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices {
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    padding-bottom:8px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-choices button,
+  .axe-service-workspace--spiritual .axe-spiritual-details .axe-spiritual-coming {
+    flex:0 0 auto;
+    font-size:10px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-vision-note {
+    bottom:6px;
+    padding:5px 8px;
+    font-size:10px;
+  }
+  .axe-service-workspace--spiritual .axe-spiritual-vision-note small {font-size:9px;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-service-workspace--spiritual .axe-spiritual-vision *,
+  .axe-service-workspace--spiritual .axe-spiritual-details * {
+    animation:none!important;transition:none!important;
+  }
+}

@@ -34,7 +34,7 @@ import {
   subscribeKillCount,
 } from '../killCountStore';
 import { characterScopedStorage, subscribeCharacterChange } from '../characterStorage';
-import { isPreviewMaxActive, subscribePreviewMax } from './previewMaxMode';
+import { getPreviewKillCount, isPreviewKillsActive, isPreviewMaxActive, subscribePreviewMax } from './previewMaxMode';
 import {
   getAXEHaloElixirCapacityBonus,
   getAXEHaloVisualProfile,
@@ -94,14 +94,14 @@ export function getHaloState() {
   const level = isPreviewMaxActive('halo') ? MAX_HALO_LEVEL : state.level;
   const bonuses = getHaloBonusesForLevel(level);
   const successChance = getSuccessChanceForLevel(level);
-  const kills = getKillCount();
+  const kills = getPreviewKillCount(getKillCount());
   return {
     level:           level,
     kills,                                  // mirrors the HUD kill count — the spendable currency
     totalAttempts:   state.totalAttempts,
     totalSuccesses:  state.totalSuccesses,
     attemptCost:     HALO_ATTEMPT_COST,
-    canAttempt:      kills >= HALO_ATTEMPT_COST && level < MAX_HALO_LEVEL,
+    canAttempt:      !isPreviewKillsActive() && !isPreviewMaxActive('halo') && kills >= HALO_ATTEMPT_COST && level < MAX_HALO_LEVEL,
     successChance,                          // 0..1 for the NEXT attempt
     tier:            getTierForLevel(level),
     bonuses,
@@ -132,7 +132,7 @@ export function subscribeHalo(fn) {
 //   { ok: true, success: true,  level, chance }          — leveled up
 //   { ok: true, success: false, level, chance }          — failed, kills lost
 export function attemptEnhancement() {
-  if (isPreviewMaxActive('halo')) return { ok: false, reason: 'test_preview_read_only' };
+  if (isPreviewMaxActive('halo') || isPreviewKillsActive()) return { ok: false, reason: 'test_preview_read_only' };
   if (state.level >= MAX_HALO_LEVEL) {
     return { ok: false, reason: 'max_level' };
   }

@@ -117,7 +117,7 @@ export default function HaloSubTab() {
           setReview(null);
         }} />
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <Stat label="Banked Kills"     value={halo.kills} />
+          <Stat label="Ranked Players Killed" value={halo.kills} />
           <Stat label="Attempt Cost"     value={halo.attemptCost} />
           <Stat label="Success Chance"   value={`${chancePct}%`} accent={chancePct >= 35 ? '#a3e635' : chancePct >= 15 ? '#ffd86b' : '#fb7185'} />
           <Stat label="Total Attempts"   value={halo.totalAttempts} />
