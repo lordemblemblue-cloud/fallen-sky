@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {
   GAME3D_DISPLAY_SETTINGS_KEY,GAME3D_DISPLAY_SETTINGS_EVENT,
+  GAME3D_RENDER_BUFFER_APPLIED_EVENT,readGame3DActualFramebuffer,
   GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
   game3DResolutionTarget,game3DViewportClass,getGame3DUIScale,
   normalizeGame3DDisplaySettings,publishedGame3DDisplayDefaults,readGame3DDisplaySettings,
@@ -93,16 +94,26 @@ function harness(){
     CustomEvent:class{constructor(type,{detail}){this.type=type;this.detail=detail;}},
   };
   const renderer={
-    domElement:{parentElement:{getBoundingClientRect:()=>({width:cssW,height:cssH})}},
+    domElement:{width:Math.floor(cssW*ratio),height:Math.floor(cssH*ratio),
+      parentElement:{getBoundingClientRect:()=>({width:cssW,height:cssH})}},
     capabilities:{maxTextureSize:4096},
     getPixelRatio:()=>ratio,
-    setPixelRatio(value){ratio=value;},
+    setPixelRatio(value){
+      ratio=value;
+      this.domElement.width=Math.floor(cssW*ratio);
+      this.domElement.height=Math.floor(cssH*ratio);
+    },
+    setSize(width,height){
+      cssW=width;cssH=height;
+      this.domElement.width=Math.floor(cssW*ratio);
+      this.domElement.height=Math.floor(cssH*ratio);
+    },
     getContext:()=>({isContextLost:()=>false}),
     info:{render:{frame:0}},
   };
   return{
     host,renderer,listeners,store,ratio:()=>ratio,
-    resize(w,h){cssW=w;cssH=h;host.innerWidth=w;host.innerHeight=h;host.dispatchEvent({type:'resize'});},
+    resize(w,h){renderer.setSize(w,h,false);host.innerWidth=w;host.innerHeight=h;host.dispatchEvent({type:'resize'});},
     tick(n,ms){let time=0;for(let i=0;i<n;i++){time+=ms;renderer.info.render.frame++;
       for(const [id,cb] of [...callbacks]){callbacks.delete(id);cb(time);}
     }},
@@ -204,4 +215,59 @@ test('mobile release builds can choose a first-run internal resolution while pla
   assert.equal(publishedGame3DDisplayDefaults(phone,{
     VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION:'bogus',
   }).resolution,'auto');
+});
+
+test('measured output changes physical WebGL pixels on every fixed resolution preset',()=>{
+  const h=harness();
+  const governor=createCloneAdaptiveGraphics({renderer:h.renderer,host:h.host,documentRef:{hidden:false}});
+  const observed=[];
+  h.host.addEventListener(GAME3D_RENDER_BUFFER_APPLIED_EVENT,event=>observed.push(event.detail));
+  const initial=readGame3DActualFramebuffer(h.renderer);
+  assert.equal(initial.width,585);
+  assert.equal(initial.height,1266);
+  for(const [mode,height] of [['720p',720],['900p',900],['1080p',1080],['1440p',1440]]){
+    saveGame3DDisplaySettings({resolution:mode,uiScale:'standard'},h.host);
+    const actual=readGame3DActualFramebuffer(h.renderer);
+    assert.equal(actual.height,height,'Actual 3D pixel height did not change for '+mode);
+    assert.equal(actual.width,Math.floor(390*height/844));
+    assert.equal(governor.getSnapshot().renderHeight,actual.height);
+    assert.equal(observed.at(-1)?.height,actual.height);
+    assert.equal(observed.at(-1)?.resolution,mode);
+  }
+  assert.notEqual(initial.height,readGame3DActualFramebuffer(h.renderer).height);
+  saveGame3DDisplaySettings({resolution:'native',uiScale:'standard'},h.host);
+  assert.deepEqual([
+    readGame3DActualFramebuffer(h.renderer).width,
+    readGame3DActualFramebuffer(h.renderer).height,
+  ],[1170,2532]);
+  governor.dispose();
+});
+
+test('GPU profile Off after manual resolution returns to auto ratio, not last manual preset',()=>{
+  const h=harness();
+  const governor=createCloneAdaptiveGraphics({renderer:h.renderer,host:h.host,documentRef:{hidden:false}});
+  saveGame3DDisplaySettings({resolution:'720p'},h.host);
+  assert.equal(readGame3DActualFramebuffer(h.renderer).height,720);
+  governor.setProfile('off');
+  saveGame3DDisplaySettings({resolution:'auto'},h.host);
+  assert.equal(h.ratio(),1.5);
+  assert.equal(readGame3DActualFramebuffer(h.renderer).height,1266);
+  governor.dispose();
+});
+
+test('the live menu reports measured pixels, while the world applies the saved mode at boot',()=>{
+  const world=root('src/components/game3d/GameWorld3D.jsx');
+  const menu=root('src/components/game3d/PauseMenu.jsx');
+  assert.match(world,/const bootTarget=game3DResolutionTarget\(/);
+  assert.match(world,/renderer\.setPixelRatio\(bootTarget\.ratio\)/);
+  assert.match(world,/window\.addEventListener\(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution\)/);
+  assert.match(world,/window\.removeEventListener\(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution\)/);
+  assert.match(world,/publishGame3DActualFramebuffer\(/);
+  assert.match(menu,/readGame3DActualFramebuffer\(renderer\)/);
+  assert.match(menu,/GAME3D_RENDER_BUFFER_APPLIED_EVENT/);
+  assert.match(menu,/Applied WebGL output:/);
+  assert.match(menu,/Waiting for the 3D renderer to initialize/);
+  assert.doesNotMatch(menu,/3D framebuffer: approximately/);
+  assert.equal(readGame3DActualFramebuffer({domElement:{width:0,height:500}}),null);
+  assert.equal(readGame3DActualFramebuffer(null),null);
 });
