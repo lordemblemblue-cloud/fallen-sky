@@ -6,8 +6,8 @@
   z-index:10;
   right:clamp(10px,1.5vw,28px);
   bottom:clamp(14px,2.1vh,24px);
-  width:clamp(300px,30vw,460px);
-  height:clamp(185px,25.5vh,256px);
+  width:clamp(295px,27vw,420px);
+  height:clamp(180px,23.5vh,238px);
   min-width:0;
   pointer-events:none;
   isolation:isolate;
@@ -372,7 +372,8 @@
   .jade-hud .jade-combat-concept-d {
     width:min(66vw,298px);
     height:clamp(137px,29vh,182px);
-    bottom:clamp(9px,2vh,16px);
+    /* Lift compact layouts above the bottom-center HP/WILL template. */
+    bottom:clamp(88px,16vh,125px);
     right:5px;
   }
   .jade-hud .jade-combat-concept-d > .jade-weapon-position {
@@ -423,7 +424,7 @@
   .jade-hud .jade-combat-concept-d {
     height:min(36vh,160px);
     width:min(36vw,325px);
-    bottom:max(5px,var(--game3d-safe-bottom,0px));
+    bottom:max(66px,var(--game3d-safe-bottom,0px));
     right:max(4px,var(--game3d-safe-right,0px));
   }
   .jade-hud .jade-concept-d-weapon-circle {width:31px;height:31px;}
