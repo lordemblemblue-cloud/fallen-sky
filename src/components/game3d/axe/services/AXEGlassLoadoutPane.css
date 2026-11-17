@@ -595,3 +595,37 @@
 @media(prefers-reduced-motion:reduce) {
   .axe-comp-unified-xp-track>span {transition:none;}
 }
+
+/* Equipment viewer: ten existing player slots are two equal-height vertical
+   banks of FIVE. First and last buttons align to the viewer's top/bottom
+   corners instead of drifting when flexbox vertically centers unequal cards. */
+.axe-glass-loadout[data-equipment-actor="player"] .axe-glass-loadout-stage .axe-app-viewer-gear {
+  display:grid;
+  grid-template-rows:repeat(5,minmax(0,1fr));
+  align-content:stretch;justify-content:stretch;align-items:stretch;
+  gap:clamp(3px,.7vh,9px);
+  min-height:0;overflow-y:auto;
+}
+.axe-glass-loadout[data-equipment-actor="player"] .axe-glass-loadout-stage .axe-app-viewer-slot {
+  min-width:0;min-height:48px;height:100%;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  padding:3px 2px;flex:none;
+}
+.axe-glass-loadout[data-equipment-actor="player"] .axe-glass-loadout-stage .axe-app-viewer-slot .axe-app-viewer-item-name {
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-gear {
+  justify-content:space-between;align-items:stretch;min-height:0;
+  gap:clamp(4px,.7vh,9px);overflow-y:auto;
+}
+.axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage .axe-app-viewer-slot {
+  min-width:0;flex:1 1 0;min-height:58px;max-height:180px;
+}
+@media(max-width:760px){
+  .axe-glass-loadout[data-equipment-actor="player"] .axe-glass-loadout-stage .axe-app-viewer-slot {
+    min-height:43px;
+  }
+  .axe-glass-loadout[data-equipment-actor="player"] .axe-glass-loadout-stage .axe-app-viewer-slot .axe-app-viewer-slot-art svg {
+    width:19px;height:19px;
+  }
+}
