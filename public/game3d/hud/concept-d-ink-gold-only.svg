@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="600" viewBox="0 0 1000 600" fill="none" aria-hidden="true">
+<!-- Only the decorative ink splash and angled gold corner frame are baked.
+     Weapon rings, skill boxes, numeric keycaps and icons are real live DOM. -->
+<defs>
+  <linearGradient id="ink" x1="80" y1="440" x2="900" y2="130" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#8c9098" stop-opacity="0"/>
+    <stop offset=".17" stop-color="#acadb0" stop-opacity=".28"/>
+    <stop offset=".48" stop-color="#dbd5cb" stop-opacity=".49"/>
+    <stop offset=".72" stop-color="#8f9296" stop-opacity=".37"/>
+    <stop offset="1" stop-color="#d5d5d2" stop-opacity=".10"/>
+  </linearGradient>
+  <linearGradient id="inkthread" x1="130" y1="375" x2="955" y2="120" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#bbc5c8" stop-opacity=".03"/>
+    <stop offset=".46" stop-color="#eff3e9" stop-opacity=".30"/>
+    <stop offset=".8" stop-color="#cfd3d2" stop-opacity=".44"/>
+    <stop offset="1" stop-color="#8b9094" stop-opacity=".07"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="150" y1="530" x2="951" y2="80" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#8a4d11" stop-opacity=".24"/>
+    <stop offset=".18" stop-color="#ffd26b" stop-opacity=".84"/>
+    <stop offset=".45" stop-color="#fff5cb" stop-opacity="1"/>
+    <stop offset=".62" stop-color="#e6a541" stop-opacity=".93"/>
+    <stop offset=".91" stop-color="#ffd26e" stop-opacity="1"/>
+    <stop offset="1" stop-color="#b36d22" stop-opacity=".84"/>
+  </linearGradient>
+  <linearGradient id="goldcore" x1="220" y1="550" x2="935" y2="65" gradientUnits="userSpaceOnUse">
+    <stop stop-color="#ffedb1" stop-opacity="0"/>
+    <stop offset=".3" stop-color="#fff0c9"/>
+    <stop offset=".8" stop-color="#ffe28e"/>
+    <stop offset="1" stop-color="#fff5d1"/>
+  </linearGradient>
+  <filter id="inksoft" x="-20%" y="-30%" width="150%" height="170%"><feGaussianBlur stdDeviation="7"/></filter>
+  <filter id="goldglow" x="-35%" y="-40%" width="180%" height="190%">
+    <feGaussianBlur stdDeviation="3.4" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <path id="sweep" d="M42 452 C165 365 249 376 375 344 C520 309 566 253 687 201 C784 158 859 168 920 103"/>
+</defs>
+<!-- Gray translucent ink cloud, angled from four skills to three weapons. -->
+<path d="M25 485 C114 376 243 375 361 355 C492 326 567 238 695 201 C811 161 846 190 928 102 C899 201 803 223 710 250 C596 293 524 376 377 399 C245 418 143 441 25 485Z"
+  fill="url(#ink)" opacity=".70" filter="url(#inksoft)"/>
+<path d="M26 458 C148 347 247 376 370 345 C515 301 595 224 690 205 C789 182 868 158 939 87"
+  stroke="url(#ink)" stroke-width="58" stroke-linecap="round" opacity=".64"/>
+<path d="M19 463 C139 367 276 381 386 347 C523 304 559 255 699 215 C788 189 874 161 929 111"
+  stroke="url(#inkthread)" stroke-width="18" stroke-linecap="round" opacity=".72"/>
+<path d="M58 475 C179 381 254 396 391 358 C502 331 598 263 709 225 C832 185 881 162 930 96"
+  stroke="#c9c6be" stroke-opacity=".23" stroke-width="8" stroke-linecap="round" stroke-dasharray="48 15 15 8"/>
+<path d="M116 432 C260 373 337 402 457 335 M289 398 C395 387 467 348 541 307 M628 254 C728 222 829 184 889 140"
+  stroke="#f1f0e8" stroke-opacity=".23" stroke-width="2.3" stroke-linecap="round"/>
+<path d="M18 486 L90 420 M52 469 L136 413 M117 426 L172 399 M295 375 L370 355
+         M477 320 L555 268 M600 263 L687 218 M771 198 L845 157"
+  stroke="#d8dad5" stroke-opacity=".20" stroke-width="2" stroke-linecap="round"/>
+<!-- The gold bottom-to-right L-shaped line and pointed upper fin, not UI buttons. -->
+<path d="M197 536 C318 535 405 538 505 537 L728 538
+  C857 538 927 492 939 398 C950 329 930 256 944 193
+  C950 143 948 84 970 25"
+  stroke="#5e370f" stroke-opacity=".54" stroke-width="19" stroke-linecap="round" filter="url(#goldglow)"/>
+<path d="M197 536 C318 535 405 538 505 537 L728 538
+  C857 538 927 492 939 398 C950 329 930 256 944 193
+  C950 143 948 84 970 25"
+  stroke="url(#gold)" stroke-width="9" stroke-linecap="round" filter="url(#goldglow)"/>
+<path d="M220 530 L723 531 C858 531 921 489 932 399 C942 332 924 262 936 188
+   C947 132 947 76 966 31"
+  stroke="url(#goldcore)" stroke-width="2.7" stroke-linecap="round"/>
+<path d="M944 187 C945 118 957 64 970 25 L989 136 L955 174Z"
+  fill="#a36520" fill-opacity=".53" stroke="#f5c46b" stroke-width="3.5" filter="url(#goldglow)"/>
+<path d="M952 136 L969 49 L977 120 L966 143Z" fill="#fff2ba" fill-opacity=".57"/>
+<path d="M507 515 L528 537 L507 559 L486 537 Z M950 365 L970 385 L950 405 L930 385 Z"
+  fill="#b66a17" stroke="#ffd97b" stroke-width="3" filter="url(#goldglow)"/>
+<path d="M507 524 L520 537 L507 550 L494 537 Z M950 374 L961 385 L950 396 L939 385 Z"
+  fill="#fff1c3" fill-opacity=".90"/>
+<path d="M296 535 H359 M657 537 H705 M888 474 Q907 453 917 430"
+  stroke="#fff7da" stroke-opacity=".70" stroke-width="3" filter="url(#goldglow)"/>
+</svg>

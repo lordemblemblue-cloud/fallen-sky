@@ -1,0 +1,439 @@
+/* Game 3D — Concept D L-Corner weapon + skill HUD.
+   IMPORTANT: only the gray splash and angled gold flourish are a static
+   transparent image; circles, skill frames, labels and data are live HTML. */
+.jade-hud .jade-combat-concept-d {
+  position:absolute;
+  z-index:10;
+  right:clamp(10px,1.5vw,28px);
+  bottom:clamp(14px,2.1vh,24px);
+  width:clamp(295px,27vw,420px);
+  height:clamp(180px,23.5vh,238px);
+  min-width:0;
+  pointer-events:none;
+  isolation:isolate;
+  overflow:visible;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-ornament {
+  position:absolute;
+  z-index:0;
+  inset:-4% -1% -2% -1%;
+  background:url('/game3d/hud/concept-d-ink-gold-only.svg') center / 100% 100% no-repeat;
+  opacity:.79;
+  pointer-events:none;
+  user-select:none;
+}
+/* The three owned weapon roles are an honest vertical stack of circles.
+   Keep existing verified draw/assign/wheel/touch handlers in WeaponStack. */
+.jade-hud .jade-combat-concept-d > .jade-weapon-position {
+  position:absolute;
+  z-index:3;
+  top:9%;
+  bottom:auto;
+  right:1.8%;
+  left:auto;
+  width:21%;
+  height:78%;
+  margin:0;
+  padding:0;
+  filter:none;
+  pointer-events:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-weapon-template {
+  position:relative;
+  width:100%;
+  height:100%;
+  pointer-events:auto;
+  touch-action:pan-y;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  gap:2px;
+  background:none;
+}
+.jade-hud .jade-concept-d-rail {
+  flex:1 1 auto;
+  min-height:0;
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-around;
+  flex-direction:column;
+  gap:3px;
+}
+.jade-hud .jade-concept-d-role {
+  position:relative;
+  display:grid;
+  place-items:center;
+  flex:1 1 0;
+  min-height:0;
+  width:100%;
+  pointer-events:auto;
+}
+.jade-hud .jade-concept-d-weapon-circle {
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:clamp(37px,3.25vw,56px);
+  height:clamp(37px,3.25vw,56px);
+  aspect-ratio:1;
+  border:1.8px solid rgba(239,206,151,.88);
+  border-radius:50%;
+  background:radial-gradient(circle at 42% 30%,rgba(45,57,59,.91),rgba(6,15,26,.91) 79%);
+  box-shadow:inset 0 0 12px rgba(0,0,0,.80),0 0 6px rgba(228,175,104,.36);
+  backdrop-filter:blur(7px) saturate(113%);
+  color:#f4dfbc;
+  padding:0;
+  cursor:pointer;
+  pointer-events:auto;
+  transition:color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+.jade-hud .jade-concept-d-role[data-active="true"] .jade-concept-d-weapon-circle {
+  border-color:#96f6ff;
+  border-width:2px;
+  background:radial-gradient(circle at 50% 38%,rgba(28,97,126,.91),rgba(5,28,45,.94) 76%);
+  color:#daffff;
+  box-shadow:0 0 12px #44d7ffb8,0 0 0 2px #91eaff3f,inset 0 0 13px #46d1ff49;
+}
+.jade-hud .jade-concept-d-weapon-circle:focus-visible,
+.jade-hud .jade-concept-d-weapon-circle:hover {
+  outline:2px solid #ffe7b1;
+  outline-offset:2px;
+  transform:scale(1.04);
+}
+.jade-hud .jade-concept-d-weapon-icon {
+  width:61%;
+  height:61%;
+  filter:drop-shadow(0 0 3px #f6dfa670);
+}
+.jade-hud .jade-concept-d-weapon-image {
+  position:absolute;
+  inset:18%;
+  width:64%;
+  height:64%;
+  object-fit:contain;
+  filter:drop-shadow(0 0 3px #caf5ff82);
+}
+.jade-hud .jade-concept-d-assign {
+  position:absolute;
+  left:0;
+  top:5%;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border:1px solid rgba(248,218,164,.74);
+  border-radius:50%;
+  background:rgba(5,22,34,.91);
+  color:#f6d8a5;
+  cursor:pointer;
+  pointer-events:auto;
+  padding:1px;
+  opacity:.85;
+}
+.jade-hud .jade-concept-d-assign:hover,
+.jade-hud .jade-concept-d-assign:focus-visible {
+  outline:2px solid #ffe5b4;
+  outline-offset:1px;
+  background:rgba(23,68,91,.95);
+  opacity:1;
+}
+.jade-hud .jade-concept-d-cycle {
+  position:absolute;
+  left:-22%;
+  bottom:-18%;
+  width:125%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  pointer-events:auto;
+}
+.jade-hud .jade-concept-d-cycle button {
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  padding:0;
+  border:1px solid rgba(245,202,133,.64);
+  border-radius:5px;
+  background:rgba(6,22,34,.86);
+  color:#ffe4b0;
+  cursor:pointer;
+  pointer-events:auto;
+}
+.jade-hud .jade-concept-d-q-key {
+  position:absolute;
+  z-index:4;
+  right:11%;
+  bottom:-30%;
+  display:grid;
+  place-items:center;
+  min-width:22px;
+  height:22px;
+  padding:0 4px;
+  border:1px solid rgba(245,206,138,.85);
+  border-radius:5px;
+  background:rgba(7,19,28,.91);
+  color:#ffdfaa;
+  font:600 10px/1 system-ui,sans-serif;
+  box-shadow:0 0 4px rgba(244,176,75,.22);
+  pointer-events:none;
+}
+.jade-hud .jade-concept-d-cycle button:hover,
+.jade-hud .jade-concept-d-cycle button:focus-visible {
+  outline:1px solid #9feeff;
+  background:rgba(27,74,93,.91);
+}
+.jade-hud .jade-combat-concept-d .jade-weapon-chooser {
+  position:absolute;
+  z-index:7;
+  top:5%;
+  right:calc(100% + 12px);
+  left:auto;
+  width:clamp(180px,18vw,235px);
+  max-width:65vw;
+  pointer-events:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-weapon-notice {
+  position:absolute;
+  z-index:6;
+  top:auto;
+  bottom:calc(100% + 10px);
+  left:auto;
+  right:0;
+  width:max-content;
+  max-width:250px;
+  pointer-events:none;
+}
+/* Dynamic five main slots (1–5), with legacy skills 6–0 revealed via a
+   compact toggle. Existing keyboard skill casting/weapon presets stay intact. */
+.jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+  position:absolute;
+  z-index:2;
+  left:4%;
+  right:auto;
+  top:auto;
+  bottom:15%;
+  width:73%;
+  height:clamp(42px,5.4vh,57px);
+  margin:0;
+  padding:0;
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  grid-template-rows:minmax(0,1fr);
+  justify-items:center;
+  align-items:center;
+  column-gap:clamp(3px,.45vw,8px);
+  row-gap:10px;
+  border:0;
+  background:none;
+  box-shadow:none;
+  overflow:visible;
+  pointer-events:none;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+  position:relative;
+  top:auto;
+  bottom:auto;
+  left:auto;
+  right:auto;
+  inset:auto;
+  display:grid;
+  place-items:center;
+  width:clamp(34px,3.15vw,50px);
+  height:clamp(34px,3.15vw,50px);
+  transform:none;
+  opacity:1;
+  margin:0;
+  padding:0;
+  border-radius:9px;
+  border:1.4px solid rgba(216,193,151,.81);
+  background:linear-gradient(145deg,rgba(28,39,49,.8),rgba(5,19,31,.91));
+  box-shadow:inset 0 0 9px #000a,0 0 6px rgba(233,191,129,.19);
+  backdrop-filter:blur(7px);
+  pointer-events:none;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot::before {
+  content:'';
+  inset:3px;
+  border-radius:5px;
+  border:1px solid rgba(193,214,219,.21);
+  background:transparent;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot[data-equipped="yes"] {
+  border-color:#f7d391;
+  box-shadow:0 0 8px rgba(230,195,116,.5),inset 0 0 12px rgba(71,119,141,.17);
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-face {
+  inset:0;
+  width:100%;
+  height:100%;
+  transform:none;
+  display:grid;
+  place-items:center;
+  background:none;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-glyph {
+  font:700 clamp(17px,1.55vw,25px)/1 Georgia,serif;
+  color:#f4ecdf;
+  text-shadow:0 0 7px #96ddff6b;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-key {
+  position:absolute;
+  z-index:4;
+  left:50%;
+  right:auto;
+  top:calc(100% + 4px);
+  bottom:auto;
+  width:auto;
+  min-width:21px;
+  height:19px;
+  padding:1px 4px;
+  transform:translateX(-50%);
+  display:grid;
+  place-items:center;
+  border:1px solid rgba(247,211,151,.82);
+  border-radius:5px;
+  background:rgba(8,19,30,.93);
+  color:#fff1cd;
+  font:600 10px/1 system-ui,sans-serif;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot--buff .jade-skill-key {
+  left:50%;
+  right:auto;
+  top:calc(100% + 4px);
+  bottom:auto;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-cooldown {
+  transform:translate(-50%,-50%);
+  border-radius:7px;
+  width:80%;
+  height:80%;
+  background:rgba(5,17,27,.83);
+  box-shadow:inset 0 0 5px #000;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot--buff {
+  display:none;
+  border-color:rgba(183,174,157,.63);
+  opacity:.9;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+  height:clamp(105px,13vh,133px);
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  row-gap:10px;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] .jade-skill-slot--buff {
+  display:grid;
+  grid-row:1;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] .jade-skill-slot--combat {
+  grid-row:2;
+}
+.jade-hud .jade-concept-d-more-skills {
+  position:absolute;
+  z-index:6;
+  left:0;
+  bottom:calc(100% + 7px);
+  padding:2px 8px;
+  border-radius:12px;
+  border:1px solid rgba(208,193,159,.58);
+  background:rgba(8,21,32,.80);
+  color:#efe0c5;
+  font:600 9px/1.35 system-ui,sans-serif;
+  cursor:pointer;
+  pointer-events:auto;
+  transition:border-color .15s,color .15s;
+}
+.jade-hud .jade-concept-d-more-skills:hover,
+.jade-hud .jade-concept-d-more-skills:focus-visible {
+  outline:2px solid #a8ecff;
+  outline-offset:1px;
+  border-color:#f5c884;
+}
+@media(max-width:1100px) {
+  .jade-hud .jade-combat-concept-d {
+    right:clamp(5px,1vw,12px);
+    width:clamp(280px,35vw,380px);
+    height:clamp(166px,23vh,222px);
+    bottom:clamp(16px,2vh,26px);
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(30px,3.35vw,43px);
+    height:clamp(30px,3.35vw,43px);
+  }
+  .jade-hud .jade-concept-d-weapon-circle {
+    width:clamp(34px,4vw,48px);
+    height:clamp(34px,4vw,48px);
+  }
+}
+@media(max-width:680px) {
+  .jade-hud .jade-combat-concept-d {
+    width:min(66vw,298px);
+    height:clamp(137px,29vh,182px);
+    /* Lift compact layouts above the bottom-center HP/WILL template. */
+    bottom:clamp(88px,16vh,125px);
+    right:5px;
+  }
+  .jade-hud .jade-combat-concept-d > .jade-weapon-position {
+    right:0;
+    width:24%;
+    height:79%;
+  }
+  .jade-hud .jade-concept-d-weapon-circle {
+    width:clamp(27px,5.9vw,38px);
+    height:clamp(27px,5.9vw,38px);
+  }
+  .jade-hud .jade-concept-d-assign {
+    left:-5px;
+    width:16px;
+    height:16px;
+  }
+  .jade-hud .jade-concept-d-assign svg {width:10px;height:10px;}
+  .jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+    left:4%;
+    width:72%;
+    bottom:17%;
+    height:32px;
+    column-gap:2px;
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(24px,5vw,33px);
+    height:clamp(24px,5vw,33px);
+    border-radius:6px;
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-glyph {font-size:15px;}
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-key {
+    min-width:16px;
+    height:15px;
+    padding:0 2px;
+    font-size:8px;
+  }
+  .jade-hud .jade-concept-d-cycle {gap:2px;}
+  .jade-hud .jade-concept-d-cycle button {width:18px;height:18px;}
+  .jade-hud .jade-concept-d-cycle button svg {width:11px;height:11px;}
+  .jade-hud .jade-concept-d-q-key {height:16px;min-width:16px;font-size:8px;bottom:-27%;}
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+    height:clamp(72px,18vh,100px);
+    row-gap:7px;
+  }
+  .jade-hud .jade-concept-d-more-skills {font-size:8px;padding:1px 5px;}
+}
+@media(max-height:510px) and (orientation:landscape) {
+  .jade-hud .jade-combat-concept-d {
+    height:min(36vh,160px);
+    width:min(36vw,325px);
+    bottom:max(66px,var(--game3d-safe-bottom,0px));
+    right:max(4px,var(--game3d-safe-right,0px));
+  }
+  .jade-hud .jade-concept-d-weapon-circle {width:31px;height:31px;}
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+    width:clamp(22px,2.8vw,33px);
+    height:clamp(22px,2.8vw,33px);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .jade-hud .jade-combat-concept-d *,
+  .jade-hud .jade-combat-concept-d *::before {transition:none!important;animation:none!important;}
+}

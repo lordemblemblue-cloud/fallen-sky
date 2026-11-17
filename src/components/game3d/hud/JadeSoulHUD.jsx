@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Heart, Flame } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getCombatResources, subscribeCombatResources } from '../combat/combatResourcesStore';
-import { ACTIVE_SLOTS, getLoadout, subscribeLoadout } from '../skills/loadoutStore';
+import { ACTIVE_SLOTS, getLoadout, getSkillPresets, selectSkillPreset, subscribeLoadout } from '../skills/loadoutStore';
 import { getSkillById } from '../skills/skillRegistry';
 import { subscribePlayerPosition } from '../playerPositionStore';
 import { getActiveEquippedAXEWeapon, subscribeAXEEquipmentInventory } from '../axe/equipment/AXEEquipmentInventoryStore';
@@ -15,9 +15,10 @@ import {
   drawAXEHUDWeaponRole, assignAXEHUDWeaponRole, subscribeAXEHUDWeaponRoles,
 } from '../axe/weapons/AXEWeaponRoleSlots.js';
 import { subscribeCharacterChange } from '../characterStorage';
-import AXECurvedWeaponTemplate from '../axe/weapons/AXECurvedWeaponTemplate';
+import AXEConceptDWeaponTemplate from '../axe/weapons/AXEConceptDWeaponTemplate';
 import './JadeSoulHUD.css';
 import './JadeApprovedGoldTemplate.css';
+import './JadeConceptDCombatHUD.css';
 import AXEServicesNavigation from '../axe/services/AXEServicesNavigation';
 import HUDCompassStrip from './HUDCompassStrip';
 import TargetDisplay from './TargetDisplay';
@@ -40,10 +41,13 @@ const SKILL_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
 const SKILL_ARC_RISE = [10, 7, 0, -11, -24];
 
 function SkillMatrix({ loadout }) {
-  // Real 10-slot loadout and 1–9/0 controls; only the visual positions change.
-  // Each five-slot bank rises toward the back-right edge of the screen.
+  // Concept D shows five main skill sockets and an optional second bank.
+  // All ten original 1–9/0 hotkeys and active loadout entries remain live.
+  const [showSecondary,setShowSecondary]=useState(false);
   return (
-    <div className="jade-ability-matrix" role="group" aria-label="Combat skills, keys 1 through 9 and 0">
+    <div className="jade-ability-matrix" role="group"
+      data-secondary-open={showSecondary?'true':'false'}
+      aria-label="Combat skills, keys 1 through 9 and 0">
       {Array.from({ length: ACTIVE_SLOTS }, (_, index) => {
         const id = loadout?.activeSlots?.[index];
         const skill = id ? getSkillById(id) : null;
@@ -67,6 +71,12 @@ function SkillMatrix({ loadout }) {
           </div>
         );
       })}
+      <button type="button" className="jade-concept-d-more-skills"
+        aria-expanded={showSecondary}
+        aria-label={showSecondary?'Hide secondary skills 6 through 0':'Show secondary skills 6 through 0'}
+        onClick={()=>setShowSecondary(current=>!current)}>
+        {showSecondary?'− 6–0':'+ 6–0'}
+      </button>
     </div>
   );
 }
@@ -101,9 +111,19 @@ function WeaponStack({ playerLevel }) {
     }
     const result=drawAXEHUDWeaponRole(role,{level:playerLevel||1});
     if(result.ok){
+      // Weapon identity, not the customizable button's role label, chooses the
+      // matching real Skill Book preset: Damage 0, Range 1, Defense 2.
+      // This leaves the user's saved ten-slot banks and cooldowns intact.
+      const drawnRole=inferAXEWeaponRole(result.item||item);
+      const index=drawnRole==='ranged'?1:drawnRole==='defensive'?2:
+        drawnRole==='offensive'?0:null;
+      const presetChange=index!==null && getSkillPresets().index!==index
+        ? selectSkillPreset(index) : {ok:true};
       setAssigning(null);
       activeRoleRef.current=role;
-      setNotice(`${ROLE_TITLES[role]} · ${result.item?.name||item.name}`);
+      setNotice(presetChange.ok
+        ? `${ROLE_TITLES[role]} · ${result.item?.name||item.name}`
+        : `${ROLE_TITLES[role]} drawn · skill preset could not be changed`);
     } else {
       setNotice(result.message||result.reason?.replace(/_/g,' ')||'Weapon unavailable');
     }
@@ -120,7 +140,8 @@ function WeaponStack({ playerLevel }) {
   },[performDraw]);
 
   const cycleAvailable=useCallback(direction=>{
-    const roles=AXE_HUD_WEAPON_ROLES.map(row=>row.role);
+    // Cycle in the same top-to-bottom order as Concept D's visible circles.
+    const roles=['offensive','ranged','defensive'];
     const activeId=getActiveEquippedAXEWeapon()?.instanceId;
     // An assigned slot can contain ANY owned weapon. Remember which panel
     // actually drew it instead of inferring a role from the weapon family.
@@ -184,7 +205,7 @@ function WeaponStack({ playerLevel }) {
 
   return (
     <div className="jade-weapon-position" aria-label="Three weapon roles: damage, defense, ranged">
-      <AXECurvedWeaponTemplate
+      <AXEConceptDWeaponTemplate
         rows={AXE_HUD_WEAPON_ROLES}
         getItem={getAXERoleWeapon}
         activeId={active?.instanceId}
@@ -507,8 +528,12 @@ export default function JadeSoulHUD({
         onSelectGroup={onSelectServiceGroup || (() => onOpenServices?.())}
       />
       <div className="jade-combat-hud" aria-hidden={serviceMode || undefined} inert={serviceMode ? '' : undefined}>
-      <WeaponStack playerLevel={hud?.level} />
-      <SkillMatrix loadout={loadout}/>
+      <div className="jade-combat-concept-d" data-combat-hud="concept-d"
+        aria-label="L-corner weapon selector and skill slots">
+        <span className="jade-concept-d-ornament" aria-hidden="true"/>
+        <WeaponStack playerLevel={hud?.level} />
+        <SkillMatrix loadout={loadout}/>
+      </div>
 
       {/* Contextual stamina ring to the avatar's right while using stamina.
           The actual skill hotbar and three-role weapon template are unchanged. */}
