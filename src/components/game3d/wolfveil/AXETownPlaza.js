@@ -1,3 +1,5 @@
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+
 /**
  * AXE / Wolfveil - Japanese-Egyptian Grand Town Plaza (Three.js)
  * Extracted and adapted from the user's 3D town diorama HTML.
@@ -2620,6 +2622,81 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             if (includeLighting) townGroup.add(keyDirLight);
 
 
+
+    // Merge only genuinely static render geometry. Buildings retain their
+    // separate rooms, doors, mount animations and model-showcase controls.
+    // This lowers draw calls without changing the collision/walk-through shells.
+    function batchStaticDirect(group) {
+        const buckets = new Map();
+        for (const child of group.children) {
+            if (!child.isMesh || !child.geometry || Array.isArray(child.material)) continue;
+            const key = child.material;
+            if (!buckets.has(key)) buckets.set(key, []);
+            buckets.get(key).push(child);
+        }
+        for (const [material, objects] of buckets) {
+            for (const indexed of [true, false]) {
+                const compatible = objects.filter(mesh => Boolean(mesh.geometry.index) === indexed);
+                for (let start = 0; start < compatible.length; start += 48) {
+                    const slice = compatible.slice(start, start + 48);
+                    if (slice.length < 4) continue;
+                    // Three's merge requires the same vertex attributes.
+                    const bySignature = new Map();
+                    for (const mesh of slice) {
+                        const key = Object.keys(mesh.geometry.attributes).sort().join(',');
+                        if (!bySignature.has(key)) bySignature.set(key, []);
+                        bySignature.get(key).push(mesh);
+                    }
+                    for (const meshes of bySignature.values()) {
+                        if (meshes.length < 4) continue;
+                        const geometries = meshes.map(mesh => {
+                            mesh.updateMatrix();
+                            const transformed = mesh.geometry.clone();
+                            transformed.applyMatrix4(mesh.matrix);
+                            return transformed;
+                        });
+                        const joined = mergeGeometries(geometries, false);
+                        geometries.forEach(geometry => geometry.dispose());
+                        if (!joined) continue;
+                        const mesh = new THREE.Mesh(joined, material);
+                        mesh.castShadow = meshes.some(item => item.castShadow);
+                        mesh.receiveShadow = meshes.some(item => item.receiveShadow);
+                        mesh.name = 'AXE_StaticTownBatch';
+                        group.add(mesh);
+                        meshes.forEach(item => {
+                            group.remove(item);
+                            item.geometry.dispose();
+                        });
+                    }
+                }
+            }
+        }
+    }
+    function batchRoofs(group) {
+        for (const child of [...group.children]) if (child.isGroup) batchRoofs(child);
+        batchStaticDirect(group);
+    }
+    function geometryStats() {
+        let meshes = 0, triangles = 0;
+        townGroup.traverse(object => {
+            if (!object.isMesh || !object.geometry) return;
+            meshes++;
+            const geometry = object.geometry;
+            triangles += (geometry.index?.count ?? geometry.getAttribute('position')?.count ?? 0) / 3;
+        });
+        return { meshes, triangles: Math.round(triangles) };
+    }
+    const beforeOptimization = geometryStats();
+    stoneRingGroups.forEach(batchStaticDirect);
+    outerRingGroup.children.forEach(batchStaticDirect);
+    allRoofs.forEach(batchRoofs);
+    const afterOptimization = geometryStats();
+    const performanceStats = Object.freeze({
+        quality: lowDetail ? 'low' : 'balanced',
+        before: beforeOptimization, after: afterOptimization,
+        savedDrawCalls: Math.max(0, beforeOptimization.meshes - afterOptimization.meshes),
+    });
+
     // Host controls replace standalone demo HTML buttons.
     let surgeTimer = 0;
     let allDoorsAndHoistOpen = true; // permit entry at genkan side doors
@@ -2786,6 +2863,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         refs: { fountain: fountainGroup, shops: innerShopsGroup, homes: outerRingGroup, roofs: allRoofs },
         anchors: townAnchors,
         rooms: { shops: shopInteriors, homes: houseEntries },
+        performanceStats,
         collisionZones,
         setShowroomModel(index = 0) {
             const chosen = Math.max(0, Math.min(allAnimatedMounts.length - 1, Math.floor(index)));
