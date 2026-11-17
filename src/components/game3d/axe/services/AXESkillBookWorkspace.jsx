@@ -149,7 +149,7 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
       next.passiveSets[index].forEach((id,i) => equipPassive(i,id));
     }
     setSelected(null);
-    setStatus(companion ? ['Support','Combat','Mobility'][index]+' companion skills selected.' : 'Weapon skill bar selected.');
+    setStatus(companion ? ['Assist','Damage','Balanced'][index]+' companion skills selected.' : 'Weapon skill bar selected.');
   };
   const savePreset = side => {
     if (companion) refreshBanks({ ...banks, companionSets:banks.companionSets.map((set,i) =>
@@ -190,7 +190,9 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
   // The clone's approved three-lane UI must never bypass these real equipment,
   // weapon bar, skill unlock, point investment and saved preset callbacks.
   const SkillBookView = cloneClassic ? AXESkillBookRedesign : AXECloneSkillTreeWorkspace;
-  return <SkillBookView
+  // Both companion entry routes share the purpose-built Assist/Damage tree.
+  const ActiveSkillBookView = companion ? AXECloneSkillTreeWorkspace : SkillBookView;
+  return <ActiveSkillBookView
     currentPage={currentPage} companion={companion}
     onPageChange={id=>onSelect?onSelect(id):setLocalPage(id)}
     view={view} onChangeView={changeView}

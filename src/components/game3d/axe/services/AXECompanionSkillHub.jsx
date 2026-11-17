@@ -1,114 +1,160 @@
-import { useMemo, useState } from 'react';
-import { Activity, ArrowRight, Compass, Heart, Search, Shield, Sparkles, Swords, Wind } from 'lucide-react';
-import { getAllCompanionSkills } from '../../skills/companionSkillRegistry';
-import { companionCombatPaths } from './AXECompanionSkillModel.mjs';
+import {useMemo,useState} from 'react';
+import {Activity,ArrowRight,Check,Clock3,Heart,LockKeyhole,Search,Shield,Sparkles,Swords,Target,Wind} from 'lucide-react';
+import {getAllCompanionSkills} from '../../skills/companionSkillRegistry';
+import {COMPANION_ABILITIES} from '../../companionAbilityStore';
+import {companionCombatPaths} from './AXECompanionSkillModel.mjs';
+import {
+  COMPANION_SKILL_BRANCHES,buildCompanionSkillBranches,
+  companionSkillCanCast,companionSkillMetrics,
+} from './AXECompanionSkillBranches.mjs';
 import './AXESkillCollections.css';
+import './AXECompanionSkillTree.css';
 
-// Skill paths are projected from the real companion registry; unknown
-// future combat attacks appear in Other rather than being omitted.
-const COMBAT_ICONS={single:Swords,multi:Activity,area:Sparkles,other:Shield};
-const CATEGORIES=[
-  {id:'combat',title:'Combat',subtitle:'Single, multi-hit and area attacks',icon:Swords},
-  {id:'mobility',title:'Mobility',subtitle:'Registered movement and repositioning skills',icon:Wind},
-  {id:'support',title:'Support',subtitle:'Restoration and recovery',icon:Heart},
-  {id:'fusion',title:'Fusion',subtitle:'Transformation skills and current readiness',icon:Sparkles},
-];
-export default function AXECompanionSkillHub({activeIds=[],onEquip,onSelected}) {
-  const [category,setCategory]=useState('combat');
-  const [pathId,setPathId]=useState('single');
+const COMBAT_ICONS={single:Swords,multi:Activity,area:Sparkles,other:Target};
+const ASSIST_ICONS={support:Heart,mobility:Wind,fusion:Sparkles};
+const RUNTIME_IDS=COMPANION_ABILITIES.map(ability=>ability.id);
+const readable=value=>String(value||'').replaceAll('_',' ').replace(/\b\w/g,ch=>ch.toUpperCase());
+
+/**
+ * The 2-lane skill tree is a visual catalog, not a new skill unlock engine.
+ * All equip gestures use the parent's canonical companion loadout callbacks.
+ */
+export default function AXECompanionSkillHub({
+  activeIds=[],onEquip,onSelected,targetEquipSlot=null,
+}) {
+  const [branch,setBranch]=useState('damage');
   const [query,setQuery]=useState('');
   const [selectedId,setSelectedId]=useState(null);
+  const [message,setMessage]=useState('');
   const registry=useMemo(()=>getAllCompanionSkills(),[]);
-  const paths=useMemo(()=>companionCombatPaths(registry),[registry]);
-  const currentPath=paths.find(path=>path.id===pathId)||paths[0];
-  const categoryData=CATEGORIES.find(group=>group.id===category)||CATEGORIES[0];
-  const members=category==='combat'?currentPath.skills:
-    registry.filter(skill=>skill.category===category);
-  const shown=members.filter(skill=>!query||[skill.skill_name,skill.description]
-    .join(' ').toLowerCase().includes(query.trim().toLowerCase()));
-  const selected=members.find(skill=>skill.skill_id===selectedId)||members[0]||null;
-  const Icon=categoryData.icon;
-  const equip=skill=>{if(skill)onEquip?.(skill);};
-  return <section className="axe-sk-hub axe-sk-companion-hub" data-skill-hub="companion" aria-label="Companion skills">
-    <header className="axe-sk-hero">
-      <div className="axe-sk-hero-symbol"><Icon size={29}/></div>
-      <div><small>Companion · Existing Z / X / V / B loadout</small>
-        <h2>Companion {categoryData.title}</h2><p>{categoryData.subtitle}</p></div>
-      <span>{registry.length} registered</span>
+  // Keep existing registered attack path mapping (single/multi/area) intact.
+  const combatPaths=useMemo(()=>companionCombatPaths(registry),[registry]);
+  const groups=useMemo(()=>buildCompanionSkillBranches(registry),[registry]);
+  const current=groups.find(group=>group.id===branch)||groups[0];
+  const term=query.trim().toLowerCase();
+  const shown=current.skills.filter(skill=>!term||
+    [skill.skill_name,skill.description,skill.category].filter(Boolean)
+      .join(' ').toLowerCase().includes(term));
+  const selected=shown.find(skill=>skill.skill_id===selectedId)||shown[0]||null;
+  const equipped=selected?activeIds.includes(selected.skill_id):false;
+  const canCast=companionSkillCanCast(selected,RUNTIME_IDS);
+  const selectedSlot=Number.isInteger(targetEquipSlot)&&targetEquipSlot>=0&&targetEquipSlot<4
+    ?targetEquipSlot:null;
+
+  const choose=skill=>{
+    setSelectedId(skill.skill_id);
+    setMessage('');
+    onSelected?.(skill);
+  };
+  const equip=skill=>{
+    if(!skill)return;
+    if(!companionSkillCanCast(skill,RUNTIME_IDS)){
+      setMessage('This ability has no active companion cast handler yet. It cannot be equipped.');
+      return;
+    }
+    if(activeIds.includes(skill.skill_id)&&selectedSlot===null){
+      setMessage('This skill is already equipped. Select a different skill or target a slot to move it.');
+      return;
+    }
+    onEquip?.(skill);
+    setMessage('');
+  };
+
+  return <section className="axe-sk-hub axe-sk-companion-hub axe-comp-skillbook"
+    data-skill-hub="companion" data-companion-skill-layout="assist-damage-tree"
+    aria-label="Companion skill tree">
+    <header className="axe-comp-tree-hero">
+      <div className="axe-comp-tree-brand"><Sparkles size={25}/></div>
+      <div><small>COMPANION ABILITIES</small><h2>Companion Skill Tree</h2>
+        <p>Two branches. Real companion abilities. Four equipped slots.</p></div>
+      <span>{activeIds.filter(Boolean).length} / 4 equipped</span>
     </header>
-    <div className="axe-sk-companion-tabs" aria-label="Companion skill categories">
-      {CATEGORIES.map(group=><button key={group.id} type="button" aria-pressed={category===group.id}
-        onClick={()=>{setCategory(group.id);setSelectedId(null);setQuery('');}}>
-        <group.icon size={17}/>{group.title}</button>)}
-    </div>
-    <div className="axe-sk-toolbar">
-      {category==='combat'?<nav className="axe-sk-combat-paths" aria-label="Companion combat paths">
-        {paths.map(path=><button type="button" key={path.id} aria-pressed={pathId===path.id}
-          onClick={()=>{setPathId(path.id);setSelectedId(null);}}>
-          {(()=>{
-            const PathIcon=COMBAT_ICONS[path.id]||Shield;
-            return <PathIcon size={19}/>;
-          })()}{path.label}</button>)}
-      </nav>:<div className="axe-sk-path-caption">{categoryData.title} · Registered abilities</div>}
-      <label className="axe-sk-search"><Search size={16}/><input type="search"
-        value={query} onChange={event=>setQuery(event.target.value)}
-        aria-label="Search companion abilities" placeholder="Search abilities"/></label>
-    </div>
-    <div className="axe-sk-columns">
-      <div className="axe-sk-companion-left">
-        <div className={'axe-sk-skill-list axe-sk-companion-list'+
-        (category==='combat'?' axe-sk-companion-tree':'')} role="list"
-        aria-label={'Companion '+categoryData.title+' abilities'}>
-        {shown.map((skill,i)=>{
-          const equipped=activeIds.includes(skill.skill_id);
-          return <div key={skill.skill_id} role="listitem"
-            className={category==='combat'?'axe-sk-combat-node':'axe-sk-list-row'}>
-          <button type="button"
-            className={'axe-sk-skill'+(selected?.skill_id===skill.skill_id?' axe-sk-skill--selected':'')}
-            aria-pressed={selected?.skill_id===skill.skill_id}
-            onClick={()=>{setSelectedId(skill.skill_id);onSelected?.(skill);}}
-            onDoubleClick={()=>equip(skill)}
-            onContextMenu={event=>{event.preventDefault();equip(skill);}}
-            title="Click for details; right-click or double-click to equip">
-            <span className="axe-sk-skill-mark">{category==='combat'?<Swords size={24}/>:<Icon size={24}/>}</span>
-            <span><strong>{skill.skill_name}</strong>
-              <small>{skill.cooldown}s cooldown · {skill.requiresTarget?'Target required':'No target'}</small></span>
-            <span className="axe-sk-skill-end">{equipped?'Equipped':<ArrowRight size={16}/>}</span>
-          </button>
-          {category==='combat'&&i<shown.length-1&&<span className="axe-sk-combat-connector"
-            aria-hidden="true"><ArrowRight size={21}/></span>}
-          </div>;
+
+    <div className="axe-comp-tree-controls">
+      <nav className="axe-comp-tree-tabs" aria-label="Companion skill branches">
+        {COMPANION_SKILL_BRANCHES.map(entry=>{
+          const Icon=entry.id==='assist'?Heart:Swords;
+          const count=groups.find(group=>group.id===entry.id)?.skills.length||0;
+          return <button key={entry.id} type="button" aria-pressed={branch===entry.id}
+            onClick={()=>{setBranch(entry.id);setSelectedId(null);setMessage('');}}>
+            <Icon size={17}/><strong>{entry.label}</strong><small>{count}</small>
+          </button>;
         })}
-        {!shown.length&&<p className="axe-sk-empty">No registered {categoryData.title.toLowerCase()} skills match this selection.</p>}
+      </nav>
+      <label className="axe-comp-tree-search"><Search size={16} aria-hidden="true"/>
+        <input type="search" value={query} onChange={event=>{setQuery(event.target.value);setSelectedId(null);}}
+          placeholder="Search companion abilities" aria-label="Search companion abilities"/>
+      </label>
+    </div>
+    <div className="axe-comp-tree-body">
+      <section className="axe-comp-tree-map" aria-label={current.label+' skill path'}>
+        <div className="axe-comp-tree-map-heading"><div>
+          <h3>{current.label} Path</h3><p>{current.description}</p></div>
+          <span>{shown.length} abilities</span>
         </div>
-        {category==='combat'&&<div className="axe-sk-combat-rule">
-          <span>Skill progression</span>
-          <p>Abilities shown here come from the actual combat registry. Companion skill levels and automatic passives are not separately recorded yet, so no invented upgrades are displayed.</p>
-        </div>}
-        {category==='mobility'&&<div className="axe-sk-combat-rule">
-          <span><Wind size={15}/> Mobility development</span>
-          <p>Teleport Dash is the available repositioning ability. A lasting speed-increase buff is not yet implemented in the verified companion runtime; it cannot be equipped as a placeholder.</p>
-        </div>}
-        {category==='fusion'&&<div className="axe-sk-combat-rule">
-          <span>Fusion readiness</span>
-          <p>Only registered skills are equippable. Transformation visuals or damage bonuses remain subject to the existing gameplay implementation and eligibility rules.</p>
-        </div>}
-      </div>
-      <aside className="axe-sk-inspector" aria-label="Companion skill information">
-        {selected?<><div className="axe-sk-inspector-kicker">{categoryData.title} · Registered Skill</div>
-          <h3>{selected.skill_name}</h3><p>{selected.description}</p>
+        <div className="axe-sk-companion-tree axe-comp-tree-nodes" role="list"
+          aria-label={current.label+' companion skills'}>
+          {shown.map((skill,index)=>{
+            const path=combatPaths.find(group=>group.skills.some(item=>item.skill_id===skill.skill_id))||{id:'other'};
+            const Icon=branch==='damage'?(COMBAT_ICONS[path.id]||Swords):
+              (ASSIST_ICONS[skill.category]||Shield);
+            const ready=companionSkillCanCast(skill,RUNTIME_IDS);
+            const isEquipped=activeIds.includes(skill.skill_id);
+            return <div key={skill.skill_id} className="axe-sk-combat-node" role="listitem">
+              <button type="button" aria-pressed={selected?.skill_id===skill.skill_id}
+                className={'axe-sk-skill axe-comp-tree-node'+(!ready?' axe-comp-tree-node--future':'')+
+                  (selected?.skill_id===skill.skill_id?' axe-sk-skill--selected':'')}
+                onClick={()=>choose(skill)} onDoubleClick={()=>equip(skill)}
+                onContextMenu={event=>{event.preventDefault();equip(skill);}}
+                title={ready?'Click for details; right-click or double-click to equip':'Preview only: cast unavailable'}>
+                <span className="axe-comp-tree-node-top"><span className="axe-sk-skill-mark">
+                  <Icon size={22}/></span>
+                  {isEquipped?<span className="axe-comp-tree-node-status"><Check size={13}/> Equipped</span>:
+                    !ready?<span className="axe-comp-tree-node-status axe-comp-tree-node-status--future"><LockKeyhole size={12}/> Future</span>:null}
+                </span>
+                <strong>{skill.skill_name}</strong>
+                <small>{branch==='damage'?readable(path.id):readable(skill.category)}</small>
+                <span className="axe-comp-tree-node-foot"><Clock3 size={13}/> {skill.cooldown}s cooldown</span>
+              </button>
+              {index<shown.length-1&&<span className="axe-sk-combat-connector" aria-hidden="true">
+                <ArrowRight size={20}/></span>}
+            </div>;
+          })}
+          {!shown.length&&<p className="axe-sk-empty">No skills match the search. Try another name.</p>}
+        </div>
+        <div className="axe-comp-tree-note">
+          <Sparkles size={15}/><p>The lines organize the companion's abilities; they do not
+            invent skill points, mastery levels or prerequisites. Pick an ability, then choose a
+            Z / X / V / B slot beneath the tree to equip it.</p>
+        </div>
+        {branch==='assist'&&<p className="axe-comp-tree-assist-note">
+          Teleport Dash is the available repositioning ability. A lasting
+          speed-increase buff is not yet implemented. Deity Fusion remains
+          visible for planning but cannot be cast until its runtime is ready.</p>}
+      </section>
+      <aside className="axe-sk-inspector axe-comp-tree-inspector" aria-label="Selected companion skill details">
+        {selected?<>
+          <span className="axe-sk-inspector-kicker">{current.label} · {readable(selected.category)}</span>
+          <h3>{selected.skill_name}</h3>
+          <p>{selected.description}</p>
           <div className="axe-sk-metrics">
-            <span>Cooldown <strong>{selected.cooldown}s</strong></span>
-            <span>Attack <strong>{selected.damage==null?'—':selected.damage}</strong></span>
-            <span>Healing <strong>{selected.heal==null?'—':selected.heal}</strong></span>
-            <span>Equipped <strong>{activeIds.includes(selected.skill_id)?'Yes':'No'}</strong></span>
+            {companionSkillMetrics(selected).map(([label,value])=><span key={label}>
+              {label}<strong>{value}</strong></span>)}
           </div>
-          <h4><Shield size={17}/> Companion loadout</h4>
-          <p>Equipped companion abilities use Z / X / V / B and the existing companion ability runtime. Select a free slot below, or equip directly.</p>
-          <button type="button" className="axe-sk-equip" disabled={activeIds.includes(selected.skill_id)}
-            onClick={()=>equip(selected)}><Swords size={17}/>
-            {activeIds.includes(selected.skill_id)?'Already Equipped':'Equip to Free Companion Slot'}</button>
-        </>:<div className="axe-sk-empty"><Compass size={24}/><p>Select a registered companion ability to see its effects.</p></div>}
+          <h4><Shield size={17}/> Equipped ability</h4>
+          <p>{equipped?'Currently equipped to '+['Z','X','V','B'][activeIds.indexOf(selected.skill_id)]+'.':
+            canCast?'This ability uses the existing companion combat runtime.':'This ability is registered for future development, but its cast is unavailable.'}</p>
+          <button type="button" className="axe-sk-equip"
+            disabled={!canCast||(equipped&&selectedSlot===null)} onClick={()=>equip(selected)}>
+            {!canCast?<><LockKeyhole size={16}/> Not Yet Available</>:
+              equipped&&selectedSlot===null?<><Check size={16}/> Already Equipped</>:
+              selectedSlot!==null?<><Swords size={16}/> Equip to {['Z','X','V','B'][selectedSlot]}</>:
+              <><Swords size={16}/> Equip to Next Free Slot</>}
+          </button>
+          {canCast&&selectedSlot===null&&!equipped&&activeIds.every(Boolean)&&
+            <p className="axe-comp-tree-slot-help">All four slots are occupied. Select a slot below to replace its ability.</p>}
+        </>:<div className="axe-sk-empty">Select a registered ability to inspect its effects.</div>}
+        {message&&<p className="axe-comp-tree-feedback" role="status">{message}</p>}
       </aside>
     </div>
   </section>;
