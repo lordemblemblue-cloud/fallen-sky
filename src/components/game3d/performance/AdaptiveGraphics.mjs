@@ -1,3 +1,9 @@
+import {
+  GAME3D_DISPLAY_SETTINGS_EVENT,game3DResolutionTarget,
+  normalizeGame3DDisplaySettings,readGame3DDisplaySettings,
+  readGame3DRendererViewport,
+} from './Game3DDisplaySettings.mjs';
+
 // Clone Game 3D adaptive browser renderer. No WebAssembly, native hardware access,
 // gameplay changes, or assumed precise VRAM figures. Fails open to WebGL defaults.
 export const CLONE_GPU_PROFILE_KEY = 'axe3d_clone_gpu_profile_v1';
@@ -86,8 +92,24 @@ export function createCloneAdaptiveGraphics({
   const originalRatio = Number(renderer.getPixelRatio?.()) || 1;
   let ratio = originalRatio;
   let quality = readQuality(host);
-  const dpr = Number(host.devicePixelRatio) || 1;
-  let ceiling = rendererPixelRatioLimit({ profile, quality, devicePixelRatio: dpr });
+  let display = readGame3DDisplaySettings(host);
+  // Explicit framebuffer resolutions supersede auto GPU profiles; camera
+  // aspect and logical CSS viewport remain independent of this ratio.
+  const getTarget = () => {
+    const viewport = readGame3DRendererViewport(renderer, host);
+    const autoCap = rendererPixelRatioLimit({
+      profile, quality, devicePixelRatio: Number(host.devicePixelRatio) || 1,
+    });
+    return game3DResolutionTarget({
+      resolution: display.resolution,
+      viewportWidth: viewport.width, viewportHeight: viewport.height,
+      devicePixelRatio: Number(host.devicePixelRatio) || 1,
+      autoRatio: autoCap,
+      maxTextureSize: renderer.capabilities?.maxTextureSize,
+    });
+  };
+  let target = getTarget();
+  let ceiling = target.ratio;
   let slowWindows = 0, fastWindows = 0;
   let lastChangeAt = -Infinity;
   let lastFrameAt = 0, lastSampleAt = 0, lastObservedRenderFrame = null, raf = null;
@@ -95,7 +117,8 @@ export function createCloneAdaptiveGraphics({
   let batch = [];
 
   function applyRatio(next) {
-    if (disposed || profile === 'off' || !Number.isFinite(next) || next <= 0 ||
+    if (disposed || (profile === 'off' && display.resolution === 'auto') ||
+        !Number.isFinite(next) || next <= 0 ||
         Math.abs(next - ratio) < 0.01) return;
     try {
       if (renderer.getContext?.()?.isContextLost?.()) return;
@@ -108,27 +131,53 @@ export function createCloneAdaptiveGraphics({
     }
   }
 
-  function changeProfile(next) {
-    if (disposed) return;
-    profile = normalizeCloneGPUProfile(next);
+  function refreshTarget({ resetAdaptation = false } = {}) {
     quality = readQuality(host);
-    ceiling = rendererPixelRatioLimit({ profile, quality, devicePixelRatio: dpr });
-    slowWindows = 0; fastWindows = 0; lastChangeAt = -Infinity;
-    if (profile === 'off') {
-      try { renderer.setPixelRatio(originalRatio); ratio = originalRatio;
-        if (host.__gw3dRenderer === renderer) host.__gw3dInkLook?.setSize?.();
-      } catch { /* WebGL context may be lost */ }
+    target = getTarget();
+    ceiling = target.ratio;
+    if (resetAdaptation) {
+      slowWindows = 0; fastWindows = 0; lastChangeAt = -Infinity;
+    }
+    if (display.resolution !== 'auto') {
+      // Fixed render resolution, only reduced if a WebGL texture/pixel limit
+      // prevents it; the GPU FPS governor keeps measuring but stops resizing.
+      applyRatio(ceiling);
+    } else if (profile === 'off') {
+      try {
+        const safeOriginal = game3DResolutionTarget({
+          resolution:'auto', autoRatio:originalRatio,
+          viewportWidth:target.cssWidth, viewportHeight:target.cssHeight,
+          maxTextureSize:renderer.capabilities?.maxTextureSize,
+        }).ratio;
+        if (Math.abs(ratio-safeOriginal) >= .01) {
+          renderer.setPixelRatio(safeOriginal); ratio=safeOriginal;
+          if (host.__gw3dRenderer === renderer) host.__gw3dInkLook?.setSize?.();
+        }
+      } catch { /* Context may already be lost. */ }
     } else {
       applyRatio(profile === 'auto' ? Math.min(ratio, ceiling) : ceiling);
     }
-    sample = { ...sample, profile, ratio };
+    sample = { ...sample, ratio, profile,
+      resolution:display.resolution, renderWidth:target.width, renderHeight:target.height,
+      limited:target.limited };
+  }
+
+  function changeProfile(next) {
+    if (disposed) return;
+    profile = normalizeCloneGPUProfile(next);
+    refreshTarget({ resetAdaptation:true });
   }
 
   function onGraphicsSettings() {
+    if (!disposed) refreshTarget({ resetAdaptation:true });
+  }
+  function onDisplaySettings(event) {
     if (disposed) return;
-    quality = readQuality(host);
-    ceiling = rendererPixelRatioLimit({ profile, quality, devicePixelRatio: dpr });
-    if (profile !== 'off') applyRatio(profile === 'auto' ? Math.min(ratio, ceiling) : ceiling);
+    display=normalizeGame3DDisplaySettings(event?.detail ?? readGame3DDisplaySettings(host));
+    refreshTarget({ resetAdaptation:true });
+  }
+  function onResize() {
+    if (!disposed) refreshTarget({ resetAdaptation:true });
   }
 
   function tick(now) {
@@ -159,7 +208,9 @@ export function createCloneAdaptiveGraphics({
     else if (frame.p95Ms < 19 && frame.p99Ms < 24) { fastWindows++; slowWindows = 0; }
     else { slowWindows = 0; fastWindows = 0; }
 
-    if (now - lastChangeAt > 9000) {
+    // Fixed 720p/900p/1080p/1440p/native modes are user controlled.
+    // Auto mode alone uses the existing hysteresis-based governor.
+    if (display.resolution === 'auto' && now - lastChangeAt > 9000) {
       const next = nextClonePixelRatio({
         profile, current: ratio, ceiling, p95Ms: frame.p95Ms,
         p99Ms: frame.p99Ms, slowWindows, fastWindows,
@@ -170,21 +221,30 @@ export function createCloneAdaptiveGraphics({
         slowWindows = 0; fastWindows = 0;
       }
     }
-    sample = { ...frame, ratio, profile, sampledAt: now };
+    const viewport=readGame3DRendererViewport(renderer,host);
+    sample = { ...frame, ratio, profile, resolution:display.resolution,
+      renderWidth:Math.floor(viewport.width*ratio),
+      renderHeight:Math.floor(viewport.height*ratio),limited:target.limited,
+      sampledAt: now };
     try { onSample(sample); } catch { /* UI cannot disrupt gameplay */ }
   }
 
   host.addEventListener?.('graphicsSettingsChanged', onGraphicsSettings);
+  host.addEventListener?.(GAME3D_DISPLAY_SETTINGS_EVENT, onDisplaySettings);
+  host.addEventListener?.('resize', onResize);
   changeProfile(profile);
   raf = host.requestAnimationFrame(tick);
   const controller = {
     setProfile: changeProfile,
+    syncViewport: onResize,
     getSnapshot: () => ({ ...sample, profile, ratio }),
     dispose() {
       if (disposed) return;
       disposed = true;
       if (raf !== null) host.cancelAnimationFrame?.(raf);
       host.removeEventListener?.('graphicsSettingsChanged', onGraphicsSettings);
+      host.removeEventListener?.(GAME3D_DISPLAY_SETTINGS_EVENT, onDisplaySettings);
+      host.removeEventListener?.('resize', onResize);
       batch = [];
     },
   };
