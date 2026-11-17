@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Footprints } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getCombatResources, subscribeCombatResources } from '../combat/combatResourcesStore';
 import { ACTIVE_SLOTS, getLoadout, subscribeLoadout } from '../skills/loadoutStore';
@@ -260,6 +261,12 @@ export default function JadeSoulHUD({
   const [loadout, setLoadout] = useState(getLoadout);
   const [localExpanded, setLocalExpanded] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
+  // The near-player stamina ring is contextual: show it when stamina is spent,
+  // then let it fade instead of filling the permanent HUD with a third tank.
+  const [staminaVisible, setStaminaVisible] = useState(false);
+  const previousStamina = useRef(resources.stamina);
+  const staminaFadeTimer = useRef(null);
+  const staminaAnchorRef = useRef(null);
   const navigationHidden = serviceMode || (servicesExpanded ?? localExpanded);
   useEffect(() => {
     const open = event => {
@@ -290,6 +297,29 @@ export default function JadeSoulHUD({
   useEffect(() => subscribePlayerHUD(setHud), []);
   useEffect(() => subscribeCombatResources(setResources), []);
   useEffect(() => subscribeLoadout(setLoadout), []);
+  useEffect(() => {
+    const previous = previousStamina.current;
+    previousStamina.current = resources.stamina;
+    if (Number.isFinite(previous) && Number(resources.stamina) < previous - 0.05) {
+      setStaminaVisible(true);
+      clearTimeout(staminaFadeTimer.current);
+      staminaFadeTimer.current = setTimeout(() => setStaminaVisible(false), 1950);
+    }
+  }, [resources.stamina]);
+  useEffect(() => () => clearTimeout(staminaFadeTimer.current), []);
+  // Publish pixel-free percentages from the real camera projection, not a
+  // fixed guess about where the avatar sits on different aspect ratios.
+  // Mutating the decorative element avoids a React render every world frame.
+  useEffect(() => subscribePlayerPosition(position => {
+    const node = staminaAnchorRef.current;
+    if (!node) return;
+    const valid = position?.screenVisible &&
+      Number.isFinite(position.screenX) && Number.isFinite(position.screenY);
+    node.style.visibility = valid ? 'visible' : 'hidden';
+    if (!valid) return;
+    node.style.left = Math.max(10, Math.min(88, position.screenX + 10)) + '%';
+    node.style.top = Math.max(16, Math.min(76, position.screenY - 7)) + '%';
+  }), []);
 
   const hpPct = ratio(hud?.hp, hud?.maxHP) * 100;
   // Real spendable Will follows the derived Chi capacity; stamina has its own
@@ -307,19 +337,20 @@ export default function JadeSoulHUD({
           for Services layout measurements without mounting a visible portrait. */}
       <div className="jade-status" aria-label="Character status" />
 
-      {/* Original HP and Will tanks, relocated directly above the EXP rail. */}
-      <div className="jade-status-bars">
-        <div className="jade-status-row">
-          <div className="jade-status-header"><span>HP</span><span>{fmt(hud?.hp)} / {fmt(hud?.maxHP)}</span></div>
-          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--hp" style={{ width: `${hpPct}%` }}/></div>
+      {/* Same live HP and Will ledgers, visually balanced around the compact
+          Agent experience octagon. The weapon selector and skills are intact. */}
+      <div className="jade-status-bars jade-status-bars--refined" aria-label="Player HP and Will">
+        <div className="jade-status-row jade-status-row--hp">
+          <div className="jade-status-header">
+            <span>♡ &nbsp; HP</span><span>{fmt(hud?.hp)} / {fmt(hud?.maxHP)}</span>
+          </div>
+          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--hp" style={{width:hpPct+'%'}}/></div>
         </div>
-        <div className="jade-status-row">
-          <div className="jade-status-header"><span>WILL</span><span>{fmt(currentWill)} / {fmt(maxWill)}</span></div>
-          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--will" style={{ width: `${willPct}%` }}/></div>
-        </div>
-        <div className="jade-status-row jade-status-row--stamina" aria-label={`Stamina ${fmt(resources.stamina)} of ${fmt(resources.maxStamina)}`}>
-          <div className="jade-status-header"><span>STAMINA</span><span>{fmt(resources.stamina)} / {fmt(resources.maxStamina)}</span></div>
-          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--stamina" style={{ width: `${staminaPct}%` }}/></div>
+        <div className="jade-status-row jade-status-row--will">
+          <div className="jade-status-header">
+            <span>✧ &nbsp; WILL</span><span>{fmt(currentWill)} / {fmt(maxWill)}</span>
+          </div>
+          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--will" style={{width:willPct+'%'}}/></div>
         </div>
       </div>
 
@@ -338,28 +369,38 @@ export default function JadeSoulHUD({
       <WeaponStack playerLevel={hud?.level} />
       <SkillMatrix loadout={loadout}/>
 
-      <div className="jade-xp"
-        role="progressbar" aria-label={`Level ${hud?.level || 1} experience`}
+      <div className="jade-xp jade-xp--compact" data-hud-agent-exp="octagon"
+        role="progressbar" aria-label={`Agent level ${hud?.level || 1} experience`}
         aria-valuemin={0} aria-valuemax={hasFiniteXP ? hud.xpForNext : 100}
         aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext, Math.max(0, Number(hud?.xp) || 0)) : 100}
-        title={`XP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}>
-        <span className="jade-xp-label">XP</span>
-        <div className="jade-xp-rail" aria-hidden="true">
-          <span className="jade-xp-track">
-            <span className="jade-xp-fill" style={{ width: `${xpPct}%` }}/>
-          </span>
-          {[18, 35, 65, 82].map((pct, index) => (
-            <span key={index} className={`jade-xp-pip jade-xp-pip--${index % 2 ? 'diamond' : 'dot'}`}
-              style={{ left: `${pct}%` }}/>
-          ))}
-          <span className="jade-xp-center">
-            <span>{hasFiniteXP
-              ? (hud.xpForNext > 9999 ? `${Math.round(xpPct)}%` : `${fmt(hud.xp)} / ${fmt(hud.xpForNext)}`)
-              : 'MAX'}</span>
-          </span>
-        </div>
-        <span className="jade-xp-level">LV. {fmt(hud?.level || 1)}</span>
+        title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
+        style={{'--jade-xp-progress':xpPct+'%'}}>
+        <span className="jade-xp-octagon-face" aria-hidden="true">
+          <span className="jade-xp-octagon-energy"/>
+          <span className="jade-xp-agent">AGENT</span>
+          <strong className="jade-xp-number">{fmt(hud?.level || 1)}</strong>
+          <span className="jade-xp-octagon-rule"/>
+          <span className="jade-xp-caption">EXP</span>
+          <span className="jade-xp-readout">{hasFiniteXP
+            ? `${fmt(hud?.xp)} / ${fmt(hud.xpForNext)}` : 'MAX'}</span>
+        </span>
       </div>
+      {/* Contextual stamina ring to the avatar's right while using stamina.
+          The actual skill hotbar and three-role weapon template are unchanged. */}
+      <div ref={staminaAnchorRef} className="jade-stamina-popup"
+        data-stamina-visible={staminaVisible && !navigationHidden ? 'true' : 'false'}
+        role="progressbar" aria-label="Stamina"
+        aria-valuemin={0} aria-valuemax={Math.max(1,resources.maxStamina||1)}
+        aria-valuenow={Math.max(0,resources.stamina||0)}
+        title={`Stamina ${fmt(resources.stamina)} / ${fmt(resources.maxStamina)}`}>
+        <div className="jade-stamina-ring" style={{'--stamina-progress':staminaPct+'%'}}>
+          <div className="jade-stamina-ring-core">
+            <Footprints size={16} strokeWidth={1.8} aria-hidden="true"/>
+            <span>STAMINA</span>
+          </div>
+        </div>
+      </div>
+
       </div>
       {mapOpen && !serviceMode && createPortal(<AXEWorldMapOverlay region={region} onClose={() => setMapOpen(false)} />, document.body)}
     </div>
