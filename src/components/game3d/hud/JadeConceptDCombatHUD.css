@@ -19,7 +19,8 @@
   position:absolute;
   z-index:0;
   inset:0;
-  background:url('/game3d/hud/concept-d-original-ornament.avif') center / contain no-repeat;
+  /* No fallback brush with baked circles/boxes; cleaned asset is the <img>. */
+  background:none;
   opacity:.94;
   pointer-events:none;
   user-select:none;
@@ -926,4 +927,28 @@
   }
   .jade-hud .jade-combat-concept-d > .jade-ability-matrix {right:7%;}
   .jade-hud .jade-combat-concept-d > .jade-weapon-position {right:11%;}
+}
+
+/* CLEAN IMAGE, 2026-11-17: sampled from the user's approved cleaned image.
+   No rasterized skill sockets or weapon circles remain on the background.
+   Keep the gold/silver splash's outer point INSIDE the right edge. All real
+   slot elements are rendered separately above this original-picture layer. */
+.jade-hud .jade-combat-concept-d > img.jade-concept-d-ornament {
+  inset:7% 2% 9% auto;
+  width:96%;
+  height:84%;
+  max-width:96%;
+  object-fit:contain;
+  object-position:center right;
+  opacity:.91;
+  background:none;
+  border:0;
+  clip-path:inset(0);
+  pointer-events:none;
+}
+.jade-hud .jade-combat-concept-d {
+  /* Decorations never extend beyond the website corner; all five live skill
+     slots and the three weapon controls retain their current positions. */
+  right:max(8px,var(--game3d-safe-right,0px));
+  max-width:calc(100% - 16px);
 }
