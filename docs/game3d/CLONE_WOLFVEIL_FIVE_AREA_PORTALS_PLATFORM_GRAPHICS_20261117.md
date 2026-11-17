@@ -193,8 +193,9 @@ What is still over budget, in measured order:
 
 1. Triangles in every area: grass that follows the player (0.85 to 1.17 M)
    and the owner's long-grass tiles (95,000 to 660,000 per area).
-2. Draw calls in town (782): the town's moving parts (about 340), long-grass
-   tiles (148), caves (65).
+2. Draw calls in town (782): town parts left unmerged because they move,
+   are tagged or are see-through (about 340), long-grass tiles (148), caves
+   (65).
 3. Lights: 20 to 26 lights are switched on wherever the player stands. Their
    cost shows only in a real frame-rate reading.
 
