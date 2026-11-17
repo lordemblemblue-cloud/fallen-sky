@@ -11,7 +11,7 @@ const historical=read('public/game3d/hud/concept-d-ink-gold-only.svg');
 
 test('the original FIRST screenshot has its own translucent image in the ACTUAL Game 3D dock',()=>{
   assert.match(hud,/<img className="jade-concept-d-ornament"/);
-  assert.match(hud,/src="https:\/\/media\.base44\.com\/images\/public\/6876751a602125f45f1861b9\/067e28e05_axe_original_left_splash_translucent\.webp"/);
+  assert.match(hud,/src="https:\/\/media\.base44\.com\/images\/public\/6876751a602125f45f1861b9\/d85c9f639_axe_first_design_exact_splash_five_slots\.webp"/);
   assert.match(hud,/aria-hidden="true" draggable="false" loading="eager" decoding="async"/);
   assert.match(css,/\.jade-hud \.jade-combat-concept-d > img\.jade-concept-d-ornament/);
   assert.match(css,/object-fit:fill/);
