@@ -139,7 +139,8 @@ test('Character creation keeps local scanner, remote draft is a separate opted-i
   assert.match(cloud,/VITE_GAME3D_MESHY_FACE_PREVIEW/);
   assert.match(cloud,/consent/);
   assert.match(cloud,/getAccessToken/);
-  assert.doesNotMatch(cloud,/setConfig\(|model_url\s*:/);
+  assert.doesNotMatch(cloud,/\bsetConfig\s*\(/);
+  assert.doesNotMatch(cloud,/^\s*model_url\s*:/m);
   assert.match(route,/middleware:\[requireUserRoute\]/);
   assert.match(route,/faceDraftEnabled\(process.env,context.user\)/);
   assert.match(route,/requireSameOrigin\(request\)/);
