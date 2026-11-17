@@ -63,7 +63,7 @@ test('level-up notice follows left HUD minimap, not across the player view', () 
   const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
   const hud = read('src/components/game3d/hud/JadeSoulHUD.css');
   const map = read('src/components/game3d/hud/JadeSoulHUD.jsx');
-  const levelStyles = css.slice(css.indexOf('/* Compact level-up card. Match the real minimap'));
+  const levelStyles = css.slice(css.indexOf('/* Compact level-up card. Follow the real minimap'));
   assert.ok(levelStyles.length > 100, 'Level-specific map placement rules exist');
   assert.match(map, /className="jade-compass-block"/);
   assert.match(map, /aria-label="Open world map"/);
@@ -78,7 +78,7 @@ test('level-up notice follows left HUD minimap, not across the player view', () 
 
 test('30 percent smaller notification scales down width, height, decoration and typography', () => {
   const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
-  const compact = css.slice(css.indexOf('/* Compact level-up card. Match the real minimap'));
+  const compact = css.slice(css.indexOf('/* Compact level-up card. Follow the real minimap'));
   assert.match(compact, /width:min\(301px,calc\(100vw - 28px\)\)/);
   assert.match(compact, /min-height:115px/);
   assert.match(compact, /height:48px/);
