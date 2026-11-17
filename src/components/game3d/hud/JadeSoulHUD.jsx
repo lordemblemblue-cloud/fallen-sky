@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Heart, Flame } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getCombatResources, subscribeCombatResources } from '../combat/combatResourcesStore';
-import { ACTIVE_SLOTS, getLoadout, subscribeLoadout } from '../skills/loadoutStore';
+import { ACTIVE_SLOTS, getLoadout, getSkillPresets, selectSkillPreset, subscribeLoadout } from '../skills/loadoutStore';
 import { getSkillById } from '../skills/skillRegistry';
 import { subscribePlayerPosition } from '../playerPositionStore';
 import { getActiveEquippedAXEWeapon, subscribeAXEEquipmentInventory } from '../axe/equipment/AXEEquipmentInventoryStore';
@@ -111,6 +111,16 @@ function WeaponStack({ playerLevel }) {
     }
     const result=drawAXEHUDWeaponRole(role,{level:playerLevel||1});
     if(result.ok){
+      // Weapon identity, not the customizable button's role label, chooses the
+      // matching real Skill Book preset: Damage 0, Range 1, Defense 2.
+      // This leaves the user's saved ten-slot banks and cooldowns intact.
+      const drawnRole=inferAXEWeaponRole(result.item||item);
+      const index=drawnRole==='ranged'?1:drawnRole==='defensive'?2:
+        drawnRole==='offensive'?0:null;
+      if(index!==null && getSkillPresets().index!==index){
+        const changed=selectSkillPreset(index);
+        if(!changed.ok)setNotice('Weapon drawn; skill preset could not be changed');
+      }
       setAssigning(null);
       activeRoleRef.current=role;
       setNotice(`${ROLE_TITLES[role]} · ${result.item?.name||item.name}`);
