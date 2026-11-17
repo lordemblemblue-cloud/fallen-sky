@@ -2652,6 +2652,46 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 houseEntries.push({ id: 'residence-' + (h + 1), group: house });
             }
 
+            // Far-distance silhouette LOD. Full procedural houses and shops
+            // still exist for walking inside them; beyond the approach radius,
+            // only a handful of low-polygon meshes render per building.
+            // Collisions are analytical and never change with visual LOD.
+            function makeDistantProxy(room, isShop) {
+                const proxy = new THREE.Group();
+                proxy.name = 'TownProxy_' + room.id;
+                proxy.position.copy(room.group.position);
+                proxy.rotation.copy(room.group.rotation);
+                proxy.scale.copy(room.group.scale);
+                function silhouette(w, h, d, material, x, y, z, rx = 0) {
+                    const mesh = addBox(proxy, w, h, d, material, x, y, z, rx);
+                    mesh.castShadow = false;
+                    mesh.receiveShadow = false;
+                    mesh.userData.otsCameraIgnore = true; // camera must use real near walls
+                }
+                if (isShop) {
+                    silhouette(7.5, 3.8, 9.5, mats.sandstone, -5.8, 2.2, -0.6);
+                    silhouette(10.7, 3.8, 7.5, mats.plaster, 3.2, 2.2, -1.6);
+                    silhouette(8.0, .26, 10, mats.kawaraTile, -5.8, 4.3, -0.6, .28);
+                    silhouette(11.0, .26, 8, mats.kawaraTile, 3.2, 4.45, -1.6, -.28);
+                    if (room.id === 'blacksmith') {
+                        silhouette(10, 3.0, 7.0, mats.sandstone, 3.2, 6.15, -1.6);
+                        silhouette(11.0, .35, 8, mats.kawaraTile, 3.2, 8.0, -1.6, .3);
+                    }
+                } else {
+                    const twoStory = Number(room.id.split('-').pop()) % 2 === 1;
+                    silhouette(9.2, twoStory ? 6.6 : 3.8, 6.0, mats.sandstone, 0, twoStory ? 3.65 : 2.1, 0);
+                    const roofY = twoStory ? 7.2 : 4.4;
+                    silhouette(9.8, .27, 3.7, mats.kawaraTile, 0, roofY, 1.4, .32);
+                    silhouette(9.8, .27, 3.7, mats.kawaraTile, 0, roofY, -1.4, -.32);
+                    silhouette(2.0, 1.6, .08, mats.shojiGlow, 0, 2.3, 3.05);
+                }
+                proxy.visible = false;
+                room.group.parent.add(proxy);
+                roomProxies.set(room.id, proxy);
+            }
+            shopInteriors.forEach(room => makeDistantProxy(room, true));
+            houseEntries.forEach(room => makeDistantProxy(room, false));
+
             // ============================================================================
             // 8. SCENE LIGHTING
             // ============================================================================
@@ -2817,22 +2857,28 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         dt = Math.max(0, Math.min(0.1, Number(dt) || 0));
         elapsed = Number(elapsed) || 0;
         if (surgeTimer > 0) surgeTimer = Math.max(0, surgeTimer - dt);
-        // Cull distant home/shop groups only four times a second. The fountain
-        // and collision remain active, and a player inside keeps their room.
+        // Keep only the near rooms' full geometry active; distant roofs remain
+        // recognizable as 3-6 mesh proxies instead of a hundred roof ribs.
+        // Hysteresis prevents popping/flickering near storefront thresholds.
         visibilityTimer += dt;
+        let visualLODChanged = false;
         if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
             visibilityTimer = 0;
-            const homeRangeSq = (lowDetail ? 48 : 90) ** 2;
-            const shopRangeSq = (lowDetail ? 58 : 115) ** 2;
             const localX = playerPosition.x - townGroup.position.x;
             const localZ = playerPosition.z - townGroup.position.z;
-            for (const home of houseEntries) {
-                const dx = localX - home.group.position.x, dz = localZ - home.group.position.z;
-                home.group.visible = dx * dx + dz * dz < homeRangeSq;
-            }
-            for (const shop of shopInteriors) {
-                const dx = localX - shop.group.position.x, dz = localZ - shop.group.position.z;
-                shop.group.visible = dx * dx + dz * dz < shopRangeSq;
+            for (const [rooms, kind] of [[houseEntries, 'home'], [shopInteriors, 'shop']]) {
+                for (const room of rooms) {
+                    const dx = localX - room.group.position.x, dz = localZ - room.group.position.z;
+                    const oldState = room.group.userData.axeLODState || 'proxy';
+                    const nextState = townLODState(Math.hypot(dx, dz), kind, oldState, activeQuality);
+                    const proxy = roomProxies.get(room.id);
+                    const detailed = nextState === 'detail';
+                    const distant = nextState === 'proxy';
+                    if (room.group.visible !== detailed || proxy?.visible !== distant) visualLODChanged = true;
+                    room.group.visible = detailed;
+                    if (proxy) proxy.visible = distant;
+                    room.group.userData.axeLODState = nextState;
+                }
             }
         }
         const flowMult = surgeTimer > 0 ? 3.2 : 1;
@@ -2936,7 +2982,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     l.group.rotation.z = Math.sin(elapsed * 1.6 + l.phase) * 0.035;
                 });
 
-
+        return visualLODChanged;
     }
 
     // Exposes coarse static collider shapes, so the game's own collision system can
