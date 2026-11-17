@@ -80,7 +80,7 @@ test('Universal/Companion/Mounts redesign preserves 95.2 backend authority bound
   const book=service('AXECloneSkillTreeWorkspace.jsx');
   const mount=service('AXEOwnedMountsPanel.jsx');
   const overview=service('AXECompanionOverviewClone.jsx');
-  assert.match(book,/modernCollection=companion\|\|category==='universal'/);
+  assert.match(book,/modernCollection=companion\|\|\['universal','passive'\]/);
   assert.match(book,/<AXECompanionSkillHub/);
   assert.match(book,/<AXEUniversalSkillHub/);
   assert.match(book,/onQuickEquip\?\.\(skill\)/);
