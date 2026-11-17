@@ -1,14 +1,18 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { ArrowRight, Compass, Shield, Swords, Target } from 'lucide-react';
 import AXECompanionMountCircleRail from './AXECompanionMountCircleRail';
 import { getAXEMountState, subscribeAXEMounts, activateAXEMount } from '../progression/AXEMountStore';
 import { getAXEMountDefinition, getAXEMountBonuses } from '../progression/AXEMountSystem';
+import { getCompanionById } from '../../companionData';
 import { getActiveWeaponPath, subscribeWeaponBuffs } from '../../weaponClassBuffStore';
 import {
   COMPANION_MASTERY_PATHS, getCompanionMasteryProgress, normalizeCompanionMasteryRole,
 } from '../progression/AXECompanionRoleMastery.mjs';
 import { getCompanionGrowthView, applyCompanionGrowthBonus } from '../progression/AXECompanionGrowthView.mjs';
 import './AXECompanionProfileRedesign.css';
+import './AXECompanionMasteryGallery.css';
+
+const CompanionPreview3D = lazy(()=>import('../../equipment/CompanionPreview3D'));
 
 const ICONS = { damage: Swords, defense: Shield, range: Target };
 const format = value => Number(value||0).toLocaleString('en-US',{maximumFractionDigits:1});
@@ -30,6 +34,7 @@ export default function AXECompanionMasteryPanel({onNotice=()=>{},onMyCompanion=
   const mount=mounts.find(entry=>entry.instanceId===selectedId)
     ||mounts.find(entry=>entry.instanceId===snapshot.activeMountId)||mounts[0]||null;
   const def=mount?getAXEMountDefinition(mount.definitionId):null;
+  const linkedModel=def?.modelRef?getCompanionById(def.modelRef):null;
   const activeRole=normalizeCompanionMasteryRole(weaponRole);
   const role=selectedRole||activeRole;
   const chosen=COMPANION_MASTERY_PATHS.find(path=>path.id===role)||COMPANION_MASTERY_PATHS[0];
@@ -47,14 +52,38 @@ export default function AXECompanionMasteryPanel({onNotice=()=>{},onMyCompanion=
     <AXECompanionMountCircleRail mounts={mounts} selectedId={mount?.instanceId}
       activeId={snapshot.activeMountId} registeredId={snapshot.registeredMountId}
       label="My Companion" onSelect={id=>{setSelectedId(id);setSelectedRole(null);}}/>
+    <section className="axe-mastery-portrait" aria-label="Selected companion live 3D viewer">
+      <header className="axe-mastery-portrait-head">
+        <small>{snapshot.activeMountId===mount?.instanceId?'ACTIVE COMPANION':'OWNED COMPANION'}</small>
+        <strong>{def?.name||'No companion selected'}</strong>
+      </header>
+      <div className="axe-mastery-portrait-stage">
+        {linkedModel?<Suspense fallback={<p className="axe-mastery-model-empty">Loading 3D companion…</p>}>
+          <CompanionPreview3D key={linkedModel.id} companionId={linkedModel.id}/>
+        </Suspense>:<p className="axe-mastery-model-empty">{mount
+          ? 'No 3D model is linked to this companion.'
+          : 'Choose an owned companion to preview.'}</p>}
+      </div>
+      <div className="axe-mastery-portrait-foot">
+        <div className="axe-mastery-growth-compact">
+          <span>Growth cycles <strong>{growth.completedCycles} / 4</strong></span>
+          <span>Level <strong>{growth.level} / 20</strong></span>
+        </div>
+        <div className="axe-collection-progress" role="progressbar"
+          aria-label="Companion growth level progress" aria-valuemin={0} aria-valuemax={100}
+          aria-valuenow={Math.round(growth.percent)}><span style={{width:growth.percent+'%'}}/></div>
+        <small>{eligible?'Mastery training unlocked':
+          'Complete the first Level 20 cycle (5,000 XP) to unlock mastery'}</small>
+        <button className="axe-mastery-return" type="button" onClick={onMyCompanion}>
+          <Compass size={15}/>Equipment</button>
+      </div>
+    </section>
     <main className="axe-mastery-center">
       <header className="axe-mastery-compact-header">
         <div><small>COMPANION MASTERY</small>
           <h2>{def?.name||'Select a Companion'}</h2>
           {mount&&<span>Lv {growth.level} · Growth {mount.growthPercent||0}% · {format(mount.totalXp)} XP</span>}
         </div>
-        <button type="button" className="axe-mastery-return" onClick={onMyCompanion}>
-          <Compass size={15}/>Equipment</button>
       </header>
       {mount?<div className="axe-mastery-workbench">
         <section className="axe-mastery-paths" aria-label="Damage, Defense and Range mastery paths">
