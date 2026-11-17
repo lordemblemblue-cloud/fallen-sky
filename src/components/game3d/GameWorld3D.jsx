@@ -142,6 +142,7 @@ import { xpForLevel, pickTier, getEnemyTierByName,
 } from './gameWorldConfig';
 import { attachContextGuard } from './webglContextGuard';
 import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSettings } from './render/inkWashLook';
+import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
 import { createAtomicUltraSumiMode } from './render/atomicUltraSumiMode.mjs';
 import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
@@ -511,23 +512,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let livingInkWorld = null; // initialized only after the Game 3D Wolfveil roots exist
     let atomicLook = null; // clone-only safe global vegetation material style
     let suigenActive=false; // set before any Graphics listeners can fire
-    // Render-only FPS cap: world simulation still updates at browser rAF
-    // cadence, so changing this setting does not slow physics or networking.
-    const frameLimit=()=>[30,60,120,144].includes(Number(readGraphicsSettings().fpsCap))
-      ?Number(readGraphicsSettings().fpsCap):60;
-    let renderIntervalMs=1000/frameLimit();
-    let previousRenderMs=-Infinity;
-    const canRenderFrame=now=>{
-      if(!Number.isFinite(now)||now-previousRenderMs>=renderIntervalMs-.6){
-        previousRenderMs=Number.isFinite(now)?now:0;
-        return true;
-      }
-      return false;
-    };
+    // A refresh-rate-independent rendering cap; game simulation still runs
+    // on every browser rAF, so movement and server authority are not throttled.
+    const renderPacer=createGame3DRenderFramePacer(readGraphicsSettings().fpsCap);
     window.__gw3dInkLook = inkLook; // the bench and reviews read and set its level
     const onGraphicsSettings = () => {
-      renderIntervalMs=1000/frameLimit();
-      previousRenderMs=-Infinity;
+      renderPacer.setFPSCap(readGraphicsSettings().fpsCap);
       inkLook.setPalette(resolveInkPalette());
       inkLook.setLevel(resolveInkLevel());
       livingInkWorld?.setLevel(resolveInkLevel());
@@ -2706,7 +2696,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const animate = (renderNow=performance.now()) => {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      const renderThisFrame=canRenderFrame(renderNow);
+      const renderThisFrame=renderPacer.shouldRender(renderNow);
       // Character selection is a camera/UI state of this SAME Wolfveil scene.
       // Suspend combat, input, rewards and physics; keep scenery, idle animation
       // and real renderer alive. No second canvas or terrain is constructed.
