@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, ChevronRight, Search, Shield, Sparkles, Swords, Wind, X } from 'lucide-react';
+import { BookOpen, ChevronRight, Search, Shield, Sparkles, Swords, Wind } from 'lucide-react';
 import { getAllSkills, scaleStat } from '../../skills/skillRegistry';
 import { SKILL_TYPE } from '../../skills/skillTypes';
 import { selectUniversalSkills } from './AXEUniversalSkillModel.mjs';
@@ -48,7 +48,6 @@ export default function AXEUniversalSkillHub({
 }) {
   const [query,setQuery]=useState('');
   const [selectedId,setSelectedId]=useState(null);
-  const [detailOpen,setDetailOpen]=useState(false);
   const [,setMasteryRevision]=useState(0);
   const catalog=useMemo(()=>buildUniversalSkills(),[]);
   useEffect(()=>subscribeSkillMastery(()=>setMasteryRevision(n=>n+1)),[]);
@@ -60,8 +59,8 @@ export default function AXEUniversalSkillHub({
   const selected=catalog.find(skill=>skill.skill_id===selectedId)||null;
   const mastery=selected?getSkillMastery(selected.skill_id):null;
   const equipped=selected&&(activeIds.includes(selected.skill_id)||passiveIds.includes(selected.skill_id));
-  const select=skill=>{setSelectedId(skill.skill_id);setDetailOpen(true);onSelected?.(skill);};
-  return <section className="axe-sk-universal-hub" data-skill-hub="universal"
+  const select=skill=>{setSelectedId(skill.skill_id);onSelected?.(skill);};
+  return <section className="axe-sk-universal-hub" data-skill-hub="universal" data-universal-layout="split-detail"
     aria-label="Universal skills — buffs and passives">
     <div className="axe-sk-universal-toolbar">
       <span><Sparkles size={19} aria-hidden="true"/> Universal <small>Buffs &amp; Passives</small></span>
@@ -69,41 +68,55 @@ export default function AXEUniversalSkillHub({
         <input aria-label="Search universal skills" placeholder="Search both groups" type="search"
           value={query} onChange={event=>setQuery(event.target.value)}/></label>
     </div>
-    <div className="axe-sk-universal-columns">
-      <UniversalSkillsColumn title="Buffs" kind="buffs" icon={Shield}
-        skills={buffs} equippedIds={activeIds} selectedId={selectedId}
-        onSelect={select} onEquip={onEquip}/>
-      <UniversalSkillsColumn title="Passives" kind="passives" icon={Wind}
-        skills={passives} equippedIds={passiveIds} selectedId={selectedId}
-        onSelect={select} onEquip={onEquip}/>
+    <div className="axe-sk-universal-workspace">
+      <section className="axe-sk-universal-library" aria-label="Universal skill library">
+        <div className="axe-sk-universal-columns">
+          <UniversalSkillsColumn title="Buffs" kind="buffs" icon={Shield}
+            skills={buffs} equippedIds={activeIds} selectedId={selectedId}
+            onSelect={select} onEquip={onEquip}/>
+          <UniversalSkillsColumn title="Passives" kind="passives" icon={Wind}
+            skills={passives} equippedIds={passiveIds} selectedId={selectedId}
+            onSelect={select} onEquip={onEquip}/>
+        </div>
+      </section>
+      <aside className="axe-sk-universal-detail" aria-label="Selected universal skill details">
+        <div className="axe-sk-universal-detail-title">
+          <h2><BookOpen size={17} aria-hidden="true"/> Skill Information</h2>
+          <span>{selected ? selected.skill_type===SKILL_TYPE.PASSIVE?'Passive':'Buff' : 'Select a skill'}</span>
+        </div>
+        {selected ? <>
+          <div className="axe-sk-universal-detail-head">
+            <div><small>{selected.skill_type===SKILL_TYPE.PASSIVE?'PASSIVE':'ACTIVE BUFF'} ·
+              Lv. {mastery?.level||1} / {selected.max_level||mastery?.maxLevel||1}</small>
+              <h3>{selected.skill_name}</h3></div>
+          </div>
+          <p>{selected.description}</p>
+          <div className="axe-sk-universal-stats">
+            {Object.keys(selected.scaling||{}).map(stat=>{
+              const level=mastery?.level||1;
+              const now=scaleStat(selected,stat,level);
+              const next=scaleStat(selected,stat,Math.min(selected.max_level||level,level+1));
+              return <div key={stat}><span>{label(stat)}</span>
+                <strong>{fmt(now,stat)} → {fmt(next,stat)}</strong></div>;
+            })}
+            <div><span>Cooldown</span><strong>{selected.cooldown||0}s</strong></div>
+            <div><span>Status</span><strong>{equipped?'Equipped':'Available'}</strong></div>
+          </div>
+          <button type="button" className="axe-sk-equip"
+            disabled={!!equipped||!isWeaponSkillUnlocked(selected.skill_id)}
+            onClick={()=>onEquip?.(selected)}>
+            <Swords size={16}/>{equipped?'Already Equipped':
+              selected.skill_type===SKILL_TYPE.PASSIVE?'Equip to Passive Slot':'Equip to Free Skill Slot'}
+          </button>
+          <p className="axe-sk-caption"><BookOpen size={13}/> Skill mastery progresses through gameplay.
+            Buffs use active slots; passives use the existing passive loadout.</p>
+        </> : <div className="axe-sk-universal-detail-empty">
+          <Sparkles size={26} aria-hidden="true"/>
+          <h3>Choose a skill</h3>
+          <p>Select a Buff or Passive from the left to view its effects, mastery,
+            cooldown and equipped status here.</p>
+        </div>}
+      </aside>
     </div>
-    {detailOpen&&selected&&<aside className="axe-sk-universal-detail" aria-label="Selected universal skill details">
-      <div className="axe-sk-universal-detail-head">
-        <div><small>{selected.skill_type===SKILL_TYPE.PASSIVE?'PASSIVE':'ACTIVE BUFF'} ·
-          Lv. {mastery?.level||1} / {selected.max_level||mastery?.maxLevel||1}</small>
-          <h3>{selected.skill_name}</h3></div>
-        <button type="button" aria-label="Close skill details" onClick={()=>setDetailOpen(false)}><X size={19}/></button>
-      </div>
-      <p>{selected.description}</p>
-      <div className="axe-sk-universal-stats">
-        {Object.keys(selected.scaling||{}).map(stat=>{
-          const level=mastery?.level||1;
-          const now=scaleStat(selected,stat,level);
-          const next=scaleStat(selected,stat,Math.min(selected.max_level||level,level+1));
-          return <div key={stat}><span>{label(stat)}</span>
-            <strong>{fmt(now,stat)} → {fmt(next,stat)}</strong></div>;
-        })}
-        <div><span>Cooldown</span><strong>{selected.cooldown||0}s</strong></div>
-        <div><span>Status</span><strong>{equipped?'Equipped':'Available'}</strong></div>
-      </div>
-      <button type="button" className="axe-sk-equip"
-        disabled={!!equipped||!isWeaponSkillUnlocked(selected.skill_id)}
-        onClick={()=>onEquip?.(selected)}>
-        <Swords size={16}/>{equipped?'Already Equipped':
-          selected.skill_type===SKILL_TYPE.PASSIVE?'Equip to Passive Slot':'Equip to Free Skill Slot'}
-      </button>
-      <p className="axe-sk-caption"><BookOpen size={13}/> Skill mastery progresses through gameplay.
-        Buffs use active slots; passives use the existing passive loadout.</p>
-    </aside>}
   </section>;
 }
