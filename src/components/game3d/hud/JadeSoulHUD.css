@@ -1262,3 +1262,255 @@
     transition:none!important;animation:none!important;
   }
 }
+
+
+/* AAA minimalist vitals / contextual stamina — 2026-11-16.
+   Only the left/center resource display changes. Existing weapon role selector,
+   skill matrix, chat, services, compass and map remain entirely untouched. */
+.jade-hud .jade-status-bars--refined {
+  position:absolute;
+  z-index:7;
+  left:50%;
+  right:auto;
+  bottom:clamp(35px,5vh,55px);
+  transform:translateX(-50%);
+  width:min(76vw,1050px);
+  display:grid;
+  grid-template-columns:minmax(0,1fr) clamp(110px,12vw,150px) minmax(0,1fr);
+  column-gap:clamp(9px,2vw,32px);
+  align-items:end;
+  gap:0;
+  pointer-events:none;
+}
+.jade-hud .jade-status-bars--refined .jade-status-row {
+  width:100%;
+  min-width:0;
+  height:auto;
+  display:block;
+  flex:none;
+}
+.jade-status-bars--refined .jade-status-row--hp {grid-column:1;grid-row:1;}
+.jade-status-bars--refined .jade-status-row--will {grid-column:3;grid-row:1;}
+.jade-hud .jade-status-bars--refined .jade-status-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  height:auto;
+  min-height:17px;
+  padding:0 2px 5px;
+  color:#ebdfc9;
+  font:500 clamp(10px,.75vw,12px)/1.2 Georgia,serif;
+  letter-spacing:.085em;
+  text-shadow:0 1px 6px #000;
+}
+.jade-hud .jade-status-bars--refined .jade-status-header span:last-child {
+  color:#eaf0f4;
+  font:500 clamp(10px,.76vw,12px)/1.2 system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:0;
+}
+.jade-hud .jade-status-bars--refined .jade-status-track {
+  margin:0;
+  height:6px;
+  width:100%;
+  border:0;
+  border-radius:8px;
+  clip-path:none;
+  background:rgba(4,18,31,.88);
+  box-shadow:inset 0 1px 2px #000b,0 0 0 1px rgba(196,166,115,.46);
+  overflow:hidden;
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill {
+  height:100%;
+  border-radius:8px;
+  transition:width .18s ease;
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill--hp {
+  background:linear-gradient(90deg,#a62544,#f76c76);
+  box-shadow:0 0 6px rgba(251,78,105,.45);
+}
+.jade-hud .jade-status-bars--refined .jade-status-fill--will {
+  background:linear-gradient(90deg,#42a7d5,#96f1ff);
+  box-shadow:0 0 6px rgba(103,213,252,.48);
+}
+
+/* The EXP progress now lives INSIDE the level octagon: no second long EXP
+   track and no oversized icon. 70%-ish scale of the approved concept. */
+.jade-hud .jade-xp--compact {
+  position:absolute;
+  z-index:8;
+  top:auto;
+  right:auto;
+  left:50%;
+  bottom:clamp(12px,2vh,23px);
+  transform:translateX(-50%);
+  display:block;
+  width:clamp(88px,8.4vw,126px);
+  min-width:0;
+  height:clamp(94px,11.8vh,130px);
+  padding:2px;
+  border:0;
+  border-radius:0;
+  background:linear-gradient(145deg,rgba(255,230,170,.92),rgba(139,100,48,.91) 65%,#ffdf97);
+  box-shadow:none;
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,23% 100%,0 77%,0 23%);
+  text-align:center;
+  color:#fff3d5;
+  filter:drop-shadow(0 2px 8px rgba(0,0,0,.34));
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-face {
+  position:relative;
+  width:100%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:2px;
+  isolation:isolate;
+  overflow:hidden;
+  background:linear-gradient(145deg,rgba(15,27,34,.97),rgba(4,14,25,.98));
+  clip-path:polygon(22% 0,78% 0,100% 23%,100% 77%,78% 100%,22% 100%,0 77%,0 23%);
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-energy {
+  position:absolute;
+  z-index:-1;
+  left:0;
+  bottom:0;
+  width:100%;
+  height:var(--jade-xp-progress,0%);
+  background:linear-gradient(to top,rgba(207,144,50,.38),rgba(228,184,100,.14) 62%,rgba(255,218,151,.04));
+  transition:height .28s ease;
+}
+.jade-hud .jade-xp--compact .jade-xp-agent {
+  font:600 clamp(9px,.75vw,11px)/1.1 Georgia,serif;
+  letter-spacing:.09em;
+}
+.jade-hud .jade-xp--compact .jade-xp-number {
+  font:400 clamp(28px,3.1vw,40px)/.95 Georgia,serif;
+  text-shadow:0 0 9px rgba(255,220,142,.2);
+}
+.jade-hud .jade-xp--compact .jade-xp-octagon-rule {
+  width:53%;
+  height:1px;
+  margin:3px 0 1px;
+  background:linear-gradient(90deg,transparent,#d1ab73,transparent);
+}
+.jade-hud .jade-xp--compact .jade-xp-caption {
+  font:500 9px/1.1 Georgia,serif;
+  letter-spacing:.13em;
+}
+.jade-hud .jade-xp--compact .jade-xp-readout {
+  font:500 clamp(9px,.67vw,11px)/1.2 system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;
+  letter-spacing:-.035em;
+  color:#f1dcad;
+}
+
+/* Circular stamina appears only after an actual stamina spend.
+   Its anchor comes from the avatar's projected screen position. */
+.jade-hud .jade-stamina-popup {
+  position:absolute;
+  z-index:12;
+  top:43%;
+  left:61%;
+  width:clamp(64px,6.2vw,82px);
+  height:clamp(64px,6.2vw,82px);
+  padding:6px;
+  display:grid;
+  place-items:center;
+  transform:translate(-50%,-50%) scale(.88);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease,visibility .22s ease;
+}
+.jade-hud .jade-stamina-popup[data-stamina-visible="true"] {
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1);
+}
+.jade-hud .jade-stamina-popup::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,#cfa96f,#73572d,#e1c68e);
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,23% 100%,0 77%,0 23%);
+}
+.jade-hud .jade-stamina-popup::after {
+  content:'';
+  position:absolute;
+  inset:2px;
+  background:rgba(8,23,33,.97);
+  clip-path:polygon(23% 0,77% 0,100% 23%,100% 77%,77% 100%,23% 100%,0 77%,0 23%);
+}
+.jade-hud .jade-stamina-ring {
+  position:relative;
+  z-index:1;
+  display:grid;
+  place-items:center;
+  width:100%;
+  height:100%;
+  padding:5px;
+  border-radius:50%;
+  background:conic-gradient(from -90deg,#83faff 0 var(--stamina-progress,0%),rgba(47,100,116,.37) var(--stamina-progress,0%) 100%);
+  box-shadow:0 0 5px rgba(78,210,235,.36);
+}
+.jade-hud .jade-stamina-ring-core {
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  background:rgba(8,25,36,.98);
+  color:#f0f7fa;
+}
+.jade-hud .jade-stamina-ring-core svg {color:#dbf7ff;flex:none;}
+.jade-hud .jade-stamina-ring-core span {
+  color:#e8e2d0;
+  font:600 7px/1 Georgia,serif;
+  letter-spacing:.035em;
+}
+.jade-hud[data-service-mode="true"] .jade-stamina-popup,
+.game3d-view[data-services-open="true"] .jade-stamina-popup {
+  display:none;
+}
+@media (max-width:860px) {
+  .jade-hud .jade-status-bars--refined {
+    width:min(84vw,620px);
+    grid-template-columns:minmax(0,1fr) 95px minmax(0,1fr);
+    column-gap:8px;
+    bottom:36px;
+  }
+  .jade-hud .jade-xp--compact {width:90px;height:100px;bottom:12px;}
+  .jade-hud .jade-xp--compact .jade-xp-number {font-size:30px;}
+}
+@media (max-width:620px) {
+  .jade-hud .jade-status-bars--refined {
+    width:calc(100% - 24px);
+    grid-template-columns:minmax(0,1fr) 76px minmax(0,1fr);
+    column-gap:5px;
+    bottom:40px;
+  }
+  .jade-hud .jade-status-bars--refined .jade-status-header {
+    font-size:9px;
+    gap:3px;
+    padding:0 0 4px;
+  }
+  .jade-hud .jade-status-bars--refined .jade-status-header span:last-child {
+    font-size:8px;
+  }
+  .jade-hud .jade-xp--compact {width:76px;height:84px;bottom:17px;}
+  .jade-hud .jade-xp--compact .jade-xp-number {font-size:26px;}
+  .jade-hud .jade-xp--compact .jade-xp-agent,
+  .jade-hud .jade-xp--compact .jade-xp-readout {font-size:8px;}
+  .jade-hud .jade-stamina-popup {width:66px;height:66px;}
+}
+@media (prefers-reduced-motion:reduce) {
+  .jade-hud .jade-xp--compact .jade-xp-octagon-energy,
+  .jade-hud .jade-stamina-popup,
+  .jade-hud .jade-status-bars--refined .jade-status-fill {transition:none;}
+}
