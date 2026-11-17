@@ -38,7 +38,7 @@
 }
 .game3d-view .axe-service-workspace {
   min-width:0;max-width:100%;max-height:100dvh;
-  padding-bottom:max(0px,var(--game3d-safe-bottom));
+  scroll-padding-bottom:max(12px,var(--game3d-safe-bottom));
 }
 .game3d-view .axe-service-workspace .axe-service-progression {
   min-width:0;max-width:100%;
@@ -75,7 +75,8 @@
     right:max(0px,var(--game3d-safe-right));
   }
   .game3d-view .jade-services-navigation {
-    overflow-x:auto;overflow-y:visible;overscroll-behavior-x:contain;
+    /* Preserve authored dropdown overflow and service button hit targets. */
+    max-width:calc(100% - var(--game3d-safe-left) - var(--game3d-safe-right));
   }
 }
 /* Interface size can increase legibility on large screens. On a compact
