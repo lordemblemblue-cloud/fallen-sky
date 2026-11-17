@@ -48,7 +48,7 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
   useEffect(()=>{
     setSelected(null);setTypeFilter('All');setRarityFilter('All');setSearch('');
     setVarietySlot('');setPreviewOwner('wardrobe');
-  },[page,companion.activeCompanionId]);
+  },[page]); // Keep direct companion selections in the live viewer until a wardrobe slot is clicked.
   const isImbue=page==='Imbuement';
   const selectedModel=getCompanionById(companion.activeCompanionId);
   // One read-only collection combines both owned player Vanity sets and
