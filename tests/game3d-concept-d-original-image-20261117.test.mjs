@@ -35,7 +35,7 @@ test('real weapon and skill controls align around enlarged first image and remai
   assert.match(css,/grid-template-columns:repeat\(5,minmax\(0,1fr\)\)/);
   assert.match(weapon,/ChevronLeft/);
   assert.match(weapon,/ChevronRight/);
-  assert.match(weapon,/onClick=\{\(\)=>onDraw\(role\)\}/);
+  assert.match(weapon,/onClick=\{event=>onDraw\(role,event\.shiftKey\)\}/);
   assert.match(weapon,/getAXEWeaponHUDArtwork\(item\)/);
   assert.match(ui,/<SkillMatrix loadout=\{loadout\}\/>/);
   assert.match(ui,/data-hud-template="approved-gold-shell-20261117"/);
