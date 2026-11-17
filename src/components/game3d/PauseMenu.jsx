@@ -19,6 +19,8 @@ import {CLONE_GPU_PROFILE_KEY,CLONE_GPU_PROFILES,readCloneGPUProfile,
   normalizeCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
 import {readGame3DDesktopInstall,saveGame3DDesktopInstall}
   from './performance/Game3DDesktopInstall.mjs';
+import {rememberGame3DPlatformSetting} from './performance/Game3DPlatformGraphics.mjs';
+import Game3DPlatformGraphicsPanel from './performance/Game3DPlatformGraphicsPanel';
 import {GAME3D_GPU_BRIDGE_DOWNLOAD,GAME3D_GPU_BRIDGE_SESSION_KEY,
   describeGame3DGpuReport,fetchGame3DGpuBridge,parseGame3DGpuReport}
   from './performance/Game3DGpuBridge.mjs';
@@ -258,6 +260,8 @@ export default function PauseMenu({
     setGraphics(sanitized);
     try{localStorage.setItem('game_graphics_settings',JSON.stringify(sanitized));}
     catch{/* a private-browser quota error must not break the menu */}
+    // Browser, desktop app and mobile each keep their own copy of these.
+    rememberGame3DPlatformSetting({graphics:sanitized});
     window.dispatchEvent(new CustomEvent('graphicsSettingsChanged',{detail:sanitized}));
   };
   const changeWorldVariant=next=>{
@@ -289,6 +293,7 @@ export default function PauseMenu({
   const changeDisplay=next=>{
     const saved=saveGame3DDisplaySettings(next);
     setDisplaySettings(saved);
+    rememberGame3DPlatformSetting({display:saved});
   };
   const changeHudPrefs=next=>setHudPrefs(saveGame3DHudCustomization(next));
   const changeHudPanel=(id,patchValue)=>changeHudPrefs(changeGame3DHudWidget(hudPrefs,id,patchValue));
@@ -299,8 +304,17 @@ export default function PauseMenu({
     const profile=normalizeCloneGPUProfile(next);
     setGpuProfile(profile);
     try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{}
+    rememberGame3DPlatformSetting({gpuProfile:profile});
     window.__axe3dCloneGovernor?.setProfile?.(profile);
     window.dispatchEvent(new CustomEvent('game3dCloneGPUProfileChanged',{detail:{profile}}));
+  };
+  // Another platform's saved settings were just swapped in (and applied to
+  // the live renderer): show them in this menu too.
+  const showPlatformProfile=applied=>{
+    if(!applied?.profile)return;
+    setGraphics(game3dPauseGraphicsDefaults(applied.graphics||applied.profile.graphics));
+    setDisplaySettings(applied.profile.display);
+    setGpuProfile(applied.profile.gpuProfile);
   };
   const changeDesktopInstall=target=>{
     setDesktopInstall(saveGame3DDesktopInstall(target));
@@ -615,6 +629,7 @@ export default function PauseMenu({
                 </div>
               </div>}
               {view==='graphics'&&<div className="axe3d-pause__settings-grid">
+                <Game3DPlatformGraphicsPanel open={open} onProfileApplied={showPlatformProfile}/>
                 <div className="axe3d-pause__surface" data-testid="game3d-display-resolution-settings">
                   <div className="axe3d-pause__surface-heading"><Monitor size={22}/><div>
                     <strong>Display Resolution &amp; Interface Fit</strong>

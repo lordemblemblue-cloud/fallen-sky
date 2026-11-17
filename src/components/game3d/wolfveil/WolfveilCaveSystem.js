@@ -22,6 +22,8 @@ import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from 
 import {WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_JUNCTION,
   WOLFVEIL_MODULAR_CANYON} from './WolfveilModularCaveKit.mjs';
 import {appendWolfveilModularCaveVisuals} from './WolfveilModularCaveVisuals.mjs';
+import {installWolfveilCaveDrawBudget} from './WolfveilCaveDrawBudget.mjs';
+import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
 
 import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
@@ -194,6 +196,9 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const torusGeo = new THREE.TorusGeometry(1, 0.18, 7, 18);
   const rockGeo = new THREE.DodecahedronGeometry(1, 0);
 
+  // Every prop built by addProp is motionless decoration unless it is later
+  // registered in animatedFlames; the draw budget below merges the rest.
+  const staticProps = [];
   const addProp = (geo, mat, x, y, z, sx, sy, sz, rx = 0, ry = 0, rz = 0) => {
     const m = new THREE.Mesh(geo, mat);
     m.position.set(x, y, z);
@@ -203,6 +208,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     m.receiveShadow = true;
     m.raycast = () => {};
     group.add(m);
+    staticProps.push(m);
     return m;
   };
 
@@ -1005,11 +1011,36 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     return l;
   });
 
+  // Draw budget (WolfveilCaveDrawBudget.mjs): parts that lie under the turf
+  // are only drawn while the player is underground, and identical props share
+  // one draw. It fails open: on any error the caves stay exactly as built.
+  let drawBudget = null;
+  try {
+    const flameMeshes = new Set(animatedFlames.map(flame => flame.mesh));
+    drawBudget = installWolfveilCaveDrawBudget({
+      Group: THREE.Group,
+      InstancedMesh: THREE.InstancedMesh,
+      group,
+      heightAt: createWolfveilTerrainSurfaceSampler(),
+      mouths: WOLFVEIL_CAVE_ENTRANCE_FRAMES.map(frame => [frame.mouth[0], frame.mouth[2]]),
+      keep: [floorMesh, shellMesh, pavementMesh, ...entranceOccluders, ...lightPool],
+      staticProps: staticProps.filter(mesh => !flameMeshes.has(mesh)),
+    });
+  } catch (error) {
+    console.warn('[Wolfveil caves] draw budget unavailable; caves left as built:', error);
+  }
+
   let elapsed = 0;
   // A fresh login never implicitly authorizes an underground cave session:
   // old fall-through checkpoints are rescued onto the intact surface instead
   // of restoring the very collision bug the owner is reporting.
   let activeCaveId = null; // set by pressing E at an arch, or by walking into the mouth
+  // Tells the draw budget where the player is, in the same call that moves
+  // them, so the interior is on screen the moment they arrive in it.
+  const syncDrawBudget = (worldPos = null) => drawBudget?.update({
+    inside: activeCaveId !== null,
+    player: worldPos ? { x: worldPos.x, y: worldPos.y, z: worldPos.z - offsetZ } : null,
+  });
   // The four entrances are real openings: stepping into a stone mouth descends
   // into that cave. The E prompt still works for every approach angle.
   const enterFromMouth = (worldPos) => {
@@ -1054,6 +1085,16 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       build:modularVisual.stats,
       treasureChestsDecorativeOnly:true,bossGameplayImplemented:false,
     },
+    // Draw budget controls and numbers (diagnostics, A/B test, map export).
+    drawBudget: {
+      stats() { return drawBudget?.stats() ?? null; },
+      setEnabled(enabled) { return drawBudget?.setEnabled(enabled) ?? false; },
+      isInteriorShown() { return drawBudget?.isInteriorShown() ?? true; },
+    },
+    /** Keeps the whole cave network drawn while `task` runs (map export). */
+    withInteriorShown(task) {
+      return drawBudget ? drawBudget.withInteriorShown(task) : Promise.resolve().then(task);
+    },
     awakeFloors(){return awakeCaveFloors(defeatedBosses);},
     noteBossDefeated(bossId) {
       // Records the painting, never a reward. Combat still owns the kill.
@@ -1090,6 +1131,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       // unsupported cliff or samples the underside as the outdoor surface.
       activeCaveId=travel.action==='enter'?travel.caveId:null;
       worldPos.x=travel.x;worldPos.y=travel.y;worldPos.z=travel.z+offsetZ;
+      syncDrawBudget(worldPos);
       return {action:travel.action,name:travel.name,caveId:travel.caveId};
     },
     resolveCollision(worldPos, prevWorldPos, radius = 0.62) {
@@ -1142,6 +1184,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
         occludersHidden = hideOccluders;
         for (const mesh of entranceOccluders) mesh.visible = !hideOccluders;
       }
+      syncDrawBudget(playerWorldPos);
       if (!playerWorldPos || !Number.isFinite(playerWorldPos.x) || !Number.isFinite(playerWorldPos.z)) {
         for (const l of lightPool) l.intensity = 0;
         return;
@@ -1167,6 +1210,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     },
     dispose() {
+      drawBudget?.dispose();
       modularVisual.waterGeometry.dispose();
       for (const mat of wayfindingMaterials) mat.dispose();
       for (const t of ownedTextures) t.dispose();

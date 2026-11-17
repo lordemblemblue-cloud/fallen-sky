@@ -10,6 +10,8 @@ import {
   readRendererInfo,
   summarizeFrameTimes,
 } from './renderStats';
+import { evaluateGame3DAreaBudget, describeGame3DAreaBudget } from '../performance/Game3DAreaBudget.mjs';
+import { activeGame3DPlatformProfile } from '../performance/Game3DPlatformGraphics.mjs';
 
 const WINDOW_FRAMES = 240;
 const MB = 1024 * 1024;
@@ -105,6 +107,9 @@ export default function RenderStatsOverlay() {
         gpuRender: wrapped?.ext ? summarizeFrameTimes(tail(gpu)) : null,
         info: readRendererInfo(renderer),
         scene: estimateSceneMemory(window.__gw3dScene),
+        // Which Wolfveil area is loaded and how this platform's budget is doing.
+        area: window.__gw3dAreaLoader?.getStats?.() || null,
+        platform: activeGame3DPlatformProfile(window).platform,
         jsHeapMB: performance.memory ? performance.memory.usedJSHeapSize / MB : null,
       };
     };
@@ -130,7 +135,7 @@ export default function RenderStatsOverlay() {
   }, [enabled]);
 
   if (!enabled || !view) return null;
-  const { frame, cpuRender, gpuRender, info, scene, jsHeapMB } = view;
+  const { frame, cpuRender, gpuRender, info, scene, jsHeapMB, area, platform } = view;
   const fmt = (n, d = 1) => (Number.isFinite(n) ? n.toFixed(d) : '-');
   const lines = [
     `fps ${fmt(frame.fps, 0)}  frame p50 ${fmt(frame.p50Ms)} p95 ${fmt(frame.p95Ms)} ms`,
@@ -141,6 +146,15 @@ export default function RenderStatsOverlay() {
     lines.push(`calls ${info.calls}  tris ${info.triangles.toLocaleString()}  pts ${info.points}  lines ${info.lines}`);
     lines.push(`geo ${info.geometries}  tex ${info.textures}  programs ${info.programs}`);
     lines.push(`buffer ${info.bufferWidth}x${info.bufferHeight} @${fmt(info.pixelRatio, 2)}`);
+    // The counters above are the last pass drawn; with a post-process style
+    // on, read the budget with the Classic visual style for the scene pass.
+    lines.push(describeGame3DAreaBudget(evaluateGame3DAreaBudget({
+      platform, calls: info.calls, triangles: info.triangles, fps: frame.fps,
+    }), area?.areaLabel || ''));
+  }
+  if (area) {
+    lines.push(`areas loaded ${area.loadedAreas.join('+')} (${area.mode})  scenery tris in ${area.triangles.loaded.toLocaleString()} out ${area.triangles.unloaded.toLocaleString()}`);
+    lines.push(`area units ${area.units.loaded}/${area.units.total}  batches split ${area.batches.split} left ${area.batches.dynamic}  instances ${area.loadedInstances}/${area.sourceInstances}`);
   }
   lines.push(`meshes ${scene.meshes} (skinned ${scene.skinnedMeshes}, casters ${scene.shadowCasters})  lights ${scene.lights}`);
   lines.push(`est. GPU geo ${fmt(scene.geometryBytes / MB)} MB  tex ${fmt(scene.textureBytes / MB)} MB`);

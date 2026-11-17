@@ -158,7 +158,11 @@ import {isInsideMeadowCircle,meadowGroundHeight}
 import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage} from './wolfveil/WolfveilScene';
-import {createWolfveilFourRegionRuntime} from './wolfveil/streaming/WolfveilFourRegionRuntime.mjs';
+import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
+import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
+import {createWolfveilAreaPortals} from './wolfveil/WolfveilAreaPortals';
+import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
+  activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
@@ -474,6 +478,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     container.appendChild(canvas);
+
+    // Browser, desktop app and mobile each keep their own graphics settings.
+    // Copy this platform's saved profile into the live settings BEFORE the
+    // renderer reads its GPU profile, resolution and quality below.
+    try { bootGame3DPlatformGraphics(window); }
+    catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
     try {
@@ -813,16 +823,39 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             scene.updateMatrixWorld(true);
           },
         }) : null;
-    // Four player-centric render regions share the SAME physical Wolfveil.
-    // Keep original BVH floor, river, server collision and world coordinates.
-    const regionStream=wolfveilVillage?createWolfveilFourRegionRuntime({
-      world:wolfveilVillage.world,position:{x:0,z:70},
+    // Five areas (town plus front, left, right and back) share the SAME
+    // physical Wolfveil: one BVH floor, river, server collision and world
+    // coordinates. Only the area the player is in is drawn; the others are
+    // unloaded until a portal is near. How much stays loaded is this
+    // platform's own setting (browser, desktop app or mobile).
+    const areaPlatform=activeGame3DPlatformProfile(window);
+    const regionStream=wolfveilVillage?createWolfveilAreaLoader({
+      world:wolfveilVillage.world,position:{x:0,z:70},portals:WOLFVEIL_AREA_PORTALS,
+      mode:areaPlatform.profile.areaLoading,
+      preloadMeters:areaPlatform.profile.preloadMeters,
+      releaseGpuMemory:areaPlatform.profile.releaseGpuMemory,
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
       },
       onStats(stats){window.__gw3dRegionStreamingStatus=stats;},
+      // Shadows are redrawn only on request (static sun): ask again whenever
+      // an area's scenery appears or leaves.
+      onAreasChanged(){renderer.shadowMap.needsUpdate=true;},
     }):null;
-    if(regionStream)window.__gw3dRegionStreamer=regionStream;
+    if(regionStream){
+      window.__gw3dRegionStreamer=regionStream; // name kept for existing console checks
+      window.__gw3dAreaLoader=regionStream;
+    }
+    // Gateways are decoration: if one cannot be built the world still starts.
+    let areaPortals=null;
+    try{areaPortals=wolfveilVillage?createWolfveilAreaPortals(wolfveilVillage.world):null;}
+    catch(error){console.warn('Wolfveil area portals unavailable:',error);}
+    const onPlatformGraphics=event=>{
+      const profile=event?.detail?.profile||activeGame3DPlatformProfile(window).profile;
+      regionStream?.setOptions({mode:profile.areaLoading,
+        preloadMeters:profile.preloadMeters,releaseGpuMemory:profile.releaseGpuMemory});
+    };
+    window.addEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
     // In an explicitly E-entered cave session, movement's ground-step guard
     // must use the nearby real ramp contact rather than the overhead sealed
     // mountain. Outside (no cave session), the cave system returns no Y, so
@@ -855,6 +888,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // The owner's Japanese-Egyptian artisan town now replaces the old 80-tile
     // Blender town, while the authoritative Wolfveil terrain stays intact.
     const importedSpawnTown=region==='wolfveil'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
+    // The town sits beside the valley builder in the scene; hand it to the
+    // area loader so its buildings unload with the town area too.
+    if(importedSpawnTown?.root)regionStream?.addUnits([importedSpawnTown.root]);
     const vortexLake=region==='wolfveil'
       ?createVortexLakeLandmark(scene,{
         sampleGroundY,
@@ -1009,7 +1045,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           throw Error('Wolfveil imported town GLB not ready: refusing incomplete full-map export');
       }
       const {exportGame3DFullMap} = await import('./mapExport/Game3DFullMapExporter.mjs');
-      const performExport=()=>exportGame3DFullMap({...options,scene,region});
+      // The caves hide their buried interior while the player is on the
+      // surface; an export must still contain every tunnel and chamber.
+      const exportScene=()=>exportGame3DFullMap({...options,scene,region});
+      const caves=wolfveilVillage?.caveSystem;
+      const performExport=()=>caves?.withInteriorShown
+        ?caves.withInteriorShown(exportScene):exportScene();
       // Export ALL original static meshes, not only today's loaded chunks.
       return regionStream?regionStream.withFullMapExport(performExport):performExport();
     };
@@ -2878,6 +2919,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
         regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
+        areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
         ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         if(!suigenActive)vortexLake?.update(delta,null);
@@ -2911,6 +2953,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
       regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
+        areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       const vortexTravel=suigenActive?null:vortexLake?.update(delta,modelRef.current?.position);
@@ -5045,11 +5088,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       livingMeadow?.dispose();
       zombieCamps?.dispose();
       if(window.__gw3dZombieCamps===zombieCamps)window.__gw3dZombieCamps=null;
-      importedSpawnTown?.dispose();
-      ambientBirds?.dispose();
+      // Hand every managed object back before its owner tears it down.
+      window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
+      areaPortals?.dispose();
       regionStream?.dispose();
       if(window.__gw3dRegionStreamer===regionStream)window.__gw3dRegionStreamer=null;
+      if(window.__gw3dAreaLoader===regionStream)window.__gw3dAreaLoader=null;
       window.__gw3dRegionStreamingStatus=null;
+      importedSpawnTown?.dispose();
+      ambientBirds?.dispose();
       wolfveilVillage?.dispose();
       lunarGate?.dispose();
       astralGate?.dispose();
