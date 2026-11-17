@@ -812,6 +812,11 @@ export function createLunaDashboardPlayerController({
     requestJump,
     requestAirWalkAction,
     cancelAirWalk,
+    resetAirWalkMotion:()=>{
+      resetAirWalk();jumpOffset=0;jumpVelocity=0;jumpPhase=null;
+      jumpPhaseSeconds=0;externallyAirborne=false;
+      isBusy=false;busyResetAt=0;
+    },
     getAirWalkState:()=>({...airWalk}),
     requestRoll,
     setAiming,
