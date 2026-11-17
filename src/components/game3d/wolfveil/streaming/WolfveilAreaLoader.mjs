@@ -717,9 +717,12 @@ export function createWolfveilAreaLoader({
     return Math.abs(e[1])*(box.max.x-box.min.x)+Math.abs(e[5])*(box.max.y-box.min.y)+
       Math.abs(e[9])*(box.max.z-box.min.z);
   }
+  // Glass, water and glows have no outline. Leaves cut out of a texture do:
+  // they are flagged transparent but drawn at full strength.
   const solid=mesh=>{
     const material=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;
-    return Boolean(material)&&!material.transparent&&!(Number(material.opacity??1)<1);
+    return Boolean(material)&&material.visible!==false&&material.depthWrite!==false&&
+      !(Number(material.opacity??1)<1);
   };
   function worldInstance(mesh,i){ // matrixWorld x instanceMatrix[i]
     const w=mesh.matrixWorld.elements,a=mesh.instanceMatrix.array,o=i*16,out=new Array(16);

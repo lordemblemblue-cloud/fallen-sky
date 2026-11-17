@@ -496,8 +496,11 @@ function mountWithTallScenery(overrides={}){
   const v=mount({farProxy,farSceneryMaxTriangles:5000,...(overrides.loader||{})});
   const tower=new Mesh('SWV_Watchtower',geometry({half:6,height:12,triangles:2000}),{}).at(20,30,-380);
   const bench=new Mesh('SWV_Bench',geometry({height:1}),{}).at(24,30,-384);
-  const banner=new Mesh('SWV_Banner',geometry({height:9}),{transparent:true}).at(28,30,-380);
-  for(const object of [tower,bench,banner]){v.root.add(object);v.valley.meshes.push(object);}
+  const banner=new Mesh('SWV_GlassBanner',geometry({height:9}),{transparent:true,opacity:.4}).at(28,30,-380);
+  const glow=new Mesh('SWV_Glow',geometry({height:9}),{depthWrite:false}).at(32,30,-380);
+  // Leaves cut out of a texture: flagged transparent, drawn at full strength.
+  const maple=new Mesh('SWV_CutoutMaple',geometry({height:8}),{transparent:true,alphaTest:.5}).at(36,30,-380);
+  for(const object of [tower,bench,banner,glow,maple]){v.root.add(object);v.valley.meshes.push(object);}
   const elms=plant(v,{name:'SWV_Owner_Elms',height:17,triangles:900}); // too heavy to keep whole
   const bake=()=>{v.settle();v.settle();v.step(world(...SPOTS.town),2.1);
     for(let i=0;i<8;i++)v.step(world(...SPOTS.town),.1);};
@@ -509,8 +512,10 @@ const shownOutlines=v=>v.farProxy.built.filter(entry=>entry.object.visible&&!ent
 test('tall scenery that unloads with its area is baked into one outline per area',()=>{
   const v=mountWithTallScenery();v.bake();
   const south=v.farProxy.built.find(entry=>entry.area==='south');
-  // The tower and the elms standing in the south; never the bench or the see-through banner.
-  assert.deepEqual(south.sources.map(source=>source.mesh.name).sort(),['SWV_Owner_Elms','SWV_Watchtower']);
+  // The tower, the cut-out maple and the elms standing in the south; never
+  // the bench, the glass banner or the glow.
+  assert.deepEqual(south.sources.map(source=>source.mesh.name).sort(),
+    ['SWV_CutoutMaple','SWV_Owner_Elms','SWV_Watchtower']);
   const tower=south.sources.find(source=>source.mesh===v.tower);
   assert.deepEqual(tower.matrices.length,1);
   assert.deepEqual(tower.matrices[0].slice(12,15),[20,30,-310],'world placement, valley offset included');
@@ -522,7 +527,7 @@ test('tall scenery that unloads with its area is baked into one outline per area
   const stats=v.loader.getStats().farOutline;
   assert.equal(stats.enabled,true);
   assert.deepEqual(stats.shown.sort(),['east','north','south','west']);
-  assert.deepEqual(stats.areas.south,{sources:2,triangles:80,sourceTriangles:1800,cellMeters:.75});
+  assert.deepEqual(stats.areas.south,{sources:3,triangles:120,sourceTriangles:2700,cellMeters:.75});
   // Nothing is baked twice while the scenery stays the same.
   for(let i=0;i<60;i++)v.step(world(...SPOTS.town),.1);
   assert.equal(v.farProxy.built.length,5);
@@ -556,7 +561,7 @@ test('outlines are rebaked when scenery changes and removed when switched off',(
   v.bake();
   const south=v.farProxy.built.filter(entry=>entry.area==='south');
   assert.equal(south.length,2,'the south was baked again with the new pagoda');
-  assert.equal(south[1].sources.length,3);
+  assert.equal(south[1].sources.length,4);
   assert.equal(v.farProxy.disposed.filter(name=>name==='WV_Area_Far_south').length,1);
   assert.equal(v.farProxy.built.length,6,'the other areas were left alone');
   v.tower.visible=false;                       // hidden by its owner
