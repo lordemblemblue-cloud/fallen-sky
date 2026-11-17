@@ -12,6 +12,10 @@
 //    (see staticMergingObstacle). Everything else is left exactly as built.
 //  - Before merging, the caller plays the scenery's own animation while
 //    `markMoved()` watches: whatever moved is never merged.
+//  - The caller also triggers everything the scenery hides on its own (roofs
+//    cut away indoors, far buildings) while `noteToggles()` watches. Parts
+//    are only merged with parts that are hidden and shown together, and each
+//    merged mesh follows its owner's switches in the same frame.
 //  - The originals stay in the scene, switched to "not drawn" (render layer
 //    mask 0, the same switch the avatar draw-call merger uses), so their
 //    owner can keep writing to them. A few are re-checked every frame; one
@@ -149,6 +153,8 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
     throw new TypeError('BufferGeometry, BufferAttribute and Mesh constructors are required');
 
   const entries=new Map();   // mesh -> {mesh,home,state,batch,hiddenFor}
+  const wasVisible=new Map();// every node under the root -> visible at the snapshot
+  const toggles=new Set();   // nodes the owner was seen hiding or showing
   const leftAlone=new Map(); // reason -> count
   const batches=new Map();   // key -> {key,mesh,members:Set<entry>,dirty}
   let enabled=true,built=false,cursor=0,queue=[],handedBack=0;
@@ -183,10 +189,11 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
   /** Phase 1: remember where every mergeable mesh stands right now. */
   function snapshot(){
     if(built)return 0;
-    entries.clear();leftAlone.clear();
+    entries.clear();leftAlone.clear();wasVisible.clear();toggles.clear();
     const cache=new Map();
     const walk=node=>{
       if(isBatch(node))return;
+      if(node!==root)wasVisible.set(node,node.visible!==false);
       if(node!==root&&node.isMesh){
         const obstacle=staticMergingObstacle(node);
         if(obstacle)note(obstacle);
@@ -204,7 +211,7 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
     walk(root);
     return entries.size;
   }
-  /** Phase 2 (repeatable): whatever moved or hid since the snapshot is dynamic. */
+  /** Phase 2 (repeatable): whatever moved since the snapshot is dynamic. */
   function markMoved(){
     if(built)return 0;
     const cache=new Map();
@@ -213,9 +220,26 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
       if(entry.state!=='static')continue;
       const now=relative(entry.mesh,cache);
       if(!now||moved(now,entry.home)){entry.state='dynamic';note('moves');found++;}
-      else if(!shown(entry.mesh)){entry.state='dynamic';note('hidden by its owner');found++;}
     }
     return found;
+  }
+  /**
+   * Phase 2 (repeatable): remember every node whose owner has just hidden or
+   * shown it. Call it while a roof is cut away, a far building is culled...
+   */
+  function noteToggles(){
+    if(built)return 0;
+    const before=toggles.size;
+    for(const [node,visible] of wasVisible)
+      if((node.visible!==false)!==visible)toggles.add(node);
+    return toggles.size-before;
+  }
+  // The owner's switches above a mesh, nearest first: parts sharing them are
+  // hidden and shown together.
+  function scopeOf(mesh){
+    const scope=[];
+    for(let at=mesh;at&&at!==root;at=at.parent)if(toggles.has(at))scope.push(at);
+    return scope;
   }
 
   function keyOf(mesh,ids){
@@ -224,7 +248,8 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
     const layout=Object.entries(geometry.attributes).map(([name,attribute])=>
       name+attribute.itemSize+(attribute.normalized?'n':'')+attribute.array.constructor.name).sort().join(',');
     return [id(mesh.material),mesh.castShadow?1:0,mesh.receiveShadow?1:0,mesh.renderOrder||0,
-      mesh.frustumCulled===false?0:1,own(mesh,'raycast')?'decor':'solid',layout].join('|');
+      mesh.frustumCulled===false?0:1,own(mesh,'raycast')?'decor':'solid',layout,
+      scopeOf(mesh).map(id).join('+')].join('|');
   }
   function fill(batch){
     const members=[...batch.members];
@@ -277,8 +302,10 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
         for(const entry of members){entry.state='single';note('one of a kind');}
         continue;
       }
-      const batch={key,mesh:null,members:new Set(members),dirty:false};
+      const batch={key,mesh:null,members:new Set(members),dirty:false,
+        scope:scopeOf(members[0].mesh),shown:true};
       fill(batch);
+      follow(batch);
       for(const entry of members){entry.batch=batch;entry.state='merged';entry.mesh.layers.mask=0;}
       batches.set(key,batch);
     }
@@ -286,6 +313,11 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
     return batches.size;
   }
 
+  // A merged mesh is drawn exactly when its owner's switches say so.
+  function follow(batch){
+    const show=batch.scope.every(node=>node.visible!==false);
+    if(show!==batch.shown){batch.shown=show;batch.mesh.visible=show;}
+  }
   function handBack(entry,reason){
     const batch=entry.batch;
     if(!batch)return;
@@ -296,6 +328,7 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
   /** Every frame: re-check a few originals; hand back any that changed. */
   function update(dt=1/60){
     if(!built||!enabled||!batches.size)return;
+    for(const batch of batches.values())follow(batch);
     if(cursor>=queue.length){queue=[...entries.values()].filter(entry=>entry.state==='merged');cursor=0;}
     const stop=Math.min(queue.length,cursor+auditPerFrame);
     // One full pass takes this long; hidden time is counted pass by pass.
@@ -311,7 +344,8 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
         handBack(entry,'changed by its owner');continue;
       }
       if(moved(relative(mesh,cache),entry.home)){handBack(entry,'moves');continue;}
-      // Whole-area unloading hides batch and parts together: not the owner's doing.
+      // Hidden together with its batch (a known switch, or the whole area
+      // being unloaded): nothing to hand back.
       if(entry.batch.mesh.visible===false||!shown(entry.batch.mesh)){entry.hiddenFor=0;continue;}
       if(shown(mesh))entry.hiddenFor=0;
       else if((entry.hiddenFor+=passSeconds)>=hiddenGraceSeconds)handBack(entry,'hidden by its owner');
@@ -319,7 +353,7 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
     for(const batch of [...batches.values()]){
       if(!batch.dirty)continue;
       if(batch.members.size<Math.max(2,minMeshes))dropBatch(batch);
-      else fill(batch);
+      else{fill(batch);batch.mesh.visible=batch.shown;}
     }
   }
 
@@ -332,7 +366,7 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
   }
 
   return {
-    snapshot,markMoved,build,update,
+    snapshot,markMoved,noteToggles,build,update,
     get batches(){return [...batches.values()].map(batch=>batch.mesh);},
     /** A/B switch: false restores the scenery exactly as built. */
     setEnabled(next){
@@ -346,6 +380,7 @@ export function createStaticMeshMerger({root,BufferGeometry,BufferAttribute,Mesh
       return {
         enabled,built,candidates:entries.size,merged,batches:batches.size,
         drawCallsSaved:merged-batches.size,triangles,handedBack,
+        switches:toggles.size,
         leftAlone:Object.fromEntries(leftAlone),
       };
     },

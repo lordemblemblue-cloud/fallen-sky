@@ -164,7 +164,7 @@ test('whatever stays still while the scenery animates is merged, one draw per ma
   assert.equal(t.accelerated.length,2,'clickable batches get a fast ray test');
   assert.equal(typeof batches.find(batch=>batch.material===t.sandstone&&batch.userData.meshes===2).raycast,'function');
   assert.deepEqual(t.merger.stats(),{enabled:true,built:true,candidates:13,merged:9,batches:3,
-    drawCallsSaved:6,triangles:9,handedBack:0,
+    drawCallsSaved:6,triangles:9,handedBack:0,switches:0,
     leftAlone:{'see-through':1,named:1,moves:3,'one of a kind':1}});
 });
 
@@ -214,6 +214,42 @@ test('hidden by its owner is handed back; a whole area being unloaded is not',()
   assert.equal(t.merger.stats().leftAlone['hidden by its owner'],3);
 });
 
+test('parts the owner hides together are merged together and follow the switch at once',()=>{
+  const t=buildTown();t.merger.snapshot();
+  // The town cuts its roofs away indoors: seen once before merging.
+  t.roofs.visible=false;assert.equal(t.merger.noteToggles(),1);t.roofs.visible=true;
+  assert.equal(t.merger.noteToggles(),0,'a switch is remembered once');
+  t.merger.build();
+  const sandstone=t.merger.batches.filter(batch=>batch.material===t.sandstone&&
+    !Object.prototype.hasOwnProperty.call(batch,'raycast'));
+  // Walls and roof tiles share a material but not a switch: two meshes.
+  assert.deepEqual(sandstone.map(batch=>batch.userData.meshes).sort(),[2,3]);
+  const tiles=sandstone.find(batch=>batch.userData.meshes===3);
+  const walls=sandstone.find(batch=>batch.userData.meshes===2);
+  assert.equal(t.merger.stats().switches,1);
+  t.roofs.visible=false;t.merger.update(1/60);
+  assert.equal(tiles.visible,false,'the merged roof disappears in the same frame');
+  assert.equal(walls.visible,true);
+  for(let i=0;i<50;i++)t.merger.update(.1);
+  assert.equal(t.merger.stats().handedBack,0,'a known switch never costs the merge');
+  t.roofs.visible=true;t.merger.update(1/60);
+  assert.equal(tiles.visible,true);
+  // Hidden while the merge is built: still merged, and starts hidden.
+  const late=buildTown();late.merger.snapshot();
+  late.roofs.visible=false;late.merger.noteToggles();
+  late.merger.build();
+  const lateTiles=late.merger.batches.find(batch=>batch.userData.meshes===3);
+  assert.equal(lateTiles.visible,false);
+  late.roofs.visible=true;late.merger.update(1/60);
+  assert.equal(lateTiles.visible,true);
+  // A part with a switch of its own has nobody to merge with.
+  const own=buildTown();own.merger.snapshot();
+  own.beams[0].visible=false;own.merger.noteToggles();own.beams[0].visible=true;
+  own.merger.build();
+  assert.equal(own.beams[0].layers.mask,1);
+  assert.equal(own.merger.stats().leftAlone['one of a kind']>=1,true);
+});
+
 test('the A/B switch restores the scenery exactly as built and merges again on request',()=>{
   const t=buildTown();t.merger.snapshot();t.merger.build();
   const before=t.root.children.length;
@@ -231,7 +267,21 @@ test('the A/B switch restores the scenery exactly as built and merges again on r
 });
 
 const source=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('material effects ignore merged batches; the merger needs no Three.js',()=>{
+test('the town merges its motionless parts, fails open, and effects ignore the batches',()=>{
+  const town=source('src/components/game3d/wolfveil/WolfveilArtisanTownScene.mjs');
+  assert.match(town,/createStaticMeshMerger\(\{/);
+  assert.match(town,/merger\.snapshot\(\);/);
+  // Every switch the town owns is thrown once before merging.
+  assert.match(town,/town\.setDoorsOpen\(false\); play\(12\);/);
+  assert.match(town,/town\.setDoorsOpen\(true\); play\(90, false\);/);
+  assert.match(town,/town\.setRoofsVisible\(false\); merger\.noteToggles\(\); town\.setRoofsVisible\(true\);/);
+  assert.match(town,/town\.setIndoorCutaway\(room\.id\); merger\.noteToggles\(\);/);
+  assert.match(town,/town\.setIndoorCutaway\(null\);/);
+  assert.match(town,/merger\.build\(\);/);
+  assert.match(town,/new MeshBVH\(batch\.geometry\)/);
+  // Merged meshes follow the town's switches after it has thrown them.
+  assert.match(town,/otsCameraRevision \|\| 0\) \+ 1;\s*\}\s*\/\/[^\n]*\n\s*merger\?\.update\(step\);/);
+  assert.match(town,/merger\?\.dispose\(\);/);
   const blaze=source('src/components/game3d/render/BlazeOfGrassWorld.mjs');
   assert.equal((blaze.match(/userData\?\.game3dMergedBatch/g)||[]).length,2,
     'a merged batch must neither protect nor receive a material effect');

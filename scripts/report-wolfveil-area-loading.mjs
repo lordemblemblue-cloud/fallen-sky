@@ -213,7 +213,8 @@ export async function runWolfveilAreaLoadingReport({
     portals?.update(dt,position,loader?.getArea());
     try{village.update(dt,weather,position);}
     catch(error){noteOnce('village.update needs a renderer here: '+(error?.message||error));}
-    try{town?.update?.(dt,position);}catch{/* town actors need a renderer */}
+    try{town?.update?.(dt,position);}
+    catch(error){noteOnce('the town update stops headless: '+String(error?.message||error).slice(0,120));}
     scene.updateMatrixWorld();
   };
   const run=seconds=>{for(let i=0;i<Math.round(seconds*10);i++)frame(.1);};
@@ -593,8 +594,8 @@ export async function runWolfveilAreaLoadingReport({
     check(!gap.length,'town triangles moved between materials: '+gap.slice(0,5).join(', '));
     const drift=Math.max(...builtBounds.map((value,i)=>Math.abs(value-mergedBounds[i])));
     check(drift<=.02,'the merged town must occupy the same space as built (bounds moved '+drift.toFixed(4)+' m)');
-    check(merged.drawCalls*4<built.drawCalls,
-      'merging must cut the town\'s draw calls at least four times ('+merged.drawCalls+' vs '+built.drawCalls+')');
+    check(merged.drawCalls*1.5<built.drawCalls,
+      'merging must cut the town\'s draw calls by at least a third ('+merged.drawCalls+' vs '+built.drawCalls+')');
     check(again.drawCalls===merged.drawCalls&&again.triangles===merged.triangles,
       'switching the town merge off and on again must give the same result');
     // Ten seconds of town life: nothing that was merged may turn out to move.
@@ -602,9 +603,39 @@ export async function runWolfveilAreaLoadingReport({
     const later=town.drawBudget.stats();
     check(later.handedBack===0,later.handedBack+' merged town parts moved afterwards and had to be handed back: '+
       JSON.stringify(later.leftAlone));
+    // Indoors the town cuts roofs and ceilings away. The merged meshes must
+    // show exactly what the town shows: same triangles merged or as built.
+    let indoors=null;
+    const model=town.model,reach=70;
+    search:for(let dx=-reach;dx<=reach;dx+=2)for(let dz=-reach;dz<=reach;dz+=2){
+      const spot={x:model.position.x+dx,z:model.position.z+dz};
+      const room=town.getRoomAt?.(spot);
+      if(room){indoors={room:room.id||room.label||'room',spot};break search;}
+    }
+    if(indoors){
+      position.x=indoors.spot.x;position.z=indoors.spot.z;run(.6);
+      loader.setEnabled(false);
+      const mergedIn=measureTown();
+      town.drawBudget.setEnabled(false);
+      const builtIn=measureTown();
+      town.drawBudget.setEnabled(true);run(.2);
+      const againIn=measureTown();
+      loader.setEnabled(true);
+      check(builtIn.triangles<built.triangles,
+        'standing in '+indoors.room+' the town must cut something away ('+builtIn.triangles+' vs '+built.triangles+')');
+      check(mergedIn.triangles===builtIn.triangles&&againIn.triangles===builtIn.triangles,
+        'indoors the merged town must draw exactly what the town shows ('+mergedIn.triangles+
+        ' and '+againIn.triangles+' vs '+builtIn.triangles+')');
+      indoors={room:indoors.room,asBuilt:{drawCalls:builtIn.drawCalls,triangles:builtIn.triangles},
+        merged:{drawCalls:mergedIn.drawCalls,triangles:mergedIn.triangles}};
+      moveTo(...spots.town);run(1);
+      check(town.drawBudget.stats().handedBack===0,
+        'a visit indoors made the merger hand parts back: '+JSON.stringify(town.drawBudget.stats().leftAlone));
+    }else noteOnce('no walk-in room found in the town: the indoor cutaway was not exercised');
     townResult={asBuilt:{drawCalls:built.drawCalls,triangles:built.triangles},
-      merged:{drawCalls:merged.drawCalls,triangles:merged.triangles},
-      boundsDriftMeters:drift,budget:later};
+      merged:{drawCalls:merged.drawCalls,triangles:merged.triangles},indoors,
+      ownBatching:town.performanceStats||null,
+      boundsDriftMeters:drift,budget:town.drawBudget.stats()};
   }else if(town){
     // The town batches itself (AXETownPlaza) and hides far buildings: report
     // what it hands the renderer from the square and from inside a home.
@@ -789,6 +820,9 @@ export function formatWolfveilAreaLoadingReport(result){
     lines.push('  as built   '+String(t.asBuilt.drawCalls).padStart(5)+' calls  '+n(t.asBuilt.triangles).padStart(8)+' tris');
     lines.push('  merged     '+String(t.merged.drawCalls).padStart(5)+' calls  '+n(t.merged.triangles).padStart(8)+
       ' tris   (bounds moved '+t.boundsDriftMeters.toFixed(4)+' m)');
+    if(t.indoors)lines.push('  inside '+t.indoors.room+': as built '+t.indoors.asBuilt.drawCalls+' calls '+
+      n(t.indoors.asBuilt.triangles)+' tris, merged '+t.indoors.merged.drawCalls+' calls '+n(t.indoors.merged.triangles)+' tris');
+    if(t.ownBatching)lines.push('  the town\'s own batching before this: '+JSON.stringify(t.ownBatching));
     lines.push('  '+JSON.stringify(t.budget));
   }
   if(result.caves){
