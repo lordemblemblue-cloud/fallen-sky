@@ -80,13 +80,12 @@ test('ramps and connected tunnels have contiguous walkable floors without multi-
       }
     }
     assert(steps>15,corridor.id+' is unreasonably short');
-    if(corridor.kind!=='entry'){
-      const ys=corridor.waypoints.map(point=>point[1]);
-      assert(Math.max(...ys)-Math.min(...ys)<1.1,corridor.id+' still drops along the hall');
-    }
   }
   assert.equal(WOLFVEIL_CAVE_HUB.y,WOLFVEIL_DUNGEON_FLOOR_Y);
-  assert.ok(WOLFVEIL_EXPLORABLE_CAVES.every(cave=>cave.chamber.y===WOLFVEIL_DUNGEON_FLOOR_Y));
+  for (const cave of WOLFVEIL_EXPLORABLE_CAVES) {
+    assert.ok(cave.mouthY - cave.chamber.y < 16, cave.name + ' should open on level 1');
+    assert.ok(cave.chamber.y > WOLFVEIL_CAVE_HUB.y + 4, cave.name + ' should sit above the deep floor');
+  }
 });
 
 test('all mapped arch labels and four central hub direction signs match the real connected geometry',()=>{

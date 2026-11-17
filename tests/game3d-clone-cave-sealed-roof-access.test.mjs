@@ -59,15 +59,11 @@ test('outdoor stone ribbons are real finite triangles and meet each sealed-arch 
       threshold.z-cave.threshold[2])<1e-5);
     assert.ok(Math.abs(threshold.y-cave.threshold[1])<1e-5);
     const ramp=WOLFVEIL_CAVE_CORRIDORS.find(c=>c.id==='entry_'+cave.id);
-    const landing=[
-      cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
-      WOLFVEIL_DUNGEON_FLOOR_Y,
-      cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong,
-    ];
-    assert.deepEqual(ramp.waypoints[0],landing);
-    assert.ok(ramp.waypoints.every(point=>Math.abs(point[1]-WOLFVEIL_DUNGEON_FLOOR_Y)<1e-6));
+    assert.deepEqual(ramp.waypoints[0],[cave.threshold[0],cave.threshold[1],cave.threshold[2]]);
     assert.deepEqual(ramp.waypoints.at(-1),[
       cave.chamber.x,cave.chamber.y,cave.chamber.z]);
+    assert.ok(cave.mouthY-cave.chamber.y<16,cave.name+' level 1 is still a deep drop');
+    assert.ok(cave.chamber.y>WOLFVEIL_DUNGEON_FLOOR_Y+4);
     assert.ok(Math.abs(wolfveilHeight(cave.threshold[0],
       cave.threshold[2])-cave.threshold[1])<1e-5);
   }

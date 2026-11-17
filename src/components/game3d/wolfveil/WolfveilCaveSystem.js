@@ -7,6 +7,7 @@ import {
   WOLFVEIL_EXPLORABLE_CAVES,
   WOLFVEIL_CAVE_HUB,
   WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_CAVE_DROP,
   sampleWolfveilPlayerCaveFloorY,
   sampleWolfveilCaveSpace,
   planWolfveilCaveInteraction,
@@ -243,7 +244,9 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
             // Outside the mouth the hillside is the floor. Stone starts once
             // the ramp is actually under the rock.
-            if (along < 6 || my > wolfveilHeight(mx, mz) - 4) continue;
+            // Daylight in front of the arch stays open. The hall is drawn once
+            // the floor is actually under the rock.
+            if (along < 1.5 || my + 3.2 > wolfveilHeight(mx, mz)) continue;
           }
           const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
           // Mission path in the middle. The rock edges stay darker and a
@@ -264,8 +267,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
               [s0 * hw, d0 * 0.85], [s1 * hw, d0 * 0.85], [s1 * hw, d1 * 0.85], [s0 * hw, d1 * 0.85],
             ]);
           }
-          // Entry reads as a stair: one tread per slice, same mesh, no extra draw.
-          if (cor.kind === 'entry') {
+          // The door stair only. The level-1 hall after it stays a flat path.
+          if (cor.kind === 'entry' && y0 - y1 > 0.2) {
             floorTris.quad(
               [x0 + nx * (hw - 0.35), y0 + 0.08, z0 + nz * (hw - 0.35)],
               [x0 - nx * (hw - 0.35), y0 + 0.08, z0 - nz * (hw - 0.35)],
@@ -905,11 +908,22 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   };
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES) {
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
-    addWayfinding('E · '+cave.name,
+    addWayfinding('Level 1 · walk in',
       cave.threshold[0],cave.threshold[1]+3.4,cave.threshold[2],10.2);
-    const ix = mx + dx * 6, iz = mz + dz * 6;
+    const ix = mx + dx * WOLFVEIL_CAVE_DROP.exitAlong, iz = mz + dz * WOLFVEIL_CAVE_DROP.exitAlong;
     const inside=sampleWolfveilCaveSpace(ix,iz,.62);
-    if(inside)addWayfinding('E · Return Outside',ix,inside.floorY+3,iz,9);
+    if(inside)addWayfinding('Level 1 · E · Return Outside',ix,inside.floorY+3,iz,9);
+  }
+  for (const cor of WOLFVEIL_CAVE_CORRIDORS) {
+    if (cor.kind !== 'tunnel') continue;
+    const a = cor.waypoints[0], b = cor.waypoints.at(-1);
+    if (Math.abs(a[1] - b[1]) < 6) continue;
+    const high = a[1] > b[1] ? a : b;
+    const low = a[1] > b[1] ? b : a;
+    const dx = low[0] - high[0], dz = low[2] - high[2];
+    const len = Math.hypot(dx, dz) || 1;
+    addWayfinding('Stairs down · not an elevator',
+      high[0] + dx / len * 8, high[1] + 3.1, high[2] + dz / len * 8, 11);
   }
   const rotunda=WOLFVEIL_CAVE_HUB;
   for(const edge of navigationGraph.edges) {
@@ -966,15 +980,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     const travel = planWolfveilCaveInteraction(
       { x: cave.mouth[0], y: cave.mouthY, z: cave.mouth[1] });
     if (!travel) return null;
-    // One drop onto the shared dungeon floor, in the first hall.
-    // Not a walk down a ramp, and not a skip to the far chamber.
+    // Walk in on level 1. This only steps you onto the hall past the door
+    // stair. It does not drop you to the deep floor, and it is not an elevator.
     activeCaveId = cave.id;
     worldPos.x = travel.x;
     worldPos.y = travel.y;
     worldPos.z = travel.z + offsetZ;
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('skillActivatedToast', {
-        detail: { text: 'Descending into ' + cave.name + ' · E at the arch to leave' },
+        detail: { text: 'Level 1 · ' + cave.name + ' · stairs down are past the hall' },
       }));
     }
     return { action: 'enter', name: cave.name, caveId: cave.id };

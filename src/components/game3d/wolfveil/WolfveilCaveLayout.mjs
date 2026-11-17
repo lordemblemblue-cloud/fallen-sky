@@ -64,12 +64,12 @@ const RAW_ENTRANCES = [
   },
 ];
 
-// One underground storey. The mouth drops you onto it. Halls stay on it.
-// Deep enough that a 6m ceiling still has rock over the lowest valley crossing.
+// The deep floor under the valley. Level 1 is higher, just inside each mouth.
+// You walk down to this floor. There is no elevator.
 export const WOLFVEIL_DUNGEON_FLOOR_Y = -8;
-// Where E puts you after the drop, and where E sends you back outside.
-// The landing is far enough from the exit arch that one press cannot do both.
-export const WOLFVEIL_CAVE_DROP = Object.freeze({ landAlong: 14, exitAlong: 6 });
+// exitAlong is the arch you press E at to leave. landAlong is only a fallback;
+// each cave stores its own level-one hall on the cave object.
+export const WOLFVEIL_CAVE_DROP = Object.freeze({ landAlong: 16, exitAlong: 3.5 });
 
 export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
   RAW_ENTRANCES.map(cave => {
@@ -80,15 +80,24 @@ export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
     const chamberOffset = cave.chamberOffset;
     const cx = mx + dx * chamberOffset;
     const cz = mz + dz * chamberOffset;
-    const floorY = WOLFVEIL_DUNGEON_FLOOR_Y;
+    const surf = wolfveilHeight(cx, cz);
     const thresholdX = mx - dx * 3.5;
     const thresholdZ = mz - dz * 3.5;
     const thresholdY = wolfveilHeight(thresholdX, thresholdZ);
+    // Level 1 sits just under this hillside, not at the bottom of the valley.
+    // A short stair at the door covers the few metres. The long way down
+    // starts only after the hall and the big room.
+    const floorY = Math.min(mouthY - 4, surf - cave.ceilingHeight - 3.2);
+    const drop = Math.max(0, thresholdY - floorY);
+    const beforeRoom = cave.chamberOffset - cave.chamberRadius - 2.5;
+    const levelOneAlong = Math.min(beforeRoom, Math.max(11, drop / 0.55));
     return Object.freeze({
       ...cave,
       dir: Object.freeze([dx, dz]),
       mouthY,
       threshold: Object.freeze([thresholdX, thresholdY, thresholdZ]),
+      level: 1,
+      levelOneAlong,
       chamber: Object.freeze({
         id: cave.id + '_chamber',
         x: cx,
@@ -187,15 +196,21 @@ function rimPoint(room, tx, tz) {
 function entryWaypoints(c) {
   const [dx, dz] = c.dir;
   const y = c.chamber.y;
-  const { landAlong, exitAlong } = WOLFVEIL_CAVE_DROP;
-  const hall = Math.max(landAlong + 6, (c.chamber.along || 30) - c.chamber.radius - 2);
-  // Flat from the first landing. The surface is not a waypoint, so nothing
-  // slopes back up through the mouth.
-  return [
-    [c.mouth[0] + dx * exitAlong, y, c.mouth[1] + dz * exitAlong],
-    [c.mouth[0] + dx * hall, y, c.mouth[1] + dz * hall],
-    [c.chamber.x, y, c.chamber.z],
-  ];
+  const land = c.levelOneAlong;
+  const steps = 4;
+  const pts = [[c.threshold[0], c.threshold[1], c.threshold[2]]];
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    pts.push([
+      c.mouth[0] + dx * land * t,
+      c.threshold[1] + (y - c.threshold[1]) * t,
+      c.mouth[1] + dz * land * t,
+    ]);
+  }
+  const hall = Math.max(land + 8, (c.chamber.along || 30) - c.chamber.radius - 2);
+  pts.push([c.mouth[0] + dx * hall, y, c.mouth[1] + dz * hall]);
+  pts.push([c.chamber.x, y, c.chamber.z]);
+  return pts;
 }
 
 function buryWaypoints(xz, y0, y1) {
@@ -408,8 +423,8 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
     // Entry lands safely past the rock arch, while the return interaction
     // is INSIDE that same arch. A player walks back toward daylight and uses
     // E there instead of finding a teleport button 13 metres inside a room.
-    const insideX = mx + dx * WOLFVEIL_CAVE_DROP.landAlong;
-    const insideZ = mz + dz * WOLFVEIL_CAVE_DROP.landAlong;
+    const insideX = mx + dx * cave.levelOneAlong;
+    const insideZ = mz + dz * cave.levelOneAlong;
     const exitX = mx + dx * WOLFVEIL_CAVE_DROP.exitAlong;
     const exitZ = mz + dz * WOLFVEIL_CAVE_DROP.exitAlong;
     if(insideCave){
