@@ -1,5 +1,9 @@
 # Game 3D clone — Four-region Wolfveil streaming (first integration pass)
 
+> **Superseded 2026-11-17** by the five-area loader, portals and per-platform
+> graphics: see `CLONE_WOLFVEIL_FIVE_AREA_PORTALS_PLATFORM_GRAPHICS_20261117.md`.
+> This module and its test remain in the repository but are no longer mounted.
+
 ## Scope and owner intent
 
 The owner requested a major reduction in Game 3D map lag by splitting
