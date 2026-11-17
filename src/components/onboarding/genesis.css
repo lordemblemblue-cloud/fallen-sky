@@ -95,3 +95,45 @@
  .genesis-actions>button{flex:1}
 }
 @media (max-width:420px){.genesis-steps li:not([aria-current=step]):not(:first-child):not(:last-child){display:none}}
+
+/* MESHY CLOUD HEAD DRAFT — separate from local selfie fitting */
+.genesis-meshy-face-draft {
+ display:grid;gap:11px;margin-top:17px;padding:15px 13px;border-radius:11px;
+ background:linear-gradient(145deg,rgba(22,45,64,.42),rgba(10,20,33,.55));
+ border:1px solid rgba(117,180,212,.27);
+}
+.genesis-meshy-face-draft h3 {
+ display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:0;
+ font-size:14px;font-weight:650;color:#e7f7ff;
+}
+.genesis-meshy-face-draft h3 span {
+ color:#92cbe3;font-size:9px;letter-spacing:.08em;text-transform:uppercase;
+}
+.genesis-meshy-face-draft p {font-size:11px;line-height:1.55;margin:0;}
+.genesis-meshy-label {display:grid;gap:6px;font-size:11px;color:#d9e8f3;}
+.genesis-meshy-label input {width:100%;max-width:100%;font-size:11px;color:inherit;}
+.genesis-meshy-label input::file-selector-button {
+ border:1px solid rgba(138,205,232,.4);border-radius:6px;
+ background:rgba(33,68,97,.5);color:#f0f8ff;padding:6px 9px;cursor:pointer;
+}
+.genesis-meshy-photos {display:flex;gap:8px;flex-wrap:wrap;}
+.genesis-meshy-photos img {height:69px;width:69px;object-fit:cover;
+ border:1px solid rgba(155,206,231,.38);border-radius:7px;}
+.genesis-meshy-consent {display:flex;align-items:flex-start;gap:9px;
+ font-size:11px;line-height:1.5;color:#e6edf4;}
+.genesis-meshy-consent input {flex:none;accent-color:#84c8ee;margin-top:3px;}
+.genesis-meshy-actions {display:flex;flex-wrap:wrap;gap:8px;}
+.genesis-meshy-actions button {min-height:32px;padding:6px 10px;}
+.genesis-meshy-thumb {width:96px;height:96px;object-fit:contain;border-radius:8px;}
+.genesis-meshy-head-stage {position:relative;height:clamp(210px,33vh,330px);
+ width:100%;border-radius:9px;border:1px solid rgba(139,205,236,.33);
+ background:radial-gradient(circle at 45% 30%,rgba(69,107,145,.36),rgba(5,14,27,.66));
+ overflow:hidden;}
+.genesis-meshy-head-stage-canvas {position:absolute;inset:0;width:100%;height:100%;}
+.genesis-meshy-head-stage p {position:absolute;inset:auto 9px 8px;
+ background:rgba(5,17,29,.77);border-radius:6px;padding:7px;color:#eaf8ff;
+ text-align:center;pointer-events:none;}
+@media(max-width:600px) {
+ .genesis-meshy-face-draft {padding:10px 9px;gap:8px;}
+ .genesis-meshy-head-stage {height:220px;}
+}
