@@ -70,7 +70,12 @@ export function createWolfveilNearGrassStream({ group, geometry, material, accep
       return counts;
     },
     /** A/B switch: false draws every cell with the full blade, as before. */
-    setDetailLevels(enabled) { detailLevels = Boolean(enabled) && levels.length > 1; return detailLevels; },
+    setDetailLevels(enabled) {
+      detailLevels = Boolean(enabled) && levels.length > 1;
+      // Start every cell afresh, so the switch gives the same lawn each time.
+      for (const mesh of cells.values()) if (mesh) mesh.userData.grassDetail = null;
+      return detailLevels;
+    },
     update(player) {
       if (!player) return;
       for (const [key, mesh] of cells) {

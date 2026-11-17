@@ -57,7 +57,7 @@ test('the stream swaps blade geometry by distance and keeps every blade planted'
   assert.match(stream,/mesh\.geometry = levels\[level\];/);
   assert.match(stream,/PER_CELL = 900/,'the number of blades per cell is unchanged');
   assert.match(stream,/else if \(mesh\) \{ mesh\.visible = true; applyDetail\(mesh, distance\); \}/);
-  assert.match(stream,/setDetailLevels\(enabled\)/);
+  assert.match(stream,/setDetailLevels\(enabled\) \{[\s\S]{0,260}mesh\.userData\.grassDetail = null;/);
   const blades=source('src/components/game3d/wolfveil/WolfveilIndividualGrassBlades.js');
   assert.match(blades,/createIndividualSumiEBladeGeometry\(\{ segments = 4 \} = \{\}\)/);
   assert.match(blades,/const segs = Math\.max\(1, Math\.floor\(segments\) \|\| 4\);/);
