@@ -166,15 +166,15 @@ pull request, then lints the new files and runs `npm run build`.
 
 Draw calls / triangles standing deep inside each area (browser budget: 500
 draw calls, 1.5 M triangles). All four owner models load in this run, on
-`main` at `2093d13` (walkable low-poly town, #50 and later).
+`main` at `a7af0d9` (walkable low-poly town with its own proxies, #50, #52).
 
-| Area  | Whole valley, as first measured | One area loaded, now |
-|-------|---------------------------------|----------------------|
-| town  | 4,558 / 3.44 M                  | 641 / 1.51 M         |
-| south | 4,591 / 4.40 M                  | 303 / 1.74 M         |
-| west  | 4,591 / 4.32 M                  | 490 / 2.37 M         |
-| east  | 4,586 / 4.09 M                  | 450 / 1.92 M         |
-| north | 4,591 / 4.30 M                  | 437 / 1.91 M         |
+| Area  | Whole valley, as first measured | One area loaded, now | Budget          |
+|-------|---------------------------------|----------------------|-----------------|
+| town  | 4,558 / 3.44 M                  | 481 / 1.35 M         | inside          |
+| south | 4,591 / 4.40 M                  | 270 / 1.01 M         | inside          |
+| west  | 4,591 / 4.32 M                  | 361 / 1.68 M         | over, triangles |
+| east  | 4,586 / 4.09 M                  | 356 / 1.43 M         | inside          |
+| north | 4,591 / 4.30 M                  | 347 / 1.22 M         | inside          |
 
 - All 11 portals pass walking both ways: arrival notice, both sides loaded
   during the crossing, arch shown.
@@ -184,28 +184,26 @@ draw calls, 1.5 M triangles). All four owner models load in this run, on
 - **Caves** (`wolfveil/WolfveilCaveDrawBudget.mjs`): 791 draw calls as built,
   drawn from anywhere. Now 65 on the surface and 150 inside a cave, with the
   same triangles per material and the same bounds.
-- **Town** (`performance/Game3DStaticMerging.mjs`, installed in
-  `WolfveilArtisanTownScene.mjs`). The town on `main` batches itself, hides
-  far buildings (homes beyond 62 m, shops beyond 85 m in its low-poly default)
-  and cuts roofs and ceilings away indoors. On top of that the merger bakes
-  every part that never moves into one mesh per material, but only together
-  with parts the town hides and shows together: before merging, the town
-  plays its animation, shuts and opens its doors, cuts every roof and ceiling
-  away and culls its far buildings once, and every node it switched is
-  remembered (33 switches). Merged meshes follow those switches in the same
-  frame. From the square: 379 draw calls as built, 250 merged. Inside a home:
-  664 as built, 432 merged. Same triangles in both places, bounds unchanged,
-  nothing handed back after ten seconds of town animation or a visit indoors.
-- **Distant scenery** (below): 1 to 5 draw calls and 41,000 to 63,000
+- **Grass that follows the player** (`wolfveil/WolfveilNearGrassDetail.mjs`,
+  `WolfveilNearGrassStream.js`): every blade stays planted (66 cells, 59,400
+  blades), but a cell draws each blade with 21 triangles within 18 m, 9 to
+  32 m and 3 beyond, on the same curve, with 2 m of hysteresis. 1,247,400
+  triangles became 448,200. A/B: `nearGrass.setDetailLevels(false)`.
+- **Owner long-grass tiles** (`wolfveil/WolfveilGrassTileReplacement.js`): the
+  sparse far tiles share 64 m chunks instead of 32 m. 695 draw calls map-wide
+  became 263; near tiles keep 32 m chunks.
+- **Town**: left to the town's own performance work on `main` (low-poly
+  tiers, building proxies, culling). From the square it hands the renderer
+  185 draw calls and 11,094 triangles. A generic merger was built for it here
+  and removed again after colliding with that work three times in a day.
+- **Distant scenery** (below): 2 to 5 draw calls and 31,000 to 62,000
   triangles per area, included in the table.
 
-What is still over budget, in measured order:
+What is still over budget:
 
-1. Triangles in every area: grass that follows the player (0.85 to 1.17 M)
-   and the owner's long-grass tiles (95,000 to 660,000 per area).
-2. Draw calls in town (641): long-grass tiles, the town's moving and named
-   parts, caves (65).
-3. Lights: 20 to 26 lights are switched on wherever the player stands. Their
+1. West, triangles: the owner's far grass tiles (659,520 there) and the grass
+   that follows the player (395,862).
+2. Lights: 6 to 12 lights are switched on wherever the player stands. Their
    cost shows only in a real frame-rate reading.
 
 ## Distant scenery (what an unloaded area still shows)
@@ -230,8 +228,8 @@ Two parts, both in `streaming/WolfveilAreaLoader.mjs`:
 
    | Area | Stands for                        | Outline     | Bake  |
    |------|-----------------------------------|-------------|-------|
-   | west | the owner's trees, 108,240 tris   | 22,646 tris | 19 ms |
-   | town | 31 tall parts, 16,128 tris        | 3,714 tris  | 5 ms  |
+   | west | the owner's trees, 108,240 tris   | 22,646 tris | 27 ms |
+   | town | 72 tall parts, 16,068 tris        | 3,724 tris  | 4 ms  |
 
    A part counts as tall when it is 4 m high, or when its top stands 2.5 m
    above the ground under it (so a building made of short pieces keeps its
@@ -271,11 +269,11 @@ view; grass is 55 to 70%.
 node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-platform-graphics.test.mjs \
             tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs \
-            tests/game3d-clone-static-merging.test.mjs \
-            tests/game3d-clone-far-proxy.test.mjs
+            tests/game3d-clone-far-proxy.test.mjs \
+            tests/game3d-clone-wolfveil-near-grass-detail.test.mjs
 ```
 
-78 tests with stand-in scene objects, all passing. The real-valley test
+75 tests with stand-in scene objects, all passing. The real-valley test
 (`tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs`) runs where
 `three` is installed, which is CI.
 
@@ -284,17 +282,14 @@ node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
 - **Not seen in a browser.** No frame rate, GPU time or memory reading exists
   for any area. Draw calls and triangles are counted, not timed.
 - Portal arch size, height and brightness have not been seen on screen.
-- The merged town, the caves and the distant outlines have not been looked at
-  in the game; the checks compare triangles, materials and bounds, not
-  pixels. The outline's flat colours and coarse shape are the part most
+- The caves, the grass detail levels and the distant outlines have not been
+  looked at in the game; the checks compare triangles, materials and bounds,
+  not pixels. The outline's flat colours and coarse shape are the part most
   likely to need tuning by eye.
 - GPU release re-upload has not been exercised on a real device.
 
 ## Known limits of this pass
 
-- Town parts that move together (a swaying lantern is several meshes) are
-  still drawn one by one: about 224 draws that could be merged per moving
-  group.
 - Beyond a border the ground cover is still missing: grass, flowers, shrubs
   and stones of an unloaded area are not drawn and have no stand-in.
 - An outline pops to the real scenery when its area loads (90 m before the
