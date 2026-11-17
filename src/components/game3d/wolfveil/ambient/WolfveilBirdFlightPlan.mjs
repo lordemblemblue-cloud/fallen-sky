@@ -29,7 +29,11 @@ export function makeBird(index,center,terrainY,random){
    phase:random()*TAU,speed:2.8+random()*2.5,
    mode:'flight',time:0,flightFor:7+random()*11,
    restFor:3+random()*7,target:null,ground:0,
-   wing:0,flightY:y};
+   wing:0,flightY:y,
+   // Independent text-keyframed animation clocks (never synchronized flock-wide).
+   motionClock:random()*4,beatHz:2.8+random()*.9,
+   flapFor:1.45+random()*1.35,glideFor:.7+random()*1.15,
+   flapEnergy:.8,flightStage:'flap',bank:0,pitch:0};
 }
 export function findBirdLanding(center,random,{
  groundAt,clearAt,originZ=70,coreHalf=550,tries=32,
@@ -58,7 +62,10 @@ export function advanceBird(b,dt,{
 }={}){
  const step=clamp(finite(dt)?dt:0,0,.08);
  if(!step||!b||!center)return b;
+ const previousHeading=b.heading;
+ const previousY=b.y;
  b.time+=step;
+ b.motionClock=(Number.isFinite(b.motionClock)?b.motionClock:0)+step;
  if(b.mode==='flight'){
    const distance=Math.hypot(center.x-b.x,center.z-b.z);
    const towards=Math.atan2(center.z-b.z,center.x-b.x);
@@ -99,7 +106,30 @@ export function advanceBird(b,dt,{
      b.mode='flight';b.time=0;b.target=null;
    }
  }
- b.wing=b.mode==='landed'?0.025:
-   (b.mode==='descending'?0.48:b.mode==='takeoff'?0.85:0.62);
+ // Alternating short powered wingbeats with longer buoyant glides. Each bird
+ // has its own phase/rate. A measured, smoothed bank follows actual turns.
+ const flapFor=Number.isFinite(b.flapFor)?Math.max(.4,b.flapFor):2;
+ const glideFor=Number.isFinite(b.glideFor)?Math.max(.25,b.glideFor):1;
+ const cycleTime=b.motionClock%(flapFor+glideFor);
+ b.flightStage=b.mode==='landed'?'perch':
+   b.mode==='takeoff'?'takeoff':b.mode==='descending'?'brake':
+   cycleTime<flapFor?'flap':'glide';
+ const targetEnergy=b.mode==='landed'?0:
+   b.mode==='takeoff'?1:b.mode==='descending'?.38:
+   b.flightStage==='glide'?.12:.78;
+ b.flapEnergy=(Number.isFinite(b.flapEnergy)?b.flapEnergy:.6)+
+   (targetEnergy-(Number.isFinite(b.flapEnergy)?b.flapEnergy:.6))*
+     Math.min(1,step*(b.mode==='takeoff'?5:2.4));
+ const turnAmount=Math.atan2(Math.sin(b.heading-previousHeading),
+   Math.cos(b.heading-previousHeading));
+ const targetBank=b.mode==='landed'?0:
+   Math.max(-.27,Math.min(.27,turnAmount/step*.17));
+ b.bank+=(targetBank-(b.bank||0))*Math.min(1,step*2.5);
+ const climbSpeed=(b.y-previousY)/step;
+ const targetPitch=b.mode==='landed'?0:
+   b.mode==='takeoff'?-.19:b.mode==='descending'?.16:
+   Math.max(-.12,Math.min(.12,-climbSpeed*.035));
+ b.pitch+=(targetPitch-(b.pitch||0))*Math.min(1,step*3);
+ b.wing=b.flapEnergy; // compatibility with older visual budget diagnostics
  return b;
 }

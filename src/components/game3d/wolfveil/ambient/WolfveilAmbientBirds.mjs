@@ -11,6 +11,8 @@ import {insideWolfveilImportedTown} from '../WolfveilImportedTownLayout.mjs';
 import {wolfveilIsProtectedSWTile} from '../WolfveilSWQuarterQuality.mjs';
 import {birdRandom,birdBudget,makeBird,findBirdLanding,advanceBird,
   BIRD_QUALITY} from './WolfveilBirdFlightPlan.mjs';
+import {classifyWolfveilBirdBone,sampleWolfveilBirdPose}
+  from './WolfveilBirdRigAnimation.mjs';
 
 export const WOLFVEIL_OWNER_BIRD_ASSET=
   'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/d9fad7809_tripo_convert_bdd73c28-af44-45e3-b758-1d783314f872.glb';
@@ -18,6 +20,8 @@ export const WOLFVEIL_OWNER_BIRD_ASSET=
 const noop=()=>{};
 const FLAP_AXIS=new THREE.Vector3(0,0,1);
 const FLAP_ROTATION=new THREE.Quaternion();
+const SWEEP_AXIS=new THREE.Vector3(0,1,0);
+const SWEEP_ROTATION=new THREE.Quaternion();
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const finite=n=>typeof n==='number'&&Number.isFinite(n);
 function makeFarGeometry(){
@@ -42,34 +46,57 @@ function fallbackBird(shared){
   const other=blade.clone();
   other.rotation.y=-.5;other.position.z=.32;r.add(other);
   root.add(l,r);
-  return {root,wings:[{bone:l,base:l.quaternion.clone(),sign:1},
-                      {bone:r,base:r.quaternion.clone(),sign:-1}],fallback:true};
+  return {root,wings:[{bone:l,base:l.quaternion.clone(),sign:1,segment:0},
+                      {bone:r,base:r.quaternion.clone(),sign:-1,segment:0}],
+    head:[],tail:[],rootY:root.position.y,fallback:true};
 }
 function animatedBird(model,shared){
   if(!model)return fallbackBird(shared);
   const root=cloneSkinned(model);
-  const wings=[];
+  const wings=[],head=[],tail=[];
   root.traverse(o=>{
-    if(o.isBone&&(/(?:^|::)0_Left_Limb_0/.test(o.name)||
-       /(?:^|::)0_Right_Limb_0/.test(o.name))){
-      wings.push({bone:o,base:o.quaternion.clone(),
-        sign:o.name.includes('Left')?1:-1});
+    if(o.isBone){
+      const joint=classifyWolfveilBirdBone(o.name);
+      if(joint?.kind==='wing')wings.push({
+        bone:o,base:o.quaternion.clone(),sign:joint.sign,segment:joint.segment,
+      });
+      if(joint?.kind==='head'||joint?.kind==='neck')
+        head.push({bone:o,base:o.quaternion.clone(),kind:joint.kind});
+      if(joint?.kind==='tail')
+        tail.push({bone:o,base:o.quaternion.clone()});
     }
     if(o.isMesh){o.castShadow=false;o.receiveShadow=false;
       o.raycast=noop;o.frustumCulled=false;
       o.userData={...o.userData,decorativeOnly:true,nonCollider:true};}
   });
-  return {root,wings,fallback:false};
+  return {root,wings,head,tail,rootY:root.position.y,fallback:false};
 }
+/** Apply actual GLB joint poses, always relative to the supplied bind pose.
+ * None of the bird's original vertex weights or bone transforms are replaced.
+ * Shoulder joints lift both wings, optional outer joints feather the tips,
+ * and optional neck/tail bones stabilize banking, ascent and braking.
+ */
 function updateRig(actor,bird){
-  const amp=bird.wing;
-  const beat=Math.sin(bird.time*(bird.mode==='landed'?1.1:12.4)+bird.phase);
+  const pose=sampleWolfveilBirdPose(bird);
   for(const w of actor.wings){
-    // Additive flap, never alter joint position/skin weights/root translation.
-    w.bone.quaternion.copy(w.base);
-    w.bone.quaternion.multiply(FLAP_ROTATION.setFromAxisAngle(
-      FLAP_AXIS,beat*amp*w.sign));
+    const angle=w.segment===0?pose.wingAngle:
+      pose.wingTipAngle*(1/Math.max(1,w.segment));
+    w.bone.quaternion.copy(w.base).multiply(
+      FLAP_ROTATION.setFromAxisAngle(FLAP_AXIS,angle*w.sign));
+    w.bone.quaternion.multiply(SWEEP_ROTATION.setFromAxisAngle(
+      SWEEP_AXIS,pose.wingSweep*w.sign*(w.segment===0?1:.45)));
   }
+  for(const joint of actor.tail){
+    joint.bone.quaternion.copy(joint.base).multiply(
+      FLAP_ROTATION.setFromAxisAngle(FLAP_AXIS,pose.tail));
+  }
+  for(const joint of actor.head){
+    joint.bone.quaternion.copy(joint.base).multiply(
+      FLAP_ROTATION.setFromAxisAngle(FLAP_AXIS,
+        pose.head*(joint.kind==='head'?1:.42)));
+  }
+  actor.root.position.y=actor.rootY+pose.bob;
+  return pose;
 }
 /** Optional visual-only wildlife system for the clone's existing Wolfveil scene.
  * One GLB is loaded; near rigged birds share its geometry/textures.
@@ -96,6 +123,25 @@ export function createWolfveilAmbientBirds({
   const farMaterial=new THREE.MeshBasicMaterial({
     color:0x334d5c,side:THREE.DoubleSide,depthWrite:false,
   });
+  // Distant silhouettes remain ONE instanced draw call. A shared shader time
+  // animates their wing vertices; per-instance world positions shift phases
+  // so the flock does not flap synchronously.
+  const farWingClock={value:0};
+  farMaterial.customProgramCacheKey=()=>'wolfveil-bird-instanced-flap-v1';
+  farMaterial.onBeforeCompile=shader=>{
+    shader.uniforms.uWolfveilBirdTime=farWingClock;
+    shader.vertexShader=shader.vertexShader
+      .replace('#include <common>',
+        '#include <common>\nuniform float uWolfveilBirdTime;')
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          float birdPhase=instanceMatrix[3].x*.17+instanceMatrix[3].z*.23;
+        #else
+          float birdPhase=0.0;
+        #endif
+        transformed.y += abs(position.x)*.16*
+          sin(uWolfveilBirdTime*16.0+birdPhase);`);
+  };
   const farGeometry=makeFarGeometry();
   const farMesh=new THREE.InstancedMesh(farGeometry,farMaterial,MAX_FAR);
   farMesh.name='DistantAmbientBirds_Instanced';
@@ -144,16 +190,16 @@ export function createWolfveilAmbientBirds({
     loader.load(modelUrl,gltf=>{
       if(disposed)return;
       const root=gltf?.scene;
-      if(!root){fillNear(null);loaded=true;return;}
+      if(!root){fillNear(null);loaded=true;refreshBudget();return;}
       templateAssets.push(root);
-      fillNear(root);loaded=true;
+      fillNear(root);loaded=true;refreshBudget();
     },undefined,()=>{
       if(disposed)return;
       // Graceful lightweight fallback, not an invented second bird asset.
-      fillNear(null);loaded=true;
+      fillNear(null);loaded=true;refreshBudget();
     });
   }catch{
-    fillNear(null);loaded=true;
+    fillNear(null);loaded=true;refreshBudget();
   }
   function refreshBudget(){
     const budget=birdBudget(qualityName,avgFrameMs,mobile);
@@ -172,6 +218,7 @@ export function createWolfveilAmbientBirds({
     const step=clamp(finite(dt)?dt:0,0,.08);
     if(!step)return;
     elapsed+=step;frames++;
+    farWingClock.value=elapsed;
     refreshCenter(playerPosition);
     avgFrameMs=avgFrameMs*.96+step*1000*.04;
     if(frames%120===0)refreshBudget();
@@ -190,9 +237,12 @@ export function createWolfveilAmbientBirds({
       item.actor.position.set(b.x,b.y,b.z);
       // Uploaded bird faces local -X, so orient that axis along travel.
       item.actor.rotation.y=Math.atan2(Math.sin(b.heading),-Math.cos(b.heading));
-      item.actor.rotation.z=b.mode==='flight'?0.06*Math.sin(b.phase+elapsed):
-        b.mode==='descending'?0.02:0;
-      updateRig(item.rig,b);
+      const pose=updateRig(item.rig,b);
+      // Source model faces local -X. Rotate flight attitude on the same
+      // actor, not on the player or glider. Gentle turns bank through X;
+      // ascents and braking tilt the nose through Z.
+      item.actor.rotation.x=pose.bank;
+      item.actor.rotation.z=pose.pitch;
     }
     // Distant low-geometry flock, one draw call, amortized matrices.
     if(frames%2===0){
@@ -234,8 +284,12 @@ export function createWolfveilAmbientBirds({
   return {
     update,setQuality(q){if(BIRD_QUALITY[q]){qualityName=q;refreshBudget();}},
     status(){return {loaded,modelSource:loaded&&templateAssets.length?'owner_glb':'fallback_or_loading',
+      animation:'text_keyframed_bone_flight',animatedWingJoints:near[0]?.rig?.wings?.length||0,
       activeNear,activeFar,modeCounts:near.slice(0,activeNear).reduce((o,item)=>{
         o[item.bird.mode]=(o[item.bird.mode]||0)+1;return o;
+      },{}),flightStages:near.slice(0,activeNear).reduce((o,item)=>{
+        const stage=item.bird.flightStage||'flap';
+        o[stage]=(o[stage]||0)+1;return o;
       },{}),frameMs:Math.round(avgFrameMs),visualOnly:true};},
     dispose,
   };
