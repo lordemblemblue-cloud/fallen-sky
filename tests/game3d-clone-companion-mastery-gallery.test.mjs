@@ -8,47 +8,64 @@ import {getCompanionGrowthView} from '../src/components/game3d/axe/progression/A
 
 const read=path=>readFileSync(new URL('../src/components/game3d/axe/services/'+path,import.meta.url),'utf8');
 const panel=read('AXECompanionMasteryPanel.jsx');
-const styles=read('AXECompanionMasteryGallery.css');
+const galleryStyles=read('AXECompanionMasteryGallery.css');
+const styles=read('AXECompanionProfileRedesign.css');
+const circle=read('AXECompanionMountCircleRail.jsx');
+const circleStyles=read('AXECompanionMountCircleRail.css');
 const workspace=read('AXECompanionWorkspace.jsx');
 
-test('mastery previews the selected owned mount in the existing real 3D component',()=>{
-  assert.match(panel,/getCompanionById\(def\.modelRef\)/);
-  assert.match(panel,/CompanionPreview3D key=\{linkedModel\.id\} companionId=\{linkedModel\.id\}/);
-  assert.match(panel,/data-mastery-layout="portrait-3d-guided"/);
-  assert.match(panel,/setSelectedId\(entry\.instanceId\)/);
+test('mastery keeps the selected mount in the real skinned 3D companion viewer',()=>{
+  assert.match(panel,/getCompanionById\(def.modelRef\)/);
+  assert.match(panel,/CompanionPreview3D key=\{linkedModel.id\} companionId=\{linkedModel.id\}/);
+  assert.match(panel,/className="axe-mastery-portrait"/);
+  assert.match(panel,/axe-mastery-portrait-stage/);
+  assert.match(panel,/data-companion-page="role-mastery"/);
+  assert.match(galleryStyles,/\.axe-mastery-portrait-stage/);
   assert.doesNotMatch(panel,/setActiveCompanion\(/);
 });
-test('mastery uses a circular owned-mount rail, not another large My Companion box',()=>{
-  assert.match(panel,/className="axe-mastery-avatar-rail"/);
-  assert.match(panel,/className="axe-mastery-avatar"/);
-  assert.doesNotMatch(panel,/<h3>My Companion<\/h3>/);
-  assert.match(styles,/\.axe-mastery-avatar\s*\{[\s\S]*?border-radius:50%/);
+
+test('mastery reuses the same Variety-style circular owned-mount selector as Equipment',()=>{
+  assert.match(panel,/<AXECompanionMountCircleRail mounts=\{mounts\}/);
+  assert.match(panel,/onSelect=\{id=>\{setSelectedId\(id\)/);
+  assert.match(circle,/data-companion-roster-layout="circles"/);
+  assert.match(circle,/getAXEMountDefinition\(mount.definitionId\)/);
+  assert.match(circleStyles,/border-radius:50%/);
+  assert.doesNotMatch(panel,/<h3>My Companion<\/h3>|Find mount|rosterQuery/);
 });
-test('Damage, Defense and Range explain actual ranks, remaining XP and active weapon',()=>{
+
+test('compact Damage Defense Range choices show real rank progress beside detailed increases',()=>{
   assert.match(panel,/COMPANION_MASTERY_PATHS\.map\(path=>/);
-  assert.match(panel,/getCompanionMasteryProgress\(mount,path\.id\)/);
-  assert.match(panel,/progress\.nextXp-progress\.xp/);
-  assert.match(panel,/masterySummary\[path\.id\]/);
-  assert.match(panel,/p\.rank\*2/);
-  assert.match(panel,/axe-mastery-active-pill/);
+  assert.match(panel,/getCompanionMasteryProgress\(mount,path.id\)/);
+  assert.match(panel,/className="axe-mastery-role-list"/);
+  assert.match(panel,/className="axe-mastery-role-row"/);
+  assert.match(panel,/className="axe-mastery-stat-breakdown"/);
+  assert.match(panel,/className="axe-mastery-stat-numbers"/);
+  assert.match(panel,/progress.nextXp-progress.xp/);
+  assert.match(panel,/p.rank\*2/);
+  assert.match(panel,/activeRole===path.id/);
   const mount={roleMastery:{damage:{xp:90}}};
   const p=getCompanionMasteryProgress(mount,'damage');
   assert.equal(p.rank,getCompanionMasteryRank(90));
   assert.equal(p.nextXp-p.xp,60);
 });
-test('preserves actual growth prerequisite, right inspector and activation transaction',()=>{
+
+test('preserves mastery eligibility, current/next contributions and active mount switching',()=>{
   assert.match(panel,/getCompanionGrowthView\(mount\?\.totalXp\|\|0\)/);
-  assert.match(panel,/level\.completedCycles>=1/);
+  assert.match(panel,/growth.completedCycles>=1/);
   assert.match(panel,/getAXEMountBonuses\(mount\)/);
-  assert.match(panel,/activateAXEMount\(mount\.instanceId\)/);
+  assert.match(panel,/activateAXEMount\(mount.instanceId\)/);
   assert.match(panel,/className="axe-mastery-inspector"/);
+  assert.match(panel,/No .*bonus recorded for this mount/);
   assert.equal(getCompanionGrowthView(4999).completedCycles,0);
   assert.equal(getCompanionGrowthView(5000).completedCycles,1);
 });
-test('scoped responsive Mastery CSS leaves Equipment and Variety unchanged',()=>{
-  assert.match(styles,/\.axe-mastery-rebuild--gallery/);
-  assert.match(styles,/@media\(max-width:960px\)/);
-  assert.match(styles,/@media\(max-width:650px\)/);
+
+test('compact gallery remains responsive without changing Equipment or Variety styles',()=>{
+  assert.match(styles,/\.axe-mastery-rebuild--compact/);
+  assert.match(styles,/grid-template-columns:minmax\(70px,84px\) minmax\(200px,29%\) minmax\(0,1fr\)/);
+  assert.match(styles,/\.axe-mastery-workbench/);
+  assert.match(styles,/@media\(max-width:760px\)/);
+  assert.match(styles,/\.axe-mastery-rebuild--compact>\.axe-mastery-portrait/);
   assert.doesNotMatch(styles,/\.axe-comp-style-layout/);
   assert.match(workspace,/const TABS=\['Equipment','Mastery','Vanity','Imbuement'\]/);
   assert.match(workspace,/tab==='Mastery'\?<div/);
