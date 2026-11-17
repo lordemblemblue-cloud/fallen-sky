@@ -125,7 +125,7 @@ test('combat ledger prevents underpayment, negative or oversized drain, and defe
   const remaining=ledger.stamina;
   ledger=advanceCombatResourceLedger(ledger,.08,{alive:true});
   assert.equal(ledger.stamina,remaining,'gliding prevents instant frame-to-frame regeneration');
-  for(let i=0;i<4;i++)ledger=trySpendCombatResource(ledger,'air_walk').state;
+  for(let i=0;i<3;i++)ledger=trySpendCombatResource(ledger,'air_walk').state;
   assert.ok(ledger.stamina>=0);
   const last=trySpendCombatResource(ledger,'air_walk');
   assert.equal(last.ok,false);
