@@ -12,9 +12,6 @@ const smooth = t => {
   return u * u * (3 - 2 * u);
 };
 
-// Four distinct surface caverns at the FAR edges of Wolfveil, plus one deep
-// interconnecting rotunda under the valley. The underground layer is a second
-// map: each mouth is a hike apart, and the tunnels run beneath the whole valley.
 const RAW_ENTRANCES = [
   {
     id: 'jade_lantern_grotto',
@@ -67,6 +64,13 @@ const RAW_ENTRANCES = [
   },
 ];
 
+// The deep floor under the valley. Level 1 is higher, just inside each mouth.
+// You walk down to this floor. There is no elevator.
+export const WOLFVEIL_DUNGEON_FLOOR_Y = -8;
+// exitAlong is the arch you press E at to leave. landAlong is only a fallback;
+// each cave stores its own level-one hall on the cave object.
+export const WOLFVEIL_CAVE_DROP = Object.freeze({ landAlong: 16, exitAlong: 3.5 });
+
 export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
   RAW_ENTRANCES.map(cave => {
     const [mx, mz] = cave.mouth;
@@ -77,18 +81,23 @@ export const WOLFVEIL_EXPLORABLE_CAVES = Object.freeze(
     const cx = mx + dx * chamberOffset;
     const cz = mz + dz * chamberOffset;
     const surf = wolfveilHeight(cx, cz);
-    // A real drop from the mouth, still under a rock roof. The long grade
-    // down to the valley basement happens once, in the tunnel, not as a
-    // second stair stacked on the same footprint.
-    const floorY = Math.min(mouthY - 14, surf - 16);
     const thresholdX = mx - dx * 3.5;
     const thresholdZ = mz - dz * 3.5;
     const thresholdY = wolfveilHeight(thresholdX, thresholdZ);
+    // Level 1 sits just under this hillside, not at the bottom of the valley.
+    // A short stair at the door covers the few metres. The long way down
+    // starts only after the hall and the big room.
+    const floorY = Math.min(mouthY - 4, surf - cave.ceilingHeight - 3.2);
+    const drop = Math.max(0, thresholdY - floorY);
+    const beforeRoom = cave.chamberOffset - cave.chamberRadius - 2.5;
+    const levelOneAlong = Math.min(beforeRoom, Math.max(11, drop / 0.55));
     return Object.freeze({
       ...cave,
       dir: Object.freeze([dx, dz]),
       mouthY,
       threshold: Object.freeze([thresholdX, thresholdY, thresholdZ]),
+      level: 1,
+      levelOneAlong,
       chamber: Object.freeze({
         id: cave.id + '_chamber',
         x: cx,
@@ -110,9 +119,9 @@ export const WOLFVEIL_CAVE_HUB = Object.freeze({
   name: 'Subterranean Wolf-Spirit Rotunda',
   theme: 'ancient_rotunda',
   x: -6,
-  y: -4,
+  y: WOLFVEIL_DUNGEON_FLOOR_Y,
   z: 24,
-  radius: 18,
+  radius: 46,
   ceiling: 7.4,
   lightColor: 0xf5b869,
   accentColor: 0x67e8f9,
@@ -186,26 +195,28 @@ function rimPoint(room, tx, tz) {
 
 function entryWaypoints(c) {
   const [dx, dz] = c.dir;
-  const lipY = c.mouthY - 0.3;
-  const endAlong = Math.max(10, (c.chamber.along || 30) - c.chamber.radius + 1.5);
-  const pts = [
-    [c.threshold[0], c.threshold[1], c.threshold[2]],
-    [c.mouth[0], lipY, c.mouth[1]],
-  ];
-  const steps = 6;
+  const y = c.chamber.y;
+  const land = c.levelOneAlong;
+  const steps = 4;
+  const pts = [[c.threshold[0], c.threshold[1], c.threshold[2]]];
   for (let i = 1; i <= steps; i++) {
     const t = i / steps;
     pts.push([
-      c.mouth[0] + dx * endAlong * t,
-      lipY + (c.chamber.y - lipY) * t,
-      c.mouth[1] + dz * endAlong * t,
+      c.mouth[0] + dx * land * t,
+      c.threshold[1] + (y - c.threshold[1]) * t,
+      c.mouth[1] + dz * land * t,
     ]);
   }
-  pts.push([c.chamber.x, c.chamber.y, c.chamber.z]);
+  const hall = Math.max(land + 8, (c.chamber.along || 30) - c.chamber.radius - 2);
+  pts.push([c.mouth[0] + dx * hall, y, c.mouth[1] + dz * hall]);
+  pts.push([c.chamber.x, y, c.chamber.z]);
   return pts;
 }
 
 function buryWaypoints(xz, y0, y1) {
+  if (Math.abs(y1 - y0) < 0.5) {
+    return xz.map(p => [p[0], y0, p[1]]);
+  }
   const pts = [[xz[0][0], xz[0][1]]];
   for (let i = 1; i < xz.length; i++) {
     const [ax, az] = pts[pts.length - 1];
@@ -269,13 +280,16 @@ function tunnelWaypoints(a, b, lateral) {
 }
 
 function sideAlcove(anchor, nx, nz, length, id) {
-  const end = [anchor.x + nx * length, anchor.y, anchor.z + nz * length];
-  const mid = [anchor.x + nx * length * 0.55, anchor.y, anchor.z + nz * length * 0.55];
+  const len = Math.hypot(nx, nz) || 1;
+  nx /= len;
+  nz /= len;
+  const rim = (anchor.radius || 15) + 2;
+  const at = (dist) => [anchor.x + nx * dist, anchor.y, anchor.z + nz * dist];
   return makePolylineCorridor(id, [
-    [anchor.x, anchor.y, anchor.z],
-    mid,
-    end,
-  ], 3.4, 5.6, 'alcove');
+    at(rim),
+    at(rim + length * 0.55),
+    at(rim + length),
+  ], 4.2, 5.8, 'alcove');
 }
 
 export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
@@ -409,8 +423,10 @@ export function planWolfveilCaveInteraction(localPosition,{insideCave=false,radi
     // Entry lands safely past the rock arch, while the return interaction
     // is INSIDE that same arch. A player walks back toward daylight and uses
     // E there instead of finding a teleport button 13 metres inside a room.
-    const insideX=mx+dx*13,insideZ=mz+dz*13;
-    const exitX=mx+dx*3,exitZ=mz+dz*3;
+    const insideX = mx + dx * cave.levelOneAlong;
+    const insideZ = mz + dz * cave.levelOneAlong;
+    const exitX = mx + dx * WOLFVEIL_CAVE_DROP.exitAlong;
+    const exitZ = mz + dz * WOLFVEIL_CAVE_DROP.exitAlong;
     if(insideCave){
       if(Math.hypot(localPosition.x-exitX,localPosition.z-exitZ)>radius)
         continue;

@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {buildWolfveilTerrain} from '../src/components/game3d/wolfveil/WolfveilGeometry.js';
 import {wolfveilHeight} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {
-  WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_EXPLORABLE_CAVES,WOLFVEIL_CAVE_CORRIDORS,WOLFVEIL_CAVE_DROP,
   sampleWolfveilCaveSpace,sampleWolfveilPlayerCaveFloorY,
   planWolfveilCaveInteraction,resolveWolfveilCaveWallCollision,
 } from '../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
@@ -58,8 +58,8 @@ test('E at every existing arch enters the same real connected cave and returns b
     assert(Number.isFinite(below),'Underground entry has real floor contact');
     assert.equal(planWolfveilCaveInteraction(enter,{insideCave:true}),null,
       'Cannot immediately exit at the underground landing');
-    const innerArch={x:cave.mouth[0]+cave.dir[0]*3,
-      y:enter.y,z:cave.mouth[1]+cave.dir[1]*3};
+    const innerArch={x:cave.mouth[0]+cave.dir[0]*WOLFVEIL_CAVE_DROP.exitAlong,
+      y:enter.y,z:cave.mouth[1]+cave.dir[1]*WOLFVEIL_CAVE_DROP.exitAlong};
     const leave=planWolfveilCaveInteraction(innerArch,{insideCave:true});
     assert.equal(leave?.action,'exit',cave.id);
     assert.equal(leave?.caveId,cave.id);

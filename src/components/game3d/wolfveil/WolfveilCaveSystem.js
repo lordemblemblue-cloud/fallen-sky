@@ -7,6 +7,7 @@ import {
   WOLFVEIL_EXPLORABLE_CAVES,
   WOLFVEIL_CAVE_HUB,
   WOLFVEIL_CAVE_CORRIDORS,
+  WOLFVEIL_CAVE_DROP,
   sampleWolfveilPlayerCaveFloorY,
   sampleWolfveilCaveSpace,
   planWolfveilCaveInteraction,
@@ -20,6 +21,13 @@ import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from 
 
 import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
+import {
+  WOLFVEIL_CAVE_FLOORS,
+  caveFloorByCaveId,
+  caveFloorIsAwake,
+  awakeCaveFloors,
+  paintSumiCaveMural,
+} from './WolfveilCaveNarrative.mjs';
 
 const TAU = Math.PI * 2;
 const LIGHT_POOL_SIZE = 6;
@@ -38,8 +46,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
 
   const texSuite = getWolfveilSumiETextures();
   const ownedTextures = [
-    cloneRepeatedTexture(texSuite.caveRock.map, 0.16, 0.16),
-    cloneRepeatedTexture(texSuite.caveRock.bumpMap, 0.16, 0.16),
+    cloneRepeatedTexture(texSuite.columnarBasalt.map, 0.72, 0.72),
+    cloneRepeatedTexture(texSuite.columnarBasalt.bumpMap, 0.72, 0.72),
     cloneRepeatedTexture(texSuite.stone.map, 0.28, 0.28),
     cloneRepeatedTexture(texSuite.stone.bumpMap, 0.28, 0.28),
     cloneRepeatedTexture(texSuite.wood.map, 0.4, 0.4),
@@ -51,7 +59,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     color: 0x6f7987,
     map: ownedTextures[0],
     bumpMap: ownedTextures[1],
-    bumpScale: 0.08,
+    bumpScale: 0.2,
     roughness: 0.91,
     metalness: 0.05,
     vertexColors: true,
@@ -164,6 +172,9 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const shellTris = new WolfveilTriangles();
   const lightAnchors = [];
   const animatedFlames = [];
+  const sumiScrolls = [];
+  const sumiTorches = [];
+  const defeatedBosses = new Set();
   const rand = mulberry32(0xc47e2026);
 
   const registerLight = (x, y, z, color, intensity = 22, distance = 28) => {
@@ -233,19 +244,31 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
             // Outside the mouth the hillside is the floor. Stone starts once
             // the ramp is actually under the rock.
-            if (along < 0.6 || my > wolfveilHeight(mx, mz) + 0.2) continue;
+            // Daylight in front of the arch stays open. The hall is drawn once
+            // the floor is actually under the rock.
+            if (along < 1.5 || my + 3.2 > wolfveilHeight(mx, mz)) continue;
           }
           const d0 = distAcc + seg.lenXZ * t0, d1 = distAcc + seg.lenXZ * t1;
-          floorTris.quad(
-            [x0 + nx * hw, y0, z0 + nz * hw],
-            [x0 - nx * hw, y0, z0 - nz * hw],
-            [x1 - nx * hw, y1, z1 - nz * hw],
-            [x1 + nx * hw, y1, z1 + nz * hw],
-            [0.62, 0.58, 0.52],
-            [[0, d0], [hw, d0], [hw, d1], [0, d1]],
-          );
-          // Entry reads as a stair: one tread per slice, same mesh, no extra draw.
-          if (cor.kind === 'entry') {
+          // Mission path in the middle. The rock edges stay darker and a
+          // little mossy so the walk reads against the wall.
+          const mixEdge = (t, yLift = 0) => {
+            const a = [x0 + nx * hw, y0 + yLift, z0 + nz * hw];
+            const b = [x0 - nx * hw, y0 + yLift, z0 - nz * hw];
+            const c = [x1 - nx * hw, y1 + yLift, z1 - nz * hw];
+            const d = [x1 + nx * hw, y1 + yLift, z1 + nz * hw];
+            const at = (p, q) => [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t, p[2] + (q[2] - p[2]) * t];
+            return [at(a, b), at(d, c)];
+          };
+          const bands = [[0, 0.18, [0.4, 0.48, 0.36]], [0.18, 0.82, [0.74, 0.69, 0.56]], [0.82, 1, [0.4, 0.48, 0.36]]];
+          for (const [s0, s1, color] of bands) {
+            const [l0, r0] = mixEdge(s0, s0 > 0.2 && s1 < 0.9 ? 0.03 : 0);
+            const [l1, r1] = mixEdge(s1, s0 > 0.2 && s1 < 0.9 ? 0.03 : 0);
+            floorTris.quad(l0, r0, r1, l1, color, [
+              [s0 * hw, d0 * 0.85], [s1 * hw, d0 * 0.85], [s1 * hw, d1 * 0.85], [s0 * hw, d1 * 0.85],
+            ]);
+          }
+          // The door stair only. The level-1 hall after it stays a flat path.
+          if (cor.kind === 'entry' && y0 - y1 > 0.2) {
             floorTris.quad(
               [x0 + nx * (hw - 0.35), y0 + 0.08, z0 + nz * (hw - 0.35)],
               [x0 - nx * (hw - 0.35), y0 + 0.08, z0 - nz * (hw - 0.35)],
@@ -255,22 +278,75 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
             );
           }
           const out = hw + 0.55;
+          const uv = (u0, v0, u1, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
           for (const side of [-1, 1]) {
+            const jag = (x, y, z) => {
+              const j = Math.max(0, rockDisplacement(x, y, z)) * 0.38;
+              return [x + nx * side * j, y, z + nz * side * j];
+            };
+            const wall = (x, y, z) => jag(x + nx * out * side, y, z + nz * out * side);
             shellTris.quad(
-              [x0 + nx * out * side, y0, z0 + nz * out * side],
-              [x1 + nx * out * side, y1, z1 + nz * out * side],
-              [x1 + nx * out * side, y1 + wallH, z1 + nz * out * side],
-              [x0 + nx * out * side, y0 + wallH, z0 + nz * out * side],
-              side < 0 ? [0.46, 0.44, 0.4] : [0.4, 0.42, 0.46],
+              wall(x0, y0, z0), wall(x1, y1, z1), wall(x1, y1 + wallH, z1), wall(x0, y0 + wallH, z0),
+              side < 0 ? [0.62, 0.6, 0.56] : [0.56, 0.58, 0.62],
+              [[d0 * 0.42, 0], [d1 * 0.42, 0], [d1 * 0.42, wallH * 0.42], [d0 * 0.42, wallH * 0.42]],
             );
+            const inn = out - 0.28;
+            shellTris.quad(
+              [x0 + nx * inn * side, y0, z0 + nz * inn * side],
+              [x1 + nx * inn * side, y1, z1 + nz * inn * side],
+              [x1 + nx * inn * side, y1 + 0.58, z1 + nz * inn * side],
+              [x0 + nx * inn * side, y0 + 0.58, z0 + nz * inn * side],
+              [0.34, 0.52, 0.32],
+              uv(d0 * 0.5, 0, d1 * 0.5, 0.45),
+            );
+          }
+          // Ragged brick courses along the rock. Uneven, with gaps, so the
+          // wall is masonry that has started to fall in, not a flat panel.
+          if ((sIdx + i) % 2 === 0) {
+            for (let b = 0; b < 3; b++) {
+              const side = (sIdx + b) % 2 === 0 ? 1 : -1;
+              const jag = 0.15 + ((b * 5 + i) % 3) * 0.12;
+              const span = 0.55 + (b % 2) * 0.35;
+              const rise = 0.42 + ((b + sIdx) % 3) * 0.22;
+              const base = 0.85 + (b % 2) * 0.55;
+              const inset = out - 0.5;
+              const ox = nx * inset * side, oz = nz * inset * side;
+              const ax = mx + ox - seg.dx / steps * span * 0.5;
+              const az = mz + oz - seg.dz / steps * span * 0.5;
+              const bx = mx + ox + seg.dx / steps * span * 0.5;
+              const bz = mz + oz + seg.dz / steps * span * 0.5;
+              shellTris.quad(
+                [ax, my + base, az],
+                [bx, my + base + jag * 0.2, bz],
+                [bx + nx * side * jag, my + base + rise, bz + nz * side * jag],
+                [ax + nx * side * jag * 0.6, my + base + rise * 0.85, az + nz * side * jag * 0.6],
+                b === 1 ? [0.48, 0.58, 0.4] : [0.58, 0.52, 0.46],
+                [[0, 0], [span, 0], [span, rise], [0, rise]],
+              );
+            }
           }
           shellTris.quad(
             [x0 + nx * out, y0 + ceilH, z0 + nz * out],
             [x0 - nx * out, y0 + ceilH, z0 - nz * out],
             [x1 - nx * out, y1 + ceilH, z1 - nz * out],
             [x1 + nx * out, y1 + ceilH, z1 + nz * out],
-            [0.34, 0.36, 0.4],
+            [0.4, 0.42, 0.46],
+            [[d0 * 0.35, 0], [d0 * 0.35, out], [d1 * 0.35, out], [d1 * 0.35, 0]],
           );
+          // A shallow niche every few slices. Something to stop and look at,
+          // still the same rock mesh.
+          if (cor.kind === 'tunnel' && (sIdx + i) % 5 === 2) {
+            const side = sIdx % 2 === 0 ? 1 : -1;
+            const inset = out - 0.85;
+            shellTris.quad(
+              [mx + nx * inset * side - seg.dx / steps * 0.35, my + 1.05, mz + nz * inset * side - seg.dz / steps * 0.35],
+              [mx + nx * inset * side + seg.dx / steps * 0.35, my + 1.05, mz + nz * inset * side + seg.dz / steps * 0.35],
+              [mx + nx * inset * side + seg.dx / steps * 0.35, my + 2.55, mz + nz * inset * side + seg.dz / steps * 0.35],
+              [mx + nx * inset * side - seg.dx / steps * 0.35, my + 2.55, mz + nz * inset * side - seg.dz / steps * 0.35],
+              [0.22, 0.2, 0.18],
+              [[0, 0], [1.4, 0], [1.4, 1.5], [0, 1.5]],
+            );
+          }
         }
 
       // One stone pier and lantern about every 90m. Not a rib on every slice.
@@ -327,14 +403,78 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   for (const cor of WOLFVEIL_CAVE_CORRIDORS) {
     if (cor.kind !== 'alcove') continue;
     const end = cor.waypoints[cor.waypoints.length - 1];
-    addBrazier(end[0], end[1], end[2], 0xf4c078, false);
-    addProp(boxGeo, wallMat, end[0], end[1] + 0.85, end[2] + 1.6, 1.8, 1.4, 0.45);
+    const prev = cor.waypoints[cor.waypoints.length - 2];
+    const fx = end[0] - prev[0], fz = end[2] - prev[2];
+    const fl = Math.hypot(fx, fz) || 1;
+    const ux = fx / fl, uz = fz / fl;
+    const sx = -uz, sz = ux;
+    addBrazier(end[0] - ux * 1.4, end[1], end[2] - uz * 1.4, 0xf4c078, false);
+    shellTris.quad(
+      [end[0] - sx * 2.2, end[1], end[2] - sz * 2.2],
+      [end[0] + sx * 2.2, end[1], end[2] + sz * 2.2],
+      [end[0] + sx * 2.2, end[1] + 2.8, end[2] + sz * 2.2],
+      [end[0] - sx * 2.2, end[1] + 2.8, end[2] - sz * 2.2],
+      [0.48, 0.46, 0.42],
+      [[0, 0], [3.2, 0], [3.2, 2.2], [0, 2.2]],
+    );
+    floorTris.quad(
+      [end[0] - ux * 2.4 - sx * 1.3, end[1] + 0.42, end[2] - uz * 2.4 - sz * 1.3],
+      [end[0] - ux * 2.4 + sx * 1.3, end[1] + 0.42, end[2] - uz * 2.4 + sz * 1.3],
+      [end[0] - ux * 0.7 + sx * 1.3, end[1] + 0.42, end[2] - uz * 0.7 + sz * 1.3],
+      [end[0] - ux * 0.7 - sx * 1.3, end[1] + 0.42, end[2] - uz * 0.7 - sz * 1.3],
+      [0.55, 0.52, 0.46],
+      [[0, 0], [2.4, 0], [2.4, 1.2], [0, 1.2]],
+    );
   }
 
   // Four real stone approach tracks; mountain/roof polygons remain SEALED.
   // The final outdoor apron leads to the existing E-activated arch, while
   // the internal ramp is still the only legal way down after entry.
-  const caveAccessStats=appendWolfveilCaveAccessFloor(floorTris);
+  // Outdoor flagstone is its own walk mesh. The cave floor stays underground,
+  // so a player on the hillside walks the pavement all the way to the arch.
+  const pavementTris = new WolfveilTriangles();
+  const caveAccessStats=appendWolfveilCaveAccessFloor(pavementTris);
+  const pavementMat = floorMat.clone();
+  pavementMat.name = 'SWV_CaveApproach_DressedFlagstone';
+  pavementMat.polygonOffset = true;
+  pavementMat.polygonOffsetFactor = -2;
+  pavementMat.polygonOffsetUnits = -2;
+  world.ownedMaterials.push(pavementMat);
+  const pavementMesh = new THREE.Mesh(pavementTris.geometry(), pavementMat);
+  pavementMesh.name = 'SWV_CaveApproach_FlagstonePavement';
+  pavementMesh.receiveShadow = true;
+  pavementMesh.userData = {
+    walkable: true,
+    approachPavement: true,
+    clientGroundRaycast: true,
+    notServerAuthority: true,
+  };
+  group.add(pavementMesh);
+  world.walkableSurfaces ??= [];
+  world.walkableSurfaces.push(pavementMesh);
+  // Rock beds beside the path, off the walk, so each mouth sits in stone
+  // instead of starting out of the grass.
+  for (const approach of WOLFVEIL_CAVE_APPROACHES) {
+    const cave = WOLFVEIL_EXPLORABLE_CAVES.find(item => item.id === approach.caveId);
+    const [dx, dz] = cave.dir;
+    const nx = -dz, nz = dx;
+    for (const spot of [approach.points[1], approach.points[2]]) {
+      for (const side of [-1, 1]) {
+        const x = spot.x + nx * side * 5.6;
+        const z = spot.z + nz * side * 5.6;
+        const y = wolfveilHeight(x, z);
+        const ox = nx * side, oz = nz * side;
+        shellTris.quad(
+          [x, y, z],
+          [x + ox * 1.8, y + 0.2, z + oz * 1.8],
+          [x + ox * 1.5 + dx * 2.2, y + 1.45, z + oz * 1.5 + dz * 2.2],
+          [x + dx * 2.4, y + 1.2, z + dz * 2.4],
+          [0.58, 0.56, 0.52],
+          [[0, 0], [1.6, 0], [1.6, 1.3], [0, 1.3]],
+        );
+      }
+    }
+  }
   const caveAccessProps=appendWolfveilCaveAccessProps({
     addProp,addBrazier,stoneGeo:boxGeo,beamGeo:boxGeo,
     stoneMat:floorMat,timberMat,bronzeMat,
@@ -389,7 +529,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       shellTris.quad(
         facePoint(a0, 1, 0), facePoint(a1, 1, 0),
         facePoint(a1, s1, leanAt(a1)), facePoint(a0, s0, leanAt(a0)),
-        [0.46, 0.50, 0.57],
+        [0.62, 0.64, 0.68],
+        [[i * 0.55, 0], [(i + 1) * 0.55, 0], [(i + 1) * 0.55, 2.4], [i * 0.55, 2.4]],
       );
     }
     // Broken rock teeth hanging along the rim of the mouth.
@@ -457,31 +598,23 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       addProp(boxGeo, wallMat, px, base + 2.05, pz, 0.62, 4.1, 0.78, 0, yaw, 0);
     }
     addProp(boxGeo, wallMat, doorX, my + 3.95, doorZ, 4.5, 0.48, 0.72, 0, yaw, 0);
-
-    // Outdoor stair: the place you walk up to enter. Each tread sits on the
-    // hillside, so it cannot float and drop you.
-    for (let s = 0; s < 7; s++) {
-      const along = -5.6 + s * 0.68;
-      const sx = mx + dx * along, sz = mz + dz * along;
-      const sy = wolfveilHeight(sx, sz);
-      addProp(boxGeo, floorMat, sx, sy + 0.1, sz, 3.15, 0.16, 0.58, 0, yaw, 0);
-    }
-    // Interior stair: the same ramp you walk down after E, and back up to
-    // leave. Visual only. Feet still use the connected cave floor.
-    const entry = WOLFVEIL_CAVE_CORRIDORS.find(c => c.id === `entry_${cave.id}`);
-    if (entry) {
-      for (const seg of entry.segments) {
-        const count = Math.max(1, Math.floor(seg.lenXZ / 1.05));
-        for (let i = 0; i < count; i++) {
-          const t = (i + 0.5) / count;
-          const sx = seg.ax + seg.dx * t;
-          const sy = seg.ay + seg.dy * t;
-          const sz = seg.az + seg.dz * t;
-          const along = (sx - mx) * dx + (sz - mz) * dz;
-          if (along < 0.7 || along > 12) continue;
-          if (sy > wolfveilHeight(sx, sz) + 0.3) continue;
-          addProp(boxGeo, floorMat, sx, sy + 0.05, sz, 2.5, 0.12, 0.52, 0, Math.atan2(seg.dx, seg.dz), 0);
-        }
+    // A second rock course and low retaining walls, so the arch is a built
+    // mouth in the hill instead of a lintel standing on bare dirt.
+    addProp(boxGeo, wallMat, doorX - dx * 0.35, my + 4.55, doorZ - dz * 0.35, 5.1, 0.42, 1.05, 0, yaw, 0);
+    for (let i = 0; i < 6; i++) {
+      const f0 = -8.2 + i * 1.25, f1 = f0 + 1.25;
+      for (const side of [-1, 1]) {
+        const lat = side * 4.05;
+        const at = f => {
+          const x = mx + dx * f + nx * lat, z = mz + dz * f + nz * lat;
+          return [x, wolfveilHeight(x, z), z];
+        };
+        const a = at(f0), b = at(f1);
+        shellTris.quad(
+          a, b, [b[0], b[1] + 1.28, b[2]], [a[0], a[1] + 1.28, a[2]],
+          [0.55, 0.56, 0.58],
+          [[0, f0 * 0.4], [1.2, f0 * 0.4], [1.2, 1.3], [0, 1.3]],
+        );
       }
     }
   }
@@ -551,8 +684,10 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
         };
         const p00 = vtx(ra, a0), p01 = vtx(ra, a1), p11 = vtx(rb, a1), p10 = vtx(rb, a0);
         const shade = 0.48 + 0.36 * (tier / (rings.length - 1));
-        if (rb.r === 0) shellTris.tri(p00, p01, p10, [shade * 0.86, shade * 0.92, shade]);
-        else shellTris.quad(p00, p01, p11, p10, [shade * 0.86, shade * 0.92, shade]);
+        if (rb.r === 0) shellTris.tri(p00, p01, p10, [shade * 0.86, shade * 0.92, shade],
+          [[i * 0.8, tier * 1.2], [(i + 1) * 0.8, tier * 1.2], [i * 0.8, tier * 1.2 + 1.1]]);
+        else shellTris.quad(p00, p01, p11, p10, [shade * 0.86, shade * 0.92, shade],
+          [[i * 0.8, tier * 1.2], [(i + 1) * 0.8, tier * 1.2], [(i + 1) * 0.8, tier * 1.2 + 1.4], [i * 0.8, tier * 1.2 + 1.4]]);
       }
     }
 
@@ -586,6 +721,59 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
       addProp(boxGeo, floorMat, ch.x, ch.y + 0.35, ch.z, 3.2, 0.7, 3.2);
       addProp(boxGeo, bronzeMat, ch.x, ch.y + 0.85, ch.z, 2.1, 0.28, 2.1);
+    }
+
+    // Sumi-e scroll: grass strokes and fire strokes, the valley's old idea
+    // hung on the stone. Locked floors stay an unfinished grey painting.
+    const story = caveFloorByCaveId(ch.cave?.id || ch.id);
+    if (story && typeof document !== 'undefined' && typeof document.createElement === 'function') {
+      const awake = caveFloorIsAwake(story, defeatedBosses);
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 288;
+      paintSumiCaveMural(canvas.getContext('2d'), canvas.width, canvas.height, story, awake);
+      const texture = new THREE.CanvasTexture(canvas);
+      texture.colorSpace = THREE.SRGBColorSpace;
+      ownedTextures.push(texture);
+      const mat = new THREE.MeshBasicMaterial({
+        map: texture, transparent: true, side: THREE.DoubleSide, depthWrite: false,
+      });
+      mat.name = 'SWV_Cave_SumiScroll_' + story.order;
+      world.ownedMaterials.push(mat);
+      const scroll = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 3.5), mat);
+      const dir = ch.cave?.dir || [0, 1];
+      const back = (ch.radius || 14) * 0.62;
+      scroll.position.set(ch.x + dir[0] * back, ch.y + 2.6, ch.z + dir[1] * back);
+      scroll.lookAt(ch.x, ch.y + 2.6, ch.z);
+      scroll.raycast = () => {};
+      scroll.name = 'SWV_Cave_SumiMural_' + story.caveId;
+      group.add(scroll);
+      sumiScrolls.push({ mesh: scroll, floor: story, canvas, texture });
+      for (const side of [-1, 1]) {
+        const tx = ch.x + dir[0] * (back - 1.2) + (-dir[1]) * side * 2.4;
+        const tz = ch.z + dir[1] * (back - 1.2) + dir[0] * side * 2.4;
+        addProp(cylGeo, timberMat, tx, ch.y + 0.7, tz, 0.08, 1.4, 0.08);
+        const flameCanvas = document.createElement('canvas');
+        flameCanvas.width = 64;
+        flameCanvas.height = 96;
+        paintSumiCaveMural(flameCanvas.getContext('2d'), 64, 96, story, awake);
+        const flameTex = new THREE.CanvasTexture(flameCanvas);
+        flameTex.colorSpace = THREE.SRGBColorSpace;
+        ownedTextures.push(flameTex);
+        const flameMat = new THREE.SpriteMaterial({
+          map: flameTex, transparent: true, depthWrite: false,
+        });
+        flameMat.name = 'SWV_Cave_SumiTorch_' + story.order;
+        world.ownedMaterials.push(flameMat);
+        const flame = new THREE.Sprite(flameMat);
+        flame.position.set(tx, ch.y + 1.7, tz);
+        flame.scale.set(0.55, 0.8, 1);
+        flame.raycast = () => {};
+        flame.visible = awake;
+        group.add(flame);
+        sumiTorches.push({ mesh: flame, floor: story, phase: side + story.order });
+        if (awake) registerLight(tx, ch.y + 1.8, tz, 0xffb35c, 16, 14);
+      }
     }
 
     // ─── UNIQUE INTERIOR DESIGN PER CAVERN ───
@@ -720,11 +908,22 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   };
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES) {
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
-    addWayfinding('E · '+cave.name,
+    addWayfinding('Level 1 · walk in',
       cave.threshold[0],cave.threshold[1]+3.4,cave.threshold[2],10.2);
-    const ix=mx+dx*3,iz=mz+dz*3;
+    const ix = mx + dx * WOLFVEIL_CAVE_DROP.exitAlong, iz = mz + dz * WOLFVEIL_CAVE_DROP.exitAlong;
     const inside=sampleWolfveilCaveSpace(ix,iz,.62);
-    if(inside)addWayfinding('E · Return Outside',ix,inside.floorY+3,iz,9);
+    if(inside)addWayfinding('Level 1 · E · Return Outside',ix,inside.floorY+3,iz,9);
+  }
+  for (const cor of WOLFVEIL_CAVE_CORRIDORS) {
+    if (cor.kind !== 'tunnel') continue;
+    const a = cor.waypoints[0], b = cor.waypoints.at(-1);
+    if (Math.abs(a[1] - b[1]) < 6) continue;
+    const high = a[1] > b[1] ? a : b;
+    const low = a[1] > b[1] ? b : a;
+    const dx = low[0] - high[0], dz = low[2] - high[2];
+    const len = Math.hypot(dx, dz) || 1;
+    addWayfinding('Stairs down · not an elevator',
+      high[0] + dx / len * 8, high[1] + 3.1, high[2] + dz / len * 8, 11);
   }
   const rotunda=WOLFVEIL_CAVE_HUB;
   for(const edge of navigationGraph.edges) {
@@ -781,18 +980,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     const travel = planWolfveilCaveInteraction(
       { x: cave.mouth[0], y: cave.mouthY, z: cave.mouth[1] });
     if (!travel) return null;
-    // Land just inside the rock, not 13 m in: the player walks the descending
-    // entry ramp themselves instead of being dropped at the chamber door.
-    const insideX = cave.mouth[0] + cave.dir[0] * 5.5;
-    const insideZ = cave.mouth[1] + cave.dir[1] * 5.5;
-    const space = sampleWolfveilCaveSpace(insideX, insideZ, 0.5);
+    // Walk in on level 1. This only steps you onto the hall past the door
+    // stair. It does not drop you to the deep floor, and it is not an elevator.
     activeCaveId = cave.id;
-    worldPos.x = space ? insideX : travel.x;
-    worldPos.y = space ? space.floorY + 0.1 : travel.y;
-    worldPos.z = (space ? insideZ : travel.z) + offsetZ;
+    worldPos.x = travel.x;
+    worldPos.y = travel.y;
+    worldPos.z = travel.z + offsetZ;
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('skillActivatedToast', {
-        detail: { text: 'Descending into ' + cave.name + ' · E at the arch to leave' },
+        detail: { text: 'Level 1 · ' + cave.name + ' · stairs down are past the hall' },
       }));
     }
     return { action: 'enter', name: cave.name, caveId: cave.id };
@@ -800,6 +996,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   return {
     group,
     floorMesh,
+    pavementMesh,
     shellMesh,
     caves: WOLFVEIL_EXPLORABLE_CAVES,
     hub: WOLFVEIL_CAVE_HUB,
@@ -808,6 +1005,23 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     approaches:WOLFVEIL_CAVE_APPROACHES,
     approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
     lightAnchorCount: lightAnchors.length,
+    floors: WOLFVEIL_CAVE_FLOORS,
+    awakeFloors(){return awakeCaveFloors(defeatedBosses);},
+    noteBossDefeated(bossId) {
+      // Records the painting, never a reward. Combat still owns the kill.
+      if (!bossId) return awakeCaveFloors(defeatedBosses);
+      defeatedBosses.add(bossId);
+      for (const scroll of sumiScrolls) {
+        const awake = caveFloorIsAwake(scroll.floor, defeatedBosses);
+        const ctx = scroll.canvas.getContext('2d');
+        paintSumiCaveMural(ctx, scroll.canvas.width, scroll.canvas.height, scroll.floor, awake);
+        scroll.texture.needsUpdate = true;
+      }
+      for (const torch of sumiTorches) {
+        torch.mesh.visible = caveFloorIsAwake(torch.floor, defeatedBosses);
+      }
+      return awakeCaveFloors(defeatedBosses);
+    },
     isActive(){return activeCaveId!==null;},
     walkIn: enterFromMouth,
     playerGroundY(worldPos) {
@@ -864,6 +1078,12 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
           : 0.88 + 0.18 * Math.sin(elapsed * 8.5 + f.phase);
         f.mesh.scale.y = Math.abs(f.mesh.scale.y) * (0.96 + 0.04 * s);
         f.mesh.position.y = f.baseY + (f.gentle ? 0.03 * Math.sin(elapsed * 1.9 + f.phase) : 0);
+      }
+      for (const torch of sumiTorches) {
+        if (!torch.mesh.visible) continue;
+        const lick = 0.82 + 0.18 * Math.sin(elapsed * 9.2 + torch.phase);
+        torch.mesh.scale.y = 0.8 * lick;
+        torch.mesh.material.opacity = 0.72 + 0.28 * lick;
       }
 
       // Server-authoritative duel play owns the body position; never teleport it.

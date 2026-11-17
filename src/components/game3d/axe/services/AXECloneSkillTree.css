@@ -497,3 +497,59 @@
     padding:4px;
   }
 }
+
+/* Companion lower loadout: share Character's exact equipped-bar materials.
+ * Only the companion owner is scoped. Keep the canonical four Z/X/V/B slots,
+ * active/preset events, right-click removal and hover/focus behavior intact. */
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped {
+  color:var(--ct-cream);
+  background:transparent;
+  box-shadow:none;
+  margin-top:4px;
+  padding-top:6px;
+  border-top:1px solid rgba(241,203,143,.45);
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-heading {
+  background:transparent;
+  color:var(--ct-cream);
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-heading>button {
+  border:1px solid #ba8e56;
+  color:#ffe1a6;
+  background:#1b293a;
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-heading>.axe-ct-save-preset {
+  border:1px solid #d5ae73;
+  color:#f2d5a2;
+  background:rgba(35,54,69,.72);
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots {
+  background:transparent;
+  gap:6px;
+  padding:7px 3px 2px;
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots>button {
+  border:1px solid #a8a2a0;
+  border-radius:8px;
+  background:linear-gradient(140deg,#233c52,#122234);
+  color:#edd7ae;
+  min-height:57px;
+  box-shadow:none;
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots>button:hover,
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots>button:focus-visible {
+  border-color:#f8d18b;
+}
+.axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots>button.axe-ct-equipped-target {
+  border-color:#ffe3a4;
+  box-shadow:inset 0 0 11px rgba(238,194,128,.30);
+}
+@media(max-width:620px) {
+  .axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots {
+    overflow-x:auto;
+    gap:4px;
+  }
+  .axe-clone-skill-root[data-progression-panel="skills_companion"][data-skillbook-layout="simplified"] .axe-ct-equipped-slots>button {
+    min-width:39px;
+  }
+}

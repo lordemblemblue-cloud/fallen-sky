@@ -4,6 +4,10 @@ import { PLAYER_AFK_DELAY_SECONDS } from './playerNativeAnimationClips';
 import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, resolvePlayerAnimationKey } from './playerAnimationActions.mjs';
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
+import {
+  createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
+  advanceAirWalk,releaseAirWalkGlide,isAirWalkInFlight,
+} from './AirWalkTraversal.mjs';
 
 // 3-hit weapon combos (weapons/weaponComboClips.js, baked per held weapon). A press inside the chain window
 // continues the chain; a press during a swing is buffered and starts the next hit at that swing's cancel point.
@@ -44,6 +48,7 @@ const STATES = {
 const LOOP_STATES = new Set([
   STATES.IDLE, STATES.AFK, STATES.COMBAT_IDLE, STATES.WALK, STATES.RUN, STATES.SPRINT, STATES.RUN_BACK, STATES.JUMP_LOOP,
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
+  'fallLoop', // no glider model yet: preserve a looping airborne pose
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
@@ -72,7 +77,14 @@ const DODGE_STATE_BY_DIRECTION = {
   backward: STATES.DODGE_BACKWARD,
 };
 
-export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
+export function createLunaDashboardPlayerController({
+  mixer,oneShotRef,
+  // Inject the world's existing character-scoped stamina ledger. The
+  // animation controller never mutates stamina or a player save directly.
+  getAirWalkStamina=()=>0,
+  spendAirWalkBoost=()=>({ok:false,reason:'unavailable'}),
+  spendAirWalkGlide=()=>({ok:false,reason:'unavailable'}),
+}={}) {
   const actions = {};
   let currentState = null;
   let previousMoving = false;
@@ -98,6 +110,16 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
   let jumpVelocity=0;
   let jumpPhase=null;
   let jumpPhaseSeconds=0;
+  let airWalk=createAirWalkState();
+  let lastAirWorldY=null;
+  let lastAirGroundY=null;
+  const cancelAirWalk=()=>{
+    if(isAirWalkInFlight(airWalk)) airWalk=releaseAirWalkGlide(airWalk);
+    return airWalk.mode;
+  };
+  const resetAirWalk=()=>{
+    airWalk=createAirWalkState();lastAirWorldY=null;lastAirGroundY=null;
+  };
   const GRAVITY=18;
   const JUMP_SPEED=5.4;
   const extraClips = {}; // weapon combo clips: kept across bindClips
@@ -433,6 +455,10 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     busyResetAt = 0;
     specialMoveTimer = 0;
     specialMoveVelocity = null;
+    resetAirWalk();
+    jumpOffset=0;
+    jumpVelocity=0;
+    jumpPhase=null;
     const played = available ? playState(available, { force: true, fade: 0.12 }) : false;
     if (!played) {
       // Native boot may precede the death montage. Preserve the last rendered
@@ -463,6 +489,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     jumpPhase = null;
     jumpPhaseSeconds = 0;
     externallyAirborne = false;
+    resetAirWalk();
     idleStartedAt = null;
     previousMoving = false;
     pendingEquipmentTransition = null;
@@ -521,6 +548,42 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
   };
 
   // Use the correct melee clip when available. The older bow clip remains
+  // Space: jump from ground, deploy an invisible glider once airborne,
+  // then pay stamina to Air Walk and resume gliding after the upward kick.
+  // Separate from equipped combat skills, mounts, K/Soulbook, and the Q crouch.
+  const requestAirWalkAction=()=>{
+    if(isDead||isMounted)return {ok:false,reason:'unavailable'};
+    if(airWalk.mode==='glide'){
+      const planned=beginAirWalkBoost(airWalk,{stamina:getAirWalkStamina()});
+      if(!planned.ok)return planned;
+      const paid=spendAirWalkBoost();
+      if(!paid?.ok)return {ok:false,reason:paid?.reason||'not_enough_stamina'};
+      airWalk=planned.state;
+      return {ok:true,action:'air_walk'};
+    }
+    if(isAirWalkInFlight(airWalk))return {ok:false,reason:'boost_in_progress'};
+    if(jumpPhase==='takeoff'||jumpPhase==='airborne'){
+      const planned=deployAirWalkGlide(airWalk,{
+        worldY:lastAirWorldY,floorY:lastAirGroundY,stamina:getAirWalkStamina(),
+      });
+      if(!planned.ok)return planned;
+      airWalk=planned.state;
+      jumpPhase='airborne';
+      jumpVelocity=0;
+      jumpPhaseSeconds=0;
+      isBusy=false;
+      busyResetAt=0;
+      externallyAirborne=true;
+      if(oneShotRef)oneShotRef.current=false;
+      const glideLoop=hasAction('fallLoop')?'fallLoop':STATES.JUMP_LOOP;
+      if(hasAction(glideLoop))playState(glideLoop,{force:true,fade:.12});
+      return {ok:true,action:'glide'};
+    }
+    if(jumpPhase)return {ok:false,reason:'landing'};
+    const jumped=requestJump();
+    return jumped?{ok:true,action:'jump'}:{ok:false,reason:'jump_unavailable'};
+  };
+
   // a fallback for existing avatars without a registered melee animation.
   // Timed skill combos may restart a compatible attack montage at most once
   // every 90ms; regular clicks still obey the ordinary busy/cooldown gates.
@@ -574,7 +637,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
   // Motion requests never move directly through unvalidated terrain. The
   // world owns the swept boundary/building/tree/rail collision checks; this
   // callback hands them the requested planar displacement only.
-  const updateMotion = (model, delta, groundY = model.position.y, moveWithCollision) => {
+  const updateMotion = (model, delta, groundY = model.position.y, moveWithCollision, resolveCeilingY) => {
     advanceBlend();
     const dt=Number.isFinite(delta)?Math.max(0,Math.min(.08,delta)):0;
     let correctedGroundY=groundY;
@@ -586,6 +649,38 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
       }
       specialMoveTimer=Math.max(0,specialMoveTimer-step);
       if(specialMoveTimer===0)specialMoveVelocity=null;
+    }
+    if(isAirWalkInFlight(airWalk)){
+      // The single owner of vertical gliding height keeps absolute world Y.
+      // Ordinary X/Z still goes through the collision-safe World3D callback.
+      const canGlide=airWalk.mode!=='glide' ||
+        (getAirWalkStamina()>0 && !!spendAirWalkGlide(dt)?.ok);
+      const next=advanceAirWalk(airWalk,dt,{
+        floorY:correctedGroundY,
+        ceilingY:typeof resolveCeilingY==='function'
+          ?resolveCeilingY(airWalk.y):null,
+        canGlide,
+      });
+      airWalk=next.state;
+      if(next.landed){
+        jumpOffset=0;
+        jumpVelocity=0;
+        jumpPhase='landing';
+        jumpPhaseSeconds=ONE_SHOT_DURATION[STATES.JUMP_LAND];
+        busyResetAt=now()+jumpPhaseSeconds;
+        externallyAirborne=false;
+        model.position.y=correctedGroundY;
+        lastAirWorldY=correctedGroundY;
+        lastAirGroundY=correctedGroundY;
+        if(hasAction(STATES.JUMP_LAND))
+          playState(STATES.JUMP_LAND,{force:true,fade:.09});
+      }else{
+        jumpOffset=Math.max(0,airWalk.y-correctedGroundY);
+        model.position.y=airWalk.y;
+        lastAirWorldY=airWalk.y;
+        lastAirGroundY=correctedGroundY;
+      }
+      return;
     }
     if(jumpPhase==='takeoff' || jumpPhase==='airborne'){
       jumpOffset=Math.max(0,jumpOffset+jumpVelocity*dt-.5*GRAVITY*dt*dt);
@@ -609,6 +704,8 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     // The actual world height is sampled again every frame, so jumping follows
     // the same hill/floor baseline and cannot permanently change the spawn Y.
     model.position.y=correctedGroundY+jumpOffset;
+    lastAirWorldY=model.position.y;
+    lastAirGroundY=correctedGroundY;
   };
 
   const setAiming = (enabled) => {
@@ -672,6 +769,7 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     specialMoveTimer = 0;
     specialMoveVelocity = null;
     externallyAirborne = false;
+    resetAirWalk();
     pendingEquipmentTransition = null;
     previousMoving = false;
     idleStartedAt = null;
@@ -713,6 +811,14 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     requestDodge,
     requestHitReact,
     requestJump,
+    requestAirWalkAction,
+    cancelAirWalk,
+    resetAirWalkMotion:()=>{
+      resetAirWalk();jumpOffset=0;jumpVelocity=0;jumpPhase=null;
+      jumpPhaseSeconds=0;externallyAirborne=false;
+      isBusy=false;busyResetAt=0;
+    },
+    getAirWalkState:()=>({...airWalk}),
     requestRoll,
     setAiming,
     setBlocking,
@@ -732,6 +838,6 @@ export function createLunaDashboardPlayerController({ mixer, oneShotRef }) {
     getJumpOffset:()=>jumpOffset,
     isMovementOverridden: () => blocksBowMovement({busy:isBusy,dead:isDead,bowAttackActive:bowAttackAllowsMovement}),
     has: hasAction,
-    getDebugState: () => ({ currentState, ...lastMovement, isBusy, bowAttackAllowsMovement, isAiming, isBlocking, equipment: { ...equipment }, isMounted, isDead, specialMoveTimer,jumpPhase,jumpOffset }),
+    getDebugState: () => ({ currentState, ...lastMovement, isBusy, bowAttackAllowsMovement, isAiming, isBlocking, equipment: { ...equipment }, isMounted, isDead, specialMoveTimer,jumpPhase,jumpOffset,airWalk:{...airWalk} }),
   };
 }

@@ -1,14 +1,14 @@
 // Concept D weapon rail: real owned weapons, real buttons, no baked icons.
 // The owner's actual first-image translucent raster sits BEHIND these live controls.
-import { ChevronLeft, ChevronRight, Crosshair, Settings2, Shield, Star, Swords } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, Shield, Swords } from 'lucide-react';
 import { getAXEWeaponHUDArtwork } from './AXECurvedWeaponTemplate';
 
 const ROLE_ICONS={offensive:Swords,ranged:Crosshair,defensive:Shield};
 const DISPLAY_ORDER=['offensive','ranged','defensive'];
 
 export default function AXEConceptDWeaponTemplate({
-  rows,getItem,activeId,assigning,wheelRef,
-  onDraw,onAssign,onCycle,onFavorite,onTouchStart,onTouchEnd,
+  rows,getItem,activeId,wheelRef,
+  onDraw,onCycle,onTouchStart,onTouchEnd,
 }){
   const byRole=Object.fromEntries(rows.map(row=>[row.role,row]));
   return (
@@ -34,21 +34,14 @@ export default function AXEConceptDWeaponTemplate({
             <div className="jade-concept-d-role" key={role}
               data-role={role} data-active={active?'true':'false'}>
               <button type="button" className="jade-concept-d-weapon-circle"
-                onClick={()=>onDraw(role)} aria-pressed={active}
-                aria-label={item?`Equip ${item.name} in ${row.label}`:`Choose weapon for ${row.label}`}
-                title={item?`${row.label}: ${item.name}`:`${row.label}: no weapon assigned`}>
+                onClick={event=>onDraw(role,event.shiftKey)} aria-pressed={active}
+                aria-label={item?`Equip ${item.name} in ${row.label}`:`Equip a weapon for ${row.label}`}
+                title={item?`${row.label}: ${item.name} · Shift-click to cycle owned weapons`:`${row.label}: click to equip an owned weapon`}>
                 <Icon className="jade-concept-d-weapon-icon" size={25}
                   strokeWidth={1.65} aria-hidden="true"/>
                 {artwork && <img className="jade-concept-d-weapon-image"
                   key={artwork} src={artwork} alt="" loading="lazy"
                   onError={event=>{event.currentTarget.style.display='none';}}/>}
-              </button>
-              <button type="button" className="jade-concept-d-assign"
-                aria-label={`Assign owned weapon to ${row.label}`}
-                aria-expanded={assigning===role}
-                title={`Change ${row.label} weapon`}
-                onClick={()=>onAssign(role)}>
-                <Settings2 size={13} aria-hidden="true"/>
               </button>
             </div>
           );
@@ -60,11 +53,6 @@ export default function AXEConceptDWeaponTemplate({
           <ChevronRight size={19} aria-hidden="true"/>
         </button>
       </div>
-      <button type="button" className="jade-concept-d-favorite"
-        aria-label="Draw favorite weapon" onClick={onFavorite}
-        title="Favorite Damage weapon — up arrow">
-        <Star size={14} aria-hidden="true"/>
-      </button>
       {/* Q remains the real crouch key in GameWorld3D; weapon selection
           uses clickable circles, wheel, arrows and Shift+C instead. */}
       <kbd className="jade-concept-d-q-key"

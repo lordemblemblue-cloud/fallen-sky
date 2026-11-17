@@ -33,23 +33,62 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
 export const WOLFVEIL_CAVE_APPROACH_WIDTH=3.4; // pedestrian path, ~2.5 body widths
 export const WOLFVEIL_CAVE_APRON_HALF_WIDTH=6.8; // guard the formerly open tile edges
 export const WOLFVEIL_CAVE_RIM_GUARD_METRES=7*0.3048;
+// A built path, not the raw cliff. About 17 degrees. Steeper hills switch back.
+export const WOLFVEIL_CAVE_APPROACH_MAX_GRADE=0.30;
 
-// Returns a surface trail ending exactly at the existing cave ramp threshold.
-// Path points carry true Wolfveil terrain heights rather than painting a fake
-// ground plane. Steep authored slope is sampled every 1.5m by the renderer.
+function gradeLeg(from, to, endKind) {
+  const maxGrade = WOLFVEIL_CAVE_APPROACH_MAX_GRADE;
+  const step = 8;
+  const pts = [];
+  let x = from.x, z = from.z, y = from.y;
+  let side = 1;
+  for (let guard = 0; guard < 90; guard++) {
+    const dx = to.x - x, dz = to.z - z;
+    const dist = Math.hypot(dx, dz);
+    const dy = to.y - y;
+    if (dist < 5.5) break;
+    if (Math.abs(dy) <= maxGrade * dist + 0.04) {
+      const n = Math.max(1, Math.ceil(dist / step));
+      for (let i = 1; i <= n; i++) {
+        const t = i / n;
+        pts.push({
+          x: x + dx * t, z: z + dz * t, y: y + dy * t,
+          kind: i === n ? endKind : 'path',
+        });
+      }
+      return pts;
+    }
+    const fx = dx / dist, fz = dz / dist;
+    const dirx = fx * 0.42 + (-fz) * side * 0.91;
+    const dirz = fz * 0.42 + fx * side * 0.91;
+    const len = Math.hypot(dirx, dirz) || 1;
+    const climb = Math.sign(dy || 1) * maxGrade * step;
+    const y2 = dy > 0 ? Math.min(to.y, y + climb) : Math.max(to.y, y + climb);
+    x += dirx / len * step;
+    z += dirz / len * step;
+    y = y2;
+    pts.push({ x, z, y, kind: 'turn' });
+    if (guard % 3 === 2) side *= -1;
+  }
+  pts.push({ x: to.x, z: to.z, y: to.y, kind: endKind });
+  return pts;
+}
+
 export const WOLFVEIL_CAVE_APPROACHES=Object.freeze(
   WOLFVEIL_EXPLORABLE_CAVES.map(cave=>{
     const spec=WOLFVEIL_CAVE_ACCESS_TRAILS[cave.id];
     if(!spec)throw new Error('Missing access trail for '+cave.id);
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
-    const front=[mx-dx*10.5,mz-dz*10.5];
-    const anchor=[mx-dx*3.5,mz-dz*3.5];
+    const front={x:mx-dx*10.5,z:mz-dz*10.5,y:wolfveilHeight(mx-dx*10.5,mz-dz*10.5)};
+    const anchor={x:mx-dx*3.5,z:mz-dz*3.5,y:cave.threshold[1]};
+    const junction={x:spec.junction[0],z:spec.junction[1],y:wolfveilHeight(spec.junction[0],spec.junction[1]),kind:'trail'};
+    const bend={x:spec.bend[0],z:spec.bend[1],y:wolfveilHeight(spec.bend[0],spec.bend[1])};
     const surfacePoints=[
-      {x:spec.junction[0],z:spec.junction[1],kind:'trail'},
-      {x:spec.bend[0],z:spec.bend[1],kind:'turn'},
-      {x:front[0],z:front[1],kind:'staging'},
-      {x:anchor[0],z:anchor[1],kind:'threshold'},
-    ].map(p=>Object.freeze({...p,y:p.kind==='threshold'?cave.threshold[1]:wolfveilHeight(p.x,p.z)}));
+      junction,
+      ...gradeLeg(junction,bend,'turn'),
+      ...gradeLeg(bend,front,'staging'),
+      ...gradeLeg(front,{...anchor,kind:'threshold'},'threshold'),
+    ].map(p=>Object.freeze({...p,y:p.kind==='threshold'?cave.threshold[1]:p.y}));
     const entrance=Object.freeze({
       x:mx,y:cave.mouthY-.35,z:mz,heading:Math.atan2(dx,dz),
       outdoorX:front[0],outdoorZ:front[1],

@@ -511,3 +511,47 @@
     display:flex;flex-wrap:wrap;gap:2px 10px;
   }
 }
+
+/* UI Options: precise local HUD scaling, movable box selection, layout toggle.
+   Reuse the native pause-menu glass finish, not a second settings dialog. */
+.axe3d-pause__hud-ui{display:grid;gap:14px}
+.axe3d-pause__hud-ui>.axe3d-pause__surface{margin:0;min-width:0}
+.axe3d-pause__hud-range{
+  display:grid;grid-template-columns:minmax(110px,1fr) minmax(140px,2.2fr) 52px;
+  align-items:center;gap:14px;margin:17px 0;
+  color:#e9dcc5;font-size:12px;font-weight:600
+}
+.axe3d-pause__hud-range input{width:100%;accent-color:#a4e9ed;cursor:pointer}
+.axe3d-pause__hud-range output{text-align:right;font-variant-numeric:tabular-nums;color:#ffe6b3;font-size:13px}
+.axe3d-pause__hud-selector{
+  display:grid;grid-template-columns:minmax(110px,1fr) minmax(190px,2.2fr) 52px;
+  align-items:center;gap:14px;margin:16px 0;
+  color:#e9dcc5;font-size:12px;font-weight:600
+}
+.axe3d-pause__hud-selector select{
+  grid-column:2/span 2;min-width:0;padding:9px 12px;border:1px solid rgba(171,202,211,.45);
+  border-radius:6px;color:#f4e7cf;background:#0e2638
+}
+.axe3d-pause__hud-buttons{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:19px}
+.axe3d-pause__hud-buttons button{
+  display:inline-flex;gap:6px;align-items:center;justify-content:center;
+  padding:8px 11px;border:1px solid rgba(211,183,143,.5);border-radius:7px;
+  background:rgba(12,30,43,.9);color:#efddc1;font-size:11px;font-weight:700;cursor:pointer
+}
+.axe3d-pause__hud-buttons button:hover,.axe3d-pause__hud-buttons button:focus-visible{
+  outline:1px solid #c8eff4;outline-offset:1px;border-color:#9adaea
+}
+.axe3d-pause__hud-buttons .axe3d-pause__hud-edit-now{
+  color:#09242c;background:linear-gradient(110deg,#a5e5e9,#d1ecdf);
+  border-color:#9fe3e0
+}
+@media(max-width:590px){
+  .axe3d-pause__hud-range,.axe3d-pause__hud-selector{
+    grid-template-columns:1fr auto;gap:8px;margin:13px 0
+  }
+  .axe3d-pause__hud-range>span{grid-column:1/span 2}
+  .axe3d-pause__hud-range input{grid-column:1}
+  .axe3d-pause__hud-selector>span{grid-column:1/span 2}
+  .axe3d-pause__hud-selector select{grid-column:1/span 2}
+  .axe3d-pause__hud-buttons button{flex:1 1 auto}
+}

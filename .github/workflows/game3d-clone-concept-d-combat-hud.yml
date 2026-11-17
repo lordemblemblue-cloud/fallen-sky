@@ -7,7 +7,11 @@ on:
       - 'src/components/game3d/hud/JadeConceptDCombatHUD.css'
       - 'src/components/game3d/axe/weapons/AXEConceptDWeaponTemplate.jsx'
       - 'public/game3d/hud/concept-d-ink-gold-only.svg'
+      - 'public/game3d/hud/concept-d-original-ornament.avif'
+      - 'public/game3d/hud/first-left-splash-asset.json'
+      - 'tests/game3d-first-reference-splash-five-skill-weapon-layout-20261117.test.mjs'
       - 'tests/game3d-concept-d-brush-weapon-skills-20261117.test.mjs'
+      - 'tests/game3d-concept-d-original-image-20261117.test.mjs'
       - '.github/workflows/game3d-clone-concept-d-combat-hud.yml'
   workflow_dispatch:
 
@@ -31,6 +35,8 @@ jobs:
         run: >
           node --test
           tests/game3d-concept-d-brush-weapon-skills-20261117.test.mjs
+          tests/game3d-concept-d-original-image-20261117.test.mjs
+          tests/game3d-first-reference-splash-five-skill-weapon-layout-20261117.test.mjs
           tests/game3d-clone-curved-weapon-template.test.mjs
           tests/game3d-hud-liquid-glass-hp-will-exp-20261117.test.mjs
       - name: Build native Game 3D application

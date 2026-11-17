@@ -58,10 +58,10 @@ test('HUD writes assignments through character-scoped store and draws through in
     "getAXEInventoryItemsByCategory('weapon')",
   ]) assert.ok(module.includes(phrase),phrase);
   for(const phrase of [
-    'AXE_HUD_WEAPON_ROLES.map(row=>','drawAXEHUDWeaponRole(role,{level:playerLevel||1})',
-    'assignAXEHUDWeaponRole(role,id)','getOwnedWeaponsForAXERole(assigning)',
+    'rows={AXE_HUD_WEAPON_ROLES}','drawAXEHUDWeaponRole(role,{level:playerLevel||1})',
+    'assignAXEHUDWeaponRole(role,next.instanceId)','getOwnedWeaponsForAXERole(role)',
     "el.addEventListener('wheel',onWheel,{passive:false})",
-    "e.code!=='KeyC'",'aria-pressed={isActive}','onClick={()=>performDraw(row.role)}',
+    "key==='KeyC'",'onDraw={(role,cycleOwned)=>cycleOwned?cycleOwnedForRole(role):performDraw(role)}',
   ]) assert.ok(ui.includes(phrase),phrase);
   assert.match(css,/\.jade-weapon-role-icon/);
   assert.match(css,/\.jade-weapon-card\.is-active/);

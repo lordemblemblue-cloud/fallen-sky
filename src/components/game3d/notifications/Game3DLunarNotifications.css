@@ -311,15 +311,15 @@
 }
 
 
-/* Compact level-up card. Match the real minimap's upper-right anchor
+/* Compact level-up card. Follow the real minimap's new upper-left anchor
  * (JadeSoulHUD.css: .jade-compass-block), instead of centering the toast on
  * the player's view. Size is 70% of the previous 430px / 164px popup.
  * The extra vertical offset clears the minimap's south compass marker and
  * the toast's filigree; story and DM notices keep their original anchors. */
 .axe-lunar-notifications--level{
   width:min(301px,calc(100vw - 28px));
-  left:auto;
-  right:clamp(14px,2.4vw,42px);
+  left:clamp(14px,2.4vw,42px);
+  right:auto;
   top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 50px);
   transform:none;
   filter:drop-shadow(0 5px 12px rgba(8,10,19,.17));
@@ -429,11 +429,11 @@
   color:#fff0ce;
   background:rgba(6,17,30,.12);
 }
-/* At the phone breakpoint the actual map moves to top:25px,right:18px and
- * width:106px. The toast follows those exact coordinates. */
+/* At the phone breakpoint the map moves to top:25px,left:12px and
+ * width:106px. The toast follows the same edge below the map. */
 @media(max-width:620px){
   .axe-lunar-notifications--level{
-    right:18px;
+    left:12px;right:auto;
     top:calc(25px + 106px + 43px);
   }
 }
@@ -451,5 +451,13 @@
   }
   .axe-lunar-notifications--level .axe-lunar-level-filigree{
     top:-30px;height:42px;
+  }
+}
+
+/* Tiny-screen map is 80px wide at left:12px, top:18px. */
+@media(max-width:420px){
+  .axe-lunar-notifications--level{
+    left:12px;right:auto;
+    top:calc(18px + 80px + 43px);
   }
 }
