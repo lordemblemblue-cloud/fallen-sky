@@ -41,8 +41,10 @@ export default function MeshyFaceDraftPreview({url}) {
       const center=bounds.getCenter(new THREE.Vector3());
       const max=Math.max(dimensions.x,dimensions.y,dimensions.z);
       if(!Number.isFinite(max)||max<.001){setMessage('The generated model is empty.');return}
-      model.position.sub(center);
-      const scale=1.8/max;model.scale.multiplyScalar(scale);
+      const scale=1.8/max;
+      model.scale.multiplyScalar(scale);
+      // Center the scaled geometry, not just the unscaled source pivot.
+      model.position.addScaledVector(center,-scale);
       scene.add(model);
       controls.target.set(0,0,0);
       camera.position.set(0,.08,Math.max(2.4,3.2*max/Math.max(max,.1)));
