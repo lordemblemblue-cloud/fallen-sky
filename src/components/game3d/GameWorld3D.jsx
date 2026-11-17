@@ -625,6 +625,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     // Camera
     const camera = new THREE.PerspectiveCamera(GAME3D_GAME2_CAMERA.fov, (w0 || 1) / (h0 || 1), 0.1, 3200);
+    // Ashroot Hollow keeps its torches on layer 2 so the sun does not flood the cave.
+    camera.layers.enable(2);
     camera.position.set(0, 3, -5);
     // One-shot cinematic after genuine Wolfveil Play has loaded its own actor.
     // No second preview world, alternate ground height or authority fork.

@@ -82,13 +82,16 @@ function hubLocal(x, z) {
 }
 
 export function hallwayHalfWidth(along) {
-  const base = 3.42
-    + 0.42 * Math.sin(along * 0.29)
-    + 0.26 * Math.sin(along * 0.13 + 0.7);
-  const body = clamp(base, 3.28, 4.25);
+  const base = clamp(
+    3.42 + 0.42 * Math.sin(along * 0.29) + 0.26 * Math.sin(along * 0.13 + 0.7),
+    3.28,
+    4.25,
+  );
+  // The published mouth is the narrowest point. The bore opens behind it.
+  const fromMouth = 2.95 + (base - 2.95) * smooth(along / 7);
   const flareStart = hallLength - 14;
-  if (along <= flareStart) return body;
-  return body + (5.35 - body) * smooth((along - flareStart) / 14);
+  if (along <= flareStart) return fromMouth;
+  return fromMouth + (5.35 - fromMouth) * smooth((along - flareStart) / 14);
 }
 
 export function hallwayCeiling(along) {
@@ -147,7 +150,7 @@ function circleClearance(x, z, cx, cz, radius) {
 // the ridge without a steep ramp. The first pass uses the mouth height only
 // to trace the plan; Y is rewritten once the buried floor is known.
 const planWaypoints = [];
-const HALL_STEPS = 16;
+const HALL_STEPS = 32;
 for (let i = 0; i <= HALL_STEPS; i++) {
   const t = i / HALL_STEPS;
   const along = t * hallLength;
@@ -363,9 +366,9 @@ export const entrance = Object.freeze({
   dir: Object.freeze([dirX, dirZ]),
   outward: Object.freeze([-dirX, -dirZ]),
   yaw: Math.atan2(dirX, dirZ),
-  openingHalfWidth: 2.9,
-  openingWidth: 5.8,
-  openingHeight: 4.8,
+  openingHalfWidth: 2.95,
+  openingWidth: 5.9,
+  openingHeight: 4.7,
   floorY: mouthY,
   // Flat socket just outside the arch. The approach path ends on `outer`.
   outer: Object.freeze({
@@ -490,6 +493,15 @@ export function sampleBookCaveSpace(x, z, margin = 0) {
   best = consider(
     best, hall.clear - pad, hall.floor, hallwayCeiling(hall.along), 'hallway', hallwayCorridor.id,
   );
+  // The mouth cap is round, so a few metres of hillside sit inside the
+  // volume. Follow the sill there instead of holding the inner floor.
+  if (best && best.id === hallwayCorridor.id) {
+    const along = (x - MOUTH_X) * dirX + (z - MOUTH_Z) * dirZ;
+    if (along < 0 && along > -9.2) {
+      const ramp = mouthY + (outerGround - mouthY) * clamp(-along / 9, 0, 1);
+      best = { ...best, floorY: ramp, ceilingY: ramp + hallwayCeiling(0) };
+    }
+  }
   const raidJoin = corridorClearance(raidNeck, x, z);
   best = consider(best, raidJoin.clear - pad, floorY, 6.4, 'raid', raidNeck.id);
   const dungeonJoin = corridorClearance(dungeonNeck, x, z);
