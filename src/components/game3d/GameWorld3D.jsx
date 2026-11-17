@@ -171,6 +171,7 @@ import {saveWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,
   from './worlds/WolfveilWorldVariants.mjs';
 import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
 import {installWolfveilArtisanTown} from './wolfveil/WolfveilArtisanTownScene.mjs';
+import WolfveilArtisanShopPanel from './wolfveil/WolfveilArtisanShopPanel';
 import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTown} from './wolfveil/WolfveilImportedTownLayout.mjs';
 import {createWolfveilLivingMeadow} from './wolfveil/WolfveilLivingMeadow';
 import {createWolfveilLivingSumiEMaterials} from './wolfveil/WolfveilLivingSumiEMaterials.mjs';
@@ -279,6 +280,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   const [questNPCSuppressed, setQuestNPCSuppressed] = useState(false);
   const [nearbyNPC, setNearbyNPC] = useState(null);
   const [nearbyTownResident, setNearbyTownResident] = useState(null);
+  const [nearbyArtisanShop, setNearbyArtisanShop] = useState(null);
+  const [activeArtisanShop, setActiveArtisanShop] = useState(null);
+  const nearbyArtisanShopRef = useRef(null);
+  useEffect(() => {
+    const open = event => {
+      const id = event.detail?.shopId;
+      if (['blacksmith','potion','tailor','models'].includes(id)) setActiveArtisanShop(id);
+    };
+    window.addEventListener('game3dArtisanShopOpen', open);
+    return () => window.removeEventListener('game3dArtisanShopOpen', open);
+  }, []);
   const [enemyCount, setEnemyCount] = useState(region==='wolfveil'?0:region===LUNAR_CAVE_REGION?LUNAR_CAVE_TRAINING_SPAWNS.length:region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS.length:ENEMY_SPAWNS.length);
   const [score, setScore] = useState(0);
   const [playerLevel, setPlayerLevel] = useState(1);
@@ -888,6 +900,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // The owner's Japanese-Egyptian artisan town now replaces the old 80-tile
     // Blender town, while the authoritative Wolfveil terrain stays intact.
     const importedSpawnTown=region==='wolfveil'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
+    const onArtisanModelSelect = event => importedSpawnTown?.selectShowroomModel(event.detail?.index ?? 0);
+    window.addEventListener('game3dArtisanShowroomSelect', onArtisanModelSelect);
     // The town sits beside the valley builder in the scene; hand it to the
     // area loader so its buildings unload with the town area too.
     if(importedSpawnTown?.root)regionStream?.addUnits([importedSpawnTown.root]);
@@ -2294,6 +2308,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(door){e.preventDefault();return;}
         }
       }
+      // Shop interactions are deliberate and only work at real entryways or
+      // inside the corresponding physical shop. No invisible door blocks E.
+      if (k === 'e' && !e.repeat && model && region === 'wolfveil' && !suigenActive) {
+        const shop = importedSpawnTown?.nearestShop(model.position);
+        if (shop && !bossEncounter.isNPCSuppressed()) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('game3dArtisanShopOpen', { detail: { shopId: shop.id } }));
+          return;
+        }
+      }
       keys.current[k] = true;
       // Game 2/Luna camera fallback: arrow keys steer camera yaw/pitch.
       if (k.startsWith('arrow')) e.preventDefault();
@@ -3619,6 +3643,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           setNearbyTownResident(townNeighbor?{
             id:townNeighbor.id,name:townNeighbor.name,role:townNeighbor.role,
           }:null);
+        }
+        // Shop prompts only change React state when a different merchant becomes
+        // nearest; walk-up E opens one of the four real storefronts.
+        const nearShop = !bossEncounter.isNPCSuppressed()
+          ? importedSpawnTown?.nearestShop(model.position) : null;
+        if (nearShop?.id !== nearbyArtisanShopRef.current?.id) {
+          nearbyArtisanShopRef.current = nearShop || null;
+          setNearbyArtisanShop(nearShop ? { id: nearShop.id, label: nearShop.label } : null);
         }
         // ─── NPC proximity & interaction (generic npcs array is empty) ───
         let closestNPC = null;
@@ -5095,6 +5127,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(window.__gw3dRegionStreamer===regionStream)window.__gw3dRegionStreamer=null;
       if(window.__gw3dAreaLoader===regionStream)window.__gw3dAreaLoader=null;
       window.__gw3dRegionStreamingStatus=null;
+      window.removeEventListener('game3dArtisanShowroomSelect', onArtisanModelSelect);
       importedSpawnTown?.dispose();
       ambientBirds?.dispose();
       wolfveilVillage?.dispose();
@@ -5377,6 +5410,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
       {/* Day/night + season + weather HUD */}
       {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} />}
+      {!loading && region === 'wolfveil' && nearbyArtisanShop && !activeArtisanShop && !entryMode && (
+        <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[30] pointer-events-none rounded-xl border border-amber-400/50 bg-slate-950/85 backdrop-blur-lg px-4 py-2 text-center text-sm text-amber-100">
+          E · {nearbyArtisanShop.label}
+        </div>
+      )}
+      {activeArtisanShop && <WolfveilArtisanShopPanel
+        shopId={activeArtisanShop} onClose={() => setActiveArtisanShop(null)} />}
       <PlayerInteractionMenu
         open={!!playerMenu}
         x={playerMenu?.x || 0}
