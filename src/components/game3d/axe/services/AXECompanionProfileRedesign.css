@@ -176,3 +176,162 @@
 .axe-comp-refinement-row button:disabled {opacity:.46;cursor:not-allowed;}
 .axe-comp-refinement-row button:not(:disabled):hover {background:#d9bd8b8a;color:#262e35;}
 .axe-comp-refinement-cancel {margin-top:10px;background:#1d3549;}
+
+/* Companion Mastery 2.0: same circle selector as Variety and Equipment.
+   All three roles occupy one 20%-smaller vertical navigation area; the rest
+   is real training progress and next-rank stat changes. No oversized cards. */
+.axe-mastery-rebuild.axe-mastery-rebuild--compact {
+  display:grid;grid-template-columns:minmax(70px,84px) minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr);gap:10px;
+  width:100%;height:100%;min-height:0;min-width:0;
+  padding:9px;overflow:hidden;
+}
+.axe-mastery-rebuild--compact>.axe-comp-circle-rail {
+  grid-column:1;grid-row:1;min-height:0;
+  padding:10px 3px;overflow:hidden;
+}
+.axe-mastery-rebuild--compact>.axe-mastery-center {
+  grid-column:2;grid-row:1;min-height:0;min-width:0;
+  padding:0;display:flex;flex-direction:column;overflow:hidden;
+}
+.axe-mastery-compact-header {
+  flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:11px 15px;
+  border-bottom:1px solid #e0bf8b7c;
+}
+.axe-mastery-compact-header>div {min-width:0;}
+.axe-mastery-compact-header small {font:10px Georgia,serif;letter-spacing:.13em;color:#e6c38c;}
+.axe-mastery-compact-header h2 {
+  margin:4px 0;font:normal clamp(19px,2vw,27px)/1.1 Georgia,serif;
+  color:#ffe0ab;overflow-wrap:anywhere;
+}
+.axe-mastery-compact-header span {font:11px Georgia,serif;color:#d3dde2;}
+.axe-mastery-compact-header .axe-mastery-return {
+  flex:0 0 auto;width:auto;padding:7px 10px;font-size:11px;
+}
+.axe-mastery-workbench {
+  display:grid;grid-template-columns:minmax(155px,26%) minmax(0,1fr);
+  flex:1 1 auto;min-width:0;min-height:0;overflow:hidden;
+}
+.axe-mastery-paths {
+  display:flex;flex-direction:column;gap:10px;min-height:0;min-width:0;
+  border-right:2px solid #e1c38e91;
+  padding:12px 10px 11px;overflow-y:auto;scrollbar-width:thin;
+}
+.axe-mastery-path-heading {display:flex;flex-wrap:wrap;gap:5px;align-items:baseline;}
+.axe-mastery-path-heading strong {font:normal 16px Georgia,serif;color:#ffe0aa;}
+.axe-mastery-path-heading small {font:10px Georgia,serif;color:#cfdbde;}
+.axe-mastery-role-list {
+  display:flex;flex-direction:column;gap:7px;min-width:0;
+}
+.axe-mastery-role-list .axe-mastery-role-row {
+  display:flex;align-items:center;gap:9px;min-height:79px;
+  padding:10px 9px;min-width:0;
+  border:1px solid #dabb848c;border-radius:8px;
+  background:linear-gradient(130deg,#1e394dd4,#172c3db8);
+  color:#f5ddb3;text-align:left;
+}
+.axe-mastery-role-row>svg {flex-shrink:0;color:#f0cf92;}
+.axe-mastery-role-row[aria-pressed=true] {
+  border-color:#ffdfa2;background:linear-gradient(120deg,#96774777,#20374ade);
+  box-shadow:inset 0 0 12px #edca903a;
+}
+.axe-mastery-role-row:focus-visible {outline:2px solid #ffe9bd;outline-offset:2px;}
+.axe-mastery-role-text {display:flex;flex:1 1 auto;flex-direction:column;gap:5px;min-width:0;}
+.axe-mastery-role-text strong {font:normal 15px Georgia,serif;}
+.axe-mastery-role-text small {color:#d8d7d2;font:11px Georgia,serif;white-space:normal;}
+.axe-mastery-role-text .axe-collection-progress {height:5px;width:100%;}
+.axe-mastery-role-row em {font:10px Georgia,serif;color:#b8f0d0;font-style:normal;}
+.axe-mastery-how {
+  margin-top:auto;border-top:1px solid #dcbf8c7e;padding-top:8px;color:#c9d7db;
+}
+.axe-mastery-how summary {cursor:pointer;color:#ecd2a8;font:12px Georgia,serif;}
+.axe-mastery-how p {font:11px/1.5 Georgia,serif;line-height:1.5;}
+.axe-mastery-workbench>.axe-mastery-inspector {
+  display:flex;flex-direction:column;gap:12px;min-height:0;min-width:0;
+  padding:15px 17px;overflow-y:auto;scrollbar-width:thin;
+}
+.axe-mastery-detail-header {
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding-bottom:12px;border-bottom:1px solid #d9bb8a85;
+}
+.axe-mastery-detail-header small {
+  font:10px Georgia,serif;letter-spacing:.08em;color:#b9d7e5;
+}
+.axe-mastery-detail-header h3 {
+  margin:5px 0 6px;color:#ffe3ab;font:normal 23px/1.2 Georgia,serif;
+}
+.axe-mastery-detail-header p {margin:0;font:12px/1.45 Georgia,serif;color:#d5dde0;}
+.axe-mastery-summary-line {
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
+  padding-bottom:11px;border-bottom:1px solid #dcbf8c57;
+}
+.axe-mastery-summary-line>div {display:flex;flex-direction:column;gap:5px;min-width:0;}
+.axe-mastery-summary-line small {font:10px Georgia,serif;color:#c9d6db;}
+.axe-mastery-summary-line strong {font:normal clamp(14px,1.6vw,21px) Georgia,serif;color:#fce0ab;overflow-wrap:anywhere;}
+.axe-mastery-summary-line strong span {font-size:11px;color:#d3d9dc;}
+.axe-mastery-progress-details {padding-bottom:12px;border-bottom:1px solid #d9be8b57;}
+.axe-mastery-progress-details>.axe-collection-progress {height:9px;}
+.axe-mastery-increase-heading {
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:9px;
+  border-bottom:1px solid #d9bb8a75;padding-bottom:7px;
+}
+.axe-mastery-increase-heading h4 {margin:0;padding:0;border:0;font:normal 17px Georgia,serif;color:#ffe1ad;}
+.axe-mastery-increase-heading>span {display:flex;align-items:center;gap:5px;font:11px Georgia,serif;color:#d7dfdf;}
+.axe-mastery-stat-breakdown {display:flex;flex-direction:column;gap:4px;}
+.axe-mastery-stat-row {
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:1px solid #dcc08b50;padding:10px 2px;
+}
+.axe-mastery-stat-row>div:first-child {display:flex;flex-direction:column;gap:5px;min-width:0;}
+.axe-mastery-stat-row>div:first-child strong {font:normal 14px Georgia,serif;color:#f7deb5;}
+.axe-mastery-stat-row>div:first-child small {font:10px Georgia,serif;color:#bacbd3;}
+.axe-mastery-stat-numbers {
+  display:grid;grid-template-columns:auto 15px auto;grid-template-rows:auto auto;
+  align-items:center;justify-items:center;column-gap:7px;row-gap:4px;flex:0 0 auto;
+  white-space:nowrap;
+}
+.axe-mastery-stat-numbers span {font:13px Georgia,serif;color:#dee6e8;}
+.axe-mastery-stat-numbers svg {color:#e6c68c;}
+.axe-mastery-stat-numbers b {font:600 14px Georgia,serif;color:#bbefd0;}
+.axe-mastery-stat-numbers small {
+  grid-column:1 / -1;justify-self:end;font:10px Georgia,serif;color:#bae5c8;
+}
+.axe-mastery-workbench .axe-comp-detail-hint {font-size:11px!important;}
+.axe-mastery-workbench .axe-mastery-locked,.axe-mastery-workbench .axe-mastery-ready {
+  margin:0;padding:9px 10px;
+}
+.axe-mastery-workbench .axe-mastery-activate {max-width:210px;margin-left:auto;}
+.axe-mastery-empty {padding:20px;color:#d6dfe2;}
+@media(max-width:1150px) {
+  .axe-mastery-rebuild.axe-mastery-rebuild--compact {grid-template-columns:70px minmax(0,1fr);}
+  .axe-mastery-workbench {grid-template-columns:minmax(145px,27%) minmax(0,1fr);}
+  .axe-mastery-summary-line {grid-template-columns:repeat(2,minmax(0,1fr));}
+  .axe-mastery-role-row em {display:none;}
+}
+@media(max-width:760px) {
+  .axe-mastery-rebuild.axe-mastery-rebuild--compact {
+    grid-template-columns:60px minmax(0,1fr);
+    grid-template-rows:minmax(0,1fr);overflow:hidden;
+    padding:5px;gap:5px;
+  }
+  .axe-mastery-rebuild--compact>.axe-comp-circle-rail {grid-column:1;grid-row:1;}
+  .axe-mastery-rebuild--compact>.axe-mastery-center {grid-column:2;grid-row:1;overflow-y:auto;}
+  .axe-mastery-workbench {grid-template-columns:minmax(0,1fr);overflow:visible;display:flex;flex-direction:column;}
+  .axe-mastery-paths {border-right:0;border-bottom:2px solid #e1c38e91;overflow:visible;}
+  .axe-mastery-role-list {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+  .axe-mastery-role-list .axe-mastery-role-row {flex-direction:column;align-items:center;gap:4px;min-height:110px;padding:8px 4px;}
+  .axe-mastery-role-text {width:100%;text-align:center;}
+  .axe-mastery-role-text strong {font-size:12px;}
+  .axe-mastery-role-text small {font-size:10px;}
+  .axe-mastery-role-list .axe-mastery-role-row>svg {width:18px;height:18px;}
+  .axe-mastery-workbench>.axe-mastery-inspector {overflow:visible;padding:12px 10px;}
+  .axe-mastery-compact-header {padding:10px 8px;gap:5px;}
+  .axe-mastery-compact-header .axe-mastery-return {padding:6px 5px;}
+}
+@media(max-width:430px) {
+  .axe-mastery-role-list {gap:3px;}
+  .axe-mastery-stat-row {align-items:flex-start;flex-wrap:wrap;}
+  .axe-mastery-stat-numbers {margin-left:auto;}
+  .axe-mastery-summary-line {gap:5px;}
+}
