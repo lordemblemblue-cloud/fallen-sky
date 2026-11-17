@@ -88,11 +88,10 @@ import ClanOverlay from '../components/game3d/clan/ClanOverlay';
 import CinematicQuestDialogue from '../components/game3d/npc/CinematicQuestDialogue';
 import {
   bindWorldAudio,
-  setWorldTargetVolume,
   teardownCombatMusic,
   isInCombat,
 } from '../components/game3d/combatMusicController';
-import {createGame3DEntryAudio,GAME3D_WORLD_THEME_GAIN}
+import {createGame3DEntryAudio}
   from '../components/game3d/audio/Game3DEntryAudio.mjs';
 
 export default function GameView() {
@@ -158,7 +157,6 @@ export default function GameView() {
     const saved = parseFloat(localStorage.getItem('game_theme_volume'));
     return Number.isFinite(saved) ? saved : 0.5;
   });
-  const audioRef = useRef(null);
   const entryAudioRef=useRef(null);
 
   useEffect(() => subscribeLearnedSkills(setLearnedSkillIds), []);
@@ -205,19 +203,18 @@ export default function GameView() {
   // exactly once per browser.
   useEffect(() => { runOneTimeProgressionReset(); }, []);
 
-  // Use the owner's actual uploaded intro music instead of the legacy
-  // game-1/game-2 hero-background lookup. The live world is already mounted
-  // under the character menu; only this audio transport changes at entry.
+  // Character login plays the owner's title theme; Game 3D exploration never
+  // reuses it. Combat sounds/music and outdoor ambience remain separate.
+  // The live world is already mounted behind character selection.
   useEffect(()=>{
     const music=createGame3DEntryAudio({
       initialVolume:themeVolume,
       inCombat:isInCombat,
     });
     entryAudioRef.current=music;
-    // Combat music now fades/pauses the SAME title score that continues
-    // through exploration. Nature is its own low-volume background layer.
-    audioRef.current=music.getWorldAudio();
-    bindWorldAudio(audioRef,themeVolume*GAME3D_WORLD_THEME_GAIN);
+    // Combat transitions must never restart the character-selection theme
+    // after the player presses Play, even after exiting a battle.
+    bindWorldAudio(null,0);
     const unlock=()=>music.unlock();
     // Autoplay cannot be guaranteed before a gesture. The first Start,
     // character-selection, or PLAY click reliably unlocks sound instead.
@@ -229,15 +226,15 @@ export default function GameView() {
       window.removeEventListener('keydown',unlock,true);
       music.dispose();
       entryAudioRef.current=null;
-      audioRef.current=null;
+      bindWorldAudio(null,0);
     };
   },[]);
   useEffect(()=>{
     entryAudioRef.current?.setPhase(phase);
     if(phase==='world'){
-      // Refresh the combat resume target even if the volume changed while
-      // on character selection, without bypassing the entry fade.
-      bindWorldAudio(audioRef,themeVolume*GAME3D_WORLD_THEME_GAIN);
+      // The intro is menu-only: do not attach its <Audio> element to
+      // combat's "resume exploration music" callback.
+      bindWorldAudio(null,0);
     }
   },[phase]);
   useEffect(()=>{entryAudioRef.current?.setRegion(worldRegion);},[worldRegion]);
@@ -466,10 +463,8 @@ export default function GameView() {
   // Live-update audio volume when slider changes (without reloading the track)
   useEffect(() => {
     entryAudioRef.current?.setVolume(themeVolume);
-    // Only adjust the combat transport during an actual slider change in
-    // world gameplay. On initial login this setter would raise the PAUSED
-    // ambience element to full volume, bypassing the cinematic crossfade.
-    if(phase==='world')setWorldTargetVolume(themeVolume*GAME3D_WORLD_THEME_GAIN);
+    // This slider controls menu music while selecting a character, and the
+    // outdoor ambience level in-world. It never resumes the intro track.
     localStorage.setItem('game_theme_volume', String(themeVolume));
   }, [themeVolume]);
 
