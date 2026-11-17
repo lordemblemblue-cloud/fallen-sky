@@ -183,12 +183,10 @@ export default function AXECloneSkillTreeWorkspace({
       id,label:id.charAt(0).toUpperCase()+id.slice(1),icon:'passive',
     })),[]);
   const displayCategories = companion ? companionCategories : CLONE_SKILL_TREE_CATEGORIES;
-  const filteredFlat = companion ? registry.filter(skill=>skill.category===category)
-    : category==='passive' ?
-    registry.filter(s=>s.skill_type===SKILL_TYPE.PASSIVE) :
-    registry.filter(s=>s.skill_type===(view==='buffs'||category==='universal'?SKILL_TYPE.ACTIVE_BUFF:SKILL_TYPE.ACTIVE_ATTACK));
+  const filteredFlat = companion ? registry.filter(skill=>skill.category===category) :
+    registry.filter(s=>s.skill_type===(view==='buffs'?SKILL_TYPE.ACTIVE_BUFF:SKILL_TYPE.ACTIVE_ATTACK));
   const collection = view==='skills'&&!companion&&['damage','range','defense'].includes(category);
-  const modernCollection=companion||['universal','passive'].includes(category);
+  const modernCollection=companion||category==='universal';
   const getSkill = companion ? getCompanionSkillById : getSkillById;
   const switchPreset = next => {
     if (!onChoosePreset) {setFeedback('Skill set switching is unavailable.');return;}
@@ -308,15 +306,15 @@ export default function AXECloneSkillTreeWorkspace({
           ? <AXECompanionSkillHub activeIds={activeIds}
               onEquip={equipFromModernHub}
               onSelected={skill=>selectNode({kind:'skill',id:skill.skill_id,tier:0})}/>
-          : ['universal','passive'].includes(category)
-          ? <AXEUniversalSkillHub key={category} passiveOnly={category==='passive'}
+          : category==='universal'
+          ? <AXEUniversalSkillHub
               activeIds={activeIds} passiveIds={passiveIds}
               onEquip={equipFromModernHub}
               onSelected={skill=>selectNode({kind:'skill',id:skill.skill_id,tier:0})}/>
           : <>
           <div className="axe-ct-main-heading">
             <div className="axe-ct-main-icon"><Swords size={29}/></div>
-            <div><h2>{companion?'Companion Skills':category==='passive'?'Passive Skills':'Universal Skills'}</h2>
+            <div><h2>{companion?'Companion Skills':'Universal Skills'}</h2>
               <p>Your registered skill collection and mastery</p></div>
           </div>
           <div className="axe-ct-toolbar">

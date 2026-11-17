@@ -20,7 +20,6 @@ const CHARACTER_CATEGORIES = Object.freeze([
   {id:'bow', name:'Range', icon:'🏹', weapon:WEAPON_TYPE.RANGED, mode:'range'},
   {id:'defense', name:'Defense', icon:'🛡️', weapon:WEAPON_TYPE.GUARDIAN, mode:'defense'},
   {id:'universal', name:'Universal', icon:'✦', weapon:null},
-  {id:'passive', name:'Passive', icon:'✧', passive:true},
 ]);
 const FILTERS = Object.freeze([
   {id:'all',label:'All'}, {id:'active',label:'Active'},

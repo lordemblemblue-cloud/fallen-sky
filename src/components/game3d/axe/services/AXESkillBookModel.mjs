@@ -5,8 +5,9 @@ export const SKILL_BOOK_CATEGORY_WEAPONS=Object.freeze({
 export function skillBelongsToCategory(skill,category,companion=false){
   if(!skill)return false;
   if(companion)return skill.category===category;
-  if(category==='passive')return skill.skill_type==='PASSIVE';
-  if(category==='universal')return skill.weapon_type==null&&skill.skill_type!=='PASSIVE';
+  // Universal contains both weapon-independent buffs and registered passives.
+  if(category==='universal')return skill.weapon_type==null&&
+    (skill.skill_type==='ACTIVE_BUFF'||skill.skill_type==='PASSIVE');
   const weapon=SKILL_BOOK_CATEGORY_WEAPONS[category];
   return !!weapon&&skill.weapon_type===weapon;
 }

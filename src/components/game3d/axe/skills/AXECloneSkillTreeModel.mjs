@@ -6,7 +6,6 @@ export const CLONE_SKILL_TREE_CATEGORIES = Object.freeze([
   { id:'range', label:'Range', icon:'ranged' },
   { id:'defense', label:'Defense', icon:'shield' },
   { id:'universal', label:'Universal', icon:'burst' },
-  { id:'passive', label:'Passive', icon:'passive' },
 ]);
 
 const roles = Object.freeze({ damage:'offensive', range:'ranged', defense:'defensive' });
