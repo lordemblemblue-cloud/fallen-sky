@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { isPreviewKillsActive } from '../../progression/previewMaxMode';
 import { Feather, FlaskConical, Orbit, Sparkles, CircleHelp, Flame, Wind, Heart, Sword, ScrollText } from 'lucide-react';
 import { getHaloState, subscribeHalo, attemptEnhancement, setHaloHidden } from '../../progression/haloStore';
 import { MAX_HALO_LEVEL, getHaloBonusesForLevel } from '../../progression/haloData';
@@ -12,6 +13,8 @@ import TitleSubTab from '../../progression/hub/TitleSubTab';
 import DevSpiritualMaxControls from '../../progression/hub/DevSpiritualMaxControls';
 import AscensionSubTab from '../../progression/hub/AscensionSubTab';
 import './AXESpiritualWorkspace.css';
+
+const CharacterViewer = lazy(() => import('./AXESpiritualCharacterViewer'));
 
 const ESSENCES = [
   { id: 'vitality', label: 'Vitals', Icon: Heart, note: 'Gain experience by enduring damage during combat.' },
@@ -151,34 +154,25 @@ export default function AXESpiritualWorkspace({ serviceId, onSelect, onClose }) 
   const essenceIllustration = isEssence ? (essenceType?.label || 'Buddha Essence') : '';
 
   return <div className="axe-spiritual-root" data-progression-panel={serviceId} aria-label="Spiritual enhancement">
-    <aside className="axe-spiritual-sidebar" aria-label="Spiritual disciplines">
-      <div className="axe-spiritual-brand"><span className="axe-spirit-brand-mark">◈</span>
-        <div><h2>Spiritual</h2><p>Awaken your true self</p></div></div>
-      <nav className="axe-spiritual-choices">
-        <div className="axe-spiritual-coming"><Sparkles size={23} /><span><b>Soul Enchant</b><small>Future soul discipline</small></span><span className="axe-spirit-soon">Soon</span></div>
-        <button type="button" aria-pressed={isEssence} onClick={() => changeService('elixir')}>
-          <FlaskConical size={26} /><span><b>Buddha Essence</b><small>Refine your vital energies</small></span></button>
-        <button type="button" aria-pressed={isHalo} onClick={() => changeService('halo')}>
-          <Orbit size={26} /><span><b>Mind (Halo)</b><small>Awaken your mind</small></span></button>
-        <button type="button" aria-pressed={isWings} onClick={() => changeService('wings')}>
-          <Feather size={26} /><span><b>Wings</b><small>Manifest spiritual wings</small></span></button>
-        <button type="button" aria-pressed={isTitles} onClick={() => changeService('title')}>
-          <ScrollText size={26} /><span><b>Titles</b><small>Choose and advance your specialization</small></span></button>
-        <button type="button" aria-pressed={isAscension} onClick={() => changeService('ascension')}>
-          <Sparkles size={26} /><span><b>Ascension</b><small>Awaken your character's ascended nature</small></span></button>
-      </nav>
-      <div className="axe-spirit-ink-scene" aria-hidden="true"><span>山</span><span>雲</span></div>
-    </aside>
-    <div className="axe-spiritual-vision" aria-hidden="true">
-      <div className={`axe-spiritual-illustration ${isHalo ? 'axe-spiritual-illustration--halo' : isWings ? 'axe-spiritual-illustration--wings' : isTitles ? 'axe-spiritual-illustration--titles' : isAscension ? 'axe-spiritual-illustration--ascension' : 'axe-spiritual-illustration--essence'}`}>
-        {isHalo ? <><div className="axe-spirit-ring"/><div className="axe-spirit-aura-body"/></>
-          : isWings ? <><div className="axe-spirit-wing axe-spirit-wing--left"/><div className="axe-spirit-wing axe-spirit-wing--right"/><div className="axe-spirit-aura-core"/></>
-          : <><div className="axe-spirit-orb"/><span className="axe-spirit-orb-symbol">✦</span></>}
+    <div className="axe-spiritual-vision" aria-label="Live character and spiritual effects">
+      <Suspense fallback={<p className="axe-spiritual-viewer-loading">Loading character viewer…</p>}>
+        <CharacterViewer halo={halo} wings={wings} selectedWing={isWings ? wing : null}/>
+      </Suspense>
+      <div className="axe-spiritual-vision-note">
+        {isHalo ? 'Mind · Halo of Awakening' : isWings ? (wing?.name || 'Spiritual Wings')
+          : isTitles ? 'Titles · Specialization' : isAscension ? 'Ascension · Awakening' : essenceIllustration}
+        <small>Drag to rotate · Live character and progression</small>
       </div>
-      <div className="axe-spiritual-circle"/>
-      <div className="axe-spiritual-vision-note">{isHalo ? 'Mind · Halo of Awakening' : isWings ? (wing?.name || 'Spiritual Wings') : isTitles ? 'Titles · Specialization' : isAscension ? 'Ascension · Awakening' : essenceIllustration}</div>
     </div>
     <section className="axe-spiritual-details">
+      <nav className="axe-spiritual-choices" aria-label="Spiritual disciplines">
+        <span className="axe-spiritual-coming" title="Future soul discipline"><Sparkles size={16}/><span>Soul Enchant · Soon</span></span>
+        <button type="button" aria-pressed={isEssence} onClick={() => changeService('elixir')}><FlaskConical size={17}/>Buddha Essence</button>
+        <button type="button" aria-pressed={isHalo} onClick={() => changeService('halo')}><Orbit size={17}/>My Halo</button>
+        <button type="button" aria-pressed={isWings} onClick={() => changeService('wings')}><Feather size={17}/>Wings</button>
+        <button type="button" aria-pressed={isTitles} onClick={() => changeService('title')}><ScrollText size={17}/>Titles</button>
+        <button type="button" aria-pressed={isAscension} onClick={() => changeService('ascension')}><Sparkles size={17}/>Ascension</button>
+      </nav>
       <div className="axe-spiritual-details-head">
         {/* Titles owns its own heading and live contribution balance. Showing the
             generic heading here duplicated it and stole vertical space. */}
@@ -195,7 +189,7 @@ export default function AXESpiritualWorkspace({ serviceId, onSelect, onClose }) 
         {tabs.map(tab => <button type="button" key={tab.id} aria-pressed={section === tab.id} onClick={() => changeSection(tab.id)}>{tab.label}</button>)}
       </nav>
       <div className="axe-spiritual-detail-scroll">
-        {(isHalo || isWings || isTitles) && <DevSpiritualMaxControls />}
+        <DevSpiritualMaxControls />
         {isTitles ? <div className="axe-spiritual-title-embed"><TitleSubTab /></div>
           : isAscension ? <div className="axe-spiritual-ascension-embed"><AscensionSubTab /></div> : isEssence ? section === 'overview' ? <>
           <h3>The Four Essences</h3>
@@ -234,13 +228,13 @@ export default function AXESpiritualWorkspace({ serviceId, onSelect, onClose }) 
               ['Current tier', halo.tier?.label || 'Dormant'],
               ['Halo visibility', halo.hidden ? 'Hidden in world' : 'Visible in world'],
               ['Successful enhancements', `${halo.totalSuccesses} / ${halo.totalAttempts} attempts`],
-              ['Banked player kills', kills],
+              ['Ranked players killed', kills],
             ] : [
               ['Selected wings', wing?.name || 'None'],
               ['Equipped', wings.equippedPathId === selectedWingId ? 'Yes' : 'No'],
               ['Reinforcement', `${wing?.reinforcementPercent || 0}%`],
               ['Successful enhancements', `${wing?.totalSuccesses || 0} / ${wing?.totalAttempts || 0} attempts`],
-              ['Banked player kills', kills],
+              ['Ranked players killed', kills],
             ]}/>
             {isHalo ? <HaloDetails halo={halo}/> : <WingDetails wing={wing}/>}
             {isWings && <div role="group" aria-label="Wing appearance, all factions"
@@ -274,7 +268,7 @@ export default function AXESpiritualWorkspace({ serviceId, onSelect, onClose }) 
                 ['Halo tier', halo.tier?.label || 'Dormant']]) ]}/>
             {isHalo ? <HaloDetails halo={halo} preview/> : <WingDetails wing={wing} preview/>}
             {confirmation && <p className="axe-spiritual-warning">Confirm spending {cost} Player Kill Count. Success is not guaranteed.</p>}
-            <button type="button" className="axe-spiritual-primary" disabled={level >= cap || kills < cost}
+            <button type="button" className="axe-spiritual-primary" disabled={level >= cap || kills < cost || isPreviewKillsActive()}
               onClick={enhance}>{confirmation ? 'Confirm Enhancement Attempt' : 'Enhance with Player Kills'}</button>
           </>}
           {section === 'evolve' && <>
