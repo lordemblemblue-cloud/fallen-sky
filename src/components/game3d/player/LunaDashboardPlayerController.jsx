@@ -48,6 +48,7 @@ const STATES = {
 const LOOP_STATES = new Set([
   STATES.IDLE, STATES.AFK, STATES.COMBAT_IDLE, STATES.WALK, STATES.RUN, STATES.SPRINT, STATES.RUN_BACK, STATES.JUMP_LOOP,
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
+  'fallLoop', // no glider model yet: preserve a looping airborne pose
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
