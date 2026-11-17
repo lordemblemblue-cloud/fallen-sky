@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createEightWayDodgeClips } from './playerEightWayDodgeClips';
+import { createEightWayDodgeClips } from './playerEightWayDodgeClips.js';
 
 // Four playable Game 3D rigs are not identical: Adam/Eve use mixamorig bones;
 // Getsuga/Artemis use the original pelvis/thigh/clavicle hierarchy. When a
