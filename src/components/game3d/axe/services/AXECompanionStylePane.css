@@ -1,5 +1,5 @@
-/* Companion borrows Appearance's 4-panel glass layout directly.
-   Imbue uses the SAME player model as Appearance and four selection corners. */
+/* Companion Variety retains its five live wardrobe slots and Appearance glass.
+   Imbuement uses the separate unified 50/50 panel in AXECompanionImbuementPane.css. */
 .axe-comp-modern {flex:1;min-height:0;display:flex;flex-direction:column;padding:8px;}
 .axe-comp-modern .axe-app-layout {width:100%;height:100%;min-height:0;}
 .axe-comp-modern .axe-app-rail {grid-column:1;grid-row:1;}
@@ -15,26 +15,6 @@
 .axe-comp-style-layout .axe-app-model-host {width:100%;height:100%;}
 .axe-comp-style-detail {min-height:0;height:100%;flex:1;}
 .axe-comp-style-detail>.axe-app-card-content {overflow-y:auto;}
-.axe-comp-imbue-stage {position:relative;}
-.axe-comp-imbue-corner {position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  width:72px;min-height:70px;gap:4px;border:1px solid #ffe0a0b9;border-radius:11px;
-  background:linear-gradient(135deg,rgba(34,55,72,.81),rgba(29,45,63,.66));
-  box-shadow:inset 0 0 12px #eed8ac2c,0 0 10px #0d14249c;color:#ffe4b0;}
-.axe-comp-imbue-corner[aria-pressed=true] {background:linear-gradient(135deg,#cda76b,#ffe0ab,#ae8654);
-  border-color:#fff0be;color:#302419;box-shadow:0 0 15px #ffd992a1;}
-.axe-comp-imbue-corner span {font:25px Georgia,serif;}
-.axe-comp-imbue-corner small {font:11px Georgia,serif;}
-.axe-comp-imbue-corner--0 {left:12px;top:14px;}
-.axe-comp-imbue-corner--1 {right:12px;top:14px;}
-.axe-comp-imbue-corner--2 {left:12px;bottom:77px;}
-.axe-comp-imbue-corner--3 {right:12px;bottom:77px;}
-.axe-comp-imbue-list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
-.axe-comp-imbue-list button {display:flex;align-items:center;justify-content:space-between;
-  min-height:64px;gap:5px;min-width:0;padding:10px;border:1px solid #dbba8885;
-  background:rgba(38,60,75,.58);border-radius:8px;color:#f1e2c7;font:12px Georgia,serif;}
-.axe-comp-imbue-list button[aria-pressed=true] {border-color:#fbe3ab;
-  box-shadow:0 0 13px #ffe2a785,inset 0 0 11px #eed8a02e;}
-.axe-comp-imbue-list b {color:#bff1d2;}
 .axe-comp-imbue-button {width:100%;min-height:42px;margin:14px 0;display:flex;
   align-items:center;justify-content:center;gap:8px;}
 /* Single joined Vanity + Costumes collection — the other tab is removed.
@@ -171,15 +151,6 @@
 .axe-comp-style-stage .axe-comp-variety-slot .axe-app-viewer-item-name {
   font-size:9px;text-align:center;overflow-wrap:anywhere;white-space:normal;
   display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
-}
-.axe-comp-variety-preview-toggle {
-  position:absolute;z-index:9;top:9px;left:50%;transform:translateX(-50%);
-  max-width:55%;padding:6px 9px;border:1px solid #e9ce9e;
-  border-radius:16px;color:#fce6ba;background:#1b3245eb;
-  font:11px Georgia,serif;cursor:pointer;
-}
-.axe-comp-variety-preview-toggle:focus-visible,.axe-comp-variety-preview-toggle:hover {
-  outline:1px solid #fff0c6;border-color:#fff0c6;
 }
 .axe-comp-variety-slot-heading {
   display:flex;justify-content:space-between;align-items:center;gap:8px;
