@@ -6,7 +6,7 @@ import { WOLFVEIL_CAVE_APPROACHES, isWolfveilCaveApproachReserved }
   from './WolfveilCaveAccessPlan.mjs';
 import { wolfveilHeight, wolfveilDistanceToRiver, wolfveilRouteClearance }
   from './WolfveilLayout.js';
-import { clearOf } from './WolfveilForestLayout.js';
+import { clearOf, wolfveilForestTrunkColliders } from './WolfveilForestLayout.js';
 import { planWolfveilCaveEntranceLandscaping }
   from './WolfveilCaveLandscapePlan.mjs';
 
@@ -29,12 +29,14 @@ export function installWolfveilCaveEntranceLandscaping(world, parent, {
 } = {}) {
   if (!world?.ownedMaterials || !parent?.add)
     throw new TypeError('The existing cave scene and material owner are required');
+  const existingTrunks = wolfveilForestTrunkColliders();
   const placements = planWolfveilCaveEntranceLandscaping(approaches, {
     heightAt: wolfveilHeight,
     reservedAt: isWolfveilCaveApproachReserved,
     routeClearance: wolfveilRouteClearance,
     riverDistance: wolfveilDistanceToRiver,
-    clearAt: (x, z) => clearOf({ x, z }, 1.15),
+    clearAt: (x, z) => clearOf({ x, z }, 1.15) &&
+      !existingTrunks.some(tree => Math.hypot(tree.x-x,tree.z-z) < tree.radius+1.8),
   });
   const byKind = new Map();
   for (const item of placements) {
