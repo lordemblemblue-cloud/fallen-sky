@@ -361,9 +361,25 @@ export default function JadeSoulHUD({
               <stop offset="1" stopColor="#1a1716" stopOpacity=".91"/>
             </linearGradient>
             <linearGradient id="jade-template-wing" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#604b34" stopOpacity=".72"/>
-              <stop offset=".48" stopColor="#29221e" stopOpacity=".88"/>
-              <stop offset="1" stopColor="#170f0b" stopOpacity=".68"/>
+              <stop offset="0" stopColor="#604b34" stopOpacity=".55"/>
+              <stop offset=".48" stopColor="#29221e" stopOpacity=".62"/>
+              <stop offset="1" stopColor="#170f0b" stopOpacity=".47"/>
+            </linearGradient>
+            {/* Muted outer ends, luminous near the octagon; WILL mirrors HP. */}
+            <linearGradient id="jade-template-wing-opacity" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="white" stopOpacity=".36"/>
+              <stop offset="22%" stopColor="white" stopOpacity=".52"/>
+              <stop offset="61%" stopColor="white" stopOpacity=".83"/>
+              <stop offset="100%" stopColor="white" stopOpacity="1"/>
+            </linearGradient>
+            <mask id="jade-template-wing-fade" maskUnits="userSpaceOnUse" x="0" y="0" width="486" height="270">
+              <rect x="0" y="0" width="486" height="270" fill="url(#jade-template-wing-opacity)"/>
+            </mask>
+            <linearGradient id="jade-template-wing-glass" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#0e1820" stopOpacity=".06"/>
+              <stop offset="35%" stopColor="#20313b" stopOpacity=".14"/>
+              <stop offset="73%" stopColor="#43352c" stopOpacity=".25"/>
+              <stop offset="100%" stopColor="#241a18" stopOpacity=".41"/>
             </linearGradient>
             <filter id="jade-template-outer-glow" x="-30%" y="-50%" width="160%" height="200%">
               <feGaussianBlur stdDeviation="3.5" result="glow"/>
@@ -375,30 +391,39 @@ export default function JadeSoulHUD({
             {/* The dark glass header is part of the EMPTY metal frame, not a
                 screenshot caption: live resource labels float above it. */}
             <path d="M 74 126 H 391 Q 412 126 422 150 L 433 196
-              H 107 L 77 163 Z" fill="url(#jade-template-glass)"
-              fillOpacity=".70" stroke="none"/>
-            <path d="M 12 149 L 67 149 L 106 191 L 421 191 L 482 256
-              L 442 220 L 97 220 L 50 171 Z"
-              fill="url(#jade-template-wing)" stroke="#a85b08" strokeWidth="8"
-              strokeLinejoin="round" filter="url(#jade-template-outer-glow)"/>
-            <path d="M 12 149 L 67 149 L 106 191 L 421 191 L 482 256
-              L 442 220 L 97 220 L 50 171 Z"
-              fill="none" stroke="url(#jade-template-gold)" strokeWidth="3.5"
-              strokeLinejoin="round"/>
-            <path d="M 28 155 L 61 155 L 103 202 L 428 202 L 455 231
-              L 437 215 L 102 215 L 49 166"
-              fill="none" stroke="#ffde8a" strokeOpacity=".79" strokeWidth="2.2"
-              strokeLinejoin="round"/>
-            <path d="M 105 225 H 436" fill="none"
-              stroke="#ffca47" strokeOpacity=".34" strokeWidth="4"
-              strokeLinecap="round"/>
-            <path d="M 282 217 L 293 225 L 282 233 L 271 225 Z"
-              fill="#fff0ae" stroke="#ffae19" strokeWidth="2"
-              filter="url(#jade-template-outer-glow)"/>
+              H 107 L 77 163 Z" fill="url(#jade-template-wing-glass)"
+              stroke="none"/>
+            <g mask="url(#jade-template-wing-fade)">
+              {/* Curved housing and tapered tip remain fully DETACHED from the
+                  center frame; no straight bridge connects underneath it. */}
+              <path d="M 12 149 L 67 149 Q 77 154 83 163 L 106 191
+                L 405 191 Q 420 191 431 206 L 482 256
+                Q 478 258 474 253 L 442 220 L 97 220
+                Q 91 220 86 214 L 50 171 Z"
+                fill="url(#jade-template-wing)" stroke="#a85b08" strokeWidth="8"
+                strokeLinejoin="round" filter="url(#jade-template-outer-glow)"/>
+              <path d="M 12 149 L 67 149 Q 77 154 83 163 L 106 191
+                L 405 191 Q 420 191 431 206 L 482 256
+                Q 478 258 474 253 L 442 220 L 97 220
+                Q 91 220 86 214 L 50 171 Z"
+                fill="none" stroke="url(#jade-template-gold)" strokeWidth="3.5"
+                strokeLinejoin="round"/>
+              <path d="M 28 155 L 61 155 L 103 202
+                L 414 202 Q 426 202 433 213 L 455 231
+                L 437 215 L 102 215 L 49 166"
+                fill="none" stroke="#ffde8a" strokeOpacity=".79" strokeWidth="2.2"
+                strokeLinejoin="round"/>
+              <path d="M 105 225 H 436" fill="none"
+                stroke="#ffca47" strokeOpacity=".27" strokeWidth="3.2"
+                strokeLinecap="round"/>
+              <path d="M 282 217 L 293 225 L 282 233 L 271 225 Z"
+                fill="#fff0ae" stroke="#ffae19" strokeWidth="2"
+                filter="url(#jade-template-outer-glow)"/>
+            </g>
           </g>)}
           {/* Complete octagon: no middle divider or ornamental horizontal wave. */}
           <path d="M 551 12 H 649 L 710 74 V 196 L 649 258 H 551
-            L 490 196 V 74 Z" fill="url(#jade-template-glass)"
+            L 490 196 V 74 Z" fill="url(#jade-template-glass)" fillOpacity=".14"
             stroke="#a9630d" strokeWidth="9" strokeLinejoin="round"
             filter="url(#jade-template-outer-glow)"/>
           <path d="M 551 12 H 649 L 710 74 V 196 L 649 258 H 551
@@ -451,6 +476,16 @@ export default function JadeSoulHUD({
           aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext,Math.max(0,Number(hud?.xp)||0)) : 100}
           title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
           style={{'--jade-xp-progress':xpPct+'%'}}>
+          {/* Transparent octagonal glass is the backdrop blur layer; metal
+              remains decorative SVG, while the actual EXP controls the water. */}
+          <span className="jade-xp-liquid-glass" aria-hidden="true"/>
+          <span className="jade-xp-water" aria-hidden="true">
+            <span className="jade-xp-water-level">
+              <span className="jade-xp-water-wave jade-xp-water-wave--front"/>
+              <span className="jade-xp-water-wave jade-xp-water-wave--back"/>
+              <span className="jade-xp-water-bubbles"/>
+            </span>
+          </span>
           <span className="jade-xp-octagon-face">
             <strong className="jade-xp-number">{fmt(hud?.level || 1)}</strong>
             <span className="jade-xp-caption">EXP</span>

@@ -40,9 +40,11 @@ test('only live game stats are painted over the decorative frame',()=>{
   assert.match(component,/fmt\(hud\?\.level \|\| 1\)/);
   assert.doesNotMatch(component,/2,840\s*\/\s*2,840|24,300\s*\/\s*40,000/);
 });
-test('the approved frame has no decorative wave line and supports responsive sizing',()=>{
+test('the approved frame has no fixed decorative crossbar; dynamic EXP water remains behind live text',()=>{
   assert.doesNotMatch(component,/jade-xp-octagon-rule|jade-xp-octagon-energy/);
   assert.doesNotMatch(approved,/jade-exp-wave-left|jade-exp-wave-right/);
+  assert.match(component,/className="jade-xp-water-level"/);
+  assert.match(approved,/@keyframes jade-glass-river-flow/);
   assert.match(approved,/@media\(max-width:420px\)/);
   assert.match(approved,/@media\(prefers-reduced-motion:reduce\)/);
   assert.match(approved,/\.jade-hud\[data-service-mode="true"\] \.jade-hud-template/);
