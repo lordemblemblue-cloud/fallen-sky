@@ -115,8 +115,18 @@ export function makeWolfveilTownNavigation({ shops = [], homes = [], fountain = 
     }
     return closest;
   }
+  function roomAt(position) {
+    if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.z)) return null;
+    for (const room of regions) {
+      const p = localPoint(room, position.x, position.z);
+      if (room.kind === 'shop' && p.x > -9.0 && p.x < 8 && p.z > -5.0 && p.z < 1.9) return {id:room.id,kind:room.kind};
+      if (room.kind === 'home' && Math.abs(p.x) < 4.0 && Math.abs(p.z) < 2.5) return {id:room.id,kind:room.kind};
+    }
+    return null;
+  }
   return {
     rooms: regions.map(({id,label,kind,x,z}) => ({id,label,kind,x,z})),
+    roomAt,
     isSolid: hitWall,
     resolveCollision: resolve,
     nearestShop,
