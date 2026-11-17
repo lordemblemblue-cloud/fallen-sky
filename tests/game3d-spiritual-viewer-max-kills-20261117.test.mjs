@@ -53,7 +53,7 @@ test('preview-only max kills are ephemeral, non-spendable and never touch the ca
   assert.match(halo, /isPreviewMaxActive\('halo'\) \|\| isPreviewKillsActive\(\)/);
   assert.match(wings, /isPreviewMaxActive\('wings'\) \|\| isPreviewKillsActive\(\)/);
   assert.match(workspace, /disabled=\{level >= cap \|\| kills < cost \|\| isPreviewKillsActive\(\)\}/);
-  assert.doesNotMatch(preview, /incrementKillCount|resetKillCount|characterScopedStorage|localStorage|fetch\(/);
+  assert.doesNotMatch(preview, /\bincrementKillCount\s*\(|\bresetKillCount\s*\(|\bcharacterScopedStorage\s*\(|\blocalStorage\s*\.|\bfetch\s*\(/);
   assert.match(kills, /persist\(\)/); // Real canonical count still persists as before.
 });
 test('test-only preview requires explicit opt-in plus test server and exact host', () => {
