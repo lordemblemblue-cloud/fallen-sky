@@ -24,7 +24,12 @@ function adornAvatar(model, halo, wings, selectedWing) {
   const size = bounds.getSize(new THREE.Vector3());
   const center = bounds.getCenter(new THREE.Vector3());
   const height = Number.isFinite(size.y) && size.y > .1 ? size.y : 1.8;
-  const scale = height / 1.8;
+  // loadAvatarModel normalizes the avatar to 1.8m by scaling its root.
+  // Ornament meshes are CHILDREN of that root; compensate for its scale
+  // so crowns and wings fit Eve/Adam and custom GLB bodies alike.
+  const rootScale = model.getWorldScale(new THREE.Vector3());
+  const localHeight = height / Math.max(.001, Math.abs(rootScale.y));
+  const scale = localHeight / 1.8;
   const group = new THREE.Group();
   group.name = 'axe-spiritual-preview-adornment';
   // The model is already fitted to the selected real character. Use its world
@@ -35,7 +40,7 @@ function adornAvatar(model, halo, wings, selectedWing) {
   if (haloLevel > 0) {
     const tier = haloLevel >= 100 ? 4 : haloLevel >= 70 ? 3 : haloLevel >= 40 ? 2 : 1;
     const haloGroup = new THREE.Group();
-    haloGroup.position.y = height * .31;
+    haloGroup.position.y = localHeight * .31;
     haloGroup.rotation.z = -.09;
     const ring = (radius, tube, y, opacity) => {
       const mesh = new THREE.Mesh(
@@ -63,7 +68,7 @@ function adornAvatar(model, halo, wings, selectedWing) {
       : wingLevel >= 70 ? 3 : wingLevel >= 40 ? 2 : 1;
     const color = new THREE.Color(wing.color || '#b0dcff');
     const wingRoot = new THREE.Group();
-    wingRoot.position.set(0, height * .03, -.11 * scale);
+    wingRoot.position.set(0, localHeight * .03, -.11 * scale);
     for (const side of [-1, 1]) {
       const count = 5 + tier * 2;
       for (let index = 0; index < count; index++) {
