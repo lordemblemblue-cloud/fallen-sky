@@ -19,6 +19,7 @@ import { COMPANION_GEAR, getCompanionById } from '../../companionData';
 import { getAXEMountState, subscribeAXEMounts, activateAXEMount, registerAXEMount, previewAXEMountGearRefine, refineAXEMountGear } from '../progression/AXEMountStore';
 import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
+import { getCompanionGrowthView } from '../progression/AXECompanionGrowthView.mjs';
 import { getPlayerHUD } from '../../playerHUDStore';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
@@ -82,9 +83,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const ownedMounts = (mounts.mounts || []).filter(m=>m?.instanceId);
   const selectedMount = ownedMounts.find(m=>m.instanceId===selectedMountId)
     ||ownedMounts.find(m=>m.instanceId===mounts.activeMountId)||ownedMounts[0]||null;
+  const normalizedRosterQuery=rosterQuery.trim().toLowerCase();
   const filteredMounts=ownedMounts.filter(m=>{
-    const name=getAXEMountDefinition(m.definitionId)?.name||m.definitionId;
-    return !rosterQuery.trim()||name.toLowerCase().includes(rosterQuery.trim().toLowerCase());
+    const definition=getAXEMountDefinition(m.definitionId);
+    const searchable=[definition?.name||m.definitionId,definition?.rarity,definition?.specialty];
+    return !normalizedRosterQuery||searchable.some(part=>String(part||'').toLowerCase().includes(normalizedRosterQuery));
   });
   const selectedMountName = selectedMount
     ? getAXEMountDefinition(selectedMount.definitionId)?.name || caption(selectedMount.definitionId)
@@ -228,29 +231,43 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     </aside> : <aside className="axe-app-rail axe-glass-loadout-rail axe-comp-owned-roster axe-comp-owned-roster--classic"
       aria-label="Companions - owned mounts" data-companion-roster-layout="classic">
       <header className="axe-comp-roster-title">
-        <div className="axe-comp-roster-heading"><Compass size={18} aria-hidden="true"/>
-          <strong>Companions</strong></div>
-        <label className="axe-comp-roster-search" aria-label="Search companion">
+        <div className="axe-comp-roster-heading"><Compass size={17} aria-hidden="true"/>
+          <strong>Companions</strong><small>{ownedMounts.length} owned</small></div>
+        <label className="axe-comp-roster-search" aria-label="Search owned companions">
           <Search size={16} aria-hidden="true"/>
           <input type="search" autoComplete="off" aria-label="Search companion"
-            placeholder={rosterFocused?'':'Search companion'}
+            placeholder={rosterFocused?'':'Search companions'}
             value={rosterQuery}
             onFocus={()=>setRosterFocused(true)}
             onBlur={()=>setRosterFocused(false)}
             onChange={event=>setRosterQuery(event.target.value)}/>
+          {rosterQuery&&<button type="button" aria-label="Clear companion search"
+            onClick={()=>setRosterQuery('')}><X size={14}/></button>}
         </label>
       </header>
       <div className="axe-comp-roster-list">
         {filteredMounts.map(mount=>{
           const isActive=mount.instanceId===mounts.activeMountId;
+          const isRegistered=mount.instanceId===mounts.registeredMountId;
           const isSelected=mount.instanceId===selectedMount?.instanceId;
-          const name=getAXEMountDefinition(mount.definitionId)?.name||caption(mount.definitionId);
+          const definition=getAXEMountDefinition(mount.definitionId);
+          const name=definition?.name||caption(mount.definitionId);
+          const growth=getCompanionGrowthView(mount.totalXp||0);
+          const growthPct=Number(mount.growthPercent||0);
           return <button key={mount.instanceId} type="button" aria-pressed={isSelected}
+            aria-label={name+', level '+growth.level+', '+growthPct+'% mount growth'+
+              (isActive?', active riding mount':'')+(isRegistered?', registered for stats':'')}
+            title={name+' · '+caption(definition?.rarity||'Mount')+' · '+caption(definition?.specialty||'Companion')+
+              ' · Level '+growth.level+' (cycle '+growth.cycle+') · '+growthPct+'% growth · '+
+              Number(mount.totalXp||0).toLocaleString()+' total XP'}
             onClick={()=>{setSelectedMountId(mount.instanceId);setSelectedId(null);setFilter('All');setRefineReview(null);}}>
-            <span className="axe-comp-roster-sigil"><Compass size={18}/></span>
+            <span className="axe-comp-roster-sigil" aria-hidden="true">{name.charAt(0).toUpperCase()}</span>
             <span className="axe-comp-roster-entry"><strong>{name}</strong>
-              <small>{isActive?'Active · ':''}{Number(mount.growthPercent||0)}% growth</small></span>
-            {isActive&&<Check size={15} aria-label="Active mount"/>}
+              <small>Lv {growth.level} · {growthPct}% growth</small>
+              {(isActive||isRegistered)&&<span className="axe-comp-roster-status">
+                {isActive?'Active':''}{isActive&&isRegistered?' · ':''}{isRegistered?'Registered':''}
+              </span>}</span>
+            {isActive&&<Check size={13} aria-hidden="true" className="axe-comp-roster-active-check"/>}
           </button>;
         })}
         {!ownedMounts.length&&<p>No owned mounts on this character.</p>}
