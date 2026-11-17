@@ -5,17 +5,23 @@
 export function createOTSCameraColliders({ groundMeshes = [], roots = () => [] } = {}) {
   const list = [];
   let signature = null;
+  const visibleInHierarchy = node => {
+    for (let current = node; current; current = current.parent) {
+      if (current.visible === false) return false;
+    }
+    return true;
+  };
   return function resolveOTSCameraColliders() {
     const rootNodes = (roots() || []).filter(Boolean);
     const next = `${groundMeshes.length}|${rootNodes
-      .map((node) => `${node?.children?.length || 0}`).join(',')}`;
+      .map((node) => `${node?.children?.length || 0}:${node?.userData?.otsCameraRevision || 0}`).join(',')}`;
     if (next === signature) return list;
     signature = next;
     list.length = 0;
     list.push(...groundMeshes);
     for (const root of rootNodes) {
       root?.traverse?.((node) => {
-        if (node?.isMesh && node.visible !== false && !node.userData?.otsCameraIgnore)
+        if (node?.isMesh && visibleInHierarchy(node) && !node.userData?.otsCameraIgnore)
           list.push(node);
       });
     }
