@@ -1,0 +1,36 @@
+name: Game 3D Clone Spirituality Merge Integrity
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/axe/services/AXESpiritualCharacterViewer.jsx'
+      - 'src/components/game3d/axe/services/AXESpiritualWorkspace.jsx'
+      - 'src/components/game3d/axe/services/AXESpiritualWorkspace.css'
+      - 'src/components/game3d/progression/**'
+      - 'tests/game3d-spiritual-viewer-max-kills-20261117.test.mjs'
+      - '.github/workflows/game3d-clone-spirituality-merge-integrity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spirituality-integrity:
+    name: Spirituality model, approved HUD and Vite build
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install exact lockfile dependencies
+        run: npm ci
+      - name: Verify original HUD and merged Spirituality contracts
+        run: >
+          node --test
+          tests/game3d-spiritual-viewer-max-kills-20261117.test.mjs
+          tests/game3d-hud-compact-symmetric-20261116.test.mjs
+      - name: Compile Game 3D after conflict resolution
+        run: npm run build
