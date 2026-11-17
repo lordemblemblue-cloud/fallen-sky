@@ -6,6 +6,7 @@ import {AVATAR_STYLE_PRESETS,COMPANION_MODELS,DEFAULT_AVATAR_APPEARANCE} from '.
 import {useCustomizationCatalog} from './useCustomizationCatalog';
 import {useBuiltinLayers} from './creatorBuiltinLayers';
 import GenesisFaceScan from './GenesisFaceScan';
+import MeshyFaceDraftCreator from './MeshyFaceDraftCreator';
 import CulturalInspirationSelector from './CulturalInspirationSelector';
 import {regionColorKey} from './bodyRegions.js';
 import {MAKEUP_COLORS} from './creatorMakeup.js';
@@ -133,7 +134,7 @@ export default function CharacterAppearanceEditor({config,setConfig,capabilities
    {shapes('face')}
    <Group><Colors label="Eye color" choices={EYES} disabled={!caps.iris} value={config.eye_tint_enabled?config.eye_color:''} onChange={c=>update({eye_tint_enabled:true,eye_color:c})}/></Group>
    {!fused&&layer('eyebrows','Brows')}
-   <details className="creator-photo"><summary>Match from a photo</summary><GenesisFaceScan config={config} setConfig={setConfig} capabilities={capabilities}/></details>
+   <details className="creator-photo"><summary>Match from a photo</summary><GenesisFaceScan config={config} setConfig={setConfig} capabilities={capabilities}/><MeshyFaceDraftCreator/></details>
   </>}
   {section==='skin'&&<>
    <Group><Colors label="Complexion" choices={SKIN} value={config.skin_tint_enabled?config.skin_tone:''} disabled={!caps.skin} onChange={c=>update({skin_tint_enabled:true,skin_tone:c})} onReset={()=>update({skin_tint_enabled:false})}/>
