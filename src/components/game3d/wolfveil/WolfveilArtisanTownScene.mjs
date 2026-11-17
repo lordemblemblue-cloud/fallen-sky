@@ -84,6 +84,7 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     get model() { return town.group; },
     get livingQuarterReport() { return livingQuarter?.report || null; },
     get performanceStats() { return town.performanceStats; },
+    get visibleGeometryStats() { return town.getVisibleGeometryStats(); },
     get interiorReport() { return nav.report; },
     groundY,
     isSolid(x,z) { return nav.isSolid(x,z) || Boolean(livingQuarter?.isSolid(x,z)); },
