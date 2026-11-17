@@ -484,3 +484,114 @@
     max-width:none;
   }
 }
+
+/* Companion Equipment -> Stats & Growth. The original Attributes and Growth
+   cards were split between the inventory and item-details columns. In insight
+   mode these columns become ONE companion overview: level/XP + summary above,
+   Attributes and Growth beneath a divider, within a single scrolling card.
+   Equipment mode and the Character layout are intentionally unchanged. */
+.axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified
+  >.axe-app-main-stack {
+  grid-column:3 / 5;grid-row:1;min-width:0;min-height:0;
+  overflow:hidden;display:flex;
+}
+.axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified
+  .axe-comp-unified-card {
+  display:flex;flex-direction:column;flex:1 1 auto;
+  width:100%;height:100%;min-height:0;min-width:0;
+  padding:10px 13px;border:1px solid rgba(232,198,140,.73);
+  background:linear-gradient(140deg,rgba(22,43,61,.83),rgba(16,32,48,.75));
+}
+.axe-comp-unified-heading {flex:0 0 auto;}
+.axe-comp-unified-heading h3 {font:normal clamp(18px,1.6vw,24px) Georgia,serif!important;color:#ffdfa9;}
+.axe-comp-unified-empty {padding:24px 15px;color:#e7d9c4;font:13px Georgia,serif;}
+.axe-comp-unified-scroll {
+  flex:1 1 auto;min-width:0;min-height:0;
+  overflow-x:hidden;overflow-y:auto;
+  overscroll-behavior:contain;scrollbar-width:thin;
+  scrollbar-color:#d5b27d70 transparent;
+  padding:2px 6px 12px 1px;
+}
+.axe-comp-unified-intro {
+  display:flex;flex-direction:column;gap:11px;
+  border-bottom:1px solid #e9ca936e;padding:5px 6px 18px;
+}
+.axe-comp-unified-identity {display:flex;justify-content:space-between;align-items:center;gap:15px;}
+.axe-comp-unified-identity>div:first-child {min-width:0;}
+.axe-comp-unified-identity small {color:#dfc8a2;font:10px Georgia,serif;letter-spacing:.1em;}
+.axe-comp-unified-identity h4 {margin:3px 0 5px;font:normal clamp(19px,1.7vw,27px) Georgia,serif;
+  color:#ffe4b7;overflow-wrap:anywhere;}
+.axe-comp-unified-identity p {margin:0;font:11px/1.5 Georgia,serif;color:#d7e3e4;}
+.axe-comp-unified-level {display:flex;flex-direction:column;align-items:flex-end;
+  gap:3px;flex-shrink:0;}
+.axe-comp-unified-level strong {font:normal 29px/1 Georgia,serif;color:#ffe1ad;}
+.axe-comp-unified-level strong span {font-size:13px;color:#d8ccb8;}
+.axe-comp-unified-xp-row {display:flex;justify-content:space-between;gap:8px;
+  font:12px Georgia,serif;color:#f0ddbd;}
+.axe-comp-unified-xp-row strong {color:#bfe8d2;font-weight:600;}
+.axe-comp-unified-xp-track {height:9px;border:1px solid #ddba8089;border-radius:12px;
+  background:#0d2234;overflow:hidden;}
+.axe-comp-unified-xp-track>span {display:block;height:100%;border-radius:10px;
+  background:linear-gradient(90deg,#80afaf,#f4d79e);transition:width .2s ease;}
+.axe-comp-unified-metrics {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.axe-comp-unified-metrics>div {display:flex;flex-wrap:wrap;align-items:center;gap:5px;
+  padding:10px 11px;min-width:0;border:1px solid #dac09274;border-radius:8px;
+  background:rgba(31,56,73,.72);color:#f4e2c8;font:12px Georgia,serif;}
+.axe-comp-unified-metrics svg {color:#ebc794;flex:0 0 auto;}
+.axe-comp-unified-metrics strong {margin-left:auto;font:16px Georgia,serif;color:#c2ecd5;}
+.axe-comp-unified-detail-groups {display:flex;flex-direction:column;gap:0;min-width:0;}
+.axe-comp-unified-detail-groups>.axe-comp-insights-card {
+  display:flex;flex-direction:column;flex:0 0 auto;
+  height:auto;min-height:0;padding:12px 7px 14px;
+  border:0;border-radius:0;box-shadow:none;backdrop-filter:none;
+  background:transparent;overflow:visible;
+}
+.axe-comp-unified-detail-groups>.axe-comp-insights-card:before,
+.axe-comp-unified-detail-groups>.axe-comp-insights-card:after {content:none;}
+.axe-comp-unified-detail-groups>.axe-comp-insights-card+.axe-comp-insights-card {
+  border-top:1px solid rgba(230,192,132,.73);padding-top:18px;
+}
+.axe-comp-unified-detail-groups>.axe-comp-insights-card>.axe-app-card-heading {
+  min-height:38px;padding:4px 2px 9px;margin-bottom:10px;
+  border-bottom:1px solid #e6c18b55;
+}
+.axe-comp-unified-detail-groups>.axe-comp-insights-card>.axe-app-card-content {
+  flex:0 0 auto;min-height:0;max-height:none;overflow:visible;padding:0 3px;
+}
+.axe-comp-unified-detail-groups .axe-comp-insight-metrics {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 13px;
+}
+.axe-comp-unified-detail-groups .axe-comp-insight-stat {min-width:0;}
+.axe-comp-unified-detail-groups .axe-comp-insight-stat strong {
+  white-space:normal;text-align:right;overflow-wrap:anywhere;
+}
+/* Level, XP progress and name are shown once in the unified top overview,
+   not repeated as a second fake header inside Growth & Experience. */
+.axe-comp-unified-detail-groups [data-companion-insight="growth"] .axe-comp-insight-level,
+.axe-comp-unified-detail-groups [data-companion-insight="growth"] .axe-collection-progress,
+.axe-comp-unified-detail-groups [data-companion-insight="growth"] .axe-collection-progress-caption {
+  display:none;
+}
+@media(max-width:980px) {
+  .axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified {
+    grid-template-rows:minmax(330px,47vh) minmax(520px,auto);
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified
+    >.axe-app-main-stack {
+    grid-column:1 / -1;grid-row:2;min-height:520px;
+  }
+  .axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified
+    .axe-comp-unified-card {height:clamp(520px,75vh,900px);}
+}
+@media(max-width:590px) {
+  .axe-glass-loadout[data-equipment-actor="companion"].axe-glass-loadout--companion-unified {
+    grid-template-rows:minmax(320px,44vh) minmax(520px,auto);
+  }
+  .axe-comp-unified-identity {align-items:flex-start;}
+  .axe-comp-unified-metrics {grid-template-columns:1fr;}
+  .axe-comp-unified-detail-groups .axe-comp-insight-metrics {grid-template-columns:1fr;}
+  .axe-comp-unified-detail-groups .axe-comp-insight-summary {grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media(prefers-reduced-motion:reduce) {
+  .axe-comp-unified-xp-track>span {transition:none;}
+}
