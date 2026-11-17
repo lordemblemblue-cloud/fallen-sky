@@ -23,7 +23,7 @@ import { getPlayerHUD } from '../../playerHUDStore';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
-import {CompanionAttributesPanel,CompanionGrowthPanel} from './AXECompanionInsights';
+import AXECompanionUnifiedInsights from './AXECompanionUnifiedInsights';
 
 const PlayerModel = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CompanionModel = lazy(() => import('../../equipment/CompanionPreview3D'));
@@ -215,7 +215,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
           </div>
   );
 
-  return <div className="axe-app-layout axe-glass-loadout" data-equipment-actor={actor}>
+  return <div className={'axe-app-layout axe-glass-loadout'+(!isPlayer&&insightsOpen?' axe-glass-loadout--companion-unified':'')} data-equipment-actor={actor}>
     {isPlayer ? <aside className="axe-app-rail axe-glass-loadout-rail" aria-label="Equipment slot filters">
       <div className="axe-app-rail-glyph"><Package size={21}/><small>Gear</small></div>
       {categories.map(slot => <button type="button" key={slot} aria-pressed={isPlayer ? focusedSlot===slot : filter===slot}
@@ -314,8 +314,8 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         {isPlayer ? 'Player Equipment' : selectedMountName}</strong>
         <span>{equipped.length} pieces equipped</span></div>
     </section>
-    <main className="axe-app-main-stack" aria-label={isPlayer ? "Owned equipment inventory" : insightsOpen ? "Companion attributes" : "Available companion gear catalog"}>
-      {!isPlayer&&insightsOpen ? <CompanionAttributesPanel mount={selectedMount} snapshot={mounts}/> : <section className="axe-app-card axe-app-inventory">
+    <main className="axe-app-main-stack" aria-label={isPlayer ? "Owned equipment inventory" : insightsOpen ? "Companion overview, attributes and experience" : "Available companion gear catalog"}>
+      {!isPlayer&&insightsOpen ? <AXECompanionUnifiedInsights mount={selectedMount} snapshot={mounts}/> : <section className="axe-app-card axe-app-inventory">
         <header className="axe-app-card-heading"><Package size={20}/><h3>Inventory</h3>
           <small>{visible.length} / {list.length}</small>
           {!isPlayer && inventoryToolbar}</header>
@@ -345,8 +345,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         </div>
       </section>}
     </main>
-    <aside className="axe-app-right-stack" aria-label={!isPlayer&&insightsOpen ? "Companion growth and experience" : "Equipment details and set progress"}>
-      {!isPlayer&&insightsOpen ? <CompanionGrowthPanel mount={selectedMount} snapshot={mounts}/> : <>
+    {(isPlayer || !insightsOpen) && <aside className="axe-app-right-stack" aria-label="Equipment details and set progress">
       <section className="axe-app-card axe-glass-loadout-details">
         <header className="axe-app-card-heading"><Gem size={20}/><h3>{selectedPrestige?.displayName||selected?.name||'Equipment Details'}</h3>
           <small>{selected?.rarityLabel || caption(selected?.rarity || '—')}</small></header>
@@ -456,7 +455,6 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             onClick={()=>setRefineReview(null)}>Cancel refinement</button>}
         </div>
       </details>}
-      </>}
-    </aside>
+    </aside>}
   </div>;
 }
