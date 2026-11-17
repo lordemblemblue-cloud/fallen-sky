@@ -1,0 +1,124 @@
+/* Responsive Game 3D chrome. WebGL canvas and HUD both occupy the same CSS
+   viewport; neither receives a nonuniform transform when render resolution
+   changes. Opt-in Game 3D only; never touches Game 2, Dashboard or Store. */
+.game3d-view {
+  --game3d-ui-scale:1;
+  --game3d-safe-top:env(safe-area-inset-top,0px);
+  --game3d-safe-right:env(safe-area-inset-right,0px);
+  --game3d-safe-bottom:env(safe-area-inset-bottom,0px);
+  --game3d-safe-left:env(safe-area-inset-left,0px);
+  width:100%;height:100%;
+  min-width:0;min-height:0;
+  overflow:hidden;contain:layout;
+}
+.game3d-view > .relative,
+.game3d-view > .relative > .w-full,
+.game3d-view .jade-hud {
+  min-width:0;min-height:0;max-width:100%;
+}
+.game3d-view .jade-hud {
+  font-size:calc(12px * var(--game3d-ui-scale,1));
+}
+.game3d-view .jade-status {
+  left:max(var(--game3d-safe-left),clamp(9px,2.1vw,40px));
+  top:max(var(--game3d-safe-top),clamp(12px,3.8vh,40px));
+}
+.game3d-view .jade-compass-block {
+  right:max(var(--game3d-safe-right),clamp(9px,2.4vw,42px));
+}
+.game3d-view .jade-services-navigation {
+  max-width:calc(100% - var(--game3d-safe-left) - var(--game3d-safe-right));
+}
+.game3d-view .jade-services-navigation .jade-services-button,
+.game3d-view .jade-services-navigation .jade-service-option {
+  font-size:clamp(9px,calc(10px * var(--game3d-ui-scale,1)),13px);
+}
+.game3d-view .jade-hud .jade-status-bars--refined {
+  max-width:calc(100% - 12px - var(--game3d-safe-left) - var(--game3d-safe-right));
+}
+.game3d-view .axe-service-workspace {
+  min-width:0;max-width:100%;max-height:100dvh;
+  scroll-padding-bottom:max(12px,var(--game3d-safe-bottom));
+}
+.game3d-view .axe-service-workspace .axe-service-progression {
+  min-width:0;max-width:100%;
+}
+.game3d-view .game3d-world-chat {
+  max-width:calc(100% - 12px - var(--game3d-safe-left) - var(--game3d-safe-right));
+}
+/* Handheld landscape: the 800p screen is small in CSS even when the hardware
+   or docked display is high-DPI. Keep existing Services and weapon hotkeys
+   accessible; trim decoration rather than stretching their parent. */
+@media (max-height:650px) and (orientation:landscape) {
+  .game3d-view .jade-status {
+    top:max(var(--game3d-safe-top),6px);
+  }
+  .game3d-view .jade-services-navigation .jade-services-button {
+    min-height:34px;padding-block:3px;
+  }
+  .game3d-view .axe-service-workspace[data-service-extent="viewport-top"]:not(.axe-service-workspace--blacksmith) {
+    top:clamp(42px,9dvh,65px)!important;
+  }
+  .game3d-view .jade-hud .jade-status-bars--refined {
+    bottom:max(10px,var(--game3d-safe-bottom));
+  }
+}
+@media (max-width:680px) {
+  .game3d-view .jade-status {
+    left:max(var(--game3d-safe-left),7px);
+  }
+  .game3d-view .jade-compass-block {
+    right:max(var(--game3d-safe-right),6px);
+  }
+  .game3d-view .axe-service-workspace {
+    left:max(0px,var(--game3d-safe-left));
+    right:max(0px,var(--game3d-safe-right));
+  }
+  .game3d-view .jade-services-navigation {
+    /* Preserve authored dropdown overflow and service button hit targets. */
+    max-width:calc(100% - var(--game3d-safe-left) - var(--game3d-safe-right));
+  }
+}
+/* Interface size can increase legibility on large screens. On a compact
+   handheld, clamp headings/labels instead of applying scale(...) to the
+   complete HUD, which would push buttons outside pointer-safe bounds. */
+.game3d-view .axe-service-heading h1 {
+  font-size:clamp(14px,calc(17px * var(--game3d-ui-scale,1)),21px);
+}
+.game3d-view .axe-service-operations button {
+  font-size:clamp(10px,calc(11px * var(--game3d-ui-scale,1)),14px);
+}
+.game3d-view .jade-hud .jade-status-header {
+  font-size:clamp(8px,calc(11px * var(--game3d-ui-scale,1)),13px);
+}
+@media(prefers-reduced-motion:reduce) {
+  .game3d-view .jade-hud *, .game3d-view .axe-service-workspace * {
+    scroll-behavior:auto;
+  }
+}
+
+/* Phone landscape (common game orientation): keep HUD, menus and touch targets
+   inside the short screen without overflow. High-DPI phones report large
+   devicePixelRatio but small CSS pixels — UI is sized to CSS viewport. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .game3d-view {
+    --game3d-ui-scale: 0.85;
+  }
+  .game3d-view .jade-status,
+  .game3d-view .jade-compass-block,
+  .game3d-view .jade-services-navigation {
+    font-size: clamp(8px, calc(9px * var(--game3d-ui-scale, 1)), 12px);
+  }
+  .game3d-view .axe-service-workspace {
+    max-height: calc(100dvh - 40px);
+  }
+  .game3d-view .jade-hud .jade-status-bars--refined {
+    bottom: max(4px, var(--game3d-safe-bottom));
+  }
+}
+@media (max-width: 420px) {
+  .game3d-view .jade-services-navigation .jade-services-button {
+    min-height: 32px;
+    padding: 2px 6px;
+  }
+}
