@@ -1,3 +1,4 @@
+/* global TextEncoder, TextDecoder, btoa, atob, crypto, URL, AbortSignal, fetch */
 /**
  * Preview-only opt-in Meshy face-head draft. No public/production use.
  *
