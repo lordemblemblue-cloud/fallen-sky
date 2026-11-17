@@ -345,12 +345,17 @@ export default function JadeSoulHUD({
             <span>♡ &nbsp; HP</span><span>{fmt(hud?.hp)} / {fmt(hud?.maxHP)}</span>
           </div>
           <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--hp" style={{width:hpPct+'%'}}/></div>
+          {/* Cropped translucent PNG directly from the approved HP screenshot.
+              The red bar and live HP numbers stay independent of the picture. */}
+          <span className="jade-status-raster-trim jade-status-raster-trim--hp" aria-hidden="true"/>
         </div>
         <div className="jade-status-row jade-status-row--will">
           <div className="jade-status-header">
             <span>✧ &nbsp; WILL</span><span>{fmt(currentWill)} / {fmt(maxWill)}</span>
           </div>
           <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--will" style={{width:willPct+'%'}}/></div>
+          {/* Mirrored original gold photography; live Will never baked into it. */}
+          <span className="jade-status-raster-trim jade-status-raster-trim--will" aria-hidden="true"/>
         </div>
       </div>
 
@@ -375,6 +380,8 @@ export default function JadeSoulHUD({
         aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext, Math.max(0, Number(hud?.xp) || 0)) : 100}
         title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
         style={{'--jade-xp-progress':xpPct+'%'}}>
+        {/* Transparent photo-cut octagon border; numbers and EXP are real DOM. */}
+        <span className="jade-xp-raster-frame" aria-hidden="true"/>
         <span className="jade-xp-octagon-face" aria-hidden="true">
           <span className="jade-xp-octagon-energy"/>
           <span className="jade-xp-agent">AGENT</span>
