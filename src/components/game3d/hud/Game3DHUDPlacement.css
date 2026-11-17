@@ -1,0 +1,70 @@
+/* Left column, top to bottom: minimap, online count at its south edge,
+   quest log halfway to world chat, world chat, then the three launchers.
+   Services stays in the gap to the right of the minimap. */
+.game3d-view {
+  --axe-map-top: clamp(19px, 3vh, 37px);
+  --axe-map-left: clamp(14px, 2.4vw, 42px);
+  --axe-map-size: clamp(126px, 11.2vw, 184px);
+  --axe-map-bottom: calc(var(--axe-map-top) + var(--axe-map-size));
+  --axe-online-block: 34px;
+  --axe-launcher-row: calc(var(--axe-hud-launcher-size, 42px) + 8px);
+  --axe-chat-block: 120px;
+}
+.game3d-view .jade-hud .jade-services-navigation {
+  top: var(--axe-map-top) !important;
+  left: calc(var(--axe-map-left) + var(--axe-map-size) + 22px) !important;
+  width: max(120px, calc(100% - var(--axe-map-left) - var(--axe-map-size) - 22px - clamp(215px, 19vw, 306px) - var(--axe-map-left) - 16px)) !important;
+}
+.game3d-view .game3d-online-pill {
+  top: calc(var(--axe-map-bottom) + 8px) !important;
+  left: calc(var(--axe-map-left) + var(--axe-map-size) / 2) !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) scale(var(--game3d-community-scale, 1)) !important;
+  transform-origin: center top !important;
+}
+.game3d-view .jade-quest-tracker {
+  left: var(--axe-map-left) !important;
+  top: calc(var(--axe-map-bottom) + var(--axe-online-block) + (100% - var(--axe-map-bottom) - var(--axe-online-block) - var(--axe-hud-xp-bottom, 36px) - var(--axe-launcher-row) - var(--axe-chat-block)) / 2) !important;
+}
+.game3d-view .game3d-world-chat {
+  bottom: calc(var(--axe-hud-xp-bottom, 36px) + var(--axe-launcher-row)) !important;
+}
+.game3d-view .axe-echo-launch,
+.game3d-view .axe-chronicle-vault-launch,
+.game3d-view .axe-minigames-launch {
+  top: auto !important;
+  bottom: var(--axe-hud-xp-bottom, 36px) !important;
+  right: auto !important;
+  transform-origin: left bottom;
+}
+.game3d-view .axe-echo-launch { left: var(--axe-map-left) !important; }
+.game3d-view .axe-chronicle-vault-launch {
+  left: calc(var(--axe-map-left) + var(--axe-hud-launcher-size, 42px) + 7px) !important;
+}
+.game3d-view .axe-minigames-launch {
+  left: calc(var(--axe-map-left) + (var(--axe-hud-launcher-size, 42px) + 7px) * 2) !important;
+}
+@media (max-width: 620px) {
+  .game3d-view {
+    --axe-map-top: 25px;
+    --axe-map-left: 12px;
+    --axe-map-size: 106px;
+    --axe-hud-launcher-size: 36px;
+    --axe-chat-block: 96px;
+  }
+  .game3d-view .jade-hud .jade-services-navigation {
+    width: max(72px, calc(100% - 12px - 106px - 22px - 144px - 12px - 8px)) !important;
+  }
+}
+@media (max-width: 420px) {
+  .game3d-view {
+    --axe-map-top: 18px;
+    --axe-map-left: 12px;
+    --axe-map-size: 80px;
+    --axe-chat-block: 84px;
+  }
+  .game3d-view .jade-hud .jade-services-navigation {
+    width: max(64px, calc(100% - 12px - 80px - 16px - 120px - 8px - 8px)) !important;
+  }
+}
