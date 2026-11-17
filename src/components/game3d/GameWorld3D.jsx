@@ -187,6 +187,7 @@ import { createAvatarDrawCalls } from './player/avatarDrawCalls';
 import { createWorldEnvironmentSystem } from './WorldEnvironmentSystem';
 import { createCharacterReadabilityLights } from './CharacterReadabilityLights';
 import { getCharacterDodge, getPlanarBasisFromYaw } from './player/characterDodgeVector';
+import { getEightWayDodgeMove } from './player/game3dEightWayDodge.mjs';
 import { game3dInputKey, game3dMoveAxes } from './player/Game3DMovementInput.mjs';
 import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, directionRelativeToFacing } from './axe/player/AXEClickToMove';
 import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/player/AXEClickToMoveScene';
@@ -2109,17 +2110,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       return { forward, right: cameraRight, cameraForward, cameraRight };
     };
 
-    // Dodge is resolved in the CHARACTER's frame — camera angle/pitch has no
-    // influence. The tapped key decides the side; any other WASD key still
-    // held blends in, all relative to the body's facing.
+    // Eight-way dodges are actor-relative, not based on camera pitch/yaw.
+    // Each diagonal gets its own actual animation and collision-swept vector.
+    // R alone is the backward shoulder roll; R + WASD chooses a 360-degree roll.
     const getDodgeVectorAndName = (key) => {
-      if (!model) return { direction: 'forward', vector: new THREE.Vector3(0, 0, 1) };
+      if (!model) return { direction: 'backward', vector: new THREE.Vector3(0, 0, -1) };
       return getCharacterDodge(model, {
         forward: key === 'w' || !!keys.current['w'],
         backward: key === 's' || !!keys.current['s'],
         left: key === 'a' || !!keys.current['a'],
         right: key === 'd' || !!keys.current['d'],
-      });
+      }, {fallback:key==='r'?'backward':'forward'});
     };
 
     const updateLockOnRotation = (delta) => {
@@ -2258,7 +2259,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const dodgeBudget = canSpendCombatResource('dodge');
           if (!dodgeBudget.ok) {
             showCombatNotice('Not enough stamina to dodge');
-          } else if (playerStateMachine.canStart('dodge') && playerAnim?.requestDodge?.(dodge.vector, dodge.direction) && playerStateMachine.startCombat('dodge', { lock: 0.45, cancel: 0.18 })) {
+          } else if (playerStateMachine.canStart('dodge') && playerAnim?.requestDodge?.(dodge.vector, dodge.direction) &&
+            playerStateMachine.startCombat('dodge', { lock: getEightWayDodgeMove(dodge.direction).duration, cancel: 0.18 })) {
             spendCombatResource('dodge');
             window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
             startDodgeVanish(dodge.direction);
@@ -2296,10 +2298,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const roll=getDodgeVectorAndName('w');
           const budget=canSpendCombatResource('dodge');
           if(!budget.ok)showCombatNotice('Not enough stamina to roll');
-          else if(playerAnim?.requestRoll?.(roll.vector)){
-            playerStateMachine.startCombat('dodge',{lock:0.72,cancel:0.25});
+          else if(playerAnim?.requestRoll?.(roll.vector,roll.direction)){
+            playerStateMachine.startCombat('dodge',{
+              lock:getEightWayDodgeMove(roll.direction,{roll:true}).duration,cancel:0.25,
+            });
             spendCombatResource('dodge');
+            window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
             startDodgeVanish();
+            playerDodgeSequence += 1;
             playActionSound('player_jump');
           }
         }
