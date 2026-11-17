@@ -18,6 +18,9 @@ import {CLONE_GPU_PROFILE_KEY,CLONE_GPU_PROFILES,readCloneGPUProfile,
   normalizeCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
 import {readGame3DDesktopInstall,saveGame3DDesktopInstall}
   from './performance/Game3DDesktopInstall.mjs';
+import {GAME3D_GPU_BRIDGE_DOWNLOAD,GAME3D_GPU_BRIDGE_SESSION_KEY,
+  describeGame3DGpuReport,fetchGame3DGpuBridge,parseGame3DGpuReport}
+  from './performance/Game3DGpuBridge.mjs';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_BUFFER_APPLIED_EVENT,
   GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
   readGame3DDisplaySettings,saveGame3DDisplaySettings,game3DResolutionTarget,
@@ -92,6 +95,12 @@ export default function PauseMenu({
   const [gpuProfile,setGpuProfile]=useState(()=>
     typeof window==='undefined'?'auto':readCloneGPUProfile(window));
   const [desktopInstall,setDesktopInstall]=useState(()=>readGame3DDesktopInstall());
+  const [bridgeCode,setBridgeCode]=useState('');
+  const [bridgeReport,setBridgeReport]=useState(()=>{
+    try{return parseGame3DGpuReport(sessionStorage.getItem(GAME3D_GPU_BRIDGE_SESSION_KEY));}
+    catch{return null;}
+  });
+  const [bridgeError,setBridgeError]=useState('');
   const [displaySettings,setDisplaySettings]=useState(readGame3DDisplaySettings);
   const [displayViewport,setDisplayViewport]=useState(()=>({
     width:typeof window==='undefined'?1280:window.innerWidth,
@@ -276,6 +285,31 @@ export default function PauseMenu({
   };
   const changeDesktopInstall=target=>{
     setDesktopInstall(saveGame3DDesktopInstall(target));
+  };
+  const rememberBridge=report=>{
+    setBridgeReport(report);
+    setBridgeError('');
+    window.__gw3dGpuBridge=report;
+    try{sessionStorage.setItem(GAME3D_GPU_BRIDGE_SESSION_KEY,JSON.stringify(report));}catch{}
+  };
+  const connectGpuBridge=async()=>{
+    setBridgeError('');
+    const controller=new AbortController();
+    const timer=window.setTimeout(()=>controller.abort(),2500);
+    try{
+      rememberBridge(await fetchGame3DGpuBridge({pairingCode:bridgeCode,signal:controller.signal}));
+    }catch(error){
+      setBridgeError(error?.name==='AbortError'
+        ?'The bridge did not answer. Start Export-FallenSkyGpu.ps1 and leave its window open.'
+        :error?.message||'Could not connect to the graphics-card bridge.');
+    }finally{window.clearTimeout(timer);}
+  };
+  const loadGpuBridgeFile=async event=>{
+    const file=event.target.files?.[0];
+    event.target.value='';
+    if(!file)return;
+    try{rememberBridge(parseGame3DGpuReport(await file.text()));}
+    catch(error){setBridgeError(error?.message||'Could not read that graphics-card report.');}
   };
   const displayPreview=game3DResolutionTarget({
     resolution:displaySettings.resolution,
@@ -592,6 +626,22 @@ export default function PauseMenu({
                       : 'You are playing in the web browser. '}
                     A browser page cannot turn itself into an .exe, and there is no installer to download yet.
                     The Windows program is the later install, so the game can use the GPU outside the browser.
+                  </p>
+                  <h4 className="axe3d-pause__subhead">Graphics-card connection</h4>
+                  <p className="axe3d-pause__help">The page cannot see the graphics card by itself. Download the bridge, run it on this Windows computer, and enter its pairing code. Or run it with -ExportOnly and load the JSON file it places in your user folder. This does not run on a phone.</p>
+                  <p className="axe3d-pause__help"><a href={GAME3D_GPU_BRIDGE_DOWNLOAD}>Download graphics-card bridge</a></p>
+                  <label className="axe3d-pause__help">Pairing code
+                    <input value={bridgeCode} autoComplete="off" spellCheck="false"
+                      onChange={event=>setBridgeCode(event.target.value)}
+                      aria-label="Graphics-card bridge pairing code"/>
+                  </label>
+                  <button type="button" className="axe3d-pause__option" onClick={connectGpuBridge}>Connect</button>
+                  <label className="axe3d-pause__help">Load report file
+                    <input type="file" accept="application/json,.json" onChange={loadGpuBridgeFile}
+                      aria-label="Load graphics-card report file"/>
+                  </label>
+                  <p className="axe3d-pause__help" role="status" data-testid="game3d-gpu-bridge">
+                    {bridgeError||describeGame3DGpuReport(bridgeReport)}
                   </p>
                 </div>
               </div>}
