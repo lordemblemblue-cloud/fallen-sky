@@ -1931,12 +1931,15 @@
   left:calc(clamp(14px,2.4vw,42px) + clamp(126px,11.2vw,184px) + 12px);
   width:max(0px,calc(100% - clamp(14px,2.4vw,42px) - clamp(126px,11.2vw,184px) - clamp(14px,2.4vw,42px) - clamp(215px,19vw,306px) - 24px));
 }
-/* The quest box formerly began under an empty top-left portrait. The map and
- * level-up notice now use that space: keep quests below them rather than
- * placing a large quest panel over the minimap or the level-up toast. */
+/* Quests normally begin immediately below the left minimap and its optional
+ * target bar; only when the 1.5s level-up toast is visible do they move farther
+ * down, so neither box covers the other during that brief notification. */
 .jade-hud .jade-quest-tracker {
-  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 50px + 115px + 26px);
+  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 66px);
   max-height:min(30vh,240px);
+}
+.game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
+  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 50px + 115px + 26px);
 }
 .jade-hud .jade-compass-block .axe-target-lock {
   width:min(100%,228px);
@@ -1954,8 +1957,11 @@
     width:max(0px,calc(100% - 12px - 106px - 8px - 144px - 12px - 8px));
   }
   .jade-hud .jade-quest-tracker {
-    top:calc(25px + 106px + 43px + 102px + 26px);
+    top:calc(25px + 106px + 66px);
     max-height:min(24vh,190px);
+  }
+  .game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
+    top:calc(25px + 106px + 43px + 102px + 26px);
   }
 }
 @media(max-width:420px) {
@@ -1970,8 +1976,11 @@
     width:max(0px,calc(100% - 12px - 80px - 8px - 120px - 8px - 8px));
   }
   .jade-hud .jade-quest-tracker {
-    top:calc(18px + 80px + 43px + 102px + 22px);
+    top:calc(18px + 80px + 66px);
     width:min(48vw,185px);
     max-height:min(25vh,165px);
+  }
+  .game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
+    top:calc(18px + 80px + 43px + 102px + 22px);
   }
 }
