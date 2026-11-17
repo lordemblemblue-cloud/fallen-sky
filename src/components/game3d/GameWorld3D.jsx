@@ -1045,7 +1045,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           throw Error('Wolfveil imported town GLB not ready: refusing incomplete full-map export');
       }
       const {exportGame3DFullMap} = await import('./mapExport/Game3DFullMapExporter.mjs');
-      const performExport=()=>exportGame3DFullMap({...options,scene,region});
+      // The caves hide their buried interior while the player is on the
+      // surface; an export must still contain every tunnel and chamber.
+      const exportScene=()=>exportGame3DFullMap({...options,scene,region});
+      const caves=wolfveilVillage?.caveSystem;
+      const performExport=()=>caves?.withInteriorShown
+        ?caves.withInteriorShown(exportScene):exportScene();
       // Export ALL original static meshes, not only today's loaded chunks.
       return regionStream?regionStream.withFullMapExport(performExport):performExport();
     };

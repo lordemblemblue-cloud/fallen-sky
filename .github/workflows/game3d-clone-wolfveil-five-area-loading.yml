@@ -16,6 +16,7 @@ on:
       - 'tests/game3d-clone-wolfveil-five-area-loading.test.mjs'
       - 'tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs'
       - 'tests/game3d-clone-platform-graphics.test.mjs'
+      - 'tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs'
       - '.github/workflows/game3d-clone-wolfveil-five-area-loading.yml'
   workflow_dispatch:
 
@@ -31,11 +32,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Five areas, portals, area loader, platform profiles and budgets
+      - name: Five areas, portals, area loader, platform profiles, budgets and cave draw budget
         run: |
           node --test \
             tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
-            tests/game3d-clone-platform-graphics.test.mjs
+            tests/game3d-clone-platform-graphics.test.mjs \
+            tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs
 
   real-valley:
     name: Real valley under real Three.js, lint and production build
@@ -55,7 +57,7 @@ jobs:
         run: |
           node --test --test-force-exit \
             tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs
-      - name: Report what one loaded area costs (with the imported town model when reachable)
+      - name: Report what one loaded area costs (with the artisan town)
         run: node scripts/report-wolfveil-area-loading.mjs --town
       - name: Lint the new files (must be clean)
         run: |
@@ -68,16 +70,20 @@ jobs:
             src/components/game3d/performance/Game3DPlatformGraphics.mjs \
             src/components/game3d/performance/Game3DPlatformGraphicsPanel.jsx \
             src/components/game3d/performance/Game3DAreaBudget.mjs \
+            src/components/game3d/performance/Game3DStaticInstancing.mjs \
+            src/components/game3d/wolfveil/WolfveilCaveDrawBudget.mjs \
             scripts/report-wolfveil-area-loading.mjs \
             tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs \
-            tests/game3d-clone-platform-graphics.test.mjs
+            tests/game3d-clone-platform-graphics.test.mjs \
+            tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs
       - name: Lint the edited files (no more errors than main)
         run: |
           count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
           status=0
           for file in \
             src/components/game3d/GameWorld3D.jsx \
+            src/components/game3d/wolfveil/WolfveilCaveSystem.js \
             src/components/game3d/PauseMenu.jsx \
             src/components/game3d/debug/RenderStatsOverlay.jsx \
             src/pages/GameView.jsx; do

@@ -6,7 +6,7 @@
 // prints what one loaded area costs next to the whole valley.
 //
 //   node scripts/report-wolfveil-area-loading.mjs            the valley
-//   node scripts/report-wolfveil-area-loading.mjs --town     + the imported town model (network)
+//   node scripts/report-wolfveil-area-loading.mjs --town     + the artisan town beside the valley
 //   node scripts/report-wolfveil-area-loading.mjs --json     machine-readable
 //
 // What it cannot measure: frame rate, real draw calls after frustum culling,
@@ -115,9 +115,11 @@ function costOf(node){
 // Everything the renderer would be handed, honouring `visible` the way
 // Three.js does (an invisible parent hides its whole subtree).
 export function measureVisibleScene(root,{labelOf=()=>'scene',skip=()=>false}={}){
-  const out={objects:0,drawCalls:0,triangles:0,ids:new Set(),byLabel:new Map()};
+  const out={objects:0,drawCalls:0,triangles:0,lights:0,ids:new Set(),byLabel:new Map()};
   const walk=node=>{
     if(node.visible===false||skip(node))return;
+    // Every light that is switched on is paid for by every lit surface.
+    if(node.isLight&&!node.isAmbientLight&&!node.isHemisphereLight&&node.intensity>0)out.lights++;
     if(isRenderable(node)){
       const cost=costOf(node);
       out.objects++;out.drawCalls+=cost.drawCalls;out.triangles+=cost.triangles;
@@ -170,12 +172,14 @@ export async function runWolfveilAreaLoadingReport({
   let town=null;
   if(withTown){
     try{
-      const {installWolfveilImportedTown}=await import(SOURCE+'wolfveil/WolfveilImportedTownScene.mjs');
-      town=installWolfveilImportedTown(scene,{});
+      // The town GameWorld3D mounts today: the artisan fountain town, built
+      // in code (no download), standing beside the valley in the scene.
+      const {installWolfveilArtisanTown}=await import(SOURCE+'wolfveil/WolfveilArtisanTownScene.mjs');
+      town=installWolfveilArtisanTown(scene,{});
       const deadline=Date.now()+townTimeoutMs;
       while(town.status==='loading'&&Date.now()<deadline)await sleep(250);
-      noteOnce('imported town model: '+town.status);
-    }catch(error){noteOnce('imported town could not be installed: '+(error?.message||error));}
+      noteOnce('town: '+town.status);
+    }catch(error){noteOnce('the town could not be installed: '+(error?.message||error));}
   }
   if(assetWaitMs>0)await sleep(assetWaitMs); // let owner trees, houses and palace arrive
   const assetState=key=>{try{return village[key]??null;}catch(error){return 'unreadable: '+error.message;}};
@@ -191,8 +195,15 @@ export async function runWolfveilAreaLoadingReport({
   let loader=null,portals=null;
   const events=[];
   // One game frame, in the order GameWorld3D runs it.
+  // The player's feet follow the turf, as in the game, unless a cave visit
+  // has put them underground.
+  let underground=false;
   const frame=(dt=.1)=>{
     clock.t+=dt*1000;
+    if(!underground){
+      const turf=village.worldHeight?.(position.x,position.z);
+      if(Number.isFinite(turf))position.y=turf;
+    }
     loader?.update(position);
     portals?.update(dt,position,loader?.getArea());
     try{village.update(dt,weather,position);}
@@ -325,8 +336,8 @@ export async function runWolfveilAreaLoadingReport({
     check(seen.drawCalls<=whole.drawCalls,'loading only '+id+' issues more draw calls than the whole valley from the same spot');
     const budget=evaluateGame3DAreaBudget({platform:'browser',calls:seen.drawCalls,triangles:seen.triangles});
     areas[id]={
-      drawCalls:seen.drawCalls,triangles:seen.triangles,objects:seen.objects,
-      wholeValleyHere:{drawCalls:whole.drawCalls,triangles:whole.triangles},
+      drawCalls:seen.drawCalls,triangles:seen.triangles,objects:seen.objects,lights:seen.lights,
+      wholeValleyHere:{drawCalls:whole.drawCalls,triangles:whole.triangles,lights:whole.lights},
       drawCallShare:seen.drawCalls/whole.drawCalls,triangleShare:seen.triangles/whole.triangles,
       browserBudget:{within:budget.within,over:[...budget.over],
         drawCallShare:budget.drawCallShare,triangleShare:budget.triangleShare},
@@ -425,6 +436,73 @@ export async function runWolfveilAreaLoadingReport({
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');
   loader.setOptions({releaseGpuMemory:false});
 
+  // ---- caves: buried parts only underground, identical props one draw ----
+  const caves=village.caveSystem;
+  let caveResult=null;
+  if(caves?.drawBudget?.stats()){
+    const byMaterial=node=>{
+      const list=Array.isArray(node.material)?node.material:[node.material];
+      return list.map(material=>material?.name||material?.uuid||'none').join('+');
+    };
+    const measureCaves=()=>measureVisibleScene(caves.group,{labelOf:byMaterial});
+    const boundsOf=()=>{
+      scene.updateMatrixWorld(true);
+      const box=new THREE.Box3().setFromObject(caves.group);
+      return [box.min.x,box.min.y,box.min.z,box.max.x,box.max.y,box.max.z];
+    };
+    moveTo(...spots.town);run(.5);
+    const onSurface=measureCaves();
+    const surfaceStats=caves.drawBudget.stats();
+    check(surfaceStats.interiorShown===false,
+      'standing in town the buried cave interior must be switched off ('+surfaceStats.reason+')');
+    // As built (budget off) against merged with the whole network shown.
+    caves.drawBudget.setEnabled(false);
+    const built=measureCaves(),builtBounds=boundsOf();
+    caves.drawBudget.setEnabled(true);
+    const merged=await caves.withInteriorShown(async()=>({count:measureCaves(),bounds:boundsOf()}));
+    check(!caves.drawBudget.isInteriorShown(),'after a map export the cave interior must be hidden again');
+    check(merged.count.triangles===built.triangles,
+      'merging cave props must not add or lose triangles ('+merged.count.triangles+' vs '+built.triangles+')');
+    const materialGap=[];
+    for(const label of new Set([...built.byLabel.keys(),...merged.count.byLabel.keys()])){
+      const was=built.byLabel.get(label)?.triangles||0,now=merged.count.byLabel.get(label)?.triangles||0;
+      if(Math.abs(was-now)>.5)materialGap.push(label+' '+now+' vs '+was);
+    }
+    check(!materialGap.length,'cave triangles moved between materials: '+materialGap.slice(0,5).join(', '));
+    const drift=Math.max(...builtBounds.map((value,i)=>Math.abs(value-merged.bounds[i])));
+    check(drift<=.05,'merged cave props must occupy the same space as built (bounds moved '+drift.toFixed(3)+' m)');
+    check(merged.count.drawCalls<built.drawCalls,
+      'merging cave props must lower the draw calls ('+merged.count.drawCalls+' vs '+built.drawCalls+')');
+    check(onSurface.drawCalls<merged.count.drawCalls,
+      'on the surface fewer cave draws than underground ('+onSurface.drawCalls+' vs '+merged.count.drawCalls+')');
+    // Walk in through the first arch: the interior must be there on arrival.
+    const cave=caves.caves[0];
+    const body={x:cave.mouth[0],y:cave.mouthY,z:cave.mouth[1]+OFFSET};
+    const entered=caves.interact(body);
+    let inside=null,wholeSceneInside=null,left=null;
+    check(entered?.action==='enter','pressing E at the first cave arch did not enter the cave');
+    if(entered?.action==='enter'){
+      check(caves.drawBudget.isInteriorShown(),'the cave interior was not drawn on the frame the player arrived');
+      underground=true;position.x=body.x;position.y=body.y;position.z=body.z;
+      run(.5);
+      check(caves.drawBudget.isInteriorShown(),'the cave interior switched off while the player stood inside');
+      inside=measureCaves();wholeSceneInside=measure();
+      left=caves.interact(position);
+      if(left?.action==='exit'){
+        underground=false;run(.5);
+        check(!caves.drawBudget.isInteriorShown(),'back on the surface the cave interior must switch off again');
+      }else noteOnce('the cave visit ended underground: no exit prompt where the arch drops the player');
+    }
+    caveResult={
+      asBuilt:{drawCalls:built.drawCalls,triangles:built.triangles},
+      onSurface:{drawCalls:onSurface.drawCalls,triangles:onSurface.triangles},
+      insideCave:inside&&{drawCalls:inside.drawCalls,triangles:inside.triangles},
+      wholeSceneInsideCave:wholeSceneInside&&{drawCalls:wholeSceneInside.drawCalls,triangles:wholeSceneInside.triangles},
+      visit:{entered:entered?.name||null,left:left?.action||null},
+      boundsDriftMeters:drift,budget:caves.drawBudget.stats(),
+    };
+  }else check(!caves,'the cave draw budget failed to install (see the console warning)');
+
   // ---- hand everything back ----------------------------------------------
   check(loader.getStats().failed===null,'loader failed open: '+loader.getStats().failed);
   const finalStats=loader.getStats();
@@ -453,7 +531,7 @@ export async function runWolfveilAreaLoadingReport({
     breakdowns,
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
-    areas,portals:portalResults,
+    areas,portals:portalResults,caves:caveResult,
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
     report,
@@ -465,7 +543,7 @@ export function formatWolfveilAreaLoadingReport(result){
   const pct=value=>Math.round(value*100)+'%';
   const lines=[];
   lines.push('Wolfveil five-area loading, real valley, Three.js r'+result.three+
-    (result.withTown?' (with the imported town model)':' (without the imported town model)'));
+    (result.withTown?' (with the artisan town)':' (without the town)'));
   lines.push('assets: '+JSON.stringify(result.assets));
   lines.push('timings: '+JSON.stringify(result.timings));
   lines.push('');
@@ -487,6 +565,21 @@ export function formatWolfveilAreaLoadingReport(result){
     for(const entry of area.largest)
       lines.push('    '+n(entry.triangles).padStart(10)+' tris  '+String(entry.drawCalls).padStart(4)+' calls  '+
         String(entry.objects).padStart(4)+' objects  '+entry.label);
+  }
+  lines.push('');
+  lines.push('Lights switched on (each one is paid for by every lit surface): '+
+    Object.entries(result.areas).map(([id,area])=>id+' '+area.lights+' of '+area.wholeValleyHere.lights).join(', '));
+  if(result.caves){
+    const c=result.caves,row=entry=>entry?String(entry.drawCalls).padStart(4)+' calls  '+
+      n(entry.triangles).padStart(8)+' tris':'   not measured';
+    lines.push('');
+    lines.push('Caves and tunnels (drawn from anywhere in the valley until now):');
+    lines.push('  as built, always drawn      '+row(c.asBuilt));
+    lines.push('  now, on the surface         '+row(c.onSurface));
+    lines.push('  now, inside a cave          '+row(c.insideCave)+'   (whole scene while inside: '+row(c.wholeSceneInsideCave)+')');
+    lines.push('  visit: entered '+(c.visit.entered||'nothing')+', then '+(c.visit.left||'stayed inside')+
+      '; bounds moved '+c.boundsDriftMeters.toFixed(4)+' m');
+    lines.push('  '+JSON.stringify(c.budget));
   }
   lines.push('');
   lines.push('Loader: '+JSON.stringify(result.loader));
