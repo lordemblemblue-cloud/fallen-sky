@@ -1,0 +1,30 @@
+name: Game 3D Login Theme Stops After Play
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/audio/Game3DEntryAudio.mjs'
+      - 'src/pages/GameView.jsx'
+      - 'tests/game3d-entry-audio-and-movement.test.mjs'
+      - '.github/workflows/game3d-entry-music.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  intro-music-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Character-menu theme, Play transition and combat regressions
+        run: node --test tests/game3d-entry-audio-and-movement.test.mjs
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify Game 3D production bundle
+        run: npm run build
