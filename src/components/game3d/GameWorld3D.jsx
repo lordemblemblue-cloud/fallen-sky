@@ -1598,6 +1598,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const playerStateMachine = new CorePlayerStateMachine();
     let coreAnimationController = null;
     const otsCameraColliders = createOTSCameraColliders({ groundMeshes, roots: () => [wolfveilVillage?.world?.group, importedSpawnTown?.root] }); const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes, aim: otsAim.current, cameraColliders: otsCameraColliders });
+    const hudProjection = new THREE.Vector3(); // reuse: no per-frame vector allocations for stamina anchor
     // Clone already owns the tiny OTS aim dot. Add only the confirmed-hit
     // brackets and original spirit-bird animation, not a second crosshair.
     const bowOccluders=otsCameraColliders;
@@ -3211,8 +3212,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if(remote)place(remote.group,p,true);
           }
         }
-        // Broadcast live player position + facing to the HUD minimap store (isRunning consumed by WindRunEffect)
-        setPlayerPosition({ x: model.position.x, z: model.position.z, yaw: orbit.current.yaw, isRunning: isRunning && isMoving });
+        // Position projection is published just after the camera updates below.
         window.__localPlayerPos = { x: model.position.x, y: model.position.y, z: model.position.z };
         if (performance.now() >= nextCheckpointSaveAt) {
           nextCheckpointSaveAt = performance.now() + 4000;
@@ -3245,6 +3245,25 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Smooth camera system: damped lock-on yaw, combat distance, and sprint pullback without per-frame object spam.
         playerCameraSystem.update(delta, playerStateMachine.intent);
         companionCameraFade?.update({camera,player:model,mounted,delta});
+        // The real in-scene avatar is the HUD stamina anchor. Store normalized
+        // screen percentages alongside existing minimap position + running
+        // state. This affects no movement, camera control, worker authority,
+        // skills or weapon roles.
+        camera.updateMatrixWorld();
+        hudProjection.set(
+          model.position.x, model.position.y + (mounted ? 2.25 : 1.35),
+          model.position.z,
+        ).project(camera);
+        setPlayerPosition({
+          x: model.position.x, z: model.position.z,
+          yaw: orbit.current.yaw, isRunning: isRunning && isMoving,
+          screenX:(hudProjection.x + 1) * 50,
+          screenY:(1 - hudProjection.y) * 50,
+          screenVisible:Number.isFinite(hudProjection.x) &&
+            Number.isFinite(hudProjection.y) &&
+            hudProjection.z >= -1 && hudProjection.z <= 1 &&
+            Math.abs(hudProjection.x) <= 1 && Math.abs(hudProjection.y) <= 1,
+        });
         updateOTSAimFrame({camera,aim:otsAim.current,colliders:otsCameraColliders(),
           extraMeshes:[...enemies,...bossEntities].map(e=>e.group).filter(Boolean),
           bowEquipped:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
