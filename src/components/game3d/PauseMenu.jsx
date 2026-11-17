@@ -3,6 +3,7 @@ import {AnimatePresence, motion} from 'framer-motion';
 import {
   AudioLines, ChevronRight, DoorOpen, Gamepad2,
   Keyboard, LogOut, Monitor, MousePointerClick, Play, Settings2, Users, MessageSquare, BookOpen,
+  LayoutDashboard, Move, RotateCcw,
   ShieldAlert, UserPlus, Volume2, VolumeX, X,
 } from 'lucide-react';
 import {base44} from '@/api/base44Client';
@@ -29,10 +30,15 @@ import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_BUFFER_APPLIED_EVENT,
 import {readWolfveilWorldVariant,saveWolfveilWorldVariant,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
+import {
+  GAME3D_HUD_CUSTOMIZATION_EVENT,GAME3D_HUD_LAYOUTS,GAME3D_HUD_WIDGETS,
+  readGame3DHudCustomization,saveGame3DHudCustomization,
+  changeGame3DHudWidget,defaultGame3DHudCustomization,
+} from './hud/Game3DHudCustomization.mjs';
 import './PauseMenu.css';
 
 const MENU_ICONS={overview:Gamepad2,audio:AudioLines,controls:Keyboard,
-  graphics:Monitor,community:Users,session:DoorOpen};
+  graphics:Monitor,ui:LayoutDashboard,community:Users,session:DoorOpen};
 const PRESET_QUALITY=['low','medium','high','ultra'];
 const FPS_CAPS=[30,60,120,144];
 const CONTROL_KEYS=[
@@ -73,7 +79,7 @@ function Switch({checked,onChange,label,description}){
 
 export default function PauseMenu({
   open,onClose,volume=0.5,onVolumeChange=()=>{},onReturnToCharacterSelect,onCreateCharacter,
-  context='world',motionEnabled,onMotionChange,
+  context='world',motionEnabled,onMotionChange,onEditHUD,
 }){
   const entry=context==='entry';
   const reduceMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -102,6 +108,13 @@ export default function PauseMenu({
   });
   const [bridgeError,setBridgeError]=useState('');
   const [displaySettings,setDisplaySettings]=useState(readGame3DDisplaySettings);
+  const [hudPrefs,setHudPrefs]=useState(readGame3DHudCustomization);
+  const [hudPanel,setHudPanel]=useState('combat');
+  useEffect(()=>{
+    const onChange=event=>setHudPrefs(event?.detail||readGame3DHudCustomization());
+    window.addEventListener(GAME3D_HUD_CUSTOMIZATION_EVENT,onChange);
+    return ()=>window.removeEventListener(GAME3D_HUD_CUSTOMIZATION_EVENT,onChange);
+  },[]);
   const [displayViewport,setDisplayViewport]=useState(()=>({
     width:typeof window==='undefined'?1280:window.innerWidth,
     height:typeof window==='undefined'?720:window.innerHeight,
@@ -182,6 +195,7 @@ export default function PauseMenu({
     setGpuStats(isRenderStatsEnabled(window.location.search,window.localStorage));
     setGpuProfile(readCloneGPUProfile(window));
     setDisplaySettings(readGame3DDisplaySettings());
+    setHudPrefs(readGame3DHudCustomization());
     setWorldVariant(readWolfveilWorldVariant());
     setWorldVariantError('');
     // Refresh the same graphics settings written from either entry or in-world.
@@ -276,6 +290,11 @@ export default function PauseMenu({
     const saved=saveGame3DDisplaySettings(next);
     setDisplaySettings(saved);
   };
+  const changeHudPrefs=next=>setHudPrefs(saveGame3DHudCustomization(next));
+  const changeHudPanel=(id,patchValue)=>changeHudPrefs(changeGame3DHudWidget(hudPrefs,id,patchValue));
+  const resetHudPositions=()=>changeHudPrefs({
+    ...hudPrefs,widgets:defaultGame3DHudCustomization().widgets,
+  });
   const changeGpuProfile=next=>{
     const profile=normalizeCloneGPUProfile(next);
     setGpuProfile(profile);
@@ -355,6 +374,7 @@ export default function PauseMenu({
     audio:['Audio','Adjust your game theme'],
     controls:['Controls','Choose how you move through the world'],
     graphics:['Graphics & Display','Tune the world to your device'],
+    ui:['UI Customization','Arrange your HUD and choose your weapon and skill layout'],
     community:['HUD & Community','Choose which social elements appear while you play'], 
     session:['Session','Manage your character and account'],
   }[view]||['Journey Menu','Your adventure is still running'];
@@ -451,6 +471,9 @@ export default function PauseMenu({
                   <button type="button" onClick={()=>selectView('community')}>
                     <Users size={22}/><strong>Community</strong><span>Chat · Echo · Players</span>
                   </button>
+                  <button type="button" onClick={()=>selectView('ui')}>
+                    <LayoutDashboard size={22}/><strong>UI</strong><span>HUD scale · Layout · Move boxes</span>
+                  </button>
                 </div>
               </>}
               {view==='audio'&&<div className="axe3d-pause__surface">
@@ -486,6 +509,66 @@ export default function PauseMenu({
                   </div>
                 </div>
               </>}
+              {view==='ui'&&<div className="axe3d-pause__hud-ui" data-testid="game3d-ui-customization-settings">
+                <div className="axe3d-pause__surface">
+                  <div className="axe3d-pause__surface-heading"><LayoutDashboard size={22}/><div>
+                    <strong>Weapon &amp; Skill Layout</strong>
+                    <p>Switch between the current compact row and the original Concept D with vertical weapons and horizontal skills. Equipment, cooldowns, and combat inputs never change.</p>
+                  </div></div>
+                  <OptionButtons label="Combat HUD preset" value={hudPrefs.layout}
+                    items={GAME3D_HUD_LAYOUTS.map(o=>({id:o.id,text:o.label}))}
+                    onPick={layout=>changeHudPrefs({...hudPrefs,layout})}/>
+                  <p className="axe3d-pause__help">
+                    {GAME3D_HUD_LAYOUTS.find(o=>o.id===hudPrefs.layout)?.description}
+                  </p>
+                </div>
+                <div className="axe3d-pause__surface">
+                  <div className="axe3d-pause__surface-heading"><Move size={22}/><div>
+                    <strong>Scale &amp; Position HUD Boxes</strong>
+                    <p>Adjust the entire HUD, resize individual elements, and rearrange them after entering the game.</p>
+                  </div></div>
+                  <label className="axe3d-pause__hud-range">
+                    <span>Overall HUD size</span>
+                    <input type="range" min=".7" max="1.35" step=".05"
+                      aria-label="Overall HUD size" value={hudPrefs.globalScale}
+                      onChange={e=>changeHudPrefs({...hudPrefs,globalScale:Number(e.target.value)})}/>
+                    <output>{Math.round(hudPrefs.globalScale*100)}%</output>
+                  </label>
+                  <label className="axe3d-pause__hud-selector">
+                    <span>Adjust box</span>
+                    <select aria-label="Choose a HUD box to resize" value={hudPanel}
+                      onChange={e=>setHudPanel(e.target.value)}>
+                      {GAME3D_HUD_WIDGETS.map(o=><option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="axe3d-pause__hud-range">
+                    <span>Selected box size</span>
+                    <input type="range" min=".65" max="1.5" step=".05"
+                      aria-label="Selected HUD box size" value={hudPrefs.widgets[hudPanel].scale}
+                      onChange={e=>changeHudPanel(hudPanel,{scale:Number(e.target.value)})}/>
+                    <output>{Math.round(hudPrefs.widgets[hudPanel].scale*100)}%</output>
+                  </label>
+                  <div className="axe3d-pause__hud-buttons">
+                    <button type="button" onClick={()=>
+                      changeHudPanel(hudPanel,{x:0,y:0,scale:1})}>
+                      <RotateCcw size={15}/> Reset selected box
+                    </button>
+                    <button type="button" onClick={resetHudPositions}>
+                      Reset all box positions
+                    </button>
+                    {!entry&&typeof onEditHUD==='function'&&
+                      <button type="button" className="axe3d-pause__hud-edit-now"
+                        onClick={onEditHUD}>
+                        <Move size={15}/> Edit HUD in World
+                      </button>}
+                  </div>
+                  <p className="axe3d-pause__help">
+                    {entry?'Enter the world to drag and reposition boxes.':
+                      'Select Edit HUD in World to drag the live boxes. You can also move them with arrow keys and press Esc to finish.'}
+                    {' '}Settings are saved locally in this browser.
+                  </p>
+                </div>
+              </div>}
               {view==='community'&&<div className="axe3d-pause__settings-grid" data-testid="game3d-community-settings">
                 <div className="axe3d-pause__surface">
                   <div className="axe3d-pause__surface-heading">
