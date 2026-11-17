@@ -165,16 +165,16 @@ numbers are an upper bound on what one camera view draws. The job
 pull request, then lints the new files and runs `npm run build`.
 
 Draw calls / triangles standing deep inside each area (browser budget: 500
-draw calls, 1.5 M triangles). All four owner models (tree, grass, plants,
-garden) load in this run.
+draw calls, 1.5 M triangles). All four owner models load in this run, on
+`main` at `2093d13` (walkable low-poly town, #50 and later).
 
-| Area  | Whole valley, as it was built | One area loaded, now |
-|-------|-------------------------------|----------------------|
-| town  | 4,558 / 3.44 M                | 790 / 1.63 M         |
-| south | 4,591 / 4.40 M                | 303 / 1.75 M         |
-| west  | 4,591 / 4.32 M                | 490 / 2.38 M         |
-| east  | 4,586 / 4.09 M                | 450 / 1.92 M         |
-| north | 4,591 / 4.30 M                | 437 / 1.91 M         |
+| Area  | Whole valley, as first measured | One area loaded, now |
+|-------|---------------------------------|----------------------|
+| town  | 4,558 / 3.44 M                  | 641 / 1.51 M         |
+| south | 4,591 / 4.40 M                  | 303 / 1.74 M         |
+| west  | 4,591 / 4.32 M                  | 490 / 2.37 M         |
+| east  | 4,586 / 4.09 M                  | 450 / 1.92 M         |
+| north | 4,591 / 4.30 M                  | 437 / 1.91 M         |
 
 - All 11 portals pass walking both ways: arrival notice, both sides loaded
   during the crossing, arch shown.
@@ -184,21 +184,27 @@ garden) load in this run.
 - **Caves** (`wolfveil/WolfveilCaveDrawBudget.mjs`): 791 draw calls as built,
   drawn from anywhere. Now 65 on the surface and 150 inside a cave, with the
   same triangles per material and the same bounds.
-- **Town** (`performance/Game3DStaticMerging.mjs`): the artisan plaza is 3,555
-  draw calls for 139,468 triangles as built. Merged: 399 draw calls, the same
-  139,468 triangles, bounds unchanged. 3,212 parts became 56 meshes; 224
-  moving parts, 64 tagged, 33 see-through and 13 one-of-a-kind parts were left
-  alone; none had to be handed back in ten seconds of town animation.
-- **Distant scenery** (below): 1 to 5 draw calls and 46,000 to 69,000
+- **Town** (`performance/Game3DStaticMerging.mjs`, installed in
+  `WolfveilArtisanTownScene.mjs`). The town on `main` batches itself, hides
+  far buildings (homes beyond 62 m, shops beyond 85 m in its low-poly default)
+  and cuts roofs and ceilings away indoors. On top of that the merger bakes
+  every part that never moves into one mesh per material, but only together
+  with parts the town hides and shows together: before merging, the town
+  plays its animation, shuts and opens its doors, cuts every roof and ceiling
+  away and culls its far buildings once, and every node it switched is
+  remembered (33 switches). Merged meshes follow those switches in the same
+  frame. From the square: 379 draw calls as built, 250 merged. Inside a home:
+  664 as built, 432 merged. Same triangles in both places, bounds unchanged,
+  nothing handed back after ten seconds of town animation or a visit indoors.
+- **Distant scenery** (below): 1 to 5 draw calls and 41,000 to 63,000
   triangles per area, included in the table.
 
 What is still over budget, in measured order:
 
 1. Triangles in every area: grass that follows the player (0.85 to 1.17 M)
    and the owner's long-grass tiles (95,000 to 660,000 per area).
-2. Draw calls in town (790): town parts left unmerged because they move,
-   are tagged or are see-through (about 340), long-grass tiles (148), caves
-   (65).
+2. Draw calls in town (641): long-grass tiles, the town's moving and named
+   parts, caves (65).
 3. Lights: 20 to 26 lights are switched on wherever the player stands. Their
    cost shows only in a real frame-rate reading.
 
@@ -222,14 +228,42 @@ Two parts, both in `streaming/WolfveilAreaLoader.mjs`:
    full-map export, and rebaked when the scenery or an owner's visibility
    changes. On the real valley:
 
-   | Area | Stands for                         | Outline        | Bake  |
-   |------|------------------------------------|----------------|-------|
-   | town | 16 tall meshes, 66,736 triangles   | 10,734 tris    | 20 ms |
-   | west | the owner's trees, 108,240 tris    | 22,646 tris    | 27 ms |
+   | Area | Stands for                        | Outline     | Bake  |
+   |------|-----------------------------------|-------------|-------|
+   | west | the owner's trees, 108,240 tris   | 22,646 tris | 19 ms |
+   | town | 31 tall parts, 16,128 tris        | 3,714 tris  | 5 ms  |
 
-   South, east and north hold no tall scenery that unloads, so they have no
-   outline. Their ground cover (grass, flowers, shrubs, stones) is still
-   absent beyond 90 m.
+   A part counts as tall when it is 4 m high, or when its top stands 2.5 m
+   above the ground under it (so a building made of short pieces keeps its
+   walls). The outline never shows what its owner has hidden: the town hides
+   its own far buildings, so from far away the town's outline holds only what
+   the town itself still draws. South, east and north hold no tall scenery
+   that unloads, so they have no outline. Their ground cover (grass, flowers,
+   shrubs, stones) is still absent beyond 90 m.
+
+## Ground detail: measured, not built
+
+`node scripts/measure-wolfveil-terrain-detail.mjs` (pure Node, about 15 s)
+answers what a "high-poly to smart mesh" rework of the ground would buy.
+
+- The live ground is an even 310 x 310 grid, 192,200 triangles, drawn whole.
+  Against a 1 m sampling of the designed height function it is off by 30 cm
+  on average (RMS), more than 25 cm over 13% of the map, 6 m at worst.
+- An adaptive mesh that matches the designed surface needs **more** triangles
+  than the grid, not fewer: 197,756 for a 50 cm tolerance, 302,750 for 25 cm,
+  519,455 for 10 cm. The design holds more fine detail than the grid shows.
+- Lighting: the grid's normals are within 2 degrees of the true surface at the
+  median, but more than 10 degrees off over 13.6% of the map. A baked normal
+  map would add that detail with no extra triangles.
+- A lighter ground for unloaded areas (half detail) would save 104,000 to
+  134,000 triangles depending on the area, 5 to 8% of what is drawn.
+- Everything in the valley (grass, stones, paths, bridges, town floors, cave
+  mouths, portals) is placed on the current grid surface through
+  `WolfveilTerrainSurfaceSampler.mjs`. A different ground surface moves the
+  ground under all of it.
+
+Nothing was changed in the ground. The ground is 8 to 12% of the triangles in
+view; grass is 55 to 70%.
 
 ## Tests
 
@@ -241,7 +275,7 @@ node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-far-proxy.test.mjs
 ```
 
-76 tests with stand-in scene objects, all passing. The real-valley test
+78 tests with stand-in scene objects, all passing. The real-valley test
 (`tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs`) runs where
 `three` is installed, which is CI.
 
