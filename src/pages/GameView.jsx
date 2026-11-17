@@ -12,6 +12,7 @@ import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
 import '../components/game3d/performance/Game3DResponsiveDisplay.css';
 import {game3dCharacterModel} from '../components/game3d/game3dCharacterModel';
 import GameHUD from '../components/game3d/hud/GameHUD';
+import Game3DHudLayoutEditor from '../components/game3d/hud/Game3DHudLayoutEditor';
 import {readGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
   from '../components/game3d/hud/game3dCommunityHUDSettings.mjs';
 import '../components/game3d/hud/Game3DCommunityHUD.css';
@@ -125,6 +126,7 @@ export default function GameView() {
   const [clanOverlayOpen, setClanOverlayOpen] = useState(false);
   const [learnedSkillIds, setLearnedSkillIds] = useState(() => getLearnedSkillIds());
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
+  const [hudEditing,setHudEditing]=useState(false);
   const [communityHUD,setCommunityHUD]=useState(()=>readGame3DCommunityHUD());
   const [displaySettings,setDisplaySettings]=useState(()=>readGame3DDisplaySettings());
   const [cssViewport,setCSSViewport]=useState(()=>({
@@ -816,9 +818,14 @@ export default function GameView() {
       {/* In-world cinematic dialogue → quest flow for the Living Quest NPC (Artemis) */}
       <CinematicQuestDialogue />
 
+      {/* The actual game UI stays mounted; edit handles simply position its
+          existing boxes without replacing skills, HUD stats or keybinds. */}
+      <Game3DHudLayoutEditor active={hudEditing}
+        onDone={()=>setHudEditing(false)}/>
       {/* Pause menu — opened by ESC */}
       <PauseMenu
         open={pauseMenuOpen}
+        onEditHUD={()=>{setPauseMenuOpen(false);setHudEditing(true);}}
         onClose={() => setPauseMenuOpen(false)}
         onCreateCharacter={() => { window.dispatchEvent(new Event('game3dCheckpointFlush')); setResumeCheckpoint(null); setPauseMenuOpen(false); setWorldEntryStatus('idle'); setPlayIntroCamera(false); setCreatorOnLogin(true); setPhase('login'); }}
         volume={themeVolume}
