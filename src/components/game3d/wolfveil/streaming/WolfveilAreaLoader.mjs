@@ -95,6 +95,10 @@ export function createWolfveilAreaLoader({
   //   farProxy.build(area, [{mesh, matrices}]) -> {object, triangles, ...} | null
   //   farProxy.dispose(object)
   farProxy=null,farProxySeconds=2,
+  // With the ground height known (world x, z -> y), a part also counts as
+  // tall when its top stands this far above the ground under it: the walls
+  // of a building made of many short pieces, not only its roof.
+  groundHeightAt=null,farOutlineReachMeters=2.5,
   releaseGpuMemory=false,releaseDelaySeconds=20,
   onTransition=()=>{},onStats=()=>{},onAreasChanged=()=>{},
   now=clockNow,
@@ -719,6 +723,16 @@ export function createWolfveilAreaLoader({
   }
   // Glass, water and glows have no outline. Leaves cut out of a texture do:
   // they are flagged transparent but drawn at full strength.
+  function standsTall(mesh){
+    const height=meshHeight(mesh);
+    if(height>=farSceneryMeters)return true;
+    if(typeof groundHeightAt!=='function'||!(height>0))return false;
+    const box=geometryBox(mesh.geometry),e=mesh.matrixWorld.elements;
+    const x=(box.min.x+box.max.x)/2,y=(box.min.y+box.max.y)/2,z=(box.min.z+box.max.z)/2;
+    const ground=groundHeightAt(e[0]*x+e[4]*y+e[8]*z+e[12],e[2]*x+e[6]*y+e[10]*z+e[14]);
+    const top=e[1]*x+e[5]*y+e[9]*z+e[13]+height/2;
+    return Number.isFinite(ground)&&top-ground>=farOutlineReachMeters;
+  }
   const solid=mesh=>{
     const material=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;
     return Boolean(material)&&material.visible!==false&&material.depthWrite!==false&&
@@ -751,7 +765,7 @@ export function createWolfveilAreaLoader({
           const count=Math.min(leaf.count|0,Math.floor(leaf.instanceMatrix.array.length/16));
           list.push({mesh:leaf,matrices:Array.from({length:count},(_,i)=>worldInstance(leaf,i)),
             stamp:idOf(leaf)+':'+count+':'+(leaf.instanceMatrix.version|0)});
-        }else if(meshHeight(leaf)>=farSceneryMeters)
+        }else if(standsTall(leaf))
           list.push({mesh:leaf,matrices:[[...leaf.matrixWorld.elements]],
             stamp:idOf(leaf)+':'+idOf(leaf.geometry)});
       }

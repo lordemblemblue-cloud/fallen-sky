@@ -535,6 +535,27 @@ test('tall scenery that unloads with its area is baked into one outline per area
   assert.equal(v.farProxy.built.length,5);
 });
 
+test('with the ground known, walls made of short pieces join the outline',()=>{
+  const build=groundHeightAt=>{
+    const farProxy=outlineBuilder();
+    const v=mount({farProxy,groundHeightAt});
+    // A 3 m wall panel, a 1.5 m panel raised onto it, and a bench, on ground at y=30.
+    const lower=new Mesh('SWV_WallLower',geometry({height:3}),{}).at(20,30,-380);
+    const upper=new Mesh('SWV_WallUpper',geometry({height:1.5}),{}).at(20,33,-380);
+    const bench=new Mesh('SWV_Bench',geometry({height:1}),{}).at(24,30,-384);
+    for(const object of [lower,upper,bench]){v.root.add(object);v.valley.meshes.push(object);}
+    v.settle();v.settle();v.step(world(...SPOTS.town),2.1);
+    for(let i=0;i<8;i++)v.step(world(...SPOTS.town),.1);
+    return (farProxy.built.find(entry=>entry.area==='south')?.sources||[])
+      .map(source=>source.mesh.name).sort();
+  };
+  assert.deepEqual(build(null),[],'without the ground only 4 m pieces count');
+  assert.deepEqual(build(()=>30),['SWV_WallLower','SWV_WallUpper']);
+  assert.deepEqual(build(()=>NaN),[],'unknown ground: nothing extra');
+  // On a hillside the ground under each piece decides, not the lowest point.
+  assert.deepEqual(build((x,z)=>z<-300?32:30),['SWV_WallUpper']);
+});
+
 test('an outline gives way to the real scenery when its area loads',()=>{
   const v=mountWithTallScenery();v.bake();
   v.step(world(...SPOTS.south),.2);

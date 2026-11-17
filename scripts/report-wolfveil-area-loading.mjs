@@ -281,6 +281,7 @@ export async function runWolfveilAreaLoadingReport({
   loader=createWolfveilAreaLoader({
     world,position:toWorld(0,-70),portals:WOLFVEIL_AREA_PORTALS,
     now:()=>clock.t,onTransition:event=>events.push(event),
+    groundHeightAt:(x,z)=>village.worldHeight(x,z),
     farProxy:{...farOutline,build(area,sources){
       const before=performance.now();
       const built=farOutline.build(area,sources);

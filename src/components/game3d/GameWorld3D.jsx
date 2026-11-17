@@ -854,6 +854,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       releaseGpuMemory:areaPlatform.profile.releaseGpuMemory,
       farScenery:areaPlatform.profile.farScenery,
       farProxy:farOutline,
+      groundHeightAt:(x,z)=>wolfveilVillage.worldHeight(x,z),
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
       },

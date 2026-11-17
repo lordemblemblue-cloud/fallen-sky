@@ -47,10 +47,10 @@ for (const segments of [310]) {
   const s = stats(err);
   console.log(`\nLIVE even grid ${segments}x${segments} (${(SPAN / segments).toFixed(2)} m step, ${segments * segments * 2} triangles)\n  ${fmt(s)}`);
   // where the error lives: 11x11 grid of 100 m squares, share of total squared error
-  const cells = new Float64Array(121); let total = 0;
+  const cells = new Float64Array(121);
   for (let j = 0; j < SIZE; j++) for (let i = 0; i < SIZE; i++) {
     const e = err[j * SIZE + i], c = Math.min(10, Math.floor(i * STEP / 100)), r = Math.min(10, Math.floor(j * STEP / 100));
-    cells[r * 11 + c] = Math.max(cells[r * 11 + c], e); total++;
+    cells[r * 11 + c] = Math.max(cells[r * 11 + c], e);
   }
   const worst = [...cells].map((e, k) => ({ e, r: Math.floor(k / 11), c: k % 11 })).sort((a, b) => b.e - a.e);
   console.log('  100 m squares whose worst point is off by >50 cm:', worst.filter(w => w.e > .5).length, 'of 121; >25 cm:', worst.filter(w => w.e > .25).length);
