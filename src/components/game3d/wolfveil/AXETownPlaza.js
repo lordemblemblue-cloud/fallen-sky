@@ -2793,6 +2793,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                         mesh.castShadow = meshes.some(item => item.castShadow);
                         mesh.receiveShadow = meshes.some(item => item.receiveShadow);
                         mesh.name = 'AXE_StaticTownBatch';
+                        // Proxy meshes must not enter the OTS camera collider
+                        // list after static batching has replaced originals.
+                        mesh.userData.otsCameraIgnore = meshes.every(item => item.userData?.otsCameraIgnore);
                         group.add(mesh);
                         meshes.forEach(item => {
                             group.remove(item);
@@ -2824,6 +2827,19 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     batchRoofs(innerShopsGroup);
     batchRoofs(outerRingGroup);
     const afterOptimization = geometryStats();
+    function visibleGeometryStats() {
+        let meshes = 0, triangles = 0;
+        function walk(node) {
+            if (!node.visible) return;
+            if (node.isMesh && node.geometry) {
+                meshes++;
+                triangles += (node.geometry.index?.count ?? node.geometry.getAttribute('position')?.count ?? 0) / 3;
+            }
+            for (const child of node.children) walk(child);
+        }
+        walk(townGroup);
+        return { visibleMeshes: meshes, visibleTriangles: Math.round(triangles), quality: activeQuality };
+    }
     const performanceStats = Object.freeze({
         quality: activeQuality,
         before: beforeOptimization, after: afterOptimization,
@@ -3028,6 +3044,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         anchors: townAnchors,
         rooms: { shops: shopInteriors, homes: houseEntries },
         performanceStats,
+        getVisibleGeometryStats: visibleGeometryStats,
         collisionZones,
         setShowroomModel(index = 0) {
             const chosen = Math.max(0, Math.min(allAnimatedMounts.length - 1, Math.floor(index)));
