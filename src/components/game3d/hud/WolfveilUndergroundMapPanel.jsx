@@ -125,8 +125,10 @@ export default function WolfveilUndergroundMapPanel({ position }) {
               strokeDasharray={known ? undefined : '9 9'}/>
             <circle cx={p.x} cy={p.y} r={r * 0.86} fill={known ? '#274055' : '#1a2836'}
               fillOpacity=".82" stroke={known ? '#9fd3e4' : '#46596b'} strokeWidth="2"/>
-            {room.kind === 'hub' && <circle cx={p.x} cy={p.y} r={r * 0.44} fill="none"
+            {room.kind === 'hub' && <circle cx={p.x} cy={p.y} r={r * 0.72} fill="none"
               stroke="#e7c489" strokeWidth="3"/>}
+            {room.kind === 'hub' && <text x={p.x} y={p.y + 26} textAnchor="middle" fontSize="15"
+              fill="#e7c489" stroke="#122334" strokeWidth="4" paintOrder="stroke">Open floor</text>}
             {chosen && <circle cx={p.x} cy={p.y} r={r + 9} fill="none" stroke="#eaf8ff"
               strokeWidth="3" strokeOpacity=".75"/>}
             <text x={p.x} y={p.y + 6} textAnchor="middle" fontSize="17" fontWeight="bold"
@@ -198,7 +200,7 @@ export default function WolfveilUndergroundMapPanel({ position }) {
           : 'Drawn on the chart but not yet entered. Walk inside to reveal it.'}</span>
         <span>World position: {Math.round(selectedRoom.x)}, {Math.round(selectedRoom.z)}</span>
         <span>{selectedRoom.kind === 'hub'
-          ? 'Central hub where the four cavern tunnels meet.'
+          ? 'Open exploration floor. The five tunnels come in through the rim; the two side pockets are off the west and north edges.'
           : 'Connected by tunnel to the Subterranean Wolf-Spirit Rotunda.'}</span>
       </div> : selectedExit ? <div>
         <strong>{selectedExit.name}</strong>

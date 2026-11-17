@@ -112,7 +112,7 @@ export const WOLFVEIL_CAVE_HUB = Object.freeze({
   x: -6,
   y: WOLFVEIL_DUNGEON_FLOOR_Y,
   z: 24,
-  radius: 18,
+  radius: 46,
   ceiling: 7.4,
   lightColor: 0xf5b869,
   accentColor: 0x67e8f9,
@@ -265,13 +265,16 @@ function tunnelWaypoints(a, b, lateral) {
 }
 
 function sideAlcove(anchor, nx, nz, length, id) {
-  const end = [anchor.x + nx * length, anchor.y, anchor.z + nz * length];
-  const mid = [anchor.x + nx * length * 0.55, anchor.y, anchor.z + nz * length * 0.55];
+  const len = Math.hypot(nx, nz) || 1;
+  nx /= len;
+  nz /= len;
+  const rim = (anchor.radius || 15) + 2;
+  const at = (dist) => [anchor.x + nx * dist, anchor.y, anchor.z + nz * dist];
   return makePolylineCorridor(id, [
-    [anchor.x, anchor.y, anchor.z],
-    mid,
-    end,
-  ], 3.4, 5.6, 'alcove');
+    at(rim),
+    at(rim + length * 0.55),
+    at(rim + length),
+  ], 4.2, 5.8, 'alcove');
 }
 
 export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
