@@ -398,12 +398,21 @@ export default function PlayerAngelWings() {
       const dihedral = pose.dihedral + (nextPose.dihedral - pose.dihedral) * drift;
       const sweep = pose.sweep + (nextPose.sweep - pose.sweep) * drift;
       const lift = pose.lift + (nextPose.lift - pose.lift) * drift;
-
+      const flightMode=window.__gw3dAirFlightMode||'idle';
+      const airborneWing=flightMode==='glide'||flightMode==='boost'||
+        flightMode==='walk'||flightMode==='dash';
+      // Wings fan outward and stay clearly visible in flight instead of
+      // disappearing mid-flap. A finishing dash folds them back for speed.
+      // They return smoothly to their normal ornamental stroke on landing.
+      const spread=flightMode==='dash'?.05:flightMode==='walk'?.42:.22;
+      const wingRoll=airborneWing?THREE.MathUtils.lerp(dihedral,spread,.78):dihedral;
+      const wingSweep=airborneWing?THREE.MathUtils.lerp(sweep,-.10,.62):sweep;
+      const wingAlpha=airborneWing?Math.max(.87,alpha):alpha;
       if (leftWing && rightWing) {
-        leftWing.rotation.z = dihedral;
-        rightWing.rotation.z = -dihedral;
-        leftWing.rotation.y = sweep;
-        rightWing.rotation.y = -sweep;
+        leftWing.rotation.z = wingRoll;
+        rightWing.rotation.z = -wingRoll;
+        leftWing.rotation.y = wingSweep;
+        rightWing.rotation.y = -wingSweep;
         leftWing.position.y = lift;
         rightWing.position.y = lift;
       }
@@ -422,17 +431,17 @@ export default function PlayerAngelWings() {
         for (let i = 0; i < parts.feathers.length; i++) {
           const m = parts.feathers[i].material;
           if (!m) continue;
-          m.emissiveIntensity = (shimmer + pulse) * (0.25 + alpha * 0.75);
-          m.opacity = 0.94 * alpha;
+          m.emissiveIntensity = (shimmer + pulse) * (0.25 + wingAlpha * 0.75);
+          m.opacity = 0.94 * wingAlpha;
         }
       }
 
       // Spine energy conduit — streams out of the back, brightest mid-stroke.
-      if (parts?.spine) parts.spine.update(timeRef, dt, 0.45 + alpha * 0.55);
+      if (parts?.spine) parts.spine.update(timeRef, dt, 0.45 + wingAlpha * 0.55);
 
       // Root light pulses with the stroke.
       if (parts?.light) {
-        parts.light.intensity = (0.6 + currentTier * 0.12) * (0.4 + alpha * 0.6);
+        parts.light.intensity = (0.6 + currentTier * 0.12) * (0.4 + wingAlpha * 0.6);
       }
 
       // Trailing motes drift behind the wings.
