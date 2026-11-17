@@ -148,6 +148,9 @@ export function createWolfveilAreaLoader({
       if(box){
         const e=object.matrixWorld.elements;
         const groups=Array.isArray(object.material)?Math.max(1,object.material.length):1;
+        // Render layer mask 0 marks an original that a draw-call merger has
+        // replaced: it is still gated and measured, but it costs nothing.
+        const drawn=object.layers?.mask!==0;
         out.leaves.push(object);
         if(object.isInstancedMesh&&object.instanceMatrix?.array){
           const reach=.5*Math.hypot(box.max.x-box.min.x,box.max.y-box.min.y,
@@ -160,7 +163,7 @@ export function createWolfveilAreaLoader({
             grow(e[0]*x+e[4]*y+e[8]*z+e[12],e[1]*x+e[5]*y+e[9]*z+e[13],
               e[2]*x+e[6]*y+e[10]*z+e[14],reach*columnScale(array,o)*scale);
           }
-          out.triangles+=triangleCount(object.geometry)*count;
+          if(drawn)out.triangles+=triangleCount(object.geometry)*count;
         }else{
           for(let corner=0;corner<8;corner++){
             const x=corner&1?box.max.x:box.min.x,y=corner&2?box.max.y:box.min.y;
@@ -168,9 +171,9 @@ export function createWolfveilAreaLoader({
             grow(e[0]*x+e[4]*y+e[8]*z+e[12],e[1]*x+e[5]*y+e[9]*z+e[13],
               e[2]*x+e[6]*y+e[10]*z+e[14]);
           }
-          out.triangles+=triangleCount(object.geometry);
+          if(drawn)out.triangles+=triangleCount(object.geometry);
         }
-        out.drawCalls+=groups;
+        if(drawn)out.drawCalls+=groups;
       }
       for(const child of object.children||[])visit(child);
     };
