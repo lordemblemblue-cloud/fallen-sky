@@ -218,8 +218,8 @@ function entranceRockwork(root,mats){
   rock(root,mats,0,10.6,5.2,6.3,3.25,5,617);
   rock(root,mats,-3.8,10.3,2,3.3,2.4,3.5,619);
   rock(root,mats,4.2,10.5,3.1,3.2,2.6,3.4,621);
-  const crown=new THREE.Mesh(new THREE.CylinderGeometry(.08,.88,3.3,6),crystalMat);
-  crown.position.set(0,10.2,1.25);crown.rotation.z=.12;root.add(crown);
+  // The standalone crystal crown hovering over this portal has been retired.
+  // Keep the seated natural stone arch, traversable opening and collision cheeks.
   return colliders;
 }
 export function createLunarMountainEntrance(scene,{sampleGroundY}={}){
