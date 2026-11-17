@@ -605,7 +605,16 @@ export async function runWolfveilAreaLoadingReport({
     townResult={asBuilt:{drawCalls:built.drawCalls,triangles:built.triangles},
       merged:{drawCalls:merged.drawCalls,triangles:merged.triangles},
       boundsDriftMeters:drift,budget:later};
-  }else if(town)check(false,'the town draw budget failed to install (see the console warning)');
+  }else if(town){
+    // The town batches itself (AXETownPlaza) and hides far buildings: report
+    // what it hands the renderer from the square and from inside a home.
+    moveTo(...spots.town);run(1);
+    loader.setEnabled(false);
+    const fromSquare=measureVisibleScene(town.root);
+    loader.setEnabled(true);run(.3);
+    townResult={own:town.performanceStats||null,
+      fromSquare:{drawCalls:fromSquare.drawCalls,triangles:fromSquare.triangles}};
+  }
 
   // ---- caves: buried parts only underground, identical props one draw ----
   const caves=village.caveSystem;
@@ -768,7 +777,12 @@ export function formatWolfveilAreaLoadingReport(result){
   for(const entry of result.tallScenery.units)lines.push('  '+entry.area.padEnd(6)+
     entry.height.toFixed(1).padStart(6)+' m tall '+entry.width.toFixed(1).padStart(6)+' m wide  '+
     n(entry.triangles).padStart(8)+' tris '+String(entry.drawCalls).padStart(4)+' calls  '+entry.name);
-  if(result.town){
+  if(result.town?.own!==undefined){
+    lines.push('');
+    lines.push('Town (artisan plaza, batched by its own code): from the square '+
+      result.town.fromSquare.drawCalls+' calls, '+n(result.town.fromSquare.triangles)+' tris; its own report '+
+      JSON.stringify(result.town.own));
+  }else if(result.town){
     const t=result.town;
     lines.push('');
     lines.push('Town (artisan plaza):');

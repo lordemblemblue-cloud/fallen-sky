@@ -231,16 +231,7 @@ test('the A/B switch restores the scenery exactly as built and merges again on r
 });
 
 const source=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('the town merges its motionless parts, fails open, and effects ignore the batches',()=>{
-  const town=source('src/components/game3d/wolfveil/WolfveilArtisanTownScene.mjs');
-  assert.match(town,/createStaticMeshMerger\(\{/);
-  assert.match(town,/merger\.snapshot\(\);/);
-  assert.match(town,/town\.setDoorsOpen\(true\);/);
-  assert.match(town,/town\.setDoorsOpen\(false\);/);
-  assert.match(town,/merger\.build\(\);/);
-  assert.match(town,/new MeshBVH\(batch\.geometry\)/);
-  assert.match(town,/merger\?\.update\(step\);/);
-  assert.match(town,/merger\?\.dispose\(\);/);
+test('material effects ignore merged batches; the merger needs no Three.js',()=>{
   const blaze=source('src/components/game3d/render/BlazeOfGrassWorld.mjs');
   assert.equal((blaze.match(/userData\?\.game3dMergedBatch/g)||[]).length,2,
     'a merged batch must neither protect nor receive a material effect');

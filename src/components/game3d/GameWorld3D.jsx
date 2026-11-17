@@ -860,7 +860,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       onStats(stats){window.__gw3dRegionStreamingStatus=stats;},
       // Shadows are redrawn only on request (static sun): ask again whenever
       // an area's scenery appears or leaves.
-      onAreasChanged(){renderer.shadowMap.needsUpdate=true;},
+      onAreasChanged(){
+        renderer.shadowMap.needsUpdate=true;
+        // The camera arm collides with what is drawn: have it look again
+        // whenever an area's scenery appears or leaves.
+        const valley=wolfveilVillage.world.group;
+        valley.userData.otsCameraRevision=(valley.userData.otsCameraRevision||0)+1;
+      },
     }):null;
     if(regionStream){
       window.__gw3dRegionStreamer=regionStream; // name kept for existing console checks

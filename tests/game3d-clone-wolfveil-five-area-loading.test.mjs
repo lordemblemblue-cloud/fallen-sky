@@ -805,7 +805,7 @@ test('the live game world mounts the five-area loader, portals and platform sett
   assert.ok(world.indexOf('bootGame3DPlatformGraphics(window)')<world.indexOf('const bootProfile = readCloneGPUProfile(window)'));
   assert.match(world,/regionStream\?\.addUnits\(\[importedSpawnTown\.root\]\)/);
   assert.equal(world.match(/areaPortals\?\.update\(delta,/g).length,2,'title screen and live play');
-  assert.match(world,/onAreasChanged\(\)\{renderer\.shadowMap\.needsUpdate=true;\}/);
+  assert.match(world,/onAreasChanged\(\)\{\s*renderer\.shadowMap\.needsUpdate=true;[\s\S]{0,260}otsCameraRevision=\(valley\.userData\.otsCameraRevision\|\|0\)\+1;\s*\}/);
   assert.match(world,/regionStream\.withFullMapExport\(performExport\)/);
   // The loader hands objects back before the town and the valley are torn down.
   assert.ok(world.indexOf('regionStream?.dispose();')<world.indexOf('importedSpawnTown?.dispose();'));
