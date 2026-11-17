@@ -3266,6 +3266,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // The world physics remains the single source of truth for grounded
         // status; no new rigid body or secondary jump/gravity loop is created.
         const traversalAfterMotion=playerAnim?.getAirWalkState?.();
+        // The existing back-mounted wing renderer uses this visual-only
+        // flight mode to spread and steady its feathers while actually flying.
+        // It is NOT a second physics state, save slot or stamina ledger.
+        window.__gw3dAirFlightMode=traversalAfterMotion?.mode||'idle';
         const jumpAfterMotion=playerAnim?.getDebugState?.()?.jumpPhase;
         if(!bossFallActive && tornadoRes.liftY<=0){
           const inFlight=(traversalAfterMotion?.mode||'idle')!=='idle' ||
