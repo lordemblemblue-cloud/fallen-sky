@@ -1747,6 +1747,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const hideSkillCharge=()=>{skillChargeHud.style.opacity='0';};
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
+    let wasAirborneLastFrame=false; // one-shot landing transition, not repeated montage
     const lastDirectionTap = { current: {} };
     const DOUBLE_TAP_MS = 280;
     const chargedKeys = new Map();
@@ -2639,6 +2640,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       m.visible = true;
       playerAnim?.revive?.();
       playerAnim?.resetAirWalkMotion?.();
+      wasAirborneLastFrame=false;
       clickToMove.cancel('respawn');
       playerInvulTimer.current = PLAYER_INVUL_AFTER_HIT;
       resetCombatResources();
@@ -2736,10 +2738,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const airWalkUp=new THREE.Vector3(0,1,0);
     const sampleAirWalkCeilingY=(actor,footY)=>{
       if(!actor || !Number.isFinite(footY) || !groundMeshes?.length)return null;
-      airWalkCeilingOrigin.set(actor.position.x,footY+1.72,actor.position.z);
+      // Start below head height so low cave arches are still detected.
+      airWalkCeilingOrigin.set(actor.position.x,footY+.2,actor.position.z);
       airWalkCeilingRay.set(airWalkCeilingOrigin,airWalkUp);
-      airWalkCeilingRay.near=.04;
-      airWalkCeilingRay.far=2.6;
+      airWalkCeilingRay.near=.2;
+      airWalkCeilingRay.far=3.8;
       const hit=airWalkCeilingRay.intersectObjects(groundMeshes,true)
         .find(entry=>entry.object?.visible!==false && Number.isFinite(entry.distance));
       return hit?.point?.y ?? null;
@@ -3091,9 +3094,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const regularJump=jumpNow==='takeoff'||jumpNow==='airborne';
         playerStateMachine.setAirborneState({
           grounded:!bossFallActive && tornadoRes.liftY<=0 &&
-            airNow?.mode==='idle' && !regularJump,
+            (airNow?.mode||'idle')==='idle' && !regularJump,
           verticalVelocity:bossFallActive?-1:tornadoRes.liftY>0?1:
-            airNow?.mode!=='idle'?(airNow?.velocityY||-1):
+            (airNow?.mode||'idle')!=='idle'?(airNow?.velocityY||-1):
             regularJump?1:0,
         });
         // One camera-yaw movement basis for ALL WASD states. A lock controls
@@ -3233,14 +3236,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const traversalAfterMotion=playerAnim?.getAirWalkState?.();
         const jumpAfterMotion=playerAnim?.getDebugState?.()?.jumpPhase;
         if(!bossFallActive && tornadoRes.liftY<=0){
-          const inFlight=traversalAfterMotion?.mode!=='idle' ||
+          const inFlight=(traversalAfterMotion?.mode||'idle')!=='idle' ||
             jumpAfterMotion==='takeoff'||jumpAfterMotion==='airborne';
+          const justLanded=wasAirborneLastFrame && !inFlight;
+          wasAirborneLastFrame=inFlight;
           playerStateMachine.setAirborneState({
             grounded:!inFlight,
-            verticalVelocity:traversalAfterMotion?.mode!=='idle'
+            verticalVelocity:(traversalAfterMotion?.mode||'idle')!=='idle'
               ?(traversalAfterMotion?.velocityY||-1):inFlight?1:0,
-            justLanded:!inFlight && jumpAfterMotion==='landing',
+            justLanded,
           });
+        }else{
+          wasAirborneLastFrame=false;
         }
         // Tornado lift is applied after the feet-to-ground pass so the funnel
         // can actually carry the player up out of the storm.
