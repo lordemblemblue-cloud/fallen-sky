@@ -14,7 +14,7 @@ import { horizontalSkillWheelOffset } from './AXESkillWheel.mjs';
 
 const PATH_ORDER = ['single', 'three', 'aerial'];
 const ROMAN = ['I', 'II', 'III', 'IV', 'V'];
-const WEAPON_LABELS = { damage:'Sword', range:'Bow', defense:'Guardian' };
+const WEAPON_LABELS = { damage:'Damage', range:'Range', defense:'Defense' };
 const formatValue = (skill,key,level) => {
   const value=scaleStat(skill,key,level);
   return /pct|chance|reflect/.test(key) ? (value*100).toFixed(1)+'%'
@@ -47,7 +47,7 @@ function BranchCard({ icon, title, subtitle, locked=false, selected=false, equip
     onClick={onClick} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu}>
     <span className="axe-hp-node-glyph">{skillIcon(icon,34)}</span>
     <strong>{title}</strong>
-    <small>{subtitle}</small>
+    {subtitle&&<small>{subtitle}</small>}
     {equipped&&<span className="axe-hp-equipped-tag">Equipped</span>}
     {locked&&<span className="axe-hp-locked-mark">◇ Locked</span>}
   </button>;
@@ -157,51 +157,8 @@ export default function AXESkillPathHorizontal({
       </button>)}
     </nav>
     <div className="axe-hp-stage">
-      <header className="axe-hp-feature">
-        <span className="axe-hp-feature-symbol">{skillIcon(path.icon,58)}</span>
-        <div className="axe-hp-feature-copy">
-          <h2>{path.id==='three'?'Multi':path.id==='single'?'Single':'Aerial'} / {WEAPON_LABELS[category]}</h2>
-          <p>{path.label} path — {description}</p>
-          <button type="button" className="axe-hp-activate-bar"
-            onClick={()=>onActivateWeapon?.(category)}
-            title="Switch to this weapon's saved skill bar">
-            {activeMode?.id===category?'Active ':'Activate '}{WEAPON_LABELS[category]} Bar
-          </button>
-        </div>
-        <div className="axe-hp-feature-selected">
-          <div><strong>{displayTitle}</strong>
-            {level&&<span>Lv. {level.level} / {level.maxLevel}</span>}</div>
-          <p>{node.kind==='skill'&&activeSkill
-            ? 'Cooldown: '+activeSkill.cooldown+' sec · Hits: '+activeSkill.hit_count
-            : 'Stage '+(stageIndex+1)+' · '+spent+'/'+cap+' points invested'}</p>
-          <div className="axe-hp-upgrade-controls">
-            <small>{points.available} skill points available</small>
-            <button type="button" disabled={!canUpgrade} onClick={handleUpgrade}
-              title={canUpgrade?'Spend one earned weapon skill point':stageAvailable?'No points available or stage complete':'Previous stage must be completed'}>
-              <ArrowUp size={18}/> Upgrade
-            </button>
-          </div>
-        </div>
-      </header>
       <div className="axe-hp-lanes-layout">
         <section className="axe-hp-fork-tree" aria-label={path.label+' active and passive skill branches'}>
-          <div className="axe-hp-tree-root">
-            <BranchCard icon={path.icon} title={path.titles[0]}
-              subtitle={root?'Lv. '+getSkillMastery(root.skill_id).level+' / '+getSkillMastery(root.skill_id).maxLevel:'Registered skill'}
-              selected={node.kind==='skill'&&node.id===path.active[0]}
-              equipped={activeIds.includes(path.active[0])}
-              onClick={()=>select('skill',path.active[0],1)}
-              onDoubleClick={()=>onEquipSkill?.(path.active[0])}
-              onContextMenu={event=>{event.preventDefault();onEquipSkill?.(path.active[0]);}}/>
-            <span className="axe-hp-root-label">Base skill</span>
-          </div>
-          <svg className="axe-hp-fork-lines" viewBox="0 0 68 300" preserveAspectRatio="none"
-            aria-hidden="true" fill="none" stroke="#f1c77f" strokeWidth="2.5"
-            strokeLinecap="round" strokeLinejoin="round">
-            <path d="M0 150H25Q34 150 34 137V80Q34 69 45 69H66"/>
-            <path d="M0 150H25Q34 150 34 163V228Q34 237 45 237H66"/>
-            <path d="M58 63L67 69 58 75M58 231L67 237 58 243"/>
-          </svg>
           <div ref={sharedScrollRef} className="axe-hp-tree-branches" tabIndex={0}
             aria-label="Shared horizontal skill progression; scroll down to move left and up to move right"
             onKeyDown={event=>{
@@ -218,11 +175,11 @@ export default function AXESkillPathHorizontal({
                 const id=card.skillId;
                 const locked=skill?!isWeaponSkillUnlocked(skill.skill_id):true;
                 const name=card.title||skill?.skill_name||'Unknown skill';
-                const sub=skill
-                  ? 'Lv. '+getSkillMastery(skill.skill_id).level+' / '+getSkillMastery(skill.skill_id).maxLevel
-                  : 'Unavailable in registry';
+                // Prominent registered name plus a quiet branch nickname.
+                // Numeric mastery details belong in Skill Information only.
+                const subtitle=skill && name!==skill.skill_name ? name : '';
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
-                  <BranchCard icon={card.icon} title={name} subtitle={sub}
+                  <BranchCard icon={card.icon} title={skill?.skill_name||name} subtitle={subtitle}
                     locked={locked} selected={node.id===id}
                     equipped={activeIds.includes(id)}
                     onClick={()=>select('skill',id,card.tier)}
@@ -237,12 +194,11 @@ export default function AXESkillPathHorizontal({
               <span className="axe-hp-track-caption">Passives · {path.label} (automatic)</span>
               {WEAPON_SKILL_TIERS.map((cost,i)=>{
                 const unlocked=weaponTierUnlocked(points.save,category,i);
-                const allocated=points.save?.nodes?.[category]?.[i]||0;
                 const id='stage_'+category+'_'+i;
                 return <div role="listitem" className="axe-hp-track-item" key={id}>
                   <BranchCard icon={i%2?'precision':'passive'}
                     title={'Charge Focus '+ROMAN[i]}
-                    subtitle={unlocked?'+1% charged · '+allocated+'/'+cost+' pts':'Unlock previous stage'}
+                    subtitle={unlocked?'+1% charged':'Requires previous stage'}
                     locked={!unlocked} selected={node.id===id}
                     onClick={()=>select('stage',id,i+1,i)}/>
                   {i<WEAPON_SKILL_TIERS.length-1&&
@@ -253,6 +209,12 @@ export default function AXESkillPathHorizontal({
           </div>
         </section>
         <aside className="axe-hp-info" aria-label="Selected skill information">
+          <div className="axe-hp-info-identity">
+            <small>{path.label} · {WEAPON_LABELS[category]}</small>
+            <h2>{displayTitle}</h2>
+            <p>{description}</p>
+            {level&&<span className="axe-hp-info-level">Lv. {level.level} / {level.maxLevel}</span>}
+          </div>
           <h3><BookOpen size={17}/> Skill Information</h3>
           <dl>
             <div><dt>Skill Type</dt><dd>{node.kind==='skill'?'Active':node.kind==='stage'?'Passive Stage':'Linked Passive'}</dd></div>
@@ -276,6 +238,20 @@ export default function AXESkillPathHorizontal({
           <p className="axe-hp-xp-copy">{node.kind==='skill'&&level?.nextLevelXp!=null
             ? Math.max(0,Math.ceil(level.nextLevelXp-level.xp)).toLocaleString()+' mastery XP to next level'
             : node.kind==='skill'&&level?'Mastery maxed':'Mastery XP is earned through confirmed combat use.'}</p>
+          <div className="axe-hp-info-actions" aria-label="Skill actions">
+            <button type="button" className="axe-hp-activate-bar"
+              onClick={()=>onActivateWeapon?.(category)}
+              title="Switch to this weapon's saved skill bar">
+              {activeMode?.id===category?'Active ':'Activate '}{WEAPON_LABELS[category]} Bar
+            </button>
+            <div className="axe-hp-upgrade-controls">
+              <small>{points.available} skill points available</small>
+              <button type="button" disabled={!canUpgrade} onClick={handleUpgrade}
+                title={canUpgrade?'Spend one earned weapon skill point':stageAvailable?'No points available or stage complete':'Previous stage must be completed'}>
+                <ArrowUp size={17}/> Upgrade
+              </button>
+            </div>
+          </div>
         </aside>
       </div>
     </div>
