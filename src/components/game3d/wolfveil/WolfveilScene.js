@@ -34,12 +34,16 @@ import {installShadowWolfHouseModels} from './ShadowWolfHouseGLB.js';
 import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
 import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
+import {ensureCaveExteriorGrade} from '../cave/exterior/terrainGrade.js';
+import {installCaveExterior} from '../cave/exterior/installCaveExterior.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
 import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
+  // Bench the Ashen Cliff approach before the terrain mesh samples height.
+  ensureCaveExteriorGrade();
   const world=new WolfveilBuilder(scene);
   // Live Game 1 spawns near world (0,0). In the first connected art slice,
   // put the market at spawn; preserve unshifted master layout coordinates.
@@ -155,6 +159,9 @@ export function createWolfveilVillage(scene,options={}){
     explorableCaves:enableCaves,
   });
   const caveSystem=enableCaves?createWolfveilCaveSystem(world,{offsetZ}):null;
+  // Path, cliff and cave mouth outside the shared interior anchor.
+  // Built for the market-origin world the player actually walks.
+  const caveExterior=enableCaves?installCaveExterior(world):null;
   // This shared Wolfveil valley retires all legacy/fountain housing and
   // fallback silhouettes. The Luna Dashboard architecture is the ONLY home.
   // Source GLB files stay archived in the project, but do not spawn.
@@ -282,7 +289,7 @@ export function createWolfveilVillage(scene,options={}){
   // valley's local geometry is offset 70m into the real game's coordinates.
   world.group.updateMatrixWorld(true);
   const sceneState={
-    ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,individualGrass,
+    ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,caveExterior,individualGrass,
     get uploadedLandscapeModels(){return ownerModels?.status()??null;},
     grassTileReplacement:ownerGrassTiles,
     get grassTileStatus(){return ownerGrassTiles?.status()??null;},
@@ -326,6 +333,7 @@ export function createWolfveilVillage(scene,options={}){
       vegetation.update(frame);
       palace.update(dt);
       caveSystem?.update(dt,playerPosition);
+      caveExterior?.update(dt);
       groundCover?.update(dt,frame,playerPosition); // bent footsteps relax over time; no new collider
       individualGrass?.update(frame,playerPosition?{x:playerPosition.x,z:playerPosition.z-offsetZ}:null);
       ownerModels?.update(frame); // uploaded foliage, no new authoritative collision
@@ -346,6 +354,7 @@ export function createWolfveilVillage(scene,options={}){
       // own tread-top support catches feet; a high side riser blocks motion.
       let pushed=!!(player&&previous&&palace.resolveApproachCollision?.(position,previous,radius));
       if(previous&&caveSystem?.resolveCollision(position,previous,radius))pushed=true;
+      if(previous&&caveExterior?.resolveCollision(position,previous,radius))pushed=true;
       for(const b of colliders){
         const actualZ=b.z+offsetZ;
         if(b.kind==='palace'){
@@ -446,6 +455,7 @@ export function createWolfveilVillage(scene,options={}){
       fountainHomes.dispose();
       palace.dispose();
       caveSystem?.dispose();
+      caveExterior?.dispose();
       individualGrass?.dispose();
       vegetation.dispose();
       ownerGrassTiles?.dispose();
