@@ -9,7 +9,7 @@
   right:auto;
   bottom:clamp(9px,1.5vh,18px);
   transform:translateX(-50%);
-  width:min(66vw,744px);
+  width:min(70vw,800px);
   max-width:calc(100% - 20px);
   height:clamp(108px,14.2vh,145px);
   min-height:0;
@@ -243,7 +243,7 @@
 /* Fit the actual frame itself, not just the bars, at tablet and phone sizes. */
 @media(max-width:1000px) {
   .jade-hud .jade-hud-template {
-    width:min(76vw,690px);
+    width:min(80vw,736px);
     height:clamp(100px,13.5vh,137px);
     bottom:12px;
   }
@@ -253,7 +253,7 @@
 }
 @media(max-width:700px) {
   .jade-hud .jade-hud-template {
-    width:min(calc(100% - 20px),590px);
+    width:min(calc(100% - 16px),610px);
     height:clamp(88px,12.5vh,118px);
     bottom:10px;
   }
@@ -294,7 +294,7 @@
   .game3d-view .jade-hud .jade-hud-template {
     bottom:max(3px,var(--game3d-safe-bottom,0px));
     height:clamp(76px,23vh,105px);
-    width:min(70vw,650px);
+    width:min(74vw,690px);
   }
 }
 @media(prefers-reduced-motion:reduce) {
@@ -302,25 +302,26 @@
 }
 
 
-/* 2026-11-17 · Live HP/WILL fade + EXP liquid-glass revision.
-   Keep the owner's single approved SVG as the frame. Original transparent
-   gold-trim PNGs are used as a faint shading accent only (no fake values).
-   Both angular tails terminate short of the octagon: NEVER connect below. */
+/* Live HP/WILL frame-fit correction: slightly taller/wider approved gold
+   housing, but the two RESOURCE tracks are shorter and moved INSIDE its dark
+   glass wings. The visible sloped gold tails still end before the octagon.
+   On the 1200-unit artwork the desktop bars now occupy x=108..413 on HP
+   (and mirror for Will), inside the ~x=77..433 metal wing; no overlay leak. */
 .jade-hud .jade-hud-template {
-  height:clamp(117px,15.2vh,158px);
+  height:clamp(122px,16.2vh,170px);
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row {
-  top:43%;
-  height:40%;
-  width:28.3%;
+  top:47%;
+  height:36%;
+  width:25.4%;
   isolation:isolate;
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp {
-  left:8.2%;
+  left:9%;
   right:auto;
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will {
-  right:8.2%;
+  right:9%;
   left:auto;
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row::before {
@@ -357,24 +358,31 @@
   z-index:2;
   margin-top:5px;
   height:clamp(7px,.71vw,10px);
+  --jade-vitals-tip:clamp(7px,.70vw,10px);
   border:1px solid rgba(249,208,140,.58);
   border-radius:999px;
   overflow:hidden;
   background:linear-gradient(180deg,rgba(14,21,31,.62),rgba(30,34,38,.25));
   box-shadow:inset 0 1px 3px #000b,0 0 5px rgba(251,181,69,.27);
 }
+/* The inner tips are NOT rectangles extending over empty space.
+   A one-bar-height diagonal cut is approximately 45 degrees; its last
+   pixels disappear to reveal the actual gold sloping bezel beneath.
+   HP cuts its RIGHT end; Will cuts its LEFT. The opposite ends stay softly
+   shaded, preserving the owner's bright-near-the-value tank appearance. */
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp .jade-status-track {
-  /* Fade the outer HP end; near the value / sloped octagon end is luminous. */
-  border-top-right-radius:70% 90%;
-  border-bottom-right-radius:70% 90%;
-  -webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,.70),#000 57%);
-  mask-image:linear-gradient(90deg,rgba(0,0,0,.70),#000 57%);
+  border-top-right-radius:0;
+  border-bottom-right-radius:0;
+  clip-path:polygon(0 0,calc(100% - var(--jade-vitals-tip)) 0,100% 100%,0 100%);
+  -webkit-mask-image:linear-gradient(90deg,rgba(0,0,0,.68) 0%,#000 34%,#000 87%,transparent 100%);
+  mask-image:linear-gradient(90deg,rgba(0,0,0,.68) 0%,#000 34%,#000 87%,transparent 100%);
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will .jade-status-track {
-  border-top-left-radius:70% 90%;
-  border-bottom-left-radius:70% 90%;
-  -webkit-mask-image:linear-gradient(270deg,rgba(0,0,0,.70),#000 57%);
-  mask-image:linear-gradient(270deg,rgba(0,0,0,.70),#000 57%);
+  border-top-left-radius:0;
+  border-bottom-left-radius:0;
+  clip-path:polygon(var(--jade-vitals-tip) 0,100% 0,100% 100%,0 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 13%,#000 66%,rgba(0,0,0,.68) 100%);
+  mask-image:linear-gradient(90deg,transparent 0%,#000 13%,#000 66%,rgba(0,0,0,.68) 100%);
 }
 .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-fill {
   height:100%;
@@ -496,12 +504,12 @@
 }
 @media(max-width:700px) {
   .jade-hud .jade-hud-template {
-    height:clamp(94px,13.2vh,125px);
+    height:clamp(100px,14vh,132px);
   }
   .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row {
-    top:44%;
-    width:27.4%;
-    height:39%;
+    top:46%;
+    width:25.4%;
+    height:40%;
   }
   .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-track {
     height:7px;
@@ -509,10 +517,10 @@
   }
 }
 @media(max-width:420px) {
-  .jade-hud .jade-hud-template {height:94px;}
+  .jade-hud .jade-hud-template {height:99px;}
   .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row {
-    top:43%;
-    width:27%;
+    top:46%;
+    width:25.4%;
     height:43%;
   }
   .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header {
