@@ -77,7 +77,7 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     onStatus?.({state:'ready', reason:'Artisan plaza walkable interiors loaded'});
     onReady?.();
   });
-  let roofCutaway = false;
+  let cutawayRoomId = null;
   return {
     root,
     get status() { return active ? 'ready' : 'disposed'; },
@@ -103,10 +103,11 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
       elapsed += step;
       town.update(step,elapsed,playerPosition);
       livingQuarter?.update(step,playerPosition);
-      const shouldCutAway = !!nav.roomAt(playerPosition);
-      if (shouldCutAway !== roofCutaway) {
-        roofCutaway = shouldCutAway;
-        town.setRoofsVisible(!shouldCutAway);
+      const roomId = nav.roomAt(playerPosition)?.id || null;
+      if (roomId !== cutawayRoomId) {
+        cutawayRoomId = roomId;
+        town.setRoofsVisible(!roomId);
+        town.setIndoorCutaway(roomId);
       }
     },
     dispose() {
