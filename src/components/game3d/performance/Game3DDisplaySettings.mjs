@@ -32,11 +32,31 @@ export function normalizeGame3DDisplaySettings(raw) {
     uiScale:uiSet.has(input.uiScale)?input.uiScale:'auto',
   });
 }
-export function readGame3DDisplaySettings(host=typeof window!=='undefined'?window:null) {
+// A mobile/handheld distribution can ship a default *internal render
+// resolution* without forcing the OS screen mode or preventing players from
+// selecting another preset in Settings. Set VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION
+// to e.g. 720p in that distribution's build environment.
+export function publishedGame3DDisplayDefaults(host=null,buildEnv={}) {
+  const width=Number(host?.innerWidth)||1280;
+  const height=Number(host?.innerHeight)||720;
+  const coarse=Boolean(host?.matchMedia?.('(any-pointer: coarse)')?.matches)||
+    (Number(host?.navigator?.maxTouchPoints)||0)>0;
+  const handheld=Math.min(width,height)<700||
+    (coarse&&width<=1450&&height<=1000);
+  const chosen=handheld?buildEnv?.VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION:'auto';
+  return normalizeGame3DDisplaySettings({
+    resolution:chosen,uiScale:'auto',
+  });
+}
+export function readGame3DDisplaySettings(
+  host=typeof window!=='undefined'?window:null,
+  buildEnv=import.meta.env||{},
+) {
+  const defaults=publishedGame3DDisplayDefaults(host,buildEnv);
   try {
-    return normalizeGame3DDisplaySettings(JSON.parse(
-      host?.localStorage?.getItem(GAME3D_DISPLAY_SETTINGS_KEY)||'null'));
-  } catch { return normalizeGame3DDisplaySettings(null); }
+    const saved=host?.localStorage?.getItem(GAME3D_DISPLAY_SETTINGS_KEY);
+    return saved ? normalizeGame3DDisplaySettings(JSON.parse(saved)) : defaults;
+  } catch { return defaults; }
 }
 export function saveGame3DDisplaySettings(raw,host=typeof window!=='undefined'?window:null) {
   const settings=normalizeGame3DDisplaySettings(raw);
