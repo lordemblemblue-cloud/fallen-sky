@@ -16,8 +16,10 @@ import {readGame3DCommunityHUD,saveGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT
 import {RENDER_STATS_STORAGE_KEY,isRenderStatsEnabled} from './debug/renderStats';
 import {CLONE_GPU_PROFILE_KEY,CLONE_GPU_PROFILES,readCloneGPUProfile,
   normalizeCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
-import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
-  readGame3DDisplaySettings,saveGame3DDisplaySettings,game3DResolutionTarget}
+import {GAME3D_DISPLAY_SETTINGS_EVENT,GAME3D_RENDER_BUFFER_APPLIED_EVENT,
+  GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
+  readGame3DDisplaySettings,saveGame3DDisplaySettings,game3DResolutionTarget,
+  readGame3DActualFramebuffer,readGame3DRendererViewport}
   from './performance/Game3DDisplaySettings.mjs';
 import {readWolfveilWorldVariant,saveWolfveilWorldVariant,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
@@ -93,6 +95,7 @@ export default function PauseMenu({
     height:typeof window==='undefined'?720:window.innerHeight,
     dpr:typeof window==='undefined'?1:window.devicePixelRatio||1,
   }));
+  const [actualFramebuffer,setActualFramebuffer]=useState(null);
   const [menuMotion,setMenuMotion]=useState(()=>{
     try{return localStorage.getItem('game3d_menu_motion')!=='false';}
     catch{return true;}
@@ -117,13 +120,34 @@ export default function PauseMenu({
   useEffect(()=>subscribeAXEControlSettings(setControls),[]);
   useEffect(()=>{
     if(!open)return;
-    const update=()=>setDisplayViewport({
-      width:window.innerWidth,height:window.innerHeight,
-      dpr:window.devicePixelRatio||1,
-    });
+    const update=()=>{
+      const renderer=window.__gw3dRenderer;
+      const viewport=renderer
+        ?readGame3DRendererViewport(renderer,window)
+        :{width:window.innerWidth,height:window.innerHeight};
+      setDisplayViewport(old=>{
+        const next={width:viewport.width,height:viewport.height,
+          dpr:window.devicePixelRatio||1};
+        return old.width===next.width&&old.height===next.height&&old.dpr===next.dpr?old:next;
+      });
+      // This is the actual renderer canvas drawing buffer, not the predicted
+      // game3DResolutionTarget output. Do not show a fake applied resolution.
+      const next=readGame3DActualFramebuffer(renderer);
+      setActualFramebuffer(old=>
+        old?.width===next?.width&&old?.height===next?.height&&
+        old?.pixelRatio===next?.pixelRatio?old:next);
+    };
     update();
     window.addEventListener('resize',update,{passive:true});
-    return ()=>window.removeEventListener('resize',update);
+    window.addEventListener(GAME3D_RENDER_BUFFER_APPLIED_EVENT,update);
+    // The governor attaches to the game canvas asynchronously; this finds it
+    // even if settings were opened before the 3D scene finished booting.
+    const watcher=window.setInterval(update,500);
+    return ()=>{
+      window.removeEventListener('resize',update);
+      window.removeEventListener(GAME3D_RENDER_BUFFER_APPLIED_EVENT,update);
+      window.clearInterval(watcher);
+    };
   },[open]);
   useEffect(()=>{
     const onPresence=event=>setPresence(event?.detail||{status:'unknown',count:null,max:20});
@@ -252,12 +276,12 @@ export default function PauseMenu({
       profile:gpuProfile,quality:graphics.quality,
       devicePixelRatio:displayViewport.dpr,
     }),
+    maxTextureSize:typeof window==='undefined'
+      ?undefined:window.__gw3dRenderer?.capabilities?.maxTextureSize,
   });
-  const actualBuffer=typeof window!=='undefined'
-    ?window.__axe3dCloneGovernor?.getSnapshot?.():null;
-  const displayedPixels=displaySettings.resolution==='auto'&&actualBuffer?.renderWidth
-    ?[actualBuffer.renderWidth,actualBuffer.renderHeight]
-    :[displayPreview.width,displayPreview.height];
+  // No inferred framebuffer sizes are ever labelled as an applied result.
+  const displayedPixels=actualFramebuffer
+    ?[actualFramebuffer.width,actualFramebuffer.height]:null;
   const changeVolume=value=>{
     const next=Math.max(0,Math.min(1,Number(value)||0));
     if(next>0)lastVolumeRef.current=next;
@@ -477,9 +501,12 @@ export default function PauseMenu({
                         <option key={option.id} value={option.id}>{option.label}</option>)}
                     </select>
                   </label>
-                  <p className="axe3d-pause__help" role="status">
+                  <p className="axe3d-pause__help" role="status" data-testid="game3d-live-resolution">
                     Game viewport: {displayPreview.cssWidth} × {displayPreview.cssHeight} CSS pixels.
-                    {' '}3D framebuffer: approximately {displayedPixels[0]} × {displayedPixels[1]} pixels.
+                    {' '}Requested render target: {displayPreview.width} × {displayPreview.height}.
+                    {' '}{displayedPixels
+                      ? `Applied WebGL output: ${displayedPixels[0]} × ${displayedPixels[1]} physical pixels.`
+                      : 'Waiting for the 3D renderer to initialize; no resolution has been confirmed yet.'}
                     {displayPreview.limited?' Limited to fit this browser’s safe texture/pixel budget.':''}
                   </p>
                   <OptionButtons label="Interface size" value={displaySettings.uiScale}
