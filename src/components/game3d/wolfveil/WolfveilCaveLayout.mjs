@@ -5,6 +5,11 @@
 // a central Subterranean Rotunda and five winding rock-cut tunnels.
 // Coordinates are Wolfveil-local (Game 3D applies +70m Z via world.group).
 import { wolfveilHeight } from './WolfveilLayout.js';
+import {
+  WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_CANYON,
+  WOLFVEIL_MODULAR_CORRIDOR_SPECS,WOLFVEIL_MODULAR_TRAVEL_NODES,
+  WOLFVEIL_MODULAR_ARENA_ROUTE,sampleWolfveilModularCanyon,
+} from './WolfveilModularCaveKit.mjs';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smooth = t => {
@@ -130,6 +135,7 @@ export const WOLFVEIL_CAVE_HUB = Object.freeze({
 export const WOLFVEIL_CAVE_CHAMBERS = Object.freeze([
   ...WOLFVEIL_EXPLORABLE_CAVES.map(c => c.chamber),
   WOLFVEIL_CAVE_HUB,
+  WOLFVEIL_MODULAR_TREASURE_ROOM,
 ]);
 
 function makePolylineCorridor(id, waypoints, halfWidth = 3.6, ceiling = 5.8, kind = 'tunnel') {
@@ -329,6 +335,10 @@ export const WOLFVEIL_CAVE_CORRIDORS = Object.freeze([
   // to stand, look, and find by walking, not a teleport or a loot button.
   sideAlcove(WOLFVEIL_CAVE_HUB, -1, 0.15, 36, 'alcove_west_quiet_basin'),
   sideAlcove(WOLFVEIL_CAVE_HUB, 0.2, 1, 34, 'alcove_north_offering'),
+  // Owner's modular viewer: connected hallway + T + vault + larger canyon.
+  ...WOLFVEIL_MODULAR_CORRIDOR_SPECS.map(spec=>
+    makePolylineCorridor(spec.id,spec.waypoints,
+      spec.halfWidth,spec.ceiling,spec.kind)),
 ]);
 
 /**
@@ -386,6 +396,11 @@ export function sampleWolfveilCaveSpace(x, z, margin = 0) {
       }
     }
   }
+  // Canyon walkability is shared with its visual floor tiles: the gorge is
+  // deliberately empty except at the three real stone bridge crossings.
+  const modular=sampleWolfveilModularCanyon(x,z,margin);
+  if(modular)consider(modular.clearance,modular.floorY,
+    modular.ceilingY-modular.floorY,modular.kind);
   return best;
 }
 
@@ -509,6 +524,7 @@ export function buildWolfveilCaveTravelGraph() {
     {id:WOLFVEIL_CAVE_HUB.id,name:WOLFVEIL_CAVE_HUB.name,
       x:WOLFVEIL_CAVE_HUB.x,y:WOLFVEIL_CAVE_HUB.y,
       z:WOLFVEIL_CAVE_HUB.z,kind:'hub'},
+    ...WOLFVEIL_MODULAR_TRAVEL_NODES,
   ];
   const nearest=(x,z)=>nodes.reduce((best,n)=>{
     const d=Math.hypot(x-n.x,z-n.z);
@@ -522,6 +538,17 @@ export function buildWolfveilCaveTravelGraph() {
     if(!from||!to||from.distance>1||to.distance>1||from.id===to.id)continue;
     edges.push({id:corridor.id,from:from.id,to:to.id,
       length:corridor.totalLength});
+  }
+  // The arena route runs across the *rendered, collision-enabled* middle
+  // bridge. It is not a synthetic teleport or an encounter activation.
+  const routeLength=WOLFVEIL_MODULAR_ARENA_ROUTE.reduce((len,p,i,pts)=>
+    i?len+Math.hypot(p[0]-pts[i-1][0],p[2]-pts[i-1][2]):len,0);
+  if(WOLFVEIL_MODULAR_ARENA_ROUTE.every(p=>
+    Boolean(sampleWolfveilModularCanyon(p[0],p[2],0.62)))){
+    edges.push({id:'modular_canyon_open_floor_to_arena',
+      from:WOLFVEIL_MODULAR_CANYON.entrance.id,
+      to:WOLFVEIL_MODULAR_CANYON.arena.id,
+      length:routeLength,kind:'walkable_floor'});
   }
   return {nodes,edges,hubId:WOLFVEIL_CAVE_HUB.id};
 }
