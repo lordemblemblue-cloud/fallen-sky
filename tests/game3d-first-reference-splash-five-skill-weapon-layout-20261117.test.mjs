@@ -46,9 +46,9 @@ test('three weapon choices above skills, previous arrow LEFT and next arrow RIGH
   assert.match(weapon,/className="jade-concept-d-cycle-next"/);
   assert.match(weapon,/onClick=\{\(\)=>onCycle\(1\)\}/);
   assert.match(weapon,/getItem\(role\)/);
-  assert.match(weapon,/onClick=\{\(\)=>onDraw\(role\)\}/);
-  assert.match(weapon,/onClick=\{\(\)=>onAssign\(role\)\}/);
-  assert.match(weapon,/onClick=\{onFavorite\}/);
+  assert.match(weapon,/onClick=\{event=>onDraw\(role,event\.shiftKey\)\}/);
+  assert.doesNotMatch(weapon,/jade-concept-d-assign|onAssign\(role\)/);
+  assert.doesNotMatch(weapon,/jade-concept-d-favorite/);
   assert.match(css,/grid-template-columns:clamp\(26px,3vw,37px\) minmax\(0,1fr\) clamp\(26px,3vw,37px\)/);
   assert.match(css,/flex-direction:row/);
   assert.match(css,/top:8%/);
