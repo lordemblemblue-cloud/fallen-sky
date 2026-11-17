@@ -1,7 +1,8 @@
 import {
   GAME3D_DISPLAY_SETTINGS_EVENT,game3DResolutionTarget,
   normalizeGame3DDisplaySettings,readGame3DDisplaySettings,
-  readGame3DRendererViewport,
+  readGame3DRendererViewport,readGame3DActualFramebuffer,
+  publishGame3DActualFramebuffer,
 } from './Game3DDisplaySettings.mjs';
 
 // Clone Game 3D adaptive browser renderer. No WebAssembly, native hardware access,
@@ -104,7 +105,12 @@ export function createCloneAdaptiveGraphics({
   }
   let disposed = false;
   let profile = normalizeCloneGPUProfile(initialProfile ?? readCloneGPUProfile(host));
-  const originalRatio = Number(renderer.getPixelRatio?.()) || 1;
+  // Auto + GPU Off should restore the original DPR quality cap, not a
+  // 720p/1080p choice that might already have been applied during startup.
+  const originalRatio = rendererPixelRatioLimit({
+    profile:'off', quality:readQuality(host),
+    devicePixelRatio:Number(host.devicePixelRatio)||1,
+  });
   let ratio = originalRatio;
   let quality = readQuality(host);
   let display = readGame3DDisplaySettings(host);
@@ -133,16 +139,19 @@ export function createCloneAdaptiveGraphics({
 
   function applyRatio(next) {
     if (disposed || (profile === 'off' && display.resolution === 'auto') ||
-        !Number.isFinite(next) || next <= 0 ||
-        Math.abs(next - ratio) < 0.01) return;
+        !Number.isFinite(next) || next <= 0) return;
     try {
       if (renderer.getContext?.()?.isContextLost?.()) return;
-      renderer.setPixelRatio(next); // Three.js also refreshes its drawing buffer size.
-      ratio = next;
-      // The Sumi-e postprocess target must match the new drawing buffer.
-      if (host.__gw3dRenderer === renderer) host.__gw3dInkLook?.setSize?.();
+      // A direct GameWorld3D resolution event may have changed the renderer
+      // before this governor listener runs. Read the renderer, not the cached
+      // ratio, so we never report an unapplied resolution.
+      const current=Number(renderer.getPixelRatio?.())||ratio;
+      if(Math.abs(next-current)>=0.001)
+        renderer.setPixelRatio(next); // Updates Three.js canvas.width/height.
+      ratio=Number(renderer.getPixelRatio?.())||next;
+      if(host.__gw3dRenderer===renderer)host.__gw3dInkLook?.setSize?.();
     } catch {
-      // Rendering must continue even if a GPU is lost during resizing.
+      // Rendering must continue if the WebGL context is temporarily lost.
     }
   }
 
@@ -164,17 +173,23 @@ export function createCloneAdaptiveGraphics({
           viewportWidth:target.cssWidth, viewportHeight:target.cssHeight,
           maxTextureSize:renderer.capabilities?.maxTextureSize,
         }).ratio;
-        if (Math.abs(ratio-safeOriginal) >= .01) {
-          renderer.setPixelRatio(safeOriginal); ratio=safeOriginal;
+        if (Math.abs((Number(renderer.getPixelRatio?.())||ratio)-safeOriginal) >= .001) {
+          renderer.setPixelRatio(safeOriginal);
           if (host.__gw3dRenderer === renderer) host.__gw3dInkLook?.setSize?.();
         }
+        ratio=Number(renderer.getPixelRatio?.())||safeOriginal;
       } catch { /* Context may already be lost. */ }
     } else {
       applyRatio(profile === 'auto' ? Math.min(ratio, ceiling) : ceiling);
     }
+    const actual=publishGame3DActualFramebuffer({
+      renderer,host,resolution:display.resolution,limited:target.limited,
+    });
     sample = { ...sample, ratio, profile,
-      resolution:display.resolution, renderWidth:target.width, renderHeight:target.height,
-      limited:target.limited };
+      resolution:display.resolution,
+      renderWidth:actual?.width??target.width,
+      renderHeight:actual?.height??target.height,
+      limited:target.limited,applied:Boolean(actual) };
   }
 
   function changeProfile(next) {
@@ -240,10 +255,11 @@ export function createCloneAdaptiveGraphics({
       }
     }
     const viewport=readGame3DRendererViewport(renderer,host);
+    const actual=readGame3DActualFramebuffer(renderer);
     sample = { ...frame, ratio, profile, resolution:display.resolution,
-      renderWidth:Math.floor(viewport.width*ratio),
-      renderHeight:Math.floor(viewport.height*ratio),limited:target.limited,
-      sampledAt: now };
+      renderWidth:actual?.width??Math.floor(viewport.width*ratio),
+      renderHeight:actual?.height??Math.floor(viewport.height*ratio),
+      limited:target.limited,applied:Boolean(actual),sampledAt:now };
     try { onSample(sample); } catch { /* UI cannot disrupt gameplay */ }
   }
 
