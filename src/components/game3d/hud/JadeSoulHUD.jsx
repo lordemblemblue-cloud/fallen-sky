@@ -553,7 +553,9 @@ export default function JadeSoulHUD({
             splash image. No CSS/SVG recreation of its brush strokes.
             Interactive slots and weapon roles are layered above this image. */}
         <img className="jade-concept-d-ornament"
-          src="/game3d/hud/clean-curl-splash-only.webp"
+          src={hudCustomization.layout==='vertical'
+            ?'/game3d/hud/concept-d-original-ornament.avif'
+            :'/game3d/hud/clean-curl-splash-only.webp'}
           alt="" aria-hidden="true" draggable="false" loading="eager" decoding="async"/>
         <WeaponStack playerLevel={hud?.level} />
         <SkillMatrix loadout={loadout}/>
