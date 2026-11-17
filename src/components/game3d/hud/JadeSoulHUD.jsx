@@ -83,7 +83,6 @@ function SkillMatrix({ loadout }) {
 
 function WeaponStack({ playerLevel }) {
   const [, refresh] = useState(0);
-  const [assigning, setAssigning] = useState(null);
   const [notice, setNotice] = useState('');
   const wheelRef = useRef(null);
   const wheelAt = useRef(0);
@@ -92,7 +91,7 @@ function WeaponStack({ playerLevel }) {
 
   useEffect(() => subscribeAXEHUDWeaponRoles(() => refresh(n=>n+1)), []);
   useEffect(() => subscribeAXEEquipmentInventory(() => refresh(n=>n+1)), []);
-  useEffect(() => subscribeCharacterChange(() => {setAssigning(null);setNotice('');activeRoleRef.current=null;}), []);
+  useEffect(() => subscribeCharacterChange(() => {setNotice('');activeRoleRef.current=null;}), []);
   useEffect(() => {
     if(!notice)return;
     const timer=setTimeout(()=>setNotice(''),2800);
@@ -101,13 +100,24 @@ function WeaponStack({ playerLevel }) {
 
   const active=getActiveEquippedAXEWeapon();
   const performDraw=useCallback(role=>{
-    const item=getAXERoleWeapon(role);
+    let item=getAXERoleWeapon(role);
     if(!item){
-      setAssigning(role);
-      setNotice(getOwnedWeaponsForAXERole(role).length
-        ? `Choose a weapon for the ${ROLE_TITLES[role]} slot`
-        : 'No weapons in your inventory yet');
-      return false;
+      // No side popup: quietly assign the first unused, genuinely owned
+      // weapon to an empty role. Never steal a weapon from another role.
+      const occupied=new Set(['offensive','ranged','defensive']
+        .filter(other=>other!==role).map(other=>getAXERoleWeapon(other)?.instanceId)
+        .filter(Boolean));
+      const owned=getOwnedWeaponsForAXERole(role).filter(weapon=>
+        !occupied.has(weapon.instanceId));
+      const candidate=owned.find(weapon=>inferAXEWeaponRole(weapon)===role)||owned[0];
+      if(candidate){
+        const assignment=assignAXEHUDWeaponRole(role,candidate.instanceId);
+        if(assignment.ok)item=getAXERoleWeapon(role);
+      }
+      if(!item){
+        setNotice('No unassigned owned weapon available for '+ROLE_TITLES[role]);
+        return false;
+      }
     }
     const result=drawAXEHUDWeaponRole(role,{level:playerLevel||1});
     if(result.ok){
@@ -119,7 +129,6 @@ function WeaponStack({ playerLevel }) {
         drawnRole==='offensive'?0:null;
       const presetChange=index!==null && getSkillPresets().index!==index
         ? selectSkillPreset(index) : {ok:true};
-      setAssigning(null);
       activeRoleRef.current=role;
       setNotice(presetChange.ok
         ? `${ROLE_TITLES[role]} · ${result.item?.name||item.name}`
@@ -130,13 +139,27 @@ function WeaponStack({ playerLevel }) {
     return result.ok === true;
   },[playerLevel]);
 
-  const assignAndDraw=useCallback((role,id)=>{
-    const result=assignAXEHUDWeaponRole(role,id);
+  // Shift-click a weapon circle to cycle genuinely owned equipment IN that
+  // role without opening a side panel or rendering extra mini-boxes.
+  const cycleOwnedForRole=useCallback(role=>{
+    const occupied=new Set(['offensive','ranged','defensive']
+      .filter(other=>other!==role).map(other=>getAXERoleWeapon(other)?.instanceId)
+      .filter(Boolean));
+    const owned=getOwnedWeaponsForAXERole(role).filter(item=>
+      !occupied.has(item.instanceId));
+    if(!owned.length){
+      setNotice('No unassigned owned weapons for '+ROLE_TITLES[role]);
+      return false;
+    }
+    const currentId=getAXERoleWeapon(role)?.instanceId;
+    const currentIndex=owned.findIndex(item=>item.instanceId===currentId);
+    const next=owned[(currentIndex+1)%owned.length];
+    const result=assignAXEHUDWeaponRole(role,next.instanceId);
     if(!result.ok){
       setNotice(result.reason?.replace(/_/g,' ')||'Cannot assign weapon');
-      return;
+      return false;
     }
-    performDraw(role);
+    return performDraw(role);
   },[performDraw]);
 
   const cycleAvailable=useCallback(direction=>{
@@ -209,12 +232,9 @@ function WeaponStack({ playerLevel }) {
         rows={AXE_HUD_WEAPON_ROLES}
         getItem={getAXERoleWeapon}
         activeId={active?.instanceId}
-        assigning={assigning}
         wheelRef={wheelRef}
-        onDraw={performDraw}
-        onAssign={role=>setAssigning(current=>current===role?null:role)}
+        onDraw={(role,cycleOwned)=>cycleOwned?cycleOwnedForRole(role):performDraw(role)}
         onCycle={cycleAvailable}
-        onFavorite={drawFavorite}
         onTouchStart={e=>{touchY.current=e.touches[0]?.clientY??null;}}
         onTouchEnd={e=>{
           const start=touchY.current;
@@ -224,19 +244,8 @@ function WeaponStack({ playerLevel }) {
             cycleAvailable(e.changedTouches[0].clientY<start?1:-1);
         }}
       />
-      {assigning && <div className="jade-weapon-chooser" role="group"
-        aria-label={`Assign a ${ROLE_TITLES[assigning]} weapon`}>
-        <div className="jade-weapon-chooser-title">
-          <span>Choose weapon · {ROLE_TITLES[assigning]}</span>
-          <button type="button" onClick={()=>setAssigning(null)} aria-label="Close weapon assignment">×</button>
-        </div>
-        {getOwnedWeaponsForAXERole(assigning).length
-          ? getOwnedWeaponsForAXERole(assigning).map(item=>
-            <button type="button" key={item.instanceId}
-              onClick={()=>assignAndDraw(assigning,item.instanceId)}>{item.name}</button>)
-          : <p>No owned weapons yet.</p>}
-      </div>}
-      {notice && <div className="jade-weapon-notice" role="status">{notice}</div>}
+      {/* Preserve accessible feedback without an intrusive side popup. */}
+      <span className="jade-weapon-status-sr" role="status" aria-live="polite">{notice}</span>
     </div>
   );
 }

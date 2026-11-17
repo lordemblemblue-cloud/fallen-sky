@@ -30,16 +30,16 @@ test('three roles are live owned-weapon circles, not artwork cutouts',()=>{
   assert.match(weapon,/getItem\(role\)/);
   assert.match(weapon,/getAXEWeaponHUDArtwork\(item\)/);
   assert.match(weapon,/aria-pressed=\{active\}/);
-  assert.match(weapon,/onClick=\{\(\)=>onDraw\(role\)\}/);
-  assert.match(weapon,/onClick=\{\(\)=>onAssign\(role\)\}/);
+  assert.match(weapon,/onClick=\{event=>onDraw\(role,event\.shiftKey\)\}/);
+  assert.doesNotMatch(weapon,/onAssign\(role\)|jade-concept-d-assign/);
   assert.match(weapon,/ref=\{wheelRef\}/);
   assert.match(css,/\.jade-concept-d-weapon-circle\s*\{/);
   assert.match(css,/border-radius:50%/);
 });
 test('original weapon transaction and wheel/arrow/touch switching are preserved',()=>{
   assert.match(hud,/drawAXEHUDWeaponRole\(role,\{level:playerLevel\|\|1\}\)/);
-  assert.match(hud,/assignAXEHUDWeaponRole\(role,id\)/);
-  assert.match(hud,/getOwnedWeaponsForAXERole\(assigning\)/);
+  assert.match(hud,/assignAXEHUDWeaponRole\(role,next\.instanceId\)/);
+  assert.match(hud,/getOwnedWeaponsForAXERole\(role\)/);
   assert.match(hud,/el\.addEventListener\('wheel',onWheel,\{passive:false\}\)/);
   assert.match(hud,/key==='ArrowLeft'\)cycleAvailable\(-1\)/);
   assert.match(hud,/const roles=\['offensive','ranged','defensive'\]/);

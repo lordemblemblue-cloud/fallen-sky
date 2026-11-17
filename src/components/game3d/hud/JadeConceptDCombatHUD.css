@@ -756,3 +756,174 @@
   }
   .jade-hud .jade-combat-concept-d .jade-concept-d-favorite {display:none;}
 }
+
+
+/* 2026-11-17 owner correction: CLUMP controls to the RIGHT of the ORIGINAL
+   unmodified first-image translucent splash. Do not recreate the image.
+   All five skills remain real slots; 3 weapons use the SAME diameter.
+   No mini assignment boxes, popovers, or floating favorite circle. */
+.jade-hud .jade-combat-concept-d {
+  --jade-dock-slot:clamp(32px,3vw,49px);
+  --jade-dock-gap:clamp(2px,.30vw,4px);
+  --jade-dock-arrow:clamp(22px,2vw,27px);
+  right:clamp(3px,.7vw,12px);
+}
+.jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+  top:59%;
+  bottom:auto;
+  left:auto;
+  right:10%;
+  width:max-content;
+  max-width:calc(100% - 10px);
+  height:22%;
+  display:grid;
+  grid-template-columns:repeat(5,var(--jade-dock-slot));
+  grid-template-rows:minmax(0,1fr);
+  justify-content:center;
+  justify-items:center;
+  align-items:center;
+  column-gap:var(--jade-dock-gap);
+  row-gap:7px;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix .jade-skill-slot {
+  width:var(--jade-dock-slot);
+  height:var(--jade-dock-slot);
+  max-width:100%;
+  flex:none;
+  transform:none;
+}
+.jade-hud .jade-combat-concept-d > .jade-weapon-position {
+  top:15%;
+  left:auto;
+  right:14.5%;
+  width:max-content;
+  max-width:calc(100% - 10px);
+  height:28%;
+  padding:0;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle {
+  position:relative;
+  left:auto;
+  right:auto;
+  top:auto;
+  bottom:auto;
+  width:max-content;
+  max-width:100%;
+  height:100%;
+  display:grid;
+  grid-template-columns:var(--jade-dock-arrow) max-content var(--jade-dock-arrow);
+  justify-content:center;
+  align-items:center;
+  gap:var(--jade-dock-gap);
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-rail {
+  flex:none;
+  width:max-content;
+  min-width:0;
+  height:100%;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:var(--jade-dock-gap);
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-role {
+  display:grid;
+  place-items:center;
+  flex:0 0 var(--jade-dock-slot);
+  width:var(--jade-dock-slot);
+  height:var(--jade-dock-slot);
+  min-width:0;
+  min-height:0;
+  max-height:none;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-weapon-circle,
+.jade-hud .jade-combat-concept-d .jade-concept-d-role[data-active="true"] .jade-concept-d-weapon-circle {
+  width:var(--jade-dock-slot);
+  height:var(--jade-dock-slot);
+  max-width:100%;
+  min-width:0;
+  min-height:0;
+  transform:none;
+  aspect-ratio:1;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button {
+  width:var(--jade-dock-arrow);
+  min-width:0;
+  height:var(--jade-dock-arrow);
+  padding:0;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-cycle > button svg {
+  width:62%;
+  height:62%;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-assign,
+.jade-hud .jade-combat-concept-d .jade-weapon-chooser,
+.jade-hud .jade-combat-concept-d .jade-weapon-notice,
+.jade-hud .jade-combat-concept-d .jade-concept-d-favorite {
+  display:none!important;
+}
+.jade-hud .jade-combat-concept-d .jade-weapon-status-sr {
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip-path:inset(50%);
+  white-space:nowrap;
+  border:0;
+}
+.jade-hud .jade-combat-concept-d .jade-concept-d-more-skills {
+  left:0;
+  bottom:calc(100% + 5px);
+  white-space:nowrap;
+}
+.jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+  top:44%;
+  height:41%;
+  grid-template-rows:repeat(2,minmax(0,1fr));
+  row-gap:7px;
+}
+@media (max-width:1100px) {
+  .jade-hud .jade-combat-concept-d {
+    --jade-dock-slot:clamp(30px,3.4vw,43px);
+    --jade-dock-arrow:clamp(21px,2.3vw,25px);
+  }
+}
+@media (max-width:680px) {
+  .jade-hud .jade-combat-concept-d {
+    --jade-dock-slot:clamp(23px,6vw,34px);
+    --jade-dock-arrow:clamp(18px,4.6vw,23px);
+    --jade-dock-gap:3px;
+    right:max(3px,var(--game3d-safe-right,0px));
+  }
+  .jade-hud .jade-combat-concept-d > .jade-ability-matrix {
+    top:59%;
+    right:7%;
+    width:max-content;
+    height:23%;
+    grid-template-columns:repeat(5,var(--jade-dock-slot));
+    column-gap:var(--jade-dock-gap);
+  }
+  .jade-hud .jade-combat-concept-d > .jade-weapon-position {
+    top:15%;
+    left:auto;
+    right:11%;
+    width:max-content;
+    height:27%;
+  }
+  .jade-hud .jade-combat-concept-d .jade-ability-matrix[data-secondary-open="true"] {
+    top:44%;
+    height:41%;
+  }
+}
+@media (max-height:510px) and (orientation:landscape) {
+  .jade-hud .jade-combat-concept-d {
+    --jade-dock-slot:clamp(22px,3.2vw,32px);
+    --jade-dock-arrow:clamp(17px,2.4vw,22px);
+    --jade-dock-gap:2px;
+  }
+  .jade-hud .jade-combat-concept-d > .jade-ability-matrix {right:7%;}
+  .jade-hud .jade-combat-concept-d > .jade-weapon-position {right:11%;}
+}
