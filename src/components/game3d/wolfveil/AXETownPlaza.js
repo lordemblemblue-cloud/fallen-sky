@@ -793,11 +793,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 const gate = new THREE.Group();
                 gate.position.set(0, 0, 33.0);
-                const colL = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 4.8, 16), mats.column);
+                const colL = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 4.8, lowDetail ? 8 : 12), mats.column);
                 colL.position.set(-2.3, 2.4, 0);
                 colL.castShadow = true;
                 gate.add(colL);
-                const colR = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 4.8, 16), mats.column);
+                const colR = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 4.8, lowDetail ? 8 : 12), mats.column);
                 colR.position.set(2.3, 2.4, 0);
                 colR.castShadow = true;
                 gate.add(colR);
@@ -893,7 +893,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 roofUpper.position.y = 1.96;
                 lGroup.add(roofUpper);
 
-                const finial = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), mats.gold);
+                const finial = new THREE.Mesh(new THREE.SphereGeometry(0.11, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.gold);
                 finial.position.y = 2.16;
                 lGroup.add(finial);
 
@@ -950,7 +950,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 rock.receiveShadow = true;
                 fountainGroup.add(rock);
             }
-            const lowerShelfPlateau = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.65, 0.85, 24), mats.cragRock);
+            const lowerShelfPlateau = new THREE.Mesh(new THREE.CylinderGeometry(3.25, 3.65, 0.85, lowDetail ? 8 : 12), mats.cragRock);
             lowerShelfPlateau.position.set(0, 1.48, 0);
             lowerShelfPlateau.receiveShadow = true;
             fountainGroup.add(lowerShelfPlateau);
@@ -1026,14 +1026,14 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 wolf.scale.setScalar(scale);
 
                 // Hindquarters & Folded Seated Haunches
-                const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.52, 16, 14), mats.wolfStone);
+                const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.52, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                 pelvis.scale.set(0.95, 1.18, 1.15);
                 pelvis.position.set(0, 0.52, -0.38);
                 pelvis.castShadow = true;
                 wolf.add(pelvis);
 
                 for (let s = -1; s <= 1; s += 2) {
-                    const thigh = new THREE.Mesh(new THREE.SphereGeometry(0.36, 14, 12), mats.wolfStone);
+                    const thigh = new THREE.Mesh(new THREE.SphereGeometry(0.36, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                     thigh.scale.set(0.72, 1.25, 1.1);
                     thigh.position.set(s * 0.34, 0.48, -0.28);
                     thigh.rotation.x = 0.35;
@@ -1044,20 +1044,20 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     hock.rotation.x = -0.45;
                     wolf.add(hock);
 
-                    const hindPaw = new THREE.Mesh(new THREE.SphereGeometry(0.15, 10, 8), mats.wolfStone);
+                    const hindPaw = new THREE.Mesh(new THREE.SphereGeometry(0.15, lowDetail ? 8 : 10, lowDetail ? 6 : 8), mats.wolfStone);
                     hindPaw.scale.set(0.9, 0.55, 1.35);
                     hindPaw.position.set(s * 0.34, 0.08, 0.12);
                     wolf.add(hindPaw);
                 }
 
                 // Deep Muscular Spine, Ribcage & Proudly Arched Chest
-                const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 1.25, 16), mats.wolfStone);
+                const spine = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 1.25, lowDetail ? 8 : 12), mats.wolfStone);
                 spine.position.set(0, 1.02, -0.02);
                 spine.rotation.x = 0.52;
                 spine.castShadow = true;
                 wolf.add(spine);
 
-                const breast = new THREE.Mesh(new THREE.SphereGeometry(0.48, 16, 14), mats.wolfStone);
+                const breast = new THREE.Mesh(new THREE.SphereGeometry(0.48, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                 breast.scale.set(0.96, 1.22, 1.08);
                 breast.position.set(0, 1.38, 0.28);
                 breast.castShadow = true;
@@ -1065,25 +1065,25 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 // Braced Straight Front Legs, Shoulders & Clawed Paws
                 for (let s = -1; s <= 1; s += 2) {
-                    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), mats.wolfStone);
+                    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.28, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                     shoulder.scale.set(0.75, 1.3, 0.95);
                     shoulder.position.set(s * 0.28, 1.22, 0.36);
                     wolf.add(shoulder);
 
-                    const foreleg = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.095, 1.18, 12), mats.wolfStone);
+                    const foreleg = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.095, 1.18, lowDetail ? 8 : 12), mats.wolfStone);
                     foreleg.position.set(s * 0.25, 0.62, 0.42);
                     foreleg.rotation.x = -0.06;
                     foreleg.castShadow = true;
                     wolf.add(foreleg);
 
-                    const forePaw = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 10), mats.wolfStone);
+                    const forePaw = new THREE.Mesh(new THREE.SphereGeometry(0.15, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                     forePaw.scale.set(0.95, 0.55, 1.4);
                     forePaw.position.set(s * 0.25, 0.08, 0.52);
                     wolf.add(forePaw);
                 }
 
                 // Thick Layered Sculpted Fur Ruff Collar around Neck & Shoulders (Signature Detail from Image)
-                const neckCore = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.44, 0.92, 14), mats.wolfStone);
+                const neckCore = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.44, 0.92, lowDetail ? 8 : 12), mats.wolfStone);
                 neckCore.position.set(0, 1.88, 0.38);
                 neckCore.rotation.x = 0.28;
                 wolf.add(neckCore);
@@ -1114,7 +1114,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 headGroup.rotation.x = -0.88; // Pitched steeply skyward in a full howl
                 wolf.add(headGroup);
 
-                const skull = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 12), mats.wolfStone);
+                const skull = new THREE.Mesh(new THREE.SphereGeometry(0.28, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.wolfStone);
                 skull.scale.set(0.92, 0.95, 1.15);
                 headGroup.add(skull);
 
@@ -1128,12 +1128,12 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 // Upper Snout Bridge & Dark Nose Tip
-                const upperSnout = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.20, 0.56, 12), mats.wolfStone);
+                const upperSnout = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.20, 0.56, lowDetail ? 8 : 12), mats.wolfStone);
                 upperSnout.rotation.x = Math.PI / 2 - 0.08;
                 upperSnout.position.set(0, 0.06, 0.34);
                 headGroup.add(upperSnout);
 
-                const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 8), mats.obsidian);
+                const noseTip = new THREE.Mesh(new THREE.SphereGeometry(0.065, lowDetail ? 8 : 10, lowDetail ? 6 : 8), mats.obsidian);
                 noseTip.position.set(0, 0.10, 0.61);
                 headGroup.add(noseTip);
 
@@ -1341,12 +1341,12 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 const grp = new THREE.Group();
                 grp.position.set(x, y, z);
                 addBox(grp, 0.04, 0.45, 0.04, mats.charredTimber, 0, 0.55, 0);
-                const capT = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.08, 16), mats.charredTimber);
+                const capT = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.08, lowDetail ? 8 : 12), mats.charredTimber);
                 capT.position.y = 0.34;
                 grp.add(capT);
-                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.65, 20), mats.lanternGlowMat);
+                const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.65, lowDetail ? 8 : 12), mats.lanternGlowMat);
                 grp.add(body);
-                const capB = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.08, 16), mats.charredTimber);
+                const capB = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.08, lowDetail ? 8 : 12), mats.charredTimber);
                 capB.position.y = -0.34;
                 grp.add(capB);
                 allLanterns.push({ group: grp, phase: Math.random() * Math.PI * 2 });
@@ -1437,10 +1437,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 function addCol(x, y, z, height = 3.85) {
                     const col = new THREE.Group();
                     col.position.set(x, y, z);
-                    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.25, 20), mats.flagstone);
+                    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.25, lowDetail ? 8 : 12), mats.flagstone);
                     plinth.position.y = 0.125;
                     col.add(plinth);
-                    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.36, height - 0.8, 20), mats.column);
+                    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.36, height - 0.8, lowDetail ? 8 : 12), mats.column);
                     shaft.position.y = (height - 0.8) / 2 + 0.25;
                     shaft.castShadow = true;
                     shaft.receiveShadow = true;
@@ -1451,7 +1451,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                         ring.position.y = height - 0.65 + r * 0.07;
                         col.add(ring);
                     }
-                    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.3, 0.48, 20), capMat);
+                    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.3, 0.48, lowDetail ? 8 : 12), capMat);
                     cap.position.y = height - 0.3;
                     col.add(cap);
                     addBox(col, 0.85, 0.16, 0.85, mats.gold, 0, height - 0.04, 0);
@@ -1551,7 +1551,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 shopGroup.add(roofGroup);
                 roofGroup.add(createTiledRoofSlope(11.8, 5.4, 0.44, 3.1, 5.75, 0.55, true));
                 roofGroup.add(createTiledRoofSlope(11.8, 5.4, 0.44, 3.1, 5.75, -3.75, false));
-                const mainRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 12.0, 12), mats.kawaraTile);
+                const mainRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 12.0, lowDetail ? 8 : 12), mats.kawaraTile);
                 mainRidge.rotation.z = Math.PI / 2;
                 mainRidge.position.set(3.1, 6.95, -1.6);
                 roofGroup.add(mainRidge);
@@ -1560,7 +1560,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 roofGroup.add(createTiledRoofSlope(7.8, 5.6, 0.42, -5.75, 5.55, 1.65, true));
                 roofGroup.add(createTiledRoofSlope(7.8, 5.6, 0.42, -5.75, 5.55, -2.85, false));
-                const leftRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 8.0, 12), mats.kawaraTile);
+                const leftRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 8.0, lowDetail ? 8 : 12), mats.kawaraTile);
                 leftRidge.rotation.z = Math.PI / 2;
                 leftRidge.position.set(-5.75, 6.68, -0.6);
                 roofGroup.add(leftRidge);
@@ -1808,10 +1808,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 function createLotusColumn(x, y, z, height = 3.65) {
                     const col = new THREE.Group();
                     col.position.set(x, y, z);
-                    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.25, 20), mats.flagstone);
+                    const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.25, lowDetail ? 8 : 12), mats.flagstone);
                     plinth.position.y = 0.125;
                     col.add(plinth);
-                    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.36, height - 0.8, 20), mats.column);
+                    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.36, height - 0.8, lowDetail ? 8 : 12), mats.column);
                     shaft.position.y = (height - 0.8) / 2 + 0.25;
                     shaft.castShadow = true;
                     shaft.receiveShadow = true;
@@ -1822,7 +1822,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                         ring.position.y = height - 0.65 + r * 0.07;
                         col.add(ring);
                     }
-                    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.3, 0.48, 20), mats.turquoise);
+                    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.3, 0.48, lowDetail ? 8 : 12), mats.turquoise);
                     cap.position.y = height - 0.3;
                     col.add(cap);
                     addBox(col, 0.85, 0.16, 0.85, mats.gold, 0, height - 0.04, 0);
@@ -1856,7 +1856,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     addBox(houseGroup, 1.52, 0.08, 0.32, mats.sandstone, 9.15, 0.86, cz);
                     addBox(houseGroup, 0.34, 0.68, 0.34, mats.sandstone, 10.48, 0.34, cz);
                     addBox(houseGroup, 0.38, 0.12, 0.38, mats.frieze, 10.48, 0.68, cz);
-                    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), mats.gold);
+                    const finial = new THREE.Mesh(new THREE.SphereGeometry(0.13, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.gold);
                     finial.position.set(10.48, 0.82, cz);
                     houseGroup.add(finial);
                 }
@@ -1888,7 +1888,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     hilt.rotation.z = Math.PI / 2;
                     hilt.position.x = -length * 0.38;
                     sword.add(hilt);
-                    const tsuba = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, 12), mats.gold);
+                    const tsuba = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.02, lowDetail ? 8 : 12), mats.gold);
                     tsuba.rotation.z = Math.PI / 2;
                     tsuba.position.x = -length * 0.22;
                     sword.add(tsuba);
@@ -1931,7 +1931,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 hood.position.set(-4.3, 2.85, -4.1);
                 houseGroup.add(hood);
 
-                const emberBed = new THREE.Mesh(new THREE.SphereGeometry(0.68, 16, 12), mats.emberMat);
+                const emberBed = new THREE.Mesh(new THREE.SphereGeometry(0.68, lowDetail ? 8 : 12, lowDetail ? 6 : 10), mats.emberMat);
                 emberBed.scale.set(1.2, 0.45, 0.9);
                 emberBed.position.set(-4.3, 1.42, -3.95);
                 houseGroup.add(emberBed);
@@ -1944,7 +1944,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     allEmberParticles.push(p);
                 }
 
-                const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.72, 16), mats.darkWood);
+                const stump = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 0.72, lowDetail ? 8 : 12), mats.darkWood);
                 stump.position.set(-4.8, 0.86, -1.7);
                 houseGroup.add(stump);
                 addBox(houseGroup, 0.85, 0.28, 0.36, mats.darkIron, -4.8, 1.36, -1.7);
@@ -1953,7 +1953,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 anvilHorn.position.set(-5.42, 1.38, -1.7);
                 houseGroup.add(anvilHorn);
 
-                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 0.82, 16), mats.warmWood);
+                const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 0.82, lowDetail ? 8 : 12), mats.warmWood);
                 barrel.position.set(-6.2, 0.9, -2.3);
                 houseGroup.add(barrel);
                 addBox(houseGroup, 1.8, 0.85, 0.75, mats.cabinet, -2.8, 0.92, -1.8);
@@ -2013,7 +2013,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 houseGroup.add(roofGroup);
                 roofGroup.add(createTiledRoofSlope(11.6, 5.2, 0.46, 3.1, 10.65, 0.35, true));
                 roofGroup.add(createTiledRoofSlope(11.6, 5.2, 0.46, 3.1, 10.65, -3.95, false));
-                const mainRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 11.8, 12), mats.kawaraTile);
+                const mainRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 11.8, lowDetail ? 8 : 12), mats.kawaraTile);
                 mainRidge.rotation.z = Math.PI / 2;
                 mainRidge.position.set(3.1, 11.82, -1.8);
                 roofGroup.add(mainRidge);
@@ -2022,7 +2022,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 roofGroup.add(createTiledRoofSlope(7.6, 3.6, 0.48, -5.7, 9.2, -1.65, true));
                 roofGroup.add(createTiledRoofSlope(7.6, 3.6, 0.48, -5.7, 9.2, -4.55, false));
-                const leftRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 7.8, 12), mats.kawaraTile);
+                const leftRidge = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 7.8, lowDetail ? 8 : 12), mats.kawaraTile);
                 leftRidge.rotation.z = Math.PI / 2;
                 leftRidge.position.set(-5.7, 10.05, -3.1);
                 roofGroup.add(leftRidge);
@@ -2067,7 +2067,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     shopGroup,
                     mats.turquoise,
                     mats.norenClothMat,
-                    new THREE.SphereGeometry(0.13, 12, 10),
+                    new THREE.SphereGeometry(0.13, lowDetail ? 8 : 12, lowDetail ? 6 : 10),
                     mats.gold
                 );
 
@@ -2099,16 +2099,16 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     const m = new THREE.Group();
                     m.position.set(x, y, z);
                     m.rotation.y = rotY;
-                    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 0.78, 18), mats.silkLinen);
+                    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, 0.78, lowDetail ? 8 : 12), mats.silkLinen);
                     skirt.position.y = 0.72;
                     m.add(skirt);
-                    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.21, 0.65, 16), coatMat);
+                    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.21, 0.65, lowDetail ? 8 : 12), coatMat);
                     torso.position.y = 1.38;
                     m.add(torso);
-                    const neckCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.29, 0.14, 18), mats.frieze);
+                    const neckCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.29, 0.14, lowDetail ? 8 : 12), mats.frieze);
                     neckCollar.position.y = 1.68;
                     m.add(neckCollar);
-                    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.18, 16), sashMat);
+                    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.18, lowDetail ? 8 : 12), sashMat);
                     belt.position.y = 1.06;
                     m.add(belt);
                     parent.add(m);
@@ -2132,10 +2132,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 for (let v = 0; v < 3; v++) {
                     const vx = -7.8 + v * 1.45;
                     const vz = 1.55;
-                    const vatOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.48, 0.72, 20), mats.stairBrick);
+                    const vatOuter = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.48, 0.72, lowDetail ? 8 : 12), mats.stairBrick);
                     vatOuter.position.set(vx, 0.82, vz);
                     shopGroup.add(vatOuter);
-                    const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, 18), vatColors[v]);
+                    const liquid = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.05, lowDetail ? 8 : 12), vatColors[v]);
                     liquid.position.set(vx, 1.12, vz);
                     shopGroup.add(liquid);
                 }
@@ -2158,7 +2158,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 for (let row = -2; row <= 2; row++) {
                     addBox(boltShelf, 6.2, 0.06, 0.56, mats.warmWood, 0, row * 0.58, 0.02);
                     for (let col = -5; col <= 5; col += 2) {
-                        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.48, 12), fabricPalette[Math.abs(row + col) % fabricPalette.length]);
+                        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.48, lowDetail ? 8 : 12), fabricPalette[Math.abs(row + col) % fabricPalette.length]);
                         bolt.rotation.x = Math.PI / 2;
                         bolt.position.set(col * 0.48, row * 0.58 + 0.16, 0.08);
                         boltShelf.add(bolt);
@@ -2242,7 +2242,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 for (let w = -1; w <= 1; w += 2) {
                     const wx = w * 0.58;
                     addBox(grinderTable, 0.42, 0.22, 0.65, mats.obsidian, wx, 0.96, 0);
-                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, 24), mats.gold);
+                    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.06, lowDetail ? 8 : 12), mats.gold);
                     wheel.rotation.z = Math.PI / 2;
                     wheel.position.set(wx, 1.12, 0);
                     grinderTable.add(wheel);
@@ -2387,7 +2387,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     shopGroup,
                     mats.emeraldArmor,
                     mats.norenMountMat,
-                    new THREE.SphereGeometry(0.13, 12, 10),
+                    new THREE.SphereGeometry(0.13, lowDetail ? 8 : 12, lowDetail ? 6 : 10),
                     mats.gold
                 );
 
@@ -2434,7 +2434,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 // Zone 2: Center Barding Turntable, Ivory Kirin War-Steed & Overhead Hoist Gantry
                 const turntable = new THREE.Group();
                 turntable.position.set(1.35, 0.54, -0.85);
-                const tableDisc = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.75, 0.14, 32), mats.obsidianCoat);
+                const tableDisc = new THREE.Mesh(new THREE.CylinderGeometry(1.65, 1.75, 0.14, lowDetail ? 8 : 12), mats.obsidianCoat);
                 tableDisc.position.y = 0.07;
                 turntable.add(tableDisc);
                 createSacredMount(turntable, 0, 0.14, 0, 0.35, mats.ivoryCoat, mats.emeraldArmor, true, false);
@@ -2516,7 +2516,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
                 rg.add(backSlope);
 
-                const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, width + 0.3, 12), mats.kawaraTile);
+                const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, width + 0.3, lowDetail ? 8 : 12), mats.kawaraTile);
                 ridge.rotation.z = Math.PI / 2;
                 ridge.position.y = Math.sin(pitch) * (depth * 0.3);
                 rg.add(ridge);
@@ -2569,7 +2569,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 // Twin Front Lotus Pillars
                 [-1.35, 1.35].forEach(px => {
-                    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 3.1, 12), mats.column);
+                    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 3.1, lowDetail ? 8 : 12), mats.column);
                     p.position.set(px, 2.0, 3.25);
                     house.add(p);
                 });
