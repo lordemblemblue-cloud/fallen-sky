@@ -19,6 +19,9 @@ import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
 import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
 import {installWolfveilCaveEntranceLandscaping} from './WolfveilCaveLandscapeVisuals.js';
 import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
+import {WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_JUNCTION,
+  WOLFVEIL_MODULAR_CANYON} from './WolfveilModularCaveKit.mjs';
+import {appendWolfveilModularCaveVisuals} from './WolfveilModularCaveVisuals.mjs';
 
 import { wolfveilHeight } from './WolfveilLayout.js';
 import { getWolfveilSumiETextures, cloneRepeatedTexture } from './WolfveilSumiETextures.mjs';
@@ -240,6 +243,19 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
           const x0 = seg.ax + seg.dx * t0, y0 = seg.ay + seg.dy * t0, z0 = seg.az + seg.dz * t0;
           const x1 = seg.ax + seg.dx * t1, y1 = seg.ay + seg.dy * t1, z1 = seg.az + seg.dz * t1;
           const mx = (x0 + x1) * 0.5, my = (y0 + y1) * 0.5, mz = (z0 + z1) * 0.5;
+          // Three independent corridor shells cannot close across the T.
+          // The canonical floor remains continuous; suppress wall/ceiling
+          // fragments only in the central junction crossing.
+          if(cor.id.startsWith('modular_') &&
+            Math.hypot(mx-WOLFVEIL_MODULAR_JUNCTION.x,
+              mz-WOLFVEIL_MODULAR_JUNCTION.z)<6){
+            floorTris.quad(
+              [x0+nx*hw,y0,z0+nz*hw],[x1+nx*hw,y1,z1+nz*hw],
+              [x1-nx*hw,y1,z1-nz*hw],[x0-nx*hw,y0,z0-nz*hw],
+              [.66,.64,.57],
+            );
+            continue;
+          }
           if (cor.kind === 'entry') {
             const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
             const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
@@ -627,6 +643,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const allChambers = [
     ...WOLFVEIL_EXPLORABLE_CAVES.map(c => ({ ...c.chamber, cave: c })),
     { ...WOLFVEIL_CAVE_HUB, cave: WOLFVEIL_CAVE_HUB },
+    { ...WOLFVEIL_MODULAR_TREASURE_ROOM,
+      cave: WOLFVEIL_MODULAR_TREASURE_ROOM },
   ];
 
   // Check if a wall azimuth aligns with an incoming tunnel so chamber walls stay open at doorways
@@ -873,6 +891,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     }
   }
 
+  // A physically connected owner-authored modular extension. The visual
+  // floor shares coordinates with the canonical sampler & wall collision.
+  const modularVisual=appendWolfveilModularCaveVisuals({
+    group,floorTris,shellTris,addProp,addBrazier,
+    boxGeo,cylGeo,octaGeo,torusGeo,wallMat,floorMat,
+    bronzeMat,timberMat,jadeCrystalMat,amethystCrystalMat,
+  });
+  world.ownedMaterials.push(modularVisual.waterMaterial);
+
   // Lightweight, camera-facing cave wayfinding: the stone arches now have
   // deliberate E entry/exit and the central rotunda signs point to EACH
   // of the four physically connected corridors. Sprites never raycast and
@@ -940,6 +967,15 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     addWayfinding(next.name,rotunda.x+dx/len*7,
       rotunda.y+3.3,rotunda.z+dz/len*7,10.2);
   }
+
+  addWayfinding('T junction · Vault left · Canyon right',
+    WOLFVEIL_MODULAR_JUNCTION.x,
+    WOLFVEIL_MODULAR_JUNCTION.y+3.2,
+    WOLFVEIL_MODULAR_JUNCTION.z,13.5);
+  addWayfinding('Canyon · three bridges · arena ahead',
+    WOLFVEIL_MODULAR_CANYON.entrance.x,
+    WOLFVEIL_MODULAR_CANYON.entrance.y+4,
+    WOLFVEIL_MODULAR_CANYON.entrance.z,12.2);
 
   const floorMesh = new THREE.Mesh(floorTris.geometry(), floorMat);
   floorMesh.name = 'SWV_CaveSystem_WalkableStoneFloor';
@@ -1011,6 +1047,13 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       landscapeDecor:caveLandscape.placements,landscapeDrawGroups:caveLandscape.drawGroups},
     lightAnchorCount: lightAnchors.length,
     floors: WOLFVEIL_CAVE_FLOORS,
+    modularCave:{
+      canyon:WOLFVEIL_MODULAR_CANYON,
+      treasureRoom:WOLFVEIL_MODULAR_TREASURE_ROOM,
+      junction:WOLFVEIL_MODULAR_JUNCTION,
+      build:modularVisual.stats,
+      treasureChestsDecorativeOnly:true,bossGameplayImplemented:false,
+    },
     awakeFloors(){return awakeCaveFloors(defeatedBosses);},
     noteBossDefeated(bossId) {
       // Records the painting, never a reward. Combat still owns the kill.
@@ -1124,6 +1167,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       }
     },
     dispose() {
+      modularVisual.waterGeometry.dispose();
       for (const mat of wayfindingMaterials) mat.dispose();
       for (const t of ownedTextures) t.dispose();
       boxGeo.dispose();
