@@ -140,7 +140,8 @@ function WeaponStack({ playerLevel }) {
   },[performDraw]);
 
   const cycleAvailable=useCallback(direction=>{
-    const roles=AXE_HUD_WEAPON_ROLES.map(row=>row.role);
+    // Cycle in the same top-to-bottom order as Concept D's visible circles.
+    const roles=['offensive','ranged','defensive'];
     const activeId=getActiveEquippedAXEWeapon()?.instanceId;
     // An assigned slot can contain ANY owned weapon. Remember which panel
     // actually drew it instead of inferring a role from the weapon family.
