@@ -2557,7 +2557,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 addBox(house, 2.7, 0.62, 0.28, mats.charredTimber, 0, 3.32, 2.92);
                 addBox(house, 1.3, 0.12, 0.9, mats.warmWood, -2.1, 0.87, -0.7);
                 addBox(house, 1.0, 0.38, 0.65, mats.tatami, 2.3, 0.73, -1.45);
-                addBox(house, 9.4, 0.45, 6.2, mats.frieze, 0, 3.75, 0);
+                const upperShell = new THREE.Group();
+                upperShell.name = 'HomeUpperShellAndCeiling';
+                house.userData.interiorUpperShell = upperShell;
+                house.add(upperShell);
+                addBox(upperShell, 9.4, 0.45, 6.2, mats.frieze, 0, 3.75, 0);
                 // Glowing Front Shoji Windows & Genkan Lattice Door
                 // Open genkan panels are parked to either side of the entrance.
                 addBox(house, 0.16, 2.8, 0.18, mats.charredTimber, -1.4, 1.9, 3.04);
@@ -2576,14 +2580,14 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
 
                 if (isTwoStory) {
                     // Upper level is an actual room shell, not an opaque solid slab.
-                    addBox(house, 8.8, 0.18, 5.6, mats.warmWood, 0, 4.02, 0);
-                    addBox(house, 0.26, 2.7, 5.6, mats.plaster, -4.25, 5.2, 0);
-                    addBox(house, 0.26, 2.7, 5.6, mats.plaster, 4.25, 5.2, 0);
-                    addBox(house, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, -2.72);
-                    addBox(house, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, 2.72);
-                    addBox(house, 9.0, 0.38, 5.8, mats.frieze, 0, 6.6, 0);
-                    addBox(house, 2.6, 1.35, 0.14, mats.shojiGlow, -2.1, 5.2, 2.82);
-                    addBox(house, 2.6, 1.35, 0.14, mats.shojiGlow, 2.1, 5.2, 2.82);
+                    addBox(upperShell, 8.8, 0.18, 5.6, mats.warmWood, 0, 4.02, 0);
+                    addBox(upperShell, 0.26, 2.7, 5.6, mats.plaster, -4.25, 5.2, 0);
+                    addBox(upperShell, 0.26, 2.7, 5.6, mats.plaster, 4.25, 5.2, 0);
+                    addBox(upperShell, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, -2.72);
+                    addBox(upperShell, 8.8, 2.7, 0.26, mats.plaster, 0, 5.2, 2.72);
+                    addBox(upperShell, 9.0, 0.38, 5.8, mats.frieze, 0, 6.6, 0);
+                    addBox(upperShell, 2.6, 1.35, 0.14, mats.shojiGlow, -2.1, 5.2, 2.82);
+                    addBox(upperShell, 2.6, 1.35, 0.14, mats.shojiGlow, 2.1, 5.2, 2.82);
                     // 2F Wooden Balcony Railing
                     addBox(house, 9.2, 0.12, 0.14, mats.charredTimber, 0, 4.45, 3.15);
                     house.add(createBuildingRoof(9.8, 6.8, 0.42, 7.35, mats.gold));
@@ -2739,6 +2743,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     stoneRingGroups.forEach(batchStaticDirect);
     innerShopsGroup.children.forEach(batchStaticDirect);
     outerRingGroup.children.forEach(batchStaticDirect);
+    houseEntries.forEach(home => batchStaticDirect(home.group.userData.interiorUpperShell));
     allRoofs.forEach(batchRoofs);
     const afterOptimization = geometryStats();
     const performanceStats = Object.freeze({
@@ -2942,6 +2947,13 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         setOuterHomesVisible(visible) { outerRingGroup.visible = Boolean(visible); },
         setInnerShopsVisible(visible) { innerShopsGroup.visible = Boolean(visible); },
         setRoofsVisible(visible) { allRoofs.forEach(r => { r.visible = Boolean(visible); }); },
+        setIndoorCutaway(roomId) {
+            houseEntries.forEach(home => {
+                const ceiling = home.group.userData.interiorUpperShell;
+                if (ceiling) ceiling.visible = home.id !== roomId;
+            });
+            if (smithUpperFacadeGroup) smithUpperFacadeGroup.visible = roomId !== 'blacksmith';
+        },
         setBlacksmithCutaway(open) { if (smithUpperFacadeGroup) smithUpperFacadeGroup.visible = !open; },
         setLightingEnabled(on) { ambientLight.visible = keyDirLight.visible = Boolean(on); },
         setActive(on) { state.active = Boolean(on); townGroup.visible = Boolean(on); },
