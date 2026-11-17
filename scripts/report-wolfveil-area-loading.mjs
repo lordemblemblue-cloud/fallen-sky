@@ -76,6 +76,14 @@ export function installHeadlessStubs(){
   }))g.window[key]??=value;
   g.requestAnimationFrame??=()=>0;
   g.cancelAnimationFrame??=()=>{};
+  // Three.js loaders report download progress with this browser event.
+  g.ProgressEvent??=class ProgressEvent extends Event{
+    constructor(type,init={}){
+      super(type);
+      this.lengthComputable=Boolean(init.lengthComputable);
+      this.loaded=init.loaded||0;this.total=init.total||0;
+    }
+  };
   // A model download that fails with nobody listening must not end the run.
   g.__wolfveilUnhandled=[];
   g.process?.on?.('unhandledRejection',error=>{
@@ -200,7 +208,10 @@ export async function runWolfveilAreaLoadingReport({
       if(top.parent===world.group){inValley=true;break;}
       top=top.parent;
     }
-    const name=(top.name||top.type||'(unnamed)').replace(/^WV_Area_[a-z]+_/,'');
+    // Per-area copies report under their source; streamed tiles (name ending
+    // in grid coordinates) report as one family.
+    const name=(top.name||top.type||'(unnamed)').replace(/^WV_Area_[a-z]+_/,'')
+      .replace(/_-?\d+:-?\d+$/,'_*');
     return (inValley?'valley/':'scene/')+name;
   };
   // The portal arches are the loader's own decoration, not valley scenery.
@@ -455,7 +466,8 @@ export function formatWolfveilAreaLoadingReport(result){
   for(const [id,area] of Object.entries(result.areas)){
     lines.push('  '+id+':');
     for(const entry of area.largest)
-      lines.push('    '+n(entry.triangles).padStart(10)+' tris  '+String(entry.drawCalls).padStart(4)+' calls  '+entry.label);
+      lines.push('    '+n(entry.triangles).padStart(10)+' tris  '+String(entry.drawCalls).padStart(4)+' calls  '+
+        String(entry.objects).padStart(4)+' objects  '+entry.label);
   }
   lines.push('');
   lines.push('Loader: '+JSON.stringify(result.loader));
