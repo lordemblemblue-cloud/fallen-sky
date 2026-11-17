@@ -243,6 +243,19 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
           const x0 = seg.ax + seg.dx * t0, y0 = seg.ay + seg.dy * t0, z0 = seg.az + seg.dz * t0;
           const x1 = seg.ax + seg.dx * t1, y1 = seg.ay + seg.dy * t1, z1 = seg.az + seg.dz * t1;
           const mx = (x0 + x1) * 0.5, my = (y0 + y1) * 0.5, mz = (z0 + z1) * 0.5;
+          // Three independent corridor shells cannot close across the T.
+          // The canonical floor remains continuous; suppress wall/ceiling
+          // fragments only in the central junction crossing.
+          if(cor.id.startsWith('modular_') &&
+            Math.hypot(mx-WOLFVEIL_MODULAR_JUNCTION.x,
+              mz-WOLFVEIL_MODULAR_JUNCTION.z)<6){
+            floorTris.quad(
+              [x0+nx*hw,y0,z0+nz*hw],[x1+nx*hw,y1,z1+nz*hw],
+              [x1-nx*hw,y1,z1-nz*hw],[x0-nx*hw,y0,z0-nz*hw],
+              [.66,.64,.57],
+            );
+            continue;
+          }
           if (cor.kind === 'entry') {
             const cave = WOLFVEIL_EXPLORABLE_CAVES.find(c => cor.id === `entry_${c.id}`);
             const along = (mx - cave.mouth[0]) * cave.dir[0] + (mz - cave.mouth[1]) * cave.dir[1];
