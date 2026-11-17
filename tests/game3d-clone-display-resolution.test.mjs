@@ -5,7 +5,7 @@ import {
   GAME3D_DISPLAY_SETTINGS_KEY,GAME3D_DISPLAY_SETTINGS_EVENT,
   GAME3D_RENDER_RESOLUTIONS,GAME3D_UI_SCALES,
   game3DResolutionTarget,game3DViewportClass,getGame3DUIScale,
-  normalizeGame3DDisplaySettings,readGame3DDisplaySettings,
+  normalizeGame3DDisplaySettings,publishedGame3DDisplayDefaults,readGame3DDisplaySettings,
   saveGame3DDisplaySettings,
 } from '../src/components/game3d/performance/Game3DDisplaySettings.mjs';
 import {
@@ -184,4 +184,24 @@ test('render-only FPS caps pace 144 Hz, 60 Hz and 30 Hz without simulation throt
   assert.equal(pacer.shouldRender(8),true,'changing FPS cap takes effect immediately');
   assert.equal(pacer.shouldRender(Infinity),false);
   assert.equal(pacer.getFPSCap(),120);
+});
+
+test('mobile release builds can choose a first-run internal resolution while players retain overrides',()=>{
+  const env={VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION:'720p'};
+  const phone={innerWidth:390,innerHeight:844,navigator:{maxTouchPoints:5}};
+  const steamDeck={innerWidth:1280,innerHeight:800,navigator:{maxTouchPoints:1}};
+  const desktop={innerWidth:1920,innerHeight:1080,navigator:{maxTouchPoints:0}};
+  assert.equal(publishedGame3DDisplayDefaults(phone,env).resolution,'720p');
+  assert.equal(publishedGame3DDisplayDefaults(steamDeck,env).resolution,'720p');
+  assert.equal(publishedGame3DDisplayDefaults(desktop,env).resolution,'auto');
+  assert.equal(readGame3DDisplaySettings(phone,env).resolution,'720p');
+  phone.localStorage={
+    getItem:key=>key===GAME3D_DISPLAY_SETTINGS_KEY
+      ?JSON.stringify({resolution:'1080p',uiScale:'large'}):null,
+  };
+  assert.equal(readGame3DDisplaySettings(phone,env).resolution,'1080p');
+  assert.equal(readGame3DDisplaySettings(phone,env).uiScale,'large');
+  assert.equal(publishedGame3DDisplayDefaults(phone,{
+    VITE_GAME3D_MOBILE_DEFAULT_RESOLUTION:'bogus',
+  }).resolution,'auto');
 });
