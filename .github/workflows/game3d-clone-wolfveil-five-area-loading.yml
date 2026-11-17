@@ -3,17 +3,18 @@ name: Game 3D Wolfveil Five-Area Loading and Platform Graphics
 on:
   pull_request:
     paths:
-      - 'src/components/game3d/wolfveil/streaming/**'
-      - 'src/components/game3d/wolfveil/WolfveilAreaPortals.js'
-      - 'src/components/game3d/wolfveil/WolfveilLayout.js'
-      - 'src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs'
-      - 'src/components/game3d/performance/Game3DPlatformGraphics.mjs'
-      - 'src/components/game3d/performance/Game3DPlatformGraphicsPanel.jsx'
-      - 'src/components/game3d/performance/Game3DAreaBudget.mjs'
-      - 'src/components/game3d/performance/Game3DDisplaySettings.mjs'
-      - 'src/components/game3d/performance/AdaptiveGraphics.mjs'
+      - 'src/components/game3d/wolfveil/**'
+      - 'src/components/game3d/cave/**'
+      - 'src/components/game3d/performance/**'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/PauseMenu.jsx'
+      - 'src/components/game3d/Game3DAreaNotice.jsx'
+      - 'src/components/game3d/debug/RenderStatsOverlay.jsx'
       - 'src/components/game3d/game3dPauseMenuModel.mjs'
+      - 'src/pages/GameView.jsx'
+      - 'scripts/report-wolfveil-area-loading.mjs'
       - 'tests/game3d-clone-wolfveil-five-area-loading.test.mjs'
+      - 'tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs'
       - 'tests/game3d-clone-platform-graphics.test.mjs'
       - '.github/workflows/game3d-clone-wolfveil-five-area-loading.yml'
   workflow_dispatch:
@@ -35,3 +36,56 @@ jobs:
           node --test \
             tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-platform-graphics.test.mjs
+
+  real-valley:
+    name: Real valley under real Three.js, lint and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Area loader against the real Wolfveil valley (every area, every portal)
+        run: |
+          node --test --test-force-exit \
+            tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs
+      - name: Report what one loaded area costs (with the imported town model when reachable)
+        run: node scripts/report-wolfveil-area-loading.mjs --town
+      - name: Lint the new files (must be clean)
+        run: |
+          npx eslint --quiet \
+            src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs \
+            src/components/game3d/wolfveil/streaming/WolfveilAreaPortalPlan.mjs \
+            src/components/game3d/wolfveil/streaming/WolfveilAreaLoader.mjs \
+            src/components/game3d/wolfveil/WolfveilAreaPortals.js \
+            src/components/game3d/Game3DAreaNotice.jsx \
+            src/components/game3d/performance/Game3DPlatformGraphics.mjs \
+            src/components/game3d/performance/Game3DPlatformGraphicsPanel.jsx \
+            src/components/game3d/performance/Game3DAreaBudget.mjs \
+            scripts/report-wolfveil-area-loading.mjs \
+            tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
+            tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs \
+            tests/game3d-clone-platform-graphics.test.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          status=0
+          for file in \
+            src/components/game3d/GameWorld3D.jsx \
+            src/components/game3d/PauseMenu.jsx \
+            src/components/game3d/debug/RenderStatsOverlay.jsx \
+            src/pages/GameView.jsx; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: errors on this branch $head, on main $base"
+            if [ "$head" -lt 0 ] || [ "$base" -lt 0 ] || [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status
+      - name: Compile the real Game 3D application
+        run: npm run build

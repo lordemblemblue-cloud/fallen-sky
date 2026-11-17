@@ -1,6 +1,7 @@
 // Five-area Wolfveil loading: the plan, the portals and the loader that keeps
 // only one area drawn. The loader is duck-typed, so these tests drive it with
 // small stand-in scene objects and need neither Three.js nor a GPU.
+/* global console, URL */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

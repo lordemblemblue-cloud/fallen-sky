@@ -781,11 +781,24 @@ export function createWolfveilAreaLoader({
     pending.clear();known.clear();extras.clear();
   }
 
+  // Read-only snapshot of what is managed, for diagnostics and tests.
+  function inspect(){
+    return {
+      units:[...units.values()].map(unit=>({object:unit.object,area:unit.area,
+        targets:[...unit.targets],open:unit.gates.every(gate=>gate.open),
+        triangles:unit.triangles,drawCalls:unit.drawCalls})),
+      batches:[...batches.values()].map(record=>({source:record.source,
+        count:record.count,primed:record.primed,
+        areas:Object.fromEntries([...record.lists].map(([area,list])=>[area,list.length])),
+        clones:Object.fromEntries(record.clones)})),
+      settling:[...pending.keys()],
+    };
+  }
   try{scan(now());refresh(position,now(),{immediate:true});}
   catch(error){failOpen(error);}
   return {
     update,getStats,getReport,withFullMapExport,setEnabled,setMode,setOptions,
-    addUnits,dispose,
+    addUnits,dispose,inspect,
     rescan(){lastScan=-Infinity;},
     getArea:()=>current,getRegion:()=>current,
     getPortals:()=>portals,getGateways:()=>portals,
