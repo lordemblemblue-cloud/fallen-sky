@@ -17,7 +17,7 @@ test('transparent artwork is ONLY the gray ink splash and angled gold edge',()=>
   assert.match(svg,/M197 536|M 197 536/);
   assert.match(svg,/filter id="goldglow"/);
   assert.doesNotMatch(svg,/<rect\b|<circle\b|<text\b|<image\b/);
-  assert.match(css,/background:url\('\/game3d\/hud\/concept-d-ink-gold-only\.svg'\)/);
+  assert.match(css,/background:url\('\/game3d\/hud\/concept-d-original-ornament\.avif'\)/);
   assert.match(css,/pointer-events:none/);
 });
 test('three roles are live owned-weapon circles, not artwork cutouts',()=>{
