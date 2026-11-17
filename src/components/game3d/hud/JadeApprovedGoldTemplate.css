@@ -1,0 +1,302 @@
+/* Owner-approved template of November 17: ONE gold shell containing HP, EXP,
+   and WILL. The SVG is purely ornamental: no baked numbers, no crossbar or
+   wave line through the center, no independent PNG/gauge ornament. All vitals
+   remain sourced from JadeSoulHUD's real live stores. */
+.jade-hud .jade-hud-template {
+  position:absolute;
+  z-index:9;
+  left:50%;
+  right:auto;
+  bottom:clamp(9px,1.5vh,18px);
+  transform:translateX(-50%);
+  width:min(66vw,744px);
+  max-width:calc(100% - 20px);
+  height:clamp(108px,14.2vh,145px);
+  min-height:0;
+  isolation:isolate;
+  pointer-events:none;
+  overflow:visible;
+  color:#f9ecd4;
+  font-family:Georgia,serif;
+}
+.jade-hud .jade-hud-template-art {
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  z-index:0;
+  overflow:visible;
+  pointer-events:none;
+  filter:drop-shadow(0 0 5px rgba(248,161,30,.42)) drop-shadow(0 4px 7px rgba(0,0,0,.45));
+}
+.game3d-view .jade-hud .jade-hud-template .jade-status-bars--refined {
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:block;
+  grid-template-columns:none;
+  align-items:initial;
+  gap:0;
+  left:0;
+  right:0;
+  top:0;
+  bottom:auto;
+  transform:none;
+  margin:0;
+  padding:0;
+  width:100%;
+  max-width:none;
+  height:100%;
+  pointer-events:none;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row {
+  position:absolute;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+  top:47%;
+  width:27.1%;
+  height:34%;
+  margin:0;
+  padding:0;
+  background:transparent;
+  border:0;
+  overflow:visible;
+  grid-column:auto;
+  grid-row:auto;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--hp {
+  left:8.2%;
+  right:auto;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row--will {
+  left:auto;
+  right:8.2%;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header {
+  display:flex;
+  flex:0 0 auto;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  height:auto;
+  min-height:20px;
+  margin:0;
+  padding:0 0 2px;
+  gap:4px;
+  color:#fff1d2;
+  font:600 clamp(9px,.80vw,12px)/1.1 Georgia,serif;
+  letter-spacing:0;
+  white-space:nowrap;
+  text-shadow:0 1px 4px #000,0 0 5px rgba(255,183,68,.20);
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header span:last-child {
+  flex:0 0 auto;
+  color:#fff0d0;
+  font:600 clamp(9px,.83vw,12px)/1.1 Georgia,serif;
+  letter-spacing:0;
+  font-variant-numeric:tabular-nums;
+}
+.jade-hud .jade-template-vital-title {
+  display:inline-flex;
+  flex:0 1 auto;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  color:#ffe8b8;
+  font:600 clamp(11px,1.02vw,15px)/1.1 Georgia,serif;
+}
+.jade-hud .jade-template-vital-title svg {
+  display:block;
+  flex:0 0 auto;
+  width:clamp(13px,1.23vw,19px);
+  height:clamp(13px,1.23vw,19px);
+}
+.jade-hud .jade-template-vital-title--hp svg {
+  color:#ff4354;
+  filter:drop-shadow(0 0 3px #ef3249);
+}
+.jade-hud .jade-template-vital-title--will svg {
+  color:#73ddff;
+  filter:drop-shadow(0 0 3px #17b8ff);
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-track {
+  display:block;
+  flex:0 0 auto;
+  position:relative;
+  z-index:1;
+  width:100%;
+  height:clamp(6px,.65vw,9px);
+  margin:5px 0 0;
+  border:1px solid rgba(255,224,164,.74);
+  border-radius:999px;
+  clip-path:none;
+  background:linear-gradient(180deg,rgba(22,12,12,.94),rgba(39,28,20,.88));
+  box-shadow:inset 0 1px 3px rgba(0,0,0,.8),0 0 4px rgba(246,181,79,.35);
+  overflow:hidden;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-fill {
+  display:block;
+  height:100%;
+  border-radius:999px;
+  transition:width .28s ease;
+  box-shadow:inset 0 1px 1px #fff8;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-fill::after {
+  content:none;
+  animation:none;
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-fill--hp {
+  background:linear-gradient(180deg,#ffa0a0 0%,#ff4e5e 40%,#ad1232 100%);
+  box-shadow:0 0 6px rgba(255,73,88,.8),inset 0 1px 1px rgba(255,243,223,.8);
+}
+.jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-fill--will {
+  background:linear-gradient(180deg,#b8faff 0%,#32c7ff 43%,#0662bc 100%);
+  box-shadow:0 0 6px rgba(63,215,255,.85),inset 0 1px 1px rgba(237,252,255,.8);
+}
+/* The reference's central octagon is an empty picture frame. The only things
+   inside here are the current player's level and real XP text — no line, no
+   energy surface, no screenshot values. */
+.jade-hud .jade-hud-template .jade-xp--compact {
+  position:absolute;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  left:41.2%;
+  right:auto;
+  top:7%;
+  bottom:auto;
+  width:17.6%;
+  height:86%;
+  min-width:0;
+  padding:0;
+  transform:none;
+  border:0;
+  border-radius:0;
+  background:none;
+  clip-path:none;
+  filter:none;
+  box-shadow:none;
+  pointer-events:none;
+}
+.jade-hud .jade-hud-template .jade-xp--compact::before,
+.jade-hud .jade-hud-template .jade-xp--compact::after {
+  content:none;
+  display:none;
+}
+.jade-hud .jade-hud-template .jade-xp--compact .jade-xp-octagon-face {
+  position:relative;
+  z-index:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  padding:0 5%;
+  gap:clamp(2px,.45vh,5px);
+  overflow:visible;
+  clip-path:none;
+  border:0;
+  background:none;
+  color:#fff1ca;
+  text-align:center;
+  white-space:nowrap;
+}
+.jade-hud .jade-hud-template .jade-xp--compact .jade-xp-number {
+  display:block;
+  flex:0 0 auto;
+  position:static;
+  margin:0;
+  color:#fff2ce;
+  font:400 clamp(27px,3vw,43px)/1.05 Georgia,serif;
+  text-shadow:0 0 5px rgba(255,193,87,.5),0 1px 5px #000;
+}
+.jade-hud .jade-hud-template .jade-xp--compact .jade-xp-caption {
+  display:block;
+  position:static;
+  font:600 clamp(9px,.86vw,13px)/1.15 Georgia,serif;
+  letter-spacing:.12em;
+  color:#ffe6a7;
+  text-shadow:0 1px 4px #000;
+}
+.jade-hud .jade-hud-template .jade-xp--compact .jade-xp-readout {
+  display:block;
+  position:static;
+  max-width:100%;
+  font:500 clamp(8px,.78vw,12px)/1.15 Georgia,serif;
+  letter-spacing:-.025em;
+  color:#f6e7c6;
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 1px 4px #000;
+}
+/* When Services covers the play scene, do not leave the ornate shell across a
+   menu. The quest tracker remains independently positioned and untouched. */
+.jade-hud[data-service-mode="true"] .jade-hud-template,
+.game3d-view[data-services-open="true"] .jade-hud-template {
+  opacity:0;
+  visibility:hidden;
+}
+/* Fit the actual frame itself, not just the bars, at tablet and phone sizes. */
+@media(max-width:1000px) {
+  .jade-hud .jade-hud-template {
+    width:min(76vw,690px);
+    height:clamp(100px,13.5vh,137px);
+    bottom:12px;
+  }
+  .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header {
+    font-size:10px;
+  }
+}
+@media(max-width:700px) {
+  .jade-hud .jade-hud-template {
+    width:min(calc(100% - 20px),590px);
+    height:clamp(88px,12.5vh,118px);
+    bottom:10px;
+  }
+  .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-row {
+    top:47%;
+    width:27%;
+  }
+  .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header {
+    font-size:9px;
+    min-height:15px;
+    gap:2px;
+  }
+  .jade-hud .jade-template-vital-title {font-size:10px;gap:3px;}
+  .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-track {
+    height:6px;
+    margin-top:3px;
+  }
+  .jade-hud .jade-hud-template .jade-xp--compact .jade-xp-number {
+    font-size:clamp(21px,5vw,32px);
+  }
+  .jade-hud .jade-hud-template .jade-xp--compact .jade-xp-readout {font-size:8px;}
+}
+@media(max-width:420px) {
+  .jade-hud .jade-hud-template {
+    width:calc(100% - 8px);
+    height:87px;
+    bottom:7px;
+  }
+  .jade-hud .jade-hud-template .jade-status-bars--refined .jade-status-header span:last-child {
+    font-size:7.5px;
+  }
+  .jade-hud .jade-template-vital-title svg {width:11px;height:11px;}
+  .jade-hud .jade-hud-template .jade-xp--compact .jade-xp-number {font-size:23px;}
+  .jade-hud .jade-hud-template .jade-xp--compact .jade-xp-caption {font-size:8px;}
+  .jade-hud .jade-hud-template .jade-xp--compact .jade-xp-readout {font-size:7.5px;}
+}
+@media(max-height:500px) and (orientation:landscape) {
+  .game3d-view .jade-hud .jade-hud-template {
+    bottom:max(3px,var(--game3d-safe-bottom,0px));
+    height:clamp(76px,23vh,105px);
+    width:min(70vw,650px);
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .jade-hud .jade-hud-template .jade-status-fill {transition:none;}
+}

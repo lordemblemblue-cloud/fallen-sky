@@ -1,47 +1,56 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const hud=read('src/components/game3d/hud/JadeSoulHUD.jsx');
-const style=read('src/components/game3d/hud/JadeSoulHUD.css');
+const css=read('src/components/game3d/hud/JadeApprovedGoldTemplate.css');
 const quest=read('src/components/game3d/hud/JadeQuestTracker.css');
-const current=style.slice(style.lastIndexOf('2026-11-16 owner screenshot correction: compact, symmetric HP/Will'));
 
-test('HP and WILL shrink from old 1050px maximum without touching hotbar',()=>{
-  assert.match(current,/width:min\(52vw,655px\)/);
-  assert.match(current,/grid-template-columns:minmax\(0,1fr\) clamp\(98px,8\.8vw,120px\) minmax\(0,1fr\)/);
-  assert.match(current,/max-width:465px/);
+test('reference silhouette is one UI shell, with live HP/WILL tracks INSIDE it',()=>{
+  assert.match(hud,/data-hud-template="approved-gold-shell-20261117"/);
+  assert.match(hud,/className="jade-hud-template-art"/);
+  assert.match(hud,/viewBox="0 0 1200 270"/);
+  assert.match(hud,/\['hp','will'\]\.map\(side=>/);
+  assert.match(hud,/transform=\{side==='will'\?'translate\(1200 0\) scale\(-1 1\)'/);
+  assert.match(css,/width:min\(66vw,744px\)/);
+  assert.match(css,/\.jade-status-row--hp\s*\{\s*left:8\.2%/);
+  assert.match(css,/\.jade-status-row--will\s*\{\s*left:auto;\s*right:8\.2%/);
+  assert.doesNotMatch(hud,/jade-status-connector|jade-status-raster-trim/);
+});
+test('octagon frame is decorative only, with live level / EXP and no middle line',()=>{
+  assert.match(hud,/Complete octagon: no middle divider or ornamental horizontal wave/);
+  assert.match(hud,/className="jade-xp jade-xp--compact"/);
+  assert.match(hud,/aria-label=\{`Level \$\{hud\?\.level \|\| 1\} experience`\}/);
+  assert.match(hud,/className="jade-xp-number">\{fmt\(hud\?\.level \|\| 1\)\}/);
+  assert.match(hud,/className="jade-xp-caption">EXP/);
+  assert.match(hud,/fmt\(hud\?\.xp\)/);
+  assert.match(hud,/fmt\(hud\.xpForNext\)/);
+  assert.doesNotMatch(hud,/jade-xp-octagon-energy|jade-xp-octagon-rule|jade-xp-raster-frame/);
+  assert.doesNotMatch(hud,/>AGENT<|2,840\s*\/\s*2,840|24,300\s*\/\s*40,000/);
+  assert.match(css,/no line, no\s*energy surface/);
+});
+test('HP and WILL are real values and display matching colored tracks',()=>{
+  assert.match(hud,/style=\{\{width:hpPct\+'%'\}\}/);
+  assert.match(hud,/style=\{\{width:willPct\+'%'\}\}/);
+  assert.match(hud,/fmt\(hud\?\.hp\)/);
+  assert.match(hud,/fmt\(hud\?\.maxHP\)/);
+  assert.match(hud,/fmt\(currentWill\)/);
+  assert.match(hud,/fmt\(maxWill\)/);
+  assert.match(hud,/aria-label="HP"/);
+  assert.match(hud,/aria-label="WILL"/);
+});
+test('legacy weapon UI, stamina popup and Questbook dock are not moved',()=>{
   assert.match(hud,/<WeaponStack playerLevel=\{hud\?\.level\} \/>/);
   assert.match(hud,/<SkillMatrix loadout=\{loadout\}\/>/);
-});
-test('both tank elbows share identical geometry with mirrored WILL rather than an extra uphill leg',()=>{
-  const exact='d="M1 2 H18 L38 23 H65"';
-  assert.equal(hud.split(exact).length-1,2);
-  assert.match(hud,/jade-status-connector--hp/);
-  assert.match(hud,/jade-status-connector--will/);
-  assert.match(current,/\.jade-hud \.jade-status-connector--will \{[^}]*transform:scaleX\(-1\)/);
-});
-test('EXP octagon uses live values without AGENT label or an extra divider',()=>{
-  assert.match(hud,/aria-label=\{`Level \$\{hud\?\.level \|\| 1\} experience`\}/);
-  assert.doesNotMatch(hud,/>AGENT<|className="jade-xp-agent"/);
-  assert.doesNotMatch(hud,/className="jade-xp-octagon-rule"/);
-  assert.match(hud,/--jade-xp-progress':xpPct\+'%'/);
-  assert.match(hud,/jade-xp-raster-frame/);
-});
-test('liquid rises with earned experience and its opposing waves move gently',()=>{
-  assert.match(current,/height:var\(--jade-xp-progress,0%\)/);
-  assert.match(current,/jade-exp-wave-left 13s/);
-  assert.match(current,/jade-exp-wave-right 17s/);
-  assert.match(current,/prefers-reduced-motion:reduce/);
-});
-test('stamina icon is an animated-context runner silhouette, not footprints',()=>{
-  assert.match(hud,/className="jade-stamina-runner"/);
-  assert.match(hud,/data-stamina-visible=\{staminaVisible && !navigationHidden/);
-  assert.doesNotMatch(hud,/Footprints/);
-});
-test('quest tracker and its restored lower anchor remain independent of HUD edits',()=>{
   assert.match(hud,/<JadeQuestTracker/);
+  assert.match(hud,/data-stamina-visible=\{staminaVisible && !navigationHidden/);
   assert.match(quest,/--axe-quest-top:calc\(clamp\(148px,20vh,220px\) \+ clamp\(48px,7vh,72px\)\)/);
-  assert.doesNotMatch(current,/axe-quest-top|jade-quest-tracker|axe-echo-launch/);
+  assert.doesNotMatch(css,/jade-quest-tracker|axe-quest-top|axe-echo-launch/);
+});
+test('small screens keep the entire frame in bounds with no fake wave',()=>{
+  assert.match(css,/@media\(max-width:700px\)/);
+  assert.match(css,/@media\(max-width:420px\)/);
+  assert.match(css,/@media\(max-height:500px\) and \(orientation:landscape\)/);
+  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.doesNotMatch(css,/@keyframes jade-exp-wave|jade-xp-octagon-energy::before/);
 });

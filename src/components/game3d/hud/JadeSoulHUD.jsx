@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Heart, Flame } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getCombatResources, subscribeCombatResources } from '../combat/combatResourcesStore';
 import { ACTIVE_SLOTS, getLoadout, subscribeLoadout } from '../skills/loadoutStore';
@@ -16,6 +17,7 @@ import {
 import { subscribeCharacterChange } from '../characterStorage';
 import AXECurvedWeaponTemplate from '../axe/weapons/AXECurvedWeaponTemplate';
 import './JadeSoulHUD.css';
+import './JadeApprovedGoldTemplate.css';
 import AXEServicesNavigation from '../axe/services/AXEServicesNavigation';
 import HUDCompassStrip from './HUDCompassStrip';
 import TargetDisplay from './TargetDisplay';
@@ -338,33 +340,123 @@ export default function JadeSoulHUD({
 
       {/* Same live HP and Will ledgers, visually balanced around the compact
           Agent experience octagon. The weapon selector and skills are intact. */}
-      <div className="jade-status-bars jade-status-bars--refined" aria-label="Player HP and Will">
-        <div className="jade-status-row jade-status-row--hp">
-          <div className="jade-status-header">
-            <span>♡ &nbsp; HP</span><span>{fmt(hud?.hp)} / {fmt(hud?.maxHP)}</span>
+      {/* The approved image is a decorative TEMPLATE, not a source of text.
+          A single scalable gold shell owns both tanks and the center level
+          octagon. No text or stats are embedded in its SVG artwork. */}
+      <div className="jade-hud-template" data-hud-template="approved-gold-shell-20261117"
+        role="group" aria-label="Player HP, Will and level experience">
+        <svg className="jade-hud-template-art" viewBox="0 0 1200 270"
+          preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="jade-template-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#fff1b9"/>
+              <stop offset=".23" stopColor="#ffdc68"/>
+              <stop offset=".55" stopColor="#ffaf1e"/>
+              <stop offset=".82" stopColor="#b96c12"/>
+              <stop offset="1" stopColor="#fff3b1"/>
+            </linearGradient>
+            <linearGradient id="jade-template-glass" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#51402a" stopOpacity=".94"/>
+              <stop offset=".48" stopColor="#1d1b18" stopOpacity=".95"/>
+              <stop offset="1" stopColor="#1a1716" stopOpacity=".91"/>
+            </linearGradient>
+            <linearGradient id="jade-template-wing" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="#604b34" stopOpacity=".72"/>
+              <stop offset=".48" stopColor="#29221e" stopOpacity=".88"/>
+              <stop offset="1" stopColor="#170f0b" stopOpacity=".68"/>
+            </linearGradient>
+            <filter id="jade-template-outer-glow" x="-30%" y="-50%" width="160%" height="200%">
+              <feGaussianBlur stdDeviation="3.5" result="glow"/>
+              <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          {['hp','will'].map(side=><g key={side}
+            transform={side==='will'?'translate(1200 0) scale(-1 1)':undefined}>
+            {/* The dark glass header is part of the EMPTY metal frame, not a
+                screenshot caption: live resource labels float above it. */}
+            <path d="M 74 126 H 391 Q 412 126 422 150 L 433 196
+              H 107 L 77 163 Z" fill="url(#jade-template-glass)"
+              fillOpacity=".70" stroke="none"/>
+            <path d="M 12 149 L 67 149 L 106 191 L 421 191 L 482 256
+              L 442 220 L 97 220 L 50 171 Z"
+              fill="url(#jade-template-wing)" stroke="#a85b08" strokeWidth="8"
+              strokeLinejoin="round" filter="url(#jade-template-outer-glow)"/>
+            <path d="M 12 149 L 67 149 L 106 191 L 421 191 L 482 256
+              L 442 220 L 97 220 L 50 171 Z"
+              fill="none" stroke="url(#jade-template-gold)" strokeWidth="3.5"
+              strokeLinejoin="round"/>
+            <path d="M 28 155 L 61 155 L 103 202 L 428 202 L 455 231
+              L 437 215 L 102 215 L 49 166"
+              fill="none" stroke="#ffde8a" strokeOpacity=".79" strokeWidth="2.2"
+              strokeLinejoin="round"/>
+            <path d="M 105 225 H 436" fill="none"
+              stroke="#ffca47" strokeOpacity=".34" strokeWidth="4"
+              strokeLinecap="round"/>
+            <path d="M 282 217 L 293 225 L 282 233 L 271 225 Z"
+              fill="#fff0ae" stroke="#ffae19" strokeWidth="2"
+              filter="url(#jade-template-outer-glow)"/>
+          </g>)}
+          {/* Complete octagon: no middle divider or ornamental horizontal wave. */}
+          <path d="M 551 12 H 649 L 710 74 V 196 L 649 258 H 551
+            L 490 196 V 74 Z" fill="url(#jade-template-glass)"
+            stroke="#a9630d" strokeWidth="9" strokeLinejoin="round"
+            filter="url(#jade-template-outer-glow)"/>
+          <path d="M 551 12 H 649 L 710 74 V 196 L 649 258 H 551
+            L 490 196 V 74 Z" fill="none"
+            stroke="url(#jade-template-gold)" strokeWidth="4"
+            strokeLinejoin="round"/>
+          <path d="M 555 21 H 645 L 701 78 V 192 L 645 249 H 555
+            L 499 192 V 78 Z"
+            fill="none" stroke="#fff0a7" strokeOpacity=".74"
+            strokeWidth="1.6" strokeLinejoin="round"/>
+          {[[600,11],[600,260],[490,136],[710,136]].map(([x,y])=>
+            <g key={x+'-'+y} transform={`translate(${x} ${y})`}>
+              <path d="M0 -14 L13 0 L0 14 L-13 0 Z"
+                fill="#ffd557" stroke="#fff5c5" strokeWidth="2"
+                filter="url(#jade-template-outer-glow)"/>
+              <path d="M0 -7 L7 0 L0 7 L-7 0 Z" fill="#fff2c4"/>
+            </g>)}
+        </svg>
+        <div className="jade-status-bars jade-status-bars--refined" aria-label="Live HP and Will">
+          <div className="jade-status-row jade-status-row--hp">
+            <div className="jade-status-header">
+              <span className="jade-template-vital-title jade-template-vital-title--hp">
+                <Heart size={18} strokeWidth={2} aria-hidden="true"/>HP</span>
+              <span>{fmt(hud?.hp)} / {fmt(hud?.maxHP)}</span>
+            </div>
+            <div className="jade-status-track" role="progressbar"
+              aria-label="HP" aria-valuemin={0}
+              aria-valuemax={Math.max(1,Number(hud?.maxHP)||1)}
+              aria-valuenow={Math.max(0,Math.min(Number(hud?.maxHP)||1,Number(hud?.hp)||0))}>
+              <div className="jade-status-fill jade-status-fill--hp" style={{width:hpPct+'%'}}/>
+            </div>
           </div>
-          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--hp" style={{width:hpPct+'%'}}/></div>
-          {/* Cropped translucent PNG directly from the approved HP screenshot.
-              The red bar and live HP numbers stay independent of the picture. */}
-          <span className="jade-status-raster-trim jade-status-raster-trim--hp" aria-hidden="true"/>
-          <svg className="jade-status-connector jade-status-connector--hp" viewBox="0 0 66 28"
-            preserveAspectRatio="none" aria-hidden="true">
-            <path className="jade-status-connector-outline" d="M1 2 H18 L38 23 H65"/>
-            <path className="jade-status-connector-highlight" d="M1 4 H17 L37 25 H65"/>
-          </svg>
+          <div className="jade-status-row jade-status-row--will">
+            <div className="jade-status-header">
+              <span className="jade-template-vital-title jade-template-vital-title--will">
+                <Flame size={18} strokeWidth={2} aria-hidden="true"/>WILL</span>
+              <span>{fmt(currentWill)} / {fmt(maxWill)}</span>
+            </div>
+            <div className="jade-status-track" role="progressbar"
+              aria-label="WILL" aria-valuemin={0}
+              aria-valuemax={Math.max(1,Number(maxWill)||1)}
+              aria-valuenow={Math.max(0,Math.min(Number(maxWill)||1,Number(currentWill)||0))}>
+              <div className="jade-status-fill jade-status-fill--will" style={{width:willPct+'%'}}/>
+            </div>
+          </div>
         </div>
-        <div className="jade-status-row jade-status-row--will">
-          <div className="jade-status-header">
-            <span>✧ &nbsp; WILL</span><span>{fmt(currentWill)} / {fmt(maxWill)}</span>
-          </div>
-          <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--will" style={{width:willPct+'%'}}/></div>
-          {/* Mirrored original gold photography; live Will never baked into it. */}
-          <span className="jade-status-raster-trim jade-status-raster-trim--will" aria-hidden="true"/>
-          <svg className="jade-status-connector jade-status-connector--will" viewBox="0 0 66 28"
-            preserveAspectRatio="none" aria-hidden="true">
-            <path className="jade-status-connector-outline" d="M1 2 H18 L38 23 H65"/>
-            <path className="jade-status-connector-highlight" d="M1 4 H17 L37 25 H65"/>
-          </svg>
+        <div className="jade-xp jade-xp--compact" data-hud-agent-exp="octagon"
+          role="progressbar" aria-label={`Level ${hud?.level || 1} experience`}
+          aria-valuemin={0} aria-valuemax={hasFiniteXP ? hud.xpForNext : 100}
+          aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext,Math.max(0,Number(hud?.xp)||0)) : 100}
+          title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
+          style={{'--jade-xp-progress':xpPct+'%'}}>
+          <span className="jade-xp-octagon-face">
+            <strong className="jade-xp-number">{fmt(hud?.level || 1)}</strong>
+            <span className="jade-xp-caption">EXP</span>
+            <span className="jade-xp-readout">{hasFiniteXP
+              ? `${fmt(hud?.xp)} / ${fmt(hud.xpForNext)}` : 'MAX'}</span>
+          </span>
         </div>
       </div>
 
@@ -383,22 +475,6 @@ export default function JadeSoulHUD({
       <WeaponStack playerLevel={hud?.level} />
       <SkillMatrix loadout={loadout}/>
 
-      <div className="jade-xp jade-xp--compact" data-hud-agent-exp="octagon"
-        role="progressbar" aria-label={`Level ${hud?.level || 1} experience`}
-        aria-valuemin={0} aria-valuemax={hasFiniteXP ? hud.xpForNext : 100}
-        aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext, Math.max(0, Number(hud?.xp) || 0)) : 100}
-        title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
-        style={{'--jade-xp-progress':xpPct+'%'}}>
-        {/* Transparent photo-cut octagon border; numbers and EXP are real DOM. */}
-        <span className="jade-xp-raster-frame" aria-hidden="true"/>
-        <span className="jade-xp-octagon-face" aria-hidden="true">
-          <span className="jade-xp-octagon-energy"/>
-          <strong className="jade-xp-number">{fmt(hud?.level || 1)}</strong>
-          <span className="jade-xp-caption">EXP</span>
-          <span className="jade-xp-readout">{hasFiniteXP
-            ? `${fmt(hud?.xp)} / ${fmt(hud.xpForNext)}` : 'MAX'}</span>
-        </span>
-      </div>
       {/* Contextual stamina ring to the avatar's right while using stamina.
           The actual skill hotbar and three-role weapon template are unchanged. */}
       <div ref={staminaAnchorRef} className="jade-stamina-popup"
