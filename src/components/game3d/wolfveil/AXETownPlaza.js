@@ -750,7 +750,9 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
                 mesh.position.set(x, y, z);
                 if (rx || ry || rz) mesh.rotation.set(rx, ry, rz);
-                mesh.castShadow = true;
+                // Keep large world shadows from hero props; hundreds of tiny trim
+                // shadow casters otherwise multiply the town's GPU shadow pass.
+                mesh.castShadow = !lowDetail;
                 mesh.receiveShadow = true;
                 parent.add(mesh);
                 return mesh;
@@ -898,9 +900,13 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 finial.position.y = 2.16;
                 lGroup.add(finial);
 
-                const ptLight = new THREE.PointLight(0xffa52a, 1.35, 8.5);
-                ptLight.position.set(0, 1.15, 0);
-                lGroup.add(ptLight);
+                // In low detail retain the two front lantern lights; rear lanterns
+                // still glow using emissive material without extra light passes.
+                if (!lowDetail || z > 0) {
+                    const ptLight = new THREE.PointLight(0xffa52a, 1.35, 8.5);
+                    ptLight.position.set(0, 1.15, 0);
+                    lGroup.add(ptLight);
+                }
 
                 fountainGroup.add(lGroup);
             }
@@ -969,7 +975,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 [0.85, 3.25, 0.25, 1.25, 0.85, 1.15]
             ];
             upperCragConfigs.forEach(([rx, ry, rz, sx, sy, sz], idx) => {
-                const crag = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, 1), mats.cragRock);
+                const crag = new THREE.Mesh(new THREE.DodecahedronGeometry(1.0, lowDetail ? 0 : 1), mats.cragRock);
                 crag.position.set(rx, ry, rz);
                 crag.scale.set(sx, sy, sz);
                 crag.rotation.set(idx * 0.7, idx * 1.2, idx * 0.4);
@@ -2687,7 +2693,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     function batchStaticDirect(group) {
         const buckets = new Map();
         for (const child of group.children) {
-            if (!child.isMesh || !child.geometry || Array.isArray(child.material) || dynamicTownMeshes.has(child)) continue;
+            if (!child.isMesh || !child.geometry || !child.material || Array.isArray(child.material) || dynamicTownMeshes.has(child)) continue;
             // Transparent mesh sorting and animation overrides are never merged.
             if (child.material.transparent || child.userData?.noTownBatch) continue;
             const key = child.material;
@@ -2795,15 +2801,17 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         visibilityTimer += dt;
         if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
             visibilityTimer = 0;
-            const homeRange = lowDetail ? 48 : 90;
-            const shopRange = lowDetail ? 58 : 115;
+            const homeRangeSq = (lowDetail ? 48 : 90) ** 2;
+            const shopRangeSq = (lowDetail ? 58 : 115) ** 2;
+            const localX = playerPosition.x - townGroup.position.x;
+            const localZ = playerPosition.z - townGroup.position.z;
             for (const home of houseEntries) {
-                home.group.visible = Math.hypot(playerPosition.x - townGroup.position.x - home.group.position.x,
-                    playerPosition.z - townGroup.position.z - home.group.position.z) < homeRange;
+                const dx = localX - home.group.position.x, dz = localZ - home.group.position.z;
+                home.group.visible = dx * dx + dz * dz < homeRangeSq;
             }
             for (const shop of shopInteriors) {
-                shop.group.visible = Math.hypot(playerPosition.x - townGroup.position.x - shop.group.position.x,
-                    playerPosition.z - townGroup.position.z - shop.group.position.z) < shopRange;
+                const dx = localX - shop.group.position.x, dz = localZ - shop.group.position.z;
+                shop.group.visible = dx * dx + dz * dz < shopRangeSq;
             }
         }
         const flowMult = surgeTimer > 0 ? 3.2 : 1;
