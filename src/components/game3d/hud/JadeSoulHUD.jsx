@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Footprints } from 'lucide-react';
 import { getPlayerHUD, subscribePlayerHUD } from '../playerHUDStore';
 import { getCombatResources, subscribeCombatResources } from '../combat/combatResourcesStore';
 import { ACTIVE_SLOTS, getLoadout, subscribeLoadout } from '../skills/loadoutStore';
@@ -348,6 +347,11 @@ export default function JadeSoulHUD({
           {/* Cropped translucent PNG directly from the approved HP screenshot.
               The red bar and live HP numbers stay independent of the picture. */}
           <span className="jade-status-raster-trim jade-status-raster-trim--hp" aria-hidden="true"/>
+          <svg className="jade-status-connector jade-status-connector--hp" viewBox="0 0 66 28"
+            preserveAspectRatio="none" aria-hidden="true">
+            <path className="jade-status-connector-outline" d="M1 2 H18 L38 23 H65"/>
+            <path className="jade-status-connector-highlight" d="M1 4 H17 L37 25 H65"/>
+          </svg>
         </div>
         <div className="jade-status-row jade-status-row--will">
           <div className="jade-status-header">
@@ -356,6 +360,11 @@ export default function JadeSoulHUD({
           <div className="jade-status-track"><div className="jade-status-fill jade-status-fill--will" style={{width:willPct+'%'}}/></div>
           {/* Mirrored original gold photography; live Will never baked into it. */}
           <span className="jade-status-raster-trim jade-status-raster-trim--will" aria-hidden="true"/>
+          <svg className="jade-status-connector jade-status-connector--will" viewBox="0 0 66 28"
+            preserveAspectRatio="none" aria-hidden="true">
+            <path className="jade-status-connector-outline" d="M1 2 H18 L38 23 H65"/>
+            <path className="jade-status-connector-highlight" d="M1 4 H17 L37 25 H65"/>
+          </svg>
         </div>
       </div>
 
@@ -375,7 +384,7 @@ export default function JadeSoulHUD({
       <SkillMatrix loadout={loadout}/>
 
       <div className="jade-xp jade-xp--compact" data-hud-agent-exp="octagon"
-        role="progressbar" aria-label={`Agent level ${hud?.level || 1} experience`}
+        role="progressbar" aria-label={`Level ${hud?.level || 1} experience`}
         aria-valuemin={0} aria-valuemax={hasFiniteXP ? hud.xpForNext : 100}
         aria-valuenow={hasFiniteXP ? Math.min(hud.xpForNext, Math.max(0, Number(hud?.xp) || 0)) : 100}
         title={`EXP ${fmt(hud?.xp)} / ${hasFiniteXP ? fmt(hud.xpForNext) : 'MAX'}`}
@@ -384,9 +393,7 @@ export default function JadeSoulHUD({
         <span className="jade-xp-raster-frame" aria-hidden="true"/>
         <span className="jade-xp-octagon-face" aria-hidden="true">
           <span className="jade-xp-octagon-energy"/>
-          <span className="jade-xp-agent">AGENT</span>
           <strong className="jade-xp-number">{fmt(hud?.level || 1)}</strong>
-          <span className="jade-xp-octagon-rule"/>
           <span className="jade-xp-caption">EXP</span>
           <span className="jade-xp-readout">{hasFiniteXP
             ? `${fmt(hud?.xp)} / ${fmt(hud.xpForNext)}` : 'MAX'}</span>
@@ -402,7 +409,13 @@ export default function JadeSoulHUD({
         title={`Stamina ${fmt(resources.stamina)} / ${fmt(resources.maxStamina)}`}>
         <div className="jade-stamina-ring" style={{'--stamina-progress':staminaPct+'%'}}>
           <div className="jade-stamina-ring-core">
-            <Footprints size={16} strokeWidth={1.8} aria-hidden="true"/>
+            <svg className="jade-stamina-runner" width="18" height="18"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+              aria-hidden="true">
+              <circle cx="15.7" cy="3.6" r="1.9"/>
+              <path d="m12 8 4.1 1.5 2.8 3.1M12 8l-3.6 4.3-3.3.6M12 8l-2.2 4.7 3.4 2.1-2.5 6M13.2 14.8l4.2 2.7 2.8.6"/>
+            </svg>
             <span>STAMINA</span>
           </div>
         </div>
