@@ -1,0 +1,30 @@
+name: Game 3D Cave Entrance Landscape Safety
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilCaveLandscapePlan.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilCaveLandscapeVisuals.js'
+      - 'src/components/game3d/wolfveil/WolfveilCaveSystem.js'
+      - 'tests/game3d-clone-cave-approach-landscaping-companion.test.mjs'
+      - '.github/workflows/game3d-clone-cave-landscape-companion.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cave-landscape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate four cave approach scenery and unchanged walk-in safety
+        run: |
+          node --test \
+            tests/game3d-clone-cave-approach-landscaping-companion.test.mjs \
+            tests/game3d-clone-cave-sealed-roof-access.test.mjs \
+            tests/game3d-clone-four-cave-connected-route.test.mjs

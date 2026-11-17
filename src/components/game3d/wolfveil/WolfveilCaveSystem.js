@@ -17,6 +17,7 @@ import {
 import { WOLFVEIL_CAVE_ENTRANCE_FRAMES, caveEntranceAt } from './WolfveilCaveEntrancePlan.mjs';
 import { WolfveilTriangles, mulberry32 } from './WolfveilGeometry.js';
 import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './WolfveilCaveAccessGeometry.mjs';
+import {installWolfveilCaveEntranceLandscaping} from './WolfveilCaveLandscapeVisuals.js';
 import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
 
 import { wolfveilHeight } from './WolfveilLayout.js';
@@ -479,6 +480,9 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     addProp,addBrazier,stoneGeo:boxGeo,beamGeo:boxGeo,
     stoneMat:floorMat,timberMat,bronzeMat,
   });
+  // Cosmetic approach shoulders and themed forecourts, independent of cave
+  // geometry/collision. Always follows the current authored entry paths.
+  const caveLandscape=installWolfveilCaveEntranceLandscaping(world,group);
 
   // 2. Cave entrances. Each rock mouth gets a jagged stone face around a genuinely
   // dark throat, boulder frames and a packed-earth apron, so the hillside reads as
@@ -1003,7 +1007,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     corridors: WOLFVEIL_CAVE_CORRIDORS,
     navigationGraph,
     approaches:WOLFVEIL_CAVE_APPROACHES,
-    approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length},
+    approachBuild:{...caveAccessStats,waymarks:caveAccessProps.length,
+      landscapeDecor:caveLandscape.placements,landscapeDrawGroups:caveLandscape.drawGroups},
     lightAnchorCount: lightAnchors.length,
     floors: WOLFVEIL_CAVE_FLOORS,
     awakeFloors(){return awakeCaveFloors(defeatedBosses);},
