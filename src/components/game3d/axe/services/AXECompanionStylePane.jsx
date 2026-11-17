@@ -158,7 +158,7 @@ export default function AXECompanionStylePane({ page='Vanity', onNotice=()=>{}, 
         onClick={()=>setPreviewOwner(value=>value==='wardrobe'?'companion':'wardrobe')}>
         {previewOwner==='wardrobe'?'View Companion':'View Player Wardrobe'}
       </button>}
-      <AXECompanionFusionButton onNotice={onNotice}/>
+      {(isImbue||previewOwner==='companion')&&<AXECompanionFusionButton onNotice={onNotice}/>}
       <div className="axe-app-model-caption"><strong>
         {isImbue?'Player Imbuement':previewOwner==='wardrobe'?'Player Wardrobe':
           selectedModel?.name||'Companion Appearance'}</strong>
