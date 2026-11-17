@@ -54,7 +54,7 @@ export function getGame3DUIScale({uiScale='auto',width=1280,height=720}={}) {
   if(uiScale==='standard')return 1;
   // CSS viewport, not physical phone resolution: an 1170x2532 phone is
   // typically ~390x844 CSS px and needs an adaptive compact layout.
-  return width<440||height<560?.9:width<680?.95:1;
+  return (width<440||height<560) ? .9 : width<680 ? .95 : 1;
 }
 export function game3DViewportClass({width=1280,height=720}={}) {
   const min=Math.min(width,height);
