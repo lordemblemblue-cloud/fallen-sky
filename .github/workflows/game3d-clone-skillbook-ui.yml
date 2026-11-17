@@ -5,6 +5,9 @@ on:
     paths:
       - 'src/components/game3d/axe/services/AXECloneSkillTreeWorkspace.jsx'
       - 'src/components/game3d/axe/services/AXECloneSkillTree.css'
+      - 'src/components/game3d/axe/services/AXECompanionSkillHub.jsx'
+      - 'src/components/game3d/axe/services/AXECompanionSkillTree.css'
+      - 'tests/game3d-clone-companion-matching-skillbook-ui.test.mjs'
       - 'src/components/game3d/axe/services/AXESkillPathHorizontal.jsx'
       - 'src/components/game3d/axe/services/AXESkillPathHorizontal.css'
       - 'tests/game3d-clone-skillbook-simplified-gold-layout.test.mjs'
@@ -28,6 +31,6 @@ jobs:
       - name: Install exact lockfile dependencies
         run: npm ci
       - name: Verify simplified Skillbook without unrelated town tests
-        run: node --test tests/game3d-clone-skillbook-simplified-gold-layout.test.mjs
+        run: node --test tests/game3d-clone-skillbook-simplified-gold-layout.test.mjs tests/game3d-clone-companion-matching-skillbook-ui.test.mjs tests/game3d-clone-companion-assist-damage-tree.test.mjs
       - name: Compile the actual Game 3D application
         run: npm run build

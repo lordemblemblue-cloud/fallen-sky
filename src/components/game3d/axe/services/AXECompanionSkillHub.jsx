@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {Activity,ArrowRight,Check,Clock3,Heart,LockKeyhole,Search,Shield,Sparkles,Swords,Target,Wind} from 'lucide-react';
+import {Activity,ArrowRight,Check,Heart,LockKeyhole,Search,Shield,Sparkles,Swords,Target,Wind} from 'lucide-react';
 import {getAllCompanionSkills} from '../../skills/companionSkillRegistry';
 import {COMPANION_ABILITIES} from '../../companionAbilityStore';
 import {companionCombatPaths} from './AXECompanionSkillModel.mjs';
@@ -61,12 +61,12 @@ export default function AXECompanionSkillHub({
   };
 
   return <section className="axe-sk-hub axe-sk-companion-hub axe-comp-skillbook"
-    data-skill-hub="companion" data-companion-skill-layout="assist-damage-tree"
+    data-skill-hub="companion" data-companion-skill-layout="compact-gold"
     aria-label="Companion skill tree">
     <header className="axe-comp-tree-hero">
       <div className="axe-comp-tree-brand"><Sparkles size={25}/></div>
-      <div><small>COMPANION ABILITIES</small><h2>Companion Skill Tree</h2>
-        <p>Two branches. Real companion abilities. Four equipped slots.</p></div>
+      <div><small>COMPANION ABILITIES</small><h2>Companion Skills</h2>
+        <p>Browse Damage and Assist skills; select one for details.</p></div>
       <span>{activeIds.filter(Boolean).length} / 4 equipped</span>
     </header>
 
@@ -88,9 +88,8 @@ export default function AXECompanionSkillHub({
     </div>
     <div className="axe-comp-tree-body">
       <section className="axe-comp-tree-map" aria-label={current.label+' skill path'}>
-        <div className="axe-comp-tree-map-heading"><div>
-          <h3>{current.label} Path</h3><p>{current.description}</p></div>
-          <span>{shown.length} abilities</span>
+        <div className="axe-comp-tree-map-heading">
+          <h3>{current.label} Skills</h3><span>{shown.length} abilities</span>
         </div>
         <div className="axe-sk-companion-tree axe-comp-tree-nodes" role="list"
           aria-label={current.label+' companion skills'}>
@@ -113,8 +112,6 @@ export default function AXECompanionSkillHub({
                     !ready?<span className="axe-comp-tree-node-status axe-comp-tree-node-status--future"><LockKeyhole size={12}/> Future</span>:null}
                 </span>
                 <strong>{skill.skill_name}</strong>
-                <small>{branch==='damage'?readable(path.id):readable(skill.category)}</small>
-                <span className="axe-comp-tree-node-foot"><Clock3 size={13}/> {skill.cooldown}s cooldown</span>
               </button>
               {index<shown.length-1&&<span className="axe-sk-combat-connector" aria-hidden="true">
                 <ArrowRight size={20}/></span>}
@@ -122,17 +119,11 @@ export default function AXECompanionSkillHub({
           })}
           {!shown.length&&<p className="axe-sk-empty">No skills match the search. Try another name.</p>}
         </div>
-        <div className="axe-comp-tree-note">
-          <Sparkles size={15}/><p>The lines organize the companion's abilities; they do not
-            invent skill points, mastery levels or prerequisites. Pick an ability, then choose a
-            Z / X / V / B slot beneath the tree to equip it.</p>
-        </div>
-        {branch==='assist'&&<p className="axe-comp-tree-assist-note">
-          Teleport Dash is the available repositioning ability. A lasting
-          speed-increase buff is not yet implemented. Deity Fusion remains
-          visible for planning but cannot be cast until its runtime is ready.</p>}
+
       </section>
       <aside className="axe-sk-inspector axe-comp-tree-inspector" aria-label="Selected companion skill details">
+        <div className="axe-comp-tree-info-title"><h2><Sparkles size={17}/> Skill Information</h2>
+          <span>{current.label} · {shown.length} skills</span></div>
         {selected?<>
           <span className="axe-sk-inspector-kicker">{current.label} · {readable(selected.category)}</span>
           <h3>{selected.skill_name}</h3>
@@ -141,9 +132,11 @@ export default function AXECompanionSkillHub({
             {companionSkillMetrics(selected).map(([label,value])=><span key={label}>
               {label}<strong>{value}</strong></span>)}
           </div>
-          <h4><Shield size={17}/> Equipped ability</h4>
-          <p>{equipped?'Currently equipped to '+['Z','X','V','B'][activeIds.indexOf(selected.skill_id)]+'.':
-            canCast?'This ability uses the existing companion combat runtime.':'This ability is registered for future development, but its cast is unavailable.'}</p>
+          <div className="axe-comp-tree-info-availability">
+            <Shield size={15}/><span>{equipped?'Equipped to '+['Z','X','V','B'][activeIds.indexOf(selected.skill_id)]:
+              canCast?'Ready to equip':'Registered · Future ability'}</span>
+          </div>
+          {!canCast&&<p>This ability is registered for future development, but its cast is unavailable.</p>}
           <button type="button" className="axe-sk-equip"
             disabled={!canCast||(equipped&&selectedSlot===null)} onClick={()=>equip(selected)}>
             {!canCast?<><LockKeyhole size={16}/> Not Yet Available</>:
@@ -154,6 +147,12 @@ export default function AXECompanionSkillHub({
           {canCast&&selectedSlot===null&&!equipped&&activeIds.every(Boolean)&&
             <p className="axe-comp-tree-slot-help">All four slots are occupied. Select a slot below to replace its ability.</p>}
         </>:<div className="axe-sk-empty">Select a registered ability to inspect its effects.</div>}
+        {branch==='assist'&&<p className="axe-comp-tree-assist-note">
+          Teleport Dash is the available repositioning ability. A lasting
+          speed-increase buff is not yet implemented. Deity Fusion remains
+          visible for planning but cannot be cast until its runtime is ready.</p>}
+        <p className="axe-comp-tree-runtime-note">Abilities follow the existing companion runtime.
+          No invented skill points or mastery levels. Choose a Z / X / V / B slot to equip.</p>
         {message&&<p className="axe-comp-tree-feedback" role="status">{message}</p>}
       </aside>
     </div>
