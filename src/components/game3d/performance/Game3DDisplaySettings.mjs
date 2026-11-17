@@ -3,6 +3,7 @@
 // changes camera FOV, alters hitboxes, or changes the operating system display.
 export const GAME3D_DISPLAY_SETTINGS_KEY = 'game3d_display_settings_v1';
 export const GAME3D_DISPLAY_SETTINGS_EVENT = 'game3dDisplaySettingsChanged';
+export const GAME3D_RENDER_BUFFER_APPLIED_EVENT = 'game3dRenderBufferApplied';
 export const GAME3D_RENDER_RESOLUTIONS = Object.freeze([
   {id:'auto',label:'Adaptive'},
   {id:'720p',label:'720p'},
@@ -120,4 +121,35 @@ export function readGame3DRendererViewport(renderer,host=typeof window!=='undefi
   const width=valid(box?.width,valid(renderer?.domElement?.clientWidth,valid(host?.innerWidth,1280)));
   const height=valid(box?.height,valid(renderer?.domElement?.clientHeight,valid(host?.innerHeight,720)));
   return {width,height};
+}
+
+// Read the actual WebGL drawing buffer, never the CSS canvas rectangle or a
+// prediction from the selected resolution. Three.js updates canvas.width and
+// canvas.height whenever setPixelRatio/setSize changes its drawing buffer.
+export function readGame3DActualFramebuffer(renderer) {
+  const canvas=renderer?.domElement;
+  const width=Number(canvas?.width),height=Number(canvas?.height);
+  if(!Number.isSafeInteger(width)||width<1||!Number.isSafeInteger(height)||height<1)
+    return null;
+  return Object.freeze({
+    width,height,pixels:width*height,
+    pixelRatio:Number(renderer?.getPixelRatio?.())||1,
+  });
+}
+
+// Both the renderer and graphics governor publish only measured physical pixels.
+// The pause menu uses this event to confirm that the selection really applied.
+export function publishGame3DActualFramebuffer({
+  renderer,host=typeof window==='undefined'?null:window,
+  resolution='auto',limited=false,
+}={}) {
+  const actual=readGame3DActualFramebuffer(renderer);
+  if(!actual)return null;
+  const payload=Object.freeze({...actual,resolution,limited:Boolean(limited)});
+  try {
+    const EventType=host?.CustomEvent||(typeof CustomEvent==='undefined'?null:CustomEvent);
+    if(EventType)host?.dispatchEvent?.(new EventType(
+      GAME3D_RENDER_BUFFER_APPLIED_EVENT,{detail:payload}));
+  }catch { /* A blocked UI event must not prevent WebGL rendering. */ }
+  return payload;
 }
