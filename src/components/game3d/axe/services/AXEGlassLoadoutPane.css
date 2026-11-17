@@ -690,3 +690,103 @@
   .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-sigil,
   .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-roster-active-check {display:none;}
 }
+
+/* Revision: Companion Equipment mirrors the actual Variety circular rail.
+   Remove the old text/search roster as well as side-stacked viewer slot rails.
+   Three canonical gear slots occupy corners; the fourth is a real All Gear
+   inventory action (the mount model currently defines only three gear slots). */
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] {
+  grid-template-columns:minmax(70px,7%) minmax(330px,39%) minmax(235px,1fr) minmax(230px,.9fr);
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"]>.axe-comp-circle-rail {
+  grid-column:1;grid-row:1;min-width:0;min-height:0;overflow:hidden;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage {
+  grid-column:2;grid-row:1;
+  display:grid;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:minmax(0,1fr) auto;position:relative;isolation:isolate;
+  overflow:hidden;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage>.axe-app-model-center {
+  grid-column:1;grid-row:1;min-width:0;min-height:0;width:100%;height:100%;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corners {
+  position:absolute;z-index:4;inset:0 0 72px;
+  pointer-events:none;overflow:visible;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner {
+  position:absolute;pointer-events:auto;
+  width:clamp(80px,8vw,105px);min-height:95px;
+  max-height:120px;padding:9px 5px;gap:5px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  border:1px solid #e9cb8dce;border-radius:10px;
+  background:linear-gradient(150deg,rgba(36,56,74,.91),rgba(18,35,52,.88));
+  color:#f8deaf;box-shadow:inset 0 0 15px #fce1b51c,0 6px 14px #06111c91;
+  backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--top-left {top:51px;left:10px;}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--top-right {top:51px;right:10px;}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--bottom-left {bottom:9px;left:10px;}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--bottom-right {bottom:9px;right:10px;}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner[aria-pressed=true] {
+  border-color:#ffeac0;background:linear-gradient(145deg,rgba(164,124,70,.93),rgba(47,64,80,.89));
+  box-shadow:0 0 13px #f6d8a270;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner:focus-visible {
+  outline:2px solid #fff0c3;outline-offset:2px;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner .axe-app-viewer-slot-art {
+  max-height:37px;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner small {
+  font:12px/1.1 Georgia,serif;overflow-wrap:anywhere;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner .axe-app-viewer-item-name {
+  display:block;font:10px/1.1 Georgia,serif;max-width:100%;
+  white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:#d0dbe1;
+}
+.axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-app-model-caption {
+  grid-column:1;grid-row:2;max-width:100%;z-index:5;margin:0 auto 2px;
+  padding:6px 9px;gap:4px;min-height:58px;
+}
+.axe-comp-viewer-mount-actions {
+  display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:3px;
+}
+.axe-comp-viewer-mount-actions button {
+  font:10px Georgia,serif;color:#f8e0b6;background:#2c4353e8;
+  border:1px solid #e4c38c;border-radius:6px;
+  padding:4px 7px;min-height:24px;
+}
+.axe-comp-viewer-mount-actions button:hover,.axe-comp-viewer-mount-actions button:focus-visible {
+  background:#ad8f65;color:#171f27;outline-color:#ffe3aa;
+}
+@media(max-width:1160px) {
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:minmax(64px,7%) minmax(260px,34%) minmax(190px,1fr) minmax(190px,.9fr);
+  }
+}
+@media(max-width:980px) {
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:64px minmax(0,1fr);
+    grid-template-rows:minmax(360px,49vh) auto auto;height:auto;
+  }
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"]>.axe-comp-circle-rail {grid-column:1;grid-row:1;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-glass-loadout-stage {grid-column:2;grid-row:1;}
+}
+@media(max-width:590px) {
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] {
+    grid-template-columns:57px minmax(0,1fr);grid-template-rows:370px auto auto;
+  }
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner {
+    width:clamp(64px,19vw,83px);min-height:76px;max-height:92px;padding:5px 3px;gap:2px;
+  }
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--top-left {top:49px;left:4px;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--top-right {top:49px;right:4px;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--bottom-left {bottom:4px;left:4px;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner--bottom-right {bottom:4px;right:4px;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner .axe-app-viewer-slot-art svg {
+    width:23px;height:23px;
+  }
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner small {font-size:10px;}
+  .axe-comp-modern .axe-glass-loadout[data-equipment-actor="companion"] .axe-comp-viewer-corner .axe-app-viewer-item-name {font-size:8px;}
+}
