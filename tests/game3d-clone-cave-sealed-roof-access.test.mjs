@@ -51,6 +51,11 @@ test('four physical cave approach tracks meet the original trails, with differen
     assert.ok(isWolfveilCaveApproachReserved(a.points.at(-1).x,a.points.at(-1).z,1));
     assert.ok(a.points.reduce((sum,p,i)=>i?sum+Math.hypot(
       p.x-a.points[i-1].x,p.z-a.points[i-1].z):sum,0)>35);
+    const mid=a.points[Math.floor(a.points.length/2)];
+    const cave=WOLFVEIL_EXPLORABLE_CAVES.find(c=>c.id===a.caveId);
+    if(Math.hypot(mid.x-cave.mouth[0],mid.z-cave.mouth[1])>12)
+      assert.ok(Math.abs(wolfveilHeight(mid.x,mid.z)-mid.y)<1.2,
+        a.id+' hillside was not benched under the trail');
   }
 });
 test('outdoor stone ribbons are real finite triangles and meet each sealed-arch threshold',()=>{

@@ -34,8 +34,8 @@ export function appendWolfveilCaveAccessFloor(floorTris){
   // courses a mason would lay so the path reads as built, not painted on.
   const mix3=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t];
   const layPavement=(e0,e1,v0,v1)=>{
-    const bands=[[0,.18],[.18,.82],[.82,1]];
-    const colors=[[.46,.43,.38],COLOR_CENTER,[.46,.43,.38]];
+    const bands=[[0,.32],[.32,.68],[.68,1]];
+    const colors=[[.40,.42,.36],COLOR_CENTER,[.40,.42,.36]];
     for(let b=0;b<3;b++){
       const [s0,s1]=bands[b];
       const a=mix3(e0.left,e0.right,s0);
@@ -168,23 +168,31 @@ export function appendWolfveilCaveAccessProps({
   for(const approach of WOLFVEIL_CAVE_APPROACHES){
     const cave=caveById.get(approach.caveId),[dx,dz]=cave.dir;
     const nx=-dz,nz=dx;
-    // Low stone retaining edges and handrails flank the outdoor approach.
+    // Stones along the cut, not a fence. The uphill side gets the larger rock.
+    for(let i=1;i<approach.points.length-1;i+=2){
+      const p=approach.points[i];
+      const prev=approach.points[i-1];
+      if(Math.hypot(p.x-cave.mouth[0],p.z-cave.mouth[1])<10)continue;
+      const tx=p.x-prev.x,tz=p.z-prev.z;
+      const len=Math.hypot(tx,tz)||1;
+      const sx=-tz/len,sz=tx/len;
+      const n=Math.abs(Math.sin(p.x*0.17+p.z*0.11));
+      const side=n>0.5?1:-1;
+      const lat=2.6+n*1.6;
+      const x=p.x+sx*side*lat,z=p.z+sz*side*lat;
+      const y=wolfveilHeight(x,z);
+      const h=0.55+n*0.9;
+      addProp(stoneGeo,stoneMat,x,y+h*0.45,z,0.7+n*0.5,h,0.62+n*0.35,n,side*0.4,0);
+    }
+    // A few rocks settle the arch. They stay outside the walk.
     for(const side of [-1,1]){
-      for(let j=0;j<5;j++){
-        const f=-12+j*2.0;
-        const x=cave.mouth[0]+dx*f+nx*side*5.9,
-          z=cave.mouth[1]+dz*f+nz*side*5.9;
-        // Posts are kept beyond the walkable center line so a player capsule
-        // never catches the post while entering/exiting.
+      for(let j=0;j<3;j++){
+        const f=-11+j*2.4;
+        const x=cave.mouth[0]+dx*f+nx*side*(5.6+j*0.15),
+          z=cave.mouth[1]+dz*f+nz*side*(5.6+j*0.15);
         const y=wolfveilHeight(x,z);
-        addProp(stoneGeo,stoneMat,x,y+.56,z,.67,1.04,.67,0,.18*j,0);
-        if(j<4){
-          const lx=x+dx*1.25,lz=z+dz*1.25;
-          addProp(beamGeo,timberMat,lx,y+1.06,lz,.15,.16,2.55,0,
-            Math.atan2(dx,dz),0);
-        }
+        addProp(stoneGeo,stoneMat,x,y+.42,z,.9,.7,.8,0,.2*j,0);
       }
-      // Height-independent short corner lanterns outside the entry bay.
       if(addBrazier){
         const bx=cave.mouth[0]-dx*7+nx*side*4.0;
         const bz=cave.mouth[1]-dz*7+nz*side*4.0;
@@ -192,25 +200,16 @@ export function appendWolfveilCaveAccessProps({
         addBrazier(bx,h,bz,cave.lightColor,cave.theme==='crystal_geode');
       }
     }
-    // Terrain-anchored mountain rock shoulders make the arched entrance
-    // look settled in the real hillside without carving an overhead hole.
-    const front=approach.points[2];
+    const front=approach.points.find(p=>p.kind==='staging')||approach.points[2];
     for(const side of [-1,1]){
-      const px=front.x+nx*side*4.3,pz=front.z+nz*side*4.3;
+      const px=front.x+nx*side*3.6,pz=front.z+nz*side*3.6;
       const h=wolfveilHeight(px,pz);
-      addProp(stoneGeo,stoneMat,px,h+.54,pz,1.3,1.15,1.38,0,side*.23,0);
-      const gateX=front.x+nx*side*2.4,gateZ=front.z+nz*side*2.4;
-      const groundY=wolfveilHeight(gateX,gateZ);
-      addProp(beamGeo,timberMat,gateX,groundY+1.1,gateZ,.2,2.0,.2);
+      addProp(stoneGeo,stoneMat,px,h+.5,pz,1.15,0.85,1.2,0,side*.3,0);
     }
-    // A repeated warm waymark at the junction and staging bend. The actual
-    // player path is already a continuous stone strip, not floating steps.
-    for(const point of [approach.points[0],approach.points[1]]){
-      const x=point.x+nx*2.2,z=point.z+nz*2.2,y=wolfveilHeight(x,z);
-      addProp(beamGeo,timberMat,x,y+1.1,z,.22,2.2,.22);
-      addProp(beamGeo,bronzeMat,x,y+2.15,z,1.0,.17,.28,0,
-        Math.atan2(dx,dz),0);
-    }
+    const start=approach.points[0];
+    const x=start.x+nx*2.4,z=start.z+nz*2.4,y=wolfveilHeight(x,z);
+    addProp(beamGeo,timberMat,x,y+1.05,z,.18,1.7,.18);
+    addProp(beamGeo,bronzeMat,x,y+1.85,z,.85,.14,.24,0,Math.atan2(dx,dz),0);
     placements.push({
       id:approach.id,trail:approach.trailName,waymark:approach.waymark,
       propsOnly:true,guardedMouth:true,

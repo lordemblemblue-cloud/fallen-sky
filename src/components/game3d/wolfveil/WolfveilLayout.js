@@ -321,7 +321,15 @@ export function wolfveilPreBridgeHeight(x,z){
 export const wolfveilBridgeBankTerrainGrade=createWolfveilBridgeBankTerrainGrade(
   WOLFVEIL_BRIDGES,wolfveilPreBridgeHeight);
 export function wolfveilHeight(x,z){
-  return gradeWolfveilImportedTown(x,z,wolfveilBridgeBankTerrainGrade(x,z));
+  const y=gradeWolfveilImportedTown(x,z,wolfveilBridgeBankTerrainGrade(x,z));
+  const grade=wolfveilCaveApproachTerrainGrade;
+  return typeof grade==='function'?grade(x,z,y):y;
+}
+// Filled by the cave access plan once its paths exist. Kept off the import
+// graph so the cave mouths can measure the hill before the bench is applied.
+export let wolfveilCaveApproachTerrainGrade=null;
+export function setWolfveilCaveApproachTerrainGrade(fn){
+  wolfveilCaveApproachTerrainGrade=typeof fn==='function'?fn:null;
 }
 export const WOLFVEIL_DISTRICTS=Object.freeze([
   {id:'market',name:'Wolf-Spirit Market',center:[0,-70],purpose:'safe services'},
