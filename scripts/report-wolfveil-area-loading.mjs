@@ -474,7 +474,13 @@ export async function runWolfveilAreaLoadingReport({
   const census=loader.inspect();
   const tallSplit=census.batches.map(batch=>({name:batch.source.name||'(unnamed)',
     instances:batch.count,height:instanceHeightOf(batch.source),
-    triangles:Math.round(trianglesOf(batch.source)*batch.count)}))
+    triangles:Math.round(trianglesOf(batch.source)*batch.count),
+    // Why it does or does not get an outline: how its material is drawn.
+    drawn:(Array.isArray(batch.source.material)?batch.source.material:[batch.source.material])
+      .map(material=>[material?.type,material?.transparent?'transparent':'opaque',
+        'opacity '+material?.opacity,material?.depthWrite===false?'no depth':'depth',
+        material?.alphaTest?'cutout '+material.alphaTest:'',material?.visible===false?'hidden':'']
+        .filter(Boolean).join(' ')).join(' | ')}))
     .filter(entry=>entry.height>=4).sort((x,y)=>y.triangles-x.triangles);
   const tallUnits=[];
   for(const unit of census.units){
@@ -754,7 +760,8 @@ export function formatWolfveilAreaLoadingReport(result){
   }else lines.push('Far scenery: switched off');
   lines.push('Tall instanced scenery that is still unloaded (4 m and taller, too heavy to keep whole):');
   for(const entry of result.tallScenery.splitBatches)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+
-    String(entry.instances).padStart(5)+' x '+entry.height.toFixed(1).padStart(5)+' m  '+entry.name);
+    String(entry.instances).padStart(5)+' x '+entry.height.toFixed(1).padStart(5)+' m  '+entry.name+
+    '   ['+entry.drawn+']');
   if(!result.tallScenery.splitBatches.length)lines.push('  none');
   lines.push('Tall single objects that are unloaded with their area ('+result.tallScenery.unitCount+
     ' in all; largest by silhouette):');
