@@ -41,3 +41,238 @@
 @media(max-width:960px){.axe-comp-tree-body{grid-template-columns:minmax(0,1.2fr) minmax(195px,1fr)}.axe-comp-skillbook .axe-comp-tree-node{flex-basis:148px;max-width:148px}}
 @media(max-width:720px){.axe-comp-tree-hero>span{display:none}.axe-comp-tree-controls{flex-direction:column;align-items:stretch}.axe-comp-tree-tabs button{flex:1;min-width:0}.axe-comp-tree-search{width:100%}.axe-comp-tree-body{display:flex;flex-direction:column;overflow:auto}.axe-comp-tree-map,.axe-comp-tree-inspector{flex:0 0 auto;overflow:visible}.axe-comp-skillbook .axe-sk-companion-tree{min-height:150px;max-height:190px;overflow-x:auto}.axe-comp-tree-inspector{min-height:180px}}
 @media(prefers-reduced-motion:reduce){.axe-comp-skillbook *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+
+/* Compact Companion Skillbook — same navy glass and champagne gold as the
+   simplified Character Skillbook, without stacked category, tree or info boxes. */
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"]{
+  --comp-skill-gold:rgba(242,210,147,.76);
+  --comp-skill-ivory:#f5e9d7;
+  gap:6px;min-height:0;background:transparent;
+  color:var(--comp-skill-ivory);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero{
+  flex:0 0 auto;min-height:43px;gap:9px;padding:2px 5px 7px;
+  border:0;border-bottom:1px solid rgba(240,202,140,.48);
+  border-radius:0;
+  background:linear-gradient(90deg,rgba(17,35,52,.09),transparent);
+  box-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-brand{
+  width:32px;height:32px;flex-basis:32px;border:0;border-radius:6px;
+  background:rgba(28,43,58,.15);color:#f6d69c;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-brand svg{
+  width:19px;height:19px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero small{
+  font:9px Georgia,serif;letter-spacing:.1em;color:#dfbe89;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero h2{
+  margin:1px 0;color:#ffe0a4;
+  font:normal clamp(17px,1.65vw,23px)/1.1 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero p{
+  margin:1px 0;color:#d3c6af;font:10px/1.35 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-hero>span{
+  padding:0 1px;white-space:nowrap;color:#dfc7a0;
+  font:10px Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-controls{
+  flex:0 0 auto;min-height:35px;gap:10px;
+  padding:1px 4px 5px;border-bottom:1px solid rgba(242,210,147,.3);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs{
+  gap:5px;align-items:center;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs button{
+  min-width:105px;min-height:31px;gap:6px;padding:5px 10px;
+  border:0;border-bottom:2px solid transparent;border-radius:0;
+  color:#e6d2b2;background:transparent;box-shadow:none;
+  font:12px Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs button:hover{
+  color:#ffe0a4;background:rgba(215,173,103,.10);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs button[aria-pressed="true"]{
+  border-color:#f1c983;color:#ffe8bd;
+  background:rgba(210,162,93,.11);box-shadow:none;text-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs button small{
+  margin-left:2px;color:inherit;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-search{
+  width:min(230px,36%);min-width:112px;padding:5px 7px;
+  border:0;border-bottom:1px solid #e8c88a99;border-radius:0;
+  background:rgba(17,34,51,.09);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-search input{
+  color:#f5e9d7;font:11px Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-body{
+  flex:1 1 auto;min-height:0;min-width:0;
+  grid-template-columns:minmax(0,1fr) clamp(240px,30%,370px);
+  gap:clamp(8px,1vw,15px);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map{
+  min-height:0;gap:5px;padding:7px 8px 7px 2px;
+  border:0;border-right:1px solid rgba(229,186,126,.35);border-radius:0;
+  background:rgba(22,38,52,.12);box-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map-heading{
+  align-items:center;min-height:29px;padding:0 3px 6px;
+  border-bottom:1px solid rgba(240,202,140,.34);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map-heading h3{
+  font:normal clamp(16px,1.45vw,21px) Georgia,serif;color:#f6d69c;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map-heading>span{
+  font:10px Georgia,serif;color:#d3bd98;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-companion-tree{
+  flex:1 1 auto;min-height:100px;max-height:none;margin:0;padding:6px 2px;
+  align-items:center;overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;scrollbar-color:#cda66c90 transparent;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-combat-node{
+  min-height:98px;height:auto;gap:2px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node{
+  flex:0 0 136px;max-width:136px;min-height:98px;height:auto;
+  gap:7px;padding:10px 8px;
+  justify-content:center;align-items:center;text-align:center;
+  border:1px solid rgba(242,210,147,.19);
+  border-radius:9px;background:rgba(28,45,63,.20);
+  box-shadow:none;color:#f5e9d7;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node:hover,
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node[aria-pressed="true"]{
+  border-color:#f0ca88ab;background:rgba(214,171,99,.17);
+  box-shadow:0 0 0 1px rgba(230,186,114,.18);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node--future{
+  border-style:dashed;opacity:.75;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node-top{
+  width:100%;justify-content:center;gap:7px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node .axe-sk-skill-mark{
+  width:33px;height:33px;border:1px solid rgba(236,197,134,.62);
+  border-radius:8px;background:rgba(40,62,81,.37);
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node strong{
+  font:normal 13px/1.25 Georgia,serif;white-space:normal;
+  overflow-wrap:anywhere;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node-status{
+  font:9px Georgia,serif;color:#bfe5ca;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-combat-connector{
+  flex:0 0 18px;min-width:18px;filter:none;opacity:.68;
+  color:#e2bf80;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-combat-connector svg{
+  width:15px;height:15px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector{
+  min-height:0;padding:7px 7px 8px 4px;overflow-y:auto;
+  border:0;border-radius:0;background:rgba(10,25,40,.12);
+  box-shadow:none;backdrop-filter:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-info-title{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  border-bottom:1px solid rgba(240,202,140,.5);
+  padding:0 0 8px;min-height:30px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-info-title h2{
+  display:flex;align-items:center;gap:6px;margin:0;
+  color:#f6d69c;font:normal clamp(16px,1.45vw,20px)/1.1 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-info-title>span{
+  color:#d4c09d;font:10px Georgia,serif;text-align:right;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-inspector-kicker{
+  display:block;margin-top:9px;color:#d8bd8e;
+  font:9px Georgia,serif;letter-spacing:.06em;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector h3{
+  margin:4px 0 7px;color:#ffe2aa;
+  font:normal clamp(19px,1.8vw,26px)/1.15 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector p{
+  margin:4px 0 8px;color:#e4d7c3;font:11px/1.45 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-metrics{
+  grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 11px;
+  margin:6px 0 8px;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-metrics span{
+  padding:5px 1px;border:0;border-bottom:1px solid #d8b98035;
+  border-radius:0;background:transparent;color:#d3c3aa;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-metrics strong{
+  margin-top:2px;color:#f5e6c6;font:normal 13px Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-info-availability{
+  display:flex;align-items:center;gap:7px;
+  padding-top:6px;border-top:1px solid rgba(240,202,140,.26);
+  color:#e5cda3;font:11px Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-equip{
+  margin:8px 0 3px;padding:8px 6px;
+  border:1px solid #f0d19a;border-radius:6px;
+  background:linear-gradient(95deg,#f2d398,#ffedc1 58%,#cda16b);
+  color:#302313;font:12px Georgia,serif;text-shadow:none;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-assist-note,
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-runtime-note{
+  display:block;max-width:100%;padding:5px 0 0;margin:6px 0 0;
+  border-top:1px solid rgba(225,191,137,.23);
+  color:#cabfae;font:10px/1.4 Georgia,serif;
+}
+.axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-feedback{
+  color:#f5d197;font:10px Georgia,serif;
+}
+@media(max-width:960px){
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-body{
+    grid-template-columns:minmax(0,1fr) minmax(215px,36%);
+    gap:7px;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-node{
+    flex-basis:122px;max-width:122px;
+  }
+}
+@media(max-width:720px){
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-controls{
+    flex-direction:row;align-items:center;flex-wrap:wrap;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs{
+    flex:1 1 auto;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-tabs button{
+    flex:1 1 0;min-width:0;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-search{
+    flex:1 1 100%;width:100%;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-body{
+    display:flex;flex-direction:column;overflow-y:auto;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-map,
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector{
+    flex:0 0 auto;overflow:visible;border-right:0;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-sk-companion-tree{
+    min-height:110px;max-height:160px;overflow-x:auto;
+  }
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] .axe-comp-tree-inspector{
+    min-height:0;border-top:1px solid rgba(240,202,140,.35);
+    padding-top:8px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .axe-comp-skillbook[data-companion-skill-layout="compact-gold"] *{
+    transition:none!important;animation:none!important;
+  }
+}
