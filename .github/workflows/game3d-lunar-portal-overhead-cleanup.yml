@@ -1,0 +1,24 @@
+name: Game 3D Lunar Portal Ornament Removal
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/dungeons/LunarCaveScene.js'
+      - 'tests/game3d-lunar-portal-overhead-crystal-removal.test.mjs'
+      - '.github/workflows/game3d-lunar-portal-overhead-cleanup.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lunar-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm obsolete crown absent and actual cave portal preserved
+        run: node --test tests/game3d-lunar-portal-overhead-crystal-removal.test.mjs
