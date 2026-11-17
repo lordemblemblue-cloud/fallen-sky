@@ -4658,14 +4658,27 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     animate();
 
+    // Actual canvas container dimensions, not the screen's physical pixel
+    // resolution. Keeping camera aspect in CSS space prevents stretching and
+    // ensures mouse aiming and projected HUD positions stay aligned.
+    let lastCSSWidth=w0,lastCSSHeight=h0;
     const handleResize = () => {
-      camera.aspect = container.clientWidth / container.clientHeight;
+      const width=Math.round(container.clientWidth);
+      const height=Math.round(container.clientHeight);
+      if(!width||!height||(width===lastCSSWidth&&height===lastCSSHeight))return;
+      lastCSSWidth=width;lastCSSHeight=height;
+      camera.aspect=width/height;
       camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setSize(width,height,false); // Never overwrite canvas width:100%;height:100%.
+      window.__axe3dCloneGovernor?.syncViewport?.();
       inkLook.setSize();
       atomicLook?.resize();
     };
+    const canvasResizeObserver=typeof ResizeObserver!=='undefined'
+      ?new ResizeObserver(handleResize):null;
+    canvasResizeObserver?.observe(container);
     window.addEventListener('resize', handleResize);
+    handleResize();
 
     return () => {
       flushCheckpoint();
@@ -4754,6 +4767,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (document.pointerLockElement === renderer.domElement)
         document.exitPointerLock?.();
       window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('resize', handleResize);
+      canvasResizeObserver?.disconnect();
       window.removeEventListener('playerSkillStrike', handlePlayerSkillStrike);
       for (const held of heldAOEKeys.values()) {
         window.dispatchEvent(new CustomEvent('axeAoeChannelStop',
