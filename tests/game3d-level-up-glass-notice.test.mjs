@@ -47,7 +47,7 @@ test('clicking the level-up body navigates to real Character attributes service'
 test('compact glass and decorative gold design changes only level toast styles', () => {
   const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
   const ui = read('src/components/game3d/notifications/Game3DLunarNotifications.jsx');
-  assert.match(css, /\.axe-lunar-notifications--level\{\s*width:min\(430px,90vw\)/);
+  assert.match(css, /\.axe-lunar-notifications--level\{\s*width:min\(301px,calc\(100vw - 28px\)\)/);
   assert.match(css, /\.axe-lunar-notifications--level \.axe-lunar-level\{/);
   assert.match(css, /backdrop-filter:blur\(7px\) saturate\(112%\)/);
   assert.match(css, /\.axe-lunar-level-filigree/);
@@ -57,4 +57,33 @@ test('compact glass and decorative gold design changes only level toast styles',
   // The shared story and friend-message implementations must remain wired.
   assert.match(ui, /active\.kind==='story' && <StoryNotice/);
   assert.match(ui, /active\.kind==='message' && <MessageNotice/);
+});
+
+test('level-up notice sits under the HUD minimap, not across the player view', () => {
+  const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
+  const hud = read('src/components/game3d/hud/JadeSoulHUD.css');
+  const map = read('src/components/game3d/hud/JadeSoulHUD.jsx');
+  const levelStyles = css.slice(css.indexOf('/* Compact level-up card. Match the real minimap'));
+  assert.ok(levelStyles.length > 100, 'Level-specific map placement rules exist');
+  assert.match(map, /className="jade-compass-block"/);
+  assert.match(map, /aria-label="Open world map"/);
+  assert.match(hud, /\.jade-compass-block\s*\{\s*right: clamp\(14px, 2\.4vw, 42px\);\s*top: clamp\(19px, 3vh, 37px\);\s*width: clamp\(126px, 11\.2vw, 184px\);/);
+  assert.match(levelStyles, /right:clamp\(14px,2\.4vw,42px\)/);
+  assert.match(levelStyles, /top:calc\(clamp\(19px,3vh,37px\) \+ clamp\(126px,11\.2vw,184px\) \+ 50px\)/);
+  assert.match(levelStyles, /left:auto;[\s\S]*transform:none/);
+  assert.doesNotMatch(levelStyles, /top:clamp\(145px,34vh,385px\)/);
+});
+
+test('30 percent smaller notification scales down width, height, decoration and typography', () => {
+  const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
+  const compact = css.slice(css.indexOf('/* Compact level-up card. Match the real minimap'));
+  assert.match(compact, /width:min\(301px,calc\(100vw - 28px\)\)/);
+  assert.match(compact, /min-height:115px/);
+  assert.match(compact, /height:48px/);
+  assert.match(compact, /font:500 clamp\(15px,2\.2vw,19px\)/);
+  assert.match(compact, /right:18px;\s*top:calc\(25px \+ 106px \+ 43px\)/);
+  assert.match(compact, /width:min\(255px,calc\(100vw - 28px\)\)/);
+  assert.match(compact, /min-height:102px/);
+  // The level-specific change must not relocate other notifications.
+  assert.doesNotMatch(compact, /\.axe-lunar-notifications--story\s*\{|\.axe-lunar-notifications--message\s*\{/);
 });
