@@ -165,15 +165,16 @@ numbers are an upper bound on what one camera view draws. The job
 pull request, then lints the new files and runs `npm run build`.
 
 Draw calls / triangles standing deep inside each area (browser budget: 500
-draw calls, 1.5 M triangles):
+draw calls, 1.5 M triangles). All four owner models (tree, grass, plants,
+garden) load in this run.
 
-| Area  | Whole valley from there | One area, town as built | One area, town merged |
-|-------|-------------------------|-------------------------|-----------------------|
-| town  | 4,558 / 3.44 M          | 3,938 / 1.55 M          | 782 / 1.55 M          |
-| south | 4,591 / 4.40 M          | 298 / 1.68 M            | 298 / 1.68 M          |
-| west  | 4,591 / 4.32 M          | 479 / 2.31 M            | 479 / 2.31 M          |
-| east  | 4,586 / 4.09 M          | 441 / 1.86 M            | 441 / 1.86 M          |
-| north | 4,591 / 4.30 M          | 433 / 1.85 M            | 433 / 1.85 M          |
+| Area  | Whole valley, as it was built | One area loaded, now |
+|-------|-------------------------------|----------------------|
+| town  | 4,558 / 3.44 M                | 790 / 1.63 M         |
+| south | 4,591 / 4.40 M                | 303 / 1.75 M         |
+| west  | 4,591 / 4.32 M                | 490 / 2.38 M         |
+| east  | 4,586 / 4.09 M                | 450 / 1.92 M         |
+| north | 4,591 / 4.30 M                | 437 / 1.91 M         |
 
 - All 11 portals pass walking both ways: arrival notice, both sides loaded
   during the crossing, arch shown.
@@ -188,16 +189,47 @@ draw calls, 1.5 M triangles):
   139,468 triangles, bounds unchanged. 3,212 parts became 56 meshes; 224
   moving parts, 64 tagged, 33 see-through and 13 one-of-a-kind parts were left
   alone; none had to be handed back in ten seconds of town animation.
+- **Distant scenery** (below): 1 to 5 draw calls and 46,000 to 69,000
+  triangles per area, included in the table.
 
 What is still over budget, in measured order:
 
 1. Triangles in every area: grass that follows the player (0.85 to 1.17 M)
    and the owner's long-grass tiles (95,000 to 660,000 per area).
-2. Draw calls in town (782): town parts left unmerged because they move,
+2. Draw calls in town (790): town parts left unmerged because they move,
    are tagged or are see-through (about 340), long-grass tiles (148), caves
    (65).
 3. Lights: 20 to 26 lights are switched on wherever the player stands. Their
    cost shows only in a real frame-rate reading.
+
+## Distant scenery (what an unloaded area still shows)
+
+Setting: Graphics menu, "Distant scenery", per platform (browser and desktop
+on, mobile off). Loader options `farScenery`, `farProxy`.
+
+Two parts, both in `streaming/WolfveilAreaLoader.mjs`:
+
+1. **Kept whole.** Tall, cheap instanced scenery (instances 4 m and taller,
+   at most 60,000 triangles per batch) is never split or unloaded. One draw
+   call per batch for the whole valley, the same as one area's copy cost. On
+   the real valley: 5 batches, 460 instances, 51,096 triangles (the gorge's
+   rock terraces and the fallback trees).
+2. **Outline.** Tall scenery that does unload with its area is baked into one
+   coarse mesh per area (`performance/Game3DFarProxy.mjs`, vertex clustering
+   on a 0.75 m grid, at most 30,000 triangles, flat colours taken from the
+   real materials; `wolfveil/WolfveilFarOutline.js` builds the mesh). It is
+   shown while its area is unloaded, hidden with the loader off and during a
+   full-map export, and rebaked when the scenery or an owner's visibility
+   changes. On the real valley:
+
+   | Area | Stands for                         | Outline        | Bake  |
+   |------|------------------------------------|----------------|-------|
+   | town | 16 tall meshes, 66,736 triangles   | 10,734 tris    | 20 ms |
+   | west | the owner's trees, 108,240 tris    | 22,646 tris    | 27 ms |
+
+   South, east and north hold no tall scenery that unloads, so they have no
+   outline. Their ground cover (grass, flowers, shrubs, stones) is still
+   absent beyond 90 m.
 
 ## Tests
 
@@ -205,10 +237,11 @@ What is still over budget, in measured order:
 node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
             tests/game3d-clone-platform-graphics.test.mjs \
             tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs \
-            tests/game3d-clone-static-merging.test.mjs
+            tests/game3d-clone-static-merging.test.mjs \
+            tests/game3d-clone-far-proxy.test.mjs
 ```
 
-63 tests with stand-in scene objects, all passing. The real-valley test
+76 tests with stand-in scene objects, all passing. The real-valley test
 (`tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs`) runs where
 `three` is installed, which is CI.
 
@@ -217,20 +250,21 @@ node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
 - **Not seen in a browser.** No frame rate, GPU time or memory reading exists
   for any area. Draw calls and triangles are counted, not timed.
 - Portal arch size, height and brightness have not been seen on screen.
-- The merged town and the caves have not been looked at in the game; the
-  checks compare triangles, materials and bounds, not pixels.
+- The merged town, the caves and the distant outlines have not been looked at
+  in the game; the checks compare triangles, materials and bounds, not
+  pixels. The outline's flat colours and coarse shape are the part most
+  likely to need tuning by eye.
 - GPU release re-upload has not been exercised on a real device.
-- Owner grass, plant and garden models do not load headless, so their cost is
-  missing from the table above.
 
 ## Known limits of this pass
 
 - Town parts that move together (a swaying lantern is several meshes) are
   still drawn one by one: about 224 draws that could be merged per moving
   group.
-- Beyond a border the ground still shows, bare. Unloaded sides have no trees,
-  props or buildings until the player is within range; there is no baked
-  low-detail skyline for them yet.
+- Beyond a border the ground cover is still missing: grass, flowers, shrubs
+  and stones of an unloaded area are not drawn and have no stand-in.
+- An outline pops to the real scenery when its area loads (90 m before the
+  border). There is no cross-fade.
 - The terrain is still one 192,200-triangle grid drawn whole. Per-area ground
   detail (the high-poly to smart-mesh work) is the next step.
 - Enemies, NPCs, grass that streams around the player and the outer meadow
