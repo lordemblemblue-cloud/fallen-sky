@@ -1,6 +1,7 @@
 import { Check, PawPrint } from 'lucide-react';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getCompanionGrowthView } from '../progression/AXECompanionGrowthView.mjs';
+import './AXECompanionMountCircleRail.css';
 
 // Companion Equipment and Mastery share the circular selector used by Variety
 // and Imbue. Only *owned* mounts are shown; selecting a circle never mutates
