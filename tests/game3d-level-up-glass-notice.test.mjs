@@ -59,7 +59,7 @@ test('compact glass and decorative gold design changes only level toast styles',
   assert.match(ui, /active\.kind==='message' && <MessageNotice/);
 });
 
-test('level-up notice sits under the HUD minimap, not across the player view', () => {
+test('level-up notice follows left HUD minimap, not across the player view', () => {
   const css = read('src/components/game3d/notifications/Game3DLunarNotifications.css');
   const hud = read('src/components/game3d/hud/JadeSoulHUD.css');
   const map = read('src/components/game3d/hud/JadeSoulHUD.jsx');
@@ -67,10 +67,12 @@ test('level-up notice sits under the HUD minimap, not across the player view', (
   assert.ok(levelStyles.length > 100, 'Level-specific map placement rules exist');
   assert.match(map, /className="jade-compass-block"/);
   assert.match(map, /aria-label="Open world map"/);
-  assert.match(hud, /\.jade-compass-block\s*\{\s*right: clamp\(14px, 2\.4vw, 42px\);\s*top: clamp\(19px, 3vh, 37px\);\s*width: clamp\(126px, 11\.2vw, 184px\);/);
-  assert.match(levelStyles, /right:clamp\(14px,2\.4vw,42px\)/);
+  const mapStyles = hud.slice(hud.lastIndexOf('/* HUD top row: MAP | SERVICES | WEATHER'));
+  assert.ok(mapStyles.length > 200, 'Final top-row map layout exists');
+  assert.match(mapStyles, /\.jade-hud \.jade-compass-block \{[\s\S]*?left:clamp\(14px,2\.4vw,42px\);\s*right:auto;\s*width:clamp\(126px,11\.2vw,184px\)/);
+  assert.match(levelStyles, /left:clamp\(14px,2\.4vw,42px\);\s*right:auto/);
   assert.match(levelStyles, /top:calc\(clamp\(19px,3vh,37px\) \+ clamp\(126px,11\.2vw,184px\) \+ 50px\)/);
-  assert.match(levelStyles, /left:auto;[\s\S]*transform:none/);
+  assert.match(levelStyles, /transform:none/);
   assert.doesNotMatch(levelStyles, /top:clamp\(145px,34vh,385px\)/);
 });
 
@@ -81,7 +83,7 @@ test('30 percent smaller notification scales down width, height, decoration and 
   assert.match(compact, /min-height:115px/);
   assert.match(compact, /height:48px/);
   assert.match(compact, /font:500 clamp\(15px,2\.2vw,19px\)/);
-  assert.match(compact, /right:18px;\s*top:calc\(25px \+ 106px \+ 43px\)/);
+  assert.match(compact, /left:12px;right:auto;\s*top:calc\(25px \+ 106px \+ 43px\)/);
   assert.match(compact, /width:min\(255px,calc\(100vw - 28px\)\)/);
   assert.match(compact, /min-height:102px/);
   // The level-specific change must not relocate other notifications.
