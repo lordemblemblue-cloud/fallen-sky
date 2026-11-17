@@ -2077,6 +2077,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 createIvyCluster(houseGroup, 9.1, 0.4, -4.4, 3.1);
 
                 smithForgeFireLight = new THREE.PointLight(0xff5e1a, 2.8, 14);
+                smithForgeFireLight.visible = !ultraLow;
                 smithForgeFireLight.position.set(-4.3, 1.85, -3.4);
                 houseGroup.add(smithForgeFireLight);
             }
@@ -2219,6 +2220,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 addBox(shopGroup, 0.64, 1.68, 0.1, mats.bronzeMirror, 7.25, 1.8, -3.19, 0, -0.55, 0);
 
                 const galleryLight = new THREE.PointLight(0xffc978, 2.0, 12);
+                galleryLight.visible = !ultraLow;
                 galleryLight.position.set(2.2, 3.7, -1.6);
                 shopGroup.add(galleryLight);
             }
@@ -2381,6 +2383,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 const matrixLight = new THREE.PointLight(0xc084fc, 2.6, 13.0);
+                matrixLight.visible = !ultraLow;
                 matrixLight.position.set(2.1, 3.1, -1.65);
                 shopGroup.add(matrixLight);
             }
@@ -2507,6 +2510,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 }
 
                 const rigLight = new THREE.PointLight(0x34d399, 2.1, 12.0);
+                rigLight.visible = !ultraLow;
                 rigLight.position.set(1.35, 3.6, -0.85);
                 shopGroup.add(rigLight);
             }
@@ -2882,6 +2886,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
             }
         }
         const flowMult = surgeTimer > 0 ? 3.2 : 1;
+        const animateDetailedShops = shopInteriors.some(shop => shop.group.visible);
                 // Animate Flowing Waterfall UV Scroll & Spiral Energy Ribbons
                 waterfallTex.offset.y += dt * 1.35 * flowMult;
                 spiralRibbonTex.offset.x -= dt * 1.15 * flowMult;
@@ -2906,8 +2911,10 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                     }
                 });
 
+        if (animateDetailedShops) {
                 // ------------------------------------------------------------------------
-                // ANIMATE ALL 4 FULL-DETAIL UPLOADED HOUSES IN THE INNER PLAZA RING
+                // Only animate the nearby shop meshes, not the offscreen
+                // full-detail rooms replaced by silhouette proxies.
                 // ------------------------------------------------------------------------
                 // 1. Slide Genkan Doors, VIP Fitting Room Shoji & Relic Vault Shoji
                 allSlidingDoors.forEach(d => {
@@ -2981,6 +2988,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 allLanterns.forEach(l => {
                     l.group.rotation.z = Math.sin(elapsed * 1.6 + l.phase) * 0.035;
                 });
+        }
 
         return visualLODChanged;
     }
