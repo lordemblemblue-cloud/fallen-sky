@@ -111,6 +111,7 @@ export function createWolfveilAreaLoader({
   let lastStats=null,lastStatsAt=-Infinity,statsStale=true;
   // Bookkeeping is spread out so no single frame pays for the whole valley.
   let totalsCache=null,scanChanged=false,quietScans=0,auditQueue=[],auditCursor=0;
+  let building=0; // per-area copies still waiting for their turn to be built
   let unitsStale=true; // unit gates need re-applying (loaded set or unit list changed)
 
   const walkable=()=>new Set(world.walkableSurfaces||[]);
@@ -589,6 +590,7 @@ export function createWolfveilAreaLoader({
       if(setLoaded(desired,time))applyUnits();
       dropUnloadedClones();
     }
+    if(waiting!==building){building=waiting;statsStale=true;}
     dirty=waiting>0;
   }
 
@@ -625,7 +627,7 @@ export function createWolfveilAreaLoader({
       area:current,areaLabel:info?.label||current,side:info?.side||null,
       loadedAreas:areas,
       units:{total:units.size,loaded:sum('units')},
-      batches:{split:batches.size,settling:pending.size,dynamic:dynamicNames.size},
+      batches:{split:batches.size,settling:pending.size,dynamic:dynamicNames.size,building},
       triangles:{
         loaded:Math.round(sum('unitTriangles')+sum('instanceTriangles')),
         unloaded:Math.round(all('unitTriangles')+all('instanceTriangles')

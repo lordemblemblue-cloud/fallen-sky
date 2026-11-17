@@ -402,6 +402,18 @@ test('loading modes: single area, area plus neighbours, or the whole valley',()=
   assert.equal(v.loader.setMode('everything'),false);
   assert.equal(v.loader.setOptions({preloadMeters:40}).preloadMeters,40);
 });
+test('copies are built a few per frame and the stats say how many are still to come',()=>{
+  const v=mount({batchesPerFrame:1});v.settle();
+  assert.equal(v.loader.getStats().batches.building,0);
+  assert.equal(v.clones().length,1);
+  v.loader.setMode('all');
+  const waiting=[];
+  for(let i=0;i<6;i++){v.step(world(...SPOTS.town),.1);waiting.push(v.loader.getStats().batches.building);}
+  assert.deepEqual(waiting,[3,2,1,0,0,0]);
+  assert.equal(v.clones().length,5);
+  const stats=v.loader.getStats();
+  assert.equal(stats.loadedInstances,stats.sourceInstances);
+});
 test('the A/B switch restores the valley exactly as it was built',()=>{
   const v=mount();v.settle();
   assert.equal(v.loader.setEnabled(false),true);

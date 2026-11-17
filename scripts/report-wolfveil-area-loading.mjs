@@ -376,18 +376,37 @@ export async function runWolfveilAreaLoadingReport({
   // downloading in the meantime cannot make two honest counts disagree.
   moveTo(...spots.town);run(3);
   const report=loader.getReport();
-  loader.setMode('all');run(3);
+  // Per-area copies are built a few per frame, so "every area" is only
+  // complete once the loader reports nothing left to build.
+  const settleBuilds=(limit=600)=>{
+    let frames=0;
+    do{frame(.1);frames++;}while(loader.getStats().batches.building>0&&frames<limit);
+    return frames;
+  };
+  loader.setMode('all');
+  const allModeFrames=settleBuilds();
+  run(1);
   const everything=measure();
   const allStats=loader.getStats();
   loader.setEnabled(false);
   const off=measure();
   loader.setEnabled(true);
+  check(allStats.batches.building===0,
+    'switching to every area never finished building its copies ('+
+    allStats.batches.building+' still waiting after '+allModeFrames+' frames)');
   check(allStats.loadedInstances===allStats.sourceInstances,
     'with every area loaded the copies must add up to the source instances');
+  const allModeGap=[];
+  for(const label of new Set([...everything.byLabel.keys(),...off.byLabel.keys()])){
+    const on=everything.byLabel.get(label)?.triangles||0;
+    const whole=off.byLabel.get(label)?.triangles||0;
+    if(Math.abs(on-whole)>1)allModeGap.push(label+' '+Math.round(on)+' vs '+Math.round(whole));
+  }
   check(Math.abs(everything.triangles-off.triangles)<=2,
     'with every area loaded the triangle total must equal the whole valley ('+
-    everything.triangles+' vs '+off.triangles+')');
-  loader.setMode('single');run(3);
+    everything.triangles+' vs '+off.triangles+(allModeGap.length?
+      '; differs in: '+allModeGap.slice(0,6).join(', '):'')+')');
+  loader.setMode('single');settleBuilds();run(3);
   const exported=await loader.withFullMapExport(async()=>measure());
   loader.setEnabled(false);
   const offAtExport=measure();
