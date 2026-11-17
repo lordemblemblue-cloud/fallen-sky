@@ -98,7 +98,7 @@ import { createCombatImpactFeedback } from './vfx/CombatImpactFeedback';
 import { createDuelDefenseFeedback } from './vfx/DuelDefenseFeedback';
 import { createCombatWeaponTrails } from './vfx/CombatWeaponTrails';
 import { createWeaponComboBinder } from './weapons/weaponComboBinder.js';
-import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources } from './combat/combatResourcesStore';
+import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources, getCombatResources } from './combat/combatResourcesStore';
 import { selectCombatSwingSound, selectCombatImpactSound, AUTHORED_SKILL_SOUNDS } from './combat/CombatSoundRouter';
 import { AbilitySystem } from './skills/AbilitySystem';
 import { ENEMY_SPAWNS } from './enemySpawnConfig';

@@ -214,7 +214,15 @@ export default function WorldTileEditor({
       start: tile, end: tile, x: event.clientX, y: event.clientY,
       additive: event.ctrlKey || event.metaKey
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    // A secondary-button press, a touch that already lifted, or a pointer the
+    // browser has released throws here and aborts the whole drag handler.
+    try {
+      if (event.currentTarget?.isConnected
+        && event.pointerId !== undefined
+        && event.currentTarget.hasPointerCapture?.(event.pointerId) === false) {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }
+    } catch { /* capture is an enhancement; selection still works without it */ }
     if (tile) setFocusId(tile.id);
     if (event.button === 0) event.preventDefault();
   };

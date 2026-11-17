@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { secrets } from 'base44:runtime';
 import { requireUserRoute } from '@/lib/auth-middleware';
 import {
   createFaceDraft, faceDraftEnabled, getFaceDraft,
@@ -14,7 +15,17 @@ const reply = result => Response.json(result,{
   status:result.ok?200:result.status||400,
   headers:{'cache-control':'no-store','x-content-type-options':'nosniff'},
 });
-const authorized = (context) => faceDraftEnabled(process.env,context.user);
+// App secrets, read through the platform runtime (no process.env on Workers).
+const FACE_ENV_KEYS = [
+  'GAME3D_MESHY_FACE_ENABLED', 'GAME3D_MESHY_FACE_SERVER_ENV', 'MESHY_API_KEY',
+  'GAME3D_MESHY_FACE_SIGNING_SECRET', 'GAME3D_MESHY_FACE_ALLOWED_USERS',
+];
+const faceEnv = () => FACE_ENV_KEYS.reduce((env, key) => {
+  const value = secrets.get(key);
+  if (value !== undefined) env[key] = value;
+  return env;
+}, {});
+const authorized = (context) => faceDraftEnabled(faceEnv(),context.user);
 const requireSameOrigin = request => {
   const origin=request.headers.get('origin');
   // Bearer token is required; Origin also blocks cross-site browser attempts.
@@ -39,18 +50,18 @@ export const Route = createFileRoute('/api/game3d-face')({
           if(raw.length>8_000_000)return deny('photos-too-large',413);
           input=JSON.parse(raw);
         }catch{return deny('invalid-request')}
-        return reply(await createFaceDraft({env:process.env,user:context.user,input}));
+        return reply(await createFaceDraft({env:faceEnv(),user:context.user,input}));
       },
       GET: async ({request,context}) => {
         if(!authorized(context))return deny('face-draft-disabled-or-not-authorized',403);
         return reply(await getFaceDraft({
-          env:process.env,user:context.user,ticket:ticketOf(request)}));
+          env:faceEnv(),user:context.user,ticket:ticketOf(request)}));
       },
       DELETE: async ({request,context}) => {
         if(!authorized(context))return deny('face-draft-disabled-or-not-authorized',403);
         if(!requireSameOrigin(request))return deny('invalid-origin',403);
         return reply(await getFaceDraft({
-          env:process.env,user:context.user,ticket:ticketOf(request),remove:true}));
+          env:faceEnv(),user:context.user,ticket:ticketOf(request),remove:true}));
       },
     },
   },
