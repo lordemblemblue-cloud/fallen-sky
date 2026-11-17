@@ -425,3 +425,89 @@
   .axe3d-pause__overlay *{transition:none!important;animation:none!important}
 }
 .axe3d-pause__overlay[data-motion="off"] *{transition:none!important;animation:none!important}
+
+
+/* Responsive rendering/viewport controls. These settings change only the 3D
+   framebuffer and uniform UI density; they never change the screen's aspect. */
+.axe3d-pause__display-selector{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:10px 14px;min-width:0;padding:15px 0 13px;
+  border-bottom:1px solid rgba(217,240,242,.11);
+}
+.axe3d-pause__display-selector>span{
+  color:#e0edf0;font-size:13px;line-height:1.4;
+}
+.axe3d-pause__display-selector select{
+  display:block;flex:0 1 220px;min-width:160px;max-width:100%;
+  min-height:42px;padding:8px 35px 8px 11px;
+  border:1px solid rgba(237,209,157,.62);border-radius:7px;
+  background:#112535;color:#f6e5c7;cursor:pointer;
+  font:inherit;font-size:13px;
+}
+.axe3d-pause__display-selector select:focus-visible{
+  outline:2px solid #f3cd86;outline-offset:2px;
+}
+.axe3d-pause__surface[data-testid="game3d-display-resolution-settings"] .axe3d-pause__setting{
+  margin-top:9px;
+}
+.axe3d-pause__surface[data-testid="game3d-display-resolution-settings"] .axe3d-pause__help{
+  max-width:70ch;overflow-wrap:anywhere;
+}
+@media(max-width:980px), (max-height:650px){
+  .axe3d-pause__overlay{
+    padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px)
+      env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+  }
+  .axe3d-pause__panel{
+    height:100%;max-height:100dvh;
+  }
+  .axe3d-pause__header{
+    min-height:67px;padding:9px clamp(12px,2vw,24px);
+  }
+  .axe3d-pause__body{
+    grid-template-columns:clamp(160px,23vw,220px) minmax(0,1fr);
+  }
+  .axe3d-pause__rail{
+    padding:12px 9px;gap:3px;
+  }
+  .axe3d-pause__resume,.axe3d-pause__nav-item{
+    min-height:40px;padding:8px 9px!important;
+  }
+  .axe3d-pause__content{
+    padding:clamp(10px,2.5vw,24px);
+  }
+  .axe3d-pause__section-head{
+    padding-bottom:12px;margin-bottom:13px;
+  }
+  .axe3d-pause__section-head h3{
+    font-size:clamp(23px,3vw,32px);
+  }
+  .axe3d-pause__footer{
+    padding:7px clamp(12px,2vw,24px);
+  }
+}
+@media(max-width:700px){
+  .axe3d-pause__body{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .axe3d-pause__rail{
+    flex-direction:row;gap:3px;padding:6px 8px;
+    overflow-x:auto;overflow-y:hidden;
+    border-right:0;border-bottom:1px solid rgba(209,235,238,.15);
+  }
+  .axe3d-pause__resume,.axe3d-pause__nav-item{
+    min-width:max-content;width:auto;
+    padding:8px 10px!important;
+  }
+  .axe3d-pause__content{padding:13px clamp(10px,3vw,18px);}
+  .axe3d-pause__display-selector{
+    align-items:stretch;flex-direction:column;gap:7px;
+  }
+  .axe3d-pause__display-selector select{
+    flex:0 0 auto;width:100%;min-width:0;
+  }
+  .axe3d-pause__option-group{
+    display:flex;flex-wrap:wrap;gap:2px 10px;
+  }
+}
