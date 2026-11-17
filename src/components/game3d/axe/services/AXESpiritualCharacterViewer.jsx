@@ -37,7 +37,7 @@ function adornAvatar(model, halo, wings, selectedWing) {
   const base = new THREE.Vector3(center.x, bounds.min.y + height * .69, center.z);
   group.position.copy(model.worldToLocal(base));
   const haloLevel = Math.max(0, Number(halo?.level) || 0);
-  if (haloLevel > 0) {
+  if (haloLevel > 0 && !halo?.hidden) {
     const tier = haloLevel >= 100 ? 4 : haloLevel >= 70 ? 3 : haloLevel >= 40 ? 2 : 1;
     const haloGroup = new THREE.Group();
     haloGroup.position.y = localHeight * .31;
@@ -66,7 +66,8 @@ function adornAvatar(model, halo, wings, selectedWing) {
     const wingLevel = Math.max(0, Number(wing.level) || 0);
     const tier = wingLevel >= 130 ? 5 : wingLevel >= 100 ? 4
       : wingLevel >= 70 ? 3 : wingLevel >= 40 ? 2 : 1;
-    const color = new THREE.Color(wing.color || '#b0dcff');
+    const energySkin = wings?.visualStyle === 'blue_energy';
+    const color = new THREE.Color(energySkin ? '#74d7ff' : (wing.color || '#b0dcff'));
     const wingRoot = new THREE.Group();
     wingRoot.position.set(0, localHeight * .03, -.11 * scale);
     for (const side of [-1, 1]) {
@@ -78,8 +79,8 @@ function adornAvatar(model, halo, wings, selectedWing) {
           new THREE.ConeGeometry((.062 + tier * .003) * scale, length, 5),
           new THREE.MeshStandardMaterial({
             color, emissive: color, emissiveIntensity: .17 + tier * .05,
-            metalness: .12, roughness: .45, transparent: true,
-            opacity: wingLevel > 0 ? .72 : .26,
+            metalness: .12, roughness: energySkin ? .2 : .45, transparent: true,
+            opacity: wingLevel > 0 ? (energySkin ? .85 : .72) : .26,
             side: THREE.DoubleSide, depthWrite: false,
           }),
         );
@@ -131,9 +132,12 @@ export default function AXESpiritualCharacterViewer({ halo, wings, selectedWing 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.model_url, config.creator_body]);
   useEffect(() => { stage.current?.setAppearance(config); }, [config]);
+  // Reactivity follows visible forms, not kill-counter updates. Recreating
+  // WebGL meshes on every kill would cause avoidable stalls and allocation.
   useEffect(() => {
-    adornAvatar(currentModel.current, halo, wings, selectedWing);
-  }, [halo, wings, selectedWing]);
+    adornAvatar(currentModel.current, latest.current.halo, latest.current.wings, latest.current.selectedWing);
+  }, [halo?.level, halo?.hidden, wings?.equippedPathId, wings?.equippedWing?.level,
+    wings?.visualStyle, selectedWing?.id, selectedWing?.level]);
   return <div ref={mount} className="axe-spiritual-player-model"
     role="img" aria-label="Rotatable three-dimensional character and spiritual progression preview">
     {error && <p className="axe-spiritual-model-error" role="status">{error}</p>}
