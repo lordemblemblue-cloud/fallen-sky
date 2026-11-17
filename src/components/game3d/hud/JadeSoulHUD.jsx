@@ -38,7 +38,7 @@ const fmt = (n) => Math.max(0, Math.floor(Number(n) || 0)).toLocaleString('en-US
 const ROLE_TITLES = { offensive: 'Damage', defensive: 'Defense', ranged: 'Ranged' };
 
 const SKILL_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-const SKILL_ARC_RISE = [0, 0, 0, 0, 0];
+const SKILL_ARC_RISE = [10, 7, 0, -11, -24];
 
 function SkillMatrix({ loadout }) {
   // Concept D shows five main skill sockets and an optional second bank.
