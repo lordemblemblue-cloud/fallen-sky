@@ -98,7 +98,11 @@ export function advanceAirWalk(previous,delta,{
     }
   }
   if(mode==='boost' && velocityY<=0)mode=canGlide?'glide':'fall';
-  if(finite(floorY) && nextY<=floorY+1e-4 && velocityY<=0){
+  // Never mistake a higher roof/gallery sampled above the avatar for a
+  // supporting landing floor. Descending feet must CROSS a surface beneath
+  // their previous position before we settle on it.
+  if(finite(floorY) && floorY<=previous.y+.2 &&
+     nextY<=floorY+1e-4 && velocityY<=0){
     return {state:createAirWalkState(),drainStamina:drained,
       landed:true,groundY:floorY,exhausted};
   }
