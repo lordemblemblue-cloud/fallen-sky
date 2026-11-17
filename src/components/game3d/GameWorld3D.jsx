@@ -166,7 +166,7 @@ import {saveWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
 import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
-import {installWolfveilImportedTown} from './wolfveil/WolfveilImportedTownScene.mjs';
+import {installWolfveilArtisanTown} from './wolfveil/WolfveilArtisanTownScene.mjs';
 import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTown} from './wolfveil/WolfveilImportedTownLayout.mjs';
 import {createWolfveilLivingMeadow} from './wolfveil/WolfveilLivingMeadow';
 import {createWolfveilLivingSumiEMaterials} from './wolfveil/WolfveilLivingSumiEMaterials.mjs';
@@ -852,9 +852,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const grassGround=wolfveilVillage?.ground||lunarDungeon?.ground||astralDungeon?.ground||buildGrassEnvironment(scene);
     const forestBiome = grassGround.userData.forestBiome;
     groundMeshes.push(grassGround);
-    // The owner's 80-tile assembled town is on the SAME authoritative terrain.
-    // Loading errors never block the character or remove Wolfveil's ground.
-    const importedSpawnTown=region==='wolfveil'?installWolfveilImportedTown(scene,{onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
+    // The owner's Japanese-Egyptian artisan town now replaces the old 80-tile
+    // Blender town, while the authoritative Wolfveil terrain stays intact.
+    const importedSpawnTown=region==='wolfveil'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
     const vortexLake=region==='wolfveil'
       ?createVortexLakeLandmark(scene,{
         sampleGroundY,
