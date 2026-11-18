@@ -7,7 +7,8 @@
 import { wolfveilHeight } from './WolfveilLayout.js';
 import {
   WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_CANYON,
-  WOLFVEIL_MODULAR_CORRIDOR_SPECS,WOLFVEIL_MODULAR_TRAVEL_NODES,
+  WOLFVEIL_MODULAR_CHAMBERS,WOLFVEIL_MODULAR_CORRIDOR_SPECS,
+  WOLFVEIL_MODULAR_TRAVEL_NODES,
   WOLFVEIL_MODULAR_ARENA_ROUTE,sampleWolfveilModularCanyon,
 } from './WolfveilModularCaveKit.mjs';
 
@@ -135,7 +136,7 @@ export const WOLFVEIL_CAVE_HUB = Object.freeze({
 export const WOLFVEIL_CAVE_CHAMBERS = Object.freeze([
   ...WOLFVEIL_EXPLORABLE_CAVES.map(c => c.chamber),
   WOLFVEIL_CAVE_HUB,
-  WOLFVEIL_MODULAR_TREASURE_ROOM,
+  ...WOLFVEIL_MODULAR_CHAMBERS,
 ]);
 
 function makePolylineCorridor(id, waypoints, halfWidth = 3.6, ceiling = 5.8, kind = 'tunnel') {
