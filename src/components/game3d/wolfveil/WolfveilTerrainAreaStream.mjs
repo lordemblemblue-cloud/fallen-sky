@@ -10,9 +10,11 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     throw new TypeError('Wolfveil terrain streaming requires terrain geometry and a scene parent');
   const position=source.attributes.position,color=source.attributes.color;
   const uv=source.attributes.uv,normal=source.attributes.normal,index=source.index;
-  const read=(attribute,i)=>attribute?.array
-    ?Array.from(attribute.array.slice(i*attribute.itemSize,i*attribute.itemSize+attribute.itemSize))
-    :Array(attribute?.itemSize||0).fill(0);
+  const copy=(target,attribute,i)=>{
+    if(!attribute?.array)return;
+    const start=i*attribute.itemSize;
+    for(let k=0;k<attribute.itemSize;k++)target.push(attribute.array[start+k]);
+  };
   let active=null,mesh=null,pending=null,requestId=0,disposed=false,overlay=null;
   const build=area=>{
     const p=[],c=[],t=[],n=[];
@@ -23,8 +25,7 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
       const cz=(position.getZ(ids[0])+position.getZ(ids[1])+position.getZ(ids[2]))/3;
       if(wolfveilAreaAtLocal(cx,cz)!==area)continue;
       for(const id of ids){
-        p.push(...read(position,id));c.push(...read(color,id));
-        t.push(...read(uv,id));n.push(...read(normal,id));
+        copy(p,position,id);copy(c,color,id);copy(t,uv,id);copy(n,normal,id);
       }
     }
     const geometry=new THREE.BufferGeometry();
