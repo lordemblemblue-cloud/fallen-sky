@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronUp, ChevronDown, ChevronRight, Crown, MapPin, Plus, Settings, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ChevronUp, ChevronDown, ChevronRight, CloudDownload, Copy, Crown, KeyRound, MapPin, Plus, Settings, Sparkles, Trash2, X } from 'lucide-react';
 import AvatarAppearanceDialog from '@/components/onboarding/AvatarAppearanceDialog';
 import {useCompanionIdentity} from '@/components/onboarding/CompanionIdentityContext';
 import {CULTURAL_INSPIRATIONS, GENRE_DIRECTIONS} from '@/components/onboarding/creatorCultures';
@@ -15,6 +15,10 @@ import {
   isDeletableGame3DCharacter,
 } from './characterStore';
 import {callGameServer} from './social/socialServer';
+import {
+  callGuestCharacterVault, forgetGuestRecoveryCode,
+  formatGuestRecoveryCode, getGuestRecoveryCode, recoverGuestCharacter,
+} from './character/guestCharacterCloud';
 import { subscribeCharacterChange, userScopedKey, getStorageUser } from './characterStorage';
 import { readCharacterSelectionOverview, formatCharacterOverviewValue } from './character/characterSelectionOverview.mjs';
 import { getLivingChronicleIdentity } from './character/livingChronicleIdentity.mjs';
@@ -111,6 +115,12 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
   const [deleteTarget,setDeleteTarget]=useState(null);
   const [deleteBusy,setDeleteBusy]=useState(false);
   const [deleteError,setDeleteError]=useState('');
+  const [recoveryOpen,setRecoveryOpen]=useState(false);
+  const [recoveryName,setRecoveryName]=useState('');
+  const [recoveryCode,setRecoveryCode]=useState('');
+  const [recoveryBusy,setRecoveryBusy]=useState(false);
+  const [recoveryError,setRecoveryError]=useState('');
+  const [codeOpen,setCodeOpen]=useState(false);
 
   // Every game uses the one completed account avatar; Game 3D only adds its own progression slot.
   useEffect(() => {
@@ -131,6 +141,11 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     else setSelectedIndex((current) => Math.min(current, Math.max(0, visibleRoster.length - 1)));
   }), [workflowEnabled]);
   useEffect(() => subscribeCharacterChange(() => setSaveTick((value) => value + 1)), []);
+  useEffect(() => {
+    const update = () => setSaveTick((tick) => tick + 1);
+    window.addEventListener('axeGuestRecoveryCodeUpdated', update);
+    return () => window.removeEventListener('axeGuestRecoveryCodeUpdated', update);
+  }, []);
 
   const characters = useMemo(
     () => roster.map((char) => ({ ...char, level: characterLevel(char) })),
@@ -238,9 +253,14 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     setDeleteBusy(true);setDeleteError('');
     try {
       if(getStorageUser()==='__anon__'){
-        // Guest characters only exist on this device; no account server
-        // owns their data and no network tombstone is required.
+        // A cloud-backed guest must be tombstoned remotely BEFORE local deletion.
+        // An offline deletion must not accidentally resurrect after reconnecting.
+        if(getGuestRecoveryCode(current.id)){
+          const result=await callGuestCharacterVault('delete',{characterId:current.id});
+          if(result?.deleted!==true)throw new Error('The cloud did not confirm character deletion.');
+        }
         if(!deleteCreatedCharacter(current.id))throw new Error('Could not delete this local character. Please retry.');
+        forgetGuestRecoveryCode(current.id);
       } else {
         // Never delete an account-backed character without server approval.
         const result=await callGameServer('characterVault','delete',{characterId:current.id});
@@ -253,6 +273,21 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     }catch(error){
       setDeleteError(error?.message||'Could not delete this character. Please retry.');
     }finally{setDeleteBusy(false);}
+  };
+  const restoreGuest=async(event)=>{
+    event?.preventDefault?.();
+    if(recoveryBusy)return;
+    setRecoveryError('');
+    setRecoveryBusy(true);
+    try{
+      const restored=await recoverGuestCharacter(recoveryName,recoveryCode);
+      setRecoveryOpen(false);setRecoveryCode('');setRecoveryName('');
+      setStep('select');
+      setStartError(restored.alreadyOnDevice
+        ? 'Character linked. Your local and cloud progress will be compared when you enter the world.'
+        : 'Character restored from the cloud. Select Enter World to play.');
+    }catch(error){setRecoveryError(error?.message||'Could not recover this character.');}
+    finally{setRecoveryBusy(false);}
   };
   const classLabel = selected
     ? displayField(selected.className || selected.role || selected.faction, 'Adventurer')
@@ -302,6 +337,11 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
         if(!deleteBusy){setDeleteTarget(null);setDeleteError('');}
         return;
       }
+      if(recoveryOpen || codeOpen){
+        event.preventDefault();
+        if(!recoveryBusy){setRecoveryOpen(false);setCodeOpen(false);}
+        return;
+      }
       if (showCreate || showEditPlatformAvatar || workflowOpen) return; // Each overlay owns its close flow.
       if (settingsOpen) { event.preventDefault(); setSettingsOpen(false); }
       else if (step === 'faction') { event.preventDefault(); setStep('select'); }
@@ -310,7 +350,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [settingsOpen, showCreate, showEditPlatformAvatar, workflowOpen, deleteTarget, deleteBusy, onBack, step]);
+  }, [settingsOpen, showCreate, showEditPlatformAvatar, workflowOpen, recoveryOpen, codeOpen, recoveryBusy, deleteTarget, deleteBusy, onBack, step]);
 
   return (
     <main className={'axe-login axe-login--live-entry axe-login--arcane'+(entering?' axe-login--entering':'')} aria-label="Game 3D character selection" data-entry-step={step} data-live-world={liveWorld?'true':'false'} data-world-ready={worldReady?'true':'false'} data-motion={motionEnabled?'on':'off'} data-info-tab={infoTab} style={chronicle.css}>
@@ -521,6 +561,15 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
                   <Trash2 size={16} strokeWidth={1.7}/><span>Delete</span>
                 </button>
               )}
+              {getStorageUser()==='__anon__' && <>
+                <button type="button" className="axe-crossline-action" onClick={()=>{setRecoveryError('');setRecoveryOpen(true);}}>
+                  <CloudDownload size={16}/><span>Recover character</span>
+                </button>
+                {selected && <button type="button" className="axe-crossline-action"
+                  onClick={()=>setCodeOpen(true)}>
+                  <KeyRound size={16}/><span>Recovery code</span>
+                </button>}
+              </>}
               {selected?.platform_avatar_id && <button type="button" className="axe-crossline-action"
                 onClick={()=>setShowEditPlatformAvatar(true)}>
                 <Sparkles size={16}/><span>Customize Avatar</span>
@@ -569,6 +618,11 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
             ? (playableCount?'ENTER SERVER':'CREATE NEW CHARACTER')
             : 'ENTER WORLD'}
         </button>
+        {step==='start' && getStorageUser()==='__anon__' && <button type="button"
+          className="axe-crossline-action" style={{margin:'0.75rem auto',display:'flex',alignItems:'center',gap:'0.5rem'}}
+          onClick={()=>{setRecoveryError('');setRecoveryOpen(true);}}>
+          <CloudDownload size={16}/> Recover a cloud character
+        </button>}
       </div>}
       {worldError && step==='select' && <p className="axe-login-live-status" role="alert">
         {worldError}<button type="button" onClick={onRetryWorld}>Retry world</button>
@@ -602,6 +656,52 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
           </section>
         </div>
       )}
+      {recoveryOpen && <div className="fixed inset-0 z-[230] grid place-items-center bg-black/80 p-4">
+        <form onSubmit={restoreGuest} role="dialog" aria-modal="true" aria-label="Recover a character"
+          className="w-full max-w-md space-y-4 rounded-2xl border border-amber-400/35 bg-slate-950 p-6 text-white shadow-2xl">
+          <h2 className="text-xl font-semibold">Recover your character</h2>
+          <p className="text-sm text-slate-300">No account or password required. Enter the character name and private recovery code you saved.</p>
+          <label className="block text-sm">Character name
+            <input autoFocus required maxLength={24} autoComplete="off" value={recoveryName}
+              onChange={event=>setRecoveryName(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-white/25 bg-white/10 px-3 py-2 text-white"
+              placeholder="Your character's name"/>
+          </label>
+          <label className="block text-sm">Recovery code
+            <input required autoComplete="off" spellCheck={false} value={recoveryCode}
+              onChange={event=>setRecoveryCode(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-white/25 bg-white/10 px-3 py-2 font-mono text-white"
+              placeholder="XXXXX-XXXXX-XXXXX…"/>
+          </label>
+          {recoveryError && <p role="alert" className="text-sm text-red-300">{recoveryError}</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" className="rounded-lg border border-white/25 px-4 py-2" disabled={recoveryBusy}
+              onClick={()=>setRecoveryOpen(false)}>Cancel</button>
+            <button type="submit" disabled={recoveryBusy} className="rounded-lg bg-amber-200 px-4 py-2 font-semibold text-slate-950">
+              {recoveryBusy?'Recovering…':'Recover character'}
+            </button>
+          </div>
+        </form>
+      </div>}
+      {codeOpen && <div className="fixed inset-0 z-[230] grid place-items-center bg-black/80 p-4">
+        <section role="dialog" aria-modal="true" aria-label="Character recovery code"
+          className="w-full max-w-md space-y-4 rounded-2xl border border-amber-400/35 bg-slate-950 p-6 text-white shadow-2xl">
+          <h2 className="text-xl font-semibold">Private recovery code</h2>
+          <p className="text-sm text-slate-300">Save this code somewhere private. You'll need your character name and this code to play on another device if browser data is lost.</p>
+          <p className="text-sm font-semibold">{selected?.name || 'Character'}</p>
+          {getGuestRecoveryCode(selected?.id)
+            ? <code className="block break-all rounded-lg border border-white/20 bg-white/10 p-3 text-center tracking-wider text-amber-100">{formatGuestRecoveryCode(selected?.id)}</code>
+            : <p className="text-sm text-amber-200">No cloud recovery code yet. The game is saved locally; cloud registration will retry when the service is available.</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" className="rounded-lg border border-white/25 px-4 py-2" onClick={()=>setCodeOpen(false)}>Close</button>
+            {getGuestRecoveryCode(selected?.id) && <button type="button"
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-200 px-4 py-2 font-semibold text-slate-950"
+              onClick={()=>{void navigator.clipboard?.writeText(formatGuestRecoveryCode(selected?.id)).catch(()=>{});}}>
+              <Copy size={15}/> Copy code
+            </button>}
+          </div>
+        </section>
+      </div>}
       {showEditPlatformAvatar && (
         <section className="axe-login-creator-inworld" aria-label="Edit avatar in the living world">
           <AvatarAppearanceDialog embedded
