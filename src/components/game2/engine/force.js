@@ -1,0 +1,758 @@
+/* eslint-disable */
+// Force powers (Jedi Outcast MP set: push, pull, grip, lightning, heal, speed, mind trick, rage, protect, absorb, drain,
+// sight, team heal, team energize, force jump, saber throw) with the original animations.
+// One class drives both the player (keyboard / power selector) and the dark Jedi (AI sets `want` flags and calls cast()),
+// so the enemy really uses the same powers, effects and costs. Push / pull / grip / lightning outcomes come from
+// forcerules.js (ported from w_force.c) via Game.applyThrow().
+import { v3, clamp } from './math.js';
+import { hostile } from './combat.js';
+import { insideLightningCone, lightningSpreadEnd } from './forceLightningCone.mjs';
+import { bolt, drawBolt } from './fx.js';
+import { dominanceFor, findDominated } from './executions.js';
+import { GRIP_MAX_DIST, gripBlocker, gripPhase, gripEffectiveLevel, gripDamagePerTick, gripTicksBetween, gripBroken, lightningMul } from './forcerules.js';
+import { experimentalForceEnabled, pushChargeDuration, pushImpulseMultiplier, gripPushEligible, findWallPin, GRIP_PUSH_COST, WALL_PIN_DURATION } from './experimentalForceCombos.js';
+import { beginSaberSurge, saberSurgeRate } from './experimentalSaberSurge.js';
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+// Balance (Atom X Eve tuning on top of the retail costs): Push / Pull cost 22 and share a 0.55 s recovery so they cannot be
+// spammed back to back; Heal costs HEAL_FP_PER_HP Force per point healed (0 -> 100 % = 6 + 130 = 136 Force, more than a full
+// tank) and Force does not regenerate while healing.
+export const THROW_COST = 22, THROW_RECOVERY = 0.55, HEAL_FP_PER_HP = 1.3;
+// Charged Force Push: hold the Push key; the push goes on release (or at PUSH_CHARGE_MAX s). A tap (under PUSH_TAP s) is a
+// normal push. Charge 0..1 adds range, knock-back (up to twice as far) and damage, up to PUSH_CHARGE_COST more Force,
+// and from 0.75 one level; from PUSH_TWO_HANDED (2 s of the 3) it is pushed with both hands (G2_FORCEPUSH_2H).
+export const PUSH_CHARGE_MAX = 3, PUSH_TAP = 0.15, PUSH_CHARGE_COST = 20, PUSH_TWO_HANDED = 0.66;
+export const pushCharge = held => clamp((held - PUSH_TAP) / (PUSH_CHARGE_MAX - PUSH_TAP), 0, 1);
+export const POWERS = [
+  { id: 'push', name: 'Force Push', cost: THROW_COST }, { id: 'pull', name: 'Force Pull', cost: THROW_COST },
+  { id: 'grip', name: 'Force Grip', cost: 12, hold: true }, { id: 'lightning', name: 'Force Lightning', cost: 8, hold: true },
+  { id: 'heal', name: 'Force Heal', cost: 6, rate: 30, hold: true }, { id: 'speed', name: 'Force Speed', cost: 50 },
+  { id: 'mind', name: 'Mind Trick', cost: 20 }, { id: 'rage', name: 'Force Rage', cost: 50 },
+  { id: 'protect', name: 'Force Protect', cost: 25 }, { id: 'absorb', name: 'Force Absorb', cost: 25 },
+  { id: 'drain', name: 'Force Drain', cost: 10, hold: true }, { id: 'see', name: 'Force Sight', cost: 20 },
+  { id: 'teamheal', name: 'Team Heal', cost: 25 }, { id: 'teamforce', name: 'Team Energize', cost: 25 },
+  { id: 'levitate', name: 'Force Levitate', cost: 26 },
+];
+// Force Levitate (Atom X Eve): lifts the target, helpless, for LEVITATE_S s. Any hit on them, or any attack by the caster,
+// drops them; Absorb breaks it. Push them while they float and they are launched (Game.launchLevitated).
+export const LEVITATE_S = 3.5;
+// Combos (Atom X Eve)
+//  Push + Speed: Force Speed within INTERCEPT_WINDOW s of a push that sent someone flying dashes you to where they will land,
+//  facing them; your saber hits on them while they are down or flying are worth INTERCEPT_BONUS x for a moment.
+//  Saber throw + Lightning: lightning aimed at your thrown saber charges it; while it flows, arcs jump from the spinning
+//  blade to every foe within SABER_ARC_R m of it (SABER_ARC_DPS each) and the Force drains twice as fast.
+export const INTERCEPT_WINDOW = 1.6, INTERCEPT_BONUS = 1.5, SABER_ARC_R = 4, SABER_ARC_DPS = 30;
+// Legacy lightning-storm effect parameters retained for a potential distinct ability.
+// Normal held Force Lightning NEVER automatically changes into an all-direction storm:
+// it remains the player's 10m forward aiming cone for the entire hold.
+export const STORM_CHARGE = 2, STORM_RADIUS = 50, STORM_DMG = 5, STORM_DRAIN = 16, STORM_STRIKES_PER_S = 24, STORM_BOLT_S = 0.22;
+// Force Repulse (special, X; "pulse" in the code): the meter fills from damage you deal (PULSE_PER_HP per point) and
+// defeats (PULSE_PER_KILL). When it is full the caster rises REPULSE_RISE m and curls into a ball while the Force gathers
+// (PULSE_WINDUP s), then bursts open with the arms flung wide: every foe within PULSE_RADIUS m is blasted outward and
+// disintegrates in the air (Game.forcePulse). The arms stay open REPULSE_HOLD s, then the caster comes down.
+export const PULSE_MAX = 100, PULSE_PER_HP = 0.25, PULSE_PER_KILL = 8.75, PULSE_RADIUS = 7, PULSE_WINDUP = 0.95;
+// what the specials take from the meter (of PULSE_MAX): Force Repulse 80%, Mind Dominance 55%
+export const REPULSE_COST = 80, DOMINANCE_COST = 55;
+export const REPULSE_RISE = 1.4, REPULSE_HOLD = 0.5, REPULSE_FALL = 0.45;
+// poses held by playing an animation at 2% speed from that moment, measured on the skeleton: the tightest tuck of the
+// backflip (head 0.23 m from the knees) and the widest arms of the Force fountain (hands 1.23 m apart)
+export const REPULSE_BALL = ['BOTH_FLIP_B', 0.15], REPULSE_OPEN = ['BOTH_FORCEFOUNTAIN1_MIDDLE', 1.15];
+const holdPose = (f, [anim, at], blend) => f.actor.setBoth(anim, { blend, restart: true, loop: false, speed: 0.02, startAt: at / 0.02 });
+const smoothstep = x => { const t = Math.min(1, Math.max(0, x)); return t * t * (3 - 2 * t); };
+const OFFENSIVE = new Set(['push', 'pull', 'grip', 'lightning', 'drain']);
+export const POWER_BY_ID = Object.fromEntries(POWERS.map(p => [p.id, p]));
+// Ten direct-cast slots. Remaining powers stay reachable in the mouse-wheel selector.
+export const FORCE_QUICK_SLOTS = Object.freeze([
+  ['1', 'push'], ['2', 'pull'], ['3', 'grip'], ['4', 'lightning'], ['5', 'heal'],
+  ['6', 'speed'], ['7', 'mind'], ['8', 'rage'], ['9', 'protect'], ['0', 'absorb'],
+]);
+// letter keys for powers beyond the ten number slots
+export const FORCE_LETTER_SLOTS = Object.freeze([['G', 'levitate']]);
+export const FORCE_QUICK_BINDINGS = Object.freeze([...FORCE_QUICK_SLOTS.flatMap(([digit, id]) => [
+  { code: 'Digit' + digit, id }, { code: 'Numpad' + digit, id },
+]), ...FORCE_LETTER_SLOTS.map(([key, id]) => ({ code: 'Key' + key, id }))]);
+export const FORCE_HOTKEY_LABELS = Object.freeze(Object.fromEntries([...FORCE_QUICK_SLOTS, ...FORCE_LETTER_SLOTS].map(([key, id]) => [id, key])));
+// Scrollable force menu: all 10 quick-slot abilities plus Drain, Sight and Levitate.
+export const SELECT_ORDER = [...FORCE_QUICK_SLOTS.map(([, id]) => id), 'drain', 'see', 'levitate'];
+export const SELECT_ALL = [...SELECT_ORDER, 'teamheal', 'teamforce'];
+export const FORCE_DUR = { speed: 10, rage: 12, protect: 15, absorb: 12, see: 15 };
+const DUR = FORCE_DUR;
+const GRIP_ALLOWED = new Set(['push', 'pull', 'absorb', 'protect']); // what a gripped fighter can still do (push / pull break the grip)
+const GRIP_WHY = { busy: 'Force Grip: busy', 'mid-swing': 'Force Grip: finish the swing first', 'low Force': 'Not enough Force', 'no target': 'Force Grip: no target', 'already gripped': 'Already gripped', recovering: 'Target just broke free', down: 'Force Grip: down', 'out of range': 'Force Grip: out of range (' + GRIP_MAX_DIST.toFixed(1) + ' m)' };
+
+export class Force {
+  constructor(game, p, o = {}) {
+    this.g = game; this.p = p; this.npc = !!o.npc; this.fp = o.fp ?? 100; this.max = this.fp; this.regen = o.regen ?? 9; this.active = {}; this.holding = null; this.holdVia = 'key'; this.cool = {}; this.gcd = 0; this.loops = {}; this.pending = [];
+    this.target = null; this.bolts = []; this.boltT = 0; this.beam = null; this.healT = 0; this.lt = 0; this.want = {}; this.bodyBolts = null; this.stormBolts = []; this.storm = null;
+    this.lv = Object.assign({ push: 3, pull: 3, grip: 3, lightning: 3, heal: 3, speed: 3, mind: 3, rage: 3, protect: 3, absorb: 3, drain: 3, see: 3 }, o.levels);
+    this.list = (o.list || SELECT_ORDER).slice(); this.sel = Math.max(0, this.list.indexOf(o.select || 'push')); this.selShow = 0;
+    this.dmgScale = o.dmgScale ?? 1; this.healRate = o.healRate ?? 24; this.spd = o.speedGain ?? 1.75; this.protectMul = o.protectMul ?? 0.2;
+    this.gripLevel = 0; this.gripBase = 0; this.gripT = 0; this.gripCracked = false; this.brokenFree = false; this.absorbMsgT = 0;
+  }
+  // ---------------- selector (player)
+  selId() { return this.list[this.sel]; }
+  select(d) { const n = this.list.length; this.sel = ((this.sel + d) % n + n) % n; this.selShow = 2.4; }
+  selectId(id) { const i = this.list.indexOf(id); if (i >= 0) { this.sel = i; this.selShow = 2.4; } }
+  // ---------------- helpers
+  say(t) { if (!this.npc) this.g.hud.msg(t); }
+  shake(a) { if (!this.npc) this.g.shake(a); }
+  alive() { const s = this.p.status; return s === 'normal' || s === 'roll' || s === 'gripped' || s === 'down' || s === 'getup'; }
+  anim(name, o) { if (this.p.status === 'gripped') return; this.p.playForce(name, o); } // a gripped fighter keeps the choke pose
+  canJump() { return this.fp >= 10; }
+  use(cost) { if (this.fp < cost) { this.say('Not enough Force'); return false; } this.fp -= cost; return true; }
+  aim() {
+    if (!this.npc) return this.g.aimDir();
+    const T = this.g.aiTarget ? this.g.aiTarget(this.p) : this.g.player; if (!T) return [Math.sin(this.p.yaw), 0, Math.cos(this.p.yaw)];
+    const o = this.origin(), c = T.chest(); return v3.norm([c[0] - o[0], c[1] - o[1] - 0.1, c[2] - o[2]]);
+  }
+  origin() { const c = this.p.chest(); return [c[0], c[1] + 0.25, c[2]]; }
+  hands(d = this.aim()) { const a = this.p.actor; const l = a.bonePos('lhand'), r = a.bonePos('rhand'); return [v3.addS(l, d, 0.12), v3.addS(r, d, 0.12)]; }
+  targets() {
+    const g = this.g; if (!this.npc) return g.targets();
+    if (g.openArena) return g.foesOf(this.p).map(f => ({ type: 'npc', ref: f, center: () => f.chest() }));
+    const P = g.player; return P.status === 'dead' ? [] : [{ type: 'npc', ref: P, center: () => P.chest() }];
+  }
+  cone(range, deg, opts = {}) {
+    const o = this.origin(), d = this.aim(), cs = Math.cos(deg * Math.PI / 180); const out = [];
+    for (const t of this.targets()) { if (opts.npcOnly && t.type !== 'npc') continue; if (opts.allies === undefined && t.type === 'npc' && t.ref.team === 'ally') continue; if (opts.allies !== undefined && t.type === 'npc' && (t.ref.team === 'ally') !== opts.allies) continue;
+      const c = t.center(), v = v3.sub(c, o), L = v3.len(v); if (L > range || L < 0.2) continue; const dot = v3.dot(v3.scale(v, 1 / L), d); if (dot < cs) continue; out.push({ t, L, dot, v: v3.scale(v, 1 / L) }); }
+    out.sort((a, b) => (b.dot * 3 - b.L * 0.05) - (a.dot * 3 - a.L * 0.05)); return out;
+  }
+  flat(v) { const l = Math.hypot(v[0], v[2]) || 1; return [v[0] / l, 0, v[2] / l]; }
+  absorbDef(f) { const F = this.g.forceOf(f); return { absorbActive: !!(F && F.active.absorb), absorbLevel: F ? F.lv.absorb : 0 }; }
+  addFp(n) { this.fp = Math.min(this.max, this.fp + n); } // Force gained (Absorb); another player's Force is updated by their own game
+  // ---------------- per frame
+  update(dt, input) {
+    const g = this.g, p = this.p, now = g.t; this.gcd -= dt; this.selShow = Math.max(0, this.selShow - dt); this.absorbMsgT -= dt;
+    if (p.status === 'dead') { this.releaseAll(true); return; }
+    const free = (p.status === 'normal' || p.status === 'roll') && !p.kata, gripped = p.status === 'gripped'; // no casting mid-kata
+    this.updateLevitation();
+    if (!this.npc && input) {
+      // The player can press Push while maintaining an active Grip. This is
+      // deliberately handled before the generic cast lockout; other held
+      // powers and Classic mode retain their original restrictions.
+      if (this.holding === 'grip' && experimentalForceEnabled(this) &&
+          (input.pressed('Digit1') || input.pressed('Numpad1') ||
+           (this.selId() === 'push' && input.pressed('KeyF')))) {
+        this.doGripPush();
+      }
+      if (this.gcd <= 0 && !this.holding && !this.charging && (free || gripped || p.status === 'down' || p.status === 'getup' || p.status === 'levitated')) {
+        const shortcut = FORCE_QUICK_BINDINGS.find(({ code, id }) => this.list.includes(id) && input.pressed(code));
+        const want = shortcut && (free || gripped || ['push', 'pull'].includes(shortcut.id)) ? shortcut : input.pressed('KeyF') && (free || gripped || ['push', 'pull'].includes(this.selId())) ? { id: this.selId(), code: 'KeyF' } : null;
+        // a free fighter charges a push while the key is held; gripped / knocked-down ones push at once to get free
+        if (want && want.id === 'push' && free) this.startCharge(want.code);
+        else if (want) this.tryCast(want.id, want.code);
+      }
+      if (this.charging) {
+        // Press Lightning (4) while still holding Push (1 or the selected F
+        // shortcut) to release an electrified shockwave. It must still pay
+        // both Force costs and honor the Push recovery limit.
+        const lightningShortcut = FORCE_QUICK_BINDINGS.find(({ code, id }) => id === 'lightning' && this.list.includes(id) && input.pressed(code));
+        if (lightningShortcut && this.charging.via && input.held(this.charging.via)) {
+          this.tickCharge(input, true);
+        } else this.tickCharge(input);
+      }
+      if (input.pressed('KeyX') && free) this.startPulse();
+      if (input.pressed('KeyV') && free) this.startDominance();
+      if (input.pressed('KeyJ')) { p.jumpLevel = p.jumpLevel % 3 + 1; g.hud.msg('Force Jump level ' + p.jumpLevel); }
+    }
+    // held powers
+    if (this.holding) {
+      const pw = POW(this.holding); let down;
+      if (this.npc) down = !!this.want[pw.id]; else down = !!(input && input.held(this.holdVia));
+      if (this.holding === 'heal') { if (p.status === 'dead' || this.fp <= 0) this.release(true); else this.tickHold('heal', dt); }
+      else if (!down || p.status !== 'normal') this.release(); else this.tickHold(this.holding, dt);
+    }
+    // timed powers
+    for (const k of Object.keys(this.active)) { if (now >= this.active[k].until) this.endTimed(k); else this.tickTimed(k, dt); }
+    if (this.dash) this.tickDash(dt);
+    if (this.stormBolts.length) { for (const b of this.stormBolts) b.t -= dt; this.stormBolts = this.stormBolts.filter(b => b.t > 0); }
+    if (this.pulsing) this.tickPulse(dt);
+    // delayed effects
+    for (let i = this.pending.length - 1; i >= 0; i--) if (this.pending[i].t <= now) { const f = this.pending[i].fn; this.pending.splice(i, 1); f(); }
+    // regen (none while healing: the heal is paid for in full)
+    const busy = this.holding || Object.keys(this.active).length; const sustainedThrow = !!this.p.thrown && this.p.thrown.phase !== 'back' && !!this.p.cmd.alt; this.fp = clamp(this.fp + (sustainedThrow || this.holding === 'heal' ? 0 : busy ? 2.2 : this.regen) * dt, 0, this.max);
+    if (this.fp <= 0 && this.holding) this.release();
+    // keep held-anim alive
+    if (this.holding && p.forceHold) p.forceUntil = now + 0.25;
+    // lightning bolt regen
+    if (this.holding === 'lightning') { this.boltT -= dt; if (this.boltT <= 0) { this.boltT = 0.04; this.regenBolts(); } }
+  }
+  later(sec, fn) { this.pending.push({ t: this.g.t + sec, fn }); }
+  tryCast(id, via) {
+    if (this.p.status === 'levitated' && id !== 'absorb') { this.say('Levitated: only Absorb breaks it'); this.gcd = 0.3; return false; }
+    if ((this.p.status === 'down' || this.p.status === 'getup') && id !== 'push' && id !== 'pull') return false;
+    if (this.p.status === 'gripped' && !GRIP_ALLOWED.has(id)) { this.say('Gripped: only Push, Pull, Absorb or Protect'); this.gcd = 0.3; return false; }
+    return this.activate(id, via);
+  }
+  cast(id, o) { return this.activate(id, 'ai', o); }
+  // ---------------- charged push (player): hold to charge, release to throw
+  startCharge(via) {
+    if ((this.cool.throw || 0) > this.g.t) { this.say('Force Push recovering'); this.gcd = 0.1; return; }
+    if (this.fp < THROW_COST) { this.say('Not enough Force'); this.gcd = 0.3; return; }
+    this.charging = { via, t0: this.g.t };
+  }
+  chargeLevel() { return this.charging ? this.chargeFraction(this.g.t - this.charging.t0) : 0; }
+  chargeFraction(held) {
+    const max = pushChargeDuration(this, PUSH_CHARGE_MAX);
+    return clamp((held - PUSH_TAP) / (max - PUSH_TAP), 0, 1);
+  }
+  tickCharge(input, withLightning = false) {
+    const g = this.g, p = this.p, C = this.charging, held = g.t - C.t0, c = this.chargeFraction(held);
+    if (withLightning) {
+      this.charging = null;
+      if (p.status !== 'normal' && p.status !== 'roll') return;
+      if (this.fp < POW('push').cost + Math.round(PUSH_CHARGE_COST * c) + POW('lightning').cost) {
+        this.say('Not enough Force for Lightning Push'); return;
+      }
+      this.fp -= POW('lightning').cost; // lightning surcharge paid exactly once
+      this.activate('push', C.via, { charge: c, lightning: true });
+      return;
+    }
+    if ((input.held(C.via) && held < pushChargeDuration(this, PUSH_CHARGE_MAX)) && (p.status === 'normal' || p.status === 'roll')) {
+      if (c > 0 && Math.random() < 0.3 + c * 0.6) { const h = this.hands(), k = Math.random() < 0.5 ? 0 : 1, a = Math.random() * 6.28; g.fx.emit({ p: v3.addS(h[k], [Math.cos(a), Math.random() - 0.3, Math.sin(a)], 0.35 * (1 - c * 0.5)), v: v3.scale(v3.sub(h[k], v3.addS(h[k], [Math.cos(a), 0, Math.sin(a)], 0.35)), 3), life: 0.25, size: 0.03 + 0.04 * c, c0: [0.6, 0.85, 1, 0.9], c1: [0.4, 0.6, 1, 0] }); }
+      return;
+    }
+    this.charging = null; if (p.status === 'normal' || p.status === 'roll') this.activate('push', C.via, { charge: c });
+  }
+  activate(id, via = 'key', o = {}) {
+    const pw = POW(id); if (!pw) return false;
+    // A lock on a CTF teammate changes Force Protect (9 / selected F)
+    // into Force Shield: heal and mitigate damage on that teammate.
+    // Validate BEFORE taking Force so walls, range and recipient cooldown
+    // never consume the player's meter or silently shield the caster.
+    const supportTarget = !this.npc && id === 'protect' &&
+      this.g.teamMatch?.mode === 'ctf' && this.g.lockedTarget?.team === this.p.team
+      ? this.g.lockedTarget : null;
+    if (supportTarget && !this.g.teamMatch.canCastAllyShield(this.p,supportTarget)) {
+      this.say('Force Shield: teammate blocked, too far away or still protected');
+      return false;
+    }
+    if ((id === 'push' || id === 'pull') && (this.cool.throw || 0) > this.g.t) { this.say('Force ' + (id === 'push' ? 'Push' : 'Pull') + ' recovering'); this.gcd = 0.1; return false; }
+    const extra = id === 'push' ? Math.round(PUSH_CHARGE_COST * clamp(o.charge || 0, 0, 1)) : 0;
+    if (!this.use(pw.cost + extra)) { this.gcd = 0.3; return false; }
+    if (id === 'push' || id === 'pull') this.cool.throw = this.g.t + THROW_RECOVERY;
+    this.gcd = 0.25; this.holdVia = via;
+    const f = this['do_' + id]; if (f) f.call(this, o); this.g.tutorial?.onCast(this.p, id, o); if (this.g.net) this.g.net.onCast(this, id);
+    if (OFFENSIVE.has(id) && id !== 'push') this.dropLevitated('attack'); // attacking anyone ends your own levitation (do_push launches them first)
+    return true;
+  }
+  // ---------------- Force Levitate
+  do_levitate() {
+    const g = this.g, p = this.p, c = this.cone(14, 30)[0];
+    if (!c) { this.fp += POW('levitate').cost; this.say('Force Levitate: no target'); this.gcd = 0.3; return; }
+    if(c.t.type==='npc'&&c.t.ref.isRancorBoss){this.fp+=POW('levitate').cost;this.say('The Rancor is too massive to levitate');return;}
+    this.anim('BOTH_FORCEGRIP1', { durMs: 600 }); g.sfxAt('grip', p.pos, 0.6); g.sfxAt('jump', p.pos, 0.4);
+    const t = c.t, at = t.center(); this.dropLevitated('recast');
+    for (let k = 0; k < 2; k++) g.fx.ring({ p: [at[0], at[1] - 1.1 + k * 0.5, at[2]], n: [0, 1, 0], r0: 0.3, r1: 1.4, life: 0.7, w: 0.08, c: [0.65, 0.85, 1, 0.9], move: [0, 2.5, 0] });
+    if (t.type !== 'npc') { t.ref.lifted = LEVITATE_S; t.ref.vel = [0, 2.2, 0]; t.ref.glow = 1; return; }
+    const v = t.ref, VF = g.forceOf(v), ab = gripEffectiveLevel(this.absorbDef(v), 3, 12);
+    if (ab.level <= 0) { if (VF) VF.addFp(ab.fpGain); g.banner('LEVITATE ABSORBED', [0.78, 0.5, 1]); g.sfxAt('absorbhit', v.pos, 1); return; }
+    if (v.spawnShield > g.t || v.status === 'dead') { this.say('Force Levitate: no effect'); return; }
+    if (v.levitate(true, { from: p, duration: LEVITATE_S }) === false) {
+      this.say('Force Levitate resisted');
+      if (p.isPlayer) g.banner('LEVITATE RESISTED', [0.78, 0.82, 1]);
+      return;
+    }
+    this.levTarget = v; this.levStart = g.t; this.levUntil = g.t + LEVITATE_S;
+    if (v.isPlayer || p.isPlayer) g.banner(v.isPlayer ? 'LEVITATED' : 'LEVITATE', [0.7, 0.88, 1]);
+  }
+  // the caster's side: forget the target when it is down again; attacking (a swing, a thrown saber, an offensive power) drops it
+  updateLevitation() {
+    const v = this.levTarget; if (!v) return;
+    const g = this.g, grace = v.remote && g.t - this.levStart < 0.6; // another player's fighter shows 'levitated' a moment later
+    if ((v.status !== 'levitated' && !grace) || g.t > this.levUntil + 0.5) { this.levTarget = null; return; }
+    if (this.p.swingActive?.() || this.p.thrown) this.dropLevitated('attack');
+  }
+  dropLevitated(why) { const v = this.levTarget; if (!v) return; this.levTarget = null; if (v.status === 'levitated' || v.remote) v.levitate(false, { why }); }
+  onHurt(dmg) { if (this.npc && ((this.holding === 'heal' && dmg >= 4) || (this.holding === 'lightning' && dmg >= 10))) this.release(); } // a heal / lightning can be broken by a solid hit
+  interrupt() { this.pending.length = 0; if (this.holding !== 'heal') this.release(); } // a push / pull that lands cancels what the target was casting
+  release(silent) { const id = this.holding; if (!id) return; this['end_' + id] && this['end_' + id](silent); this.holding = null; this.beam = null; this.bolts.length = 0; if (this.loops.hold) { this.loops.hold.stop(0.1); this.loops.hold = null; } }
+  releaseAll(silent) { this.release(silent); this.charging = null; this.dropLevitated('down'); for (const k of Object.keys(this.active)) this.endTimed(k); }
+  reset() { this.releaseAll(true); this.dash = null; this.pulsing = null; this.pending.length = 0; this.want = {}; this.fp = this.max; this.gcd = 0; this.target = null; this.bodyBolts = null; this.absorbMsgT = 0; }
+  // ---------------- grip bookkeeping
+  gripperOf(f) { return this.g.gripperOf(f); }
+  // a gripped fighter who pushes / pulls with a level >= the grip level breaks it (the gripper is busy, so he cannot counter)
+  freeFromGrip(kind) {
+    const p = this.p; if (p.status !== 'gripped') return;
+    const gr = this.gripperOf(p);
+    if (!gr) { p.grip(false, 0, { free: true }); return; }
+    if (gripBroken(this.lv[kind], gr.gripBase)) { gr.brokenFree = true; gr.release(); this.g.banner('GRIP BROKEN', [0.55, 0.95, 1]); this.g.sfxAt('push', p.pos, 0.8); }
+    else this.say('Too weak to break the grip');
+  }
+  // ---------------- instant powers
+  do_push(o = {}) {
+    const g = this.g, p = this.p, ch = clamp(o.charge || 0, 0, 1); this.freeFromGrip('push');
+    for (const f of g.fighters()) if (f !== p && f.thrown && v3.dist(f.thrown.pos, p.chest()) < 0.9) f.unlodgeSaber(); // a push knocks a saber spinning in you loose
+    const d = this.aim(); const col = o.lightning ? [0.45, 0.7, 1] : this.npc ? [1, 0.5, 0.45] : [0.7, 0.86, 1];
+    if (o.lightning && p.isPlayer) g.banner('LIGHTNING PUSH', [0.55, 0.82, 1], 1.1);
+    const two = ch >= PUSH_TWO_HANDED && p.actor.skel.anims.G2_FORCEPUSH_2H; // charged long enough: both hands
+    this.anim(two ? 'G2_FORCEPUSH_2H' : 'BOTH_FORCEPUSH', { durMs: 680 }); g.sfxAt('push', p.pos, 1 + 0.3 * ch); if (two) g.sfxAt('hit3', p.pos, 0.6); this.shake(0.22 + 0.3 * ch);
+    if (two && p.isPlayer) g.banner('TWO-HANDED PUSH', [0.7, 0.9, 1], 1.1);
+    this.later(0, () => { // w_force.c ForceThrow: the push lands on the frame it is cast, no wind-up delay
+      if (!this.alive()) return;
+      const hands = this.hands(); const mid = v3.lerp(hands[0], hands[1], 0.5); this.pushFx(mid, d, col, ch);
+      const range = 13 + 8 * ch;
+      this.lastPush = { t: g.t, targets: [] }; // for Push + Speed
+      for (const h of this.cone(range, 52)) {
+        const t = h.t, fall = clamp(1 - h.L / (15 + 5 * ch), 0.2, 1); const dir = this.flat(h.v); if (t.type === 'npc') this.lastPush.targets.push(t.ref);
+        if (t.type === 'npc') {
+          g.applyThrow(this, t.ref, false, { dir, dist: h.L, fall, charge: ch, pushMult: pushImpulseMultiplier(this) });
+          if (o.lightning && t.ref.status !== 'dead' && !(t.ref.spawnShield > g.t)) {
+            const mod = lightningMul(this.absorbDef(t.ref), this.lv.lightning, 1);
+            if (mod.mul > 0) { t.ref.electrify(0.65); t.ref.hurt(8 * p.damageMul * this.dmgScale * mod.mul, p, { noFlinch: true }); }
+            else g.forceOf(t.ref)?.addFp(5);
+            const mid = this.hands()[0], end = t.ref.chest();
+            this.stormBolts.push({ pts: bolt(mid, end, 12, 0.25), t: STORM_BOLT_S });
+          }
+        }
+        else { const boost = pushImpulseMultiplier(this); g.world.impulse(t.ref, [dir[0] * (9 + 10 * fall) * (1 + ch) * boost, 3 + 3 * fall, dir[2] * (9 + 10 * fall) * (1 + ch) * boost]); t.ref.glow = 1; }
+      }
+      this.dropLevitated('attack'); // a push is an attack: whoever you levitated (and did not just launch) drops
+    });
+  }
+  pushFx(mid, d, col, ch = 0) {
+    const g = this.g, p = this.p;
+    g.fx.ring({ p: v3.addS(mid, d, 0.3), n: d, r0: 0.25, r1: 2.8 + 2.4 * ch, life: 0.55 + 0.2 * ch, w: 0.2 + 0.15 * ch, c: [col[0], col[1], col[2], 0.95], move: v3.scale(d, 15 + 8 * ch) });
+    if (ch > 0.5) g.fx.ring({ p: v3.addS(mid, d, 0.6), n: d, r0: 0.4, r1: 4.2, life: 0.7, w: 0.14, c: [1, 1, 1, 0.75], move: v3.scale(d, 22) });
+    g.fx.ring({ p: v3.addS(mid, d, 0.1), n: d, r0: 0.15, r1: 2.0, life: 0.4, w: 0.12, c: [1, 1, 1, 0.8], move: v3.scale(d, 11) });
+    for (let i = 0; i < 46; i++) { const sp = v3.norm([d[0] + rnd(-0.35, 0.35), d[1] + rnd(-0.25, 0.3), d[2] + rnd(-0.35, 0.35)]); g.fx.emit({ p: v3.addS(mid, d, 0.3), v: v3.scale(sp, rnd(8, 20)), life: rnd(0.25, 0.55), size: rnd(0.04, 0.1), c0: [col[0], col[1] + 0.05, col[2] + 0.1, 0.8], c1: [col[0] * 0.7, col[1] * 0.8, 1, 0], drag: 1.8 }); }
+    for (let i = 0; i < 26; i++) { const a = rnd(-0.5, 0.5), dd = this.flat(d); const dir = [dd[0] * Math.cos(a) - dd[2] * Math.sin(a), 0, dd[0] * Math.sin(a) + dd[2] * Math.cos(a)]; g.fx.emit({ p: [p.pos[0] + dir[0] * rnd(0.5, 5), 0.1, p.pos[2] + dir[2] * rnd(0.5, 5)], v: [dir[0] * rnd(4, 12), rnd(0.5, 2), dir[2] * rnd(4, 12)], life: rnd(0.5, 1), size: rnd(0.15, 0.35), grow: 0.8, c0: [0.45, 0.42, 0.5, 0.3], c1: [0.4, 0.38, 0.45, 0], drag: 2.5, mode: 0 }); }
+  }
+  pullFx(mid, d, col) {
+    const g = this.g;
+    for (let k = 0; k < 3; k++) g.fx.ring({ p: v3.addS(mid, d, 5 - k * 0.7), n: d, r0: 2.0, r1: 0.2, life: 0.5, w: 0.14, c: [col[0], col[1], col[2], 0.8], move: v3.scale(d, -9) });
+    for (let i = 0; i < 40; i++) { const dist = rnd(2, 9); const sp = v3.norm([d[0] + rnd(-0.5, 0.5), d[1] + rnd(-0.3, 0.4), d[2] + rnd(-0.5, 0.5)]); g.fx.emit({ p: v3.addS(mid, sp, dist), v: v3.scale(sp, -rnd(10, 22)), life: dist / 16, size: rnd(0.03, 0.08), c0: [col[0] + 0.1, col[1] + 0.05, 1, 0.9], c1: [col[0] + 0.1, col[1] + 0.05, 1, 0.2] }); }
+  }
+  mindFx() { const g = this.g, o = this.origin(); g.fx.ring({ p: [o[0], 1.0, o[2]], n: [0, 1, 0], r0: 0.4, r1: 7, life: 0.9, w: 0.12, c: [0.75, 0.5, 1, 0.9] }); g.fx.ring({ p: [o[0], 1.3, o[2]], n: [0, 1, 0], r0: 0.4, r1: 5, life: 0.7, w: 0.08, c: [0.9, 0.8, 1, 0.8] }); }
+  do_pull() {
+    const g = this.g, p = this.p; this.freeFromGrip('pull');
+    const d = this.aim(); const col = this.npc ? [1, 0.55, 0.5] : [0.6, 0.8, 1];
+    this.anim('BOTH_FORCEPULL', { durMs: 560 }); g.sfxAt('pull', p.pos, 1); this.shake(0.12);
+    this.later(0, () => { // immediate, like the push
+      if (!this.alive()) return;
+      const hands = this.hands(); const mid = v3.lerp(hands[0], hands[1], 0.5); this.pullFx(mid, d, col);
+      for (const h of this.cone(13, 52)) {
+        const t = h.t, dir = this.flat(h.v); const flatD = Math.max(0.5, Math.hypot(t.center()[0] - p.pos[0], t.center()[2] - p.pos[2]));
+        if (t.type === 'npc') g.applyThrow(this, t.ref, true, { dir, dist: h.L, flatD });
+        else { const sp = clamp((flatD - 1.3) / 0.55, 3, 22); g.world.impulse(t.ref, [-dir[0] * sp * t.ref.mass, 4.5 * t.ref.mass, -dir[2] * sp * t.ref.mass]); t.ref.glow = 1; }
+      }
+    });
+  }
+  do_mind() {
+    const g = this.g, p = this.p; this.anim('BOTH_MINDTRICK1', { durMs: 700 }); g.sfxAt('distract', p.pos, 1);
+    this.later(0, () => {
+      if (!this.alive()) return;
+      this.mindFx();
+      for (const h of this.cone(14, 80, { npcOnly: true })) { const n = h.t.ref; if (hostile(p, n)) {
+        if (n.isRancorBoss || n.kind === 'darkjedi' || n.remote) { g.banner('MIND TRICK RESISTED', [1, 0.6, 0.6]); g.fx.ring({ p: [n.pos[0], n.pos[1] + 2.15, n.pos[2]], n: [0, 1, 0], r0: 0.1, r1: 0.5, life: 0.8, w: 0.05, c: [1, 0.3, 0.25, 1] }); g.sfxAt('distractstop', n.pos, 0.7); continue; }
+        n.distracted = 8; g.fx.ring({ p: [n.pos[0], n.pos[1] + 2.15, n.pos[2]], n: [0, 1, 0], r0: 0.1, r1: 0.45, life: 1.2, w: 0.05, c: [0.8, 0.55, 1, 1] }); g.hud.msg('Mind trick: enemy confused'); } }
+    });
+  }
+  do_see() {
+    const g = this.g; if (this.active.see) { this.endTimed('see'); this.fp += 20; return; }
+    this.anim('BOTH_MINDTRICK2', { durMs: 700 }); this.startTimed('see'); g.sfxAt('see', this.p.pos, 1);
+  }
+  do_speed() {
+    const v = this.interceptTarget(); // Push + Speed: dash to where the fighter you just pushed will land
+    if (v) this.intercept(v); else this.anim('BOTH_FORCEHEAL_QUICK', { durMs: 700 });
+    this.startTimed('speed'); this.g.sfxAt('speed', this.p.pos, 1);
+  }
+  // ---------------- Push + Speed
+  interceptTarget() {
+    const g = this.g; if (!this.lastPush || g.t - this.lastPush.t > INTERCEPT_WINDOW) return null;
+    return this.lastPush.targets.find(v => v.status === 'flung' && v3.dist(v.pos, this.p.pos) < 22) || null;
+  }
+  intercept(v) {
+    const g = this.g, p = this.p, fl = g.world.floorAt(v.pos[0], v.pos[2], v.pos[1] + 0.5) ?? v.pos[1], h = Math.max(0, v.pos[1] - fl);
+    const tl = (v.vel[1] + Math.sqrt(Math.max(0, v.vel[1] * v.vel[1] + 2 * 20 * h))) / 20; // time until they land (G = 20)
+    const land = [v.pos[0] + v.vel[0] * tl, fl, v.pos[2] + v.vel[2] * tl], sp = Math.hypot(v.vel[0], v.vel[2]) || 1, dir = [v.vel[0] / sp, 0, v.vel[2] / sp];
+    const to = [land[0] + dir[0] * 1.4, land[1], land[2] + dir[2] * 1.4]; g.world.collide(to, p.radius);
+    this.dash = { from: p.pos.slice(), to, t: 0, dur: 0.2, face: Math.atan2(-dir[0], -dir[2]) };
+    p.interceptBonusUntil = g.t + 1.6; p.interceptBonus = INTERCEPT_BONUS; this.lastPush = null; p.playForce('BOTH_RUN2', { durMs: 200, whole: true });
+    if (!this.npc) g.banner('INTERCEPT', [0.6, 0.9, 1]);
+  }
+  tickDash(dt) {
+    const D = this.dash, p = this.p, g = this.g; D.t += dt; const k = Math.min(1, D.t / D.dur), e = k * k * (3 - 2 * k);
+    p.pos = v3.lerp(D.from, D.to, e); p.vel = [0, 0, 0]; p.yaw = p.targetYaw = D.face;
+    for (let i = 0; i < 3; i++) g.fx.emit({ p: [p.pos[0] + rnd(-0.3, 0.3), p.pos[1] + rnd(0.1, 1.7), p.pos[2] + rnd(-0.3, 0.3)], v: [0, 0, 0], life: 0.3, size: 0.1, grow: 0.3, c0: [0.5, 0.8, 1, 0.7], c1: [0.3, 0.5, 1, 0] });
+    if (k >= 1) { this.dash = null; if (!this.npc) g.cam.yaw = D.face; }
+  }
+  // ---------------- Force Repulse (special)
+  gainPulse(n) { if (n > 0) this.pulse = Math.min(PULSE_MAX, (this.pulse || 0) + n); }
+  pulseReady() { return (this.pulse || 0) >= REPULSE_COST; }
+  startPulse() {
+    const g = this.g, p = this.p;
+    if (!this.pulseReady() || this.pulsing || this.holding || (p.status !== 'normal' && p.status !== 'roll')) { if (!this.npc && !this.pulseReady()) this.say('Force Repulse is not charged yet'); return false; }
+    this.pulse -= REPULSE_COST; this.charging = null; p.endForce(); p.cancelAttackState();
+    // the caster is locked into the move like an execution: this tick moves and poses them
+    p.status = 'executing'; p.statusT = 0; p.vel = [0, 0, 0]; p.onGround = false; p.ducked = false;
+    this.pulsing = { t0: g.t, y0: p.pos[1], burst: 0 }; holdPose(p, REPULSE_BALL, 0.25);
+    g.sfxAt('jumpbuild', p.pos, 1); g.sfxAt('rage', p.pos, 0.8);
+    if (g.net) g.net.onCast(this, 'pulse'); return true;
+  }
+  // ---------------- Mind Dominance (special, DOMINANCE_COST of the same meter): the foe in front turns their own lightsaber
+  // on themselves (executions.js 'dominance'); a foe holding Force Absorb resists it and nothing is spent
+  dominanceReady() { return (this.pulse || 0) >= DOMINANCE_COST; }
+  startDominance(target) {
+    const g = this.g, p = this.p;
+    if (!this.dominanceReady()) { if (!this.npc) this.say('Mind Dominance needs ' + DOMINANCE_COST + '% of the meter'); return false; }
+    if (this.pulsing || this.holding || p.status !== 'normal' || !p.onGround || !g.startExecution) return false;
+    const vic = target ? (dominanceFor(g, p, target) ? target : null) : findDominated(g, p);
+    if (!vic) { if (!this.npc) this.say('Mind Dominance: no foe with a lightsaber in front of you'); return false; }
+    const VF = g.forceOf(vic);
+    if (VF && VF.active && VF.active.absorb) { this.gcd = 0.6; g.sfxAt('absorb', vic.pos, 1); if (!this.npc) this.say('Mind Dominance resisted: they are absorbing the Force'); else if (vic.isPlayer) g.hud.msg('You resisted Mind Dominance'); return false; }
+    this.charging = null; const ex = g.startExecution(p, vic, 'dominance'); if (!ex) return false;
+    this.pulse -= DOMINANCE_COST; return true;
+  }
+  tickPulse(dt) {
+    const g = this.g, p = this.p, S = this.pulsing, T = g.t - S.t0, top = S.y0 + REPULSE_RISE;
+    if (p.status !== 'executing') { this.pulsing = null; return; } // knocked, gripped or killed out of it
+    if (!S.burst) { // rise and curl up while the Force gathers into the ball
+      p.pos[1] = S.y0 + REPULSE_RISE * smoothstep(T / 0.55); p.yaw += dt * 1.8; p.targetYaw = p.yaw;
+      const c = p.chest(), n = T > 0.55 ? 7 : 4;
+      for (let i = 0; i < n; i++) { const a = rnd(0, 6.28), r = rnd(1.5, 3.5), from = [c[0] + Math.cos(a) * r, c[1] + rnd(-1.2, 1.2), c[2] + Math.sin(a) * r]; g.fx.emit({ p: from, v: v3.scale(v3.sub(c, from), 1 / 0.35), life: 0.35, size: 0.05, c0: [1, 0.9, 0.6, 0.9], c1: [1, 0.6, 0.2, 0.2] }); }
+      g.lightFlash = Math.max(g.lightFlash, T * 1.2); g.lightFlashPos = c;
+      if (T >= PULSE_WINDUP) { S.burst = g.t; holdPose(p, REPULSE_OPEN, 0.06); g.forcePulse(p, PULSE_RADIUS); } // burst open
+      return;
+    }
+    const tb = g.t - S.burst; if (tb < REPULSE_HOLD) { p.pos[1] = top; return; }
+    const fl = g.world.floorAt(p.pos[0], p.pos[2], top);
+    if (fl === null) return this.endPulse(false); // nothing below (a chasm): just drop
+    const k = smoothstep((tb - REPULSE_HOLD) / REPULSE_FALL); p.pos[1] = top + (fl - top) * k;
+    if (k >= 1) this.endPulse(true);
+  }
+  endPulse(landed) {
+    const p = this.p; this.pulsing = null; if (p.status !== 'executing') return;
+    p.status = 'normal'; p.statusT = 0; p.vel = [0, 0, 0]; p.onGround = landed; p.endForce(); p.actor.followLegs(); p.actor.torso.cur = null;
+  }
+  do_rage() { this.anim('BOTH_FORCEFOUNTAIN1_START', { durMs: 1100 }); this.startTimed('rage'); this.g.sfxAt('rage', this.p.pos, 1); this.shake(0.3); }
+  do_protect() {
+    const g=this.g, p=this.p;
+    const ally=!this.npc && g.teamMatch?.mode === 'ctf' &&
+      g.lockedTarget?.team === p.team ? g.lockedTarget : null;
+    if (ally) {
+      // Activation already validated LOS/team/range/cooldown before charging FP.
+      // Apply immediately rather than scheduling a delayed heal after the lock
+      // can change. The caster does not receive a second Protect buff.
+      if (!g.teamMatch.applyAllyShield(p,ally)) {
+        this.fp=Math.min(this.max,this.fp+POW('protect').cost);
+        return;
+      }
+      this.anim('BOTH_FORCEHEAL_QUICK',{durMs:800});
+      g.sfxAt('protect',ally.pos,0.9);
+      g.fx?.ring?.({p:ally.chest(),n:[0,1,0],r0:0.3,r1:1.25,
+        life:0.7,w:0.09,c:[0.45,0.78,1,0.78]});
+      return;
+    }
+    // Existing self-only Force Protect everywhere else.
+    this.anim('BOTH_FORCEHEAL_QUICK', { durMs: 800 });
+    this.startTimed('protect');
+    g.sfxAt('protect', p.pos, 1);
+  }
+  do_absorb() { if (this.p.status === 'levitated') this.p.levitate(false, { absorbed: true }); this.anim('BOTH_FORCEHEAL_QUICK', { durMs: 800 }); this.startTimed('absorb'); this.g.sfxAt('absorb', this.p.pos, 1); }
+  do_teamheal() {
+    const g = this.g, p = this.p; this.anim('BOTH_FORCEHEAL_QUICK', { durMs: 800 }); g.sfxAt('teamheal', p.pos, 1);
+    this.later(0.3, () => { const o = p.pos; g.fx.ring({ p: [o[0], 0.1, o[2]], n: [0, 1, 0], r0: 0.5, r1: 11, life: 1.0, w: 0.2, c: [0.3, 1, 0.5, 0.9] }); g.fx.ring({ p: [o[0], 0.1, o[2]], n: [0, 1, 0], r0: 0.3, r1: 8, life: 0.8, w: 0.1, c: [0.7, 1, 0.8, 0.8] });
+      let n = 0; for (const f of g.npcs) if (f.team === 'ally' && f.status !== 'dead' && v3.dist(f.pos, o) < 11) { f.hp = Math.min(f.maxHp, f.hp + 60); f.healFlash = 1.5; n++; g.burstHeal(f); } g.hud.msg(n ? 'Team Heal: ' + n + ' ally healed' : 'Team Heal: no allies in range'); });
+  }
+  do_teamforce() {
+    const g = this.g, p = this.p; this.anim('BOTH_FORCEFOUNTAIN1_START', { durMs: 1100 }); g.sfxAt('teamforce', p.pos, 1);
+    this.later(0.5, () => { const o = p.pos; g.fx.ring({ p: [o[0], 0.1, o[2]], n: [0, 1, 0], r0: 0.5, r1: 11, life: 1.0, w: 0.2, c: [0.4, 0.6, 1, 0.9] }); g.fx.ring({ p: [o[0], 1.2, o[2]], n: [0, 1, 0], r0: 0.5, r1: 9, life: 0.9, w: 0.1, c: [0.8, 0.9, 1, 0.8] });
+      let n = 0; for (const f of g.npcs) if (f.team === 'ally' && f.status !== 'dead' && v3.dist(f.pos, o) < 11) { f.energized = 8; n++; } g.hud.msg(n ? 'Team Energize: ' + n + ' ally empowered' : 'Team Energize: no allies in range'); });
+  }
+  // ---------------- timed
+  startTimed(id) {
+    const g = this.g, p = this.p, q = this.npc ? 0.4 : 1; this.active[id] = { until: g.t + DUR[id], t0: g.t };
+    if (id === 'speed') { p.speedMul = this.spd; p.saber.rageMul = this.npc ? 1.2 : 1.35; if (beginSaberSurge(this)) { p.saber.rageMul = saberSurgeRate(this, p.saber.rageMul); if (p.isPlayer) g.hud.msg('SABER SURGE · 2 SEC'); } this.loops.speed = g.sfx.loop('speedloop', { vol: 0.35 * q }); }
+    if (id === 'rage') { p.damageMul = 1.7; p.speedMul = Math.max(p.speedMul, this.npc ? 1.2 : 1.3); p.saber.rageMul = saberSurgeRate(this, this.npc ? 1.45 : 1.7); p.glow = 0.22; p.glowCol = [1, 0.12, 0.08]; this.loops.rage = g.sfx.loop('rageloop', { vol: 0.35 * q }); }
+    if (id === 'protect') { p.takeMul = this.protectMul; this.loops.protect = g.sfx.loop('protectloop', { vol: 0.3 * q }); }
+    if (id === 'absorb') { this.loops.absorb = g.sfx.loop('absorbloop', { vol: 0.3 * q }); }
+    if (id === 'see') { this.loops.see = g.sfx.loop('seeloop', { vol: 0.25 }); }
+    if (this.npc) g.hud.msg((p.label || 'Enemy') + ': ' + POW(id).name); else g.hud.msg(POW(id).name + ' active');
+  }
+  endTimed(id) {
+    const p = this.p; delete this.active[id]; if (this.loops[id]) { this.loops[id].stop(0.3); delete this.loops[id]; }
+    const rageSpd = this.npc ? 1.2 : 1.3, rageSab = this.npc ? 1.45 : 1.7, spdSab = this.npc ? 1.2 : 1.35;
+    if (id === 'speed') { this.saberSurge = null; p.speedMul = this.active.rage ? rageSpd : 1; p.saber.rageMul = this.active.rage ? rageSab : 1; p.actor.animSpeed = 1; }
+    if (id === 'rage') { p.damageMul = 1; p.speedMul = this.active.speed ? this.spd : 1; p.saber.rageMul = this.active.speed ? saberSurgeRate(this, spdSab) : 1; p.glow = 0; }
+    if (id === 'protect') p.takeMul = 1;
+  }
+  tickTimed(id, dt) {
+    const g = this.g, p = this.p, c = p.chest();
+    if (id === 'speed') {
+      // Only future saber moves change speed when the two-second burst ends;
+      // an already committed animation keeps its authored move/hit timing.
+      const classic = this.active.rage ? (this.npc ? 1.45 : 1.7) : (this.npc ? 1.2 : 1.35);
+      p.saber.rageMul = saberSurgeRate(this, classic, g.t);
+      if (Math.hypot(p.vel[0], p.vel[2]) > 2 && Math.random() < 0.7) g.fx.emit({ p: [p.pos[0] + rnd(-0.3, 0.3), rnd(0.3, 1.5), p.pos[2] + rnd(-0.3, 0.3)], v: [-p.vel[0] * 0.15, 0, -p.vel[2] * 0.15], life: 0.4, size: 0.09, grow: 0.2, c0: [0.5, 0.8, 1, 0.7], c1: [0.3, 0.5, 1, 0] });
+    }
+    if (id === 'rage') { p.glow = 0.16 + 0.1 * Math.sin(g.t * 9); if (Math.random() < 0.8) g.fx.emit({ p: [p.pos[0] + rnd(-0.4, 0.4), rnd(0.1, 1.6), p.pos[2] + rnd(-0.4, 0.4)], v: [0, rnd(0.8, 2.2), 0], life: 0.6, size: rnd(0.05, 0.12), c0: [1, 0.2, 0.05, 0.8], c1: [0.6, 0, 0, 0] }); }
+    if (id === 'protect' || id === 'absorb') {
+      const col = id === 'protect' ? [0.3, 0.9, 0.7] : [0.7, 0.4, 1];
+      if (Math.random() < 0.5) { const a = rnd(0, 6.28), b = rnd(-1, 1); g.fx.emit({ p: [c[0] + Math.cos(a) * 1.05, c[1] + b * 0.9, c[2] + Math.sin(a) * 1.05], v: [0, 0.5, 0], life: 0.5, size: 0.06, c0: [col[0], col[1], col[2], 0.8], c1: [col[0], col[1], col[2], 0] }); }
+    }
+  }
+  // ---------------- held powers
+  do_grip() {
+    const g = this.g, p = this.p; const c = this.cone(14, 28)[0];
+    if (!c) { this.fp += 12; this.say('Force Grip: no target'); return; }
+    const t = c.t;
+    if(t.type==='npc'&&t.ref.isRancorBoss){this.fp+=12;this.say('Rancor immune to Force Grip');return;}
+    if (t.type === 'npc') {
+      const v = t.ref, VF = g.forceOf(v);
+      const why = gripBlocker({ att: g.gripSnap(p, this.fp + 12, 12), tgt: g.gripSnap(v, VF ? VF.fp : 0, 12), dist: c.L, inFront: c.dot > 0.8 });
+      if (why) { this.fp += 12; this.say(GRIP_WHY[why] || ('Force Grip: ' + why)); this.gcd = 0.35; if (why === 'out of range') g.banner('OUT OF GRIP RANGE', [1, 0.8, 0.5]); return; }
+      const eff = gripEffectiveLevel(this.absorbDef(v), this.lv.grip, 12);
+      if (eff.level <= 0) { // Force Absorb cancels the grip before it takes hold
+        if (VF) VF.addFp(eff.fpGain); g.banner('GRIP ABSORBED', [0.78, 0.5, 1]); g.sfxAt('absorbhit', v.pos, 1); g.fx.sparks(v.chest(), [0, 1, 0], 10, [0.7, 0.4, 1, 1]);
+        this.anim('BOTH_FORCEGRIP_HOLD', { durMs: 450 }); this.gcd = 0.6; return;
+      }
+      this.gripBase = this.lv.grip; this.gripLevel = eff.level;
+      const ph = gripPhase(this.gripLevel, 0);
+      v.grip(true, ph.lift ? 1.45 : 0, { carry: ph.carry ? () => this.carryPoint() : null, from: p });
+    }
+    this.holding = 'grip'; this.target = t; this.gripT = 0; this.gripCracked = false; this.brokenFree = false;
+    this.anim('BOTH_FORCEGRIP_HOLD', { durMs: 300, hold: true }); g.sfxAt('grip', p.pos, 1); this.loops.hold = g.sfx.loop('heal', { vol: 0.0 });
+  }
+  doGripPush() {
+    if (!gripPushEligible(this)) {
+      this.say('Grip + Push requires a held enemy, enough Force, and Push off cooldown');
+      return false;
+    }
+    const g = this.g, p = this.p, victim = this.target.ref;
+    const dir = this.flat([victim.pos[0] - p.pos[0], 0, victim.pos[2] - p.pos[2]]);
+    const pin = findWallPin(g.world, victim, dir);
+    // Commit all state only after both the eligibility and optional wall
+    // collision probe. Failed actions never consume Force or break Grip.
+    if (!this.use(GRIP_PUSH_COST)) return false;
+    this.cool.throw = g.t + THROW_RECOVERY;
+    this.gcd = 0.4;
+    this.brokenFree = true; // end Grip cleanly, then either pin or throw victim
+    this.release(true);
+    this.anim('BOTH_FORCEPUSH', { durMs: 420 });
+    g.sfxAt('push', p.pos, 0.95);
+    if (pin) {
+      victim.pinToWall(pin.pos, p, WALL_PIN_DURATION);
+      const impact = [pin.pos[0] + dir[0] * (victim.radius || 0.35), pin.pos[1] + 1.05, pin.pos[2] + dir[2] * (victim.radius || 0.35)];
+      g.addCrack?.(impact, [-dir[0], 0, -dir[2]], 0.85);
+      g.fx.sparks(impact, [-dir[0], 0, -dir[2]], 14, [0.7, 0.9, 1, 1]);
+      g.sfxAt('hit3', impact, 0.95);
+      g.banner('FORCE WALL PIN', [0.7, 0.9, 1], 1.0);
+    } else {
+      // No wall in the physical collision map: it is a Grip → Push throw,
+      // never an invisible pin in mid-air.
+      victim.push(dir, 12 * pushImpulseMultiplier(this), 3.2, { quicker: true });
+      victim.hurt(7 * (this.dmgScale || 1), p, { noFlinch: true });
+      g.banner('GRIP → PUSH', [0.7, 0.9, 1], 0.8);
+    }
+    g.tutorial?.onCast?.(p, 'grip-push', { pinned: !!pin });
+    return true;
+  }
+  carryPoint() { const f = this.flat(this.aim()), p = this.p.pos; return [p[0] + f[0] * 2.4, 0, p[2] + f[2] * 2.4]; }
+  tickHold(id, dt) { const f = this['tick_' + id]; if (f) f.call(this, dt); }
+  tick_grip(dt) {
+    const g = this.g, p = this.p, t = this.target; if (!t || (t.type === 'npc' && t.ref.status === 'dead')) { this.release(); return; }
+    this.fp -= 14 * dt;
+    const beforeTick = this.gripT;
+    this.gripT += dt;
+    const c = t.center(), hands = this.hands(), h = v3.lerp(hands[0], hands[1], 0.5);
+    if (t.type === 'npc') {
+      const v = t.ref, VF = g.forceOf(v);
+      if (v.status !== 'gripped' && !(v.remote && this.gripT < 0.6)) { this.release(); return; } // knocked out of it some other way (another player's fighter shows 'gripped' a moment later)
+      if (VF && VF.active.absorb) { // Force Absorb raised while gripped lowers (or cancels) the grip
+        const eff = gripEffectiveLevel(this.absorbDef(v), this.gripBase, 12);
+        if (eff.level < this.gripLevel) { this.gripLevel = eff.level; if (eff.level <= 0) { VF.addFp(eff.fpGain); g.banner('GRIP ABSORBED', [0.78, 0.5, 1]); g.sfxAt('absorbhit', v.pos, 1); this.brokenFree = true; this.release(); return; } }
+      }
+      const ph = gripPhase(this.gripLevel, this.gripT);
+      v.gripLift = ph.lift ? 1.45 : 0; if (ph.carry && !v.gripCarry) v.gripCarry = () => this.carryPoint();
+      const ticks = gripTicksBetween(beforeTick, this.gripT);
+      if (ticks > 0) {
+        const tickDamage = gripDamagePerTick(v.maxHp) * p.damageMul * this.dmgScale;
+        for (let i = 0; i < ticks && v.status !== 'dead'; i++) v.hurt(tickDamage, p, { noFlinch: true });
+      }
+      if (!this.gripCracked && this.gripT >= ph.crackAt && ph.crack > 0) {
+        this.gripCracked = true; v.hurt(ph.crack * p.damageMul * this.dmgScale, p, { noFlinch: true }); g.sfxAt('hit3', v.pos, 0.9); g.fx.sparks(c, [0, 1, 0], 14, [1, 0.35, 0.15, 1]); g.fx.ring({ p: c, n: [0, 1, 0], r0: 0.2, r1: 1.4, life: 0.35, w: 0.08, c: [1, 0.3, 0.15, 0.95] });
+        if (v.isPlayer) { g.hud.hit(ph.crack); this.g.shake(0.3); } else this.shake(0.15);
+      }
+      if (v.status === 'dead') { this.release(); return; }
+      if (ph.end) { this.release(); return; }
+    } else { const b = t.ref; b.lifted = 0.2; const ty = 1.7; b.vel[1] += (ty - b.pos[1]) * 6 * dt - b.vel[1] * 4 * dt; b.vel[0] += (p.pos[0] + this.flat(this.aim())[0] * 4.5 - b.pos[0]) * 2 * dt; b.vel[2] += (p.pos[2] + this.flat(this.aim())[2] * 4.5 - b.pos[2]) * 2 * dt; b.glow = 0.7; b.pos[1] += (ty - b.pos[1]) * Math.min(1, dt * 3); }
+    // no line from the hand to the victim: the grip shows only at their throat (sparks and the closing rings)
+    if (Math.random() < 0.6) g.fx.emit({ p: [c[0] + rnd(-0.25, 0.25), c[1] + rnd(-0.2, 0.3), c[2] + rnd(-0.25, 0.25)], v: [rnd(-0.4, 0.4), rnd(-0.2, 0.4), rnd(-0.4, 0.4)], life: 0.4, size: rnd(0.03, 0.07), c0: [1, 0.35, 0.1, 0.9], c1: [0.8, 0.1, 0.05, 0] });
+    if (Math.floor(this.gripT * 6) !== Math.floor((this.gripT - dt) * 6)) g.fx.ring({ p: c, n: v3.norm(v3.sub(h, c)), r0: 0.7, r1: 0.25, life: 0.35, w: 0.05, c: [1, 0.3, 0.15, 0.9], seg: 24 });
+    if (t.type === 'npc' && v3.dist(c, p.chest()) > 16) this.release();
+  }
+  end_grip(silent) {
+    const t = this.target; this.target = null;
+    if (t && t.type === 'npc' && (t.ref.status === 'gripped' || t.ref.remote)) t.ref.grip(false, 0, { free: this.brokenFree, soft: this.gripLevel <= 1 });
+    if (t && t.type === 'prop') { t.ref.lifted = 0; }
+    this.brokenFree = false; this.p.endForce();
+  }
+  do_lightning() {
+    const g = this.g, p = this.p; this.holding = 'lightning'; this.anim('BOTH_FORCELIGHTNING_START', { durMs: 160, hold: true }); this.lt = 0; this.ltPhase = 'start';
+    g.sfxAt('lightning', p.pos, 1); this.loops.hold = g.sfx.loop('lightning2', { vol: this.npc ? 0.18 : 0.35 }); this.regenBolts(); this.hitT = 0;
+  }
+  // Saber throw + Lightning: your own thrown saber in front of you takes the lightning
+  chargedSaber() {
+    const T = this.p.thrown; if (!T) return null; const o = this.origin(), v = v3.sub(T.pos, o), L = v3.len(v);
+    return L < 18 && L > 0.3 && v3.dot(v3.scale(v, 1 / L), this.lightningAim()) > Math.cos(65 * Math.PI / 180) ? T : null;
+  }
+  // Unlike generic aim(), this ignores an optional saber target lock. Player
+  // camera direction alone controls the electrical spread.
+  lightningAim() { return this.npc ? this.aim() : this.g.aimDir(true); }
+  // Normal Lightning is an unassisted shotgun-style field in front of the aim,
+  // not a lock-on to the nearest enemy. Every hostile inside the field can be hit.
+  lightningHits() {
+    const origin = this.origin(), direction = this.lightningAim();
+    return this.targets().filter(t => t.type === 'npc' && hostile(this.p, t.ref) &&
+      t.ref.status !== 'dead' && insideLightningCone(origin, direction, t.center())).map(t => ({ t }));
+  }
+  regenBolts() {
+    const g = this.g, d = this.lightningAim(), hands = this.hands(d);
+    const S = this.chargedSaber();
+    if (S) { // hands -> saber, then saber -> every foe in reach of it
+      this.bolts.length = 0; const mk = (a, b, w, j) => this.bolts.push({ pts: bolt(a, b, 9, j), br: [], w });
+      mk(hands[0], S.pos, 1, 0.22); mk(hands[1], S.pos, 0.9, 0.22);
+      for (const f of g.foesOf(this.p)) if (v3.dist(f.chest(), S.pos) < SABER_ARC_R) mk(S.pos, f.chest(), 0.8, 0.3);
+      for (let i = 0; i < 2; i++) mk(S.pos, v3.addS(S.pos, v3.norm([rnd(-1, 1), rnd(-0.6, 1), rnd(-1, 1)]), rnd(0.6, 1.4)), 0.5, 0.15);
+      this.ltTargets = []; return;
+    }
+    // Freely spray visible arcs across the aiming cone. None terminate at or
+    // pursue enemy coordinates; hit detection below uses this same cone.
+    this.bolts.length = 0;
+    const mk = (a, b, w = 1, jit = 0.18) => { const pts = bolt(a, b, 9, jit); const br = []; if (Math.random() < 0.6) { const k = 2 + Math.floor(Math.random() * 5), t = pts[k]; const e = v3.addS(t, v3.norm([rnd(-1, 1), rnd(-0.5, 1), rnd(-1, 1)]), rnd(0.5, 1.4)); br.push(bolt(t, e, 4, 0.12)); } this.bolts.push({ pts, br, w }); };
+    for (let i = 0; i < 5; i++) {
+      const from = hands[i % 2];
+      const end = lightningSpreadEnd(from, d, rnd(4.5, 9.3), Math.random(), Math.random());
+      end[1] = Math.max(0.05, end[1]);
+      mk(from, end, rnd(0.7, 1), 0.18);
+    }
+    this.ltTargets = this.lightningHits();
+  }
+  tick_lightning(dt) {
+    const g = this.g, p = this.p; this.fp -= 14 * dt; this.lt += dt;
+    if (this.ltPhase === 'start' && this.lt > 0.16) { this.ltPhase = 'hold'; this.anim('BOTH_FORCELIGHTNING_HOLD', { durMs: 300, hold: true, loop: true }); }
+    this.hitT -= dt; const hands = this.hands(this.lightningAim());
+    const S = this.chargedSaber();
+    if (S) { // the charged saber: double drain, arcs from the blade to every foe near it
+      this.fp -= 14 * dt; S.chargedUntil = g.t + 0.25;
+      for (const v of g.foesOf(p)) {
+        if (v.status === 'dead' || v3.dist(v.chest(), S.pos) >= SABER_ARC_R) continue;
+        const VF = g.forceOf(v), lm = lightningMul(this.absorbDef(v), this.lv.lightning, 1);
+        if (lm.mul <= 0) { if (VF) VF.addFp(12 * dt); this.absorbFx(v, dt); continue; }
+        v.electrify(0.25); v.hurt(SABER_ARC_DPS * dt * p.damageMul * this.dmgScale * lm.mul, p, { noFlinch: true });
+        if (this.hitT <= 0) g.sfxAt('lhit' + (1 + Math.floor(Math.random() * 3)), v.chest(), 0.7); if (Math.random() < 0.5) g.fx.sparks(v.chest(), [0, 1, 0], 2, [0.6, 0.8, 1, 1]);
+      }
+      if (this.hitT <= 0) this.hitT = 0.28; g.lightFlash = 0.7; g.lightFlashPos = S.pos; return;
+    }
+    // Holding Lightning stays directional at every duration. A 360-degree
+    // auto-striking storm would violate player-controlled forward aiming.
+    this.ltTargets = this.lightningHits();
+    for (const { t } of this.ltTargets) {
+      if (g.tryClash?.(p, t.ref, 'lightning')) return; // a facing stream can still clash
+    }
+    for (const h of (this.ltTargets || [])) {
+      const t = h.t;
+      if (t.type === 'npc') {
+        const v = t.ref; if (v.status === 'dead') continue;
+        const VF = g.forceOf(v), lm = lightningMul(this.absorbDef(v), this.lv.lightning, 1);
+        if (lm.mul <= 0) { if (VF) VF.addFp(12 * dt); this.absorbFx(v, dt); continue; } // Force Absorb: no damage, the absorber gains Force
+        if (v.kind === 'darkjedi' || v.isPlayer || v.remote) v.electrify(0.25); else v.shock(true); // fighters keep control, training droids are stunned
+        v.hurt(26 * dt * p.damageMul * this.dmgScale * lm.mul, p, { noFlinch: true });
+        if (v.status === 'dead' && !v.zapped) { v.zapped = true; }
+        if (!v.isPlayer && v.kind !== 'darkjedi' && !v.remote) this.bodyArcs(v);
+        if (this.hitT <= 0) { g.sfxAt('lhit' + (1 + Math.floor(Math.random() * 3)), t.center(), 0.7); }
+        if (Math.random() < 0.6) g.fx.sparks(t.center(), [0, 1, 0], 2, [0.6, 0.8, 1, 1]);
+      } else {
+        t.ref.flash = 1; t.ref.hp -= 10 * dt;
+        if (this.hitT <= 0) { g.sfxAt('lhit' + (1 + Math.floor(Math.random() * 3)), t.center(), 0.7); }
+        if (Math.random() < 0.6) g.fx.sparks(t.center(), [0, 1, 0], 2, [0.6, 0.8, 1, 1]);
+      }
+    }
+    if (this.hitT <= 0) this.hitT = 0.28;
+    for (const hnd of hands) if (Math.random() < 0.5) g.fx.emit({ p: hnd, v: [rnd(-1, 1), rnd(-0.5, 1.2), rnd(-1, 1)], life: 0.25, size: 0.04, c0: [0.7, 0.85, 1, 1], c1: [0.4, 0.5, 1, 0] });
+    g.lightFlash = 0.6; g.lightFlashPos = hands[0];
+  }
+  // the lightning storm: the left hand raised, open palm (Jedi Outcast's quick heal gesture, held); a strike on each foe
+  // within STORM_RADIUS m about every 0.6 s, nearest first, at most STORM_STRIKES_PER_S in all
+  tickStorm(dt) {
+    const g = this.g, p = this.p, now = g.t, S = this.storm ??= { next: new Map() };
+    if (!S.posed) {
+      S.posed = true; this.bolts.length = 0; this.ltTargets = [];
+      p.actor.setTorso('BOTH_FORCEHEAL_QUICK', { blend: 0.25, restart: true, loop: false, speed: 0.02, startAt: 0.48 / 0.02 });
+      g.sfxAt('lightning2', p.pos, 1); g.shake?.(0.25); if (p.isPlayer) g.banner('LIGHTNING STORM', [0.7, 0.85, 1], 1.2);
+    }
+    this.fp -= STORM_DRAIN * dt; // on top of the channel's own drain
+    const palm = p.actor.bonePos('lhand'), from = [palm[0], palm[1] + 0.15, palm[2]];
+    const foes = g.foesOf(p).filter(v => v.status !== 'dead' && !(v.spawnShield > now) && Math.abs(v.pos[1] - p.pos[1]) < 15 && Math.hypot(v.pos[0] - p.pos[0], v.pos[2] - p.pos[2]) <= STORM_RADIUS)
+      .sort((a, b) => Math.hypot(a.pos[0] - p.pos[0], a.pos[2] - p.pos[2]) - Math.hypot(b.pos[0] - p.pos[0], b.pos[2] - p.pos[2]));
+    S.budget = Math.min(6, (S.budget || 0) + STORM_STRIKES_PER_S * dt);
+    for (const v of foes) { if (S.budget < 1) break; if (now < (S.next.get(v) ?? 0)) continue; S.next.set(v, now + rnd(0.45, 0.75)); S.budget -= 1; this.stormStrike(v, from); }
+    if (Math.random() < 0.7) g.fx.emit({ p: from, v: [rnd(-0.6, 0.6), rnd(1.5, 4), rnd(-0.6, 0.6)], life: 0.3, size: 0.05, c0: [0.8, 0.9, 1, 1], c1: [0.4, 0.5, 1, 0] });
+    g.lightFlash = Math.max(g.lightFlash, 0.45); g.lightFlashPos = from;
+  }
+  // one strike: the bolt climbs from the palm, crosses the sky and comes straight down on them (a U)
+  stormStrike(v, from) {
+    const g = this.g, p = this.p, c = v.chest(), VF = g.forceOf(v), lm = lightningMul(this.absorbDef(v), this.lv.lightning, 1);
+    const up = [from[0], from[1] + 9, from[2]], over = [c[0], c[1] + 12, c[2]], pts = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20, a = (1 - t) ** 3, b = 3 * (1 - t) ** 2 * t, e = 3 * (1 - t) * t * t, d = t ** 3, q = [0, 1, 2].map(k => a * from[k] + b * up[k] + e * over[k] + d * c[k]);
+      if (i > 0 && i < 20) for (let k = 0; k < 3; k++) q[k] += rnd(-0.4, 0.4); pts.push(q);
+    }
+    this.stormBolts.push({ pts, t: STORM_BOLT_S });
+    g.fx.sparks(c, [0, 1, 0], 8, [0.7, 0.85, 1, 1]); g.sfxAt('lhit' + (1 + Math.floor(Math.random() * 3)), c, 0.8); g.flashLight?.(c, [0.6, 0.75, 1], 0.12);
+    if (lm.mul <= 0) { if (VF) VF.addFp(4); this.absorbFx(v, 0.1); return; } // Force Absorb: no damage, the absorber gains Force
+    v.markAttacker?.(p); v.electrify(0.45); v.hurt(STORM_DMG * p.damageMul * this.dmgScale * lm.mul, p, { noFlinch: true });
+  }
+  absorbFx(v, dt) {
+    const g = this.g; if (Math.random() < 0.7) g.fx.sparks(v.chest(), [0, 1, 0], 2, [0.75, 0.45, 1, 1]);
+    if (this.absorbMsgT <= 0) { this.absorbMsgT = 0.9; g.sfxAt('absorbhit', v.pos, 0.8); g.banner('LIGHTNING ABSORBED', [0.78, 0.5, 1]); }
+  }
+  bodyArcs(n) { this.g.bodyArc(n); }
+  end_lightning(silent) { this.storm = null; if (!silent) this.p.playForce('BOTH_FORCELIGHTNING_RELEASE', { durMs: 420 }); this.ltTargets = []; this.g.lightFlash = 0; }
+  do_heal() {
+    const g = this.g, p = this.p; this.holding = 'heal'; p.forceHold = false; this.healT = 0; this.healCompleted = false;
+  }
+  tick_heal(dt) {
+    const g = this.g, p = this.p; this.healT += dt;
+    // pay per point healed: what is left in the tank limits how far this heal goes
+    const gain = Math.min(p.maxHp - p.hp, this.healRate * dt, Math.max(0, this.fp) / HEAL_FP_PER_HP); this.fp -= gain * HEAL_FP_PER_HP; p.hp += gain; p.healFlash = 0.6;
+    if (this.fp <= 0.01 && p.hp < p.maxHp) { this.say('Out of Force'); this.release(); return; }
+    p.forceHold = false;
+    if (Math.random() < 0.9) { const a = rnd(0, 6.28), r = rnd(0.2, 0.8); g.fx.emit({ p: [p.pos[0] + Math.cos(a) * r, rnd(0.1, 0.6), p.pos[2] + Math.sin(a) * r], v: [0, rnd(0.7, 1.8), 0], life: rnd(0.8, 1.4), size: rnd(0.04, 0.1), c0: [0.4, 1, 0.55, 0.9], c1: [0.2, 0.9, 0.4, 0] }); }
+    if (Math.floor(this.healT * 1.4) !== Math.floor((this.healT - dt) * 1.4)) { g.fx.ring({ p: [p.pos[0], 0.05, p.pos[2]], n: [0, 1, 0], r0: 0.2, r1: 1.6, life: 0.9, w: 0.1, c: [0.35, 1, 0.5, 0.8] });  }
+    if (p.hp >= p.maxHp) { this.healCompleted = true; this.release(); }
+  }
+  end_heal(silent) { this.p.forceHold = false; if (!silent && this.healCompleted) this.g.sfxAt('heal', this.p.pos, 1); this.healCompleted = false; }
+  do_drain() {
+    const g = this.g, p = this.p; const c = this.cone(10, 30, { npcOnly: true })[0]; if (!c) { this.fp += 10; this.say('Force Drain: no target'); return; }
+    this.holding = 'drain'; this.target = c.t; this.anim('BOTH_FORCEGRIP_HOLD', { durMs: 300, hold: true }); g.sfxAt('drain', p.pos, 1); this.dt2 = 0;
+  }
+  tick_drain(dt) {
+    const g = this.g, p = this.p, t = this.target; if (!t || t.ref.status === 'dead') { this.release(); return; }
+    const v = t.ref, VF = g.forceOf(v), lm = lightningMul(this.absorbDef(v), this.lv.drain, 1);
+    const c = t.center(), hands = this.hands(), h = v3.lerp(hands[0], hands[1], 0.5);
+    if (lm.mul <= 0) { if (VF) VF.addFp(12 * dt); g.banner('DRAIN ABSORBED', [0.78, 0.5, 1]); this.release(); return; }
+    this.fp += 3 * dt; p.hp = Math.min(p.maxHp, p.hp + 9 * dt * lm.mul); v.hurt(15 * dt * p.damageMul * this.dmgScale * lm.mul, p, { noFlinch: true }); if (v.kind === 'darkjedi' || v.isPlayer || v.remote) v.electrify(0.25); else v.shock(true); this.dt2 += dt;
+    this.beam = { a: h, b: c, col: [0.8, 0.2, 1] };
+    for (let i = 0; i < 2; i++) { const k = Math.random(); g.fx.emit({ p: v3.lerp(c, h, k), v: v3.scale(v3.norm(v3.sub(h, c)), 5), life: 0.3, size: 0.05, c0: [0.85, 0.3, 1, 0.9], c1: [0.5, 0.1, 0.8, 0] }); }
+    if (this.dt2 > 0.5) { this.dt2 = 0; g.sfxAt('drained', v.pos, 0.5); }
+    if (v3.dist(c, p.chest()) > 12) this.release();
+  }
+  end_drain() { this.p.endForce(); this.target = null; }
+  // ---------------- drawing
+  draw(R) {
+    const g = this.g;
+    if (this.beam) { const b = this.beam; const pts = bolt(b.a, b.b, 14, 0.06); for (let i = 0; i < pts.length - 1; i++) { R.beam(pts[i], pts[i + 1], 0.06, [b.col[0], b.col[1], b.col[2], 0.3]); R.beam(pts[i], pts[i + 1], 0.018, [1, 0.8 + b.col[1] * 0.2, 0.8, 0.9]); } }
+    if (this.holding === 'lightning' && !this.storm) for (const bl of this.bolts) { drawBolt(R, bl.pts, [0.55, 0.75, 1], bl.w); for (const br of bl.br) drawBolt(R, br, [0.55, 0.75, 1], 0.55); }
+    for (const sb of this.stormBolts) { const a = Math.max(0, sb.t / STORM_BOLT_S), P = sb.pts; for (let i = 0; i < P.length - 1; i++) { R.beam(P[i], P[i + 1], 0.16, [0.55, 0.7, 1, 0.35 * a]); R.beam(P[i], P[i + 1], 0.04, [1, 1, 1, 0.95 * a]); } } // the storm's bolts
+    const c = this.p.chest();
+    for (const id of ['protect', 'absorb']) if (this.active[id]) { const col = id === 'protect' ? [0.3, 0.9, 0.7] : [0.7, 0.4, 1]; const pulse = 0.5 + 0.15 * Math.sin(g.t * 5); R.billboard(c, 1.55, [col[0], col[1], col[2], 0.20 * pulse], 0); R.billboard(c, 1.2, [col[0], col[1], col[2], 0.12], 0); }
+    if (this.active.rage) R.billboard(c, 1.4, [1, 0.1, 0.05, 0.12 + 0.05 * Math.sin(g.t * 8)], 0);
+    if (this.active.speed) R.billboard(c, 1.3, [0.4, 0.7, 1, 0.07], 0);
+    const T = this.p.thrown; if (T && T.chargedUntil > g.t) { R.billboard(T.pos, 0.75 + 0.15 * Math.sin(g.t * 40), [0.55, 0.78, 1, 0.45], 0); R.billboard(T.pos, 0.3, [1, 1, 1, 0.8], 0); } // charged saber
+    if (this.pulsing) R.billboard(c, 0.6 + (g.t - this.pulsing.t0) * 3, [1, 0.8, 0.45, 0.25], 0);
+  }
+}
+function POW(id) { return POWER_BY_ID[id]; }
