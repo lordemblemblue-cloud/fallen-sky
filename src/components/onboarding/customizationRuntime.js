@@ -8,6 +8,7 @@ import { bindCreatorHairColor } from './creatorHairColor.js';
 import { ensureHairSprings, disposeHairSprings } from './hairSprings.js';
 import { ensureFemaleBodySprings, disposeFemaleBodySprings } from './bodySprings.js';
 import { applyBodyMasks, layerBodyMask, gloveHandSides } from './armorBodyMask.js';
+import { applyArmorEnchantGlow } from '../game3d/enchantVfx/armorEnchantGlow.js';
 export { applyBodyMasks, layerBodyMask };
 // Layer-owned secondary bones (hair spring chains from tools/avatar-fuse, cape chains
 // from tools/avatar-armor) do not exist on the body: they keep their own joints and
@@ -311,6 +312,10 @@ export class AvatarCustomizationRuntime {
     }
    });}));
   });
+  // Enchantment light inside each worn armor piece (game3d/enchantVfx). Only appearances built
+  // from the Game 3D inventory carry game3d_armor_enchant; the creator's never do.
+  try{applyArmorEnchantGlow(this.layers,this.appearance.game3d_armor_enchant);}
+  catch(error){console.warn('[Game 3D] Armor enchantment light skipped:',error);}
  }
  restoreHidden(){this.hidden.forEach((value,node)=>{node.visible=value;});this.hidden.clear();}
  disposeItem(item){(item.root.userData.surfaceMeshes||[]).forEach(disposeLayer);disposeLayer(item.root);}

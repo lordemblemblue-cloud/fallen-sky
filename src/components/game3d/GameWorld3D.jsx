@@ -60,6 +60,8 @@ import { createMountedWeaponPresentation } from './player/mountedWeaponPresentat
 import { createEquippedBowGLBPresentation } from './player/equippedBowGLBPresentation.mjs';
 import { createPlayerWeaponRuntime } from './weapons/playerWeaponRuntime.js';
 import { createPlayerWeaponSummon, resolveSpaceAction } from './weapons/playerWeaponSummon.js';
+import { createWeaponEnchantVfx } from './enchantVfx/weaponEnchantVfx.js';
+import { createEnchantPercentCache } from './enchantVfx/enchantVisualState.js';
 import { inferAXEMasteryWeaponId } from './axe/weapons/AXEWeaponIdentity';
 import { getAbilityState, tickCooldowns as tickLegacyAbilityCooldowns, startCooldown as startLegacyAbilityCooldown, clearTarget, updateTargetHP, ABILITY_DEFINITIONS } from './abilityStore';
 import { getLoadout, cycleSkillPreset, startCooldown as startSkillCooldown, tickCooldowns as tickSkillCooldowns } from './skills/loadoutStore';
@@ -1798,6 +1800,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Weapon in hand: summoned (oil-metal forming) and dismissed, never sheathed (weapons/).
     let weaponRuntime = null;
     let weaponSummon = null;
+    // Enchantment light on the held weapon: its own renderer, the armor's shared rules (enchantVfx/).
+    let weaponEnchantVfx = null;
+    let enchantPercentCache = null;
     let weaponPlayerMoving = false;
     let lastMountedWeaponObject = null;
     let haloVisualRuntime = null;
@@ -2048,6 +2053,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // hold the playable actor in its bind pose while a request is pending.
       playerAnim.bindClips(initialPlayerAnimationClips(fbx));
       // The weapon pack (public/game3d/weapons) is summoned into the hand and melted away again.
+      weaponEnchantVfx?.dispose();
+      enchantPercentCache?.dispose();
       weaponSummon?.dispose();
       weaponRuntime?.dispose();
       weaponRuntime = createPlayerWeaponRuntime({ model: fbx, scene, bodyHeight: window.__gw3dPlayerHeight || 1.7 });
@@ -2058,6 +2065,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime,
         bodyHeight: window.__gw3dPlayerHeight || 1.7 }); }
       catch (error) { console.warn('[Game 3D clone] weapon combo rig bake unavailable', error); weaponCombos = null; }
+      // The held weapon's enchantment light (enchantVfx/weaponEnchantVfx.js): visual only.
+      enchantPercentCache = createEnchantPercentCache();
+      weaponEnchantVfx = createWeaponEnchantVfx({ getPercent: (item) => enchantPercentCache?.get(item) || 0 });
+      window.__game3dWeaponEnchantVfx = weaponEnchantVfx; // QA: __game3dWeaponEnchantVfx.describe()
       coreAnimationController = new CoreAnimationController({ legacyController: playerAnim });
 
       // ─── Spawn all 5 Quest NPCs as individual archer model copies ───
@@ -3122,6 +3133,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       weaponSummon?.update(delta, { state: playerAnim?.getCurrent?.(), aiming: !!playerAnim?.getIsAiming?.(),
         moving: weaponPlayerMoving, inCombat: isInCombat(),
         externalRoot: weaponSummon?.getVisual()?.type === 'external' ? model?.getObjectByName?.('AXE_Equipped_Training_Bow') || null : null });
+      // The held weapon's enchantment light: internal glow, tight aura and anchored sparks (visual only).
+      weaponEnchantVfx?.update(delta, { roots: weaponRuntime?.getRoots() || [], item: equippedForAnimation,
+        kind: equippedFamily === 'bow' ? 'bow' : 'blade' });
       weaponCombos?.update();
       // Claude combo presentation cues; avoid duplicate bow arrows. Existing
       // charged-shot hit resolution and bowVisuals remain authoritative.
@@ -5121,6 +5135,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       heldBowPresentation?.dispose();
       heldBowPresentation = null;
       heldBowPlayer = null;
+      weaponEnchantVfx?.dispose();
+      weaponEnchantVfx = null;
+      enchantPercentCache?.dispose();
+      enchantPercentCache = null;
+      if (window.__game3dWeaponEnchantVfx) delete window.__game3dWeaponEnchantVfx;
       weaponSummon?.dispose();
       weaponSummon = null;
       weaponCombos = null;

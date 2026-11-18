@@ -23,6 +23,8 @@ import CostumeSubTab from '../../progression/hub/CostumeSubTab';
 import AXECompanionWorkspace from './AXECompanionWorkspace';
 import AXESkillBookWorkspace from './AXESkillBookWorkspace';
 import AXEQuestLogbookWorkspace from './AXEQuestLogbookWorkspace';
+import EnchantLightPreview from '../../enchantVfx/EnchantLightPreview';
+import { projectEnchantPercent } from '../../enchantVfx/enchantVisualState.js';
 
 import {
   getItemEnchantments,
@@ -503,6 +505,11 @@ export function EquipmentServicePanel({
             <Stat label="Sockets" value={`${sockets.sockets?.length || 0}/${sockets.maxSockets || 0}`} />
             <Stat label="Aura" value={aura ? `Tier ${aura.tierRank || 1}` : 'None'} />
           </div>
+
+          {/* The item's enchantment light now and after a successful operation (visual only). */}
+          <EnchantLightPreview item={item}
+            proposedPercent={['reinforcement', 'enchant', 'over_enchant'].includes(serviceId)
+              ? projectEnchantPercent(item, serviceId) : null} />
 
           {/* Real resource inventory */}
           <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.025] p-4" data-service-resource-summary>

@@ -35,6 +35,7 @@ import {
   getAXEItemAura,
   subscribeAXEAura,
 } from '../../axe/equipment/AXEEquipmentAuraStore';
+import EnchantLightPreview from '../../enchantVfx/EnchantLightPreview';
 
 const FILTERS = [
   { id: 'all', label: 'All Gear' },
@@ -250,6 +251,7 @@ export default function CharacterInventoryTab({ onOpenService }) {
             <Info label="Sockets" value={`${sockets.sockets?.length || 0}/${sockets.maxSockets || 0}`} />
             <Info label="Aura" value={aura ? `Tier ${aura.tierRank || 1}` : 'None'} />
           </div>
+          <EnchantLightPreview item={selected} compact />
 
           <div className="mt-6">
             <div className="flex items-center gap-2">

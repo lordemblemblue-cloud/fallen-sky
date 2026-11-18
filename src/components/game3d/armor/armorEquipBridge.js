@@ -14,6 +14,8 @@ import { loadBuiltinLayers } from '@/components/onboarding/creatorBuiltinLayers'
 import { getActiveCharacter } from '../characterStore';
 import { getEquippedAXEItems, subscribeAXEEquipmentInventory } from '../axe/equipment/AXEEquipmentInventoryStore';
 import { equippedAXEArmorPieces, AXE_ARMOR_PACK_SETS, AXE_DEV_ARMOR_SETS } from '../axe/equipment/AXEArmorPackCatalog';
+import { getArmorEnchantMap, subscribeEnchantments } from '../enchantVfx/enchantVisualState.js';
+import { armorEnchantKey } from '../enchantVfx/enchantEquipment.mjs';
 import {
   armorSlotOf as slotOf,
   withEquippedArmor as mergeArmor,
@@ -93,6 +95,18 @@ export function useArmoredAppearance(appearance, characterId) {
     const next = equippedAXEArmorPieces(snapshot?.items || []);
     setInventoryWorn((previous) => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
   }), []);
+  // Enchantment light per worn piece, from each piece's own item instance (enchantVfx/).
+  // Refreshed on equip changes, every Blacksmith upgrade and character switches.
+  const [armorEnchant, setArmorEnchant] = useState(() => getArmorEnchantMap(getEquippedAXEItems()));
+  useEffect(() => {
+    const refresh = () => {
+      const next = getArmorEnchantMap(getEquippedAXEItems());
+      setArmorEnchant((previous) => armorEnchantKey(previous) === armorEnchantKey(next) ? previous : next);
+    };
+    const offInventory = subscribeAXEEquipmentInventory(refresh);
+    const offEnchant = subscribeEnchantments(refresh);
+    return () => { offInventory?.(); offEnchant?.(); };
+  }, []);
   const [pieces, setPieces] = useState([]);
   const [manifestState, setManifestState] = useState({bodyId:null,ready:false,error:''});
   const equippedPieceIds = Object.values(inventoryWorn).filter(Boolean).sort().join('|');
@@ -154,7 +168,9 @@ export function useArmoredAppearance(appearance, characterId) {
         delete safeSelection[slot];
     const safeAppearance=unrenderableSlots.size
       ?{...appearance,selected_assets:safeSelection}:appearance;
-    const result=withEquippedArmor(safeAppearance,resolved,pieces);
+    const merged=withEquippedArmor(safeAppearance,resolved,pieces);
+    // Each worn piece's enchantment light (read by customizationRuntime -> armorEnchantGlow).
+    const result=merged&&typeof merged==='object'?{...merged,game3d_armor_enchant:armorEnchant}:merged;
     // The inventory owns the equipment. If a GLB was never authored for a
     // particular armor set/body, report that specific gap instead of silently
     // showing an unchanged character in the world and every 3D viewer.
@@ -171,7 +187,7 @@ export function useArmoredAppearance(appearance, characterId) {
         .map(([slot,id])=>slot+': no fitted 3D model for '+id);
     }
     return warnings.length?{...result,game3d_armor_visual_warnings:warnings}:result;
-  },[appearance,resolved,pieces,inventoryWorn,body,manifestState]);
+  },[appearance,resolved,pieces,inventoryWorn,body,manifestState,armorEnchant]);
 }
 
 if (typeof window !== 'undefined' && !window.__axeArmorEquipBridge) {
