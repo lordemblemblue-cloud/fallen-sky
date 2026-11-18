@@ -2903,7 +2903,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Cave cliff/void protection uses the SAME ground raycast as player feet.
     // Seven-foot rim band prevents lateral fall-through without flattening
     // the mountain, falsifying a floor or changing the official cave portals.
-    if((region==='wolfveil'||region===WOLFVEIL_CAVES_REGION) && !dedicatedMode && mapReady &&
+    if(region==='wolfveil' && !dedicatedMode && mapReady &&
        !wolfveilVillage?.caveSystem?.isActive?.() &&
        (model.position.x!==fromX || model.position.z!==fromZ) &&
        shouldRejectCaveGroundStep({
