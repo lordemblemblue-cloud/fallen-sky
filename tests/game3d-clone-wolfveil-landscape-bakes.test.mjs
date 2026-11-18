@@ -365,3 +365,47 @@ test("the owner's elm model is present in the clone (no lollipop placeholder elm
   assert.ok(b.length>1_000_000);
   assert.ok(read('src/components/game3d/render/forestOwnerElmAssets.js').includes('/game3d/elm-owner-optimized.glb'));
 });
+
+// --- existing rock meshes folded into the baked field ----------------------
+import {createWolfveilBakedRockField} from '../src/components/game3d/wolfveil/WolfveilBakedRocks.js';
+
+test('path-edge / owner-square / gorge stones fold into the baked field without touching their meshes',()=>{
+  const world={group:new THREE.Group()};
+  let ready=null;
+  const field=createWolfveilBakedRockField(world,[],{heightAt:()=>0,loader:{load(url,ok){ready=ok;}}});
+  const geo=new THREE.IcosahedronGeometry(1,1),shared=new THREE.MeshStandardMaterial();
+  shared.name='Wolfveil_WeatheredPathEdgeStone';
+  const stones=new THREE.InstancedMesh(geo,shared,2);
+  const m=new THREE.Matrix4();
+  stones.setMatrixAt(0,m.compose(new THREE.Vector3(0,0,0),new THREE.Quaternion(),new THREE.Vector3(.3,.12,.3)));
+  stones.setMatrixAt(1,m.compose(new THREE.Vector3(10,0,0),new THREE.Quaternion(),new THREE.Vector3(.3,.12,.3)));
+  stones.setColorAt(0,new THREE.Color(.2,.3,.2));stones.setColorAt(1,new THREE.Color(.4,.4,.4));
+  const square=new THREE.InstancedMesh(geo,shared,1);   // owner square sharing the material
+  const gorgeMat=new THREE.MeshStandardMaterial();
+  const gorge=new THREE.InstancedMesh(geo,gorgeMat,1);
+  gorge.setMatrixAt(0,m.compose(new THREE.Vector3(2,0,2),new THREE.Quaternion(),new THREE.Vector3(3,2,3)));
+  world.group.add(stones,square,gorge);
+  assert.equal(field.adopt(stones,{variants:['rubble','flat'],copyColors:true,scale:.9}),2);
+  assert.equal(field.adopt(gorge,{variants:['boulder'],keepRaycast:true}),1);
+  assert.equal(field.count,3);
+  assert.ok(stones.visible&&gorge.material===gorgeMat,'nothing changes until the GLB is ready');
+  const scene=new THREE.Group();
+  for(const v of WOLFVEIL_BAKED_ROCKS.variants)for(let lod=0;lod<3;lod++){
+    const node=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial());
+    node.name=`wv_rock_${v}_LOD${lod}`;scene.add(node);
+  }
+  ready({scene});
+  assert.equal(field.ready,true);
+  assert.equal(stones.visible,false,'decorative stones hide once baked copies are live');
+  assert.equal(square.visible,true,'a mesh that was not adopted is untouched');
+  assert.equal(shared.colorWrite,true,'the shared owner-tile material is never mutated');
+  assert.ok(gorge.visible&&gorge.material!==gorgeMat&&gorge.material.colorWrite===false,
+    'raycast meshes keep raycasting through an invisible material clone');
+  field.setFilter(x=>x<5);
+  field.update(0,0);
+  const drawn=field.lodCounts.reduce((a,b)=>a+b,0);
+  assert.equal(drawn,2,'region filter drops the stone at x=10');
+  field.dispose();
+  assert.equal(stones.visible,true);
+  assert.equal(gorge.material,gorgeMat);
+});

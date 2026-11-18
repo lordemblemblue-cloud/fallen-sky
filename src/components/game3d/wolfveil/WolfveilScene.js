@@ -202,9 +202,9 @@ export function createWolfveilVillage(scene,options={}){
     compactPathLights:quietEntryDecor,
   });
   // Game 3D: the gorge boulders draw as baked rock (their own mesh keeps
-  // its raycasts and transforms, it only stops writing colour/depth).
+  // its raycasts and transforms through an invisible material clone).
   bakedRocks?.adopt(world.meshes.find(m=>m.name==='SWV_Gorge_BasaltRockTerraceErosion'),
-    {variant:'boulder',tint:[.5,.52,.54]});
+    {variants:['boulder','block'],tint:[.5,.52,.54],keepRaycast:true});
   const vegetation=buildWolfveilVegetation(world,{
     blueCanopy:false, // owner trees use bark browns and natural green foliage
   });
@@ -220,6 +220,13 @@ export function createWolfveilVillage(scene,options={}){
         importedTownAtMarket:Boolean(options.importedTownAtMarket),
       })
     :null;
+  // Game 3D: weathered path-edge stones and the owner squares' stones (all
+  // drawn with the shared 'Wolfveil_WeatheredPathEdgeStone' material) become
+  // baked rock with each instance's own tile tint. Their meshes, counts and
+  // matrices are untouched; they only hide once the baked copies are live.
+  if(bakedRocks)for(const mesh of world.meshes.filter(m=>m.isInstancedMesh&&
+    m.material?.name==='Wolfveil_WeatheredPathEdgeStone'))
+    bakedRocks.adopt(mesh,{variants:['rubble','flat','boulder'],copyColors:true,scale:.9});
   const individualGrass=options.groundCover
     ?buildWolfveilIndividualGrassField(world,{
         terrainSpan:options.span||1100,
