@@ -2229,11 +2229,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     // Click-to-move: a Settings option, off by default (axe/player/AXEClickToMove.js). With it off,
     // nothing below changes WASD play. Walkable = terrain under the point, inside the arena clamp.
-    const arenaRadius = region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:36.5; // dungeon bounds use their dedicated collision geometry
+    const arenaRadius = region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:region===WOLFVEIL_CAVES_REGION?675:36.5; // dungeon bounds use their dedicated collision geometry
     // Wolfveil is an explorable landscape, not the 36.5m combat test arena.
     // Both click-to-move and keyboard movement stop only at actual terrain edges.
     const isClickMoveWalkable = (x, z) =>
-      (region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
+      (region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||region===WOLFVEIL_CAVES_REGION||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
     const clickMoveMarker = createAXEClickToMoveMarker(scene);
     const clickToMove = createAXEClickToMove({
       isEnabled: isAXEClickToMoveEnabled,
@@ -2884,7 +2884,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         model.position.x=fromX;
         model.position.z=fromZ;
       }
-    }else if (distFromCenter > arenaRadius) {
+    }else if (region!==WOLFVEIL_CAVES_REGION && distFromCenter > arenaRadius) {
       const edgeScale = arenaRadius / distFromCenter;
       model.position.x *= edgeScale;
       model.position.z *= edgeScale;
