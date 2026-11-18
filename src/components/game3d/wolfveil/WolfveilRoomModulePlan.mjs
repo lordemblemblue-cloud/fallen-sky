@@ -70,7 +70,7 @@ export function instantiateWolfveilRoomModule(moduleId,{
     return {
       id:direction,
       x:x+normal[0]*reach,
-      y:y+module.socketHeight,
+      y:y+module.socketHeight*0.5,
       z:z+normal[1]*reach,
       normal,
       width:module.socketWidth,
