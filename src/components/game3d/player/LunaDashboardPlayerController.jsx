@@ -324,12 +324,15 @@ export function createLunaDashboardPlayerController({
     if (!moving) {
       if (aiming && hasAction('aimOverdraw')) return 'aimOverdraw';
       if (aiming && hasAction(STATES.COMBAT_IDLE)) return STATES.COMBAT_IDLE;
-      if (!aiming && !blocking && idleStartedAt !== null && now() - idleStartedAt >= PLAYER_AFK_DELAY_SECONDS) {
+      // The armed idle and its look/examine variants come from the longbow pack: the hands hold a bow.
+      // With a sword or daggers drawn they read as a stuck bow loop, so melee keeps the normal idle.
+      const meleeDrawn = equipment.equipped && equipment.weaponType === 'melee';
+      if (!aiming && !blocking && !meleeDrawn && idleStartedAt !== null && now() - idleStartedAt >= PLAYER_AFK_DELAY_SECONDS) {
         const variants = PLAYER_IDLE_VARIANTS.filter(hasAction);
         if (variants.length) return variants[idleVariantIndex++ % variants.length];
         if (hasAction(STATES.AFK)) return STATES.AFK;
       }
-      if (equipment.equipped && hasAction('idleArmed')) return 'idleArmed';
+      if (equipment.equipped && equipment.weaponType === 'bow' && hasAction('idleArmed')) return 'idleArmed';
       return STATES.IDLE;
     }
     if (aiming) return combatMovementState(direction);
@@ -832,7 +835,10 @@ export function createLunaDashboardPlayerController({
     if (equipment.weaponType === weaponType && equipment.equipped === !!equipped) return false;
     const previous = equipment;
     equipment = { weaponType, equipped: !!equipped };
-    const transition = weaponType === 'bow' && previous.weaponType !== 'bow' ? 'equipBow'
+    // Summoned weapons (weapons/playerWeaponSummon.js) form in the hand with their own one-shot gesture,
+    // so the longbow pack's draw-from-the-back / put-away clips do not play for them.
+    const transition = context.summon ? null
+      : weaponType === 'bow' && previous.weaponType !== 'bow' ? 'equipBow'
       : previous.weaponType === 'bow' && weaponType !== 'bow' ? 'disarmBow' : null;
     if (transition && hasAction(transition) && !isMounted && !isDead) {
       if (isBusy) pendingEquipmentTransition = transition;
@@ -889,7 +895,7 @@ export function createLunaDashboardPlayerController({
     if (isDeathState(currentState)) return;
     if (isIdleVariant(currentState)) {
       idleStartedAt = now();
-      playState(equipment.equipped && hasAction('idleArmed') ? 'idleArmed' : STATES.IDLE, { force: true, fade: 0.2 });
+      playState(equipment.equipped && equipment.weaponType === 'bow' && hasAction('idleArmed') ? 'idleArmed' : STATES.IDLE, { force: true, fade: 0.2 });
       return;
     }
     // A jump's takeoff animation can end while the character is still

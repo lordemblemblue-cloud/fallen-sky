@@ -112,6 +112,37 @@ for (const item of makeAXEDevArmorItems()) {
   }));
 }
 
+// Owner weapon pack (public/game3d/weapons): summoned into the hand by weapons/playerWeaponSummon.js.
+// Introduced once through the versioned starter migration — V4, because clone characters already
+// received the V3 Crescent Moon pieces — bound and untradeable, with the same starter-level stats as
+// the existing starter weapons. Visuals grant no stats.
+INVENTORY.weapon.push(...[
+  { id: 'wp_pack_energy_sword', name: 'Energy Sword', type: 'Weapon — Sword', model: 'energy_sword', family: 'sword', role: 'offensive', archetype: 'close_combat', baseStats: { attack: 6 }, atk: '2-3' },
+  { id: 'wp_pack_odachi', name: 'Odachi', type: 'Weapon — Greatsword', model: 'odachi', family: 'sword', role: 'offensive', archetype: 'single_hit', baseStats: { attack: 6 }, atk: '2-4' },
+  { id: 'wp_pack_fantasy_sword', name: 'Fantasy Sword', type: 'Weapon — Sword', model: 'fantasy_sword', family: 'sword', role: 'offensive', archetype: 'close_combat', baseStats: { attack: 6 }, atk: '2-3' },
+  { id: 'wp_pack_fantasy_bow', name: 'Fantasy Bow', type: 'Weapon — Bow', model: 'fantasy_bow', family: 'bow', role: 'ranged', archetype: 'ranged', baseStats: { attack: 5 }, atk: '4-6' },
+  { id: 'wp_pack_violet_bow', name: 'Violet Fantasy Bow', type: 'Weapon — Bow', model: 'violet_bow', family: 'bow', role: 'ranged', archetype: 'ranged', baseStats: { attack: 5 }, atk: '4-6' },
+  { id: 'wp_pack_ornate_bow', name: 'Ornate Bow', type: 'Weapon — Bow', model: 'ornate_bow', family: 'bow', role: 'ranged', archetype: 'ranged', baseStats: { attack: 5 }, atk: '4-6' },
+].map(({ model, family, role, ...weapon }) => gear({
+  ...weapon,
+  slot: 'weapon',
+  category: 'weapon',
+  masteryWeaponId: family,
+  weaponFamily: family,
+  axeWeaponRole: role,
+  appearance: { weaponModelId: model },
+  rarity: 'common',
+  mastery: 1,
+  tier: 1,
+  level: 1,
+  durability: '100/100',
+  introducedVersion: 4,
+  source: 'weapon_pack',
+  bindState: 'bound',
+  tradeable: false,
+  equipped: false,
+})));
+
 // Armor pack (fitted armor layers): loot-only templates, deliberately NOT part of INVENTORY above, so
 // new and existing characters are never granted them as starters. They drop from monsters
 // (axe/loot/AXEArmorLootSystem.js) and enter AXEEquipmentInventoryStore on pickup.
