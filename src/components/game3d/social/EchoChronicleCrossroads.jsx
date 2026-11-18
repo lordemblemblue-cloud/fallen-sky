@@ -5,8 +5,8 @@ import {
 import {buildEchoChronicleCrossroads} from './echoChronicleCrossroads.js';
 import {buildEchoChronicleRecordedReturns} from './echoChronicleRecordedReturns.js';
 import {buildEchoChronicleStoryThreads} from './echoChronicleStoryThreads.js';
-import EchoChronicleThreadReader from './EchoChronicleThreadReader';
-import EchoChronicleReadingShelf from './EchoChronicleReadingShelf';
+import EchoChronicleThreadReader from './EchoChronicleThreadReader.jsx';
+import EchoChronicleReadingShelf from './EchoChronicleReadingShelf.jsx';
 import {
  ECHO_THREAD_FILTERS,ECHO_THREAD_SORTS,projectEchoChronicleThreadExplorer,
 } from './echoChronicleThreadExplorer.js';

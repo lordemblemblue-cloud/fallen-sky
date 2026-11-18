@@ -58,6 +58,8 @@ import {createFactionThreeFacingFrame} from './character/factionThreeMountFacing
 import { createMountedRiderPose } from './player/mountedRiderPose.mjs';
 import { createMountedWeaponPresentation } from './player/mountedWeaponPresentation.mjs';
 import { createEquippedBowGLBPresentation } from './player/equippedBowGLBPresentation.mjs';
+import { createPlayerWeaponRuntime } from './weapons/playerWeaponRuntime.js';
+import { createPlayerWeaponSummon, resolveSpaceAction } from './weapons/playerWeaponSummon.js';
 import { inferAXEMasteryWeaponId } from './axe/weapons/AXEWeaponIdentity';
 import { getAbilityState, tickCooldowns as tickLegacyAbilityCooldowns, startCooldown as startLegacyAbilityCooldown, clearTarget, updateTargetHP, ABILITY_DEFINITIONS } from './abilityStore';
 import { getLoadout, cycleSkillPreset, startCooldown as startSkillCooldown, tickCooldowns as tickSkillCooldowns } from './skills/loadoutStore';
@@ -1793,6 +1795,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let mixer;
     let model;
     let playerAnim;
+    // Weapon in hand: summoned (oil-metal forming) and dismissed, never sheathed (weapons/).
+    let weaponRuntime = null;
+    let weaponSummon = null;
+    let weaponPlayerMoving = false;
+    let lastMountedWeaponObject = null;
     let haloVisualRuntime = null;
     let fusionVisualRuntime = null; // Mount Soul Fusion aura
     let ascensionVisualRuntime = null; // Taurus Chosen Ascension: levitation, Angel Cloak, Destroyer shockwave, Defensive shield
@@ -2040,10 +2047,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Native clips are ready with the GLB. Optional admin FBXs must never
       // hold the playable actor in its bind pose while a request is pending.
       playerAnim.bindClips(initialPlayerAnimationClips(fbx));
-      // Capture the actual player rig's rest pose before the first mixer update.
-      // The weapon pack GLBs are not shipped by this clone transfer; use
-      // default grips while preserving the existing equipment/weapon visuals.
-      try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim,
+      // The weapon pack (public/game3d/weapons) is summoned into the hand and melted away again.
+      weaponSummon?.dispose();
+      weaponRuntime?.dispose();
+      weaponRuntime = createPlayerWeaponRuntime({ model: fbx, scene, bodyHeight: window.__gw3dPlayerHeight || 1.7 });
+      weaponSummon = createPlayerWeaponSummon({ model: fbx, scene, runtime: weaponRuntime, renderer,
+        getPixelScale: () => renderer.domElement.height / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) });
+      // Capture the actual player rig's rest pose before the first mixer update; the combos are
+      // rebaked with the held pack weapon's own grip once it is in hand.
+      try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime,
         bodyHeight: window.__gw3dPlayerHeight || 1.7 }); }
       catch (error) { console.warn('[Game 3D clone] weapon combo rig bake unavailable', error); weaponCombos = null; }
       coreAnimationController = new CoreAnimationController({ legacyController: playerAnim });
@@ -2391,8 +2403,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Space: angled Air Jump -> earned wing glide -> kick/hold to Skywalk.
       // Double-tap the kick button while boosting to finish in a forward
       // burst, then return automatically to glide. G/Q/R remain untouched.
+      // A summoned weapon that is out on foot melts back into the hand on the
+      // press that would leave the ground (owner, 2026-11); in the air, Space
+      // keeps driving the glide / Skywalk chain.
       if(k===' '){
-        if(!e.repeat && !isMountedRef.current){
+        const spaceOnGround=(playerAnim?.getAirWalkState?.().mode||'idle')==='idle' &&
+          !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
+        if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
+          weaponSummon.dismiss();
+        else if(!e.repeat && !isMountedRef.current){
           const allowAirWalk=!dedicatedMode && !window.__activeDuel &&
             !tornado.getState().active && getPlayerHUD().hp>0;
           const profile=getHaloFlightProfile({level:getHaloState().level});
@@ -2714,6 +2733,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if (guardSpend.ok) {
             playerStateMachine.setIntent({ blockHeld: true });
             playerAnim?.setBlocking(true);
+            if (!isMountedRef.current) weaponSummon?.ensureOut(); // guarding with nothing out summons the weapon
             setTimeout(() => {
               playerStateMachine.setIntent({ blockHeld: false });
               playerAnim?.setBlocking(false);
@@ -3017,6 +3037,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       // Revert additive gesture poses before the normal Mixers update.
       echoGestureRuntime.preUpdate();
+      weaponSummon?.preUpdate();
       impactFeedback.preUpdate(); // restore additive bone recoil before enemy Mixers pose
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
@@ -3056,8 +3077,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       charLights.update(delta, envSystem.getState, modelRef.current, camera);
       playerAnim?.setMounted?.(isMountedRef.current);
       const equippedForAnimation = getActiveEquippedAXEWeapon();
-      playerAnim?.setEquipmentContext?.({ weaponType: inferAXEMasteryWeaponId(equippedForAnimation) || 'unarmed',
-        equipped: !!equippedForAnimation });
+      const equippedFamily = inferAXEMasteryWeaponId(equippedForAnimation);
+      // A change of the active weapon is a draw: it is summoned into the hand (weapons/playerWeaponSummon.js).
+      weaponSummon?.setSuspended(!!isMountedRef.current);
+      weaponSummon?.sync(equippedForAnimation, equippedFamily);
+      playerAnim?.setEquipmentContext?.({ weaponType: equippedFamily || 'unarmed', summon: !!weaponSummon,
+        equipped: !!equippedForAnimation && (!weaponSummon || !weaponSummon.getVisual() || weaponSummon.isOut()) });
       if (getPlayerHUD().hp <= 0 && !playerAnim?.getDebugState?.().isDead) {
         if (isMountedRef.current) {
           restoreMountedRider();
@@ -3072,12 +3097,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
+      // After the base pose: the summon gesture, the closed hand and the forming / melting weapon.
+      // No bow `drawing` state: the clone's bowVisuals arrow (fired with the press) is the only arrow.
+      weaponSummon?.update(delta, { state: playerAnim?.getCurrent?.(), aiming: !!playerAnim?.getIsAiming?.(),
+        moving: weaponPlayerMoving, inCombat: isInCombat(),
+        externalRoot: weaponSummon?.getVisual()?.type === 'external' ? model?.getObjectByName?.('AXE_Equipped_Training_Bow') || null : null });
       weaponCombos?.update();
       // Claude combo presentation cues; avoid duplicate bow arrows. Existing
       // charged-shot hit resolution and bowVisuals remain authoritative.
       for (const cue of playerAnim?.pollComboEvents?.() || []) {
         if (cue.kind?.startsWith('sword') && cue.type === 'sweep') {
-          weaponTrails.emit({ actor: model, weaponPath: 'melee', hitIndex: cue.index, record: cue.seconds });
+          // the ribbon follows the summoned blade itself (base -> tip) over its cutting arc
+          weaponTrails.emit({ actor: model, weaponPath: 'melee', hitIndex: cue.index, record: cue.seconds,
+            blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null });
         }
       }
       ascensionVisualRuntime?.lateUpdate?.(); // levitation lifts the posed skeleton
@@ -3301,6 +3333,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
         }
         const isMoving = move.lengthSq() > 0;
+        weaponPlayerMoving = isMoving;
         const isRunning = !!keys.current['shift'] && isMoving;
         const isSprinting = !!keys.current['control'] && isMoving;
         // A held LEFT click is also a drawn-bow aim state. Walk, strafe,
@@ -4111,6 +4144,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           pendingBowShotCharge=null;
         }
         if (canProcessBasicStrike || pendingSkillStrike) {
+          // Attacking with the weapon dismissed summons it first (presentation only; the strike proceeds).
+          if (!isMountedRef.current) weaponSummon?.ensureOut();
           // A skill strike consumes one queued skill hit. A simultaneous basic
           // click remains pending for a later frame instead of stealing its multiplier.
           const isSkillStrike = !!pendingSkillStrike;
@@ -4174,6 +4209,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
                 actor: model, weaponPath: activeWeaponPath,
                 hitIndex: pendingSkillStrike?.hitIndex ?? 0,
+                blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null,
               });
               if(activeWeaponPath==='ranged'){
                 const aimEnemy=lockOnTargetRef.current?.group?.position;
@@ -4252,6 +4288,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
               actor: model, weaponPath: activeWeaponPath,
               hitIndex: pendingSkillStrike?.hitIndex ?? 0,
+              blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null,
             });
             if(activeWeaponPath==='ranged'){
               bowVisuals.fire({origin:model.position,
@@ -4969,6 +5006,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const equippedWeapon = mountedAttackSeconds > 0 ? getActiveEquippedAXEWeapon() : null; // both hands hold the mount unless attacking
         mountedWeapon.update({ item: equippedWeapon,
           family: inferAXEMasteryWeaponId(equippedWeapon) });
+        // A weapon appearing in the riding hand pours together like the on-foot summon.
+        const mountedWeaponObject = mountedWeapon.getStatus?.().object || null;
+        if (mountedWeaponObject && mountedWeaponObject !== lastMountedWeaponObject)
+          weaponSummon?.constructOn(mountedWeaponObject, inferAXEMasteryWeaponId(equippedWeapon) === 'bow' ? 'bow' : 'blade');
+        lastMountedWeaponObject = mountedWeaponObject;
         mountAppearanceSeconds = Math.max(0, mountAppearanceSeconds - delta);
         if (!dodgeVanish.active) model.visible = mountAppearanceSeconds === 0;
       } else if (mountedRider) {
@@ -5058,7 +5100,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       heldBowPresentation?.dispose();
       heldBowPresentation = null;
       heldBowPlayer = null;
+      weaponSummon?.dispose();
+      weaponSummon = null;
       weaponCombos = null;
+      weaponRuntime?.dispose();
+      weaponRuntime = null;
       restoreMountedRider();
       companionAssetDisposed = true;
       companionSecondaryRig?.dispose();

@@ -10,6 +10,8 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     throw new TypeError('Wolfveil terrain streaming requires terrain geometry and a scene parent');
   const position=source.attributes.position,color=source.attributes.color;
   const uv=source.attributes.uv,normal=source.attributes.normal,index=source.index;
+  // Baked terrain splat weights (WolfveilTerrainSplat.js), when the terrain has them.
+  const splat=source.attributes.aSplat;
   const copy=(target,attribute,i)=>{
     if(!attribute?.array)return;
     const start=i*attribute.itemSize;
@@ -17,7 +19,7 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
   };
   let active=null,mesh=null,pending=null,requestId=0,disposed=false,overlay=null;
   const build=area=>{
-    const p=[],c=[],t=[],n=[];
+    const p=[],c=[],t=[],n=[],w=[];
     const vertexCount=index?.count||position.count;
     for(let i=0;i+2<vertexCount;i+=3){
       const ids=index?[index.array[i],index.array[i+1],index.array[i+2]]:[i,i+1,i+2];
@@ -25,7 +27,7 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
       const cz=(position.getZ(ids[0])+position.getZ(ids[1])+position.getZ(ids[2]))/3;
       if(wolfveilAreaAtLocal(cx,cz)!==area)continue;
       for(const id of ids){
-        copy(p,position,id);copy(c,color,id);copy(t,uv,id);copy(n,normal,id);
+        copy(p,position,id);copy(c,color,id);copy(t,uv,id);copy(n,normal,id);copy(w,splat,id);
       }
     }
     const geometry=new THREE.BufferGeometry();
@@ -33,6 +35,7 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     geometry.setAttribute('color',new THREE.Float32BufferAttribute(c,3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute(t,2));
     geometry.setAttribute('normal',new THREE.Float32BufferAttribute(n,3));
+    if(splat)geometry.setAttribute('aSplat',new THREE.Float32BufferAttribute(w,splat.itemSize));
     geometry.computeBoundingBox();geometry.computeBoundingSphere();
     geometry.boundsTree=new MeshBVH(geometry,{maxLeafTris:16});
     const next=new THREE.Mesh(geometry,material);
