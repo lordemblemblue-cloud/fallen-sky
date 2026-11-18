@@ -89,13 +89,17 @@ Deno.serve(async (req) => {
     const digest = await hashCode(code);
     let matches: RecordData[];
     if (action === 'recover') {
-      const key = nameKey(data.name);
-      matches = (await collection.filter({ name_key: key }, '-created_date', 100)) || [];
+      // Look up by secret hash, not by an arbitrarily limited list of common
+      // names (hundreds of players may choose the same character name).
+      matches = (await collection.filter({ recovery_hash: digest }, '-created_date', 2)) || [];
     } else {
       if (!ID.test(String(data.characterId || ''))) return json({ error: 'Invalid character' }, 400);
       matches = (await collection.filter({ character_id: String(data.characterId) }, '-created_date', 2)) || [];
     }
-    const row = matches.find((item) => !item.deleted_at && sameHash(String(item.recovery_hash || ''), digest));
+    const nameForRecovery = action === 'recover' ? nameKey(data.name) : null;
+    const row = matches.find((item) => !item.deleted_at &&
+      sameHash(String(item.recovery_hash || ''), digest) &&
+      (!nameForRecovery || item.name_key === nameForRecovery));
     if (!row) return json({ error: 'Character name or recovery code not found', code: 'not_found' }, 404);
     if (action === 'recover') return json({ success: true, characterId: row.character_id, rosterEntry: row.roster_entry, save: fullSave(row) });
     if (action === 'get') return json({ success: true, save: fullSave(row) });
