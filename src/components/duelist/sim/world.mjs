@@ -1,0 +1,308 @@
+// Duelist Adventure arena simulation: bodies in a circular arena driven by the rules core.
+// Headless and deterministic (the caller passes dt): the match server runs it as the authority, the
+// browser runs it for practice and for prediction. It decides who each landed move reaches; the core
+// decides what happens to them.
+import {
+  MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
+  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina,
+} from '../core/index.mjs';
+
+export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
+// Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
+// d * KNOCKBACK_DECAY m/s and it travels about d metres.
+export const KNOCKBACK_DECAY = 8;
+export const GRIP_HOLD = Object.freeze({ distance: 2.3, lift: 1.1 }); // where a gripped body hangs
+export const PROJECTILE_SPEED = Object.freeze({ bowShot: 60, sniperShot: 140 });
+export const PROJECTILE_HEIGHT = 1.35;
+// Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
+const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
+const PROJECTILES = new Set(['bowShot', 'sniperShot']);
+const GRAVITY = 18;
+
+export function createWorld({ arenaRadius = 18, friendlyFire = false } = {}) {
+  return { time: 0, arenaRadius, friendlyFire, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1 };
+}
+
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0 } = {}) {
+  const fighter = createFighter({ id, team, weapon });
+  world.fighters.set(id, fighter);
+  world.bodies.set(id, {
+    x, z, y: 0, yaw, vy: 0,
+    intent: { x: 0, z: 0 }, run: false, sprint: false,
+    kx: 0, kz: 0, // knockback velocity (m/s)
+    motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
+    moving: false, speed: 0,
+  });
+  return fighter;
+}
+
+export const bodyOf = (world, id) => world.bodies.get(id);
+export const forwardOf = (yaw) => ({ x: Math.sin(yaw), z: Math.cos(yaw) });
+const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
+
+/**
+ * One step. inputs: { [fighterId]: { move: {x, z} (world direction, length <= 1), run, sprint,
+ *   face: yaw | null, presses: [command] } }. Returns the step's effects (strikes, knockbacks, holds,
+ *   projectiles, defeats) for presentation and broadcast.
+ */
+export function step(world, dt, inputs = {}) {
+  world.time += dt;
+  const now = world.time;
+  const effects = [];
+  // 1. intent, facing and presses
+  for (const [id, fighter] of world.fighters) {
+    const body = world.bodies.get(id);
+    const input = inputs[id] || {};
+    const m = input.move || { x: 0, z: 0 };
+    const len = Math.hypot(m.x, m.z);
+    body.intent = len > 1 ? { x: m.x / len, z: m.z / len } : { x: m.x || 0, z: m.z || 0 };
+    body.run = !!input.run;
+    body.sprint = !!input.sprint;
+    const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
+    // the body turns to face where the player aims, except while committed to a strike's active part
+    const committed = fighter.action && fighter.action.t >= fighter.action.move.startup && fighter.action.move.kind === 'attack';
+    if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
+    for (const command of input.presses || []) {
+      const before = fighter.action?.id;
+      const res = press(fighter, command, now);
+      if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id);
+    }
+  }
+  // 2. the rules advance; moves that start from the buffer get their root motion too
+  const pending = [];
+  for (const [id, fighter] of world.fighters) {
+    const body = world.bodies.get(id);
+    update(fighter, dt, now);
+    for (const event of takeEvents(fighter)) {
+      if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id);
+      pending.push({ fighter, body, event });
+    }
+  }
+  // 3. bodies move
+  for (const [id, fighter] of world.fighters) moveBody(world, fighter, world.bodies.get(id), dt, now);
+  separate(world);
+  for (const body of world.bodies.values()) keepInside(world, body);
+  // 4. landed moves reach whoever is in range and arc
+  for (const { fighter, body, event } of pending) {
+    if (event.type === 'hit') {
+      if (PROJECTILES.has(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
+      else resolveReach(world, fighter, body, event.id, effects, now);
+    } else if (event.type === 'tick') {
+      const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
+      if (held) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
+    } else if (event.type === 'end' || event.type === 'dropped' || event.type === 'interrupt') {
+      // the grip ends by throwing (gripThrow lands next and lets go) or by dropping its target
+      if ((event.id === 'grip' || event.type === 'dropped') && fighter.action?.id !== 'gripThrow') releaseHeld(world, fighter);
+    }
+  }
+  // a holder that was staggered or killed lets go
+  for (const fighter of world.fighters.values()) {
+    if (!fighter.heldBy) continue;
+    const holder = world.fighters.get(fighter.heldBy);
+    if (!holder || holder.vitals.dead || !['grip', 'gripThrow'].includes(holder.action?.id)) fighter.heldBy = null;
+  }
+  // 5. projectiles fly
+  stepProjectiles(world, dt, now, effects);
+  return effects;
+}
+
+function startMotion(body, fighter, id) {
+  const move = moveById(id);
+  if (!move?.rootMotion) { body.motion = null; return; }
+  // rolls and dashes go where the stick points (or straight ahead); strikes lunge forward
+  const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
+    ? { x: body.intent.x / Math.hypot(body.intent.x, body.intent.z), z: body.intent.z / Math.hypot(body.intent.x, body.intent.z) }
+    : forwardOf(body.yaw);
+  if (move.kind === 'movement') body.yaw = Math.atan2(dir.x, dir.z);
+  const from = move.kind === 'movement' ? 0 : move.startup;
+  body.motion = { id, dir, from, to: from + move.active, distance: move.rootMotion, done: 0 };
+}
+
+function moveBody(world, fighter, body, dt, now) {
+  let vx = 0;
+  let vz = 0;
+  const a = fighter.action;
+  if (fighter.heldBy) {
+    // hanging in the holder's grip
+    const holder = world.bodies.get(fighter.heldBy);
+    if (holder) {
+      const f = forwardOf(holder.yaw);
+      body.x = holder.x + f.x * GRIP_HOLD.distance;
+      body.z = holder.z + f.z * GRIP_HOLD.distance;
+      body.y += (GRIP_HOLD.lift - body.y) * Math.min(1, dt * 10);
+      body.vy = 0;
+      body.kx = 0; body.kz = 0;
+      body.moving = false; body.speed = 0;
+      return;
+    }
+  }
+  if (body.motion && a?.id === body.motion.id) {
+    const { from, to, distance: d, dir } = body.motion;
+    const span = Math.max(1e-6, to - from);
+    const target = Math.max(0, Math.min(1, (a.t - from) / span)) * d;
+    const stepDist = target - body.motion.done;
+    body.motion.done = target;
+    vx += (dir.x * stepDist) / dt;
+    vz += (dir.z * stepDist) / dt;
+  } else {
+    body.motion = null;
+    // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
+    const planted = a && a.move.kind !== 'movement' && !a.move.channel && a.t < a.move.startup + a.move.active;
+    const free = !fighter.vitals.dead && !isStunned(fighter, now) && !planted;
+    const len = Math.hypot(body.intent.x, body.intent.z);
+    if (free && len > 0.01) {
+      let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
+      if (body.sprint && !fighter.vitals.winded && len > 0.5) {
+        drainStamina(fighter.vitals, SPRINT.staminaPerSec * dt, now);
+        speed = SPRINT.speed;
+      }
+      // a raised guard and a channelled grip slow you to a walk
+      if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
+      vx += body.intent.x * speed;
+      vz += body.intent.z * speed;
+      body.speed = speed * len;
+    } else body.speed = 0;
+  }
+  // knockback, decaying
+  vx += body.kx;
+  vz += body.kz;
+  const decay = Math.exp(-KNOCKBACK_DECAY * dt);
+  body.kx *= decay;
+  body.kz *= decay;
+  if (Math.hypot(body.kx, body.kz) < 0.05) { body.kx = 0; body.kz = 0; }
+  body.x += vx * dt;
+  body.z += vz * dt;
+  body.moving = Math.hypot(vx, vz) > 0.1;
+  // falling back down after a throw or a release
+  if (body.y > 0 || body.vy > 0) {
+    body.vy -= GRAVITY * dt;
+    body.y = Math.max(0, body.y + body.vy * dt);
+    if (body.y === 0) body.vy = 0;
+  }
+  keepInside(world, body);
+}
+
+// the arena's edge
+function keepInside(world, body) {
+  const r = Math.hypot(body.x, body.z);
+  const limit = world.arenaRadius - BODY_RADIUS;
+  if (r > limit) { body.x *= limit / r; body.z *= limit / r; }
+}
+
+// keep bodies from overlapping (a held body is the holder's business)
+function separate(world) {
+  const list = [...world.fighters.values()].filter((f) => !f.vitals.dead && !f.heldBy);
+  for (let i = 0; i < list.length; i++) {
+    for (let j = i + 1; j < list.length; j++) {
+      const a = world.bodies.get(list[i].id);
+      const b = world.bodies.get(list[j].id);
+      const d = distance(a, b);
+      const min = BODY_RADIUS * 2;
+      if (d >= min) continue;
+      const nx = d > 1e-6 ? (b.x - a.x) / d : 1;
+      const nz = d > 1e-6 ? (b.z - a.z) / d : 0;
+      const push = (min - d) / 2;
+      a.x -= nx * push; a.z -= nz * push;
+      b.x += nx * push; b.z += nz * push;
+    }
+  }
+}
+
+// Everyone (or the nearest one) the move reaches from where the attacker stands, facing where it faces.
+export function targetsInReach(world, attacker, body, move, single) {
+  const found = [];
+  for (const other of world.fighters.values()) {
+    if (!hostile(world, attacker, other) || other.vitals.dead) continue;
+    const ob = world.bodies.get(other.id);
+    const d = distance(body, ob);
+    if (d > move.range + BODY_RADIUS) continue;
+    if (!insideArc(body, body.yaw, ob, move.arc)) continue;
+    found.push({ fighter: other, d });
+  }
+  found.sort((p, q) => p.d - q.d);
+  return single ? found.slice(0, 1).map((t) => t.fighter) : found.map((t) => t.fighter);
+}
+
+function resolveReach(world, attacker, body, id, effects, now) {
+  const move = moveById(id);
+  // the throw reaches the one being held, wherever it hangs
+  if (id === 'gripThrow') {
+    const held = [...world.fighters.values()].find((f) => f.heldBy === attacker.id);
+    if (held) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
+    return;
+  }
+  for (const target of targetsInReach(world, attacker, body, move, SINGLE_TARGET.has(id))) {
+    const tb = world.bodies.get(target.id);
+    collect(effects, strike(attacker, target, id, { now, defenderFacesAttacker: insideArc(tb, tb.yaw, body, BLOCK.frontArcDeg) }), attacker, target, world);
+  }
+}
+
+function collect(effects, outcome, attacker, defender, world) {
+  if (!outcome) return;
+  for (const effect of outcome.effects) {
+    effects.push(effect);
+    if (effect.type === 'knockback' && world) {
+      const from = world.bodies.get(attacker.id);
+      const to = world.bodies.get(defender.id);
+      let dx = to.x - from.x;
+      let dz = to.z - from.z;
+      const d = Math.hypot(dx, dz) || 1;
+      dx /= d; dz /= d;
+      to.kx += dx * effect.distance * KNOCKBACK_DECAY;
+      to.kz += dz * effect.distance * KNOCKBACK_DECAY;
+      if (effect.distance > 3) to.vy = Math.max(to.vy, 3.5); // a hard push lifts the body off its feet
+    }
+  }
+}
+
+function releaseHeld(world, holder) {
+  for (const f of world.fighters.values()) if (f.heldBy === holder.id) f.heldBy = null;
+}
+
+function spawnProjectile(world, fighter, body, id, effects) {
+  const move = moveById(id);
+  const dir = forwardOf(body.yaw);
+  const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
+    dir, speed: PROJECTILE_SPEED[id] || 60, left: move.range };
+  world.projectiles.push(p);
+  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir });
+}
+
+function stepProjectiles(world, dt, now, effects) {
+  for (let i = world.projectiles.length - 1; i >= 0; i--) {
+    const p = world.projectiles[i];
+    const travel = Math.min(p.left, p.speed * dt);
+    const owner = world.fighters.get(p.owner);
+    // the first hostile body along this step's segment
+    let hit = null;
+    let best = Infinity;
+    for (const other of world.fighters.values()) {
+      if (!owner || !hostile(world, owner, other) || other.vitals.dead) continue;
+      const b = world.bodies.get(other.id);
+      const rx = b.x - p.x;
+      const rz = b.z - p.z;
+      const along = rx * p.dir.x + rz * p.dir.z;
+      if (along < -BODY_RADIUS || along > travel + BODY_RADIUS) continue;
+      const side = Math.abs(rx * p.dir.z - rz * p.dir.x);
+      if (side <= BODY_RADIUS + 0.05 && along < best) { best = along; hit = other; }
+    }
+    if (hit && owner) {
+      const hb = world.bodies.get(hit.id);
+      const ob = { x: p.x, z: p.z };
+      collect(effects, strike(owner, hit, p.move, { now, defenderFacesAttacker: insideArc(hb, hb.yaw, ob, BLOCK.frontArcDeg) }), owner, hit, world);
+      effects.push({ type: 'projectileEnd', id: p.id, hit: hit.id });
+      world.projectiles.splice(i, 1);
+      continue;
+    }
+    p.x += p.dir.x * travel;
+    p.z += p.dir.z * travel;
+    p.left -= travel;
+    if (p.left <= 1e-6 || Math.hypot(p.x, p.z) > world.arenaRadius) {
+      effects.push({ type: 'projectileEnd', id: p.id, hit: null });
+      world.projectiles.splice(i, 1);
+    }
+  }
+}
+
+export { MOVES };

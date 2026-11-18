@@ -69,7 +69,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   const staggerFor = Math.max(result.stagger || 0, through ? move.stagger : 0);
   if (staggerFor > 0 && moveId !== 'grip') stagger(defender, staggerFor, now);
   const knockback = through ? move.knockback : move.knockback * 0.25;
-  if (knockback) effects.push({ type: 'knockback', defender: defender.id, from: attacker.id, speed: knockback });
+  if (knockback) effects.push({ type: 'knockback', defender: defender.id, from: attacker.id, distance: knockback });
   if (result.collapsed) effects.push({ type: 'veilCollapse', defender: defender.id });
   if (result.killed) effects.push({ type: 'defeat', defender: defender.id, by: attacker.id });
   effects.push({ type: 'impact', outcome: result.outcome, move: moveId, defender: defender.id, veil: result.veil,
