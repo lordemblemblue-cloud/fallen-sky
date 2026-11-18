@@ -128,7 +128,7 @@ export function createWolfveilVillage(scene,options={}){
   // Keep the full heightfield as CPU-side source data for the existing
   // landscaping and tile tools, but draw and raycast only one area mesh.
   const ground=world.mesh(new THREE.Group());
-  ground.name='SWV_RealWalkableContouredTerrain';
+  ground.name='SWV_Streamed_OverworldFloor';
   ground.userData.wolfveil=true;
   const terrainAreas=createWolfveilTerrainAreaStream({
     source:geometry,material:terrainMaterial,parent:ground,offsetZ,
