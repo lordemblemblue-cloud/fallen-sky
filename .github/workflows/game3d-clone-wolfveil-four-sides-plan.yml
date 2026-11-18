@@ -1,0 +1,35 @@
+name: Game 3D Wolfveil four sides plan
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilFourSidesPlan.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilLayout.js'
+      - 'src/components/game3d/wolfveil/WolfveilForestLayout.js'
+      - 'src/components/game3d/wolfveil/streaming/**'
+      - 'tests/game3d-clone-wolfveil-four-sides-plan.test.mjs'
+      - '.github/workflows/game3d-clone-wolfveil-four-sides-plan.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  four-sides-plan:
+    name: Mountain, forest, grassland and wilds plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The plan and every placement in it
+        run: node --test tests/game3d-clone-wolfveil-four-sides-plan.test.mjs
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Lint the new files
+        run: |
+          npx eslint --quiet \
+            src/components/game3d/wolfveil/WolfveilFourSidesPlan.mjs \
+            tests/game3d-clone-wolfveil-four-sides-plan.test.mjs
