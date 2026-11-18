@@ -19,12 +19,21 @@
 `tools/game3d-weapons/prepare_lowpoly_weapons.py` does this and renders the pictures. It needs only Python
 with numpy and Pillow.
 
-## Still missing
+## The rest of the pack
 
 The pack manifest also lists the energy sword, the odachi, the fantasy bow and the ornate bow. Their files
-are not in this repository, and their sources are too heavy to ship as they are: they need
-`tools/game3d-weapons/build-weapons.mjs`, which runs Blender. Until then an item that names one of them
-shows nothing in hand, and other players' bows (which use the fantasy bow) are not drawn.
+are now here too: `public/game3d/weapons/{energy_sword,odachi,fantasy_bow,ornate_bow}.glb`, the optimized
+builds made by `tools/game3d-weapons/build-weapons.mjs` (Blender), each exactly the size the manifest
+records. The six pack items in the starting inventory (`wp_pack_*`, starter catalog V4) name one model each;
+the other players' stand-in bow (the fantasy bow, used when `createRemotePlayersManager` is given
+`comboWeapons`) is now drawn as well.
+
+## Summoned, not sheathed
+
+`GameWorld3D` holds the equipped weapon through `weapons/playerWeaponSummon.js`: changing the active weapon
+pours it together in the hand (the oil-metal effect), attacking or guarding with nothing out summons it, six
+seconds of moving out of combat melts it away, and Space melts it on the ground (in the air Space keeps
+driving the jump / wing glide / Skywalk chain).
 
 ## Pictures in the inventory
 
