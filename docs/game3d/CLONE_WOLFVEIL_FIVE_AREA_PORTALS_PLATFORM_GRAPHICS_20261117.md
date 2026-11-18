@@ -279,15 +279,17 @@ view; grass is 55 to 70%.
 The same report surveys the scattered scenery of each area as it is built
 (instanced meshes; 25 m squares; ground is the visible ground mesh).
 
-| Area  | Size    | Trees | Stones | Flowers | Shrubs, ferns | Grass tiles | Squares with nothing but grass |
-|-------|---------|-------|--------|---------|---------------|-------------|--------------------------------|
-| town  | 17.1 ha | 36    | 622    | 440     | 281           | 944         | 116 of 273 (42%)               |
-| south | 8.9 ha  | 0     | 51     | 314     | 22            | 132         | 99 of 143 (69%)                |
-| west  | 28 ha   | 22    | 846    | 1,090   | 419           | 916         | 190 of 448 (42%)               |
-| east  | 34 ha   | 2     | 1,008  | 526     | 291           | 739         | 267 of 544 (49%)               |
-| north | 33 ha   | 0     | 1,011  | 62      | 104           | 469         | 255 of 528 (48%)               |
+| Area  | Size    | Tree pieces | Stones | Flowers | Shrubs, ferns | Grass tiles | Squares with nothing but grass |
+|-------|---------|-------------|--------|---------|---------------|-------------|--------------------------------|
+| town  | 17.1 ha | 36          | 622    | 440     | 281           | 944         | 116 of 273 (42%)               |
+| south | 8.9 ha  | 0           | 51     | 314     | 22            | 132         | 99 of 143 (69%)                |
+| west  | 28 ha   | 22          | 846    | 1,090   | 419           | 916         | 190 of 448 (42%)               |
+| east  | 34 ha   | 2           | 1,008  | 526     | 291           | 739         | 267 of 544 (49%)               |
+| north | 33 ha   | 0           | 1,011  | 62      | 104           | 469         | 255 of 528 (48%)               |
 
-- The valley has 60 trees. South and north have none; east has 2.
+- Trees are few. A trunk and a crown count as separate pieces: about 18 elms
+  around the town, 22 uploaded trees in the west, one or two in the east,
+  none in the south or the north.
 - South is the emptiest area: 69% of its squares hold nothing but grass.
 - Scenery standing more than 0.5 m above the ground: the top stones of the
   wayfinding cairns (79, stacked on purpose) and 25 gorge boulders that stand
