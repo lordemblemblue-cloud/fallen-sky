@@ -98,6 +98,7 @@ import { createCombatImpactFeedback } from './vfx/CombatImpactFeedback';
 import { createDuelDefenseFeedback } from './vfx/DuelDefenseFeedback';
 import { createCombatWeaponTrails } from './vfx/CombatWeaponTrails';
 import { createWeaponComboBinder } from './weapons/weaponComboBinder.js';
+import { swordSkillComboKind } from './weapons/weaponComboClips.js';
 import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources, getCombatResources } from './combat/combatResourcesStore';
 import { selectCombatSwingSound, selectCombatImpactSound, AUTHORED_SKILL_SOUNDS } from './combat/CombatSoundRouter';
 import { AbilitySystem } from './skills/AbilitySystem';
@@ -3042,7 +3043,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Claude combo presentation cues; avoid duplicate bow arrows. Existing
       // charged-shot hit resolution and bowVisuals remain authoritative.
       for (const cue of playerAnim?.pollComboEvents?.() || []) {
-        if (cue.kind === 'swordCombo' && cue.type === 'sweep') {
+        if (cue.kind?.startsWith('sword') && cue.type === 'sweep') {
           weaponTrails.emit({ actor: model, weaponPath: 'melee', hitIndex: cue.index, record: cue.seconds });
         }
       }
@@ -4118,8 +4119,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               // PvP is strictly one locked target. No cones, cleaves, nearest-target
               // fallback, or collateral hits are allowed.
               if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
+              const swordSkillKind=isSkillStrike&&pendingSkillStrike?.skillId
+                ?swordSkillComboKind(pendingSkillStrike.skillId,
+                  getSkillMasteryLevel(pendingSkillStrike.skillId),
+                  getSkillById(pendingSkillStrike.skillId)?.max_level):null;
               const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
-                : ['damage', 'melee'].includes(activeWeaponPath) ? 'swordCombo' : null);
+                : ['damage', 'melee'].includes(activeWeaponPath) ? (swordSkillKind||'swordCombo') : null);
               const montage = comboKind || (activeWeaponPath === 'ranged' ? 'attack' : 'kick');
               if (playerAnim?.HandleCombat) {
                 playerAnim.HandleCombat(montage, {
@@ -4133,7 +4138,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
               // Claude's sword combo draws at its actual cutting arc; bow keeps
               // the existing one-arrow-per-cast feedback and hit/miss registration.
-              if (!(comboKind === 'swordCombo' && playerAnim?.getComboState?.())) weaponTrails.emit({
+              if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
                 actor: model, weaponPath: activeWeaponPath,
                 hitIndex: pendingSkillStrike?.hitIndex ?? 0,
               });
@@ -4193,8 +4198,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // have their own scheduled spacing and bypass this basic cooldown.
             if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
             // Attack montage is manually gated by the animation state machine.
+            const swordSkillKind=isSkillStrike&&pendingSkillStrike?.skillId
+              ?swordSkillComboKind(pendingSkillStrike.skillId,
+                getSkillMasteryLevel(pendingSkillStrike.skillId),
+                getSkillById(pendingSkillStrike.skillId)?.max_level):null;
             const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
-              : ['damage', 'melee'].includes(activeWeaponPath) && !isRangedClickAttack ? 'swordCombo' : null);
+              : ['damage', 'melee'].includes(activeWeaponPath) && !isRangedClickAttack
+                ? (swordSkillKind||'swordCombo') : null);
             const montage = comboKind || (isRangedClickAttack || activeWeaponPath === 'ranged' ? 'attack' : 'kick');
             if (playerAnim?.HandleCombat) {
               playerAnim.HandleCombat(montage, {
