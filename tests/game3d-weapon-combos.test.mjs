@@ -311,19 +311,24 @@ test('without combo clips the regular attack plays; riding never swings', () => 
   assert.equal(d.ctl.requestAttack('swordCombo'), false);
 });
 
-test('GameWorld3D: summoned weapons fight with their combo; trails and arrows follow the swing', () => {
+test('GameWorld3D (clone): summoned weapons fight with their combo; blade trails follow the swing', () => {
   const world = readFileSync('src/components/game3d/GameWorld3D.jsx', 'utf8');
   const summonAt = world.indexOf('weaponSummon = createPlayerWeaponSummon(');
   const binderAt = world.indexOf('weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime');
   assert.ok(summonAt > 0 && binderAt > summonAt && binderAt - summonAt < 600, 'the binder is made with the runtime, at model load (rest pose)');
-  assert.match(world, /const weaponComboKind = \(rangedClick = false\) => \{\s*if \(isMountedRef\.current \|\| !weaponSummon\) return null;/);
+  // The clone picks the combo from the weapon path (ranged -> bow, melee/damage -> sword) on foot
+  assert.equal((world.match(/const comboKind = !isMountedRef\.current (?:&&|\?) \(activeWeaponPath === 'ranged' \? 'bowCombo'/g) || []).length, 2,
+    'PvE and duel presses choose the combo');
   assert.equal((world.match(/hitIndex: comboKind && !isSkillStrike \? undefined : pendingSkillStrike\?\.hitIndex \?\? 0,/g) || []).length, 2,
     'PvE and duel basic presses continue the chain');
   const after = world.indexOf('weaponSummon?.update(delta,');
   assert.ok(world.indexOf('playerAnim?.pollComboEvents?.()', after) > after, 'combo cues are read after the summon update (posed hands)');
-  assert.match(world, /record: cue\.seconds,/);
-  assert.match(world, /weaponRuntime\.fireArrow\(\{ target: comboArrowTarget \}\);/);
-  assert.match(world, /drawing: comboSwing\?\.kind === 'bowCombo' \? comboSwing\.time > 0\.04 && comboSwing\.time < comboSwing\.hit : null,/);
+  assert.match(world, /record: cue\.seconds,\s*blade: weaponSummon\?\.isOut\(\) \? weaponRuntime\?\.getBladeAnchors\(\) : null/);
+  // The clone's charged-shot bowVisuals arrow (fired with the press, and coloured by its hit) stays the only
+  // arrow: no pack arrow, and no nocked arrow drawn after the real one has flown.
+  assert.match(world, /bowVisuals\.fire\(/);
+  assert.doesNotMatch(world, /weaponRuntime\??\.fireArrow\(/);
+  assert.doesNotMatch(world, /drawing: comboSwing/);
 });
 
 test('blade trails record for the combo\'s own cut length', async () => {

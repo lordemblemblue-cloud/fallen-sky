@@ -26,7 +26,9 @@ test('GameWorld3D asks resolveSpaceAction before it jumps', () => {
   const space = world.slice(world.indexOf("if(k===' '){"), world.indexOf("if(k==='r'){"));
   assert.ok(space.includes('resolveSpaceAction'), 'Space handler uses the summon rule');
   assert.ok(space.indexOf('weaponSummon.dismiss()') < space.indexOf('requestJump'), 'dismiss is checked first');
-  assert.match(space, /else if\(!e\.repeat && !isMountedRef\.current && playerAnim\?\.requestJump/, 'jump stays the fallback');
+  // only on the ground: in the air Space keeps driving the jump / wing glide / Skywalk chain
+  assert.match(space, /if\(!e\.repeat && spaceGrounded && resolveSpaceAction\(/);
+  assert.match(space, /else if\(!e\.repeat && !isMountedRef\.current\)\{[\s\S]*requestAirWalkAction[\s\S]*requestJump/, 'jump / air walk stays the fallback');
 });
 
 test('auto-dismiss: one config constant, only uninterrupted out-of-combat movement counts', () => {

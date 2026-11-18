@@ -44,7 +44,7 @@ test('the test bow is a loadable-format GLB mesh with an embedded binary buffer'
 
 test('starter catalog migration never recreates already consumed V1 props', () => {
   const store = src('src/components/game3d/axe/equipment/AXEEquipmentInventoryStore.js');
-  assert.match(store, /CURRENT_STARTER_CATALOG_VERSION = 2/);
+  assert.match(store, /CURRENT_STARTER_CATALOG_VERSION = [2-9]\b/); // the V2 bow stays; later versions add other items
   assert.match(store, /previousCatalogVersion < Number\(starter\.introducedVersion \|\| 1\)/);
   assert.match(store, /modelUrl: existing\.modelUrl \|\| starter\.modelUrl/);
 });
