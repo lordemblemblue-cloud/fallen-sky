@@ -493,6 +493,7 @@ export function createWolfveilVillage(scene,options={}){
       if(disposed)return;
       disposed=true;
       terrainAreas.dispose();
+      geometry.dispose();
       houseModels?.dispose();
       fountainHomes.dispose();
       palace.dispose();
