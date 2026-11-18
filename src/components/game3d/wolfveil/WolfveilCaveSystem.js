@@ -241,7 +241,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     for (let sIdx = 0; sIdx < cor.segments.length; sIdx++) {
       const seg = cor.segments[sIdx];
       const nx = -seg.dz / seg.lenXZ, nz = seg.dx / seg.lenXZ;
-      const slice = 8;
+      const slice = cor.id.startsWith('modular_') ? 12 : 8;
       const steps = Math.max(1, Math.ceil(seg.lenXZ / slice));
       const hw = cor.halfWidth;
       const wallH = 3.85;
@@ -710,7 +710,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   for (const ch of allChambers) {
     const R = ch.radius + 0.9;
     const H = ch.ceiling;
-    const radialSegs = 12;
+    const radialSegs = ch.id.startsWith('modular_') ? 8 : 12;
     const rings = [
       { r: 1.02, y: -0.5 },
       { r: 1.04, y: H * 0.34 },
