@@ -2,7 +2,6 @@
 // All landmarks, routes, buildings, terrain and water share world meters;
 // the viewer and the actual game instantiate this same scene module.
 import * as THREE from 'three';
-import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import {
   WOLFVEIL_SITES,WOLFVEIL_RIVER,WOLFVEIL_ROUTES,WOLFVEIL_BRIDGES,
   WOLFVEIL_HOUSING_PLOTS,wolfveilHeight,wolfveilDistanceToRiver,wolfveilRouteClearance,
