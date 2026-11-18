@@ -489,7 +489,10 @@ export async function runWolfveilAreaLoadingReport({
     ['shrubs and ferns',/shrub|fern|bush|reed/i],
     ['trees',/tree|elm|cedar|pine|maple|bamboo|crown|trunk|canopy|branch|foliage/i],
     ['stones',/stone|rock|boulder|basalt|pebble/i],['logs',/log|stump/i]];
-  const kindOf=name=>(KINDS.find(([,test])=>test.test(name))||['other'])[0];
+  // "SWV_Instanced_<material>" batches are building parts (bridge planks of
+  // cedar, piers of basalt), not planted scenery.
+  const kindOf=name=>/^SWV_Instanced_/.test(name)?'other':
+    (KINDS.find(([,test])=>test.test(name))||['other'])[0];
   const SQUARE=25;
   const survey=Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,
     {kinds:{},planted:new Set(),floating:[],buried:0,checked:0,squares:0}]));
@@ -523,7 +526,8 @@ export async function runWolfveilAreaLoadingReport({
       if(!Number.isFinite(ground))continue;
       entry.checked++;
       const half=Math.abs(m[1])*hx+Math.abs(m[5])*hy+Math.abs(m[9])*hz,gap=y-half-ground;
-      if(gap>.5)entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
+      // A bloom rides on its stem: above the ground by design.
+      if(gap>.5&&!/bloom/i.test(node.name))entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
       else if(y+half<ground-.1)entry.buried++;
     }
   });
