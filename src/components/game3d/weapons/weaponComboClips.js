@@ -211,6 +211,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
     // straightest wrist (staying near the default elbow otherwise); the upper arm turns so the elbow points
     // that way, the forearm carries the pronation and the wrist only bends. A blade the wrist cannot reach
     // within 50 degrees gives way instead of the wrist.
+    // A captured move is keyed many times a second, so its arms are solved with the key before in mind:
+    // the elbow stays near where it was, and the forearm's turn fades out before it would flip over.
+    let flowing = null;
     const placeArm = (arm, fore, hand, target, pole, B, sideAxis) => {
       const ab = armRest.get(arm);
       const info = handInfo.get(hand);
@@ -237,10 +240,12 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
           const E = C.clone().addScaledVector(outAt(phi), h);
           const f = W.clone().sub(E).normalize();
           const inside = Math.max(0, -E.clone().sub(S).dot(sideAxis)); // elbow tucked into the chest
-          const cost = bestBend(info, B, f) + 0.45 * Math.abs(phi) + 6 * inside;
+          const before = flowing?.get(arm);
+          const cost = bestBend(info, B, f) + 0.45 * Math.abs(phi) + 6 * inside + (before === undefined ? 0 : 0.5 * Math.abs(phi - before));
           if (cost < best) { best = cost; phiBest = phi; }
         }
       }
+      if (flowing && held) flowing.set(arm, phiBest);
       const out = outAt(phiBest);
       const E = C.clone().addScaledVector(out, h);
       const dirU = E.clone().sub(S).normalize();
@@ -267,7 +272,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
         // most of the hand's roll away from the neutral wrist is the forearm's pronation
         const D = qH.clone().multiply(qF0.clone().multiply(ab.relH).invert());
         const twist = 2 * Math.atan2(D.x * dirF.x + D.y * dirF.y + D.z * dirF.z, D.w);
-        pronation = THREE.MathUtils.clamp(Math.atan2(Math.sin(twist), Math.cos(twist)) * 0.8, -150 * DEG, 150 * DEG);
+        const turn = Math.atan2(Math.sin(twist), Math.cos(twist));
+        const fade = flowing ? THREE.MathUtils.clamp((180 * DEG - Math.abs(turn)) / (60 * DEG), 0, 1) : 1;
+        pronation = THREE.MathUtils.clamp(turn * 0.8 * fade, -150 * DEG, 150 * DEG);
       }
       const qF = new THREE.Quaternion().setFromAxisAngle(dirF, pronation).multiply(qF0);
       setWorldQ(fore, qF);
@@ -366,7 +373,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
 
     const combos = Array.isArray(moves) && moves.length ? moves : comboKind === 'bowCombo' ? BOW_COMBO : SWORD_COMBO;
     for (const [index, combo] of combos.entries()) {
+      flowing = combo.ease === 'linear' ? new Map() : null;
       const poses = combo.keys.map((key) => pose(key, combo));
+      flowing = null;
       // densify with eased in-betweens so each strike reads sharp and its recovery settles; a captured move
       // (ease: 'linear', its own `steps`) already carries its timing in closely spaced keys
       const steps = Number(combo.steps) >= 1 ? Math.round(Number(combo.steps)) : 6;

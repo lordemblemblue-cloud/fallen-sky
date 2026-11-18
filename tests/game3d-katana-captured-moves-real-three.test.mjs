@@ -103,34 +103,34 @@ for (const rigId of Object.keys(RIGS)) {
           .flatMap((v) => [Math.round(v.x / h.k * 1000), Math.round(v.y / h.k * 1000), Math.round(v.z / h.k * 1000)]));
       }
       // nothing snaps: how far any joint, and the blade tip, moves in one sixtieth of a second
-      let jump = 0, tipSpeed = 0, previous = null;
+      let jump = 0, tipSpeed = 0, tipAt = 0, previous = null;
       for (let i = 0; i <= Math.ceil(clip.duration * 60); i++) {
         poseAt(model, mixer, action, clip, i / 60);
         const now = [...JOINTS.map((name) => h.world(h.bone(name))), h.world(h.tip)];
         if (previous) {
           now.forEach((v, j) => {
             const speed = v.distanceTo(previous[j]) / h.k * 60;
-            if (j < JOINTS.length) jump = Math.max(jump, speed); else tipSpeed = Math.max(tipSpeed, speed);
+            if (j < JOINTS.length) jump = Math.max(jump, speed); else if (speed > tipSpeed) { tipSpeed = speed; tipAt = i / 60; }
           });
         }
         previous = now;
       }
       mixer.stopAllAction(); mixer.uncacheRoot(model);
       m.bladeMean = m.n ? m.bladeMean / m.n : 0;
-      rows.push({ move: move.name, ...m, jump, tipSpeed });
+      rows.push({ move: move.name, ...m, jump, tipSpeed, tipAt });
       if (captured.includes(move)) console.log('KATANA_POSES ' + JSON.stringify({ rig: rigId, move: move.name, hit: move.hit, ...dump }));
     }
     console.log('\n' + rigId + ', odachi (' + h.weapon.length + ' m): blade off the key (worst / mean degrees), second hand off the hilt (m), lowest ankle and blade tip (m), wrist bend, fastest joint and blade tip (m/s)');
     for (const r of rows) {
       console.log('  ' + r.move.padEnd(20) + ' blade ' + r.blade.toFixed(0).padStart(3) + ' / ' + r.bladeMean.toFixed(0).padStart(2) + '   hilt ' + r.hilt.toFixed(3)
-        + '   ankle ' + r.ankle.toFixed(3) + '   tip ' + r.tip.toFixed(2) + '   wrist ' + r.wrist.toFixed(0).padStart(3) + '   fastest ' + r.jump.toFixed(1).padStart(5) + ' / ' + r.tipSpeed.toFixed(0));
+        + '   ankle ' + r.ankle.toFixed(3) + '   tip ' + r.tip.toFixed(2) + '   wrist ' + r.wrist.toFixed(0).padStart(3) + '   fastest ' + r.jump.toFixed(1).padStart(5) + ' / ' + r.tipSpeed.toFixed(0) + ' at ' + r.tipAt.toFixed(2) + ' s');
     }
     for (const r of rows) {
       assert.ok(r.bladeMean < 25, r.move + ': the blade follows its keys (mean ' + r.bladeMean.toFixed(1) + ' degrees off)');
       assert.ok(r.hilt < 0.12, r.move + ': the second hand is on the hilt (' + r.hilt.toFixed(3) + ' m off)');
       assert.ok(r.ankle > -0.03, r.move + ': no foot below the ground (' + r.ankle.toFixed(3) + ' m)');
       assert.ok(r.tip > 0.02, r.move + ': the blade stays out of the ground (' + r.tip.toFixed(2) + ' m)');
-      assert.ok(r.jump < 30 && r.tipSpeed < 120, r.move + ': nothing snaps (joints ' + r.jump.toFixed(1) + ' m/s, tip ' + r.tipSpeed.toFixed(0) + ' m/s)');
+      assert.ok(r.jump < 30 && r.tipSpeed < 70, r.move + ': nothing snaps (joints ' + r.jump.toFixed(1) + ' m/s, tip ' + r.tipSpeed.toFixed(0) + ' m/s)');
     }
     // each combo bakes as the controller's three sword states, and hits that follow each other in the
     // capture meet: the body is in the same pose where one ends and the next begins
