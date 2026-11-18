@@ -19,10 +19,10 @@ import {
 } from './WolfveilFiveAreaPlan.mjs';
 
 export const WOLFVEIL_AREA_LOADING_MODES=Object.freeze(['single','neighbors','all']);
-// Never managed: the ground, anything this loader or the older region
-// streamer created, the portal markers and the underground cave network
-// (a cave runs beneath several surface areas at once). The river and other
-// map-wide meshes need no rule: whatever straddles a border stays loaded.
+// Never managed: objects this loader or the older region streamer created,
+// portal markers and the underground cave network. The streamed terrain is
+// supplied as area-owned floor meshes. Map-wide meshes that straddle borders
+// stay loaded.
 const SHARED_NAME=/^(?:WV_Area_|WV_Stream_|WV_Portal_)|Terrain|Cave/i;
 // Already streamed around the player or animated by their owner every frame.
 const DYNAMIC_NAME=/^(?:SWV_Near_GrassBlades_|SWV_Individual_GrassBlades_|Wolfveil_Town_Park_IndividualGrassBlades|WV_Meadow_|WV_LivingMeadow_|WV_4MileRadius_|DistantAmbientBirds|AmbientBird|Game3D_Clone_AmbientBirds)/;
@@ -703,7 +703,7 @@ export function createWolfveilAreaLoader({
       drawCallsHidden:all('unitDrawCalls')-sum('unitDrawCalls'),
       gpuRelease:{enabled:settings.releaseGpuMemory,areas:[...released],
         geometries:totals.releasedGeometries,textures:totals.releasedTextures},
-      collisionStreaming:false,terrainStreaming:'existing_meadow_tiles',
+      collisionStreaming:false,terrainStreaming:'portal_area_chunks',
       // Field names kept from the four-region streamer's console readout.
       region:current,loadedRegions:areas,sourceBatches:batches.size,
       sourceInstances,loadedInstances,
