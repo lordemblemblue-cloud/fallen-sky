@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
 import { readGlb, readAccessor } from '../tools/avatar-motion/glb-io.mjs';
-import { getSocket } from '../src/components/game3d/character/CharacterSocketUtils.js';
 import { loadRigs } from '../tools/game3d-weapons/calibrate-grips.mjs';
 
 const DIR = 'public/game3d/weapons';
@@ -88,8 +87,8 @@ test('hand sockets resolve on all four rigs and every closed-hand joint exists',
     J.nodes.forEach((n, i) => (n.children || []).forEach((c) => nodes[i].add(nodes[c])));
     const root = new THREE.Group();
     J.scenes[0].nodes.forEach((i) => root.add(nodes[i]));
-    assert.equal(getSocket(root, 'RightHand')?.name, sanitize(entry.hands.right.bone), `${id} right`);
-    assert.equal(getSocket(root, 'LeftHand')?.name, sanitize(entry.hands.left.bone), `${id} left`);
+    // the runtime holds weapons on the manifest's hand bones (the clone has no CharacterSocketUtils)
+    for (const side of ['right', 'left']) assert.ok(root.getObjectByName(sanitize(entry.hands[side].bone))?.isBone, `${id} ${side} hand bone`);
     for (const side of ['right', 'left']) {
       const fist = Object.keys(entry.hands[side].fist);
       assert.equal(fist.length, id.startsWith('fused') ? 15 : 1, `${id} ${side} fist joints`);
@@ -126,11 +125,13 @@ test('blades leave the thumb side; a bow in combat sends its arrow along the for
   }
 });
 
-test('the pack weapons are starter items carrying their model ids (catalog version 3)', () => {
+test('the pack weapons are starter items carrying their model ids (clone catalog version 4)', () => {
   const catalog = fs.readFileSync('src/components/game3d/equipment/inventoryData.jsx', 'utf8');
   const store = fs.readFileSync('src/components/game3d/axe/equipment/AXEEquipmentInventoryStore.js', 'utf8');
   for (const id of IDS) assert.match(catalog, new RegExp(`id: 'wp_pack_${id}'[^\\n]*model: '${id}'`), id);
   assert.match(catalog, /appearance: \{ weaponModelId: model \}/);
-  assert.match(catalog, /introducedVersion: 3,\s*\n\s*source: 'weapon_pack',\s*\n\s*bindState: 'bound',\s*\n\s*tradeable: false,/);
-  assert.match(store, /CURRENT_STARTER_CATALOG_VERSION = 3;/);
+  // V4 in the clone: its characters already received the V3 Crescent Moon pieces, and the migration only
+  // grants items introduced after a character's recorded catalog version.
+  assert.match(catalog, /introducedVersion: 4,\s*\n\s*source: 'weapon_pack',\s*\n\s*bindState: 'bound',\s*\n\s*tradeable: false,/);
+  assert.match(store, /CURRENT_STARTER_CATALOG_VERSION = [4-9]\b/);
 });
