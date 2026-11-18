@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {FACTION_PET_RIG_PROFILES,combineNativeFactionPetClips,proceduralFactionPetGait}
-  from './factionPetAnimationRigs.mjs';
-import {sanitizeFactionThreeNativeClips} from './factionThreeMountRig.mjs';
+import {FACTION_PET_RIG_PROFILES,combineNativeFactionPetClips,proceduralFactionPetGait,
+  faceFactionPetForward,withFactionPetLife} from './factionPetAnimationRigs.mjs';
+import {isFactionThreeMount,sanitizeFactionThreeNativeClips} from './factionThreeMountRig.mjs';
 
 // Inspected the owner's original baby_wolf Take 001 (439 keys, 30fps),
 // including rendered frames and repeated-pose comparisons. These are complete
@@ -103,6 +103,28 @@ const saveTransforms = root => {
   };
 };
 
+// Yaw that turns the source body's tail-to-head direction onto the target's, both in their roots' frames.
+// World-space deltas are only meaningful between bodies that face the same way: applied to a body facing
+// 90 degrees off, a forward leg swing becomes a sideways splay and a spine arch becomes a lean.
+function facingAlignment(sourceRoot, targetRoot, mapping, sourceNodes, targetNodes) {
+  const entries = Object.entries(mapping); // [target, source]
+  const bySource = name => entries.find(([, s]) => normalize(s) === normalize(name));
+  const back = bySource('RigPelvis_01');
+  const front = bySource('RigChest_010') || bySource('RigNeck2_018') || bySource('RigSpine2_08');
+  const direction = (root, nodes, a, b) => {
+    const from = nodes.get(normalize(a)), to = nodes.get(normalize(b));
+    if (!from || !to) return null;
+    const toRoot = root.matrixWorld.clone().invert();
+    const d = to.getWorldPosition(new THREE.Vector3()).applyMatrix4(toRoot)
+      .sub(from.getWorldPosition(new THREE.Vector3()).applyMatrix4(toRoot));
+    d.y = 0;
+    return d.lengthSq() > 1e-12 ? d.normalize() : null;
+  };
+  const s = back && front ? direction(sourceRoot, sourceNodes, back[1], front[1]) : null;
+  const t = back && front ? direction(targetRoot, targetNodes, back[0], front[0]) : null;
+  return s && t ? new THREE.Quaternion().setFromUnitVectors(s, t) : new THREE.Quaternion();
+}
+
 /** Bake source world-space rest deltas into each target's own local bind axes. */
 export function retargetDogMountClips(sourceRoot, sourceClips, targetRoot, companionId, mappingOverride = null) {
   const mapping = mappingOverride || DOG_MOUNT_RIG_MAPS[companionId];
@@ -110,6 +132,9 @@ export function retargetDogMountClips(sourceRoot, sourceClips, targetRoot, compa
   const clips = splitDogMountClips(sourceClips);
   sourceRoot.updateMatrixWorld(true); targetRoot.updateMatrixWorld(true);
   const sourceNodes = nodesByName(sourceRoot), targetNodes = nodesByName(targetRoot);
+  // Profile maps (the winged faction pets) align facings; the verified Faction 1 maps keep identity.
+  const align = mappingOverride ? facingAlignment(sourceRoot, targetRoot, mapping, sourceNodes, targetNodes) : new THREE.Quaternion();
+  const alignInverse = align.clone().invert();
   const restoreSource = saveTransforms(sourceRoot), restoreTarget = saveTransforms(targetRoot);
   const sourceInverse = sourceRoot.getWorldQuaternion(new THREE.Quaternion()).invert();
   const targetRootRotation = targetRoot.getWorldQuaternion(new THREE.Quaternion());
@@ -142,8 +167,9 @@ export function retargetDogMountClips(sourceRoot, sourceClips, targetRoot, compa
         mixer.setTime(time); sourceRoot.updateMatrixWorld(true);
         for (const node of order) {
           const pair = pairs.get(node);
-          const desiredWorld = sourceInverse.clone().multiply(pair.source.getWorldQuaternion(new THREE.Quaternion()))
-            .multiply(pair.inverseRest).multiply(pair.targetRest).premultiply(targetRootRotation);
+          const delta = sourceInverse.clone().multiply(pair.source.getWorldQuaternion(new THREE.Quaternion())).multiply(pair.inverseRest);
+          const desiredWorld = align.clone().multiply(delta).multiply(alignInverse)
+            .multiply(pair.targetRest).premultiply(targetRootRotation);
           const parentInverse = node.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
           node.quaternion.copy(parentInverse.multiply(desiredWorld)).normalize();
           node.updateMatrixWorld(true);
@@ -195,6 +221,9 @@ export async function prepareMountAnimationClips(root, embeddedClips = [], defin
   if (definition.animationRigProfile) {
     const profile=FACTION_PET_RIG_PROFILES[definition.animationRigProfile];
     if(!profile)throw new Error('Unknown faction pet animation rig: '+definition.animationRigProfile);
+    // Before anything measures the body (gait retarget, rider seat): face +Z like every other mount.
+    // Faction 3 (#160) is already turned by its own outer frame (factionThreeMountFacing.mjs): never twice.
+    if(!isFactionThreeMount(definition))faceFactionPetForward(root,definition.animationRigProfile);
     try {
       const source=await loadDogSource(definition);
       const gait=retargetDogMountClips(source.scene,source.animations||[],root,definition.id,profile.map);
@@ -203,10 +232,13 @@ export async function prepareMountAnimationClips(root, embeddedClips = [], defin
       // the same Faction-3-only pelvis/unsafe-track filter to the gait as
       // the native clip, while leaving all four animated legs intact.
       const steadyGait=sanitizeFactionThreeNativeClips(root,gait,definition);
-      return combineNativeFactionPetClips(sanitizeFactionThreeNativeClips(root,embeddedClips,definition),steadyGait,definition.animationRigProfile);
+      const combined=combineNativeFactionPetClips(sanitizeFactionThreeNativeClips(root,embeddedClips,definition),steadyGait,definition.animationRigProfile);
+      // corrupt native tail/wing keys are dropped; a procedural tail/wing layer replaces them
+      return withFactionPetLife(root,combined,embeddedClips,definition.animationRigProfile);
     } catch(error) {
       console.warn('Faction pet baby-wolf gait unavailable; using native idle and local gait',error);
-      return proceduralFactionPetGait(root,sanitizeFactionThreeNativeClips(root,embeddedClips,definition),definition.animationRigProfile);
+      return withFactionPetLife(root,proceduralFactionPetGait(root,sanitizeFactionThreeNativeClips(root,embeddedClips,definition),definition.animationRigProfile),
+        embeddedClips,definition.animationRigProfile);
     }
   }
   const source = await loadDogSource(definition);

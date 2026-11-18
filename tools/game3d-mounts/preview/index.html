@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Faction pet preview</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; background: #1d1f23; color: #e8e6e1; font: 12px/1.4 system-ui, sans-serif; }
+    #wrap { position: relative; display: inline-block; }
+    #labels { position: absolute; inset: 0; pointer-events: none; display: grid; }
+    #labels div { padding: 4px 6px; color: #f4efe2; text-shadow: 0 1px 2px #000; }
+    #report { white-space: pre; padding: 8px 12px; }
+  </style>
+</head>
+<body>
+  <div id="wrap"><canvas id="c"></canvas><div id="labels"></div></div>
+  <div id="report">loading…</div>
+  <script type="module" src="./preview.js"></script>
+</body>
+</html>
