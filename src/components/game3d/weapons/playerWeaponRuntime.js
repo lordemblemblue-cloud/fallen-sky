@@ -277,6 +277,9 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
     const rig = rigId ? m.rigs[rigId] : null;
     const parts = [];
     const fist = [];
+    // The grip and the fingers are solved from the hands as they are now, so open whatever the weapon being
+    // put away had closed: solved from a closed fist, the fingers would not reach the new handle.
+    if (current) for (const f of current.fist) if (f.restore) f.bone.quaternion.copy(f.restore);
     for (const side of ['right', 'left']) {
       const own = pair?.getObjectByName(DAGGER_PAIR_MODEL.nodes[side]) || null;
       const solved = solveFallbackGrip(model, { hand: side, class: 'sword', handleRadius: own ? DAGGER_PAIR_MODEL.handleRadius : 0.014 }, ['carry', 'combat'], bodyHeight);
