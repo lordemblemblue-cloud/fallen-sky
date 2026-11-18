@@ -133,11 +133,22 @@ def extract(c, spec, facing, origin):
     def body(v):     # capture vector (cm) -> [forward, up, right] in body metres
         return [float(v @ F * s), float(v @ U * s), float(v @ R * s)]
     f0, f1 = c.frame(spec['start']), c.frame(spec['end'])
-    frames = sorted(set(list(range(f0, f1, KEY_EVERY)) + [f1]))
     pelvis_yaw = c.yaw('Hips'); chest = c.delta('Spine4'); chest_yaw = c.yaw('Spine4'); head_yaw = c.yaw('Head')
     rh, lh = smooth(c.p('RightHand'), 1), smooth(c.p('LeftHand'), 1)
     line = unit(smooth(rh - lh, 2))                    # from the lower hand to the hand under the guard
     chest_p = c.p('Spine4')
+    def blade_at(f):
+        # the blade: the line through both hands while they share the hilt, pulled a little towards
+        # straight out from the chest (a wrist is only tracked to a couple of centimetres)
+        reach = unit(rh[f] - chest_p[f])
+        return unit(line[f] * 0.75 + reach * 0.25) if np.linalg.norm(rh[f] - lh[f]) <= TWO_HANDED_CM else reach
+    # a key every other frame, and every frame where the blade or the hand moves too far for that
+    frames = sorted(set(list(range(f0, f1, KEY_EVERY)) + [f1]))
+    for a, b in zip(list(frames), list(frames)[1:]):
+        turn = math.degrees(math.acos(max(-1.0, min(1.0, float(blade_at(a) @ blade_at(b))))))
+        if b - a > 1 and (turn > 30 or np.linalg.norm(rh[b] - rh[a]) * c.scale > 0.2):
+            frames.append((a + b) // 2)
+    frames = sorted(set(frames))
     keys = []
     for f in frames:
         key = {'t': round((f - f0) / c.fps, 4)}
@@ -159,10 +170,7 @@ def extract(c, spec, facing, origin):
             else:
                 out['arm'] = [round(v, 3) for v in arm]
             if side == 'r':
-                # the blade: the line through both hands while they share the hilt, pulled a little towards
-                # straight out from the chest (a wrist is only tracked to a couple of centimetres)
-                reach = unit(hand[f] - chest_p[f])
-                blade = unit(line[f] * 0.75 + reach * 0.25) if two else reach
+                blade = blade_at(f)
                 out['blade'] = [round(v, 3) for v in (float(blade @ F), float(blade @ U), float(blade @ R))]
             key[side] = out
         feet = {}

@@ -121,8 +121,8 @@ export const KATANA_COMBOS = Object.freeze([
     reads: 'A diagonal cut from the high guard, the returning cut across, then up over the head and down.' },
   { id: 'kneelingStorm', name: 'Kneeling storm', source: 'capture', moves: ['dojoSpinToKnee', 'dojoKneelingCut', 'dojoRisingCut'],
     reads: 'A full turn that drops to one knee, a cut from the knee, then a cut on the way back up.' },
-  { id: 'leapingFinish', name: 'Leaping finish', source: 'capture', moves: ['dojoSweep', 'dojoLeapingCut', 'dojoSpinningFinish'],
-    reads: 'A level sweep, a stepping overhead cut, then a full turn into a last overhead cut.' },
+  { id: 'leapingFinish', name: 'Leaping finish', source: 'capture', moves: ['dojoReturn', 'dojoLeapingCut', 'dojoSpinningFinish'],
+    reads: 'A cut across, a stepping overhead cut, then a full turn into a last overhead cut.' },
   { id: 'kesaFlow', name: 'Kesa flow', source: 'strikes', strikes: [3, 9, 1],
     reads: 'Down from the right shoulder, straight back up on the left, then straight down.' },
   { id: 'crossingCuts', name: 'Crossing cuts', source: 'strikes', strikes: [2, 8, 3],
@@ -137,8 +137,19 @@ export const katanaCombo = (id) => KATANA_COMBOS.find((combo) => combo.id === id
 export const katanaCapturedMove = (id) => KATANA_CAPTURED_MOVES.find((move) => move.id === id) || null;
 
 const strikeMove = (strike, name) => ({ name, technique: strike.id, hit: strike.hit, sweep: strike.sweep, cancel: strike.cancel, keys: strike.keys });
-const capturedMove = (move, name) => ({ name, technique: move.id, hit: move.hit, sweep: move.sweep, cancel: move.cancel, keys: move.keys,
-  ease: move.ease, steps: move.steps, armLength: move.armLength });
+// A captured move's hips and feet are measured from where its group began in the capture. `from` is where
+// the body already stands when the move starts ([forward, right] from the character's own spot): the move
+// is slid so it starts there, and so it can open a combo or follow a move it did not follow in the capture.
+function capturedMove(move, name, from = [0, 0]) {
+  const start = move.keys[0].hips;
+  const slide = [from[0] - (start[2] || 0), from[1] - (start[3] || 0)];
+  const round = (v) => Math.round(v * 1000) / 1000;
+  const keys = move.keys.map((key) => ({ ...key,
+    hips: [key.hips[0], key.hips[1], round((key.hips[2] || 0) + slide[0]), round((key.hips[3] || 0) + slide[1])],
+    feet: Object.fromEntries(Object.entries(key.feet).map(([side, foot]) => [side, [round(foot[0] + slide[0]), round(foot[1] + slide[1]), ...foot.slice(2)]])) }));
+  return { name, technique: move.id, hit: move.hit, sweep: move.sweep, cancel: move.cancel, keys,
+    ease: move.ease, steps: move.steps, armLength: move.armLength };
+}
 
 /** The nine strikes as baker moves, each its own clip ("katanaStrike1" .. "katanaStrike9"). */
 export function katanaStrikeMoves() {
@@ -158,7 +169,13 @@ export function katanaComboMoves(comboId = KATANA_DEFAULT_COMBO, stateNames = ['
   const combo = katanaCombo(comboId);
   const parts = combo?.moves ? combo.moves.map(katanaCapturedMove) : combo?.strikes?.map(katanaStrike);
   if (!parts || parts.length !== stateNames.length || parts.some((part) => !part)) return null;
-  return parts.map((part, i) => (combo.moves ? capturedMove(part, stateNames[i]) : strikeMove(part, stateNames[i])));
+  if (!combo.moves) return parts.map((part, i) => strikeMove(part, stateNames[i]));
+  let stands = [0, 0];
+  return parts.map((part, i) => {
+    const move = capturedMove(part, stateNames[i], stands);
+    stands = move.keys.at(-1).hips.slice(2, 4);
+    return move;
+  });
 }
 
 /**

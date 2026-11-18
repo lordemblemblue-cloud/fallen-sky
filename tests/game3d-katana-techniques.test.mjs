@@ -42,7 +42,7 @@ test('every strike is a quick two-handed cut that starts and ends in the same gu
     assert.ok(strike.sweep[0] < strike.hit && strike.hit < strike.sweep[1] && strike.sweep[1] <= strike.cancel && strike.cancel < last.t,
       strike.name + ': chamber, hit, follow-through, then the next hit may start');
     assert.ok(keyAt(strike, strike.sweep[0]) && keyAt(strike, strike.hit) && keyAt(strike, strike.sweep[1]), strike.name + ': a key at each beat');
-    const { t: _first, ...guardIn } = keys[0], { t: _last, ...guardOut } = last;
+    const guardIn = { ...keys[0], t: 0 }, guardOut = { ...last, t: 0 };
     assert.deepEqual(guardIn, guardOut, strike.name + ' returns to the guard it left');
     for (const k of keys) {
       assert.ok(k.r.arm.length === 3 && k.r.blade.length === 3 && Math.hypot(...k.r.blade) > 0.5, strike.name + ': right hand carries the blade');
@@ -136,7 +136,13 @@ test('captured moves: real footwork and timing, in the baker\'s own keys', () =>
       const end = a.keys.at(-1), start = b.keys[0];
       assert.deepEqual([end.r, end.l, end.spine, end.feet], [start.r, start.l, start.spine, start.feet], combo.name + ': ' + a.id + ' into ' + b.id);
     }
+    // as a combo, the first hit starts over the character's own spot and each next hit starts where the last one stood
+    const hits = katanaComboMoves(combo.id);
+    assert.deepEqual(hits[0].keys[0].hips.slice(2), [0, 0], combo.name + ' opens on the spot');
+    for (let i = 0; i + 1 < 3; i++) assert.deepEqual(hits[i + 1].keys[0].hips.slice(2), hits[i].keys.at(-1).hips.slice(2), combo.name + ' hit ' + (i + 2) + ' starts where hit ' + (i + 1) + ' stood');
+    for (const hit of hits) for (const k of hit.keys) assert.ok(Math.hypot(k.hips[2], k.hips[3]) < 0.9, combo.name + ' stays within a step of its spot: ' + k.hips);
   }
+  for (const move of katanaCapturedMoves()) assert.deepEqual(move.keys[0].hips.slice(2), [0, 0], move.name + ' alone starts on the spot');
 });
 
 test('a long two-handed blade swings the katana combo; other swords keep their three hits', () => {
