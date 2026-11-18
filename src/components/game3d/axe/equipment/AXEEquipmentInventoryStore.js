@@ -6,6 +6,7 @@
 // owned item instances live here and are persisted per user + per character.
 
 import { INVENTORY } from '../../equipment/inventoryData';
+import { weaponPackPictureForItem } from '../../weapons/weaponPackPictures.mjs';
 import { previewAXEWeaponLegacyForge } from './AXEWeaponLegacyForge';
 import { characterScopedStorage, subscribeCharacterChange } from '../../characterStorage';
 import {
@@ -16,6 +17,13 @@ import {
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
 const CURRENT_STARTER_CATALOG_VERSION = 3;
+
+// A sword, dagger pair or bow with no picture of its own shows the weapon pack's picture of its model,
+// in the starting inventory and in one saved before the pictures existed.
+const weaponPicture = (item) => {
+  const iconUrl = weaponPackPictureForItem(item);
+  return iconUrl ? { iconUrl } : {};
+};
 
 function seedItems() {
   return Object.entries(INVENTORY).flatMap(([category, items]) =>
@@ -32,6 +40,7 @@ function seedItems() {
         locked: !!raw.locked,
         acquiredAt: 0,
         source: raw.source || 'starter',
+        ...weaponPicture({ ...raw, category }),
       };
     }),
   );
@@ -51,6 +60,7 @@ function normalizeItem(raw = {}, fallbackCategory = null) {
     locked: !!raw.locked,
     acquiredAt: Number(raw.acquiredAt || Date.now()),
     source: raw.source || 'owned',
+    ...weaponPicture({ ...raw, category }),
   };
 }
 

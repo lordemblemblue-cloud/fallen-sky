@@ -11,7 +11,8 @@ const COMBO_STATES = new Set(WEAPON_COMBO_STATE_NAMES);
 
 export const WEAPON_AUTO_DISMISS_SECONDS = 6;
 // Items without their own model show the pack model of their family.
-export const FAMILY_DEFAULT_WEAPON_MODELS = Object.freeze({ sword: 'fantasy_sword', bow: 'fantasy_bow' });
+// (the bow is the pack bow whose file is in this repository)
+export const FAMILY_DEFAULT_WEAPON_MODELS = Object.freeze({ sword: 'fantasy_sword', bow: 'violet_bow' });
 
 // What to show in hand for an equipped weapon item. family = the item's mastery family
 // (AXEWeaponIdentity.inferAXEMasteryWeaponId).

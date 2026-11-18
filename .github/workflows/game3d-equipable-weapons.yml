@@ -1,0 +1,70 @@
+name: Game 3D equipable weapons
+
+on:
+  pull_request:
+    paths:
+      - 'public/game3d/weapons/**'
+      - 'src/components/game3d/weapons/playerWeaponRuntime.js'
+      - 'src/components/game3d/weapons/playerWeaponSummon.js'
+      - 'src/components/game3d/weapons/weaponPackPictures.mjs'
+      - 'src/components/game3d/axe/equipment/AXEEquipmentInventoryStore.js'
+      - 'src/components/game3d/equipment/inventoryData.jsx'
+      - 'src/components/game3d/wolfveil/WolfveilArtisanShopCatalog.mjs'
+      - 'tools/game3d-weapons/**'
+      - 'tests/game3d-equipable-weapons.test.mjs'
+      - '.github/workflows/game3d-equipable-weapons.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game3d-equipable-weapons-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  weapons:
+    name: Sword, daggers and bow in the inventory and in the hand
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The tool reads as Python
+        run: python3 -m py_compile tools/game3d-weapons/prepare_lowpoly_weapons.py
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Files, pictures, items, and each weapon in the hands of the real bodies
+        run: node --test tests/game3d-equipable-weapons.test.mjs
+      - name: Lint the new files
+        run: npx eslint --quiet src/components/game3d/weapons/weaponPackPictures.mjs tests/game3d-equipable-weapons.test.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          git fetch -q origin main
+          status=0
+          for file in \
+            src/components/game3d/weapons/playerWeaponRuntime.js \
+            src/components/game3d/weapons/playerWeaponSummon.js \
+            src/components/game3d/axe/equipment/AXEEquipmentInventoryStore.js; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: $head errors here, $base on main"
+            if [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status
+      - name: The game's own weapon tests, here and on main
+        run: |
+          tests="tests/game3d-weapon-pack-assets.test.mjs tests/game3d-remote-weapon-combos.test.mjs"
+          node --test $tests > here.txt 2>&1 || true
+          grep -E "^# (tests|pass|fail)" here.txt | tr '\n' ' '; echo "(this branch)"; grep -E "^not ok" here.txt | head -20 || true
+          git fetch -q origin main
+          mkdir -p /tmp/main && git --work-tree=/tmp/main checkout origin/main -- . && (cd /tmp/main && ln -s "$GITHUB_WORKSPACE/node_modules" node_modules && node --test $tests > "$GITHUB_WORKSPACE/main.txt" 2>&1 || true)
+          git reset -q
+          grep -E "^# (tests|pass|fail)" main.txt | tr '\n' ' '; echo "(main)"; grep -E "^not ok" main.txt | head -20 || true
+          here=$(grep -cE "^not ok" here.txt || true); base=$(grep -cE "^not ok" main.txt || true)
+          if [ "$here" -gt "$base" ]; then echo "more failures than main"; exit 1; fi

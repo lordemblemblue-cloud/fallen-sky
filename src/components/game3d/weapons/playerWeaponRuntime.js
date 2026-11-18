@@ -118,6 +118,13 @@ function createArrowFactory() {
 }
 
 // ---------- daggers (weapon frame: grip at the origin, blade +Y, edge +Z, metres) ----------
+// The pair's own model: two curved daggers in one file, each in the weapon frame, named DaggerRight and
+// DaggerLeft (tools/game3d-weapons/prepare_lowpoly_weapons.py). The blades modelled below stand in for it
+// wherever that file cannot be loaded.
+export const DAGGER_PAIR_MODEL = Object.freeze({
+  url: '/game3d/weapons/curved_daggers.glb', nodes: Object.freeze({ right: 'DaggerRight', left: 'DaggerLeft' }),
+  handleRadius: 0.0155, tip: Object.freeze([0, 0.38, -0.09]), bladeBase: Object.freeze([0, 0.075, 0]),
+});
 function createDaggerFactory() {
   const shape = new THREE.Shape();
   shape.moveTo(-0.021, 0.06); shape.lineTo(-0.024, 0.1); shape.quadraticCurveTo(-0.019, 0.27, 0, 0.37);
@@ -256,26 +263,37 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
     return true;
   }
 
-  // Dual daggers (the dual_blades family): one short blade in each hand. There is no dagger asset yet, so
-  // the blades are modelled here in the weapon frame and gripped with the same solver as the pack swords.
+  // Dual daggers (the dual_blades family): one short blade in each hand, the pair's own model when it loads
+  // and the blades modelled above otherwise, gripped with the same solver as the pack swords.
   async function equipDaggers() {
     const token = ++equipToken;
     if (current?.id === 'daggers') return true;
     let m = null;
     try { m = await getManifest(); } catch { /* the bind-pose solver below still works */ }
+    let pair = null;
+    try { pair = await loadScene(DAGGER_PAIR_MODEL.url); } catch { /* the modelled blades stand in */ }
     if (token !== equipToken || disposed) return false;
     const rigId = m ? findWeaponRig(model, m) : null;
     const rig = rigId ? m.rigs[rigId] : null;
     const parts = [];
     const fist = [];
+    // The grip and the fingers are solved from the hands as they are now, so open whatever the weapon being
+    // put away had closed: solved from a closed fist, the fingers would not reach the new handle.
+    if (current) for (const f of current.fist) if (f.restore) f.bone.quaternion.copy(f.restore);
     for (const side of ['right', 'left']) {
-      const solved = solveFallbackGrip(model, { hand: side, class: 'sword', handleRadius: 0.014 }, ['carry', 'combat'], bodyHeight);
+      const own = pair?.getObjectByName(DAGGER_PAIR_MODEL.nodes[side]) || null;
+      const solved = solveFallbackGrip(model, { hand: side, class: 'sword', handleRadius: own ? DAGGER_PAIR_MODEL.handleRadius : 0.014 }, ['carry', 'combat'], bodyHeight);
       if (!solved) continue;
       const handBone = model.getObjectByName(sanitize(solved.bone));
       if (!handBone) continue;
       const root = new THREE.Group();
       root.name = `WeaponPack_dagger_${side}`;
-      root.add(daggers.make());
+      if (own) {
+        const blade = own.clone(true);
+        blade.position.set(0, 0, 0); blade.quaternion.identity(); blade.scale.setScalar(1);
+        blade.traverse((n) => { if (n.isMesh) { n.castShadow = true; n.frustumCulled = true; } });
+        root.add(blade);
+      } else root.add(daggers.make());
       handBone.add(root);
       parts.push({ root, handBone, side, grips: { carry: toTransform(solved.grips.carry), combat: toTransform(solved.grips.combat) } });
       const pose = Object.keys(solved.fist).length ? solved.fist : rig?.hands?.[side]?.fist || {};
@@ -289,8 +307,10 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
     const hidden = (rig?.hideWhenArmed || []).map((n) => model.getObjectByName(sanitize(n))).filter(Boolean)
       .map((node) => { const visible = node.visible; node.visible = false; return { node, visible }; });
     const first = parts[0];
-    const tip = new THREE.Object3D(); tip.name = 'WeaponTip'; tip.position.set(0, 0.36, 0); first.root.add(tip);
-    const base = new THREE.Object3D(); base.name = 'WeaponBladeBase'; base.position.set(0, 0.08, 0); first.root.add(base);
+    const tip = new THREE.Object3D(); tip.name = 'WeaponTip'; first.root.add(tip);
+    const base = new THREE.Object3D(); base.name = 'WeaponBladeBase'; first.root.add(base);
+    if (pair) { tip.position.fromArray(DAGGER_PAIR_MODEL.tip); base.position.fromArray(DAGGER_PAIR_MODEL.bladeBase); }
+    else { tip.position.set(0, 0.36, 0); base.position.set(0, 0.08, 0); }
     current = { id: 'daggers', cls: 'dagger', hand: 'both', weapon: { id: 'daggers', class: 'dagger', hand: 'both' }, rigId,
       root: first.root, handBone: first.handBone, tip, base, nock: null, fist, hidden, grips: first.grips, parts,
       drawHand: null, string: null, nocked: null };
