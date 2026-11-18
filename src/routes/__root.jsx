@@ -1,6 +1,5 @@
-import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Navigate, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { DefaultCatchBoundary } from "@/components/DefaultCatchBoundary";
-import { NotFound } from "@/components/NotFound";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/AuthContext";
 import { Base44Scripts } from "base44:document";
@@ -21,7 +20,8 @@ export const Route = createRootRoute({
     ],
   }),
   errorComponent: DefaultCatchBoundary,
-  notFoundComponent: () => <NotFound />,
+  // Retired account URLs (and other stale app paths) lead directly into the game.
+  notFoundComponent: () => <Navigate to="/" replace />,
   shellComponent: RootDocument,
   component: RootComponent,
 });
