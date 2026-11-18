@@ -1,0 +1,45 @@
+{
+ "fantasy_sword": {
+  "tip": [
+   0.0043,
+   0.8088,
+   0.0032
+  ],
+  "pommel": -0.11,
+  "handleRadius": 0.0197,
+  "bytes": 1597028,
+  "tris": 19357,
+  "manifestTip": [
+   -0.0059,
+   0.81,
+   0.0058
+  ]
+ },
+ "curved_daggers": {
+  "DaggerLeft": {
+   "tip": [
+    0.0,
+    0.38,
+    -0.1132
+   ],
+   "pommel": -0.0736,
+   "handleRadius": 0.0148,
+   "gripLength": 0.0988,
+   "length": 0.4536,
+   "tris": 2560
+  },
+  "DaggerRight": {
+   "tip": [
+    -0.0,
+    0.38,
+    -0.085
+   ],
+   "pommel": -0.0668,
+   "handleRadius": 0.0162,
+   "gripLength": 0.0972,
+   "length": 0.4468,
+   "tris": 2346
+  },
+  "bytes": 601320
+ }
+}
