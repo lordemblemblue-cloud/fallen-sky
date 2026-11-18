@@ -357,9 +357,9 @@ export function createWolfveilVillage(scene,options={}){
     interactCave(position){return caveSystem?.interact(position)??null;},
     interactPalace(position){return palace.interact(position);},
     resetPalaceNavigation(){palace.resetNavigation();},
-    update(dt,weather={},playerPosition=null){
+    update(dt,weather={},playerPosition=null,streamedArea=null){
       if(disposed)return;
-      terrainAreas.update(playerPosition);
+      terrainAreas.update(playerPosition,streamedArea);
       elapsed+=Math.max(0,Math.min(dt,.08));
       const storm=weather.weather==='storm',rainy=storm||weather.weather==='rain';
       const windMph=Number(weather.windMph??(storm?24:rainy?13:7));
