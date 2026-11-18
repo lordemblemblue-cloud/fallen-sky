@@ -68,15 +68,16 @@ function ballFaces(split){
 const cornerNoise=(v,salt)=>hash(Math.round(v[0]*40)+Math.round(v[1]*40)*31,Math.round(v[2]*40)+salt*7.3);
 
 // Japanese cedar: a straight bare trunk with a root flare, then four tiers
-// of drooping boughs. Walk under it and look up into the tiers.
+// of drooping boughs wide enough that a stand closes overhead. Walk under it
+// and look up into the tiers.
 function cedar(){
   const b=builder();
   const bark=sceneryColor(0x5b4433),root=sceneryColor(0x3b2d23);
-  b.tube([{y:-.05,r:.052,color:root},{y:.05,r:.034,color:bark},{y:.94,r:.007,color:shade(bark,.8)}],6,.3);
+  b.tube([{y:-.05,r:.05,color:root},{y:.05,r:.032,color:bark},{y:.94,r:.007,color:shade(bark,.8)}],5,.3);
   const deep=sceneryColor(0x21412b),leaf=sceneryColor(0x2f5f3c),tip=sceneryColor(0x4a8350);
-  const tiers=[[.60,.33,.205],[.75,.49,.170],[.89,.65,.126],[1,.80,.078]];
+  const tiers=[[.60,.33,.25],[.75,.49,.205],[.89,.65,.15],[1,.80,.092]];
   tiers.forEach(([top,foot,radius],t)=>{
-    const sides=7,light=.86+t*.06; // higher boughs catch more light
+    const sides=6,light=.86+t*.06; // higher boughs catch more light
     const apex=[0,top,0];
     const mid=k=>{const a=t*.9+k*TAU/sides,r=radius*(.46+.1*hash(k,t+1));
       return [Math.cos(a)*r,top-(top-foot)*(.4+.08*hash(k+9,t)),Math.sin(a)*r];};
@@ -118,13 +119,14 @@ function pine(){
   return b.done({doubleSided:true});
 }
 
-// Maple: a short leaning trunk under three rounded crowns.
+// Red maple: a short leaning trunk under three rounded crowns the colour of
+// autumn. They stand along the roads and trails, so red means "this way".
 function maple(){
   const b=builder();
-  const bark=sceneryColor(0x54463a),root=sceneryColor(0x372d26);
+  const bark=sceneryColor(0x4a3b33),root=sceneryColor(0x2f2622);
   b.tube([{y:-.06,r:.05,color:root},{y:.08,r:.034,color:bark},{y:.56,r:.02,x:.03,z:.01,color:bark}],5,.2);
-  const low=sceneryColor(0x355c30),high=sceneryColor(0x6c9c4e);
-  const crowns=[[[.03,.76,.01],[.33,.25,.33],1],[[.24,.62,.12],[.24,.18,.24],2],[[-.2,.65,-.11],[.26,.19,.26],3]];
+  const low=sceneryColor(0x8e2f1d),high=sceneryColor(0xe0702c);
+  const crowns=[[[.03,.74,.01],[.34,.27,.34],1],[[.24,.61,.12],[.25,.21,.25],2],[[-.2,.64,-.11],[.27,.22,.27],3]];
   for(const [centre,size,salt] of crowns)for(const face of ballFaces(false)){
     const corner=v=>{const k=.86+.28*cornerNoise(v,salt);
       return [centre[0]+v[0]*size[0]*k,centre[1]+v[1]*size[1]*k,centre[2]+v[2]*size[2]*k];};
@@ -134,7 +136,7 @@ function maple(){
   return b.done({doubleSided:true});
 }
 
-// Bamboo: three leaning canes with drooping leaf sprays near the top.
+// Bamboo: three leaning canes with drooping leaf sprays up their top half.
 function bamboo(){
   const b=builder();
   const base=sceneryColor(0x5d7a39),cane=sceneryColor(0x8ba650);
@@ -146,12 +148,12 @@ function bamboo(){
     const midAt=along(.5),topAt=along(1);
     b.tube([{y:-.03,r:.012,x:footX,z:footZ,color:base},{y:midAt[1],r:.01,x:midAt[0],z:midAt[2],color:cane},
       {y:topAt[1],r:.005,x:topAt[0],z:topAt[2],color:cane}],4,a);
-    for(let s=0;s<3;s++){
-      const from=along(.58+s*.17),turn=a+1.1+s*2.1,lx=Math.cos(turn),lz=Math.sin(turn);
-      const reach=.17-.02*s,px=-lz,pz=lx;
-      const tip=[from[0]+lx*reach,from[1]-.06,from[2]+lz*reach];
-      const left=[from[0]+lx*reach*.5+px*.045,from[1]+.015,from[2]+lz*reach*.5+pz*.045];
-      const right=[from[0]+lx*reach*.5-px*.045,from[1]+.015,from[2]+lz*reach*.5-pz*.045];
+    for(let s=0;s<4;s++){
+      const from=along(.5+s*.15),turn=a+1.1+s*1.9,lx=Math.cos(turn),lz=Math.sin(turn);
+      const reach=.25-.03*s,px=-lz,pz=lx;
+      const tip=[from[0]+lx*reach,from[1]-.08,from[2]+lz*reach];
+      const left=[from[0]+lx*reach*.5+px*.07,from[1]+.02,from[2]+lz*reach*.5+pz*.07];
+      const right=[from[0]+lx*reach*.5-px*.07,from[1]+.02,from[2]+lz*reach*.5-pz*.07];
       b.tri(from,left,right,leaf,leaf,leaf);
       b.tri(left,tip,right,leaf,leafTip,leaf);
     }
@@ -162,7 +164,7 @@ function bamboo(){
 // Fern: seven arching fronds around four upright ones.
 function shrub(){
   const b=builder();
-  const root=sceneryColor(0x2c5329),green=sceneryColor(0x47793a),tip=sceneryColor(0x73a44d);
+  const root=sceneryColor(0x33602e),green=sceneryColor(0x4c813d),tip=sceneryColor(0x7bac52);
   const frond=(a,reach,rise,droop,width)=>{
     const dx=Math.cos(a),dz=Math.sin(a),px=-dz,pz=dx;
     const from=[dx*.04,-.04,dz*.04],end=[dx*reach,droop,dz*reach];
@@ -176,20 +178,26 @@ function shrub(){
   return b.done({doubleSided:true});
 }
 
-// A drift of six small flowers: thin stems, a leaf, an open cup of petals.
+// A drift of seven flowers: a thin stem, a leaf, and a bloom that shows its
+// colour from the side as well as from above.
 function flowers(){
   const b=builder();
   const stem=sceneryColor(0x4f7d3a),stemDark=sceneryColor(0x35592b);
-  const petals=[0xf3efe4,0xbba8de,0xf3efe4,0xe7ca5c,0xbba8de,0xf3efe4].map(sceneryColor);
-  const heart=sceneryColor(0xd9a93a);
-  for(let f=0;f<6;f++){
-    const a=f*TAU/6+.5*hash(f,1),r=.25+.6*hash(f,2),x=Math.cos(a)*r,z=Math.sin(a)*r;
-    const tall=.72+.28*hash(f,3),turn=a+1.3,sx=Math.cos(turn)*.035,sz=Math.sin(turn)*.035;
+  const petals=[0xf6f1e6,0xb7a2e2,0xf6f1e6,0xecc94f,0xb7a2e2,0xf6f1e6,0xe9a7b8].map(sceneryColor);
+  const heart=sceneryColor(0xe2b340);
+  for(let f=0;f<7;f++){
+    const a=f*TAU/7+.5*hash(f,1),r=.2+.75*hash(f,2),x=Math.cos(a)*r,z=Math.sin(a)*r;
+    const tall=.7+.2*hash(f,3),turn=a+1.3,sx=Math.cos(turn)*.02,sz=Math.sin(turn)*.02;
     const head=[x+.04*Math.cos(a),tall,z+.04*Math.sin(a)];
     b.tri([x-sx,-.05,z-sz],[x+sx,-.05,z+sz],head,stemDark,stemDark,stem);
-    b.tri([x,tall*.3,z],[x+sx*5,tall*.5,z+sz*5],[x+sx*3,tall*.28,z+sz*3],stemDark,stem,stem);
-    const cup=k=>{const p=turn+k*TAU/4;return [head[0]+Math.cos(p)*.1,tall+.06,head[2]+Math.sin(p)*.1];};
-    for(let k=0;k<4;k++)b.tri(head,cup(k),cup((k+1)%4),heart,petals[f],petals[f]);
+    b.tri([x,tall*.3,z],[x+sx*9,tall*.5,z+sz*9],[x+sx*5,tall*.27,z+sz*5],stemDark,stem,stem);
+    // Bloom: a squat diamond, petals round the rim and a golden heart on top.
+    const rim=k=>{const p=turn+k*TAU/4;return [head[0]+Math.cos(p)*.13,tall+.07,head[2]+Math.sin(p)*.13];};
+    const crown=[head[0],tall+.16,head[2]];
+    for(let k=0;k<4;k++){
+      b.tri(head,rim(k),rim((k+1)%4),stem,petals[f],petals[f]);
+      b.tri(crown,rim(k),rim((k+1)%4),heart,petals[f],petals[f]);
+    }
   }
   return b.done({doubleSided:true});
 }
@@ -224,6 +232,18 @@ export function wolfveilSideSceneryShape(kind){
   return made.get(kind);
 }
 
+/**
+ * Split one kind's pieces into batches no heavier than `maxTriangles` each,
+ * south to north, so every batch of trees stays light enough to be kept on
+ * the horizon and a batch behind the camera can be skipped.
+ */
+export function wolfveilSideSceneryBatches(items,trianglesEach,maxTriangles=55000){
+  const count=Math.max(1,Math.ceil(items.length*trianglesEach/maxTriangles));
+  if(count===1)return [items];
+  const sorted=[...items].sort((a,b)=>a.z-b.z||a.x-b.x),size=Math.ceil(sorted.length/count);
+  return Array.from({length:count},(_,i)=>sorted.slice(i*size,(i+1)*size)).filter(batch=>batch.length);
+}
+
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 /**
  * Where and how each planted piece stands on the drawn ground.
@@ -245,7 +265,7 @@ export function wolfveilSideSceneryInstances(placements,{heightAt}){
       const light=.84+.26*h2;tint=[light*(1+.07*(h3-.5)),light,light*(1-.09*(h3-.5))];
     }else if(item.kind==='maple'){
       sx=sz=tall*(.95+.25*h1);tiltX=(h2-.5)*.1;tiltZ=(h3-.5)*.1;
-      const light=.88+.22*h2;tint=[light*(1+.12*h3),light,light*(1-.1*h3)];
+      const light=.86+.24*h2;tint=[light,light*(.8+.4*h3),light*(.85+.15*h3)]; // crimson to orange
     }else if(item.kind==='bamboo'){
       sx=sz=tall*(.9+.3*h1);tiltX=(h2-.5)*.08;tiltZ=(h3-.5)*.08;
       const light=.9+.2*h2;tint=[light,light,light*(.94+.06*h3)];

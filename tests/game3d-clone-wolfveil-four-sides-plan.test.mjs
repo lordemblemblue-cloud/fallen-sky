@@ -54,7 +54,7 @@ test('the plan is the same every time, and each side gets what its theme asks fo
   assert.ok(count('west','bamboo')>=150&&count('north','bamboo')===0);
   for(const id of WOLFVEIL_SIDE_IDS)for(const [kind,cap] of Object.entries(WOLFVEIL_SIDE_THEMES[id].caps))
     assert.ok(count(id,kind)<=cap,id+' '+kind+' over its cap');
-  assert.ok(whole.totals.trunks>=900&&whole.totals.trunks<=1100,'trees that need a collider: '+whole.totals.trunks);
+  assert.ok(whole.totals.trunks>=1300&&whole.totals.trunks<=1700,'trees that need a collider: '+whole.totals.trunks);
   assert.throws(()=>planWolfveilSidePlanting('town'),/Unknown Wolfveil side/);
 });
 

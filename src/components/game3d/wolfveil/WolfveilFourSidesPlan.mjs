@@ -20,7 +20,7 @@
 // numbers, shared by the scene, the tests and (for trunks) the server.
 import {wolfveilHeight,wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
 import {WOLFVEIL_MOB_AREAS,WOLFVEIL_FIGHTING_GROUNDS,wolfveilFightingGroundAt,wolfveilMobAreaAt,
-  wolfveilFrontierTrailClearance,wolfveilNoise2} from './WolfveilLandscapeDesign.mjs';
+  wolfveilFrontierTrailClearance,wolfveilMountainness,wolfveilNoise2} from './WolfveilLandscapeDesign.mjs';
 import {wolfveilAreaAtLocal,wolfveilAreaRect} from './streaming/WolfveilFiveAreaPlan.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './streaming/WolfveilAreaPortalPlan.mjs';
 import {WOLFVEIL_CAVE_ENTRANCE_FRAMES} from './WolfveilCaveEntrancePlan.mjs';
@@ -29,14 +29,14 @@ import {isWolfveilCaveApproachReserved} from './WolfveilCaveAccessPlan.mjs';
 import {forestTrailIsProtected} from './WolfveilForestTrailLandscape.mjs';
 import {WOLFVEIL_SW_QUALITY} from './WolfveilSWQuarterQuality.mjs';
 
-export const WOLFVEIL_FOUR_SIDES_REVISION='wolfveil-four-sides-v1-20261117';
+export const WOLFVEIL_FOUR_SIDES_REVISION='wolfveil-four-sides-v2-20261117';
 
 // What one piece of scenery needs around it. `trunk` scenery (a tree) blocks
 // the way and gets a collider on the client and the server. `bulky` scenery
 // (a boulder) is kept out of camps, arenas and gateways like a tree, but is
 // walked through like every stone already in the valley.
 export const WOLFVEIL_SIDE_SCENERY=Object.freeze({
-  cedar:  {trunk:true, spacing:6.5,maxSlope:.62,pathClear:5,  height:[13,19]},
+  cedar:  {trunk:true, spacing:6.5,maxSlope:.62,pathClear:5,  height:[14,22]},
   pine:   {trunk:true, spacing:7,  maxSlope:.70,pathClear:5,  height:[8,13]},
   maple:  {trunk:true, spacing:9,  maxSlope:.50,pathClear:5,  height:[7,10]},
   bamboo: {trunk:false,spacing:2.2,maxSlope:.45,pathClear:3.5,height:[5,8]},
@@ -55,9 +55,10 @@ export const WOLFVEIL_SIDE_THEMES=Object.freeze({
     perHectare:{pine:5,boulder:26,shrub:6,flowers:1},
     caps:{pine:140,boulder:700,shrub:180,flowers:40}}),
   west:Object.freeze({side:'left',theme:'forest',title:'Bluewood',levels:[40,50],
-    look:'Tall cedars in groves with glades between them. Ferns under the trees, bamboo by the low ground, a few red maples.',
-    perHectare:{cedar:24,maple:3,bamboo:9,shrub:26,boulder:4,flowers:5},
-    caps:{cedar:480,maple:60,bamboo:220,shrub:560,boulder:100,flowers:120}}),
+    look:'Tall cedars in thick stands with glades between them. Ferns under the trees, bamboo by the low ground, red maples along the roads and trails.',
+    // Maples first: they take their places by the trails before the cedars close in.
+    perHectare:{maple:3,cedar:40,bamboo:9,shrub:26,boulder:4,flowers:6.5},
+    caps:{maple:60,cedar:1000,bamboo:220,shrub:700,boulder:100,flowers:160}}),
   south:Object.freeze({side:'front',theme:'grassland',title:'Southern Gate Fields',levels:null,
     look:'Open rolling fields. Wide drifts of flowers, a lone tree here and there, nothing to block the view of the gate.',
     perHectare:{maple:.9,flowers:70,shrub:4,boulder:1.2},
@@ -113,10 +114,15 @@ function welcome(side,kind,x,z,slope){
   const grove=.5+.5*wolfveilNoise2(x*.021+11.3,z*.021-4.7);   // broad groves and glades
   const drift=.5+.5*wolfveilNoise2(x*.047-2.1,z*.047+8.9);    // smaller drifts
   if(side==='west'){
-    if(kind==='cedar')return grove>.36?1:.12;                 // groves, with glades between
+    const flank=wolfveilMountainness(x,z)>.3;                 // the mountain's foot is rock, not woodland
+    if(kind==='boulder')return flank?1:.45;
+    if(flank)return 0;
+    if(kind==='cedar')return grove>.4?1:.04;                  // thick stands, open glades between
+    if(kind==='maple')                                        // red maples mark the roads and trails
+      return Math.min(wolfveilRouteClearance(x,z),wolfveilFrontierTrailClearance(x,z))<18?1:.03;
     if(kind==='bamboo')return wolfveilHeight(x,z)<40&&drift>.55?1:0;
-    if(kind==='shrub')return grove>.3?1:.35;                  // ferns keep to the shade
-    if(kind==='flowers')return grove<.36?1:.1;                // flowers keep to the glades
+    if(kind==='shrub')return grove>.34?1:.3;                  // ferns keep to the shade
+    if(kind==='flowers')return grove<.4?1:.06;                // flowers keep to the glades
   }
   if(side==='north'){
     if(kind==='boulder')return Math.min(1,.25+slope*1.3);     // scree on the steep ground

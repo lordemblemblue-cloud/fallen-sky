@@ -6,12 +6,14 @@ import {readFileSync} from 'node:fs';
 import {WOLFVEIL_SIDE_SCENERY,WOLFVEIL_OWNER_TREE_CLEAR,WOLFVEIL_FOREST_FLOOR_SQUARE,
   wolfveilFinishedGroundAt,planWolfveilFourSides}
   from '../src/components/game3d/wolfveil/WolfveilFourSidesPlan.mjs';
-import {WOLFVEIL_PLANTED_SIDES,WOLFVEIL_PLANTED_TRUNK_RADIUS,wolfveilPlantedSide,
+import {WOLFVEIL_PLANTED_SIDES,wolfveilPlantedTrunkRadius,wolfveilPlantedSide,
   wolfveilPlantedTrunkColliders,wolfveilTrunkColliders,createWolfveilCircleGrid}
   from '../src/components/game3d/wolfveil/WolfveilTrunkColliders.mjs';
 import {WOLFVEIL_SIDE_SCENERY_KINDS,WOLFVEIL_SIDE_SCENERY_LABELS,wolfveilSideSceneryShape,
-  wolfveilSideSceneryInstances} from '../src/components/game3d/wolfveil/WolfveilSideSceneryShapes.mjs';
+  wolfveilSideSceneryInstances,wolfveilSideSceneryBatches} from '../src/components/game3d/wolfveil/WolfveilSideSceneryShapes.mjs';
 import {wolfveilForestTrunkColliders} from '../src/components/game3d/wolfveil/WolfveilForestLayout.js';
+import {wolfveilRouteClearance} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+import {wolfveilFrontierTrailClearance,wolfveilMountainness} from '../src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs';
 import {wolfveilAreaAtLocal} from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {createWolfveilTerrainSurfaceSampler} from '../src/components/game3d/wolfveil/WolfveilTerrainSurfaceSampler.mjs';
 import {isWolfveilCaveApproachReserved} from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -31,13 +33,13 @@ const HORIZON_TRIANGLES=60000;
 test('the forest is the first planted side and holds what the plan says',()=>{
   assert.deepEqual(WOLFVEIL_PLANTED_SIDES,['west']);
   assert.equal(forest.theme,'forest');
-  assert.deepEqual(forest.counts,{cedar:480,maple:60,bamboo:220,shrub:560,boulder:100,flowers:120});
+  assert.deepEqual(forest.counts,{maple:60,cedar:1000,bamboo:220,shrub:700,boulder:100,flowers:160});
   assert.equal(wolfveilPlantedSide('north'),null,'the mountain is not built yet');
   assert.equal(wolfveilPlantedSide('west'),forest,'planned once, then shared');
 });
 
 test('every shape is light, whole and stands on the ground',()=>{
-  const budget={cedar:110,pine:80,maple:80,bamboo:70,shrub:24,flowers:36,boulder:80};
+  const budget={cedar:96,pine:80,maple:80,bamboo:72,shrub:24,flowers:70,boulder:80};
   assert.deepEqual([...WOLFVEIL_SIDE_SCENERY_KINDS].sort(),Object.keys(WOLFVEIL_SIDE_SCENERY).sort(),
     'one shape for every kind the plan can place');
   for(const kind of WOLFVEIL_SIDE_SCENERY_KINDS){
@@ -60,16 +62,41 @@ test('every shape is light, whole and stands on the ground',()=>{
   assert.throws(()=>wolfveilSideSceneryShape('palm'),RangeError);
 });
 
-test('the whole forest costs under 100,000 triangles and six draw calls',()=>{
-  let triangles=0;
+test('the whole forest costs under 150,000 triangles and seven draw calls',()=>{
+  let triangles=0,drawCalls=0;
   for(const [kind,list] of Object.entries(standing)){
-    const cost=wolfveilSideSceneryShape(kind).triangles*list.length;
-    triangles+=cost;
-    if(WOLFVEIL_SIDE_SCENERY[kind].height[0]>=4)
-      assert.ok(cost<=HORIZON_TRIANGLES,kind+' stays on the horizon from every area ('+cost+' triangles)');
+    const each=wolfveilSideSceneryShape(kind).triangles,batches=wolfveilSideSceneryBatches(list,each);
+    triangles+=each*list.length;drawCalls+=batches.length;
+    assert.equal(batches.reduce((sum,batch)=>sum+batch.length,0),list.length,kind+': every piece is in one batch');
+    assert.equal(new Set(batches.flat()).size,list.length,kind+': no piece is drawn twice');
+    // Each batch of trees is light enough to stay on the horizon from every area.
+    if(WOLFVEIL_SIDE_SCENERY[kind].height[0]>=4)for(const batch of batches)
+      assert.ok(batch.length*each<=HORIZON_TRIANGLES,kind+' batch of '+batch.length*each+' triangles');
   }
   assert.equal(Object.keys(standing).length,6);
-  assert.ok(triangles<100000,'forest triangles: '+triangles);
+  assert.equal(drawCalls,7,'the cedars are two batches, every other kind is one');
+  assert.ok(triangles<150000,'forest triangles: '+triangles);
+  // Batches run south to north, so one behind the camera can be skipped.
+  const [south,north]=wolfveilSideSceneryBatches(standing.cedar,wolfveilSideSceneryShape('cedar').triangles);
+  assert.ok(Math.max(...south.map(item=>item.z))<=Math.min(...north.map(item=>item.z)));
+  assert.deepEqual(wolfveilSideSceneryBatches([1,2,3],10,1000),[[1,2,3]],'a small kind stays one batch');
+});
+
+test('it reads as a forest: thick stands, clear glades, red maples by the trails, rock left bare',()=>{
+  const cedars=forest.placements.filter(item=>item.kind==='cedar');
+  // Most cedars have a close neighbour: stands, not a scatter.
+  const close=cedars.filter(tree=>cedars.some(other=>other!==tree&&Math.hypot(tree.x-other.x,tree.z-other.z)<12)).length;
+  assert.ok(close/cedars.length>=.85,'cedars standing in a stand: '+close+' of '+cedars.length);
+  const maples=forest.placements.filter(item=>item.kind==='maple');
+  const byTrail=maples.filter(item=>Math.min(wolfveilRouteClearance(item.x,item.z),
+    wolfveilFrontierTrailClearance(item.x,item.z))<18).length;
+  assert.ok(byTrail/maples.length>=.7,'maples that mark a road or trail: '+byTrail+' of '+maples.length);
+  for(const item of forest.placements)if(item.kind!=='boulder')
+    assert.ok(wolfveilMountainness(item.x,item.z)<=.3,item.kind+' on the mountain\'s rock at '+item.x+','+item.z);
+  const shape=wolfveilSideSceneryShape('maple');
+  let red=0,green=0;
+  for(let i=0;i<shape.color.length;i+=3){red+=shape.color[i];green+=shape.color[i+1];}
+  assert.ok(red>green*2,'the maple is red');
 });
 
 test('every piece stands on the drawn ground: nothing floats, nothing is buried',()=>{
@@ -121,13 +148,19 @@ test('planting leaves alone the owner\'s trees, paths to caves and ground finish
 
 test('planted trunks are one list for the client and the server',()=>{
   const planted=wolfveilPlantedTrunkColliders(),owner=wolfveilForestTrunkColliders();
-  assert.equal(planted.length,540,'480 cedars and 60 maples');
+  assert.equal(planted.length,1060,'1,000 cedars and 60 maples');
   assert.equal(wolfveilPlantedTrunkColliders(),planted,'computed once');
   for(const trunk of planted){
     assert.equal(wolfveilAreaAtLocal(trunk.x,trunk.z),'west');
     assert.ok(/^planted_(cedar|maple)$/.test(trunk.kind));
-    assert.equal(trunk.radius,WOLFVEIL_PLANTED_TRUNK_RADIUS[trunk.kind.slice(8)]);
+    assert.ok(trunk.radius>=.25&&trunk.radius<=.8,'trunk radius '+trunk.radius);
   }
+  // A trunk is as thick as its tree is tall: the tallest cedar is the stoutest.
+  const cedars=forest.placements.filter(item=>item.kind==='cedar');
+  const tallest=cedars.reduce((a,b)=>b.height>a.height?b:a),shortest=cedars.reduce((a,b)=>b.height<a.height?b:a);
+  const radiusAt=tree=>planted.find(trunk=>trunk.x===tree.x&&trunk.z===tree.z).radius;
+  assert.equal(radiusAt(tallest),wolfveilPlantedTrunkRadius('cedar',tallest.height));
+  assert.ok(radiusAt(tallest)>radiusAt(shortest));
   const all=wolfveilTrunkColliders();
   assert.equal(all.length,owner.length+planted.length);
   assert.deepEqual(all.slice(0,owner.length),owner,'the owner\'s trees come first, unchanged');
@@ -178,6 +211,7 @@ test('the scene draws the plan and blocks with the shared trunk list',()=>{
   assert.match(drawn,/mesh\.raycast=\(\)=>\{\}/,'scenery is never a click target');
   assert.match(drawn,/mesh\.castShadow=false/);
   assert.match(drawn,/'SWV_'\+title\+'_'\+WOLFVEIL_SIDE_SCENERY_LABELS\[kind\]/);
+  assert.match(drawn,/wolfveilSideSceneryBatches\(all,shape\.triangles\)/);
   assert.match(drawn,/flatShading:true/);
   const server=source('server/game3d/mapCollision.mjs');
   assert.match(server,/wolfveilPlantedTrunkColliders\(\)\.map/);

@@ -19,6 +19,7 @@ on:
       - 'src/components/game3d/wolfveil/streaming/**'
       - 'tests/game3d-clone-wolfveil-four-sides-plan.test.mjs'
       - 'tests/game3d-clone-wolfveil-forest-side.test.mjs'
+      - 'scripts/render-wolfveil-planted-sides.mjs'
       - '.github/workflows/game3d-clone-wolfveil-four-sides-plan.yml'
 
 permissions:
@@ -50,7 +51,8 @@ jobs:
             src/components/game3d/wolfveil/WolfveilSideSceneryShapes.mjs \
             src/components/game3d/wolfveil/WolfveilTrunkColliders.mjs \
             tests/game3d-clone-wolfveil-four-sides-plan.test.mjs \
-            tests/game3d-clone-wolfveil-forest-side.test.mjs
+            tests/game3d-clone-wolfveil-forest-side.test.mjs \
+            scripts/render-wolfveil-planted-sides.mjs
       - name: Lint the edited files (no more errors than main)
         run: |
           count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
@@ -65,3 +67,10 @@ jobs:
             if [ "$head" -lt 0 ] || [ "$base" -lt 0 ] || [ "$head" -gt "$base" ]; then status=1; fi
           done
           exit $status
+      - name: Study pictures of the planted sides
+        run: node scripts/render-wolfveil-planted-sides.mjs --out wolfveil-planted-sides
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolfveil-planted-sides
+          path: wolfveil-planted-sides/*.png
+          retention-days: 30

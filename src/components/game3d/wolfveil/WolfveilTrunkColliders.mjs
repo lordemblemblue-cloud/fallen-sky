@@ -9,8 +9,11 @@ import {wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
 import {planWolfveilSidePlanting} from './WolfveilFourSidesPlan.mjs';
 
 export const WOLFVEIL_PLANTED_SIDES=Object.freeze(['west']);
-// Trunk radius by kind, in metres: what a body bumps into, not the crown.
-export const WOLFVEIL_PLANTED_TRUNK_RADIUS=Object.freeze({cedar:.55,pine:.5,maple:.5});
+// How thick a trunk is for every metre the tree is tall: what a body bumps
+// into at walking height, not the crown. A 22 m cedar is 0.75 m in radius.
+export const WOLFVEIL_PLANTED_TRUNK_GIRTH=Object.freeze({cedar:.034,pine:.042,maple:.04});
+export const wolfveilPlantedTrunkRadius=(kind,height)=>
+  Math.round(height*(WOLFVEIL_PLANTED_TRUNK_GIRTH[kind]??.04)*100)/100;
 
 const plans=new Map();
 /** The planting plan of one built side (computed once, about 150 ms). */
@@ -27,7 +30,7 @@ export function wolfveilPlantedTrunkColliders(){
     for(const side of WOLFVEIL_PLANTED_SIDES)
       for(const item of wolfveilPlantedSide(side).placements)
         if(item.trunk)list.push(Object.freeze({x:item.x,z:item.z,
-          radius:WOLFVEIL_PLANTED_TRUNK_RADIUS[item.kind]??.5,kind:'planted_'+item.kind}));
+          radius:wolfveilPlantedTrunkRadius(item.kind,item.height),kind:'planted_'+item.kind}));
     plantedTrunks=Object.freeze(list);
   }
   return plantedTrunks;
