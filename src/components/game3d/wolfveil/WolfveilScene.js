@@ -36,10 +36,36 @@ import {installShadowWolfHouseModels} from './ShadowWolfHouseGLB.js';
 import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
 import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
+import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
 import {createBookCaveInterior} from '../cave/caveInterior.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
 import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
+
+export function createWolfveilCaveDestination(scene){
+  if(!scene?.add)throw Error('Wolfveil cave destination requires the existing Three.js scene');
+  const group=new THREE.Group();
+  group.name='SWV_Streamed_Cave_Destination';
+  group.position.z=70;
+  scene.add(group);
+  const world={
+    group,ownedMaterials:[],walkableSurfaces:[],
+    mesh(object){group.add(object);return object;},
+  };
+  const caveSystem=createWolfveilCaveSystem(world,{
+    offsetZ:70,startActiveCaveId:WOLFVEIL_EXPLORABLE_CAVES[0].id,
+  });
+  return {
+    caveSystem,
+    floor:caveSystem.floorMesh,
+    pavement:caveSystem.pavementMesh,
+    walkableSurfaces:world.walkableSurfaces,
+    dispose(){
+      caveSystem.dispose();
+      group.parent?.remove(group);
+    },
+  };
+}
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
@@ -48,7 +74,7 @@ export function createWolfveilVillage(scene,options={}){
   // put the market at spawn; preserve unshifted master layout coordinates.
   const offsetZ=options.originAtMarket?70:0;
   world.group.position.z=offsetZ;
-  const enableCaves=Boolean(options.originAtMarket);
+  const enableCaves=options.loadCaves===false?false:Boolean(options.originAtMarket);
   const geometry=buildWolfveilTerrain({
     span:options.span||1100,segments:options.segments||310,
     caveCutouts:enableCaves,
