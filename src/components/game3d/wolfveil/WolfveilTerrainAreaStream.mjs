@@ -35,7 +35,7 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     geometry.computeBoundingBox();geometry.computeBoundingSphere();
     geometry.boundsTree=new MeshBVH(geometry,{maxLeafTris:16});
     const next=new THREE.Mesh(geometry,material);
-    next.name='SWV_AreaTerrain_'+area;
+    next.name='SWV_ActiveAreaFloor_'+area;
     next.userData.wolfveilAreaTerrain=area;next.userData.wolfveil=true;
     next.receiveShadow=true;next.raycast=acceleratedRaycast;
     parent.add(next);
