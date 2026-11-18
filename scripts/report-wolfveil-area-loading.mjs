@@ -118,13 +118,13 @@ function costOf(node){
 }
 // Everything the renderer would be handed, honouring `visible` the way
 // Three.js does (an invisible parent hides its whole subtree).
-export function measureVisibleScene(root,{labelOf=()=>'scene',skip=()=>false}={}){
+export function measureVisibleScene(root,{labelOf=()=>'scene',skip=()=>false,inView=()=>true}={}){
   const out={objects:0,drawCalls:0,triangles:0,lights:0,ids:new Set(),byLabel:new Map()};
   const walk=node=>{
     if(node.visible===false||skip(node))return;
     // Every light that is switched on is paid for by every lit surface.
     if(node.isLight&&!node.isAmbientLight&&!node.isHemisphereLight&&node.intensity>0)out.lights++;
-    if(isRenderable(node)){
+    if(isRenderable(node)&&inView(node)){
       const cost=costOf(node);
       out.objects++;out.drawCalls+=cost.drawCalls;out.triangles+=cost.triangles;
       out.ids.add(node.uuid);
@@ -309,6 +309,32 @@ export async function runWolfveilAreaLoadingReport({
   const floors=[...(world.walkableSurfaces||[])];
   const floorsVisibleAtBaseline=new Set(floors.filter(effectivelyVisible));
 
+  // ---- what ONE camera view draws ----------------------------------------
+  // The renderer skips every object whose bounds are outside the camera's
+  // view. This is the same test, with the game's own camera, looking in
+  // eight directions from behind the player.
+  const {GAME3D_GAME2_CAMERA}=await import(SOURCE+'player/Game3DGame2Camera.mjs');
+  const viewCamera=new THREE.PerspectiveCamera(GAME3D_GAME2_CAMERA.fov||60,16/9,.1,3200);
+  const frustum=new THREE.Frustum(),projection=new THREE.Matrix4();
+  const measureViews=()=>{
+    scene.updateMatrixWorld(true);
+    const back=GAME3D_GAME2_CAMERA.distance||3.45,views=[];
+    for(let k=0;k<8;k++){
+      const yaw=k*Math.PI/4,sin=Math.sin(yaw),cos=Math.cos(yaw);
+      viewCamera.position.set(position.x-sin*back,position.y+2.3,position.z-cos*back);
+      viewCamera.lookAt(position.x+sin*20,position.y+.6,position.z+cos*20);
+      viewCamera.updateMatrixWorld(true);
+      projection.multiplyMatrices(viewCamera.projectionMatrix,viewCamera.matrixWorldInverse);
+      frustum.setFromProjectionMatrix(projection);
+      const seen=measureVisibleScene(scene,{inView:node=>node.frustumCulled===false||
+        (node.isSprite?frustum.intersectsSprite(node):frustum.intersectsObject(node))});
+      views.push({drawCalls:seen.drawCalls,triangles:seen.triangles});
+    }
+    const pick=key=>({worst:Math.max(...views.map(view=>view[key])),
+      average:Math.round(views.reduce((sum,view)=>sum+view[key],0)/views.length)});
+    return {drawCalls:pick('drawCalls'),triangles:pick('triangles'),fov:viewCamera.fov};
+  };
+
   // ---- one spot deep inside every area ----------------------------------
   const spots={town:[-34,-12],south:[-34,-407],west:[-370,-155],east:[336,-155],north:[0,395]};
   const areas={};
@@ -320,6 +346,7 @@ export async function runWolfveilAreaLoadingReport({
     run(3);
     const stats=loader.getStats();
     const seen=measure();
+    const views=measureViews();
     const snapshot=loader.inspect();
     // Grass that streams around the player differs from spot to spot, so the
     // fair comparison is the same spot, same frame, with the loader off.
@@ -353,6 +380,7 @@ export async function runWolfveilAreaLoadingReport({
     const budget=evaluateGame3DAreaBudget({platform:'browser',calls:seen.drawCalls,triangles:seen.triangles});
     areas[id]={
       drawCalls:seen.drawCalls,triangles:seen.triangles,objects:seen.objects,lights:seen.lights,
+      views,
       wholeValleyHere:{drawCalls:whole.drawCalls,triangles:whole.triangles,lights:whole.lights},
       drawCallShare:seen.drawCalls/whole.drawCalls,triangleShare:seen.triangles/whole.triangles,
       browserBudget:{within:budget.within,over:[...budget.over],
@@ -451,6 +479,64 @@ export async function runWolfveilAreaLoadingReport({
   moveTo(...spots.town);run(2);
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');
   loader.setOptions({releaseGpuMemory:false});
+
+  // ---- land survey: what stands in each area, where it is bare, what floats --
+  // Scattered scenery only (instanced meshes), as its owners show it with the
+  // loader off. Ground is the visible ground mesh, where everything is planted.
+  const {createWolfveilTerrainSurfaceSampler}=await import(SOURCE+'wolfveil/WolfveilTerrainSurfaceSampler.mjs');
+  const groundAt=createWolfveilTerrainSurfaceSampler();
+  const KINDS=[['grass',/grass|meadow|tuft|blade/i],['flowers',/flower|bloom|petal/i],
+    ['shrubs and ferns',/shrub|fern|bush|reed/i],
+    ['trees',/tree|elm|cedar|pine|maple|bamboo|crown|trunk|canopy|branch|foliage/i],
+    ['stones',/stone|rock|boulder|basalt|pebble/i],['logs',/log|stump/i]];
+  const kindOf=name=>(KINDS.find(([,test])=>test.test(name))||['other'])[0];
+  const SQUARE=25;
+  const survey=Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,
+    {kinds:{},planted:new Set(),floating:[],buried:0,checked:0,squares:0}]));
+  for(let x=-550+SQUARE/2;x<550;x+=SQUARE)for(let z=-550+SQUARE/2;z<550;z+=SQUARE){
+    const area=plan.wolfveilAreaAtLocal(x,z);
+    if(area)survey[area].squares++;
+  }
+  loader.setEnabled(false);
+  scene.updateMatrixWorld(true);
+  world.group.traverse(node=>{
+    if(!node.isInstancedMesh||node.userData.wolfveilAreaClone||!effectivelyVisible(node)||
+       /^SWV_Near_GrassBlades_|^WV_Area_/.test(node.name))return;
+    if(!node.geometry.boundingBox)node.geometry.computeBoundingBox();
+    const box=node.geometry.boundingBox,w=node.matrixWorld.elements,a=node.instanceMatrix.array;
+    const cx=(box.min.x+box.max.x)/2,cy=(box.min.y+box.max.y)/2,cz=(box.min.z+box.max.z)/2;
+    const hx=(box.max.x-box.min.x)/2,hy=(box.max.y-box.min.y)/2,hz=(box.max.z-box.min.z)/2;
+    const kind=kindOf(node.name),m=new Array(16);
+    for(let i=0;i<node.count;i++){
+      const o=i*16;
+      for(let c=0;c<4;c++)for(let r=0;r<4;r++)
+        m[c*4+r]=w[r]*a[o+c*4]+w[4+r]*a[o+c*4+1]+w[8+r]*a[o+c*4+2]+w[12+r]*a[o+c*4+3];
+      const x=m[0]*cx+m[4]*cy+m[8]*cz+m[12],y=m[1]*cx+m[5]*cy+m[9]*cz+m[13];
+      const z=m[2]*cx+m[6]*cy+m[10]*cz+m[14]-OFFSET;
+      const area=plan.wolfveilAreaAtLocal(x,z);
+      if(!area)continue;
+      const entry=survey[area];
+      entry.kinds[kind]=(entry.kinds[kind]||0)+1;
+      if(kind==='other')continue; // roof tiles, fences: not planted scenery
+      if(kind!=='grass')entry.planted.add(Math.floor(x/SQUARE)+':'+Math.floor(z/SQUARE));
+      const ground=groundAt(x,z);
+      if(!Number.isFinite(ground))continue;
+      entry.checked++;
+      const half=Math.abs(m[1])*hx+Math.abs(m[5])*hy+Math.abs(m[9])*hz,gap=y-half-ground;
+      if(gap>.5)entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
+      else if(y+half<ground-.1)entry.buried++;
+    }
+  });
+  loader.setEnabled(true);run(.3);
+  const surveyResult=Object.fromEntries(Object.entries(survey).map(([id,entry])=>{
+    const byName={};
+    for(const item of entry.floating)byName[item.name]=(byName[item.name]||0)+1;
+    return [id,{hectares:Math.round(entry.squares*SQUARE*SQUARE/1000)/10,kinds:entry.kinds,
+      squares:entry.squares,bareSquares:Math.max(0,entry.squares-entry.planted.size),
+      checked:entry.checked,buried:entry.buried,floating:entry.floating.length,
+      floatingByName:Object.entries(byName).sort((x,y)=>y[1]-x[1]).slice(0,4),
+      worstFloating:entry.floating.sort((x,y)=>y.gap-x.gap).slice(0,3)}];
+  }));
 
   // ---- near grass: every blade planted, far cells drawn with fewer segments --
   let grassResult=null;
@@ -695,7 +781,7 @@ export async function runWolfveilAreaLoadingReport({
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
     areas,portals:portalResults,caves:caveResult,town:townResult,
-    nearGrass:grassResult,farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
+    survey:surveyResult,nearGrass:grassResult,farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
       unitCount:tallUnits.length},
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
@@ -724,6 +810,16 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('  (whole valley at the spawn: '+n(result.baseline.drawCalls)+' draw calls, '+
     n(result.baseline.triangles)+' triangles)');
   lines.push('');
+  lines.push('One camera view, after the renderer\'s own culling (game camera, '+
+    Object.values(result.areas)[0].views.fov+' degree view, eight directions):');
+  lines.push('  area     worst direction                 average direction              browser budget (500 calls / 1.5 M tris)');
+  for(const [id,area] of Object.entries(result.areas)){
+    const v=area.views,over=[v.drawCalls.worst>500?'drawCalls':'',v.triangles.worst>1.5e6?'triangles':''].filter(Boolean);
+    lines.push('  '+id.padEnd(6)+n(v.drawCalls.worst).padStart(7)+' calls '+n(v.triangles.worst).padStart(10)+' tris  '+
+      n(v.drawCalls.average).padStart(7)+' calls '+n(v.triangles.average).padStart(10)+' tris   '+
+      (over.length?'OVER '+over.join('+'):'inside'));
+  }
+  lines.push('');
   lines.push('Largest things on screen with only that area loaded:');
   for(const [id,area] of Object.entries(result.areas)){
     lines.push('  '+id+':');
@@ -734,6 +830,19 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('');
   lines.push('Lights switched on (each one is paid for by every lit surface): '+
     Object.entries(result.areas).map(([id,area])=>id+' '+area.lights+' of '+area.wholeValleyHere.lights).join(', '));
+  if(result.survey){
+    lines.push('');
+    lines.push('Land survey (scattered scenery as built; ground is the visible ground mesh; 25 m squares):');
+    for(const [id,a] of Object.entries(result.survey)){
+      lines.push('  '+id+': '+a.hectares+' ha. '+Object.entries(a.kinds).sort((x,y)=>y[1]-x[1])
+        .map(([kind,count])=>kind+' '+n(count)).join(', '));
+      lines.push('    squares with nothing planted but grass: '+a.bareSquares+' of '+a.squares+
+        ' ('+Math.round(100*a.bareSquares/Math.max(1,a.squares))+'%)');
+      lines.push('    off the ground, of '+n(a.checked)+' checked: '+a.floating+' more than 0.5 m above it, '+
+        a.buried+' wholly under it'+(a.floating?'. Mostly '+a.floatingByName.map(([name,count])=>name+' x'+count).join(', ')+
+        '. Worst: '+a.worstFloating.map(item=>item.gap+' m at x '+item.x+', z '+item.z+' ('+item.name+')').join('; '):''));
+    }
+  }
   if(result.nearGrass){
     const g=result.nearGrass;
     lines.push('');
