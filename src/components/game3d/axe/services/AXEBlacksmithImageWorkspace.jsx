@@ -26,6 +26,8 @@ import AXEGemForgePane from './AXEGemForgePane';
 import { AXE_GEM_DEFINITIONS } from '../equipment/AXESocketGemSystem';
 import AXECoreForgePane from './AXECoreForgePane';
 import AXERuneForgePane from './AXERuneForgePane';
+import EnchantLightPreview from '../../enchantVfx/EnchantLightPreview';
+import { projectEnchantPercent } from '../../enchantVfx/enchantVisualState.js';
 import './AXEBlacksmithImageWorkspace.css';
 
 // Exact user-approved transparent Blacksmith glass artwork; the PNG contains
@@ -770,6 +772,9 @@ export default function AXEBlacksmithImageWorkspace({
           <b>{percent == null ? '—' : percent + '%'}</b>
           <div className="axe-blacksmith-success-track"><i style={{ width: (percent || 0) + '%' }} /></div>
         </div>
+        {/* Enchantment light before and after a successful attempt: the same rules as the worn item. */}
+        {selectedItem && forgeTab && <EnchantLightPreview item={selectedItem} compact
+          proposedPercent={tab === 'enchant' || tab === 'over_enchant' ? projectEnchantPercent(selectedItem, tab) : null} />}
         {tab === 'ascend' && <div className="axe-blacksmith-extra-details" aria-label="Ascension reinforcement and stat imprint details">
           <h4>Ascension Imprint — Four Stages</h4>
           <div><span>Rarity</span><b>{selectedItem?.rarity || '—'}</b></div>
