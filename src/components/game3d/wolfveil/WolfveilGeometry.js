@@ -14,6 +14,7 @@ import {WOLFVEIL_PALETTE as PAL,wolfveilHeight,wolfveilDistanceToRiver,
 import {wolfveilTrailBreakAt} from './WolfveilTrailBreaks.mjs';
 import {wolfveilLandscapeSurface,wolfveilNoise2,WOLFVEIL_SUMMITS} from './WolfveilLandscapeDesign.mjs';
 import {makeWolfveilTrailDirtTextures,makeWolfveilTrailEdgeAlpha,applyWolfveilTrailUVs} from './WolfveilTrailSurface.js';
+import {wolfveilSplatWeights} from './WolfveilTerrainSplat.js';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 
@@ -122,6 +123,7 @@ export class WolfveilTriangles{
 }
 export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false,landscape=false}={}){
   const g=new THREE.BufferGeometry(),v=[],c=[],uv=[],idx=[];
+  const splat=landscape?new Float32Array((segments+1)*(segments+1)*4):null;
   const rand=Math.sin;
   // Heights first, so each vertex can read its neighbours' slope for free.
   const row=segments+1,step=span/segments,heights=new Float32Array(row*row);
@@ -144,6 +146,8 @@ export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false,l
           west:smooth(90,350,-x),
         });
         c.push(surface.color[0],surface.color[1],surface.color[2]);
+        // Baked-texture blend weights (grass, dirt, rock, snow) for this vertex.
+        splat.set(wolfveilSplatWeights(surface),(zi*(segments+1)+xi)*4);
         continue;
       }
       const moist=Math.max(0,1-riverDistance/70);
@@ -208,6 +212,7 @@ export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false,l
   g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));
   g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
   g.computeVertexNormals();
+  if(splat)g.userData.splatWeights=splat;
   return g;
 }
 export function makeRidgeGeometry(center,depth=340,seed=98){

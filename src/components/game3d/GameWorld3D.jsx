@@ -592,7 +592,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const worldGltfLoader = new GLTFLoader();
 
     // Day/night + seasons + dynamic weather (rain, snow, storm, fog, clouds)
-    const envSystem = createWorldEnvironmentSystem({ scene, sun, hemi, fog: scene.fog, camera, renderer, dayLengthSeconds: 86400 });
+    // Wolfveil's landscape is framed by mountain ranges 450-900 m away: give
+    // the overworld ~1.4 km of clear-weather visibility (weather still thins it).
+    const envSystem = createWorldEnvironmentSystem({ scene, sun, hemi, fog: scene.fog, camera, renderer, dayLengthSeconds: 86400,
+      viewScale: region === 'wolfveil' ? 5.5 : 1 });
     setEnvSystem(envSystem);
     window.__worldEnv = envSystem;
     if(region===ASTRAL_DUNGEON_REGION){

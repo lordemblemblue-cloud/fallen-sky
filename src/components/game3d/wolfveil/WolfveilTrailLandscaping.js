@@ -90,5 +90,8 @@ export function buildWolfveilTrailLandscaping(world,{terrainSpan=1100,terrainSeg
     tint.set(tones[Math.floor(t.tone*tones.length)%tones.length]);
   });
   return {heightAt,rocks:plan.rocks.length,tufts:plan.tufts.length,triangles:plan.triangles,
-    plantAnchors:plan.plantAnchors,grassAnchors:plan.grassAnchors};
+    plantAnchors:plan.plantAnchors,grassAnchors:plan.grassAnchors,
+    // Game 3D swaps these chiselled stones for baked rocks (WolfveilBakedRocks.js).
+    rockPlan:plan.rocks,
+    rockMeshes:world.meshes.filter(m=>m.name==='SWV_Landscape_Stones')};
 }

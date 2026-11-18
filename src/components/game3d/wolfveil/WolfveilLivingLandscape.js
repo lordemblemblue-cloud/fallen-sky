@@ -151,5 +151,8 @@ export function buildWolfveilLivingLandscape(world,{heightAt}){
     for(const region of byRegion(items))batch(world,geometry,material,region,name,place);
   return {flowers:plan.flowers.length,shrubs:plan.shrubs.length,ferns:plan.ferns.length,
     reeds:plan.reeds.length,bankStones:plan.bankStones.length,logs:plan.logs.length,
-    triangles:plan.triangles};
+    triangles:plan.triangles,
+    // Game 3D swaps these wet stones for baked rocks (WolfveilBakedRocks.js).
+    bankStonePlan:plan.bankStones,
+    bankStoneMeshes:world.meshes.filter(m=>m.name==='SWV_Living_BankStones')};
 }

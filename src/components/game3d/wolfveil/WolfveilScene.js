@@ -37,6 +37,9 @@ import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
 import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
+import {installWolfveilBakedRockField} from './WolfveilBakedRocks.js';
+import {createWolfveilTerrainSplatMaterial,applyWolfveilSplatAttributes} from './WolfveilTerrainSplat.js';
+import {WOLFVEIL_TERRAIN_MACRO,wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
@@ -52,7 +55,7 @@ export function createWolfveilVillage(scene,options={}){
     // Game 3D: authored landscape palette (ranges, trails, fields, camps).
     landscape:Boolean(options.originAtMarket),
   });
-  const terrainMaterial=material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide});
+  let terrainMaterial=material(0xffffff,.92,{vertexColors:true,side:THREE.DoubleSide});
   // Game 3D opt-in: replace flat ground pigment inside the first spawn square.
   // No overlay mesh: terrain geometry, raycast BVH and server collision stay identical.
   if(options.spawnGroundTile){
@@ -95,6 +98,18 @@ export function createWolfveilVillage(scene,options={}){
       enabled:true,riverDistance:wolfveilDistanceToRiver,
       reservedAt:(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r),
     });
+  // Game 3D: textures baked from high-res detail on the low-poly terrain.
+  // The palette (and every tile pigment pass above) becomes a macro tint.
+  let terrainSplat=null;
+  if(geometry.userData.splatWeights){
+    applyWolfveilSplatAttributes(geometry,geometry.userData.splatWeights);
+    delete geometry.userData.splatWeights;
+    // Macro maps were baked for the standard 1,100 m square only.
+    terrainSplat=createWolfveilTerrainSplatMaterial({onStatus:options.onTerrainTextures,
+      macro:(options.span||1100)===WOLFVEIL_TERRAIN_MACRO.span?wolfveilTerrainMacroRect(offsetZ):null});
+    terrainMaterial=terrainSplat.material;
+    world.ownedMaterials.push(terrainMaterial);
+  }
   const ground=world.mesh(new THREE.Mesh(geometry,terrainMaterial));
   // The real Game 1 renderer casts a downward ray every frame for player,
   // mount, companions, enemies, and NPCs. Accelerate this 190K-triangle
@@ -110,7 +125,9 @@ export function createWolfveilVillage(scene,options={}){
   if(options.spawnGroundTile)ground.frustumCulled=false;
   // Blend the owner's dirt with weathered stone only on the western flank.
   // This overlay never enters BVH, player-foot raycasts or worker physics.
-  const westLandscaping=options.groundCover
+  // The splat terrain carries baked dirt/rock itself; the translucent west
+  // owner-texture overlay is only kept for the untextured path.
+  const westLandscaping=options.groundCover&&!terrainSplat
     ?addWolfveilWestHillsideLandscaping(world,geometry,{
         span:options.span||1100,segments:options.segments||310,
         landscape:Boolean(options.originAtMarket),
@@ -144,6 +161,13 @@ export function createWolfveilVillage(scene,options={}){
   // Wayfinding stones: fighting-ground rings, Hunter's Loop cairns, camp
   // gateways and riverbank rock spots (decorative, no colliders).
   const landscapeMarkers=options.originAtMarket?buildWolfveilLandscapeMarkers(world):null;
+  // Game 3D: every one of those stones (plus range outcrops) becomes a rock
+  // sculpted at 327k triangles and baked onto 900/270/76-triangle LODs.
+  // The procedural stones above stay visible until the GLB is ready.
+  const bakedRocks=options.originAtMarket&&options.bakedRocks!==false
+    ?installWolfveilBakedRockField(world,{trailLandscaping,landscapeMarkers,livingLandscape,
+        heightAt:trailLandscaping?.heightAt??wolfveilHeight,loader:options.rockModelLoader})
+    :null;
   const river=addWolfveilWater(world,WOLFVEIL_RIVER,{
     silverWater:Boolean(options.silverWater),
   });
@@ -283,6 +307,9 @@ export function createWolfveilVillage(scene,options={}){
   world.group.updateMatrixWorld(true);
   const sceneState={
     ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,individualGrass,
+    terrainSplat,bakedRocks,
+    get bakedRockStatus(){return bakedRocks?{ready:bakedRocks.ready,failed:bakedRocks.failed,
+      count:bakedRocks.count,outcrops:bakedRocks.outcrops,lods:bakedRocks.lodCounts}:null;},
     get uploadedLandscapeModels(){return ownerModels?.status()??null;},
     grassTileReplacement:ownerGrassTiles,
     get grassTileStatus(){return ownerGrassTiles?.status()??null;},
@@ -328,6 +355,7 @@ export function createWolfveilVillage(scene,options={}){
       caveSystem?.update(dt,playerPosition);
       groundCover?.update(dt,frame,playerPosition); // bent footsteps relax over time; no new collider
       individualGrass?.update(frame,playerPosition?{x:playerPosition.x,z:playerPosition.z-offsetZ}:null);
+      if(playerPosition)bakedRocks?.update(playerPosition.x,playerPosition.z-offsetZ); // LOD buckets
       ownerModels?.update(frame); // uploaded foliage, no new authoritative collision
       ownerGrassTiles?.update(); // remove late-loading outdated grass accents
       waterfall.update(frame);
@@ -447,6 +475,7 @@ export function createWolfveilVillage(scene,options={}){
       palace.dispose();
       caveSystem?.dispose();
       individualGrass?.dispose();
+      bakedRocks?.dispose();
       vegetation.dispose();
       ownerGrassTiles?.dispose();
       ownerModels?.dispose();

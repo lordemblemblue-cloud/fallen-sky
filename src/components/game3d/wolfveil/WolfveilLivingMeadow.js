@@ -7,7 +7,6 @@ import { clearOf } from './WolfveilForestLayout.js';
 import {isVortexLakeWetSurface} from './VortexLakeLayout.mjs';
 import { buildWolfveilGrassClumpGeometry } from './WolfveilGroundCover.js';
 import {wolfveilGrassCurrent} from './WolfveilFlowPlanting.mjs';
-import {WOLFVEIL_WEST_LANDSCAPE_TEXTURES,wolfveilWestOwnerSoilFromSurface} from './WolfveilWestHillsideGround.js';
 import {wolfveilRockSideBlend,wolfveilWestRockGrassAllowed} from './WolfveilWestRockGrassPockets.mjs';
 import {
   WOLFVEIL_MEADOW_FIELD as FIELD, clampMeadow, isInsideMeadowCircle,
@@ -17,8 +16,8 @@ import {
 } from './WolfveilMeadowField.mjs';
 import {wolfveilLandscapeSurface,wolfveilLandscapeAllowsTallGrass} from './WolfveilLandscapeDesign.mjs';
 import {wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
-import {makeWolfveilInkGrassTexture} from './WolfveilSpawnGroundDetail.js';
-import {getWolfveilSumiETextures,cloneRepeatedTexture} from './WolfveilSumiETextures.mjs';
+import {createWolfveilTerrainSplatMaterial,wolfveilSplatWeights,wolfveilSplatTint} from './WolfveilTerrainSplat.js';
+import {wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
 
 const MAX_CONTACTS = 8;
 const TILE_KEY = (ix, iz) => ix + ':' + iz;
@@ -40,7 +39,7 @@ function addTileSkirt(geometry, segments, depth) {
     Array.from({length: row}, (_, k) => k * row),
     Array.from({length: row}, (_, k) => k * row + segments),
   ];
-  const names = ['position', 'normal', 'uv', 'color', 'aWestSoil'];
+  const names = ['position', 'normal', 'uv', 'color', 'aSplat'];
   const source = Object.fromEntries(names.map(name => [name, geometry.getAttribute(name)]));
   const base = source.position.count;
   const extra = edges.length * row;
@@ -84,8 +83,8 @@ function createTerrainTile(ix, iz, near, material) {
   const positions = geometry.attributes.position;
   const uv = geometry.attributes.uv;
   const colors = new Float32Array(positions.count * 3);
-  const westSoil = new Float32Array(positions.count);
-  const tint = new THREE.Color();
+  const splat = new Float32Array(positions.count * 4);
+  const tintOut = [0, 0, 0];
   for (let i = 0; i < positions.count; i++) {
     let x = centerX + positions.getX(i);
     let z = centerZ + positions.getZ(i);
@@ -116,15 +115,16 @@ function createTerrainTile(ix, iz, near, material) {
       routeClearance: mountains ? wolfveilRouteClearance(x, z) : Infinity,
       west: wolfveilRockSideBlend(x, z) * .6,
     });
-    tint.setRGB(surface.color[0], surface.color[1], surface.color[2]);
-    // Owner west dirt/stone only where the design has soil (not on rock/snow).
-    westSoil[i] = wolfveilRockSideBlend(x, z) * wolfveilWestOwnerSoilFromSurface(x, z, surface);
-    colors[i * 3] = tint.r;
-    colors[i * 3 + 1] = tint.g;
-    colors[i * 3 + 2] = tint.b;
+    // Baked-texture blend weights + the palette as a macro tint (as the core).
+    const weights = wolfveilSplatWeights(surface);
+    splat.set(weights, i * 4);
+    wolfveilSplatTint(surface.color, weights, tintOut);
+    colors[i * 3] = tintOut[0];
+    colors[i * 3 + 1] = tintOut[1];
+    colors[i * 3 + 2] = tintOut[2];
   }
   geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
-  geometry.setAttribute('aWestSoil',new THREE.BufferAttribute(westSoil,1));
+  geometry.setAttribute('aSplat',new THREE.BufferAttribute(splat,4));
   addTileSkirt(geometry, segments, mountains ? 30 : 3);
   geometry.computeBoundingSphere();
   if (near) {
@@ -150,8 +150,11 @@ function createGrassMaterial(windTime, wind, gust, contacts) {
     metalness:0,transparent:false,depthWrite:true,
   });
   material.name = 'WV_ExistingSevenBladeGrass_WindAndFootstepContact';
-  material.customProgramCacheKey = () => 'wolfveil-meadow-root-anchored-grass-v3-relaxation';
+  material.customProgramCacheKey = () => 'wolfveil-meadow-root-anchored-grass-v4-unflipped';
   material.onBeforeCompile = shader => {
+    // Double-sided clumps keep their normal on back faces (no black blades).
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
+      '#include <normal_fragment_begin>\n  normal = normalize( vNormal );');
     shader.uniforms.uMeadowTime = windTime;
     shader.uniforms.uMeadowWind = wind;
     shader.uniforms.uMeadowGust = gust;
@@ -261,75 +264,18 @@ export function createWolfveilLivingMeadow({
   root.name='WV_4MileRadius_StreamingSolidMeadow';
   scene.add(root);
 
-  const fallbackTexture=(r,g,b)=>{
-    const t=new THREE.DataTexture(new Uint8Array([r,g,b,255]),1,1,THREE.RGBAFormat);
-    t.colorSpace=THREE.SRGBColorSpace;t.needsUpdate=true;return t;
-  };
-  // The western streamed 4-mile extension must match the full west dirt/rock
-  // half of the 1,100m core, not revert to all-green beyond a streaming seam.
-  const white=fallbackTexture(255,255,255);
-  const westDirt={value:fallbackTexture(116,92,70)};
-  const westStone={value:fallbackTexture(124,127,127)};
-  const ownedWestTextures=new Set([white,westDirt.value,westStone.value]);
-  // The core terrain's own detail pigment + turf bump: vertex colours carry
-  // the landscape palette and both meshes meet at the 550m edge without a seam.
-  const detail=makeWolfveilInkGrassTexture();
-  const detailBump=cloneRepeatedTexture(getWolfveilSumiETextures().turf.bumpMap,1,1);
-  ownedWestTextures.add(detail);ownedWestTextures.add(detailBump);
-  const terrainMaterial = new THREE.MeshStandardMaterial({
-    color:0xffffff,map:detail,bumpMap:detailBump,bumpScale:.036,
-    vertexColors:true,side:THREE.DoubleSide,
-    roughness:.97,metalness:0,
+  // Same baked splat material as the 1,100m core (WolfveilTerrainSplat.js):
+  // grass/dirt/rock/snow textures baked from high-res detail, palette as tint,
+  // so the streamed ranges and meadow match the core across the 550 m edge.
+  const terrainSplat=createWolfveilTerrainSplatMaterial({
+    onStatus:status=>{if(status.loaded===8)onTextureStatus('loaded');},
+    // Tiles overlapping the core square pick up the same baked relief.
+    macro:wolfveilTerrainMacroRect(offsetZ),
   });
-  terrainMaterial.name='WV_OwnerGrassTexture_WestDirtStone_SolidMeadowGround';
-  terrainMaterial.customProgramCacheKey=()=> 'wolfveil-streamed-west-owner-dirt-stone-v2-landscape';
-  terrainMaterial.onBeforeCompile=shader=>{
-    shader.uniforms.uWestDirt=westDirt;
-    shader.uniforms.uWestStone=westStone;
-    shader.vertexShader=shader.vertexShader
-      .replace('#include <common>',`#include <common>
-attribute float aWestSoil;
-varying vec2 vWestSoilUV;
-varying float vWestRockBlend;`)
-      .replace('#include <begin_vertex>',`#include <begin_vertex>
-vWestSoilUV=uv*1.04;
-vWestRockBlend=aWestSoil;`);
-    shader.fragmentShader=shader.fragmentShader
-      .replace('#include <common>',`#include <common>
-uniform sampler2D uWestDirt,uWestStone;
-varying vec2 vWestSoilUV;
-varying float vWestRockBlend;`)
-      .replace('#include <color_fragment>',`#include <color_fragment>
-float westTone=sin(vWestSoilUV.x*2.37+cos(vWestSoilUV.y*1.8))*
-  sin(vWestSoilUV.y*2.81-vWestSoilUV.x*.63);
-float westGrit=smoothstep(.1,.82,.48+.39*westTone);
-vec3 westSoil=mix(texture2D(uWestDirt,vWestSoilUV).rgb,
-  texture2D(uWestDirt,vWestSoilUV*.29+vec2(.37,.11)).rgb,.5);
-vec3 westRock=mix(texture2D(uWestStone,vWestSoilUV*1.13).rgb,
-  texture2D(uWestStone,vWestSoilUV*.33+vec2(.21,.63)).rgb,.5);
-vec3 westMineral=mix(westSoil,westRock,westGrit*.80);
-westMineral=mix(westMineral,westMineral*vec3(.82,.92,.94),.13);
-diffuseColor.rgb=mix(diffuseColor.rgb,westMineral,vWestRockBlend*.98);`);
-  };
-  const texture=new THREE.TextureLoader();
-  let grassAlbedo=null,disposed=false,loadedTexture=false;
-  const loadWestTexture=(url,holder)=>{
-    texture.load(url,t=>{
-      if(disposed){t.dispose();return;}
-      t.wrapS=t.wrapT=THREE.RepeatWrapping;
-      t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;t.needsUpdate=true;
-      ownedWestTextures.add(t);holder.value=t;
-    },undefined,()=>{/* Original PBR fallback texels remain usable. */});
-  };
-  if(typeof document!=='undefined'){
-    loadWestTexture(WOLFVEIL_WEST_LANDSCAPE_TEXTURES.dirt,westDirt);
-    loadWestTexture(WOLFVEIL_WEST_LANDSCAPE_TEXTURES.rock,westStone);
-  }
-  // The former tiled grass photo (VOLCANO_TEXTURES.volcano_grass) checkered
-  // the mountains from afar; the procedural detail map is ready immediately.
-  loadedTexture=true;
-  grassAlbedo=null;
-  onTextureStatus('loaded');
+  const terrainMaterial=terrainSplat.material;
+  terrainMaterial.name='WV_Baked_Splat_SolidMeadowGround';
+  let disposed=false;
+  const loadedTexture=true;
 
   const windTime={value:0};
   const wind={value:new THREE.Vector2(.65,.35)};
@@ -494,8 +440,6 @@ diffuseColor.rgb=mix(diffuseColor.rgb,westMineral,vWestRockBlend*.98);`);
     // meadow teardown, never here (would break every other tile instance).
     grassGeometry.dispose();
     grassMaterial.dispose();
-    if(grassAlbedo)grassAlbedo.dispose();
-    for(const t of ownedWestTextures)t.dispose();
     terrainMaterial.dispose();
     scene.remove(root);
   }
