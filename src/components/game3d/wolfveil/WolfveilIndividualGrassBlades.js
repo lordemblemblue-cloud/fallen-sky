@@ -12,6 +12,7 @@ import { clearOf } from './WolfveilForestLayout.js';
 import { mulberry32 } from './WolfveilGeometry.js';
 import { createWolfveilTerrainSurfaceSampler } from './WolfveilTerrainSurfaceSampler.mjs';
 import { createWolfveilNearGrassStream } from './WolfveilNearGrassStream.js';
+import { WOLFVEIL_NEAR_GRASS_DETAIL } from './WolfveilNearGrassDetail.mjs';
 
 const TAU = Math.PI * 2;
 const noRaycast = () => {};
@@ -19,7 +20,9 @@ const noRaycast = () => {};
 // Single curved, 4-segment tapered 3D blade with root-to-tip Sumi-e vertex shading.
 // Each instance is a genuine individual blade (with 2 companion micro-shoots at its
 // root crown so close inspection reads as individual rooted blades, never X-cards).
-export function createIndividualSumiEBladeGeometry() {
+// `segments` per shoot: 4 is the full blade; 2 and 1 are the same blade on
+// the same curve for cells too far away to show the difference.
+export function createIndividualSumiEBladeGeometry({ segments = 4 } = {}) {
   const positions = [];
   const colors = [];
   const normals = [];
@@ -31,7 +34,7 @@ export function createIndividualSumiEBladeGeometry() {
     { ox: -0.028, oz: 0.022, yaw: 4.1, h: 0.41, w: 0.017, curve: 0.11, shade: 0.86 },
   ];
 
-  const segs = 4;
+  const segs = Math.max(1, Math.floor(segments) || 4);
   for (const s of shoots) {
     const cos = Math.cos(s.yaw), sin = Math.sin(s.yaw);
     const base = positions.length / 3;
@@ -254,14 +257,18 @@ export function buildWolfveilIndividualGrassField(world, {
     meshes.push(inst);
   }
 
+  // Lighter versions of the same blade for cells farther from the player.
+  const lighterBlades = WOLFVEIL_NEAR_GRASS_DETAIL.segments.slice(1)
+    .map(segments => createIndividualSumiEBladeGeometry({ segments }));
   const nearGrass = createWolfveilNearGrassStream({
     group: world.group, geometry, material, palette: VALLEY_BLADE_PALETTE,
     accept: (x, z) => acceptSpot(x, z, 0.3),
+    lighterGeometries: lighterBlades,
   });
 
   return {
     nearGrass,
-    dispose() { nearGrass.dispose(); },
+    dispose() { nearGrass.dispose(); for (const blade of lighterBlades) blade.dispose(); },
     bladeInstances: spots.length,
     totalIndividualShoots: spots.length * 3,
     chunks: meshes.length,

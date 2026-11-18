@@ -1,0 +1,68 @@
+name: Game 3D Wolfveil sumi-e caves
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/caves/**'
+      - 'src/components/game3d/wolfveil/WolfveilCaveSystem.js'
+      - 'src/components/game3d/wolfveil/WolfveilCaveLayout.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilModularCaveKit.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilCaveDrawBudget.mjs'
+      - 'scripts/extract-sumi-corridor-kit.mjs'
+      - 'tests/game3d-clone-wolfveil-sumi-caves.test.mjs'
+      - 'tests/game3d-clone-wolfveil-sumi-caves-real-three.test.mjs'
+      - '.github/workflows/game3d-clone-wolfveil-sumi-caves.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/game3d/wolfveil/caves/**'
+      - 'src/components/game3d/wolfveil/WolfveilCaveSystem.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game3d-wolfveil-sumi-caves-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sumi-caves:
+    name: Owner's cave kit, light walls and the hallway
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Painted walls, merging and the hallway plan
+        run: node --test tests/game3d-clone-wolfveil-sumi-caves.test.mjs
+      - name: The caves the hallway stands in
+        run: node --test tests/game3d-clone-modular-cave-canyon.test.mjs tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Every piece of the kit under the real Three.js
+        run: node --test tests/game3d-clone-wolfveil-sumi-caves-real-three.test.mjs
+      - name: Lint the new files
+        run: |
+          npx eslint --quiet \
+            src/components/game3d/wolfveil/caves \
+            scripts/extract-sumi-corridor-kit.mjs \
+            tests/game3d-clone-wolfveil-sumi-caves.test.mjs \
+            tests/game3d-clone-wolfveil-sumi-caves-real-three.test.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          git fetch -q origin main
+          status=0
+          for file in \
+            src/components/game3d/wolfveil/WolfveilCaveSystem.js; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: errors on this branch $head, on main $base"
+            if [ "$head" -lt 0 ] || [ "$base" -lt 0 ] || [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status

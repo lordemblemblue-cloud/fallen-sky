@@ -55,6 +55,7 @@ function installGate(object,onIntent=null){
     },
   };
 }
+const FAR_SCENERY='far scenery, drawn from every area';
 function triangleCount(geometry){
   const indexed=Number(geometry?.index?.count);
   if(indexed>0)return indexed/3;
@@ -84,6 +85,20 @@ export function createWolfveilAreaLoader({
   settleSeconds=3,scanSeconds=2,auditSeconds=1,
   // Tall landmarks (peaks, towers) stay on the skyline from every area.
   skylineMeters=40,maxDepth=3,unitAuditsPerFrame=48,
+  // Far scenery: tall, cheap instanced scenery (the forest) is never split or
+  // unloaded, so an unloaded area still shows its trees on the horizon. One
+  // draw call per kind of tree for the whole valley, the same as one area.
+  farScenery=true,farSceneryMeters=4,farSceneryMaxTriangles=60000,
+  // Far outline: tall scenery that IS unloaded with its area (buildings, big
+  // trees) is baked into one coarse mesh per area and shown while that area
+  // is unloaded. The caller supplies the builder:
+  //   farProxy.build(area, [{mesh, matrices}]) -> {object, triangles, ...} | null
+  //   farProxy.dispose(object)
+  farProxy=null,farProxySeconds=2,
+  // With the ground height known (world x, z -> y), a part also counts as
+  // tall when its top stands this far above the ground under it: the walls
+  // of a building made of many short pieces, not only its roof.
+  groundHeightAt=null,farOutlineReachMeters=2.5,
   releaseGpuMemory=false,releaseDelaySeconds=20,
   onTransition=()=>{},onStats=()=>{},onAreasChanged=()=>{},
   now=clockNow,
@@ -94,6 +109,7 @@ export function createWolfveilAreaLoader({
     mode:WOLFVEIL_AREA_LOADING_MODES.includes(mode)?mode:'single',
     preloadMeters,hysteresisMeters,batchesPerFrame,
     releaseGpuMemory:Boolean(releaseGpuMemory),releaseDelaySeconds,
+    farScenery:Boolean(farScenery),
   };
   const units=new Map();      // object -> single-area scenery record
   const batches=new Map();    // instanced source -> per-area split record
@@ -112,6 +128,9 @@ export function createWolfveilAreaLoader({
   // Bookkeeping is spread out so no single frame pays for the whole valley.
   let totalsCache=null,scanChanged=false,quietScans=0,auditQueue=[],auditCursor=0;
   let building=0; // per-area copies still waiting for their turn to be built
+  const buildingAreas=new Set(); // areas whose copies are still being built
+  const proxies=new Map();       // area -> {object, signature, triangles, ...}
+  let proxyDue=true,proxyAt=-Infinity,proxyQueue=[],proxyFailure=null;
   let unitsStale=true; // unit gates need re-applying (loaded set or unit list changed)
 
   const walkable=()=>new Set(world.walkableSurfaces||[]);
@@ -148,6 +167,9 @@ export function createWolfveilAreaLoader({
       if(box){
         const e=object.matrixWorld.elements;
         const groups=Array.isArray(object.material)?Math.max(1,object.material.length):1;
+        // Render layer mask 0 marks an original that a draw-call merger has
+        // replaced: it is still gated and measured, but it costs nothing.
+        const drawn=object.layers?.mask!==0;
         out.leaves.push(object);
         if(object.isInstancedMesh&&object.instanceMatrix?.array){
           const reach=.5*Math.hypot(box.max.x-box.min.x,box.max.y-box.min.y,
@@ -160,7 +182,7 @@ export function createWolfveilAreaLoader({
             grow(e[0]*x+e[4]*y+e[8]*z+e[12],e[1]*x+e[5]*y+e[9]*z+e[13],
               e[2]*x+e[6]*y+e[10]*z+e[14],reach*columnScale(array,o)*scale);
           }
-          out.triangles+=triangleCount(object.geometry)*count;
+          if(drawn)out.triangles+=triangleCount(object.geometry)*count;
         }else{
           for(let corner=0;corner<8;corner++){
             const x=corner&1?box.max.x:box.min.x,y=corner&2?box.max.y:box.min.y;
@@ -168,9 +190,9 @@ export function createWolfveilAreaLoader({
             grow(e[0]*x+e[4]*y+e[8]*z+e[12],e[1]*x+e[5]*y+e[9]*z+e[13],
               e[2]*x+e[6]*y+e[10]*z+e[14]);
           }
-          out.triangles+=triangleCount(object.geometry);
+          if(drawn)out.triangles+=triangleCount(object.geometry);
         }
-        out.drawCalls+=groups;
+        if(drawn)out.drawCalls+=groups;
       }
       for(const child of object.children||[])visit(child);
     };
@@ -208,11 +230,34 @@ export function createWolfveilAreaLoader({
     const e=object.matrixWorld?.elements;
     units.set(object,{
       object,area,triangles:print.triangles,drawCalls:print.drawCalls,
-      targets,gates:targets.map(target=>installGate(target)),
+      // An owner showing or hiding a part changes what the far outline holds.
+      targets,gates:targets.map(target=>installGate(target,()=>{proxyDue=true;})),
       home:e?[e[12],e[13],e[14]]:null,
     });
     remember(object,'unit',signature(object));
     dirty=true;totalsCache=null;unitsStale=true;
+  }
+  // Typical standing height of one instance, in world metres. Uses the world
+  // Y row of (world x instance) so models authored lying down still count.
+  function instanceHeight(mesh){
+    const box=mesh.geometry?geometryBox(mesh.geometry):null;
+    const array=mesh.instanceMatrix?.array,w=mesh.matrixWorld?.elements;
+    const count=Math.min(mesh.count|0,array?Math.floor(array.length/16):0);
+    if(!box||!w||count<1)return 0;
+    const sx=box.max.x-box.min.x,sy=box.max.y-box.min.y,sz=box.max.z-box.min.z;
+    const step=Math.max(1,Math.floor(count/24)),heights=[];
+    for(let i=0;i<count;i+=step){
+      const o=i*16;
+      const row=c=>w[1]*array[o+c*4]+w[5]*array[o+c*4+1]+w[9]*array[o+c*4+2];
+      heights.push(Math.abs(row(0))*sx+Math.abs(row(1))*sy+Math.abs(row(2))*sz);
+    }
+    heights.sort((a,b)=>a-b);
+    return heights[heights.length>>1]||0;
+  }
+  function isFarScenery(mesh,print){
+    if(!settings.farScenery||!mesh.isInstancedMesh||mesh.isSkinnedMesh||!(mesh.count>=1))return false;
+    if(!(print.triangles>0)||print.triangles>farSceneryMaxTriangles)return false;
+    return instanceHeight(mesh)>=farSceneryMeters;
   }
   function batchEligible(mesh){
     if(!mesh.isInstancedMesh||!(mesh.count>=2)||!mesh.parent)return false;
@@ -258,7 +303,7 @@ export function createWolfveilAreaLoader({
       trianglesPerInstance:triangleCount(mesh.geometry),
       drawCalls:Array.isArray(mesh.material)?Math.max(1,mesh.material.length):1,
     };
-    record.gate=installGate(mesh,()=>syncCloneVisibility(record));
+    record.gate=installGate(mesh,()=>{proxyDue=true;syncCloneVisibility(record);});
     batches.set(mesh,record);
     remember(mesh,'batch',signature(mesh));
     dirty=true;totalsCache=null;
@@ -349,6 +394,12 @@ export function createWolfveilAreaLoader({
       return;
     }
     if(print.empty){remember(object,'shared',sig,'nothing to draw yet');return;}
+    if(isFarScenery(object,print)){
+      pending.delete(object);
+      remember(object,'shared',sig,FAR_SCENERY);
+      known.get(object).far={instances:object.count|0,triangles:Math.round(print.triangles)};
+      return;
+    }
     const area=wolfveilAreaOfRect(print.minX,print.maxX,
       print.minZ-offsetZ,print.maxZ-offsetZ);
     // A skyline landmark is tall AND slender (a peak, a tower). A wide model
@@ -403,6 +454,7 @@ export function createWolfveilAreaLoader({
     // While models are still arriving, look every `scanSeconds`; once several
     // scans in a row find nothing new, look three times less often.
     quietScans=scanChanged||pending.size?0:quietScans+1;
+    if(scanChanged)proxyDue=true;
   }
   const scanInterval=()=>scanSeconds*1000*(quietScans>=5?3:1);
   // Anything that turned out to move, change or leave goes back to how its
@@ -466,6 +518,7 @@ export function createWolfveilAreaLoader({
   // Returns how many per-area batches are still waiting to be built.
   function applyBatches(budget){
     let waiting=0,remaining=budget;
+    buildingAreas.clear();
     for(const record of batches.values()){
       if(disabled||disposed){
         for(const area of [...record.clones.keys()])dropClone(record,area);
@@ -475,7 +528,7 @@ export function createWolfveilAreaLoader({
       for(const area of record.lists.keys()){
         if(!loaded.has(area)||record.clones.has(area))continue;
         if(remaining>0){buildClone(record,area);remaining--;}
-        else{waiting++;ready=false;}
+        else{waiting++;ready=false;buildingAreas.add(area);}
       }
       if(ready)record.primed=true;
       record.gate.setOpen(exportDepth>0||!record.primed);
@@ -575,7 +628,7 @@ export function createWolfveilAreaLoader({
       if(want){loaded.add(area);unloadedAt.delete(area);released.delete(area);}
       else{loaded.delete(area);unloadedAt.set(area,time);}
     }
-    if(changed){statsStale=true;unitsStale=true;onAreasChanged([...loaded]);}
+    if(changed){statsStale=true;unitsStale=true;syncProxies();onAreasChanged([...loaded]);}
     return changed;
   }
   function refresh(playerPosition,time,{immediate=false}={}){
@@ -591,6 +644,7 @@ export function createWolfveilAreaLoader({
       dropUnloadedClones();
     }
     if(waiting!==building){building=waiting;statsStale=true;}
+    syncProxies();
     dirty=waiting>0;
   }
 
@@ -628,6 +682,15 @@ export function createWolfveilAreaLoader({
       loadedAreas:areas,
       units:{total:units.size,loaded:sum('units')},
       batches:{split:batches.size,settling:pending.size,dynamic:dynamicNames.size,building},
+      farScenery:farSceneryTotals(),
+      farOutline:{
+        enabled:Boolean(farProxy)&&settings.farScenery&&!proxyFailure,
+        failed:proxyFailure?String(proxyFailure.message||proxyFailure):null,
+        shown:[...proxies].filter(([,proxy])=>proxy.object.visible!==false).map(([area])=>area),
+        areas:Object.fromEntries([...proxies].map(([area,proxy])=>[area,{
+          sources:proxy.sources,triangles:proxy.triangles,
+          sourceTriangles:proxy.sourceTriangles,cellMeters:proxy.cellMeters}])),
+      },
       triangles:{
         loaded:Math.round(sum('unitTriangles')+sum('instanceTriangles')),
         unloaded:Math.round(all('unitTriangles')+all('instanceTriangles')
@@ -644,6 +707,133 @@ export function createWolfveilAreaLoader({
     };
   }
   // What ended up where: the checklist for the first in-game review.
+  // ---- far outline -------------------------------------------------------
+  const sourceIds=new WeakMap();let nextSourceId=1;
+  const idOf=object=>{
+    let id=sourceIds.get(object);
+    if(!id){id=nextSourceId++;sourceIds.set(object,id);}
+    return id;
+  };
+  // World Y extent of a plain mesh.
+  function meshHeight(mesh){
+    const box=mesh.geometry?geometryBox(mesh.geometry):null,e=mesh.matrixWorld?.elements;
+    if(!box||!e)return 0;
+    return Math.abs(e[1])*(box.max.x-box.min.x)+Math.abs(e[5])*(box.max.y-box.min.y)+
+      Math.abs(e[9])*(box.max.z-box.min.z);
+  }
+  // Glass, water and glows have no outline. Leaves cut out of a texture do:
+  // they are flagged transparent but drawn at full strength.
+  function standsTall(mesh){
+    const height=meshHeight(mesh);
+    if(height>=farSceneryMeters)return true;
+    if(typeof groundHeightAt!=='function'||!(height>0))return false;
+    const box=geometryBox(mesh.geometry),e=mesh.matrixWorld.elements;
+    const x=(box.min.x+box.max.x)/2,y=(box.min.y+box.max.y)/2,z=(box.min.z+box.max.z)/2;
+    const ground=groundHeightAt(e[0]*x+e[4]*y+e[8]*z+e[12],e[2]*x+e[6]*y+e[10]*z+e[14]);
+    const top=e[1]*x+e[5]*y+e[9]*z+e[13]+height/2;
+    return Number.isFinite(ground)&&top-ground>=farOutlineReachMeters;
+  }
+  const solid=mesh=>{
+    const material=Array.isArray(mesh.material)?mesh.material[0]:mesh.material;
+    return Boolean(material)&&material.visible!==false&&material.depthWrite!==false&&
+      !(Number(material.opacity??1)<1);
+  };
+  function worldInstance(mesh,i){ // matrixWorld x instanceMatrix[i]
+    const w=mesh.matrixWorld.elements,a=mesh.instanceMatrix.array,o=i*16,out=new Array(16);
+    for(let c=0;c<4;c++)for(let r=0;r<4;r++)
+      out[c*4+r]=w[r]*a[o+c*4]+w[4+r]*a[o+c*4+1]+w[8+r]*a[o+c*4+2]+w[12+r]*a[o+c*4+3];
+    return out;
+  }
+  // Everything tall that is unloaded together with its area, per area.
+  function tallSources(){
+    const byArea=new Map(WOLFVEIL_AREA_IDS.map(id=>[id,[]]));
+    for(const unit of units.values()){
+      const gates=new Map(unit.targets.map((target,i)=>[target,unit.gates[i]]));
+      const wanted=node=>{ // the owner's own visibility, from the part up to the unit
+        for(let at=node;at;at=at.parent){
+          const gate=gates.get(at);
+          if(gate?!gate.intent:at.visible===false)return false;
+          if(at===unit.object)break;
+        }
+        return true;
+      };
+      const list=byArea.get(unit.area);
+      for(const leaf of footprint(unit.object).leaves){
+        if(!leaf.isMesh||leaf.isSkinnedMesh||leaf.layers?.mask===0||!solid(leaf)||!wanted(leaf))continue;
+        if(leaf.isInstancedMesh){
+          if(instanceHeight(leaf)<farSceneryMeters)continue;
+          const count=Math.min(leaf.count|0,Math.floor(leaf.instanceMatrix.array.length/16));
+          list.push({mesh:leaf,matrices:Array.from({length:count},(_,i)=>worldInstance(leaf,i)),
+            stamp:idOf(leaf)+':'+count+':'+(leaf.instanceMatrix.version|0)});
+        }else if(standsTall(leaf))
+          list.push({mesh:leaf,matrices:[[...leaf.matrixWorld.elements]],
+            stamp:idOf(leaf)+':'+idOf(leaf.geometry)});
+      }
+    }
+    for(const record of batches.values()){
+      const mesh=record.source;
+      if(!record.gate.intent||!solid(mesh)||instanceHeight(mesh)<farSceneryMeters)continue;
+      for(const [area,indices] of record.lists)if(indices.length)
+        byArea.get(area).push({mesh,matrices:Array.from(indices,i=>worldInstance(mesh,i)),
+          stamp:idOf(mesh)+':'+indices.length+':'+record.version});
+    }
+    return byArea;
+  }
+  function dropProxy(area){
+    const proxy=proxies.get(area);
+    if(!proxy)return;
+    proxies.delete(area);statsStale=true;
+    try{farProxy?.dispose?.(proxy.object);}catch{/* already gone */}
+  }
+  function dropProxies(){for(const area of [...proxies.keys()])dropProxy(area);proxyQueue=[];}
+  // An outline shows while its area is unloaded, and for the few frames in
+  // which a just-loaded area is still building its real scenery.
+  function syncProxies(){
+    const off=passive()||!settings.farScenery;
+    for(const [area,proxy] of proxies){
+      const show=!off&&(!loaded.has(area)||buildingAreas.has(area));
+      if(proxy.object.visible!==show){proxy.object.visible=show;statsStale=true;}
+    }
+  }
+  // Re-plans when the scenery changed, then bakes at most one area per frame.
+  function advanceProxies(time){
+    if(!farProxy||proxyFailure||!settings.farScenery||passive())return;
+    try{
+      // Parts hidden deep inside a model do not announce themselves: look
+      // again every half minute.
+      if(time-proxyAt>=30000)proxyDue=true;
+      if(proxyDue&&!pending.size&&time-proxyAt>=farProxySeconds*1000){
+        proxyDue=false;proxyAt=time;proxyQueue=[];
+        for(const [area,sources] of tallSources()){
+          const signature=sources.map(source=>source.stamp).join(',');
+          if(proxies.get(area)?.signature===signature)continue;
+          if(!sources.length){dropProxy(area);continue;}
+          proxyQueue.push({area,sources,signature});
+        }
+      }
+      const job=proxyQueue.shift();
+      if(!job)return;
+      dropProxy(job.area);
+      const built=farProxy.build(job.area,job.sources);
+      if(built?.object){
+        proxies.set(job.area,{...built,signature:job.signature,sources:job.sources.length});
+        statsStale=true;syncProxies();
+      }
+    }catch(error){
+      // Outlines are decoration: lose them, keep the loader.
+      proxyFailure=error||Error('unknown');
+      try{dropProxies();}catch{/* nothing left to drop */}
+      globalThis.console?.warn?.('Wolfveil far outline switched itself off:',proxyFailure);
+    }
+  }
+  function farSceneryTotals(){
+    const out={enabled:settings.farScenery,batches:0,instances:0,triangles:0};
+    for(const [object,entry] of known){
+      if(entry.reason!==FAR_SCENERY||!entry.far||!object.parent)continue;
+      out.batches++;out.instances+=entry.far.instances;out.triangles+=entry.far.triangles;
+    }
+    return out;
+  }
   function getReport(){
     const {perArea}=summary();
     const shared=[];
@@ -682,6 +872,7 @@ export function createWolfveilAreaLoader({
       for(const record of batches.values())record.gate.setOpen(true);
     }
     statsStale=true;
+    try{dropProxies();}catch{/* outlines are decoration */}
     globalThis.console?.warn?.('Wolfveil area loader switched itself off:',failure);
   }
   function update(playerPosition,options={}){
@@ -697,6 +888,7 @@ export function createWolfveilAreaLoader({
     if(time-lastScan>=scanInterval())scan(time);
     if(time-lastAudit>=auditSeconds*1000)audit(time);
     auditUnits(unitAuditsPerFrame);
+    if(!paused)advanceProxies(time);
     // The area follows the player even while the loader is switched off, so
     // notices keep working and switching back on needs no catch-up frame.
     if(playerPosition&&!exportDepth){
@@ -736,11 +928,12 @@ export function createWolfveilAreaLoader({
   async function withFullMapExport(task){
     if(disposed||typeof task!=='function')throw Error('Cannot export a disposed area loader');
     exportDepth++;
-    if(exportDepth===1){unitsStale=true;applyUnits();applyBatches(0);}
+    if(exportDepth===1){unitsStale=true;applyUnits();applyBatches(0);syncProxies();}
     try{return await task();}
     finally{
       exportDepth--;
       if(!exportDepth&&!disposed){unitsStale=true;applyUnits();applyBatches(Infinity);dirty=true;}
+      syncProxies();
     }
   }
   // In-game A/B switch: off draws the whole valley exactly as it was built.
@@ -767,6 +960,21 @@ export function createWolfveilAreaLoader({
       settings.releaseGpuMemory=options.releaseGpuMemory;
     if(Number.isFinite(options.releaseDelaySeconds)&&options.releaseDelaySeconds>=0)
       settings.releaseDelaySeconds=options.releaseDelaySeconds;
+    if(typeof options.farScenery==='boolean'&&options.farScenery!==settings.farScenery){
+      settings.farScenery=options.farScenery;
+      // Classify the instanced scenery afresh under the new rule.
+      if(settings.farScenery){
+        for(const mesh of [...batches.keys()])
+          if(isFarScenery(mesh,footprint(mesh)))releaseBatch(mesh,null);
+        for(const object of [...units.keys()])
+          if(isFarScenery(object,footprint(object))){forgetUnit(object);known.delete(object);}
+      }else{
+        for(const [object,entry] of [...known])
+          if(entry.reason===FAR_SCENERY)known.delete(object);
+        dropProxies();
+      }
+      totalsCache=null;statsStale=true;lastScan=-Infinity;proxyDue=true;
+    }
     if(options.mode)setMode(options.mode);
     dirty=true;
     return {...settings};
@@ -778,6 +986,7 @@ export function createWolfveilAreaLoader({
   function dispose(){
     if(disposed)return;
     disposed=true;
+    try{dropProxies();}catch{/* outlines are decoration */}
     for(const mesh of [...batches.keys()])releaseBatch(mesh,null);
     for(const object of [...units.keys()])forgetUnit(object);
     pending.clear();known.clear();extras.clear();

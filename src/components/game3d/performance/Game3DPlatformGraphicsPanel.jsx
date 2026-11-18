@@ -89,6 +89,18 @@ export default function Game3DPlatformGraphicsPanel({open=true,onProfileApplied}
         <span className="axe3d-pause__switch-knob"/>
       </button>
     </div>
+    <div className="axe3d-pause__switch-row">
+      <div><strong>Distant scenery</strong>
+        <p>Keeps unloaded areas on the horizon: their trees stay, and their
+          buildings and rock faces are drawn as one simple outline each.
+          Without it the land beyond a portal is bare until you get close.</p></div>
+      <button type="button" className="axe3d-pause__switch" role="switch"
+        aria-checked={!!profile.farScenery}
+        aria-label="Distant scenery"
+        onClick={()=>remember({farScenery:!profile.farScenery})}>
+        <span className="axe3d-pause__switch-knob"/>
+      </button>
+    </div>
     <p className="axe3d-pause__help" data-testid="game3d-platform-budget">
       Target for one loaded area on {platformLabel(state.active)}:
       {' '}{budget.drawCalls.toLocaleString('en-US')} draw calls,

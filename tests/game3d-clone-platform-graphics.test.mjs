@@ -63,6 +63,11 @@ test('three platforms, each with complete defaults of its own',()=>{
     mobile.graphics.shadows,mobile.gpuProfile,mobile.releaseGpuMemory],
   ['720p','low',30,false,'performance',true]);
   assert.equal(browser.releaseGpuMemory,false);
+  // Distant forests: on where there is headroom, off on phones by default.
+  assert.deepEqual([browser.farScenery,GAME3D_PLATFORM_DEFAULTS.desktop.farScenery,mobile.farScenery],
+    [true,true,false]);
+  assert.equal(normalizeGame3DPlatformProfile({farScenery:false},'browser').farScenery,false);
+  assert.equal(normalizeGame3DPlatformProfile({farScenery:'yes'},'mobile').farScenery,false);
   assert.deepEqual(Object.keys(GAME3D_AREA_LOADING_LABELS),[...WOLFVEIL_AREA_LOADING_MODES]);
 });
 test('browser default is native-sharp on a 1080p screen and never upscales a small one',()=>{

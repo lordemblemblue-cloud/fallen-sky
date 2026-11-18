@@ -44,16 +44,19 @@ export const GAME3D_PLATFORM_DEFAULTS=Object.freeze({
     graphics:Object.freeze({quality:'high',shadows:true,fpsCap:60}),
     display:Object.freeze({resolution:'auto',uiScale:'auto'}),
     gpuProfile:'auto',areaLoading:'single',preloadMeters:90,releaseGpuMemory:false,
+    farScenery:true,
   }),
   desktop:Object.freeze({
     graphics:Object.freeze({quality:'ultra',shadows:true,fpsCap:120}),
     display:Object.freeze({resolution:'native',uiScale:'auto'}),
     gpuProfile:'quality',areaLoading:'single',preloadMeters:140,releaseGpuMemory:false,
+    farScenery:true,
   }),
   mobile:Object.freeze({
     graphics:Object.freeze({quality:'low',shadows:false,fpsCap:30}),
     display:Object.freeze({resolution:'720p',uiScale:'auto'}),
     gpuProfile:'performance',areaLoading:'single',preloadMeters:60,releaseGpuMemory:true,
+    farScenery:false,
   }),
 });
 
@@ -90,6 +93,8 @@ export function normalizeGame3DPlatformProfile(raw,platform='browser'){
     preloadMeters:Number.isFinite(preload)?clamp(Math.round(preload),30,200):base.preloadMeters,
     releaseGpuMemory:typeof input.releaseGpuMemory==='boolean'
       ?input.releaseGpuMemory:base.releaseGpuMemory,
+    // Distant forests of unloaded areas stay on the horizon.
+    farScenery:typeof input.farScenery==='boolean'?input.farScenery:base.farScenery,
   });
 }
 
@@ -224,7 +229,8 @@ export function rememberGame3DPlatformSetting(patch,host=defaultHost()){
     display:{...current.display,...(input.display||{})},
   },state.active);
   persist(host,state.selected,{...state.profiles,[state.active]:next});
-  if('areaLoading' in input||'preloadMeters' in input||'releaseGpuMemory' in input){
+  if('areaLoading' in input||'preloadMeters' in input||'releaseGpuMemory' in input||
+     'farScenery' in input){
     const EventType=host?.CustomEvent||globalThis.CustomEvent;
     try{
       if(EventType)host?.dispatchEvent?.(new EventType(GAME3D_PLATFORM_GRAPHICS_EVENT,

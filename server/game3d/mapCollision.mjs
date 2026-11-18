@@ -12,6 +12,7 @@ import {
   planWolfveilBridgeDeck,projectWolfveilBridgePoint,
 } from '../../src/components/game3d/wolfveil/WolfveilBridgeProfile.mjs';
 import { wolfveilForestTrunkColliders } from '../../src/components/game3d/wolfveil/WolfveilForestLayout.js';
+import { wolfveilPlantedTrunkColliders, createWolfveilCircleGrid } from '../../src/components/game3d/wolfveil/WolfveilTrunkColliders.mjs';
 import { WOLFVEIL_IMPORTED_TOWN_TREE } from '../../src/components/game3d/wolfveil/WolfveilImportedTownLayout.mjs';
 import { createHash } from 'node:crypto';
 
@@ -70,7 +71,13 @@ const circles=[Object.freeze({x:WOLFVEIL_IMPORTED_TOWN_TREE.x,
   ...wolfveilForestTrunkColliders().map(t=>Object.freeze({
     x:t.x,z:t.z+WOLFVEIL_RENDER_OFFSET_Z,radius:t.radius,
   })),
+  // Trees planted by the four-sides plan: the same list the scene draws.
+  ...wolfveilPlantedTrunkColliders().map(t=>Object.freeze({
+    x:t.x,z:t.z+WOLFVEIL_RENDER_OFFSET_Z,radius:t.radius,
+  })),
 ];
+// Hundreds of trunks: a step is tested against the few near it, not all.
+const circleGrid=createWolfveilCircleGrid(circles);
 // The same source-frame bridge profiles are sampled by the renderer and
 // signed worker. This is not full mesh-level PvP, stairs or mount physics.
 const bridgeSurface=createWolfveilTerrainSurfaceSampler({span:1100,segments:310});
@@ -96,7 +103,8 @@ const bridgeRailBlocked=(x,localZ)=>{
   }
   return false;
 };
-export const WOLFVEIL_FOREST_TRUNK_COUNT=circles.length-1;
+export const WOLFVEIL_PLANTED_TRUNK_COUNT=wolfveilPlantedTrunkColliders().length;
+export const WOLFVEIL_FOREST_TRUNK_COUNT=circles.length-1-WOLFVEIL_PLANTED_TRUNK_COUNT;
 export const WOLFVEIL_STATIC_OBSTACLE_COUNT=obstacles.length+circles.length;
 // Derive the collision revision from the actual checked-in geometry and
 // height function, rather than trusting a client-supplied arbitrary version.
@@ -137,7 +145,7 @@ export function createWolfveilMapCollision(){
        Math.abs(z-WOLFVEIL_RENDER_OFFSET_Z)>PLAYABLE_HALF_SPAN-DUEL_BODY_RADIUS) return true;
     return bridgeRailBlocked(x,z-WOLFVEIL_RENDER_OFFSET_Z) ||
       obstacles.some(b=>insideRect(x,z,DUEL_BODY_RADIUS,b)) ||
-      circles.some(c=>Math.hypot(x-c.x,z-c.z)<c.radius+DUEL_BODY_RADIUS-1e-8);
+      circleGrid.some(x,z,c=>Math.hypot(x-c.x,z-c.z)<c.radius+DUEL_BODY_RADIUS-1e-8);
   };
   const height=(local,origin)=>{
     if(!originValid(origin)||!finite(local?.x)||!finite(local?.z))return null;

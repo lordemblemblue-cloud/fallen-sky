@@ -414,6 +414,205 @@ test('copies are built a few per frame and the stats say how many are still to c
   const stats=v.loader.getStats();
   assert.equal(stats.loadedInstances,stats.sourceInstances);
 });
+// ------------------------------------------------------------ far scenery
+const everyArea=[SPOTS.town,[30,-20],SPOTS.south,SPOTS.west,[-400,-100],SPOTS.east,SPOTS.north,[60,360]];
+function plant(v,{name='SWV_Forest_CedarCrowns',height=9,triangles=300,points=everyArea,geo=null}={}){
+  const forest=new Instanced(geo||geometry({height,triangles}),{map:texture()},points.length).place(points);
+  forest.name=name;v.root.add(forest);v.valley.meshes.push(forest);
+  return forest;
+}
+const copiesOf=(v,forest)=>v.clones().filter(node=>node.name.endsWith(forest.name));
+
+test('tall, cheap instanced scenery stays on the horizon of every area',()=>{
+  const v=mount();
+  const forest=plant(v),shrubs=plant(v,{name:'SWV_Living_Shrubs',height:1.2});
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,0,'the forest is never split into per-area copies');
+  assert.equal(copiesOf(v,shrubs).length,1,'low scenery is still split and unloaded');
+  for(const spot of Object.values(SPOTS)){
+    v.step(world(...spot),.2);v.step(world(...spot),.2);
+    assert.equal(forest.visible,true,'the whole forest is drawn from '+spot);
+    assert.equal(forest.count,8);
+  }
+  assert.deepEqual(v.loader.getStats().farScenery,{enabled:true,batches:1,instances:8,triangles:2400});
+  const kept=v.loader.getReport().alwaysLoaded.largest.find(entry=>entry.name===forest.name);
+  assert.match(kept.reason,/far scenery/);
+});
+
+test('far scenery must be tall and cheap; a grove inside one area counts too',()=>{
+  const v=mount({farSceneryMaxTriangles:5000});
+  const heavy=plant(v,{name:'SWV_Owner_Elms',height:17,triangles:900});       // 7,200 > 5,000
+  const grove=plant(v,{name:'SWV_Bamboo_Grove',height:8,points:[SPOTS.west,[-400,-100],[-330,40]]});
+  // Authored lying down (tall along z), stood upright by each instance matrix.
+  const lying=geometry({height:1,triangles:200});
+  lying.boundingBox={min:{x:-1,y:-.5,z:0},max:{x:1,y:.5,z:12}};
+  const elms=plant(v,{name:'SWV_ZUp_Elms',geo:lying});
+  for(let i=0;i<elms.count;i++)elms.instanceMatrix.array.set([1,0,0,0, 0,0,-1,0, 0,1,0,0],i*16);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,heavy).length,1,'too heavy to draw everywhere: split and unloaded');
+  assert.equal(copiesOf(v,elms).length,0);
+  v.step(world(...SPOTS.east),.2);v.step(world(...SPOTS.east),.2);
+  assert.equal(grove.visible,true,'the western grove still shows from the east');
+  assert.equal(heavy.visible,false);
+  assert.equal(v.loader.getStats().farScenery.batches,2);
+});
+
+test('far scenery can be switched off and on again while playing',()=>{
+  const v=mount();
+  const forest=plant(v);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,0);
+  assert.equal(v.loader.setOptions({farScenery:false}).farScenery,false);
+  v.settle();v.settle();
+  assert.equal(copiesOf(v,forest).length,1,'with the rule off the forest is split like any batch');
+  assert.equal(forest.visible,false);
+  assert.equal(v.loader.getStats().farScenery.batches,0);
+  v.loader.setOptions({farScenery:true});
+  v.step(world(...SPOTS.town),.1);
+  assert.equal(copiesOf(v,forest).length,0,'the copies are removed at once');
+  assert.equal(forest.visible,true);
+  v.settle();
+  assert.equal(v.loader.getStats().farScenery.batches,1);
+  const off=mount({farScenery:false});
+  const second=plant(off);
+  off.settle();off.settle();
+  assert.equal(copiesOf(off,second).length,1);
+});
+
+// ------------------------------------------------------------ far outline
+function outlineBuilder({fail=false}={}){
+  const built=[],disposed=[];
+  return {built,disposed,
+    build(area,sources){
+      if(fail)throw new Error('no WebGL');
+      const object={name:'WV_Area_Far_'+area,visible:true};
+      built.push({area,object,sources});
+      return {object,triangles:sources.length*40,sourceTriangles:sources.length*900,cellMeters:.75};
+    },
+    dispose(object){disposed.push(object.name);object.gone=true;}};
+}
+function mountWithTallScenery(overrides={}){
+  const farProxy=outlineBuilder(overrides.outline);
+  const v=mount({farProxy,farSceneryMaxTriangles:5000,...(overrides.loader||{})});
+  const tower=new Mesh('SWV_Watchtower',geometry({half:6,height:12,triangles:2000}),{}).at(20,30,-380);
+  const bench=new Mesh('SWV_Bench',geometry({height:1}),{}).at(24,30,-384);
+  const banner=new Mesh('SWV_GlassBanner',geometry({height:9}),{transparent:true,opacity:.4}).at(28,30,-380);
+  const glow=new Mesh('SWV_Glow',geometry({height:9}),{depthWrite:false}).at(32,30,-380);
+  // Leaves cut out of a texture: flagged transparent, drawn at full strength.
+  const maple=new Mesh('SWV_CutoutMaple',geometry({height:8}),{transparent:true,alphaTest:.5}).at(36,30,-380);
+  for(const object of [tower,bench,banner,glow,maple]){v.root.add(object);v.valley.meshes.push(object);}
+  const elms=plant(v,{name:'SWV_Owner_Elms',height:17,triangles:900}); // too heavy to keep whole
+  const bake=()=>{v.settle();v.settle();v.step(world(...SPOTS.town),2.1);
+    for(let i=0;i<8;i++)v.step(world(...SPOTS.town),.1);};
+  return {...v,farProxy,tower,bench,banner,elms,bake};
+}
+const shownOutlines=v=>v.farProxy.built.filter(entry=>entry.object.visible&&!entry.object.gone)
+  .map(entry=>entry.area).sort();
+
+test('tall scenery that unloads with its area is baked into one outline per area',()=>{
+  const v=mountWithTallScenery();v.bake();
+  const south=v.farProxy.built.find(entry=>entry.area==='south');
+  // The tower, the cut-out maple and the elms standing in the south; never
+  // the bench, the glass banner or the glow.
+  assert.deepEqual(south.sources.map(source=>source.mesh.name).sort(),
+    ['SWV_CutoutMaple','SWV_Owner_Elms','SWV_Watchtower']);
+  const tower=south.sources.find(source=>source.mesh===v.tower);
+  assert.deepEqual(tower.matrices.length,1);
+  assert.deepEqual(tower.matrices[0].slice(12,15),[20,30,-310],'world placement, valley offset included');
+  const elms=south.sources.find(source=>source.mesh===v.elms);
+  assert.equal(elms.matrices.length,1,'only the elm that stands in the south');
+  assert.ok(Array.isArray(elms.matrices[0])&&elms.matrices[0].length===16,'a full placement, not a number');
+  assert.deepEqual([elms.matrices[0][12],elms.matrices[0][14]],[SPOTS.south[0],SPOTS.south[1]+70]);
+  assert.deepEqual(v.farProxy.built.map(entry=>entry.area).sort(),['east','north','south','town','west']);
+  // Standing in town: every other area shows its outline, the town does not.
+  assert.deepEqual(shownOutlines(v),['east','north','south','west']);
+  const stats=v.loader.getStats().farOutline;
+  assert.equal(stats.enabled,true);
+  assert.deepEqual(stats.shown.sort(),['east','north','south','west']);
+  assert.deepEqual(stats.areas.south,{sources:3,triangles:120,sourceTriangles:2700,cellMeters:.75});
+  // Nothing is baked twice while the scenery stays the same.
+  for(let i=0;i<60;i++)v.step(world(...SPOTS.town),.1);
+  assert.equal(v.farProxy.built.length,5);
+});
+
+test('with the ground known, walls made of short pieces join the outline',()=>{
+  const build=groundHeightAt=>{
+    const farProxy=outlineBuilder();
+    const v=mount({farProxy,groundHeightAt});
+    // A 3 m wall panel, a 1.5 m panel raised onto it, and a bench, on ground at y=30.
+    const lower=new Mesh('SWV_WallLower',geometry({height:3}),{}).at(20,30,-380);
+    const upper=new Mesh('SWV_WallUpper',geometry({height:1.5}),{}).at(20,33,-380);
+    const bench=new Mesh('SWV_Bench',geometry({height:1}),{}).at(24,30,-384);
+    for(const object of [lower,upper,bench]){v.root.add(object);v.valley.meshes.push(object);}
+    v.settle();v.settle();v.step(world(...SPOTS.town),2.1);
+    for(let i=0;i<8;i++)v.step(world(...SPOTS.town),.1);
+    return (farProxy.built.find(entry=>entry.area==='south')?.sources||[])
+      .map(source=>source.mesh.name).sort();
+  };
+  assert.deepEqual(build(null),[],'without the ground only 4 m pieces count');
+  assert.deepEqual(build(()=>30),['SWV_WallLower','SWV_WallUpper']);
+  assert.deepEqual(build(()=>NaN),[],'unknown ground: nothing extra');
+  // On a hillside the ground under each piece decides, not the lowest point.
+  assert.deepEqual(build((x,z)=>z<-300?32:30),['SWV_WallUpper']);
+});
+
+test('an outline gives way to the real scenery when its area loads',()=>{
+  const v=mountWithTallScenery();v.bake();
+  v.step(world(...SPOTS.south),.2);
+  for(let i=0;i<6;i++)v.step(world(...SPOTS.south),.1);
+  assert.deepEqual(shownOutlines(v),['east','north','town','west']);
+  assert.equal(v.tower.visible,true);
+  // Loader off, or a map export: the valley is drawn as built, no outlines.
+  v.loader.setEnabled(false);
+  assert.deepEqual(shownOutlines(v),[]);
+  v.loader.setEnabled(true);v.step(world(...SPOTS.south),.1);
+  assert.deepEqual(shownOutlines(v),['east','north','town','west']);
+  let during=null;
+  return v.loader.withFullMapExport(async()=>{during=shownOutlines(v);}).then(()=>{
+    assert.deepEqual(during,[]);
+    assert.deepEqual(shownOutlines(v),['east','north','town','west']);
+    v.loader.setMode('all');
+    for(let i=0;i<6;i++)v.step(world(...SPOTS.south),.1);
+    assert.deepEqual(shownOutlines(v),[],'with every area loaded nothing needs an outline');
+  });
+});
+
+test('outlines are rebaked when scenery changes and removed when switched off',()=>{
+  const v=mountWithTallScenery();v.bake();
+  const pagoda=new Mesh('SWV_Pagoda',geometry({half:5,height:20}),{}).at(30,30,-390);
+  v.root.add(pagoda);v.valley.meshes.push(pagoda);
+  v.bake();
+  const south=v.farProxy.built.filter(entry=>entry.area==='south');
+  assert.equal(south.length,2,'the south was baked again with the new pagoda');
+  assert.equal(south[1].sources.length,4);
+  assert.equal(v.farProxy.disposed.filter(name=>name==='WV_Area_Far_south').length,1);
+  assert.equal(v.farProxy.built.length,6,'the other areas were left alone');
+  v.tower.visible=false;                       // hidden by its owner
+  v.loader.rescan?.();v.bake();
+  assert.equal(v.farProxy.built.filter(entry=>entry.area==='south').pop().sources
+    .some(source=>source.mesh===v.tower),false);
+  v.loader.setOptions({farScenery:false});
+  assert.equal(v.loader.getStats().farOutline.enabled,false);
+  assert.deepEqual(Object.keys(v.loader.getStats().farOutline.areas),[]);
+  v.loader.setOptions({farScenery:true});v.bake();
+  assert.deepEqual(shownOutlines(v).length,4);
+  const before=v.farProxy.disposed.length;
+  v.loader.dispose();
+  assert.equal(v.farProxy.disposed.length,before+5,'dispose removes every outline');
+});
+
+test('a failing outline builder switches only the outlines off',()=>{
+  const v=mountWithTallScenery({outline:{fail:true}});v.bake();
+  const stats=v.loader.getStats();
+  assert.equal(stats.failed,null,'the loader itself keeps working');
+  assert.equal(stats.farOutline.enabled,false);
+  assert.match(stats.farOutline.failed,/no WebGL/);
+  v.step(world(...SPOTS.south),.2);
+  assert.equal(v.loader.getArea(),'south');
+  const plain=mount();plain.settle();
+  assert.equal(plain.loader.getStats().farOutline.enabled,false,'no builder, no outlines');
+});
+
 test('the A/B switch restores the valley exactly as it was built',()=>{
   const v=mount();v.settle();
   assert.equal(v.loader.setEnabled(false),true);
@@ -627,7 +826,7 @@ test('the live game world mounts the five-area loader, portals and platform sett
   assert.ok(world.indexOf('bootGame3DPlatformGraphics(window)')<world.indexOf('const bootProfile = readCloneGPUProfile(window)'));
   assert.match(world,/regionStream\?\.addUnits\(\[importedSpawnTown\.root\]\)/);
   assert.equal(world.match(/areaPortals\?\.update\(delta,/g).length,2,'title screen and live play');
-  assert.match(world,/onAreasChanged\(\)\{renderer\.shadowMap\.needsUpdate=true;\}/);
+  assert.match(world,/onAreasChanged\(\)\{\s*renderer\.shadowMap\.needsUpdate=true;[\s\S]{0,260}otsCameraRevision=\(valley\.userData\.otsCameraRevision\|\|0\)\+1;\s*\}/);
   assert.match(world,/regionStream\.withFullMapExport\(performExport\)/);
   // The loader hands objects back before the town and the valley are torn down.
   assert.ok(world.indexOf('regionStream?.dispose();')<world.indexOf('importedSpawnTown?.dispose();'));

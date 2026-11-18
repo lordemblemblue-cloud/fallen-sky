@@ -4,14 +4,28 @@
 // Decoration only: no colliders, no raycasts.
 import * as THREE from 'three';
 import { mulberry32 } from './WolfveilGeometry.js';
+import { nearGrassDetailLevel } from './WolfveilNearGrassDetail.mjs';
 
 const CELL = 10, RADIUS = 46, KEEP = 62, PER_CELL = 900, BUILDS_PER_UPDATE = 2;
 
-export function createWolfveilNearGrassStream({ group, geometry, material, accept, palette }) {
+// `lighterGeometries`: the same blade with fewer segments, lightest last.
+// Cells farther from the player draw every blade with one of these; nothing
+// is planted more thinly (see WolfveilNearGrassDetail.mjs).
+export function createWolfveilNearGrassStream({ group, geometry, material, accept, palette, lighterGeometries = [] }) {
   const cells = new Map();
   const dummy = new THREE.Object3D();
+  const levels = [geometry, ...lighterGeometries];
+  let detailLevels = levels.length > 1;
+  const applyDetail = (mesh, distance) => {
+    const current = mesh.userData.grassDetail;
+    const level = detailLevels
+      ? Math.min(levels.length - 1, nearGrassDetailLevel(distance, current)) : 0;
+    if (level === current) return;
+    mesh.userData.grassDetail = level;
+    mesh.geometry = levels[level];
+  };
 
-  function build(cx, cz) {
+  function build(cx, cz, distance) {
     const rand = mulberry32(((cx * 73856093) ^ (cz * 19349663)) >>> 0);
     const spots = [];
     for (let i = 0; i < PER_CELL; i++) {
@@ -35,7 +49,8 @@ export function createWolfveilNearGrassStream({ group, geometry, material, accep
     mesh.name = `SWV_Near_GrassBlades_${cx}:${cz}`;
     mesh.receiveShadow = true;
     mesh.raycast = () => {};
-    mesh.userData = { decorativeOnly: true, nonCollider: true, individualBlades: true };
+    mesh.userData = { decorativeOnly: true, nonCollider: true, individualBlades: true, grassDetail: null };
+    applyDetail(mesh, distance);
     group.add(mesh);
     return mesh;
   }
@@ -48,12 +63,26 @@ export function createWolfveilNearGrassStream({ group, geometry, material, accep
 
   return {
     get cells() { return cells.size; },
+    /** How many cells are drawn at each detail level, fullest first. */
+    get detail() {
+      const counts = levels.map(() => 0);
+      for (const mesh of cells.values()) if (mesh) counts[mesh.userData.grassDetail || 0]++;
+      return counts;
+    },
+    /** A/B switch: false draws every cell with the full blade, as before. */
+    setDetailLevels(enabled) {
+      detailLevels = Boolean(enabled) && levels.length > 1;
+      // Start every cell afresh, so the switch gives the same lawn each time.
+      for (const mesh of cells.values()) if (mesh) mesh.userData.grassDetail = null;
+      return detailLevels;
+    },
     update(player) {
       if (!player) return;
       for (const [key, mesh] of cells) {
         const [cx, cz] = key.split(':').map(Number);
-        if (Math.hypot((cx + 0.5) * CELL - player.x, (cz + 0.5) * CELL - player.z) > KEEP) release(key);
-        else if (mesh) mesh.visible = true;
+        const distance = Math.hypot((cx + 0.5) * CELL - player.x, (cz + 0.5) * CELL - player.z);
+        if (distance > KEEP) release(key);
+        else if (mesh) { mesh.visible = true; applyDetail(mesh, distance); }
       }
       const reach = Math.ceil(RADIUS / CELL), px = Math.floor(player.x / CELL), pz = Math.floor(player.z / CELL);
       const wanted = [];
@@ -64,7 +93,7 @@ export function createWolfveilNearGrassStream({ group, geometry, material, accep
         if (d <= RADIUS) wanted.push({ cx, cz, key, d });
       }
       wanted.sort((a, b) => a.d - b.d);
-      for (const c of wanted.slice(0, BUILDS_PER_UPDATE)) cells.set(c.key, build(c.cx, c.cz));
+      for (const c of wanted.slice(0, BUILDS_PER_UPDATE)) cells.set(c.key, build(c.cx, c.cz, c.d));
     },
     dispose() { for (const key of [...cells.keys()]) release(key); },
   };

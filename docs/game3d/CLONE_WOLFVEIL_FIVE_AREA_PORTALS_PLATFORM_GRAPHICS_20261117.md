@@ -155,48 +155,186 @@ drawn in every area, with the reason each one could not be assigned.
 - In code: in `GameWorld3D.jsx`, remount `createWolfveilFourRegionRuntime` in
   place of `createWolfveilAreaLoader`, or pass `mode:'all'`.
 
+## Measured on the real valley (CI, Three.js r171)
+
+`scripts/report-wolfveil-area-loading.mjs --town` builds the real valley and
+the town the game mounts, mounts the real loader and portals, and counts
+everything handed to the renderer. It counts all directions at once, so the
+numbers are an upper bound on what one camera view draws. The job
+"Real valley under real Three.js, lint and production build" runs it on every
+pull request, then lints the new files and runs `npm run build`.
+
+Draw calls / triangles standing deep inside each area (browser budget: 500
+draw calls, 1.5 M triangles). All four owner models load in this run, on
+`main` at `a7af0d9` (walkable low-poly town with its own proxies, #50, #52).
+
+| Area  | Whole valley, as first measured | One area loaded, now | Budget          |
+|-------|---------------------------------|----------------------|-----------------|
+| town  | 4,558 / 3.44 M                  | 481 / 1.35 M         | inside          |
+| south | 4,591 / 4.40 M                  | 270 / 1.01 M         | inside          |
+| west  | 4,591 / 4.32 M                  | 361 / 1.68 M         | over, triangles |
+| east  | 4,586 / 4.09 M                  | 356 / 1.43 M         | inside          |
+| north | 4,591 / 4.30 M                  | 347 / 1.22 M         | inside          |
+
+One camera view, after the renderer's own culling (the game camera, 60 degree
+view, eight directions from behind the player). This is what a frame draws:
+
+| Area  | Worst direction | Average direction | Budget |
+|-------|-----------------|-------------------|--------|
+| town  | 280 / 0.84 M    | 178 / 0.76 M      | inside |
+| south | 207 / 0.77 M    | 110 / 0.67 M      | inside |
+| west  | 249 / 1.24 M    | 141 / 0.95 M      | inside |
+| east  | 243 / 1.02 M    | 142 / 0.83 M      | inside |
+| north | 212 / 0.89 M    | 132 / 0.75 M      | inside |
+
+- All 11 portals pass walking both ways: arrival notice, both sides loaded
+  during the crossing, arch shown.
+- Nothing lost or duplicated: with every area loaded the triangle total equals
+  the whole valley; full-map export sees exactly the original objects; dispose
+  restores every object.
+- **Caves** (`wolfveil/WolfveilCaveDrawBudget.mjs`): 791 draw calls as built,
+  drawn from anywhere. Now 65 on the surface and 150 inside a cave, with the
+  same triangles per material and the same bounds.
+- **Grass that follows the player** (`wolfveil/WolfveilNearGrassDetail.mjs`,
+  `WolfveilNearGrassStream.js`): every blade stays planted (66 cells, 59,400
+  blades), but a cell draws each blade with 21 triangles within 18 m, 9 to
+  32 m and 3 beyond, on the same curve, with 2 m of hysteresis. 1,247,400
+  triangles became 448,200. A/B: `nearGrass.setDetailLevels(false)`.
+- **Owner long-grass tiles** (`wolfveil/WolfveilGrassTileReplacement.js`): the
+  sparse far tiles share 64 m chunks instead of 32 m. 695 draw calls map-wide
+  became 263; near tiles keep 32 m chunks.
+- **Town**: left to the town's own performance work on `main` (low-poly
+  tiers, building proxies, culling). From the square it hands the renderer
+  185 draw calls and 11,094 triangles. A generic merger was built for it here
+  and removed again after colliding with that work three times in a day.
+- **Distant scenery** (below): 2 to 5 draw calls and 31,000 to 62,000
+  triangles per area, included in the table.
+
+What is left:
+
+1. West is over on triangles when every direction is counted at once (the
+   owner's far grass tiles, 659,520 there), and inside in any single view.
+2. Lights: 6 to 12 lights are switched on wherever the player stands. Their
+   cost shows only in a real frame-rate reading.
+
+## Distant scenery (what an unloaded area still shows)
+
+Setting: Graphics menu, "Distant scenery", per platform (browser and desktop
+on, mobile off). Loader options `farScenery`, `farProxy`.
+
+Two parts, both in `streaming/WolfveilAreaLoader.mjs`:
+
+1. **Kept whole.** Tall, cheap instanced scenery (instances 4 m and taller,
+   at most 60,000 triangles per batch) is never split or unloaded. One draw
+   call per batch for the whole valley, the same as one area's copy cost. On
+   the real valley: 5 batches, 460 instances, 51,096 triangles (the gorge's
+   rock terraces and the fallback trees).
+2. **Outline.** Tall scenery that does unload with its area is baked into one
+   coarse mesh per area (`performance/Game3DFarProxy.mjs`, vertex clustering
+   on a 0.75 m grid, at most 30,000 triangles, flat colours taken from the
+   real materials; `wolfveil/WolfveilFarOutline.js` builds the mesh). It is
+   shown while its area is unloaded, hidden with the loader off and during a
+   full-map export, and rebaked when the scenery or an owner's visibility
+   changes. On the real valley:
+
+   | Area | Stands for                        | Outline     | Bake  |
+   |------|-----------------------------------|-------------|-------|
+   | west | the owner's trees, 108,240 tris   | 22,646 tris | 27 ms |
+   | town | 72 tall parts, 16,068 tris        | 3,724 tris  | 4 ms  |
+
+   A part counts as tall when it is 4 m high, or when its top stands 2.5 m
+   above the ground under it (so a building made of short pieces keeps its
+   walls). The outline never shows what its owner has hidden: the town hides
+   its own far buildings, so from far away the town's outline holds only what
+   the town itself still draws. South, east and north hold no tall scenery
+   that unloads, so they have no outline. Their ground cover (grass, flowers,
+   shrubs, stones) is still absent beyond 90 m.
+
+## Ground detail: measured, not built
+
+`node scripts/measure-wolfveil-terrain-detail.mjs` (pure Node, about 15 s)
+answers what a "high-poly to smart mesh" rework of the ground would buy.
+
+- The live ground is an even 310 x 310 grid, 192,200 triangles, drawn whole.
+  Against a 1 m sampling of the designed height function it is off by 30 cm
+  on average (RMS), more than 25 cm over 13% of the map, 6 m at worst.
+- An adaptive mesh that matches the designed surface needs **more** triangles
+  than the grid, not fewer: 197,756 for a 50 cm tolerance, 302,750 for 25 cm,
+  519,455 for 10 cm. The design holds more fine detail than the grid shows.
+- Lighting: the grid's normals are within 2 degrees of the true surface at the
+  median, but more than 10 degrees off over 13.6% of the map. A baked normal
+  map would add that detail with no extra triangles.
+- A lighter ground for unloaded areas (half detail) would save 104,000 to
+  134,000 triangles depending on the area, 5 to 8% of what is drawn.
+- Everything in the valley (grass, stones, paths, bridges, town floors, cave
+  mouths, portals) is placed on the current grid surface through
+  `WolfveilTerrainSurfaceSampler.mjs`. A different ground surface moves the
+  ground under all of it.
+
+Nothing was changed in the ground. The ground is 8 to 12% of the triangles in
+view; grass is 55 to 70%.
+
+## Land survey (the first step of re-landscaping)
+
+The same report surveys the scattered scenery of each area as it is built
+(instanced meshes; 25 m squares; ground is the visible ground mesh).
+
+| Area  | Size    | Tree pieces | Stones | Flowers | Shrubs, ferns | Grass tiles | Squares with nothing but grass |
+|-------|---------|-------------|--------|---------|---------------|-------------|--------------------------------|
+| town  | 17.1 ha | 36          | 622    | 440     | 281           | 944         | 116 of 273 (42%)               |
+| south | 8.9 ha  | 0           | 51     | 314     | 22            | 132         | 99 of 143 (69%)                |
+| west  | 28 ha   | 22          | 846    | 1,090   | 419           | 916         | 190 of 448 (42%)               |
+| east  | 34 ha   | 2           | 1,008  | 526     | 291           | 739         | 267 of 544 (49%)               |
+| north | 33 ha   | 0           | 1,011  | 62      | 104           | 469         | 255 of 528 (48%)               |
+
+- Trees are few. A trunk and a crown count as separate pieces: about 18 elms
+  around the town, 22 uploaded trees in the west, one or two in the east,
+  none in the south or the north.
+- South is the emptiest area: 69% of its squares hold nothing but grass.
+- Scenery standing more than 0.5 m above the ground: the top stones of the
+  wayfinding cairns (79, stacked on purpose) and 25 gorge boulders that stand
+  2 to 14 m above the drawn ground beside the river (north around x 223,
+  z 315; also x 118 to 123, z 172 to 177). The boulders are placed on the
+  designed height or 3 m above the river, not on the drawn ground
+  (`WolfveilTerraces.js`); whether they float needs a look in the game.
+- 16 pieces of scenery lie wholly under the ground (6 town, 8 east, 2 north).
+
+Nothing in the land was changed by the survey.
+
 ## Tests
 
 ```sh
 node --test tests/game3d-clone-wolfveil-five-area-loading.test.mjs \
-            tests/game3d-clone-platform-graphics.test.mjs
+            tests/game3d-clone-platform-graphics.test.mjs \
+            tests/game3d-clone-wolfveil-cave-draw-budget.test.mjs \
+            tests/game3d-clone-far-proxy.test.mjs \
+            tests/game3d-clone-wolfveil-near-grass-detail.test.mjs
 ```
 
-45 tests, all passing: areas tile the core exactly; landmarks, fighting
-grounds and all 14 mob areas fall where expected; 11 portals on real paths,
-each arch facing along its path;
-load-before-unload across the market bridge; owner visibility preserved;
-changing batches and moving objects handed back; lights untouched; late
-models; full-map export; A/B switch; GPU release limits; three platform
-profiles isolated from each other; budgets; the wiring in the game world,
-menu, notice and diagnostics overlay.
-
-Whole suite in this workspace (no `three`, `esbuild` or `ws` installed):
-`main` at `5aa9dac` 2,235 tests / 136 failing; this branch 2,280 tests / the
-identical 136 failing; 45 new passing. Edited JS and JSX files parse.
+75 tests with stand-in scene objects, all passing. The real-valley test
+(`tests/game3d-clone-wolfveil-area-loading-real-world.test.mjs`) runs where
+`three` is installed, which is CI.
 
 ## Not verified
 
-- **Not run in the game.** No signed-in Play, preview, WebGL or build was
-  possible in the authoring workspace (package installs were unavailable).
-  `npm run lint` and `npm run build` were not run.
-- The loader was driven by stand-in scene objects, not real Three.js objects.
-  Its behaviour on the real scene is the first thing to check with
-  `getReport()`.
-- No frame-rate, draw-call or memory measurement exists yet for any area.
+- **Not seen in a browser.** No frame rate, GPU time or memory reading exists
+  for any area. Draw calls and triangles are counted, not timed.
 - Portal arch size, height and brightness have not been seen on screen.
+- The caves, the grass detail levels and the distant outlines have not been
+  looked at in the game; the checks compare triangles, materials and bounds,
+  not pixels. The outline's flat colours and coarse shape are the part most
+  likely to need tuning by eye.
 - GPU release re-upload has not been exercised on a real device.
 
 ## Known limits of this pass
 
-- **The town's own draw calls are not reduced while standing in town.** The
-  961 calls at the spawn come from the town's models and need batching inside
-  the town. Unloading the town helps only the four sides.
-- Beyond a border the ground still shows, bare. Unloaded sides have no trees,
-  props or buildings until the player is within range; there is no baked
-  low-detail skyline for them yet.
+- Beyond a border the ground cover is still missing: grass, flowers, shrubs
+  and stones of an unloaded area are not drawn and have no stand-in.
+- An outline pops to the real scenery when its area loads (90 m before the
+  border). There is no cross-fade.
 - The terrain is still one 192,200-triangle grid drawn whole. Per-area ground
   detail (the high-poly to smart-mesh work) is the next step.
 - Enemies, NPCs, grass that streams around the player and the outer meadow
   are unchanged; they already follow the player or are owned by other systems.
-- A cave session keeps using the surface area above the player.
+- A cave session keeps using the surface area above the player: inside a
+  cave the surface area is still drawn (568 draw calls in total).

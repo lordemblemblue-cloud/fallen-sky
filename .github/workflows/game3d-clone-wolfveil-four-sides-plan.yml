@@ -1,0 +1,76 @@
+name: Game 3D Wolfveil four sides plan
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilFourSidesPlan.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilFourSidesScenery.js'
+      - 'src/components/game3d/wolfveil/WolfveilSideSceneryShapes.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTrunkColliders.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilScene.js'
+      - 'src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilSWQuarterQuality.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilForestTrailLandscape.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTerrainSurfaceSampler.mjs'
+      - 'server/game3d/mapCollision.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilLayout.js'
+      - 'src/components/game3d/wolfveil/WolfveilForestLayout.js'
+      - 'src/components/game3d/wolfveil/streaming/**'
+      - 'tests/game3d-clone-wolfveil-four-sides-plan.test.mjs'
+      - 'tests/game3d-clone-wolfveil-forest-side.test.mjs'
+      - 'scripts/render-wolfveil-planted-sides.mjs'
+      - '.github/workflows/game3d-clone-wolfveil-four-sides-plan.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  four-sides-plan:
+    name: Mountain, forest, grassland and wilds plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The plan and every placement in it
+        run: node --test tests/game3d-clone-wolfveil-four-sides-plan.test.mjs
+      - name: The planted forest, its shapes and the trunks the server blocks
+        run: node --test tests/game3d-clone-wolfveil-forest-side.test.mjs
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Lint the new files
+        run: |
+          npx eslint --quiet \
+            src/components/game3d/wolfveil/WolfveilFourSidesPlan.mjs \
+            src/components/game3d/wolfveil/WolfveilFourSidesScenery.js \
+            src/components/game3d/wolfveil/WolfveilSideSceneryShapes.mjs \
+            src/components/game3d/wolfveil/WolfveilTrunkColliders.mjs \
+            tests/game3d-clone-wolfveil-four-sides-plan.test.mjs \
+            tests/game3d-clone-wolfveil-forest-side.test.mjs \
+            scripts/render-wolfveil-planted-sides.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          git fetch -q origin main
+          status=0
+          for file in \
+            src/components/game3d/wolfveil/WolfveilScene.js \
+            server/game3d/mapCollision.mjs; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: errors on this branch $head, on main $base"
+            if [ "$head" -lt 0 ] || [ "$base" -lt 0 ] || [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status
+      - name: Study pictures of the planted sides
+        run: node scripts/render-wolfveil-planted-sides.mjs --out wolfveil-planted-sides
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolfveil-planted-sides
+          path: wolfveil-planted-sides/*.png
+          retention-days: 30

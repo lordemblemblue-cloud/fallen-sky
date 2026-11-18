@@ -77,13 +77,15 @@ export function installHeadlessStubs(){
   g.requestAnimationFrame??=()=>0;
   g.cancelAnimationFrame??=()=>{};
   // Three.js loaders report download progress with this browser event.
-  g.ProgressEvent??=class ProgressEvent extends Event{
+  g.ProgressEvent??=class ProgressEvent extends g.Event{
     constructor(type,init={}){
       super(type);
       this.lengthComputable=Boolean(init.lengthComputable);
       this.loaded=init.loaded||0;this.total=init.total||0;
     }
   };
+  // Model loaders written for browsers and workers reach for `self`.
+  g.self??=g;
   // A model download that fails with nobody listening must not end the run.
   g.__wolfveilUnhandled=[];
   g.process?.on?.('unhandledRejection',error=>{
@@ -99,7 +101,9 @@ export function installHeadlessStubs(){
   };
 }
 
-const isRenderable=node=>Boolean(node.geometry&&(node.isMesh||node.isLine||node.isPoints||node.isSprite));
+// Render layer mask 0 is how the draw-call mergers switch an original off.
+const isRenderable=node=>Boolean(node.geometry&&node.layers?.mask!==0&&
+  (node.isMesh||node.isLine||node.isPoints||node.isSprite));
 function costOf(node){
   const geometry=node.geometry;
   const groups=Array.isArray(node.material)?Math.max(1,geometry.groups?.length||node.material.length):1;
@@ -114,13 +118,13 @@ function costOf(node){
 }
 // Everything the renderer would be handed, honouring `visible` the way
 // Three.js does (an invisible parent hides its whole subtree).
-export function measureVisibleScene(root,{labelOf=()=>'scene',skip=()=>false}={}){
+export function measureVisibleScene(root,{labelOf=()=>'scene',skip=()=>false,inView=()=>true}={}){
   const out={objects:0,drawCalls:0,triangles:0,lights:0,ids:new Set(),byLabel:new Map()};
   const walk=node=>{
     if(node.visible===false||skip(node))return;
     // Every light that is switched on is paid for by every lit surface.
     if(node.isLight&&!node.isAmbientLight&&!node.isHemisphereLight&&node.intensity>0)out.lights++;
-    if(isRenderable(node)){
+    if(isRenderable(node)&&inView(node)){
       const cost=costOf(node);
       out.objects++;out.drawCalls+=cost.drawCalls;out.triangles+=cost.triangles;
       out.ids.add(node.uuid);
@@ -145,6 +149,7 @@ export async function runWolfveilAreaLoadingReport({
   const {createWolfveilVillage}=await import(SOURCE+'wolfveil/WolfveilScene.js');
   const {createWolfveilAreaLoader}=await import(SOURCE+'wolfveil/streaming/WolfveilAreaLoader.mjs');
   const {createWolfveilAreaPortals}=await import(SOURCE+'wolfveil/WolfveilAreaPortals.js');
+  const {createWolfveilFarOutline}=await import(SOURCE+'wolfveil/WolfveilFarOutline.js');
   const {WOLFVEIL_AREA_PORTALS}=await import(SOURCE+'wolfveil/streaming/WolfveilAreaPortalPlan.mjs');
   const plan=await import(SOURCE+'wolfveil/streaming/WolfveilFiveAreaPlan.mjs');
   const {evaluateGame3DAreaBudget}=await import(SOURCE+'performance/Game3DAreaBudget.mjs');
@@ -208,7 +213,8 @@ export async function runWolfveilAreaLoadingReport({
     portals?.update(dt,position,loader?.getArea());
     try{village.update(dt,weather,position);}
     catch(error){noteOnce('village.update needs a renderer here: '+(error?.message||error));}
-    try{town?.update?.(dt,position);}catch{/* town actors need a renderer */}
+    try{town?.update?.(dt,position);}
+    catch(error){noteOnce('the town update stops headless: '+String(error?.message||error).slice(0,120));}
     scene.updateMatrixWorld();
   };
   const run=seconds=>{for(let i=0;i<Math.round(seconds*10);i++)frame(.1);};
@@ -269,9 +275,19 @@ export async function runWolfveilAreaLoadingReport({
   let groundDisposed=false;
   village.ground.geometry.addEventListener('dispose',()=>{groundDisposed=true;});
   started=performance.now();
+  // The outline builder GameWorld3D uses, timed: a bake happens while playing.
+  const farOutline=createWolfveilFarOutline({scene});
+  const bakeMs={};
   loader=createWolfveilAreaLoader({
     world,position:toWorld(0,-70),portals:WOLFVEIL_AREA_PORTALS,
     now:()=>clock.t,onTransition:event=>events.push(event),
+    groundHeightAt:(x,z)=>village.worldHeight(x,z),
+    farProxy:{...farOutline,build(area,sources){
+      const before=performance.now();
+      const built=farOutline.build(area,sources);
+      bakeMs[area]=Math.round((performance.now()-before)*10)/10;
+      return built;
+    }},
   });
   if(town?.root)loader.addUnits([town.root]);
   portals=createWolfveilAreaPortals(world);
@@ -293,6 +309,32 @@ export async function runWolfveilAreaLoadingReport({
   const floors=[...(world.walkableSurfaces||[])];
   const floorsVisibleAtBaseline=new Set(floors.filter(effectivelyVisible));
 
+  // ---- what ONE camera view draws ----------------------------------------
+  // The renderer skips every object whose bounds are outside the camera's
+  // view. This is the same test, with the game's own camera, looking in
+  // eight directions from behind the player.
+  const {GAME3D_GAME2_CAMERA}=await import(SOURCE+'player/Game3DGame2Camera.mjs');
+  const viewCamera=new THREE.PerspectiveCamera(GAME3D_GAME2_CAMERA.fov||60,16/9,.1,3200);
+  const frustum=new THREE.Frustum(),projection=new THREE.Matrix4();
+  const measureViews=()=>{
+    scene.updateMatrixWorld(true);
+    const back=GAME3D_GAME2_CAMERA.distance||3.45,views=[];
+    for(let k=0;k<8;k++){
+      const yaw=k*Math.PI/4,sin=Math.sin(yaw),cos=Math.cos(yaw);
+      viewCamera.position.set(position.x-sin*back,position.y+2.3,position.z-cos*back);
+      viewCamera.lookAt(position.x+sin*20,position.y+.6,position.z+cos*20);
+      viewCamera.updateMatrixWorld(true);
+      projection.multiplyMatrices(viewCamera.projectionMatrix,viewCamera.matrixWorldInverse);
+      frustum.setFromProjectionMatrix(projection);
+      const seen=measureVisibleScene(scene,{inView:node=>node.frustumCulled===false||
+        (node.isSprite?frustum.intersectsSprite(node):frustum.intersectsObject(node))});
+      views.push({drawCalls:seen.drawCalls,triangles:seen.triangles});
+    }
+    const pick=key=>({worst:Math.max(...views.map(view=>view[key])),
+      average:Math.round(views.reduce((sum,view)=>sum+view[key],0)/views.length)});
+    return {drawCalls:pick('drawCalls'),triangles:pick('triangles'),fov:viewCamera.fov};
+  };
+
   // ---- one spot deep inside every area ----------------------------------
   const spots={town:[-34,-12],south:[-34,-407],west:[-370,-155],east:[336,-155],north:[0,395]};
   const areas={};
@@ -304,6 +346,7 @@ export async function runWolfveilAreaLoadingReport({
     run(3);
     const stats=loader.getStats();
     const seen=measure();
+    const views=measureViews();
     const snapshot=loader.inspect();
     // Grass that streams around the player differs from spot to spot, so the
     // fair comparison is the same spot, same frame, with the loader off.
@@ -337,6 +380,7 @@ export async function runWolfveilAreaLoadingReport({
     const budget=evaluateGame3DAreaBudget({platform:'browser',calls:seen.drawCalls,triangles:seen.triangles});
     areas[id]={
       drawCalls:seen.drawCalls,triangles:seen.triangles,objects:seen.objects,lights:seen.lights,
+      views,
       wholeValleyHere:{drawCalls:whole.drawCalls,triangles:whole.triangles,lights:whole.lights},
       drawCallShare:seen.drawCalls/whole.drawCalls,triangleShare:seen.triangles/whole.triangles,
       browserBudget:{within:budget.within,over:[...budget.over],
@@ -436,6 +480,255 @@ export async function runWolfveilAreaLoadingReport({
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');
   loader.setOptions({releaseGpuMemory:false});
 
+  // ---- land survey: what stands in each area, where it is bare, what floats --
+  // Scattered scenery only (instanced meshes), as its owners show it with the
+  // loader off. Ground is the visible ground mesh, where everything is planted.
+  const {createWolfveilTerrainSurfaceSampler}=await import(SOURCE+'wolfveil/WolfveilTerrainSurfaceSampler.mjs');
+  const groundAt=createWolfveilTerrainSurfaceSampler();
+  const KINDS=[['grass',/grass|meadow|tuft|blade/i],['flowers',/flower|bloom|petal/i],
+    ['shrubs and ferns',/shrub|fern|bush|reed/i],
+    ['trees',/tree|elm|cedar|pine|maple|bamboo|crown|trunk|canopy|branch|foliage/i],
+    ['stones',/stone|rock|boulder|basalt|pebble/i],['logs',/log|stump/i]];
+  // "SWV_Instanced_<material>" batches are building parts (bridge planks of
+  // cedar, piers of basalt), not planted scenery.
+  const kindOf=name=>/^SWV_Instanced_/.test(name)?'other':
+    (KINDS.find(([,test])=>test.test(name))||['other'])[0];
+  const SQUARE=25;
+  const survey=Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,
+    {kinds:{},planted:new Set(),floating:[],buried:0,checked:0,squares:0}]));
+  for(let x=-550+SQUARE/2;x<550;x+=SQUARE)for(let z=-550+SQUARE/2;z<550;z+=SQUARE){
+    const area=plan.wolfveilAreaAtLocal(x,z);
+    if(area)survey[area].squares++;
+  }
+  loader.setEnabled(false);
+  scene.updateMatrixWorld(true);
+  world.group.traverse(node=>{
+    if(!node.isInstancedMesh||node.userData.wolfveilAreaClone||!effectivelyVisible(node)||
+       /^SWV_Near_GrassBlades_|^WV_Area_/.test(node.name))return;
+    if(!node.geometry.boundingBox)node.geometry.computeBoundingBox();
+    const box=node.geometry.boundingBox,w=node.matrixWorld.elements,a=node.instanceMatrix.array;
+    const cx=(box.min.x+box.max.x)/2,cy=(box.min.y+box.max.y)/2,cz=(box.min.z+box.max.z)/2;
+    const hx=(box.max.x-box.min.x)/2,hy=(box.max.y-box.min.y)/2,hz=(box.max.z-box.min.z)/2;
+    const kind=kindOf(node.name),m=new Array(16);
+    for(let i=0;i<node.count;i++){
+      const o=i*16;
+      for(let c=0;c<4;c++)for(let r=0;r<4;r++)
+        m[c*4+r]=w[r]*a[o+c*4]+w[4+r]*a[o+c*4+1]+w[8+r]*a[o+c*4+2]+w[12+r]*a[o+c*4+3];
+      const x=m[0]*cx+m[4]*cy+m[8]*cz+m[12],y=m[1]*cx+m[5]*cy+m[9]*cz+m[13];
+      const z=m[2]*cx+m[6]*cy+m[10]*cz+m[14]-OFFSET;
+      const area=plan.wolfveilAreaAtLocal(x,z);
+      if(!area)continue;
+      const entry=survey[area];
+      entry.kinds[kind]=(entry.kinds[kind]||0)+1;
+      if(kind==='other')continue; // roof tiles, fences: not planted scenery
+      if(kind!=='grass')entry.planted.add(Math.floor(x/SQUARE)+':'+Math.floor(z/SQUARE));
+      const ground=groundAt(x,z);
+      if(!Number.isFinite(ground))continue;
+      entry.checked++;
+      const half=Math.abs(m[1])*hx+Math.abs(m[5])*hy+Math.abs(m[9])*hz,gap=y-half-ground;
+      // A bloom rides on its stem and a crown on its trunk: above the ground
+      // by design.
+      if(gap>.5&&!/bloom|foliage|crown|canopy/i.test(node.name))entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
+      else if(y+half<ground-.1)entry.buried++;
+    }
+  });
+  loader.setEnabled(true);run(.3);
+  const surveyResult=Object.fromEntries(Object.entries(survey).map(([id,entry])=>{
+    const byName={};
+    for(const item of entry.floating)byName[item.name]=(byName[item.name]||0)+1;
+    return [id,{hectares:Math.round(entry.squares*SQUARE*SQUARE/1000)/10,kinds:entry.kinds,
+      squares:entry.squares,bareSquares:Math.max(0,entry.squares-entry.planted.size),
+      checked:entry.checked,buried:entry.buried,floating:entry.floating.length,
+      floatingByName:Object.entries(byName).sort((x,y)=>y[1]-x[1]).slice(0,4),
+      worstFloating:entry.floating.sort((x,y)=>y.gap-x.gap).slice(0,3)}];
+  }));
+
+  // ---- near grass: every blade planted, far cells drawn with fewer segments --
+  let grassResult=null;
+  const nearGrass=village.individualGrass?.nearGrass;
+  if(nearGrass?.setDetailLevels){
+    const lawn=()=>{
+      const out={cells:0,blades:0,triangles:0,perBlade:new Set()};
+      world.group.traverse(node=>{
+        if(!node.isInstancedMesh||!/^SWV_Near_GrassBlades_/.test(node.name)||node.visible===false)return;
+        const each=node.geometry.index.count/3;
+        out.cells++;out.blades+=node.count;out.triangles+=each*node.count;out.perBlade.add(each);
+      });
+      return out;
+    };
+    moveTo(...spots.south);run(6); // long enough for every cell around the player to be planted
+    const light=lawn(),levels=[...nearGrass.detail];
+    nearGrass.setDetailLevels(false);run(.2);
+    const full=lawn();
+    nearGrass.setDetailLevels(true);run(.2);
+    const again=lawn();
+    check(full.perBlade.size===1&&full.perBlade.has(21),
+      'with detail levels off every blade must be the full 21 triangles ('+[...full.perBlade]+')');
+    check([...light.perBlade].every(each=>[21,9,3].includes(each))&&light.perBlade.size===3,
+      'near grass must draw blades of 21, 9 and 3 triangles ('+[...light.perBlade].sort((a,b)=>b-a)+')');
+    check(light.blades===full.blades&&light.cells===full.cells,
+      'detail levels must not remove a single blade ('+light.blades+' vs '+full.blades+')');
+    check(light.triangles<full.triangles*.5,
+      'detail levels must at least halve the near grass ('+light.triangles+' vs '+full.triangles+')');
+    check(again.triangles===light.triangles,'switching grass detail off and on must give the same lawn');
+    check(levels.reduce((sum,count)=>sum+count,0)===light.cells&&levels[0]>0,
+      'cells per detail level must add up, with full detail around the player ('+levels+')');
+    grassResult={cells:light.cells,blades:light.blades,cellsPerLevel:levels,
+      triangles:light.triangles,fullTriangles:full.triangles};
+  }
+
+  // ---- far scenery: what an unloaded area still shows on the horizon ------
+  // Typical standing height of one instance (world Y extent), as the loader
+  // measures it, and an inventory of everything tall the loader manages.
+  const instanceHeightOf=mesh=>{
+    if(!mesh.geometry.boundingBox)mesh.geometry.computeBoundingBox();
+    const size=mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+    const w=mesh.matrixWorld.elements,a=mesh.instanceMatrix.array,heights=[];
+    const step=Math.max(1,Math.floor(mesh.count/24));
+    for(let i=0;i<mesh.count;i+=step){
+      const o=i*16,row=c=>w[1]*a[o+c*4]+w[5]*a[o+c*4+1]+w[9]*a[o+c*4+2];
+      heights.push(Math.abs(row(0))*size.x+Math.abs(row(1))*size.y+Math.abs(row(2))*size.z);
+    }
+    heights.sort((x,y)=>x-y);
+    return heights[heights.length>>1]||0;
+  };
+  const trianglesOf=mesh=>(mesh.geometry.index?mesh.geometry.index.count:
+    mesh.geometry.attributes.position.count)/3;
+  moveTo(...spots.town);run(.5);
+  const farStats=loader.getStats().farScenery;
+  const farKept=loader.getReport().alwaysLoaded.largest
+    .filter(entry=>/far scenery/.test(entry.reason||''));
+  const census=loader.inspect();
+  const tallSplit=census.batches.map(batch=>({name:batch.source.name||'(unnamed)',
+    instances:batch.count,height:instanceHeightOf(batch.source),
+    triangles:Math.round(trianglesOf(batch.source)*batch.count),
+    // Why it does or does not get an outline: how its material is drawn.
+    drawn:(Array.isArray(batch.source.material)?batch.source.material:[batch.source.material])
+      .map(material=>[material?.type,material?.transparent?'transparent':'opaque',
+        'opacity '+material?.opacity,material?.depthWrite===false?'no depth':'depth',
+        material?.alphaTest?'cutout '+material.alphaTest:'',material?.visible===false?'hidden':'']
+        .filter(Boolean).join(' ')).join(' | ')}))
+    .filter(entry=>entry.height>=4).sort((x,y)=>y.triangles-x.triangles);
+  const tallUnits=[];
+  for(const unit of census.units){
+    const box=new THREE.Box3().setFromObject(unit.object);
+    if(box.isEmpty())continue;
+    const size=box.getSize(new THREE.Vector3());
+    if(size.y<4)continue;
+    tallUnits.push({name:unit.object.name||'(unnamed)',area:unit.area,height:size.y,
+      width:Math.max(size.x,size.z),triangles:Math.round(unit.triangles),drawCalls:unit.drawCalls});
+  }
+  tallUnits.sort((x,y)=>y.height*y.width-x.height*x.width);
+  // Far scenery is drawn from every area and never duplicated.
+  let farResult=null;
+  if(farStats?.enabled){
+    const farObjects=[];
+    scene.traverse(node=>{
+      if(node.isInstancedMesh&&farKept.some(entry=>entry.name===node.name)&&
+         !node.userData.wolfveilAreaClone)farObjects.push(node);
+    });
+    // A fallback tree that its owner switched off (the real model arrived)
+    // is the owner's business, not the loader's.
+    loader.setEnabled(false);
+    const ownerHidden=new Set(farObjects.filter(node=>node.visible===false));
+    loader.setEnabled(true);run(.3);
+    const perArea={},outlineShown={};
+    const outlineAreas=Object.keys(loader.getStats().farOutline.areas);
+    for(const id of plan.WOLFVEIL_AREA_IDS){
+      moveTo(...spots[id]);run(1);settleBuilds();
+      const hidden=farObjects.filter(node=>node.visible===false&&!ownerHidden.has(node)).map(node=>node.name);
+      check(!hidden.length,'far scenery hidden while standing in '+id+': '+hidden.slice(0,4).join(', '));
+      perArea[id]=measure();
+      // Outlines: every unloaded area that has one shows it; a loaded area never does.
+      const state=loader.getStats();
+      outlineShown[id]=[...state.farOutline.shown].sort();
+      const expected=outlineAreas.filter(area=>!state.loadedAreas.includes(area)).sort();
+      check(outlineShown[id].join()===expected.join(),'standing in '+id+' the outlines shown were ['+
+        outlineShown[id]+'], expected ['+expected+']');
+    }
+    const outline=loader.getStats().farOutline;
+    check(outline.enabled&&!outline.failed,'the far outline switched itself off: '+outline.failed);
+    for(const [area,info] of Object.entries(outline.areas)){
+      check(info.triangles>0&&info.triangles<=30000,
+        'the '+area+' outline must stay within 30,000 triangles ('+info.triangles+')');
+      check(info.triangles<info.sourceTriangles,
+        'the '+area+' outline must be lighter than what it stands for ('+info.triangles+' vs '+info.sourceTriangles+')');
+    }
+    let outlineBroken=0;
+    scene.traverse(node=>{
+      if(!node.userData?.wolfveilFarOutline)return;
+      const array=node.geometry.attributes.position.array;
+      for(let i=0;i<array.length;i++)if(!Number.isFinite(array[i])){outlineBroken++;break;}
+    });
+    check(!outlineBroken,outlineBroken+' far outlines contain unreadable positions');
+    // The price of the horizon: the same spots with the rule switched off.
+    loader.setOptions({farScenery:false});
+    moveTo(...spots.town);run(8);settleBuilds();
+    const without={};
+    for(const id of plan.WOLFVEIL_AREA_IDS){moveTo(...spots[id]);run(1);settleBuilds();without[id]=measure();}
+    loader.setOptions({farScenery:true});
+    moveTo(...spots.town);run(8);settleBuilds();
+    check(loader.getStats().farScenery.batches===farStats.batches,
+      'switching far scenery off and on again must find the same batches ('+
+      loader.getStats().farScenery.batches+' vs '+farStats.batches+')');
+    farResult={stats:farStats,kept:farKept,outline:{...outline,bakeMs,shownFrom:outlineShown},
+      cost:Object.fromEntries(plan.WOLFVEIL_AREA_IDS.map(id=>[id,{
+        drawCalls:perArea[id].drawCalls-without[id].drawCalls,
+        triangles:perArea[id].triangles-without[id].triangles}]))};
+  }
+
+  // ---- planted sides: the four-sides plan as it stands in the valley ------
+  let plantedResult=null;
+  {
+    const built=village.info?.plantedSides||null;
+    check(Boolean(built),'the planted sides were not drawn (see the console error)');
+    if(built){
+      const meshes=[];
+      world.group.traverse(node=>{
+        if(node.isInstancedMesh&&node.userData?.source==='wolfveil_four_sides'&&
+           !node.userData.wolfveilAreaClone)meshes.push(node);
+      });
+      check(meshes.length===built.drawCalls,
+        'planted batches in the scene: '+meshes.length+', built: '+built.drawCalls);
+      const drawnNow=mesh=>effectivelyVisible(mesh)||loader.inspect().batches
+        .some(batch=>batch.source===mesh&&Object.values(batch.clones).some(effectivelyVisible));
+      const seenFrom={};
+      for(const id of ['town',...built.sides]){
+        moveTo(...spots[id]);run(1.5);settleBuilds();
+        seenFrom[id]=meshes.filter(drawnNow).map(mesh=>mesh.name).sort();
+      }
+      for(const side of built.sides){
+        const own=meshes.filter(mesh=>mesh.userData.side===side);
+        const missing=own.filter(mesh=>!seenFrom[side].includes(mesh.name)).map(mesh=>mesh.name);
+        check(!missing.length,'standing in the '+side+' its planted scenery is not drawn: '+missing.join(', '));
+        // Trees stay on the horizon from the town; ferns and flowers do not.
+        const tall=own.filter(mesh=>instanceHeightOf(mesh)>=4).map(mesh=>mesh.name);
+        const low=own.filter(mesh=>instanceHeightOf(mesh)<4).map(mesh=>mesh.name);
+        const lost=tall.filter(name=>!seenFrom.town.includes(name));
+        const leaked=low.filter(name=>seenFrom.town.includes(name));
+        check(!lost.length,'from the town the '+side+' trees are missing from the horizon: '+lost.join(', '));
+        check(!leaked.length,'from the town the '+side+' ground plants are still drawn: '+leaked.join(', '));
+      }
+      check(village.treeTrunkColliders>=built.sides.length,
+        'planted trees must block the way (trunks: '+village.treeTrunkColliders+')');
+      moveTo(...spots.town);run(1.5);settleBuilds();
+      plantedResult={...built,trunks:village.treeTrunkColliders,seenFrom};
+    }
+  }
+
+  // ---- town: owned by its own performance work on main -------------------
+  // The town batches itself, swaps far buildings for its own proxies and
+  // hides the rest: report what it hands the renderer from the square.
+  let townResult=null;
+  if(town){
+    moveTo(...spots.town);run(1);
+    loader.setEnabled(false);
+    const fromSquare=measureVisibleScene(town.root);
+    loader.setEnabled(true);run(.3);
+    townResult={own:town.performanceStats||null,
+      fromSquare:{drawCalls:fromSquare.drawCalls,triangles:fromSquare.triangles}};
+  }
+
   // ---- caves: buried parts only underground, identical props one draw ----
   const caves=village.caveSystem;
   let caveResult=null;
@@ -453,6 +746,22 @@ export async function runWolfveilAreaLoadingReport({
     moveTo(...spots.town);run(.5);
     const onSurface=measureCaves();
     const surfaceStats=caves.drawBudget.stats();
+    // The owner's sumi-e hallway along the modular tunnels.
+    const halls=caves.modularCave?.halls||null,hallsObject=caves.modularCave?.hallsObject||null;
+    check(Boolean(halls&&hallsObject),'the sumi-e hallway was not built (see the console warning)');
+    let hallsSeen=null;
+    if(hallsObject){
+      check(!effectivelyVisible(hallsObject),'on the surface the buried hallway must not be drawn');
+      hallsSeen=await caves.withInteriorShown(async()=>{
+        const shown=effectivelyVisible(hallsObject),count=measureVisibleScene(hallsObject,{labelOf:byMaterial});
+        return {shown,drawCalls:count.drawCalls,triangles:count.triangles};
+      });
+      check(hallsSeen.shown,'underground the hallway must be drawn');
+      check(hallsSeen.drawCalls===halls.drawCalls&&hallsSeen.triangles===halls.triangles,
+        'the hallway on screen ('+hallsSeen.drawCalls+' calls, '+hallsSeen.triangles+' triangles) is not what was baked ('+
+        halls.drawCalls+', '+halls.triangles+')');
+      check(halls.drawCalls<=14,'the hallway must stay a handful of draw calls: '+halls.drawCalls);
+    }
     check(surfaceStats.interiorShown===false,
       'standing in town the buried cave interior must be switched off ('+surfaceStats.reason+')');
     // As built (budget off) against merged with the whole network shown.
@@ -499,7 +808,7 @@ export async function runWolfveilAreaLoadingReport({
       insideCave:inside&&{drawCalls:inside.drawCalls,triangles:inside.triangles},
       wholeSceneInsideCave:wholeSceneInside&&{drawCalls:wholeSceneInside.drawCalls,triangles:wholeSceneInside.triangles},
       visit:{entered:entered?.name||null,left:left?.action||null},
-      boundsDriftMeters:drift,budget:caves.drawBudget.stats(),
+      boundsDriftMeters:drift,budget:caves.drawBudget.stats(),halls,
     };
   }else check(!caves,'the cave draw budget failed to install (see the console warning)');
 
@@ -531,7 +840,9 @@ export async function runWolfveilAreaLoadingReport({
     breakdowns,
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
-    areas,portals:portalResults,caves:caveResult,
+    areas,portals:portalResults,caves:caveResult,town:townResult,
+    survey:surveyResult,nearGrass:grassResult,farScenery:farResult,planted:plantedResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
+      unitCount:tallUnits.length},
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
     report,
@@ -559,6 +870,16 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('  (whole valley at the spawn: '+n(result.baseline.drawCalls)+' draw calls, '+
     n(result.baseline.triangles)+' triangles)');
   lines.push('');
+  lines.push('One camera view, after the renderer\'s own culling (game camera, '+
+    Object.values(result.areas)[0].views.fov+' degree view, eight directions):');
+  lines.push('  area     worst direction                 average direction              browser budget (500 calls / 1.5 M tris)');
+  for(const [id,area] of Object.entries(result.areas)){
+    const v=area.views,over=[v.drawCalls.worst>500?'drawCalls':'',v.triangles.worst>1.5e6?'triangles':''].filter(Boolean);
+    lines.push('  '+id.padEnd(6)+n(v.drawCalls.worst).padStart(7)+' calls '+n(v.triangles.worst).padStart(10)+' tris  '+
+      n(v.drawCalls.average).padStart(7)+' calls '+n(v.triangles.average).padStart(10)+' tris   '+
+      (over.length?'OVER '+over.join('+'):'inside'));
+  }
+  lines.push('');
   lines.push('Largest things on screen with only that area loaded:');
   for(const [id,area] of Object.entries(result.areas)){
     lines.push('  '+id+':');
@@ -569,6 +890,67 @@ export function formatWolfveilAreaLoadingReport(result){
   lines.push('');
   lines.push('Lights switched on (each one is paid for by every lit surface): '+
     Object.entries(result.areas).map(([id,area])=>id+' '+area.lights+' of '+area.wholeValleyHere.lights).join(', '));
+  if(result.survey){
+    lines.push('');
+    lines.push('Land survey (scattered scenery as built; ground is the visible ground mesh; 25 m squares):');
+    for(const [id,a] of Object.entries(result.survey)){
+      lines.push('  '+id+': '+a.hectares+' ha. '+Object.entries(a.kinds).sort((x,y)=>y[1]-x[1])
+        .map(([kind,count])=>kind+' '+n(count)).join(', '));
+      lines.push('    squares with nothing planted but grass: '+a.bareSquares+' of '+a.squares+
+        ' ('+Math.round(100*a.bareSquares/Math.max(1,a.squares))+'%)');
+      lines.push('    off the ground, of '+n(a.checked)+' checked: '+a.floating+' more than 0.5 m above it, '+
+        a.buried+' wholly under it'+(a.floating?'. Mostly '+a.floatingByName.map(([name,count])=>name+' x'+count).join(', ')+
+        '. Worst: '+a.worstFloating.map(item=>item.gap+' m at x '+item.x+', z '+item.z+' ('+item.name+')').join('; '):''));
+    }
+  }
+  if(result.nearGrass){
+    const g=result.nearGrass;
+    lines.push('');
+    lines.push('Grass that follows the player (standing in the south): '+g.cells+' cells, '+n(g.blades)+
+      ' blades. Every blade at full detail: '+n(g.fullTriangles)+' tris. By distance (21 / 9 / 3 triangles a blade, cells '+
+      g.cellsPerLevel.join(' / ')+'): '+n(g.triangles)+' tris.');
+  }
+  if(result.planted){
+    const p=result.planted;
+    lines.push('');
+    lines.push('Planted sides ('+p.sides.join(', ')+'): '+n(p.pieces)+' pieces, '+n(p.triangles)+
+      ' triangles in '+p.drawCalls+' draw calls. Tree trunks that block the way, owner\'s and planted: '+n(p.trunks)+'.');
+    for(const [key,entry] of Object.entries(p.byKind))
+      lines.push('  '+key.replace(':',' ')+': '+n(entry.pieces)+' pieces, '+n(entry.triangles)+' triangles');
+    lines.push('  Seen from the town: '+(p.seenFrom.town.join(', ')||'none'));
+  }
+  lines.push('');
+  if(result.farScenery){
+    const f=result.farScenery;
+    lines.push('Far scenery (tall, cheap instanced scenery drawn from every area): '+
+      f.stats.batches+' batches, '+n(f.stats.instances)+' instances, '+n(f.stats.triangles)+' triangles');
+    for(const entry of f.kept)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+
+      String(entry.drawCalls).padStart(3)+' calls  '+entry.name);
+    lines.push('  what the horizon costs against unloading it: '+Object.entries(f.cost)
+      .map(([id,c])=>id+' '+(c.drawCalls>=0?'+':'')+c.drawCalls+' calls '+(c.triangles>=0?'+':'')+n(c.triangles)+' tris').join(', '));
+    lines.push('Far outline (tall scenery of an unloaded area as one coarse mesh, one draw call each):');
+    for(const [area,info] of Object.entries(f.outline.areas))lines.push('  '+area.padEnd(6)+
+      String(info.sources).padStart(4)+' tall objects  '+n(info.sourceTriangles).padStart(9)+' tris -> '+
+      n(info.triangles).padStart(7)+' tris at '+info.cellMeters+' m grid, baked in '+
+      (f.outline.bakeMs[area]??'?')+' ms');
+    if(!Object.keys(f.outline.areas).length)lines.push('  no area has tall scenery to outline');
+  }else lines.push('Far scenery: switched off');
+  lines.push('Tall instanced scenery that is still unloaded (4 m and taller, too heavy to keep whole):');
+  for(const entry of result.tallScenery.splitBatches)lines.push('  '+n(entry.triangles).padStart(9)+' tris  '+
+    String(entry.instances).padStart(5)+' x '+entry.height.toFixed(1).padStart(5)+' m  '+entry.name+
+    '   ['+entry.drawn+']');
+  if(!result.tallScenery.splitBatches.length)lines.push('  none');
+  lines.push('Tall single objects that are unloaded with their area ('+result.tallScenery.unitCount+
+    ' in all; largest by silhouette):');
+  for(const entry of result.tallScenery.units)lines.push('  '+entry.area.padEnd(6)+
+    entry.height.toFixed(1).padStart(6)+' m tall '+entry.width.toFixed(1).padStart(6)+' m wide  '+
+    n(entry.triangles).padStart(8)+' tris '+String(entry.drawCalls).padStart(4)+' calls  '+entry.name);
+  if(result.town){
+    lines.push('');
+    lines.push('Town (artisan plaza, optimised by its own code on main): from the square '+
+      result.town.fromSquare.drawCalls+' calls, '+n(result.town.fromSquare.triangles)+' tris; its own report '+
+      JSON.stringify(result.town.own));
+  }
   if(result.caves){
     const c=result.caves,row=entry=>entry?String(entry.drawCalls).padStart(4)+' calls  '+
       n(entry.triangles).padStart(8)+' tris':'   not measured';
@@ -577,6 +959,9 @@ export function formatWolfveilAreaLoadingReport(result){
     lines.push('  as built, always drawn      '+row(c.asBuilt));
     lines.push('  now, on the surface         '+row(c.onSurface));
     lines.push('  now, inside a cave          '+row(c.insideCave)+'   (whole scene while inside: '+row(c.wholeSceneInsideCave)+')');
+    if(c.halls)lines.push('  sumi-e hallway: '+c.halls.runs+' runs, '+c.halls.meters+' m. As the owner\'s kit builds it: '+
+      n(c.halls.meshesBefore)+' meshes, '+n(c.halls.trianglesBefore)+' triangles. Baked: '+c.halls.drawCalls+' draw calls, '+
+      n(c.halls.triangles)+' triangles.');
     lines.push('  visit: entered '+(c.visit.entered||'nothing')+', then '+(c.visit.left||'stayed inside')+
       '; bounds moved '+c.boundsDriftMeters.toFixed(4)+' m');
     lines.push('  '+JSON.stringify(c.budget));

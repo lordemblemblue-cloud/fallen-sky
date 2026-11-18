@@ -153,13 +153,17 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
       const nearRoots=[],farRoots=[];
       for(const r of roots)(Math.hypot(r.x-center.x,r.z-center.z)<85
         ?nearRoots:farRoots).push(r);
-      // Chunk by 32m so frustum culling rejects offscreen 2m tiles;
+      // Chunk so frustum culling rejects offscreen 2m tiles;
       // one continent-sized InstancedMesh would submit every blade even
       // when the camera only sees a few metres of the map.
-      const chunked=(geometry,material,spots,label)=>{
+      // Near tiles: 32m chunks. Far tiles are sparse (measured: 4 or 5 to a
+      // 32m chunk, 135 to 205 draw calls per loaded area for 3,000 triangles
+      // each), so they share 64m chunks: a quarter of the draw calls, and
+      // still far smaller than what the camera sees.
+      const chunked=(geometry,material,spots,label,size=32)=>{
         const chunks=new Map();
         for(const root of spots){
-          const key=Math.floor(root.x/32)+':'+Math.floor(root.z/32);
+          const key=Math.floor(root.x/size)+':'+Math.floor(root.z/size);
           if(!chunks.has(key))chunks.set(key,[]);
           chunks.get(key).push(root);
         }
@@ -168,7 +172,7 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
       };
       const meshes=[
         ...chunked(near.geometry,nearMat,nearRoots,'SWV_Owner_LongGrass_Tile_2m_Near'),
-        ...chunked(far.geometry,farMat,farRoots,'SWV_Owner_LongGrass_Tile_2m_Far'),
+        ...chunked(far.geometry,farMat,farRoots,'SWV_Owner_LongGrass_Tile_2m_Far',64),
       ];
       if(!meshes.length)throw Error('No replacement instances');
       for(const mesh of meshes)world.mesh(mesh);
