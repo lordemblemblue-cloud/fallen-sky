@@ -49,7 +49,7 @@ function rockDisplacement(x, y, z) {
   );
 }
 
-export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
+export function createWolfveilCaveSystem(world, { offsetZ = 0, startActiveCaveId = null } = {}) {
   const group = new THREE.Group();
   group.name = 'SWV_FourCave_Interconnected_TunnelSystem';
   world.mesh(group);
@@ -1114,7 +1114,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   // A fresh login never implicitly authorizes an underground cave session:
   // old fall-through checkpoints are rescued onto the intact surface instead
   // of restoring the very collision bug the owner is reporting.
-  let activeCaveId = null; // set by pressing E at an arch, or by walking into the mouth
+  let activeCaveId = startActiveCaveId; // set by a destination spawn, E at an arch, or walking into the mouth
   // Tells the draw budget where the player is, in the same call that moves
   // them, so the interior is on screen the moment they arrive in it.
   const syncDrawBudget = (worldPos = null) => drawBudget?.update({
