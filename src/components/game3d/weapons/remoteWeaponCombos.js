@@ -69,7 +69,8 @@ export function createRemoteComboWeapon({ model, scene = null, manifest = null, 
   let since = 0; // seconds since the last swing ended
   return {
     swing(state, action) {
-      const kind = remoteComboKind(state);
+      const clipKind = remoteComboKind(state);
+      const kind = clipKind?.startsWith('sword') ? 'swordCombo' : clipKind;
       if (!kind || !action) { swing = null; return; }
       swing = { state, kind, action, hit: action.getClip().userData?.hit ?? null, fired: false };
       since = 0;
