@@ -168,13 +168,15 @@ function rangeLift(rd,x,z){
   // Fine rock relief scaled by height so foothills stay walkable.
   const rough=.055*wolfveilNoise2(x*.045+seed,z*.045)+.03*wolfveilNoise2(x*.11,z*.11-seed);
   let lift=Math.max(0,n.lift*crest*profile*erosion*(1+rough*(.35+.65*profile)));
-  // Strata: stepped ledges (flat shelf, rocky riser) on the mid and upper
-  // flanks, wandering in height, so walls read as layered rock, not lumps.
-  const ledges=smooth(.12,.5,profile)*.42;
+  // Strata: stepped ledges only in cliff bands on the steeper upper flanks,
+  // patchy along the range and broken by the couloirs, with wandering step
+  // heights, so walls read as layered rock instead of contour terraces.
+  const band=smooth(.30,.62,profile)*smooth(-.15,.45,wolfveilNoise2(n.along*.0085+seed*1.7,seed*.9));
+  const ledges=band*smooth(.30,.70,gully)*.34;
   if(ledges>0){
-    const step=6.5+1.5*wolfveilNoise2(n.along*.004+seed,seed*2.3);
+    const step=7.5+2.5*wolfveilNoise2(n.along*.0055+seed,n.d*.008+seed*2.3);
     const q=lift/step,f=q-Math.floor(q);
-    lift=lift*(1-ledges)+(Math.floor(q)+smooth(.6,.97,f))*step*ledges;
+    lift=lift*(1-ledges)+(Math.floor(q)+smooth(.42,.94,f))*step*ledges;
   }
   return lift;
 }

@@ -150,5 +150,7 @@ export function buildWolfveilLandscapeMarkers(world,{riverRocks=360}={}){
   mesh.userData={decorativeOnly:true,nonCollider:true,landscapeMarkers:true};
   world.mesh(mesh);
   const counts={};for(const p of plan)counts[p.kind]=(counts[p.kind]||0)+1;
-  return {mesh,count:plan.length,counts};
+  // `plan` lets the baked rock field (WolfveilBakedRocks.js) replace these
+  // placeholder stones with high-poly-baked rocks once its GLB has loaded.
+  return {mesh,count:plan.length,counts,plan};
 }

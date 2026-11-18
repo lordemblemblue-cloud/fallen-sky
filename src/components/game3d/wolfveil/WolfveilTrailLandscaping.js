@@ -54,7 +54,7 @@ export function byRegion(items){
   return [...regions.values()];
 }
 
-export function buildWolfveilTrailLandscaping(world,{terrainSpan=1100,terrainSegments=310}={}){
+export function buildWolfveilTrailLandscaping(world,{terrainSpan=1100,terrainSegments=310,plantCards=null}={}){
   const heightAt=createWolfveilTerrainSurfaceSampler({span:terrainSpan,segments:terrainSegments});
   const plan=planWolfveilTrailLandscaping({heightAt});
   const rockShape=rockGeometry(),tuftShape=tuftGeometry();
@@ -89,6 +89,15 @@ export function buildWolfveilTrailLandscaping(world,{terrainSpan=1100,terrainSeg
     const tones=t.dry?DRY_TONES:GREEN_TONES;
     tint.set(tones[Math.floor(t.tone*tones.length)%tones.length]);
   });
+  // Game 3D: tufts become cards baked from ~46 real blades each
+  // (WolfveilPlantCards.js); the 15-triangle tufts above are the fallback.
+  plantCards?.layer(world,plan.tufts,{name:'SWV_BakedCard_GrassTufts',
+    cellOf:t=>t.dry?'tuft_dry':'tuft_green',heightOf:(t,cell)=>cell.size*t.size*.85,
+    tintOf:t=>{const v=.88+.24*t.tone;return [v,v,v];},
+    fallback:world.meshes.filter(m=>m.name==='SWV_Landscape_GrassTufts')});
   return {heightAt,rocks:plan.rocks.length,tufts:plan.tufts.length,triangles:plan.triangles,
-    plantAnchors:plan.plantAnchors,grassAnchors:plan.grassAnchors};
+    plantAnchors:plan.plantAnchors,grassAnchors:plan.grassAnchors,
+    // Game 3D swaps these chiselled stones for baked rocks (WolfveilBakedRocks.js).
+    rockPlan:plan.rocks,
+    rockMeshes:world.meshes.filter(m=>m.name==='SWV_Landscape_Stones')};
 }
