@@ -43,6 +43,7 @@ import ChronicleBlueprintLibrary from '../components/game3d/chronicle/ChronicleB
 import MiniGamesHub from '../components/game3d/minigames/MiniGamesHub';
 import '../components/game3d/hud/Game3DHUDPlacement.css';
 import CharacterVaultSync from '../components/game3d/character/CharacterVaultSync';
+import GuestCharacterCloudSync from '../components/game3d/character/GuestCharacterCloudSync';
 import DuelSystem from '../components/game3d/social/DuelSystem';
 import DuelMarkers from '../components/game3d/social/DuelMarkers';
 import NetworkBridgeMount from '../components/network/NetworkBridgeMount';
@@ -606,7 +607,7 @@ export default function GameView() {
           Owns enemies / loot / pvp damage / player hp.
           GameWorld3D is becoming a renderer that reads from this. */}
       <GameStateProvider showDebugHUD={false}>
-      {user?.id && <CharacterVaultSync showStatus={false} />}
+      {user?.id ? <CharacterVaultSync showStatus={false} /> : <GuestCharacterCloudSync showStatus={phase==='world'} />}
        <GameWorld3D key={worldRegion+':'+worldEntryCycle} region={worldRegion}
         entryMode={phase==='login'} entryPreviewMode={entryPreviewMode}
         entryCinematic={playIntroCamera}
