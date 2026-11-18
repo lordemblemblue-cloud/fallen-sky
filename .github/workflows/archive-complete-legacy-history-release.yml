@@ -1,0 +1,43 @@
+name: Archive complete legacy Fallen-sky Git history as release asset
+
+on:
+  push:
+    branches:
+      - migration/archive-complete-legacy-20261118
+
+permissions:
+  contents: write
+
+jobs:
+  archive-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Mirror complete public source Git history
+        run: |
+          set -euo pipefail
+          git clone --mirror https://github.com/marcusflow1-arch/Fallen-sky-.git /tmp/fallen-sky-legacy.git
+          cd /tmp/fallen-sky-legacy.git
+          git for-each-ref --format='%(refname)' refs/heads/ | sort > /tmp/legacy-branch-list.txt
+          branch_count=$(wc -l </tmp/legacy-branch-list.txt)
+          echo "Source branches: $branch_count"
+          test "$branch_count" -gt 100
+          git bundle create /tmp/Fallen-sky-complete-20261118.bundle --all
+          git bundle verify /tmp/Fallen-sky-complete-20261118.bundle
+          ls -lh /tmp/Fallen-sky-complete-20261118.bundle
+          test -s /tmp/Fallen-sky-complete-20261118.bundle
+      - name: Publish complete history as a release asset in Emblem Blue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create legacy-source-20261118 /tmp/Fallen-sky-complete-20261118.bundle \
+            --title "Legacy Fallen-sky: complete source history (18 Nov 2026)" \
+            --notes "Complete restorable Git bundle of marcusflow1-arch/Fallen-sky- including all source branches, commits, models, binary assets, and workflows. Historical archive only; the active Emblem Blue main branch is not replaced. Download the .bundle and use: git clone Fallen-sky-complete-20261118.bundle recovered-source"
+      - name: Verify release asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view legacy-source-20261118 --json url,assets --jq '{url, assets:[.assets[] | {name,size}]}'
