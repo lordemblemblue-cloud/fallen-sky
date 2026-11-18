@@ -1,0 +1,59 @@
+name: Game 3D gear and pose fixes
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/onboarding/armorBodyMask.js'
+      - 'src/components/onboarding/customizationRuntime.js'
+      - 'src/components/game3d/player/uprightStandingClip.js'
+      - 'src/components/game3d/player/playerAnimationLibrary.jsx'
+      - 'src/components/game3d/player/playerNativeAnimationClips.js'
+      - 'src/components/game3d/weapons/playerWeaponRuntime.js'
+      - 'public/models/characters/fused/**'
+      - 'tests/game3d-gear-and-pose-fixes.test.mjs'
+      - 'tests/game3d-equipable-weapons.test.mjs'
+      - '.github/workflows/game3d-gear-and-pose-fixes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game3d-gear-and-pose-fixes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gear:
+    name: Gloves, eyes under a helmet, standing pose and weapon grips on the real bodies
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Gloves hide the hand, helmets keep the eyes, the standing pose is upright
+        run: node --test tests/game3d-gear-and-pose-fixes.test.mjs
+      - name: Sword, daggers and bow in the hand
+        run: node --test tests/game3d-equipable-weapons.test.mjs
+      - name: Lint the new files
+        run: npx eslint --quiet src/components/game3d/player/uprightStandingClip.js tests/game3d-gear-and-pose-fixes.test.mjs tests/game3d-equipable-weapons.test.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          git fetch -q origin main
+          status=0
+          for file in \
+            src/components/onboarding/armorBodyMask.js \
+            src/components/onboarding/customizationRuntime.js \
+            src/components/game3d/player/playerAnimationLibrary.jsx; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: $head errors here, $base on main"
+            if [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status

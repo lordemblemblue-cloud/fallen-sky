@@ -7,7 +7,7 @@ import { bindFusedMakeup } from './creatorMakeup.js';
 import { bindCreatorHairColor } from './creatorHairColor.js';
 import { ensureHairSprings, disposeHairSprings } from './hairSprings.js';
 import { ensureFemaleBodySprings, disposeFemaleBodySprings } from './bodySprings.js';
-import { applyBodyMasks, layerBodyMask } from './armorBodyMask.js';
+import { applyBodyMasks, layerBodyMask, gloveHandSides } from './armorBodyMask.js';
 export { applyBodyMasks, layerBodyMask };
 // Layer-owned secondary bones (hair spring chains from tools/avatar-fuse, cape chains
 // from tools/avatar-armor) do not exist on the body: they keep their own joints and
@@ -273,7 +273,10 @@ export class AvatarCustomizationRuntime {
      }
     });
    }
-   applyBodyMasks(this.root,[...this.layers.values()].filter(x=>x.asset.rig_id===this.rigId).map(x=>layerBodyMask(x.root)).filter(Boolean));
+   // worn gloves hide the whole hand they are skinned to, so no finger shows through a closed fist
+   const gloveSides=new Set();
+   for(const x of this.layers.values())if(x.asset.slot==='gloves'&&x.asset.rig_id===this.rigId)gloveHandSides(x.root).forEach(side=>gloveSides.add(side));
+   applyBodyMasks(this.root,[...this.layers.values()].filter(x=>x.asset.rig_id===this.rigId).map(x=>layerBodyMask(x.root)).filter(Boolean),{gloveSides});
    this.apply();this.onChange(inspectCustomization(this.root));
    // Report asset/rig errors to both viewers instead of displaying a naked
    // character with no explanation. Valid pieces stay applied.

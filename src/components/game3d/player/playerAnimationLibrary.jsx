@@ -2,6 +2,7 @@ import {retargetAvatarClip} from '@/components/onboarding/retargetAvatarClip';
 import { base44 } from '@/api/base44Client';
 import {createPlayerMovementFallbackClips} from './playerMovementFallbackClips';
 import {nativePlayerAnimationClips} from './playerNativeAnimationClips';
+import { withUprightStanding } from './uprightStandingClip.js';
 import {resolvePlayerAnimationKey, uploadedPlayerAction} from './playerAnimationActions.mjs';
 import {loadUploadedAnimationMontage} from './uploadedAnimationMontage.mjs';
 
@@ -83,7 +84,7 @@ export function initialPlayerAnimationClips(target) {
     fallback = createPlayerMovementFallbackClips(target);
     if (target) initialFallbackClips.set(target, fallback);
   }
-  const clipsByKey = { ...fallback, ...nativePlayerAnimationClips(target) };
+  const clipsByKey = { ...fallback, ...withUprightStanding(target, nativePlayerAnimationClips(target)) };
   clipsByKey.diveForward ||= clipsByKey.roll;
   clipsByKey.run ||= clipsByKey.walk;
   return clipsByKey;
@@ -137,7 +138,7 @@ export async function loadPlayerAnimationClips(loader, target, { onMontageReady 
   // Prefer the actor's native, correctly bound clips over generic FBX uploads
   // for its authored Idle/Walk/Run/dodges. The same rule applies to all four
   // bodies, not only fused v2. Extra motion clips may ship in future GLBs.
-  Object.assign(clipsByKey,nativePlayerAnimationClips(target));
+  Object.assign(clipsByKey,withUprightStanding(target, nativePlayerAnimationClips(target)));
   // These are the motions the owner explicitly supplied for this montage.
   // Native clips still start immediately; validated montage clips take over
   // only for characters enabled by the pack loader (Eve first).
