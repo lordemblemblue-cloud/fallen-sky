@@ -29,7 +29,7 @@ function MoonGlyph({ illum, eclipse }) {
   return <Moon className="w-3.5 h-3.5 text-indigo-300" style={{ opacity: 0.35 + 0.65 * illum }} />;
 }
 
-export default function WorldEnvironmentHUD({ system }) {
+export default function WorldEnvironmentHUD({ system, adminTools = false }) {
   const [snap, setSnap] = useState(null);
   const [weatherEditorOpen, setWeatherEditorOpen] = useState(false);
   const editorPreview = typeof window !== 'undefined' && isGame3DEditorPreview({
@@ -133,6 +133,17 @@ export default function WorldEnvironmentHUD({ system }) {
             );
           })}
         </div>
+      )}
+      {adminTools && (
+        <button type="button"
+          className="pointer-events-auto mt-1 w-full rounded-lg border border-amber-300/30 bg-amber-500/10 px-2.5 py-1.5 text-left text-[9px] font-black tracking-wide text-amber-100 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+          aria-label="Admin teleport to Wolfveil cave gate"
+          title="Admin shortcut: teleport inside Wolfveil caves by the return gate"
+          onClick={() => window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
+            detail: { target: 'wolfveil-caves', spawnAtGate: true },
+          }))}>
+          ADMIN · TELEPORT TO CAVE GATE
+        </button>
       )}
     </div>
     {editorPreview && <WeatherTestPanel system={system} open={weatherEditorOpen} onClose={() => setWeatherEditorOpen(false)} />}

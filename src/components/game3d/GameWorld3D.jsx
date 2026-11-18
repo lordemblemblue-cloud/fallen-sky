@@ -229,7 +229,7 @@ const showCombatNotice = (text) => {
   window.dispatchEvent(new CustomEvent('skillActivatedToast', { detail: { text } }));
 };
 
-export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
+export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
   // This flag is read by the existing WebGL loop without destroying its scene
@@ -1977,7 +1977,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }:null;
       fbx.position.set(returnPosition?.x ?? workflowSpawn?.x ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.x:region===WOLFVEIL_CAVES_REGION?-6:0),
         returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
-        returnPosition?.z ?? workflowSpawn?.z ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.z:region===WOLFVEIL_CAVES_REGION?94:0));
+        returnPosition?.z ?? workflowSpawn?.z ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.z:region===WOLFVEIL_CAVES_REGION?(portalSpawnAtGate?124:94):0));
       if (initialWorkflowTarget && !workflowSpawn)
         showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
@@ -5449,7 +5449,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       {!loading && <Game3DLunarNotifications environmentSystem={envSystem} />}
 
       {/* Day/night + season + weather HUD */}
-      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} />}
+      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} adminTools={workflowAllowed} />}
       {!loading && region === 'wolfveil' && nearbyArtisanShop && !activeArtisanShop && !entryMode && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[30] pointer-events-none rounded-xl border border-amber-400/50 bg-slate-950/85 backdrop-blur-lg px-4 py-2 text-center text-sm text-amber-100">
           E · {nearbyArtisanShop.label}
