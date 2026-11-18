@@ -1,53 +1,48 @@
-# What the sword skills look like
+# What the sword skills look like at each mastery tier
 
-The sword's single-hit skills and three-hit skills each play their own cuts, a different set per level,
-instead of the three basic combo clips. Presentation only: damage, cooldowns, hit timing and unlocks are
-unchanged. Data: `src/components/game3d/weapons/swordSkillMoves.mjs`.
+Heavy Strike (single hit) and Triple Slash (three hits) each have four visual tiers, chosen from the skill's
+mastery level: levels 1 to 3, 4 to 6, 7 to 9, and 10 (`swordSkillComboKind` in `weaponComboClips.js`). Each
+tier plays a different set of cuts, taken from the katana techniques (the nine strikes and the moves captured
+from the dojo video). Presentation only: damage, cooldowns, hit timing and unlocks are unchanged.
+Data: `src/components/game3d/weapons/swordSkillMoves.mjs`.
 
-## Single hit
+## Heavy Strike (single hit)
 
-| Level | Game skill | Look |
+| Tier | Mastery | Look |
 | --- | --- | --- |
-| 1 | Heavy Strike (`sword_heavy_strike`), Blade Art 2 | Straight cut: blade over the head, straight down the middle |
-| 2 | Blade Art 4 (tree: Heavy Slash) | Level sweep from the left hip across the body |
-| 3 | Blade Art 6 (tree: Execution Cut) | Stepping overhead cut that ends with the point at the ground |
-| 4 | Blade Art 9 (divine single) | The end of a full turn into a last overhead cut |
+| 1 | 1 to 3 | Level sweep from the left hip across the body |
+| 2 | 4 to 6 | Straight cut: blade over the head, straight down the middle |
+| 3 | 7 to 9 | Stepping overhead cut that ends with the point at the ground |
+| 4 | 10 | The end of a full turn into a last overhead cut |
 
-## Three-hit multi
+## Triple Slash (three hits, half a second apart)
 
-| Level | Game skill | Hits apart | Look |
-| --- | --- | --- | --- |
-| 1 | Triple Slash (`sword_triple_slash`) | 0.50 s | Dojo flow: diagonal cut, returning cut, overhead cut |
-| 2 | Blade Art 5 (tree: Rising Flurry) | 0.17 s | Rising gate: up from the right hip, down the same line, straight up |
-| 3 | Blade Art 10 (tree: Storm Flurry) | 0.22 s | Side to side: three level cuts at the waist |
-| 4 | none yet | 0.50 s | Kneeling storm: turn down to one knee, cut from the knee, cut on the way up |
-
-There is no fourth three-hit sword skill in the game, so the level 4 multi is built and baked but no skill
-plays it. To give it to a skill, add that skill's id to `SWORD_SKILL_LOOKS`.
-
-## Chains: a multi into a single hit
-
-A single hit cast right after a multi starts when the multi's last cut lets go. How far the body is from the
-single's first pose at that moment, measured on the real bodies:
-
-| Chain | Joints apart | |
+| Tier | Mastery | Look |
 | --- | --- | --- |
-| Level 1 multi into level 2 single | 4 to 8 cm | The sweep is the very next cut in the dojo capture |
-| Level 2 multi into level 1 single | 9 cm | The blade is already overhead |
-| Level 4 multi into level 3 single | about 0.5 m | Close, not seamless: the stepping cut's wind-up is trimmed |
-| Level 1 multi into level 3 single | about 0.5 m | Close, not seamless |
+| 1 | 1 to 3 | Dojo flow: diagonal cut, returning cut, overhead cut |
+| 2 | 4 to 6 | Rising gate: up from the right hip, down the same line, straight up |
+| 3 | 7 to 9 | Side to side: three level cuts at the waist |
+| 4 | 10 | Kneeling storm: turn down to one knee, cut from the knee, cut on the way up |
 
-Any other pair still plays; the body blends between the two poses.
+## Chains: Triple Slash into Heavy Strike
+
+Heavy Strike cast while the third hit plays starts when that cut lets go. Any pair of tiers chains. These
+pairs were chosen so the single begins in (or close to) the pose the three-hit ends in:
+
+- Tier 1 into tier 1: the sweep is the very next cut after the overhead cut in the dojo capture
+- Tier 2 into tier 2: the last rising cut ends with the blade overhead, where the straight cut begins
+- Tier 4 into tier 3: the stepping cut follows the rising cut in the dojo capture
+
+The bake check prints the whole table (every Triple Slash tier into every Heavy Strike tier).
 
 ## How it is wired
 
+- The game already chose the tier from mastery and gave each tier its own clip names; the tiers used to be
+  small variations of the three basic swings. This supplies real cuts for those clip names.
+- The binder bakes them for the weapon in hand. Long two-handed blades hold the hilt with both hands; every
+  other sword swings the same cuts with one hand, the other hand guarding.
 - A skill hit is shown the moment it is cast, so each clip starts close to its strike: long wind-ups are
   trimmed, and every cut lands within half a second.
-- The three hits of a multi are three clips, one per hit, because the game sends each hit on its own. Each
-  is free to be replaced when the next hit arrives.
-- Long two-handed blades hold the hilt with both hands. Every other sword swings the same cuts with one
-  hand, the other hand guarding.
-- The player controller plays the skill's clip in place of the combo clip that hit would have used, and still
-  reports that combo state outside (`getCurrent`, `getComboState`, combo events). So the weapon grip, the
-  trails and what other players see are as before: other players see the three basic combo clips.
-- The basic attack chain is unchanged.
+- Nothing changed in the player controller or in `GameWorld3D.jsx`.
+- The basic attack chain is unchanged (the katana combo on long blades, the game's three hits otherwise).
+- The Blade Arts keep the basic combo clips, as before.

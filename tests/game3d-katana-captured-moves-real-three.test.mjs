@@ -156,19 +156,19 @@ for (const rigId of Object.keys(RIGS)) {
   });
 }
 
-// ---- the sword skills' own clips (weapons/swordSkillMoves.mjs) ----
+// ---- the mastery tiers of Heavy Strike and Triple Slash (weapons/swordSkillMoves.mjs) ----
 const skillsModule = await import('../src/components/game3d/weapons/swordSkillMoves.mjs');
 for (const rigId of Object.keys(RIGS)) {
   for (const weaponId of ['odachi', 'fantasy_sword']) {
-    test('sword skill clips on ' + rigId + ' holding the ' + weaponId, { skip }, async () => {
+    test('sword skill tier clips on ' + rigId + ' holding the ' + weaponId, { skip }, async () => {
       const model = await loadBody(rigId);
       const rest = baker.captureRestPose(model);
       const h = setup(model, rigId, weaponId);
       const twoHanded = weaponId === 'odachi';
-      const moves = skillsModule.swordSkillMovesForWeapon({ id: weaponId, cls: h.weapon.class || h.weapon.cls });
+      const moves = skillsModule.swordSkillTierMovesForWeapon({ id: weaponId, cls: h.weapon.class || h.weapon.cls });
       assert.equal(moves.some((m) => m.keys.some((k) => k.l.hilt)), twoHanded, weaponId + (twoHanded ? ' is held with both hands' : ' is swung with one hand'));
       const clips = baker.bakeWeaponComboClips(model, twoHanded ? 'greatsword' : 'sword', { right: h.gripQ }, { rest, reach: h.weapon.length, moves: [...baker.SWORD_COMBO, ...moves] });
-      assert.deepEqual(Object.keys(clips), ['swordCombo1', 'swordCombo2', 'swordCombo3', ...skillsModule.SWORD_SKILL_STATE_NAMES]);
+      assert.deepEqual(Object.keys(clips), ['swordCombo1', 'swordCombo2', 'swordCombo3', ...skillsModule.SWORD_SKILL_TIER_STATE_NAMES]);
       const F = new THREE.Vector3(0, 0, 1), U = new THREE.Vector3(0, 1, 0), R = new THREE.Vector3(-1, 0, 0);
       const body = (v) => new THREE.Vector3().addScaledVector(F, v[0]).addScaledVector(U, v[1]).addScaledVector(R, v[2]);
       const standAnkle = Math.min(h.world(h.bone('LeftFoot')).y, h.world(h.bone('RightFoot')).y);
@@ -220,27 +220,32 @@ for (const rigId of Object.keys(RIGS)) {
       }
       // every level looks different where it lands: the blade points another way, or the hand or the hips are somewhere else
       const apart = (a, b) => a.blade.angleTo(b.blade) * 180 / Math.PI / 30 + a.hand.distanceTo(b.hand) / 0.25 + Math.abs(a.hips - b.hips) / 0.15;
-      const singles = skillsModule.SWORD_SINGLE_HITS.map((s) => 'swordSkillSingle' + s.level);
+      const singles = skillsModule.SWORD_SINGLE_HITS.map((s) => 'swordSingleTier' + s.tier);
       const lines = [];
       for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) {
         const d = apart(sign[singles[i]], sign[singles[j]]);
         lines.push('single ' + (i + 1) + ' vs ' + (j + 1) + ': ' + d.toFixed(1));
-        assert.ok(d > 1, 'single hit level ' + (i + 1) + ' and level ' + (j + 1) + ' land differently (' + d.toFixed(2) + ')');
+        assert.ok(d > 1, 'single hit tier ' + (i + 1) + ' and tier ' + (j + 1) + ' land differently (' + d.toFixed(2) + ')');
       }
       for (let i = 1; i <= 4; i++) for (let j = i + 1; j <= 4; j++) {
-        const d = [1, 2, 3].reduce((sum, hit) => sum + apart(sign['swordSkillMulti' + i + 'Hit' + hit], sign['swordSkillMulti' + j + 'Hit' + hit]), 0);
-        lines.push('multi ' + i + ' vs ' + j + ': ' + d.toFixed(1));
-        assert.ok(d > 3, 'three-hit level ' + i + ' and level ' + j + ' land differently (' + d.toFixed(2) + ')');
+        const d = [1, 2, 3].reduce((sum, hit) => sum + apart(sign['swordTripleTier' + i + 'Hit' + hit], sign['swordTripleTier' + j + 'Hit' + hit]), 0);
+        lines.push('triple ' + i + ' vs ' + j + ': ' + d.toFixed(1));
+        assert.ok(d > 3, 'three-hit tier ' + i + ' and tier ' + j + ' land differently (' + d.toFixed(2) + ')');
       }
-      console.log('  how differently the levels land (1 = clearly different): ' + lines.join(', '));
-      // chains: how far the body is from the single hit's first pose when the multi's last cut lets go
+      console.log('  how differently the tiers land (1 = clearly different): ' + lines.join(', '));
+      // chains: how far the body is from each single hit's first pose when each three-hit's last cut lets go
+      // (rows: Triple Slash tier, columns: Heavy Strike tier), leaving out how far the body has travelled
+      const gapOf = (triple, single) => {
+        const end = ends['swordTripleTier' + triple + 'Hit3'], start = starts['swordSingleTier' + single];
+        const travelled = end[0].clone().sub(start[0]).setY(0);
+        return Math.max(...end.map((v, j) => v.clone().sub(travelled).distanceTo(start[j]) / h.k));
+      };
+      for (const triple of [1, 2, 3, 4]) console.log('  chain: triple tier ' + triple + ' into single tier 1..4, joints apart (m): ' + [1, 2, 3, 4].map((single) => gapOf(triple, single).toFixed(2)).join('  '));
       for (const chain of skillsModule.SWORD_SKILL_CHAINS) {
-        const end = ends['swordSkillMulti' + chain.multi + 'Hit3'], start = starts['swordSkillSingle' + chain.single];
-        const hipsShift = end[0].clone().sub(start[0]).setY(0);
-        const gap = Math.max(...end.map((v, j) => v.clone().sub(hipsShift).distanceTo(start[j]) / h.k));
-        console.log('  chain multi ' + chain.multi + ' into single ' + chain.single + ': joints apart ' + gap.toFixed(2) + ' m (the body has travelled ' + (hipsShift.length() / h.k).toFixed(2) + ' m)');
-        assert.ok(gap < 0.6, 'multi ' + chain.multi + ' flows into single ' + chain.single + ' (' + gap.toFixed(2) + ' m)');
+        const gap = gapOf(chain.triple, chain.single);
+        assert.ok(gap < 0.6, 'triple tier ' + chain.triple + ' flows into single tier ' + chain.single + ' (' + gap.toFixed(2) + ' m)');
       }
+      for (const tier of [1, 2]) assert.ok(gapOf(tier, tier) < 0.15, 'tier ' + tier + ' of both skills meet (' + gapOf(tier, tier).toFixed(2) + ' m)');
     });
   }
 }

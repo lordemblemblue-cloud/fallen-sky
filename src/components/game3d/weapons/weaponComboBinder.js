@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { solveFallbackGrip } from './playerWeaponRuntime.js';
 import { bakeWeaponComboClips, captureRestPose, comboKindForWeapon, SWORD_COMBO } from './weaponComboClips.js';
 import { swordMovesForWeapon } from './katanaTechniques.mjs';
-import { swordSkillMoves, swordSkillMovesForWeapon } from './swordSkillMoves.mjs';
+import { swordSkillTierMoves, swordSkillTierMovesForWeapon } from './swordSkillMoves.mjs';
 
 const DEFAULT_HOLDS = Object.freeze({
   swordCombo: Object.freeze({ hand: 'right', class: 'sword', handleRadius: 0.015 }),
@@ -24,13 +24,11 @@ export function createWeaponComboBinder({ model, controller, runtime = null, bod
     bakedWith[comboKind] = key;
     return true;
   };
-  // The sword skills' own clips (swordSkillMoves.mjs) are baked next to the combo, for a controller that plays
-  // them (the local player's). Other players' avatars keep to the three combo clips.
-  const skills = controller?.playsSwordSkillClips === true;
-  const swordMoves = (held) => {
-    if (!skills) return held ? swordMovesForWeapon(held) : null;
-    return [...((held && swordMovesForWeapon(held)) || SWORD_COMBO), ...(held ? swordSkillMovesForWeapon(held) : swordSkillMoves({ twoHanded: false }))];
-  };
+  // Every sword bakes its three hits (the katana combo on a long two-handed blade, katanaTechniques.mjs) and
+  // the four mastery tiers of its single-hit and three-hit skills (swordSkillMoves.mjs), with both hands on a
+  // long blade and one hand on any other sword. Passing moves replaces the baker's own sword list.
+  const swordMoves = (held) => [...((held && swordMovesForWeapon(held)) || SWORD_COMBO),
+    ...(held ? swordSkillTierMovesForWeapon(held) : swordSkillTierMoves({ twoHanded: false }))];
   for (const [comboKind, hold] of Object.entries(DEFAULT_HOLDS)) {
     const solved = model ? solveFallbackGrip(model, hold, ['combat'], bodyHeight) : null;
     const q = solved?.grips?.combat?.quaternion;
