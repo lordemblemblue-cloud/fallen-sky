@@ -109,6 +109,7 @@ export default function GameView() {
   const [creatorOnLogin, setCreatorOnLogin] = useState(false);
   const [worldRegion,setWorldRegion]=useState('wolfveil');
   const [portalReturn,setPortalReturn]=useState(false);
+  const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
   const [workflowSpawn, setWorkflowSpawn] = useState(null);
   const [resumeCheckpoint, setResumeCheckpoint] = useState(null);
@@ -279,6 +280,7 @@ export default function GameView() {
       worldReadyRef.current=false;
       setWorldReady(false);
       setWorldEntryStatus('loading');
+      setPortalSpawnAtGate(target==='wolfveil-caves'&&event.detail?.spawnAtGate===true);
       if(target!=='wolfveil'){
         vortexOriginRef.current=event.detail?.sourcePortal==='vortex'?'vortex':null;
         setPortalReturn(false);
@@ -608,7 +610,7 @@ export default function GameView() {
        <GameWorld3D key={worldRegion+':'+worldEntryCycle} region={worldRegion}
         entryMode={phase==='login'} entryPreviewMode={entryPreviewMode}
         entryCinematic={playIntroCamera}
-        initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn}
+        initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
         resumeCheckpoint={resumeCheckpoint} />
       {/* Keep GPU governor/warmup, but relocate its floating GPU/FPS button to native Graphics settings. */}
       <Game3DPerformanceBootstrap region={worldRegion} showPanel={false} />
