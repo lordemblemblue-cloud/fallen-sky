@@ -237,9 +237,16 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
     }
     setDeleteBusy(true);setDeleteError('');
     try {
-      const result=await callGameServer('characterVault','delete',{characterId:current.id});
-      if(result?.success!==true || result?.deleted!==true)throw new Error('The server did not confirm character deletion.');
-      if(!deleteCreatedCharacter(current.id))throw new Error('The server deleted this character, but the local roster could not update. Refresh this page.');
+      if(getStorageUser()==='__anon__'){
+        // Guest characters only exist on this device; no account server
+        // owns their data and no network tombstone is required.
+        if(!deleteCreatedCharacter(current.id))throw new Error('Could not delete this local character. Please retry.');
+      } else {
+        // Never delete an account-backed character without server approval.
+        const result=await callGameServer('characterVault','delete',{characterId:current.id});
+        if(result?.success!==true || result?.deleted!==true)throw new Error('The server did not confirm character deletion.');
+        if(!deleteCreatedCharacter(current.id))throw new Error('The server deleted this character, but the local roster could not update. Refresh this page.');
+      }
       setDeleteTarget(null);
       setStartError('');
       if(!getCharacterState().roster.some(char=>!char.isDevTest))setStep('select');
