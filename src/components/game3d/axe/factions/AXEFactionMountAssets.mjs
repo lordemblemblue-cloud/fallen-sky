@@ -7,6 +7,9 @@ export const GAME3D_FACTION_MOUNTS = Object.freeze({
     factionId: 'AXE_Faction_1', companionId: 'faction_bear',
     mountDefinitionId: 'axe_mount_faction_bear', name: 'Fantasy Bear',
     modelUrl: 'https://media.base44.com/files/public/6876751a602125f45f1861b9/4a25e7204_fantasy_bear_3d_model__1_.glb',
+    // The same rigged bear with its own Idle / Walk / Run baked from the Baby Wolf
+    // (tools/avatar-motion/retarget-mounts.mjs); Game 3D loads it instead.
+    bakedModelUrl: '/models/mounts/faction_bear.glb',
     scale: 1.4,
   }),
   AXE_Faction_2: Object.freeze({

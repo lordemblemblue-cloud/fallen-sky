@@ -74,6 +74,9 @@ export const COMPANION_DEFINITIONS = [
     spawnPos: [4, 0.3, -3],
     color: 0xb4d5ee,
     gearSlots: ['saddle', 'armor', 'charm'],
+    // Faction 1's bear plays its baked Idle / Walk / Run: the runtime dog-cycle
+    // retarget laid its long spine flat in the gallop. The winged pets keep theirs.
+    ...(asset.bakedModelUrl ? { modelUrl: asset.bakedModelUrl, animationSource: 'embedded' } : {}),
   })),
 ];
 

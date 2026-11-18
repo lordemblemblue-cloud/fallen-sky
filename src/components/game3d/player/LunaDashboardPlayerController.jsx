@@ -4,6 +4,7 @@ import { PLAYER_AFK_DELAY_SECONDS } from './playerNativeAnimationClips';
 import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, resolvePlayerAnimationKey } from './playerAnimationActions.mjs';
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
+import {dodgeTravelStep} from './dodgeMoves.js';
 import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
@@ -113,6 +114,9 @@ export function createLunaDashboardPlayerController({
   let busyResetAt = 0;
   let specialMoveVelocity = null;
   let specialMoveTimer = 0;
+  // Authored dodges (dodgeMoves.js) cover the dash distance along their own
+  // travel curve: airborne / rolling only, never sliding through a crouch.
+  let travelMove = null;
   let lastAttackAt = -Infinity;
   let jumpOffset=0;
   let jumpVelocity=0;
@@ -352,6 +356,7 @@ export function createLunaDashboardPlayerController({
     jumpPhase=null;
     specialMoveTimer=0;
     specialMoveVelocity=null;
+    travelMove = null;
     if (oneShotRef) oneShotRef.current = false;
     if (pumpWeaponCombo()) return;
     if (pendingEquipmentTransition) {
@@ -474,6 +479,7 @@ export function createLunaDashboardPlayerController({
     busyResetAt = 0;
     specialMoveTimer = 0;
     specialMoveVelocity = null;
+    travelMove = null;
     resetAirWalk();
     jumpOffset=0;
     jumpVelocity=0;
@@ -503,6 +509,7 @@ export function createLunaDashboardPlayerController({
     busyResetAt = 0;
     specialMoveTimer = 0;
     specialMoveVelocity = null;
+    travelMove = null;
     jumpOffset = 0;
     jumpVelocity = 0;
     jumpPhase = null;
@@ -536,6 +543,17 @@ export function createLunaDashboardPlayerController({
     bowAttackAllowsMovement = false;
     busyResetAt = now() + timing.duration;
     if (oneShotRef) oneShotRef.current = true;
+    const travel = actions[state].getClip()?.userData?.dodgeTravel;
+    if (travel) {
+      // Authored dodge: the same distance as the constant-speed dash below,
+      // spread over the clip's own travel curve.
+      travelMove = { dir: dir.clone(), travel, duration: timing.duration, elapsed: 0,
+        distance: speed * Math.min(.68,timing.duration) };
+      specialMoveVelocity = null;
+      specialMoveTimer = 0;
+      return true;
+    }
+    travelMove = null;
     specialMoveVelocity = dir.multiplyScalar(speed);
     // Move with the real world's collision sweep, not raw animation root
     // translations or teleportation. Bound the dash for unusually long clips.
@@ -710,6 +728,14 @@ export function createLunaDashboardPlayerController({
     advanceBlend();
     const dt=Number.isFinite(delta)?Math.max(0,Math.min(.08,delta)):0;
     let correctedGroundY=groundY;
+    if (travelMove) {
+      const [dx, dz] = dodgeTravelStep(travelMove, dt);
+      if(typeof moveWithCollision==='function' && (dx || dz)){
+        const corrected=moveWithCollision(dx,dz);
+        if(Number.isFinite(corrected))correctedGroundY=corrected;
+      }
+      if(travelMove.elapsed>=travelMove.duration)travelMove=null;
+    }
     if (specialMoveTimer > 0 && specialMoveVelocity) {
       const step=Math.min(dt,specialMoveTimer);
       if(typeof moveWithCollision==='function' && step>0){
@@ -879,6 +905,7 @@ export function createLunaDashboardPlayerController({
     jumpPhaseSeconds = 0;
     specialMoveTimer = 0;
     specialMoveVelocity = null;
+    travelMove = null;
     externallyAirborne = false;
     resetAirWalk();
     pendingEquipmentTransition = null;

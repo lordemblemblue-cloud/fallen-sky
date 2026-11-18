@@ -155,8 +155,10 @@ test('existing actor-native dodge clips take priority when the rig supplies them
 });
 
 test('world and controller implement real stamina-limited, collision-checked 360 dodge',()=>{
-  assert.match(world,/getCharacterDodge\(model, \{/);
-  assert.match(world,/fallback:key==='r'\?'backward':'forward'/);
+  // Owner, 2026-11: dodge keys point on screen (dashboard controls); the eight-way move follows the body.
+  assert.match(world,/getInputDodge\(model, orbit\.current\.yaw, \{/);
+  assert.match(world,/fallback: key === 'r' \? 'backward' : 'forward'/);
+  assert.match(world,/const roll=getDodgeVectorAndName\('r'\);/,'R alone rolls backward');
   assert.match(world,/getEightWayDodgeMove\(dodge.direction\)\.duration/);
   assert.match(world,/playerAnim\?\.requestDodge\?\.\(dodge.vector, dodge.direction\)/);
   assert.match(world,/playerAnim\?\.requestRoll\?\.\(roll.vector,roll.direction\)/);
