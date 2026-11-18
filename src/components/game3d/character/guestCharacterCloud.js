@@ -20,7 +20,7 @@ export function forgetGuestRecoveryCode(id) {
   try { localStorage.removeItem(codeKey(id)); } catch {}
   notify();
 }
-const normalize = (value) => String(value || '').toUpperCase().replace(/[\\s-]/g, '');
+const normalize = (value) => String(value || '').toUpperCase().replace(/[\s-]/g, '');
 
 export async function ensureGuestRecoveryCode(characterId) {
   if (!/^char_[A-Za-z0-9_-]+$/.test(characterId) || getStorageUser() !== '__anon__') {
