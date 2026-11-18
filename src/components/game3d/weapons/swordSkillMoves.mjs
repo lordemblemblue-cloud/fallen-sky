@@ -53,7 +53,7 @@ export const SWORD_THREE_HITS = Object.freeze([
 export const SWORD_SKILL_CHAINS = Object.freeze([
   { triple: 1, single: 1, why: 'The level sweep is the very next cut after the overhead cut in the dojo capture.' },
   { triple: 2, single: 2, why: 'The last rising cut ends with the blade overhead, where the straight cut begins.' },
-  { triple: 4, single: 3, why: 'The stepping cut follows the rising cut in the dojo capture.' },
+  { triple: 4, single: 1, why: 'The rising cut ends turned to the left with the blade low, close to where the sweep winds up.' },
 ].map((chain) => Object.freeze(chain)));
 
 /** Clip names, the same ones weaponComboClips.js gives the tiers. */

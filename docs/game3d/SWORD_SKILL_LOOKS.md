@@ -26,14 +26,23 @@ Data: `src/components/game3d/weapons/swordSkillMoves.mjs`.
 
 ## Chains: Triple Slash into Heavy Strike
 
-Heavy Strike cast while the third hit plays starts when that cut lets go. Any pair of tiers chains. These
-pairs were chosen so the single begins in (or close to) the pose the three-hit ends in:
+Heavy Strike cast while the third hit plays starts when that cut lets go. Any pair of tiers chains; the body
+blends between the two poses. How far apart the joints are at that moment, measured on the real bodies
+(rows: Triple Slash tier, columns: Heavy Strike tier, metres):
 
-- Tier 1 into tier 1: the sweep is the very next cut after the overhead cut in the dojo capture
-- Tier 2 into tier 2: the last rising cut ends with the blade overhead, where the straight cut begins
-- Tier 4 into tier 3: the stepping cut follows the rising cut in the dojo capture
+| | Single 1 | Single 2 | Single 3 | Single 4 |
+| --- | --- | --- | --- | --- |
+| **Triple 1** | **0.04 to 0.08** | 0.86 | 0.49 | 0.66 |
+| **Triple 2** | 0.87 | **0.09** | 0.6 | 0.6 |
+| **Triple 3** | 0.47 | 0.63 | 0.6 | 0.6 |
+| **Triple 4** | **0.18 to 0.25** | 0.86 | 0.48 | 0.65 |
 
-The bake check prints the whole table (every Triple Slash tier into every Heavy Strike tier).
+The three pairs in bold join almost seamlessly:
+
+- Tier 1 into tier 1: the sweep is the very next cut after the overhead cut in the dojo capture. A new
+  player has both skills at tier 1, so their first chain is this one.
+- Tier 2 into tier 2: the last rising cut ends with the blade overhead, where the straight cut begins.
+- Tier 4 into tier 1: the rising cut ends turned to the left with the blade low, where the sweep winds up.
 
 ## How it is wired
 
