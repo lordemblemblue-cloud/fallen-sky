@@ -7,10 +7,11 @@ const key = name => String(name || '').toLowerCase().replace(/[^a-z0-9]/g, '').r
 const EPS = 1e-6;
 // Calibrated against the actual owner-uploaded mounts. Tiger Spine_1 is at
 // the forward saddle lip; its seated center lies 28cm behind that bone. The
-// bear's Spine_1 sits over its broad hindquarters (1.5 m across): the seat is
-// 28cm forward, just behind the shoulder hump, where a rider can straddle it.
-const SEAT_FORWARD_OFFSETS = Object.freeze({ faction_tiger: -.28, faction_bear: .28 });
+// bear's Spine_1 is under its own modelled saddle: the rider sits there, legs
+// spread over its broad back (straddleLeg) and lifted onto it (measureSeatLift).
+const SEAT_FORWARD_OFFSETS = Object.freeze({ faction_tiger: -.28 });
 const FLANK_STEP = .05; // metres between the flank profile's samples
+const WING_BONE = /wing/i; // a vertex mostly skinned to these is wing, not body
 const LEG_CLEARANCE = .075; // metres between a leg bone and the body surface (the thigh's own thickness)
 const SEAT_COMPRESSION = .015; // metres the rider may press into the back (fur, padding)
 const MAX_SEAT_LIFT = .15;
@@ -95,8 +96,9 @@ export function solveMountedLimb(upper, lower, end, target, pole) {
   return true;
 }
 
-// Only real mesh vertices contribute: the companion's decorative ground ring
-// must not make the saddle wider or higher. Read the skinned positions once,
+// Only real body vertices contribute: the companion's decorative ground ring
+// and the winged mounts' wings (raised above the back at rest) must not make
+// the saddle wider or higher. Read the skinned positions once,
 // then retain the seat relative to an animated spine bone for subsequent frames.
 function measureMount(mount, definition) {
   mount.updateWorldMatrix(true, true);
@@ -108,8 +110,16 @@ function measureMount(mount, definition) {
         node.userData?.factionThreeSecondaryHelper ||
         (!node.isSkinnedMesh && node.geometry.type === 'RingGeometry')) return;
     node.skeleton?.update();
+    const skinIndex = node.geometry.attributes.skinIndex, skinWeight = node.geometry.attributes.skinWeight;
+    const wingBones = new Set((node.isSkinnedMesh && skinIndex && skinWeight ? node.skeleton?.bones || [] : [])
+      .map((bone, index) => (WING_BONE.test(bone.name) ? index : -1)).filter(index => index >= 0));
     const stride = Math.max(1, Math.ceil(attribute.count / 24000));
     for (let i = 0; i < attribute.count; i += stride) {
+      if (wingBones.size) {
+        let wing = 0;
+        for (let k = 0; k < 4; k++) if (wingBones.has(skinIndex.getComponent(i, k))) wing += skinWeight.getComponent(i, k);
+        if (wing > .5) continue;
+      }
       const vertex = new THREE.Vector3();
       node.getVertexPosition(i, vertex);
       vertex.applyMatrix4(node.matrixWorld).applyMatrix4(inverse);

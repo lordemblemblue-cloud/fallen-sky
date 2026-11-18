@@ -178,6 +178,39 @@ for (const rigId of Object.keys(RIGS)) {
   }
 }
 
+// The winged Faction 2/3 mounts hold their wings up above the back at rest. Vertices skinned to wing bones
+// are not body: the seat is measured on the back, not on the wing tips (live-checked on #158 and #160).
+test('a winged mount seats the rider on its back, not on its raised wings', () => {
+  const player = riders['fused-female-v1'];
+  const root = new THREE.Bone(); root.name = 'root';
+  const spine = new THREE.Bone(); spine.name = 'spine'; spine.position.set(0, 1.0, 0); root.add(spine);
+  const wing = new THREE.Bone(); wing.name = 'wing_l_base'; wing.position.set(0.15, 0.3, 0); spine.add(wing);
+  const body = new THREE.BoxGeometry(0.6, 0.6, 2.0, 6, 6, 20).translate(0, 1.0, 0); // back at 1.3 m
+  const sail = new THREE.BoxGeometry(1.2, 0.8, 0.3, 12, 8, 3).translate(0, 1.7, 0); // wings spread over the seat, up to 2.1 m
+  const merged = new THREE.BufferGeometry();
+  const positions = [...body.attributes.position.array, ...sail.attributes.position.array];
+  merged.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const count = positions.length / 3, bodyCount = body.attributes.position.count;
+  const skinIndex = [], skinWeight = [];
+  for (let i = 0; i < count; i++) { skinIndex.push(i < bodyCount ? 1 : 2, 0, 0, 0); skinWeight.push(1, 0, 0, 0); }
+  merged.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(skinIndex, 4));
+  merged.setAttribute('skinWeight', new THREE.Float32BufferAttribute(skinWeight, 4));
+  const indexed = [...body.index.array, ...sail.index.array.map((v) => v + bodyCount)];
+  merged.setIndex(indexed);
+  const mesh = new THREE.SkinnedMesh(merged, new THREE.MeshStandardMaterial());
+  const mount = new THREE.Group();
+  mount.add(root, mesh);
+  new THREE.Scene().add(mount);
+  mount.updateMatrixWorld(true);
+  mesh.bind(new THREE.Skeleton([root, spine, wing]));
+  const pose = createMountedRiderPose({ player, mount, definition: { id: 'test_winged' } });
+  assert.ok(pose.supported);
+  const seat = pose.getStatus().seat;
+  assert.ok(seat.y > 1.3 && seat.y < 1.55, `seated on the back at ${seat.y.toFixed(2)} m, not on the 2.1 m wing`);
+  assert.ok(pose.getStatus().halfWidth < 0.45, `the wing does not widen the saddle (${pose.getStatus().halfWidth.toFixed(2)} m)`);
+  pose.restore();
+});
+
 test('GameWorld3D: a drawn pack weapon rides along in the hand; riding never melts it away', () => {
   const world = readFileSync('src/components/game3d/GameWorld3D.jsx', 'utf8');
   assert.match(world, /weaponSummon\?\.setSuspended\(!!isMountedRef\.current && !ridingWithPack\);/);
