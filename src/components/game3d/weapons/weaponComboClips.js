@@ -6,8 +6,13 @@
 // upright bow with the arrow forward for a bow), using that weapon's own combat grip from the weapon pack.
 // Output: ordinary AnimationClips that the player controller binds as one-shot states.
 //
-//   sword: swordCombo1 forehand cut, swordCombo2 rising backhand, swordCombo3 overhead chop
-//   bow:   bowCombo1 quick shot, bowCombo2 fast shot with a sidestep lean, bowCombo3 overdrawn power shot
+//   sword:   swordCombo1 flat slash, swordCombo2 rising diagonal, swordCombo3 forward thrust (owner handoff
+//            2026-11-18: 0.50 / 0.54 / 0.48 s, contact at 0.22 / 0.24 / 0.21 s)
+//   two-hand: swordTwoHand1-3, both hands on the hilt while the right button is held (owner 2026-11-18)
+//   daggers: daggerLight1 right slash and daggerLight2 left cross-cut (left click, the fastest), daggerStab
+//            (right click): 0.33 / 0.37 / 0.43 s, contact at 0.12 / 0.15 / 0.18 s
+//   bow:     bowCombo1 quick shot, bowCombo2 fast shot with a sidestep lean, bowCombo3 overdrawn power shot
+//   idles:   idleSword, idleSwordTwoHand, idleDaggers, idleBow: looping stances for each weapon in hand
 // clip.userData: { combo, index, hit, sweep, cancel } in clip seconds — hit = the strike / arrow release,
 // sweep = [start, end] of the blade's cutting arc (trail recording), cancel = when the next hit may start.
 import * as THREE from 'three';
@@ -16,6 +21,11 @@ import { solveMountedLimb } from '../player/mountedRiderPose.mjs';
 export const WEAPON_COMBO_STATES = Object.freeze({
   swordCombo: Object.freeze(['swordCombo1', 'swordCombo2', 'swordCombo3']),
   bowCombo: Object.freeze(['bowCombo1', 'bowCombo2', 'bowCombo3']),
+  // daggers: left click chains the light slashes (the fastest), right click is the normal stab
+  daggerLight: Object.freeze(['daggerLight1', 'daggerLight2']),
+  daggerStab: Object.freeze(['daggerStab']),
+  // a sword held in both hands while the right mouse button is held
+  swordTwoHand: Object.freeze(['swordTwoHand1', 'swordTwoHand2', 'swordTwoHand3']),
   swordSingleTier1: Object.freeze(['swordSingleTier1']),
   swordSingleTier2: Object.freeze(['swordSingleTier2']),
   swordSingleTier3: Object.freeze(['swordSingleTier3']),
@@ -28,6 +38,15 @@ export const WEAPON_COMBO_STATES = Object.freeze({
 export const WEAPON_COMBO_STATE_NAMES = Object.freeze(
   Object.values(WEAPON_COMBO_STATES).flat(),
 );
+// Looping stances for the weapon in hand, baked with the combos (same grips) and played while standing.
+export const WEAPON_IDLE_STATES = Object.freeze(['idleSword', 'idleSwordTwoHand', 'idleDaggers', 'idleBow']);
+// Which idle a standing character plays: family = the held weapon's mastery family; null = the normal idle.
+export function weaponIdleState(family, { twoHand = false } = {}) {
+  if (family === 'bow') return 'idleBow';
+  if (family === 'dual_blades' || family === 'dagger') return 'idleDaggers';
+  if (family === 'sword') return twoHand ? 'idleSwordTwoHand' : 'idleSword';
+  return null;
+}
 
 // The two existing sword skills gain four visual tiers at mastery levels 1, 4, 7 and 10.
 export function swordSkillComboKind(skillId, level=1, maxLevel=10) {
@@ -40,11 +59,13 @@ export function swordSkillComboKind(skillId, level=1, maxLevel=10) {
   return family+tier;
 }
 
-// 'bow' -> bowCombo; sword / greatsword / dagger / blade -> swordCombo; anything else has no combo.
+// Which family of clips a weapon class bakes: 'bow' -> bowCombo; dagger / dual blades -> daggerCombo;
+// sword / greatsword / blade -> swordCombo; anything else has no combo.
 export function comboKindForWeapon(kindOrClass) {
   const k = String(kindOrClass || '').toLowerCase();
   if (/bow/.test(k)) return 'bowCombo';
-  if (/sword|blade|dagger/.test(k)) return 'swordCombo';
+  if (/dagger|dual_blades/.test(k)) return 'daggerCombo';
+  if (/sword|blade/.test(k)) return 'swordCombo';
   return null;
 }
 
@@ -60,6 +81,9 @@ const RIG = {
   lUp: ['mixamorig:LeftUpLeg', 'thigh_l'], lLeg: ['mixamorig:LeftLeg', 'calf_l'], lFoot: ['mixamorig:LeftFoot', 'foot_l'],
 };
 const DEG = Math.PI / 180;
+// Finger joints that close around a hilt (thumbs keep their rest), and how far each one bends.
+const FINGER_CURL = /(?:Index|Middle|Ring|Pinky)[123]$/;
+const HILT_CURL = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 1.05);
 
 // Body-space vectors: [forward, up, right] in metres for a 1.7 m body (scaled to the actual rig).
 // arm: wrist target relative to that arm's shoulder, third component towards that arm's own side (mirrored);
@@ -71,7 +95,8 @@ const STANCE = { l: [0.14, -0.13, 0], r: [-0.12, 0.14, -25] }; // [forward, righ
 const GUARD = { arm: [0.32, -0.28, -0.05] }; // free hand in front of the chest
 const SWORD_READY = { spine: [0, 4, 0], hips: [0.03, 0], r: { arm: [0.36, -0.2, 0.12], blade: [0.55, 0.65, 0.15] }, l: GUARD };
 
-export const SWORD_COMBO = [
+// The original three swings. The sword skills' legacy tier clips below are built from them, unchanged.
+const LEGACY_SWORD_COMBO = [
   { name: 'swordCombo1', hit: 0.29, sweep: [0.15, 0.41], cancel: 0.4, keys: [ // forehand: right-back to front-left, flat
     { t: 0.0, ...SWORD_READY },
     { t: 0.15, spine: [34, 2, -3], hips: [0.05, 10], r: { arm: [-0.08, 0.06, 0.34], blade: [-0.6, 0.15, 0.78] }, l: { arm: [0.35, -0.15, -0.2] } },
@@ -95,6 +120,92 @@ export const SWORD_COMBO = [
     { t: 0.82, ...SWORD_READY },
   ] },
 ];
+
+// The handoff's sword timing (2026-11-18): a flat slash (0.50 s, contact 0.22), a diagonal slash (0.54 s,
+// contact 0.24) and a forward thrust (0.48 s, contact 0.21). The two slashes are the original cuts, retimed.
+const retime = (move, times, extra) => ({ ...move, ...extra, keys: move.keys.map((key, i) => ({ ...key, t: times[i] })) });
+export const SWORD_COMBO = [
+  retime(LEGACY_SWORD_COMBO[0], [0, 0.09, 0.22, 0.31, 0.5], { hit: 0.22, sweep: [0.09, 0.31], cancel: 0.34 }),
+  retime(LEGACY_SWORD_COMBO[1], [0, 0.11, 0.24, 0.34, 0.54], { hit: 0.24, sweep: [0.11, 0.34], cancel: 0.37 }),
+  { name: 'swordCombo3', hit: 0.21, sweep: [0.1, 0.3], cancel: 0.33, keys: [ // thrust: chamber at the hip, drive straight ahead
+    { t: 0.0, ...SWORD_READY },
+    { t: 0.1, spine: [20, 3, 0], hips: [0.05, 10], r: { arm: [0.02, -0.2, 0.22], blade: [0.96, 0.18, 0.2] }, l: { arm: [0.32, -0.18, -0.12] } },
+    { t: 0.21, spine: [-18, 12, 0], hips: [0.1, -14], r: { arm: [0.68, -0.08, 0.02], blade: [0.99, 0.04, -0.06] }, l: { arm: [-0.02, -0.34, 0.2] } },
+    { t: 0.3, spine: [-16, 11, 0], hips: [0.09, -13], r: { arm: [0.64, -0.09, 0.02], blade: [0.99, 0.04, -0.06] }, l: { arm: [0.0, -0.34, 0.2] } },
+    { t: 0.48, ...SWORD_READY },
+  ] },
+];
+
+// Both hands on the hilt (the left hand `hilt` metres towards the pommel): a squared guard, blade raised in
+// front; the swings are a little heavier than the one-handed ones.
+const TWO_HAND_HILT = { hilt: 0.09 };
+const TWO_HAND_READY = { spine: [-10, 7, 0], hips: [0.08, 12], r: { arm: [0.36, -0.2, -0.1], blade: [0.72, 0.66, -0.2] }, l: TWO_HAND_HILT };
+export const SWORD_TWO_HAND_COMBO = [
+  { name: 'swordTwoHand1', combo: 'swordTwoHand', index: 0, hit: 0.24, sweep: [0.1, 0.34], cancel: 0.38, keys: [ // flat cleave
+    { t: 0.0, ...TWO_HAND_READY },
+    { t: 0.1, spine: [36, 3, -4], hips: [0.09, 18], r: { arm: [0.04, 0.06, 0.3], blade: [-0.55, 0.32, 0.77] }, l: TWO_HAND_HILT },
+    { t: 0.24, spine: [-20, 10, 3], hips: [0.1, -14], r: { arm: [0.44, -0.06, -0.2], blade: [0.78, 0.02, -0.62] }, l: TWO_HAND_HILT },
+    { t: 0.34, spine: [-34, 9, 3], hips: [0.1, -20], r: { arm: [0.3, -0.06, -0.34], blade: [0.05, 0.02, -0.99] }, l: TWO_HAND_HILT },
+    { t: 0.52, ...TWO_HAND_READY },
+  ] },
+  { name: 'swordTwoHand2', combo: 'swordTwoHand', index: 1, hit: 0.26, sweep: [0.12, 0.37], cancel: 0.41, keys: [ // rising diagonal
+    { t: 0.0, ...TWO_HAND_READY },
+    { t: 0.12, spine: [-26, 14, 6], hips: [0.09, -10], r: { arm: [0.36, -0.34, -0.24], blade: [0.32, -0.7, -0.64] }, l: TWO_HAND_HILT },
+    { t: 0.26, spine: [24, 3, -4], hips: [0.08, 14], r: { arm: [0.5, 0.28, 0.26], blade: [0.45, 0.74, 0.5] }, l: TWO_HAND_HILT },
+    { t: 0.37, spine: [34, -3, -5], hips: [0.07, 18], r: { arm: [0.16, 0.42, 0.34], blade: [-0.28, 0.9, 0.33] }, l: TWO_HAND_HILT },
+    { t: 0.56, ...TWO_HAND_READY },
+  ] },
+  { name: 'swordTwoHand3', combo: 'swordTwoHand', index: 2, hit: 0.3, sweep: [0.16, 0.42], cancel: 0.47, keys: [ // overhead chop
+    { t: 0.0, ...TWO_HAND_READY },
+    { t: 0.16, spine: [2, -12, 0], hips: [0.06, 6], r: { arm: [0.08, 0.42, -0.18], blade: [-0.72, 0.68, -0.05] }, l: TWO_HAND_HILT },
+    { t: 0.3, spine: [-2, 26, 0], hips: [0.15, -2], r: { arm: [0.56, -0.2, -0.14], blade: [0.56, -0.83, -0.04] }, l: TWO_HAND_HILT },
+    { t: 0.42, spine: [-2, 27, 0], hips: [0.16, -2], r: { arm: [0.56, -0.24, -0.14], blade: [0.5, -0.86, -0.04] }, l: TWO_HAND_HILT },
+    { t: 0.6, ...TWO_HAND_READY },
+  ] },
+];
+
+// Daggers: a low centre of gravity, both blades forward. Each hand's `blade` is its own dagger's direction.
+const DAGGER_READY = { spine: [0, 9, 0], hips: [0.08, 0],
+  r: { arm: [0.3, -0.24, 0.06], blade: [0.72, 0.5, 0.48] }, l: { arm: [0.36, -0.16, -0.02], blade: [0.8, 0.55, -0.24] } };
+const DAGGER_RIGHT_GUARD = { arm: [0.3, -0.22, 0.03], blade: [0.72, 0.5, 0.48] };
+export const DAGGER_COMBO = [
+  { name: 'daggerLight1', combo: 'daggerLight', index: 0, hit: 0.12, sweep: [0.04, 0.18], cancel: 0.22, keys: [ // quick right slash
+    { t: 0.0, ...DAGGER_READY },
+    { t: 0.04, spine: [18, 9, -2], hips: [0.09, 8], r: { arm: [0.16, -0.12, 0.34], blade: [0.35, 0.35, 0.87] }, l: DAGGER_READY.l },
+    { t: 0.12, spine: [-16, 11, 2], hips: [0.1, -8], r: { arm: [0.56, -0.14, -0.12], blade: [0.85, 0.05, -0.52] }, l: { arm: [0.26, -0.24, 0.06], blade: [0.7, 0.5, -0.5] } },
+    { t: 0.18, spine: [-24, 11, 2], hips: [0.1, -10], r: { arm: [0.4, -0.16, -0.3], blade: [0.3, 0.02, -0.95] }, l: { arm: [0.26, -0.24, 0.06], blade: [0.7, 0.5, -0.5] } },
+    { t: 0.33, ...DAGGER_READY },
+  ] },
+  { name: 'daggerLight2', combo: 'daggerLight', index: 1, hit: 0.15, sweep: [0.06, 0.22], cancel: 0.26, keys: [ // left cross-cut
+    { t: 0.0, ...DAGGER_READY },
+    { t: 0.06, spine: [-22, 9, 2], hips: [0.09, -8], l: { arm: [0.12, -0.1, 0.36], blade: [-0.25, 0.3, -0.92] }, r: DAGGER_RIGHT_GUARD },
+    { t: 0.15, spine: [18, 11, -2], hips: [0.1, 9], l: { arm: [0.56, -0.18, -0.14], blade: [0.8, -0.12, 0.59] }, r: { arm: [0.26, -0.24, 0.04], blade: [0.7, 0.5, 0.5] } },
+    { t: 0.22, spine: [26, 11, -2], hips: [0.1, 11], l: { arm: [0.38, -0.2, -0.32], blade: [0.12, -0.1, 0.99] }, r: { arm: [0.26, -0.24, 0.04], blade: [0.7, 0.5, 0.5] } },
+    { t: 0.37, ...DAGGER_READY },
+  ] },
+  { name: 'daggerStab', combo: 'daggerStab', index: 0, hit: 0.18, sweep: [0.1, 0.27], cancel: 0.32, keys: [ // precision stab
+    { t: 0.0, ...DAGGER_READY },
+    { t: 0.08, spine: [16, 7, 0], hips: [0.1, 10], r: { arm: [0.06, -0.22, 0.18], blade: [0.96, 0.2, 0.18] }, l: { arm: [0.34, -0.06, 0.0], blade: [0.55, 0.8, -0.2] } },
+    { t: 0.18, spine: [-14, 15, 0], hips: [0.14, -12], r: { arm: [0.7, -0.1, -0.02], blade: [0.99, 0.05, -0.08] }, l: { arm: [0.24, -0.1, 0.12], blade: [0.5, 0.8, -0.3] } },
+    { t: 0.27, spine: [-12, 14, 0], hips: [0.13, -11], r: { arm: [0.64, -0.11, -0.02], blade: [0.99, 0.05, -0.08] }, l: { arm: [0.24, -0.1, 0.12], blade: [0.5, 0.8, -0.3] } },
+    { t: 0.43, ...DAGGER_READY },
+  ] },
+];
+
+// Looping idles: the stance, a breath in, the stance again (the ends match, so the loop is seamless).
+const breathing = (name, base, seconds, { bend = 1.5, drop = 0.008, lift = 0.01 } = {}) => {
+  const raise = (limb) => (limb?.arm ? { ...limb, arm: [limb.arm[0], limb.arm[1] + lift, limb.arm[2]] } : limb);
+  const inhale = { ...base, spine: [base.spine[0], base.spine[1] + bend, base.spine[2]],
+    hips: [base.hips[0] + drop, ...base.hips.slice(1)], r: raise(base.r), l: raise(base.l) };
+  return { name, idle: true, hit: 0, cancel: seconds, keys: [{ t: 0, ...base }, { t: seconds / 2, ...inhale }, { t: seconds, ...base }] };
+};
+const WIDE_FEET = { l: [0.22, -0.17, 8], r: [-0.18, 0.19, -30] };
+export const IDLE_SWORD = breathing('idleSword', { spine: [0, 3, 0], hips: [0.02, 0],
+  r: { arm: [0.2, -0.4, 0.14], blade: [0.72, 0.3, 0.3] }, l: { arm: [0.08, -0.5, -0.02] } }, 2.4);
+export const IDLE_SWORD_TWO_HAND = breathing('idleSwordTwoHand', { ...TWO_HAND_READY, feet: WIDE_FEET }, 2.0);
+export const IDLE_DAGGERS = breathing('idleDaggers', DAGGER_READY, 2.0, { drop: 0.01 });
+export const IDLE_BOW = breathing('idleBow', { spine: [3, 3, 0], hips: [0.02, 3],
+  l: { arm: [0.14, -0.44, 0.1], blade: [0.42, 0.9, 0.1] }, r: { arm: [0.06, -0.5, 0.04] } }, 2.6, { lift: 0.006 });
 
 // Make higher mastery tiers read as increasingly committed sword forms while keeping
 // the original hit timing and hit count. Each tier also gets its own state names so
@@ -138,17 +249,17 @@ const TIER_STYLES=Object.freeze([
   Object.freeze({reach:.15,drop:.08,twist:30,bodyTurn:15,roll:8,bladeYaw:.38,sweep:.16,lift:.09}),
 ]);
 const SINGLE_SOURCE_BY_TIER=Object.freeze([
-  SWORD_COMBO[0], // level 1: clean forehand cut
-  SWORD_COMBO[1], // level 2: rising backhand
-  SWORD_COMBO[0], // level 3: extended cross cut
-  SWORD_COMBO[2], // level 4: committed overhead finisher
+  LEGACY_SWORD_COMBO[0], // level 1: clean forehand cut
+  LEGACY_SWORD_COMBO[1], // level 2: rising backhand
+  LEGACY_SWORD_COMBO[0], // level 3: extended cross cut
+  LEGACY_SWORD_COMBO[2], // level 4: committed overhead finisher
 ]);
 export const SWORD_SKILL_SINGLE_COMBOS=Object.freeze(
   SINGLE_SOURCE_BY_TIER.map((source,index)=>Object.freeze(makeSwordTierMotion(
     source,`swordSingleTier${index+1}`,TIER_STYLES[index]))),
 );
 export const SWORD_SKILL_TRIPLE_COMBOS=Object.freeze(TIER_STYLES.map((style,tierIndex)=>
-  Object.freeze(SWORD_COMBO.map((source,hitIndex)=>Object.freeze(makeSwordTierMotion(
+  Object.freeze(LEGACY_SWORD_COMBO.map((source,hitIndex)=>Object.freeze(makeSwordTierMotion(
     source,`swordTripleTier${tierIndex+1}Hit${hitIndex+1}`,style))))),
 );
 
@@ -183,6 +294,14 @@ export const BOW_COMBO = [
     { t: 0.88, ...BOW_READY },
   ] },
 ];
+
+// What a family bakes when the caller passes no moves of its own (the binder passes its own for swords).
+export function defaultMovesFor(comboKind) {
+  if (comboKind === 'bowCombo') return [...BOW_COMBO, IDLE_BOW];
+  if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS];
+  return [...SWORD_COMBO, ...SWORD_TWO_HAND_COMBO, IDLE_SWORD, IDLE_SWORD_TWO_HAND,
+    ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat()];
+}
 
 function findBones(model) {
   const out = {};
@@ -222,6 +341,7 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
   const restPose = rest?.size ? rest : captureRestPose(model);
   if (!restPose.has(b.hips) || !restPose.has(b.rHand) || !restPose.has(b.lHand)) return {};
   const animated = [...new Set(Object.values(b).filter(Boolean))];
+  const curlBones = new Map(); // finger bone -> 'l' | 'r', for a hand that holds the hilt
   const saved = [...restPose.keys()].map((bone) => [bone, bone.position.clone(), bone.quaternion.clone()]);
   const restore = () => { for (const [bone, p, q] of saved) { bone.position.copy(p); bone.quaternion.copy(q); } model.updateMatrixWorld(true); };
   const toRest = () => { for (const [bone, v] of restPose) { bone.position.copy(v.position); bone.quaternion.copy(v.quaternion); } model.updateMatrixWorld(true); };
@@ -358,6 +478,22 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       setWorldQ(hand, qH || qF.clone().multiply(ab.relH));
     };
 
+    // Second hand of a two-handed grip: on the hilt, `hilt` metres towards the pommel from the hand that
+    // carries the blade (placed first: the right hand is solved before the left).
+    const placeHilt = (side, spec, leadSpec) => {
+      const [arm, fore, hand] = side === 'l' ? [b.lArm, b.lFore, b.lHand] : [b.rArm, b.rFore, b.rHand];
+      const sideSign = side === 'r' ? 1 : -1;
+      const lead = side === 'l' ? b.rHand : b.lHand;
+      const leadInfo = handInfo.get(lead);
+      const leadQ = lead.getWorldQuaternion(new THREE.Quaternion());
+      const along = leadInfo?.grip ? new THREE.Vector3(0, 1, 0).applyQuaternion(leadQ.clone().multiply(leadInfo.grip))
+        : leadSpec?.blade ? body(leadSpec.blade).normalize() : U.clone();
+      const shoulder = arm.getWorldPosition(new THREE.Vector3());
+      const target = lead.getWorldPosition(new THREE.Vector3()).addScaledVector(along, -spec.hilt * k);
+      const p = spec.pole || [-0.2, -0.5, 0.5];
+      const pole = shoulder.clone().add(body([p[0] * k, p[1] * k, p[2] * sideSign * k]));
+      placeArm(arm, fore, hand, target, pole, null, R.clone().multiplyScalar(sideSign));
+    };
     const pose = (key, move = {}) => {
       toRest();
       // hips: lower by `drop` metres and turn by `twist` (+ = right; the right is -X when facing +Z); a
@@ -401,19 +537,7 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
         const spec = key[side];
         const sideSign = side === 'r' ? 1 : -1;
         if (spec && !spec.arm && Number.isFinite(spec.hilt)) {
-          // Second hand of a two-handed grip: on the hilt, `hilt` metres towards the pommel from the hand
-          // that carries the blade (placed first: the right hand is solved before the left).
-          const lead = side === 'l' ? b.rHand : b.lHand;
-          const leadSpec = key[side === 'l' ? 'r' : 'l'];
-          const leadInfo = handInfo.get(lead);
-          const leadQ = lead.getWorldQuaternion(new THREE.Quaternion());
-          const along = leadInfo?.grip ? new THREE.Vector3(0, 1, 0).applyQuaternion(leadQ.clone().multiply(leadInfo.grip))
-            : leadSpec?.blade ? body(leadSpec.blade).normalize() : U.clone();
-          const shoulder = arm.getWorldPosition(new THREE.Vector3());
-          const target = lead.getWorldPosition(new THREE.Vector3()).addScaledVector(along, -spec.hilt * k);
-          const p = spec.pole || [-0.2, -0.5, 0.5];
-          const pole = shoulder.clone().add(body([p[0] * k, p[1] * k, p[2] * sideSign * k]));
-          placeArm(arm, fore, hand, target, pole, null, R.clone().multiplyScalar(sideSign));
+          placeHilt(side, spec, key[side === 'l' ? 'r' : 'l']);
           continue;
         }
         if (!spec?.arm) continue;
@@ -444,15 +568,22 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
           }
         }
       }
+      for (const [bone, side] of curlBones) if (Number.isFinite(key[side]?.hilt)) bone.quaternion.multiply(HILT_CURL);
       model.updateMatrixWorld(true);
       return { q: animated.map((bone) => bone.quaternion.clone()), hips: b.hips.position.clone() };
     };
 
     // The sword bakes its three hits and the two sword skills' four mastery tiers. Moves passed in replace
     // that whole list, so a caller that passes moves includes the tier clips it wants kept (see the binder).
-    const combos = Array.isArray(moves) && moves.length ? moves : comboKind === 'bowCombo' ? BOW_COMBO : [
-      ...SWORD_COMBO, ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat(),
-    ];
+    const combos = Array.isArray(moves) && moves.length ? moves : defaultMovesFor(comboKind);
+    // The second hand of a two-handed grip closes around the hilt: its fingers are keyed in every clip of
+    // this bake (at rest unless that key holds the hilt). The hand holding the weapon is closed by the runtime.
+    const hiltSides = new Set();
+    for (const combo of combos) for (const key of combo.keys) for (const side of ['l', 'r']) if (Number.isFinite(key[side]?.hilt)) hiltSides.add(side);
+    for (const side of hiltSides) {
+      const hand = side === 'l' ? b.lHand : b.rHand;
+      hand.traverse((n) => { if (n !== hand && n.isBone && restPose.has(n) && FINGER_CURL.test(n.name) && !curlBones.has(n)) { curlBones.set(n, side); animated.push(n); } });
+    }
     for (const [index, combo] of combos.entries()) {
       flowing = combo.ease === 'linear' ? new Map() : null;
       const poses = combo.keys.map((key) => pose(key, combo));
@@ -471,8 +602,20 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
           const u = s / steps;
           const e = linear ? u : u * u * (3 - 2 * u); // smoothstep
           times.push(a + (bt - a) * u);
-          animated.forEach((bone, j) => values[j].push(...poses[i].q[j].clone().slerp(poses[i + 1].q[j], e).toArray()));
-          hipValues.push(...poses[i].hips.clone().lerp(poses[i + 1].hips, e).toArray());
+          const blended = animated.map((bone, j) => poses[i].q[j].clone().slerp(poses[i + 1].q[j], e));
+          const hipsAt = poses[i].hips.clone().lerp(poses[i + 1].hips, e);
+          // Each arm blends on its own, so in a fast swing the hand on the hilt would drift off it: solve
+          // that hand onto the hilt again from the blended pose of the hand carrying the blade.
+          const hilt = s > 0 && ['l', 'r'].find((side) => Number.isFinite(combo.keys[i][side]?.hilt) && Number.isFinite(combo.keys[i + 1][side]?.hilt));
+          if (hilt) {
+            animated.forEach((bone, j) => bone.quaternion.copy(blended[j]));
+            b.hips.position.copy(hipsAt);
+            model.updateMatrixWorld(true);
+            placeHilt(hilt, combo.keys[i + 1][hilt], combo.keys[i + 1][hilt === 'l' ? 'r' : 'l']);
+            animated.forEach((bone, j) => blended[j].copy(bone.quaternion));
+          }
+          animated.forEach((bone, j) => values[j].push(...blended[j].toArray()));
+          hipValues.push(...hipsAt.toArray());
         }
       }
       const last = combo.keys.length - 1;
@@ -483,8 +626,8 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       tracks.push(new THREE.VectorKeyframeTrack(`${b.hips.name}.position`, times, hipValues));
       const clip = new THREE.AnimationClip(combo.name, combo.keys[last].t, tracks);
       // a skill's clip says which hit of its skill it is; a combo clip is its place in the list
-      clip.userData = { combo: comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
-        ...(combo.technique ? { technique: combo.technique } : {}) };
+      clip.userData = { combo: combo.idle ? null : combo.combo || comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
+        ...(combo.idle ? { idle: true, loop: true } : {}), ...(combo.technique ? { technique: combo.technique } : {}) };
       out[combo.name] = clip;
     }
   } finally {

@@ -60,6 +60,8 @@ import { createMountedWeaponPresentation } from './player/mountedWeaponPresentat
 import { createEquippedBowGLBPresentation } from './player/equippedBowGLBPresentation.mjs';
 import { createPlayerWeaponRuntime } from './weapons/playerWeaponRuntime.js';
 import { createPlayerWeaponSummon, resolveSpaceAction } from './weapons/playerWeaponSummon.js';
+import { RIGHT_CLICK, resolveRightClickAction, createSwordStance, weaponStyleMultiplier, basicMeleeComboKind,
+  isLongBlade, SWORD_STANCE, BASIC_MELEE_COMBOS } from './player/weaponRightClick.mjs';
 import { createWeaponEnchantVfx } from './enchantVfx/weaponEnchantVfx.js';
 import { createEnchantPercentCache } from './enchantVfx/enchantVisualState.js';
 import { inferAXEMasteryWeaponId } from './axe/weapons/AXEWeaponIdentity';
@@ -1870,6 +1872,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const chargedKeys = new Map();
     // Draw on canvas down, fire one resolved arrow only on window release.
     const heldBow={active:false,startedAt:0};
+    // The right mouse button by weapon (player/weaponRightClick.mjs): the bow aims, a sword takes the
+    // two-hand stance while held, daggers stab, anything else guards on a tap.
+    const swordStance=createSwordStance();
+    let rightClickAction=null,rightPressAt=0,swordStanceActive=false;
+    let nextMeleeVariant='light'; // 'normal' after a dagger right click
+    // Basic melee strikes waiting for their swing's contact frame: [{ serial, at, land }]
+    const pendingMeleeContacts=[];
     let pendingBowShotCharge=null;
     const cancelBowCharge=()=>{
       heldBow.active=false;pendingBowShotCharge=null;
@@ -2069,6 +2078,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       enchantPercentCache = createEnchantPercentCache();
       weaponEnchantVfx = createWeaponEnchantVfx({ getPercent: (item) => enchantPercentCache?.get(item) || 0 });
       window.__game3dWeaponEnchantVfx = weaponEnchantVfx; // QA: __game3dWeaponEnchantVfx.describe()
+      if (import.meta.env?.DEV) window.__gw3dWeaponDebug = { model: fbx, runtime: weaponRuntime, summon: weaponSummon, combos: weaponCombos, anim: playerAnim };
       coreAnimationController = new CoreAnimationController({ legacyController: playerAnim });
 
       // ─── Spawn all 5 Quest NPCs as individual archer model copies ───
@@ -2718,7 +2728,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         drag.current.active = true;
         drag.current.x = e.clientX;
         drag.current.y = e.clientY;
-        rightDragMoved.current = false; otsAim.current.beginHold(performance.now()); // hold = OTS aim, tap = guard
+        rightDragMoved.current = false;
+        rightPressAt = performance.now();
+        rightClickAction = resolveRightClickAction({
+          family: inferAXEMasteryWeaponId(getActiveEquippedAXEWeapon()),
+          ranged: getActiveWeaponPath()==='ranged', mounted: !!isMountedRef.current,
+        });
+        if (rightClickAction === RIGHT_CLICK.AIM) otsAim.current.beginHold(rightPressAt); // only the bow zooms
+        else if (rightClickAction === RIGHT_CLICK.STANCE) swordStance.press(rightPressAt); // held: both hands on the hilt
+        else if (rightClickAction === RIGHT_CLICK.ATTACK) { // daggers: the normal attack
+          nextMeleeVariant = 'normal'; rangedClickAttackPressed.current = false; attackPressed.current = true;
+        }
         // A browser cannot move its OS cursor programmatically. Pointer lock
         // uses relative mouse deltas and hides the cursor so the reticle stays
         // at the exact centre while the camera follows the mouse.
@@ -2734,7 +2754,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (entryModeRef.current || entryCamera.isActive()) {cancelBowCharge();return;}
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen || window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) {
         cancelBowCharge();drag.current.active=false;rightDragMoved.current=false;
-        otsAim.current.endHold(performance.now());return;
+        otsAim.current.endHold(performance.now());swordStance.cancel();rightClickAction=null;return;
       }
       if(e.button===0&&heldBow.active){
         const status=getBowChargeStatus(Math.max(0,performance.now()-heldBow.startedAt));
@@ -2749,10 +2769,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         return;
       }
       if (e.button === 2) {
-        const startedOnWorldCanvas = drag.current.active; const aimHeldMs = otsAim.current.endHold(performance.now());
+        const startedOnWorldCanvas = drag.current.active; const releasedAt = performance.now();
+        const action = rightClickAction; rightClickAction = null;
+        const aimHeldMs = otsAim.current.endHold(releasedAt);
+        const stance = swordStance.release(releasedAt);
+        const heldMs = action === RIGHT_CLICK.AIM ? aimHeldMs : releasedAt - rightPressAt;
         drag.current.active = false;
-        // Only a quick right-click that never dragged still guards; holding aims.
-        if (startedOnWorldCanvas && !rightDragMoved.current && aimHeldMs < OTS_AIM.tapGuardMs) {
+        // Only a quick right-click that never dragged still guards; holding aims (bow) or takes the two-hand
+        // stance (sword). Daggers attack with the right button, so it never guards with them.
+        if (startedOnWorldCanvas && !rightDragMoved.current && heldMs < OTS_AIM.tapGuardMs &&
+            !stance.wasActive && action !== RIGHT_CLICK.ATTACK) {
           const guardSpend = spendCombatResource('guard');
           if (guardSpend.ok) {
             playerStateMachine.setIntent({ blockHeld: true });
@@ -3109,11 +3135,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       playerAnim?.setMounted?.(isMountedRef.current);
       const equippedForAnimation = getActiveEquippedAXEWeapon();
       const equippedFamily = inferAXEMasteryWeaponId(equippedForAnimation);
+      swordStanceActive = swordStance.update(performance.now()) && equippedFamily === 'sword' && !isMountedRef.current;
       // A change of the active weapon is a draw: it is summoned into the hand (weapons/playerWeaponSummon.js).
-      weaponSummon?.setSuspended(!!isMountedRef.current);
+      // Riding keeps a weapon pack weapon (or the daggers) drawn in the hand: the rider pose holds it, one
+      // hand on the reins. Other weapons (an item's own GLB) hand over to the mount's weapon presenter.
+      const ridingWithPack = !!isMountedRef.current && ['pack', 'daggers'].includes(weaponSummon?.getVisual()?.type);
+      weaponSummon?.setSuspended(!!isMountedRef.current && !ridingWithPack);
       weaponSummon?.sync(equippedForAnimation, equippedFamily);
+      if (ridingWithPack && !weaponSummon.isOut()) weaponSummon.ensureOut();
       playerAnim?.setEquipmentContext?.({ weaponType: equippedFamily || 'unarmed', summon: !!weaponSummon,
-        equipped: !!equippedForAnimation && (!weaponSummon || !weaponSummon.getVisual() || weaponSummon.isOut()) });
+        equipped: !!equippedForAnimation && (!weaponSummon || !weaponSummon.getVisual() || weaponSummon.isOut()),
+        twoHand: swordStanceActive });
       if (getPlayerHUD().hp <= 0 && !playerAnim?.getDebugState?.().isDead) {
         if (isMountedRef.current) {
           restoreMountedRider();
@@ -3131,7 +3163,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // After the base pose: the summon gesture, the closed hand and the forming / melting weapon.
       // No bow `drawing` state: the clone's bowVisuals arrow (fired with the press) is the only arrow.
       weaponSummon?.update(delta, { state: playerAnim?.getCurrent?.(), aiming: !!playerAnim?.getIsAiming?.(),
-        moving: weaponPlayerMoving, inCombat: isInCombat(),
+        moving: weaponPlayerMoving && !isMountedRef.current, inCombat: isInCombat(),
         externalRoot: weaponSummon?.getVisual()?.type === 'external' ? model?.getObjectByName?.('AXE_Equipped_Training_Bow') || null : null });
       // The held weapon's enchantment light: internal glow, tight aura and anchored sparks (visual only).
       weaponEnchantVfx?.update(delta, { roots: weaponRuntime?.getRoots() || [], item: equippedForAnimation,
@@ -3140,12 +3172,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Claude combo presentation cues; avoid duplicate bow arrows. Existing
       // charged-shot hit resolution and bowVisuals remain authoritative.
       for (const cue of playerAnim?.pollComboEvents?.() || []) {
-        if (cue.kind?.startsWith('sword') && cue.type === 'sweep') {
+        // a basic melee click's strike lands on its own swing's contact frame (owner handoff 2026-11-18)
+        if (cue.type === 'hit' && BASIC_MELEE_COMBOS.has(cue.kind)) {
+          const waiting = pendingMeleeContacts.findIndex((contact) => contact.serial === cue.serial);
+          if (waiting >= 0) pendingMeleeContacts.splice(waiting, 1)[0].land();
+        }
+        if (/^(sword|dagger)/.test(cue.kind || '') && cue.type === 'sweep') {
           // the ribbon follows the summoned blade itself (base -> tip) over its cutting arc
           weaponTrails.emit({ actor: model, weaponPath: 'melee', hitIndex: cue.index, record: cue.seconds,
             blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null });
         }
       }
+      // a swing cut short before its contact (a dodge, a hit, a newer press) lands nothing
+      for (let i = pendingMeleeContacts.length - 1; i >= 0; i--)
+        if (performance.now() - pendingMeleeContacts[i].at > 2000) pendingMeleeContacts.splice(i, 1);
       ascensionVisualRuntime?.lateUpdate?.(); // levitation lifts the posed skeleton
       ascendedGearVisualRuntime?.lateUpdate?.(); // animated hand socket placement
       if (dodgeVanish.active) {
@@ -3241,6 +3281,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           drag.current.active = false;
           rightDragMoved.current = false;
           playerStateMachine.setIntent({ blockHeld: false, aimHeld: false }); otsAim.current.endHold(performance.now()); otsAim.current.setPadAim(false);
+          swordStance.cancel(); rightClickAction = null;
           playerAnim?.setBlocking(false);
           clickToMove.cancel('ui');
           playerAnim?.setAirWalkHeld?.(false);
@@ -3401,6 +3442,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
         const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
+          (swordStanceActive ? SWORD_STANCE.moveSpeedMultiplier : 1) *
           (skillApproaching ? 2.2 : 1);
         const canMove = isMoving && airMode!=='dash' &&
           !window.__axeTileInspectionEditing && !dedicatedMode && !movementOverridden &&
@@ -4177,6 +4219,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
           pendingBowShotCharge=null;
+          nextMeleeVariant='light';
         }
         if (canProcessBasicStrike || pendingSkillStrike) {
           // Attacking with the weapon dismissed summons it first (presentation only; the strike proceeds).
@@ -4191,7 +4234,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             rangedClickAttackPressed.current=false;
             pendingBowShotCharge=null;
           }
-          const strikeMultiplier = isSkillStrike ? pendingSkillStrike.multiplier : 1;
+          // How the weapon is used (player/weaponRightClick.mjs): the two-hand sword stance hits harder,
+          // dagger light slashes carry less than the stab. PvE only: duels use the server's own numbers.
+          const styleFamily = inferAXEMasteryWeaponId(getActiveEquippedAXEWeapon());
+          const meleeVariant = isSkillStrike ? null : nextMeleeVariant;
+          if (!isSkillStrike) nextMeleeVariant = 'light';
+          const basicMeleeKind = basicMeleeComboKind({ family: styleFamily, stance: swordStanceActive,
+            variant: meleeVariant, longBlade: isLongBlade(weaponRuntime?.getCurrent?.()) });
+          const styleMultiplier = window.__activeDuel ? 1 : weaponStyleMultiplier({ family: styleFamily,
+            stance: swordStanceActive, variant: meleeVariant, isSkill: isSkillStrike, skillWeaponType: pendingSkillStrike?.weaponType });
+          const strikeMultiplier = (isSkillStrike ? pendingSkillStrike.multiplier : 1) * styleMultiplier;
 
           const activeDuel = typeof window !== 'undefined' ? window.__activeDuel : null;
           const activeWeaponPath = getActiveWeaponPath();
@@ -4227,7 +4279,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                   getSkillMasteryLevel(pendingSkillStrike.skillId),
                   getSkillById(pendingSkillStrike.skillId)?.max_level):null;
               const comboKind = !isMountedRef.current ? (activeWeaponPath === 'ranged' ? 'bowCombo'
-                : ['damage', 'melee'].includes(activeWeaponPath) ? (swordSkillKind||'swordCombo') : null) : null;
+                : (swordSkillKind||basicMeleeKind)) : null;
               const montage = comboKind || (activeWeaponPath === 'ranged' ? 'attack' : 'kick');
               if (playerAnim?.HandleCombat) {
                 playerAnim.HandleCombat(montage, {
@@ -4241,7 +4293,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
               // Claude's sword combo draws at its actual cutting arc; bow keeps
               // the existing one-arrow-per-cast feedback and hit/miss registration.
-              if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
+              if (!(/^(sword|dagger)/.test(comboKind || '') && playerAnim?.getComboState?.())) weaponTrails.emit({
                 actor: model, weaponPath: activeWeaponPath,
                 hitIndex: pendingSkillStrike?.hitIndex ?? 0,
                 blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null,
@@ -4291,13 +4343,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               ...bowAimTarget,chargeMultiplier:bowShot?.multiplier||1,
             };
             if(activeWeaponPath==='ranged')bowVisuals.noteAimTime(performance.now()-bowAimStartedAt);
-            // The bridge and normal enemy damage use exactly this SAME resolved
-            // hitbox; a second independent raycast must not select another AI.
-            // Melee keeps its original synchronous priority resolution. Bow
-            // resolution is delayed only until AFTER the shot tracer exists,
-            // so a same-frame boss/rogue hit paints that exact tracer green.
-            let attackConsumedByPriorityTarget = activeWeaponPath==='ranged'
-              ? false : dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             // Basic swings use attack-speed timing. Timed skill combo hits
             // have their own scheduled spacing and bypass this basic cooldown.
             if (!isSkillStrike) playerAttackCooldown.current = basicAttackCooldown(getAXEAttackSpeedMult(getPlayerHUD().derived));
@@ -4306,12 +4351,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               ?swordSkillComboKind(pendingSkillStrike.skillId,
                 getSkillMasteryLevel(pendingSkillStrike.skillId),
                 getSkillById(pendingSkillStrike.skillId)?.max_level):null;
+            // A basic melee click swings the held weapon's own combo (player/weaponRightClick.mjs): a sword's
+            // three hits (two-handed in the stance), daggers' light chain or stab; empty hands punch and kick.
             const comboKind = !isMountedRef.current ? (activeWeaponPath === 'ranged' ? 'bowCombo'
-              : ['damage', 'melee'].includes(activeWeaponPath) && !isRangedClickAttack
-                ? (swordSkillKind||'swordCombo') : null) : null;
+              : !isRangedClickAttack ? (swordSkillKind||basicMeleeKind) : null) : null;
             const montage = comboKind || (isRangedClickAttack || activeWeaponPath === 'ranged' ? 'attack' : 'kick');
+            let swingAccepted = false;
             if (playerAnim?.HandleCombat) {
-              playerAnim.HandleCombat(montage, {
+              swingAccepted = playerAnim.HandleCombat(montage, {
                 combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
                 hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                 heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
@@ -4320,11 +4367,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playOneShot(montage, 1.4);
             }
             playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
-            if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
+            if (!(/^(sword|dagger)/.test(comboKind || '') && playerAnim?.getComboState?.())) weaponTrails.emit({
               actor: model, weaponPath: activeWeaponPath,
               hitIndex: pendingSkillStrike?.hitIndex ?? 0,
               blade: weaponSummon?.isOut() ? weaponRuntime?.getBladeAnchors() : null,
             });
+            // One swing, one strike. The bridge and normal enemy damage use exactly this SAME resolved
+            // hitbox; a second independent raycast must not select another AI. A bow's strike resolves
+            // right AFTER the shot tracer exists, so a same-frame boss/rogue hit paints that exact tracer
+            // green; a basic melee swing's strike waits for that swing's contact frame (below).
+            const landStrike = () => {
+            let attackConsumedByPriorityTarget = activeWeaponPath==='ranged'
+              ? false : dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             if(activeWeaponPath==='ranged'){
               bowVisuals.fire({origin:model.position,
                 target:bowAimTarget?.point||cameraBowImpactPoint(camera,otsCameraColliders(),BOW_PVE_RANGE)});
@@ -4556,6 +4610,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             }
           }
             } // each forward target (one for basic/single; many only for AoE)
+            };
+            // A basic melee swing lands at its clip's contact frame: the controller's 'hit' cue carrying this
+            // swing's number. Anything else, or a press that started no combo swing, lands right away.
+            const contactSerial = swingAccepted && !isSkillStrike && comboKind && comboKind === basicMeleeKind &&
+              playerAnim?.getComboState?.() ? playerAnim.getLastSwingSerial?.() : null;
+            if (contactSerial) pendingMeleeContacts.push({ serial: contactSerial, at: performance.now(), land: landStrike });
+            else landStrike();
         }
       }
     }
@@ -5037,8 +5098,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             mount: mountedRiderMount, definition: companionDefRef.current });
           mountedWeapon = createMountedWeaponPresentation({ player: model });
         }
-        mountedAttackSeconds = Math.max(0, mountedAttackSeconds - delta); mountedRider.update({ weaponHand: mountedAttackSeconds > 0 });
-        const equippedWeapon = mountedAttackSeconds > 0 ? getActiveEquippedAXEWeapon() : null; // both hands hold the mount unless attacking
+        mountedAttackSeconds = Math.max(0, mountedAttackSeconds - delta);
+        // A drawn weapon pack weapon is carried: the reins in one hand, the weapon out at the other's side
+        // (daggers: a dagger in the reins hand too). Bows are held in the left hand, so the right takes the reins.
+        const ridingFamily = inferAXEMasteryWeaponId(getActiveEquippedAXEWeapon());
+        const ridingHands = ['pack', 'daggers'].includes(weaponSummon?.getVisual()?.type) ? weaponRuntime?.getHands?.() || [] : [];
+        const ridingRoots = weaponRuntime?.getRoots?.() || [];
+        const hold = ridingHands.length ? {
+          family: ridingFamily,
+          reins: ridingFamily === 'dual_blades' || ridingHands.every((h) => h.side === 'left') ? 'Right' : 'Left',
+          weapons: ridingHands.map((h) => ({ side: h.side === 'left' ? 'Left' : 'Right', root: ridingRoots.find((r) => r.parent === h.handBone) || null })),
+        } : null;
+        mountedRider.update({ weaponHand: mountedAttackSeconds > 0, hold });
+        // Other weapons (no pack model) still appear in the riding hand while attacking.
+        const equippedWeapon = !hold && mountedAttackSeconds > 0 ? getActiveEquippedAXEWeapon() : null;
         mountedWeapon.update({ item: equippedWeapon,
           family: inferAXEMasteryWeaponId(equippedWeapon) });
         // A weapon appearing in the riding hand pours together like the on-foot summon.

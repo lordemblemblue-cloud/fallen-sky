@@ -48,7 +48,13 @@ export function createWeaponAutoDismiss({ seconds = WEAPON_AUTO_DISMISS_SECONDS 
   };
 }
 
-export function createPlayerWeaponSummon({ model, scene, runtime, renderer = null, getPixelScale, autoDismissSeconds = WEAPON_AUTO_DISMISS_SECONDS }) {
+// An equip that failed (the model or the manifest did not load) is retried this many times, waiting
+// 0.5, 1, 2 and 4 s, before the weapon counts as put away; drawing it again starts over.
+export const WEAPON_EQUIP_RETRY = Object.freeze({ attempts: 4, firstWait: 0.5 });
+const STRAY_SWEEP_SECONDS = 1;
+
+export function createPlayerWeaponSummon({ model, scene, runtime, renderer = null, getPixelScale,
+  autoDismissSeconds = WEAPON_AUTO_DISMISS_SECONDS, onError = (e) => console.warn('[weapons]', e) }) {
   const fx = createWeaponConstructFx({ scene, renderer, getPixelScale });
   const gesture = createWeaponSummonGesture({ model });
   const autoDismiss = createWeaponAutoDismiss({ seconds: autoDismissSeconds });
@@ -58,37 +64,69 @@ export function createPlayerWeaponSummon({ model, scene, runtime, renderer = nul
   let suspended = false; // riding: the mount's own weapon presenter draws the weapon
   let token = 0;
   let externalPending = null;
+  let inFlight = 0;  // token of the draw whose model is still loading (0 = none)
+  let retry = null;  // { wait, attempt } after an equip that failed
+  let sweepClock = 0;
+  // Old weapons melting back into the hand while the next one forms. Each is removed when its melt
+  // ends, and also when the melt is cut short (another effect on the same root, a dispose): left
+  // attached, its real material comes back and the old weapon stays solid in the hand.
+  const orphans = new Set();
 
   const kindOf = (v) => (v?.kind === 'bow' ? 'bow' : 'blade');
+  const heldId = (v) => (v?.type === 'daggers' ? 'daggers' : v?.id);
+  const removeOrphan = (root) => { orphans.delete(root); root?.removeFromParent(); };
+  function meltAway(root, kind) {
+    if (!root) return;
+    orphans.add(root);
+    try { fx.play(root, { kind, mode: 'melt', onDone: () => removeOrphan(root) }); }
+    catch (error) { removeOrphan(root); onError(error); }
+  }
 
-  async function materialize({ animate = true } = {}) {
+  async function materialize({ animate = true, attempt = 0 } = {}) {
     if (!visual) return false;
     const my = ++token;
     out = true;
+    retry = null;
     if (visual.type === 'external') {
+      inFlight = 0;
       runtime.unequip();
       if (animate) externalPending = { since: 0 };
       return true;
     }
-    const ok = visual.type === 'daggers' ? await runtime.equipDaggers() : await runtime.equip(visual.id);
-    if (!ok || my !== token || suspended) return ok;
-    if (!animate) { runtime.setHandClosed(true); return true; }
-    runtime.setStanceWeight(1); // form in the combat grip, then settle into the carry
-    gesture.play({
-      hands: runtime.getHands().map((h) => ({ side: h.side, gripQuaternion: h.gripQuaternion })),
-      kind: visual.type === 'daggers' ? 'dagger' : kindOf(visual),
-      hold: WEAPON_CONSTRUCT_SECONDS.build * 0.85,
-    });
-    for (const part of runtime.getHands()) {
-      const root = runtime.getRoots().find((r) => r.parent === part.handBone);
-      fx.play(root, { kind: kindOf(visual), mode: 'build' }); // the liquid pools at the grip, inside the closed hand
+    inFlight = my;
+    let ok = false;
+    try { ok = visual.type === 'daggers' ? await runtime.equipDaggers() : await runtime.equip(visual.id); }
+    catch (error) { onError(error); ok = false; }
+    if (my !== token) return ok; // a newer draw, dismiss or switch took over
+    inFlight = 0;
+    if (suspended) return ok;     // riding: drawn again on dismount
+    if (!ok) {
+      // Nothing reached the hand: try again shortly instead of staying "out" with an empty hand.
+      if (attempt < WEAPON_EQUIP_RETRY.attempts) retry = { wait: WEAPON_EQUIP_RETRY.firstWait * 2 ** attempt, attempt: attempt + 1 };
+      else { out = false; onError(new Error(`could not put ${heldId(visual)} in the hand`)); }
+      return false;
     }
+    try {
+      if (!animate) { runtime.setHandClosed(true); return true; }
+      runtime.setStanceWeight(1); // form in the combat grip, then settle into the carry
+      gesture.play({
+        hands: runtime.getHands().map((h) => ({ side: h.side, gripQuaternion: h.gripQuaternion })),
+        kind: visual.type === 'daggers' ? 'dagger' : kindOf(visual),
+        hold: WEAPON_CONSTRUCT_SECONDS.build * 0.85,
+      });
+      for (const part of runtime.getHands()) {
+        const root = runtime.getRoots().find((r) => r.parent === part.handBone);
+        fx.play(root, { kind: kindOf(visual), mode: 'build' }); // the liquid pools at the grip, inside the closed hand
+      }
+    } catch (error) { onError(error); } // the weapon is in the hand either way
     return true;
   }
 
   function dismiss({ animate = true } = {}) {
     if (!out) return false;
     out = false;
+    retry = null;
+    inFlight = 0;
     autoDismiss.reset();
     const my = ++token;
     gesture.cancel();
@@ -98,7 +136,9 @@ export function createPlayerWeaponSummon({ model, scene, runtime, renderer = nul
     runtime.releaseHand();
     let left = roots.length;
     for (const root of roots) {
-      fx.play(root, { kind: kindOf(visual), mode: 'melt', onDone: () => { if (--left === 0 && my === token && !out) runtime.unequip(); } });
+      try {
+        fx.play(root, { kind: kindOf(visual), mode: 'melt', onDone: () => { if (--left === 0 && my === token && !out) runtime.unequip(); } });
+      } catch (error) { onError(error); runtime.unequip(); break; }
     }
     return true;
   }
@@ -115,10 +155,11 @@ export function createPlayerWeaponSummon({ model, scene, runtime, renderer = nul
       // switching: the old weapon melts back into the hand while the new one starts forming
       const oldKind = kindOf(visual);
       gesture.cancel();
-      for (const root of runtime.orphan()) fx.play(root, { kind: oldKind, mode: 'melt', onDone: () => root.removeFromParent() });
+      for (const root of runtime.orphan()) meltAway(root, oldKind);
       out = false;
     }
     visual = next;
+    retry = null;
     if (suspended) { out = true; return; }
     // world entry shows the equipped weapon without the summon; later draws animate
     materialize({ animate: !first });
@@ -128,8 +169,27 @@ export function createPlayerWeaponSummon({ model, scene, runtime, renderer = nul
     if (suspended === !!next) return;
     suspended = !!next;
     gesture.cancel();
-    if (suspended) runtime.unequip();
+    if (suspended) { retry = null; runtime.unequip(); }
     else if (out) materialize({ animate: false });
+  }
+
+  // Keeps the hand equal to what it should hold, whatever interrupted a draw or a melt.
+  function reconcile(delta) {
+    for (const root of orphans) if (!fx.isPlaying(root)) removeOrphan(root);
+    const roots = runtime.getRoots();
+    if (!out) {
+      // put away: a melt that ended without its clean-up must not leave the weapon solid in the hand
+      if (roots.length && !roots.some((r) => fx.isPlaying(r))) runtime.unequip();
+    } else if (!suspended && visual && visual.type !== 'external' && !inFlight) {
+      if (retry) {
+        retry.wait -= delta;
+        if (retry.wait <= 0) materialize({ animate: false, attempt: retry.attempt });
+      } else if (runtime.getCurrent()?.id !== heldId(visual)) {
+        retry = { wait: 0, attempt: 1 }; // lost from the hand: draw it again next frame
+      }
+    }
+    sweepClock += delta;
+    if (sweepClock >= STRAY_SWEEP_SECONDS) { sweepClock = 0; runtime.sweepStrays?.([...orphans]); }
   }
 
   return {
@@ -155,11 +215,13 @@ export function createPlayerWeaponSummon({ model, scene, runtime, renderer = nul
         externalPending = null;
       } else if (externalPending && (externalPending.since += delta) > 3) externalPending = null;
       fx.update(delta);
+      reconcile(delta);
       if (!suspended && autoDismiss.update(delta, { out, moving, inCombat: inCombat || aiming })) dismiss({ animate: true });
     },
     // Riding: play the forming effect on the mount presenter's weapon when it appears.
     constructOn: (root, kind = 'blade') => fx.play(root, { kind, mode: 'build', hand: root?.parent || null }),
     isAnimating: () => gesture.isActive() || fx.activeCount() > 0,
-    dispose() { token++; gesture.cancel(); fx.dispose(); },
+    getOrphanCount: () => orphans.size,
+    dispose() { token++; gesture.cancel(); fx.dispose(); for (const root of [...orphans]) removeOrphan(root); },
   };
 }
