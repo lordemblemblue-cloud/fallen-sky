@@ -200,7 +200,7 @@ for (const rigId of Object.keys(RIGS)) {
         const hips = h.world(h.bone('Hips'));
         sign[move.name] = { blade: along(), hand: h.world(h.bone('RightHand')).sub(hips).divideScalar(h.k), hips: hips.y / h.k };
         poseAt(model, mixer, action, clip, 0); starts[move.name] = joints();
-        poseAt(model, mixer, action, clip, clip.duration); ends[move.name] = joints();
+        poseAt(model, mixer, action, clip, move.cancel); ends[move.name] = joints(); // where a queued cast takes over
         if (rigId === 'fused-female-v1') {
           const dump = { t: [], p: [] };
           for (let i = 0; i < 6; i++) {
@@ -233,7 +233,7 @@ for (const rigId of Object.keys(RIGS)) {
         assert.ok(d > 3, 'three-hit level ' + i + ' and level ' + j + ' land differently (' + d.toFixed(2) + ')');
       }
       console.log('  how differently the levels land (1 = clearly different): ' + lines.join(', '));
-      // chains: how far the body is from the single hit's first pose when the multi's last cut ends
+      // chains: how far the body is from the single hit's first pose when the multi's last cut lets go
       for (const chain of skillsModule.SWORD_SKILL_CHAINS) {
         const end = ends['swordSkillMulti' + chain.multi + 'Hit3'], start = starts['swordSkillSingle' + chain.single];
         const hipsShift = end[0].clone().sub(start[0]).setY(0);
