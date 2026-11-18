@@ -1,0 +1,26 @@
+{
+ "Flip_Left": {
+  "frames": 20,
+  "duration": 0.62,
+  "min_clearance_hh": -0.0,
+  "max_clearance_hh": 0.449
+ },
+ "Back_Flip": {
+  "frames": 23,
+  "duration": 0.72,
+  "min_clearance_hh": -0.0,
+  "max_clearance_hh": 0.615
+ },
+ "Front_Roll": {
+  "frames": 22,
+  "duration": 0.7,
+  "min_clearance_hh": -0.0,
+  "max_clearance_hh": 0.0
+ },
+ "Flip_Right": {
+  "frames": 20,
+  "duration": 0.62,
+  "min_clearance_hh": -0.0,
+  "max_clearance_hh": 0.449
+ }
+}

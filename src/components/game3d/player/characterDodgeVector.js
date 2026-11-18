@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { game3dGame2MovementBasis } from './Game3DGame2Camera.mjs';
 import { dodgeDirectionFromAxes } from './game3dEightWayDodge.mjs';
 
-// Dodge direction is CHARACTER-relative, never camera-relative.
-// Camera yaw/pitch have ZERO influence here: forward/back come from the body's
-// own facing (flattened to the ground plane) and left/right come from the
-// perpendicular of that facing. So "dodge left" always goes to the character's
-// left side, whatever angle the camera happens to be looking from.
+// getCharacterDodge resolves W/A/S/D in the CHARACTER's frame: forward/back
+// come from the body's own facing (flattened to the ground plane) and
+// left/right from its perpendicular, whatever the camera looks from. The
+// angled Air Jump aims with it. Dodges use getInputDodge below instead: the
+// owner asked for the Luna dashboard's screen-relative controls (2026-11).
 //
 // Facing convention in this world: the player model is yawed with
 // setFromAxisAngle(up, atan2(moveX, moveZ)), so the body's forward is
@@ -69,4 +69,30 @@ export function getCharacterDodge(facingSource, input = {}, { fallback = 'forwar
   }
   _dir.normalize();
   return {direction,vector:_dir.clone()};
+}
+
+// Dodges on the Luna dashboard / Game 2 controls (owner, 2026-11): W/A/S/D point
+// on SCREEN through the camera yaw (or the lock-on axes), exactly like movement,
+// so double-tap A always goes screen-left, whichever way the body faces. The
+// eight-way move then comes from where that points relative to the BODY, in
+// 45-degree sectors, so the animation still matches the body: running left and
+// double-tapping A rolls on along the run. No key: the body's own `fallback`
+// direction (R alone rolls backward).
+// `basis` replaces the camera basis while locked on ({ forward, right }).
+// Returns { direction, vector } like getCharacterDodge; vector is a fresh unit Vector3.
+const EIGHT_WAY_SECTORS = ['forward', 'forwardRight', 'right', 'backwardRight', 'backward', 'backwardLeft', 'left', 'forwardLeft'];
+export function getInputDodge(facingSource, cameraYaw, input = {}, { basis = null, fallback = 'forward' } = {}) {
+  const { forward: camForward, right: camRight } = basis || getPlanarBasisFromYaw(cameraYaw);
+  const dir = new THREE.Vector3();
+  if (input.forward) dir.add(camForward);
+  if (input.backward) dir.sub(camForward);
+  if (input.right) dir.add(camRight);
+  if (input.left) dir.sub(camRight);
+  dir.y = 0;
+  if (dir.lengthSq() < 1e-8) return getCharacterDodge(facingSource, {}, { fallback });
+  dir.normalize();
+  const { forward, right } = getCharacterPlanarVectors(facingSource);
+  const angle = Math.atan2(dir.dot(right), dir.dot(forward)); // 0 along the body, +PI/2 its right side
+  const sector = ((Math.round(angle / (Math.PI / 4)) % 8) + 8) % 8;
+  return { direction: EIGHT_WAY_SECTORS[sector], vector: dir };
 }

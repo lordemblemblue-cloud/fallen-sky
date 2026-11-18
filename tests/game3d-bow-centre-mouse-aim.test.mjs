@@ -30,7 +30,10 @@ test('mouse movement drives camera under pointer lock; click-to-move cannot cons
  assert.match(world,/getActiveWeaponPath\(\)!=='ranged' && isAXEClickToMoveEnabled\(\)/);
  assert.match(world,/if \(getActiveWeaponPath\(\)==='ranged' && !altCursorHeld\.current/);
  assert.match(world,/renderer\.domElement\.requestPointerLock\?\.\(\)/);
- assert.match(world,/captured \? e\.movementX : e\.clientX - drag\.current\.x/);
+ // Luna dashboard mouse look: relative movement under pointer lock, client deltas while right-dragging
+ // (and plain hover over the world canvas when the page refuses the lock).
+ assert.match(world,/if \(captured\) \{\s*dx = e\.movementX; dy = e\.movementY;/);
+ assert.match(world,/dx = e\.clientX - drag\.current\.x;/);
  assert.match(world,/applyGame3DGame2MouseLook\(orbit\.current, dx, dy\)/);
  assert.match(world,/bowEquipped:getActiveWeaponPath\(\)==='ranged'&&!isMountedRef\.current/);
 });

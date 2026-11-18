@@ -200,7 +200,7 @@ import {
 import { createAvatarDrawCalls } from './player/avatarDrawCalls';
 import { createWorldEnvironmentSystem } from './WorldEnvironmentSystem';
 import { createCharacterReadabilityLights } from './CharacterReadabilityLights';
-import { getCharacterDodge, getPlanarBasisFromYaw } from './player/characterDodgeVector';
+import { getCharacterDodge, getInputDodge, getPlanarBasisFromYaw } from './player/characterDodgeVector';
 import { getEightWayDodgeMove } from './player/game3dEightWayDodge.mjs';
 import { game3dInputKey, game3dMoveAxes } from './player/Game3DMovementInput.mjs';
 import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, directionRelativeToFacing } from './axe/player/AXEClickToMove';
@@ -2226,18 +2226,31 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       return { forward, right: cameraRight, cameraForward, cameraRight };
     };
 
-    // Eight-way dodges are actor-relative, not based on camera pitch/yaw.
-    // Each diagonal gets its own actual animation and collision-swept vector.
-    // R alone is the backward shoulder roll; R + WASD chooses a 360-degree roll.
+    // Eight-way dodges on the Luna dashboard controls (owner, 2026-11): the
+    // keys point on SCREEN through the camera yaw (or the lock-on axes), like
+    // WASD movement, so double-tap A always dodges screen-left. The eight-way
+    // move (its animation) is picked from where that points relative to the
+    // body. The tapped key wins over a held opposite key. R alone is the
+    // backward roll; R + WASD rolls toward the keys.
     const getDodgeVectorAndName = (key) => {
       if (!model) return { direction: 'backward', vector: new THREE.Vector3(0, 0, -1) };
-      return getCharacterDodge(model, {
-        forward: key === 'w' || !!keys.current['w'],
-        backward: key === 's' || !!keys.current['s'],
-        left: key === 'a' || !!keys.current['a'],
-        right: key === 'd' || !!keys.current['d'],
-      }, {fallback:key==='r'?'backward':'forward'});
+      const held = (k, opposite) => key === k || (key !== opposite && !!keys.current[k]);
+      const lockAxes = getCombatAxes();
+      return getInputDodge(model, orbit.current.yaw, {
+        forward: held('w', 's'),
+        backward: held('s', 'w'),
+        left: held('a', 'd'),
+        right: held('d', 'a'),
+      }, { basis: lockAxes ? { forward: lockAxes.forward, right: lockAxes.cameraRight } : null,
+        fallback: key === 'r' ? 'backward' : 'forward' });
     };
+    // The angled Air Jump keeps its body-relative aim: forward plus any held W/A/S/D.
+    const getAirJumpVector = () => (model ? getCharacterDodge(model, {
+      forward: true,
+      backward: !!keys.current['s'],
+      left: !!keys.current['a'],
+      right: !!keys.current['d'],
+    }).vector : new THREE.Vector3(0, 0, 1));
 
     const updateLockOnRotation = (delta) => {
       const target = getLockOnTargetPosition();
@@ -2419,7 +2432,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const nowMs=performance.now();
           const kickDoubleTap=['boost','walk'].includes(currentMode)&&
             lastAirKickTapMs>0 && nowMs-lastAirKickTapMs<=HALO_FLIGHT_RULES.doubleTapMilliseconds;
-          const vector=model?getDodgeVectorAndName('w').vector:new THREE.Vector3(0,0,1);
+          const vector=getAirJumpVector();
           const result=allowAirWalk
             ?playerAnim?.requestAirWalkAction?.({
               haloPercent:profile.haloPercent,directionVector:vector,doubleTap:kickDoubleTap,
@@ -2441,7 +2454,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       if(k==='r'){
         if(!e.repeat && !isMountedRef.current && playerStateMachine.canStart('dodge')){
-          const roll=getDodgeVectorAndName('w');
+          const roll=getDodgeVectorAndName('r');
           const budget=canSpendCombatResource('dodge');
           if(!budget.ok)showCombatNotice('Not enough stamina to roll');
           else if(playerAnim?.requestRoll?.(roll.vector,roll.direction)){
@@ -2754,18 +2767,25 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         drag.current.active = false;
         return;
       }
+      // Luna dashboard mouse look: relative movement while the pointer is
+      // locked (left-click the world). Without the lock, as on the dashboard,
+      // plain hover over the world canvas free-looks, so a page or iframe that
+      // refuses pointer lock still has a working camera. Right-drag remains.
       const captured = document.pointerLockElement === renderer.domElement;
-      if (!captured && !drag.current.active) return;
-      // Relative movement stays smooth under pointer lock; client positions
-      // remain usable if an iframe/browser blocks pointer lock.
-      const dx = captured ? e.movementX : e.clientX - drag.current.x;
-      const dy = captured ? e.movementY : e.clientY - drag.current.y;
-      if (!captured) {
+      let dx = 0, dy = 0;
+      if (captured) {
+        dx = e.movementX; dy = e.movementY;
+      } else if (drag.current.active) {
+        dx = e.clientX - drag.current.x;
+        dy = e.clientY - drag.current.y;
         drag.current.x = e.clientX;
         drag.current.y = e.clientY;
-      }
-      if (drag.current.active && (Math.abs(dx) > 1 || Math.abs(dy) > 1))
-        rightDragMoved.current = true;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) rightDragMoved.current = true;
+      } else if (e.target === renderer.domElement && !isAXEClickToMoveEnabled()) {
+        // Some browsers report one large jump when the cursor re-enters the page.
+        dx = Math.max(-120, Math.min(120, e.movementX || 0));
+        dy = Math.max(-120, Math.min(120, e.movementY || 0));
+      } else return;
       applyGame3DGame2MouseLook(orbit.current, dx, dy);
     };
     const onWheel = (e) => {
@@ -3389,7 +3409,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if (!combatAxes && !otsAim.current.aiming && !heldBow.active) {
             const angle = Math.atan2(move.x, move.z);
             const targetQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), angle);
-            model.quaternion.slerp(targetQ, ROT_SMOOTH);
+            // Luna dashboard turn rate (12/s, frame-rate independent).
+            model.quaternion.slerp(targetQ, Math.min(1, delta * 12));
           }
         }
         // Glue player feet to terrain, then let the manual controller add jump/roll offsets.

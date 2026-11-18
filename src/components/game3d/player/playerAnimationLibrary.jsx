@@ -5,6 +5,7 @@ import {nativePlayerAnimationClips} from './playerNativeAnimationClips';
 import { withUprightStanding } from './uprightStandingClip.js';
 import {resolvePlayerAnimationKey, uploadedPlayerAction} from './playerAnimationActions.mjs';
 import {loadUploadedAnimationMontage} from './uploadedAnimationMontage.mjs';
+import {loadDodgeClips,EIGHT_WAY_DODGE_PACK_SLOTS} from './dodgeMoves.js';
 
 const norm = (value = '') => value.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 const initialFallbackClips = new WeakMap();
@@ -139,6 +140,20 @@ export async function loadPlayerAnimationClips(loader, target, { onMontageReady 
   // for its authored Idle/Walk/Run/dodges. The same rule applies to all four
   // bodies, not only fused v2. Extra motion clips may ship in future GLBs.
   Object.assign(clipsByKey,withUprightStanding(target, nativePlayerAnimationClips(target)));
+  // Authored dodges (dodgeMoves.js, owner 2026-11): side flips, a back flip and
+  // a forward roll, retargeted onto this body, fill the eight-way dodge slots.
+  // They replace native side-hops and the generated placeholder rolls, but never
+  // an admin upload or the owner's montage for that slot (applied after).
+  try {
+    const pack=await loadDodgeClips(target);
+    for(const [slot,source] of Object.entries(EIGHT_WAY_DODGE_PACK_SLOTS)){
+      if(chosen.has(slot)||!pack[source])continue;
+      const clip=pack[source].clone();
+      clip.name=slot;
+      clip.userData=pack[source].userData;
+      clipsByKey[slot]=clip;
+    }
+  } catch (error) { console.warn('[Game3D] Dodge moves unavailable; keeping the generated dodges.', error); }
   // These are the motions the owner explicitly supplied for this montage.
   // Native clips still start immediately; validated montage clips take over
   // only for characters enabled by the pack loader (Eve first).
