@@ -50,9 +50,24 @@ runtime.
 
 The existing five-area tests (`tests/game3d-clone-wolfveil-five-area-loading.test.mjs`) pass unchanged.
 
+## Live check (guest `/gameview`, `vite dev`)
+
+This was a local merge of this branch with `claude/migration-repair-20261118`, the branch that re-wires the round-2
+landscaping. The two branches merge without conflicts. In the running game:
+- The town floor draws with the baked splat material.
+- The baked rock field draws 1,252 rocks in 18 batches. The old path-edge stones are hidden in favour of the baked ones.
+- All 53 plant-card meshes have their atlas.
+- The gates and veils stand on their borders, and the light arches are gone.
+
+![Market Bridge gate](screenshots-area-gates-20261118/fs-market-bridge-gate.jpg)
+![West veil and gates](screenshots-area-gates-20261118/fs-west-veil.jpg)
+
+These frames were rendered straight from the scene with no post effects, at the hidden browser pane's 769×720
+size, so the aspect ratio is squeezed. The game's living ink style re-tints the torii from vermilion to ink.
+
 ## Known limitations
 
-- **Not checked visually in this repository.** The same torii, veil and membrane shaders were checked in the harness of the earlier clone (see the `screenshots-portal-regions-20261118` sheet on the `claude/landscape-whole-map-20261116` branch of `marcusflow1-arch/Fallen-sky-`). Not run signed in or on a phone.
+- **Not run signed in or on a phone.** Walking through a gate in the live game was not driven by real input. The veil collision is covered by tests, and was walked with collision in the earlier clone's harness.
 - **Some trails stop at a veil.** The portal plan has no portal where a trail runs down the river channel (by design: only bridges cross the water). Those trails, for example the riverside loop by the waterfall, end at the veil; the bridges are the way across.
 - **The server duel worker does not know about the veils** (client collision only), and NPC paths are not re-planned around them.
 
