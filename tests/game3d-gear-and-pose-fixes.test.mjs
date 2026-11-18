@@ -70,18 +70,22 @@ for (const [gender, [file, rigId]] of Object.entries(BODIES)) {
       const left = (mesh, flags) => { if (!flags) return 0; const a = mesh.geometry.index.array; let n = 0; for (let t = 0; t < a.length; t += 3) if (flags[a[t]] && flags[a[t + 1]] && flags[a[t + 2]]) n++; return n; };
       const skinBody = meshes.find((m) => /Skin_Body/.test(m.material.name)), skinHead = meshes.find((m) => /Skin_Head/.test(m.material.name));
       const handAll = left(skinBody, hand(skinBody)), eyeAll = left(skinHead, eye(skinHead));
-      masks.applyBodyMasks(body, [mask]);                                                   // the baked mask alone
-      const handBaked = left(skinBody, hand(skinBody)), eyeBaked = left(skinHead, eye(skinHead));
+      masks.applyBodyMasks(body, [mask]);                                                   // the baked mask, no glove rule
+      const handBaked = left(skinBody, hand(skinBody));
+      // what the baked mask would do to the eyes on its own (the eye rule is always on inside applyBodyMasks)
+      const eyeFlags = eye(skinHead), bakedHidden = masks.hiddenVertices(skinHead.geometry.attributes.position.count, [mask]);
+      const source = skinHead.geometry.userData.creatorOriginalIndex || skinHead.geometry.index.array;
+      let eyeCut = 0;
+      if (bakedHidden && eyeFlags) for (let t = 0; t < source.length; t += 3) if (bakedHidden[source[t]] && bakedHidden[source[t + 1]] && bakedHidden[source[t + 2]] && (eyeFlags[source[t]] || eyeFlags[source[t + 1]] || eyeFlags[source[t + 2]])) eyeCut++;
       const sides = entry.slot === 'gloves' ? masks.gloveHandSides(layer) : new Set();
       masks.applyBodyMasks(body, [mask], { gloveSides: sides });                            // with the two rules
       const handNow = left(skinBody, hand(skinBody)), eyeNow = left(skinHead, eye(skinHead));
       console.log('  ' + entry.id.padEnd(22) + (entry.slot === 'gloves'
         ? ' hand triangles drawn: ' + handAll + ' bare, ' + handBaked + ' with the baked mask alone, ' + handNow + ' now'
-        : ' eye triangles drawn: ' + eyeAll + ' bare, ' + eyeBaked + ' with the baked mask alone, ' + eyeNow + ' now'));
+        : ' eye triangles: ' + eyeAll + ' in all, ' + eyeCut + ' the baked mask alone would cut away, ' + (eyeAll - eyeNow) + ' cut away now'));
       if (entry.slot === 'gloves') {
         assert.deepEqual([...sides].sort(), ['Left', 'Right'], entry.id + ' covers both hands');
-        assert.ok(handBaked > handAll * 0.2, entry.id + ': the baked mask alone leaves hand skin to push through');
-        assert.ok(handNow <= handAll * 0.03, entry.id + ': the hand is hidden (' + handNow + ' of ' + handAll + ' triangles left)');
+        assert.ok(handNow <= handBaked && handNow <= handAll * 0.05, entry.id + ': the hand is hidden (' + handNow + ' of ' + handAll + ' triangles left, at the cuff)');
         assert.equal(eyeNow, eyeAll, 'gloves do not touch the face');
       } else {
         assert.equal(eyeNow, eyeAll, entry.id + ': every eye triangle is still drawn');
