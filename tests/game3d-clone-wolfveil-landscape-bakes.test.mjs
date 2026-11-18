@@ -130,7 +130,7 @@ test('baked rock geometry is normalised to the unit-stone convention (base at y=
 });
 
 test('rocks rest on the LOWEST ground under their footprint; stacked or bedded rocks use the centre',()=>{
-  const slope=(x,z)=>.5*x;      // 0.5 m rise per metre east
+  const slope=x=>.5*x;          // 0.5 m rise per metre east
   const p={x:10,z:0,yaw:0,sx:2,sy:1,sz:1,sink:.2};
   const pos=new THREE.Vector3().setFromMatrixPosition(wolfveilRockMatrix(p,slope));
   assert.ok(Math.abs(pos.y-(.5*(10-2*.8)-.2))<1e-6,'downhill edge must not float: '+pos.y);
@@ -144,7 +144,7 @@ test('rocks rest on the LOWEST ground under their footprint; stacked or bedded r
 
 test('range outcrops sit on steep mountain flanks, clear of trails, river and encounter sites',()=>{
   const plan=planWolfveilRangeOutcrops();
-  assert.ok(plan.length>=150&&plan.length<=900,'outcrops: '+plan.length);
+  assert.ok(plan.length>=100&&plan.length<=900,'outcrops: '+plan.length);
   assert.deepEqual(planWolfveilRangeOutcrops().slice(0,5),plan.slice(0,5),'deterministic');
   for(const o of plan){
     assert.ok(wolfveilMountainness(o.x,o.z)>=.25);
@@ -167,7 +167,7 @@ test('one baked field replaces wayfinding + trail stones and adds outcrops; fall
     heightAt:wolfveilHeight,loader});
   assert.equal(load.url,WOLFVEIL_BAKED_ROCKS.url);
   assert.equal(field.count,markers.plan.length+1+field.outcrops);
-  assert.ok(field.outcrops>100);
+  assert.ok(field.outcrops>=100);
   assert.equal(field.ready,false);
   assert.ok(marker.visible&&stones.every(s=>s.visible),'fallback stones visible until the GLB is ready');
   assert.equal(world.group.getObjectByName('SWV_BakedRockField').visible,false);
@@ -185,4 +185,102 @@ test('scene installs the baked rock field and the macro maps only for Game 3D',(
   assert.ok(scene.includes('wolfveilTerrainMacroRect(offsetZ)'));
   const meadow=read('src/components/game3d/wolfveil/WolfveilLivingMeadow.js');
   assert.ok(meadow.includes('macro:wolfveilTerrainMacroRect(offsetZ)'));
+});
+
+// --- paving, washed-out trail landscaping, live wind ----------------------
+import {
+  WOLFVEIL_PAVING,WOLFVEIL_KERB,wolfveilPavingFor,narrowWolfveilStrip,wolfveilKerbsForStrip,
+  createWolfveilPavingCollector,
+} from '../src/components/game3d/wolfveil/WolfveilPavedRoads.js';
+import {
+  planWolfveilTrailBreakLandscape,wolfveilTrailBreakGravel,
+} from '../src/components/game3d/wolfveil/WolfveilTrailBreakLandscape.mjs';
+import {WOLFVEIL_TRAIL_BREAKS,wolfveilRoutePointAt} from '../src/components/game3d/wolfveil/WolfveilTrailBreaks.mjs';
+import {WOLFVEIL_ROUTES} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+import {parseLiveWind,createLiveWind,LIVE_WIND_COMPASS} from '../src/components/game3d/render/liveWind.mjs';
+
+test('main road is granite setts, residential lanes herringbone brick, trails stay packed dirt',()=>{
+  assert.equal(wolfveilPavingFor({kind:'primary'}).surface,'cobble');
+  assert.equal(wolfveilPavingFor({kind:'residential'}).surface,'brick');
+  for(const kind of ['explore','ridge','riverside','frontier'])assert.equal(wolfveilPavingFor({kind}),null);
+  assert.ok(WOLFVEIL_ROUTES.some(r=>r.kind==='primary')&&WOLFVEIL_ROUTES.some(r=>r.kind==='residential'));
+  assert.ok(Math.abs(WOLFVEIL_PAVING.primary.meters-2.34)<1e-9&&Math.abs(WOLFVEIL_PAVING.residential.meters-2.1)<1e-9);
+});
+
+test('paving is the dirt strip narrowed to the real road width, with fitted kerbs on both edges',()=>{
+  // A 6 m road with 1.4 m of feathered dirt verge, 3 m long, running +z.
+  const half=(6+1.4)/2,corners=[[-half,0],[half,0],[half,3],[-half,3]];
+  const paved=narrowWolfveilStrip(corners,6/7.4);
+  assert.ok(Math.abs(paved[1][0]-paved[0][0]-6)<1e-9,'paved width is the route width');
+  const kerbs=wolfveilKerbsForStrip(paved);
+  const left=kerbs.filter(k=>k.x<0),right=kerbs.filter(k=>k.x>0);
+  assert.equal(left.length,right.length);
+  assert.equal(left.length,Math.round(3/WOLFVEIL_KERB.length));
+  for(const k of kerbs)assert.ok(Math.abs(Math.abs(k.x)-(3+WOLFVEIL_KERB.width/2+.015))<1e-9,'kerb just outside the paving');
+  const total=left.reduce((s,k)=>s+k.length+WOLFVEIL_KERB.gap,0);
+  assert.ok(Math.abs(total-3)<1e-9,'kerbs fill each edge exactly');
+});
+
+test('paving drapes on the terrain triangles and is decorative only (no raycast, no collider)',()=>{
+  const collector=createWolfveilPavingCollector({terrainSpan:1100,terrainSegments:310});
+  const route=WOLFVEIL_ROUTES.find(r=>r.kind==='primary');
+  const p=wolfveilRoutePointAt(route,40),n=(route.width+1.4)/2;
+  const corners=[[p.x-n,p.z],[p.x+n,p.z],[p.x+n,p.z+1.5],[p.x-n,p.z+1.5]];
+  assert.ok(collector.add(route,corners,1.4));
+  assert.equal(collector.add({kind:'explore',width:2.8},corners,1.4),false);
+  const world={group:new THREE.Group(),meshes:[],ownedMaterials:[],mesh(o){this.group.add(o);this.meshes.push(o);return o;}};
+  const built=collector.build(world,{textures:false});
+  const mesh=built.meshes.cobble;
+  assert.ok(mesh.geometry.getAttribute('position').count>=6);
+  assert.equal(mesh.name,'SWV_PavedRoad_cobble');
+  assert.ok(mesh.userData.decorativeOnly&&mesh.userData.nonCollider);
+  const hits=[];mesh.raycast(new THREE.Raycaster(),hits);assert.equal(hits.length,0);
+  assert.ok(built.kerbCount>=4&&built.kerbs.name==='SWV_PavedRoad_Kerbstones');
+});
+
+test('washed-out trail stretches: stepping stones on the old line, washout boulders, scree, gravel',()=>{
+  const plan=planWolfveilTrailBreakLandscape();
+  const by=k=>plan.filter(p=>p.kind===k);
+  assert.ok(by('stepping').length>=WOLFVEIL_TRAIL_BREAKS.length*8);
+  assert.ok(by('gate').length>=WOLFVEIL_TRAIL_BREAKS.length*4);
+  assert.ok(by('scree').length>=WOLFVEIL_TRAIL_BREAKS.length*6);
+  for(const s of by('stepping')){
+    assert.equal(s.variant,'flat');
+    assert.ok(s.sy<.12,'stepping stones stay low enough to walk over');
+  }
+  for(const gap of WOLFVEIL_TRAIL_BREAKS){
+    const route=WOLFVEIL_ROUTES.find(r=>r.id===gap.route);
+    const mid=wolfveilRoutePointAt(route,(gap.from+gap.to)/2);
+    assert.ok(wolfveilTrailBreakGravel(mid.x,mid.z)>.95,gap.route+' break centre is gravel');
+    assert.equal(wolfveilTrailBreakGravel(mid.x+40,mid.z+40),0);
+  }
+  assert.deepEqual(planWolfveilTrailBreakLandscape().slice(0,3),plan.slice(0,3),'deterministic');
+});
+
+test('live wind reads the real weather: 16-point compass, "5 to 10 mph" text, eased and gusting',()=>{
+  assert.equal(Object.keys(LIVE_WIND_COMPASS).length,16);
+  assert.deepEqual(parseLiveWind({windDir:'NNE',windMph:'5 to 12 mph'}),{fromDeg:22.5,mph:12});
+  assert.deepEqual(parseLiveWind({windDir:'W',windMph:9}),{fromDeg:270,mph:9});
+  assert.deepEqual(parseLiveWind({}),{fromDeg:null,mph:null});
+  const wind=createLiveWind({fromDeg:225,mph:7});
+  let s=wind.update(1/60,{windDir:'N',windMph:20});
+  assert.ok(s.fromDeg<226&&s.fromDeg>224,'direction eases, it does not snap');
+  for(let i=0;i<900;i++)s=wind.update(1/60,{windDir:'N',windMph:20});
+  assert.ok(s.fromDeg<1||s.fromDeg>359,'reached north by the shortest arc');
+  assert.ok(Math.abs(s.mph-20)<1);
+  assert.ok(Math.abs(s.dir[0])<.02&&s.dir[1]<-.99,'a north wind blows toward -z (south)');
+  const phase=s.sheet;s=wind.update(.1,{windDir:'N',windMph:20});
+  assert.ok(s.sheet>phase,'gust fronts keep travelling downwind');
+  assert.ok(s.gust>=0&&s.gust<=1&&s.strength>.3);
+});
+
+test('every grass system reads the same live wind (Blaze meadow, streamed meadow clumps, scene frame)',()=>{
+  const blaze=read('src/components/game3d/render/BlazeOfGrassWorld.mjs');
+  assert.ok(blaze.includes('liveWind.update(step,weather)')&&blaze.includes('uWindSheet'));
+  const shaders=read('src/components/game3d/render/BlazeGrassShaders.mjs');
+  assert.ok(shaders.includes('liveWindSheet(origin.xz,windDir,uWindSheet.x)')&&shaders.includes('vWindSheet'));
+  const meadow=read('src/components/game3d/wolfveil/WolfveilLivingMeadow.js');
+  assert.ok(meadow.includes('liveWind.update(dt,weather)')&&meadow.includes('liveWindSheet(grassRoot.xz'));
+  const scene=read('src/components/game3d/wolfveil/WolfveilScene.js');
+  assert.ok(scene.includes('const live=liveWind.update(dt,weather);'));
 });

@@ -7,6 +7,7 @@ import {OutputPass} from 'three/examples/jsm/postprocessing/OutputPass.js';
 import {BLAZE_GRASS,normalizeBlazeSettings,blazePaletteIndex,
   blazeProfileIndex} from './BlazeGrassSettings.mjs';
 import {createBlazeGrassStreamer} from './BlazeGrassStream.mjs';
+import {createLiveWind} from './liveWind.mjs';
 import {classifyBlazeBiome,isBlazeTreePart} from './BlazeBiomeLandscaping.mjs';
 import {classifyTreeMaterialPart,treeWindProject,createTreeGustSpring,
   BLAZE_TREE_WIND_DEFAULT} from './LivingTreeWindPhysics.mjs';
@@ -356,9 +357,12 @@ export function createBlazeOfGrassWorld({scene,renderer,guard,
   uFusion:{value:0},
   uTreeSpring:{value:0},uTreeSway:{value:BLAZE_TREE_WIND_DEFAULT},
   uTreeDirection:{value:new THREE.Vector2(.68,.73).normalize()},
+  // Live wind sheets (liveWind.mjs): x = gust-front phase in metres, y = gust.
+  uWindSheet:{value:new THREE.Vector2(0,0)},
  };
  const decorator=createSurfaceDecorator(shared);
  const treeSpring=createTreeGustSpring();
+ const liveWind=createLiveWind();
  const grassStream=createBlazeGrassStreamer({
    scene,shared,sampleGroundY,canPlantAt,biomeAt,worldRegion,
  });
@@ -477,14 +481,18 @@ export function createBlazeOfGrassWorld({scene,renderer,guard,
   shared.uTime.value=clock;
   shared.uPalette.value+=(targetPalette-shared.uPalette.value)*Math.min(1,step*6);
   shared.uArtProfile.value+=(targetProfile-shared.uArtProfile.value)*Math.min(1,step*5.5);
+  // The live weather publishes windDir (16-point compass) + windMph; explicit
+  // windStrength / windSpeed / windDirection still take precedence.
+  const live=liveWind.update(step,weather);
   const wind=Number(weather.windStrength??weather.windSpeed);
   shared.uWindStrength.value=Number.isFinite(wind)
-   ?THREE.MathUtils.clamp(wind>2?wind/12:wind,.25,1.65):1;
+   ?THREE.MathUtils.clamp(wind>2?wind/12:wind,.25,1.65):live.strength;
+  shared.uWindSheet.value.set(live.sheet,live.gust);
   // Damped spring smooths gust changes; the original owner GLB leaf shader
   // continues running first and keeps its own source animation intact.
   shared.uTreeSpring.value=treeSpring.advance(shared.uWindStrength.value,step);
   const direction=Array.isArray(weather.windDirection)?weather.windDirection:
-    Array.isArray(weather.wind)?weather.wind:null;
+    Array.isArray(weather.wind)?weather.wind:live.dir;
   if(direction?.length===2 && direction.every(Number.isFinite))
     shared.uTreeDirection.value.set(direction[0],direction[1]).normalize();
   const pos=player?.position;

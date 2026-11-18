@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, Buffer, URL, console, performance */
 // Wolfveil terrain macro bake (2026-11-16 landscaping, round 2).
 //
 // High-poly -> texture -> low-poly for the whole map. The shared height

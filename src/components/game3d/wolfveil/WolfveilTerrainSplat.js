@@ -215,6 +215,11 @@ const FRAGMENT_MAP=`
   vec4 b=max(hw-top,vec4(0.))*step(vec4(.004),w);
   b/=max(.0001,b.x+b.y+b.z+b.w);
   vec3 albedo=a0*b.x+a1*b.y+a2*b.z+a3*b.w;
+  // Meadow life at a distance: broad lush, sun-dried and deep-green patches
+  // so a field never reads as one flat green from afar.
+  float mv=wvSplatNoise(vSplatWorld.xz*.021+7.3)*.6+wvSplatNoise(vSplatWorld.xz*.067-2.1)*.4;
+  vec3 meadowTone=mix(vec3(.76,.92,.72),vec3(1.28,1.13,.7),smoothstep(.3,.75,mv));
+  albedo*=mix(vec3(1.),meadowTone,b.x*.9);
   // Ridges catch light, creases and damp gullies darken, valleys get sky AO.
   albedo*=clamp(1.+mCav*.35,.6,1.3)*(1.-mFlow*.18*(b.y+b.z))*mix(1.,mAO,.35);
   wvSplatNormalWorld=normalize(n0*b.x+n1*b.y+n2*b.z+n3*b.w);

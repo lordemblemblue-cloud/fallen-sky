@@ -368,8 +368,11 @@ def main():
     jobs = [('wv_grass', grass_ground), ('wv_dirt', dirt), ('wv_rock', rock),
             ('wv_snow', snow), ('wv_cobble', cobble), ('wv_brick', brick)]
     means = {}
+    # Dirt, grass, rock, cobble and brick now come from bake_materials.py
+    # (real high-poly scatter); only snow is baked here unless named.
+    selected = ONLY or {'wv_snow'}
     for name, fn in jobs:
-        if ONLY and name not in ONLY:
+        if name not in selected:
             continue
         t = time.time()
         means[name] = [round(float(c), 4) for c in fn()]

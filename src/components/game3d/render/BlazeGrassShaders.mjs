@@ -1,5 +1,6 @@
 // Owner-provided Sanctuary prototype: refactored from browser-globals/r128 to
 // shader modules for the live Game 3D Three.js renderer. Texture-free geometry.
+import {LIVE_WIND_SHEET_GLSL} from './liveWind.mjs';
 export const BLAZE_NOISE = /* glsl */`
 float bHash12(vec2 p){
   vec3 p3=fract(vec3(p.xyx)*.1031);
@@ -34,10 +35,12 @@ attribute float aScale;
 attribute float aBiomeIndex;
 uniform float uTime,uFlameSpeed,uCurlAmp,uWindStrength,uArtProfile;
 uniform vec2 uTreeDirection;
+uniform vec2 uWindSheet; // x: live gust-front phase (m), y: gust 0..1
 uniform vec3 uPlayerPos;
 varying vec2 vUv;
 varying vec3 vWorldPos;
-varying float vPhase,vScale,vBiomeIndex;
+varying float vPhase,vScale,vBiomeIndex,vWindSheet;
+${LIVE_WIND_SHEET_GLSL}
 void main(){
  float meadowV=step(2.5,uArtProfile);
  vUv=uv;vPhase=aPhase;vScale=aScale;vBiomeIndex=aBiomeIndex;
@@ -56,9 +59,14 @@ void main(){
  wp.z+=cos(origin.z*.15-slowT*.75+aPhase*4.)*
     .035*pow(h,1.35)*uCurlAmp*uWindStrength;
  // Meadow: tips lean downwind and bob in slow gusts; roots never move.
+ // Live wind sheets: gust fronts sweep downwind across the whole field.
+ vec2 windDir=normalize(uTreeDirection+vec2(.0001));
+ float sheet=liveWindSheet(origin.xz,windDir,uWindSheet.x)*(.35+.65*uWindSheet.y);
+ vWindSheet=sheet*meadowV;
  float gust=.55+.45*sin(slowT*.9+origin.x*.045+origin.z*.035);
- float bend=pow(h,2.)*(.09+.07*sin(slowT*1.7+origin.x*.31+origin.z*.23+aPhase*6.28))*gust;
- wp.xz+=normalize(uTreeDirection+vec2(.0001))*bend*uWindStrength*meadowV;
+ float bend=pow(h,2.)*(.09+.07*sin(slowT*1.7+origin.x*.31+origin.z*.23+aPhase*6.28))*gust*(1.+1.6*sheet);
+ wp.xz+=windDir*bend*uWindStrength*meadowV;
+ wp.y-=bend*uWindStrength*meadowV*sheet*.35; // tips dip as a front lays them over
  vec2 away=wp.xz-uPlayerPos.xz;
  float dist=length(away);
  if(dist<2.6){
@@ -75,7 +83,7 @@ uniform float uPalette,uArtProfile,uLiquidGlass,uGlareBoost,uBrightness,uFusion;
 uniform vec3 uSunDir;
 varying vec2 vUv;
 varying vec3 vWorldPos;
-varying float vPhase,vScale,vBiomeIndex;
+varying float vPhase,vScale,vBiomeIndex,vWindSheet;
 /* BLAZE_NOISE */
 // One tapered, curved blade of a three-blade tuft drawn on the card.
 void meadowBlade(float u,float h,float bu,float bh,float bl,float bw,float id,
@@ -121,6 +129,8 @@ void main(){
   col*=.62+.38*clamp(L.y,0.,1.);
   float back=pow(clamp(dot(-V,L),0.,1.),3.)*smoothstep(.35,1.,along);
   col+=vec3(.22,.26,.06)*back*.55;
+  // Wind sheen: blades laid over by a passing gust front catch the sky.
+  col=mix(col,col*1.22+vec3(.035,.045,.02),vWindSheet*smoothstep(.25,1.,along)*.8);
   col=clamp(col*uBrightness*1.24,vec3(0.),vec3(1.));
   gl_FragColor=vec4(col,1.);
   #include <tonemapping_fragment>

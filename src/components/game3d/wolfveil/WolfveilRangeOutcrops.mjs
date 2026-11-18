@@ -4,7 +4,7 @@
 // data (no THREE). Decorative only: they sit on slopes too steep to be
 // walking routes and never come near trails, the river or encounter sites.
 import {wolfveilHeight,wolfveilDistanceToRiver,wolfveilAnyTrailClearance} from './WolfveilLayout.js';
-import {wolfveilMountainness,wolfveilFightingGroundAt,wolfveilMobAreaAt} from './WolfveilLandscapeDesign.mjs';
+import {wolfveilMountainness,wolfveilFightingGroundAt,wolfveilMobAreaAt,wolfveilNoise2} from './WolfveilLandscapeDesign.mjs';
 
 export const WOLFVEIL_OUTCROP_BUDGET=Object.freeze({max:900,cell:16,half:542});
 const mulberry32=seed=>()=>{let t=seed+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);
@@ -28,7 +28,10 @@ export function planWolfveilRangeOutcrops({heightAt=wolfveilHeight,seed=0x0c7c0d
     if(m<.25)continue;
     const e=2,gx=(heightAt(x+e,z)-heightAt(x-e,z))/(2*e),gz=(heightAt(x,z+e)-heightAt(x,z-e))/(2*e);
     const slope=Math.hypot(gx,gz);
-    if(roll>smooth(.35,.95,slope)*smooth(.25,.7,m)*.8)continue;
+    // Crags gather in clusters (low-frequency noise) instead of an even
+    // scatter that reads as polka dots on the range faces.
+    const cluster=smooth(-.05,.45,wolfveilNoise2(x*.013+3.7,z*.013-1.9));
+    if(roll>smooth(.35,.95,slope)*smooth(.25,.7,m)*cluster*.95)continue;
     if(wolfveilAnyTrailClearance(x,z)<9||wolfveilDistanceToRiver(x,z)<22)continue;
     if(wolfveilFightingGroundAt(x,z,12)||wolfveilMobAreaAt(x,z,12))continue;
     const s=1.8+sizeRoll*sizeRoll*5.5;
@@ -41,7 +44,8 @@ export function planWolfveilRangeOutcrops({heightAt=wolfveilHeight,seed=0x0c7c0d
     if(sink>1.2*sy)continue;
     out.push({x,z,yaw:Math.atan2(gx,gz)+(rand()-.5)*.5,tiltX:theta,tiltZ:(rand()-.5)*.12,
       sx,sy,sz,sink,kind:'outcrop',grounding:'center',
-      tint:[.92+.1*tone,.92+.1*tone,.9+.1*tone]});
+      // Matched to the weathered cliff rock around them, not fresh granite.
+      tint:[.64+.12*tone,.64+.12*tone,.62+.12*tone]});
   }
   return out;
 }

@@ -14,6 +14,8 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {planWolfveilRangeOutcrops} from './WolfveilRangeOutcrops.mjs';
+import {planWolfveilTrailBreakLandscape} from './WolfveilTrailBreakLandscape.mjs';
+import {wolfveilMountainness} from './WolfveilLandscapeDesign.mjs';
 
 export const WOLFVEIL_BAKED_ROCKS=Object.freeze({
   url:'/game3d/landscape/wv_rocks.glb',
@@ -202,14 +204,17 @@ const WAYFINDING_TINT=Object.freeze({standing:[1,1,.98],cairn:[1.02,1,.97],gate:
  * stones are hidden only once the GLB is ready.
  */
 export function installWolfveilBakedRockField(world,{trailLandscaping=null,landscapeMarkers=null,
-  livingLandscape=null,heightAt,loader=null,outcrops=true,onReady=null,onError=null}={}){
+  livingLandscape=null,heightAt,loader=null,outcrops=true,trailBreaks=false,onReady=null,onError=null}={}){
   const placements=[];
   for(const p of landscapeMarkers?.plan??[])
     placements.push({...p,tint:WAYFINDING_TINT[p.kind]||WAYFINDING_TINT.rubble});
   // Chiselled 20-triangle stones (trail shoulders, washed-out stretches, wild
   // ground, wet riverbank): same footprint, now a baked rock.
   const chiselled=(r,kind,base,spread)=>{
-    const t=base+spread*r.tone,moss=r.moss||0;
+    // On the ranges, stones take the weathered cliff tone instead of reading
+    // as light granite dots against the darker rock faces.
+    const m=Math.max(0,Math.min(1,(wolfveilMountainness(r.x,r.z)-.2)/.4));
+    const t=(base+spread*r.tone)*(1-.28*m),moss=r.moss||0;
     placements.push({x:r.x,z:r.z,yaw:r.yaw,tiltX:r.tilt*.5,tiltZ:r.tilt*.3,
       sx:r.size*r.stretch,sy:r.size*r.squash*.72,sz:r.size,sink:r.size*r.squash*.5,kind,
       tint:[t*(1-moss*.18),t*(1-moss*.05),t*(1-moss*.3)]});
@@ -218,6 +223,9 @@ export function installWolfveilBakedRockField(world,{trailLandscaping=null,lands
   for(const r of livingLandscape?.bankStonePlan??[])chiselled(r,'river',.66,.14);
   const outcropPlan=outcrops?planWolfveilRangeOutcrops({heightAt}):[];
   placements.push(...outcropPlan);
+  // Stepping stones, washout boulders and scree where a trail is broken.
+  const breakPlan=trailBreaks?planWolfveilTrailBreakLandscape():[];
+  placements.push(...breakPlan);
   const fallback=[...(trailLandscaping?.rockMeshes??[]),...(livingLandscape?.bankStoneMeshes??[]),
     ...(landscapeMarkers?.mesh?[landscapeMarkers.mesh]:[])];
   const field=createWolfveilBakedRockField(world,placements,{heightAt,loader,onError,
@@ -226,5 +234,6 @@ export function installWolfveilBakedRockField(world,{trailLandscaping=null,lands
       onReady?.({...detail,outcrops:outcropPlan.length});
     }});
   field.outcrops=outcropPlan.length;
+  field.breakRocks=breakPlan.length;
   return field;
 }

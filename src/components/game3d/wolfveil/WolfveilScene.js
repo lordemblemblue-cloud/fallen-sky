@@ -38,6 +38,7 @@ import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
 import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
 import {installWolfveilBakedRockField} from './WolfveilBakedRocks.js';
+import {createLiveWind} from '../render/liveWind.mjs';
 import {createWolfveilTerrainSplatMaterial,applyWolfveilSplatAttributes} from './WolfveilTerrainSplat.js';
 import {WOLFVEIL_TERRAIN_MACRO,wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
 
@@ -166,6 +167,7 @@ export function createWolfveilVillage(scene,options={}){
   // The procedural stones above stay visible until the GLB is ready.
   const bakedRocks=options.originAtMarket&&options.bakedRocks!==false
     ?installWolfveilBakedRockField(world,{trailLandscaping,landscapeMarkers,livingLandscape,
+        trailBreaks:Boolean(options.groundCover),
         heightAt:trailLandscaping?.heightAt??wolfveilHeight,loader:options.rockModelLoader})
     :null;
   const river=addWolfveilWater(world,WOLFVEIL_RIVER,{
@@ -299,6 +301,7 @@ export function createWolfveilVillage(scene,options={}){
     },
   };
   let elapsed=0,disposed=false;
+  const liveWind=createLiveWind();
   let fallbackDisposed=false;
   let modelState='retired_old_houses';
   const initialSurfaceCount=world.walkableSurfaces?.length||0;
@@ -340,15 +343,15 @@ export function createWolfveilVillage(scene,options={}){
       if(disposed)return;
       elapsed+=Math.max(0,Math.min(dt,.08));
       const storm=weather.weather==='storm',rainy=storm||weather.weather==='rain';
-      const windMph=Number(weather.windMph??(storm?24:rainy?13:7));
-      const degMap={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
-      const dir=Number.isFinite(degMap[weather.windDir])?degMap[weather.windDir]:225;
-      const rad=dir*Math.PI/180;
+      // Live wind (render/liveWind.mjs): 16-point compass + mph from the live
+      // weather, eased, with gusts and travelling gust fronts ("sheets").
+      const live=liveWind.update(dt,weather);
       const frame={
         time:elapsed,
         rain:rainy?(storm?1:.65):0,
-        wind:[-Math.sin(rad),-Math.cos(rad)],
-        gust:Math.max(0,Math.min(1,.18+windMph/35)),
+        wind:[live.dir[0],live.dir[1]],
+        gust:Math.max(0,Math.min(1,.18+live.mph/35+live.gust*.25)),
+        windMph:live.mph,windSheet:live.sheet,windGust:live.gust,
       };
       vegetation.update(frame);
       palace.update(dt);

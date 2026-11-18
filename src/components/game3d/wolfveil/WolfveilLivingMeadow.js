@@ -18,10 +18,10 @@ import {wolfveilLandscapeSurface,wolfveilLandscapeAllowsTallGrass} from './Wolfv
 import {wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
 import {createWolfveilTerrainSplatMaterial,wolfveilSplatWeights,wolfveilSplatTint} from './WolfveilTerrainSplat.js';
 import {wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
+import {createLiveWind,LIVE_WIND_SHEET_GLSL} from '../render/liveWind.mjs';
 
 const MAX_CONTACTS = 8;
 const TILE_KEY = (ix, iz) => ix + ':' + iz;
-const WIND_DIRECTIONS = {N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
 const GRASS_COLORS = [0x476a36,0x597945,0x718d48,0x476d4c,0x929754,0x3e663f]
   .map(hex => new THREE.Color(hex));
 
@@ -144,13 +144,13 @@ function createTerrainTile(ix, iz, near, material) {
   return mesh;
 }
 
-function createGrassMaterial(windTime, wind, gust, contacts) {
+function createGrassMaterial(windTime, wind, gust, contacts, sheet = {value:new THREE.Vector2()}) {
   const material = new THREE.MeshStandardMaterial({
     color:0xffffff,roughness:.94,side:THREE.DoubleSide,
     metalness:0,transparent:false,depthWrite:true,
   });
   material.name = 'WV_ExistingSevenBladeGrass_WindAndFootstepContact';
-  material.customProgramCacheKey = () => 'wolfveil-meadow-root-anchored-grass-v4-unflipped';
+  material.customProgramCacheKey = () => 'wolfveil-meadow-root-anchored-grass-v5-live-wind';
   material.onBeforeCompile = shader => {
     // Double-sided clumps keep their normal on back faces (no black blades).
     shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
@@ -158,12 +158,14 @@ function createGrassMaterial(windTime, wind, gust, contacts) {
     shader.uniforms.uMeadowTime = windTime;
     shader.uniforms.uMeadowWind = wind;
     shader.uniforms.uMeadowGust = gust;
+    shader.uniforms.uMeadowSheet = sheet;
     shader.uniforms.uMeadowContacts = contacts;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>',`#include <common>
 uniform float uMeadowTime, uMeadowGust;
-uniform vec2 uMeadowWind;
-uniform vec4 uMeadowContacts[8];`)
+uniform vec2 uMeadowWind, uMeadowSheet;
+uniform vec4 uMeadowContacts[8];
+${LIVE_WIND_SHEET_GLSL}`)
       .replace('#include <begin_vertex>',`#include <begin_vertex>
 // Bend the existing curved blade tips, never uproot their bases.
 #ifdef USE_INSTANCING
@@ -174,8 +176,12 @@ vec3 grassRoot = (modelMatrix * vec4(0.,0.,0.,1.)).xyz;
 float flex = smoothstep(0.04,0.78,position.y);
 float sway = .5*sin(uMeadowTime*2.2 + grassRoot.x*.18 + grassRoot.z*.12)
            + .5*sin(uMeadowTime*1.43 + grassRoot.z*.31 - grassRoot.x*.07);
-transformed.xz += normalize(uMeadowWind+vec2(.0001)) *
-  (sway * (.07 + .21*uMeadowGust) * flex);
+// Live gust fronts sweep downwind: clumps lay over as each one passes.
+vec2 windDir = normalize(uMeadowWind+vec2(.0001));
+float front = liveWindSheet(grassRoot.xz, windDir, uMeadowSheet.x) * (.35 + .65*uMeadowSheet.y);
+transformed.xz += windDir *
+  ((sway * (.07 + .21*uMeadowGust) + front*(.16 + .2*uMeadowGust)) * flex);
+transformed.y -= front * .06 * flex;
 for (int j=0;j<8;j++){
   vec4 contact = uMeadowContacts[j];
   vec2 away = grassRoot.xz-contact.xy;
@@ -280,13 +286,15 @@ export function createWolfveilLivingMeadow({
   const windTime={value:0};
   const wind={value:new THREE.Vector2(.65,.35)};
   const gust={value:.2};
+  const sheet={value:new THREE.Vector2(0,0)};
+  const liveWind=createLiveWind();
   const contacts={value:Array.from({length:MAX_CONTACTS},
     ()=>new THREE.Vector4(99999,99999,1,0))};
   // Previous footprints remain pressed for roughly two seconds and relax
   // exponentially instead of disappearing as soon as the avatar moves away.
   const bendingTraces=[];
   let previousGrassFoot=null;
-  const grassMaterial=createGrassMaterial(windTime,wind,gust,contacts);
+  const grassMaterial=createGrassMaterial(windTime,wind,gust,contacts,sheet);
   const grassGeometry=buildWolfveilGrassClumpGeometry();
   const terrainTiles=new Map(),grassTiles=new Map();
   let lastGroundTile='',lastGrassTile='',tileCount=0,clumpCount=0;
@@ -391,11 +399,12 @@ export function createWolfveilLivingMeadow({
     updateTerrain(focus.x,focus.z);
     updateGrass(focus.x,focus.z);
     windTime.value+=clampMeadow(Number(dt)||0,0,.1);
-    const mph=Number(weather.windMph);
-    gust.value=clampMeadow(Number.isFinite(mph)?mph/32:.35,.15,1);
-    const dir=WIND_DIRECTIONS[weather.windDir]??225;
-    const rad=dir*Math.PI/180;
-    wind.value.set(-Math.sin(rad),-Math.cos(rad));
+    // Live wind (render/liveWind.mjs): eased 16-point direction, gusts and
+    // travelling gust fronts shared with the Blaze meadow grass.
+    const live=liveWind.update(dt,weather);
+    gust.value=clampMeadow(live.mph/32+live.gust*.2,.15,1);
+    wind.value.set(live.dir[0],live.dir[1]);
+    sheet.value.set(live.sheet,live.gust);
     const seconds=clampMeadow(Number(dt)||0,0,.1);
     const recovery=Math.exp(-seconds/1.45);
     for(const trace of bendingTraces)trace.pressure*=recovery;

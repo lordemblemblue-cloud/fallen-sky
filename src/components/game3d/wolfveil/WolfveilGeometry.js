@@ -17,6 +17,9 @@ import {makeWolfveilTrailDirtTextures,makeWolfveilTrailEdgeAlpha,applyWolfveilTr
 import {wolfveilSplatWeights} from './WolfveilTerrainSplat.js';
 import { WOLFVEIL_PALACE, WOLFVEIL_PALACE_APPROACH } from './WolfveilPalaceLayout.mjs';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
+import {createWolfveilPavingCollector,upgradeWolfveilTrailDirt} from './WolfveilPavedRoads.js';
+import {wolfveilTrailBreakGravel} from './WolfveilTrailBreakLandscape.mjs';
+const BREAK_GRAVEL=Object.freeze([.205,.180,.145]); // linear grey-brown gravel
 
 import {getWolfveilSumiETextures,cloneRepeatedTexture} from './WolfveilSumiETextures.mjs';
 const TAU=Math.PI*2;
@@ -145,6 +148,13 @@ export function buildWolfveilTerrain({span=1100,segments=310,caveCutouts=false,l
           riverDistance,routeClearance:wolfveilRouteClearance(x,z),
           west:smooth(90,350,-x),
         });
+        // Washed-out trail stretches: the soil under the stepping stones
+        // turns to grey-brown gravel (WolfveilTrailBreakLandscape.mjs).
+        const gravel=wolfveilTrailBreakGravel(x,z);
+        if(gravel>0){
+          for(let k=0;k<3;k++)surface.color[k]+=(BREAK_GRAVEL[k]-surface.color[k])*gravel*.8;
+          surface.dirt=Math.max(surface.dirt??0,gravel*.95);
+        }
         c.push(surface.color[0],surface.color[1],surface.color[2]);
         // Baked-texture blend weights (grass, dirt, rock, snow) for this vertex.
         splat.set(wolfveilSplatWeights(surface),(zi*(segments+1)+xi)*4);
@@ -400,6 +410,11 @@ export function addWolfveilPaths(world,routes,{
   const project=canonicalPlaySurface?createWolfveilPathSurface({
     heightAt:wolfveilHeight,span:terrainSpan,segments:terrainSegments,
   }):null;
+  // Game 3D landscape: granite setts / herringbone brick + kerbs on top of
+  // the main road and residential lanes (WolfveilPavedRoads.js).
+  const paving=verge&&canonicalPlaySurface?createWolfveilPavingCollector({
+    terrainSpan,terrainSegments,surfaceAt:surface,
+  }):null;
   function emit(strip){
     if(!strip)return;
     const {corners,pathTint,x0,z0,x1,z1,nx,nz}=strip;
@@ -479,6 +494,7 @@ export function addWolfveilPaths(world,routes,{
           }
         }
         if(canonicalPlaySurface){
+          paving?.add(route,corners,verge);
           if(Math.abs(t0)<1e-9)cap.start=true;
           if(Math.abs(t1-1)<1e-9){cap.end=true;cap.normal=[nx,nz];cap.tint=pathTint;}
           const strip={corners,pathTint,x0,z0,x1,z1,nx,nz};
@@ -542,10 +558,13 @@ export function addWolfveilPaths(world,routes,{
     });
     pathMat.name='SWV_SumiE_TexturedDirtTrailNetwork';
     world.ownedMaterials.push(pathMat);
+    // Blender-baked trail dirt replaces the procedural placeholder once loaded.
+    upgradeWolfveilTrailDirt(pathMat,{metresPerRepeat:4.5});
     const obj=world.mesh(new THREE.Mesh(geometry,pathMat));
     obj.name='SWV_PhysicalTraversablePathNetwork';obj.receiveShadow=true;
     // Drawn after the translucent west soil overlay so trails stay on top.
     obj.renderOrder=2;
+    obj.userData.paving=paving?.build(world)??null;
     return obj;
   }
   const dirtSuite=getWolfveilSumiETextures().dirt;
