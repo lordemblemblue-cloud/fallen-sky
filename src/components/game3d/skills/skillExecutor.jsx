@@ -1,4 +1,4 @@
-import { getSkillById, scaleStat } from './skillRegistry';
+import { getSkillById, scaleSkillDamage } from './skillRegistry';
 import { canCastWithEquippedWeapon, describeWeaponMismatch } from './weaponValidator';
 import { activateBuff } from './buffEngine';
 import { SKILL_TYPE, CAST_TYPE } from './skillTypes';
@@ -54,7 +54,10 @@ function toast(text) {
 // echo: an extra strike from an absorbed mount's soul (Mount Soul Fusion), never the skill's own hit
 function dispatchStrike(skill, hitIndex, level, echo = null, castOptions = {}) {
   if (typeof window === 'undefined') return;
-  const baseMult = scaleStat(skill, 'damage_pct', level || 1) || 1;
+  // The one place a skill's level becomes damage. Everything below multiplies other things (echo,
+  // Ascension, charge, skill points), never the level again. Optional balance curve:
+  // docs/game3d/SKILL_DAMAGE_CURVE_20261118.md. The held weapon only matters for guardian skills.
+  const baseMult = scaleSkillDamage(skill, level || 1, () => castOptions.heldWeaponId ?? getActiveWeaponId()) || 1;
   // Destroyer Nature (Taurus Chosen Ascension): skill damage x1.5, echoes included
   // Weapon mastery bonuses are already included in resolved stats; avoid applying twice.
   const charged = chargedStrikeModifiers(castOptions.qualification, hitIndex, skill.hit_count, !!echo);
@@ -256,7 +259,8 @@ export function castSkill(skillId, ctx = {}) {
   const castOptions = { qualification, castId: ctx.castId || null,
     targetId: ctx.targetId || null,
     chainFrom: eligibleChain ? ctx.chainFrom : null,
-    channelToken: channelAOE ? ctx.channelToken : null };
+    channelToken: channelAOE ? ctx.channelToken : null,
+    heldWeaponId: getActiveWeaponId() }; // the weapon that cast it, for the guardian (dagger) damage curve
   const paid = ctx.spendCombatResource?.('skill', skill) || { ok: true };
   if (!paid.ok) {
     toast(paid.reason === 'not_enough_will' ? 'Not enough Will' : 'Not enough stamina');
