@@ -1,0 +1,32 @@
+name: Guest character cloud save verification
+
+on:
+  push:
+    paths:
+      - 'src/components/game3d/character/guestCharacterCloud.js'
+      - 'src/components/game3d/character/GuestCharacterCloudSync.jsx'
+      - 'src/components/game3d/character/characterVault.js'
+      - 'src/components/game3d/CharacterLoginScreen.jsx'
+      - 'src/pages/GameView.jsx'
+      - 'base44/functions/guestCharacterVault/entry.ts'
+      - 'base44/entities/game3-d-guest-character-save.jsonc'
+      - 'docs/game3d/GUEST_PASSWORDLESS_CLOUD_SAVE.md'
+      - '.github/workflows/guest-character-cloud-save.yml'
+  workflow_dispatch:
+
+jobs:
+  build-guest-game:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate guest character schema
+        run: node -e "JSON.parse(require('fs').readFileSync('base44/entities/game3-d-guest-character-save.jsonc', 'utf8'))"
+      - name: Build game and cloud recovery interface
+        run: npm run build
