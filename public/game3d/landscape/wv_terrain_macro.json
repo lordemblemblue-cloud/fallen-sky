@@ -1,0 +1,22 @@
+{
+  "revision": "wolfveil-terrain-macro-v1-20261116",
+  "generatedBy": "scripts/bake-wolfveil-terrain-macro.mjs",
+  "span": 1100,
+  "normalSize": 2048,
+  "maskSize": 1024,
+  "orientation": "row 0 = local z min, column 0 = x min (flipY false)",
+  "checksum": "60ee4712",
+  "erosion": {
+    "droplets": 266345,
+    "steps": 14493725,
+    "gain": 0.3764,
+    "rawErodedP90": 7.591,
+    "erodedP99": 1.737,
+    "erodedP90": 0.736,
+    "depositedP99": 1.05
+  },
+  "bytes": {
+    "normal": 483954,
+    "mask": 134510
+  }
+}

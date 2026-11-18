@@ -45,8 +45,9 @@ export function createIndividualSumiEBladeGeometry({ segments = 4 } = {}) {
       const halfW = s.w * (1 - 0.82 * Math.pow(t, 1.35));
       const cx = s.ox + sin * bend;
       const cz = s.oz + cos * bend;
-      // Slight V-fold spine normal so each individual blade catches directional rim light
-      const nx = sin * 0.25, ny = 0.45, nz = cos * 0.25;
+      // Up-biased V-fold normal: blades light like the ground they grow from
+      // (sideways normals left them almost black under a high sun).
+      const nx = sin * 0.18, ny = 1.0, nz = cos * 0.18;
       const rootDark = 0.44 + 0.72 * Math.pow(t, 0.85);
       const r = rootDark * s.shade * (0.92 + 0.14 * t);
       const g = rootDark * s.shade * (0.98 + 0.08 * t);
@@ -57,7 +58,7 @@ export function createIndividualSumiEBladeGeometry({ segments = 4 } = {}) {
           cx - cos * halfW, y, cz + sin * halfW,
           cx + cos * halfW, y, cz - sin * halfW,
         );
-        normals.push(nx - cos * 0.35, ny, nz + sin * 0.35, nx + cos * 0.35, ny, nz - sin * 0.35);
+        normals.push(nx - cos * 0.22, ny, nz + sin * 0.22, nx + cos * 0.22, ny, nz - sin * 0.22);
         colors.push(r, g, b, r, g, b);
       } else {
         // Sharp pointed blade tip
@@ -100,8 +101,12 @@ export function createSumiEBladeMaterial(uniforms) {
     side: THREE.DoubleSide,
   });
   mat.name = 'Wolfveil_IndividualSumiEGrassBlades';
-  mat.customProgramCacheKey = () => 'wolfveil-individual-sumie-blades-v1';
+  mat.customProgramCacheKey = () => 'wolfveil-individual-sumie-blades-v2-unflipped';
   mat.onBeforeCompile = shader => {
+    // Thin double-sided blades: the back face keeps the same up-biased
+    // normal instead of flipping it underground (which rendered them black).
+    shader.fragmentShader = shader.fragmentShader.replace('#include <normal_fragment_begin>',
+      '#include <normal_fragment_begin>\n  normal = normalize( vNormal );');
     shader.uniforms.uBladeTime = uniforms.time;
     shader.uniforms.uBladeGust = uniforms.gust;
     shader.uniforms.uBladeWind = uniforms.wind;
