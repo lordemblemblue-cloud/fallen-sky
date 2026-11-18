@@ -3,9 +3,7 @@ import { AXE_PROCEDURAL_SET_FAMILIES } from '../loot/AXELevelGearProgression.mjs
 import {AXE_FARMING_SET_PROFILES} from './AXEFarmingSetProfiles.mjs';
 import { AXE_ARMOR_PACK_SETS } from './AXEArmorPackCatalog.js';
 import { AXE_CHOSEN_SET_ID, AXE_CHOSEN_REQUIRED_SLOTS, getAXEChosenSetStatus } from './AXEChosenSetRules.mjs';
-import {
-  getAXESetAscensionTier, scaleAXESetBonus, getAXEFullSetAuraRank,
-} from './AXESetAscensionRules.mjs';
+import { getAXEFullSetAuraRank } from './AXESetAscensionRules.mjs';
 // Set identity, grade and activation thresholds are separate concepts so Rare,
 // Elite and Heroic versions can share a family without sharing balance values.
 
@@ -131,22 +129,18 @@ export function evaluateAXESetBonuses(items = []) {
 
   for (const group of groups.values()) {
     const activeThresholds = [];
-    const ascensionByThreshold = {};
     const activeConditional = {};
     for (const threshold of [2, 3, 4, 5]) {
       const bonus = group.definition.thresholds[threshold];
       const conditionalBonus = group.definition.conditionalThresholds?.[threshold];
       if (group.count < threshold || (!bonus && !conditionalBonus)) continue;
-      // Only upgrades completed on EACH required piece increase this tier.
-      // +1/+2/+3/+4 = 1.25/1.50/1.75/2.00 x BASE set bonus.
-      const tier = getAXESetAscensionTier(group.items, threshold);
-      ascensionByThreshold[threshold] = tier;
+      // Set bonuses stay exactly as authored: Ascension raises only each item's own stats
+      // (Blacksmith v2; docs/game3d/BLACKSMITH_V2_20261118.md).
       activeThresholds.push(threshold);
-      if (bonus) addStats(stats, scaleAXESetBonus(bonus, tier));
+      if (bonus) addStats(stats, bonus);
       if (conditionalBonus) {
-        const boosted = scaleAXESetBonus(conditionalBonus, tier);
-        addStats(conditional, boosted);
-        addStats(activeConditional, boosted);
+        addStats(conditional, conditionalBonus);
+        addStats(activeConditional, conditionalBonus);
       }
     }
     const fullAuraRank = getAXEFullSetAuraRank(group.items,
@@ -158,7 +152,6 @@ export function evaluateAXESetBonuses(items = []) {
       equippedPieces: group.count,
       itemIds: group.itemIds,
       activeThresholds,
-      ascensionByThreshold,
       fullAuraRank,
       conditionalBonuses: activeConditional,
       nextThreshold: [2, 3, 4, 5].find((n) => n > group.count &&

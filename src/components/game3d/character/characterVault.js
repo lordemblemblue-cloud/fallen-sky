@@ -38,24 +38,29 @@ const isFresh = (data) => {
 const ROLL_REFUSALS = {
   not_synced: 'saving_your_character_try_again',
   item_destroyed: 'item_destroyed',
+  item_consumed: 'item_used_up',
+  donor_unavailable: 'donor_no_longer_available',
   too_fast: 'too_fast',
   invalid: 'upgrade_not_available',
 };
+// Combine and Ascension (service 'stage') take a donor (docs/game3d/BLACKSMITH_V2_20261118.md)
+const DONOR_SERVICES = new Set(['combine', 'stage']);
 
 // Server-rolled upgrades (docs/game3d/SERVER_UPGRADES.md): for a character the server keeps,
-// reinforcement, over-enchant, refine and ultimate are rolled by itemUpgrade, never here.
-// Registered with the Services gateway (setAXEServiceDiceSource) by CharacterVaultSync.
+// reinforcement (Enchant %), over-enchant, refine, ultimate, Combine and Ascension are rolled
+// by itemUpgrade, never here. Registered with the Services gateway (setAXEServiceDiceSource)
+// by CharacterVaultSync.
 export function createServerDice(engine, {
   call, // (fn, action, data) => Promise<body>; throws Error { code }
   getIdentity,
   wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 }) {
-  return async ({ serviceId, itemId, protectedAttempt, transactionId }) => {
+  return async ({ serviceId, itemId, donorId = null, protectedAttempt, transactionId }) => {
     const status = engine.get().status;
     if (status === 'local_only') return { local: true };
     if (status === 'conflict') return { ok: false, reason: 'choose_which_save_to_keep_first' };
     const { characterId } = getIdentity();
-    const ask = async () => ({ ok: true, result: (await call('itemUpgrade', 'roll', { characterId, serviceId, itemId, protectedAttempt, transactionId })).result });
+    const ask = async () => ({ ok: true, result: (await call('itemUpgrade', 'roll', { characterId, serviceId, itemId, ...(donorId ? { donorId } : {}), protectedAttempt, transactionId })).result });
     // the server rolls on its copy of the character, so it gets this device's latest first
     await engine.flush();
     for (let attempt = 0; ; attempt++) {
@@ -63,6 +68,10 @@ export function createServerDice(engine, {
         return await ask();
       } catch (e) {
         if (e.code === 'local_only') return { local: true };
+        // An itemUpgrade deployed before Blacksmith v2 doesn't know Combine or Ascension (and
+        // its Character Vault doesn't keep them either): they stay on this device until the
+        // owner deploys the new functions.
+        if (e.code === 'invalid' && DONOR_SERVICES.has(serviceId) && /not rolled by the server/i.test(String(e.message || ''))) return { local: true };
         if (e.code === 'not_synced' && attempt === 0) { await wait(800); await engine.flush(); continue; }
         return { ok: false, reason: ROLL_REFUSALS[e.code] || 'upgrades_need_a_server_connection' };
       }

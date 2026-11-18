@@ -66,7 +66,13 @@ import { AXE_SERVICE_GROUPS } from './AXEServiceGroups';
 import { executeAXEServiceTransaction } from './AXEServiceTransactionGateway';
 import { getAXEServiceResourceCount } from './AXEServiceResources';
 import { filterAXEItemsForService, getAXEServiceEligibility, describeAXEServiceEligibility } from './AXEServiceEligibility';
-import { AXE_SERVICE_DRAG_TYPE, getAXEServiceOperationPreview, isAXECompatibleDonor, readAXEServiceDrop } from './AXEServiceWorkspaceModel';
+import {
+  AXE_SERVICE_DRAG_TYPE, describeAXEDonorReason, getAXEServiceOperationPreview, isAXEAscensionDonor, isAXECompatibleDonor, readAXEServiceDrop,
+} from './AXEServiceWorkspaceModel';
+import { getAXEOwnedItemStatBreakdown } from '../equipment/AXEEquipmentRuntimeStats';
+import { formatAXEItemStatTooltip } from '../equipment/AXEItemStatBreakdown.mjs';
+import { isAXEAscensionRarity } from '../equipment/AXEItemAdvancementSystem';
+import AXEItemStatBreakdownList from '../equipment/AXEItemStatBreakdownList';
 import './AXEEquipmentWorkspace.css';
 
 const PROGRESSION_PANELS = {
@@ -116,7 +122,9 @@ function describeResult(result) {
     if (result.outcome) return `Success — ${String(result.outcome).replaceAll('_', ' ')}`;
     return 'Transaction completed.';
   }
-  return `Not completed — ${String(result.reason || result.outcome || 'unknown result').replaceAll('_', ' ')}`;
+  // a failed roll (Enchant −3, a kept donor) is a completed attempt, not a refusal
+  if (result.outcome) return `Failed — ${String(result.outcome).replaceAll('_', ' ')}${result.donorId && !result.donorConsumed ? ' (the donor was kept)' : ''}`;
+  return `Not completed — ${String(describeAXEDonorReason(result.reason) || result.reason || 'unknown result').replaceAll('_', ' ')}`;
 }
 
 function rarityClass(rarity) {
@@ -135,6 +143,7 @@ function InventoryItemCard({ item, selected, picked, onClick, onDoubleClick, dis
   const reinforcement = getItemReinforcement(item.instanceId);
   const enchantments = getItemEnchantments(item.instanceId);
   const totalEnchant = enchantments.reduce((sum, value) => sum + Number(value || 0), 0);
+  const advancement = getAXEAdvancementState(item.instanceId);
 
   return (
     <button
@@ -142,6 +151,7 @@ function InventoryItemCard({ item, selected, picked, onClick, onDoubleClick, dis
       onClick={onClick}
       onDoubleClick={onDoubleClick}
       disabled={disabled}
+      title={formatAXEItemStatTooltip(getAXEOwnedItemStatBreakdown(item), { title: item.name })}
       draggable={!disabled}
       aria-pressed={selected || picked}
       onDragStart={(event) => {
@@ -179,7 +189,7 @@ function InventoryItemCard({ item, selected, picked, onClick, onDoubleClick, dis
             {item.locked && <Lock className="h-2.5 w-2.5 text-amber-200/70" />}
           </div>
           <div className="mt-1 text-[9px] text-white/35">
-            Reinforce {reinforcement.percent || 0}% · Enchant +{totalEnchant} · Qty {item.quantity ?? 1}
+            Enchant {reinforcement.percent || 0}% · Slots +{totalEnchant} · Combine +{advancement.combine?.count || 0} · Ascension +{Math.min(4, advancement.stage?.rank || 0)}
           </div>
         </div>
 
@@ -310,8 +320,13 @@ export function EquipmentServicePanel({
   const sockets = item ? getAXESocketState(item.instanceId) : {};
   const aura = item ? getAXEItemAura(item.instanceId) : null;
 
-  const compatibleDonors = allItems.filter((candidate) => isAXECompatibleDonor(item, candidate, advancement));
+  // Combine and Ascend take a donor (Blacksmith v2 rules: same rarity and type; Combine also
+  // the same item level, Ascend an equal or lower one)
+  const compatibleDonors = serviceId === 'stage'
+    ? (item && isAXEAscensionRarity(item) ? allItems.filter((candidate) => isAXEAscensionDonor(item, candidate)) : [])
+    : allItems.filter((candidate) => isAXECompatibleDonor(item, candidate, advancement));
   const donor = compatibleDonors.find((candidate) => candidate.instanceId === donorId) || null;
+  const statBreakdown = item ? getAXEOwnedItemStatBreakdown(item) : null;
 
   const ownedGems = (lootState.gem || [])
     .map((lootItem) => AXE_GEM_DEFINITIONS[lootItem.id])
@@ -362,8 +377,10 @@ export function EquipmentServicePanel({
     const candidate = allItems.find((entry) => entry.instanceId === instanceId);
     if (!candidate) return;
     if (slot === 'donor') {
-      if (isAXECompatibleDonor(item, candidate, advancement)) { setDonorId(candidate.instanceId); setReview(null); }
-      else setLastResult({ ok: false, reason: 'Choose a different, unlocked, unequipped instance of the same template and grade.' });
+      if (compatibleDonors.some((entry) => entry.instanceId === candidate.instanceId)) { setDonorId(candidate.instanceId); setReview(null); }
+      else setLastResult({ ok: false, reason: serviceId === 'stage'
+        ? 'Choose a different, unlocked, unequipped item of the same rarity and type, with an equal or lower item level.'
+        : 'Choose a different, unlocked, unequipped item of the same rarity, item level, slot and type.' });
     } else {
       const eligibility = getAXEServiceEligibility(serviceId, candidate);
       if (eligibility.eligible) { setSelectedId(candidate.instanceId); setTargetCleared(false); setReview(null); setLastResult(null); }
@@ -437,8 +454,8 @@ export function EquipmentServicePanel({
               disabled={pending}
               onClick={() => setPickedId(entry.instanceId)}
               onDoubleClick={() => placeItem(entry.instanceId,
-                serviceId === 'combine' && item && entry.instanceId !== item.instanceId
-                  && isAXECompatibleDonor(item, entry, advancement) ? 'donor' : 'target')}
+                (serviceId === 'combine' || serviceId === 'stage') && item && entry.instanceId !== item.instanceId
+                  && compatibleDonors.some((candidate) => candidate.instanceId === entry.instanceId) ? 'donor' : 'target')}
             />
           ))}
         </div>
@@ -467,7 +484,7 @@ export function EquipmentServicePanel({
               }}>
               <span>Equipment target</span><strong>{item?.name || 'Place owned equipment'}</strong><small>{pickedId ? 'Tap to place selected inventory item' : item ? 'Tap to remove, or select an inventory item to replace' : 'Select an inventory item, then tap here'}</small>
             </button>
-            {serviceId === 'combine' && item && <button type="button" className="axe-service-item-slot" disabled={pending}
+            {(serviceId === 'combine' || (serviceId === 'stage' && item && isAXEAscensionRarity(item))) && item && <button type="button" className="axe-service-item-slot" disabled={pending}
               onDragOver={(event) => event.preventDefault()} onDrop={(event) => onSlotDrop(event, 'donor')}
               onClick={() => pickedId ? placeItem(pickedId, 'donor') : setDonorId('')}>
               <span>Donor · consumed on success</span><strong>{donor?.name || 'Place a matching donor'}</strong><small>{donor ? 'Tap without a picked item to remove' : 'Separate unlocked, unequipped instance'}</small>
@@ -496,15 +513,20 @@ export function EquipmentServicePanel({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-            <Stat label="Reinforcement" value={`${reinforcement.percent || 0}%`} />
-            <Stat label="Enchant" value={`+${enchantments.reduce((s, v) => s + Number(v || 0), 0)}`} />
+            <Stat label="Enchant" value={`${reinforcement.percent || 0}%`} />
+            <Stat label="Enchant slots" value={`+${enchantments.reduce((s, v) => s + Number(v || 0), 0)}`} />
             <Stat label="Over-Enchant" value={`+${overEnchant.level || 0}`} />
-            <Stat label="Stage" value={advancement.stage?.label || 'Base'} />
+            <Stat label="Combine" value={`+${advancement.combine?.count || 0}`} />
+            <Stat label="Ascension" value={`+${Math.min(4, advancement.stage?.rank || 0)}`} />
             <Stat label="Refine" value={`+${advancement.refine?.level || 0}`} />
             <Stat label="Ultimate" value={`+${advancement.ultimate?.level || 0}`} />
             <Stat label="Sockets" value={`${sockets.sockets?.length || 0}/${sockets.maxSockets || 0}`} />
             <Stat label="Aura" value={aura ? `Tier ${aura.tierRank || 1}` : 'None'} />
           </div>
+
+          {/* The item's own stats: the original roll and the upgrades' increase (Blacksmith v2). */}
+          <AXEItemStatBreakdownList rows={statBreakdown?.rows || []} label="Item stats" />
+
 
           {/* The item's enchantment light now and after a successful operation (visual only). */}
           <EnchantLightPreview item={item}
@@ -563,8 +585,8 @@ export function EquipmentServicePanel({
           <fieldset className="mt-5 min-w-0" disabled={pending}>
             {serviceId === 'reinforcement' && (
               <ActionGrid>
-                <Action label="Reinforce Item" onClick={() => execute('reinforcement')} />
-                <Action label="Protected Reinforcement" onClick={() => execute('reinforcement', { options: { protectedAttempt: true } })} />
+                <Action label="Enchant (+5%)" onClick={() => execute('reinforcement')} />
+                <Action label="Protected Enchant" onClick={() => execute('reinforcement', { options: { protectedAttempt: true } })} />
               </ActionGrid>
             )}
 
@@ -640,17 +662,48 @@ export function EquipmentServicePanel({
                   </>
                 ) : (
                   <div className="mt-3 text-sm text-white/40">
-                    No unequipped, unlocked matching duplicate is owned. Combine requires a real matching donor item.
+                    No unequipped, unlocked item with the same rarity, item level, slot and type is owned. Combine needs a real matching donor item.
                   </div>
                 )}
               </div>
             )}
 
-            {serviceId === 'stage' && (
+            {serviceId === 'stage' && (item && isAXEAscensionRarity(item) ? (
+              <div className="rounded-xl border border-white/10 bg-white/[0.025] p-4">
+                <div className="text-[9px] uppercase tracking-[0.28em] text-white/35">Donor to sacrifice</div>
+                {compatibleDonors.length ? (
+                  <>
+                    <select
+                      value={donorId}
+                      onChange={(event) => setDonorId(event.target.value)}
+                      className="mt-3 w-full rounded-lg border border-white/10 bg-neutral-900/90 px-3 py-2 text-sm text-white"
+                      aria-label="Ascension donor"
+                    >
+                      <option value="">Choose a donor from inventory</option>
+                      {compatibleDonors.map((candidate) => (
+                        <option key={candidate.instanceId} value={candidate.instanceId}>
+                          {candidate.name} · {candidate.rarity} · Lv. {candidate.itemLevel ?? candidate.level ?? 1}
+                        </option>
+                      ))}
+                    </select>
+                    <Action
+                      className="mt-3"
+                      label={donor ? `Ascend with ${donor.name}` : 'Select a donor first'}
+                      disabled={!donor}
+                      onClick={() => execute('stage', { donorId: donor.instanceId, donor })}
+                    />
+                  </>
+                ) : (
+                  <div className="mt-3 text-sm text-white/40">
+                    No unequipped, unlocked item of the same rarity and type with an equal or lower item level is owned.
+                  </div>
+                )}
+              </div>
+            ) : (
               <ActionGrid>
                 <Action label="Advance Item Stage" onClick={() => execute('stage')} />
               </ActionGrid>
-            )}
+            ))}
 
             {serviceId === 'refine' && (
               <ActionGrid>

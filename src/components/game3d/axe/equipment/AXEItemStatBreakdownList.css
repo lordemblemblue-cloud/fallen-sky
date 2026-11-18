@@ -1,0 +1,50 @@
+/* Per-item stat breakdown (Blacksmith v2): `Attack 1,000 (+150)` with colour-coded parts. */
+.axe-stat-breakdown {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: rgba(236, 242, 255, 0.82);
+}
+.axe-stat-breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "name value" "total total" "sources sources";
+  column-gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(10, 18, 34, 0.32);
+}
+.axe-stat-breakdown-name { grid-area: name; color: rgba(214, 224, 244, 0.72); min-width: 0; overflow-wrap: anywhere; }
+.axe-stat-breakdown-value { grid-area: value; text-align: right; white-space: nowrap; }
+.axe-stat-breakdown-value b { color: #f4f7ff; font-weight: 600; }
+.axe-stat-breakdown-bonus { margin-left: 4px; font-style: normal; color: #9fe3b4; }
+.axe-stat-breakdown-total {
+  grid-area: total;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  justify-content: flex-end;
+  font-size: 11px;
+  color: rgba(214, 224, 244, 0.6);
+}
+.axe-stat-breakdown-total strong { color: #ffe6a6; font-weight: 600; }
+.axe-stat-breakdown-total small.is-better { color: #9fe3b4; }
+.axe-stat-breakdown-total small.is-worse { color: #f3a5a5; }
+.axe-stat-breakdown-sources { grid-area: sources; display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; justify-content: flex-end; }
+.axe-stat-breakdown-sources i {
+  font-style: normal;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(226, 232, 245, 0.78);
+}
+.axe-stat-breakdown-sources i[data-source="combine"] { border-color: rgba(240, 190, 96, 0.45); color: #f3cd84; }
+.axe-stat-breakdown-sources i[data-source="enchant"] { border-color: rgba(110, 196, 255, 0.45); color: #9fd6ff; }
+.axe-stat-breakdown-sources i[data-source="ascend"] { border-color: rgba(190, 146, 255, 0.5); color: #d2b8ff; }
+.axe-stat-breakdown-empty { margin: 6px 0 0; font-size: 12px; color: rgba(214, 224, 244, 0.55); }

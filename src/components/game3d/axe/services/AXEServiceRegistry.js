@@ -10,11 +10,11 @@ export const AXE_SERVICE_CATEGORIES = Object.freeze({
   APPEARANCE: 'appearance',
 });
 
-// Only these four existing equipment actions have a Character Vault server-
-// rolled path. Other actions remain available through existing local/persisted
+// Only these equipment actions have a Character Vault server-rolled path (Combine and
+// Ascend since Blacksmith v2). Other actions remain available through existing local/persisted
 // handlers or a separately configured authoritative service bridge. This flag
 // describes the built-in server-roll capability, not connection status.
-const BUILTIN_SERVER_ROLLED = new Set(['reinforcement', 'over_enchant', 'refine', 'ultimate']);
+const BUILTIN_SERVER_ROLLED = new Set(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage']);
 const service = (entry) => Object.freeze({
   remoteAccessible: true,
   authoritative: BUILTIN_SERVER_ROLLED.has(entry.id),
@@ -22,12 +22,12 @@ const service = (entry) => Object.freeze({
 });
 
 export const AXE_SERVICE_REGISTRY = Object.freeze([
-  service({ id: 'reinforcement', label: 'Reinforcement', description: "Raises an item's reinforcement bonus. Shows protection and downgrade risk before confirming.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
-  service({ id: 'enchant', label: 'Enchant', description: "Levels an item's individual enchantment slots using owned materials; not the same as Over-Enchant.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
+  service({ id: 'reinforcement', label: 'Enchant %', description: "Raises an item's Enchant from 0 % to 200 %. A failure loses 3 points (never below 0 %) and never breaks the item.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
+  service({ id: 'enchant', label: 'Enchant Slots', description: "Levels an item's four +10 enchantment slots using owned materials; not the same as Over-Enchant.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'over_enchant', label: 'Over-Enchant', description: "Applies a separate catalyst-based enhancement with its own level, costs and fracture rules.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'weapon_legacy', label: 'Weapon Legacy', description: 'Separate four-weapon level-up preparation or twelve-piece elite-set echo. Never advances Combine Stage.', category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
-  service({ id: 'combine', label: 'Combine', description: "Combines compatible owned equipment. A separate donor item is consumed only on success.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
-  service({ id: 'stage', label: 'Ascend', description: "Evolves an item's stage using Evolution Stones. No second equipment item is required.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
+  service({ id: 'combine', label: 'Combine', description: "Combine +0–12 with a donor of the same rarity, item level, slot and type. The donor is consumed only on success.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
+  service({ id: 'stage', label: 'Ascend', description: "Ascension +0–4 for Rare, Elite and Legendary: one same-rarity donor of equal or lower level per attempt, consumed only on success. Raises the item's own stats.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'refine', label: 'Refine', description: "Improves refinement levels; high-level failure can downgrade or destroy unprotected equipment.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'runes', label: 'Ultimate', description: 'Equip one Ultimate rune tag per equipment item or combine matching runes for upgrades.', category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'progression_panel' }),
   service({ id: 'ultimate', label: 'Ultimate', description: "Advanced Legendary/Heroic enhancement with ten levels and possible sealing on failure.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),

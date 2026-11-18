@@ -3,9 +3,13 @@ import './AXEBlacksmithWorkflowPanel.css';
 
 const art = item => item?.imageUrl || item?.iconUrl || item?.image || null;
 const display = value => String(value ?? '').replaceAll('_', ' ');
-const labelFor = mode => mode === 'combine' ? 'Combine Stage' : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant';
+const labelFor = mode => mode === 'combine' ? 'Combine' : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant';
+const pct = chance => chance == null ? '—' : Math.round(Number(chance) * 1000) / 10 + '%';
 
-export default function AXEBlacksmithWorkflowPanel({ mode, target, donor, compatibleDonors = [],
+// Blacksmith v2 (docs/game3d/BLACKSMITH_V2_20261118.md): the Enchant tab runs the item's
+// Enchant % (0–200, `operation` 'reinforcement') or its four +10 slots ('enchant').
+export default function AXEBlacksmithWorkflowPanel({ mode, operation = mode, enchantMode = 'percent', onChangeEnchantMode = () => {},
+  target, donor, compatibleDonors = [],
   requirements = [], materialSelection = '', selectedMaterial = null,
   readout, canForge, confirmCombine, autoEnabled, onToggleAuto, autoProtection, onToggleProtection,
   minSuccess, onChangeThreshold, onSelectDonor, onClearTarget, onClearDonor,
@@ -13,10 +17,11 @@ export default function AXEBlacksmithWorkflowPanel({ mode, target, donor, compat
   batchPending, onCancelBatch, notice, onChangeMode,
 }) {
   const combine = mode === 'combine';
-  const isRisky = mode === 'over_enchant';
+  const percentMode = operation === 'reinforcement';
+  const isRisky = mode === 'over_enchant' || percentMode;
   const chance = readout?.chance;
-  const current = combine ? readout?.stage : mode === 'over_enchant'
-    ? readout?.overEnchantLevel : readout?.enchantTotal;
+  const current = combine ? '+' + (readout?.combineStage ?? 0) : mode === 'over_enchant'
+    ? readout?.overEnchantLevel : percentMode ? (readout?.reinforcementPercent ?? 0) + '%' : readout?.enchantTotal;
   const icon = item => art(item)
     ? <img src={art(item)} alt="" draggable={false}/>
     : <Gem size={23} aria-hidden="true"/>;
@@ -46,12 +51,19 @@ export default function AXEBlacksmithWorkflowPanel({ mode, target, donor, compat
           <span>{labelFor(id)}</span>
         </button>)}
     </nav>
+    {mode === 'enchant' && <div className="axe-forge-mode-boxes axe-forge-enchant-modes" role="group" aria-label="Enchant type">
+      {[['percent', 'Enchant % (0–200)'], ['slots', 'Slots (4 × +10)']].map(([id, label]) =>
+        <button type="button" key={id} className="axe-forge-mode-box" aria-pressed={enchantMode === id}
+          onClick={() => onChangeEnchantMode(id)} disabled={batchBusy}>
+          <span>{label}</span>
+        </button>)}
+    </div>}
     <div className="axe-forge-selected" aria-label="Selected equipment">
       <div className="axe-forge-selected-art">{target ? icon(target) : <Layers size={24} aria-hidden="true"/>}</div>
       <div><strong>{target?.name || 'No equipment selected'}</strong>
         {target ? <small>Lv. {target.itemLevel ?? target.level ?? 1} · {target.rarity ?? target.tier ?? 'Equipment'}</small>
           : <small>Choose an item from Inventory</small>}
-        {target && <small>{current == null ? 'Equipment' : (combine ? 'Stage' : 'Enchant') + ': ' + display(current)}</small>}
+        {target && <small>{current == null ? 'Equipment' : (combine ? 'Combine' : percentMode ? 'Enchant' : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant slots') + ': ' + display(current)}</small>}
       </div>
       {target && <button type="button" className="axe-forge-clear" onClick={onClearTarget}
         aria-label="Remove selected equipment" disabled={batchBusy}>×</button>}
@@ -80,7 +92,7 @@ export default function AXEBlacksmithWorkflowPanel({ mode, target, donor, compat
           onClick={() => onSelectDonor(item)} title={'Select ' + item.name + ' as donor'}>
           {item.name} <small>Lv. {item.itemLevel ?? item.level ?? 1}</small>
         </button>)}
-      </div> : <p>No unlocked, matching equipment at the same level and rarity.</p>)}
+      </div> : <p>No unlocked, unequipped item with the same rarity, item level, slot and type.</p>)}
       {target && !combine && (requirements.length ? requirements.map(([id, required, owned]) =>
         <button type="button" key={id} className="axe-forge-required-item"
           aria-pressed={materialSelection === id} disabled={batchBusy}
@@ -108,9 +120,10 @@ export default function AXEBlacksmithWorkflowPanel({ mode, target, donor, compat
         </label>}
       </>}
       {target && <p className="axe-forge-risk-note"><ShieldCheck size={14} aria-hidden="true"/>
-        {mode === 'enchant' ? 'Normal Enchant succeeds with the current rules; it does not break gear.'
-          : combine ? 'Success consumes the donor. Failed attempts keep it.'
-            : 'Success: ' + (chance == null ? '—' : Math.round(chance * 100) + '%') + '. Failure can fracture and lower Over-Enchant. Unsafe unprotected attempts stop.'}
+        {percentMode ? 'Success: ' + pct(chance) + ' (+5 points). Failure: −3 points, never below 0 %; the item never breaks and Combine and Ascension stay.'
+          : mode === 'enchant' ? 'Slot Enchant succeeds with the current rules; it does not break gear.'
+            : combine ? 'Success: ' + pct(chance) + '. A success uses up the donor; a failure keeps the donor and the stage (fee: free).'
+              : 'Success: ' + pct(chance) + '. Failure can fracture and lower Over-Enchant. Unsafe unprotected attempts stop.'}
       </p>}
     </div>
     <div className="axe-forge-action-row">

@@ -92,9 +92,9 @@ export function resolveAXEHeroStrike(hero, target, {
     isAerialAttack, isSkill: isSkillStrike || skillMultiplier !== 1,
     isRanged: isRangedAttack,
   });
+  // the weapon's own skill perk; Ascension no longer adds skill levels to it (Blacksmith v2)
   const equippedWeapon=pve&&isSkillStrike?getActiveEquippedAXEWeapon():null;
   const weaponPerkPct=equippedWeapon ? getAXEWeaponSkillPerkBonus(equippedWeapon,
-    getAXEAdvancementState(equippedWeapon.instanceId).stage?.rank,
     {family:skillFamily,aerial:isAerialAttack}) : 0;
   const weaponPerkMultiplier=pve ? 1+weaponPerkPct/100 : 1;
   const rangeCrit = n(hero.rangeUnit) > 0 && far > n(hero.rangeUnit) ? n(hero.rangeCritPct) : 0;

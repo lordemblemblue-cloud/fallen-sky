@@ -23,7 +23,7 @@ import {
   setAXEAdvancementRecord,
 } from '../equipment/AXEItemAdvancementStore';
 import { AXE_OVER_ENCHANT_CONFIG, getAXEReinforcementCap } from '../equipment/AXEItemEnhancementSystem';
-import { SERVER_ROLLED_UPGRADES } from '../../../../../base44/shared/itemUpgradeLedger.ts';
+import { DONOR_UPGRADES, SERVER_ROLLED_UPGRADES } from '../../../../../base44/shared/itemUpgradeLedger.ts';
 import {
   drillAXESocket,
   getAXESocketState,
@@ -44,11 +44,12 @@ import {
   getLootItemCount,
   addLootToInventory,
 } from '../../lootStore';
-import { getAXEServiceInventoryCost } from './AXEServiceEconomy';
+import { getAXEAscensionCost, getAXECombineCost, getAXEServiceInventoryCost } from './AXEServiceEconomy';
 import { canAffordAXEServiceCost, consumeAXEServiceCost, getAXEServiceResourceCount, getAXEServiceResourceCategory } from './AXEServiceResources';
-import { getNextStage, AXE_REFINE_CONFIG, AXE_ULTIMATE_CONFIG } from '../equipment/AXEItemAdvancementSystem';
-import {isAXEFarmingRarity} from '../loot/AXEFarmingGearTiers.mjs';
-import {previewAXEAscensionFeed} from '../equipment/AXEAscensionFeedingRules.mjs';
+import {
+  getNextStage, isAXEAscensionRarity, isAXELegacyStageRarity, validateAXEAscensionDonor, validateCombine,
+  AXE_REFINE_CONFIG, AXE_ULTIMATE_CONFIG,
+} from '../equipment/AXEItemAdvancementSystem';
 import { AXE_GEM_DEFINITIONS, canInsertAXEGem, getAXEGemUpgradePreview } from '../equipment/AXESocketGemSystem';
 import { getShopState, spendGold, addGold } from '../../shop/shopStore';
 import { getPlayerHUD } from '../../playerHUDStore';
@@ -79,6 +80,38 @@ const withOwnedItem = (payload, fn, serviceId = null) => {
   }
   return fn(check.item);
 };
+
+// What Combine and Ascension check before anything is paid or rolled, on this device or on
+// the server: an owned target, a separate owned donor the player has not locked or equipped,
+// the Blacksmith v2 donor rules, and the most the attempt can cost.
+function checkDonorUpgrade(serviceId, payload) {
+  const check = requireOwned(payload.itemId || payload.item?.instanceId || payload.item?.id);
+  if (!check.ok) return check;
+  const item = check.item;
+  const eligible = getAXEServiceEligibility(serviceId, item);
+  if (!eligible.eligible) return { ok: false, reason: eligible.reason };
+  const advancement = getAXEAdvancementState(item.instanceId);
+  if (serviceId === 'stage') {
+    if (!getNextStage(advancement.stage)) return { ok: false, reason: 'MAX_STAGE' };
+    if (isAXELegacyStageRarity(item)) {
+      const cost = getAXEAscensionCost({ item, advancement });
+      return canAfford(cost) ? { ok: true, item, donor: null, cost } : { ok: false, reason: 'insufficient_materials', cost };
+    }
+    if (!isAXEAscensionRarity(item)) return { ok: false, reason: 'ASCENSION_RARITY_NOT_ELIGIBLE' };
+  }
+  const donorId = payload.donorId || payload.donor?.instanceId || payload.donor?.id;
+  if (!donorId) return { ok: false, reason: 'DONOR_REQUIRED' };
+  const donorCheck = canConsumeAXEEquipmentItem(donorId);
+  if (!donorCheck.ok) return { ok: false, reason: donorCheck.reason };
+  const donor = donorCheck.item;
+  const valid = serviceId === 'combine'
+    ? validateCombine({ ...item, combine: advancement.combine }, donor)
+    : validateAXEAscensionDonor(item, donor);
+  if (!valid.ok) return valid;
+  const cost = serviceId === 'combine' ? getAXECombineCost() : getAXEAscensionCost({ item });
+  if (!canAfford(cost)) return { ok: false, reason: 'insufficient_materials', cost };
+  return { ok: true, item, donor, cost };
+}
 
 const localHandlers = {
   upgrade_gem: (payload) => {
@@ -117,24 +150,25 @@ const localHandlers = {
     overEnchantItem(item.instanceId, payload.options || {})
   , 'over_enchant'),
 
+  // Combine (Blacksmith v2): a donor of the same rarity, item level, slot and subtype. The fee
+  // (free for now) is paid on every attempt; a success uses up the donor, a failure keeps it.
   combine: (payload) => {
-    const targetId = payload.itemId || payload.item?.instanceId || payload.item?.id;
-    const donorId = payload.donorId || payload.donor?.instanceId || payload.donor?.id;
-    const targetCheck = requireOwned(targetId);
-    if (!targetCheck.ok) return targetCheck;
-    const eligibility = getAXEServiceEligibility('combine', targetCheck.item);
-    if (!eligibility.eligible) return { ok: false, reason: eligibility.reason };
-    const donorCheck = canConsumeAXEEquipmentItem(donorId);
-    if (!donorCheck.ok) return donorCheck;
-
-    const result = applyAXECombine(targetCheck.item, donorCheck.item, payload.options || {});
+    const ready = checkDonorUpgrade('combine', payload);
+    if (!ready.ok) return ready;
+    const { item, donor, cost } = ready;
+    const paid = consumeCost(cost);
+    if (!paid.ok) return paid;
+    const previous = { ...getAXEAdvancementState(item.instanceId).combine };
+    const result = applyAXECombine(item, donor, payload.options || {});
     if (result.ok && result.donorConsumed) {
-      const consumed = consumeAXEEquipmentItem(donorCheck.item.instanceId);
+      const consumed = consumeAXEEquipmentItem(donor.instanceId);
       if (!consumed.ok) {
-        return { ok: false, reason: 'DONOR_CONSUME_FAILED', transactionResult: result };
+        // never a free stage when the donor could not be taken
+        setAXEAdvancementRecord(item.instanceId, 'combine', previous);
+        return { ok: false, reason: 'DONOR_CONSUME_FAILED', cost };
       }
     }
-    return result;
+    return { ...result, donorId: donor.instanceId, donorConsumed: !!(result.ok && result.donorConsumed), cost };
   },
 
   // The legacy recipe is distinct from Combine Stage and retains the target
@@ -152,44 +186,41 @@ const localHandlers = {
     });
   }, 'weapon_legacy'),
 
-  stage: (payload) => withOwnedItem(payload, (item) => {
-    const advancement=getAXEAdvancementState(item.instanceId);
-    if(!getNextStage(advancement.stage))return {ok:false,reason:'MAX_STAGE'};
-    const currentPct=Number(getItemReinforcement(item.instanceId)?.percent||0);
-    if(!Number.isFinite(currentPct)||currentPct<0)
-      return {ok:false,reason:'REINFORCEMENT_INVALID'};
-    if(isAXEFarmingRarity(item.rarity)){
-      // The new Rare/Elite/Legendary ascension path requires a real owned,
-      // unlocked, unequipped same-rarity/same-slot donor. No forge materials
-      // or client-supplied rank/percent bypass. The transaction gateway already
-      // locks the item, donor and shared inventory until this finishes.
-      const donorId=payload.donorId||payload.donor?.instanceId;
-      const donorCheck=canConsumeAXEEquipmentItem(donorId);
-      if(!donorCheck.ok)return donorCheck;
-      const preview=previewAXEAscensionFeed(item,advancement.stage,donorCheck.item);
-      if(!preview.ok)return preview;
-      const previous={...advancement.stage};
-      const result=applyAXEStage(item.instanceId,{feedDonor:donorCheck.item});
-      if(!result.ok)return result;
-      const consumed=consumeAXEEquipmentItem(donorCheck.item.instanceId);
-      if(!consumed.ok){
-        // Never grant free ranks when inventory debit cannot complete.
-        setAXEAdvancementRecord(item.instanceId,'stage',previous);
-        return {ok:false,reason:'ASCENSION_DONOR_DEBIT_FAILED'};
-      }
-      return {...result,donorId:donorCheck.item.instanceId,
-        donorConsumed:true,required:preview.required,
-        progressAfter:preview.progressAfter,cost:{donors:1}};
+  // Ascension (Blacksmith v2), Rare / Elite / Legendary: one owned, unlocked, unequipped donor
+  // of the same rarity and slot/subtype with an equal or lower item level per attempt. The fee
+  // is paid on every attempt and the catalyst on a success (both free for now); a success uses
+  // up the donor, a failure keeps the donor and the rank. Chosen keeps its materials-only
+  // stage (the Chosen set's x2/x3 counts Stage IV pieces). Every other rarity: off.
+  stage: (payload) => {
+    const ready = checkDonorUpgrade('stage', payload);
+    if (!ready.ok) return ready;
+    const { item, donor } = ready;
+    const advancement = getAXEAdvancementState(item.instanceId);
+    if (isAXELegacyStageRarity(item)) {
+      const cost = getAXEAscensionCost({ item, advancement });
+      const paid = consumeCost(cost);
+      if (!paid.ok) return paid;
+      return { ...applyAXEStage(item.instanceId), cost };
     }
-    // Preserve legacy materials-based stage upgrades for nonfarming grades.
-    if(currentPct>getAXEReinforcementCap(item))
-      return {ok:false,reason:'REINFORCEMENT_EXCEEDS_RARITY_CAP'};
-    const cost=getAXEServiceInventoryCost('stage',{advancement});
-    const paid=consumeCost(cost);
-    if(!paid.ok)return paid;
-    const result=applyAXEStage(item.instanceId);
-    return {...result,cost};
-  },'stage'),
+    const previous = { ...advancement.stage };
+    const result = applyAXEStage(item.instanceId, { donor });
+    if (result.reason) return result;
+    const cost = getAXEAscensionCost({ item, success: !!result.ok });
+    const paid = consumeCost(cost);
+    if (!paid.ok) {
+      if (result.ok) setAXEAdvancementRecord(item.instanceId, 'stage', previous);
+      return paid;
+    }
+    if (result.ok) {
+      const consumed = consumeAXEEquipmentItem(donor.instanceId);
+      if (!consumed.ok) {
+        // never a free rank when the donor could not be taken
+        setAXEAdvancementRecord(item.instanceId, 'stage', previous);
+        return { ok: false, reason: 'ASCENSION_DONOR_DEBIT_FAILED', cost };
+      }
+    }
+    return { ...result, donorId: donor.instanceId, donorConsumed: !!result.ok, cost };
+  },
 
   refine: (payload) => withOwnedItem(payload, (item) => {
     const advancement = getAXEAdvancementState(item.instanceId);
@@ -288,6 +319,7 @@ const setUpgradeRecord = (serviceId, itemId, record) => (
 
 // what the game refuses anyway, checked before a roll is spent on it
 function checkBeforeServerRoll(serviceId, payload) {
+  if (DONOR_UPGRADES.includes(serviceId)) return checkDonorUpgrade(serviceId, payload);
   const check = requireOwned(payload.itemId || payload.item?.instanceId || payload.item?.id);
   if (!check.ok) return check;
   const eligible = getAXEServiceEligibility(serviceId, check.item);
@@ -327,9 +359,11 @@ async function runServerRolledUpgrade(serviceId, payload, expectedIdentity) {
   // the server rolls on its copy of the save, which must hold this item (starter items may
   // still be only in memory)
   persistAXEEquipmentInventory();
+  const donorId = ready.donor?.instanceId || null;
   const dice = await diceSource({
     serviceId,
     itemId,
+    ...(donorId ? { donorId } : {}),
     protectedAttempt: !!payload.options?.protectedAttempt,
     transactionId: payload.transactionId,
   });
@@ -350,11 +384,19 @@ async function runServerRolledUpgrade(serviceId, payload, expectedIdentity) {
   } else {
     setUpgradeRecord(serviceId, itemId, rolled.after);
   }
+  // the server used up the donor (Combine / Ascension success): it is gone here too
+  if (rolled.donorConsumed && rolled.donorId && getOwned(rolled.donorId)) {
+    consumeAXEEquipmentItem(rolled.donorId, { allowEquipped: true, allowLocked: true });
+  }
   return {
     ok: !!rolled.ok,
     outcome: rolled.outcome || null,
     cost: rolled.cost || null,
+    chance: rolled.chance ?? null,
+    before: rolled.before || null,
+    after: rolled.after || null,
     ...(rolled.destroyed ? { destroyed: true } : {}),
+    ...(DONOR_UPGRADES.includes(serviceId) ? { donorId: rolled.donorId || null, donorConsumed: !!rolled.donorConsumed } : {}),
     serverRolled: true,
   };
 }
