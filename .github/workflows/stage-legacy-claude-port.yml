@@ -34,6 +34,7 @@ jobs:
           stage_feature() {
             local src="$1" dest="$2" friendly="$3"
             local added=0 applied=0 skipped=0
+            git rev-parse --verify "source/claude/$src" >/dev/null
             git switch -C "$dest" origin/main
             local report="/tmp/$(echo "$dest" | tr / _).txt"
             : > "$report"
@@ -45,12 +46,12 @@ jobs:
                     printf 'SKIP already exists: %s\n' "$path" >> "$report"
                     skipped=$((skipped+1))
                   else
-                    git checkout "source/$src" -- "$path"
+                    git checkout "source/claude/$src" -- "$path"
                     added=$((added+1))
                   fi
                   ;;
                 M)
-                  git diff --binary --full-index "source/main...source/$src" -- "$path" > /tmp/legacy-one-file.patch
+                  git diff --binary --full-index "source/main...source/claude/$src" -- "$path" > /tmp/legacy-one-file.patch
                   if git apply --3way --index /tmp/legacy-one-file.patch >/tmp/apply-stdout.log 2>/tmp/apply-stderr.log; then
                     applied=$((applied+1))
                   else
@@ -65,7 +66,7 @@ jobs:
                   skipped=$((skipped+1))
                   ;;
               esac
-            done < <(git diff --name-status --no-renames "source/main...source/$src")
+            done < <(git diff --name-status --no-renames "source/main...source/claude/$src")
             git diff --cached --stat
             if ! git diff --cached --quiet; then
               git commit -m "Stage legacy Claude $friendly assets and conflict-free changes" \
