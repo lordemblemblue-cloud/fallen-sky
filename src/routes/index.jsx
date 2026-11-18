@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import Game3DHost from '@/components/game3d/Game3DHost';
+import GamesHub from '@/pages/GamesHub';
 
-// Public guest game entry. Account registration/login will be added separately later.
+// Adam X Eve Games hub: Fallen Sky Online (/gameview) on the left,
+// Duelist Adventure (/duelist) on the right.
 export const Route = createFileRoute('/')({
   ssr: false,
-  head: () => ({ meta: [{ title: 'Game 3D / Book · Atom × Eve' }] }),
-  component: Game3DHost,
+  head: () => ({ meta: [{ title: 'Adam X Eve Games' }] }),
+  component: GamesHub,
 });
