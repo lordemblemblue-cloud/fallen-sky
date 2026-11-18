@@ -112,6 +112,9 @@ One viewer file per kit, like the town and corridor files:
 
 ## Caves: finish them from the corridor file
 
+Started: see `WOLFVEIL_SUMI_CAVES.md` for what is built (the hallway in the
+tunnels, every piece of the kit made light) and what is still to place.
+
 `ancient_sumi_e_corridor_3d_viewer (3).html` holds six pieces: a hall with a
 treasure vault and a cave branch, a straight hall, a T-junction, a canyon
 (river and lake basin 162 x 38 m, cliff road, rock bridge, ways back up,
