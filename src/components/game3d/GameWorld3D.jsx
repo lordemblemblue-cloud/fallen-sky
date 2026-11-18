@@ -162,7 +162,10 @@ import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/Wo
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
-import {createWolfveilAreaPortals} from './wolfveil/WolfveilAreaPortals';
+// Torii gates + gate-only veils replace the decorative light arches of
+// ./wolfveil/WolfveilAreaPortals (kept: swap the constructor back to undo).
+import {createWolfveilAreaGates} from './wolfveil/WolfveilAreaGates';
+import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaCrossingMist';
 import {createWolfveilFarOutline} from './wolfveil/WolfveilFarOutline';
 import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
   activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
@@ -879,10 +882,23 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.__gw3dRegionStreamer=regionStream; // name kept for existing console checks
       window.__gw3dAreaLoader=regionStream;
     }
-    // Gateways are decoration: if one cannot be built the world still starts.
+    // Gateways: torii gates at every area portal, joined by spirit-veil
+    // walls that let the player (and AI) cross a border only through a gate.
+    // If they cannot be built the world still starts, with open borders.
     let areaPortals=null;
-    try{areaPortals=wolfveilVillage?createWolfveilAreaPortals(wolfveilVillage.world):null;}
-    catch(error){console.warn('Wolfveil area portals unavailable:',error);}
+    try{areaPortals=wolfveilVillage?createWolfveilAreaGates(wolfveilVillage.world):null;}
+    catch(error){console.warn('Wolfveil area gates unavailable:',error);}
+    // Walking through a gate thickens a screen mist; an area change flashes it.
+    const areaMist=areaPortals?createWolfveilAreaCrossingMist(container):null;
+    const onAreaMist=event=>{if(event?.detail?.gateway||event?.detail?.gatewayLabel)areaMist?.flash();};
+    window.addEventListener('game3dWorldRegionChange',onAreaMist);
+    // Veils are client presentation collision like buildings: never in a
+    // server-owned duel body, never underground (cave tunnels pass under).
+    const resolveAreaVeils=(position,from,radius)=>{
+      if(!areaPortals?.resolveCollision||dedicatedMode||region!=='wolfveil'||
+        wolfveilVillage?.caveSystem?.isActive?.())return false;
+      return areaPortals.resolveCollision(position,from,radius);
+    };
     const onPlatformGraphics=event=>{
       const profile=event?.detail?.profile||activeGame3DPlatformProfile(window).profile;
       regionStream?.setOptions({mode:profile.areaLoading,
@@ -2902,6 +2918,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       wolfveilVillage?.resolveBuildingCollision(model.position,.62,
         {x:fromX,y:model.position.y,z:fromZ},{player:true});
       importedSpawnTown?.resolveCollision(model.position,{x:fromX,z:fromZ});
+      resolveAreaVeils(model.position,{x:fromX,z:fromZ},.62);
     }
     // Cave cliff/void protection uses the SAME ground raycast as player feet.
     // Seven-foot rim band prevents lateral fall-through without flattening
@@ -2972,6 +2989,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
+        areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
         ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         if(!suigenActive)vortexLake?.update(delta,null);
@@ -3006,6 +3024,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
+        areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
@@ -4012,7 +4031,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               enemy.group.position.z = nextZ;
               enemy.group.position.y = nextGround;
               forestBiome?.resolveCollision(enemy.group.position, 0.55);
-              wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });
+              wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });resolveAreaVeils(enemy.group.position, { x: fromX, z: fromZ }, 0.55);
             }
             if (enemy.idleAction?.isRunning?.()) enemy.idleAction.fadeOut(0.2);
             const motionAction=enemy.aiEngaged&&!returning&&enemy.runAction
@@ -4051,7 +4070,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 if (ground !== null && ground !== undefined) {
                   enemy.group.position.set(nextX, ground, nextZ);
                   forestBiome?.resolveCollision(enemy.group.position, 0.55);
-                  wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });
+                  wolfveilVillage?.resolveBuildingCollision(enemy.group.position, 0.55, { x: fromX, z: fromZ });importedSpawnTown?.resolveCollision(enemy.group.position, { x: fromX, z: fromZ });resolveAreaVeils(enemy.group.position, { x: fromX, z: fromZ }, 0.55);
                 }
                 const faceQ = new THREE.Quaternion().setFromAxisAngle(
                   new THREE.Vector3(0, 1, 0), Math.atan2(dx, dz),
@@ -5163,6 +5182,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Hand every managed object back before its owner tears it down.
       window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
       areaPortals?.dispose();
+      areaMist?.dispose();
+      window.removeEventListener('game3dWorldRegionChange',onAreaMist);
       regionStream?.dispose();
       farOutline?.disposeAll();
       if(window.__gw3dRegionStreamer===regionStream)window.__gw3dRegionStreamer=null;
