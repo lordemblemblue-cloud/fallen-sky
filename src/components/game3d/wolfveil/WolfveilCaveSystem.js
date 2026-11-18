@@ -23,6 +23,7 @@ import {WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_JUNCTION,
   WOLFVEIL_MODULAR_CANYON} from './WolfveilModularCaveKit.mjs';
 import {appendWolfveilModularCaveVisuals} from './WolfveilModularCaveVisuals.mjs';
 import {installWolfveilCaveDrawBudget} from './WolfveilCaveDrawBudget.mjs';
+import {buildWolfveilSumiHalls} from './caves/WolfveilSumiCaveHalls.js';
 import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
 
 import { wolfveilHeight } from './WolfveilLayout.js';
@@ -906,6 +907,19 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   });
   world.ownedMaterials.push(modularVisual.waterMaterial);
 
+  // The owner's sumi-e hallway (tiled path, painted brick walls, gold and
+  // silver trim) along the three modular tunnels, built from the owner's own
+  // kit and baked to one mesh per material. Scenery only: the stone floor
+  // and the tunnel walls above still decide where a player can walk. If it
+  // cannot be built the tunnels stay bare rock, as before.
+  let sumiHalls = null;
+  try {
+    sumiHalls = buildWolfveilSumiHalls({ THREE });
+    group.add(sumiHalls.object);
+  } catch (error) {
+    console.warn('[Wolfveil caves] sumi-e hallway unavailable; tunnels stay bare rock:', error);
+  }
+
   // Lightweight, camera-facing cave wayfinding: the stone arches now have
   // deliberate E entry/exit and the central rotunda signs point to EACH
   // of the four physically connected corridors. Sprites never raycast and
@@ -1083,6 +1097,8 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
       treasureRoom:WOLFVEIL_MODULAR_TREASURE_ROOM,
       junction:WOLFVEIL_MODULAR_JUNCTION,
       build:modularVisual.stats,
+      halls:sumiHalls?.stats??null,
+      hallsObject:sumiHalls?.object??null,
       treasureChestsDecorativeOnly:true,bossGameplayImplemented:false,
     },
     // Draw budget controls and numbers (diagnostics, A/B test, map export).
@@ -1212,6 +1228,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     dispose() {
       drawBudget?.dispose();
       modularVisual.waterGeometry.dispose();
+      sumiHalls?.dispose();
       for (const mat of wayfindingMaterials) mat.dispose();
       for (const t of ownedTextures) t.dispose();
       boxGeo.dispose();

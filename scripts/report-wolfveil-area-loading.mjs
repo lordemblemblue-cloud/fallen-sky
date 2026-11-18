@@ -746,6 +746,22 @@ export async function runWolfveilAreaLoadingReport({
     moveTo(...spots.town);run(.5);
     const onSurface=measureCaves();
     const surfaceStats=caves.drawBudget.stats();
+    // The owner's sumi-e hallway along the modular tunnels.
+    const halls=caves.modularCave?.halls||null,hallsObject=caves.modularCave?.hallsObject||null;
+    check(Boolean(halls&&hallsObject),'the sumi-e hallway was not built (see the console warning)');
+    let hallsSeen=null;
+    if(hallsObject){
+      check(!effectivelyVisible(hallsObject),'on the surface the buried hallway must not be drawn');
+      hallsSeen=await caves.withInteriorShown(async()=>{
+        const shown=effectivelyVisible(hallsObject),count=measureVisibleScene(hallsObject,{labelOf:byMaterial});
+        return {shown,drawCalls:count.drawCalls,triangles:count.triangles};
+      });
+      check(hallsSeen.shown,'underground the hallway must be drawn');
+      check(hallsSeen.drawCalls===halls.drawCalls&&hallsSeen.triangles===halls.triangles,
+        'the hallway on screen ('+hallsSeen.drawCalls+' calls, '+hallsSeen.triangles+' triangles) is not what was baked ('+
+        halls.drawCalls+', '+halls.triangles+')');
+      check(halls.drawCalls<=14,'the hallway must stay a handful of draw calls: '+halls.drawCalls);
+    }
     check(surfaceStats.interiorShown===false,
       'standing in town the buried cave interior must be switched off ('+surfaceStats.reason+')');
     // As built (budget off) against merged with the whole network shown.
@@ -792,7 +808,7 @@ export async function runWolfveilAreaLoadingReport({
       insideCave:inside&&{drawCalls:inside.drawCalls,triangles:inside.triangles},
       wholeSceneInsideCave:wholeSceneInside&&{drawCalls:wholeSceneInside.drawCalls,triangles:wholeSceneInside.triangles},
       visit:{entered:entered?.name||null,left:left?.action||null},
-      boundsDriftMeters:drift,budget:caves.drawBudget.stats(),
+      boundsDriftMeters:drift,budget:caves.drawBudget.stats(),halls,
     };
   }else check(!caves,'the cave draw budget failed to install (see the console warning)');
 
@@ -943,6 +959,9 @@ export function formatWolfveilAreaLoadingReport(result){
     lines.push('  as built, always drawn      '+row(c.asBuilt));
     lines.push('  now, on the surface         '+row(c.onSurface));
     lines.push('  now, inside a cave          '+row(c.insideCave)+'   (whole scene while inside: '+row(c.wholeSceneInsideCave)+')');
+    if(c.halls)lines.push('  sumi-e hallway: '+c.halls.runs+' runs, '+c.halls.meters+' m. As the owner\'s kit builds it: '+
+      n(c.halls.meshesBefore)+' meshes, '+n(c.halls.trianglesBefore)+' triangles. Baked: '+c.halls.drawCalls+' draw calls, '+
+      n(c.halls.triangles)+' triangles.');
     lines.push('  visit: entered '+(c.visit.entered||'nothing')+', then '+(c.visit.left||'stayed inside')+
       '; bounds moved '+c.boundsDriftMeters.toFixed(4)+' m');
     lines.push('  '+JSON.stringify(c.budget));
