@@ -1,0 +1,88 @@
+name: Stage Claude's remaining gameplay ports from legacy source
+
+on:
+  push:
+    branches:
+      - migration/stage-claude-feature-ports-20261118
+
+permissions:
+  contents: write
+
+jobs:
+  stage-claude-features:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out latest target main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Build safe candidate branches from source diffs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Emblem Blue migration'
+          git config user.email 'actions@users.noreply.github.com'
+          git remote add source https://github.com/marcusflow1-arch/Fallen-sky-.git
+          git fetch --no-tags source \
+            '+refs/heads/main:refs/remotes/source/main' \
+            '+refs/heads/claude/weapon-pack-summon-20261118:refs/remotes/source/claude/weapon-pack-summon-20261118' \
+            '+refs/heads/claude/landscape-whole-map-20261116:refs/remotes/source/claude/landscape-whole-map-20261116'
+
+          stage_feature() {
+            local src="$1" dest="$2" friendly="$3"
+            local added=0 applied=0 skipped=0
+            git switch -C "$dest" origin/main
+            local report="/tmp/$(echo "$dest" | tr / _).txt"
+            : > "$report"
+            while IFS=$'\t' read -r status path; do
+              [ -n "$path" ] || continue
+              case "$status" in
+                A)
+                  if git cat-file -e "HEAD:$path" 2>/dev/null; then
+                    printf 'SKIP already exists: %s\n' "$path" >> "$report"
+                    skipped=$((skipped+1))
+                  else
+                    git checkout "source/$src" -- "$path"
+                    added=$((added+1))
+                  fi
+                  ;;
+                M)
+                  git diff --binary --full-index "source/main...source/$src" -- "$path" > /tmp/legacy-one-file.patch
+                  if git apply --3way --index /tmp/legacy-one-file.patch >/tmp/apply-stdout.log 2>/tmp/apply-stderr.log; then
+                    applied=$((applied+1))
+                  else
+                    git reset -q HEAD -- "$path" || true
+                    git checkout HEAD -- "$path" || true
+                    printf 'SKIP conflicting update: %s\n' "$path" >> "$report"
+                    skipped=$((skipped+1))
+                  fi
+                  ;;
+                *)
+                  printf 'SKIP non-additive change (%s): %s\n' "$status" "$path" >> "$report"
+                  skipped=$((skipped+1))
+                  ;;
+              esac
+            done < <(git diff --name-status --no-renames "source/main...source/$src")
+            git diff --cached --stat
+            if ! git diff --cached --quiet; then
+              git commit -m "Stage legacy Claude $friendly assets and conflict-free changes" \
+                -m "Original source: marcusflow1-arch/Fallen-sky-, source branch claude/$src. Conflicting changes were excluded to preserve newer Emblem Blue code; review before merging."
+              git push --set-upstream origin "$dest"
+            fi
+            echo "### $friendly" >> "$GITHUB_STEP_SUMMARY"
+            echo "Candidate branch: \$dest" >> "$GITHUB_STEP_SUMMARY"
+            echo "Added files: $added. Applied modified files: $applied. Skipped conflicts/other changes: $skipped." >> "$GITHUB_STEP_SUMMARY"
+            if [ -s "$report" ]; then
+              echo 'Skipped files requiring manual integration:' >> "$GITHUB_STEP_SUMMARY"
+              echo '\`\`\`' >> "$GITHUB_STEP_SUMMARY"
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+              echo '\`\`\`' >> "$GITHUB_STEP_SUMMARY"
+            fi
+            git switch main
+          }
+
+          stage_feature weapon-pack-summon-20261118 migration/claude-weapon-pack-20261118 'weapon pack'
+          stage_feature landscape-whole-map-20261116 migration/claude-landscape-20261118 'landscaping'
