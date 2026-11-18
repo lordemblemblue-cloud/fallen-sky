@@ -16,7 +16,7 @@ import {
 } from './AXEEquipmentSystem';
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
-const CURRENT_STARTER_CATALOG_VERSION = 3;
+const CURRENT_STARTER_CATALOG_VERSION = 4; // 3: clone Crescent Moon preview pieces; 4: owner weapon pack
 
 // A sword, dagger pair or bow with no picture of its own shows the weapon pack's picture of its model,
 // in the starting inventory and in one saved before the pictures existed.

@@ -50,7 +50,7 @@ test('clone-only V3 starter migration seeds six items and retains old upgrade co
  assert.match(inventory,/for \(const item of makeAXEDevArmorItems\(\)\)/);
  assert.match(inventory,/introducedVersion: 3/);
  assert.match(inventory,/source: 'clone_crescent_moon_preview'/);
- assert.match(store,/CURRENT_STARTER_CATALOG_VERSION = 3/);
+ assert.match(store,/CURRENT_STARTER_CATALOG_VERSION = [3-9]\b/); // later catalog versions (4: weapon pack) keep V3's one-time grant
  assert.match(store,/previousCatalogVersion < Number\(starter.introducedVersion/);
  assert.match(equip,/useArmoredAppearance\(/);
  assert.match(read('src/components/game3d/equipment/enchantmentStore.jsx'),/export const reinforceItem = /);
