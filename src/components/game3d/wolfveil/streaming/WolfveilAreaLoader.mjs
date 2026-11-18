@@ -400,14 +400,18 @@ export function createWolfveilAreaLoader({
       known.get(object).far={instances:object.count|0,triangles:Math.round(print.triangles)};
       return;
     }
-    const area=wolfveilAreaOfRect(print.minX,print.maxX,
-      print.minZ-offsetZ,print.maxZ-offsetZ);
+    const areaOwnedTerrain=object.userData?.wolfveilAreaTerrain;
+    const area=WOLFVEIL_AREA_IDS.includes(areaOwnedTerrain)
+      ?areaOwnedTerrain
+      :wolfveilAreaOfRect(print.minX,print.maxX,print.minZ-offsetZ,print.maxZ-offsetZ);
     // A skyline landmark is tall AND slender (a peak, a tower). A wide model
-    // that merely follows sloping ground is ordinary scenery.
+    // that merely follows sloping ground is ordinary scenery. Terrain chunks
+    // carry an explicit owner because their cells follow grid lines at a
+    // portal border and can straddle that mathematical line by one cell.
     const height=print.maxY-print.minY;
     const tall=height>=skylineMeters&&
       height>=.4*Math.max(print.maxX-print.minX,print.maxZ-print.minZ);
-    if(area&&!tall){
+    if(area&&(!tall||WOLFVEIL_AREA_IDS.includes(areaOwnedTerrain))){
       pending.delete(object);
       // Async models fill in over several frames: wait until two scans agree.
       if(seen?.state==='settling'&&seen.signature===sig)makeUnit(object,area,print);
