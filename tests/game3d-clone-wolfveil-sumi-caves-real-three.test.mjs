@@ -53,7 +53,8 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
   const kit=createLightSumiCorridorKit({THREE,document:fakeDocument()});
   const pieces=[
     ['hallway','createHallwayStandaloneModule',2500,14],
-    ['hallway with vault','createHallwayAttachedModule',16000,30],
+    // Thirty floating stairs and relics each move on their own, so each is a draw call.
+    ['hallway with vault','createHallwayAttachedModule',16000,50],
     ['T-junction','createDetachedTJunctionModule',7000,16],
     ['cave and canyon','createDetachedCaveCanyonModule',48000,30],
     ['sunken sanctuary','createDetachedSunkenSanctuaryCaveModule',58000,90],
