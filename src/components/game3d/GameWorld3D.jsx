@@ -4134,8 +4134,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 ?swordSkillComboKind(pendingSkillStrike.skillId,
                   getSkillMasteryLevel(pendingSkillStrike.skillId),
                   getSkillById(pendingSkillStrike.skillId)?.max_level):null;
-              const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
-                : ['damage', 'melee'].includes(activeWeaponPath) ? (swordSkillKind||'swordCombo') : null);
+              const comboKind = !isMountedRef.current ? (activeWeaponPath === 'ranged' ? 'bowCombo'
+                : ['damage', 'melee'].includes(activeWeaponPath) ? (swordSkillKind||'swordCombo') : null) : null;
               const montage = comboKind || (activeWeaponPath === 'ranged' ? 'attack' : 'kick');
               if (playerAnim?.HandleCombat) {
                 playerAnim.HandleCombat(montage, {
@@ -4213,9 +4213,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               ?swordSkillComboKind(pendingSkillStrike.skillId,
                 getSkillMasteryLevel(pendingSkillStrike.skillId),
                 getSkillById(pendingSkillStrike.skillId)?.max_level):null;
-            const comboKind = !isMountedRef.current && (activeWeaponPath === 'ranged' ? 'bowCombo'
+            const comboKind = !isMountedRef.current ? (activeWeaponPath === 'ranged' ? 'bowCombo'
               : ['damage', 'melee'].includes(activeWeaponPath) && !isRangedClickAttack
-                ? (swordSkillKind||'swordCombo') : null);
+                ? (swordSkillKind||'swordCombo') : null) : null;
             const montage = comboKind || (isRangedClickAttack || activeWeaponPath === 'ranged' ? 'attack' : 'kick');
             if (playerAnim?.HandleCombat) {
               playerAnim.HandleCombat(montage, {
