@@ -9,8 +9,10 @@ import {
 import {isChroniclePhoto} from './echoChroniclePhoto';
 import {buildPrivateEchoStarPreview} from './echoChronicleSkyJourney';
 import EchoChronicleSkyChapterEditor from './EchoChronicleSkyChapterEditor';
-import EchoChronicleSkyAtlas,{EchoChronicleSkyStoryboard} from './EchoChronicleSkyAtlas';
-import EchoChronicleJourneyTrail from './EchoChronicleJourneyTrail';
+// Explicit .jsx: echoChronicleSkyAtlas.js / echoChronicleJourneyTrail.js differ only by case, and a
+// case-insensitive disk (Windows) would otherwise resolve these to the data helpers.
+import EchoChronicleSkyAtlas,{EchoChronicleSkyStoryboard} from './EchoChronicleSkyAtlas.jsx';
+import EchoChronicleJourneyTrail from './EchoChronicleJourneyTrail.jsx';
 import {getStorageUser,getActiveId} from '../characterStorage';
 import {planEchoReadingShelfReturn}
  from './echoChronicleReadingShelfReturn.js';

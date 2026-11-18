@@ -5,7 +5,7 @@ import {
  ECHO_NEXT_QUEUE_FILTERS,ECHO_NEXT_QUEUE_SORTS,
  buildEchoChronicleNextMemoryQueue,
 } from './echoChronicleNextMemoryQueue.js';
-import EchoChronicleThreadReader from './EchoChronicleThreadReader';
+import EchoChronicleThreadReader from './EchoChronicleThreadReader.jsx';
 import {projectEchoChronicleRemainingPages}
  from './echoChronicleRemainingPages.js';
 import {planEchoChronicleReadingCheckpoint}

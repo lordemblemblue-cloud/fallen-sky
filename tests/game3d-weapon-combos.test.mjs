@@ -316,8 +316,9 @@ test('GameWorld3D (clone): summoned weapons fight with their combo; blade trails
   const summonAt = world.indexOf('weaponSummon = createPlayerWeaponSummon(');
   const binderAt = world.indexOf('weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime');
   assert.ok(summonAt > 0 && binderAt > summonAt && binderAt - summonAt < 600, 'the binder is made with the runtime, at model load (rest pose)');
-  // The clone picks the combo from the weapon path (ranged -> bow, melee/damage -> sword) on foot
-  assert.equal((world.match(/const comboKind = !isMountedRef\.current && \(activeWeaponPath === 'ranged' \? 'bowCombo'/g) || []).length, 2,
+  // The clone picks the combo from the weapon path (ranged -> bow, melee/damage -> sword, or the sword skill's own
+  // tier kind) on foot, and none while riding
+  assert.equal((world.match(/const comboKind = !isMountedRef\.current \? \(activeWeaponPath === 'ranged' \? 'bowCombo'/g) || []).length, 2,
     'PvE and duel presses choose the combo');
   assert.equal((world.match(/hitIndex: comboKind && !isSkillStrike \? undefined : pendingSkillStrike\?\.hitIndex \?\? 0,/g) || []).length, 2,
     'PvE and duel basic presses continue the chain');

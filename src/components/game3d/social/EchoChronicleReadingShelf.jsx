@@ -11,8 +11,8 @@ import {
  ECHO_READING_SHELF_FILTERS,ECHO_READING_SHELF_SORTS,
  projectEchoChronicleReadingShelf,
 } from './echoChronicleReadingShelf.js';
-import EchoChronicleThreadReader from './EchoChronicleThreadReader';
-import EchoChronicleNextMemoryQueue from './EchoChronicleNextMemoryQueue';
+import EchoChronicleThreadReader from './EchoChronicleThreadReader.jsx';
+import EchoChronicleNextMemoryQueue from './EchoChronicleNextMemoryQueue.jsx';
 import {planEchoChronicleNextSavedMemory}
  from './echoChronicleNextSavedMemory.js';
 import {buildEchoChronicleReadingSkyIndex}

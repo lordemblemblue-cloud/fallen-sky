@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import {isWolfveilCaveApproachReserved} from './WolfveilCaveAccessPlan.mjs';
 import {planWolfveilLivingLandscape} from './WolfveilLivingLandscapePlan.mjs';
 import {rockGeometry,byRegion} from './WolfveilTrailLandscaping.js';
+import {WOLFVEIL_FLOWER_CELLS} from './WolfveilPlantCardAtlas.mjs';
 
 const BLOOM_TONES=[0xf2efe2,0xe8c63a,0x6f72c9,0xc8432f,0xb86fa8]; // species order
 const BLOOM_HEIGHT=[1,.85,1.7,1.2,.7];
@@ -107,7 +108,7 @@ function batch(world,geometry,material,items,name,place){
   return world.mesh(mesh);
 }
 
-export function buildWolfveilLivingLandscape(world,{heightAt}){
+export function buildWolfveilLivingLandscape(world,{heightAt,plantCards=null}){
   const plan=planWolfveilLivingLandscape({heightAt});
   const leaf=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.95,
     vertexColors:true,side:THREE.DoubleSide});
@@ -117,7 +118,9 @@ export function buildWolfveilLivingLandscape(world,{heightAt}){
   const bush=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.92,
     vertexColors:true,flatShading:true});
   const stone=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.55,flatShading:true});
-  const bark=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,flatShading:true});
+  // Game 3D (plant cards on): round, smooth-shaded logs instead of faceted
+  // seven-sided prisms that read as grey rocks.
+  const bark=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.98,flatShading:!plantCards});
 
   const upright=(item,height=1)=>{
     dummy.position.set(item.x,item.y-.02,item.z);
@@ -142,7 +145,7 @@ export function buildWolfveilLivingLandscape(world,{heightAt}){
       dummy.rotation.set(r.tilt,r.yaw,r.tilt*.6);
       dummy.scale.set(r.size*r.stretch,r.size*r.squash,r.size);
       tint.set(pick(WET_STONE_TONES,r.tone)).lerp(MOSS,r.moss*.5);}],
-    [plan.logs,new THREE.CylinderGeometry(1,1,1,7,1).rotateZ(Math.PI/2),bark,'SWV_Living_Logs',l=>{
+    [plan.logs,new THREE.CylinderGeometry(1,1,1,plantCards?14:7,1).rotateZ(Math.PI/2),bark,'SWV_Living_Logs',l=>{
       dummy.position.set(l.x,l.y+l.radius*.55,l.z);
       dummy.rotation.set(0,l.yaw,l.pitch);
       dummy.scale.set(l.length,l.radius,l.radius);
@@ -151,7 +154,32 @@ export function buildWolfveilLivingLandscape(world,{heightAt}){
   for(const [items,geometry,material,name,place] of layers)
     for(const region of byRegion(items.filter(p=>!isWolfveilCaveApproachReserved(p.x,p.z,.65))))
       batch(world,geometry,material,region,name,place);
+  // Game 3D: flowers, shrubs, ferns and reeds become cards baked from
+  // high-poly plants (WolfveilPlantCards.js); these meshes are the fallback.
+  // The cards keep out of the cave approaches like the meshes they replace.
+  if(plantCards){
+    const clear=list=>list.filter(p=>!isWolfveilCaveApproachReserved(p.x,p.z,.65));
+    const fallbackOf=(...names)=>world.meshes.filter(m=>names.includes(m.name));
+    const tone=t=>{const v=.88+.24*t;return [v,v,v];};
+    plantCards.layer(world,clear(plan.flowers),{name:'SWV_BakedCard_Wildflowers',
+      cellOf:f=>WOLFVEIL_FLOWER_CELLS[f.species]||'flower_white',
+      heightOf:(f,cell)=>cell.size*f.size,tintOf:f=>tone(f.tone),
+      fallback:fallbackOf('SWV_Living_FlowerStems','SWV_Living_FlowerBlooms')});
+    plantCards.layer(world,clear(plan.shrubs),{name:'SWV_BakedCard_Shrubs',
+      cellOf:s=>s.dry?'shrub_dry':s.tone<.22?'shrub_flowering':'shrub',
+      heightOf:(s,cell)=>cell.size*s.size*.9,tintOf:s=>tone(s.tone),
+      fallback:fallbackOf('SWV_Living_Shrubs')});
+    plantCards.layer(world,clear(plan.ferns),{name:'SWV_BakedCard_Ferns',cellOf:()=>'fern',
+      heightOf:(f,cell)=>cell.size*f.size*.8,tintOf:f=>tone(f.tone),
+      fallback:fallbackOf('SWV_Living_Ferns')});
+    plantCards.layer(world,clear(plan.reeds),{name:'SWV_BakedCard_Reeds',cellOf:()=>'reeds',
+      heightOf:(r,cell)=>cell.size*r.size*.85,tintOf:r=>tone(r.tone),
+      fallback:fallbackOf('SWV_Living_Reeds')});
+  }
   return {flowers:plan.flowers.length,shrubs:plan.shrubs.length,ferns:plan.ferns.length,
     reeds:plan.reeds.length,bankStones:plan.bankStones.length,logs:plan.logs.length,
-    triangles:plan.triangles};
+    triangles:plan.triangles,
+    // Game 3D swaps these wet stones for baked rocks (WolfveilBakedRocks.js).
+    bankStonePlan:plan.bankStones,
+    bankStoneMeshes:world.meshes.filter(m=>m.name==='SWV_Living_BankStones')};
 }

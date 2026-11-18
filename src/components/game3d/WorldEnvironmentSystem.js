@@ -175,6 +175,9 @@ export function createWorldEnvironmentSystem({
   dayLengthSeconds = 240,   // one full 24h cycle
   seasonCycleDays = 5,      // in-game days per season
   climate: initialClimate = 'michigan',
+  // Overworld view distance multiplier (1 = the original 90-260 m mist).
+  // Classic Wolfveil passes ~5.5 so its mountain ranges stay visible.
+  viewScale = 1,
 }) {
   if (!scene || !sun || !hemi || !fog) {
     console.warn('[WorldEnvironmentSystem] missing required deps');
@@ -786,9 +789,10 @@ export function createWorldEnvironmentSystem({
     const baseFog = pal.fog.clone().lerp(new THREE.Color(season.fogTint), 0.35);
     baseFog.multiplyScalar(mod.fogMul);
     fog.color.copy(baseFog);
-    const far = 260 * mod.fogFar * (state.eclipse ? 0.6 : 1) * readGraphicsFogScale();
+    const view = Number.isFinite(viewScale) && viewScale > 0 ? viewScale : 1;
+    const far = 260 * view * mod.fogFar * (state.eclipse ? 0.6 : 1) * readGraphicsFogScale();
     fog.far = far;
-    fog.near = Math.min(far * 0.35, 90);
+    fog.near = Math.min(far * 0.35, 90 * view);
 
     // Clouds — opacity follows cloud cover (smoothed), color follows weather +
     // season, brightness follows the sun so clouds dim at night (moonlit, not

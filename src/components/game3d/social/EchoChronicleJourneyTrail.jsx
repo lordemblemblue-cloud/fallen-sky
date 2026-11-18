@@ -4,7 +4,7 @@ import {
  MapPin,Star,Users,Search,X,Compass,
 } from 'lucide-react';
 import {buildEchoChronicleJourneyTrail} from './echoChronicleJourneyTrail';
-import EchoChronicleCrossroads from './EchoChronicleCrossroads';
+import EchoChronicleCrossroads from './EchoChronicleCrossroads.jsx';
 import {
  ECHO_JOURNEY_FILTERS,projectEchoChronicleJourneyView,
  echoJourneyContextCounts,
