@@ -117,12 +117,12 @@ def spine_angles(m, F, U, R, bones=3):
     """Twist / bend / lean (the baker's spine key) whose per-bone turns, applied to `bones` spine bones,
     add up to the world rotation m. The baker turns each bone about U, then R, then F."""
     a = root_of(m, bones)
-    B = np.stack([R, U, F], 1)             # columns: body axes in the capture's world
-    l = B.T @ a @ B                        # the per-bone turn in body axes (x = R, y = U, z = F)
-    # l = Rz(lean) * Rx(-bend) * Ry(-twist)
+    # body axes as a right-handed set (left, up, forward); a turn about `left` is a turn the other way about `right`
+    B = np.stack([-R, U, F], 1)
+    l = B.T @ a @ B                        # the per-bone turn: l = Rz(lean) * Rx(bend) * Ry(-twist)
     rx = math.asin(max(-1.0, min(1.0, l[2, 1])))
     rz = math.atan2(-l[0, 1], l[1, 1]); ry = math.atan2(-l[2, 0], l[2, 2])
-    return [-math.degrees(ry) * bones, -math.degrees(rx) * bones, math.degrees(rz) * bones]
+    return [-math.degrees(ry) * bones, math.degrees(rx) * bones, math.degrees(rz) * bones]
 
 
 def extract(c, spec, facing, origin):
