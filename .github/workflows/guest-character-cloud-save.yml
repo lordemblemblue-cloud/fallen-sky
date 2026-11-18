@@ -28,5 +28,7 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Validate guest character schema
         run: node -e "JSON.parse(require('fs').readFileSync('base44/entities/game3-d-guest-character-save.jsonc', 'utf8'))"
+      - name: Validate guest Deno function TypeScript
+        run: npx esbuild base44/functions/guestCharacterVault/entry.ts --bundle --platform=neutral --format=esm --external:npm:* --outfile=/tmp/guest-character-vault-check.mjs
       - name: Build game and cloud recovery interface
         run: npm run build
