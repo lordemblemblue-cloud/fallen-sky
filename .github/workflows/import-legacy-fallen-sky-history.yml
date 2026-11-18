@@ -1,0 +1,40 @@
+name: One-time import of legacy Fallen-sky branch history
+
+on:
+  push:
+    branches:
+      - migration/import-legacy-history-20261118
+
+permissions:
+  contents: write
+
+jobs:
+  import-legacy-branches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the Emblem Blue repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Fetch all source branches and their objects
+        run: |
+          set -euo pipefail
+          git remote add legacy https://github.com/marcusflow1-arch/Fallen-sky-.git
+          git fetch --prune --no-tags legacy '+refs/heads/*:refs/remotes/legacy/*'
+          count=$(git for-each-ref --format='%(refname)' refs/remotes/legacy/ | wc -l)
+          echo "Fetched $count legacy branches"
+          test "$count" -gt 0
+      - name: Copy legacy history into namespaced branches; never update main
+        run: |
+          set -euo pipefail
+          git push origin 'refs/remotes/legacy/*:refs/heads/legacy/*'
+      - name: Verify that source main and Claude branches were copied
+        run: |
+          set -euo pipefail
+          for branch in main claude/weapon-pack-summon-20261118 claude/winged-mount-animation-20261118 claude/landscape-whole-map-20261116; do
+            git ls-remote --exit-code origin "refs/heads/legacy/$branch" >/dev/null
+            echo "Verified legacy/$branch"
+          done
+          echo "Legacy history archived without changing the active main branch."
