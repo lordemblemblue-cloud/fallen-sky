@@ -151,6 +151,17 @@ function capturedMove(move, name, from = [0, 0]) {
     ease: move.ease, steps: move.steps, armLength: move.armLength };
 }
 
+/**
+ * One technique as a baker move with the clip name asked for: a strike by its number (1..9) or a captured
+ * move by its id. `from`: where the body already stands when a captured move starts.
+ */
+export function katanaBakerMove(technique, name, from = [0, 0]) {
+  const strike = typeof technique === 'number' ? katanaStrike(technique) : null;
+  if (strike) return strikeMove(strike, name);
+  const captured = typeof technique === 'string' ? katanaCapturedMove(technique) : null;
+  return captured ? capturedMove(captured, name, from) : null;
+}
+
 /** The nine strikes as baker moves, each its own clip ("katanaStrike1" .. "katanaStrike9"). */
 export function katanaStrikeMoves() {
   return KATANA_STRIKES.map((strike) => strikeMove(strike, 'katanaStrike' + strike.number));

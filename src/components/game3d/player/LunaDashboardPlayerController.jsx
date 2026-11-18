@@ -5,6 +5,7 @@ import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, re
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
+import { SWORD_SKILL_STATE_NAMES, swordSkillState } from '../weapons/swordSkillMoves.mjs';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
   beginAirWalkFinisher,setAirWalkKickHeld,
@@ -15,6 +16,10 @@ import {HALO_FLIGHT_RULES,paidGlideSeconds} from './haloWingFlightRules.mjs';
 // 3-hit weapon combos (weapons/weaponComboClips.js, baked per held weapon). A press inside the chain window
 // continues the chain; a press during a swing is buffered and starts the next hit at that swing's cancel point.
 const WEAPON_COMBO_STATE_SET = new Set(Object.values(WEAPON_COMBO_STATES).flat());
+// A sword skill's own clip (weapons/swordSkillMoves.mjs) plays in place of the combo clip its hit would use.
+// Outside this controller it is still reported as that combo state, so the weapon grip, the trails and
+// other players' view of the swing work as they do for the combo.
+const WEAPON_CLIP_STATE_SET = new Set([...WEAPON_COMBO_STATE_SET, ...SWORD_SKILL_STATE_NAMES]);
 export const WEAPON_COMBO_CHAIN_GRACE_SECONDS = 0.55; // after a swing ends, the next press still continues the chain
 export const WEAPON_COMBO_BUFFER_SECONDS = 0.6; // how long a buffered press waits for the cancel point
 
@@ -141,8 +146,9 @@ export function createLunaDashboardPlayerController({
   const ATTACK_STATES = new Set([
     STATES.DRAW_ARROW, STATES.MELEE_ATTACK, STATES.MELEE_COMBO_2,
     STATES.MELEE_COMBO_3, STATES.HEAVY_ATTACK,
-    'kick', 'punch', 'aimRecoil', ...WEAPON_COMBO_STATE_SET,
+    'kick', 'punch', 'aimRecoil', ...WEAPON_CLIP_STATE_SET,
   ]);
+  const shownStateOf = new Map(); // a skill clip's state -> the combo state it stands in for
   const now = () => performance.now() / 1000;
   const hasAction = (state) => !!actions[resolvePlayerAnimationKey(state)];
   const isIdleVariant = state => PLAYER_IDLE_VARIANTS.includes(state);
@@ -173,7 +179,9 @@ export function createLunaDashboardPlayerController({
     const index = config.heavy ? states.length - 1
       : explicit ? Math.abs(Math.trunc(Number(hitIndex))) % states.length
         : comboChain.kind === kind && at <= comboChain.until ? (comboChain.index + 1) % states.length : 0;
-    const state = states[index];
+    const skillState = kind === 'swordCombo' && config.skillId ? swordSkillState(config.skillId, explicit ? hitIndex : 0) : null;
+    const state = skillState && hasAction(skillState) ? skillState : states[index];
+    if (state !== states[index]) shownStateOf.set(state, states[index]);
     const speed = Math.max(0.7, Math.min(2.2, Number(config.speed) || 1));
     queuedCombo = null;
     if (!playState(state, { force: true, fade: 0.06, timeScale: speed })) return false;
@@ -217,8 +225,8 @@ export function createLunaDashboardPlayerController({
   // Combo clips are baked per held weapon (weapons/weaponComboBinder.js) and survive bindClips. Returns false,
   // changing nothing, while a combo swing is still playing or fading out; the caller retries later.
   const setWeaponComboClips = (clipsByKey = {}) => {
-    const entries = Object.entries(clipsByKey).filter(([key, clip]) => WEAPON_COMBO_STATE_SET.has(key) && clip);
-    if ([...WEAPON_COMBO_STATE_SET].some((key) => actions[key]?.isScheduled() && actions[key].getEffectiveWeight() > 0)) return false;
+    const entries = Object.entries(clipsByKey).filter(([key, clip]) => WEAPON_CLIP_STATE_SET.has(key) && clip);
+    if ([...WEAPON_CLIP_STATE_SET].some((key) => actions[key]?.isScheduled() && actions[key].getEffectiveWeight() > 0)) return false;
     for (const [key, clip] of entries) {
       const old = actions[key];
       if (old?.getClip() === clip) continue;
@@ -235,7 +243,7 @@ export function createLunaDashboardPlayerController({
     const action = comboAction();
     if (!action) return null;
     const { hit = 0, cancel = action.getClip().duration, sweep = null } = action.getClip().userData || {};
-    return { state: activeCombo.state, kind: activeCombo.kind, index: activeCombo.index, time: action.time,
+    return { state: shownStateOf.get(activeCombo.state) || activeCombo.state, kind: activeCombo.kind, index: activeCombo.index, time: action.time,
       duration: action.getClip().duration, hit, cancel, sweep, queued: !!queuedCombo };
   };
   // Presentation cues of the swing in progress, each once: 'sweep' when the blade starts its cutting arc
@@ -247,7 +255,7 @@ export function createLunaDashboardPlayerController({
     const { hit = 0, sweep = null } = action.getClip().userData || {};
     const speed = action.getEffectiveTimeScale() || 1;
     const t = action.time;
-    const base = { kind: activeCombo.kind, index: activeCombo.index, state: activeCombo.state };
+    const base = { kind: activeCombo.kind, index: activeCombo.index, state: shownStateOf.get(activeCombo.state) || activeCombo.state };
     if (sweep && !activeCombo.sweepSent && t >= sweep[0]) {
       activeCombo.sweepSent = true;
       events.push({ type: 'sweep', ...base, seconds: Math.max(0.05, (sweep[1] - Math.max(t, sweep[0])) / speed) });
@@ -937,7 +945,8 @@ export function createLunaDashboardPlayerController({
     setWeaponComboClips,
     getComboState,
     pollComboEvents,
-    getCurrent: () => isMounted ? 'mounted' : currentState || STATES.IDLE,
+    getCurrent: () => isMounted ? 'mounted' : shownStateOf.get(currentState) || currentState || STATES.IDLE,
+    playsSwordSkillClips: true,
     getIsAiming: () => isAiming,
     getIsBlocking: () => isBlocking,
     getIsCrouching: () => false,

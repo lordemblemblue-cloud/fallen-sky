@@ -401,7 +401,8 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       const tracks = animated.map((bone, j) => new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, times, values[j]));
       tracks.push(new THREE.VectorKeyframeTrack(`${b.hips.name}.position`, times, hipValues));
       const clip = new THREE.AnimationClip(combo.name, combo.keys[last].t, tracks);
-      clip.userData = { combo: comboKind, index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
+      // a skill's clip says which hit of its skill it is; a combo clip is its place in the list
+      clip.userData = { combo: comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
         ...(combo.technique ? { technique: combo.technique } : {}) };
       out[combo.name] = clip;
     }

@@ -155,3 +155,92 @@ for (const rigId of Object.keys(RIGS)) {
     assert.ok(process.memoryUsage().heapUsed > 0);
   });
 }
+
+// ---- the sword skills' own clips (weapons/swordSkillMoves.mjs) ----
+const skillsModule = await import('../src/components/game3d/weapons/swordSkillMoves.mjs');
+for (const rigId of Object.keys(RIGS)) {
+  for (const weaponId of ['odachi', 'fantasy_sword']) {
+    test('sword skill clips on ' + rigId + ' holding the ' + weaponId, { skip }, async () => {
+      const model = await loadBody(rigId);
+      const rest = baker.captureRestPose(model);
+      const h = setup(model, rigId, weaponId);
+      const twoHanded = weaponId === 'odachi';
+      const moves = skillsModule.swordSkillMovesForWeapon({ id: weaponId, cls: h.weapon.class || h.weapon.cls });
+      assert.equal(moves.some((m) => m.keys.some((k) => k.l.hilt)), twoHanded, weaponId + (twoHanded ? ' is held with both hands' : ' is swung with one hand'));
+      const clips = baker.bakeWeaponComboClips(model, twoHanded ? 'greatsword' : 'sword', { right: h.gripQ }, { rest, reach: h.weapon.length, moves: [...baker.SWORD_COMBO, ...moves] });
+      assert.deepEqual(Object.keys(clips), ['swordCombo1', 'swordCombo2', 'swordCombo3', ...skillsModule.SWORD_SKILL_STATE_NAMES]);
+      const F = new THREE.Vector3(0, 0, 1), U = new THREE.Vector3(0, 1, 0), R = new THREE.Vector3(-1, 0, 0);
+      const body = (v) => new THREE.Vector3().addScaledVector(F, v[0]).addScaledVector(U, v[1]).addScaledVector(R, v[2]);
+      const standAnkle = Math.min(h.world(h.bone('LeftFoot')).y, h.world(h.bone('RightFoot')).y);
+      const along = () => new THREE.Vector3(0, 1, 0).applyQuaternion(h.root.getWorldQuaternion(new THREE.Quaternion()));
+      const joints = () => JOINTS.map((name) => h.world(h.bone(name)));
+      const sign = {}, starts = {}, ends = {};
+      console.log('\n' + rigId + ', ' + weaponId + ' (' + h.weapon.length + ' m), ' + (twoHanded ? 'two hands' : 'one hand') + ': blade off the key (mean degrees), second hand off the hilt (m), lowest ankle and tip (m), fastest joint / tip (m/s)');
+      for (const move of moves) {
+        const clip = clips[move.name];
+        assert.deepEqual([clip.userData.combo, clip.userData.index, clip.userData.hit, clip.userData.cancel], ['swordCombo', move.index, move.hit, move.cancel], move.name);
+        const mixer = new THREE.AnimationMixer(model), action = mixer.clipAction(clip);
+        let blade = 0, n = 0, hilt = 0, ankle = Infinity, tip = Infinity;
+        for (const key of move.keys) {
+          poseAt(model, mixer, action, clip, key.t);
+          blade += along().angleTo(body(key.r.blade).normalize()) * 180 / Math.PI; n++;
+          const rh = h.world(h.bone('RightHand')), lh = h.world(h.bone('LeftHand'));
+          if (key.l.hilt) hilt = Math.max(hilt, lh.distanceTo(rh.clone().addScaledVector(along(), -key.l.hilt * h.k)) / h.k);
+          ankle = Math.min(ankle, (Math.min(h.world(h.bone('LeftFoot')).y, h.world(h.bone('RightFoot')).y) - standAnkle) / h.k);
+          tip = Math.min(tip, h.world(h.tip).y / h.k);
+        }
+        let jump = 0, tipSpeed = 0, previous = null;
+        for (let i = 0; i <= Math.ceil(clip.duration * 60); i++) {
+          poseAt(model, mixer, action, clip, i / 60);
+          const now = [...joints(), h.world(h.tip)];
+          if (previous) now.forEach((v, j) => { const s = v.distanceTo(previous[j]) / h.k * 60; if (j < JOINTS.length) jump = Math.max(jump, s); else tipSpeed = Math.max(tipSpeed, s); });
+          previous = now;
+        }
+        poseAt(model, mixer, action, clip, move.hit);
+        const hips = h.world(h.bone('Hips'));
+        sign[move.name] = { blade: along(), hand: h.world(h.bone('RightHand')).sub(hips).divideScalar(h.k), hips: hips.y / h.k };
+        poseAt(model, mixer, action, clip, 0); starts[move.name] = joints();
+        poseAt(model, mixer, action, clip, clip.duration); ends[move.name] = joints();
+        if (rigId === 'fused-female-v1') {
+          const dump = { t: [], p: [] };
+          for (let i = 0; i < 6; i++) {
+            const t = clip.duration * i / 5;
+            poseAt(model, mixer, action, clip, t);
+            dump.t.push(Math.round(t * 1000) / 1000);
+            dump.p.push([...joints(), h.world(h.root), h.world(h.tip)].flatMap((v) => [Math.round(v.x / h.k * 1000), Math.round(v.y / h.k * 1000), Math.round(v.z / h.k * 1000)]));
+          }
+          console.log('SWORD_SKILL_POSES ' + JSON.stringify({ weapon: weaponId, move: move.name, hit: move.hit, ...dump }));
+        }
+        mixer.stopAllAction(); mixer.uncacheRoot(model);
+        console.log('  ' + move.name.padEnd(21) + ' blade ' + (blade / n).toFixed(0).padStart(2) + '   hilt ' + hilt.toFixed(3) + '   ankle ' + ankle.toFixed(3) + '   tip ' + tip.toFixed(2) + '   fastest ' + jump.toFixed(1).padStart(4) + ' / ' + tipSpeed.toFixed(0));
+        assert.ok(blade / n < 25, move.name + ': the blade follows its keys (' + (blade / n).toFixed(1) + ' degrees off)');
+        if (twoHanded) assert.ok(hilt < 0.12, move.name + ': the second hand is on the hilt (' + hilt.toFixed(3) + ' m off)');
+        assert.ok(ankle > -0.03 && tip > 0.02, move.name + ': feet and blade stay out of the ground (' + ankle.toFixed(3) + ', ' + tip.toFixed(2) + ')');
+        assert.ok(jump < 30 && tipSpeed < 90, move.name + ': nothing snaps (joints ' + jump.toFixed(1) + ' m/s, tip ' + tipSpeed.toFixed(0) + ' m/s)');
+      }
+      // every level looks different where it lands: the blade points another way, or the hand or the hips are somewhere else
+      const apart = (a, b) => a.blade.angleTo(b.blade) * 180 / Math.PI / 30 + a.hand.distanceTo(b.hand) / 0.25 + Math.abs(a.hips - b.hips) / 0.15;
+      const singles = skillsModule.SWORD_SINGLE_HITS.map((s) => 'swordSkillSingle' + s.level);
+      const lines = [];
+      for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) {
+        const d = apart(sign[singles[i]], sign[singles[j]]);
+        lines.push('single ' + (i + 1) + ' vs ' + (j + 1) + ': ' + d.toFixed(1));
+        assert.ok(d > 1, 'single hit level ' + (i + 1) + ' and level ' + (j + 1) + ' land differently (' + d.toFixed(2) + ')');
+      }
+      for (let i = 1; i <= 4; i++) for (let j = i + 1; j <= 4; j++) {
+        const d = [1, 2, 3].reduce((sum, hit) => sum + apart(sign['swordSkillMulti' + i + 'Hit' + hit], sign['swordSkillMulti' + j + 'Hit' + hit]), 0);
+        lines.push('multi ' + i + ' vs ' + j + ': ' + d.toFixed(1));
+        assert.ok(d > 3, 'three-hit level ' + i + ' and level ' + j + ' land differently (' + d.toFixed(2) + ')');
+      }
+      console.log('  how differently the levels land (1 = clearly different): ' + lines.join(', '));
+      // chains: how far the body is from the single hit's first pose when the multi's last cut ends
+      for (const chain of skillsModule.SWORD_SKILL_CHAINS) {
+        const end = ends['swordSkillMulti' + chain.multi + 'Hit3'], start = starts['swordSkillSingle' + chain.single];
+        const hipsShift = end[0].clone().sub(start[0]).setY(0);
+        const gap = Math.max(...end.map((v, j) => v.clone().sub(hipsShift).distanceTo(start[j]) / h.k));
+        console.log('  chain multi ' + chain.multi + ' into single ' + chain.single + ': joints apart ' + gap.toFixed(2) + ' m (the body has travelled ' + (hipsShift.length() / h.k).toFixed(2) + ' m)');
+        assert.ok(gap < 0.6, 'multi ' + chain.multi + ' flows into single ' + chain.single + ' (' + gap.toFixed(2) + ' m)');
+      }
+    });
+  }
+}

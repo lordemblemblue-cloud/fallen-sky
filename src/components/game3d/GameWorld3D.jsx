@@ -4126,6 +4126,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                   combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
                   hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                   heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
+                  skillId: pendingSkillStrike?.skillId || null, // a sword skill plays its own cut (weapons/swordSkillMoves.mjs)
                 });
               } else {
                 playOneShot(montage, 1.4);
@@ -4201,6 +4202,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
                 combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
                 hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                 heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
+                skillId: pendingSkillStrike?.skillId || null, // a sword skill plays its own cut (weapons/swordSkillMoves.mjs)
               });
             } else {
               playOneShot(montage, 1.4);

@@ -4,8 +4,9 @@
 // rebaked with that weapon's exact combat grip. Presentation only: no damage, cooldown or network state.
 import * as THREE from 'three';
 import { solveFallbackGrip } from './playerWeaponRuntime.js';
-import { bakeWeaponComboClips, captureRestPose, comboKindForWeapon } from './weaponComboClips.js';
+import { bakeWeaponComboClips, captureRestPose, comboKindForWeapon, SWORD_COMBO } from './weaponComboClips.js';
 import { swordMovesForWeapon } from './katanaTechniques.mjs';
+import { swordSkillMoves, swordSkillMovesForWeapon } from './swordSkillMoves.mjs';
 
 const DEFAULT_HOLDS = Object.freeze({
   swordCombo: Object.freeze({ hand: 'right', class: 'sword', handleRadius: 0.015 }),
@@ -23,10 +24,18 @@ export function createWeaponComboBinder({ model, controller, runtime = null, bod
     bakedWith[comboKind] = key;
     return true;
   };
+  // The sword skills' own clips (swordSkillMoves.mjs) are baked next to the combo, for a controller that plays
+  // them (the local player's). Other players' avatars keep to the three combo clips.
+  const skills = controller?.playsSwordSkillClips === true;
+  const swordMoves = (held) => {
+    if (!skills) return held ? swordMovesForWeapon(held) : null;
+    return [...((held && swordMovesForWeapon(held)) || SWORD_COMBO), ...(held ? swordSkillMovesForWeapon(held) : swordSkillMoves({ twoHanded: false }))];
+  };
   for (const [comboKind, hold] of Object.entries(DEFAULT_HOLDS)) {
     const solved = model ? solveFallbackGrip(model, hold, ['combat'], bodyHeight) : null;
     const q = solved?.grips?.combat?.quaternion;
-    bake(comboKind, hold.class, q ? { [hold.hand]: new THREE.Quaternion().fromArray(q) } : {}, 'default');
+    bake(comboKind, hold.class, q ? { [hold.hand]: new THREE.Quaternion().fromArray(q) } : {}, 'default', null,
+      comboKind === 'swordCombo' ? swordMoves(null) : null);
   }
 
   return {
@@ -37,7 +46,7 @@ export function createWeaponComboBinder({ model, controller, runtime = null, bod
       if (!comboKind || bakedWith[comboKind] === held.id || controller?.getComboState?.()) return false;
       const grips = Object.fromEntries((runtime.getHands?.() || []).map((h) => [h.side, h.gripQuaternion]));
       // A long two-handed blade swings the katana combo (katanaTechniques.mjs); other swords keep their three hits.
-      return bake(comboKind, held.cls, grips, held.id, held.length, comboKind === 'swordCombo' ? swordMovesForWeapon(held) : null);
+      return bake(comboKind, held.cls, grips, held.id, held.length, comboKind === 'swordCombo' ? swordMoves(held) : null);
     },
     bakedFor: (comboKind) => bakedWith[comboKind] ?? null,
   };
