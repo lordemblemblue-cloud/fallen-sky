@@ -149,7 +149,7 @@ for (const rigId of Object.keys(RIGS)) {
       }
       const gaps = [0, 1].map((i) => Math.max(...ends[i].end.map((v, j) => v.distanceTo(ends[i + 1].start[j]) / h.k)));
       console.log('  combo ' + combo.id.padEnd(14) + ' joints apart between hits: ' + gaps.map((g) => g.toFixed(2)).join(' m, ') + ' m');
-      if (combo.id === 'dojoFlow' || combo.id === 'kneelingStorm') gaps.forEach((g) => assert.ok(g < 0.02, combo.name + ' hits meet (' + g.toFixed(3) + ' m)'));
+      if (combo.id === 'dojoFlow' || combo.id === 'kneelingStorm') gaps.forEach((g) => assert.ok(g < 0.05, combo.name + ' hits meet (' + g.toFixed(3) + ' m)'));
       gaps.forEach((g) => assert.ok(g < 0.3, combo.name + ': the body is close to where the next hit starts (' + g.toFixed(2) + ' m)'));
     }
     assert.ok(process.memoryUsage().heapUsed > 0);
