@@ -153,7 +153,9 @@ export function createCharacter({ name, appearance, avatarConfig = {}, factionId
   return character;
 }
 
-// Called only AFTER the owning account's characterVault delete action succeeds.
+// For account-backed characters, call only AFTER the owning account's
+// characterVault delete succeeds. A guest (__anon__) character has no remote
+// account and may be deleted directly from browser-local storage.
 // Also clears this user's local character-scoped progress/backup data, so a
 // different character never inherits its inventory, currency or old XP.
 export function deleteCreatedCharacter(id) {
