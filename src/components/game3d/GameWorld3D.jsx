@@ -158,7 +158,8 @@ import {isInsideMeadowCircle,meadowGroundHeight}
   from './wolfveil/WolfveilMeadowField.mjs';
 import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
-import {createWolfveilVillage} from './wolfveil/WolfveilScene';
+import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/WolfveilScene';
+import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
 import {createWolfveilAreaPortals} from './wolfveil/WolfveilAreaPortals';
@@ -819,6 +820,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const wolfveilVillage=region==='wolfveil'
       ?createWolfveilVillage(scene,{
           originAtMarket:true,
+          loadCaves:false,
           // Game 3D-only silver river; default Game 1 material stays unchanged.
           silverWater:true,
           sunLight:sun,
@@ -891,9 +893,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // the fully preserved surface roof remains the only valid floor.
     const caveAwareGroundY=(x,z,referenceY)=>{
       const ordinary=sampleGroundY(x,z,referenceY);
-      if(region!=='wolfveil'||suigenActive||!wolfveilVillage?.caveSystem||
+      if((region!=='wolfveil'&&region!==WOLFVEIL_CAVES_REGION)||suigenActive||!(wolfveilVillage?.caveSystem||wolfveilCaveDestination?.caveSystem)||
          !Number.isFinite(referenceY))return ordinary;
-      const caveY=wolfveilVillage.caveSystem.playerGroundY({x,y:referenceY,z});
+      const caveY=(wolfveilVillage?.caveSystem||wolfveilCaveDestination?.caveSystem)?.playerGroundY({x,y:referenceY,z});
       return Number.isFinite(caveY)&&Math.abs(caveY-referenceY)<=1.1
         ?caveY:ordinary;
     };
@@ -909,11 +911,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     wolfveilVillage?.river?.bindContact?.(waterContact);
     // The cave is an entirely separate map, sharing only Game 3D's real
     // character, renderer, animations and combat systems.
+    const wolfveilCaveDestination=region===WOLFVEIL_CAVES_REGION?createWolfveilCaveDestination(scene):null;
     const lunarDungeon = region===LUNAR_CAVE_REGION ? createLunarCaveDungeon(scene) : null;
     const astralDungeon = region===ASTRAL_DUNGEON_REGION ? createAstralDungeon(scene) : null;
-    const grassGround=wolfveilVillage?.ground||lunarDungeon?.ground||astralDungeon?.ground||buildGrassEnvironment(scene);
+    const grassGround=wolfveilVillage?.ground||lunarDungeon?.ground||astralDungeon?.ground||wolfveilCaveDestination?.floor||buildGrassEnvironment(scene);
     const forestBiome = grassGround.userData.forestBiome;
-    groundMeshes.push(grassGround);
+    if(wolfveilCaveDestination)groundMeshes.push(...wolfveilCaveDestination.walkableSurfaces);
+    else groundMeshes.push(grassGround);
     // The owner's Japanese-Egyptian artisan town now replaces the old 80-tile
     // Blender town, while the authoritative Wolfveil terrain stays intact.
     const importedSpawnTown=region==='wolfveil'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
@@ -932,6 +936,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         },
       }):null;
     window.__gw3dVortexLake=vortexLake;
+    const wolfveilDungeonPortals=region==='wolfveil'||region===WOLFVEIL_CAVES_REGION
+      ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination'}):null;
     const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
     const astralGate = region==='wolfveil' ? createAstralMountainGate(scene,{sampleGroundY}) : null;
     if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
@@ -1963,14 +1969,15 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }) : null;
       const returnSite=portalReturn==='astral'?ASTRAL_DUNGEON_ENTRANCE:LUNAR_CAVE_ENTRANCE;
       const vortexReturn=portalReturn==='vortex'?VORTEX_LAKE.safeReturn:null;
+      const sumiReturn=portalReturn==='sumi'?{x:-360,z:-400+70}:null;
       const returnPosition=region==='wolfveil'&&portalReturn ? {
-        x:vortexReturn?.x??returnSite.approachX,
-        z:vortexReturn?.z??returnSite.approachZ,
-        y:vortexReturn?.y??sampleGroundY(returnSite.approachX,returnSite.approachZ)??0.3,
+        x:vortexReturn?.x??sumiReturn?.x??returnSite.approachX,
+        z:vortexReturn?.z??sumiReturn?.z??returnSite.approachZ,
+        y:vortexReturn?.y??sampleGroundY(sumiReturn?.x??returnSite.approachX,sumiReturn?.z??returnSite.approachZ)??0.3,
       }:null;
-      fbx.position.set(returnPosition?.x ?? workflowSpawn?.x ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.x:0),
-        returnPosition?.y ?? workflowSpawn?.y ?? 0.3,
-        returnPosition?.z ?? workflowSpawn?.z ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.z:0));
+      fbx.position.set(returnPosition?.x ?? workflowSpawn?.x ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.x:region===WOLFVEIL_CAVES_REGION?-6:0),
+        returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
+        returnPosition?.z ?? workflowSpawn?.z ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.z:region===WOLFVEIL_CAVES_REGION?94:0));
       if (initialWorkflowTarget && !workflowSpawn)
         showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
@@ -2222,11 +2229,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
 
     // Click-to-move: a Settings option, off by default (axe/player/AXEClickToMove.js). With it off,
     // nothing below changes WASD play. Walkable = terrain under the point, inside the arena clamp.
-    const arenaRadius = region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:36.5; // dungeon bounds use their dedicated collision geometry
+    const arenaRadius = region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:region===WOLFVEIL_CAVES_REGION?675:36.5; // dungeon bounds use their dedicated collision geometry
     // Wolfveil is an explorable landscape, not the 36.5m combat test arena.
     // Both click-to-move and keyboard movement stop only at actual terrain edges.
     const isClickMoveWalkable = (x, z) =>
-      (region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
+      (region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||region===WOLFVEIL_CAVES_REGION||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
     const clickMoveMarker = createAXEClickToMoveMarker(scene);
     const clickToMove = createAXEClickToMove({
       isEnabled: isAXEClickToMoveEnabled,
@@ -2877,7 +2884,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         model.position.x=fromX;
         model.position.z=fromZ;
       }
-    }else if (distFromCenter > arenaRadius) {
+    }else if (region!==WOLFVEIL_CAVES_REGION && distFromCenter > arenaRadius) {
       const edgeScale = arenaRadius / distFromCenter;
       model.position.x *= edgeScale;
       model.position.z *= edgeScale;
@@ -2908,6 +2915,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
        })){
       model.position.x=fromX;model.position.z=fromZ;
     }
+    (wolfveilVillage?.caveSystem||wolfveilCaveDestination?.caveSystem)?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
@@ -2997,6 +3005,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
+      const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
+      if(dungeonTravel)window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:dungeonTravel}));
+      wolfveilCaveDestination?.caveSystem?.update(delta,modelRef.current?.position);
       const vortexTravel=suigenActive?null:vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
@@ -5157,6 +5168,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       window.removeEventListener('game3dArtisanShowroomSelect', onArtisanModelSelect);
       importedSpawnTown?.dispose();
       ambientBirds?.dispose();
+      wolfveilDungeonPortals?.dispose();
+      wolfveilCaveDestination?.dispose();
       wolfveilVillage?.dispose();
       lunarGate?.dispose();
       astralGate?.dispose();
