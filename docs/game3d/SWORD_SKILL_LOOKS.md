@@ -27,15 +27,17 @@ plays it. To give it to a skill, add that skill's id to `SWORD_SKILL_LOOKS`.
 
 ## Chains: a multi into a single hit
 
-A single hit cast right after a multi starts when the multi's last cut lets go. These pairs were chosen so
-the single begins in (or close to) the pose the multi ends in:
+A single hit cast right after a multi starts when the multi's last cut lets go. How far the body is from the
+single's first pose at that moment, measured on the real bodies:
 
-- Level 1 multi into level 2 single (the sweep is the very next cut in the dojo capture)
-- Level 2 multi into level 1 single (the blade is already overhead)
-- Level 4 multi into level 3 single
-- Level 1 multi into level 3 single
+| Chain | Joints apart | |
+| --- | --- | --- |
+| Level 1 multi into level 2 single | 4 to 8 cm | The sweep is the very next cut in the dojo capture |
+| Level 2 multi into level 1 single | 9 cm | The blade is already overhead |
+| Level 4 multi into level 3 single | about 0.5 m | Close, not seamless: the stepping cut's wind-up is trimmed |
+| Level 1 multi into level 3 single | about 0.5 m | Close, not seamless |
 
-Any other pair still plays; the body just blends between the two poses.
+Any other pair still plays; the body blends between the two poses.
 
 ## How it is wired
 
