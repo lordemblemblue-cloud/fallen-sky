@@ -46,6 +46,8 @@ export const WOLFVEIL_CAVE_ENTRANCE_FRAMES = Object.freeze(
     return Object.freeze({
       caveId: cave.id,
       name: cave.name,
+      theme: cave.theme,
+      accentColor: cave.accentColor,
       lightColor: cave.lightColor,
       mouth: Object.freeze([mx, cave.mouthY, mz]),
       dir: Object.freeze([dx, dz]),

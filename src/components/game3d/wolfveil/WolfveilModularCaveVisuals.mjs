@@ -6,6 +6,11 @@ import * as THREE from 'three';
 import {
   WOLFVEIL_MODULAR_CANYON as C,WOLFVEIL_MODULAR_JUNCTION as T,
   WOLFVEIL_MODULAR_TREASURE_ROOM as VAULT,
+  WOLFVEIL_MODULAR_L_CORNER as L_TURN,
+  WOLFVEIL_MODULAR_WAYFINDER_HUB as HUB,
+  WOLFVEIL_MODULAR_SANCTUARY as SANCTUARY,
+  WOLFVEIL_MODULAR_ECHO_GALLERY as ECHO,
+  WOLFVEIL_MODULAR_SECRET_CACHE as CACHE,
   getWolfveilModularCanyonTileRects,isWolfveilModularCanyonBridge,
 } from './WolfveilModularCaveKit.mjs';
 
@@ -23,7 +28,7 @@ export function appendWolfveilModularCaveVisuals({
   const tint=(x,z)=>((Math.floor(x/4)+Math.floor(z/4))%3===0
     ?[.52,.53,.49]:[.61,.59,.53]);
 
-  for(const tile of getWolfveilModularCanyonTileRects(4)){
+  for(const tile of getWolfveilModularCanyonTileRects(8)){
     const {minX:x0,maxX:x1,minZ:z0,maxZ:z1}=tile,y=C.y;
     floorTris.quad([x0,y,z0],[x0,y,z1],[x1,y,z1],[x1,y,z0],
       tint(x0,z0),[[0,0],[0,1],[1,1],[1,0]]);
@@ -50,12 +55,15 @@ export function appendWolfveilModularCaveVisuals({
     if(Math.abs((z+z1)/2-C.entrance.z)>8){
       wall(C.minX,z,C.minX,z1,C.y,rockTop+Math.sin(z*.1)*2.1);
     }
-    wall(C.maxX,z,C.maxX,z1,C.y,rockTop+Math.cos(z*.09)*2.1);
+    // The eastern canyon mouth is the real route to the modular L-turn.
+    if(Math.abs((z+z1)/2-C.arena.z)>8){
+      wall(C.maxX,z,C.maxX,z1,C.y,rockTop+Math.cos(z*.09)*2.1);
+    }
   }
   // The gorge has no top floor. Visible walls extend down to the water.
   const g=C.gorge;
-  for(let z=g.minZ;z<g.maxZ;z+=4){
-    const z1=Math.min(z+4,g.maxZ),mid=(z+z1)/2;
+  for(let z=g.minZ;z<g.maxZ;z+=8){
+    const z1=Math.min(z+8,g.maxZ),mid=(z+z1)/2;
     if(isWolfveilModularCanyonBridge(mid))continue;
     for(const x of [g.minX,g.maxX]){
       shellTris.quad([x,C.y,z],[x,C.y,z1],
@@ -97,8 +105,8 @@ export function appendWolfveilModularCaveVisuals({
 
   // Broken megaliths communicate the size of the 180 x 140m interior.
   // Rocks and ornaments do not silently become gameplay colliders.
-  for(let i=0;i<20;i++){
-    const theta=i/20*TAU;
+  for(let i=0;i<10;i++){
+    const theta=i/10*TAU;
     const x=C.x+Math.cos(theta)*76,z=C.z+Math.sin(theta)*57;
     if(x<C.minX+3||x>C.maxX-3||z<C.minZ+3||z>C.maxZ-3)continue;
     const h=5+(i%5)*2.25;
@@ -114,8 +122,8 @@ export function appendWolfveilModularCaveVisuals({
     arena.radius*1.92,.2,arena.radius*1.92);
   addProp(torusGeo,bronzeMat,arena.x,C.y+.24,arena.z,
     arena.radius-1.2,arena.radius-1.2,.5,Math.PI/2);
-  for(let i=0;i<8;i++){
-    const a=i/8*TAU,x=arena.x+Math.cos(a)*15,z=arena.z+Math.sin(a)*15;
+  for(let i=0;i<6;i++){
+    const a=i/6*TAU,x=arena.x+Math.cos(a)*15,z=arena.z+Math.sin(a)*15;
     addProp(boxGeo,wallMat,x,C.y+1.65,z,1.2,3.3,1.2,0,a,0);
   }
   if(addBrazier){
@@ -141,6 +149,69 @@ export function appendWolfveilModularCaveVisuals({
   }
   if(addBrazier){
     addBrazier(VAULT.x-4,VAULT.y,VAULT.z,0xf1be68,false);
+  }
+
+  // The L-turn gets a mitered two-leg floor mark, so the route reads before
+  // the player reaches the corner.
+  addProp(boxGeo,bronzeMat,L_TURN.x,L_TURN.y+.08,L_TURN.z,
+    8.6,.12,.48,0,Math.PI/4,0);
+  addProp(boxGeo,jadeCrystalMat,L_TURN.x+1.4,L_TURN.y+.12,L_TURN.z-1.4,
+    4.2,.08,.18,0,Math.PI/4,0);
+
+  // Four cardinal sockets around a central wayfinder star distinguish the hub
+  // from the ordinary circular chambers.
+  addProp(torusGeo,bronzeMat,HUB.x,HUB.y+.28,HUB.z,8.4,8.4,.32,Math.PI/2);
+  addProp(torusGeo,jadeCrystalMat,HUB.x,HUB.y+.34,HUB.z,6.7,6.7,.16,Math.PI/2);
+  addProp(octaGeo,jadeCrystalMat,HUB.x,HUB.y+1.2,HUB.z,1.25,2.1,1.25);
+  for(const [dx,dz] of [[0,-13],[13,0],[0,13],[-13,0]]){
+    const x=HUB.x+dx,z=HUB.z+dz;
+    addProp(boxGeo,bronzeMat,x,HUB.y+.18,z,2.6,.28,2.6,0,Math.atan2(dx,dz),0);
+    addProp(octaGeo,amethystCrystalMat,x,HUB.y+2.3,z,.52,1.05,.52);
+  }
+  if(addBrazier){
+    for(const [dx,dz] of [[0,-10],[10,0],[0,10],[-10,0]]){
+      addBrazier(HUB.x+dx,HUB.y,HUB.z+dz,0x9fe0d1,true);
+    }
+  }
+
+  // A ringed relic sits inside the sanctuary. Jade inlay channels mark the
+  // canal paths while leaving the shared floor sampler and collision intact.
+  addProp(torusGeo,bronzeMat,SANCTUARY.x,SANCTUARY.y+.34,SANCTUARY.z,
+    8.8,8.8,.38,Math.PI/2);
+  addProp(torusGeo,amethystCrystalMat,SANCTUARY.x,SANCTUARY.y+.42,SANCTUARY.z,
+    6.5,6.5,.15,Math.PI/2);
+  addProp(octaGeo,jadeCrystalMat,SANCTUARY.x,SANCTUARY.y+1.55,SANCTUARY.z,
+    1.0,2.5,1.0);
+  for(const [dx,dz,w,d] of [
+    [-13,0,9,.34],[13,0,9,.34],[0,-13,.34,9],[0,13,.34,9],
+  ]){
+    addProp(boxGeo,jadeCrystalMat,SANCTUARY.x+dx,SANCTUARY.y+.13,
+      SANCTUARY.z+dz,w,.12,d);
+  }
+  for(const [dx,dz] of [[-16,-16],[16,-16],[-16,16],[16,16]]){
+    addProp(boxGeo,wallMat,SANCTUARY.x+dx,SANCTUARY.y+3.3,
+      SANCTUARY.z+dz,1.25,6.6,1.25);
+    addProp(octaGeo,amethystCrystalMat,SANCTUARY.x+dx,
+      SANCTUARY.y+7.1,SANCTUARY.z+dz,.8,1.5,.8);
+  }
+  if(addBrazier){
+    addBrazier(SANCTUARY.x-8,SANCTUARY.y,SANCTUARY.z,0x66d4e8,true);
+    addBrazier(SANCTUARY.x+8,SANCTUARY.y,SANCTUARY.z,0x66d4e8,true);
+  }
+
+  // Paired pillars make the return loop and sealed side reliquary legible.
+  for(const z of [ECHO.z-5,ECHO.z+5]){
+    addProp(boxGeo,wallMat,ECHO.x-7,ECHO.y+2.5,z,1.3,5,1.3);
+    addProp(boxGeo,wallMat,ECHO.x+7,ECHO.y+2.5,z,1.3,5,1.3);
+  }
+  addProp(torusGeo,bronzeMat,ECHO.x,ECHO.y+.24,ECHO.z,5.8,5.8,.22,Math.PI/2);
+  addProp(boxGeo,wallMat,CACHE.x,CACHE.y+3.1,CACHE.z+8,
+    8.5,6.2,.8);
+  addProp(torusGeo,amethystCrystalMat,CACHE.x,CACHE.y+3.2,CACHE.z+7.45,
+    1.35,1.35,.18);
+  for(const side of [-1,1]){
+    addProp(octaGeo,jadeCrystalMat,CACHE.x+side*5,CACHE.y+2.3,
+      CACHE.z+4,.7,1.5,.7);
   }
   return {stats,water,waterGeometry,waterMaterial};
 }
