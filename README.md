@@ -1,21 +1,25 @@
 # Game 3D / Book — Atom × Eve
 
-This is the standalone **Game 3D / Book** destination for the original **Adam and Eve** models, character creation, factions, companions, mounts, Halo/Wings, quests and Wolfveil world.
+This repository hosts the standalone Game 3D / Book experience: character creation and selection, factions, companions, mounts, quests, combat, and Wolfveil.
 
-**Migration branch status: incomplete; not deployed.** See [Migration Status](docs/GAME3D_BOOK_MIGRATION_STATUS.md). The original source lives in the private repository `marcusflow1-arch/atom-x-eve-os`; this repository is the separate TanStack Start destination, so its existing Cloudflare/Base44 authentication and server bootstrap must be preserved.
+## Temporary guest mode (November 2026)
 
-## Complete the original game source import
+- `/` and `/gameview` launch the game directly without a login page or redirect.
+- The login, registration, forgot/reset-password and MFA pages, their client-side flows, and the unrelated GitSync Pro dashboard have been removed.
+- The character-selection screen is **part of the game** and remains intact.
+- Character slots and local progression use the existing `__anon__` browser-local save namespace. Guest data is **not** account-backed or synced between browsers.
+- Account-restricted server functionality (including privileged game APIs and account-based social/character operations) stays protected, and may be unavailable to guests. Do not remove authorization checks or expose service-role access to work around this limitation.
+- A new account system can be designed and added when ready; do not silently restore the old registration/MFA flows.
 
-From a clean checkout of the `migration/game3d-book-adam-eve-20261112` branch, with the GitHub CLI authorized to clone the private source:
+## Development
 
 ```bash
-npm run migrate:game3d -- --apply
 npm install
+npm run dev
+npm run lint
 npm run build
 ```
 
-The import script follows the original Game 3D client imports and copies the Node game server, relevant Base44 backend modules and local Adam/Eve GLBs, while excluding unrelated game pages. It records any remaining cross-app imports for review.
+App routes live in `src/routes`. The actual game is mounted by `src/components/game3d/Game3DHost.jsx` and `src/pages/GameView.jsx`; gameplay backend modules remain under `base44/functions` and `server/game3d`.
 
-The authenticated home route is Game 3D / Book, not the old GitSync dashboard. The old GitSync-only page routes are removed **on the migration branch**. The root document, sign-in flow, and TanStack Start infrastructure are intentionally retained.
-
-**Important:** A code copy is not a transfer of live player records, secrets, backend credentials, or the running standalone game server. Verify Base44 destination connection, server deployment, asset loads, character/account isolation, and two-client signed-in Game 3D Play before merging to `main` or publishing.
+The existing migration notes are in [docs/GAME3D_BOOK_MIGRATION_STATUS.md](docs/GAME3D_BOOK_MIGRATION_STATUS.md); those are historical and may describe the old authenticated route setup.

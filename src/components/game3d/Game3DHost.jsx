@@ -4,8 +4,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '@/components/auth/AuthContext';
 
 // The real Game 3D / Book entry, mounted by both the app home and /gameview.
-// Game systems share the platform session; storage and cloud saves use the
-// signed-in account instead of an unbound guest roster.
+// Game systems enter as guests for now. Character saves remain in the
+// local anonymous namespace until an account system is introduced later.
 const GameView = lazy(() => import('@/pages/GameView'));
 
 export default function Game3DHost() {

@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Active project policy — guest-only game entry (2026-11-18)
+
+**This section supersedes the legacy authentication examples below.** The five account routes (login, register, forgot-password, reset-password, MFA), their view/helpers, and the old GitSync dashboard are intentionally removed. `/` and `/gameview` are public Game 3D entries. Preserve the game character-selection screen (unrelated to account sign-in) and its local guest storage. Do not re-add login redirects, auth gates, MFA, registration, or GitSync dashboard without a new request. The root/game auth contexts are temporary compatibility stubs with **no remote login call**. Keep existing server-side permission checks on restricted gameplay features: no guest impersonation, no service-role bypass, no public access to privileged Meshy or economy endpoints. The Base44 request middleware and error-capture runtime remain necessary infrastructure, not the deleted login backend.
+
 ## Project Context
 
 This is a Base44 app repository built with **TanStack Start** (React 19, plain JavaScript — no TypeScript): file-based routes, server functions and server routes, server-side rendering by default. Treat it as user-owned application code, keep changes focused on the user's request, and preserve the conventions below.

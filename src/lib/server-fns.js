@@ -1,13 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireUser } from "@/lib/auth-middleware";
-import { readRepositoryActivity } from "@/lib/github-repo.server";
 
 // Hourly weather for the live world, from the National Weather Service.
 // The world reads one object per hour: category drives sky/particles, and the
 // precipitation values decide rain, snow and lightning.
 const DETROIT_POINT = "https://api.weather.gov/points/42.3314,-83.0458";
 
-const UA = { "User-Agent": "GitSync-Pro (game weather)", Accept: "application/geo+json" };
+const UA = { "User-Agent": "Game3D (game weather)", Accept: "application/geo+json" };
 
 function categoryFor(shortForecast = "") {
   const text = shortForecast.toLowerCase();
@@ -48,23 +46,3 @@ export const getDetroitForecast = createServerFn({ method: "GET" }).handler(asyn
     return { hours: [], days: null, fetchedAt: new Date().toISOString() };
   }
 });
-
-// Live repository dashboard. The shared GitHub connection belongs to the app
-// builder, so this runs only for a signed-in app user and returns repository
-// data only, never the access token.
-export const getRepositoryActivity = createServerFn({ method: "GET" })
-  .middleware([requireUser])
-  .handler(async ({ context }) => {
-    let connection;
-    try {
-      connection = await context.getBase44().asServiceRole.connectors.getConnection("github");
-    } catch {
-      return { ok: false, state: "not-connected" };
-    }
-    if (!connection?.accessToken) return { ok: false, state: "not-connected" };
-
-    const result = await readRepositoryActivity(connection.accessToken);
-    if (!result.ok) return { ok: false, state: "repository-error", status: result.status };
-
-    return { ok: true, ...result.data };
-  });
