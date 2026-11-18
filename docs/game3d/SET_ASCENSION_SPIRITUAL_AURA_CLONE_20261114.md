@@ -1,5 +1,9 @@
 # Game 3D clone — rarity progression, set Ascension, and spiritual aura
 
+> **Superseded (2026-11-18):** Blacksmith v2 removed the set-bonus scaling and the reinforcement-scaled
+> imprints described here; Ascension now raises only the item's own stats. See
+> [BLACKSMITH_V2_20261118.md](BLACKSMITH_V2_20261118.md). The spiritual aura is unchanged.
+
 **Scope:** `marcusflow1-arch/gitsync-pro` clone preview only. Main Game 3D remains unchanged.
 
 ## Separate progression systems
