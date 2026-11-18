@@ -23,12 +23,19 @@ export const WOLFVEIL_ROOM_MODULES=Object.freeze({
   }),
   echo_gallery:Object.freeze({
     id:'echo_gallery',shape:'radial',radius:14,ceiling:8.6,
-    socketWidth:4.84,socketHeight:5.6,ports:Object.freeze(['north','west']),
+    socketWidth:4.84,socketHeight:5.6,ports:Object.freeze([
+      Object.freeze({direction:'north',height:5.8}),
+      Object.freeze({direction:'west',height:5.6}),
+    ]),
   }),
   crossroads:Object.freeze({
     id:'crossroads',shape:'radial',radius:18,ceiling:12,
-    socketWidth:5.1,socketHeight:6.4,
-    ports:Object.freeze(['north','east','south','west']),
+    ports:Object.freeze([
+      Object.freeze({direction:'north',width:5.4,height:7.1}),
+      Object.freeze({direction:'east',width:4.84,height:5.8}),
+      Object.freeze({direction:'south',width:4.84,height:5.8}),
+      Object.freeze({direction:'west',width:5.1,height:6.4}),
+    ]),
   }),
   sanctuary:Object.freeze({
     id:'sanctuary',shape:'radial',radius:22,ceiling:15,
@@ -64,17 +71,18 @@ export function instantiateWolfveilRoomModule(moduleId,{
     throw new TypeError('Wolfveil room instances need an id and finite x/y/z');
   if(!Number.isInteger(quarterTurns))
     throw new TypeError('Wolfveil room quarterTurns must be an integer');
-  const ports=freezePorts(module.ports.map(direction=>{
+  const ports=freezePorts(module.ports.map(entry=>{
+    const direction=typeof entry==='string'?entry:entry.direction;
+    const width=entry.width??module.socketWidth;
+    const height=entry.height??module.socketHeight;
     const normal=rotate(DIRECTIONS[direction],quarterTurns);
     const reach=module.radius+0.9;
     return {
       id:direction,
       x:x+normal[0]*reach,
-      y:y+module.socketHeight*0.5,
+      y:y+height*0.5,
       z:z+normal[1]*reach,
-      normal,
-      width:module.socketWidth,
-      height:module.socketHeight,
+      normal,width,height,
     };
   }));
   return Object.freeze({
