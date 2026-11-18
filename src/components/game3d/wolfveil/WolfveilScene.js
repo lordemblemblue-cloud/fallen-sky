@@ -2,7 +2,6 @@
 // All landmarks, routes, buildings, terrain and water share world meters;
 // the viewer and the actual game instantiate this same scene module.
 import * as THREE from 'three';
-import {MeshBVH,acceleratedRaycast} from 'three-mesh-bvh';
 import {
   WOLFVEIL_SITES,WOLFVEIL_RIVER,WOLFVEIL_ROUTES,WOLFVEIL_BRIDGES,
   WOLFVEIL_HOUSING_PLOTS,wolfveilHeight,wolfveilDistanceToRiver,wolfveilRouteClearance,
@@ -41,6 +40,7 @@ import {createBookCaveInterior} from '../cave/caveInterior.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
 import {buildWolfveilLandscapeMarkers} from './WolfveilLandscapeMarkers.js';
+import {createWolfveilTerrainAreaStream} from './WolfveilTerrainAreaStream.mjs';
 
 export function createWolfveilCaveDestination(scene){
   if(!scene?.add)throw Error('Wolfveil cave destination requires the existing Three.js scene');
@@ -124,18 +124,15 @@ export function createWolfveilVillage(scene,options={}){
       enabled:true,riverDistance:wolfveilDistanceToRiver,
       reservedAt:(x,z,r)=>wolfveilIsProtectedSWTile(x,z,r),
     });
-  const ground=world.mesh(new THREE.Mesh(geometry,terrainMaterial));
-  // The real Game 1 renderer casts a downward ray every frame for player,
-  // mount, companions, enemies, and NPCs. Accelerate this 190K-triangle
-  // terrain with a static BVH rather than checking all triangles per foot.
-  geometry.boundsTree=new MeshBVH(geometry,{maxLeafTris:16});
-  ground.raycast=acceleratedRaycast;
-  ground.name='SWV_RealWalkableContouredTerrain';
-  ground.userData.isTerrain=true;
+  // Keep the full heightfield as CPU-side source data for the existing
+  // landscaping and tile tools, but draw and raycast only one area mesh.
+  const ground=world.mesh(new THREE.Group());
+  ground.name='SWV_Streamed_OverworldFloor';
   ground.userData.wolfveil=true;
-  ground.receiveShadow=true;
-  // Keep the one physical terrain in view while exploring the spawn square:
-  // browser-specific culling must not leave the sky visible beneath our feet.
+  const terrainAreas=createWolfveilTerrainAreaStream({
+    source:geometry,material:terrainMaterial,parent:ground,offsetZ,
+    initialArea:options.initialArea||'town',
+  });
   if(options.spawnGroundTile)ground.frustumCulled=false;
   // Blend the owner's dirt with weathered stone only on the western flank.
   // This overlay never enters BVH, player-foot raycasts or worker physics.
@@ -359,8 +356,9 @@ export function createWolfveilVillage(scene,options={}){
     interactCave(position){return caveSystem?.interact(position)??null;},
     interactPalace(position){return palace.interact(position);},
     resetPalaceNavigation(){palace.resetNavigation();},
-    update(dt,weather={},playerPosition=null){
+    update(dt,weather={},playerPosition=null,streamedArea=null){
       if(disposed)return;
+      terrainAreas.update(playerPosition,streamedArea);
       elapsed+=Math.max(0,Math.min(dt,.08));
       const storm=weather.weather==='storm',rainy=storm||weather.weather==='rain';
       const windMph=Number(weather.windMph??(storm?24:rainy?13:7));
@@ -494,6 +492,8 @@ export function createWolfveilVillage(scene,options={}){
     dispose(){
       if(disposed)return;
       disposed=true;
+      terrainAreas.dispose();
+      geometry.dispose();
       houseModels?.dispose();
       fountainHomes.dispose();
       palace.dispose();
