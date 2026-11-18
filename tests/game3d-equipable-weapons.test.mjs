@@ -162,27 +162,24 @@ for (const [rigId, file] of Object.entries(RIGS)) {
       const d = tips(side).map((tip) => { const v = world(tip).sub(origin); return v.addScaledVector(axis, -v.dot(axis)).length() / k; });
       return d.reduce((a, b) => a + b, 0) / d.length;
     };
-    const hold = (current, parts) => {
-      const report = [];
-      for (const part of parts) {
-        const side = part.side === 'left' ? 'Left' : 'Right';
-        const grip = part.grips.combat;
-        part.root.position.copy(grip.position); part.root.quaternion.copy(grip.quaternion); part.root.scale.setScalar(grip.scale);
-        for (const f of current.fist) f.bone.quaternion.copy(f.restore);
-        model.updateMatrixWorld(true);
-        const open = fromHandle(part.root, side);
-        for (const f of current.fist) f.bone.quaternion.copy(f.q);
-        model.updateMatrixWorld(true);
-        const closed = fromHandle(part.root, side);
-        const palm = world(part.root).distanceTo(world(part.handBone)) / k;
-        report.push({ side, open, closed, palm });
-      }
-      return report;
+    // the hand as the runtime poses it: combat grip, fingers closed (or opened), settled over a second of updates
+    const settle = (state, closed) => {
+      runtime.setHandClosed(closed);
+      for (let i = 0; i < 90; i++) runtime.update(1 / 60, { state });
+      runtime.setStanceWeight(1);
+      model.updateMatrixWorld(true);
+    };
+    const hold = (state) => {
+      const roots = runtime.getRoots(), hands = runtime.getHands();
+      const measure = () => roots.map((root, i) => fromHandle(root, hands[i].side === 'left' ? 'Left' : 'Right'));
+      settle(state, false); const open = measure();
+      settle(state, true); const closed = measure();
+      return roots.map((root, i) => ({ side: hands[i].side, open: open[i], closed: closed[i], palm: world(root).distanceTo(world(hands[i].handBone)) / k }));
     };
     const check = (label, report, hands) => {
       assert.equal(report.length, hands, label + ' hands');
       for (const r of report) {
-        console.log('  ' + rigId + ' ' + label.padEnd(14) + r.side.padEnd(6) + ' grip ' + (r.palm * 100).toFixed(1) + ' cm from the wrist; fingertips from the handle axis: open ' + (r.open * 100).toFixed(1) + ' cm, closed ' + (r.closed * 100).toFixed(1) + ' cm');
+        console.log('  ' + rigId + ' ' + label.padEnd(8) + r.side.padEnd(6) + ' grip ' + (r.palm * 100).toFixed(1) + ' cm from the wrist; fingertips from the handle axis: open ' + (r.open * 100).toFixed(1) + ' cm, closed ' + (r.closed * 100).toFixed(1) + ' cm');
         assert.ok(r.palm > 0.04 && r.palm < 0.14, label + ': the grip sits in the palm (' + r.palm.toFixed(3) + ' m from the wrist)');
         assert.ok(r.closed < 0.055, label + ': the fingers close round the handle (' + r.closed.toFixed(3) + ' m)');
         assert.ok(r.closed < r.open - 0.015, label + ': closed is tighter than an open hand');
@@ -190,23 +187,22 @@ for (const [rigId, file] of Object.entries(RIGS)) {
     };
 
     assert.equal(await runtime.equip('fantasy_sword'), true, 'the sword equips ' + errors.join('; '));
-    let current = runtime.getCurrent();
-    assert.equal(current.id, 'fantasy_sword');
-    assert.ok(current.root.getObjectByProperty('isMesh', true), 'the sword model is in the hand');
-    check('sword', hold(current, [{ side: 'right', root: current.root, handBone: current.handBone, grips: current.grips }]), 1);
+    assert.deepEqual([runtime.getCurrent().id, runtime.getCurrent().hand], ['fantasy_sword', 'right']);
+    assert.ok(runtime.getRoot().getObjectByProperty('isMesh', true), 'the sword model is in the hand');
+    assert.ok(loads.includes('/game3d/weapons/fantasy_sword.glb'));
+    check('sword', hold('swordCombo1'), 1);
 
     assert.equal(await runtime.equipDaggers(), true, 'the daggers equip ' + errors.join('; '));
-    current = runtime.getCurrent();
-    assert.equal(current.id, 'daggers');
-    assert.deepEqual(current.parts.map((p) => p.root.children[0]?.name).sort(), ['DaggerLeft', 'DaggerRight'], 'each hand holds its own blade of the pair');
+    assert.deepEqual([runtime.getCurrent().id, runtime.getCurrent().hand], ['daggers', 'both']);
+    assert.deepEqual(runtime.getRoots().map((root) => root.children[0]?.name).sort(), ['DaggerLeft', 'DaggerRight'], 'each hand holds its own blade of the pair');
     assert.ok(loads.includes('/game3d/weapons/curved_daggers.glb'));
-    check('daggers', hold(current, current.parts), 2);
-    const tip = current.tip.position;
+    check('daggers', hold('swordCombo1'), 2);
+    const tip = runtime.getBladeAnchors().tip.position;
     assert.ok(Math.abs(tip.y - 0.38) < 1e-6 && tip.z < 0, 'the trail follows the real blade tip');
 
     assert.equal(await runtime.equip('violet_bow'), true, 'the bow equips ' + errors.join('; '));
-    current = runtime.getCurrent();
-    check('bow', hold(current, [{ side: 'left', root: current.root, handBone: current.handBone, grips: current.grips }]), 1);
+    assert.deepEqual([runtime.getCurrent().id, runtime.getCurrent().hand], ['violet_bow', 'left']);
+    check('bow', hold('bowCombo1'), 1);
     assert.deepEqual(errors, []);
     runtime.dispose?.();
   });
