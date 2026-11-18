@@ -35,14 +35,15 @@ of the forest, by the portal to the mountain.
 | Side      | Trees                       | Boulders | Shrubs, ferns | Flower drifts | Bamboo |
 |-----------|-----------------------------|----------|---------------|---------------|--------|
 | mountain  | 140 pines, below 215 m only | 700      | 180           | 34            | 0      |
-| forest    | 480 cedars, 60 maples       | 100      | 560           | 120           | 220    |
+| forest    | 1,000 cedars, 60 red maples | 100      | 700           | 160           | 220    |
 | grassland | 8 lone maples               | 11       | 36            | 560           | 0      |
 | wilds     | 230 pines, 60 maples        | 460      | 340           | 220           | 0      |
 
-4,519 pieces, 978 of them trees. Today the valley has about 40 trees.
+5,219 pieces, 1,498 of them trees. Before this the valley had about 40 trees.
 
-- Forest: cedars stand in groves with glades between them; ferns keep to the
-  shade, flowers to the glades, bamboo to the low ground.
+- Forest: cedars stand in thick stands with glades between them; red maples
+  mark the roads and trails; ferns keep to the shade, flowers to the glades,
+  bamboo to the low ground; the mountain's rocky foot gets boulders only.
 - Mountain: boulders gather on the steep ground; pines stop at the tree line.
 - Grassland: flowers in wide drifts, open grass between, the view to the gate
   kept clear.
@@ -50,38 +51,59 @@ of the forest, by the portal to the mountain.
   trail between camps stays open.
 
 Nothing is placed on a road or trail, in the river, in the town, on a fighting
-ground, inside a monster camp, or within 16 m of a portal or 18 m of a cave
-mouth. Trees stand at least 6.5 m apart. The tests check every placement.
+ground, inside a monster camp, within 16 m of a portal or 18 m of a cave
+mouth, on a path to a cave, or within 8 m of one of the owner's own trees.
+Ground other work finished by hand is left alone; the one exception is the
+100 m forest-floor square, which gets trees and nothing else. Trees stand at
+least 6.5 m apart. The tests check every placement.
 
-## What it will cost to draw
+## Built so far: the forest
 
-With a light tree of about 300 triangles, instanced by kind: the forest about
-190,000 triangles and 12 draw calls, the wilds about 140,000, the mountain
-about 105,000, the grassland about 10,000. One loaded side stays inside the
-browser budget (500 draw calls, 1.5 M triangles) measured on PR #49.
+The western forest is planted (`WolfveilFourSidesScenery.js`), drawn from
+light shapes made for it (`WolfveilSideSceneryShapes.mjs`):
 
-## What building it needs
+| Kind        | Pieces | Triangles each | Triangles |
+|-------------|--------|----------------|-----------|
+| cedar       | 1,000  | 92             | 92,000    |
+| red maple   | 60     | 80             | 4,800     |
+| bamboo      | 220    | 72             | 15,840    |
+| fern        | 700    | 22             | 15,400    |
+| boulder     | 100    | 80             | 8,000     |
+| flower drift| 160    | 70             | 11,200    |
 
-1. **Tree colliders on the server.** Trees block the way, and the server
-   shares the trunk list (`wolfveilForestTrunkColliders`). It tests every
-   trunk on every step; 978 trees need a grid there first.
-2. **Light models.** The owner's uploaded tree is 4,920 triangles: right for a
-   few hero trees, too heavy for a forest. Until light models arrive the
-   valley's own retired low-poly cedar, pine and maple can stand in.
-3. **Everything that reads the tree list** (ground cover, grass, birds, spawn
-   detail, cave approaches, server collision and combat tests) is checked
-   against the new trees.
+2,240 pieces, 147,240 triangles, seven draw calls (the cedars are two batches
+so each stays light enough to be kept on the horizon from every area).
+Measured in the real valley, one camera view in the forest's worst direction
+is 255 draw calls and 1.34 M triangles, inside the browser budget (500 and
+1.5 M). Counting every direction at once the west is over on triangles, as it
+was before the forest (1.68 M then, 1.83 M now), and the east crosses the line
+(1.55 M) because the forest stays drawn on its horizon.
 
-Order: forest, then wilds, mountain, grassland; one side per pull request,
-each measured with the report from #49.
+Trees block the way. The 1,060 planted trunks are one list
+(`WolfveilTrunkColliders.mjs`) used by the scene and by the server, and the
+server now looks trunks up in a grid instead of testing every one on every
+step. A trunk is as thick as its tree is tall (0.28 m to 0.75 m). Adding
+trunks changes the server's map fingerprint, as any map change does: a saved
+private-world session made on the old map is asked to start again.
+
+`node scripts/render-wolfveil-planted-sides.mjs` draws study pictures of a
+side from the real ground, plan and shapes without a browser (`--sides
+north,east` draws a side that is not built yet). They are for judging layout
+and shapes; the game adds grass, textures and the owner's models.
+
+## What the other sides will cost
+
+At the same weight of piece: the wilds about 82,000 triangles, the mountain
+about 73,000, the grassland about 42,000. Order: wilds, mountain, grassland;
+one side per pull request, each measured the same way.
 
 ## Assets that would lift it (owner can have these built)
 
 One viewer file per kit, like the town and corridor files:
 
-1. Light trees: a cedar (13 to 19 m), a pine (8 to 13 m), a maple (7 to 10 m),
-   each at most 300 triangles with separate trunk and crown; a bamboo clump of
-   at most 60.
+1. Trees to replace the stand-in shapes: a cedar (14 to 22 m), a pine (8 to
+   13 m), a maple (7 to 10 m), each at most 150 triangles in one piece with
+   colours painted on (no textures); a bamboo clump of at most 80.
 2. Mountain kit: three boulders (at most 80 triangles), two cliff pieces (at
    most 250), a dead pine.
 3. Grassland kit: three flower drifts, a hay rick, a field fence.
