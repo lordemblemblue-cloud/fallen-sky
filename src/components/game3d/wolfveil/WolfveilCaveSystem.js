@@ -695,6 +695,13 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
 
   // Check if a wall azimuth aligns with an incoming tunnel so chamber walls stay open at doorways
   const isCorridorOpening = (ch, angle) => {
+    // Modular rooms only open where their reusable module declares a socket.
+    // The route intersection below then confirms a corridor actually reaches it.
+    if(ch.ports?.length){
+      const aligned=ch.ports.some(port=>
+        Math.cos(angle)*port.normal[0]+Math.sin(angle)*port.normal[1]>0.92);
+      if(!aligned)return false;
+    }
     const wx = ch.x + Math.cos(angle) * ch.radius;
     const wz = ch.z + Math.sin(angle) * ch.radius;
     for (const cor of WOLFVEIL_CAVE_CORRIDORS) {

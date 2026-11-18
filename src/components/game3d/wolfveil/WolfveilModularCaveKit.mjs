@@ -3,36 +3,43 @@
 // footprint drives the mesh, floor sampling and wall collision.
 // This expands the existing sealed-roof, E-entered cave network; no second
 // entrance, no loot grants, no boss spawning and no server authority change.
+import {instantiateWolfveilRoomModule} from './WolfveilRoomModulePlan.mjs';
 
-export const WOLFVEIL_MODULAR_TREASURE_ROOM=Object.freeze({
-  id:'modular_sumi_treasure_vault',name:'Sumi-e Treasure Vault',
-  x:-61,y:-8,z:-95,radius:12,ceiling:7.8,theme:'treasure_module',
-  type:'decorative_treasure', // game loot ownership remains elsewhere
-});
+export const WOLFVEIL_MODULAR_TREASURE_ROOM=instantiateWolfveilRoomModule(
+  'treasure_vault',{
+    id:'modular_sumi_treasure_vault',name:'Sumi-e Treasure Vault',
+    x:-61,y:-8,z:-95,theme:'treasure_module',
+    type:'decorative_treasure', // game loot ownership remains elsewhere
+  });
 export const WOLFVEIL_MODULAR_JUNCTION=Object.freeze({
   id:'modular_t_junction',name:'Sumi-e Three-Way Junction',
   x:-6,y:-8,z:-95,kind:'junction',
 });
-export const WOLFVEIL_MODULAR_L_CORNER=Object.freeze({
-  id:'modular_l_turn',name:'Sumi-e L-Turn',x:230,y:-8,z:-162,
-  radius:8,ceiling:7.2,theme:'l_turn',kind:'corner',
-});
-export const WOLFVEIL_MODULAR_WAYFINDER_HUB=Object.freeze({
-  id:'modular_fourway_hub',name:'Wayfinder Crossroads',x:280,y:-8,z:-162,
-  radius:18,ceiling:12,theme:'wayfinder_hub',kind:'junction',
-});
-export const WOLFVEIL_MODULAR_SANCTUARY=Object.freeze({
-  id:'modular_sunken_sanctuary',name:'Sunken Sumi-e Sanctuary',
-  x:280,y:-8,z:-245,radius:22,ceiling:15,theme:'sunken_sanctuary',
-});
-export const WOLFVEIL_MODULAR_ECHO_GALLERY=Object.freeze({
-  id:'modular_echo_gallery',name:'Echo Gallery',x:280,y:-8,z:-68,
-  radius:14,ceiling:8.6,theme:'echo_gallery',
-});
-export const WOLFVEIL_MODULAR_SECRET_CACHE=Object.freeze({
-  id:'modular_secret_cache',name:'Sealed Reliquary',x:354,y:-8,z:-162,
-  radius:13,ceiling:8.2,theme:'sealed_reliquary',type:'decorative_cache',
-});
+export const WOLFVEIL_MODULAR_L_CORNER=instantiateWolfveilRoomModule(
+  'small_round',{
+    id:'modular_l_turn',name:'Sumi-e L-Turn',x:230,y:-8,z:-162,
+    theme:'l_turn',kind:'corner',
+  });
+export const WOLFVEIL_MODULAR_WAYFINDER_HUB=instantiateWolfveilRoomModule(
+  'crossroads',{
+    id:'modular_fourway_hub',name:'Wayfinder Crossroads',x:280,y:-8,z:-162,
+    theme:'wayfinder_hub',kind:'junction',
+  });
+export const WOLFVEIL_MODULAR_SANCTUARY=instantiateWolfveilRoomModule(
+  'sanctuary',{
+    id:'modular_sunken_sanctuary',name:'Sunken Sumi-e Sanctuary',
+    x:280,y:-8,z:-245,theme:'sunken_sanctuary',
+  });
+export const WOLFVEIL_MODULAR_ECHO_GALLERY=instantiateWolfveilRoomModule(
+  'echo_gallery',{
+    id:'modular_echo_gallery',name:'Echo Gallery',x:280,y:-8,z:-68,
+    theme:'echo_gallery',
+  });
+export const WOLFVEIL_MODULAR_SECRET_CACHE=instantiateWolfveilRoomModule(
+  'reliquary',{
+    id:'modular_secret_cache',name:'Sealed Reliquary',x:354,y:-8,z:-162,
+    theme:'sealed_reliquary',type:'decorative_cache',
+  });
 export const WOLFVEIL_MODULAR_CHAMBERS=Object.freeze([
   WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_L_CORNER,
   WOLFVEIL_MODULAR_WAYFINDER_HUB,WOLFVEIL_MODULAR_SANCTUARY,

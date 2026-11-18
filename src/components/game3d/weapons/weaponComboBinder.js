@@ -4,7 +4,7 @@
 // rebaked with that weapon's exact combat grip. Presentation only: no damage, cooldown or network state.
 import * as THREE from 'three';
 import { solveFallbackGrip } from './playerWeaponRuntime.js';
-import { bakeWeaponComboClips, captureRestPose, comboKindForWeapon } from './weaponComboClips.js';
+import { bakeWeaponComboClips, captureRestPose, comboKindForWeapon, SWORD_SKILL_SINGLE_COMBOS, SWORD_SKILL_TRIPLE_COMBOS } from './weaponComboClips.js';
 import { swordMovesForWeapon } from './katanaTechniques.mjs';
 
 const DEFAULT_HOLDS = Object.freeze({
@@ -37,7 +37,10 @@ export function createWeaponComboBinder({ model, controller, runtime = null, bod
       if (!comboKind || bakedWith[comboKind] === held.id || controller?.getComboState?.()) return false;
       const grips = Object.fromEntries((runtime.getHands?.() || []).map((h) => [h.side, h.gripQuaternion]));
       // A long two-handed blade swings the katana combo (katanaTechniques.mjs); other swords keep their three hits.
-      return bake(comboKind, held.cls, grips, held.id, held.length, comboKind === 'swordCombo' ? swordMovesForWeapon(held) : null);
+      // Passing moves replaces the baker's whole sword list, so the sword skills' tier clips go along with them.
+      const katana = comboKind === 'swordCombo' ? swordMovesForWeapon(held) : null;
+      const moves = katana ? [...katana, ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat()] : null;
+      return bake(comboKind, held.cls, grips, held.id, held.length, moves);
     },
     bakedFor: (comboKind) => bakedWith[comboKind] ?? null,
   };

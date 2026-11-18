@@ -59,7 +59,7 @@ const SKILLS = [
     max_level: 10,
     scaling: { damage_pct: { min: 1.30, max: 1.80 } },
     icon: '🗡️',
-    description: 'One heavy overhead strike that scales with sword damage.',
+    description: 'One heavy sword strike that scales with sword damage. Its motion evolves at mastery levels 1, 4, 7, and 10.',
     animation_ref: 'sword_heavy',
     vfx_ref: 'slash_heavy',
   },
@@ -76,7 +76,7 @@ const SKILLS = [
     max_level: 10,
     scaling: { damage_pct: { min: 0.90, max: 1.20 } }, // per hit
     icon: '⚔️Ⅲ',
-    description: 'Three-hit sword combo: three consecutive slashes, each 0.5s apart. Requires a Damage/sword weapon.',
+    description: 'Three consecutive sword strikes, each 0.5s apart. Its motion evolves at mastery levels 1, 4, 7, and 10. Requires a Damage/sword weapon.',
     animation_ref: 'sword_combo',
     vfx_ref: 'slash_combo',
   },
