@@ -526,8 +526,9 @@ export async function runWolfveilAreaLoadingReport({
       if(!Number.isFinite(ground))continue;
       entry.checked++;
       const half=Math.abs(m[1])*hx+Math.abs(m[5])*hy+Math.abs(m[9])*hz,gap=y-half-ground;
-      // A bloom rides on its stem: above the ground by design.
-      if(gap>.5&&!/bloom/i.test(node.name))entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
+      // A bloom rides on its stem and a crown on its trunk: above the ground
+      // by design.
+      if(gap>.5&&!/bloom|foliage|crown|canopy/i.test(node.name))entry.floating.push({name:node.name,x:Math.round(x),z:Math.round(z),gap:Math.round(gap*10)/10});
       else if(y+half<ground-.1)entry.buried++;
     }
   });

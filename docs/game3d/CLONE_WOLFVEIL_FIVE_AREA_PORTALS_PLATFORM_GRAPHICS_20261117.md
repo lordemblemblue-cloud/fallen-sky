@@ -176,6 +176,17 @@ draw calls, 1.5 M triangles). All four owner models load in this run, on
 | east  | 4,586 / 4.09 M                  | 356 / 1.43 M         | inside          |
 | north | 4,591 / 4.30 M                  | 347 / 1.22 M         | inside          |
 
+One camera view, after the renderer's own culling (the game camera, 60 degree
+view, eight directions from behind the player). This is what a frame draws:
+
+| Area  | Worst direction | Average direction | Budget |
+|-------|-----------------|-------------------|--------|
+| town  | 280 / 0.84 M    | 178 / 0.76 M      | inside |
+| south | 207 / 0.77 M    | 110 / 0.67 M      | inside |
+| west  | 249 / 1.24 M    | 141 / 0.95 M      | inside |
+| east  | 243 / 1.02 M    | 142 / 0.83 M      | inside |
+| north | 212 / 0.89 M    | 132 / 0.75 M      | inside |
+
 - All 11 portals pass walking both ways: arrival notice, both sides loaded
   during the crossing, arch shown.
 - Nothing lost or duplicated: with every area loaded the triangle total equals
@@ -199,10 +210,10 @@ draw calls, 1.5 M triangles). All four owner models load in this run, on
 - **Distant scenery** (below): 2 to 5 draw calls and 31,000 to 62,000
   triangles per area, included in the table.
 
-What is still over budget:
+What is left:
 
-1. West, triangles: the owner's far grass tiles (659,520 there) and the grass
-   that follows the player (395,862).
+1. West is over on triangles when every direction is counted at once (the
+   owner's far grass tiles, 659,520 there), and inside in any single view.
 2. Lights: 6 to 12 lights are switched on wherever the player stands. Their
    cost shows only in a real frame-rate reading.
 
@@ -262,6 +273,31 @@ answers what a "high-poly to smart mesh" rework of the ground would buy.
 
 Nothing was changed in the ground. The ground is 8 to 12% of the triangles in
 view; grass is 55 to 70%.
+
+## Land survey (the first step of re-landscaping)
+
+The same report surveys the scattered scenery of each area as it is built
+(instanced meshes; 25 m squares; ground is the visible ground mesh).
+
+| Area  | Size    | Trees | Stones | Flowers | Shrubs, ferns | Grass tiles | Squares with nothing but grass |
+|-------|---------|-------|--------|---------|---------------|-------------|--------------------------------|
+| town  | 17.1 ha | 36    | 622    | 440     | 281           | 944         | 116 of 273 (42%)               |
+| south | 8.9 ha  | 0     | 51     | 314     | 22            | 132         | 99 of 143 (69%)                |
+| west  | 28 ha   | 22    | 846    | 1,090   | 419           | 916         | 190 of 448 (42%)               |
+| east  | 34 ha   | 2     | 1,008  | 526     | 291           | 739         | 267 of 544 (49%)               |
+| north | 33 ha   | 0     | 1,011  | 62      | 104           | 469         | 255 of 528 (48%)               |
+
+- The valley has 60 trees. South and north have none; east has 2.
+- South is the emptiest area: 69% of its squares hold nothing but grass.
+- Scenery standing more than 0.5 m above the ground: the top stones of the
+  wayfinding cairns (79, stacked on purpose) and 25 gorge boulders that stand
+  2 to 14 m above the drawn ground beside the river (north around x 223,
+  z 315; also x 118 to 123, z 172 to 177). The boulders are placed on the
+  designed height or 3 m above the river, not on the drawn ground
+  (`WolfveilTerraces.js`); whether they float needs a look in the game.
+- 16 pieces of scenery lie wholly under the ground (6 town, 8 east, 2 north).
+
+Nothing in the land was changed by the survey.
 
 ## Tests
 
