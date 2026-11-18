@@ -4216,7 +4216,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playOneShot(montage, 1.4);
             }
             playSynchronizedSwing(activeWeaponPath, pendingSkillStrike?.skillId);
-            if (!(comboKind === 'swordCombo' && playerAnim?.getComboState?.())) weaponTrails.emit({
+            if (!(comboKind?.startsWith('sword') && playerAnim?.getComboState?.())) weaponTrails.emit({
               actor: model, weaponPath: activeWeaponPath,
               hitIndex: pendingSkillStrike?.hitIndex ?? 0,
             });
