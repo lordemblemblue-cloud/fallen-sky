@@ -20,7 +20,10 @@ import {appendWolfveilCaveAccessFloor,appendWolfveilCaveAccessProps} from './Wol
 import {installWolfveilCaveEntranceLandscaping} from './WolfveilCaveLandscapeVisuals.js';
 import {WOLFVEIL_CAVE_APPROACHES,resolveWolfveilCaveEntranceRailCollision} from './WolfveilCaveAccessPlan.mjs';
 import {WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_JUNCTION,
-  WOLFVEIL_MODULAR_CANYON} from './WolfveilModularCaveKit.mjs';
+  WOLFVEIL_MODULAR_CANYON,WOLFVEIL_MODULAR_CHAMBERS,
+  WOLFVEIL_MODULAR_WAYFINDER_HUB,WOLFVEIL_MODULAR_SANCTUARY,
+  WOLFVEIL_MODULAR_ECHO_GALLERY,WOLFVEIL_MODULAR_SECRET_CACHE,
+  WOLFVEIL_MODULAR_L_CORNER} from './WolfveilModularCaveKit.mjs';
 import {appendWolfveilModularCaveVisuals} from './WolfveilModularCaveVisuals.mjs';
 import {installWolfveilCaveDrawBudget} from './WolfveilCaveDrawBudget.mjs';
 import {createWolfveilTerrainSurfaceSampler} from './WolfveilTerrainSurfaceSampler.mjs';
@@ -686,8 +689,7 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
   const allChambers = [
     ...WOLFVEIL_EXPLORABLE_CAVES.map(c => ({ ...c.chamber, cave: c })),
     { ...WOLFVEIL_CAVE_HUB, cave: WOLFVEIL_CAVE_HUB },
-    { ...WOLFVEIL_MODULAR_TREASURE_ROOM,
-      cave: WOLFVEIL_MODULAR_TREASURE_ROOM },
+    ...WOLFVEIL_MODULAR_CHAMBERS.map(ch=>({ ...ch, cave: ch })),
   ];
 
   // Check if a wall azimuth aligns with an incoming tunnel so chamber walls stay open at doorways
@@ -1019,6 +1021,26 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     WOLFVEIL_MODULAR_CANYON.entrance.x,
     WOLFVEIL_MODULAR_CANYON.entrance.y+4,
     WOLFVEIL_MODULAR_CANYON.entrance.z,12.2);
+  addWayfinding('Four-way hub · choose a route',
+    WOLFVEIL_MODULAR_WAYFINDER_HUB.x,
+    WOLFVEIL_MODULAR_WAYFINDER_HUB.y+3.2,
+    WOLFVEIL_MODULAR_WAYFINDER_HUB.z,14);
+  addWayfinding('Sunken sanctuary · north passage',
+    WOLFVEIL_MODULAR_SANCTUARY.x,
+    WOLFVEIL_MODULAR_SANCTUARY.y+4,
+    WOLFVEIL_MODULAR_SANCTUARY.z,13);
+  addWayfinding('Echo gallery · return loop',
+    WOLFVEIL_MODULAR_ECHO_GALLERY.x,
+    WOLFVEIL_MODULAR_ECHO_GALLERY.y+3,
+    WOLFVEIL_MODULAR_ECHO_GALLERY.z,12);
+  addWayfinding('Sealed reliquary · eastern branch',
+    WOLFVEIL_MODULAR_SECRET_CACHE.x,
+    WOLFVEIL_MODULAR_SECRET_CACHE.y+3,
+    WOLFVEIL_MODULAR_SECRET_CACHE.z,12);
+  addWayfinding('L-turn · canyon route',
+    WOLFVEIL_MODULAR_L_CORNER.x,
+    WOLFVEIL_MODULAR_L_CORNER.y+3,
+    WOLFVEIL_MODULAR_L_CORNER.z,12);
 
   const floorMesh = new THREE.Mesh(floorTris.geometry(), floorMat);
   floorMesh.name = 'SWV_CaveSystem_WalkableStoneFloor';
