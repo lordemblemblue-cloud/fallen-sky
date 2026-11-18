@@ -26,6 +26,7 @@ import { SKILL_TYPE, WEAPON_TYPE, CAST_TYPE } from './skillTypes';
 import { AXE_CORE_SKILLS } from '../axe/skills/AXECoreSkillLadder';
 import { AXE_DIVINE_SKILLS } from '../axe/skills/AXEDivineSkillSet';
 import { SPRINT_SKILL_ID, SPRINT_MAX_LEVEL } from './sprintRules.mjs';
+import { curvedSkillDamagePct, getSkillDamageCurveConfig } from './skillDamageCurve.mjs';
 
 const SKILLS = [
   // Default-learned movement passive, equipped in the first open passive slot.
@@ -265,6 +266,17 @@ export function scaleStat(skill, statKey, level) {
   const lvl = Math.max(1, Math.min(skill.max_level, level || 1));
   const t = (lvl - 1) / Math.max(1, skill.max_level - 1);
   return range.min + (range.max - range.min) * t;
+}
+
+// Damage multiplier of an attack skill at `level`: the ONE place a skill's level becomes damage.
+// skillExecutor.dispatchStrike uses it and nothing downstream scales a skill's level again.
+// Balance setting off (the default): exactly scaleStat(skill, 'damage_pct', level), the linear growth.
+// On: skillDamageCurve.mjs replaces it for skills that have a cap (sword, bow, and guardian
+// skills while daggers are held); every other skill stays linear.
+// heldWeapon: the held weapon's mastery id, or a function returning it (see resolveSkillCurveCap).
+export function scaleSkillDamage(skill, level, heldWeapon = null, config = getSkillDamageCurveConfig()) {
+  const curved = curvedSkillDamagePct(skill, level, heldWeapon, config);
+  return curved ?? scaleStat(skill, 'damage_pct', level);
 }
 
 export default SKILLS;
