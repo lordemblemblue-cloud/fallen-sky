@@ -28,7 +28,7 @@ export function appendWolfveilModularCaveVisuals({
   const tint=(x,z)=>((Math.floor(x/4)+Math.floor(z/4))%3===0
     ?[.52,.53,.49]:[.61,.59,.53]);
 
-  for(const tile of getWolfveilModularCanyonTileRects(4)){
+  for(const tile of getWolfveilModularCanyonTileRects(8)){
     const {minX:x0,maxX:x1,minZ:z0,maxZ:z1}=tile,y=C.y;
     floorTris.quad([x0,y,z0],[x0,y,z1],[x1,y,z1],[x1,y,z0],
       tint(x0,z0),[[0,0],[0,1],[1,1],[1,0]]);
@@ -62,8 +62,8 @@ export function appendWolfveilModularCaveVisuals({
   }
   // The gorge has no top floor. Visible walls extend down to the water.
   const g=C.gorge;
-  for(let z=g.minZ;z<g.maxZ;z+=4){
-    const z1=Math.min(z+4,g.maxZ),mid=(z+z1)/2;
+  for(let z=g.minZ;z<g.maxZ;z+=8){
+    const z1=Math.min(z+8,g.maxZ),mid=(z+z1)/2;
     if(isWolfveilModularCanyonBridge(mid))continue;
     for(const x of [g.minX,g.maxX]){
       shellTris.quad([x,C.y,z],[x,C.y,z1],
@@ -105,8 +105,8 @@ export function appendWolfveilModularCaveVisuals({
 
   // Broken megaliths communicate the size of the 180 x 140m interior.
   // Rocks and ornaments do not silently become gameplay colliders.
-  for(let i=0;i<20;i++){
-    const theta=i/20*TAU;
+  for(let i=0;i<10;i++){
+    const theta=i/10*TAU;
     const x=C.x+Math.cos(theta)*76,z=C.z+Math.sin(theta)*57;
     if(x<C.minX+3||x>C.maxX-3||z<C.minZ+3||z>C.maxZ-3)continue;
     const h=5+(i%5)*2.25;
@@ -122,8 +122,8 @@ export function appendWolfveilModularCaveVisuals({
     arena.radius*1.92,.2,arena.radius*1.92);
   addProp(torusGeo,bronzeMat,arena.x,C.y+.24,arena.z,
     arena.radius-1.2,arena.radius-1.2,.5,Math.PI/2);
-  for(let i=0;i<8;i++){
-    const a=i/8*TAU,x=arena.x+Math.cos(a)*15,z=arena.z+Math.sin(a)*15;
+  for(let i=0;i<6;i++){
+    const a=i/6*TAU,x=arena.x+Math.cos(a)*15,z=arena.z+Math.sin(a)*15;
     addProp(boxGeo,wallMat,x,C.y+1.65,z,1.2,3.3,1.2,0,a,0);
   }
   if(addBrazier){
