@@ -6,8 +6,8 @@
 // Coordinates are Wolfveil-local (Game 3D applies +70m Z via world.group).
 import { wolfveilHeight } from './WolfveilLayout.js';
 import {
-  WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_CANYON,
-  WOLFVEIL_MODULAR_CHAMBERS,WOLFVEIL_MODULAR_CORRIDOR_SPECS,
+  WOLFVEIL_MODULAR_CANYON,WOLFVEIL_MODULAR_CHAMBERS,
+  WOLFVEIL_MODULAR_CORRIDOR_SPECS,
   WOLFVEIL_MODULAR_TRAVEL_NODES,
   WOLFVEIL_MODULAR_ARENA_ROUTE,sampleWolfveilModularCanyon,
 } from './WolfveilModularCaveKit.mjs';
