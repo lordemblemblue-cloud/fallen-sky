@@ -13,6 +13,31 @@ export const WOLFVEIL_MODULAR_JUNCTION=Object.freeze({
   id:'modular_t_junction',name:'Sumi-e Three-Way Junction',
   x:-6,y:-8,z:-95,kind:'junction',
 });
+export const WOLFVEIL_MODULAR_L_CORNER=Object.freeze({
+  id:'modular_l_turn',name:'Sumi-e L-Turn',x:230,y:-8,z:-162,
+  radius:8,ceiling:7.2,theme:'l_turn',kind:'corner',
+});
+export const WOLFVEIL_MODULAR_WAYFINDER_HUB=Object.freeze({
+  id:'modular_fourway_hub',name:'Wayfinder Crossroads',x:280,y:-8,z:-162,
+  radius:18,ceiling:12,theme:'wayfinder_hub',kind:'junction',
+});
+export const WOLFVEIL_MODULAR_SANCTUARY=Object.freeze({
+  id:'modular_sunken_sanctuary',name:'Sunken Sumi-e Sanctuary',
+  x:280,y:-8,z:-245,radius:22,ceiling:15,theme:'sunken_sanctuary',
+});
+export const WOLFVEIL_MODULAR_ECHO_GALLERY=Object.freeze({
+  id:'modular_echo_gallery',name:'Echo Gallery',x:280,y:-8,z:-68,
+  radius:14,ceiling:8.6,theme:'echo_gallery',
+});
+export const WOLFVEIL_MODULAR_SECRET_CACHE=Object.freeze({
+  id:'modular_secret_cache',name:'Sealed Reliquary',x:354,y:-8,z:-162,
+  radius:13,ceiling:8.2,theme:'sealed_reliquary',type:'decorative_cache',
+});
+export const WOLFVEIL_MODULAR_CHAMBERS=Object.freeze([
+  WOLFVEIL_MODULAR_TREASURE_ROOM,WOLFVEIL_MODULAR_L_CORNER,
+  WOLFVEIL_MODULAR_WAYFINDER_HUB,WOLFVEIL_MODULAR_SANCTUARY,
+  WOLFVEIL_MODULAR_ECHO_GALLERY,WOLFVEIL_MODULAR_SECRET_CACHE,
+]);
 export const WOLFVEIL_MODULAR_CANYON=Object.freeze({
   id:'modular_canyon',name:'Sunken Stonewater Canyon',
   minX:40,maxX:220,minZ:-230,maxZ:-90,
@@ -50,6 +75,49 @@ export const WOLFVEIL_MODULAR_CORRIDOR_SPECS=Object.freeze([
       Object.freeze([57,-8,-160]),
     ]),
   }),
+  Object.freeze({
+    id:'modular_arena_to_l_turn',kind:'tunnel',halfWidth:2.55,ceiling:6.4,
+    waypoints:Object.freeze([
+      Object.freeze([181,-8,-162]),Object.freeze([205,-8,-162]),
+      Object.freeze([230,-8,-162]),
+    ]),
+  }),
+  Object.freeze({
+    id:'modular_l_turn_to_wayfinder',kind:'tunnel',halfWidth:2.55,ceiling:6.4,
+    waypoints:Object.freeze([
+      Object.freeze([230,-8,-162]),Object.freeze([230,-8,-202]),
+      Object.freeze([280,-8,-202]),Object.freeze([280,-8,-162]),
+    ]),
+  }),
+  Object.freeze({
+    id:'modular_wayfinder_to_sanctuary',kind:'tunnel',halfWidth:2.7,ceiling:7.1,
+    waypoints:Object.freeze([
+      Object.freeze([280,-8,-162]),Object.freeze([280,-8,-192]),
+      Object.freeze([280,-8,-220]),Object.freeze([280,-8,-245]),
+    ]),
+  }),
+  Object.freeze({
+    id:'modular_wayfinder_to_echo_gallery',kind:'tunnel',halfWidth:2.42,ceiling:5.8,
+    waypoints:Object.freeze([
+      Object.freeze([280,-8,-162]),Object.freeze([280,-8,-116]),
+      Object.freeze([280,-8,-68]),
+    ]),
+  }),
+  Object.freeze({
+    id:'modular_echo_gallery_return_to_t',kind:'tunnel',halfWidth:2.42,ceiling:5.6,
+    waypoints:Object.freeze([
+      Object.freeze([280,-8,-68]),Object.freeze([220,-8,-68]),
+      Object.freeze([140,-8,-68]),Object.freeze([60,-8,-68]),
+      Object.freeze([20,-8,-76]),Object.freeze([-6,-8,-95]),
+    ]),
+  }),
+  Object.freeze({
+    id:'modular_wayfinder_to_reliquary',kind:'tunnel',halfWidth:2.42,ceiling:5.8,
+    waypoints:Object.freeze([
+      Object.freeze([280,-8,-162]),Object.freeze([316,-8,-162]),
+      Object.freeze([354,-8,-162]),
+    ]),
+  }),
 ]);
 export const WOLFVEIL_MODULAR_TRAVEL_NODES=Object.freeze([
   Object.freeze({id:WOLFVEIL_MODULAR_JUNCTION.id,
@@ -66,6 +134,9 @@ export const WOLFVEIL_MODULAR_TRAVEL_NODES=Object.freeze([
   Object.freeze({id:WOLFVEIL_MODULAR_CANYON.arena.id,name:'Canyon Arena',
     x:WOLFVEIL_MODULAR_CANYON.arena.x,y:-8,
     z:WOLFVEIL_MODULAR_CANYON.arena.z,kind:'boss_staging'}),
+  ...WOLFVEIL_MODULAR_CHAMBERS.filter(ch=>ch.id!==WOLFVEIL_MODULAR_TREASURE_ROOM.id)
+    .map(ch=>Object.freeze({id:ch.id,name:ch.name,x:ch.x,y:ch.y,z:ch.z,
+      kind:ch.kind||ch.type||'chamber'})),
 ]);
 // This is a physically walkable open-floor route, NOT a teleport edge.
 // It crosses the central stone bridge at the fixed z=-162 band.
