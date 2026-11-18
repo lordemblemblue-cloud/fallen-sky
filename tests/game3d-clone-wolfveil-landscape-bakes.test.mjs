@@ -284,3 +284,84 @@ test('every grass system reads the same live wind (Blaze meadow, streamed meadow
   const scene=read('src/components/game3d/wolfveil/WolfveilScene.js');
   assert.ok(scene.includes('const live=liveWind.update(dt,weather);'));
 });
+
+// --- baked plant cards + restored owner elm --------------------------------
+import {WOLFVEIL_PLANT_ATLAS,WOLFVEIL_FLOWER_CELLS,wolfveilPlantCell}
+  from '../src/components/game3d/wolfveil/WolfveilPlantCardAtlas.mjs';
+import {createWolfveilPlantCardGeometry,createWolfveilPlantCardKit}
+  from '../src/components/game3d/wolfveil/WolfveilPlantCards.js';
+
+test('plant card atlas table matches the Blender bake (wv_plants.json)',()=>{
+  const meta=JSON.parse(read(LANDSCAPE+'wv_plants.json'));
+  assert.equal(meta.revision,WOLFVEIL_PLANT_ATLAS.revision);
+  assert.equal(meta.grid,WOLFVEIL_PLANT_ATLAS.grid);
+  const names=Object.keys(meta.cells);
+  assert.deepEqual(names,Object.keys(WOLFVEIL_PLANT_ATLAS.cells),'same plants in the same atlas order');
+  names.forEach((name,i)=>{
+    const c=meta.cells[name],ours=WOLFVEIL_PLANT_ATLAS.cells[name];
+    assert.equal(ours.index,i);
+    assert.ok(Math.abs(c.size-ours.size)<1e-3,name+' card size '+c.size+' vs '+ours.size);
+    assert.ok(c.highPolyTriangles>=700,name+' is a real high-poly model');
+    const col=i%4,row=Math.floor(i/4);
+    assert.deepEqual(c.rect,[col/4,row/4,(col+1)/4,(row+1)/4]);
+  });
+  for(const f of ['wv_plants_albedo.webp','wv_plants_normal.webp']){
+    const size=statSync(file(LANDSCAPE+f)).size;
+    assert.ok(size>100_000&&size<1_500_000,f+' '+size);
+  }
+  assert.deepEqual(WOLFVEIL_FLOWER_CELLS,['flower_white','flower_yellow','flower_purple','flower_red','flower_pink']);
+  const cell=wolfveilPlantCell('fern');
+  assert.ok(cell.uv[0]>.75&&cell.uv[0]<.751&&cell.uv[2]<.25,'inset fern cell');
+  assert.equal(wolfveilPlantCell('nope').name,'tuft_green');
+});
+
+test('plant cards: three crossed quads, per-instance atlas cell, hidden until the atlas loads',()=>{
+  const g=createWolfveilPlantCardGeometry();
+  assert.equal(g.getAttribute('position').count,12);
+  assert.equal(g.index.count/3,6);
+  g.computeBoundingBox();
+  assert.ok(g.boundingBox.min.y===0&&g.boundingBox.max.y===1);
+  const world={group:new THREE.Group(),meshes:[],ownedMaterials:[],mesh(o){this.group.add(o);this.meshes.push(o);return o;}};
+  const kit=createWolfveilPlantCardKit({textures:false});
+  const old=new THREE.Mesh();
+  const items=[{x:1,y:2,z:3,yaw:.5,size:1,dry:false,tone:.5},{x:9,y:2,z:3,yaw:0,size:1.2,dry:true,tone:.1}];
+  const layer=kit.layer(world,items,{name:'SWV_BakedCard_Test',cellOf:t=>t.dry?'tuft_dry':'tuft_green',
+    heightOf:(t,c)=>c.size*t.size,fallback:[old]});
+  assert.equal(layer.count,2);
+  const mesh=layer.meshes[0];
+  assert.equal(mesh.visible,false,'cards hidden until the atlas textures are ready');
+  assert.ok(old.visible,'procedural plants stay as the fallback');
+  const cells=mesh.geometry.getAttribute('aCell');
+  assert.equal(cells.itemSize,4);
+  const m=new THREE.Matrix4();mesh.getMatrixAt(0,m);
+  const s=new THREE.Vector3().setFromMatrixScale(m);
+  assert.ok(Math.abs(s.y-WOLFVEIL_PLANT_ATLAS.cells.tuft_green.size)<1e-6);
+  assert.ok(mesh.userData.decorativeOnly&&mesh.userData.nonCollider);
+  const shader={uniforms:{},vertexShader:'#include <common>\n#include <uv_vertex>\n#include <project_vertex>\n',
+    fragmentShader:'#include <normal_fragment_begin>\n#include <normal_fragment_maps>\n'};
+  kit.material.onBeforeCompile(shader);
+  for(const t of ['attribute vec4 aCell','liveWindSheet(plantRoot.xz','vMapUv=uv*aCell.zw+aCell.xy'])
+    assert.ok(shader.vertexShader.includes(t),'vertex lacks '+t);
+  assert.ok(shader.fragmentShader.includes('getTangentFrame(-vViewPosition,cardN,vNormalMapUv)'));
+  kit.update({time:3,wind:[1,0],gust:.5,windSheet:12,windGust:.4});
+  assert.equal(kit.uniforms.uPlantSheet.value.x,12);
+  kit.dispose();
+});
+
+test('scene swaps flowers, shrubs, ferns, reeds and tufts to baked cards (Game 3D only)',()=>{
+  const scene=read('src/components/game3d/wolfveil/WolfveilScene.js');
+  assert.ok(scene.includes('options.originAtMarket&&options.groundCover&&options.bakedPlants!==false'));
+  assert.ok(scene.includes('plantCards?.update(frame)'));
+  const living=read('src/components/game3d/wolfveil/WolfveilLivingLandscape.js');
+  for(const n of ['SWV_BakedCard_Wildflowers','SWV_BakedCard_Shrubs','SWV_BakedCard_Ferns','SWV_BakedCard_Reeds'])
+    assert.ok(living.includes(n),n);
+  assert.ok(read('src/components/game3d/wolfveil/WolfveilTrailLandscaping.js').includes('SWV_BakedCard_GrassTufts'));
+  assert.ok(read('tools/landscape-bake/bake_plants.py').includes('def plant_fern'));
+});
+
+test("the owner's elm model is present in the clone (no lollipop placeholder elms)",()=>{
+  const b=readFileSync(file('public/game3d/elm-owner-optimized.glb'));
+  assert.equal(b.toString('ascii',0,4),'glTF');
+  assert.ok(b.length>1_000_000);
+  assert.ok(read('src/components/game3d/render/forestOwnerElmAssets.js').includes('/game3d/elm-owner-optimized.glb'));
+});

@@ -60,6 +60,24 @@ export function wolfveilKerbsForStrip(paved,{length=WOLFVEIL_KERB.length,width=W
   return out;
 }
 
+/** Kerbs {x,z,strip} not standing inside any OTHER paved strip quad. */
+export function wolfveilKerbsOutsidePaving(kerbs,strips){
+  const boxes=strips.map(q=>({q,minX:Math.min(...q.map(p=>p[0])),maxX:Math.max(...q.map(p=>p[0])),
+    minZ:Math.min(...q.map(p=>p[1])),maxZ:Math.max(...q.map(p=>p[1]))}));
+  const inside=(q,x,z)=>{
+    let sign=0;
+    for(let i=0;i<4;i++){
+      const a=q[i],b=q[(i+1)%4],c=(b[0]-a[0])*(z-a[1])-(b[1]-a[1])*(x-a[0]);
+      if(Math.abs(c)<1e-12)continue;
+      const s=Math.sign(c);
+      if(sign===0)sign=s;else if(s!==sign)return false;
+    }
+    return true;
+  };
+  return kerbs.filter(k=>!boxes.some((b,i)=>i!==k.strip&&k.x>=b.minX&&k.x<=b.maxX&&
+    k.z>=b.minZ&&k.z<=b.maxZ&&inside(b.q,k.x,k.z)));
+}
+
 function loadSurfaceMaps(material,id,meters,loader){
   if(!loader)return;
   const maps={};
@@ -82,7 +100,7 @@ function loadSurfaceMaps(material,id,meters,loader){
 export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=310,surfaceAt=null}={}){
   const project=createWolfveilPathSurface({heightAt:wolfveilHeight,span:terrainSpan,
     segments:terrainSegments,lift:.13});
-  const positions={cobble:[],brick:[]},kerbs=[];
+  const positions={cobble:[],brick:[]},kerbs=[],strips=[];
   return {
     /** corners: the finished dirt strip; route: its route (kind, width). */
     add(route,corners,verge){
@@ -93,7 +111,25 @@ export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=
       if(!tris)return false;
       const list=positions[paving.surface];
       for(const tri of tris)for(const p of tri)list.push(p[0],p[1],p[2]);
-      kerbs.push(...wolfveilKerbsForStrip(paved));
+      const id=strips.length;
+      strips.push(paved);
+      for(const k of wolfveilKerbsForStrip(paved))kerbs.push({...k,strip:id});
+      return true;
+    },
+    /**
+     * Fills the outer wedge of a bend (the dirt network's bevel [bend point,
+     * end of the previous strip, start of the next]) narrowed to the road
+     * width, so the paving turns the corner instead of showing dirt.
+     */
+    addBevel(route,bevel,verge){
+      const paving=wolfveilPavingFor(route);
+      if(!paving)return false;
+      const k=route.width/(route.width+verge),[b,p1,p2]=bevel;
+      const pull=p=>[b[0]+(p[0]-b[0])*k,b[1]+(p[1]-b[1])*k];
+      const tris=project([b,pull(p1),pull(p2)]);
+      if(!tris)return false;
+      const list=positions[paving.surface];
+      for(const tri of tris)for(const p of tri)list.push(p[0],p[1],p[2]);
       return true;
     },
     get kerbCount(){return kerbs.length;},
@@ -122,6 +158,9 @@ export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=
         mesh.userData={decorativeOnly:true,nonCollider:true,paving:kind};
         meshes[paving.surface]=mesh;
       }
+      // Junctions: a kerb that would stand on another road's paving is dropped.
+      const kept=wolfveilKerbsOutsidePaving(kerbs,strips);
+      kerbs.length=0;kerbs.push(...kept);
       let kerbMesh=null;
       if(kerbs.length){
         const K=WOLFVEIL_KERB;

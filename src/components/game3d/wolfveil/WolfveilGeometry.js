@@ -533,6 +533,7 @@ export function addWolfveilPaths(world,routes,{
       if(excludePalaceApproach&&route.id==='public_gate_market_sanctuary'&&
         bevel.some(p=>p[1]>WOLFVEIL_PALACE_APPROACH.fromZ&&
           p[1]<WOLFVEIL_PALACE.z+WOLFVEIL_PALACE.depth/2))continue;
+      paving?.addBevel(route,bevel,verge); // paving turns the corner too
       const projected=project(bevel);
       if(!projected)continue; // outer meadow representation stays unchanged
       const uv=verge

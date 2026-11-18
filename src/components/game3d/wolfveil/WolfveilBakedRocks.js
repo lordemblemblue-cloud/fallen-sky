@@ -24,6 +24,8 @@ export const WOLFVEIL_BAKED_ROCKS=Object.freeze({
   lodDistances:Object.freeze([55,160]),
   // Pebble-sized stones never need the 900-triangle LOD.
   smallStone:.35,
+  // Draw distance for pebbles (< smallStone) and stones (< 1.2 m half-extent).
+  drawDistance:Object.freeze([140,320]),
   refreshMeters:4,
 });
 
@@ -92,13 +94,18 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
   const count=placements.length;
   const matrices=new Float32Array(count*16),colors=new Float32Array(count*3);
   const variant=new Uint8Array(count),bias=new Uint8Array(count),xz=new Float32Array(count*2);
+  // Size-based draw distance: pebbles vanish (sub-pixel) past 140 m, stones
+  // past 320 m; boulders and range outcrops always draw.
+  const reach=new Float32Array(count);
   const perVariant=new Array(V.length).fill(0);
   const m=new THREE.Matrix4(),kindIndex={};
   placements.forEach((p,i)=>{
     const k=kindIndex[p.kind]=(kindIndex[p.kind]??-1)+1;
     const v=Math.max(0,V.indexOf(p.variant||wolfveilRockVariant(p.kind,k)));
     variant[i]=v;perVariant[v]++;
-    bias[i]=Math.max(p.sx,p.sy,p.sz)<R.smallStone?1:0;
+    const extent=Math.max(p.sx,p.sy,p.sz);
+    bias[i]=extent<R.smallStone?1:0;
+    reach[i]=extent<R.smallStone?R.drawDistance[0]:extent<1.2?R.drawDistance[1]:Infinity;
     wolfveilRockMatrix(p,heightAt,m).toArray(matrices,i*16);
     const t=p.tint||[1,1,1];
     colors[i*3]=t[0];colors[i*3+1]=t[1];colors[i*3+2]=t[2];
@@ -118,6 +125,7 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
     const lodCounts=[0,0,0];
     for(let i=0;i<count;i++){
       const dx=xz[i*2]-px,dz=xz[i*2+1]-pz,d=Math.hypot(dx,dz);
+      if(d>reach[i])continue;
       let lod=d<d0?0:d<d1?1:2;
       if(bias[i]&&lod<2)lod=d<d0*.55?1:2;
       const v=variant[i],mesh=state.meshes[v][lod],n=fill[v][lod]++;
@@ -132,6 +140,31 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
     }));
     state.lodCounts=lodCounts;
     state.lastX=px;state.lastZ=pz;
+  }
+
+  // Existing rock meshes whose raycasting must stay exactly as it is (e.g.
+  // the gorge boulders): a baked twin draws at the same transforms and the
+  // original keeps raycasting while writing no colour or depth.
+  const adopted=[];
+  function twin(entry){
+    if(!state.meshes||entry.twin)return;
+    const {mesh,variant,tint}=entry;
+    const v=Math.max(0,V.indexOf(variant));
+    const source=state.meshes[v][1].geometry;
+    const centred=source.clone().translate(0,-1,0); // [0,2] -> [-1,1], like a unit solid
+    state.owned.push(centred);
+    const t=new THREE.InstancedMesh(centred,state.meshes[v][1].material,mesh.count);
+    const m=new THREE.Matrix4(),c=new THREE.Color(tint[0],tint[1],tint[2]);
+    for(let i=0;i<mesh.count;i++){mesh.getMatrixAt(i,m);t.setMatrixAt(i,m);t.setColorAt(i,c);}
+    t.instanceMatrix.needsUpdate=true;t.instanceColor.needsUpdate=true;
+    t.name=mesh.name+'_BakedTwin';
+    t.frustumCulled=false;t.receiveShadow=true;
+    t.raycast=()=>{};
+    t.userData={decorativeOnly:true,nonCollider:true,bakedTwinOf:mesh.name};
+    mesh.parent?.add(t);
+    entry.saved={colorWrite:mesh.material.colorWrite,depthWrite:mesh.material.depthWrite};
+    mesh.material.colorWrite=false;mesh.material.depthWrite=false;
+    entry.twin=t;
   }
 
   const gltfLoader=loader||(typeof document!=='undefined'?new GLTFLoader():null);
@@ -165,6 +198,7 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
       state.meshes=meshes;
       state.ready=true;
       group.visible=true;
+      for(const entry of adopted)twin(entry);
       refresh(Number.isFinite(state.lastX)?state.lastX:0,Number.isFinite(state.lastZ)?state.lastZ:0);
       onReady?.({count,perVariant:Object.fromEntries(V.map((v,i)=>[v,perVariant[i]]))});
     },undefined,error=>{
@@ -179,6 +213,14 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
     get ready(){return state.ready;},
     get failed(){return state.failed;},
     get lodCounts(){return state.lodCounts.slice();},
+    /** Draw a baked twin of an existing rock InstancedMesh (see twin()). */
+    adopt(mesh,{variant='boulder',tint=[.55,.56,.57]}={}){
+      if(!mesh?.isInstancedMesh)return false;
+      const entry={mesh,variant,tint,twin:null};
+      adopted.push(entry);
+      twin(entry);
+      return true;
+    },
     update(px,pz){
       if(!Number.isFinite(px)||!Number.isFinite(pz))return;
       if(!state.ready){state.lastX=px;state.lastZ=pz;return;}
@@ -187,6 +229,10 @@ export function createWolfveilBakedRockField(world,placements,{heightAt,url=WOLF
     dispose(){
       state.disposed=true;
       group.removeFromParent();
+      for(const entry of adopted)if(entry.twin){
+        entry.twin.removeFromParent();
+        Object.assign(entry.mesh.material,entry.saved);
+      }
       for(const o of state.owned)o.dispose?.();
       state.owned.length=0;
     },
