@@ -69,13 +69,116 @@ export function maskedIndex(source, hidden) {
   return keep;
 }
 
-/** Apply the union of `masks` to every body mesh under root (layers and overlays excluded). */
-export function applyBodyMasks(root, masks = []) {
+// ---- two rules on top of the baked masks ----
+// A piece's baked mask only hides skin that sits safely under it in the pose it was fitted in. Two places
+// need more than that:
+//   gloves  a hand closes round a weapon, and finger skin the mask left visible pushes out through the
+//           glove. A worn glove therefore hides the whole hand it is skinned to (wrist and fingers), apart
+//           from the skin at its cuff.
+//   eyes    a helmet's mask can reach the eyelids and the eyeballs, and cutting those away leaves the face
+//           looking asleep. The eyes are never hidden: every vertex the blink and look shapes move stays.
+const HAND_BONE = /(Left|Right)Hand(?:(?:Thumb|Index|Middle|Ring|Pinky)\d)?$/;
+const FINGER_BONE = /(Left|Right)Hand(?:Thumb|Index|Middle|Ring|Pinky)\d$/;
+const EYE_SHAPE = /^FX_(?:Blink|Look)|blink|eyelid|eye_?(?:close|shut)/i;
+
+/** For each vertex, the index (into the skin's bones) of the bone that moves it most. */
+export function leadingBones(skinIndex, skinWeight, count) {
+  const out = new Int32Array(count);
+  for (let i = 0; i < count; i++) {
+    let best = 0;
+    for (let k = 1; k < 4; k++) if (skinWeight[i * 4 + k] > skinWeight[i * 4 + best]) best = k;
+    out[i] = skinIndex[i * 4 + best];
+  }
+  return out;
+}
+
+/** Which hands ('Left', 'Right') a glove covers: those with a finger bone leading some of its vertices. */
+export function coveredHandSides(leading, boneNames) {
+  const sides = new Set();
+  for (let i = 0; i < leading.length && sides.size < 2; i++) {
+    const side = FINGER_BONE.exec(boneNames[leading[i]] || '')?.[1];
+    if (side) sides.add(side);
+  }
+  return sides;
+}
+
+/** One byte per vertex: 1 where the leading bone is the wrist or a finger of a covered hand. */
+export function handVertices(leading, boneNames, sides) {
+  const flags = new Uint8Array(leading.length);
+  if (!sides?.size) return flags;
+  const covered = boneNames.map((name) => { const side = HAND_BONE.exec(name || '')?.[1]; return !!side && sides.has(side); });
+  for (let i = 0; i < leading.length; i++) if (covered[leading[i]]) flags[i] = 1;
+  return flags;
+}
+
+/** One byte per vertex: 1 where a blink or look shape moves it (the eyelids and the eyeballs). shapes: {name: Float32Array of xyz offsets}. */
+export function eyeVertices(shapes, count) {
+  let flags = null;
+  for (const [name, offsets] of Object.entries(shapes || {})) {
+    if (!EYE_SHAPE.test(name) || !offsets) continue;
+    flags ||= new Uint8Array(count);
+    for (let i = 0; i < count; i++) {
+      if (offsets[i * 3] !== 0 || offsets[i * 3 + 1] !== 0 || offsets[i * 3 + 2] !== 0) flags[i] = 1;
+    }
+  }
+  return flags;
+}
+
+/** One byte per vertex: 1 where some mask keeps the skin next to its opening (its band). */
+export function bandVertices(count, masks = []) {
+  let flags = null;
+  for (const mask of masks) for (const primitive of mask?.primitives || []) {
+    if ((primitive.count | 0) !== count || !primitive.band_count) continue;
+    const band = decodeMaskBits(primitive, 'band');
+    flags ||= new Uint8Array(count);
+    for (let i = 0; i < count; i++) if (band[i]) flags[i] = 1;
+  }
+  return flags;
+}
+
+const leadingCache = new WeakMap(), eyeCache = new WeakMap();
+const leadingOf = (mesh) => {
+  const g = mesh.geometry, index = g.attributes.skinIndex, weight = g.attributes.skinWeight;
+  if (!mesh.isSkinnedMesh || !index || !weight || !mesh.skeleton) return null;
+  if (!leadingCache.has(g)) leadingCache.set(g, leadingBones(index.array, weight.array, index.count));
+  return leadingCache.get(g);
+};
+
+/** The hands a worn glove layer covers ('Left' / 'Right'), from the bones its meshes are skinned to. */
+export function gloveHandSides(layerRoot) {
+  const sides = new Set();
+  layerRoot?.traverse((n) => {
+    const leading = n.isSkinnedMesh ? leadingOf(n) : null;
+    if (leading) coveredHandSides(leading, n.skeleton.bones.map((b) => b.name)).forEach((side) => sides.add(side));
+  });
+  return sides;
+}
+
+/**
+ * Apply the union of `masks` to every body mesh under root (layers and overlays excluded).
+ * gloveSides: the hands worn gloves cover (gloveHandSides); their skin is hidden whole.
+ */
+export function applyBodyMasks(root, masks = [], { gloveSides = null } = {}) {
   const meshes = [];
   root?.traverse((n) => { if (n.isMesh && n.geometry && !n.userData?.creatorLayer && !n.userData?.customizationSurface) meshes.push(n); });
   for (const mesh of meshes) {
     const geometry = mesh.geometry, count = geometry.attributes.position?.count || 0;
-    const hidden = hiddenVertices(count, masks);
+    let hidden = hiddenVertices(count, masks);
+    const leading = gloveSides?.size ? leadingOf(mesh) : null;
+    if (leading) {
+      const hand = handVertices(leading, mesh.skeleton.bones.map((b) => b.name), gloveSides), band = bandVertices(count, masks);
+      for (let i = 0; i < count; i++) {
+        if (hand[i] && !(band && band[i])) { hidden ||= new Uint8Array(count); hidden[i] = 1; }
+      }
+    }
+    if (hidden && mesh.morphTargetDictionary && geometry.morphAttributes?.position) {
+      if (!eyeCache.has(geometry)) {
+        const shapes = Object.fromEntries(Object.entries(mesh.morphTargetDictionary).map(([name, i]) => [name, geometry.morphAttributes.position[i]?.array]));
+        eyeCache.set(geometry, eyeVertices(shapes, count));
+      }
+      const eyes = eyeCache.get(geometry);
+      if (eyes) { for (let i = 0; i < count; i++) if (eyes[i]) hidden[i] = 0; if (!hidden.some((v) => v)) hidden = null; }
+    }
     const original = geometry.userData.creatorOriginalIndex;
     if (!hidden) {
       if (original) { geometry.setIndex(new THREE.BufferAttribute(original, 1)); delete geometry.userData.creatorOriginalIndex; }

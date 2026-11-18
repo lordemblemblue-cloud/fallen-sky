@@ -186,17 +186,40 @@ for (const [rigId, file] of Object.entries(RIGS)) {
       }
     };
 
+    // which way each blade points, hand at rest (carry) and ready (combat): against the forearm, and whether
+    // it leaves the fist on the thumb side (a forward grip) or the little-finger side (a reverse grip)
+    const aim = (label) => {
+      const roots = runtime.getRoots(), hands = runtime.getHands();
+      for (const [stance, weight] of [['carry', 0], ['combat', 1]]) {
+        runtime.setStanceWeight(weight); model.updateMatrixWorld(true);
+        roots.forEach((root, i) => {
+          const S = hands[i].side === 'left' ? 'Left' : 'Right';
+          const q = root.getWorldQuaternion(new THREE.Quaternion());
+          const blade = new THREE.Vector3(0, 1, 0).applyQuaternion(q), edge = new THREE.Vector3(0, 0, 1).applyQuaternion(q);
+          const bone = (n) => world(model.getObjectByName('mixamorig' + S + n));
+          const forearm = bone('Hand').sub(bone('ForeArm')).normalize();
+          const thumbward = bone('HandIndex1').sub(bone('HandPinky1')).normalize();
+          const fingers = bone('HandMiddle1').sub(bone('Hand')).normalize();
+          const palm = new THREE.Vector3().crossVectors(fingers, thumbward).normalize().multiplyScalar(S === 'Right' ? 1 : -1);
+          console.log('  ' + rigId + ' ' + label.padEnd(8) + stance.padEnd(7) + S.padEnd(6) + ' blade vs forearm ' + (blade.angleTo(forearm) * 180 / Math.PI).toFixed(0).padStart(3) + ' deg; blade along thumb side '
+            + blade.dot(thumbward).toFixed(2) + ', along fingers ' + blade.dot(fingers).toFixed(2) + ', out of the palm ' + blade.dot(palm).toFixed(2) + '; edge along fingers ' + edge.dot(fingers).toFixed(2) + ', along thumb side ' + edge.dot(thumbward).toFixed(2));
+        });
+      }
+    };
+
     assert.equal(await runtime.equip('fantasy_sword'), true, 'the sword equips ' + errors.join('; '));
     assert.deepEqual([runtime.getCurrent().id, runtime.getCurrent().hand], ['fantasy_sword', 'right']);
     assert.ok(runtime.getRoot().getObjectByProperty('isMesh', true), 'the sword model is in the hand');
     assert.ok(loads.includes('/game3d/weapons/fantasy_sword.glb'));
     check('sword', hold('swordCombo1'), 1);
+    aim('sword');
 
     assert.equal(await runtime.equipDaggers(), true, 'the daggers equip ' + errors.join('; '));
     assert.deepEqual([runtime.getCurrent().id, runtime.getCurrent().hand], ['daggers', 'both']);
     assert.deepEqual(runtime.getRoots().map((root) => root.children[0]?.name).sort(), ['DaggerLeft', 'DaggerRight'], 'each hand holds its own blade of the pair');
     assert.ok(loads.includes('/game3d/weapons/curved_daggers.glb'));
     check('daggers', hold('swordCombo1'), 2);
+    aim('daggers');
     const tip = runtime.getBladeAnchors().tip.position;
     assert.ok(Math.abs(tip.y - 0.38) < 1e-6 && tip.z < 0, 'the trail follows the real blade tip');
 
