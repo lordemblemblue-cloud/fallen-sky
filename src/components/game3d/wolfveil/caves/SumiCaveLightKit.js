@@ -198,7 +198,21 @@ export function bakeSumiPiece(kit,group,{THREE,name=group.name||'Sumi_Piece'}={}
   // Take the lights and the merged meshes out of the piece.
   const remove=[];
   group.traverse(object=>{if(object.isLight||(object.isMesh&&partOf(object)!==object))remove.push(object);});
-  for(const object of remove)object.parent?.remove(object);
+  for(const object of remove){
+    const parent=object.parent;
+    if(!parent)continue;
+    if(object.children.length){
+      // Something still hangs from this mesh (a floating relic on a plinth):
+      // leave an empty holder in its place so nothing under it moves.
+      const holder=new THREE.Group();
+      holder.name=object.name;
+      holder.position.copy(object.position);holder.quaternion.copy(object.quaternion);holder.scale.copy(object.scale);
+      for(const child of [...object.children])holder.add(child);
+      parent.add(holder);
+    }
+    parent.remove(object);
+  }
+  group.updateMatrixWorld(true);
 
   const settled=new Set();
   let batch=0;
