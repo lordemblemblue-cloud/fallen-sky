@@ -24,7 +24,10 @@ import {WOLFVEIL_MOB_AREAS,WOLFVEIL_FIGHTING_GROUNDS,wolfveilFightingGroundAt,wo
 import {wolfveilAreaAtLocal,wolfveilAreaRect} from './streaming/WolfveilFiveAreaPlan.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './streaming/WolfveilAreaPortalPlan.mjs';
 import {WOLFVEIL_CAVE_ENTRANCE_FRAMES} from './WolfveilCaveEntrancePlan.mjs';
-import {clearOf} from './WolfveilForestLayout.js';
+import {clearOf,wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
+import {isWolfveilCaveApproachReserved} from './WolfveilCaveAccessPlan.mjs';
+import {forestTrailIsProtected} from './WolfveilForestTrailLandscape.mjs';
+import {WOLFVEIL_SW_QUALITY} from './WolfveilSWQuarterQuality.mjs';
 
 export const WOLFVEIL_FOUR_SIDES_REVISION='wolfveil-four-sides-v1-20261117';
 
@@ -90,6 +93,20 @@ const slopeAt=(x,z)=>Math.hypot(wolfveilHeight(x+2,z)-wolfveilHeight(x-2,z),
 const nearAny=(x,z,points,reach)=>points.some(point=>Math.hypot(x-point[0],z-point[1])<reach);
 const PORTALS=WOLFVEIL_AREA_PORTALS.map(portal=>[portal.x,portal.z]);
 const CAVE_MOUTHS=WOLFVEIL_CAVE_ENTRANCE_FRAMES.map(frame=>[frame.mouth[0],frame.mouth[2]]);
+// The owner's own trees keep their ground: nothing big within their crown,
+// nothing at all against their trunk.
+export const WOLFVEIL_OWNER_TREE_CLEAR=Object.freeze({big:8,small:2.5});
+const OWNER_TREE_CLEAR=WOLFVEIL_OWNER_TREE_CLEAR;
+// Ground other work has finished by hand stays as it is. The one exception is
+// the 100 m forest-floor square: its floor is dressed and waiting for trees,
+// so trees (and only trees) are planted over it.
+export const WOLFVEIL_FOREST_FLOOR_SQUARE='WV-R06-C02';
+export function wolfveilFinishedGroundAt(x,z,padding=0,{trunk=false}={}){
+  if(forestTrailIsProtected(x,z,padding))return true;
+  return WOLFVEIL_SW_QUALITY.protectedTiles.some(tile=>
+    !(trunk&&tile.id===WOLFVEIL_FOREST_FLOOR_SQUARE)&&
+    x>=tile.minX-padding&&x<tile.maxX+padding&&z>=tile.minZ-padding&&z<tile.maxZ+padding);
+}
 
 // How welcome a kind of scenery is at a spot, 0..1, by the side's theme.
 function welcome(side,kind,x,z,slope){
@@ -127,6 +144,7 @@ export function planWolfveilSidePlanting(side,{seed=0x51de5}={}){
   const rect=wolfveilAreaRect(side,{clamp:true});
   const hectares=(rect.maxX-rect.minX)*(rect.maxZ-rect.minZ)/10000;
   const rand=mulberry32(seed^(WOLFVEIL_SIDE_IDS.indexOf(side)*0x9E3779B1));
+  const ownerTrunks=wolfveilForestTrunkColliders().map(trunk=>[trunk.x,trunk.z]);
   const placements=[],counts={},turnedAway={};
   const no=reason=>{turnedAway[reason]=(turnedAway[reason]||0)+1;return false;};
   // Trunks of every kind keep their distance from each other.
@@ -153,6 +171,9 @@ export function planWolfveilSidePlanting(side,{seed=0x51de5}={}){
       if(wolfveilFightingGroundAt(x,z,big?4:-2)){no('fighting ground');continue;}
       if(big&&wolfveilMobAreaAt(x,z,-4)){no('inside a monster camp');continue;}
       if(nearAny(x,z,PORTALS,big?16:8)||nearAny(x,z,CAVE_MOUTHS,big?18:9)){no('portal or cave mouth');continue;}
+      if(isWolfveilCaveApproachReserved(x,z,big?3:1.5)){no('path to a cave');continue;}
+      if(wolfveilFinishedGroundAt(x,z,big?3:1.5,{trunk:rule.trunk})){no('ground finished by hand');continue;}
+      if(nearAny(x,z,ownerTrunks,big?OWNER_TREE_CLEAR.big:OWNER_TREE_CLEAR.small)){no('under one of the owner\'s trees');continue;}
       if(wolfveilDistanceToRiver(x,z)<22+rule.pathClear){no('river bank');continue;}
       const slope=slopeAt(x,z);
       if(slope>rule.maxSlope){no('too steep');continue;}

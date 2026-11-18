@@ -677,6 +677,45 @@ export async function runWolfveilAreaLoadingReport({
         triangles:perArea[id].triangles-without[id].triangles}]))};
   }
 
+  // ---- planted sides: the four-sides plan as it stands in the valley ------
+  let plantedResult=null;
+  {
+    const built=village.info?.plantedSides||null;
+    check(Boolean(built),'the planted sides were not drawn (see the console error)');
+    if(built){
+      const meshes=[];
+      world.group.traverse(node=>{
+        if(node.isInstancedMesh&&node.userData?.source==='wolfveil_four_sides'&&
+           !node.userData.wolfveilAreaClone)meshes.push(node);
+      });
+      check(meshes.length===built.drawCalls,
+        'planted batches in the scene: '+meshes.length+', built: '+built.drawCalls);
+      const drawnNow=mesh=>effectivelyVisible(mesh)||loader.inspect().batches
+        .some(batch=>batch.source===mesh&&Object.values(batch.clones).some(effectivelyVisible));
+      const seenFrom={};
+      for(const id of ['town',...built.sides]){
+        moveTo(...spots[id]);run(1.5);settleBuilds();
+        seenFrom[id]=meshes.filter(drawnNow).map(mesh=>mesh.name).sort();
+      }
+      for(const side of built.sides){
+        const own=meshes.filter(mesh=>mesh.userData.side===side);
+        const missing=own.filter(mesh=>!seenFrom[side].includes(mesh.name)).map(mesh=>mesh.name);
+        check(!missing.length,'standing in the '+side+' its planted scenery is not drawn: '+missing.join(', '));
+        // Trees stay on the horizon from the town; ferns and flowers do not.
+        const tall=own.filter(mesh=>instanceHeightOf(mesh)>=4).map(mesh=>mesh.name);
+        const low=own.filter(mesh=>instanceHeightOf(mesh)<4).map(mesh=>mesh.name);
+        const lost=tall.filter(name=>!seenFrom.town.includes(name));
+        const leaked=low.filter(name=>seenFrom.town.includes(name));
+        check(!lost.length,'from the town the '+side+' trees are missing from the horizon: '+lost.join(', '));
+        check(!leaked.length,'from the town the '+side+' ground plants are still drawn: '+leaked.join(', '));
+      }
+      check(village.treeTrunkColliders>=built.sides.length,
+        'planted trees must block the way (trunks: '+village.treeTrunkColliders+')');
+      moveTo(...spots.town);run(1.5);settleBuilds();
+      plantedResult={...built,trunks:village.treeTrunkColliders,seenFrom};
+    }
+  }
+
   // ---- town: owned by its own performance work on main -------------------
   // The town batches itself, swaps far buildings for its own proxies and
   // hides the rest: report what it hands the renderer from the square.
@@ -786,7 +825,7 @@ export async function runWolfveilAreaLoadingReport({
     loaderOff:{drawCalls:off.drawCalls,triangles:off.triangles},
     allAreasLoaded:{drawCalls:everything.drawCalls,triangles:everything.triangles},
     areas,portals:portalResults,caves:caveResult,town:townResult,
-    survey:surveyResult,nearGrass:grassResult,farScenery:farResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
+    survey:surveyResult,nearGrass:grassResult,farScenery:farResult,planted:plantedResult,tallScenery:{splitBatches:tallSplit.slice(0,20),units:tallUnits.slice(0,30),
       unitCount:tallUnits.length},
     loader:{units:finalStats.units,batches:finalStats.batches,
       sourceInstances:finalStats.sourceInstances,gpuRelease:release},
@@ -854,6 +893,15 @@ export function formatWolfveilAreaLoadingReport(result){
     lines.push('Grass that follows the player (standing in the south): '+g.cells+' cells, '+n(g.blades)+
       ' blades. Every blade at full detail: '+n(g.fullTriangles)+' tris. By distance (21 / 9 / 3 triangles a blade, cells '+
       g.cellsPerLevel.join(' / ')+'): '+n(g.triangles)+' tris.');
+  }
+  if(result.planted){
+    const p=result.planted;
+    lines.push('');
+    lines.push('Planted sides ('+p.sides.join(', ')+'): '+n(p.pieces)+' pieces, '+n(p.triangles)+
+      ' triangles in '+p.drawCalls+' draw calls. Tree trunks that block the way, owner\'s and planted: '+n(p.trunks)+'.');
+    for(const [key,entry] of Object.entries(p.byKind))
+      lines.push('  '+key.replace(':',' ')+': '+n(entry.pieces)+' pieces, '+n(entry.triangles)+' triangles');
+    lines.push('  Seen from the town: '+(p.seenFrom.town.join(', ')||'none'));
   }
   lines.push('');
   if(result.farScenery){

@@ -22,6 +22,8 @@ import {wolfveilIsProtectedSWTile} from './WolfveilSWQuarterQuality.mjs';
 // LAND-WS05 #1282: tile-exclusive pigment; never another scene or collision floor.
 import {applyWolfveilSquareR08C10GroundPigment} from '../axe/world/landscaping/WolfveilSquareR08C10.mjs';
 import {clearOf,wolfveilTreePlacements,wolfveilForestTrunkColliders} from './WolfveilForestLayout.js';
+import {wolfveilTrunkColliders} from './WolfveilTrunkColliders.mjs';
+import {buildWolfveilFourSidesScenery} from './WolfveilFourSidesScenery.js';
 import {installWolfveilOwnerLandscapeModels} from './WolfveilOwnerLandscapeModels.js';
 import {buildWolfveilTrailLandscaping} from './WolfveilTrailLandscaping.js';
 import {buildWolfveilLivingLandscape} from './WolfveilLivingLandscape.js';
@@ -222,8 +224,20 @@ export function createWolfveilVillage(scene,options={}){
   })),...fountainHomes.colliders,palace.palace];
   // The exact same immutable FBX ancient and GLB elm trunk centers/radii are
   // used for local Play and the dedicated authoritative worker.
+  // Planted sides (the western forest first): light instanced scenery from
+  // the four-sides plan. Its trees block the way through the same trunk list
+  // the server uses, so they are only added when the scenery really stands.
+  let fourSides=null;
+  if(options.originAtMarket){
+    try{
+      fourSides=buildWolfveilFourSidesScenery(world,{heightAt:trailLandscaping?.heightAt,
+        terrainSpan:options.span||1100,terrainSegments:options.segments||310});
+    }catch(error){
+      console.error('[Wolfveil] planted sides could not be drawn; their trees will not block',error);
+    }
+  }
   const treeColliders=options.originAtMarket
-    ?wolfveilForestTrunkColliders():[];
+    ?(fourSides?wolfveilTrunkColliders():wolfveilForestTrunkColliders()):[];
   const info={
     id:'wolfveil_valley',
     kind:'game1_shadow_race_homeland',
@@ -240,6 +254,7 @@ export function createWolfveilVillage(scene,options={}){
     fountainHomes:{count:fountainHomes.count,locations:fountainHomes.colliders},
     get fountainHomeAssetStatus(){return fountainHomes.state;},
     plantedTrees:vegetation.trees.length,
+    plantedSides:fourSides?.stats??null,
     trailLandscaping:trailLandscaping?{rocks:trailLandscaping.rocks,
       tufts:trailLandscaping.tufts,triangles:trailLandscaping.triangles}:null,
     livingLandscape,
