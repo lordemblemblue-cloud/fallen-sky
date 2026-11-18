@@ -267,7 +267,7 @@ export default function GameView() {
     if(phase!=='world')return;
     const onPortalTravel=(event)=>{
       const target=event.detail?.target;
-      if(!['wolfveil','lunar-cave','astral-dungeon'].includes(target)||target===worldRegion)return;
+      if(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||target===worldRegion)return;
       services.controller.close();
       setPauseMenuOpen(false);
       setStoreOpen(false);
@@ -275,6 +275,10 @@ export default function GameView() {
       window.dispatchEvent(new Event('game3dCheckpointFlush'));
       setWorkflowSpawn(null);
       setResumeCheckpoint(null);
+      setWorldEntryError('');
+      worldReadyRef.current=false;
+      setWorldReady(false);
+      setWorldEntryStatus('loading');
       if(target!=='wolfveil'){
         vortexOriginRef.current=event.detail?.sourcePortal==='vortex'?'vortex':null;
         setPortalReturn(false);
@@ -282,6 +286,7 @@ export default function GameView() {
         const fromVortex=vortexOriginRef.current==='vortex';
         setPortalReturn(fromVortex?'vortex':
           event.detail?.returnToGate==='astral'?'astral':
+          event.detail?.returnToGate==='sumi'?'sumi':
           event.detail?.returnToGate===true);
         vortexOriginRef.current=null;
       }
