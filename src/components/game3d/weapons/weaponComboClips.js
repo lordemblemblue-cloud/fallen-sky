@@ -132,9 +132,12 @@ export function captureRestPose(model) {
  * the hand bone's space); without one that hand keeps the IK result.
  * rest: captureRestPose(model) taken before any animation played (default: the current pose).
  * reach: the held blade's length in metres (default 1): a low cut lifts the blade so its tip clears the ground.
+ * moves: other moves to bake instead of the built-in three, in the same key format (katanaTechniques.mjs).
+ *   A hand given as { hilt: metres } instead of { arm } holds the hilt that far below the other hand.
+ *   Captured moves (katanaCapturedMoves.mjs) also key hips[2..3] (shift), feet, look and each elbow's pole.
  * Returns { [clipName]: AnimationClip } or {} when the rig lacks the bones.
  */
-export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest = null, reach = null } = {}) {
+export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest = null, reach = null, moves = null } = {}) {
   if (!model) return {};
   const b = findBones(model);
   const needed = ['hips', 'spine', 'rArm', 'rFore', 'rHand', 'lArm', 'lFore', 'lHand'];
@@ -271,12 +274,15 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       setWorldQ(hand, qH || qF.clone().multiply(ab.relH));
     };
 
-    const pose = (key) => {
+    const pose = (key, move = {}) => {
       toRest();
-      // hips: lower by `drop` metres and turn by `twist` (+ = right; the right is -X when facing +Z)
-      const [drop, twist] = key.hips || [0, 0];
+      // hips: lower by `drop` metres and turn by `twist` (+ = right; the right is -X when facing +Z); a
+      // captured move also shifts them [forward, right] over feet that stay where they were planted
+      const [drop, twist, shiftF = 0, shiftR = 0] = key.hips || [0, 0];
       const hipsWorld = b.hips.getWorldPosition(new THREE.Vector3());
-      b.hips.position.copy(b.hips.parent.worldToLocal(hipsWorld.add(new THREE.Vector3(0, -drop * k, 0))));
+      const standing = hipsWorld.clone();
+      hipsWorld.add(new THREE.Vector3(0, -drop * k, 0)).add(body([shiftF * k, 0, shiftR * k]));
+      b.hips.position.copy(b.hips.parent.worldToLocal(hipsWorld));
       b.hips.updateWorldMatrix(false, true);
       rotateWorld(b.hips, U, -twist * DEG);
       // spine: spread twist / bend / lean over the spine bones; the head keeps looking ahead
@@ -286,17 +292,22 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
         rotateWorld(bone, R, (-sb * DEG) / spineBones.length);
         rotateWorld(bone, F, (sl * DEG) / spineBones.length);
       }
-      const look = (st + twist) * 0.75 * DEG;
+      // a key may say where the head looks (degrees right of the chest) instead of "straight ahead"
+      const look = Number.isFinite(key.look) ? -key.look * DEG : (st + twist) * 0.75 * DEG;
       if (b.neck && b.head) rotateWorld(b.neck, U, look * 0.4);
       rotateWorld(b.head || b.neck, U, b.head && b.neck ? look * 0.6 : look);
       if (sb) rotateWorld(b.head || b.neck, R, sb * 0.5 * DEG);
-      // legs: planted stance (feet relative to the hips, flat on the ground)
+      // legs: planted stance (feet relative to the hips, flat on the ground). A key with its own `feet`
+      // ([forward, right, yaw, lift, knee] per foot) places them from where the body stands at rest instead,
+      // so a step, a lunge or a knee on the ground stays put while the hips travel over it.
       const hipsP = b.hips.getWorldPosition(new THREE.Vector3());
       for (const [side, up, leg, foot] of [['l', b.lUp, b.lLeg, b.lFoot], ['r', b.rUp, b.rLeg, b.rFoot]]) {
         if (!up || !leg || !foot) continue;
-        const [fwd, right, yaw] = STANCE[side];
-        const target = hipsP.clone().add(body([fwd * k, 0, right * k])).setY(ankleY);
-        const pole = hipsP.clone().add(body([0.6 * k, -0.4 * k, right * 2 * k]));
+        const own = Array.isArray(key.feet?.[side]) ? key.feet[side] : null;
+        const [fwd, right, yaw, lift = 0, knee = null] = own || STANCE[side];
+        const target = (own ? standing : hipsP).clone().add(body([fwd * k, 0, right * k])).setY(ankleY + Math.max(0, lift) * k);
+        const pole = Array.isArray(knee) ? hipsP.clone().add(body([knee[0] * k, knee[1] * k, knee[2] * k]))
+          : hipsP.clone().add(body([0.6 * k, -0.4 * k, right * 2 * k]));
         solveMountedLimb(up, leg, foot, target, pole);
         const flat = footRestWorld.get(foot);
         if (flat) setWorldQ(foot, new THREE.Quaternion().setFromAxisAngle(U, -yaw * DEG).multiply(flat));
@@ -304,11 +315,30 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       // arms: wrist targets relative to each shoulder, then the weapon direction through the grip
       for (const [side, arm, fore, hand] of [['r', b.rArm, b.rFore, b.rHand], ['l', b.lArm, b.lFore, b.lHand]]) {
         const spec = key[side];
+        const sideSign = side === 'r' ? 1 : -1;
+        if (spec && !spec.arm && Number.isFinite(spec.hilt)) {
+          // Second hand of a two-handed grip: on the hilt, `hilt` metres towards the pommel from the hand
+          // that carries the blade (placed first: the right hand is solved before the left).
+          const lead = side === 'l' ? b.rHand : b.lHand;
+          const leadSpec = key[side === 'l' ? 'r' : 'l'];
+          const leadInfo = handInfo.get(lead);
+          const leadQ = lead.getWorldQuaternion(new THREE.Quaternion());
+          const along = leadInfo?.grip ? new THREE.Vector3(0, 1, 0).applyQuaternion(leadQ.clone().multiply(leadInfo.grip))
+            : leadSpec?.blade ? body(leadSpec.blade).normalize() : U.clone();
+          const shoulder = arm.getWorldPosition(new THREE.Vector3());
+          const target = lead.getWorldPosition(new THREE.Vector3()).addScaledVector(along, -spec.hilt * k);
+          const p = spec.pole || [-0.2, -0.5, 0.5];
+          const pole = shoulder.clone().add(body([p[0] * k, p[1] * k, p[2] * sideSign * k]));
+          placeArm(arm, fore, hand, target, pole, null, R.clone().multiplyScalar(sideSign));
+          continue;
+        }
         if (!spec?.arm) continue;
         const shoulder = arm.getWorldPosition(new THREE.Vector3());
-        const sideSign = side === 'r' ? 1 : -1;
+        // a captured move says how long the arm it was measured on is: reach as far along this body's own arm
+        const ab = armRest.get(arm);
+        const fit = Number(move.armLength) > 0 && ab ? THREE.MathUtils.clamp((ab.up + ab.lo) / k / Number(move.armLength), 0.7, 1.3) : 1;
         const v = spec.arm;
-        const target = shoulder.clone().add(body([v[0] * k, v[1] * k, v[2] * sideSign * k]));
+        const target = shoulder.clone().add(body([v[0] * k * fit, v[1] * k * fit, v[2] * sideSign * k * fit]));
         const p = spec.pole || [-0.3, -0.3, 0.6];
         const pole = shoulder.clone().add(body([p[0] * k, p[1] * k, p[2] * sideSign * k]));
         const B = spec.blade ? body(spec.blade).normalize() : null;
@@ -334,20 +364,22 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       return { q: animated.map((bone) => bone.quaternion.clone()), hips: b.hips.position.clone() };
     };
 
-    const combos = comboKind === 'bowCombo' ? BOW_COMBO : SWORD_COMBO;
+    const combos = Array.isArray(moves) && moves.length ? moves : comboKind === 'bowCombo' ? BOW_COMBO : SWORD_COMBO;
     for (const [index, combo] of combos.entries()) {
-      const poses = combo.keys.map((key) => pose(key));
-      // densify with eased in-betweens so each strike reads sharp and its recovery settles
+      const poses = combo.keys.map((key) => pose(key, combo));
+      // densify with eased in-betweens so each strike reads sharp and its recovery settles; a captured move
+      // (ease: 'linear', its own `steps`) already carries its timing in closely spaced keys
+      const steps = Number(combo.steps) >= 1 ? Math.round(Number(combo.steps)) : 6;
+      const linear = combo.ease === 'linear';
       const times = [];
       const values = animated.map(() => []);
       const hipValues = [];
       for (let i = 0; i < combo.keys.length - 1; i++) {
         const a = combo.keys[i].t;
         const bt = combo.keys[i + 1].t;
-        const steps = 6;
         for (let s = 0; s < steps; s++) {
           const u = s / steps;
-          const e = u * u * (3 - 2 * u); // smoothstep
+          const e = linear ? u : u * u * (3 - 2 * u); // smoothstep
           times.push(a + (bt - a) * u);
           animated.forEach((bone, j) => values[j].push(...poses[i].q[j].clone().slerp(poses[i + 1].q[j], e).toArray()));
           hipValues.push(...poses[i].hips.clone().lerp(poses[i + 1].hips, e).toArray());
@@ -360,7 +392,8 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       const tracks = animated.map((bone, j) => new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, times, values[j]));
       tracks.push(new THREE.VectorKeyframeTrack(`${b.hips.name}.position`, times, hipValues));
       const clip = new THREE.AnimationClip(combo.name, combo.keys[last].t, tracks);
-      clip.userData = { combo: comboKind, index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips' };
+      clip.userData = { combo: comboKind, index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
+        ...(combo.technique ? { technique: combo.technique } : {}) };
       out[combo.name] = clip;
     }
   } finally {
