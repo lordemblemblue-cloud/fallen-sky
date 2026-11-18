@@ -1,0 +1,93 @@
+name: Game 3D katana techniques
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/weapons/katanaTechniques.mjs'
+      - 'src/components/game3d/weapons/katanaCapturedMoves.mjs'
+      - 'src/components/game3d/weapons/swordSkillMoves.mjs'
+      - 'src/components/game3d/weapons/weaponComboClips.js'
+      - 'src/components/game3d/weapons/weaponComboBinder.js'
+      - 'src/components/game3d/player/LunaDashboardPlayerController.jsx'
+      - 'src/components/game3d/player/mountedRiderPose.mjs'
+      - 'src/components/game3d/skills/skillRegistry.jsx'
+      - 'src/components/game3d/axe/skills/AXECoreSkillLadder.js'
+      - 'base44/shared/duelComboPolicy.mjs'
+      - 'tools/game3d-mocap/**'
+      - 'tests/game3d-katana-techniques.test.mjs'
+      - 'tests/game3d-katana-captured-moves-real-three.test.mjs'
+      - 'tests/game3d-sword-skill-moves.test.mjs'
+      - '.github/workflows/game3d-katana-techniques.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/game3d/weapons/katanaTechniques.mjs'
+      - 'src/components/game3d/weapons/katanaCapturedMoves.mjs'
+      - 'src/components/game3d/weapons/weaponComboClips.js'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game3d-katana-techniques-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  katana:
+    name: Katana strikes and captured moves on the real bodies
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: The nine strikes, the captured moves and the combos
+        run: node --test tests/game3d-katana-techniques.test.mjs tests/game3d-sword-skill-moves.test.mjs
+      - name: The capture tool reads as Python
+        run: python3 -m py_compile tools/game3d-mocap/fbx_read.py tools/game3d-mocap/fbx_skeleton_take.py tools/game3d-mocap/sword_moves_from_capture.py
+      - name: Install lockfile dependencies
+        run: npm ci
+      - name: Every move and every sword skill clip baked on the real bodies
+        run: node --test tests/game3d-katana-captured-moves-real-three.test.mjs
+      - name: The real player controller plays each skill's own clip
+        run: node --test tests/game3d-sword-skill-moves.test.mjs
+      - name: Lint the new files
+        run: |
+          npx eslint --quiet \
+            src/components/game3d/weapons/katanaTechniques.mjs \
+            src/components/game3d/weapons/katanaCapturedMoves.mjs \
+            src/components/game3d/weapons/swordSkillMoves.mjs \
+            tests/game3d-katana-techniques.test.mjs \
+            tests/game3d-sword-skill-moves.test.mjs \
+            tests/game3d-katana-captured-moves-real-three.test.mjs
+      - name: Lint the edited files (no more errors than main)
+        run: |
+          count() { node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).reduce((n,r)=>n+r.errorCount,0))}catch{console.log(-1)}})'; }
+          git fetch -q origin main
+          status=0
+          for file in \
+            src/components/game3d/weapons/weaponComboClips.js \
+            src/components/game3d/weapons/weaponComboBinder.js \
+            src/components/game3d/player/LunaDashboardPlayerController.jsx \
+            src/components/game3d/GameWorld3D.jsx; do
+            head=$(npx eslint --quiet -f json "$file" | count || true)
+            base=$(git show "origin/main:$file" | npx eslint --quiet -f json --stdin --stdin-filename "$file" | count || true)
+            echo "$file: $head errors here, $base on main"
+            if [ "$head" -gt "$base" ]; then status=1; fi
+          done
+          exit $status
+      - name: The game's combo test, here and on main
+        run: |
+          node --test tests/game3d-weapon-combos.test.mjs > here.txt 2>&1 || true
+          grep -E "^# (tests|pass|fail)" here.txt | tr '\n' ' '; echo "(this branch)"
+          grep -E "^not ok" here.txt | head -20 || true
+          git checkout -q origin/main -- src/components/game3d/weapons/weaponComboClips.js src/components/game3d/weapons/weaponComboBinder.js src/components/game3d/player/LunaDashboardPlayerController.jsx src/components/game3d/GameWorld3D.jsx
+          node --test tests/game3d-weapon-combos.test.mjs > main.txt 2>&1 || true
+          grep -E "^# (tests|pass|fail)" main.txt | tr '\n' ' '; echo "(main's baker, binder, controller and world)"
+          grep -E "^not ok" main.txt | head -20 || true
+          here=$(grep -cE "^not ok" here.txt || true); base=$(grep -cE "^not ok" main.txt || true)
+          if [ "$here" -gt "$base" ]; then echo "more failures than main"; exit 1; fi

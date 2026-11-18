@@ -1,0 +1,22 @@
+{
+  "about": "Which parts of which capture become which sword move. Times are seconds in the capture (list them with: sword_moves_from_capture.py strokes <capture.fbx>). facing: the way the swordsman faces, degrees about up in the capture. origin: the moment the hips stand over the character's own spot; moves of one group follow each other in the capture, so each starts in the pose the last one ended in.",
+  "groups": [
+    { "capture": "Katana_swords_training__samurai_1080p.fbx", "facing": 40, "origin": 1.27, "moves": [
+      { "id": "dojoDiagonal", "name": "Diagonal cut from the high guard", "start": 1.27, "hit": 1.63, "end": 1.80 },
+      { "id": "dojoReturn", "name": "Returning cut", "start": 1.80, "hit": 2.07, "end": 2.27 },
+      { "id": "dojoOverhead", "name": "Overhead cut", "start": 2.27, "hit": 2.93, "end": 3.13 }
+    ] },
+    { "capture": "Katana_swords_training__samurai_1080p.fbx", "facing": 40, "origin": 3.13, "moves": [
+      { "id": "dojoSweep", "name": "Level sweep", "start": 3.13, "hit": 3.47, "end": 3.60 }
+    ] },
+    { "capture": "Katana_swords_training__samurai_1080p.fbx", "facing": 40, "origin": 3.60, "moves": [
+      { "id": "dojoSpinToKnee", "name": "Spinning cut down to one knee", "start": 3.60, "hit": 4.43, "end": 4.70, "sweep": [3.80, 4.50] },
+      { "id": "dojoKneelingCut", "name": "Cut from one knee", "start": 4.70, "hit": 5.13, "end": 5.33 },
+      { "id": "dojoRisingCut", "name": "Rising cut", "start": 5.33, "hit": 5.77, "end": 5.90 }
+    ] },
+    { "capture": "Katana_swords_training__samurai_1080p.fbx", "facing": 40, "origin": 5.90, "moves": [
+      { "id": "dojoLeapingCut", "name": "Leaping overhead cut", "start": 5.90, "hit": 6.57, "end": 6.87 },
+      { "id": "dojoSpinningFinish", "name": "Spinning overhead finish", "start": 6.87, "hit": 7.83, "end": 8.17, "sweep": [7.40, 7.95], "recover": 0.2 }
+    ] }
+  ]
+}
