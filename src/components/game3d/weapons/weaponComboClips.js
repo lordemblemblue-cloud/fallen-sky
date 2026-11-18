@@ -16,8 +16,29 @@ import { solveMountedLimb } from '../player/mountedRiderPose.mjs';
 export const WEAPON_COMBO_STATES = Object.freeze({
   swordCombo: Object.freeze(['swordCombo1', 'swordCombo2', 'swordCombo3']),
   bowCombo: Object.freeze(['bowCombo1', 'bowCombo2', 'bowCombo3']),
+  swordSingleTier1: Object.freeze(['swordSingleTier1']),
+  swordSingleTier2: Object.freeze(['swordSingleTier2']),
+  swordSingleTier3: Object.freeze(['swordSingleTier3']),
+  swordSingleTier4: Object.freeze(['swordSingleTier4']),
+  swordTripleTier1: Object.freeze(['swordTripleTier1Hit1', 'swordTripleTier1Hit2', 'swordTripleTier1Hit3']),
+  swordTripleTier2: Object.freeze(['swordTripleTier2Hit1', 'swordTripleTier2Hit2', 'swordTripleTier2Hit3']),
+  swordTripleTier3: Object.freeze(['swordTripleTier3Hit1', 'swordTripleTier3Hit2', 'swordTripleTier3Hit3']),
+  swordTripleTier4: Object.freeze(['swordTripleTier4Hit1', 'swordTripleTier4Hit2', 'swordTripleTier4Hit3']),
 });
-export const WEAPON_COMBO_STATE_NAMES = Object.freeze([...WEAPON_COMBO_STATES.swordCombo, ...WEAPON_COMBO_STATES.bowCombo]);
+export const WEAPON_COMBO_STATE_NAMES = Object.freeze(
+  Object.values(WEAPON_COMBO_STATES).flat(),
+);
+
+// The two existing sword skills gain four visual tiers at mastery levels 1, 4, 7 and 10.
+export function swordSkillComboKind(skillId, level=1, maxLevel=10) {
+  const family=skillId==='sword_triple_slash'?'swordTripleTier'
+    :skillId==='sword_heavy_strike'?'swordSingleTier':null;
+  if(!family)return null;
+  const max=Math.max(1,Number(maxLevel)||10);
+  const value=Math.min(max,Math.max(1,Number(level)||1));
+  const tier=Math.min(4,1+Math.floor((value-1)*3/Math.max(1,max-1)));
+  return family+tier;
+}
 
 // 'bow' -> bowCombo; sword / greatsword / dagger / blade -> swordCombo; anything else has no combo.
 export function comboKindForWeapon(kindOrClass) {
@@ -74,6 +95,62 @@ export const SWORD_COMBO = [
     { t: 0.82, ...SWORD_READY },
   ] },
 ];
+
+// Make higher mastery tiers read as increasingly committed sword forms while keeping
+// the original hit timing and hit count. Each tier also gets its own state names so
+// the chain can move between the single and three-hit skills at a cancel window.
+function makeSwordTierMotion(source,name,style={}){
+  const lastTime=source.keys[source.keys.length-1].t||1;
+  const phaseAt=t=>Math.sin(Math.PI*Math.max(0,Math.min(1,t/lastTime)));
+  const rotateBlade=(blade,yaw)=>{
+    if(!blade)return blade;
+    const [forward,up,right]=blade;
+    const c=Math.cos(yaw),s=Math.sin(yaw);
+    return [forward*c-right*s,up,forward*s+right*c];
+  };
+  const keys=source.keys.map(key=>{
+    const effort=phaseAt(key.t);
+    const hips=[...(key.hips||[0,0])];
+    hips[0]=(hips[0]||0)+(style.drop||0)*effort;
+    hips[1]=(hips[1]||0)+(style.twist||0)*(effort-.25);
+    const spine=[...(key.spine||[0,0,0])];
+    spine[0]=(spine[0]||0)+(style.bodyTurn||0)*(effort-.25);
+    spine[2]=(spine[2]||0)+(style.roll||0)*effort;
+    const limb=spec=>{
+      if(!spec)return spec;
+      const out={...spec};
+      if(spec.arm){
+        out.arm=[spec.arm[0]+(style.reach||0)*effort,
+          spec.arm[1]+(style.lift||0)*effort,
+          spec.arm[2]+(style.sweep||0)*effort];
+      }
+      if(spec.blade)out.blade=rotateBlade(spec.blade,(style.bladeYaw||0)*(effort-.25));
+      return out;
+    };
+    return {...key,hips,spine,r:limb(key.r),l:limb(key.l)};
+  });
+  return {...source,name,keys};
+}
+const TIER_STYLES=Object.freeze([
+  Object.freeze({}),
+  Object.freeze({reach:.04,twist:9,bodyTurn:5,bladeYaw:.12,sweep:.08}),
+  Object.freeze({reach:.09,twist:18,bodyTurn:10,bladeYaw:.24,sweep:-.12,lift:.04}),
+  Object.freeze({reach:.15,drop:.08,twist:30,bodyTurn:15,roll:8,bladeYaw:.38,sweep:.16,lift:.09}),
+]);
+const SINGLE_SOURCE_BY_TIER=Object.freeze([
+  SWORD_COMBO[0], // level 1: clean forehand cut
+  SWORD_COMBO[1], // level 2: rising backhand
+  SWORD_COMBO[0], // level 3: extended cross cut
+  SWORD_COMBO[2], // level 4: committed overhead finisher
+]);
+export const SWORD_SKILL_SINGLE_COMBOS=Object.freeze(
+  SINGLE_SOURCE_BY_TIER.map((source,index)=>Object.freeze(makeSwordTierMotion(
+    source,`swordSingleTier${index+1}`,TIER_STYLES[index]))),
+);
+export const SWORD_SKILL_TRIPLE_COMBOS=Object.freeze(TIER_STYLES.map((style,tierIndex)=>
+  Object.freeze(SWORD_COMBO.map((source,hitIndex)=>Object.freeze(makeSwordTierMotion(
+    source,`swordTripleTier${tierIndex+1}Hit${hitIndex+1}`,style))))),
+);
 
 // Bow: the left hand holds the bow out in front, upright, arrow forward; the right hand draws to the face.
 const BOW_READY = { spine: [12, 3, 0], hips: [0.03, 6], l: { arm: [0.42, -0.28, 0.06], blade: [0.25, 0.97, 0] }, r: { arm: [0.32, -0.3, -0.12] } };
@@ -334,7 +411,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       return { q: animated.map((bone) => bone.quaternion.clone()), hips: b.hips.position.clone() };
     };
 
-    const combos = comboKind === 'bowCombo' ? BOW_COMBO : SWORD_COMBO;
+    const combos = comboKind === 'bowCombo' ? BOW_COMBO : [
+      ...SWORD_COMBO,...SWORD_SKILL_SINGLE_COMBOS,...SWORD_SKILL_TRIPLE_COMBOS.flat(),
+    ];
     for (const [index, combo] of combos.entries()) {
       const poses = combo.keys.map((key) => pose(key));
       // densify with eased in-betweens so each strike reads sharp and its recovery settles
