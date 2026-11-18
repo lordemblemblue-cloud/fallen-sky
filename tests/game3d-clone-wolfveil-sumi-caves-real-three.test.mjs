@@ -59,6 +59,7 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
     ['sunken sanctuary','createDetachedSunkenSanctuaryCaveModule',58000,90],
   ];
   let total=0;
+  const over=[]; // every budget is checked before any fails, so one run tells all
   for(const [name,method,triangleBudget,drawBudget] of pieces){
     const group=kit[method]();
     group.updateMatrixWorld(true);
@@ -72,9 +73,9 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
     assert.equal(after.triangles,baked.stats.triangles);
     assert.equal(after.lights,0,name+': lights are listed, not left in the piece');
     assert.equal(baked.lights.length,built.lights);
-    assert.ok(baked.stats.triangles<=triangleBudget,name+' triangles: '+baked.stats.triangles);
+    if(baked.stats.triangles>triangleBudget)over.push(name+' triangles: '+baked.stats.triangles+' of '+triangleBudget);
     assert.ok(baked.stats.triangles<=built.triangles,'baking never adds triangles');
-    assert.ok(baked.stats.drawCalls<=drawBudget,name+' draw calls: '+baked.stats.drawCalls);
+    if(baked.stats.drawCalls>drawBudget)over.push(name+' draw calls: '+baked.stats.drawCalls+' of '+drawBudget);
     assert.ok(baked.stats.drawCalls<built.meshes/4,name+' is merged');
     // The baked piece occupies the space the built piece did.
     baked.object.updateMatrixWorld(true);
@@ -93,6 +94,7 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
     });
   }
   console.log('all five pieces, baked: '+n(total)+' triangles; walls painted: '+kit.light.walls+' ('+n(kit.light.wallMeters)+' m)');
+  assert.deepEqual(over,[],'pieces over their budget');
   assert.ok(total<170000,'all five pieces: '+total);
   // What the owner's file animates is still there to animate.
   assert.ok(kit.gyroRings.length>0&&kit.waterfallColumns.length>0,'the sanctuary keeps its rings and waterfalls');

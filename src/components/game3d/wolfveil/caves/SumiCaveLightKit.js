@@ -166,7 +166,10 @@ export function bakeSumiPiece(kit,group,{THREE,name=group.name||'Sumi_Piece'}={}
   for(const water of [kit.secretDoor,kit.cavernWater,kit.sanctuaryWater,...(kit.waterMeshes||[])])if(water)moving.add(water);
   const moves=object=>{for(let o=object;o;o=o.parent)if(moving.has(o))return true;return false;};
 
-  const lights=[],still=new Map(),stats={meshesBefore:0,trianglesBefore:0,drawCalls:0,triangles:0,movingMeshes:0,lights:0};
+  // The moving part a mesh belongs to: the outermost one that holds it.
+  const partOf=object=>{let part=null;for(let o=object;o;o=o.parent)if(moving.has(o))part=o;return part;};
+  const lights=[],still=new Map(),parts=new Map();
+  const stats={meshesBefore:0,trianglesBefore:0,drawCalls:0,triangles:0,movingMeshes:0,lights:0};
   const trianglesOf=geometry=>(geometry.index?geometry.index.count:geometry.attributes.position.count)/3;
   group.traverse(object=>{
     if(object.isLight){
@@ -176,7 +179,17 @@ export function bakeSumiPiece(kit,group,{THREE,name=group.name||'Sumi_Piece'}={}
     }
     if(!object.isMesh||!object.geometry?.attributes?.position)return;
     stats.meshesBefore++;stats.trianglesBefore+=trianglesOf(object.geometry);
-    if(moves(object)){stats.movingMeshes++;stats.drawCalls++;stats.triangles+=trianglesOf(object.geometry);return;}
+    const part=partOf(object);
+    if(part===object){stats.movingMeshes++;stats.drawCalls++;stats.triangles+=trianglesOf(object.geometry);return;}
+    if(part){
+      // Inside a moving part (the secret door is thirty bricks): merged
+      // within the part, so it still moves as one.
+      if(!parts.has(part))parts.set(part,new Map());
+      const byMaterial=parts.get(part);
+      if(!byMaterial.has(object.material))byMaterial.set(object.material,[]);
+      byMaterial.get(object.material).push(object);
+      return;
+    }
     // The clear resin poured over the floor is a second, see-through floor.
     if(object.material===kit.resinCoatMaterial)return;
     if(!still.has(object.material))still.set(object.material,[]);
@@ -184,30 +197,38 @@ export function bakeSumiPiece(kit,group,{THREE,name=group.name||'Sumi_Piece'}={}
   });
   // Take the lights and the merged meshes out of the piece.
   const remove=[];
-  group.traverse(object=>{if(object.isLight||(object.isMesh&&!moves(object)))remove.push(object);});
+  group.traverse(object=>{if(object.isLight||(object.isMesh&&partOf(object)!==object))remove.push(object);});
   for(const object of remove)object.parent?.remove(object);
 
   const settled=new Set();
   let batch=0;
-  for(const [material,meshes] of still){
-    const merged=mergeSumiTriangles(meshes.map(mesh=>({
-      position:mesh.geometry.attributes.position.array,normal:mesh.geometry.attributes.normal?.array,
-      uv:mesh.geometry.attributes.uv?.array,index:mesh.geometry.index?.array,matrix:mesh.matrixWorld.elements})));
-    for(const mesh of meshes)mesh.geometry.dispose?.();
-    if(!merged.triangles)continue;
-    const geometry=new THREE.BufferGeometry();
-    geometry.setAttribute('position',new THREE.BufferAttribute(merged.position,3));
-    geometry.setAttribute('normal',new THREE.BufferAttribute(merged.normal,3));
-    geometry.setAttribute('uv',new THREE.BufferAttribute(merged.uv,2));
-    geometry.computeBoundingBox();geometry.computeBoundingSphere();
-    settleMaterial(material,settled);
-    const mesh=new THREE.Mesh(geometry,material);
-    mesh.name=name+'_'+(material.name||'Material')+'_'+(++batch);
-    mesh.castShadow=false;mesh.receiveShadow=false;
-    mesh.userData={sumiBaked:true,sources:meshes.length};
-    group.add(mesh);
-    stats.drawCalls++;stats.triangles+=merged.triangles;
-  }
+  // One mesh for every material, in the frame of `parent` (the piece itself,
+  // or a moving part).
+  const mergeInto=(parent,byMaterial,toParent)=>{
+    for(const [material,meshes] of byMaterial){
+      const merged=mergeSumiTriangles(meshes.map(mesh=>({
+        position:mesh.geometry.attributes.position.array,normal:mesh.geometry.attributes.normal?.array,
+        uv:mesh.geometry.attributes.uv?.array,index:mesh.geometry.index?.array,
+        matrix:toParent?toParent.clone().multiply(mesh.matrixWorld).elements:mesh.matrixWorld.elements})));
+      for(const mesh of meshes)mesh.geometry.dispose?.();
+      if(!merged.triangles)continue;
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.BufferAttribute(merged.position,3));
+      geometry.setAttribute('normal',new THREE.BufferAttribute(merged.normal,3));
+      geometry.setAttribute('uv',new THREE.BufferAttribute(merged.uv,2));
+      geometry.computeBoundingBox();geometry.computeBoundingSphere();
+      settleMaterial(material,settled);
+      const mesh=new THREE.Mesh(geometry,material);
+      mesh.name=name+'_'+(material.name||'Material')+'_'+(++batch);
+      mesh.castShadow=false;mesh.receiveShadow=false;
+      mesh.userData={sumiBaked:true,sources:meshes.length,moves:parent!==group};
+      parent.add(mesh);
+      stats.drawCalls++;stats.triangles+=merged.triangles;
+      if(parent!==group)stats.movingMeshes++;
+    }
+  };
+  mergeInto(group,still,null);
+  for(const [part,byMaterial] of parts)mergeInto(part,byMaterial,new THREE.Matrix4().copy(part.matrixWorld).invert());
   group.traverse(object=>{
     if(object.isMesh&&moves(object)){settleMaterial(object.material,settled);object.castShadow=false;object.receiveShadow=false;}
   });
