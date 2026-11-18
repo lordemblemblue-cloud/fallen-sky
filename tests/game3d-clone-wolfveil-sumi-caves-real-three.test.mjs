@@ -63,7 +63,8 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
   for(const [name,method,triangleBudget,drawBudget] of pieces){
     const group=kit[method]();
     group.updateMatrixWorld(true);
-    const before=new THREE.Box3().setFromObject(group),built=count(group);
+    // Measured corner by corner: a turned rock's own box is bigger than the rock.
+    const before=new THREE.Box3().setFromObject(group,true),built=count(group);
     const baked=bakeSumiPiece(kit,group,{THREE,name});
     const after=count(baked.object);
     console.log(name+': built '+n(built.meshes)+' meshes, '+n(built.triangles)+' triangles, '+built.lights+' lights; baked '+
@@ -79,7 +80,7 @@ test('every piece of the kit builds light and bakes to a handful of draw calls',
     assert.ok(baked.stats.drawCalls<built.meshes/4,name+' is merged');
     // The baked piece occupies the space the built piece did.
     baked.object.updateMatrixWorld(true);
-    const box=new THREE.Box3().setFromObject(baked.object);
+    const box=new THREE.Box3().setFromObject(baked.object,true);
     for(const axis of ['x','y','z']){
       assert.ok(Math.abs(box.min[axis]-before.min[axis])<.02,name+' moved on '+axis);
       assert.ok(Math.abs(box.max[axis]-before.max[axis])<.02,name+' moved on '+axis);
