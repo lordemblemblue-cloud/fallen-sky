@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Cloud, CloudOff } from 'lucide-react';
-import { createCharacterVaultSync, summarizeCharacterSave } from './characterVault';
+import { createCharacterVaultSync } from './characterVault';
 import { callGuestCharacterVault } from './guestCharacterCloud';
 import { getActiveId, getStorageUser, notifyCharacterChange, subscribeCharacterChange } from '../characterStorage';
 import { getCharacterState } from '../characterStore';
