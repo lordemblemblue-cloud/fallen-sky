@@ -627,6 +627,43 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0 } = {}) {
     // A second rock course and low retaining walls, so the arch is a built
     // mouth in the hill instead of a lintel standing on bare dirt.
     addProp(boxGeo, wallMat, doorX - dx * 0.35, my + 4.55, doorZ - dz * 0.35, 5.1, 0.42, 1.05, 0, yaw, 0);
+
+    // One shared modular portal frame, finished with a motif for each cave.
+    // These are decoration only: the walk opening and collision remain owned
+    // by WOLFVEIL_CAVE_ENTRANCE_FRAMES and the shared cave layout.
+    const accentMat = frame.theme === 'lantern_shrine' ? warmLanternMat
+      : frame.theme === 'skylight_roots' ? jadeCrystalMat
+      : frame.theme === 'ink_spring' ? inkRuneMat
+      : amethystCrystalMat;
+    for (const side of [-1, 1]) {
+      const px = doorX + nx * side * 2.45;
+      const pz = doorZ + nz * side * 2.45;
+      addProp(boxGeo, bronzeMat, px, my + 2.1, pz, 0.16, 2.8, 0.14, 0, yaw, 0);
+      if (frame.theme === 'lantern_shrine') {
+        addHangingLantern(px, my + 5.1, pz, accentMat, frame.lightColor);
+      } else if (frame.theme === 'skylight_roots') {
+        addProp(boxGeo, accentMat, px, my + 4.15, pz, 0.26, 2.35, 0.28,
+          0, yaw + side * 0.24, 0);
+      } else if (frame.theme === 'ink_spring') {
+        addProp(cylGeo, bronzeMat, px, my + 0.62, pz, 0.74, 1.24, 0.74);
+        addProp(torusGeo, accentMat, px, my + 1.42, pz, 0.53, 0.53, 0.13,
+          0, yaw, 0);
+      } else {
+        addProp(octaGeo, accentMat, px, my + 2.75, pz, 0.56, 1.45, 0.56,
+          0, yaw + side * 0.28, 0);
+      }
+    }
+    const crestY = my + 4.85;
+    if (frame.theme === 'lantern_shrine' || frame.theme === 'ink_spring') {
+      addProp(torusGeo, accentMat, doorX, crestY, doorZ, 0.66, 0.66, 0.12,
+        0, yaw, 0);
+    } else {
+      addProp(octaGeo, accentMat, doorX, crestY, doorZ, 0.74, 0.92, 0.3,
+        0, yaw, 0);
+    }
+    addProp(boxGeo, bronzeMat, doorX, my + 0.06, doorZ, 3.25, 0.08, 0.72,
+      0, yaw, 0);
+
     for (let i = 0; i < 6; i++) {
       const f0 = -8.2 + i * 1.25, f1 = f0 + 1.25;
       for (const side of [-1, 1]) {
