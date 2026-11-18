@@ -16,7 +16,7 @@ export const VAULT_SYNC = Object.freeze({ intervalMs: 20_000, offlineRetryMs: 60
 const META_BASE = 'axe_character_vault_meta';
 const BACKUP_BASE = 'axe_character_vault_local_backup';
 const LOCAL_ONLY_USERS = new Set(['__anon__']);
-const LOCAL_ONLY_CHARACTERS = new Set(['__default__']);
+const LOCAL_ONLY_CHARACTERS = new Set(['__default__', '__dev_test__']);
 
 const parse = (raw) => { try { return JSON.parse(raw); } catch { return null; } };
 
@@ -116,6 +116,7 @@ export function createCharacterVaultSync({
   reloadCharacter, // () => void: makes every store re-read the active character
   getRosterEntry = () => null, // (characterId) => roster card
   mergeRoster = () => 0, // (entries) => number added
+  allowAnonymous = false, // opt in ONLY for guest cloud endpoint protected by recovery code
   setTimer = (fn, ms) => setInterval(fn, ms),
   clearTimer = (t) => clearInterval(t),
 }) {
@@ -212,7 +213,7 @@ export function createCharacterVaultSync({
     identity = id;
     rejectedFingerprint = null;
     const signedIn = Boolean(id?.userId) && !LOCAL_ONLY_USERS.has(id.userId);
-    const onServer = signedIn && Boolean(id?.characterId) && !LOCAL_ONLY_CHARACTERS.has(id.characterId);
+    const onServer = (signedIn || allowAnonymous) && Boolean(id?.characterId) && !LOCAL_ONLY_CHARACTERS.has(id.characterId);
     if (onServer) { busy = true; set({ status: 'syncing', conflict: null, replacedFromServer: false }); }
     else set({ status: 'local_only', conflict: null });
     // characters this device has never seen; a new device has none picked yet, so this comes first
