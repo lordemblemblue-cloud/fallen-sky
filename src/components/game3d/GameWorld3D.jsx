@@ -2969,7 +2969,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
-        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
+        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
         ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         if(!suigenActive)vortexLake?.update(delta,null);
         livingInkWorld?.update(delta,envSystem.getState());
@@ -3003,7 +3003,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       regionStream?.update(modelRef.current?.position||{x:0,z:70},
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
-        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position);importedSpawnTown?.update(delta,modelRef.current?.position);
+        wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
       if(dungeonTravel)window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:dungeonTravel}));
