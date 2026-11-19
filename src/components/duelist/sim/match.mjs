@@ -17,6 +17,7 @@
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown } from '../core/index.mjs';
+import { makeBall, stepFootball } from './football.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -25,6 +26,7 @@ export const MODES = Object.freeze({
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
+  football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
 });
 export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, baseInset: 4 });
 export const COUNTDOWN = 3;
@@ -47,6 +49,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 },
     flags: def.flags ? makeFlags(def) : null,
+    ball: def.football ? makeBall() : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
   for (const p of players) seat(match, { ...p, kind: 'player' });
@@ -202,6 +205,7 @@ function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.
 
 // What a bot is after besides the nearest fight: the objective of the mode.
 function goalFor(match, s) {
+  if (match.ball && s.team) return { x: match.ball.x, z: match.ball.z, urgent: true };
   if (!match.flags || !s.team) return null;
   const { world } = match;
   const me = bodyOf(world, s.id);
@@ -245,10 +249,25 @@ export function stepMatch(match, dt, inputs = {}) {
     if (!f || f.vitals.dead) continue;
     // a bot thinks for itself unless the caller drives it (a test, a replay)
     let input = s.kind === 'player' ? inputs[s.id] || {} : inputs[s.id] || think(world, s.bot, { goal: goalFor(match, s) });
+    if (match.ball) {
+      // No attacks or damage in Football. Bots chase the ball using ordinary
+      // movement inputs; humans can dribble or press interact (F) to kick.
+      if (s.kind === 'bot' && !inputs[s.id]) {
+        const me = bodyOf(world, s.id);
+        const dx = match.ball.x - me.x;
+        const dz = match.ball.z - me.z;
+        const length = Math.hypot(dx, dz) || 1;
+        input = { move: { x: dx / length, z: dz / length }, face: Math.atan2(dx, dz), run: true,
+          sprint: length > 5, interact: length < 2.2, presses: [] };
+      } else {
+        input = { ...input, presses: (input.presses || []).filter(cmd => cmd === 'roll' || cmd === 'dash') };
+      }
+    }
     if (carrying(match, s.id)) input = { ...input, sprint: false };
     all[s.id] = input;
   }
   const effects = step(world, dt, all);
+  if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
     respawns(match);
@@ -409,6 +428,7 @@ export function matchView(match, forId = null) {
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
+    ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
     people, me: forId ? people.find((p) => p.id === forId) || null : null,
     feed: match.feed.slice(-5),
   };
