@@ -384,11 +384,12 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     const { match } = room;
     const flags = match.flags ? Object.fromEntries(Object.entries(match.flags).map(([t, f]) => [t, { state: f.state, carrier: f.carrier, x: f.x, z: f.z }])) : null;
+    const ball = match.ball ? { x: match.ball.x, z: match.ball.z } : null;
     for (const client of room.clients.values()) {
       if (client.away) continue;
       const fighters = [];
       for (const f of world.fighters.values()) fighters.push(encodeFighter(f, world.bodies.get(f.id), { own: f.id === client.id }));
-      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, effects, events, own: ownOf(world, client, match.phase === 'live'),
+      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, ball, effects, events, own: ownOf(world, client, match.phase === 'live'),
         view: withView ? { ...matchView(match, client.id), away } : undefined });
     }
   }
