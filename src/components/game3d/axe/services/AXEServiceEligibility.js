@@ -6,6 +6,7 @@
 import { AXE_ULTIMATE_CONFIG } from '../equipment/AXEItemAdvancementSystem';
 import { canApplyAXEAura } from '../equipment/AXEEquipmentAuraSystem';
 import { getAXEService } from './AXEServiceRegistry.js';
+import { getAXEGearTierInfo } from '../../../../../base44/shared/axeGearTiers.ts';
 
 const SLOT_GROUPS = Object.freeze({
   combat: new Set(['weapon', 'helm', 'chest', 'gloves', 'legs', 'boots']),
@@ -50,6 +51,12 @@ export function getAXEServiceEligibility(serviceId, item) {
     return ENHANCEABLE.has(slot)
       ? { eligible: true }
       : { eligible: false, reason: 'SERVICE_SLOT_NOT_ELIGIBLE' };
+  }
+
+  // gear tiers: weapons, armor and jewelry of a rarity with a level ladder
+  if (serviceId === 'tier_up') {
+    return getAXEGearTierInfo(item)
+      ? { eligible: true } : { eligible: false, reason: 'NOT_TIERED_GEAR' };
   }
 
   if (serviceId === 'weapon_legacy') {

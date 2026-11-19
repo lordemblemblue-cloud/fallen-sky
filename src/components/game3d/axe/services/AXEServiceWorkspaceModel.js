@@ -23,6 +23,9 @@ import {
 } from '../equipment/AXEItemAdvancementSystem';
 import { canInsertAXEGem, drillSuccessChance } from '../equipment/AXESocketGemSystem';
 import {
+  axeGearRequiredLevel, getAXEGearTierInfo, getAXEGearTierUpCost, previewAXEGearTierUp,
+} from '../../../../../base44/shared/axeGearTiers.ts';
+import {
   getAXEAscensionCost,
   getAXECombineCost,
   getAXEOverEnchantCost,
@@ -79,6 +82,7 @@ export function getAXEServiceOperationPreview(serviceId, {
   donor = null,
   gemId = null,
   socketIndex = 0,
+  heroLevel = null,
 } = {}) {
   const preview = {
     canAdvance: !!item,
@@ -167,6 +171,21 @@ export function getAXEServiceOperationPreview(serviceId, {
       risk: `A success uses up the donor. A failure keeps the donor and the rank; only the fee (${costText(config.fee)}) is charged${Object.keys(config.catalyst).length ? (config.catalystOnFailure ? ' and the catalyst' : '') : ''}.`,
       confirmation: donor && validation.ok ? `Ascend ${item.name} with ${donor.name}? ${pct(chance)} chance. A success uses up ${donor.name}; a failure keeps it.` : null,
       reason: describeAXEDonorReason(validation.reason) };
+  }
+  if (serviceId === 'tier_up') {
+    // gear tiers (setting): the next level step on the item's ladder (docs/game3d/GEAR_TIERS_20261119.md)
+    const tier = previewAXEGearTierUp(item, { heroLevel });
+    const info = tier.info || getAXEGearTierInfo(item);
+    const requiredLevel = tier.requiredLevel ?? (info?.nextStep != null ? axeGearRequiredLevel(info.rarity, info.nextStep) : null);
+    return { ...preview, canAdvance: !!tier.ok, cost: tier.ok ? tier.cost : getAXEGearTierUpCost(item),
+      chance: tier.ok ? tier.chance : null, tierPreview: tier, tierInfo: info,
+      currentLevel: info?.level ?? null, nextLevel: info?.nextStep ?? null, requiredLevel,
+      outcome: !info ? 'Not on a gear-tier ladder' : info.atMax ? `Lv ${info.level} (top step)`
+        : `Lv ${info.level} → Lv ${info.nextStep}${info.lookChanges && info.system ? ' · new look' : ''}`,
+      risk: 'Always succeeds. The item takes the next step’s stats (and, past a band edge, its look); Combine, Enchant and Ascension are kept.',
+      reason: tier.ok ? undefined : tier.reason === 'NOT_TIERED_GEAR' ? 'This item is not on a gear-tier ladder.'
+        : tier.reason === 'MAX_TIER' ? 'This item is on its top step.'
+          : tier.reason === 'HERO_LEVEL_TOO_LOW' ? `Reach level ${requiredLevel} to use the next step.` : describeAXEDonorReason(tier.reason) };
   }
   if (serviceId === 'refine') {
     const level = Number(advancement.refine?.level || 0);

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowUpRight, Gem, Package, Shield, Swords, Sparkles, Zap, Layers, Diamond, CircleDot, Dumbbell, SlidersHorizontal } from 'lucide-react';
-import { getAllAXEEquipmentItems, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
-import { getLootInventory, subscribeLootInventory } from '../../lootStore';
+import { ArrowUpRight, Gem, Package, Shield, Swords, Sparkles, Zap, Layers, Diamond, CircleDot, Dumbbell, SlidersHorizontal, ChevronsUp } from 'lucide-react';
+import { getAllAXEEquipmentItems, getAXEEquipmentItem, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
+import { applyAXEGearTierRecord, axeGearRarityLabel, getAXEGearItemType } from '../../../../../base44/shared/axeGearTiers.ts';
+import { isGearTiersEnabled } from '../loot/AXEGearTierFlag.mjs';
+import { getPlayerHUD } from '../../playerHUDStore';
+import { LOOT_TABLE, getLootInventory, subscribeLootInventory } from '../../lootStore';
 import {
   getItemEnchantments, getItemReinforcement, getItemOverEnchant, getCostForNextLevel,
   MAX_ENCH_LEVEL, MATERIALS, subscribeEnchantments,
@@ -67,12 +70,15 @@ function InventorySymbol({ item }) {
     : kind === 'Accessories' ? <Gem size={23} /> : <Package size={23} />;
 }
 
-const MATERIAL_NAMES = new Map(MATERIALS.map(entry => [entry.id, entry.name]));
+// enchant materials first, then every other loot item by its display name (e.g. Upgrade Stone)
+const MATERIAL_NAMES = new Map([...LOOT_TABLE.map(entry => [entry.id, entry.name]), ...MATERIALS.map(entry => [entry.id, entry.name])]);
 const BLACKSMITH_TABS = [
   { id: 'enchant', label: 'Enchant', operation: 'reinforcement', Icon: ArrowUpRight },
   { id: 'over_enchant', label: 'Over-Enchant', operation: 'over_enchant', Icon: Zap },
   { id: 'combine', label: 'Combine', operation: 'combine', Icon: Layers },
   { id: 'ascend', label: 'Ascend', operation: 'stage', Icon: Diamond },
+  // gear tiers (setting, off by default; docs/game3d/GEAR_TIERS_20261119.md)
+  ...(isGearTiersEnabled() ? [{ id: 'tier', label: 'Tier Up', operation: 'tier_up', Icon: ChevronsUp }] : []),
   { id: 'sockets', label: 'Sockets & Gems', operation: 'sockets', Icon: Gem },
   { id: 'core', label: 'Core', operation: 'core', Icon: CircleDot },
   { id: 'runes', label: 'Ultimate', operation: 'runes', Icon: Sparkles },
@@ -83,6 +89,7 @@ const OPERATION_DESCRIPTIONS = {
   over_enchant: 'Further enhance equipment after every enchantment slot reaches its maximum.',
   combine: 'Combine +0–12 with a donor of the same rarity, item level, slot and type. Each stage adds 2 % of the original stats. A failure keeps the stage and the donor. Weapon Legacy is a separate reward below.',
   ascend: 'Ascension +0–4 for Rare, Elite and Legendary: one donor per attempt (same rarity and type, item level equal or lower). It raises this item’s own stats only; a failure keeps the donor and the rank.',
+  tier: 'Tier Up moves this item to its next level step (e.g. Lv 45 → 55) with that step’s stats; past a band edge it takes the next look. Combine, Enchant and Ascension are kept.',
   sockets: 'Open a socket and insert a compatible owned gem using the existing forge controls.',
 };
 const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -92,7 +99,9 @@ const pctText = chance => chance == null ? '—' : (Math.round(Number(chance) * 
 const itemArt = item => item?.imageUrl || item?.iconUrl || item?.image || null;
 // the service a tab runs: the Enchant tab runs the Enchant % (reinforcement) or the four slots
 export const blacksmithOperationFor = (tab, enchantMode = 'percent') =>
-  tab === 'enchant' ? (enchantMode === 'slots' ? 'enchant' : 'reinforcement') : tab === 'ascend' ? 'stage' : tab;
+  tab === 'enchant' ? (enchantMode === 'slots' ? 'enchant' : 'reinforcement')
+    : tab === 'ascend' ? 'stage' : tab === 'tier' ? 'tier_up' : tab;
+const heroLevel = () => Math.max(1, Math.floor(Number(getPlayerHUD()?.level) || 1));
 // hover text for an owned item: its stats from the one breakdown (`Attack 1,000 (+150) = 1,150`)
 const itemTooltip = item => {
   try { return formatAXEItemStatTooltip(getAXEOwnedItemStatBreakdown(item), { title: item.name }); } catch { return item?.name || ''; }
@@ -116,6 +125,7 @@ export function getAXEBlacksmithReadout(item, operation = 'reinforcement', donor
     slotIndex: selectedSlot,
     enchantCost: getCostForNextLevel(enchantments[selectedSlot] || 0),
     donor,
+    heroLevel: heroLevel(),
   });
   const combineStage = Number(advancement.combine?.count || 0);
   const rank = Number(advancement.stage?.rank || 0);
@@ -134,8 +144,12 @@ export function getAXEBlacksmithReadout(item, operation = 'reinforcement', donor
   } else if (operation === 'stage' && isAXEAscensionRarity(item) && rank < AXE_EQUIPMENT_ASCENSION_CONFIG.maxAscensions) {
     projected = { advancement: { ...advancement, stage: { ...advancement.stage, rank: rank + 1 } } };
   }
+  // gear tiers: the same item one step up (its Combine, Enchant and Ascension apply to the new roll)
+  const tieredItem = operation === 'tier_up' && preview.tierPreview?.ok
+    ? applyAXEGearTierRecord(item, preview.tierPreview.record) : null;
   const breakdown = getAXEOwnedItemStatBreakdown(item);
-  const after = projected ? getAXEOwnedItemStatBreakdown(item, projected) : null;
+  const after = tieredItem ? getAXEOwnedItemStatBreakdown(tieredItem)
+    : projected ? getAXEOwnedItemStatBreakdown(item, projected) : null;
   const enchantTotal = enchantments.reduce((sum, level) => sum + Number(level || 0), 0);
   const slotCapacity = enchantments.length * MAX_ENCH_LEVEL;
   const attack = axeBreakdownAttack(breakdown);
@@ -183,12 +197,17 @@ function describeForgeResult(operation, result, before, after) {
     return result.ok ? `Success: Ascension +${before.rank} → +${after.rank}. The donor was used up.`
       : `Failed: Ascension stays +${after.rank}. The donor was kept.`;
   }
+  if (operation === 'tier_up') {
+    return result.ok ? `Success: Lv ${before.level} → Lv ${after.level}${result.lookChanges ? ' with its next look' : ''}. Combine, Enchant and Ascension were kept.`
+      : `Failed: the item stays Lv ${after.level}.`;
+  }
   return result.ok ? 'Forging completed.' : String(result.outcome || 'Forging could not be completed.').replaceAll('_', ' ');
 }
 const recordsOf = id => ({
   percent: Number(getItemReinforcement(id)?.percent || 0),
   combine: Number(getAXEAdvancementState(id)?.combine?.count || 0),
   rank: Number(getAXEAdvancementState(id)?.stage?.rank || 0),
+  level: Number(getAXEEquipmentItem(id)?.itemLevel ?? getAXEEquipmentItem(id)?.level ?? 1),
 });
 
 // Rebuild the canonical preview from owned state before EVERY batch attempt.
@@ -317,7 +336,7 @@ export default function AXEBlacksmithImageWorkspace({
   // The service this tab runs (Enchant tab: Enchant % or slots; Ascend: the stage service).
   const operation = blacksmithOperationFor(tab, enchantMode);
   const percentMode = operation === 'reinforcement';
-  const forgeTab = ['enchant','over_enchant','combine','sockets','ascend'].includes(tab);
+  const forgeTab = ['enchant','over_enchant','combine','sockets','ascend','tier'].includes(tab);
   const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, operation,
     tab === 'combine' || tab === 'ascend' ? donorItem : null) : null;
   const ascendEligible = Boolean(selectedItem && isAXEAscensionRarity(selectedItem));
@@ -394,6 +413,7 @@ export default function AXEBlacksmithImageWorkspace({
     : readout?.preview?.reason && !readout.preview.canAdvance ? readout.preview.reason
     : readout?.preview?.outcome || 'Ready to review forge requirements';
   const currentValue = tab === 'ascend' ? Math.min(4, asNumber(progressState?.stage?.rank))
+    : tab === 'tier' ? asNumber(readout?.itemLevel)
     : tab === 'combine' ? asNumber(progressState?.combine?.count)
     : tab === 'sockets' ? asNumber(socketState?.sockets?.length)
     : tab === 'over_enchant' ? asNumber(getItemOverEnchant(selectedId)?.level)
@@ -401,13 +421,15 @@ export default function AXEBlacksmithImageWorkspace({
     : readout?.enchantTotal || 0;
   const nextValue = tab === 'ascend'
     ? (readout?.preview?.nextRank ?? null)
+    : tab === 'tier' ? (readout?.preview?.nextLevel ?? null)
     : tab === 'combine' ? (currentValue < AXE_COMBINE_CONFIG.maxCombines ? currentValue + 1 : null)
     : tab === 'sockets' || tab === 'over_enchant'
     ? (readout?.preview?.canAdvance ? currentValue + 1 : null)
     : percentMode ? (readout?.preview?.canAdvance ? readout.preview.nextPercent : null)
     : tab === 'enchant' ? readout?.projectedEnchant : null;
   const valueText = value => value == null ? '—'
-    : tab === 'ascend' ? '+' + fmt(value) : percentMode ? fmt(value) + '%' : '+' + fmt(value);
+    : tab === 'ascend' ? '+' + fmt(value) : tab === 'tier' ? 'Lv ' + fmt(value)
+      : percentMode ? fmt(value) + '%' : '+' + fmt(value);
 
   const pickTab = next => {
     cancelledBatch.current = true;
@@ -748,7 +770,7 @@ export default function AXEBlacksmithImageWorkspace({
           <div className="axe-blacksmith-dynamic-row">
             <span>{tab === 'combine' ? 'Combine' : tab === 'sockets' ? 'Sockets opened'
               : tab === 'over_enchant' ? 'Over-Enchant' : tab === 'ascend' ? 'Ascension'
-                : percentMode ? 'Enchant' : 'Enchant slots'}</span>
+                : tab === 'tier' ? 'Item level' : percentMode ? 'Enchant' : 'Enchant slots'}</span>
             <b>{selectedItem ? valueText(currentValue) : '—'}</b>
             <span className="axe-blacksmith-arrow">→</span>
             <b>{valueText(nextValue)}</b>
@@ -789,6 +811,24 @@ export default function AXEBlacksmithImageWorkspace({
         {/* Enchantment light before and after a successful attempt: the same rules as the worn item. */}
         {selectedItem && forgeTab && <EnchantLightPreview item={selectedItem} compact
           proposedPercent={['reinforcement', 'enchant', 'over_enchant'].includes(operation) ? projectEnchantPercent(selectedItem, operation) : null} />}
+        {tab === 'tier' && <div className="axe-blacksmith-extra-details" aria-label="Tier Up rules">
+          <h4>Tier Up — level steps</h4>
+          {(() => {
+            const info = readout?.preview?.tierInfo;
+            const type = info ? getAXEGearItemType(info.typeId) : null;
+            if (!selectedItem) return <p>Choose an item to see its next level step.</p>;
+            if (!info) return <p>This item is not on a gear-tier ladder (Common, Unique, Rare, Elite and Legendary weapons, armor and jewelry are).</p>;
+            return <>
+              <div><span>Ladder</span><b>{axeGearRarityLabel(info.rarity)} {type?.label || info.typeId}</b></div>
+              <div><span>Step now</span><b>{info.step == null ? 'below the first step' : 'Lv ' + fmt(info.step)}{info.offLadder ? ' (item Lv ' + fmt(info.level) + ')' : ''}</b></div>
+              <div><span>Next step</span><b>{info.atMax ? 'Top step reached' : 'Lv ' + fmt(info.nextStep)}</b></div>
+              {!info.atMax && <div><span>Hero level needed</span><b>{fmt(readout?.preview?.requiredLevel)}</b></div>}
+              {!info.atMax && <div><span>Look</span><b>{info.system ? (info.lookChanges ? 'Changes to the next band’s look' : 'Same look') : 'Keeps its own model'}</b></div>}
+              <div><span>Success</span><b>{pctText(readout?.preview?.chance ?? (info.atMax ? null : 1))}</b></div>
+              <p>Combine, Enchant, Ascension, sockets and aura stay on the item. Base stats become the next step’s at the item’s own quality; rolled stats keep their roll and grow with the level.</p>
+            </>;
+          })()}
+        </div>}
         {tab === 'ascend' && <div className="axe-blacksmith-extra-details" aria-label="Ascension rules and donor">
           <h4>Ascension — up to +4</h4>
           <div><span>Rarity</span><b>{selectedItem?.rarity || '—'}</b></div>

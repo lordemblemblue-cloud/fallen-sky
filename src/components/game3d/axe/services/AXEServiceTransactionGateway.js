@@ -31,6 +31,7 @@ import {
 } from '../equipment/AXESocketGemStore';
 import { applyAXEItemAura, getAXEItemAura, rerollAXEItemAura } from '../equipment/AXEEquipmentAuraStore';
 import {
+  applyAXEGearTierRecordToItem,
   applyAXEWeaponLegacyInventoryTransaction,
   canConsumeAXEEquipmentItem,
   consumeAXEEquipmentItem,
@@ -38,6 +39,8 @@ import {
   getAXEEquipmentItem,
   persistAXEEquipmentInventory,
 } from '../equipment/AXEEquipmentInventoryStore';
+import { previewAXEGearTierUp, readAXEGearTierRecord } from '../../../../../base44/shared/axeGearTiers.ts';
+import { isGearTiersEnabled } from '../loot/AXEGearTierFlag.mjs';
 import {
   consumeLootItemById,
   consumeLootUnits,
@@ -298,7 +301,29 @@ const localHandlers = {
       : applyAXEItemAura(item, payload.options || {});
     return { ...result, cost };
   }, 'equipment_aura'),
+
+  // Gear tiers (setting; docs/game3d/GEAR_TIERS_20261119.md): the item moves to its next level step
+  // (45 -> 55), with the next step's stats and, past a band edge, its look. Defaults: Upgrade Stones
+  // only, always succeeds; Combine, Enchant and Ascension carry over (same instance id).
+  tier_up: (payload) => withOwnedItem(payload, (item) => {
+    if (!isGearTiersEnabled()) return { ok: false, reason: 'GEAR_TIERS_OFF' };
+    const preview = previewAXEGearTierUp(item, { heroLevel: heroLevelNow() });
+    if (!preview.ok) return { ok: false, reason: preview.reason, requiredLevel: preview.requiredLevel ?? null };
+    const paid = consumeCost(preview.cost);
+    if (!paid.ok) return paid;
+    if (Math.random() > preview.chance) return { ok: false, outcome: 'failure', cost: preview.cost, chance: preview.chance };
+    const before = readAXEGearTierRecord(item);
+    const applied = applyAXEGearTierRecordToItem(item.instanceId, preview.record);
+    if (!applied.ok) return applied;
+    return { ok: true, outcome: 'success', cost: preview.cost, chance: preview.chance, before, after: preview.record,
+      from: preview.from, to: preview.to, lookChanges: preview.lookChanges };
+  }, 'tier_up'),
 };
+
+// the hero's level, which a tier-up's next step must not exceed
+function heroLevelNow() {
+  return Math.max(1, Math.floor(Number(getPlayerHUD()?.level) || 1));
+}
 
 // ---- server-rolled upgrades (docs/game3d/SERVER_UPGRADES.md) ----
 // Reinforcement, over-enchant, refine and ultimate are rolled and paid by the server when
@@ -314,7 +339,9 @@ export function setAXEServiceDiceSource(fn) {
 const setUpgradeRecord = (serviceId, itemId, record) => (
   serviceId === 'reinforcement' || serviceId === 'over_enchant'
     ? setServerUpgradeRecord(serviceId, itemId, record)
-    : setAXEAdvancementRecord(itemId, serviceId, record)
+    : serviceId === 'tier_up'
+      ? applyAXEGearTierRecordToItem(itemId, record).ok
+      : setAXEAdvancementRecord(itemId, serviceId, record)
 );
 
 // what the game refuses anyway, checked before a roll is spent on it
@@ -345,6 +372,12 @@ function checkBeforeServerRoll(serviceId, payload) {
     if (Number(advancement.ultimate?.level || 0) >= AXE_ULTIMATE_CONFIG.maxLevel) return { ok: false, reason: 'MAX_ULTIMATE' };
     if (!AXE_ULTIMATE_CONFIG.eligibleRarities.includes(String(check.item.rarity || '').toLowerCase())) return { ok: false, reason: 'RARITY_NOT_ELIGIBLE' };
     cost = getAXEServiceInventoryCost('ultimate', { advancement, protectedAttempt });
+    affordable = canAfford(cost);
+  } else if (serviceId === 'tier_up') {
+    if (!isGearTiersEnabled()) return { ok: false, reason: 'GEAR_TIERS_OFF' };
+    const preview = previewAXEGearTierUp(check.item, { heroLevel: heroLevelNow() });
+    if (!preview.ok) return { ok: false, reason: preview.reason, requiredLevel: preview.requiredLevel ?? null };
+    cost = preview.cost;
     affordable = canAfford(cost);
   }
   if (!affordable) return { ok: false, reason: 'insufficient_materials', cost };

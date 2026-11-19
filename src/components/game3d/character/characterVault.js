@@ -43,8 +43,9 @@ const ROLL_REFUSALS = {
   too_fast: 'too_fast',
   invalid: 'upgrade_not_available',
 };
-// Combine and Ascension (service 'stage') take a donor (docs/game3d/BLACKSMITH_V2_20261118.md)
-const DONOR_SERVICES = new Set(['combine', 'stage']);
+// Upgrades an older itemUpgrade may not know yet: Combine and Ascension (service 'stage',
+// docs/game3d/BLACKSMITH_V2_20261118.md) and the gear-tier tier-up (docs/game3d/GEAR_TIERS_20261119.md)
+const NEWER_SERVER_SERVICES = new Set(['combine', 'stage', 'tier_up']);
 
 // Server-rolled upgrades (docs/game3d/SERVER_UPGRADES.md): for a character the server keeps,
 // reinforcement (Enchant %), over-enchant, refine, ultimate, Combine and Ascension are rolled
@@ -68,10 +69,10 @@ export function createServerDice(engine, {
         return await ask();
       } catch (e) {
         if (e.code === 'local_only') return { local: true };
-        // An itemUpgrade deployed before Blacksmith v2 doesn't know Combine or Ascension (and
-        // its Character Vault doesn't keep them either): they stay on this device until the
-        // owner deploys the new functions.
-        if (e.code === 'invalid' && DONOR_SERVICES.has(serviceId) && /not rolled by the server/i.test(String(e.message || ''))) return { local: true };
+        // An itemUpgrade deployed before these upgrades doesn't know them (and its Character Vault
+        // doesn't keep them either): they stay on this device until the owner deploys the new
+        // functions.
+        if (e.code === 'invalid' && NEWER_SERVER_SERVICES.has(serviceId) && /not rolled by the server/i.test(String(e.message || ''))) return { local: true };
         if (e.code === 'not_synced' && attempt === 0) { await wait(800); await engine.flush(); continue; }
         return { ok: false, reason: ROLL_REFUSALS[e.code] || 'upgrades_need_a_server_connection' };
       }
