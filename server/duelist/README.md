@@ -8,8 +8,14 @@ flag) and for the co-op story mission played with a crew. Practice and the solo 
   score; each player gets 20 snapshots a second.
 - **Players only send commands** (`input` messages: movement, facing, button presses). Input is checked
   (`net/protocol.mjs` `sanitizeInput`: move clamped, only known commands), button presses go through a token
-  bucket (`core/fairplay.mjs`: 14 a second, bursts of 6), and a connection sending more than 90 messages a
-  second is closed. One connection per account.
+  bucket (`core/fairplay.mjs`: 14 a second, bursts of 6), messages beyond 120 a second are ignored, and a
+  connection sending more than 400 a second is closed. One connection per account.
+- **Prediction.** A player's inputs are numbered and used one a tick, in order (none waiting: the last one's
+  movement stands; a burst after a stall skips to the newest few, keeping every press). Each snapshot says
+  which input was used last (`ack`) and, while the server is acting on that player's inputs, carries the
+  player's own fighter in full (`own`, only ever to that player); the browser replays the inputs not used
+  yet on top of it (`src/components/duelist/net/predict.mjs`). A page from before an update (an older
+  `PROTOCOL`) is told to reload.
 - **Join.** `join { mode }` puts the player in the busiest match of that mode that has room, taking a bot's
   seat (the lowest-scoring bot of the team that needs a player), or starts a match filled with bots.
   `join { mode: 'any' }` picks the busiest match of any mode that has players in it. A leaving player's
@@ -55,10 +61,8 @@ one replica (matches live in memory), with `BASE44_APP_ID` and `DUELIST_ALLOWED_
 
 ## Not yet
 
-- Client-side prediction: the browser shows the server's state 100 ms behind (smooth, but your own moves
-  arrive one round trip late on a distant server).
 - Reconnecting to the same seat after a dropped connection; results saved to accounts.
 - A crew member who joins mid-mission meets the people already in the depot as they were manned for the
   smaller crew (later rooms are manned for the new size).
 
-Tests: `node --test tests/duelist-server.test.mjs` (from the repository root).
+Tests: `node --test tests/duelist-server.test.mjs tests/duelist-predict.test.mjs` (from the repository root).

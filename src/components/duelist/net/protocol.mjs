@@ -17,16 +17,23 @@
 //   { t: 'joined', match, mode, you, seats, replaced }   seats: [{ id, name, team, kind, body }]
 //       a story room adds: mission, code, and seats for the depot's people { id, name, kind: 'enemy', type, tag, named }
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
-//   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view? }
+//   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
+//       ack: the last input the simulation has used (inputs are used one a tick, in order);
+//       own: the receiving player's fighter in full at that moment (encodeOwn), sent while the server is
+//       acting on that player's inputs: the browser carries on from it by the same rules (net/predict.mjs)
 //       a story room's view is the mission's (sim/mission.mjs missionView) plus room: { code, open } and againIn;
 //       uses: [[id, by, progress]] for what is being used right now; idle: [id] people who have noticed nobody
 //       and stand as last sent (everyone is sent in full once a second and when someone joins or appears)
 //   { t: 'left' }   { t: 'error', code, message }
 import { CLIENT_COMMANDS, MOVES } from '../core/index.mjs';
 
-export const PROTOCOL = 1;
+export const PROTOCOL = 2;
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
+// A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
+// a stall) and the oldest are skipped, their presses kept, so the fighter never runs long behind its player.
+export const MAX_WAITING_INPUTS = 5;
+export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
 export const ONLINE_MODES = Object.freeze(['duel', 'ffa', 'tdm', 'ctf']);
@@ -123,4 +130,64 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   b.moving = data.sp > 0.1;
   b.motion = data.md ? { dir: { x: data.md[0], z: data.md[1] } } : null;
   return { f, b };
+}
+
+// ---- the receiving player's own fighter, in full
+// Positions travel to a hundredth of a millimetre. Times travel exactly: the rules compare them with
+// thresholds (six ticks of a sixtieth sit right on a tenth of a second), and a rounded clock would decide a
+// tick differently from the server.
+const r5 = (n) => Math.round(n * 1e5) / 1e5;
+const when = (n) => (n === -Infinity ? null : n === Infinity ? 'inf' : n);
+const then = (n) => (n === null || n === undefined ? -Infinity : n === 'inf' ? Infinity : n);
+const times = (map) => Object.fromEntries(Object.entries(map).map(([k, t]) => [k, when(t)]));
+const untimes = (map) => Object.fromEntries(Object.entries(map || {}).map(([k, t]) => [k, then(t)]));
+
+/**
+ * Everything the rules keep about one fighter and its body at world time `time`: enough for the player's
+ * browser to carry on from this moment by the same rules (net/predict.mjs). Only ever sent to that player.
+ */
+export function encodeOwn(f, body, time) {
+  const v = f.vitals;
+  const a = f.action;
+  const m = body.motion;
+  return {
+    at: time, w: f.weapon,
+    v: [r5(v.hp), r5(v.stamina), r5(v.will), r5(v.shield), v.collapsed ? 1 : 0, v.winded ? 1 : 0, v.dead ? 1 : 0,
+      when(v.collapsedAt), when(v.lastStaminaSpend), when(v.lastWillSpend), when(v.lastShieldHit)],
+    mx: [v.max.hp, v.max.stamina, v.max.will, v.max.shield],
+    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0] : 0,
+    cd: times(f.cooldowns),
+    bf: f.buffer ? [f.buffer.command, f.buffer.at] : 0,
+    g: f.guard ? f.guard.since : null,
+    t: [when(f.stunnedUntil), when(f.protectedUntil), when(f.downUntil), when(f.riseUntil)],
+    hb: f.heldBy || 0,
+    br: times(f.breaches),
+    b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
+    // the current move's root motion: following its clip, or a set distance along a direction
+    m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
+  };
+}
+
+/** Write encodeOwn's data into a fighter and its body (both replaced in every respect the rules read). */
+export function applyOwn(f, body, data) {
+  const v = f.vitals;
+  const [hp, stamina, will, shield, collapsed, winded, dead, collapsedAt, lastStaminaSpend, lastWillSpend, lastShieldHit] = data.v;
+  Object.assign(v, { hp, stamina, will, shield, collapsed: !!collapsed, winded: !!winded, dead: !!dead, collapsedAt: then(collapsedAt),
+    lastStaminaSpend: then(lastStaminaSpend), lastWillSpend: then(lastWillSpend), lastShieldHit: then(lastShieldHit) });
+  v.max = { hp: data.mx[0], stamina: data.mx[1], will: data.mx[2], shield: data.mx[3] };
+  f.weapon = data.w;
+  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null } : null;
+  f.cooldowns = untimes(data.cd);
+  f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1] } : null;
+  f.guard = data.g === null || data.g === undefined ? null : { since: data.g };
+  [f.stunnedUntil, f.protectedUntil, f.downUntil, f.riseUntil] = data.t.map(then);
+  f.heldBy = data.hb || null;
+  f.breaches = untimes(data.br);
+  f.events = [];
+  const [x, y, z, yaw, vy, kx, kz] = data.b;
+  Object.assign(body, { x, y, z, yaw, vy, kx, kz });
+  const m = data.m;
+  body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
+    : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };
+  return { f, body };
 }

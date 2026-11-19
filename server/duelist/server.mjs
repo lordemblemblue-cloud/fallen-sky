@@ -5,6 +5,12 @@
 // checked and rate-limited here (a modified client can press buttons faster than the rules allow, never
 // more than the rules allow).
 //
+// A player's inputs are numbered and used one a tick, in the order they were sent (with none waiting, the
+// last one's movement stands; a burst after a stall skips to the newest few, keeping every press). Each
+// snapshot says which input the simulation has reached and, while it is acting on the player's inputs,
+// carries that player's own fighter in full: the browser replays the inputs the server has not reached yet
+// on top of it, so a player's own moves show at once (src/components/duelist/net/predict.mjs).
+//
 // Joining: a mode picks the busiest match of that mode with room (a bot seat to take, or a free seat), or
 // starts one filled with bots; 'any' picks the busiest match of any mode that has players in it (or starts a
 // free for all). The joining player takes a bot's place; a leaving player's seat goes back to a bot. A
@@ -20,7 +26,7 @@ import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, MODES } from 
 import { createMission, stepMission, joinMission, leaveMission, missionView } from '../../src/components/duelist/sim/mission.mjs';
 import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, BODY_IDS, sanitizeInput, encodeFighter } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, BODY_IDS, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -155,6 +161,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     for (const s of room.match.seats.values()) if (!room.bodies.has(s.id)) room.bodies.set(s.id, BODY_IDS[room.bodies.size % BODY_IDS.length]);
     room.clients.set(client.id, client);
     client.room = room;
+    client.input = {};
+    client.waiting = [];
     client.lastInputAt = clock();
     send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room) });
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
@@ -187,6 +195,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.bodies.set(client.id, client.body);
     room.clients.set(client.id, client);
     client.room = room;
+    client.input = {};
+    client.waiting = [];
     client.lastInputAt = now;
     send(client, crewJoined(room, client));
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
@@ -241,6 +251,13 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.fullNext = true;
   }
 
+  // A player's own fighter in full, for prediction: only while the rules act on that player's inputs (the
+  // fight is on and the fighter stands), and only ever to that player.
+  const ownOf = (world, client, live) => {
+    const f = live ? world.fighters.get(client.id) : null;
+    return f && !f.vitals.dead ? encodeOwn(f, world.bodies.get(client.id), world.time) : undefined;
+  };
+
   function snapshot(room) {
     room.snaps += 1;
     const full = !!room.fullNext || room.snaps % FULL_EVERY === 0;
@@ -271,8 +288,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       for (const client of room.clients.values()) {
         const fighters = [];
         for (const [id, data] of encoded) fighters.push(id === client.id ? encodeFighter(world.fighters.get(id), world.bodies.get(id), { own: true }) : data);
-        send(client, { t: 'snap', time, ack: client.lastSeq, fighters, idle: idle.length ? idle : undefined, projectiles, flags: null, effects, events,
-          uses: uses.length ? uses : undefined,
+        send(client, { t: 'snap', time, ack: client.usedSeq, fighters, idle: idle.length ? idle : undefined, projectiles, flags: null, effects, events,
+          own: ownOf(world, client, mission.phase === 'live'), uses: uses.length ? uses : undefined,
           view: withView ? { ...missionView(mission, client.id), room: { code: room.code, open: room.open }, againIn } : undefined });
       }
       return;
@@ -282,7 +299,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     for (const client of room.clients.values()) {
       const fighters = [];
       for (const f of world.fighters.values()) fighters.push(encodeFighter(f, world.bodies.get(f.id), { own: f.id === client.id }));
-      send(client, { t: 'snap', time, ack: client.lastSeq, fighters, projectiles, flags, effects, events,
+      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, effects, events, own: ownOf(world, client, match.phase === 'live'),
         view: withView ? matchView(match, client.id) : undefined });
     }
   }
@@ -300,7 +317,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (room.mission && !room.clients.size) continue; // nobody here: the mission waits
         const inputs = {};
         for (const client of room.clients.values()) {
-          inputs[client.id] = { ...client.input, presses: client.presses.splice(0) };
+          // one waiting input a tick, in order; with none waiting, the last one's movement stands
+          const next = client.waiting.shift();
+          if (next) {
+            const { seq, presses, ...held } = next;
+            client.input = held;
+            client.usedSeq = seq;
+            inputs[client.id] = { ...held, presses };
+          } else inputs[client.id] = { ...client.input, presses: [] };
         }
         const { effects, events } = room.mission ? stepMission(room.mission, STEP, inputs) : stepMatch(room.match, STEP, inputs);
         if (effects.length) room.effects.push(...effects);
@@ -333,7 +357,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   }, 4);
 
   wss.on('connection', (ws) => {
-    const client = { ws, id: null, name: 'Duelist', body: BODY_IDS[0], room: null, input: {}, presses: [], lastSeq: -1, lastInputAt: clock(),
+    // waiting: inputs not yet used; lastSeq: the newest received; usedSeq: the newest the simulation used; accepted: presses let through
+    const client = { ws, id: null, name: 'Duelist', body: BODY_IDS[0], room: null, input: {}, waiting: [], lastSeq: -1, usedSeq: -1, accepted: 0, lastInputAt: clock(),
       limiter: createInputRateLimiter(), budget: { since: clock(), count: 0 }, wrongCodes: { count: 0, until: 0 }, signingIn: false };
     clients.add(client);
     ws.on('message', async (data) => {
@@ -347,6 +372,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       if (!msg || typeof msg.t !== 'string') return;
       if (msg.t === 'hello') {
         if (client.id || client.signingIn) return;
+        // a page loaded before the game was updated speaks an older protocol
+        if (msg.v !== PROTOCOL) { send(client, { t: 'error', code: 'version', message: 'The game was updated. Reload the page.' }); ws.close(4426, 'version'); return; }
         client.signingIn = true;
         let user = null;
         try { user = await authenticate(typeof msg.token === 'string' ? msg.token : '', msg); } catch { user = null; }
@@ -379,12 +406,15 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (!input || input.seq <= client.lastSeq) return;
         client.lastSeq = input.seq;
         client.lastInputAt = now;
-        client.input = { move: input.move, run: input.run, sprint: input.sprint, face: input.face, strafe: input.strafe, interact: input.interact };
-        for (const command of input.presses) {
-          // presses beyond the input budget are dropped (guard and release always pass: they only let go)
-          if (command === 'blockUp' || command === 'release' || client.limiter.allow(now)) client.presses.push(command);
+        // presses beyond the input budget are dropped (guard and release always pass: they only let go)
+        const presses = input.presses.filter((command) => command === 'blockUp' || command === 'release' || client.limiter.allow(now));
+        client.accepted += presses.length;
+        client.waiting.push({ seq: input.seq, move: input.move, run: input.run, sprint: input.sprint, face: input.face, strafe: input.strafe, interact: input.interact, presses });
+        // a burst after a stall: skip to the newest few (every press kept), so the fighter does not run long behind its player
+        if (client.waiting.length > MAX_WAITING_INPUTS) {
+          const skipped = client.waiting.splice(0, client.waiting.length - KEPT_WAITING_INPUTS);
+          client.waiting[0].presses = [...skipped.flatMap((s) => s.presses), ...client.waiting[0].presses].slice(-16);
         }
-        if (client.presses.length > 16) client.presses.splice(0, client.presses.length - 16);
       }
     });
     ws.on('close', () => { leave(client); clients.delete(client); });
