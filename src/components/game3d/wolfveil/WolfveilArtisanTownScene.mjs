@@ -98,6 +98,8 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     selectShowroomModel(index) { return town.setShowroomModel(index); },
     nearestResident(position) { return livingQuarter?.nearestResident(position) || null; },
     interactResident(position) { return livingQuarter?.interact(position) || null; },
+    nearestCivicQuestSource(position) { return livingQuarter?.nearestCivicQuestSource(position) || null; },
+    collectCivicQuestSource(position) { return livingQuarter?.collectCivicQuestSource(position) || null; },
     resolveCollision(position,previous) {
       const wallHit = nav.resolveCollision(position,previous);
       const residentHit = livingQuarter?.resolveCollision(position,previous) || false;
