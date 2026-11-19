@@ -5,6 +5,7 @@ import {CLONE_TOWN_HOUSES,CLONE_TOWN_GUARDS,CLONE_TOWN_CITIZENS,
   from './WolfveilTownLivingQuarterLayout.mjs';
 import {makeTownDialogueBrain,makeTownSentence,townConversationResult}
   from './WolfveilTownDialogueBrain.mjs';
+import {attachWolfveilGuardVisual} from './WolfveilGuardVisuals.mjs';
 
 // Clone-only: light procedural architecture + decorative NPC presentation.
 // Not an extra terrain plate, not a new combat opponent, and never a client
@@ -274,8 +275,17 @@ export function buildWolfveilTownLivingQuarter(parent,{
       collision.isSolid(initialX,initialZ))return;
   const model=makeCitizen(data,materials);
   root.add(model.actor);
+  // Replace the procedural guard art with the owner's GLB when it loads.
+  // The capsule parts remain as a low-poly offline fallback, not extra NPCs.
+  const placeholderMeshes=[];
+  if(data.role==='guard')model.actor.traverse(node=>{if(node.isMesh)placeholderMeshes.push(node);});
+  const guardVisual=data.role==='guard'
+    ?attachWolfveilGuardVisual(model.actor,data.variant||'blue',{
+      onAttached:()=>placeholderMeshes.forEach(mesh=>{mesh.visible=false;}),
+    })
+    :null;
   const brain=makeTownDialogueBrain(WORLD_SEED+agents.length*1559);
-  const agent={...data,...model,rand:brain,
+  const agent={...data,...model,guardVisual,rand:brain,
     x:initialX,z:initialZ,timer:5+brain()*16,chatLeft:0,
     stepPhase:brain()*Math.PI*2,progress:0,moving:false};
   model.actor.position.set(initialX,ground(initialX,initialZ),initialZ);
@@ -351,6 +361,7 @@ export function buildWolfveilTownLivingQuarter(parent,{
    a.actor.position.set(a.x,ground(a.x,a.z)??a.actor.position.y,a.z);
    if(moving)a.actor.rotation.y=Math.atan2(a.x-oldX,a.z-oldZ);
    a.stepPhase+=dt*(moving?7:1.2);
+   a.guardVisual?.update(dt,moving);
    const stride=moving?Math.sin(a.stepPhase)*.37:0;
    a.limbs[0].rotation.x=stride;a.limbs[1].rotation.x=-stride;
    a.arms[0].rotation.x=-stride*.56;a.arms[1].rotation.x=stride*.56;
@@ -401,7 +412,7 @@ export function buildWolfveilTownLivingQuarter(parent,{
  function dispose(){
   if(disposed)return;disposed=true;
   parent.remove(root);
-  for(const a of agents)a.speech.dispose();
+  for(const a of agents){a.guardVisual?.dispose();a.speech.dispose();}
   root.traverse(node=>{
    if(node.userData?.signDispose)node.userData.signDispose();
    if(node.isMesh)node.geometry.dispose();
