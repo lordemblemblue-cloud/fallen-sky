@@ -1,0 +1,25 @@
+name: Falling Sky two-guard patrols and tunnel watch
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/wolfveil/WolfveilGuardVisuals.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilCaveWatch*.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarter*.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilScene.js'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/questData.jsx'
+      - 'tests/game3d-wolfveil-two-guards-tunnel-watch.test.mjs'
+      - '.github/workflows/game3d-tunnel-guards.yml'
+  workflow_dispatch:
+jobs:
+  guard-patrols:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/game3d-wolfveil-two-guards-tunnel-watch.test.mjs
+      - run: npm run build
