@@ -15,8 +15,9 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const temp = await mkdtemp(path.join(tmpdir(), 'axe-active-effects-'));
 after(() => rm(temp, { recursive: true, force: true }));
 
-// The real effects that GameWorld3D (cast beam), companionAbilityHandler (companion abilities) and
-// legacyTargetedAbilities (legacy spells) push onto activeEffects, bundled with their three.js instance.
+// The real effects that GameWorld3D (cast beam, skill-use burst, level-up celebration), companionAbilityHandler
+// (companion abilities) and legacyTargetedAbilities (legacy spells) push onto activeEffects, bundled with their
+// three.js instance.
 const bundle = path.join(temp, 'effects.mjs');
 const game3d = './src/components/game3d/';
 await build({
@@ -24,6 +25,7 @@ await build({
     contents: [
       "export * as THREE from 'three';",
       `export { createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
+      `export { createSkillUseBurst, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
       `export { createHealEffect } from '${game3d}HealEffect.jsx';`,
       `export { createBiteEffect } from '${game3d}BiteEffect.jsx';`,
       `export { createLifeDrainEffect } from '${game3d}LifeDrainEffect.jsx';`,
@@ -210,6 +212,12 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   const effects = {
     'cast light beam': () => fx.createPlayerCastLightBeam({
       scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45,
+    }),
+    'skill-use burst': () => fx.createSkillUseBurst({
+      scene, playerRef: { current: player }, getGroundY: () => 0, duration: 0.65,
+    }),
+    'level-up celebration': () => fx.createLevelUpCelebration({
+      scene, playerRef: { current: player }, getGroundY: () => 0,
     }),
     heal: () => fx.createHealEffect(scene, at(0, 0)),
     bite: () => fx.createBiteEffect(scene, 2, 0, 2),
