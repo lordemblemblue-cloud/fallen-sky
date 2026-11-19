@@ -55,6 +55,8 @@ export function checkCharacterSave(data: unknown, previous: Save | null = null, 
   if (hero !== undefined) {
     if (!isInt(hero.level) || hero.level < 1 || hero.level > AXE_LEVEL_CAP) errors.push(`level ${hero.level} is outside 1–${AXE_LEVEL_CAP}`);
     if (!(num(hero.xp) >= 0)) errors.push('xp must be a number of 0 or more');
+    // XP piled up at an older, lower level cap, kept aside when the cap rose (heroLevelCurve.mjs)
+    if (hero.xpBankedAtOldCap !== undefined && !(num(hero.xpBankedAtOldCap) >= 0)) errors.push('banked xp must be a number of 0 or more');
     const base = hero.baseStats || {};
     const values = ['strength', 'dexterity', 'constitution', 'focus'].map((k) => num(base[k]));
     if (values.some((v) => !(v >= 0))) errors.push('attributes must be numbers of 0 or more');
@@ -104,7 +106,7 @@ export function checkCharacterSave(data: unknown, previous: Save | null = null, 
   // skill mastery: XP per skill, the level is read from it (skillMastery.ts)
   const mastery = parse(s[SKILL_MASTERY_KEY]);
   if (s[SKILL_MASTERY_KEY] !== undefined) errors.push(...checkSkillMasterySave(mastery));
-  // gear: a fully built level-100 heroic item stays far below these
+  // gear: a fully built heroic item at the level cap stays far below these (a level-155 gear tier: 374, 0.76)
   const inventory = parse(s.axe_equipment_inventory_v2);
   const items = (inventory?.items || []) as any[];
   if (items.length > 600) errors.push(`${items.length} items (at most 600)`);

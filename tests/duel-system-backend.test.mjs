@@ -80,7 +80,7 @@ test('a tampered client cannot bring absurd stats', async () => {
   reset();
   const { duel } = await call('alice', 'challenge', { opponentId: 'bob', stats: { level: 999, damage: 1e9, maxHP: 1e9, critChance: 100, defense: -5 } });
   const s = stored(duel.id).challenger_stats;
-  assert.equal(s.level, 100);
+  assert.equal(s.level, shared.AXE_LEVEL_CAP);
   assert.equal(s.damage, shared.AXE_DUEL_STAT_LIMITS.damage);
   assert.equal(s.maxHP, Math.round(shared.AXE_DUEL_STAT_LIMITS.maxHP));
   assert.equal(s.critChance, 50);

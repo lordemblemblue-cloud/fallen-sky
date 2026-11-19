@@ -8,7 +8,9 @@
 
 type Stats = Record<string, any>;
 
-export const AXE_LEVEL_CAP = 100;
+// Raised from 100 to 155 (owner, 2026-11-19) so gear tiers above level 100 can be worn.
+// docs/game3d/LEVEL_CAP_155_20261119.md
+export const AXE_LEVEL_CAP = 155;
 
 export const AXE_COMBAT_RULES = Object.freeze({
   critChanceCapPct: 50,
@@ -49,6 +51,11 @@ export const AXE_POWER_BUDGET = Object.freeze({
 // level (progress = (level - 1) / (cap - 1); see buildAXEHero). Generated from the real
 // stores by `node tools/game3d/stat-report.mjs --write-par`; the power-budget test fails when
 // the systems drift from it, so regenerate it after changing any system's numbers.
+// Rows 1–100 were measured with the cap at 100. Rows 110–155 continue each column in a straight
+// line at its levels 80–100 slope, stopped at its build cap (crit chance 50, crit damage 1,
+// crit defense 0.6, armor pen 20, hit bonus 10), so levels 1–100 and their enemies are unchanged
+// by the cap raise. Regenerating with the tool at cap 155 would re-base every row: don't,
+// without the owner. docs/game3d/LEVEL_CAP_155_20261119.md
 // [level, damage, maxHP, defense, attackSuccess, attackBlock, critChance, attributionAttack, attributionDefense,
 //  criticalDamage, criticalDefense, armorPenPct, hitBonusPct, avoidPct, blockPct, damageReductionPct]
 // (the whole combat sheet, so enemies are calibrated against what heroes really bring)
@@ -67,6 +74,12 @@ export const AXE_PAR_HERO_TABLE: ReadonlyArray<ReadonlyArray<number>> = Object.f
   [80, 2575, 8096, 976, 368.7, 541.6, 37.3, 276, 248, 0.627, 0.6, 7.9, 7.9, 0, 0, 0],
   [90, 3346, 10397, 1247.6, 413.6, 647.6, 41.6, 315, 280, 0.749, 0.6, 8.9, 8.9, 0, 0, 0],
   [100, 4126.6, 13321, 1563.5, 491.2, 792.8, 44.8, 345, 340, 0.811, 0.6, 10, 10, 0, 0, 0],
+  [110, 4902.4, 15934, 1857.3, 552.5, 918.4, 48.6, 379.5, 386, 0.903, 0.6, 11.1, 10, 0, 0, 0],
+  [120, 5678.2, 18546, 2151, 613.7, 1044, 50, 414, 432, 0.995, 0.6, 12.1, 10, 0, 0, 0],
+  [130, 6454, 21159, 2444.8, 675, 1169.6, 50, 448.5, 478, 1, 0.6, 13.2, 10, 0, 0, 0],
+  [140, 7229.8, 23771, 2738.5, 736.2, 1295.2, 50, 483, 524, 1, 0.6, 14.2, 10, 0, 0, 0],
+  [150, 8005.6, 26384, 3032.3, 797.5, 1420.8, 50, 517.5, 570, 1, 0.6, 15.3, 10, 0, 0, 0],
+  [155, 8393.5, 27690, 3179.1, 828.1, 1483.6, 50, 534.8, 593, 1, 0.6, 15.8, 10, 0, 0, 0],
 ]);
 
 const PAR_KEYS = ['level', 'damage', 'maxHP', 'defense', 'attackSuccess', 'attackBlock', 'critChance', 'attributionAttack', 'attributionDefense',
@@ -303,7 +316,7 @@ export function getAXEEnemyStats(level: number = 1, tier: string = 'normal'): St
 // ---- duels -----------------------------------------------------------------------------
 // The combat stats a duelist brings, as the server keeps them. Progression still lives in
 // each player's browser, so these are reported by the client; every field is clamped to
-// what a fully built level-100 hero can have (with headroom), so a tampered client cannot
+// what a fully built hero at the level cap can have (with headroom), so a tampered client cannot
 // bring absurd numbers. Making progression server-owned is what makes them trustworthy.
 const MAX_HERO = AXE_PAR_HERO_TABLE[AXE_PAR_HERO_TABLE.length - 1];
 export const AXE_DUEL_STAT_LIMITS: Readonly<Record<string, number>> = Object.freeze({

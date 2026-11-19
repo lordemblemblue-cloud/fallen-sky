@@ -9,6 +9,9 @@ export const WEAPON_SKILL_PATHS = Object.freeze([
   Object.freeze({ id: 'range', label: 'Bow', role: 'ranged', weapon: 'ranged' }),
   Object.freeze({ id: 'defense', label: 'Guardian', role: 'defensive', weapon: 'guardian' }),
 ]);
+// The last character level that earns weapon skill points. It stays 100 although the hero level
+// cap is now 155: carried on, the formula below would give 994 points and fill all three paths
+// by level 113. Owner question in docs/game3d/LEVEL_CAP_155_20261119.md.
 export const WEAPON_SKILL_CAP = 100;
 export const WEAPON_SKILL_PATH_COST = WEAPON_SKILL_TIERS.reduce((a, b) => a + b, 0);
 const PATH_IDS = WEAPON_SKILL_PATHS.map(p => p.id);

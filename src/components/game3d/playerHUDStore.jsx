@@ -17,6 +17,7 @@ import {
 import { getEquippedTitleAttributeBonuses, getEquippedTitleBonuses, subscribeTitles } from './progression/titleStore';
 import { consumeRestedForGain } from './restedXPStore';
 import { xpForLevel } from './gameWorldConfig';
+import { bankXPAboveCapRaise } from './progression/heroLevelCurve.mjs';
 import { characterScopedStorage, getActiveId, getStorageUser, subscribeCharacterChange } from './characterStorage';
 import { AXE_PRIMARY_STATS, createDefaultAXEPowerProgression, normalizeAXEPowerProgression } from './axe/progression/AXECharacterProgressionConfig';
 import { getRegisteredAXECoreBonuses, subscribeAXECores } from './axe/progression/AXECoreStore';
@@ -280,9 +281,12 @@ const loadState = () => {
       const base = migrateBaseStats(parsed.baseStats);
       const b = getBonuses();
       const derived = computeDerivedWithVanity(base, b);
+      // XP piled up at an older, lower cap is kept, not spent at once: no jump on the next kill.
+      const { xp, xpBankedAtOldCap } = bankXPAboveCapRaise(parsed);
       return {
         level: parsed.level || 1,
-        xp: parsed.xp || 0,
+        xp,
+        xpBankedAtOldCap,
         xpForNext: parsed.xpForNext || xpForLevel(parsed.level || 1), // Infinity is saved as null at the cap
         baseStats: base,
         unspentPoints: parsed.unspentPoints || 0,
@@ -318,6 +322,8 @@ const persist = () => {
     unspentPoints: state.unspentPoints,
     hp: state.hp,
     powerProgression: state.powerProgression,
+    // only heroes who had XP piled up at the old cap carry the key (heroLevelCurve.mjs)
+    ...(state.xpBankedAtOldCap > 0 ? { xpBankedAtOldCap: state.xpBankedAtOldCap } : {}),
   }));
 };
 const emit = () => {
