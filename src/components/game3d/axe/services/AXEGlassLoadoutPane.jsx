@@ -6,8 +6,10 @@ import {
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
-import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
+import { computeAXEItemStatBreakdown, formatAXEItemStatTooltip } from '../equipment/AXEItemStatBreakdown.mjs';
+import AXEItemStatBreakdownList from '../equipment/AXEItemStatBreakdownList';
+import { getAXEWeaponLegacyDamageMultiplier } from '../equipment/AXEWeaponLegacyForge';
 import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
@@ -132,13 +134,25 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const isEquipped = selected && (isPlayer ? !!selected.equipped
     : companion.gear?.[activeCompanion?.id]?.[selected.slot] === selected.id);
   const selectedInstanceId = selected?.instanceId;
-  const enhancementMultiplier = isPlayer && selectedInstanceId
-    ? getAXEEnhancementStatMultiplier({
-      reinforcement: enhancements?.reinforcement?.[selectedInstanceId],
-      enchantments: enhancements?.enchantments?.[selectedInstanceId],
-      overEnchant: enhancements?.overEnchant?.[selectedInstanceId],
-    }) : 1;
-  const itemStats = getAXEEquipmentDisplayStats(selected, enhancementMultiplier);
+  // The item's records from the live stores (this pane re-renders on every Blacksmith change);
+  // its stats come from the same per-item breakdown as combat (Blacksmith v2).
+  const recordsFor = item => item?.instanceId ? {
+    reinforcement: enhancements?.reinforcement?.[item.instanceId],
+    enchantments: enhancements?.enchantments?.[item.instanceId],
+    overEnchant: enhancements?.overEnchant?.[item.instanceId],
+    advancement: advancements?.state?.[item.instanceId] || getAXEAdvancementState(item.instanceId),
+    legacyDamageMultiplier: getAXEWeaponLegacyDamageMultiplier(item),
+  } : 1;
+  const selectedRecords = isPlayer && selectedInstanceId ? recordsFor(selected) : 1;
+  const itemStats = getAXEEquipmentDisplayStats(selected, selectedRecords);
+  const breakdownOf = item => computeAXEItemStatBreakdown(item,
+    isPlayer && item?.instanceId ? recordsFor(item) : { enhancementMultiplier: 1 });
+  const selectedBreakdown = selected ? breakdownOf(selected) : null;
+  // compare with what is worn in the same slot (the selected item's own stats vs the worn one)
+  const wornInSlot = isPlayer && selected && !selected.equipped
+    ? items.find(item => item.equipped && item.slot === selected.slot && item.instanceId !== selected.instanceId) || null
+    : null;
+  const wornBreakdown = wornInSlot ? breakdownOf(wornInSlot) : null;
   const prestigeFor=item=>isPlayer&&item
     ? getAXEFarmingAscendedIdentity(item,
       (advancements?.state?.[item.instanceId]||getAXEAdvancementState(item.instanceId))?.stage?.rank)
@@ -309,7 +323,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
               aria-pressed={selected?.instanceId===item.instanceId}
               onClick={()=>setSelectedId(item.instanceId || item.id)}
               onDoubleClick={()=>{setSelectedId(item.instanceId || item.id);performItem(item);}}
-              title={'Double-click to equip '+item.name}>
+              title={formatAXEItemStatTooltip(breakdownOf(item), { title: item.name })+'\nDouble-click to equip'}>
               <span className="axe-app-inventory-art"><IconFor item={item}/></span>
               <span className="axe-app-inventory-name">{prestigeFor(item)?.displayName||item.name}</span>
               <small>{caption(item.slot)}</small>
@@ -340,10 +354,10 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             </p>}
             {isPlayer && selected.instanceId && getAXEAdvancementState(selected.instanceId)?.stage?.rank > 0 &&
               <p className="axe-app-description">
-                Ascension +{getAXEAdvancementState(selected.instanceId).stage.rank}/4 ·
+                Ascension +{Math.min(4,getAXEAdvancementState(selected.instanceId).stage.rank)}/4 ·
                 {getAXEAdvancementState(selected.instanceId).stage.rank>=4
-                  ?' Prestige aura and enhanced item bonuses unlocked.'
-                  :' Additional sacrifices strengthen this equipment and its matching set.'}
+                  ?' Prestige name and aura unlocked; this item’s own stats are raised.'
+                  :' Each Ascension raises this item’s own stats (set bonuses are unchanged).'}
               </p>}
             {selected.evolutionPath && <p className="axe-app-description">
               Evolution potential: {caption(selected.evolutionPath)} · future Blacksmith recipe required.
@@ -351,17 +365,16 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             {selected.visualPending && <p className="axe-app-description">
               3D model pending · equipment stats, ownership and set progress are active.
             </p>}
-            <h4>Item Stats <small>{isPlayer ? 'Reinforcement + enchantments' : 'Base stats'}</small></h4>
-            {itemStats.map(({stat,base,current,difference})=><div className="axe-app-bonus-row" key={stat}>
-              <span>{caption(stat)}</span><b>+{fmt(current)}
-                {difference !== 0 && <small className="axe-glass-base-stat" title="Value before reinforcement, enchantment and over-enchant">Base +{fmt(base)}</small>}
-              </b>
-            </div>)}
-            {!itemStats.length && <p className="axe-app-description">No stat modifiers on this piece.</p>}
-            {isPlayer && enhancementMultiplier > 1 && <p className="axe-app-description axe-glass-upgrade-preview">
-              Equipment enhancement ×{fmt(enhancementMultiplier)} applied to flat item stats.
-              Other bonuses (gems, soul, sets and advancement) are calculated separately in combat.
+            <h4>Item Stats <small>{isPlayer ? 'Original roll (+ Combine, Enchant, Ascend)' : 'Base stats'}</small></h4>
+            {/* One breakdown for every screen: `Attack 1,000 (+150)`, the effective total and its parts. */}
+            <AXEItemStatBreakdownList rows={selectedBreakdown?.rows || []}
+              compare={wornBreakdown?.rows || null} compareLabel="Equipped"
+              label={'Item stats of '+(selected.name||'equipment')} />
+            {itemStats.some(row => row.difference !== 0) && <p className="axe-app-description axe-glass-upgrade-preview">
+              Each upgrade adds a share of the original roll; nothing multiplies another.
+              Gems, soul, sets and auras are added separately in combat.
             </p>}
+            {wornInSlot && <p className="axe-app-description">Compared with {wornInSlot.name} (equipped in this slot).</p>}
             {isPlayer && <div className="axe-glass-set-display">
               <h4>Equipment Set <small>{equipped.length} equipped</small></h4>
               <div className="axe-glass-ten-slots">
@@ -386,12 +399,6 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
                 {Object.keys(set.conditionalBonuses || {}).length > 0 &&
                   <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>}
-                {set.setId !== AXE_CHOSEN_SET_ID && (set.activeThresholds || []).map(threshold => {
-                  const tier = set.ascensionByThreshold?.[threshold];
-                  return tier ? <small key={threshold} className="axe-glass-set-special">
-                    {threshold}-piece set bonus: Ascension +{tier.rank}/4 · +{tier.bonusPct}% of its original value
-                  </small> : null;
-                })}
                 {set.fullAuraRank > 0 && <small className="axe-glass-set-special">
                   Spiritual full-set aura unlocked · Ascension +{set.fullAuraRank}
                 </small>}

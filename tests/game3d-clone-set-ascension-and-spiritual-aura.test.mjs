@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { transform } from 'esbuild';
+// Blacksmith v2 (owner-approved 2026-11-18; docs/game3d/BLACKSMITH_V2_20261118.md): Ascension
+// raises only the ascended item's own stats; set bonuses are never multiplied by it. The
+// ascension ranks still drive the full-set aura (visual) and the Chosen set's own x2/x3 rule.
 import {
-  getAXESetAscensionTier, scaleAXESetBonus, getAXEFullSetAuraRank,
-  doesAXEStageIncreaseItemStats,
+  getAXEFullSetAuraRank, getAXESetAscensionRank,
 } from '../src/components/game3d/axe/equipment/AXESetAscensionRules.mjs';
 import {
   evaluateAXESetBonuses, getAXESetCombatMultiplier,
 } from '../src/components/game3d/axe/equipment/AXESetBonusSystem.js';
+import { computeAXEItemStatBreakdown } from '../src/components/game3d/axe/equipment/AXEItemStatBreakdown.mjs';
 
 const pieces=(rank=0,count=2,rarity='rare',setId='AXE_Set_Wildhunt') =>
   ['helm','chest','gloves','legs','boots','cape'].slice(0,count).map((slot,i)=>({
@@ -16,25 +19,17 @@ const pieces=(rank=0,count=2,rarity='rare',setId='AXE_Set_Wildhunt') =>
     advancement:{stage:{rank}},
   }));
 
-test('each stage scales the actual existing set bonus by 25% of its original value, not a fixed grant',()=>{
-  for(const [rank,multiplier] of [[0,1],[1,1.25],[2,1.5],[3,1.75],[4,2]]){
-    const tier=getAXESetAscensionTier(pieces(rank),2);
-    assert.equal(tier.multiplier,multiplier);
-    assert.equal(scaleAXESetBonus({maxChi:500,defense:80,skillPoints:3},tier).maxChi,500*multiplier);
-    assert.equal(scaleAXESetBonus({maxChi:500,defense:80},tier).defense,80*multiplier);
-    assert.equal(evaluateAXESetBonuses(pieces(rank)).conditional.mobDamagePct,15*multiplier);
+test('Ascension never scales a set bonus: every rank keeps the authored value',()=>{
+  for(const rank of [0,1,2,3,4]){
+    assert.equal(evaluateAXESetBonuses(pieces(rank)).conditional.mobDamagePct,15);
+    assert.deepEqual(evaluateAXESetBonuses(pieces(rank,4)).stats,{defense:2});
+    assert.equal(getAXESetAscensionRank(pieces(rank)[0]),rank);
   }
-});
-
-test('two matching pieces need to be ascended to improve a two-piece set threshold',()=>{
-  const mixed=pieces(4);
-  mixed[1].advancement.stage.rank=0;
-  assert.equal(getAXESetAscensionTier(mixed,2).multiplier,1);
-  assert.equal(evaluateAXESetBonuses(mixed).conditional.mobDamagePct,15);
-  const extra=pieces(4,4);
-  extra[3].advancement.stage.rank=0;
-  assert.equal(getAXESetAscensionTier(extra,2).multiplier,2);
-  assert.equal(getAXESetAscensionTier(extra,4).multiplier,1);
+  const mixed=pieces(4,4);
+  mixed[3].advancement.stage.rank=0;
+  assert.deepEqual(evaluateAXESetBonuses(mixed).stats,evaluateAXESetBonuses(pieces(0,4)).stats);
+  assert.deepEqual(evaluateAXESetBonuses(mixed).conditional,evaluateAXESetBonuses(pieces(0,4)).conditional);
+  assert.equal(evaluateAXESetBonuses(mixed).activeSets[0].ascensionByThreshold,undefined);
 });
 
 test('set aura requires the whole unique authored set with at least one real Ascension on each piece',()=>{
@@ -49,19 +44,22 @@ test('set aura requires the whole unique authored set with at least one real Asc
   assert.equal(getAXEFullSetAuraRank(mixed,slots),0);
 });
 
-test('Rare, Elite, Legendary Stage upgrades strengthen individual items AND matching set bonuses',()=>{
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'rare'}),true);
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'elite'}),true);
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Wildhunt',rarity:'legendary'}),true);
-  assert.equal(doesAXEStageIncreaseItemStats({setId:'AXE_Set_Chosen',rarity:'chosen'}),false);
-  assert.equal(doesAXEStageIncreaseItemStats({rarity:'elite'}),true);
+test('Rare, Elite, Legendary Ascension strengthens the individual item only; Chosen pieces gain no item stats',()=>{
+  const item=(rarity,setId='AXE_Set_Wildhunt')=>({instanceId:'x',rarity,setId,baseStats:{defense:100}});
+  const at4=(rarity,setId)=>computeAXEItemStatBreakdown(item(rarity,setId),{advancement:{stage:{rank:4}}}).rows[0].ascend;
+  assert.equal(at4('rare'),15);
+  assert.equal(at4('elite'),75);
+  assert.equal(at4('legendary'),100);
+  assert.equal(at4('chosen','AXE_Set_Chosen'),0);
+  assert.equal(at4('common'),0);
 });
 
-test('rare/elite conditional set effects grow in PvE while never applying to PvP or bosses',()=>{
-  assert.equal(getAXESetCombatMultiplier(pieces(4),{pve:true,targetTier:'normal'}),1.3);
+test('rare/elite conditional set effects apply in PvE only, never to PvP or bosses, and never scale with Ascension',()=>{
+  assert.equal(getAXESetCombatMultiplier(pieces(4),{pve:true,targetTier:'normal'}),1.15);
+  assert.equal(getAXESetCombatMultiplier(pieces(0),{pve:true,targetTier:'normal'}),1.15);
   assert.equal(getAXESetCombatMultiplier(pieces(4),{pve:true,targetTier:'boss'}),1);
   assert.equal(getAXESetCombatMultiplier(pieces(4),{pve:false,targetTier:'normal'}),1);
-  assert.equal(getAXESetCombatMultiplier(pieces(4,2,'elite'),{pve:true,targetTier:'normal'}),1.3);
+  assert.equal(getAXESetCombatMultiplier(pieces(4,2,'elite'),{pve:true,targetTier:'normal'}),1.15);
 });
 
 test('Chosen keeps its exclusive six-piece +100/+200% all-stat rules',()=>{
@@ -73,13 +71,13 @@ test('Chosen keeps its exclusive six-piece +100/+200% all-stat rules',()=>{
   assert.equal(evaluateAXESetBonuses(chosen).chosen.bonusPct,100);
 });
 
-test('enhancement percent caps are Common40, Unique45, Rare50, Elite80, Legendary120, Chosen200',async()=>{
+test('Enchant ceilings: every rarity reaches 200 %, Mythic keeps 120 % until the owner decides',async()=>{
   const src=fs.readFileSync('base44/shared/axeItemEnhancement.ts','utf8');
   const js=(await transform(src,{loader:'ts',format:'esm'})).code;
   const {getAXEReinforcementCap}=await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'));
   for(const [rarity,cap] of Object.entries({
-    common:40,uncommon:45,unique:45,rare:50,rare_elite:50,
-    elite:80,elite_set:80,legendary:120,mythic:120,chosen:200,ascendant:200,
+    common:200,uncommon:200,unique:200,rare:200,rare_elite:200,
+    elite:200,elite_set:200,legendary:200,mythic:120,chosen:200,ascendant:200,
   })) assert.equal(getAXEReinforcementCap({rarity,setId:'AXE_Set_Wildhunt'}),cap,rarity);
 });
 
@@ -94,8 +92,8 @@ test('world and combat wire the aura lifecycle and current advancement records',
   assert.match(world,/ascendedGearVisualRuntime\?\.lateUpdate/);
   assert.match(world,/ascendedGearVisualRuntime\?\.dispose/);
   assert.match(combat,/getEquippedAXEItems\(\)\.map\(item/);
-  assert.match(runtime,/doesAXEStageIncreaseItemStats\(item\)/);
-  assert.match(advancement,/Math\.min\(savedReinforcementPercent, getAXEReinforcementCap\(item\)\)/);
+  assert.match(runtime,/computeAXEItemStatBreakdown\(item, records\)/);
+  assert.match(advancement,/resolveAscensionRecord\(current\.stage,item,options\.donor\|\|null/);
   assert.match(visual,/subscribeAXEItemAdvancement/);
   assert.match(visual,/subscribeAXEEquipmentInventory/);
   assert.match(visual,/Spiritual_Ascended_Weapon_Aura/);

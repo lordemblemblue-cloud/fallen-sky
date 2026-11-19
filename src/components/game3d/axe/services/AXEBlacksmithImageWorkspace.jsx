@@ -8,20 +8,22 @@ import {
 } from '../../equipment/enchantmentStore';
 import { getAXEAdvancementState, subscribeAXEItemAdvancement } from '../equipment/AXEItemAdvancementStore';
 import { getAXESocketState, subscribeAXESockets } from '../equipment/AXESocketGemStore';
-import { getAXEEnhancementStatMultiplier, getAXEReinforcementCap } from '../equipment/AXEItemEnhancementSystem';
-import { AXE_ADVANCEMENT_STAT_CONFIG } from '../equipment/AXEEquipmentRuntimeStats';
-import { getNextStage, getAXEAscensionImprintBonus, getAXEEquipmentAscensionBonus, getAXEEquipmentAscensionRateBonus, AXE_EQUIPMENT_ASCENSION_CONFIG } from '../equipment/AXEItemAdvancementSystem';
-import { getAXEServiceOperationPreview, isAXECompatibleDonor } from './AXEServiceWorkspaceModel';
+import { AXE_REINFORCEMENT_CONFIG, getAXEReinforcementCap } from '../equipment/AXEItemEnhancementSystem';
+import { getAXEOwnedItemStatBreakdown } from '../equipment/AXEEquipmentRuntimeStats';
+import { axeBreakdownAttack, formatAXEFlatNumber, formatAXEItemStatTooltip } from '../equipment/AXEItemStatBreakdown.mjs';
+import AXEItemStatBreakdownList from '../equipment/AXEItemStatBreakdownList';
+import {
+  AXE_COMBINE_CONFIG, AXE_EQUIPMENT_ASCENSION_CONFIG, getAXEAscensionMaxBonus, isAXEAscensionRarity, isAXELegacyStageRarity,
+} from '../equipment/AXEItemAdvancementSystem';
+import { describeAXEDonorReason, getAXEServiceOperationPreview, isAXEAscensionDonor, isAXECompatibleDonor } from './AXEServiceWorkspaceModel';
 import { executeAXEServiceTransaction } from './AXEServiceTransactionGateway';
 import { getAXEServiceResourceCount, getAXEServiceResourceCategory } from './AXEServiceResources';
-import { getAXEOverEnchantCost } from './AXEServiceEconomy';
+import { getAXEOverEnchantCost, getAXEReinforcementCost } from './AXEServiceEconomy';
 import { getActiveId, getStorageUser, subscribeCharacterChange } from '../../characterStorage';
 import { isSafeCombineDonor, filterForgeInventory, runBlacksmithAutoBatch } from './AXEBlacksmithAutoForge';
 import AXEBlacksmithWorkflowPanel from './AXEBlacksmithWorkflowPanel';
 import AXEWeaponLegacyForgePane from './AXEWeaponLegacyForgePane';
-import { getAXEWeaponLegacyDamageMultiplier } from '../equipment/AXEWeaponLegacyForge';
-import {isAXEFarmingRarity,getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
-import {validateAXEAscensionFeed,previewAXEAscensionFeed} from '../equipment/AXEAscensionFeedingRules.mjs';
+import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import AXEGemForgePane from './AXEGemForgePane';
 import { AXE_GEM_DEFINITIONS } from '../equipment/AXESocketGemSystem';
 import AXECoreForgePane from './AXECoreForgePane';
@@ -67,73 +69,39 @@ function InventorySymbol({ item }) {
 
 const MATERIAL_NAMES = new Map(MATERIALS.map(entry => [entry.id, entry.name]));
 const BLACKSMITH_TABS = [
-  { id: 'enchant', label: 'Enchant', operation: 'enchant', Icon: ArrowUpRight },
+  { id: 'enchant', label: 'Enchant', operation: 'reinforcement', Icon: ArrowUpRight },
   { id: 'over_enchant', label: 'Over-Enchant', operation: 'over_enchant', Icon: Zap },
-  { id: 'combine', label: 'Combine Stage', operation: 'combine', Icon: Layers },
+  { id: 'combine', label: 'Combine', operation: 'combine', Icon: Layers },
   { id: 'ascend', label: 'Ascend', operation: 'stage', Icon: Diamond },
   { id: 'sockets', label: 'Sockets & Gems', operation: 'sockets', Icon: Gem },
   { id: 'core', label: 'Core', operation: 'core', Icon: CircleDot },
   { id: 'runes', label: 'Ultimate', operation: 'runes', Icon: Sparkles },
 ];
+// Blacksmith v2 (docs/game3d/BLACKSMITH_V2_20261118.md)
 const OPERATION_DESCRIPTIONS = {
-  enchant: 'Strengthen individual enchantment slots on this equipment.',
+  enchant: 'Enchant 0–200 %: each success adds 5 points. A failure loses 3 points (never below 0 %) and never breaks the item. The four +10 slots and Over-Enchant also add to the item and its enchant light.',
   over_enchant: 'Further enhance equipment after every enchantment slot reaches its maximum.',
-  combine: 'Combine Stage 1–12 remains unchanged. Weapon Legacy is a separate 4-weapon or 12-piece reward below.',
-  ascend: 'Sacrifice same-rarity, same-slot equipment to grow Ascension I–IV. Higher-level donors can skip stages; each level records your Reinforcement.',
+  combine: 'Combine +0–12 with a donor of the same rarity, item level, slot and type. Each stage adds 2 % of the original stats. A failure keeps the stage and the donor. Weapon Legacy is a separate reward below.',
+  ascend: 'Ascension +0–4 for Rare, Elite and Legendary: one donor per attempt (same rarity and type, item level equal or lower). It raises this item’s own stats only; a failure keeps the donor and the rank.',
   sockets: 'Open a socket and insert a compatible owned gem using the existing forge controls.',
 };
 const asNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
 const fmt = value => value == null || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString();
+const fmtStat = value => value == null || !Number.isFinite(Number(value)) ? '—' : formatAXEFlatNumber(value);
+const pctText = chance => chance == null ? '—' : (Math.round(Number(chance) * 1000) / 10) + '%';
 const itemArt = item => item?.imageUrl || item?.iconUrl || item?.image || null;
+// the service a tab runs: the Enchant tab runs the Enchant % (reinforcement) or the four slots
+export const blacksmithOperationFor = (tab, enchantMode = 'percent') =>
+  tab === 'enchant' ? (enchantMode === 'slots' ? 'enchant' : 'reinforcement') : tab === 'ascend' ? 'stage' : tab;
+// hover text for an owned item: its stats from the one breakdown (`Attack 1,000 (+150) = 1,150`)
+const itemTooltip = item => {
+  try { return formatAXEItemStatTooltip(getAXEOwnedItemStatBreakdown(item), { title: item.name }); } catch { return item?.name || ''; }
+};
 
-// Read the real item plus the SAME enhancement and advancement coefficients as
-// combat. A gear item's attack is not a fictitious generic "power" score.
-const ATTACK_KEYS = ['attack', 'damage', 'attackPower', 'physicalAttack', 'maxAtk'];
-function itemAttackBase(item) {
-  const stats = { ...item.baseStats };
-  for (const [key, value] of Object.entries(item.rolledStats || {})) {
-    stats[key] = (Number(stats[key]) || 0) + (Number(value) || 0);
-  }
-  const key = ATTACK_KEYS.find(name => Number.isFinite(Number(stats[name])));
-  return key ? Number(stats[key]) : null;
-}
-
-// This selection is based on the item's real stat keys, not an invented
-// generic Power score. Flat stats use core scaling; rate stats get only the
-// strictly capped Ascension rate adjustment used by live combat.
-const ASCENSION_STAT_KEYS = Object.freeze([
-  ...ATTACK_KEYS, 'defense', 'defensePower', 'hp', 'maxHP',
-  'strength', 'dexterity', 'constitution', 'focus', 'spirit',
-  'critChance', 'criticalChance', 'critDamage', 'criticalDamage',
-]);
-const ASCENSION_RATE_KEYS = new Set(['critChance','criticalChance','critDamage','criticalDamage']);
-function ascensionStatPreview(item, enhancement, current, projected, canProject) {
-  const stats = { ...(item?.baseStats || {}) };
-  for (const [key, raw] of Object.entries(item?.rolledStats || {})) {
-    stats[key] = (Number(stats[key]) || 0) + (Number(raw) || 0);
-  }
-  const key = ASCENSION_STAT_KEYS.find(k => Number.isFinite(Number(stats[k])));
-  if (!key) return null;
-  const value = Number(stats[key]);
-  const isRate = ASCENSION_RATE_KEYS.has(key);
-  const currentScale = isRate ? 1 + getAXEEquipmentAscensionRateBonus(current.stage)
-    : enhancement * advancementScale(current);
-  const nextScale = isRate ? 1 + getAXEEquipmentAscensionRateBonus(projected.stage)
-    : enhancement * advancementScale(projected);
-  return { label: key, isRate,
-    current: Math.round(value * currentScale * 100) / 100,
-    next: canProject ? Math.round(value * nextScale * 100) / 100 : null };
-}
-
-function advancementScale(state) {
-  return 1
-    + Number(state.combine?.count || 0) * AXE_ADVANCEMENT_STAT_CONFIG.combinePerSuccess
-    + getAXEEquipmentAscensionBonus(state.stage)
-    + Number(state.refine?.level || 0) * AXE_ADVANCEMENT_STAT_CONFIG.refinePerLevel
-    + Number(state.ultimate?.level || 0) * AXE_ADVANCEMENT_STAT_CONFIG.ultimatePerLevel;
-}
-
-export function getAXEBlacksmithReadout(item, operation = 'enchant', donor = null) {
+// The forge readout: the item's stats from the SAME per-item breakdown combat uses, now and
+// after a successful attempt of `operation` (Blacksmith v2: every upgrade adds a share of the
+// original roll; nothing compounds).
+export function getAXEBlacksmithReadout(item, operation = 'reinforcement', donor = null) {
   if (!item?.instanceId) return null;
   const id = item.instanceId;
   const enchantments = getItemEnchantments(id);
@@ -149,66 +117,79 @@ export function getAXEBlacksmithReadout(item, operation = 'enchant', donor = nul
     enchantCost: getCostForNextLevel(enchantments[selectedSlot] || 0),
     donor,
   });
-  const before = getAXEEnhancementStatMultiplier({ reinforcement, enchantments, overEnchant });
-  const nextEnchantments = [...enchantments];
-  let projectedOver = overEnchant;
-  let projectedAdvancement = advancement;
-  let canProject = Boolean(preview.canAdvance);
-  if (operation === 'enchant' && nextEnchantSlot >= 0) {
-    nextEnchantments[nextEnchantSlot] = Number(nextEnchantments[nextEnchantSlot] || 0) + 1;
+  const combineStage = Number(advancement.combine?.count || 0);
+  const rank = Number(advancement.stage?.rank || 0);
+  // the records after a SUCCESS (Combine and Ascend project even before a donor is chosen)
+  let projected = null;
+  if (operation === 'reinforcement' && preview.canAdvance) {
+    projected = { reinforcement: { ...reinforcement, percent: preview.nextPercent } };
+  } else if (operation === 'enchant' && nextEnchantSlot >= 0) {
+    const next = [...enchantments];
+    next[nextEnchantSlot] = Number(next[nextEnchantSlot] || 0) + 1;
+    projected = { enchantments: next };
   } else if (operation === 'over_enchant' && preview.canAdvance) {
-    projectedOver = { ...overEnchant, level: Number(overEnchant.level || 0) + 1 };
-  } else if ((operation === 'stage' || operation === 'ascend') && preview.canAdvance) {
-    const projectedRank=preview.feedPreview?.nextRank??(Number(advancement.stage?.rank||0)+1);
-    const pct = Math.min(Number(reinforcement.percent||0),getAXEReinforcementCap(item));
-    let stage=advancement.stage;
-    for(let rank=Number(stage?.rank||0)+1;rank<=projectedRank;rank++){
-      const next=getNextStage(stage);
-      if(!next)break;
-      const imprint={rank:next.rank,reinforcementPercent:pct,
-        bonus:getAXEAscensionImprintBonus(next.rank,pct),
-        ruleVersion:AXE_EQUIPMENT_ASCENSION_CONFIG.ruleVersion};
-      stage={...stage,...next,imprints:[...(stage?.imprints||[]),imprint]};
-    }
-    projectedAdvancement={...advancement,stage};
-  } else if (operation === 'combine' || operation === 'sockets') {
-    // Donor/gem/ascension effects are not calculated from made-up numbers.
-    canProject = false;
+    projected = { overEnchant: { ...overEnchant, level: Number(overEnchant.level || 0) + 1 } };
+  } else if (operation === 'combine' && combineStage < AXE_COMBINE_CONFIG.maxCombines) {
+    projected = { advancement: { ...advancement, combine: { count: combineStage + 1 } } };
+  } else if (operation === 'stage' && isAXEAscensionRarity(item) && rank < AXE_EQUIPMENT_ASCENSION_CONFIG.maxAscensions) {
+    projected = { advancement: { ...advancement, stage: { ...advancement.stage, rank: rank + 1 } } };
   }
-  const after = getAXEEnhancementStatMultiplier({
-    reinforcement, enchantments: nextEnchantments, overEnchant: projectedOver,
-  });
-  const attackBase = itemAttackBase(item);
-  const currentAttack = attackBase === null ? null :
-    Math.round(attackBase * before * advancementScale(advancement) * getAXEWeaponLegacyDamageMultiplier(item));
-  const projectedAttack = currentAttack === null || !canProject ? null :
-    Math.round(attackBase * after * advancementScale(projectedAdvancement) * getAXEWeaponLegacyDamageMultiplier(item));
+  const breakdown = getAXEOwnedItemStatBreakdown(item);
+  const after = projected ? getAXEOwnedItemStatBreakdown(item, projected) : null;
   const enchantTotal = enchantments.reduce((sum, level) => sum + Number(level || 0), 0);
   const slotCapacity = enchantments.length * MAX_ENCH_LEVEL;
-  const statPreview = ascensionStatPreview(item, before, advancement,
-    projectedAdvancement, canProject && (operation === 'stage' || operation === 'ascend'));
+  const attack = axeBreakdownAttack(breakdown);
+  const projectedAttack = after ? axeBreakdownAttack(after) : null;
   return {
     itemLevel: Number(item.itemLevel ?? item.level ?? 1),
     enchantSlot: selectedSlot,
-    currentAttack, projectedAttack,
-    enchantTotal, projectedEnchant: canProject && operation === 'enchant' ? enchantTotal + 1 : enchantTotal,
+    currentAttack: attack, projectedAttack: projectedAttack != null && projectedAttack !== attack ? projectedAttack : null,
+    statRows: breakdown.rows, projectedRows: after?.rows || null, sources: breakdown.sources,
+    enchantTotal, projectedEnchant: operation === 'enchant' && nextEnchantSlot >= 0 ? enchantTotal + 1 : enchantTotal,
     chance: preview.chance, cost: preview.cost || {},
     overEnchantLevel: Number(overEnchant.level || 0),
-    // The original meter says "Ascension Readiness": represent the owned
-    // item's persisted stage, not an imaginary ascension or enchant score.
-    readiness: Math.min(100, Math.max(0, Number(advancement.stage?.rank || 0) / 4 * 100)),
+    // "Ascension Readiness": the owned item's persisted rank, not an invented score
+    readiness: Math.min(100, Math.max(0, rank / 4 * 100)),
     enchantTotalMax: slotCapacity,
     stage: advancement.stage?.label || 'Base',
-    stageRank: Math.min(4, Number(advancement.stage?.rank || 0)),
-    legacyStage: Number(advancement.stage?.rank || 0) > 4,
-    ascensionBonus: getAXEEquipmentAscensionBonus(advancement.stage),
-    nextAscensionBonus: preview?.nextAscensionGain ?? null,
-    ascensionStatPreview: statPreview,
+    stageRank: Math.min(4, rank),
+    legacyStage: rank > 4,
+    combineStage,
+    ascendMaxPct: getAXEAscensionMaxBonus(item) * 100,
     reinforcementPercent: Number(reinforcement.percent || 0),
     reinforcementCap: getAXEReinforcementCap(item),
     preview,
   };
 }
+
+// what the forge says after an attempt: the result in the item's own numbers
+function describeForgeResult(operation, result, before, after) {
+  if (!result) return 'Forging could not be completed.';
+  if (!result.ok && !result.outcome) {
+    const reason = String(result.message || describeAXEDonorReason(result.reason) || 'Forging could not be completed.');
+    return 'Not completed — ' + reason.replaceAll('_', ' ');
+  }
+  if (operation === 'reinforcement') {
+    return result.ok ? `Success: Enchant ${before.percent}% → ${after.percent}%.`
+      : result.outcome === 'protected' ? `Failed: the Stabilizer kept Enchant at ${after.percent}%.`
+        : `Failed: Enchant ${before.percent}% → ${after.percent}%. The item is intact.`;
+  }
+  if (operation === 'combine') {
+    return result.ok ? `Success: Combine +${before.combine} → +${after.combine}. The donor was used up.`
+      : `Failed: Combine stays +${after.combine}. The donor was kept.`;
+  }
+  if (operation === 'stage') {
+    if (result.legacy) return `Chosen stage +${before.rank} → +${after.rank}.`;
+    return result.ok ? `Success: Ascension +${before.rank} → +${after.rank}. The donor was used up.`
+      : `Failed: Ascension stays +${after.rank}. The donor was kept.`;
+  }
+  return result.ok ? 'Forging completed.' : String(result.outcome || 'Forging could not be completed.').replaceAll('_', ' ');
+}
+const recordsOf = id => ({
+  percent: Number(getItemReinforcement(id)?.percent || 0),
+  combine: Number(getAXEAdvancementState(id)?.combine?.count || 0),
+  rank: Number(getAXEAdvancementState(id)?.stage?.rank || 0),
+});
 
 // Rebuild the canonical preview from owned state before EVERY batch attempt.
 function liveAutoPreview(serviceId, item, donor = null, protectedAttempt = false) {
@@ -225,6 +206,8 @@ function liveAutoPreview(serviceId, item, donor = null, protectedAttempt = false
     canAdvance: preview.canAdvance && (serviceId !== 'over_enchant' || isReadyToOverenchant(id)),
   };
 }
+// operations whose failure a Stabilizer can protect
+const PROTECTABLE = new Set(['reinforcement', 'over_enchant']);
 
 export default function AXEBlacksmithImageWorkspace({
   mode, onClose, stationMessage = '', EquipmentPanel, ProgressionPanel, onSelectedItem, onTransaction,
@@ -248,6 +231,9 @@ export default function AXEBlacksmithImageWorkspace({
   const [confirmCombine, setConfirmCombine] = useState(false);
   const [forgeNotice, setForgeNotice] = useState('');
   const [tab, setTab] = useState(initialTab);
+  // The Enchant tab: the item's Enchant % (reinforcement, 0–200; shown first, Blacksmith v2)
+  // or its four +10 slots, one switch away in the same tab
+  const [enchantMode, setEnchantMode] = useState('percent');
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [autoProtection, setAutoProtection] = useState(false);
   const [minSuccess, setMinSuccess] = useState(90);
@@ -279,20 +265,28 @@ export default function AXEBlacksmithImageWorkspace({
   useEffect(() => () => { cancelledBatch.current = true; }, []);
   useEffect(() => {
     if (['enchant','over_enchant','combine','sockets','core'].includes(mode.serviceId)) setTab(mode.serviceId);
+    else if (mode.serviceId === 'reinforcement') setTab('enchant');
     else if (mode.serviceId === 'stage') setTab('ascend');
     else if (mode.serviceId === 'ultimate' || mode.serviceId === 'runes') setTab('runes');
+    if (mode.serviceId === 'reinforcement') setEnchantMode('percent');
   }, [mode.serviceId]);
   useEffect(() => {
     if (selectedId && !items.some(item => item.instanceId === selectedId)) setSelectedId('');
     if (donorId && !items.some(item => item.instanceId === donorId)) setDonorId('');
   }, [items, selectedId, donorId]);
-  useEffect(() => { setConfirmCombine(false); setForgeNotice(''); }, [tab, selectedId, donorId]);
+  // a used-up donor leaves the donor slot; the forge's result message stays on screen
+  const keepNoticeRef = useRef(false);
+  useEffect(() => {
+    setConfirmCombine(false);
+    if (keepNoticeRef.current) { keepNoticeRef.current = false; return; }
+    setForgeNotice('');
+  }, [tab, enchantMode, selectedId, donorId]);
   useEffect(() => {
     cancelledBatch.current = true;
     setBatchPending(false);
     setSelectedMaterialId('');
     setShowAll(false);
-  }, [tab, selectedId]);
+  }, [tab, enchantMode, selectedId]);
 
   const selectedItem = items.find(item => item.instanceId === selectedId) || null;
   const donorItem = items.find(item => item.instanceId === donorId && item.instanceId !== selectedId) || null;
@@ -320,10 +314,13 @@ export default function AXEBlacksmithImageWorkspace({
   const overReady = Boolean(selectedItem && isReadyToOverenchant(selectedItem.instanceId));
   // Recompute persisted enchantment, stage and gem previews on their subscriptions.
   void revision;
-  // Ascend reuses the existing server-compatible Stage I-V transaction.
+  // The service this tab runs (Enchant tab: Enchant % or slots; Ascend: the stage service).
+  const operation = blacksmithOperationFor(tab, enchantMode);
+  const percentMode = operation === 'reinforcement';
   const forgeTab = ['enchant','over_enchant','combine','sockets','ascend'].includes(tab);
-  const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, tab === 'ascend' ? 'stage' : tab,
+  const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, operation,
     tab === 'combine' || tab === 'ascend' ? donorItem : null) : null;
+  const ascendEligible = Boolean(selectedItem && isAXEAscensionRarity(selectedItem));
   const progressState = selectedItem ? getAXEAdvancementState(selectedItem.instanceId) : null;
   const prestigeStyle=selectedItem ? getAXEFarmingAscendedIdentity(selectedItem,progressState?.stage?.rank) : null;
   const socketState = selectedItem ? getAXESocketState(selectedItem.instanceId) : null;
@@ -333,9 +330,8 @@ export default function AXEBlacksmithImageWorkspace({
     ? items.filter(candidate => isSafeCombineDonor(selectedItem, candidate,
       (target, donor) => isAXECompatibleDonor(target, donor, progressState)))
     : [], [items, selectedId, tab, revision]);
-  const ascensionDonors=useMemo(()=>selectedItem && tab==='ascend' &&
-    isAXEFarmingRarity(selectedItem.rarity)
-      ? items.filter(candidate=>validateAXEAscensionFeed(selectedItem,candidate).ok)
+  const ascensionDonors=useMemo(()=>selectedItem && tab==='ascend' && isAXEAscensionRarity(selectedItem)
+      ? items.filter(candidate=>isAXEAscensionDonor(selectedItem,candidate))
       :[],[items,selectedId,tab,revision]);
   useEffect(() => {
     if (tab !== 'combine' || !autoEnabled || !selectedItem || batchBusy) return;
@@ -344,13 +340,14 @@ export default function AXEBlacksmithImageWorkspace({
   }, [tab, autoEnabled, selectedId, donorId, items, revision, batchBusy]);
   const relevantCost = readout ? {
     ...(readout.cost || {}),
-    ...(tab === 'over_enchant' && autoProtection &&
+    ...(PROTECTABLE.has(operation) && autoProtection &&
       Number(readout.chance) < minSuccess / 100 ? {
-        mat_protection: getAXEOverEnchantCost(getItemOverEnchant(selectedId)?.level,
-          { protectedAttempt: true }).mat_protection,
+        mat_protection: (operation === 'over_enchant'
+          ? getAXEOverEnchantCost(getItemOverEnchant(selectedId)?.level, { protectedAttempt: true })
+          : getAXEReinforcementCost(getItemReinforcement(selectedId)?.percent, { protectedAttempt: true })).mat_protection,
       } : {}),
   } : {};
-  const inventoryRelevantCost = tab === 'over_enchant' ? { ...relevantCost, mat_protection: 1 } : relevantCost;
+  const inventoryRelevantCost = PROTECTABLE.has(operation) ? { ...relevantCost, mat_protection: 1 } : relevantCost;
   const materialRequirements = Object.entries(relevantCost).map(([id, required]) =>
     [id, required, getAXEServiceResourceCount(id)]);
   const stagedMaterial = materialStacks.find(item => item.id === selectedMaterialId) || null;
@@ -359,7 +356,7 @@ export default function AXEBlacksmithImageWorkspace({
     .filter(Boolean))].sort(), [items]);
   const displayed = useMemo(() => {
     if (workflowMode && selectedItem && !showAll) return filterForgeInventory({
-      mode: tab, target: selectedItem, items, materialStacks, required: inventoryRelevantCost,
+      mode: operation, target: selectedItem, items, materialStacks, required: inventoryRelevantCost,
       resourceCategory: getAXEServiceResourceCategory,
       compatible: (target, donor) => isAXECompatibleDonor(target, donor, progressState),
     });
@@ -385,28 +382,32 @@ export default function AXEBlacksmithImageWorkspace({
     const stacks = (filter === 'All' || filter === 'Materials')
       && kindFilter !== 'Equipment' && rarityFilter === 'All' ? materialStacks : [];
     return [...equipment, ...stacks];
-  }, [items, materialStacks, filter, kindFilter, rarityFilter, selectedId, tab, showAll, revision, autoProtection, minSuccess, socketFilter, socketMode]);
+  }, [items, materialStacks, filter, kindFilter, rarityFilter, selectedId, tab, operation, showAll, revision, autoProtection, minSuccess, socketFilter, socketMode]);
   const gridSlots = Array.from({ length: Math.max(200, displayed.length) }, (_, index) => displayed[index] || null);
   const selectedTab = BLACKSMITH_TABS.find(entry => entry.id === tab) || BLACKSMITH_TABS[0];
-  const currentStage = progressState?.stage?.label || 'Base';
   const progress = selectedItem ? Math.max(0, Math.min(100, asNumber(progressState?.stage?.rank) / 4 * 100)) : 0;
   const percent = readout?.chance == null ? null : Math.round(readout.chance * 100);
   const status = !selectedItem ? 'Choose a piece of equipment from Inventory'
     : tab === 'over_enchant' && !overReady ? 'Finish standard Enchant before Over-Enchant'
     : tab === 'combine' && !donorItem ? 'Choose a separate matching donor in the second square'
-    : tab === 'ascend' && selectedItem && isAXEFarmingRarity(selectedItem.rarity) && !donorItem ? 'Choose matching equipment to sacrifice'
+    : tab === 'ascend' && ascendEligible && !donorItem && readout?.preview?.nextRank ? 'Choose matching equipment to sacrifice'
     : readout?.preview?.reason && !readout.preview.canAdvance ? readout.preview.reason
     : readout?.preview?.outcome || 'Ready to review forge requirements';
   const currentValue = tab === 'ascend' ? Math.min(4, asNumber(progressState?.stage?.rank))
     : tab === 'combine' ? asNumber(progressState?.combine?.count)
     : tab === 'sockets' ? asNumber(socketState?.sockets?.length)
     : tab === 'over_enchant' ? asNumber(getItemOverEnchant(selectedId)?.level)
+    : percentMode ? asNumber(readout?.reinforcementPercent)
     : readout?.enchantTotal || 0;
   const nextValue = tab === 'ascend'
-    ? (readout?.preview?.canAdvance ? (readout.preview.feedPreview?.nextRank ?? currentValue+1) : null)
-    : tab === 'combine' || tab === 'sockets' || tab === 'over_enchant'
+    ? (readout?.preview?.nextRank ?? null)
+    : tab === 'combine' ? (currentValue < AXE_COMBINE_CONFIG.maxCombines ? currentValue + 1 : null)
+    : tab === 'sockets' || tab === 'over_enchant'
     ? (readout?.preview?.canAdvance ? currentValue + 1 : null)
+    : percentMode ? (readout?.preview?.canAdvance ? readout.preview.nextPercent : null)
     : tab === 'enchant' ? readout?.projectedEnchant : null;
+  const valueText = value => value == null ? '—'
+    : tab === 'ascend' ? '+' + fmt(value) : percentMode ? fmt(value) + '%' : '+' + fmt(value);
 
   const pickTab = next => {
     cancelledBatch.current = true;
@@ -434,7 +435,7 @@ export default function AXEBlacksmithImageWorkspace({
           Object.hasOwn(inventoryRelevantCost, entry.id)) setSelectedMaterialId(entry.id);
       return;
     }
-    if(tab==='ascend' && selectedItem && validateAXEAscensionFeed(selectedItem,entry).ok)
+    if(tab==='ascend' && selectedItem && isAXEAscensionDonor(selectedItem,entry))
       setDonorId(entry.instanceId);
     else if (tab === 'combine' && selectedItem && entry.instanceId !== selectedId &&
         isSafeCombineDonor(selectedItem, entry, (target, donor) =>
@@ -475,26 +476,29 @@ export default function AXEBlacksmithImageWorkspace({
     && (tab !== 'combine' || (!!donorItem &&
       isSafeCombineDonor(selectedItem, donorItem,
         (target, donor) => isAXECompatibleDonor(target, donor, progressState))))
+    && (tab !== 'ascend' || !ascendEligible || (!!donorItem && isAXEAscensionDonor(selectedItem, donorItem)))
     && !!readout?.preview?.canAdvance;
   const beginForge = async () => {
     if (!canForge || forging || batchRunningRef.current) return;
-    if ((tab === 'combine' || (tab==='ascend' && isAXEFarmingRarity(selectedItem.rarity))) && !confirmCombine) {
+    if ((tab === 'combine' || (tab==='ascend' && ascendEligible)) && !confirmCombine) {
       setConfirmCombine(true);
-      setForgeNotice(tab === 'ascend' ? 'Ascension permanently sacrifices the selected donor. Press Forge again to confirm.' : 'A successful combine consumes the donor. Confirm to begin forging.');
+      setForgeNotice((readout?.preview?.confirmation || (tab === 'ascend'
+        ? 'A successful Ascension uses up the donor; a failure keeps it.'
+        : 'A successful Combine uses up the donor; a failure keeps it.')) + ' Press Forge again to confirm.');
       return;
     }
     setForging(true);
     setForgeNotice('Forging…');
     try {
-      const result = await executeAXEServiceTransaction(tab === 'ascend' ? 'stage' : tab, {
+      const before = recordsOf(selectedItem.instanceId);
+      const result = await executeAXEServiceTransaction(operation, {
         itemId: selectedItem.instanceId,
         ...(['combine','ascend'].includes(tab) && donorItem ? { donorId: donorItem.instanceId } : {}),
-        ...(tab === 'enchant' ? { slotIndex: readout.enchantSlot } : {}),
+        ...(operation === 'enchant' ? { slotIndex: readout.enchantSlot } : {}),
       });
       onTransaction?.(result);
-      setForgeNotice(result.outcome || result.message || result.reason?.replaceAll('_', ' ')
-        || (result.ok ? 'Forging completed.' : 'Forging could not be completed.'));
-      if (result.donorConsumed) setDonorId('');
+      setForgeNotice(describeForgeResult(operation, result, before, recordsOf(selectedItem.instanceId)));
+      if (result.donorConsumed) { keepNoticeRef.current = true; setDonorId(''); }
       setRevision(current => current + 1);
     } catch (error) {
       setForgeNotice(error?.message || 'Forging could not be completed.');
@@ -517,7 +521,7 @@ export default function AXEBlacksmithImageWorkspace({
     setForgeNotice('Processing confirmed batch…');
     try {
       const completed = await runBlacksmithAutoBatch({
-        mode: tab, targetId: selectedItem.instanceId,
+        mode: operation, targetId: selectedItem.instanceId,
         getTarget: id => getAllAXEEquipmentItems().find(item => item.instanceId === id),
         getDonors: getAllAXEEquipmentItems,
         compatible: (target, donor) => isAXECompatibleDonor(
@@ -536,7 +540,7 @@ export default function AXEBlacksmithImageWorkspace({
         },
         onAttempt: ({ result, attempts, donorId: consumedId }) => {
           setRevision(value => value + 1);
-          if (result?.donorConsumed && consumedId) setDonorId('');
+          if (result?.donorConsumed && consumedId) { keepNoticeRef.current = true; setDonorId(''); }
           setForgeNotice('Attempt ' + attempts + ': ' +
             (result?.message || result?.outcome || result?.reason || 'completed'));
         },
@@ -585,7 +589,9 @@ export default function AXEBlacksmithImageWorkspace({
       {tab === 'core' && <AXECoreForgePane />}
       {tab === 'runes' && <AXERuneForgePane />}
       {workflowMode && <AXEBlacksmithWorkflowPanel
-        mode={tab} target={selectedItem} donor={donorItem}
+        mode={tab} operation={operation} enchantMode={enchantMode}
+        onChangeEnchantMode={next => { if (!batchRunningRef.current) { setEnchantMode(next); setAutoEnabled(false); } }}
+        target={selectedItem} donor={donorItem}
         compatibleDonors={compatibleDonors} requirements={materialRequirements}
         selectedMaterial={stagedMaterial} materialSelection={selectedMaterialId}
         readout={readout} canForge={canForge} confirmCombine={confirmCombine}
@@ -671,7 +677,7 @@ export default function AXEBlacksmithImageWorkspace({
           aria-pressed={tab === 'sockets' && entry.resourceCategory === 'gem'
             ? (socketMode === 'upgrade' && socketSelectionTarget === 'donor'
               ? socketDonorGemId === entry.id : socketGemId === entry.id)
-            : !entry.material && (selectedId === entry.instanceId || (tab === 'combine' && donorId === entry.instanceId))}
+            : !entry.material && (selectedId === entry.instanceId || ((tab === 'combine' || tab === 'ascend') && donorId === entry.instanceId))}
           draggable={!entry.material}
           onDragStart={event => {
             if (!entry.material) {
@@ -682,7 +688,7 @@ export default function AXEBlacksmithImageWorkspace({
           }}
           onClick={() => selectItem(entry)} onDoubleClick={() => selectItem(entry)}
           onContextMenu={event => contextSelect(event, entry)}
-          title={(entry.name || entry.id) + ' — right-click to place in Forge'}>
+          title={(entry.material ? (entry.name || entry.id) : itemTooltip(entry)) + '\nRight-click to place in Forge'}>
           {entry.gemIcon && tab === 'sockets' ? <span className="axe-blacksmith-gem-icon" aria-hidden="true">{entry.gemIcon}</span>
             : itemArt(entry) ? <img className="axe-blacksmith-item-image" src={itemArt(entry)}
             alt="" loading="lazy" /> : <InventorySymbol item={entry} />}
@@ -740,18 +746,26 @@ export default function AXEBlacksmithImageWorkspace({
             <b>{selectedItem ? 'Lv. ' + fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1) : '—'}</b>
           </div>
           <div className="axe-blacksmith-dynamic-row">
-            <span>{tab === 'combine' ? 'Combine count' : tab === 'sockets' ? 'Sockets opened'
-              : tab === 'over_enchant' ? 'Over-Enchant' : tab === 'ascend' ? 'Equipment Stage' : 'Enchantment'}</span>
-            <b>{selectedItem ? (tab === 'ascend' ? 'Stage ' : '+') + fmt(currentValue) : '—'}</b>
+            <span>{tab === 'combine' ? 'Combine' : tab === 'sockets' ? 'Sockets opened'
+              : tab === 'over_enchant' ? 'Over-Enchant' : tab === 'ascend' ? 'Ascension'
+                : percentMode ? 'Enchant' : 'Enchant slots'}</span>
+            <b>{selectedItem ? valueText(currentValue) : '—'}</b>
             <span className="axe-blacksmith-arrow">→</span>
-            <b>{nextValue == null ? '—' : (tab === 'ascend' ? 'Stage ' : '+') + fmt(nextValue)}</b>
+            <b>{valueText(nextValue)}</b>
           </div>
+          {percentMode && selectedItem && readout?.preview?.canAdvance && <div className="axe-blacksmith-dynamic-row">
+            <span>On a failure</span><b>{fmt(readout.preview.failurePercent)}%</b>
+            <span className="axe-blacksmith-arrow" aria-hidden="true"> </span><b>never breaks</b>
+          </div>}
           <div className="axe-blacksmith-dynamic-row">
-            <span>Attack</span><b>{fmt(readout?.currentAttack)}</b>
+            <span>Attack</span><b>{fmtStat(readout?.currentAttack)}</b>
             <span className="axe-blacksmith-arrow">→</span>
-            <b>{fmt(readout?.projectedAttack)}</b>
+            <b>{fmtStat(readout?.projectedAttack)}</b>
           </div>
           <p className="axe-blacksmith-operation-hint" role="status">{forgeNotice || status}</p>
+          {selectedItem && <AXEItemStatBreakdownList rows={readout?.statRows || []}
+            projected={readout?.projectedRows} label="Item stats now and after a success"
+            className="axe-blacksmith-stat-breakdown" />}
         </div>
         <div className="axe-blacksmith-materials-block">
           <strong>Required Materials</strong>
@@ -762,9 +776,9 @@ export default function AXEBlacksmithImageWorkspace({
               <b className={owned < required ? 'is-short' : ''}>{fmt(owned)} / {fmt(required)}</b>
             </div>;
           }) : <p>{!selectedItem ? 'Select owned equipment to display its real costs.'
-            : tab === 'combine' ? 'Choose a matching donor in the second slot.'
-            : tab === 'ascend' && selectedItem && isAXEFarmingRarity(selectedItem.rarity)
-              ? 'Choose a matching equipment donor below. No separate forge materials.'
+            : tab === 'combine' ? 'Fee: free. Choose a matching donor in the second slot.'
+            : tab === 'ascend' && ascendEligible
+              ? 'Fee and catalyst: free. Choose one matching donor below.'
               : 'No materials listed for this operation.'}</p>}
         </div>
         <div className="axe-blacksmith-success">
@@ -774,54 +788,54 @@ export default function AXEBlacksmithImageWorkspace({
         </div>
         {/* Enchantment light before and after a successful attempt: the same rules as the worn item. */}
         {selectedItem && forgeTab && <EnchantLightPreview item={selectedItem} compact
-          proposedPercent={tab === 'enchant' || tab === 'over_enchant' ? projectEnchantPercent(selectedItem, tab) : null} />}
-        {tab === 'ascend' && <div className="axe-blacksmith-extra-details" aria-label="Ascension reinforcement and stat imprint details">
-          <h4>Ascension Imprint — Four Stages</h4>
+          proposedPercent={['reinforcement', 'enchant', 'over_enchant'].includes(operation) ? projectEnchantPercent(selectedItem, operation) : null} />}
+        {tab === 'ascend' && <div className="axe-blacksmith-extra-details" aria-label="Ascension rules and donor">
+          <h4>Ascension — up to +4</h4>
           <div><span>Rarity</span><b>{selectedItem?.rarity || '—'}</b></div>
-          <div><span>Current Reinforcement</span><b>{fmt(readout?.reinforcementPercent)}%</b></div>
-          <div><span>Rarity reinforcement maximum</span><b>{fmt(readout?.reinforcementCap)}%</b></div>
-          <div><span>Ascensions used</span><b>{fmt(readout?.stageRank)} / 4</b></div>
-          {selectedItem && isAXEFarmingRarity(selectedItem.rarity) && <>
+          <div><span>Ascension</span><b>+{fmt(readout?.stageRank)} / 4</b></div>
+          {selectedItem && ascendEligible && <>
+            <div><span>Item stats at +4</span><b>+{fmt(readout?.ascendMaxPct)}% of the original roll</b></div>
+            <div><span>Success chance</span><b>{readout?.preview?.nextRank
+              ? '+' + readout.preview.nextRank + ': ' + pctText(readout.preview.chance) : 'Maximum reached'}</b></div>
+            <div><span>Odds by rank</span><b>{AXE_EQUIPMENT_ASCENSION_CONFIG.successChanceByRank
+              .map((chance, index) => '+' + (index + 1) + ' ' + pctText(chance)).join(' · ')}</b></div>
             <label className="axe-blacksmith-feed-selector">
               Sacrifice equipment
               <select value={ascensionDonors.some(item=>item.instanceId===donorId)?donorId:''}
-                aria-label="Select equipment to feed into Ascension"
+                aria-label="Select equipment to sacrifice for Ascension"
                 onChange={event=>{setDonorId(event.target.value);setConfirmCombine(false);}}>
-                <option value="">Choose same rarity and equipment slot…</option>
+                <option value="">Choose same rarity and type, level {fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1)} or lower…</option>
                 {ascensionDonors.map(item=><option key={item.instanceId} value={item.instanceId}>
-                  {item.name} · Lv. {fmt(item.itemLevel??item.level)} 
+                  {item.name} · Lv. {fmt(item.itemLevel??item.level)}
                 </option>)}
               </select>
             </label>
-            <div><span>Current feed progress</span><b>{fmt(progressState?.stage?.feedProgress||0)} / {Math.min(4,Number(progressState?.stage?.rank||0)+1)}</b></div>
             <div><span>Compatible donors owned</span><b>{ascensionDonors.length}</b></div>
-            <div><span>Selected donor result</span><b>{readout?.preview?.feedPreview?.ok
-              ?('Stage '+readout.preview.feedPreview.currentRank+' → '+readout.preview.feedPreview.nextRank)
-              :'Choose donor'}</b></div>
-            <p>Same rarity and slot only. +1 needs one donor, +2 needs two, +3 needs three, +4 needs four. Higher-level donors can skip ranks. Legendary needs just one per rank.</p>
+            <div><span>Fee / catalyst</span><b>Free</b></div>
+            <p>One donor per attempt: same rarity and type (weapon family; armor and jewelry by slot), item level equal or lower. A success uses up the donor; a failure keeps the donor and the rank. Combine and Enchant are not needed and are never reset. Set bonuses are not changed.</p>
           </>}
-          <div><span>Locked flat-stat bonus</span><b>+{((readout?.ascensionBonus || 0) * 100).toFixed(2)}%</b></div>
-          <div><span>Next imprint adds</span><b>{readout?.nextAscensionBonus == null ? 'MAX'
-            : '+' + (readout.nextAscensionBonus * 100).toFixed(2) + '%'}</b></div>
-          {readout?.ascensionStatPreview && <div><span>{readout.ascensionStatPreview.label}</span>
-            <b>{fmt(readout.ascensionStatPreview.current)}{readout.ascensionStatPreview.isRate ? '%' : ''}
-              {' → '}{fmt(readout.ascensionStatPreview.next)}{readout.ascensionStatPreview.isRate ? '%' : ''}</b>
-          </div>}
-          <p>Reinforce first for stronger bonuses. Each Ascension permanently records the percentage used; later upgrades cannot change an earlier imprint.</p>
+          {selectedItem && !ascendEligible && <p>{isAXELegacyStageRarity(selectedItem)
+            ? 'Chosen keeps its own stage path for the Chosen set (Evolution Stones, no donor, no item-stat change).'
+            : 'Ascension is for Rare, Elite and Legendary equipment. Common and Unique ascension is off; Mythical is not available yet.'}</p>}
         </div>}
         {workflowMode && <div className="axe-blacksmith-extra-details" aria-label="Detailed upgrade information">
           <h4>Equipment &amp; Forge Details</h4>
           <div><span>Rarity</span><b>{selectedItem?.rarity || selectedItem?.tier || '—'}</b></div>
           <div><span>Item level</span><b>{selectedItem ? fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1) : '—'}</b></div>
-          <div><span>Equipment stage</span><b>{selectedItem ? currentStage : '—'}</b></div>
-          <div><span>Combine successes</span><b>{selectedItem ? fmt(progressState?.combine?.count || 0) : '—'}</b></div>
+          <div><span>Ascension</span><b>{selectedItem ? '+' + fmt(readout?.stageRank ?? 0) : '—'}</b></div>
+          <div><span>Combine</span><b>{selectedItem ? '+' + fmt(progressState?.combine?.count || 0) + ' / ' + AXE_COMBINE_CONFIG.maxCombines : '—'}</b></div>
           {tab === 'combine' && <>
             <div><span>Matching donors</span><b>{compatibleDonors.length}</b></div>
             <div><span>Selected donor</span><b>{donorItem?.name || 'None'}</b></div>
-            <p>Same template, rarity and item level only. Equipped, locked, and favorited items are excluded.</p>
+            <div><span>Fee</span><b>Free</b></div>
+            <p>Same rarity, item level, slot and type (weapon family; armor and jewelry by slot), not necessarily the same item. Equipped, locked and favourite items are excluded.</p>
           </>}
-          {tab === 'enchant' && <div><span>Enchant level</span>
-            <b>{selectedItem ? fmt(readout?.enchantTotal) + ' / ' + fmt(readout?.enchantTotalMax) : '—'}</b></div>}
+          {tab === 'enchant' && <>
+            <div><span>Enchant</span><b>{selectedItem ? fmt(readout?.reinforcementPercent) + '% / ' + fmt(readout?.reinforcementCap) + '%' : '—'}</b></div>
+            <div><span>Enchant slots</span>
+              <b>{selectedItem ? fmt(readout?.enchantTotal) + ' / ' + fmt(readout?.enchantTotalMax) : '—'}</b></div>
+            {percentMode && <div><span>On a failure</span><b>−{AXE_REINFORCEMENT_CONFIG.failurePenaltyPercent} points, never below 0%</b></div>}
+          </>}
           {tab === 'over_enchant' && <>
             <div><span>Over-Enchant</span><b>{selectedItem ? '+' + fmt(getItemOverEnchant(selectedId).level) : '—'}</b></div>
             <div><span>Stabilizers owned</span><b>{fmt(getAXEServiceResourceCount('mat_protection'))}</b></div>
@@ -846,20 +860,21 @@ export default function AXEBlacksmithImageWorkspace({
       <section className="axe-blacksmith-progression-panel" aria-label="Equipment progression">
         <h3>Equipment Progression</h3>
         <div className="axe-blacksmith-current-projected" aria-label="Actual combat attack projection">
-        <span>Current Attack <b>{fmt(readout?.currentAttack)}</b></span>
+        <span>Current Attack <b>{fmtStat(readout?.currentAttack)}</b></span>
         <span aria-hidden="true">→</span>
-        <span>Projected Attack <b>{fmt(readout?.projectedAttack)}</b></span>
+        <span>Projected Attack <b>{fmtStat(readout?.projectedAttack)}</b></span>
       </div>
       <div className="axe-blacksmith-stats-strip" aria-label="Equipment progress">
-        <span>Attack <b>{fmt(readout?.currentAttack)}</b></span>
+        <span>Attack <b>{fmtStat(readout?.currentAttack)}</b></span>
         <span>Item Level <b>{selectedItem ? fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1) : '—'}</b></span>
-        <span>{tab === 'sockets' ? 'Sockets' : 'Enchantment'} <b>{selectedItem
+        <span>{tab === 'sockets' ? 'Sockets' : 'Enchant'} <b>{selectedItem
           ? tab === 'sockets' ? asNumber(socketState?.sockets?.length) + ' / ' + (socketState?.maxSockets || 4)
-            : '+' + fmt(readout?.enchantTotal ?? getItemEnchantments(selectedId).reduce((n,v)=>n+asNumber(v),0)) : '—'}</b></span>
+            : fmt(readout?.reinforcementPercent ?? getItemReinforcement(selectedId)?.percent ?? 0) + '% · slots +'
+              + fmt(readout?.enchantTotal ?? getItemEnchantments(selectedId).reduce((n,v)=>n+asNumber(v),0)) : '—'}</b></span>
       </div>
-      <div className="axe-blacksmith-readiness" aria-label="Equipment stage progression">
-        <div><span>{selectedItem ? currentStage : 'No selected equipment'}</span>
-          <b>{selectedItem ? 'Stage ' + Math.min(4, asNumber(progressState?.stage?.rank)) + ' / 4' : '—'}</b></div>
+      <div className="axe-blacksmith-readiness" aria-label="Equipment ascension progression">
+        <div><span>{selectedItem ? (prestigeStyle?.displayName || 'Ascension') : 'No selected equipment'}</span>
+          <b>{selectedItem ? '+' + Math.min(4, asNumber(progressState?.stage?.rank)) + ' / 4' : '—'}</b></div>
         <div className="axe-blacksmith-readiness-track"><i style={{ width: progress + '%' }} /></div>
       </div>
       </section>

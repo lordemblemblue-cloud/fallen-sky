@@ -5,7 +5,10 @@
 // These numbers are provisional balance values. The backend contract is the
 // important part: preview -> validate ownership -> consume -> mutate item state.
 
+import { AXE_COMBINE_CONFIG, AXE_EQUIPMENT_ASCENSION_CONFIG, isAXELegacyStageRarity } from './axeItemAdvancement.ts';
+
 export const AXE_SERVICE_COST_RULES = Object.freeze({
+  // the older materials-only stage path, kept for the Chosen set (Blacksmith v2)
   stage: Object.freeze({
     base: Object.freeze({ evo_upgrade_stone: 1 }),
     growthEveryRank: 1,
@@ -97,4 +100,21 @@ export function getAXEReinforcementCost(percent: unknown = 0, { protectedAttempt
 
 export function getAXEOverEnchantCost(level: unknown = 0, { protectedAttempt = false }: { protectedAttempt?: boolean } = {}): Cost {
   return { mat_over_enchant: 1 + Math.floor((Number(level) || 0) / 2), ...(protectedAttempt ? { mat_protection: 1 } : {}) };
+}
+
+// Combine (Blacksmith v2): the configured fee, charged on every attempt (free for now).
+export function getAXECombineCost(): Cost {
+  return mergeCost(AXE_COMBINE_CONFIG.fee);
+}
+
+// Ascension (Blacksmith v2): the fee on every attempt plus the catalyst on a success (on a
+// failure too only when catalystOnFailure). `success` left out: the most an attempt can cost,
+// which must be affordable before anything is rolled. Chosen keeps its older stage cost.
+export function getAXEAscensionCost({ success, item = null, advancement = null }: {
+  success?: boolean; item?: Record<string, any> | null; advancement?: Record<string, any> | null;
+} = {}): Cost {
+  if (item && isAXELegacyStageRarity(item)) return getAXEServiceInventoryCost('stage', { advancement });
+  const config = AXE_EQUIPMENT_ASCENSION_CONFIG;
+  const withCatalyst = success === undefined || success === true || config.catalystOnFailure;
+  return mergeCost(config.fee, withCatalyst ? config.catalyst : null);
 }

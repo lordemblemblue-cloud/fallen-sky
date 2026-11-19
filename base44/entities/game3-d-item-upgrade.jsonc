@@ -6,7 +6,7 @@
     "owner_id": { "type": "string", "description": "The account that owns the character" },
     "character_id": { "type": "string", "maxLength": 128 },
     "item_id": { "type": "string", "maxLength": 200, "description": "The item instance" },
-    "service": { "type": "string", "enum": ["reinforcement", "over_enchant", "refine", "ultimate"] },
+    "service": { "type": "string", "enum": ["reinforcement", "over_enchant", "refine", "ultimate", "combine", "stage"], "description": "reinforcement is the item's Enchant %; stage is Ascension (docs/game3d/BLACKSMITH_V2_20261118.md)" },
     "record": { "type": "object", "description": "The record the item keeps, as the game stores it" },
     "attempts": { "type": "integer", "default": 0 },
     "last_outcome": { "type": "string" },
@@ -15,7 +15,8 @@
     "last_result": { "type": "object" },
     "rolled_at": { "type": "string", "format": "date-time" },
     "restored_at": { "type": "string", "format": "date-time", "description": "Set when a save restore put this record back" },
-    "spent": { "type": "array", "items": { "type": "string" }, "description": "The loot units (dropIds) the server took to pay for rolls on this item and upgrade; a save that still holds them loses them" }
+    "spent": { "type": "array", "items": { "type": "string" }, "description": "The loot units (dropIds) the server took to pay for rolls on this item and upgrade; a save that still holds them loses them" },
+    "consumed": { "type": "array", "items": { "type": "string" }, "description": "Combine / Ascension: the donor items (instance ids) a success on this item used up; the server never uses them again and a save that still holds them loses them" }
   },
   "required": ["owner_id", "character_id", "item_id", "service", "record"],
   "rls": {

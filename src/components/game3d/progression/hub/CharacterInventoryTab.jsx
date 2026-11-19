@@ -36,6 +36,8 @@ import {
   subscribeAXEAura,
 } from '../../axe/equipment/AXEEquipmentAuraStore';
 import EnchantLightPreview from '../../enchantVfx/EnchantLightPreview';
+import { getAXEOwnedItemStatBreakdown } from '../../axe/equipment/AXEEquipmentRuntimeStats';
+import AXEItemStatBreakdownList from '../../axe/equipment/AXEItemStatBreakdownList';
 
 const FILTERS = [
   { id: 'all', label: 'All Gear' },
@@ -59,15 +61,6 @@ function matches(item, filter) {
   if (filter === 'prestige') return PRESTIGE.has(slot);
   if (filter === 'auxiliary') return slot === 'auxiliary';
   return true;
-}
-
-function statsText(item) {
-  const stats = { ...(item.baseStats || {}), ...(item.rolledStats || {}) };
-  const parts = Object.entries(stats)
-    .filter(([, value]) => Number(value))
-    .slice(0, 5)
-    .map(([key, value]) => `${key.replaceAll('_', ' ')} +${value}`);
-  return parts.length ? parts.join(' · ') : 'No base stat metadata';
 }
 
 export default function CharacterInventoryTab({ onOpenService }) {
@@ -118,6 +111,12 @@ export default function CharacterInventoryTab({ onOpenService }) {
   const advancement = getAXEAdvancementState(selected.instanceId);
   const sockets = getAXESocketState(selected.instanceId);
   const aura = getAXEItemAura(selected.instanceId);
+  // the item's own stats from the one per-item breakdown (Blacksmith v2)
+  const breakdown = getAXEOwnedItemStatBreakdown(selected);
+  const equippedInSlot = !selected.equipped
+    ? items.find((item) => item.equipped && item.slot === selected.slot && item.instanceId !== selected.instanceId) || null
+    : null;
+  const equippedBreakdown = equippedInSlot ? getAXEOwnedItemStatBreakdown(equippedInSlot) : null;
 
   const run = (fn) => {
     const result = fn();
@@ -237,15 +236,19 @@ export default function CharacterInventoryTab({ onOpenService }) {
           )}
 
           <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
-            <div className="text-[9px] uppercase tracking-[0.26em] text-white/30">Base + Rolled Stats</div>
-            <div className="mt-2 text-sm leading-6 text-white/65">{statsText(selected)}</div>
+            <div className="text-[9px] uppercase tracking-[0.26em] text-white/30">
+              Item Stats · original roll (+ Combine, Enchant, Ascend){equippedInSlot ? ` · compared with ${equippedInSlot.name}` : ''}
+            </div>
+            <AXEItemStatBreakdownList rows={breakdown.rows} compare={equippedBreakdown?.rows || null}
+              compareLabel="Equipped" empty="No base stat metadata" label="Item stats" />
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-4">
-            <Info label="Reinforcement" value={`${reinforcement.percent || 0}%`} />
-            <Info label="Enchant" value={`+${enchantments.reduce((sum, v) => sum + Number(v || 0), 0)}`} />
+            <Info label="Enchant" value={`${reinforcement.percent || 0}%`} />
+            <Info label="Enchant slots" value={`+${enchantments.reduce((sum, v) => sum + Number(v || 0), 0)}`} />
             <Info label="Over-Enchant" value={`+${overEnchant.level || 0}`} />
-            <Info label="Stage" value={advancement.stage?.label || 'Base'} />
+            <Info label="Combine" value={`+${advancement.combine?.count || 0}`} />
+            <Info label="Ascension" value={`+${Math.min(4, advancement.stage?.rank || 0)}`} />
             <Info label="Refine" value={`+${advancement.refine?.level || 0}`} />
             <Info label="Ultimate" value={`+${advancement.ultimate?.level || 0}`} />
             <Info label="Sockets" value={`${sockets.sockets?.length || 0}/${sockets.maxSockets || 0}`} />
@@ -264,11 +267,11 @@ export default function CharacterInventoryTab({ onOpenService }) {
 
             <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
               {[
-                ['reinforcement', 'Reinforce'],
-                ['enchant', 'Enchant'],
+                ['reinforcement', 'Enchant %'],
+                ['enchant', 'Enchant Slots'],
                 ['over_enchant', 'Over-Enchant'],
                 ['combine', 'Combine'],
-                ['stage', 'Stage'],
+                ['stage', 'Ascend'],
                 ['refine', 'Refine'],
                 ['ultimate', 'Ultimate'],
                 ['sockets', 'Sockets / Gems'],

@@ -7,9 +7,7 @@ import { getEquippedAXEItems } from './AXEEquipmentInventoryStore';
 import { getAXEWeaponLegacyDamageMultiplier, getAXEWeaponLegacyEchoPct } from './AXEWeaponLegacyForge';
 import { getAXESoulRegaliaBonuses } from '../progression/AXESoulRegaliaStore';
 import { getItemEnchantments, getItemOverEnchant, getItemReinforcement } from '../../equipment/enchantmentStore';
-import { getAXEEnhancementStatMultiplier } from './AXEItemEnhancementSystem';
 import { getAXEAdvancementState } from './AXEItemAdvancementStore';
-import { getAXEEquipmentAscensionBonus, getAXEEquipmentAscensionRateBonus } from './AXEItemAdvancementSystem';
 import { getAXESocketState } from './AXESocketGemStore';
 import { collectAXEGemStats } from './AXESocketGemSystem';
 import { getAXEEquipmentRune, getAXEEquipmentRuneStats } from './AXEEquipmentRuneStore';
@@ -17,24 +15,35 @@ import { getAXEItemAura } from './AXEEquipmentAuraStore';
 import { collectAXEAuraStats } from './AXEEquipmentAuraSystem';
 import { evaluateAXESetBonuses } from './AXESetBonusSystem';
 import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
-import { doesAXEStageIncreaseItemStats, getAXESetAscensionRank } from './AXESetAscensionRules.mjs';
+import { getAXESetAscensionRank } from './AXESetAscensionRules.mjs';
 import { evaluateAXEAuxiliaryBonuses } from './AXEAuxiliaryGearSystem';
+import { AXE_ITEM_STAT_CONFIG, AXE_RATE_STATS, computeAXEItemStatBreakdown } from './AXEItemStatBreakdown.mjs';
 
-// Provisional balance only. The important backend contract is that each
-// advancement path has a deterministic, centralized contribution to real stats.
+// Provisional balance only (Blacksmith v2: each share is ADDED from the item's original
+// roll, AXEItemStatBreakdown.mjs). Kept under this name for older readers.
 export const AXE_ADVANCEMENT_STAT_CONFIG = Object.freeze({
-  combinePerSuccess: 0.02,
-  stagePerRank: 0.08,
-  refinePerLevel: 0.025,
-  ultimatePerLevel: 0.04,
+  combinePerSuccess: AXE_ITEM_STAT_CONFIG.combinePerStage,
+  refinePerLevel: AXE_ITEM_STAT_CONFIG.refinePerLevel,
+  ultimatePerLevel: AXE_ITEM_STAT_CONFIG.ultimatePerLevel,
 });
 
-function advancementMultiplier(record = {}, includeStageImprint = true) {
-  return 1
-    + Math.max(0, Number(record.combine?.count || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.combinePerSuccess
-    + (includeStageImprint ? getAXEEquipmentAscensionBonus(record.stage) : 0)
-    + Math.max(0, Number(record.refine?.level || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.refinePerLevel
-    + Math.max(0, Number(record.ultimate?.level || 0)) * AXE_ADVANCEMENT_STAT_CONFIG.ultimatePerLevel;
+// An owned item's records, read from the live stores (one place for every screen).
+export function getAXEOwnedItemRecords(item) {
+  const itemId = item?.instanceId;
+  return {
+    reinforcement: getItemReinforcement(itemId),
+    enchantments: getItemEnchantments(itemId),
+    overEnchant: getItemOverEnchant(itemId),
+    advancement: getAXEAdvancementState(itemId),
+    legacyDamageMultiplier: getAXEWeaponLegacyDamageMultiplier(item),
+  };
+}
+
+// The one per-item stat breakdown (original + Combine + Enchant + Ascend ...), from the live
+// stores; `overrides` replaces records for a preview (the Blacksmith's projected result).
+export function getAXEOwnedItemStatBreakdown(item, overrides = {}) {
+  if (!item) return computeAXEItemStatBreakdown(null);
+  return computeAXEItemStatBreakdown(item, { ...getAXEOwnedItemRecords(item), ...overrides });
 }
 
 const makeOutput = () => ({
@@ -148,17 +157,15 @@ function addStat(out, key, rawValue, scale = 1) {
 }
 
 // Percentage stats (crit chance, crit damage, crit defense, +x% stats) are rates: item level,
-// rarity rolls and upgrades scale flat stats, never these. A ring's 0.5% crit used to grow
-// with every upgrade until one ring gave about half a hero's crit chance.
-export const AXE_RATE_STATS = Object.freeze(new Set([
-  'critChance', 'criticalChance', 'critDamage', 'criticalDamage', 'critDefense', 'criticalDefense',
-  'attackPct', 'damagePct', 'defensePct', 'hpPct', 'maxHPPct', 'chiPct', 'maxChiPct',
-]));
+// rarity rolls, Combine and Enchant scale flat stats, never these (Ascension grows them
+// relatively, AXEItemStatBreakdown.mjs). A ring's 0.5% crit used to grow with every upgrade
+// until one ring gave about half a hero's crit chance.
+export { AXE_RATE_STATS };
 export const isAXERateStat = (key) => AXE_RATE_STATS.has(key);
 
-function addStats(out, stats = {}, scale = 1, ascensionRateBonus = 0) {
+function addStats(out, stats = {}, scale = 1) {
   for (const [key, value] of Object.entries(stats || {})) {
-    addStat(out, key, value, isAXERateStat(key) ? 1 + ascensionRateBonus : scale);
+    addStat(out, key, value, isAXERateStat(key) ? 1 : scale);
   }
 }
 
@@ -175,49 +182,19 @@ export function getAXEEquipmentRuntimeBonuses() {
 
   const liveItems = equipped.map((item) => {
     const itemId = item.instanceId;
-    const reinforcement = getItemReinforcement(itemId);
-    const enchantments = getItemEnchantments(itemId);
-    const overEnchant = getItemOverEnchant(itemId);
-    const advancement = getAXEAdvancementState(itemId);
-    const enhancementMult = getAXEEnhancementStatMultiplier({
-      reinforcement,
-      enchantments,
-      overEnchant,
-    });
-    const stageItemImprintEnabled = doesAXEStageIncreaseItemStats(item);
-    // Bounded extra base-stat credit for harder-to-farm Elite and Legendary
-    // donors; no rate multiplication, shared-item mutation or PvP bypass.
-    const extraPerRank=String(item.rarity||'').toLowerCase()==='elite'?0.015:
-      String(item.rarity||'').toLowerCase()==='legendary'?0.025:0;
+    const records = getAXEOwnedItemRecords(item);
+    const { reinforcement, enchantments, overEnchant, advancement } = records;
     const ascendedRank=Math.min(4,Math.max(0,Number(advancement.stage?.rank)||0));
-    const advancementMult=advancementMultiplier(advancement,stageItemImprintEnabled)
-      +(stageItemImprintEnabled ? ascendedRank*extraPerRank : 0);
-    const coreScale=enhancementMult*advancementMult;
-    const rateBonus = stageItemImprintEnabled ? getAXEEquipmentAscensionRateBonus(advancement.stage) : 0;
     const socketState = getAXESocketState(itemId);
     const aura = getAXEItemAura(itemId);
-
     const infusionPct = Number(soul.itemInfusion?.[itemId] || 0);
-    const ownDefPct=item.abilityPerks?.type==='armor_defense_pct'
-      ? Math.max(0,Math.min(12,Number(item.abilityPerks.basePct)||0))+
-        (ascendedRank>=4?Math.max(0,Math.min(6,Number(item.abilityPerks.ascendedBonusPct)||0)):0)
-      :0;
-    const ownStats=ownDefPct?{
-      ...item.baseStats,
-      defense:Number(item.baseStats?.defense||0)*(1+ownDefPct/100),
-    }:item.baseStats;
-    addStats(out, soulEffectiveStats(ownStats, infusionPct), coreScale, rateBonus);
-    addStats(out, soulEffectiveStats(item.rolledStats, infusionPct), coreScale, rateBonus);
-    // Weapon Legacy affects only the weapon's own flat ATK contribution,
-    // not STR, crit rates, set bonuses or the character-wide damage multiplier.
-    const legacyAttackKeys = ['attack', 'damage', 'attackPower', 'physicalAttack'];
-    const ownAttack = [item.baseStats, item.rolledStats].reduce((sum, stats) =>
-      sum + legacyAttackKeys.reduce((subtotal, key) =>
-        subtotal + Math.max(0, Number(stats?.[key]) || 0), 0), 0);
-    const legacyBonus = getAXEWeaponLegacyDamageMultiplier(item) - 1;
-    if (legacyBonus > 0 && ownAttack > 0) {
-      out.flat.damage += ownAttack * (1 + infusionPct / 100) * coreScale * legacyBonus;
-    }
+
+    // The item's own stats, once: original roll + Combine + Enchant + Ascend (+ Refine,
+    // Ultimate, Weapon Legacy on its attack, the armor perk on its defense), each a share of the
+    // original roll and added, never compounded (Blacksmith v2). Soul infusion then scales the
+    // item's whole contribution, as before.
+    const breakdown = computeAXEItemStatBreakdown(item, records);
+    for (const row of breakdown.rows) addStat(out, row.stat, row.total * (1 + infusionPct / 100));
 
     addStats(out, soulEffectiveStats(collectAXEGemStats({ ...item, ...socketState }), infusionPct), 1);
     addStats(out, soulEffectiveStats(getAXEEquipmentRuneStats(itemId), infusionPct), 1);
@@ -235,17 +212,19 @@ export function getAXEEquipmentRuntimeBonuses() {
       advancement,
     };
 
+    const shares = breakdown.sources;
     out.items.push({
       itemId,
       name: getAXEFarmingAscendedIdentity(item,ascendedRank)?.displayName||item.name,
       slot: item.slot,
-      enhancementMultiplier: enhancementMult,
-      advancementMultiplier: advancementMult,
-      finalCoreMultiplier: coreScale,
-      ascensionImprintBonus: stageItemImprintEnabled ? getAXEEquipmentAscensionBonus(advancement.stage) : 0,
+      // the per-system shares of the original roll, added together (Blacksmith v2)
+      enhancementMultiplier: shares.enchantMultiplier,
+      combinePct: shares.combinePct,
+      enchantPct: shares.enchantPct,
+      ascensionPct: shares.ascendPct,
+      finalCoreMultiplier: 1 + (shares.combinePct + shares.enchantPct + shares.ascendPct + shares.refinePct + shares.ultimatePct) / 100,
+      statBreakdown: breakdown.rows,
       setAscensionRank: getAXESetAscensionRank(liveItem),
-      stageItemImprintEnabled,
-      ascensionRateBonus: rateBonus,
       soulInfusionPct: Number(soul.itemInfusion?.[itemId] || 0),
       legacyWeaponDamageBonusPct: Math.round((getAXEWeaponLegacyDamageMultiplier(item) - 1) * 10000) / 100,
       separateEchoAttackPct: getAXEWeaponLegacyEchoPct(item),
