@@ -262,6 +262,9 @@ function interactions(mission, dt, inputs) {
       if (dist(bodyOf(world, s.id), it) <= INTERACT_RADIUS) { worker = s.id; break; }
     }
     if (worker) {
+      // whoever is at it turns to it
+      const b = bodyOf(world, worker);
+      if (dist(b, it) > 0.05) b.yaw = Math.atan2(it.x - b.x, it.z - b.z);
       it.progress += dt;
       it.by = worker;
       if (it.progress >= it.seconds) {
@@ -295,8 +298,10 @@ export function missionView(mission, forId = null) {
   }
   return {
     mission: def.id, name: def.title, phase: mission.phase,
-    stage: { index: mission.stageIndex, count: def.stages.length, title: stage.title, text },
-    markers: (stage.markers?.(mission, h) || []).map((m) => ({ x: m.x, z: m.z, label: m.label || '' })),
+    stage: { index: mission.stageIndex, count: def.stages.length, id: stage.id, title: stage.title, text },
+    alarm: !!stage.alarm, // the depot is locked down (red lights, sirens)
+    // follow: the marker is a person on the move (the client shows their name, not a beacon)
+    markers: (stage.markers?.(mission, h) || []).map((m) => ({ x: m.x, z: m.z, label: m.label || '', follow: !!m.follow })),
     timer: stage.timer ? Math.max(0, stage.timer(mission, h)) : null,
     prompt,
     comms: mission.comms[0] ? { speaker: mission.comms[0].speaker, text: mission.comms[0].text } : null,
@@ -305,7 +310,9 @@ export function missionView(mission, forId = null) {
     people: [...mission.seats.values()].map((s) => ({ id: s.id, name: s.name, dead: !!world.fighters.get(s.id)?.vitals.dead,
       respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time) })),
     me: forId ? { id: forId } : null,
-    interactables: [...mission.interactables.values()].filter((it) => it.enabled && !it.done).map((it) => ({ id: it.id, x: it.x, z: it.z, label: it.label })),
+    interactables: [...mission.interactables.values()].filter((it) => it.enabled && !it.done).map((it) => ({ id: it.id, x: it.x, z: it.z, label: it.label,
+      kind: it.kind || 'use', progress: Math.min(1, it.progress / it.seconds), by: it.by })),
+    done: [...mission.interactables.values()].filter((it) => it.done).map((it) => it.id),
     doors: [...mission.level.doors.values()].map((d) => ({ id: d.id, open: d.open })),
   };
 }

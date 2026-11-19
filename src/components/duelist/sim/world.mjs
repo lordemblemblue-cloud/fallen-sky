@@ -325,7 +325,7 @@ function spawnProjectile(world, fighter, body, id, effects) {
   const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
     dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
   world.projectiles.push(p);
-  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir });
+  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir, speed: p.speed });
 }
 
 function stepProjectiles(world, dt, now, effects) {

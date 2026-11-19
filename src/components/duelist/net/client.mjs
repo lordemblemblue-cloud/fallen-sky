@@ -7,6 +7,9 @@
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
+import { MISSIONS } from '../sim/mission.mjs';
+import { createLevel, setDoor } from '../sim/level.mjs';
+import { enemySeat, crewSeat } from '../client/missionSeats.mjs';
 import { PROTOCOL, WS_PATH, encodeInput, applyFighter } from './protocol.mjs';
 
 const DELAY = 0.1; // seconds the picture stays behind the newest snapshot
@@ -41,11 +44,19 @@ const newBody = () => ({ x: 0, y: 0, z: 0, yaw: 0, vy: 0, speed: 0, moving: fals
 const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
 /**
- * An online match. mode: 'duel' | 'ffa' | 'tdm' | 'ctf' | 'any'. onChange(status, detail) reports
- * 'connecting' | 'joining' | 'ready' | 'closed' | 'error'.
+ * An online match. mode: 'duel' | 'ffa' | 'tdm' | 'ctf' | 'any', or 'story': the co-op mission in a crew room
+ * (room: a crew's code, 'new' for a room of your own, or null for any open crew). onChange(status, detail)
+ * reports 'connecting' | 'joining' | 'ready' | 'closed' | 'error'.
  */
-export function createOnlineSource({ url, token, name, body, mode, onChange = () => {} }) {
-  const world = createWorld({ arenaRadius: MODES[mode]?.arena || 22 });
+export function createOnlineSource({ url, token, name, body, mode, room = null, onChange = () => {} }) {
+  const story = mode === 'story';
+  // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
+  const def = story ? MISSIONS.contraband : null;
+  const level = def ? createLevel(def.level) : null;
+  const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22 });
+  const maxOf = new Map(); // the depot's people: id -> their full vitals
+  const lastFull = new Map(); // a mission: fighter id -> its last full state (the unchanged come by id only)
+  let code = null;
   const snaps = []; // { time, fighters, projectiles, flags, effects, events }
   let ws = null;
   let meId = null;
@@ -61,6 +72,28 @@ export function createOnlineSource({ url, token, name, body, mode, onChange = ()
   let shown = -Infinity; // the server time the picture has reached
   let seatsVersion = 0;
   const setStatus = (s, detail = '') => { status = s; onChange(s, detail); };
+  // the server's seats as the game view dresses them (a mission's people get their kits here)
+  const dress = (list) => {
+    if (!story) return list;
+    return list.map((s) => {
+      if (s.kind !== 'enemy') return crewSeat(s, meId);
+      if (s.max) maxOf.set(s.id, { hp: s.max[0], will: s.max[1], stamina: s.max[2], shield: s.max[3] });
+      return enemySeat({ id: s.id, name: s.name, typeId: s.type, named: s.named, tag: s.tag, body: s.body });
+    });
+  };
+  const makeFighter = (id, team) => createFighter({ id, team, vitals: maxOf.get(id) || null });
+  // what is being used right now rides every snapshot; the rest of the view comes a few times a second
+  const applyUses = (uses = []) => {
+    if (!view?.interactables) return;
+    const by = new Map(uses.map((u) => [u[0], u]));
+    for (const it of view.interactables) {
+      const u = by.get(it.id);
+      it.by = u ? u[1] : null;
+      if (u) it.progress = u[2];
+    }
+    const mine = view.prompt ? by.get(view.prompt.id) : null;
+    if (mine) view.prompt.progress = mine[2];
+  };
   const send = (m) => { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); };
   const local = () => performance.now() / 1000;
 
@@ -69,23 +102,41 @@ export function createOnlineSource({ url, token, name, body, mode, onChange = ()
   ws.onmessage = (event) => {
     let msg;
     try { msg = JSON.parse(event.data); } catch { return; }
-    if (msg.t === 'welcome') { meId = msg.id; setStatus('joining'); send({ t: 'join', mode }); }
+    if (msg.t === 'welcome') {
+      meId = msg.id;
+      setStatus('joining');
+      send({ t: 'join', mode, ...(story && room === 'new' ? { create: true } : story && room ? { code: room } : {}) });
+    }
     else if (msg.t === 'joined') {
       matchMode = msg.mode;
       world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
-      if (msg.rematch) { world.fighters.clear(); world.bodies.clear(); snaps.length = 0; shown = -Infinity; offset = null; }
-      seats = msg.seats;
+      if (msg.rematch) {
+        world.fighters.clear(); world.bodies.clear(); snaps.length = 0; shown = -Infinity; offset = null;
+        // a mission from the start: its doors as they were
+        if (level) { for (const d of def.level.doors) setDoor(level, d.id, !!d.open); view = null; maxOf.clear(); lastFull.clear(); }
+      }
+      code = msg.code || null;
+      seats = dress(msg.seats);
       seatsVersion += 1;
       setStatus('ready', msg.mode);
-    } else if (msg.t === 'seats') { seats = msg.seats; seatsVersion += 1; }
+    } else if (msg.t === 'seats') { seats = dress(msg.seats); seatsVersion += 1; }
     else if (msg.t === 'snap') {
       const at = local();
       const estimate = msg.time - at;
       // the newest snapshot that arrived soonest after it was sent sets the clock (jitter only delays)
       offset = offset === null ? estimate : Math.max(estimate, offset - 0.002);
+      if (story) {
+        // the depot's people who have noticed nobody come by id only: their last full state stands
+        for (const f of msg.fighters) lastFull.set(f.id, f);
+        for (const id of msg.idle || []) { const f = lastFull.get(id); if (f) msg.fighters.push(f); }
+      }
       snaps.push(msg);
       if (snaps.length > 40) snaps.shift();
-      if (msg.view) view = msg.view;
+      if (msg.view) {
+        view = msg.view;
+        if (level && view.doors) for (const d of view.doors) setDoor(level, d.id, d.open);
+      }
+      if (story) applyUses(msg.uses);
       if (msg.flags) flags = msg.flags;
     } else if (msg.t === 'error') setStatus('error', msg.message);
     else if (msg.t === 'left') setStatus('closed', 'You left the match.');
@@ -95,6 +146,10 @@ export function createOnlineSource({ url, token, name, body, mode, onChange = ()
 
   return {
     world,
+    kind: story ? 'mission' : 'match',
+    level,
+    def,
+    get code() { return code; }, // a crew room's code, to give to friends
     get meId() { return meId; },
     get mode() { return matchMode; },
     get status() { return status; },
@@ -138,7 +193,7 @@ export function createOnlineSource({ url, token, name, body, mode, onChange = ()
         present.add(data.id);
         const before = past.get(data.id) || data;
         // discrete state from the earlier snapshot (the moment shown), its action clock carried forward
-        const { f, b } = applyFighter(world, before, (id, team) => createFighter({ id, team }), newBody);
+        const { f, b } = applyFighter(world, before, makeFighter, newBody);
         if (f.action) f.action.t += Math.max(0, time - s0.time);
         const [x0, y0, z0, yaw0] = before.p;
         const [x1, y1, z1, yaw1] = data.p;

@@ -145,3 +145,89 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   a.ws.close();
   await server.close();
 });
+
+test('a crew room for the story mission: its own code, a friend joins by it, the depot and the mission view arrive, it is not listed', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const a = await player(url, 'ann', 'maskedWarrior');
+  a.send({ t: 'join', mode: 'story', create: true });
+  const joined = await a.next((m) => m.t === 'joined');
+  assert.equal(joined.mode, 'story');
+  assert.equal(joined.mission, 'contraband');
+  assert.match(joined.code, /^[A-HJ-NP-Z]{5}$/);
+  assert.deepEqual(joined.seats.filter((s) => s.kind === 'player').map((s) => [s.id, s.team, s.body]), [['ann', 'crew', 'maskedWarrior']]);
+  const depot = joined.seats.filter((s) => s.kind === 'enemy');
+  assert.equal(depot.length, 3, 'the dock is manned for a crew of one');
+  assert.deepEqual([depot[0].type, depot[0].max], ['gunner', [42, 0, 60, 10]], 'a guard, with a guard\'s vitals (no Will: no Veil)');
+  assert.deepEqual((await (await fetch(http)).json()).matches, [], 'a room of your own is not listed');
+  const snap = await a.next((m) => m.t === 'snap' && m.view);
+  assert.equal(snap.view.mission, 'contraband');
+  assert.equal(snap.view.stage.index, 0);
+  assert.deepEqual(snap.view.room, { code: joined.code, open: false });
+  assert.equal(snap.fighters.length, 4, 'the player and the three guards');
+  const quiet = await a.next((m) => m.t === 'snap' && m.idle?.length === 3);
+  assert.equal(quiet.fighters.length, 1, 'guards who have noticed nobody come by id between full snapshots');
+  assert.ok(JSON.stringify(snap).length < 4000, `a snapshot of ${JSON.stringify(snap).length} bytes`);
+  // a wrong code and a malformed one are refused; the right one joins the same room
+  const b = await player(url, 'ben', 'huntress');
+  b.send({ t: 'join', mode: 'story', code: joined.code === 'ZZZZZ' ? 'YYYYY' : 'ZZZZZ' });
+  assert.equal((await b.next((m) => m.t === 'error')).code, 'code');
+  b.send({ t: 'join', mode: 'story', code: 'nope' });
+  assert.equal((await b.next((m) => m.t === 'error')).code, 'code');
+  b.send({ t: 'join', mode: 'story', code: joined.code });
+  const joinedB = await b.next((m) => m.t === 'joined');
+  assert.equal(joinedB.match, joined.match);
+  assert.equal(joinedB.seats.filter((s) => s.kind === 'player').length, 2);
+  await a.next((m) => m.t === 'seats' && m.seats.filter((s) => s.kind === 'player').length === 2);
+  const both = await b.next((m) => m.t === 'snap' && m.view?.people.length === 2);
+  assert.deepEqual(both.view.people.map((p) => p.id).sort(), ['ann', 'ben']);
+  // the friend leaves: the crew is one again, the mission goes on
+  b.send({ t: 'leave' });
+  await b.next((m) => m.t === 'left');
+  await a.next((m) => m.t === 'seats' && m.seats.filter((s) => s.kind === 'player').length === 1);
+  a.ws.close();
+  b.ws.close();
+  await server.close();
+});
+
+test('the interact key reaches the mission: held at a marked crate, the crate opens', async () => {
+  const { server, url } = await start();
+  const a = await player(url, 'ann');
+  a.send({ t: 'join', mode: 'story', create: true });
+  const joined = await a.next((m) => m.t === 'joined');
+  const { mission } = server.rooms.get(joined.match);
+  const { world } = mission;
+  // nobody in the way, and the player standing at crate A
+  for (const e of mission.enemies.values()) Object.assign(world.fighters.get(e.id).vitals, { hp: 0, dead: true });
+  Object.assign(world.bodies.get('ann'), { x: -20, z: -16.6 });
+  let seq = 0;
+  const hold = setInterval(() => a.send(encodeInput(seq++, { move: { x: 0, z: 0 }, interact: true })), 15);
+  const using = await a.next((m) => m.t === 'snap' && m.uses?.some((u) => u[0] === 'crateA' && u[1] === 'ann' && u[2] > 0), 4000);
+  assert.ok(using, 'who is using what rides the snapshots');
+  const opened = await a.next((m) => m.t === 'snap' && m.view?.done.includes('crateA'), 6000);
+  clearInterval(hold);
+  assert.ok(opened.events.some((e) => e.type === 'interacted' && e.id === 'crateA' && e.by === 'ann'));
+  assert.equal(opened.view.stage.text, 'Open the marked crates (1/3)');
+  a.ws.close();
+  await server.close();
+});
+
+test('open crews: the story with no code finds a crew with room; the lobby lists it; Join (any) stays with the matches', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const a = await player(url, 'ann');
+  a.send({ t: 'join', mode: 'story' });
+  const joined = await a.next((m) => m.t === 'joined');
+  const { matches } = await (await fetch(http)).json();
+  assert.deepEqual(matches.map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
+  const b = await player(url, 'ben');
+  b.send({ t: 'join', mode: 'story' });
+  assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
+  const c = await player(url, 'cy');
+  c.send({ t: 'join', mode: 'any' });
+  const joinedC = await c.next((m) => m.t === 'joined');
+  assert.notEqual(joinedC.match, joined.match);
+  assert.equal(joinedC.mode, 'ffa', 'the Join button looks for a match, not a mission');
+  for (const p of [a, b, c]) p.ws.close();
+  await server.close();
+});

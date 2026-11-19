@@ -3,7 +3,7 @@
 // and offers one obvious button.
 import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Radio } from 'lucide-react';
+import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
 import { MENU_MODES, MODE_ORDER, LEVELS } from './modes.js';
@@ -44,7 +44,7 @@ export function DuelistHub() {
   return (
     <MenuShell title="Duelist Adventure" subtitle="Will, Telekinesis and crystal blades." back={{ to: '/', label: 'Adam X Eve Games' }}>
       <div className="grid gap-3 sm:grid-cols-4">
-        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="A co-op mission inside a smugglers' freight depot." accent="#c4a3ff" badge="In development" />
+        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="Break into a smugglers' freight depot and find who is behind it." accent="#c4a3ff" badge={lobby.online && lobby.byMode.story ? playing(lobby.byMode.story) : '1 to 4 players'} />
         <JoinTile lobby={lobby} />
         {MODE_ORDER.filter((m) => m !== 'practice').map((m) => (
           <ModeTile key={m} mode={m} badge={lobby.online ? playing(lobby.byMode[m]) : null} />
@@ -177,6 +177,8 @@ export function JoinPage() {
   const lobby = useLobby();
   const join = (mode) => navigate({ to: '/duelist-next/play', search: { mode, online: 1 } });
   const withPlayers = (lobby.matches || []).filter((m) => m.players > 0);
+  // the busiest place with players and room: a match (the server picks it) or an open story crew
+  const busiest = withPlayers.find((m) => m.open);
   return (
     <MenuShell title="Join" subtitle="Jump into a match that has players in it. You take a bot's place." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       {!lobby.online ? (
@@ -186,7 +188,7 @@ export function JoinPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <Button primary onClick={() => join('any')}><LogIn className="h-4 w-4" /> {withPlayers.length ? 'Join a match' : 'Start a match others can join'}</Button>
+          <Button primary onClick={() => join(busiest?.mode === 'story' ? 'story' : 'any')}><LogIn className="h-4 w-4" /> {withPlayers.length ? 'Join a match' : 'Start a match others can join'}</Button>
           <div className="space-y-2">
             <div className="text-xs uppercase tracking-wider text-white/40">Matches</div>
             <MatchRows matches={lobby.matches} onJoin={join} />
@@ -222,7 +224,7 @@ export function FighterPage() {
 const CONTROLS = [
   ['Move', 'W A S D'], ['Sprint', 'Shift'], ['Light strike (chain three)', 'Left mouse'], ['Heavy strike', 'E'], ['Guard (a fresh guard parries)', 'Right mouse, hold'],
   ['Roll (into a push or a strike)', 'Space'], ['Dash', 'Ctrl'], ['Push', '1'], ['Pull', '2'], ['Telekinesis grip (let go to throw)', '3, hold'],
-  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'],
+  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'], ['Use (story: crates, consoles, cores)', 'F, hold'],
 ];
 
 function readAudio() {
@@ -267,25 +269,60 @@ export function SettingsPage() {
 }
 
 const ACTS = [
-  ['Infiltration', 'Get inside the Halvane Logistics orbital freight depot. Find who signs off the "medical crates".'],
-  ['The Ledger', 'The crates hold unregistered crystal-forged rifles. Find the three people behind the shipments.'],
-  ['The Evidence', 'Get the ledger cores and the broker\'s records out alive. The base locks down.'],
-  ['The Name', 'The buyer pays in Will-forged crystal. A recorded message plays in a voice you know.'],
+  ['Infiltration', 'Get into the Halvane Logistics freight depot and open the crates its manifest calls medical supplies.'],
+  ['The Ledger', 'Three people sign every transfer: the quartermaster, the broker and the security chief. Find them and take their ledger cores.'],
+  ['The Evidence', 'The depot locks down. Carry the cores to the cargo lift and hold it until it arrives.'],
+  ['The Name', 'The buyer paid in Will-forged crystal. A recorded message plays in a voice you know.'],
 ];
 
 export function StoryPage() {
+  const navigate = useNavigate();
+  const lobby = useLobby();
+  const [prefs] = usePrefs();
+  const [typed, setTyped] = useState('');
+  const code = typed.toUpperCase().replace(/[^A-HJ-NP-Z]/g, '').slice(0, 5);
+  const play = (search) => navigate({ to: '/duelist-next/play', search: { mode: 'story', ...search } });
+  const crews = (lobby.matches || []).filter((m) => m.mode === 'story' && m.open);
+  const offline = lobby.serverUrl ? 'The match server is not answering.' : 'Online play is not set up yet.';
   return (
-    <MenuShell title="Contraband" subtitle="A co-op mission for 1 to 4 players. In development." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <ol className="grid gap-3 sm:grid-cols-2">
-        {ACTS.map(([title, line], i) => (
-          <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
-            <div className="mt-1 text-base font-semibold">{title}</div>
-            <div className="mt-1 text-sm text-white/60">{line}</div>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-6 text-sm text-white/45">The mission is being built: you will play it with friends from this page.</p>
+    <MenuShell title="Contraband" subtitle="A story mission for 1 to 4 players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <div className="space-y-5">
+          <ol className="grid gap-3 sm:grid-cols-2">
+            {ACTS.map(([title, line], i) => (
+              <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
+                <div className="mt-1 text-base font-semibold">{title}</div>
+                <div className="mt-1 text-sm text-white/60">{line}</div>
+              </li>
+            ))}
+          </ol>
+          <ul className="space-y-1.5 text-xs text-white/55">
+            <li>About ten minutes. If the whole crew falls, the stage starts again from its checkpoint.</li>
+            <li>The guards have no Veil but carry sidearms: a line of light shows where a shot will go. Roll or guard.</li>
+            <li>Hold F to open crates, use consoles and take ledger cores. The depot is manned for the size of your crew.</li>
+          </ul>
+        </div>
+        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <Button primary onClick={() => play({ online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
+          <div className="h-px bg-white/10" />
+          <div className="text-xs uppercase tracking-wider text-white/40">With a crew</div>
+          <Button onClick={() => play({ online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
+            <Users className="h-4 w-4" /> Start a crew room
+          </Button>
+          <p className="text-xs text-white/40">You get a code to give to up to three friends.</p>
+          <div className="flex items-center gap-2">
+            <input value={code} onChange={(e) => setTyped(e.target.value)} placeholder="CODE" maxLength={5} aria-label="Crew code"
+              className="w-24 rounded-lg border border-white/10 bg-[#0c1622] px-3 py-2 text-sm uppercase tracking-[0.25em] text-white/90 outline-none placeholder:text-white/25 focus:border-cyan-300/40" />
+            <Button onClick={() => play({ online: 1, room: code })} disabled={!lobby.online || code.length !== 5}><LogIn className="h-4 w-4" /> Join with a code</Button>
+          </div>
+          <Button onClick={() => play({ online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
+            <LogIn className="h-4 w-4" /> {crews.length ? `Join an open crew (${crews.length})` : 'Start an open crew'}
+          </Button>
+          {!lobby.online && <p className="text-xs text-white/40">{offline}</p>}
+          <p className="text-xs text-white/40">Fighter: {BODIES[prefs.fighter]?.name}. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200/80 hover:underline">Change</Link></p>
+        </div>
+      </div>
     </MenuShell>
   );
 }

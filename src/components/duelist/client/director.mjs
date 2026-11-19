@@ -46,7 +46,9 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         if (a && !s.released && a.t >= a.move.startup) {
           s.released = true;
           const dir = forwardOf(bodyOf(world, id).yaw);
-          if (a.move.kind === 'attack') {
+          if (a.move.damageKind === 'projectile') {
+            // a shot is heard as each round leaves (the 'projectile' effect, below)
+          } else if (a.move.kind === 'attack') {
             audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' });
           } else {
             const kind = a.id === 'gripThrow' ? 'throw' : a.id;
@@ -63,6 +65,7 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         stop = Math.max(stop, feel.stop * weight);
         const target = actors[e.defender];
         const at = target ? target.chest() : null;
+        if (e.type === 'projectile') audio.play('shot', actors[e.owner]?.chest() || null);
         if (e.type === 'impact' && at) impactSound(e, at);
         else if (e.type === 'parry' && target) audio.play('parry', target.hand());
         else if (e.type === 'veilCollapse' && at) audio.play('collapse', at);

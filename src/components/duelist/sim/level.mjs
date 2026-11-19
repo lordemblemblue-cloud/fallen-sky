@@ -68,10 +68,13 @@ export function resolveCircle(level, body, radius) {
   return touched;
 }
 
-/** How far along a ray (from, unit dir) the first solid is, up to max (Infinity: nothing in the way). */
-export function rayDistance(level, from, dir, max = Infinity) {
+/**
+ * How far along a ray (from, unit dir) the first solid is, up to max (Infinity: nothing in the way).
+ * boxes: what counts as solid (the camera, for one, looks over low cover).
+ */
+export function rayDistance(level, from, dir, max = Infinity, boxes = solids(level)) {
   let best = Infinity;
-  for (const b of solids(level)) {
+  for (const b of boxes) {
     let t0 = 0;
     let t1 = max;
     let hit = true;

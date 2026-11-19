@@ -83,3 +83,36 @@
   .duelist-countdown { font-size: 54px; }
   .duelist-sound { bottom: 104px; right: auto; left: 50%; transform: translateX(-50%); }
 }
+/* story mission HUD */
+.duelist-objective { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: min(520px, 46vw); display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; pointer-events: none; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.75); }
+.duelist-objective-mission { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(220, 235, 255, 0.55); }
+.duelist-objective-title { font-size: 16px; font-weight: 700; color: #ffe1a6; animation: duelist-objective-in 1.4s ease-out; }
+.duelist-objective-text { font-size: 13px; color: #eaf6ff; }
+.duelist-objective-text b { margin-left: 8px; font-variant-numeric: tabular-nums; color: #ffcf8a; }
+@keyframes duelist-objective-in { 0% { opacity: 0; transform: scale(1.35); color: #ffffff; } 35% { opacity: 1; transform: scale(1.12); } 100% { transform: scale(1); } }
+.duelist-comms { position: absolute; left: 50%; bottom: 118px; transform: translateX(-50%); width: min(620px, 82vw); padding: 9px 14px; border-radius: 12px; background: rgba(8, 14, 24, 0.78); border: 1px solid rgba(160, 200, 255, 0.2); font-size: 14px; line-height: 1.4; color: #eaf3ff; pointer-events: none; animation: duelist-comms-in 0.25s ease-out; }
+.duelist-comms-who { display: block; margin-bottom: 2px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #c4a3ff; }
+@keyframes duelist-comms-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.duelist-prompt { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 14px; color: #ffe1a6; pointer-events: none; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8); }
+.duelist-prompt kbd { display: inline-block; min-width: 20px; padding: 1px 6px; margin-right: 4px; border-radius: 5px; border: 1px solid rgba(255, 220, 150, 0.7); background: rgba(40, 30, 10, 0.6); font: inherit; font-weight: 700; text-align: center; }
+.duelist-prompt-bar { width: 180px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+.duelist-prompt-bar > div { height: 100%; background: #ffcf6a; transition: width 0.1s linear; }
+.duelist-crew { position: absolute; left: 16px; top: 112px; display: flex; flex-direction: column; gap: 2px; font-size: 12px; color: #bfe9ff; pointer-events: none; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+.duelist-crew .is-down { color: #ff9a8a; }
+.duelist-crew-code { color: #ffe1a6; pointer-events: auto; user-select: text; }
+.duelist-crew-code b { margin-left: 4px; font-size: 14px; letter-spacing: 0.2em; }
+.duelist-result-failed { color: #ffb4a6; text-shadow: 0 0 24px rgba(255, 110, 90, 0.55); }
+.duelist-result-ending { max-width: min(560px, 84vw); text-align: center; line-height: 1.5; }
+.duelist-result-actions { display: flex; gap: 12px; }
+.duelist-markers { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.duelist-marker { position: absolute; left: 0; top: 0; width: 140px; margin: -9px 0 0 -70px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #ffe1a6; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.85); white-space: nowrap; }
+.duelist-marker i { width: 11px; height: 11px; margin-bottom: 3px; border: 2px solid #ffd98a; background: rgba(255, 200, 100, 0.2); transform: rotate(45deg); box-shadow: 0 0 10px rgba(255, 200, 100, 0.7); }
+.duelist-marker.is-off i { background: #ffd98a; }
+.duelist-marker small { font-size: 10px; color: rgba(255, 235, 200, 0.75); }
+/* between the two vitals panels only where there is room; otherwise under them */
+@media (max-width: 1240px) { .duelist-objective { top: 104px; width: min(520px, 92vw); } .duelist-crew { top: 176px; } }
+@media (max-width: 720px) {
+  .duelist-objective { top: 92px; width: 92vw; }
+  .duelist-comms { bottom: 150px; font-size: 13px; }
+  .duelist-crew { top: 92px; }
+}

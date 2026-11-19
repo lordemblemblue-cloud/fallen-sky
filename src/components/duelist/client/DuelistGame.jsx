@@ -1,27 +1,34 @@
 // Duelist Adventure (new build): one match in the arena (practice, duel, free for all, team deathmatch or
 // capture the flag), played in the browser against bots (client/localSource.mjs) or online on the match
-// server (net/client.mjs). Both are "sources" with the same shape; this view draws whichever it is given.
+// server (net/client.mjs); or the story mission in its depot (client/missionSource.mjs). All are "sources"
+// with the same shape; this view draws whichever it is given.
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
-import { bodyOf, hostile } from '../sim/world.mjs';
+import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
+import { clearLine, rayDistance } from '../sim/level.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
+import { createSidearm, createAimLine } from './sidearm.mjs';
+import { dressGuard } from './guardKit.mjs';
 import { createFighterAnimator } from './animator.mjs';
 import { createArena, createSceneLighting } from './arena.mjs';
+import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
 import { createWarp } from './warp.mjs';
 import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
-import { createNameTags, createCtfProps, fighterColor } from './matchProps.mjs';
+import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createLocalSource } from './localSource.mjs';
+import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
 import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
+import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 
@@ -29,9 +36,17 @@ const POWER_KEYS = [['push', '1'], ['pull', '2'], ['grip', '3'], ['breach', '4']
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
 const YOU_COLOR = 0x9fe8ff;
 const NET_TEXT = { connecting: 'Connecting to the match server…', joining: 'Finding a match…' };
+const CREW_TEXT = { connecting: 'Connecting to the match server…', joining: 'Joining the crew…' };
+// what the body does while it uses something (a clip of the motion pack, by the thing's kind)
+const WORK_CLIPS = { crate: { clip: 'interact' }, terminal: { clip: 'hack', loop: true }, core: { clip: 'pickup' }, use: { clip: 'interact' } };
+const HEAD = 1.45; // metres: where the camera looks, and where its line to the fighter starts
+const BODY_REMAINS = 7; // seconds a fallen guard lies before it is cleared away
 
-async function createActor(scene, bodyId, swordColor) {
+// seat: { body, weapon ('sword' | 'sidearm'), kit (a guard's uniform), kind }
+async function createActor(scene, seat, weaponColor) {
+  const bodyId = seat.body;
   const { model, clips } = await loadFighterBody(bodyId);
+  if (seat.kit) dressGuard(model, seat.kit); // fitted at rest, before anything poses the body
   // the clip packs are retargeted from the body's rest pose: before anything poses it
   const [pack, dodges] = await Promise.all([
     clipsForBody(model, { rigKey: bodyId }),
@@ -42,28 +57,31 @@ async function createActor(scene, bodyId, swordColor) {
   scene.add(group);
   // held in Telekinesis has no clip in the pack: an authored pose
   const { clips: baked, grip, handBone } = bakeDuelMoves(model, ['held']);
-  const sword = createCrystalSword({ color: swordColor });
+  const gun = seat.weapon === 'sidearm';
+  const sword = gun ? createSidearm({ color: weaponColor }) : createCrystalSword({ color: weaponColor });
   attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(handBone || 'mixamorig:RightHand')), grip);
-  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked } });
-  const trail = createSwordTrail(scene, { color: swordColor });
+  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance: gun ? 'sidearm' : 'sword' });
+  const trail = gun ? null : createSwordTrail(scene, { color: weaponColor });
+  const aim = gun ? createAimLine(scene, { color: weaponColor }) : null;
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   const leftHand = model.getObjectByName('mixamorigLeftHand');
   return {
-    group, model, sword, animator, trail, yaw: 0, at: new THREE.Vector3(),
+    group, model, sword, animator, trail, aim, gun, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
-    dispose() { animator.dispose(); sword.dispose(); trail.dispose(); group.removeFromParent(); },
+    dispose() { animator.dispose(); sword.dispose(); trail?.dispose(); aim?.dispose(); group.removeFromParent(); },
   };
 }
 
 /**
- * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button). you: your body; foe: the
- * opponent's in a local duel or practice; bots: how many opponents in practice; botLevel: trainee | duelist |
- * master. online + serverUrl: play on the match server instead of in the browser.
+ * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button) | story (the co-op mission).
+ * you: your body; foe: the opponent's in a local duel or practice; bots: how many opponents in practice;
+ * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser
+ * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1 }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, onLeave = null }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -90,13 +108,17 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 400);
-    createSceneLighting(scene);
-    const source = online
-      ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, onChange: (s, detail) => setNet({ status: s, detail }) })
-      : createLocalSource({ mode, botLevel, bots, seed: 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919, youBody, foeBody });
+    const lights = createSceneLighting(scene);
+    scene.add(lights.sun.target);
+    const story = mode === 'story';
+    const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
+    const source = story && !online ? createMissionSource({ seed, youBody })
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, room, onChange: (s, detail) => setNet({ status: s, detail }) })
+        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
     const { world } = source;
+    const level = source.level || null; // a mission's rooms (matches are fought in the open arena)
     const me = () => source.meId;
-    // the arena is sized by the mode (online, the mode is known once a match is found)
+    // the arena is sized by the mode (online, the mode is known once a match is found); a mission has its depot
     let arenaMode = null;
     let arena = null;
     let warp = null;
@@ -106,10 +128,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       if (arenaMode === m) return;
       arenaMode = m;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
-      arena = createArena({ radius: MODES[m]?.arena || 18 });
+      arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18 });
       scene.add(arena.group);
     };
     ensureArena(source.mode || mode);
+    const markers = level ? createMarkerOverlay(mount) : null;
     warp = createWarp(renderer, scene, camera);
     const vfx = createDuelVfx(scene, { warp: warpHolder, arena: arenaHolder, camera });
     const audio = createDuelAudio();
@@ -149,26 +172,38 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     observer.observe(mount);
     pressRef.current = (command) => controls.press(command);
 
-    // fighters come and go with the seats (online: players join, bots step out)
+    // fighters come and go with the seats (online: players join, bots step out; a mission: its people appear
+    // room by room). Bodies are built one at a time, a frame apart, so a full room does not arrive as a hitch.
+    const queue = [];
+    const retired = new Set(); // a mission's fallen, cleared away
+    let building = false;
+    const colorOf = (s, i) => s.color ?? (TEAM_COLORS[s.team] ? fighterColor(s.team) : s.id === me() ? YOU_COLOR : fighterColor(null, i));
     const syncActors = () => {
       seatsSeen = source.seatsVersion;
       seatList = source.seats();
       const ids = new Set(seatList.map((s) => s.id));
       for (const id of Object.keys(actors)) if (!ids.has(id)) { actors[id].dispose(); delete actors[id]; tags.remove(id); }
       seatList.forEach((s, i) => {
-        if (actors[s.id] || pending.has(s.id)) return;
+        if (actors[s.id] || pending.has(s.id) || retired.has(s.id)) return;
         pending.add(s.id);
-        const color = s.team ? fighterColor(s.team) : s.id === me() ? YOU_COLOR : fighterColor(null, i);
-        createActor(scene, s.body, color).then((actor) => {
-          pending.delete(s.id);
-          if (disposed || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
-          actors[s.id] = actor;
-          if (s.id !== me()) tags.set(s.id, s.name, s.team ? fighterColor(s.team) : 0xdfe9f5);
-        }).catch((error) => { pending.delete(s.id); console.error('[duelist] could not load a fighter', error); setStatus('error'); });
+        queue.push({ seat: s, color: colorOf(s, i) });
       });
     };
+    const buildNext = () => {
+      if (building || !queue.length) return;
+      const { seat: s, color } = queue.shift();
+      if (!source.seats().some((x) => x.id === s.id)) { pending.delete(s.id); return; }
+      building = true;
+      createActor(scene, s, color).then((actor) => {
+        if (disposed || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
+        actors[s.id] = actor;
+        // in a mission only people with a name wear it
+        if (s.id !== me() && (s.kind !== 'enemy' || s.named)) tags.set(s.id, s.name, s.kind === 'enemy' ? 0xffc9b8 : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5);
+      }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
+        .finally(() => { pending.delete(s.id); building = false; });
+    };
 
-    // the nearest standing hostile to the player (for lock-on and the right-hand panel)
+    // the nearest standing hostile to the player (for lock-on and the right-hand panel); in rooms, one in sight
     const nearestHostile = (range = Infinity) => {
       const mine = world.fighters.get(me());
       const at = bodyOf(world, me());
@@ -178,10 +213,30 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         if (f.id === me() || f.vitals.dead || !hostile(world, mine, f)) continue;
         const b = bodyOf(world, f.id);
         const d = Math.hypot(b.x - at.x, b.z - at.z);
-        if (d <= range && (!best || d < best.d)) best = { id: f.id, d };
+        if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b))) continue;
+        best = { id: f.id, d };
       }
       return best?.id || null;
     };
+    // indoors the camera stays in the room: pulled in front of whatever is between it and the fighter's head
+    const head = new THREE.Vector3();
+    const clampCamera = level ? (target, point) => {
+      head.set(target.x, target.y + HEAD, target.z);
+      const dx = point.x - head.x;
+      const dz = point.z - head.z;
+      const d = Math.hypot(dx, dz);
+      const margin = 0.3;
+      if (d > 1e-4) {
+        const free = rayDistance(level, head, { x: dx / d, z: dz / d }, d + margin, arena.cameraBlockers(point.y));
+        if (free < d + margin) {
+          const k = Math.max(0.1, (free - margin) / d);
+          point.x = head.x + dx * k;
+          point.z = head.z + dz * k;
+          point.y = head.y + (point.y - head.y) * k;
+        }
+      }
+      point.y = Math.min(point.y, DEPOT.height - 0.3);
+    } : null;
     const lockedBody = () => {
       const f = lockId ? world.fighters.get(lockId) : null;
       if (!f || f.vitals.dead) { lockId = null; return null; }
@@ -194,13 +249,21 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let fixedShot = null;
     let manual = false;
     let film = null;
+    let pilot = null; // development: the game plays your fighter through a mission
+    let drawing = true; // development: off while a test skips ahead
     if (import.meta.env?.DEV) {
       window.__duelist = {
-        source, match: source.match || null, world, controls, actors, audio,
+        source, match: source.match || null, mission: source.mission || null, world, controls, actors, audio, arena, camera, renderer,
+        autopilot: (on = true) => {
+          if (!on || !source.mission) { pilot = null; return Promise.resolve(false); }
+          return import('../sim/autopilot.mjs').then((m) => { pilot = { think: m.thinkAutopilot, state: m.createAutopilot(me(), { seed: 3 }) }; return true; });
+        },
+        // skip ahead without drawing or animating (a mission's later stages, in a test)
+        skip: (seconds, stepSize = 1 / 30) => { drawing = false; try { for (let t = 0; t < seconds - 1e-9; t += stepSize) tick(stepSize); } finally { drawing = true; } },
         slow: (v = 1) => { timeScale = Math.max(0, v); },
         lock: (on) => { lockId = on ? nearestHostile() : null; },
         view: (offset = 0) => { viewOffset = offset; },
-        camera: (shot = null) => { fixedShot = shot; },
+        shot: (shot = null) => { fixedShot = shot; },
         manual: (on) => { manual = !!on; },
         advance: (seconds, stepSize = 1 / 60) => { for (let t = 0; t < seconds - 1e-9; t += stepSize) tick(stepSize); },
         film: (count = 12, every = 0.05, cols = 4) => new Promise((resolve) => {
@@ -250,22 +313,62 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         const won = e.winner === me() || (myTeam && e.winner === myTeam);
         audio.play(e.winner === 'draw' ? 'loss' : won ? 'victory' : 'loss');
       }
+      // a mission's
+      else if (e.type === 'stage') audio.play('objective');
+      else if (e.type === 'comms') audio.play('comms');
+      else if (e.type === 'interacted') audio.play('interact', actors[e.by]?.chest() || null);
+      else if (e.type === 'door') audio.play('door', arena.doorAt?.(e.id) || null);
+      else if (e.type === 'failed') audio.play('loss');
+      else if (e.type === 'complete') audio.play('victory');
+      else if (e.type === 'retry' || e.type === 'respawn') { if (e.type === 'retry') director.reset(); if (e.type === 'retry' || e.id === me()) follow.snap(); }
     };
 
+    // In rooms, only people the camera or your fighter could see are drawn and animated: a line to the body
+    // (or just either side of it) that no wall, pillar or shut door crosses. Anyone close counts, and whoever
+    // drops out of sight stays a moment longer.
+    const eyes = [{ x: 0, z: 0 }, { x: 0, z: 0 }];
+    const lineClear = (from, x, z, boxes) => {
+      const dx = x - from.x;
+      const dz = z - from.z;
+      const d = Math.hypot(dx, dz);
+      return d < 0.5 || rayDistance(level, from, { x: dx / d, z: dz / d }, d, boxes) >= d - 1e-3;
+    };
+    const inSight = (actor, body, dt) => {
+      const boxes = arena.cameraBlockers(Infinity);
+      let seen = false;
+      for (const from of eyes) {
+        const dx = body.x - from.x;
+        const dz = body.z - from.z;
+        const d = Math.hypot(dx, dz) || 1;
+        const sx = (-dz / d) * 0.55;
+        const sz = (dx / d) * 0.55;
+        if (d < 5 || lineClear(from, body.x, body.z, boxes) || lineClear(from, body.x + sx, body.z + sz, boxes) || lineClear(from, body.x - sx, body.z - sz, boxes)) { seen = true; break; }
+      }
+      actor.unseen = seen ? 0 : (actor.unseen ?? 99) + dt;
+      return actor.unseen < 1.2;
+    };
+    const retire = (id) => { actors[id].dispose(); delete actors[id]; retired.add(id); tags.remove(id); };
+
+    // a mission's view (the depot is drawn from it): fresh ten times a second, with the HUD
+    let lastView = level ? source.view() : null;
+    let alarmOn = false;
     const tick = (dt) => {
       clock += dt;
       if (controls.takeLockToggle()) lockId = lockId ? null : nearestHostile();
       if (fightTimer > 0) { fightTimer -= dt; if (fightTimer <= 0) setFightFlash(false); }
       if (source.status === 'ready' && source.seatsVersion !== seatsSeen) syncActors();
+      buildNext();
       const mineId = me();
-      const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id]);
+      // the players' bodies must be there to start; a mission's people step in as they are built
+      const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy');
       if (ready) {
-        if (source.mode && source.mode !== arenaMode) ensureArena(source.mode);
+        if (!level && source.mode && source.mode !== arenaMode) ensureArena(source.mode);
         if (!ctf && source.mode === 'ctf') {
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         const readInput = () => {
+          if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
           const target = lockedBody();
           const faceYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : null;
@@ -277,10 +380,24 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
         const feel = director.frame(dt);
         const show = feel.stopped ? dt * 0.1 : dt;
+        // who is using what (a crate's lid, a console, a core): their bodies show it
+        const working = new Map();
+        for (const it of lastView?.interactables || []) if (it.by && it.progress > 0) working.set(it.by, { ...(WORK_CLIPS[it.kind] || WORK_CLIPS.use), progress: it.progress });
+        if (level) {
+          const mine = bodyOf(world, mineId);
+          eyes[0].x = camera.position.x; eyes[0].z = camera.position.z;
+          if (mine) { eyes[1].x = mine.x; eyes[1].z = mine.z; }
+        }
         for (const [id, actor] of Object.entries(actors)) {
           const fighter = world.fighters.get(id);
           const body = bodyOf(world, id);
-          if (!fighter || !body) { actor.group.visible = false; continue; }
+          if (!fighter || !body) { actor.group.visible = false; actor.aim?.hide(); continue; }
+          if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
+            actor.group.visible = false;
+            actor.aim?.hide();
+            if (fighter.vitals.dead) retire(id); // nobody is looking: the fallen are cleared away
+            continue;
+          }
           actor.group.visible = true;
           // a respawn is a cut, not a slide across the arena
           if (actor.at.distanceTo(new THREE.Vector3(body.x, body.y, body.z)) > 5) actor.yaw = body.yaw;
@@ -289,15 +406,33 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
-          actor.animator.update(show, { fighter, body, now: world.time });
-          const will = fighter.vitals.will / fighter.vitals.max.will;
+          if (drawing) actor.animator.update(show, { fighter, body, now: world.time, working: working.get(id) || null });
+          const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));
+          const a = fighter.action;
+          if (actor.gun) {
+            // a shot's wind-up shows: the sidearm's core heats and a line marks where the round will go
+            const winding = a && a.move.damageKind === 'projectile' && a.t < a.move.startup ? a.t / a.move.startup : 0;
+            actor.sword.charge(winding);
+            if (winding > 0) {
+              const dir = forwardOf(body.yaw);
+              const reach = level ? Math.min(a.move.range, rayDistance(level, body, dir, a.move.range)) : a.move.range;
+              const muzzle = actor.sword.muzzle();
+              actor.aim.show({ x: muzzle.x, y: PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
+            } else actor.aim.hide();
+          }
           actor.sword.update(show);
-          actor.trail.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, fighter.action?.move?.kind === 'attack');
+          actor.trail?.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, a?.move?.kind === 'attack');
+          // a mission's fallen lie a while, then are cleared away
+          if (actor.kind === 'enemy' && fighter.vitals.dead) {
+            actor.fallen += dt;
+            if (actor.fallen > BODY_REMAINS) actor.group.position.y -= (actor.fallen - BODY_REMAINS) * 0.9;
+            if (actor.fallen > BODY_REMAINS + 1.4) retire(id);
+          }
         }
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
         vfx.update(show, { grips });
-        tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead);
+        tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
         if (ctf) {
           const z = MODES.ctf.arena - CTF.baseInset;
           const homes = { red: { x: 0, z: -z }, blue: { x: 0, z } };
@@ -306,12 +441,22 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         }
         const at = bodyOf(world, mineId);
         const target = lockedBody();
+        // watched while the game plays your fighter: the camera turns with the body
+        if (pilot && at) { const y = controls.yaw(); controls.setYaw(y + Math.atan2(Math.sin(at.yaw - y), Math.cos(at.yaw - y)) * Math.min(1, dt * 2.5)); }
         const followYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
         if (at) {
           if (follow.distanceTo(at) > 8) follow.snap();
-          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target });
+          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target, clamp: clampCamera });
+          if (level) {
+            // the key light follows the crew through the rooms; a camera pressed against you looks through you
+            lights.sun.position.set(at.x + 5, 20, at.z + 3);
+            lights.sun.target.position.set(at.x, 0, at.z);
+            if (actors[mineId]) actors[mineId].group.visible = camera.position.distanceTo(head.set(at.x, at.y + HEAD, at.z)) > 0.85;
+          }
         }
         if (target && at) controls.setYaw(followYaw);
+        if (markers) markers.update(lastView?.phase === 'live' ? lastView.markers.filter((m) => !m.follow) : [], camera, at);
+        if (lastView && !!lastView.alarm !== alarmOn) { alarmOn = !!lastView.alarm; if (alarmOn) audio.play('alarm'); }
         if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
         if (feel.shake > 0.001) {
           const t = feel.shake * feel.shake;
@@ -328,24 +473,27 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const shownId = lockId || nearestHostile(14);
           const shown = shownId ? world.fighters.get(shownId) : null;
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
+          const view = source.view();
+          if (level) lastView = view;
           setHud({
             you: mine ? snapshot(mine, world.time) : null,
             target: shown ? snapshot(shown, world.time) : null,
             targetName: seat?.name || '',
             targetTeam: seat?.team || null,
             lockOn: !!lockId,
-            view: source.view(),
+            view,
             myTeam: seatList.find((s) => s.id === mineId)?.team || null,
             powers: mine ? POWER_KEYS.map(([id, key]) => ({ id, key, ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })) : [],
           });
           setStatus('ready');
         }
       } else {
-        follow.update(dt, { target: { x: 0, y: 0, z: 0 }, yaw: controls.yaw(), pitch: controls.pitch() });
+        const start = source.def?.start || { x: 0, z: 0 };
+        follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera });
       }
-      arena.update(dt);
+      arena.update(dt, { view: lastView });
       warp.update(dt);
-      warp.render();
+      if (drawing) warp.render();
       if (film) filmFrame(dt);
     };
     const loop = (now) => {
@@ -366,6 +514,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       audio.dispose();
       tags.dispose();
       ctf?.dispose();
+      markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
       arena.dispose();
@@ -374,35 +523,46 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room]);
 
   const view = hud?.view;
+  const mission = view?.mission ? view : null; // a story mission's view; otherwise a match's
+  const match = view && !mission ? view : null;
   const waiting = online && net && net.status !== 'ready';
+  const again = () => setGeneration((g) => g + 1);
   return (
     <div className="duelist-game" ref={mountRef}>
       {hud?.you && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
-      {view && <ScoreLine view={view} />}
-      {view && <Countdown view={view} fightFlash={fightFlash} />}
-      {view && <RespawnNote view={view} />}
-      {view && <Feed view={view} />}
-      {view && <Result view={view} myTeam={hud.myTeam} online={online} onAgain={() => setGeneration((g) => g + 1)} />}
+      {match && <ScoreLine view={match} />}
+      {match && <Countdown view={match} fightFlash={fightFlash} />}
+      {match && <RespawnNote view={match} />}
+      {match && <Feed view={match} />}
+      {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
+      {mission && <Objective view={mission} />}
+      {mission && <Crew view={mission} />}
+      {mission && <Prompt view={mission} />}
+      {mission && <Comms view={mission} />}
+      {mission && <DownNote view={mission} />}
+      {mission && <MissionEnd view={mission} onAgain={online ? null : again} onLeave={onLeave} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
-      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{NET_TEXT[net.status]}</div>}
+      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]}</div>}
       {waiting && (net.status === 'error' || net.status === 'closed') && <div className="duelist-center">{net.detail || 'Not connected.'}</div>}
-      {!online && status === 'loading' && <div className="duelist-center">Forging the arena…</div>}
+      {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
-      <div className="duelist-help">Click to fight · WASD move · Shift sprint · LMB light · E heavy · RMB guard · Space roll · 1 push · 2 pull · 3 grip · 4 breach · Z resist · Tab lock on</div>
+      <div className="duelist-help">Click to fight · WASD move · Shift sprint · LMB light · E heavy · RMB guard · Space roll · 1 push · 2 pull · 3 grip · 4 breach · Z resist · Tab lock on{mode === 'story' ? ' · F (hold) use' : ''}</div>
     </div>
   );
 }
 
+const share = (value, max) => (max > 0 ? value / max : 0); // an ordinary person has no Will at all
+
 function snapshot(f, now) {
   const v = f.vitals;
   return {
-    hp: v.hp / v.max.hp, stamina: v.stamina / v.max.stamina, will: v.will / v.max.will, shield: v.shield / v.max.shield,
-    veil: fighterVeil(f), winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
+    hp: share(v.hp, v.max.hp), stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
+    veil: fighterVeil(f), noVeil: v.max.will <= 0, winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
     dead: v.dead,
   };
 }
@@ -412,11 +572,12 @@ function Bar({ value, kind }) {
 }
 
 function Vitals({ title, v, align, color = null }) {
+  const veil = v.dead ? 'Fallen' : v.noVeil ? 'No Veil' : v.veil === 'collapsed' ? 'Veil collapsed' : v.veil === 'unstable' ? 'Veil unstable' : 'Veil stable';
   return (
     <div className={`duelist-vitals duelist-vitals-${align}`}>
-      <div className="duelist-vitals-title" style={color ? { color } : undefined}>{title} <span className={`duelist-veil duelist-veil-${v.veil}`}>{v.dead ? 'Fallen' : v.veil === 'collapsed' ? 'Veil collapsed' : v.veil === 'unstable' ? 'Veil unstable' : 'Veil stable'}</span></div>
+      <div className="duelist-vitals-title" style={color ? { color } : undefined}>{title} <span className={`duelist-veil duelist-veil-${v.veil}`}>{veil}</span></div>
       <Bar value={v.shield} kind="shield" />
-      <Bar value={v.will} kind="will" />
+      {!v.noVeil && <Bar value={v.will} kind="will" />}
       <Bar value={v.hp} kind="hp" />
       <Bar value={v.stamina} kind="stamina" />
       <div className="duelist-tags">
