@@ -7,6 +7,7 @@ import { getAllAXEEquipmentItems, subscribeAXEEquipmentInventory } from '../equi
 import { subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter, subscribeCharacters } from '../../characterStore';
 import { AXE_EQUIPMENT_SLOT_DEFS } from '../equipment/AXEEquipmentSystem';
+import { inferAXEWeaponRole } from '../weapons/AXEWeaponIdentity';
 import { getWingsState, subscribeWings } from '../../progression/wingsStore';
 import { getAXECapeState, subscribeAXECapes } from '../progression/AXECapeStore';
 import { getAXECapeDefinition } from '../progression/AXECapeSystem';
@@ -24,12 +25,21 @@ const ATTRIBUTES = Object.freeze([
   { key:'strength', name:'Strength', Icon:Shield, info:'Improves physical damage and attack accuracy.' },
   { key:'focus', name:'Spirit', Icon:Sparkles, info:'Improves Chi, spirit damage and recovery.' },
 ]);
-// This is a read-only equipment sheet, not a second inventory. Keep every
-// supported equip position visible, including off-hand, rings, wings,
-// cosmetics and the auxiliary slots. Long rails scroll independently of the 3D model.
+// Display the three weapon identities as dedicated positions beside the model.
+// The inventory still decides which owned weapons can be equipped; these tiles
+// never grant an extra equipped weapon or duplicate its stats.
+const WEAPON_ROLE_SLOTS = Object.freeze([
+  { role:'offensive', label:'Damage' },
+  { role:'defensive', label:'Defense' },
+  { role:'ranged', label:'Range' },
+]);
+// The remaining supported equipment positions keep their real inventory slots.
+// Long rails scroll independently so enlarging tiles never squashes the avatar.
 const CHARACTER_DISPLAY_SLOTS = Object.freeze(
-  Object.entries(AXE_EQUIPMENT_SLOT_DEFS).flatMap(([slot, def]) =>
-    Array.from({length:def.maxEquipped}, (_,index)=>[slot,index])),
+  Object.entries(AXE_EQUIPMENT_SLOT_DEFS)
+    .filter(([slot]) => slot !== 'weapon')
+    .flatMap(([slot, def]) =>
+      Array.from({length:def.maxEquipped}, (_,index)=>[slot,index])),
 );
 const SLOT_SPLIT = Math.ceil(CHARACTER_DISPLAY_SLOTS.length / 2);
 const SLOT_LABELS = {
@@ -58,7 +68,7 @@ function GearIcon({item}) {
   if(item?.slot==='costume'||item?.slot?.startsWith('vanity_'))return <Shirt size={24}/>;
   return <Shield size={24}/>;
 }
-export default function AXECharacterWorkspace({ embedded=false } = {}) {
+export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment } = {}) {
   const [hud,setHud]=useState(getPlayerHUD);
   const [activeCharacter,setActiveCharacter]=useState(getActiveCharacter);
   const [equipment,setEquipment]=useState(getAllAXEEquipmentItems);
@@ -111,7 +121,10 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
     }
     return null;
   };
-  const equippedDisplayCount=CHARACTER_DISPLAY_SLOTS.filter(([slot,index])=>slotItem(slot,index)).length;
+  const roleWeapon = role => liveEquipment.find(item =>
+    item.slot === 'weapon' && inferAXEWeaponRole(item) === role) || null;
+  const equippedDisplayCount = CHARACTER_DISPLAY_SLOTS.filter(([slot,index]) =>
+    slotItem(slot,index)).length + WEAPON_ROLE_SLOTS.filter(({role}) => roleWeapon(role)).length;
   const derived=hud.derived||{};
   // Display allocatable base points here, not equipment-inflated effective totals.
   const totalAttr=migrateBaseStats(hud.baseStats);
@@ -141,6 +154,17 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
       : String(result.reason || 'Unable to allocate points').replaceAll('_',' '));
     if(result.ok)setPlan({});
   };
+  const weaponRoleSlot = ({role,label}) => {
+    const gear=roleWeapon(role);
+    return <button key={role} type="button"
+      className="axe-app-viewer-slot axe-char-viewer-slot axe-char-weapon-slot"
+      title={(gear?.name || label+' weapon empty')+' · Open Equipment to change weapons'}
+      aria-label={label+' weapon: '+(gear?.name||'Empty')+'. Open Equipment'}
+      onClick={onOpenEquipment}>
+      <span className="axe-app-viewer-slot-art"><GearIcon item={gear || {slot:'weapon'}} /></span>
+      <small>{label}</small><span className="axe-app-viewer-item-name">{gear?.name||'—'}</span>
+    </button>;
+  };
   const equippedSlot=([slot,index])=>{
     const gear=slotItem(slot,index);
     const label=(SLOT_LABELS[slot] || caption(slot))+
@@ -160,7 +184,8 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
     <div className="axe-char-layout">
       <section className="axe-app-model-stage axe-char-model-stage" aria-label="Player 3D viewer with all supported equipment slots">
         <div className="axe-app-model-glow" aria-hidden="true"/>
-        <div className="axe-app-viewer-gear axe-app-viewer-gear--left">
+        <div className="axe-app-viewer-gear axe-app-viewer-gear--left" aria-label="Damage weapon and equipped left-side gear">
+          {weaponRoleSlot(WEAPON_ROLE_SLOTS[0])}
           {CHARACTER_DISPLAY_SLOTS.slice(0,SLOT_SPLIT).map(equippedSlot)}
         </div>
         <div className="axe-app-model-center axe-char-model-center">
@@ -168,7 +193,8 @@ export default function AXECharacterWorkspace({ embedded=false } = {}) {
             <div className="axe-app-model-host"><PlayerModel/></div>
           </Suspense>
         </div>
-        <div className="axe-app-viewer-gear axe-app-viewer-gear--right">
+        <div className="axe-app-viewer-gear axe-app-viewer-gear--right" aria-label="Defense and Range weapons and equipped right-side gear">
+          {WEAPON_ROLE_SLOTS.slice(1).map(weaponRoleSlot)}
           {CHARACTER_DISPLAY_SLOTS.slice(SLOT_SPLIT).map(equippedSlot)}
         </div>
         <div className="axe-app-model-caption">
