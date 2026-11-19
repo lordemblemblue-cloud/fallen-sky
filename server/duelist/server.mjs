@@ -197,10 +197,18 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     seats: seatsOf(room), key: client.key, ...extra });
 
   // code: a friend's crew; create: a room of your own (not listed); neither: any open crew, or a new open one
-  function enterCrew(client, { code = null, create = false } = {}) {
+  function enterCrew(client, { code = null, create = false, open = false, matchId = null } = {}) {
     const now = clock();
     let room = null;
-    if (code) {
+    if (matchId) {
+      // An open crew may be joined by the exact ID advertised in /lobby.
+      // Never allow private rooms to be enumerated or joined by guessed IDs.
+      room = rooms.get(matchId);
+      if (!room?.mission || !room.open || !hasRoom(room)) {
+        send(client, { t: 'error', code: 'room', message: 'That public crew is no longer available.' });
+        return;
+      }
+    } else if (code) {
       if (client.wrongCodes.until > now) { send(client, { t: 'error', code: 'wait', message: 'Too many wrong codes. Try again in a moment.' }); return; }
       room = [...rooms.values()].find((r) => r.mission && r.code === code) || null;
       if (!room) {
@@ -215,7 +223,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     if (client.room) leave(client);
     if (room) joinMission(room.mission, { id: client.id, name: client.name });
-    else room = openCrew(client, { open: !create });
+    else room = openCrew(client, { open: open || !create });
     room.bodies.set(client.id, client.body);
     room.clients.set(client.id, client);
     client.room = room;
@@ -518,7 +526,11 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (msg.mode === STORY_MODE) {
           const coded = msg.code !== undefined && msg.code !== null;
           if (coded && (typeof msg.code !== 'string' || !ROOM_CODE.test(msg.code))) { send(client, { t: 'error', code: 'code', message: 'That is not a crew code.' }); return; }
-          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true });
+          const matchId = msg.matchId === undefined ? null : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;
+          if (matchId === false || (matchId && (coded || msg.create))) {
+            send(client, { t: 'error', code: 'room', message: 'Invalid public crew selection.' }); return;
+          }
+          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, open: msg.open === true, matchId });
           return;
         }
         const mode = msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
