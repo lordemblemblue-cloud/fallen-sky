@@ -9,6 +9,7 @@ const CHARGED = new Set(['push', 'pull', 'grip', 'breach']);
 const RELEASE_SOUND = { push: 'push', pull: 'pull', grip: 'gripStart', throw: 'throw', resist: 'resist', dash: 'dash' };
 const SLAM_DELAY = 0.28; // seconds from the knockdown blow to the body landing (the knockback clip)
 
+// playerId: the player's fighter id, or a function giving it (online, it is known once signed in)
 export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) {
   const seen = new Map(); // fighter id -> { action, released }
   const later = []; // { at: world time, run }
@@ -16,7 +17,8 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
   let stop = 0;
 
   const heldBy = (holderId) => [...world.fighters.values()].find((f) => f.heldBy === holderId) || null;
-  const involvesPlayer = (e) => [e.defender, e.attacker, e.from, e.by].includes(playerId);
+  const me = () => (typeof playerId === 'function' ? playerId() : playerId);
+  const involvesPlayer = (e) => [e.defender, e.attacker, e.from, e.by].includes(me());
 
   function impactSound(e, at) {
     if (e.outcome === 'blocked') { audio.play('block', at); return; }

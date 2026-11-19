@@ -1,12 +1,12 @@
 // Duelist Adventure (new build): one match in the arena (practice, duel, free for all, team deathmatch or
-// capture the flag) on the new rules core. The match runs at a fixed 60 Hz (sim/match.mjs: the same rules
-// the match server will run); the picture shows its latest state.
+// capture the flag), played in the browser against bots (client/localSource.mjs) or online on the match
+// server (net/client.mjs). Both are "sources" with the same shape; this view draws whichever it is given.
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
 import { bodyOf, hostile } from '../sim/world.mjs';
-import { createMatch, stepMatch, matchView, MODES } from '../sim/match.mjs';
-import { loadFighterBody, MOVEMENT_PACK_URL, BODIES } from './assets.mjs';
+import { MODES, CTF } from '../sim/match.mjs';
+import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
@@ -19,14 +19,16 @@ import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor } from './matchProps.mjs';
+import { createLocalSource } from './localSource.mjs';
+import { createOnlineSource } from '../net/client.mjs';
 import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
+import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 
-const STEP = 1 / 60;
 const POWER_KEYS = [['push', '1'], ['pull', '2'], ['grip', '3'], ['breach', '4'], ['dash', 'Ctrl'], ['resist', 'Z']];
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
-const BODY_ORDER = Object.keys(BODIES);
 const YOU_COLOR = 0x9fe8ff;
+const NET_TEXT = { connecting: 'Connecting to the match server…', joining: 'Finding a match…' };
 
 async function createActor(scene, bodyId, swordColor) {
   const { model, clips } = await loadFighterBody(bodyId);
@@ -51,22 +53,25 @@ async function createActor(scene, bodyId, swordColor) {
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
+    dispose() { animator.dispose(); sword.dispose(); trail.dispose(); group.removeFromParent(); },
   };
 }
 
 /**
- * mode: practice | duel | ffa | tdm | ctf. you: your body; foe: the opponent's in a duel or practice; bots:
- * how many opponents in practice; botLevel: trainee | duelist | master.
+ * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button). you: your body; foe: the
+ * opponent's in a local duel or practice; bots: how many opponents in practice; botLevel: trainee | duelist |
+ * master. online + serverUrl: play on the match server instead of in the browser.
  */
-export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1 }) {
+export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
+  online = false, serverUrl = null }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
+  const [net, setNet] = useState(null);
   const [generation, setGeneration] = useState(0);
   const [fightFlash, setFightFlash] = useState(false);
   const pressRef = useRef(null);
   const audioRef = useRef(null);
-  const teamRef = useRef(null);
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
@@ -75,7 +80,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let disposed = false;
     setStatus('loading');
     setHud(null);
-    const def = MODES[mode] || MODES.practice;
+    setNet(null);
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
@@ -86,34 +91,49 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 400);
     createSceneLighting(scene);
-    const arena = createArena({ radius: def.arena });
-    scene.add(arena.group);
-    const warp = createWarp(renderer, scene, camera);
-    const vfx = createDuelVfx(scene, { warp, arena, camera });
+    const source = online
+      ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, onChange: (s, detail) => setNet({ status: s, detail }) })
+      : createLocalSource({ mode, botLevel, bots, seed: 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919, youBody, foeBody });
+    const { world } = source;
+    const me = () => source.meId;
+    // the arena is sized by the mode (online, the mode is known once a match is found)
+    let arenaMode = null;
+    let arena = null;
+    let warp = null;
+    const warpHolder = { ring: (...a) => warp?.ring(...a), hold: (...a) => warp?.hold(...a) };
+    const arenaHolder = { arc: (...a) => arena?.arc(...a) };
+    const ensureArena = (m) => {
+      if (arenaMode === m) return;
+      arenaMode = m;
+      if (arena) { arena.dispose(); arena.group.removeFromParent(); }
+      arena = createArena({ radius: MODES[m]?.arena || 18 });
+      scene.add(arena.group);
+    };
+    ensureArena(source.mode || mode);
+    warp = createWarp(renderer, scene, camera);
+    const vfx = createDuelVfx(scene, { warp: warpHolder, arena: arenaHolder, camera });
     const audio = createDuelAudio();
     audioRef.current = audio;
     setMuted(audio.muted);
     const controls = createControls(renderer.domElement);
     const follow = createFollowCamera(camera);
-    const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
-    const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You' }], seats: def.id === 'practice' ? 1 + bots : null });
-    const { world } = match;
-    teamRef.current = match.seats.get('you')?.team || null;
     const wake = () => audio.resume(); // browsers start sound only after the player does something
     window.addEventListener('pointerdown', wake);
     window.addEventListener('keydown', wake);
     const actors = {};
-    const director = createDirector({ world, vfx, audio, actors });
+    const pending = new Set();
+    const director = createDirector({ world, vfx, audio, actors, playerId: me });
     const tags = createNameTags(scene);
-    const ctf = match.flags ? createCtfProps(scene, match.flags) : null;
+    let ctf = null;
     let lockId = null;
     let clock = 0;
     const lookDir = new THREE.Vector3();
-    let accumulator = 0;
     let last = performance.now();
     let hudClock = 0;
     let frame = 0;
     let fightTimer = 0;
+    let seatsSeen = 0;
+    let seatList = [];
     const resize = () => {
       const w = mount.clientWidth || 1;
       const h = mount.clientHeight || 1;
@@ -129,16 +149,35 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     observer.observe(mount);
     pressRef.current = (command) => controls.press(command);
 
+    // fighters come and go with the seats (online: players join, bots step out)
+    const syncActors = () => {
+      seatsSeen = source.seatsVersion;
+      seatList = source.seats();
+      const ids = new Set(seatList.map((s) => s.id));
+      for (const id of Object.keys(actors)) if (!ids.has(id)) { actors[id].dispose(); delete actors[id]; tags.remove(id); }
+      seatList.forEach((s, i) => {
+        if (actors[s.id] || pending.has(s.id)) return;
+        pending.add(s.id);
+        const color = s.team ? fighterColor(s.team) : s.id === me() ? YOU_COLOR : fighterColor(null, i);
+        createActor(scene, s.body, color).then((actor) => {
+          pending.delete(s.id);
+          if (disposed || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
+          actors[s.id] = actor;
+          if (s.id !== me()) tags.set(s.id, s.name, s.team ? fighterColor(s.team) : 0xdfe9f5);
+        }).catch((error) => { pending.delete(s.id); console.error('[duelist] could not load a fighter', error); setStatus('error'); });
+      });
+    };
+
     // the nearest standing hostile to the player (for lock-on and the right-hand panel)
     const nearestHostile = (range = Infinity) => {
-      const me = world.fighters.get('you');
-      const mine = bodyOf(world, 'you');
-      if (!me || !mine) return null;
+      const mine = world.fighters.get(me());
+      const at = bodyOf(world, me());
+      if (!mine || !at) return null;
       let best = null;
       for (const f of world.fighters.values()) {
-        if (f.id === 'you' || f.vitals.dead || !hostile(world, me, f)) continue;
+        if (f.id === me() || f.vitals.dead || !hostile(world, mine, f)) continue;
         const b = bodyOf(world, f.id);
-        const d = Math.hypot(b.x - mine.x, b.z - mine.z);
+        const d = Math.hypot(b.x - at.x, b.z - at.z);
         if (d <= range && (!best || d < best.d)) best = { id: f.id, d };
       }
       return best?.id || null;
@@ -149,20 +188,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       return bodyOf(world, lockId);
     };
 
-    // development only: drive the match from a test (window.__duelist.controls.press('push'), .match, .world,
-    // .bots(false) to stop the bots thinking, .slow(0.1), .lock(true), .view(rad), .camera(shot), .manual(true) +
-    // .advance(s), .film(count, every, cols), .audio)
+    // development only: drive the match from a test (see the previous build's notes in docs/duelist)
     let timeScale = 1;
     let viewOffset = 0;
     let fixedShot = null;
     let manual = false;
     let film = null;
-    let botsAwake = true;
     if (import.meta.env?.DEV) {
       window.__duelist = {
-        match, world, controls, actors, audio,
-        bots: (on) => { botsAwake = !!on; },
-        bot: (on) => { botsAwake = !!on; },
+        source, match: source.match || null, world, controls, actors, audio,
         slow: (v = 1) => { timeScale = Math.max(0, v); },
         lock: (on) => { lockId = on ? nearestHostile() : null; },
         view: (offset = 0) => { viewOffset = offset; },
@@ -207,32 +241,13 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
     };
 
-    // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
-    const seats = [...match.seats.values()];
-    const others = BODY_ORDER.filter((b) => b !== youBody);
-    let k = 0;
-    const plan = seats.map((s, i) => {
-      if (s.id === 'you') return { s, body: youBody, color: s.team ? fighterColor(s.team) : YOU_COLOR };
-      const body = (def.id === 'duel' || def.id === 'practice') && k === 0 ? foeBody : others[k % others.length];
-      k += 1;
-      return { s, body, color: fighterColor(s.team, i) };
-    });
-    Promise.all(plan.map(({ s, body, color }) => createActor(scene, body, color).then((a) => [s, a]))).then((entries) => {
-      if (disposed) { for (const [, a] of entries) { a.animator.dispose(); a.sword.dispose(); a.trail.dispose(); } return; }
-      for (const [s, a] of entries) {
-        actors[s.id] = a;
-        if (s.id !== 'you') tags.set(s.id, s.name, s.team ? fighterColor(s.team) : 0xdfe9f5);
-      }
-      setStatus('ready');
-    }).catch((error) => { console.error('[duelist] could not load the fighters', error); setStatus('error'); });
-
     const onMatchEvent = (e) => {
-      const myTeam = teamRef.current;
+      const myTeam = seatList.find((s) => s.id === me())?.team || null;
       if (e.type === 'fight') { fightTimer = 0.9; setFightFlash(true); }
       else if (e.type === 'captured') audio.play(e.team === myTeam ? 'resist' : 'breach');
       else if (e.type === 'flagTaken') audio.play('gripStart', actors[e.by]?.chest() || null);
       else if (e.type === 'over') {
-        const won = e.winner === 'you' || (myTeam && e.winner === myTeam);
+        const won = e.winner === me() || (myTeam && e.winner === myTeam);
         audio.play(e.winner === 'draw' ? 'loss' : won ? 'victory' : 'loss');
       }
     };
@@ -241,29 +256,32 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       clock += dt;
       if (controls.takeLockToggle()) lockId = lockId ? null : nearestHostile();
       if (fightTimer > 0) { fightTimer -= dt; if (fightTimer <= 0) setFightFlash(false); }
-      const ready = seats.every((s) => actors[s.id]);
+      if (source.status === 'ready' && source.seatsVersion !== seatsSeen) syncActors();
+      const mineId = me();
+      const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id]);
       if (ready) {
-        accumulator += dt;
-        let first = true;
-        while (accumulator >= STEP) {
-          accumulator -= STEP;
-          const me = bodyOf(world, 'you');
-          const target = lockedBody();
-          const faceYaw = target && me ? Math.atan2(target.x - me.x, target.z - me.z) : null;
-          const playerInput = controls.read({ faceYaw, strafe: !!target });
-          if (!first) playerInput.presses = [];
-          first = false;
-          const { effects, events } = stepMatch(match, STEP, botsAwake ? { you: playerInput } : { you: playerInput, ...Object.fromEntries([...match.seats.values()].filter((s) => s.kind === 'bot').map((s) => [s.id, {}])) });
-          director.step(effects);
-          for (const e of events) onMatchEvent(e);
+        if (source.mode && source.mode !== arenaMode) ensureArena(source.mode);
+        if (!ctf && source.mode === 'ctf') {
+          const z = MODES.ctf.arena - CTF.baseInset;
+          ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
+        const readInput = () => {
+          const at = bodyOf(world, mineId);
+          const target = lockedBody();
+          const faceYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : null;
+          return controls.read({ faceYaw, strafe: !!target });
+        };
+        const { effects, events } = source.step(dt, readInput);
+        director.step(effects);
+        for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
         const feel = director.frame(dt);
         const show = feel.stopped ? dt * 0.1 : dt;
         for (const [id, actor] of Object.entries(actors)) {
           const fighter = world.fighters.get(id);
           const body = bodyOf(world, id);
-          if (!fighter || !body) continue;
+          if (!fighter || !body) { actor.group.visible = false; continue; }
+          actor.group.visible = true;
           // a respawn is a cut, not a slide across the arena
           if (actor.at.distanceTo(new THREE.Vector3(body.x, body.y, body.z)) > 5) actor.yaw = body.yaw;
           const turn = Math.atan2(Math.sin(body.yaw - actor.yaw), Math.cos(body.yaw - actor.yaw));
@@ -275,18 +293,25 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const will = fighter.vitals.will / fighter.vitals.max.will;
           actor.sword.setWill(will, fighterVeil(fighter));
           actor.sword.update(show);
-          actor.trail.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, fighter.action?.move.kind === 'attack');
+          actor.trail.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, fighter.action?.move?.kind === 'attack');
         }
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
         vfx.update(show, { grips });
         tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead);
-        ctf?.update(show, match.flags, actors, (id) => bodyOf(world, id));
-        const me = bodyOf(world, 'you');
+        if (ctf) {
+          const z = MODES.ctf.arena - CTF.baseInset;
+          const homes = { red: { x: 0, z: -z }, blue: { x: 0, z } };
+          const flags = source.flags();
+          if (flags) ctf.update(show, Object.fromEntries(Object.entries(flags).map(([t, f]) => [t, { ...f, home: f.home || homes[t] }])), actors, (id) => bodyOf(world, id));
+        }
+        const at = bodyOf(world, mineId);
         const target = lockedBody();
-        const followYaw = target && me ? Math.atan2(target.x - me.x, target.z - me.z) : controls.yaw();
-        if (me && follow.distanceTo(me) > 8) follow.snap();
-        follow.update(dt, { target: me, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target });
-        if (target && me) controls.setYaw(followYaw);
+        const followYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
+        if (at) {
+          if (follow.distanceTo(at) > 8) follow.snap();
+          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target });
+        }
+        if (target && at) controls.setYaw(followYaw);
         if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
         if (feel.shake > 0.001) {
           const t = feel.shake * feel.shake;
@@ -299,18 +324,21 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         hudClock += dt;
         if (hudClock > 0.1) {
           hudClock = 0;
-          const mine = world.fighters.get('you');
+          const mine = world.fighters.get(mineId);
           const shownId = lockId || nearestHostile(14);
           const shown = shownId ? world.fighters.get(shownId) : null;
+          const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           setHud({
             you: mine ? snapshot(mine, world.time) : null,
             target: shown ? snapshot(shown, world.time) : null,
-            targetName: shownId ? match.seats.get(shownId)?.name || '' : '',
-            targetTeam: shownId ? match.seats.get(shownId)?.team || null : null,
+            targetName: seat?.name || '',
+            targetTeam: seat?.team || null,
             lockOn: !!lockId,
-            view: matchView(match, 'you'),
+            view: source.view(),
+            myTeam: seatList.find((s) => s.id === mineId)?.team || null,
             powers: mine ? POWER_KEYS.map(([id, key]) => ({ id, key, ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })) : [],
           });
+          setStatus('ready');
         }
       } else {
         follow.update(dt, { target: { x: 0, y: 0, z: 0 }, yaw: controls.yaw(), pitch: controls.pitch() });
@@ -331,6 +359,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       disposed = true;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      source.dispose();
       controls.dispose();
       vfx.dispose();
       warp.dispose();
@@ -340,14 +369,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
       arena.dispose();
-      for (const actor of Object.values(actors)) { actor.animator.dispose(); actor.sword.dispose(); actor.trail.dispose(); }
+      for (const actor of Object.values(actors)) actor.dispose();
       renderer.dispose();
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl]);
 
   const view = hud?.view;
+  const waiting = online && net && net.status !== 'ready';
   return (
     <div className="duelist-game" ref={mountRef}>
       {hud?.you && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
@@ -355,11 +385,13 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {view && <Countdown view={view} fightFlash={fightFlash} />}
       {view && <RespawnNote view={view} />}
       {view && <Feed view={view} />}
-      {view && <Result view={view} myTeam={teamRef.current} onAgain={() => setGeneration((g) => g + 1)} />}
+      {view && <Result view={view} myTeam={hud.myTeam} online={online} onAgain={() => setGeneration((g) => g + 1)} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
-      {status === 'loading' && <div className="duelist-center">Forging the arena…</div>}
+      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{NET_TEXT[net.status]}</div>}
+      {waiting && (net.status === 'error' || net.status === 'closed') && <div className="duelist-center">{net.detail || 'Not connected.'}</div>}
+      {!online && status === 'loading' && <div className="duelist-center">Forging the arena…</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       <div className="duelist-help">Click to fight · WASD move · Shift sprint · LMB light · E heavy · RMB guard · Space roll · 1 push · 2 pull · 3 grip · 4 breach · Z resist · Tab lock on</div>
     </div>

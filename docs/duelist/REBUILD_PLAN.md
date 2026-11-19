@@ -154,4 +154,21 @@ mechanic; mysteries open gradually.
     fighter drawn with team colours, name tags, CTF bases and flags (on the carrier's back), score line,
     countdown and "Fight!", respawn note, feed, result board, lock-on cycles to the nearest hostile
   - [ ] Bigger arenas with cover and a CTF map with two ends (today one round arena, sized per mode)
-- [ ] Phase 5 onward
+- [ ] Phase 5: online play (in progress)
+  - [x] Match server `server/duelist/` (Node + ws, the Railway pattern of the Game 2 arena server; see its
+    README): many matches in one process, each the shared `sim/match.mjs` stepped at 60 Hz; the server decides
+    every hit, cooldown and score; 20 snapshots a second (own cooldowns only to their owner); sign-in with the
+    Base44 token once per connection (guests only with `DUELIST_ALLOW_GUESTS=1`, local testing); one
+    connection per account
+  - [x] Join: a mode goes to the busiest match of that mode with room or starts one full of bots; Join (any)
+    goes to the busiest match that has players; the joining player takes a bot's seat; a leaving player's seat
+    goes back to a bot; a finished match restarts after 12 s with the same players
+  - [x] Fair play: inputs sanitised (move clamped, only known commands), presses through the token bucket,
+    messages over 120 a second ignored and over 400 a second disconnect, 4 KB message cap, origin allow-list
+  - [x] Browser: `net/client.mjs` draws the server's match through the same renderer as local play (a mirror
+    world 100 ms behind, interpolated); inputs at most 60 a second; `/duelist-next` Online switch and Join
+    button (the local test server on localhost, or `VITE_DUELIST_WS_URL`)
+  - [x] Tests: `tests/duelist-server.test.mjs` (real WebSocket clients); two browser tabs verified in one match
+  - [ ] Client-side prediction for your own fighter (today your moves show one round trip + 100 ms late)
+  - [ ] Reconnect to the same seat; results saved to accounts; deployment (needs the owner's go-ahead)
+- [ ] Phase 6 onward

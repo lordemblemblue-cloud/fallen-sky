@@ -38,6 +38,12 @@ export function createNameTags(scene) {
       if (tags.has(id)) return;
       tags.set(id, make(name, hex));
     },
+    remove(id) {
+      const tag = tags.get(id);
+      if (!tag) return;
+      tag.texture.dispose(); tag.material.dispose(); tag.sprite.removeFromParent();
+      tags.delete(id);
+    },
     // actors: { [id]: { root, chest() } }; dead: (id) => bool hides a fallen fighter's tag
     update(actors, hidden = () => false) {
       for (const [id, tag] of tags) {

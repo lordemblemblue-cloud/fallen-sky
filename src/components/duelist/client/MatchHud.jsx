@@ -4,7 +4,9 @@ import { TEAM_COLORS } from './matchProps.mjs';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 const clock = (s) => (s === null || s === undefined ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`);
-const nameOf = (view, id) => (id === 'you' ? 'You' : view.people.find((p) => p.id === id)?.name || 'Someone');
+// the player is view.me ('you' in a local match, the account id online)
+const meOf = (view) => view.me?.id ?? 'you';
+const nameOf = (view, id) => (id === meOf(view) ? 'You' : view.people.find((p) => p.id === id)?.name || 'Someone');
 const teamName = (t) => (t === 'red' ? 'Red' : 'Blue');
 
 function FlagMark({ team, flag }) {
@@ -16,7 +18,7 @@ export function ScoreLine({ view }) {
   const { mode } = view;
   let middle = null;
   if (mode === 'duel') {
-    const foe = view.people.find((p) => p.id !== 'you');
+    const foe = view.people.find((p) => p.id !== meOf(view));
     middle = (
       <>
         <span>You {view.me?.roundWins ?? 0}</span>
@@ -38,7 +40,7 @@ export function ScoreLine({ view }) {
       <>
         <span>You {view.me?.defeats ?? 0}</span>
         <span className="duelist-score-sep">to {view.scoreToWin}</span>
-        <span>{leader && leader.id !== 'you' ? `${leader.name} ${leader.defeats}` : 'You lead'}</span>
+        <span>{leader && leader.id !== meOf(view) ? `${leader.name} ${leader.defeats}` : 'You lead'}</span>
       </>
     );
   }
@@ -61,7 +63,7 @@ export function Countdown({ view, fightFlash }) {
     return <div className="duelist-countdown">{view.mode === 'duel' && view.round > 1 ? <small>Round {view.round}</small> : null}{Math.ceil(view.countdown)}</div>;
   }
   if (view.phase === 'roundOver') {
-    const who = view.roundWinner ? `${nameOf(view, view.roundWinner)} ${view.roundWinner === 'you' ? 'take' : 'takes'} the round` : 'Round drawn';
+    const who = view.roundWinner ? `${nameOf(view, view.roundWinner)} ${view.roundWinner === meOf(view) ? 'take' : 'takes'} the round` : 'Round drawn';
     return <div className="duelist-countdown duelist-countdown-small">{who}</div>;
   }
   if (fightFlash) return <div className="duelist-countdown duelist-countdown-fight">Fight!</div>;
@@ -94,10 +96,10 @@ export function Feed({ view }) {
   return <div className="duelist-feed">{lines.map((l) => <div key={l.key}>{l.text}</div>)}</div>;
 }
 
-export function Result({ view, myTeam, onAgain }) {
+export function Result({ view, myTeam, onAgain, online = false }) {
   if (view.phase !== 'over') return null;
   const w = view.winner;
-  const won = w === 'you' || (myTeam && w === myTeam);
+  const won = w === meOf(view) || (myTeam && w === myTeam);
   const title = w === 'draw' ? 'Draw' : won ? 'Victory' : 'Defeated';
   const teams = view.mode === 'tdm' || view.mode === 'ctf';
   return (
@@ -108,14 +110,14 @@ export function Result({ view, myTeam, onAgain }) {
         <thead><tr><th>Fighter</th><th>Defeats</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr></thead>
         <tbody>
           {view.people.map((p) => (
-            <tr key={p.id} className={p.id === 'you' ? 'is-you' : ''}>
-              <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === 'you' ? 'You' : p.name}</td>
+            <tr key={p.id} className={p.id === meOf(view) ? 'is-you' : ''}>
+              <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === meOf(view) ? 'You' : p.name}</td>
               <td>{p.defeats}</td><td>{p.falls}</td>{view.mode === 'ctf' && <td>{p.captures}</td>}{view.mode === 'duel' && <td>{p.roundWins}</td>}
             </tr>
           ))}
         </tbody>
       </table>
-      <button type="button" onClick={onAgain}>Play again</button>
+      {online ? <div className="duelist-result-sub">The next match starts in a few seconds.</div> : <button type="button" onClick={onAgain}>Play again</button>}
     </div>
   );
 }
