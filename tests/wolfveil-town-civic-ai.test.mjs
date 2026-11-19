@@ -7,6 +7,7 @@ import {townRoomWorldPoint,planWolfveilTownCivilians,townSegmentWalkable,
 import {prepareWolfveilCivicSources,createWolfveilCivicTaskRuntime,
   WOLFVEIL_CIVIC_TASKS}
   from '../src/components/game3d/wolfveil/WolfveilTownCivicTasks.mjs';
+import {CLONE_TOWN_GUARDS} from '../src/components/game3d/wolfveil/WolfveilTownLivingQuarterLayout.mjs';
 
 const collision={
  groundAt:(x,z)=>(Math.abs(x)<63&&Math.abs(z)<68?5:null),
@@ -33,7 +34,7 @@ test('civic staff are attached only to real instantiated shops',()=>{
 });
 test('existing guard roster remains distinct from static vendors and house owners',()=>{
  const npcs=planWolfveilTownCivilians({collision});
- assert.equal(npcs.filter(a=>a.role==='guard').length,4);
+ assert.equal(npcs.filter(a=>a.role==='guard').length,CLONE_TOWN_GUARDS.length);
  assert.ok(npcs.every(a=>!collision.isSolid(a.x,a.z)));
  assert.equal(new Set(npcs.map(a=>a.id)).size,npcs.length);
 });

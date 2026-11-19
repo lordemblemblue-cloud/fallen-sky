@@ -36,7 +36,7 @@ test('one double-sized detached hall and four shop or home buildings per side, w
   for(const n of CLONE_TOWN_HOUSES)if(n!==h)
     assert.equal(rectanglesOverlap(h,n,1),false,h.id+' vs '+n.id);
  }
- assert.equal(CLONE_TOWN_GUARDS.length,4);
+ assert.equal(CLONE_TOWN_GUARDS.length,2);
  assert.equal(CLONE_TOWN_CITIZENS.length,8);
 });
 test('reject hazardous house foundations, rather than bridging water or protruding tiles',()=>{
@@ -61,18 +61,18 @@ test('locally-generated chatter is varied, bounded, repeatable and never mints i
  assert.ok(conversation.text.length>20);
  assert.equal(conversation.questNpcId,'archer_vex');
 });
-test('Three.js houses, 4 guard patrols, merchants and non-combat sprites attach and dispose',()=>{
+test('Three.js houses, 2 guard patrols, merchants and non-combat sprites attach and dispose',()=>{
  const scene=new THREE.Group();
  const town=buildWolfveilTownLivingQuarter(scene,{collision:mockCollision});
  assert.equal(town.report.houses,9);
- assert.equal(town.report.guards,5); // four patrols and the longhouse warden
- assert.equal(town.report.citizens,13);
+ assert.equal(town.report.guards,CLONE_TOWN_GUARDS.length+1); // patrols and the longhouse warden
+ assert.equal(town.report.citizens,CLONE_TOWN_CITIZENS.length+CLONE_TOWN_GUARDS.length+1);
  assert.equal(town.report.shops,6);
  assert.equal(town.report.rejected.length,0);
  assert.equal(typeof town.report.architectureBatched,'boolean');
  assert.equal(scene.children.length,1);
  assert.equal(town.root.children.filter(n=>n.name.startsWith('CloneTownHouse_')).length,9);
- assert.equal(town.root.children.filter(n=>n.name.startsWith('CloneTownNPC_')).length,13);
+ assert.equal(town.root.children.filter(n=>n.name.startsWith('CloneTownNPC_')).length,CLONE_TOWN_CITIZENS.length+CLONE_TOWN_GUARDS.length+1);
  assert.equal(town.isSolid(39,-44),true,'closed merchant house is a genuine wall');
  assert.equal(town.isSolid(0,-35),false,'central approach remains open');
  const guard=town.agents.find(a=>a.id==='guard_sera');
