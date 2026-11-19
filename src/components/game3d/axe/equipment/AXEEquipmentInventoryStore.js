@@ -14,6 +14,10 @@ import {
   migrateLegacyEquipmentItem,
   validateAXEEquip,
 } from './AXEEquipmentSystem';
+import {
+  MAX_AXE_GEAR_PRESETS, normalizeAXEEquippedWeapons,
+  equipOnlyAXEWeapon, applyAXEEquipmentPresetRules,
+} from './AXEWeaponLoadoutRules.mjs';
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
 const CURRENT_STARTER_CATALOG_VERSION = 4; // 3: clone Crescent Moon preview pieces; 4: owner weapon pack
@@ -71,10 +75,11 @@ function chooseActiveWeaponInstanceId(items = [], preferred = null) {
 }
 
 function buildDefault() {
-  const items = seedItems();
+  const normalized = normalizeAXEEquippedWeapons(seedItems());
   return {
-    items,
-    activeWeaponInstanceId: chooseActiveWeaponInstanceId(items),
+    items: normalized.items,
+    activeWeaponInstanceId: normalized.activeWeaponInstanceId,
+    gearPresets: Array(MAX_AXE_GEAR_PRESETS).fill(null),
     starterCatalogVersion: CURRENT_STARTER_CATALOG_VERSION,
   };
 }
@@ -118,13 +123,23 @@ function load() {
       });
     }
 
-    const items = [...byId.values()];
+    // Older saves could mark the former starter and the Training Bow as
+    // equipped together. Normalize in memory without granting or deleting items.
+    const normalized = normalizeAXEEquippedWeapons(
+      [...byId.values()], parsed.activeWeaponInstanceId || null,
+    );
+    const gearPresets = Array.from({ length: MAX_AXE_GEAR_PRESETS }, (_, index) => {
+      const saved = Array.isArray(parsed.gearPresets) ? parsed.gearPresets[index] : null;
+      if (!saved || !Array.isArray(saved.itemIds)) return null;
+      return {
+        name: typeof saved.name === 'string' ? saved.name.slice(0, 32) : 'Gear Set ' + (index + 1),
+        itemIds: saved.itemIds.filter(id => typeof id === 'string').slice(0, 100),
+      };
+    });
     return {
-      items,
-      activeWeaponInstanceId: chooseActiveWeaponInstanceId(
-        items,
-        parsed.activeWeaponInstanceId || null,
-      ),
+      items: normalized.items,
+      activeWeaponInstanceId: normalized.activeWeaponInstanceId,
+      gearPresets,
       // Undefined preserves the old affinity-store history until the first draw.
       previousWeaponInstanceId: typeof parsed.previousWeaponInstanceId === 'string'
         ? parsed.previousWeaponInstanceId : parsed.previousWeaponInstanceId === null ? null : undefined,
@@ -148,6 +163,8 @@ function snapshot() {
     })),
     activeWeaponInstanceId: state.activeWeaponInstanceId || null,
     previousWeaponInstanceId: state.previousWeaponInstanceId,
+    gearPresets: (state.gearPresets || Array(MAX_AXE_GEAR_PRESETS).fill(null))
+      .map(entry => entry ? { name: entry.name, itemIds: [...entry.itemIds] } : null),
     starterCatalogVersion: Number(state.starterCatalogVersion || CURRENT_STARTER_CATALOG_VERSION),
   };
 }
@@ -176,29 +193,32 @@ export function getPreviousAXEWeaponInstanceId() {
 export function switchAXEInventoryWeapon(instanceId, context = {}) {
   const target = state.items.find(item => item.instanceId === instanceId || item.id === instanceId);
   if (!target || target.category !== 'weapon') return { ok: false, reason: 'WEAPON_NOT_OWNED' };
-  const current = getActiveEquippedAXEWeapon();
-  if (current?.instanceId === target.instanceId) {
-    return { ok: true, reason: 'ALREADY_ACTIVE', item: structuredClone(current) };
-  }
   const validation = validateAXEEquip(target, context);
   if (!validation.ok) return validation;
   if (target.slot !== 'weapon') return { ok: false, reason: 'INVALID_SLOT' };
 
-  const removed = state.items.filter(item => item.category === 'weapon' && item.equipped &&
-    item.instanceId !== target.instanceId && item.instanceId !== current?.instanceId);
-  const removeIds = new Set(removed.map(item => item.instanceId));
-  const next = { ...state,
-    items: state.items.map(item => item.instanceId === target.instanceId ? { ...item, equipped: true }
-      : removeIds.has(item.instanceId) ? { ...item, equipped: false } : item),
-    activeWeaponInstanceId: target.instanceId,
-    previousWeaponInstanceId: current?.instanceId || null,
+  const current = getActiveEquippedAXEWeapon();
+  const change = equipOnlyAXEWeapon(state.items, target.instanceId);
+  if (!change.ok) return change;
+  if (current?.instanceId === target.instanceId && !change.autoUnequippedIds.length) {
+    return { ok: true, reason: 'ALREADY_ACTIVE', item: structuredClone(current) };
+  }
+
+  // Every equipped weapon other than the selected one returns to inventory,
+  // including the previously active sword/bow. Never delete owned instances.
+  const next = {
+    ...state,
+    items: change.items,
+    activeWeaponInstanceId: change.activeWeaponInstanceId,
+    previousWeaponInstanceId: current?.instanceId !== target.instanceId
+      ? (current?.instanceId || null) : state.previousWeaponInstanceId,
   };
   if (!storage.setChecked(JSON.stringify(next))) {
     return { ok: false, reason: 'SAVE_FAILED', message: 'Could not save the weapon switch. Your equipment is unchanged. Free device storage and retry.' };
   }
   state = next;
   publish();
-  return { ok: true, item: structuredClone(getActiveEquippedAXEWeapon()), autoUnequippedIds: [...removeIds] };
+  return { ok: true, item: structuredClone(getActiveEquippedAXEWeapon()), autoUnequippedIds: change.autoUnequippedIds };
 }
 
 // Preserve main's explicit save entrypoint for server-side upgrade requests.
@@ -302,6 +322,11 @@ export function equipAXEInventoryItem(instanceId, context = {}) {
   const target = state.items[index];
   const validation = validateAXEEquip(target, context);
   if (!validation.ok) return validation;
+  // A weapon equip is an exclusive, checked transaction, even when a legacy
+  // save already marks the requested weapon equipped alongside another.
+  if (target.slot === 'weapon' && target.category === 'weapon') {
+    return switchAXEInventoryWeapon(target.instanceId, context);
+  }
   if (target.equipped) {
     if (target.category === 'weapon' && state.activeWeaponInstanceId !== target.instanceId) {
       state = { ...state, activeWeaponInstanceId: target.instanceId };
@@ -353,6 +378,56 @@ export function unequipAXEInventoryItem(instanceId) {
   };
   emit();
   return { ok: true };
+}
+
+// Three character-scoped preference slots. Saving copies IDs only and leaves
+// the active equipment unchanged; a preset never grants a second owned item.
+export function saveAXEEquipmentPreset(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= MAX_AXE_GEAR_PRESETS)
+    return { ok: false, reason: 'INVALID_PRESET_SLOT' };
+  const gearPresets = [...(state.gearPresets || Array(MAX_AXE_GEAR_PRESETS).fill(null))];
+  gearPresets[index] = {
+    name: 'Gear Set ' + (index + 1),
+    itemIds: state.items.filter(item => item.equipped && AXE_EQUIPMENT_SLOT_DEFS[item.slot])
+      .map(item => item.instanceId),
+  };
+  const next = { ...state, gearPresets };
+  if (!storage.setChecked(JSON.stringify(next))) return { ok: false, reason: 'SAVE_FAILED' };
+  state = next;
+  publish();
+  return { ok: true, preset: { ...gearPresets[index], itemIds: [...gearPresets[index].itemIds] } };
+}
+
+// Switch a complete set in ONE checked save, or do nothing if any piece was
+// destroyed, consumed, out of level range, or conflicts with slot limits.
+export function activateAXEEquipmentPreset(index, context = {}) {
+  if (!Number.isInteger(index) || index < 0 || index >= MAX_AXE_GEAR_PRESETS)
+    return { ok: false, reason: 'INVALID_PRESET_SLOT' };
+  const saved = state.gearPresets?.[index];
+  if (!saved) return { ok: false, reason: 'EMPTY_PRESET' };
+  const change = applyAXEEquipmentPresetRules(state.items, saved.itemIds, AXE_EQUIPMENT_SLOT_DEFS);
+  if (!change.ok) return change;
+  for (const item of change.items) {
+    if (!item.equipped) continue;
+    const validation = validateAXEEquip(item, context);
+    if (!validation.ok) return { ...validation, itemId: item.instanceId };
+  }
+  const oldActive = state.activeWeaponInstanceId;
+  const autoUnequippedIds = state.items.filter(item => item.equipped &&
+    !change.items.find(next => next.instanceId === item.instanceId)?.equipped)
+    .map(item => item.instanceId);
+  const next = {
+    ...state,
+    items: change.items,
+    activeWeaponInstanceId: change.activeWeaponInstanceId,
+    previousWeaponInstanceId: oldActive !== change.activeWeaponInstanceId
+      ? (oldActive || null) : state.previousWeaponInstanceId,
+  };
+  if (!storage.setChecked(JSON.stringify(next))) return { ok: false, reason: 'SAVE_FAILED' };
+  state = next;
+  publish();
+  return { ok: true, presetIndex: index, autoUnequippedIds,
+    equippedItemIds: saved.itemIds.slice(), activeWeaponInstanceId: change.activeWeaponInstanceId };
 }
 
 export function setAXEInventoryItemLocked(instanceId, locked) {
