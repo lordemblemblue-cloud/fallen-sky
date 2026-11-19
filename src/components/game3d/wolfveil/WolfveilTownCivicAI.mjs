@@ -13,7 +13,7 @@ export const TOWN_STAFF=Object.freeze([
  {shopId:'blacksmith',id:'civic_bren',name:'Bren',role:'smith',questNpcId:'archer_vex'},
  {shopId:'tailor',id:'civic_ori',name:'Ori',role:'tailor',questNpcId:'archer_noor'},
  {shopId:'potion',id:'civic_yuki',name:'Yuki',role:'herbalist',questNpcId:'archer_kira'},
- {shopId:'models',id:'civic_nami',name:'Nami',role:'tea',questNpcId:'archer_lyra'},
+ {shopId:'models',id:'civic_nami',name:'Nami',role:'showroom',questNpcId:'archer_lyra'},
 ]);
 const residentNames=['Mei','Kenji','Hana','Toma','Rin','Sora','Ilan','Aya'];
 const valid=(p,collision,r=.48)=>finite(p)&&Number.isFinite(collision.groundAt(p.x,p.z))&&
