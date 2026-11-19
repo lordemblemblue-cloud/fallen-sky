@@ -35,6 +35,7 @@ import {installShadowWolfHouseModels} from './ShadowWolfHouseGLB.js';
 import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
 import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
+import {createWolfveilCaveWatch} from './WolfveilCaveWatch.mjs';
 import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
 import {createBookCaveInterior} from '../cave/caveInterior.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
@@ -60,12 +61,14 @@ export function createWolfveilCaveDestination(scene){
   const caveSystem=createWolfveilCaveSystem(world,{
     offsetZ:70,startActiveCaveId:WOLFVEIL_EXPLORABLE_CAVES[0].id,
   });
+  const caveWatch=createWolfveilCaveWatch(group,{caveSystem,offsetZ:70,mode:'inside'});
   return {
-    caveSystem,
+    caveSystem,caveWatch,
     floor:caveSystem.floorMesh,
     pavement:caveSystem.pavementMesh,
     walkableSurfaces:world.walkableSurfaces,
     dispose(){
+      caveWatch?.dispose();
       caveSystem.dispose();
       group.parent?.remove(group);
     },
@@ -214,6 +217,7 @@ export function createWolfveilVillage(scene,options={}){
     explorableCaves:enableCaves,
   });
   const caveSystem=enableCaves?createWolfveilCaveSystem(world,{offsetZ}):null;
+  const caveWatch=caveSystem?createWolfveilCaveWatch(world.group,{caveSystem,offsetZ}):null;
   // Ashroot Hollow: hallway and hub inward of one mouth. The four older
   // caves stay as they are. This interior begins at its own entrance socket.
   const bookCave=enableCaves?createBookCaveInterior(world,{offsetZ}):null;
@@ -369,7 +373,7 @@ export function createWolfveilVillage(scene,options={}){
   // valley's local geometry is offset 70m into the real game's coordinates.
   world.group.updateMatrixWorld(true);
   const sceneState={
-    ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,bookCave,individualGrass,
+    ground,world,scene,info,geometry,town,river,waterfall,vegetation,caveSystem,caveWatch,bookCave,individualGrass,
     terrainSplat,bakedRocks,plantCards,
     get bakedRockStatus(){return bakedRocks?{ready:bakedRocks.ready,failed:bakedRocks.failed,
       count:bakedRocks.count,outcrops:bakedRocks.outcrops,lods:bakedRocks.lodCounts}:null;},
@@ -422,6 +426,7 @@ export function createWolfveilVillage(scene,options={}){
       vegetation.update(frame);
       palace.update(dt);
       caveSystem?.update(dt,playerPosition);
+      caveWatch?.update(dt,playerPosition);
       bookCave?.update(dt,playerPosition);
       groundCover?.update(dt,frame,playerPosition); // bent footsteps relax over time; no new collider
       individualGrass?.update(frame,playerPosition?{x:playerPosition.x,z:playerPosition.z-offsetZ}:null);
@@ -547,6 +552,7 @@ export function createWolfveilVillage(scene,options={}){
       houseModels?.dispose();
       fountainHomes.dispose();
       palace.dispose();
+      caveWatch?.dispose();
       caveSystem?.dispose();
       bookCave?.dispose();
       individualGrass?.dispose();
