@@ -17,6 +17,11 @@ export const MENU_MODES = Object.freeze({
     blurb: 'Six fighters, everyone for themselves.',
     rules: ['First to 15 defeats wins, or the most when 8 minutes end.', 'You come back 3 seconds after a fall, protected for a moment.', 'Bots fill the empty places and step out when players join.'],
   },
+  football: {
+    title: 'Football', icon: Target, accent: '#f6cd82', online: true,
+    blurb: 'Team goal scoring with a live ball and bot-filled teams.',
+    rules: ['Move toward the ball to dribble or press F to kick it farther.', 'Five goals wins, or lead at the end of eight minutes.', 'Bots fill open slots and step out as humans join.'],
+  },
   tdm: {
     title: 'Team deathmatch', icon: Shield, accent: '#5fb4ff', online: true,
     blurb: 'Red against blue, four a side.',
@@ -29,5 +34,5 @@ export const MENU_MODES = Object.freeze({
   },
 });
 
-export const MODE_ORDER = Object.freeze(['duel', 'ffa', 'tdm', 'ctf', 'practice']);
+export const MODE_ORDER = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'practice']);
 export const LEVELS = Object.freeze([['trainee', 'Trainee'], ['duelist', 'Duelist'], ['master', 'Master']]);
