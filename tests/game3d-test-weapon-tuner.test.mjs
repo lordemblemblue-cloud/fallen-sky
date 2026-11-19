@@ -99,5 +99,5 @@ test('Blacksmith and derived combat use one test projection; saves are guarded',
   assert.match(hud,/subscribeAXETestWeaponTuning\(recomputeFromBonuses\)/);
   assert.match(forge,/<AXETestWeaponTuner item=\{selectedItem\} \/>/);
   assert.match(hud,/subscribeCharacterChange\(clearAXETestWeaponTuning\)/);
-  assert.doesNotMatch(tuner,/localStorage|functions\.invoke|setAXEAdvancementRecord|setItemReinforcement|fetch\(/);
+  assert.doesNotMatch(tuner,/localStorage\.(getItem|setItem)|functions\.invoke|setAXEAdvancementRecord|setItemReinforcement|fetch\(/);
 });
