@@ -166,9 +166,16 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     return pool[0] || openRoom(mode === 'any' ? 'ffa' : mode);
   }
 
-  function enter(client, mode) {
+  function enter(client, mode, requestedMatchId = null) {
+    // Select the exact advertised match when joining from the server browser.
+    // A stale or forged id must not silently send the player into a different arena.
+    const selected = requestedMatchId ? rooms.get(requestedMatchId) : null;
+    if (requestedMatchId && (!selected || selected.mission || selected.mode !== mode || !hasRoom(selected))) {
+      send(client, { t: 'error', code: 'room', message: 'That server is no longer available. Return to Online and refresh.' });
+      return;
+    }
     if (client.room) leave(client);
-    const room = pickRoom(mode);
+    const room = selected || pickRoom(mode);
     const result = joinMatch(room.match, { id: client.id, name: client.name });
     if (!result.ok) { send(client, { t: 'error', code: 'full', message: 'That match is full.' }); return; }
     room.bodies.set(client.id, client.body);
@@ -515,7 +522,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         const mode = msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
         if (!mode) { send(client, { t: 'error', code: 'mode', message: 'Unknown mode.' }); return; }
-        enter(client, mode);
+        const matchId = msg.matchId === undefined ? null
+          : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;
+        if (matchId === false) { send(client, { t: 'error', code: 'room', message: 'Invalid server selection.' }); return; }
+        enter(client, mode, matchId);
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {
