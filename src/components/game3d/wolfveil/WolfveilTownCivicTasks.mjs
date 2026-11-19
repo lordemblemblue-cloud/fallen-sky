@@ -1,5 +1,6 @@
 // Town side-quest spatial contract. Client-side NPC intent/progress ONLY.
 // No XP, Silver, rarity, inventory, or server loot is awarded here.
+import {findTownWalkPath} from './WolfveilTownCivicAI.mjs';
 export const WOLFVEIL_CIVIC_TASKS=Object.freeze([
  Object.freeze({id:'civic_mint_for_healer',npcId:'civic_yuki',title:'Mint for the Apothecary',
   sourceId:'civic_willow_mint_cache',sourceLabel:'Mint and Willow',sourceX:11,sourceZ:-37,
@@ -27,6 +28,11 @@ export function prepareWolfveilCivicSources(collision,definitions=WOLFVEIL_CIVIC
     const p={x:wanted.x+Math.cos(angle)*radius,z:wanted.z+Math.sin(angle)*radius};
     if(!finite(p)||!Number.isFinite(collision.groundAt(p.x,p.z))||collision.isSolid(p.x,p.z,.75))continue;
     if(sources.some(s=>distance(s,p)<3.5))continue;
+    // A pickup must be reachable from the actual southern street entrance.
+    // An accessible-looking point trapped inside a closed interior cannot
+    // turn into a quest objective simply because its floor is finite.
+    const entrance={x:0,z:-55};
+    if(distance(entrance,p)>.15&&!findTownWalkPath(entrance,p,collision).length)continue;
     placed=p;break;
    }
    if(placed)break;
