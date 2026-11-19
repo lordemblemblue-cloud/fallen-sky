@@ -109,6 +109,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
   let matchMode = mode;
   let view = null;
   let flags = null;
+  let footballBall = null;
   let status = 'connecting';
   let seq = 0;
   let stepClock = 0; // time waiting to be played in whole steps
@@ -224,6 +225,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       }
       if (story) applyUses(msg.uses);
       if (msg.flags) flags = msg.flags;
+      if (msg.ball) footballBall = { ...msg.ball };
       // the player's own fighter: back to the server's word, the inputs it has not used yet replayed on top
       others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], z: f.p[2] }));
       if (predictor) {
@@ -294,6 +296,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
     seats: () => seats,
     view: () => view,
     flags: () => flags,
+    ball: () => footballBall,
     /** The connection as the player feels it: the round trip (seconds) and how the prediction is going. */
     netStats: () => ({ roundTrip, lag, ...(predictor ? predictor.stats() : { predicting: false }) }),
     /**
@@ -368,6 +371,10 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       }
       for (const id of [...world.fighters.keys()]) if (!present.has(id)) { world.fighters.delete(id); world.bodies.delete(id); }
       if (predicting && world.fighters.has(meId)) predictor.present(world.fighters.get(meId), world.bodies.get(meId), time, dt);
+      if (s1.ball) {
+        const prev = s0.ball || s1.ball;
+        footballBall = { x: prev.x + (s1.ball.x - prev.x) * k, z: prev.z + (s1.ball.z - prev.z) * k };
+      }
       world.projectiles = s1.projectiles.map((p) => ({ id: p.id, x: p.x, z: p.z, dir: { x: p.d[0], z: p.d[1] }, move: p.move }));
       while (snaps.length > 2 && snaps[1].time < time - 0.5) snaps.shift();
       return out;
