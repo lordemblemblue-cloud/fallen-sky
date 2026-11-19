@@ -58,11 +58,15 @@ export const COMPANION_DEFINITIONS = [
     modelUrl: asset.modelUrl,
     previousModelUrl: asset.previousModelUrl || null,
     modelFormat: 'glb',
-    // Faction 1 still uses the verified original dog-cycle retarget. Uploaded
-    // Faction 2/3 winged pets preserve native idle/tail/wing animation and
-    // remap the existing baby-wolf walk/run to their own named bone skeleton.
-    animationSource: 'baby-wolf-retarget',
+    // Faction 1 still uses the verified original dog-cycle retarget. The uploaded
+    // Faction 2 winged pet preserves native idle/tail/wing animation and remaps the
+    // existing baby-wolf walk/run to its own named bone skeleton. The re-rigged
+    // Faction 3 mount plays its embedded Idle / Walk / Run / Fly ('native-clips').
+    animationSource: asset.animationSource || 'baby-wolf-retarget',
     animationRigProfile: asset.animationRigProfile || null,
+    // What the hosted previous model needs if the shipped file fails to load.
+    previousAnimationSource: asset.previousAnimationSource || null,
+    previousAnimationRigProfile: asset.previousAnimationRigProfile || null,
     animationModelUrl: BABY_WOLF_GLTF,
     animationBundleManifest: BABY_WOLF_BUNDLE,
     idleClipName: 'idle',

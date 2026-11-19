@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "generatedBy": "tools/avatar-motion/mobility-clips.mjs",
+  "bodies": {
+    "fused-male-v1": {
+      "dir": "",
+      "clips": [
+        "Back_Roll",
+        "Dodge_Forward",
+        "Sprint"
+      ]
+    },
+    "fused-female-v1": {
+      "dir": "female/",
+      "clips": [
+        "Back_Roll",
+        "Dodge_Forward",
+        "Sprint"
+      ]
+    }
+  }
+}

@@ -6,7 +6,8 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8'
 
 test('nearby auto-target is disabled by default and an explicit persisted user choice', () => {
   const store = read('src/components/game3d/axe/player/AXEControlSettingsStore.js');
-  assert.match(store, /AXE_CONTROL_SETTINGS_DEFAULTS = Object\.freeze\(\{ clickToMove: false, autoTargetNearby: false \}\)/);
+  // dodgeRollVariant (the optional roll dodges) is off by default as well.
+  assert.match(store, /AXE_CONTROL_SETTINGS_DEFAULTS = Object\.freeze\(\{ clickToMove: false, autoTargetNearby: false(?:, dodgeRollVariant: false)? \}\)/);
   assert.match(store, /autoTargetNearby: saved\.autoTargetNearby === true/);
   assert.match(store, /export function isAXEAutoTargetNearbyEnabled\(\)/);
   assert.match(store, /export function setAXEAutoTargetNearbyEnabled\(enabled\)/);
