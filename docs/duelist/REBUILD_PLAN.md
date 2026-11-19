@@ -108,7 +108,13 @@ mechanic; mysteries open gradually.
   - [x] Animator: idle/walk/jog/sprint by speed; the sword chain (rising slash, diagonal cut into a lunge,
     spinning cut), the overhead heavy, Telekinesis reach/hold/throw, Breach palm strike, Resist brace; settle
     clips after a move; roll or locked-on flips; block; flinches, guard break, knockdown and get-up, defeat
-  - [x] Motion lab at `/duelist-lab`: every clip on both bodies, speed, scrub, travel, camera views
+  - [x] Motion lab at `/duelist-lab`: every clip on every body, speed, scrub, travel, camera views
+  - [x] The owner's characters (Tripo, unrigged T-pose meshes, 2026-11-18): Masked Warrior and Huntress,
+    rigged by `tools/duelist/rig_character.py` (Blender, headless): the fused skeleton fitted to the body's
+    own proportions (arm row, span, armpits, cross-sections), heat weights where Blender can solve the mesh
+    (Masked Warrior) and region-limited distance weights where it cannot (Huntress), textures 2K. Reports in
+    `tools/duelist/characters/`. Selectable as you / opponent on `/duelist-next` (Eve and Adam too).
+    Re-rig: `blender -b --factory-startup -P tools/duelist/rig_character.py -- <character.glb> <out.glb> --preview <dir>`
   - [ ] Strafing and backpedal clips for locked-on movement (the pack has forward loops only)
   - [ ] Dual blades, staff and bow movesets and clips
 - [ ] Phase 3: effects and sound (in progress)

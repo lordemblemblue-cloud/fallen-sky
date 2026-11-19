@@ -12,7 +12,7 @@ import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
 
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
-const NATURAL = Object.freeze({ walk: 1.5, jog: 4.95, sprint: 7.63 });
+const NATURAL = Object.freeze({ walk: 1.5, packWalk: 0.9, jog: 4.95, sprint: 7.63 });
 const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7.2 });
 const GRIP_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
 
@@ -27,6 +27,8 @@ export function createFighterAnimator({ model, clips }) {
     ...(clips.baked || {}), ...(clips.dodges || {}), ...pack,
     walkBase: clips.walk || pack.walk,
   };
+  // bodies without a walk of their own take the pack's (a slower stride)
+  const naturalWalk = clips.walk ? NATURAL.walk : NATURAL.packWalk;
   const loops = new Set(['swordIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
   const actions = new Map(); // clip name -> { action, weight, name }
   const actionFor = (name) => {
@@ -174,7 +176,7 @@ export function createFighterAnimator({ model, clips }) {
     }
     const pace = {
       idle: 1,
-      walk: THREE.MathUtils.clamp(Math.max(speed, 0.8) / NATURAL.walk, 0.6, 1.7),
+      walk: THREE.MathUtils.clamp(Math.max(speed, 0.8) / naturalWalk, 0.6, 2.4),
       jog: THREE.MathUtils.clamp(speed / NATURAL.jog, 0.7, 1.4),
       sprint: THREE.MathUtils.clamp(speed / NATURAL.sprint, 0.7, 1.4),
     };

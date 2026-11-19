@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { MOTION_CLIPS } from '../core/motionPack.data.mjs';
-import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
+import { loadFighterBody, MOVEMENT_PACK_URL, BODIES } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
 import { CRYSTAL_SWORD } from './duelMoves.mjs';
@@ -13,7 +13,7 @@ import { createArena, createSceneLighting } from './arena.mjs';
 import './duelist.css';
 
 const DODGES = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
-const VIEWS = Object.freeze({ front: [0, 1.4, 6.2], side: [6.4, 1.3, 0.6], threeQuarter: [4.6, 1.7, 4.6], back: [0, 1.6, -6.2] });
+const VIEWS = Object.freeze({ front: [0, 1.6, 9.8], side: [11, 1.4, 0.6], threeQuarter: [7.6, 2.2, 7.6], back: [0, 1.8, -9.8] });
 
 export default function MotionLab() {
   const mountRef = useRef(null);
@@ -38,7 +38,7 @@ export default function MotionLab() {
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
-    camera.position.set(0, 1.4, 6.2);
+    camera.position.set(0, 1.6, 9.5);
     camera.lookAt(0, 0.95, 0);
     createSceneLighting(scene);
     const arena = createArena({ radius: 12 });
@@ -60,8 +60,10 @@ export default function MotionLab() {
     observer.observe(mount);
 
     (async () => {
-      for (const [gender, x] of [['female', -0.9], ['male', 0.9]]) {
-        const { model } = await loadFighterBody(gender);
+      const ids = Object.keys(BODIES);
+      for (const [i, bodyId] of ids.entries()) {
+        const x = (i - (ids.length - 1) / 2) * 1.8;
+        const { model } = await loadFighterBody(bodyId);
         if (disposed) return;
         const group = new THREE.Group();
         group.position.x = x;
@@ -70,9 +72,9 @@ export default function MotionLab() {
         const solved = solveFallbackGrip(model, CRYSTAL_SWORD, ['combat'], 1.7);
         const sword = createCrystalSword();
         if (solved) attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(solved.bone)), solved.grips.combat);
-        const clips = { ...(await clipsForBody(model, { rigKey: gender })), ...(await clipsForBody(model, { rigKey: gender, url: MOVEMENT_PACK_URL, names: DODGES })) };
+        const clips = { ...(await clipsForBody(model, { rigKey: bodyId })), ...(await clipsForBody(model, { rigKey: bodyId, url: MOVEMENT_PACK_URL, names: DODGES })) };
         const mixer = new THREE.AnimationMixer(model);
-        bodies.push({ gender, group, model, x, mixer, clips, action: null, sword });
+        bodies.push({ bodyId, group, model, x, mixer, clips, action: null, sword });
       }
       if (!disposed) setNames(Object.keys(bodies[0].clips));
     })().catch((error) => console.error('[motion lab]', error));
@@ -145,8 +147,8 @@ export default function MotionLab() {
       state.view = view;
       pose(0);
       // one body, closer: the camera moves towards it along the view direction
-      const focus = new THREE.Vector3(only === 'male' ? 0.9 : only === 'female' ? -0.9 : 0, 0.95, 0.4);
-      for (const b of bodies) b.group.visible = !only || b.gender === only;
+      const focus = new THREE.Vector3(bodies.find((b) => b.bodyId === only)?.x ?? 0, 0.95, 0.4);
+      for (const b of bodies) b.group.visible = !only || b.bodyId === only;
       camera.position.fromArray(VIEWS[view]).sub(new THREE.Vector3(0, 0.95, 0.4)).multiplyScalar(distance).add(focus);
       camera.lookAt(focus);
       times.forEach((t, i) => {

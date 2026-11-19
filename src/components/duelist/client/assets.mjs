@@ -1,13 +1,18 @@
-// Character assets for Duelist Adventure: Fallen Sky's fused bodies (until the owner's own models arrive)
-// with their own locomotion clips, and the authored roll / flip pack. Loaded once, cloned per fighter.
+// Character assets for Duelist Adventure: the owner's characters (rigged onto the fused bodies' skeleton by
+// tools/duelist/rig_character.py) and Fallen Sky's fused bodies, with the authored roll / flip pack.
+// Loaded once, cloned per fighter.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 
-export const BODY_URLS = Object.freeze({
-  female: '/models/characters/fused/Female_Fused_v2.glb',
-  male: '/models/characters/fused/Male_Fused_v2.glb',
+export const BODIES = Object.freeze({
+  maskedWarrior: Object.freeze({ name: 'Masked Warrior', url: '/models/characters/duelist/masked-warrior.glb' }),
+  huntress: Object.freeze({ name: 'Huntress', url: '/models/characters/duelist/huntress.glb' }),
+  female: Object.freeze({ name: 'Eve', url: '/models/characters/fused/Female_Fused_v2.glb' }),
+  male: Object.freeze({ name: 'Adam', url: '/models/characters/fused/Male_Fused_v2.glb' }),
 });
+export const BODY_URLS = Object.freeze(Object.fromEntries(Object.entries(BODIES).map(([id, b]) => [id, b.url])));
+export const bodyName = (id) => BODIES[id]?.name || 'Duelist';
 export const MOVEMENT_PACK_URL = '/models/animations/dodges/dodges.glb';
 export const BODY_HEIGHT = 1.7;
 // The bodies' own clips the game plays (their special-ability clips are not used).
@@ -24,8 +29,8 @@ const load = (url) => {
  * A fresh body for one fighter: { model, clips } with the model 1.7 m tall, feet on the ground, facing +Z.
  * clips: { idle, walk, run, roll, backFlip, flipLeft, flipRight } (AnimationClips bound by bone name).
  */
-export async function loadFighterBody(gender = 'female') {
-  const [gltf, pack] = await Promise.all([load(BODY_URLS[gender] || BODY_URLS.female), load(MOVEMENT_PACK_URL).catch(() => null)]);
+export async function loadFighterBody(bodyId = 'female') {
+  const [gltf, pack] = await Promise.all([load(BODY_URLS[bodyId] || BODY_URLS.female), load(MOVEMENT_PACK_URL).catch(() => null)]);
   const model = cloneSkinned(gltf.scene);
   model.traverse((n) => {
     if (n.isSkinnedMesh) { n.frustumCulled = false; n.castShadow = true; n.receiveShadow = true; }
@@ -53,5 +58,5 @@ export async function loadFighterBody(gender = 'female') {
   const clips = {};
   for (const [key, name] of Object.entries(LOCOMOTION_CLIPS)) clips[key] = byName(gltf.animations, name);
   for (const [key, name] of Object.entries(MOVEMENT_CLIPS)) clips[key] = byName(pack?.animations, name);
-  return { model, clips, gender };
+  return { model, clips, bodyId };
 }

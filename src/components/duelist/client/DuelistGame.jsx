@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
 import { createWorld, addFighter, step, bodyOf } from '../sim/world.mjs';
 import { createBot, think } from '../sim/bots.mjs';
-import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
+import { loadFighterBody, MOVEMENT_PACK_URL, bodyName } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
@@ -33,12 +33,12 @@ function startDuel(world) {
 
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
 
-async function createActor(scene, gender, swordColor) {
-  const { model, clips } = await loadFighterBody(gender);
+async function createActor(scene, bodyId, swordColor) {
+  const { model, clips } = await loadFighterBody(bodyId);
   // the clip packs are retargeted from the body's rest pose: before anything poses it
   const [pack, dodges] = await Promise.all([
-    clipsForBody(model, { rigKey: gender }),
-    clipsForBody(model, { rigKey: gender, url: MOVEMENT_PACK_URL, names: EVASIONS }),
+    clipsForBody(model, { rigKey: bodyId }),
+    clipsForBody(model, { rigKey: bodyId, url: MOVEMENT_PACK_URL, names: EVASIONS }),
   ]);
   const group = new THREE.Group();
   group.add(model);
@@ -59,7 +59,7 @@ async function createActor(scene, gender, swordColor) {
   };
 }
 
-export default function DuelistGame({ botLevel = 'duelist' }) {
+export default function DuelistGame({ botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress' }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -177,7 +177,7 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       }
     };
 
-    Promise.all([createActor(scene, 'female', 0x9fe8ff), createActor(scene, 'male', 0xff8a7a)]).then(([you, foe]) => {
+    Promise.all([createActor(scene, youBody, 0x9fe8ff), createActor(scene, foeBody, 0xff8a7a)]).then(([you, foe]) => {
       if (disposed) return;
       actors.you = you;
       actors.bot = foe;
@@ -281,11 +281,11 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [botLevel]);
+  }, [botLevel, youBody, foeBody]);
 
   return (
     <div className="duelist-game" ref={mountRef}>
-      {hud && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
+      {hud && <DuelHud hud={hud} foeName={bodyName(foeBody)} onPower={(id) => pressRef.current?.(id)} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
@@ -330,7 +330,7 @@ function Vitals({ title, v, align }) {
 }
 
 // Telekinesis's hold is a press and a release: a tap on the button grips, a second tap throws.
-function DuelHud({ hud, onPower }) {
+function DuelHud({ hud, foeName, onPower }) {
   const gripping = useRef(false);
   const tap = (id) => {
     if (id === 'grip') { onPower(gripping.current ? 'release' : 'grip'); gripping.current = !gripping.current; return; }
@@ -339,7 +339,7 @@ function DuelHud({ hud, onPower }) {
   return (
     <>
       <Vitals title="You" v={hud.you} align="left" />
-      <Vitals title="Duelist" v={hud.bot} align="right" />
+      <Vitals title={foeName} v={hud.bot} align="right" />
       <div className="duelist-powers">
         {hud.powers.map((p) => (
           <button type="button" key={p.id} className={`duelist-power ${p.ready > 0 ? 'is-cooling' : ''}`} onClick={() => tap(p.id)}>
