@@ -49,7 +49,9 @@ function animatedMaterial(source, uniforms) {
 export function attachWolfveilGuardVisual(parent, variant = 'blue', { onAttached = () => {} } = {}) {
   let disposed = false, root = null, materials = [], time = 0, lastMoving = false;
   const uniforms = { step: {value:0}, stride: {value:0} };
-  getModel(variant).then(original => {
+  // Headless Node tests and SSR have no ProgressEvent. Keep the procedural
+  // guard in those environments instead of attempting a browser-only GLB fetch.
+  if(typeof window!=='undefined'&&typeof ProgressEvent!=='undefined')getModel(variant).then(original => {
     if (disposed || !parent?.parent) return;
     const visual = original.clone(true);
     // Tripo exports stand about 1m high with feet at local y=0.

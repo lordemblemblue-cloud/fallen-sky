@@ -6,6 +6,10 @@ import {CLONE_TOWN_HOUSES,CLONE_TOWN_GUARDS,CLONE_TOWN_CITIZENS,
 import {makeTownDialogueBrain,makeTownSentence,townConversationResult}
   from './WolfveilTownDialogueBrain.mjs';
 import {attachWolfveilGuardVisual} from './WolfveilGuardVisuals.mjs';
+import {planWolfveilTownCivilians,findTownWalkPath,advanceTownCitizen}
+  from './WolfveilTownCivicAI.mjs';
+import {WOLFVEIL_CIVIC_TASKS,prepareWolfveilCivicSources,
+  createWolfveilCivicTaskRuntime} from './WolfveilTownCivicTasks.mjs';
 
 // Clone-only: light procedural architecture + decorative NPC presentation.
 // Not an extra terrain plate, not a new combat opponent, and never a client
@@ -245,7 +249,7 @@ function slideAgainstHouses(plots,position,previous,pad){
  * motion and dialogue are purely client presentation; rewards never minted.
  */
 export function buildWolfveilTownLivingQuarter(parent,{
-  collision,onStatus,architectureEnabled=true,
+  collision,onStatus,architectureEnabled=true,realShops=[],realHomes=[],
 }={}){
  if(!parent||!collision)return null;
  // Clean-town mode preserves patrol guards/dialogue, but prevents every
@@ -269,14 +273,18 @@ export function buildWolfveilTownLivingQuarter(parent,{
  const houses=new Map(layout.accepted.map(h=>[h.id,h]));
  const agents=[];
  const ground=(x,z)=>collision.groundAt(x,z);
+ const npcCollision={
+   groundAt:ground,
+   isSolid:(x,z,radius=.48)=>collision.isSolid(x,z,radius)||
+     houseBlocked(layout.accepted,x,z,radius),
+ };
  const createAgent=(data,initialX,initialZ)=>{
   if(!Number.isFinite(ground(initialX,initialZ))||
       houseBlocked(layout.accepted,initialX,initialZ,1.0)||
       collision.isSolid(initialX,initialZ))return;
   const model=makeCitizen(data,materials);
   root.add(model.actor);
-  // Replace the procedural guard art with the owner's GLB when it loads.
-  // The capsule parts remain as a low-poly offline fallback, not extra NPCs.
+  // Keep the main branch's guard GLB attachment, with low-poly fallback.
   const placeholderMeshes=[];
   if(data.role==='guard')model.actor.traverse(node=>{if(node.isMesh)placeholderMeshes.push(node);});
   const guardVisual=data.role==='guard'
@@ -287,7 +295,8 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const brain=makeTownDialogueBrain(WORLD_SEED+agents.length*1559);
   const agent={...data,...model,guardVisual,rand:brain,
     x:initialX,z:initialZ,timer:5+brain()*16,chatLeft:0,
-    stepPhase:brain()*Math.PI*2,progress:0,moving:false};
+    stepPhase:brain()*Math.PI*2,progress:0,moving:false,
+    waypoints:[],routeIndex:1,waitLeft:1+brain()*2,blockedFor:0};
   model.actor.position.set(initialX,ground(initialX,initialZ),initialZ);
   agents.push(agent);
  };
@@ -301,17 +310,63 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const x=h.x+(h.facade==='east'?h.w/2+3.1:-h.w/2-3.1);
   if(def)createAgent({...def,homeX:x,homeZ:h.z},x,h.z);
  }
- for(const def of CLONE_TOWN_GUARDS){
-  const p=def.route[0];
-  createAgent({...def,questNpcId:def.side==='left'?'archer_vex':'archer_lyra'},
-    p[0],p[1]);
+ if(!architectureEnabled&&(realShops.length||realHomes.length)){
+   // Use the already-instantiated homes and shops; never rebuild houses.
+   const civicRoster=planWolfveilTownCivilians({
+     shops:realShops,homes:realHomes,collision:npcCollision,
+   });
+   for(const def of civicRoster)createAgent(def,def.x,def.z);
+ }else{
+   // Keep the existing standalone clone-only preview behavior.
+   for(const def of CLONE_TOWN_GUARDS){
+     const p=def.route[0];
+     createAgent({...def,questNpcId:def.side==='left'?'archer_vex':'archer_lyra'},
+       p[0],p[1]);
+   }
+ }
+ // Retrieval sources are actual visible world objects on the already
+ // navigable town floor. If a giver did not spawn, her source cannot exist.
+ const civicSources=prepareWolfveilCivicSources(npcCollision,
+   WOLFVEIL_CIVIC_TASKS.filter(task=>agents.some(a=>a.id===task.npcId)));
+ const civicTasks=createWolfveilCivicTaskRuntime(civicSources);
+ const questProps=[];
+ for(const source of civicSources){
+   const group=new THREE.Group();
+   group.name='TownQuestSource_'+source.sourceId;
+   group.userData={sourceId:source.sourceId,taskId:source.id,
+     clientObjectiveOnly:true,noItemGrant:true};
+   const satchel=source.itemId==='civic_dispatch_scroll';
+   const base=new THREE.Mesh(new THREE.BoxGeometry(.60,.3,.47),
+     satchel?materials.timber:materials.resident);
+   base.position.y=.22;group.add(base);
+   if(!satchel){
+     for(const dx of [-.19,0,.19]){
+       const plant=new THREE.Mesh(new THREE.ConeGeometry(.13,.48,5),
+         materials.resident);
+       plant.position.set(dx,.52,.01);
+       plant.rotation.z=dx*1.4;group.add(plant);
+     }
+   }
+   const label=newSprite('E · '+source.sourceLabel,[2.7,.58],
+     {fontSize:24,background:'#10251fdc',color:'#d7fbc6'});
+   if(label.sprite){label.sprite.position.y=1.35;group.add(label.sprite);}
+   group.position.set(source.x,source.y,source.z);
+   group.visible=false;
+   root.add(group);
+   questProps.push({group,label,source});
  }
  const placed=layout.accepted.length;
  const report={plannedHouses:CLONE_TOWN_HOUSES.length,houses:placed,
    architectureBatched,
    architectureEnabled,
-   shops:layout.accepted.filter(h=>h.role==='shop').length,
+   shops:architectureEnabled?layout.accepted.filter(h=>h.role==='shop').length:realShops.length,
+   homes:architectureEnabled?layout.accepted.filter(h=>h.role==='home').length:realHomes.length,
    citizens:agents.length,guards:agents.filter(a=>a.role==='guard').length,
+   vendors:agents.filter(a=>a.mode==='vendor').length,
+   residents:agents.filter(a=>a.mode==='resident').length,
+   navigation:'collision-swept-astar',
+   placedQuestSources:civicSources.length,
+   questRewardAuthority:'server-only-not-connected',
    rejected:layout.rejected};
  root.userData.cloneTownQuarter=report;onStatus?.(report);
  let now=0,disposed=false;
@@ -331,31 +386,46 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const friend=agents.find(v=>v!==a&&v.side===a.side&&
     Math.hypot(v.x-a.x,v.z-a.z)<6);
   const result=townConversationResult(a,a.rand,{friend});
+  const civic=civicTasks.talk(a.id);
   a.timer=4+a.rand()*5;
-  return result;
+  return civic
+    ?{...result,...civic,questNpcId:null,questOffer:false}
+    :result;
  }
  function update(delta,playerPosition){
   if(disposed)return;
   const dt=Math.max(0,Math.min(Number(delta)||0,.08));now+=dt;
+  const civicState=civicTasks.snapshot();
+  for(const prop of questProps){
+    const active=civicState[prop.source.id]==='accepted';
+    prop.group.visible=Boolean(active&&playerPosition&&
+      Math.hypot(playerPosition.x-prop.source.x,
+        playerPosition.z-prop.source.z)<42);
+  }
   for(const a of agents){
    const oldX=a.x,oldZ=a.z;
    a.pairedTalkLeft=Math.max(0,(a.pairedTalkLeft||0)-dt);
-   if(a.route&&Array.isArray(a.route)&&a.route.length===2){
-    const [[ax,az],[bx,bz]]=a.route;
-    const length=Math.hypot(bx-ax,bz-az);
-    // Patrols stop briefly when greeting a fellow guard.
-    if(a.pairedTalkLeft<=0)a.progress=(a.progress+dt*a.speed)%(2*length);
-    const ratio=a.progress<length?a.progress/length:2-a.progress/length;
-    const nx=ax+(bx-ax)*ratio,nz=az+(bz-az)*ratio;
-    if(Number.isFinite(ground(nx,nz))&&!collision.isSolid(nx,nz)&&
-        !houseBlocked(layout.accepted,nx,nz,1)){
-      a.x=nx;a.z=nz;
-    }
-   }else if(a.homeX!=null){
-    const nx=a.homeX+Math.sin(now*.44+a.stepPhase)*.62,
-      nz=a.homeZ+Math.cos(now*.33+a.stepPhase)*.5;
-    if(Number.isFinite(ground(nx,nz))&&!collision.isSolid(nx,nz)&&
-        !houseBlocked(layout.accepted,nx,nz,.6)){a.x=nx;a.z=nz;}
+   // Goal-oriented schedules use a collision-swept route. Never walk
+   // directly through a real door, shop, home wall or another resident.
+   a.waitLeft=Math.max(0,a.waitLeft-dt);
+   if(a.mode!=='vendor'&&a.route?.length===2&&
+       a.waitLeft<=0&&a.pairedTalkLeft<=0&&!a.waypoints.length){
+     const target=a.route[a.routeIndex] || a.route[1];
+     if(Math.hypot(target[0]-a.x,target[1]-a.z)<.36){
+       a.routeIndex=1-a.routeIndex;
+       a.waitLeft=1.4+a.rand()*3.1;
+     }else{
+       a.waypoints=findTownWalkPath({x:a.x,z:a.z},
+         {x:target[0],z:target[1]},npcCollision);
+       if(!a.waypoints.length)a.waitLeft=2.5+a.rand()*2.5;
+     }
+   }
+   if(a.mode!=='vendor'&&a.pairedTalkLeft<=0&&a.waitLeft<=0){
+     advanceTownCitizen(a,dt,npcCollision,agents);
+     if(a.blockedFor>2){
+       // Wait and replan rather than teleporting past a moving NPC or wall.
+       a.waypoints.length=0;a.blockedFor=0;a.waitLeft=.8+a.rand()*1.5;
+     }
    }
    const motion=Math.hypot(a.x-oldX,a.z-oldZ),moving=motion>dt*.05;
    a.actor.position.set(a.x,ground(a.x,a.z)??a.actor.position.y,a.z);
@@ -413,6 +483,7 @@ export function buildWolfveilTownLivingQuarter(parent,{
   if(disposed)return;disposed=true;
   parent.remove(root);
   for(const a of agents){a.guardVisual?.dispose();a.speech.dispose();}
+  for(const p of questProps)p.label.dispose();
   root.traverse(node=>{
    if(node.userData?.signDispose)node.userData.signDispose();
    if(node.isMesh)node.geometry.dispose();
@@ -424,6 +495,9 @@ export function buildWolfveilTownLivingQuarter(parent,{
   root,report,get houses(){return [...layout.accepted];},
   get agents(){return agents.map(a=>({id:a.id,name:a.name,x:a.x,z:a.z,role:a.role}));},
   update,nearestResident,interact,
+  nearestCivicQuestSource:player=>civicTasks.nearestAvailableSource(player),
+  collectCivicQuestSource:player=>civicTasks.pickup(player),
+  get civicQuestSnapshot(){return civicTasks.snapshot();},
   isSolid(x,z){return houseBlocked(layout.accepted,x,z,.52);},
   resolveCollision(position,previous,radius=.55){
     return slideAgainstHouses(layout.accepted,position,previous,Math.max(.3,radius));

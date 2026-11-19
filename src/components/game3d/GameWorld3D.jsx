@@ -2470,6 +2470,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(door){e.preventDefault();return;}
         }
       }
+      // Civic retrieval objects have placed, collision-safe world positions.
+      // E records a LOCAL objective observation, never XP, currency, loot
+      // or authoritative quest completion without the server ledger.
+      if(k==='e'&&!e.repeat&&model&&region==='wolfveil'&&!suigenActive&&
+         !bossEncounter.isNPCSuppressed()){
+        const result=importedSpawnTown?.collectCivicQuestSource(model.position);
+        if(result){
+          e.preventDefault();
+          showCombatNotice(result.text);
+          return;
+        }
+      }
       // Shop interactions are deliberate and only work at real entryways or
       // inside the corresponding physical shop. No invisible door blocks E.
       if (k === 'e' && !e.repeat && model && region === 'wolfveil' && !suigenActive) {
