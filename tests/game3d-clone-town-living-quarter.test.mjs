@@ -80,7 +80,7 @@ test('Three.js houses, 2 guard patrols, merchants and non-combat sprites attach 
  for(let i=0;i<200;i++)town.update(.06,{x:-20,z:-35});
  const moved=town.agents.find(a=>a.id==='guard_sera');
  assert.notEqual(moved.z,guard.z,'guard patrol walks along its street');
- const talk=town.interact({x:-21,z:moved.z});
+ const talk=town.interact({x:moved.x,z:moved.z});
  assert.ok(talk&&talk.name);
  assert.equal(talk.canGrantItems,false);
  const near=town.nearestResident({x:999,z:999});

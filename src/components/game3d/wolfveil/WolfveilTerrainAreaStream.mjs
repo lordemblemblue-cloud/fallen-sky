@@ -46,7 +46,10 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     return next;
   };
   const removeOverlay=()=>{
-    overlay?.remove();overlay=null;
+    // In browser DOM, remove exists. Headless report stubs need a safe fallback.
+    if(typeof overlay?.remove==='function')overlay.remove();
+    else overlay?.parentNode?.removeChild?.(overlay);
+    overlay=null;
   };
   const showOverlay=area=>{
     if(typeof document==='undefined')return;
