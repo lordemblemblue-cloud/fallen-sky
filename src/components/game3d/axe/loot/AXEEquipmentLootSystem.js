@@ -12,6 +12,8 @@ import {
   AXE_GEAR_RARITY_SCALE, AXE_PROCEDURAL_SET_FAMILIES,
   getAXELevelGearBand, rollAXELevelAffixes, rollAXELevelRarity, rollAXEEvolutionPath,
 } from './AXELevelGearProgression.mjs';
+import { isGearTiersEnabled } from './AXEGearTierFlag.mjs';
+import { buildAXEGearTierDrop } from './AXEGearTierLoot.mjs';
 
 export const AXE_EQUIPMENT_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -50,6 +52,14 @@ export function rollAXEEquipmentDrop(enemyTier = 'normal', isBoss = false, {
 } = {}) {
   const tier = normalizeTier(enemyTier,isBoss);
   if (unit(rng) >= AXE_EQUIPMENT_DROP_CONFIG.chanceByTier[tier]) return null;
+  // Gear tiers (setting, off by default; docs/game3d/GEAR_TIERS_20261119.md): the same drop chance,
+  // but the item comes from the level 1–155 ladders.
+  if (isGearTiersEnabled()) {
+    return buildAXEGearTierDrop({
+      rng, monsterLevel: Math.max(1,Math.floor(Number(enemyLevel ?? playerLevel)||1)),
+      enemyTier: tier, isBoss, sourceId,
+    });
+  }
   const pool=buildTemplatePool();
   if (!pool.length) return null;
 

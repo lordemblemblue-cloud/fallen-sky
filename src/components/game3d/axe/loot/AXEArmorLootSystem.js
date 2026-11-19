@@ -10,6 +10,10 @@ import { AXE_ARMOR_PACK_SETS, armorTemplateId, makeAXEArmorTemplate } from '../e
 import { getAXELevelRarityWeights, rollAXEEvolutionPath, rollAXELevelAffixes } from './AXELevelGearProgression.mjs';
 import {getAXEFarmingGearLevel} from './AXEFarmingGearTiers.mjs';
 import {makeAXEFarmingItemPerks} from '../equipment/AXEFarmingItemPerks.mjs';
+import { isGearTiersEnabled } from './AXEGearTierFlag.mjs';
+import {
+  axeGearRequiredLevel, getAXEGearDropLevel, getAXEGearRarityWeights, migrateAXEGearTierItem,
+} from '../../../../../base44/shared/axeGearTiers.ts';
 
 export const AXE_ARMOR_DROP_CONFIG = Object.freeze({
   chanceByTier: Object.freeze({
@@ -50,7 +54,8 @@ function tierOf(enemyTier, isBoss) {
 function weightsFor(tier, monsterLevel) {
   const w = AXE_ARMOR_DROP_CONFIG.rarityWeightsByTier;
   const raw = BOSS_TIERS.has(tier) ? w.boss : (w[tier] || w.normal);
-  const allowed = getAXELevelRarityWeights(monsterLevel, {
+  // with gear tiers on, a rarity can drop only from its first step (Rare 45, Elite 85, Legendary 155)
+  const allowed = (isGearTiersEnabled() ? getAXEGearRarityWeights : getAXELevelRarityWeights)(monsterLevel, {
     enemyTier:tier,isBoss:BOSS_TIERS.has(tier),
   });
   // Keep original per-enemy armor-pack odds, but never let an early-level mob
@@ -95,7 +100,9 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
   const { set, piece } = pool[Math.floor(clampRng(rng()) * pool.length)];
   const bands = AXE_ARMOR_DROP_CONFIG.qualityBands;
   const qualityBand = bands[Math.floor(clampRng(rng()) * bands.length)];
-  const level = getAXEFarmingGearLevel(rarity,monsterLevel)??monsterLevel;
+  const tiers = isGearTiersEnabled();
+  // gear tiers: the rarity's step at or below the monster level (45, 55, 65 ...)
+  const level = (tiers ? getAXEGearDropLevel(rarity, monsterLevel) : getAXEFarmingGearLevel(rarity,monsterLevel))??monsterLevel;
   const rarityScale = RARITY_SCALE[set.rarity] || 1;
   const statScale = rarityScale * (1 + (level - 1) * AXE_ARMOR_DROP_CONFIG.levelScalePerLevel) * (1 + qualityBand / 100);
   const template = makeAXEArmorTemplate(set, piece);
@@ -111,6 +118,17 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
     key, Number((Number(value) * (isRate(key) ? rarityScale : statScale)).toFixed(Math.abs(Number(value)) < 2 ? 2 : 0)),
   ]));
 
+  const equipmentItem = {
+    ...template,
+    category: piece.slot,
+    qualityBand,
+    itemLevel: level,
+    level,
+    monsterLevelAtDrop: monsterLevel,
+    baseStats, rolledStats, setId,
+    abilityPerks:makeAXEFarmingItemPerks({slot:piece.slot,rarity}),
+    evolutionPath, rarityVariant: evolutionPath,
+  };
   return {
     dropId: `axe_armor_drop_${String(sourceId).replace(/[^a-zA-Z0-9_-]/g, '_')}`,
     id: template.id,
@@ -121,16 +139,9 @@ export function rollAXEArmorDrop(enemyTier = 'normal', isBoss = false, {
     rarity: set.rarity,
     qualityBand,
     icon: '🛡️',
-    equipmentItem: {
-      ...template,
-      category: piece.slot,
-      qualityBand,
-      itemLevel: level,
-      level,
-      monsterLevelAtDrop: monsterLevel,
-      baseStats, rolledStats, setId,
-      abilityPerks:makeAXEFarmingItemPerks({slot:piece.slot,rarity}),
-      evolutionPath, rarityVariant: evolutionPath,
-    },
+    // gear tiers: the piece keeps its own model and name, and notes its step for the Blacksmith
+    equipmentItem: tiers
+      ? migrateAXEGearTierItem({ ...equipmentItem, requiredLevel: axeGearRequiredLevel(rarity, level) })
+      : equipmentItem,
   };
 }

@@ -6,7 +6,7 @@
     "owner_id": { "type": "string", "description": "The account that owns the character" },
     "character_id": { "type": "string", "maxLength": 128 },
     "item_id": { "type": "string", "maxLength": 200, "description": "The item instance" },
-    "service": { "type": "string", "enum": ["reinforcement", "over_enchant", "refine", "ultimate", "combine", "stage"], "description": "reinforcement is the item's Enchant %; stage is Ascension (docs/game3d/BLACKSMITH_V2_20261118.md)" },
+    "service": { "type": "string", "enum": ["reinforcement", "over_enchant", "refine", "ultimate", "combine", "stage", "tier_up"], "description": "reinforcement is the item's Enchant %; stage is Ascension (docs/game3d/BLACKSMITH_V2_20261118.md); tier_up moves gear to its next level step (docs/game3d/GEAR_TIERS_20261119.md)" },
     "record": { "type": "object", "description": "The record the item keeps, as the game stores it" },
     "attempts": { "type": "integer", "default": 0 },
     "last_outcome": { "type": "string" },
