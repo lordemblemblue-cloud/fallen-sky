@@ -78,6 +78,7 @@ import { BOW_PVE_RANGE, selectCameraBowTarget, selectLockedBowAbilityTarget, cam
 import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryChargeRules.mjs';
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
+import { tickActiveEffects, disposeActiveEffects } from './vfx/activeEffects.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
 import { tickCompanionCooldowns } from './companionAbilityStore';
@@ -4748,10 +4749,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       });
 
       // ─── Update active visual effects (lightning etc.) ───
-      activeEffects.current = activeEffects.current.filter((fx) => {
-        fx.update(delta);
-        return fx.alive();
-      });
+      // A finished effect is disposed as it leaves the list: its scene objects, lights and listeners go too.
+      activeEffects.current = tickActiveEffects(activeEffects.current, delta);
 
       // Menu transitions, death and PvP cancel held pulses immediately.
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
@@ -5411,6 +5410,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           { detail: { token: held.token } }));
       }
       window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
+      // The render loop has stopped, so dispose the effects still in flight here rather than leave them
+      // (and the cast beam's window listener) holding on to this scene.
+      activeEffects.current = disposeActiveEffects(activeEffects.current);
       heldAOEKeys.clear();
       chargedKeys.clear();
       cancelBowCharge();
