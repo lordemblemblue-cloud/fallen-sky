@@ -53,3 +53,6 @@
 .duelist-lab-clips button.is-on { border-color: #9fe8ff; background: rgba(60, 130, 190, 0.45); }
 .duelist-lab-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: rgba(220, 235, 255, 0.55); margin-bottom: 4px; }
 @media (max-width: 720px) { .duelist-lab { flex-direction: column; } .duelist-lab-panel { width: auto; max-height: 45%; border-left: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); } }
+.duelist-sound { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); padding: 4px 12px; border-radius: 999px; border: 1px solid rgba(120, 200, 255, 0.28); background: rgba(12, 22, 38, 0.72); color: #cfe6ff; font: inherit; font-size: 11px; cursor: pointer; }
+.duelist-sound:hover { border-color: rgba(160, 230, 255, 0.6); }
+@media (max-width: 720px) { .duelist-sound { top: auto; bottom: 104px; } }

@@ -1,5 +1,6 @@
 // The practice arena: a circular duelling floor on a high platform at dusk, a ring of light at its edge,
 // crystal pylons around it and a far skyline. Original; procedural (no textures to load).
+// Waves of Telekinesis light the floor's hex lines as they pass: arc(), from a body outward or inward.
 import * as THREE from 'three';
 
 const FLOOR_VERTEX = /* glsl */`
@@ -7,6 +8,9 @@ const FLOOR_VERTEX = /* glsl */`
   void main() { vec4 w = modelMatrix * vec4(position, 1.0); vXZ = w.xz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const FLOOR_FRAGMENT = /* glsl */`
   uniform float uRadius; uniform float uTime; uniform vec3 uBase; uniform vec3 uLine; uniform vec3 uEdge;
+  uniform vec3 uWaveColor; uniform int uWaveCount;
+  uniform vec4 uWaveA[6]; // origin x, z, front radius (m), strength
+  uniform vec4 uWaveB[6]; // facing (rad), cos(half arc), band width (m), 0
   varying vec2 vXZ;
   // hexagonal cell distance (0 at a cell centre, 0.5 at its edge)
   float hexEdge(vec2 p) {
@@ -23,6 +27,18 @@ const FLOOR_FRAGMENT = /* glsl */`
     float rings = smoothstep(0.92, 1.0, abs(sin(r * 0.9 - uTime * 0.6)));
     float edge = smoothstep(uRadius - 0.6, uRadius - 0.05, r) * (1.0 - smoothstep(uRadius, uRadius + 0.05, r));
     vec3 c = uBase + uLine * (cells * 0.35 + rings * 0.12 * (1.0 - r / uRadius)) + uEdge * edge * 2.2;
+    float wave = 0.0;
+    for (int i = 0; i < 6; i++) {
+      if (i >= uWaveCount) break;
+      vec2 d = vXZ - uWaveA[i].xy;
+      float dist = length(d);
+      vec2 facing = vec2(sin(uWaveB[i].x), cos(uWaveB[i].x));
+      float along = dist > 1e-3 ? dot(d / dist, facing) : 1.0;
+      float inArc = smoothstep(uWaveB[i].y - 0.12, uWaveB[i].y + 0.04, along);
+      float band = exp(-pow((dist - uWaveA[i].z) / uWaveB[i].z, 2.0));
+      wave += band * inArc * uWaveA[i].w;
+    }
+    c += uWaveColor * wave * (0.18 + cells * 1.8);
     gl_FragColor = vec4(c, 1.0);
   }`;
 
@@ -32,7 +48,10 @@ export function createArena({ radius = 18 } = {}) {
   const disposables = [];
   const keep = (x) => { disposables.push(x); return x; };
   const floorUniforms = { uRadius: { value: radius }, uTime: { value: 0 }, uBase: { value: new THREE.Color(0x0d1420) },
-    uLine: { value: new THREE.Color(0x3fa7ff) }, uEdge: { value: new THREE.Color(0x7fe9ff) } };
+    uLine: { value: new THREE.Color(0x3fa7ff) }, uEdge: { value: new THREE.Color(0x7fe9ff) },
+    uWaveColor: { value: new THREE.Color(0x9fe6ff) }, uWaveCount: { value: 0 },
+    uWaveA: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) }, uWaveB: { value: Array.from({ length: 6 }, () => new THREE.Vector4()) } };
+  const waves = []; // { x, z, yaw, cosHalf, from, to, width, strength, ttl, age }
   const floor = new THREE.Mesh(keep(new THREE.CircleGeometry(radius + 0.3, 96)),
     keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: FLOOR_FRAGMENT, uniforms: floorUniforms })));
   floor.rotation.x = -Math.PI / 2;
@@ -74,7 +93,30 @@ export function createArena({ radius = 18 } = {}) {
   }
   return {
     group,
-    update(dt) { floorUniforms.uTime.value += dt; },
+    /**
+     * A wave across the floor from (x, z): facing yaw (rad), arc (deg, 360 = a full ring), its front running
+     * from `from` to `to` metres (to < from: it folds inward) over ttl seconds.
+     */
+    arc({ x, z, yaw = 0, arc = 360, from = 0.3, to = 8, width = 0.7, strength = 1, ttl = 0.5 }) {
+      if (waves.length >= 6) waves.shift();
+      waves.push({ x, z, yaw, cosHalf: arc >= 359 ? -2 : Math.cos(THREE.MathUtils.degToRad(arc / 2)), from, to, width, strength, ttl, age: 0 });
+    },
+    update(dt) {
+      floorUniforms.uTime.value += dt;
+      let n = 0;
+      for (let i = waves.length - 1; i >= 0; i--) {
+        const w = waves[i];
+        w.age += dt / w.ttl;
+        if (w.age >= 1) { waves.splice(i, 1); continue; }
+      }
+      for (const w of waves) {
+        const k = 1 - Math.pow(1 - w.age, 2);
+        floorUniforms.uWaveA.value[n].set(w.x, w.z, w.from + (w.to - w.from) * k, w.strength * (1 - w.age));
+        floorUniforms.uWaveB.value[n].set(w.yaw, w.cosHalf, w.width, 0);
+        n += 1;
+      }
+      floorUniforms.uWaveCount.value = n;
+    },
     dispose() { disposables.forEach((d) => d.dispose()); },
   };
 }

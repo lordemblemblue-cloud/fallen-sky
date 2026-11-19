@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
-import { createWorld, addFighter, step, bodyOf, forwardOf } from '../sim/world.mjs';
+import { createWorld, addFighter, step, bodyOf } from '../sim/world.mjs';
 import { createBot, think } from '../sim/bots.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
@@ -13,6 +13,10 @@ import { createFighterAnimator } from './animator.mjs';
 import { createArena, createSceneLighting } from './arena.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import { createWarp } from './warp.mjs';
+import { createSwordTrail } from './trails.mjs';
+import { createDuelAudio } from './audio.mjs';
+import { createDirector } from './director.mjs';
 import './duelist.css';
 
 const STEP = 1 / 60;
@@ -44,10 +48,11 @@ async function createActor(scene, gender, swordColor) {
   const sword = createCrystalSword({ color: swordColor });
   attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(handBone || 'mixamorig:RightHand')), grip);
   const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked } });
+  const trail = createSwordTrail(scene, { color: swordColor });
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   const leftHand = model.getObjectByName('mixamorigLeftHand');
   return {
-    group, model, sword, animator, yaw: 0,
+    group, model, sword, animator, trail, yaw: 0,
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
@@ -60,6 +65,8 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
   const [status, setStatus] = useState('loading');
   const restartRef = useRef(null);
   const pressRef = useRef(null);
+  const audioRef = useRef(null);
+  const [muted, setMuted] = useState(false);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -77,19 +84,28 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
     createSceneLighting(scene);
     const arena = createArena({ radius: 18 });
     scene.add(arena.group);
-    const vfx = createDuelVfx(scene);
+    const warp = createWarp(renderer, scene, camera);
+    const vfx = createDuelVfx(scene, { warp, arena, camera });
+    const audio = createDuelAudio();
+    audioRef.current = audio;
+    setMuted(audio.muted);
     const controls = createControls(renderer.domElement);
     const follow = createFollowCamera(camera);
     const world = createWorld({ arenaRadius: 18 });
     startDuel(world);
+    const wake = () => audio.resume(); // browsers start sound only after the player does something
+    window.addEventListener('pointerdown', wake);
+    window.addEventListener('keydown', wake);
     let bot = createBot('bot', { level: botLevel, seed: 17 });
     const actors = {};
+    const director = createDirector({ world, vfx, audio, actors });
     let lockOn = false;
+    let clock = 0;
+    const lookDir = new THREE.Vector3();
     let accumulator = 0;
     let last = performance.now();
     let hudClock = 0;
     let frame = 0;
-    const lastActions = {};
     const resize = () => {
       const w = mount.clientWidth || 1;
       const h = mount.clientHeight || 1;
@@ -98,11 +114,12 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       renderer.domElement.style.height = '100%';
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      warp.setSize(w, h);
     };
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
-    restartRef.current = () => { startDuel(world); bot = createBot('bot', { level: botLevel, seed: Math.floor(Math.random() * 1e6) }); setStatus('fighting'); };
+    restartRef.current = () => { startDuel(world); director.reset(); bot = createBot('bot', { level: botLevel, seed: Math.floor(Math.random() * 1e6) }); setStatus('fighting'); };
     pressRef.current = (command) => controls.press(command);
     // development only: lets a test drive the duel (window.__duelist.controls.press('push'), .world, .bot(false),
     // .slow(0.1) for slow motion, .lock(true) to lock on)
@@ -111,12 +128,15 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
     let fixedShot = null;
     if (import.meta.env?.DEV) {
       window.__duelist = {
-        world, controls, actors,
+        world, controls, actors, audio,
         bot: (on) => { bot = on ? createBot('bot', { level: botLevel, seed: 17 }) : null; },
         slow: (v = 1) => { timeScale = Math.max(0, v); },
         lock: (on) => { lockOn = !!on; },
         view: (offset = 0) => { viewOffset = offset; }, // turn the camera around the player (radians)
         camera: (shot = null) => { fixedShot = shot; }, // { position: [x, y, z], target: [x, y, z] } or null to follow
+        // step by hand: manual(true) stops the frame loop, advance(s) runs s seconds of frames at 60 Hz
+        manual: (on) => { manual = !!on; },
+        advance: (seconds, step = 1 / 60) => { for (let t = 0; t < seconds - 1e-9; t += step) tick(step); },
         // film strip: `count` frames, one every `every` game seconds, into one image over the page
         film: (count = 12, every = 0.05, cols = 4) => new Promise((resolve) => {
           const w = renderer.domElement.width;
@@ -164,10 +184,8 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       setStatus('fighting');
     }).catch((error) => { console.error('[duelist] could not load the fighters', error); setStatus('error'); });
 
-    const loop = (now) => {
-      frame = requestAnimationFrame(loop);
-      const dt = Math.min(0.1, (now - last) / 1000) * timeScale;
-      last = now;
+    const tick = (dt) => {
+      clock += dt;
       if (controls.takeLockToggle()) lockOn = !lockOn;
       const ready = actors.you && actors.bot;
       if (ready) {
@@ -182,16 +200,11 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
           if (!first) playerInput.presses = [];
           first = false;
           const effects = step(world, STEP, { you: playerInput, bot: bot ? think(world, bot) : {} });
-          for (const e of effects) vfx.effect(e, actors);
-          // Telekinesis waves leave the hand as the power starts
-          for (const [id, fighter] of world.fighters) {
-            const current = fighter.action?.id || null;
-            if (current !== lastActions[id] && ['push', 'pull', 'gripThrow'].includes(current)) {
-              vfx.wave(current === 'gripThrow' ? 'throw' : current, actors[id], forwardOf(bodyOf(world, id).yaw));
-            }
-            lastActions[id] = current;
-          }
+          director.step(effects);
         }
+        // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
+        const feel = director.frame(dt);
+        const show = feel.stopped ? dt * 0.1 : dt;
         // place the bodies
         for (const [id, actor] of Object.entries(actors)) {
           const fighter = world.fighters.get(id);
@@ -201,15 +214,25 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
           actor.yaw += turn * Math.min(1, dt * 18);
           actor.group.position.set(body.x, body.y, body.z);
           actor.group.rotation.set(0, actor.yaw, 0);
-          actor.animator.update(dt, { fighter, body, now: world.time });
-          actor.sword.setWill(fighter.vitals.will / fighter.vitals.max.will, fighterVeil(fighter));
-          actor.sword.update(dt);
+          actor.animator.update(show, { fighter, body, now: world.time });
+          const will = fighter.vitals.will / fighter.vitals.max.will;
+          actor.sword.setWill(will, fighterVeil(fighter));
+          actor.sword.update(show);
+          actor.trail.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, fighter.action?.move.kind === 'attack');
         }
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
-        vfx.update(dt, grips);
+        vfx.update(show, { grips });
         follow.update(dt, { target: you, yaw: (lockOn && foe ? Math.atan2(foe.x - you.x, foe.z - you.z) : controls.yaw()) + viewOffset, pitch: controls.pitch(), lockOn: lockOn ? foe : null });
         if (lockOn && foe) controls.setYaw(Math.atan2(foe.x - you.x, foe.z - you.z));
         if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
+        // camera shake: a quick, decaying wobble (trauma squared)
+        if (feel.shake > 0.001) {
+          const t = feel.shake * feel.shake;
+          camera.rotateX(Math.sin(clock * 53) * 0.022 * t);
+          camera.rotateY(Math.sin(clock * 47 + 1.3) * 0.022 * t);
+          camera.rotateZ(Math.sin(clock * 61 + 2.1) * 0.03 * t);
+        }
+        audio.listen(camera.position, camera.getWorldDirection(lookDir));
         // HUD at 10 Hz
         hudClock += dt;
         if (hudClock > 0.1) {
@@ -220,14 +243,26 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
             you: snapshot(me, world.time), bot: snapshot(them, world.time), lockOn,
             powers: POWER_KEYS.map(([id, key]) => ({ id, key, ready: Math.max(0, (me.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })),
           });
-          if (me.vitals.dead || them.vitals.dead) setStatus(me.vitals.dead ? 'defeated' : 'victory');
+          if (me.vitals.dead || them.vitals.dead) setStatus((was) => {
+            const next = me.vitals.dead ? 'defeated' : 'victory';
+            if (was !== next) audio.play(next === 'victory' ? 'victory' : 'loss');
+            return next;
+          });
         }
       } else {
         follow.update(dt, { target: { x: 0, y: 0, z: -4 }, yaw: controls.yaw(), pitch: controls.pitch() });
       }
       arena.update(dt);
-      renderer.render(scene, camera);
+      warp.update(dt);
+      warp.render();
       if (film) filmFrame(dt);
+    };
+    let manual = false;
+    const loop = (now) => {
+      frame = requestAnimationFrame(loop);
+      const dt = Math.min(0.1, (now - last) / 1000) * timeScale;
+      last = now;
+      if (!manual) tick(dt);
     };
     frame = requestAnimationFrame(loop);
     return () => {
@@ -236,8 +271,12 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       observer.disconnect();
       controls.dispose();
       vfx.dispose();
+      warp.dispose();
+      audio.dispose();
+      window.removeEventListener('pointerdown', wake);
+      window.removeEventListener('keydown', wake);
       arena.dispose();
-      for (const actor of Object.values(actors)) { actor.animator.dispose(); actor.sword.dispose(); }
+      for (const actor of Object.values(actors)) { actor.animator.dispose(); actor.sword.dispose(); actor.trail.dispose(); }
       renderer.dispose();
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
@@ -247,6 +286,9 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
   return (
     <div className="duelist-game" ref={mountRef}>
       {hud && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
+      <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
+        {muted ? 'Sound off' : 'Sound on'}
+      </button>
       {status === 'loading' && <div className="duelist-center">Forging the arena…</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       {(status === 'victory' || status === 'defeated') && (

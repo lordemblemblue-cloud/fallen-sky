@@ -111,4 +111,22 @@ mechanic; mysteries open gradually.
   - [x] Motion lab at `/duelist-lab`: every clip on both bodies, speed, scrub, travel, camera views
   - [ ] Strafing and backpedal clips for locked-on movement (the pack has forward loops only)
   - [ ] Dual blades, staff and bow movesets and clips
-- [ ] Phase 3 onward
+- [ ] Phase 3: effects and sound (in progress)
+  - [x] Bent space (`client/warp.mjs`): a post pass displaces the picture around Telekinesis: rings that run
+    out (push, throw, resist, impacts) or fold in (pull, breach), a swirling lens round a held body, with a
+    slight colour split at the bend
+  - [x] Telekinesis (`client/vfx.mjs`): the hand gathers light in the wind-up; push sends a rippling cone of
+    bent air, dust and a floor wave; pull folds it back into the hand; the grip binds the body with twin
+    twisting ribbons, motes and orbiting shards; the throw bursts and the body trails light; Breach opens a
+    violet tear; Resist rings out across the floor. No lightning anywhere.
+  - [x] Floor waves (`arena.arc`): the hex lines light as a wave passes; knockdowns slam dust and a ring
+  - [x] Crystal sword trails (`client/trails.mjs`), strikes only, brightness by Will
+  - [x] Hits: Veil ripples and crystal shards, shield hexes, wound sparks, block and parry sparks with a
+    flash, Veil collapse shatters; camera shake and a short hit-stop on heavy hits (picture only, the rules
+    never pause)
+  - [x] Sound (`client/audio.mjs`): all synthesized in WebAudio (no recordings): blade swings, Veil / shield /
+    body hits, block, parry, push, pull, grip hum (climbs while held), throw, breach crack, resist, roll, dash,
+    knockdown, Veil shatter, defeat, victory and loss stingers; placed in the world; mute button
+  - [x] `client/director.mjs`: turns the simulation's steps into effects, sound, shake and hit-stop
+  - [ ] Footsteps, ambience, arena music
+- [ ] Phase 4 onward
