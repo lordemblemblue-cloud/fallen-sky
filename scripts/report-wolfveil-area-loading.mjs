@@ -74,8 +74,14 @@ export function installHeadlessStubs(){
     matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),
     devicePixelRatio:1,innerWidth:1920,innerHeight:1080,location:{search:'',href:'http://localhost/'},
   }))g.window[key]??=value;
-  g.requestAnimationFrame??=()=>0;
+  // Deterministic frame scheduler: queue browser-only callbacks and advance
+  // them once per simulated report frame. Terrain swaps must actually run.
+  const queuedFrames=[];
+  g.requestAnimationFrame??=(callback)=>{queuedFrames.push(callback);return queuedFrames.length;};
   g.cancelAnimationFrame??=()=>{};
+  g.__wolfveilFlushFrame=()=>{
+    for(const callback of queuedFrames.splice(0))callback(performance.now());
+  };
   // Three.js loaders report download progress with this browser event.
   g.ProgressEvent??=class ProgressEvent extends g.Event{
     constructor(type,init={}){
@@ -215,6 +221,7 @@ export async function runWolfveilAreaLoadingReport({
     catch(error){noteOnce('village.update needs a renderer here: '+(error?.message||error));}
     try{town?.update?.(dt,position);}
     catch(error){noteOnce('the town update stops headless: '+String(error?.message||error).slice(0,120));}
+    globalThis.__wolfveilFlushFrame?.();
     scene.updateMatrixWorld();
   };
   const run=seconds=>{for(let i=0;i<Math.round(seconds*10);i++)frame(.1);};
