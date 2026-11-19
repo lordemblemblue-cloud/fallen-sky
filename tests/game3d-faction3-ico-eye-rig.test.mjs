@@ -120,8 +120,9 @@ test('both local and remote mounts already run the shared secondary rig after th
   const world=read('src/components/game3d/GameWorld3D.jsx');
   const remote=read('src/components/game3d/RemoteCompanionManager.jsx');
   const rig=read('src/components/game3d/character/factionThreeMountRig.mjs');
-  assert.match(world,/companionSecondaryRig\?\.update\(delta\)/);
-  assert.match(remote,/inst\.secondaryRig\?\.update\(delta\)/);
+  // The flying flag (character/mountFlight.mjs) rides along; the rig itself still runs every frame.
+  assert.match(world,/companionSecondaryRig\?\.update\(delta[,)]/);
+  assert.match(remote,/inst\.secondaryRig\?\.update\(delta[,)]/);
   assert.match(rig,/const eyes=createFactionThreeEyeControls\(root,definition\)/);
   assert.match(rig,/eyes\.update\(step\)/);
   assert.match(rig,/eyes\.dispose\(\)/);

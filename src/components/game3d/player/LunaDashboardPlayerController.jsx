@@ -5,6 +5,7 @@ import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, re
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import {dodgeTravelStep} from './dodgeMoves.js';
+import {DODGE_VARIANT_MOVES,dodgeMoveCandidates,pickDodgeMove} from './game3dDodgeProfiles.mjs';
 import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, weaponIdleState } from '../weapons/weaponComboClips.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
@@ -76,7 +77,7 @@ const ONE_SHOT_DURATION = {
   [STATES.JUMP_START]: 0.24,
   [STATES.JUMP_LAND]: 0.22,
   [STATES.ROLL]: GAME3D_MOBILITY_SECONDS.roll,
-  ...Object.fromEntries([...EIGHT_WAY_DODGE_MOVES,...SIDE_ROLL_VARIANTS]
+  ...Object.fromEntries([...EIGHT_WAY_DODGE_MOVES,...SIDE_ROLL_VARIANTS,...Object.values(DODGE_VARIANT_MOVES)]
     .map(move=>[move.key,move.duration])),
 };
 
@@ -582,8 +583,10 @@ export function createLunaDashboardPlayerController({
     return true;
   };
 
-  const requestDodge = (directionVector, directionName = 'forward') => {
-    const move=getEightWayDodgeMove(directionName);
+  // rollDodges: the player's "Roll dodges" setting. The forward sidestep / back roll variants
+  // (game3dDodgeProfiles.mjs) play when this body has their clips; otherwise the eight-way move does.
+  const requestDodge = (directionVector, directionName = 'forward', { rollDodges = false } = {}) => {
+    const move=pickDodgeMove(dodgeMoveCandidates(directionName,{rollDodges}),hasAction)||getEightWayDodgeMove(directionName);
     // All eight named generated clips exist from first render; if an old rig
     // somehow cannot bind one, preserve its original dodge/dive behavior.
     const state=hasAction(move.key)?move.key:
@@ -593,7 +596,7 @@ export function createLunaDashboardPlayerController({
   };
 
   const requestRoll = (directionVector, directionName = 'backward') => {
-    const move=getEightWayDodgeMove(directionName,{roll:true});
+    const move=pickDodgeMove(dodgeMoveCandidates(directionName,{rollKey:true}),hasAction)||getEightWayDodgeMove(directionName,{roll:true});
     const state=hasAction(move.key)?move.key:
       hasAction(STATES.ROLL)?STATES.ROLL:STATES.DIVE_FORWARD;
     if(!hasAction(state))return false;

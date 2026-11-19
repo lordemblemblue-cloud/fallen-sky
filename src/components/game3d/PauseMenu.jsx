@@ -9,7 +9,7 @@ import {
 import {base44} from '@/api/base44Client';
 import {inkPaletteFor} from './render/inkWashLook';
 import {getAXEControlSettings, setAXEClickToMoveEnabled, setAXEAutoTargetNearbyEnabled,
-  subscribeAXEControlSettings} from './axe/player/AXEControlSettingsStore';
+  setAXEDodgeRollVariantEnabled, subscribeAXEControlSettings} from './axe/player/AXEControlSettingsStore';
 import {GAME3D_PAUSE_SECTIONS,game3dPauseEscape,
   game3dPauseGraphicsDefaults,activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {readGame3DCommunityHUD,saveGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
@@ -46,8 +46,11 @@ const FPS_CAPS=[30,60,120,144];
 const CONTROL_KEYS=[
   {keys:'W A S D',action:'Move your character'},
   {keys:'Space',action:'Jump'},
-  {keys:'R',action:'Forward roll (uses dodge stamina)'},
-  {keys:'Double-tap WASD',action:'Directional dodge (uses dodge stamina)'},
+  {keys:'R',action:'Roll: backward, or toward W / A / S / D (uses dodge stamina)'},
+  {keys:'Double-tap W',action:'Sidestep forward (uses dodge stamina)'},
+  {keys:'Double-tap A / D',action:'Flip sideways'},
+  {keys:'Double-tap S',action:'Back flip'},
+  {keys:'Space (riding)',action:'Take off / land with your mount'},
   {keys:'Mouse',action:'Look and aim'},
   {keys:'Middle-click',action:'Manually lock onto or release a target'},
   {keys:'E',action:'Interact with the world'},
@@ -509,6 +512,9 @@ export default function PauseMenu({
                   <Switch label="Click to move" checked={controls.clickToMove}
                     description="Click the ground to walk there. WASD cancels the destination."
                     onChange={()=>setAXEClickToMoveEnabled(!controls.clickToMove)}/>
+                  <Switch label="Roll dodges" checked={!!controls.dodgeRollVariant}
+                    description="Double-tap W rolls forward and double-tap S rolls backward instead of the sidestep and the back flip."
+                    onChange={()=>setAXEDodgeRollVariantEnabled(!controls.dodgeRollVariant)}/>
                   <Switch label="Automatically lock nearby enemies" checked={controls.autoTargetNearby}
                     description="Off by default. Leave off to keep camera and movement independent of enemy spawns; middle-click still locks targets manually."
                     onChange={()=>setAXEAutoTargetNearbyEnabled(!controls.autoTargetNearby)}/>

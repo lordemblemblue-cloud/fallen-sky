@@ -18,7 +18,8 @@ test('only the bear is baked; its definition plays the baked clips, the winged p
   assert.ok(existsSync('public' + GAME3D_FACTION_MOUNTS.AXE_Faction_1.bakedModelUrl));
   for (const id of ['AXE_Faction_2', 'AXE_Faction_3']) {
     assert.equal(GAME3D_FACTION_MOUNTS[id].bakedModelUrl, undefined, id);
-    assert.ok(GAME3D_FACTION_MOUNTS[id].animationRigProfile, id);
+    // Faction 3's re-rigged file plays its own clips; its hosted fallback keeps the runtime retarget profile.
+    assert.ok(GAME3D_FACTION_MOUNTS[id].animationRigProfile || GAME3D_FACTION_MOUNTS[id].previousAnimationRigProfile, id);
   }
   // companionData.jsx (JSX: read as source): the baked file and its own clips override the runtime retarget
   const data = readFileSync('src/components/game3d/companionData.jsx', 'utf8');
