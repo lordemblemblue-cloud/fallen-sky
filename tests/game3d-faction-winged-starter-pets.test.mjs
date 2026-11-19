@@ -20,11 +20,15 @@ test('each faction gets its own established companion and starter mount ID',()=>
  assert.equal(a.AXE_Faction_2.companionId,'faction_armored_wolf');
  assert.equal(a.AXE_Faction_3.companionId,'faction_tiger');
  assert.equal(a.AXE_Faction_2.animationRigProfile,'winged_faction_2_158');
- assert.equal(a.AXE_Faction_3.animationRigProfile,'winged_faction_3_160');
+ // Faction 3 ships #160 re-rigged with its own clips (tools/game3d-mounts/rerig_faction_tiger.py); the hosted
+ // #160 and its runtime rig profile are the fallback.
+ assert.equal(a.AXE_Faction_3.modelUrl,'/models/mounts/faction_tiger_rigged_v1.glb');
+ assert.equal(a.AXE_Faction_3.animationSource,'native-clips');
+ assert.equal(a.AXE_Faction_3.previousAnimationRigProfile,'winged_faction_3_160');
+ assert.equal(a.AXE_Faction_3.previousAnimationSource,'baby-wolf-retarget');
  assert.ok(a.AXE_Faction_2.modelUrl.endsWith('158.glb'));
- assert.ok(a.AXE_Faction_3.modelUrl.endsWith('160.glb'));
+ assert.ok(a.AXE_Faction_3.previousModelUrl.endsWith('160.glb'));
  assert.ok(a.AXE_Faction_2.previousModelUrl.endsWith('.glb'));
- assert.ok(a.AXE_Faction_3.previousModelUrl.endsWith('.glb'));
  assert.notEqual(a.AXE_Faction_2.modelUrl,a.AXE_Faction_3.modelUrl);
 });
 test('the inspected new rig profiles map four feet and anatomical source bones',()=>{
@@ -91,7 +95,7 @@ test('the original and clone avatar loaders use one shared runtime retargeting p
  assert.match(remote,/prepareMountAnimationClips\(root,embeddedClips,effectiveDefinition\)/);
  assert.match(remote,/if\(!companionDef\.previousModelUrl\)throw error/);
  assert.match(world,/failToPreviousModel/);
- assert.match(world,/animationRigProfile: null/);
+ assert.match(world,/animationRigProfile: companionDef\.previousAnimationRigProfile \?\? null/);
  assert.match(store,/axeCharacterFactionChanged/);
  assert.match(store,/adoptFactionStarterIfPristine/);
  assert.match(store,/old\.totalXp!==0/);

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {FACTION_PET_RIG_PROFILES,combineNativeFactionPetClips,proceduralFactionPetGait,
-  faceFactionPetForward,withFactionPetLife} from './factionPetAnimationRigs.mjs';
+  faceFactionPetForward,withFactionPetLife,proceduralMountFlightClip} from './factionPetAnimationRigs.mjs';
 import {isFactionThreeMount,sanitizeFactionThreeNativeClips} from './factionThreeMountRig.mjs';
 
 // Inspected the owner's original baby_wolf Take 001 (439 keys, 30fps),
@@ -209,10 +209,28 @@ function loadDogSource(definition) {
 }
 
 /** Shared by local Play and remote-player companions; unknown models retain native clips. */
+/** The ridden-flight clip (character/mountFlight.mjs) for a mount that has none: appended as `fly`. */
+export function withMountFlightClip(root, clips, { profileId = null, dogMap = null } = {}) {
+  if (!root || (clips || []).some(clip => /^fly$/i.test(clip?.name || ''))) return clips;
+  try {
+    const profile = profileId ? FACTION_PET_RIG_PROFILES[profileId] : null;
+    const fly = proceduralMountFlightClip(root, { profile, dogMap });
+    return fly ? [...clips, fly] : clips;
+  } catch (error) {
+    globalThis.console.warn('Mount flight clip unavailable for this rig', error);
+    return clips;
+  }
+}
+
 export async function prepareMountAnimationClips(root, embeddedClips = [], definition = {}) {
   if (definition.animationSource === 'baby-wolf-bundled') return splitDogMountClips(embeddedClips);
-  if (definition.animationSource !== 'baby-wolf-retarget')
-    return sanitizeFactionThreeNativeClips(root,embeddedClips,definition);
+  if (definition.animationSource !== 'baby-wolf-retarget') {
+    // A re-rigged mount ships its own Idle / Walk / Run / Fly (tools/game3d-mounts): played as exported.
+    const clips = definition.animationSource === 'native-clips' ? embeddedClips
+      : sanitizeFactionThreeNativeClips(root,embeddedClips,definition);
+    // Faction mounts fly when ridden; the baked bear has no wings, so its flight is the leg tuck and the bob.
+    return definition.factionId ? withMountFlightClip(root, clips, { dogMap: DOG_MOUNT_RIG_MAPS[definition.id] || null }) : clips;
+  }
   // The newly uploaded faction 2/3 models contain their own genuine idle
   // animation (tail + wings). Preserve it, retarget the existing baby wolf
   // WALK/RUN tracks onto their inspected joint maps, and include the native

@@ -159,10 +159,13 @@ test('world and controller implement real stamina-limited, collision-checked 360
   assert.match(world,/getInputDodge\(model, orbit\.current\.yaw, \{/);
   assert.match(world,/fallback: key === 'r' \? 'backward' : 'forward'/);
   assert.match(world,/const roll=getDodgeVectorAndName\('r'\);/,'R alone rolls backward');
-  assert.match(world,/getEightWayDodgeMove\(dodge.direction\)\.duration/);
-  assert.match(world,/playerAnim\?\.requestDodge\?\.\(dodge.vector, dodge.direction\)/);
+  // The lock is the duration of the move that actually plays (game3dDodgeProfiles.mjs: the forward sidestep /
+  // back roll variants when the body has their clips, otherwise the eight-way move).
+  assert.match(world,/dodgeMoveFor\(dodge\.direction, \{ rollDodges \}\)\.duration/);
+  assert.match(world,/playerAnim\?\.requestDodge\?\.\(dodge\.vector, dodge\.direction, \{ rollDodges \}\)/);
   assert.match(world,/playerAnim\?\.requestRoll\?\.\(roll.vector,roll.direction\)/);
-  assert.match(world,/getEightWayDodgeMove\(roll.direction,\{roll:true\}\)\.duration/);
+  assert.match(world,/dodgeMoveFor\(roll\.direction,\{rollKey:true\}\)\.duration/);
+  assert.match(world,/\|\| getEightWayDodgeMove\(direction, \{ roll: !!options\.rollKey \}\)/);
   assert.match(world,/canSpendCombatResource\('dodge'\)/);
   assert.match(world,/spendCombatResource\('dodge'\)/);
   assert.match(world,/startDodgeVanish\(\)/);

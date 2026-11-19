@@ -232,6 +232,8 @@ export default function MultiplayerSystem({ envUrl, surface = 'dashboard' }) {
                   z: comp.isMounted ? s.z : (compPos?.z ?? s.z),
                   yaw: comp.isMounted ? s.yaw : (compPos?.yaw ?? s.yaw),
                   anim: s.anim,
+                  // GameWorld3D: the ridden mount is airborne (character/mountFlight.mjs); y carries its altitude.
+                  flying: !!comp.isMounted && window.__localMountFlying === true,
                   last_update: Date.now(),
                 }
               });

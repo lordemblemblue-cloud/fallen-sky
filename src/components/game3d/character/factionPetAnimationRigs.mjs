@@ -177,7 +177,8 @@ export function factionPetLifeTracks(root,mode,duration){
   const F=new THREE.Vector3(0,0,1),U=new THREE.Vector3(0,1,0),X=new THREE.Vector3(1,0,0);
   const toRoot=root.matrixWorld.clone().invert();
   const w=TAU/duration; // one full rhythm per clip, so every track loops seamlessly
-  const amp={idle:{sway:9,lift:4,flap:5,tip:7},walk:{sway:11,lift:5,flap:8,tip:10},run:{sway:15,lift:8,flap:16,tip:20}}[mode];
+  const amp={idle:{sway:9,lift:4,flap:5,tip:7},walk:{sway:11,lift:5,flap:8,tip:10},run:{sway:15,lift:8,flap:16,tip:20},
+    fly:{sway:7,lift:9,flap:30,tip:22}}[mode];
   const tracks=[];
   tail.forEach((bone,i)=>{
     const lag=i*.55;
@@ -228,6 +229,17 @@ export function withFactionPetLife(root,clips,nativeClips,profileId){
     out.push(clip);
   }
   if(!out.some(c=>c.name==='idle'))out.unshift(new THREE.AnimationClip('idle',4,factionPetLifeTracks(root,'idle',4)));
+  // Ridden flight (character/mountFlight.mjs): the wing beat and tucked legs, with the tail and its life layer.
+  if(!out.some(c=>/^fly$/i.test(c.name))){
+    const fly=proceduralMountFlightClip(root,{profile,pelvisBob:profileId!=='winged_faction_3_160'});
+    if(fly){
+      const has=new Set(fly.tracks.map(t=>t.name));
+      const life=factionPetLifeTracks(root,'fly',fly.duration).filter(t=>!has.has(t.name));
+      const clip=new THREE.AnimationClip('fly',fly.duration,[...fly.tracks,...life]);
+      clip.userData=fly.userData;
+      out.push(clip);
+    }
+  }
   return out;
 }
 
@@ -295,4 +307,155 @@ export function proceduralFactionPetGait(root,embeddedClips,profileId) {
     result.push(new THREE.AnimationClip(name,duration,tracks));
   }
   return combineNativeFactionPetClips(embeddedClips,result,profileId);
+}
+
+// ---------------------------------------------------------------------------------------- flight (ridden mounts)
+
+export const MOUNT_FLIGHT_CLIP = Object.freeze({
+  name: 'fly', beatHz: 2.1, beats: 2, fps: 30,
+  wingLift: 0.22,   // mean raise of the wing base above its bind pose (rad)
+  wingBeat: 0.55,   // base beat amplitude (rad)
+  wingTip: 0.42,    // extra tip amplitude (rad), lagging the base
+  tipLag: 0.6,      // rad of beat phase
+  legTuck: 0.45,    // upper legs swing back (rad); lower legs bend half as much
+  bob: 0.035,       // pelvis bob per beat (model units)
+});
+
+const snapshotTransforms = (root) => {
+  const saved = [];
+  root.traverse((node) => saved.push([node, node.position.clone(), node.quaternion.clone(), node.scale.clone()]));
+  return () => {
+    for (const [node, position, quaternion, scale] of saved) {
+      node.position.copy(position); node.quaternion.copy(quaternion); node.scale.copy(scale);
+    }
+    root.updateMatrixWorld(true);
+  };
+};
+
+/** Upper-leg bones of a mount: the rig profile's limbs, a dog-map rig's Limb_0 joints, or name patterns. */
+export function mountLegBones(root, { profile = null, dogMap = null } = {}) {
+  const nodes = boneNodes(root);
+  const fromNames = (names) => names.map((n) => nodes.get(key(n))).filter(Boolean);
+  if (profile?.limbs) return fromNames(profile.limbs);
+  if (dogMap) return fromNames(Object.keys(dogMap).filter((n) => /Limb_0$/i.test(n)));
+  const found = [];
+  nodes.forEach((bone, k) => { if (/^(front|hind|rear|fore|back)[lr].*(upper|1)$/.test(k) || /limb0$/.test(k)) found.push(bone); });
+  return found;
+}
+
+/** Wing base bones (a wing bone whose parent is not a wing) with their first wing child as the tip. */
+export function mountWingBones(root) {
+  const wings = [];
+  root.traverse((node) => {
+    if (!node.isBone || !/wing/i.test(node.name) || /wing/i.test(node.parent?.name || '')) return;
+    const tip = node.children.find((child) => child.isBone && /wing/i.test(child.name)) || null;
+    wings.push({ base: node, tip });
+  });
+  return wings;
+}
+
+/**
+ * A looping wing-beat flight cycle for a ridden mount (character/mountFlight.mjs). Wings beat about the body's
+ * forward axis around their bind pose (#160's file rests them folded straight up, like the life layer above)
+ * with the tips lagging, the upper legs tuck back, the pelvis bobs with every beat. A rig without wing bones (the
+ * bear) still gets the tuck and the bob. Rotations are solved against each bone's rest world orientation, so no
+ * per-rig axis table is needed. Returns null when the skeleton offers nothing to animate.
+ */
+export function proceduralMountFlightClip(root, { profile = null, dogMap = null, pelvisBob = true, config = MOUNT_FLIGHT_CLIP } = {}) {
+  root.updateMatrixWorld(true);
+  const wings = mountWingBones(root);
+  const legs = mountLegBones(root, { profile, dogMap });
+  const nodes = boneNodes(root);
+  const pelvis = nodes.get('pelvis') || nodes.get('rigpelvis01') || nodes.get('tripospine0') || null;
+  const head = nodes.get('head') || nodes.get('righead021') || null;
+  if (!wings.length && !legs.length) return null;
+  const restore = snapshotTransforms(root);
+  for (const { base, tip } of wings) for (const bone of [base, tip]) {
+    const bind = bone && bindLocalQuaternion(root, bone);
+    if (bind) bone.quaternion.copy(bind);
+  }
+  root.updateMatrixWorld(true);
+  const rootQuat = root.getWorldQuaternion(new THREE.Quaternion());
+  const worldPos = (node) => node.getWorldPosition(new THREE.Vector3());
+  // Body axes in world space from the skeleton: forward = pelvis -> head on the ground plane.
+  const up = new THREE.Vector3(0, 1, 0).applyQuaternion(rootQuat).normalize();
+  let forward = pelvis && head ? worldPos(head).sub(worldPos(pelvis)) : new THREE.Vector3(0, 0, 1).applyQuaternion(rootQuat);
+  forward.addScaledVector(up, -forward.dot(up));
+  if (forward.lengthSq() < 1e-8) forward = new THREE.Vector3(0, 0, 1).applyQuaternion(rootQuat);
+  forward.normalize();
+  const left = new THREE.Vector3().crossVectors(up, forward).normalize();
+  const center = pelvis ? worldPos(pelvis) : worldPos(root);
+
+  const restWorld = new Map();
+  root.traverse((node) => { if (node.isBone) restWorld.set(node, node.getWorldQuaternion(new THREE.Quaternion())); });
+  const wingBind = new Map(wings.flatMap(({ base, tip }) => [base, tip].filter(Boolean).map((b) => [b, b.quaternion.clone()])));
+  const toBind = () => { for (const [bone, q] of wingBind) bone.quaternion.copy(q); root.updateMatrixWorld(true); };
+  const setWorld = (bone, world) => {
+    const parent = bone.parent.getWorldQuaternion(new THREE.Quaternion()).invert();
+    bone.quaternion.copy(parent.multiply(world)).normalize();
+    bone.updateMatrixWorld(true);
+  };
+  const aboutAxis = (axis, angle) => new THREE.Quaternion().setFromAxisAngle(axis, angle);
+  // Tuck direction per leg: the rotation that moves the child joint backwards (against the forward axis).
+  const tuckSign = (bone) => {
+    const child = bone.children.find((c) => c.isBone);
+    if (!child) return 1;
+    const before = worldPos(child);
+    setWorld(bone, aboutAxis(left, 0.3).multiply(restWorld.get(bone)));
+    const after = worldPos(child);
+    restore(); toBind();
+    return after.sub(before).dot(forward) < 0 ? 1 : -1;
+  };
+  const legPlan = legs.map((bone) => ({ bone, sign: tuckSign(bone), lower: bone.children.find((c) => c.isBone) || null }));
+  const wingPlan = wings.map(({ base, tip }) => ({ base, tip, side: worldPos(base).sub(center).dot(left) >= 0 ? 1 : -1 }));
+  const bobbing = pelvisBob && pelvis && pelvis.parent;
+  const pelvisParentInverse = bobbing ? pelvis.parent.getWorldQuaternion(new THREE.Quaternion()).invert() : null;
+  const pelvisParentScale = bobbing ? pelvis.parent.getWorldScale(new THREE.Vector3()).y || 1 : 1;
+  const pelvisRest = bobbing ? pelvis.position.clone() : null;
+  const bobDirection = bobbing ? up.clone().applyQuaternion(pelvisParentInverse).normalize().multiplyScalar(config.bob / pelvisParentScale) : null;
+
+  const duration = config.beats / config.beatHz;
+  const frames = Math.max(8, Math.round(duration * config.fps));
+  const times = Array.from({ length: frames + 1 }, (_, i) => duration * i / frames);
+  const tracks = new Map();
+  const push = (name, value) => { if (!tracks.has(name)) tracks.set(name, []); tracks.get(name).push(...value); };
+  for (let i = 0; i <= frames; i++) {
+    const t = i === frames ? 0 : times[i];
+    const phase = 2 * Math.PI * config.beatHz * t;
+    restore(); toBind();
+    for (const { base, tip, side } of wingPlan) { // parents first: the wing base before its tip
+      const raise = config.wingLift + config.wingBeat * Math.sin(phase);
+      setWorld(base, aboutAxis(forward, side * raise).multiply(restWorld.get(base)));
+      push(`${base.name}.quaternion`, base.quaternion.toArray());
+      if (tip) {
+        const flick = config.wingTip * Math.sin(phase - config.tipLag);
+        setWorld(tip, aboutAxis(forward, side * (raise + flick)).multiply(restWorld.get(tip)));
+        push(`${tip.name}.quaternion`, tip.quaternion.toArray());
+      }
+    }
+    for (const { bone, sign, lower } of legPlan) {
+      const tuck = config.legTuck * (0.85 + 0.15 * Math.sin(phase - 0.9));
+      setWorld(bone, aboutAxis(left, sign * tuck).multiply(restWorld.get(bone)));
+      push(`${bone.name}.quaternion`, bone.quaternion.toArray());
+      if (lower) {
+        setWorld(lower, aboutAxis(left, -sign * tuck * 0.5).multiply(restWorld.get(lower)));
+        push(`${lower.name}.quaternion`, lower.quaternion.toArray());
+      }
+    }
+    if (bobbing) push(`${pelvis.name}.position`, pelvisRest.clone().addScaledVector(bobDirection, Math.sin(phase - 0.5)).toArray());
+  }
+  restore();
+  const clipTracks = [];
+  for (const [name, values] of tracks) {
+    if (name.endsWith('.quaternion')) {
+      for (let f = 1; f <= frames; f++) { // one hemisphere per track
+        const a = (f - 1) * 4, b = f * 4;
+        if (values[a] * values[b] + values[a + 1] * values[b + 1] + values[a + 2] * values[b + 2] + values[a + 3] * values[b + 3] < 0) for (let k = 0; k < 4; k++) values[b + k] = -values[b + k];
+      }
+      clipTracks.push(new THREE.QuaternionKeyframeTrack(name, times, values));
+    } else clipTracks.push(new THREE.VectorKeyframeTrack(name, times, values));
+  }
+  const clip = new THREE.AnimationClip(config.name, duration, clipTracks);
+  clip.userData = { loop: true, procedural: 'mount-flight', wings: wingPlan.length, legs: legPlan.length };
+  return clip;
 }
