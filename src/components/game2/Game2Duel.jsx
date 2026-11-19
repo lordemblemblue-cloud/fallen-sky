@@ -90,6 +90,7 @@ export default function Game2Duel({initialLaunch=null,onWindowExit=null,userId=n
   const [choice, setChoice] = useState(initialLaunch?.choice||null); // 'single' | 'archive' | 'boss_way' | 'online' | 'multi' | 'ffa' | 'tdm' | 'ctf' | 'sudden'
   const [mapId, setMapId] = useState(initialLaunch?.mapId||'skybridge');
   const [saber, setSaber] = useState(initialLaunch?.saber||'single'); // 'single' | 'dual' | 'staff'
+  const [practiceInfinite, setPracticeInfinite] = useState(!!initialLaunch?.infinitePractice);
   const [online, setOnline] = useState(null); // lobby result: { name, side, selfId, local }
   const [hostOnOpen,setHostOnOpen] = useState(false);
   const [inlineOnline,setInlineOnline] = useState(false);
@@ -106,6 +107,7 @@ export default function Game2Duel({initialLaunch=null,onWindowExit=null,userId=n
     }));
     setMapId(r.mapId || 'training');
     setSaber(r.saber || 'single');
+    setPracticeInfinite(!!r.infinitePractice);
     setHostOnOpen(!!r.hostOnOpen);
     // The menu can now initiate a real Railway room directly from its inline
     // right-hand command panel; the legacy full-screen lobby remains a fallback.
@@ -128,12 +130,12 @@ export default function Game2Duel({initialLaunch=null,onWindowExit=null,userId=n
     } else if (choice === 'online') setOnline(null);
     else setChoice(null);
   }; // Inline quick match/customs returns to Jedi Duels; legacy lobby stays intact.
-  return <Game2Session key={choice + mapId + saber + avatarId + (online ? online.selfId : '')}
+  return <Game2Session key={choice + mapId + saber + avatarId + practiceInfinite + (online ? online.selfId : '')}
     choice={choice} online={online} mapId={mapId} saber={saber}
-    character={character} avatarId={avatarId} displayName={displayName} userId={userId} onExit={exit} />;
+    character={character} avatarId={avatarId} displayName={displayName} userId={userId} initialInfinitePractice={practiceInfinite} onExit={exit} />;
 }
 
-function Game2Session({ choice, online, mapId, saber, character, avatarId, displayName, userId, onExit }) {
+function Game2Session({ choice, online, mapId, saber, character, avatarId, displayName, userId, initialInfinitePractice = false, onExit }) {
   const [avatarWarning,setAvatarWarning]=useState('');
   const hostRef = useRef(null);
   const forceOrbRef=useRef(null),specialOrbRef=useRef(null);
@@ -161,7 +163,7 @@ function Game2Session({ choice, online, mapId, saber, character, avatarId, displ
   onExitRef.current = onExit;
   const [paused, setPaused] = useState(false);
   const skillTree = useSkillTreeMenu({ gameRef, ready: status.phase === 'ready', blocked: paused });
-  const [infinitePractice, setInfinitePractice] = useState(false);
+  const [infinitePractice, setInfinitePractice] = useState(initialInfinitePractice);
   const [sessionSettings, setSessionSettings] = useState(loadSettings);
   // Tap targets inject the SAME F/X key presses handled by Game/Force;
   // they never manipulate meters or bypass an ability's normal costs.
@@ -372,6 +374,7 @@ function Game2Session({ choice, online, mapId, saber, character, avatarId, displ
         }
         game = new Game(renderer, assets, canvas, hud, { ...engineOptions, deferOnlineJoin: choice === 'online' });
         gameRef.current = game;
+        if (choice === 'multi' && initialInfinitePractice) game.setInfinitePractice(true);
         // The real Game 2 player and networking remain alive as the deployment
         // screen selects another uploaded character. Only its optional, verified
         // visual GLB overlay changes. Fast consecutive selections cancel stale
