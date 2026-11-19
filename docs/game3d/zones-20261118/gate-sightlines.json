@@ -1,0 +1,145 @@
+[
+ {
+  "id": "town_east_market_bridge",
+  "label": "Market Stone Bridge",
+  "kind": "bridge",
+  "behind": "town",
+  "ahead": "east",
+  "x": 122,
+  "z": -98,
+  "sightlinePastBorder": {
+   "median": 496,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_east_residential_footbridge",
+  "label": "Residential Timber Bridge",
+  "kind": "bridge",
+  "behind": "town",
+  "ahead": "east",
+  "x": 122,
+  "z": 35,
+  "sightlinePastBorder": {
+   "median": 584,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_east_outer_trail_bridge",
+  "label": "Outrider Rope Bridge",
+  "kind": "bridge",
+  "behind": "town",
+  "ahead": "east",
+  "x": 122,
+  "z": 205,
+  "sightlinePastBorder": {
+   "median": 468,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_south_south_fields_way",
+  "label": "Southern Fields Way Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "south",
+  "x": 8.6,
+  "z": -265,
+  "sightlinePastBorder": {
+   "median": 540,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_west_south_residential",
+  "label": "South Residential Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "west",
+  "x": -190,
+  "z": -260,
+  "sightlinePastBorder": {
+   "median": 404,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_west_west_residential",
+  "label": "West Residential Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "west",
+  "x": -190,
+  "z": -111.3,
+  "sightlinePastBorder": {
+   "median": 504,
+   "max": 648
+  }
+ },
+ {
+  "id": "east_north_hunters_loop_east",
+  "label": "Hunter's Loop · East Gate",
+  "kind": "trail",
+  "behind": "east",
+  "ahead": "north",
+  "x": 343.7,
+  "z": 240,
+  "sightlinePastBorder": {
+   "median": 316,
+   "max": 648
+  }
+ },
+ {
+  "id": "west_north_hunters_loop_west",
+  "label": "Hunter's Loop · Cedar Spine Gate",
+  "kind": "trail",
+  "behind": "north",
+  "ahead": "west",
+  "x": -409.5,
+  "z": 240,
+  "sightlinePastBorder": {
+   "median": 160,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_north_ridge_path",
+  "label": "Ridge Path Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "north",
+  "x": -22.2,
+  "z": 240,
+  "sightlinePastBorder": {
+   "median": 528,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_west_training_forest",
+  "label": "Training Forest Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "west",
+  "x": -190,
+  "z": 79.2,
+  "sightlinePastBorder": {
+   "median": 516,
+   "max": 648
+  }
+ },
+ {
+  "id": "town_west_west_woodland_fork",
+  "label": "West Woodland Fork Gate",
+  "kind": "trail",
+  "behind": "town",
+  "ahead": "west",
+  "x": -190,
+  "z": -64.5,
+  "sightlinePastBorder": {
+   "median": 528,
+   "max": 648
+  }
+ }
+]
