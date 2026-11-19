@@ -6,7 +6,8 @@ import { BOSS_WAY_CHOICES, bossWayChoice } from './engine/bossWay/bossSelection.
 import { MISSION_RETURN_CHANNEL } from './missionWindow.js';
 import { DEFAULT_SETTINGS, QUALITY_PRESETS, loadSettings, saveSettings } from './settings.js';
 import Game2BindingEditor from './Game2BindingEditor';
-import Game2OnlineCommand from './Game2OnlineCommand';
+import DuelistOnlineBrowser from './DuelistOnlineBrowser';
+import { MENU_MODES } from '../duelist/menu/modes.js';
 import RecreateCombat from './RecreateCombat';
 import './Game2Menus.css';
 import './game2-command-menu.css';
@@ -20,9 +21,12 @@ const ASSET_BASE = `${import.meta.env?.BASE_URL ?? '/'}game2/`;
 // The console-style rail exposes only five destinations.
 const MENU_ITEMS = [
   { id: 'story', label: 'Story Campaign', icon: BookOpen },
-  { id: 'multiplayer', label: 'Online Multiplayer', icon: Users },
-  { id: 'training', label: 'Combat Training', icon: Target },
-  { id: 'settings', label: 'Settings & Controls', icon: Settings2 },
+  { id: 'modes', label: 'Game Modes', icon: Swords },
+  { id: 'multiplayer', label: 'Online', icon: Users },
+  { id: 'fleet_assault', label: 'Fleet Assault', icon: Ship },
+  { id: 'practice', label: 'Practice', icon: Target },
+  { id: 'training', label: 'Combat Training', icon: GraduationCap },
+  { id: 'settings', label: 'Controls & Settings', icon: Settings2 },
   { id: 'exit', label: 'Exit to Games Hub', icon: DoorOpen },
 ];
 // Existing features remain available from contextual panels instead of the rail.
@@ -45,11 +49,11 @@ const SECONDARY_ITEMS = [
 // Context options live immediately to the right of the Jedi Duels rail;
 // selecting or arrowing through an option changes only the detail on its right.
 const COMMAND_SUBPAGES = {
-  multiplayer: [
-    { id: 'online_arenas', label: 'Online Play', icon: Server },
-    { id: 'skirmish', label: 'Skirmish vs AI', icon: Swords },
-    { id: 'practice', label: 'Duel Practice', icon: GraduationCap },
-    { id: 'fleet_assault', label: 'Fleet Assault', icon: Ship },
+  modes: [
+    { id: 'duel', label: 'Duel', icon: Swords },
+    { id: 'ctf', label: 'Capture the Flag', icon: Target },
+    { id: 'ffa', label: 'Free For All', icon: Users },
+    { id: 'tdm', label: 'Team Deathmatch', icon: Shield },
   ],
   training: [
     { id: 'tutorial', label: 'Arena', icon: GraduationCap },
@@ -64,7 +68,7 @@ const COMMAND_SUBPAGES = {
   ],
 };
 const COMMAND_SECTION_NAMES = {
-  multiplayer: 'Multiplayer', training: 'Combat Training', settings: 'Settings',
+  modes: 'Game Modes', training: 'Combat Training', settings: 'Settings',
 };
 
 // offline matches against AI fighters (engine/teamMatch.js)
@@ -83,7 +87,7 @@ const CONTROLS = [
   ['Saber throw', 'Hold right mouse: it homes in on the nearest foe and spins inside them'],
   ['Rolling thrust · roll throw', 'Attack with W held during a roll: up out of it into a lunge stab at the foe in front · hold right mouse mid-roll: the saber flies straight out ahead'],
   ['Saber kata', 'Left + right mouse together: a chain of your stance\'s attacks, pressing forward (50 Force)'],
-  ['Saberstaff kicks', 'Right mouse + W / A / S / D with the saberstaff (Jedi Academy moves installed): a kick that way knocks them down'],
+  ['Saberstaff kicks', 'Right mouse + W / A / S / D with the saberstaff (advanced staff moves): a kick that way knocks them down'],
   ['Draw saber · Execute', 'R (when a foe glows red and the prompt shows, R executes)'],
   ['Force Push (charge)', 'Hold 1, release to throw: the longer the hold, the harder the push; the full 3 s pushes with both hands, twice as far'],
   ['Force Pull', '2 · jump first to yank them up in front of you; Push them while they hang there to blow them away'],
@@ -315,7 +319,8 @@ export default function Game2Menu({ onStart,userId=null }) {
   const offlineDesktop = typeof window !== 'undefined' && window.atomXEGame2?.mode === 'offline';
   const [item, setItem] = useState('story');
   const [section, setSection] = useState('story');
-  const [multiplayerMode, setMultiplayerMode] = useState('online_arenas');
+  const [selectedMode, setSelectedMode] = useState('duel');
+  const previousSection = useRef('story');
   const [trainingMode, setTrainingMode] = useState('tutorial');
   const [settingsTab, setSettingsTab] = useState('settings_graphics');
   const [avatar,setAvatar] = useState(()=>readGame2Character(undefined,userId));
@@ -332,8 +337,9 @@ export default function Game2Menu({ onStart,userId=null }) {
   const navRef = useRef(null);
 
   const start = (choice, extra = {}) => onStart({ choice, mapId, avatarId:avatar.id, ...extra });
+  const playCompetitive = (matchMode, online) => navigate({ to: '/duelist-next/play', search: { mode: matchMode, online: online ? 1 : 0 } });
   // Ignore stale or retired menu identifiers, including removed admin and archive items.
-  const pick = (id) => { if (!MENU_ITEMS.some(entry => entry.id === id)) return; if (id === 'exit') { if (offlineDesktop) void window.atomXEGame2.returnToLauncher(); else navigate({ to: '/' }); } else setItem(id); if (id !== 'exit') setSection(id); };
+  const pick = (id) => { if (!MENU_ITEMS.some(entry => entry.id === id)) return; if (id === 'exit') { if (offlineDesktop) void window.atomXEGame2.returnToLauncher(); else navigate({ to: '/' }); } else { if (id === 'multiplayer' && section !== 'multiplayer') previousSection.current = section; setItem(id); setSection(id); } };
   // Up / Down move through the menu, Enter opens an item (buttons already take Enter / Space)
   const onNavKey = (e) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
@@ -342,14 +348,14 @@ export default function Game2Menu({ onStart,userId=null }) {
     const i = list.indexOf(document.activeElement);
     list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus();
   };
-  const activeItem = item === 'multiplayer' ? multiplayerMode
+  const activeItem = item === 'modes' ? selectedMode
     : item === 'training' ? trainingMode
     : item === 'settings' ? settingsTab : item;
   const extensionSection = COMMAND_SUBPAGES[section] && item !== 'characters' ? section : null;
   const activeSubpage = COMMAND_SUBPAGES[section]?.some(option => option.id === activeItem)
     ? activeItem : COMMAND_SUBPAGES[section]?.[0]?.id;
   const chooseSubpage = id => {
-    if (section === 'multiplayer') setMultiplayerMode(id);
+    if (section === 'modes') setSelectedMode(id);
     if (section === 'training') setTrainingMode(id);
     if (section === 'settings') setSettingsTab(id);
     // Returning from a previous nested view keeps the extension anchored.
@@ -400,12 +406,27 @@ export default function Game2Menu({ onStart,userId=null }) {
       <PlayButton onClick={()=>{setSection('story');setItem('story');}}>Continue to game modes</PlayButton>
     </Panel>
   );
+  else if (section === 'modes' && ['duel', 'ctf', 'ffa', 'tdm'].includes(activeItem)) {
+    const selected = MENU_MODES[activeItem];
+    panel = (
+      <Panel kicker="Competitive Modes · Duelist Adventure" title={selected.title}>
+        <p className="g2-command-intro">{selected.blurb}</p>
+        <div className="mt-5 space-y-3 text-sm text-white/75">
+          {selected.rules.map(rule => <p key={rule} className="border-l-2 border-cyan-200/40 pl-3">{rule}</p>)}
+        </div>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button type="button" className="g2-button g2-button-primary" onClick={() => playCompetitive(activeItem, false)}>Play Against Bots</button>
+          <button type="button" className="g2-button" onClick={() => { previousSection.current = 'modes'; setItem('multiplayer'); setSection('multiplayer'); }}>Find Online Server</button>
+        </div>
+      </Panel>
+    );
+  }
   else if (activeItem === 'story') panel = (
     <Panel kicker="Story Mode · Mission 1" title="Kejim Post">
       <p className="g2-command-intro">Infiltrate Kejim Post, uncover Imperial evidence, and reach extraction.</p>
       <details className="g2-command-disclosure">
         <summary>Read mission briefing</summary>
-        <p className="text-sm leading-relaxed text-white/70">Land with Jan Ors, infiltrate the Imperial outpost, and follow the recovered evidence beyond the hangar into nine connected northern districts. Cross the fractured gorge, navigate the detention wing and reactor works, fight coordinated dark Jedi squads, and choose whether to redirect power or use a safer shutdown before transmitting the evidence at the relay. Reach the extraction apron with your discoveries intact. The expanded Kejim environment combines industrial grates, rock formations, atmospheric effects, and the original combat rules.</p>
+        <p className="text-sm leading-relaxed text-white/70">Land with Jan Ors, infiltrate the Imperial outpost, and follow the recovered evidence beyond the hangar into nine connected northern districts. Cross the fractured gorge, navigate the detention wing and reactor works, fight coordinated enemy duelist squads, and choose whether to redirect power or use a safer shutdown before transmitting the evidence at the relay. Reach the extraction apron with your discoveries intact. The expanded Kejim environment combines industrial grates, rock formations, atmospheric effects, and the original combat rules.</p>
       </details>
       <PlayButton onClick={() => start('single')}>Begin mission</PlayButton>
       <div className="mt-5"><button type="button" className="rounded-lg border border-cyan-200/30 px-4 py-2 text-sm text-cyan-100" onClick={() => setItem('recreate')}>Recreate · Combat Lab</button></div>
@@ -471,17 +492,9 @@ export default function Game2Menu({ onStart,userId=null }) {
       </div>
     </Panel>
   );
-  else if (activeItem === 'online_arenas') panel = (
-    <Game2OnlineCommand
-      offlineDesktop={offlineDesktop}
-      onSwitchOnline={() => window.atomXEGame2?.chooseMode('online')}
-      onEnter={session => start('online', { mapId:session.mapId, onlineSession:session })}
-      onPractice={() => start('multi',{mapId:'training'})}
-    />
-  );
   else if (activeItem === 'fleet_assault') panel = (
-    <Panel kicker="New mode · Republic vs Separatists · 40+ pilots" title="Fleet Assault">
-      <p className="text-sm leading-relaxed text-white/70">Starfighter battle between cruiser fleets, each cruiser led by a Jedi commander. Boost and dogfight, strip shields and knock out subsystems, board the enemy cruisers once their shields fall, and win the planet's comms array for a buff while the losers lose team voice.</p>
+    <Panel kicker="Space Combat · 40+ pilots" title="Fleet Assault">
+      <p className="text-sm leading-relaxed text-white/70">Starfighter battle between cruiser fleets, each cruiser led by an elite commander. Boost and dogfight, strip shields and knock out subsystems, board the enemy cruisers once their shields fall, and win the planet's comms array for a buff while the losers lose team voice.</p>
       <p className="mt-3 text-xs leading-relaxed text-amber-200/75">The space fight is playable now: practice against AI pilots in this page, or online once the Game 2 server with Fleet Assault is deployed. Saber combat aboard the cruisers and on the planet comes later.</p>
       <PlayButton onClick={() => start('fleet_assault')}>Launch Fleet Assault</PlayButton>
     </Panel>
@@ -623,12 +636,18 @@ export default function Game2Menu({ onStart,userId=null }) {
     <div className="g2-command-menu absolute inset-0 overflow-hidden bg-[#02040a] text-white"
       data-testid="game2-menu" data-game2-menu-design="command">
       <MenuBackdrop motion={settings.menuMotion} />
+      {section === 'multiplayer' ? (
+        <DuelistOnlineBrowser
+          onBack={() => { setItem(previousSection.current); setSection(previousSection.current); }}
+          onJoin={matchMode => playCompetitive(matchMode, true)}
+        />
+      ) : (
       <div className="g2-command-layout relative z-10 flex h-full flex-col md:flex-row">
         <nav ref={navRef} onKeyDown={onNavKey} aria-label="Game 2 main menu"
           className="g2-command-rail">
           <header className="g2-command-brand">
             <div className="g2-command-brand__eyebrow"><Gamepad2 size={17} aria-hidden="true" /> Game 2</div>
-            <h1>JEDI DUELS</h1>
+            <h1>DUELIST ADVENTURE</h1>
             <div className="g2-command-brand__rule" aria-hidden="true"><span>✧</span></div>
           </header>
           <ul className="g2-command-nav">
@@ -648,18 +667,6 @@ export default function Game2Menu({ onStart,userId=null }) {
             })}
           </ul>
           <div className="g2-command-rail__bottom">
-            <div className="g2-command-character" data-testid="game2-selected-character">
-              <span className="g2-command-character__heading">Selected Character</span>
-              <div className="g2-command-character__row">
-                <span className="g2-command-character__portrait" aria-hidden="true">
-                  {String(avatar.name || 'E').slice(0,1)}
-                </span>
-                <div>
-                  <strong>{avatar.name}</strong>
-                  <button type="button" onClick={() => setItem('characters')}>Change Character</button>
-                </div>
-              </div>
-            </div>
             <p className="g2-command-controls">
               <span><kbd>↑ ↓</kbd> Navigate</span>
               <span><kbd>Enter</kbd> Select</span>
@@ -670,15 +677,15 @@ export default function Game2Menu({ onStart,userId=null }) {
         <section className="g2-command-main" aria-live="polite" aria-label={currentPageName}>
           <div className="g2-command-main__content">
             {extensionSection ? (
-              <div className={'g2-command-extension' + (['multiplayer','training'].includes(extensionSection) ? ' g2-command-extension--wide' : '')}
+              <div className={'g2-command-extension' + (['modes','training'].includes(extensionSection) ? ' g2-command-extension--wide' : '')}
                 data-game2-extension={extensionSection}>
-                {['multiplayer','training'].includes(extensionSection) && (
+                {['modes','training'].includes(extensionSection) && (
                   <header className="g2-command-extension__topline">
                     <div className="g2-command-extension__topline-title">{COMMAND_SECTION_NAMES[extensionSection]}</div>
                   </header>
                 )}
                 <aside className="g2-command-extension__options" aria-label={COMMAND_SECTION_NAMES[extensionSection] + ' options'}>
-                  {!['multiplayer','training'].includes(extensionSection) &&
+                  {!['modes','training'].includes(extensionSection) &&
                     <div className="g2-command-extension__section-name">{COMMAND_SECTION_NAMES[extensionSection]}</div>}
                   <div className="g2-command-extension__items" role="group" aria-label={COMMAND_SECTION_NAMES[extensionSection] + ' selections'}
                     onKeyDown={onSubpageKey}>
@@ -694,7 +701,7 @@ export default function Game2Menu({ onStart,userId=null }) {
                     ))}
                   </div>
                 </aside>
-                {!['multiplayer','training'].includes(extensionSection) &&
+                {!['modes','training'].includes(extensionSection) &&
                   <span className="g2-command-extension__divider" aria-hidden="true" />}
                 <div className="g2-command-extension__details" data-game2-active-detail={activeSubpage}>
                   {panel}
@@ -711,6 +718,7 @@ export default function Game2Menu({ onStart,userId=null }) {
           </div>
         </section>
       </div>
+      )}
     </div>
   );
 }
