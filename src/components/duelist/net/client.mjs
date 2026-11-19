@@ -179,7 +179,11 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       const again = !!seat;
       seat = null;
       setStatus('joining', again ? 'Your seat was given up. Joining again…' : '');
-      const how = story && again && code ? { code } : story && room === 'new' ? { create: true } : story && room ? { code: room } : matchId ? { matchId } : {};
+      const how = story && again && code ? { code }
+        : story && room === 'open' ? { create: true, open: true }
+        : story && room === 'new' ? { create: true }
+        : story && /^m[0-9]+$/.test(room || '') ? { matchId: room }
+        : story && room ? { code: room } : matchId ? { matchId } : {};
       send({ t: 'join', mode, ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
