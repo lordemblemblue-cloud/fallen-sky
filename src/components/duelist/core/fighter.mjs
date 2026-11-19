@@ -21,6 +21,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     buffer: null, // { command, at }
     guard: null, // { since }
     stunnedUntil: -Infinity, // stagger, guard break, parried
+    protectedUntil: -Infinity, // just respawned: nothing reaches it until then, or until it acts
     downUntil: -Infinity, // knocked down: lying until then, then rising until riseUntil
     riseUntil: -Infinity,
     heldBy: null, // the fighter holding this one with Telekinesis
@@ -61,6 +62,7 @@ export function blockedReason(f, id, now) {
 
 function startMove(f, id, now, chainedFrom = null) {
   const move = moveById(id);
+  if (move.kind === 'attack' || move.kind === 'power') f.protectedUntil = -Infinity; // acting ends spawn protection
   spendStamina(f.vitals, move.stamina, now);
   spendWill(f.vitals, move.will, now);
   if (move.cooldown > 0) f.cooldowns[id] = now + move.cooldown;
@@ -135,7 +137,7 @@ export function stagger(f, seconds, now) {
 
 // i-frames of a roll, or knocked down and not yet standing (now omitted: only the move's i-frames count)
 export const isInvulnerable = (f, now) => {
-  if (now !== undefined && isDown(f, now)) return true;
+  if (now !== undefined && (isDown(f, now) || now < f.protectedUntil)) return true;
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };

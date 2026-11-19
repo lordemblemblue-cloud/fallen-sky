@@ -135,4 +135,23 @@ mechanic; mysteries open gradually.
     knockdown, Veil shatter, defeat, victory and loss stingers; placed in the world; mute button
   - [x] `client/director.mjs`: turns the simulation's steps into effects, sound, shake and hit-stop
   - [ ] Footsteps, ambience, arena music
-- [ ] Phase 4 onward
+- [ ] Phase 4: modes and bots (in progress)
+  - [x] `sim/match.mjs` (tests: `tests/duelist-match.test.mjs`): practice (you and 1-3 bots, no score),
+    duel (rounds, first to 3, 90 s round clock decided by who stands better), free for all (first to 15
+    defeats or the most at 8 min), team deathmatch (red/blue, first to 30 or the most at 8 min), capture
+    the flag (bases at each end; carry theirs home while yours is home; first to 3 or the most at 10 min;
+    a carrier who falls, is knocked down or is gripped drops it; a team mate's touch returns it; 20 s
+    auto-return; carriers cannot sprint). Respawns with spawn protection (ends when you act). Countdown,
+    round breaks, feed, results.
+  - [x] Seats: bots fill empty seats and step out when a player joins (`joinMatch`: the lowest-scoring bot
+    of the team that needs a player); a leaving player is replaced by a bot (`leaveMatch`). The network
+    layer (phase 5) calls these.
+  - [x] Bots: objectives (take their flag, run it home, return ours, guard, hunt the thief, escort our
+    carrier), standing targets over fallen ones, parries timed on the blow, punishing whiffs, Breach on a
+    strong Veil then a heavy, escapes when hurt; same commands and limits as a player. Full bot matches in
+    every mode finish (duel ~2 min, FFA ~5 min, TDM ~3.5 min, CTF ~5 min with captures).
+  - [x] Client: any mode at `/duelist-next` (mode bar; your fighter, opponent, bot count and level), every
+    fighter drawn with team colours, name tags, CTF bases and flags (on the carrier's back), score line,
+    countdown and "Fight!", respawn note, feed, result board, lock-on cycles to the nearest hostile
+  - [ ] Bigger arenas with cover and a CTF map with two ends (today one round arena, sized per mode)
+- [ ] Phase 5 onward

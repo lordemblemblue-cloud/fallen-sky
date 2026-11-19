@@ -26,20 +26,44 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false } = {}) {
 export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0 } = {}) {
   const fighter = createFighter({ id, team, weapon });
   world.fighters.set(id, fighter);
-  world.bodies.set(id, {
+  world.bodies.set(id, newBody(x, z, yaw));
+  return fighter;
+}
+
+/** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0 } = {}) {
+  const old = world.fighters.get(id);
+  if (!old) return null;
+  const fighter = createFighter({ id, team: old.team, weapon: old.weapon });
+  fighter.protectedUntil = world.time + protect;
+  world.fighters.set(id, fighter);
+  world.bodies.set(id, newBody(x, z, yaw));
+  for (const f of world.fighters.values()) if (f.heldBy === id) f.heldBy = null;
+  return fighter;
+}
+
+/** Take a fighter out of the arena (a player who left, a bot whose seat a player took). */
+export function removeFighter(world, id) {
+  for (const f of world.fighters.values()) if (f.heldBy === id) f.heldBy = null;
+  world.fighters.delete(id);
+  world.bodies.delete(id);
+  for (let i = world.projectiles.length - 1; i >= 0; i--) if (world.projectiles[i].owner === id) world.projectiles.splice(i, 1);
+}
+
+function newBody(x, z, yaw) {
+  return {
     x, z, y: 0, yaw, vy: 0,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
     moving: false, speed: 0,
-  });
-  return fighter;
+  };
 }
 
 export const bodyOf = (world, id) => world.bodies.get(id);
 export const forwardOf = (yaw) => ({ x: Math.sin(yaw), z: Math.cos(yaw) });
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
+export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
 
 /**
  * One step. inputs: { [fighterId]: { move: {x, z} (world direction, length <= 1), run, sprint,

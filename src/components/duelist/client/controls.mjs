@@ -115,5 +115,8 @@ export function createFollowCamera(camera) {
       camera.position.lerp(wanted, 1 - Math.exp(-dt * 14));
       camera.lookAt(focus);
     },
+    // a cut (a respawn): the next update jumps instead of gliding
+    snap() { first = true; },
+    distanceTo(target) { return Math.hypot(focus.x - target.x, focus.z - target.z); },
   };
 }

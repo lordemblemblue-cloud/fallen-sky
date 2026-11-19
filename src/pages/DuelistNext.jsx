@@ -3,28 +3,39 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from '@tanstack/react-router';
 import DuelistGame from '@/components/duelist/client/DuelistGame';
 import { BODIES } from '@/components/duelist/client/assets.mjs';
+import { MODES } from '@/components/duelist/sim/match.mjs';
 
-function BodySelect({ label, value, onChange }) {
+const MODE_ORDER = ['practice', 'duel', 'ffa', 'tdm', 'ctf'];
+const SHORT = { practice: 'Practice', duel: 'Duel', ffa: 'Free for all', tdm: 'Team deathmatch', ctf: 'Capture the flag' };
+
+function Select({ label, value, onChange, options }) {
   return (
     <label className="flex items-center gap-1.5 text-[11px] text-white/45">
       {label}
       <select value={value} onChange={(e) => onChange(e.target.value)}
         className="rounded-md border border-white/10 bg-[#0c1622] px-1.5 py-1 text-xs text-white/85 outline-none focus:border-cyan-300/40">
-        {Object.entries(BODIES).map(([id, b]) => <option key={id} value={id}>{b.name}</option>)}
+        {options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
       </select>
     </label>
   );
 }
 
+const BODY_OPTIONS = Object.entries(BODIES).map(([id, b]) => [id, b.name]);
+
 // Duelist Adventure, new build: the from-scratch rebuild on the Will system (docs/duelist/REBUILD_PLAN.md).
-// It runs beside the current /duelist page until it replaces it.
+// It runs beside the current /duelist page until it replaces it. The bar above the arena picks the mode,
+// your fighter and the bots until the full menus (a page per mode, Join) arrive.
 export default function DuelistNext() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState('practice');
   const [you, setYou] = useState('maskedWarrior');
   const [foe, setFoe] = useState('huntress');
+  const [level, setLevel] = useState('duelist');
+  const [bots, setBots] = useState('1');
+  const oneOnOne = mode === 'practice' || mode === 'duel';
   return (
     <main className="flex h-screen min-h-0 flex-col bg-[#05080d] text-white">
-      <header className="flex h-12 shrink-0 items-center gap-3 border-b border-white/10 bg-[#08111b] px-4">
+      <header className="flex min-h-12 shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-white/10 bg-[#08111b] px-4 py-1.5">
         <button
           type="button"
           onClick={() => navigate({ to: '/' })}
@@ -36,15 +47,25 @@ export default function DuelistNext() {
         <div className="h-5 w-px bg-white/10" />
         <div>
           <div className="text-sm font-semibold">Duelist Adventure</div>
-          <div className="text-[10px] text-white/35">New build · Practice duel</div>
+          <div className="text-[10px] text-white/35">New build · {MODES[mode].name}</div>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <BodySelect label="You" value={you} onChange={setYou} />
-          <BodySelect label="Opponent" value={foe} onChange={setFoe} />
+        <nav className="flex flex-wrap gap-1" aria-label="Mode">
+          {MODE_ORDER.map((id) => (
+            <button key={id} type="button" onClick={() => setMode(id)}
+              className={`rounded-full border px-2.5 py-1 text-[11px] transition ${id === mode ? 'border-cyan-300/60 bg-cyan-400/15 text-cyan-100' : 'border-white/10 text-white/60 hover:border-white/25 hover:text-white'}`}>
+              {SHORT[id]}
+            </button>
+          ))}
+        </nav>
+        <div className="ml-auto flex flex-wrap items-center gap-3">
+          <Select label="You" value={you} onChange={setYou} options={BODY_OPTIONS} />
+          {oneOnOne && <Select label="Opponent" value={foe} onChange={setFoe} options={BODY_OPTIONS} />}
+          {mode === 'practice' && <Select label="Bots" value={bots} onChange={setBots} options={[['1', '1'], ['2', '2'], ['3', '3']]} />}
+          <Select label="Level" value={level} onChange={setLevel} options={[['trainee', 'Trainee'], ['duelist', 'Duelist'], ['master', 'Master']]} />
         </div>
       </header>
       <section className="relative min-h-0 flex-1">
-        <DuelistGame key={you + foe} you={you} foe={foe} />
+        <DuelistGame key={[mode, you, foe, level, bots].join('|')} mode={mode} you={you} foe={foe} botLevel={level} bots={Number(bots)} />
       </section>
     </main>
   );
