@@ -123,13 +123,13 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     .map((r) => (r.mission
       ? { id: r.id, mode: STORY_MODE, name: r.mission.def.title, players: humansIn(r), bots: 0, seats: CREW_SIZE, phase: r.mission.phase === 'complete' ? 'over' : 'live', open: hasRoom(r) }
       : { id: r.id, mode: r.mode, name: MODES[r.mode].name, players: humansIn(r), bots: r.match.seats.size - humansIn(r),
-        seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r) }))
+        seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r), publicRoom: !!r.publicRoom }))
     .sort((a, b) => b.players - a.players || a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-  function openRoom(mode) {
+  function openRoom(mode, { permanent = false } = {}) {
     const id = `m${nextRoom++}`;
     const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel });
-    const room = { id, mode, match, mission: null, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
+    const room = { id, mode, match, mission: null, publicRoom: permanent, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
     let k = 0;
     for (const s of match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
     rooms.set(id, room);
@@ -155,6 +155,9 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     log('crew', id, open ? 'open' : 'private');
     return room;
   }
+
+  // One always-open, bot-filled public server per competitive mode. Extra rooms open only when needed.
+  for (const mode of ONLINE_MODES) openRoom(mode, { permanent: true });
 
   function pickRoom(mode) {
     // the Join button ('any') looks for a match; crews are joined from the story page
@@ -435,14 +438,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         if (room.ticks % SNAPSHOT_EVERY === 0) snapshot(room);
         if (room.match.phase === 'over' && room.overAt === null) room.overAt = now;
-        if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && room.clients.size) rematch(room);
+        if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && (room.clients.size || room.publicRoom)) rematch(room);
       }
     }
     // a dropped player who has not come back in time: the seat goes back to a bot (a match) or leaves the crew
     for (const room of rooms.values()) {
       for (const client of [...room.clients.values()]) if (client.away && now - client.awaySince > reconnectSeconds) { log('gone', client.id, room.id); leave(client); }
     }
-    for (const [id, room] of rooms) if (!room.clients.size && now - room.emptySince > IDLE_ROOM_SECONDS) { rooms.delete(id); log('room closed', id); }
+    for (const [id, room] of rooms) if (!room.publicRoom && !room.clients.size && now - room.emptySince > IDLE_ROOM_SECONDS) { rooms.delete(id); log('room closed', id); }
     for (const client of clients) if (client.room && now - client.lastInputAt > IDLE_PLAYER_SECONDS) { leave(client); send(client, { t: 'error', code: 'idle', message: 'Left the match after a long time without input.' }); }
   }, 4);
 
