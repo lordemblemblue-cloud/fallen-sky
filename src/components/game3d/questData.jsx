@@ -278,6 +278,23 @@ QUESTS.push({
 
 QUESTS.push(...AXE_QUESTS);
 
+// Side quest offered by the outside watch captain at Jade Lantern Grotto.
+// Uses existing quest acceptance, kill progress and the normal verified
+// turn-in/reward path. The nearby silent sentry never grants a quest or loot.
+QUESTS.push({
+  id: 'q_wolfveil_jade_watch_side',
+  type: 'side',
+  unlockLevel: 1,
+  npcId: 'wolfveil_jade_watch_captain',
+  title: 'Watch the Lower Passage',
+  description: 'The lower tunnel has become unsafe. Clear three hostile spirits on the approach, then return to me. The sentry inside will keep the lamps burning until you return.',
+  objective: { type: 'kill', count: 3 },
+  reward: { xp: 80, points: 1 },
+  spawnCount: 3,
+  spawnTier: 'normal',
+});
+
+
 // Helper: which quest (if any) is currently available from this NPC for this player?
 // Picks the lowest-unlockLevel quest from this NPC that the player has unlocked
 // but not yet accepted or completed.

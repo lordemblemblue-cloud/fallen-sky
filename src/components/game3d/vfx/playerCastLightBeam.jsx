@@ -35,12 +35,14 @@ export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY
 
   let t = 0;
   let cancelled = false;
+  let disposed = false;
   let asset = null;
   const onCancel = () => { cancelled = true; };
   window.addEventListener('playerSkillCastCancel', onCancel);
 
   loadBeam(loader).then((src) => {
-    if (!src || cancelled) return;
+    // The first cast can outlast its GLB load; never attach the asset to a cancelled or disposed beam.
+    if (!src || cancelled || disposed) return;
     asset = src.clone(true);
     asset.scale.setScalar(1.05);
     asset.traverse((node) => {
@@ -74,8 +76,11 @@ export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY
       light.intensity = 1.8 * alpha;
       if (asset) asset.visible = alpha > 0.03;
     },
-    alive() { return !cancelled && t < duration; },
+    alive() { return !cancelled && !disposed && t < duration; },
+    // GameWorld3D disposes the beam once it is no longer alive (vfx/activeEffects.mjs); safe to call again.
     dispose() {
+      if (disposed) return;
+      disposed = true;
       window.removeEventListener('playerSkillCastCancel', onCancel);
       scene.remove(group);
       ringGeo.dispose(); ringMat.dispose();

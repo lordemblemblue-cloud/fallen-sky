@@ -9,7 +9,7 @@ import { evaluateAXEAuxiliaryBonuses } from './AXEAuxiliaryGearSystem';
 // equipmentStore/inventoryData files to remain as presentation adapters.
 
 export const AXE_EQUIPMENT_SLOT_DEFS = Object.freeze({
-  weapon:     Object.freeze({ id: 'weapon', label: 'Weapon', maxEquipped: 2, layer: 'combat' }),
+  weapon:     Object.freeze({ id: 'weapon', label: 'Weapon', maxEquipped: 1, layer: 'combat' }),
   helm:       Object.freeze({ id: 'helm', label: 'Helm', maxEquipped: 1, layer: 'combat' }),
   chest:      Object.freeze({ id: 'chest', label: 'Chest', maxEquipped: 1, layer: 'combat' }),
   gloves:     Object.freeze({ id: 'gloves', label: 'Gloves', maxEquipped: 1, layer: 'combat' }),
@@ -76,7 +76,9 @@ export function validateAXEEquip(item, context = {}) {
   if (!slot) return { ok: false, reason: 'INVALID_SLOT' };
 
   const level = Number(context.level ?? 1);
-  if (level < Number(item.itemLevel || 1)) return { ok: false, reason: 'LEVEL_REQUIRED' };
+  // gear tiers may set a requirement below the item level (Legendary Lv 155 opens at 150)
+  const required = Number(item.requiredLevel ?? item.itemLevel ?? 1) || 1;
+  if (level < required) return { ok: false, reason: 'LEVEL_REQUIRED' };
 
   if (item.factionRequirement && context.factionId && item.factionRequirement !== context.factionId) {
     return { ok: false, reason: 'FACTION_REQUIRED' };

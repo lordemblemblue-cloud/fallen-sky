@@ -44,9 +44,11 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     yaw: item.group.rotation.y,
     scale: item.group.scale.x * town.group.scale.x,
   });
+  const shopRooms = town.rooms.shops.map(asNavRoom);
+  const homeRooms = town.rooms.homes.map(asNavRoom);
   const nav = makeWolfveilTownNavigation({
-    shops: town.rooms.shops.map(asNavRoom),
-    homes: town.rooms.homes.map(asNavRoom),
+    shops: shopRooms,
+    homes: homeRooms,
     fountain: {x: town.group.position.x, z: town.group.position.z, radius: 6.55},
   });
   const groundY = (x, z) => (
@@ -62,6 +64,9 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
   };
   livingQuarter = buildWolfveilTownLivingQuarter(root, {
     collision, architectureEnabled: false,
+    // Reuse the actual installed shops/houses, not the abandoned procedural
+    // house-plan rectangles. This keeps staff and residents in the visible town.
+    realShops: shopRooms, realHomes: homeRooms,
     onStatus(report) { root.userData.cloneTownLivingQuarter = report; },
   });
   root.userData.townReplacement = {
@@ -93,6 +98,8 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     selectShowroomModel(index) { return town.setShowroomModel(index); },
     nearestResident(position) { return livingQuarter?.nearestResident(position) || null; },
     interactResident(position) { return livingQuarter?.interact(position) || null; },
+    nearestCivicQuestSource(position) { return livingQuarter?.nearestCivicQuestSource(position) || null; },
+    collectCivicQuestSource(position) { return livingQuarter?.collectCivicQuestSource(position) || null; },
     resolveCollision(position,previous) {
       const wallHit = nav.resolveCollision(position,previous);
       const residentHit = livingQuarter?.resolveCollision(position,previous) || false;

@@ -53,7 +53,7 @@ export function createEquippedBowGLBPresentation({ player } = {}) {
   };
   const update = ({ item, mounted = false } = {}) => {
     const url = item?.modelUrl;
-    const eligible = !disposed && !mounted && hand && item?.equipped !== false
+    const eligible = !disposed && !mounted && hand && item?.equipped === true
       && (item?.masteryWeaponId === 'bow' || /bow/i.test(item?.name || ''))
       && typeof url === 'string' && LOCAL_BOW.test(url);
     if (!eligible) {

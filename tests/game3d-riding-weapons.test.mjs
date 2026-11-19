@@ -107,7 +107,8 @@ const setups = {
   },
   dual_blades: (model) => {
     const weapons = ['Right', 'Left'].map((side) => {
-      const solved = solveFallbackGrip(model, { hand: side.toLowerCase(), class: 'sword', handleRadius: 0.0155 }, ['combat'], 1.7);
+      // the reverse grip the runtime holds daggers in (owner 2026-11-19)
+      const solved = solveFallbackGrip(model, { hand: side.toLowerCase(), class: 'dagger', handleRadius: 0.0155 }, ['combat'], 1.7);
       return holdWeapon(model, side, solved.grips.combat, [0, 0.37, 0], `WeaponPack_dagger_${side.toLowerCase()}`);
     });
     return { family: 'dual_blades', reins: 'Right', weapons };

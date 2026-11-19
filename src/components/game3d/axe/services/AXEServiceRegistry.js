@@ -14,7 +14,7 @@ export const AXE_SERVICE_CATEGORIES = Object.freeze({
 // Ascend since Blacksmith v2). Other actions remain available through existing local/persisted
 // handlers or a separately configured authoritative service bridge. This flag
 // describes the built-in server-roll capability, not connection status.
-const BUILTIN_SERVER_ROLLED = new Set(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage']);
+const BUILTIN_SERVER_ROLLED = new Set(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage', 'tier_up']);
 const service = (entry) => Object.freeze({
   remoteAccessible: true,
   authoritative: BUILTIN_SERVER_ROLLED.has(entry.id),
@@ -28,6 +28,7 @@ export const AXE_SERVICE_REGISTRY = Object.freeze([
   service({ id: 'weapon_legacy', label: 'Weapon Legacy', description: 'Separate four-weapon level-up preparation or twelve-piece elite-set echo. Never advances Combine Stage.', category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'combine', label: 'Combine', description: "Combine +0–12 with a donor of the same rarity, item level, slot and type. The donor is consumed only on success.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'stage', label: 'Ascend', description: "Ascension +0–4 for Rare, Elite and Legendary: one same-rarity donor of equal or lower level per attempt, consumed only on success. Raises the item's own stats.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
+  service({ id: 'tier_up', label: 'Tier Up', description: "Gear tiers (setting): moves an item to its next level step (e.g. Lv 45 to 55) with that step's stats; Combine, Enchant and Ascension are kept.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'refine', label: 'Refine', description: "Improves refinement levels; high-level failure can downgrade or destroy unprotected equipment.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),
   service({ id: 'runes', label: 'Ultimate', description: 'Equip one Ultimate rune tag per equipment item or combine matching runes for upgrades.', category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'progression_panel' }),
   service({ id: 'ultimate', label: 'Ultimate', description: "Advanced Legendary/Heroic enhancement with ten levels and possible sealing on failure.", category: AXE_SERVICE_CATEGORIES.EQUIPMENT, kind: 'equipment_action' }),

@@ -127,7 +127,8 @@ for (const rigId of Object.keys(RIGS)) {
     const grips = {};
     const solvedGrips = {};
     for (const side of ['right', 'left']) {
-      const solved = solveFallbackGrip(model, { hand: side, class: 'sword', handleRadius: 0.0155 }, ['combat'], 1.7);
+      // reverse grip in both hands (owner 2026-11-19), as the binder and the runtime hold them
+      const solved = solveFallbackGrip(model, { hand: side, class: 'dagger', handleRadius: 0.0155 }, ['combat'], 1.7);
       solvedGrips[side] = solved.grips.combat;
       grips[side] = new THREE.Quaternion().fromArray(solved.grips.combat.quaternion);
     }
@@ -144,18 +145,21 @@ for (const rigId of Object.keys(RIGS)) {
         assert.ok(clip.userData.hit < clip.userData.cancel && clip.userData.cancel < clip.duration, `${name} cancels after the contact`);
         const { at } = checkMotion(model, clip, held);
         const [a, b] = clip.userData.sweep.map(at);
-        if (name === 'daggerLight1') assert.ok(right(a.tips[0]) - right(b.tips[0]) > 0.35, `right blade cuts right to left: ${right(a.tips[0]).toFixed(2)} -> ${right(b.tips[0]).toFixed(2)}`);
-        if (name === 'daggerLight2') assert.ok(right(b.tips[1]) - right(a.tips[1]) > 0.35, `left blade cuts left to right: ${right(a.tips[1]).toFixed(2)} -> ${right(b.tips[1]).toFixed(2)}`);
+        // hooks: the fist sweeps across, the blade along its forearm cutting behind it
+        if (name === 'daggerLight1') assert.ok(right(a.hands[1]) - right(b.hands[1]) > 0.35, `right fist hooks right to left: ${right(a.hands[1]).toFixed(2)} -> ${right(b.hands[1]).toFixed(2)}`);
+        if (name === 'daggerLight2') assert.ok(right(b.hands[0]) - right(a.hands[0]) > 0.35, `left fist hooks left to right: ${right(a.hands[0]).toFixed(2)} -> ${right(b.hands[0]).toFixed(2)}`);
         if (name === 'daggerStab') {
+          // a reverse grip stabs like a hammer: the point down, the fist driven out ahead of the hips
           const c = at(hit);
-          assert.ok(c.blades[0].z > Math.cos(35 / DEG), `the stab points ahead: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
+          assert.ok(c.blades[0].y < -0.85, `the stab points down: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
           assert.ok(c.hands[1].z - c.hips.z > 0.45, `the stabbing hand reaches ${(c.hands[1].z - c.hips.z).toFixed(2)} m ahead of the hips`);
         }
       }
       const idle = clips.idleDaggers;
       assert.ok(idle.userData.idle && idle.userData.loop && Math.abs(idle.duration - 2) < 1e-6);
       const { frames } = checkMotion(model, idle, held);
-      for (const f of frames) f.blades.forEach((blade, i) => assert.ok(blade.z > 0.3, `idle: blade ${i} points forward (${blade.z.toFixed(2)})`));
+      // the guard: both blades hang down (along the forearms: game3d-weapon-montage.test.mjs measures that)
+      for (const f of frames) f.blades.forEach((blade, i) => assert.ok(blade.y < -0.5, `idle: blade ${i} hangs down (${blade.y.toFixed(2)})`));
     } finally {
       held.forEach((h) => h.release());
     }
@@ -197,7 +201,8 @@ for (const rigId of Object.keys(RIGS)) {
     const w = manifest.weapons.find((x) => x.id === 'fantasy_bow');
     const q = new THREE.Quaternion().fromArray(w.grips[rigId].combat.quaternion);
     const clips = bakeWeaponComboClips(model, 'bow', { left: q }, { rest: captureRestPose(model), moves: movesForFamily('bowCombo') });
-    assert.deepEqual(Object.keys(clips), ['bowCombo1', 'bowCombo2', 'bowCombo3', 'idleBow']);
+    // with the player's own draw, hold, shots and running carry (game3d-weapon-montage.test.mjs)
+    assert.deepEqual(Object.keys(clips), ['bowCombo1', 'bowCombo2', 'bowCombo3', 'idleBow', 'bowDraw', 'bowHold', 'bowRelease', 'bowQuick', 'bowRunCarry']);
     const held = [hold(model, 'left', w.grips[rigId].combat, [0, 0.6, 0])];
     try {
       const { frames } = checkMotion(model, clips.idleBow, held);

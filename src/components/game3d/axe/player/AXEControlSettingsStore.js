@@ -3,6 +3,8 @@
 //
 //   clickToMove: false by default. WASD is always on; click-to-move is the option the player
 //                switches on (AXEClickToMove.js).
+//   dodgeRollVariant: false by default. Double-tap W / S sidestep forward / back flip; with the option on they
+//                roll instead (player/game3dDodgeProfiles.mjs). A / D flips and R are unchanged.
 //
 // Key: axe_control_settings_v1::<userId> (characterStorage.userScopedKey). Reloads when the
 // signed-in user changes.
@@ -10,14 +12,15 @@
 import { subscribeCharacterChange, userScopedKey } from '../../characterStorage';
 
 export const AXE_CONTROL_SETTINGS_KEY = 'axe_control_settings_v1';
-export const AXE_CONTROL_SETTINGS_DEFAULTS = Object.freeze({ clickToMove: false, autoTargetNearby: false });
+export const AXE_CONTROL_SETTINGS_DEFAULTS = Object.freeze({ clickToMove: false, autoTargetNearby: false, dodgeRollVariant: false });
 
 const listeners = new Set();
 
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(userScopedKey(AXE_CONTROL_SETTINGS_KEY)) || 'null');
-    if (saved?.v === 1) return { clickToMove: saved.clickToMove === true, autoTargetNearby: saved.autoTargetNearby === true };
+    if (saved?.v === 1) return { clickToMove: saved.clickToMove === true, autoTargetNearby: saved.autoTargetNearby === true,
+      dodgeRollVariant: saved.dodgeRollVariant === true };
   } catch {}
   return { ...AXE_CONTROL_SETTINGS_DEFAULTS };
 }
@@ -49,6 +52,15 @@ export function setAXEClickToMoveEnabled(enabled) {
   try { localStorage.setItem(userScopedKey(AXE_CONTROL_SETTINGS_KEY), JSON.stringify({ v: 1, ...settings })); } catch {}
   emit();
   return settings.clickToMove;
+}
+
+export function isAXEDodgeRollVariantEnabled() { return settings.dodgeRollVariant === true; }
+
+export function setAXEDodgeRollVariantEnabled(enabled) {
+  settings = { ...settings, dodgeRollVariant: enabled === true };
+  try { localStorage.setItem(userScopedKey(AXE_CONTROL_SETTINGS_KEY), JSON.stringify({ v: 1, ...settings })); } catch { /* storage blocked */ }
+  emit();
+  return settings.dodgeRollVariant;
 }
 
 export function subscribeAXEControlSettings(fn) {

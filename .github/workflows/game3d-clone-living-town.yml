@@ -4,19 +4,27 @@ on:
     paths:
       - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterLayout.mjs'
       - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownCivicAI.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownCivicTasks.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilArtisanTownScene.mjs'
       - 'src/components/game3d/wolfveil/WolfveilTownDialogueBrain.mjs'
       - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
       - 'src/components/game3d/GameWorld3D.jsx'
       - 'tests/game3d-clone-town-living-quarter.test.mjs'
+      - 'tests/wolfveil-town-civic-ai.test.mjs'
       - '.github/workflows/game3d-clone-living-town.yml'
   push:
     paths:
       - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterLayout.mjs'
       - 'src/components/game3d/wolfveil/WolfveilTownLivingQuarterScene.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownCivicAI.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilTownCivicTasks.mjs'
+      - 'src/components/game3d/wolfveil/WolfveilArtisanTownScene.mjs'
       - 'src/components/game3d/wolfveil/WolfveilTownDialogueBrain.mjs'
       - 'src/components/game3d/wolfveil/WolfveilImportedTownScene.mjs'
       - 'src/components/game3d/GameWorld3D.jsx'
       - 'tests/game3d-clone-town-living-quarter.test.mjs'
+      - 'tests/wolfveil-town-civic-ai.test.mjs'
 permissions:
   contents: read
 jobs:
@@ -32,6 +40,6 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
       - name: Verify plot safety, 3D houses, patrols, dialogue and authorized quests
-        run: node --test tests/game3d-clone-town-living-quarter.test.mjs
+        run: node --test tests/game3d-clone-town-living-quarter.test.mjs tests/wolfveil-town-civic-ai.test.mjs
       - name: Build Game 3D clone
         run: npm run build

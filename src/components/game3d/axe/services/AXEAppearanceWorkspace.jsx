@@ -210,7 +210,7 @@ export default function AXEAppearanceWorkspace({
         <section className="axe-app-unified-character-panel"
           aria-label="Character 3D viewer, equipment, attributes and live statistics">
           <Suspense fallback={<p className="axe-app-loading">Loading Character…</p>}>
-            <CharacterWorkspace embedded/>
+            <CharacterWorkspace embedded onOpenEquipment={() => showTab('Equipment')}/>
           </Suspense>
           {notice && <div className="axe-app-notice" role="status">{notice}
             <button type="button" onClick={()=>setNotice('')}

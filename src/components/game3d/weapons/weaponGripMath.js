@@ -15,11 +15,17 @@ const DEG = Math.PI / 180;
 // tilt = degrees the handle leans from the knuckle line towards the fingers, so with the arm hanging the tip
 // points down along the forearm (carry) or forward for a cut (combat). A bow in combat runs through the fist
 // with the arrow along the forearm; carried, it lies along the forearm with the string towards the body.
+// A dagger is held in a reverse grip (owner 2026-11-19): the blade leaves the fist on the little-finger side
+// and runs back along the forearm (tilt = degrees from the knuckle line towards the wrist), the edge facing
+// away from the forearm and the pommel on the thumb side, under the thumb (solveThumbCap).
 export const WEAPON_GRIP_RULES = Object.freeze({
   sword: Object.freeze({ combat: Object.freeze({ tilt: 18 }), carry: Object.freeze({ tilt: 34 }) }),
   greatsword: Object.freeze({ combat: Object.freeze({ tilt: 8 }), carry: Object.freeze({ tilt: 12 }) }),
   bow: Object.freeze({ combat: Object.freeze({ tilt: 0 }), carry: Object.freeze({ lean: 25 }) }),
+  dagger: Object.freeze({ combat: Object.freeze({ reverse: true, tilt: 55 }), carry: Object.freeze({ reverse: true, tilt: 58 }) }),
 });
+// How far the pommel's end sits from a dagger's grip origin, metres (the pair's model and the modelled blades).
+export const DAGGER_POMMEL_DEPTH = 0.072;
 
 // Finger flexion for a closed hand around a ~3 cm handle (MCP, PIP, DIP), degrees.
 export const FIST_ANGLES = Object.freeze({
@@ -63,6 +69,10 @@ export function weaponBasis(palm, cls, stance, tune = {}) {
     const lean = (rule.lean + (tune.lean || 0)) * DEG;
     Y = palm.d.clone().multiplyScalar(-Math.cos(lean)).addScaledVector(palm.k, Math.sin(lean)).normalize();
     Z = palm.n.clone().negate();
+  } else if (rule.reverse) {
+    const t = (rule.tilt + (tune.tilt || 0)) * DEG;
+    Y = palm.k.clone().multiplyScalar(-Math.cos(t)).addScaledVector(palm.d, -Math.sin(t)).normalize();
+    Z = palm.d.clone().multiplyScalar(Math.cos(t)).addScaledVector(palm.k, -Math.sin(t));
   } else {
     const t = (rule.tilt + (tune.tilt || 0)) * DEG;
     Y = palm.k.clone().multiplyScalar(Math.cos(t)).addScaledVector(palm.d, Math.sin(t)).normalize();
@@ -88,6 +98,50 @@ export function solveGrip({ handBind, palm, cls, stance, radius = 0.015, unitsPe
   const position = P.sub(hp).applyQuaternion(inv).divideScalar(hs.x);
   const quaternion = inv.multiply(wq).normalize();
   return { position: round(position.toArray()), quaternion: round(quaternion.toArray()), scale: Number((unitsPerMetre / hs.x).toFixed(6)) };
+}
+
+// The thumb laid on a reverse-gripped pommel: its tip on `target` (bind space). A small search over the thumb's
+// swing across the palm, its turn in the palm's plane and the bend of its two outer joints, each joint turned
+// in its own frame on top of its rest rotation (the same convention as solveFist). bones / chain as in
+// solveFist (chain: [Thumb1, Thumb2, Thumb3]). Returns { pose: { [bone]: quaternion array }, miss } (miss: how
+// far the tip ends from the target, bind units) or null.
+export function solveThumbCap({ bones, chain, palm, target }) {
+  if (!chain?.length || !chain.every((b) => bones[b]) || !target) return null;
+  const pos = (name) => new THREE.Vector3().setFromMatrixPosition(bones[name].bind);
+  const rot = (name) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().extractRotation(bones[name].bind));
+  const sigma = palm.side === 'left' ? -1 : 1;
+  const [b1, b2, b3] = chain;
+  const p1 = pos(b1), p2 = pos(b2), p3 = pos(b3);
+  const tip = p3.clone().add(p3.clone().sub(p2).multiplyScalar(0.85)); // the last bone has no end joint
+  const swing = palm.d.clone().multiplyScalar(-sigma);
+  const turn = palm.n.clone();
+  const flex = new THREE.Vector3().crossVectors(p3.clone().sub(p2).normalize(), palm.n).normalize();
+  const about = (pivot, rotation, point) => point.clone().sub(pivot).applyQuaternion(rotation).add(pivot);
+  const scale = p1.distanceTo(p2) + p2.distanceTo(p3) || 1; // angle penalty in the rig's own units
+  let best = null;
+  for (let a = -60; a <= 60; a += 5) {
+    for (let b = -60; b <= 60; b += 5) {
+      const r1 = new THREE.Quaternion().setFromAxisAngle(swing, a * DEG).multiply(new THREE.Quaternion().setFromAxisAngle(turn, b * DEG));
+      const j2 = about(p1, r1, p2), j3 = about(p1, r1, p3), t1 = about(p1, r1, tip);
+      const f1 = flex.clone().applyQuaternion(r1);
+      for (let f = 0; f <= 60; f += 6) {
+        const r2 = new THREE.Quaternion().setFromAxisAngle(f1, f * DEG);
+        const j3b = about(j2, r2, j3), t2 = about(j2, r2, t1);
+        const t3 = about(j3b, new THREE.Quaternion().setFromAxisAngle(f1.clone().applyQuaternion(r2), f * DEG), t2);
+        const cost = t3.distanceTo(target) + scale * 0.0004 * (Math.abs(a) + Math.abs(b) + f);
+        if (!best || cost < best.cost) best = { cost, miss: t3.distanceTo(target), a, b, f };
+      }
+    }
+  }
+  const local = (name, axis, deg) => new THREE.Quaternion().setFromAxisAngle(axis.clone().applyQuaternion(rot(name).invert()).normalize(), deg * DEG);
+  return {
+    miss: best.miss,
+    pose: {
+      [b1]: round(bones[b1].rest.clone().multiply(local(b1, swing, best.a)).multiply(local(b1, turn, best.b)).toArray()),
+      [b2]: round(bones[b2].rest.clone().multiply(local(b2, flex, best.f)).toArray()),
+      [b3]: round(bones[b3].rest.clone().multiply(local(b3, flex, best.f)).toArray()),
+    },
+  };
 }
 
 // Closed hand for rigs with Mixamo finger chains: each joint bends about the finger's hinge axis

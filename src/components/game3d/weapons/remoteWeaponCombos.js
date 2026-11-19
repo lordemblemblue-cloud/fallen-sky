@@ -70,7 +70,8 @@ export function createRemoteComboWeapon({ model, scene = null, manifest = null, 
   return {
     swing(state, action) {
       const clipKind = remoteComboKind(state);
-      const kind = clipKind?.startsWith('sword') ? 'swordCombo' : clipKind;
+      // the player's own shots (bowRelease / bowQuick) show the same stand-in bow as the bow combo
+      const kind = clipKind?.startsWith('sword') ? 'swordCombo' : clipKind?.startsWith('bow') ? 'bowCombo' : clipKind;
       if (!kind || !action) { swing = null; return; }
       swing = { state, kind, action, hit: action.getClip().userData?.hit ?? null, fired: false };
       since = 0;

@@ -78,6 +78,7 @@ import { BOW_PVE_RANGE, selectCameraBowTarget, selectLockedBowAbilityTarget, cam
 import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryChargeRules.mjs';
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
+import { tickActiveEffects, disposeActiveEffects } from './vfx/activeEffects.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
 import { tickCompanionCooldowns } from './companionAbilityStore';
@@ -213,7 +214,11 @@ import { getEightWayDodgeMove } from './player/game3dEightWayDodge.mjs';
 import { game3dInputKey, game3dMoveAxes } from './player/Game3DMovementInput.mjs';
 import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, directionRelativeToFacing } from './axe/player/AXEClickToMove';
 import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/player/AXEClickToMoveScene';
-import { isAXEClickToMoveEnabled } from './axe/player/AXEControlSettingsStore';
+import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
+import { createDoubleTapDetector, dodgeMoveCandidates, pickDodgeMove, screenForwardFacingYaw } from './player/game3dDodgeProfiles.mjs';
+import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
+import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
+import { createMountFlightController } from './character/mountFlight.mjs';
 import WorldEnvironmentHUD from './WorldEnvironmentHUD';
 import { getDetroitWeather } from '@/functions/getDetroitWeather';
 import { createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
@@ -375,6 +380,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
   const companionWalkActionRef = useRef(null);
   const companionIdleActionRef = useRef(null);
   const companionRunActionRef = useRef(null);
+  const companionFlyActionRef = useRef(null); // ridden flight wing beat (character/mountFlight.mjs)
   const companionCurrentAnimRef = useRef('idle');
   const mountToggleRef = useRef(false);
   const isMountedRef = useRef(false);
@@ -707,6 +713,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       echoGestureRuntime.play(event.detail);
     };
     window.addEventListener('echoGestureObserved', onEchoGestureObserved);
+    // Skill-cast and level-up gestures on the local hero (player/playerMomentGestures.mjs): layered over the
+    // posed skeleton after the mixers, restored before the next frame's mixers, like the Echo gestures.
+    const momentGestures = createPlayerMomentGestures({ getActor: () => modelRef.current });
 
     // Slice C — expose scene + camera + legacy remote manager on window so the
     // network-remotes pipeline (mounted as a sibling) can attach without code
@@ -1281,6 +1290,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           const idleClip = findClip(companionDef.idleClipName) || clips[0];
           const walkClip = findClip(companionDef.walkClipName) || clips[1] || clips[0];
           const runClip  = findClip(companionDef.runClipName)  || clips[2] || null;
+          const flyClip  = findClip('fly'); // ridden flight (mountAnimations.withMountFlightClip, or the GLB's own Fly)
+          if (flyClip && flyClip !== idleClip && flyClip !== walkClip && flyClip !== runClip) {
+            const fly = compMixer.clipAction(flyClip);
+            fly.setEffectiveTimeScale(1.0);
+            companionFlyActionRef.current = fly;
+          }
           if (idleClip) {
             const idle = compMixer.clipAction(idleClip);
             companionIdleActionRef.current = idle;
@@ -1345,7 +1360,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               ...companionDef,
               modelUrl: companionDef.previousModelUrl,
               previousModelUrl: null,
-              animationRigProfile: null,
+              // A shipped re-rig falls back to its hosted original with that file's own animation path.
+              animationSource: companionDef.previousAnimationSource || companionDef.animationSource,
+              animationRigProfile: companionDef.previousAnimationRigProfile ?? null,
             });
           } else console.error('Companion GLB load error:', err);
         };
@@ -1394,6 +1411,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       companionIdleActionRef.current = null;
       companionWalkActionRef.current = null;
       companionRunActionRef.current = null;
+      companionFlyActionRef.current = null;
       companionCurrentAnimRef.current = 'idle';
       if (previous) {
         scene.remove(previous);
@@ -1448,7 +1466,24 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
         duration,
       }));
+      // The skill's own moment: a burst in the weapon family's color and a power-surge gesture layered over
+      // whatever strike the cast plays. Presentation only; nothing here changes the cast.
+      const castSkill = getSkillById(e.detail?.skillId);
+      activeEffects.current.push(createSkillUseBurst({
+        scene, playerRef: modelRef, getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
+        color: skillBurstColor(castSkill?.weapon_type), duration: Math.max(0.5, Math.min(0.9, duration)),
+      }));
+      momentGestures.play('skillCast', { seconds: Math.max(0.45, Math.min(0.8, duration)) });
     };
+    // A level actually gained (playerHUDStore.awardXP through this world's XP paths): light pillar, rings,
+    // sparks and a cheer; LevelUpToastListener shows the HUD toast on the same event.
+    const handlePlayerLevelUp = () => {
+      activeEffects.current.push(createLevelUpCelebration({
+        scene, playerRef: modelRef, getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
+      }));
+      momentGestures.play('levelUp');
+    };
+    window.addEventListener('playerLevelUp', handlePlayerLevelUp);
     window.addEventListener('playerSkillStrike', handlePlayerSkillStrike);
     // Mount Soul Fusion absorbed the mount: run the normal dismount on the next frame
     const handleForceDismount = () => { if (isMountedRef.current) mountToggleRef.current = true; };
@@ -1893,8 +1928,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const dodgeVanish = { active: false, timer: 0, duration: 0.45 };
     const crouchTogglePressed = { current: false };
     let wasAirborneLastFrame=false; // one-shot landing transition, not repeated montage
-    const lastDirectionTap = { current: {} };
-    const DOUBLE_TAP_MS = 280;
+    // Double taps of W / A / S / D (player/game3dDodgeProfiles.mjs): a press, its release, a second press in the window.
+    const dodgeTaps = createDoubleTapDetector();
+    // Winged mount flight (character/mountFlight.mjs): Space while riding takes off and lands; the mount follows
+    // the terrain a few metres up and the seated rider rides along.
+    const mountFlight = createMountFlightController();
+    const mountTargetQuat = new THREE.Quaternion(), mountPitchQuat = new THREE.Quaternion();
+    const MOUNT_PITCH_AXIS = new THREE.Vector3(1, 0, 0);
+    const DODGE_FACING_AXIS = new THREE.Vector3(0, 1, 0);
     let lastAirKickTapMs=0;
     const chargedKeys = new Map();
     // Draw on canvas down, fire one resolved arrow only on window release.
@@ -2311,6 +2352,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       model.quaternion.slerp(targetQuat, 1 - Math.exp(-14 * delta));
     };
 
+    // The move a dodge plays (game3dDodgeProfiles.mjs): the first candidate this body has a clip for. Its
+    // duration is the dodge's combat lock, like the eight-way moves.
+    const dodgeMoveFor = (direction, options = {}) => pickDodgeMove(dodgeMoveCandidates(direction, options),
+      key => !!playerAnim?.has?.(key)) || getEightWayDodgeMove(direction, { roll: !!options.rollKey });
+
     // Dodge invulnerability is a gameplay window, not invisibility. The
     // previous hide-model assignment made every successful dodge look broken.
     const startDodgeVanish = () => {
@@ -2393,7 +2439,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
         }
         if(region==='wolfveil'&&!suigenActive&&!dedicatedMode){
-          const caveTravel=wolfveilVillage?.interactCave(model.position);
+          // E should open the captain's side-quest dialogue when nearby,
+          // rather than unexpectedly entering the tunnel through its arch.
+          const caveTravel=wolfveilVillage?.caveWatch?.nearestResident(model.position)
+            ? null : wolfveilVillage?.interactCave(model.position);
           if(caveTravel){
             e.preventDefault();
             showCombatNotice(
@@ -2424,6 +2473,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(door){e.preventDefault();return;}
         }
       }
+      // Civic retrieval objects have placed, collision-safe world positions.
+      // E records a LOCAL objective observation, never XP, currency, loot
+      // or authoritative quest completion without the server ledger.
+      if(k==='e'&&!e.repeat&&model&&region==='wolfveil'&&!suigenActive&&
+         !bossEncounter.isNPCSuppressed()){
+        const result=importedSpawnTown?.collectCivicQuestSource(model.position);
+        if(result){
+          e.preventDefault();
+          showCombatNotice(result.text);
+          return;
+        }
+      }
       // Shop interactions are deliberate and only work at real entryways or
       // inside the corresponding physical shop. No invisible door blocks E.
       if (k === 'e' && !e.repeat && model && region === 'wolfveil' && !suigenActive) {
@@ -2438,16 +2499,26 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Game 2/Luna camera fallback: arrow keys steer camera yaw/pitch.
       if (k.startsWith('arrow')) e.preventDefault();
       clickToMove.noteKey(k); // any WASD key cancels a click move
-      const dodgeKeys = new Set(['w', 'a', 's', 'd']);
-      if (!e.repeat && dodgeKeys.has(k)) {
-        const nowMs = performance.now();
-        if (nowMs - (lastDirectionTap.current[k] || 0) <= DOUBLE_TAP_MS) {
+      // Double-tap W / A / S / D: W sidesteps forward, A / D flip sideways, S back-flips; the "Roll dodges"
+      // setting rolls on W / S instead (player/game3dDodgeProfiles.mjs). A tap needs its release in between.
+      // The dodge travels where the keys point on screen. Where walking turns the body toward the keys (no
+      // lock-on, no aiming), the first tap has already started that turn and would make every double-tap a
+      // forward move, so the body squares up to the camera first and the keys pick the eight-way slot
+      // themselves. Locked on or aiming, the body does not turn with the keys and keeps its facing.
+      if (dodgeTaps.keyDown(k, performance.now(), { repeat: e.repeat })) {
+          const turnedFacing = model && !getCombatAxes() && !otsAim.current.aiming && !heldBow.active
+            ? model.quaternion.clone() : null;
+          if (turnedFacing) model.quaternion.setFromAxisAngle(DODGE_FACING_AXIS,
+            screenForwardFacingYaw(getPlanarBasisFromYaw(orbit.current.yaw).forward));
           const dodge = getDodgeVectorAndName(k);
+          const rollDodges = isAXEDodgeRollVariantEnabled();
           const dodgeBudget = canSpendCombatResource('dodge');
+          let dodged = false;
           if (!dodgeBudget.ok) {
             showCombatNotice('Not enough stamina to dodge');
-          } else if (playerStateMachine.canStart('dodge') && playerAnim?.requestDodge?.(dodge.vector, dodge.direction) &&
-            playerStateMachine.startCombat('dodge', { lock: getEightWayDodgeMove(dodge.direction).duration, cancel: 0.18 })) {
+          } else if (playerStateMachine.canStart('dodge') && playerAnim?.requestDodge?.(dodge.vector, dodge.direction, { rollDodges }) &&
+            playerStateMachine.startCombat('dodge', { lock: dodgeMoveFor(dodge.direction, { rollDodges }).duration, cancel: 0.18 })) {
+            dodged = true;
             spendCombatResource('dodge');
             window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
             startDodgeVanish(dodge.direction);
@@ -2455,11 +2526,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             gainAXEBuddhaEssenceExperience('dexterity', 2);
             playActionSound('player_jump');
           }
-          lastDirectionTap.current[k] = 0;
+          if (!dodged && turnedFacing) model.quaternion.copy(turnedFacing); // no dodge: leave the turn alone
           e.preventDefault();
           return;
-        }
-        lastDirectionTap.current[k] = nowMs;
       }
       // Space: angled Air Jump -> earned wing glide -> kick/hold to Skywalk.
       // Double-tap the kick button while boosting to finish in a forward
@@ -2472,6 +2541,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
         if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
           weaponSummon.dismiss();
+        else if(!e.repeat && isMountedRef.current){
+          // Riding: Space takes off with the mount and lands it again (character/mountFlight.mjs). On foot
+          // Space stays the Air Jump -> wing glide -> Skywalk chain below.
+          if(companionFlyActionRef.current)showCombatNotice(mountFlight.toggle()==='takeoff'?'Taking off':'Landing');
+          else showCombatNotice('This mount cannot fly');
+        }
         else if(!e.repeat && !isMountedRef.current){
           const allowAirWalk=!dedicatedMode && !window.__activeDuel &&
             !tornado.getState().active && getPlayerHUD().hp>0;
@@ -2507,7 +2582,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(!budget.ok)showCombatNotice('Not enough stamina to roll');
           else if(playerAnim?.requestRoll?.(roll.vector,roll.direction)){
             playerStateMachine.startCombat('dodge',{
-              lock:getEightWayDodgeMove(roll.direction,{roll:true}).duration,cancel:0.25,
+              lock:dodgeMoveFor(roll.direction,{rollKey:true}).duration,cancel:0.25,
             });
             spendCombatResource('dodge');
             window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
@@ -2615,6 +2690,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     };
     const onInputBlur = () => {
       altCursorHeld.current = false;
+      dodgeTaps.reset();
       playerAnim?.setAirWalkHeld?.(false);
       lastAirKickTapMs=0;
       clearWorldMapMovement();
@@ -2625,6 +2701,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (e.key === 'Alt') { altCursorHeld.current = false; return; }
       const k = game3dInputKey(e);
       keys.current[k] = false;
+      dodgeTaps.keyUp(k);
       if(k===' ')playerAnim?.setAirWalkHeld?.(false);
       // Release of a charged/held input while navigating the ESC menu must
       // never cast a queued skill when the player returns to the world.
@@ -2715,6 +2792,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(!heldBow.active){
             heldBow.active=true;heldBow.startedAt=performance.now();
             bowVisuals.setCharge?.(getBowChargeStatus(0));
+            // the draw shows the bow: a dismissed bow is summoned with the press (presentation only)
+            if(!isMountedRef.current)weaponSummon?.ensureOut();
           }
         }else{
           rangedClickAttackPressed.current=false;
@@ -2917,14 +2996,17 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const idle = companionIdleActionRef.current;
       const walk = companionWalkActionRef.current;
       const run = companionRunActionRef.current;
+      const fly = companionFlyActionRef.current;
+      if (targetAnim === 'fly' && !fly) targetAnim = 'run';
       if (targetAnim === 'run' && !run && walk) targetAnim = 'walk';
-      const next = targetAnim === 'run' ? run : targetAnim === 'walk' ? walk : idle;
+      const next = targetAnim === 'fly' ? fly : targetAnim === 'run' ? run : targetAnim === 'walk' ? walk : idle;
       // A clip arriving asynchronously must still start when the requested
       // state is unchanged. Missing clips must not silence the current action.
       if (!next || (targetAnim === companionCurrentAnimRef.current && next.isRunning())) return;
       if (targetAnim !== 'idle' && idle) idle.fadeOut(0.2);
       if (targetAnim !== 'walk' && walk) walk.fadeOut(0.2);
       if (targetAnim !== 'run' && run) run.fadeOut(0.2);
+      if (targetAnim !== 'fly' && fly) fly.fadeOut(0.25);
       next.reset().setEffectiveWeight(1).fadeIn(0.2).play();
       companionCurrentAnimRef.current = targetAnim;
     };
@@ -3121,6 +3203,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(model)model.visible=true;
         if(region==='wolfveil')entryCamera.start();
       }
+      momentGestures.preUpdate(); // skill-cast / level-up gesture: give the bones back before the mixers pose them
       // Revert additive gesture poses before the normal Mixers update.
       echoGestureRuntime.preUpdate();
       weaponSummon?.preUpdate();
@@ -3142,6 +3225,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
       if(dungeonTravel)window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:dungeonTravel}));
       wolfveilCaveDestination?.caveSystem?.update(delta,modelRef.current?.position);
+      wolfveilCaveDestination?.caveWatch?.update(delta,modelRef.current?.position);
       const vortexTravel=suigenActive?null:vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
@@ -3194,9 +3278,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
-      // After the base pose: the summon gesture, the closed hand and the forming / melting weapon.
-      // No bow `drawing` state: the clone's bowVisuals arrow (fired with the press) is the only arrow.
-      weaponSummon?.update(delta, { state: playerAnim?.getCurrent?.(), aiming: !!playerAnim?.getIsAiming?.(),
+      // Montages over locomotion: the legs keep walking / running under a swing or a shot, and the bow is
+      // carried low and out while running (player/locomotionUnderlay.js).
+      playerAnim?.lateUpdate?.(delta);
+      // After the base pose: the summon gesture, the closed hand and the forming / melting weapon. `drawing`
+      // nocks an arrow and pulls the string while the bow is drawn; the arrow in flight stays the clone's
+      // bowVisuals arrow (fired with the shot), so the nocked one only disappears at the release.
+      weaponSummon?.update(delta, { state: playerAnim?.getWeaponState?.() ?? playerAnim?.getCurrent?.(),
+        drawing: playerAnim?.getBowDrawing?.() ?? null, aiming: !!playerAnim?.getIsAiming?.(),
         moving: weaponPlayerMoving && !isMountedRef.current, inCombat: isInCombat(),
         externalRoot: weaponSummon?.getVisual()?.type === 'external' ? model?.getObjectByName?.('AXE_Equipped_Training_Bow') || null : null });
       // The held weapon's enchantment light: internal glow, tight aura and anchored sparks (visual only).
@@ -3293,7 +3382,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         const mountTravelFromX = model.position.x;
         const mountTravelFromZ = model.position.z;
         const axeMountSpeed = getActiveAXEMountSpeedMultiplier();
-        const speedMult = mounted ? (axeMountSpeed || getEffectiveSpeedMultiplier()) : 1.0;
+        const speedMult = mounted ? (axeMountSpeed || getEffectiveSpeedMultiplier()) * mountFlight.speedMultiplier() : 1.0;
         // Opening the C Character Hub immediately releases movement input. This
         // prevents a held W/Shift/Ctrl key from continuing to move the character
         // behind a full-screen UI.
@@ -3578,35 +3667,42 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // ─── Mount handling: companion follows player while mounted ───
         if (companionMixerRef.current) companionMixerRef.current.update(delta);
         if (mounted && compGroup) {
-          // Keep the gameplay root on the ground. The pose pass places the
+          // Keep the gameplay root on the ground (or at the flight altitude above it). The pose pass places the
           // pelvis on the mount and solves the legs/arms after all animation.
           compGroup.position.x = model.position.x;
           compGroup.position.z = model.position.z;
-          // The visual animal's forward axis is compensated only within
-          // its child frame. The world root still tracks player movement.
-          // Time-based smoothing removes frame-rate-dependent turn jitter.
-          const mountTurn=isFactionThreeMount(companionDefRef.current)
-            ? 1-Math.exp(-16*Math.min(Math.max(delta,0),.1)) : ROT_SMOOTH;
-          compGroup.quaternion.slerp(model.quaternion, mountTurn);
-          if (mapReady) {
-            const gy = sampleGroundY(compGroup.position.x, compGroup.position.z);
-            if (gy !== null) {
-              compGroup.position.y = gy;
-              model.position.y = gy;
-            }
-          }
           // Actual travel selects run at every speed; holding W into a wall
           // leaves the animal idle. Walk stays available as a separate clip.
           const mountMoved = Math.hypot(model.position.x - mountTravelFromX,
             model.position.z - mountTravelFromZ) > 0.0001;
-          playCompanionAnimation(mountMoved ? 'run' : 'idle');
+          const flight = mountFlight.update(delta, { mounted: true, moving: mountMoved });
+          window.__localMountFlying = flight.airborne; // the companion packet tells other players
+          // The visual animal's forward axis is compensated only within
+          // its child frame. The world root still tracks player movement.
+          // Time-based smoothing removes frame-rate-dependent turn jitter.
+          // Airborne, the mount noses down while travelling.
+          const mountTurn=isFactionThreeMount(companionDefRef.current)
+            ? 1-Math.exp(-16*Math.min(Math.max(delta,0),.1)) : ROT_SMOOTH;
+          mountTargetQuat.copy(model.quaternion);
+          if (flight.flying) mountTargetQuat.multiply(mountPitchQuat.setFromAxisAngle(MOUNT_PITCH_AXIS, flight.pitch));
+          compGroup.quaternion.slerp(mountTargetQuat, mountTurn);
+          if (mapReady) {
+            const gy = sampleGroundY(compGroup.position.x, compGroup.position.z);
+            if (gy !== null) {
+              compGroup.position.y = gy + flight.altitude;
+              model.position.y = gy + flight.altitude;
+            }
+          }
+          playCompanionAnimation(flight.airborne ? 'fly' : mountMoved ? 'run' : 'idle');
         } else {
+          if (mountFlight.isFlying()) mountFlight.land(true); // dismounted: no flight state lingers
+          window.__localMountFlying = false;
           // Not mounted — steering-based companion AI prevents snap/micro-jitter near the player.
           if (!dodgeVanish.active) model.visible = true;
           companionSystem.update(delta, { ownerMoving: isMoving, ownerRunning: isRunning, ownerYaw: orbit.current.yaw });
         }
 
-        companionSecondaryRig?.update(delta); // mount-owned tail/wing motion, after locomotion
+        companionSecondaryRig?.update(delta, { flying: mounted && mountFlight.isAirborne() }); // mount-owned tail/wing motion, after locomotion
         if (compGroup) compGroup.visible = mounted || npcsVisible;
         // ─── Companion proximity prompt ───
         if (compGroup && !mounted) {
@@ -3830,8 +3926,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Clone town residents use the repaired imported town's own floor
         // and separate non-combat AI actor loop. Only publish React proximity
         // when its nearest resident changes, never 60 state writes/second.
-        const townNeighbor=(!bossEncounter.isNPCSuppressed()&&npcsVisible)
-          ?importedSpawnTown?.nearestResident(model.position):null;
+        const caveWatch=wolfveilVillage?.caveWatch || wolfveilCaveDestination?.caveWatch;
+        const guardNeighbor=!bossEncounter.isNPCSuppressed()
+          ?caveWatch?.nearestResident(model.position):null;
+        const townNeighbor=(!bossEncounter.isNPCSuppressed()&&(npcsVisible||guardNeighbor))
+          ?guardNeighbor||importedSpawnTown?.nearestResident(model.position):null;
         if(townNeighbor?.id!==nearbyTownResidentRef.current?.id){
           nearbyTownResidentRef.current=townNeighbor||null;
           setNearbyTownResident(townNeighbor?{
@@ -3907,7 +4006,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               });
             }
           } else if (townNeighbor) {
-            const conversation=importedSpawnTown?.interactResident(model.position);
+            const conversation=guardNeighbor
+              ?caveWatch?.interact(model.position)
+              :importedSpawnTown?.interactResident(model.position);
             if(conversation){
               // Ambient language may suggest work but cannot forge inventory
               // grants. Only the existing quest handoff validates a real quest
@@ -4640,7 +4741,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               playerLevelRef.current = hudProgression.level;
               setPlayerXP(hudProgression.xp);
               setPlayerLevel(hudProgression.level);
-              if (hudProgression.level > levelBeforeReward) playActionSound('level_up');
+              if (hudProgression.level > levelBeforeReward) {
+                playActionSound('level_up');
+                window.dispatchEvent(new CustomEvent('playerLevelUp', { detail: { level: hudProgression.level, from: levelBeforeReward, source: 'enemy' } }));
+              }
               } // Ordinary legacy client rewards; never for pending cinematic encounters.
             }
           }
@@ -4679,10 +4783,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       });
 
       // ─── Update active visual effects (lightning etc.) ───
-      activeEffects.current = activeEffects.current.filter((fx) => {
-        fx.update(delta);
-        return fx.alive();
-      });
+      // A finished effect is disposed as it leaves the list: its scene objects, lights and listeners go too.
+      activeEffects.current = tickActiveEffects(activeEffects.current, delta);
 
       // Menu transitions, death and PvP cancel held pulses immediately.
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
@@ -5114,6 +5216,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       avatarDrawCalls?.update(); // after everything that poses the avatar this frame
       // Light bone gestures run after the base animation pose, with no input lock.
       echoGestureRuntime.update();
+      momentGestures.update();
       // A real inventory-backed GLB bow follows the active Adam/Eve hand.
       // It yields to the existing mounted weapon renderer when riding.
       if (model && heldBowPlayer !== model) {
@@ -5341,6 +5444,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           { detail: { token: held.token } }));
       }
       window.dispatchEvent(new CustomEvent('playerSkillCastCancel'));
+      // The render loop has stopped, so dispose the effects still in flight here rather than leave them
+      // (and the cast beam's window listener) holding on to this scene.
+      activeEffects.current = disposeActiveEffects(activeEffects.current);
       heldAOEKeys.clear();
       chargedKeys.clear();
       cancelBowCharge();
@@ -5350,6 +5456,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       skillStrikeQueue.clear();
       window.removeEventListener('axeMountForceDismount', handleForceDismount);
       window.removeEventListener('playerSkillCastStart', handlePlayerSkillCastStart);
+      window.removeEventListener('playerLevelUp', handlePlayerLevelUp);
+      momentGestures.dispose();
       window.removeEventListener('axeAerialSkillCast', handleAXEAerialSkillCast);
       renderer.domElement.removeEventListener('mousedown', onMouseDown);
       renderer.domElement.removeEventListener('wheel', onWheel);
@@ -5639,7 +5747,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             setPlayerXP(hudProgression.xp);
             setPlayerLevel(hudProgression.level);
             playActionSound('quest_complete');
-            if (hudProgression.level > levelBeforeReward) playActionSound('level_up');
+            if (hudProgression.level > levelBeforeReward) {
+              playActionSound('level_up');
+              window.dispatchEvent(new CustomEvent('playerLevelUp', { detail: { level: hudProgression.level, from: levelBeforeReward, source: 'quest' } }));
+            }
             setActiveQuestDialogue(null);
           }}
         />

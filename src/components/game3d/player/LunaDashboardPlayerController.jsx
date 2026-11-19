@@ -5,7 +5,9 @@ import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, re
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import {dodgeTravelStep} from './dodgeMoves.js';
-import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, weaponIdleState } from '../weapons/weaponComboClips.js';
+import {DODGE_VARIANT_MOVES,dodgeMoveCandidates,pickDodgeMove} from './game3dDodgeProfiles.mjs';
+import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, BOW_POSE_STATES, weaponIdleState, findComboBones } from '../weapons/weaponComboClips.js';
+import { createLocomotionUnderlay } from './locomotionUnderlay.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
   beginAirWalkFinisher,setAirWalkKickHeld,
@@ -20,6 +22,27 @@ const WEAPON_COMBO_STATE_SET = new Set(Object.values(WEAPON_COMBO_STATES).flat()
 const WEAPON_IDLE_STATE_SET = new Set(WEAPON_IDLE_STATES);
 export const WEAPON_COMBO_CHAIN_GRACE_SECONDS = 0.55; // after a swing ends, the next press still continues the chain
 export const WEAPON_COMBO_BUFFER_SECONDS = 0.6; // how long a buffered press waits for the cancel point
+// Animation montages over locomotion (owner 2026-11-19): weapon swings and the bow's draw, hold and shots play
+// on the upper body; while the player moves, the legs keep the walk / run / sprint under them
+// (player/locomotionUnderlay.js), and moving is allowed. The bow: holding the aim draws (bowDraw) and holds at
+// full draw (bowHold); letting go looses (bowRelease from the held draw, bowQuick when there was none); while
+// running, the bow arm is carried low and out from the hip (bowRunCarry).
+const BOW_DRAW = 'bowDraw';
+const BOW_HOLD = 'bowHold';
+const BOW_RUN_CARRY = 'bowRunCarry';
+const BOW_SHOT_STATES = new Set([...WEAPON_COMBO_STATES.bowRelease, ...WEAPON_COMBO_STATES.bowQuick]);
+const BOW_SHOT_KINDS = new Set(['bowRelease', 'bowQuick']);
+const UPPER_BODY_STATES = new Set([...WEAPON_COMBO_STATE_SET, BOW_DRAW, BOW_HOLD]);
+const FAST_GAITS = new Set(['run', 'sprint', 'runBack', 'runLeft', 'runRight']);
+export const MONTAGE_BLEND = Object.freeze({
+  inSeconds: 0.1, // locomotion -> a swing or shot (between hits of a chain: 0.06)
+  outSeconds: 0.2, // a swing or shot -> locomotion
+  legsSeconds: 0.14, // the legs taking over / handing back the stance when moving starts or stops
+  bowCarrySeconds: 0.16, // the bow arm settling into / out of the running carry
+  bowLowerSeconds: 0.22, // after the aim is let go, how long the draw waits for the shot
+  fullDraw: 0.92, // this much of the draw counts as fully drawn (the shot looses from the hold)
+});
+const approach = (value, target, step) => (value < target ? Math.min(target, value + step) : Math.max(target, value - step));
 
 const STATES = {
   IDLE: 'idle',
@@ -56,7 +79,7 @@ const LOOP_STATES = new Set([
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
   'fallLoop', // regular falling still uses its existing pose
   'wingGlide','airWalkLoop', // real rig-local flight motions
-  ...WEAPON_IDLE_STATES,
+  ...WEAPON_IDLE_STATES, BOW_HOLD,
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
@@ -76,7 +99,7 @@ const ONE_SHOT_DURATION = {
   [STATES.JUMP_START]: 0.24,
   [STATES.JUMP_LAND]: 0.22,
   [STATES.ROLL]: GAME3D_MOBILITY_SECONDS.roll,
-  ...Object.fromEntries([...EIGHT_WAY_DODGE_MOVES,...SIDE_ROLL_VARIANTS]
+  ...Object.fromEntries([...EIGHT_WAY_DODGE_MOVES,...SIDE_ROLL_VARIANTS,...Object.values(DODGE_VARIANT_MOVES)]
     .map(move=>[move.key,move.duration])),
 };
 
@@ -149,6 +172,15 @@ export function createLunaDashboardPlayerController({
   // each click's strike on that swing's own contact frame (and drop it if the swing never happens).
   let swingSerial = 0;
   let lastSwingSerial = 0;
+  // Montages over locomotion: the legs follow the gait under a swing or a shot while the player moves.
+  const underlay = createLocomotionUnderlay(mixer.getRoot?.(), findComboBones(mixer.getRoot?.()));
+  let legsBlend = 0; // 0 standing still .. 1 moving
+  let gait = null; // the walk / run / sprint the legs follow while moving
+  let lastMontageClip = null; // the latest swing / shot / draw clip played
+  let bowCarry = 0; // 0..1: the bow arm carried low and out while running
+  let bowDrawn = false; // the draw reached full draw since the aim began (or since the last shot)
+  let bowLowerAt = null; // the aim was let go while drawn: the draw waits until then for the shot
+  let pendingShots = 0; // further arrows waiting behind the queued shot: each plays its own shot
 
   const ATTACK_STATES = new Set([
     STATES.DRAW_ARROW, STATES.MELEE_ATTACK, STATES.MELEE_COMBO_2,
@@ -188,8 +220,10 @@ export function createLunaDashboardPlayerController({
     const state = states[index];
     const speed = Math.max(0.7, Math.min(2.2, Number(config.speed) || 1));
     queuedCombo = null;
-    if (!playState(state, { force: true, fade: 0.06, timeScale: speed })) return false;
-    const duration = durationFor(state, speed);
+    // a montage: a chain's next hit cuts in quickly, the first one blends in from the walk / idle
+    const fade = UPPER_BODY_STATES.has(currentState) ? 0.06 : MONTAGE_BLEND.inSeconds;
+    if (!playState(state, { force: true, fade, timeScale: speed, startAt: config.startAt })) return false;
+    const duration = Math.max(0.01, durationFor(state, speed) - (actions[state]?.time || 0) / speed);
     isBusy = true;
     lastAttackAt = at;
     busyResetAt = at + duration;
@@ -208,6 +242,12 @@ export function createLunaDashboardPlayerController({
     if (isBusy) {
       const swing = comboAction();
       if (swing && swing.time < comboCancelAt(currentState)) {
+        if (BOW_SHOT_KINDS.has(kind) && queuedCombo && BOW_SHOT_KINDS.has(queuedCombo.kind)) {
+          // every arrow of a multi-shot plays its own shot: this one follows the shot already waiting
+          pendingShots += 1;
+          lastSwingSerial = ++swingSerial;
+          return true;
+        }
         queuedCombo = { kind, config, at, from: currentState, serial: ++swingSerial };
         lastSwingSerial = queuedCombo.serial;
         return true;
@@ -222,16 +262,23 @@ export function createLunaDashboardPlayerController({
     const at = now();
     if (isDead || isMounted || at - queuedCombo.at > WEAPON_COMBO_BUFFER_SECONDS || currentState !== queuedCombo.from) {
       queuedCombo = null; // expired, or a dodge / hit / jump took over
+      pendingShots = 0;
       return false;
     }
     if (isBusy && (actions[currentState]?.time ?? 0) < comboCancelAt(currentState)) return false;
     const { kind, config, serial } = queuedCombo;
-    return startWeaponCombo(kind, config, at, serial);
+    const started = startWeaponCombo(kind, config, at, serial);
+    if (started && pendingShots > 0 && BOW_SHOT_KINDS.has(kind)) {
+      pendingShots -= 1; // the next waiting arrow: a quick shot from the nock once this one has loosed
+      queuedCombo = { kind: 'bowQuick', config: { ...config, startAt: undefined }, at, from: currentState, serial: ++swingSerial };
+    }
+    return started;
   };
   // Combo clips are baked per held weapon (weapons/weaponComboBinder.js) and survive bindClips. Returns false,
   // changing nothing, while a combo swing is still playing or fading out; the caller retries later.
   const setWeaponComboClips = (clipsByKey = {}) => {
-    const entries = Object.entries(clipsByKey).filter(([key, clip]) => (WEAPON_COMBO_STATE_SET.has(key) || WEAPON_IDLE_STATE_SET.has(key)) && clip);
+    const entries = Object.entries(clipsByKey).filter(([key, clip]) => (WEAPON_COMBO_STATE_SET.has(key) || WEAPON_IDLE_STATE_SET.has(key)
+      || BOW_POSE_STATES.includes(key)) && clip);
     if ([...WEAPON_COMBO_STATE_SET].some((key) => actions[key]?.isScheduled() && actions[key].getEffectiveWeight() > 0)) return false;
     let replayIdle = false;
     for (const [key, clip] of entries) {
@@ -283,6 +330,15 @@ export function createLunaDashboardPlayerController({
     const nextAction = actions[state];
     const previousAction = currentState ? actions[currentState] : null;
     advanceBlend();
+    // anything but the draw itself ends a held draw (a shot, a dodge, a hit): the next aim draws again
+    if (state !== BOW_DRAW && state !== BOW_HOLD) bowDrawn = false;
+    // a draw or quick shot right after a shot starts from the nock: the bow stays up between shots
+    let startAt = Number.isFinite(options.startAt) ? options.startAt : null;
+    if (startAt === null && (state === BOW_DRAW || state === 'bowQuick') && BOW_SHOT_STATES.has(currentState)) {
+      const nock = nextAction.getClip().userData?.nock;
+      if (Number.isFinite(nock)) startAt = nock;
+    }
+    if (UPPER_BODY_STATES.has(state)) lastMontageClip = nextAction.getClip();
     if (![STATES.IDLE, STATES.AFK, 'idleArmed', ...WEAPON_IDLE_STATES, ...PLAYER_IDLE_VARIANTS].includes(state)) idleStartedAt = null;
     // Two semantic states can share a fallback clip. Changing the state must
     // not rewind that action or crossfade it against itself.
@@ -320,6 +376,9 @@ export function createLunaDashboardPlayerController({
       ? previousAction.time / Math.max(0.001, previousAction.getClip().duration) : null;
     nextAction.reset().play();
     if (phase !== null && !options.resetPhase) nextAction.time = phase * nextAction.getClip().duration;
+    // the walk / run taking over from a montage continues the stride the legs kept under it
+    if (Number.isFinite(options.phase)) nextAction.time = (((options.phase % 1) + 1) % 1) * nextAction.getClip().duration;
+    if (startAt !== null) nextAction.time = Math.min(Math.max(0, startAt), nextAction.getClip().duration);
     blendTransition = { target: nextAction, weights, startedAt: mixer.time, duration: options.fade ?? 0.16 };
     advanceBlend();
     currentState = state;
@@ -342,10 +401,25 @@ export function createLunaDashboardPlayerController({
     const stance = weaponIdleState(equipment.family, { twoHand: equipment.twoHand });
     return stance && hasAction(stance) ? stance : STATES.IDLE;
   };
+  // The walk / run / sprint for this movement (also what the legs keep under a montage).
+  const gaitState = ({ running, sprinting, direction }) => {
+    if (sprinting && hasAction(STATES.SPRINT)) return STATES.SPRINT;
+    const suffix = { backward: 'Back', left: 'Left', right: 'Right' }[direction] || '';
+    const directional = `${running ? 'run' : 'walk'}${suffix}`;
+    if (hasAction(directional)) return directional;
+    if (!running && hasAction(STATES.WALK)) return STATES.WALK;
+    if (direction === 'backward' && hasAction(STATES.RUN_BACK)) return STATES.RUN_BACK;
+    return STATES.RUN;
+  };
+  // The bow's own draw: a bow in hand and its draw clips baked.
+  const bowStatesReady = () => equipment.family === 'bow' && equipment.equipped && hasAction(BOW_DRAW) && hasAction(BOW_HOLD);
+  const bowLowering = () => bowLowerAt !== null && (currentState === BOW_DRAW || currentState === BOW_HOLD);
   const movementStateFor = ({ moving, running, sprinting, direction, aiming, blocking }) => {
     if (blocking && hasAction('block')) return 'block';
     if (blocking && hasAction(STATES.COMBAT_IDLE)) return STATES.COMBAT_IDLE;
     if (externallyAirborne && hasAction('fallLoop')) return 'fallLoop';
+    // the aim held with a bow: draw, then hold at full draw (over the walk / run while moving)
+    if ((aiming || bowLowering()) && bowStatesReady()) return bowDrawn ? BOW_HOLD : BOW_DRAW;
     if (!moving) {
       if (aiming && hasAction('aimOverdraw')) return 'aimOverdraw';
       if (aiming && hasAction(STATES.COMBAT_IDLE)) return STATES.COMBAT_IDLE;
@@ -361,13 +435,7 @@ export function createLunaDashboardPlayerController({
       return standingIdle();
     }
     if (aiming) return combatMovementState(direction);
-    if (sprinting && hasAction(STATES.SPRINT)) return STATES.SPRINT;
-    const suffix = { backward: 'Back', left: 'Left', right: 'Right' }[direction] || '';
-    const directional = `${running ? 'run' : 'walk'}${suffix}`;
-    if (hasAction(directional)) return directional;
-    if (!running && hasAction(STATES.WALK)) return STATES.WALK;
-    if (direction === 'backward' && hasAction(STATES.RUN_BACK)) return STATES.RUN_BACK;
-    return STATES.RUN;
+    return gaitState({ running, sprinting, direction });
   };
 
   const resetBusy = () => {
@@ -426,7 +494,12 @@ export function createLunaDashboardPlayerController({
       return;
     }
     previousMoving = !!moving;
-    playState(movementStateFor(lastMovement), { fade: 0.16 });
+    const next = movementStateFor(lastMovement);
+    // a montage hands back to the locomotion with a longer blend, the walk / run carrying on the stride the
+    // legs kept under it
+    const fromMontage = UPPER_BODY_STATES.has(currentState) && !UPPER_BODY_STATES.has(next);
+    playState(next, { fade: fromMontage ? MONTAGE_BLEND.outSeconds : 0.16,
+      ...(fromMontage && underlay && next === gait && legsBlend > 0 ? { phase: underlay.getPhase() } : {}) });
   };
 
   const bindClips = (clipsByKey = {}) => {
@@ -495,6 +568,7 @@ export function createLunaDashboardPlayerController({
     const state = isDeathState(requested) ? requested : /back/i.test(kind) ? 'deathBackward' : 'deathForward';
     const available = hasAction(state) ? state : PLAYER_DEATH_ACTIONS.find(hasAction);
     queuedCombo = null;
+    pendingShots = 0;
     isBusy = false;
     bowAttackAllowsMovement = false;
     busyResetAt = 0;
@@ -545,6 +619,7 @@ export function createLunaDashboardPlayerController({
     queuedCombo = null;
     activeCombo = null;
     comboChain = { kind: null, index: -1, until: -Infinity };
+    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0;
     if (oneShotRef) oneShotRef.current = false;
     handleMovement({ moving: false, running: false, aiming: false, blocking: false });
     return true;
@@ -582,8 +657,10 @@ export function createLunaDashboardPlayerController({
     return true;
   };
 
-  const requestDodge = (directionVector, directionName = 'forward') => {
-    const move=getEightWayDodgeMove(directionName);
+  // rollDodges: the player's "Roll dodges" setting. The forward sidestep / back roll variants
+  // (game3dDodgeProfiles.mjs) play when this body has their clips; otherwise the eight-way move does.
+  const requestDodge = (directionVector, directionName = 'forward', { rollDodges = false } = {}) => {
+    const move=pickDodgeMove(dodgeMoveCandidates(directionName,{rollDodges}),hasAction)||getEightWayDodgeMove(directionName);
     // All eight named generated clips exist from first render; if an old rig
     // somehow cannot bind one, preserve its original dodge/dive behavior.
     const state=hasAction(move.key)?move.key:
@@ -593,7 +670,7 @@ export function createLunaDashboardPlayerController({
   };
 
   const requestRoll = (directionVector, directionName = 'backward') => {
-    const move=getEightWayDodgeMove(directionName,{roll:true});
+    const move=pickDodgeMove(dodgeMoveCandidates(directionName,{rollKey:true}),hasAction)||getEightWayDodgeMove(directionName,{roll:true});
     const state=hasAction(move.key)?move.key:
       hasAction(STATES.ROLL)?STATES.ROLL:STATES.DIVE_FORWARD;
     if(!hasAction(state))return false;
@@ -695,8 +772,33 @@ export function createLunaDashboardPlayerController({
   // a fallback for existing avatars without a registered melee animation.
   // Timed skill combos may restart a compatible attack montage at most once
   // every 90ms; regular clicks still obey the ordinary busy/cooldown gates.
+  // How far the draw on screen has come, in bowDraw's own seconds (Infinity: held at full draw; null: no draw).
+  const drawSeconds = () => (currentState === BOW_HOLD ? Infinity
+    : currentState === BOW_DRAW ? actions[BOW_DRAW]?.time ?? 0 : null);
+  // A ranged attack's shot: loosed from the held draw (bowRelease), or drawn and loosed at once (bowQuick); a
+  // draw let go early carries on in the quick shot from the same point of its own, faster draw.
+  const bowShotFor = () => {
+    bowLowerAt = null;
+    const at = drawSeconds();
+    const draw = actions[BOW_DRAW]?.getClip()?.userData || {};
+    const quick = actions.bowQuick?.getClip()?.userData || {};
+    const full = Number.isFinite(draw.full) ? draw.full : Infinity;
+    if (at !== null && at >= full * MONTAGE_BLEND.fullDraw) return { kind: 'bowRelease' };
+    if (at === null) return { kind: 'bowQuick' };
+    const nockD = draw.nock || 0, nockQ = quick.nock || 0, fullQ = quick.full || 0;
+    const startAt = at < nockD ? (at / Math.max(1e-3, nockD)) * nockQ
+      : nockQ + ((at - nockD) / Math.max(1e-3, full - nockD)) * (fullQ - nockQ);
+    return { kind: 'bowQuick', startAt: Math.min(fullQ, startAt) };
+  };
+
   const requestAttack = (kind = 'attack', options = {}) => {
-    const config = typeof options === 'number' ? { speed: options } : (options || {});
+    let config = typeof options === 'number' ? { speed: options } : (options || {});
+    // a ranged attack plays the bow's own shots when they are baked: one shot animation per arrow
+    if (kind === 'bowCombo' && hasAction('bowRelease') && hasAction('bowQuick')) {
+      const shot = bowShotFor();
+      kind = shot.kind;
+      config = { ...config, startAt: shot.startAt };
+    }
     // 'swordCombo' / 'bowCombo': the held weapon's 3-hit combo; without its clips, the regular attack below
     if (WEAPON_COMBO_STATES[kind]) {
       const combo = requestWeaponCombo(kind, config);
@@ -864,9 +966,56 @@ export function createLunaDashboardPlayerController({
   };
 
   const setAiming = (enabled) => {
+    const was = isAiming;
     isAiming = !!enabled;
+    // the aim let go while drawn: the draw stays a moment, for the shot that the release fires
+    if (was && !isAiming && (currentState === BOW_DRAW || currentState === BOW_HOLD)) bowLowerAt = now() + MONTAGE_BLEND.bowLowerSeconds;
+    if (isAiming) bowLowerAt = null;
     handleMovement({ ...lastMovement, aiming: isAiming });
     return true;
+  };
+
+  // Once a frame, before the mixer: the draw reaching full draw holds it; a draw whose aim was let go without
+  // a shot lowers the bow.
+  const updateBowDraw = () => {
+    // the aim still held after a shot: the next arrow is drawn from the shot's cancel point
+    const shot = comboAction();
+    if (shot && isBusy && isAiming && BOW_SHOT_STATES.has(currentState) && !queuedCombo && bowStatesReady()
+      && shot.time >= comboCancelAt(currentState)) resetBusy();
+    const draw = actions[BOW_DRAW];
+    if (currentState === BOW_DRAW && draw && !bowDrawn && draw.time >= draw.getClip().duration - 1e-3) {
+      bowDrawn = true;
+      if (!isBusy) handleMovement(lastMovement);
+    }
+    if (bowLowerAt !== null && now() >= bowLowerAt) {
+      bowLowerAt = null;
+      if (currentState === BOW_DRAW || currentState === BOW_HOLD) { bowDrawn = false; if (!isBusy) handleMovement(lastMovement); }
+    }
+  };
+
+  // After the mixer has posed the body: under a swing, a shot or the bow's draw, the legs keep the gait the
+  // player moves with (standing still, the montage's own stance stays), and while running with the bow its arm
+  // carries the bow low and out from the hip.
+  const lateUpdate = (delta = 0) => {
+    if (!underlay || isMounted) return;
+    const dt = Math.max(0, Math.min(0.1, Number(delta) || 0));
+    const moving = !!lastMovement.moving && !isDead && !externallyAirborne && !jumpPhase && !isAirWalkInFlight(airWalk);
+    if (moving) gait = gaitState(lastMovement);
+    legsBlend = approach(legsBlend, moving ? 1 : 0, dt / MONTAGE_BLEND.legsSeconds);
+    const gaitAction = gait ? actions[gait] : null;
+    const gaitClip = gaitAction?.getClip() || null;
+    if (gaitClip && currentState === gait && gaitAction.isRunning()) underlay.sync(gaitClip, gaitAction.time / Math.max(1e-3, gaitClip.duration));
+    let upper = 0;
+    for (const state of UPPER_BODY_STATES) {
+      const action = actions[state];
+      if (action?.isScheduled()) upper += action.getEffectiveWeight();
+    }
+    underlay.update(dt, { locomotion: gaitClip, timeScale: gaitAction?.timeScale || 1,
+      weight: Math.min(1, upper) * legsBlend, montage: upper > 1e-3 ? lastMontageClip : null });
+    const carry = actions[BOW_RUN_CARRY];
+    const carrying = !!carry && equipment.family === 'bow' && equipment.equipped && FAST_GAITS.has(currentState) && !isBusy;
+    bowCarry = approach(bowCarry, carrying ? 1 : 0, dt / MONTAGE_BLEND.bowCarrySeconds);
+    if (carry && bowCarry > 0) underlay.overlayArm(carry.getClip(), 'left', bowCarry, { animated: actions[currentState]?.getClip() || null });
   };
 
   const setBlocking = (enabled) => {
@@ -944,6 +1093,7 @@ export function createLunaDashboardPlayerController({
     idleStartedAt = null;
     queuedCombo = null;
     activeCombo = null;
+    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0;
     if (oneShotRef) oneShotRef.current = false;
     if (!isMounted) handleMovement(lastMovement);
   };
@@ -951,6 +1101,11 @@ export function createLunaDashboardPlayerController({
   mixer.addEventListener('finished', (event) => {
     if (event.action !== actions[currentState]) return;
     if (isDeathState(currentState)) return;
+    if (currentState === BOW_DRAW) { // fully drawn: hold it
+      bowDrawn = true;
+      if (!isBusy) handleMovement(lastMovement);
+      return;
+    }
     if (isIdleVariant(currentState)) {
       idleStartedAt = now();
       playState(standingIdle(), { force: true, fade: 0.2 });
@@ -997,7 +1152,25 @@ export function createLunaDashboardPlayerController({
     setMounted,
     updateActionState: handleMovement,
     updateMotion,
-    updateAnimation: (delta = 0) => { pumpWeaponCombo(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
+    updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
+    // after mixer.update: the legs under a montage and the bow carried while running
+    lateUpdate,
+    // true while the bow is drawn (the arrow nocked and the string pulled), false otherwise; null without a bow
+    getBowDrawing: () => {
+      if (equipment.family !== 'bow') return null;
+      const nockedFrom = (action) => 0.6 * (action?.getClip().userData?.nock || 0);
+      if (currentState === BOW_HOLD) return true;
+      if (currentState === BOW_DRAW) return (actions[BOW_DRAW]?.time ?? 0) >= nockedFrom(actions[BOW_DRAW]);
+      const swing = comboAction();
+      if (swing && activeCombo.state === 'bowQuick') return swing.time >= nockedFrom(swing) && swing.time < (swing.getClip().userData?.hit ?? 0);
+      return false;
+    },
+    // the state the weapon in hand should be gripped for: the running bow carry holds it like a drawn bow
+    getWeaponState: () => (bowCarry > 0.5 ? BOW_RUN_CARRY : currentState || STATES.IDLE),
+    // the walk / run / sprint the legs follow while moving (under a montage too); null standing still
+    getGait: () => (lastMovement.moving && !isMounted ? gait : null),
+    getMontageState: () => ({ legs: legsBlend, gait, phase: underlay?.getPhase() ?? null, weight: underlay?.getWeight() ?? 0,
+      bowCarry, bowDrawn, bowLowering: bowLowerAt !== null }),
     setWeaponComboClips,
     getComboState,
     pollComboEvents,
@@ -1008,7 +1181,8 @@ export function createLunaDashboardPlayerController({
     getIsBlocking: () => isBlocking,
     getIsCrouching: () => false,
     getJumpOffset:()=>jumpOffset,
-    isMovementOverridden: () => blocksBowMovement({busy:isBusy,dead:isDead,bowAttackActive:bowAttackAllowsMovement}),
+    // a swing or a shot is a montage over locomotion: the player keeps moving through it
+    isMovementOverridden: () => blocksBowMovement({busy:isBusy,dead:isDead,bowAttackActive:bowAttackAllowsMovement || (isBusy && !!comboAction())}),
     has: hasAction,
     getDebugState: () => ({ currentState, ...lastMovement, isBusy, bowAttackAllowsMovement, isAiming, isBlocking, equipment: { ...equipment }, isMounted, isDead, specialMoveTimer,jumpPhase,jumpOffset,airWalk:{...airWalk} }),
   };
