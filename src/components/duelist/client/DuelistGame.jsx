@@ -24,6 +24,7 @@ import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
+import { createFootballProps } from './footballProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
@@ -148,6 +149,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const director = createDirector({ world, vfx, audio, actors, playerId: me });
     const tags = createNameTags(scene);
     let ctf = null;
+    let football = null;
     let lockId = null;
     let clock = 0;
     const lookDir = new THREE.Vector3();
@@ -367,6 +369,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
+        if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
@@ -375,6 +378,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           return controls.read({ faceYaw, strafe: !!target });
         };
         const { effects, events } = source.step(dt, readInput);
+        football?.update(source.ball?.(), dt);
         director.step(effects);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
@@ -515,6 +519,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       audio.dispose();
       tags.dispose();
       ctf?.dispose();
+      football?.dispose();
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
