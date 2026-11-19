@@ -643,10 +643,10 @@ export default function Game2Menu({ onStart,userId=null }) {
         />
       ) : (
       <div className="g2-command-layout relative z-10 flex h-full flex-col md:flex-row">
-        <nav ref={navRef} onKeyDown={onNavKey} aria-label="Game 2 main menu"
+        <nav ref={navRef} onKeyDown={onNavKey} aria-label="Duelist Adventure main menu"
           className="g2-command-rail">
           <header className="g2-command-brand">
-            <div className="g2-command-brand__eyebrow"><Gamepad2 size={17} aria-hidden="true" /> Game 2</div>
+            <div className="g2-command-brand__eyebrow"><Gamepad2 size={17} aria-hidden="true" /> Atom X Eve Games</div>
             <h1>DUELIST ADVENTURE</h1>
             <div className="g2-command-brand__rule" aria-hidden="true"><span>✧</span></div>
           </header>
