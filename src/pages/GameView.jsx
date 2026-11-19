@@ -81,6 +81,7 @@ import SlashEffectLayer from '../components/game3d/SlashEffect';
 import PauseMenu from '../components/game3d/PauseMenu';
 import WindRunEffect from '../components/game3d/WindRunEffect';
 import SkillActivationToastListener from '../components/game3d/SkillActivationToastListener';
+import LevelUpToastListener from '../components/game3d/LevelUpToastListener.jsx';
 import Game3DAreaNotice from '../components/game3d/Game3DAreaNotice';
 import GameStateProvider from '../components/game3d/state/GameStateProvider';
 import CombatMusicTrigger from '../components/game3d/CombatMusicTrigger';
@@ -808,6 +809,7 @@ export default function GameView() {
 
       {/* Toast feedback when self-cast skills (Shield, Focus, Haste, etc.) activate */}
       <SkillActivationToastListener />
+      <LevelUpToastListener />
       {/* Names the Wolfveil area the player has just walked into */}
       {phase==='world' && <Game3DAreaNotice />}
 
