@@ -5,6 +5,8 @@ import {CLONE_TOWN_HOUSES,CLONE_TOWN_GUARDS,CLONE_TOWN_CITIZENS,
   from './WolfveilTownLivingQuarterLayout.mjs';
 import {makeTownDialogueBrain,makeTownSentence,townConversationResult}
   from './WolfveilTownDialogueBrain.mjs';
+import {planWolfveilTownCivilians,findTownWalkPath,advanceTownCitizen}
+  from './WolfveilTownCivicAI.mjs';
 
 // Clone-only: light procedural architecture + decorative NPC presentation.
 // Not an extra terrain plate, not a new combat opponent, and never a client
@@ -244,7 +246,7 @@ function slideAgainstHouses(plots,position,previous,pad){
  * motion and dialogue are purely client presentation; rewards never minted.
  */
 export function buildWolfveilTownLivingQuarter(parent,{
-  collision,onStatus,architectureEnabled=true,
+  collision,onStatus,architectureEnabled=true,realShops=[],realHomes=[],
 }={}){
  if(!parent||!collision)return null;
  // Clean-town mode preserves patrol guards/dialogue, but prevents every
@@ -268,6 +270,11 @@ export function buildWolfveilTownLivingQuarter(parent,{
  const houses=new Map(layout.accepted.map(h=>[h.id,h]));
  const agents=[];
  const ground=(x,z)=>collision.groundAt(x,z);
+ const npcCollision={
+   groundAt:ground,
+   isSolid:(x,z,radius=.48)=>collision.isSolid(x,z,radius)||
+     houseBlocked(layout.accepted,x,z,radius),
+ };
  const createAgent=(data,initialX,initialZ)=>{
   if(!Number.isFinite(ground(initialX,initialZ))||
       houseBlocked(layout.accepted,initialX,initialZ,1.0)||
@@ -277,7 +284,8 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const brain=makeTownDialogueBrain(WORLD_SEED+agents.length*1559);
   const agent={...data,...model,rand:brain,
     x:initialX,z:initialZ,timer:5+brain()*16,chatLeft:0,
-    stepPhase:brain()*Math.PI*2,progress:0,moving:false};
+    stepPhase:brain()*Math.PI*2,progress:0,moving:false,
+    waypoints:[],routeIndex:1,waitLeft:1+brain()*2,blockedFor:0};
   model.actor.position.set(initialX,ground(initialX,initialZ),initialZ);
   agents.push(agent);
  };
@@ -291,10 +299,19 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const x=h.x+(h.facade==='east'?h.w/2+3.1:-h.w/2-3.1);
   if(def)createAgent({...def,homeX:x,homeZ:h.z},x,h.z);
  }
- for(const def of CLONE_TOWN_GUARDS){
-  const p=def.route[0];
-  createAgent({...def,questNpcId:def.side==='left'?'archer_vex':'archer_lyra'},
-    p[0],p[1]);
+ if(!architectureEnabled&&(realShops.length||realHomes.length)){
+   // Use the already-instantiated homes and shops; never rebuild houses.
+   const civicRoster=planWolfveilTownCivilians({
+     shops:realShops,homes:realHomes,collision:npcCollision,
+   });
+   for(const def of civicRoster)createAgent(def,def.x,def.z);
+ }else{
+   // Keep the existing standalone clone-only preview behavior.
+   for(const def of CLONE_TOWN_GUARDS){
+     const p=def.route[0];
+     createAgent({...def,questNpcId:def.side==='left'?'archer_vex':'archer_lyra'},
+       p[0],p[1]);
+   }
  }
  const placed=layout.accepted.length;
  const report={plannedHouses:CLONE_TOWN_HOUSES.length,houses:placed,
@@ -302,6 +319,9 @@ export function buildWolfveilTownLivingQuarter(parent,{
    architectureEnabled,
    shops:layout.accepted.filter(h=>h.role==='shop').length,
    citizens:agents.length,guards:agents.filter(a=>a.role==='guard').length,
+   vendors:agents.filter(a=>a.mode==='vendor').length,
+   residents:agents.filter(a=>a.mode==='resident').length,
+   navigation:'collision-swept-astar',
    rejected:layout.rejected};
  root.userData.cloneTownQuarter=report;onStatus?.(report);
  let now=0,disposed=false;
@@ -330,22 +350,27 @@ export function buildWolfveilTownLivingQuarter(parent,{
   for(const a of agents){
    const oldX=a.x,oldZ=a.z;
    a.pairedTalkLeft=Math.max(0,(a.pairedTalkLeft||0)-dt);
-   if(a.route&&Array.isArray(a.route)&&a.route.length===2){
-    const [[ax,az],[bx,bz]]=a.route;
-    const length=Math.hypot(bx-ax,bz-az);
-    // Patrols stop briefly when greeting a fellow guard.
-    if(a.pairedTalkLeft<=0)a.progress=(a.progress+dt*a.speed)%(2*length);
-    const ratio=a.progress<length?a.progress/length:2-a.progress/length;
-    const nx=ax+(bx-ax)*ratio,nz=az+(bz-az)*ratio;
-    if(Number.isFinite(ground(nx,nz))&&!collision.isSolid(nx,nz)&&
-        !houseBlocked(layout.accepted,nx,nz,1)){
-      a.x=nx;a.z=nz;
-    }
-   }else if(a.homeX!=null){
-    const nx=a.homeX+Math.sin(now*.44+a.stepPhase)*.62,
-      nz=a.homeZ+Math.cos(now*.33+a.stepPhase)*.5;
-    if(Number.isFinite(ground(nx,nz))&&!collision.isSolid(nx,nz)&&
-        !houseBlocked(layout.accepted,nx,nz,.6)){a.x=nx;a.z=nz;}
+   // Goal-oriented schedules use a collision-swept route. Never walk
+   // directly through a real door, shop, home wall or another resident.
+   a.waitLeft=Math.max(0,a.waitLeft-dt);
+   if(a.mode!=='vendor'&&a.route?.length===2&&
+       a.waitLeft<=0&&a.pairedTalkLeft<=0&&!a.waypoints.length){
+     const target=a.route[a.routeIndex] || a.route[1];
+     if(Math.hypot(target[0]-a.x,target[1]-a.z)<.36){
+       a.routeIndex=1-a.routeIndex;
+       a.waitLeft=1.4+a.rand()*3.1;
+     }else{
+       a.waypoints=findTownWalkPath({x:a.x,z:a.z},
+         {x:target[0],z:target[1]},npcCollision);
+       if(!a.waypoints.length)a.waitLeft=2.5+a.rand()*2.5;
+     }
+   }
+   if(a.mode!=='vendor'&&a.pairedTalkLeft<=0&&a.waitLeft<=0){
+     advanceTownCitizen(a,dt,npcCollision,agents);
+     if(a.blockedFor>2){
+       // Wait and replan rather than teleporting past a moving NPC or wall.
+       a.waypoints.length=0;a.blockedFor=0;a.waitLeft=.8+a.rand()*1.5;
+     }
    }
    const motion=Math.hypot(a.x-oldX,a.z-oldZ),moving=motion>dt*.05;
    a.actor.position.set(a.x,ground(a.x,a.z)??a.actor.position.y,a.z);
