@@ -163,7 +163,15 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     // the Join button ('any') looks for a match; crews are joined from the story page
     const pool = [...rooms.values()].filter((r) => hasRoom(r) && (mode === 'any' ? !r.mission && humansIn(r) > 0 : r.mode === mode));
     pool.sort(byPlayers);
-    return pool[0] || openRoom(mode === 'any' ? 'ffa' : mode);
+    return pool[0] || openRoom(mode === 'any' ? 'duel' : mode);
+  }
+
+  function ensureSpareRoom(mode) {
+    if (!ONLINE_MODES.includes(mode)) return;
+    // Exactly one bot-filled open room is kept ready while this mode fills;
+    // unused overflow rooms still expire after the normal idle timeout.
+    const ready = [...rooms.values()].some(r => !r.mission && r.mode === mode && hasRoom(r));
+    if (!ready) openRoom(mode);
   }
 
   function enter(client, mode, requestedMatchId = null) {
@@ -190,6 +198,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     client.key = newKey();
     send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key });
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
+    ensureSpareRoom(room.mode);
     log('join', client.id, room.id, result.replaced ? `replacing ${result.replaced}` : '');
   }
 
