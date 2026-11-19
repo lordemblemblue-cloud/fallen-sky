@@ -81,7 +81,7 @@ async function createActor(scene, seat, weaponColor) {
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1, room = null, onLeave = null }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, onLeave = null }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -113,7 +113,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, room, onChange: (s, detail) => setNet({ status: s, detail }) })
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, room, matchId, onChange: (s, detail) => setNet({ status: s, detail }) })
         : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
     const { world } = source;
     const level = source.level || null; // a mission's rooms (matches are fought in the open arena)
@@ -524,7 +524,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId]);
 
   const view = hud?.view;
   const mission = view?.mission ? view : null; // a story mission's view; otherwise a match's
