@@ -32,6 +32,24 @@ import {
 const ZONE_BUILDERS = {grotto_hall: buildGrottoHall, grotto_chamber: buildGrottoChamber};
 const RUNTIME_ZONES = Object.keys(ZONE_BUILDERS);
 
+// Phase B.2: scene-level layers of the legacy valley that are created by
+// other modules (no reference reaches GameWorld3D). Matched by name; the
+// valley group, town, meadow, vortex lake and mountain gates are passed in
+// by reference (GameWorld3D's classicWorldRoots).
+export const WOLFVEIL_SURFACE_LAYER_NAMES = /^(?:BlazeStreamedBiomeLandscaping|Wolfveil_Classic_Reused_Suigen_Trees_Bamboo_Rocks|Game3D_Clone_AmbientBirds_VisualOnly|SWV_CaveDestinationPortals|AXE World Respawn Shrines|AXE_SilverBlueQuestTrail|WV_Area_Far_\w+|Discovery_\w+)$/;
+/**
+ * Roots of the valley to stop drawing while the player is inside a sealed
+ * zone: the explicit ones plus matching direct children of the scene. Never
+ * lights, cameras, the player, or the natural-zone root itself.
+ */
+export function collectWolfveilSurfaceRoots(scene, explicit = [], {exclude = []} = {}) {
+  const skip = new Set(exclude.filter(Boolean));
+  const roots = new Set(explicit.filter(Boolean));
+  for (const child of scene?.children || [])
+    if (WOLFVEIL_SURFACE_LAYER_NAMES.test(child.name || '')) roots.add(child);
+  return [...roots].filter(root => !skip.has(root) && !root.isLight && !root.isCamera);
+}
+
 function createOcclusionOverlay(container, doc = globalThis.document) {
   if (!container || !doc?.createElement) return null;
   const el = doc.createElement('div');
@@ -60,6 +78,11 @@ export function createWolfveilNaturalZones({
   // meshes there (the exploration camera clips against them and jumps meet
   // the cave roof) and removes them again before it is released.
   addGroundMeshes = () => {}, removeGroundMeshes = () => {},
+  // Phase B.2: while the player is inside a sealed zone the legacy valley is
+  // not drawn (render suspension: nothing is disposed, raycasts and server
+  // state are untouched). `surfaceRoots()` lists what to hide; GameWorld3D
+  // bumps the camera-collider revision in `onSurfaceVisibility`.
+  surfaceRoots = () => [], onSurfaceVisibility = () => {}, suspendSurface = true,
   options = {},
 } = {}) {
   if (!scene?.add) throw new TypeError('Natural zones need the Game 3D scene');
@@ -90,12 +113,46 @@ export function createWolfveilNaturalZones({
   const released = [];          // {id, ref: WeakRef(root), report, at}
   const timings = [];           // load ms per zone build
   let player = null, lastLocal = null, disposed = false;
+  // ---- Phase B.2: legacy valley render suspension
+  const hidden = new Map();     // root -> it was visible when suspended
+  let suspensionEnabled = Boolean(suspendSurface), suspensions = 0, enforced = 0;
+  function suspendValley() {
+    if (!suspensionEnabled || hidden.size) return 0;
+    let list = [];
+    try { list = surfaceRoots() || []; } catch { list = []; }
+    for (const target of [...list, facadeLedger.root]) {
+      if (!target || target === root || hidden.has(target)) continue;
+      const wasVisible = target.visible !== false;
+      hidden.set(target, wasVisible);
+      if (wasVisible) target.visible = false;
+    }
+    suspensions++;
+    try { onSurfaceVisibility(false); } catch { /* cosmetic */ }
+    return hidden.size;
+  }
+  // Something re-showed a root while the player is underground: hide it again.
+  function enforceSuspension() {
+    for (const [target, wasVisible] of hidden)
+      if (wasVisible && target.visible !== false) { target.visible = false; enforced++; }
+  }
+  function resumeValley() {
+    if (!hidden.size) return 0;
+    const count = hidden.size;
+    for (const [target, wasVisible] of hidden) if (wasVisible) target.visible = true;
+    hidden.clear();
+    // Shadows were not re-rendered while hidden; casters are back now.
+    requestShadowUpdate();
+    try { onSurfaceVisibility(true); } catch { /* cosmetic */ }
+    return count;
+  }
   const zones = {
     surface: {
       kind: 'legacy',
-      load: () => 'legacy',
-      // The valley is the legacy zone: Phase B never unloads it (see doc).
-      unload: () => ({legacy: true, resident: true}),
+      // LOAD(surface) = draw the valley again (it never left memory).
+      load: () => { resumeValley(); return 'legacy'; },
+      // UNLOAD(surface) = stop drawing it. Phase B.2 does not dispose the
+      // legacy valley; it stays resident for raycasts, server state and AI.
+      unload: () => ({legacy: true, resident: true, renderSuspendedRoots: suspendValley()}),
     },
   };
   for (const id of RUNTIME_ZONES) {
@@ -180,6 +237,7 @@ export function createWolfveilNaturalZones({
     }
     const frame = machine.update(dt, {position: local, mounted, airborne});
     lastLocal = local;
+    if (hidden.size) enforceSuspension();
     const open = innerDoorOpen();
     for (const id of loadedRuntime()) {
       const zone = machine.handle(id);
@@ -239,6 +297,7 @@ export function createWolfveilNaturalZones({
       loadMs: timings.slice(-6),
       prefetch: grottoPrefetchCacheStats(),
       runtimes: zoneRuntimeDiagnostics(),
+      surface: {suspensionEnabled, suspended: hidden.size > 0, hiddenRoots: hidden.size, suspensions, reshownWhileHidden: enforced},
       position: lastLocal && {...grottoFrameOf(lastLocal.x, lastLocal.z), y: lastLocal.y},
     };
   }
@@ -246,6 +305,7 @@ export function createWolfveilNaturalZones({
     if (disposed) return;
     disposed = true;
     machine.dispose();
+    resumeValley(); // never leave the valley hidden behind an unmounted controller
     facadeLedger.dispose();
     overlay?.dispose();
     root.parent?.remove(root);
@@ -255,6 +315,13 @@ export function createWolfveilNaturalZones({
   return {
     root, cameraRoot: root, update, playerGroundY, ceilingY, resolveCollision, isInside, safeCheckpoint,
     stats, history: () => machine.history(), machine, dispose, liveReleasedRoots,
+    /** Phase B.2 switch (measurements, rollback): suspend the valley underground or not. */
+    setSurfaceSuspension(enabled) {
+      suspensionEnabled = Boolean(enabled);
+      if (!suspensionEnabled) resumeValley();
+      else if (isInside()) suspendValley();
+      return suspensionEnabled;
+    },
     get state() { return machine.state; },
     get activeZone() { return machine.activeZone; },
   };

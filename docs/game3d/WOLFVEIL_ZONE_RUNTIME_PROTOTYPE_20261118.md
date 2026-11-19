@@ -119,9 +119,27 @@ node --test tests/game3d-wolfveil-zone-runtime.test.mjs tests/game3d-wolfveil-do
 
 Full suite: `node --test --test-reporter=tap tests/` → 1,053 tests, 84 failing. `main` 38cf79d gives 1,031 / 84 with the **identical failing names**: no new failures.
 
-## 7. Next steps (owner's decision)
+## 7. Phase B.2: the valley is not drawn underground (built, same flag)
 
-1. **Phase B.2:** suspend drawing of the legacy valley while the player is inside a sealed zone (measured 249 → 28 draw calls in the hall).
-2. Make enemies, companions and remote players zone-aware (the audit's "do not keep every remote renderer or AI clone in the active scene").
+UNLOAD(surface) now **suspends drawing** of the legacy valley (nothing is disposed; raycasts, AI and server state are untouched), and LOAD(surface) draws it again, still behind the sealed screen. Every way out restores it: exit, abort, eviction and dispose. A runtime switch is available for measurement and rollback: `__gw3dNaturalZones.setSurfaceSuspension(false)`.
+
+- **Hidden:** GameWorld3D's existing `classicWorldRoots` (valley, town, meadow, vortex lake, lunar/astral gates: the same roots the world-variant switch hides), the named valley layers (Blaze grass, Suigen accent trees, birds, cave rings, respawn shrines, quest trail, discovery nodes, far outlines) and the doorway facade.
+- **NPCs:** quest NPCs are neither drawn nor talkable underground. `npcSuppressed` also becomes true while `naturalZones.isInside()`.
+- **Re-showing:** if another system re-shows a hidden root, the controller hides it again the next frame. The only one seen was the area loader's east far outline, twice per entry.
+
+| Game camera, 960×540 | Before B.2 | B.2 |
+|---|---|---|
+| Entry hall | 227 calls / 1.62 M triangles | **31 / 70 k** |
+| Chamber | 212 / 1.41 M | **20-27 / 69 k** |
+| Chamber, looking towards the town | 983 calls (two town NPC models: 503 + 422) | **31 / 10.5 k** |
+| Valley, outside the mouth after the exit | 317 / 1.60 M | 323 / 1.75 M (everything back) |
+
+10 in-game round trips with B.2 (`b2-roundtrips-10.json`): every trip hid the valley and NPCs underground and showed them again on exit. GPU geometries, textures and programs were flat (1,151 / 273 / 242). Screenshots: `b2-hall-game-camera.jpg`, `b2-chamber-toward-town.jpg`, `b2-valley-after-exit.jpg`. Test: `Phase B.2: the valley is not drawn underground and comes back on every way out`.
+
+**Still drawn underground:** the companion (it stays on the surface above), enemies and remote players. CPU updates of the valley (grass streaming, area loader, NPC animation mixers) keep running.
+
+## 8. Next steps (owner's decision)
+
+1. Make enemies, companions and remote players zone-aware (the audit's "do not keep every remote renderer or AI clone in the active scene").
 3. Art pass on the grotto (rock kit, real lanterns, sound) before showing it to players.
 4. Phase C: the Training Forest trailhead as the first surface doorway (see the survey doc).

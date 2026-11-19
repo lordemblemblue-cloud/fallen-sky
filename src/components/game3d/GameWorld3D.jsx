@@ -174,7 +174,7 @@ import {createWolfveilAreaGates} from './wolfveil/WolfveilAreaGates';
 import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaCrossingMist';
 // Natural-zone streaming prototype (Phase B). OFF unless ?naturalZones=1 or
 // localStorage game3d.naturalZones=1; the five-area loader stays the rollback.
-import {createWolfveilNaturalZones} from './wolfveil/zones/WolfveilNaturalZones.js';
+import {createWolfveilNaturalZones,collectWolfveilSurfaceRoots} from './wolfveil/zones/WolfveilNaturalZones.js';
 import {wolfveilNaturalZonesEnabled} from './wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
 import {createWolfveilFarOutline} from './wolfveil/WolfveilFarOutline';
 import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
@@ -910,6 +910,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           requestShadowUpdate:()=>{renderer.shadowMap.needsUpdate=true;},
           addGroundMeshes:meshes=>{groundMeshes.push(...meshes);},
           removeGroundMeshes:meshes=>{for(const mesh of meshes){const i=groundMeshes.indexOf(mesh);if(i>=0)groundMeshes.splice(i,1);}},
+          // Phase B.2: underground, stop drawing the classic world (the same
+          // roots the world-variant switch hides) and the named valley layers.
+          surfaceRoots:()=>collectWolfveilSurfaceRoots(scene,classicWorldRoots,{exclude:[modelRef.current]}),
+          onSurfaceVisibility:()=>{const valley=wolfveilVillage.world.group;
+            valley.userData.otsCameraRevision=(valley.userData.otsCameraRevision||0)+1;},
         });
         window.__gw3dNaturalZones=naturalZones;
       }catch(error){console.warn('Wolfveil natural zones unavailable:',error);naturalZones=null;}
@@ -3838,7 +3843,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // ─── NPC proximity & interaction (generic npcs array is empty) ───
         let closestNPC = null;
         // ─── Quest NPC proximity ───
-        const npcSuppressed = bossEncounter.isNPCSuppressed();
+        // Underground in a natural zone (flag) the valley's quest NPCs are neither drawn nor talkable.
+        const npcSuppressed = bossEncounter.isNPCSuppressed() || Boolean(naturalZones?.isInside());
         let closestQuestNPC = null;
         let closestQuestDist = NPC_INTERACT_RANGE;
         questNPCs.forEach((qn) => {

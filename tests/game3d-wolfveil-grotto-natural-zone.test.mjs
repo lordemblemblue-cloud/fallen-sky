@@ -13,7 +13,7 @@ import {
   WOLFVEIL_PROTOTYPE_ZONE_GRAPH, WOLFVEIL_NATURAL_ZONE_PROPOSAL, validateZoneGraph,
 } from '../src/components/game3d/wolfveil/zones/WolfveilZoneGraph.mjs';
 import {wolfveilNaturalZonesEnabled} from '../src/components/game3d/wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
-import {createWolfveilNaturalZones} from '../src/components/game3d/wolfveil/zones/WolfveilNaturalZones.js';
+import {createWolfveilNaturalZones, collectWolfveilSurfaceRoots} from '../src/components/game3d/wolfveil/zones/WolfveilNaturalZones.js';
 import {wolfveilHeight} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {createWolfveilTerrainSurfaceSampler} from '../src/components/game3d/wolfveil/WolfveilTerrainSurfaceSampler.mjs';
 import {wolfveilAreaGates} from '../src/components/game3d/wolfveil/streaming/WolfveilAreaVeils.mjs';
@@ -173,6 +173,66 @@ test('controller: doorways, cave ground, collision, eviction and checkpoints in 
   assert.ok(!scene.children.includes(nz.root), 'dispose removes the whole natural-zone root');
 });
 
+test('Phase B.2: the valley is not drawn underground and comes back on every way out', () => {
+  const scene = new THREE.Scene();
+  const valley = new THREE.Group(); valley.name = 'Game1_ShadowWolf_WolfveilValley';
+  const town = new THREE.Group();
+  const grass = new THREE.Group(); grass.name = 'BlazeStreamedBiomeLandscaping';
+  const far = new THREE.Group(); far.name = 'WV_Area_Far_east'; far.visible = false; // already hidden by the area loader
+  const effects = new THREE.Group(); effects.name = 'WeaponConstructDroplets';
+  const sun = new THREE.DirectionalLight();
+  scene.add(valley, town, grass, far, effects, sun);
+  const player = new THREE.Object3D(); scene.add(player);
+  let shadowRequests = 0, visibilityCalls = 0;
+  const nz = createWolfveilNaturalZones({scene, audio: false,
+    surfaceRoots: () => collectWolfveilSurfaceRoots(scene, [valley, town, null], {exclude: [player]}),
+    requestShadowUpdate: () => { shadowRequests++; },
+    onSurfaceVisibility: () => { visibilityCalls++; }});
+  const facade = nz.root.children.find(c => String(c.userData.wolfveilZone).startsWith('facade'));
+  const at = (p, y) => player.position.set(p.x, y, p.z + 70);
+  const tick = (n = 30) => { for (let i = 0; i < n; i++) nz.update(1 / 30, {player}); };
+  const enter = () => { const t = grottoFramePoint(1, 0); at(t, wolfveilHeight(t.x, t.z)); tick(20); };
+  const surfaceDrawn = () => valley.visible && town.visible && grass.visible && facade.visible;
+  assert.deepEqual(collectWolfveilSurfaceRoots(scene, [valley, town], {exclude: [player]}).sort((a, b) => a.id - b.id),
+    [valley, town, grass, far].sort((a, b) => a.id - b.id), 'named layers join the explicit roots; effects, lights and the player never do');
+  assert.ok(surfaceDrawn());
+  enter();
+  assert.equal(nz.activeZone, 'grotto_hall');
+  assert.ok(!valley.visible && !town.visible && !grass.visible && !facade.visible, 'valley not drawn underground');
+  assert.equal(effects.visible, true, 'gameplay effects are left alone');
+  assert.equal(nz.stats().surface.hiddenRoots, 5);
+  valley.visible = true; tick(1);
+  assert.equal(valley.visible, false, 'a root re-shown by another system is hidden again');
+  // Start leaving, then step back out of the exit pocket during the load: re-suspended.
+  const shadowsBefore = shadowRequests;
+  at(grottoFramePoint(4.8, 0), 6.2);
+  for (let i = 0; i < 30 && nz.state !== 'LOAD'; i++) tick(1); // LOAD(surface) lasts one frame
+  assert.equal(nz.state, 'LOAD');
+  assert.ok(surfaceDrawn(), 'LOAD(surface) draws the valley again behind the sealed screen');
+  at(grottoFramePoint(7.5, 0), 6.2); tick(2);
+  assert.equal(nz.activeZone, 'grotto_hall');
+  assert.equal(valley.visible, false, 'abort hides it again');
+  at(grottoFramePoint(4.8, 0), 6.2); tick(20);
+  assert.equal(nz.activeZone, 'surface');
+  assert.ok(surfaceDrawn(), 'back outside: everything drawn');
+  assert.equal(far.visible, false, 'roots that were hidden before stay as their owner left them');
+  assert.ok(shadowRequests > shadowsBefore && visibilityCalls >= 2, 'shadows and camera colliders refreshed');
+  // Respawn away while underground.
+  enter();
+  player.position.set(0, 20, 0); tick(3);
+  assert.equal(nz.activeZone, 'surface');
+  assert.ok(surfaceDrawn(), 'eviction draws the valley again');
+  // The runtime switch (measurement and rollback).
+  nz.setSurfaceSuspension(false);
+  enter();
+  assert.ok(surfaceDrawn(), 'switch off: the valley stays drawn underground');
+  nz.setSurfaceSuspension(true);
+  assert.ok(!valley.visible, 'switch on while underground: hidden at once');
+  nz.dispose();
+  assert.ok(surfaceDrawn() || !facade.parent, 'dispose never leaves the valley hidden');
+  assert.ok(valley.visible && town.visible && grass.visible);
+});
+
 test('GameWorld3D: everything is behind the flag and the five-area loader stays the rollback', () => {
   const world = source('src/components/game3d/GameWorld3D.jsx');
   assert.match(world, /if\(wolfveilVillage&&!dedicatedMode&&wolfveilNaturalZonesEnabled\(\)\)\{/);
@@ -183,5 +243,9 @@ test('GameWorld3D: everything is behind the flag and the five-area loader stays 
   assert.match(world, /exclude:naturalZones\?\['jade_lantern_grotto'\]:\[\]/);
   assert.match(world, /naturalZones\?\.dispose\(\)/);
   assert.match(world, /naturalZones\?\.playerGroundY\(model\.position\)\?\?palaceY/);
+  assert.match(world, /surfaceRoots:\(\)=>collectWolfveilSurfaceRoots\(scene,classicWorldRoots,\{exclude:\[modelRef\.current\]\}\)/,
+    'B.2 hides the same classic roots the world-variant switch hides');
+  assert.match(world, /const npcSuppressed = bossEncounter\.isNPCSuppressed\(\) \|\| Boolean\(naturalZones\?\.isInside\(\)\);/,
+    'quest NPCs are neither drawn nor talkable underground (flag only)');
   assert.match(source('src/components/game3d/wolfveil/WolfveilDungeonPortals.js'), /filter\(cave=>!exclude\.includes\(cave\.id\)\)/);
 });
