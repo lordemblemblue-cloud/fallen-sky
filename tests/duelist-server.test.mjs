@@ -172,6 +172,41 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   await server.close();
 });
 
+test('a selected public server accepts humans, removes exactly one bot each and rejects stale or mismatched IDs', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const initial = (await (await fetch(http)).json()).matches;
+  const tdm = initial.find(m => m.mode === 'tdm');
+  const duel = initial.find(m => m.mode === 'duel');
+  assert.ok(tdm?.id && duel?.id, 'both official arenas are advertised');
+  const a = await player(url, 'alice');
+  const b = await player(url, 'bob');
+
+  b.send({ t: 'join', mode: 'tdm', matchId: duel.id });
+  assert.equal((await b.next(m => m.t === 'error')).code, 'room', 'cannot join a different mode using a room id');
+  b.send({ t: 'join', mode: 'tdm', matchId: 'm999999' });
+  assert.equal((await b.next(m => m.t === 'error')).code, 'room', 'cannot join a stale server id');
+  a.send({ t: 'join', mode: 'tdm', matchId: tdm.id });
+  const first = await a.next(m => m.t === 'joined');
+  assert.equal(first.match, tdm.id);
+  assert.equal(first.seats.filter(s => s.kind === 'bot').length, tdm.seats - 1);
+  b.send({ t: 'join', mode: 'tdm', matchId: tdm.id });
+  const second = await b.next(m => m.t === 'joined');
+  assert.equal(second.match, tdm.id);
+  assert.equal(second.seats.filter(s => s.kind === 'bot').length, tdm.seats - 2);
+  const live = (await (await fetch(http)).json()).matches.find(m => m.id === tdm.id);
+  assert.equal(live.players, 2);
+  assert.equal(live.bots, tdm.seats - 2);
+  a.send({ t: 'leave' });
+  await a.next(m => m.t === 'left');
+  const back = (await (await fetch(http)).json()).matches.find(m => m.id === tdm.id);
+  assert.equal(back.players, 1);
+  assert.equal(back.bots, tdm.seats - 1);
+  a.ws.close();
+  b.ws.close();
+  await server.close();
+});
+
 test('a crew room for the story mission: its own code, a friend joins by it, the depot and the mission view arrive, it is not listed', async () => {
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
