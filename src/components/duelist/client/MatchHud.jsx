@@ -26,7 +26,7 @@ export function ScoreLine({ view }) {
         <span>{foe?.roundWins ?? 0} {foe?.name}</span>
       </>
     );
-  } else if (mode === 'tdm' || mode === 'ctf') {
+  } else if (mode === 'tdm' || mode === 'ctf' || mode === 'football') {
     middle = (
       <>
         <span style={{ color: hex(TEAM_COLORS.red) }}>Red {view.teamScores.red}</span>
@@ -83,6 +83,7 @@ function feedLine(view, e) {
     case 'flagDropped': return `The ${teamName(e.team).toLowerCase()} flag was dropped`;
     case 'flagReturned': return e.by ? `${n(e.by)} returned the ${teamName(e.team).toLowerCase()} flag` : `The ${teamName(e.team).toLowerCase()} flag went home`;
     case 'captured': return `${teamName(e.team)} scored! (${n(e.by)})`;
+    case 'goal': return `${teamName(e.team)} scored a goal${e.by ? ` (${n(e.by)})` : ''}!`;
     case 'roundOver': return e.winner ? `Round ${e.round}: ${n(e.winner)}` : `Round ${e.round} drawn`;
     case 'joined': return `${e.name} joined`;
     case 'left': return `${e.name} left`;
@@ -103,7 +104,7 @@ export function Result({ view, myTeam, onAgain, online = false }) {
   const w = view.winner;
   const won = w === meOf(view) || (myTeam && w === myTeam);
   const title = w === 'draw' ? 'Draw' : won ? 'Victory' : 'Defeated';
-  const teams = view.mode === 'tdm' || view.mode === 'ctf';
+  const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football';
   return (
     <div className="duelist-center duelist-result">
       <div className="duelist-result-title">{title}</div>
