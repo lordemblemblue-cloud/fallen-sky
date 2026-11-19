@@ -28,7 +28,7 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
   world.fighters.set(id, fighter);
   world.bodies.set(id, {
     x, z, y: 0, yaw, vy: 0,
-    intent: { x: 0, z: 0 }, run: false, sprint: false,
+    intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
     moving: false, speed: 0,
@@ -59,9 +59,12 @@ export function step(world, dt, inputs = {}) {
     body.intent = len > 1 ? { x: m.x / len, z: m.z / len } : { x: m.x || 0, z: m.z || 0 };
     body.run = !!input.run;
     body.sprint = !!input.sprint;
+    body.strafe = !!input.strafe; // locked on: rolls keep facing the target (side and back evasions)
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
-    // the body turns to face where the player aims, except while committed to a strike's active part
-    const committed = fighter.action && fighter.action.t >= fighter.action.move.startup && fighter.action.move.kind === 'attack';
+    // the body turns to face where the player aims, except while committed to a roll or dash, or to a
+    // strike's active part
+    const a = fighter.action;
+    const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
       const before = fighter.action?.id;
@@ -114,7 +117,7 @@ function startMotion(body, fighter, id) {
   const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
     ? { x: body.intent.x / Math.hypot(body.intent.x, body.intent.z), z: body.intent.z / Math.hypot(body.intent.x, body.intent.z) }
     : forwardOf(body.yaw);
-  if (move.kind === 'movement') body.yaw = Math.atan2(dir.x, dir.z);
+  if (move.kind === 'movement' && !body.strafe) body.yaw = Math.atan2(dir.x, dir.z);
   const from = move.kind === 'movement' ? 0 : move.startup;
   body.motion = { id, dir, from, to: from + move.active, distance: move.rootMotion, done: 0 };
 }
