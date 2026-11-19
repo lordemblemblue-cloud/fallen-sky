@@ -3,6 +3,7 @@ import { Check, Compass, Crown, Gem, Package, Search, Shield, Shirt, Star, Sword
 import {
   getAllAXEEquipmentItems, subscribeAXEEquipmentInventory,
   equipAXEInventoryItem, unequipAXEInventoryItem,
+  getAXEEquipmentInventoryState, saveAXEEquipmentPreset, activateAXEEquipmentPreset,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
@@ -61,6 +62,8 @@ function IconFor({ item, size=28 }) {
 export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} }) {
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
+  const [gearPresets,setGearPresets] = useState(() => getAXEEquipmentInventoryState().gearPresets);
+  const [selectedGearPreset,setSelectedGearPreset] = useState(0);
   const companion = useLive(subscribeCompanion,getCompanionState);
   const mounts = useLive(subscribeAXEMounts,getAXEMountState);
   // This snapshot notifies Appearance immediately when Blacksmith finishes an
@@ -115,7 +118,10 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     }
     setRefineReview({slotId:slot.id,stage,cost:preview.cost.gold});
   };
-  useEffect(() => subscribeAXEEquipmentInventory(state => setItems(state.items)), []);
+  useEffect(() => subscribeAXEEquipmentInventory(state => {
+    setItems(state.items);
+    setGearPresets(state.gearPresets);
+  }), []);
   useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId,activeModelId]);
 
   const list = useMemo(() => isPlayer
@@ -314,6 +320,27 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         <div className="axe-app-card-content">
           <div className="axe-app-inventory-browser">
           {isPlayer && inventoryToolbar}
+          {isPlayer && <div className="axe-gear-presets" role="group"
+            aria-label="Three character-specific saved equipment sets">
+            <label>Gear Set
+              <select value={selectedGearPreset} onChange={e=>setSelectedGearPreset(Number(e.target.value))}
+                aria-label="Choose equipment set preference">
+                {[0,1,2].map(index=><option key={index} value={index}>
+                  Set {index+1}{gearPresets?.[index] ? ' · Saved' : ' · Empty'}
+                </option>)}
+              </select>
+            </label>
+            <button type="button" onClick={()=>{
+              const result=saveAXEEquipmentPreset(selectedGearPreset);
+              onNotice(result.ok ? 'Current equipment saved to Gear Set '+(selectedGearPreset+1)+'.'
+                : (result.message || caption(result.reason || 'Could not save gear set')));
+            }}>Save Current Gear</button>
+            <button type="button" disabled={!gearPresets?.[selectedGearPreset]} onClick={()=>{
+              const result=activateAXEEquipmentPreset(selectedGearPreset,{level:getPlayerHUD().level});
+              onNotice(result.ok ? 'Equipped Gear Set '+(selectedGearPreset+1)+'. All previous pieces returned to inventory.'
+                : (result.message || caption(result.reason || 'Could not equip gear set')));
+            }}>Equip Set</button>
+          </div>}
           <div className="axe-app-inventory-grid" role="list">
             {visible.map(item=><button type="button" role="listitem"
               className={'axe-app-inventory-tile'+(prestigeFor(item)?' axe-inventory-prestige':'')}
