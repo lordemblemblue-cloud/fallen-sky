@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, ChevronRight, DoorOpen, Gamepad2, GraduationCap, Keyboard, Monitor, Plus, Server, Settings2, Ship, Swords, Target, Users, Volume2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronRight, DoorOpen, Gamepad2, GraduationCap, Keyboard, Monitor, Plus, Server, Settings2, Shield, Ship, Swords, Target, Users, Volume2 } from 'lucide-react';
 import { GAME2_SKIRMISH_MAPS } from './engine/arenaMaps.js';
 import { BOSS_WAY_CHOICES, bossWayChoice } from './engine/bossWay/bossSelection.js';
 import { MISSION_RETURN_CHANNEL } from './missionWindow.js';
@@ -18,7 +18,7 @@ const ASSET_BASE = `${import.meta.env?.BASE_URL ?? '/'}game2/`;
 // Game 2 main menu: the menu runs down the left, the item you click opens on the right, and behind it a live duel
 // (two AI fighters in the Lightsaber Training arena, engine 'attract' mode) plays under a slow cinematic camera.
 // Picking a fight calls onStart({ choice, mapId, saber }); Game2Duel.jsx runs it.
-// The console-style rail exposes only five destinations.
+// The console-style rail keeps gameplay modes, Fleet Assault and practice separate.
 const MENU_ITEMS = [
   { id: 'story', label: 'Story Campaign', icon: BookOpen },
   { id: 'modes', label: 'Game Modes', icon: Swords },
@@ -46,7 +46,7 @@ const SECONDARY_ITEMS = [
   { id: 'controls', label: 'Combat Guide' },
 ];
 
-// Context options live immediately to the right of the Jedi Duels rail;
+// Context options live immediately to the right of the Duelist Adventure rail;
 // selecting or arrowing through an option changes only the detail on its right.
 const COMMAND_SUBPAGES = {
   modes: [
