@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ChevronRight, Radio, RefreshCw, Server, Shield, Users } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Radio, RefreshCw, Server, Users } from 'lucide-react';
 import { useLobby } from '../duelist/menu/useLobby.js';
 import { MENU_MODES } from '../duelist/menu/modes.js';
 
@@ -59,11 +59,12 @@ export default function DuelistOnlineBrowser({ onBack, onJoin }) {
           <div className="grid gap-3" aria-label="Available match servers">
             {visible.map((match) => {
               const mode = MENU_MODES[match.mode];
+              const Icon = mode.icon;
               const available = lobby.online && match.open;
               return (
                 <div key={match.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-white/15 bg-[#122337]/65 p-4 shadow-lg shadow-black/10 backdrop-blur-lg sm:p-5">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/[0.06]" style={{ color: mode.accent }}>
-                    <Shield size={22} aria-hidden="true" />
+                    <Icon size={22} aria-hidden="true" />
                   </div>
                   <div className="min-w-[160px] flex-1">
                     <div className="text-base font-semibold">{mode.title}</div>
@@ -90,7 +91,7 @@ export default function DuelistOnlineBrowser({ onBack, onJoin }) {
         )}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-5 text-sm text-white/50">
           <span>{visible.length} {visible.length === 1 ? 'server' : 'servers'} listed · Empty seats are played by bots.</span>
-          <button type="button" onClick={() => window.location.reload()} className="inline-flex items-center gap-2 text-cyan-200/80 hover:text-white">
+          <button type="button" onClick={lobby.refresh} className="inline-flex items-center gap-2 text-cyan-200/80 hover:text-white">
             <RefreshCw size={15} aria-hidden="true" /> Refresh
           </button>
         </div>
