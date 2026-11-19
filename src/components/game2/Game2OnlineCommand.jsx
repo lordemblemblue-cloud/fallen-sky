@@ -85,7 +85,7 @@ export default function Game2OnlineCommand({ onEnter, onPractice, offlineDesktop
   useEffect(() => {
     let cancelled = false;
     if (local) {
-      setUser({ id: 'local-' + Math.random().toString(36).slice(2), full_name: 'Jedi' });
+      setUser({ id: 'local-' + Math.random().toString(36).slice(2), full_name: 'Duelist' });
       return undefined;
     }
     base44.auth.me().then(found => { if (!cancelled) setUser(found); })
@@ -200,7 +200,7 @@ export default function Game2OnlineCommand({ onEnter, onPractice, offlineDesktop
       && (light >= teamCap || dark < light) ? 'dark' : 'light');
     const selectedBackend = server.backend || backend;
     onEnter({
-      name: savedName || user.full_name?.split(' ')[0] || 'Jedi',
+      name: savedName || user.full_name?.split(' ')[0] || 'Duelist',
       side, ai: 0, selfId: makePeerId(user.id), local,
       backend: selectedBackend, actorMode: selectedBackend === 'base44', actorRoomId: server.actorRoomId,
       mapId: server.mapId, serverId: creatingServer ? undefined : (server.serverId || server.id),
@@ -299,7 +299,7 @@ export default function Game2OnlineCommand({ onEnter, onPractice, offlineDesktop
     try {
       queueConnectionRef.current = (queueUsesActor ? openGame2ActorMatchQueue : openGame2MatchQueue)({
         ...(queueUsesActor ? { client: base44 } : { token }), peer: makePeerId(user.id),
-        name: savedName || user.full_name?.split(' ')[0] || 'Jedi', modes,
+        name: savedName || user.full_name?.split(' ')[0] || 'Duelist', modes,
         mapId:requested==='random'||requested==='all'?null:requestedMap,
         onWaiting: message => {
           if (request !== queueRequestRef.current) return;
