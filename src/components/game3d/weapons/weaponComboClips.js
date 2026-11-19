@@ -330,7 +330,7 @@ const BOW_FLICK = [-0.08, 0.12, 0.04];
 const BOW_HOLD_BREATH = AIM([0.045, 0.104, -0.142], { spine: [24, 1.2, 0], raise: 0.026 });
 // Running with the bow (owner 2026-11-19): the bow arm hangs a little out from the hip, the bow pointing forward
 // and down away from the legs, and stays there while the legs run (the controller lays this arm over the run).
-export const BOW_RUN_CARRY_ARM = Object.freeze({ arm: Object.freeze([0.1, -0.48, 0.26]), blade: Object.freeze([0.84, -0.3, -0.45]) });
+export const BOW_RUN_CARRY_ARM = Object.freeze({ arm: Object.freeze([0.12, -0.42, 0.25]), blade: Object.freeze([0.84, -0.3, -0.45]) });
 const BOW_RUN_CARRY_POSE = { spine: [0, 4, 0], hips: [0.02, 0], l: BOW_RUN_CARRY_ARM, r: { arm: [0.08, -0.5, 0.06] } };
 export const BOW_SHOTS = [
   { name: 'bowDraw', pose: true, hit: 0.45, cancel: 0.45, nock: 0.16, full: 0.45, keys: [

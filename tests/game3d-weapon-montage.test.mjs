@@ -20,6 +20,7 @@ import { solveFallbackGrip, COMBAT_STATES } from '../src/components/game3d/weapo
 import { WEAPON_GRIP_RULES, DAGGER_POMMEL_DEPTH } from '../src/components/game3d/weapons/weaponGripMath.js';
 import { createLocomotionUnderlay, CHEST_FOLLOWS_HIPS } from '../src/components/game3d/player/locomotionUnderlay.js';
 import { syncFusedLocomotion } from '../src/components/game3d/player/fusedLocomotionSync.js';
+import { createPlayerMovementFallbackClips } from '../src/components/game3d/player/playerMovementFallbackClips.js';
 
 globalThis.self ??= globalThis;
 const DEG = 180 / Math.PI;
@@ -42,6 +43,21 @@ async function loadBody(rigId) {
   model.scale.multiplyScalar(1.7 / (box.max.y - box.min.y));
   model.updateMatrixWorld(true);
   return model;
+}
+// The mobility pack's Sprint cycle for a body (public/models/animations/mocap, bound by bone name), as the
+// game's clip library binds it: named 'sprint', its extras (speed, loop) in userData.
+const sprintClips = {};
+async function sprintClip(rigId) {
+  if (!sprintClips[rigId]) {
+    const loader = new GLTFLoader();
+    const bytes = readFileSync(`public/models/animations/mocap/${rigId === 'fused-female-v1' ? 'female/' : ''}Sprint.glb`);
+    const gltf = await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+    const clip = gltf.animations[0];
+    clip.name = 'sprint';
+    clip.userData = { ...(gltf.parser?.json?.animations?.[0]?.extras || {}) };
+    sprintClips[rigId] = clip;
+  }
+  return sprintClips[rigId];
 }
 const bone = (model, name) => model.getObjectByName(`mixamorig${name}`);
 const W = (o) => o.getWorldPosition(new THREE.Vector3());
@@ -195,43 +211,52 @@ for (const rigId of Object.keys(RIGS)) {
     }
   });
 
-  test(`${rigId} running with the bow: carried low and out from the hip, clear of the body through the whole run`, () => {
+  // the body's own Run (Shift) and the mobility pack's Sprint (Ctrl; tools/avatar-motion/mobility-clips.mjs)
+  test(`${rigId} running and sprinting with the bow: carried low and out from the hip, clear of the body through the whole cycle`, async () => {
     const model = bodies[rigId];
     const bow = manifest.weapons.find((w) => w.id === 'fantasy_bow');
     const grip = bow.grips[rigId];
     const clips = bakeWeaponComboClips(model, 'bow', { left: new THREE.Quaternion().fromArray(grip.combat.quaternion) },
       { rest: captureRestPose(model), moves: movesForFamily('bowCombo') });
-    const run = nativeClip(model, 'Run');
     const underlay = createLocomotionUnderlay(model, findComboBones(model));
-    let plain = Infinity, carried = Infinity, lowest = Infinity, out = Infinity;
+    const gaits = { run: nativeClip(model, 'Run'), sprint: await sprintClip(rigId) };
     const held = holdAt(model, 'left', grip.carry);
     try {
-      for (let i = 0; i < 48; i++) {
-        const t = (run.duration * i) / 48;
-        let done = pose(model, run, t);
-        held.root.position.fromArray(grip.carry.position); held.root.quaternion.fromArray(grip.carry.quaternion);
-        model.updateMatrixWorld(true);
-        plain = Math.min(plain, bowClearance(model, held.root, bow));
-        done();
-        done = pose(model, run, t);
-        assert.equal(underlay.overlayArm(clips.bowRunCarry, 'left', 1, { animated: run }), true);
-        held.root.position.fromArray(grip.combat.position); held.root.quaternion.fromArray(grip.combat.quaternion);
-        model.updateMatrixWorld(true);
-        carried = Math.min(carried, bowClearance(model, held.root, bow));
-        const hand = W(bone(model, 'LeftHand'));
-        const hips = W(bone(model, 'Hips'));
-        const right = new THREE.Vector3(-1, 0, 0); // the body faces +Z: its right is -X
-        lowest = Math.min(lowest, hips.y + 0.15 - hand.y);
-        out = Math.min(out, -hand.clone().sub(hips).dot(right));
-        done();
+      for (const [gait, clip] of Object.entries(gaits)) {
+        let plain = Infinity, carried = Infinity, lowest = Infinity, out = Infinity;
+        const handFromHips = [], swingingHand = [];
+        for (let i = 0; i < 48; i++) {
+          const t = (clip.duration * i) / 48;
+          let done = pose(model, clip, t);
+          held.root.position.fromArray(grip.carry.position); held.root.quaternion.fromArray(grip.carry.quaternion);
+          model.updateMatrixWorld(true);
+          plain = Math.min(plain, bowClearance(model, held.root, bow));
+          swingingHand.push(W(bone(model, 'LeftHand')).sub(W(bone(model, 'Hips'))));
+          done();
+          done = pose(model, clip, t);
+          assert.equal(underlay.overlayArm(clips.bowRunCarry, 'left', 1, { animated: clip }), true);
+          held.root.position.fromArray(grip.combat.position); held.root.quaternion.fromArray(grip.combat.quaternion);
+          model.updateMatrixWorld(true);
+          carried = Math.min(carried, bowClearance(model, held.root, bow));
+          const hand = W(bone(model, 'LeftHand'));
+          const hips = W(bone(model, 'Hips'));
+          const right = new THREE.Vector3(-1, 0, 0); // the body faces +Z: its right is -X
+          lowest = Math.min(lowest, hips.y + 0.15 - hand.y);
+          out = Math.min(out, -hand.clone().sub(hips).dot(right));
+          handFromHips.push(hand.sub(hips));
+          done();
+        }
+        assert.ok(plain < 0, `${gait}: the gait's own arm swings the bow into the body (${(plain * 100).toFixed(1)} cm): the bug the owner saw`);
+        assert.ok(carried > 0.08, `${gait}: carried, the bow stays clear of the torso and legs (${(carried * 100).toFixed(1)} cm at the closest)`);
+        assert.ok(lowest > 0, `${gait}: the bow hand stays low, about hip height`);
+        assert.ok(out > 0.22, `${gait}: the bow hand stays out from the hip (${out.toFixed(2)} m from the middle)`);
+        const spread = (points) => Math.max(...points.map((a) => Math.max(...points.map((b) => a.distanceTo(b)))));
+        const sway = spread(handFromHips), swing = spread(swingingHand);
+        assert.ok(sway < 0.06 && sway < swing / 4, `${gait}: the hand rides with the hips (${(sway * 100).toFixed(1)} cm) instead of swinging with the stride (${(swing * 100).toFixed(1)} cm)`);
       }
     } finally {
       held.release();
     }
-    assert.ok(plain < 0, `the run's own arm swings the bow into the body (${(plain * 100).toFixed(1)} cm): the bug the owner saw`);
-    assert.ok(carried > 0.03, `carried, the bow stays clear of the torso and legs (${(carried * 100).toFixed(1)} cm at the closest)`);
-    assert.ok(lowest > 0, 'the bow hand stays low, about hip height');
-    assert.ok(out > 0.22, `the bow hand stays out from the hip (${out.toFixed(2)} m from the middle)`);
   });
 
   test(`${rigId} underlay: the legs follow the walk under a montage, the chest keeps the montage's turn`, () => {
@@ -307,7 +332,9 @@ async function liveController(rigId) {
   const model = await loadBody(rigId);
   const mixer = new THREE.AnimationMixer(model);
   const ctl = runtime.exports.createLunaDashboardPlayerController({ mixer });
-  ctl.bindClips({ idle: nativeClip(model, 'Stand'), walk: nativeClip(model, 'Walk'), run: nativeClip(model, 'Run') });
+  // the body's own gaits, the mobility pack's sprint and the generated dodges (as the game binds them)
+  ctl.bindClips({ ...createPlayerMovementFallbackClips(model), idle: nativeClip(model, 'Stand'), walk: nativeClip(model, 'Walk'),
+    run: nativeClip(model, 'Run'), sprint: await sprintClip(rigId) });
   createWeaponComboBinder({ model, controller: ctl }); // every family baked from the rest pose, as at load
   let moving = { moving: false, running: false };
   const step = (seconds, each = null) => {
@@ -454,7 +481,7 @@ test('the bow: hold draws then holds; letting go looses from the hold; every sho
   assert.ok(timed[1] - 0.2 < 0.2, `the second shot looses ${(timed[1] - 0.2).toFixed(2)} s after its arrow`);
 });
 
-test('running with the bow carries it low and out; walking leaves the walk alone', async () => {
+test('running and sprinting with the bow carry it low and out; walking leaves the walk alone', async () => {
   const { ctl, model, step, move } = await liveController('fused-male-v1');
   ctl.setEquipmentContext({ weaponType: 'bow', equipped: true, summon: true });
   move({ moving: true, running: false });
@@ -462,19 +489,66 @@ test('running with the bow carries it low and out; walking leaves the walk alone
   assert.equal(ctl.getCurrent(), 'walk');
   assert.equal(ctl.getWeaponState(), 'walk');
   assert.equal(ctl.getMontageState().bowCarry, 0);
-  move({ moving: true, running: true });
-  step(0.5);
-  assert.equal(ctl.getCurrent(), 'run');
-  assert.equal(ctl.getWeaponState(), 'bowRunCarry', 'the bow held like a drawn bow (combat grip) while carried');
-  assert.equal(ctl.getMontageState().bowCarry, 1);
-  const carry = ctl.actions.bowRunCarry.getClip();
   const b = findComboBones(model);
-  const track = carry.tracks.find((tr) => tr.name === `${b.lFore.name}.quaternion`);
-  assert.ok(b.lFore.quaternion.angleTo(new THREE.Quaternion().fromArray(track.values, 0)) * DEG < 1, 'the bow arm is the carry pose');
-  // aiming while running: the draw over the run, the legs running
+  for (const [gait, movement] of [['run', { moving: true, running: true }], ['sprint', { moving: true, running: true, sprinting: true }]]) {
+    move(movement);
+    step(0.5);
+    assert.equal(ctl.getCurrent(), gait);
+    assert.equal(ctl.getWeaponState(), 'bowRunCarry', `${gait}: the bow held like a drawn bow (combat grip) while carried`);
+    assert.equal(ctl.getMontageState().bowCarry, 1);
+    // the bow hand rides with the hips, low and out at the side, instead of swinging with the stride
+    const offsets = [];
+    step(0.9, () => offsets.push(b.lHand.getWorldPosition(new THREE.Vector3()).sub(b.hips.getWorldPosition(new THREE.Vector3()))));
+    const sway = Math.max(...offsets.map((a) => Math.max(...offsets.map((c) => a.distanceTo(c)))));
+    assert.ok(sway < 0.06, `${gait}: the bow hand stays beside the hips (${(sway * 100).toFixed(1)} cm of drift)`);
+    for (const o of offsets) assert.ok(o.x > 0.22 && o.y < 0.15, `${gait}: low and out at the left side (${o.toArray().map((x) => x.toFixed(2))})`);
+  }
+  // aiming while sprinting: the draw over the sprint, the legs sprinting
   ctl.setAiming(true);
   step(0.6);
   assert.equal(ctl.getCurrent(), 'bowHold');
-  assert.equal(ctl.getGait(), 'run');
-  assert.ok(ctl.getMontageState().weight > 0.99, 'the legs keep running under the held draw');
+  assert.equal(ctl.getGait(), 'sprint');
+  assert.ok(ctl.getMontageState().weight > 0.99, 'the legs keep sprinting under the held draw');
+});
+
+test('a swing over the sprint: the legs keep the sprint cycle under it', async () => {
+  const { ctl, model, step, move } = await liveController('fused-female-v1');
+  ctl.setEquipmentContext({ weaponType: 'sword', equipped: true, summon: true });
+  move({ moving: true, running: true, sprinting: true });
+  step(0.5);
+  assert.equal(ctl.getCurrent(), 'sprint');
+  const sprint = ctl.actions.sprint.getClip();
+  assert.equal(ctl.HandleCombat('swordCombo', { speed: 1 }), true);
+  assert.equal(ctl.isMovementOverridden(), false);
+  let worst = 0;
+  step(0.3, () => {
+    const m = ctl.getMontageState();
+    if (ctl.getCurrent() !== 'swordCombo1' || m.weight < 0.99) return;
+    assert.equal(m.gait, 'sprint');
+    for (const b of legBones(model)) {
+      const track = sprint.tracks.find((tr) => tr.name === `${b.name}.quaternion`);
+      if (!track) continue;
+      const want = new THREE.Quaternion().fromArray(track.createInterpolant().evaluate(m.phase * sprint.duration));
+      worst = Math.max(worst, b.quaternion.angleTo(want) * DEG);
+    }
+  });
+  assert.ok(worst < 1, `under the swing the legs are the sprint (${worst.toFixed(2)} deg off)`);
+});
+
+test('a dodge cuts a swing as on main: not during the strike, from its recovery when moving', async () => {
+  const { ctl, step, move } = await liveController('fused-male-v1');
+  ctl.setEquipmentContext({ weaponType: 'sword', equipped: true, summon: true });
+  move({ moving: false, running: false });
+  step(0.4);
+  assert.equal(ctl.HandleCombat('swordCombo', { speed: 1 }), true);
+  step(0.1);
+  const left = new THREE.Vector3(1, 0, 0);
+  assert.equal(ctl.requestDodge(left, 'left'), false, 'the strike is not cut short');
+  assert.equal(ctl.getCurrent(), 'swordCombo1');
+  move({ moving: true, running: false });
+  step(0.3); // past the swing's cancel point: moving ends its recovery
+  assert.equal(ctl.requestDodge(left, 'left'), true, 'the recovery is');
+  assert.notEqual(ctl.getCurrent(), 'swordCombo1');
+  assert.equal(ctl.getComboState(), null, 'the swing is over');
+  assert.equal(ctl.isMovementOverridden(), true, 'the dodge keeps its own lock');
 });

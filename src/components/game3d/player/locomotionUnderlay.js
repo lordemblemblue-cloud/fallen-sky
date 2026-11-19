@@ -11,6 +11,7 @@
 // overlayArm lays one arm of a pose clip (the bow carried while running) over whatever the mixer posed.
 // Presentation only: no movement, collision, damage or network state lives here.
 import * as THREE from 'three';
+import { solveMountedLimb } from './mountedRiderPose.mjs';
 
 // How much of the locomotion hips' sway the chest keeps: the rest is cancelled, so a swing or an aim stays on
 // target while the hips walk.
@@ -53,6 +54,39 @@ export function createLocomotionUnderlay(model, bones) {
       samplers.set(source, list);
     }
     return samplers.get(source);
+  };
+  // The pose's first frame worked out in the model's own frame (forward kinematics from the pose's tracks;
+  // nodes it does not animate keep their own transform): the hips, the elbow and the hand positions and the
+  // hand's orientation. The live skeleton is not touched.
+  const armReferences = new WeakMap(); // pose -> { [side]: reference }
+  const rotationScale = new THREE.Matrix4();
+  const armReference = (pose, side, [, fore, hand]) => {
+    const bySide = armReferences.get(pose) || {};
+    if (bySide[side]) return bySide[side];
+    const quaternions = new Map();
+    let hipsPosition = null;
+    for (const { node, prop, interpolant } of samplersFor(pose)) {
+      const value = interpolant.evaluate(0);
+      if (prop === 'quaternion') quaternions.set(node, new THREE.Quaternion().fromArray(value).normalize());
+      else if (node === bones.hips) hipsPosition = new THREE.Vector3().fromArray(value);
+    }
+    const local = (node) => {
+      const path = [];
+      for (let n = node; n && n !== model; n = n.parent) path.unshift(n);
+      const m = new THREE.Matrix4();
+      for (const n of path) {
+        m.multiply(new THREE.Matrix4().compose(n === bones.hips && hipsPosition ? hipsPosition : n.position,
+          quaternions.get(n) || n.quaternion, n.scale));
+      }
+      return m;
+    };
+    const handMatrix = local(hand);
+    const handQ = new THREE.Quaternion();
+    handMatrix.decompose(new THREE.Vector3(), handQ, new THREE.Vector3());
+    const reference = { hips: new THREE.Vector3().setFromMatrixPosition(local(bones.hips)),
+      elbow: new THREE.Vector3().setFromMatrixPosition(local(fore)), hand: new THREE.Vector3().setFromMatrixPosition(handMatrix), handQ };
+    armReferences.set(pose, { ...bySide, [side]: reference });
+    return reference;
   };
   const nodesOf = (source) => {
     if (!source) return null;
@@ -100,18 +134,27 @@ export function createLocomotionUnderlay(model, bones) {
       }
       return true;
     },
-    // One arm of `pose` (a baked pose clip, sampled at `time`) laid over the current pose by `weight`. Only
-    // bones the mixer is animating this frame may be passed in: animated = the clip on screen.
-    overlayArm(pose, side, weight, { time = 0, animated = null } = {}) {
+    // One arm of `pose` (a baked pose clip) laid over the current pose by `weight`, held in the body's frame:
+    // the hand goes where the pose puts it relative to the hips (two-bone IK, the elbow towards the pose's
+    // elbow) and turns to the pose's own orientation. However far the gait under it leans or twists the
+    // chest, the hand and what it holds stay where the pose put them. Only bones the mixer is animating this
+    // frame may be passed in: animated = the clip on screen.
+    overlayArm(pose, side, weight, { animated = null } = {}) {
       const w = THREE.MathUtils.clamp(Number(weight) || 0, 0, 1);
-      const chain = arms[side];
+      const [arm, fore, hand] = arms[side] || [];
       const written = nodesOf(animated);
-      if (!pose || !chain?.length || !written || w <= 1e-3) return false;
-      const wanted = new Set(chain);
-      for (const { node, prop, interpolant } of samplersFor(pose)) {
-        if (prop !== 'quaternion' || !wanted.has(node) || !written.has(node)) continue;
-        node.quaternion.slerp(q.fromArray(interpolant.evaluate(Math.min(time, pose.duration))).normalize(), w);
-      }
+      if (!pose || !arm || !fore || !hand || !written || w <= 1e-3) return false;
+      if (![arm, fore, hand].every((node) => written.has(node))) return false;
+      const ref = armReference(pose, side, [arm, fore, hand]);
+      model.updateMatrixWorld(true);
+      const hipsLive = bones.hips.getWorldPosition(new THREE.Vector3());
+      const fromHips = (local) => local.clone().sub(ref.hips).applyMatrix4(rotationScale.extractRotation(model.matrixWorld))
+        .multiplyScalar(model.getWorldScale(p).x).add(hipsLive);
+      const before = [arm, fore, hand].map((node) => node.quaternion.clone());
+      if (!solveMountedLimb(arm, fore, hand, fromHips(ref.hand), fromHips(ref.elbow))) return false;
+      const handWorld = model.getWorldQuaternion(new THREE.Quaternion()).multiply(ref.handQ);
+      hand.quaternion.copy(fore.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(handWorld));
+      [arm, fore, hand].forEach((node, i) => { const solved = node.quaternion.clone(); node.quaternion.copy(before[i]).slerp(solved, w); });
       return true;
     },
     getPhase: () => phase,
