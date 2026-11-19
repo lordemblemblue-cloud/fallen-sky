@@ -9,7 +9,8 @@ import * as THREE from 'three';
 // legs 2.5-3.7x too fast. Past LOCOMOTION_CADENCE.max the step rate stays natural and the extra ground speed
 // shows as a longer glide, the same trade the Luna dashboard makes by playing its gaits at their own rate.
 export const LOCOMOTION_CADENCE = Object.freeze({ min: 0.75, max: 1.45 });
-const LOCOMOTION_STATES = new Set(['walk', 'run']);
+// Sprint is the mobility pack's run cycle (tools/avatar-motion/mobility-clips.mjs), with its speed measured the same way.
+const LOCOMOTION_STATES = new Set(['walk', 'run', 'sprint']);
 const scratch = new THREE.Vector3();
 
 export function locomotionTimeScale(clipSpeed, bodyScale, moveSpeed) {

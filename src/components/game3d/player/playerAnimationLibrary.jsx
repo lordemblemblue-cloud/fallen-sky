@@ -6,6 +6,15 @@ import { withUprightStanding } from './uprightStandingClip.js';
 import {resolvePlayerAnimationKey, uploadedPlayerAction} from './playerAnimationActions.mjs';
 import {loadUploadedAnimationMontage} from './uploadedAnimationMontage.mjs';
 import {loadDodgeClips,EIGHT_WAY_DODGE_PACK_SLOTS} from './dodgeMoves.js';
+import {loadMobilityClipPack} from './mobilityClipPack.mjs';
+
+// Mobility clip pack (public/models/animations/mocap, tools/avatar-motion/mobility-clips.mjs) -> controller keys:
+// the double-tap W sidestep, the "Roll dodges" back roll and the Ctrl sprint cycle (fused bodies only).
+export const MOBILITY_PACK_SLOTS = Object.freeze({
+  Dodge_Forward: 'dodgeStepForward',
+  Back_Roll: 'dodgeBackRoll',
+  Sprint: 'sprint',
+});
 
 const norm = (value = '') => value.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
 const initialFallbackClips = new WeakMap();
@@ -154,6 +163,17 @@ export async function loadPlayerAnimationClips(loader, target, { onMontageReady 
       clipsByKey[slot]=clip;
     }
   } catch (error) { console.warn('[Game3D] Dodge moves unavailable; keeping the generated dodges.', error); }
+  // The forward sidestep, the back roll and the sprint cycle: never over an admin upload for that key.
+  try {
+    const mobility=await loadMobilityClipPack(target);
+    for(const [name,key] of Object.entries(MOBILITY_PACK_SLOTS)){
+      if(chosen.has(key)||!mobility[name])continue;
+      const clip=mobility[name].clone();
+      clip.name=key;
+      clip.userData=mobility[name].userData;
+      clipsByKey[key]=clip;
+    }
+  } catch (error) { console.warn('[Game3D] Mobility clip pack unavailable.', error); }
   // These are the motions the owner explicitly supplied for this montage.
   // Native clips still start immediately; validated montage clips take over
   // only for characters enabled by the pack loader (Eve first).
