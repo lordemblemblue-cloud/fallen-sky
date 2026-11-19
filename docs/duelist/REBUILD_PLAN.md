@@ -171,4 +171,15 @@ mechanic; mysteries open gradually.
   - [x] Tests: `tests/duelist-server.test.mjs` (real WebSocket clients); two browser tabs verified in one match
   - [ ] Client-side prediction for your own fighter (today your moves show one round trip + 100 ms late)
   - [ ] Reconnect to the same seat; results saved to accounts; deployment (needs the owner's go-ahead)
-- [ ] Phase 6 onward
+- [ ] Phase 6: menus (in progress)
+  - [x] `/duelist-next` hub: Story, Join, a tile per mode (with how many are playing), Practice, Fighter,
+    Settings (`src/components/duelist/menu/`)
+  - [x] A page per mode (`/duelist-next/duel`, `/ffa`, `/tdm`, `/ctf`, `/practice`): the rules in three lines,
+    the live matches of that mode, Play online / Play against bots (practice: opponent, bots, level)
+  - [x] `/duelist-next/join`: one button into the busiest match that has players (or start one others can
+    join), and the list of live matches; the server's public `/lobby` (modes and head counts only)
+  - [x] `/duelist-next/fighter` (saved per browser), `/duelist-next/settings` (volume, sound on/off, mouse
+    sensitivity, the controls), `/duelist-next/story` (the mission's four parts; "in development")
+  - [x] `/duelist-next/play?mode=…&online=…`: the arena with a Menu button back to where you came from
+  - [ ] Key rebinding; touch controls; a fighter preview (3D) on the Fighter page
+- [ ] Phase 7 onward

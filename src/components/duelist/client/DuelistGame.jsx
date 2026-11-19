@@ -63,7 +63,7 @@ async function createActor(scene, bodyId, swordColor) {
  * master. online + serverUrl: play on the match server instead of in the browser.
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null }) {
+  online = false, serverUrl = null, sensitivity = 1 }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -115,7 +115,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const audio = createDuelAudio();
     audioRef.current = audio;
     setMuted(audio.muted);
-    const controls = createControls(renderer.domElement);
+    const controls = createControls(renderer.domElement, { sensitivity });
     const follow = createFollowCamera(camera);
     const wake = () => audio.resume(); // browsers start sound only after the player does something
     window.addEventListener('pointerdown', wake);
@@ -374,7 +374,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity]);
 
   const view = hud?.view;
   const waiting = online && net && net.status !== 'ready';

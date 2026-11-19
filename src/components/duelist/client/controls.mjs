@@ -13,7 +13,7 @@ export const DEFAULT_BINDINGS = Object.freeze({
 
 const AIMED = new Set(['light', 'heavy', 'push', 'pull', 'grip', 'breach']);
 
-export function createControls(canvas, { bindings = DEFAULT_BINDINGS } = {}) {
+export function createControls(canvas, { bindings = DEFAULT_BINDINGS, sensitivity = 1 } = {}) {
   const keys = new Set();
   const presses = [];
   let yaw = 0;
@@ -39,8 +39,8 @@ export function createControls(canvas, { bindings = DEFAULT_BINDINGS } = {}) {
   const onMouseUp = (e) => { if (e.button === 2) presses.push('blockUp'); };
   const onMouseMove = (e) => {
     if (document.pointerLockElement !== canvas) return;
-    yaw -= e.movementX * 0.0026;
-    pitch = THREE.MathUtils.clamp(pitch + e.movementY * 0.0022, -0.2, 1.1);
+    yaw -= e.movementX * 0.0026 * sensitivity;
+    pitch = THREE.MathUtils.clamp(pitch + e.movementY * 0.0022 * sensitivity, -0.2, 1.1);
   };
   const onContext = (e) => e.preventDefault();
   const onBlur = () => { keys.clear(); presses.push('blockUp'); };

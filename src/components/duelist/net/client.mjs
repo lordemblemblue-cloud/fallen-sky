@@ -3,7 +3,7 @@
 // (fighters and bodies the animator, effects and HUD already read), shown 100 ms behind the newest one so
 // movement between snapshots is interpolated and smooth. Effects and match events are released when the
 // picture reaches the moment they happened.
-/* global window, WebSocket, performance */
+/* global window, WebSocket, performance, fetch */
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
@@ -18,6 +18,23 @@ export function duelistServerUrl() {
   if (typeof configured === 'string' && /^wss?:\/\/[^\s/]+(?::\d+)?\/ws\/duelist$/i.test(configured.trim())) return configured.trim();
   if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return `ws://${window.location.hostname}:5321${WS_PATH}`;
   return null;
+}
+
+/**
+ * The live matches on the match server (for the menus): [{ id, mode, name, players, bots, seats, phase, open }],
+ * or null when the server cannot be reached.
+ */
+export async function fetchLobby(serverUrl = duelistServerUrl()) {
+  if (!serverUrl) return null;
+  const url = serverUrl.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/ws\/duelist$/i, '/lobby');
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const body = await res.json();
+    return Array.isArray(body.matches) ? body.matches : null;
+  } catch {
+    return null;
+  }
 }
 
 const newBody = () => ({ x: 0, y: 0, z: 0, yaw: 0, vy: 0, speed: 0, moving: false, motion: null, intent: { x: 0, z: 0 }, target: null });

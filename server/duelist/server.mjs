@@ -33,6 +33,12 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       res.end(JSON.stringify({ ok: true, protocol: PROTOCOL, rooms: rooms.size, players: [...clients].filter((c) => c.room).length }));
       return;
     }
+    // the live matches, for the menus (public: modes and head counts, no names or ids)
+    if (req.url === '/lobby') {
+      res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ protocol: PROTOCOL, matches: lobby() }));
+      return;
+    }
     res.writeHead(404);
     res.end();
   });
@@ -48,6 +54,11 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   const humansIn = (room) => [...room.match.seats.values()].filter((s) => s.kind === 'player').length;
   const hasRoom = (room) => room.match.phase !== 'over' && ([...room.match.seats.values()].some((s) => s.kind === 'bot') || room.match.seats.size < room.match.capacity);
   const seatsOf = (room) => [...room.match.seats.values()].map((s) => ({ id: s.id, name: s.name, team: s.team, kind: s.kind, body: room.bodies.get(s.id) || BODY_IDS[0] }));
+  // live matches, busiest first: mode, players, bots, seats, phase (no names or ids beyond the match's)
+  const lobby = () => [...rooms.values()]
+    .map((r) => ({ id: r.id, mode: r.mode, name: MODES[r.mode].name, players: humansIn(r), bots: r.match.seats.size - humansIn(r),
+      seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r) }))
+    .sort((a, b) => b.players - a.players || a.id.localeCompare(b.id, undefined, { numeric: true }));
 
   function openRoom(mode) {
     const id = `m${nextRoom++}`;
@@ -188,8 +199,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       }
       if (!client.id) return;
       if (msg.t === 'lobby') {
-        send(client, { t: 'lobby', matches: [...rooms.values()].map((r) => ({ id: r.id, mode: r.mode, name: MODES[r.mode].name, players: humansIn(r),
-          bots: r.match.seats.size - humansIn(r), seats: r.match.capacity, phase: r.match.phase })) });
+        send(client, { t: 'lobby', matches: lobby() });
       } else if (msg.t === 'join') {
         const mode = msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
         if (!mode) { send(client, { t: 'error', code: 'mode', message: 'Unknown mode.' }); return; }

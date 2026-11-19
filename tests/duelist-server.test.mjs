@@ -1,4 +1,4 @@
-/* global performance, setTimeout, setInterval, clearInterval */
+/* global performance, setTimeout, setInterval, clearInterval, fetch */
 // Duelist Adventure's match server over real WebSockets: sign-in, joining (a player takes a bot's seat; Join
 // finds the match that has players), snapshots, the server moving a player by its input, the press budget,
 // and a leaving player's seat going back to a bot. The server clock runs 4x fast to skip the countdown.
@@ -124,5 +124,24 @@ test('presses beyond the budget are dropped; leaving gives the seat back to a bo
   assert.equal(seats.seats.filter((s) => s.kind === 'bot').length, 1, 'a bot took the empty seat');
   a.ws.close();
   d.ws.close();
+  await server.close();
+});
+
+test('the lobby lists live matches for the menus: mode and head counts, no names or account ids', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  assert.deepEqual((await (await fetch(http)).json()).matches, []);
+  const a = await player(url, 'eve-account-123');
+  a.send({ t: 'join', mode: 'tdm' });
+  const joined = await a.next((m) => m.t === 'joined');
+  const res = await fetch(http);
+  assert.equal(res.headers.get('access-control-allow-origin'), '*');
+  const text = await res.text();
+  const { matches } = JSON.parse(text);
+  assert.equal(matches.length, 1);
+  assert.deepEqual({ id: matches[0].id, mode: matches[0].mode, players: matches[0].players, bots: matches[0].bots, seats: matches[0].seats, open: matches[0].open },
+    { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
+  assert.ok(!text.includes('eve-account-123') && !text.includes('EVE-ACCOUNT'), 'no player ids or names');
+  a.ws.close();
   await server.close();
 });
