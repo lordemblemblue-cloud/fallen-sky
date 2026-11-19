@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * Creates a detailed, lingering lightning bolt effect in a Three.js scene.
@@ -142,13 +143,10 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
   // Initial build
   rebuildAllStrands();
 
-  // Two point lights at different heights for richer illumination
-  const light1 = new THREE.PointLight(0x88bbff, 18, 40);
-  light1.position.set(targetX, groundY + 3, targetZ);
-  group.add(light1);
-  const light2 = new THREE.PointLight(0xaaddff, 10, 50);
-  light2.position.set(targetX, START_Y * 0.4, targetZ);
-  group.add(light2);
+  // Two lights at different heights for richer illumination, borrowed from the world's effect light pool
+  // (vfx/effectLightPool.mjs); the ground light is asked for first.
+  const light1 = acquireEffectLight(scene, { color: 0x88bbff, distance: 40, position: { x: targetX, y: groundY + 3, z: targetZ } });
+  const light2 = acquireEffectLight(scene, { color: 0xaaddff, distance: 50, position: { x: targetX, y: START_Y * 0.4, z: targetZ } });
 
   let elapsed = 0;
   let alive = true;
@@ -202,8 +200,8 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
     });
 
     // Lights
-    light1.intensity = Math.max(0, 18 * opacity * flicker);
-    light2.intensity = Math.max(0, 10 * opacity * flicker);
+    light1?.set(Math.max(0, 18 * opacity * flicker));
+    light2?.set(Math.max(0, 10 * opacity * flicker));
 
     // Cleanup when lifetime ends
     if (elapsed >= LIFETIME) {
@@ -218,6 +216,8 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
       impactGeo.dispose(); impactMat.dispose();
       ringGeo.dispose(); ringMat.dispose();
       scene.remove(group);
+      light1?.release();
+      light2?.release();
     }
   };
 

@@ -79,6 +79,7 @@ import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryCharge
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { tickActiveEffects, disposeActiveEffects } from './vfx/activeEffects.mjs';
+import { createEffectLightPool } from './vfx/effectLightPool.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
 import { tickCompanionCooldowns } from './companionAbilityStore';
@@ -1459,6 +1460,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // recompiled every lit material in the middle of the fight.
     const playerCastLight = createPlayerCastLight(scene);
     const skillUseBurstLight = createSkillUseBurstLight(scene);
+    // Companion abilities, legacy spells and the level-up celebration borrow lights from this pool, for the same
+    // reason (vfx/effectLightPool.mjs).
+    const effectLightPool = createEffectLightPool(scene);
     const handlePlayerSkillCastStart = (e) => {
       const duration = e.detail?.duration || 0.45;
       activeEffects.current.push(createPlayerCastLightBeam({
@@ -5429,6 +5433,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       activeEffects.current = disposeActiveEffects(activeEffects.current);
       playerCastLight.dispose();
       skillUseBurstLight.dispose();
+      effectLightPool.dispose();
       heldAOEKeys.clear();
       chargedKeys.clear();
       cancelBowCharge();

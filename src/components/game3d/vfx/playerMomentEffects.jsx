@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createSharedEffectLight } from './sharedEffectLight.mjs';
+import { acquireEffectLight } from './effectLightPool.mjs';
 
 // Presentation-only effects for two gameplay moments on the local hero, run through GameWorld3D's activeEffects
 // list ({ update(delta), alive(), dispose() }, like vfx/playerCastLightBeam.jsx):
@@ -159,9 +160,6 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
     transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   flash.position.y = 1.2;
   group.add(flash);
-  const light = new THREE.PointLight(color, 0, 10);
-  light.position.y = 1.4;
-  group.add(light);
   const count = 90;
   const sparks = makeSparks(count, color, 0.14);
   const seeds = new Float32Array(count * 3);
@@ -172,6 +170,9 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
     sparks.positions[i * 3 + 1] = -1;
   }
   group.add(sparks.points);
+  // Borrowed from the world's effect light pool (vfx/effectLightPool.mjs); without a pool it is the celebration's
+  // own light, added before the group so the group stays the scene's last child.
+  const light = acquireEffectLight(scene, { color, distance: 10 });
   if (scene) scene.add(group);
   let t = 0, disposed = false;
   // GameWorld3D's activeEffects list disposes an effect once it is no longer alive (vfx/activeEffects.mjs). The
@@ -179,6 +180,7 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    light?.release();
     scene?.remove(group);
     pillarGeo.dispose(); pillarMat.dispose(); flash.material.dispose();
     for (const ring of rings) { ring.geo.dispose(); ring.mat.dispose(); }
@@ -210,7 +212,7 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
       }
       flash.scale.setScalar(0.5 + 2.4 * Math.min(1, t / 0.22));
       flash.material.opacity = 0.95 * Math.max(0, 1 - t / 0.5);
-      light.intensity = 5.5 * envelope;
+      light?.set(5.5 * envelope, { x: group.position.x, y: group.position.y + 1.4, z: group.position.z });
       for (let i = 0; i < count; i++) {
         const phase = (t / 1.6 + seeds[i * 3 + 2]) % 1;
         const angle = seeds[i * 3] + phase * 5.5;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * LifeDrainEffect — a red/crimson energy stream that pulls from the target
@@ -57,9 +58,8 @@ export function createLifeDrainEffect(scene, getSourcePos, getTargetPos) {
     });
   }
 
-  // Crimson point light at the target
-  const light = new THREE.PointLight(0xff2244, 4, 8);
-  group.add(light);
+  // Crimson light at the target, borrowed from the world's effect light pool (vfx/effectLightPool.mjs)
+  const light = acquireEffectLight(scene, { color: 0xff2244, distance: 8 });
 
   let elapsed = 0;
   let alive = true;
@@ -75,7 +75,6 @@ export function createLifeDrainEffect(scene, getSourcePos, getTargetPos) {
     // Place spheres
     sphere.position.set(tgt.x, tgt.y + 1.0, tgt.z);
     recv.position.set(src.x, src.y + 1.2, src.z);
-    light.position.copy(sphere.position);
 
     // Update tether endpoints
     linePositions[0] = tgt.x; linePositions[1] = tgt.y + 1.0; linePositions[2] = tgt.z;
@@ -104,7 +103,7 @@ export function createLifeDrainEffect(scene, getSourcePos, getTargetPos) {
     sphereMat.opacity = 0.7 * fade;
     recvMat.opacity = 0.5 * fade;
     lineMat.opacity = 0.8 * fade;
-    light.intensity = 4 * fade;
+    light?.set(4 * fade, sphere.position);
 
     if (elapsed >= LIFETIME) {
       alive = false;
@@ -113,6 +112,7 @@ export function createLifeDrainEffect(scene, getSourcePos, getTargetPos) {
       recvGeo.dispose(); recvMat.dispose();
       lineGeo.dispose(); lineMat.dispose();
       scene.remove(group);
+      light?.release();
     }
   };
 

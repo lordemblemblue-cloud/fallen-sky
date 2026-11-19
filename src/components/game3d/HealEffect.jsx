@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * HealEffect — rising green sparkles + an expanding aura ring around the
@@ -50,9 +51,8 @@ export function createHealEffect(scene, getCasterPos) {
     group.add(sMesh);
   }
 
-  // Soft green light
-  const light = new THREE.PointLight(0x4ade80, 5, 6);
-  group.add(light);
+  // Soft green light, borrowed from the world's effect light pool (vfx/effectLightPool.mjs)
+  const light = acquireEffectLight(scene, { color: 0x4ade80, distance: 6 });
 
   let elapsed = 0;
   let alive = true;
@@ -84,8 +84,7 @@ export function createHealEffect(scene, getCasterPos) {
       s.mat.opacity = Math.max(0, fade * (1 - localT * 0.5));
     });
 
-    light.position.set(0, 1, 0);
-    light.intensity = 5 * fade;
+    light?.set(5 * fade, { x: group.position.x, y: group.position.y + 1, z: group.position.z });
 
     if (elapsed >= LIFETIME) {
       alive = false;
@@ -93,6 +92,7 @@ export function createHealEffect(scene, getCasterPos) {
       ringGeo.dispose(); ringMat.dispose();
       discGeo.dispose(); discMat.dispose();
       scene.remove(group);
+      light?.release();
     }
   };
 

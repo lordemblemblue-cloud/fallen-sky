@@ -25,6 +25,7 @@ await build({
     contents: [
       "export * as THREE from 'three';",
       `export { createSharedEffectLight } from '${game3d}vfx/sharedEffectLight.mjs';`,
+      `export { createEffectLightPool, acquireEffectLight, EFFECT_LIGHT_POOL_SIZE } from '${game3d}vfx/effectLightPool.mjs';`,
       `export { createPlayerCastLight, createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
       `export { createSkillUseBurst, createSkillUseBurstLight, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
       `export { createHealEffect } from '${game3d}HealEffect.jsx';`,
@@ -210,9 +211,12 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   scene.add(player);
   const at = (x, z) => () => ({ x, y: 0, z });
   const loader = deferredLoader();
-  // As GameWorld3D sets them up: the cast beam and skill-use burst share lights that exist with the world.
+  // As GameWorld3D sets them up: the cast beam and skill-use burst share lights that exist with the world, and the
+  // other effects borrow from its effect light pool.
   const castLight = fx.createPlayerCastLight(scene);
   const burstLight = fx.createSkillUseBurstLight(scene);
+  const lightPool = fx.createEffectLightPool(scene);
+  const worldLights = [castLight.light, burstLight.light, ...lightPool.lights];
   const effects = {
     'cast light beam': () => fx.createPlayerCastLightBeam({
       scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45, castLight,
@@ -232,23 +236,88 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
     'lightning strike': () => fx.createLightningStrike(scene, 2, 2, 0),
   };
   const before = sceneSnapshot(scene);
+  // Runs effects to the end, watching the scene's light count and the brightest world light every frame.
+  const runWatching = (list) => {
+    let frames = 0, mostLights = 0, brightest = 0;
+    while (list.length && frames < 600) {
+      list = tickActiveEffects(list, 1 / 30);
+      frames++;
+      mostLights = Math.max(mostLights, sceneSnapshot(scene).lights);
+      brightest = Math.max(brightest, ...worldLights.map((light) => light.intensity));
+    }
+    return { list, mostLights, brightest };
+  };
 
   for (const [name, create] of Object.entries(effects)) {
     const effect = create();
     assert.ok(sceneSnapshot(scene).objects > before.objects, `${name} adds to the scene while it plays`);
-    assert.deepEqual(runOut([effect], 1 / 30).list, [], `${name} finishes`);
+    const run = runWatching([effect]);
+    assert.deepEqual(run.list, [], `${name} finishes`);
+    assert.equal(run.mostLights, before.lights, `${name} never changes the scene's light count`);
+    if (name === 'shadow teleport') assert.equal(run.brightest, 0, 'the shadow teleport has no light');
+    else assert.ok(run.brightest > 0, `${name} lights the scene through a world light`);
     assert.deepEqual(sceneSnapshot(scene), before, `${name} leaves nothing behind`);
+    assert.equal(lightPool.busy(), 0, `${name} returns its pooled lights`);
   }
 
-  // Many casts at once, as in a fight. Live, the scene gained one light per skill cast and kept it.
+  // Many casts at once, as in a fight, more than the pool can light: the extra effects play without a light.
+  // Live, the scene gained a light per effect and three.js recompiled every lit material for each new count.
   const all = [];
   for (let round = 0; round < 3; round++) for (const create of Object.values(effects)) all.push(create());
-  assert.ok(sceneSnapshot(scene).lights > before.lights, 'companion, spell and level-up effects bring their own lights');
-  assert.deepEqual(runOut(all, 1 / 30).list, []);
+  assert.equal(lightPool.busy(), fx.EFFECT_LIGHT_POOL_SIZE);
+  const crowd = runWatching(all);
+  assert.deepEqual(crowd.list, []);
+  assert.equal(crowd.mostLights, before.lights, 'no effect adds a light while the world lights are in place');
   assert.deepEqual(sceneSnapshot(scene), before);
-  assert.equal(castLight.light.intensity, 0);
-  assert.equal(burstLight.light.intensity, 0);
+  assert.equal(lightPool.busy(), 0);
+  assert.ok(worldLights.every((light) => light.intensity === 0), 'all world lights dark again');
   assert.equal(globalThis.window.listenerCount('playerSkillCastCancel'), 0);
+});
+
+test('the effect light pool lends a fixed set of lights and never changes the scene light count', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const pool = fx.createEffectLightPool(scene); // GameWorld3D creates it before the world's first frame
+  const before = sceneSnapshot(scene);
+  assert.equal(before.lights, fx.EFFECT_LIGHT_POOL_SIZE);
+
+  const borrowed = [];
+  for (let i = 0; i < fx.EFFECT_LIGHT_POOL_SIZE; i++) {
+    borrowed.push(fx.acquireEffectLight(scene, { color: 0xff2244, distance: 5 + i, position: { x: i, y: 1, z: 0 } }));
+  }
+  assert.ok(borrowed.every(Boolean));
+  assert.equal(fx.acquireEffectLight(scene, { color: 0x66ddff }), null, 'a busy pool lends nothing');
+
+  const [first] = borrowed;
+  first.set(3, { x: 7, y: 2, z: -1 });
+  assert.equal(first.light.intensity, 3);
+  assert.deepEqual(first.light.position.toArray(), [7, 2, -1]);
+  assert.equal(first.light.distance, 5);
+  assert.ok(first.light.color.equals(new THREE.Color(0xff2244)));
+  first.release();
+  first.release();
+  first.set(9); // a released handle changes nothing
+  assert.equal(first.light.intensity, 0);
+  assert.equal(pool.busy(), fx.EFFECT_LIGHT_POOL_SIZE - 1);
+
+  const again = fx.acquireEffectLight(scene, { color: 0x66ddff, distance: 12 });
+  assert.equal(again.light, first.light, 'a returned light is lent again');
+  assert.equal(again.light.distance, 12);
+  assert.ok(again.light.color.equals(new THREE.Color(0x66ddff)));
+  assert.deepEqual(sceneSnapshot(scene), before, 'lending and returning never add or remove a light');
+
+  pool.dispose();
+  pool.dispose();
+  assert.equal(sceneSnapshot(scene).lights, 0, 'world teardown removes the pool');
+  again.release(); // after teardown: harmless
+
+  // Without a pool (previews, tests) an effect gets a light of its own that leaves with it.
+  const own = fx.acquireEffectLight(scene, { color: 0xffffff, distance: 4 });
+  assert.equal(sceneSnapshot(scene).lights, 1);
+  own.release();
+  assert.equal(sceneSnapshot(scene).lights, 0);
+  assert.equal(fx.acquireEffectLight(null, {}), null);
 });
 
 test('skill casts light the scene through the shared beam and burst lights, so the light count never changes', async () => {
@@ -331,11 +400,12 @@ test('GameWorld3D ticks its effects through the disposing list and disposes what
   // burst, and leave with the world.
   const firstFrame = world.indexOf('\n    animate();');
   for (const created of ['const playerCastLight = createPlayerCastLight(scene);',
-    'const skillUseBurstLight = createSkillUseBurstLight(scene);']) {
+    'const skillUseBurstLight = createSkillUseBurstLight(scene);',
+    'const effectLightPool = createEffectLightPool(scene);']) {
     const at = world.indexOf(created);
     assert.ok(at > 0 && at < firstFrame, `${created} runs before the first frame`);
   }
   assert.match(world, /createPlayerCastLightBeam\(\{[^}]*castLight: playerCastLight,/);
   assert.match(world, /createSkillUseBurst\(\{[\s\S]{0,300}?burstLight: skillUseBurstLight,/);
-  assert.match(teardown, /playerCastLight\.dispose\(\);\s+skillUseBurstLight\.dispose\(\);/);
+  assert.match(teardown, /playerCastLight\.dispose\(\);\s+skillUseBurstLight\.dispose\(\);\s+effectLightPool\.dispose\(\);/);
 });

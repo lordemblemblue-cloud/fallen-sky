@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * Creates a swirling frost/ice tornado at a target position.
@@ -97,10 +98,8 @@ export function createFrostTornado(scene, targetX, targetZ, groundY = 0) {
     group.add(mesh);
   }
 
-  // ─── Cyan-blue light from inside the tornado ───
-  const light = new THREE.PointLight(0x88ddff, 8, 18);
-  light.position.set(targetX, groundY + 2.5, targetZ);
-  group.add(light);
+  // ─── Cyan-blue light from inside the tornado, borrowed from the world's effect light pool ───
+  const light = acquireEffectLight(scene, { color: 0x88ddff, distance: 18, position: { x: targetX, y: groundY + 2.5, z: targetZ } });
 
   // Fire a 3-slash DOM effect at the tornado's world position (multi-hit AoE visual)
   window.dispatchEvent(new CustomEvent('spawnSlashWorld', {
@@ -162,7 +161,7 @@ export function createFrostTornado(scene, targetX, targetZ, groundY = 0) {
       p.mat.opacity = 0.9 * fade * (1 - p.heightT * 0.4);
     });
 
-    light.intensity = 8 * fade;
+    light?.set(8 * fade);
 
     if (elapsed >= LIFETIME) {
       alive = false;
@@ -173,6 +172,7 @@ export function createFrostTornado(scene, targetX, targetZ, groundY = 0) {
       shards.forEach((s) => { s.geo.dispose(); s.mat.dispose(); group.remove(s.mesh); });
       particles.forEach((p) => { p.geo.dispose(); p.mat.dispose(); group.remove(p.mesh); });
       scene.remove(group);
+      light?.release();
     }
   };
 
