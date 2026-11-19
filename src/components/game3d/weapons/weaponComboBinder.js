@@ -38,15 +38,59 @@ export function movesForFamily(comboKind, held = null) {
   return swordMovesFor(held);
 }
 
+// Which of its family's move sets a weapon swings: a long blade swings the katana moves (katanaTechniques.mjs) under
+// the sword's own state names, so a clip edited in Blender for the one-handed sword never plays on it.
+export function weaponMoveVariant(comboKind, held = null) {
+  return comboKind === 'swordCombo' && held && swordMovesForWeapon(held) ? 'longBlade' : 'standard';
+}
+
+const AUTHORED_TIMING = new Set(['hit', 'cancel', 'sweep', 'windUp', 'chargeFrom', 'charge', 'nock', 'full']);
+// A clip edited in Blender (weaponClipPack.mjs) keeps the timing its markers gave it; what it does not say (which
+// combo and hit it is, idle, pose, a timing marker it lacks) comes from the baked clip it replaces.
+function authoredOver(authored, baked) {
+  const own = authored.userData || (authored.userData = {});
+  for (const [key, value] of Object.entries(baked.userData || {})) {
+    if (own[key] !== undefined) continue;
+    if (!AUTHORED_TIMING.has(key)) own[key] = value;
+    else if (Number.isFinite(value)) own[key] = Math.min(value, authored.duration);
+    else if (Array.isArray(value)) own[key] = value.map((t) => Math.min(t, authored.duration));
+  }
+  return authored;
+}
+
 // Create it right after the model loads, before the mixer first poses it: that pose is the rig's rest pose.
 export function createWeaponComboBinder({ model, controller, runtime = null, bodyHeight = 1.7, rest = null }) {
   const restPose = rest || captureRestPose(model);
   const bakedWith = { swordCombo: null, bowCombo: null, daggerCombo: null }; // what each family was last baked for
-  const bake = (comboKind, weaponClass, grips, key, reach = null, moves = null) => {
+  const bakedVariant = { swordCombo: 'standard', bowCombo: 'standard', daggerCombo: 'standard' };
+  const lastBaked = {}; // each family's last baked clips, by state
+  let authored = {}; // the owner's Blender-edited clips (weaponClipPack.mjs), by state
+  let authoredPending = false;
+  // a family's clips: the baked ones, with the authored clip of each state its move set has
+  const withAuthored = (baked, variant) => {
+    const out = { ...baked };
+    for (const [state, clip] of Object.entries(baked)) {
+      const own = authored[state];
+      if (own && (own.userData?.variant || 'standard') === variant) out[state] = authoredOver(own, clip);
+    }
+    return out;
+  };
+  const bake = (comboKind, weaponClass, grips, key, reach = null, moves = null, held = null) => {
     const clips = bakeWeaponComboClips(model, weaponClass, grips, { rest: restPose, reach, moves });
     if (!Object.keys(clips).length) return false;
-    if (controller?.setWeaponComboClips?.(clips) === false) return false;
+    const variant = weaponMoveVariant(comboKind, held);
+    if (controller?.setWeaponComboClips?.(withAuthored(clips, variant)) === false) return false;
     bakedWith[comboKind] = key;
+    bakedVariant[comboKind] = variant;
+    lastBaked[comboKind] = clips;
+    return true;
+  };
+  // Authored clips that load after the families were baked go in once no swing plays (the controller refuses mid-swing).
+  const applyAuthored = () => {
+    if (!authoredPending) return false;
+    const clips = Object.assign({}, ...Object.entries(lastBaked).map(([kind, baked]) => withAuthored(baked, bakedVariant[kind])));
+    if (controller?.setWeaponComboClips?.(clips) === false) return false;
+    authoredPending = false;
     return true;
   };
   for (const [comboKind, holds] of Object.entries(DEFAULT_HOLDS)) {
@@ -63,13 +107,22 @@ export function createWeaponComboBinder({ model, controller, runtime = null, bod
   return {
     // Call once per frame. Rebakes for a newly held weapon, never in the middle of a swing.
     update() {
+      applyAuthored();
       const held = runtime?.getCurrent?.();
       const comboKind = comboKindForWeapon(held?.cls);
       if (!comboKind || bakedWith[comboKind] === held.id || controller?.getComboState?.()) return false;
       const grips = Object.fromEntries((runtime.getHands?.() || []).map((h) => [h.side, h.gripQuaternion]));
       // A long two-handed blade swings the katana combo (katanaTechniques.mjs); other swords keep their three hits.
-      return bake(comboKind, held.cls, grips, held.id, held.length, movesForFamily(comboKind, held));
+      return bake(comboKind, held.cls, grips, held.id, held.length, movesForFamily(comboKind, held), held);
     },
     bakedFor: (comboKind) => bakedWith[comboKind] ?? null,
+    // The owner's Blender-edited clips (loadWeaponClipPack): from now on each replaces its baked clip on every weapon
+    // of its family that swings its move set. True once they are in the controller (later, if a swing is playing).
+    setAuthoredClips(clips = {}) {
+      authored = { ...clips };
+      authoredPending = true;
+      return applyAuthored();
+    },
+    authoredStates: () => Object.keys(authored),
   };
 }

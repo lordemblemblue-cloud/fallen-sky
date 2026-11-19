@@ -108,6 +108,7 @@ import { createCombatImpactFeedback } from './vfx/CombatImpactFeedback';
 import { createDuelDefenseFeedback } from './vfx/DuelDefenseFeedback';
 import { createCombatWeaponTrails } from './vfx/CombatWeaponTrails';
 import { createWeaponComboBinder } from './weapons/weaponComboBinder.js';
+import { loadWeaponClipPack } from './weapons/weaponClipPack.mjs';
 import { swordSkillComboKind } from './weapons/weaponComboClips.js';
 import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources, getCombatResources } from './combat/combatResourcesStore';
 import { selectCombatSwingSound, selectCombatImpactSound, AUTHORED_SKILL_SOUNDS } from './combat/CombatSoundRouter';
@@ -2160,6 +2161,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime,
         bodyHeight: window.__gw3dPlayerHeight || 1.7 }); }
       catch (error) { console.warn('[Game 3D clone] weapon combo rig bake unavailable', error); weaponCombos = null; }
+      // The weapon clips the owner edited in Blender (public/models/animations/weapons, weapons/weaponClipPack.mjs)
+      // replace their baked ones once loaded; without that pack every weapon keeps its baked clips.
+      if (weaponCombos) {
+        const binder = weaponCombos;
+        loadWeaponClipPack(fbx).then((clips) => {
+          if (weaponCombos === binder && Object.keys(clips).length) binder.setAuthoredClips(clips);
+        }).catch(() => {});
+      }
       // The held weapon's enchantment light (enchantVfx/weaponEnchantVfx.js): visual only.
       enchantPercentCache = createEnchantPercentCache();
       weaponEnchantVfx = createWeaponEnchantVfx({ getPercent: (item) => enchantPercentCache?.get(item) || 0 });
