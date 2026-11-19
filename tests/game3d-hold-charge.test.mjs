@@ -198,6 +198,44 @@ test('a click is a normal swing; a hold slows the wind-up, holds the coil, and s
   assert.equal(ctl.getCurrent(), 'idleSword', 'back to the stance');
 });
 
+test('a long frame (the game does not clamp its delta) never carries a held swing past its wind-up or the coil past its peak', async () => {
+  const { ctl, step, clock, cues, press, model } = await liveController('fused-male-v1');
+  const mixer = ctl.actions.idleSword.getMixer();
+  const longFrame = (seconds) => {
+    clock.seconds += seconds;
+    ctl.updateAnimation(seconds);
+    mixer.update(seconds);
+    ctl.lateUpdate(seconds);
+    cues.push(...ctl.pollComboEvents().map((c) => ({ ...c, at: clock.seconds })));
+  };
+  assert.ok(model);
+  ctl.setEquipmentContext({ weaponType: 'sword', equipped: true, summon: true });
+  step(0.3);
+  // pressed, then a frame longer than the wind-up but inside the click window: the swing stops at its wind-up
+  assert.equal(press(), true);
+  const swing = ctl.actions.swordCombo1;
+  longFrame(0.15);
+  assert.ok(Math.abs(swing.time - swing.getClip().userData.windUp) < 1e-3, `at the wind-up (${swing.time.toFixed(3)} s)`);
+  assert.equal(ctl.getCurrent(), 'swordCombo1');
+  // a 0.5 s frame (a first swing loading its effects) crosses the click window: the charge engages in that frame
+  // and coils at its own slow speed, short of its peak
+  longFrame(0.5);
+  assert.equal(ctl.getCurrent(), 'swordCharge');
+  const coil = ctl.actions.swordCharge;
+  const { charge: peak, chargeFrom } = coil.getClip().userData;
+  assert.ok(coil.time > chargeFrom && coil.time < peak, `coiling (${coil.time.toFixed(3)} s, peak ${peak})`);
+  assert.equal(cues.filter((c) => c.type === 'hit').length, 0);
+  longFrame(2.5); // a frozen tab or a load: the coil stops at its peak, still held, still the charge
+  assert.equal(ctl.getCurrent(), 'swordCharge', 'still the charge');
+  assert.ok(coil.time <= peak + 1e-3, `not past the peak (${coil.time.toFixed(3)} s of ${peak})`);
+  step(0.1);
+  assert.ok(Math.abs(coil.time - peak) < 2e-3 && coil.getEffectiveTimeScale() === 0, 'holding the peak');
+  assert.equal(cues.filter((c) => c.type === 'hit').length, 0, 'no strike while held');
+  ctl.releaseCharge();
+  step(0.5);
+  assert.equal(cues.filter((c) => c.type === 'hit').length, 1, 'the release strikes once');
+});
+
 test('charging while walking keeps the legs walking; a dodge cancels the charge', async () => {
   const { ctl, step, cues, press, move } = await liveController('fused-female-v1');
   ctl.setEquipmentContext({ weaponType: 'sword', equipped: true, summon: true });

@@ -263,7 +263,10 @@ export function createLunaDashboardPlayerController({
     comboChain = { kind: null, index: -1, until: -Infinity }; // a charged strike ends the chain
   };
   // Once a frame, before the mixer: the held swing's speed (see `hold`).
-  const updateHoldCharge = () => {
+  // delta: the frame the mixer is about to play. While the button is down no frame, however long (the game's delta is
+  // not clamped: a first swing that loads its effects can take a second), carries the swing past its wind-up or the
+  // coil past its peak.
+  const updateHoldCharge = (delta = 0) => {
     const swing = comboAction();
     if (!hold) return;
     if (!swing || activeCombo.serial !== hold.serial) { hold = null; return; } // cut short (dodge, hit, death)
@@ -273,11 +276,16 @@ export function createLunaDashboardPlayerController({
     const heldMs = ((held ? now() : hold.releasedAt) - hold.pressedAt) * 1000;
     const t = swing.time;
     const hit = Number.isFinite(userData.hit) ? userData.hit : swing.getClip().duration;
+    const upTo = (stop, scale) => (held && delta > 0 ? Math.min(scale, Math.max(0, stop - t) / (delta * speed)) : scale);
     if (!hold.engaged) {
-      if (held && heldMs >= HOLD_CHARGE.engageMs && t < hit) { engageCharge(); return; }
+      if (held && heldMs >= HOLD_CHARGE.engageMs && t < hit) { // the charge, coiling from this very frame
+        engageCharge();
+        if (hold?.engaged) updateHoldCharge(delta);
+        return;
+      }
       // still deciding: the swing waits at its wind-up while the button is down; a click plays straight through
-      const waiting = held && t >= userData.windUp;
-      swing.setEffectiveTimeScale(waiting ? 0 : speed);
+      const waiting = held && t >= userData.windUp - 1e-4;
+      swing.setEffectiveTimeScale(waiting ? 0 : speed * upTo(userData.windUp, 1));
       busyResetAt = waiting ? 0 : busyResetAt || now() + Math.max(0.01, swing.getClip().duration - t) / speed;
       if (!held) hold = null;
       return;
@@ -285,7 +293,7 @@ export function createLunaDashboardPlayerController({
     const from = userData.chargeFrom ?? 0;
     const peak = Number.isFinite(userData.charge) ? userData.charge : hit;
     let scale = 1;
-    if (held) scale = t < from ? 1 : t < peak ? chargeWindUpSpeed(peak - t, heldMs) : 0; // coil slowly, then hold it
+    if (held) scale = upTo(peak, t < from ? 1 : t < peak - 1e-4 ? chargeWindUpSpeed(peak - t, heldMs) : 0); // coil slowly, then hold it
     else if (t < hit) scale = HOLD_CHARGE.releaseSpeed; // let go: the strike, faster
     swing.setEffectiveTimeScale(speed * scale);
     if (!held && t >= hit) hold = null; // landed: the recovery plays at its own speed
@@ -1233,7 +1241,7 @@ export function createLunaDashboardPlayerController({
     setMounted,
     updateActionState: handleMovement,
     updateMotion,
-    updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateHoldCharge(); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
+    updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateHoldCharge(Math.max(0, Number(delta) || 0)); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
     // after mixer.update: the legs under a montage and the bow carried while running
     lateUpdate,
     // true while the bow is drawn (the arrow nocked and the string pulled), false otherwise; null without a bow
