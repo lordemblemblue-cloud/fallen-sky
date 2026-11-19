@@ -12,7 +12,7 @@ export const Route = createFileRoute('/duelist-next/play')({
     const mode = MODES.includes(search.mode) ? search.mode : 'practice';
     const online = mode === 'any' || ((search.online === 1 || search.online === '1' || search.online === true) && mode !== 'practice');
     const asked = typeof search.room === 'string' ? search.room.trim() : '';
-    const room = mode !== 'story' || !online ? null : asked === 'new' ? 'new' : /^[A-HJ-NP-Z]{5}$/.test(asked.toUpperCase()) ? asked.toUpperCase() : null;
+    const room = mode !== 'story' || !online ? null : ['new', 'open'].includes(asked) ? asked : /^m[0-9]+$/.test(asked) ? asked : /^[A-HJ-NP-Z]{5}$/.test(asked.toUpperCase()) ? asked.toUpperCase() : null;
     const from = search.from === 'duelist' ? 'duelist' : null;
     const matchId = online && !['story', 'any'].includes(mode) && /^m[0-9]+$/.test(String(search.matchId || '')) ? String(search.matchId) : null;
     return { mode, online: online ? 1 : 0, ...(room ? { room } : {}), ...(matchId ? { matchId } : {}), ...(from ? { from } : {}) };
