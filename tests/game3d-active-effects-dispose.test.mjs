@@ -245,6 +245,32 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   assert.equal(globalThis.window.listenerCount('playerSkillCastCancel'), 0);
 });
 
+test('a lightning strike keeps one set of materials across bolt rebuilds and disposes every material it showed', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  // Every material the strike puts in the scene, and whether it was disposed by the end.
+  const seen = new Map();
+  const collect = () => scene.traverse((node) => {
+    for (const material of [node.material].flat()) {
+      if (!material || seen.has(material)) continue;
+      seen.set(material, false);
+      material.addEventListener('dispose', () => seen.set(material, true));
+    }
+  });
+
+  let list = [fx.createLightningStrike(scene, 2, 2, 0)];
+  collect();
+  const atStart = seen.size;
+  let frames = 0;
+  while (list.length && frames < 600) { list = tickActiveEffects(list, 1 / 60); collect(); frames++; }
+
+  assert.deepEqual(list, []);
+  assert.ok(frames >= 40, 'the bolts are rebuilt every 35 ms over the ~0.8 s strike');
+  assert.equal(seen.size, atStart, 'rebuilding the bolts adds no materials');
+  assert.equal([...seen.values()].filter((disposed) => !disposed).length, 0, 'every material is disposed');
+});
+
 test('GameWorld3D ticks its effects through the disposing list and disposes what is left on teardown', () => {
   const world = readFileSync(path.join(root, 'src/components/game3d/GameWorld3D.jsx'), 'utf8');
   assert.match(world, /import \{ tickActiveEffects, disposeActiveEffects \} from '\.\/vfx\/activeEffects\.mjs';/);

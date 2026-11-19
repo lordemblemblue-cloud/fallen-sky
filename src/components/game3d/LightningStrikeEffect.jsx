@@ -69,6 +69,18 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
   }
 
   // ─── Build bolt strands ───
+  // The strands get new geometry every REBUILD_INTERVAL, but every strand always had the same colors and opacity,
+  // so they share these three materials for the whole strike. Each rebuild used to create 18 new materials and only
+  // the last set was ever disposed.
+  const boltMat = new THREE.MeshBasicMaterial({
+    color: BOLT_COLOR, transparent: true, opacity: 1.0, depthWrite: false,
+  });
+  const coreMat = new THREE.MeshBasicMaterial({
+    color: CORE_COLOR, transparent: true, opacity: 1.0, depthWrite: false,
+  });
+  const glowMat = new THREE.MeshBasicMaterial({
+    color: GLOW_COLOR, transparent: true, opacity: 0.25, depthWrite: false,
+  });
   const strands = [];
   const buildStrand = (fromY, toY, spread = 1.0, thickness = 0.07) => {
     const points = [];
@@ -90,29 +102,20 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
 
     // Outer glow tube
     const glowGeo = new THREE.TubeGeometry(curve, NUM_SEGMENTS * 3, thickness * 2.5, 5, false);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: GLOW_COLOR, transparent: true, opacity: 0.25, depthWrite: false,
-    });
     const glowMesh = new THREE.Mesh(glowGeo, glowMat);
     group.add(glowMesh);
 
     // Main bolt tube
     const tubeGeo = new THREE.TubeGeometry(curve, NUM_SEGMENTS * 3, thickness, 5, false);
-    const mat = new THREE.MeshBasicMaterial({
-      color: BOLT_COLOR, transparent: true, opacity: 1.0, depthWrite: false,
-    });
-    const mesh = new THREE.Mesh(tubeGeo, mat);
+    const mesh = new THREE.Mesh(tubeGeo, boltMat);
     group.add(mesh);
 
     // Bright inner core
     const coreTubeGeo = new THREE.TubeGeometry(curve, NUM_SEGMENTS * 2, thickness * 0.35, 4, false);
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: CORE_COLOR, transparent: true, opacity: 1.0, depthWrite: false,
-    });
     const core = new THREE.Mesh(coreTubeGeo, coreMat);
     group.add(core);
 
-    strands.push({ mesh, core, glowMesh, mat, coreMat, glowMat, tubeGeo, coreTubeGeo, glowGeo });
+    strands.push({ mesh, core, glowMesh, tubeGeo, coreTubeGeo, glowGeo });
   };
 
   const rebuildAllStrands = () => {
@@ -174,12 +177,10 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
       rebuildAllStrands();
     }
 
-    // Apply opacity to all strands
-    strands.forEach(({ mat, coreMat, glowMat }) => {
-      mat.opacity = Math.max(0, opacity);
-      coreMat.opacity = Math.max(0, opacity);
-      glowMat.opacity = Math.max(0, opacity * 0.25);
-    });
+    // Apply opacity to all strands (they share these materials)
+    boltMat.opacity = Math.max(0, opacity);
+    coreMat.opacity = Math.max(0, opacity);
+    glowMat.opacity = Math.max(0, opacity * 0.25);
 
     // Flash spheres fade
     flashMat.opacity = elapsed < FLASH_DURATION ? 0.55 * (1 - elapsed / FLASH_DURATION) : 0;
@@ -207,11 +208,11 @@ export function createLightningStrike(scene, targetX, targetZ, groundY = 0) {
     // Cleanup when lifetime ends
     if (elapsed >= LIFETIME) {
       alive = false;
-      strands.forEach(({ mesh, core, glowMesh, mat, coreMat, glowMat, tubeGeo, coreTubeGeo, glowGeo }) => {
+      strands.forEach(({ mesh, core, glowMesh, tubeGeo, coreTubeGeo, glowGeo }) => {
         tubeGeo.dispose(); coreTubeGeo.dispose(); glowGeo.dispose();
-        mat.dispose(); coreMat.dispose(); glowMat.dispose();
         group.remove(mesh); group.remove(core); group.remove(glowMesh);
       });
+      boltMat.dispose(); coreMat.dispose(); glowMat.dispose();
       sparks.forEach((s) => { s.geo.dispose(); s.mat.dispose(); group.remove(s.mesh); });
       flashGeo.dispose(); flashMat.dispose();
       impactGeo.dispose(); impactMat.dispose();
