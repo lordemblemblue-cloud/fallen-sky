@@ -19,7 +19,7 @@ const load = (file) => {
 test('both Adam files carry the repair and keep the mesh layout the armor masks and animations index into', () => {
   for (const file of FILES) {
     const { J, mesh, body, head } = load(file);
-    assert.equal(J.asset.extras?.fusedBodyRepair?.version, 1, `${file}: repair marker`);
+    assert.equal(J.asset.extras?.fusedBodyRepair?.version, 2, `${file}: repair marker`);
     assert.equal(J.accessors[body.attributes.POSITION].count, 40820, `${file}: body vertices`);
     assert.equal(J.accessors[head.attributes.POSITION].count, 9222, `${file}: head vertices`);
     assert.equal(J.accessors[body.indices].count, 42849, `${file}: body indices`);
@@ -54,6 +54,35 @@ test('the neck seam: every vertex the head and body share has the same skin weig
     for (const [jn, w] of wh) if (w > 1e-4) assert.ok(Math.abs((wb.get(jn) || 0) - w) < 1e-4, `seam vertex ${i}: joint ${jn} ${w} vs ${wb.get(jn)}`);
   });
   assert.ok(shared >= 55, `${shared} shared seam vertices`);
+});
+
+test('FX_JawOpen opens like a jaw: one hinge, the whole lower lip at the full angle, the teeth still', () => {
+  const { glb, mesh, head } = load(FILES[1]);
+  const P = readAccessor(glb, head.attributes.POSITION);
+  const D = readAccessor(glb, head.targets[mesh.extras.targetNames.indexOf('FX_JawOpen')].POSITION);
+  const moving = P.map((_, i) => i).filter((i) => Math.hypot(...D[i]) > 1e-7);
+  // pivot of a rotation about an axis parallel to x (least squares on the perpendicular bisectors)
+  let a11 = 0, a12 = 0, a22 = 0, b1 = 0, b2 = 0;
+  for (const i of moving) {
+    const [dx, dy, dz] = D[i];
+    assert.ok(Math.abs(dx) < 1e-6, 'a hinge about x moves nothing sideways');
+    const my = P[i][1] + dy / 2, mz = P[i][2] + dz / 2, w = Math.hypot(dy, dz), r = dy * my + dz * mz;
+    a11 += w * dy * dy; a12 += w * dy * dz; a22 += w * dz * dz; b1 += w * dy * r; b2 += w * dz * r;
+  }
+  const det = a11 * a22 - a12 * a12, cy = (b1 * a22 - b2 * a12) / det, cz = (a11 * b2 - a12 * b1) / det;
+  const angle = (i) => { const qy = P[i][1] - cy, qz = P[i][2] - cz, ry = qy + D[i][1], rz = qz + D[i][2]; return Math.abs(Math.atan2(qy * rz - qz * ry, qy * ry + qz * rz)) * 180 / Math.PI; };
+  const full = Math.max(...moving.map(angle));
+  assert.ok(full > 16 && full < 18.5, `full opening ${full.toFixed(2)} deg`);
+  // the lower lip at the middle of the mouth (in front, just under the lip line) swings at the full angle
+  const zmax = Math.max(...moving.map((i) => P[i][2]));
+  const front = moving.filter((i) => P[i][2] > zmax - 0.012);
+  const xc = front.reduce((s, i) => s + P[i][0], 0) / front.length;
+  const split = Math.max(...front.filter((i) => Math.abs(P[i][0] - xc) < 0.006).map((i) => P[i][1]));
+  const lip = front.filter((i) => Math.abs(P[i][0] - xc) < 0.006 && P[i][1] > split - 0.012);
+  assert.ok(lip.length > 10, `${lip.length} lower-lip vertices`);
+  for (const i of lip) assert.ok(angle(i) > full * 0.97, `lower lip vertex ${i} swings ${angle(i).toFixed(2)} of ${full.toFixed(2)} deg`);
+  // nothing below the eyes moves above the lip line: the teeth and the upper lip stay
+  assert.ok(moving.every((i) => P[i][1] <= split + 1e-6), 'nothing above the lip line moves');
 });
 
 test('the lips meet: no opening wider than 1.5 mm (model units) between them at the centre of the mouth', () => {

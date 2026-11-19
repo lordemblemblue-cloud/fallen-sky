@@ -3,10 +3,14 @@
 // tattoos and every animation keep working because nothing is renumbered.
 //
 //   Mouth  The head sculpt had its lips parted with the teeth showing. The jaw region is closed by 45% of the
-//          FX_JawOpen hinge (FX_JawOpen is scaled by 1.45 so its fully open pose stays where it was), then the slit
-//          left between the lips is sealed a step at a time: measured by casting rays at the mouth, each lip moves as
-//          a whole toward a meet line, the move fading out past the mouth corners. Normals around the lips are
-//          recomputed.
+//          FX_JawOpen hinge, then the slit left between the lips is sealed a step at a time: measured by casting rays
+//          at the mouth, each lip moves as a whole toward a meet line, the move fading out past the mouth corners.
+//          Normals around the lips are recomputed.
+//   Open   FX_JawOpen (talking, surprise, pain, shout, the creator's "Open mouth") is rebuilt on the closed mouth about
+//          the build's own jaw hinge, opening 1.45x as far as before: the jaw swings as one piece, the whole lower lip
+//          moves with it (the old weights faded out inside the lip, which stretched it into a tongue-like sheet), the
+//          drop tapers toward the mouth corners, and the teeth stay with the upper jaw. The strip of triangles that
+//          joins the lips (it spans the opening) and the cavity behind the lips are painted a dark mouth colour.
 //   Neck   Where the head meets the body (a 55-vertex seam shared by both primitives) the head's skin is a jagged
 //          sawtooth over the upper back, lighter than the body, and the body texture near it is a mosaic of tiny
 //          per-triangle charts whose rims show as orange triangle lines. Within a few centimetres of the seam the art
@@ -34,8 +38,16 @@ const [inPath, outPath] = args;
 const opt = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
 const REPORT = opt('--report', null);
 const RECIPE = {
-  version: 1,
+  version: 2,
   jaw: 0.45,
+  // FX_JawOpen rebuilt as a hinge on the closed mouth: full angle = the old full angle x open_scale; jaw vertices swing
+  // as one piece (old weight remapped by steep), fully in the mouth core; the teeth stay with the upper jaw
+  jaw_open: { open_scale: 1.45, steep: 0.4, core_x: 0.012, core_fade_x: 0.016, core_below: 0.016, core_fade_y: 0.008,
+    // the lips drop less toward the corners (rounder opening); the chin below keeps the full swing
+    taper: 0.5, taper_start: 0.008, taper_width: 0.016, taper_zone_below: 0.02, taper_zone_fade: 0.008 },
+  // the strip that joins the lips (it stretches across the opening) and the cavity behind them: dark mouth interior,
+  // strictly inside the mouth (strip within strip_x of the centre, cavity only where it is hidden behind the lips)
+  mouth_interior: { color: [52, 20, 18], depth: 0.003, strip_x: 0.019, cavity_x: 0.024 },
   seal: { iterations: 12, step: 0.5, share_lower: 0.5, plateau_lower: 0.004, fall_lower: 0.01, plateau_upper: 0.004, fall_upper: 0.006, sigma_columns: 4, depth: 0.01 },
   neck: { radius: 0.028, weight_iterations: 6, normal_iterations: 4 },
   tone: { smooth_iterations: 30, body: [0.035, 0.07], head: [0.018, 0.045] },
@@ -95,7 +107,7 @@ function sparseTarget(prim, name) {
     vals.push([glb.bin.readFloatLE(voff(k)), glb.bin.readFloatLE(voff(k) + 4), glb.bin.readFloatLE(voff(k) + 8)]);
   }
   return {
-    vals,
+    idx, vals,
     dense(count) { const out = Array.from({ length: count }, () => [0, 0, 0]); idx.forEach((i, k) => { out[i] = vals[k]; }); return out; },
     write(next) {
       next.forEach((v, k) => { glb.bin.writeFloatLE(v[0], voff(k)); glb.bin.writeFloatLE(v[1], voff(k) + 4); glb.bin.writeFloatLE(v[2], voff(k) + 8); });
@@ -163,9 +175,28 @@ function nodeNormals(G, list, want) {
 // ------------------------------------------------------------------ mouth
 const jaw = sparseTarget(primH, 'FX_JawOpen');
 const Dh = jaw.dense(H.P.length);
+// the build authored FX_JawOpen as a hinge about an axis parallel to x: recover the pivot and each vertex's weight
+const hinge = (() => {
+  let a11 = 0, a12 = 0, a22 = 0, b1 = 0, b2 = 0;
+  H.P.forEach((p, i) => {
+    const [, dy, dz] = Dh[i], w = Math.hypot(dy, dz);
+    if (w < 1e-9) return;
+    const my = p[1] + dy / 2, mz = p[2] + dz / 2, r = dy * my + dz * mz;
+    a11 += w * dy * dy; a12 += w * dy * dz; a22 += w * dz * dz; b1 += w * dy * r; b2 += w * dz * r;
+  });
+  const det = a11 * a22 - a12 * a12, cy = (b1 * a22 - b2 * a12) / det, cz = (a11 * b2 - a12 * b1) / det;
+  const angle = H.P.map((p, i) => {
+    if (!(Dh[i][1] || Dh[i][2])) return 0;
+    const qy = p[1] - cy, qz = p[2] - cz, ry = qy + Dh[i][1], rz = qz + Dh[i][2];
+    return Math.atan2(qy * rz - qz * ry, qy * ry + qz * rz);
+  });
+  const mags = angle.filter((a) => a).map(Math.abs).sort((x, y) => x - y);
+  const full = mags[Math.floor(mags.length * 0.95)];
+  return { cy, cz, full, sign: Math.sign(angle.reduce((s, a) => s + a, 0)), weight: angle.map((a) => Math.min(1, Math.abs(a) / full)) };
+})();
 H.P.forEach((p, i) => { if (Dh[i][0] || Dh[i][1] || Dh[i][2]) H.P[i] = sub(p, mul(Dh[i], RECIPE.jaw)); });
-jaw.write(jaw.vals.map((v) => mul(v, 1 + RECIPE.jaw)));
 report.jaw_vertices = Dh.filter((d) => d[0] || d[1] || d[2]).length;
+report.jaw_hinge = { pivot_y: +hinge.cy.toFixed(4), pivot_z: +hinge.cz.toFixed(4), full_deg: +(hinge.full * 180 / Math.PI).toFixed(2) };
 
 // the slit between the lips, per 1 mm column: front rays (glTF +z), the pit nearest the jaw split
 function measureSlit(P, I) {
@@ -270,6 +301,45 @@ function measureSlit(P, I) {
   history.push({ columns: last.length, max_gap: +Math.max(0, ...last.map((c) => c.hi - c.lo)).toFixed(4) });
   report.lip_slit = history;
 }
+
+// FX_JawOpen rebuilt on the closed mouth. The build's version faded its weight out inside the lower lip, so opening
+// stretched the lower lip into a long flat sheet (it looked like a tongue) and sheared the teeth. Now the jaw region
+// swings about the same hinge as one piece: the old weight remapped steeply, the whole lower lip at full weight in the
+// mouth core (blending only past the corners, toward the cheeks and the throat), the teeth with the upper jaw.
+const mouth = (() => {
+  const GH = weldAll([H]);
+  const comp = new Int32Array(GH.nodes.length).fill(-1), sizes = [];
+  for (let s = 0; s < GH.nodes.length; s++) {
+    if (comp[s] >= 0) continue;
+    const st = [s]; comp[s] = sizes.length; let n = 0;
+    while (st.length) { const v = st.pop(); n++; for (const u of GH.adj[v]) if (comp[u] < 0) { comp[u] = sizes.length; st.push(u); } }
+    sizes.push(n);
+  }
+  const main = sizes.indexOf(Math.max(...sizes));
+  const inMain = H.P.map((_, i) => comp[H.node[i]] === main);
+  const jawPts = H.P.filter((p, i) => inMain[i] && hinge.weight[i] > 0.05);
+  const zmax = Math.max(...jawPts.map((p) => p[2]));
+  const lipFront = jawPts.filter((p) => p[2] > zmax - 0.03);
+  const xc = lipFront.reduce((s, p) => s + p[0], 0) / lipFront.length;
+  const split = Math.max(...lipFront.filter((p) => Math.abs(p[0] - xc) < 0.006).map((p) => p[1]));
+  const O = RECIPE.jaw_open, full = hinge.full * O.open_scale;
+  const w = H.P.map((p, i) => {
+    if (!inMain[i]) return 0; // teeth and the other small shells stay with the upper jaw
+    const m0 = hinge.weight[i];
+    if (m0 < 1e-3) return 0;
+    const dx = Math.abs(p[0] - xc);
+    const core = (1 - smooth01((dx - O.core_x) / O.core_fade_x)) * (1 - smooth01((split - O.core_below - p[1]) / O.core_fade_y));
+    const lipZone = smooth01((p[1] - (split - O.taper_zone_below)) / O.taper_zone_fade);
+    const taper = 1 - O.taper * smooth01((dx - O.taper_start) / O.taper_width) * lipZone;
+    return Math.min(1, Math.max(smooth01(m0 / O.steep), core)) * taper;
+  });
+  jaw.write(jaw.idx.map((i) => {
+    const th = hinge.sign * full * w[i], qy = H.P[i][1] - hinge.cy, qz = H.P[i][2] - hinge.cz, c = Math.cos(th), s = Math.sin(th);
+    return w[i] ? [0, qy * c - qz * s - qy, qy * s + qz * c - qz] : [0, 0, 0];
+  }));
+  report.jaw_open = { full_deg: +(full * 180 / Math.PI).toFixed(2), xc: +xc.toFixed(4), split: +split.toFixed(4), full_weight: w.filter((x) => x > 0.999).length, teeth_still: H.P.filter((_, i) => !inMain[i] && hinge.weight[i] > 0).length };
+  return { w, inMain, xc, split, zmax };
+})();
 
 // ------------------------------------------------------------------ neck seam
 const G = weldAll([B, H]);
@@ -460,6 +530,48 @@ function dilate(data, w, h, covered, passes) {
       n++;
     }, (ia, ib, ic) => Math.min(nodeDist(d, ia), nodeDist(d, ib), nodeDist(d, ic)) < zout);
     report.repainted_texels[k === 'B' ? 'body' : 'head'] = n;
+  }
+  // the mouth interior: the strip of triangles joining the lips (it spans the opening when the jaw drops) and the cavity
+  // behind the lips get a dark mouth colour. All of it is hidden while the mouth is closed.
+  {
+    const M = RECIPE.mouth_interior, dark = M.color.map(toLin), im = imgs.H;
+    const near = [];
+    for (let t = 0; t < H.I.length; t += 3) {
+      const a = H.P[H.I[t]], b = H.P[H.I[t + 1]], c = H.P[H.I[t + 2]];
+      if (Math.abs((a[0] + b[0] + c[0]) / 3 - mouth.xc) < M.cavity_x + 0.02 && Math.abs((a[1] + b[1] + c[1]) / 3 - mouth.split) < 0.04) near.push([a, b, c]);
+    }
+    const frontZ = (x, y) => {
+      let best = -Infinity;
+      for (const [a, b, c] of near) {
+        const v0x = b[0] - a[0], v0y = b[1] - a[1], v1x = c[0] - a[0], v1y = c[1] - a[1], den = v0x * v1y - v1x * v0y;
+        if (Math.abs(den) < 1e-14) continue;
+        const u = ((x - a[0]) * v1y - v1x * (y - a[1])) / den, v = (v0x * (y - a[1]) - (x - a[0]) * v0y) / den;
+        if (u >= 0 && v >= 0 && u + v <= 1) best = Math.max(best, a[2] + u * (b[2] - a[2]) + v * (c[2] - a[2]));
+      }
+      return best;
+    };
+    let strip = 0, cavity = 0;
+    for (let t = 0; t < H.I.length; t += 3) {
+      const ia = H.I[t], ib = H.I[t + 1], ic = H.I[t + 2];
+      if (!mouth.inMain[ia] || !mouth.inMain[ib] || !mouth.inMain[ic]) continue;
+      const c = [0, 1, 2].map((k) => (H.P[ia][k] + H.P[ib][k] + H.P[ic][k]) / 3);
+      const dx = Math.abs(c[0] - mouth.xc);
+      if (dx > M.cavity_x || c[1] < mouth.split - 0.025 || c[1] > mouth.split + 0.012 || c[2] < 0.015) continue;
+      const ws = [mouth.w[ia], mouth.w[ib], mouth.w[ic]];
+      let f = 0;
+      if (dx < M.strip_x && Math.max(...ws) - Math.min(...ws) > 0.5 && Math.abs(c[1] - mouth.split) < 0.01) { f = 1; strip++; }
+      else {
+        const depth = frontZ(c[0], c[1]) - c[2];
+        if (Number.isFinite(depth) && depth > M.depth) { f = smooth01((depth - M.depth) / 0.004); cavity++; }
+      }
+      if (f <= 0) continue;
+      rasterUV(H, im.w, im.h, (x, y) => {
+        const i = y * im.w + x;
+        if (!interior.H[i]) return;
+        for (let k = 0; k < 3; k++) im.data[i * 4 + k] = toSrgb(toLin(im.data[i * 4 + k]) * (1 - f) + dark[k] * f);
+      }, null, [ia, ib, ic]);
+    }
+    report.mouth_interior = { strip_triangles: strip, cavity_triangles: cavity };
   }
   // every chart rim and gutter rebuilt from the chart interiors
   for (const k of ['B', 'H']) {
