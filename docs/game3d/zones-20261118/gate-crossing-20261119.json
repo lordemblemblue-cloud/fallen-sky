@@ -1,0 +1,351 @@
+{
+ "at": "2026-11-19T08:24:34.755Z",
+ "keyWalks": [
+  {
+   "gate": "town_east_market_bridge",
+   "kind": "bridge",
+   "from": "behind",
+   "to": "east",
+   "align": 1,
+   "maxS": 13.4,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east",
+   "areas": "town>east"
+  },
+  {
+   "gate": "town_east_market_bridge",
+   "kind": "bridge",
+   "from": "ahead",
+   "to": "town",
+   "align": 1,
+   "maxS": 13.59,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east",
+   "areas": "east>town"
+  },
+  {
+   "gate": "town_east_residential_footbridge",
+   "kind": "bridge",
+   "from": "behind",
+   "to": "east",
+   "align": 1,
+   "maxS": 13.28,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east",
+   "areas": "town>east"
+  },
+  {
+   "gate": "town_east_residential_footbridge",
+   "kind": "bridge",
+   "from": "ahead",
+   "to": "town",
+   "align": 1,
+   "maxS": 13.17,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east",
+   "areas": "east>town"
+  },
+  {
+   "gate": "town_east_outer_trail_bridge",
+   "kind": "bridge",
+   "from": "behind",
+   "to": "east",
+   "align": 1,
+   "maxS": 13.06,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east+north",
+   "areas": "town>east"
+  },
+  {
+   "gate": "town_east_outer_trail_bridge",
+   "kind": "bridge",
+   "from": "ahead",
+   "to": "town",
+   "align": 1,
+   "maxS": 13,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+east+north",
+   "areas": "east>town"
+  },
+  {
+   "gate": "town_south_south_fields_way",
+   "kind": "trail",
+   "from": "behind",
+   "to": "south",
+   "align": 0.99,
+   "maxS": 12.94,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+south",
+   "areas": "town>south"
+  },
+  {
+   "gate": "town_south_south_fields_way",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 0.99,
+   "maxS": 12.92,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+south",
+   "areas": "south>town"
+  },
+  {
+   "gate": "town_west_south_residential",
+   "kind": "trail",
+   "from": "behind",
+   "to": "west",
+   "align": 0.95,
+   "maxS": 10.06,
+   "crossed": true,
+   "switched": false,
+   "floorsBefore": "town+south+west",
+   "areas": "town"
+  },
+  {
+   "gate": "town_west_south_residential",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 0.95,
+   "maxS": 10.35,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+south+west",
+   "areas": "town"
+  },
+  {
+   "gate": "town_west_west_residential",
+   "kind": "trail",
+   "from": "behind",
+   "to": "west",
+   "align": 1,
+   "maxS": 13.11,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+west",
+   "areas": "town>west"
+  },
+  {
+   "gate": "town_west_west_residential",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 1,
+   "maxS": 13.42,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+west",
+   "areas": "west>town"
+  },
+  {
+   "gate": "east_north_hunters_loop_east",
+   "kind": "trail",
+   "from": "behind",
+   "to": "north",
+   "align": 0.91,
+   "maxS": -2.06,
+   "crossed": false,
+   "switched": false,
+   "floorsBefore": "east+north",
+   "areas": "east"
+  },
+  {
+   "gate": "east_north_hunters_loop_east",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "east",
+   "align": 0.91,
+   "maxS": -2.02,
+   "crossed": false,
+   "switched": true,
+   "floorsBefore": "east+north",
+   "areas": "east"
+  },
+  {
+   "gate": "west_north_hunters_loop_west",
+   "kind": "trail",
+   "from": "behind",
+   "to": "west",
+   "align": 0.82,
+   "maxS": -2.01,
+   "crossed": false,
+   "switched": false,
+   "floorsBefore": "north+west",
+   "areas": "north"
+  },
+  {
+   "gate": "west_north_hunters_loop_west",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "north",
+   "align": 0.82,
+   "maxS": -2.02,
+   "crossed": false,
+   "switched": true,
+   "floorsBefore": "north+west",
+   "areas": "north"
+  },
+  {
+   "gate": "town_north_ridge_path",
+   "kind": "trail",
+   "from": "behind",
+   "to": "north",
+   "align": 0.91,
+   "maxS": -2,
+   "crossed": false,
+   "switched": true,
+   "floorsBefore": "north+town",
+   "areas": "north"
+  },
+  {
+   "gate": "town_north_ridge_path",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 0.91,
+   "maxS": -2,
+   "crossed": false,
+   "switched": false,
+   "floorsBefore": "north+town",
+   "areas": "north"
+  },
+  {
+   "gate": "town_west_training_forest",
+   "kind": "trail",
+   "from": "behind",
+   "to": "west",
+   "align": 0.97,
+   "maxS": 12.86,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+west",
+   "areas": "town>west"
+  },
+  {
+   "gate": "town_west_training_forest",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 0.97,
+   "maxS": 12.17,
+   "crossed": true,
+   "switched": true,
+   "floorsBefore": "town+west",
+   "areas": "west>town"
+  },
+  {
+   "gate": "town_west_west_woodland_fork",
+   "kind": "trail",
+   "from": "behind",
+   "to": "west",
+   "align": 0.82,
+   "maxS": -2.05,
+   "crossed": false,
+   "switched": false,
+   "floorsBefore": "town+west",
+   "areas": "town"
+  },
+  {
+   "gate": "town_west_west_woodland_fork",
+   "kind": "trail",
+   "from": "ahead",
+   "to": "town",
+   "align": 0.82,
+   "maxS": -2.02,
+   "crossed": false,
+   "switched": true,
+   "floorsBefore": "town+west",
+   "areas": "town"
+  }
+ ],
+ "steeredWalks": [
+  {
+   "gate": "east_north_hunters_loop_east",
+   "from": "behind",
+   "maxS": 12.67,
+   "lateralMax": 0.8,
+   "area": "east",
+   "floors": "east+north"
+  },
+  {
+   "gate": "east_north_hunters_loop_east",
+   "from": "ahead",
+   "maxS": 12.98,
+   "lateralMax": 0.78,
+   "area": "east",
+   "floors": "east+north"
+  },
+  {
+   "gate": "west_north_hunters_loop_west",
+   "from": "behind",
+   "maxS": 12.89,
+   "lateralMax": 2.11,
+   "area": "north",
+   "floors": "north+west"
+  },
+  {
+   "gate": "west_north_hunters_loop_west",
+   "from": "ahead",
+   "maxS": 12.9,
+   "lateralMax": 2.43,
+   "area": "north",
+   "floors": "north+west"
+  },
+  {
+   "gate": "town_north_ridge_path",
+   "from": "behind",
+   "maxS": 12.72,
+   "lateralMax": 1.1,
+   "area": "north",
+   "floors": "north+town"
+  },
+  {
+   "gate": "town_north_ridge_path",
+   "from": "ahead",
+   "maxS": 12.99,
+   "lateralMax": 0.85,
+   "area": "north",
+   "floors": "north+town"
+  },
+  {
+   "gate": "town_west_west_woodland_fork",
+   "from": "behind",
+   "maxS": 12.61,
+   "lateralMax": 2.63,
+   "area": "town",
+   "floors": "town+west"
+  },
+  {
+   "gate": "town_west_west_woodland_fork",
+   "from": "ahead",
+   "maxS": 13.06,
+   "lateralMax": 2.3,
+   "area": "town",
+   "floors": "town+west"
+  },
+  {
+   "gate": "town_west_south_residential",
+   "from": "behind",
+   "maxS": 15.3,
+   "lateralMax": 1.38,
+   "area": "west",
+   "floors": "town+west+south"
+  },
+  {
+   "gate": "town_west_south_residential",
+   "from": "ahead",
+   "maxS": 12.62,
+   "lateralMax": 1.4,
+   "area": "west",
+   "floors": "town+west+south"
+  }
+ ]
+}

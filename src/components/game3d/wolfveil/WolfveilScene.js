@@ -404,6 +404,9 @@ export function createWolfveilVillage(scene,options={}){
     interactCave(position){return caveSystem?.interact(position)??null;},
     interactPalace(position){return palace.interact(position);},
     resetPalaceNavigation(){palace.resetNavigation();},
+    // Ground streaming: a neighbouring area's floor is built this far ahead.
+    setTerrainPreloadMeters(meters){return terrainAreas.setPreloadMeters(meters);},
+    terrainStreamStats(){return terrainAreas.stats();},
     update(dt,weather={},playerPosition=null,streamedArea=null){
       if(disposed)return;
       terrainAreas.update(playerPosition,streamedArea);

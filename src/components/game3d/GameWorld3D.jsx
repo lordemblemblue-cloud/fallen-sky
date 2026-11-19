@@ -891,6 +891,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     if(regionStream){
       window.__gw3dRegionStreamer=regionStream; // name kept for existing console checks
       window.__gw3dAreaLoader=regionStream;
+      // The ground of a neighbouring area streams in as the player nears its gate.
+      wolfveilVillage.setTerrainPreloadMeters?.(areaPlatform.profile.preloadMeters);
     }
     // Gateways: torii gates at every area portal, joined by spirit-veil
     // walls that let the player (and AI) cross a border only through a gate.
@@ -933,6 +935,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       regionStream?.setOptions({mode:profile.areaLoading,
         preloadMeters:profile.preloadMeters,releaseGpuMemory:profile.releaseGpuMemory,
         farScenery:profile.farScenery});
+      wolfveilVillage?.setTerrainPreloadMeters?.(profile.preloadMeters);
     };
     window.addEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
     // In an explicitly E-entered cave session, movement's ground-step guard
@@ -3131,6 +3134,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
+      // A torii gate carries a player who steps into it through to the far side.
+      const gateCarry=dedicatedMode?null:areaPortals?.carryStep?.(delta);
+      if(gateCarry&&modelRef.current)moveWorldActor(modelRef.current,gateCarry.dx,gateCarry.dz,isMountedRef.current);
       naturalZones?.update(delta,{player:modelRef.current,mounted:isMountedRef.current,
         airborne:(playerAnim?.getAirWalkState?.()?.mode||'idle')!=='idle'||['takeoff','airborne'].includes(playerAnim?.getDebugState?.()?.jumpPhase)});
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);

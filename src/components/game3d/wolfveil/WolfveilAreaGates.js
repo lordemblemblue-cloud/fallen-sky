@@ -24,6 +24,9 @@ export const WOLFVEIL_AREA_VEIL_STYLE=Object.freeze({
   labelRange:48,      // gate labels exist (and hold a texture) only this close
   approach:3.2,       // the crossing mist starts this far from a gate plane
   reportRange:220,    // visibleIds(): gates of the current area within this
+  carryReach:1.3,     // stepping this close to the plane, inside the opening, starts a carry
+  carryDepth:4.2,     // ...that ends this far past the plane on the far side
+  carrySpeed:9,       // metres per second (0.3-0.75 s per carry)
 });
 const S=WOLFVEIL_AREA_VEIL_STYLE;
 
@@ -304,6 +307,23 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
   };
 
   let mist=0,elapsed=0,enabled=true,disposed=false,lastPlayer=null,lastArea=null;
+  // A gate carries a player who steps into its opening through to the far
+  // side (S.carryDepth metres past the plane), so it works as a portal and
+  // the player always ends up clearly in the next area. The game applies it
+  // as ordinary movement, so collision and ground checks still hold.
+  let carry=null,carryCooldown=0,carries=0;
+  function startCarry(entry,side,depth,lateral){
+    const {gate}=entry,t=[gate.facing[1],-gate.facing[0]];
+    const to={
+      x:gate.x+gate.facing[0]*side*S.carryDepth+t[0]*lateral,
+      z:gate.z+gate.facing[1]*side*S.carryDepth+t[1]*lateral,
+    };
+    const from={x:lastPlayer.x,z:lastPlayer.z};
+    const distance=Math.hypot(to.x-from.x,to.z-from.z);
+    carry={gate:gate.id,from,to,t:0,duration:Math.max(.3,Math.min(.75,distance/S.carrySpeed)),
+      into:side>0?gate.ahead:gate.behind,startDepth:depth,stalled:0};
+    carries++;
+  }
   function dropLabel(entry,i){
     const sprite=entry.labels[i];
     if(!sprite)return;
@@ -333,7 +353,26 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     uniforms.uTime.value=elapsed;
     mist=0;lastArea=area;
     const px=Number(position?.x),pz=Number(position?.z)-offsetZ;
+    const previous=lastPlayer;
     lastPlayer=Number.isFinite(px)&&Number.isFinite(pz)?{x:px,z:pz}:null;
+    carryCooldown=Math.max(0,carryCooldown-Math.max(0,Number(dt)||0));
+    // A teleport, respawn or switched-off gates end a carry at once.
+    if(carry&&(!enabled||!lastPlayer||(previous&&Math.hypot(lastPlayer.x-previous.x,lastPlayer.z-previous.z)>=4)))carry=null;
+    // Stepping into a gate opening, moving towards its plane, starts a carry.
+    if(enabled&&!carry&&!carryCooldown&&previous&&lastPlayer&&
+       Math.hypot(lastPlayer.x-previous.x,lastPlayer.z-previous.z)<4){
+      for(const entry of gates){
+        const {gate}=entry;
+        if(Math.abs(lastPlayer.x-gate.x)>10||Math.abs(lastPlayer.z-gate.z)>10)continue;
+        const depthOf=p=>(p.x-gate.x)*gate.facing[0]+(p.z-gate.z)*gate.facing[1];
+        const now=depthOf(lastPlayer),before=depthOf(previous);
+        const lateral=(lastPlayer.x-gate.x)*gate.facing[1]-(lastPlayer.z-gate.z)*gate.facing[0];
+        if(Math.abs(lateral)>gate.halfWidth-.25)continue;
+        const side=before<0?1:-1; // +1: walking from the behind side towards ahead
+        const approaching=side>0?now>before+1e-4:now<before-1e-4;
+        if(approaching&&Math.abs(now)<=S.carryReach){startCarry(entry,side,now,lateral);break;}
+      }
+    }
     const cam=uniforms.uCam.value;
     for(const entry of gates){
       const {gate}=entry;
@@ -353,6 +392,24 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
       }
     }
     return mist;
+  }
+  /**
+   * The carry's movement for this frame, in WORLD metres ({dx, dz}), or null.
+   * Call after update(); the caller moves the player with its usual collision.
+   */
+  function carryStep(dt){
+    if(!carry||!lastPlayer)return null;
+    const step=Math.max(0,Math.min(Number(dt)||0,.1));
+    carry.t=Math.min(carry.duration,carry.t+step);
+    const k=carry.t/carry.duration,ease=k*k*(3-2*k);
+    const target={x:carry.from.x+(carry.to.x-carry.from.x)*ease,z:carry.from.z+(carry.to.z-carry.from.z)*ease};
+    const dx=target.x-lastPlayer.x,dz=target.z-lastPlayer.z;
+    // Blocked (a post, a missing floor): give up rather than push forever.
+    const left=Math.hypot(carry.to.x-lastPlayer.x,carry.to.z-lastPlayer.z);
+    if(carry.t>=carry.duration){
+      if(left<.6||(carry.stalled+=step)>.35){carry=null;carryCooldown=.6;}
+    }
+    return {dx,dz};
   }
   /**
    * Client movement (WORLD coordinates, like resolveBuildingCollision):
@@ -385,8 +442,11 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     for(const material of [veilMaterial,membraneMaterial,...Object.values(materials)])material.dispose();
   }
   return {
-    root,count:gates.length,gates:gates.map(entry=>entry.gate),update,resolveCollision,dispose,
+    root,count:gates.length,gates:gates.map(entry=>entry.gate),update,resolveCollision,dispose,carryStep,
     get mist(){return mist;},
+    /** The gate carry in progress ({gate, into, t, duration}) or null; `carries` counts them. */
+    get carry(){return carry&&{gate:carry.gate,into:carry.into,t:carry.t,duration:carry.duration};},
+    get carries(){return carries;},
     setEnabled(next){
       enabled=Boolean(next);root.visible=enabled;
       if(!enabled)for(const entry of gates){dropLabel(entry,0);dropLabel(entry,1);}
