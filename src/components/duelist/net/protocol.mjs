@@ -3,7 +3,8 @@
 // the server sends back.
 //
 // client -> server
-//   { t: 'hello', v, token, name, body }        sign in (token checked by the server) and pick a fighter
+//   { t: 'hello', v, token, name, body, resume? }  sign in (token checked by the server) and pick a fighter;
+//                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
 //   { t: 'join', mode }                          'duel' | 'ffa' | 'tdm' | 'ctf' | 'any' (any match with players)
 //   { t: 'join', mode: 'story', code?, create? } the co-op mission: a crew room by its code, a new room of your
@@ -12,9 +13,10 @@
 //                                                interact held (story), presses
 //   { t: 'leave' }
 // server -> client
-//   { t: 'welcome', id, name }
+//   { t: 'welcome', id, name, resumed }          resumed: back in the seat (its 'joined', resumed: true, follows)
 //   { t: 'lobby', matches: [{ id, mode, players, bots, seats, phase }] }
-//   { t: 'joined', match, mode, you, seats, replaced }   seats: [{ id, name, team, kind, body }]
+//   { t: 'joined', match, mode, you, seats, replaced, key }   seats: [{ id, name, team, kind, body, away? }];
+//       key: comes back to this seat after a dropped connection (a fresh one each time), for RECONNECT_SECONDS
 //       a story room adds: mission, code, and seats for the depot's people { id, name, kind: 'enemy', type, tag, named }
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
@@ -25,6 +27,9 @@
 //       uses: [[id, by, progress]] for what is being used right now; idle: [id] people who have noticed nobody
 //       and stand as last sent (everyone is sent in full once a second and when someone joins or appears)
 //   { t: 'left' }   { t: 'error', code, message }
+//   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
+// close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
+// 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES } from '../core/index.mjs';
 
 export const PROTOCOL = 2;
@@ -33,6 +38,8 @@ export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
 // a stall) and the oldest are skipped, their presses kept, so the fighter never runs long behind its player.
 export const MAX_WAITING_INPUTS = 5;
+// A dropped connection keeps its seat this long (server seconds); the browser keeps trying for as long.
+export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second

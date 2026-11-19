@@ -99,6 +99,8 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
     },
     /** The server is not acting on this player's inputs (fallen, a countdown): nothing to predict. */
     drop() { active = false; },
+    /** A new connection or a new match: nothing to replay, nothing predicted until the server's next word. */
+    reset() { pending.length = 0; active = false; ex = 0; ey = 0; ez = 0; lastCorrection = 0; },
     /**
      * Write the predicted fighter into the fighter and body the game view draws (the mirror world's), whose
      * clock reads `time`: moments (cooldowns, a stagger's end) are moved onto that clock, and an action keeps

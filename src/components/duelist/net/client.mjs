@@ -6,6 +6,10 @@
 //
 // The player's own fighter is the exception: it is played here a step ahead of the server (net/predict.mjs),
 // so a press shows at once, and hits that involve the player show the moment the server reports them.
+//
+// A dropped connection is not the end: the page reconnects by itself and sits back down in its seat with the
+// key the server gave it (a bot or the autopilot plays it meanwhile, for RECONNECT_SECONDS). The key is kept
+// in the tab's session storage too, so a reload sits back down as well; leaving for the menu gives it up.
 /* global window, WebSocket, performance, fetch, setTimeout */
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
@@ -13,14 +17,33 @@ import { MODES } from '../sim/match.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
 import { createLevel, setDoor } from '../sim/level.mjs';
 import { enemySeat, crewSeat } from '../client/missionSeats.mjs';
-import { PROTOCOL, WS_PATH, TICK_HZ, encodeInput, sanitizeInput, applyFighter } from './protocol.mjs';
+import { PROTOCOL, WS_PATH, TICK_HZ, RECONNECT_SECONDS, encodeInput, sanitizeInput, applyFighter } from './protocol.mjs';
 import { createPredictor } from './predict.mjs';
 
 const DELAY = 0.1; // seconds the picture stays behind the newest snapshot
 const STEP = 1 / TICK_HZ; // the player's inputs are read, sent and played in the server's own steps
 const MAX_CATCH_UP = 0.1; // seconds of steps made up after a long frame; beyond that the time is let go
 const DEAD = 4; // the fallen bit of a snapshot fighter's state
-const CLOSE_REASONS = { 4401: 'Sign in to play online.', 4409: 'You signed in somewhere else.', 4426: 'The game was updated. Reload the page.', 4429: 'Too many messages.' };
+const SILENCE_SECONDS = 3; // nothing from the server for this long (it sends 20 snapshots a second): the connection is gone
+const CLOSE_REASONS = { 4401: 'Sign in to play online.', 4409: 'You signed in somewhere else.', 4410: 'You carried on in another window.',
+  4426: 'The game was updated. Reload the page.', 4429: 'Too many messages.' };
+// closes that end the visit (nothing to reconnect to)
+const FINAL = new Set([4401, 4409, 4410, 4426, 4429]);
+const RESUME_KEY = 'duelist.resume';
+
+// This tab's session storage (where the seat's key is kept across a reload), when the browser allows it.
+function tabStorage() {
+  try { return typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null; } catch { return null; }
+}
+// The seat this tab last sat in, when it was asked for the same way and recently: { match, key }.
+function keptSeat(storage, mode, room) {
+  try {
+    const kept = JSON.parse(storage.getItem(RESUME_KEY) || 'null');
+    if (kept && kept.mode === mode && (kept.room || null) === (room || null) && typeof kept.match === 'string' && typeof kept.key === 'string'
+      && Date.now() - kept.at < RECONNECT_SECONDS * 1000) return { match: kept.match, key: kept.key };
+  } catch { /* nothing kept */ }
+  return null;
+}
 
 /** Where the match server is: VITE_DUELIST_WS_URL, or the local test server when the page runs on localhost. */
 export function duelistServerUrl() {
@@ -66,10 +89,11 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
 /**
  * An online match. mode: 'duel' | 'ffa' | 'tdm' | 'ctf' | 'any', or 'story': the co-op mission in a crew room
  * (room: a crew's code, 'new' for a room of your own, or null for any open crew). onChange(status, detail)
- * reports 'connecting' | 'joining' | 'ready' | 'closed' | 'error'. predict: false draws the player's own
- * fighter from the server's picture like everyone else's (for comparison).
+ * reports 'connecting' | 'joining' | 'ready' | 'reconnecting' | 'closed' | 'error'. predict: false draws the
+ * player's own fighter from the server's picture like everyone else's (for comparison). storage: where the
+ * seat's key is kept across a reload (this tab's session storage by default).
  */
-export function createOnlineSource({ url, token, name, body, mode, room = null, predict = true, onChange = () => {} }) {
+export function createOnlineSource({ url, token, name, body, mode, room = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   const def = story ? MISSIONS.contraband : null;
@@ -130,21 +154,48 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
   // a hit on the player, or the player's own strike landing or being parried
   const involvesMe = (e) => e.defender === meId || ((e.type === 'impact' || e.type === 'parry') && e.attacker === meId);
 
+  // ---- the connection
+  let seat = null; // { match, key }: where the player sits, and the key that comes back to it
+  let joinedOnce = false;
+  let stopped = false; // left on purpose: nothing to come back to
+  let reconnectUntil = 0;
+  let attempt = 0;
+  let lastHeard = 0; // when the server was last heard from (local seconds)
+  let lastKept = 0;
+  const keep = () => {
+    if (!storage || !seat) return;
+    try { storage.setItem(RESUME_KEY, JSON.stringify({ mode, room, match: seat.match, key: seat.key, at: Date.now() })); } catch { /* this visit only */ }
+  };
+  const forget = () => { if (!storage) return; try { storage.removeItem(RESUME_KEY); } catch { /* nothing kept */ } };
+
   function receive(msg) {
+    lastHeard = local();
     if (msg.t === 'welcome') {
       meId = msg.id;
-      if (predict && !devNoPrediction()) predictor = createPredictor({ id: meId, level, arenaRadius: world.arenaRadius });
-      setStatus('joining');
-      send({ t: 'join', mode, ...(story && room === 'new' ? { create: true } : story && room ? { code: room } : {}) });
+      if (predict && !devNoPrediction() && (!predictor || predictor.fighter.id !== meId)) predictor = createPredictor({ id: meId, level, arenaRadius: world.arenaRadius });
+      if (msg.resumed) return; // back in the seat: its 'joined' follows
+      // a seat of its own: as asked; after a drop that lasted too long, back into the same crew by its code
+      const again = !!seat;
+      seat = null;
+      setStatus('joining', again ? 'Your seat was given up. Joining again…' : '');
+      const how = story && again && code ? { code } : story && room === 'new' ? { create: true } : story && room ? { code: room } : {};
+      send({ t: 'join', mode, ...how });
     } else if (msg.t === 'joined') {
+      // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
+      const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
+      joinedOnce = true;
       matchMode = msg.mode;
       world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.drop(); }
-      if (msg.rematch) {
-        world.fighters.clear(); world.bodies.clear(); snaps.length = 0; shown = -Infinity; offset = null;
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.reset(); }
+      if (fresh) {
+        world.fighters.clear(); world.bodies.clear(); flags = null;
         // a mission from the start: its doors as they were
         if (level) { for (const d of def.level.doors) setDoor(level, d.id, !!d.open); view = null; maxOf.clear(); lastFull.clear(); }
       }
+      // the picture starts again from the server's next snapshot (back after a drop: the same world, a new clock)
+      if (fresh || msg.resumed) { snaps.length = 0; shown = -Infinity; offset = null; instant.length = 0; sentAt.clear(); handover = -Infinity; }
+      seat = msg.key ? { match: msg.match, key: msg.key } : null;
+      keep();
       code = msg.code || null;
       seats = dress(msg.seats);
       seatsVersion += 1;
@@ -186,18 +237,49 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       if (left !== undefined) roundTrip = roundTrip === null ? at - left : roundTrip + (at - left - roundTrip) * 0.1;
       for (const n of sentAt.keys()) { if (n > msg.ack) break; sentAt.delete(n); }
     } else if (msg.t === 'error') setStatus('error', msg.message);
-    else if (msg.t === 'left') setStatus('closed', 'You left the match.');
+    else if (msg.t === 'left') { seat = null; forget(); setStatus('closed', 'You left the match.'); }
   }
 
-  ws = new WebSocket(url);
-  ws.onopen = () => send({ t: 'hello', v: PROTOCOL, token: token || '', name, body });
-  ws.onmessage = (event) => {
-    let msg;
-    try { msg = JSON.parse(event.data); } catch { return; }
-    if (lag) setTimeout(() => receive(msg), lag * 500); else receive(msg);
-  };
-  ws.onclose = (e) => { if (status !== 'error') setStatus('closed', CLOSE_REASONS[e.code] || 'The match server closed the connection.'); };
-  ws.onerror = () => setStatus('error', 'The match server could not be reached.');
+  function connect(resume) {
+    const socket = new WebSocket(url);
+    ws = socket;
+    socket.onopen = () => { if (ws === socket) send({ t: 'hello', v: PROTOCOL, token: token || '', name, body, ...(resume ? { resume } : {}) }); };
+    socket.onmessage = (event) => {
+      if (ws !== socket) return;
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+      if (lag) setTimeout(() => { if (ws === socket) receive(msg); }, lag * 500); else receive(msg);
+    };
+    socket.onclose = (e) => { if (ws === socket) lost(e.code); };
+    socket.onerror = () => {}; // its close follows
+  }
+
+  // The connection closed: the end (left, refused, replaced, never reached), or a drop to come back from:
+  // tries again, sooner then later, for as long as the server keeps the seat.
+  function lost(closeCode) {
+    ws = null;
+    if (stopped) return;
+    if (!seat || FINAL.has(closeCode)) {
+      if (FINAL.has(closeCode)) { seat = null; forget(); }
+      if (status === 'error' || status === 'closed') return;
+      if (status === 'connecting') setStatus('error', 'The match server could not be reached.');
+      else setStatus('closed', CLOSE_REASONS[closeCode] || 'The match server closed the connection.');
+      return;
+    }
+    if (status !== 'reconnecting') {
+      reconnectUntil = local() + RECONNECT_SECONDS - 2;
+      attempt = 0;
+      predictor?.reset();
+      setStatus('reconnecting', 'Connection lost. Reconnecting…');
+    }
+    if (local() > reconnectUntil) { seat = null; forget(); setStatus('closed', 'The connection was lost.'); return; }
+    const wait = Math.min(4, 0.25 * 2 ** attempt);
+    attempt += 1;
+    setTimeout(() => { if (!stopped && !ws && seat) connect(seat); }, wait * 1000);
+  }
+
+  // a reload in this tab while seated: straight back to that seat
+  connect(storage ? keptSeat(storage, mode, room) : null);
 
   return {
     world,
@@ -221,6 +303,14 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
      */
     step(dt, input) {
       const out = { effects: instant.splice(0), events: [] };
+      // nothing heard for a while: the connection is gone, whatever the socket says
+      if (status === 'ready' && ws && local() - lastHeard > SILENCE_SECONDS) {
+        const dead = ws;
+        ws = null;
+        try { dead.close(); } catch { /* already gone */ }
+        lost(1006);
+      }
+      if (seat && local() - lastKept > 1) { lastKept = local(); keep(); }
       if (status === 'ready' && meId) {
         stepClock = Math.min(MAX_CATCH_UP, stepClock + dt);
         while (stepClock >= STEP - 1e-9) {
@@ -282,7 +372,28 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       while (snaps.length > 2 && snaps[1].time < time - 0.5) snaps.shift();
       return out;
     },
-    leave() { send({ t: 'leave' }); },
-    dispose() { try { ws?.close(); } catch { /* already closed */ } },
+    /** For trying the reconnect out (and tests): the connection goes as if the network had dropped. */
+    simulateDrop() {
+      if (!ws) return;
+      const dead = ws;
+      ws = null;
+      try { dead.close(); } catch { /* already gone */ }
+      lost(1006);
+    },
+    /** Leave on purpose: the seat is given up (a bot takes it) and nothing reconnects. */
+    leave() { stopped = true; seat = null; forget(); send({ t: 'leave' }); },
+    /**
+     * Done with the match (back to the menu): the seat is given up. keepSeat: the page is going but its player
+     * is not (a reload, or a test of one): the seat waits and the kept key brings the next page back to it.
+     * Only a source that got its seat gives one up (React's development double mount disposes the first
+     * source before it has one: the kept key must survive for the second).
+     */
+    dispose({ keepSeat = false } = {}) {
+      stopped = true;
+      if (!keepSeat && seat) { seat = null; forget(); deliver({ t: 'leave' }); }
+      const socket = ws;
+      ws = null;
+      try { socket?.close(); } catch { /* already closed */ }
+    },
   };
 }

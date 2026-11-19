@@ -45,8 +45,9 @@ export function Crew({ view }) {
     <div className="duelist-crew">
       {code && <div className="duelist-crew-code">Crew code <b>{code}</b>{view.room.open ? ' · open to anyone' : ''}</div>}
       {view.people.map((p) => (
-        <div key={p.id} className={p.dead ? 'is-down' : ''}>
+        <div key={p.id} className={p.dead || view.away?.includes(p.id) ? 'is-down' : ''}>
           {p.id === view.me?.id ? 'You' : p.name}{p.dead ? ` · down${p.respawnIn > 0 ? ` ${Math.ceil(p.respawnIn)}` : ''}` : ''}
+          {view.away?.includes(p.id) ? ' · reconnecting' : ''}
         </div>
       ))}
     </div>

@@ -28,7 +28,7 @@ async function authenticate(token, hello) {
     const user = await client.auth.me();
     if (user?.id) return { id: String(user.id), name: hello?.name || user.full_name || 'Duelist' };
   }
-  if (allowGuests) return { id: `guest-${Math.random().toString(36).slice(2, 10)}`, name: hello?.name || 'Guest' };
+  if (allowGuests) return { id: `guest-${Math.random().toString(36).slice(2, 10)}`, name: hello?.name || 'Guest', guest: true };
   return null;
 }
 

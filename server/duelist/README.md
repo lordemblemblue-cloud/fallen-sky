@@ -28,6 +28,12 @@ flag) and for the co-op story mission played with a crew. Practice and the solo 
   mission waits while its room is empty (the room closes after a minute) and starts again 20 s after it is
   completed. Wrong codes are slowed down (five, then a 30 s wait). The Join button (`any`) looks for a
   match, not a mission.
+- **Reconnecting.** A dropped connection keeps its seat for 30 s (`RECONNECT_SECONDS`): meanwhile a bot plays
+  it in a match, the mission's autopilot in a crew (a crew with nobody connected waits). Every `joined` carries a
+  key; `hello { resume: { match, key } }` sits the player back down (a fresh key each time; an account's key
+  never opens another account's seat, and a guest only ever gets a guest's back). Signing in afresh without a
+  key gives up a seat the account left waiting. The server pings every 5 s and cuts connections that stop
+  answering.
 - **Sign-in.** Each connection signs in once with the player's Base44 token (checked with Base44, like the
   Game 2 arena server); the account id is the player's id.
 
@@ -61,8 +67,8 @@ one replica (matches live in memory), with `BASE44_APP_ID` and `DUELIST_ALLOWED_
 
 ## Not yet
 
-- Reconnecting to the same seat after a dropped connection; results saved to accounts.
+- Results saved to accounts.
 - A crew member who joins mid-mission meets the people already in the depot as they were manned for the
   smaller crew (later rooms are manned for the new size).
 
-Tests: `node --test tests/duelist-server.test.mjs tests/duelist-predict.test.mjs` (from the repository root).
+Tests: `node --test tests/duelist-server.test.mjs tests/duelist-predict.test.mjs tests/duelist-reconnect.test.mjs` (from the repository root).
