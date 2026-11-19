@@ -1,6 +1,5 @@
 // Temporary, client-only weapon balance controls for the Game 3D test server.
 // No currency, material, item, vault or server-authoritative progression writes.
-import { subscribeCharacterChange } from '../../characterStorage';
 import { allowsSpiritualPreviewMax } from '../../progression/previewMaxRules.mjs';
 import { AXE_ENCHANTMENT_CONFIG, AXE_OVER_ENCHANT_CONFIG, getAXEReinforcementCap } from './AXEItemEnhancementSystem.js';
 import {
@@ -135,5 +134,4 @@ export function subscribeAXETestWeaponTuning(fn) {
   return () => listeners.delete(fn);
 }
 
-// A character switch can never inherit another character's test weapon bonuses.
-subscribeCharacterChange(() => clearAXETestWeaponTuning());
+// Host application subscribes to character changes and clears the test overlay.

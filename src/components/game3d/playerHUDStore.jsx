@@ -8,7 +8,7 @@ import { awardCompanionXP } from './companionProgressionStore';
 import { getAXEMountDefinition } from './axe/progression/AXEMountSystem';
 import { getHaloBonuses, subscribeHalo } from './progression/haloStore';
 import { isAnyPreviewMaxActive } from './progression/previewMaxMode';
-import { hasAXETestWeaponTuning, subscribeAXETestWeaponTuning } from './axe/equipment/AXETestWeaponTuner.mjs';
+import { clearAXETestWeaponTuning, hasAXETestWeaponTuning, subscribeAXETestWeaponTuning } from './axe/equipment/AXETestWeaponTuner.mjs';
 import { getAuraBonuses, subscribeAura } from './progression/auraStore';
 import {
   getEquippedWingsMultiplierBonuses,
@@ -592,6 +592,8 @@ subscribeAXEMounts(recomputeFromBonuses);
 subscribeAXEVanity(recomputeFromBonuses);
 subscribeAXEEquipmentInventory(recomputeFromBonuses);
 subscribeAXETestWeaponTuning(recomputeFromBonuses);
+// Always clear transient weapon overrides when the active character/account changes.
+subscribeCharacterChange(clearAXETestWeaponTuning);
 subscribeEnchantments(recomputeFromBonuses);
 subscribeAXEItemAdvancement(recomputeFromBonuses);
 subscribeAXESockets(recomputeFromBonuses);
