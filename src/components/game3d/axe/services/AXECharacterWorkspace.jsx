@@ -212,6 +212,8 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
               <div><span>Character</span><strong>{activeCharacter?.name || 'Character'}</strong></div>
               <div><span>Level</span><strong>{display(hud.level)}</strong></div>
               <div><span>Experience</span><strong>{display(hud.xp)}</strong></div>
+              {hud.xpBankedAtOldCap > 0 && <div><span>XP kept at the old cap</span>
+                <strong>{display(hud.xpBankedAtOldCap)}</strong></div>}
               {(activeCharacter?.className || activeCharacter?.role) && <div><span>Class / Role</span>
                 <strong>{activeCharacter.className || activeCharacter.role}</strong></div>}
               {(activeCharacter?.factionName || activeCharacter?.faction) && <div><span>Faction</span>
