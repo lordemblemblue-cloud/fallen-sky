@@ -79,3 +79,13 @@ The existing gate and five-area suites still pass.
 ## 6. Rollback
 
 Revert the commit. Nothing else depends on it.
+
+## 7. Update: merged with `main` 0b3fd6b (PR #98/#100, civic town NPCs)
+
+- **The one conflict:** `WolfveilTerrainAreaStream.mjs`. Main's 79f5d85 made removing the old "Loading <area>…" overlay safe in headless runs. This branch had already replaced that overlay and its deferred build with synchronous per-area streaming, so the branch side was kept: there is no overlay left to remove.
+- **Main's headless report script** (`scripts/report-wolfveil-area-loading.mjs`) now steps queued animation frames and checks that the streamed ground stays drawable. Both still hold.
+- **Tests on the merge:** the gate-crossing tests, #98's `wolfveil-town-civic-ai` and `game3d-clone-town-living-quarter` tests, and the five-area and gate suites pass (74/74). The headless real-valley loading test fails on `main` as well (four far-outline checks; asset downloads are unavailable headless).
+- **Live check on the merge** (sound muted, default settings; `zones-20261118/gate-crossing-merged-20261119.json`):
+  - All 11 gates crossed from both sides, with the far side's ground loaded before arrival.
+  - All 14 town NPCs were present. Over 30 s both guards patrolled ~32 m, residents took short walks, and vendors stayed at their counters.
+  - Speech bubbles appeared for both guards and a vendor.

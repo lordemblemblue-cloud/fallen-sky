@@ -1,0 +1,34 @@
+{
+ "at": "2026-11-19",
+ "build": "merge 9b62be1: claude/wolfveil-area-streaming-20261119 + main 0b3fd6b (PR #98/#100 civic town NPCs)",
+ "method": "local vite dev, guest, default settings, sound muted in the test tab; steering walker with keyboard input from 8 m before each gate",
+ "gateWalks": [
+  {"gate": "town_east_market_bridge", "from": "behind", "farSide": "east", "farLoadedBefore": true, "floorsBefore": "town+east", "maxPastPlane": 13, "crossed": true},
+  {"gate": "town_east_market_bridge", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+east", "maxPastPlane": 12.89, "crossed": true},
+  {"gate": "town_east_residential_footbridge", "from": "behind", "farSide": "east", "farLoadedBefore": true, "floorsBefore": "town+east", "maxPastPlane": 12.61, "crossed": true},
+  {"gate": "town_east_residential_footbridge", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+east", "maxPastPlane": 12.54, "crossed": true},
+  {"gate": "town_east_outer_trail_bridge", "from": "behind", "farSide": "east", "farLoadedBefore": true, "floorsBefore": "town+east+north", "maxPastPlane": 12.55, "crossed": true},
+  {"gate": "town_east_outer_trail_bridge", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+east+north", "maxPastPlane": 12.99, "crossed": true},
+  {"gate": "town_south_south_fields_way", "from": "behind", "farSide": "south", "farLoadedBefore": true, "floorsBefore": "town+south", "maxPastPlane": 13.85, "crossed": true},
+  {"gate": "town_south_south_fields_way", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+south", "maxPastPlane": 12.57, "crossed": true},
+  {"gate": "town_west_south_residential", "from": "behind", "farSide": "west", "farLoadedBefore": true, "floorsBefore": "town+south+west", "maxPastPlane": 12.86, "crossed": true},
+  {"gate": "town_west_south_residential", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+south+west", "maxPastPlane": 14.2, "crossed": true},
+  {"gate": "town_west_west_residential", "from": "behind", "farSide": "west", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 13.47, "crossed": true},
+  {"gate": "town_west_west_residential", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 14.01, "crossed": true},
+  {"gate": "east_north_hunters_loop_east", "from": "behind", "farSide": "north", "farLoadedBefore": true, "floorsBefore": "east+north", "maxPastPlane": 12.82, "crossed": true},
+  {"gate": "east_north_hunters_loop_east", "from": "ahead", "farSide": "east", "farLoadedBefore": true, "floorsBefore": "east+north", "maxPastPlane": 12.66, "crossed": true},
+  {"gate": "west_north_hunters_loop_west", "from": "behind", "farSide": "west", "farLoadedBefore": true, "floorsBefore": "north+west", "maxPastPlane": 12.61, "crossed": true},
+  {"gate": "west_north_hunters_loop_west", "from": "ahead", "farSide": "north", "farLoadedBefore": true, "floorsBefore": "north+west", "maxPastPlane": 12.87, "crossed": true},
+  {"gate": "town_north_ridge_path", "from": "behind", "farSide": "north", "farLoadedBefore": true, "floorsBefore": "north+town", "maxPastPlane": 15.1, "crossed": true},
+  {"gate": "town_north_ridge_path", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "north+town", "maxPastPlane": 12.68, "crossed": true},
+  {"gate": "town_west_training_forest", "from": "behind", "farSide": "west", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 12.73, "crossed": true},
+  {"gate": "town_west_training_forest", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 13.29, "crossed": true},
+  {"gate": "town_west_west_woodland_fork", "from": "behind", "farSide": "west", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 12.87, "crossed": true},
+  {"gate": "town_west_west_woodland_fork", "from": "ahead", "farSide": "town", "farLoadedBefore": true, "floorsBefore": "town+west", "maxPastPlane": 13.3, "crossed": true}
+ ],
+ "townNpcs": {
+  "report": {"citizens": 14, "guards": 2, "vendors": 4, "residents": 8, "navigation": "collision-swept-astar"},
+  "over30Seconds": "guards Sera and Ren patrolled ~32 m each; residents moved 1.2-2.1 m; vendors stayed at their counters",
+  "speechBubblesShown": {"guard_ren": 2, "guard_sera": 1, "civic_bren": 1}
+ }
+}
