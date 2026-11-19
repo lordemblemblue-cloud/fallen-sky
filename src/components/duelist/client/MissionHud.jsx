@@ -37,11 +37,13 @@ export function Prompt({ view }) {
   );
 }
 
-/** The crew, when there is more than one of you. */
+/** The crew, when there is more than one of you; online, the room's code to give to friends. */
 export function Crew({ view }) {
-  if (view.people.length < 2) return null;
+  const code = view.room?.code || null;
+  if (view.people.length < 2 && !code) return null;
   return (
     <div className="duelist-crew">
+      {code && <div className="duelist-crew-code">Crew code <b>{code}</b>{view.room.open ? ' · open to anyone' : ''}</div>}
       {view.people.map((p) => (
         <div key={p.id} className={p.dead ? 'is-down' : ''}>
           {p.id === view.me?.id ? 'You' : p.name}{p.dead ? ` · down${p.respawnIn > 0 ? ` ${Math.ceil(p.respawnIn)}` : ''}` : ''}
@@ -72,6 +74,7 @@ export function MissionEnd({ view, onAgain, onLeave = null }) {
     <div className="duelist-center duelist-result">
       <div className="duelist-result-title">Mission complete</div>
       <div className="duelist-result-sub duelist-result-ending">{view.ending}</div>
+      {view.againIn !== null && view.againIn !== undefined && <div className="duelist-result-sub">The mission starts again in {view.againIn}</div>}
       <div className="duelist-result-actions">
         {onAgain && <button type="button" onClick={onAgain}>Play again</button>}
         {onLeave && <button type="button" onClick={onLeave}>Back to the menu</button>}

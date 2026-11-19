@@ -6,14 +6,21 @@
 //   { t: 'hello', v, token, name, body }        sign in (token checked by the server) and pick a fighter
 //   { t: 'lobby' }                               the open matches
 //   { t: 'join', mode }                          'duel' | 'ffa' | 'tdm' | 'ctf' | 'any' (any match with players)
-//   { t: 'input', s, m: [x, z], r, sp, f, st, p }  seq, move, run, sprint, face (yaw or null), strafe, presses
+//   { t: 'join', mode: 'story', code?, create? } the co-op mission: a crew room by its code, a new room of your
+//                                                own (create), or neither: any open crew
+//   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
+//                                                interact held (story), presses
 //   { t: 'leave' }
 // server -> client
 //   { t: 'welcome', id, name }
 //   { t: 'lobby', matches: [{ id, mode, players, bots, seats, phase }] }
 //   { t: 'joined', match, mode, you, seats, replaced }   seats: [{ id, name, team, kind, body }]
-//   { t: 'seats', seats }                                someone joined or left
+//       a story room adds: mission, code, and seats for the depot's people { id, name, kind: 'enemy', type, tag, named }
+//   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view? }
+//       a story room's view is the mission's (sim/mission.mjs missionView) plus room: { code, open } and againIn;
+//       uses: [[id, by, progress]] for what is being used right now; idle: [id] people who have noticed nobody
+//       and stand as last sent (everyone is sent in full once a second and when someone joins or appears)
 //   { t: 'left' }   { t: 'error', code, message }
 import { CLIENT_COMMANDS, MOVES } from '../core/index.mjs';
 
@@ -23,6 +30,9 @@ export const TICK_HZ = 60;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
 export const ONLINE_MODES = Object.freeze(['duel', 'ffa', 'tdm', 'ctf']);
+export const STORY_MODE = 'story';
+export const CREW_SIZE = 4;
+export const ROOM_CODE = /^[A-HJ-NP-Z]{5}$/; // a crew room's code: five letters, no I or O
 export const MAX_MESSAGE_BYTES = 4096;
 // inputs are sent at most 60 a second: messages beyond 120 a second are ignored, beyond 400 the connection closes
 export const MAX_MESSAGES_PER_SECOND = 120;
@@ -45,7 +55,7 @@ export function sanitizeInput(raw) {
   if (len > 1) { x /= len; z /= len; }
   const presses = Array.isArray(raw.p) ? raw.p.slice(0, 8).filter((c) => typeof c === 'string' && CLIENT_COMMANDS.has(c)) : [];
   return {
-    seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, strafe: !!raw.st,
+    seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, strafe: !!raw.st, interact: raw.i === 1 || raw.i === true,
     face: finite(raw.f) ? Math.atan2(Math.sin(raw.f), Math.cos(raw.f)) : null,
     presses,
   };
@@ -54,7 +64,7 @@ export function sanitizeInput(raw) {
 /** The browser's input object as an input message. */
 export function encodeInput(seq, input) {
   return { t: 'input', s: seq, m: [r3(input.move?.x || 0), r3(input.move?.z || 0)], r: input.run !== false, sp: !!input.sprint,
-    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, p: input.presses?.length ? input.presses : undefined };
+    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined };
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };

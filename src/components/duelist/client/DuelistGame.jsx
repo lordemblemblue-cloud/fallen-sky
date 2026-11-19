@@ -36,6 +36,7 @@ const POWER_KEYS = [['push', '1'], ['pull', '2'], ['grip', '3'], ['breach', '4']
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
 const YOU_COLOR = 0x9fe8ff;
 const NET_TEXT = { connecting: 'Connecting to the match server…', joining: 'Finding a match…' };
+const CREW_TEXT = { connecting: 'Connecting to the match server…', joining: 'Joining the crew…' };
 // what the body does while it uses something (a clip of the motion pack, by the thing's kind)
 const WORK_CLIPS = { crate: { clip: 'interact' }, terminal: { clip: 'hack', loop: true }, core: { clip: 'pickup' }, use: { clip: 'interact' } };
 const HEAD = 1.45; // metres: where the camera looks, and where its line to the fighter starts
@@ -76,10 +77,11 @@ async function createActor(scene, seat, weaponColor) {
 /**
  * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button) | story (the co-op mission).
  * you: your body; foe: the opponent's in a local duel or practice; bots: how many opponents in practice;
- * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser.
+ * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser
+ * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1, onLeave = null }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, onLeave = null }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -110,8 +112,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     scene.add(lights.sun.target);
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
-    const source = story ? createMissionSource({ seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, onChange: (s, detail) => setNet({ status: s, detail }) })
+    const source = story && !online ? createMissionSource({ seed, youBody })
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, room, onChange: (s, detail) => setNet({ status: s, detail }) })
         : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
     const { world } = source;
     const level = source.level || null; // a mission's rooms (matches are fought in the open arena)
@@ -521,7 +523,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room]);
 
   const view = hud?.view;
   const mission = view?.mission ? view : null; // a story mission's view; otherwise a match's
@@ -545,7 +547,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
-      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{NET_TEXT[net.status]}</div>}
+      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]}</div>}
       {waiting && (net.status === 'error' || net.status === 'closed') && <div className="duelist-center">{net.detail || 'Not connected.'}</div>}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}

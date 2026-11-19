@@ -1,7 +1,7 @@
 # Duelist Adventure match server
 
 The authoritative server for online Duelist Adventure (duel, free for all, team deathmatch, capture the
-flag). Practice stays in the browser.
+flag) and for the co-op story mission played with a crew. Practice and the solo mission stay in the browser.
 
 - **One Node process, many matches.** Every match is `src/components/duelist/sim/match.mjs`, the same rules
   the browser practises with, stepped at 60 Hz. The server decides every hit, every cooldown and every
@@ -14,6 +14,14 @@ flag). Practice stays in the browser.
   seat (the lowest-scoring bot of the team that needs a player), or starts a match filled with bots.
   `join { mode: 'any' }` picks the busiest match of any mode that has players in it. A leaving player's
   seat goes back to a bot. A finished match starts again 12 s later with the same players.
+- **Crews (the story mission).** `join { mode: 'story', create: true }` opens a room of your own and
+  returns its five-letter code; friends send `join { mode: 'story', code }`; `join { mode: 'story' }`
+  joins any open crew or starts an open one. Up to four in a crew. The mission is
+  `src/components/duelist/sim/mission.mjs`, stepped like a match (the depot's people are run here too); the
+  `input` message carries the interact key. A room of your own is not in the lobby; an open crew is. The
+  mission waits while its room is empty (the room closes after a minute) and starts again 20 s after it is
+  completed. Wrong codes are slowed down (five, then a 30 s wait). The Join button (`any`) looks for a
+  match, not a mission.
 - **Sign-in.** Each connection signs in once with the player's Base44 token (checked with Base44, like the
   Game 2 arena server); the account id is the player's id.
 
@@ -50,5 +58,7 @@ one replica (matches live in memory), with `BASE44_APP_ID` and `DUELIST_ALLOWED_
 - Client-side prediction: the browser shows the server's state 100 ms behind (smooth, but your own moves
   arrive one round trip late on a distant server).
 - Reconnecting to the same seat after a dropped connection; results saved to accounts.
+- A crew member who joins mid-mission meets the people already in the depot as they were manned for the
+  smaller crew (later rooms are manned for the new size).
 
 Tests: `node --test tests/duelist-server.test.mjs` (from the repository root).

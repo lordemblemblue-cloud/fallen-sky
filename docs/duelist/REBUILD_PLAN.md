@@ -179,7 +179,35 @@ mechanic; mysteries open gradually.
   - [x] `/duelist-next/join`: one button into the busiest match that has players (or start one others can
     join), and the list of live matches; the server's public `/lobby` (modes and head counts only)
   - [x] `/duelist-next/fighter` (saved per browser), `/duelist-next/settings` (volume, sound on/off, mouse
-    sensitivity, the controls), `/duelist-next/story` (the mission's four parts; "in development")
+    sensitivity, the controls), `/duelist-next/story` (the mission: play solo, start a crew room, join by
+    code, join an open crew)
   - [x] `/duelist-next/play?mode=…&online=…`: the arena with a Menu button back to where you came from
   - [ ] Key rebinding; touch controls; a fighter preview (3D) on the Fighter page
-- [ ] Phase 7 onward
+- [ ] Phase 7: the story mission, "Contraband" (in progress)
+  - [x] Rooms (`sim/level.mjs`): walls, doors and cover as boxes; bodies slide along them; strikes, shots and
+    Telekinesis need a clear line; a graph of waypoints for finding a way between rooms
+  - [x] The depot's people (`sim/enemies.mjs`): no Will and so no Veil; gunners and marksmen with
+    crystal-forged sidearms (an aimed shot has a wind-up you can see, roll through or guard), enforcers and a
+    captain hand to hand, three ringleaders, and a Will user (a full duelist). Nobody acts until alerted;
+    squads raise the alarm; only a few may wind up a shot at once
+  - [x] The mission engine (`sim/mission.mjs`): stages with objectives, markers and hooks; held
+    interactions; comms lines; a fallen player returns at the checkpoint, a fallen crew starts the stage
+    again; the depot is manned for the crew's size (1 to 4)
+  - [x] Contraband (`sim/missions/contraband.mjs`): open the marked crates; unlock the inner door; find the
+    quartermaster, the broker and the security chief and take their ledger cores; carry them to the cargo
+    lift through the lockdown; hold the lift; the recording that names the buyer; the teacher in the vault,
+    who yields (nobody is executed)
+  - [x] Tests: `tests/duelist-mission.test.mjs` (a piloted crew of two finishes the mission by the rules)
+  - [x] In the browser (`client/depot.mjs`, `guardKit.mjs`, `sidearm.mjs`, `MissionHud.jsx`,
+    `missionSource.mjs`): the depot drawn from the level (doors red shut and green open, crates that open,
+    the door control, ledger cores, the lift's hold ring, beacons and on-screen markers with distance, red
+    lights in the lockdown); guards in a procedural uniform over the fused bodies; the sidearm's aim line;
+    objective, comms, hold-F prompt, crew, "the crew is down", "mission complete"; people out of sight are
+    not drawn or animated; the camera stays in the room. All seven stages verified with the autopilot
+  - [x] With a crew (`server/duelist/`, `net/client.mjs`): crew rooms on the match server (a room of your own
+    with a code, join by code, or any open crew), the mission run by the server, the interact key in the
+    input message; two browser tabs verified in one crew
+  - [ ] Guards' models: today a procedural kit (helmet, plates) over the base bodies; the owner's own guard
+    characters would replace it
+  - [ ] Voices or text-to-speech for the comms lines; a second mission
+- [ ] Phase 8: `/duelist` switches to the new build (needs the owner's go-ahead)

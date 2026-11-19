@@ -1,29 +1,15 @@
 // A story mission played in the browser, as a "source" for the game view (the same shape as a local match or
-// an online one). The crew is you (friends join through the server); the depot's people are seats too, so
-// the renderer gives them bodies, sidearms and name tags as they appear.
+// an online one). The crew is you (friends play through the match server: net/client.mjs); the depot's
+// people are seats too, so the renderer gives them bodies, kits and name tags as they appear.
 import { createMission, stepMission, missionView } from '../sim/mission.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
-import { KITS } from './guardKit.mjs';
+import { enemySeat, crewSeat, teacherBodyFor } from './missionSeats.mjs';
 
 const STEP = 1 / 60;
-const GUARD_BODIES = ['male', 'female'];
-// the depot's people wear a kit by their job (client/guardKit.mjs); the three ringleaders each have their own
-const BODY_OF = Object.freeze({ dask: 'male', perrin: 'female', rooke: 'male' });
-export const CREW_COLOR = 0x7dffb0; // a crewmate's blade
-const TEACHER_COLOR = 0xc4a3ff;
-
-/** One of the depot's people as a seat the renderer can dress. playerBody: the body the player chose. */
-export function enemySeat(enemy, index, playerBody) {
-  const willUser = enemy.type.kind === 'duelist';
-  const kit = willUser ? null : KITS[enemy.tag] || KITS[enemy.typeId] || KITS.gunner;
-  // the teacher is whichever of the owner's two fighters you are not
-  const body = willUser ? (playerBody === 'maskedWarrior' ? 'huntress' : 'maskedWarrior') : BODY_OF[enemy.tag] || GUARD_BODIES[index % GUARD_BODIES.length];
-  return { id: enemy.id, name: enemy.name, team: 'depot', kind: 'enemy', body, weapon: enemy.type.weapon, named: enemy.named, tag: enemy.tag || null,
-    willUser, kit, color: kit ? kit.glow : TEACHER_COLOR };
-}
 
 export function createMissionSource({ id = 'contraband', seed = 1, youBody = BODY_IDS[0] } = {}) {
   const mission = createMission({ id, seed, players: [{ id: 'you', name: 'You' }] });
+  const teacherBody = teacherBodyFor(youBody);
   let accumulator = 0;
   let seats = [];
   let version = 0;
@@ -34,8 +20,8 @@ export function createMissionSource({ id = 'contraband', seed = 1, youBody = BOD
     known = key;
     version += 1;
     seats = [
-      ...[...mission.seats.values()].map((s) => ({ id: s.id, name: s.name, team: 'crew', kind: 'player', body: youBody, weapon: 'sword', color: s.id === 'you' ? null : CREW_COLOR })),
-      ...[...mission.enemies.values()].map((e, i) => enemySeat(e, i, youBody)),
+      ...[...mission.seats.values()].map((s) => crewSeat({ id: s.id, name: s.name, body: youBody }, 'you')),
+      ...[...mission.enemies.values()].map((e) => enemySeat(e, { teacherBody })),
     ];
   };
   refresh();

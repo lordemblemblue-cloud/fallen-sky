@@ -9,13 +9,13 @@ import { MENU_MODES } from '@/components/duelist/menu/modes';
 
 // Duelist Adventure's arena (the new build): the match the menus chose, with your saved fighter and settings.
 // mode: practice | duel | ffa | tdm | ctf | any (Join) | story (the mission); online: on the match server, else against bots here.
-export default function DuelistArena({ mode = 'practice', online = false }) {
+export default function DuelistArena({ mode = 'practice', online = false, room = null }) {
   const [prefs] = useState(readPrefs);
   const navigate = useNavigate();
   const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
   const back = mode === 'any' ? 'join' : mode;
   const title = mode === 'any' ? 'Join' : mode === 'story' ? 'Contraband' : MENU_MODES[mode]?.title || 'Practice';
-  const where = mode === 'story' ? 'story mission' : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
+  const where = mode === 'story' ? (online ? 'story mission, with a crew' : 'story mission, solo') : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
   const unavailable = online && !serverUrl;
   return (
     <main className="flex h-screen min-h-0 flex-col bg-[#05080d] text-white">
@@ -36,7 +36,7 @@ export default function DuelistArena({ mode = 'practice', online = false }) {
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            bots={prefs.bots} sensitivity={prefs.sensitivity} onLeave={() => navigate({ to: '/duelist-next/$page', params: { page: back } })} />
+            bots={prefs.bots} sensitivity={prefs.sensitivity} room={room} onLeave={() => navigate({ to: '/duelist-next/$page', params: { page: back } })} />
         )}
       </section>
     </main>
