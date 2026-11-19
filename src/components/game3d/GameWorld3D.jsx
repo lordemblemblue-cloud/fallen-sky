@@ -4563,17 +4563,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             // hitbox; a second independent raycast must not select another AI. A bow's strike resolves
             // right AFTER the shot tracer exists, so a same-frame boss/rogue hit paints that exact tracer
             // green; a basic melee swing's strike waits for that swing's contact frame (below).
-            // charge: a held swing's multiplier, known when it lands (meleeChargeMultiplier)
+            // charge: a held swing's multiplier, known when it lands (meleeChargeMultiplier); it multiplies this
+            // strike only, so inside landStrike strikeMultiplier is the swing's multiplier times its charge
+            const swingMultiplier = strikeMultiplier;
             const landStrike = (charge = 1) => {
-            const landedMultiplier = strikeMultiplier * Math.max(1, Number(charge) || 1);
+            const strikeMultiplier = swingMultiplier * Math.max(1, Number(charge) || 1);
             let attackConsumedByPriorityTarget = activeWeaponPath==='ranged'
-              ? false : dispatchRogueAttack(playerDerivedRef, landedMultiplier, bowAimTarget);
+              ? false : dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             if(activeWeaponPath==='ranged'){
               bowVisuals.fire({origin:model.position,
                 target:bowAimTarget?.point||cameraBowImpactPoint(camera,otsCameraColliders(),BOW_PVE_RANGE)});
               // The hit event arrives synchronously and colors the just-fired
               // arrow. The bridge must never do its own separate target test.
-              attackConsumedByPriorityTarget=dispatchRogueAttack(playerDerivedRef,landedMultiplier,bowAimTarget);
+              attackConsumedByPriorityTarget=dispatchRogueAttack(playerDerivedRef,strikeMultiplier,bowAimTarget);
             }
             // PvE bow target range matches the actual reticle trace. Duel
             // validation and its shorter authoritative weapon range stay as is.
@@ -4612,7 +4614,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           // miss or a dodge shows MISS and spends no buff, charge or forced critical.
           const liveDerived = getPlayerHUD().derived || playerDerivedRef.current;
           const strike = closestEnemy ? resolveAXEHeroStrike(liveDerived, closestEnemy.derived, {
-            skillMultiplier: landedMultiplier, targetHp: closestEnemy.hp, targetMaxHp: closestEnemy.maxHp,
+            skillMultiplier: strikeMultiplier, targetHp: closestEnemy.hp, targetMaxHp: closestEnemy.maxHp,
             tier: closestEnemy.isBoss ? 'boss' : closestEnemy.derived?.tier, distance: closestEnemyDist,
             chargedCritBonusPct: pendingSkillStrike?.chargedCritBonusPct || 0,
             chargedFatalBonusPct: pendingSkillStrike?.chargedFatalBonusPct || 0,

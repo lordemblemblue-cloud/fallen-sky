@@ -256,8 +256,11 @@ test('GameWorld3D: the held left button charges a basic swing and the charge lan
   assert.match(world, /const cancelBowCharge=\(\)=>\{[\s\S]{0,140}releaseMeleeHold\(\);/);
   assert.match(world, /\? \{ hold: true, pressedAt: meleeHold\.at \/ 1000 \} : \{\}\),/);
   assert.match(world, /pendingMeleeContacts\.splice\(waiting, 1\)\[0\]\.land\(meleeChargeMultiplier\(cue\.serial\)\);/);
-  assert.match(world, /const landedMultiplier = strikeMultiplier \* Math\.max\(1, Number\(charge\) \|\| 1\);/);
-  assert.equal(world.split('skillMultiplier: landedMultiplier').length - 1, 1, 'the PvE strike carries it');
+  assert.match(world, /const swingMultiplier = strikeMultiplier;\s*const landStrike = \(charge = 1\) => \{\s*const strikeMultiplier = swingMultiplier \* Math\.max\(1, Number\(charge\) \|\| 1\);/);
+  // inside landStrike the rogue/boss bridge and the PvE strike resolution keep main's call sites and get the charge
+  const landed = world.slice(world.indexOf('const landStrike = (charge = 1) => {'), world.indexOf('if (contactSerial) pendingMeleeContacts.push'));
+  assert.equal(landed.split('skillMultiplier: strikeMultiplier, targetHp').length - 1, 1, 'the PvE strike carries it');
+  assert.equal(landed.split(/dispatchRogueAttack\(playerDerivedRef,\s*strikeMultiplier,\s*bowAimTarget\)/).length - 1, 2, 'both bridge calls carry it');
   assert.match(world, /if\(!charge\?\.engaged\|\|window\.__activeDuel\)return 1;/);
   assert.match(world, /'CHARGED · DOUBLE DAMAGE'/);
 });
