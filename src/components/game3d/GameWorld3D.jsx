@@ -172,6 +172,10 @@ import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan
 // ./wolfveil/WolfveilAreaPortals (kept: swap the constructor back to undo).
 import {createWolfveilAreaGates} from './wolfveil/WolfveilAreaGates';
 import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaCrossingMist';
+// Natural-zone streaming prototype (Phase B). OFF unless ?naturalZones=1 or
+// localStorage game3d.naturalZones=1; the five-area loader stays the rollback.
+import {createWolfveilNaturalZones} from './wolfveil/zones/WolfveilNaturalZones.js';
+import {wolfveilNaturalZonesEnabled} from './wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
 import {createWolfveilFarOutline} from './wolfveil/WolfveilFarOutline';
 import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
   activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
@@ -896,13 +900,27 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     catch(error){console.warn('Wolfveil area gates unavailable:',error);}
     // Walking through a gate thickens a screen mist; an area change flashes it.
     const areaMist=areaPortals?createWolfveilAreaCrossingMist(container):null;
+    // Natural zones (flag, default OFF): the Jade Lantern Grotto loads as two
+    // zones behind authored doorways and is released completely on exit.
+    let naturalZones=null;
+    if(wolfveilVillage&&!dedicatedMode&&wolfveilNaturalZonesEnabled()){
+      try{
+        naturalZones=createWolfveilNaturalZones({scene,container,
+          onNotice:text=>showCombatNotice(text),
+          requestShadowUpdate:()=>{renderer.shadowMap.needsUpdate=true;},
+          addGroundMeshes:meshes=>{groundMeshes.push(...meshes);},
+          removeGroundMeshes:meshes=>{for(const mesh of meshes){const i=groundMeshes.indexOf(mesh);if(i>=0)groundMeshes.splice(i,1);}},
+        });
+        window.__gw3dNaturalZones=naturalZones;
+      }catch(error){console.warn('Wolfveil natural zones unavailable:',error);naturalZones=null;}
+    }
     const onAreaMist=event=>{if(event?.detail?.gateway||event?.detail?.gatewayLabel)areaMist?.flash();};
     window.addEventListener('game3dWorldRegionChange',onAreaMist);
     // Veils are client presentation collision like buildings: never in a
     // server-owned duel body, never underground (cave tunnels pass under).
     const resolveAreaVeils=(position,from,radius)=>{
       if(!areaPortals?.resolveCollision||dedicatedMode||region!=='wolfveil'||
-        wolfveilVillage?.caveSystem?.isActive?.())return false;
+        wolfveilVillage?.caveSystem?.isActive?.()||naturalZones?.isInside())return false;
       return areaPortals.resolveCollision(position,from,radius);
     };
     const onPlatformGraphics=event=>{
@@ -962,7 +980,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }):null;
     window.__gw3dVortexLake=vortexLake;
     const wolfveilDungeonPortals=region==='wolfveil'||region===WOLFVEIL_CAVES_REGION
-      ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination'}):null;
+      ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination',
+        exclude:naturalZones?['jade_lantern_grotto']:[]}):null; // the prototype doorway replaces that ring
     const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
     const astralGate = region==='wolfveil' ? createAstralMountainGate(scene,{sampleGroundY}) : null;
     if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
@@ -1815,7 +1834,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     let avatarDrawCalls = null; // skips the avatar's parked skill-effect meshes (docs/game3d/AVATAR_DRAW_CALLS.md)
     const playerStateMachine = new CorePlayerStateMachine();
     let coreAnimationController = null;
-    const otsCameraColliders = createOTSCameraColliders({ groundMeshes, roots: () => [wolfveilVillage?.world?.group, importedSpawnTown?.root] }); const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes, aim: otsAim.current, cameraColliders: otsCameraColliders });
+    const otsCameraColliders = createOTSCameraColliders({ groundMeshes, roots: () => [wolfveilVillage?.world?.group, importedSpawnTown?.root, naturalZones?.cameraRoot] }); const playerCameraSystem = new PlayerCameraSystem({ camera, orbit, modelRef, lockOnTargetRef, groundMeshes, aim: otsAim.current, cameraColliders: otsCameraColliders });
     const hudProjection = new THREE.Vector3(); // reuse: no per-frame vector allocations for stamina anchor
     // Clone already owns the tiny OTS aim dot. Add only the confirmed-hit
     // brackets and original spirit-bird animation, not a second crosshair.
@@ -2991,17 +3010,18 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       suigenRuntime?.district?.resolveCollision(model.position,
         {x:fromX,z:fromZ},mounted?.85:.62);
     }else{
-      forestBiome?.resolveCollision(model.position, .62);
+      // Underground in a natural zone the valley's trunks and walls are overhead, not in the way.
+      if(!naturalZones?.isInside()){forestBiome?.resolveCollision(model.position, .62);
       wolfveilVillage?.resolveBuildingCollision(model.position,.62,
         {x:fromX,y:model.position.y,z:fromZ},{player:true});
       importedSpawnTown?.resolveCollision(model.position,{x:fromX,z:fromZ});
-      resolveAreaVeils(model.position,{x:fromX,z:fromZ},.62);
+      resolveAreaVeils(model.position,{x:fromX,z:fromZ},.62);}
     }
     // Cave cliff/void protection uses the SAME ground raycast as player feet.
     // Seven-foot rim band prevents lateral fall-through without flattening
     // the mountain, falsifying a floor or changing the official cave portals.
     if(region==='wolfveil' && !dedicatedMode && mapReady &&
-       !wolfveilVillage?.caveSystem?.isActive?.() &&
+       !wolfveilVillage?.caveSystem?.isActive?.() && !naturalZones?.isInside() &&
        (model.position.x!==fromX || model.position.z!==fromZ) &&
        shouldRejectCaveGroundStep({
          from:{x:fromX,z:fromZ},
@@ -3013,6 +3033,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       model.position.x=fromX;model.position.z=fromZ;
     }
     (wolfveilVillage?.caveSystem||wolfveilCaveDestination?.caveSystem)?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
+    naturalZones?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
@@ -3032,7 +3053,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if (!actor || entryModeRef.current || dedicatedMode || getPlayerHUD().hp <= 0 ||
           checkpointOwnerRef.current !== getStorageUser() + '::' + getActiveId()) return;
       const point = {
-        region, x:actor.position.x, y:actor.position.y, z:actor.position.z,
+        region, ...(naturalZones?.safeCheckpoint()||{x:actor.position.x, y:actor.position.y, z:actor.position.z}),
         yaw:orbit.current.yaw,
       };
       // Do not stamp a new timestamp every four seconds while standing still.
@@ -3105,6 +3126,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
+      naturalZones?.update(delta,{player:modelRef.current,mounted:isMountedRef.current,
+        airborne:(playerAnim?.getAirWalkState?.()?.mode||'idle')!=='idle'||['takeoff','airborne'].includes(playerAnim?.getDebugState?.()?.jumpPhase)});
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
       if(dungeonTravel)window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:dungeonTravel}));
       wolfveilCaveDestination?.caveSystem?.update(delta,modelRef.current?.position);
@@ -3223,7 +3246,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           setIsMounted(false);
           setMounted(false);
           setAXEMountRiding(false);
-        } else if (compGroup && getPlayerHUD().hp > 0 &&
+        } else if (compGroup && getPlayerHUD().hp > 0 && !naturalZones?.isInside() &&
                    playerAnim?.getAirWalkState?.().mode==='idle' &&
                    !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase)) {
           // Only mount if close enough
@@ -3476,19 +3499,19 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           // upper gallery and roof terrace. Never sample the roof from above
           // or snap an upstairs player down to Wolfveil's hillside.
           const palaceY=suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position);
-          const gy=palaceY??sampleGroundY(model.position.x,model.position.z,model.position.y);
+          const gy=(naturalZones?.playerGroundY(model.position)??palaceY)??sampleGroundY(model.position.x,model.position.z,model.position.y);
           if (gy !== null) model.position.y = gy;
           if(playerAnim)playerAnim.updateMotion(model,delta,gy??model.position.y,(dx,dz)=>{
             if(!dedicatedMode && !tornadoRes.lockMovement && !bossSpecialLock && !window.__axeTileInspectionEditing)
               moveWorldActor(model,dx,dz,mounted);
-            return (suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position))
+            return (naturalZones?.playerGroundY(model.position)??(suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position)))
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
           },footY=>sampleAirWalkCeilingY(model,footY));
         } else if (playerAnim && !bossFallActive) {
           playerAnim.updateMotion(model,delta,model.position.y-(playerAnim.getJumpOffset?.()||0),(dx,dz)=>{
             if(!dedicatedMode && !tornadoRes.lockMovement && !bossSpecialLock && !window.__axeTileInspectionEditing)
               moveWorldActor(model,dx,dz,mounted);
-            return (suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position))
+            return (naturalZones?.playerGroundY(model.position)??(suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position)))
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
           },footY=>sampleAirWalkCeilingY(model,footY));
         }
@@ -3525,7 +3548,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(region==='wolfveil' &&
           (!insideWolfveilClientGround(model.position.x,model.position.z,.65) ||
            (!dedicatedMode && mapReady &&
-            !wolfveilVillage?.caveSystem?.isActive?.() &&
+            !wolfveilVillage?.caveSystem?.isActive?.() && !naturalZones?.isInside() &&
             shouldRejectCaveGroundStep({
              from:beforeRoguePush,
              to:{x:model.position.x,z:model.position.z},
@@ -5341,6 +5364,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // Hand every managed object back before its owner tears it down.
       window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
       areaPortals?.dispose();
+      naturalZones?.dispose();if(window.__gw3dNaturalZones===naturalZones)window.__gw3dNaturalZones=null;
       areaMist?.dispose();
       window.removeEventListener('game3dWorldRegionChange',onAreaMist);
       regionStream?.dispose();
