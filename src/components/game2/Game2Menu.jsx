@@ -337,7 +337,7 @@ export default function Game2Menu({ onStart,userId=null }) {
   const navRef = useRef(null);
 
   const start = (choice, extra = {}) => onStart({ choice, mapId, avatarId:avatar.id, ...extra });
-  const playCompetitive = (matchMode, online) => navigate({ to: '/duelist-next/play', search: { mode: matchMode, online: online ? 1 : 0 } });
+  const playCompetitive = (matchMode, online, matchId = null) => navigate({ to: '/duelist-next/play', search: { mode: matchMode, online: online ? 1 : 0, from: 'duelist', ...(matchId ? { matchId } : {}) } });
   // Ignore stale or retired menu identifiers, including removed admin and archive items.
   const pick = (id) => { if (!MENU_ITEMS.some(entry => entry.id === id)) return; if (id === 'exit') { if (offlineDesktop) void window.atomXEGame2.returnToLauncher(); else navigate({ to: '/' }); } else { if (id === 'multiplayer' && section !== 'multiplayer') previousSection.current = section; setItem(id); setSection(id); } };
   // Up / Down move through the menu, Enter opens an item (buttons already take Enter / Space)
@@ -639,7 +639,7 @@ export default function Game2Menu({ onStart,userId=null }) {
       {section === 'multiplayer' ? (
         <DuelistOnlineBrowser
           onBack={() => { setItem(previousSection.current); setSection(previousSection.current); }}
-          onJoin={matchMode => playCompetitive(matchMode, true)}
+          onJoin={(matchMode, matchId) => playCompetitive(matchMode, true, matchId)}
         />
       ) : (
       <div className="g2-command-layout relative z-10 flex h-full flex-col md:flex-row">
