@@ -1,49 +1,67 @@
 // Keyboard and mouse for Duelist Adventure, and the follow camera.
-// Default bindings (rebindable later in Settings):
-//   WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard parries)
-//   Space roll · Ctrl dash · 1 push · 2 pull · 3 grip (hold, let go to throw) · 4 Veil Breach · Z resist
-//   Tab lock on · F (hold) use what is in front of you · mouse look (click to capture the mouse, Esc releases it)
+// What each key and mouse button does is the player's own choice (client/bindings.mjs; Settings). The
+// defaults: WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard
+// parries) · Space roll · Ctrl dash · 1 push · 2 pull · 3 grip (hold, let go to throw) · 4 Veil Breach ·
+// Z resist · Tab lock on · F (hold) use what is in front of you. Mouse look: click to capture the mouse, Esc
+// releases it.
 /* global window, document */
 import * as THREE from 'three';
-
-export const DEFAULT_BINDINGS = Object.freeze({
-  KeyE: 'heavy', Space: 'roll', ControlLeft: 'dash', ControlRight: 'dash', Digit1: 'push', Digit2: 'pull', Digit3: 'grip',
-  Digit4: 'breach', KeyZ: 'resist',
-});
+import { DEFAULT_KEYS, KIND, keysFrom, actionFor } from './bindings.mjs';
 
 const AIMED = new Set(['light', 'heavy', 'push', 'pull', 'grip', 'breach']);
 
-export function createControls(canvas, { bindings = DEFAULT_BINDINGS, sensitivity = 1 } = {}) {
-  const keys = new Set();
+/** keys: the player's bindings ({ action: code }; anything missing is a default). */
+export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } = {}) {
+  const bound = keysFrom(keys);
+  const held = new Set(); // actions held down right now
   const presses = [];
   let yaw = 0;
   let pitch = 0.32;
   let lockRequested = false;
+  // an input went down: what its action does on pressing (held actions are read each step)
+  const down = (code) => {
+    const action = actionFor(bound, code);
+    if (!action) return false;
+    if (held.has(action)) return true;
+    held.add(action);
+    const kind = KIND[action];
+    if (action === 'lock') lockRequested = true;
+    else if (kind === 'press') presses.push(action);
+    else if (kind === 'guard') presses.push('blockDown');
+    else if (kind === 'grip') presses.push('grip');
+    return true;
+  };
+  const up = (code) => {
+    const action = actionFor(bound, code);
+    if (!action || !held.has(action)) return;
+    held.delete(action);
+    if (KIND[action] === 'guard') presses.push('blockUp');
+    if (KIND[action] === 'grip') presses.push('release');
+  };
   const onKeyDown = (e) => {
-    if (e.repeat) return;
-    keys.add(e.code);
-    const command = bindings[e.code];
-    if (command) { presses.push(command); e.preventDefault(); }
-    if (e.code === 'Tab') { lockRequested = true; e.preventDefault(); }
+    const mine = actionFor(bound, e.code);
+    if (mine) e.preventDefault(); // Tab, Space and the like do nothing else while playing
+    if (!e.repeat) down(e.code);
   };
-  const onKeyUp = (e) => {
-    keys.delete(e.code);
-    if (bindings[e.code] === 'grip') presses.push('release');
-  };
+  const onKeyUp = (e) => up(e.code);
   const onMouseDown = (e) => {
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock?.()?.catch?.(() => {}); return; }
-    if (e.button === 0) presses.push('light');
-    if (e.button === 2) presses.push('blockDown');
+    down(`Mouse${e.button}`);
     e.preventDefault();
   };
-  const onMouseUp = (e) => { if (e.button === 2) presses.push('blockUp'); };
+  const onMouseUp = (e) => up(`Mouse${e.button}`);
   const onMouseMove = (e) => {
     if (document.pointerLockElement !== canvas) return;
     yaw -= e.movementX * 0.0026 * sensitivity;
     pitch = THREE.MathUtils.clamp(pitch + e.movementY * 0.0022 * sensitivity, -0.2, 1.1);
   };
   const onContext = (e) => e.preventDefault();
-  const onBlur = () => { keys.clear(); presses.push('blockUp'); };
+  // the window lost focus: whatever was held is let go (a raised guard drops, a held grip throws)
+  const onBlur = () => {
+    if (held.has('grip')) presses.push('release');
+    held.clear();
+    presses.push('blockUp');
+  };
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   canvas.addEventListener('mousedown', onMouseDown);
@@ -53,10 +71,11 @@ export function createControls(canvas, { bindings = DEFAULT_BINDINGS, sensitivit
   window.addEventListener('blur', onBlur);
 
   return {
+    keys: bound,
     // This frame's input for the player's fighter (world-space move from the camera's yaw).
     read({ faceYaw = null, strafe = false } = {}) {
-      const f = (keys.has('KeyW') ? 1 : 0) - (keys.has('KeyS') ? 1 : 0);
-      const s = (keys.has('KeyD') ? 1 : 0) - (keys.has('KeyA') ? 1 : 0);
+      const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0);
+      const s = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
       const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
       const right = { x: -Math.cos(yaw), z: Math.sin(yaw) };
       let x = forward.x * f + right.x * s;
@@ -66,12 +85,12 @@ export function createControls(canvas, { bindings = DEFAULT_BINDINGS, sensitivit
       const moving = len > 0.01;
       const pressed = presses.splice(0);
       // strikes and powers go where the camera looks; otherwise the body turns the way it moves
-      const aiming = pressed.some((c) => AIMED.has(c)) || keys.has('KeyE');
+      const aiming = pressed.some((c) => AIMED.has(c)) || held.has('heavy');
       return {
         move: { x, z },
         run: true,
-        sprint: keys.has('ShiftLeft') || keys.has('ShiftRight'),
-        interact: keys.has('KeyF'), // held at a crate, a console, a ledger core (story missions)
+        sprint: held.has('sprint'),
+        interact: held.has('interact'), // held at a crate, a console, a ledger core, a bell (story missions)
         face: faceYaw ?? (aiming ? yaw : moving ? Math.atan2(x, z) : null),
         strafe,
         presses: pressed,

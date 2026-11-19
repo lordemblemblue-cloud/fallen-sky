@@ -27,11 +27,12 @@ export function Comms({ view }) {
   );
 }
 
-export function Prompt({ view }) {
+// keyName: the key the player uses things with (their own binding)
+export function Prompt({ view, keyName = 'F' }) {
   if (!view.prompt || view.phase !== 'live' || meOf(view)?.dead) return null;
   return (
     <div className="duelist-prompt">
-      <span><kbd>F</kbd> hold: {view.prompt.label}</span>
+      <span><kbd>{keyName}</kbd> hold: {view.prompt.label}</span>
       <div className="duelist-prompt-bar"><div style={{ width: `${Math.round(view.prompt.progress * 100)}%` }} /></div>
     </div>
   );

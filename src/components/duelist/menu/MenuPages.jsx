@@ -1,11 +1,12 @@
 // Duelist Adventure's menus, kept simple: a hub, a page for each mode, a Join page that puts you in any match
 // with players in it, your fighter, settings, and the story mission. Each page says what it is in one line
 // and offers one obvious button.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
+import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
 import { MENU_MODES, MODE_ORDER, LEVELS } from './modes.js';
 import { STORY_MISSIONS } from './missions.js';
 import { useLobby } from './useLobby.js';
@@ -223,14 +224,71 @@ export function FighterPage() {
   );
 }
 
-const CONTROLS = [
-  ['Move', 'W A S D'], ['Sprint', 'Shift'], ['Light strike (chain three)', 'Left mouse'], ['Heavy strike', 'E'], ['Guard (a fresh guard parries)', 'Right mouse, hold'],
-  ['Roll (into a push or a strike)', 'Space'], ['Dash', 'Ctrl'], ['Push', '1'], ['Pull', '2'], ['Telekinesis grip (let go to throw)', '3, hold'],
-  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'], ['Use (story: crates, consoles, cores)', 'F, hold'],
-];
-
 function readAudio() {
   try { return { volume: 0.8, muted: false, ...JSON.parse(window.localStorage.getItem('duelist.audio') || '{}') }; } catch { return { volume: 0.8, muted: false }; }
+}
+
+// an action's name without its hint ("Roll (into a push or a strike)" -> "Roll")
+const ACTION_NAME = Object.fromEntries(ACTIONS.map((a) => [a.id, a.label.replace(/\s*\(.*\)$/, '')]));
+const speechWorks = () => typeof window !== 'undefined' && !!window.speechSynthesis;
+
+/** Change what a key does: pick an action, then press the key or mouse button for it (Esc to cancel). */
+function KeyBindings({ keys, onChange }) {
+  const [waiting, setWaiting] = useState(null); // the action waiting for its new input
+  const [note, setNote] = useState('');
+  const bound = keysFrom(keys);
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const take = (code, e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (code === 'Escape') { setWaiting(null); setNote(''); return; }
+      if (!bindable(code)) { setNote(`${keyLabel(code)} cannot be used. Pick another, or Esc to cancel.`); return; }
+      const result = rebind(bound, waiting, code);
+      onChange(result.keys);
+      setNote(result.swapped ? `${keyLabel(code)} was ${ACTION_NAME[result.swapped]}: the two swapped.` : '');
+      setWaiting(null);
+    };
+    const onKey = (e) => take(e.code, e);
+    const onMouse = (e) => take(`Mouse${e.button}`, e);
+    const onContext = (e) => e.preventDefault();
+    // listening starts once the click that asked for a key is over (its mousedown came before it), so that click
+    // is never taken as the key; and at once, so a key pressed straight after it is not missed
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('mousedown', onMouse, true);
+    window.addEventListener('contextmenu', onContext, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mousedown', onMouse, true);
+      window.removeEventListener('contextmenu', onContext, true);
+    };
+  }, [waiting, keys]);
+  const changed = ACTIONS.some(({ id }) => bound[id] !== DEFAULT_KEYS[id]);
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div className="text-xs uppercase tracking-wider text-white/40">Controls</div>
+        <button type="button" onClick={() => { onChange({ ...DEFAULT_KEYS }); setNote('Back to the default keys.'); setWaiting(null); }} disabled={!changed}
+          className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70 transition hover:border-white/35 hover:text-white disabled:opacity-40">Reset to defaults</button>
+      </div>
+      <table className="w-full text-sm">
+        <tbody>
+          {ACTIONS.map(({ id, label }) => (
+            <tr key={id} className="border-t border-white/5">
+              <td className="py-1.5 text-white/70">{label}</td>
+              <td className="py-1.5 text-right">
+                <button type="button" onClick={() => { setWaiting(waiting === id ? null : id); setNote(''); }} aria-label={`Change the key for ${label}`}
+                  className={`min-w-[7.5rem] rounded-lg border px-2.5 py-1 text-xs transition ${waiting === id ? 'border-amber-300/70 bg-amber-300/10 text-amber-100' : 'border-white/10 text-cyan-100/90 hover:border-white/30'}`}>
+                  {waiting === id ? 'Press a key…' : keyLabel(bound[id])}
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-3 min-h-[1rem] text-xs text-white/50">{waiting ? `Press the key or mouse button for “${ACTION_NAME[waiting]}”. Esc cancels.` : note}</p>
+    </div>
+  );
 }
 
 export function SettingsPage() {
@@ -241,10 +299,11 @@ export function SettingsPage() {
     setAudio(next);
     try { window.localStorage.setItem('duelist.audio', JSON.stringify(next)); } catch { /* this visit only */ }
   };
+  const [speech] = useState(speechWorks);
   return (
     <MenuShell title="Settings" back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+        <div className="space-y-5 self-start rounded-2xl border border-white/10 bg-white/[0.03] p-5">
           <label className="block space-y-2 text-sm">
             <span className="flex justify-between text-white/70"><span>Sound volume</span><span>{Math.round(audio.volume * 100)}%</span></span>
             <input type="range" min="0" max="1" step="0.05" value={audio.volume} onChange={(e) => saveAudio({ volume: Number(e.target.value) })} className="w-full" />
@@ -252,19 +311,16 @@ export function SettingsPage() {
           <label className="flex items-center gap-2 text-sm text-white/70">
             <input type="checkbox" checked={!audio.muted} onChange={(e) => saveAudio({ muted: !e.target.checked })} /> Sound on
           </label>
+          <label className="flex items-start gap-2 text-sm text-white/70">
+            <input type="checkbox" className="mt-1" checked={prefs.voices !== false} onChange={(e) => update({ voices: e.target.checked })} disabled={!speech} />
+            <span>Spoken comms<span className="block text-xs text-white/40">{speech ? 'The story missions\' radio lines are read aloud, each speaker in a voice of their own.' : 'This browser cannot speak; the lines stay on screen.'}</span></span>
+          </label>
           <label className="block space-y-2 text-sm">
             <span className="flex justify-between text-white/70"><span>Mouse sensitivity</span><span>{prefs.sensitivity.toFixed(2)}×</span></span>
             <input type="range" min="0.3" max="2.5" step="0.05" value={prefs.sensitivity} onChange={(e) => update({ sensitivity: Number(e.target.value) })} className="w-full" />
           </label>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="mb-3 text-xs uppercase tracking-wider text-white/40">Controls</div>
-          <table className="w-full text-sm">
-            <tbody>
-              {CONTROLS.map(([what, key]) => <tr key={what} className="border-t border-white/5"><td className="py-1.5 text-white/70">{what}</td><td className="py-1.5 text-right text-cyan-100/90">{key}</td></tr>)}
-            </tbody>
-          </table>
-        </div>
+        <KeyBindings keys={prefs.keys || {}} onChange={(next) => update({ keys: next })} />
       </div>
     </MenuShell>
   );

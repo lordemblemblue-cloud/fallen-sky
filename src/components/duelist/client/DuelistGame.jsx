@@ -19,6 +19,8 @@ import { createArena, createSceneLighting } from './arena.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
+import { createVoices } from './voices.mjs';
 import { createWarp } from './warp.mjs';
 import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
@@ -32,7 +34,7 @@ import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionH
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 
-const POWER_KEYS = [['push', '1'], ['pull', '2'], ['grip', '3'], ['breach', '4'], ['dash', 'Ctrl'], ['resist', 'Z']];
+const POWERS = ['push', 'pull', 'grip', 'breach', 'dash', 'resist']; // the on-screen buttons, labelled with their keys
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
 const YOU_COLOR = 0x9fe8ff;
 const NET_TEXT = { connecting: 'Connecting to the match server…', joining: 'Finding a match…' };
@@ -84,7 +86,11 @@ async function createActor(scene, seat, weaponColor) {
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1, room = null, mission = 'contraband', onLeave = null, onNext = null, onMission = null }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, mission = 'contraband', onLeave = null, onNext = null, onMission = null,
+  keys = null, voicesOn = true }) {
+  const bound = keysFrom(keys || {});
+  const keysKey = JSON.stringify(bound);
+  const voicesRef = useRef(null);
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -148,7 +154,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const audio = createDuelAudio();
     audioRef.current = audio;
     setMuted(audio.muted);
-    const controls = createControls(renderer.domElement, { sensitivity });
+    const controls = createControls(renderer.domElement, { keys: bound, sensitivity });
+    // the comms lines, spoken as they appear on screen (and the radio's click)
+    const voices = createVoices({ audio, enabled: voicesOn });
+    voicesRef.current = voices;
+    let lineShown = null;
     const follow = createFollowCamera(camera);
     const wake = () => audio.resume(); // browsers start sound only after the player does something
     window.addEventListener('pointerdown', wake);
@@ -269,7 +279,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let drawing = true; // development: off while a test skips ahead
     if (import.meta.env?.DEV) {
       window.__duelist = {
-        source, match: source.match || null, mission: source.mission || null, world, controls, actors, audio, arena, camera, renderer,
+        source, match: source.match || null, mission: source.mission || null, world, controls, actors, audio, voices, arena, camera, renderer,
         autopilot: (on = true) => {
           if (!on || !source.mission) { pilot = null; return Promise.resolve(false); }
           return import('../sim/autopilot.mjs').then((m) => { pilot = { think: m.thinkAutopilot, state: m.createAutopilot(me(), { seed: 3 }) }; return true; });
@@ -331,7 +341,6 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       // a mission's
       else if (e.type === 'stage') audio.play('objective');
-      else if (e.type === 'comms') audio.play('comms');
       else if (e.type === 'interacted') {
         const kind = source.def?.interactables?.find((it) => it.id === e.id)?.kind;
         audio.play(kind === 'bell' ? 'bell' : 'interact', actors[e.by]?.chest() || null);
@@ -515,6 +524,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           const view = source.view();
           if (level) lastView = view;
+          const line = view?.comms || null;
+          const said = line ? `${line.speaker}\n${line.text}` : null;
+          if (said !== lineShown) {
+            lineShown = said;
+            if (line && drawing) { audio.play('comms'); voices.say(line.speaker, line.text); }
+          }
           setHud({
             you: mine ? snapshot(mine, world.time) : null,
             target: shown ? snapshot(shown, world.time) : null,
@@ -523,7 +538,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             lockOn: !!lockId,
             view,
             myTeam: seatList.find((s) => s.id === mineId)?.team || null,
-            powers: mine ? POWER_KEYS.map(([id, key]) => ({ id, key, ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })) : [],
+            powers: mine ? POWERS.map((id) => ({ id, key: keyLabel(controls.keys[id], { short: true }), ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })) : [],
           });
           setStatus('ready');
         }
@@ -552,6 +567,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       controls.dispose();
       vfx.dispose();
       warp.dispose();
+      voices.dispose();
       audio.dispose();
       tags.dispose();
       ctf?.dispose();
@@ -564,7 +580,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, mission]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, mission, keysKey, voicesOn]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's
@@ -581,11 +597,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}
       {quest && <Crew view={quest} />}
-      {quest && <Prompt view={quest} />}
+      {quest && <Prompt view={quest} keyName={keyLabel(bound.interact, { short: true })} />}
       {quest && <Comms view={quest} />}
       {quest && <DownNote view={quest} />}
       {quest && <MissionEnd view={quest} onAgain={online ? null : again} onLeave={onLeave} onNext={online ? null : onNext} />}
-      <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
+      <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); if (a.muted) voicesRef.current?.stop(); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
       {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]}</div>}
@@ -599,7 +615,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       )}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
-      <div className="duelist-help">Click to fight · WASD move · Shift sprint · LMB light · E heavy · RMB guard · Space roll · 1 push · 2 pull · 3 grip · 4 breach · Z resist · Tab lock on{mode === 'story' ? ' · F (hold) use' : ''}</div>
+      <div className="duelist-help">{helpLine(bound, { story: mode === 'story' })}</div>
     </div>
   );
 }

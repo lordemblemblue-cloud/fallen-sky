@@ -1,0 +1,286 @@
+{
+  "lines": [
+    {
+      "id": "c7a60232",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Packing foam. No medicine. Keep going."
+    },
+    {
+      "id": "27e0bf8d",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Serial plates filed off. Somebody wanted these never to be traced."
+    },
+    {
+      "id": "da9f7f3a",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Sidearms. Crystal-forged, and the rounds are cut to tear at a Veil. Nobody builds that to hunt ordinary people. These were made for us."
+    },
+    {
+      "id": "1f77a692",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Three signatures on every transfer: the quartermaster who builds them, the broker who sells them, the chief who keeps it quiet. They are inside."
+    },
+    {
+      "id": "ebc11c49",
+      "mission": "contraband",
+      "speaker": "Perrin",
+      "text": "Whatever your people offered, the buyer offered more. In crystal."
+    },
+    {
+      "id": "bc6273de",
+      "mission": "contraband",
+      "speaker": "Dask",
+      "text": "Veil-born, in my workshop. Good. I have wanted to see what these do to one of you."
+    },
+    {
+      "id": "6dc25f6d",
+      "mission": "contraband",
+      "speaker": "Dask",
+      "text": "I build what I am paid to build. Ask Perrin who pays."
+    },
+    {
+      "id": "0728f16c",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "One core. Two more signatures on every transfer."
+    },
+    {
+      "id": "51a26cef",
+      "mission": "contraband",
+      "speaker": "Rooke",
+      "text": "Seal it. Nobody walks out of here with a core."
+    },
+    {
+      "id": "63f4367e",
+      "mission": "contraband",
+      "speaker": "Perrin",
+      "text": "The buyer never showed a face. And never needed the guns for themselves. Think about that."
+    },
+    {
+      "id": "3c98a62a",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Two. One more and we know all of it."
+    },
+    {
+      "id": "a685ea0e",
+      "mission": "contraband",
+      "speaker": "Rooke",
+      "text": "Take it. You will not reach the lift."
+    },
+    {
+      "id": "345c2b5c",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "That is all three. Forget the depot: get the cores to the cargo lift. I am bringing it down."
+    },
+    {
+      "id": "b4c99691",
+      "mission": "contraband",
+      "speaker": "Rooke",
+      "text": "All posts: lock it down. They are carrying the cores."
+    },
+    {
+      "id": "b8d79e81",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Lift is coming. Half a minute. Do not let them pull you off it."
+    },
+    {
+      "id": "0e953960",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Perrin's records are open. The buyer paid in Will-forged crystal. Only one of us could make that."
+    },
+    {
+      "id": "e643e342",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "There is a recording on the last core. You should hear it."
+    },
+    {
+      "id": "17e638cf",
+      "mission": "contraband",
+      "speaker": "Arden (recording)",
+      "text": "If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run."
+    },
+    {
+      "id": "29814813",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "...That is Arden. That is your teacher's voice."
+    },
+    {
+      "id": "58cd7b94",
+      "mission": "contraband",
+      "speaker": "Arden",
+      "text": "The Houses hunt us with a word and a warrant. I gave the hunted something to shoot back with."
+    },
+    {
+      "id": "a6d78719",
+      "mission": "contraband",
+      "speaker": "Arden",
+      "text": "You still drop your guard after the third cut. I never could fix that."
+    },
+    {
+      "id": "57a069d5",
+      "mission": "contraband",
+      "speaker": "Arden",
+      "text": "Enough. You have grown past me."
+    },
+    {
+      "id": "83a68863",
+      "mission": "contraband",
+      "speaker": "Arden",
+      "text": "Take the cores. Decide for yourself who should hold them. I did."
+    },
+    {
+      "id": "eab529ca",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "The lift is here. Whatever you decide about Arden, decide it outside."
+    },
+    {
+      "id": "000d6122",
+      "mission": "saltmarch",
+      "speaker": "Defender",
+      "text": "Wardens at the lock! Hold them!"
+    },
+    {
+      "id": "a283e3ea",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "They stand down when they are beaten. Let them."
+    },
+    {
+      "id": "c60a1f35",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "You will not take one of us. Not one."
+    },
+    {
+      "id": "725c99c8",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "Enough! ...You hold back. Wardens never hold back. Who sent you?"
+    },
+    {
+      "id": "8e8500c0",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "Tell him the truth. We are here because of the ledger."
+    },
+    {
+      "id": "ac7cc96d",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "Then you know Arden armed us. Do you know who put that ledger in the Houses' hands?"
+    },
+    {
+      "id": "1a921846",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants."
+    },
+    {
+      "id": "fb551ee7",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "Then help us leave. Ring the warning bells and the tunnel opens under the chapel. Hurry: wardens do not knock."
+    },
+    {
+      "id": "4ee694da",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "Warden signatures at the outer lock. They are already in the yard."
+    },
+    {
+      "id": "8349d457",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "They hear it. The first of them are on the stairs."
+    },
+    {
+      "id": "4f5aa4be",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "One more, and every soul in Saltmarch is moving."
+    },
+    {
+      "id": "962d2219",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "More of them, and a marksman. Keep moving."
+    },
+    {
+      "id": "62cefb20",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "That is all of them. To the chapel: the tunnel door is behind the altar."
+    },
+    {
+      "id": "43bbd781",
+      "mission": "saltmarch",
+      "speaker": "Arden",
+      "text": "You came. I hoped you would, and hoped you would not."
+    },
+    {
+      "id": "27ad5c04",
+      "mission": "saltmarch",
+      "speaker": "Arden",
+      "text": "A hundred people are on those stairs. Hold this door with me."
+    },
+    {
+      "id": "d7e1e549",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "A second squad through the commons. Wardens and a marksman."
+    },
+    {
+      "id": "9e36b750",
+      "mission": "saltmarch",
+      "speaker": "Hask",
+      "text": "The last of us are in the tunnel. Thank you, whoever you are."
+    },
+    {
+      "id": "41c60eba",
+      "mission": "saltmarch",
+      "speaker": "Crane",
+      "text": "Arden Vale. And company. I carry a warrant for the teacher, and a blank line beneath it."
+    },
+    {
+      "id": "a41a1ec0",
+      "mission": "saltmarch",
+      "speaker": "Crane",
+      "text": "Arden taught you well. Arden taught me too, once."
+    },
+    {
+      "id": "5c8c9976",
+      "mission": "saltmarch",
+      "speaker": "Crane",
+      "text": "Go, then. All of you."
+    },
+    {
+      "id": "986a8fe8",
+      "mission": "saltmarch",
+      "speaker": "Crane",
+      "text": "The warrant named a teacher. By morning it will name the students."
+    },
+    {
+      "id": "48caa292",
+      "mission": "saltmarch",
+      "speaker": "Arden",
+      "text": "The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did."
+    },
+    {
+      "id": "291db56e",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court."
+    }
+  ]
+}

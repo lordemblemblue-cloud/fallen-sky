@@ -194,7 +194,12 @@ mechanic; mysteries open gradually.
     sensitivity, the controls), `/duelist-next/story` (the mission: play solo, start a crew room, join by
     code, join an open crew)
   - [x] `/duelist-next/play?mode=…&online=…`: the arena with a Menu button back to where you came from
-  - [ ] Key rebinding; touch controls; a fighter preview (3D) on the Fighter page
+  - [x] Key rebinding (`client/bindings.mjs`, Settings → Controls): any action to any key or mouse button
+    (click it, press the new one; Esc cancels; a taken key swaps the two; Reset to defaults); either Shift,
+    Ctrl or Alt counts; Esc, F5, F11, F12 and the system keys are never bound; saved per browser and repaired
+    if broken. The game, the power bar, the help line and the "hold to use" prompt follow the bindings.
+    Tests: `tests/duelist-controls.test.mjs`
+  - [ ] Touch controls; a fighter preview (3D) on the Fighter page
 - [ ] Phase 7: the story missions, "Contraband" and "Saltmarch" (in progress)
   - [x] Rooms (`sim/level.mjs`): walls, doors and cover as boxes; bodies slide along them; strikes, shots and
     Telekinesis need a clear line; a graph of waypoints for finding a way between rooms
@@ -238,5 +243,12 @@ mechanic; mysteries open gradually.
     and its title follows). Tests: `tests/duelist-saltmarch.test.mjs` (3), server tests (+3)
   - [ ] Guards' models: today a procedural kit (helmet, plates; a hood and cloak for civilians) over the base
     bodies; the owner's own characters would replace it
-  - [ ] Voices or text-to-speech for the comms lines; a third mission
+  - [x] Spoken comms (`client/voices.mjs`; Settings → Spoken comms, on by default): each line read aloud as it
+    appears, with the browser's own voices, one cast per speaker (women and men as written, the better voices
+    to the bigger parts; with only a few voices on a system, speakers who share one are told apart by
+    pitch). Follows the game's volume and mute. A line the browser holds back until the player first clicks
+    (after a reload) is said then. Recorded lines drop in without code: `public/audio/duelist/voices/`
+    (`lines.json` lists all 47 lines with their ids, from `node tools/duelist/comms-lines.mjs`; a file listed
+    in `voices.json` plays instead of the browser's voice)
+  - [ ] Recorded voices for the comms lines (a voice service or actors, the owner's choice); a third mission
 - [ ] Phase 8: `/duelist` switches to the new build (needs the owner's go-ahead)

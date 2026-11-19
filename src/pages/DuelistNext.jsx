@@ -38,7 +38,7 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            bots={prefs.bots} sensitivity={prefs.sensitivity} room={room} mission={mission} onMission={setPlaying}
+            bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} mission={mission} onMission={setPlaying}
             onNext={(id) => navigate({ to: '/duelist-next/play', search: { mode: 'story', mission: id, online: 0 } })} onLeave={() => navigate({ to: '/duelist-next/$page', params: { page: back } })} />
         )}
       </section>
