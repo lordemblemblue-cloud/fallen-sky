@@ -36,10 +36,10 @@ function tabStorage() {
   try { return typeof window !== 'undefined' && window.sessionStorage ? window.sessionStorage : null; } catch { return null; }
 }
 // The seat this tab last sat in, when it was asked for the same way and recently: { match, key }.
-function keptSeat(storage, mode, room) {
+function keptSeat(storage, mode, room, matchId = null) {
   try {
     const kept = JSON.parse(storage.getItem(RESUME_KEY) || 'null');
-    if (kept && kept.mode === mode && (kept.room || null) === (room || null) && typeof kept.match === 'string' && typeof kept.key === 'string'
+    if (kept && kept.mode === mode && (kept.room || null) === (room || null) && (!matchId || kept.match === matchId) && typeof kept.match === 'string' && typeof kept.key === 'string'
       && Date.now() - kept.at < RECONNECT_SECONDS * 1000) return { match: kept.match, key: kept.key };
   } catch { /* nothing kept */ }
   return null;
@@ -93,7 +93,7 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
  * player's own fighter from the server's picture like everyone else's (for comparison). storage: where the
  * seat's key is kept across a reload (this tab's session storage by default).
  */
-export function createOnlineSource({ url, token, name, body, mode, room = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+export function createOnlineSource({ url, token, name, body, mode, room = null, matchId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   const def = story ? MISSIONS.contraband : null;
@@ -178,7 +178,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       const again = !!seat;
       seat = null;
       setStatus('joining', again ? 'Your seat was given up. Joining again…' : '');
-      const how = story && again && code ? { code } : story && room === 'new' ? { create: true } : story && room ? { code: room } : {};
+      const how = story && again && code ? { code } : story && room === 'new' ? { create: true } : story && room ? { code: room } : matchId ? { matchId } : {};
       send({ t: 'join', mode, ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
@@ -279,7 +279,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
   }
 
   // a reload in this tab while seated: straight back to that seat
-  connect(storage ? keptSeat(storage, mode, room) : null);
+  connect(storage ? keptSeat(storage, mode, room, matchId) : null);
 
   return {
     world,
