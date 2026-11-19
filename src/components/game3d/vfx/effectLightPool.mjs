@@ -23,11 +23,12 @@ function borrow(light, { color = 0xffffff, distance = 0, decay = 2, position = n
   let released = false;
   return {
     light,
-    /** This frame's intensity, and the light's position when it moves with the effect ({ x, y, z }). */
-    set(intensity, at = null) {
+    /** This frame's intensity; also its position ({ x, y, z }) when it moves, and its color when that changes. */
+    set(intensity, at = null, color = null) {
       if (released) return;
       light.intensity = intensity;
       if (at) light.position.set(at.x, at.y, at.z);
+      if (color != null) light.color.set(color);
     },
     /** The effect has ended. Safe to call again. */
     release() {

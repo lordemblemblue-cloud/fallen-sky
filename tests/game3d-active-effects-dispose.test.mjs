@@ -35,6 +35,8 @@ await build({
       `export { createShadowTeleport } from '${game3d}ShadowTeleportEffect.jsx';`,
       `export { createFrostTornado } from '${game3d}FrostTornadoEffect.jsx';`,
       `export { createLightningStrike } from '${game3d}LightningStrikeEffect.jsx';`,
+      `export { createWeaponConstructFx, WEAPON_CONSTRUCT_SECONDS } from '${game3d}weapons/weaponConstructFx.js';`,
+      `export { buildAXEStationGeometry } from '${game3d}axe/services/world/AXEServiceStationRuntime.js';`,
     ].join('\n'),
     resolveDir: root,
   },
@@ -385,6 +387,75 @@ test('a lightning strike keeps one set of materials across bolt rebuilds and dis
   assert.ok(frames >= 40, 'the bolts are rebuilt every 35 ms over the ~0.8 s strike');
   assert.equal(seen.size, atStart, 'rebuilding the bolts adds no materials');
   assert.equal([...seen.values()].filter((disposed) => !disposed).length, 0, 'every material is disposed');
+});
+
+test('a weapon summon borrows a pooled light for its molten glow and never changes the light count', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const pool = fx.createEffectLightPool(scene);
+  const construct = fx.createWeaponConstructFx({ scene });
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.01).translate(0, 0.4, 0),
+    new THREE.MeshStandardMaterial({ color: 0x888888 }));
+  const root = new THREE.Group();
+  root.add(blade);
+  scene.add(root);
+  const before = sceneSnapshot(scene);
+
+  construct.play(root, { kind: 'blade', mode: 'build' });
+  let mostLights = 0, brightest = 0;
+  const seconds = fx.WEAPON_CONSTRUCT_SECONDS.build + fx.WEAPON_CONSTRUCT_SECONDS.settle + 0.2;
+  for (let t = 0; t < seconds; t += 1 / 30) {
+    construct.update(1 / 30);
+    mostLights = Math.max(mostLights, sceneSnapshot(scene).lights);
+    brightest = Math.max(brightest, ...pool.lights.map((light) => light.intensity));
+  }
+  assert.equal(construct.activeCount(), 0, 'the weapon has set');
+  assert.equal(mostLights, before.lights, 'summoning a weapon never adds a light');
+  assert.ok(brightest > 0, 'the molten glow lights a pooled light');
+  assert.equal(pool.busy(), 0, 'and gives it back');
+  construct.dispose();
+});
+
+test('a blacksmith station carries an anchor for the runtime\'s one forge light, not a light of its own', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  // Stands in for the runtime's shared station assets: every geometry and material name resolves.
+  const assets = {
+    geometries: new Proxy({}, { get: () => new THREE.BoxGeometry() }),
+    materials: new Proxy({}, { get: () => new THREE.MeshBasicMaterial() }),
+  };
+  const visual = fx.buildAXEStationGeometry(assets, { id: 'forge-1', groupId: 'blacksmith', position: { x: 10, y: 2, z: -4 } });
+  let lights = 0;
+  visual.group.traverse((node) => { if (node.isLight) lights++; });
+  assert.equal(lights, 0, 'the station brings no light');
+  assert.equal(visual.lightAnchor?.name, 'ForgeLightAnchor');
+  const anchorAt = visual.lightAnchor.getWorldPosition(new THREE.Vector3());
+  assert.ok(anchorAt.distanceTo(new THREE.Vector3(10 - 1.45, 2 + 1.35, -4 + 0.15)) < 1e-9, 'where the forge light used to sit');
+});
+
+test('loot drops and the service-station forge keep the scene light count fixed', () => {
+  const read = (file) => readFileSync(path.join(root, 'src/components/game3d', file), 'utf8');
+  const loot = read('WorldLootDrops.jsx');
+  assert.doesNotMatch(loot, /new THREE\.PointLight/, 'no light per drop');
+  assert.match(loot, /acquireEffectLight\(scene, \{ color: glowEntry\.hex, distance: 3\.5 \}\)/,
+    'one pooled glow on the drop nearest the player');
+  assert.match(loot, /glowRef\.current\.handle\.release\(\);/, 'the glow goes back once no drop is left');
+  assert.match(loot, /glowRef\.current\?\.handle\.release\(\);/, 'and when the loot layer unmounts');
+  assert.equal((loot.match(/disposeDropMesh\(/g) || []).length, 3, 'removed and picked-up drops free their meshes');
+
+  const station = read('axe/services/world/AXEServiceStationRuntime.js');
+  assert.equal((station.match(/new THREE\.PointLight/g) || []).length, 1, 'one forge light for every station');
+  assert.match(station, /const forgeLight = new THREE\.PointLight\(0xffa35c, 0, 8, 2\);[\s\S]{0,80}scene\.add\(forgeLight\);/);
+  assert.doesNotMatch(station, /[Ll]ight\.visible\s*=/, 'no light is shown or hidden by distance');
+  assert.match(station, /closestForge\.getWorldPosition\(forgeLight\.position\);/);
+  assert.match(station, /else forgeLight\.intensity = 0;/, 'dark when no forge is near');
+  assert.match(station, /scene\.remove\(forgeLight\); forgeLight\.dispose\(\);/);
+
+  // The forge light exists from the world's setup, before its first frame.
+  const world = read('GameWorld3D.jsx');
+  const runtimeAt = world.indexOf('const stationRuntime = createAXEServiceStationRuntime(');
+  assert.ok(runtimeAt > 0 && runtimeAt < world.indexOf('\n    animate();'));
 });
 
 test('GameWorld3D ticks its effects through the disposing list and disposes what is left on teardown', () => {
