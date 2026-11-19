@@ -18,6 +18,7 @@ import {
 import { describeAXEDonorReason, getAXEServiceOperationPreview, isAXEAscensionDonor, isAXECompatibleDonor } from './AXEServiceWorkspaceModel';
 import { executeAXEServiceTransaction } from './AXEServiceTransactionGateway';
 import { getAXEServiceResourceCount, getAXEServiceResourceCategory } from './AXEServiceResources';
+import { canClaimAXEBlacksmithTestMaterials, grantLimitedAXEBlacksmithTestMaterials } from './AXETestMaterialGrant';
 import { getAXEOverEnchantCost, getAXEReinforcementCost } from './AXEServiceEconomy';
 import { getActiveId, getStorageUser, subscribeCharacterChange } from '../../characterStorage';
 import { isSafeCombineDonor, filterForgeInventory, runBlacksmithAutoBatch } from './AXEBlacksmithAutoForge';
@@ -230,6 +231,7 @@ export default function AXEBlacksmithImageWorkspace({
   const [forging, setForging] = useState(false);
   const [confirmCombine, setConfirmCombine] = useState(false);
   const [forgeNotice, setForgeNotice] = useState('');
+  const [testPackNotice, setTestPackNotice] = useState('');
   const [tab, setTab] = useState(initialTab);
   // The Enchant tab: the item's Enchant % (reinforcement, 0–200; shown first, Blacksmith v2)
   // or its four +10 slots, one switch away in the same tab
@@ -578,6 +580,22 @@ export default function AXEBlacksmithImageWorkspace({
           technology without taking an entire extra row above the forge. */}
       {stationMessage && <span className="axe-blacksmith-workstation-status"
         role="status" aria-live="polite">{stationMessage}</span>}
+      {/* Never visible in published/live builds, ordinary characters, or outside
+          an explicitly selected test region; no automatic grants. */}
+      {canClaimAXEBlacksmithTestMaterials() && <div
+        className="axe-blacksmith-test-material-grant"
+        style={{position:'relative', zIndex:5, display:'flex', alignItems:'center', gap:8, padding:'4px 10px', fontSize:11}}
+      >
+        <button type="button" onClick={() => {
+          const result = grantLimitedAXEBlacksmithTestMaterials();
+          setTestPackNotice(result.ok
+            ? `Test inventory: ${result.materialUnits} materials/gems/runes and ${result.coreEssence} Core Essence added once.`
+            : (result.reason || 'Grant failed').replaceAll('_', ' '));
+        }} style={{border:'1px solid #c9a45a', borderRadius:6, padding:'3px 8px', background:'rgba(0,0,0,.55)', color:'#efd29a'}}>
+          Claim Limited Test Materials
+        </button>
+        {testPackNotice && <span role="status" aria-live="polite">{testPackNotice}</span>}
+      </div>}
 
       <nav className="axe-blacksmith-image-tabs" aria-label="Blacksmith operations">
         {BLACKSMITH_TABS.map(({ id, label, Icon }) => <button type="button" key={id}
