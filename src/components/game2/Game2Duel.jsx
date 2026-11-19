@@ -42,8 +42,8 @@ const MODES = {
     blurb:'Battle the 50,000 HP dragon: wing sweeps, smooth shader fire, aerial skyfall, a lethal grabbing claw and fire-breathing offspring.',
   },
   archive: {
-    tag: 'Mission Archive', title: 'Jedi Missions', loading: 'Preparing mission', icon: Swords,
-    blurb: 'Explore your selected mission. Return to the Jedi Duels menu when finished.',
+    tag: 'Mission Archive', title: 'Adventure Missions', loading: 'Preparing mission', icon: Swords,
+    blurb: 'Explore your selected mission. Return to the Duelist Adventure menu when finished.',
   },
   tutorial: {
     tag: 'Tutorial', title: 'Guided Arena Academy', loading: 'Training arena', icon: Swords,
@@ -74,7 +74,7 @@ const MODES = {
     blurb: 'Blue: you and 24 AI teammates. Red: 25 enemies. One life per fighter; eliminate the entire opposing team to win.',
   },
 };
-const PRACTICE = { tag: 'Practice', title: 'Dark Jedi Duel', loading: 'Dark Jedi duel', icon: Swords };
+const PRACTICE = { tag: 'Practice', title: 'Duel Practice', loading: 'Training duel', icon: Swords };
 
 function fillParent(el) {
   Object.assign(el.style, { position: 'absolute', inset: '0', width: '100%', height: '100%', display: 'block', outline: 'none' });
@@ -99,7 +99,7 @@ export default function Game2Duel({initialLaunch=null,onWindowExit=null,userId=n
     setCharacter(current=>({
       ...(current||{}),
       id:current?.id||'game2-'+selected.id,
-      name:'Jedi',
+      name:'Duelist',
       gender:selected.gender||'male',
       model:selected.url||'Explorer_G2_Game.glb',
       avatarId:selected.id,
@@ -454,7 +454,7 @@ function Game2Session({ choice, online, mapId, saber, character, avatarId, displ
         if (choice === 'online' && online?.queued) {
           const saved = readLoadout();
           deployRef.current?.({ ...saved, side: online.side || saved.side,
-            name: online.name || 'Jedi' });
+            name: online.name || 'Duelist' });
         }
         // Online play must not look connected until the shared arena welcomes this player.
         if (choice === 'online') {
@@ -663,7 +663,7 @@ function Game2Session({ choice, online, mapId, saber, character, avatarId, displ
         className="absolute left-3.5 top-[62px] z-20 flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#080a16]/70 px-2.5 py-1.5 text-[11px] font-semibold text-white/70 backdrop-blur transition hover:bg-[#101528]/90 hover:text-white"
       >
         <Menu className="h-3.5 w-3.5" />
-        {choice === 'archive' ? 'Return to Jedi Duels' : status.phase === 'ready' ? 'Pause · Esc' : (choice === 'online' ? 'Lobby' : 'Main menu')}
+        {choice === 'archive' ? 'Return to Duelist Adventure' : status.phase === 'ready' ? 'Pause · Esc' : (choice === 'online' ? 'Lobby' : 'Main menu')}
       </button>
       {paused && status.phase === 'ready' && (
         <Game2PauseMenu value={sessionSettings} onChange={setSessionSettings}
@@ -708,10 +708,10 @@ function Game2Session({ choice, online, mapId, saber, character, avatarId, displ
             : choice === 'tutorial'
             ? 'The Arena Tutorial could not initialize. The specific error above identifies the problem; return to the main menu to retry.'
             : choice === 'archive'
-            ? 'This is the actual selected Jedi Academy mission window. The administrator must install the verified original BSP and its dependent game assets on the game server; players do not need to supply game files. A different map will not be substituted.'
+            ? 'This is the selected mission archive window. The administrator must install the verified original BSP and its dependent game assets on the game server; players do not need to supply game files. A different map will not be substituted.'
             : 'Game 2 could not initialize. Check the error above; WebGL2 is only one possible cause.'}</div>
           <button type="button" onClick={onExit} className="mt-3 rounded-lg border border-white/30 bg-white/10 px-5 py-2 text-sm font-semibold text-white hover:bg-white/20">
-            {choice === 'archive' ? 'Return to Jedi Duels' : choice === 'boss_way'||choice === 'boss_way_preview' ? 'Back to Boss Selection' : 'Back to Main Menu'}
+            {choice === 'archive' ? 'Return to Duelist Adventure' : choice === 'boss_way'||choice === 'boss_way_preview' ? 'Back to Boss Selection' : 'Back to Main Menu'}
           </button>
         </div>
       )}
