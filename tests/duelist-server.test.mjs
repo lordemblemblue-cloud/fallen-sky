@@ -149,7 +149,13 @@ test('presses beyond the budget are dropped; leaving gives the seat back to a bo
 test('the lobby lists live matches for the menus: mode and head counts, no names or account ids', async () => {
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
-  assert.deepEqual((await (await fetch(http)).json()).matches, []);
+  const starters = (await (await fetch(http)).json()).matches;
+  assert.deepEqual(starters.map(m => m.mode).sort(), ['ctf', 'duel', 'ffa', 'tdm']);
+  for (const room of starters) {
+    assert.equal(room.publicRoom, true, 'every mode gets a permanent official server');
+    assert.equal(room.players, 0);
+    assert.equal(room.bots, room.seats, 'all unoccupied slots initially belong to bots');
+  }
   const a = await player(url, 'eve-account-123');
   a.send({ t: 'join', mode: 'tdm' });
   const joined = await a.next((m) => m.t === 'joined');
@@ -157,8 +163,9 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
   const text = await res.text();
   const { matches } = JSON.parse(text);
-  assert.equal(matches.length, 1);
-  assert.deepEqual({ id: matches[0].id, mode: matches[0].mode, players: matches[0].players, bots: matches[0].bots, seats: matches[0].seats, open: matches[0].open },
+  assert.equal(matches.length, 4, 'joining does not create a duplicate public server');
+  const selected = matches.find(m => m.id === joined.match);
+  assert.deepEqual({ id: selected.id, mode: selected.mode, players: selected.players, bots: selected.bots, seats: selected.seats, open: selected.open },
     { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
   assert.ok(!text.includes('eve-account-123') && !text.includes('EVE-ACCOUNT'), 'no player ids or names');
   a.ws.close();
@@ -178,7 +185,7 @@ test('a crew room for the story mission: its own code, a friend joins by it, the
   const depot = joined.seats.filter((s) => s.kind === 'enemy');
   assert.equal(depot.length, 3, 'the dock is manned for a crew of one');
   assert.deepEqual([depot[0].type, depot[0].max], ['gunner', [42, 0, 60, 10]], 'a guard, with a guard\'s vitals (no Will: no Veil)');
-  assert.deepEqual((await (await fetch(http)).json()).matches, [], 'a room of your own is not listed');
+  assert.equal((await (await fetch(http)).json()).matches.filter(m => m.mode === 'story').length, 0, 'private story rooms are not listed beside public arenas');
   const snap = await a.next((m) => m.t === 'snap' && m.view);
   assert.equal(snap.view.mission, 'contraband');
   assert.equal(snap.view.stage.index, 0);
@@ -238,7 +245,8 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   a.send({ t: 'join', mode: 'story' });
   const joined = await a.next((m) => m.t === 'joined');
   const { matches } = await (await fetch(http)).json();
-  assert.deepEqual(matches.map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
+  assert.deepEqual(matches.filter(m => m.mode === 'story').map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
+  assert.equal(matches.filter(m => m.publicRoom).length, 4, 'the public modes remain listed during story missions');
   const b = await player(url, 'ben');
   b.send({ t: 'join', mode: 'story' });
   assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
