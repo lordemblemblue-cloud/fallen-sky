@@ -18,12 +18,17 @@ export function locomotionTimeScale(clipSpeed, bodyScale, moveSpeed) {
   return Math.max(LOCOMOTION_CADENCE.min, Math.min(LOCOMOTION_CADENCE.max, moveSpeed / (clipSpeed * bodyScale)));
 }
 
+// The walk / run on screen, and the gait the legs keep under a swing or a shot (getGait: those montages play
+// over locomotion), step at the ground speed.
 export function syncFusedLocomotion(playerAnim, model, moveSpeed) {
   if (!model?.userData?.fusedCharacter || !playerAnim) return null;
-  const state = playerAnim.getCurrent?.();
-  if (!LOCOMOTION_STATES.has(state)) return null;
-  const action = playerAnim.actions?.[state];
-  const scale = locomotionTimeScale(action?.getClip?.()?.userData?.speed, model.getWorldScale(scratch).y, moveSpeed);
-  if (scale !== null) action.setEffectiveTimeScale(scale);
-  return scale;
+  const states = [...new Set([playerAnim.getCurrent?.(), playerAnim.getGait?.()])].filter((state) => LOCOMOTION_STATES.has(state));
+  let result = null;
+  for (const state of states) {
+    const action = playerAnim.actions?.[state];
+    const scale = locomotionTimeScale(action?.getClip?.()?.userData?.speed, model.getWorldScale(scratch).y, moveSpeed);
+    if (scale !== null) action.setEffectiveTimeScale(scale);
+    result ??= scale;
+  }
+  return result;
 }

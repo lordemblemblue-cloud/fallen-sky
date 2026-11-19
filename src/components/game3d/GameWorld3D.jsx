@@ -2781,6 +2781,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           if(!heldBow.active){
             heldBow.active=true;heldBow.startedAt=performance.now();
             bowVisuals.setCharge?.(getBowChargeStatus(0));
+            // the draw shows the bow: a dismissed bow is summoned with the press (presentation only)
+            if(!isMountedRef.current)weaponSummon?.ensureOut();
           }
         }else{
           rangedClickAttackPressed.current=false;
@@ -3261,9 +3263,14 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
-      // After the base pose: the summon gesture, the closed hand and the forming / melting weapon.
-      // No bow `drawing` state: the clone's bowVisuals arrow (fired with the press) is the only arrow.
-      weaponSummon?.update(delta, { state: playerAnim?.getCurrent?.(), aiming: !!playerAnim?.getIsAiming?.(),
+      // Montages over locomotion: the legs keep walking / running under a swing or a shot, and the bow is
+      // carried low and out while running (player/locomotionUnderlay.js).
+      playerAnim?.lateUpdate?.(delta);
+      // After the base pose: the summon gesture, the closed hand and the forming / melting weapon. `drawing`
+      // nocks an arrow and pulls the string while the bow is drawn; the arrow in flight stays the clone's
+      // bowVisuals arrow (fired with the shot), so the nocked one only disappears at the release.
+      weaponSummon?.update(delta, { state: playerAnim?.getWeaponState?.() ?? playerAnim?.getCurrent?.(),
+        drawing: playerAnim?.getBowDrawing?.() ?? null, aiming: !!playerAnim?.getIsAiming?.(),
         moving: weaponPlayerMoving && !isMountedRef.current, inCombat: isInCombat(),
         externalRoot: weaponSummon?.getVisual()?.type === 'external' ? model?.getObjectByName?.('AXE_Equipped_Training_Bow') || null : null });
       // The held weapon's enchantment light: internal glow, tight aura and anchored sparks (visual only).
