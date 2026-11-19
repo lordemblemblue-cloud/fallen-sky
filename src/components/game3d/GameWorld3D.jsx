@@ -2436,7 +2436,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           }
         }
         if(region==='wolfveil'&&!suigenActive&&!dedicatedMode){
-          const caveTravel=wolfveilVillage?.interactCave(model.position);
+          // E should open the captain's side-quest dialogue when nearby,
+          // rather than unexpectedly entering the tunnel through its arch.
+          const caveTravel=wolfveilVillage?.caveWatch?.nearestResident(model.position)
+            ? null : wolfveilVillage?.interactCave(model.position);
           if(caveTravel){
             e.preventDefault();
             showCombatNotice(
@@ -3204,6 +3207,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       const dungeonTravel=wolfveilDungeonPortals?.update(delta,modelRef.current?.position);
       if(dungeonTravel)window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:dungeonTravel}));
       wolfveilCaveDestination?.caveSystem?.update(delta,modelRef.current?.position);
+      wolfveilCaveDestination?.caveWatch?.update(delta,modelRef.current?.position);
       const vortexTravel=suigenActive?null:vortexLake?.update(delta,modelRef.current?.position);
       if(vortexTravel)
         window.dispatchEvent(new CustomEvent('game3dPortalTravel',{detail:vortexTravel}));
@@ -3904,8 +3908,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         // Clone town residents use the repaired imported town's own floor
         // and separate non-combat AI actor loop. Only publish React proximity
         // when its nearest resident changes, never 60 state writes/second.
-        const townNeighbor=(!bossEncounter.isNPCSuppressed()&&npcsVisible)
-          ?importedSpawnTown?.nearestResident(model.position):null;
+        const caveWatch=wolfveilVillage?.caveWatch || wolfveilCaveDestination?.caveWatch;
+        const guardNeighbor=!bossEncounter.isNPCSuppressed()
+          ?caveWatch?.nearestResident(model.position):null;
+        const townNeighbor=(!bossEncounter.isNPCSuppressed()&&(npcsVisible||guardNeighbor))
+          ?guardNeighbor||importedSpawnTown?.nearestResident(model.position):null;
         if(townNeighbor?.id!==nearbyTownResidentRef.current?.id){
           nearbyTownResidentRef.current=townNeighbor||null;
           setNearbyTownResident(townNeighbor?{
@@ -3981,7 +3988,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
               });
             }
           } else if (townNeighbor) {
-            const conversation=importedSpawnTown?.interactResident(model.position);
+            const conversation=guardNeighbor
+              ?caveWatch?.interact(model.position)
+              :importedSpawnTown?.interactResident(model.position);
             if(conversation){
               // Ambient language may suggest work but cannot forge inventory
               // grants. Only the existing quest handoff validates a real quest
