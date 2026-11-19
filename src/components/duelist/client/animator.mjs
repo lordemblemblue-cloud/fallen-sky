@@ -20,7 +20,9 @@ const GRIP_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
  * clips: { pack: {name: clip} (motion pack, retargeted), walk: the body's own walk, dodges: {Front_Roll, ...},
  *          baked: {held, ...} (posed fallbacks) }
  */
-export function createFighterAnimator({ model, clips }) {
+// stance: 'sword' (a duelist) or 'sidearm' (a smuggler: the pistol stance is the idle, and the hand's grip)
+export function createFighterAnimator({ model, clips, stance = 'sword' }) {
+  const idleName = stance === 'sidearm' ? 'pistolIdle' : 'swordIdle';
   const mixer = new THREE.AnimationMixer(model);
   const pack = clips.pack || {};
   const library = {
@@ -29,7 +31,7 @@ export function createFighterAnimator({ model, clips }) {
   };
   // bodies without a walk of their own take the pack's (a slower stride)
   const naturalWalk = clips.walk ? NATURAL.walk : NATURAL.packWalk;
-  const loops = new Set(['swordIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
+  const loops = new Set(['swordIdle', 'pistolIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
   const actions = new Map(); // clip name -> { action, weight, name }
   const actionFor = (name) => {
     if (actions.has(name)) return actions.get(name);
@@ -46,15 +48,15 @@ export function createFighterAnimator({ model, clips }) {
     return entry;
   };
   // the sword hand's grip, always on
-  if (pack.swordIdle) {
-    const fingers = pack.swordIdle.tracks.filter((t) => GRIP_FINGERS.test(t.name));
+  if (pack[idleName]) {
+    const fingers = pack[idleName].tracks.filter((t) => GRIP_FINGERS.test(t.name));
     if (fingers.length) {
-      const grip = mixer.clipAction(new THREE.AnimationClip('swordGrip', pack.swordIdle.duration, fingers));
+      const grip = mixer.clipAction(new THREE.AnimationClip('weaponGrip', pack[idleName].duration, fingers));
       grip.play();
       grip.setEffectiveWeight(1);
     }
   }
-  const base = { idle: actionFor('swordIdle'), walk: actionFor('walkBase'), jog: actionFor('jog'), sprint: actionFor('sprint') };
+  const base = { idle: actionFor(idleName) || actionFor('swordIdle'), walk: actionFor('walkBase'), jog: actionFor('jog'), sprint: actionFor('sprint') };
   const baseEntries = new Set(Object.values(base).filter(Boolean));
   const baseWeights = { idle: 1, walk: 0, jog: 0, sprint: 0 };
   const baseTime = { idle: 0, walk: 0, jog: 0, sprint: 0 };
@@ -77,7 +79,7 @@ export function createFighterAnimator({ model, clips }) {
   };
 
   // What shows over the base now: { clip, time, fade, out } or null.
-  function choose(fighter, body, now, dt) {
+  function choose(fighter, body, now, dt, working) {
     const a = fighter.action;
     if (fighter.vitals.dead) {
       if (deathStart === null) deathStart = elapsed;
@@ -113,6 +115,13 @@ export function createFighterAnimator({ model, clips }) {
         return { clip: reaction.clip, time: Math.min(clip.duration - 1e-3, u * span), fade: 0.04 };
       }
     }
+    // using something (a crate's lid, a console, a ledger core): the clip follows the work
+    if (working && !a && library[working.clip]) {
+      settle = null;
+      const clip = library[working.clip];
+      const time = working.loop ? elapsed % clip.duration : Math.min(clip.duration - 1e-3, working.progress * clip.duration);
+      return { clip: working.clip, time, fade: 0.12 };
+    }
     if (a) {
       settle = null;
       if (a.id === 'roll') {
@@ -142,9 +151,10 @@ export function createFighterAnimator({ model, clips }) {
     return null;
   }
 
-  function update(dt, { fighter, body, now }) {
+  // working: { clip, progress (0..1), loop } while the fighter is using something, else null
+  function update(dt, { fighter, body, now, working = null }) {
     elapsed += dt;
-    const want = choose(fighter, body, now, dt);
+    const want = choose(fighter, body, now, dt, working);
     lastAction = fighter.action;
     let outRate = 1 / FADE.out;
     if (want) {

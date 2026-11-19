@@ -2,7 +2,7 @@
 // Default bindings (rebindable later in Settings):
 //   WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard parries)
 //   Space roll · Ctrl dash · 1 push · 2 pull · 3 grip (hold, let go to throw) · 4 Veil Breach · Z resist
-//   Tab lock on · mouse look (click the arena to capture the mouse, Esc releases it)
+//   Tab lock on · F (hold) use what is in front of you · mouse look (click to capture the mouse, Esc releases it)
 /* global window, document */
 import * as THREE from 'three';
 
@@ -71,6 +71,7 @@ export function createControls(canvas, { bindings = DEFAULT_BINDINGS, sensitivit
         move: { x, z },
         run: true,
         sprint: keys.has('ShiftLeft') || keys.has('ShiftRight'),
+        interact: keys.has('KeyF'), // held at a crate, a console, a ledger core (story missions)
         face: faceYaw ?? (aiming ? yaw : moving ? Math.atan2(x, z) : null),
         strafe,
         presses: pressed,
@@ -101,7 +102,8 @@ export function createFollowCamera(camera) {
   const wanted = new THREE.Vector3();
   let first = true;
   return {
-    update(dt, { target, yaw, pitch, lockOn = null }) {
+    // clamp(target, point): indoors, pulls a camera position back inside the room (walls, the ceiling)
+    update(dt, { target, yaw, pitch, lockOn = null, clamp = null }) {
       const distance = 4.3;
       focus.set(target.x, target.y + 1.45, target.z);
       if (lockOn) focus.lerp(new THREE.Vector3(lockOn.x, lockOn.y + 1.2, lockOn.z), 0.25);
@@ -111,8 +113,10 @@ export function createFollowCamera(camera) {
         focus.z - Math.cos(yaw) * Math.cos(pitch) * distance,
       );
       wanted.y = Math.max(0.4, wanted.y);
+      if (clamp) clamp(target, wanted);
       if (first) { camera.position.copy(wanted); first = false; }
       camera.position.lerp(wanted, 1 - Math.exp(-dt * 14));
+      if (clamp) clamp(target, camera.position);
       camera.lookAt(focus);
     },
     // a cut (a respawn): the next update jumps instead of gliding

@@ -11,7 +11,7 @@
 import * as THREE from 'three';
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
-  wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8 });
+  wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });
 
 // ---------- particles
 const P_VERTEX = /* glsl */`
@@ -469,6 +469,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   const bolts = new Map(); // projectile id -> mesh
   const boltGeometry = new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6).rotateX(Math.PI / 2);
   const boltMaterial = new THREE.MeshBasicMaterial({ color: 0xbfefff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending });
+  const roundMaterial = new THREE.MeshBasicMaterial({ color: COLORS.round, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending }); // a sidearm's
   const tmp = new THREE.Vector3();
   const burst = (at, count, speed, opts) => {
     for (let i = 0; i < count; i++) {
@@ -642,16 +643,24 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         feel.shake = 0.4; feel.stop = 0.12;
       }
       if (e.type === 'projectile' && source) {
-        const mesh = new THREE.Mesh(boltGeometry, boltMaterial);
+        const sidearm = String(e.move).startsWith('sidearm');
+        const hex = sidearm ? COLORS.round : 0xbfefff;
+        const mesh = new THREE.Mesh(boltGeometry, sidearm ? roundMaterial : boltMaterial);
         mesh.position.set(e.x, 1.35, e.z);
         mesh.lookAt(e.x + e.dir.x, 1.35, e.z + e.dir.z);
-        mesh.userData = { dir: e.dir, speed: e.move === 'sniperShot' ? 140 : 60 };
+        mesh.userData = { dir: e.dir, speed: e.speed || (e.move === 'sniperShot' ? 140 : 60), hex };
         scene.add(mesh);
         bolts.set(e.id, mesh);
+        // the muzzle
+        flashes.flash(mesh.position, hex, 7, 0.1);
+        for (let i = 0; i < 8; i++) {
+          const v = 6 + Math.random() * 6;
+          particles.spawn(e.x, 1.35, e.z, e.dir.x * v + rand(1.5), rand(1.5), e.dir.z * v + rand(1.5), { hex, size: 0.035, ttl: 0.18, damping: 4 });
+        }
       }
       if (e.type === 'projectileEnd') {
         const mesh = bolts.get(e.id);
-        if (mesh) { burst(mesh.position, 12, 3, { hex: 0xbfefff, size: 0.04, ttl: 0.3 }); mesh.removeFromParent(); bolts.delete(e.id); }
+        if (mesh) { burst(mesh.position, 12, 3, { hex: mesh.userData.hex, size: 0.04, ttl: 0.3 }); mesh.removeFromParent(); bolts.delete(e.id); }
       }
       return feel;
     },
@@ -696,7 +705,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
     dispose() {
       particles.dispose(); shells.dispose(); cones.dispose(); tether.dispose(); shards.dispose(); tears.dispose(); flashes.dispose();
       for (const mesh of bolts.values()) mesh.removeFromParent();
-      boltGeometry.dispose(); boltMaterial.dispose();
+      boltGeometry.dispose(); boltMaterial.dispose(); roundMaterial.dispose();
     },
   };
 }

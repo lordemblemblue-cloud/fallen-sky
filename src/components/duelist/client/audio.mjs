@@ -187,6 +187,34 @@ export function createDuelAudio() {
     loss(t, d) {
       [392, 349.23, 293.66].forEach((f, i) => tone(d, t + i * 0.22, { type: 'triangle', f0: f, f1: f * 0.98, peak: 0.12, attack: 0.02, decay: 0.9 }));
     },
+    // ---- story missions
+    shot(t, d) {
+      // a crystal round leaving a sidearm: a hard crack, a glassy ring, a short thump
+      noiseBurst(d, t, { type: 'highpass', f0: jitter(5200), f1: 1800, q: 0.7, peak: 0.55, attack: 0.001, decay: 0.07 });
+      tone(d, t, { type: 'square', f0: jitter(1400), f1: 220, peak: 0.14, attack: 0.001, decay: 0.09 });
+      tone(d, t, { f0: 150, f1: 50, peak: 0.5, attack: 0.002, decay: 0.12 });
+      chime(d, t + 0.01, jitter(2100, 0.1), { peak: 0.05, decay: 0.25 });
+    },
+    objective(t, d) {
+      [659.25, 987.77].forEach((f, i) => chime(d, t + i * 0.13, f, { peak: 0.08, decay: 0.9, partials: [1, 2, 3.01] }));
+    },
+    comms(t, d) {
+      tone(d, t, { type: 'triangle', f0: 1320, peak: 0.05, attack: 0.004, decay: 0.06 });
+      tone(d, t + 0.09, { type: 'triangle', f0: 1760, peak: 0.05, attack: 0.004, decay: 0.08 });
+      noiseBurst(d, t, { type: 'bandpass', f0: 2400, f1: 2400, q: 3, peak: 0.03, decay: 0.2 });
+    },
+    interact(t, d) {
+      chime(d, t, 880, { peak: 0.07, decay: 0.4 });
+      tone(d, t + 0.08, { type: 'triangle', f0: 1174.66, peak: 0.07, decay: 0.3 });
+    },
+    door(t, d) {
+      noiseBurst(d, t, { type: 'lowpass', f0: 500, f1: 180, q: 0.8, peak: 0.5, attack: 0.05, decay: 0.7 });
+      tone(d, t, { type: 'sawtooth', f0: 70, f1: 46, peak: 0.12, attack: 0.05, decay: 0.7 });
+      tone(d, t + 0.7, { f0: 90, f1: 40, peak: 0.5, attack: 0.002, decay: 0.2 });
+    },
+    alarm(t, d) {
+      for (let i = 0; i < 3; i++) tone(d, t + i * 0.7, { type: 'sawtooth', f0: 440, f1: 660, peak: 0.06, attack: 0.3, decay: 0.3 });
+    },
   };
 
   return {

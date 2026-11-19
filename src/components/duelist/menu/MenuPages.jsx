@@ -44,7 +44,7 @@ export function DuelistHub() {
   return (
     <MenuShell title="Duelist Adventure" subtitle="Will, Telekinesis and crystal blades." back={{ to: '/', label: 'Adam X Eve Games' }}>
       <div className="grid gap-3 sm:grid-cols-4">
-        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="A co-op mission inside a smugglers' freight depot." accent="#c4a3ff" badge="In development" />
+        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="Break into a smugglers' freight depot and find who is behind it." accent="#c4a3ff" badge="1 to 4 players" />
         <JoinTile lobby={lobby} />
         {MODE_ORDER.filter((m) => m !== 'practice').map((m) => (
           <ModeTile key={m} mode={m} badge={lobby.online ? playing(lobby.byMode[m]) : null} />
@@ -222,7 +222,7 @@ export function FighterPage() {
 const CONTROLS = [
   ['Move', 'W A S D'], ['Sprint', 'Shift'], ['Light strike (chain three)', 'Left mouse'], ['Heavy strike', 'E'], ['Guard (a fresh guard parries)', 'Right mouse, hold'],
   ['Roll (into a push or a strike)', 'Space'], ['Dash', 'Ctrl'], ['Push', '1'], ['Pull', '2'], ['Telekinesis grip (let go to throw)', '3, hold'],
-  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'],
+  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'], ['Use (story: crates, consoles, cores)', 'F, hold'],
 ];
 
 function readAudio() {
@@ -267,25 +267,37 @@ export function SettingsPage() {
 }
 
 const ACTS = [
-  ['Infiltration', 'Get inside the Halvane Logistics orbital freight depot. Find who signs off the "medical crates".'],
-  ['The Ledger', 'The crates hold unregistered crystal-forged rifles. Find the three people behind the shipments.'],
-  ['The Evidence', 'Get the ledger cores and the broker\'s records out alive. The base locks down.'],
-  ['The Name', 'The buyer pays in Will-forged crystal. A recorded message plays in a voice you know.'],
+  ['Infiltration', 'Get into the Halvane Logistics freight depot and open the crates its manifest calls medical supplies.'],
+  ['The Ledger', 'Three people sign every transfer: the quartermaster, the broker and the security chief. Find them and take their ledger cores.'],
+  ['The Evidence', 'The depot locks down. Carry the cores to the cargo lift and hold it until it arrives.'],
+  ['The Name', 'The buyer paid in Will-forged crystal. A recorded message plays in a voice you know.'],
 ];
 
 export function StoryPage() {
+  const navigate = useNavigate();
+  const [prefs] = usePrefs();
   return (
-    <MenuShell title="Contraband" subtitle="A co-op mission for 1 to 4 players. In development." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <ol className="grid gap-3 sm:grid-cols-2">
-        {ACTS.map(([title, line], i) => (
-          <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-            <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
-            <div className="mt-1 text-base font-semibold">{title}</div>
-            <div className="mt-1 text-sm text-white/60">{line}</div>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-6 text-sm text-white/45">The mission is being built: you will play it with friends from this page.</p>
+    <MenuShell title="Contraband" subtitle="A story mission for 1 to 4 players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <ol className="grid gap-3 sm:grid-cols-2">
+          {ACTS.map(([title, line], i) => (
+            <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+              <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
+              <div className="mt-1 text-base font-semibold">{title}</div>
+              <div className="mt-1 text-sm text-white/60">{line}</div>
+            </li>
+          ))}
+        </ol>
+        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <Button primary onClick={() => navigate({ to: '/duelist-next/play', search: { mode: 'story', online: 0 } })}><Play className="h-4 w-4" /> Play solo</Button>
+          <ul className="space-y-1.5 text-xs text-white/55">
+            <li>About ten minutes. Fall and you start the stage again from its checkpoint.</li>
+            <li>The guards have no Veil but carry sidearms: a line of light shows where a shot will go. Roll or guard.</li>
+            <li>Hold F to open crates, use consoles and take ledger cores.</li>
+          </ul>
+          <p className="text-xs text-white/40">Fighter: {BODIES[prefs.fighter]?.name}. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200/80 hover:underline">Change</Link></p>
+        </div>
+      </div>
     </MenuShell>
   );
 }

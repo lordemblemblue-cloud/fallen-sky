@@ -43,6 +43,15 @@ export const MOVE_MOTION = Object.freeze({
   breach: { segments: phases('breach', 'punchJab', [0, 0.12, 0.2, 0.5]), settle: { clip: 'punchJab', from: 0.5 } },
   // Resist: brace and throw the hold off
   resist: { segments: [seg('shieldBurst', 0, end('resist'), 0.05, 0.35)], settle: { clip: 'shieldBurst', from: 0.35 } },
+  // the smugglers' sidearm: the aim is held through the wind-up (you can see it coming), then the recoil
+  sidearmShot: { segments: [seg('pistolShoot', 0, MOVES.sidearmShot.startup, 0, 0.02), seg('pistolShoot', MOVES.sidearmShot.startup, end('sidearmShot'), 0.02, 0.5)] },
+  sidearmBurst: { segments: [
+    seg('pistolShoot', 0, MOVES.sidearmBurst.startup, 0, 0.02),
+    ...MOVES.sidearmBurst.hitAt.map((h, i, all) => seg('pistolShoot', MOVES.sidearmBurst.startup + h,
+      i + 1 < all.length ? MOVES.sidearmBurst.startup + all[i + 1] : activeEnd('sidearmBurst'), 0.02, 0.2)),
+    seg('pistolShoot', activeEnd('sidearmBurst'), end('sidearmBurst'), 0.2, 0.6),
+  ] },
+  sidearmWhip: { segments: phases('sidearmWhip', 'punchCross', [0.02, 0.14, 0.22, 0.6]) },
   // the Will dash: the rules move the body (6 m), the clip only lends the lunge
   dash: { segments: [seg('swordDash', 0, end('dash'), 0.22, 0.5, { travel: false })], settle: { clip: 'swordDash', from: 0.5 } },
 });

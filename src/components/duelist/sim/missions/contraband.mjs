@@ -27,9 +27,16 @@ const spans = (from, to, gaps) => {
 };
 const hWall = (z, x0, x1, gaps = []) => spans(x0, x1, gaps).map(([a, b]) => ({ x0: a, x1: b, z0: z - T, z1: z + T }));
 const vWall = (x, z0, z1, gaps = []) => spans(z0, z1, gaps).map(([a, b]) => ({ x0: x - T, x1: x + T, z0: a, z1: b }));
-const crate = (x, z, half = 0.7) => ({ x0: x - half, x1: x + half, z0: z - half, z1: z + half });
+// cover is a box; its style is only how the client draws it (a crate, a workbench, a desk, a data stack...)
+const crate = (x, z, half = 0.7, style = 'crate') => ({ x0: x - half, x1: x + half, z0: z - half, z1: z + half, style });
+const styled = (style) => (x, z) => crate(x, z, 0.7, style);
+const bench = styled('bench');
+const desk = styled('desk');
+const shelf = styled('shelf');
+const post = styled('console');
+const pillar = (x, z) => crate(x, z, 0.8, 'pillar');
 
-export const LIFT = Object.freeze({ x: 22, z: -20 });
+export const LIFT = Object.freeze({ x: 22, z: -20, radius: 4.5 });
 const VAULT = Object.freeze({ x: -19, z: 20 });
 const PLACES = Object.freeze({
   dask: { x: 22, z: 3, label: 'Quartermaster' }, perrin: { x: -22, z: 3, label: 'Broker' }, rooke: { x: 22, z: 21, label: 'Security chief' },
@@ -37,6 +44,12 @@ const PLACES = Object.freeze({
 
 const LEVEL = {
   bounds: { x0: -30, x1: 30, z0: -24, z1: 28 },
+  // each room's lamp (only the client uses these)
+  lights: [
+    { x: -18, z: -16, color: 0x8fc4ff }, { x: 0, z: -16, color: 0x8fc4ff }, { x: 19, z: -17, color: 0xffd9a0 },
+    { x: 0, z: 2, color: 0x7fe0d8 }, { x: -21, z: 2, color: 0xc9a3ff }, { x: 21, z: 2, color: 0xffa860 },
+    { x: -19, z: 20, color: 0x9a7bff }, { x: 2, z: 20, color: 0x6fb0ff }, { x: 21, z: 20, color: 0xff8a7a },
+  ],
   walls: [
     ...hWall(-24, -30, 30), ...hWall(28, -30, 30), ...vWall(-30, -24, 28), ...vWall(30, -24, 28),
     ...hWall(-8, -30, 30, [[-1.5, 1.5]]), ...hWall(12, -30, 30, [[-1.5, 1.5]]),
@@ -57,10 +70,10 @@ const LEVEL = {
     // concourse
     crate(-6, 6), crate(6, -3), crate(-5, -4), crate(5, 7),
     // workshop benches, the broker's furniture, the archive's shelves, the security office
-    crate(18, 6), crate(24, -2), crate(20, -5), crate(-18, 6), crate(-24, -3), crate(-20, 9),
-    crate(-3, 24), crate(6, 16), crate(8, 25), crate(18, 24), crate(25, 17),
+    bench(18, 6), bench(24, -2), bench(20, -5), desk(-18, 6), desk(-24, -3), desk(-20, 9),
+    shelf(-3, 24), shelf(6, 16), shelf(8, 25), post(18, 24), post(25, 17),
     // the vault's four pillars
-    crate(-14, 24, 0.8), crate(-24, 24, 0.8), crate(-14, 16, 0.8), crate(-24, 16, 0.8),
+    pillar(-14, 24), pillar(-24, 24), pillar(-14, 16), pillar(-24, 16),
   ],
   nav: {
     nodes: {
@@ -128,13 +141,13 @@ const takeCore = (m, h) => {
 };
 
 const INTERACTABLES = [
-  { id: 'crateA', x: -20, z: -18, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
-  { id: 'crateB', x: -8, z: -12, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
-  { id: 'crateC', x: 16, z: -13, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
-  { id: 'dockTerminal', x: 3.4, z: -8.9, label: 'Unlock the inner door', seconds: 2, counter: 'terminals' },
-  { id: 'coreDask', x: 26.5, z: 2, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
-  { id: 'corePerrin', x: -26.5, z: 2, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
-  { id: 'coreRooke', x: 26.5, z: 20, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
+  { id: 'crateA', kind: 'crate', x: -20, z: -18, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
+  { id: 'crateB', kind: 'crate', x: -8, z: -12, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
+  { id: 'crateC', kind: 'crate', x: 16, z: -13, label: 'Open the marked crate', seconds: 1.6, counter: 'crates', onDone: openCrate },
+  { id: 'dockTerminal', kind: 'terminal', x: 3.4, z: -8.9, facing: Math.PI, label: 'Unlock the inner door', seconds: 2, counter: 'terminals' },
+  { id: 'coreDask', kind: 'core', x: 26.5, z: 2, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
+  { id: 'corePerrin', kind: 'core', x: -26.5, z: 2, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
+  { id: 'coreRooke', kind: 'core', x: 26.5, z: 20, label: 'Take the ledger core', seconds: 1.5, counter: 'cores', onDone: takeCore },
 ];
 
 // what each of the three says when the crew walks in, and when they fall
@@ -198,7 +211,7 @@ const STAGES = [
     done: (m) => (m.counters.cores || 0) >= 3,
   },
   {
-    id: 'lift', title: 'Get the evidence out', groups: ['lockdownA'],
+    id: 'lift', title: 'Get the evidence out', groups: ['lockdownA'], alarm: true,
     text: 'Carry the ledger cores to the cargo lift',
     enter: (m, h) => {
       h.say('Ione', 'That is all three. Forget the depot: get the cores to the cargo lift. I am bringing it down.');
@@ -208,10 +221,10 @@ const STAGES = [
     },
     retry: (m, h) => h.respawn('lockdownA'),
     markers: () => [{ ...LIFT, label: 'Cargo lift' }],
-    done: (m, h) => h.crewNear(LIFT, 4.5) >= 1,
+    done: (m, h) => h.crewNear(LIFT, LIFT.radius) >= 1,
   },
   {
-    id: 'hold', title: 'Get the evidence out', groups: ['lockdownA', 'lockdownB'],
+    id: 'hold', title: 'Get the evidence out', groups: ['lockdownA', 'lockdownB'], alarm: true,
     text: 'Hold the lift while it powers up',
     enter: (m, h) => {
       h.checkpoint({ x: LIFT.x - 2, z: LIFT.z + 1, yaw: 0 });
@@ -222,7 +235,7 @@ const STAGES = [
     },
     retry: (m, h) => { h.flag('hold', 0); h.flag('wave', false); h.respawn('lockdownA'); },
     update: (m, h, dt) => {
-      if (h.crewNear(LIFT, 4.5) >= 1) h.flag('hold', (m.flags.hold || 0) + dt);
+      if (h.crewNear(LIFT, LIFT.radius) >= 1) h.flag('hold', (m.flags.hold || 0) + dt);
       if (!m.flags.wave && m.flags.hold >= 9) { h.flag('wave'); h.spawn('lockdownB'); }
       if (!m.flags.decrypt && m.flags.hold >= 16) {
         h.flag('decrypt');
@@ -252,6 +265,7 @@ const STAGES = [
     id: 'arden', title: 'Arden Vale', groups: ['vault'],
     text: (m) => (m.flags.ardenYielded ? 'Hear Arden out' : 'Face your teacher'),
     enter: (m, h) => {
+      m.comms.length = Math.min(m.comms.length, 1); // the crew is here: whatever was still queued gives way
       h.say('Arden', 'The Houses hunt us with a word and a warrant. I gave the hunted something to shoot back with.');
       h.alarm();
     },
@@ -277,7 +291,7 @@ const STAGES = [
         h.say('Ione', 'The lift is here. Whatever you decide about Arden, decide it outside.');
       }
     },
-    markers: (m, h) => { const a = h.tagged('arden'); const b = a && m.world.bodies.get(a.id); return b && !m.flags.ardenYielded ? [{ x: b.x, z: b.z, label: 'Arden Vale' }] : []; },
+    markers: (m, h) => { const a = h.tagged('arden'); const b = a && m.world.bodies.get(a.id); return b && !m.flags.ardenYielded ? [{ x: b.x, z: b.z, label: 'Arden Vale', follow: true }] : []; },
     done: (m) => !!m.flags.ardenYielded && m.comms.length === 0,
   },
 ];
