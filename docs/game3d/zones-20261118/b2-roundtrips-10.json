@@ -1,0 +1,280 @@
+{
+ "rows": [
+  {
+   "i": 1,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 32,
+   "chamber": true,
+   "chamberCalls": 26,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 2,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 3,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 4,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 5,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 6,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 7,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 27,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 8,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 33,
+   "chamber": true,
+   "chamberCalls": 26,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 9,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 32,
+   "chamber": true,
+   "chamberCalls": 26,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  },
+  {
+   "i": 10,
+   "enter": true,
+   "hallHidden": true,
+   "hallNpcHidden": true,
+   "hallCalls": 32,
+   "chamber": true,
+   "chamberCalls": 26,
+   "chamberHidden": true,
+   "exit": true,
+   "valleyBack": true,
+   "npcBack": true,
+   "surface": 0,
+   "geo": 1151,
+   "tex": 273,
+   "prog": 242
+  }
+ ],
+ "stats": {
+  "enabled": true,
+  "state": "APPROACH_GATE",
+  "active": "surface",
+  "inside": false,
+  "transition": {
+   "doorway": "grotto_mouth:in",
+   "state": "APPROACH_GATE",
+   "t": 0.6828999999761581
+  },
+  "loaded": [
+   "surface"
+  ],
+  "zones": {},
+  "facade": {
+   "id": "facade:grotto_mouth",
+   "disposed": false,
+   "objects": 17,
+   "geometry": 14,
+   "material": 3,
+   "texture": 0,
+   "renderTarget": 0,
+   "bvh": 0,
+   "audio": 0,
+   "disposable": 0,
+   "shared": 0,
+   "timers": 0,
+   "listeners": 0,
+   "updates": 0,
+   "cleanups": 0
+  },
+  "counters": {
+   "transitions": 42,
+   "aborts": 0,
+   "failures": 0,
+   "evictions": 1,
+   "loads": 42,
+   "unloads": 43
+  },
+  "released": 32,
+  "releasedStillReachable": 32,
+  "lastReport": {
+   "id": "grotto_hall",
+   "objects": 34,
+   "bvh": 3,
+   "geometry": 24,
+   "texture": 1,
+   "material": 19,
+   "renderTarget": 0,
+   "audio": 0,
+   "disposable": 0,
+   "timers": 0,
+   "listeners": 0,
+   "cleanups": 1,
+   "errors": [],
+   "residentMs": 1594
+  },
+  "loadMs": [
+   {
+    "id": "grotto_hall",
+    "ms": 8.2
+   },
+   {
+    "id": "grotto_chamber",
+    "ms": 7.9
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 8
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 8
+   },
+   {
+    "id": "grotto_chamber",
+    "ms": 7.8
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 7.4
+   }
+  ],
+  "prefetch": {
+   "entries": 2,
+   "bytes": 125004
+  },
+  "runtimes": {
+   "created": 34,
+   "disposed": 33,
+   "finalized": 0,
+   "live": 1
+  },
+  "surface": {
+   "suspensionEnabled": true,
+   "suspended": false,
+   "hiddenRoots": 0,
+   "suspensions": 12,
+   "reshownWhileHidden": 26
+  },
+  "position": {
+   "a": -4.5000000000000115,
+   "l": -3.9968028886505635e-15,
+   "y": 14.310635574499429
+  }
+ }
+}
