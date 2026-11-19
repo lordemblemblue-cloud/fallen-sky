@@ -1,0 +1,204 @@
+// One fighter's animation, driven by the simulation every frame.
+//
+// Base: idle, walk, jog and sprint blended by the body's real speed, each playing at the speed that keeps its
+// feet planted. Over it, one state at a time, cross-faded:
+//   a move: its clip at the time the rules say (core/moveMotion.mjs), so what you see is what the rules decide;
+//   the move's settle: the rest of the motion after it ends, until you walk or act (an anime cut, not a snap);
+//   a roll: forward roll, or (locked on) back or side flip;
+//   guard, a flinch or a guard break, knocked down and getting up, held in Telekinesis, defeat.
+// The sword hand always grips (its fingers come from the sword stance, whatever the base clip does).
+import * as THREE from 'three';
+import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
+
+export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
+// metres per second each base clip covers at normal speed (the pack's are measured by its builder)
+const NATURAL = Object.freeze({ walk: 1.5, packWalk: 0.9, jog: 4.95, sprint: 7.63 });
+const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7.2 });
+const GRIP_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
+
+/**
+ * clips: { pack: {name: clip} (motion pack, retargeted), walk: the body's own walk, dodges: {Front_Roll, ...},
+ *          baked: {held, ...} (posed fallbacks) }
+ */
+export function createFighterAnimator({ model, clips }) {
+  const mixer = new THREE.AnimationMixer(model);
+  const pack = clips.pack || {};
+  const library = {
+    ...(clips.baked || {}), ...(clips.dodges || {}), ...pack,
+    walkBase: clips.walk || pack.walk,
+  };
+  // bodies without a walk of their own take the pack's (a slower stride)
+  const naturalWalk = clips.walk ? NATURAL.walk : NATURAL.packWalk;
+  const loops = new Set(['swordIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
+  const actions = new Map(); // clip name -> { action, weight, name }
+  const actionFor = (name) => {
+    if (actions.has(name)) return actions.get(name);
+    const clip = library[name];
+    if (!clip) return null;
+    const action = mixer.clipAction(clip);
+    action.setLoop(loops.has(name) ? THREE.LoopRepeat : THREE.LoopOnce, Infinity);
+    action.clampWhenFinished = true;
+    action.setEffectiveWeight(0);
+    action.play();
+    action.paused = true; // times are set by hand
+    const entry = { action, weight: 0, name };
+    actions.set(name, entry);
+    return entry;
+  };
+  // the sword hand's grip, always on
+  if (pack.swordIdle) {
+    const fingers = pack.swordIdle.tracks.filter((t) => GRIP_FINGERS.test(t.name));
+    if (fingers.length) {
+      const grip = mixer.clipAction(new THREE.AnimationClip('swordGrip', pack.swordIdle.duration, fingers));
+      grip.play();
+      grip.setEffectiveWeight(1);
+    }
+  }
+  const base = { idle: actionFor('swordIdle'), walk: actionFor('walkBase'), jog: actionFor('jog'), sprint: actionFor('sprint') };
+  const baseEntries = new Set(Object.values(base).filter(Boolean));
+  const baseWeights = { idle: 1, walk: 0, jog: 0, sprint: 0 };
+  const baseTime = { idle: 0, walk: 0, jog: 0, sprint: 0 };
+  let elapsed = 0;
+  let settle = null; // { clip, time }
+  let lastAction = null; // the fighter.action object seen last frame
+  let evasion = { action: null, clip: 'Front_Roll' };
+  let reaction = { until: -Infinity, clip: null, start: 0, length: 0 };
+  let flinchToggle = false;
+  let deathStart = null;
+
+  const evasionClip = (body) => {
+    const dir = body.motion?.dir;
+    if (!dir) return 'Front_Roll';
+    const fx = Math.sin(body.yaw), fz = Math.cos(body.yaw);
+    const ahead = dir.x * fx + dir.z * fz;
+    const right = dir.x * -fz + dir.z * fx;
+    const name = Math.abs(ahead) >= Math.abs(right) ? (ahead >= 0 ? 'Front_Roll' : 'Back_Flip') : (right > 0 ? 'Flip_Right' : 'Flip_Left');
+    return library[name] ? name : 'Front_Roll';
+  };
+
+  // What shows over the base now: { clip, time, fade, out } or null.
+  function choose(fighter, body, now, dt) {
+    const a = fighter.action;
+    if (fighter.vitals.dead) {
+      if (deathStart === null) deathStart = elapsed;
+      settle = null;
+      return library.death ? { clip: 'death', time: Math.min(library.death.duration - 1e-3, elapsed - deathStart), fade: 0.08 } : null;
+    }
+    deathStart = null;
+    // knocked down: thrown back and lying, then getting up
+    if (now < fighter.riseUntil) {
+      settle = null;
+      if (now < fighter.downUntil) {
+        const u = 1 - (fighter.downUntil - now) / KNOCKDOWN.lie;
+        if (library.knockback) return { clip: 'knockback', time: Math.min(library.knockback.duration - 1e-3, u * library.knockback.duration), fade: 0.05 };
+      } else if (library.getUp) {
+        const u = 1 - (fighter.riseUntil - now) / KNOCKDOWN.rise;
+        return { clip: 'getUp', time: Math.min(library.getUp.duration - 1e-3, u * library.getUp.duration), fade: 0.1 };
+      }
+    }
+    if (fighter.heldBy && library.held) { settle = null; return { clip: 'held', time: elapsed % library.held.duration }; }
+    if (isStunned(fighter, now)) {
+      settle = null;
+      // a new stagger: a flinch for a short one, a guard break for a long one (guard broken, parried)
+      if (reaction.until !== fighter.stunnedUntil) {
+        const length = fighter.stunnedUntil - now;
+        flinchToggle = !flinchToggle;
+        const clip = length >= 0.6 && library.guardBreak ? 'guardBreak' : flinchToggle ? 'hitChest' : 'hitHead';
+        reaction = { until: fighter.stunnedUntil, clip, start: now, length };
+      }
+      const clip = library[reaction.clip];
+      if (clip) {
+        const u = Math.min(1, (now - reaction.start) / Math.max(0.05, reaction.length));
+        const span = reaction.clip === 'guardBreak' ? clip.duration : Math.min(clip.duration, reaction.length * 1.2);
+        return { clip: reaction.clip, time: Math.min(clip.duration - 1e-3, u * span), fade: 0.04 };
+      }
+    }
+    if (a) {
+      settle = null;
+      if (a.id === 'roll') {
+        if (evasion.action !== a) evasion = { action: a, clip: evasionClip(body) };
+        const clip = library[evasion.clip];
+        if (clip) return { clip: evasion.clip, time: Math.min(clip.duration - 1e-3, (a.t / a.move.duration) * clip.duration), fade: 0.05 };
+      }
+      const at = clipAt(a.id, a.t);
+      if (at && library[at.clip]) return { clip: at.clip, time: at.time, fade: a.chainedFrom ? 0.06 : FADE.in };
+      if (library[a.id]) return { clip: a.id, time: Math.min(library[a.id].duration - 1e-3, a.t) };
+    }
+    // the move just ended: its motion settles unless the fighter moves on
+    if (!a && lastAction && !fighter.guard) {
+      const s = settleOf(lastAction.id);
+      if (s && library[s.clip]) settle = { clip: s.clip, time: s.from };
+    }
+    if (settle) {
+      const clip = library[settle.clip];
+      settle.time += dt;
+      if (fighter.guard || (body.speed || 0) > 0.6 || !clip || settle.time >= clip.duration - 1e-3) settle = null;
+      else return { clip: settle.clip, time: settle.time, fade: FADE.in, out: FADE.settleOut };
+    }
+    if (fighter.guard && library.swordBlock) {
+      // hold the block, breathing a little
+      return { clip: 'swordBlock', time: 0.36 + 0.1 * (0.5 - 0.5 * Math.cos(elapsed * 2.4)), fade: 0.06 };
+    }
+    return null;
+  }
+
+  function update(dt, { fighter, body, now }) {
+    elapsed += dt;
+    const want = choose(fighter, body, now, dt);
+    lastAction = fighter.action;
+    let outRate = 1 / FADE.out;
+    if (want) {
+      const entry = actionFor(want.clip);
+      if (entry) entry.action.time = want.time;
+      if (want.out) outRate = 1 / want.out;
+    }
+    // the shown state fades in, the rest fade out
+    let overlay = 0;
+    for (const entry of actions.values()) {
+      if (baseEntries.has(entry)) continue;
+      const on = !!want && entry.name === want.clip;
+      const rate = on ? 1 / (want.fade || FADE.in) : outRate;
+      entry.weight += ((on ? 1 : 0) - entry.weight) * Math.min(1, dt * rate);
+      if (!on && entry.weight < 1e-3) entry.weight = 0;
+      overlay += entry.weight;
+    }
+    // base by speed
+    const speed = body.speed || 0;
+    const target = { idle: 0, walk: 0, jog: 0, sprint: 0 };
+    if (speed < 0.05) target.idle = 1;
+    else if (speed <= SPEED.walk) { const k = speed / SPEED.walk; target.idle = 1 - k; target.walk = k; }
+    else if (speed <= SPEED.run) { const k = (speed - SPEED.walk) / (SPEED.run - SPEED.walk); target.walk = 1 - k; target.jog = k; }
+    else { const k = Math.min(1, (speed - SPEED.run) / (SPEED.sprint - SPEED.run)); target.jog = 1 - k; target.sprint = k; }
+    let baseSum = 0;
+    for (const key of Object.keys(baseWeights)) {
+      baseWeights[key] += (target[key] - baseWeights[key]) * Math.min(1, dt / FADE.base);
+      baseSum += baseWeights[key];
+    }
+    const pace = {
+      idle: 1,
+      walk: THREE.MathUtils.clamp(Math.max(speed, 0.8) / naturalWalk, 0.6, 2.4),
+      jog: THREE.MathUtils.clamp(speed / NATURAL.jog, 0.7, 1.4),
+      sprint: THREE.MathUtils.clamp(speed / NATURAL.sprint, 0.7, 1.4),
+    };
+    const overlayShare = Math.min(1, overlay);
+    const baseShare = 1 - overlayShare;
+    for (const [key, entry] of Object.entries(base)) {
+      if (!entry) continue;
+      baseTime[key] = (baseTime[key] + dt * pace[key]) % entry.action.getClip().duration;
+      entry.action.time = baseTime[key];
+      entry.action.setEffectiveWeight(baseSum > 1e-6 ? (baseWeights[key] / baseSum) * baseShare : (key === 'idle' ? baseShare : 0));
+    }
+    for (const entry of actions.values()) {
+      if (baseEntries.has(entry)) continue;
+      entry.action.setEffectiveWeight(overlay > 1e-6 ? (entry.weight / overlay) * overlayShare : 0);
+    }
+    mixer.update(0);
+  }
+
+  return {
+    update,
+    mixer,
+    current: () => [...actions.values()].filter((e) => e.weight > 0.5 && !baseEntries.has(e)).map((e) => e.name)[0] || null,
+    dispose: () => mixer.stopAllAction(),
+  };
+}

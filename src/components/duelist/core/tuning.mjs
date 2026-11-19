@@ -49,5 +49,9 @@ export const INPUT = Object.freeze({
   burst: 6, // token bucket size
 });
 
+// A push or a throw that drives a body this far (m) knocks it down (a pull never does): it lies, then rises, and nothing reaches it
+// until it stands again (a fallen fighter cannot be juggled or held down).
+export const KNOCKDOWN = Object.freeze({ distance: 3, lie: 0.7, rise: 0.95 });
+
 export const SPRINT = Object.freeze({ staminaPerSec: 14, speed: 7.2 });
 export const MOVE_SPEED = Object.freeze({ walk: 2.2, run: 4.6 });

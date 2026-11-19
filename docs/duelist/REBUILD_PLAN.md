@@ -85,5 +85,101 @@ mechanic; mysteries open gradually.
     buffered press, stagger, grips
   - `combat.mjs`: what a landed move does (knockback, stagger, hold, throw, breach, parry)
   - `fairplay.mjs`: the server's per-fighter input budget and the allowed client commands
-- [ ] Phase 1b: arena simulation (fighters moving, reach and arcs, projectiles) driving the core headless
-- [ ] Phase 2 onward
+  - knockdown (`KNOCKDOWN`): a push or a throw that drives a body 3 m or more knocks it down; it lies, rises,
+    and nothing reaches it until it stands (no juggling). A pull only drags the target into reach.
+- [x] Phase 1b: arena simulation, `src/components/duelist/sim/` (tests: `tests/duelist-sim.test.mjs`)
+  - `world.mjs`: bodies in a round arena, reach and arcs, roll/dash root motion, strikes moving the body by
+    their clip's own travel, knockback, Telekinesis holds and throws, projectiles, teams
+  - `bots.mjs`: trainee / duelist / master practice bots that only send commands (same costs, cooldowns and
+    limits as a player); they wait for a fallen foe to stand (tests: `tests/duelist-bots.test.mjs`)
+- [ ] Phase 2: characters and animation (in progress)
+  - [x] Practice duel at `/duelist-next` (beside the current `/duelist`): player against a bot, fixed 60 Hz
+    simulation, HUD (shield, Will, HP, stamina, Veil state, cooldowns; tappable power buttons), victory/defeat
+  - [x] Motion pack from the owner's clip pack (ActionForge, 80 clips on the fused female rig, 2026-11-18):
+    `tools/duelist/build-motion-pack.mjs` strips the meshes (`tools/duelist/source/actionforge-80.anim.glb`
+    keeps all 80 clips), takes travel out of the clips and measures it, finds each strike's fastest swing,
+    and writes `public/models/animations/duelist/duelist-motion.glb` (58 clips) and
+    `core/motionPack.data.mjs`. Rebuild: `node tools/duelist/build-motion-pack.mjs tools/duelist/source/actionforge-80.anim.glb`
+  - [x] Retargeting at load (`client/motionLibrary.mjs`): any Mixamo-named body plays the clips (the fused
+    male's arm bones are rolled differently from the female's; the roll/flip pack is retargeted the same way)
+  - [x] `core/moveMotion.mjs`: each move's clip and how its wind-up, contact and follow-through map onto the
+    move's startup, active and recovery (the rules keep the frame data; the clip follows), shared by the
+    animator and the simulation's root motion (tests: `tests/duelist-motion.test.mjs`)
+  - [x] Animator: idle/walk/jog/sprint by speed; the sword chain (rising slash, diagonal cut into a lunge,
+    spinning cut), the overhead heavy, Telekinesis reach/hold/throw, Breach palm strike, Resist brace; settle
+    clips after a move; roll or locked-on flips; block; flinches, guard break, knockdown and get-up, defeat
+  - [x] Motion lab at `/duelist-lab`: every clip on every body, speed, scrub, travel, camera views
+  - [x] The owner's characters (Tripo, unrigged T-pose meshes, 2026-11-18): Masked Warrior and Huntress,
+    rigged by `tools/duelist/rig_character.py` (Blender, headless): the fused skeleton fitted to the body's
+    own proportions (arm row, span, armpits, cross-sections), heat weights where Blender can solve the mesh
+    (Masked Warrior) and region-limited distance weights where it cannot (Huntress), textures 2K. Reports in
+    `tools/duelist/characters/`. Selectable as you / opponent on `/duelist-next` (Eve and Adam too).
+    Re-rig: `blender -b --factory-startup -P tools/duelist/rig_character.py -- <character.glb> <out.glb> --preview <dir>`
+  - [ ] Strafing and backpedal clips for locked-on movement (the pack has forward loops only)
+  - [ ] Dual blades, staff and bow movesets and clips
+- [ ] Phase 3: effects and sound (in progress)
+  - [x] Bent space (`client/warp.mjs`): a post pass displaces the picture around Telekinesis: rings that run
+    out (push, throw, resist, impacts) or fold in (pull, breach), a swirling lens round a held body, with a
+    slight colour split at the bend
+  - [x] Telekinesis (`client/vfx.mjs`): the hand gathers light in the wind-up; push sends a rippling cone of
+    bent air, dust and a floor wave; pull folds it back into the hand; the grip binds the body with twin
+    twisting ribbons, motes and orbiting shards; the throw bursts and the body trails light; Breach opens a
+    violet tear; Resist rings out across the floor. No lightning anywhere.
+  - [x] Floor waves (`arena.arc`): the hex lines light as a wave passes; knockdowns slam dust and a ring
+  - [x] Crystal sword trails (`client/trails.mjs`), strikes only, brightness by Will
+  - [x] Hits: Veil ripples and crystal shards, shield hexes, wound sparks, block and parry sparks with a
+    flash, Veil collapse shatters; camera shake and a short hit-stop on heavy hits (picture only, the rules
+    never pause)
+  - [x] Sound (`client/audio.mjs`): all synthesized in WebAudio (no recordings): blade swings, Veil / shield /
+    body hits, block, parry, push, pull, grip hum (climbs while held), throw, breach crack, resist, roll, dash,
+    knockdown, Veil shatter, defeat, victory and loss stingers; placed in the world; mute button
+  - [x] `client/director.mjs`: turns the simulation's steps into effects, sound, shake and hit-stop
+  - [ ] Footsteps, ambience, arena music
+- [ ] Phase 4: modes and bots (in progress)
+  - [x] `sim/match.mjs` (tests: `tests/duelist-match.test.mjs`): practice (you and 1-3 bots, no score),
+    duel (rounds, first to 3, 90 s round clock decided by who stands better), free for all (first to 15
+    defeats or the most at 8 min), team deathmatch (red/blue, first to 30 or the most at 8 min), capture
+    the flag (bases at each end; carry theirs home while yours is home; first to 3 or the most at 10 min;
+    a carrier who falls, is knocked down or is gripped drops it; a team mate's touch returns it; 20 s
+    auto-return; carriers cannot sprint). Respawns with spawn protection (ends when you act). Countdown,
+    round breaks, feed, results.
+  - [x] Seats: bots fill empty seats and step out when a player joins (`joinMatch`: the lowest-scoring bot
+    of the team that needs a player); a leaving player is replaced by a bot (`leaveMatch`). The network
+    layer (phase 5) calls these.
+  - [x] Bots: objectives (take their flag, run it home, return ours, guard, hunt the thief, escort our
+    carrier), standing targets over fallen ones, parries timed on the blow, punishing whiffs, Breach on a
+    strong Veil then a heavy, escapes when hurt; same commands and limits as a player. Full bot matches in
+    every mode finish (duel ~2 min, FFA ~5 min, TDM ~3.5 min, CTF ~5 min with captures).
+  - [x] Client: any mode at `/duelist-next` (mode bar; your fighter, opponent, bot count and level), every
+    fighter drawn with team colours, name tags, CTF bases and flags (on the carrier's back), score line,
+    countdown and "Fight!", respawn note, feed, result board, lock-on cycles to the nearest hostile
+  - [ ] Bigger arenas with cover and a CTF map with two ends (today one round arena, sized per mode)
+- [ ] Phase 5: online play (in progress)
+  - [x] Match server `server/duelist/` (Node + ws, the Railway pattern of the Game 2 arena server; see its
+    README): many matches in one process, each the shared `sim/match.mjs` stepped at 60 Hz; the server decides
+    every hit, cooldown and score; 20 snapshots a second (own cooldowns only to their owner); sign-in with the
+    Base44 token once per connection (guests only with `DUELIST_ALLOW_GUESTS=1`, local testing); one
+    connection per account
+  - [x] Join: a mode goes to the busiest match of that mode with room or starts one full of bots; Join (any)
+    goes to the busiest match that has players; the joining player takes a bot's seat; a leaving player's seat
+    goes back to a bot; a finished match restarts after 12 s with the same players
+  - [x] Fair play: inputs sanitised (move clamped, only known commands), presses through the token bucket,
+    messages over 120 a second ignored and over 400 a second disconnect, 4 KB message cap, origin allow-list
+  - [x] Browser: `net/client.mjs` draws the server's match through the same renderer as local play (a mirror
+    world 100 ms behind, interpolated); inputs at most 60 a second; `/duelist-next` Online switch and Join
+    button (the local test server on localhost, or `VITE_DUELIST_WS_URL`)
+  - [x] Tests: `tests/duelist-server.test.mjs` (real WebSocket clients); two browser tabs verified in one match
+  - [ ] Client-side prediction for your own fighter (today your moves show one round trip + 100 ms late)
+  - [ ] Reconnect to the same seat; results saved to accounts; deployment (needs the owner's go-ahead)
+- [ ] Phase 6: menus (in progress)
+  - [x] `/duelist-next` hub: Story, Join, a tile per mode (with how many are playing), Practice, Fighter,
+    Settings (`src/components/duelist/menu/`)
+  - [x] A page per mode (`/duelist-next/duel`, `/ffa`, `/tdm`, `/ctf`, `/practice`): the rules in three lines,
+    the live matches of that mode, Play online / Play against bots (practice: opponent, bots, level)
+  - [x] `/duelist-next/join`: one button into the busiest match that has players (or start one others can
+    join), and the list of live matches; the server's public `/lobby` (modes and head counts only)
+  - [x] `/duelist-next/fighter` (saved per browser), `/duelist-next/settings` (volume, sound on/off, mouse
+    sensitivity, the controls), `/duelist-next/story` (the mission's four parts; "in development")
+  - [x] `/duelist-next/play?mode=…&online=…`: the arena with a Menu button back to where you came from
+  - [ ] Key rebinding; touch controls; a fighter preview (3D) on the Fighter page
+- [ ] Phase 7 onward

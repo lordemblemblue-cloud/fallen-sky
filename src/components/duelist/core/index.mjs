@@ -6,3 +6,5 @@ export * from './damage.mjs';
 export * from './fighter.mjs';
 export * from './combat.mjs';
 export * from './fairplay.mjs';
+export * from './moveMotion.mjs';
+export { MOTION_CLIPS, MOTION_PACK_URL } from './motionPack.data.mjs';
