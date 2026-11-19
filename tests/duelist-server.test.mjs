@@ -3,7 +3,7 @@
 // finds the match that has players), snapshots, the server moving a player by its input, the press budget,
 // and a leaving player's seat going back to a bot. The server clock runs 4x fast to skip the countdown
 // (the prediction tests run it at its real speed, against a browser's predictor).
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createDuelistServer } from '../server/duelist/server.mjs';
@@ -12,11 +12,18 @@ import { createPredictor } from '../src/components/duelist/net/predict.mjs';
 import { INPUT } from '../src/components/duelist/core/index.mjs';
 
 const SPEED = 4;
-async function start({ speed = SPEED } = {}) {
+// every server a test starts is closed at the end, even when the test fails (an open one keeps node running)
+const started = [];
+after(async () => { for (const s of started) await s.close(); });
+async function start({ speed = SPEED, ...options } = {}) {
   const server = createDuelistServer({
-    host: '127.0.0.1', port: 0, clock: () => (performance.now() / 1000) * speed,
+    host: '127.0.0.1', port: 0, clock: () => (performance.now() / 1000) * speed, ...options,
     authenticate: async (token, hello) => (token ? { id: token, name: hello.name } : null),
   });
+  const close = server.close;
+  let closed = false;
+  server.close = async () => { if (closed) return; closed = true; await close(); };
+  started.push(server);
   const address = await server.listen();
   return { server, url: `ws://127.0.0.1:${address.port}${WS_PATH}` };
 }
@@ -323,6 +330,81 @@ test('a browser predicting against the real server: its inputs are used in order
   const mean = corrections.reduce((s, c) => s + c, 0) / corrections.length;
   const worst = Math.max(...corrections);
   assert.ok(mean < 0.1 && worst < 0.6, `corrections: ${mean.toFixed(3)} m on average, ${worst.toFixed(2)} m at worst over ${corrections.length} snapshots`);
+  a.ws.close();
+  await server.close();
+});
+
+const until = async (check, ms = 3000) => {
+  const end = performance.now() + ms;
+  while (performance.now() < end) { if (check()) return true; await new Promise((r) => setTimeout(r, 10)); }
+  return check();
+};
+
+test('a crew plays the mission it asked for; open crews are matched per mission; a code joins whatever its crew plays', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const a = await player(url, 'ann');
+  a.send({ t: 'join', mode: 'story', mission: 'saltmarch' });
+  const joined = await a.next((m) => m.t === 'joined');
+  assert.equal(joined.mission, 'saltmarch');
+  assert.ok(joined.seats.some((s) => s.kind === 'enemy' && s.type === 'refugee'), 'the refuge\'s defenders in the yard');
+  const b = await player(url, 'ben');
+  b.send({ t: 'join', mode: 'story', mission: 'contraband' });
+  const joinedB = await b.next((m) => m.t === 'joined');
+  assert.equal(joinedB.mission, 'contraband');
+  assert.notEqual(joinedB.match, joined.match, 'an open crew of another mission is not this one');
+  const c = await player(url, 'cy');
+  c.send({ t: 'join', mode: 'story', mission: 'contraband', code: joined.code });
+  const joinedC = await c.next((m) => m.t === 'joined');
+  assert.equal(joinedC.match, joined.match);
+  assert.equal(joinedC.mission, 'saltmarch', 'a friend\'s code: their mission');
+  const { matches } = await (await fetch(http)).json();
+  assert.deepEqual(matches.map((m) => [m.mission, m.name, m.players]).sort(), [['contraband', 'Contraband', 1], ['saltmarch', 'Saltmarch', 2]]);
+  for (const p of [a, b, c]) p.ws.close();
+  await server.close();
+});
+
+test('a crew that finishes Contraband goes on to Saltmarch together', async () => {
+  const { server, url } = await start({ speed: 1, missionAgainSeconds: 0.3 });
+  const a = await player(url, 'ann');
+  a.send({ t: 'join', mode: 'story', create: true });
+  const joined = await a.next((m) => m.t === 'joined');
+  assert.equal(joined.mission, 'contraband');
+  const room = server.rooms.get(joined.match);
+  room.mission.phase = 'complete';
+  const done = await a.next((m) => m.t === 'snap' && m.view?.phase === 'complete');
+  assert.deepEqual(done.view.next, { id: 'saltmarch', title: 'Saltmarch' }, 'the view says what comes next');
+  const next = await a.next((m) => m.t === 'joined' && m.rematch, 3000);
+  assert.equal(next.mission, 'saltmarch');
+  assert.equal(next.match, joined.match, 'the same room, the same code');
+  assert.equal(next.code, joined.code);
+  assert.equal(room.mission.id, 'saltmarch');
+  a.ws.close();
+  await server.close();
+});
+
+test('Saltmarch\'s ally is a seat: the teacher is sent as an ally, in the teacher\'s body, and snapshots carry her', async () => {
+  const { server, url } = await start({ speed: 1 });
+  const a = await player(url, 'ann', 'maskedWarrior');
+  a.send({ t: 'join', mode: 'story', mission: 'saltmarch', create: true });
+  const joined = await a.next((m) => m.t === 'joined');
+  const { mission } = server.rooms.get(joined.match);
+  // through the first three stages by their own conditions: the lock opened, the keeper heard, the bells rung
+  mission.flags['done:lockConsole'] = true;
+  assert.ok(await until(() => mission.stageIndex === 1));
+  mission.flags.heard = true;
+  mission.comms.length = 0;
+  assert.ok(await until(() => mission.stageIndex === 2));
+  mission.counters.bells = 3;
+  assert.ok(await until(() => mission.stageIndex === 3));
+  const seats = await a.next((m) => m.t === 'seats' && m.seats.some((s) => s.kind === 'ally'));
+  const arden = seats.seats.find((s) => s.kind === 'ally');
+  assert.deepEqual([arden.name, arden.tag, arden.type, arden.body], ['Arden Vale', 'arden', 'willUser', 'huntress']);
+  assert.deepEqual(arden.max, [190, 170, 140, 50], 'with the teacher\'s own strength');
+  const wardens = seats.seats.filter((s) => s.kind === 'enemy' && s.type === 'warden');
+  assert.ok(wardens.length >= 1 && wardens.every((w) => w.body === undefined), 'wardens wear their own builds, not the teacher\'s');
+  const snap = await a.next((m) => m.t === 'snap' && m.fighters.some((f) => f.id === arden.id));
+  assert.equal(snap.fighters.find((f) => f.id === arden.id).tm, 'crew');
   a.ws.close();
   await server.close();
 });

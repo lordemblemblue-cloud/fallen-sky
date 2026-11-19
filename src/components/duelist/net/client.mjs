@@ -16,7 +16,7 @@ import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
 import { createLevel, setDoor } from '../sim/level.mjs';
-import { enemySeat, crewSeat } from '../client/missionSeats.mjs';
+import { enemySeat, allySeat, crewSeat } from '../client/missionSeats.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, RECONNECT_SECONDS, encodeInput, sanitizeInput, applyFighter } from './protocol.mjs';
 import { createPredictor } from './predict.mjs';
 
@@ -87,17 +87,20 @@ const newBody = () => ({ x: 0, y: 0, z: 0, yaw: 0, vy: 0, speed: 0, moving: fals
 const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * k;
 
 /**
- * An online match. mode: 'duel' | 'ffa' | 'tdm' | 'ctf' | 'any', or 'story': the co-op mission in a crew room
- * (room: a crew's code, 'new' for a room of your own, or null for any open crew). onChange(status, detail)
+ * An online match. mode: 'duel' | 'ffa' | 'tdm' | 'ctf' | 'any', or 'story': a co-op mission (mission: which
+ * one, sim/mission.mjs MISSIONS) in a crew room (room: a crew's code, 'new' for a room of your own, or null for
+ * any open crew). A crew's room may play another mission than the one asked for (a friend's code; the next
+ * mission after one is finished): level and def follow it, and generation counts each new mission or match. onChange(status, detail)
  * reports 'connecting' | 'joining' | 'ready' | 'reconnecting' | 'closed' | 'error'. predict: false draws the
  * player's own fighter from the server's picture like everyone else's (for comparison). storage: where the
  * seat's key is kept across a reload (this tab's session storage by default).
  */
-export function createOnlineSource({ url, token, name, body, mode, room = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
-  const def = story ? MISSIONS.contraband : null;
-  const level = def ? createLevel(def.level) : null;
+  let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
+  let level = def ? createLevel(def.level) : null;
+  let generation = 0;
   const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22 });
   const maxOf = new Map(); // the depot's people: id -> their full vitals
   const lastFull = new Map(); // a mission: fighter id -> its last full state (the unchanged come by id only)
@@ -129,8 +132,9 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
   const dress = (list) => {
     if (!story) return list;
     return list.map((s) => {
-      if (s.kind !== 'enemy') return crewSeat(s, meId);
+      if (s.kind === 'player') return crewSeat(s, meId);
       if (s.max) maxOf.set(s.id, { hp: s.max[0], will: s.max[1], stamina: s.max[2], shield: s.max[3] });
+      if (s.kind === 'ally') return allySeat({ id: s.id, name: s.name, typeId: s.type, tag: s.tag, body: s.body });
       return enemySeat({ id: s.id, name: s.name, typeId: s.type, named: s.named, tag: s.tag, body: s.body });
     });
   };
@@ -179,7 +183,7 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       seat = null;
       setStatus('joining', again ? 'Your seat was given up. Joining again…' : '');
       const how = story && again && code ? { code } : story && room === 'new' ? { create: true } : story && room ? { code: room } : {};
-      send({ t: 'join', mode, ...how });
+      send({ t: 'join', mode, ...(story ? { mission } : {}), ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
@@ -187,7 +191,15 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
       matchMode = msg.mode;
       world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
       if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.reset(); }
+      // the crew plays another mission (a friend's crew; the story's next one): its rooms
+      if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
+        def = MISSIONS[msg.mission];
+        level = createLevel(def.level);
+        if (predictor) predictor.world.level = level;
+        view = null; maxOf.clear(); lastFull.clear();
+      }
       if (fresh) {
+        generation += 1;
         world.fighters.clear(); world.bodies.clear(); flags = null;
         // a mission from the start: its doors as they were
         if (level) { for (const d of def.level.doors) setDoor(level, d.id, !!d.open); view = null; maxOf.clear(); lastFull.clear(); }
@@ -284,8 +296,9 @@ export function createOnlineSource({ url, token, name, body, mode, room = null, 
   return {
     world,
     kind: story ? 'mission' : 'match',
-    level,
-    def,
+    get level() { return level; },
+    get def() { return def; },
+    get generation() { return generation; }, // a new mission or match: what was drawn of the last one goes
     get code() { return code; }, // a crew room's code, to give to friends
     get meId() { return meId; },
     get mode() { return matchMode; },

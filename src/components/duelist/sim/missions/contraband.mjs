@@ -280,6 +280,7 @@ const STAGES = [
         // never an execution: Arden yields
         h.flag('ardenYielded');
         arden.yielded = true;
+        f.yielded = true;
         f.vitals.dead = false;
         f.vitals.hp = Math.max(f.vitals.hp, 1);
         f.action = null;

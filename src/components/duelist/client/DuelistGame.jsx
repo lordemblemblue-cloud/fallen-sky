@@ -38,7 +38,8 @@ const YOU_COLOR = 0x9fe8ff;
 const NET_TEXT = { connecting: 'Connecting to the match server…', joining: 'Finding a match…' };
 const CREW_TEXT = { connecting: 'Connecting to the match server…', joining: 'Joining the crew…' };
 // what the body does while it uses something (a clip of the motion pack, by the thing's kind)
-const WORK_CLIPS = { crate: { clip: 'interact' }, terminal: { clip: 'hack', loop: true }, core: { clip: 'pickup' }, use: { clip: 'interact' } };
+const WORK_CLIPS = { crate: { clip: 'interact' }, terminal: { clip: 'hack', loop: true }, core: { clip: 'pickup' }, bell: { clip: 'interact' }, use: { clip: 'interact' } };
+const KNEEL = Object.freeze({ clip: 'crouchIdle', loop: true, progress: 0 }); // someone who stood down
 const HEAD = 1.45; // metres: where the camera looks, and where its line to the fighter starts
 const BODY_REMAINS = 7; // seconds a fallen guard lies before it is cleared away
 
@@ -75,13 +76,15 @@ async function createActor(scene, seat, weaponColor) {
 }
 
 /**
- * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button) | story (the co-op mission).
+ * mode: practice | duel | ffa | tdm | ctf (online: also 'any', the Join button) | story (a co-op mission: mission
+ * names which, sim/mission.mjs MISSIONS; onNext(id) goes on to the next one after it is finished; onMission(id)
+ * hears which mission is playing, when it is not the one asked for or changes).
  * you: your body; foe: the opponent's in a local duel or practice; bots: how many opponents in practice;
  * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1, room = null, onLeave = null }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, mission = 'contraband', onLeave = null, onNext = null, onMission = null }) {
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -90,6 +93,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [fightFlash, setFightFlash] = useState(false);
   const pressRef = useRef(null);
   const audioRef = useRef(null);
+  const onMissionRef = useRef(onMission);
+  onMissionRef.current = onMission;
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
@@ -112,11 +117,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     scene.add(lights.sun.target);
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
-    const source = story && !online ? createMissionSource({ seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, room, onChange: (s, detail) => setNet({ status: s, detail }) })
+    const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, onChange: (s, detail) => setNet({ status: s, detail }) })
         : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
     const { world } = source;
-    const level = source.level || null; // a mission's rooms (matches are fought in the open arena)
+    // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
+    let level = source.level || null;
+    let generationSeen = source.generation || 0;
+    let missionTold = mission;
+    const tellMission = () => { const id = source.def?.id; if (id && id !== missionTold) { missionTold = id; onMissionRef.current?.(id); } };
     const me = () => source.meId;
     // the arena is sized by the mode (online, the mode is known once a match is found); a mission has its depot
     let arenaMode = null;
@@ -125,14 +134,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const warpHolder = { ring: (...a) => warp?.ring(...a), hold: (...a) => warp?.hold(...a) };
     const arenaHolder = { arc: (...a) => arena?.arc(...a) };
     const ensureArena = (m) => {
-      if (arenaMode === m) return;
-      arenaMode = m;
+      const key = level ? `mission:${source.def?.id}` : m;
+      if (arenaMode === key) return;
+      arenaMode = key;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
       arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18 });
       scene.add(arena.group);
     };
     ensureArena(source.mode || mode);
-    const markers = level ? createMarkerOverlay(mount) : null;
+    let markers = level ? createMarkerOverlay(mount) : null;
     warp = createWarp(renderer, scene, camera);
     const vfx = createDuelVfx(scene, { warp: warpHolder, arena: arenaHolder, camera });
     const audio = createDuelAudio();
@@ -194,15 +204,20 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       const { seat: s, color } = queue.shift();
       if (!source.seats().some((x) => x.id === s.id)) { pending.delete(s.id); return; }
       building = true;
+      const gen = generationSeen;
       createActor(scene, s, color).then((actor) => {
-        if (disposed || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
+        if (disposed || gen !== generationSeen || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
         actors[s.id] = actor;
         // in a mission only people with a name wear it
-        if (s.id !== me() && (s.kind !== 'enemy' || s.named)) tags.set(s.id, s.name, s.kind === 'enemy' ? 0xffc9b8 : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5);
+        if (s.id !== me() && (s.kind !== 'enemy' || s.named)) {
+          tags.set(s.id, s.name, s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5);
+        }
       }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
         .finally(() => { pending.delete(s.id); building = false; });
     };
 
+    // someone who stood down (kneeling) is out of the fight: no lock-on, no panel
+    const outOfFight = (f) => !!f.yielded || !!lastView?.yielded?.includes(f.id);
     // the nearest standing hostile to the player (for lock-on and the right-hand panel); in rooms, one in sight
     const nearestHostile = (range = Infinity) => {
       const mine = world.fighters.get(me());
@@ -210,7 +225,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       if (!mine || !at) return null;
       let best = null;
       for (const f of world.fighters.values()) {
-        if (f.id === me() || f.vitals.dead || !hostile(world, mine, f)) continue;
+        if (f.id === me() || f.vitals.dead || outOfFight(f) || !hostile(world, mine, f)) continue;
         const b = bodyOf(world, f.id);
         const d = Math.hypot(b.x - at.x, b.z - at.z);
         if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b))) continue;
@@ -220,7 +235,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     };
     // indoors the camera stays in the room: pulled in front of whatever is between it and the fighter's head
     const head = new THREE.Vector3();
-    const clampCamera = level ? (target, point) => {
+    const clampCamera = (target, point) => {
+      if (!level) return;
       head.set(target.x, target.y + HEAD, target.z);
       const dx = point.x - head.x;
       const dz = point.z - head.z;
@@ -236,10 +252,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         }
       }
       point.y = Math.min(point.y, DEPOT.height - 0.3);
-    } : null;
+    };
     const lockedBody = () => {
       const f = lockId ? world.fighters.get(lockId) : null;
-      if (!f || f.vitals.dead) { lockId = null; return null; }
+      if (!f || f.vitals.dead || outOfFight(f)) { lockId = null; return null; }
       return bodyOf(world, lockId);
     };
 
@@ -316,7 +332,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       // a mission's
       else if (e.type === 'stage') audio.play('objective');
       else if (e.type === 'comms') audio.play('comms');
-      else if (e.type === 'interacted') audio.play('interact', actors[e.by]?.chest() || null);
+      else if (e.type === 'interacted') {
+        const kind = source.def?.interactables?.find((it) => it.id === e.id)?.kind;
+        audio.play(kind === 'bell' ? 'bell' : 'interact', actors[e.by]?.chest() || null);
+      }
       else if (e.type === 'door') audio.play('door', arena.doorAt?.(e.id) || null);
       else if (e.type === 'failed') audio.play('loss');
       else if (e.type === 'complete') audio.play('victory');
@@ -356,11 +375,31 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       clock += dt;
       if (controls.takeLockToggle()) lockId = lockId ? null : nearestHostile();
       if (fightTimer > 0) { fightTimer -= dt; if (fightTimer <= 0) setFightFlash(false); }
+      // a new mission or match on the same connection (a crew going on to the next mission): its rooms, and
+      // nobody of the last one (ids repeat between missions)
+      if ((source.generation || 0) !== generationSeen || (source.level || null) !== level) {
+        generationSeen = source.generation || 0;
+        if ((source.level || null) !== level) {
+          level = source.level || null;
+          ensureArena(source.mode || mode);
+          if (level && !markers) markers = createMarkerOverlay(mount);
+        }
+        lastView = level ? source.view() : null;
+        tellMission();
+        const players = new Set(source.seats().filter((s) => s.kind === 'player').map((s) => s.id));
+        for (const [id, actor] of Object.entries(actors)) if (!players.has(id)) { actor.dispose(); delete actors[id]; tags.remove(id); }
+        retired.clear();
+        queue.length = 0;
+        pending.clear();
+        seatsSeen = -1;
+        alarmOn = false;
+        lockId = null;
+      }
       if (source.status === 'ready' && source.seatsVersion !== seatsSeen) syncActors();
       buildNext();
       const mineId = me();
       // the players' bodies must be there to start; a mission's people step in as they are built
-      const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy');
+      const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy' || s.kind === 'ally');
       if (ready) {
         if (!level && source.mode && source.mode !== arenaMode) ensureArena(source.mode);
         if (!ctf && source.mode === 'ctf') {
@@ -383,6 +422,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // who is using what (a crate's lid, a console, a core): their bodies show it
         const working = new Map();
         for (const it of lastView?.interactables || []) if (it.by && it.progress > 0) working.set(it.by, { ...(WORK_CLIPS[it.kind] || WORK_CLIPS.use), progress: it.progress });
+        for (const id of lastView?.yielded || []) if (!working.has(id)) working.set(id, KNEEL);
         if (level) {
           const mine = bodyOf(world, mineId);
           eyes[0].x = camera.position.x; eyes[0].z = camera.position.z;
@@ -524,11 +564,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, mission]);
 
   const view = hud?.view;
-  const mission = view?.mission ? view : null; // a story mission's view; otherwise a match's
-  const match = view && !mission ? view : null;
+  const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's
+  const match = view && !quest ? view : null;
   const waiting = online && net && net.status !== 'ready';
   const again = () => setGeneration((g) => g + 1);
   return (
@@ -539,12 +579,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {match && <RespawnNote view={match} />}
       {match && <Feed view={match} />}
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
-      {mission && <Objective view={mission} />}
-      {mission && <Crew view={mission} />}
-      {mission && <Prompt view={mission} />}
-      {mission && <Comms view={mission} />}
-      {mission && <DownNote view={mission} />}
-      {mission && <MissionEnd view={mission} onAgain={online ? null : again} onLeave={onLeave} />}
+      {quest && <Objective view={quest} />}
+      {quest && <Crew view={quest} />}
+      {quest && <Prompt view={quest} />}
+      {quest && <Comms view={quest} />}
+      {quest && <DownNote view={quest} />}
+      {quest && <MissionEnd view={quest} onAgain={online ? null : again} onLeave={onLeave} onNext={online ? null : onNext} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
@@ -554,7 +594,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         <div className="duelist-center duelist-reconnecting">
           <span>{net.detail || 'Connection lost. Reconnecting…'}</span>
           <small>{mode !== 'story' ? 'A bot keeps your seat until you are back.'
-            : (mission?.people?.length || 1) > 1 ? 'The autopilot plays your fighter until you are back.' : 'The mission waits for you.'}</small>
+            : (quest?.people?.length || 1) > 1 ? 'The autopilot plays your fighter until you are back.' : 'The mission waits for you.'}</small>
         </div>
       )}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}

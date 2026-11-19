@@ -44,7 +44,8 @@ function pickTarget(world, bot, prefer = null) {
   }
   let best = null;
   for (const other of world.fighters.values()) {
-    if (other.id === bot.id || other.vitals.dead || (me.team !== null && other.team === me.team)) continue;
+    // someone who stood down is out of the fight
+    if (other.id === bot.id || other.vitals.dead || other.yielded || (me.team !== null && other.team === me.team)) continue;
     const d = dist(mine, bodyOf(world, other.id)) + (isDown(other, world.time) ? 6 : 0);
     if (!best || d < best.d) best = { id: other.id, d };
   }

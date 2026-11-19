@@ -1,8 +1,9 @@
 /* global document */
 // A mission's rooms, drawn from its level (sim/level.mjs): deck plates, bulkhead walls with a line of light,
 // freight doors that sink into the floor (red shut, green open), crates and furniture as cover, and what the
-// crew uses: marked crates that open, a door control, ledger cores, the cargo lift, objective beacons.
-// In a lockdown the lights turn red. Original and procedural (the few textures are painted on canvases here).
+// crew uses: marked crates that open, a door control, ledger cores, warning bells, the ring where the crew
+// holds, objective beacons. In a lockdown the lights turn red. The mission's theme dresses it: the depot's
+// steel and cyan light, or the refuge's salt-stone, flagstones and lamplight. Original and procedural (the few textures are painted on canvases here).
 // It stands where the arena does in the game view: group, arc() (Telekinesis lights the deck seams), update,
 // dispose; plus cameraBlockers() so the follow camera stays inside the room.
 import * as THREE from 'three';
@@ -12,6 +13,13 @@ import { FLOOR_VERTEX, WAVE_GLSL, createFloorWaves } from './arena.mjs';
 export const DEPOT = Object.freeze({ height: 4.2, cover: 1.5 });
 const H = DEPOT.height;
 const COLORS = Object.freeze({ closed: 0xe8453a, open: 0x2fbf86, trim: 0x2aa9cf, alarm: 0xff2a1a, mark: 0xffb347, core: 0xffc45a, beacon: 0xffd98a });
+// How a mission's rooms are dressed (its `theme`).
+const THEMES = Object.freeze({
+  depot: { floor: 'plates', wall: 'bulkhead', door: 'door', trim: 0x2aa9cf, background: 0x070b12, fog: [30, 110], hemi: 1.05, sun: 1.6, sunColor: 0xe6eeff, rim: 0.7,
+    deck: { metalness: 0.35, roughness: 0.52 }, walls: { metalness: 0.5, roughness: 0.62 }, lamp: [0.75, 0.9, 1.0], ceiling: [0.022, 0.028, 0.04], waves: 0x9fe6ff },
+  refuge: { floor: 'flags', wall: 'stone', door: 'gate', trim: 0xffa64d, background: 0x0d0b09, fog: [26, 95], hemi: 0.95, sun: 1.25, sunColor: 0xffe2c0, rim: 0.35,
+    deck: { metalness: 0.04, roughness: 0.9 }, walls: { metalness: 0.03, roughness: 0.93 }, lamp: [1.0, 0.72, 0.42], ceiling: [0.034, 0.027, 0.021], waves: 0xffd9a0 },
+});
 
 const OVERLAY_FRAGMENT = /* glsl */`
   uniform float uTime; uniform vec4 uLift; uniform float uLiftFill; uniform float uAlarm;
@@ -36,16 +44,16 @@ const OVERLAY_FRAGMENT = /* glsl */`
     gl_FragColor = vec4(c, 1.0);
   }`;
 const CEILING_FRAGMENT = /* glsl */`
-  uniform float uTime; uniform float uAlarm;
+  uniform float uTime; uniform float uAlarm; uniform vec3 uBase; uniform vec3 uLamp;
   varying vec2 vXZ;
   void main() {
-    vec3 c = vec3(0.022, 0.028, 0.04);
+    vec3 c = uBase;
     vec2 f = abs(fract(vXZ / 4.0) - 0.5);
-    c += vec3(0.02, 0.026, 0.036) * smoothstep(0.44, 0.5, max(f.x, f.y)); // beams
+    c += uBase * 0.9 * smoothstep(0.44, 0.5, max(f.x, f.y)); // beams
     // strips of light along the rooms, broken into lengths
     float row = abs(fract(vXZ.y / 8.0) - 0.5);
     float strip = (1.0 - smoothstep(0.02, 0.035, row)) * step(0.25, fract(vXZ.x / 4.0));
-    vec3 lamp = mix(vec3(0.75, 0.9, 1.0), vec3(1.0, 0.12, 0.08) * (0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 6.0))), uAlarm);
+    vec3 lamp = mix(uLamp, vec3(1.0, 0.12, 0.08) * (0.35 + 0.65 * (0.5 + 0.5 * sin(uTime * 6.0))), uAlarm);
     gl_FragColor = vec4(c + lamp * strip * 1.5, 1.0);
   }`;
 
@@ -114,6 +122,39 @@ const SKINS = {
     g.fillStyle = '#fff'; g.fillRect(10, s * 0.72, s - 20, 5);
     for (let x = 16; x < s - 12; x += 22) g.fillRect(x, s * 0.3, 10, 10);
   },
+  // the refuge: salt-stone in courses, flagstones, an iron-bound gate
+  stone(g, s) {
+    g.fillStyle = '#4a443c'; g.fillRect(0, 0, s, s); // the mortar
+    const h = s / 4;
+    for (let r = 0; r < 4; r++) {
+      const shift = r % 2 ? s / 4 : 0;
+      for (let x = -shift; x < s; x += s / 2) {
+        const tone = 128 + ((r * 41 + Math.round(x + shift) * 7) % 34);
+        g.fillStyle = `rgb(${tone + 26}, ${tone + 16}, ${tone + 2})`;
+        g.fillRect(x + 2, r * h + 2, s / 2 - 4, h - 4);
+      }
+    }
+  },
+  flags(g, s) {
+    g.fillStyle = '#3a342d'; g.fillRect(0, 0, s, s);
+    [[0, 0, 0.55, 0.45], [0.55, 0, 0.45, 0.6], [0, 0.45, 0.35, 0.55], [0.35, 0.45, 0.2, 0.55], [0.55, 0.6, 0.45, 0.4]].forEach(([x, y, w, h], i) => {
+      const tone = 96 + i * 9;
+      g.fillStyle = `rgb(${tone + 20}, ${tone + 12}, ${tone})`;
+      g.fillRect(x * s + 2, y * s + 2, w * s - 4, h * s - 4);
+    });
+  },
+  gate(g, s) {
+    g.fillStyle = '#4b3424'; g.fillRect(0, 0, s, s); // planks
+    g.strokeStyle = '#2e1f14'; g.lineWidth = 2;
+    for (let x = s / 6; x < s; x += s / 6) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, s); g.stroke(); }
+    g.fillStyle = '#2b2b2e'; // iron bands and their studs
+    for (const y of [s * 0.18, s * 0.72]) {
+      g.fillRect(0, y, s, 9);
+      g.fillStyle = '#8a8a90';
+      for (let x = 8; x < s; x += 18) { g.beginPath(); g.arc(x, y + 4.5, 2, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#2b2b2e';
+    }
+  },
 };
 
 // a box from (x0, z0)-(x1, z1) between two heights, its texture laid out in metres (tile metres to a repeat)
@@ -141,6 +182,8 @@ const inside = (b, p) => p.x > b.x0 && p.x < b.x1 && p.z > b.z0 && p.z < b.z1;
 export function createDepot({ level, def, scene = null, lights = null }) {
   const group = new THREE.Group();
   group.name = 'Depot';
+  const theme = THEMES[def.theme] || THEMES.depot;
+  const refuge = def.theme === 'refuge';
   const disposables = [];
   const keep = (x) => { disposables.push(x); return x; };
   const tex = Object.fromEntries(Object.entries(SKINS).map(([name, draw]) => [name, keep(canvasTexture(128, draw))]));
@@ -149,18 +192,18 @@ export function createDepot({ level, def, scene = null, lights = null }) {
   const depth = bounds.z1 - bounds.z0;
   const centre = { x: (bounds.x0 + bounds.x1) / 2, z: (bounds.z0 + bounds.z1) / 2 };
   if (scene) {
-    scene.background = new THREE.Color(0x070b12);
-    scene.fog = new THREE.Fog(0x070b12, 30, 110);
+    scene.background = new THREE.Color(theme.background);
+    scene.fog = new THREE.Fog(theme.background, theme.fog[0], theme.fog[1]);
   }
   if (lights) {
-    lights.hemi.intensity = 1.05;
-    lights.sun.intensity = 1.6;
-    lights.sun.color.setHex(0xe6eeff);
-    lights.rimLight.intensity = 0.7;
+    lights.hemi.intensity = theme.hemi;
+    lights.sun.intensity = theme.sun;
+    lights.sun.color.setHex(theme.sunColor);
+    lights.rimLight.intensity = theme.rim;
   }
 
   // ---- the deck, its lit overlay, the ceiling
-  const waves = createFloorWaves();
+  const waves = createFloorWaves({ color: theme.waves });
   const flat = (y, up = true) => {
     const g = keep(new THREE.PlaneGeometry(width, depth).rotateX(up ? -Math.PI / 2 : Math.PI / 2).translate(centre.x, y, centre.z));
     const uv = g.attributes.uv;
@@ -168,20 +211,20 @@ export function createDepot({ level, def, scene = null, lights = null }) {
     for (let i = 0; i < uv.count; i++) uv.setXY(i, pos.getX(i) / 2, pos.getZ(i) / 2);
     return g;
   };
-  const deck = new THREE.Mesh(flat(0), keep(new THREE.MeshStandardMaterial({ map: tex.plates, metalness: 0.35, roughness: 0.52 })));
+  const deck = new THREE.Mesh(flat(0), keep(new THREE.MeshStandardMaterial({ map: tex[theme.floor], ...theme.deck })));
   deck.receiveShadow = true;
   group.add(deck);
   const overlayUniforms = { uTime: { value: 0 }, uLift: { value: new THREE.Vector4(0, 0, 4.5, 0) }, uLiftFill: { value: 0 }, uAlarm: { value: 0 }, ...waves.uniforms };
   const overlay = new THREE.Mesh(flat(0.006), keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: OVERLAY_FRAGMENT, uniforms: overlayUniforms,
     transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
   group.add(overlay);
-  const ceilingUniforms = { uTime: { value: 0 }, uAlarm: { value: 0 } };
+  const ceilingUniforms = { uTime: { value: 0 }, uAlarm: { value: 0 }, uBase: { value: new THREE.Vector3(...theme.ceiling) }, uLamp: { value: new THREE.Vector3(...theme.lamp) } };
   group.add(new THREE.Mesh(flat(H, false), keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: CEILING_FRAGMENT, uniforms: ceilingUniforms }))));
 
   // ---- walls, with a line of light at chest height; the vault's pillars
-  const wallMaterial = keep(new THREE.MeshStandardMaterial({ map: tex.bulkhead, metalness: 0.5, roughness: 0.62 }));
-  const trimMaterial = keep(new THREE.MeshBasicMaterial({ color: COLORS.trim }));
-  const trimColor = new THREE.Color(COLORS.trim);
+  const wallMaterial = keep(new THREE.MeshStandardMaterial({ map: tex[theme.wall], ...theme.walls }));
+  const trimMaterial = keep(new THREE.MeshBasicMaterial({ color: theme.trim }));
+  const trimColor = new THREE.Color(theme.trim);
   const alarmColor = new THREE.Color(COLORS.alarm);
   const pillars = level.cover.filter((b) => b.style === 'pillar');
   const strip = (x0, x1, z0, z1) => boxGeometry({ x0, x1, z0, z1 }, 1.05, 1.11);
@@ -203,7 +246,7 @@ export function createDepot({ level, def, scene = null, lights = null }) {
   ], trimMaterial, { receive: false });
 
   // ---- doors: a slab that sinks into the floor, bars of light across it and a strip of light on the wall either side
-  const doorMaterial = keep(new THREE.MeshStandardMaterial({ map: tex.door, metalness: 0.6, roughness: 0.45 }));
+  const doorMaterial = keep(new THREE.MeshStandardMaterial({ map: tex[theme.door], metalness: refuge ? 0.2 : 0.6, roughness: refuge ? 0.75 : 0.45 }));
   const doors = [...level.doors.values()].map((d) => {
     const alongX = d.x1 - d.x0 >= d.z1 - d.z0;
     const cx = (d.x0 + d.x1) / 2;
@@ -251,8 +294,11 @@ export function createDepot({ level, def, scene = null, lights = null }) {
   };
   const standard = (options) => keep(new THREE.MeshStandardMaterial({ metalness: 0.4, roughness: 0.55, ...options }));
   const mats = {
-    crateA: standard({ map: tex.crate, color: 0x6f7d92 }),
-    crateB: standard({ map: tex.crate, color: 0x8a7f6a }),
+    crateA: standard({ map: tex.crate, color: refuge ? 0x8a7a62 : 0x6f7d92 }),
+    crateB: standard({ map: tex.crate, color: refuge ? 0x6e604c : 0x8a7f6a }),
+    wood: standard({ color: 0x6b4a2e, metalness: 0.02, roughness: 0.85 }),
+    cloth: standard({ color: 0x8a8070, metalness: 0, roughness: 0.95 }),
+    books: standard({ color: 0x3a2a1c, emissiveMap: tex.slots, emissive: 0xffb060, emissiveIntensity: 0.35, metalness: 0.02, roughness: 0.8 }),
     lid: standard({ map: tex.crate, color: 0x59657a }),
     bench: standard({ map: tex.bulkhead, color: 0xa89c90, metalness: 0.3, roughness: 0.5 }),
     rack: standard({ map: tex.bulkhead, color: 0x6a625c, emissiveMap: tex.lamps, emissive: 0xff9440, emissiveIntensity: 1.6 }),
@@ -316,7 +362,17 @@ export function createDepot({ level, def, scene = null, lights = null }) {
     if (use) { markedCrate(b, use); continue; }
     const cx = (b.x0 + b.x1) / 2;
     const cz = (b.z0 + b.z1) / 2;
-    if (b.style === 'bench') { prop(b, 0, 0.95, mats.bench); prop({ ...b, z1: b.z0 + 0.45 }, 0.95, DEPOT.cover, mats.rack); }
+    const inset = (box, by) => ({ x0: box.x0 + by, x1: box.x1 - by, z0: box.z0 + by, z1: box.z1 - by });
+    if (b.style === 'bench' && refuge) {
+      // a bunk: two beds, four posts
+      prop(b, 0, 0.42, mats.wood); prop(inset(b, 0.06), 0.42, 0.56, mats.cloth);
+      prop(b, 1.08, 1.28, mats.wood); prop(inset(b, 0.06), 1.28, 1.4, mats.cloth);
+      for (const [x, z] of [[b.x0, b.z0], [b.x1 - 0.1, b.z0], [b.x0, b.z1 - 0.1], [b.x1 - 0.1, b.z1 - 0.1]]) prop({ x0: x, x1: x + 0.1, z0: z, z1: z + 0.1 }, 0, DEPOT.cover, mats.wood);
+    } else if (b.style === 'desk' && refuge) {
+      // a long table, sacks of salt piled on it
+      prop(b, 0, 0.8, mats.wood); prop({ ...inset(b, 0.12), x1: (b.x0 + b.x1) / 2 + 0.2 }, 0.8, DEPOT.cover - 0.1, mats.cloth);
+    } else if (b.style === 'shelf' && refuge) prop(b, 0, DEPOT.cover + 0.6, mats.books); // the refuge's records
+    else if (b.style === 'bench') { prop(b, 0, 0.95, mats.bench); prop({ ...b, z1: b.z0 + 0.45 }, 0.95, DEPOT.cover, mats.rack); }
     else if (b.style === 'desk') { prop(b, 0, 0.85, mats.desk); prop({ ...b, z0: b.z1 - 0.1 }, 0.85, DEPOT.cover, mats.glass); }
     else if (b.style === 'console') { prop(b, 0, 1, mats.console); prop({ x0: b.x0 + 0.08, x1: b.x1 - 0.08, z0: b.z0, z1: b.z0 + 0.14 }, 1, DEPOT.cover, mats.monitor); }
     else if (b.style === 'shelf') prop(b, 0, DEPOT.cover, mats.shelf);
@@ -362,6 +418,33 @@ export function createDepot({ level, def, scene = null, lights = null }) {
           material.emissiveIntensity = on ? 1.6 + 0.6 * Math.sin(time * 5) : 0.25;
         },
       });
+    } else if (it.kind === 'bell') {
+      // a warning bell in a wooden frame: it swings while it is rung, and glows once it has been
+      for (const dx of [-0.45, 0.37]) prop({ x0: it.x + dx, x1: it.x + dx + 0.08, z0: it.z - 0.04, z1: it.z + 0.04 }, 0, 2.4, mats.wood);
+      prop({ x0: it.x - 0.5, x1: it.x + 0.5, z0: it.z - 0.05, z1: it.z + 0.05 }, 2.32, 2.44, mats.wood);
+      const yoke = new THREE.Group();
+      yoke.position.set(it.x, 2.32, it.z);
+      group.add(yoke);
+      const bronze = keep(new THREE.MeshStandardMaterial({ color: 0x9a7a3a, metalness: 0.85, roughness: 0.3, emissive: COLORS.mark, emissiveIntensity: 0, side: THREE.DoubleSide }));
+      const bell = new THREE.Mesh(keep(new THREE.CylinderGeometry(0.11, 0.28, 0.4, 16, 1, true)), bronze);
+      bell.position.y = -0.3;
+      bell.castShadow = true;
+      yoke.add(bell);
+      const crown = new THREE.Mesh(keep(new THREE.SphereGeometry(0.11, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2)), bronze);
+      crown.position.y = -0.1;
+      yoke.add(crown);
+      let swing = 0;
+      uses.push({
+        id: it.id, ring: useRing(it.x, it.z, 1),
+        update(dt, on, done, time) {
+          swing += ((on ? 1 : done ? 0.12 : 0) - swing) * Math.min(1, dt * 4);
+          yoke.rotation.z = Math.sin(time * (on ? 9 : 2.2)) * 0.45 * swing;
+          bronze.emissiveIntensity = done ? 0.8 + 0.3 * Math.sin(time * 2) : on ? 0.45 : 0;
+        },
+      });
+    } else if (it.kind !== 'crate') {
+      // anything else to use: its ring on the floor
+      uses.push({ id: it.id, ring: useRing(it.x, it.z, 1), update() {} });
     }
   }
 

@@ -61,7 +61,8 @@ export function DownNote({ view }) {
   return <div className="duelist-respawn">Down. Back in {Math.max(0, me.respawnIn).toFixed(1)}</div>;
 }
 
-export function MissionEnd({ view, onAgain, onLeave = null }) {
+// onNext(id): (playing alone) on to the story's next mission
+export function MissionEnd({ view, onAgain, onLeave = null, onNext = null }) {
   if (view.phase === 'failed') {
     return (
       <div className="duelist-center duelist-result">
@@ -71,12 +72,16 @@ export function MissionEnd({ view, onAgain, onLeave = null }) {
     );
   }
   if (view.phase !== 'complete') return null;
+  const next = view.next || null;
   return (
     <div className="duelist-center duelist-result">
       <div className="duelist-result-title">Mission complete</div>
       <div className="duelist-result-sub duelist-result-ending">{view.ending}</div>
-      {view.againIn !== null && view.againIn !== undefined && <div className="duelist-result-sub">The mission starts again in {view.againIn}</div>}
+      {view.againIn !== null && view.againIn !== undefined && (
+        <div className="duelist-result-sub">{next ? `The crew goes on to ${next.title} in ${view.againIn}` : `The mission starts again in ${view.againIn}`}</div>
+      )}
       <div className="duelist-result-actions">
+        {next && onNext && <button type="button" onClick={() => onNext(next.id)}>Next: {next.title}</button>}
         {onAgain && <button type="button" onClick={onAgain}>Play again</button>}
         {onLeave && <button type="button" onClick={onLeave}>Back to the menu</button>}
       </div>

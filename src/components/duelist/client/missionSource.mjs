@@ -3,7 +3,7 @@
 // people are seats too, so the renderer gives them bodies, kits and name tags as they appear.
 import { createMission, stepMission, missionView } from '../sim/mission.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
-import { enemySeat, crewSeat, teacherBodyFor } from './missionSeats.mjs';
+import { enemySeat, allySeat, crewSeat, teacherBodyFor } from './missionSeats.mjs';
 
 const STEP = 1 / 60;
 
@@ -15,12 +15,13 @@ export function createMissionSource({ id = 'contraband', seed = 1, youBody = BOD
   let version = 0;
   let known = '';
   const refresh = () => {
-    const key = [...mission.seats.keys(), ...mission.enemies.keys()].join(',');
+    const key = [...mission.seats.keys(), '|', ...mission.allies.keys(), '|', ...mission.enemies.keys()].join(',');
     if (key === known) return;
     known = key;
     version += 1;
     seats = [
       ...[...mission.seats.values()].map((s) => crewSeat({ id: s.id, name: s.name, body: youBody }, 'you')),
+      ...[...mission.allies.values()].map((a) => allySeat(a, { teacherBody })),
       ...[...mission.enemies.values()].map((e) => enemySeat(e, { teacherBody })),
     ];
   };

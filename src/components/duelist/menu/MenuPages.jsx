@@ -7,6 +7,7 @@ import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio } from '
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
 import { MENU_MODES, MODE_ORDER, LEVELS } from './modes.js';
+import { STORY_MISSIONS } from './missions.js';
 import { useLobby } from './useLobby.js';
 
 const FIGHTER_NOTES = {
@@ -44,7 +45,8 @@ export function DuelistHub() {
   return (
     <MenuShell title="Duelist Adventure" subtitle="Will, Telekinesis and crystal blades." back={{ to: '/', label: 'Adam X Eve Games' }}>
       <div className="grid gap-3 sm:grid-cols-4">
-        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="Break into a smugglers' freight depot and find who is behind it." accent="#c4a3ff" badge={lobby.online && lobby.byMode.story ? playing(lobby.byMode.story) : '1 to 4 players'} />
+        <PageTile wide page="story" icon={BookOpen} title="Story" line={`Co-op missions for 1 to 4: ${STORY_MISSIONS.map((m) => m.title).join(', then ')}.`} accent="#c4a3ff"
+          badge={lobby.online && lobby.byMode.story ? playing(lobby.byMode.story) : `${STORY_MISSIONS.length} missions`} />
         <JoinTile lobby={lobby} />
         {MODE_ORDER.filter((m) => m !== 'practice').map((m) => (
           <ModeTile key={m} mode={m} badge={lobby.online ? playing(lobby.byMode[m]) : null} />
@@ -268,13 +270,7 @@ export function SettingsPage() {
   );
 }
 
-const ACTS = [
-  ['Infiltration', 'Get into the Halvane Logistics freight depot and open the crates its manifest calls medical supplies.'],
-  ['The Ledger', 'Three people sign every transfer: the quartermaster, the broker and the security chief. Find them and take their ledger cores.'],
-  ['The Evidence', 'The depot locks down. Carry the cores to the cargo lift and hold it until it arrives.'],
-  ['The Name', 'The buyer paid in Will-forged crystal. A recorded message plays in a voice you know.'],
-];
-
+/** The story: each mission with its parts and its buttons; one box joins a friend's crew, whatever it plays. */
 export function StoryPage() {
   const navigate = useNavigate();
   const lobby = useLobby();
@@ -282,47 +278,63 @@ export function StoryPage() {
   const [typed, setTyped] = useState('');
   const code = typed.toUpperCase().replace(/[^A-HJ-NP-Z]/g, '').slice(0, 5);
   const play = (search) => navigate({ to: '/duelist-next/play', search: { mode: 'story', ...search } });
-  const crews = (lobby.matches || []).filter((m) => m.mode === 'story' && m.open);
   const offline = lobby.serverUrl ? 'The match server is not answering.' : 'Online play is not set up yet.';
   return (
-    <MenuShell title="Contraband" subtitle="A story mission for 1 to 4 players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5">
-          <ol className="grid gap-3 sm:grid-cols-2">
-            {ACTS.map(([title, line], i) => (
-              <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
-                <div className="mt-1 text-base font-semibold">{title}</div>
-                <div className="mt-1 text-sm text-white/60">{line}</div>
-              </li>
-            ))}
-          </ol>
-          <ul className="space-y-1.5 text-xs text-white/55">
-            <li>About ten minutes. If the whole crew falls, the stage starts again from its checkpoint.</li>
-            <li>The guards have no Veil but carry sidearms: a line of light shows where a shot will go. Roll or guard.</li>
-            <li>Hold F to open crates, use consoles and take ledger cores. The depot is manned for the size of your crew.</li>
-          </ul>
+    <MenuShell title="Story" subtitle="Co-op missions for 1 to 4 players, in order. A crew that finishes one goes on to the next." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="space-y-6">
+          {STORY_MISSIONS.map((m) => <MissionCard key={m.id} mission={m} lobby={lobby} offline={offline} play={play} />)}
         </div>
-        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          <Button primary onClick={() => play({ online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
-          <div className="h-px bg-white/10" />
-          <div className="text-xs uppercase tracking-wider text-white/40">With a crew</div>
-          <Button onClick={() => play({ online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <Users className="h-4 w-4" /> Start a crew room
-          </Button>
-          <p className="text-xs text-white/40">You get a code to give to up to three friends.</p>
+        <div className="space-y-4 self-start rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-xs uppercase tracking-wider text-white/40">A friend's crew</div>
           <div className="flex items-center gap-2">
             <input value={code} onChange={(e) => setTyped(e.target.value)} placeholder="CODE" maxLength={5} aria-label="Crew code"
               className="w-24 rounded-lg border border-white/10 bg-[#0c1622] px-3 py-2 text-sm uppercase tracking-[0.25em] text-white/90 outline-none placeholder:text-white/25 focus:border-cyan-300/40" />
-            <Button onClick={() => play({ online: 1, room: code })} disabled={!lobby.online || code.length !== 5}><LogIn className="h-4 w-4" /> Join with a code</Button>
+            <Button onClick={() => play({ online: 1, room: code })} disabled={!lobby.online || code.length !== 5}><LogIn className="h-4 w-4" /> Join</Button>
           </div>
-          <Button onClick={() => play({ online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <LogIn className="h-4 w-4" /> {crews.length ? `Join an open crew (${crews.length})` : 'Start an open crew'}
-          </Button>
+          <p className="text-xs text-white/40">The code takes you to their crew, whichever mission it is playing.</p>
           {!lobby.online && <p className="text-xs text-white/40">{offline}</p>}
+          <div className="h-px bg-white/10" />
+          <ul className="space-y-1.5 text-xs text-white/55">
+            <li>About ten minutes each. If the whole crew falls, the stage starts again from its checkpoint.</li>
+            <li>A line of light shows where a shot will go. Roll or guard.</li>
+            <li>Hold F to use things: crates, consoles, cores, bells. Each mission is manned for the size of your crew.</li>
+          </ul>
           <p className="text-xs text-white/40">Fighter: {BODIES[prefs.fighter]?.name}. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200/80 hover:underline">Change</Link></p>
         </div>
       </div>
     </MenuShell>
+  );
+}
+
+function MissionCard({ mission, lobby, offline, play }) {
+  const crews = (lobby.matches || []).filter((x) => x.mode === 'story' && x.mission === mission.id && x.open);
+  return (
+    <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <div className="text-xs uppercase tracking-wider text-violet-200/70">Mission {mission.number}</div>
+          <h2 className="text-xl font-semibold">{mission.title}</h2>
+          <p className="mt-0.5 text-sm text-white/60">{mission.line}</p>
+        </div>
+      </div>
+      <ol className="mt-3 grid gap-2 sm:grid-cols-2">
+        {mission.parts.map(([title, line], i) => (
+          <li key={title} className="rounded-xl border border-white/5 bg-white/[0.02] px-3 py-2">
+            <div className="text-[11px] uppercase tracking-wider text-white/40">Part {i + 1} · {title}</div>
+            <div className="text-xs text-white/60">{line}</div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button primary onClick={() => play({ mission: mission.id, online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
+        <Button onClick={() => play({ mission: mission.id, online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? 'You get a code to give to up to three friends' : offline}>
+          <Users className="h-4 w-4" /> Start a crew room
+        </Button>
+        <Button onClick={() => play({ mission: mission.id, online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
+          <LogIn className="h-4 w-4" /> {crews.length ? `Join an open crew (${crews.length})` : 'Start an open crew'}
+        </Button>
+      </div>
+    </section>
   );
 }

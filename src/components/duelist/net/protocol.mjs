@@ -7,8 +7,9 @@
 //                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
 //   { t: 'join', mode }                          'duel' | 'ffa' | 'tdm' | 'ctf' | 'any' (any match with players)
-//   { t: 'join', mode: 'story', code?, create? } the co-op mission: a crew room by its code, a new room of your
-//                                                own (create), or neither: any open crew
+//   { t: 'join', mode: 'story', mission?, code?, create? } a story mission (sim/mission.mjs MISSIONS; default
+//                                                Contraband): a crew room by its code (whatever it plays), a new
+//                                                room of your own (create), or neither: any open crew playing it
 //   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
 //                                                interact held (story), presses
 //   { t: 'leave' }
@@ -18,6 +19,8 @@
 //   { t: 'joined', match, mode, you, seats, replaced, key }   seats: [{ id, name, team, kind, body, away? }];
 //       key: comes back to this seat after a dropped connection (a fresh one each time), for RECONNECT_SECONDS
 //       a story room adds: mission, code, and seats for the depot's people { id, name, kind: 'enemy', type, tag, named }
+//       and the crew's allies { id, name, kind: 'ally', type, tag }; a finished mission's crew is sent the next
+//       mission's 'joined' (rematch: true, mission: the next one)
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
 //       ack: the last input the simulation has used (inputs are used one a tick, in order);
