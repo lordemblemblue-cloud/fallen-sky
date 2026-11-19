@@ -18,6 +18,8 @@ import {
   MAX_AXE_GEAR_PRESETS, normalizeAXEEquippedWeapons,
   equipOnlyAXEWeapon, applyAXEEquipmentPresetRules,
 } from './AXEWeaponLoadoutRules.mjs';
+import { applyAXEGearTierRecord, migrateAXEGearTierItem } from '../../../../../base44/shared/axeGearTiers.ts';
+import { isGearTiersEnabled } from '../loot/AXEGearTierFlag.mjs';
 
 const storage = characterScopedStorage('axe_equipment_inventory_v2');
 const CURRENT_STARTER_CATALOG_VERSION = 4; // 3: clone Crescent Moon preview pieces; 4: owner weapon pack
@@ -53,7 +55,7 @@ function seedItems() {
 function normalizeItem(raw = {}, fallbackCategory = null) {
   const category = raw.category || fallbackCategory || raw.slot || 'misc';
   const migrated = migrateLegacyEquipmentItem(raw, category);
-  return {
+  const item = {
     ...raw,
     ...migrated,
     id: raw.id || migrated.templateId,
@@ -66,6 +68,9 @@ function normalizeItem(raw = {}, fallbackCategory = null) {
     source: raw.source || 'owned',
     ...weaponPicture({ ...raw, category }),
   };
+  // Gear tiers (setting): a saved item keeps its level, stats and model and only notes its step
+  // on the level 1–155 ladders (docs/game3d/GEAR_TIERS_20261119.md).
+  return isGearTiersEnabled() ? migrateAXEGearTierItem(item) : item;
 }
 
 function chooseActiveWeaponInstanceId(items = [], preferred = null) {
@@ -225,6 +230,18 @@ export function switchAXEInventoryWeapon(instanceId, context = {}) {
 // It serializes the same state as the atomic weapon transaction.
 export function persistAXEEquipmentInventory() {
   storage.set(JSON.stringify(state));
+}
+
+// Blacksmith tier-up (gear tiers): the item's new level, stats and look, from the shared rules or
+// the server's record (itemUpgrade). Same instance id, so its Combine, Enchant, Ascension, sockets
+// and aura carry over.
+export function applyAXEGearTierRecordToItem(instanceId, record) {
+  const index = state.items.findIndex((item) => item.instanceId === instanceId);
+  if (index < 0 || !record) return { ok: false, reason: 'ITEM_MISSING' };
+  const next = applyAXEGearTierRecord(state.items[index], record);
+  state = { ...state, items: state.items.map((item, i) => (i === index ? next : item)) };
+  emit();
+  return { ok: true, item: { ...next } };
 }
 
 function emitItemRemoved(item, reason) {

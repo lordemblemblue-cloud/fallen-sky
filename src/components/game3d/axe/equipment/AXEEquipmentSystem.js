@@ -76,7 +76,9 @@ export function validateAXEEquip(item, context = {}) {
   if (!slot) return { ok: false, reason: 'INVALID_SLOT' };
 
   const level = Number(context.level ?? 1);
-  if (level < Number(item.itemLevel || 1)) return { ok: false, reason: 'LEVEL_REQUIRED' };
+  // gear tiers may set a requirement below the item level (Legendary Lv 155 opens at 150)
+  const required = Number(item.requiredLevel ?? item.itemLevel ?? 1) || 1;
+  if (level < required) return { ok: false, reason: 'LEVEL_REQUIRED' };
 
   if (item.factionRequirement && context.factionId && item.factionRequirement !== context.factionId) {
     return { ok: false, reason: 'FACTION_REQUIRED' };
