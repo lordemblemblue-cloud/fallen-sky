@@ -215,7 +215,7 @@ const STAGES = [
     text: 'Carry the ledger cores to the cargo lift',
     enter: (m, h) => {
       h.say('Ione', 'That is all three. Forget the depot: get the cores to the cargo lift. I am bringing it down.');
-      h.say('Rooke', 'All posts: lock it down. They are carrying the cores.', 3.4);
+      h.say('Rooke', 'All posts: lock it down. They are carrying the cores.');
       h.alarm();
       h.spawn('lockdownA');
     },
@@ -251,7 +251,7 @@ const STAGES = [
     text: 'Go to the archive vault',
     enter: (m, h) => {
       h.say('Ione', 'There is a recording on the last core. You should hear it.');
-      h.say('Arden (recording)', 'If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run.', 7);
+      h.say('Arden (recording)', 'If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run.');
       h.say('Ione', '...That is Arden. That is your teacher\'s voice.');
       h.open('vault');
       h.checkpoint({ x: 1, z: 17, yaw: -Math.PI / 2 });

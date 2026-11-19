@@ -118,7 +118,7 @@ export function createVoices({ audio = null, enabled = true, base = '/audio/duel
     if (file && typeof Audio !== 'undefined') {
       const playing = new Audio(base + file);
       clip = playing;
-      playing.volume = Math.min(1, level);
+      playing.volume = Math.min(1, level * (CAST[speaker]?.volume ?? 1)); // a recording of Arden is quieter here too
       playing.play()?.catch?.((e) => { if (e?.name === 'NotAllowedError' && clip === playing) holdBack(speaker, text); });
       return;
     }

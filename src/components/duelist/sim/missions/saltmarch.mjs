@@ -179,7 +179,7 @@ const STAGES = [
         h.say('Hask', 'Enough! ...You hold back. Wardens never hold back. Who sent you?');
         h.say('Ione', 'Tell him the truth. We are here because of the ledger.');
         h.say('Hask', 'Then you know Arden armed us. Do you know who put that ledger in the Houses\' hands?');
-        h.say('Ione', '...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants.', 6);
+        h.say('Ione', '...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants.');
         h.say('Hask', 'Then help us leave. Ring the warning bells and the tunnel opens under the chapel. Hurry: wardens do not knock.');
       }
     },
@@ -247,8 +247,8 @@ const STAGES = [
         m.comms.length = 0;
         h.say('Crane', 'Go, then. All of you.');
         h.say('Crane', 'The warrant named a teacher. By morning it will name the students.');
-        h.say('Arden', 'The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did.', 6);
-        h.say('Ione', 'There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court.', 6);
+        h.say('Arden', 'The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did.');
+        h.say('Ione', 'There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court.');
       }
     },
     markers: (m, h) => following(m, h, 'crane', 'Warden-Captain Crane'),

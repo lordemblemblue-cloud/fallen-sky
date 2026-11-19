@@ -78,9 +78,15 @@ export function leaveMission(mission, id) {
   return true;
 }
 
+/**
+ * How long a comms line stays up (and holds the next one back): long enough for its recorded voice
+ * (public/audio/duelist/voices; the slowest speaker takes about 0.067 s a character) and a beat after it.
+ */
+export const commsSeconds = (text) => Math.max(3.2, 1.6 + text.length * 0.07);
+
 // ---- what a stage's hooks may call
 const say = (mission, speaker, text, seconds = null) => {
-  const line = { speaker, text, seconds: seconds ?? Math.max(3.2, 1.6 + text.length * 0.055) };
+  const line = { speaker, text, seconds: seconds ?? commsSeconds(text) };
   mission.comms.push(line);
   mission.events.push({ type: 'comms', speaker, text, at: mission.world.time });
 };

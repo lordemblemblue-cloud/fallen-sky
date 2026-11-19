@@ -1,6 +1,12 @@
 {
   "lines": [
     {
+      "id": "be53fca6",
+      "mission": "contraband",
+      "speaker": "Ione",
+      "text": "Halvane's manifest says medical supplies. Nobody posts gunmen over bandages. Open the marked crates."
+    },
+    {
       "id": "c7a60232",
       "mission": "contraband",
       "speaker": "Ione",
@@ -143,6 +149,18 @@
       "mission": "contraband",
       "speaker": "Ione",
       "text": "The lift is here. Whatever you decide about Arden, decide it outside."
+    },
+    {
+      "id": "5dcec3bf",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "The ledger's last shipment came here: Saltmarch, an old salt works. The Houses filed a warrant on it this morning."
+    },
+    {
+      "id": "fb14369b",
+      "mission": "saltmarch",
+      "speaker": "Ione",
+      "text": "Get inside before their wardens do. And go easy: whoever is in there will take you for wardens."
     },
     {
       "id": "000d6122",

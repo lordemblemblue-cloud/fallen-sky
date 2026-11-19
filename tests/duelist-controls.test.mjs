@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, actionFor, keyLabel, helpLine, bindable } from '../src/components/duelist/client/bindings.mjs';
 import { CAST, castVoices, lineId, genderOf, createVoices } from '../src/components/duelist/client/voices.mjs';
+import { MISSION_ORDER, commsSeconds } from '../src/components/duelist/sim/mission.mjs';
+import { writtenLines } from '../tools/duelist/written-lines.mjs';
 
 test('the default bindings: every action has its own input', () => {
   const keys = keysFrom({});
@@ -249,7 +251,33 @@ test('a recorded line plays instead of the browser\'s voice once voices.json lis
   }
 });
 
-test('every line of the story has a speaker with a part, and an id its recording takes', () => {
+// a constant-rate MP3's length: the bytes after its ID3 tag at the first frame's bit rate (MPEG layer III)
+function mp3Seconds(buf) {
+  let at = buf.toString('latin1', 0, 3) === 'ID3' ? 10 + (((buf[6] & 0x7f) << 21) | ((buf[7] & 0x7f) << 14) | ((buf[8] & 0x7f) << 7) | (buf[9] & 0x7f)) : 0;
+  while (at < buf.length - 2 && !(buf[at] === 0xff && (buf[at + 1] & 0xe0) === 0xe0)) at++;
+  const mpeg1 = ((buf[at + 1] >> 3) & 3) === 3;
+  const kbps = (mpeg1 ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320] : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160])[buf[at + 2] >> 4];
+  return ((buf.length - at) * 8) / (kbps * 1000);
+}
+
+test('every recorded voice ends before its line leaves the screen (the next line would cut it off)', (t) => {
+  const { lines: recorded } = JSON.parse(readFileSync(new URL('../public/audio/duelist/voices/voices.json', import.meta.url), 'utf8'));
+  let worst = Infinity;
+  for (const mission of MISSION_ORDER) {
+    const source = readFileSync(new URL(`../src/components/duelist/sim/missions/${mission}.mjs`, import.meta.url), 'utf8');
+    for (const { speaker, text, seconds } of writtenLines(source)) {
+      const file = recorded[lineId(speaker, text)];
+      if (!file) continue;
+      const voice = mp3Seconds(readFileSync(new URL(`../public/audio/duelist/voices/${file}`, import.meta.url)));
+      const shown = seconds ?? commsSeconds(text);
+      worst = Math.min(worst, shown - voice);
+      assert.ok(voice + 0.25 <= shown, `${speaker} (${file}): the voice takes ${voice.toFixed(2)} s, the line is up for ${shown.toFixed(2)} s: ${text}`);
+    }
+  }
+  t.diagnostic(`the tightest line still has ${worst.toFixed(2)} s after its voice`);
+});
+
+test('every line of the story has a speaker with a part, and an id its recording takes', (t) => {
   assert.equal(lineId('Ione', 'Open the marked crates.'), lineId('Ione', 'Open the marked crates.'));
   assert.notEqual(lineId('Ione', 'Hold.'), lineId('Hask', 'Hold.'));
   assert.match(lineId('Arden', 'You came.'), /^[0-9a-f]{8}$/);
@@ -259,9 +287,26 @@ test('every line of the story has a speaker with a part, and an id its recording
     assert.ok(CAST[l.speaker], `${l.speaker} has a voice`);
     assert.equal(l.id, lineId(l.speaker, l.text));
   }
-  assert.deepEqual(new Set(lines.map((l) => l.mission)), new Set(['contraband', 'saltmarch']));
+  assert.deepEqual(new Set(lines.map((l) => l.mission)), new Set(MISSION_ORDER));
+  // every line written in a mission's file is listed, the opening lines included
+  for (const mission of MISSION_ORDER) {
+    const source = readFileSync(new URL(`../src/components/duelist/sim/missions/${mission}.mjs`, import.meta.url), 'utf8');
+    const written = writtenLines(source);
+    assert.ok(written.length >= 20, `${mission}: ${written.length} lines found in its file`);
+    for (const { speaker, text } of written) {
+      assert.ok(lines.some((l) => l.id === lineId(speaker, text)), `not in lines.json (run node tools/duelist/comms-lines.mjs): ${speaker}: ${text}`);
+    }
+  }
+  // the recordings (tools/duelist/record-comms.mjs): each one listed is there, is an MP3 and belongs to a line
+  // of today's missions (a changed line has a new id and needs recording again; until then the browser speaks it)
   const { lines: recorded } = JSON.parse(readFileSync(new URL('../public/audio/duelist/voices/voices.json', import.meta.url), 'utf8'));
-  assert.deepEqual(recorded, {}, 'no recordings yet: the browser speaks every line');
+  for (const [id, file] of Object.entries(recorded)) {
+    assert.ok(lines.some((l) => l.id === id), `${file}: a line no mission says any more`);
+    assert.equal(file, `${id}.mp3`);
+    const head = readFileSync(new URL(`../public/audio/duelist/voices/${file}`, import.meta.url)).subarray(0, 3);
+    assert.ok(head.toString('latin1') === 'ID3' || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0), `${file} is an MP3`);
+  }
+  t.diagnostic(`${Object.keys(recorded).length} of ${lines.length} lines recorded`);
   // without a browser there is nothing to speak with, and nothing breaks
   const voices = createVoices({ audio: { muted: false, volume: 1 } });
   assert.equal(voices.supported, false);

@@ -244,11 +244,17 @@ mechanic; mysteries open gradually.
   - [ ] Guards' models: today a procedural kit (helmet, plates; a hood and cloak for civilians) over the base
     bodies; the owner's own characters would replace it
   - [x] Spoken comms (`client/voices.mjs`; Settings → Spoken comms, on by default): each line read aloud as it
-    appears, with the browser's own voices, one cast per speaker (women and men as written, the better voices
-    to the bigger parts; with only a few voices on a system, speakers who share one are told apart by
-    pitch). Follows the game's volume and mute. A line the browser holds back until the player first clicks
-    (after a reload) is said then. Recorded lines drop in without code: `public/audio/duelist/voices/`
-    (`lines.json` lists all 47 lines with their ids, from `node tools/duelist/comms-lines.mjs`; a file listed
-    in `voices.json` plays instead of the browser's voice)
-  - [ ] Recorded voices for the comms lines (a voice service or actors, the owner's choice); a third mission
+    appears. Follows the game's volume and mute. A line the browser holds back until the player first clicks
+    (after a reload) is said then. A line with a recording plays it; any other is read by the browser's own
+    voices, one cast per speaker (women and men as written, the better voices to the bigger parts; with only
+    a few voices on a system, speakers who share one are told apart by pitch)
+  - [x] Recorded voices (`public/audio/duelist/voices/`): all 50 lines, made with ElevenLabs (model Eleven v4,
+    its premade voices), 3 min 46 s of speech, 2 MB of MP3 at 64 kbps. Cast: Ione Sarah, Arden River (a
+    neutral voice: the story gives Arden no pronoun), Hask George, Crane Lily, Dask Callum, Perrin Matilda,
+    Rooke Adam, the defender Harry. `node tools/duelist/comms-lines.mjs` lists the lines (`lines.json`, by id:
+    played through with the autopilot, the lines said as a mission starts, and every line written in a
+    mission's file); `tools/duelist/record-comms.mjs` records only those without a recording (key from a
+    git-ignored .env file; `--dry` shows the cost). A line stays up until its voice is done
+    (`commsSeconds`, 0.07 s a character); the tests check that every recording ends before its line goes
+  - [ ] A third mission
 - [ ] Phase 8: `/duelist` switches to the new build (needs the owner's go-ahead)

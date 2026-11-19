@@ -230,7 +230,6 @@ function readAudio() {
 
 // an action's name without its hint ("Roll (into a push or a strike)" -> "Roll")
 const ACTION_NAME = Object.fromEntries(ACTIONS.map((a) => [a.id, a.label.replace(/\s*\(.*\)$/, '')]));
-const speechWorks = () => typeof window !== 'undefined' && !!window.speechSynthesis;
 
 /** Change what a key does: pick an action, then press the key or mouse button for it (Esc to cancel). */
 function KeyBindings({ keys, onChange }) {
@@ -299,7 +298,6 @@ export function SettingsPage() {
     setAudio(next);
     try { window.localStorage.setItem('duelist.audio', JSON.stringify(next)); } catch { /* this visit only */ }
   };
-  const [speech] = useState(speechWorks);
   return (
     <MenuShell title="Settings" back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       <div className="grid gap-6 lg:grid-cols-2">
@@ -312,8 +310,8 @@ export function SettingsPage() {
             <input type="checkbox" checked={!audio.muted} onChange={(e) => saveAudio({ muted: !e.target.checked })} /> Sound on
           </label>
           <label className="flex items-start gap-2 text-sm text-white/70">
-            <input type="checkbox" className="mt-1" checked={prefs.voices !== false} onChange={(e) => update({ voices: e.target.checked })} disabled={!speech} />
-            <span>Spoken comms<span className="block text-xs text-white/40">{speech ? 'The story missions\' radio lines are read aloud, each speaker in a voice of their own.' : 'This browser cannot speak; the lines stay on screen.'}</span></span>
+            <input type="checkbox" className="mt-1" checked={prefs.voices !== false} onChange={(e) => update({ voices: e.target.checked })} />
+            <span>Spoken comms<span className="block text-xs text-white/40">The story missions&apos; radio lines are read aloud, each speaker in a voice of their own. The words stay on screen either way.</span></span>
           </label>
           <label className="block space-y-2 text-sm">
             <span className="flex justify-between text-white/70"><span>Mouse sensitivity</span><span>{prefs.sensitivity.toFixed(2)}×</span></span>
