@@ -8,6 +8,7 @@ import { awardCompanionXP } from './companionProgressionStore';
 import { getAXEMountDefinition } from './axe/progression/AXEMountSystem';
 import { getHaloBonuses, subscribeHalo } from './progression/haloStore';
 import { isAnyPreviewMaxActive } from './progression/previewMaxMode';
+import { clearAXETestWeaponTuning, hasAXETestWeaponTuning, subscribeAXETestWeaponTuning } from './axe/equipment/AXETestWeaponTuner.mjs';
 import { getAuraBonuses, subscribeAura } from './progression/auraStore';
 import {
   getEquippedWingsMultiplierBonuses,
@@ -308,7 +309,7 @@ let previewHPBefore = null;
 const listeners = new Set();
 const persist = () => {
   // Never sync a test-boosted HP snapshot to the local or remote Character Vault.
-  if (isAnyPreviewMaxActive()) return;
+  if (isAnyPreviewMaxActive() || hasAXETestWeaponTuning()) return;
   if (characterIdentity() !== stateOwner) return; // never write one character into another's slot
   storage.set(JSON.stringify({
     level: state.level,
@@ -561,7 +562,7 @@ function recomputeFromBonusesNow() {
     listeners.forEach((fn) => fn(state));
     return;
   }
-  const boosted = isAnyPreviewMaxActive();
+  const boosted = isAnyPreviewMaxActive() || hasAXETestWeaponTuning();
   if (boosted && previewHPBefore === null) previewHPBefore = state.hp;
   if (!boosted && previewHPBefore !== null) {
     state = { ...state, hp: previewHPBefore };
@@ -590,6 +591,9 @@ subscribeAXEPets(recomputeFromBonuses);
 subscribeAXEMounts(recomputeFromBonuses);
 subscribeAXEVanity(recomputeFromBonuses);
 subscribeAXEEquipmentInventory(recomputeFromBonuses);
+subscribeAXETestWeaponTuning(recomputeFromBonuses);
+// Always clear transient weapon overrides when the active character/account changes.
+subscribeCharacterChange(clearAXETestWeaponTuning);
 subscribeEnchantments(recomputeFromBonuses);
 subscribeAXEItemAdvancement(recomputeFromBonuses);
 subscribeAXESockets(recomputeFromBonuses);

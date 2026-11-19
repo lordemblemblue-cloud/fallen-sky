@@ -25,6 +25,7 @@ import { getAXEOverEnchantCost, getAXEReinforcementCost } from './AXEServiceEcon
 import { getActiveId, getStorageUser, subscribeCharacterChange } from '../../characterStorage';
 import { isSafeCombineDonor, filterForgeInventory, runBlacksmithAutoBatch } from './AXEBlacksmithAutoForge';
 import AXEBlacksmithWorkflowPanel from './AXEBlacksmithWorkflowPanel';
+import AXETestWeaponTuner from './AXETestWeaponTuner';
 import AXEWeaponLegacyForgePane from './AXEWeaponLegacyForgePane';
 import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import AXEGemForgePane from './AXEGemForgePane';
@@ -895,6 +896,8 @@ export default function AXEBlacksmithImageWorkspace({
             setRevision(value => value + 1);
             onTransaction?.(result);
           }} />}
+        {/* Client-only test station: no permanent forge or server writes. */}
+        <AXETestWeaponTuner item={selectedItem} />
       </section>
 
       <section className="axe-blacksmith-progression-panel" aria-label="Equipment progression">
