@@ -11,6 +11,8 @@
 //     `next` without waiting for the recovery.
 //   cancelInto + cancelFrom: kinds of moves that may interrupt this one from that time on (roll into push).
 //   iframes: [from, to] during which nothing can touch the fighter.
+//   rootMotion: metres a roll or dash carries the body over its active phase (strikes and powers move the body
+//     by their clip's own travel instead: moveMotion.mjs).
 //   channel: the active phase lasts while the button is held, up to `active` seconds, paying willPerSec.
 
 const move = (spec) => Object.freeze({
@@ -31,10 +33,11 @@ export const MOVES = Object.freeze({
     chain: { next: 'swordLight2', from: 0.17, to: 0.42 }, cancelInto: ['movement', 'power'], cancelFrom: 0.22 }),
   swordLight2: move({ weapon: 'sword', startup: 0.1, active: 0.08, recovery: 0.2, stamina: 6, damage: 10,
     chain: { next: 'swordLight3', from: 0.16, to: 0.4 }, cancelInto: ['movement', 'power'], cancelFrom: 0.2 }),
-  swordLight3: move({ weapon: 'sword', startup: 0.14, active: 0.1, recovery: 0.28, stamina: 8, damage: 15, knockback: 0.8,
-    stagger: 0.45, cancelInto: ['movement'], cancelFrom: 0.34 }),
+  // the finisher spins before it cuts: a longer wind-up, easier to see coming
+  swordLight3: move({ weapon: 'sword', startup: 0.24, active: 0.1, recovery: 0.3, stamina: 8, damage: 15, knockback: 0.8,
+    stagger: 0.45, cancelInto: ['movement'], cancelFrom: 0.44 }),
   swordHeavy: move({ weapon: 'sword', startup: 0.28, active: 0.1, recovery: 0.34, stamina: 14, damage: 22, knockback: 1.2,
-    stagger: 0.6, shieldMultiplier: 1.15, rootMotion: 0.8, cancelInto: ['movement'], cancelFrom: 0.5 }),
+    stagger: 0.6, shieldMultiplier: 1.15, cancelInto: ['movement'], cancelFrom: 0.5 }),
 
   // ---- reverse-grip dual blades: rapid hits that drain Will
   bladesLight1: move({ weapon: 'dualBlades', startup: 0.07, active: 0.05, recovery: 0.13, stamina: 4, damage: 5, veilMultiplier: 1.35,

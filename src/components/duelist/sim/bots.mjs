@@ -1,7 +1,7 @@
 // Practice and fill-in bots: they read the same world a player sees and send the same commands a player
 // sends (no shortcuts: the rules core and its cooldowns apply to them too). Difficulty sets reaction time,
 // how often they defend, and how hard they press.
-import { MOVES, isStunned } from '../core/index.mjs';
+import { MOVES, isStunned, isDown } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 
 export const BOT_LEVELS = Object.freeze({
@@ -58,6 +58,12 @@ export function think(world, bot) {
   // held: struggle free as soon as it may
   if (me.heldBy) { if (me.vitals.will >= MOVES.resist.will) presses.push('resist'); return input; }
   if (isStunned(me, now)) return input;
+  // a fallen foe cannot be hit: close to striking distance and wait for it to stand
+  if (isDown(foe, now)) {
+    if (d > 2.6) input.move = { x: toward.x, z: toward.z };
+    if (me.guard) presses.push('blockUp');
+    return input;
+  }
 
   // React to the foe's strike after the bot's reaction time: guard, or roll away.
   const foeAction = foe.action;

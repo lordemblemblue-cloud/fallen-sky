@@ -14,11 +14,13 @@ test('a bot closes the distance and lands strikes on a standing target', () => {
   const dummy = addFighter(w, { id: 'dummy', x: 0, z: 4 });
   const bot = createBot('bot', { level: 'master', seed: 3 });
   let impacts = 0;
+  let closest = Infinity;
   for (let i = 0; i < 60 * 12; i++) {
     const effects = step(w, DT, { bot: think(w, bot) });
     impacts += effects.filter((e) => e.type === 'impact' && e.defender === 'dummy').length;
+    closest = Math.min(closest, Math.hypot(bodyOf(w, 'bot').x - bodyOf(w, 'dummy').x, bodyOf(w, 'bot').z - bodyOf(w, 'dummy').z));
   }
-  assert.ok(Math.hypot(bodyOf(w, 'bot').x - bodyOf(w, 'dummy').x, bodyOf(w, 'bot').z - bodyOf(w, 'dummy').z) < 4, 'closed in');
+  assert.ok(closest < 2.3, `closed in to ${closest.toFixed(2)} m`);
   assert.ok(impacts >= 3, `${impacts} hits in 12 s`);
   assert.ok(dummy.vitals.shield < VITALS.shield || dummy.vitals.will < VITALS.will);
 });

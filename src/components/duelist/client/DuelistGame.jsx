@@ -5,7 +5,8 @@ import * as THREE from 'three';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
 import { createWorld, addFighter, step, bodyOf, forwardOf } from '../sim/world.mjs';
 import { createBot, think } from '../sim/bots.mjs';
-import { loadFighterBody } from './assets.mjs';
+import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
+import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
 import { createFighterAnimator } from './animator.mjs';
@@ -26,19 +27,27 @@ function startDuel(world) {
   addFighter(world, { id: 'bot', team: null, weapon: 'sword', x: 0, z: 4, yaw: Math.PI });
 }
 
+const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
+
 async function createActor(scene, gender, swordColor) {
   const { model, clips } = await loadFighterBody(gender);
+  // the clip packs are retargeted from the body's rest pose: before anything poses it
+  const [pack, dodges] = await Promise.all([
+    clipsForBody(model, { rigKey: gender }),
+    clipsForBody(model, { rigKey: gender, url: MOVEMENT_PACK_URL, names: EVASIONS }),
+  ]);
   const group = new THREE.Group();
   group.add(model);
   scene.add(group);
-  const { clips: moveClips, grip, handBone } = bakeDuelMoves(model);
+  // held in Telekinesis has no clip in the pack: an authored pose
+  const { clips: baked, grip, handBone } = bakeDuelMoves(model, ['held']);
   const sword = createCrystalSword({ color: swordColor });
   attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(handBone || 'mixamorig:RightHand')), grip);
-  const animator = createFighterAnimator({ model, clips, moveClips });
+  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked } });
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   const leftHand = model.getObjectByName('mixamorigLeftHand');
   return {
-    group, model, sword, animator, yaw: 0, fallen: 0,
+    group, model, sword, animator, yaw: 0,
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
@@ -93,19 +102,60 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
     resize();
     const observer = new ResizeObserver(resize);
     observer.observe(mount);
-    restartRef.current = () => { startDuel(world); bot = createBot('bot', { level: botLevel, seed: Math.floor(Math.random() * 1e6) }); for (const a of Object.values(actors)) a.fallen = 0; setStatus('fighting'); };
+    restartRef.current = () => { startDuel(world); bot = createBot('bot', { level: botLevel, seed: Math.floor(Math.random() * 1e6) }); setStatus('fighting'); };
     pressRef.current = (command) => controls.press(command);
     // development only: lets a test drive the duel (window.__duelist.controls.press('push'), .world, .bot(false),
     // .slow(0.1) for slow motion, .lock(true) to lock on)
     let timeScale = 1;
+    let viewOffset = 0;
+    let fixedShot = null;
     if (import.meta.env?.DEV) {
       window.__duelist = {
         world, controls, actors,
         bot: (on) => { bot = on ? createBot('bot', { level: botLevel, seed: 17 }) : null; },
         slow: (v = 1) => { timeScale = Math.max(0, v); },
         lock: (on) => { lockOn = !!on; },
+        view: (offset = 0) => { viewOffset = offset; }, // turn the camera around the player (radians)
+        camera: (shot = null) => { fixedShot = shot; }, // { position: [x, y, z], target: [x, y, z] } or null to follow
+        // film strip: `count` frames, one every `every` game seconds, into one image over the page
+        film: (count = 12, every = 0.05, cols = 4) => new Promise((resolve) => {
+          const w = renderer.domElement.width;
+          const h = renderer.domElement.height;
+          const scale = Math.min(1, 1200 / (cols * w));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(cols * w * scale);
+          canvas.height = Math.round(Math.ceil(count / cols) * h * scale);
+          film = { count, every, cols, scale, w, h, index: 0, acc: every, ctx: canvas.getContext('2d'), canvas, resolve };
+        }),
       };
     }
+    let film = null;
+    const filmFrame = (dt) => {
+      film.acc += dt;
+      if (film.acc < film.every) return;
+      film.acc = 0;
+      const { ctx, cols, scale, w, h, index } = film;
+      const x = (index % cols) * w * scale;
+      const y = Math.floor(index / cols) * h * scale;
+      ctx.drawImage(renderer.domElement, x, y, w * scale, h * scale);
+      ctx.fillStyle = '#9fe8ff';
+      ctx.font = '14px sans-serif';
+      ctx.fillText(`${world.time.toFixed(2)}s`, x + 6, y + 18);
+      film.index += 1;
+      if (film.index >= film.count) {
+        let img = document.getElementById('duelist-film');
+        if (!img) {
+          img = document.createElement('img');
+          img.id = 'duelist-film';
+          img.style.cssText = 'position:fixed;left:0;top:0;max-width:100vw;max-height:100vh;z-index:60;background:#000;cursor:pointer';
+          img.onclick = () => img.remove();
+          document.body.appendChild(img);
+        }
+        img.src = film.canvas.toDataURL('image/jpeg', 0.85);
+        film.resolve({ width: film.canvas.width, height: film.canvas.height });
+        film = null;
+      }
+    };
 
     Promise.all([createActor(scene, 'female', 0x9fe8ff), createActor(scene, 'male', 0xff8a7a)]).then(([you, foe]) => {
       if (disposed) return;
@@ -150,16 +200,16 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
           const turn = Math.atan2(Math.sin(body.yaw - actor.yaw), Math.cos(body.yaw - actor.yaw));
           actor.yaw += turn * Math.min(1, dt * 18);
           actor.group.position.set(body.x, body.y, body.z);
-          actor.fallen += ((fighter.vitals.dead ? 1 : 0) - actor.fallen) * Math.min(1, dt * 5);
-          actor.group.rotation.set(-actor.fallen * Math.PI * 0.48, actor.yaw, 0, 'YXZ');
+          actor.group.rotation.set(0, actor.yaw, 0);
           actor.animator.update(dt, { fighter, body, now: world.time });
           actor.sword.setWill(fighter.vitals.will / fighter.vitals.max.will, fighterVeil(fighter));
           actor.sword.update(dt);
         }
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
         vfx.update(dt, grips);
-        follow.update(dt, { target: you, yaw: lockOn && foe ? Math.atan2(foe.x - you.x, foe.z - you.z) : controls.yaw(), pitch: controls.pitch(), lockOn: lockOn ? foe : null });
+        follow.update(dt, { target: you, yaw: (lockOn && foe ? Math.atan2(foe.x - you.x, foe.z - you.z) : controls.yaw()) + viewOffset, pitch: controls.pitch(), lockOn: lockOn ? foe : null });
         if (lockOn && foe) controls.setYaw(Math.atan2(foe.x - you.x, foe.z - you.z));
+        if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
         // HUD at 10 Hz
         hudClock += dt;
         if (hudClock > 0.1) {
@@ -177,6 +227,7 @@ export default function DuelistGame({ botLevel = 'duelist' }) {
       }
       arena.update(dt);
       renderer.render(scene, camera);
+      if (film) filmFrame(dt);
     };
     frame = requestAnimationFrame(loop);
     return () => {

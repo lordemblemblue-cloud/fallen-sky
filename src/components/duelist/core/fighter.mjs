@@ -8,6 +8,7 @@
 import { BINDINGS, POWER_BINDINGS, moveById } from './moves.mjs';
 import { INPUT, BREACH } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
+import { KNOCKDOWN } from './tuning.mjs';
 
 export function createFighter({ id, team = null, weapon = 'sword', vitals = null } = {}) {
   return {
@@ -20,6 +21,8 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     buffer: null, // { command, at }
     guard: null, // { since }
     stunnedUntil: -Infinity, // stagger, guard break, parried
+    downUntil: -Infinity, // knocked down: lying until then, then rising until riseUntil
+    riseUntil: -Infinity,
     heldBy: null, // the fighter holding this one with Telekinesis
     breaches: {}, // attacker id -> until: whose hits reach this fighter through its Veil
     events: [],
@@ -28,6 +31,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
 
 const busy = (f) => !!f.action;
 export const isStunned = (f, now) => now < f.stunnedUntil;
+export const isDown = (f, now) => now < f.riseUntil;
 
 // Which move a command starts right now (a chain continues the current move's chain).
 function moveForCommand(f, command) {
@@ -46,6 +50,7 @@ export function blockedReason(f, id, now) {
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
+  if (isDown(f, now)) return 'down';
   const restrained = isStunned(f, now) || f.heldBy;
   if (restrained && id !== 'resist') return f.heldBy ? 'held' : 'stunned';
   if (now < (f.cooldowns[id] ?? -Infinity)) return 'cooldown';
@@ -76,6 +81,7 @@ function canInterrupt(f, id) {
   const a = f.action;
   if (!a) return true;
   const move = moveById(id);
+  if (!move) return false; // a buffered guard waits for the action to end
   if (a.move.chain?.next === id && a.t >= a.move.chain.from && a.t <= a.move.chain.to) return true;
   return a.t >= a.move.cancelFrom && a.move.cancelInto.includes(move.kind);
 }
@@ -127,10 +133,20 @@ export function stagger(f, seconds, now) {
   f.stunnedUntil = Math.max(f.stunnedUntil, now + seconds);
 }
 
-export const isInvulnerable = (f) => {
+// i-frames of a roll, or knocked down and not yet standing (now omitted: only the move's i-frames count)
+export const isInvulnerable = (f, now) => {
+  if (now !== undefined && isDown(f, now)) return true;
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };
+
+/** Knocked off the feet by a hard push or throw: lies for KNOCKDOWN.lie, rises for KNOCKDOWN.rise. */
+export function knockDown(f, now) {
+  stagger(f, KNOCKDOWN.lie + KNOCKDOWN.rise, now);
+  f.downUntil = now + KNOCKDOWN.lie;
+  f.riseUntil = f.downUntil + KNOCKDOWN.rise;
+  f.events.push({ type: 'knockdown', at: now });
+}
 
 export function grantBreach(defender, attackerId, now) {
   defender.breaches[attackerId] = now + BREACH.seconds;

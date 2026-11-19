@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, addFighter, step, bodyOf, BODY_RADIUS, GRIP_HOLD, PROJECTILE_SPEED } from '../src/components/duelist/sim/world.mjs';
-import { MOVES, VITALS } from '../src/components/duelist/core/index.mjs';
+import { MOVES, VITALS, KNOCKDOWN, travelAt, blockedReason, isInvulnerable } from '../src/components/duelist/core/index.mjs';
 
 const DT = 1 / 60;
 // run the world; `script(t)` returns the inputs for that step
@@ -30,7 +30,7 @@ test('a sword strike reaches a duelist in front and in range, not one behind or 
   assert.equal(a.vitals.stamina < VITALS.stamina, true);
 });
 
-test('a roll carries the body its full distance in the stick direction; a heavy strike lunges forward', () => {
+test('a roll carries the body its full distance in the stick direction; a heavy strike lunges as its clip does', () => {
   const w = createWorld();
   addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
   let sent = false;
@@ -40,7 +40,10 @@ test('a roll carries the body its full distance in the stick direction; a heavy 
   const v = createWorld();
   addFighter(v, { id: 'h', x: 0, z: 0, yaw: 0 });
   run(v, MOVES.swordHeavy.duration + 0.1, once('h', 'heavy'));
-  assert.ok(Math.abs(bodyOf(v, 'h').z - MOVES.swordHeavy.rootMotion) < 0.1, `lunged ${bodyOf(v, 'h').z.toFixed(2)} m`);
+  const clipLunge = travelAt('swordHeavy', MOVES.swordHeavy.duration).forward;
+  assert.ok(clipLunge > 0.8, `the heavy's clip lunges ${clipLunge.toFixed(2)} m`);
+  const h = bodyOf(v, 'h');
+  assert.ok(Math.abs(h.z - clipLunge) < 0.05 && Math.abs(h.x) < 0.15, `lunged ${h.z.toFixed(2)} m (x ${h.x.toFixed(2)})`);
 });
 
 test('push throws everyone in its cone back; pull drags the nearest one in', () => {
@@ -117,4 +120,32 @@ test('facing turns the body, but a strike stays committed to its direction once 
   run(w, MOVES.swordHeavy.startup + 0.02);
   step(w, DT, { a: { face: 0 } });
   assert.ok(Math.abs(bodyOf(w, 'a').yaw - target) < 1e-9, 'committed');
+});
+
+test('a hard push knocks the body down: nothing reaches it and it cannot act until it stands again', () => {
+  const w = createWorld();
+  addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
+  const b = addFighter(w, { id: 'b', x: 0, z: 2, yaw: Math.PI });
+  const effects = run(w, MOVES.push.startup + MOVES.push.active + 0.05, once('a', 'push'));
+  assert.ok(effects.some((e) => e.type === 'knockdown' && e.defender === 'b'), 'knocked down');
+  assert.equal(blockedReason(b, 'swordLight1', w.time), 'down');
+  assert.equal(isInvulnerable(b, w.time), true);
+  // a strike on the fallen body is evaded
+  const lying = bodyOf(w, 'b');
+  addFighter(w, { id: 'c', x: lying.x, z: lying.z - 1.6, yaw: 0 });
+  const later = run(w, MOVES.swordLight1.duration, once('c', 'light'));
+  assert.ok(!later.some((e) => e.type === 'impact' && e.defender === 'b'), 'no hits on a fallen fighter');
+  run(w, KNOCKDOWN.lie + KNOCKDOWN.rise);
+  assert.equal(blockedReason(b, 'swordLight1', w.time), null, 'stands and fights again');
+  assert.equal(isInvulnerable(b, w.time), false);
+});
+
+test('a pull drags the target into reach on its feet: no knockdown', () => {
+  const w = createWorld();
+  addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
+  const b = addFighter(w, { id: 'b', x: 0, z: 7, yaw: Math.PI });
+  const effects = run(w, MOVES.pull.duration, once('a', 'pull'));
+  assert.ok(effects.some((e) => e.type === 'knockback' && e.defender === 'b'), 'pulled');
+  assert.ok(!effects.some((e) => e.type === 'knockdown'), 'not knocked down');
+  assert.notEqual(blockedReason(b, 'swordLight1', w.time + 1), 'down');
 });

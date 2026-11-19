@@ -4,7 +4,7 @@
 // decides what happens to them.
 import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
-  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina,
+  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
 } from '../core/index.mjs';
 
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
@@ -112,6 +112,8 @@ export function step(world, dt, inputs = {}) {
 
 function startMotion(body, fighter, id) {
   const move = moveById(id);
+  // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
+  if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion) { body.motion = null; return; }
   // rolls and dashes go where the stick points (or straight ahead); strikes lunge forward
   const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
@@ -140,7 +142,17 @@ function moveBody(world, fighter, body, dt, now) {
       return;
     }
   }
-  if (body.motion && a?.id === body.motion.id) {
+  if (body.motion?.clip && a?.id === body.motion.id) {
+    const travel = travelAt(a.id, a.t);
+    const df = travel.forward - body.motion.forward;
+    const dr = travel.right - body.motion.right;
+    body.motion.forward = travel.forward;
+    body.motion.right = travel.right;
+    const f = forwardOf(body.yaw);
+    vx += (f.x * df - f.z * dr) / dt; // right of the facing is (-f.z, f.x)
+    vz += (f.z * df + f.x * dr) / dt;
+    body.speed = 0;
+  } else if (body.motion && !body.motion.clip && a?.id === body.motion.id) {
     const { from, to, distance: d, dir } = body.motion;
     const span = Math.max(1e-6, to - from);
     const target = Math.max(0, Math.min(1, (a.t - from) / span)) * d;

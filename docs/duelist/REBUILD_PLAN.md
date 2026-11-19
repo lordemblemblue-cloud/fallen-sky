@@ -85,5 +85,30 @@ mechanic; mysteries open gradually.
     buffered press, stagger, grips
   - `combat.mjs`: what a landed move does (knockback, stagger, hold, throw, breach, parry)
   - `fairplay.mjs`: the server's per-fighter input budget and the allowed client commands
-- [ ] Phase 1b: arena simulation (fighters moving, reach and arcs, projectiles) driving the core headless
-- [ ] Phase 2 onward
+  - knockdown (`KNOCKDOWN`): a push or a throw that drives a body 3 m or more knocks it down; it lies, rises,
+    and nothing reaches it until it stands (no juggling). A pull only drags the target into reach.
+- [x] Phase 1b: arena simulation, `src/components/duelist/sim/` (tests: `tests/duelist-sim.test.mjs`)
+  - `world.mjs`: bodies in a round arena, reach and arcs, roll/dash root motion, strikes moving the body by
+    their clip's own travel, knockback, Telekinesis holds and throws, projectiles, teams
+  - `bots.mjs`: trainee / duelist / master practice bots that only send commands (same costs, cooldowns and
+    limits as a player); they wait for a fallen foe to stand (tests: `tests/duelist-bots.test.mjs`)
+- [ ] Phase 2: characters and animation (in progress)
+  - [x] Practice duel at `/duelist-next` (beside the current `/duelist`): player against a bot, fixed 60 Hz
+    simulation, HUD (shield, Will, HP, stamina, Veil state, cooldowns; tappable power buttons), victory/defeat
+  - [x] Motion pack from the owner's clip pack (ActionForge, 80 clips on the fused female rig, 2026-11-18):
+    `tools/duelist/build-motion-pack.mjs` strips the meshes (`tools/duelist/source/actionforge-80.anim.glb`
+    keeps all 80 clips), takes travel out of the clips and measures it, finds each strike's fastest swing,
+    and writes `public/models/animations/duelist/duelist-motion.glb` (58 clips) and
+    `core/motionPack.data.mjs`. Rebuild: `node tools/duelist/build-motion-pack.mjs tools/duelist/source/actionforge-80.anim.glb`
+  - [x] Retargeting at load (`client/motionLibrary.mjs`): any Mixamo-named body plays the clips (the fused
+    male's arm bones are rolled differently from the female's; the roll/flip pack is retargeted the same way)
+  - [x] `core/moveMotion.mjs`: each move's clip and how its wind-up, contact and follow-through map onto the
+    move's startup, active and recovery (the rules keep the frame data; the clip follows), shared by the
+    animator and the simulation's root motion (tests: `tests/duelist-motion.test.mjs`)
+  - [x] Animator: idle/walk/jog/sprint by speed; the sword chain (rising slash, diagonal cut into a lunge,
+    spinning cut), the overhead heavy, Telekinesis reach/hold/throw, Breach palm strike, Resist brace; settle
+    clips after a move; roll or locked-on flips; block; flinches, guard break, knockdown and get-up, defeat
+  - [x] Motion lab at `/duelist-lab`: every clip on both bodies, speed, scrub, travel, camera views
+  - [ ] Strafing and backpedal clips for locked-on movement (the pack has forward loops only)
+  - [ ] Dual blades, staff and bow movesets and clips
+- [ ] Phase 3 onward

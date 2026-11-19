@@ -2,9 +2,9 @@
 // to them (stagger, knockback, being held or thrown, a Veil Breach) and what a parry does to the attacker.
 // The world (or the match server) decides who is in reach; this decides what happens to them.
 import { moveById } from './moves.mjs';
-import { BLOCK } from './tuning.mjs';
+import { BLOCK, KNOCKDOWN } from './tuning.mjs';
 import { resolveHit } from './damage.mjs';
-import { stagger, isInvulnerable, isBreachedBy, grantBreach } from './fighter.mjs';
+import { stagger, isInvulnerable, isBreachedBy, grantBreach, knockDown } from './fighter.mjs';
 
 // Is `attackerPos` inside the defender's guard arc? Positions { x, z }; facing = the defender's yaw
 // (radians, 0 = +Z).
@@ -31,7 +31,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
 
   // Breach opens the defender's Veil to this attacker for a moment; it does no damage itself.
   if (move.damageKind === 'breach') {
-    if (isInvulnerable(defender)) return { result: { outcome: 'evaded' }, effects };
+    if (isInvulnerable(defender, now)) return { result: { outcome: 'evaded' }, effects };
     grantBreach(defender, attacker.id, now);
     effects.push({ type: 'breach', attacker: attacker.id, defender: defender.id });
     return { result: { outcome: 'breach' }, effects };
@@ -39,7 +39,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
 
   // The grip takes hold of the defender (who can Resist), then crushes it while held.
   if (moveId === 'grip' && dt === null) {
-    if (isInvulnerable(defender)) return { result: { outcome: 'evaded' }, effects };
+    if (isInvulnerable(defender, now)) return { result: { outcome: 'evaded' }, effects };
     defender.heldBy = attacker.id;
     effects.push({ type: 'held', attacker: attacker.id, defender: defender.id });
     return { result: { outcome: 'held' }, effects };
@@ -49,7 +49,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
 
   const defense = {
     vitals: defender.vitals,
-    invulnerable: isInvulnerable(defender),
+    invulnerable: isInvulnerable(defender, now),
     guard: defender.guard ? { since: defender.guard.since, facing: defenderFacesAttacker } : null,
     breached: isBreachedBy(defender, attacker.id, now),
   };
@@ -70,6 +70,11 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   if (staggerFor > 0 && moveId !== 'grip') stagger(defender, staggerFor, now);
   const knockback = through ? move.knockback : move.knockback * 0.25;
   if (knockback) effects.push({ type: 'knockback', defender: defender.id, from: attacker.id, distance: knockback });
+  // a push or a throw knocks down; a pull only drags the target into reach (to be hit, not to fall)
+  if (through && move.knockback >= KNOCKDOWN.distance && !result.killed) {
+    knockDown(defender, now);
+    effects.push({ type: 'knockdown', defender: defender.id, by: attacker.id });
+  }
   if (result.collapsed) effects.push({ type: 'veilCollapse', defender: defender.id });
   if (result.killed) effects.push({ type: 'defeat', defender: defender.id, by: attacker.id });
   effects.push({ type: 'impact', outcome: result.outcome, move: moveId, defender: defender.id, veil: result.veil,

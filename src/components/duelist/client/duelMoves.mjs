@@ -111,12 +111,12 @@ export const LOOPED = Object.freeze(new Set(['guard', 'ready', 'held']));
  * Returns { clips: { name: AnimationClip }, grip: { position, quaternion, scale } } (the crystal sword's
  * combat grip in the right hand bone's space, for attaching the weapon).
  */
-export function bakeDuelMoves(model) {
+export function bakeDuelMoves(model, names = null) {
   const rest = captureRestPose(model);
   const solved = solveFallbackGrip(model, CRYSTAL_SWORD, ['combat'], 1.7);
   const grip = solved?.grips?.combat || null;
   const quaternion = grip ? grip.quaternion : null;
   const clips = bakeWeaponComboClips(model, 'sword', quaternion ? { right: new THREE.Quaternion().fromArray(quaternion) } : {},
-    { rest, reach: CRYSTAL_SWORD.length, moves: DUEL_MOVES });
+    { rest, reach: CRYSTAL_SWORD.length, moves: names ? DUEL_MOVES.filter((m) => names.includes(m.name)) : DUEL_MOVES });
   return { clips, grip, handBone: solved?.bone || null };
 }
