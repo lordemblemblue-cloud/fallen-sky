@@ -246,12 +246,13 @@ function moveWeapons(rightHand, leftHand) {
 
 // Riding with a drawn weapon (owner request 2026-11-18): the reins hand rests on the mount's back, and the
 // other hand carries the weapon out at its side, pointing where these say (body frame: forward, up, out
-// to that hand's side). With daggers the reins hand grips its own dagger too, the blade running back down
-// along the forearm. Attacking lifts the weapon hand.
+// to that hand's side). Daggers sit in a reverse grip (owner 2026-11-19): the reins hand grips its own dagger
+// too, and both blades run back down along the forearms; raised to strike, the free one points down for a
+// hammer stab. Attacking lifts the weapon hand.
 export const RIDING_WEAPON_AIMS = Object.freeze({
   sword: Object.freeze({ carry: [0.78, -0.22, 0.32], attack: [0.55, 0.62, 0.2] }),
   bow: Object.freeze({ carry: [0.24, 0.93, 0.12], attack: [0.3, 0.9, 0.1] }),
-  dual_blades: Object.freeze({ carry: [0.7, -0.45, 0.28], attack: [0.6, 0.55, 0.2], reins: [-0.35, -0.86, 0.12] }),
+  dual_blades: Object.freeze({ carry: [-0.3, -0.88, 0.3], attack: [0.25, -0.95, 0.15], reins: [-0.35, -0.86, 0.12] }),
 });
 const MAX_WRIST_TURN = 100 * Math.PI / 180;
 
