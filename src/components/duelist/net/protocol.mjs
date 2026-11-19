@@ -6,7 +6,7 @@
 //   { t: 'hello', v, token, name, body, resume? }  sign in (token checked by the server) and pick a fighter;
 //                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
-//   { t: 'join', mode }                          'duel' | 'ffa' | 'tdm' | 'ctf' | 'any' (any match with players)
+//   { t: 'join', mode }                          'duel' | 'ctf' | 'football' | 'tdm' | 'any' (any match with players)
 //   { t: 'join', mode: 'story', code?, create? } the co-op mission: a crew room by its code, a new room of your
 //                                                own (create), or neither: any open crew
 //   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
@@ -43,7 +43,7 @@ export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ffa', 'tdm', 'ctf']);
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm']);
 export const STORY_MODE = 'story';
 export const CREW_SIZE = 4;
 export const ROOM_CODE = /^[A-HJ-NP-Z]{5}$/; // a crew room's code: five letters, no I or O
