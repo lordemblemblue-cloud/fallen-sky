@@ -9,8 +9,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {
   bakeWeaponComboClips, captureRestPose, comboKindForWeapon, WEAPON_COMBO_STATES, WEAPON_COMBO_STATE_NAMES,
+  WEAPON_IDLE_STATES,
 } from '../src/components/game3d/weapons/weaponComboClips.js';
-import { createWeaponComboBinder } from '../src/components/game3d/weapons/weaponComboBinder.js';
+import { createWeaponComboBinder, movesForFamily } from '../src/components/game3d/weapons/weaponComboBinder.js';
 import { COMBAT_STATES } from '../src/components/game3d/weapons/playerWeaponRuntime.js';
 
 globalThis.self ??= globalThis;
@@ -89,8 +90,10 @@ for (const rigId of Object.keys(RIGS)) {
       const model = bodies[rigId];
       const { weapon, q } = gripOf(weaponId, rigId);
       const rest = captureRestPose(model);
-      const clips = bakeWeaponComboClips(model, weapon.class, { [weapon.hand]: q }, { rest, reach: weapon.length });
-      assert.deepEqual(Object.keys(clips), [...WEAPON_COMBO_STATES[kind]]);
+      const baked = bakeWeaponComboClips(model, weapon.class, { [weapon.hand]: q }, { rest, reach: weapon.length });
+      // the family also bakes its stance (and, for swords, the two-hand swings and the skill tiers); the three hits come first
+      assert.deepEqual(Object.keys(baked).slice(0, 3), [...WEAPON_COMBO_STATES[kind]]);
+      const clips = Object.fromEntries(WEAPON_COMBO_STATES[kind].map((name) => [name, baked[name]]));
       // the bake leaves the rig exactly as it found it
       const same = (a, b) => a.toArray().every((x, i) => Math.abs(x - b.toArray()[i]) < 1e-9);
       for (const [b, v] of rest) assert.ok(same(b.quaternion, v.quaternion) && same(b.position, v.position), `${b.name} restored`);
@@ -167,7 +170,8 @@ for (const rigId of Object.keys(RIGS)) {
             const right = (p) => -p.x; // the character's right is -X when facing +Z
             if (index === 0) assert.ok(right(a.tip) > 0.4 && right(b.tip) < -0.4, `forehand cuts right to left: ${right(a.tip).toFixed(2)} -> ${right(b.tip).toFixed(2)}`);
             if (index === 1) assert.ok(b.tip.y - a.tip.y > 0.8, `backhand rises: ${a.tip.y.toFixed(2)} -> ${b.tip.y.toFixed(2)} m`);
-            if (index === 2) assert.ok(a.tip.y > a.head.y && hitFrame.tip.y < 0.9 && hitFrame.tip.z > 0.4, `chop from above the head (${a.tip.y.toFixed(2)}) down in front (${hitFrame.tip.y.toFixed(2)}, ${hitFrame.tip.z.toFixed(2)})`);
+            if (index === 2) assert.ok(hitFrame.blade.z > Math.cos(35 / DEG) && hitFrame.tip.z > 0.9 && hitFrame.tip.y > 0.6 && hitFrame.tip.y < 1.7,
+              `thrust drives the point straight ahead: tip ${hitFrame.tip.z.toFixed(2)} m ahead, ${hitFrame.tip.y.toFixed(2)} m up, blade ${hitFrame.blade.toArray().map((x) => x.toFixed(2))}`);
           }
         }
       } finally {
@@ -179,11 +183,13 @@ for (const rigId of Object.keys(RIGS)) {
 
 test('combo kinds, state names and the runtime combat grip agree', () => {
   assert.equal(comboKindForWeapon('bow'), 'bowCombo');
-  for (const c of ['sword', 'greatsword', 'dagger', 'blade']) assert.equal(comboKindForWeapon(c), 'swordCombo');
+  for (const c of ['sword', 'greatsword', 'blade']) assert.equal(comboKindForWeapon(c), 'swordCombo');
+  for (const c of ['dagger', 'dual_blades']) assert.equal(comboKindForWeapon(c), 'daggerCombo');
   assert.equal(comboKindForWeapon('staff'), null);
   assert.equal(comboKindForWeapon(undefined), null);
-  assert.deepEqual(WEAPON_COMBO_STATE_NAMES, ['swordCombo1', 'swordCombo2', 'swordCombo3', 'bowCombo1', 'bowCombo2', 'bowCombo3']);
-  for (const s of WEAPON_COMBO_STATE_NAMES) assert.ok(COMBAT_STATES.has(s), `${s} uses the combat grip`);
+  assert.deepEqual(WEAPON_COMBO_STATE_NAMES.slice(0, 12), ['swordCombo1', 'swordCombo2', 'swordCombo3', 'bowCombo1', 'bowCombo2', 'bowCombo3',
+    'daggerLight1', 'daggerLight2', 'daggerStab', 'swordTwoHand1', 'swordTwoHand2', 'swordTwoHand3']);
+  for (const s of [...WEAPON_COMBO_STATE_NAMES, ...WEAPON_IDLE_STATES]) assert.ok(COMBAT_STATES.has(s), `${s} uses the combat grip`);
 });
 
 test('the binder bakes both combos at start and rebakes for the held weapon, never mid-swing', async () => {
@@ -194,7 +200,7 @@ test('the binder bakes both combos at start and rebakes for the held weapon, nev
   let held = null;
   const runtime = { getCurrent: () => held, getHands: () => (held ? [{ side: 'left', gripQuaternion: gripOf('fantasy_bow', 'fused-female-v1').q }] : []) };
   const binder = createWeaponComboBinder({ model, controller, runtime });
-  assert.deepEqual(applied, ['swordCombo1,swordCombo2,swordCombo3', 'bowCombo1,bowCombo2,bowCombo3']);
+  assert.deepEqual(applied, ['swordCombo', 'bowCombo', 'daggerCombo'].map((kind) => movesForFamily(kind).map((m) => m.name).join(',')));
   assert.equal(binder.bakedFor('bowCombo'), 'default');
   held = { id: 'fantasy_bow', cls: 'bow' };
   swinging = { state: 'bowCombo1' };

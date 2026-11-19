@@ -290,6 +290,9 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
 
   const tick = (now) => {
     frame = requestAnimationFrame(tick);
+    // A lost WebGL context (too many live canvases, a GPU reset) cannot draw until the browser restores it:
+    // skip the frame rather than throw on every one of them.
+    if (renderer.getContext().isContextLost?.()) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     const t = now / 1000;
     // framing

@@ -155,6 +155,7 @@ test('a long two-handed blade swings the katana combo; other swords keep their t
   assert.match(baker, /Array\.isArray\(moves\) && moves\.length \? moves/);
   assert.match(baker, /Number\.isFinite\(spec\.hilt\)/);
   const binder = source('src/components/game3d/weapons/weaponComboBinder.js');
-  assert.match(binder, /comboKind === 'swordCombo' \? swordMoves\(held\) : null/);
-  assert.match(binder, /\(held && swordMovesForWeapon\(held\)\) \|\| SWORD_COMBO\)/);
+  assert.match(binder, /movesForFamily\(comboKind, held\)/);
+  assert.match(binder, /const katana = held \? swordMovesForWeapon\(held\) : null;/);
+  assert.match(binder, /\(katana \|\| SWORD_COMBO\)/);
 });

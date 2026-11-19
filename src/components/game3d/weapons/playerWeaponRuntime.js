@@ -9,12 +9,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { palmFromKnuckles, palmFromHandAxis, solveGrip, solveFist } from './weaponGripMath.js';
-import { WEAPON_COMBO_STATE_NAMES } from './weaponComboClips.js';
+import { WEAPON_COMBO_STATE_NAMES, WEAPON_IDLE_STATES } from './weaponComboClips.js';
 
 export const WEAPON_MANIFEST_URL = '/game3d/weapons/manifest.json';
 export const COMBAT_STATES = new Set(['drawArrow', 'meleeAttack', 'meleeCombo2', 'meleeCombo3', 'heavyAttack',
   'aimWalkForward', 'aimWalkBackward', 'aimWalkLeft', 'aimWalkRight', 'bowDraw',
-  'aimRecoil', 'aimOverdraw', 'punch', 'kick', 'block', 'combatIdle', ...WEAPON_COMBO_STATE_NAMES]);
+  'aimRecoil', 'aimOverdraw', 'punch', 'kick', 'block', 'combatIdle', ...WEAPON_COMBO_STATE_NAMES,
+  ...WEAPON_IDLE_STATES]); // the weapon stances are baked with the combat grip
 const COMBAT_HOLD_S = 0.7; // stay in the combat grip between combo swings
 const BLEND_RATE = 9; // 1/s
 const sanitize = (name) => THREE.PropertyBinding.sanitizeNodeName(name);
@@ -463,6 +464,15 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
     getCurrent: () => (current ? { id: current.id, cls: current.cls, hand: current.hand, rigId: current.rigId,
       length: current.weapon?.length ?? (current.cls === 'dagger' ? 0.37 : null) } : null),
     getRoots: () => current?.parts.map((p) => p.root) || [],
+    // Pack weapons on this body that the runtime no longer holds (a melt that never finished, an error
+    // in the middle of a switch) are removed; `keep` lists roots still melting away on purpose.
+    sweepStrays: (keep = []) => {
+      const held = new Set([...(current?.parts.map((p) => p.root) || []), ...keep]);
+      const strays = [];
+      model.traverse((n) => { if (n !== model && /^WeaponPack_/.test(n.name) && !held.has(n)) strays.push(n); });
+      for (const n of strays) n.removeFromParent();
+      return strays.length;
+    },
     getHands: () => current?.parts.map((p) => ({ side: p.side, handBone: p.handBone, gripQuaternion: p.grips.combat.quaternion })) || [],
     getRoot: () => current?.root || null,
     getBladeAnchors: () => (current?.tip ? { base: current.base, tip: current.tip } : null),

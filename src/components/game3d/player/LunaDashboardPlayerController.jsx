@@ -5,7 +5,7 @@ import { UPLOADED_PLAYER_ACTIONS, PLAYER_IDLE_VARIANTS, PLAYER_DEATH_ACTIONS, re
 import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityTiming.mjs';
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import {dodgeTravelStep} from './dodgeMoves.js';
-import { WEAPON_COMBO_STATES } from '../weapons/weaponComboClips.js';
+import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, weaponIdleState } from '../weapons/weaponComboClips.js';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
   beginAirWalkFinisher,setAirWalkKickHeld,
@@ -16,6 +16,8 @@ import {HALO_FLIGHT_RULES,paidGlideSeconds} from './haloWingFlightRules.mjs';
 // 3-hit weapon combos (weapons/weaponComboClips.js, baked per held weapon). A press inside the chain window
 // continues the chain; a press during a swing is buffered and starts the next hit at that swing's cancel point.
 const WEAPON_COMBO_STATE_SET = new Set(Object.values(WEAPON_COMBO_STATES).flat());
+// Looping stances for the weapon in hand (sword, two-hand sword, daggers, bow), baked with the combos.
+const WEAPON_IDLE_STATE_SET = new Set(WEAPON_IDLE_STATES);
 export const WEAPON_COMBO_CHAIN_GRACE_SECONDS = 0.55; // after a swing ends, the next press still continues the chain
 export const WEAPON_COMBO_BUFFER_SECONDS = 0.6; // how long a buffered press waits for the cancel point
 
@@ -54,6 +56,7 @@ const LOOP_STATES = new Set([
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
   'fallLoop', // regular falling still uses its existing pose
   'wingGlide','airWalkLoop', // real rig-local flight motions
+  ...WEAPON_IDLE_STATES,
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
 
@@ -103,7 +106,8 @@ export function createLunaDashboardPlayerController({
   let bowAttackAllowsMovement = false;
   let isAiming = false;
   let isBlocking = false;
-  let equipment = { weaponType: 'unarmed', equipped: false };
+  // family: the held weapon's mastery family (sword, dual_blades, bow); twoHand: the sword stance is held
+  let equipment = { weaponType: 'unarmed', equipped: false, family: null, twoHand: false };
   let pendingEquipmentTransition = null;
   let idleVariantIndex = 0;
   let externallyAirborne = false;
@@ -139,8 +143,12 @@ export function createLunaDashboardPlayerController({
   const JUMP_SPEED=5.4;
   const extraClips = {}; // weapon combo clips: kept across bindClips
   let comboChain = { kind: null, index: -1, until: -Infinity };
-  let activeCombo = null; // { state, kind, index, sweepSent, hitSent }
-  let queuedCombo = null; // { kind, config, at, from }
+  let activeCombo = null; // { state, kind, index, sweepSent, hitSent, serial }
+  let queuedCombo = null; // { kind, config, at, from, serial }
+  // Every accepted swing (started now or buffered) gets a number; its cues carry it, so the world can land
+  // each click's strike on that swing's own contact frame (and drop it if the swing never happens).
+  let swingSerial = 0;
+  let lastSwingSerial = 0;
 
   const ATTACK_STATES = new Set([
     STATES.DRAW_ARROW, STATES.MELEE_ATTACK, STATES.MELEE_COMBO_2,
@@ -170,7 +178,7 @@ export function createLunaDashboardPlayerController({
     const clip = actions[state]?.getClip();
     return clip ? clip.userData?.cancel ?? clip.duration : 0;
   };
-  const startWeaponCombo = (kind, config, at) => {
+  const startWeaponCombo = (kind, config, at, serial = ++swingSerial) => {
     const states = WEAPON_COMBO_STATES[kind];
     const hitIndex = config.hitIndex;
     const explicit = hitIndex !== undefined && hitIndex !== null && Number.isFinite(Number(hitIndex));
@@ -187,7 +195,8 @@ export function createLunaDashboardPlayerController({
     busyResetAt = at + duration;
     if (oneShotRef) oneShotRef.current = true;
     comboChain = { kind, index, until: at + duration + WEAPON_COMBO_CHAIN_GRACE_SECONDS };
-    activeCombo = { state, kind, index, sweepSent: false, hitSent: false };
+    activeCombo = { state, kind, index, sweepSent: false, hitSent: false, serial };
+    lastSwingSerial = serial;
     return true;
   };
   // null: no combo clips for this kind (the caller falls back to the regular attack montage)
@@ -199,7 +208,8 @@ export function createLunaDashboardPlayerController({
     if (isBusy) {
       const swing = comboAction();
       if (swing && swing.time < comboCancelAt(currentState)) {
-        queuedCombo = { kind, config, at, from: currentState };
+        queuedCombo = { kind, config, at, from: currentState, serial: ++swingSerial };
+        lastSwingSerial = queuedCombo.serial;
         return true;
       }
       if (!swing && currentState !== STATES.RUN_STOP && !(config.combo && ATTACK_STATES.has(currentState))) return false;
@@ -215,17 +225,19 @@ export function createLunaDashboardPlayerController({
       return false;
     }
     if (isBusy && (actions[currentState]?.time ?? 0) < comboCancelAt(currentState)) return false;
-    const { kind, config } = queuedCombo;
-    return startWeaponCombo(kind, config, at);
+    const { kind, config, serial } = queuedCombo;
+    return startWeaponCombo(kind, config, at, serial);
   };
   // Combo clips are baked per held weapon (weapons/weaponComboBinder.js) and survive bindClips. Returns false,
   // changing nothing, while a combo swing is still playing or fading out; the caller retries later.
   const setWeaponComboClips = (clipsByKey = {}) => {
-    const entries = Object.entries(clipsByKey).filter(([key, clip]) => WEAPON_COMBO_STATE_SET.has(key) && clip);
+    const entries = Object.entries(clipsByKey).filter(([key, clip]) => (WEAPON_COMBO_STATE_SET.has(key) || WEAPON_IDLE_STATE_SET.has(key)) && clip);
     if ([...WEAPON_COMBO_STATE_SET].some((key) => actions[key]?.isScheduled() && actions[key].getEffectiveWeight() > 0)) return false;
+    let replayIdle = false;
     for (const [key, clip] of entries) {
       const old = actions[key];
       if (old?.getClip() === clip) continue;
+      if (old && key === currentState) replayIdle = true; // the stance on screen is being replaced
       if (old) { old.stop(); mixer.uncacheClip(old.getClip()); }
       extraClips[key] = clip;
       const action = mixer.clipAction(clip);
@@ -233,6 +245,7 @@ export function createLunaDashboardPlayerController({
       action.setEffectiveWeight(1);
       actions[key] = action;
     }
+    if (replayIdle) { const state = currentState; currentState = null; blendTransition = null; playState(state, { force: true, fade: 0 }); }
     return true;
   };
   const getComboState = () => {
@@ -251,7 +264,7 @@ export function createLunaDashboardPlayerController({
     const { hit = 0, sweep = null } = action.getClip().userData || {};
     const speed = action.getEffectiveTimeScale() || 1;
     const t = action.time;
-    const base = { kind: activeCombo.kind, index: activeCombo.index, state: activeCombo.state };
+    const base = { kind: activeCombo.kind, index: activeCombo.index, state: activeCombo.state, serial: activeCombo.serial };
     if (sweep && !activeCombo.sweepSent && t >= sweep[0]) {
       activeCombo.sweepSent = true;
       events.push({ type: 'sweep', ...base, seconds: Math.max(0.05, (sweep[1] - Math.max(t, sweep[0])) / speed) });
@@ -270,7 +283,7 @@ export function createLunaDashboardPlayerController({
     const nextAction = actions[state];
     const previousAction = currentState ? actions[currentState] : null;
     advanceBlend();
-    if (![STATES.IDLE, STATES.AFK, 'idleArmed', ...PLAYER_IDLE_VARIANTS].includes(state)) idleStartedAt = null;
+    if (![STATES.IDLE, STATES.AFK, 'idleArmed', ...WEAPON_IDLE_STATES, ...PLAYER_IDLE_VARIANTS].includes(state)) idleStartedAt = null;
     // Two semantic states can share a fallback clip. Changing the state must
     // not rewind that action or crossfade it against itself.
     if (previousAction === nextAction && !options.force) {
@@ -321,6 +334,14 @@ export function createLunaDashboardPlayerController({
     return direction === 'backward' && hasAction(STATES.RUN_BACK) ? STATES.RUN_BACK : STATES.RUN;
   };
 
+  // Standing still with a weapon drawn: the owner's uploaded bow idle when it is loaded, otherwise the
+  // baked stance of the weapon family (and the two-hand sword stance while it is held); empty hands: idle.
+  const standingIdle = () => {
+    if (!equipment.equipped) return STATES.IDLE;
+    if (equipment.weaponType === 'bow' && hasAction('idleArmed')) return 'idleArmed';
+    const stance = weaponIdleState(equipment.family, { twoHand: equipment.twoHand });
+    return stance && hasAction(stance) ? stance : STATES.IDLE;
+  };
   const movementStateFor = ({ moving, running, sprinting, direction, aiming, blocking }) => {
     if (blocking && hasAction('block')) return 'block';
     if (blocking && hasAction(STATES.COMBAT_IDLE)) return STATES.COMBAT_IDLE;
@@ -334,10 +355,10 @@ export function createLunaDashboardPlayerController({
       if (!aiming && !blocking && !meleeDrawn && idleStartedAt !== null && now() - idleStartedAt >= PLAYER_AFK_DELAY_SECONDS) {
         const variants = PLAYER_IDLE_VARIANTS.filter(hasAction);
         if (variants.length) return variants[idleVariantIndex++ % variants.length];
-        if (hasAction(STATES.AFK)) return STATES.AFK;
+        // the generic AFK pose has empty hands: a drawn weapon keeps its own stance instead
+        if (hasAction(STATES.AFK) && standingIdle() === STATES.IDLE) return STATES.AFK;
       }
-      if (equipment.equipped && equipment.weaponType === 'bow' && hasAction('idleArmed')) return 'idleArmed';
-      return STATES.IDLE;
+      return standingIdle();
     }
     if (aiming) return combatMovementState(direction);
     if (sprinting && hasAction(STATES.SPRINT)) return STATES.SPRINT;
@@ -452,8 +473,8 @@ export function createLunaDashboardPlayerController({
     bowAttackAllowsMovement = false;
     const speed = Math.max(0.05, Number(config.timeScale) || 1);
     if (!playState(state, { ...config, force: true, timeScale: speed, fade: config.fade ?? 0.16 })) return false;
-    if (config.equipmentContext !== false && state === 'equipBow') equipment = { weaponType: 'bow', equipped: true };
-    if (config.equipmentContext !== false && state === 'disarmBow') equipment = { weaponType: 'unarmed', equipped: false };
+    if (config.equipmentContext !== false && state === 'equipBow') equipment = { weaponType: 'bow', equipped: true, family: 'bow', twoHand: false };
+    if (config.equipmentContext !== false && state === 'disarmBow') equipment = { weaponType: 'unarmed', equipped: false, family: null, twoHand: false };
     if (state === 'block') isBlocking = true;
     if (state === 'aimOverdraw') isAiming = true;
     if (!LOOP_STATES.has(state) && !isIdleVariant(state)) {
@@ -858,9 +879,19 @@ export function createLunaDashboardPlayerController({
     const requested = String(context.weaponType || context.type || 'unarmed').toLowerCase();
     const equipped = context.equipped ?? requested !== 'unarmed';
     const weaponType = !equipped ? 'unarmed' : /bow|ranged|archer/.test(requested) ? 'bow' : 'melee';
-    if (equipment.weaponType === weaponType && equipment.equipped === !!equipped) return false;
+    const family = !equipped ? null : weaponType === 'bow' ? 'bow'
+      : /dual_blades|dagger/.test(requested) ? 'dual_blades' : /sword|blade/.test(requested) ? 'sword' : null;
+    const twoHand = !!context.twoHand && family === 'sword';
+    if (equipment.weaponType === weaponType && equipment.equipped === !!equipped
+      && equipment.family === family && equipment.twoHand === twoHand) return false;
     const previous = equipment;
-    equipment = { weaponType, equipped: !!equipped };
+    equipment = { weaponType, equipped: !!equipped, family, twoHand };
+    if (previous.family !== family) idleStartedAt = null; // another weapon: its stance first, idle variants later
+    if (previous.weaponType === weaponType && previous.equipped === !!equipped) {
+      // same kind of weapon, another family or stance: only the standing pose changes
+      handleMovement(lastMovement);
+      return true;
+    }
     // Summoned weapons (weapons/playerWeaponSummon.js) form in the hand with their own one-shot gesture,
     // so the longbow pack's draw-from-the-back / put-away clips do not play for them.
     const transition = context.summon ? null
@@ -922,7 +953,7 @@ export function createLunaDashboardPlayerController({
     if (isDeathState(currentState)) return;
     if (isIdleVariant(currentState)) {
       idleStartedAt = now();
-      playState(equipment.equipped && equipment.weaponType === 'bow' && hasAction('idleArmed') ? 'idleArmed' : STATES.IDLE, { force: true, fade: 0.2 });
+      playState(standingIdle(), { force: true, fade: 0.2 });
       return;
     }
     // A jump's takeoff animation can end while the character is still
@@ -970,6 +1001,8 @@ export function createLunaDashboardPlayerController({
     setWeaponComboClips,
     getComboState,
     pollComboEvents,
+    // the number of the swing the latest accepted combo press will play (started now or buffered)
+    getLastSwingSerial: () => lastSwingSerial,
     getCurrent: () => isMounted ? 'mounted' : currentState || STATES.IDLE,
     getIsAiming: () => isAiming,
     getIsBlocking: () => isBlocking,
