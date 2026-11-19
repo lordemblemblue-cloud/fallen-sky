@@ -42,6 +42,14 @@ export const WEAPON_COMBO_STATES = Object.freeze({
   // the player's own bow shots: loosed from the held draw, or drawn and loosed in one quick motion
   bowRelease: Object.freeze(['bowRelease']),
   bowQuick: Object.freeze(['bowQuick']),
+  // a basic swing held into a charge (owner 2026-11-19, combat/HoldChargeRules.mjs): the wind-up slows while held
+  swordCharge: Object.freeze(['swordCharge']),
+  swordTwoHandCharge: Object.freeze(['swordTwoHandCharge']),
+  daggerCharge: Object.freeze(['daggerCharge']),
+});
+// The charge move a held basic swing of each kind turns into.
+export const CHARGE_STATE_FOR_KIND = Object.freeze({
+  swordCombo: 'swordCharge', swordTwoHand: 'swordTwoHandCharge', daggerLight: 'daggerCharge', daggerStab: 'daggerCharge',
 });
 export const WEAPON_COMBO_STATE_NAMES = Object.freeze(
   Object.values(WEAPON_COMBO_STATES).flat(),
@@ -215,6 +223,42 @@ export const DAGGER_COMBO = [
   ] },
 ];
 
+// Charged strikes (owner 2026-11-19, combat/HoldChargeRules.mjs): a basic swing still held after its wind-up turns
+// into its family's charge move. The controller plays from `chargeFrom`, slows the coil from there to `charge` (the
+// deepest wind-up) so it peaks exactly when the charge is full, holds it there while the button stays down, then
+// plays the strike faster on release. One-hand: a big diagonal from high behind the shoulder; two-hand: an overhead
+// cleave; daggers: both fists raised by the head, then a double hammer strike down and forward.
+export const SWORD_CHARGE = { name: 'swordCharge', combo: 'swordCharge', index: 0, hit: 0.5, sweep: [0.43, 0.62], cancel: 0.72,
+  chargeFrom: 0.12, charge: 0.42, keys: [
+    { t: 0.0, ...SWORD_READY },
+    { t: 0.12, spine: [30, 0, -3], hips: [0.05, 12], r: { arm: [-0.05, 0.12, 0.34], blade: [-0.65, 0.5, 0.57] }, l: { arm: [0.36, -0.08, -0.16] } },
+    { t: 0.42, spine: [50, -6, -6], hips: [0.1, 20], r: { arm: [-0.14, 0.3, 0.26], blade: [-0.78, 0.55, 0.3] }, l: { arm: [0.42, 0.02, -0.18] } },
+    { t: 0.5, spine: [-34, 16, 4], hips: [0.14, -18], r: { arm: [0.6, -0.12, -0.22], blade: [0.7, -0.35, -0.62] }, l: { arm: [0.06, -0.42, -0.14] } },
+    { t: 0.62, spine: [-46, 18, 4], hips: [0.14, -22], r: { arm: [0.3, -0.3, -0.5], blade: [-0.1, -0.5, -0.86] }, l: { arm: [0.02, -0.46, -0.1] } },
+    { t: 1.0, ...SWORD_READY },
+  ] };
+export const SWORD_TWO_HAND_CHARGE = { name: 'swordTwoHandCharge', combo: 'swordTwoHandCharge', index: 0, hit: 0.52, sweep: [0.46, 0.64],
+  cancel: 0.76, chargeFrom: 0.12, charge: 0.44, keys: [
+    { t: 0.0, ...TWO_HAND_READY },
+    { t: 0.12, spine: [6, -6, 0], hips: [0.06, 6], r: { arm: [0.12, 0.3, -0.12], blade: [-0.4, 0.9, -0.1] }, l: TWO_HAND_HILT },
+    { t: 0.44, spine: [10, -16, 0], hips: [0.1, 4], r: { arm: [-0.02, 0.48, -0.08], blade: [-0.8, 0.58, -0.05] }, l: TWO_HAND_HILT },
+    { t: 0.52, spine: [-2, 30, 0], hips: [0.18, -2], r: { arm: [0.56, -0.18, -0.14], blade: [0.56, -0.82, -0.04] }, l: TWO_HAND_HILT },
+    { t: 0.64, spine: [-2, 32, 0], hips: [0.19, -2], r: { arm: [0.54, -0.24, -0.14], blade: [0.48, -0.87, -0.04] }, l: TWO_HAND_HILT },
+    { t: 1.05, ...TWO_HAND_READY },
+  ] };
+const DAGGER_RAISED_POLE = [-0.1, -0.15, 0.7];
+export const DAGGER_CHARGE = { name: 'daggerCharge', combo: 'daggerCharge', index: 0, hit: 0.47, sweep: [0.41, 0.56], cancel: 0.66,
+  chargeFrom: 0.1, charge: 0.4, keys: [
+    { t: 0.0, ...DAGGER_READY },
+    { t: 0.1, spine: [0, 3, 0], hips: [0.1, 0], r: { arm: [0.14, 0.18, 0.1], forearm: ALONG, pole: DAGGER_RAISED_POLE },
+      l: { arm: [0.14, 0.18, 0.1], forearm: ALONG, pole: DAGGER_RAISED_POLE } },
+    { t: 0.4, spine: [0, -8, 0], hips: [0.16, 0], r: { arm: [0.08, 0.36, 0.12], forearm: ALONG, pole: DAGGER_RAISED_POLE },
+      l: { arm: [0.08, 0.36, 0.12], forearm: ALONG, pole: DAGGER_RAISED_POLE } },
+    { t: 0.47, spine: [0, 22, 0], hips: [0.2, 0], r: { arm: [0.6, -0.12, 0.06], blade: [0.25, -0.95, 0.06] }, l: { arm: [0.6, -0.12, 0.06], blade: [0.25, -0.95, -0.06] } },
+    { t: 0.56, spine: [0, 22, 0], hips: [0.2, 0], r: { arm: [0.58, -0.16, 0.06], blade: [0.25, -0.95, 0.06] }, l: { arm: [0.58, -0.16, 0.06], blade: [0.25, -0.95, -0.06] } },
+    { t: 0.92, ...DAGGER_READY },
+  ] };
+
 // Looping idles: the stance, a breath in, the stance again (the ends match, so the loop is seamless).
 const breathing = (name, base, seconds, { bend = 1.5, drop = 0.008, lift = 0.01 } = {}) => {
   const raise = (limb) => (limb?.arm ? { ...limb, arm: [limb.arm[0], limb.arm[1] + lift, limb.arm[2]] } : limb);
@@ -363,9 +407,9 @@ export const BOW_SHOTS = [
 // What a family bakes when the caller passes no moves of its own (the binder passes its own for swords).
 export function defaultMovesFor(comboKind) {
   if (comboKind === 'bowCombo') return [...BOW_COMBO, IDLE_BOW, ...BOW_SHOTS];
-  if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS];
+  if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS, DAGGER_CHARGE];
   return [...SWORD_COMBO, ...SWORD_TWO_HAND_COMBO, IDLE_SWORD, IDLE_SWORD_TWO_HAND,
-    ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat()];
+    ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat(), SWORD_CHARGE, SWORD_TWO_HAND_CHARGE];
 }
 
 // The bones the combos pose, by role (hips, spine, spine1, spine2, neck, head, rSh / lSh, rArm / rFore / rHand,
@@ -706,7 +750,11 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       // a skill's clip says which hit of its skill it is; a combo clip is its place in the list
       clip.userData = { combo: combo.idle || combo.pose ? null : combo.combo || comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
         ...(combo.idle ? { idle: true, loop: true } : {}), ...(combo.pose ? { pose: true } : {}), ...(combo.technique ? { technique: combo.technique } : {}),
-        ...(Number.isFinite(combo.nock) ? { nock: combo.nock } : {}), ...(Number.isFinite(combo.full) ? { full: combo.full } : {}) };
+        ...(Number.isFinite(combo.nock) ? { nock: combo.nock } : {}), ...(Number.isFinite(combo.full) ? { full: combo.full } : {}),
+        // a charge move's slow wind-up [chargeFrom, charge]; a keyed swing's wind-up (its second key), where a held
+        // press waits to become a charge (a captured move, keyed many times a second, has none)
+        ...(Number.isFinite(combo.chargeFrom) ? { chargeFrom: combo.chargeFrom } : {}), ...(Number.isFinite(combo.charge) ? { charge: combo.charge } : {}),
+        ...(!combo.idle && !combo.pose && combo.ease !== 'linear' && combo.keys.length >= 4 && combo.keys[1].t < combo.hit ? { windUp: combo.keys[1].t } : {}) };
       out[combo.name] = clip;
     }
   } finally {

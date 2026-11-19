@@ -420,7 +420,7 @@ test('the bow: hold draws then holds; letting go looses from the hold; every sho
   ctl.setAiming(true);
   step(1 / 60);
   assert.equal(ctl.getCurrent(), 'bowDraw', 'holding the aim draws');
-  step(0.6);
+  step(1.3); // the draw comes back over the full charge (1.2 s)
   assert.equal(ctl.getCurrent(), 'bowHold', 'then holds at full draw');
   assert.equal(ctl.getBowDrawing(), true);
   step(1.5);
@@ -436,14 +436,14 @@ test('the bow: hold draws then holds; letting go looses from the hold; every sho
   assert.equal(hits.length, 1);
   assert.equal(ctl.getCurrent(), 'idleBow', 'and the bow lowers');
   // aim let go without a shot: the draw waits a moment, then lowers
-  ctl.setAiming(true); step(0.7);
+  ctl.setAiming(true); step(1.3);
   assert.equal(ctl.getCurrent(), 'bowHold');
   ctl.setAiming(false); step(0.1);
   assert.equal(ctl.getCurrent(), 'bowHold', 'waiting for the shot');
   step(0.3);
   assert.equal(ctl.getCurrent(), 'idleBow', 'lowered');
   // shots while the aim stays held: release, then draw again from the nock (the bow stays up)
-  ctl.setAiming(true); step(0.7);
+  ctl.setAiming(true); step(1.3);
   assert.equal(ctl.HandleCombat('bowCombo', { speed: 1 }), true);
   assert.equal(ctl.getCurrent(), 'bowRelease');
   step(0.25);
@@ -505,7 +505,7 @@ test('running and sprinting with the bow carry it low and out; walking leaves th
   }
   // aiming while sprinting: the draw over the sprint, the legs sprinting
   ctl.setAiming(true);
-  step(0.6);
+  step(1.3);
   assert.equal(ctl.getCurrent(), 'bowHold');
   assert.equal(ctl.getGait(), 'sprint');
   assert.ok(ctl.getMontageState().weight > 0.99, 'the legs keep sprinting under the held draw');

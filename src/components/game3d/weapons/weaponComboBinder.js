@@ -9,6 +9,7 @@ import { solveFallbackGrip } from './playerWeaponRuntime.js';
 import {
   bakeWeaponComboClips, captureRestPose, comboKindForWeapon, SWORD_COMBO, SWORD_TWO_HAND_COMBO, BOW_COMBO,
   BOW_SHOTS, DAGGER_COMBO, IDLE_SWORD, IDLE_SWORD_TWO_HAND, IDLE_DAGGERS, IDLE_BOW,
+  SWORD_CHARGE, SWORD_TWO_HAND_CHARGE, DAGGER_CHARGE,
 } from './weaponComboClips.js';
 import { swordMovesForWeapon } from './katanaTechniques.mjs';
 import { swordSkillTierMoves, swordSkillTierMovesForWeapon } from './swordSkillMoves.mjs';
@@ -21,16 +22,19 @@ const DEFAULT_HOLDS = Object.freeze({
 
 // Every sword bakes its three hits (the katana combo on a long two-handed blade, katanaTechniques.mjs), the
 // two-handed swings and both stances, and the four mastery tiers of its single-hit and three-hit skills
-// (swordSkillMoves.mjs). A long blade is always held in both hands, so its normal stance is the two-hand one.
+// (swordSkillMoves.mjs). A long blade is always held in both hands, so its normal stance is the two-hand one,
+// and so is its charged strike. Held basic swings turn into the charge moves (combat/HoldChargeRules.mjs).
 export function swordMovesFor(held) {
   const katana = held ? swordMovesForWeapon(held) : null;
   const stance = katana ? { ...IDLE_SWORD_TWO_HAND, name: 'idleSword' } : IDLE_SWORD;
-  return [...(katana || SWORD_COMBO), ...SWORD_TWO_HAND_COMBO, stance, IDLE_SWORD_TWO_HAND,
+  const charge = katana ? { ...SWORD_TWO_HAND_CHARGE, name: 'swordCharge', combo: 'swordCharge' } : SWORD_CHARGE;
+  const moves = [...(katana || SWORD_COMBO), ...SWORD_TWO_HAND_COMBO, stance, IDLE_SWORD_TWO_HAND,
     ...(held ? swordSkillTierMovesForWeapon(held) : swordSkillTierMoves({ twoHanded: false }))];
+  return [...moves, charge, SWORD_TWO_HAND_CHARGE];
 }
 export function movesForFamily(comboKind, held = null) {
   if (comboKind === 'bowCombo') return [...BOW_COMBO, IDLE_BOW, ...BOW_SHOTS];
-  if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS];
+  if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS, DAGGER_CHARGE];
   return swordMovesFor(held);
 }
 

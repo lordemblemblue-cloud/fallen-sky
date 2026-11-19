@@ -134,7 +134,7 @@ for (const rigId of Object.keys(RIGS)) {
     }
     const rest = captureRestPose(model);
     const clips = bakeWeaponComboClips(model, 'dagger', grips, { rest, moves: movesForFamily('daggerCombo') });
-    assert.deepEqual(Object.keys(clips), ['daggerLight1', 'daggerLight2', 'daggerStab', 'idleDaggers']);
+    assert.deepEqual(Object.keys(clips), ['daggerLight1', 'daggerLight2', 'daggerStab', 'idleDaggers', 'daggerCharge']);
     const timing = { daggerLight1: [0.33, 0.12, 'daggerLight', 0], daggerLight2: [0.37, 0.15, 'daggerLight', 1], daggerStab: [0.43, 0.18, 'daggerStab', 0] };
     const held = [hold(model, 'right', solvedGrips.right, [0, 0.37, 0]), hold(model, 'left', solvedGrips.left, [0, 0.37, 0])];
     try {
