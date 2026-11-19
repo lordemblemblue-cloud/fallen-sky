@@ -9,21 +9,23 @@ import { MENU_MODES } from '@/components/duelist/menu/modes';
 
 // Duelist Adventure's arena (the new build): the match the menus chose, with your saved fighter and settings.
 // mode: practice | duel | ffa | tdm | ctf | any (Join) | story (the mission); online: on the match server, else against bots here.
-export default function DuelistArena({ mode = 'practice', online = false, room = null }) {
+export default function DuelistArena({ mode = 'practice', online = false, room = null, matchId = null, from = null }) {
   const [prefs] = useState(readPrefs);
   const navigate = useNavigate();
   const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
   const back = mode === 'any' ? 'join' : mode;
+  const backToMenu = from === 'duelist' ? '/duelist' : null;
+  const leave = () => backToMenu ? navigate({ to: backToMenu }) : navigate({ to: '/duelist-next/$page', params: { page: back } });
   const title = mode === 'any' ? 'Join' : mode === 'story' ? 'Contraband' : MENU_MODES[mode]?.title || 'Practice';
   const where = mode === 'story' ? (online ? 'story mission, with a crew' : 'story mission, solo') : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
   const unavailable = online && !serverUrl;
   return (
     <main className="flex h-screen min-h-0 flex-col bg-[#05080d] text-white">
       <header className="flex h-11 shrink-0 items-center gap-3 border-b border-white/10 bg-[#08111b] px-3">
-        <Link to="/duelist-next/$page" params={{ page: back }}
+        <button type="button" onClick={leave}
           className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/60 transition hover:bg-white/5 hover:text-white">
           <ArrowLeft className="h-4 w-4" /> Menu
-        </Link>
+        </button>
         <div className="h-5 w-px bg-white/10" />
         <div className="text-sm font-semibold">{title}</div>
         <div className="text-[11px] text-white/40">{where} · {BODIES[prefs.fighter]?.name}</div>
@@ -36,7 +38,7 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            bots={prefs.bots} sensitivity={prefs.sensitivity} room={room} onLeave={() => navigate({ to: '/duelist-next/$page', params: { page: back } })} />
+            bots={prefs.bots} sensitivity={prefs.sensitivity} room={room} matchId={matchId} onLeave={leave} />
         )}
       </section>
     </main>
