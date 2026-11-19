@@ -1,5 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
-import { DONOR_UPGRADES, SERVER_ROLLED_UPGRADES, consumedItemIds, findItem, pickCostUnits, readUpgrade, rollUpgrade, saveAsServerKnows, spentCounts, upgradeBase, upgradeCost } from '../../shared/itemUpgradeLedger.ts';
+import { DONOR_UPGRADES, SERVER_ROLLED_UPGRADES, consumedItemIds, findItem, heroLevelOf, pickCostUnits, readUpgrade, rollUpgrade, saveAsServerKnows, spentCounts, upgradeBase, upgradeCost } from '../../shared/itemUpgradeLedger.ts';
 
 // The server rolls Game 3D's risky item upgrades (docs/game3d/SERVER_UPGRADES.md):
 // reinforcement (the Enchant %), over-enchant, refine, ultimate, Combine and Ascension
@@ -11,6 +11,8 @@ import { DONOR_UPGRADES, SERVER_ROLLED_UPGRADES, consumedItemIds, findItem, pick
 // Combine and Ascension take a donor from the server's copy of the save; a donor used up by
 // a success is recorded on the target's row (consumed) and is gone for the server from then
 // on: never a target or a donor again, and removed from every save the Vault keeps.
+// A gear-tier tier-up (service 'tier_up'; docs/game3d/GEAR_TIERS_20261119.md) moves the item to
+// its next step, checked against the hero's level in the server's copy of the save.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -95,7 +97,7 @@ Deno.serve(async (req) => {
       const before = row ? { ...upgradeBase(serviceId), ...(row.record || {}) } : { ...upgradeBase(serviceId), ...(readUpgrade(save.data, serviceId, itemId) || {}) };
       const protectedAttempt = data.protectedAttempt === true;
       const roll = serverRoll();
-      const rolled = rollUpgrade(serviceId, before, { roll, protectedAttempt, item, donor });
+      const rolled = rollUpgrade(serviceId, before, { roll, protectedAttempt, item, donor, heroLevel: heroLevelOf(save.data) });
       // at the cap, an item that can't take this upgrade or a donor that doesn't match: nothing was rolled
       if (rolled.reason) return json({ success: true, result: { ok: false, reason: rolled.reason, serviceId, itemId, ...(takesDonor ? { donorId: donorId || null } : {}) } });
       // paid from the server's copy of the save; without the materials, nothing is rolled. What

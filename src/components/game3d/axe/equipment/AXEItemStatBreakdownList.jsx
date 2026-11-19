@@ -29,7 +29,9 @@ export default function AXEItemStatBreakdownList({
         <span className="axe-stat-breakdown-name">{axeStatLabel(stat)}</span>
         <span className="axe-stat-breakdown-value">
           {row ? <>
-            <b>{formatAXEStatValue(row.original, rate)}</b>
+            {/* a tier-up changes the original roll itself (27 → 32), not only the increase */}
+            <b>{formatAXEStatValue(row.original, rate)}{next && Math.abs((next.original || 0) - (row.original || 0)) > 1e-9
+              ? <> → {formatAXEStatValue(next.original, rate)}</> : null}</b>
             {(Math.abs(row.bonus) > 1e-9 || changed) && <em className="axe-stat-breakdown-bonus">({formatAXEStatBonus(row.bonus, rate)}{changed
               ? <> → {formatAXEStatBonus(next.bonus, rate)}</> : null})</em>}
           </> : <b>—</b>}

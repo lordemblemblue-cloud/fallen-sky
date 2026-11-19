@@ -6,15 +6,20 @@
 // rolls them, keeps each item's result (Game3DItemUpgrade), and the Character Vault puts that
 // result back into any save that says otherwise, so a reloaded browser save can't undo a bad
 // roll, an edited one can't add levels, and a donor used up by Combine or Ascension stays gone
-// (docs/game3d/BLACKSMITH_V2_20261118.md).
+// (docs/game3d/BLACKSMITH_V2_20261118.md). The gear-tier tier-up (service 'tier_up';
+// docs/game3d/GEAR_TIERS_20261119.md) moves an item to its next step: its record is the item's
+// own level, stats and look in the inventory, and a save that undoes it gets it back.
 import { resolveReinforcement, resolveOverEnchant } from './axeItemEnhancement.ts';
 import { resolveAscensionRecord, resolveCombineRecord, resolveRefine, resolveUltimate } from './axeItemAdvancement.ts';
 import { getAXEAscensionCost, getAXECombineCost, getAXEOverEnchantCost, getAXEReinforcementCost, getAXEServiceInventoryCost } from './axeServiceEconomy.ts';
+import { applyAXEGearTierRecord, getAXEGearTierUpCost, previewAXEGearTierUp, readAXEGearTierRecord } from './axeGearTiers.ts';
 
 type Rec = Record<string, any>;
 type Save = Record<string, string>;
 
-export const SERVER_ROLLED_UPGRADES = Object.freeze(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage']);
+export const SERVER_ROLLED_UPGRADES = Object.freeze(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage', 'tier_up']);
+// an upgrade whose record is the inventory item itself (level, stats, look), not a separate entry
+export const ITEM_RECORD_UPGRADES = Object.freeze(['tier_up']);
 // upgrades that take a second item (the donor), consumed on success
 export const DONOR_UPGRADES = Object.freeze(['combine', 'stage']);
 
@@ -35,9 +40,18 @@ const PLACES: Record<string, { key: string; field: string | null; base: Rec }> =
   ultimate: { key: 'axe_item_advancement_v2', field: 'ultimate', base: { level: 0, sealed: false } },
   combine: { key: 'axe_item_advancement_v2', field: 'combine', base: { count: 0 } },
   stage: { key: 'axe_item_advancement_v2', field: 'stage', base: { rank: 0, id: 'stage_0', label: 'Base' } },
+  // the inventory item's own tier fields (readAXEGearTierRecord)
+  tier_up: { key: 'axe_equipment_inventory_v2', field: null, base: {} },
 };
 const INVENTORY_KEY = 'axe_equipment_inventory_v2';
 const LOOT_KEY = 'game_loot_inventory_v2';
+const PROGRESSION_KEY = 'wwm_player_progression_v1';
+
+// the hero's level in a save (the server checks a tier-up against it)
+export function heroLevelOf(save: Save | null | undefined): number | null {
+  const level = Number(parse(save?.[PROGRESSION_KEY])?.level);
+  return Number.isFinite(level) && level >= 1 ? Math.floor(level) : null;
+}
 
 export const upgradeBase = (service: string): Rec => ({ ...(PLACES[service]?.base || {}) });
 
@@ -58,6 +72,7 @@ export function findItem(save: Save | null | undefined, itemId: string): Rec | n
 
 // the item's record for one upgrade, or null when it has never had one
 export function readUpgrade(save: Save | null | undefined, service: string, itemId: string): Rec | null {
+  if (ITEM_RECORD_UPGRADES.includes(service)) return readAXEGearTierRecord(findItem(save, itemId));
   const place = PLACES[service];
   const entry = parse(save?.[place.key])?.[itemId];
   if (!entry) return null;
@@ -65,6 +80,11 @@ export function readUpgrade(save: Save | null | undefined, service: string, item
 }
 
 function writeUpgrade(save: Save, service: string, itemId: string, record: Rec): Save {
+  if (ITEM_RECORD_UPGRADES.includes(service)) {
+    const inv = parse(save[INVENTORY_KEY]) || {};
+    const items = (inv.items || []).map((i: Rec) => (idOf(i) === itemId ? applyAXEGearTierRecord(i, record) : i));
+    return { ...save, [INVENTORY_KEY]: JSON.stringify({ ...inv, items }) };
+  }
   const place = PLACES[service];
   const map = parse(save[place.key]) || {};
   const entry = place.field ? { ...DEFAULT_ADVANCEMENT, ...(map[itemId] || {}), [place.field]: record } : record;
@@ -78,9 +98,19 @@ export function consumedItemIds(rows: Array<{ consumed?: string[] }> = []): Set<
   return ids;
 }
 
+// A gear-tier tier-up as a roll: the item with its current tier record, moved one step.
+function resolveTierUp(before: Rec, item: Rec | null, heroLevel: number | null, roll: number) {
+  if (!item) return { ok: false, reason: 'ITEM_MISSING', record: before };
+  const preview = previewAXEGearTierUp(applyAXEGearTierRecord(item, before), { heroLevel });
+  if (!preview.ok) return { ok: false, reason: preview.reason, record: before };
+  if (roll > preview.chance) return { ok: false, outcome: 'failure', chance: preview.chance, record: before };
+  return { ok: true, outcome: 'success', chance: preview.chance, record: { ...before, ...preview.record } };
+}
+
 // the game's own rules, with the server's roll; `after` is the record the item keeps.
-// Combine and Ascension also take the donor, as the server's copy of the save holds it.
-export function rollUpgrade(service: string, before: Rec, { roll, protectedAttempt = false, item = null, donor = null }: { roll: number; protectedAttempt?: boolean; item?: Rec | null; donor?: Rec | null }) {
+// Combine and Ascension also take the donor, as the server's copy of the save holds it; a tier-up
+// checks the hero's level in that save.
+export function rollUpgrade(service: string, before: Rec, { roll, protectedAttempt = false, item = null, donor = null, heroLevel = null }: { roll: number; protectedAttempt?: boolean; item?: Rec | null; donor?: Rec | null; heroLevel?: number | null }) {
   const opts = { roll, protectedAttempt };
   let result: Rec;
   if (service === 'reinforcement') result = resolveReinforcement(before, { ...opts, item });
@@ -89,6 +119,7 @@ export function rollUpgrade(service: string, before: Rec, { roll, protectedAttem
   else if (service === 'ultimate') result = resolveUltimate(item, before, opts);
   else if (service === 'combine') result = resolveCombineRecord(before, item, donor, { roll });
   else if (service === 'stage') result = resolveAscensionRecord(before, item, donor, { roll });
+  else if (service === 'tier_up') result = resolveTierUp(before, item, heroLevel, roll);
   else return { ok: false, reason: 'not_a_server_rolled_upgrade' };
   // at the cap, an item that can't take it, or a donor that doesn't match: nothing rolled, nothing changes
   if (result.reason) return { ok: false, reason: result.reason, before, after: before };
@@ -110,6 +141,7 @@ export function upgradeCost(service: string, before: Rec, { protectedAttempt = f
   if (service === 'refine' || service === 'ultimate') return getAXEServiceInventoryCost(service, { advancement: { [service]: before }, protectedAttempt });
   if (service === 'combine') return getAXECombineCost();
   if (service === 'stage') return getAXEAscensionCost({ success, item, advancement: { stage: before } });
+  if (service === 'tier_up') return item ? getAXEGearTierUpCost(applyAXEGearTierRecord(item, before)) : {};
   return {};
 }
 
@@ -202,6 +234,7 @@ export function enforceUpgradeLedger(save: Save, previous: Save | null, ledger: 
   }
 
   for (const service of SERVER_ROLLED_UPGRADES) {
+    if (ITEM_RECORD_UPGRADES.includes(service)) continue; // below
     // a record deleted from the save counts too (deleting a fracture or a seal is a change)
     const ids = [...owned].filter((id) => byKey.has(`${id}::${service}`) || readUpgrade(data, service, id) || readUpgrade(previous, service, id));
     for (const id of ids) {
@@ -211,6 +244,20 @@ export function enforceUpgradeLedger(save: Save, previous: Save | null, ledger: 
       data = writeUpgrade(data, service, id, { ...PLACES[service].base, ...(allowed || {}) });
       corrections.push(`${id}: ${service} ${JSON.stringify(current)} -> ${JSON.stringify(allowed || PLACES[service].base)}`);
     }
+  }
+
+  // Tier-ups live on the item itself, which other systems may also change (Weapon Legacy raises a
+  // level): only a server tier-up is enforced, and only when a save went back below it (a reloaded
+  // save) or kept its level with other stats (an edited one).
+  for (const id of owned) {
+    const allowed = byKey.get(`${id}::tier_up`);
+    if (!allowed) continue;
+    const current = readUpgrade(data, 'tier_up', id);
+    if (!current) continue;
+    const below = Number(current.level) < Number(allowed.level);
+    if (!below && (Number(current.level) !== Number(allowed.level) || same('tier_up', current, allowed))) continue;
+    data = writeUpgrade(data, 'tier_up', id, allowed);
+    corrections.push(`${id}: tier_up Lv ${current.level} -> Lv ${allowed.level}`);
   }
   return { data, corrections };
 }
