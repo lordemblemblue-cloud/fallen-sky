@@ -45,13 +45,35 @@ play as the controller's states, but they are montages now:
   arrow in flight is still the clone's `bowVisuals` arrow, fired with the shot.
 - Other players' avatars play `bowRelease` / `bowQuick` with the stand-in bow; the held draw shows as idle there.
 
-### The bow while running (`BOW_RUN_CARRY_ARM`, `bowRunCarry`)
+### The bow while running and sprinting (`BOW_RUN_CARRY_ARM`, `bowRunCarry`)
 
-Running (and sprinting, which plays the run clip on the fused bodies) with a bow lays a baked bow-arm pose over
-the run: the arm hangs a little out from the hip, the bow pointing forward and down away from the legs, gripped
-like a drawn bow (combat grip). Walking is unchanged. Measured over the whole run cycle against the body
-(torso and leg capsules): before, the run's own arm swung the bow 8-9 cm into the torso on both bodies; now it
-stays 5.0 cm clear on the female body (thigh) and 7.9 cm on the male (torso), live 7.9 cm too.
+Running and sprinting with a bow hold it like this: the arm hangs a little out from the hip, the bow pointing
+forward and down away from the legs, gripped like a drawn bow (combat grip). Walking is unchanged. The baked
+`bowRunCarry` pose says where: each frame the bow arm is solved with two-bone IK so the hand sits where that pose
+puts it relative to the hips, the bow turned as in the pose, both in the body's frame
+(`locomotionUnderlay.overlayArm`). However far the gait leans or twists the chest, the hand rides with the hips
+(1-5 cm of drift) instead of swinging with the stride. Measured over the whole cycle against the body (torso
+and leg capsules), both fused bodies:
+
+| Gait | The gait's own arm (before) | Carried |
+|---|---|---|
+| Run (the body's own, Shift) | 8-9 cm into the torso | 10.3-14.5 cm clear |
+| Sprint (the port's longbow-pack run, Ctrl) | 8.5-12 cm into the hips | 12.0-12.5 cm clear |
+
+## Merged with the player/mount animation port
+
+`claude/port-player-mount-animation-20261119` (1b766da: dodges, sprint and the mobility clip pack, skill-cast and
+level-up moments, Roll dodges setting, re-rigged Faction 3 tiger, animation preview harness) is merged into this
+branch (owner: "Yes, fold it in"), so the open PRs merge in any order. The one conflict was the controller's
+imports (both kept). With the port's clips:
+
+- a swing or the held draw over the new Sprint: the legs keep the sprint cycle (`getGait` = `sprint`, timed by
+  `syncFusedLocomotion`, which now covers `sprint`);
+- the bow carry while sprinting: the chest-relative carry swung the bow 6-10 cm into the body over the Sprint,
+  hence the hips-relative IK above;
+- dodges cut a swing as on `main`: not during the strike (the swing is busy), from its recovery when moving;
+- the port does not touch the weapons, grips or dagger poses; its skill-cast / level-up gesture layer runs late
+  in the frame, after the legs pass, and gives its bones back before the mixer.
 
 ### Daggers in a reverse grip (`weapons/weaponGripMath.js`, `weapons/playerWeaponRuntime.js`)
 
@@ -68,23 +90,30 @@ stays 5.0 cm clear on the female body (thigh) and 7.9 cm on the male (torso), li
 
 ## Checks
 
-- `tests/game3d-weapon-montage.test.mjs` (15, both fused bodies): reverse grip in both hands and stances,
+- `tests/game3d-weapon-montage.test.mjs` (17, both fused bodies): reverse grip in both hands and stances,
   thumb on the pommel, blades along the forearms in the guard; the draw reaches the string and holds at full
   draw, the hold / release / quick shot share the full-draw pose, the hold loops seamlessly; the bow clears the
-  body over the whole run while carried (and goes into it with the plain run arm); the underlay's legs, phase
-  and chest; the real controller on a real body: a swing over the walk (legs within 1 degree of the walk, no
-  leg snapping in or out, movement allowed), a standing swing keeps its stance, the bow's draw / hold /
-  release / redraw / early release / multi-shot queue, the running carry and the draw over a run.
+  body over the whole Run and Sprint while carried (and goes into it with the gaits' own arms), the hand riding
+  with the hips; the underlay's legs, phase and chest; the real controller on a real body with the game's clip
+  binding (its gaits, the pack's sprint, the generated dodges): a swing over the walk (legs within 1 degree of
+  the walk, no leg snapping in or out, movement allowed) and over the sprint, a standing swing keeps its
+  stance, a dodge cuts a swing as on main, the bow's draw / hold / release / redraw / early release /
+  multi-shot queue, the running and sprinting carry and the draw over a sprint.
 - Updated: `game3d-weapon-feel` (daggers baked with the reverse grip: hooks, hammer stab, blades down in the
   guard; the bow family's bake list), `game3d-riding-weapons` (reverse-grip daggers).
-- Whole suite (`node --test --test-reporter=tap tests/`): branch 1122 tests, 84 failing; `main` ab603e4 1107
-  tests, 84 failing; the same 84 by name.
+- Whole suite (`node --test --test-reporter=tap tests/`), compared by test name: this branch with the port
+  merged 1141 tests, 84 failing; `main` ab603e4 1107 / 84; the port branch alone 1124 / 84; this branch before
+  the merge 1122 / 84. The same 84 fail on all four.
 - Live on `/gameview` (my own tab, the game's sound muted): a sword click while walking (W held) plays
   `swordCombo1` while the character keeps walking (never blocked), the legs on the walk, blending in and back
   out; a dagger slash the same; the daggers' guard in the reverse grip (close-up render); the bow: holding the
   left button -> `bowDraw` (arrow nocked) -> `bowHold` for as long as it is held; letting go -> `bowRelease`
-  (arrow gone) -> the bow stance; running with the bow -> the carry pose (combat grip), 7.9 cm clear of the
-  body; drawing while running holds the draw over running legs at full speed.
+  (arrow gone) -> the bow stance; running with the bow -> the carry pose (combat grip); drawing while running
+  holds the draw over running legs at full speed.
+- Live after the merge: a sword swing while sprinting (Ctrl+W) plays over the Sprint's legs at sprint speed and
+  the sprint carries on; a double-tap A during the strike does not dodge (the swing finishes), once free it
+  plays `dodgeStepLeft`; sprinting with the bow carries it 12.5 cm clear of the body; drawing while sprinting
+  holds the draw over sprinting legs, letting go shoots.
 
 ## Limits
 
