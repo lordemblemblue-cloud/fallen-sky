@@ -217,11 +217,11 @@ import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/play
 import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
 import { createDoubleTapDetector, dodgeMoveCandidates, pickDodgeMove, screenForwardFacingYaw } from './player/game3dDodgeProfiles.mjs';
 import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
-import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
+import { createSkillUseBurst, createSkillUseBurstLight, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
 import { createMountFlightController } from './character/mountFlight.mjs';
 import WorldEnvironmentHUD from './WorldEnvironmentHUD';
 import { getDetroitWeather } from '@/functions/getDetroitWeather';
-import { createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
+import { createPlayerCastLight, createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
 import { createQuestEnemySpawner } from './questEnemySpawner';
 import { spawnLivingQuestNPC } from './npc/spawnLivingQuestNPC';
 import {loadAXEQuestNPCVisual} from './npc/axeAnimatedQuestNpcGLB.mjs';
@@ -1454,6 +1454,11 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const handleAXEAerialSkillCast = () => {
       playerAnim?.requestJump?.();
     };
+    // A skill cast's beam and burst light the scene through one light each, there from before the first frame until
+    // teardown (vfx/sharedEffectLight.mjs): a light per cast changed the scene's light count, and three.js then
+    // recompiled every lit material in the middle of the fight.
+    const playerCastLight = createPlayerCastLight(scene);
+    const skillUseBurstLight = createSkillUseBurstLight(scene);
     const handlePlayerSkillCastStart = (e) => {
       const duration = e.detail?.duration || 0.45;
       activeEffects.current.push(createPlayerCastLightBeam({
@@ -1462,6 +1467,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         playerRef: modelRef,
         getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
         duration,
+        castLight: playerCastLight,
       }));
       // The skill's own moment: a burst in the weapon family's color and a power-surge gesture layered over
       // whatever strike the cast plays. Presentation only; nothing here changes the cast.
@@ -1469,6 +1475,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       activeEffects.current.push(createSkillUseBurst({
         scene, playerRef: modelRef, getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
         color: skillBurstColor(castSkill?.weapon_type), duration: Math.max(0.5, Math.min(0.9, duration)),
+        burstLight: skillUseBurstLight,
       }));
       momentGestures.play('skillCast', { seconds: Math.max(0.45, Math.min(0.8, duration)) });
     };
@@ -5413,6 +5420,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // The render loop has stopped, so dispose the effects still in flight here rather than leave them
       // (and the cast beam's window listener) holding on to this scene.
       activeEffects.current = disposeActiveEffects(activeEffects.current);
+      playerCastLight.dispose();
+      skillUseBurstLight.dispose();
       heldAOEKeys.clear();
       chargedKeys.clear();
       cancelBowCharge();

@@ -24,8 +24,9 @@ await build({
   stdin: {
     contents: [
       "export * as THREE from 'three';",
-      `export { createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
-      `export { createSkillUseBurst, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
+      `export { createSharedEffectLight } from '${game3d}vfx/sharedEffectLight.mjs';`,
+      `export { createPlayerCastLight, createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
+      `export { createSkillUseBurst, createSkillUseBurstLight, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
       `export { createHealEffect } from '${game3d}HealEffect.jsx';`,
       `export { createBiteEffect } from '${game3d}BiteEffect.jsx';`,
       `export { createLifeDrainEffect } from '${game3d}LifeDrainEffect.jsx';`,
@@ -188,7 +189,7 @@ test('a cancelled cast beam is disposed on the next frame and leaves the cached 
   loader.arrive({ scene: asset });
   await flushMicrotasks();
   const group = scene.getObjectByName('PlayerCastLightBeam');
-  assert.equal(group.children.length, 4, 'ring, core, light and the GLB clone');
+  assert.equal(group.children.length, 3, 'ring, core and the GLB clone (its light sits in the scene, not the group)');
 
   let list = tickActiveEffects([beam], 1 / 60);
   assert.equal(list.length, 1);
@@ -209,12 +210,15 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   scene.add(player);
   const at = (x, z) => () => ({ x, y: 0, z });
   const loader = deferredLoader();
+  // As GameWorld3D sets them up: the cast beam and skill-use burst share lights that exist with the world.
+  const castLight = fx.createPlayerCastLight(scene);
+  const burstLight = fx.createSkillUseBurstLight(scene);
   const effects = {
     'cast light beam': () => fx.createPlayerCastLightBeam({
-      scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45,
+      scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45, castLight,
     }),
     'skill-use burst': () => fx.createSkillUseBurst({
-      scene, playerRef: { current: player }, getGroundY: () => 0, duration: 0.65,
+      scene, playerRef: { current: player }, getGroundY: () => 0, duration: 0.65, burstLight,
     }),
     'level-up celebration': () => fx.createLevelUpCelebration({
       scene, playerRef: { current: player }, getGroundY: () => 0,
@@ -239,10 +243,53 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   // Many casts at once, as in a fight. Live, the scene gained one light per skill cast and kept it.
   const all = [];
   for (let round = 0; round < 3; round++) for (const create of Object.values(effects)) all.push(create());
-  assert.ok(sceneSnapshot(scene).lights >= before.lights + all.length);
+  assert.ok(sceneSnapshot(scene).lights > before.lights, 'companion, spell and level-up effects bring their own lights');
   assert.deepEqual(runOut(all, 1 / 30).list, []);
   assert.deepEqual(sceneSnapshot(scene), before);
+  assert.equal(castLight.light.intensity, 0);
+  assert.equal(burstLight.light.intensity, 0);
   assert.equal(globalThis.window.listenerCount('playerSkillCastCancel'), 0);
+});
+
+test('skill casts light the scene through the shared beam and burst lights, so the light count never changes', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const castLight = fx.createPlayerCastLight(scene); // GameWorld3D creates both before the world's first frame
+  const burstLight = fx.createSkillUseBurstLight(scene);
+  const before = sceneSnapshot(scene);
+  const playerRef = { current: { position: new THREE.Vector3(3, 0, -2) } };
+  const cast = (color) => [
+    fx.createPlayerCastLightBeam({
+      scene, loader: deferredLoader(), playerRef, getGroundY: () => 1, duration: 0.45, castLight,
+    }),
+    fx.createSkillUseBurst({ scene, playerRef, getGroundY: () => 1, color, duration: 0.65, burstLight }),
+  ];
+  // A sword skill and a bow skill overlapping.
+  let list = tickActiveEffects([...cast(0xffb347), ...cast(0x7fe7ff)], 0.06);
+  assert.equal(list.length, 4);
+  assert.equal(sceneSnapshot(scene).lights, before.lights, 'casting adds no light to the scene');
+
+  // Overlapping effects give what their separate lights at the same spot gave: summed intensity, mixed color.
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.ok(close(castLight.light.intensity, 2 * 1.8 * (0.06 / 0.12)), 'two beams fading in add up');
+  assert.ok(castLight.light.position.distanceTo(new THREE.Vector3(3, 1 + 0.04 + 0.7, -2)) < 1e-9);
+  assert.ok(close(burstLight.light.intensity, 2 * 3.2 * (1 - (0.06 / 0.65) ** 2)), 'two bursts add up');
+  assert.ok(burstLight.light.position.distanceTo(new THREE.Vector3(3, 1 + 1.2, -2)) < 1e-9);
+  const mixed = new THREE.Color(0xffb347).add(new THREE.Color(0x7fe7ff)).multiplyScalar(0.5);
+  assert.ok(close(burstLight.light.color.r, mixed.r) && close(burstLight.light.color.g, mixed.g)
+    && close(burstLight.light.color.b, mixed.b), 'equal bursts mix their weapon colors evenly');
+
+  list = runOut(list, 1 / 30).list;
+  assert.deepEqual(list, []);
+  assert.equal(castLight.light.intensity, 0, 'dark once the casts end');
+  assert.equal(burstLight.light.intensity, 0);
+  assert.deepEqual(sceneSnapshot(scene), before, 'both lights stay in the scene for the next cast');
+
+  castLight.dispose();
+  castLight.dispose();
+  burstLight.dispose();
+  assert.equal(sceneSnapshot(scene).lights, before.lights - 2, 'world teardown removes them');
 });
 
 test('a lightning strike keeps one set of materials across bolt rebuilds and disposes every material it showed', async () => {
@@ -279,4 +326,16 @@ test('GameWorld3D ticks its effects through the disposing list and disposes what
   const teardown = world.slice(world.indexOf('rendererGuard.markDisposed();'));
   assert.ok(teardown.includes('cancelAnimationFrame(frameId);'), 'teardown stops the render loop');
   assert.match(teardown, /activeEffects\.current = disposeActiveEffects\(activeEffects\.current\);/);
+
+  // The cast lights exist before the first frame (the setup's closing animate() call), are handed to every beam and
+  // burst, and leave with the world.
+  const firstFrame = world.indexOf('\n    animate();');
+  for (const created of ['const playerCastLight = createPlayerCastLight(scene);',
+    'const skillUseBurstLight = createSkillUseBurstLight(scene);']) {
+    const at = world.indexOf(created);
+    assert.ok(at > 0 && at < firstFrame, `${created} runs before the first frame`);
+  }
+  assert.match(world, /createPlayerCastLightBeam\(\{[^}]*castLight: playerCastLight,/);
+  assert.match(world, /createSkillUseBurst\(\{[\s\S]{0,300}?burstLight: skillUseBurstLight,/);
+  assert.match(teardown, /playerCastLight\.dispose\(\);\s+skillUseBurstLight\.dispose\(\);/);
 });
