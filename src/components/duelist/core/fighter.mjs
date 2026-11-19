@@ -42,6 +42,8 @@ function moveForCommand(f, command) {
     if (command === 'light' && a?.move.chain && a.t >= a.move.chain.from && a.t <= a.move.chain.to) return a.move.chain.next;
     return first;
   }
+  // '#move': a move by its id, for the rules' own callers (guards' AI); never accepted from a client
+  if (command[0] === '#') return moveById(command.slice(1)) ? command.slice(1) : null;
   return POWER_BINDINGS[command] || null;
 }
 

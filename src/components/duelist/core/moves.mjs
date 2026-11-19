@@ -26,6 +26,8 @@ const move = (spec) => Object.freeze({
 
 // Crystal forms: one crystal, four shapes.
 export const WEAPONS = Object.freeze(['sword', 'dualBlades', 'staff', 'bow']);
+// what the smugglers carry (not a crystal form: no Will needed to fire it)
+export const CONTRABAND = Object.freeze(['sidearm']);
 
 export const MOVES = Object.freeze({
   // ---- sword: precise, heavy finishers that punish a weakened defense
@@ -67,6 +69,13 @@ export const MOVES = Object.freeze({
   sniperShot: move({ weapon: 'bow', startup: 1.1, active: 0.04, recovery: 0.4, stamina: 10, damage: 42, range: 90, arc: 2,
     shieldMultiplier: 2, damageKind: 'projectile', cooldown: 1.6, cancelInto: ['movement'], cancelFrom: 1.14 }),
 
+  // ---- crystal-forged sidearm (the smugglers' contraband): its rounds are cut to drain a Veil
+  sidearmShot: move({ weapon: 'sidearm', startup: 0.36, active: 0.04, recovery: 0.3, damage: 6, range: 28, arc: 3, veilMultiplier: 1.35,
+    stagger: 0.1, damageKind: 'projectile', projectileSpeed: 46, cancelInto: ['movement'], cancelFrom: 0.4 }),
+  sidearmBurst: move({ weapon: 'sidearm', startup: 0.55, active: 0.3, recovery: 0.45, damage: 5, hitAt: [0, 0.13, 0.26], range: 28, arc: 3,
+    veilMultiplier: 1.35, stagger: 0.1, cooldown: 2.5, damageKind: 'projectile', projectileSpeed: 46, cancelInto: ['movement'], cancelFrom: 0.85 }),
+  sidearmWhip: move({ weapon: 'sidearm', startup: 0.2, active: 0.08, recovery: 0.3, damage: 6, range: 1.7, arc: 100, knockback: 0.6, stagger: 0.35 }),
+
   // ---- Telekinesis (Will): push, pull, grip; Veil Breach; resist
   push: move({ kind: 'power', startup: 0.12, active: 0.1, recovery: 0.24, will: 16, cooldown: 1.4, damage: 4, range: 9, arc: 70,
     knockback: 4.5, stagger: 0.6, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.3 }),
@@ -95,6 +104,7 @@ export const BINDINGS = Object.freeze({
   dualBlades: Object.freeze({ light: 'bladesLight1', heavy: 'bladesHeavy' }),
   staff: Object.freeze({ light: 'staffLight1', heavy: 'staffHeavy' }),
   bow: Object.freeze({ light: 'bowShot', heavy: 'sniperShot' }),
+  sidearm: Object.freeze({ light: 'sidearmShot', heavy: 'sidearmBurst' }),
 });
 export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash' });
 

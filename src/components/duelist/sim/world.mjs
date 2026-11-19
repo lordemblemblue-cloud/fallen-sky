@@ -1,4 +1,5 @@
-// Duelist Adventure arena simulation: bodies in a circular arena driven by the rules core.
+// Duelist Adventure arena simulation: bodies in a circular arena, or in a mission's rooms (a level: walls,
+// doors and cover, sim/level.mjs), driven by the rules core.
 // Headless and deterministic (the caller passes dt): the match server runs it as the authority, the
 // browser runs it for practice and for prediction. It decides who each landed move reaches; the core
 // decides what happens to them.
@@ -6,6 +7,7 @@ import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
   createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
 } from '../core/index.mjs';
+import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
@@ -16,15 +18,19 @@ export const PROJECTILE_SPEED = Object.freeze({ bowShot: 60, sniperShot: 140 });
 export const PROJECTILE_HEIGHT = 1.35;
 // Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
-const PROJECTILES = new Set(['bowShot', 'sniperShot']);
 const GRAVITY = 18;
 
-export function createWorld({ arenaRadius = 18, friendlyFire = false } = {}) {
-  return { time: 0, arenaRadius, friendlyFire, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1 };
+export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
+  return { time: 0, arenaRadius, friendlyFire, level, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1 };
 }
 
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0 } = {}) {
-  const fighter = createFighter({ id, team, weapon });
+/**
+ * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
+ * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
+ */
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null } = {}) {
+  const fighter = createFighter({ id, team, weapon, vitals });
+  if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
   return fighter;
@@ -113,7 +119,7 @@ export function step(world, dt, inputs = {}) {
   // 4. landed moves reach whoever is in range and arc
   for (const { fighter, body, event } of pending) {
     if (event.type === 'hit') {
-      if (PROJECTILES.has(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
+      if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
       else resolveReach(world, fighter, body, event.id, effects, now);
     } else if (event.type === 'tick') {
       const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
@@ -210,8 +216,20 @@ function moveBody(world, fighter, body, dt, now) {
   body.kx *= decay;
   body.kz *= decay;
   if (Math.hypot(body.kx, body.kz) < 0.05) { body.kx = 0; body.kz = 0; }
-  body.x += vx * dt;
-  body.z += vz * dt;
+  if (world.level) {
+    // in rooms: short steps, so a dash or a hard push never passes through a wall
+    const dx = vx * dt;
+    const dz = vz * dt;
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dz)) / 0.2));
+    for (let i = 0; i < n; i++) {
+      body.x += dx / n;
+      body.z += dz / n;
+      if (resolveCircle(world.level, body, BODY_RADIUS)) { body.kx *= 0.5; body.kz *= 0.5; }
+    }
+  } else {
+    body.x += vx * dt;
+    body.z += vz * dt;
+  }
   body.moving = Math.hypot(vx, vz) > 0.1;
   // falling back down after a throw or a release
   if (body.y > 0 || body.vy > 0) {
@@ -222,8 +240,9 @@ function moveBody(world, fighter, body, dt, now) {
   keepInside(world, body);
 }
 
-// the arena's edge
+// the arena's edge, or the rooms' walls
 function keepInside(world, body) {
+  if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
   const r = Math.hypot(body.x, body.z);
   const limit = world.arenaRadius - BODY_RADIUS;
   if (r > limit) { body.x *= limit / r; body.z *= limit / r; }
@@ -257,6 +276,7 @@ export function targetsInReach(world, attacker, body, move, single) {
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
     if (!insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (world.level && !clearLine(world.level, body, ob)) continue; // nothing reaches through a wall
     found.push({ fighter: other, d });
   }
   found.sort((p, q) => p.d - q.d);
@@ -303,7 +323,7 @@ function spawnProjectile(world, fighter, body, id, effects) {
   const move = moveById(id);
   const dir = forwardOf(body.yaw);
   const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
-    dir, speed: PROJECTILE_SPEED[id] || 60, left: move.range };
+    dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
   world.projectiles.push(p);
   effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir });
 }
@@ -311,8 +331,14 @@ function spawnProjectile(world, fighter, body, id, effects) {
 function stepProjectiles(world, dt, now, effects) {
   for (let i = world.projectiles.length - 1; i >= 0; i--) {
     const p = world.projectiles[i];
-    const travel = Math.min(p.left, p.speed * dt);
+    let travel = Math.min(p.left, p.speed * dt);
     const owner = world.fighters.get(p.owner);
+    // a wall, a crate or a closed door stops it
+    let wall = false;
+    if (world.level) {
+      const toWall = rayDistance(world.level, p, p.dir, travel);
+      if (toWall < travel) { travel = toWall; wall = true; }
+    }
     // the first hostile body along this step's segment
     let hit = null;
     let best = Infinity;
@@ -337,11 +363,17 @@ function stepProjectiles(world, dt, now, effects) {
     p.x += p.dir.x * travel;
     p.z += p.dir.z * travel;
     p.left -= travel;
-    if (p.left <= 1e-6 || Math.hypot(p.x, p.z) > world.arenaRadius) {
+    if (wall || p.left <= 1e-6 || (!world.level && Math.hypot(p.x, p.z) > world.arenaRadius)) {
       effects.push({ type: 'projectileEnd', id: p.id, hit: null });
       world.projectiles.splice(i, 1);
     }
   }
+}
+
+// a move whose hit is a shot that flies (an arrow, a sidearm's bolt)
+function isShot(id) {
+  const move = moveById(id);
+  return move?.damageKind === 'projectile';
 }
 
 export { MOVES };

@@ -80,7 +80,7 @@ export function regenerate(v, dt, now) {
   const willDelay = v.collapsed ? VEIL.collapseRecoverDelay : VITALS.willRegenDelay;
   const since = v.collapsed ? now - v.collapsedAt : now - v.lastWillSpend;
   if (since >= willDelay) {
-    v.will = Math.min(v.max.will, v.will + VITALS.willRegenPerSec * dt);
+    v.will = Math.min(v.max.will, v.will + VITALS.willRegenPerSec * (v.willRegenScale || 1) * dt);
     if (v.collapsed && v.will >= VEIL.collapseRestoreAt) v.collapsed = false; // the Veil re-forms
   }
   if (now - v.lastShieldHit >= VITALS.shieldRegenDelay) v.shield = Math.min(v.max.shield, v.shield + VITALS.shieldRegenPerSec * dt);
