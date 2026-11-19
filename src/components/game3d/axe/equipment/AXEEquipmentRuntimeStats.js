@@ -4,6 +4,7 @@
 // refine, ultimate, sockets/gems, aura and sets) feeds this one calculation.
 
 import { getEquippedAXEItems } from './AXEEquipmentInventoryStore';
+import { getAXETestWeaponTuning, projectAXETestWeaponRecords } from './AXETestWeaponTuner.mjs';
 import { getAXEWeaponLegacyDamageMultiplier, getAXEWeaponLegacyEchoPct } from './AXEWeaponLegacyForge';
 import { getAXESoulRegaliaBonuses } from '../progression/AXESoulRegaliaStore';
 import { getItemEnchantments, getItemOverEnchant, getItemReinforcement } from '../../equipment/enchantmentStore';
@@ -28,15 +29,20 @@ export const AXE_ADVANCEMENT_STAT_CONFIG = Object.freeze({
 });
 
 // An owned item's records, read from the live stores (one place for every screen).
-export function getAXEOwnedItemRecords(item) {
+export function getAXEOwnedItemRecords(item, {includeTestTuning = true} = {}) {
   const itemId = item?.instanceId;
-  return {
+  const records = {
     reinforcement: getItemReinforcement(itemId),
     enchantments: getItemEnchantments(itemId),
     overEnchant: getItemOverEnchant(itemId),
     advancement: getAXEAdvancementState(itemId),
     legacyDamageMultiplier: getAXEWeaponLegacyDamageMultiplier(item),
   };
+  // In the configured test world only: apply in-memory, per-weapon overlays to
+  // the SAME stat breakdown combat and equipment previews already consume.
+  // Never write these simulated records into the upgrade ledger or inventory.
+  const tune = includeTestTuning ? getAXETestWeaponTuning(itemId) : null;
+  return tune ? projectAXETestWeaponRecords(item, records, tune) : records;
 }
 
 // The one per-item stat breakdown (original + Combine + Enchant + Ascend ...), from the live
