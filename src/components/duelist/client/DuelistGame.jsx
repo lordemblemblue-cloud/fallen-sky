@@ -487,7 +487,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           });
           setStatus('ready');
         }
-      } else {
+      } else if (source.status !== 'reconnecting') {
+        // nothing to follow yet (while reconnecting the picture simply holds still)
         const start = source.def?.start || { x: 0, z: 0 };
         follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera });
       }
@@ -549,6 +550,13 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       </button>
       {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]}</div>}
       {waiting && (net.status === 'error' || net.status === 'closed') && <div className="duelist-center">{net.detail || 'Not connected.'}</div>}
+      {waiting && net.status === 'reconnecting' && (
+        <div className="duelist-center duelist-reconnecting">
+          <span>{net.detail || 'Connection lost. Reconnecting…'}</span>
+          <small>{mode !== 'story' ? 'A bot keeps your seat until you are back.'
+            : (mission?.people?.length || 1) > 1 ? 'The autopilot plays your fighter until you are back.' : 'The mission waits for you.'}</small>
+        </div>
+      )}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       <div className="duelist-help">Click to fight · WASD move · Shift sprint · LMB light · E heavy · RMB guard · Space roll · 1 push · 2 pull · 3 grip · 4 breach · Z resist · Tab lock on{mode === 'story' ? ' · F (hold) use' : ''}</div>

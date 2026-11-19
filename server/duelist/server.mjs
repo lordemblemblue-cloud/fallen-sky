@@ -1,9 +1,15 @@
-/* global performance, setInterval, clearInterval */
+/* global performance, setInterval, clearInterval, Buffer */
 // Duelist Adventure's match server: one Node process, many matches, each run by the same rules the browser
 // practises with (src/components/duelist/sim/match.mjs). The server is the authority: it steps every match
 // at 60 Hz, decides every hit, and sends each player 20 snapshots a second. Players only send commands,
 // checked and rate-limited here (a modified client can press buttons faster than the rules allow, never
 // more than the rules allow).
+//
+// A player's inputs are numbered and used one a tick, in the order they were sent (with none waiting, the
+// last one's movement stands; a burst after a stall skips to the newest few, keeping every press). Each
+// snapshot says which input the simulation has reached and, while it is acting on the player's inputs,
+// carries that player's own fighter in full: the browser replays the inputs the server has not reached yet
+// on top of it, so a player's own moves show at once (src/components/duelist/net/predict.mjs).
 //
 // Joining: a mode picks the busiest match of that mode with room (a bot seat to take, or a free seat), or
 // starts one filled with bots; 'any' picks the busiest match of any mode that has players in it (or starts a
@@ -13,14 +19,20 @@
 // The story mission (sim/mission.mjs) runs in crew rooms of up to four: a room of your own with a code to
 // give to friends, a room joined by its code, or any open crew. A crew room is not listed unless it is open.
 // The mission waits while nobody is in the room, and starts again a little after it is completed.
-import { randomInt } from 'node:crypto';
+//
+// A dropped connection does not lose its seat: for RECONNECT_SECONDS a bot plays it (a match) or the
+// mission's autopilot does (a crew; with nobody connected the mission waits), and the player sits back down
+// with the key their 'joined' carried (a fresh key each time; it opens only that player's seat). Pings every
+// few seconds notice a connection that died without closing.
+import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, MODES } from '../../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES } from '../../src/components/duelist/sim/match.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView } from '../../src/components/duelist/sim/mission.mjs';
+import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, BODY_IDS, sanitizeInput, encodeFighter } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -33,8 +45,9 @@ const MISSION = 'contraband';
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O
 const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing crew codes is slowed down
 
+// reconnectSeconds: how long a dropped seat waits (server clock); heartbeatMs: how often connections are pinged
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
-  clock = () => performance.now() / 1000, log = () => {} } = {}) {
+  clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000 } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -63,6 +76,12 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   });
 
   const send = (client, message) => { if (client.ws.readyState === WebSocket.OPEN) client.ws.send(JSON.stringify(message)); };
+  const newKey = () => randomBytes(18).toString('base64url');
+  const sameKey = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const worldOf = (room) => (room.mission || room.match).world;
+  const awayIn = (room) => [...room.clients.values()].filter((c) => c.away).map((c) => c.id);
+  const connected = (room) => [...room.clients.values()].some((c) => !c.away);
+  const isAway = (room, id) => room.clients.get(id)?.away || undefined;
   const byPlayers = (a, b) => humansIn(b) - humansIn(a) || a.id.localeCompare(b.id, undefined, { numeric: true });
   const humansIn = (room) => (room.mission ? room.mission.seats.size : [...room.match.seats.values()].filter((s) => s.kind === 'player').length);
   const hasRoom = (room) => (room.mission
@@ -89,7 +108,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   };
   const seatsOf = (room) => (room.mission
     ? [
-      ...[...room.mission.seats.values()].map((s) => ({ id: s.id, name: s.name, team: 'crew', kind: 'player', body: room.bodies.get(s.id) || BODY_IDS[0] })),
+      ...[...room.mission.seats.values()].map((s) => ({ id: s.id, name: s.name, team: 'crew', kind: 'player', body: room.bodies.get(s.id) || BODY_IDS[0], away: isAway(room, s.id) })),
       // max: the person's full health, Will, stamina and armor (the depot's people are not built like duelists)
       ...shownEnemies(room).map((e) => {
         const { max } = room.mission.world.fighters.get(e.id).vitals;
@@ -97,7 +116,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
           max: [max.hp, max.will, max.stamina, max.shield], body: e.type.kind === 'duelist' ? teacherBody(room, e.id) : undefined };
       }),
     ]
-    : [...room.match.seats.values()].map((s) => ({ id: s.id, name: s.name, team: s.team, kind: s.kind, body: room.bodies.get(s.id) || BODY_IDS[0] })));
+    : [...room.match.seats.values()].map((s) => ({ id: s.id, name: s.name, team: s.team, kind: s.kind, body: room.bodies.get(s.id) || BODY_IDS[0], away: isAway(room, s.id) })));
   const seatKey = (room) => [...room.mission.seats.keys(), '|', ...shownEnemies(room).map((e) => e.id)].join(',');
   // live matches and open crews, busiest first: mode, players, bots, seats, phase (no names or ids beyond the room's)
   const lobby = () => [...rooms.values()].filter((r) => !r.mission || r.open)
@@ -155,14 +174,17 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     for (const s of room.match.seats.values()) if (!room.bodies.has(s.id)) room.bodies.set(s.id, BODY_IDS[room.bodies.size % BODY_IDS.length]);
     room.clients.set(client.id, client);
     client.room = room;
+    client.input = {};
+    client.waiting = [];
     client.lastInputAt = clock();
-    send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room) });
+    client.key = newKey();
+    send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key });
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
     log('join', client.id, room.id, result.replaced ? `replacing ${result.replaced}` : '');
   }
 
   const crewJoined = (room, client, extra = {}) => ({ t: 'joined', match: room.id, mode: STORY_MODE, mission: room.mission.id, code: room.code, you: client.id, team: 'crew',
-    seats: seatsOf(room), ...extra });
+    seats: seatsOf(room), key: client.key, ...extra });
 
   // code: a friend's crew; create: a room of your own (not listed); neither: any open crew, or a new open one
   function enterCrew(client, { code = null, create = false } = {}) {
@@ -187,7 +209,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.bodies.set(client.id, client.body);
     room.clients.set(client.id, client);
     client.room = room;
+    client.input = {};
+    client.waiting = [];
     client.lastInputAt = now;
+    client.key = newKey();
     send(client, crewJoined(room, client));
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
     room.seatKey = seatKey(room);
@@ -223,7 +248,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       const result = joinMatch(room.match, { id: client.id, name: client.name });
       room.bodies.set(client.id, client.body);
       if (result.replaced) room.bodies.delete(result.replaced);
-      send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), rematch: true });
+      send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key, rematch: true });
     }
   }
 
@@ -241,6 +266,74 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.fullNext = true;
   }
 
+  // something everyone in the room should hear about (a drop, a return): with the next snapshot, and in a match's feed
+  const note = (room, e) => {
+    room.events.push({ ...e, at: worldOf(room).time });
+    if (room.match) noteEvent(room.match, e);
+  };
+  const tellSeats = (room, except = null) => {
+    const seats = seatsOf(room);
+    for (const other of room.clients.values()) if (other !== except) send(other, { t: 'seats', seats });
+  };
+
+  // The connection dropped without leaving: the seat waits for its player.
+  function goAway(client) {
+    const room = client.room;
+    Object.assign(client, { away: true, awaySince: clock(), input: {}, waiting: [], extra: ['blockUp', 'release'], pilot: null });
+    note(room, { type: 'away', id: client.id, name: client.name });
+    tellSeats(room, client);
+    log('away', client.id, room.id);
+  }
+
+  // A dropped player's seat is played meanwhile: by a bot in a match, by the mission's autopilot in a crew.
+  function standIn(room, client) {
+    if (room.match) return standInInput(room.match, client.id);
+    if (!client.pilot) client.pilot = createAutopilot(client.id, { seed: 7 });
+    return thinkAutopilot(room.mission, client.pilot);
+  }
+
+  // The seat a 'hello' asks to come back to: its room and key must match, and it must be this account's (a
+  // guest only ever gets a guest's seat back).
+  function seatFor(user, resume) {
+    if (!resume || typeof resume !== 'object' || typeof resume.match !== 'string' || typeof resume.key !== 'string' || resume.key.length > 64) return null;
+    const room = rooms.get(resume.match);
+    if (!room) return null;
+    const old = [...room.clients.values()].find((c) => sameKey(c.key, resume.key));
+    if (!old) return null;
+    return (user.guest ? old.guest : !old.guest && old.id === String(user.id)) ? old : null;
+  }
+
+  // A new connection sits down in the seat an older one held (dropped, or still open after a reload).
+  function takeOver(client, old) {
+    const room = old.room;
+    Object.assign(client, { id: old.id, name: old.name, body: old.body, guest: old.guest, room, key: newKey(), away: false, input: {}, waiting: [],
+      extra: ['blockUp', 'release'], lastSeq: -1, usedSeq: -1, lastInputAt: clock(), wrongCodes: old.wrongCodes });
+    room.clients.set(client.id, client);
+    old.room = null;
+    old.replaced = true;
+    clients.delete(old);
+    if (old.ws.readyState === WebSocket.OPEN) old.ws.close(4410, 'continued elsewhere');
+    note(room, { type: 'back', id: client.id, name: client.name });
+    if (room.mission) room.fullNext = true; // the returning player sees everyone in full
+    tellSeats(room, client);
+    log('back', client.id, room.id);
+  }
+
+  // what a returning player is told: the room as it is now
+  const rejoined = (client) => {
+    const room = client.room;
+    if (room.mission) return crewJoined(room, client, { resumed: true });
+    return { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: room.match.seats.get(client.id)?.team || null, seats: seatsOf(room),
+      key: client.key, resumed: true };
+  };
+
+  // A player's own fighter in full, for prediction: only while the rules act on that player's inputs (the
+  // fight is on and the fighter stands), and only ever to that player.
+  const ownOf = (world, client, live) => {
+    const f = live ? world.fighters.get(client.id) : null;
+    return f && !f.vitals.dead ? encodeOwn(f, world.bodies.get(client.id), world.time) : undefined;
+  };
+
   function snapshot(room) {
     room.snaps += 1;
     const full = !!room.fullNext || room.snaps % FULL_EVERY === 0;
@@ -253,6 +346,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     const events = room.events;
     room.effects = [];
     room.events = [];
+    const away = awayIn(room);
     if (room.mission) {
       const { mission } = room;
       // The crew and whoever of the depot's people is still part of the picture; each fighter is encoded once.
@@ -269,21 +363,23 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       const uses = [...mission.interactables.values()].filter((it) => it.by).map((it) => [it.id, it.by, Math.round(Math.min(1, it.progress / it.seconds) * 100) / 100]);
       const againIn = room.overAt === null ? null : Math.max(0, Math.ceil(MISSION_AGAIN_AFTER - (clock() - room.overAt)));
       for (const client of room.clients.values()) {
+        if (client.away) continue;
         const fighters = [];
         for (const [id, data] of encoded) fighters.push(id === client.id ? encodeFighter(world.fighters.get(id), world.bodies.get(id), { own: true }) : data);
-        send(client, { t: 'snap', time, ack: client.lastSeq, fighters, idle: idle.length ? idle : undefined, projectiles, flags: null, effects, events,
-          uses: uses.length ? uses : undefined,
-          view: withView ? { ...missionView(mission, client.id), room: { code: room.code, open: room.open }, againIn } : undefined });
+        send(client, { t: 'snap', time, ack: client.usedSeq, fighters, idle: idle.length ? idle : undefined, projectiles, flags: null, effects, events,
+          own: ownOf(world, client, mission.phase === 'live'), uses: uses.length ? uses : undefined,
+          view: withView ? { ...missionView(mission, client.id), room: { code: room.code, open: room.open }, againIn, away } : undefined });
       }
       return;
     }
     const { match } = room;
     const flags = match.flags ? Object.fromEntries(Object.entries(match.flags).map(([t, f]) => [t, { state: f.state, carrier: f.carrier, x: f.x, z: f.z }])) : null;
     for (const client of room.clients.values()) {
+      if (client.away) continue;
       const fighters = [];
       for (const f of world.fighters.values()) fighters.push(encodeFighter(f, world.bodies.get(f.id), { own: f.id === client.id }));
-      send(client, { t: 'snap', time, ack: client.lastSeq, fighters, projectiles, flags, effects, events,
-        view: withView ? matchView(match, client.id) : undefined });
+      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, effects, events, own: ownOf(world, client, match.phase === 'live'),
+        view: withView ? { ...matchView(match, client.id), away } : undefined });
     }
   }
 
@@ -297,10 +393,24 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     while (carry >= STEP) {
       carry -= STEP;
       for (const room of rooms.values()) {
-        if (room.mission && !room.clients.size) continue; // nobody here: the mission waits
+        if (room.mission && !connected(room)) continue; // nobody here (or everyone dropped): the mission waits
         const inputs = {};
         for (const client of room.clients.values()) {
-          inputs[client.id] = { ...client.input, presses: client.presses.splice(0) };
+          let input;
+          if (client.away) input = standIn(room, client); // dropped: played meanwhile
+          else {
+            // one waiting input a tick, in order; with none waiting, the last one's movement stands
+            const next = client.waiting.shift();
+            if (next) {
+              const { seq, presses, ...held } = next;
+              client.input = held;
+              client.usedSeq = seq;
+              input = { ...held, presses };
+            } else input = { ...client.input, presses: [] };
+          }
+          // on dropping and on coming back: let go of a raised guard or a held grip
+          if (client.extra.length) input = { ...input, presses: [...client.extra.splice(0), ...(input.presses || [])] };
+          inputs[client.id] = input;
         }
         const { effects, events } = room.mission ? stepMission(room.mission, STEP, inputs) : stepMatch(room.match, STEP, inputs);
         if (effects.length) room.effects.push(...effects);
@@ -328,35 +438,66 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && room.clients.size) rematch(room);
       }
     }
+    // a dropped player who has not come back in time: the seat goes back to a bot (a match) or leaves the crew
+    for (const room of rooms.values()) {
+      for (const client of [...room.clients.values()]) if (client.away && now - client.awaySince > reconnectSeconds) { log('gone', client.id, room.id); leave(client); }
+    }
     for (const [id, room] of rooms) if (!room.clients.size && now - room.emptySince > IDLE_ROOM_SECONDS) { rooms.delete(id); log('room closed', id); }
     for (const client of clients) if (client.room && now - client.lastInputAt > IDLE_PLAYER_SECONDS) { leave(client); send(client, { t: 'error', code: 'idle', message: 'Left the match after a long time without input.' }); }
   }, 4);
 
+  // A connection that died without closing (a dropped network) answers no pings: it is cut, and its seat waits.
+  const heartbeat = setInterval(() => {
+    for (const client of clients) {
+      if (client.ws.readyState !== WebSocket.OPEN) continue;
+      if (client.pinged) { client.ws.terminate(); continue; }
+      client.pinged = true;
+      try { client.ws.ping(); } catch { /* closing */ }
+    }
+  }, heartbeatMs);
+
   wss.on('connection', (ws) => {
-    const client = { ws, id: null, name: 'Duelist', body: BODY_IDS[0], room: null, input: {}, presses: [], lastSeq: -1, lastInputAt: clock(),
-      limiter: createInputRateLimiter(), budget: { since: clock(), count: 0 }, wrongCodes: { count: 0, until: 0 }, signingIn: false };
+    // waiting: inputs not yet used; lastSeq: the newest received; usedSeq: the newest the simulation used; accepted: presses let through
+    // key: comes back to the seat; away: the connection dropped (the seat waits); extra: presses for the next step
+    const client = { ws, id: null, name: 'Duelist', body: BODY_IDS[0], room: null, input: {}, waiting: [], lastSeq: -1, usedSeq: -1, accepted: 0, lastInputAt: clock(),
+      limiter: createInputRateLimiter(), budget: { since: clock(), count: 0 }, wrongCodes: { count: 0, until: 0 }, signingIn: false,
+      key: null, guest: false, away: false, awaySince: 0, extra: [], pilot: null, pinged: false, replaced: false };
     clients.add(client);
+    ws.on('pong', () => { client.pinged = false; });
     ws.on('message', async (data) => {
       const now = clock();
+      client.pinged = false;
       if (now - client.budget.since >= 1) { client.budget.since = now; client.budget.count = 0; }
       client.budget.count += 1;
-      if (client.budget.count > ABUSE_MESSAGES_PER_SECOND) { ws.close(4429, 'too many messages'); return; }
+      if (client.budget.count > ABUSE_MESSAGES_PER_SECOND) { leave(client); ws.close(4429, 'too many messages'); return; }
       if (client.budget.count > MAX_MESSAGES_PER_SECOND) return; // over budget: ignored, not punished
       let msg;
       try { msg = JSON.parse(String(data)); } catch { return; }
       if (!msg || typeof msg.t !== 'string') return;
       if (msg.t === 'hello') {
         if (client.id || client.signingIn) return;
+        // a page loaded before the game was updated speaks an older protocol
+        if (msg.v !== PROTOCOL) { send(client, { t: 'error', code: 'version', message: 'The game was updated. Reload the page.' }); ws.close(4426, 'version'); return; }
         client.signingIn = true;
         let user = null;
         try { user = await authenticate(typeof msg.token === 'string' ? msg.token : '', msg); } catch { user = null; }
         if (!user?.id) { send(client, { t: 'error', code: 'auth', message: 'Sign in to play online.' }); ws.close(4401, 'not signed in'); return; }
-        // one connection per account: an older one is closed
+        // back after a drop or a reload: the seat the key opens, if it is this player's
+        const old = seatFor(user, msg.resume);
+        if (old) {
+          takeOver(client, old);
+          send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, resumed: true });
+          send(client, rejoined(client));
+          return;
+        }
+        // one connection per account: an older one is closed, and a seat it left waiting is given up
         for (const other of clients) if (other !== client && other.id === String(user.id)) { leave(other); other.ws.close(4409, 'signed in elsewhere'); }
+        for (const room of rooms.values()) { const waiting = room.clients.get(String(user.id)); if (waiting?.away) leave(waiting); }
         client.id = String(user.id);
+        client.guest = !!user.guest;
         client.name = String(user.name || msg.name || 'Duelist').replace(/[^\p{L}\p{N} _.-]/gu, '').slice(0, 20) || 'Duelist';
         client.body = BODY_IDS.includes(msg.body) ? msg.body : BODY_IDS[0];
-        send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL });
+        send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, resumed: false });
         return;
       }
       if (!client.id) return;
@@ -379,15 +520,23 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (!input || input.seq <= client.lastSeq) return;
         client.lastSeq = input.seq;
         client.lastInputAt = now;
-        client.input = { move: input.move, run: input.run, sprint: input.sprint, face: input.face, strafe: input.strafe, interact: input.interact };
-        for (const command of input.presses) {
-          // presses beyond the input budget are dropped (guard and release always pass: they only let go)
-          if (command === 'blockUp' || command === 'release' || client.limiter.allow(now)) client.presses.push(command);
+        // presses beyond the input budget are dropped (guard and release always pass: they only let go)
+        const presses = input.presses.filter((command) => command === 'blockUp' || command === 'release' || client.limiter.allow(now));
+        client.accepted += presses.length;
+        client.waiting.push({ seq: input.seq, move: input.move, run: input.run, sprint: input.sprint, face: input.face, strafe: input.strafe, interact: input.interact, presses });
+        // a burst after a stall: skip to the newest few (every press kept), so the fighter does not run long behind its player
+        if (client.waiting.length > MAX_WAITING_INPUTS) {
+          const skipped = client.waiting.splice(0, client.waiting.length - KEPT_WAITING_INPUTS);
+          client.waiting[0].presses = [...skipped.flatMap((s) => s.presses), ...client.waiting[0].presses].slice(-16);
         }
-        if (client.presses.length > 16) client.presses.splice(0, client.presses.length - 16);
       }
     });
-    ws.on('close', () => { leave(client); clients.delete(client); });
+    ws.on('close', () => {
+      clients.delete(client);
+      // it left on purpose, or a newer connection took its seat; otherwise the seat waits for its player
+      if (client.replaced || !client.room) return;
+      goAway(client);
+    });
     ws.on('error', () => {});
   });
 
@@ -396,6 +545,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     listen() { return new Promise((resolve) => http.listen(port, host, () => resolve(http.address()))); },
     async close() {
       clearInterval(timer);
+      clearInterval(heartbeat);
       for (const client of clients) client.ws.terminate();
       await new Promise((resolve) => wss.close(() => resolve()));
       await new Promise((resolve) => http.close(() => resolve()));

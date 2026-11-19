@@ -68,6 +68,9 @@
 .duelist-countdown-small { font-size: 26px; }
 .duelist-countdown-fight { color: #9fe8ff; letter-spacing: 0.08em; }
 .duelist-respawn { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); font-size: 20px; color: #ffcf8a; pointer-events: none; }
+.duelist-reconnecting { background: rgba(5, 9, 16, 0.55); gap: 8px; }
+.duelist-reconnecting span { font-size: 18px; color: #ffe1a6; animation: duelist-flicker 1.2s steps(2) infinite; }
+.duelist-reconnecting small { font-size: 12px; color: rgba(220, 235, 255, 0.7); }
 .duelist-feed { position: absolute; right: 16px; top: 128px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-size: 12px; color: rgba(230, 240, 255, 0.85); pointer-events: none; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
 .duelist-result-sub { font-size: 15px; color: #cfe6ff; }
 .duelist-board { border-collapse: collapse; font-size: 13px; min-width: 260px; background: rgba(8, 16, 28, 0.7); border-radius: 10px; overflow: hidden; }

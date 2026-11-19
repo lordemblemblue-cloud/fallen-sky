@@ -165,6 +165,21 @@ export function leaveMatch(match, id) {
   return true;
 }
 
+/**
+ * A player whose connection dropped keeps the seat for a while (the match server waits for them to come
+ * back); meanwhile a bot plays it. This step's input for that seat.
+ */
+export function standInInput(match, id) {
+  const s = match.seats.get(id);
+  const f = match.world.fighters.get(id);
+  if (!s || s.kind !== 'player' || !f || f.vitals.dead || match.phase !== 'live') return {};
+  if (!s.standIn) s.standIn = createBot(id, { level: match.botLevel, seed: match.seed * 977 + match.order.indexOf(id) * 31 + 5 });
+  return think(match.world, s.standIn, { goal: goalFor(match, s) });
+}
+
+/** A line in the match's feed from outside the rules (the server: a player lost their connection, or is back). */
+export const noteEvent = (match, e) => event(match, e);
+
 function protect(match, id) {
   const f = match.world.fighters.get(id);
   if (f && match.def.protect) f.protectedUntil = match.world.time + match.def.protect;

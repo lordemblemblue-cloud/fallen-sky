@@ -86,6 +86,8 @@ function feedLine(view, e) {
     case 'roundOver': return e.winner ? `Round ${e.round}: ${n(e.winner)}` : `Round ${e.round} drawn`;
     case 'joined': return `${e.name} joined`;
     case 'left': return `${e.name} left`;
+    case 'away': return `${e.id === meOf(view) ? 'You' : e.name} lost connection`;
+    case 'back': return `${e.id === meOf(view) ? 'You are' : `${e.name} is`} back`;
     default: return null;
   }
 }

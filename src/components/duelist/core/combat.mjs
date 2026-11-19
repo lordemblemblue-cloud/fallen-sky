@@ -77,7 +77,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   }
   if (result.collapsed) effects.push({ type: 'veilCollapse', defender: defender.id });
   if (result.killed) effects.push({ type: 'defeat', defender: defender.id, by: attacker.id });
-  effects.push({ type: 'impact', outcome: result.outcome, move: moveId, defender: defender.id, veil: result.veil,
+  effects.push({ type: 'impact', outcome: result.outcome, move: moveId, attacker: attacker.id, defender: defender.id, veil: result.veil,
     shield: result.shieldDamage, will: result.willSpent, hp: result.hpDamage });
   return { result, effects };
 }
