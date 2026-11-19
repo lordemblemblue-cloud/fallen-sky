@@ -74,7 +74,7 @@ export default function DuelistOnlineBrowser({ onBack, onJoin }) {
                     <div><Users size={14} className="mr-1 inline text-cyan-200" aria-hidden="true" /> {match.players}/{match.seats} players</div>
                     <div>{match.bots} {match.bots === 1 ? 'bot' : 'bots'}</div>
                   </div>
-                  <button type="button" disabled={!available} onClick={() => onJoin(match.mode)}
+                  <button type="button" disabled={!available} onClick={() => onJoin(match.mode, match.id)}
                     className="inline-flex min-w-28 items-center justify-center gap-2 rounded-lg border border-amber-200/50 bg-amber-200/15 px-4 py-2.5 text-sm font-semibold text-amber-100 transition hover:bg-amber-200/25 disabled:cursor-not-allowed disabled:opacity-35">
                     {available ? 'Join Server' : 'Unavailable'} <ChevronRight size={15} aria-hidden="true" />
                   </button>
