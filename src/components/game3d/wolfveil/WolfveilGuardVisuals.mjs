@@ -7,7 +7,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 export const WOLFVEIL_GUARD_MODELS = Object.freeze({
   blue: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/18d7c6281_falling_sky_guard_blue_optimized.glb',
-  warden: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/05ea26777_falling_sky_guard_warden_light.glb',
+  warden: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/b06321b8e_falling_sky_guard_warden_game.glb',
 });
 
 const loader = new GLTFLoader();
