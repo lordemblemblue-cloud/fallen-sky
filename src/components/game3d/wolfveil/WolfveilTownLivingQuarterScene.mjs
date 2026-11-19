@@ -7,6 +7,8 @@ import {makeTownDialogueBrain,makeTownSentence,townConversationResult}
   from './WolfveilTownDialogueBrain.mjs';
 import {planWolfveilTownCivilians,findTownWalkPath,advanceTownCitizen}
   from './WolfveilTownCivicAI.mjs';
+import {WOLFVEIL_CIVIC_TASKS,prepareWolfveilCivicSources,
+  createWolfveilCivicTaskRuntime} from './WolfveilTownCivicTasks.mjs';
 
 // Clone-only: light procedural architecture + decorative NPC presentation.
 // Not an extra terrain plate, not a new combat opponent, and never a client
@@ -313,6 +315,37 @@ export function buildWolfveilTownLivingQuarter(parent,{
        p[0],p[1]);
    }
  }
+ // Retrieval sources are actual visible world objects on the already
+ // navigable town floor. If a giver did not spawn, her source cannot exist.
+ const civicSources=prepareWolfveilCivicSources(npcCollision,
+   WOLFVEIL_CIVIC_TASKS.filter(task=>agents.some(a=>a.id===task.npcId)));
+ const civicTasks=createWolfveilCivicTaskRuntime(civicSources);
+ const questProps=[];
+ for(const source of civicSources){
+   const group=new THREE.Group();
+   group.name='TownQuestSource_'+source.sourceId;
+   group.userData={sourceId:source.sourceId,taskId:source.id,
+     clientObjectiveOnly:true,noItemGrant:true};
+   const satchel=source.itemId==='civic_dispatch_scroll';
+   const base=new THREE.Mesh(new THREE.BoxGeometry(.60,.3,.47),
+     satchel?materials.timber:materials.resident);
+   base.position.y=.22;group.add(base);
+   if(!satchel){
+     for(const dx of [-.19,0,.19]){
+       const plant=new THREE.Mesh(new THREE.ConeGeometry(.13,.48,5),
+         materials.resident);
+       plant.position.set(dx,.52,.01);
+       plant.rotation.z=dx*1.4;group.add(plant);
+     }
+   }
+   const label=newSprite('E · '+source.sourceLabel,[2.7,.58],
+     {fontSize:24,background:'#10251fdc',color:'#d7fbc6'});
+   if(label.sprite){label.sprite.position.y=1.35;group.add(label.sprite);}
+   group.position.set(source.x,source.y,source.z);
+   group.visible=false;
+   root.add(group);
+   questProps.push({group,label,source});
+ }
  const placed=layout.accepted.length;
  const report={plannedHouses:CLONE_TOWN_HOUSES.length,houses:placed,
    architectureBatched,
@@ -322,6 +355,8 @@ export function buildWolfveilTownLivingQuarter(parent,{
    vendors:agents.filter(a=>a.mode==='vendor').length,
    residents:agents.filter(a=>a.mode==='resident').length,
    navigation:'collision-swept-astar',
+   placedQuestSources:civicSources.length,
+   questRewardAuthority:'server-only-not-connected',
    rejected:layout.rejected};
  root.userData.cloneTownQuarter=report;onStatus?.(report);
  let now=0,disposed=false;
@@ -341,12 +376,22 @@ export function buildWolfveilTownLivingQuarter(parent,{
   const friend=agents.find(v=>v!==a&&v.side===a.side&&
     Math.hypot(v.x-a.x,v.z-a.z)<6);
   const result=townConversationResult(a,a.rand,{friend});
+  const civic=civicTasks.talk(a.id);
   a.timer=4+a.rand()*5;
-  return result;
+  return civic
+    ?{...result,...civic,questNpcId:null,questOffer:false}
+    :result;
  }
  function update(delta,playerPosition){
   if(disposed)return;
   const dt=Math.max(0,Math.min(Number(delta)||0,.08));now+=dt;
+  const civicState=civicTasks.snapshot();
+  for(const prop of questProps){
+    const active=civicState[prop.source.id]==='accepted';
+    prop.group.visible=Boolean(active&&playerPosition&&
+      Math.hypot(playerPosition.x-prop.source.x,
+        playerPosition.z-prop.source.z)<42);
+  }
   for(const a of agents){
    const oldX=a.x,oldZ=a.z;
    a.pairedTalkLeft=Math.max(0,(a.pairedTalkLeft||0)-dt);
@@ -427,6 +472,7 @@ export function buildWolfveilTownLivingQuarter(parent,{
   if(disposed)return;disposed=true;
   parent.remove(root);
   for(const a of agents)a.speech.dispose();
+  for(const p of questProps)p.label.dispose();
   root.traverse(node=>{
    if(node.userData?.signDispose)node.userData.signDispose();
    if(node.isMesh)node.geometry.dispose();
@@ -438,6 +484,9 @@ export function buildWolfveilTownLivingQuarter(parent,{
   root,report,get houses(){return [...layout.accepted];},
   get agents(){return agents.map(a=>({id:a.id,name:a.name,x:a.x,z:a.z,role:a.role}));},
   update,nearestResident,interact,
+  nearestCivicQuestSource:player=>civicTasks.nearestAvailableSource(player),
+  collectCivicQuestSource:player=>civicTasks.pickup(player),
+  get civicQuestSnapshot(){return civicTasks.snapshot();},
   isSolid(x,z){return houseBlocked(layout.accepted,x,z,.52);},
   resolveCollision(position,previous,radius=.55){
     return slideAgainstHouses(layout.accepted,position,previous,Math.max(.3,radius));
