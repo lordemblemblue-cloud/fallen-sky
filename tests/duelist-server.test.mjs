@@ -81,11 +81,11 @@ test('a page loaded before an update (an older protocol) is told to reload', asy
 test('players join (taking bots\' seats), Join finds the match with players, the server moves a player by its input', async () => {
   const { server, url } = await start();
   const a = await player(url, 'ann');
-  a.send({ t: 'join', mode: 'ffa' });
+  a.send({ t: 'join', mode: 'football' });
   const joined = await a.next((m) => m.t === 'joined');
-  assert.equal(joined.mode, 'ffa');
+  assert.equal(joined.mode, 'football');
   assert.ok(joined.replaced, 'took a bot\'s seat');
-  assert.equal(joined.seats.length, 6);
+  assert.equal(joined.seats.length, 8);
   assert.equal(joined.seats.find((s) => s.id === 'ann').body, 'huntress');
   // the second player presses Join (any mode): the match that has a player in it
   const b = await player(url, 'ben', 'maskedWarrior');
@@ -150,7 +150,7 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
   const starters = (await (await fetch(http)).json()).matches;
-  assert.deepEqual(starters.map(m => m.mode).sort(), ['ctf', 'duel', 'ffa', 'tdm']);
+  assert.deepEqual(starters.map(m => m.mode).sort(), ['ctf', 'duel', 'football', 'tdm']);
   for (const room of starters) {
     assert.equal(room.publicRoom, true, 'every mode gets a permanent official server');
     assert.equal(room.players, 0);
@@ -289,7 +289,7 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   c.send({ t: 'join', mode: 'any' });
   const joinedC = await c.next((m) => m.t === 'joined');
   assert.notEqual(joinedC.match, joined.match);
-  assert.equal(joinedC.mode, 'ffa', 'the Join button looks for a match, not a mission');
+  assert.equal(joinedC.mode, 'duel', 'the Join button looks for a match, not a mission');
   for (const p of [a, b, c]) p.ws.close();
   await server.close();
 });
