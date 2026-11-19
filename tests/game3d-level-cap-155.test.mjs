@@ -7,7 +7,9 @@ import {
 } from '../base44/shared/axePowerBudget.ts';
 import { XP_TABLE, xpForLevel, totalXPToReach, bankXPAboveCapRaise } from '../src/components/game3d/progression/heroLevelCurve.mjs';
 import { checkCharacterSave } from '../base44/shared/characterSaveRules.ts';
-import { weaponSkillPointsEarned, WEAPON_SKILL_CAP } from '../base44/shared/weaponSkillPoints.mjs';
+import {
+  weaponSkillPointsEarned, WEAPON_SKILL_CAP, WEAPON_SKILL_POINTS_KEY, WEAPON_SKILL_TIERS, blankWeaponSkillPoints,
+} from '../base44/shared/weaponSkillPoints.mjs';
 import { deriveCharacterLevel, MAX_CHARACTER_LEVEL } from '../server/game3d/progressionLevelPolicy.mjs';
 import { deriveGame3DBaseStats } from '../server/game3d/combatStatsPreview.mjs';
 import { createGame3DPrivateAXEPveResolvers143 } from '../server/game3d/privateAXEPveResolver143.mjs';
@@ -165,10 +167,21 @@ test('the Character Vault accepts levels to 155 and the attribute points they ea
   assert.deepEqual(checkCharacterSave(heroSave({ level: 100, baseStats: attrs(0), xpBankedAtOldCap: -1 })).errors, ['banked xp must be a number of 0 or more']);
 });
 
-test('weapon skill points still stop at level 100 (owner question)', () => {
-  assert.equal(WEAPON_SKILL_CAP, 100);
-  assert.equal(weaponSkillPointsEarned(100), 502);
-  assert.equal(weaponSkillPointsEarned(155), 502);
+test('weapon skill points carry on to 155: all three paths by 113 (owner, 2026-11-19)', () => {
+  assert.equal(WEAPON_SKILL_CAP, AXE_LEVEL_CAP);
+  assert.equal(weaponSkillPointsEarned(100), 502, 'levels 1-100 unchanged');
+  assert.equal(weaponSkillPointsEarned(112), 598);
+  assert.equal(weaponSkillPointsEarned(113), 606);
+  assert.equal(weaponSkillPointsEarned(120), 663);
+  assert.equal(weaponSkillPointsEarned(140), 844);
+  assert.equal(weaponSkillPointsEarned(155), 994);
+  // the Vault: three full paths (600 points) need level 113
+  const full = blankWeaponSkillPoints();
+  for (const id of Object.keys(full.nodes)) full.nodes[id] = [...WEAPON_SKILL_TIERS];
+  const withPaths = (level) => ({ ...heroSave({ level, baseStats: attrs(0) }), [WEAPON_SKILL_POINTS_KEY]: JSON.stringify(full) });
+  assert.equal(checkCharacterSave(withPaths(113)).ok, true);
+  assert.equal(checkCharacterSave(withPaths(155)).ok, true);
+  assert.deepEqual(checkCharacterSave(withPaths(112)).errors, ['weapon skill points spent exceed level 112 entitlement']);
 });
 
 test('the private server previews follow the same cap', () => {
