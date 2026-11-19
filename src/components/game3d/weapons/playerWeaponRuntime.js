@@ -8,14 +8,16 @@
 // Presentation only: no damage, hit, cooldown or network state lives here.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { palmFromKnuckles, palmFromHandAxis, solveGrip, solveFist } from './weaponGripMath.js';
-import { WEAPON_COMBO_STATE_NAMES, WEAPON_IDLE_STATES } from './weaponComboClips.js';
+import {
+  palmFromKnuckles, palmFromHandAxis, solveGrip, solveFist, solveThumbCap, gripPoint, weaponBasis, DAGGER_POMMEL_DEPTH,
+} from './weaponGripMath.js';
+import { WEAPON_COMBO_STATE_NAMES, WEAPON_IDLE_STATES, BOW_POSE_STATES } from './weaponComboClips.js';
 
 export const WEAPON_MANIFEST_URL = '/game3d/weapons/manifest.json';
 export const COMBAT_STATES = new Set(['drawArrow', 'meleeAttack', 'meleeCombo2', 'meleeCombo3', 'heavyAttack',
   'aimWalkForward', 'aimWalkBackward', 'aimWalkLeft', 'aimWalkRight', 'bowDraw',
   'aimRecoil', 'aimOverdraw', 'punch', 'kick', 'block', 'combatIdle', ...WEAPON_COMBO_STATE_NAMES,
-  ...WEAPON_IDLE_STATES]); // the weapon stances are baked with the combat grip
+  ...WEAPON_IDLE_STATES, ...BOW_POSE_STATES]); // the weapon stances and the bow's poses are baked with the combat grip
 const COMBAT_HOLD_S = 0.7; // stay in the combat grip between combo swings
 const BLEND_RATE = 9; // 1/s
 const sanitize = (name) => THREE.PropertyBinding.sanitizeNodeName(name);
@@ -65,11 +67,12 @@ export function solveFallbackGrip(model, weapon, stanceList = ['carry', 'combat'
   let hand = bindOf(handName);
   let palm = null;
   let fist = {};
+  let chains = null;
+  const bones = {};
   if (hand && bindOf(`mixamorig:${S}HandMiddle1`)) {
-    const chains = Object.fromEntries(MIXAMO_FINGERS.map((f) => [f, [1, 2, 3].map((i) => `mixamorig:${S}Hand${f}${i}`)]));
+    chains = Object.fromEntries(MIXAMO_FINGERS.map((f) => [f, [1, 2, 3].map((i) => `mixamorig:${S}Hand${f}${i}`)]));
     const p = (n) => pos(bindOf(n));
     palm = palmFromKnuckles({ wrist: pos(hand), index: p(chains.Index[0]), middle: p(chains.Middle[0]), pinky: p(chains.Pinky[0]) }, side);
-    const bones = {};
     for (const name of Object.values(chains).flat()) {
       const bone = model.getObjectByName(sanitize(name));
       const bind = bindOf(name);
@@ -91,6 +94,14 @@ export function solveFallbackGrip(model, weapon, stanceList = ['carry', 'combat'
   const unitsPerMetre = (bodyHeight / 1.7) * (bindScale / Math.max(1e-9, worldScale));
   const grips = {};
   for (const stance of stanceList) grips[stance] = solveGrip({ handBind: hand, palm, cls: weapon.class, stance, radius: weapon.handleRadius, unitsPerMetre });
+  if (weapon.class === 'dagger' && chains) {
+    // a reverse grip: the thumb rests on the pommel's end, just past the index knuckle
+    const Y = new THREE.Vector3().setFromMatrixColumn(weaponBasis(palm, 'dagger', 'combat'), 1);
+    const cap = gripPoint(palm, Math.min(weapon.handleRadius ?? 0.015, 0.03) * unitsPerMetre)
+      .addScaledVector(Y, -(DAGGER_POMMEL_DEPTH + 0.006) * unitsPerMetre);
+    const thumb = solveThumbCap({ bones, chain: chains.Thumb, palm, target: cap });
+    if (thumb) Object.assign(fist, thumb.pose);
+  }
   return { bone: handName, grips, fist };
 }
 
@@ -265,7 +276,8 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
   }
 
   // Dual daggers (the dual_blades family): one short blade in each hand, the pair's own model when it loads
-  // and the blades modelled above otherwise, gripped with the same solver as the pack swords.
+  // and the blades modelled above otherwise, both in a reverse grip (blade down along the forearm, the thumb on
+  // the pommel: owner 2026-11-19), solved like the pack swords' grips.
   async function equipDaggers() {
     const token = ++equipToken;
     if (current?.id === 'daggers') return true;
@@ -283,7 +295,7 @@ export function createPlayerWeaponRuntime({ model, scene, manifest = null, manif
     if (current) for (const f of current.fist) if (f.restore) f.bone.quaternion.copy(f.restore);
     for (const side of ['right', 'left']) {
       const own = pair?.getObjectByName(DAGGER_PAIR_MODEL.nodes[side]) || null;
-      const solved = solveFallbackGrip(model, { hand: side, class: 'sword', handleRadius: own ? DAGGER_PAIR_MODEL.handleRadius : 0.014 }, ['carry', 'combat'], bodyHeight);
+      const solved = solveFallbackGrip(model, { hand: side, class: 'dagger', handleRadius: own ? DAGGER_PAIR_MODEL.handleRadius : 0.014 }, ['carry', 'combat'], bodyHeight);
       if (!solved) continue;
       const handBone = model.getObjectByName(sanitize(solved.bone));
       if (!handBone) continue;

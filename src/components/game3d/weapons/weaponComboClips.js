@@ -9,12 +9,17 @@
 //   sword:   swordCombo1 flat slash, swordCombo2 rising diagonal, swordCombo3 forward thrust (owner handoff
 //            2026-11-18: 0.50 / 0.54 / 0.48 s, contact at 0.22 / 0.24 / 0.21 s)
 //   two-hand: swordTwoHand1-3, both hands on the hilt while the right button is held (owner 2026-11-18)
-//   daggers: daggerLight1 right slash and daggerLight2 left cross-cut (left click, the fastest), daggerStab
-//            (right click): 0.33 / 0.37 / 0.43 s, contact at 0.12 / 0.15 / 0.18 s
-//   bow:     bowCombo1 quick shot, bowCombo2 fast shot with a sidestep lean, bowCombo3 overdrawn power shot
+//   daggers: held in a reverse grip in both hands (owner 2026-11-19: blade down along the forearm, thumb on the
+//            pommel): daggerLight1 right hook slash and daggerLight2 left hook slash (left click, the fastest),
+//            daggerStab (right click): 0.33 / 0.37 / 0.43 s, contact at 0.12 / 0.15 / 0.18 s
+//   bow:     bowCombo1 quick shot, bowCombo2 fast shot with a sidestep lean, bowCombo3 overdrawn power shot (other
+//            players' avatars); the player's own shots (owner 2026-11-19): bowDraw draws while the aim is held,
+//            bowHold holds at full draw, bowRelease looses from full draw, bowQuick draws and looses at once (a
+//            tap, or each further shot of a skill), bowRunCarry the bow arm's pose while running
 //   idles:   idleSword, idleSwordTwoHand, idleDaggers, idleBow: looping stances for each weapon in hand
 // clip.userData: { combo, index, hit, sweep, cancel } in clip seconds — hit = the strike / arrow release,
-// sweep = [start, end] of the blade's cutting arc (trail recording), cancel = when the next hit may start.
+// sweep = [start, end] of the blade's cutting arc (trail recording), cancel = when the next hit may start;
+// the bow's draws also say when the arrow is nocked (nock) and the string fully drawn (full).
 import * as THREE from 'three';
 import { solveMountedLimb } from '../player/mountedRiderPose.mjs';
 
@@ -34,12 +39,18 @@ export const WEAPON_COMBO_STATES = Object.freeze({
   swordTripleTier2: Object.freeze(['swordTripleTier2Hit1', 'swordTripleTier2Hit2', 'swordTripleTier2Hit3']),
   swordTripleTier3: Object.freeze(['swordTripleTier3Hit1', 'swordTripleTier3Hit2', 'swordTripleTier3Hit3']),
   swordTripleTier4: Object.freeze(['swordTripleTier4Hit1', 'swordTripleTier4Hit2', 'swordTripleTier4Hit3']),
+  // the player's own bow shots: loosed from the held draw, or drawn and loosed in one quick motion
+  bowRelease: Object.freeze(['bowRelease']),
+  bowQuick: Object.freeze(['bowQuick']),
 });
 export const WEAPON_COMBO_STATE_NAMES = Object.freeze(
   Object.values(WEAPON_COMBO_STATES).flat(),
 );
 // Looping stances for the weapon in hand, baked with the combos (same grips) and played while standing.
 export const WEAPON_IDLE_STATES = Object.freeze(['idleSword', 'idleSwordTwoHand', 'idleDaggers', 'idleBow']);
+// The bow's held poses, baked with the shots: the draw while the aim is held (bowDraw, then the bowHold loop at
+// full draw) and the bow arm's pose while running (bowRunCarry, laid over the run by the player controller).
+export const BOW_POSE_STATES = Object.freeze(['bowDraw', 'bowHold', 'bowRunCarry']);
 // Which idle a standing character plays: family = the held weapon's mastery family; null = the normal idle.
 export function weaponIdleState(family, { twoHand = false } = {}) {
   if (family === 'bow') return 'idleBow';
@@ -164,30 +175,42 @@ export const SWORD_TWO_HAND_COMBO = [
   ] },
 ];
 
-// Daggers: a low centre of gravity, both blades forward. Each hand's `blade` is its own dagger's direction.
+// Daggers in a reverse grip (owner 2026-11-19): each blade leaves the fist on the little-finger side and runs
+// back down along the forearm, the thumb on the pommel. Guard: a low centre of gravity, both fists up in front
+// of the chest, blades down along the forearms. A hand's `forearm` lays its blade back along that forearm (bent
+// off it towards [forward, up, out]); `blade` points it explicitly (body space, true right). The cuts are hooks:
+// the fist sweeps across and the blade along the forearm cuts behind it; the stab drives the fist forward and
+// down, the blade leading.
+const ALONG = [0.04, -0.06, 0.22]; // off the forearm: a little out, clear of the arm
+// fists up in front of the chest and chin, elbows down: the forearms stand, the blades hang along them
+const DAGGER_GUARD_POLE = [-0.15, -0.6, 0.35];
 const DAGGER_READY = { spine: [0, 9, 0], hips: [0.08, 0],
-  r: { arm: [0.3, -0.24, 0.06], blade: [0.72, 0.5, 0.48] }, l: { arm: [0.36, -0.16, -0.02], blade: [0.8, 0.55, -0.24] } };
-const DAGGER_RIGHT_GUARD = { arm: [0.3, -0.22, 0.03], blade: [0.72, 0.5, 0.48] };
+  r: { arm: [0.24, -0.02, -0.02], forearm: ALONG, pole: DAGGER_GUARD_POLE },
+  l: { arm: [0.3, 0.06, -0.04], forearm: ALONG, pole: DAGGER_GUARD_POLE } };
+const DAGGER_RIGHT_GUARD = { arm: [0.22, -0.04, 0.0], forearm: ALONG, pole: DAGGER_GUARD_POLE };
+const DAGGER_LEFT_GUARD = { arm: [0.28, 0.02, -0.02], forearm: ALONG, pole: DAGGER_GUARD_POLE };
 export const DAGGER_COMBO = [
-  { name: 'daggerLight1', combo: 'daggerLight', index: 0, hit: 0.12, sweep: [0.04, 0.18], cancel: 0.22, keys: [ // quick right slash
+  { name: 'daggerLight1', combo: 'daggerLight', index: 0, hit: 0.12, sweep: [0.04, 0.18], cancel: 0.22, keys: [ // right hook slash
     { t: 0.0, ...DAGGER_READY },
-    { t: 0.04, spine: [18, 9, -2], hips: [0.09, 8], r: { arm: [0.16, -0.12, 0.34], blade: [0.35, 0.35, 0.87] }, l: DAGGER_READY.l },
-    { t: 0.12, spine: [-16, 11, 2], hips: [0.1, -8], r: { arm: [0.56, -0.14, -0.12], blade: [0.85, 0.05, -0.52] }, l: { arm: [0.26, -0.24, 0.06], blade: [0.7, 0.5, -0.5] } },
-    { t: 0.18, spine: [-24, 11, 2], hips: [0.1, -10], r: { arm: [0.4, -0.16, -0.3], blade: [0.3, 0.02, -0.95] }, l: { arm: [0.26, -0.24, 0.06], blade: [0.7, 0.5, -0.5] } },
+    { t: 0.04, spine: [20, 9, -2], hips: [0.09, 8], r: { arm: [0.14, -0.08, 0.3], forearm: ALONG }, l: DAGGER_READY.l },
+    { t: 0.12, spine: [-16, 11, 2], hips: [0.1, -8], r: { arm: [0.54, -0.06, -0.06], forearm: [0, -0.1, 0.2] }, l: DAGGER_LEFT_GUARD },
+    { t: 0.18, spine: [-26, 11, 2], hips: [0.1, -10], r: { arm: [0.36, -0.1, -0.34], forearm: [0, -0.1, 0.2] }, l: DAGGER_LEFT_GUARD },
     { t: 0.33, ...DAGGER_READY },
   ] },
-  { name: 'daggerLight2', combo: 'daggerLight', index: 1, hit: 0.15, sweep: [0.06, 0.22], cancel: 0.26, keys: [ // left cross-cut
+  { name: 'daggerLight2', combo: 'daggerLight', index: 1, hit: 0.15, sweep: [0.06, 0.22], cancel: 0.26, keys: [ // left hook slash
     { t: 0.0, ...DAGGER_READY },
-    { t: 0.06, spine: [-22, 9, 2], hips: [0.09, -8], l: { arm: [0.12, -0.1, 0.36], blade: [-0.25, 0.3, -0.92] }, r: DAGGER_RIGHT_GUARD },
-    { t: 0.15, spine: [18, 11, -2], hips: [0.1, 9], l: { arm: [0.56, -0.18, -0.14], blade: [0.8, -0.12, 0.59] }, r: { arm: [0.26, -0.24, 0.04], blade: [0.7, 0.5, 0.5] } },
-    { t: 0.22, spine: [26, 11, -2], hips: [0.1, 11], l: { arm: [0.38, -0.2, -0.32], blade: [0.12, -0.1, 0.99] }, r: { arm: [0.26, -0.24, 0.04], blade: [0.7, 0.5, 0.5] } },
+    { t: 0.06, spine: [-22, 9, 2], hips: [0.09, -8], l: { arm: [0.14, -0.08, 0.3], forearm: ALONG }, r: DAGGER_RIGHT_GUARD },
+    { t: 0.15, spine: [18, 11, -2], hips: [0.1, 9], l: { arm: [0.54, -0.08, -0.06], forearm: [0, -0.1, 0.2] }, r: DAGGER_RIGHT_GUARD },
+    { t: 0.22, spine: [28, 11, -2], hips: [0.1, 11], l: { arm: [0.36, -0.12, -0.34], forearm: [0, -0.1, 0.2] }, r: DAGGER_RIGHT_GUARD },
     { t: 0.37, ...DAGGER_READY },
   ] },
-  { name: 'daggerStab', combo: 'daggerStab', index: 0, hit: 0.18, sweep: [0.1, 0.27], cancel: 0.32, keys: [ // precision stab
+  // hammer stab: a reverse grip cannot lead with the point ahead of the fist, so the fist rises by the head and
+  // drives down and forward, the point down
+  { name: 'daggerStab', combo: 'daggerStab', index: 0, hit: 0.18, sweep: [0.1, 0.27], cancel: 0.32, keys: [
     { t: 0.0, ...DAGGER_READY },
-    { t: 0.08, spine: [16, 7, 0], hips: [0.1, 10], r: { arm: [0.06, -0.22, 0.18], blade: [0.96, 0.2, 0.18] }, l: { arm: [0.34, -0.06, 0.0], blade: [0.55, 0.8, -0.2] } },
-    { t: 0.18, spine: [-14, 15, 0], hips: [0.14, -12], r: { arm: [0.7, -0.1, -0.02], blade: [0.99, 0.05, -0.08] }, l: { arm: [0.24, -0.1, 0.12], blade: [0.5, 0.8, -0.3] } },
-    { t: 0.27, spine: [-12, 14, 0], hips: [0.13, -11], r: { arm: [0.64, -0.11, -0.02], blade: [0.99, 0.05, -0.08] }, l: { arm: [0.24, -0.1, 0.12], blade: [0.5, 0.8, -0.3] } },
+    { t: 0.08, spine: [16, -2, 0], hips: [0.1, 10], r: { arm: [0.14, 0.26, 0.08], forearm: ALONG, pole: [-0.1, -0.2, 0.7] }, l: DAGGER_LEFT_GUARD },
+    { t: 0.18, spine: [-14, 16, 0], hips: [0.14, -12], r: { arm: [0.64, -0.06, -0.04], blade: [0.25, -0.95, -0.05] }, l: { arm: [0.22, -0.1, 0.06], forearm: ALONG, pole: DAGGER_GUARD_POLE } },
+    { t: 0.27, spine: [-12, 15, 0], hips: [0.13, -11], r: { arm: [0.6, -0.1, -0.04], blade: [0.25, -0.95, -0.05] }, l: { arm: [0.22, -0.1, 0.06], forearm: ALONG, pole: DAGGER_GUARD_POLE } },
     { t: 0.43, ...DAGGER_READY },
   ] },
 ];
@@ -295,19 +318,64 @@ export const BOW_COMBO = [
   ] },
 ];
 
+// The player's own bow (owner 2026-11-19): holding the aim draws (bowDraw) and then holds at full draw (bowHold,
+// a seamless loop); letting go looses from there (bowRelease: the arrow leaves on its first frame, the string
+// hand flicks back past the jaw, the bow arm follows through, then lowers). A shot without a held draw (a tap,
+// or each further shot of a skill) draws and looses in one quick motion (bowQuick). `nock` / `full`: when the
+// arrow is on the string and when it is fully drawn, so a draw let go early carries on in the quick shot from
+// the same point, and a shot that follows a shot starts from the nock instead of lowering the bow in between.
+const BOW_NOCK = [0.42, 0.05, -0.18];
+const BOW_FULL_DRAW = [0.05, 0.1, -0.14];
+const BOW_FLICK = [-0.08, 0.12, 0.04];
+const BOW_HOLD_BREATH = AIM([0.045, 0.104, -0.142], { spine: [24, 1.2, 0], raise: 0.026 });
+// Running with the bow (owner 2026-11-19): the bow arm hangs a little out from the hip, the bow pointing forward
+// and down away from the legs, and stays there while the legs run (the controller lays this arm over the run).
+export const BOW_RUN_CARRY_ARM = Object.freeze({ arm: Object.freeze([0.1, -0.48, 0.26]), blade: Object.freeze([0.84, -0.3, -0.45]) });
+const BOW_RUN_CARRY_POSE = { spine: [0, 4, 0], hips: [0.02, 0], l: BOW_RUN_CARRY_ARM, r: { arm: [0.08, -0.5, 0.06] } };
+export const BOW_SHOTS = [
+  { name: 'bowDraw', pose: true, hit: 0.45, cancel: 0.45, nock: 0.16, full: 0.45, keys: [
+    { t: 0.0, ...BOW_READY },
+    { t: 0.16, ...AIM(BOW_NOCK) },
+    { t: 0.45, ...AIM(BOW_FULL_DRAW) },
+  ] },
+  { name: 'bowHold', idle: true, hit: 0, cancel: 1.6, keys: [
+    { t: 0.0, ...AIM(BOW_FULL_DRAW) },
+    { t: 0.8, ...BOW_HOLD_BREATH },
+    { t: 1.6, ...AIM(BOW_FULL_DRAW) },
+  ] },
+  { name: 'bowRelease', combo: 'bowRelease', index: 0, hit: 0, cancel: 0.16, keys: [
+    { t: 0.0, ...AIM(BOW_FULL_DRAW) },
+    { t: 0.06, ...AIM(BOW_FLICK) },
+    { t: 0.2, ...AIM([-0.1, 0.1, 0.06], { raise: 0.01 }) },
+    { t: 0.5, ...BOW_READY },
+  ] },
+  { name: 'bowQuick', combo: 'bowQuick', index: 0, hit: 0.2, cancel: 0.22, nock: 0.07, full: 0.18, keys: [
+    { t: 0.0, ...BOW_READY },
+    { t: 0.07, ...AIM(BOW_NOCK) },
+    { t: 0.18, ...AIM(BOW_FULL_DRAW) },
+    { t: 0.2, ...AIM(BOW_FULL_DRAW) },
+    { t: 0.25, ...AIM(BOW_FLICK) },
+    { t: 0.42, ...BOW_READY },
+  ] },
+  { name: 'bowRunCarry', idle: true, hit: 0, cancel: 1, keys: [{ t: 0, ...BOW_RUN_CARRY_POSE }, { t: 1, ...BOW_RUN_CARRY_POSE }] },
+];
+
 // What a family bakes when the caller passes no moves of its own (the binder passes its own for swords).
 export function defaultMovesFor(comboKind) {
-  if (comboKind === 'bowCombo') return [...BOW_COMBO, IDLE_BOW];
+  if (comboKind === 'bowCombo') return [...BOW_COMBO, IDLE_BOW, ...BOW_SHOTS];
   if (comboKind === 'daggerCombo') return [...DAGGER_COMBO, IDLE_DAGGERS];
   return [...SWORD_COMBO, ...SWORD_TWO_HAND_COMBO, IDLE_SWORD, IDLE_SWORD_TWO_HAND,
     ...SWORD_SKILL_SINGLE_COMBOS, ...SWORD_SKILL_TRIPLE_COMBOS.flat()];
 }
 
-function findBones(model) {
+// The bones the combos pose, by role (hips, spine, spine1, spine2, neck, head, rSh / lSh, rArm / rFore / rHand,
+// lArm / lFore / lHand, rUp / rLeg / rFoot, lUp / lLeg / lFoot); a role the rig lacks is null.
+export function findComboBones(model) {
   const out = {};
-  for (const [k, names] of Object.entries(RIG)) out[k] = names.map((n) => model.getObjectByName(sanitize(n))).find(Boolean) || null;
+  for (const [k, names] of Object.entries(RIG)) out[k] = names.map((n) => model?.getObjectByName(sanitize(n))).find(Boolean) || null;
   return out;
 }
+const findBones = findComboBones;
 
 // The rig's rest pose (local position / rotation of every bone under the model). Capture it before any
 // clip has played: the combos are solved from it. Not the inverse bind matrices: the fused bodies keep
@@ -411,7 +479,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
     // A captured move is keyed many times a second, so its arms are solved with the key before in mind:
     // the elbow stays near where it was, and the forearm's turn fades out before it would flip over.
     let flowing = null;
-    const placeArm = (arm, fore, hand, target, pole, B, sideAxis) => {
+    // keepElbow: the elbow stays where the pole puts it and the wrist alone turns the blade (a reverse grip
+    // laying its blade along the forearm placed first)
+    const placeArm = (arm, fore, hand, target, pole, B, sideAxis, keepElbow = false) => {
       const ab = armRest.get(arm);
       const info = handInfo.get(hand);
       const held = !!(B && info?.grip);
@@ -430,7 +500,7 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       const v0 = new THREE.Vector3().crossVectors(dir, u0);
       const outAt = (phi) => u0.clone().multiplyScalar(Math.cos(phi)).addScaledVector(v0, Math.sin(phi));
       let phiBest = 0;
-      if (held) {
+      if (held && !keepElbow) {
         let best = Infinity;
         for (let deg = -90; deg <= 90; deg += 5) {
           const phi = deg * DEG;
@@ -549,8 +619,16 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
         const target = shoulder.clone().add(body([v[0] * k * fit, v[1] * k * fit, v[2] * sideSign * k * fit]));
         const p = spec.pole || [-0.3, -0.3, 0.6];
         const pole = shoulder.clone().add(body([p[0] * k, p[1] * k, p[2] * sideSign * k]));
-        const B = spec.blade ? body(spec.blade).normalize() : null;
-        placeArm(arm, fore, hand, target, pole, B, R.clone().multiplyScalar(sideSign));
+        let B = spec.blade ? body(spec.blade).normalize() : null;
+        const alongForearm = !!(spec.forearm && handInfo.get(hand)?.grip);
+        if (alongForearm) {
+          // a reverse grip: the blade runs back along the forearm as the arm is placed on this body, bent off it
+          // towards `forearm` ([forward, up, out to this arm's side]) so it clears the arm
+          placeArm(arm, fore, hand, target, pole, null, R.clone().multiplyScalar(sideSign));
+          B = fore.getWorldPosition(new THREE.Vector3()).sub(hand.getWorldPosition(new THREE.Vector3())).normalize();
+          if (Array.isArray(spec.forearm)) B.add(body([spec.forearm[0], spec.forearm[1], spec.forearm[2] * sideSign])).normalize();
+        }
+        placeArm(arm, fore, hand, target, pole, B, R.clone().multiplyScalar(sideSign), alongForearm);
         const info = handInfo.get(hand);
         if (B && comboKind === 'swordCombo' && info?.grip) {
           // A long blade (the odachi) would cut into the ground: the hands stop higher instead, keeping the
@@ -626,8 +704,9 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       tracks.push(new THREE.VectorKeyframeTrack(`${b.hips.name}.position`, times, hipValues));
       const clip = new THREE.AnimationClip(combo.name, combo.keys[last].t, tracks);
       // a skill's clip says which hit of its skill it is; a combo clip is its place in the list
-      clip.userData = { combo: combo.idle ? null : combo.combo || comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
-        ...(combo.idle ? { idle: true, loop: true } : {}), ...(combo.technique ? { technique: combo.technique } : {}) };
+      clip.userData = { combo: combo.idle || combo.pose ? null : combo.combo || comboKind, index: Number.isInteger(combo.index) ? combo.index : index, hit: combo.hit, sweep: combo.sweep || null, cancel: combo.cancel, generated: 'weaponComboClips',
+        ...(combo.idle ? { idle: true, loop: true } : {}), ...(combo.pose ? { pose: true } : {}), ...(combo.technique ? { technique: combo.technique } : {}),
+        ...(Number.isFinite(combo.nock) ? { nock: combo.nock } : {}), ...(Number.isFinite(combo.full) ? { full: combo.full } : {}) };
       out[combo.name] = clip;
     }
   } finally {
