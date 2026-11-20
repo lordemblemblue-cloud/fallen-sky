@@ -38,6 +38,7 @@ import TradePanel from '../components/game3d/social/TradePanel';
 import TradeSessionWatcher from '../components/game3d/social/TradeSessionWatcher';
 import IncomingRequestToast from '../components/game3d/social/IncomingRequestToast';
 import WorldChatPanel from '../components/game3d/social/WorldChatPanel';
+import FactionAnnouncementTicker from '../components/game3d/axe/factions/FactionAnnouncementTicker';
 import EchoChronicleOverlay from '../components/game3d/social/EchoChronicleOverlay';
 import ChronicleBlueprintLibrary from '../components/game3d/chronicle/ChronicleBlueprintLibrary';
 import MiniGamesHub from '../components/game3d/minigames/MiniGamesHub';
@@ -731,6 +732,9 @@ export default function GameView() {
           setFriendsListOpen(false); setClanOverlayOpen(false);
           services.controller.open(groupId);
         }} />
+      {/* Server-verified faction call-to-arms below the live minimap. Disabled
+          until rank-authorized faction announcements are available. */}
+      <FactionAnnouncementTicker />
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
       {/* World boss UI removed in the systems/animation test scene. */}
