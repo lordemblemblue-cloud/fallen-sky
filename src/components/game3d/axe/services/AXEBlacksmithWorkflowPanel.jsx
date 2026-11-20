@@ -7,7 +7,7 @@ const labelFor = mode => mode === 'combine' ? 'Combine'
 const pct = chance => chance == null ? '—' : Math.round(Number(chance) * 1000) / 10 + '%';
 const labelMaterial = id => String(id || '').replace(/^mat_/, '').replaceAll('_', ' ');
 const targetLabel = (operation, value) => operation === 'reinforcement' ? value + '%'
-  : operation === 'enchant' ? '+' + value + ' slots'
+  : operation === 'enchant' ? '+' + value + ' across slots'
   : '+' + value;
 const progressTargets = operation => operation === 'reinforcement'
   ? [25, 50, 75, 100, 125, 150, 175, 200]
@@ -20,7 +20,7 @@ const progressTargets = operation => operation === 'reinforcement'
 export default function AXEBlacksmithWorkflowPanel({
   mode, operation = mode, enchantMode = 'percent', onChangeEnchantMode = () => {},
   target, donor, compatibleDonors = [], requirements = [],
-  materialSelection = '', selectedMaterial = null,
+  materialSelection = '', selectedMaterial = null, getMaterialName = labelMaterial,
   readout, canForge, confirmCombine, autoEnabled, onToggleAuto,
   autoProtection, onToggleProtection, minSuccess, onChangeThreshold,
   autoTarget, onChangeAutoTarget, onSelectDonor, onClearTarget, onClearDonor,
@@ -112,7 +112,7 @@ export default function AXEBlacksmithWorkflowPanel({
         <button key={id} type="button" className="axe-forge-required-item"
           disabled={busy || batchBusy} aria-pressed={materialSelection === id}
           onClick={() => onMaterial(id)}>
-          <span>{labelMaterial(id)}</span>
+          <span>{getMaterialName(id)}</span>
           <strong className={owned < needed ? 'is-short' : ''}>{owned} / {needed}</strong>
         </button>) : <small>No extra materials required.</small>) : <small>Material costs appear after selecting equipment.</small>}
     </div>}
