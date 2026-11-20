@@ -686,8 +686,8 @@
   overscroll-behavior:contain;
 }
 .axe3d-pause__launcher-grid{
-  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-  gap:11px;align-items:start;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;align-items:start;
 }
 .axe3d-pause__launcher-tile{
   position:relative;min-width:0;aspect-ratio:1/1;
