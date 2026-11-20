@@ -33,3 +33,35 @@ export async function createGameWebGPURenderer({
     return { renderer: null, reason: 'webgpu-init-failed', error };
   }
 }
+
+/**
+ * Opt-in renderer selection for migrated scenes.
+ * Never use this until a scene's materials and post-processing support WebGPU.
+ * A fresh canvas is recommended when retrying after a failed GPU initialization.
+ */
+export async function createGameRendererWithFallback({
+  canvas,
+  antialias = true,
+  powerPreference = 'high-performance',
+  preferWebGPU = true,
+} = {}) {
+  if (preferWebGPU) {
+    const attempt = await createGameWebGPURenderer({ canvas, antialias, powerPreference });
+    if (attempt.renderer) return { renderer: attempt.renderer, backend: 'webgpu', fallbackReason: null };
+    // A failed WebGPU initialization may have configured the supplied canvas;
+    // allow WebGL to allocate its own clean canvas in that case.
+    if (attempt.reason === 'webgpu-init-failed') canvas = undefined;
+    const { WebGLRenderer } = await import('three');
+    return {
+      renderer: new WebGLRenderer({ ...(canvas ? { canvas } : {}), antialias, powerPreference }),
+      backend: 'webgl',
+      fallbackReason: attempt.reason,
+    };
+  }
+  const { WebGLRenderer } = await import('three');
+  return {
+    renderer: new WebGLRenderer({ ...(canvas ? { canvas } : {}), antialias, powerPreference }),
+    backend: 'webgl',
+    fallbackReason: 'webgpu-not-requested',
+  };
+}
