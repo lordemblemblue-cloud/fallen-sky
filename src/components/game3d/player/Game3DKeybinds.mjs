@@ -45,7 +45,7 @@ export function normalizeGame3DKeybinds(candidate) {
   if(new Set(Object.values(next)).size!==Object.keys(next).length)return defaults;
   return next;
 }
-export function readGame3DKeybinds(storage=typeof localStorage==='undefined'?null:localStorage) {
+export function readGame3DKeybinds(storage=typeof globalThis.localStorage==='undefined'?null:globalThis.localStorage) {
   try { return normalizeGame3DKeybinds(JSON.parse(storage?.getItem?.(GAME3D_KEYBINDS_STORAGE_KEY)||'null')); }
   catch { return {...GAME3D_DEFAULT_KEYBINDS}; }
 }
@@ -57,7 +57,7 @@ export function rebindGame3DAction(current,action,code) {
   if(occupied)return {ok:false,reason:'in-use',occupied};
   return {ok:true,bindings:{...previous,[action]:code}};
 }
-export function saveGame3DKeybinds(bindings,storage=typeof localStorage==='undefined'?null:localStorage) {
+export function saveGame3DKeybinds(bindings,storage=typeof globalThis.localStorage==='undefined'?null:globalThis.localStorage) {
   const normalized=normalizeGame3DKeybinds(bindings);
   try {storage?.setItem?.(GAME3D_KEYBINDS_STORAGE_KEY,JSON.stringify(normalized));}
   catch {/* incognito/browser quota: live settings can still work for this view */}
