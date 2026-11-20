@@ -167,6 +167,7 @@ import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/Wo
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
+import {wolfveilAreaAtWorld} from './wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 // Torii gates + gate-only veils replace the decorative light arches of
 // ./wolfveil/WolfveilAreaPortals (kept: swap the constructor back to undo).
 import {createWolfveilAreaGates} from './wolfveil/WolfveilAreaGates';
@@ -245,7 +246,7 @@ const showCombatNotice = (text) => {
   window.dispatchEvent(new CustomEvent('skillActivatedToast', { detail: { text } }));
 };
 
-export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
+export default function GameWorld3D({region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
   // This flag is read by the existing WebGL loop without destroying its scene
@@ -833,8 +834,20 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Game 1 enters the Shadow Wolf hometown by default. Its ground is the
     // very same mesh used by the full-size village renderer and physics.
     // Keep the old forest test world selectable, never silently delete it.
+    const areaGate=region==='wolfveil'&&worldArea!=='town'
+      ?WOLFVEIL_AREA_PORTALS.find(gate=>gate.a===worldArea||gate.b===worldArea):null;
+    const areaForward=areaGate?{x:areaGate.x+areaGate.dirX*14,
+      z:areaGate.z+areaGate.dirZ*14+70}:null;
+    const areaBackward=areaGate?{x:areaGate.x-areaGate.dirX*14,
+      z:areaGate.z-areaGate.dirZ*14+70}:null;
+    const areaFallback=wolfveilAreaAtWorld(areaForward)===worldArea
+      ?areaForward:areaBackward;
+    const initialAreaPosition=portalLanding||(
+      resumeCheckpoint?.region==='wolfveil'&&wolfveilAreaAtWorld(resumeCheckpoint)===worldArea
+        ?resumeCheckpoint:null)||areaFallback||{x:0,z:70};
     const wolfveilVillage=region==='wolfveil'
       ?createWolfveilVillage(scene,{
+          initialArea:worldArea,
           originAtMarket:true,
           loadCaves:false,
           // Game 3D-only silver river; default Game 1 material stays unchanged.
@@ -864,18 +877,28 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Outlines of unloaded areas are decoration: without them the loader
     // still works, the far side of a portal is just barer.
     let farOutline=null;
-    try{farOutline=wolfveilVillage?createWolfveilFarOutline({scene}):null;}
+    // Area-to-area portal play must not draw skyline proxies for the four absent maps.
+    try{farOutline=null;}
     catch(error){console.warn('Wolfveil far outline unavailable:',error);}
+    let areaTravelStarted=false;
     const regionStream=wolfveilVillage?createWolfveilAreaLoader({
-      world:wolfveilVillage.world,position:{x:0,z:70},portals:WOLFVEIL_AREA_PORTALS,
-      mode:areaPlatform.profile.areaLoading,
-      preloadMeters:areaPlatform.profile.preloadMeters,
-      releaseGpuMemory:areaPlatform.profile.releaseGpuMemory,
-      farScenery:areaPlatform.profile.farScenery,
-      farProxy:farOutline,
+      world:wolfveilVillage.world,position:initialAreaPosition,portals:WOLFVEIL_AREA_PORTALS,
+      // Competition-safe portal mode: never pre-draw the neighboring four maps.
+      mode:'single',preloadMeters:0,
+      releaseGpuMemory:true,releaseDelaySeconds:0,
+      farScenery:false,farProxy:null,
       groundHeightAt:(x,z)=>wolfveilVillage.worldHeight(x,z),
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
+        if(entryModeRef.current||areaTravelStarted||!detail.gateway||
+          detail.to===worldArea||!modelRef.current)return;
+        const actor=modelRef.current;
+        const landing={x:actor.position.x,y:actor.position.y,z:actor.position.z,
+          yaw:orbit.current.yaw};
+        if(wolfveilAreaAtWorld(landing)!==detail.to)return;
+        areaTravelStarted=true;
+        window.dispatchEvent(new CustomEvent('game3dPortalTravel',
+          {detail:{target:'wolfveil-area',area:detail.to,gateway:detail.gateway,landing}}));
       },
       onStats(stats){window.__gw3dRegionStreamingStatus=stats;},
       // Shadows are redrawn only on request (static sun): ask again whenever
@@ -896,7 +919,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // walls that let the player (and AI) cross a border only through a gate.
     // If they cannot be built the world still starts, with open borders.
     let areaPortals=null;
-    try{areaPortals=wolfveilVillage?createWolfveilAreaGates(wolfveilVillage.world):null;}
+    try{areaPortals=wolfveilVillage?createWolfveilAreaGates(wolfveilVillage.world,{area:worldArea}):null;}
     catch(error){console.warn('Wolfveil area gates unavailable:',error);}
     // Walking through a gate thickens a screen mist; an area change flashes it.
     const areaMist=areaPortals?createWolfveilAreaCrossingMist(container):null;
@@ -968,13 +991,13 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     else groundMeshes.push(grassGround);
     // The owner's Japanese-Egyptian artisan town now replaces the old 80-tile
     // Blender town, while the authoritative Wolfveil terrain stays intact.
-    const importedSpawnTown=region==='wolfveil'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
+    const importedSpawnTown=region==='wolfveil'&&worldArea==='town'?installWolfveilArtisanTown(scene,{renderer,onReady:()=>{livingInkWorld?.refresh();for(const npc of questNPCs)snapToGround(npc.group,0);}}):null;
     const onArtisanModelSelect = event => importedSpawnTown?.selectShowroomModel(event.detail?.index ?? 0);
     window.addEventListener('game3dArtisanShowroomSelect', onArtisanModelSelect);
     // The town sits beside the valley builder in the scene; hand it to the
     // area loader so its buildings unload with the town area too.
     if(importedSpawnTown?.root)regionStream?.addUnits([importedSpawnTown.root]);
-    const vortexLake=region==='wolfveil'
+    const vortexLake=region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:VORTEX_LAKE.centerX,z:VORTEX_LAKE.centerZ+70})
       ?createVortexLakeLandmark(scene,{
         sampleGroundY,
         addGroundMesh:mesh=>groundMeshes.push(mesh),
@@ -985,10 +1008,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       }):null;
     window.__gw3dVortexLake=vortexLake;
     const wolfveilDungeonPortals=region==='wolfveil'||region===WOLFVEIL_CAVES_REGION
-      ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination',
+      ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination',area:worldArea,
         exclude:naturalZones?['jade_lantern_grotto']:[]}):null; // the prototype doorway replaces that ring
-    const lunarGate = region==='wolfveil' ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
-    const astralGate = region==='wolfveil' ? createAstralMountainGate(scene,{sampleGroundY}) : null;
+    const lunarGate = region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:LUNAR_CAVE_ENTRANCE.approachX,z:LUNAR_CAVE_ENTRANCE.approachZ}) ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
+    const astralGate = region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:ASTRAL_DUNGEON_ENTRANCE.approachX,z:ASTRAL_DUNGEON_ENTRANCE.approachZ}) ? createAstralMountainGate(scene,{sampleGroundY}) : null;
     if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
     // Streamed outer meadow + map-wide Sumi-e brushwork across terrain, mountains, caves & town.
     const livingMeadow=wolfveilVillage?createWolfveilLivingMeadow({
@@ -1567,7 +1590,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // Wolfveil's existing quarry site is outside the protected hometown.
     // The hosted GLB is fetched only when the player approaches the quarry.
     // The encounter has exactly one ability: a warned jump-and-ground slam.
-    const quarryDragon = region === 'wolfveil' ? createQuarryDragonBoss({
+    const quarryDragon = region === 'wolfveil'&&worldArea===wolfveilAreaAtWorld({x:WOLFVEIL_SITES.quarry.x,z:WOLFVEIL_SITES.quarry.z+70}) ? createQuarryDragonBoss({
       loader: worldGltfLoader,
       scene,
       bossEntities,
@@ -1597,7 +1620,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // A SECOND instance of the same real GLB dragon watches the new lake
     // from the eastern mountain rim. It loads only when a player explores
     // nearby; the old quarry encounter, boss HP system and animations stay.
-    const lakeStormDragon=region==='wolfveil'?createQuarryDragonBoss({
+    const lakeStormDragon=region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:VORTEX_LAKE.centerX+58,z:VORTEX_LAKE.centerZ+100})?createQuarryDragonBoss({
       loader:worldGltfLoader,scene,bossEntities,setBosses,
       sampleGroundY:sampleTileGroundY,
       instanceId:'wolfveil_living_lake_storm_dragon',
@@ -1668,7 +1691,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     const enemySpawnDefinitions=region===LUNAR_CAVE_REGION
       ?LUNAR_CAVE_TRAINING_SPAWNS
       :region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS
-      :region==='wolfveil'?selectWolfveilGroundedEnemySpawns(sampleGroundY):ENEMY_SPAWNS;
+      :region==='wolfveil'?selectWolfveilGroundedEnemySpawns(sampleGroundY)
+        .filter(spawn=>wolfveilAreaAtWorld({x:spawn.home[0],z:spawn.home[2]})===worldArea):ENEMY_SPAWNS;
     // The 150 planned zombie camp spawns are proximity-streamed at most
     // 30 rigged enemies at once. The single GameWorld3D AI/XP loop owns them.
     const zombieCamps=region==='wolfveil'
@@ -2038,6 +2062,10 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
             sampleGroundY,
             isBlocked: (x,z) => isRuntimeFootprintBlocked({x,y:sampleGroundY(x,z) ?? 0,z},.75),
           }) : null;
+      const areaArrival=region==='wolfveil'&&portalLanding&&
+        wolfveilAreaAtWorld(portalLanding)===worldArea&&
+        [portalLanding.x,portalLanding.y,portalLanding.z].every(Number.isFinite)
+          ?portalLanding:null;
       const returnSite=portalReturn==='astral'?ASTRAL_DUNGEON_ENTRANCE:LUNAR_CAVE_ENTRANCE;
       const vortexReturn=portalReturn==='vortex'?VORTEX_LAKE.safeReturn:null;
       const sumiReturn=portalReturn==='sumi'?{x:-360,z:-400+70}:null;
@@ -2046,9 +2074,16 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         z:vortexReturn?.z??sumiReturn?.z??returnSite.approachZ,
         y:vortexReturn?.y??sampleGroundY(sumiReturn?.x??returnSite.approachX,sumiReturn?.z??returnSite.approachZ)??0.3,
       }:null;
-      fbx.position.set(returnPosition?.x ?? workflowSpawn?.x ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.x:region===WOLFVEIL_CAVES_REGION?-6:0),
-        returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
-        returnPosition?.z ?? workflowSpawn?.z ?? (region==='wolfveil'?WOLFVEIL_PLAYER_TOWN_SPAWN.z:region===WOLFVEIL_CAVES_REGION?(portalSpawnAtGate?124:94):0));
+      fbx.position.set(areaArrival?.x ?? returnPosition?.x ?? workflowSpawn?.x ??
+          (region==='wolfveil'?(areaFallback?.x??WOLFVEIL_PLAYER_TOWN_SPAWN.x):region===WOLFVEIL_CAVES_REGION?-6:0),
+        areaArrival?.y ?? returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
+        areaArrival?.z ?? returnPosition?.z ?? workflowSpawn?.z ??
+          (region==='wolfveil'?(areaFallback?.z??WOLFVEIL_PLAYER_TOWN_SPAWN.z):region===WOLFVEIL_CAVES_REGION?(portalSpawnAtGate?124:94):0));
+      if(areaArrival&&Number.isFinite(sampleGroundY(areaArrival.x,areaArrival.z,areaArrival.y))){
+        const groundY=sampleGroundY(areaArrival.x,areaArrival.z,areaArrival.y);
+        if(Math.abs(areaArrival.y-groundY)>1)fbx.position.y=groundY;
+        if(Number.isFinite(areaArrival.yaw))orbit.current.yaw=areaArrival.yaw;
+      }
       if (initialWorkflowTarget && !workflowSpawn)
         showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
@@ -2072,8 +2107,8 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       // After the avatar loads, so the armor bridge (mounted with the page) hears the start-up equips.
       armorEquipSync = createAXEArmorEquipSync();
       // Workflow already uses the live ground height; normal Play keeps its market snap.
-      if (!workflowSpawn&&!returnPosition) snapToGround(fbx, 0);
-      if (!entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition)
+      if (!workflowSpawn&&!returnPosition&&!areaArrival) snapToGround(fbx, 0);
+      if (!entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition&&!areaArrival)
         tryResumeCheckpoint(resumeCheckpoint);
       if (workflowSpawn) window.dispatchEvent(new CustomEvent('axeWorkflowArrived', {
         detail: { id: workflowSpawn.id, x: workflowSpawn.x, y: workflowSpawn.y, z: workflowSpawn.z },
