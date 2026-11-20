@@ -1,8 +1,9 @@
 # Duelist Adventure match server
 
-The authoritative server for Duelist Adventure's four public modes (Duel, Capture the Flag,
-Football and Team Deathmatch) plus the Contraband co-op story mission. Practice and solo campaign
-play remain available in the browser.
+The authoritative server for Duelist Adventure's five public modes (Duel, Capture the Flag,
+Football, Team Deathmatch and Three-Point Control) plus the Contraband co-op story mission.
+The **Online** quick-match tile chooses randomly between Team Deathmatch, Capture the Flag and
+Three-Point Control (Football and Duel are excluded). Practice and solo campaign play remain available in the browser.
 
 - **One Node process, many matches.** Every match is `src/components/duelist/sim/match.mjs`, the same rules
   the browser practises with, stepped at 60 Hz. The server decides every hit, every cooldown and every
@@ -77,3 +78,14 @@ one replica (matches live in memory), with `BASE44_APP_ID` and `DUELIST_ALLOWED_
   smaller crew (later rooms are manned for the new size).
 
 Tests: `node --test tests/duelist-server.test.mjs tests/duelist-football.test.mjs tests/duelist-predict.test.mjs tests/duelist-reconnect.test.mjs` from the repository root after installing the match server's dependencies. The `.github/workflows/duelist-adventure-check.yml` CI runs these alongside the combat/mission checks and the web build.
+
+## Three-Point Control (backend ready; maps next)
+
+Points A, B and C are neutral at round start. Stand uncontested in a point's four-metre radius
+for four seconds to capture it; a contested point freezes capture progress. Ownership lasts until
+another team completes a takeover. Zero or one points earn no score, **two points earn 1% per second**, and
+**three points earn 2% per second**. First to 100% wins. Eliminations do not award capture score.
+The server determines capture, ownership, percentages, and winner; clients only render the HUD and
+placeholder markers. Future map layouts may pass `controlLayout: [{x,z},{x,z},{x,z}]` to
+`createDuelistServer()` or `createMatch()`, with rematch persistence already supported. See
+`docs/duelist/THREE_POINT_CONTROL_QUICKPLAY.md` for the full contract. Multiplayer protocol version is 3.
