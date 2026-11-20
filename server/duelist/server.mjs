@@ -470,7 +470,16 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     for (const room of rooms.values()) {
       for (const client of [...room.clients.values()]) if (client.away && now - client.awaySince > reconnectSeconds) { log('gone', client.id, room.id); leave(client); }
     }
-    for (const [id, room] of rooms) if (!room.publicRoom && !room.clients.size && now - room.emptySince > IDLE_ROOM_SECONDS) { rooms.delete(id); log('room closed', id); }
+    for (const [id, room] of rooms) {
+      if (room.publicRoom || room.clients.size || now - room.emptySince <= IDLE_ROOM_SECONDS) continue;
+      // Do not expire the last spare server while all the other servers of
+      // that mode are full. A newcomer must always see an available room.
+      const anotherOpen = [...rooms.values()].some(other => other !== room && !other.mission &&
+        other.mode === room.mode && hasRoom(other));
+      if (!room.mission && ONLINE_MODES.includes(room.mode) && !anotherOpen) continue;
+      rooms.delete(id);
+      log('room closed', id);
+    }
     for (const client of clients) if (client.room && now - client.lastInputAt > IDLE_PLAYER_SECONDS) { leave(client); send(client, { t: 'error', code: 'idle', message: 'Left the match after a long time without input.' }); }
   }, 4);
 
