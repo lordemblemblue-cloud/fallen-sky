@@ -213,6 +213,7 @@ import { createCharacterReadabilityLights } from './CharacterReadabilityLights';
 import { getCharacterDodge, getInputDodge, getPlanarBasisFromYaw } from './player/characterDodgeVector';
 import { getEightWayDodgeMove } from './player/game3dEightWayDodge.mjs';
 import { game3dInputKey, game3dMoveAxes } from './player/Game3DMovementInput.mjs';
+import { recordGame3DCombatEvent } from './combat/Game3DCombatLog.mjs';
 import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, directionRelativeToFacing } from './axe/player/AXEClickToMove';
 import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/player/AXEClickToMoveScene';
 import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
@@ -4350,6 +4351,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
                   dmg = Math.max(0, dmg - absorbed);
                   if (dmg > 0) {
                     setHP(Math.max(0, getPlayerHUD().hp - dmg));
+                    recordGame3DCombatEvent('taken',dmg,{
+                      source:enemy.bossName||enemy.name||'Enemy',
+                    });
                     playerAnim?.requestHitReact();
                     playActionSound('player_hit');
                   }
@@ -4696,6 +4700,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           }) : null;
           if (strike && strike.kind !== 'hit') {
             spawnDamageFloat(closestEnemy.id, 'MISS', { kind: 'miss' });
+            recordGame3DCombatEvent('miss',null,{
+              target:closestEnemy.bossName||closestEnemy.name||'Enemy',
+            });
             if(activeWeaponPath==='ranged'&&aoeRadius===0)
               bowVisuals.confirmMiss(strike.kind==='dodge'?'DODGED':'MISS');
           }
@@ -4722,6 +4729,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
               sourceId: closestEnemy.id,
               sound: selectCombatImpactSound({ kind: feedbackKind, hasSound: hasCombatSound }),
               crit: !!strike.critical, lethal: !!strike.lethal,
+            });
+            if(appliedDamage>0)recordGame3DCombatEvent('dealt',appliedDamage,{
+              target:closestEnemy.bossName||closestEnemy.name||'Enemy',
             });
             if(activeWeaponPath==='ranged'&&aoeRadius===0){
               if(appliedDamage>0)bowVisuals.confirmHit(appliedDamage);
