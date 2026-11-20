@@ -272,13 +272,12 @@ function loadLearned() {
   } catch { return new Set(); }
 }
 
-// In the editor/preview environment only, auto-grant ALL skills so devs can
-// test every passive + active without needing to farm them. The live/published
-// app keeps the normal loot-driven learning flow.
+// Local development-only skill seeding for combat tests. A Base44 published
+// hostname is NOT a preview signal: live users must actually earn skills.
 function isEditorEnv() {
   try {
     const h = window.location.hostname;
-    return h === 'localhost' || h.includes('base44.app') || h.includes('preview');
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
   } catch { return false; }
 }
 
