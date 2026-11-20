@@ -29,7 +29,7 @@ test('forge uses two ingredient squares with one plus sign, not an equals/result
   assert.match(ui,/data-ingredient="materials"/);
   assert.match(ui,/className="axe-forge-ingredient-plus"/);
   assert.doesNotMatch(ui,/axe-forge-flow-result/);
-  assert.doesNotMatch(ui,/axe-forge-mode-boxes/);
+  assert.match(ui,/axe-forge-mode-boxes/); // screenshot restores the left forge mode buttons
   assert.match(ui,/className="axe-forge-primary-action"/);
   assert.match(ui,/onClick=\{onForge\}/);
 });
