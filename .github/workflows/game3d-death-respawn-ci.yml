@@ -1,0 +1,40 @@
+name: Game 3D Death Respawn Checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/death/**'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/mapSpawnPoints.js'
+      - 'src/components/game3d/player/playerMovementFallbackClips.js'
+      - 'src/pages/GameView.jsx'
+      - 'tests/game3d-death-sequence.test.mjs'
+      - 'tests/game3d-checkpoint-selection.test.mjs'
+      - '.github/workflows/game3d-death-respawn-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Death flow and spawn point regression tests
+        run: node --test tests/game3d-death-sequence.test.mjs tests/game3d-checkpoint-selection.test.mjs tests/game3d-nearby-respawn.test.mjs tests/game3d-map-spawn-points.test.mjs
+  lint-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
