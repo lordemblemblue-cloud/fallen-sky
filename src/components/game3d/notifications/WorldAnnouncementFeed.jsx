@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {worldAnnouncementFromReceipt} from './WorldAnnouncementModel.mjs';
+import {worldAnnouncementFromReceipt,cleanWorldAnnouncementText} from './WorldAnnouncementModel.mjs';
 import './WorldAnnouncementFeed.css';
 
 // The private world service emits this after verifying its own receipt.
@@ -26,7 +26,7 @@ export default function WorldAnnouncementFeed({suppressed=false}){
     // authoritative loot/dungeon/PK announcements.
     const onLocalNotice=event=>{
       const message=typeof event?.detail?.message==='string'
-        ?event.detail.message.replace(/[\u0000-\u001f\u007f<>]/g,'').slice(0,120):'';
+        ?cleanWorldAnnouncementText(event.detail.message,120):'';
       if(!message)return;
       setItems(old=>[...old,{id:'local-'+(++nextId.current),title:'WORLD STATUS',
         description:message,tone:'gold',expires:Date.now()+4500}].slice(-4));
@@ -35,7 +35,7 @@ export default function WorldAnnouncementFeed({suppressed=false}){
     // pickup. It is visible only to the player; never relayed as world proof.
     const onLoot=event=>{
       const name=typeof event?.detail?.name==='string'
-        ?event.detail.name.replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,72):'';
+        ?cleanWorldAnnouncementText(event.detail.name,72):'';
       if(!name)return;
       setItems(old=>[...old,{id:'pickup-'+(++nextId.current),title:'YOUR LOOT',
         description:'You acquired '+name,tone:'gold',expires:Date.now()+4500}].slice(-4));
