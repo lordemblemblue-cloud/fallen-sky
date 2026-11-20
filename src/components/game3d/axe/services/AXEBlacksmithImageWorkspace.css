@@ -2110,3 +2110,122 @@
   top:30.2%;
   height:42%;
 }
+
+
+/* 2026-11-20 owner-directed open Blacksmith layout.
+ * Delete the separate Inventory Forge/Enhance card, expand Inventory into its
+ * freed space, put all operations on ONE compact row, and keep the two large
+ * ingredients immediately left of the existing circular result. The separate
+ * Forge Results feed is not restyled or repositioned by this change. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  left:3.4%;
+  top:15%;
+  width:69.3%;
+  height:8.1%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:row;
+  align-items:stretch;
+  justify-content:space-between;
+  gap:clamp(3px,.38cqw,7px);
+  padding:3px 0;
+  overflow:visible;
+  background:none;
+  border:0;
+  box-shadow:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:last-child {
+  flex:1 1 0;
+  width:auto;
+  height:auto;
+  min-width:0;
+  min-height:0;
+  aspect-ratio:auto;
+  display:flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(3px,.35cqw,6px);
+  padding:5px 3px;
+  border:1px solid rgba(225,193,141,.4);
+  border-radius:7px;
+  color:#e9d9bd;
+  background:rgba(22,36,49,.74);
+  font:600 clamp(9px,.76cqw,12px)/1.2 system-ui,sans-serif;
+  white-space:normal;
+  box-shadow:none;
+  text-shadow:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button svg {
+  flex:0 0 auto;
+  width:clamp(14px,1.12cqw,19px);
+  height:clamp(14px,1.12cqw,19px);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs .axe-blacksmith-tab-label {
+  display:block;
+  min-width:0;
+  font:inherit;
+  line-height:1.15;
+  overflow-wrap:normal;
+  white-space:normal;
+  text-align:center;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button[aria-pressed="true"] {
+  color:#ffead0;
+  background:rgba(108,82,49,.72);
+  border-color:#e9ce9d;
+  box-shadow:inset 0 -2px 0 #e4be7e;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-inventory-shell {
+  display:flex;
+  left:3.4%;
+  top:24%;
+  width:35.4%;
+  height:72%;
+}
+/* The specificity here deliberately overrides the temporary restoration
+ * geometry further up this stylesheet; no old workstation frame remains. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-inventory-shell {
+  display:flex;
+  left:3.4%;
+  top:24%;
+  width:35.4%;
+  height:72%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:40.1%;
+  top:24.5%;
+  width:14.9%;
+  height:71%;
+  max-height:none;
+  border:0;
+  border-radius:0;
+  background:none;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+/* Preserve the existing circle/results content; this is ONLY its placement.
+ * The circle moves right to allow two readable ingredient squares at left. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;
+  left:55.6%;
+  top:37%;
+  width:17.1%;
+  aspect-ratio:1;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;
+  left:55.8%;
+  top:37.8%;
+  width:16.9%;
+  height:31.5%;
+}
