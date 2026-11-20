@@ -33,3 +33,14 @@ export function captureText(point) {
     status === 'capturing' ? `${point.id}: ${point.capturing} capturing ${Math.round(clamp((point.progress || 0) * 100, 0, 100))}%` :
     `${point?.id || '?'}: ${status}`;
 }
+
+/** Whether the local touch control should enqueue a power. Server rules still
+ * decide whether the ability succeeds; this only blocks known cooldowns/death. */
+export function canPressAbility(power, dead = false) {
+  return !dead && Boolean(power) && Number.isFinite(power.ready) && power.ready <= 0;
+}
+
+/** A grip must be explicitly released when changing ability pages. */
+export function pageSwitchCommands(gripHeld) {
+  return gripHeld ? ['release'] : [];
+}
