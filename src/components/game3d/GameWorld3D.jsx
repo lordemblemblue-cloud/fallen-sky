@@ -3200,7 +3200,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       // A dead or unloaded actor must release the PvE target on the next frame,
       // independently of the slower HP-overlay projection tick. Never change
       // an active player-vs-player duel lock here.
-      if (shouldReleaseWorldTarget(lockOnTargetRef.current,
+      if (lockOnTargetRef.current && shouldReleaseWorldTarget(lockOnTargetRef.current,
         [...enemies,...bossEntities,...(window.__gw3dRogues||[])])) {
         lockOnTargetRef.current = null;
         pendingAbilityApproach = null;
