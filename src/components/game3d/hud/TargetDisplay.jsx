@@ -30,7 +30,7 @@ export default function TargetDisplay() {
   return <AnimatePresence initial={false}>
     {target && <motion.div key={target.id || 'target'} className="axe-target-lock"
       initial={{opacity:0,y:-6}} animate={{opacity:1,y:0}}
-      exit={{opacity:0,y:-6}} transition={{duration:.18}}
+      exit={{opacity:0,y:-6,transition:{duration:0}}} transition={{duration:.18}}
       role="group" aria-label={title} title={title}>
       <div className="axe-target-lock-label">
         <span className="axe-target-lock-name">{name}</span>
