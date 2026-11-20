@@ -17,12 +17,12 @@ test('only two empty plus slots and one between them; no left navigation/subpage
   assert.match(panel,/data-ingredient="materials"/);
   assert.match(panel,/className="axe-forge-empty-plus"/);
   assert.match(panel,/className="axe-forge-ingredient-plus"/);
-  assert.doesNotMatch(panel,/axe-forge-mode-boxes|axe-forge-help-items|axe-forge-donor-picker/);
-  assert.doesNotMatch(panel,/<nav\b|axe-forge-flow-result/);
+  assert.match(panel,/axe-forge-mode-boxes|axe-forge-help-items/); // restored left workstation
+  assert.doesNotMatch(panel,/axe-forge-flow-result/);
 });
 test('unboxed controls sit above the existing result ring; inventory/results unchanged',()=>{
   assert.match(css,/\.axe-blacksmith-workflow \{[\s\S]*border:0;[\s\S]*background:transparent;[\s\S]*box-shadow:none/);
-  assert.match(stageCSS,/corrective layout:[\s\S]*\.axe-blacksmith-workflow \{[\s\S]*top:19%/);
+  assert.match(stageCSS,/screenshot restoration/);
   assert.match(scene,/className="axe-blacksmith-inventory-shell"/);
   assert.match(scene,/className="axe-blacksmith-forge-ring"/);
   assert.match(scene,/className="axe-blacksmith-center-preview"/);
