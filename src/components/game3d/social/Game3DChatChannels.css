@@ -89,7 +89,7 @@
 .game3d-view .game3d-world-chat.is-expanded,
 .game3d-view .game3d-world-chat.is-typing,
 .game3d-view .game3d-world-chat.is-pinned{opacity:1;visibility:visible;pointer-events:auto}
-.game3d-view .game3d-world-chat.is-typing{width:clamp(280px,32vw,450px)}
+.game3d-view .game3d-world-chat.is-typing{width:clamp(280px,32vw,450px);max-width:min(450px,calc(100vw - 22px))}
 .game3d-view .game3d-world-chat.is-typing .game3d-chat-surface {
   background:rgba(6,13,23,.86);backdrop-filter:blur(18px) saturate(128%);
 }
