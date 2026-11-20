@@ -40,6 +40,17 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
     window.addEventListener(MODE_CONFIRMED,onCommit);
     return ()=>window.removeEventListener(MODE_CONFIRMED,onCommit);
   },[]);
+  useEffect(()=>{
+    if(requested===confirmed)return undefined;
+    // Fail closed when no verified world-server acknowledgement arrives.
+    const timeout=window.setTimeout(()=>{
+      setRequested(confirmed);
+      window.dispatchEvent(new CustomEvent('game3dLocalWorldNotice',{detail:{
+        message:'Open-world PvP is unavailable until the trusted world server is connected.',
+      }}));
+    },6000);
+    return ()=>window.clearTimeout(timeout);
+  },[requested,confirmed]);
   const request=mode=>{
     if(mode===requested)return;
     setRequested(mode);
@@ -62,7 +73,7 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
         className={requested==='pvp'?'is-selected is-danger':''}>PvP</button>
     </div>
     <p>{safeZone?'Players cannot damage each other here.':
-      pending?'Awaiting server confirmation — PvP not authorized.':
+      pending?(requested==='pvp'?'PvP request pending · damage disabled':'PvE request pending · confirm protection on server'):
       confirmed==='pvp'?'PvP opt-in · server confirmed':'PvE protected · no open-world PvP'}</p>
     <small>{zone.label}</small>
   </section>;
