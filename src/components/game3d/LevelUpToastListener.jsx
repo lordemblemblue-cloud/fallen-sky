@@ -7,6 +7,10 @@ import { toast } from 'react-hot-toast';
 export default function LevelUpToastListener() {
   useEffect(() => {
     const onLevelUp = (e) => {
+      // Game3DLunarNotifications already displays the canonical level-up
+      // card beneath the minimap. Do not also create an intrusive duplicate
+      // top-center toaster while the live HUD is mounted.
+      if (document.querySelector('.game3d-view .jade-hud')) return;
       const level = Number(e.detail?.level);
       toast(Number.isFinite(level) ? `✨ Level ${level} reached` : '✨ Level up', {
         duration: 3200,

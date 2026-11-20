@@ -26,9 +26,22 @@
   transform: translateX(-50%) scale(var(--game3d-community-scale, 1)) !important;
   transform-origin: center top !important;
 }
+/* The usual quest anchor stays where it was. Only a level-up card imposes
+   a lower floor, accounting for the active target's HP bar above it. */
+.game3d-view:has(.axe-lunar-notifications--level) {
+  --axe-hud-notice-floor: calc(var(--axe-map-bottom) + 40px + var(--axe-target-notice-clearance, 0px) + 115px + 26px);
+}
+@media (max-width:550px) {
+  .game3d-view:has(.axe-lunar-notifications--level) {
+    --axe-hud-notice-floor: calc(var(--axe-map-bottom) + 40px + var(--axe-target-notice-clearance, 0px) + 102px + 22px);
+  }
+}
 .game3d-view .jade-quest-tracker {
   left: var(--axe-map-left) !important;
-  top: calc(var(--axe-map-bottom) + var(--axe-online-block) + (100% - var(--axe-map-bottom) - var(--axe-online-block) - var(--axe-hud-xp-bottom, 36px) - var(--axe-launcher-row) - var(--axe-chat-block)) / 2) !important;
+  top: max(
+    calc(var(--axe-map-bottom) + var(--axe-online-block) + (100% - var(--axe-map-bottom) - var(--axe-online-block) - var(--axe-hud-xp-bottom, 36px) - var(--axe-launcher-row) - var(--axe-chat-block)) / 2),
+    var(--axe-hud-notice-floor, 0px)
+  ) !important;
 }
 .game3d-view .game3d-world-chat {
   /* Quick launchers no longer consume the bottom-left chat margin. */

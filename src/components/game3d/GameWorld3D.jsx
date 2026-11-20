@@ -11,6 +11,8 @@ import { describeWolfveilTile } from '../worldTileEditor/wolfveilTileCatalogue.m
 const WOLFVEIL_TILE_BOUNDS = Object.freeze({ minX: -550, maxX: 550, minZ: -480, maxZ: 620 });
 const ARENA_TILE_BOUNDS = Object.freeze({ minX: -37.5, maxX: 37.5, minZ: -37.5, maxZ: 37.5 });
 import EnemyHealthBar from './EnemyHealthBar';
+import { staminaOverlapsEnemy } from './hud/staminaHudPlacement.mjs';
+import { shouldReleaseWorldTarget } from './combat/lockedTargetLifecycle.mjs';
 import BossHeadHPTank from './hud/BossHeadHPTank';
 import QuestFloatingLabel from './QuestFloatingLabel';
 import QuestDialogueBox from './QuestDialogueBox';
@@ -3236,6 +3238,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Animation loop
     let frameId;
     let uiFrameCounter = 0;
+    let staminaOccludedByEnemy = false;
     const animate = (renderNow=performance.now()) => {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -3277,6 +3280,15 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         menuCameraHeld=false;
         if(model)model.visible=true;
         if(region==='wolfveil')entryCamera.start();
+      }
+      // A dead or unloaded actor must release the PvE target on the next frame,
+      // independently of the slower HP-overlay projection tick. Never change
+      // an active player-vs-player duel lock here.
+      if (lockOnTargetRef.current && shouldReleaseWorldTarget(lockOnTargetRef.current,
+        [...enemies,...bossEntities,...(window.__gw3dRogues||[])])) {
+        lockOnTargetRef.current = null;
+        pendingAbilityApproach = null;
+        clearTarget();
       }
       momentGestures.preUpdate(); // skill-cast / level-up gesture: give the bones back before the mixers pose them
       // Revert additive gesture poses before the normal Mixers update.
@@ -3938,6 +3950,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         setPlayerPosition({
           x: model.position.x, z: model.position.z,
           yaw: orbit.current.yaw, isRunning: isRunning && isMoving,
+          staminaOccludedByEnemy,
           screenX:(hudProjection.x + 1) * 50,
           screenY:(1 - hudProjection.y) * 50,
           screenVisible:Number.isFinite(hudProjection.x) &&
@@ -4781,6 +4794,13 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
               closestEnemy.respawnAt = closestEnemy.isQuestSpawn ? null :
                 performance.now() + (closestEnemy.wolfveilZombieCampSpawn ? 18000 : 10000);
               closestEnemy.dying = true;
+              // Release the exact defeated actor before the next HUD frame.
+              // Never auto-select its nearest surviving neighbor.
+              if (String(lockOnTargetRef.current?.id) === String(closestEnemy.id)) {
+                lockOnTargetRef.current = null;
+                pendingAbilityApproach = null;
+                clearTarget();
+              }
               closestEnemy.deathTimer = 0;
               closestEnemy.hp = 0;
               if (closestEnemy.walkAction) closestEnemy.walkAction.fadeOut(0.15);
@@ -5208,8 +5228,16 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
             const db=Math.hypot(b.group.position.x-p.x,b.group.position.z-p.z);
             return da-db;
           })[0];
-        setBossHeadUI(projectBossHead(
-          dungeonBossForUI||engagedBoss||nearestBoss,camera,w,h));
+        const projectedBossHead = projectBossHead(
+          dungeonBossForUI||engagedBoss||nearestBoss,camera,w,h);
+        setBossHeadUI(projectedBossHead);
+        // Only evaluate already-projected visible combatants every third
+        // HUD frame; this avoids additional 3D projections on the render path.
+        staminaOccludedByEnemy = staminaOverlapsEnemy({
+          screenVisible:hudProjection.z>=-1 && hudProjection.z<=1,
+          screenX:(hudProjection.x+1)*50,
+          screenY:(1-hudProjection.y)*50,
+        }, projectedBossHead ? [...ui,projectedBossHead] : ui, w, h);
 
         // ─── Project quest NPC heads → screen-space for floating "QUEST" labels ───
         const qs = getQuestState();
