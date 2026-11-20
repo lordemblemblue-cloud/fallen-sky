@@ -39,3 +39,10 @@ Read root `AGENTS.md` and `README.md`. The guest-only entry policy takes precede
 
 ## Automation boundaries
 GitHub Actions validates pushes/PRs, not autonomous code writing. Scheduled coding runs are intermittent and depend on tool access; record the next task in PR comments.
+
+## Status refresh — 2026-11-20 (renderer teardown resilience)
+- Verified in GitHub: PRs #107–#117, #119 and #120 are now **merged**, including #109 adapter probe, #110 frame metrics, and #111 shader inventory. The earlier draft statuses above are historical; do not treat those files as actively reserved solely by those closed PRs.
+- This draft owns **only** `src/lib/rendererInitGuard.mjs`, `tests/rendererInitGuard.test.mjs`, and this handoff update. It prevents synchronous or asynchronous renderer `dispose()` failures from aborting cleanup/restarts or producing unhandled promise rejections after WebGPU device loss. No live game scene is switched to WebGPU by this PR.
+- The actual WebGPU migration remains incomplete: renderer factory, scene selector, adapter preflight, lifecycle guard, canvas mounting, warp-state extraction, shader inventory and metrics are infrastructure, not proof that Fallen Sky or Duelist Adventure uses WebGPU. WebGL remains the default until each scene's shader/effect audit and runtime tests pass.
+- **Next safe work:** audit the Duelist scene's live renderer/EffectComposer integration and identify which GLSL postprocessing prevents TSL/WebGPU. Prepare a separate draft PR after coordination; do not replace the active renderer until parity, resize, fallback and device-loss tests exist. Fallen Sky `GameWorld3D.jsx` needs its own shader/render-target audit.
+- **Validation:** CI on this draft should run focused `node --test tests/rendererInitGuard.test.mjs`, lint and build. Record actual outcomes in its PR comments; full-suite failures must be reported separately. Do not merge or deploy without review.
