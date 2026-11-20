@@ -25,6 +25,7 @@ import './Game3DHudLayoutVariants.css';
 import AXEServicesNavigation from '../axe/services/AXEServicesNavigation';
 import HUDCompassStrip from './HUDCompassStrip';
 import TargetDisplay from './TargetDisplay';
+import { staminaHudAnchor } from './staminaHudPlacement.mjs';
 import JadeQuestTracker from './JadeQuestTracker';
 import AXEWorldMapOverlay from './AXEWorldMapOverlay';
 import LunarCaveMinimap from './LunarCaveMinimap';
@@ -354,12 +355,12 @@ export default function JadeSoulHUD({
   useEffect(() => subscribePlayerPosition(position => {
     const node = staminaAnchorRef.current;
     if (!node) return;
-    const valid = position?.screenVisible &&
-      Number.isFinite(position.screenX) && Number.isFinite(position.screenY);
-    node.style.visibility = valid ? 'visible' : 'hidden';
-    if (!valid) return;
-    node.style.left = Math.max(10, Math.min(88, position.screenX + 10)) + '%';
-    node.style.top = Math.max(16, Math.min(76, position.screenY - 7)) + '%';
+    const anchor = staminaHudAnchor(position);
+    node.style.visibility = anchor ? 'visible' : 'hidden';
+    node.dataset.staminaOccluded = position?.staminaOccludedByEnemy ? 'true' : 'false';
+    if (!anchor) return;
+    node.style.left = anchor.left + '%';
+    node.style.top = anchor.top + '%';
   }), []);
 
   const hpPct = ratio(hud?.hp, hud?.maxHP) * 100;
