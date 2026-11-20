@@ -41,19 +41,51 @@ const playing = (n) => (n ? `${n} playing` : null);
 export function DuelistHub() {
   const lobby = useLobby();
   const [prefs] = usePrefs();
+  const [panel, setPanel] = useState('play');
+  const sections = [
+    ['play', 'Play'], ['story', 'Story'], ['fighter', 'Fighter'], ['settings', 'Settings'],
+  ];
   return (
-    <MenuShell title="Duelist Adventure" subtitle="Will, Telekinesis and crystal blades." back={{ to: '/', label: 'Adam X Eve Games' }}>
-      <div className="grid gap-3 sm:grid-cols-4">
-        <PageTile wide page="story" icon={BookOpen} title="Story: Contraband" line="Break into a smugglers' freight depot and find who is behind it." accent="#c4a3ff" badge={lobby.online && lobby.byMode.story ? playing(lobby.byMode.story) : '1 to 4 players'} />
-        <JoinTile lobby={lobby} />
-        {MODE_ORDER.filter((m) => m !== 'practice').map((m) => (
-          <ModeTile key={m} mode={m} badge={lobby.online ? playing(lobby.byMode[m]) : null} />
-        ))}
-        <ModeTile mode="practice" />
-        <PageTile page="fighter" icon={User} title="Fighter" line={BODIES[prefs.fighter]?.name || 'Choose your fighter'} accent="#ffd36a" />
-        <PageTile page="settings" icon={Settings} title="Settings" line="Sound, mouse, controls" accent="#b9c7d9" />
-      </div>
-    </MenuShell>
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#030711] text-white">
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(ellipse at 58% 40%, rgba(35,100,150,.38), transparent 42%), linear-gradient(120deg,#050a16 10%,#10253b 52%,#03050c 100%)' }} />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 opacity-50" style={{ background: 'repeating-linear-gradient(90deg, transparent 0 85px, rgba(100,205,245,.08) 86px 87px),linear-gradient(0deg,rgba(25,105,145,.2),transparent)' }} />
+      <header className="relative z-20 flex flex-wrap items-center justify-between gap-4 border-b border-cyan-100/15 bg-[#030814]/85 px-5 py-4 backdrop-blur-xl sm:px-10">
+        <div>
+          <div className="text-[10px] uppercase tracking-[.42em] text-cyan-200/65">Emblem Blue</div>
+          <h1 className="text-xl font-bold tracking-[.18em] sm:text-2xl">DUELIST ADVENTURE</h1>
+        </div>
+        <nav className="flex flex-wrap gap-2" aria-label="Duelist sections">
+          {sections.map(([id, label]) => <button key={id} type="button" onClick={() => setPanel(panel === id ? null : id)}
+            aria-pressed={panel === id}
+            className={`rounded-lg border px-4 py-2 text-xs font-semibold uppercase tracking-wider transition ${panel === id ? 'border-cyan-300/65 bg-cyan-300/15 text-cyan-100' : 'border-white/10 bg-white/5 text-white/65 hover:border-cyan-300/30 hover:text-white'}`}>{label}</button>)}
+        </nav>
+      </header>
+      <section className="relative z-10 flex flex-1 items-center justify-end px-4 py-10 sm:px-10">
+        <div className="pointer-events-none absolute bottom-[12%] left-[5%] max-w-sm">
+          <p className="text-xs uppercase tracking-[.32em] text-cyan-200/70">Enter the arena</p>
+          <p className="mt-3 text-3xl font-semibold leading-tight sm:text-5xl">Choose your path.</p>
+          <p className="mt-3 text-sm text-white/50">Will. Precision. Power.</p>
+        </div>
+        {panel && <div className="relative z-20 w-full max-w-xl rounded-2xl border border-cyan-100/20 bg-[#07101e]/90 p-5 shadow-2xl shadow-black/60 backdrop-blur-xl sm:p-7">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-lg font-semibold uppercase tracking-[.14em]">{sections.find(([id]) => id === panel)?.[1]}</h2>
+            <button type="button" aria-label="Close panel" onClick={() => setPanel(null)} className="rounded-lg border border-white/15 px-3 py-1 text-white/70 hover:text-white">✕</button>
+          </div>
+          {panel === 'play' && <div className="grid max-h-[55vh] grid-cols-1 gap-3 overflow-y-auto sm:grid-cols-2">
+            <JoinTile lobby={lobby} />
+            {MODE_ORDER.filter(m => m !== 'practice').map(m => <ModeTile key={m} mode={m} badge={lobby.online ? playing(lobby.byMode[m]) : null} />)}
+            <ModeTile mode="practice" />
+          </div>}
+          {panel === 'story' && <PageTile page="story" icon={BookOpen} title="Story: Contraband" line="Play the campaign solo or with a crew." accent="#c4a3ff" />}
+          {panel === 'fighter' && <PageTile page="fighter" icon={User} title={BODIES[prefs.fighter]?.name || 'Choose your fighter'} line="Customize your character and loadout." accent="#ffd36a" />}
+          {panel === 'settings' && <PageTile page="settings" icon={Settings} title="Settings" line="Sound, mouse and controls." accent="#b9c7d9" />}
+        </div>}
+      </section>
+      <footer className="relative z-20 flex items-center justify-between border-t border-cyan-100/15 bg-[#030814]/85 px-5 py-4 text-[11px] uppercase tracking-[.2em] text-white/50 backdrop-blur-xl sm:px-10">
+        <Link to="/" className="hover:text-cyan-200">← Games hub</Link>
+        <span>Fighter · {BODIES[prefs.fighter]?.name || 'Select'}</span>
+      </footer>
+    </main>
   );
 }
 
