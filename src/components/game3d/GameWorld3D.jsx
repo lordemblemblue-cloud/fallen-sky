@@ -229,7 +229,7 @@ import { grantQuestReward } from './questRewards';
 import QuestRewardToast from './QuestRewardToast';
 import Game3DLunarNotifications from './notifications/Game3DLunarNotifications';
 import { createAXEServiceStationRuntime } from './axe/services/world/AXEServiceStationRuntime';
-import { getAXEDungeonState } from './axe/dungeons/AXEDungeonStore';
+import { getAXEDungeonState, getAXEDungeonCheckpointPosition } from './axe/dungeons/AXEDungeonStore';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './wolfveil/WolfveilLayout';
 import { wolfveilLandscapeAllowsTallGrass } from './wolfveil/WolfveilLandscapeDesign.mjs';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
@@ -2958,16 +2958,36 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         respond({ ok: false, reason: 'The world is not ready to respawn yet.' });
         return;
       }
-      const candidates = request.source === NEARBY_RESPAWN_ID
+      const dungeonPoint = request.source === 'axe-dungeon-checkpoint'
+        ? getAXEDungeonCheckpointPosition() : null;
+      if (request.source === 'axe-dungeon-checkpoint' &&
+          (!dungeonPoint || ![dungeonPoint.x, dungeonPoint.z].every(Number.isFinite) ||
+            Math.hypot((request.x ?? Infinity) - dungeonPoint.x,
+              (request.z ?? Infinity) - dungeonPoint.z) > .01)) {
+        respond({ ok:false, reason:'This dungeon checkpoint is no longer available.' });
+        return;
+      }
+      const returningToWolfveil = region !== 'wolfveil' &&
+        request.source !== 'axe-dungeon-checkpoint';
+      const candidates = request.source === NEARBY_RESPAWN_ID && region === 'wolfveil'
         ? [resolveSafeNearbyRespawn(request.deathPosition), getRespawnPoint(), getDefaultSpawnPoint()]
         : request.source === 'axe-dungeon-checkpoint'
-          ? [request]
+          ? [dungeonPoint]
           : [getSpawnPointById(request.spawnId), getRespawnPoint(), getDefaultSpawnPoint()];
       let landing = null;
       let destinationArea = worldArea;
       for (const candidate of candidates) {
         if (!candidate || !Number.isFinite(candidate.x) || !Number.isFinite(candidate.z)) continue;
-        const candidateArea = region === 'wolfveil' ? wolfveilAreaAtWorld(candidate) : null;
+        const candidateArea = (region === 'wolfveil' || returningToWolfveil)
+          ? wolfveilAreaAtWorld(candidate) : null;
+        if (returningToWolfveil) {
+          // The current cave/dungeon scene contains no Wolfveil geometry.
+          // Ask GameView to remount the correct world area; its avatar entry
+          // samples the destination's real terrain before allowing play.
+          landing = { ...candidate, y: .3 };
+          destinationArea = candidateArea || 'town';
+          break;
+        }
         if (region === 'wolfveil' && candidateArea && candidateArea !== worldArea) {
           // The adjacent area is unloaded; the portal handler remounts it.
           // Collision validation happens during the destination's world entry.
@@ -3000,7 +3020,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       rangedClickAttackPressed.current = false;
       playerInvulTimer.current = PLAYER_INVUL_AFTER_HIT;
       resetCombatResources();
-      if (region === 'wolfveil' && destinationArea !== worldArea) {
+      if (returningToWolfveil) {
+        window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
+          detail: {
+            target:'wolfveil', source:'death-respawn',
+            landing:{ x:landing.x, y:landing.y, z:landing.z, yaw:orbit.current.yaw },
+          },
+        }));
+      } else if (region === 'wolfveil' && destinationArea !== worldArea) {
         window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
           detail: {
             target:'wolfveil-area', area:destinationArea,
