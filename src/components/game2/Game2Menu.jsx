@@ -398,7 +398,8 @@ export default function Game2Menu({ onStart,userId=null }) {
   );
   else if (activeItem === 'modes') panel = (
     <DuelistModeBrowser onJoin={(modeId, matchId) => playCompetitive(modeId, true, matchId)}
-      onSolo={modeId => playCompetitive(modeId, false)} />
+      onSolo={modeId => playCompetitive(modeId, false)}
+      onQuickMatch={() => playCompetitive('online', true)} />
   );
   else if (activeItem === 'story') panel = (
     <DuelistCampaignPanel onLaunch={playCampaign} />
