@@ -18,6 +18,7 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown } from '../core/index.mjs';
 import { makeBall, stepFootball } from './football.mjs';
+import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -27,6 +28,7 @@ export const MODES = Object.freeze({
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
+  control: Object.freeze({ id: 'control', name: 'Three-Point Control', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
 export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, baseInset: 4 });
 export const COUNTDOWN = 3;
@@ -39,7 +41,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * players: [{ id, name, team? }]. seats: the match size (default: the mode's). Returns the match; drive it
  * with stepMatch, seat people with joinMatch / leaveMatch, show it with matchView.
  */
-export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null } = {}) {
+export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null } = {}) {
   const def = MODES[mode] || MODES.practice;
   const world = createWorld({ arenaRadius: def.arena });
   const match = {
@@ -50,6 +52,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 },
     flags: def.flags ? makeFlags(def) : null,
     ball: def.football ? makeBall() : null,
+    controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
   for (const p of players) seat(match, { ...p, kind: 'player' });
@@ -205,6 +208,15 @@ function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.
 
 // What a bot is after besides the nearest fight: the objective of the mode.
 function goalFor(match, s) {
+  if (match.controlPoints && s.team) {
+    // Send bots to the objectives which their team does not yet own.
+    // Stable assignment spreads teammates over the three points.
+    const pending = match.controlPoints.filter(point => point.owner !== s.team);
+    const candidates = pending.length ? pending : match.controlPoints;
+    const index = Math.max(0, match.order.indexOf(s.id));
+    const target = candidates[index % candidates.length];
+    return { x: target.x, z: target.z, urgent: true };
+  }
   if (match.ball && s.team) return { x: match.ball.x, z: match.ball.z, urgent: true };
   if (!match.flags || !s.team) return null;
   const { world } = match;
@@ -272,6 +284,7 @@ export function stepMatch(match, dt, inputs = {}) {
   if (match.phase === 'live') {
     respawns(match);
     if (match.flags) flagsStep(match);
+    if (match.controlPoints) stepControlPoints(match, dt);
     checkEnd(match);
   }
   return { effects, events: match.events };
@@ -429,6 +442,7 @@ export function matchView(match, forId = null) {
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
+    controlPoints: controlPointView(match.controlPoints),
     people, me: forId ? people.find((p) => p.id === forId) || null : null,
     feed: match.feed.slice(-5),
   };
