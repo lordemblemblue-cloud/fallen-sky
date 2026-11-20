@@ -75,7 +75,7 @@ export default function AXEAppearanceWorkspace({
   useEffect(()=>subscribeAXEEquipmentInventory(state=>setAllEquipment(state?.items||getAllAXEEquipmentItems())),[]);
   useEffect(()=>subscribeAXEAura(setAuraRecords),[]);
   useEffect(()=>subscribeAppearanceAuraSource(setAuraSource),[]);
-  const [tab, setTab] = useState(() => initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character');
+  const [tab, setTab] = useState(() => initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : serviceId === 'cape' ? 'Vanity' : 'Character');
   const [equipmentWeaponRole,setEquipmentWeaponRole]=useState('');
   // Report the actual visible Character/Equipment/Vanity/Aura subpage so C
   // returns from a different subpage before toggling the menu closed.
@@ -84,17 +84,17 @@ export default function AXEAppearanceWorkspace({
     if (focusCharacterRequest > 0) setTab('Character');
   }, [focusCharacterRequest]);
   const [selected, setSelected] = useState(null); // {kind: 'vanity'|'costume', id}
-  const [detail, setDetail] = useState('');
+  const [detail, setDetail] = useState(serviceId === 'cape' ? 'cape' : '');
   const [notice, setNotice] = useState('');
   const [filter, setFilter] = useState('All');
   const [search,setSearch] = useState('');
 
   useEffect(() => {
-    const destination = initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character';
+    const destination = initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : serviceId === 'cape' ? 'Vanity' : 'Character';
     setTab(destination);
     setFilter(serviceId === 'costume' ? 'Costumes' : 'All');
     setSearch('');
-    setSelected(null); setDetail('');
+    setSelected(null); setDetail(serviceId === 'cape' ? 'cape' : '');
   }, [serviceId, initialTab]);
   useEffect(() => subscribeCharacterChange(() => {
     setSelected(null); setDetail(''); setNotice(''); setFilter('All'); setSearch('');
