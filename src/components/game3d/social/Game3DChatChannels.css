@@ -44,9 +44,11 @@
 /* The chat surface and the channel buttons are siblings: no sideways scroller. */
 .game3d-view .game3d-world-chat {
   display:flex;flex-direction:column;justify-content:flex-end;gap:5px;
-  max-height:min(250px,max(0px,calc(100dvh
+  /* Never cap the entire chat to zero on small screens. The top clearance
+     follows the actual left minimap, not the old skills diamond. */ 
+  max-height:min(310px,max(92px,calc(100dvh
     - (clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 16px)
-    - (clamp(42px,8vh,100px) + clamp(120px,12.4vw,185px) + 20px))));
+    - var(--axe-hud-xp-bottom,48px) - 12px)));
   transition:opacity 240ms ease,width 180ms ease,visibility 240ms ease;
   border:0!important;background:none;color:#f6e9cd;
 }
@@ -60,10 +62,30 @@
 .game3d-world-chat .game3d-chat-messages{min-height:30px;overflow-y:auto;flex:1 1 auto}
 .game3d-world-chat .game3d-chat-channel-row{flex:0 0 auto;justify-content:flex-start;pointer-events:auto}
 .game3d-view .game3d-world-chat.is-idle:not(.is-pinned) {
-  opacity:.035;visibility:visible;pointer-events:none;
+  opacity:1;visibility:visible;pointer-events:none;
 }
 .game3d-world-chat.is-idle:not(.is-pinned) .game3d-chat-channel-row,
-.game3d-world-chat.is-idle:not(.is-pinned) .game3d-chat-surface{pointer-events:none}
+.game3d-world-chat.is-idle:not(.is-pinned) .game3d-chat-surface{
+  opacity:0;visibility:hidden;pointer-events:none;
+  max-height:0;min-height:0;overflow:hidden;padding:0;border:0;
+}
+.game3d-chat-awaken {
+  display:inline-flex;align-items:center;align-self:flex-start;gap:7px;
+  min-height:30px;padding:5px 10px;border-radius:9px;
+  border:1px solid rgba(215,187,127,.48);
+  background:rgba(7,22,32,.65);
+  color:rgba(241,227,199,.82);
+  font:600 11px/1.2 system-ui,sans-serif;
+  backdrop-filter:blur(10px);
+  box-shadow:0 3px 11px rgba(0,0,0,.2);
+  pointer-events:auto;cursor:pointer;
+}
+.game3d-chat-awaken kbd{
+  color:rgba(196,225,235,.8);font:500 10px/1.2 system-ui,sans-serif;
+}
+.game3d-chat-awaken:hover,.game3d-chat-awaken:focus-visible{
+  color:#fff;border-color:#f3dab0;outline:2px solid rgba(200,228,241,.42);
+}
 .game3d-view .game3d-world-chat.is-expanded,
 .game3d-view .game3d-world-chat.is-typing,
 .game3d-view .game3d-world-chat.is-pinned{opacity:1;visibility:visible;pointer-events:auto}
@@ -81,18 +103,22 @@
 }
 @media(max-width:620px) {
  .game3d-view .game3d-world-chat {
-   max-height:min(240px,max(0px,calc(100dvh - (25px + 106px + 16px) - (55px + 95px + 16px))));
+   max-height:min(270px,max(92px,calc(100dvh - (25px + 106px + 16px) - var(--axe-hud-xp-bottom,13px) - 12px)));
  }
  .game3d-view .game3d-world-chat.is-typing {width:min(92vw,420px)}
  .game3d-chat-channel-row button{flex:0 0 auto}
 }
 @media(max-width:420px) {
  .game3d-view .game3d-world-chat {
-   max-height:min(240px,max(0px,calc(100dvh - (18px + 80px + 16px) - (55px + 95px + 16px))));
+   max-height:min(250px,max(92px,calc(100dvh - (18px + 80px + 16px) - var(--axe-hud-xp-bottom,13px) - 12px)));
  }
 }
 @media(max-height:580px) {
- .game3d-view .game3d-world-chat {bottom:18px;max-height:calc(100dvh - 230px)}
+ .game3d-view .game3d-world-chat {
+   /* XP is the actual bottom anchor. Keep the input inside the map clearance. */
+   bottom:var(--axe-hud-xp-bottom,11px);
+   max-height:min(220px,max(92px,calc(100dvh - (18px + 80px + 20px) - var(--axe-hud-xp-bottom,11px))));
+ }
 }
 @media(prefers-reduced-motion:reduce) {
  .game3d-view .game3d-world-chat {transition:none}
