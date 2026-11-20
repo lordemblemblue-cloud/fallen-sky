@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { DONOR_UPGRADES, SERVER_ROLLED_UPGRADES, consumedItemIds, findItem, heroLevelOf, pickCostUnits, readUpgrade, rollUpgrade, saveAsServerKnows, spentCounts, upgradeBase, upgradeCost } from '../../shared/itemUpgradeLedger.ts';
+import { getAXEReinforcementCap } from '../../shared/axeItemEnhancement.ts';
 
 // The server rolls Game 3D's risky item upgrades (docs/game3d/SERVER_UPGRADES.md):
 // reinforcement (the Enchant %), over-enchant, refine, ultimate, Combine and Ascension
@@ -95,6 +96,19 @@ Deno.serve(async (req) => {
       }
 
       const before = row ? { ...upgradeBase(serviceId), ...(row.record || {}) } : { ...upgradeBase(serviceId), ...(readUpgrade(save.data, serviceId, itemId) || {}) };
+      // Never let the browser bypass Over-Enchant progression by submitting
+      // a direct API request. Use the latest server-rolled reinforcement record
+      // rather than trusting the submitted equipment snapshot or UI state.
+      if (serviceId === 'over_enchant') {
+        const enchantRecord = rowOf(itemId, 'reinforcement')?.record
+          || readUpgrade(known, 'reinforcement', itemId) || {};
+        const required = getAXEReinforcementCap(item);
+        const current = Number(enchantRecord.percent || 0);
+        if (!Number.isFinite(current) || current < required) {
+          return json({ success: true, result: { ok:false, serviceId, itemId,
+            reason:'ENCHANT_CAP_REQUIRED', requiredPercent:required, currentPercent:current } });
+        }
+      }
       const protectedAttempt = data.protectedAttempt === true;
       const roll = serverRoll();
       const rolled = rollUpgrade(serviceId, before, { roll, protectedAttempt, item, donor, heroLevel: heroLevelOf(save.data) });
