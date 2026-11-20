@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {WORLD_PVP_MODE,WORLD_PVP_ZONE,resolveWorldPvpZone,canWorldPvpAttack}
+import {WORLD_PVP_ZONE,resolveWorldPvpZone,canWorldPvpAttack}
   from '../src/components/game3d/pvp/WorldPvpRules.mjs';
 import {worldAnnouncementFromReceipt}
   from '../src/components/game3d/notifications/WorldAnnouncementModel.mjs';
