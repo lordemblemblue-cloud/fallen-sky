@@ -2216,3 +2216,93 @@
 .axe-service-workspace--blacksmith .axe-blacksmith-operation-panel .axe-blacksmith-success {
   display:none;
 }
+
+
+/* 2026-11-20 final correction: the left Inventory Forge CARD was deleted
+ * in JSX, not merely hidden. Give the vacated left column to Inventory.
+ * Enchant/Combine ingredient squares are now DOWN and RIGHT of the item
+ * circle, with Auto and the primary action directly below the squares.
+ * Do not touch the right-hand statistics/Forge Results or their handlers. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-inventory-shell {
+  display:flex!important;
+  left:3.4%!important;
+  top:15%!important;
+  width:34.5%!important;
+  height:81%!important;
+}
+/* The existing seven operation subpages shift left to fill the space
+ * without duplicating Enchant / Over-Enchant / Combine as separate cards. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  left:39.3%!important;
+  top:15%!important;
+  width:57.7%!important;
+  height:8.8%!important;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+}
+/* Keep the circular equipment preview entirely LEFT of the real forge inputs. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;
+  left:39.15%!important;
+  top:37%!important;
+  width:16.125%!important;
+  aspect-ratio:1;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;
+  left:39.15%!important;
+  top:37.25%!important;
+  width:16.125%!important;
+  height:29%!important;
+}
+/* The former two squares sat ABOVE the circle, leaving their actions stranded
+ * inside the left Forge card. Move ALL controls to the circle's right instead. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:56.1%!important;
+  top:32.5%!important;
+  width:16.2%!important;
+  height:60.5%!important;
+  max-height:none!important;
+  padding:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow {
+  width:100%;
+  grid-template-columns:minmax(0,1fr) clamp(17px,1.6cqw,25px) minmax(0,1fr);
+  gap:4px;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow-slot {
+  box-sizing:border-box;
+  width:100%;
+  min-height:clamp(85px,7.2cqw,114px);
+  max-height:none;
+  aspect-ratio:auto;
+  padding:7px 3px;
+}
+/* Keep success chance and progression tied to the moved preview circle. */
+.axe-service-workspace--blacksmith .axe-blacksmith-center-success {
+  left:39.15%;
+  top:68%;
+  width:16.125%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel {
+  display:flex!important;
+  left:39.15%!important;
+  top:74.6%!important;
+  width:16.125%!important;
+  max-height:20%!important;
+}
