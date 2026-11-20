@@ -3,14 +3,15 @@
 export const WORLD_ANNOUNCEMENT_KINDS=Object.freeze([
   'item_acquired','dungeon_cleared','player_kill','killing_spree',
 ]);
-const clean=(v,max=56)=>{
+export const cleanWorldAnnouncementText=(v,max=56)=>{
   if(typeof v!=='string')return '';
-  return v.replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,max);
+  return [...v].filter(c=>c!=='<'&&c!=='>'&&c.charCodeAt(0)>31&&c.charCodeAt(0)!==127)
+    .join('').trim().slice(0,max);
 };
 export function worldAnnouncementFromReceipt(raw){
   if(!raw||!WORLD_ANNOUNCEMENT_KINDS.includes(raw.kind))return null;
-  const actor=clean(raw.actorName),target=clean(raw.targetName),
-    item=clean(raw.itemName),dungeon=clean(raw.dungeonName);
+  const actor=cleanWorldAnnouncementText(raw.actorName),target=cleanWorldAnnouncementText(raw.targetName),
+    item=cleanWorldAnnouncementText(raw.itemName),dungeon=cleanWorldAnnouncementText(raw.dungeonName);
   let title='',description='',tone='gold';
   if(raw.kind==='item_acquired'&&actor&&item){
     title='Rare Discovery';description=actor+' acquired '+item; 
