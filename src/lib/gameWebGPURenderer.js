@@ -19,7 +19,7 @@ export async function createGameWebGPURenderer({
 
   let renderer;
   try {
-    const { default: WebGPURenderer } = await import('three/webgpu');
+    const { WebGPURenderer } = await import('three/webgpu');
     renderer = new WebGPURenderer({
       ...(canvas ? { canvas } : {}),
       antialias,
