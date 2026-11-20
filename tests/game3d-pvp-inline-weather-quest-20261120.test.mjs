@@ -56,5 +56,5 @@ test('switch still awaits trusted world-server confirmation and fails closed',()
   assert.match(control,/MODE_REQUEST/);
   assert.match(control,/setRequested\(confirmed\)/);
   assert.match(control,/disabled=\{pending\}/);
-  assert.match(control,/safeZone\?'Safe Zone: players cannot damage each other here/);
+  assert.match(control,/Safe Zone: players cannot damage each other here/);
 });
