@@ -1,24 +1,35 @@
-# Duelist Adventure: main menu and permanent public matches (2026-11-19)
+# Duelist Adventure — integrated Play menu, co-op and servers
+Updated 2026-11-19
 
-## Player-facing entry
-- The existing `/duelist` main menu preserves its left-side rail and cinematic background.
-- The old secondary selected-character card is removed.
-- The visible game branding is **Duelist Adventure**, without the legacy label.
-- **Game Modes** exposes Duel, Capture the Flag, Free For All, and Team Deathmatch. Each mode's **Play Against Bots** starts the new Duelist combat engine at `/duelist-next/play`. **Find Online Server** opens the expanded server browser.
-- **Online** replaces the main rail with a full-width browser; **Back to main menu** restores the previous rail section.
-- The Online filters are **All**, **Team Deathmatch**, **Free For All**, **Capture the Flag**, and **Duel**. The browser lists only rooms returned by the actual `/lobby` endpoint and displays humans, bots, capacity, and joinability. Clicking a row joins that exact server ID.
-- Fleet Assault, Practice, Combat Training, Story Campaign, and Controls & Settings remain independent options in the original menu. Fleet Assault is preserved for further work.
-- Games launched from the original `/duelist` menu return to `/duelist` with their **Menu** button.
+## Main menu (`/duelist`)
+- The original cinematic left rail remains. Its new **Play** entry shows four mode selections on the right: Duel, Capture the Flag, Football, Team Deathmatch. There is no separate **Online** navigation item and no "Game Modes" header.
+- A thin gold separator sits between the modes and the actual server list. Each server row shows mode, human occupancy, bot occupancy, status, and Join.
+- An initially live server per mode is seeded by `server/duelist/server.mjs`. Joining a room replaces exactly one bot. When every slot fills, an extra server of that mode is created immediately. There is at least one available spare as long as the mode is full; empty overflow rooms can retire after 60 seconds if another room is open.
+- The page reads real server data through `/lobby` rather than inventing server rows. If the match service is offline, the interface says so.
+- Clicking a mode filters the server list; clicking it again restores all modes. A selected mode also offers an offline match with bots.
+- The old secondary character preview card stays removed. Fleet Assault, Practice, Story Campaign, and Controls & Settings remain separate.
 
-## Server behavior
-- `server/duelist/server.mjs` automatically creates one permanent, public match room for each mode in `ONLINE_MODES` (duel, ffa, tdm, ctf) at server initialization.
-- Each starts with a full roster of bots. Server-authoritative `joinMatch` substitutes a human for one bot; `leaveMatch` substitutes a bot for the departed human. Fair-play input limits and match rules are unchanged.
-- Permanent public rooms remain discoverable even without connected players, are exempt from idle-room cleanup, and start a new round after a completed match. Extra rooms are still possible if existing ones fill.
-- Public `/lobby` includes `publicRoom` metadata and does not expose player IDs or credentials.
-- The join protocol optionally includes a selected `matchId`. The server rejects stale, mismatched, or invalid IDs instead of silently joining another room.
+## Story Campaign — Contraband
+- The Story Campaign menu now launches the existing `Contraband` mission instead of the old placeholder campaign.
+- Solo play loads locally without a multiplayer server.
+- Co-op supports 1–4 players with real shared mission progress and objectives.
+- **Host Open Crew** creates an advertised crew (mode `story`, `create:true`, `open:true`).
+- **Join Open Crew** finds an available public crew; selecting a specific listed crew passes its opaque ID.
+- **Create Private Crew** creates an unlisted room with a five-letter code. **Join Code** requires that code; guessing an ID cannot admit a player to a private room.
+- Returning from the game goes back to the original `/duelist` menu. The in-mission HUD displays the crew code and teammate status.
 
-## Activation and verification
-- Deploy the existing dedicated Duelist match server from `server/duelist/index.mjs` and configure the browser's `VITE_DUELIST_WS_URL` to its WebSocket endpoint. Until then, the browser accurately reports server unavailability; it does **not** fabricate active servers.
-- Existing match admission still requires a valid Base44 account token, or an explicitly configured guest-capable server. Guest mode is currently documented for local testing, so production identity/admission configuration needs review.
-- Regression coverage was extended in `tests/duelist-server.test.mjs` for the four startup rooms, bot occupancy, exact room join, one-bot-per-human replacement, invalid/stale selections, and public/private room separation.
-- These repository changes were committed to GitHub; no claim is made here that they were deployed, manually play-tested, or that automated tests have run.
+## Practice
+- The oversized panel has been replaced by two stages:
+  1. Choose **One on One**, **Infinite Practice**, or **Learn the Basics**, each with a short description.
+  2. Choose a supported Game 2 training map and launch the actual training engine.
+- Infinite Practice pre-enables the existing invulnerability toggle for the duel participants. Players can still toggle it inside the arena.
+
+## Football
+- A new Football mode is in the shared Duelist simulation: two bot-filled teams, a physical goal-scoring ball, and first to five goals (or the lead at eight minutes).
+- Move to dribble; press **F** near the ball for a stronger kick. Server-authoritative ball physics and team goals are networked and rendered.
+- Football here uses goals rather than American-football downs, possession, or tackling. Those more elaborate rules are not part of this initial implementation.
+
+## Verification and deployment
+- The CI workflow `.github/workflows/duelist-adventure-check.yml` runs Duelist server, co-op, combat, Football and web-build checks.
+- GitHub source changes are complete. They are **not equivalent to publishing the Base44 web app or deploying the Node WebSocket match service**.
+- A dedicated live host must run `node server/duelist/index.mjs`, with a permitted origin and authenticated access configured. The browser must be built with `VITE_DUELIST_WS_URL=wss://<host>/ws/duelist`. Until that is configured, only local/offline matches and solo campaign play can be used.
