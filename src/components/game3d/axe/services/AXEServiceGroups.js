@@ -20,7 +20,7 @@ export const AXE_SERVICE_GROUPS = Object.freeze([
     'refine', 'ultimate', 'runes', 'sockets', 'core',
     // gear tiers (setting, off by default): Tier Up exists only while the setting is on
     ...(isGearTiersEnabled() ? ['tier_up'] : []),
-  ]),
+  ], 'panel'),
   // Character now owns the former Appearance pages. Keep its original menu
   // position and all legacy service IDs so world/service requests still work.
   // The default Character subpage replaces Overview; the outfit rail remains.

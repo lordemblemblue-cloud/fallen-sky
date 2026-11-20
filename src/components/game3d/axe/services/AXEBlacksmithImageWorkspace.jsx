@@ -257,6 +257,7 @@ export default function AXEBlacksmithImageWorkspace({
   const [autoEnabled, setAutoEnabled] = useState(false);
   const [autoProtection, setAutoProtection] = useState(false);
   const [minSuccess, setMinSuccess] = useState(90);
+  const [autoTarget, setAutoTarget] = useState(100);
   const [batchBusy, setBatchBusy] = useState(false);
   const [batchPending, setBatchPending] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -336,6 +337,14 @@ export default function AXEBlacksmithImageWorkspace({
   void revision;
   // The service this tab runs (Enchant tab: Enchant % or slots; Ascend: the stage service).
   const operation = blacksmithOperationFor(tab, enchantMode);
+  useEffect(() => {
+    // Each operation has its own meaningful destination; never carry 200%
+    // across to a +10 enchant slot, or a +12 Combine rank.
+    setAutoTarget(operation === 'reinforcement' ? 100
+      : operation === 'enchant' ? 20
+        : operation === 'over_enchant' ? 4 : 4);
+    setBatchPending(false);
+  }, [operation]);
   const percentMode = operation === 'reinforcement';
   const forgeTab = ['enchant','over_enchant','combine','sockets','ascend','tier'].includes(tab);
   const readout = selectedItem && forgeTab ? getAXEBlacksmithReadout(selectedItem, operation,
@@ -534,7 +543,7 @@ export default function AXEBlacksmithImageWorkspace({
     if (!autoEnabled || !workflowMode || !selectedItem || forging || batchRunningRef.current) return;
     if (!batchPending) {
       setBatchPending(true);
-      setForgeNotice('Confirm the batch: up to 12 real transactions; successful combines consume donors.');
+      setForgeNotice('Confirm up to 12 attempts towards your selected target. Successful combines consume donors.');
       return;
     }
     setBatchPending(false);
@@ -555,6 +564,13 @@ export default function AXEBlacksmithImageWorkspace({
         cancelled: () => cancelledBatch.current,
         minSuccess: minSuccess / 100,
         allowProtection: autoProtection,
+        targetProgress: autoTarget,
+        getProgress: (mode, id) => mode === 'reinforcement'
+          ? Number(getItemReinforcement(id)?.percent || 0)
+          : mode === 'enchant'
+            ? getItemEnchantments(id).reduce((sum, level) => sum + Number(level || 0), 0)
+            : mode === 'over_enchant' ? Number(getItemOverEnchant(id)?.level || 0)
+              : Number(getAXEAdvancementState(id)?.combine?.count || 0),
         maxAttempts: 12,
         transact: async (operation, payload) => {
           const result = await executeAXEServiceTransaction(operation, payload);
@@ -604,8 +620,10 @@ export default function AXEBlacksmithImageWorkspace({
 
       <nav className="axe-blacksmith-image-tabs" aria-label="Blacksmith operations">
         {BLACKSMITH_TABS.map(({ id, label, Icon }) => <button type="button" key={id}
-          aria-pressed={tab === id} onClick={() => pickTab(id)} title={label} disabled={batchBusy}>
-          <Icon size={24} strokeWidth={1.65} aria-hidden="true" /><span>{label}</span>
+          aria-label={label} aria-pressed={tab === id} onClick={() => pickTab(id)}
+          title={label} disabled={batchBusy || forging}>
+          <Icon size={24} strokeWidth={1.65} aria-hidden="true" />
+          <span className="axe-blacksmith-visually-hidden">{label}</span>
         </button>)}
       </nav>
 
@@ -617,13 +635,18 @@ export default function AXEBlacksmithImageWorkspace({
         target={selectedItem} donor={donorItem}
         compatibleDonors={compatibleDonors} requirements={materialRequirements}
         selectedMaterial={stagedMaterial} materialSelection={selectedMaterialId}
+        getMaterialName={id => MATERIAL_NAMES.get(id) || id.replaceAll('_', ' ')}
         readout={readout} canForge={canForge} confirmCombine={confirmCombine}
-        autoEnabled={autoEnabled} onToggleAuto={setAutoEnabled}
+        autoEnabled={autoEnabled} onToggleAuto={next => { setAutoEnabled(next); setBatchPending(false); }}
         autoProtection={autoProtection} onToggleProtection={setAutoProtection}
         minSuccess={minSuccess} onChangeThreshold={setMinSuccess}
+        autoTarget={autoTarget} onChangeAutoTarget={value => { setAutoTarget(value); setBatchPending(false); }}
         onSelectDonor={item => setForgeSlot('donor', item.instanceId)}
         onClearTarget={clearTarget} onClearDonor={() => setDonorId('')}
         onDropSlot={dropInto}
+        onFocusInventory={() => {
+          document.querySelector('.axe-blacksmith-image-inventory button')?.focus({ preventScroll: true });
+        }}
         onMaterial={id => {
           if (Object.hasOwn(inventoryRelevantCost, id)) setSelectedMaterialId(id);
         }}
@@ -722,21 +745,6 @@ export default function AXEBlacksmithImageWorkspace({
 
       </section>
 
-      {tab === 'combine' && <div className="axe-blacksmith-combine-slots" aria-label="Combine Stage equipment slots">
-        {[
-          { id: 'target', label: 'Target', item: selectedItem },
-          { id: 'donor', label: 'Donor', item: donorItem },
-        ].map(({ id, label, item }) => <div key={id} className="axe-blacksmith-combine-slot-wrap">
-          <button type="button" className="axe-blacksmith-combine-slot"
-            aria-label={label + ' equipment slot' + (item ? ': ' + item.name : ': empty')}
-            onDragOver={event => event.preventDefault()} onDrop={event => dropInto(event, id)}
-            onClick={() => { if (id === 'target') { setSelectedId(''); setDonorId(''); } else setDonorId(''); }}
-            title={item ? 'Clear ' + label : 'Choose equipment from inventory'}>
-            {item ? itemArt(item) ? <img src={itemArt(item)} alt="" /> : <InventorySymbol item={item} /> : <span aria-hidden="true">+</span>}
-          </button>
-          <small>{label}</small>
-        </div>)}
-      </div>}
       <div className="axe-blacksmith-forge-ring" aria-hidden="true">
         <i className="axe-blacksmith-forge-glyph axe-blacksmith-forge-glyph--top">✦</i>
         <i className="axe-blacksmith-forge-glyph axe-blacksmith-forge-glyph--left">✧</i>
@@ -786,9 +794,15 @@ export default function AXEBlacksmithImageWorkspace({
             <b>{fmtStat(readout?.projectedAttack)}</b>
           </div>
           <p className="axe-blacksmith-operation-hint" role="status">{forgeNotice || status}</p>
-          {selectedItem && <AXEItemStatBreakdownList rows={readout?.statRows || []}
-            projected={readout?.projectedRows} label="Item stats now and after a success"
-            className="axe-blacksmith-stat-breakdown" />}
+          {selectedItem && (workflowMode
+            ? <details className="axe-blacksmith-advanced"><summary>Full stat breakdown</summary>
+                <AXEItemStatBreakdownList rows={readout?.statRows || []}
+                  projected={readout?.projectedRows} label="Item stats now and after a success"
+                  className="axe-blacksmith-stat-breakdown" />
+              </details>
+            : <AXEItemStatBreakdownList rows={readout?.statRows || []}
+                projected={readout?.projectedRows} label="Item stats now and after a success"
+                className="axe-blacksmith-stat-breakdown" />)}
         </div>
         <div className="axe-blacksmith-materials-block">
           <strong>Required Materials</strong>
@@ -859,8 +873,9 @@ export default function AXEBlacksmithImageWorkspace({
             ? 'Chosen keeps its own stage path for the Chosen set (Evolution Stones, no donor, no item-stat change).'
             : 'Ascension is for Rare, Elite and Legendary equipment. Common and Unique ascension is off; Mythical is not available yet.'}</p>}
         </div>}
-        {workflowMode && <div className="axe-blacksmith-extra-details" aria-label="Detailed upgrade information">
-          <h4>Equipment &amp; Forge Details</h4>
+        {workflowMode && <details className="axe-blacksmith-advanced" aria-label="Detailed upgrade information">
+          <summary>Advanced Equipment &amp; Forge Details</summary>
+          <div className="axe-blacksmith-extra-details">
           <div><span>Rarity</span><b>{selectedItem?.rarity || selectedItem?.tier || '—'}</b></div>
           <div><span>Item level</span><b>{selectedItem ? fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1) : '—'}</b></div>
           <div><span>Ascension</span><b>{selectedItem ? '+' + fmt(readout?.stageRank ?? 0) : '—'}</b></div>
@@ -886,7 +901,8 @@ export default function AXEBlacksmithImageWorkspace({
           <p className={tab === 'over_enchant' ? 'axe-forge-detail-warning' : ''}>
             {readout?.preview?.risk || 'Choose an item to see the actual result and requirements.'}
           </p>
-        </div>}
+          </div>
+        </details>}
         {tab === 'combine' && <AXEWeaponLegacyForgePane
           target={selectedItem}
           items={items}
@@ -896,8 +912,11 @@ export default function AXEBlacksmithImageWorkspace({
             setRevision(value => value + 1);
             onTransaction?.(result);
           }} />}
-        {/* Client-only test station: no permanent forge or server writes. */}
-        <AXETestWeaponTuner item={selectedItem} />
+        {/* Optional test tools no longer compete with the two primary slots. */}
+        <details className="axe-blacksmith-advanced">
+          <summary>Test weapon settings</summary>
+          <AXETestWeaponTuner item={selectedItem} />
+        </details>
       </section>
 
       <section className="axe-blacksmith-progression-panel" aria-label="Equipment progression">

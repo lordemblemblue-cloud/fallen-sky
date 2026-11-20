@@ -16,7 +16,7 @@ function applyAuthority(snapshot) {
   if (!snapshot || !Number.isFinite(snapshot.version) || !Array.isArray(snapshot.stations)) return false;
   if (snapshot.version < authorityVersion) return false;
   authorityVersion = snapshot.version;
-  stations = snapshot.stations.filter(s => s?.id && AXE_STATION_GROUPS[s.groupId] && [s.position?.x, s.position?.y, s.position?.z].every(Number.isFinite));
+  stations = snapshot.stations.filter(s => s?.id && s.groupId !== 'blacksmith' && AXE_STATION_GROUPS[s.groupId] && [s.position?.x, s.position?.y, s.position?.z].every(Number.isFinite));
   if (activeStationId && !stations.some(s => s.id === activeStationId)) { activeStationId = null; event('axeServiceStationUnavailable', { reason: 'STATION_REMOVED' }); }
   mode = 'shared'; message = ''; runtime?.sync(stations); emit(); return true;
 }
@@ -93,6 +93,7 @@ function queueStationOperation(operation) {
 
 export function summonAXEServiceStation(groupId) { return queueStationOperation(() => summonStation(groupId)); }
 async function summonStation(groupId) {
+  if (groupId === 'blacksmith') return unavailable('BLACKSMITH_STATION_REMOVED');
   if (!AXE_STATION_GROUPS[groupId]) return unavailable('UNKNOWN_STATION_GROUP');
   if (!runtime) return unavailable('WORLD_NOT_READY');
   const context = runtime.context();
@@ -119,7 +120,7 @@ async function summonStation(groupId) {
 export function enterAXEServiceStation(id) { return queueStationOperation(() => enterStation(id)); }
 async function enterStation(id) {
   const station = stations.find(s => s.id === id), context = runtime?.context();
-  if (!station || !context) return unavailable('STATION_NOT_FOUND');
+  if (!station || !context || station.groupId === 'blacksmith') return unavailable('STATION_NOT_FOUND');
   if (!context.allowed) return unavailable(context.reason || 'SERVICE_UNAVAILABLE_HERE');
   if (station.region !== context.region || stationDistance(context.player, station.position) > AXE_STATION_CONFIG.interactionRange) return unavailable('STATION_TOO_FAR');
   if (authority) return authorityRequest('enter', { stationId: id });
@@ -162,5 +163,6 @@ export function tickAXEServiceStationLifecycle(now = Date.now()) {
 }
 
 export function requestAXEStationInteraction(station) {
+  if (!station || station.groupId === 'blacksmith') return;
   event('axeWorldServiceRequested', { groupId: station.groupId, stationId: station.id, serviceId: AXE_STATION_GROUPS[station.groupId]?.serviceId });
 }

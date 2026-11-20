@@ -1,146 +1,193 @@
-import { ShieldCheck, Layers, Gem, Zap, Sparkles } from 'lucide-react';
+import { ShieldCheck, Swords, Gem, Package, Layers } from 'lucide-react';
 import './AXEBlacksmithWorkflowPanel.css';
 
 const art = item => item?.imageUrl || item?.iconUrl || item?.image || null;
-const display = value => String(value ?? '').replaceAll('_', ' ');
-const labelFor = mode => mode === 'combine' ? 'Combine' : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant';
+const labelFor = mode => mode === 'combine' ? 'Combine'
+  : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant';
 const pct = chance => chance == null ? '—' : Math.round(Number(chance) * 1000) / 10 + '%';
+const labelMaterial = id => String(id || '').replace(/^mat_/, '').replaceAll('_', ' ');
+const targetLabel = (operation, value) => operation === 'reinforcement' ? value + '%'
+  : operation === 'enchant' ? '+' + value + ' across slots'
+  : '+' + value;
+const progressTargets = operation => operation === 'reinforcement'
+  ? [25, 50, 75, 100, 125, 150, 175, 200]
+  : operation === 'enchant' ? [5, 10, 20, 30, 40]
+    : operation === 'over_enchant' ? [1,2,3,4,5,6,7,8,9,10]
+      : [1,2,3,4,5,6,8,10,12];
 
-// Blacksmith v2 (docs/game3d/BLACKSMITH_V2_20261118.md): the Enchant tab runs the item's
-// Enchant % (0–200, `operation` 'reinforcement') or its four +10 slots ('enchant').
-export default function AXEBlacksmithWorkflowPanel({ mode, operation = mode, enchantMode = 'percent', onChangeEnchantMode = () => {},
-  target, donor, compatibleDonors = [],
-  requirements = [], materialSelection = '', selectedMaterial = null,
-  readout, canForge, confirmCombine, autoEnabled, onToggleAuto, autoProtection, onToggleProtection,
-  minSuccess, onChangeThreshold, onSelectDonor, onClearTarget, onClearDonor,
-  onDropSlot, onMaterial, onForge, onAuto, onStop, busy, batchBusy,
-  batchPending, onCancelBatch, notice, onChangeMode,
+// The materials box represents ALL required stacks, not a single consumed
+// stack. The existing gateway still validates and charges every actual cost.
+export default function AXEBlacksmithWorkflowPanel({
+  mode, operation = mode, enchantMode = 'percent', onChangeEnchantMode = () => {},
+  target, donor, compatibleDonors = [], requirements = [],
+  materialSelection = '', selectedMaterial = null, getMaterialName = labelMaterial,
+  readout, canForge, confirmCombine, autoEnabled, onToggleAuto,
+  autoProtection, onToggleProtection, minSuccess, onChangeThreshold,
+  autoTarget, onChangeAutoTarget, onSelectDonor, onClearTarget, onClearDonor,
+  onDropSlot, onMaterial, onFocusInventory = () => {},
+  onForge, onAuto, onStop, busy, batchBusy, batchPending, onCancelBatch, notice,
 }) {
   const combine = mode === 'combine';
-  const percentMode = operation === 'reinforcement';
-  const isRisky = mode === 'over_enchant' || percentMode;
-  const chance = readout?.chance;
-  const current = combine ? '+' + (readout?.combineStage ?? 0) : mode === 'over_enchant'
-    ? readout?.overEnchantLevel : percentMode ? (readout?.reinforcementPercent ?? 0) + '%' : readout?.enchantTotal;
-  const icon = item => art(item)
+  const materialsMissing = requirements.some(([,needed,owned]) => owned < needed);
+  const risky = operation === 'reinforcement' || operation === 'over_enchant';
+  const current = combine ? '+' + (readout?.combineStage ?? 0)
+    : operation === 'reinforcement' ? (readout?.reinforcementPercent ?? 0) + '%'
+      : operation === 'enchant' ? '+' + (readout?.enchantTotal ?? 0)
+        : '+' + (readout?.overEnchantLevel ?? 0);
+  const itemImage = (item, fallback) => art(item)
     ? <img src={art(item)} alt="" draggable={false}/>
-    : <Gem size={23} aria-hidden="true"/>;
-  const slot = (which, item, caption, action) => <button type="button"
-    className="axe-forge-flow-slot" onClick={action}
-    onDragOver={event => event.preventDefault()}
-    onDrop={event => onDropSlot(event, which)}
-    title={item ? caption + ': ' + item.name + ' — click to clear' : 'Place ' + caption.toLowerCase() + ' here'}
-    aria-label={item ? caption + ': ' + item.name : caption + ': empty'}
-    disabled={batchBusy}>
-    {item ? icon(item) : <span className="axe-forge-flow-plus" aria-hidden="true">+</span>}
-    <small>{item?.name || caption}</small>
-  </button>;
-  return <section className="axe-blacksmith-workflow" aria-label={labelFor(mode) + ' inventory workstation'}>
+    : fallback;
+
+  const equipmentSlot = (kind, item, title, fallback) =>
+    <button type="button" className="axe-forge-flow-slot" data-ingredient={kind}
+      disabled={busy || batchBusy}
+      onClick={() => item ? (kind === 'target' ? onClearTarget() : onClearDonor()) : onFocusInventory(kind)}
+      onDragOver={event => event.preventDefault()}
+      onDrop={event => onDropSlot(event, kind)}
+      title={item ? 'Remove ' + item.name + ' from this slot' : 'Choose ' + title.toLowerCase() + ' from inventory'}
+      aria-label={item ? title + ': ' + item.name + '. Click to remove.' : title + ': empty. Choose from inventory.'}>
+      <span className="axe-forge-flow-slot-art">
+        {item ? itemImage(item, fallback) : fallback}
+      </span>
+      <strong>{item?.name || title}</strong>
+      {item && <small>Lv {item.itemLevel ?? item.level ?? 1}</small>}
+    </button>;
+
+  return <section className="axe-blacksmith-workflow" data-blacksmith-two-slot="true"
+    aria-label={labelFor(mode) + ' forge workstation'}>
     <header className="axe-forge-workflow-header">
-      <span>Inventory Forge</span><h3>{labelFor(mode)}</h3>
-      <small>Right-click an owned item to place it here.</small>
+      <span>Blacksmith · Equipment</span>
+      <h3>{labelFor(mode)}</h3>
+      <small>{!target ? 'Select equipment from Inventory to begin.'
+        : mode === 'combine' ? 'Choose matching equipment for the second slot.'
+          : 'Supply the required materials and start the upgrade.'}</small>
     </header>
-    <nav className="axe-forge-mode-boxes" aria-label="Inventory upgrade subpages">
-      {['enchant', 'over_enchant', 'combine'].map(id =>
-        <button type="button" key={id} className="axe-forge-mode-box"
-          aria-pressed={mode === id} aria-current={mode === id ? 'page' : undefined}
-          onClick={() => onChangeMode(id)} disabled={batchBusy}
-          title={'Switch to ' + labelFor(id)}>
-          {id === 'combine' ? <Layers size={19} aria-hidden="true"/> : id === 'over_enchant'
-            ? <Zap size={19} aria-hidden="true"/> : <Gem size={19} aria-hidden="true"/>}
-          <span>{labelFor(id)}</span>
-        </button>)}
-    </nav>
-    {mode === 'enchant' && <div className="axe-forge-mode-boxes axe-forge-enchant-modes" role="group" aria-label="Enchant type">
-      {[['percent', 'Enchant % (0–200)'], ['slots', 'Slots (4 × +10)']].map(([id, label]) =>
-        <button type="button" key={id} className="axe-forge-mode-box" aria-pressed={enchantMode === id}
-          onClick={() => onChangeEnchantMode(id)} disabled={batchBusy}>
-          <span>{label}</span>
-        </button>)}
+
+    {mode === 'enchant' && <div className="axe-forge-enchant-modes" role="group" aria-label="Enchant method">
+      <button type="button" aria-pressed={enchantMode === 'percent'}
+        disabled={busy || batchBusy} onClick={() => onChangeEnchantMode('percent')}>
+        Enchant %
+      </button>
+      <button type="button" aria-pressed={enchantMode === 'slots'}
+        disabled={busy || batchBusy} onClick={() => onChangeEnchantMode('slots')}>
+        4 Enchant Slots
+      </button>
     </div>}
-    <div className="axe-forge-selected" aria-label="Selected equipment">
-      <div className="axe-forge-selected-art">{target ? icon(target) : <Layers size={24} aria-hidden="true"/>}</div>
-      <div><strong>{target?.name || 'No equipment selected'}</strong>
-        {target ? <small>Lv. {target.itemLevel ?? target.level ?? 1} · {target.rarity ?? target.tier ?? 'Equipment'}</small>
-          : <small>Choose an item from Inventory</small>}
-        {target && <small>{current == null ? 'Equipment' : (combine ? 'Combine' : percentMode ? 'Enchant' : mode === 'over_enchant' ? 'Over-Enchant' : 'Enchant slots') + ': ' + display(current)}</small>}
-      </div>
-      {target && <button type="button" className="axe-forge-clear" onClick={onClearTarget}
-        aria-label="Remove selected equipment" disabled={batchBusy}>×</button>}
-    </div>
-    <div className="axe-forge-flow" aria-label="Upgrade ingredients and result">
-      {slot('target', target, 'Base', onClearTarget)}
-      <span aria-hidden="true">+</span>
-      {combine ? slot('donor', donor, 'Donor', onClearDonor)
-        : <button type="button" className="axe-forge-flow-slot" disabled={batchBusy || !requirements.length}
-            onClick={() => onMaterial(requirements[0]?.[0] || '')}
-            aria-label="Show required upgrade materials">
-            {selectedMaterial ? <Gem size={21} aria-hidden="true"/> : <span aria-hidden="true">+</span>}
-            <small>{selectedMaterial?.name || 'Materials'}</small>
+
+    <div className="axe-forge-flow" aria-label="Two forge ingredients">
+      {equipmentSlot('target', target, 'Equipment', <Swords size={35} aria-hidden="true"/>)}
+      <span className="axe-forge-ingredient-plus" aria-hidden="true">+</span>
+      {combine ? equipmentSlot('donor', donor, 'Donor Equipment', <Layers size={35} aria-hidden="true"/>)
+        : <button type="button" data-ingredient="materials" className="axe-forge-flow-slot"
+            disabled={busy || batchBusy} onClick={() => {
+              onMaterial(requirements[0]?.[0] || '');
+              onFocusInventory('materials');
+            }} title="Select materials from inventory" aria-label="Required upgrade materials">
+            <span className="axe-forge-flow-slot-art">
+              {selectedMaterial ? <Gem size={35} aria-hidden="true"/> : <Package size={35} aria-hidden="true"/>}
+            </span>
+            <strong>{selectedMaterial?.name || 'Materials'}</strong>
+            <small>{requirements.length ? requirements.length + ' required resource' + (requirements.length === 1 ? '' : 's')
+              : 'No material cost'}</small>
           </button>}
-      <span aria-hidden="true">=</span>
-      <div className="axe-forge-flow-result" title="Next result uses server-compatible forge preview">
-        <Sparkles size={23} aria-hidden="true"/><small>{readout?.preview?.outcome || 'Preview'}</small>
-      </div>
     </div>
-    <div className="axe-forge-help-items">
-      <h4>{combine ? 'Matching equipment (' + compatibleDonors.length + ')' : 'Required materials'}</h4>
-      {!target && <p>Choose your base equipment to see compatible items.</p>}
-      {target && combine && (compatibleDonors.length ? <div className="axe-forge-donor-list">
-        {compatibleDonors.slice(0, 10).map(item => <button type="button" key={item.instanceId}
-          aria-pressed={donor?.instanceId === item.instanceId} disabled={batchBusy}
-          onClick={() => onSelectDonor(item)} title={'Select ' + item.name + ' as donor'}>
-          {item.name} <small>Lv. {item.itemLevel ?? item.level ?? 1}</small>
-        </button>)}
-      </div> : <p>No unlocked, unequipped item with the same rarity, item level, slot and type.</p>)}
-      {target && !combine && (requirements.length ? requirements.map(([id, required, owned]) =>
-        <button type="button" key={id} className="axe-forge-required-item"
-          aria-pressed={materialSelection === id} disabled={batchBusy}
+
+    {combine ? <div className="axe-forge-ingredients" aria-label="Eligible donor equipment">
+      {target && <label>Matching donor
+        <select value={donor?.instanceId || ''} disabled={busy || batchBusy}
+          onChange={event => {
+            const item = compatibleDonors.find(entry => entry.instanceId === event.target.value);
+            if (item) onSelectDonor(item);
+            else onClearDonor();
+          }}>
+          <option value="">Choose a matching item</option>
+          {compatibleDonors.map(item => <option key={item.instanceId} value={item.instanceId}>
+            {item.name} · Lv {item.itemLevel ?? item.level ?? 1}
+          </option>)}
+        </select>
+      </label>}
+      {target && !compatibleDonors.length && <small>No eligible unequipped donor equipment.</small>}
+    </div> : <div className="axe-forge-ingredients" aria-label="Material costs">
+      {target ? (requirements.length ? requirements.map(([id, needed, owned]) =>
+        <button key={id} type="button" className="axe-forge-required-item"
+          disabled={busy || batchBusy} aria-pressed={materialSelection === id}
           onClick={() => onMaterial(id)}>
-          <span>{display(id)}</span><strong className={owned < required ? 'is-short' : ''}>{owned} / {required}</strong>
-        </button>) : <p>No materials required for this upgrade.</p>)}
+          <span>{getMaterialName(id)}</span>
+          <strong className={owned < needed ? 'is-short' : ''}>{owned} / {needed}</strong>
+        </button>) : <small>No extra materials required.</small>) : <small>Material costs appear after selecting equipment.</small>}
+    </div>}
+
+    <div className="axe-forge-action-row">
+      <button type="button" className="axe-forge-primary-action"
+        onClick={onForge} disabled={!canForge || busy || batchBusy} aria-busy={busy}>
+        {busy ? 'Processing…' : confirmCombine ? 'Confirm Combine'
+          : labelFor(mode)}
+      </button>
     </div>
+    {target && <div className="axe-forge-quick-status">
+      <span>{current} · Success {pct(readout?.chance)}</span>
+      {materialsMissing && <span className="axe-forge-shortfall">More materials required</span>}
+    </div>}
+
     <div className="axe-forge-automation">
-      <label className="axe-forge-toggle"><input type="checkbox" checked={autoEnabled}
-        disabled={batchBusy} onChange={event => onToggleAuto(event.target.checked)}/>
-        <span>{combine ? 'Auto-add matching donors' : 'Enable Auto-' + labelFor(mode)}</span>
+      <label className="axe-forge-toggle">
+        <input type="checkbox" checked={autoEnabled} disabled={busy || batchBusy}
+          onChange={event => onToggleAuto(event.target.checked)}/>
+        <span>Auto-{labelFor(mode)}</span>
       </label>
-      {!combine && <>
-        <label className="axe-forge-threshold">Stop below success rate
-          <select aria-label="Minimum success rate" value={minSuccess}
-            onChange={event => onChangeThreshold(Number(event.target.value))} disabled={batchBusy}>
-            {[100, 95, 90, 85, 80, 75, 70, 60, 50].map(n =>
-              <option value={n} key={n}>{n}%</option>)}
+      {autoEnabled && <>
+        <label className="axe-forge-threshold">Upgrade until
+          <select aria-label="Automatic forge target" value={autoTarget}
+            onChange={event => onChangeAutoTarget(Number(event.target.value))}
+            disabled={busy || batchBusy}>
+            {progressTargets(operation).map(value =>
+              <option key={value} value={value}>{targetLabel(operation, value)}</option>)}
           </select>
         </label>
-        {isRisky && <label className="axe-forge-toggle"><input type="checkbox"
-          checked={autoProtection} disabled={batchBusy}
-          onChange={event => onToggleProtection(event.target.checked)}/>
-          <span>Use Stabilizers below limit</span>
+        <label className="axe-forge-threshold">Stop if chance below
+          <select aria-label="Minimum success rate" value={minSuccess}
+            disabled={busy || batchBusy}
+            onChange={event => onChangeThreshold(Number(event.target.value))}>
+            {[100,95,90,85,80,75,70,60,50,30,0].map(value=>
+              <option key={value} value={value}>{value}%</option>)}
+          </select>
+        </label>
+        {risky && <label className="axe-forge-toggle">
+          <input type="checkbox" checked={autoProtection} disabled={busy || batchBusy}
+            onChange={event => onToggleProtection(event.target.checked)}/>
+          <span>Use Stabilizers when needed</span>
         </label>}
+        <p className="axe-forge-batch-warning">
+          Up to 12 attempts per confirmed batch. Each attempt uses the real costs and chance;
+          stop when the target is reached, resources run out, or the risk limit applies.
+        </p>
+        {batchBusy
+          ? <button type="button" className="axe-forge-secondary-action" onClick={onStop}>
+              Stop after current attempt
+            </button>
+          : <button type="button" className="axe-forge-secondary-action"
+              onClick={onAuto} disabled={busy || !target || !canForge && !batchPending}>
+              Start Auto-{labelFor(mode)}
+            </button>}
       </>}
-      {target && <p className="axe-forge-risk-note"><ShieldCheck size={14} aria-hidden="true"/>
-        {percentMode ? 'Success: ' + pct(chance) + ' (+5 points). Failure: −3 points, never below 0 %; the item never breaks and Combine and Ascension stay.'
-          : mode === 'enchant' ? 'Slot Enchant succeeds with the current rules; it does not break gear.'
-            : combine ? 'Success: ' + pct(chance) + '. A success uses up the donor; a failure keeps the donor and the stage (fee: free).'
-              : 'Success: ' + pct(chance) + '. Failure can fracture and lower Over-Enchant. Unsafe unprotected attempts stop.'}
-      </p>}
     </div>
-    <div className="axe-forge-action-row">
-      <button type="button" onClick={onForge} disabled={busy || batchBusy || !canForge}>
-        {busy ? 'Forging…' : confirmCombine ? 'Confirm Combine' : 'Forge ' + labelFor(mode)}
-      </button>
-      {autoEnabled && (batchBusy ? <button type="button" className="axe-forge-stop" onClick={onStop}>
-        Stop after current attempt
-      </button> : <button type="button" onClick={onAuto} disabled={!target}>
-        {'Auto-' + labelFor(mode)}
-      </button>)}
-    </div>
+    {target && <p className="axe-forge-risk-note"><ShieldCheck size={15} aria-hidden="true"/>
+      {operation === 'reinforcement'
+        ? 'Each success adds 5%. Failure loses 3 points but never breaks the item.'
+        : combine
+          ? 'On success the donor is consumed. Failure keeps the donor and the combine stage.'
+          : operation === 'enchant'
+            ? 'Each slot upgrades toward +10. Equipment stays intact.'
+            : 'Unprotected failure can fracture and lower Over-Enchant.'}
+    </p>}
     {batchPending && <div className="axe-forge-confirm" role="group" aria-label="Confirm automatic forging">
-      <p>Run up to 12 sequential attempts? Each may consume materials. Combine consumes matching donors on success.</p>
-      <button type="button" onClick={onAuto}>Confirm batch</button>
+      <p>Confirm up to 12 real upgrade attempts toward {targetLabel(operation,autoTarget)}?
+        {combine ? ' Successful combines consume donors.' : ' Materials are consumed on attempts.'}</p>
+      <button type="button" onClick={onAuto}>Confirm Auto-Forge</button>
       <button type="button" onClick={onCancelBatch}>Cancel</button>
     </div>}
-    <p className="axe-forge-workflow-notice" role="status" aria-live="polite">{notice || 'Selection is free. Forge operations use your existing owned resources.'}</p>
+    <p className="axe-forge-workflow-notice" role="status" aria-live="polite">
+      {notice || 'Choose equipment and materials from Inventory. Nothing is consumed until forging.'}
+    </p>
   </section>;
 }
