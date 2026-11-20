@@ -446,7 +446,7 @@ export function createWolfveilVillage(scene,options={}){
     },
     resolveBuildingCollision(position,radius=.65,previous=null,{player=false}={}){
       if(!position)return false;
-      // The 62 authored hillside stones are not Luna interior stairs. Their
+      // The shallow authored hillside treads are not Luna interior stairs. Their
       // own tread-top support catches feet; a high side riser blocks motion.
       let pushed=!!(player&&previous&&palace.resolveApproachCollision?.(position,previous,radius));
       if(previous&&bookCave?.resolveCollision(position,previous,radius))pushed=true;
