@@ -176,7 +176,6 @@ import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaC
 // localStorage game3d.naturalZones=1; the five-area loader stays the rollback.
 import {createWolfveilNaturalZones,collectWolfveilSurfaceRoots} from './wolfveil/zones/WolfveilNaturalZones.js';
 import {wolfveilNaturalZonesEnabled} from './wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
-import {createWolfveilFarOutline} from './wolfveil/WolfveilFarOutline';
 import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
   activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
@@ -873,18 +872,15 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // coordinates. Only the area the player is in is drawn; the others are
     // unloaded until a portal is near. How much stays loaded is this
     // platform's own setting (browser, desktop app or mobile).
-    const areaPlatform=activeGame3DPlatformProfile(window);
     // Outlines of unloaded areas are decoration: without them the loader
     // still works, the far side of a portal is just barer.
-    let farOutline=null;
-    // Area-to-area portal play must not draw skyline proxies for the four absent maps.
-    try{farOutline=null;}
-    catch(error){console.warn('Wolfveil far outline unavailable:',error);}
+    // Distant-area skyline silhouettes are intentionally excluded from portal-only play.
+    const farOutline=null;
     let areaTravelStarted=false;
     const regionStream=wolfveilVillage?createWolfveilAreaLoader({
       world:wolfveilVillage.world,position:initialAreaPosition,portals:WOLFVEIL_AREA_PORTALS,
       // Competition-safe portal mode: never pre-draw the neighboring four maps.
-      mode:'single',preloadMeters:0,
+      mode:'single',preloadMeters:0,batchesPerFrame:12,settleSeconds:0,
       releaseGpuMemory:true,releaseDelaySeconds:0,
       farScenery:false,farProxy:null,
       groundHeightAt:(x,z)=>wolfveilVillage.worldHeight(x,z),
@@ -951,11 +947,10 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         wolfveilVillage?.caveSystem?.isActive?.()||naturalZones?.isInside())return false;
       return areaPortals.resolveCollision(position,from,radius);
     };
-    const onPlatformGraphics=event=>{
-      const profile=event?.detail?.profile||activeGame3DPlatformProfile(window).profile;
-      regionStream?.setOptions({mode:profile.areaLoading,
-        preloadMeters:profile.preloadMeters,releaseGpuMemory:profile.releaseGpuMemory,
-        farScenery:profile.farScenery});
+    const onPlatformGraphics=()=>{
+      // Graphics presets may alter resolution/FPS, never reactivate hidden maps.
+      regionStream?.setOptions({mode:'single',preloadMeters:0,
+        releaseGpuMemory:true,releaseDelaySeconds:0,farScenery:false});
     };
     window.addEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
     // In an explicitly E-entered cave session, movement's ground-step guard
