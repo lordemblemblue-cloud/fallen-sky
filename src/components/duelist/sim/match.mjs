@@ -378,6 +378,12 @@ function flagsStep(match) {
       if (own.state === 'home' && dist(b, own.home) < CTF.capture) {
         match.teamScores[f.team] += 1;
         match.scores[f.id].captures += 1;
+        // Award only for a server-confirmed enemy flag capture, never for
+        // client-provided interaction, proximity, or a claimed objective.
+        const capturingSeat = match.seats.get(f.id);
+        if (capturingSeat?.kind === 'player' && capturingSeat.classId) {
+          capturingSeat.specialMeter = awardSpecialCharge(capturingSeat.specialMeter, 'objective') ?? capturingSeat.specialMeter;
+        }
         goHome(flag);
         event(match, { type: 'captured', team: f.team, by: f.id });
       }
