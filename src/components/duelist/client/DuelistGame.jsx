@@ -25,6 +25,7 @@ import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createFootballProps } from './footballProps.mjs';
+import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
@@ -150,6 +151,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const tags = createNameTags(scene);
     let ctf = null;
     let football = null;
+    let control = null;
     let lockId = null;
     let clock = 0;
     const lookDir = new THREE.Vector3();
@@ -311,6 +313,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       if (e.type === 'fight') { fightTimer = 0.9; setFightFlash(true); }
       else if (e.type === 'captured') audio.play(e.team === myTeam ? 'resist' : 'breach');
       else if (e.type === 'flagTaken') audio.play('gripStart', actors[e.by]?.chest() || null);
+      else if (e.type === 'pointCaptured') audio.play('objective');
       else if (e.type === 'over') {
         const won = e.winner === me() || (myTeam && e.winner === myTeam);
         audio.play(e.winner === 'draw' ? 'loss' : won ? 'victory' : 'loss');
@@ -370,6 +373,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
+        if (!control && source.mode === 'control') control = createControlProps(scene);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
@@ -478,6 +482,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const shown = shownId ? world.fighters.get(shownId) : null;
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           const view = source.view();
+          control?.update(view?.controlPoints);
           if (level) lastView = view;
           setHud({
             you: mine ? snapshot(mine, world.time) : null,
@@ -520,6 +525,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       tags.dispose();
       ctf?.dispose();
       football?.dispose();
+      control?.dispose();
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
