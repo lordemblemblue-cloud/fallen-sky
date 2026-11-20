@@ -61,22 +61,6 @@ const QUICK_SERVICE_TILES=Object.freeze([
 ]);
 const PRESET_QUALITY=['low','medium','high','ultra'];
 const FPS_CAPS=[30,60,120,144];
-const CONTROL_KEYS=[
-  {keys:'W A S D',action:'Move your character'},
-  {keys:'Space',action:'Jump'},
-  {keys:'R',action:'Roll: backward, or toward W / A / S / D (uses dodge stamina)'},
-  {keys:'Double-tap W',action:'Sidestep forward (uses dodge stamina)'},
-  {keys:'Double-tap A / D',action:'Flip sideways'},
-  {keys:'Double-tap S',action:'Back flip'},
-  {keys:'Space (riding)',action:'Take off / land with your mount'},
-  {keys:'Mouse',action:'Look and aim'},
-  {keys:'Middle-click',action:'Manually lock onto or release a target'},
-  {keys:'E',action:'Interact with the world'},
-  {keys:'TAB',action:'Open the store'},
-  {keys:'C',action:'Character hub'},
-  {keys:'ESC',action:'Open or close the world menu'},
-];
-
 function OptionButtons({label,items,value,onPick}){
   return <fieldset className="axe3d-pause__setting">
     <legend>{label}</legend>
@@ -693,11 +677,32 @@ export default function PauseMenu({
                     description="Animate the title and Escape menu. Reduced-motion system settings still take precedence."
                     onChange={()=>updateMotion(!menuMotion)}/>
                 </div>
-                <div className="axe3d-pause__surface">
-                  <h4 className="axe3d-pause__subhead">Quick reference</h4>
-                  <div className="axe3d-pause__key-grid">
-                    {CONTROL_KEYS.map(item=><div key={item.keys}><kbd>{item.keys}</kbd><span>{item.action}</span></div>)}
+                <div className="axe3d-pause__surface" data-testid="game3d-editable-keybinds">
+                  <div className="axe3d-pause__keybind-head">
+                    <div><h4 className="axe3d-pause__subhead">Customize keybinds</h4>
+                      <p>Choose an action, then press its new key. Changes take effect immediately.</p></div>
+                    <button type="button" className="axe3d-pause__keybind-reset"
+                      onClick={()=>{
+                        setKeybinds(saveGame3DKeybinds(GAME3D_DEFAULT_KEYBINDS));
+                        setRebinding(null);setBindingMessage('Default keys restored.');
+                      }}>Reset defaults</button>
                   </div>
+                  {['gameplay','menu'].map(kind=><div key={kind}>
+                    <h5 className="axe3d-pause__keybind-group-title">{kind==='gameplay'?'Movement & actions':'Services & navigation'}</h5>
+                    <div className="axe3d-pause__keybind-grid">
+                      {GAME3D_BINDING_DEFINITIONS.filter(def=>def.kind===kind).map(def=>
+                        <button type="button" key={def.id}
+                          className={'axe3d-pause__keybind-row'+(rebinding===def.id?' is-capturing':'')}
+                          aria-pressed={rebinding===def.id}
+                          aria-label={'Change '+def.label+' key, currently '+game3dBindingLabel(keybinds[def.id])}
+                          onClick={()=>{setRebinding(def.id);setBindingMessage('Press a key for '+def.label+'. Escape cancels.');}}>
+                          <span>{def.label}</span>
+                          <kbd>{rebinding===def.id?'PRESS KEY':game3dBindingLabel(keybinds[def.id])}</kbd>
+                        </button>)}
+                    </div>
+                  </div>)}
+                  <p className="axe3d-pause__help" role="status">{bindingMessage||
+                    'Reserved: Esc, Tab, number skills, F mount, G clan, and companion/combat shortcuts.'}</p>
                 </div>
               </>}
               {view==='ui'&&<div className="axe3d-pause__hud-ui" data-testid="game3d-ui-customization-settings">
