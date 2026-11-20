@@ -3,7 +3,7 @@
 // Every equipment service (reinforcement, enchant, over-enchant, combine, stage,
 // refine, ultimate, sockets/gems, aura and sets) feeds this one calculation.
 
-import { getEquippedAXEItems } from './AXEEquipmentInventoryStore';
+import { getEquippedAXEItems, getActiveEquippedAXEWeapon } from './AXEEquipmentInventoryStore';
 import { getAXETestWeaponTuning, projectAXETestWeaponRecords } from './AXETestWeaponTuner.mjs';
 import { getAXEWeaponLegacyDamageMultiplier, getAXEWeaponLegacyEchoPct } from './AXEWeaponLegacyForge';
 import { getAXESoulRegaliaBonuses } from '../progression/AXESoulRegaliaStore';
@@ -183,7 +183,11 @@ const soulEffectiveStats = (stats = {}, percent = 0) =>
 
 export function getAXEEquipmentRuntimeBonuses() {
   const out = makeOutput();
-  const equipped = getEquippedAXEItems();
+  // All three weapons stay in the loadout, but ONLY the drawn weapon may
+  // contribute attack/defense, enchantment, aura and set progress to combat.
+  const activeWeaponId = getActiveEquippedAXEWeapon()?.instanceId;
+  const equipped = getEquippedAXEItems().filter(item =>
+    item.slot !== 'weapon' || item.instanceId === activeWeaponId);
   const soul = getAXESoulRegaliaBonuses();
 
   const liveItems = equipped.map((item) => {
