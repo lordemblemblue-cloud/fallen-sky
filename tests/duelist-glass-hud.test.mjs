@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ABILITY_PAGES, HUD_IMAGES, captureText, healthNumbers, pointState, specialPercent } from '../src/components/duelist/client/glassHud.mjs';
+import { ABILITY_PAGES, HUD_IMAGES, canPressAbility, captureText, healthNumbers, pageSwitchCommands, pointState, specialPercent } from '../src/components/duelist/client/glassHud.mjs';
 
 test('each of the six visible widget template images exists and has a transparent SVG root', () => {
   assert.equal(Object.keys(HUD_IMAGES).length, 6);
@@ -41,4 +41,16 @@ test('point owners, progress and contest messages come from authoritative state'
   assert.equal(pointState({ id: 'C', capturing: 'blue', progress: .37 }), 'capturing');
   assert.equal(captureText({ id: 'C', capturing: 'blue', progress: .37 }), 'C: blue capturing 37%');
   assert.equal(captureText({ id: 'B', owner: 'red', contested: true }), 'B: contested');
+});
+
+
+test('cooldown buttons cannot enqueue powers; a held grip releases when paging', () => {
+  assert.equal(canPressAbility({ id: 'push', ready: 0 }), true);
+  assert.equal(canPressAbility({ id: 'push', ready: 0.2 }), false);
+  assert.equal(canPressAbility({ id: 'push', ready: -0.01 }), true);
+  assert.equal(canPressAbility({ id: 'push', ready: NaN }), false);
+  assert.equal(canPressAbility(undefined), false);
+  assert.equal(canPressAbility({ id: 'grip', ready: 0 }, true), false);
+  assert.deepEqual(pageSwitchCommands(true), ['release']);
+  assert.deepEqual(pageSwitchCommands(false), []);
 });
