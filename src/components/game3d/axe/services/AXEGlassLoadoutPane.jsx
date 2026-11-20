@@ -226,7 +226,11 @@ export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole=
       (result.message || caption(result.reason) || 'Unable to equip') :
       (worn ? 'Equipment removed.' : 'Equipment equipped.'));
   };
-  const setState = isPlayer ? getAXEEquipmentSetState(items.map(item => ({
+  // Three weapons occupy the loadout, but only the drawn weapon counts toward
+  // active combat set bonuses (the other two remain ready for HUD switching).
+  const activeWeaponId=getActiveEquippedAXEWeapon()?.instanceId;
+  const setState = isPlayer ? getAXEEquipmentSetState(items.filter(item =>
+    item.slot!=='weapon'||item.instanceId===activeWeaponId).map(item => ({
     ...item,
     advancement: advancements?.state?.[item.instanceId] ||
       getAXEAdvancementState(item.instanceId),
