@@ -150,7 +150,7 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
   const starters = (await (await fetch(http)).json()).matches;
-  assert.deepEqual(starters.map(m => m.mode).sort(), ['ctf', 'duel', 'football', 'tdm']);
+  assert.deepEqual(starters.map(m => m.mode).sort(), ['control', 'ctf', 'duel', 'football', 'tdm']);
   for (const room of starters) {
     assert.equal(room.publicRoom, true, 'every mode gets a permanent official server');
     assert.equal(room.players, 0);
@@ -163,7 +163,7 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
   const text = await res.text();
   const { matches } = JSON.parse(text);
-  assert.equal(matches.length, 4, 'joining does not create a duplicate public server');
+  assert.equal(matches.length, 5, 'joining does not create a duplicate public server');
   const selected = matches.find(m => m.id === joined.match);
   assert.deepEqual({ id: selected.id, mode: selected.mode, players: selected.players, bots: selected.bots, seats: selected.seats, open: selected.open },
     { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
@@ -334,7 +334,7 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   const joined = await a.next((m) => m.t === 'joined');
   const { matches } = await (await fetch(http)).json();
   assert.deepEqual(matches.filter(m => m.mode === 'story').map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
-  assert.equal(matches.filter(m => m.publicRoom).length, 4, 'the public modes remain listed during story missions');
+  assert.equal(matches.filter(m => m.publicRoom).length, 5, 'the public modes remain listed during story missions');
   const b = await player(url, 'ben');
   b.send({ t: 'join', mode: 'story' });
   assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
