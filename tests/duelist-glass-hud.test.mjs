@@ -54,3 +54,16 @@ test('cooldown buttons cannot enqueue powers; a held grip releases when paging',
   assert.deepEqual(pageSwitchCommands(true), ['release']);
   assert.deepEqual(pageSwitchCommands(false), []);
 });
+
+test('Duelist quiet HUD retains gameplay color while removing bulky neon frames', () => {
+  const css = readFileSync(new URL('../src/components/duelist/client/duelist.css', import.meta.url), 'utf8');
+  const quiet = css.slice(css.indexOf('Duelist Adventure quiet HUD pass'));
+  assert.ok(quiet.startsWith('Duelist Adventure quiet HUD pass'));
+  assert.match(quiet, /\.duelist-game \.duelist-player-glass[\s\S]*?border-radius:7px;filter:none;box-shadow:none/);
+  assert.match(quiet, /\.duelist-game \.duelist-player-hp-rail > span[\s\S]*?background:#35c78e;box-shadow:none/);
+  assert.match(quiet, /\.duelist-game \.duelist-ability-glass[\s\S]*?border-radius:6px;color:#e0e7e8/);
+  assert.match(quiet, /\.duelist-game \.duelist-control-rail,[\s\S]*?background-image:none/);
+  assert.match(quiet, /\.duelist-game \.duelist-feed > div[\s\S]*?background:rgba\(12,18,24,\.61\)/);
+  assert.match(quiet, /\.duelist-game \.duelist-comms[\s\S]*?font-size:12px/);
+  assert.match(quiet, /@media\(max-width:640px\)/);
+});
