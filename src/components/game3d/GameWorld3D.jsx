@@ -29,9 +29,11 @@ import { preloadActionSounds } from './combatAudioStore';
 import { isInCombat } from './combatMusicController';
 import { faceMoodsFor } from '@/components/onboarding/faceMoods';
 import { setPlayerPosition } from './playerPositionStore';
-import { MAP_SPAWN_POINTS, getRespawnPoint } from './mapSpawnPoints';
+import { MAP_SPAWN_POINTS, getRespawnPoint, getDefaultSpawnPoint, getSpawnPointById, activateCheckpointId } from './mapSpawnPoints';
 import { findSafeNearbyRespawn, NEARBY_RESPAWN_ID } from './death/nearbyRespawnRules.mjs';
 import { createWorldRespawnShrines } from './death/WorldRespawnShrines';
+import { createPlayerDeathAsh } from './death/playerDeathAsh';
+import { DEATH_FALL_MS, deathAshProgress } from './death/deathSequence.mjs';
 import { worldCheckpointStore } from './worldCheckpointStore';
 import { getActiveId, getStorageUser } from './characterStorage';
 import { CREATURE_MODEL_URL, CREATURE_ANIMATION_URLS } from './creatureAssets';
@@ -1842,6 +1844,10 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     let mixer;
     let model;
     let playerAnim;
+    let playerDeathAsh = null;
+    let playerDeathElapsed = null;
+    let playerDeathRequested = false;
+    let nextRespawnCheckpointProbeAt = 0;
     // Weapon in hand: summoned (oil-metal forming) and dismissed, never sheathed (weapons/).
     let weaponRuntime = null;
     let weaponSummon = null;
@@ -2092,6 +2098,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       avatarDrawCalls = createAvatarDrawCalls(fbx);
       window.__gw3dAvatarDrawCalls = avatarDrawCalls;
       scene.add(fbx);
+      // Use the live player model, not a cloned actor or second skeleton.
+      playerDeathAsh?.dispose();
+      playerDeathAsh = createPlayerDeathAsh({ scene, model: fbx });
       // The skipped effect meshes are never drawn at load, so compile their shaders now, as the first frame did.
       try { renderer.compile(fbx, camera, scene); } catch { /* a lost context: they compile on first draw */ }
       haloVisualRuntime = createAXEHaloVisualRuntime({ model: fbx, initialState: getHaloState() });
@@ -2937,28 +2946,73 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       event.detail.respond(resolveSafeNearbyRespawn(event.detail.deathPosition));
     };
     window.addEventListener('axeNearbyRespawnQuery', onNearbyRespawnQuery);
-    // Recheck the temporary landing at the moment of respawn. If terrain or
-    // hostiles changed, fall back to the registered character checkpoint.
-    const onPlayerRespawn = (e) => {
-      const target = e.detail;
-      const m = modelRef.current || playerModelRef.current;
-      if (!m || !target) return;
-      const point = target.source === NEARBY_RESPAWN_ID
-        ? (resolveSafeNearbyRespawn(target.deathPosition) || getRespawnPoint())
-        : target;
-      if (!Number.isFinite(point?.x) || !Number.isFinite(point?.z)) return;
-      m.position.x = point.x;
-      m.position.z = point.z;
-      const gy = sampleGroundY(point.x, point.z);
-      m.position.y = Number.isFinite(gy) ? gy : 0;
-      m.visible = true;
+    const onPlayerDeathAnimation = () => { playerDeathRequested = true; };
+    window.addEventListener('playerDeathAnimation', onPlayerDeathAnimation);
+    // Named permanent spawns are resolved from the trusted registry. Do not
+    // accept arbitrary x/z supplied by the client as permanent checkpoints.
+    const onPlayerRespawn = event => {
+      const request = event.detail;
+      const respond = response => request?.respond?.(response);
+      const actor = modelRef.current || playerModelRef.current;
+      if (!actor || !request || entryModeRef.current) {
+        respond({ ok: false, reason: 'The world is not ready to respawn yet.' });
+        return;
+      }
+      const candidates = request.source === NEARBY_RESPAWN_ID
+        ? [resolveSafeNearbyRespawn(request.deathPosition), getRespawnPoint(), getDefaultSpawnPoint()]
+        : request.source === 'axe-dungeon-checkpoint'
+          ? [request]
+          : [getSpawnPointById(request.spawnId), getRespawnPoint(), getDefaultSpawnPoint()];
+      let landing = null;
+      let destinationArea = worldArea;
+      for (const candidate of candidates) {
+        if (!candidate || !Number.isFinite(candidate.x) || !Number.isFinite(candidate.z)) continue;
+        const candidateArea = region === 'wolfveil' ? wolfveilAreaAtWorld(candidate) : null;
+        if (region === 'wolfveil' && candidateArea && candidateArea !== worldArea) {
+          // The adjacent area is unloaded; the portal handler remounts it.
+          // Collision validation happens during the destination's world entry.
+          if (request.source === 'axe-dungeon-checkpoint') continue;
+          landing = { ...candidate, y: Number.isFinite(candidate.y) ? candidate.y : .3 };
+          destinationArea = candidateArea;
+          break;
+        }
+        const ground = sampleGroundY(candidate.x, candidate.z);
+        if (!Number.isFinite(ground) ||
+            (region === 'wolfveil' && !insideWolfveilClientGround(candidate.x, candidate.z, .65)) ||
+            isRuntimeFootprintBlocked({ x:candidate.x, y:ground, z:candidate.z }, .62)) continue;
+        landing = { ...candidate, y:ground };
+        break;
+      }
+      if (!landing) {
+        respond({ ok: false, reason: 'No safe spawn was found. Choose Town Plaza or another checkpoint.' });
+        return;
+      }
+      playerDeathAsh?.reset();
+      playerDeathElapsed = null;
+      playerDeathRequested = false;
+      actor.visible = true;
       playerAnim?.revive?.();
       playerAnim?.resetAirWalkMotion?.();
-      wasAirborneLastFrame=false;
+      wasAirborneLastFrame = false;
       clickToMove.cancel('respawn');
+      keys.current = {};
+      attackPressed.current = false;
+      rangedClickAttackPressed.current = false;
       playerInvulTimer.current = PLAYER_INVUL_AFTER_HIT;
       resetCombatResources();
-      window.__localPlayerPos = { x: m.position.x, y: m.position.y, z: m.position.z };
+      if (region === 'wolfveil' && destinationArea !== worldArea) {
+        window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
+          detail: {
+            target:'wolfveil-area', area:destinationArea,
+            landing:{ x:landing.x, y:landing.y, z:landing.z, yaw:orbit.current.yaw },
+          },
+        }));
+      } else {
+        actor.position.set(landing.x, landing.y, landing.z);
+        window.__localPlayerPos = { x:actor.position.x, y:actor.position.y, z:actor.position.z };
+        setPlayerPosition({ x:actor.position.x, z:actor.position.z, yaw:orbit.current.yaw });
+      }
+      respond?.({ ok: true, spawnId:landing.id, x:landing.x, z:landing.z });
     };
     window.addEventListener('playerRespawn', onPlayerRespawn);
 
@@ -3252,7 +3306,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       playerAnim?.setEquipmentContext?.({ weaponType: equippedFamily || 'unarmed', summon: !!weaponSummon,
         equipped: !!equippedForAnimation && (!weaponSummon || !weaponSummon.getVisual() || weaponSummon.isOut()),
         twoHand: swordStanceActive });
-      if (getPlayerHUD().hp <= 0 && !playerAnim?.getDebugState?.().isDead) {
+      if ((getPlayerHUD().hp <= 0 || playerDeathRequested) &&
+          playerDeathElapsed === null && !playerAnim?.getDebugState?.().isDead) {
         if (isMountedRef.current) {
           restoreMountedRider();
           isMountedRef.current = false;
@@ -3263,9 +3318,26 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           playerAnim?.setMounted?.(false);
         }
         playerAnim?.HandleDeath?.();
+        playerDeathElapsed = 0;
+        playerDeathRequested = false;
+        keys.current = {};
+        attackPressed.current = false;
+        rangedClickAttackPressed.current = false;
+        clickToMove.cancel('death');
+        cancelBowCharge();
+        // The weapon melts into the player's hand before the body's ash fall.
+        weaponSummon?.dismiss?.();
       }
       playerAnim?.updateAnimation?.(delta);
       if (mixer) mixer.update(delta);
+      if (playerDeathElapsed !== null) {
+        playerDeathElapsed += Math.max(0, delta) * 1000;
+        if (playerDeathElapsed >= DEATH_FALL_MS) playerDeathAsh?.begin();
+        playerDeathAsh?.update(delta, deathAshProgress(playerDeathElapsed));
+        keys.current = {};
+        attackPressed.current = false;
+        rangedClickAttackPressed.current = false;
+      }
       // Montages over locomotion: the legs keep walking / running under a swing or a shot, and the bow is
       // carried low and out while running (player/locomotionUnderlay.js).
       playerAnim?.lateUpdate?.(delta);
@@ -3774,6 +3846,20 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         }
         // Position projection is published just after the camera updates below.
         window.__localPlayerPos = { x: model.position.x, y: model.position.y, z: model.position.z };
+        // Activate the shrine when the actor walks within its safe landing.
+        // Unlocks persist per character but never change the chosen home.
+        if (region === 'wolfveil' && playerDeathElapsed === null && getPlayerHUD().hp > 0 &&
+            performance.now() >= nextRespawnCheckpointProbeAt) {
+          nextRespawnCheckpointProbeAt = performance.now() + 1200;
+          for (const point of MAP_SPAWN_POINTS) {
+            if (point.default || Math.hypot(model.position.x - point.x, model.position.z - point.z) > 3) continue;
+            const ground = sampleGroundY(point.x, point.z);
+            if (Number.isFinite(ground) && Math.abs(model.position.y - ground) <= 1.8 &&
+                !isRuntimeFootprintBlocked({ x:point.x, y:ground, z:point.z }, .62)) {
+              if (activateCheckpointId(point.id)) showCombatNotice('Checkpoint activated: ' + point.label);
+            }
+          }
+        }
         if (performance.now() >= nextCheckpointSaveAt) {
           nextCheckpointSaveAt = performance.now() + 4000;
           flushCheckpoint();
@@ -5412,6 +5498,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       clearInterval(weatherInterval);
       window.removeEventListener('axeNearbyRespawnQuery', onNearbyRespawnQuery);
       window.removeEventListener('playerRespawn', onPlayerRespawn);
+      window.removeEventListener('playerDeathAnimation', onPlayerDeathAnimation);
+      playerDeathAsh?.dispose();
+      playerDeathAsh = null;
       respawnShrines?.dispose();
       window.removeEventListener('axeWorldMapOpened', clearWorldMapMovement);
       window.removeEventListener('axeDialogueOpened', clearWorldMapMovement);
