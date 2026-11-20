@@ -639,3 +639,139 @@
   .axe3d-pause__overlay[data-context="world"] .axe3d-pause__content{padding:17px}
   .axe3d-pause__overlay[data-context="world"] .axe3d-pause__footer{padding:10px 15px}
 }
+
+
+/* Game 3D quick launcher — the default ESC screen.
+   Square, touch-friendly service tiles; the original settings panel is
+   mounted only after selecting the bottom-right gear. */
+.axe3d-pause__overlay[data-menu-surface="launcher"]{
+  justify-content:flex-end;align-items:stretch;
+  background:rgba(2,8,17,.38);
+  backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+  padding:0;
+}
+.axe3d-pause__launcher{
+  --launcher-accent:#a7dfea;
+  position:relative;isolation:isolate;
+  display:flex;flex-direction:column;min-width:0;
+  width:min(420px,100vw);height:100dvh;
+  margin-left:auto;overflow:hidden;
+  background:linear-gradient(155deg,rgba(12,27,43,.97),rgba(8,17,29,.98) 75%);
+  border-left:1px solid rgba(184,217,225,.26);
+  box-shadow:-25px 0 70px rgba(0,0,0,.42);
+  color:#f0f4f5;
+}
+.axe3d-pause__launcher-header{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:15px;padding:28px 26px 19px;
+  border-bottom:1px solid rgba(184,217,225,.13);
+}
+.axe3d-pause__launcher-header small{
+  font-size:10px;font-weight:700;letter-spacing:.18em;color:#9dc4cc;
+}
+.axe3d-pause__launcher-header h2{
+  font:600 27px/1.2 system-ui,sans-serif;letter-spacing:.005em;
+  margin:8px 0 5px;color:#f7f5ef;
+}
+.axe3d-pause__launcher-header p{
+  margin:0;font-size:12px;color:#a9bdc4;line-height:1.5;
+}
+.axe3d-pause__launcher-header>button{
+  flex:0 0 39px;width:39px;height:39px;display:grid;place-items:center;
+  background:rgba(167,215,229,.08);color:#d5ebef;
+  border:1px solid rgba(166,214,228,.19);border-radius:9px;
+}
+.axe3d-pause__launcher-main{
+  flex:1;min-height:0;padding:22px 25px 12px;overflow-y:auto;
+  overscroll-behavior:contain;
+}
+.axe3d-pause__launcher-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:11px;align-items:start;
+}
+.axe3d-pause__launcher-tile{
+  position:relative;min-width:0;aspect-ratio:1/1;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:13px 8px;
+  color:#e7f4f4;background:linear-gradient(145deg,rgba(40,68,81,.56),rgba(16,35,51,.75));
+  border:1px solid rgba(183,222,231,.25);border-radius:11px;
+  text-align:center;transition:background .15s,border-color .15s,transform .15s;
+}
+.axe3d-pause__launcher-tile svg{color:#b9e8ed;flex:0 0 auto}
+.axe3d-pause__launcher-tile-label{
+  font-size:13px;font-weight:650;line-height:1.3;overflow-wrap:anywhere;
+}
+.axe3d-pause__launcher-tile kbd{
+  position:absolute;top:9px;right:9px;
+  border:1px solid rgba(203,223,226,.26);border-radius:4px;
+  padding:2px 5px;min-width:19px;color:#d4e7ec;
+  background:rgba(2,12,22,.48);
+  font:650 10px/1.2 system-ui,sans-serif;
+}
+.axe3d-pause__launcher-tile:hover,
+.axe3d-pause__launcher-tile:focus-visible{
+  transform:translateY(-2px);background:rgba(55,95,113,.76);
+  border-color:#b8e3ed;outline:2px solid transparent;
+}
+.axe3d-pause__launcher-online{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  margin-top:20px;padding:10px 4px;color:#b8cbd0;
+  font-size:11px;border-top:1px solid rgba(184,217,225,.12);
+}
+.axe3d-pause__launcher-online-dot{
+  width:7px;height:7px;border-radius:100%;background:#81c9b2;
+}
+.axe3d-pause__launcher-count{margin-left:auto;color:#e4e7e2}
+.axe3d-pause__launcher-footer{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+  gap:8px;align-items:center;padding:14px 18px max(18px,env(safe-area-inset-bottom));
+  border-top:1px solid rgba(184,217,225,.17);
+  background:rgba(5,15,27,.72);
+}
+.axe3d-pause__launcher-action,
+.axe3d-pause__launcher-settings{
+  min-height:50px;display:flex;align-items:center;justify-content:center;
+  gap:7px;min-width:0;padding:9px;color:#d7ecf0;
+  border:1px solid rgba(171,216,225,.19);border-radius:9px;
+  background:rgba(119,172,188,.09);
+  font-size:11px;font-weight:650;
+}
+.axe3d-pause__launcher-settings{
+  min-width:63px;flex-direction:column;gap:2px;
+  color:#f4e4c2;border-color:rgba(224,194,138,.35);
+  background:rgba(167,135,77,.1);
+}
+.axe3d-pause__launcher-settings span{font-size:10px}
+.axe3d-pause__launcher-footer button:hover{
+  background:rgba(119,172,188,.23);border-color:rgba(206,236,240,.7);
+}
+.axe3d-pause__launcher button:focus-visible{
+  outline:2px solid #b2edf1;outline-offset:2px;
+}
+.axe3d-pause__settings-back{
+  display:inline-flex;align-items:center;gap:6px;padding:8px 10px;
+  border:1px solid rgba(173,215,224,.3);border-radius:7px;
+  background:rgba(114,169,185,.13);color:#d7edf0;
+  font-size:12px;white-space:nowrap;
+}
+.axe3d-pause__settings-back:hover{
+  background:rgba(114,169,185,.26);color:#fff;
+}
+@media(max-width:460px){
+  .axe3d-pause__launcher{width:100vw}
+  .axe3d-pause__launcher-header{padding:19px 18px 15px}
+  .axe3d-pause__launcher-main{padding:16px 18px 10px}
+  .axe3d-pause__launcher-grid{gap:9px}
+  .axe3d-pause__launcher-tile{gap:7px;padding:9px 6px}
+  .axe3d-pause__launcher-tile-label{font-size:12px}
+}
+@media(max-height:690px){
+  .axe3d-pause__launcher-header{padding-top:13px;padding-bottom:12px}
+  .axe3d-pause__launcher-main{padding-top:12px}
+  .axe3d-pause__launcher-grid{gap:8px}
+  .axe3d-pause__launcher-tile{aspect-ratio:1.16/1;gap:5px}
+  .axe3d-pause__launcher-tile svg{width:24px;height:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .axe3d-pause__launcher-tile{transition:none}
+}
