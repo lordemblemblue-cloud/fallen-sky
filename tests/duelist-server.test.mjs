@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createDuelistServer } from '../server/duelist/server.mjs';
-import { PROTOCOL, WS_PATH, MAX_WAITING_INPUTS, encodeInput, sanitizeInput } from '../src/components/duelist/net/protocol.mjs';
+import { PROTOCOL, WS_PATH, MAX_WAITING_INPUTS, QUICKPLAY_MODES, encodeInput, sanitizeInput } from '../src/components/duelist/net/protocol.mjs';
 import { createPredictor } from '../src/components/duelist/net/predict.mjs';
 import { INPUT } from '../src/components/duelist/core/index.mjs';
 
@@ -169,6 +169,44 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
     { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
   assert.ok(!text.includes('eve-account-123') && !text.includes('EVE-ACCOUNT'), 'no player ids or names');
   a.ws.close();
+  await server.close();
+});
+
+test('Online quick-match chooses only TDM, CTF or Three-Point Control and lets bots fill seats', async () => {
+  const { server, url } = await start();
+  assert.deepEqual([...QUICKPLAY_MODES].sort(), ['control', 'ctf', 'tdm']);
+  const opened = [];
+  for (let index = 0; index < 12; index++) {
+    const client = await player(url, 'quick-' + index);
+    opened.push(client);
+    client.send({ t: 'join', mode: 'online' });
+    const joined = await client.next(message => message.t === 'joined');
+    assert.ok(QUICKPLAY_MODES.includes(joined.mode), `random mode was ${joined.mode}`);
+    assert.equal(server.rooms.get(joined.match).mode, joined.mode);
+    assert.ok(joined.replaced, 'the player replaces a bot in the selected match');
+    assert.ok(joined.seats.some(seat => seat.kind === 'bot'));
+  }
+  const rogue = await player(url, 'quick-invalid');
+  opened.push(rogue);
+  rogue.send({ t: 'join', mode: 'online', matchId: 'm1' });
+  assert.equal((await rogue.next(message => message.t === 'error')).code, 'room',
+    'random mode cannot be overridden by a caller-selected server id');
+  for (const client of opened) client.ws.close();
+  await server.close();
+});
+
+test('Three-Point Control reports its objective positions and 0-100% team score over WebSocket', async () => {
+  const { server, url } = await start();
+  const participant = await player(url, 'point-tester');
+  participant.send({ t: 'join', mode: 'control' });
+  const joined = await participant.next(message => message.t === 'joined');
+  assert.equal(joined.mode, 'control');
+  const snap = await participant.next(message => message.t === 'snap' && message.view?.mode === 'control');
+  assert.deepEqual(snap.view.controlPoints.map(point => point.id), ['A', 'B', 'C']);
+  assert.equal(snap.view.scoreToWin, 100);
+  assert.deepEqual(snap.view.teamScores, { red: 0, blue: 0 });
+  assert.ok(snap.view.controlPoints.every(point => point.owner === null));
+  participant.ws.close();
   await server.close();
 });
 
