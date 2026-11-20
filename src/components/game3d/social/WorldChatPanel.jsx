@@ -6,6 +6,7 @@ import { WORLD_CHAT_CHANNEL, fetchChatHistory, partyChatChannel, sendChatMessage
 import { listGame3DBlockedPlayers } from './game3dWorldInteractions';
 import {getGame3DCombatLog,subscribeGame3DCombatLog,describeGame3DCombatEvent}
   from '../combat/Game3DCombatLog.mjs';
+import {nextChatEnterState,isIncomingChatMessage} from './chatVisibilityModel.mjs';
 import './Game3DChatChannels.css';
 
 /**
@@ -74,19 +75,31 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
     fetchChatHistory('party').then((r) => addLines('party', r.messages || [])).catch(() => {});
   }, [userId, inParty, partyChannel, addLines]);
 
-  // new messages, live
+  // New messages reveal the actual chat, including while the dock is idle.
+  // Do not gate the *attempt* to subscribe on an account id: guest-only world
+  // entry has no Base44 user, but authenticated servers may still permit reads.
+  // The server's RLS remains authoritative and is never bypassed here.
   useEffect(() => {
-    if (!userId) return undefined;
-    return base44.entities.ChatMessage.subscribe((event) => {
-      const m = event?.data;
-      if (!m || event.type === 'delete') return;
-      if (m.channel_id === WORLD_CHAT_CHANNEL) addLines('world', [m]);
-      else if (partyChannel && m.channel_id === partyChannel) addLines('party', [m]);
-      else return;
-      // Incoming messages briefly reveal the dock even when no input has focus.
-      if (m.sender_id !== userId) { setExpanded(true); setActivity(value => value + 1); }
-    });
-  }, [userId, partyChannel, addLines]);
+    try {
+      const unsubscribe = base44.entities.ChatMessage.subscribe((event) => {
+        const message = event?.data;
+        if (!message || event.type === 'delete') return;
+        const channel = message.channel_id === WORLD_CHAT_CHANNEL ? 'world'
+          : partyChannel && message.channel_id === partyChannel ? 'party' : null;
+        if (!channel) return;
+        addLines(channel, [message]);
+        if (isIncomingChatMessage(message,userId)) {
+          setExpanded(true);
+          if (!typing) setTab(channel);
+          setActivity(value => value + 1);
+        }
+      });
+      return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
+    } catch {
+      // Permission-denied guest subscriptions must not crash the HUD or Enter.
+      return undefined;
+    }
+  }, [userId, partyChannel, addLines, typing]);
 
   // Opening chat from Settings uses the exact same real world/party channel.
   useEffect(() => {
@@ -94,19 +107,33 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
     window.addEventListener('game3dOpenWorldChat',open);
     return () => window.removeEventListener('game3dOpenWorldChat',open);
   },[suppressed]);
-  // Enter (outside any field) opens the chat
+  // One Enter reveals the chat, the next Enter focuses the input. Run in
+  // capture so gameplay's bubbling hotkeys cannot consume the activation.
+  // Never hijack Enter when another text field or menu owns keyboard input.
   useEffect(() => {
-    const onKey = (e) => {
-      if (suppressed || window.__axeServiceModeOpen || !userId) return;
-      if (e.key !== 'Enter' || typing || e.target?.matches?.('input, textarea, [contenteditable="true"]')) return;
-      e.preventDefault();
-      if(tab==='combat')setTab('world');
-      if (!expanded) { setExpanded(true); setActivity(value => value + 1); }
-      else setTyping(true);
+    const onKey = (event) => {
+      if (event.key !== 'Enter') return;
+      const next = nextChatEnterState({
+        expanded, typing, tab,
+        suppressed:suppressed || window.__axeServiceModeOpen ||
+          window.__axePauseMenuOpen || window.__axeDialogueOpen,
+        editable:!!event.target?.closest?.(
+          'input, textarea, select, button, a, [role="button"], [contenteditable="true"]'
+        ),
+        composing:event.isComposing,
+        repeat:event.repeat,
+      });
+      if (!next) return;
+      event.preventDefault();
+      event.stopImmediatePropagation?.();
+      setTab(next.tab);
+      setExpanded(next.expanded);
+      setTyping(next.typing);
+      setActivity(value => value + 1);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [typing, expanded, suppressed, tab, userId]);
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [typing, expanded, suppressed, tab]);
   useEffect(() => {
     if (typing || !expanded || alwaysVisible) return undefined;
     const timeout = window.setTimeout(() => setExpanded(false), 9000);
@@ -121,8 +148,15 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
   const close = () => { setTyping(false); setExpanded(false); setDraft(''); inputRef.current?.blur(); };
   const send = async () => {
     const text = draft.trim();
-    if (tab==='combat'||!userId)return;
+    if (tab==='combat') return;
     if (!text) { close(); return; }
+    if (!userId) {
+      // Existing worldChat server requires auth.me() before granting writes.
+      // Keep the message intact; do not fabricate a successful multiplayer send.
+      setNotice('World chat messaging needs server support for guest characters.');
+      setExpanded(true);
+      return;
+    }
     try {
       const { message } = await sendChatMessage(tab, text);
       if (message) addLines(tab, [message]);
@@ -135,7 +169,7 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
   // keys typed into the chat never reach the game's hotkeys
   const onInputKey = (e) => {
     e.stopPropagation();
-    if (e.key === 'Enter') { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && !e.nativeEvent?.isComposing) { e.preventDefault(); void send(); }
     else if (e.key === 'Escape') { e.preventDefault(); close(); }
   };
 
@@ -145,8 +179,12 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
   return (
     <div
       className={`game3d-world-chat fixed z-[40] ${typing ? 'is-typing' : expanded ? 'is-expanded' : 'is-idle'} ${alwaysVisible ? 'is-pinned' : ''}`}
-      aria-label="Chat"
+      aria-label="World chat" data-chat-visible={typing||expanded||alwaysVisible ? 'true' : 'false'}
     >
+      {!typing&&!expanded&&!alwaysVisible&&
+        <button type="button" className="game3d-chat-awaken"
+          onClick={()=>{setExpanded(true);setActivity(value=>value+1);}}
+          aria-label="Reveal world chat"><MessageSquare size={14} aria-hidden="true"/> Chat <kbd>Enter</kbd></button>}
       <div className="game3d-chat-surface">
       {showDock&&<aside className="game3d-chat-combat-strip" aria-label="Recent combat results">
         <strong>COMBAT LOG</strong>
@@ -165,7 +203,7 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
             <span>{m.content}</span>
           </div>)}
       </div>
-      {typing&&userId&&tab!=='combat' && (
+      {typing&&tab!=='combat' && (
         <div className="border-t border-white/10 px-2 py-1.5">
           <input
             ref={inputRef}
@@ -178,14 +216,18 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
             placeholder={`Message ${style.label.toLowerCase()} chat`}
             className="w-full rounded bg-black/30 px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none"
           />
-          {notice && <div className="mt-1 text-[10px] text-amber-200/80">{notice}</div>}
+          {!userId && !notice &&
+            <div className="mt-1 text-[10px] text-amber-200/80" role="status">
+              Guest chat is waiting for a server-enabled messaging session.
+            </div>}
+          {notice && <div className="mt-1 text-[10px] text-amber-200/80" role="status">{notice}</div>}
         </div>
       )}
       </div>
       <div className="game3d-chat-channel-row pointer-events-auto" role="group" aria-label="Chat channels">
         <MessageSquare className="h-3 w-3 shrink-0 text-amber-200/70" aria-hidden="true"/>
         <button type="button" disabled title="Regular nearby chat needs server proximity messaging">Regular</button>
-        <button type="button" aria-pressed={tab==='world'} onClick={()=>{setTab('world');setExpanded(true);if(userId)setTyping(true);}}
+        <button type="button" aria-pressed={tab==='world'} onClick={()=>{setTab('world');setExpanded(true);setTyping(true);}}
           className={tab==='world'?'is-active':''}>World</button>
         {inParty&&<button type="button" aria-pressed={tab==='party'} onClick={()=>{setTab('party');setExpanded(true);setTyping(true);}}
           className={tab==='party'?'is-active':''}>Party</button>}
