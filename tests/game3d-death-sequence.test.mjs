@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { DEATH_FALL_MS, DEATH_ASH_MS, DEATH_UI_DELAY_MS, deathAshProgress } from '../src/components/game3d/death/deathSequence.mjs';
 
 test('fall precedes ash and the spawn screen waits for the dissolve', () => {
