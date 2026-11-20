@@ -387,11 +387,17 @@ export default function AXEBlacksmithImageWorkspace({
     .map(item => String(item.rarity || item.tier || '').trim().toLowerCase())
     .filter(Boolean))].sort(), [items]);
   const displayed = useMemo(() => {
-    if (workflowMode && selectedItem && !showAll) return filterForgeInventory({
-      mode: operation, target: selectedItem, items, materialStacks, required: inventoryRelevantCost,
-      resourceCategory: getAXEServiceResourceCategory,
-      compatible: (target, donor) => isAXECompatibleDonor(target, donor, progressState),
-    });
+    if (workflowMode && selectedItem && !showAll) {
+      // One inventory can switch modes by the ingredient selected. Show all
+      // eligible forge catalysts AND matching donors, not just the materials
+      // for the currently displayed operation, or Over-Enchant is unreachable.
+      const donors = items.filter(candidate => isSafeCombineDonor(selectedItem, candidate,
+        (target, donor) => isAXECompatibleDonor(target, donor, progressState)));
+      const catalysts = materialStacks.filter(stack => (stack.resourceCategory === 'material'
+        && !!resolveBlacksmithIngredientIntent(stack.id))
+        || Object.hasOwn(inventoryRelevantCost, stack.id));
+      return [...donors, ...catalysts];
+    }
     if (tab === 'sockets') {
       const equipment = ['All','Equipment','Weapons','Armor','Accessories'].includes(socketFilter)
         ? items.filter(item => SOCKET_EQUIPMENT_SLOTS.has(item.slot)
@@ -456,7 +462,8 @@ export default function AXEBlacksmithImageWorkspace({
   const selectItem = entry => {
     if (batchRunningRef.current || forging) return;
     if (entry.material) {
-      const intent = resolveBlacksmithIngredientIntent(entry.id);
+      // Socket materials must remain in Sockets & Gems when that page is open.
+      const intent = tab === 'sockets' ? null : resolveBlacksmithIngredientIntent(entry.id);
       if (intent && selectedItem) {
         if (intent.tab === 'over_enchant' && !overReady) {
           setForgeNotice('Over-Enchant is locked. Reach ' + getAXEReinforcementCap(selectedItem)
@@ -530,7 +537,7 @@ export default function AXEBlacksmithImageWorkspace({
         (target, donor) => isAXECompatibleDonor(target, donor, progressState))))
     && (tab !== 'ascend' || !ascendEligible || (!!donorItem && isAXEAscensionDonor(selectedItem, donorItem)))
     && (!workflowMode || tab === 'combine' || !Object.keys(relevantCost).length
-      || (selectedMaterialId && Object.hasOwn(relevantCost, selectedMaterialId)))
+      || (selectedMaterialId && Object.hasOwn(readout?.cost || {}, selectedMaterialId)))
     && !!readout?.preview?.canAdvance;
   const recordForgeAttempt = (usedOperation, result, explanation) => {
     const entry = blacksmithAttemptMessage(usedOperation, result, explanation);
@@ -787,7 +794,10 @@ export default function AXEBlacksmithImageWorkspace({
         {workflowMode && <div className="axe-blacksmith-circle-result" aria-live="polite">
           <strong>{forgeHistory[0] ? (forgeHistory[0].success ? 'SUCCESS' : 'FAILED') : 'NEXT ATTEMPT'}</strong>
           <span>{forgeHistory[0]?.text || (readout?.preview?.outcome ?? 'Select equipment and materials')}</span>
-          <small>{selectedItem ? 'Chance ' + pctText(readout?.chance) : 'Awaiting equipment'}</small>
+          <small>{selectedItem ? valueText(currentValue) + ' → ' + valueText(nextValue)
+            + ' · Chance ' + pctText(readout?.chance) : 'Awaiting equipment'}</small>
+          {selectedItem && <small>Attack {fmtStat(readout?.currentAttack)}
+            {' → '}{fmtStat(readout?.projectedAttack)}</small>}
         </div>}
         {!workflowMode && selectedItem && <>
           <div className="axe-blacksmith-item-rarity">{selectedItem.rarity || selectedItem.tier || 'Equipment'}</div>
@@ -805,6 +815,26 @@ export default function AXEBlacksmithImageWorkspace({
         aria-label="Recent Blacksmith attempts" role="log" aria-live="polite">
         <h3>Forge Results</h3>
         <p>Attempts are listed newest first.</p>
+        {autoEnabled && <details className="axe-blacksmith-feed-safety">
+          <summary>Auto safety options</summary>
+          <label>Minimum success rate
+            <select value={minSuccess} disabled={batchBusy}
+              onChange={event => setMinSuccess(Number(event.target.value))}>
+              {[100,95,90,85,80,75,70,60,50,30,0].map(value=>
+                <option key={value} value={value}>{value}%</option>)}
+            </select>
+          </label>
+          {PROTECTABLE.has(operation) && <label>
+            <input type="checkbox" checked={autoProtection} disabled={batchBusy}
+              onChange={event=>setAutoProtection(event.target.checked)}/>
+            Use owned Stabilizers at high risk
+          </label>}
+        </details>}
+        {batchBusy && <button type="button" className="axe-blacksmith-feed-stop"
+          onClick={() => { cancelledBatch.current = true; setForgeNotice('Stopping after current attempt…'); }}>
+          Stop Auto after current attempt
+        </button>}
+        {!forgeHistory.length && forgeNotice && <div className="axe-blacksmith-attempt is-idle">{forgeNotice}</div>}
         {forgeHistory.length ? forgeHistory.map(attempt =>
           <div key={attempt.id} className={'axe-blacksmith-attempt '+(attempt.success ? 'is-success' : 'is-failure')}>
             <b>{attempt.success ? 'Success' : 'Failed'} · {attempt.label}</b>
