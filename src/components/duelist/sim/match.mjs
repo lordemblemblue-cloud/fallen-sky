@@ -17,7 +17,7 @@
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown } from '../core/index.mjs';
-import { classAtSpawn, requestClassSelection } from '../core/classes.mjs';
+import { awardSpecialCharge, classAtSpawn, requestClassSelection } from '../core/classes.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -112,7 +112,7 @@ function seat(match, { id = null, name = null, kind, team = null }) {
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
   addFighter(match.world, { id: seatId, team: seatTeam, weapon: 'sword', ...spot });
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: null, pendingClass: null };
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: null, pendingClass: null, specialMeter: 0 };
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
@@ -337,6 +337,11 @@ function onDefeat(match, e) {
   const counted = by && by.id !== who.id && hostile(world, world.fighters.get(by.id) || {}, world.fighters.get(who.id) || {});
   if (counted) {
     match.scores[by.id].defeats += 1;
+    // Only the authoritative world defeat event can grant elimination charge.
+    // A client press, score display or unverified hit claim never awards meter.
+    if (by.kind === 'player' && by.classId) {
+      by.specialMeter = awardSpecialCharge(by.specialMeter, 'elimination') ?? by.specialMeter;
+    }
     if (def.id === 'tdm' && by.team) match.teamScores[by.team] += 1;
   }
   dropFlagOf(match, who.id, bodyOf(world, who.id));
@@ -481,7 +486,8 @@ export function matchView(match, forId = null) {
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
     controlPoints: controlPointView(match.controlPoints),
-    people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass } : null,
+    people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
+      specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null } : null,
     feed: match.feed.slice(-5),
   };
 }
