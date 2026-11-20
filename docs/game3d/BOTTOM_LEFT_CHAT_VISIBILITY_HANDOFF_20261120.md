@@ -24,3 +24,7 @@ The existing `base44/functions/worldChat/entry.ts` returns HTTP 401 without `bas
 3. Small phone landscape / standard desktop: panel stays under map and widens over quest text, never clips to zero. Invisible horizontal scrollbars remain.
 4. Test incoming chat from a permitted signed-in server session: panel becomes visible. Test guest mode: input appears but a send clearly reports the server authorization blocker.
 5. Browser 3D and server guest chat remain unverified until actually exercised. Do not claim a live deployment solely from GitHub merge.
+
+## Follow-up: translucent persistent chat correction (2026-11-20)
+The user clarified that the earlier `Chat / Enter` chip and two-stage Enter activation were incorrect. The **actual bottom-left in-world chat box** must remain rendered at low opacity while idle, with its existing message area and channel row in place. Enter once immediately focuses the composer and brightens the panel. Successful local sends, authorized incoming messages and chat-channel actions show it clearly, then it fades to its translucent rest state after nine seconds of inactivity. The existing Always Show Chat preference pins full opacity; explicit hide-chat preference is still respected. No new launcher or Enter label is introduced. The chat stays below the minimap.
+Changes are restricted to `WorldChatPanel.jsx`, `Game3DChatChannels.css`, `chatVisibilityModel.mjs` and targeted regression tests. Server-side guest messaging authorization remains the same open blocker as above.
