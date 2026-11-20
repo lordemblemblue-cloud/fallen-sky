@@ -656,13 +656,14 @@ export default function AXEBlacksmithImageWorkspace({
       {stationMessage && <span className="axe-blacksmith-workstation-status"
         role="status" aria-live="polite">{stationMessage}</span>}
 
+      {/* One compact navigation row above the expanded inventory and inline
+          forge controls. All operations remain available; no duplicate mode boxes. */}
       <nav className="axe-blacksmith-image-tabs" aria-label="Blacksmith operations">
-        {BLACKSMITH_TABS.filter(entry => !['over_enchant', 'combine'].includes(entry.id))
-          .map(({ id, label, Icon }) => <button type="button" key={id}
+        {BLACKSMITH_TABS.map(({ id, label, Icon }) => <button type="button" key={id}
           aria-label={label} aria-pressed={tab === id} onClick={() => pickTab(id)}
           title={label} disabled={batchBusy || forging}>
-          <Icon size={24} strokeWidth={1.65} aria-hidden="true" />
-          <span className="axe-blacksmith-visually-hidden">{label}</span>
+          <Icon size={20} strokeWidth={1.65} aria-hidden="true" />
+          <span className="axe-blacksmith-tab-label">{label}</span>
         </button>)}
       </nav>
 
@@ -694,7 +695,7 @@ export default function AXEBlacksmithImageWorkspace({
         onStop={() => { cancelledBatch.current = true; setForgeNotice('Stopping after the current attempt…'); }}
         busy={forging} batchBusy={batchBusy} batchPending={batchPending}
         onCancelBatch={() => setBatchPending(false)}
-        notice={forgeNotice || status} onChangeMode={pickTab}
+        notice={forgeNotice || status}
       />}
 
       <section className="axe-blacksmith-inventory-shell" aria-label="Blacksmith inventory">
