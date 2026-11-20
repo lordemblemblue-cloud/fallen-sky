@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/components/game3d/social/WorldChatPanel.jsx'
+      - 'src/components/game3d/social/chatVisibilityModel.mjs'
       - 'src/components/game3d/social/Game3DChatChannels.css'
       - 'src/components/game3d/FactionCommandModal.jsx'
       - 'src/components/game3d/FactionCommandModal.css'
@@ -11,6 +12,7 @@ on:
       - 'src/components/game3d/hud/game3dCommunityHUDSettings.mjs'
       - 'src/pages/GameView.jsx'
       - 'tests/game3d-chat-faction-modal-20261120.test.mjs'
+      - 'tests/game3d-chat-activation-guest-20261120.test.mjs'
       - 'tests/game3d-gold-faction-menu-layout.test.mjs'
       - '.github/workflows/game3d-chat-faction-targeted.yml'
   workflow_dispatch:
@@ -31,6 +33,7 @@ jobs:
         run: >-
           node --test
           tests/game3d-chat-faction-modal-20261120.test.mjs
+          tests/game3d-chat-activation-guest-20261120.test.mjs
           tests/game3d-gold-faction-menu-layout.test.mjs
           tests/game3d-faction-overview.test.mjs
           tests/game3d-escape-services-drawer-20261120.test.mjs
@@ -38,6 +41,7 @@ jobs:
         run: >-
           npx eslint --quiet
           src/components/game3d/social/WorldChatPanel.jsx
+          src/components/game3d/social/chatVisibilityModel.mjs
           src/components/game3d/FactionCommandModal.jsx
           src/components/game3d/PauseMenu.jsx
           src/components/game3d/axe/factions/FactionOverview.jsx
