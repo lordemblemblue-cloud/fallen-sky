@@ -14,7 +14,7 @@ const targetsFor = operation => operation === 'reinforcement'
       : [1,2,3,4,5,6,8,10,12];
 
 /**
- * A single UNBOXED forge work area, to the right of the equipment circle.
+ * A single UNBOXED forge work area, between Inventory and the equipment circle.
  * The former left-column "Inventory Forge" section is removed completely.
  * Inventory and operation navigation are in AXEBlacksmithImageWorkspace.
  * Keep live item/material selection, Combine donors, Auto, safety, and confirmations.
@@ -51,8 +51,8 @@ export default function AXEBlacksmithWorkflowPanel({
 
   return <section className="axe-blacksmith-workflow" data-blacksmith-two-slot="true"
     aria-label={label + ' equipment and materials controls'}>
-    {/* These are the ONLY two ingredient squares, below the operation row
-        and to the RIGHT of the visible equipped-item circle. */}
+    {/* These are the ONLY two ingredient squares, below the operation row,
+        to the RIGHT of Inventory and aligned with the circle's top edge. */}
     <div className="axe-forge-flow" aria-label="Equipment plus material or donor">
       {ingredient('target', target, 'Equipment', Gem, onClearTarget)}
       <span className="axe-forge-ingredient-plus" aria-hidden="true">+</span>

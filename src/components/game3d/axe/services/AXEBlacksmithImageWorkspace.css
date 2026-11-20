@@ -2220,8 +2220,9 @@
 
 /* 2026-11-20 final correction: the left Inventory Forge CARD was deleted
  * in JSX, not merely hidden. Give the vacated left column to Inventory.
- * Enchant/Combine ingredient squares are now DOWN and RIGHT of the item
- * circle, with Auto and the primary action directly below the squares.
+ * Enchant/Combine ingredient squares now sit BETWEEN Inventory and the
+ * circular weapon preview, aligned with the circle's top edge; Auto and
+ * the primary action remain below them.
  * Do not touch the right-hand statistics/Forge Results or their handlers. */
 .axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
   [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
@@ -2229,7 +2230,7 @@
   display:flex!important;
   left:3.4%!important;
   top:15%!important;
-  width:34.5%!important;
+  width:31.05%!important; /* 10% narrower than the previous 34.5% */
   height:81%!important;
 }
 /* The existing seven operation subpages shift left to fill the space
@@ -2241,12 +2242,12 @@
   height:8.8%!important;
   grid-template-columns:repeat(7,minmax(0,1fr));
 }
-/* Keep the circular equipment preview entirely LEFT of the real forge inputs. */
+/* Shift the entire circular equipment preview to the RIGHT of the ingredient slots. */
 .axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
   [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
 ) .axe-blacksmith-forge-ring {
   display:block!important;
-  left:39.15%!important;
+  left:55.1%!important;
   top:37%!important;
   width:16.125%!important;
   aspect-ratio:1;
@@ -2255,20 +2256,20 @@
   [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
 ) .axe-blacksmith-center-preview {
   display:flex!important;
-  left:39.15%!important;
-  top:37.25%!important;
+  left:55.1%!important;
+  top:37%!important;
   width:16.125%!important;
   height:29%!important;
 }
-/* The former two squares sat ABOVE the circle, leaving their actions stranded
- * inside the left Forge card. Move ALL controls to the circle's right instead. */
+/* The equipment/material boxes take the gap RIGHT OF INVENTORY and LEFT OF
+ * the circle. Align the top of the first row of boxes to the circle at 37%. */
 .axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
   [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
 ) .axe-blacksmith-workflow {
-  left:56.1%!important;
-  top:32.5%!important;
-  width:16.2%!important;
-  height:60.5%!important;
+  left:36%!important;
+  top:37%!important;
+  width:17.3%!important;
+  height:56%!important;
   max-height:none!important;
   padding:0!important;
   overflow-y:auto!important;
@@ -2293,7 +2294,7 @@
 }
 /* Keep success chance and progression tied to the moved preview circle. */
 .axe-service-workspace--blacksmith .axe-blacksmith-center-success {
-  left:39.15%;
+  left:55.1%;
   top:68%;
   width:16.125%;
 }
@@ -2301,7 +2302,7 @@
   [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
 ) .axe-blacksmith-progression-panel {
   display:flex!important;
-  left:39.15%!important;
+  left:55.1%!important;
   top:74.6%!important;
   width:16.125%!important;
   max-height:20%!important;
