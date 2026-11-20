@@ -91,7 +91,7 @@ export default function PauseMenu({
 }){
   const entry=context==='entry';
   const reduceMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const [view,setView]=useState('overview');
+  const [view,setView]=useState(context==='entry'?'graphics':'overview');
   // World Escape starts in the lightweight tile launcher. Its gear opens
   // the existing full settings panel; title-screen settings are unchanged.
   const [surface,setSurface]=useState(context==='entry'?'settings':'launcher');
@@ -203,7 +203,7 @@ export default function PauseMenu({
   },[]);
   useEffect(()=>{
     if(!open){
-      setView('overview');setSurface(entry?'settings':'launcher');
+      setView(entry?'graphics':'overview');setSurface(entry?'settings':'launcher');
       setLauncherGroup(null);setRebinding(null);setBindingMessage('');
       setConfirmAction(null);setError('');return;
     }
@@ -704,6 +704,7 @@ export default function PauseMenu({
                   </div>)}
                   <p className="axe3d-pause__help" role="status">{bindingMessage||
                     'Reserved: Esc, Tab, number skills, F mount, G clan, and companion/combat shortcuts.'}</p>
+                  <p className="axe3d-pause__help">Mouse looks and aims. Middle-click locks or releases a target; mouse buttons are not remappable here.</p>
                 </div>
               </>}
               {view==='ui'&&<div className="axe3d-pause__hud-ui" data-testid="game3d-ui-customization-settings">
