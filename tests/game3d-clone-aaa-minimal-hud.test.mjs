@@ -6,6 +6,7 @@ const read=path=>readFileSync(new URL('../src/components/game3d/'+path, import.m
 const hud=read('hud/JadeSoulHUD.jsx');
 const css=read('hud/JadeSoulHUD.css');
 const world=read('GameWorld3D.jsx');
+const placement=read('hud/staminaHudPlacement.mjs');
 
 test('Level and real XP are now inside one compact octagon',()=>{
   assert.match(hud,/data-hud-agent-exp="octagon"/);
@@ -45,8 +46,10 @@ test('project stamina beside the actual avatar after the live camera update',()=
   const publish=world.indexOf('screenVisible:Number.isFinite(hudProjection.x)');
   assert.ok(move > 0 && project > move && publish > project);
   assert.match(hud,/subscribePlayerPosition\(position =>/);
-  assert.match(hud,/position\.screenX \+ 10/);
-  assert.match(hud,/position\.screenY - 7/);
+  assert.match(hud,/staminaHudAnchor\(position\)/);
+  assert.match(placement,/position\.screenX \+ 6\.5/);
+  assert.match(placement,/position\.screenY \+ 7/);
+  assert.match(hud,/node\.dataset\.staminaOccluded/);
 });
 
 test('preserve existing weapon/ability controls and hide stamina in services',()=>{
