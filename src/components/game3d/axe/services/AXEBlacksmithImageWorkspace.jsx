@@ -835,6 +835,21 @@ export default function AXEBlacksmithImageWorkspace({
           Stop Auto after current attempt
         </button>}
         {!forgeHistory.length && forgeNotice && <div className="axe-blacksmith-attempt is-idle">{forgeNotice}</div>}
+        {tab === 'combine' && <details className="axe-blacksmith-feed-extra">
+          <summary>Weapon Legacy (advanced)</summary>
+          <AXEWeaponLegacyForgePane
+            target={selectedItem} items={items}
+            combineCount={Number(progressState?.combine?.count || 0)}
+            reinforcementPercent={Number(readout?.reinforcementPercent || 0)}
+            onTransaction={result => {
+              setRevision(value => value + 1);
+              onTransaction?.(result);
+            }}/>
+        </details>}
+        <details className="axe-blacksmith-feed-extra">
+          <summary>Test weapon settings</summary>
+          <AXETestWeaponTuner item={selectedItem}/>
+        </details>
         {forgeHistory.length ? forgeHistory.map(attempt =>
           <div key={attempt.id} className={'axe-blacksmith-attempt '+(attempt.success ? 'is-success' : 'is-failure')}>
             <b>{attempt.success ? 'Success' : 'Failed'} · {attempt.label}</b>
