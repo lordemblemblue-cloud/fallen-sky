@@ -25,6 +25,7 @@ import { getAXEOverEnchantCost, getAXEReinforcementCost } from './AXEServiceEcon
 import { getActiveId, getStorageUser, subscribeCharacterChange } from '../../characterStorage';
 import { isSafeCombineDonor, filterForgeInventory, runBlacksmithAutoBatch } from './AXEBlacksmithAutoForge';
 import AXEBlacksmithWorkflowPanel from './AXEBlacksmithWorkflowPanel';
+import {resolveBlacksmithIngredientIntent, isBlacksmithOverEnchantReady, blacksmithAttemptMessage} from './AXEBlacksmithIngredientIntent.mjs';
 import AXETestWeaponTuner from './AXETestWeaponTuner';
 import AXEWeaponLegacyForgePane from './AXEWeaponLegacyForgePane';
 import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
@@ -51,10 +52,9 @@ const SOCKET_EQUIPMENT_SLOTS = new Set(
 const ARMOR = new Set(['helm', 'chest', 'gloves', 'legs', 'boots']);
 const ACCESSORIES = new Set(['ring', 'necklace', 'accessory', 'trinket']);
 
-export function isReadyToOverenchant(itemId) {
-  if (!itemId) return false;
-  const levels = getItemEnchantments(itemId);
-  return levels.length > 0 && levels.every(level => Number(level) >= MAX_ENCH_LEVEL);
+export function isReadyToOverenchant(item) {
+  if (!item?.instanceId) return false;
+  return isBlacksmithOverEnchantReady(item, getItemReinforcement(item.instanceId), getAXEReinforcementCap);
 }
 
 function getKind(item) {
@@ -87,7 +87,7 @@ const BLACKSMITH_TABS = [
 // Blacksmith v2 (docs/game3d/BLACKSMITH_V2_20261118.md)
 const OPERATION_DESCRIPTIONS = {
   enchant: 'Enchant 0–200 %: each success adds 5 points. A failure loses 3 points (never below 0 %) and never breaks the item. The four +10 slots and Over-Enchant also add to the item and its enchant light.',
-  over_enchant: 'Further enhance equipment after every enchantment slot reaches its maximum.',
+  over_enchant: 'Over-Enchant unlocks at this equipment’s maximum standard Enchant percentage. Select an Over-Enchant Catalyst to begin.',
   combine: 'Combine +0–12 with a donor of the same rarity, item level, slot and type. Each stage adds 2 % of the original stats. A failure keeps the stage and the donor. Weapon Legacy is a separate reward below.',
   ascend: 'Ascension +0–4 for Rare, Elite and Legendary: one donor per attempt (same rarity and type, item level equal or lower). It raises this item’s own stats only; a failure keeps the donor and the rank.',
   tier: 'Tier Up moves this item to its next level step (e.g. Lv 45 → 55) with that step’s stats; past a band edge it takes the next look. Combine, Enchant and Ascension are kept.',
@@ -223,7 +223,7 @@ function liveAutoPreview(serviceId, item, donor = null, protectedAttempt = false
     protectedAttempt, enchantCost: getCostForNextLevel(enchantments[slotIndex] || 0),
   });
   return { ...preview, slotIndex,
-    canAdvance: preview.canAdvance && (serviceId !== 'over_enchant' || isReadyToOverenchant(id)),
+    canAdvance: preview.canAdvance && (serviceId !== 'over_enchant' || isReadyToOverenchant(item)),
   };
 }
 // operations whose failure a Stabilizer can protect
@@ -250,6 +250,7 @@ export default function AXEBlacksmithImageWorkspace({
   const [forging, setForging] = useState(false);
   const [confirmCombine, setConfirmCombine] = useState(false);
   const [forgeNotice, setForgeNotice] = useState('');
+  const [forgeHistory, setForgeHistory] = useState([]);
   const [tab, setTab] = useState(initialTab);
   // The Enchant tab: the item's Enchant % (reinforcement, 0–200; shown first, Blacksmith v2)
   // or its four +10 slots, one switch away in the same tab
@@ -278,7 +279,7 @@ export default function AXEBlacksmithImageWorkspace({
   useEffect(() => { if (mode.itemId) setSelectedId(mode.itemId); }, [mode.itemId]);
   useEffect(() => subscribeCharacterChange(() => {
     cancelledBatch.current = true;
-    setSelectedId(''); setDonorId(''); setSelectedMaterialId('');
+    setSelectedId(''); setDonorId(''); setSelectedMaterialId(''); setForgeHistory([]);
     setSocketGemId(''); setSocketDonorGemId(''); setSocketSelectionTarget('primary');
     setSocketFilter('Equipment'); setSocketMode('insert');
     setAutoEnabled(false); setBatchPending(false);
@@ -305,9 +306,11 @@ export default function AXEBlacksmithImageWorkspace({
   useEffect(() => {
     cancelledBatch.current = true;
     setBatchPending(false);
-    setSelectedMaterialId('');
     setShowAll(false);
   }, [tab, enchantMode, selectedId]);
+  // Changing equipment clears previous ingredient; mode selection by catalyst
+  // must not immediately erase that just-chosen ingredient.
+  useEffect(() => { setSelectedMaterialId(''); setForgeHistory([]); }, [selectedId]);
 
   const selectedItem = items.find(item => item.instanceId === selectedId) || null;
   const donorItem = items.find(item => item.instanceId === donorId && item.instanceId !== selectedId) || null;
@@ -332,7 +335,7 @@ export default function AXEBlacksmithImageWorkspace({
     return [...stacks.values()];
   }, [loot]);
   const inventoryCount = items.length + materialStacks.length;
-  const overReady = Boolean(selectedItem && isReadyToOverenchant(selectedItem.instanceId));
+  const overReady = Boolean(selectedItem && isReadyToOverenchant(selectedItem));
   // Recompute persisted enchantment, stage and gem previews on their subscriptions.
   void revision;
   // The service this tab runs (Enchant tab: Enchant % or slots; Ascend: the stage service).
@@ -417,7 +420,7 @@ export default function AXEBlacksmithImageWorkspace({
   const progress = selectedItem ? Math.max(0, Math.min(100, asNumber(progressState?.stage?.rank) / 4 * 100)) : 0;
   const percent = readout?.chance == null ? null : Math.round(readout.chance * 100);
   const status = !selectedItem ? 'Choose a piece of equipment from Inventory'
-    : tab === 'over_enchant' && !overReady ? 'Finish standard Enchant before Over-Enchant'
+    : tab === 'over_enchant' && !overReady ? 'Reach maximum Enchant (' + fmt(selectedItem ? getAXEReinforcementCap(selectedItem) : 0) + '%) before Over-Enchant'
     : tab === 'combine' && !donorItem ? 'Choose a separate matching donor in the second square'
     : tab === 'ascend' && ascendEligible && !donorItem && readout?.preview?.nextRank ? 'Choose matching equipment to sacrifice'
     : readout?.preview?.reason && !readout.preview.canAdvance ? readout.preview.reason
@@ -446,37 +449,52 @@ export default function AXEBlacksmithImageWorkspace({
     setBatchPending(false);
     setAutoEnabled(false);
     setDonorId('');
+    setSelectedMaterialId('');
     setTab(next);
     mode.controller.selectOperation(next === 'ascend' ? 'stage' : next);
   };
   const selectItem = entry => {
     if (batchRunningRef.current || forging) return;
     if (entry.material) {
-      if (tab === 'sockets' && entry.resourceCategory === 'gem' && AXE_GEM_DEFINITIONS[entry.id]) {
-        // The two gem squares are selection targets for the same owned stack
-        // in the canonical inventory; no duplicate item instance is created.
-        if (socketMode === 'upgrade' && socketSelectionTarget === 'donor') {
-          setSocketDonorGemId(entry.id);
-        } else {
-          setSocketGemId(entry.id);
-          setSocketDonorGemId('');
+      const intent = resolveBlacksmithIngredientIntent(entry.id);
+      if (intent && selectedItem) {
+        if (intent.tab === 'over_enchant' && !overReady) {
+          setForgeNotice('Over-Enchant is locked. Reach ' + getAXEReinforcementCap(selectedItem)
+            + '% Enchant before using an Over-Enchant Catalyst.');
+          return;
         }
+        if (tab !== intent.tab || (intent.enchantMode && enchantMode !== intent.enchantMode)) {
+          pickTab(intent.tab);
+          if (intent.enchantMode) setEnchantMode(intent.enchantMode);
+        }
+        setSelectedMaterialId(entry.id);
+        setForgeNotice(intent.label + ' materials selected. Nothing is consumed until forging.');
         return;
       }
-      if (selectedItem && (tab === 'enchant' || tab === 'over_enchant') &&
-          Object.hasOwn(inventoryRelevantCost, entry.id)) setSelectedMaterialId(entry.id);
+      if (!selectedItem) {
+        setForgeNotice('Choose equipment before selecting upgrade material.');
+        return;
+      }
+      if (tab === 'sockets' && entry.resourceCategory === 'gem' && AXE_GEM_DEFINITIONS[entry.id]) {
+        if (socketMode === 'upgrade' && socketSelectionTarget === 'donor') setSocketDonorGemId(entry.id);
+        else { setSocketGemId(entry.id); setSocketDonorGemId(''); }
+        return;
+      }
+      if (Object.hasOwn(inventoryRelevantCost, entry.id)) setSelectedMaterialId(entry.id);
       return;
     }
-    if(tab==='ascend' && selectedItem && isAXEAscensionDonor(selectedItem,entry))
+    if (selectedItem && entry.instanceId !== selectedId && isSafeCombineDonor(
+      selectedItem, entry, (target, donor) => isAXECompatibleDonor(target, donor, progressState)
+    )) {
+      if (tab !== 'combine') pickTab('combine');
       setDonorId(entry.instanceId);
-    else if (tab === 'combine' && selectedItem && entry.instanceId !== selectedId &&
-        isSafeCombineDonor(selectedItem, entry, (target, donor) =>
-          isAXECompatibleDonor(target, donor, progressState))) setDonorId(entry.instanceId);
-    else {
+      setForgeNotice('Matching donor selected. Combine requires confirmation.');
+    } else if (tab === 'ascend' && selectedItem && isAXEAscensionDonor(selectedItem, entry)) {
+      setDonorId(entry.instanceId);
+    } else {
       setSelectedId(entry.instanceId);
       setDonorId('');
     }
-    // Inventory selection never begins a transaction.
     onSelectedItem?.(entry);
   };
   const contextSelect = (event, entry) => {
@@ -486,6 +504,8 @@ export default function AXEBlacksmithImageWorkspace({
   };
 
   const setForgeSlot = (slot, itemId) => {
+    const staged = materialStacks.find(entry => entry.instanceId === itemId || entry.id === itemId);
+    if (slot === 'materials' && staged) { selectItem(staged); return; }
     const owned = items.find(entry => entry.instanceId === itemId);
     if (!owned) { setForgeNotice('Choose an owned equipment item.'); return; }
     if (slot === 'target') {
@@ -509,7 +529,14 @@ export default function AXEBlacksmithImageWorkspace({
       isSafeCombineDonor(selectedItem, donorItem,
         (target, donor) => isAXECompatibleDonor(target, donor, progressState))))
     && (tab !== 'ascend' || !ascendEligible || (!!donorItem && isAXEAscensionDonor(selectedItem, donorItem)))
+    && (!workflowMode || tab === 'combine' || !Object.keys(relevantCost).length
+      || (selectedMaterialId && Object.hasOwn(relevantCost, selectedMaterialId)))
     && !!readout?.preview?.canAdvance;
+  const recordForgeAttempt = (usedOperation, result, explanation) => {
+    const entry = blacksmithAttemptMessage(usedOperation, result, explanation);
+    setForgeHistory(history => [{ ...entry, id: Date.now() + ':' + Math.random().toString(36).slice(2, 7) },
+      ...history].slice(0, 8));
+  };
   const beginForge = async () => {
     if (!canForge || forging || batchRunningRef.current) return;
     if ((tab === 'combine' || (tab==='ascend' && ascendEligible)) && !confirmCombine) {
@@ -529,7 +556,9 @@ export default function AXEBlacksmithImageWorkspace({
         ...(operation === 'enchant' ? { slotIndex: readout.enchantSlot } : {}),
       });
       onTransaction?.(result);
-      setForgeNotice(describeForgeResult(operation, result, before, recordsOf(selectedItem.instanceId)));
+      const summary = describeForgeResult(operation, result, before, recordsOf(selectedItem.instanceId));
+      setForgeNotice(summary);
+      recordForgeAttempt(operation, result, summary);
       if (result.donorConsumed) { keepNoticeRef.current = true; setDonorId(''); }
       setRevision(current => current + 1);
     } catch (error) {
@@ -578,6 +607,8 @@ export default function AXEBlacksmithImageWorkspace({
           return result;
         },
         onAttempt: ({ result, attempts, donorId: consumedId }) => {
+          recordForgeAttempt(operation, result, 'Attempt ' + attempts + ': '
+            + (result?.message || result?.outcome || result?.reason || 'completed'));
           setRevision(value => value + 1);
           if (result?.donorConsumed && consumedId) { keepNoticeRef.current = true; setDonorId(''); }
           setForgeNotice('Attempt ' + attempts + ': ' +
@@ -619,7 +650,8 @@ export default function AXEBlacksmithImageWorkspace({
         role="status" aria-live="polite">{stationMessage}</span>}
 
       <nav className="axe-blacksmith-image-tabs" aria-label="Blacksmith operations">
-        {BLACKSMITH_TABS.map(({ id, label, Icon }) => <button type="button" key={id}
+        {BLACKSMITH_TABS.filter(entry => !['over_enchant', 'combine'].includes(entry.id))
+          .map(({ id, label, Icon }) => <button type="button" key={id}
           aria-label={label} aria-pressed={tab === id} onClick={() => pickTab(id)}
           title={label} disabled={batchBusy || forging}>
           <Icon size={24} strokeWidth={1.65} aria-hidden="true" />
@@ -644,6 +676,7 @@ export default function AXEBlacksmithImageWorkspace({
         onSelectDonor={item => setForgeSlot('donor', item.instanceId)}
         onClearTarget={clearTarget} onClearDonor={() => setDonorId('')}
         onDropSlot={dropInto}
+        overReady={overReady} maxEnchantPercent={selectedItem ? getAXEReinforcementCap(selectedItem) : null}
         onFocusInventory={() => {
           document.querySelector('.axe-blacksmith-image-inventory button')?.focus({ preventScroll: true });
         }}
@@ -724,13 +757,11 @@ export default function AXEBlacksmithImageWorkspace({
             ? (socketMode === 'upgrade' && socketSelectionTarget === 'donor'
               ? socketDonorGemId === entry.id : socketGemId === entry.id)
             : !entry.material && (selectedId === entry.instanceId || ((tab === 'combine' || tab === 'ascend') && donorId === entry.instanceId))}
-          draggable={!entry.material}
+          draggable={true}
           onDragStart={event => {
-            if (!entry.material) {
-              event.dataTransfer.setData('application/x-axe-owned-equipment', entry.instanceId);
-              event.dataTransfer.setData('text/plain', entry.instanceId);
-              event.dataTransfer.effectAllowed = 'copy';
-            }
+            event.dataTransfer.setData('application/x-axe-owned-equipment', entry.instanceId);
+            event.dataTransfer.setData('text/plain', entry.instanceId);
+            event.dataTransfer.effectAllowed = 'copy';
           }}
           onClick={() => selectItem(entry)} onDoubleClick={() => selectItem(entry)}
           onContextMenu={event => contextSelect(event, entry)}
