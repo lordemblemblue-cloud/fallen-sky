@@ -85,6 +85,19 @@ export function createPlayerMovementFallbackClips(model){
     ['rightShin',[0,-.15,-.3,-.3,-.18,0,0]],
     ['chest',[0,-.2,-.28,-.3,-.22,-.1,0]],
   ]);
+  // Last-resort genuine rig-local fall, used if the uploaded standing death
+  // montage has not loaded. This is NOT a combat roll and does not translate
+  // the actor through collision. The world runs the ash effect after this pose.
+  const deathForward=make('game3d_death_fall_forward',1.3,[0,.2,.48,.75,1],[
+    ['hips',[0,-.22,-.78,-1.26,-1.47]],
+    ['chest',[0,-.12,-.24,-.31,-.32]],
+    ['leftThigh',[0,.25,.68,.78,.82]],
+    ['rightThigh',[0,.32,.62,.82,.86]],
+    ['leftShin',[0,-.1,-.34,-.44,-.48]],
+    ['rightShin',[0,-.1,-.3,-.42,-.45]],
+    ['leftArm',[0,-.2,-.43,-.56,-.62]],
+    ['rightArm',[0,.24,.44,.55,.6]],
+  ]);
   const makeDodge=(name,direction,sign)=>make(name,.38,dash,[
     ['hips',[0,.18*sign,.33*sign,.16*sign,0],direction],
     ['chest',[0,-.13*sign,-.19*sign,-.1*sign,0],direction],
@@ -92,7 +105,7 @@ export function createPlayerMovementFallbackClips(model){
     ['rightThigh',[0,-.12,-.24,-.1,0]],
   ]);
   const fallback=Object.fromEntries(Object.entries({
-    jumpStart,jumpLoop,jumpLand,roll,
+    jumpStart,jumpLoop,jumpLand,roll,deathForward,
     dodgeLeft:makeDodge('game3d_dodge_left','z',1),
     dodgeRight:makeDodge('game3d_dodge_right','z',-1),
     dodgeForward:makeDodge('game3d_dodge_forward','x',-1),

@@ -293,6 +293,22 @@ export default function GameView() {
       worldReadyRef.current=false;
       setWorldReady(false);
       setWorldEntryStatus('loading');
+      if(detail.source==='death-respawn'&&target==='wolfveil'&&landing&&
+        [landing.x,landing.y,landing.z].every(Number.isFinite)){
+        // Unlike a normal dungeon return, a death choice explicitly names
+        // the desired spawn. Load only its world area and validate ground at
+        // the new scene's existing portalLanding entry point.
+        const area=wolfveilAreaAtWorld(landing)||'town';
+        setPortalReturn(false);
+        setPortalSpawnAtGate(false);
+        setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+        lastWolfveilAreaRef.current=area;
+        setWorldArea(area);
+        vortexOriginRef.current=null;
+        setWorldRegion('wolfveil');
+        return;
+      }
       if(areaTravel){
         // The old region's WebGL scene is torn down by the keyed remount.
         // Do not keep it mounted invisibly behind the destination area.
