@@ -14,5 +14,5 @@ test('services, online count, quest and launchers no longer cover the left minim
   assert.match(placement, /var\(--axe-hud-notice-floor, 0px\)/);
   assert.match(placement, /\.game3d-world-chat[\s\S]*bottom: calc\(var\(--axe-hud-xp-bottom, 36px\) \+ 8px\) !important/);
   assert.match(placement, /\.axe-echo-launch,\s*\.game3d-view \.axe-chronicle-vault-launch,\s*\.game3d-view \.axe-minigames-launch/);
-  assert.match(placement, /bottom: var\(--axe-hud-xp-bottom, 36px\) !important/);
+  assert.match(placement, /bottom: calc\(var\(--axe-hud-xp-bottom, 36px\) \+ 8px\) !important/);
 });
