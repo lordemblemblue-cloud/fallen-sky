@@ -70,3 +70,31 @@ test('duel class selection between rounds is applied at the next round spawn', (
   assert.equal(m.world.fighters.get('foe').weapon, 'sword', 'other fighters stay on their own weapon');
   assert.equal(m.seats.get('me').classId, 'assassin');
 });
+
+test('special meter is server-owned, starts at zero and is visible only to the seat owner', () => {
+  const m = createMatch({ mode: 'duel', players: [{ id: 'a' }, { id: 'b' }] });
+  assert.equal(matchView(m, 'a').me.specialMeter, null, 'legacy class has no invented charge');
+  assert.equal(queueMatchClass(m, 'a', 'assassin').accepted, true);
+  assert.equal(queueMatchClass(m, 'b', 'healer').accepted, true);
+  advance(m, COUNTDOWN + 0.1);
+  assert.equal(matchView(m, 'a').me.specialMeter, 0);
+  assert.equal(matchView(m, 'b').me.specialMeter, 0);
+  assert.equal(matchView(m, 'a').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
+  assert.equal(matchView(m, 'b').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
+  const before = m.seats.get('a').specialMeter;
+  stepMatch(m, STEP, { a: { specialMeter: 100, presses: ['special'], classId: 'juggernaut' } });
+  assert.equal(m.seats.get('a').specialMeter, before, 'untrusted input cannot award charge');
+  assert.equal(m.seats.get('a').classId, 'assassin', 'input cannot switch class');
+  assert.equal(matchView(m, 'unknown').me, null);
+});
+
+test('special meter belongs to a seat and never transfers to a replacement bot', () => {
+  const m = createMatch({ mode: 'practice', players: [{ id: 'a' }], seats: 2 });
+  queueMatchClass(m, 'a', 'duelist');
+  advance(m, COUNTDOWN + 0.1);
+  m.seats.get('a').specialMeter = 95;
+  assert.equal(matchView(m, 'a').me.specialMeter, 95);
+  // Leaving a match destroys the player seat; a replacement is a new bot.
+  // Do not leak a departing player's meter into the next occupant.
+  assert.equal(m.seats.get('bot1').specialMeter, 0);
+});
