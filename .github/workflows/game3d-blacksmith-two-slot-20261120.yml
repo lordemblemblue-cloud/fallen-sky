@@ -1,0 +1,26 @@
+name: Game 3D Blacksmith two-slot forge and world station removal
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/axe/services/AXEBlacksmith*'
+      - 'src/components/game3d/axe/services/AXEServiceGroups.js'
+      - 'src/components/game3d/axe/services/world/AXEServiceStation*.js'
+      - 'tests/game3d-blacksmith-two-slot-redesign-20261120.test.mjs'
+      - '.github/workflows/game3d-blacksmith-two-slot-20261120.yml'
+  workflow_dispatch:
+jobs:
+  blacksmith-two-slot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Simplified forge and safety regression
+        run: node --test tests/game3d-blacksmith-two-slot-redesign-20261120.test.mjs
+      - name: Blacksmith V2 mechanics regression
+        run: node --test tests/game3d-blacksmith-v2.test.mjs
+      - name: Game 3D build
+        run: npm run build
