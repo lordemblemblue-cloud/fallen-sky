@@ -61,15 +61,15 @@ test('successful sends re-reveal actual chat and fade only after activity timeou
 test('actual world chat uses a slim, restrained surface without changing chat activation',()=>{
   const css=read('src/components/game3d/social/Game3DChatChannels.css');
   const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
-  assert.match(css,/width:clamp\\(225px,23vw,315px\\)/);
+  assert.match(css,/width:clamp\(225px,23vw,315px\)/);
   assert.match(css,/max-height:88px;overflow-y:auto/);
-  assert.match(css,/border:1px solid rgba\\(216,192,147,\\.18\\);border-radius:5px/);
-  assert.match(css,/backdrop-filter:blur\\(3px\\)/);
+  assert.match(css,/border:1px solid rgba\(216,192,147,\.18\);border-radius:5px/);
+  assert.match(css,/backdrop-filter:blur\(3px\)/);
   assert.match(css,/min-height:26px;padding:3px 6px/);
   assert.match(css,/background:transparent;font-size:10px;font-weight:500/);
-  assert.doesNotMatch(css,/backdrop-filter:blur\\(13px\\)|box-shadow:0 12px 28px/);
+  assert.doesNotMatch(css,/backdrop-filter:blur\(13px\)|box-shadow:0 12px 28px/);
   assert.match(chat,/showDock&&combatEvents.length>0&&<aside/);
-  assert.match(chat,/combatEvents.slice\\(-1\\)/);
-  assert.match(chat,/max-h-\\[88px\\]/);
+  assert.match(chat,/combatEvents.slice\(-1\)/);
+  assert.match(chat,/max-h-\[88px\]/);
   assert.doesNotMatch(chat,/MessageSquare|Misses, dealt and received damage will appear here/);
 });
