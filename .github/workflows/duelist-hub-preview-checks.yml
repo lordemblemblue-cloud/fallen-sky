@@ -4,6 +4,7 @@ on:
     branches:
       - 'feature/duelist-cinematic-*'
       - 'fix/duelist-home-entry-*'
+      - 'feature/duelist-actual-menu-*'
   pull_request:
     paths:
       - 'src/components/duelist/menu/**'
