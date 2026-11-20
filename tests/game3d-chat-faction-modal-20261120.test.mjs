@@ -14,16 +14,16 @@ test('chat channels sit outside the blurred message surface without horizontal s
   assert.match(css,/\.game3d-chat-messages\{scrollbar-width:none/);
   assert.match(css,/\.game3d-world-chat\.is-typing \.game3d-chat-surface/);
   assert.match(css,/\.jade-hud \.jade-quest-tracker/);
-  assert.match(css,/max-height:min\(250px,max\(0px,calc\(100dvh/);
+  assert.match(css,/max-height:min\(310px,max\(92px,calc\(100dvh/);
 });
 
 test('Enter reveals chat before focus; incoming chat temporarily reappears',()=>{
   const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
   const settings=read('src/components/game3d/hud/game3dCommunityHUDSettings.mjs');
   const view=read('src/pages/GameView.jsx');
-  assert.match(chat,/if \(!expanded\) \{ setExpanded\(true\)/);
-  assert.match(chat,/else setTyping\(true\)/);
-  assert.match(chat,/m\.sender_id !== userId/);
+  assert.match(chat,/nextChatEnterState\(/);
+  assert.match(chat,/setTyping\(next\.typing\)/);
+  assert.match(chat,/isIncomingChatMessage\(message,userId\)/);
   assert.match(chat,/setTimeout\(\(\) => setExpanded\(false\), 9000\)/);
   assert.match(settings,/chatAlwaysVisible: false/);
   assert.match(settings,/input\.chatAlwaysVisible/);
