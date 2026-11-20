@@ -17,7 +17,7 @@ Branch: `feature/game3d-player-death-ash-respawn-20261120`. Review-only draft. N
 
 ## Suggested tests and QA
 - `node --test tests/game3d-death-sequence.test.mjs tests/game3d-checkpoint-selection.test.mjs tests/game3d-nearby-respawn.test.mjs tests/game3d-map-spawn-points.test.mjs`
-- `npm run lint` and `npm run build`.
+- Run changed-files ESLint and `npm run build`. The full repo `npm run lint` was attempted on draft PR #126 and failed with 1,834 repository-wide errors, predominantly missing global definitions in unrelated scripts/tests. Fix the lint baseline separately; do not conflate it with this feature's targeted lint.
 - Browser: die on foot with and without uploaded death FBX, verify fall -> ash -> responsive map; repeat death twice to catch invisible armor/material leaks; die while riding; respawn within 2–12 m without cliff/river/enemy overlap.
 - Visit multiple shrines and reload the same character; verify activation persists and different characters have isolated availability. Return to Town Plaza across a streaming boundary and from an active cave/dungeon; check cave checkpoint remains a separate resume choice.
 - Verify weapon returns to hand after revival, WebGL context loss doesn't crash the ash effect, mobile landscape and portrait layouts, full HP and post-respawn invulnerability.
