@@ -98,3 +98,32 @@ test('special meter belongs to a seat and never transfers to a replacement bot',
   // Do not leak a departing player's meter into the next occupant.
   assert.equal(m.seats.get('bot1').specialMeter, 0);
 });
+
+
+test('only a server-confirmed CTF capture awards objective charge to a classed human', () => {
+  const m = createMatch({ mode: 'ctf', players: [
+    { id: 'redPlayer', team: 'red' }, { id: 'bluePlayer', team: 'blue' },
+  ], seats: 2 });
+  assert.equal(queueMatchClass(m, 'redPlayer', 'healer').accepted, true);
+  advance(m, COUNTDOWN + 0.1);
+  const red = m.world.fighters.get('redPlayer');
+  // Client claims, including fabricated objective/meter fields, are not trusted.
+  stepMatch(m, STEP, { redPlayer: { objective: true, specialMeter: 100 } });
+  assert.equal(m.seats.get('redPlayer').specialMeter, 0);
+  // Arrange an already-authorized server-side flag carrier at their own base.
+  const enemyFlag = m.flags.blue;
+  enemyFlag.state = 'carried';
+  enemyFlag.carrier = 'redPlayer';
+  const own = m.flags.red;
+  const body = m.world.bodies.get('redPlayer');
+  assert.ok(body, 'world owns the fighter body');
+  body.x = own.home.x;
+  body.z = own.home.z;
+  stepMatch(m, STEP);
+  assert.equal(m.scores.redPlayer.captures, 1);
+  assert.equal(m.seats.get('redPlayer').specialMeter, 10);
+  assert.equal(matchView(m, 'redPlayer').me.specialMeter, 10);
+  assert.equal(matchView(m, 'bluePlayer').people.some(p => 'specialMeter' in p), false);
+  stepMatch(m, STEP);
+  assert.equal(m.seats.get('redPlayer').specialMeter, 10, 'a returned flag cannot award twice');
+});
