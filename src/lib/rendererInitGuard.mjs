@@ -10,7 +10,18 @@ export function createRendererInitGuard() {
   let current = null;
 
   function safelyDispose(renderer) {
-    if (renderer && typeof renderer.dispose === 'function') renderer.dispose();
+    if (!renderer || typeof renderer.dispose !== 'function') return;
+    try {
+      // A lost GPU context may throw synchronously or reject during teardown.
+      // Observe the rejection so stale initialization never leaks an unhandled
+      // promise or prevents a newer scene from starting.
+      const pending = renderer.dispose();
+      if (pending && typeof pending.then === 'function') {
+        Promise.resolve(pending).catch(() => {});
+      }
+    } catch {
+      // Teardown is best effort: the renderer has already been invalidated.
+    }
   }
 
   return {
