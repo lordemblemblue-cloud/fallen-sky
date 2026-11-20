@@ -3008,6 +3008,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         return;
       }
       playerDeathAsh?.reset();
+      // Rebuild the equipped hand weapon after the ash sequence is cleared.
+      // On a cross-area transfer the new world will create its own runtime.
+      weaponSummon?.summon?.();
       playerDeathElapsed = null;
       playerDeathRequested = false;
       actor.visible = true;
