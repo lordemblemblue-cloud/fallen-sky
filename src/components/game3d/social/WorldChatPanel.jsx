@@ -107,7 +107,7 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
     window.addEventListener('game3dOpenWorldChat',open);
     return () => window.removeEventListener('game3dOpenWorldChat',open);
   },[suppressed]);
-  // One Enter reveals the chat, the next Enter focuses the input. Run in
+  // Enter focuses the existing translucent dock on the first press. Run in
   // capture so gameplay's bubbling hotkeys cannot consume the activation.
   // Never hijack Enter when another text field or menu owns keyboard input.
   useEffect(() => {
@@ -161,7 +161,12 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       const { message } = await sendChatMessage(tab, text);
       if (message) addLines(tab, [message]);
       setNotice('');
-      close();
+      setDraft('');
+      setTyping(false);
+      inputRef.current?.blur();
+      // Keep the submitted message visible long enough to read before fading.
+      setExpanded(true);
+      setActivity(value => value + 1);
     } catch (e) {
       setNotice(e?.code === 'rate_limit' ? 'Slow down a little.' : e?.code === 'conflict' ? 'You just said that.' : e?.message || 'Message not sent.');
     }
@@ -181,10 +186,6 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       className={`game3d-world-chat fixed z-[40] ${typing ? 'is-typing' : expanded ? 'is-expanded' : 'is-idle'} ${alwaysVisible ? 'is-pinned' : ''}`}
       aria-label="World chat" data-chat-visible={typing||expanded||alwaysVisible ? 'true' : 'false'}
     >
-      {!typing&&!expanded&&!alwaysVisible&&
-        <button type="button" className="game3d-chat-awaken"
-          onClick={()=>{setExpanded(true);setActivity(value=>value+1);}}
-          aria-label="Reveal world chat"><MessageSquare size={14} aria-hidden="true"/> Chat <kbd>Enter</kbd></button>}
       <div className="game3d-chat-surface">
       {showDock&&<aside className="game3d-chat-combat-strip" aria-label="Recent combat results">
         <strong>COMBAT LOG</strong>
@@ -236,8 +237,7 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
         <button type="button" disabled title="Faction broadcast requires verified leader or vice-leader status">Faction Call</button>
         <button type="button" aria-pressed={tab==='combat'} onClick={()=>{setTab('combat');setExpanded(true);setTyping(false);setActivity(v=>v+1);}}
           className={tab==='combat'?'is-active':''}>Combat</button>
-        {!typing&&<span className="game3d-chat-channel-hint">{expanded?'Enter again to type':'Enter to open'}</span>}
-      </div>
+       </div>
     </div>
   );
 }
