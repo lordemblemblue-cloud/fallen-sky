@@ -6,7 +6,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Home, Trophy, ChevronLeft, X, Compass, Package, Layers, Crown, Sparkles, CircleDot } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
-import { MENU_MODES, MODE_ORDER, LEVELS } from './modes.js';
+import { MENU_MODES, LEVELS } from './modes.js';
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
@@ -37,8 +37,6 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
     </main>
   );
 }
-
-const playing = (n) => (n ? `${n} playing` : null);
 
 /** Icons are intentionally presentation-only; route availability comes from the catalog. */
 const HUB_GLYPHS = {
@@ -195,33 +193,6 @@ export function DuelistHub() {
       </footer>
     </main>
   );
-}
-
-function ModeTile({ mode, badge = null }) {
-  const m = MENU_MODES[mode];
-  return <PageTile page={mode} icon={m.icon} title={m.title} line={m.blurb} accent={m.accent} badge={badge} />;
-}
-
-function PageTile({ page, icon: Icon, title, line, accent, badge = null, wide = false }) {
-  return (
-    <Link to="/duelist-next/$page" params={{ page }} className={`group relative flex min-h-[112px] flex-col justify-between overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] p-4 transition hover:border-white/25 hover:bg-white/[0.06] ${wide ? 'sm:col-span-2' : ''}`}>
-      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-25 blur-2xl transition group-hover:opacity-40" style={{ background: accent }} />
-      <div className="flex items-center justify-between gap-2">
-        <Icon className="h-5 w-5" style={{ color: accent }} />
-        {badge && <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] text-white/70">{badge}</span>}
-      </div>
-      <div>
-        <div className="text-base font-semibold">{title}</div>
-        <div className="text-xs text-white/55">{line}</div>
-      </div>
-    </Link>
-  );
-}
-
-function JoinTile({ lobby }) {
-  const line = !lobby.serverUrl ? 'Online play is not set up yet.' : !lobby.reachable ? 'The match server is not answering.'
-    : lobby.players ? `${lobby.players} playing now: jump in.` : 'Nobody online yet: start a match others can join.';
-  return <PageTile wide page="join" icon={LogIn} title="Join" line={line} accent="#ffb05a" badge={lobby.online ? 'Online' : null} />;
 }
 
 function Button({ children, onClick, primary = false, disabled = false, title = undefined }) {
