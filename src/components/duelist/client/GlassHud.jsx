@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { ChevronRight, Focus, Hand, Magnet, MoveUpRight, Shield, Sparkles, Waves, Wind } from 'lucide-react';
 import { BODIES } from './assets.mjs';
-import { ABILITY_PAGES, healthNumbers, specialPercent } from './glassHud.mjs';
+import { ABILITY_PAGES, canPressAbility, healthNumbers, pageSwitchCommands, specialPercent } from './glassHud.mjs';
 
 const ICONS = { push: Waves, pull: Magnet, grip: Hand, breach: Focus, dash: Wind, resist: Shield };
 const FULL = 2 * Math.PI * 62;
@@ -15,9 +15,11 @@ export default function GlassHud({ hud, fighter = 'maskedWarrior', onPower }) {
   const v = hud.you;
   const special = specialPercent(v.special);
   const fighterName = BODIES[fighter]?.name || 'Duelist';
-  const powers = ABILITY_PAGES[page].map(id => hud.powers.find(p => p.id === id))
+  const powers = ABILITY_PAGES[page].map(id => (hud.powers || []).find(p => p.id === id))
     .filter(Boolean);
   const activate = id => {
+    const power = powers.find(p => p.id === id);
+    if (!canPressAbility(power, v.dead)) return;
     if (id === 'grip') {
       onPower?.(gripping.current ? 'release' : 'grip');
       gripping.current = !gripping.current;
@@ -25,6 +27,11 @@ export default function GlassHud({ hud, fighter = 'maskedWarrior', onPower }) {
       gripping.current = false;
       onPower?.(id);
     }
+  };
+  const nextPage = () => {
+    for (const command of pageSwitchCommands(gripping.current)) onPower?.(command);
+    gripping.current = false;
+    setPage(x => (x + 1) % ABILITY_PAGES.length);
   };
   return (
     <div className="duelist-glass-hud" data-testid="duelist-glass-hud">
@@ -66,7 +73,7 @@ export default function GlassHud({ hud, fighter = 'maskedWarrior', onPower }) {
       <nav className="duelist-ability-bank" aria-label="Three active abilities">
         <div className="duelist-ability-page">
           <span>ABILITIES {page + 1}/2</span>
-          <button type="button" onClick={() => { setPage(x => (x + 1) % ABILITY_PAGES.length); gripping.current = false; }}
+          <button type="button" onClick={nextPage}
             title="Show other abilities" aria-label="Show other three abilities">
             <ChevronRight aria-hidden="true" />
           </button>
@@ -78,7 +85,7 @@ export default function GlassHud({ hud, fighter = 'maskedWarrior', onPower }) {
               <button type="button" key={p.id} className="duelist-ability-glass"
                 data-testid={`duelist-ability-${p.id}`} onClick={() => activate(p.id)}
                 aria-label={`${p.id}, key ${p.key}${p.ready > 0 ? `, ${p.ready.toFixed(1)} seconds cooldown` : ''}`}
-                aria-disabled={p.ready > 0}>
+                disabled={!canPressAbility(p, v.dead)}>
                 <Icon aria-hidden="true" className="duelist-ability-symbol" />
                 <span className="duelist-ability-key">{p.key}</span>
                 <span className="duelist-ability-label">{p.id === 'grip' ? 'Grip / Throw' : p.id}</span>
