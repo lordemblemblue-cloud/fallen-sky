@@ -685,15 +685,8 @@ export default function PauseMenu({
                 </div>
                 <div className="axe3d-pause__surface">
                   <OptionButtons label="Visual style" value={graphics.artStyle}
-                    items={[{id:'original',text:'Classic'},{id:'ink',text:'Sumi-e Ink Wash'},
-                      {id:'atomic-ultra-sumi',text:'ULTRA MAX · Living Ultra-Sumi'}]}
+                    items={[{id:'original',text:'Classic'},{id:'ink',text:'Sumi-e Ink Wash'}]}
                     onPick={artStyle=>changeGraphics({...graphics,artStyle})}/>
-                  {graphics.artStyle==='atomic-ultra-sumi'&&<p className="axe3d-pause__help">
-                      ON by default in the clone: world-wide living-energy grass, flowing
-                      jade/cobalt/violet Sumi-e tree material and 3× taller flame blades.
-                      Existing character, roads, buildings and terrain keep their colors.
-                      No full-screen white bloom or duplicate game physics.
-                    </p>}
                   {graphics.artStyle==='ink'&&<>
                     <OptionButtons label="Ink color profile" value={inkPaletteFor(graphics)}
                       items={[{id:'vibrant',text:'Vibrant Color'},{id:'classic',text:'Classic Ink'}]}
