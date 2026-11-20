@@ -78,7 +78,7 @@ test('Auto safety and the Stop button live outside the ingredient box',()=>{
   assert.match(source,/className="axe-blacksmith-feed-safety"/);
   assert.match(source,/className="axe-blacksmith-feed-stop"/);
   assert.doesNotMatch(panel,/Stop Auto after current attempt/);
-  assert.doesNotMatch(panel,/Minimum success rate/);
+  assert.match(panel,/aria-label="Minimum success rate"/); // preserved in restored left forge safety options
   assert.doesNotMatch(panel,/Use owned Stabilizers at high risk/);
   assert.match(panel,/aria-label="Automatic forge target"/);
 });
