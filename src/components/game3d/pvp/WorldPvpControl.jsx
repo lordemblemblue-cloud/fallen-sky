@@ -15,6 +15,44 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
   const [requested,setRequested]=useState(WORLD_PVP_MODE.PVE);
   const [confirmed,setConfirmed]=useState(WORLD_PVP_MODE.PVE);
   const previousZone=useRef(null);
+  const [weatherBottomPx,setWeatherBottomPx]=useState(null);
+  // Weather height varies with the forecast and HUD screen size. Anchor to
+  // its measured bottom so World Combat never sits on top of the forecast.
+  // A late-mounted weather HUD is discovered once, not polled every frame.
+  useEffect(()=>{
+    if(suppressed){setWeatherBottomPx(null);return undefined;}
+    let weather=null,resizeObserver=null,mutationObserver=null;
+    const measure=()=>{
+      if(!weather?.isConnected)return;
+      const bottom=Math.ceil(weather.getBoundingClientRect().bottom)+10;
+      setWeatherBottomPx(previous=>previous===bottom?previous:bottom);
+    };
+    const attach=()=>{
+      if(weather?.isConnected)return;
+      const found=document.querySelector('.game3d-view .game3d-world-weather');
+      if(!found)return;
+      weather=found;
+      mutationObserver?.disconnect();
+      mutationObserver=null;
+      measure();
+      if(typeof ResizeObserver!=='undefined'){
+        resizeObserver=new ResizeObserver(measure);
+        resizeObserver.observe(weather);
+      }
+    };
+    attach();
+    if(!weather && typeof MutationObserver!=='undefined'){
+      const root=document.querySelector('.game3d-view') || document.body;
+      mutationObserver=new MutationObserver(attach);
+      mutationObserver.observe(root,{childList:true,subtree:true});
+    }
+    window.addEventListener('resize',measure);
+    return ()=>{
+      window.removeEventListener('resize',measure);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+    };
+  },[region,suppressed]);
   useEffect(()=>subscribePlayerPosition(position=>{
     const next=resolveWorldPvpZone({region,position});
     setZone(before=>before.id===next.id?before:next);
@@ -76,6 +114,7 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
     : pending ? 'Waiting for the world server to confirm the requested PvP preference.'
       : 'PvP combat requires both players to opt in and world-server authorization.';
   return <section className="game3d-pvp-control" data-safe-zone={safeZone}
+    style={weatherBottomPx == null ? undefined : {'--axe-weather-bottom-px': weatherBottomPx+'px'}}
     aria-label="World combat and safe zone status">
     <div className="game3d-pvp-control-title">
       <span>WORLD COMBAT</span>
