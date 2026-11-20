@@ -30,3 +30,7 @@ Additional gameplay features requested by the owner—four character classes, sp
 - The focused workflow `.github/workflows/duelist-liquid-glass-hud.yml` validates the template and result tests, the existing Duelist UI parser, and targeted ESLint. On commit `457cfe1`, both jobs completed successfully (GitHub run `44816330795`).
 - The much broader WebGPU and Game3D workflows also trigger on PRs but contain unrelated modules; review their failures independently instead of assuming a HUD regression.
 - The host environment could not clone GitHub directly, so no local browser test or full project build was performed in this session.
+
+## Full app build confirmation (code commit `ae09ccd`)
+
+The focused [GitHub Actions run 44816566811](https://github.com/lordemblemblue-cloud/fallen-sky/actions/runs/44816566811) passed all three jobs: `template-and-rules`, `ui-parse`, and `build-app` (runs `npm run build` with installed locked dependencies). This is the latest **code** commit validation. The subsequent handoff text update is documentation only. Still requires runtime desktop/mobile screenshot inspection, live controller testing and deployment/preview verification. Do not merge/deploy automatically.
