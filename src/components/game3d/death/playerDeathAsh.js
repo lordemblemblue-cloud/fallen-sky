@@ -15,9 +15,14 @@ export function createPlayerDeathAsh({ scene, model }) {
   // Never mutate shared GLB/armor materials: each death takes temporary clones.
   const restore = () => {
     for (const { node, material, visible, castShadow } of saved) {
+      const temporary = node.material;
       node.material = material;
       node.visible = visible;
       node.castShadow = castShadow;
+      // The temporary opacity-capable clones are owned by this death effect.
+      // Never dispose the original GLB/armor materials shared with the gear UI.
+      const copies = Array.isArray(temporary) ? temporary : [temporary];
+      copies.forEach(copy => copy?.dispose?.());
     }
     saved.length = 0;
     meshes.length = 0;
