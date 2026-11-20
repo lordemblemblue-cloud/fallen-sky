@@ -616,7 +616,11 @@ export default function GameView() {
         }
         else if (friendsListOpen) setFriendsListOpen(false);
         else if (clanOverlayOpen) setClanOverlayOpen(false);
-        else setPauseMenuOpen((v) => !v);
+        else {
+          // Always discard any old expanded service strip before opening ESC.
+          services.controller.close();
+          setPauseMenuOpen((v) => !v);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
