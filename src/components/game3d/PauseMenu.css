@@ -775,3 +775,61 @@
 @media(prefers-reduced-motion:reduce){
   .axe3d-pause__launcher-tile{transition:none}
 }
+
+
+/* Subpages live inside the right-side Escape drawer, never as a stale
+   world HUD button after the service is closed. Native details/summary keeps
+   all groups keyboard accessible without another overlay. */
+.axe3d-pause__launcher-subpages{
+  display:flex;flex-direction:column;gap:6px;
+  margin-top:17px;padding-top:15px;
+  border-top:1px solid rgba(184,217,225,.17);
+}
+.axe3d-pause__launcher-subpages-heading{
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;
+  margin-bottom:3px;
+}
+.axe3d-pause__launcher-subpages-heading strong{
+  color:#e6f0ee;font-size:13px;font-weight:700;
+}
+.axe3d-pause__launcher-subpages-heading small{
+  color:#a7c4cb;font-size:10px;
+}
+.axe3d-pause__launcher-subpage-group{
+  border:1px solid rgba(181,220,231,.22);border-radius:8px;
+  background:rgba(18,40,54,.47);min-width:0;
+}
+.axe3d-pause__launcher-subpage-group>summary{
+  display:flex;align-items:center;gap:8px;
+  min-height:37px;padding:8px 11px;cursor:pointer;
+  color:#edf7f6;list-style:none;font-size:12px;font-weight:600;
+}
+.axe3d-pause__launcher-subpage-group>summary::-webkit-details-marker{display:none}
+.axe3d-pause__launcher-subpage-group>summary span{flex:1}
+.axe3d-pause__launcher-subpage-group>summary small{
+  color:#aac5cc;font-size:10px;font-weight:500;
+}
+.axe3d-pause__launcher-subpage-group>summary svg{
+  flex-shrink:0;transition:transform .15s;
+}
+.axe3d-pause__launcher-subpage-group[open]>summary svg{transform:rotate(90deg)}
+.axe3d-pause__launcher-subpage-group>summary:hover{
+  color:#fff;background:rgba(102,167,184,.13);
+}
+.axe3d-pause__launcher-subpage-group>summary:focus-visible{
+  outline:2px solid #b2edf1;outline-offset:2px;border-radius:8px;
+}
+.axe3d-pause__launcher-subpage-buttons{
+  display:flex;flex-wrap:wrap;gap:6px;
+  padding:4px 9px 11px;
+}
+.axe3d-pause__launcher-subpage-buttons>button{
+  min-height:30px;min-width:0;flex:0 1 auto;
+  padding:5px 9px;border-radius:6px;
+  border:1px solid rgba(171,218,225,.3);
+  background:rgba(6,23,35,.69);
+  color:#e0f0f1;font-size:11px;text-align:left;
+}
+.axe3d-pause__launcher-subpage-buttons>button:hover{
+  background:rgba(81,147,161,.27);border-color:#b2e5eb;
+}
