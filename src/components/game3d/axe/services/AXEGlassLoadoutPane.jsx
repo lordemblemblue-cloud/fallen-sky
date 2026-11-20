@@ -23,7 +23,7 @@ import { getAXEMountState, subscribeAXEMounts, activateAXEMount, registerAXEMoun
 import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getPlayerHUD } from '../../playerHUDStore';
-import {getAXERoleWeapon,assignAXEHUDWeaponRole,subscribeAXEHUDWeaponRoles} from '../weapons/AXEWeaponRoleSlots';
+import {getAXERoleWeapon,assignAXEHUDWeaponRole,subscribeAXEHUDWeaponRoles} from '../weapons/AXEWeaponRoleSlots.js';
 import {AXE_HUD_WEAPON_ROLES} from '../weapons/AXEWeaponRoleSlots.mjs';
 import {inferAXEWeaponRole} from '../weapons/AXEWeaponIdentity';
 import './AXEGlassLoadoutPane.css';

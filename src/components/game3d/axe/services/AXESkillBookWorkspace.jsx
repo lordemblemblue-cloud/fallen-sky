@@ -16,7 +16,7 @@ import {
 import { getCompanionSkillById } from '../../skills/companionSkillRegistry';
 import { getAXEEquipmentInventoryState, subscribeAXEEquipmentInventory,
   switchAXEInventoryWeapon } from '../equipment/AXEEquipmentInventoryStore';
-import {getAXERoleWeapon,assignAXEHUDWeaponRole} from '../weapons/AXEWeaponRoleSlots';
+import {getAXERoleWeapon,assignAXEHUDWeaponRole} from '../weapons/AXEWeaponRoleSlots.js';
 import {SKILL_BOOK_WEAPON_MODES,getWeaponForSkillBookMode,
   getSkillBookModeForPreset} from './SkillBookWeaponModes.mjs';
 import './AXESkillBookWorkspace.css';

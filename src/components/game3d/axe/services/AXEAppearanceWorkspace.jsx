@@ -14,7 +14,7 @@ import { subscribeAXEAura } from '../equipment/AXEEquipmentAuraStore';
 import { getAppearanceAuraSource, subscribeAppearanceAuraSource, selectAppearanceAuraSource } from './AXEAppearanceAuraSelection';
 import AXEAppearanceDetails from './AXEAppearanceDetails';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
-import {getAXERoleWeapon} from '../weapons/AXEWeaponRoleSlots';
+import {getAXERoleWeapon} from '../weapons/AXEWeaponRoleSlots.js';
 import {AXE_HUD_WEAPON_ROLES} from '../weapons/AXEWeaponRoleSlots.mjs';
 import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import './AXEAppearanceWorkspace.css';

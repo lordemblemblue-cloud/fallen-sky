@@ -7,7 +7,7 @@ import { getAllAXEEquipmentItems, getActiveEquippedAXEWeapon, subscribeAXEEquipm
 import { subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter, subscribeCharacters } from '../../characterStore';
 import { AXE_EQUIPMENT_SLOT_DEFS } from '../equipment/AXEEquipmentSystem';
-import { getAXERoleWeapon, subscribeAXEHUDWeaponRoles } from '../weapons/AXEWeaponRoleSlots';
+import { getAXERoleWeapon, subscribeAXEHUDWeaponRoles } from '../weapons/AXEWeaponRoleSlots.js';
 import { getWingsState, subscribeWings } from '../../progression/wingsStore';
 import { getAXECapeState, subscribeAXECapes } from '../progression/AXECapeStore';
 import { getAXECapeDefinition } from '../progression/AXECapeSystem';
