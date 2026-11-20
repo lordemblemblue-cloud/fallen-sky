@@ -23,10 +23,11 @@ test('legacy Duelist Game 2 engine remains available at a distinct route', () =>
   assert.match(page, /<Game2Duel\b/);
 });
 
-test('cinematic hub offers navigation back to the existing Classic Arena', () => {
+test('Duelist hub removes Classic Arena from its visible home navigation without deleting its legacy route', () => {
   const menu = source('src/components/duelist/menu/MenuPages.jsx');
-  assert.match(menu, /to=['"]\/duelist-classic['"]/);
-  assert.match(menu, /CLASSIC ARENA/);
+  const hub = menu.split('export function DuelistHub() {')[1].split('function Button(')[0];
+  assert.doesNotMatch(hub, /to=['"]\/duelist-classic['"]/);
+  assert.doesNotMatch(hub, /CLASSIC ARENA|SELECT FIGHTER|LOADOUT|MISSIONS/);
 });
 
 test('existing new-build game and mode routes remain intact', () => {
