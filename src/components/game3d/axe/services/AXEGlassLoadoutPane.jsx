@@ -23,6 +23,9 @@ import { getAXEMountState, subscribeAXEMounts, activateAXEMount, registerAXEMoun
 import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getPlayerHUD } from '../../playerHUDStore';
+import {getAXERoleWeapon,assignAXEHUDWeaponRole,subscribeAXEHUDWeaponRoles} from '../weapons/AXEWeaponRoleSlots';
+import {AXE_HUD_WEAPON_ROLES} from '../weapons/AXEWeaponRoleSlots.mjs';
+import {inferAXEWeaponRole} from '../weapons/AXEWeaponIdentity';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
@@ -32,11 +35,11 @@ import AXECompanionMountCircleRail from './AXECompanionMountCircleRail';
 const PlayerModel = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CompanionModel = lazy(() => import('../../equipment/CompanionPreview3D'));
 
-// Two visible rows of five. The source slots, item IDs and permitted counts
-// come from the canonical equipment contract; this is a VIEW, not a second loadout.
+// Armor/jewelry stays in its original viewer rails. The 3 weapons now sit
+// together in the separate, real loadout rack above the character model.
 export const PLAYER_DISPLAY_SLOTS = Object.freeze([
-  ['weapon', 0], ['helm', 0], ['chest', 0], ['gloves', 0], ['legs', 0],
-  ['boots', 0], ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
+  ['helm', 0], ['chest', 0], ['gloves', 0], ['legs', 0], ['boots', 0],
+  ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
 ]);
 const fmt = value => Number(value || 0).toLocaleString('en-US',{maximumFractionDigits:2});
 const caption = value => String(value || '').replaceAll('_',' ').split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
@@ -59,7 +62,7 @@ function IconFor({ item, size=28 }) {
     key === 'ring' || key === 'necklace' || key === 'charm' ? <Gem size={size}/> :
       key === 'helm' ? <Crown size={size}/> : <Shield size={size}/>;
 }
-export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} }) {
+export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole='', onNotice=()=>{} }) {
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
   const [gearPresets,setGearPresets] = useState(() => getAXEEquipmentInventoryState().gearPresets);
@@ -80,7 +83,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const [selectedMountId,setSelectedMountId] = useState(null);
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
-  const [focusedSlot,setFocusedSlot] = useState('');
+  const [focusedSlot,setFocusedSlot] = useState(initialWeaponRole?'weapon':'');
+  const [focusedWeaponRole,setFocusedWeaponRole]=useState(initialWeaponRole);
+  const [,refreshWeaponRoles]=useState(0);
+  useEffect(()=>subscribeAXEHUDWeaponRoles(()=>refreshWeaponRoles(n=>n+1)),[]);
+  useEffect(()=>{if(initialWeaponRole){setFocusedWeaponRole(initialWeaponRole);setFocusedSlot('weapon');setFilter('All');}},[initialWeaponRole]);
   // Equipment belongs to the actual active owned mount, not the legacy pet
   // default (which previously showed a baby wolf irrespective of faction).
   const ownedMounts = (mounts.mounts || []).filter(m=>m?.instanceId);
@@ -156,7 +163,9 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const selectedBreakdown = selected ? breakdownOf(selected) : null;
   // compare with what is worn in the same slot (the selected item's own stats vs the worn one)
   const wornInSlot = isPlayer && selected && !selected.equipped
-    ? items.find(item => item.equipped && item.slot === selected.slot && item.instanceId !== selected.instanceId) || null
+    ? selected.slot==='weapon'
+      ? (focusedWeaponRole ? getAXERoleWeapon(focusedWeaponRole) : equipped.find(item=>item.slot==='weapon')) || null
+      : items.find(item => item.equipped && item.slot === selected.slot && item.instanceId !== selected.instanceId) || null
     : null;
   const wornBreakdown = wornInSlot ? breakdownOf(wornInSlot) : null;
   const prestigeFor=item=>isPlayer&&item
@@ -167,7 +176,12 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const displaySlots = isPlayer ? PLAYER_DISPLAY_SLOTS :
     (activeCompanion?.gearSlots || []).map(slot => [slot,0]);
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
+  const weaponInRole = role => getAXERoleWeapon(role);
+  const chooseWeaponSlot=role=>{
+    setFocusedWeaponRole(role);setFocusedSlot('weapon');setFilter('All');setSelectedId(null);
+  };
   const chooseSlot = slot => {
+    setFocusedWeaponRole('');
     if (isPlayer) {
       setFocusedSlot(value=>value===slot?'':slot);
       setFilter('All');
@@ -184,6 +198,20 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     // Resolve against item itself, not a selected state which may be stale.
     const worn = isPlayer ? !!item.equipped
       : companion.gear?.[activeCompanion?.id]?.[item.slot] === item.id;
+    if(isPlayer && item.slot==='weapon' && !worn){
+      const role=focusedWeaponRole||inferAXEWeaponRole(item);
+      const result=role
+        ? assignAXEHUDWeaponRole(role,item.instanceId,{level:getPlayerHUD().level})
+        : equipAXEInventoryItem(item.instanceId,{level:getPlayerHUD().level});
+      onNotice(result.ok ? 'Weapon equipped to '+(AXE_HUD_WEAPON_ROLES.find(x=>x.role===role)?.label||'loadout')+'. Switch from the main HUD.'
+        : result.message|| (result.reason==='WEAPON_SLOTS_FULL'?'All three weapon slots are full. Select a slot beside the 3D viewer to replace it.':caption(result.reason||'Unable to equip')));
+      return;
+    }
+    if(isPlayer && item.slot==='weapon' && worn && !allowUnequip && focusedWeaponRole){
+      const result=assignAXEHUDWeaponRole(focusedWeaponRole,item.instanceId,{level:getPlayerHUD().level});
+      onNotice(result.ok?'Weapon moved to '+(AXE_HUD_WEAPON_ROLES.find(x=>x.role===focusedWeaponRole)?.label||'slot')+'.':result.message||caption(result.reason));
+      return;
+    }
     if (worn && !allowUnequip) {
       onNotice('Already equipped.');
       return;
