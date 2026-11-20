@@ -121,8 +121,8 @@ test('acquired roster reflects only awarded abilities and collected skill drops'
 
 test('published Base44 hosts do not auto-grant skills merely from their hostname',()=>{
   const loot=read('src/components/game3d/lootStore.jsx');
-  assert.match(loot,/h === 'localhost' \|\| h === '127\\.0\\.0\\.1'/);
-  assert.doesNotMatch(loot,/h\\.includes\\('base44\\.app'\\)/);
+  assert.ok(loot.includes("h === 'localhost' || h === '127.0.0.1'"));
+  assert.equal(loot.includes("h.includes('base44.app')"), false);
 });
 
 test('Skill Book listens to loot, vault and learned ownership in BOTH layouts',()=>{
