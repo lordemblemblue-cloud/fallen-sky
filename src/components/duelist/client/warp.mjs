@@ -7,8 +7,9 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { createWarpField, MAX_WARP_EFFECTS } from './warpField.mjs';
 
-const MAX = 8;
+const MAX = MAX_WARP_EFFECTS;
 
 const WarpShader = {
   uniforms: {
@@ -66,8 +67,6 @@ const WarpShader = {
     }`,
 };
 
-const ease = (t) => 1 - Math.pow(1 - t, 3);
-
 export function createWarp(renderer, scene, camera) {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -75,8 +74,7 @@ export function createWarp(renderer, scene, camera) {
   composer.addPass(pass);
   composer.addPass(new OutputPass());
   const u = pass.material.uniforms;
-  const waves = []; // { at: Vector3, kind, r0, r1, strength, thickness, ttl, age }
-  const lenses = []; // this frame's held bodies: { at: Vector3, radius, strength, spin }
+  const field = createWarpField();
   const ndc = new THREE.Vector3();
   const toCamera = new THREE.Vector3();
 
@@ -94,42 +92,16 @@ export function createWarp(renderer, scene, camera) {
      * A ring of bent space at a world point. kind 'out' (runs outward) or 'in' (folds inward); radius from
      * r0 to r1 metres over ttl seconds; strength in screen heights of displacement.
      */
-    ring({ at, kind = 'out', r0 = 0.2, r1 = 5, strength = 0.03, thickness = 0.35, ttl = 0.45 }) {
-      if (waves.length >= MAX) waves.shift();
-      waves.push({ at: at.clone(), kind, r0, r1, strength, thickness, ttl, age: 0 });
-    },
-    // bodies held in Telekinesis this frame: [{ at: Vector3, radius (m), strength, spin }]
-    hold(list) { lenses.length = 0; for (const l of list) lenses.push(l); },
-    update(dt) {
-      for (let i = waves.length - 1; i >= 0; i--) {
-        waves[i].age += dt / waves[i].ttl;
-        if (waves[i].age >= 1) waves.splice(i, 1);
-      }
-    },
+    ring(options) { field.ring(options); },
+    hold(list) { field.hold(list); },
+    update(dt) { field.update(dt); },
     render() {
       const size = renderer.getSize(new THREE.Vector2());
       u.uAspect.value = size.x / Math.max(1, size.y);
-      let n = 0;
-      for (const w of waves) {
-        if (n >= MAX) break;
-        const s = project(w.at);
-        if (!s) continue;
-        const k = w.kind === 'in' ? 1 - ease(w.age) : ease(w.age);
-        const radius = (w.r0 + (w.r1 - w.r0) * k) * s.perMetre;
-        const fade = Math.pow(1 - w.age, 1.6);
-        u.uA.value[n].set(s.x, s.y, radius, w.strength * fade);
-        u.uB.value[n].set(w.kind === 'in' ? 1 : 0, Math.max(0.004, radius * w.thickness), 0, 0);
-        n += 1;
-      }
-      for (const l of lenses) {
-        if (n >= MAX) break;
-        const s = project(l.at);
-        if (!s) continue;
-        u.uA.value[n].set(s.x, s.y, l.radius * s.perMetre, l.strength);
-        u.uB.value[n].set(2, 0, l.spin, 0);
-        n += 1;
-      }
-      u.uCount.value = n;
+      u.uCount.value = field.write(project, (i, x, y, radius, strength, kind, thickness, spin) => {
+        u.uA.value[i].set(x, y, radius, strength);
+        u.uB.value[i].set(kind, thickness, spin, 0);
+      });
       composer.render();
     },
     setSize(width, height) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(width, height); },
