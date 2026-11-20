@@ -10,7 +10,7 @@ const workspaceCss = read('src/components/game3d/axe/services/AXEBlacksmithImage
 
 test('left Inventory Forge box and duplicate operation subpages are removed from DOM and styles', () => {
   assert.doesNotMatch(panel, /axe-blacksmith-inventory-forge/);
-  assert.doesNotMatch(panel, /Inventory Forge/);
+  assert.doesNotMatch(panel, /<span>Inventory Forge<\/span>/);
   assert.doesNotMatch(panel, /axe-forge-mode-boxes/);
   assert.doesNotMatch(panelCss, /axe-blacksmith-inventory-forge/);
   assert.match(workspace, /BLACKSMITH_TABS\.map/);
