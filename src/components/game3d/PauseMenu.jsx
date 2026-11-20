@@ -44,7 +44,6 @@ import { getGame3DMenuShortcut } from './axe/services/game3dMenuHotkeys.mjs';
 import {GAME3D_BINDING_DEFINITIONS, GAME3D_DEFAULT_KEYBINDS,
   readGame3DKeybinds,saveGame3DKeybinds,rebindGame3DAction,game3dBindingLabel}
   from './player/Game3DKeybinds.mjs';
-import FactionOverview from './axe/factions/FactionOverview';
 import './PauseMenu.css';
 import './PauseMenuGold.css';
 
@@ -87,7 +86,7 @@ function Switch({checked,onChange,label,description}){
 
 export default function PauseMenu({
   open,onClose,volume=0.5,onVolumeChange=()=>{},onReturnToCharacterSelect,onCreateCharacter,
-  context='world',motionEnabled,onMotionChange,onEditHUD,onOpenService,onOpenMap,
+  context='world',motionEnabled,onMotionChange,onEditHUD,onOpenService,onOpenMap,onOpenFaction,
 }){
   const entry=context==='entry';
   const reduceMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -475,6 +474,7 @@ export default function PauseMenu({
                 className={'axe3d-pause__launcher-tile'+(launcherGroup===tile.id?' is-selected':'')}
                 aria-label={tile.label+(code?' ('+game3dBindingLabel(code)+')':'')}
                 onClick={()=>{
+                  if(tile.id==='faction'){onOpenFaction?.();return;}
                   const operations=group?.visibleServiceIds||group?.serviceIds||[];
                   if(operations.length===1){onOpenService?.(group.id,operations[0]);return;}
                   setLauncherGroup(previous=>previous===tile.id?null:tile.id);
@@ -485,9 +485,9 @@ export default function PauseMenu({
               </button>;
             })}
           </div>
-          {launcherGroup&&<section className="axe3d-pause__launcher-detail"
-            aria-label={launcherGroup==='faction'?'Faction overview':'Service pages'}>
-            {launcherGroup==='faction'?<FactionOverview/>:(()=>{
+          {launcherGroup&&launcherGroup!=='faction'&&<section className="axe3d-pause__launcher-detail"
+            aria-label="Service pages">
+            {(()=>{
               const group=AXE_SERVICE_GROUPS.find(item=>item.id===launcherGroup);
               if(!group)return null;
               const operations=group.visibleServiceIds||group.serviceIds;
@@ -775,8 +775,11 @@ export default function PauseMenu({
                     </div>
                   </div>
                   <Switch label="World and party chat" checked={community.chat}
-                    description="Show the compact chat dock. Enter still opens chat when the dock is hidden."
+                    description="Allow the chat dock to appear when active. Press Enter to reveal it, then Enter again to type."
                     onChange={()=>changeCommunity({...community,chat:!community.chat})}/>
+                  <Switch label="Always show chat" checked={community.chatAlwaysVisible}
+                    description="Keep messages and channel options visible even when chat is idle."
+                    onChange={()=>changeCommunity({...community,chatAlwaysVisible:!community.chatAlwaysVisible})}/>
                   <Switch label="Echo Chronicle book" checked={community.echo}
                     description="Keep the small book launcher next to the portrait. Incoming conversations remain accessible."
                     onChange={()=>changeCommunity({...community,echo:!community.echo})}/>
