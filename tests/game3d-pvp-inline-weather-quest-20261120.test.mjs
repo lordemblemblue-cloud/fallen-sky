@@ -22,7 +22,10 @@ test('PvP renders as a single unboxed switch with World Combat and Safe Zone lab
 
 test('World Combat aligns with weather on the map right instead of taking the quest position',()=>{
   const rule=css.slice(css.indexOf('.game3d-view .game3d-pvp-control {'));
-  assert.match(rule,/top: calc\(var\(--axe-map-bottom, 209px\) \+ 13px\)/);
+  assert.match(rule,/top: max\(calc\(var\(--axe-map-bottom, 209px\) \+ 13px\), var\(--axe-weather-bottom-px, 0px\)\)/);
+  assert.match(control,/new ResizeObserver\(measure\)/);
+  assert.match(control,/new MutationObserver\(attach\)/);
+  assert.match(control,/getBoundingClientRect\(\)\.bottom/);
   assert.match(rule,/right: var\(--axe-map-left/);
   assert.match(rule,/background: none;/);
   assert.match(rule,/border: 0;/);
