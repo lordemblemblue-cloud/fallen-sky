@@ -59,6 +59,8 @@ export default function FactionOverview(){
             <div><dt><Users size={14}/> Online</dt><dd>{formatFactionMetric(row?.online)}</dd></div>
             <div><dt>Members</dt><dd>{formatFactionMetric(row?.members)}</dd></div>
             <div><dt><Zap size={14}/> Total gear power</dt><dd>{formatFactionMetric(row?.power)}</dd></div>
+            <div><dt>Treasury gold</dt><dd>{formatFactionMetric(row?.treasuryGold)}</dd></div>
+            <div><dt>Max-level players</dt><dd>{formatFactionMetric(row?.maxLevelPlayers)}</dd></div>
           </dl>
           <div className="axe-faction-overview__leadership">
             <span><Crown size={15}/> Faction Leader</span>
