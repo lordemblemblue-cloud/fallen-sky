@@ -32,7 +32,7 @@ import { createMission, stepMission, joinMission, leaveMission, missionView } fr
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -552,11 +552,17 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
           enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, open: msg.open === true, matchId });
           return;
         }
-        const mode = msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
+        const quickplay = msg.mode === 'online';
+        const mode = quickplay ? QUICKPLAY_MODES[randomInt(QUICKPLAY_MODES.length)]
+          : msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
         if (!mode) { send(client, { t: 'error', code: 'mode', message: 'Unknown mode.' }); return; }
         const matchId = msg.matchId === undefined ? null
           : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;
-        if (matchId === false) { send(client, { t: 'error', code: 'room', message: 'Invalid server selection.' }); return; }
+        if (matchId === false || (quickplay && matchId)) {
+          send(client, { t: 'error', code: 'room', message: 'Invalid server selection.' }); return;
+        }
+        // Server chooses a random supported battle mode. The client receives
+        // the actual mode in 'joined' and uses that ruleset for its arena.
         enter(client, mode, matchId);
       } else if (msg.t === 'leave') {
         leave(client);
