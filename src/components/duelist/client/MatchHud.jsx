@@ -26,6 +26,14 @@ export function ScoreLine({ view }) {
         <span>{foe?.roundWins ?? 0} {foe?.name}</span>
       </>
     );
+  } else if (mode === 'control') {
+    middle = (
+      <>
+        <span style={{ color: hex(TEAM_COLORS.red) }}>Red {Math.floor(view.teamScores.red)}%</span>
+        <span className="duelist-score-sep">First to 100%</span>
+        <span style={{ color: hex(TEAM_COLORS.blue) }}>{Math.floor(view.teamScores.blue)}% Blue</span>
+      </>
+    );
   } else if (mode === 'tdm' || mode === 'ctf' || mode === 'football') {
     middle = (
       <>
@@ -48,6 +56,17 @@ export function ScoreLine({ view }) {
     <div className="duelist-scoreline">
       <div className="duelist-scoreline-mode">{view.name}{view.clockLeft !== null ? ` · ${clock(view.clockLeft)}` : ''}</div>
       {middle && <div className="duelist-scoreline-score">{middle}</div>}
+      {view.controlPoints && (
+        <div className="duelist-scoreline-flags" aria-label="Three-Point Control objectives">
+          {view.controlPoints.map(point => (
+            <span key={point.id}
+              title={point.contested ? `${point.id}: contested` : point.capturing ? `${point.id}: ${point.capturing} capturing ${Math.round(point.progress * 100)}%` : `${point.id}: ${point.owner || 'neutral'}`}
+              style={{ color: point.owner === 'red' ? hex(TEAM_COLORS.red) : point.owner === 'blue' ? hex(TEAM_COLORS.blue) : '#d6e1eb', fontWeight: 800 }}>
+              {point.id}{point.contested ? ' ⚔' : point.capturing ? ` ${Math.round(point.progress * 100)}%` : ''}
+            </span>
+          ))}
+        </div>
+      )}
       {view.flags && (
         <div className="duelist-scoreline-flags">
           <FlagMark team="red" flag={view.flags.red} />
@@ -84,6 +103,7 @@ function feedLine(view, e) {
     case 'flagReturned': return e.by ? `${n(e.by)} returned the ${teamName(e.team).toLowerCase()} flag` : `The ${teamName(e.team).toLowerCase()} flag went home`;
     case 'captured': return `${teamName(e.team)} scored! (${n(e.by)})`;
     case 'goal': return `${teamName(e.team)} scored a goal${e.by ? ` (${n(e.by)})` : ''}!`;
+    case 'pointCaptured': return `${teamName(e.team)} captured point ${e.point}`;
     case 'roundOver': return e.winner ? `Round ${e.round}: ${n(e.winner)}` : `Round ${e.round} drawn`;
     case 'joined': return `${e.name} joined`;
     case 'left': return `${e.name} left`;
@@ -104,11 +124,11 @@ export function Result({ view, myTeam, onAgain, online = false }) {
   const w = view.winner;
   const won = w === meOf(view) || (myTeam && w === myTeam);
   const title = w === 'draw' ? 'Draw' : won ? 'Victory' : 'Defeated';
-  const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football';
+  const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football' || view.mode === 'control';
   return (
     <div className="duelist-center duelist-result">
       <div className="duelist-result-title">{title}</div>
-      {teams && <div className="duelist-result-sub">Red {view.teamScores.red} · {view.teamScores.blue} Blue</div>}
+      {teams && <div className="duelist-result-sub">Red {view.mode === 'control' ? Math.floor(view.teamScores.red) + '%' : view.teamScores.red} · {view.mode === 'control' ? Math.floor(view.teamScores.blue) + '%' : view.teamScores.blue} Blue</div>}
       <table className="duelist-board">
         <thead><tr><th>Fighter</th><th>Defeats</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr></thead>
         <tbody>
