@@ -17,7 +17,9 @@ export const WOLFVEIL_PALACE_APPROACH=Object.freeze({
 // 115 - (22.75 + 1.04 / 2) = 91.73. Previously z=98 overlapped
 // and covered the raised manor entrance with duplicate paving.
   x:0,fromZ:25,toZ:91.73,width:7.8,
-  stairs:62,rocksPerSide:29,
+  // Roughly half-metre treads keep each exposed riser at natural outdoor-step height.
+  // The former 62 one-metre slabs read as a steep wall from the town below.
+  stairs:120,rocksPerSide:29,
   fencePostSpacing:3.4,
 });
 // The next village houses derive their styling from the SAME Luna facade,

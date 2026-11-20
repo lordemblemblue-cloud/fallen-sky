@@ -90,8 +90,10 @@ export function addWolfveilLunaPalace(world,{compactPathLights=false}={}){
       yAt(approach.x-half,z1),yAt(approach.x+half,z1),
       yAt(approach.x,z),
     ];
-    const bottom=Math.min(...elevations)-.06;
-    const top=Math.max(...elevations)+.065;
+    // Bury the underside just into the shared ground and keep the walkable
+    // stone lip close to its true elevation. Never create tall floating risers.
+    const bottom=Math.min(...elevations)-.045;
+    const top=Math.max(...elevations)+.035;
     world.box(i%6===0?'granite':'basalt',approach.x,
       (bottom+top)/2,z,approach.width,top-bottom,treadDepth+.025);
     const contact=new THREE.Mesh(new THREE.PlaneGeometry(approach.width,treadDepth+.018),treadMaterial);
