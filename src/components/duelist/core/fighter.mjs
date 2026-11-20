@@ -9,12 +9,31 @@ import { BINDINGS, POWER_BINDINGS, moveById } from './moves.mjs';
 import { INPUT, BREACH } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
 import { KNOCKDOWN } from './tuning.mjs';
+import { classAbilityMove, classById } from './classes.mjs';
+import { expireEffects } from './abilities.mjs';
 
-export function createFighter({ id, team = null, weapon = 'sword', vitals = null } = {}) {
+// Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
+const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
+// with a class, Telekinesis comes from the kit; Veil Breach, roll, dash and resist are everyone's
+const LEGACY_POWERS = new Set(['push', 'pull', 'grip']);
+// abilities only a class's kit gives (core/classes.mjs)
+export const CLASS_ABILITIES = new Set(['leapStrike', 'repulse', 'bladeThrow', 'quickstep', 'quickstepAura', 'counter', 'cloak',
+  'empower', 'misdirect', 'mend', 'levitate']);
+const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
+
+/**
+ * classId: one of core/classes.mjs CLASS_IDS, or null (no class: the six powers of the first build).
+ * effects: lasting effects (core/abilities.mjs); meter: the special meter as the match last gave it (the match's
+ * seat owns it; sim/world.mjs reads it to allow a special and reports what one spent).
+ */
+export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null } = {}) {
   return {
     id,
     team,
     weapon,
+    classId: classById(classId) ? classId : null,
+    effects: {},
+    meter: 0,
     vitals: createVitals(vitals || {}),
     action: null, // { id, move, t, nextHit, held, chainedFrom }
     cooldowns: {}, // move id -> seconds when it may start again
@@ -42,9 +61,14 @@ function moveForCommand(f, command) {
     if (command === 'light' && a?.move.chain && a.t >= a.move.chain.from && a.t <= a.move.chain.to) return a.move.chain.next;
     return first;
   }
-  // '#move': a move by its id, for the rules' own callers (guards' AI); never accepted from a client
+  // '#move': a move by its id, for the rules' own callers (guards' AI, specials); never accepted from a client
   if (command[0] === '#') return moveById(command.slice(1)) ? command.slice(1) : null;
-  return POWER_BINDINGS[command] || null;
+  const slot = /^ability([1-4])$/.exec(command);
+  if (slot) return f.classId ? classAbilityMove(f.classId, Number(slot[1]) - 1) : LEGACY_SLOTS[Number(slot[1]) - 1];
+  const id = POWER_BINDINGS[command] || null;
+  // a class fights with its own kit: Telekinesis only where its kit has it (roll, dash and resist are everyone's)
+  if (id && f.classId && LEGACY_POWERS.has(id) && !kitHas(f, id)) return null;
+  return id;
 }
 
 // Why a move cannot start now (null = it can).
@@ -53,6 +77,7 @@ export function blockedReason(f, id, now) {
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
+  if (CLASS_ABILITIES.has(id) && !kitHas(f, id)) return 'class';
   if (isDown(f, now)) return 'down';
   const restrained = isStunned(f, now) || f.heldBy;
   if (restrained && id !== 'resist') return f.heldBy ? 'held' : 'stunned';
@@ -162,15 +187,17 @@ export const isBreachedBy = (defender, attackerId, now) => (defender.breaches[at
  *   { type: 'hit', id, index }: a hit lands now (the world resolves it against whoever is in reach)
  *   { type: 'tick', id, dt }: a held channel (grip) works for dt seconds
  *   { type: 'end', id }, { type: 'dropped', id } (a channel lost its Will)
+ * rate: how fast the action plays (core/abilities.mjs actionRate: stance, Quickstep, Rage).
  */
-export function update(f, dt, now) {
+export function update(f, dt, now, rate = 1) {
   regenerate(f.vitals, dt, now);
+  expireEffects(f, now);
   for (const [attacker, until] of Object.entries(f.breaches)) if (until <= now) delete f.breaches[attacker];
   const a = f.action;
   if (a) {
     const move = a.move;
     const before = a.t;
-    a.t += dt;
+    a.t += dt * rate;
     if (move.channel) {
       const activeStart = move.startup;
       // the grip takes hold (the world picks the target in reach)

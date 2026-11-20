@@ -6,6 +6,8 @@
 import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
   createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
+  blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
+  EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 
@@ -20,16 +22,18 @@ export const PROJECTILE_HEIGHT = 1.35;
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
 const GRAVITY = 18;
 
+// zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
 export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
-  return { time: 0, arenaRadius, friendlyFire, level, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1 };
+  return { time: 0, arenaRadius, friendlyFire, level, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1,
+    zones: [], nextZone: 1 };
 }
 
 /**
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null } = {}) {
-  const fighter = createFighter({ id, team, weapon, vitals });
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null } = {}) {
+  const fighter = createFighter({ id, team, weapon, vitals, classId });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
@@ -37,10 +41,11 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null } = {}) {
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
-  const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon });
+  const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId });
+  fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
@@ -97,6 +102,7 @@ export function step(world, dt, inputs = {}) {
     const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
+      if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
       const res = press(fighter, command, now);
       if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id);
@@ -106,9 +112,16 @@ export function step(world, dt, inputs = {}) {
   const pending = [];
   for (const [id, fighter] of world.fighters) {
     const body = world.bodies.get(id);
-    update(fighter, dt, now);
+    update(fighter, dt, now, actionRate(fighter, now));
     for (const event of takeEvents(fighter)) {
       if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id);
+      if (event.type === 'start') {
+        const started = moveById(event.id);
+        if (started && (started.kind === 'attack' || (started.kind === 'power' && !started.effect)) && effectOn(fighter, 'cloak', now)) {
+          endEffect(fighter, 'cloak');
+          effects.push({ type: 'uncloak', fighter: fighter.id });
+        }
+      }
       pending.push({ fighter, body, event });
     }
   }
@@ -119,7 +132,8 @@ export function step(world, dt, inputs = {}) {
   // 4. landed moves reach whoever is in range and arc
   for (const { fighter, body, event } of pending) {
     if (event.type === 'hit') {
-      if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
+      if (moveById(event.id)?.effect) applyEffectMove(world, fighter, body, event.id, effects, now);
+      else if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
       else resolveReach(world, fighter, body, event.id, effects, now);
     } else if (event.type === 'tick') {
       const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
@@ -137,7 +151,131 @@ export function step(world, dt, inputs = {}) {
   }
   // 5. projectiles fly
   stepProjectiles(world, dt, now, effects);
+  // 6. Mend and Sanctuary heal; domes fade
+  stepHeals(world, dt, now);
   return effects;
+}
+
+// ---- the classes' specials and abilities
+
+/**
+ * Q: the class special. Allowed by core/classes.mjs evaluateSpecial against the meter the match gave the fighter
+ * (and, for an execution, the nearest enemy in front that it may finish); it breaks into the fighter's own action,
+ * never out of a stagger, a grip or a fall. Reports { type: 'special', by, special, cost } for the match to charge
+ * the seat's meter, or { type: 'specialRefused', by, reason }.
+ */
+function trySpecial(world, fighter, body, now, effects) {
+  const def = classById(fighter.classId);
+  if (!def || fighter.vitals.dead) return;
+  const special = def.special;
+  const move = moveById(special.id);
+  const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
+  let verdict = null;
+  let target = null;
+  if (special.target === 'enemy') {
+    const near = [...world.fighters.values()]
+      .filter((o) => hostile(world, fighter, o) && !o.vitals.dead)
+      .map((o) => ({ o, b: world.bodies.get(o.id) }))
+      .filter(({ b }) => distance(b, body) <= special.reach + BODY_RADIUS && insideArc(body, body.yaw, b, move.arc)
+        && (!world.level || clearLine(world.level, body, b)))
+      .sort((p, q) => distance(p.b, body) - distance(q.b, body));
+    for (const { o, b } of near) {
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, target: { id: o.id, team: o.team,
+        hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
+      if (verdict.allowed) { target = o; break; }
+    }
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now });
+  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now });
+  const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
+  if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
+  if (fighter.action) { fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: special.id, at: now }); fighter.action = null; }
+  fighter.buffer = null;
+  const res = press(fighter, '#' + special.id, now);
+  if (!res.accepted || !res.id) { effects.push({ type: 'specialRefused', by: fighter.id, reason: res.reason || 'busy' }); return; }
+  startMotion(body, fighter, special.id);
+  fighter.meter = verdict.meterAfter;
+  fighter.specialTarget = target?.id || null;
+  effects.push({ type: 'special', by: fighter.id, special: special.id, cost: verdict.cost, target: target?.id || null });
+}
+
+// allies (never the fighter itself) the move reaches, nearest first
+function alliesInReach(world, fighter, body, move) {
+  const found = [];
+  for (const other of world.fighters.values()) {
+    if (other === fighter || other.vitals.dead || hostile(world, fighter, other)) continue;
+    const ob = world.bodies.get(other.id);
+    const d = distance(body, ob);
+    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (world.level && !clearLine(world.level, body, ob)) continue;
+    found.push({ fighter: other, d });
+  }
+  return found.sort((p, q) => p.d - q.d).map((t) => t.fighter);
+}
+
+/** An ability whose work is an effect (core/abilities.mjs), applied as it lands. */
+function applyEffectMove(world, fighter, body, id, effects, now) {
+  const move = moveById(id);
+  const until = now + (move.effectSeconds || 0);
+  const give = (f, kind, data = {}) => {
+    addEffect(f, kind, until, data);
+    effects.push({ type: 'effect', effect: kind, by: fighter.id, target: f.id, until });
+  };
+  switch (move.effect) {
+    case 'quick':
+      give(fighter, 'quick');
+      if (move.aura) {
+        for (const other of world.fighters.values()) {
+          if (other === fighter || other.vitals.dead || hostile(world, fighter, other)) continue;
+          if (distance(world.bodies.get(other.id), body) <= move.aura) give(other, 'quick');
+        }
+      }
+      break;
+    case 'cloak': give(fighter, 'cloak'); break;
+    case 'empower': give(fighter, 'empower', { charges: move.charges }); break;
+    case 'levitate': give(fighter, 'levitate'); body.vy = 0; break;
+    case 'rage':
+      give(fighter, 'rage');
+      fighter.stunnedUntil = Math.min(fighter.stunnedUntil, now);
+      if (fighter.heldBy) { fighter.events.push({ type: 'freed', at: now, from: fighter.heldBy }); fighter.heldBy = null; }
+      break;
+    case 'misdirect': {
+      const [target] = targetsInReach(world, fighter, body, move, true);
+      if (target) give(target, 'misdirected', { by: fighter.id });
+      break;
+    }
+    case 'mend': {
+      const ally = alliesInReach(world, fighter, body, move)[0] || fighter;
+      give(ally, 'mend', { perSec: move.heal / move.effectSeconds, by: fighter.id });
+      effects.push({ type: 'heal', by: fighter.id, target: ally.id, amount: move.heal });
+      break;
+    }
+    case 'sanctuary': {
+      const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
+        radius: SPECIAL_BALANCE.sanctuaryRadius, until };
+      world.zones.push(zone);
+      effects.push({ type: 'zone', ...zone });
+      break;
+    }
+    default: break; // counter: the stance is the move itself (core/combat.mjs answers the strike)
+  }
+}
+
+/** Does an allied Sanctuary shelter this fighter right now? */
+export function shelteredAt(world, fighter, now = world.time) {
+  const b = world.bodies.get(fighter.id);
+  if (!b) return false;
+  return world.zones.some((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius
+    && (z.team !== null && z.team !== undefined ? z.team === fighter.team : z.owner === fighter.id));
+}
+
+function stepHeals(world, dt, now) {
+  for (const f of world.fighters.values()) {
+    if (f.vitals.dead) continue;
+    let perSec = effectOn(f, 'mend', now)?.perSec || 0;
+    if (world.zones.length && shelteredAt(world, f, now)) perSec += SPECIAL_BALANCE.sanctuaryHealPerSecond;
+    if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt);
+  }
+  if (world.zones.length) world.zones = world.zones.filter((z) => z.until > now);
 }
 
 function startMotion(body, fighter, id) {
@@ -151,7 +289,7 @@ function startMotion(body, fighter, id) {
     : forwardOf(body.yaw);
   if (move.kind === 'movement' && !body.strafe) body.yaw = Math.atan2(dir.x, dir.z);
   const from = move.kind === 'movement' ? 0 : move.startup;
-  body.motion = { id, dir, from, to: from + move.active, distance: move.rootMotion, done: 0 };
+  body.motion = { id, dir, from, to: from + move.active, distance: move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1), done: 0 };
 }
 
 function moveBody(world, fighter, body, dt, now) {
@@ -185,11 +323,13 @@ function moveBody(world, fighter, body, dt, now) {
   } else if (body.motion && !body.motion.clip && a?.id === body.motion.id) {
     const { from, to, distance: d, dir } = body.motion;
     const span = Math.max(1e-6, to - from);
-    const target = Math.max(0, Math.min(1, (a.t - from) / span)) * d;
+    const progress = Math.max(0, Math.min(1, (a.t - from) / span));
+    const target = progress * d;
     const stepDist = target - body.motion.done;
     body.motion.done = target;
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
+    if (a.move.leap) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
   } else {
     body.motion = null;
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
@@ -204,6 +344,7 @@ function moveBody(world, fighter, body, dt, now) {
       }
       // a raised guard and a channelled grip slow you to a walk
       if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
+      speed *= moveRate(fighter, now);
       vx += body.intent.x * speed;
       vz += body.intent.z * speed;
       body.speed = speed * len;
@@ -231,8 +372,13 @@ function moveBody(world, fighter, body, dt, now) {
     body.z += vz * dt;
   }
   body.moving = Math.hypot(vx, vz) > 0.1;
-  // falling back down after a throw or a release
-  if (body.y > 0 || body.vy > 0) {
+  const leaping = !!(a?.move.leap && body.motion && !body.motion.clip && a.id === body.motion.id);
+  if (effectOn(fighter, 'levitate', now)) {
+    body.y += (EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
+    body.vy = 0;
+  } else if (leaping) {
+    // the arc is drawn by the root motion above
+  } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
     body.y = Math.max(0, body.y + body.vy * dt);
     if (body.y === 0) body.vy = 0;
@@ -291,9 +437,18 @@ function resolveReach(world, attacker, body, id, effects, now) {
     if (held) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
     return;
   }
+  if (move.execute) {
+    const target = world.fighters.get(attacker.specialTarget);
+    attacker.specialTarget = null;
+    if (target && !target.vitals.dead && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
+      collect(effects, strike(attacker, target, id, { now }), attacker, target, world);
+    }
+    return;
+  }
   for (const target of targetsInReach(world, attacker, body, move, SINGLE_TARGET.has(id))) {
     const tb = world.bodies.get(target.id);
-    collect(effects, strike(attacker, target, id, { now, defenderFacesAttacker: insideArc(tb, tb.yaw, body, BLOCK.frontArcDeg) }), attacker, target, world);
+    collect(effects, strike(attacker, target, id, { now, defenderFacesAttacker: insideArc(tb, tb.yaw, body, BLOCK.frontArcDeg),
+      behind: behindTarget(body, tb), sheltered: shelteredAt(world, target, now) }), attacker, target, world);
   }
 }
 
@@ -355,7 +510,8 @@ function stepProjectiles(world, dt, now, effects) {
     if (hit && owner) {
       const hb = world.bodies.get(hit.id);
       const ob = { x: p.x, z: p.z };
-      collect(effects, strike(owner, hit, p.move, { now, defenderFacesAttacker: insideArc(hb, hb.yaw, ob, BLOCK.frontArcDeg) }), owner, hit, world);
+      collect(effects, strike(owner, hit, p.move, { now, defenderFacesAttacker: insideArc(hb, hb.yaw, ob, BLOCK.frontArcDeg),
+        sheltered: shelteredAt(world, hit, now) }), owner, hit, world);
       effects.push({ type: 'projectileEnd', id: p.id, hit: hit.id });
       world.projectiles.splice(i, 1);
       continue;

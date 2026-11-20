@@ -16,8 +16,8 @@
 // they arrive.
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
-import { isDown } from '../core/index.mjs';
-import { awardSpecialCharge, classAtSpawn, requestClassSelection } from '../core/classes.mjs';
+import { isDown, MOVES } from '../core/index.mjs';
+import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -103,7 +103,8 @@ function spawnFor(match, id, team) {
   return { x: best.x, z: best.z, yaw: Math.atan2(-best.x, -best.z) };
 }
 
-function seat(match, { id = null, name = null, kind, team = null }) {
+// classId: a player's class from the start (their choice when they join); bots take the four classes in turn
+function seat(match, { id = null, name = null, kind, team = null, classId = null }) {
   const { def } = match;
   const seatTeam = def.teams ? (TEAMS.includes(team) ? team : lighterTeam(match)) : null;
   const n = kind === 'bot' ? match.nextBot++ : 0;
@@ -111,8 +112,9 @@ function seat(match, { id = null, name = null, kind, team = null }) {
   match.order.push(seatId);
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
-  addFighter(match.world, { id: seatId, team: seatTeam, weapon: 'sword', ...spot });
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: null, pendingClass: null, specialMeter: 0 };
+  const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
+  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, ...spot });
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0 };
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
@@ -132,11 +134,11 @@ const event = (match, e) => { const full = { ...e, at: match.world.time }; match
  * A player joins: a free seat, or a bot's (the lowest-scoring bot on the team with fewer players).
  * Returns { ok, id, team, replaced } or { ok: false, reason: 'full' } when every seat is a player's.
  */
-export function joinMatch(match, { id, name = id, team = null } = {}) {
+export function joinMatch(match, { id, name = id, team = null, classId = null } = {}) {
   const current = match.seats.get(id);
   if (current) return { ok: true, id, team: current.team, replaced: null };
   if (match.seats.size < match.capacity) {
-    const s = seat(match, { id, name, kind: 'player', team });
+    const s = seat(match, { id, name, kind: 'player', team, classId });
     protect(match, id);
     event(match, { type: 'joined', id, name });
     return { ok: true, id, team: s.team, replaced: null };
@@ -155,7 +157,7 @@ export function joinMatch(match, { id, name = id, team = null } = {}) {
   const seatTeam = out.team;
   unseat(match, out.id);
   match.capacity = Math.max(match.capacity, match.seats.size + 1);
-  seat(match, { id, name, kind: 'player', team: seatTeam });
+  seat(match, { id, name, kind: 'player', team: seatTeam, classId });
   protect(match, id);
   event(match, { type: 'joined', id, name, replaced: out.id });
   return { ok: true, id, team: seatTeam, replaced: out.id };
@@ -210,7 +212,7 @@ function spawnSeat(match, seat, protectSeconds = 0) {
   const chosen = seat.pendingClass ? classAtSpawn({ currentClass: seat.classId || 'duelist', pendingClass: seat.pendingClass }) : null;
   const weapon = chosen?.weapon ?? old?.weapon ?? 'sword';
   respawnFighter(match.world, seat.id, {
-    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon,
+    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, ...(chosen ? { classId: chosen.classId } : {}),
   });
   if (chosen) {
     // Charge is earned for the active class; switching classes cannot bank
@@ -319,7 +321,13 @@ export function stepMatch(match, dt, inputs = {}) {
     if (carrying(match, s.id)) input = { ...input, sprint: false };
     all[s.id] = input;
   }
+  // the seats' meters reach their fighters (a special asks the fighter's copy); what one spent comes back below
+  for (const s of match.seats.values()) {
+    const f = world.fighters.get(s.id);
+    if (f) f.meter = s.classId ? s.specialMeter : 0;
+  }
   const effects = step(world, dt, all);
+  chargeSpecials(match, effects);
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
@@ -329,6 +337,24 @@ export function stepMatch(match, dt, inputs = {}) {
     checkEnd(match);
   }
   return { effects, events: match.events };
+}
+
+// The seats' special meters, server-side: what a special spent, and what a player's landed hits and heals on allies
+// earned (a grip's crush ticks and the specials themselves earn nothing; bots never charge).
+function chargeSpecials(match, effects) {
+  const award = (s, kind) => { s.specialMeter = awardSpecialCharge(s.specialMeter, kind) ?? s.specialMeter; };
+  for (const e of effects) {
+    if (e.type === 'special') {
+      const s = match.seats.get(e.by);
+      if (s) s.specialMeter = Math.max(0, s.specialMeter - e.cost);
+      continue;
+    }
+    const by = e.type === 'impact' ? e.attacker : e.type === 'heal' ? e.by : null;
+    const s = by ? match.seats.get(by) : null;
+    if (!s || s.kind !== 'player' || !s.classId) continue;
+    if (e.type === 'impact' && (e.outcome === 'hit' || e.outcome === 'guardBreak') && e.move !== 'grip' && !MOVES[e.move]?.special) award(s, 'landedHit');
+    else if (e.type === 'heal' && e.target !== e.by) award(s, 'allyHeal');
+  }
 }
 
 function onDefeat(match, e) {
@@ -495,6 +521,7 @@ export function matchView(match, forId = null) {
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
     controlPoints: controlPointView(match.controlPoints),
+    zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
       specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null } : null,
     feed: match.feed.slice(-5),

@@ -13,8 +13,11 @@
 //                                                MISSIONS; default Contraband): a crew room by its code (whatever it
 //                                                plays), a new room of your own (create; open: listed for others), a
 //                                                listed crew (matchId), or none of these: any open crew playing it
+//   { t: 'join', ..., cls? }                      cls: the class to fight as (core/classes.mjs CLASS_IDS)
+//   { t: 'class', id }                           change class: queued for the next spawn (allowed before the fight,
+//                                                between rounds or while down; answered { t: 'class', ok, pending, reason })
 //   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
-//                                                interact held (story), presses
+//                                                interact held (story), presses (ability1-4 and special too)
 //   { t: 'leave' }
 // server -> client
 //   { t: 'welcome', id, name, resumed }          resumed: back in the seat (its 'joined', resumed: true, follows)
@@ -38,9 +41,9 @@
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
 // 4426 a page from before an update, 4429 too many messages
-import { CLIENT_COMMANDS, MOVES } from '../core/index.mjs';
+import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits } from '../core/index.mjs';
 
-export const PROTOCOL = 3;
+export const PROTOCOL = 4;
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -92,6 +95,8 @@ export function encodeInput(seq, input) {
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };
+// which lasting effects a fighter has (core/abilities.mjs EFFECT_BITS), from its effects
+const effectFlags = (f) => Object.keys(f.effects || {}).reduce((bits, kind) => bits | (EFFECT_BITS[kind] || 0), 0);
 
 /** One fighter in a snapshot (own: the receiving player's, with cooldowns). */
 export function encodeFighter(f, body, { own = false } = {}) {
@@ -110,6 +115,8 @@ export function encodeFighter(f, body, { own = false } = {}) {
     pu: finite(f.protectedUntil) ? r3(f.protectedUntil) : -1,
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
+    c: f.classId || 0,
+    fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
 }
@@ -134,6 +141,8 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.heldBy = data.hb || null;
   f.guard = data.g >= 0 ? { since: data.g } : null;
   f.breaches = Object.fromEntries((data.br || []).map((id) => [id, Infinity]));
+  f.classId = data.c || null;
+  f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
     const [id, at, chained, held] = data.a;
@@ -180,6 +189,8 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
+    cl: f.classId || 0, mt: f.meter || 0, sg: f.specialTarget || 0,
+    fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
   };
@@ -200,6 +211,10 @@ export function applyOwn(f, body, data) {
   [f.stunnedUntil, f.protectedUntil, f.downUntil, f.riseUntil] = data.t.map(then);
   f.heldBy = data.hb || null;
   f.breaches = untimes(data.br);
+  f.classId = data.cl || null;
+  f.meter = data.mt || 0;
+  f.specialTarget = data.sg || null;
+  f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz });

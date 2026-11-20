@@ -19,6 +19,7 @@ export function createInputRateLimiter({ perSecond = INPUT.maxPerSecond, burst =
 }
 
 // Commands a client may send; anything else is rejected before it reaches the rules.
+// ability1-4: the class's four abilities (without a class: push, pull, grip, breach); special: the class special
 export const CLIENT_COMMANDS = Object.freeze(new Set(['light', 'heavy', 'push', 'pull', 'grip', 'release', 'breach', 'resist',
-  'roll', 'dash', 'blockDown', 'blockUp']));
+  'roll', 'dash', 'blockDown', 'blockUp', 'ability1', 'ability2', 'ability3', 'ability4', 'special']));
 export const isClientCommand = (command) => CLIENT_COMMANDS.has(command);

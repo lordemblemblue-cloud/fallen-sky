@@ -28,10 +28,10 @@
 import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES } from '../../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass } from '../../src/components/duelist/sim/match.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
-import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
+import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
   ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
@@ -185,7 +185,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     if (!ready) openRoom(mode);
   }
 
-  function enter(client, mode, requestedMatchId = null) {
+  // classId: the class the player fights as (a seat they already have keeps its own)
+  function enter(client, mode, requestedMatchId = null, classId = null) {
     // Select the exact advertised match when joining from the server browser.
     // A stale or forged id must not silently send the player into a different arena.
     const selected = requestedMatchId ? rooms.get(requestedMatchId) : null;
@@ -195,7 +196,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     if (client.room) leave(client);
     const room = selected || pickRoom(mode);
-    const result = joinMatch(room.match, { id: client.id, name: client.name });
+    if (classId) client.classId = classId; // remembered for rematches
+    const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
     if (!result.ok) { send(client, { t: 'error', code: 'full', message: 'That match is full.' }); return; }
     room.bodies.set(client.id, client.body);
     if (result.replaced) room.bodies.delete(result.replaced);
@@ -285,7 +287,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.effects = [];
     room.events = [];
     for (const client of players) {
-      const result = joinMatch(room.match, { id: client.id, name: client.name });
+      const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
       room.bodies.set(client.id, client.body);
       if (result.replaced) room.bodies.delete(result.replaced);
       send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key, rematch: true });
@@ -577,7 +579,13 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         // Server chooses a random supported battle mode. The client receives
         // the actual mode in 'joined' and uses that ruleset for its arena.
-        enter(client, mode, matchId);
+        enter(client, mode, matchId, typeof msg.cls === 'string' && classById(msg.cls) ? msg.cls : null);
+      } else if (msg.t === 'class') {
+        // a class change: queued for the player's next spawn; the match decides when that may be
+        if (!client.room?.match || typeof msg.id !== 'string') { send(client, { t: 'class', ok: false, pending: null, reason: 'no-match' }); return; }
+        const res = queueMatchClass(client.room.match, client.id, msg.id);
+        if (res.accepted) client.classId = msg.id;
+        send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {

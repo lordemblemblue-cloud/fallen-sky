@@ -95,7 +95,10 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
  * player's own fighter from the server's picture like everyone else's (for comparison). storage: where the
  * seat's key is kept across a reload (this tab's session storage by default).
  */
-export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+// classId: the class to fight as (core/classes.mjs); chooseClass changes it for the next spawn
+export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+  let wantedClass = classId;
+  let classAnswer = null; // the server's last answer: { ok, pending, reason }
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
@@ -188,7 +191,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         : story && room === 'new' ? { create: true }
         : story && /^m[0-9]+$/.test(room || '') ? { matchId: room }
         : story && room ? { code: room } : matchId ? { matchId } : {};
-      send({ t: 'join', mode, ...(story ? { mission } : {}), ...how });
+      send({ t: 'join', mode, ...(story ? { mission } : {}), ...(wantedClass && !story ? { cls: wantedClass } : {}), ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
@@ -254,6 +257,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       const left = sentAt.get(msg.ack);
       if (left !== undefined) roundTrip = roundTrip === null ? at - left : roundTrip + (at - left - roundTrip) * 0.1;
       for (const n of sentAt.keys()) { if (n > msg.ack) break; sentAt.delete(n); }
+    } else if (msg.t === 'class') {
+      classAnswer = { ok: !!msg.ok, pending: msg.pending || null, reason: msg.reason || null };
+      onChange(status, null);
     } else if (msg.t === 'error') setStatus('error', msg.message);
     else if (msg.t === 'left') { seat = null; forget(); setStatus('closed', 'You left the match.'); }
   }
@@ -310,6 +316,14 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     get mode() { return matchMode; },
     get status() { return status; },
     get seatsVersion() { return seatsVersion; },
+    /** The server's answer to the last class change: { ok, pending, reason } or null. */
+    get classAnswer() { return classAnswer; },
+    /** Change class: the server queues it for the next spawn (before the fight, between rounds or while down). */
+    chooseClass(id) {
+      wantedClass = id;
+      classAnswer = null;
+      if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'class', id }));
+    },
     seats: () => seats,
     view: () => view,
     flags: () => flags,

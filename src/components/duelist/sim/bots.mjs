@@ -6,7 +6,7 @@
 // guard a blow it has seen coming (a master raises its guard just as the blow lands: a parry); punish a foe
 // that swung and missed; escape when badly hurt; use Telekinesis and the Breach; go after the mode's
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
-import { MOVES, BLOCK, isStunned, isDown, fighterVeil } from '../core/index.mjs';
+import { MOVES, BLOCK, CLASSES, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 
 export const BOT_LEVELS = Object.freeze({
@@ -56,6 +56,37 @@ function pickTarget(world, bot, prefer = null) {
  * This step's input for the bot, in the same shape a player's client sends.
  * goal: { x, z, urgent?, hunt? } from the match (the flag to take, the base to run to, the thief to catch).
  */
+// Which of its class's abilities a bot uses now, if any: 'ability1'-'ability4' or null.
+function classKitPress(me, foe, d, now, rnd, lvl) {
+  const ready = (id) => now >= (me.cooldowns[id] ?? 0) && me.vitals.will >= (MOVES[id]?.will ?? 0) && !me.vitals.collapsed;
+  const slot = (id) => 'ability' + (CLASSES[me.classId].abilities.findIndex((a) => a.id === id) + 1);
+  const hurt = me.vitals.hp / me.vitals.max.hp;
+  const chance = (p) => rnd() < p * (lvl.powerChance + 0.25);
+  switch (me.classId) {
+    case 'warrior':
+      if (d > 5 && d < 9 && ready('leapStrike') && chance(0.7)) return slot('leapStrike');
+      if (d < 3 && hurt < 0.6 && ready('repulse') && chance(0.6)) return slot('repulse');
+      if (d > 7 && d < 15 && ready('bladeThrow') && chance(0.4)) return slot('bladeThrow');
+      return null;
+    case 'duelist':
+      if (d > 3 && d < 8 && ready('quickstep') && chance(0.5)) return slot('quickstep');
+      if (d > 7 && d < 15 && ready('bladeThrow') && chance(0.4)) return slot('bladeThrow');
+      if (foe.action?.move.kind === 'attack' && foe.action.t < foe.action.move.startup && d < 2.6 && ready('counter') && chance(0.5)) return slot('counter');
+      return null;
+    case 'assassin':
+      if (d > 8 && ready('cloak') && chance(0.4)) return slot('cloak');
+      if (d < 4 && ready('empower') && chance(0.5)) return slot('empower');
+      if (d < 10 && ready('misdirect') && chance(0.15)) return slot('misdirect');
+      return null;
+    case 'healer':
+      if (hurt < 0.55 && ready('mend') && chance(0.8)) return slot('mend');
+      if (d > 3 && d < 8 && ready('quickstepAura') && chance(0.4)) return slot('quickstepAura');
+      if (hurt < 0.3 && d < 3 && ready('levitate') && chance(0.5)) return slot('levitate');
+      return null;
+    default: return null;
+  }
+}
+
 export function think(world, bot, { goal = null } = {}) {
   const now = world.time;
   const me = world.fighters.get(bot.id);
@@ -149,8 +180,15 @@ export function think(world, bot, { goal = null } = {}) {
     if (presses.length) return input;
   }
 
+  // the class kit: each class's abilities where they fit (core/classes.mjs)
+  if (me.classId && now >= (bot.nextKitAt ?? 0) && !me.action) {
+    bot.nextKitAt = now + 0.6;
+    const kit = classKitPress(me, foe, d, now, rnd, lvl);
+    if (kit) { presses.push(kit); return input; }
+  }
+
   // Telekinesis and the Breach, now and then: grip a collapsed Veil, push someone crowding, pull someone
-  // hanging back, open a strong Veil with a Breach before a heavy.
+  // hanging back, open a strong Veil with a Breach before a heavy. (A class only has the Telekinesis in its kit.)
   if (now >= bot.nextThinkAt && !me.action) {
     bot.nextThinkAt = now + 1.0;
     const strongVeil = foe.vitals.will > 60 && fighterVeil(foe) === 'stable';

@@ -82,7 +82,7 @@ test('special meter is server-owned, starts at zero and is visible only to the s
   assert.equal(matchView(m, 'a').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
   assert.equal(matchView(m, 'b').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
   const before = m.seats.get('a').specialMeter;
-  stepMatch(m, STEP, { a: { specialMeter: 100, presses: ['special'], classId: 'juggernaut' } });
+  stepMatch(m, STEP, { a: { specialMeter: 100, presses: ['special'], classId: 'warrior' } });
   assert.equal(m.seats.get('a').specialMeter, before, 'untrusted input cannot award charge');
   assert.equal(m.seats.get('a').classId, 'assassin', 'input cannot switch class');
   assert.equal(matchView(m, 'unknown').me, null);

@@ -96,6 +96,47 @@ export const MOVES = Object.freeze({
     rootMotion: 3.6, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
+
+  // ---- class abilities (core/classes.mjs gives each class four of these and the powers above, and a special).
+  //   effect: what the move does instead of (or besides) a hit, applied by sim/world.mjs through core/abilities.mjs;
+  //   effectSeconds: how long it lasts; targets: 'ally' / 'enemy' (one, in range and arc) or none (yourself);
+  //   aura: allies within that many metres share it; leap: the body arcs through the air over the active phase.
+  leapStrike: move({ kind: 'power', startup: 0.16, active: 0.42, recovery: 0.3, will: 20, cooldown: 7, damage: 12, range: 3, arc: 360,
+    hitAt: [0.4], knockback: 1.6, stagger: 0.7, blockable: false, rootMotion: 8, leap: 1.6, damageKind: 'telekinesis',
+    cancelInto: ['movement'], cancelFrom: 0.8 }),
+  repulse: move({ kind: 'power', startup: 0.22, active: 0.08, recovery: 0.3, will: 22, cooldown: 8, damage: 6, range: 5, arc: 360,
+    knockback: 4.5, stagger: 0.6, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.3 }),
+  bladeThrow: move({ kind: 'power', startup: 0.2, active: 0.04, recovery: 0.32, will: 14, cooldown: 5, damage: 14, range: 16, arc: 4,
+    stagger: 0.4, damageKind: 'projectile', projectileSpeed: 30, cancelInto: ['movement'], cancelFrom: 0.3 }),
+  quickstep: move({ kind: 'power', startup: 0, active: 0.05, recovery: 0.05, will: 14, cooldown: 9, range: 0, blockable: false,
+    effect: 'quick', effectSeconds: 3, damageKind: 'effect', cancelInto: ['movement', 'attack', 'power'], cancelFrom: 0 }),
+  quickstepAura: move({ kind: 'power', startup: 0.05, active: 0.05, recovery: 0.1, will: 18, cooldown: 10, range: 0, blockable: false,
+    effect: 'quick', effectSeconds: 3, aura: 6, damageKind: 'effect', cancelInto: ['movement', 'attack', 'power'], cancelFrom: 0.05 }),
+  // a parry stance: a strike that meets it in front is answered with counterStrike
+  counter: move({ kind: 'defense', startup: 0, active: 0.6, recovery: 0.15, will: 10, cooldown: 6, range: 0, blockable: false,
+    effect: 'counter', damageKind: 'effect' }),
+  counterStrike: move({ kind: 'attack', startup: 0.05, active: 0.08, recovery: 0.25, damage: 16, range: 2.4, arc: 140, knockback: 1,
+    stagger: 0.6, blockable: false, cancelInto: ['movement'], cancelFrom: 0.2 }),
+  cloak: move({ kind: 'power', startup: 0.1, active: 0.05, recovery: 0.1, will: 20, cooldown: 12, range: 0, blockable: false,
+    effect: 'cloak', effectSeconds: 4, damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.1 }),
+  empower: move({ kind: 'power', startup: 0.05, active: 0.05, recovery: 0.1, will: 15, cooldown: 10, range: 0, blockable: false,
+    effect: 'empower', effectSeconds: 8, charges: 3, damageKind: 'effect', cancelInto: ['movement', 'attack'], cancelFrom: 0.05 }),
+  misdirect: move({ kind: 'power', startup: 0.12, active: 0.05, recovery: 0.2, will: 16, cooldown: 10, range: 12, arc: 40, blockable: false,
+    effect: 'misdirect', effectSeconds: 3, targets: 'enemy', damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.2 }),
+  mend: move({ kind: 'power', startup: 0.2, active: 0.05, recovery: 0.25, will: 18, cooldown: 8, range: 18, arc: 60, blockable: false,
+    effect: 'mend', effectSeconds: 3, heal: 30, targets: 'ally', damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.25 }),
+  levitate: move({ kind: 'movement', startup: 0, active: 0.1, recovery: 0.05, will: 14, cooldown: 7, range: 0, blockable: false,
+    effect: 'levitate', effectSeconds: 2, damageKind: 'effect', cancelInto: ['attack', 'power'], cancelFrom: 0.1 }),
+
+  // ---- class specials: the server-owned meter pays (core/classes.mjs: cost), never Will
+  rage: move({ kind: 'power', startup: 0.3, active: 0.05, recovery: 0.2, range: 0, blockable: false, special: true,
+    effect: 'rage', effectSeconds: 5, iframes: [0, 0.35], damageKind: 'effect' }),
+  execution: move({ kind: 'attack', startup: 0.12, active: 0.06, recovery: 0.4, range: 2.1, arc: 90, blockable: false, special: true,
+    execute: true, iframes: [0, 0.58], damageKind: 'execution' }),
+  shadowExecution: move({ kind: 'attack', startup: 0.12, active: 0.06, recovery: 0.4, range: 2.3, arc: 90, blockable: false, special: true,
+    execute: true, iframes: [0, 0.58], damageKind: 'execution' }),
+  sanctuary: move({ kind: 'power', startup: 0.3, active: 0.05, recovery: 0.25, range: 0, blockable: false, special: true,
+    effect: 'sanctuary', effectSeconds: 5, iframes: [0, 0.35], damageKind: 'effect' }),
 });
 
 // Which move a button starts with each crystal form (the first of a chain).

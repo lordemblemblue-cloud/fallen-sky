@@ -1,12 +1,12 @@
-// Duelist Adventure class contracts. This module is intentionally headless:
-// Local practice AND the authoritative match server must eventually import
-// these definitions for class selection and special activation.
-//
-// This does not yet apply damage, spawn fighters, or load clips. It defines
-// class data and request validation with zero trust in a client-supplied result.
+// Duelist Adventure's four classes: Warrior, Duelist, Assassin and Healer (docs/duelist/CLASSES_PLAN_20261120.md).
+// Headless and shared: local practice and the authoritative match server read the same table. Each class has a
+// crystal form (weapon) and colour, a passive, four abilities (moves in core/moves.mjs, on keys 1-4; the HUD
+// shows three at a time and rotates to the fourth) and a special paid for by the server-owned meter.
+// A client never changes its class mid-fight, never charges the meter and never decides what a special does.
 export const SPECIAL_MAX = 100;
 export const ABILITY_SLOTS = 3;
-export const CLASS_IDS = Object.freeze(['assassin', 'duelist', 'juggernaut', 'healer']);
+export const CLASS_IDS = Object.freeze(['warrior', 'duelist', 'assassin', 'healer']);
+export const DEFAULT_CLASS = 'duelist';
 export const SPECIAL_CHARGE = Object.freeze({
   landedHit: 5,
   elimination: 12,
@@ -24,21 +24,32 @@ export const SPECIAL_BALANCE = Object.freeze({
   rageDamageMultiplier: 2,
   rageMoveMultiplier: 1.3,
   rageAttackSpeedMultiplier: 1.3,
-  healerFieldDurationSeconds: 5,
-  healerPowerResistance: 0.8,
-  healerDefenseMultiplier: 1.35,
+  sanctuaryDurationSeconds: 5,
+  sanctuaryRadius: 6,
+  sanctuaryPowerResistance: 0.8, // allies inside take 80% less from powers
+  sanctuaryStrikeResistance: 0.35, // and 35% less from strikes
+  sanctuaryHealPerSecond: 5,
 });
-const power = (id, name) => Object.freeze({
-  id, name, animation: 'class.power.' + id,
-  // A move not implemented in the existing core must never be
-  // silently remapped to some unrelated power.
-  implemented: false,
+
+// what a class's passive changes (core/abilities.mjs applies them)
+const PASSIVES = Object.freeze({
+  warrior: Object.freeze({ id: 'heavyStance', name: 'Heavy Stance', strikeDamage: 1.15, knockbackTaken: 0.85, attackRate: 0.92,
+    text: 'Strikes hit 15% harder and break guards faster; knockback moves you less; swings are a little slower.' }),
+  duelist: Object.freeze({ id: 'twinRhythm', name: 'Twin Rhythm',
+    text: 'A four-hit light chain; every strike drains the Veil faster.' }),
+  assassin: Object.freeze({ id: 'shadowStep', name: 'Shadow Step', rollDistance: 1.25, backstab: 1.1,
+    text: 'Longer rolls; strikes from behind hit 10% harder.' }),
+  healer: Object.freeze({ id: 'swiftStance', name: 'Swift Stance', strikeDamage: 0.9, attackRate: 1.15,
+    text: 'Faster, lighter swings; healing an ally charges your special.' }),
 });
-const entry = ({ id, name, weapon, stance, special, abilities, description }) =>
+
+const ability = (id, name, text) => Object.freeze({ id, name, text, animation: 'class.power.' + id, implemented: true });
+const entry = ({ id, name, role, weapon, color, stance, abilities, special, description }) =>
   Object.freeze({
-    id, name, weapon, stance,
-    special: Object.freeze(special),
-    abilities: Object.freeze(abilities.map(([key, label]) => power(key, label))),
+    id, name, role, weapon, color, stance,
+    passive: PASSIVES[id],
+    special: Object.freeze({ ...special, animation: 'class.' + id + '.special.' + special.id }),
+    abilities: Object.freeze(abilities.map(([key, label, text]) => ability(key, label, text))),
     animationSlots: Object.freeze({
       idle: 'class.' + id + '.idle',
       light: 'class.' + id + '.attack.light',
@@ -50,57 +61,69 @@ const entry = ({ id, name, weapon, stance, special, abilities, description }) =>
     }),
     description,
   });
+
 export const CLASSES = Object.freeze({
-  assassin: entry({
-    id: 'assassin', name: 'Assassin', weapon: 'staff', stance: 'staff',
-    description: 'Double-bladed staff; evasive flanker with a behind-the-target execution.',
+  warrior: entry({
+    id: 'warrior', name: 'Warrior', role: 'Front line', weapon: 'sword', color: 0xff4a3d, stance: 'heavy',
+    description: 'One red crystal blade, heavy strikes, and Rage.',
     abilities: [
-      ['stealth', 'Invisibility'],
-      ['push', 'Telekinetic Push'],
-      ['enhance', 'Enhanced Strikes'],
-      ['mindTrick', 'Mind Trick'],
+      ['leapStrike', 'Leap Strike', 'Jump up to 8 m ahead and slam down, staggering everyone around the landing.'],
+      ['grip', 'Telekinetic Grip', 'Lift an enemy, crush it while you hold, throw it when you let go.'],
+      ['repulse', 'Repulse', 'Throw everyone around you back and off their feet.'],
+      ['bladeThrow', 'Blade Throw', 'Your blade flies out and back, cutting whoever it meets.'],
     ],
-    special: { id: 'shadowExecution', name: 'Shadow Execution', cost: 100, animation: 'class.assassin.special.execute', target: 'enemy' },
+    special: { id: 'rage', name: 'Rage', cost: SPECIAL_MAX, target: 'self',
+      text: 'For 5 s: double damage, 30% faster, and nothing staggers, grips or knocks you down.' },
   }),
   duelist: entry({
-    id: 'duelist', name: 'Duelist', weapon: 'dualBlades', stance: 'dualBlades',
-    description: 'Dual crystal blades; fast offense and threshold-based executions.',
+    id: 'duelist', name: 'Duelist', role: 'Duel specialist', weapon: 'dualBlades', color: 0xffcf6a, stance: 'twin',
+    description: 'Twin crystal blades, fast chains, and finishing executions.',
     abilities: [
-      ['pull', 'Telekinetic Pull'],
-      ['speed', 'Speed'],
-      ['bladeThrow', 'Blade Throw'],
-      ['counter', 'Guard and Counter'],
+      ['pull', 'Telekinetic Pull', 'Drag an enemy into reach.'],
+      ['quickstep', 'Quickstep', 'For 3 s: 40% faster on your feet and 20% faster strikes.'],
+      ['bladeThrow', 'Blade Throw', 'One blade flies out and back, cutting whoever it meets.'],
+      ['counter', 'Guard and Counter', 'A short parry stance: a strike that meets it is answered with a free riposte.'],
     ],
-    special: { id: 'duelistExecution', name: 'Execution', cost: SPECIAL_MAX / 3, animation: 'class.duelist.special.execute', target: 'enemy' },
+    special: { id: 'execution', name: 'Execution', cost: SPECIAL_MAX / 3, target: 'enemy', reach: SPECIAL_BALANCE.duelistExecuteRange,
+      rule: 'threshold', text: 'Finish an enemy at 25% HP or less within reach. Costs a third of the meter.' },
   }),
-  juggernaut: entry({
-    id: 'juggernaut', name: 'Juggernaut', weapon: 'sword', stance: 'heavy',
-    description: 'Single crystal blade; heavy strikes and short Rage bursts.',
+  assassin: entry({
+    id: 'assassin', name: 'Assassin', role: 'Flanker', weapon: 'staff', color: 0xb779ff, stance: 'staff',
+    description: 'A double-bladed staff, unseen approaches, and executions from behind.',
     abilities: [
-      ['leap', 'Force Leap'],
-      ['grip', 'Telekinetic Grip'],
-      ['repulse', 'Repulse'],
-      ['bladeThrow', 'Blade Throw'],
+      ['cloak', 'Veil Cloak', 'Unseen for 4 s (a shimmer up close). Striking or being hit ends it.'],
+      ['push', 'Telekinetic Push', 'Throw everyone in front of you back.'],
+      ['empower', 'Empowered Strikes', 'Your next 3 strikes hit 40% harder and drain the target\'s Will.'],
+      ['misdirect', 'Misdirect', 'One enemy loses its lock on you and cannot target you for 3 s.'],
     ],
-    special: { id: 'rage', name: 'Rage', cost: 100, animation: 'class.juggernaut.special.rage', target: 'self' },
+    special: { id: 'shadowExecution', name: 'Shadow Execution', cost: SPECIAL_MAX, target: 'enemy', reach: SPECIAL_BALANCE.assassinExecuteRange,
+      rule: 'behind', text: 'Finish any enemy from behind, whatever its health.' },
   }),
   healer: entry({
-    id: 'healer', name: 'Healer', weapon: 'sword', stance: 'swift',
-    description: 'Single crystal blade; fast supportive fighter with an ally-protection field.',
+    id: 'healer', name: 'Healer', role: 'Support', weapon: 'sword', color: 0x6cc8ff, stance: 'swift',
+    description: 'One blue crystal blade, healing, and a dome that shelters allies.',
     abilities: [
-      ['mindTrick', 'Mind Trick'],
-      ['speed', 'Speed'],
-      ['levitate', 'Levitate'],
-      ['push', 'Telekinetic Push'],
+      ['mend', 'Mend', 'Heal the ally in front of you (or yourself) 30 HP over 3 s.'],
+      ['quickstepAura', 'Quickstep', 'You and allies within 6 m: 40% faster on your feet and 20% faster strikes for 3 s.'],
+      ['levitate', 'Levitate', 'Rise and float for 2 s.'],
+      ['push', 'Telekinetic Push', 'Throw everyone in front of you back.'],
     ],
-    special: { id: 'wardField', name: 'Protection and Absorption Field', cost: 100, animation: 'class.healer.special.ward', target: 'allies' },
+    special: { id: 'sanctuary', name: 'Sanctuary', cost: SPECIAL_MAX, target: 'allies',
+      text: 'A 6 m dome for 5 s: allies inside take 80% less from powers and 35% less from strikes, and heal.' },
   }),
 });
-const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
-const validMeter = meter => Number.isFinite(meter) && meter >= 0 && meter <= SPECIAL_MAX;
-export const classById = id => (typeof id === 'string' && Object.hasOwn(CLASSES, id) ? CLASSES[id] : null);
 
-/** Three visible powers rotating one at a time, so all four are accessible. */
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+const validMeter = (meter) => Number.isFinite(meter) && meter >= 0 && meter <= SPECIAL_MAX;
+export const classById = (id) => (typeof id === 'string' && Object.hasOwn(CLASSES, id) ? CLASSES[id] : null);
+
+/** The move a class's ability slot (0-3) starts, or null. */
+export function classAbilityMove(classId, slot) {
+  const def = classById(classId);
+  return def && Number.isInteger(slot) && slot >= 0 && slot < def.abilities.length ? def.abilities[slot].id : null;
+}
+
+/** Three visible abilities rotating one at a time, so all four are reachable on a small HUD. */
 export function visibleClassAbilities(classId, first = 0) {
   const def = classById(classId);
   if (!def) return [];
@@ -108,10 +131,11 @@ export function visibleClassAbilities(classId, first = 0) {
   return Object.freeze(Array.from({ length: ABILITY_SLOTS }, (_, i) => def.abilities[(offset + i) % def.abilities.length]));
 }
 
-/** Requests are allowed pre-match, between rounds or while defeated, with
- * the class change QUEUED for the next spawn (never mid-life).
- * Server must obtain phase/dead from match state, not from a client packet. */
-export function requestClassSelection({ currentClass = 'duelist', pendingClass = null, requestedClass, phase = 'live', dead = false } = {}) {
+/**
+ * Requests are allowed pre-match, between rounds or while defeated, with the change QUEUED for the next spawn
+ * (never mid-life). The server takes phase and death from the match, not from a client packet.
+ */
+export function requestClassSelection({ currentClass = DEFAULT_CLASS, pendingClass = null, requestedClass, phase = 'live', dead = false } = {}) {
   if (!classById(requestedClass)) return { accepted: false, reason: 'unknown-class', currentClass, pendingClass };
   if (phase !== 'countdown' && phase !== 'roundOver' && phase !== 'over' && !dead) {
     return { accepted: false, reason: 'alive-in-match', currentClass, pendingClass };
@@ -120,8 +144,8 @@ export function requestClassSelection({ currentClass = 'duelist', pendingClass =
 }
 
 /** Only authoritative spawn handlers apply the player's pending selection. */
-export function classAtSpawn({ currentClass = 'duelist', pendingClass = null } = {}) {
-  const chosen = classById(pendingClass) ? pendingClass : classById(currentClass) ? currentClass : 'duelist';
+export function classAtSpawn({ currentClass = DEFAULT_CLASS, pendingClass = null } = {}) {
+  const chosen = classById(pendingClass) ? pendingClass : classById(currentClass) ? currentClass : DEFAULT_CLASS;
   return { classId: chosen, weapon: CLASSES[chosen].weapon, pendingClass: null };
 }
 
@@ -130,9 +154,11 @@ export function awardSpecialCharge(meter, event) {
   if (!validMeter(meter) || typeof event !== 'string' || !Object.hasOwn(SPECIAL_CHARGE, event)) return null;
   return clamp(meter + SPECIAL_CHARGE[event], 0, SPECIAL_MAX);
 }
-const finitePoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.z);
+
+const finitePoint = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.z);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-function behindTarget(attacker, target) {
+/** Is `attacker` within the rear arc of a target facing `target.yaw`? */
+export function behindTarget(attacker, target) {
   const dx = attacker.x - target.x;
   const dz = attacker.z - target.z;
   const len = Math.hypot(dx, dz);
@@ -141,8 +167,11 @@ function behindTarget(attacker, target) {
   return dot <= -Math.cos(SPECIAL_BALANCE.assassinRearArcDegrees / 2 * Math.PI / 180);
 }
 
-/** Validates the special's request and meter cost without applying an effect.
- * Actual execution, Rage and barrier effects still need server-side handling. */
+/**
+ * Validates a special's request and meter cost without applying it (sim/world.mjs applies it).
+ * actor: { id, team, hp, position: { x, z } }; target (executions): { id, team, hp, maxHp, position: { x, z, yaw },
+ * protectedUntil, invulnerable }.
+ */
 export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 } = {}) {
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
@@ -157,10 +186,9 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 
     if (actor.id && target.id && actor.id === target.id) return { allowed: false, reason: 'self-target' };
     if (actor.team != null && target.team === actor.team) return { allowed: false, reason: 'friendly-target' };
     if ((target.protectedUntil ?? -Infinity) > now || target.invulnerable) return { allowed: false, reason: 'target-protected' };
-    const reach = classId === 'assassin' ? SPECIAL_BALANCE.assassinExecuteRange : SPECIAL_BALANCE.duelistExecuteRange;
-    if (distance(actor.position, target.position) > reach) return { allowed: false, reason: 'out-of-range' };
-    if (classId === 'duelist' && target.hp / target.maxHp > SPECIAL_BALANCE.duelistExecuteThreshold) return { allowed: false, reason: 'target-too-healthy' };
-    if (classId === 'assassin' && !behindTarget(actor.position, target.position)) return { allowed: false, reason: 'not-behind' };
+    if (distance(actor.position, target.position) > def.special.reach) return { allowed: false, reason: 'out-of-range' };
+    if (def.special.rule === 'threshold' && target.hp / target.maxHp > SPECIAL_BALANCE.duelistExecuteThreshold) return { allowed: false, reason: 'target-too-healthy' };
+    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position)) return { allowed: false, reason: 'not-behind' };
   }
   return { allowed: true, effect: def.special.id, cost: def.special.cost, meterAfter: clamp(meter - def.special.cost, 0, SPECIAL_MAX), animation: def.special.animation };
 }
