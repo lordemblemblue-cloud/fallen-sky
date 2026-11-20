@@ -1,26 +1,34 @@
 /**
- * WebGPU renderer bootstrap for the Fallen Sky / Duelist migration.
+ * Opt-in renderer bootstrap for migrated Fallen Sky and Duelist scenes.
+ * WebGPU startup is asynchronous; callers must await the result before creating
+ * GPU resources or starting a frame loop. Non-migrated scenes should use WebGL.
  *
- * Keep renderer selection asynchronous: WebGPURenderer.init() must complete
- * before the caller creates render targets or starts its animation loop.
- * Do not pass a pre-created WebGL context to the WebGPU renderer.
- *
- * This helper is deliberately opt-in until each game's shader, post-processing,
- * context-loss, and GPU diagnostics paths have been audited.
+ * If WebGPU initialization fails, its canvas may already have a WebGPU
+ * context. The fallback therefore receives NO canvas, and callers must mount
+ * the returned renderer.domElement (not assume their old canvas was reused).
  */
+const defaultWebGPUFactory = async (options) => {
+  const { WebGPURenderer } = await import('three/webgpu');
+  return new WebGPURenderer(options);
+};
+
+const defaultWebGLFactory = async (options) => {
+  const { WebGLRenderer } = await import('three');
+  return new WebGLRenderer(options);
+};
+
 export async function createGameWebGPURenderer({
   canvas,
   antialias = true,
   powerPreference = 'high-performance',
+  webgpuAvailable = typeof navigator !== 'undefined' && Boolean(navigator.gpu),
+  makeWebGPURenderer = defaultWebGPUFactory,
 } = {}) {
-  if (typeof navigator === 'undefined' || !navigator.gpu) {
-    return { renderer: null, reason: 'webgpu-unavailable' };
-  }
+  if (!webgpuAvailable) return { renderer: null, reason: 'webgpu-unavailable' };
 
   let renderer;
   try {
-    const { WebGPURenderer } = await import('three/webgpu');
-    renderer = new WebGPURenderer({
+    renderer = await makeWebGPURenderer({
       ...(canvas ? { canvas } : {}),
       antialias,
       powerPreference,
@@ -29,39 +37,57 @@ export async function createGameWebGPURenderer({
     await renderer.init();
     return { renderer, reason: null };
   } catch (error) {
-    renderer?.dispose();
+    // Cleanup should never mask the original init error or prevent fallback.
+    try { renderer?.dispose(); } catch { /* the GPU may already be lost */ }
     return { renderer: null, reason: 'webgpu-init-failed', error };
   }
 }
 
 /**
- * Opt-in renderer selection for migrated scenes.
- * Never use this until a scene's materials and post-processing support WebGPU.
- * A fresh canvas is recommended when retrying after a failed GPU initialization.
+ * Creates a renderer for scenes whose shaders and post-processing were audited.
+ * The caller is responsible for mounting renderer.domElement, sizing, disposal,
+ * and handling context/device loss. Canvas replacement is reported explicitly.
  */
 export async function createGameRendererWithFallback({
   canvas,
   antialias = true,
   powerPreference = 'high-performance',
   preferWebGPU = true,
+  webgpuAvailable,
+  makeWebGPURenderer = defaultWebGPUFactory,
+  makeWebGLRenderer = defaultWebGLFactory,
 } = {}) {
   if (preferWebGPU) {
-    const attempt = await createGameWebGPURenderer({ canvas, antialias, powerPreference });
-    if (attempt.renderer) return { renderer: attempt.renderer, backend: 'webgpu', fallbackReason: null };
-    // A failed WebGPU initialization may have configured the supplied canvas;
-    // allow WebGL to allocate its own clean canvas in that case.
-    if (attempt.reason === 'webgpu-init-failed') canvas = undefined;
-    const { WebGLRenderer } = await import('three');
+    const attempt = await createGameWebGPURenderer({
+      canvas, antialias, powerPreference, webgpuAvailable, makeWebGPURenderer,
+    });
+    if (attempt.renderer) {
+      return { renderer: attempt.renderer, backend: 'webgpu', fallbackReason: null, canvasReplaced: false };
+    }
+
+    const canReuseCanvas = attempt.reason !== 'webgpu-init-failed';
+    const renderer = await makeWebGLRenderer({
+      ...(canReuseCanvas && canvas ? { canvas } : {}),
+      antialias,
+      powerPreference,
+    });
     return {
-      renderer: new WebGLRenderer({ ...(canvas ? { canvas } : {}), antialias, powerPreference }),
+      renderer,
       backend: 'webgl',
       fallbackReason: attempt.reason,
+      canvasReplaced: Boolean(canvas && renderer.domElement !== canvas),
     };
   }
-  const { WebGLRenderer } = await import('three');
+
+  const renderer = await makeWebGLRenderer({
+    ...(canvas ? { canvas } : {}),
+    antialias,
+    powerPreference,
+  });
   return {
-    renderer: new WebGLRenderer({ ...(canvas ? { canvas } : {}), antialias, powerPreference }),
+    renderer,
     backend: 'webgl',
     fallbackReason: 'webgpu-not-requested',
+    canvasReplaced: Boolean(canvas && renderer.domElement !== canvas),
   };
 }
