@@ -7,12 +7,12 @@ import { getGame3DMenuShortcut, resolveGame3DMenuToggle } from
 
 const read = path => readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('C opens Character directly; C from other Character tabs first focuses Character',()=>{
+test('C opens Character directly and closes it immediately from every subpage',()=>{
   assert.deepEqual(resolveGame3DMenuToggle('character',{groupId:'skills'}),
     {action:'open',groupId:'character'});
   for(const characterTab of ['Equipment','Vanity','Aura']){
     assert.deepEqual(resolveGame3DMenuToggle('character',{groupId:'character',characterTab}),
-      {action:'focus',groupId:'character'});
+      {action:'close',groupId:'character'});
   }
   assert.deepEqual(resolveGame3DMenuToggle('character',{groupId:'character',characterTab:'Character'}),
     {action:'close',groupId:'character'});
@@ -44,9 +44,8 @@ test('Services/subpages appear only while an active workspace is open, and Escap
   assert.match(hud,/showServicesNavigation && <AXEServicesNavigation/);
   assert.match(game,/showServicesNavigation=\{services\.active\}/);
   assert.match(game,/onToggleServices=\{\(\) => services\.controller\.toggle\(\)\}/);
-  assert.match(game,/characterTab: activeCharacterSubview/);
-  assert.match(game,/toggle\.action === 'focus'/);
-  assert.match(game,/setFocusCharacterRequest\(value => value \+ 1\)/);
+  assert.doesNotMatch(game,/toggle\.action === 'focus'/);
+  assert.match(game,/The second C closes Character from ANY of its subpages/);
   assert.match(game,/onOpenService=\{\(groupId, serviceId = null\) =>/);
   assert.match(game,/void services\.controller\.open\(groupId, serviceId \? \{ serviceId \} : \{\}\)/);
   assert.match(game,/services\.controller\.close\(\);\s*setPauseMenuOpen\(\(v\) => !v\)/);
@@ -117,6 +116,7 @@ test('C/K/Escape close both the active workspace and the expanded Services row',
   const controller=read('src/components/game3d/axe/services/AXEServiceModeController.js');
   const hud=read('src/components/game3d/hud/JadeSoulHUD.jsx');
   assert.match(game,/if \(toggle\.action === 'close'\) services\.controller\.close\(\)/);
+  assert.match(game,/The second C closes Character from ANY of its subpages/);
   assert.match(game,/if \(e\.key === 'Escape'\) \{ e\.preventDefault\(\); services\.controller\.close\(\); \}/);
   assert.match(controller,/publish\(\{ \.\.\.initial\(\), message \}\)/);
   assert.match(hud,/\{showServicesNavigation && <AXEServicesNavigation/);
