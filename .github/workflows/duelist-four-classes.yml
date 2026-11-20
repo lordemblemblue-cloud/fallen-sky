@@ -1,0 +1,54 @@
+name: Duelist Four-Class Core Rules
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/core/classes.mjs'
+      - 'src/components/duelist/core/index.mjs'
+      - 'tests/duelist-classes.test.mjs'
+      - '.github/workflows/duelist-four-classes.yml'
+  push:
+    branches:
+      - 'feature/duelist-four-class-*'
+    paths:
+      - 'src/components/duelist/core/classes.mjs'
+      - 'src/components/duelist/core/index.mjs'
+      - 'tests/duelist-classes.test.mjs'
+      - '.github/workflows/duelist-four-classes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duelist-four-classes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate four-class rules
+        run: node --test tests/duelist-classes.test.mjs
+      - name: Run existing Duelist combat core regression tests
+        run: node --test tests/duelist-core.test.mjs
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint shared rules module
+        run: npx eslint src/components/duelist/core/classes.mjs src/components/duelist/core/index.mjs tests/duelist-classes.test.mjs
+      - name: Verify app build
+        run: npm run build
