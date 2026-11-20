@@ -125,10 +125,6 @@ export default function GameView() {
   const [requestedService, setRequestedService] = useState(null);
   const [requestedServiceItemId, setRequestedServiceItemId] = useState(null);
   const [requestedCharacterTab, setRequestedCharacterTab] = useState(null);
-  // Modern Character/Appearance workspace owns C. Track its actual tab so
-  // pressing C from Equipment returns to Character before closing the panel.
-  const [activeCharacterSubview, setActiveCharacterSubview] = useState('Character');
-  const [focusCharacterRequest, setFocusCharacterRequest] = useState(0);
   const [friendsListOpen, setFriendsListOpen] = useState(false);
   const [clanOverlayOpen, setClanOverlayOpen] = useState(false);
   const [learnedSkillIds, setLearnedSkillIds] = useState(() => getLearnedSkillIds());
@@ -518,7 +514,7 @@ export default function GameView() {
       const currentGroup = services.controller.getSnapshot().groupId;
       const mapWasOpen = !!window.__axeWorldMapOpen;
       const toggle = resolveGame3DMenuToggle(destination, {
-        groupId: currentGroup, mapOpen: mapWasOpen, characterTab: activeCharacterSubview,
+        groupId: currentGroup, mapOpen: mapWasOpen,
       });
       // The map is a separate HUD portal, not a station workspace.
       window.dispatchEvent(new Event('axeCloseWorldMap'));
@@ -546,16 +542,10 @@ export default function GameView() {
         setRequestedServiceItemId(null);
         setRequestedCharacterTab(null);
         if (toggle.action === 'close') {
+          // The second C closes Character from ANY of its subpages.
           services.controller.close();
-        } else if (toggle.action === 'focus') {
-          // C first returns to Character from the Equipment/Vanity/Aura
-          // subtab; pressing C again closes the full panel.
-          setFocusCharacterRequest(value => value + 1);
-          setActiveCharacterSubview('Character');
         } else {
-          setActiveCharacterSubview('Character');
-          // Reuse the already-registered unified Character + Appearance
-          // workspace, including its current 3D model and live stats.
+          // Reuse the same live Character/Appearance workspace.
           void services.controller.open('character', { serviceId: 'character' });
         }
         return;
@@ -570,7 +560,7 @@ export default function GameView() {
     };
     window.addEventListener('keydown', onServiceKey, true);
     return () => window.removeEventListener('keydown', onServiceKey, true);
-  }, [phase, pauseMenuOpen, activeCharacterSubview, services.controller]);
+  }, [phase, pauseMenuOpen, services.controller]);
 
   // Other in-world controls: TAB = Soul Emporium, G = Clan,
   // Shift+L = Friends, ESC = close overlay / pause.
@@ -725,9 +715,7 @@ export default function GameView() {
           setFriendsListOpen(false); setClanOverlayOpen(false);
           services.controller.open(groupId);
         }} />
-      {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()}
-        onCharacterTabChange={setActiveCharacterSubview}
-        focusCharacterRequest={focusCharacterRequest} />}
+      {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
       {/* World boss UI removed in the systems/animation test scene. */}
       <MultiplayerSystem envUrl="game_world_lowpoly" surface="game-world" />
