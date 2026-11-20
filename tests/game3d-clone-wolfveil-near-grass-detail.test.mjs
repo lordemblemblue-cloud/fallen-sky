@@ -61,8 +61,9 @@ test('the stream swaps blade geometry by distance and keeps every blade planted'
   const blades=source('src/components/game3d/wolfveil/WolfveilIndividualGrassBlades.js');
   assert.match(blades,/createIndividualSumiEBladeGeometry\(\{ segments = 4 \} = \{\}\)/);
   assert.match(blades,/const segs = Math\.max\(1, Math\.floor\(segments\) \|\| 4\);/);
-  assert.match(blades,/lighterGeometries: lighterBlades,/);
-  assert.match(blades,/for \(const blade of lighterBlades\) blade\.dispose\(\);/);
+  assert.doesNotMatch(blades,/createWolfveilNearGrassStream/);
+  assert.doesNotMatch(blades,/nearGrass\.update\(playerPosition\)/);
+  assert.match(blades,/inst\.frustumCulled = true/);
 });
 
 test('sparse far grass tiles share 64 m chunks; near tiles keep 32 m',()=>{
