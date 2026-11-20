@@ -13,7 +13,8 @@ test('Escape shows seven service/faction tiles and opens faction in its own dial
  assert.match(menu,/QUICK_SERVICE_TILES\.map/);
  assert.match(menu,/axe3d-pause__launcher-page-grid/);
  assert.match(menu,/onOpenService\?\.\(group\.id,serviceId\)/);
- assert.match(menu,/onOpenFaction\?\.\(\)/);\n assert.doesNotMatch(menu,/<FactionOverview\/>/);
+ assert.match(menu,/onOpenFaction\?\.\(\)/);
+ assert.doesNotMatch(menu,/<FactionOverview\/>/);
  assert.doesNotMatch(menu,/<details className="axe3d-pause__launcher-subpage-group"/);
  assert.doesNotMatch(menu,/className="axe3d-pause__settings-back"/);
  assert.doesNotMatch(menu,/ArrowLeft/);
