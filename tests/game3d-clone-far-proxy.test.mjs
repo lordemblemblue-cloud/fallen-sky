@@ -98,13 +98,13 @@ test('colours blend where different objects meet; bad input is skipped, not fata
   assert.equal(bakeFarProxy(null).sourceTriangles,0);
 });
 
-test('the game hands the outline builder to the area loader, and the menu can switch it off',async()=>{
+test('isolated portal maps do not draw far outlines, while the optional outline module remains safe',async()=>{
   const fs=await import('node:fs');
   const read=path=>fs.readFileSync(new globalThis.URL('../'+path,import.meta.url),'utf8');
   const world=read('src/components/game3d/GameWorld3D.jsx');
-  assert.match(world,/farOutline=wolfveilVillage\?createWolfveilFarOutline\(\{scene\}\):null;/);
-  assert.match(world,/farProxy:farOutline,/);
-  assert.match(world,/farScenery:profile\.farScenery\}\);/);
+  assert.match(world,/const farOutline=null;/);
+  assert.match(world,/farScenery:false,farProxy:null,/);
+  assert.match(world,/releaseGpuMemory:true,releaseDelaySeconds:0/);
   assert.match(world,/farOutline\?\.disposeAll\(\);/);
   const outline=read('src/components/game3d/wolfveil/WolfveilFarOutline.js');
   assert.match(outline,/wolfveilAreaShared:true/,'the loader must never try to manage its own outline');
