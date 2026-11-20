@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import {
-  Check, Crown, Feather, Gem, Search, Shield, Shirt, Sparkles, UserRound, X,
+  Check, Crown, Feather, Gem, Search, Shield, Shirt, Sparkles, Sword, UserRound, X,
 } from 'lucide-react';
 import { getAXEVanityState, subscribeAXEVanity, equipAXEVanityPiece } from '../progression/AXEVanityStore';
 import { AXE_VANITY_PIECES, AXE_VANITY_SLOTS } from '../progression/AXEVanitySystem';
