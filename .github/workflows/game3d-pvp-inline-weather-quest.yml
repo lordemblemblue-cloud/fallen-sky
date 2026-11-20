@@ -1,0 +1,26 @@
+name: Game 3D inline PvP and quest HUD
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/pvp/WorldPvpControl.*'
+      - 'src/components/game3d/hud/Game3DHUDPlacement.css'
+      - 'tests/game3d-pvp-inline-weather-quest-20261120.test.mjs'
+      - 'tests/game3d-hud-left-column-placement.test.mjs'
+      - '.github/workflows/game3d-pvp-inline-weather-quest.yml'
+  workflow_dispatch:
+jobs:
+  verify-world-combat-hud:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: World PvP and inline HUD regression
+        run: node --test tests/game3d-world-pvp-and-announcements.test.mjs tests/game3d-pvp-inline-weather-quest-20261120.test.mjs
+      - name: Minimap/quest and weather row regressions
+        run: node --test tests/game3d-hud-left-column-placement.test.mjs tests/game3d-hud-map-services-weather-top-row.test.mjs
+      - name: Build Game 3D app
+        run: npm run build
