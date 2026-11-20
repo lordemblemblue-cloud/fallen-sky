@@ -54,11 +54,11 @@ test('three platforms, each with complete defaults of its own',()=>{
     assert.equal(profile.areaLoading,'single','the whole valley is over budget everywhere');
   }
   const [browser,desktop,mobile]=GAME3D_PLATFORM_IDS.map(id=>normalizeGame3DPlatformProfile(null,id));
-  // Browser: sharp but adaptive. Desktop app: native and top quality. Mobile: light.
+  // All platforms now start in a frame-rate friendly Classic performance mode.
   assert.deepEqual([browser.display.resolution,browser.graphics.quality,browser.graphics.fpsCap,
-    browser.graphics.shadows,browser.gpuProfile],['auto','high',60,true,'auto']);
+    browser.graphics.shadows,browser.gpuProfile],['720p','low',60,false,'performance']);
   assert.deepEqual([desktop.display.resolution,desktop.graphics.quality,desktop.graphics.fpsCap,
-    desktop.gpuProfile],['native','ultra',120,'quality']);
+    desktop.gpuProfile],['720p','low',60,'performance']);
   assert.deepEqual([mobile.display.resolution,mobile.graphics.quality,mobile.graphics.fpsCap,
     mobile.graphics.shadows,mobile.gpuProfile,mobile.releaseGpuMemory],
   ['720p','low',30,false,'performance',true]);
@@ -70,14 +70,14 @@ test('three platforms, each with complete defaults of its own',()=>{
   assert.equal(normalizeGame3DPlatformProfile({farScenery:'yes'},'mobile').farScenery,false);
   assert.deepEqual(Object.keys(GAME3D_AREA_LOADING_LABELS),[...WOLFVEIL_AREA_LOADING_MODES]);
 });
-test('browser default is native-sharp on a 1080p screen and never upscales a small one',()=>{
+test('browser defaults to a 720p render buffer without resizing the UI',()=>{
   const browser=normalizeGame3DPlatformProfile(null,'browser');
   const full=game3DResolutionTarget({resolution:browser.display.resolution,
     viewportWidth:1920,viewportHeight:1080,devicePixelRatio:1,autoRatio:1});
-  assert.deepEqual([full.width,full.height],[1920,1080]);
+  assert.equal(full.height,720);
   const laptop=game3DResolutionTarget({resolution:browser.display.resolution,
     viewportWidth:1366,viewportHeight:768,devicePixelRatio:1,autoRatio:1});
-  assert.deepEqual([laptop.width,laptop.height],[1366,768]);
+  assert.ok(laptop.height<=720);
   const phone=game3DResolutionTarget({
     resolution:normalizeGame3DPlatformProfile(null,'mobile').display.resolution,
     viewportWidth:390,viewportHeight:844,devicePixelRatio:3});
@@ -98,7 +98,7 @@ test('bad or missing values fall back to that platform\'s own default',()=>{
   assert.equal(profile.areaLoading,'single');
   assert.equal(profile.preloadMeters,200);
   assert.equal(profile.releaseGpuMemory,true);
-  assert.equal(normalizeGame3DPlatformProfile({},'console').graphics.quality,'high');
+  assert.equal(normalizeGame3DPlatformProfile({},'console').graphics.quality,'low');
 });
 test('platform detection: tab, installed app, phone, and a forced test value',()=>{
   assert.equal(detectGame3DPlatform(makeHost()),'browser');
@@ -119,16 +119,16 @@ test('first run in a browser: defaults apply, and the settings the renderer read
   const boot=bootGame3DPlatformGraphics(host);
   assert.equal(boot.platform,'browser');
   assert.equal(boot.firstRun,true);
-  assert.equal(liveGraphics(host).quality,'high');
+  assert.equal(liveGraphics(host).quality,'low');
   assert.equal(liveGraphics(host).fpsCap,60);
-  assert.equal(readGame3DDisplaySettings(host,{}).resolution,'auto');
-  assert.equal(readCloneGPUProfile(host),'auto');
+  assert.equal(readGame3DDisplaySettings(host,{}).resolution,'720p');
+  assert.equal(readCloneGPUProfile(host),'performance');
   assert.equal(host.events.length,0,'nothing is announced before the world exists');
   const state=readGame3DPlatformGraphics(host);
   assert.equal(state.firstRun,false);
   assert.equal(state.selected,'auto');
   assert.equal(state.profiles.mobile.display.resolution,'720p');
-  assert.equal(state.profiles.desktop.display.resolution,'native');
+  assert.equal(state.profiles.desktop.display.resolution,'720p');
 });
 test('first run keeps what the player had already chosen on this device',()=>{
   const host=makeHost({stored:{
@@ -210,14 +210,14 @@ test('a later start copies the active platform profile back into the live settin
   assert.equal(boot.firstRun,false);
   assert.equal(liveGraphics(host).quality,'medium');
   assert.equal(liveGraphics(host).fpsCap,60);
-  assert.equal(readGame3DDisplaySettings(host,{}).resolution,'auto');
+  assert.equal(readGame3DDisplaySettings(host,{}).resolution,'720p');
 });
 test('blocked storage never breaks the game: defaults are still returned',()=>{
   const host=makeHost();
   host.localStorage={getItem(){throw Error('blocked');},setItem(){throw Error('blocked');}};
   const boot=bootGame3DPlatformGraphics(host);
   assert.equal(boot.platform,'browser');
-  assert.equal(boot.profile.graphics.quality,'high');
+  assert.equal(boot.profile.graphics.quality,'low');
   assert.equal(applyGame3DPlatformProfile('mobile',null,{host}).profile.display.resolution,'720p');
   assert.equal(readGame3DPlatformGraphics(null).active,'browser');
 });
@@ -230,7 +230,7 @@ test('stored state survives a round trip and ignores an unknown platform key',()
   assert.equal(state.active,'desktop');
   assert.equal(state.detected,'browser');
   assert.equal(state.profile.graphics.quality,'high');
-  assert.equal(state.profile.display.resolution,'native');
+  assert.equal(state.profile.display.resolution,'720p');
   assert.deepEqual(Object.keys(state.profiles),['browser','desktop','mobile']);
 });
 
