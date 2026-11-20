@@ -46,6 +46,7 @@ import {GAME3D_BINDING_DEFINITIONS, GAME3D_DEFAULT_KEYBINDS,
   from './player/Game3DKeybinds.mjs';
 import FactionOverview from './axe/factions/FactionOverview';
 import './PauseMenu.css';
+import './PauseMenuGold.css';
 
 const MENU_ICONS={overview:Gamepad2,services:Hammer,scoreboard:Trophy,audio:AudioLines,controls:Keyboard,
   graphics:Monitor,ui:LayoutDashboard,community:Users,session:DoorOpen};
