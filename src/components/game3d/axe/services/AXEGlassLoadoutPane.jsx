@@ -3,7 +3,7 @@ import { Check, Compass, Crown, Gem, Package, Search, Shield, Shirt, Star, Sword
 import {
   getAllAXEEquipmentItems, subscribeAXEEquipmentInventory,
   equipAXEInventoryItem, unequipAXEInventoryItem,
-  getAXEEquipmentInventoryState, saveAXEEquipmentPreset, activateAXEEquipmentPreset,
+  getAXEEquipmentInventoryState, getActiveEquippedAXEWeapon, saveAXEEquipmentPreset, activateAXEEquipmentPreset,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
@@ -283,6 +283,21 @@ export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole=
         <Star size={20} fill={insightsOpen?'currentColor':'none'}/>
         <span>{insightsOpen?'Equipment':'Stats & Growth'}</span>
       </button>}
+      {isPlayer&&<div className="axe-weapon-loadout-rack" aria-label="Three simultaneously equipped weapon slots">
+        {AXE_HUD_WEAPON_ROLES.map(({role,label})=>{
+          const weapon=weaponInRole(role);
+          const drawn=weapon?.instanceId===getActiveEquippedAXEWeapon()?.instanceId;
+          return <button key={role} type="button"
+            className={'axe-app-viewer-slot axe-weapon-rack-slot'+(drawn?' is-active':'')}
+            aria-pressed={focusedWeaponRole===role}
+            aria-label={label+' weapon slot: '+(weapon?.name||'Empty')+'. Select to equip a weapon'}
+            title={(weapon?.name||label+' slot empty')+' · Select to equip from inventory'}
+            onClick={()=>chooseWeaponSlot(role)}>
+            <span className="axe-app-viewer-slot-art"><IconFor item={weapon||{slot:'weapon'}} size={24}/></span>
+            <small>{label}</small><span className="axe-app-viewer-item-name">{weapon?.name||'—'}</span>
+          </button>;
+        })}
+      </div>}
       {isPlayer && ['left','right'].map((side) => <div key={side}
         className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
         {displaySlots.filter((_,i)=>side==='left' ? i < Math.ceil(displaySlots.length/2)
@@ -433,6 +448,14 @@ export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole=
             {isPlayer && <div className="axe-glass-set-display">
               <h4>Equipment Set <small>{equipped.length} equipped</small></h4>
               <div className="axe-glass-ten-slots">
+                {AXE_HUD_WEAPON_ROLES.map(({role,label})=>{
+                  const weapon=weaponInRole(role);
+                  return <button key={role} type="button" title={weapon?.name||label+' empty'}
+                    onClick={()=>chooseWeaponSlot(role)} aria-label={label+' weapon: '+(weapon?.name||'Empty')}>
+                    <IconFor item={weapon||{slot:'weapon'}} size={22}/><small>{label}</small>
+                    {weapon&&<Check size={13}/>}
+                  </button>;
+                })}
                 {PLAYER_DISPLAY_SLOTS.map(([slot,index])=>{
                   const wearing=slotItem(slot,index);
                   return <button type="button" key={slot+index} title={wearing?.name || caption(slot)+' empty'}
@@ -445,7 +468,7 @@ export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole=
                 })}
               </div>
               <div className="axe-app-bonus-row"><span>Equipped display slots</span>
-                <b>{PLAYER_DISPLAY_SLOTS.filter(([slot,index])=>!!slotItem(slot,index)).length} / 10</b></div>
+                <b>{PLAYER_DISPLAY_SLOTS.filter(([slot,index])=>!!slotItem(slot,index)).length+AXE_HUD_WEAPON_ROLES.filter(({role})=>!!weaponInRole(role)).length} / 12</b></div>
               {(setState?.activeSets || []).map(set => <div key={set.setId+set.grade}
                 className="axe-glass-set-progress">
                 <strong>{set.setName}</strong>
