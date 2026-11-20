@@ -76,7 +76,7 @@ export default function RespawnMapOverlay() {
         answered = true;
         setSubmitting(false);
         if (!response?.ok) { setError(response?.reason || 'No safe landing at that location. Select another spawn.'); return; }
-        onSuccess();
+        onSuccess(response);
         const { maxHP } = getPlayerHUD();
         setHP(maxHP);
         setDeathPhase('alive', { deathPosition: null });
@@ -88,9 +88,12 @@ export default function RespawnMapOverlay() {
     if (!chosen) return;
     request(chosen.temporary
       ? { source: NEARBY_RESPAWN_ID, spawnId: chosen.id, deathPosition }
-      : { spawnId: chosen.id }, () => {
+      : { spawnId: chosen.id }, (resolved) => {
       if (session) exitAXEDungeon({ failed: true });
-      if (!chosen.temporary) saveCheckpointId(chosen.id);
+      // Only persist the checkpoint the world actually accepted. A hostile or
+      // blocked spot may have forced a different, registered fallback.
+      if (!chosen.temporary && resolved?.spawnId && resolved.spawnId !== NEARBY_RESPAWN_ID)
+        saveCheckpointId(resolved.spawnId);
     });
   };
   const handleDungeonRespawn = () => {
