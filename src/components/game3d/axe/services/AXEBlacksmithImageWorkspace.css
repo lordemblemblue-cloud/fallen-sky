@@ -1754,3 +1754,124 @@
 @media (prefers-reduced-motion:reduce) {
   .axe-blacksmith-center-preview .axe-forge-ascended-art {animation:none;}
 }
+
+
+/* 2026-11-20: icon-only service rail, two-slot upgrade work area. These rules
+ * appear AFTER the legacy layout so the previous absolute panels cannot
+ * overlap the actual equipment + material/donor interaction. */
+.axe-service-workspace--blacksmith .axe-service-operations,
+.axe-service-workspace--blacksmith .axe-service-operation-help,
+.axe-service-workspace--blacksmith .axe-service-operation-select {
+  display:none !important; /* one source of navigation: the accessible icon rail */
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  position:absolute;
+  z-index:7;
+  left:34%;
+  top:15%;
+  width:4.8%;
+  height:81%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  padding:4px 0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:last-child {
+  display:grid;
+  flex:none;
+  place-items:center;
+  gap:0;
+  width:clamp(42px,3.9cqw,58px);
+  height:clamp(42px,3.9cqw,58px);
+  min-width:0;
+  min-height:0;
+  max-height:none;
+  aspect-ratio:1;
+  padding:0;
+  color:#e7d6b3;
+  background:rgba(17,32,45,.84);
+  border:1px solid rgba(227,191,137,.48);
+  border-radius:10px;
+  font-size:0;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:0 3px 14px rgba(0,0,0,.2);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button svg {
+  display:block;
+  width:clamp(21px,1.9cqw,29px);
+  height:clamp(21px,1.9cqw,29px);
+  color:inherit;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:hover,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:focus-visible {
+  border-color:#b6e8f3;
+  background:#2d4b62;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button[aria-pressed="true"] {
+  color:#ffe9ae;
+  border-color:#f2d297;
+  background:rgba(140,97,51,.72);
+  box-shadow:0 0 13px rgba(229,181,102,.32);
+}
+.axe-blacksmith-visually-hidden {
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-inventory-shell {
+  left:3.4%;
+  width:28.8%;
+  height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:40%;
+  top:15%;
+  width:31%;
+  height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-combine-slots {
+  display:none!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-operation-panel {
+  left:73%;
+  top:15%;
+  width:24.4%;
+  height:81%;
+  overflow-y:auto;
+}
+@media(max-width:860px) {
+  .axe-service-workspace--blacksmith .axe-blacksmith-image-stage {
+    min-width:1180px;
+  }
+}
