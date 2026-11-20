@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { partyStore } from './socialStores';
 import { WORLD_CHAT_CHANNEL, fetchChatHistory, partyChatChannel, sendChatMessage } from './worldChat';
@@ -187,14 +186,13 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       aria-label="World chat" data-chat-visible={typing||expanded||alwaysVisible ? 'true' : 'false'}
     >
       <div className="game3d-chat-surface">
-      {showDock&&<aside className="game3d-chat-combat-strip" aria-label="Recent combat results">
-        <strong>COMBAT LOG</strong>
-        <div>{combatEvents.slice(-3).map(event=><span key={event.id}
+      {showDock&&combatEvents.length>0&&<aside className="game3d-chat-combat-strip" aria-label="Most recent combat result">
+        <strong>COMBAT</strong>
+        <div>{combatEvents.slice(-1).map(event=><span key={event.id}
           data-damage-type={event.type}>{describeGame3DCombatEvent(event)}</span>)}
-          {!combatEvents.length&&<span>Misses, dealt and received damage will appear here.</span>}
         </div>
       </aside>}
-      <div ref={listRef} className="game3d-chat-messages max-h-[110px] overflow-y-auto px-2 py-1 text-[11px] leading-snug">
+      <div ref={listRef} className="game3d-chat-messages max-h-[88px] overflow-y-auto px-2 py-1 text-[11px] leading-snug">
         {shown.length===0&&<div className="text-white/40">{tab==='combat'?'No combat events yet.':'No messages yet.'}</div>}
         {tab==='combat' ? shown.map(event=><div key={event.id} className="game3d-chat-combat-event"
           data-damage-type={event.type}>{describeGame3DCombatEvent(event)}</div>) :
@@ -226,7 +224,6 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       )}
       </div>
       <div className="game3d-chat-channel-row pointer-events-auto" role="group" aria-label="Chat channels">
-        <MessageSquare className="h-3 w-3 shrink-0 text-amber-200/70" aria-hidden="true"/>
         <button type="button" disabled title="Regular nearby chat needs server proximity messaging">Regular</button>
         <button type="button" aria-pressed={tab==='world'} onClick={()=>{setTab('world');setExpanded(true);setTyping(true);}}
           className={tab==='world'?'is-active':''}>World</button>
