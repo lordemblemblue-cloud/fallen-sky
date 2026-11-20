@@ -159,11 +159,9 @@ import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
 import {game3dWorldGraphicsBudget} from './performance/Game3DWorldGraphicsBudget.mjs';
-import { createAtomicUltraSumiMode } from './render/atomicUltraSumiMode.mjs';
 import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
   from './wolfveil/WolfveilMeadowField.mjs';
-import {classifyBlazeBiome} from './render/BlazeBiomeLandscaping.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/WolfveilScene';
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
@@ -577,15 +575,12 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
     // this, three.js shadow-map pass crashes inside getUniforms() with
     // "Cannot read properties of null (reading 'trim')".
     const rendererGuard = attachContextGuard(renderer);
-    // Clone-only, one-time activation of the user's selected Ultra Max
-    // world style; never migrates inventory, characters or simulation state.
-    let cloneUltraGraphics;
-    try{cloneUltraGraphics=activateCloneUltraWorldGraphics(window.localStorage);}
-    catch{cloneUltraGraphics=activateCloneUltraWorldGraphics(null);}
+    // Sanitize retired Ultra-Sumi saves; only Classic or Ink can load.
+    try{activateCloneUltraWorldGraphics(window.localStorage);}
+    catch{/* Rendering must work even with blocked storage. */}
     // The world's look: sumi-e ink wash (render/inkWashLook.js), as the pause menu's Graphics settings say (or ?ink=).
     const inkLook = createInkWashLook({ renderer, guard: rendererGuard, level: resolveInkLevel(), palette: resolveInkPalette() });
     let livingInkWorld = null; // initialized only after the Game 3D Wolfveil roots exist
-    let atomicLook = null; // clone-only safe global vegetation material style
     let suigenActive=false; // set before any Graphics listeners can fire
     // A refresh-rate-independent rendering cap; game simulation still runs
     // on every browser rAF, so movement and server authority are not throttled.
@@ -627,10 +622,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       inkLook.setPalette(resolveInkPalette());
       inkLook.setLevel(resolveInkLevel());
       livingInkWorld?.setLevel(resolveInkLevel());
-      const g={...cloneUltraGraphics,...readGraphicsSettings()};
-      atomicLook?.setQuality(g.quality||'high');
-      ambientBirds?.setQuality(g.quality||'high');
-      atomicLook?.setEnabled(g.artStyle==='atomic-ultra-sumi'&&!suigenActive);
+      ambientBirds?.setQuality(readGraphicsSettings().quality||'low');
       applyWorldGraphicsBudget();
     };
     window.addEventListener('graphicsSettingsChanged', onGraphicsSettings);
@@ -660,7 +652,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         if(Math.abs((renderer.getPixelRatio?.()||1)-target.ratio)>=.001)
           renderer.setPixelRatio(target.ratio);
         inkLook.setSize();
-        atomicLook?.resize();
         publishGame3DActualFramebuffer({
           renderer,host:window,resolution:saved.resolution,limited:target.limited,
         });
@@ -1010,33 +1001,9 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       roots:[wolfveilVillage.world.group,livingMeadow?.root,importedSpawnTown?.root],
       level:resolveInkLevel(),
     }) : null;
-    // The *existing* clone game scene is reused. GPU-instanced living grass
-    // streams across all eligible outdoor Wolfveil tiles, not one 1000m²
-    // demonstration patch. Trees keep their actual imported GLB materials.
-    const atomicSettings={...cloneUltraGraphics,...readGraphicsSettings()};
-    atomicLook=createAtomicUltraSumiMode({
-      scene,renderer,camera,guard:rendererGuard,worldRegion:region,
-      // Wolfveil terrain is authored at local Z; the world offset is +70.
-      // Analytic sampler avoids ~2,000 expensive ground raycasts per tile.
-      sampleHeight:region==='wolfveil'
-        ? (x,z)=>isInsideMeadowCircle(x,z-70)?
-          meadowGroundHeight(x,z-70):null
-        :sampleGroundY,
-      quality:atomicSettings.quality||'high',
-      enabled:atomicSettings.artStyle==='atomic-ultra-sumi',
-      allowGrass:(x,z)=>region==='wolfveil'&&
-        isInsideMeadowCircle(x,z-70)&&
-        !insideWolfveilImportedTown(x,z,3)&&
-        wolfveilDistanceToRiver(x,z-70)>4&&
-        !isVortexLakeWetSurface(x,z-70,2)&&
-        wolfveilRouteClearance(x,z-70)>4&&
-        // Landscape design: trails, camp floors, fighting-ground turf and
-        // mountain rock/snow stay clear of tall streamed grass.
-        wolfveilLandscapeAllowsTallGrass(x,z-70),
-      biomeAt:({x,z})=>region==='wolfveil'?'meadow':
-        classifyBlazeBiome({region}),
-    });
-    window.__gw3dAtomicLook=atomicLook;
+    // Ultra-Sumi's extra full-frame and player-following grass render passes
+    // were removed. Draw the existing Classic/Ink world without that subsystem.
+    window.__gw3dAtomicLook=null;
 
     // Owner-required rollback: Classic Wolfveil is the actual live Game 3D
     // world. The complete Suigen map is preserved as an offline/archive asset,
@@ -1096,7 +1063,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         root.visible=originalVisibility.get(root)??true;
       classicSuigenAccents?.setVisible(true);
       ensureClassicSuigenAccents();
-      atomicLook?.setEnabled(readGraphicsSettings().artStyle==='atomic-ultra-sumi');
     };
     const worldVariantStatus=detail=>{
       window.dispatchEvent(new CustomEvent(WORLD_VARIANT_STATUS_EVENT,{detail}));
@@ -3191,8 +3157,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
           entryCamera.preview(delta,{camera,model,mode:entryPreviewModeRef.current,
             clipAgainstTerrain:pose=>playerCameraSystem.clipAgainstTerrain(pose)});
         }
-        atomicLook?.update(delta,modelRef.current?.position,envSystem.getState());
-        if(renderThisFrame&&!atomicLook?.render(camera))inkLook.render(scene,camera);
+        if(renderThisFrame)inkLook.render(scene,camera);
         return;
       }
       if(menuCameraHeld){
@@ -5303,8 +5268,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       if(playerFace){const fighting=isInCombat();playerFace.setMood(fighting?'fierce':'neutral',fighting?.85:1);playerFace.update(Math.min(delta,.1));}
       const activeCamera=window.__axeTileInspectionCamera?.worldId === 'game3d'
         ? window.__axeTileInspectionCamera.camera : camera;
-      atomicLook?.update(delta,modelRef.current?.position,envSystem.getState());
-      if(renderThisFrame&&!atomicLook?.render(activeCamera))inkLook.render(scene,activeCamera);
+      if(renderThisFrame)inkLook.render(scene,activeCamera);
     };
     animate();
 
@@ -5324,7 +5288,6 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
         window.__axe3dCloneGovernor.syncViewport();
       else onDisplayResolution();
       inkLook.setSize();
-      atomicLook?.resize();
     };
     const canvasResizeObserver=typeof ResizeObserver!=='undefined'
       ?new ResizeObserver(handleResize):null;
@@ -5415,8 +5378,7 @@ export default function GameWorld3D({region='wolfveil',initialWorkflowTarget=nul
       suigenRuntime?.dispose();
       suigenRuntime=null;
       showClassic();
-      atomicLook?.dispose();
-      if(window.__gw3dAtomicLook===atomicLook)window.__gw3dAtomicLook=null;
+      window.__gw3dAtomicLook=null;
       inkLook.dispose(); if (window.__gw3dInkLook === inkLook) window.__gw3dInkLook = null;
       clearInterval(weatherInterval);
       window.removeEventListener('axeNearbyRespawnQuery', onNearbyRespawnQuery);
