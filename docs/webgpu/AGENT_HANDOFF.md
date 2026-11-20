@@ -53,3 +53,10 @@ GitHub Actions validates pushes/PRs, not autonomous code writing. Scheduled codi
 - The inventory reports known blockers and preserves a parity checklist for outward/inward rings, held lenses, chromatic fringe and glow. A clean static inventory is **not** proof of GPU runtime compatibility.
 - Next owner: implement and browser-validate a WebGPU-compatible postprocessing path (using APIs supported by the installed Three.js version), then compare WebGL visuals and fallback/device-loss behavior before scene gating. Fallen Sky `GameWorld3D.jsx` remains a separate audit.
 - Validation to run: `node --test tests/duelistWarpReadiness.test.mjs`, `npm run lint`, `npm run build`; no tests or benchmarks claimed until a runner reports results. No merge/deploy without review.
+
+## Status refresh — 2026-11-20 (fail-closed scene readiness policy)
+- Branch `feature/webgpu-scene-readiness-policy-20261120` owns `src/lib/webgpuSceneReadiness.mjs`, `tests/webgpuSceneReadiness.test.mjs` and this handoff paragraph only.
+- Both live game scene IDs are explicitly **not ready** for WebGPU. Unknown scene IDs fail closed, including inherited property names; no live renderer is switched by this inventory.
+- The readiness helper is available for future integration with `selectRendererBackend` only after scene-level audits and browser validation. Do not flip either flag based on static tests alone.
+- Validation requested: `node --test tests/webgpuSceneReadiness.test.mjs tests/rendererSelection.test.mjs`, `npm run lint`, `npm run build`; not executed by this GitHub-only agent.
+- Next owners: Duelist postprocessing parity and Fallen Sky GameWorld3D audit, each on separate PRs. Marcus Flow 1 remains deferred.
