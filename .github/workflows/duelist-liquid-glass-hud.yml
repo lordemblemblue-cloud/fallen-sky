@@ -48,3 +48,17 @@ jobs:
         run: node scripts/verify-duelist-ui.mjs
       - name: Lint HUD components
         run: npx eslint src/components/duelist/client/DuelistGame.jsx src/components/duelist/client/GlassHud.jsx src/components/duelist/client/MatchHud.jsx src/components/duelist/client/glassHud.mjs src/components/duelist/client/resultPresentation.mjs
+
+  build-app:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build full TanStack app separately from unrelated test failures
+        run: npm run build
