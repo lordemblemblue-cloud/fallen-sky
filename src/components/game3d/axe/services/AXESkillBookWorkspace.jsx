@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import AXESkillBookRedesign from './AXESkillBookRedesign';
 import AXECloneSkillTreeWorkspace from './AXECloneSkillTreeWorkspace';
 import { getSkillById } from '../../skills/skillRegistry';
+import {getPlayerHUD} from '../../playerHUDStore';
 import { isWeaponSkillUnlocked } from '../../skills/weaponSkillPointsStore';
 import { SKILL_TYPE } from '../../skills/skillTypes';
 import {
@@ -172,7 +173,7 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
         const put=assignAXEHUDWeaponRole(mode.role,weapon.instanceId);
         if(!put.ok){setStatus(put.message||String(put.reason||'Unable to equip weapon').replaceAll('_',' '));return;}
       }
-      const draw=switchAXEInventoryWeapon(weapon.instanceId);
+      const draw=switchAXEInventoryWeapon(weapon.instanceId,{level:getPlayerHUD().level||1});
       if(!draw.ok){
         setStatus(draw.message||String(draw.reason||'Unable to draw this weapon').replaceAll('_',' '));
         return;
