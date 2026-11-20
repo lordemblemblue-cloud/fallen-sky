@@ -119,6 +119,12 @@ test('acquired roster reflects only awarded abilities and collected skill drops'
   assert.ok(afterLearning.every(s=>s.learned));
 });
 
+test('published Base44 hosts do not auto-grant skills merely from their hostname',()=>{
+  const loot=read('src/components/game3d/lootStore.jsx');
+  assert.match(loot,/h === 'localhost' \|\| h === '127\\.0\\.0\\.1'/);
+  assert.doesNotMatch(loot,/h\\.includes\\('base44\\.app'\\)/);
+});
+
 test('Skill Book listens to loot, vault and learned ownership in BOTH layouts',()=>{
   const panel=read('src/components/game3d/axe/services/AXEAcquiredSkillsPanel.jsx');
   assert.match(panel,/subscribeLearnedSkills\(refresh\)/);
