@@ -37,17 +37,18 @@ test('Escape sections now offer Services and Scoreboard, while retaining Setting
   assert.match(pause,/if \(!entry && !confirmAction\) \{ onClose\(\); return; \}/);
   assert.match(pause,/onClick=\{\(\)=>selectView\('graphics'\)\}/);
 });
-test('HUD never draws Services button in Game 3D, and Escape launch clears overlays',()=>{
+test('Services/subpages appear only while an active workspace is open, and Escape clears overlays',()=>{
   const hud=read('src/components/game3d/hud/JadeSoulHUD.jsx');
   const game=read('src/pages/GameView.jsx');
   assert.match(hud,/showServicesNavigation = false/);
   assert.match(hud,/showServicesNavigation && <AXEServicesNavigation/);
-  assert.match(game,/showServicesNavigation=\{false\}/);
+  assert.match(game,/showServicesNavigation=\{services\.active\}/);
+  assert.match(game,/onToggleServices=\{\(\) => services\.controller\.toggle\(\)\}/);
   assert.match(game,/characterTab: activeCharacterSubview/);
   assert.match(game,/toggle\.action === 'focus'/);
   assert.match(game,/setFocusCharacterRequest\(value => value \+ 1\)/);
-  assert.match(game,/onOpenService=\{groupId =>/);
-  assert.match(game,/void services\.controller\.open\(groupId\)/);
+  assert.match(game,/onOpenService=\{\(groupId, serviceId = null\) =>/);
+  assert.match(game,/void services\.controller\.open\(groupId, serviceId \? \{ serviceId \} : \{\}\)/);
   assert.match(game,/services\.controller\.close\(\);\s*setPauseMenuOpen\(\(v\) => !v\)/);
   const workspace=read('src/components/game3d/axe/services/AXEServiceWorkspace.jsx');
   assert.match(workspace,/event\.key === 'Escape'\) \{ event\.preventDefault\(\); onClose\(\); \}/);
@@ -92,4 +93,31 @@ test('Letter hotkeys work even while launcher is open, and input remains guarded
   assert.match(game,/onOpenMap=\{\(\) => \{/);
   assert.match(game,/window\.dispatchEvent\(new CustomEvent\('axeOpenWorldMap'/);
   assert.match(pause,/event\.key!=='Escape'\|\|event\.repeat/);
+});
+
+test('Escape launcher shows every real Service group and exposes its registered subpages',()=>{
+  const pause=read('src/components/game3d/PauseMenu.jsx');
+  const css=read('src/components/game3d/PauseMenu.css');
+  const appearance=read('src/components/game3d/axe/services/AXEAppearanceWorkspace.jsx');
+  assert.match(pause,/label:'Spirituality',hotkey:'J'/);
+  assert.match(pause,/className="axe3d-pause__launcher-subpages" aria-label="All service subpages"/);
+  assert.match(pause,/AXE_SERVICE_GROUPS\.map\(group=>\{/);
+  assert.match(pause,/group\.visibleServiceIds \|\| group\.serviceIds/);
+  assert.match(pause,/<details className="axe3d-pause__launcher-subpage-group" key=\{group\.id\}>/);
+  assert.match(pause,/onOpenService\?\.\(group\.id,serviceId\)/);
+  assert.match(pause,/getAXEService\(serviceId\)\?\.label/);
+  assert.match(css,/\.axe3d-pause__launcher-subpage-buttons/);
+  // A direct Cape choice must open Cape content, not silently return to Character.
+  assert.match(appearance,/serviceId === 'cape' \? 'Vanity' : 'Character'/);
+  assert.match(appearance,/setDetail\(serviceId === 'cape' \? 'cape' : ''\)/);
+});
+
+test('C/K/Escape close both the active workspace and the expanded Services row',()=>{
+  const game=read('src/pages/GameView.jsx');
+  const controller=read('src/components/game3d/axe/services/AXEServiceModeController.js');
+  const hud=read('src/components/game3d/hud/JadeSoulHUD.jsx');
+  assert.match(game,/if \(toggle\.action === 'close'\) services\.controller\.close\(\)/);
+  assert.match(game,/if \(e\.key === 'Escape'\) \{ e\.preventDefault\(\); services\.controller\.close\(\); \}/);
+  assert.match(controller,/publish\(\{ \.\.\.initial\(\), message \}\)/);
+  assert.match(hud,/\{showServicesNavigation && <AXEServicesNavigation/);
 });
