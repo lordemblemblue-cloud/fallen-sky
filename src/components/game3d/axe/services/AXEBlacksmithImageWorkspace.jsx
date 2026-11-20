@@ -635,6 +635,7 @@ export default function AXEBlacksmithImageWorkspace({
         target={selectedItem} donor={donorItem}
         compatibleDonors={compatibleDonors} requirements={materialRequirements}
         selectedMaterial={stagedMaterial} materialSelection={selectedMaterialId}
+        getMaterialName={id => MATERIAL_NAMES.get(id) || id.replaceAll('_', ' ')}
         readout={readout} canForge={canForge} confirmCombine={confirmCombine}
         autoEnabled={autoEnabled} onToggleAuto={next => { setAutoEnabled(next); setBatchPending(false); }}
         autoProtection={autoProtection} onToggleProtection={setAutoProtection}
