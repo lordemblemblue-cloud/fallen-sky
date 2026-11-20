@@ -8,7 +8,7 @@ import {
 } from '../src/components/duelist/core/classes.mjs';
 
 const actor = { id: 'attacker', team: 'blue', hp: 100, position: { x: 0, z: 0 } };
-const enemy = (hp = 25, x = 0, z = -1.5) => ({
+const enemy = (hp = 25, x = 0, z = 1.5) => ({
   id: 'enemy', team: 'red', hp, maxHp: 100, position: { x, z, yaw: 0 },
   protectedUntil: -Infinity,
 });
@@ -91,8 +91,8 @@ test('assassin execution costs the entire meter and requires striking from behin
   assert.equal(good.allowed, true, 'assassin is not gated by enemy HP threshold');
   assert.equal(good.meterAfter, 0);
   assert.equal(evaluateSpecial({ classId: 'assassin', meter: 99, actor, target: enemy() }).reason, 'not-charged');
-  assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(100, 0, 1) }).reason, 'not-behind');
-  assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(100, 0, -3) }).reason, 'out-of-range');
+  assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(100, 0, -1) }).reason, 'not-behind');
+  assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(100, 0, 3) }).reason, 'out-of-range');
 });
 
 test('an execution never passes spawn protection or targets allies or fallen enemies', () => {
