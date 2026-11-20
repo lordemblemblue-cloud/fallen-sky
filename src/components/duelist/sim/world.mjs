@@ -37,10 +37,10 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0 } = {}) {
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
-  const fighter = createFighter({ id, team: old.team, weapon: old.weapon });
+  const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon });
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
