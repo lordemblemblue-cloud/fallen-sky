@@ -26,11 +26,10 @@ export const GAME3D_DEFAULT_KEYBINDS = Object.freeze(Object.fromEntries(
 // Leave game/system-critical controls (ESC, Tab, F mount/kick, G clan,
 // Z/X/V/B companion, numbers/abilities, Shift/Control/Alt) unmapped for now.
 // Shift+C weapon-role cycling and all modifier shortcuts remain untouched.
-export const game3dCanBindCode = code =>
-  code==='Space'||code==='Equal'||/^Key[A-EH-O PRTUWY]$/.test(code);
-// Use explicit checks instead of the above broad expression for readability.
 const bindable = code => code==='Space'||code==='Equal'||
   (/^Key[A-Z]$/.test(code) && !['KeyF','KeyG','KeyV','KeyB','KeyZ','KeyX'].includes(code));
+
+export const game3dCanBindCode = bindable;
 
 export function normalizeGame3DKeybinds(candidate) {
   const defaults={...GAME3D_DEFAULT_KEYBINDS};
