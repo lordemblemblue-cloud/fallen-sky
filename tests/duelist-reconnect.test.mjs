@@ -210,14 +210,14 @@ test('the browser\'s source reconnects by itself and sits back down; after a rel
   assert.ok(await until(() => source.status === 'ready' && server.rooms.get(roomId).clients.get('ann')?.away === false, 4000), 'and sits back down by itself');
   assert.equal(source.code, code, 'in the same crew');
   assert.equal(source.meId, 'ann');
-  assert.equal(server.rooms.size, 5, 'no new room beyond four official arenas and this crew');
+  assert.equal(server.rooms.size, 6, 'no new room beyond five official arenas and this crew');
   // a reload: the page goes without leaving; the new page finds the key in the tab's storage
   source.dispose({ keepSeat: true });
   assert.ok(kept.get('duelist.resume'), 'the key is kept in the tab');
   const reloaded = createOnlineSource({ url, token: 'ann', name: 'Ann', body: 'huntress', mode: 'story', room: 'new', storage });
   assert.ok(await until(() => reloaded.status === 'ready'));
   assert.equal(reloaded.code, code, 'the same crew, not a new room');
-  assert.equal(server.rooms.size, 5);
+  assert.equal(server.rooms.size, 6);
   assert.equal(server.rooms.get(roomId).clients.get('ann').away, false);
   // back to the menu: the seat is given up and the key forgotten
   reloaded.dispose();
