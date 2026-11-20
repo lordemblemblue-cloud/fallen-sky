@@ -555,3 +555,87 @@
   .axe3d-pause__hud-selector select{grid-column:1/span 2}
   .axe3d-pause__hud-buttons button{flex:1 1 auto}
 }
+
+
+/* World Escape: a right-side sliding drawer. The title settings keep their
+   original centered/full-screen presentation, and gameplay HUD remains behind. */
+.axe3d-pause__overlay[data-context="world"]{
+  justify-content:flex-end;align-items:stretch;padding:0;
+  background:rgba(3,8,15,.5);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__panel{
+  width:min(760px,100vw);height:100dvh;max-height:100dvh;
+  margin:0;border:0;border-left:1px solid rgba(171,216,223,.36);
+  border-radius:16px 0 0 16px;
+  box-shadow:-24px 0 85px rgba(0,0,0,.56);
+  background:linear-gradient(115deg,rgba(8,21,33,.98),rgba(11,29,42,.98));
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__body{
+  grid-template-columns:195px minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__header{
+  min-height:78px;padding:13px 24px;
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__rail{
+  padding:16px 10px;gap:3px;
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__nav-item{
+  min-height:39px;padding:9px!important;font-size:12px;
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__content{
+  padding:25px clamp(15px,3vw,34px);
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__section-head h3{
+  font-size:clamp(24px,3vw,32px);
+}
+.axe3d-pause__overlay[data-context="world"] .axe3d-pause__footer{
+  padding:12px 24px;
+}
+.axe3d-pause__quick-actions,.axe3d-pause__service-list{
+  display:flex;flex-direction:column;gap:4px;margin-bottom:20px;
+}
+.axe3d-pause__quick-actions button,.axe3d-pause__service-link{
+  display:flex;align-items:center;gap:12px;
+  min-height:48px;width:100%;padding:12px 14px;text-align:left;
+  color:#eaf6f5;background:rgba(135,202,216,.07);
+  border:1px solid rgba(168,216,224,.2);border-radius:8px;
+}
+.axe3d-pause__quick-actions button:hover,.axe3d-pause__service-link:hover{
+  border-color:rgba(173,235,242,.66);background:rgba(135,202,216,.17);
+}
+.axe3d-pause__quick-actions button span,
+.axe3d-pause__service-link>span{flex:1;min-width:0}
+.axe3d-pause__service-link>span{display:flex;flex-direction:column;gap:4px}
+.axe3d-pause__service-link strong{font-size:14px;font-weight:650}
+.axe3d-pause__service-link small{font-size:11px;color:#a5c7ce}
+.axe3d-pause__service-hint{font-size:12px;color:#b5ccd2;line-height:1.6;margin:12px 2px}
+.axe3d-pause__scoreboard{border:1px solid rgba(159,212,224,.24);border-radius:10px;padding:14px}
+.axe3d-pause__scoreboard-row{
+  display:flex;align-items:center;justify-content:space-between;gap:15px;
+  padding:12px 3px;border-bottom:1px solid rgba(165,216,224,.13);
+  font-size:13px;color:#b5cbd2;
+}
+.axe3d-pause__scoreboard-row strong{color:#f2e7d1;font-variant-numeric:tabular-nums}
+.axe3d-pause__scoreboard-empty{padding:25px 4px;text-align:center;color:#aec5cd}
+.axe3d-pause__scoreboard-empty svg{margin:0 auto 12px;color:#e0c48c}
+.axe3d-pause__scoreboard-empty strong{display:block;color:#f1e5ce;font-size:14px}
+.axe3d-pause__scoreboard-empty p{margin-top:9px;line-height:1.6;font-size:12px}
+@media(max-width:700px){
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__panel{
+    width:100vw;border-radius:0;
+  }
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__body{
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);
+  }
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__rail{
+    flex-direction:row;overflow-x:auto;overflow-y:hidden;
+    padding:7px;border-right:0;border-bottom:1px solid rgba(209,235,238,.2);
+  }
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__nav-item{
+    flex:0 0 auto;width:auto;min-width:max-content;
+  }
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__content{padding:17px}
+  .axe3d-pause__overlay[data-context="world"] .axe3d-pause__footer{padding:10px 15px}
+}
