@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 260" fill="none" aria-hidden="true">
+<defs>
+<linearGradient id="metal" x1="0" y1="0" x2="960" y2="260" gradientUnits="userSpaceOnUse"><stop stop-color="#48b9e7" stop-opacity=".42"/><stop offset=".18" stop-color="#f9d79e" stop-opacity=".86"/><stop offset=".5" stop-color="#fff5d8"/><stop offset=".82" stop-color="#db9d4d" stop-opacity=".82"/><stop offset="1" stop-color="#5dd5ff" stop-opacity=".35"/></linearGradient>
+<linearGradient id="glass" x1="480" y1="0" x2="480" y2="260" gradientUnits="userSpaceOnUse"><stop stop-color="#b9efff" stop-opacity=".14"/><stop offset=".42" stop-color="#193c50" stop-opacity=".27"/><stop offset="1" stop-color="#050d18" stop-opacity=".36"/></linearGradient>
+<linearGradient id="wave" x1="0" y1="0" x2="960" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#4fd2ff" stop-opacity="0"/><stop offset=".25" stop-color="#6bd8ff" stop-opacity=".7"/><stop offset=".48" stop-color="#fff0b5"/><stop offset=".75" stop-color="#f7c073" stop-opacity=".78"/><stop offset="1" stop-color="#ffcd88" stop-opacity="0"/></linearGradient>
+</defs>
+<path d="M12 127H180L225 78H370L411 42H550L589 78H735L780 127H948L923 149H787L737 187H592L555 224H407L370 187H224L174 149H37Z" fill="url(#glass)" stroke="url(#metal)" stroke-width="3"/>
+<path d="M63 123H186L232 85H382L421 51H539L578 85H728L774 123H900" stroke="#defaff" stroke-opacity=".56" stroke-width="2"/>
+<path d="M63 156H186L233 193H382L421 234H539L578 193H728L774 156H900" stroke="#fbd18e" stroke-opacity=".65" stroke-width="2"/>
+<path d="M190 135H769" stroke="url(#wave)" stroke-width="9" stroke-opacity=".5"/>
+<path d="M200 140H760" stroke="#f9d28c" stroke-width="1.2" stroke-opacity=".42"/>
+<path d="M480 0L496 32L522 37L495 50L480 70L465 50L438 37L464 32Z" fill="#ffe8b1" fill-opacity=".91"/>
+<path d="M480 260L491 240L511 237L489 228L480 208L471 228L450 237L470 240Z" fill="#68d2fa" fill-opacity=".7"/>
+<path d="M170 130L186 114L202 130L186 146Z M790 130L774 114L758 130L774 146Z" stroke="#ffe1a6" stroke-width="3"/>
+<path d="M26 132H163M797 132H934" stroke="url(#wave)" stroke-width="3"/>
+<path d="M421 32H539M421 244H539" stroke="#f8d7ab" stroke-opacity=".55"/>
+</svg>

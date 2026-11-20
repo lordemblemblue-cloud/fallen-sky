@@ -1,6 +1,10 @@
 // The match HUD (simple on purpose): the score line at the top, the countdown and "Fight!", the respawn
 // note, the feed of what happened, and the result with the scoreboard.
+import { useEffect, useState } from 'react';
 import { TEAM_COLORS } from './matchProps.mjs';
+import './glassVictory.css';
+import { resultOutcome, resultsScoreText, VICTORY_HOLD_MS } from './resultPresentation.mjs';
+import { captureText, pointState } from './glassHud.mjs';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 const clock = (s) => (s === null || s === undefined ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`);
@@ -15,60 +19,112 @@ function FlagMark({ team, flag }) {
 }
 
 export function ScoreLine({ view }) {
+  if (!view) return null;
   const { mode } = view;
-  let middle = null;
-  if (mode === 'duel') {
-    const foe = view.people.find((p) => p.id !== meOf(view));
-    middle = (
-      <>
-        <span>You {view.me?.roundWins ?? 0}</span>
-        <span className="duelist-score-sep">Round {view.round} · first to {view.rounds}</span>
-        <span>{foe?.roundWins ?? 0} {foe?.name}</span>
-      </>
-    );
-  } else if (mode === 'control') {
-    middle = (
-      <>
-        <span style={{ color: hex(TEAM_COLORS.red) }}>Red {Math.floor(view.teamScores.red)}%</span>
-        <span className="duelist-score-sep">First to 100%</span>
-        <span style={{ color: hex(TEAM_COLORS.blue) }}>{Math.floor(view.teamScores.blue)}% Blue</span>
-      </>
-    );
-  } else if (mode === 'tdm' || mode === 'ctf' || mode === 'football') {
-    middle = (
-      <>
-        <span style={{ color: hex(TEAM_COLORS.red) }}>Red {view.teamScores.red}</span>
-        <span className="duelist-score-sep">{view.scoreToWin ? `to ${view.scoreToWin}` : ''}</span>
-        <span style={{ color: hex(TEAM_COLORS.blue) }}>{view.teamScores.blue} Blue</span>
-      </>
-    );
-  } else if (mode === 'ffa') {
-    const leader = view.people[0];
-    middle = (
-      <>
-        <span>You {view.me?.defeats ?? 0}</span>
-        <span className="duelist-score-sep">to {view.scoreToWin}</span>
-        <span>{leader && leader.id !== meOf(view) ? `${leader.name} ${leader.defeats}` : 'You lead'}</span>
-      </>
+  if (mode === 'control' && Array.isArray(view.controlPoints)) {
+    return (
+      <div className="duelist-scoreline duelist-scoreline--control">
+        <div className="duelist-control-rail" role="group" aria-label="Three-Point Control score and objectives">
+          <div className="duelist-control-team duelist-control-team--red">
+            <strong>{Math.floor(view.teamScores.red)}%</strong><span>RED TEAM</span>
+          </div>
+          <div className="duelist-control-centre">
+            <div className="duelist-control-points">
+              {view.controlPoints.map(point => (
+                <div key={point.id} className="duelist-control-point" data-state={pointState(point)}
+                  data-owner={point.owner || 'neutral'} title={captureText(point)} aria-label={captureText(point)}>
+                  <strong>{point.id}</strong>
+                  {point.contested && <small aria-hidden="true">!</small>}
+                  {!point.contested && point.capturing && <small aria-hidden="true">{Math.round(Math.min(1, Math.max(0, point.progress || 0)) * 100)}%</small>}
+                </div>
+              ))}
+            </div>
+            <span className="duelist-control-caption">CAPTURE · HOLD TWO TO SCORE</span>
+          </div>
+          <div className="duelist-control-team duelist-control-team--blue">
+            <strong>{Math.floor(view.teamScores.blue)}%</strong><span>BLUE TEAM</span>
+          </div>
+        </div>
+      </div>
     );
   }
-  return (
-    <div className="duelist-scoreline">
-      <div className="duelist-scoreline-mode">{view.name}{view.clockLeft !== null ? ` · ${clock(view.clockLeft)}` : ''}</div>
-      {middle && <div className="duelist-scoreline-score">{middle}</div>}
-      {view.controlPoints && (
-        <div className="duelist-scoreline-flags" aria-label="Three-Point Control objectives">
-          {view.controlPoints.map(point => (
-            <span key={point.id}
-              title={point.contested ? `${point.id}: contested` : point.capturing ? `${point.id}: ${point.capturing} capturing ${Math.round(point.progress * 100)}%` : `${point.id}: ${point.owner || 'neutral'}`}
-              style={{ color: point.owner === 'red' ? hex(TEAM_COLORS.red) : point.owner === 'blue' ? hex(TEAM_COLORS.blue) : '#d6e1eb', fontWeight: 800 }}>
-              {point.id}{point.contested ? ' ⚔' : point.capturing ? ` ${Math.round(point.progress * 100)}%` : ''}
-            </span>
-          ))}
+  // The rotating single-point and escort headers are deliberately waiting
+  // for their own server-authoritative objectives. Never simulate a timer in UI.
+  if (mode === 'single_control') {
+    if (!view.singlePoint) return null;
+    const point = view.singlePoint;
+    const status = point.active ? point.contested ? 'CONTESTED' : point.owner ? 'ZONE CONTROLLED' : 'CAPTURE THE ZONE' :
+      Number.isFinite(point.nextIn) ? `NEXT ZONE IN ${Math.ceil(Math.max(0, point.nextIn))}s` : 'ZONE INACTIVE';
+    return (
+      <div className="duelist-scoreline duelist-scoreline--single">
+        <div className="duelist-single-rail" role="group" aria-label="Rotating control-point objective">
+          <strong className="duelist-single-score duelist-single-score--blue">{Math.floor(view.teamScores?.blue || 0)}%</strong>
+          <div className="duelist-single-middle">
+            <strong>{point.active ? point.id || '◆' : '◇'}</strong>
+            <span>{status}</span>
+          </div>
+          <strong className="duelist-single-score duelist-single-score--red">{Math.floor(view.teamScores?.red || 0)}%</strong>
         </div>
-      )}
+      </div>
+    );
+  }
+  if (mode === 'escort') {
+    if (!view.escort || !Number.isFinite(view.escort.progress)) return null;
+    const percent = Math.max(0, Math.min(100, view.escort.progress));
+    return (
+      <div className="duelist-scoreline duelist-scoreline--escort">
+        <div className="duelist-escort-rail" role="group" aria-label="Escort transport objective">
+          <strong>ESCORT TRANSPORT</strong>
+          <div className="duelist-escort-track" role="progressbar" aria-label="Escort progress"
+            aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(percent)}>
+            <span style={{ width: `${percent}%` }} />
+          </div>
+          <span className="duelist-escort-percent">{Math.round(percent)}%</span>
+          <span className="duelist-escort-subtitle">{view.escort.contested ? 'CONTESTED · CLEAR THE TRANSPORT' :
+            view.escort.moving ? 'TRANSPORT ADVANCING' : 'WAITING FOR ESCORT'}</span>
+        </div>
+      </div>
+    );
+  }
+
+  let left = 'YOU', leftScore = 0, right = 'ENEMY', rightScore = 0, centre = clock(view.clockLeft) || '—', caption = view.name;
+  if (mode === 'tdm' || mode === 'ctf' || mode === 'football') {
+    left = 'BLUE TEAM'; leftScore = view.teamScores.blue;
+    right = 'RED TEAM'; rightScore = view.teamScores.red;
+    caption = mode === 'tdm' ? 'TEAM DEATHMATCH' : mode === 'ctf' ? 'CAPTURE THE FLAG' : 'FOOTBALL';
+  } else if (mode === 'duel') {
+    const foe = view.people.find(p => p.id !== meOf(view));
+    left = 'YOUR ROUNDS'; leftScore = view.me?.roundWins ?? 0;
+    right = foe?.name || 'RIVAL'; rightScore = foe?.roundWins ?? 0;
+    caption = `ROUND ${view.round} · FIRST TO ${view.rounds}`;
+  } else if (mode === 'ffa') {
+    const leader = view.people[0];
+    left = 'YOUR KILLS'; leftScore = view.me?.defeats ?? 0;
+    right = leader?.id === meOf(view) ? 'YOU LEAD' : leader?.name || 'LEADER';
+    rightScore = leader?.defeats ?? 0;
+    caption = `FREE FOR ALL · FIRST TO ${view.scoreToWin}`;
+  } else {
+    // Practice, tutorial and any newly introduced mode retain a small label;
+    // no imaginary score is rendered for modes without authoritative tallies.
+    return <div className="duelist-scoreline duelist-scoreline--simple">
+      <div className="duelist-scoreline-mode">{view.name}{view.clockLeft !== null ? ` · ${clock(view.clockLeft)}` : ''}</div>
+    </div>;
+  }
+  return (
+    <div className="duelist-scoreline duelist-scoreline--kills">
+      <div className="duelist-kill-rail" role="group" aria-label={caption}>
+        <div className="duelist-kill-side duelist-kill-side--blue">
+          <strong>{leftScore}{view.scoreToWin && mode === 'tdm' ? `/${view.scoreToWin}` : ''}</strong>
+          <span>{left}</span>
+        </div>
+        <div className="duelist-kill-clock"><strong>{centre}</strong><span>{caption}</span></div>
+        <div className="duelist-kill-side duelist-kill-side--red">
+          <strong>{rightScore}{view.scoreToWin && mode === 'tdm' ? `/${view.scoreToWin}` : ''}</strong>
+          <span>{right}</span>
+        </div>
+      </div>
       {view.flags && (
-        <div className="duelist-scoreline-flags">
+        <div className="duelist-scoreline-flags" aria-label="Flag state">
           <FlagMark team="red" flag={view.flags.red} />
           <FlagMark team="blue" flag={view.flags.blue} />
         </div>
@@ -119,28 +175,61 @@ export function Feed({ view }) {
   return <div className="duelist-feed">{lines.map((l) => <div key={l.key}>{l.text}</div>)}</div>;
 }
 
+/** The result animates over the still-visible arena before the details panel appears. */
 export function Result({ view, myTeam, onAgain, online = false }) {
+  const [showBoard, setShowBoard] = useState(false);
+  useEffect(() => {
+    if (view.phase !== 'over') {
+      setShowBoard(false);
+      return undefined;
+    }
+    setShowBoard(false);
+    const timer = setTimeout(() => setShowBoard(true), VICTORY_HOLD_MS);
+    return () => clearTimeout(timer);
+  }, [view.phase, view.winner]);
   if (view.phase !== 'over') return null;
   const w = view.winner;
-  const won = w === meOf(view) || (myTeam && w === myTeam);
-  const title = w === 'draw' ? 'Draw' : won ? 'Victory' : 'Defeated';
-  const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football' || view.mode === 'control';
+  const outcome = resultOutcome(view, myTeam);
+  const won = outcome === 'VICTORY';
+  const scoreText = resultsScoreText(view);
+  const teams = Boolean(scoreText);
   return (
-    <div className="duelist-center duelist-result">
-      <div className="duelist-result-title">{title}</div>
-      {teams && <div className="duelist-result-sub">Red {view.mode === 'control' ? Math.floor(view.teamScores.red) + '%' : view.teamScores.red} · {view.mode === 'control' ? Math.floor(view.teamScores.blue) + '%' : view.teamScores.blue} Blue</div>}
-      <table className="duelist-board">
-        <thead><tr><th>Fighter</th><th>Defeats</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr></thead>
-        <tbody>
-          {view.people.map((p) => (
-            <tr key={p.id} className={p.id === meOf(view) ? 'is-you' : ''}>
-              <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === meOf(view) ? 'You' : p.name}</td>
-              <td>{p.defeats}</td><td>{p.falls}</td>{view.mode === 'ctf' && <td>{p.captures}</td>}{view.mode === 'duel' && <td>{p.roundWins}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {online ? <div className="duelist-result-sub">The next match starts in a few seconds.</div> : <button type="button" onClick={onAgain}>Play again</button>}
+    <div className={'duelist-win-layer ' + (showBoard ? 'is-revealed ' : '') + (won ? 'is-victory' : w === 'draw' ? 'is-draw' : 'is-defeat')} data-testid="duelist-result-layer" role="status" aria-live="polite">
+      <div className="duelist-win-burst" aria-hidden="true" />
+      <div className="duelist-win-sweep" aria-hidden="true" />
+      <div className="duelist-win-banner">
+        <img src="/ui/duelist/glass-victory.svg" alt="" aria-hidden="true" />
+        <strong>{outcome}!</strong>
+        <small>{view.name || 'DUELIST ADVENTURE'}</small>
+      </div>
+      {showBoard && (
+        <section className="duelist-win-board" aria-label="Match results">
+          <div className="duelist-win-board-title">
+            <span>AFTER-ACTION REPORT</span>
+            {teams && <strong>{scoreText}</strong>}
+          </div>
+          <div className="duelist-win-board-scroll">
+            <table className="duelist-board">
+              <thead>
+                <tr><th>Fighter</th><th>Eliminations</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr>
+              </thead>
+              <tbody>
+                {(view.people || []).map((p) => (
+                  <tr key={p.id} className={p.id === meOf(view) ? 'is-you' : ''}>
+                    <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === meOf(view) ? 'You' : p.name}</td>
+                    <td>{p.defeats}</td><td>{p.falls}</td>
+                    {view.mode === 'ctf' && <td>{p.captures}</td>}
+                    {view.mode === 'duel' && <td>{p.roundWins}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {online
+            ? <div className="duelist-win-next">The next match starts shortly.</div>
+            : <button type="button" className="duelist-win-play-again" onClick={onAgain}>PLAY AGAIN</button>}
+        </section>
+      )}
     </div>
   );
 }

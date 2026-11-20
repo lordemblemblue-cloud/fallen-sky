@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 124" fill="none" aria-hidden="true"><defs>
+<linearGradient id="gold" x1="0" y1="0" x2="124" y2="124" gradientUnits="userSpaceOnUse"><stop stop-color="#fff4c4"/><stop offset=".25" stop-color="#ffd17c"/><stop offset=".62" stop-color="#bb743b"/><stop offset="1" stop-color="#f4d4a0"/></linearGradient>
+<linearGradient id="ice" x1="0" y1="0" x2="124" y2="124" gradientUnits="userSpaceOnUse"><stop stop-color="#e8fcff"/><stop offset=".34" stop-color="#75d3ee"/><stop offset="1" stop-color="#4b72c9"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="0" y2="124" gradientUnits="userSpaceOnUse"><stop stop-color="#d6f8ff" stop-opacity=".20"/><stop offset=".3" stop-color="#153449" stop-opacity=".31"/><stop offset="1" stop-color="#050d1c" stop-opacity=".43"/></linearGradient>
+<filter id="warm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs><circle cx="62" cy="59" r="52" fill="#07172d" fill-opacity=".35" stroke="url(#gold)" stroke-width="2.8"/>
+<circle cx="62" cy="59" r="45" stroke="url(#ice)" stroke-opacity=".78" stroke-width="1.6"/>
+<circle cx="62" cy="59" r="38" fill="#0a2a4d" fill-opacity=".30" stroke="#81d7fa" stroke-opacity=".23" stroke-width="1"/>
+<path d="M27 15L34 8H90L97 15M26 102L35 111H89L98 102" stroke="#ffdd9d" stroke-opacity=".77" stroke-width="2" stroke-linecap="round"/>
+<path d="M43 114H81L76 120H48Z" fill="#d9af70" fill-opacity=".22" stroke="#e7c48d" stroke-opacity=".72"/>
+<path d="M18 46Q11 59 18 72M106 46Q113 59 106 72" stroke="#b9f0ff" stroke-opacity=".5" stroke-width="1.5"/></svg>

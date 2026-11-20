@@ -30,6 +30,7 @@ import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
 import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
+import GlassHud from './GlassHud.jsx';
 import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
@@ -544,7 +545,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const again = () => setGeneration((g) => g + 1);
   return (
     <div className="duelist-game" ref={mountRef}>
-      {hud?.you && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
+      {hud?.you && <GlassHud hud={hud} fighter={youBody} onPower={(id) => pressRef.current?.(id)} />}
       {match && <ScoreLine view={match} />}
       {match && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
@@ -580,54 +581,9 @@ const share = (value, max) => (max > 0 ? value / max : 0); // an ordinary person
 function snapshot(f, now) {
   const v = f.vitals;
   return {
-    hp: share(v.hp, v.max.hp), stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
+    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, special: Number.isFinite(f.special) ? f.special : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
     veil: fighterVeil(f), noVeil: v.max.will <= 0, winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
     dead: v.dead,
   };
 }
 
-function Bar({ value, kind }) {
-  return <div className={`duelist-bar duelist-bar-${kind}`}><div style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }} /></div>;
-}
-
-function Vitals({ title, v, align, color = null }) {
-  const veil = v.dead ? 'Fallen' : v.noVeil ? 'No Veil' : v.veil === 'collapsed' ? 'Veil collapsed' : v.veil === 'unstable' ? 'Veil unstable' : 'Veil stable';
-  return (
-    <div className={`duelist-vitals duelist-vitals-${align}`}>
-      <div className="duelist-vitals-title" style={color ? { color } : undefined}>{title} <span className={`duelist-veil duelist-veil-${v.veil}`}>{veil}</span></div>
-      <Bar value={v.shield} kind="shield" />
-      {!v.noVeil && <Bar value={v.will} kind="will" />}
-      <Bar value={v.hp} kind="hp" />
-      <Bar value={v.stamina} kind="stamina" />
-      <div className="duelist-tags">
-        {v.winded && <span>winded</span>}{v.stunned && !v.dead && <span>staggered</span>}{v.held && <span>held</span>}{v.breached && <span>breached</span>}
-      </div>
-    </div>
-  );
-}
-
-// Telekinesis's hold is a press and a release: a tap on the button grips, a second tap throws.
-function DuelHud({ hud, onPower }) {
-  const gripping = useRef(false);
-  const tap = (id) => {
-    if (id === 'grip') { onPower(gripping.current ? 'release' : 'grip'); gripping.current = !gripping.current; return; }
-    onPower(id);
-  };
-  const teamColor = hud.targetTeam === 'red' ? '#ff6f61' : hud.targetTeam === 'blue' ? '#5fb4ff' : null;
-  return (
-    <>
-      <Vitals title="You" v={hud.you} align="left" />
-      {hud.target && <Vitals title={hud.targetName} v={hud.target} align="right" color={teamColor} />}
-      <div className="duelist-powers">
-        {hud.powers.map((p) => (
-          <button type="button" key={p.id} className={`duelist-power ${p.ready > 0 ? 'is-cooling' : ''}`} onClick={() => tap(p.id)}>
-            <span className="duelist-power-key">{p.key}</span>
-            <span className="duelist-power-name">{p.id === 'grip' ? 'telekinesis' : p.id}</span>
-            {p.ready > 0 && <span className="duelist-power-cd">{p.ready.toFixed(1)}</span>}
-          </button>
-        ))}
-      </div>
-      {hud.lockOn && <div className="duelist-lock">Locked on</div>}
-    </>
-  );
-}

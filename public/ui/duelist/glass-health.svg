@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 144" fill="none" aria-hidden="true"><defs>
+<linearGradient id="gold" x1="0" y1="0" x2="640" y2="144" gradientUnits="userSpaceOnUse"><stop stop-color="#fff4c4"/><stop offset=".25" stop-color="#ffd17c"/><stop offset=".62" stop-color="#bb743b"/><stop offset="1" stop-color="#f4d4a0"/></linearGradient>
+<linearGradient id="ice" x1="0" y1="0" x2="640" y2="144" gradientUnits="userSpaceOnUse"><stop stop-color="#e8fcff"/><stop offset=".34" stop-color="#75d3ee"/><stop offset="1" stop-color="#4b72c9"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="0" y2="144" gradientUnits="userSpaceOnUse"><stop stop-color="#d6f8ff" stop-opacity=".20"/><stop offset=".3" stop-color="#153449" stop-opacity=".31"/><stop offset="1" stop-color="#050d1c" stop-opacity=".43"/></linearGradient>
+<filter id="warm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs><path d="M81 22H590L625 55V99L590 130H82L59 106V45Z" fill="url(#glass)" stroke="url(#ice)" stroke-opacity=".5" stroke-width="1.1"/>
+<path d="M96 37H576L610 59" stroke="#E8FCFF" stroke-opacity=".55" stroke-width="1.5"/>
+<path d="M95 117H583L608 94" stroke="url(#gold)" stroke-opacity=".87" stroke-width="2.2"/>
+<path d="M108 92H567L581 104H108Z" fill="#061a23" fill-opacity=".4" stroke="#88edb3" stroke-opacity=".42" stroke-width="1"/>
+<path d="M117 94H558L567 101H117Z" fill="#4bff9c" fill-opacity=".09"/>
+<path d="M22 33L65 6L111 33V108L65 137L22 108Z" fill="#090e21" fill-opacity=".42" stroke="url(#gold)" stroke-width="3"/>
+<path d="M30 38L65 16L102 38V102L65 126L30 102Z" fill="#0b2433" fill-opacity=".25" stroke="#7dc6df" stroke-opacity=".65" stroke-width="1"/>
+<path d="M45 20L64 8L82 19" stroke="#fff0bd" stroke-width="2.2" stroke-linecap="round"/>
+<path d="M84 132L586 132" stroke="#3dbaff" stroke-opacity=".62" stroke-width="1.4"/>
+<path d="M123 48H322L341 65H123Z" fill="#e4b563" fill-opacity=".09" stroke="#ffdf9d" stroke-opacity=".65"/>
+<path d="M341 59H584" stroke="#e2bd8a" stroke-opacity=".4" stroke-width="1.4"/>
+<path d="M138 82H580" stroke="url(#gold)" stroke-opacity=".45" stroke-width="1.1"/>
+<path d="M16 114L35 132H53M99 129H111" stroke="#ffd798" stroke-width="2" stroke-opacity=".75" stroke-linecap="round"/></svg>

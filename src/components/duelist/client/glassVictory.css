@@ -1,0 +1,131 @@
+/* Original, image-backed victory transition; leaves the 3D scene visible.
+   Ornaments are in /public/ui/duelist/glass-victory.svg; the text and scores are DOM. */
+.duelist-win-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+}
+.duelist-win-burst {
+  position: absolute;
+  width: min(58vw, 780px);
+  height: min(58vw, 780px);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,250,216,.66) 0%, rgba(255,199,99,.38) 14%, rgba(130,218,255,.26) 37%, rgba(255,187,78,0) 72%);
+  mix-blend-mode: screen;
+  animation: duelist-win-burst .95s ease-out both;
+  pointer-events: none;
+}
+.duelist-win-sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 6px;
+  width: 110vw;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, transparent 0%, rgba(67,218,255,.7) 24%, #fff8d2 50%, rgba(245,170,96,.7) 76%, transparent 100%);
+  filter: drop-shadow(0 0 12px rgba(255,208,128,.55));
+  animation: duelist-win-sweep 1.15s .1s ease-out both;
+}
+.duelist-win-banner {
+  position: relative;
+  width: min(780px, 86vw);
+  aspect-ratio: 960 / 260;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  filter: drop-shadow(0 4px 9px rgba(0,0,0,.45));
+  animation: duelist-win-arrive .8s .5s cubic-bezier(.16,1,.3,1) both;
+}
+.duelist-win-banner img {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.duelist-win-banner strong {
+  position: relative;
+  margin-top: 12px;
+  letter-spacing: .1em;
+  font-size: clamp(36px, 6vw, 77px);
+  line-height: 1.05;
+  font-weight: 950;
+  font-style: italic;
+  color: #fff1b8;
+  text-shadow: 0 1px 0 #64351f, 0 3px 1px #40241b, 0 0 24px rgba(255,199,94,.64), 0 0 7px #000;
+  -webkit-text-stroke: .65px rgba(102,50,20,.36);
+}
+.duelist-win-banner small {
+  position: relative;
+  color: #b6e8ff;
+  letter-spacing: .27em;
+  text-transform: uppercase;
+  font-size: clamp(9px, 1vw, 13px);
+  font-weight: 800;
+  text-shadow: 0 2px 8px #000;
+}
+.duelist-win-layer.is-defeat .duelist-win-banner strong { color: #f6b29c; text-shadow: 0 0 24px rgba(255,105,86,.55), 0 1px 8px #000; }
+.duelist-win-layer.is-draw .duelist-win-banner strong { color: #dbeaf4; }
+.duelist-win-layer.is-revealed {
+  justify-content: flex-start;
+  padding-top: clamp(24px, 6vh, 72px);
+  background: linear-gradient(180deg, rgba(3,13,25,.24), rgba(3,13,25,.09) 45%, rgba(3,13,25,.33));
+}
+.duelist-win-layer.is-revealed .duelist-win-banner { width: min(600px, 78vw); max-height: 165px; }
+.duelist-win-board {
+  position: relative;
+  pointer-events: auto;
+  width: min(620px, 88vw);
+  max-height: min(54vh, 490px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(120deg, rgba(15,39,60,.68), rgba(4,16,28,.62));
+  backdrop-filter: blur(13px) saturate(145%);
+  -webkit-backdrop-filter: blur(13px) saturate(145%);
+  border: 1px solid rgba(245,195,124,.5);
+  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  padding: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.36);
+  animation: duelist-win-board-reveal .5s ease-out both;
+}
+.duelist-win-board-title { width:100%; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; font-weight:850; letter-spacing:.12em; color:#fbd7a1; }
+.duelist-win-board-title strong { color:#bfeeff; letter-spacing:.04em; font-size:12px; }
+.duelist-win-board-scroll { width:100%; min-height:0; overflow:auto; }
+.duelist-win-board .duelist-board { width:100%; background:transparent; font-size:12px; }
+.duelist-win-board .duelist-board th { color:#b9d8e9; }
+.duelist-win-board .duelist-board td { padding-block:8px; border-bottom:1px solid rgba(160,215,245,.12); }
+.duelist-win-play-again { pointer-events:auto; cursor:pointer; border:1px solid rgba(255,215,149,.67); background:rgba(42,69,86,.58); color:#ffe5bc; padding:11px 25px; border-radius:4px; font-weight:850; letter-spacing:.11em; }
+.duelist-win-play-again:hover, .duelist-win-play-again:focus-visible { background:rgba(71,113,140,.8); outline:2px solid #94e4ff; }
+.duelist-win-next { color:#e0eaf4; font-size:12px; }
+@keyframes duelist-win-burst { 0% { opacity:0; transform:scale(.2); } 30% { opacity:.95; } 100% { opacity:0; transform:scale(2); } }
+@keyframes duelist-win-sweep { 0% { opacity:0; transform:translate(-50%,-50%) scaleX(.02); } 35% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-50%) scaleX(1.35); } }
+@keyframes duelist-win-arrive { 0% { opacity:0; transform:scale(1.5); filter:blur(8px); } 70% { opacity:1; transform:scale(.96); filter:blur(0); } 100% { opacity:1; transform:scale(1); filter:blur(0); } }
+@keyframes duelist-win-board-reveal { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+
+/* Match events: small glass ribbons in the top-right like the supplied examples. */
+.duelist-game .duelist-feed { left:auto; right:12px; top:120px; align-items:flex-end; }
+.duelist-game .duelist-feed > div { text-align:right; }
+@media (max-width:640px) {
+  .duelist-win-layer.is-revealed { padding-top: max(62px, 9vh); }
+  .duelist-win-layer.is-revealed .duelist-win-banner { width:92vw; max-height:104px; }
+  .duelist-win-board { width:94vw; padding:12px; gap:8px; max-height:58vh; }
+  .duelist-win-board-title { font-size:9px; }
+  .duelist-win-board .duelist-board th, .duelist-win-board .duelist-board td { padding:5px 3px; font-size:10px; }
+  .duelist-game .duelist-feed { top:76px; right:5px; left:auto; max-width:55vw; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .duelist-win-burst,.duelist-win-sweep { display:none; }
+  .duelist-win-banner,.duelist-win-board { animation:none; }
+}

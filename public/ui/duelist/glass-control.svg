@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 770 128" fill="none" aria-hidden="true"><defs>
+<linearGradient id="gold" x1="0" y1="0" x2="770" y2="128" gradientUnits="userSpaceOnUse"><stop stop-color="#fff4c4"/><stop offset=".25" stop-color="#ffd17c"/><stop offset=".62" stop-color="#bb743b"/><stop offset="1" stop-color="#f4d4a0"/></linearGradient>
+<linearGradient id="ice" x1="0" y1="0" x2="770" y2="128" gradientUnits="userSpaceOnUse"><stop stop-color="#e8fcff"/><stop offset=".34" stop-color="#75d3ee"/><stop offset="1" stop-color="#4b72c9"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="0" y2="128" gradientUnits="userSpaceOnUse"><stop stop-color="#d6f8ff" stop-opacity=".20"/><stop offset=".3" stop-color="#153449" stop-opacity=".31"/><stop offset="1" stop-color="#050d1c" stop-opacity=".43"/></linearGradient>
+<filter id="warm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs><path d="M18 42H231L269 15H502L538 42H751L761 58L730 86H541L509 113H265L231 86H40L9 58Z" fill="url(#glass)" stroke="url(#gold)" stroke-opacity=".82" stroke-width="2.1"/>
+<path d="M35 52H222L237 63H35" stroke="url(#ice)" stroke-opacity=".75" stroke-width="4" stroke-linecap="round"/>
+<path d="M734 52H548L532 63H734" stroke="#fe9994" stroke-opacity=".77" stroke-width="4" stroke-linecap="round"/>
+<path d="M44 75H215M556 75H728" stroke="url(#gold)" stroke-opacity=".47"/>
+<path d="M292 13H478" stroke="#e6fcff" stroke-opacity=".45" stroke-width="1.5"/>
+<path d="M281 105H490" stroke="url(#gold)" stroke-opacity=".6" stroke-width="2.3"/>
+<path d="M268 55L291 31H479L503 55" stroke="#90dbf7" stroke-opacity=".35" stroke-width="1"/>
+<path d="M280 72L296 91H477L492 72" stroke="#e4c392" stroke-opacity=".35" stroke-width="1.2"/></svg>

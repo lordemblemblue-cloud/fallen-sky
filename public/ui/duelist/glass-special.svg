@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 190 190" fill="none" aria-hidden="true"><defs>
+<linearGradient id="gold" x1="0" y1="0" x2="190" y2="190" gradientUnits="userSpaceOnUse"><stop stop-color="#fff4c4"/><stop offset=".25" stop-color="#ffd17c"/><stop offset=".62" stop-color="#bb743b"/><stop offset="1" stop-color="#f4d4a0"/></linearGradient>
+<linearGradient id="ice" x1="0" y1="0" x2="190" y2="190" gradientUnits="userSpaceOnUse"><stop stop-color="#e8fcff"/><stop offset=".34" stop-color="#75d3ee"/><stop offset="1" stop-color="#4b72c9"/></linearGradient>
+<linearGradient id="glass" x1="0" y1="0" x2="0" y2="190" gradientUnits="userSpaceOnUse"><stop stop-color="#d6f8ff" stop-opacity=".20"/><stop offset=".3" stop-color="#153449" stop-opacity=".31"/><stop offset="1" stop-color="#050d1c" stop-opacity=".43"/></linearGradient>
+<filter id="warm" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs><circle cx="95" cy="94" r="81" fill="#051522" fill-opacity=".24" stroke="#86c9ec" stroke-opacity=".4" stroke-width="1.2"/>
+<circle cx="95" cy="94" r="73" fill="#09263a" fill-opacity=".26" stroke="url(#gold)" stroke-width="3.4"/>
+<circle cx="95" cy="94" r="64" stroke="#ffd7a1" stroke-opacity=".27" stroke-width="1" stroke-dasharray="1 8"/>
+<circle cx="95" cy="94" r="57" fill="#031426" fill-opacity=".16" stroke="#a3dded" stroke-opacity=".38"/>
+<circle cx="95" cy="94" r="46" stroke="#f4d5a0" stroke-opacity=".2"/>
+<path d="M95 8L104 23L95 30L86 23Z" fill="#80dbff" fill-opacity=".88"/>
+<path d="M19 94L30 87L30 101Z M171 94L160 87L160 101Z" fill="#f5c679" fill-opacity=".8"/>
+<path d="M62 170L75 180H115L128 170" stroke="url(#gold)" stroke-width="2.4"/>
+<path d="M47 30Q95 0 143 30" stroke="#eaf9ff" stroke-opacity=".28" stroke-width="2"/></svg>
