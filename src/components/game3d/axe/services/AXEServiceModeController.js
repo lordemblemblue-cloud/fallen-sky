@@ -23,7 +23,8 @@ export function createAXEServiceModeController({ summon, enter, leave, canOpen =
     getSnapshot: () => state,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     toggle() {
-      if (state.groupId) return;
+      // The Services button is a true toggle even while a page is open.
+      if (state.groupId) { this.close(); return; }
       publish({ expanded: !state.expanded, phase: state.expanded ? 'closed' : 'expanded', message: '' });
     },
     selectOperation(serviceId) {
@@ -78,7 +79,8 @@ export function createAXEServiceModeController({ summon, enter, leave, canOpen =
     close(message = '') {
       ++generation;
       release(state.stationId);
-      publish({ ...initial(), expanded: state.expanded, phase: state.expanded ? 'expanded' : 'closed', message });
+      // Closing a page must collapse its navigation too, for every hotkey.
+      publish({ ...initial(), message });
     },
     dispose() {
       ++generation;
