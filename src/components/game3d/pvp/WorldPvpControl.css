@@ -3,7 +3,7 @@
  * The server-confirmed preference is only a hint; damage remains server-owned. */
 .game3d-view .game3d-pvp-control {
   position: fixed;
-  top: calc(var(--axe-map-bottom, 209px) + 13px);
+  top: max(calc(var(--axe-map-bottom, 209px) + 13px), var(--axe-weather-bottom-px, 0px));
   right: var(--axe-map-left, clamp(14px,2.4vw,42px));
   left: auto;
   z-index: 63;
@@ -126,7 +126,7 @@
   .game3d-view .game3d-pvp-control {
     right: 12px;
     width: 144px;
-    top: calc(var(--axe-map-bottom,131px) + 10px);
+    top: max(calc(var(--axe-map-bottom,131px) + 10px), var(--axe-weather-bottom-px, 0px));
   }
   .game3d-pvp-control-title,.game3d-pvp-control-title strong {
     font-size: 9px;
@@ -137,7 +137,7 @@
   .game3d-view .game3d-pvp-control {
     right: 8px;
     width: 120px;
-    top: calc(var(--axe-map-bottom,98px) + 12px);
+    top: max(calc(var(--axe-map-bottom,98px) + 12px), var(--axe-weather-bottom-px, 0px));
   }
   .game3d-pvp-control-hint {display: none;}
   .game3d-pvp-control-toggle {gap: 4px;}
