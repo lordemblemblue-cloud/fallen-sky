@@ -39,6 +39,7 @@ import {
   changeGame3DHudWidget,defaultGame3DHudCustomization,
 } from './hud/Game3DHudCustomization.mjs';
 import { AXE_SERVICE_GROUPS } from './axe/services/AXEServiceGroups.js';
+import { getAXEService } from './axe/services/AXEServiceRegistry';
 import { getGame3DMenuShortcut } from './axe/services/game3dMenuHotkeys.mjs';
 import './PauseMenu.css';
 
@@ -458,6 +459,30 @@ export default function PauseMenu({
                 </button>;
               })}
           </div>
+          <section className="axe3d-pause__launcher-subpages" aria-label="All service subpages">
+            <div className="axe3d-pause__launcher-subpages-heading">
+              <strong>Service subpages</strong>
+              <small>Expand a category to open a specific page</small>
+            </div>
+            {AXE_SERVICE_GROUPS.map(group=>{
+              const tile=QUICK_SERVICE_TILES.find(item=>item.id===group.id);
+              const operations=group.visibleServiceIds || group.serviceIds;
+              return <details className="axe3d-pause__launcher-subpage-group" key={group.id}>
+                <summary>
+                  <span>{tile?.label||group.label}</span>
+                  <small>{operations.length} {operations.length===1?'page':'pages'}</small>
+                  <ChevronRight size={15} aria-hidden="true"/>
+                </summary>
+                <div className="axe3d-pause__launcher-subpage-buttons">
+                  {operations.map(serviceId=><button type="button" key={serviceId}
+                    title={getAXEService(serviceId)?.description||'Open service subpage'}
+                    onClick={()=>onOpenService?.(group.id,serviceId)}>
+                    {getAXEService(serviceId)?.label || serviceId.replaceAll('_',' ')}
+                  </button>)}
+                </div>
+              </details>;
+            })}
+          </section>
           <div className="axe3d-pause__launcher-online" aria-live="polite">
             <span className="axe3d-pause__launcher-online-dot"/>
             {presence.status==='connected'?'Online world':presence.status==='connecting'?'Connecting to world':
