@@ -158,6 +158,8 @@
 .duelist-ability-label { position:absolute; top:-4px; left:0; width:100%; font-size:9px; font-weight:800; text-transform:uppercase; color:#d9e8fb; }
 .duelist-ability-cooldown { position:absolute; top:27px; left:50%; transform:translateX(-50%); font-size:18px; font-weight:900; background:rgba(4,13,24,.72); border-radius:50%; width:40px; height:40px; display:grid; place-items:center; color:#ffd093; }
 .duelist-ability-glass:has(.duelist-ability-cooldown) .duelist-ability-symbol { opacity:.38; }
+.duelist-ability-glass:disabled { cursor:not-allowed; opacity:.54; filter:grayscale(.45); }
+.duelist-ability-glass:disabled:hover { filter:grayscale(.45); outline:none; }
 .duelist-ability-glass:hover,.duelist-ability-glass:focus-visible { filter:drop-shadow(0 0 9px rgba(97,200,255,.5)); outline:2px solid #83dcfa; outline-offset:-7px; border-radius:45%; }
 /* Objective glass uses independent images; actual scores always come from matchView. */
 .duelist-scoreline { z-index:10; width:min(720px,70vw); top:10px; font-variant-numeric:tabular-nums; }
