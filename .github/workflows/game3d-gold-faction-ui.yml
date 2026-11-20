@@ -53,8 +53,6 @@ jobs:
           tests/game3d-gold-faction-menu-layout.test.mjs
           tests/game3d-chat-faction-modal-20261120.test.mjs
           tests/game3d-escape-services-drawer-20261120.test.mjs
-      - name: Build the app
-        run: npm run build
       - name: Lint changed menu, faction and chat code
         run: >-
           npx eslint --quiet
@@ -69,3 +67,7 @@ jobs:
           src/components/game3d/axe/factions/FactionAnnouncementTicker.jsx
           src/components/game3d/combat/Game3DCombatLog.mjs
           src/components/game3d/social/WorldChatPanel.jsx
+          src/components/game3d/hud/game3dCommunityHUDSettings.mjs
+          src/pages/GameView.jsx
+      - name: Build the app
+        run: npm run build
