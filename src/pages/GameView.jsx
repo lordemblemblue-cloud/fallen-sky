@@ -881,6 +881,13 @@ export default function GameView() {
           setRequestedService(null);setRequestedServiceItemId(null);setRequestedCharacterTab(null);
           void services.controller.open(groupId);
         }}
+        onOpenMap={() => {
+          setPauseMenuOpen(false);
+          services.controller.close();
+          setProgressionOpen(false);setStoreOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          window.dispatchEvent(new CustomEvent('axeOpenWorldMap', { detail: { force: true } }));
+        }}
         onEditHUD={()=>{setPauseMenuOpen(false);setHudEditing(true);}}
         onClose={() => setPauseMenuOpen(false)}
         onCreateCharacter={() => { window.dispatchEvent(new Event('game3dCheckpointFlush')); setResumeCheckpoint(null); setPauseMenuOpen(false); setWorldEntryStatus('idle'); setPlayIntroCamera(false); setCreatorOnLogin(true); setPhase('login'); }}
