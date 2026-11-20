@@ -1,256 +1,179 @@
-/* Falling Sky Blacksmith: one readable, two-ingredient forge. The existing
- * inventory is untouched. The operation rail is a separate vertical strip. */
+/* Blacksmith's compact upgrade controls. Two ingredient squares only;
+   material-determined operation and existing authoritative forge rules. */
 .axe-service-workspace--blacksmith .axe-blacksmith-workflow {
   position:absolute;
-  left:40%;
-  top:15%;
-  width:31%;
-  height:81%;
-  box-sizing:border-box;
   z-index:5;
+  left:39.4%;
+  top:17.5%;
+  width:32%;
+  height:auto;
+  max-height:48%;
+  min-width:0;
+  box-sizing:border-box;
+  padding:clamp(10px,.9cqw,15px);
   display:flex;
   flex-direction:column;
-  gap:clamp(7px,.7cqw,12px);
-  padding:clamp(12px,1.1cqw,18px);
-  min-height:0;
-  min-width:0;
-  overflow-y:auto;
-  overscroll-behavior:contain;
+  gap:clamp(6px,.6cqw,10px);
+  overflow:auto;
   scrollbar-width:thin;
-  border:1px solid var(--axe-ui-gold,rgba(229,191,123,.58));
-  border-radius:14px;
-  color:var(--axe-ui-text,#f2e8d2);
-  background:linear-gradient(160deg,rgba(23,36,51,.93),rgba(10,19,31,.92));
-  box-shadow:inset 0 0 20px rgba(231,215,179,.07),0 12px 30px rgba(0,0,0,.24);
-  -webkit-backdrop-filter:blur(14px);
-  backdrop-filter:blur(14px);
+  border:1px solid rgba(231,193,132,.62);
+  border-radius:12px;
+  color:var(--axe-ui-text,#eee2ca);
+  background:linear-gradient(145deg,rgba(17,31,46,.93),rgba(20,31,43,.86));
+  backdrop-filter:blur(12px);
+  box-shadow:0 9px 18px rgba(0,0,0,.24),inset 0 0 20px rgba(226,188,121,.05);
 }
-.axe-blacksmith-workflow .axe-forge-workflow-header {
-  flex:0 0 auto;
-  padding-bottom:8px;
-  border-bottom:1px solid rgba(233,202,151,.25);
+.axe-blacksmith-workflow .axe-forge-workflow-header {text-align:center;flex:none}
+.axe-blacksmith-workflow .axe-forge-workflow-header h3 {
+  margin:0;
+  font:600 clamp(16px,1.45cqw,23px)/1.1 Georgia,serif;
+  color:var(--axe-ui-heading,#ffdfa6);
 }
-.axe-forge-workflow-header span {
-  color:var(--axe-ui-subtext,#c9bfae);
-  font:600 10px/1.2 system-ui,sans-serif;
-  letter-spacing:.16em;
-  text-transform:uppercase;
-}
-.axe-forge-workflow-header h3 {
-  margin:4px 0 3px;
-  color:var(--axe-ui-heading,#ffe1a8);
-  font:600 clamp(19px,1.65cqw,25px)/1.2 Georgia,serif;
-}
-.axe-forge-workflow-header small {
+.axe-blacksmith-workflow .axe-forge-workflow-header small {
   display:block;
-  color:var(--axe-ui-subtext,#d1c5b2);
-  font:11px/1.35 system-ui,sans-serif;
+  margin-top:4px;
+  color:#d0c2a9;
+  font:10px/1.3 system-ui,sans-serif;
 }
-.axe-forge-enchant-modes {
+.axe-blacksmith-workflow .axe-forge-flow {
   display:grid;
-  flex:none;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns: minmax(0,1fr) 18px minmax(0,1fr);
   gap:6px;
-}
-.axe-forge-enchant-modes button {
-  min-height:34px;
-  border:1px solid rgba(218,184,127,.4);
-  border-radius:7px;
-  background:rgba(33,51,70,.4);
-  color:#ebdfc8;
-  font:600 11px system-ui,sans-serif;
-}
-.axe-forge-enchant-modes button[aria-pressed="true"] {
-  color:#ffebc0;
-  background:rgba(149,110,46,.27);
-  border-color:rgba(252,214,146,.8);
-}
-.axe-forge-flow {
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);
-  gap:clamp(5px,.5cqw,10px);
   align-items:center;
+  width:min(100%,330px);
+  min-height:0;
+  margin:0 auto;
   flex:none;
-  min-height:128px;
-  color:#fbe2b2;
 }
-.axe-forge-flow-slot {
-  width:100%;
-  min-height:123px;
-  min-width:0;
+.axe-blacksmith-workflow .axe-forge-flow-slot {
+  box-sizing:border-box;
   display:flex;
   flex-direction:column;
-  align-items:center;
   justify-content:center;
-  gap:6px;
-  padding:10px 7px;
-  border:1px solid rgba(235,199,140,.78);
-  border-radius:12px;
-  color:#f4e6ce;
-  background:radial-gradient(circle at 50% 15%,rgba(90,114,129,.19),rgba(18,34,49,.8));
-  box-shadow:inset 0 0 17px rgba(198,164,99,.06);
-  text-align:center;
+  align-items:center;
+  gap:2px;
+  min-width:0;
+  min-height:62px;
+  max-height:70px;
+  aspect-ratio:auto;
+  padding:5px 3px;
+  border:1px solid rgba(237,204,147,.72);
+  border-radius:8px;
+  color:#f0dcb2;
+  background:rgba(20,39,54,.82);
+  box-shadow:inset 0 0 11px rgba(228,192,132,.09);
+  cursor:pointer;
 }
-.axe-forge-flow-slot:hover:not(:disabled) {
-  border-color:#b9eaff;
-  background:rgba(36,62,83,.84);
+.axe-blacksmith-workflow .axe-forge-flow-slot:hover:not(:disabled),
+.axe-blacksmith-workflow .axe-forge-flow-slot:focus-visible {
+  background:rgba(45,71,92,.88);
+  border-color:#b6e2f0;
 }
-.axe-forge-flow-slot-art {
-  display:grid;
-  place-items:center;
-  height:55px;
-  min-height:55px;
-  width:100%;
-  color:#e0c690;
-}
-.axe-forge-flow-slot-art img {
-  max-width:90%;
-  max-height:55px;
+.axe-blacksmith-workflow .axe-forge-flow-slot img {
+  max-width:52px;
+  max-height:36px;
   object-fit:contain;
 }
-.axe-forge-flow-slot strong {
-  font:600 clamp(10px,.91cqw,13px)/1.2 system-ui,sans-serif;
-  max-width:100%;
-  overflow-wrap:anywhere;
-}
-.axe-forge-flow-slot small {
+.axe-blacksmith-workflow .axe-forge-flow-slot svg {width:23px;height:23px}
+.axe-blacksmith-workflow .axe-forge-flow-slot span {
   font:10px/1.2 system-ui,sans-serif;
-  color:#bfbfc0;
-}
-.axe-forge-ingredient-plus {
-  display:block;
   text-align:center;
-  font:400 clamp(28px,3cqw,42px)/1 Georgia,serif;
-  color:#f0d39b;
-  text-shadow:0 0 18px rgba(238,200,125,.24);
-}
-.axe-forge-ingredients {
-  flex:0 0 auto;
-  display:grid;
-  gap:5px;
-  min-width:0;
-}
-.axe-forge-ingredients label {
-  display:grid;
-  gap:5px;
-  font:600 11px/1.2 system-ui,sans-serif;
-  color:#e5d4b6;
-}
-.axe-forge-ingredients select,.axe-forge-threshold select {
-  min-width:0;
   max-width:100%;
-  min-height:30px;
-  padding:5px 7px;
-  background:#24394c;
-  border:1px solid rgba(233,197,141,.57);
-  border-radius:6px;
-  color:#f5e8cd;
-  font:11px system-ui,sans-serif;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
 }
-.axe-forge-ingredients>small {
-  color:#b9cbd1;
-  font:11px/1.35 system-ui,sans-serif;
+.axe-blacksmith-workflow .axe-forge-ingredient-plus {
+  font:30px/1 Georgia,serif;
+  text-align:center;
+  color:#f6d390;
 }
-.axe-forge-required-item {
-  width:100%;
-  min-height:29px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:5px 9px;
-  border:1px solid rgba(227,190,133,.34);
-  border-radius:6px;
-  background:rgba(39,59,75,.38);
-  color:#e5e5df;
-  font:11px system-ui,sans-serif;
-  text-align:left;
-}
-.axe-forge-required-item[aria-pressed="true"] {border-color:#a7dfff;background:#31516c}
-.axe-forge-required-item strong {color:#c7f5d6;white-space:nowrap}
-.axe-forge-required-item strong.is-short,.axe-forge-shortfall {color:#ffac9e}
-.axe-forge-action-row {flex:none}
-.axe-forge-action-row .axe-forge-primary-action {
-  width:100%;
-  min-height:42px;
-  border:1px solid rgba(255,224,162,.9);
-  border-radius:9px;
-  background:linear-gradient(130deg,rgba(146,100,45,.92),rgba(94,61,33,.96));
-  box-shadow:0 2px 10px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.16);
-  color:#fff5dd;
-  font:600 clamp(14px,1.18cqw,18px)/1.2 Georgia,serif;
-}
-.axe-forge-action-row .axe-forge-primary-action:disabled {
-  cursor:not-allowed;
-  opacity:.45;
-}
-.axe-forge-quick-status {
-  display:flex;
-  justify-content:space-between;
-  flex-wrap:wrap;
-  gap:7px;
-  font:11px/1.3 system-ui,sans-serif;
-  color:#d4e5e8;
-}
-.axe-forge-automation {
+.axe-forge-material-cost {
   display:grid;
-  flex:none;
-  gap:8px;
-  border-top:1px solid rgba(233,202,151,.25);
-  padding-top:10px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:4px;
+  max-height:75px;
+  overflow:auto;
+  scrollbar-width:thin;
 }
-.axe-forge-toggle {
+.axe-forge-material-cost button {
+  border:1px solid rgba(230,196,137,.28);
+  border-radius:5px;
+  background:rgba(30,50,65,.4);
+  padding:4px 6px;
   display:flex;
   align-items:center;
-  gap:9px;
-  color:#f0dec3;
-  font:600 12px/1.35 system-ui,sans-serif;
-}
-.axe-forge-toggle input {margin:0;accent-color:#d6b27a}
-.axe-forge-threshold {
-  display:flex;
   justify-content:space-between;
+  gap:4px;
+  min-width:0;
+  color:#eadbbf;
+  font:10px/1.2 system-ui,sans-serif;
+}
+.axe-forge-material-cost button[aria-pressed="true"] {border-color:#dfc590;background:rgba(112,87,54,.35)}
+.axe-forge-material-cost button span {text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.axe-forge-material-cost button b {color:#a4efcc;white-space:nowrap}
+.axe-forge-material-cost button b.is-short {color:#ffaea6}
+.axe-forge-donor-picker {
+  display:flex;
   align-items:center;
-  flex-wrap:wrap;
   gap:8px;
+  color:#e1d2b3;
+  font:10px/1.2 system-ui,sans-serif;
+}
+.axe-forge-donor-picker select {
+  flex:1;
+  min-width:0;
+  color:#f4e3c6;
+  background:#253c4e;
+  border:1px solid rgba(231,197,138,.57);
+  border-radius:5px;
   font:11px system-ui,sans-serif;
-  color:#e0dbd0;
+  padding:5px;
 }
-.axe-forge-threshold select {min-width:92px}
-.axe-forge-batch-warning,.axe-forge-risk-note {
-  margin:0;
-  color:#c1d3d5;
-  font:10px/1.45 system-ui,sans-serif;
-}
-.axe-forge-risk-note {display:flex;align-items:flex-start;gap:7px}
-.axe-forge-risk-note svg {flex:none;margin-top:1px;color:#dcc18c}
-.axe-forge-secondary-action,.axe-forge-confirm button {
+.axe-blacksmith-workflow .axe-forge-primary-action {
+  flex:none;
+  width:100%;
   min-height:35px;
-  padding:7px;
-  border:1px solid rgba(235,202,145,.55);
+  padding:6px;
+  border:1px solid rgba(250,218,157,.86);
   border-radius:7px;
-  background:#314a60;
-  color:#f6e7c9;
-  font:600 11px system-ui,sans-serif;
+  background:linear-gradient(130deg,#876037,#674b2f);
+  color:#fff0d2;
+  font:600 13px Georgia,serif;
+  cursor:pointer;
 }
-.axe-forge-secondary-action:disabled {opacity:.5;cursor:not-allowed}
+.axe-blacksmith-workflow .axe-forge-primary-action:disabled {opacity:.45;cursor:not-allowed}
+.axe-forge-compact-auto {
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:space-between;
+  border-top:1px solid rgba(232,198,138,.28);
+  padding-top:7px;
+  font:11px/1.2 system-ui,sans-serif;
+}
+.axe-forge-compact-auto label {display:flex;align-items:center;gap:5px}
+.axe-forge-compact-auto input {accent-color:#e5ba70}
+.axe-forge-compact-auto select,
+.axe-forge-compact-auto button {
+  color:#f2e1bf;
+  background:#263e51;
+  border:1px solid rgba(226,190,127,.5);
+  border-radius:5px;
+  padding:5px;
+  font:11px/1.2 system-ui,sans-serif;
+}
+.axe-forge-compact-auto button:disabled {opacity:.5}
+.axe-forge-locked {display:flex;gap:6px;margin:0;color:#ffbea5;font:10px/1.3 system-ui,sans-serif}
 .axe-forge-confirm {
   display:grid;
-  flex:none;
   gap:6px;
-  padding:9px;
-  border:1px solid rgba(228,191,129,.55);
-  border-radius:9px;
-  background:rgba(53,67,83,.6);
+  border:1px solid rgba(240,200,132,.46);
+  border-radius:7px;
+  padding:7px;
+  font:10px/1.4 system-ui,sans-serif;
 }
-.axe-forge-confirm p {margin:0;font:11px/1.4 system-ui,sans-serif}
-.axe-forge-workflow-notice {
-  margin:0;
-  flex:none;
-  min-height:28px;
-  color:#cde6e9;
-  font:11px/1.4 system-ui,sans-serif;
-}
-@media(prefers-reduced-motion:reduce) {
-  .axe-forge-action-row button,.axe-forge-flow-slot {transition:none}
-}
+.axe-forge-confirm p {margin:0}
+.axe-forge-confirm button {background:#2b4860;border:1px solid #d9b877;border-radius:6px;color:#f9e9d2;padding:5px}
+@media(prefers-reduced-motion:reduce) {.axe-blacksmith-workflow *{transition:none!important}}
