@@ -80,3 +80,16 @@ test('WebGL allocation errors propagate when no renderer is usable', async () =>
     makeWebGLRenderer: () => { throw new Error('WebGL unavailable'); },
   }), /WebGL unavailable/);
 });
+
+test('rejected asynchronous cleanup does not mask the WebGPU startup error', async () => {
+  const cause = new Error('initialization failed');
+  const result = await createGameWebGPURenderer({ webgpuAvailable: true,
+    makeWebGPURenderer: () => ({
+      init: async () => { throw cause; },
+      dispose: async () => { throw new Error('async cleanup failed'); },
+    }),
+  });
+  assert.equal(result.renderer, null);
+  assert.equal(result.reason, 'webgpu-init-failed');
+  assert.equal(result.error, cause);
+});
