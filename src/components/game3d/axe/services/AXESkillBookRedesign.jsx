@@ -8,6 +8,7 @@ import {SKILL_TYPE, WEAPON_TYPE} from '../../skills/skillTypes';
 import {getSkillMastery, subscribeSkillMastery} from '../../skills/skillMasteryStore';
 import {getAllCompanionSkills, getCompanionSkillById} from '../../skills/companionSkillRegistry';
 import AXEWeaponSkillPointsPanel from './AXEWeaponSkillPointsPanel';
+import AXEAcquiredSkillsPanel from './AXEAcquiredSkillsPanel';
 import { isWeaponSkillUnlocked, subscribeWeaponSkillPoints } from '../../skills/weaponSkillPointsStore';
 import {getWeaponForSkillBookMode} from './SkillBookWeaponModes.mjs';
 import {formatSkillStat,skillMarkedLocked,skillLabelType,skillBelongsToCategory,skillMatchesBookFilter,titleizeSkillStat} from './AXESkillBookModel.mjs';
@@ -170,6 +171,7 @@ export default function AXESkillBookRedesign({
       {onClose&&<button type="button" data-service-close className="axe-tome-close"
         aria-label="Close Skill Book" onClick={onClose}><X size={22}/></button>}
     </header>
+    {!companion && <AXEAcquiredSkillsPanel />}
 
     <div className="axe-tome-columns">
       <aside className="axe-tome-rail" aria-label={companion?'Companion categories':'Weapons and categories'}>

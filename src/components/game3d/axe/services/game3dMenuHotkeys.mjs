@@ -11,6 +11,15 @@ export const GAME3D_MENU_HOTKEYS = Object.freeze({
   Equal: 'blacksmith',
 });
 
+// Appearance and Character share the same unified service group. Every menu
+// shortcut toggles its page, and a second press collapses the entire menu.
+export function resolveGame3DMenuToggle(destination, { groupId = null, mapOpen = false } = {}) {
+  if (!destination) return null;
+  if (destination === 'map') return { action: mapOpen ? 'close' : 'open', groupId: null };
+  const canonicalGroupId = destination === 'appearance' ? 'character' : destination;
+  return { action: groupId === canonicalGroupId ? 'close' : 'open', groupId: canonicalGroupId };
+}
+
 const EDITABLE_TARGETS = 'input, textarea, select, [contenteditable], [role="textbox"]';
 
 export function getGame3DMenuShortcut(event) {

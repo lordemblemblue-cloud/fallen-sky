@@ -272,13 +272,12 @@ function loadLearned() {
   } catch { return new Set(); }
 }
 
-// In the editor/preview environment only, auto-grant ALL skills so devs can
-// test every passive + active without needing to farm them. The live/published
-// app keeps the normal loot-driven learning flow.
+// Local development-only skill seeding for combat tests. A Base44 published
+// hostname is NOT a preview signal: live users must actually earn skills.
 function isEditorEnv() {
   try {
     const h = window.location.hostname;
-    return h === 'localhost' || h.includes('base44.app') || h.includes('preview');
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
   } catch { return false; }
 }
 
@@ -298,8 +297,10 @@ function loadInitialLearned() {
 let _learnedSkillIds = loadInitialLearned();
 const _learnListeners = new Set();
 
-function persistLearned() {
-  learnedStorage.set(JSON.stringify([..._learnedSkillIds]));
+// A skill reward is permanent only after the character-scoped save succeeds.
+// Never mark a picked-up scroll learned until the player actually learns it.
+function persistLearned(nextIds) {
+  return learnedStorage.setChecked(JSON.stringify([...nextIds]));
 }
 
 // IDs in this set are ACTIVE abilities (matches abilityStore ABILITY_DEFINITIONS.id)
@@ -308,11 +309,21 @@ const ACTIVE_ABILITY_IDS = new Set(['lightning_strike', 'shadow_teleport', 'fros
 
 export function getLearnedSkillIds() { return _learnedSkillIds; }
 
-export function learnSkill(lootItem) {
-  if (_learnedSkillIds.has(lootItem.id)) return; // already learned
-  _learnedSkillIds = new Set([..._learnedSkillIds, lootItem.id]);
-  persistLearned();
+// Called only after an existing reward/learning transaction has succeeded.
+// Quest rewards can record ownership without consuming an unrelated scroll.
+export function grantLearnedSkillId(skillId) {
+  if (typeof skillId !== 'string' || !skillId.trim()) return false;
+  if (_learnedSkillIds.has(skillId)) return true;
+  const next = new Set([..._learnedSkillIds, skillId]);
+  if (!persistLearned(next)) return false;
+  _learnedSkillIds = next;
   _learnListeners.forEach((fn) => fn(_learnedSkillIds));
+  return true;
+}
+
+export function learnSkill(lootItem) {
+  if (!lootItem?.id || _learnedSkillIds.has(lootItem.id)) return;
+  if (!grantLearnedSkillId(lootItem.id)) return false;
 
   // If this is an active ability, auto-equip it into the first empty Q/E/R/F slot
   // so it instantly appears on the player's hotkey bar.

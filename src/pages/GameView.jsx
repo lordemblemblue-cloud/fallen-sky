@@ -24,8 +24,7 @@ import CharacterProgressionMenu from '../components/game3d/CharacterProgressionM
 import useAXEServiceMode from '../components/game3d/axe/services/useAXEServiceMode';
 import AXEServiceWorkspace from '../components/game3d/axe/services/AXEServiceWorkspace';
 import { getAXEServiceGroupForService } from '../components/game3d/axe/services/AXEServiceGroups.js';
-import { getGame3DMenuShortcut } from '../components/game3d/axe/services/game3dMenuHotkeys.mjs';
-import { getAXECharacterShortcutAction } from '../components/game3d/axe/services/AXECharacterShortcutRouting.mjs';
+import { getGame3DMenuShortcut, resolveGame3DMenuToggle } from '../components/game3d/axe/services/game3dMenuHotkeys.mjs';
 import { normalizeAXEServiceRequest } from '../components/game3d/axe/services/AXEServiceRegistry';
 import MultiplayerSystem from '../components/game/MultiplayerSystem';
 import GameWorldServerManager from '../components/game3d/GameWorldServerManager';
@@ -518,6 +517,7 @@ export default function GameView() {
       event.stopImmediatePropagation?.();
       const currentGroup = services.controller.getSnapshot().groupId;
       const mapWasOpen = !!window.__axeWorldMapOpen;
+      const toggle = resolveGame3DMenuToggle(destination, { groupId: currentGroup, mapOpen: mapWasOpen });
       // The map is a separate HUD portal, not a station workspace.
       window.dispatchEvent(new Event('axeCloseWorldMap'));
       setStoreOpen(false);
@@ -530,28 +530,21 @@ export default function GameView() {
         setRequestedService(null);
         setRequestedServiceItemId(null);
         setRequestedCharacterTab(null);
-        if (!mapWasOpen) {
+        if (toggle.action === 'open') {
           window.dispatchEvent(new CustomEvent('axeOpenWorldMap', { detail: { force: true } }));
         }
         return;
       }
 
       if (destination === 'character') {
-        const action = getAXECharacterShortcutAction({
-          activeGroupId: currentGroup,
-          legacyHubOpen: progressionOpen,
-          activeTab: activeCharacterSubview,
-        });
         // The former Attributes/Inventory/Companion CharacterProgressionMenu
         // is not the new C page. Always close it rather than reopening it.
         setProgressionOpen(false);
         setRequestedService(null);
         setRequestedServiceItemId(null);
         setRequestedCharacterTab(null);
-        if (action === 'close') {
+        if (toggle.action === 'close') {
           services.controller.close();
-        } else if (action === 'focus') {
-          setFocusCharacterRequest(value => value + 1);
         } else {
           setActiveCharacterSubview('Character');
           // Reuse the already-registered unified Character + Appearance
@@ -565,12 +558,12 @@ export default function GameView() {
       setRequestedService(null);
       setRequestedServiceItemId(null);
       setRequestedCharacterTab(null);
-      if (currentGroup === destination) services.controller.close();
-      else void services.controller.open(destination);
+      if (toggle.action === 'close') services.controller.close();
+      else void services.controller.open(toggle.groupId);
     };
     window.addEventListener('keydown', onServiceKey, true);
     return () => window.removeEventListener('keydown', onServiceKey, true);
-  }, [phase, pauseMenuOpen, progressionOpen, activeCharacterSubview, services.controller]);
+  }, [phase, pauseMenuOpen, services.controller]);
 
   // Other in-world controls: TAB = Soul Emporium, G = Clan,
   // Shift+L = Friends, ESC = close overlay / pause.

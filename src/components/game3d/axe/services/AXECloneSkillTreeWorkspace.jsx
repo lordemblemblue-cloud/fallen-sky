@@ -12,6 +12,7 @@ import AXESkillPathHorizontal from './AXESkillPathHorizontal';
 import AXEUniversalSkillHub from './AXEUniversalSkillHub';
 import AXECompanionSkillHub from './AXECompanionSkillHub';
 import AXESkillTreeErrorBoundary from './AXESkillTreeErrorBoundary';
+import AXEAcquiredSkillsPanel from './AXEAcquiredSkillsPanel';
 import {
   CLONE_SKILL_TREE_CATEGORIES, createCloneSkillTreePaths, resolveCloneSkillTreeTier,
   cloneSkillTreeIsAvailable,
@@ -287,6 +288,7 @@ export default function AXECloneSkillTreeWorkspace({
         {onClose && <button className="axe-ct-close" type="button" aria-label="Close Skill Book"
           onClick={onClose}><X size={20}/></button>}</div>
     </header>
+    {!companion && <AXEAcquiredSkillsPanel />}
     <div className={'axe-ct-content'+(collection?' axe-ct-content--horizontal':'')+
       (modernCollection?' axe-ct-content--collection':'')+
       (companion?' axe-ct-content--companion':'')}>
