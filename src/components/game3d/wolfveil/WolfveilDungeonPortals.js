@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
+import {wolfveilAreaAtWorld} from './streaming/WolfveilFiveAreaPlan.mjs';
 
 export const WOLFVEIL_CAVES_REGION='wolfveil-caves';
 
 // `exclude`: cave ids whose ring is replaced by an authored doorway (the
 // natural-zone prototype); every other ring keeps its region portal.
-export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[]}={}){
+export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],area=null}={}){
   const root=new THREE.Group();
   root.name=mode==='surface'?'SWV_CaveDestinationPortals':'SWV_CaveDestinationReturnPortal';
   const ringGeometry=new THREE.TorusGeometry(2.05,.18,6,16);
@@ -18,7 +19,8 @@ export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[]}={
     color:0x183b52,transparent:true,opacity:.65,side:THREE.DoubleSide,
   });
   const portals=mode==='surface'
-    ?WOLFVEIL_EXPLORABLE_CAVES.filter(cave=>!exclude.includes(cave.id)).map(cave=>({
+    ?WOLFVEIL_EXPLORABLE_CAVES.filter(cave=>!exclude.includes(cave.id)&&
+      (!area||wolfveilAreaAtWorld({x:cave.mouth[0],z:cave.mouth[1]+70})===area)).map(cave=>({
       id:cave.id,x:cave.mouth[0],y:cave.mouthY+2.2,z:cave.mouth[1]+70,
     }))
     :[{id:'cave-return',x:-6,y:-5.8,z:70+62}];
