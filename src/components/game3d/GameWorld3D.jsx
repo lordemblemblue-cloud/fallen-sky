@@ -3301,7 +3301,11 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       // hand on the reins. Other weapons (an item's own GLB) hand over to the mount's weapon presenter.
       const ridingWithPack = !!isMountedRef.current && ['pack', 'daggers'].includes(weaponSummon?.getVisual()?.type);
       weaponSummon?.setSuspended(!!isMountedRef.current && !ridingWithPack);
-      weaponSummon?.sync(equippedForAnimation, equippedFamily);
+      // While dead, do not immediately re-materialize the weapon just melted
+      // away by the death sequence. On respawn the normal sync resumes.
+      if (playerDeathElapsed === null && getPlayerHUD().hp > 0) {
+        weaponSummon?.sync(equippedForAnimation, equippedFamily);
+      }
       if (ridingWithPack && !weaponSummon.isOut()) weaponSummon.ensureOut();
       playerAnim?.setEquipmentContext?.({ weaponType: equippedFamily || 'unarmed', summon: !!weaponSummon,
         equipped: !!equippedForAnimation && (!weaponSummon || !weaponSummon.getVisual() || weaponSummon.isOut()),
@@ -3317,6 +3321,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           playerStateMachine.setMounted(false);
           playerAnim?.setMounted?.(false);
         }
+        model.visible = true;
         playerAnim?.HandleDeath?.();
         playerDeathElapsed = 0;
         playerDeathRequested = false;
