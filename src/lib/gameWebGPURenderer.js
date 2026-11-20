@@ -38,7 +38,7 @@ export async function createGameWebGPURenderer({
     return { renderer, reason: null };
   } catch (error) {
     // Cleanup should never mask the original init error or prevent fallback.
-    try { renderer?.dispose(); } catch { /* the GPU may already be lost */ }
+    try { await renderer?.dispose(); } catch { /* the GPU may already be lost */ }
     return { renderer: null, reason: 'webgpu-init-failed', error };
   }
 }
