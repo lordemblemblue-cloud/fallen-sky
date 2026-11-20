@@ -31,9 +31,20 @@ export default function WorldAnnouncementFeed({suppressed=false}){
       setItems(old=>[...old,{id:'local-'+(++nextId.current),title:'WORLD STATUS',
         description:message,tone:'gold',expires:Date.now()+4500}].slice(-4));
     };
+    // This loot event is already emitted after a successful local inventory
+    // pickup. It is visible only to the player; never relayed as world proof.
+    const onLoot=event=>{
+      const name=typeof event?.detail?.name==='string'
+        ?event.detail.name.replace(/[\u0000-\u001f\u007f<>]/g,'').trim().slice(0,72):'';
+      if(!name)return;
+      setItems(old=>[...old,{id:'pickup-'+(++nextId.current),title:'YOUR LOOT',
+        description:'You acquired '+name,tone:'gold',expires:Date.now()+4500}].slice(-4));
+    };
+    window.addEventListener('lootPickup',onLoot);
     window.addEventListener('game3dLocalWorldNotice',onLocalNotice);
     return ()=>{
       window.removeEventListener(WORLD_ANNOUNCEMENT_EVENT,onAnnouncement);
+      window.removeEventListener('lootPickup',onLoot);
       window.removeEventListener('game3dLocalWorldNotice',onLocalNotice);
     };
   },[]);
