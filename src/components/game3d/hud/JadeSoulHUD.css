@@ -2011,25 +2011,4 @@
   --axe-target-notice-clearance:66px;
 }
 .jade-hud .jade-compass-block .axe-target-lock { margin-top:18px; }
-.jade-hud .jade-quest-tracker {
-  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 66px + var(--axe-target-notice-clearance));
-}
-.game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
-  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 40px + var(--axe-target-notice-clearance) + 115px + 26px);
-}
-@media(max-width:620px) {
-  .jade-hud .jade-quest-tracker {
-    top:calc(25px + 106px + 66px + var(--axe-target-notice-clearance));
-  }
-  .game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
-    top:calc(25px + 106px + 40px + var(--axe-target-notice-clearance) + 102px + 26px);
-  }
-}
-@media(max-width:420px) {
-  .jade-hud .jade-quest-tracker {
-    top:calc(18px + 80px + 66px + var(--axe-target-notice-clearance));
-  }
-  .game3d-view:has(.axe-lunar-notifications--level) .jade-hud .jade-quest-tracker {
-    top:calc(18px + 80px + 40px + var(--axe-target-notice-clearance) + 102px + 22px);
-  }
-}
+
