@@ -1,13 +1,13 @@
 // The embedded Duelist competitive hub: no separate Online page. Player
 // sees four modes, a hairline divider and all server-confirmed running arenas.
 import { useState } from 'react';
-import { Play, Radio, RefreshCw, Users } from 'lucide-react';
+import { Play, Radio, RefreshCw, Shuffle, Users } from 'lucide-react';
 import { useLobby } from '../duelist/menu/useLobby.js';
 import { MENU_MODES } from '../duelist/menu/modes.js';
 
-export const PUBLIC_MODE_ORDER = Object.freeze(['duel', 'ctf', 'football', 'tdm']);
+export const PUBLIC_MODE_ORDER = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control']);
 
-export default function DuelistModeBrowser({ onJoin, onSolo }) {
+export default function DuelistModeBrowser({ onJoin, onSolo, onQuickMatch }) {
   const lobby = useLobby();
   const [selected, setSelected] = useState(null);
   const matches = (lobby.matches || [])
@@ -22,6 +22,12 @@ export default function DuelistModeBrowser({ onJoin, onSolo }) {
 
   return (
     <div className="g2-duelist-browser g2-shell" data-testid="duelist-embedded-modes">
+      <button type="button" className="g2-duelist-browser__quickplay" onClick={onQuickMatch}
+        disabled={!lobby.online} data-testid="duelist-online-quickplay">
+        <Shuffle size={23} aria-hidden="true" />
+        <span><strong>Online</strong><small>Random match · Team Deathmatch, Capture the Flag or Three-Point Control</small></span>
+        <span className="g2-duelist-browser__quickplay-action">{lobby.online ? 'Find Match' : 'Offline'} <Play size={14} aria-hidden="true" /></span>
+      </button>
       <div className="g2-duelist-browser__tabs" role="group" aria-label="Choose a Duelist game mode">
         {PUBLIC_MODE_ORDER.map((id) => {
           const mode = MENU_MODES[id];
