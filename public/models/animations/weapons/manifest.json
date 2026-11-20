@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "generatedBy": "tools/game3d-weapon-anim/export_clips.py",
+  "bodies": {
+    "fused-male-v1": {
+      "dir": "",
+      "clips": {
+        "swordCombo1": {
+          "file": "swordCombo1.glb",
+          "duration": 0.5,
+          "windUp": 0.0833,
+          "hit": 0.2167,
+          "cancel": 0.3333,
+          "sweep": [
+            0.0833,
+            0.3167
+          ]
+        },
+        "swordCombo2": {
+          "file": "swordCombo2.glb",
+          "duration": 0.54,
+          "windUp": 0.1167,
+          "hit": 0.2333,
+          "cancel": 0.3667,
+          "sweep": [
+            0.1167,
+            0.3333
+          ]
+        },
+        "swordCombo3": {
+          "file": "swordCombo3.glb",
+          "duration": 0.4833,
+          "windUp": 0.1,
+          "hit": 0.2167,
+          "cancel": 0.3333,
+          "sweep": [
+            0.1,
+            0.3
+          ]
+        }
+      }
+    }
+  }
+}

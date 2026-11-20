@@ -254,3 +254,31 @@ test('the game loads the pack into the binder, and the studio tools write what i
   assert.match(builder, /act\['studio_fingerprint'\] = fingerprint\(act\)/);
   assert.match(exporter, /a\.get\('studio_fingerprint'\) != fingerprint\(a\)/);
 });
+
+test('the shipped pack (public/models/animations/weapons): every clip binds to its body with sane timing', async () => {
+  const manifestPath = 'public/models/animations/weapons/manifest.json';
+  let manifest;
+  try { manifest = JSON.parse(readFileSync(manifestPath, 'utf8')); } catch { return; } // no pack shipped: every weapon keeps its baked clips
+  const byRig = Object.fromEntries(Object.entries(BODIES).map(([name, b]) => [b.rigId, name]));
+  for (const [rigId, entry] of Object.entries(manifest.bodies)) {
+    assert.ok(byRig[rigId], `${rigId} is a fused body`);
+    const listed = weaponClipPackEntries(manifest, rigId);
+    assert.equal(listed.length, Object.keys(entry.clips).length, `${rigId}: every listed clip is a game state with a plain file name`);
+    const model = await loadBody(byRig[rigId]);
+    const { value: clips, warnings } = await quietly(() => loadWeaponClipPack(model, {
+      readManifest: async () => manifest,
+      loadClip: async (url) => (await parse(readFileSync(`public${url}`))).animations[0],
+    }));
+    assert.deepEqual(warnings, [], `${rigId}: nothing skipped`);
+    assert.deepEqual(Object.keys(clips).sort(), listed.map((e) => e.state).sort());
+    for (const [state, clip] of Object.entries(clips)) {
+      const u = clip.userData;
+      const end = clip.duration + 1e-3;
+      assert.ok(Number.isFinite(u.hit) && u.hit >= 0 && u.hit <= end, `${state}: hit inside the clip`);
+      if (Number.isFinite(u.windUp)) assert.ok(u.windUp <= u.hit, `${state}: wind-up before the hit`);
+      if (Number.isFinite(u.cancel)) assert.ok(u.cancel >= u.hit && u.cancel <= end, `${state}: cancel after the hit`);
+      if (u.sweep) assert.ok(u.sweep[0] <= u.hit && u.hit <= u.sweep[1] && u.sweep[1] <= end, `${state}: the sweep holds the hit`);
+      for (const track of clip.tracks) assert.ok(track.values.every(Number.isFinite), `${state} ${track.name}`);
+    }
+  }
+});
