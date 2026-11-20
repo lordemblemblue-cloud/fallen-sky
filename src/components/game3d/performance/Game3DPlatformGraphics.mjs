@@ -41,19 +41,19 @@ export const GAME3D_AREA_LOADING_LABELS=Object.freeze({
 // area at a time, because the whole valley is over budget on all of them.
 export const GAME3D_PLATFORM_DEFAULTS=Object.freeze({
   browser:Object.freeze({
-    graphics:Object.freeze({quality:'high',shadows:true,fpsCap:60}),
-    display:Object.freeze({resolution:'auto',uiScale:'auto'}),
-    gpuProfile:'auto',areaLoading:'single',preloadMeters:90,releaseGpuMemory:false,
+    graphics:Object.freeze({artStyle:'original',quality:'low',shadows:false,fpsCap:60}),
+    display:Object.freeze({resolution:'720p',uiScale:'auto'}),
+    gpuProfile:'performance',areaLoading:'single',preloadMeters:90,releaseGpuMemory:false,
     farScenery:true,
   }),
   desktop:Object.freeze({
-    graphics:Object.freeze({quality:'ultra',shadows:true,fpsCap:120}),
-    display:Object.freeze({resolution:'native',uiScale:'auto'}),
-    gpuProfile:'quality',areaLoading:'single',preloadMeters:140,releaseGpuMemory:false,
+    graphics:Object.freeze({artStyle:'original',quality:'low',shadows:false,fpsCap:60}),
+    display:Object.freeze({resolution:'720p',uiScale:'auto'}),
+    gpuProfile:'performance',areaLoading:'single',preloadMeters:140,releaseGpuMemory:false,
     farScenery:true,
   }),
   mobile:Object.freeze({
-    graphics:Object.freeze({quality:'low',shadows:false,fpsCap:30}),
+    graphics:Object.freeze({artStyle:'original',quality:'low',shadows:false,fpsCap:30}),
     display:Object.freeze({resolution:'720p',uiScale:'auto'}),
     gpuProfile:'performance',areaLoading:'single',preloadMeters:60,releaseGpuMemory:true,
     farScenery:false,
