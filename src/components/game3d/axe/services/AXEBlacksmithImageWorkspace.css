@@ -2022,3 +2022,53 @@
 ) .axe-blacksmith-progression-panel {
   display:none!important;
 }
+
+
+/* Advanced safety/legacy controls live in the right drawer, never inside
+ * either equipment/material square. All are closed until explicitly opened. */
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-safety,
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-extra {
+  flex:none;
+  padding:7px 8px;
+  border:1px solid rgba(225,190,136,.38);
+  border-radius:7px;
+  background:rgba(25,42,56,.68);
+  font:11px/1.4 system-ui,sans-serif;
+  color:#e7d8ba;
+}
+.axe-blacksmith-feed-safety summary,
+.axe-blacksmith-feed-extra summary {cursor:pointer;font-weight:600}
+.axe-blacksmith-feed-safety[open],
+.axe-blacksmith-feed-extra[open] {display:grid;gap:9px}
+.axe-blacksmith-feed-safety label {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding-top:6px;
+}
+.axe-blacksmith-feed-safety select {
+  background:#253d51;
+  color:#f2e2c3;
+  border:1px solid rgba(229,194,137,.59);
+  border-radius:5px;
+  padding:4px;
+  max-width:100px;
+}
+.axe-blacksmith-feed-safety input {accent-color:#dcbf81}
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-stop {
+  flex:none;
+  border:1px solid #e1a596;
+  border-radius:7px;
+  padding:7px 8px;
+  background:rgba(108,53,44,.72);
+  color:#ffe1d9;
+  font:600 11px system-ui,sans-serif;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-attempt-feed:has(
+  .axe-blacksmith-feed-extra[open],.axe-blacksmith-feed-safety[open]
+) {
+  -webkit-mask-image:none;
+  mask-image:none;
+  background:rgba(19,33,48,.94);
+}
