@@ -20,3 +20,17 @@ test('availability check supports server-side rendering', () => {
   assert.equal(detectWebGPUAvailability(undefined), false);
   assert.equal(detectWebGPUAvailability({ gpu: {} }), true);
 });
+
+for (const requested of ['WEBGPU', 'experimental', '', null, false, 1, {}]) {
+  test(`invalid renderer preference ${String(requested)} fails closed`, () => {
+    assert.deepEqual(selectRendererBackend({ requested, webgpuAvailable: true, sceneWebGPUReady: true }), {
+      backend: 'webgl', reason: 'invalid-renderer-request',
+    });
+  });
+}
+
+test('explicit WebGPU still requires both readiness and availability', () => {
+  assert.equal(selectRendererBackend({ requested: 'webgpu', webgpuAvailable: true, sceneWebGPUReady: false }).backend, 'webgl');
+  assert.equal(selectRendererBackend({ requested: 'webgpu', webgpuAvailable: false, sceneWebGPUReady: true }).backend, 'webgl');
+  assert.equal(selectRendererBackend({ requested: 'webgpu', webgpuAvailable: true, sceneWebGPUReady: true }).backend, 'webgpu');
+});
