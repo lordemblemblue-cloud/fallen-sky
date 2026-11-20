@@ -71,6 +71,9 @@
 .game3d-view .game3d-world-chat.is-typing .game3d-chat-surface {
   background:rgba(6,13,23,.86);backdrop-filter:blur(18px) saturate(128%);
 }
+.game3d-view[data-service-mode="true"] .game3d-world-chat {
+  opacity:0!important;visibility:hidden!important;pointer-events:none!important;
+}
 /* Only the overlapping left quest region yields to a focused chat input.
    The minimap above remains visible and the chat stays below its bottom edge. */
 .game3d-view:has(.game3d-world-chat.is-typing) .jade-hud .jade-quest-tracker {
