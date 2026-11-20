@@ -517,7 +517,9 @@ export default function GameView() {
       event.stopImmediatePropagation?.();
       const currentGroup = services.controller.getSnapshot().groupId;
       const mapWasOpen = !!window.__axeWorldMapOpen;
-      const toggle = resolveGame3DMenuToggle(destination, { groupId: currentGroup, mapOpen: mapWasOpen });
+      const toggle = resolveGame3DMenuToggle(destination, {
+        groupId: currentGroup, mapOpen: mapWasOpen, characterTab: activeCharacterSubview,
+      });
       // The map is a separate HUD portal, not a station workspace.
       window.dispatchEvent(new Event('axeCloseWorldMap'));
       setStoreOpen(false);
@@ -545,6 +547,11 @@ export default function GameView() {
         setRequestedCharacterTab(null);
         if (toggle.action === 'close') {
           services.controller.close();
+        } else if (toggle.action === 'focus') {
+          // C first returns to Character from the Equipment/Vanity/Aura
+          // subtab; pressing C again closes the full panel.
+          setFocusCharacterRequest(value => value + 1);
+          setActiveCharacterSubview('Character');
         } else {
           setActiveCharacterSubview('Character');
           // Reuse the already-registered unified Character + Appearance
@@ -563,7 +570,7 @@ export default function GameView() {
     };
     window.addEventListener('keydown', onServiceKey, true);
     return () => window.removeEventListener('keydown', onServiceKey, true);
-  }, [phase, pauseMenuOpen, services.controller]);
+  }, [phase, pauseMenuOpen, activeCharacterSubview, services.controller]);
 
   // Other in-world controls: TAB = Soul Emporium, G = Clan,
   // Shift+L = Friends, ESC = close overlay / pause.
@@ -705,7 +712,7 @@ export default function GameView() {
       <AXEVerifiedQuestbookMount172 />
       <AXEQuestTrailMount region={worldRegion} enabled={!services.active && !services.expanded} />
       <GameHUD region={worldRegion} serviceMode={services.active} servicesExpanded={services.expanded}
-        activeServiceGroup={services.groupId} onToggleServices={() => services.controller.toggle()}
+        showServicesNavigation={false} activeServiceGroup={services.groupId}
         onSelectServiceGroup={groupId => {
           setProgressionOpen(false); setStoreOpen(false); setPauseMenuOpen(false);
           setFriendsListOpen(false); setClanOverlayOpen(false);
@@ -860,6 +867,16 @@ export default function GameView() {
       {/* Pause menu — opened by ESC */}
       <PauseMenu
         open={pauseMenuOpen}
+        onOpenService={groupId => {
+          // Escape is a launcher, never a second menu layered behind a
+          // service. The page opens directly with no floating Services strip.
+          setPauseMenuOpen(false);
+          window.dispatchEvent(new Event('axeCloseWorldMap'));
+          setProgressionOpen(false);setStoreOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          setRequestedService(null);setRequestedServiceItemId(null);setRequestedCharacterTab(null);
+          void services.controller.open(groupId);
+        }}
         onEditHUD={()=>{setPauseMenuOpen(false);setHudEditing(true);}}
         onClose={() => setPauseMenuOpen(false)}
         onCreateCharacter={() => { window.dispatchEvent(new Event('game3dCheckpointFlush')); setResumeCheckpoint(null); setPauseMenuOpen(false); setWorldEntryStatus('idle'); setPlayIntroCamera(false); setCreatorOnLogin(true); setPhase('login'); }}
