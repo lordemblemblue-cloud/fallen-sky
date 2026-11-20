@@ -422,6 +422,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       carry -= STEP;
       for (const room of rooms.values()) {
         if (room.mission && !connected(room)) continue; // nobody here (or everyone dropped): the mission waits
+        if (!room.mission && !room.clients.size) continue; // advertised bot-filled rooms sleep until the first human joins
         const inputs = {};
         for (const client of room.clients.values()) {
           let input;
