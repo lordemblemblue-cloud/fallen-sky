@@ -60,3 +60,8 @@ GitHub Actions validates pushes/PRs, not autonomous code writing. Scheduled codi
 - The readiness helper is available for future integration with `selectRendererBackend` only after scene-level audits and browser validation. Do not flip either flag based on static tests alone.
 - Validation requested: `node --test tests/webgpuSceneReadiness.test.mjs tests/rendererSelection.test.mjs`, `npm run lint`, `npm run build`; not executed by this GitHub-only agent.
 - Next owners: Duelist postprocessing parity and Fallen Sky GameWorld3D audit, each on separate PRs. Marcus Flow 1 remains deferred.
+
+## Status refresh — 2026-11-20 (Fallen Sky context inventory, draft #131)
+- Draft #131 owns only `scripts/gameworld-webgpu-context-audit.mjs` and `tests/gameworldWebgpuContextAudit.test.mjs`; this handoff paragraph is coordination only. The script inventories line numbers for WebGL renderer creation, `getContext`, context-loss checks, render, resize and disposal.
+- Source review anchors in `GameWorld3D.jsx`: WebGL renderer around 530–531; context diagnostics 532; loss guard 654; resize 5464; disposal 5648. Do not interpret a static inventory as WebGPU compatibility.
+- Validation **not executed**: run focused Node test, audit CLI, lint, build and browser device/context-loss tests. WebGL stays default; do not merge/deploy without review. Coordinate any further edits to this handoff file with owners of #121/#125.
