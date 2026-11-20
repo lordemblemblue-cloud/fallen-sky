@@ -791,7 +791,8 @@ export default function GameView() {
       <TradePanel />
       <TradeSessionWatcher userId={user?.id} />
       <IncomingRequestToast userId={user?.id} />
-      <WorldChatPanel userId={user?.id} suppressed={services.active} showDock={communityHUD.chat} />
+      <WorldChatPanel userId={user?.id} suppressed={services.active} showDock={communityHUD.chat}
+        onOpenClan={()=>{setPauseMenuOpen(false);setClanOverlayOpen(true);}} />
        <EchoChronicleOverlay suppressed={services.active || services.expanded} showLauncher={communityHUD.echo}
         onOpenQuestLogbook={() => {
           setProgressionOpen(false);setStoreOpen(false);setPauseMenuOpen(false);
