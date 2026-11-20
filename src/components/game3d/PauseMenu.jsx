@@ -4,7 +4,7 @@ import {
   AudioLines, ChevronRight, DoorOpen, Gamepad2,
   Keyboard, LogOut, Monitor, MousePointerClick, Play, Settings2, Users, MessageSquare, BookOpen,
   LayoutDashboard, Move, RotateCcw,
-  ShieldAlert, UserPlus, Volume2, VolumeX, X,
+  ShieldAlert, UserPlus, Volume2, VolumeX, X, Hammer, Trophy,
 } from 'lucide-react';
 import {base44} from '@/api/base44Client';
 import {inkPaletteFor} from './render/inkWashLook';
@@ -37,9 +37,10 @@ import {
   readGame3DHudCustomization,saveGame3DHudCustomization,
   changeGame3DHudWidget,defaultGame3DHudCustomization,
 } from './hud/Game3DHudCustomization.mjs';
+import { AXE_SERVICE_GROUPS } from './axe/services/AXEServiceGroups.js';
 import './PauseMenu.css';
 
-const MENU_ICONS={overview:Gamepad2,audio:AudioLines,controls:Keyboard,
+const MENU_ICONS={overview:Gamepad2,services:Hammer,scoreboard:Trophy,audio:AudioLines,controls:Keyboard,
   graphics:Monitor,ui:LayoutDashboard,community:Users,session:DoorOpen};
 const PRESET_QUALITY=['low','medium','high','ultra'];
 const FPS_CAPS=[30,60,120,144];
@@ -84,7 +85,7 @@ function Switch({checked,onChange,label,description}){
 
 export default function PauseMenu({
   open,onClose,volume=0.5,onVolumeChange=()=>{},onReturnToCharacterSelect,onCreateCharacter,
-  context='world',motionEnabled,onMotionChange,onEditHUD,
+  context='world',motionEnabled,onMotionChange,onEditHUD,onOpenService,
 }){
   const entry=context==='entry';
   const reduceMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -134,7 +135,7 @@ export default function PauseMenu({
   });
   const shouldAnimate=menuMotion&&!reduceMotion;
   const availableSections=entry
-    ?GAME3D_PAUSE_SECTIONS.filter(section=>section.id!=='session')
+    ?GAME3D_PAUSE_SECTIONS.filter(section=>!['session','services','scoreboard'].includes(section.id))
     :GAME3D_PAUSE_SECTIONS;
   const updateMotion=next=>{
     const enabled=!!next;
@@ -248,6 +249,9 @@ export default function PauseMenu({
       if(event.key!=='Escape'||event.repeat)return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      // A world drawer closes completely with one Escape from ANY section;
+      // only dangerous exit confirmation gets its own cancel step.
+      if (!entry && !confirmAction) { onClose(); return; }
       const next=game3dPauseEscape(view,confirmAction);
       setConfirmAction(next.confirmAction);
       if(next.close)onClose();
@@ -388,6 +392,8 @@ export default function PauseMenu({
   const heading={
     overview:entry?['Game Settings','Adjust your experience before entering Wolfveil']
       :['Journey Menu','Your adventure is still running'],
+    services:['Services','Choose a workstation or progression menu'],
+    scoreboard:['Scoreboard','Live world session and match status'],
     audio:['Audio','Adjust your game theme'],
     controls:['Controls','Choose how you move through the world'],
     graphics:['Graphics & Display','Tune the world to your device'],
@@ -403,8 +409,10 @@ export default function PauseMenu({
       transition={{duration:shouldAnimate?.15:0}}>
       <motion.section ref={dialogRef} role="dialog" aria-modal="true" aria-label={entry?'Game 3D title settings':'Game 3D world menu'}
         className="axe3d-pause__panel"
-        initial={{opacity:0,scale:.97,y:16}} animate={{opacity:1,scale:1,y:0}}
-        exit={{opacity:0,scale:.98,y:12}} transition={{duration:shouldAnimate?.18:0}}>
+        initial={entry?{opacity:0,scale:.97,y:16}:{opacity:0,x:90}}
+        animate={entry?{opacity:1,scale:1,y:0}:{opacity:1,x:0}}
+        exit={entry?{opacity:0,scale:.98,y:12}:{opacity:0,x:90}}
+        transition={{duration:shouldAnimate?.2:0}}>
         <div className="axe3d-pause__topline"/>
         <header className="axe3d-pause__header">
           <div className="axe3d-pause__identity">
@@ -416,6 +424,8 @@ export default function PauseMenu({
           </div>
           <div className="axe3d-pause__header-end">
             <span className="axe3d-pause__online"><span/> {entry?'TITLE SCREEN':'WORLD ACTIVE'}</span>
+            <button type="button" className="axe3d-pause__icon-button" aria-label="Open settings"
+              title="Settings" onClick={()=>selectView('graphics')}><Settings2 size={20}/></button>
             <button type="button" className="axe3d-pause__icon-button"
               onClick={onClose} aria-label={entry?"Close settings":"Resume game"} title={entry?"Close settings":"Resume game"}><X size={20}/></button>
           </div>
@@ -466,6 +476,11 @@ export default function PauseMenu({
               </div>
             </div> : <>
               {view==='overview'&&<>
+                {!entry&&<div className="axe3d-pause__quick-actions">
+                  <button type="button" onClick={()=>selectView('services')}><Hammer size={19}/><span>Services</span><ChevronRight size={18}/></button>
+                  <button type="button" onClick={()=>selectView('scoreboard')}><Trophy size={19}/><span>Scoreboard</span><ChevronRight size={18}/></button>
+                  <button type="button" onClick={()=>selectView('graphics')}><Settings2 size={19}/><span>Settings</span><ChevronRight size={18}/></button>
+                </div>}
                 <div className="axe3d-pause__hero">
                   <span>WOLFVEIL · {entry?'TITLE SETTINGS':'ADVENTURE'}</span>
                   <h4>{entry?'Prepare your journey.':'The path is yours.'}</h4>
@@ -493,6 +508,28 @@ export default function PauseMenu({
                   </button>
                 </div>
               </>}
+              {view==='services'&&!entry&&<div className="axe3d-pause__service-list" aria-label="Available services">
+                {AXE_SERVICE_GROUPS.filter(group=>group.id!=='character').map(group=>(
+                  <button type="button" key={group.id} className="axe3d-pause__service-link"
+                    onClick={()=>onOpenService?.(group.id)}>
+                    <span><strong>{group.label}</strong><small>{group.id==='skills'?'K · Combat and companion skills':
+                      group.id==='quest_logbook'?'L · Quests and objectives':
+                      group.id==='companion'?'P · Pets and mounts':
+                      group.id==='spiritual'?'J · Spiritual progression':
+                      group.id==='blacksmith'?'= · Equipment upgrades':'Open service'}</small></span>
+                    <ChevronRight size={19} aria-hidden="true"/>
+                  </button>
+                ))}
+                <p className="axe3d-pause__service-hint">Press C to open Character directly. Character does not open this Escape menu or the old Services strip.</p>
+              </div>}
+              {view==='scoreboard'&&!entry&&<div className="axe3d-pause__scoreboard" aria-label="World scoreboard">
+                <div className="axe3d-pause__scoreboard-row"><span>World connection</span><strong>{presence.status==='connected'?'Online':presence.status==='full'?'Server full':presence.status==='connecting'?'Connecting':presence.status==='error'?'Unavailable':'Unknown'}</strong></div>
+                <div className="axe3d-pause__scoreboard-row"><span>Players in world</span><strong>{Number.isFinite(presence.count)?presence.count:'—'} / {presence.max||20}</strong></div>
+                <div className="axe3d-pause__scoreboard-empty"><Trophy size={24} aria-hidden="true"/>
+                  <strong>Match scores</strong>
+                  <p>No active match scores have been reported to this menu. The live world connection and player count above are real session data, not a simulated leaderboard.</p>
+                </div>
+              </div>}
               {view==='audio'&&<div className="axe3d-pause__surface">
                 <div className="axe3d-pause__surface-heading"><Volume2 size={22}/><div><strong>Game Theme</strong><p>Music volume, updated immediately.</p></div></div>
                 <div className="axe3d-pause__volume-row">
