@@ -207,6 +207,59 @@ test('a selected public server accepts humans, removes exactly one bot each and 
   await server.close();
 });
 
+test('every full Duel server creates exactly one spare bot-filled server automatically', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const first = (await (await fetch(http)).json()).matches.find(r => r.mode === 'duel');
+  assert.equal(first.seats, 2);
+  const a = await player(url, 'arena-a');
+  const b = await player(url, 'arena-b');
+  for (const client of [a, b]) {
+    client.send({ t: 'join', mode: 'duel', matchId: first.id });
+    assert.equal((await client.next(m => m.t === 'joined')).match, first.id);
+  }
+  const two = (await (await fetch(http)).json()).matches.filter(r => r.mode === 'duel');
+  assert.equal(two.length, 2, 'a second bot-filled room appears as soon as the first becomes full');
+  const spare = two.find(r => r.id !== first.id);
+  assert.equal(spare.players, 0);
+  assert.equal(spare.bots, spare.seats);
+  const c = await player(url, 'arena-c');
+  c.send({ t: 'join', mode: 'duel' });
+  assert.equal((await c.next(m => m.t === 'joined')).match, spare.id, 'newcomer takes a bot seat in the spare room');
+  const after = (await (await fetch(http)).json()).matches.filter(r => r.mode === 'duel');
+  assert.equal(after.length, 2, 'only one spare is maintained, not a duplicate for every join');
+  for (const client of [a, b, c]) client.ws.close();
+  await server.close();
+});
+
+test('public co-op can be hosted and joined by room id, private rooms cannot be guessed', async () => {
+  const { server, url } = await start();
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const owner = await player(url, 'crew-owner');
+  owner.send({ t: 'join', mode: 'story', create: true, open: true });
+  const pub = await owner.next(m => m.t === 'joined');
+  assert.equal(pub.mode, 'story');
+  assert.equal(server.rooms.get(pub.match).open, true);
+  const listed = (await (await fetch(http)).json()).matches.find(r => r.id === pub.match);
+  assert.equal(listed.mode, 'story');
+  const friend = await player(url, 'crew-friend');
+  friend.send({ t: 'join', mode: 'story', matchId: pub.match });
+  const joined = await friend.next(m => m.t === 'joined');
+  assert.equal(joined.match, pub.match);
+  assert.equal(joined.seats.filter(s => s.kind === 'player').length, 2);
+  const privateOwner = await player(url, 'private-owner');
+  privateOwner.send({ t: 'join', mode: 'story', create: true });
+  const privateRoom = await privateOwner.next(m => m.t === 'joined');
+  assert.equal(server.rooms.get(privateRoom.match).open, false);
+  const outsider = await player(url, 'outsider');
+  outsider.send({ t: 'join', mode: 'story', matchId: privateRoom.match });
+  assert.equal((await outsider.next(m => m.t === 'error')).code, 'room', 'private rooms cannot be joined by ID');
+  outsider.send({ t: 'join', mode: 'story', code: privateRoom.code });
+  assert.equal((await outsider.next(m => m.t === 'joined')).match, privateRoom.match, 'valid invite code still works');
+  for (const client of [owner, friend, privateOwner, outsider]) client.ws.close();
+  await server.close();
+});
+
 test('a crew room for the story mission: its own code, a friend joins by it, the depot and the mission view arrive, it is not listed', async () => {
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
