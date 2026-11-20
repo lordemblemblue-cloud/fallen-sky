@@ -461,3 +461,20 @@
     top:calc(18px + 80px + 43px);
   }
 }
+
+
+/* The target rail occupies the first slot below the minimap. Only a live
+ * target adds the clearance; no-target level-ups stay just beneath the map. */
+.axe-lunar-notifications--level {
+  top:calc(clamp(19px,3vh,37px) + clamp(126px,11.2vw,184px) + 40px + var(--axe-target-notice-clearance,0px));
+}
+@media(max-width:620px) {
+  .axe-lunar-notifications--level {
+    top:calc(25px + 106px + 40px + var(--axe-target-notice-clearance,0px));
+  }
+}
+@media(max-width:420px) {
+  .axe-lunar-notifications--level {
+    top:calc(18px + 80px + 40px + var(--axe-target-notice-clearance,0px));
+  }
+}
