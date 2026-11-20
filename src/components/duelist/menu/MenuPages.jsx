@@ -3,7 +3,7 @@
 // and offers one obvious button.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Home, Trophy, ChevronLeft, X, Compass, Package, Layers, Crown, Sparkles, CircleDot } from 'lucide-react';
+import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
@@ -50,29 +50,36 @@ const HUB_GLYPHS = {
  * matchmaking and gameplay: this home screen never bypasses those checks.
  */
 export function DuelistHub() {
+  const navigate = useNavigate();
   const lobby = useLobby();
-  const [prefs] = usePrefs();
-  const [panel, setPanel] = useState(null);
-  const [playStep, setPlayStep] = useState('categories');
+  const [prefs, updatePrefs] = usePrefs();
+  const [playOpen, setPlayOpen] = useState(false);
+  const [playlist, setPlaylist] = useState('normal');
   const [selectedMode, setSelectedMode] = useState('duel');
   const selected = findHubMode(selectedMode);
   const fighter = BODIES[prefs.fighter]?.name || 'Duelist';
-  const openPlay = () => { setPlayStep('categories'); setPanel('play'); };
-  const closePlay = () => { setPanel(null); setPlayStep('categories'); };
-  const goBack = () => {
-    if (playStep === 'detail') setPlayStep('modes');
-    else if (playStep === 'modes') setPlayStep('categories');
-    else closePlay();
+  // Online is a choice INSIDE each playable mode, not another top-level game mode.
+  // Practice is an action, not a competing category. Ranked is visible, but
+  // cannot launch until an authoritative ranked matchmaking queue exists.
+  const visibleModes = HUB_MODE_CARDS.filter(mode => !['practice', 'online'].includes(mode.id));
+  const playable = playlist === 'normal' && Boolean(selected?.route && MENU_MODES[selected.route]);
+  const canPlayOnline = playable && MENU_MODES[selected.route]?.online && lobby.online;
+  const canPractice = playable;
+  const modeIcon = HUB_GLYPHS[selected?.symbol] || Swords;
+  const SelectedIcon = modeIcon;
+  const launch = online => {
+    if (!playable || (online && !canPlayOnline)) return;
+    navigate({ to: '/duelist-next/play', search: { mode: selected.route, online: online ? 1 : 0 } });
   };
 
   useEffect(() => {
-    if (!panel) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === 'Escape') { setPanel(null); setPlayStep('categories'); }
+    if (!playOpen) return undefined;
+    const onKeyDown = event => {
+      if (event.key === 'Escape') setPlayOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [panel]);
+  }, [playOpen]);
 
   return (
     <main className="duelist-hub">
@@ -83,114 +90,132 @@ export function DuelistHub() {
           <div className="duelist-hub-avatar"><User size={24} aria-hidden="true" /></div>
           <div>
             <div className="duelist-hub-player-name">GUEST DUELIST</div>
-            <div className="duelist-hub-player-sub">{fighter} · Lv. —</div>
+            <div className="duelist-hub-player-sub">{fighter}</div>
           </div>
         </div>
         <h1 className="duelist-hub-title"><small>EMBLEM BLUE</small>DUELIST ADVENTURE</h1>
         <div className="duelist-hub-header-end">
-          <span className="duelist-hub-rank"><Trophy size={15} className="mr-1 inline text-amber-300" /> UNRANKED</span>
           <span>{lobby.online ? `${lobby.players} PLAYING` : 'OFFLINE / SOLO'}</span>
-          <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-hub-settings" aria-label="Settings" title="Settings">
-            <Settings size={20} />
-          </Link>
         </div>
       </header>
 
       <section className="duelist-hub-body" aria-label="Duelist home">
-        <div className="duelist-hub-left">
-          <span className="duelist-hub-eyebrow">THE HANGAR</span>
-          <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-hub-brief"><BookOpen size={20} /> STORY CAMPAIGN</Link>
-          <Link to="/duelist-next/$page" params={{ page: 'join' }} className="duelist-hub-brief"><Globe2 size={20} /> LIVE MATCHES {lobby.online ? `· ${lobby.players}` : ''}</Link>
-          <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-hub-brief"><User size={20} /> SELECT FIGHTER</Link>
-          <Link to="/duelist-classic" className="duelist-hub-brief"><Swords size={20} /> CLASSIC ARENA</Link>
-        </div>
-
         <nav className="duelist-hub-nav" aria-label="Home actions">
-          <div className="duelist-hub-home-label">HOME</div>
-          <button type="button" onClick={openPlay} className="duelist-hub-nav-action" data-active={panel === 'play'}><Play fill="currentColor" /> PLAY</button>
-          <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-hub-nav-action"><User /> CHARACTER</Link>
-          <button type="button" disabled className="duelist-hub-nav-action" title="Loadout menu is planned"><Package /> LOADOUT <em>SOON</em></button>
-          <button type="button" disabled className="duelist-hub-nav-action" title="Skills menu is planned"><Sparkles /> SKILLS <em>SOON</em></button>
-          <button type="button" disabled className="duelist-hub-nav-action" title="Ranked leaderboard is planned"><Trophy /> RANKING <em>SOON</em></button>
+          <button type="button" onClick={() => setPlayOpen(current => !current)}
+            className="duelist-hub-nav-action" data-active={playOpen} aria-expanded={playOpen}
+            aria-controls="duelist-play-drawer"><Play fill="currentColor" /> PLAY</button>
+          <Link to="/duelist-next/$page" params={{ page: 'story' }}
+            className="duelist-hub-nav-action"><BookOpen /> STORY CAMPAIGN</Link>
+          <Link to="/duelist-next/$page" params={{ page: 'fighter' }}
+            className="duelist-hub-nav-action"><User /> CHARACTER</Link>
         </nav>
       </section>
 
-      {panel === 'play' && (
-        <>
-          <button className="duelist-hub-overlay-backdrop" type="button" aria-label="Close Play menu" onClick={closePlay} />
-          <section className="duelist-hub-overlay" aria-label="Play mode selection">
-            <div className="duelist-hub-overlay-head">
-              <div>
-                <span className="duelist-hub-eyebrow">{playStep === 'categories' ? 'PLAY' : 'NORMAL PLAY'}</span>
-                <h2>{playStep === 'categories' ? 'SELECT PLAY MODE' : playStep === 'detail' ? 'SELECTED MODE' : 'CHOOSE A GAME MODE'}</h2>
-              </div>
-              <div className="duelist-hub-overlay-tools">
-                {playStep !== 'categories' && (
-                  <button type="button" className="duelist-hub-small-button" onClick={goBack}><ChevronLeft size={16} /> Back</button>
-                )}
-                <button type="button" className="duelist-hub-small-button" onClick={closePlay} aria-label="Close play menu"><X size={18} /></button>
+      {playOpen && (
+        <section id="duelist-play-drawer" className="duelist-hub-overlay" aria-label="Play mode selection">
+          <div className="duelist-hub-overlay-head">
+            <div>
+              <span className="duelist-hub-eyebrow">PLAY</span>
+              <h2>Select mode</h2>
+            </div>
+            <button type="button" className="duelist-hub-small-button"
+              onClick={() => setPlayOpen(false)} aria-label="Close play menu"><X size={18} /></button>
+          </div>
+
+          <div className="duelist-hub-play-layout">
+            <div className="duelist-hub-playlists" aria-label="Play type">
+              <button type="button" className="duelist-hub-category"
+                data-selected={playlist === 'normal'} aria-pressed={playlist === 'normal'}
+                onClick={() => setPlaylist('normal')}>
+                <Users aria-hidden="true" />
+                <span>NORMAL PLAY</span>
+              </button>
+              <button type="button" className="duelist-hub-category"
+                data-selected={playlist === 'ranked'} aria-pressed={playlist === 'ranked'}
+                onClick={() => setPlaylist('ranked')}>
+                <Trophy aria-hidden="true" />
+                <span>RANKED PLAY</span>
+                <small>Planned</small>
+              </button>
+            </div>
+
+            <div className="duelist-hub-mode-list" aria-label="Game modes">
+              <h3>Game modes</h3>
+              <div className="duelist-hub-modes">
+                {visibleModes.map(mode => {
+                  const Icon = HUB_GLYPHS[mode.symbol] || Target;
+                  return (
+                    <button key={mode.id} type="button" className="duelist-hub-mode"
+                      data-selected={selectedMode === mode.id} aria-pressed={selectedMode === mode.id}
+                      onClick={() => setSelectedMode(mode.id)}>
+                      <Icon aria-hidden="true" />
+                      <span>{mode.title}</span>
+                      {!mode.route && <small>Planned</small>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {playStep === 'categories' ? (
-              <>
-                <div className="duelist-hub-category-row">
-                  <button type="button" className="duelist-hub-category" onClick={() => setPlayStep('modes')}>
-                    <Users size={54} />
-                    <span>NORMAL PLAY</span>
-                    <small className="text-[11px] font-normal normal-case">Solo, bots and available online modes</small>
-                  </button>
-                  <button type="button" className="duelist-hub-category" data-gold="true" disabled title="Ranked matchmaking is not available yet">
-                    <Trophy size={54} />
-                    <span>RANKED PLAY</span>
-                    <small className="text-[11px] font-normal normal-case">Coming soon</small>
-                  </button>
-                </div>
-                <p className="duelist-hub-overlay-note">Select Normal Play to explore all available battle modes.</p>
-              </>
-            ) : (
-              <>
-                <div className="duelist-hub-modes" aria-label="Available game modes">
-                  {HUB_MODE_CARDS.map((mode) => {
-                    const Icon = HUB_GLYPHS[mode.symbol] || Target;
-                    return (
-                      <button key={mode.id} type="button" className="duelist-hub-mode"
-                        data-selected={selectedMode === mode.id} disabled={!mode.route}
-                        title={mode.route ? mode.description : `${mode.title} is planned`}
-                        onClick={() => { setSelectedMode(mode.id); setPlayStep('detail'); }}>
-                        <Icon aria-hidden="true" />
-                        <span>{mode.title}</span>
-                        {!mode.route && <small>COMING SOON</small>}
-                        {mode.id === 'online' && !lobby.online && <small>SERVER UNAVAILABLE</small>}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="duelist-hub-mode-detail">
-                  <div>
-                    <strong>{selected?.title || 'SELECT A MODE'}</strong>
-                    <p>{selected?.description || 'Choose a mode above.'}</p>
+            <div className="duelist-hub-mode-detail">
+              <div className="duelist-hub-mode-art" aria-hidden="true">
+                <span className="duelist-hub-mode-art-glow" />
+                <SelectedIcon />
+                <span>{selected?.title || 'Choose a mode'}</span>
+              </div>
+              <div className="duelist-hub-mode-content">
+                <h3>{selected?.title || 'Select a mode'}</h3>
+                <p>{selected?.description || 'Choose a battle mode to see its options.'}</p>
+                {playlist === 'ranked' ? (
+                  <div className="duelist-hub-mode-status" role="status">
+                    Ranked matchmaking is planned. These will be the same battle modes, without practice.
                   </div>
-                  {selected?.route && (
-                    <Link to="/duelist-next/$page" params={{ page: selected.route }} className="duelist-hub-primary">
-                      <Play fill="currentColor" /> VIEW MODE
-                    </Link>
-                  )}
-                </div>
-              </>
-            )}
-          </section>
-        </>
+                ) : !selected?.route ? (
+                  <div className="duelist-hub-mode-status" role="status">
+                    This mode is planned. Matchmaking will be available once its gameplay is ready.
+                  </div>
+                ) : (
+                  <>
+                    <div className="duelist-hub-match-actions">
+                      <button type="button" onClick={() => launch(false)}
+                        disabled={!canPractice}><Target /> PRACTICE</button>
+                      <button type="button" data-primary="true" onClick={() => launch(true)}
+                        disabled={!canPlayOnline}
+                        title={!lobby.online ? 'Online server is unavailable' : undefined}>
+                        <Play fill="currentColor" /> ONLINE PLAY
+                      </button>
+                    </div>
+                    <div className="duelist-hub-match-settings">
+                      <label>AI level
+                        <select value={prefs.level} onChange={event => updatePrefs({ level: event.target.value })}>
+                          {LEVELS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+                        </select>
+                      </label>
+                      <label>Opponent model
+                        <select value={prefs.foe} onChange={event => updatePrefs({ foe: event.target.value })}>
+                          {Object.entries(BODIES).map(([key, body]) => <option key={key} value={key}>{body.name}</option>)}
+                        </select>
+                      </label>
+                    </div>
+                    <div className="duelist-hub-action-footnote">
+                      {!lobby.online ? 'Online play will be available when the match server connects.' : 'Choose practice for bots or online for matchmaking.'}
+                      <Link to="/duelist-next/$page" params={{ page: selected.route }}>More mode details</Link>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       )}
 
       <footer className="duelist-hub-footer" aria-label="Quick navigation">
-        <button type="button" className="duelist-hub-footer-item" data-active="true" onClick={closePlay}><Home /> HOME</button>
-        <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-hub-footer-item"><Compass /> MISSIONS</Link>
-        <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-hub-footer-item"><Layers /> CHARACTER</Link>
-        <button type="button" disabled title="Collection is planned" className="duelist-hub-footer-item"><Package /> COLLECTION</button>
-        <button type="button" disabled title="Clan is planned" className="duelist-hub-footer-item"><Users /> CLAN</button>
-        <button type="button" disabled title="Battle Pass is planned" className="duelist-hub-footer-item"><Crown /> BATTLE PASS</button>
-        <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-hub-footer-item"><Settings /> SETTINGS</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'settings' }}
+          className="duelist-hub-footer-item"><Settings /> SETTINGS</Link>
+        <button type="button" disabled className="duelist-hub-footer-item"
+          title="Battle Pass is planned"><Trophy /> BATTLE PASS <small>PLANNED</small></button>
+        <button type="button" disabled className="duelist-hub-footer-item"
+          title="Plus is planned"><Zap /> PLUS</button>
       </footer>
     </main>
   );
