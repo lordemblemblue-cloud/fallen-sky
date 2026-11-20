@@ -55,3 +55,41 @@ test('HUD never draws Services button in Game 3D, and Escape launch clears overl
   assert.match(style,/\[data-context="world"\] \.axe3d-pause__panel/);
   assert.match(style,/justify-content:flex-end/);
 });
+
+test('Escape initially shows a compact square-tile launcher, not the full settings navigation',()=>{
+  const pause=read('src/components/game3d/PauseMenu.jsx');
+  const style=read('src/components/game3d/PauseMenu.css');
+  assert.match(pause,/const \[surface,setSurface\]=useState\(context==='entry'\?'settings':'launcher'\)/);
+  assert.match(pause,/const launcher=!entry&&surface==='launcher'/);
+  assert.match(pause,/\{launcher \? <motion\.section/);
+  assert.match(pause,/className="axe3d-pause__launcher-grid"/);
+  assert.match(style,/\.axe3d-pause__launcher-tile\{/);
+  assert.match(style,/aspect-ratio:1\/1/);
+  assert.match(style,/grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(pause,/data-menu-surface=\{launcher\?'launcher':'settings'\}/);
+});
+
+test('Each service is a real clickable tile; gear alone shows existing Settings',()=>{
+  const pause=read('src/components/game3d/PauseMenu.jsx');
+  for(const key of ["id:'character'","id:'skills'","id:'quest_logbook'","id:'companion'","id:'spiritual'","id:'blacksmith'"])
+    assert.ok(pause.includes(key),key);
+  assert.match(pause,/QUICK_SERVICE_TILES\.filter\(tile=>AXE_SERVICE_GROUPS\.some/);
+  assert.match(pause,/onClick=\{\(\)=>onOpenService\?\.\(tile\.id\)\}/);
+  assert.match(pause,/aria-label="Open game settings" title="Settings" onClick=\{openSettings\}/);
+  assert.match(pause,/const openSettings=\(\)=>\{selectView\('graphics'\);setSurface\('settings'\);\}/);
+  assert.match(pause,/className="axe3d-pause__settings-back"/);
+  assert.match(pause,/onClick=\{\(\)=>setSurface\('launcher'\)\}/);
+  assert.match(pause,/onClick=\{openScoreboard\}/);
+  assert.match(pause,/onClick=\{\(\)=>onOpenMap\?\.\(\)\}/);
+});
+
+test('Letter hotkeys work even while launcher is open, and input remains guarded',()=>{
+  const pause=read('src/components/game3d/PauseMenu.jsx');
+  const game=read('src/pages/GameView.jsx');
+  assert.match(pause,/getGame3DMenuShortcut\(event\)/);
+  assert.match(pause,/onOpenService\?\.\(destination==='appearance'\?'character':destination\)/);
+  assert.match(pause,/if\(destination==='map'\)onOpenMap\?\.\(\)/);
+  assert.match(game,/onOpenMap=\{\(\) => \{/);
+  assert.match(game,/window\.dispatchEvent\(new CustomEvent\('axeOpenWorldMap'/);
+  assert.match(pause,/event\.key!=='Escape'\|\|event\.repeat/);
+});
