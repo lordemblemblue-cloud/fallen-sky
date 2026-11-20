@@ -1,6 +1,8 @@
 // The match HUD (simple on purpose): the score line at the top, the countdown and "Fight!", the respawn
 // note, the feed of what happened, and the result with the scoreboard.
+import { useEffect, useState } from 'react';
 import { TEAM_COLORS } from './matchProps.mjs';
+import './glassVictory.css';
 import { captureText, pointState } from './glassHud.mjs';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
@@ -172,28 +174,63 @@ export function Feed({ view }) {
   return <div className="duelist-feed">{lines.map((l) => <div key={l.key}>{l.text}</div>)}</div>;
 }
 
+/** The result animates over the still-visible arena before the details panel appears. */
 export function Result({ view, myTeam, onAgain, online = false }) {
+  const [showBoard, setShowBoard] = useState(false);
+  useEffect(() => {
+    if (view.phase !== 'over') {
+      setShowBoard(false);
+      return undefined;
+    }
+    setShowBoard(false);
+    const timer = setTimeout(() => setShowBoard(true), 2300);
+    return () => clearTimeout(timer);
+  }, [view.phase, view.winner]);
   if (view.phase !== 'over') return null;
   const w = view.winner;
   const won = w === meOf(view) || (myTeam && w === myTeam);
-  const title = w === 'draw' ? 'Draw' : won ? 'Victory' : 'Defeated';
+  const outcome = w === 'draw' ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
   const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football' || view.mode === 'control';
+  const score = view.teamScores || { red: 0, blue: 0 };
+  const scoreText = teams ? 'Red ' + (view.mode === 'control' ? Math.floor(score.red) + '%' : score.red)
+    + '   •   ' + (view.mode === 'control' ? Math.floor(score.blue) + '%' : score.blue) + ' Blue' : '';
   return (
-    <div className="duelist-center duelist-result">
-      <div className="duelist-result-title">{title}</div>
-      {teams && <div className="duelist-result-sub">Red {view.mode === 'control' ? Math.floor(view.teamScores.red) + '%' : view.teamScores.red} · {view.mode === 'control' ? Math.floor(view.teamScores.blue) + '%' : view.teamScores.blue} Blue</div>}
-      <table className="duelist-board">
-        <thead><tr><th>Fighter</th><th>Defeats</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr></thead>
-        <tbody>
-          {view.people.map((p) => (
-            <tr key={p.id} className={p.id === meOf(view) ? 'is-you' : ''}>
-              <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === meOf(view) ? 'You' : p.name}</td>
-              <td>{p.defeats}</td><td>{p.falls}</td>{view.mode === 'ctf' && <td>{p.captures}</td>}{view.mode === 'duel' && <td>{p.roundWins}</td>}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {online ? <div className="duelist-result-sub">The next match starts in a few seconds.</div> : <button type="button" onClick={onAgain}>Play again</button>}
+    <div className={'duelist-win-layer ' + (showBoard ? 'is-revealed ' : '') + (won ? 'is-victory' : w === 'draw' ? 'is-draw' : 'is-defeat')} data-testid="duelist-result-layer" role="status" aria-live="polite">
+      <div className="duelist-win-burst" aria-hidden="true" />
+      <div className="duelist-win-sweep" aria-hidden="true" />
+      <div className="duelist-win-banner">
+        <img src="/ui/duelist/glass-victory.svg" alt="" aria-hidden="true" />
+        <strong>{outcome}!</strong>
+        <small>{view.name || 'DUELIST ADVENTURE'}</small>
+      </div>
+      {showBoard && (
+        <section className="duelist-win-board" aria-label="Match results">
+          <div className="duelist-win-board-title">
+            <span>AFTER-ACTION REPORT</span>
+            {teams && <strong>{scoreText}</strong>}
+          </div>
+          <div className="duelist-win-board-scroll">
+            <table className="duelist-board">
+              <thead>
+                <tr><th>Fighter</th><th>Eliminations</th><th>Falls</th>{view.mode === 'ctf' && <th>Captures</th>}{view.mode === 'duel' && <th>Rounds</th>}</tr>
+              </thead>
+              <tbody>
+                {(view.people || []).map((p) => (
+                  <tr key={p.id} className={p.id === meOf(view) ? 'is-you' : ''}>
+                    <td style={p.team ? { color: hex(TEAM_COLORS[p.team]) } : undefined}>{p.id === meOf(view) ? 'You' : p.name}</td>
+                    <td>{p.defeats}</td><td>{p.falls}</td>
+                    {view.mode === 'ctf' && <td>{p.captures}</td>}
+                    {view.mode === 'duel' && <td>{p.roundWins}</td>}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {online
+            ? <div className="duelist-win-next">The next match starts shortly.</div>
+            : <button type="button" className="duelist-win-play-again" onClick={onAgain}>PLAY AGAIN</button>}
+        </section>
+      )}
     </div>
   );
 }
