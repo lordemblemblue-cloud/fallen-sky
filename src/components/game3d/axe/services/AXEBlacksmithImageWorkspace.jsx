@@ -657,12 +657,11 @@ export default function AXEBlacksmithImageWorkspace({
         role="status" aria-live="polite">{stationMessage}</span>}
 
       <nav className="axe-blacksmith-image-tabs" aria-label="Blacksmith operations">
-        {BLACKSMITH_TABS.filter(entry => !['over_enchant', 'combine'].includes(entry.id))
-          .map(({ id, label, Icon }) => <button type="button" key={id}
+        {BLACKSMITH_TABS.map(({ id, label, Icon }) => <button type="button" key={id}
           aria-label={label} aria-pressed={tab === id} onClick={() => pickTab(id)}
           title={label} disabled={batchBusy || forging}>
           <Icon size={24} strokeWidth={1.65} aria-hidden="true" />
-          <span className="axe-blacksmith-visually-hidden">{label}</span>
+          <span>{label}</span>
         </button>)}
       </nav>
 
@@ -791,15 +790,7 @@ export default function AXEBlacksmithImageWorkspace({
       </div>
       <div className="axe-blacksmith-center-preview" role="status" aria-label={
         selectedItem ? 'Selected equipment in forge: ' + selectedItem.name : 'Forge is empty'}>
-        {workflowMode && <div className="axe-blacksmith-circle-result" aria-live="polite">
-          <strong>{forgeHistory[0] ? (forgeHistory[0].success ? 'SUCCESS' : 'FAILED') : 'NEXT ATTEMPT'}</strong>
-          <span>{forgeHistory[0]?.text || (readout?.preview?.outcome ?? 'Select equipment and materials')}</span>
-          <small>{selectedItem ? valueText(currentValue) + ' → ' + valueText(nextValue)
-            + ' · Chance ' + pctText(readout?.chance) : 'Awaiting equipment'}</small>
-          {selectedItem && <small>Attack {fmtStat(readout?.currentAttack)}
-            {' → '}{fmtStat(readout?.projectedAttack)}</small>}
-        </div>}
-        {!workflowMode && selectedItem && <>
+        {selectedItem && <>
           <div className="axe-blacksmith-item-rarity">{selectedItem.rarity || selectedItem.tier || 'Equipment'}</div>
           <h3 className={prestigeStyle?'axe-forge-ascended-name':''}
             style={prestigeStyle?{'--prestige-a':prestigeStyle.primary,'--prestige-b':prestigeStyle.secondary}:undefined}>
@@ -810,6 +801,12 @@ export default function AXEBlacksmithImageWorkspace({
           </div>
         </>}
       </div>
+
+      {workflowMode && <div className="axe-blacksmith-center-success" role="status"
+        aria-label={'Forge success chance '+pctText(readout?.chance)}>
+        <span>Success Rate</span><strong>{pctText(readout?.chance)}</strong>
+        {forgeHistory[0] && <small>{forgeHistory[0].success?'Last: Success':'Last: Failed'}</small>}
+      </div>}
 
       {workflowMode && <aside className="axe-blacksmith-attempt-feed"
         aria-label="Recent Blacksmith attempts" role="log" aria-live="polite">
@@ -856,7 +853,7 @@ export default function AXEBlacksmithImageWorkspace({
             <span>{attempt.text}</span>
           </div>) : <div className="axe-blacksmith-attempt is-idle">No attempts yet.</div>}
       </aside>}
-      {!workflowMode && <section className="axe-blacksmith-operation-panel" aria-label={selectedTab.label + ' details'}>
+      <section className="axe-blacksmith-operation-panel" aria-label={selectedTab.label + ' details'}>
         <div className="axe-blacksmith-operation-heading">
           <small>Forge Operation</small><h3>{selectedTab.label}</h3>
           <p>{OPERATION_DESCRIPTIONS[tab]}</p>
@@ -909,11 +906,11 @@ export default function AXEBlacksmithImageWorkspace({
               ? 'Fee and catalyst: free. Choose one matching donor below.'
               : 'No materials listed for this operation.'}</p>}
         </div>
-        <div className="axe-blacksmith-success">
+        {!workflowMode && <div className="axe-blacksmith-success">
           <span>Success Rate</span>
           <b>{percent == null ? '—' : percent + '%'}</b>
           <div className="axe-blacksmith-success-track"><i style={{ width: (percent || 0) + '%' }} /></div>
-        </div>
+        </div>}
         {/* Enchantment light before and after a successful attempt: the same rules as the worn item. */}
         {selectedItem && forgeTab && <EnchantLightPreview item={selectedItem} compact
           proposedPercent={['reinforcement', 'enchant', 'over_enchant'].includes(operation) ? projectEnchantPercent(selectedItem, operation) : null} />}
@@ -1008,7 +1005,7 @@ export default function AXEBlacksmithImageWorkspace({
           <summary>Test weapon settings</summary>
           <AXETestWeaponTuner item={selectedItem} />
         </details>
-      </section>}
+      </section>
 
       <section className="axe-blacksmith-progression-panel" aria-label="Equipment progression">
         <h3>Equipment Progression</h3>

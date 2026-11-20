@@ -40,7 +40,7 @@ test('Compact forge shows just two small ingredient squares and a single plus',(
   assert.match(source,/ingredient\('target',target,'Equipment'/);
   assert.match(source,/data-ingredient="materials"/);
   assert.doesNotMatch(source,/axe-forge-flow-result/);
-  assert.doesNotMatch(source,/axe-forge-enchant-modes/);
+  assert.match(source,/axe-forge-enchant-modes/); // original left enchant selector restored
   assert.doesNotMatch(source,/4 Enchant Slots/);
   const css=read(base+'AXEBlacksmithWorkflowPanel.css');
   assert.match(css,/min-height:62px/);
@@ -78,7 +78,7 @@ test('Auto safety and the Stop button live outside the ingredient box',()=>{
   assert.match(source,/className="axe-blacksmith-feed-safety"/);
   assert.match(source,/className="axe-blacksmith-feed-stop"/);
   assert.doesNotMatch(panel,/Stop Auto after current attempt/);
-  assert.doesNotMatch(panel,/Minimum success rate/);
+  assert.match(panel,/aria-label="Minimum success rate"/); // preserved in restored left forge safety options
   assert.doesNotMatch(panel,/Use owned Stabilizers at high risk/);
   assert.match(panel,/aria-label="Automatic forge target"/);
 });

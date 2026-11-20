@@ -29,7 +29,7 @@ test('forge uses two ingredient squares with one plus sign, not an equals/result
   assert.match(ui,/data-ingredient="materials"/);
   assert.match(ui,/className="axe-forge-ingredient-plus"/);
   assert.doesNotMatch(ui,/axe-forge-flow-result/);
-  assert.doesNotMatch(ui,/axe-forge-mode-boxes/);
+  assert.match(ui,/axe-forge-mode-boxes/); // screenshot restores the left forge mode buttons
   assert.match(ui,/className="axe-forge-primary-action"/);
   assert.match(ui,/onClick=\{onForge\}/);
 });
@@ -38,7 +38,7 @@ test('operation buttons form icon-only vertical rail and inventory retains origi
   const workspace=source(services+'AXEBlacksmithImageWorkspace.jsx');
   const css=source(services+'AXEBlacksmithImageWorkspace.css');
   assert.match(workspace,/aria-label=\{label\} aria-pressed=\{tab === id\}/);
-  assert.match(workspace,/className="axe-blacksmith-visually-hidden"/);
+  assert.match(workspace,/<span>\{label\}<\/span>/); // visible labels restored in horizontal tab bar
   assert.match(css,/width:28\.8%/);
   assert.match(css,/flex-direction:column/);
   assert.match(css,/left:34%/);
