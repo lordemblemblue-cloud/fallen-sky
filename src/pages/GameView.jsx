@@ -687,15 +687,16 @@ export default function GameView() {
                const nextRegion = resume?.region || requestedRegion;
                setResumeCheckpoint(resume);
                const nextArea=nextRegion==='wolfveil'?(wolfveilAreaAtWorld(resume)||'town'):'town';
+               const switchingArea=nextRegion==='wolfveil'&&nextArea!==worldArea;
                setWorldArea(nextArea);
                lastWolfveilAreaRef.current=nextArea;
                setPortalLanding(null);
               // Wolfveil is ALREADY rendered below this menu; do not remount it.
               // Loading curtain applies only if a model or another region is pending.
-              setWorldEntryStatus(nextRegion==='wolfveil'&&worldReadyRef.current?'idle':'loading');
+              setWorldEntryStatus(nextRegion==='wolfveil'&&!switchingArea&&worldReadyRef.current?'idle':'loading');
               setPlayIntroCamera(false); // The gateway fades directly into gameplay, without an orbit cinematic.
               setPortalReturn(false);
-              if(nextRegion!=='wolfveil'){
+              if(nextRegion!=='wolfveil'||switchingArea){
                 worldReadyRef.current=false;
                 setWorldReady(false);
               }
