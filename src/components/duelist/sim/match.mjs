@@ -481,7 +481,7 @@ export function matchView(match, forId = null) {
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
     controlPoints: controlPointView(match.controlPoints),
-    people, me: forId ? { ...(people.find((p) => p.id === forId) || {}), pendingClass: match.seats.get(forId)?.pendingClass ?? null } : null,
+    people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass } : null,
     feed: match.feed.slice(-5),
   };
 }
