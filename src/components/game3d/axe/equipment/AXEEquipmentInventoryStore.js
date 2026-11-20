@@ -128,8 +128,8 @@ function load() {
       });
     }
 
-    // Older saves could mark the former starter and the Training Bow as
-    // equipped together. Normalize in memory without granting or deleting items.
+    // Keep up to three previously equipped weapons when migrating older saves;
+    // do not manufacture missing weapons or destroy owned items.
     const normalized = normalizeAXEEquippedWeapons(
       [...byId.values()], parsed.activeWeaponInstanceId || null,
     );
@@ -193,37 +193,25 @@ export function getPreviousAXEWeaponInstanceId() {
   return state.previousWeaponInstanceId;
 }
 
-// A weapon draw is one inventory transaction. No subscriber sees an intermediate
-// unequip (which used to heal the player through max-HP recalculation).
+// Drawing one of three equipped weapons changes the combat-active instance
+// atomically; the other two REMAIN equipped and available for HUD switching.
 export function switchAXEInventoryWeapon(instanceId, context = {}) {
   const target = state.items.find(item => item.instanceId === instanceId || item.id === instanceId);
   if (!target || target.category !== 'weapon') return { ok: false, reason: 'WEAPON_NOT_OWNED' };
   const validation = validateAXEEquip(target, context);
   if (!validation.ok) return validation;
   if (target.slot !== 'weapon') return { ok: false, reason: 'INVALID_SLOT' };
-
+  if (!target.equipped) return { ok: false, reason: 'WEAPON_NOT_EQUIPPED' };
   const current = getActiveEquippedAXEWeapon();
-  const change = equipOnlyAXEWeapon(state.items, target.instanceId);
-  if (!change.ok) return change;
-  if (current?.instanceId === target.instanceId && !change.autoUnequippedIds.length) {
-    return { ok: true, reason: 'ALREADY_ACTIVE', item: structuredClone(current) };
-  }
-
-  // Every equipped weapon other than the selected one returns to inventory,
-  // including the previously active sword/bow. Never delete owned instances.
-  const next = {
-    ...state,
-    items: change.items,
-    activeWeaponInstanceId: change.activeWeaponInstanceId,
-    previousWeaponInstanceId: current?.instanceId !== target.instanceId
-      ? (current?.instanceId || null) : state.previousWeaponInstanceId,
-  };
-  if (!storage.setChecked(JSON.stringify(next))) {
+  if (current?.instanceId === target.instanceId)
+    return { ok: true, reason: 'ALREADY_ACTIVE', item: structuredClone(current), autoUnequippedIds: [] };
+  const next = { ...state, activeWeaponInstanceId: target.instanceId,
+    previousWeaponInstanceId: current?.instanceId || null };
+  if (!storage.setChecked(JSON.stringify(next)))
     return { ok: false, reason: 'SAVE_FAILED', message: 'Could not save the weapon switch. Your equipment is unchanged. Free device storage and retry.' };
-  }
   state = next;
   publish();
-  return { ok: true, item: structuredClone(getActiveEquippedAXEWeapon()), autoUnequippedIds: change.autoUnequippedIds };
+  return { ok: true, item: structuredClone(getActiveEquippedAXEWeapon()), autoUnequippedIds: [] };
 }
 
 // Preserve main's explicit save entrypoint for server-side upgrade requests.
@@ -339,10 +327,26 @@ export function equipAXEInventoryItem(instanceId, context = {}) {
   const target = state.items[index];
   const validation = validateAXEEquip(target, context);
   if (!validation.ok) return validation;
-  // A weapon equip is an exclusive, checked transaction, even when a legacy
-  // save already marks the requested weapon equipped alongside another.
+  // A weapon equip fills one of THREE persistent slots. An explicit viewer
+  // slot can replace its old item without touching the other two weapons.
   if (target.slot === 'weapon' && target.category === 'weapon') {
-    return switchAXEInventoryWeapon(target.instanceId, context);
+    const current = getActiveEquippedAXEWeapon();
+    const change = equipOnlyAXEWeapon(state.items, target.instanceId, {
+      replaceInstanceId: context.replaceWeaponInstanceId || null,
+      activeInstanceId: current?.instanceId || null,
+      activate: context.activate !== false,
+    });
+    if (!change.ok) return change;
+    const next = { ...state, items: change.items,
+      activeWeaponInstanceId: change.activeWeaponInstanceId,
+      previousWeaponInstanceId: current?.instanceId !== change.activeWeaponInstanceId
+        ? (current?.instanceId || null) : state.previousWeaponInstanceId };
+    if (!storage.setChecked(JSON.stringify(next)))
+      return { ok: false, reason: 'SAVE_FAILED', message: 'Could not save the weapon equip. Free device storage and retry.' };
+    state = next;
+    publish();
+    return { ok: true, item: getAXEEquipmentItem(target.instanceId),
+      autoUnequippedIds: change.autoUnequippedIds };
   }
   if (target.equipped) {
     if (target.category === 'weapon' && state.activeWeaponInstanceId !== target.instanceId) {
