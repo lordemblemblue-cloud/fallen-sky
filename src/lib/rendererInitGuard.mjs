@@ -1,0 +1,47 @@
+/**
+ * Guard asynchronous renderer initialization against React unmounts and
+ * overlapping scene restarts. Works with WebGL and WebGPU renderer factories.
+ *
+ * The caller owns its canvas and must stop any animation loop before dispose().
+ * This helper intentionally does not retry failed WebGPU initialization.
+ */
+export function createRendererInitGuard() {
+  let generation = 0;
+  let current = null;
+
+  function safelyDispose(renderer) {
+    if (renderer && typeof renderer.dispose === 'function') renderer.dispose();
+  }
+
+  return {
+    async initialize(factory) {
+      if (typeof factory !== 'function') throw new TypeError('renderer factory must be a function');
+      const request = ++generation;
+      const previous = current;
+      current = null;
+      safelyDispose(previous);
+      let renderer;
+      try {
+        renderer = await factory();
+      } catch (error) {
+        if (request !== generation) return { renderer: null, stale: true };
+        throw error;
+      }
+      if (request !== generation) {
+        safelyDispose(renderer);
+        return { renderer: null, stale: true };
+      }
+      current = renderer ?? null;
+      return { renderer: current, stale: false };
+    },
+    get renderer() {
+      return current;
+    },
+    dispose() {
+      generation += 1;
+      const previous = current;
+      current = null;
+      safelyDispose(previous);
+    },
+  };
+}
