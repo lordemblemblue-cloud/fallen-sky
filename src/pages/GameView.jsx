@@ -5,6 +5,7 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
+import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   getGame3DUIScale,game3DViewportClass}
@@ -110,6 +111,10 @@ export default function GameView() {
   const [playIntroCamera,setPlayIntroCamera]=useState(false);
   const [creatorOnLogin, setCreatorOnLogin] = useState(false);
   const [worldRegion,setWorldRegion]=useState('wolfveil');
+  // A five-area gate swaps to a new GameWorld3D scene, just like a dungeon portal.
+  const [worldArea,setWorldArea]=useState('town');
+  const [portalLanding,setPortalLanding]=useState(null);
+  const lastWolfveilAreaRef=useRef('town');
   const [portalReturn,setPortalReturn]=useState(false);
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
@@ -269,8 +274,15 @@ export default function GameView() {
   useEffect(()=>{
     if(phase!=='world')return;
     const onPortalTravel=(event)=>{
-      const target=event.detail?.target;
-      if(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||target===worldRegion)return;
+      const detail=event.detail||{};
+      const target=detail.target;
+      const landing=detail.landing;
+      const areaTravel=target==='wolfveil-area'&&worldRegion==='wolfveil'&&
+        WOLFVEIL_AREA_IDS.includes(detail.area)&&detail.area!==worldArea&&
+        landing&&[landing.x,landing.y,landing.z].every(Number.isFinite)&&
+        wolfveilAreaAtWorld(landing)===detail.area;
+      if(!areaTravel&&(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||
+        target===worldRegion))return;
       services.controller.close();
       setPauseMenuOpen(false);
       setStoreOpen(false);
@@ -282,23 +294,39 @@ export default function GameView() {
       worldReadyRef.current=false;
       setWorldReady(false);
       setWorldEntryStatus('loading');
-      setPortalSpawnAtGate(target==='wolfveil-caves'&&event.detail?.spawnAtGate===true);
+      if(areaTravel){
+        // The old region's WebGL scene is torn down by the keyed remount.
+        // Do not keep it mounted invisibly behind the destination area.
+        setPortalReturn(false);
+        setPortalSpawnAtGate(false);
+        setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+        lastWolfveilAreaRef.current=detail.area;
+        setWorldArea(detail.area);
+        return;
+      }
+      setPortalLanding(null);
+      setPortalSpawnAtGate(target==='wolfveil-caves'&&detail.spawnAtGate===true);
       if(target!=='wolfveil'){
-        vortexOriginRef.current=event.detail?.sourcePortal==='vortex'?'vortex':null;
+        if(worldRegion==='wolfveil')lastWolfveilAreaRef.current=worldArea;
+        vortexOriginRef.current=detail.sourcePortal==='vortex'?'vortex':null;
         setPortalReturn(false);
       }else{
         const fromVortex=vortexOriginRef.current==='vortex';
         setPortalReturn(fromVortex?'vortex':
-          event.detail?.returnToGate==='astral'?'astral':
-          event.detail?.returnToGate==='sumi'?'sumi':
-          event.detail?.returnToGate===true);
+          detail.returnToGate==='astral'?'astral':
+          detail.returnToGate==='sumi'?'sumi':
+          detail.returnToGate===true);
+        // Returning from a cave/dungeon must restore the map containing
+        // its entrance, not construct the whole valley or default to town.
+        setWorldArea(lastWolfveilAreaRef.current);
         vortexOriginRef.current=null;
       }
       setWorldRegion(target);
     };
     window.addEventListener('game3dPortalTravel',onPortalTravel);
     return ()=>window.removeEventListener('game3dPortalTravel',onPortalTravel);
-  },[phase,worldRegion,services.controller]);
+  },[phase,worldRegion,worldArea,services.controller]);
 
   // World server join is handled by GameWorldServerManager — it enforces the
   // 20-player cap and dispatches joinMultiplayerChannel only when capacity allows.
@@ -609,7 +637,8 @@ export default function GameView() {
           GameWorld3D is becoming a renderer that reads from this. */}
       <GameStateProvider showDebugHUD={false}>
       {user?.id ? <CharacterVaultSync showStatus={false} /> : <GuestCharacterCloudSync showStatus={phase==='world'} />}
-       <GameWorld3D key={worldRegion+':'+worldEntryCycle} region={worldRegion}
+       <GameWorld3D key={worldRegion+':'+(worldRegion==='wolfveil'?worldArea:'')+':'+worldEntryCycle} region={worldRegion}
+        worldArea={worldArea} portalLanding={portalLanding}
         entryMode={phase==='login'} entryPreviewMode={entryPreviewMode}
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
@@ -657,6 +686,10 @@ export default function GameView() {
                const resume = requestedRegion==='wolfveil' && !target ? worldCheckpointStore.read() : null;
                const nextRegion = resume?.region || requestedRegion;
                setResumeCheckpoint(resume);
+               const nextArea=nextRegion==='wolfveil'?(wolfveilAreaAtWorld(resume)||'town'):'town';
+               setWorldArea(nextArea);
+               lastWolfveilAreaRef.current=nextArea;
+               setPortalLanding(null);
               // Wolfveil is ALREADY rendered below this menu; do not remount it.
               // Loading curtain applies only if a model or another region is pending.
               setWorldEntryStatus(nextRegion==='wolfveil'&&worldReadyRef.current?'idle':'loading');
