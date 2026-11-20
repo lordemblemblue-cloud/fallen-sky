@@ -116,3 +116,10 @@ test('Rage and healer field register distinct, server-resolved effects', () => {
   assert.equal(evaluateSpecial({ classId: 'healer', meter: 101, actor }).reason, 'invalid-meter');
   assert.equal(SPECIAL_BALANCE.rageDamageMultiplier, 2);
 });
+
+
+test('execution checks reject non-finite coordinates or time rather than accepting out-of-range attacks', () => {
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor: { ...actor, position: { x: NaN, z: 0 } }, target: enemy() }).reason, 'invalid-context');
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: { ...enemy(), position: { x: Infinity, z: -1 } } }).reason, 'invalid-context');
+  assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(), now: NaN }).reason, 'invalid-context');
+});
