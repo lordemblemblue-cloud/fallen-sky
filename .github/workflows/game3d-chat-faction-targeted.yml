@@ -1,0 +1,46 @@
+name: Game 3D Chat and Faction Targeted Validation
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/social/WorldChatPanel.jsx'
+      - 'src/components/game3d/social/Game3DChatChannels.css'
+      - 'src/components/game3d/FactionCommandModal.jsx'
+      - 'src/components/game3d/FactionCommandModal.css'
+      - 'src/components/game3d/PauseMenu.jsx'
+      - 'src/components/game3d/axe/factions/**'
+      - 'src/components/game3d/hud/game3dCommunityHUDSettings.mjs'
+      - 'src/pages/GameView.jsx'
+      - 'tests/game3d-chat-faction-modal-20261120.test.mjs'
+      - 'tests/game3d-gold-faction-menu-layout.test.mjs'
+      - '.github/workflows/game3d-chat-faction-targeted.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  targeted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify chat and faction contracts
+        run: >-
+          node --test
+          tests/game3d-chat-faction-modal-20261120.test.mjs
+          tests/game3d-gold-faction-menu-layout.test.mjs
+          tests/game3d-faction-overview.test.mjs
+          tests/game3d-escape-services-drawer-20261120.test.mjs
+      - name: Lint changed React and state modules
+        run: >-
+          npx eslint --quiet
+          src/components/game3d/social/WorldChatPanel.jsx
+          src/components/game3d/FactionCommandModal.jsx
+          src/components/game3d/PauseMenu.jsx
+          src/components/game3d/axe/factions/FactionOverview.jsx
+          src/components/game3d/axe/factions/factionOverviewModel.mjs
+          src/components/game3d/hud/game3dCommunityHUDSettings.mjs
+          src/pages/GameView.jsx

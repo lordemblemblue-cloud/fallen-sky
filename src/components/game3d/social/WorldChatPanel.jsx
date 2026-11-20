@@ -23,11 +23,13 @@ const CHANNEL_STYLE = {
   combat: { label: 'Combat', tag: 'text-amber-200/80', name: 'text-white/85' },
 };
 
-export default function WorldChatPanel({ userId, suppressed = false, showDock = true, onOpenClan }) {
+export default function WorldChatPanel({ userId, suppressed = false, showDock = true, alwaysVisible = false, onOpenClan }) {
   const [party, setParty] = useState(partyStore.get());
   const [tab, setTab] = useState('world');
   const [lines, setLines] = useState({ world: [], party: [] });
   const [typing, setTyping] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [activity, setActivity] = useState(0);
   const [draft, setDraft] = useState('');
   const [notice, setNotice] = useState('');
   const [blockedIds, setBlockedIds] = useState(() => new Set());
@@ -80,12 +82,15 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       if (!m || event.type === 'delete') return;
       if (m.channel_id === WORLD_CHAT_CHANNEL) addLines('world', [m]);
       else if (partyChannel && m.channel_id === partyChannel) addLines('party', [m]);
+      else return;
+      // Incoming messages briefly reveal the dock even when no input has focus.
+      if (m.sender_id !== userId) { setExpanded(true); setActivity(value => value + 1); }
     });
   }, [userId, partyChannel, addLines]);
 
   // Opening chat from Settings uses the exact same real world/party channel.
   useEffect(() => {
-    const open = () => { if (!suppressed) setTyping(true); };
+    const open = () => { if (!suppressed) { setExpanded(true); setTyping(true); } };
     window.addEventListener('game3dOpenWorldChat',open);
     return () => window.removeEventListener('game3dOpenWorldChat',open);
   },[suppressed]);
@@ -96,18 +101,24 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
       if (e.key !== 'Enter' || typing || e.target?.matches?.('input, textarea, [contenteditable="true"]')) return;
       e.preventDefault();
       if(tab==='combat')setTab('world');
-      setTyping(true);
+      if (!expanded) { setExpanded(true); setActivity(value => value + 1); }
+      else setTyping(true);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [typing, suppressed, tab, userId]);
+  }, [typing, expanded, suppressed, tab, userId]);
+  useEffect(() => {
+    if (typing || !expanded || alwaysVisible) return undefined;
+    const timeout = window.setTimeout(() => setExpanded(false), 9000);
+    return () => window.clearTimeout(timeout);
+  }, [typing, expanded, activity, alwaysVisible]);
   useEffect(() => {
     if (suppressed) inputRef.current?.blur();
     else if (typing) inputRef.current?.focus();
   }, [typing, suppressed]);
   useEffect(() => { listRef.current?.scrollTo?.({ top: listRef.current.scrollHeight }); }, [lines, combatEvents, tab]);
 
-  const close = () => { setTyping(false); setDraft(''); inputRef.current?.blur(); };
+  const close = () => { setTyping(false); setExpanded(false); setDraft(''); inputRef.current?.blur(); };
   const send = async () => {
     const text = draft.trim();
     if (tab==='combat'||!userId)return;
@@ -128,15 +139,15 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
     else if (e.key === 'Escape') { e.preventDefault(); close(); }
   };
 
-  if (!showDock && !typing) return null;
+  if (!showDock && !typing && !expanded && !alwaysVisible) return null;
   const shown = tab==='combat'?combatEvents:(lines[tab] || []).filter(line => !blockedIds.has(line.sender_id));
   const style = CHANNEL_STYLE[tab]||CHANNEL_STYLE.world;
   return (
     <div
-      className={`game3d-world-chat fixed z-[40] rounded-xl transition-colors ${typing ? 'pointer-events-auto' : 'pointer-events-none'}`}
-      style={{ background: typing ? 'rgba(10, 14, 22, 0.78)' : 'rgba(10, 14, 22, 0.32)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.08)' }}
+      className={`game3d-world-chat fixed z-[40] ${typing ? 'is-typing' : expanded ? 'is-expanded' : 'is-idle'} ${alwaysVisible ? 'is-pinned' : ''}`}
       aria-label="Chat"
     >
+      <div className="game3d-chat-surface">
       {showDock&&<aside className="game3d-chat-combat-strip" aria-label="Recent combat results">
         <strong>COMBAT LOG</strong>
         <div>{combatEvents.slice(-3).map(event=><span key={event.id}
@@ -144,20 +155,6 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
           {!combatEvents.length&&<span>Misses, dealt and received damage will appear here.</span>}
         </div>
       </aside>}
-      <div className="game3d-chat-channel-row pointer-events-auto" role="group" aria-label="Chat channels">
-        <MessageSquare className="h-3 w-3 shrink-0 text-amber-200/70" aria-hidden="true"/>
-        <button type="button" disabled title="Regular nearby chat needs server proximity messaging">Regular</button>
-        <button type="button" aria-pressed={tab==='world'} onClick={()=>{setTab('world');if(userId)setTyping(true);}}
-          className={tab==='world'?'is-active':''}>World</button>
-        {inParty&&<button type="button" aria-pressed={tab==='party'} onClick={()=>{setTab('party');setTyping(true);}}
-          className={tab==='party'?'is-active':''}>Party</button>}
-        <button type="button" onClick={()=>{setTyping(false);onOpenClan?.();}}
-          title="Open your existing guild chat">Clan</button>
-        <button type="button" disabled title="Faction broadcast requires verified leader or vice-leader status">Faction Call</button>
-        <button type="button" aria-pressed={tab==='combat'} onClick={()=>{setTab('combat');setTyping(false);}}
-          className={tab==='combat'?'is-active':''}>Combat</button>
-        {!typing&&<span className="game3d-chat-channel-hint">Enter to chat</span>}
-      </div>
       <div ref={listRef} className="game3d-chat-messages max-h-[110px] overflow-y-auto px-2 py-1 text-[11px] leading-snug">
         {shown.length===0&&<div className="text-white/40">{tab==='combat'?'No combat events yet.':'No messages yet.'}</div>}
         {tab==='combat' ? shown.map(event=><div key={event.id} className="game3d-chat-combat-event"
@@ -184,6 +181,21 @@ export default function WorldChatPanel({ userId, suppressed = false, showDock = 
           {notice && <div className="mt-1 text-[10px] text-amber-200/80">{notice}</div>}
         </div>
       )}
+      </div>
+      <div className="game3d-chat-channel-row pointer-events-auto" role="group" aria-label="Chat channels">
+        <MessageSquare className="h-3 w-3 shrink-0 text-amber-200/70" aria-hidden="true"/>
+        <button type="button" disabled title="Regular nearby chat needs server proximity messaging">Regular</button>
+        <button type="button" aria-pressed={tab==='world'} onClick={()=>{setTab('world');setExpanded(true);if(userId)setTyping(true);}}
+          className={tab==='world'?'is-active':''}>World</button>
+        {inParty&&<button type="button" aria-pressed={tab==='party'} onClick={()=>{setTab('party');setExpanded(true);setTyping(true);}}
+          className={tab==='party'?'is-active':''}>Party</button>}
+        <button type="button" onClick={()=>{setTyping(false);onOpenClan?.();}}
+          title="Open your existing guild chat">Clan</button>
+        <button type="button" disabled title="Faction broadcast requires verified leader or vice-leader status">Faction Call</button>
+        <button type="button" aria-pressed={tab==='combat'} onClick={()=>{setTab('combat');setExpanded(true);setTyping(false);setActivity(v=>v+1);}}
+          className={tab==='combat'?'is-active':''}>Combat</button>
+        {!typing&&<span className="game3d-chat-channel-hint">{expanded?'Enter again to type':'Enter to open'}</span>}
+      </div>
     </div>
   );
 }

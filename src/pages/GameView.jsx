@@ -80,6 +80,7 @@ import { getLearnedSkillIds, subscribeLearnedSkills } from '../components/game3d
 import { runOneTimeProgressionReset } from '../components/game3d/progression/oneTimeReset';
 import SlashEffectLayer from '../components/game3d/SlashEffect';
 import PauseMenu from '../components/game3d/PauseMenu';
+import FactionCommandModal from '../components/game3d/FactionCommandModal';
 import WindRunEffect from '../components/game3d/WindRunEffect';
 import SkillActivationToastListener from '../components/game3d/SkillActivationToastListener';
 import LevelUpToastListener from '../components/game3d/LevelUpToastListener.jsx';
@@ -130,6 +131,7 @@ export default function GameView() {
   const [clanOverlayOpen, setClanOverlayOpen] = useState(false);
   const [learnedSkillIds, setLearnedSkillIds] = useState(() => getLearnedSkillIds());
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
+  const [factionOpen,setFactionOpen]=useState(false);
   const [hudEditing,setHudEditing]=useState(false);
   const [communityHUD,setCommunityHUD]=useState(()=>readGame3DCommunityHUD());
   const [displaySettings,setDisplaySettings]=useState(()=>readGame3DDisplaySettings());
@@ -251,6 +253,7 @@ export default function GameView() {
     if(phase!=='login')return;
     services.controller.close();
     setPauseMenuOpen(false);
+    setFactionOpen(false);
     setStoreOpen(false);
     setProgressionOpen(false);
     setRequestedService(null);
@@ -524,7 +527,7 @@ export default function GameView() {
     if (phase !== 'world') return undefined;
     const onServiceKey = (event) => {
       const destination = getGame3DMenuShortcut(event);
-      if (!destination || pauseMenuOpen || window.__axeDialogueOpen ||
+      if (!destination || pauseMenuOpen || factionOpen || window.__axeDialogueOpen ||
         window.__axeTileInspectionEditing) return;
       event.preventDefault();
       event.stopImmediatePropagation?.();
@@ -577,7 +580,7 @@ export default function GameView() {
     };
     window.addEventListener('keydown', onServiceKey, true);
     return () => window.removeEventListener('keydown', onServiceKey, true);
-  }, [phase, pauseMenuOpen, services.controller]);
+  }, [phase, pauseMenuOpen, factionOpen, services.controller]);
 
   // Other in-world controls: TAB = Soul Emporium, G = Clan,
   // Shift+L = Friends, ESC = close overlay / pause.
@@ -589,6 +592,7 @@ export default function GameView() {
       // The MMO Escape menu owns its captured ESC/Tab keys. Do not open
       // stores, clans or other HUD overlays behind its settings panels.
       if (pauseMenuOpen) return;
+      if (factionOpen) { if(e.key==='Escape'){e.preventDefault();setFactionOpen(false);} return; }
       if (services.active) {
         if (e.key === 'Escape') { e.preventDefault(); services.controller.close(); }
         return; // Tab stays focus navigation; service clicks/keys never open combat overlays.
@@ -632,7 +636,7 @@ export default function GameView() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, storeOpen, progressionOpen, friendsListOpen, clanOverlayOpen, pauseMenuOpen, services.active, services.controller]);
+  }, [phase, storeOpen, progressionOpen, friendsListOpen, clanOverlayOpen, pauseMenuOpen, factionOpen, services.active, services.controller]);
 
 
   const gameUIScale=getGame3DUIScale({...cssViewport,uiScale:displaySettings.uiScale});
@@ -795,7 +799,8 @@ export default function GameView() {
       <TradePanel />
       <TradeSessionWatcher userId={user?.id} />
       <IncomingRequestToast userId={user?.id} />
-      <WorldChatPanel userId={user?.id} suppressed={services.active} showDock={communityHUD.chat}
+      <WorldChatPanel userId={user?.id} suppressed={services.active || pauseMenuOpen || factionOpen}
+        showDock={communityHUD.chat} alwaysVisible={communityHUD.chatAlwaysVisible}
         onOpenClan={()=>{setPauseMenuOpen(false);setClanOverlayOpen(true);}} />
        <EchoChronicleOverlay suppressed={services.active || services.expanded} showLauncher={communityHUD.echo}
         onOpenQuestLogbook={() => {
@@ -883,6 +888,15 @@ export default function GameView() {
       {/* Pause menu — opened by ESC */}
       <PauseMenu
         open={pauseMenuOpen}
+        onOpenFaction={()=>{
+          // Faction is a standalone screen, never a drawer inside Escape.
+          services.controller.close();
+          setPauseMenuOpen(false);
+          setStoreOpen(false);setProgressionOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          window.dispatchEvent(new Event('axeCloseWorldMap'));
+          setFactionOpen(true);
+        }}
         onOpenService={(groupId, serviceId = null) => {
           // Escape is a launcher, never a second menu layered behind a
           // service. The page opens directly with no floating Services strip.
@@ -915,6 +929,7 @@ export default function GameView() {
           setPhase('login');
         }}
       />
+      {factionOpen && <FactionCommandModal onClose={()=>setFactionOpen(false)}/>}
       {worldEntryStatus!=='idle' && <WorldEntryCurtain
         status={worldEntryStatus}
         error={worldEntryError}

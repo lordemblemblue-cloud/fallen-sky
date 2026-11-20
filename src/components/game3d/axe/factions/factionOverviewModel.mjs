@@ -24,6 +24,8 @@ export function normalizeFactionOverview(response, factionIds=[]) {
       online:safeValue(source.online),
       members:safeValue(source.members),
       power:safeValue(source.power),
+      treasuryGold:safeValue(source.treasuryGold),
+      maxLevelPlayers:safeValue(source.maxLevelPlayers),
       leader:safeName(source.leader),
       deputies:Array.isArray(source.deputies)?source.deputies.map(safeName).filter(Boolean).slice(0,12):[],
       bonuses,

@@ -8,12 +8,13 @@ const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
 const world=read('src/components/game3d/GameWorld3D.jsx');
 const view=read('src/pages/GameView.jsx');
 
-test('Escape shows seven top-level service/faction tiles with inline large subpage buttons',()=>{
+test('Escape shows seven service/faction tiles and opens faction in its own dialog',()=>{
  assert.match(menu,/\{id:'faction',label:'Faction'/);
  assert.match(menu,/QUICK_SERVICE_TILES\.map/);
  assert.match(menu,/axe3d-pause__launcher-page-grid/);
  assert.match(menu,/onOpenService\?\.\(group\.id,serviceId\)/);
- assert.match(menu,/<FactionOverview\/>/);
+ assert.match(menu,/onOpenFaction\?\.\(\)/);
+ assert.doesNotMatch(menu,/<FactionOverview\/>/);
  assert.doesNotMatch(menu,/<details className="axe3d-pause__launcher-subpage-group"/);
  assert.doesNotMatch(menu,/className="axe3d-pause__settings-back"/);
  assert.doesNotMatch(menu,/ArrowLeft/);

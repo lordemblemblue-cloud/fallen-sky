@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - 'src/components/game3d/PauseMenu.jsx'
+      - 'src/components/game3d/FactionCommandModal.jsx'
+      - 'src/components/game3d/FactionCommandModal.css'
+      - 'src/components/game3d/hud/game3dCommunityHUDSettings.mjs'
       - 'src/components/game3d/PauseMenuGold.css'
       - 'src/components/game3d/player/Game3DKeybinds.mjs'
       - 'src/components/game3d/player/Game3DMovementInput.mjs'
@@ -17,6 +20,7 @@ on:
       - 'tests/game3d-faction-*.test.mjs'
       - 'tests/game3d-combat-log.test.mjs'
       - 'tests/game3d-gold-faction-menu-layout.test.mjs'
+      - 'tests/game3d-chat-faction-modal-20261120.test.mjs'
       - '.github/workflows/game3d-gold-faction-ui.yml'
   workflow_dispatch:
 
@@ -47,13 +51,13 @@ jobs:
           tests/game3d-faction-announcement.test.mjs
           tests/game3d-combat-log.test.mjs
           tests/game3d-gold-faction-menu-layout.test.mjs
+          tests/game3d-chat-faction-modal-20261120.test.mjs
           tests/game3d-escape-services-drawer-20261120.test.mjs
-      - name: Build the app
-        run: npm run build
       - name: Lint changed menu, faction and chat code
         run: >-
           npx eslint --quiet
           src/components/game3d/PauseMenu.jsx
+          src/components/game3d/FactionCommandModal.jsx
           src/components/game3d/player/Game3DKeybinds.mjs
           src/components/game3d/player/Game3DMovementInput.mjs
           src/components/game3d/axe/services/game3dMenuHotkeys.mjs
@@ -63,3 +67,7 @@ jobs:
           src/components/game3d/axe/factions/FactionAnnouncementTicker.jsx
           src/components/game3d/combat/Game3DCombatLog.mjs
           src/components/game3d/social/WorldChatPanel.jsx
+          src/components/game3d/hud/game3dCommunityHUDSettings.mjs
+          src/pages/GameView.jsx
+      - name: Build the app
+        run: npm run build
