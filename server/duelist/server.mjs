@@ -47,7 +47,8 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 
 // reconnectSeconds: how long a dropped seat waits (server clock); heartbeatMs: how often connections are pinged
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
-  clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000 } = {}) {
+  clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
+  controlLayout = null } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -128,7 +129,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
 
   function openRoom(mode, { permanent = false } = {}) {
     const id = `m${nextRoom++}`;
-    const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel });
+    const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel,
+      controlLayout: mode === 'control' ? controlLayout : null });
     const room = { id, mode, match, mission: null, publicRoom: permanent, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
     let k = 0;
     for (const s of match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
@@ -264,7 +266,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
 
   function rematch(room) {
     const players = [...room.clients.values()];
-    room.match = createMatch({ mode: room.mode, seed: Math.floor(clock() * 1000) % 1000003, botLevel });
+    room.match = createMatch({ mode: room.mode, seed: Math.floor(clock() * 1000) % 1000003, botLevel,
+      controlLayout: room.mode === 'control' ? controlLayout : null });
     room.bodies = new Map();
     let k = 0;
     for (const s of room.match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
