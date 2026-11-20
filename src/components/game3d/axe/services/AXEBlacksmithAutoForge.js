@@ -33,12 +33,14 @@ export async function runBlacksmithAutoBatch({
   mode, targetId, getTarget, getDonors, getPreview, compatible, getResourceCount,
   transact, getIdentity, cancelled = () => false, onAttempt = () => {},
   allowProtection = false, minSuccess = 0.90, maxAttempts = 12,
+  targetProgress = null, getProgress = null,
 } = {}) {
   if (!AUTO_MODES.includes(mode) || !validId(targetId)
     || [getTarget, getDonors, getPreview, getResourceCount, transact, getIdentity,
       cancelled, onAttempt].some(fn => typeof fn !== 'function')
     || !Number.isFinite(minSuccess) || minSuccess < 0 || minSuccess > 1
-    || !Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 24) {
+    || !Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 24
+    || (targetProgress !== null && (!Number.isFinite(targetProgress) || targetProgress <= 0 || typeof getProgress !== 'function'))) {
     return { ok: false, attempts: 0, successes: 0, reason: 'invalid_auto_configuration' };
   }
   const identity = getIdentity();
@@ -48,6 +50,11 @@ export async function runBlacksmithAutoBatch({
   while (attempts < maxAttempts) {
     if (cancelled()) { reason = 'stopped'; break; }
     if (getIdentity() !== identity) { reason = 'character_changed'; break; }
+    // Stop before spending another stone/donor once the selected, live item
+    // reaches the requested value. Never use a cached/optimistic animation.
+    if (targetProgress !== null && Number(getProgress(mode, targetId)) >= targetProgress) {
+      reason = 'target_reached'; break;
+    }
     const target = getTarget(targetId);
     if (!target || target.instanceId !== targetId || target.locked || target.vanityOnly) {
       reason = 'target_unavailable'; break;
