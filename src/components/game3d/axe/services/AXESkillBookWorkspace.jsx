@@ -15,6 +15,7 @@ import {
 import { getCompanionSkillById } from '../../skills/companionSkillRegistry';
 import { getAXEEquipmentInventoryState, subscribeAXEEquipmentInventory,
   switchAXEInventoryWeapon } from '../equipment/AXEEquipmentInventoryStore';
+import {getAXERoleWeapon,assignAXEHUDWeaponRole} from '../weapons/AXEWeaponRoleSlots';
 import {SKILL_BOOK_WEAPON_MODES,getWeaponForSkillBookMode,
   getSkillBookModeForPreset} from './SkillBookWeaponModes.mjs';
 import './AXESkillBookWorkspace.css';
@@ -163,12 +164,17 @@ export default function AXESkillBookWorkspace({ serviceId = 'skills_character', 
     const mode=SKILL_BOOK_WEAPON_MODES.find(entry=>entry.id===modeId);
     if(!mode)return;
     const weapon=getWeaponForSkillBookMode(ownedWeapons,mode.id);
-    // Use the canonical atomic weapon-draw transaction. It enforces owned
-    // items and equip restrictions; never write equipment state in the UI.
+    // A Skill Book entry may be owned but not yet one of the three equipped
+    // weapons. Equip into the matching slot before drawing for combat.
     if(weapon){
+      const equipped=getAXERoleWeapon(mode.role);
+      if(equipped?.instanceId!==weapon.instanceId){
+        const put=assignAXEHUDWeaponRole(mode.role,weapon.instanceId);
+        if(!put.ok){setStatus(put.message||String(put.reason||'Unable to equip weapon').replaceAll('_',' '));return;}
+      }
       const draw=switchAXEInventoryWeapon(weapon.instanceId);
       if(!draw.ok){
-        setStatus(draw.message||'This weapon cannot be equipped right now.');
+        setStatus(draw.message||String(draw.reason||'Unable to draw this weapon').replaceAll('_',' '));
         return;
       }
     }
