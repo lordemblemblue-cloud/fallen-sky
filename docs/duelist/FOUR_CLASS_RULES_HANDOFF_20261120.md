@@ -38,3 +38,10 @@ No benchmark or deployment is claimed.
 - New tests/duelist-match-classes.test.mjs cover countdown selection, rejected live changes, bot/unknown seat rejection, post-death respawn, next duel round and protection persistence.
 - All dedicated CI jobs (class rules + match regression tests, ESLint, full application build) passed on code commit 2990dd19447b39edece97542c09ef5794dbdc440 in [GitHub Actions run 44818159207](https://github.com/lordemblemblue-cloud/fallen-sky/actions/runs/44818159207). The follow-up commit updates documentation only.
 - The next agent should wire class choice to an authenticated player seat through a bounded WebSocket message; update client prediction, reconnect and body weapon visuals and cover spoof attempts. Do not claim the four special abilities are live.
+
+## Incremental server-owned special meter foundation (2026-11-20)
+
+- On class match seats, `specialMeter` now starts at 0. `matchView(match, authenticatedSeatId).me.specialMeter` exposes it only for that player's selected class. It is absent from the public `people` list, and remains `null` for legacy players with no class selection. The client cannot set it via `stepMatch` input.
+- The match's existing authoritative `onDefeat` handler grants the class-selected human who **actually earned a hostile elimination** the shared `elimination` charge via `awardSpecialCharge`. Bots, friendly fire and uncredited deaths do not grant this award.
+- This is **not** full charge integration: confirmed hits, assists, heals and objectives still need server-owned hooks; no special activation or meter spending is wired; UI PR #135 is unchanged. Future networking must derive the `forId` viewer identity from the authenticated seat rather than client input.
+- Code commit `d8518dcc0e8ff56ec08f4bd9d14aabd7f889b915`, test commit `d7d25ce21bbe3ebde3efdaa0097ea3da00b0e2f0`. Tests cover private readout, legacy null state, ignored client meter/class injection and zero-initialized bot seat. GitHub Actions status should be checked for the **latest** commit before claiming passing.
