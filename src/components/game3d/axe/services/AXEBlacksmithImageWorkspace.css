@@ -2072,3 +2072,41 @@
   mask-image:none;
   background:rgba(19,33,48,.94);
 }
+
+
+/* Restore the pre-redesign workstation and inventory geometry on forge tabs.
+ * Keep the existing Final/Forge Results feed and its visual styling unchanged.
+ * Workstation | inventory | existing ring | results stay in separate columns. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+ [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:2.1%;
+  top:15%;
+  width:14.7%;
+  height:81%;
+  max-height:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+ [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-inventory-shell {
+  display:flex;
+  left:18.5%;
+  top:15%;
+  width:28.8%;
+  height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+ [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  left:49.8%;
+  width:21.5%;
+  top:30%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+ [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  left:49.8%;
+  width:21.5%;
+  top:30.2%;
+  height:42%;
+}
