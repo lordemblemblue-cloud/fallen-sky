@@ -14,6 +14,8 @@ import { subscribeAXEAura } from '../equipment/AXEEquipmentAuraStore';
 import { getAppearanceAuraSource, subscribeAppearanceAuraSource, selectAppearanceAuraSource } from './AXEAppearanceAuraSelection';
 import AXEAppearanceDetails from './AXEAppearanceDetails';
 import AXEGlassLoadoutPane from './AXEGlassLoadoutPane';
+import {getAXERoleWeapon} from '../weapons/AXEWeaponRoleSlots';
+import {AXE_HUD_WEAPON_ROLES} from '../weapons/AXEWeaponRoleSlots.mjs';
 import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import './AXEAppearanceWorkspace.css';
 
@@ -74,6 +76,7 @@ export default function AXEAppearanceWorkspace({
   useEffect(()=>subscribeAXEAura(setAuraRecords),[]);
   useEffect(()=>subscribeAppearanceAuraSource(setAuraSource),[]);
   const [tab, setTab] = useState(() => initialTab === 'Equipment' ? 'Equipment' : serviceId === 'equipment_aura' ? 'Aura' : serviceId === 'vanity' ? 'Vanity' : serviceId === 'costume' ? 'Vanity' : 'Character');
+  const [equipmentWeaponRole,setEquipmentWeaponRole]=useState('');
   // Report the actual visible Character/Equipment/Vanity/Aura subpage so C
   // returns from a different subpage before toggling the menu closed.
   useEffect(() => { onActiveTabChange?.(tab); }, [tab, onActiveTabChange]);
@@ -122,9 +125,9 @@ export default function AXEAppearanceWorkspace({
     .map(([slot,id]) => ({slot,piece:AXE_VANITY_PIECES[id]}))
     .filter(row => row.piece?.slot === row.slot);
 
-  const showTab = next => {
-    setTab(next); setFilter('All'); setSearch('');
-    setDetail(''); setNotice('');
+  const showTab = (next,weaponRole='') => {
+    setTab(next);setEquipmentWeaponRole(weaponRole);setFilter('All');setSearch('');
+    setDetail('');setNotice('');
   };
   const selectItem = item => {
     setSelected({kind:item.kind,id:item.id});
@@ -204,13 +207,13 @@ export default function AXEAppearanceWorkspace({
         <span>{name}</span></button>)}
     </nav>
 
-    {tab === 'Equipment' ? <AXEGlassLoadoutPane actor="player" onNotice={setNotice}/> :
+    {tab === 'Equipment' ? <AXEGlassLoadoutPane actor="player" initialWeaponRole={equipmentWeaponRole} onNotice={setNotice}/> :
       tab === 'Character' ? <div className="axe-app-unified-character-layout">
         {outfitRail}
         <section className="axe-app-unified-character-panel"
           aria-label="Character 3D viewer, equipment, attributes and live statistics">
           <Suspense fallback={<p className="axe-app-loading">Loading Character…</p>}>
-            <CharacterWorkspace embedded onOpenEquipment={() => showTab('Equipment')}/>
+            <CharacterWorkspace embedded onOpenEquipment={role => showTab('Equipment',role)}/>
           </Suspense>
           {notice && <div className="axe-app-notice" role="status">{notice}
             <button type="button" onClick={()=>setNotice('')}
@@ -220,7 +223,18 @@ export default function AXEAppearanceWorkspace({
       </div> : <div className="axe-app-layout">
       {outfitRail}
 
-      <section className={"axe-app-model-stage"+(equippedAura?' axe-app-model-stage--aura':'')} aria-label="Character 3D viewer and equipped appearance slots">
+      <section className={"axe-app-model-stage axe-app-appearance-model-stage"+(equippedAura?' axe-app-model-stage--aura':'')} aria-label="Character 3D viewer and equipped appearance slots">
+        <div className="axe-weapon-loadout-rack" aria-label="Three equipped weapon slots">
+          {AXE_HUD_WEAPON_ROLES.map(({role,label})=>{
+            const weapon=getAXERoleWeapon(role);
+            return <button key={role} type="button" className="axe-app-viewer-slot axe-weapon-rack-slot"
+              title={(weapon?.name||label+' empty')+' · Open Equipment to equip this slot'}
+              onClick={()=>showTab('Equipment',role)}>
+              <span className="axe-app-viewer-slot-art"><Sword size={22}/></span>
+              <small>{label}</small><span className="axe-app-viewer-item-name">{weapon?.name||'—'}</span>
+            </button>;
+          })}
+        </div>
         <div className="axe-app-model-glow" aria-hidden="true"/>
         <div className="axe-app-viewer-gear axe-app-viewer-gear--left" aria-label="Equipped left-side slots">
           {APPEARANCE_SLOTS.slice(0,4).map(gearSlot)}
