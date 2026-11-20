@@ -2072,3 +2072,22 @@
   mask-image:none;
   background:rgba(19,33,48,.94);
 }
+
+/* 2026-11-20 corrective layout: the previous inventory and right-hand
+ * Forge Results remain untouched. Only the center forge becomes unboxed,
+ * with exactly two ingredient slots above the existing result circle. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:38%;
+  top:19%;
+  width:34%;
+  max-height:38%;
+  height:auto;
+  padding:0;
+  overflow:visible;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
