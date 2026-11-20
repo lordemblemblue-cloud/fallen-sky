@@ -139,7 +139,7 @@ export function ModePage({ mode }) {
           <ul className="space-y-2">
             {m.rules.map((r) => <li key={r} className="flex gap-2 text-sm text-white/75"><Icon className="mt-0.5 h-4 w-4 shrink-0" style={{ color: m.accent }} />{r}</li>)}
           </ul>
-          {m.online && (
+          {m.online && mode !== 'online' && (
             <div className="space-y-2">
               <div className="text-xs uppercase tracking-wider text-white/40">Online now</div>
               {lobby.online ? <MatchRows matches={here} onJoin={() => play(true)} /> : <p className="text-sm text-white/45">{lobby.serverUrl ? 'The match server is not answering.' : 'Online play is not set up yet.'}</p>}
@@ -147,7 +147,14 @@ export function ModePage({ mode }) {
           )}
         </div>
         <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-          {mode === 'practice' ? (
+          {mode === 'online' ? (
+            <>
+              <p className="text-sm text-white/60">The match server selects Team Deathmatch, Capture the Flag or Three-Point Control at random.</p>
+              <Button primary disabled={!lobby.online} onClick={() => play(true)}>
+                <LogIn className="h-4 w-4" /> Find Random Match
+              </Button>
+            </>
+          ) : mode === 'practice' ? (
             <>
               <Choice label="Opponent" value={prefs.foe} onChange={(v) => update({ foe: v })} options={Object.entries(BODIES).map(([id, b]) => [id, b.name])} />
               <Choice label="Bots" value={String(prefs.bots)} onChange={(v) => update({ bots: Number(v) })} options={[['1', '1'], ['2', '2'], ['3', '3']]} />
