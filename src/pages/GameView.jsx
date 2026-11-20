@@ -13,6 +13,8 @@ import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
 import '../components/game3d/performance/Game3DResponsiveDisplay.css';
 import {game3dCharacterModel} from '../components/game3d/game3dCharacterModel';
 import GameHUD from '../components/game3d/hud/GameHUD';
+import WorldAnnouncementFeed from '../components/game3d/notifications/WorldAnnouncementFeed';
+import WorldPvpControl from '../components/game3d/pvp/WorldPvpControl';
 import Game3DHudLayoutEditor from '../components/game3d/hud/Game3DHudLayoutEditor';
 import {readGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
   from '../components/game3d/hud/game3dCommunityHUDSettings.mjs';
@@ -738,6 +740,8 @@ export default function GameView() {
         }} />
       {/* Server-verified faction call-to-arms below the live minimap. Disabled
           until rank-authorized faction announcements are available. */}
+      <WorldAnnouncementFeed suppressed={services.active || services.expanded} />
+      <WorldPvpControl region={worldRegion} suppressed={services.active || services.expanded} />
       <FactionAnnouncementTicker />
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
