@@ -176,8 +176,7 @@ import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaC
 // localStorage game3d.naturalZones=1; the five-area loader stays the rollback.
 import {createWolfveilNaturalZones,collectWolfveilSurfaceRoots} from './wolfveil/zones/WolfveilNaturalZones.js';
 import {wolfveilNaturalZonesEnabled} from './wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
-import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,
-  activeGame3DPlatformProfile} from './performance/Game3DPlatformGraphics.mjs';
+import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics} from './performance/Game3DPlatformGraphics.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
