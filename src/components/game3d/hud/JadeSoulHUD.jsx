@@ -289,6 +289,7 @@ export default function JadeSoulHUD({
   region = 'wolfveil',
   onToggleServices,
   onSelectServiceGroup,
+  showServicesNavigation = false,
 }) {
   const [hud, setHud] = useState(getPlayerHUD);
   const [hudCustomization,setHudCustomization]=useState(readGame3DHudCustomization);
@@ -538,13 +539,13 @@ export default function JadeSoulHUD({
       {!navigationHidden && <HUDCompassStrip region={region} />}
       {!navigationHidden && <JadeQuestTracker
         onOpenLogbook={() => onSelectServiceGroup?.('quest_logbook')} />}
-      <AXEServicesNavigation
+      {showServicesNavigation && <AXEServicesNavigation
         expanded={servicesExpanded ?? localExpanded}
         serviceMode={serviceMode}
         activeGroup={activeServiceGroup}
         onToggle={onToggleServices || (() => { if (!serviceMode) setLocalExpanded((value) => !value); })}
         onSelectGroup={onSelectServiceGroup || (() => onOpenServices?.())}
-      />
+      />}
       <div className="jade-combat-hud" aria-hidden={serviceMode || undefined} inert={serviceMode ? '' : undefined}>
       <div className="jade-combat-concept-d" data-combat-hud="concept-d"
         data-weapon-layout={hudCustomization.layout}
