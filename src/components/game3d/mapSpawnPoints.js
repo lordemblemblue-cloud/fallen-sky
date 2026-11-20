@@ -4,6 +4,7 @@
 // own per-user, per-character save slot (see checkpointSave below).
 
 import { characterScopedStorage } from '@/components/game3d/characterStorage';
+import { availableRespawnCheckpoints, normalizeActivatedIds } from './death/activatedCheckpointRules.mjs';
 
 export const MAP_ID = 'world_3d';
 
@@ -23,6 +24,29 @@ export const MAP_SPAWN_POINTS = [
 ];
 
 const store = characterScopedStorage('wwm_checkpoint_v1');
+const activatedStore = characterScopedStorage('wwm_activated_checkpoints_v1');
+
+// Previously chosen checkpoints stay unlocked after upgrading old character saves.
+export function getActivatedCheckpointIds() {
+  let saved = [];
+  try {
+    const parsed = JSON.parse(activatedStore.get() || '[]');
+    if (Array.isArray(parsed)) saved = parsed;
+  } catch { /* A corrupt save must not prevent town respawning. */ }
+  return normalizeActivatedIds([...saved, getSavedCheckpointId()], MAP_SPAWN_POINTS);
+}
+export function activateCheckpointId(id) {
+  if (!MAP_SPAWN_POINTS.some(point => point.id === id)) return false;
+  const before = getActivatedCheckpointIds();
+  if (before.includes(id)) return false;
+  const next = normalizeActivatedIds([...before, id], MAP_SPAWN_POINTS);
+  try { activatedStore.set(JSON.stringify(next)); } catch { return false; }
+  return true;
+}
+export function getAvailableRespawnPoints() {
+  return availableRespawnCheckpoints(MAP_SPAWN_POINTS, getActivatedCheckpointIds(), getSavedCheckpointId());
+}
+
 
 /** The checkpoint this character last activated (per user + character). */
 export function getSavedCheckpointId() {
@@ -30,7 +54,8 @@ export function getSavedCheckpointId() {
 }
 
 export function saveCheckpointId(id) {
-  if (!id) return;
+  if (!getSpawnPointById(id)) return;
+  activateCheckpointId(id);
   store.set(id);
 }
 

@@ -4,12 +4,13 @@ import {
   AudioLines, ChevronRight, DoorOpen, Gamepad2,
   Keyboard, LogOut, Monitor, MousePointerClick, Play, Settings2, Users, MessageSquare, BookOpen,
   LayoutDashboard, Move, RotateCcw,
-  ShieldAlert, UserPlus, Volume2, VolumeX, X,
+  ShieldAlert, UserPlus, Volume2, VolumeX, X, Hammer, Trophy,
+  UserRound, ScrollText, PawPrint, Sparkles, Map as MapIcon, Flag,
 } from 'lucide-react';
 import {base44} from '@/api/base44Client';
 import {inkPaletteFor} from './render/inkWashLook';
 import {getAXEControlSettings, setAXEClickToMoveEnabled, setAXEAutoTargetNearbyEnabled,
-  subscribeAXEControlSettings} from './axe/player/AXEControlSettingsStore';
+  setAXEDodgeRollVariantEnabled, subscribeAXEControlSettings} from './axe/player/AXEControlSettingsStore';
 import {GAME3D_PAUSE_SECTIONS,game3dPauseEscape,
   game3dPauseGraphicsDefaults,activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {readGame3DCommunityHUD,saveGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
@@ -37,25 +38,29 @@ import {
   readGame3DHudCustomization,saveGame3DHudCustomization,
   changeGame3DHudWidget,defaultGame3DHudCustomization,
 } from './hud/Game3DHudCustomization.mjs';
+import { AXE_SERVICE_GROUPS } from './axe/services/AXEServiceGroups.js';
+import { getAXEService } from './axe/services/AXEServiceRegistry';
+import { getGame3DMenuShortcut } from './axe/services/game3dMenuHotkeys.mjs';
+import {GAME3D_BINDING_DEFINITIONS, GAME3D_DEFAULT_KEYBINDS,
+  readGame3DKeybinds,saveGame3DKeybinds,rebindGame3DAction,game3dBindingLabel}
+  from './player/Game3DKeybinds.mjs';
 import './PauseMenu.css';
+import './PauseMenuGold.css';
 
-const MENU_ICONS={overview:Gamepad2,audio:AudioLines,controls:Keyboard,
+const MENU_ICONS={overview:Gamepad2,services:Hammer,scoreboard:Trophy,audio:AudioLines,controls:Keyboard,
   graphics:Monitor,ui:LayoutDashboard,community:Users,session:DoorOpen};
+// Tiles are based on the real registered service groups; no new workspaces.
+const QUICK_SERVICE_TILES=Object.freeze([
+  {id:'character',label:'Character',hotkey:'C',icon:UserRound},
+  {id:'skills',label:'Skill Book',hotkey:'K',icon:BookOpen},
+  {id:'quest_logbook',label:'Questbook',hotkey:'L',icon:ScrollText},
+  {id:'companion',label:'Companion',hotkey:'P',icon:PawPrint},
+  {id:'spiritual',label:'Spirituality',hotkey:'J',icon:Sparkles},
+  {id:'blacksmith',label:'Blacksmith',hotkey:'=',icon:Hammer},
+  {id:'faction',label:'Faction',hotkey:null,icon:Flag},
+]);
 const PRESET_QUALITY=['low','medium','high','ultra'];
 const FPS_CAPS=[30,60,120,144];
-const CONTROL_KEYS=[
-  {keys:'W A S D',action:'Move your character'},
-  {keys:'Space',action:'Jump'},
-  {keys:'R',action:'Forward roll (uses dodge stamina)'},
-  {keys:'Double-tap WASD',action:'Directional dodge (uses dodge stamina)'},
-  {keys:'Mouse',action:'Look and aim'},
-  {keys:'Middle-click',action:'Manually lock onto or release a target'},
-  {keys:'E',action:'Interact with the world'},
-  {keys:'TAB',action:'Open the store'},
-  {keys:'C',action:'Character hub'},
-  {keys:'ESC',action:'Open or close the world menu'},
-];
-
 function OptionButtons({label,items,value,onPick}){
   return <fieldset className="axe3d-pause__setting">
     <legend>{label}</legend>
@@ -81,11 +86,19 @@ function Switch({checked,onChange,label,description}){
 
 export default function PauseMenu({
   open,onClose,volume=0.5,onVolumeChange=()=>{},onReturnToCharacterSelect,onCreateCharacter,
-  context='world',motionEnabled,onMotionChange,onEditHUD,
+  context='world',motionEnabled,onMotionChange,onEditHUD,onOpenService,onOpenMap,onOpenFaction,
 }){
   const entry=context==='entry';
   const reduceMotion=typeof window!=='undefined'&&window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const [view,setView]=useState('overview');
+  const [view,setView]=useState(context==='entry'?'graphics':'overview');
+  // World Escape starts in the lightweight tile launcher. Its gear opens
+  // the existing full settings panel; title-screen settings are unchanged.
+  const [surface,setSurface]=useState(context==='entry'?'settings':'launcher');
+  const launcher=!entry&&surface==='launcher';
+  const [launcherGroup,setLauncherGroup]=useState(null);
+  const [keybinds,setKeybinds]=useState(readGame3DKeybinds);
+  const [rebinding,setRebinding]=useState(null);
+  const [bindingMessage,setBindingMessage]=useState('');
   const [confirmAction,setConfirmAction]=useState(null);
   const [error,setError]=useState('');
   const [controls,setControls]=useState(getAXEControlSettings);
@@ -130,13 +143,14 @@ export default function PauseMenu({
     catch{return true;}
   });
   const shouldAnimate=menuMotion&&!reduceMotion;
-  const availableSections=entry
-    ?GAME3D_PAUSE_SECTIONS.filter(section=>section.id!=='session')
-    :GAME3D_PAUSE_SECTIONS;
+  // World and entry settings are options only; the launcher's tiles already
+  // cover services and scoreboard. Never offer a redundant Main/Menu page.
+  const availableSections=GAME3D_PAUSE_SECTIONS.filter(section=>
+    !['overview','session','services','scoreboard'].includes(section.id));
   const updateMotion=next=>{
     const enabled=!!next;
     setMenuMotion(enabled);
-    try{localStorage.setItem('game3d_menu_motion',String(enabled));}catch{}
+    try{localStorage.setItem('game3d_menu_motion',String(enabled));}catch{/* Browser storage may be unavailable in private mode. */}
     onMotionChange?.(enabled);
   };
   useEffect(()=>{
@@ -187,7 +201,12 @@ export default function PauseMenu({
     return ()=>window.removeEventListener('game3dWorldPresence',onPresence);
   },[]);
   useEffect(()=>{
-    if(!open){setView('overview');setConfirmAction(null);setError('');return;}
+    if(!open){
+      setView(entry?'graphics':'overview');setSurface(entry?'settings':'launcher');
+      setLauncherGroup(null);setRebinding(null);setBindingMessage('');
+      setConfirmAction(null);setError('');return;
+    }
+    setKeybinds(readGame3DKeybinds());
     // A true MMO menu keeps the shared world running. It only blocks local
     // combat/movement input, so the hero never attacks behind the controls.
     window.__axePauseMenuOpen=true;
@@ -212,6 +231,33 @@ export default function PauseMenu({
     // Capture before GameView/GameWorld's bubbling hotkeys, including when
     // focus is on a range input. ESC first backs out of nested pages.
     const onEscape=event=>{
+      // Binding capture must run before service/menu handlers; never let a
+      // captured key open a workspace or trigger gameplay behind the overlay.
+      if(rebinding){
+        event.preventDefault();event.stopImmediatePropagation?.();
+        if(event.key==='Escape'){setRebinding(null);setBindingMessage('');return;}
+        if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||event.shiftKey)return;
+        const result=rebindGame3DAction(keybinds,rebinding,event.code);
+        if(!result.ok){
+          setBindingMessage(result.reason==='in-use'
+            ?'That key is already assigned. Change its other binding first.'
+            :'This key is reserved for combat or system controls.');
+          return;
+        }
+        const saved=saveGame3DKeybinds(result.bindings);
+        setKeybinds(saved);setRebinding(null);
+        setBindingMessage('Key saved. You can reset all keys below.');
+        return;
+      }
+      // While the right drawer is up, letter shortcuts retain their direct
+      // meaning. They never expose the old floating Services navigation.
+      const destination=!entry&&!confirmAction?getGame3DMenuShortcut(event):null;
+      if(destination){
+        event.preventDefault();event.stopImmediatePropagation?.();
+        if(destination==='map')onOpenMap?.();
+        else onOpenService?.(destination==='appearance'?'character':destination);
+        return;
+      }
       if(event.key==='Tab'){
         // A visible MMO menu owns keyboard focus; Tab must never wander
         // into the live game HUD behind its full-screen modal.
@@ -245,6 +291,9 @@ export default function PauseMenu({
       if(event.key!=='Escape'||event.repeat)return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      // A world drawer closes completely with one Escape from ANY section;
+      // only dangerous exit confirmation gets its own cancel step.
+      if (!entry && !confirmAction) { onClose(); return; }
       const next=game3dPauseEscape(view,confirmAction);
       setConfirmAction(next.confirmAction);
       if(next.close)onClose();
@@ -252,9 +301,11 @@ export default function PauseMenu({
     };
     window.addEventListener('keydown',onEscape,true);
     return ()=>window.removeEventListener('keydown',onEscape,true);
-  },[open,view,confirmAction,onClose]);
+  },[open,view,confirmAction,onClose,entry,onOpenService,onOpenMap,rebinding,keybinds]);
 
   const selectView=id=>{setConfirmAction(null);setError('');setView(id);};
+  const openSettings=()=>{selectView('graphics');setSurface('settings');setLauncherGroup(null);};
+  const openScoreboard=()=>{selectView('scoreboard');setSurface('settings');};
   const changeGraphics=next=>{
     const sanitized=game3dPauseGraphicsDefaults(next);
     setGraphics(sanitized);
@@ -287,7 +338,7 @@ export default function PauseMenu({
   const changeGpuStats=next=>{
     const enabled=!!next;
     setGpuStats(enabled);
-    try{localStorage.setItem(RENDER_STATS_STORAGE_KEY,enabled?'1':'0');}catch{}
+    try{localStorage.setItem(RENDER_STATS_STORAGE_KEY,enabled?'1':'0');}catch{/* Browser storage may be unavailable in private mode. */}
     window.dispatchEvent(new CustomEvent('game3dRenderStatsChanged',{detail:{enabled}}));
   };
   const changeDisplay=next=>{
@@ -303,7 +354,7 @@ export default function PauseMenu({
   const changeGpuProfile=next=>{
     const profile=normalizeCloneGPUProfile(next);
     setGpuProfile(profile);
-    try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{}
+    try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{/* Browser storage may be unavailable in private mode. */}
     rememberGame3DPlatformSetting({gpuProfile:profile});
     window.__axe3dCloneGovernor?.setProfile?.(profile);
     window.dispatchEvent(new CustomEvent('game3dCloneGPUProfileChanged',{detail:{profile}}));
@@ -323,7 +374,7 @@ export default function PauseMenu({
     setBridgeReport(report);
     setBridgeError('');
     window.__gw3dGpuBridge=report;
-    try{sessionStorage.setItem(GAME3D_GPU_BRIDGE_SESSION_KEY,JSON.stringify(report));}catch{}
+    try{sessionStorage.setItem(GAME3D_GPU_BRIDGE_SESSION_KEY,JSON.stringify(report));}catch{/* Browser storage may be unavailable in private mode. */}
   };
   const connectGpuBridge=async()=>{
     setBridgeError('');
@@ -385,6 +436,8 @@ export default function PauseMenu({
   const heading={
     overview:entry?['Game Settings','Adjust your experience before entering Wolfveil']
       :['Journey Menu','Your adventure is still running'],
+    services:['Services','Choose a workstation or progression menu'],
+    scoreboard:['Scoreboard','Live world session and match status'],
     audio:['Audio','Adjust your game theme'],
     controls:['Controls','Choose how you move through the world'],
     graphics:['Graphics & Display','Tune the world to your device'],
@@ -395,20 +448,99 @@ export default function PauseMenu({
 
   return <AnimatePresence>
     {open&&<motion.div className="axe3d-pause__overlay" data-context={context}
-      data-motion={shouldAnimate?'on':'off'}
+      data-menu-surface={launcher?'launcher':'settings'} data-motion={shouldAnimate?'on':'off'}
       initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
       transition={{duration:shouldAnimate?.15:0}}>
-      <motion.section ref={dialogRef} role="dialog" aria-modal="true" aria-label={entry?'Game 3D title settings':'Game 3D world menu'}
+      {launcher ? <motion.section ref={dialogRef} role="dialog" aria-modal="true"
+        aria-label="Game 3D quick services" className="axe3d-pause__launcher"
+        initial={{opacity:0,x:90}} animate={{opacity:1,x:0}} exit={{opacity:0,x:90}}
+        transition={{duration:shouldAnimate?.2:0}}>
+        <header className="axe3d-pause__launcher-header">
+          <div><small>FALLEN SKY / WORLD</small><h2>Services</h2>
+            <p>Select a category to browse its pages.</p></div>
+          <button type="button" aria-label="Resume game" title="Resume game" onClick={onClose}>
+            <X size={21} aria-hidden="true"/>
+          </button>
+        </header>
+        <div className="axe3d-pause__launcher-main axe3d-pause__scroller">
+          <div className="axe3d-pause__launcher-grid" role="group" aria-label="Services and faction">
+            {QUICK_SERVICE_TILES.map((tile,index)=>{
+              const Icon=tile.icon;
+              const group=AXE_SERVICE_GROUPS.find(item=>item.id===tile.id);
+              if(!group&&tile.id!=='faction')return null;
+              const code=keybinds[tile.id];
+              return <button key={tile.id} type="button" ref={index===0?resumeRef:undefined}
+                aria-pressed={launcherGroup===tile.id}
+                className={'axe3d-pause__launcher-tile'+(launcherGroup===tile.id?' is-selected':'')}
+                aria-label={tile.label+(code?' ('+game3dBindingLabel(code)+')':'')}
+                onClick={()=>{
+                  if(tile.id==='faction'){onOpenFaction?.();return;}
+                  const operations=group?.visibleServiceIds||group?.serviceIds||[];
+                  if(operations.length===1){onOpenService?.(group.id,operations[0]);return;}
+                  setLauncherGroup(previous=>previous===tile.id?null:tile.id);
+                }}>
+                <Icon size={28} strokeWidth={1.7} aria-hidden="true"/>
+                <span className="axe3d-pause__launcher-tile-label">{tile.label}</span>
+                {code&&<kbd>{game3dBindingLabel(code)}</kbd>}
+              </button>;
+            })}
+          </div>
+          {launcherGroup&&launcherGroup!=='faction'&&<section className="axe3d-pause__launcher-detail"
+            aria-label="Service pages">
+            {(()=>{
+              const group=AXE_SERVICE_GROUPS.find(item=>item.id===launcherGroup);
+              if(!group)return null;
+              const operations=group.visibleServiceIds||group.serviceIds;
+              return <>
+                <div className="axe3d-pause__launcher-detail-header">
+                  <h3>{group.label}</h3>
+                  <span>Choose a page</span>
+                </div>
+                <div className="axe3d-pause__launcher-page-grid">
+                  {operations.map(serviceId=><button type="button" key={serviceId}
+                    title={getAXEService(serviceId)?.description||'Open service'}
+                    onClick={()=>onOpenService?.(group.id,serviceId)}>
+                    <span>{getAXEService(serviceId)?.label||serviceId.replaceAll('_',' ')}</span>
+                    <ChevronRight size={17} aria-hidden="true"/>
+                  </button>)}
+                </div>
+              </>;
+            })()}
+          </section>}
+          <div className="axe3d-pause__launcher-online" aria-live="polite">
+            <span className="axe3d-pause__launcher-online-dot"/>
+            {presence.status==='connected'?'Online world':presence.status==='connecting'?'Connecting to world':
+              presence.status==='full'?'World full':'World status unavailable'}
+            <span className="axe3d-pause__launcher-count">{Number.isFinite(presence.count)?presence.count:'—'} / {presence.max||20} players</span>
+          </div>
+        </div>
+        <footer className="axe3d-pause__launcher-footer">
+          <button type="button" className="axe3d-pause__launcher-action"
+            aria-label="Open scoreboard" onClick={openScoreboard}>
+            <Trophy size={19} aria-hidden="true"/><span>Scoreboard</span>
+          </button>
+          <button type="button" className="axe3d-pause__launcher-action"
+            aria-label="Open map (M)" onClick={()=>onOpenMap?.()}>
+            <MapIcon size={19} aria-hidden="true"/><span>Map</span>
+          </button>
+          <button type="button" className="axe3d-pause__launcher-settings"
+            aria-label="Open game settings" title="Settings" onClick={openSettings}>
+            <Settings2 size={22} aria-hidden="true"/><span>Settings</span>
+          </button>
+        </footer>
+      </motion.section> : <motion.section ref={dialogRef} role="dialog" aria-modal="true" aria-label={entry?'Game 3D title settings':'Game 3D settings'}
         className="axe3d-pause__panel"
-        initial={{opacity:0,scale:.97,y:16}} animate={{opacity:1,scale:1,y:0}}
-        exit={{opacity:0,scale:.98,y:12}} transition={{duration:shouldAnimate?.18:0}}>
+        initial={entry?{opacity:0,scale:.97,y:16}:{opacity:0,x:90}}
+        animate={entry?{opacity:1,scale:1,y:0}:{opacity:1,x:0}}
+        exit={entry?{opacity:0,scale:.98,y:12}:{opacity:0,x:90}}
+        transition={{duration:shouldAnimate?.2:0}}>
         <div className="axe3d-pause__topline"/>
         <header className="axe3d-pause__header">
           <div className="axe3d-pause__identity">
             <div className="axe3d-pause__crest"><Gamepad2 aria-hidden="true" size={23}/></div>
             <div>
               <span className="axe3d-pause__eyebrow">ATOM X EVE / GAME 3D</span>
-              <h2>{entry?'SETTINGS':'WORLD MENU'}</h2>
+              <h2>SETTINGS</h2>
             </div>
           </div>
           <div className="axe3d-pause__header-end">
@@ -463,6 +595,11 @@ export default function PauseMenu({
               </div>
             </div> : <>
               {view==='overview'&&<>
+                {!entry&&<div className="axe3d-pause__quick-actions">
+                  <button type="button" onClick={()=>selectView('services')}><Hammer size={19}/><span>Services</span><ChevronRight size={18}/></button>
+                  <button type="button" onClick={()=>selectView('scoreboard')}><Trophy size={19}/><span>Scoreboard</span><ChevronRight size={18}/></button>
+                  <button type="button" onClick={()=>selectView('graphics')}><Settings2 size={19}/><span>Settings</span><ChevronRight size={18}/></button>
+                </div>}
                 <div className="axe3d-pause__hero">
                   <span>WOLFVEIL · {entry?'TITLE SETTINGS':'ADVENTURE'}</span>
                   <h4>{entry?'Prepare your journey.':'The path is yours.'}</h4>
@@ -490,6 +627,28 @@ export default function PauseMenu({
                   </button>
                 </div>
               </>}
+              {view==='services'&&!entry&&<div className="axe3d-pause__service-list" aria-label="Available services">
+                {AXE_SERVICE_GROUPS.filter(group=>group.id!=='character').map(group=>(
+                  <button type="button" key={group.id} className="axe3d-pause__service-link"
+                    onClick={()=>onOpenService?.(group.id)}>
+                    <span><strong>{group.label}</strong><small>{group.id==='skills'?'K · Combat and companion skills':
+                      group.id==='quest_logbook'?'L · Quests and objectives':
+                      group.id==='companion'?'P · Pets and mounts':
+                      group.id==='spiritual'?'J · Spiritual progression':
+                      group.id==='blacksmith'?'= · Equipment upgrades':'Open service'}</small></span>
+                    <ChevronRight size={19} aria-hidden="true"/>
+                  </button>
+                ))}
+                <p className="axe3d-pause__service-hint">Press C to open Character directly. Character does not open this Escape menu or the old Services strip.</p>
+              </div>}
+              {view==='scoreboard'&&!entry&&<div className="axe3d-pause__scoreboard" aria-label="World scoreboard">
+                <div className="axe3d-pause__scoreboard-row"><span>World connection</span><strong>{presence.status==='connected'?'Online':presence.status==='full'?'Server full':presence.status==='connecting'?'Connecting':presence.status==='error'?'Unavailable':'Unknown'}</strong></div>
+                <div className="axe3d-pause__scoreboard-row"><span>Players in world</span><strong>{Number.isFinite(presence.count)?presence.count:'—'} / {presence.max||20}</strong></div>
+                <div className="axe3d-pause__scoreboard-empty"><Trophy size={24} aria-hidden="true"/>
+                  <strong>Match scores</strong>
+                  <p>No active match scores have been reported to this menu. The live world connection and player count above are real session data, not a simulated leaderboard.</p>
+                </div>
+              </div>}
               {view==='audio'&&<div className="axe3d-pause__surface">
                 <div className="axe3d-pause__surface-heading"><Volume2 size={22}/><div><strong>Game Theme</strong><p>Music volume, updated immediately.</p></div></div>
                 <div className="axe3d-pause__volume-row">
@@ -509,6 +668,9 @@ export default function PauseMenu({
                   <Switch label="Click to move" checked={controls.clickToMove}
                     description="Click the ground to walk there. WASD cancels the destination."
                     onChange={()=>setAXEClickToMoveEnabled(!controls.clickToMove)}/>
+                  <Switch label="Roll dodges" checked={!!controls.dodgeRollVariant}
+                    description="Double-tap W rolls forward and double-tap S rolls backward instead of the sidestep and the back flip."
+                    onChange={()=>setAXEDodgeRollVariantEnabled(!controls.dodgeRollVariant)}/>
                   <Switch label="Automatically lock nearby enemies" checked={controls.autoTargetNearby}
                     description="Off by default. Leave off to keep camera and movement independent of enemy spawns; middle-click still locks targets manually."
                     onChange={()=>setAXEAutoTargetNearbyEnabled(!controls.autoTargetNearby)}/>
@@ -516,11 +678,33 @@ export default function PauseMenu({
                     description="Animate the title and Escape menu. Reduced-motion system settings still take precedence."
                     onChange={()=>updateMotion(!menuMotion)}/>
                 </div>
-                <div className="axe3d-pause__surface">
-                  <h4 className="axe3d-pause__subhead">Quick reference</h4>
-                  <div className="axe3d-pause__key-grid">
-                    {CONTROL_KEYS.map(item=><div key={item.keys}><kbd>{item.keys}</kbd><span>{item.action}</span></div>)}
+                <div className="axe3d-pause__surface" data-testid="game3d-editable-keybinds">
+                  <div className="axe3d-pause__keybind-head">
+                    <div><h4 className="axe3d-pause__subhead">Customize keybinds</h4>
+                      <p>Choose an action, then press its new key. Changes take effect immediately.</p></div>
+                    <button type="button" className="axe3d-pause__keybind-reset"
+                      onClick={()=>{
+                        setKeybinds(saveGame3DKeybinds(GAME3D_DEFAULT_KEYBINDS));
+                        setRebinding(null);setBindingMessage('Default keys restored.');
+                      }}>Reset defaults</button>
                   </div>
+                  {['gameplay','menu'].map(kind=><div key={kind}>
+                    <h5 className="axe3d-pause__keybind-group-title">{kind==='gameplay'?'Movement & actions':'Services & navigation'}</h5>
+                    <div className="axe3d-pause__keybind-grid">
+                      {GAME3D_BINDING_DEFINITIONS.filter(def=>def.kind===kind).map(def=>
+                        <button type="button" key={def.id}
+                          className={'axe3d-pause__keybind-row'+(rebinding===def.id?' is-capturing':'')}
+                          aria-pressed={rebinding===def.id}
+                          aria-label={'Change '+def.label+' key, currently '+game3dBindingLabel(keybinds[def.id])}
+                          onClick={()=>{setRebinding(def.id);setBindingMessage('Press a key for '+def.label+'. Escape cancels.');}}>
+                          <span>{def.label}</span>
+                          <kbd>{rebinding===def.id?'PRESS KEY':game3dBindingLabel(keybinds[def.id])}</kbd>
+                        </button>)}
+                    </div>
+                  </div>)}
+                  <p className="axe3d-pause__help" role="status">{bindingMessage||
+                    'Reserved: Esc, Tab, number skills, F mount, G clan, and companion/combat shortcuts.'}</p>
+                  <p className="axe3d-pause__help">Mouse looks and aims. Middle-click locks or releases a target; mouse buttons are not remappable here.</p>
                 </div>
               </>}
               {view==='ui'&&<div className="axe3d-pause__hud-ui" data-testid="game3d-ui-customization-settings">
@@ -591,8 +775,11 @@ export default function PauseMenu({
                     </div>
                   </div>
                   <Switch label="World and party chat" checked={community.chat}
-                    description="Show the compact chat dock. Enter still opens chat when the dock is hidden."
+                    description="Allow the chat dock to appear when active. Press Enter to reveal it, then Enter again to type."
                     onChange={()=>changeCommunity({...community,chat:!community.chat})}/>
+                  <Switch label="Always show chat" checked={community.chatAlwaysVisible}
+                    description="Keep messages and channel options visible even when chat is idle."
+                    onChange={()=>changeCommunity({...community,chatAlwaysVisible:!community.chatAlwaysVisible})}/>
                   <Switch label="Echo Chronicle book" checked={community.echo}
                     description="Keep the small book launcher next to the portrait. Incoming conversations remain accessible."
                     onChange={()=>changeCommunity({...community,echo:!community.echo})}/>
@@ -679,15 +866,8 @@ export default function PauseMenu({
                 </div>
                 <div className="axe3d-pause__surface">
                   <OptionButtons label="Visual style" value={graphics.artStyle}
-                    items={[{id:'original',text:'Classic'},{id:'ink',text:'Sumi-e Ink Wash'},
-                      {id:'atomic-ultra-sumi',text:'ULTRA MAX · Living Ultra-Sumi'}]}
+                    items={[{id:'original',text:'Classic'},{id:'ink',text:'Sumi-e Ink Wash'}]}
                     onPick={artStyle=>changeGraphics({...graphics,artStyle})}/>
-                  {graphics.artStyle==='atomic-ultra-sumi'&&<p className="axe3d-pause__help">
-                      ON by default in the clone: world-wide living-energy grass, flowing
-                      jade/cobalt/violet Sumi-e tree material and 3× taller flame blades.
-                      Existing character, roads, buildings and terrain keep their colors.
-                      No full-screen white bloom or duplicate game physics.
-                    </p>}
                   {graphics.artStyle==='ink'&&<>
                     <OptionButtons label="Ink color profile" value={inkPaletteFor(graphics)}
                       items={[{id:'vibrant',text:'Vibrant Color'},{id:'classic',text:'Classic Ink'}]}
@@ -765,9 +945,9 @@ export default function PauseMenu({
         </div>
         <footer className="axe3d-pause__footer">
           <span><span className="axe3d-pause__footer-spark"/> GAME 3D · {entry?'TITLE SETTINGS':'ONLINE WORLD'}</span>
-          <span><kbd>ESC</kbd> {confirmAction?'Cancel':view==='overview'?(entry?'Close':'Resume'):'Back to main menu'}</span>
+          <span><kbd>ESC</kbd> {confirmAction?'Cancel':entry?'Close settings':'Resume game'}</span>
         </footer>
-      </motion.section>
+      </motion.section>}
     </motion.div>}
   </AnimatePresence>;
 }

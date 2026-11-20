@@ -125,7 +125,8 @@ test('withFactionPetLife replaces a corrupt idle and adds tail/wing motion to th
   const combined = combineNativeFactionPetClips([corruptIdle], gait, 'winged_faction_3_160');
   for (const c of combined) for (const t of c.tracks) assert.ok(isUsableAnimationTrack(t), `${c.name}: corrupt ${t.name} was grafted`);
   const clips = withFactionPetLife(p.root, combined, [corruptIdle], 'winged_faction_3_160');
-  assert.deepEqual(clips.map((c) => c.name), ['idle', 'walk', 'run']);
+  // ... plus the ridden flight clip (character/mountFlight.mjs)
+  assert.deepEqual(clips.map((c) => c.name), ['idle', 'walk', 'run', 'fly']);
   for (const c of clips) {
     const names = c.tracks.map((t) => t.name);
     assert.equal(new Set(names).size, names.length, `${c.name}: one track per bone`);
@@ -160,14 +161,14 @@ test('the loader turns Faction 2 (#158) content but never Faction 3 (#160), whic
     assert.ok(Number.isFinite(yaw) && Math.abs(Math.abs(yaw) - Math.PI / 2) < 1e-6, `Faction 2 content turned (${yaw})`);
     const d = wolf.chest.getWorldPosition(new THREE.Vector3()).sub(wolf.pelvis.getWorldPosition(new THREE.Vector3()));
     assert.ok(d.z > 0.29 && Math.abs(d.x) < 1e-6, `#158 body now points ${d.toArray()}`);
-    assert.deepEqual(clips2.map((c) => c.name).sort(), ['idle', 'run', 'walk']);
+    assert.deepEqual(clips2.map((c) => c.name).sort(), ['fly', 'idle', 'run', 'walk']);
     const tiger = pet();
     const def3 = { id: 'faction_tiger', animationSource: 'baby-wolf-retarget', animationRigProfile: 'winged_faction_3_160', modelUrl: 'x.glb' };
     createFactionThreeFacingFrame(tiger.root, def3);
     const clips3 = await prepareMountAnimationClips(tiger.root, [], def3);
     assert.equal(tiger.root.userData.factionPetFacingYaw, undefined, 'Faction 3 content is not turned by the loader');
     assert.equal(tiger.rig.quaternion.angleTo(new THREE.Quaternion()), 0);
-    assert.deepEqual(clips3.map((c) => c.name).sort(), ['idle', 'run', 'walk']);
+    assert.deepEqual(clips3.map((c) => c.name).sort(), ['fly', 'idle', 'run', 'walk']);
     for (const c of clips3) for (const t of c.tracks) assert.ok(isUsableAnimationTrack(t), `${c.name} ${t.name}`);
   } finally {
     console.warn = warn;

@@ -6,6 +6,7 @@ import { duelistServerUrl, fetchLobby } from '../net/client.mjs';
 export function useLobby(everyMs = 3000) {
   const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
   const [state, setState] = useState({ matches: null, reachable: false, loaded: false });
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (!serverUrl) { setState({ matches: null, reachable: false, loaded: true }); return undefined; }
     let alive = true;
@@ -16,9 +17,9 @@ export function useLobby(everyMs = 3000) {
     poll();
     const timer = setInterval(poll, everyMs);
     return () => { alive = false; clearInterval(timer); };
-  }, [serverUrl, everyMs]);
+  }, [serverUrl, everyMs, revision]);
   const byMode = {};
   let players = 0;
   for (const m of state.matches || []) { byMode[m.mode] = (byMode[m.mode] || 0) + m.players; players += m.players; }
-  return { serverUrl, ...state, players, byMode, online: !!serverUrl && state.reachable };
+  return { serverUrl, ...state, players, byMode, online: !!serverUrl && state.reachable, refresh: () => setRevision(value => value + 1) };
 }

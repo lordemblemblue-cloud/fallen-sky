@@ -17,6 +17,9 @@
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown } from '../core/index.mjs';
+import { awardSpecialCharge, classAtSpawn, requestClassSelection } from '../core/classes.mjs';
+import { makeBall, stepFootball } from './football.mjs';
+import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -25,6 +28,8 @@ export const MODES = Object.freeze({
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
+  football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
+  control: Object.freeze({ id: 'control', name: 'Three-Point Control', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
 export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, baseInset: 4 });
 export const COUNTDOWN = 3;
@@ -37,7 +42,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * players: [{ id, name, team? }]. seats: the match size (default: the mode's). Returns the match; drive it
  * with stepMatch, seat people with joinMatch / leaveMatch, show it with matchView.
  */
-export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null } = {}) {
+export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null } = {}) {
   const def = MODES[mode] || MODES.practice;
   const world = createWorld({ arenaRadius: def.arena });
   const match = {
@@ -47,6 +52,8 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 },
     flags: def.flags ? makeFlags(def) : null,
+    ball: def.football ? makeBall() : null,
+    controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
   for (const p of players) seat(match, { ...p, kind: 'player' });
@@ -105,7 +112,7 @@ function seat(match, { id = null, name = null, kind, team = null }) {
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
   addFighter(match.world, { id: seatId, team: seatTeam, weapon: 'sword', ...spot });
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null };
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: null, pendingClass: null, specialMeter: 0 };
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
@@ -180,6 +187,38 @@ export function standInInput(match, id) {
 /** A line in the match's feed from outside the rules (the server: a player lost their connection, or is back). */
 export const noteEvent = (match, e) => event(match, e);
 
+/** Server authority must call this using its authenticated player's seat ID.
+ * The packet must never supply phase/dead; those come from this match world. */
+export function queueMatchClass(match, playerId, requestedClass) {
+  const seat = match.seats.get(playerId);
+  if (!seat || seat.kind !== 'player') return { accepted: false, reason: 'not-a-player' };
+  const fighter = match.world.fighters.get(playerId);
+  const choice = requestClassSelection({
+    currentClass: seat.classId || 'duelist',
+    pendingClass: seat.pendingClass,
+    requestedClass,
+    phase: match.phase,
+    dead: !!fighter?.vitals.dead,
+  });
+  if (choice.accepted) seat.pendingClass = choice.pendingClass;
+  return choice;
+}
+
+/** Applied by rules at spawn/round start only, not by an input command. */
+function spawnSeat(match, seat, protectSeconds = 0) {
+  const old = match.world.fighters.get(seat.id);
+  const chosen = seat.pendingClass ? classAtSpawn({ currentClass: seat.classId || 'duelist', pendingClass: seat.pendingClass }) : null;
+  const weapon = chosen?.weapon ?? old?.weapon ?? 'sword';
+  respawnFighter(match.world, seat.id, {
+    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon,
+  });
+  if (chosen) {
+    seat.classId = chosen.classId;
+    seat.pendingClass = null;
+    event(match, { type: 'classSelected', id: seat.id, classId: chosen.classId, feed: false });
+  }
+}
+
 function protect(match, id) {
   const f = match.world.fighters.get(id);
   if (f && match.def.protect) f.protectedUntil = match.world.time + match.def.protect;
@@ -202,6 +241,16 @@ function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.
 
 // What a bot is after besides the nearest fight: the objective of the mode.
 function goalFor(match, s) {
+  if (match.controlPoints && s.team) {
+    // Send bots to the objectives which their team does not yet own.
+    // Stable assignment spreads teammates over the three points.
+    const pending = match.controlPoints.filter(point => point.owner !== s.team);
+    const candidates = pending.length ? pending : match.controlPoints;
+    const index = Math.max(0, match.order.indexOf(s.id));
+    const target = candidates[index % candidates.length];
+    return { x: target.x, z: target.z, urgent: true };
+  }
+  if (match.ball && s.team) return { x: match.ball.x, z: match.ball.z, urgent: true };
   if (!match.flags || !s.team) return null;
   const { world } = match;
   const me = bodyOf(world, s.id);
@@ -233,7 +282,12 @@ export function stepMatch(match, dt, inputs = {}) {
     const effects = step(world, dt, {});
     if (match.phase !== 'over' && world.time >= match.phaseUntil) {
       if (match.phase === 'roundOver') nextRound(match);
-      else { match.phase = 'live'; event(match, { type: 'fight', round: match.round, feed: false }); }
+      else {
+        // On initial countdown, apply queued class selections before any attacks.
+        for (const seat of match.seats.values()) if (seat.pendingClass) spawnSeat(match, seat, match.def.protect);
+        match.phase = 'live';
+        event(match, { type: 'fight', round: match.round, feed: false });
+      }
     }
     return { effects, events: match.events };
   }
@@ -245,14 +299,30 @@ export function stepMatch(match, dt, inputs = {}) {
     if (!f || f.vitals.dead) continue;
     // a bot thinks for itself unless the caller drives it (a test, a replay)
     let input = s.kind === 'player' ? inputs[s.id] || {} : inputs[s.id] || think(world, s.bot, { goal: goalFor(match, s) });
+    if (match.ball) {
+      // No attacks or damage in Football. Bots chase the ball using ordinary
+      // movement inputs; humans can dribble or press interact (F) to kick.
+      if (s.kind === 'bot' && !inputs[s.id]) {
+        const me = bodyOf(world, s.id);
+        const dx = match.ball.x - me.x;
+        const dz = match.ball.z - me.z;
+        const length = Math.hypot(dx, dz) || 1;
+        input = { move: { x: dx / length, z: dz / length }, face: Math.atan2(dx, dz), run: true,
+          sprint: length > 5, interact: length < 2.2, presses: [] };
+      } else {
+        input = { ...input, presses: (input.presses || []).filter(cmd => cmd === 'roll' || cmd === 'dash') };
+      }
+    }
     if (carrying(match, s.id)) input = { ...input, sprint: false };
     all[s.id] = input;
   }
   const effects = step(world, dt, all);
+  if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
     respawns(match);
     if (match.flags) flagsStep(match);
+    if (match.controlPoints) stepControlPoints(match, dt);
     checkEnd(match);
   }
   return { effects, events: match.events };
@@ -267,6 +337,11 @@ function onDefeat(match, e) {
   const counted = by && by.id !== who.id && hostile(world, world.fighters.get(by.id) || {}, world.fighters.get(who.id) || {});
   if (counted) {
     match.scores[by.id].defeats += 1;
+    // Only the authoritative world defeat event can grant elimination charge.
+    // A client press, score display or unverified hit claim never awards meter.
+    if (by.kind === 'player' && by.classId) {
+      by.specialMeter = awardSpecialCharge(by.specialMeter, 'elimination') ?? by.specialMeter;
+    }
     if (def.id === 'tdm' && by.team) match.teamScores[by.team] += 1;
   }
   dropFlagOf(match, who.id, bodyOf(world, who.id));
@@ -282,7 +357,7 @@ function respawns(match) {
   for (const s of match.seats.values()) {
     if (s.respawnAt === null || world.time < s.respawnAt) continue;
     s.respawnAt = null;
-    respawnFighter(world, s.id, { ...spawnFor(match, s.id, s.team), protect: def.protect });
+    spawnSeat(match, s, def.protect);
     if (s.bot) s.bot.combo = 0;
     event(match, { type: 'respawn', id: s.id, feed: false });
   }
@@ -303,6 +378,12 @@ function flagsStep(match) {
       if (own.state === 'home' && dist(b, own.home) < CTF.capture) {
         match.teamScores[f.team] += 1;
         match.scores[f.id].captures += 1;
+        // Award only for a server-confirmed enemy flag capture, never for
+        // client-provided interaction, proximity, or a claimed objective.
+        const capturingSeat = match.seats.get(f.id);
+        if (capturingSeat?.kind === 'player' && capturingSeat.classId) {
+          capturingSeat.specialMeter = awardSpecialCharge(capturingSeat.specialMeter, 'objective') ?? capturingSeat.specialMeter;
+        }
         goHome(flag);
         event(match, { type: 'captured', team: f.team, by: f.id });
       }
@@ -351,7 +432,7 @@ function nextRound(match) {
   match.roundClock = 0;
   match.roundWinner = null;
   world.projectiles.length = 0;
-  for (const s of match.seats.values()) respawnFighter(world, s.id, spawnFor(match, s.id, s.team));
+  for (const s of match.seats.values()) spawnSeat(match, s);
   match.phase = 'countdown';
   match.phaseUntil = world.time + 2;
   event(match, { type: 'round', round: match.round, feed: false });
@@ -397,7 +478,7 @@ function finish(match, winner) {
 export function matchView(match, forId = null) {
   const { def, world } = match;
   const people = [...match.seats.values()].map((s) => ({
-    id: s.id, name: s.name, kind: s.kind, team: s.team, ...match.scores[s.id],
+    id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, ...match.scores[s.id],
     dead: !!world.fighters.get(s.id)?.vitals.dead, respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time),
     roundWins: match.roundWins[s.id] || 0,
   }));
@@ -409,7 +490,10 @@ export function matchView(match, forId = null) {
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
-    people, me: forId ? people.find((p) => p.id === forId) || null : null,
+    ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
+    controlPoints: controlPointView(match.controlPoints),
+    people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
+      specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null } : null,
     feed: match.feed.slice(-5),
   };
 }

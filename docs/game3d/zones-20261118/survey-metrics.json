@@ -1,0 +1,2488 @@
+{
+ "capturedAt": "2026-11-19T01:42:03.640Z",
+ "heapMB": 842,
+ "renderer": {
+  "memory": {
+   "geometries": 1455,
+   "textures": 452
+  },
+  "programs": 512
+ },
+ "stats": {
+  "enabled": true,
+  "mode": "single",
+  "failed": null,
+  "area": "east",
+  "areaLabel": "Eastern Riverlands",
+  "side": "right",
+  "loadedAreas": [
+   "east"
+  ],
+  "units": {
+   "total": 319,
+   "loaded": 89
+  },
+  "batches": {
+   "split": 106,
+   "settling": 0,
+   "dynamic": 16,
+   "building": 0
+  },
+  "farScenery": {
+   "enabled": true,
+   "batches": 15,
+   "instances": 1971,
+   "triangles": 311720
+  },
+  "farOutline": {
+   "enabled": true,
+   "failed": null,
+   "shown": [
+    "west",
+    "town"
+   ],
+   "areas": {
+    "west": {
+     "sources": 1,
+     "triangles": 22646,
+     "sourceTriangles": 108240,
+     "cellMeters": 0.75
+    },
+    "town": {
+     "sources": 76,
+     "triangles": 7892,
+     "sourceTriangles": 392034,
+     "cellMeters": 0.75
+    },
+    "east": {
+     "sources": 2,
+     "triangles": 27706,
+     "sourceTriangles": 79723,
+     "cellMeters": 5.39
+    }
+   }
+  },
+  "triangles": {
+   "loaded": 845868,
+   "unloaded": 3253582
+  },
+  "drawCallsHidden": 1422,
+  "gpuRelease": {
+   "enabled": false,
+   "areas": [],
+   "geometries": 0,
+   "textures": 0
+  },
+  "collisionStreaming": false,
+  "terrainStreaming": "portal_area_chunks",
+  "region": "east",
+  "loadedRegions": [
+   "east"
+  ],
+  "sourceBatches": 106,
+  "sourceInstances": 16049,
+  "loadedInstances": 2996,
+  "unloadedInstances": 13053
+ },
+ "report": {
+  "area": "east",
+  "mode": "single",
+  "loadedAreas": [
+   "east"
+  ],
+  "areas": {
+   "town": {
+    "units": 46,
+    "unitTriangles": 755811,
+    "unitDrawCalls": 1238,
+    "instances": 5513,
+    "instanceTriangles": 620161,
+    "batches": 69,
+    "triangles": 1375972
+   },
+   "south": {
+    "units": 15,
+    "unitTriangles": 33840,
+    "unitDrawCalls": 15,
+    "instances": 561,
+    "instanceTriangles": 71079,
+    "batches": 18,
+    "triangles": 104919
+   },
+   "west": {
+    "units": 100,
+    "unitTriangles": 1087407,
+    "unitDrawCalls": 100,
+    "instances": 4075,
+    "instanceTriangles": 284843,
+    "batches": 51,
+    "triangles": 1372250
+   },
+   "east": {
+    "units": 89,
+    "unitTriangles": 673598,
+    "unitDrawCalls": 89,
+    "instances": 2996,
+    "instanceTriangles": 172270,
+    "batches": 47,
+    "triangles": 845868
+   },
+   "north": {
+    "units": 69,
+    "unitTriangles": 289468,
+    "unitDrawCalls": 69,
+    "instances": 2904,
+    "instanceTriangles": 110973,
+    "batches": 38,
+    "triangles": 400441
+   }
+  },
+  "alwaysLoaded": {
+   "objects": 64,
+   "triangles": 399953,
+   "drawCalls": 64,
+   "largest": [
+    {
+     "name": "Game 1 ORIGINAL uploaded elm / elm-broad / elm-broad-leaf",
+     "triangles": 56532,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "Game 1 ORIGINAL uploaded elm / elm-wild / elm-wild-leaf",
+     "triangles": 51024,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bluewood_Cedars_1",
+     "triangles": 46000,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bluewood_Cedars_2",
+     "triangles": 46000,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Gorge_BasaltRockTerraceErosion",
+     "triangles": 33408,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "Game 1 ORIGINAL uploaded elm / elm-slim / elm-slim-leaf",
+     "triangles": 21960,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bluewood_Bamboo",
+     "triangles": 15840,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_PhysicalTraversablePathNetwork",
+     "triangles": 15801,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_BakedRock_block_LOD2",
+     "triangles": 15732,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bridge_ContinuousGradeMatchedRails_outer_trail_bridge",
+     "triangles": 14048,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_West_OwnerTreeLoading_FallbackCrowns",
+     "triangles": 13440,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bridge_ContinuousGradeMatchedRails_residential_footbridge",
+     "triangles": 8748,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_Bridge_TwistedRopeSwags_market_bridge",
+     "triangles": 7040,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_Bridge_SeatedWoodPlanks_outer_trail_bridge",
+     "triangles": 5236,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_PavedRoad_brick",
+     "triangles": 4854,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_Bluewood_Maples",
+     "triangles": 4800,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_Bridge_SeatedWoodPlanks_residential_footbridge",
+     "triangles": 3108,
+     "drawCalls": 1,
+     "reason": "spans several areas"
+    },
+    {
+     "name": "SWV_BakedCard_GrassTufts",
+     "triangles": 2868,
+     "drawCalls": 1,
+     "reason": "per-instance shader data"
+    },
+    {
+     "name": "SWV_BakedRock_slab_LOD0",
+     "triangles": 2700,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    },
+    {
+     "name": "SWV_West_OwnerTreeLoading_FallbackTrunks",
+     "triangles": 2160,
+     "drawCalls": 1,
+     "reason": "far scenery, drawn from every area"
+    }
+   ]
+  },
+  "leftToOwner": [
+   "SWV_BakedRock_block_LOD0",
+   "SWV_BakedRock_block_LOD1",
+   "SWV_BakedRock_boulder_LOD0",
+   "SWV_BakedRock_boulder_LOD1",
+   "SWV_BakedRock_boulder_LOD2",
+   "SWV_BakedRock_flat_LOD0",
+   "SWV_BakedRock_flat_LOD1",
+   "SWV_BakedRock_flat_LOD2",
+   "SWV_BakedRock_rubble_LOD0",
+   "SWV_BakedRock_rubble_LOD1",
+   "SWV_BakedRock_rubble_LOD2",
+   "SWV_BakedRock_slab_LOD1",
+   "SWV_BakedRock_slab_LOD2",
+   "SWV_BakedRock_standing_LOD0",
+   "SWV_BakedRock_standing_LOD1",
+   "SWV_BakedRock_standing_LOD2"
+  ]
+ },
+ "gates": {
+  "town_east_market_bridge": {
+   "area": "town",
+   "ground": 17.051898919069604,
+   "ahead": "E",
+   "back": "W",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 406,
+     "triangles": 2039173
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 415,
+     "triangles": 2330961
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 237,
+     "triangles": 2503227
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 245,
+     "triangles": 2181593
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 226,
+     "triangles": 2012978
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 758,
+     "triangles": 2106778
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 1426,
+     "triangles": 2277969
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 901,
+     "triangles": 2003446
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 405,
+     "triangles": 2016063
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 415,
+     "triangles": 2330961
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 235,
+     "triangles": 2498394
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 243,
+     "triangles": 2224806
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 226,
+     "triangles": 2012978
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 758,
+     "triangles": 2106778
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 1426,
+     "triangles": 2276051
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 897,
+     "triangles": 2000948
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 396,
+     "triangles": 1992247
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 407,
+     "triangles": 2308221
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 228,
+     "triangles": 2473642
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 242,
+     "triangles": 2257558
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 222,
+     "triangles": 2019258
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 757,
+     "triangles": 2127654
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 1416,
+     "triangles": 2295669
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 890,
+     "triangles": 2012252
+    }
+   ]
+  },
+  "town_east_residential_footbridge": {
+   "area": "town",
+   "ground": 50.25456426231295,
+   "ahead": "E",
+   "back": "W",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 406,
+     "triangles": 2140095
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 428,
+     "triangles": 2124015
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 286,
+     "triangles": 2602456
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 310,
+     "triangles": 2416621
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 337,
+     "triangles": 2331606
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 1429,
+     "triangles": 2266653
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 818,
+     "triangles": 2331826
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 289,
+     "triangles": 2091799
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 407,
+     "triangles": 2140097
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 428,
+     "triangles": 2120667
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 284,
+     "triangles": 2529223
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 307,
+     "triangles": 2412504
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 341,
+     "triangles": 2342678
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 1428,
+     "triangles": 2266651
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 827,
+     "triangles": 2333338
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 291,
+     "triangles": 2091837
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 397,
+     "triangles": 2128696
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 427,
+     "triangles": 2116786
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 281,
+     "triangles": 2519238
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 304,
+     "triangles": 2406494
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 343,
+     "triangles": 2360082
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 1429,
+     "triangles": 2324460
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 879,
+     "triangles": 2310920
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 286,
+     "triangles": 2087999
+    }
+   ]
+  },
+  "town_east_outer_trail_bridge": {
+   "area": "town",
+   "ground": 77.97129854962301,
+   "ahead": "E",
+   "back": "W",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 312,
+     "triangles": 2154363
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 322,
+     "triangles": 1851844
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 256,
+     "triangles": 1765910
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 321,
+     "triangles": 2306587
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 1530,
+     "triangles": 3502896
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 1499,
+     "triangles": 3406772
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 344,
+     "triangles": 3026969
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 303,
+     "triangles": 2559016
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 312,
+     "triangles": 2154353
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 323,
+     "triangles": 1862936
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 248,
+     "triangles": 1753006
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 314,
+     "triangles": 2300550
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 1527,
+     "triangles": 3500012
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 1498,
+     "triangles": 3406770
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 344,
+     "triangles": 3026969
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 303,
+     "triangles": 2556906
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 302,
+     "triangles": 2115232
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 314,
+     "triangles": 1845120
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 246,
+     "triangles": 1763251
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 314,
+     "triangles": 2312482
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 1527,
+     "triangles": 3498813
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 1492,
+     "triangles": 3396066
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 333,
+     "triangles": 2980180
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 290,
+     "triangles": 2540080
+    }
+   ]
+  },
+  "town_south_south_fields_way": {
+   "area": "town",
+   "ground": -2.8318041503490434,
+   "ahead": "S",
+   "back": "N",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 1661,
+     "triangles": 3365965
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 502,
+     "triangles": 2538297
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 266,
+     "triangles": 2631771
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 249,
+     "triangles": 2211420
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 233,
+     "triangles": 2239759
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 252,
+     "triangles": 2379771
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 267,
+     "triangles": 2741321
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 861,
+     "triangles": 3089052
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 1660,
+     "triangles": 3363304
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 502,
+     "triangles": 2534949
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 261,
+     "triangles": 2617538
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 248,
+     "triangles": 2207307
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 234,
+     "triangles": 2242459
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 251,
+     "triangles": 2376891
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 266,
+     "triangles": 2723350
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 862,
+     "triangles": 3107618
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 1649,
+     "triangles": 3325388
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 495,
+     "triangles": 2487406
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 255,
+     "triangles": 2552447
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 242,
+     "triangles": 2159919
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 224,
+     "triangles": 2159943
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 242,
+     "triangles": 2313141
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 259,
+     "triangles": 2708315
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 855,
+     "triangles": 3022305
+    }
+   ]
+  },
+  "town_west_south_residential": {
+   "area": "town",
+   "ground": 4.086819478171732,
+   "ahead": "SW",
+   "back": "NE",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 526,
+     "triangles": 3306924
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 1691,
+     "triangles": 3606241
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 374,
+     "triangles": 2648416
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 282,
+     "triangles": 2212034
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 252,
+     "triangles": 1957180
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 281,
+     "triangles": 1925785
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 283,
+     "triangles": 2079009
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 349,
+     "triangles": 2751620
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 528,
+     "triangles": 3376132
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 1693,
+     "triangles": 3647523
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 372,
+     "triangles": 2644271
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 281,
+     "triangles": 2228236
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 252,
+     "triangles": 1957180
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 282,
+     "triangles": 1925787
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 277,
+     "triangles": 2011857
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 349,
+     "triangles": 2751620
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 497,
+     "triangles": 3271877
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 1686,
+     "triangles": 3554132
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 359,
+     "triangles": 2531579
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 273,
+     "triangles": 2140861
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 250,
+     "triangles": 1920079
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 277,
+     "triangles": 1865934
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 273,
+     "triangles": 2008834
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 344,
+     "triangles": 2715869
+    }
+   ]
+  },
+  "town_west_west_residential": {
+   "area": "town",
+   "ground": 18.692749869649152,
+   "ahead": "W",
+   "back": "E",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 359,
+     "triangles": 2487705
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 1133,
+     "triangles": 2650786
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 1579,
+     "triangles": 2758577
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 304,
+     "triangles": 2254462
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 299,
+     "triangles": 2317113
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 312,
+     "triangles": 2336353
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 280,
+     "triangles": 2177464
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 325,
+     "triangles": 2366765
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 349,
+     "triangles": 2490435
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 1132,
+     "triangles": 2655296
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 1572,
+     "triangles": 2733782
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 302,
+     "triangles": 2250253
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 299,
+     "triangles": 2314235
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 313,
+     "triangles": 2336355
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 280,
+     "triangles": 2166588
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 326,
+     "triangles": 2348085
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 319,
+     "triangles": 2375709
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 1119,
+     "triangles": 2596346
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 1567,
+     "triangles": 2702148
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 296,
+     "triangles": 2239376
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 291,
+     "triangles": 2318174
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 305,
+     "triangles": 2257002
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 274,
+     "triangles": 2247338
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 316,
+     "triangles": 2326595
+    }
+   ]
+  },
+  "east_north_hunters_loop_east": {
+   "area": "north",
+   "ground": 94.18776550466158,
+   "ahead": "NW",
+   "back": "SE",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 1462,
+     "triangles": 1844794
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 1443,
+     "triangles": 1933737
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 1455,
+     "triangles": 1843197
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 1493,
+     "triangles": 2260605
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 1561,
+     "triangles": 2878018
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 2630,
+     "triangles": 3442926
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 1683,
+     "triangles": 2639286
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 1599,
+     "triangles": 2444802
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 1464,
+     "triangles": 1847496
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 1443,
+     "triangles": 1933019
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 1455,
+     "triangles": 1843197
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 1495,
+     "triangles": 2286527
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 1561,
+     "triangles": 2878018
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 2643,
+     "triangles": 3448658
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 1730,
+     "triangles": 2640988
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 1600,
+     "triangles": 2444804
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 1455,
+     "triangles": 2042274
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 1438,
+     "triangles": 1888152
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 1453,
+     "triangles": 1949083
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 1486,
+     "triangles": 2273015
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 1556,
+     "triangles": 2862192
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 2635,
+     "triangles": 3254584
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 1726,
+     "triangles": 2592255
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 1585,
+     "triangles": 2404758
+    }
+   ]
+  },
+  "west_north_hunters_loop_west": {
+   "area": "north",
+   "ground": 91.55599436672068,
+   "ahead": "SW",
+   "back": "NE",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 3321,
+     "triangles": 1252734
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 3450,
+     "triangles": 1697576
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 4096,
+     "triangles": 2435074
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 4518,
+     "triangles": 2861451
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 3415,
+     "triangles": 2258826
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 3324,
+     "triangles": 1530753
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 3274,
+     "triangles": 1080511
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 3287,
+     "triangles": 1155881
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 3321,
+     "triangles": 1262494
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 3452,
+     "triangles": 1700278
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 4100,
+     "triangles": 2444296
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 4519,
+     "triangles": 2863793
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 3415,
+     "triangles": 2259559
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 3324,
+     "triangles": 1530753
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 3275,
+     "triangles": 1089751
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 3287,
+     "triangles": 1154443
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 3319,
+     "triangles": 1254692
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 3445,
+     "triangles": 1657558
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 4093,
+     "triangles": 2427790
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 4507,
+     "triangles": 2794502
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 3404,
+     "triangles": 2218423
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 3317,
+     "triangles": 1469360
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 3275,
+     "triangles": 1059816
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 3281,
+     "triangles": 1094033
+    }
+   ]
+  },
+  "town_north_ridge_path": {
+   "area": "north",
+   "ground": 74.87606908202488,
+   "ahead": "NW",
+   "back": "SE",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 241,
+     "triangles": 2798350
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 343,
+     "triangles": 2817486
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 441,
+     "triangles": 2701782
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 485,
+     "triangles": 2947129
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 1508,
+     "triangles": 3864839
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 319,
+     "triangles": 3026039
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 312,
+     "triangles": 2607941
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 270,
+     "triangles": 2578661
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 236,
+     "triangles": 2780971
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 341,
+     "triangles": 2813214
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 438,
+     "triangles": 2700868
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 494,
+     "triangles": 2947989
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 1508,
+     "triangles": 3864839
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 320,
+     "triangles": 3023173
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 313,
+     "triangles": 2623303
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 270,
+     "triangles": 2594689
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 231,
+     "triangles": 2720201
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 330,
+     "triangles": 2790058
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 429,
+     "triangles": 2630508
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 527,
+     "triangles": 2921806
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 1503,
+     "triangles": 3834603
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 320,
+     "triangles": 3006741
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 306,
+     "triangles": 2578217
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 265,
+     "triangles": 2596212
+    }
+   ]
+  },
+  "town_west_training_forest": {
+   "area": "west",
+   "ground": 62.75016014241714,
+   "ahead": "W",
+   "back": "E",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 276,
+     "triangles": 2314754
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 469,
+     "triangles": 2666959
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 1136,
+     "triangles": 3105449
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 1510,
+     "triangles": 3267784
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 868,
+     "triangles": 2933148
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 342,
+     "triangles": 2659323
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 299,
+     "triangles": 2470656
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 304,
+     "triangles": 2356945
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 276,
+     "triangles": 2313716
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 468,
+     "triangles": 2664079
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 1136,
+     "triangles": 3105449
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 1512,
+     "triangles": 3302346
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 869,
+     "triangles": 2933150
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 344,
+     "triangles": 2664723
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 299,
+     "triangles": 2453921
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 303,
+     "triangles": 2340208
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 265,
+     "triangles": 2244655
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 461,
+     "triangles": 2592786
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 1132,
+     "triangles": 3017033
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 1507,
+     "triangles": 3233099
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 863,
+     "triangles": 2818820
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 340,
+     "triangles": 2683792
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 296,
+     "triangles": 2496425
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 299,
+     "triangles": 2311140
+    }
+   ]
+  },
+  "town_west_west_woodland_fork": {
+   "area": "west",
+   "ground": 30.626349655065162,
+   "ahead": "NW",
+   "back": "SE",
+   "stats": [
+    {
+     "row": 0,
+     "col": 0,
+     "dir": "N",
+     "band": "standing 2.6 m",
+     "calls": 298,
+     "triangles": 2272678
+    },
+    {
+     "row": 0,
+     "col": 1,
+     "dir": "NE",
+     "band": "standing 2.6 m",
+     "calls": 507,
+     "triangles": 2398770
+    },
+    {
+     "row": 0,
+     "col": 2,
+     "dir": "E",
+     "band": "standing 2.6 m",
+     "calls": 1575,
+     "triangles": 2797359
+    },
+    {
+     "row": 0,
+     "col": 3,
+     "dir": "SE",
+     "band": "standing 2.6 m",
+     "calls": 850,
+     "triangles": 2519218
+    },
+    {
+     "row": 0,
+     "col": 4,
+     "dir": "S",
+     "band": "standing 2.6 m",
+     "calls": 311,
+     "triangles": 2290550
+    },
+    {
+     "row": 0,
+     "col": 5,
+     "dir": "SW",
+     "band": "standing 2.6 m",
+     "calls": 305,
+     "triangles": 2229724
+    },
+    {
+     "row": 0,
+     "col": 6,
+     "dir": "W",
+     "band": "standing 2.6 m",
+     "calls": 273,
+     "triangles": 2205767
+    },
+    {
+     "row": 0,
+     "col": 7,
+     "dir": "NW",
+     "band": "standing 2.6 m",
+     "calls": 301,
+     "triangles": 2287975
+    },
+    {
+     "row": 1,
+     "col": 0,
+     "dir": "N",
+     "band": "mounted 4.6 m",
+     "calls": 296,
+     "triangles": 2271496
+    },
+    {
+     "row": 1,
+     "col": 1,
+     "dir": "NE",
+     "band": "mounted 4.6 m",
+     "calls": 508,
+     "triangles": 2398772
+    },
+    {
+     "row": 1,
+     "col": 2,
+     "dir": "E",
+     "band": "mounted 4.6 m",
+     "calls": 1577,
+     "triangles": 2805281
+    },
+    {
+     "row": 1,
+     "col": 3,
+     "dir": "SE",
+     "band": "mounted 4.6 m",
+     "calls": 851,
+     "triangles": 2551618
+    },
+    {
+     "row": 1,
+     "col": 4,
+     "dir": "S",
+     "band": "mounted 4.6 m",
+     "calls": 311,
+     "triangles": 2290550
+    },
+    {
+     "row": 1,
+     "col": 5,
+     "dir": "SW",
+     "band": "mounted 4.6 m",
+     "calls": 307,
+     "triangles": 2230818
+    },
+    {
+     "row": 1,
+     "col": 6,
+     "dir": "W",
+     "band": "mounted 4.6 m",
+     "calls": 272,
+     "triangles": 2191369
+    },
+    {
+     "row": 1,
+     "col": 7,
+     "dir": "NW",
+     "band": "mounted 4.6 m",
+     "calls": 303,
+     "triangles": 2311737
+    },
+    {
+     "row": 2,
+     "col": 0,
+     "dir": "N",
+     "band": "glide 18 m",
+     "calls": 282,
+     "triangles": 2211858
+    },
+    {
+     "row": 2,
+     "col": 1,
+     "dir": "NE",
+     "band": "glide 18 m",
+     "calls": 499,
+     "triangles": 2335519
+    },
+    {
+     "row": 2,
+     "col": 2,
+     "dir": "E",
+     "band": "glide 18 m",
+     "calls": 1566,
+     "triangles": 2764736
+    },
+    {
+     "row": 2,
+     "col": 3,
+     "dir": "SE",
+     "band": "glide 18 m",
+     "calls": 849,
+     "triangles": 2541754
+    },
+    {
+     "row": 2,
+     "col": 4,
+     "dir": "S",
+     "band": "glide 18 m",
+     "calls": 301,
+     "triangles": 2249390
+    },
+    {
+     "row": 2,
+     "col": 5,
+     "dir": "SW",
+     "band": "glide 18 m",
+     "calls": 302,
+     "triangles": 2177283
+    },
+    {
+     "row": 2,
+     "col": 6,
+     "dir": "W",
+     "band": "glide 18 m",
+     "calls": 267,
+     "triangles": 2175299
+    },
+    {
+     "row": 2,
+     "col": 7,
+     "dir": "NW",
+     "band": "glide 18 m",
+     "calls": 300,
+     "triangles": 2285911
+    }
+   ]
+  }
+ }
+}

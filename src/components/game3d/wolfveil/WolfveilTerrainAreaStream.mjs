@@ -46,7 +46,10 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     return next;
   };
   const removeOverlay=()=>{
-    overlay?.remove();overlay=null;
+    // In browser DOM, remove exists. Headless report stubs need a safe fallback.
+    if(typeof overlay?.remove==='function')overlay.remove();
+    else overlay?.parentNode?.removeChild?.(overlay);
+    overlay=null;
   };
   const showOverlay=area=>{
     if(typeof document==='undefined')return;
@@ -90,8 +93,9 @@ export function createWolfveilTerrainAreaStream({source,material,parent,offsetZ=
     else commit();
     return true;
   };
-  active=stableWolfveilArea({x:0,z:offsetZ},initialArea,{zOffset:offsetZ})||initialArea;
-  if(!WOLFVEIL_AREA_IDS.includes(active))active='town';
+  // Entering through a portal must construct the destination floor first.
+  // Deriving this from the town origin ignored initialArea on every non-town map.
+  active=WOLFVEIL_AREA_IDS.includes(initialArea)?initialArea:'town';
   mesh=build(active);
   return {
     get activeArea(){return active;},

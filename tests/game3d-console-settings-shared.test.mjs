@@ -14,12 +14,12 @@ test('one Game 3D menu serves title and in-world without exposing leave-world ac
   assert.match(entry,/import PauseMenu from '\.\/PauseMenu'/);
   assert.match(entry,/<PauseMenu context="entry" open=\{settingsOpen && step==='start'\}/);
   assert.match(pause,/context='world'/);
-  assert.match(pause,/GAME3D_PAUSE_SECTIONS\.filter\(section=>section\.id!=='session'\)/);
+  assert.match(pause,/GAME3D_PAUSE_SECTIONS\.filter\(section=>/);
   assert.match(pause,/view==='session'&&!entry/);
   assert.match(pause,/entry\?'Back to Title':'Continue Game'/);
   assert.match(pause,/entry\?'Return to Title':'Return to World'/);
   assert.deepEqual(GAME3D_PAUSE_SECTIONS.map(section=>section.id),
-    ['overview','audio','controls','graphics','ui','community','session']);
+    ['overview','services','scoreboard','audio','controls','graphics','ui','community','session']);
 });
 
 test('audio graphics controls and menu motion preserve the existing live settings backend',()=>{

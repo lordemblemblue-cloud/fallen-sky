@@ -219,10 +219,11 @@ Deno.serve(async (req) => {
         byte_size: chosen.byte_size, roster_entry: chosen.roster_entry || row.roster_entry || null, flags: [], saved_at: iso, last_backup_at: iso,
       };
       const updated = { ...row, ...patch, ...((await svc.Game3DCharacterSave.update(row.id, patch)) || {}) };
-      // the restored items keep their restored upgrades: the ledger follows the restore
+      // the restored items keep their restored upgrades: the ledger follows the restore (donors
+      // the backup still holds are no longer used up)
       const ledger = await svc.Game3DItemUpgrade.filter({ owner_id: ownerId, character_id: characterId }, '-created_date', 1000);
-      for (const { row: upgrade, record, spent } of ledgerRecordsFor(chosen.data, ledger || [])) {
-        await svc.Game3DItemUpgrade.update((upgrade as any).id, { record, spent, restored_at: iso });
+      for (const { row: upgrade, record, spent, consumed } of ledgerRecordsFor(chosen.data, ledger || [])) {
+        await svc.Game3DItemUpgrade.update((upgrade as any).id, { record, spent, consumed, restored_at: iso });
       }
       // what the hero found stays found; units granted after this backup are delivered again
       const finds = await svc.Game3DDiscoveryClaim.filter({ owner_id: ownerId, character_id: characterId }, '-created_date', 1000);

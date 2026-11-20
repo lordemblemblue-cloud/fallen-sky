@@ -4,6 +4,7 @@ export const GAME3D_COMMUNITY_HUD_KEY = 'game3d_community_hud_v1';
 export const GAME3D_COMMUNITY_HUD_EVENT = 'game3dCommunityHUDChanged';
 export const GAME3D_COMMUNITY_HUD_DEFAULTS = Object.freeze({
   chat: true,
+  chatAlwaysVisible: false,
   echo: true,
   miniGames: true,
   online: true, // requested slim live count above the unchanged upper-left portrait
@@ -14,6 +15,7 @@ export function normalizeGame3DCommunityHUD(value) {
   const rawScale = Number(input.scale);
   return {
     chat: typeof input.chat === 'boolean' ? input.chat : GAME3D_COMMUNITY_HUD_DEFAULTS.chat,
+    chatAlwaysVisible: typeof input.chatAlwaysVisible === 'boolean' ? input.chatAlwaysVisible : GAME3D_COMMUNITY_HUD_DEFAULTS.chatAlwaysVisible,
     echo: typeof input.echo === 'boolean' ? input.echo : GAME3D_COMMUNITY_HUD_DEFAULTS.echo,
     miniGames: typeof input.miniGames === 'boolean' ? input.miniGames : GAME3D_COMMUNITY_HUD_DEFAULTS.miniGames,
     online: typeof input.online === 'boolean' ? input.online : GAME3D_COMMUNITY_HUD_DEFAULTS.online,

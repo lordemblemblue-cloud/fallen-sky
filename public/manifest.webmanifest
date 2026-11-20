@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Adam X Eve Games",
+  "short_name": "Adam X Eve",
+  "description": "Play Fallen Sky Online and Duelist Adventure from one game launcher.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#05070c",
+  "theme_color": "#05070c",
+  "icons": [
+    {
+      "src": "/app-icons/adam-x-eve-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/app-icons/adam-x-eve-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

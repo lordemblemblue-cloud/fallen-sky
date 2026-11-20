@@ -1984,3 +1984,31 @@
     top:calc(18px + 80px + 43px + 102px + 22px);
   }
 }
+
+
+/* Combat visibility: small contextual stamina ring beside the player's waist.
+ * The projected position is supplied by JadeSoulHUD. Occlusion comes from
+ * actual projected enemies, not a timer or an assumed screen resolution. */
+.jade-hud .jade-stamina-popup {
+  width:clamp(50px,4.5vw,62px);
+  height:clamp(50px,4.5vw,62px);
+  padding:4px;
+}
+.jade-hud .jade-stamina-popup[data-stamina-visible="true"] {
+  opacity:.58;
+}
+.jade-hud .jade-stamina-popup[data-stamina-visible="true"][data-stamina-occluded="true"] {
+  opacity:.14;
+}
+.jade-hud .jade-stamina-ring { padding:3px; }
+.jade-hud .jade-stamina-ring-core { gap:1px; }
+.jade-hud .jade-stamina-ring-core span { font-size:6px; }
+
+/* Keep target health first under the map. The level-up toast follows below it
+ * rather than covering the enemy's active target rail. */
+.game3d-view { --axe-target-notice-clearance:0px; }
+.game3d-view:has(.jade-compass-block .axe-target-lock) {
+  --axe-target-notice-clearance:66px;
+}
+.jade-hud .jade-compass-block .axe-target-lock { margin-top:18px; }
+

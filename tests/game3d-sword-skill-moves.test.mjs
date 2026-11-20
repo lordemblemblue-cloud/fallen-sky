@@ -93,7 +93,7 @@ test('chains and wiring: Triple Slash into Heavy Strike; the binder bakes the ti
   assert.ok(SWORD_SKILL_CHAINS.some((c) => c.triple === 1 && c.single === 1));
   const binder = source('src/components/game3d/weapons/weaponComboBinder.js');
   assert.match(binder, /\.\.\.\(held \? swordSkillTierMovesForWeapon\(held\) : swordSkillTierMoves\(\{ twoHanded: false \}\)\)\];/);
-  assert.match(binder, /comboKind === 'swordCombo' \? swordMoves\(null\) : null\);/);
+  assert.match(binder, /movesForFamily\(comboKind\)\);/);
   const baker = source('src/components/game3d/weapons/weaponComboClips.js');
   assert.match(baker, /index: Number\.isInteger\(combo\.index\) \? combo\.index : index/);
   // main's own way of choosing the tier and playing it is untouched

@@ -1,0 +1,34 @@
+name: Game 3D test-only weapon percent tuner
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/axe/equipment/AXETestWeaponTuner.mjs'
+      - 'src/components/game3d/axe/equipment/AXEEquipmentRuntimeStats.js'
+      - 'src/components/game3d/axe/services/AXETestWeaponTuner.jsx'
+      - 'src/components/game3d/axe/services/AXETestWeaponTuner.css'
+      - 'src/components/game3d/axe/services/AXEBlacksmithImageWorkspace.jsx'
+      - 'src/components/game3d/playerHUDStore.jsx'
+      - 'tests/game3d-test-weapon-tuner.test.mjs'
+      - '.github/workflows/game3d-test-weapon-tuner.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/game3d/axe/equipment/AXETestWeaponTuner.mjs'
+      - 'src/components/game3d/axe/equipment/AXEEquipmentRuntimeStats.js'
+      - 'src/components/game3d/axe/services/AXETestWeaponTuner.jsx'
+      - 'src/components/game3d/axe/services/AXEBlacksmithImageWorkspace.jsx'
+      - 'src/components/game3d/playerHUDStore.jsx'
+      - 'tests/game3d-test-weapon-tuner.test.mjs'
+      - '.github/workflows/game3d-test-weapon-tuner.yml'
+jobs:
+  native-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/game3d-test-weapon-tuner.test.mjs
+      - run: npm run build

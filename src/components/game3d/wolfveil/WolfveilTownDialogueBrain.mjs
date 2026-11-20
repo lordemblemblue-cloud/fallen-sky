@@ -27,6 +27,7 @@ const ROLE_LINES=Object.freeze({
  provisions:["Salt and bread for the road.","The market deliveries are late.","We have enough for the next watch."],
  herbalist:["The rain helps the herbs.","Mint and willow grow by the water.","Don't crush the leaves in your pack."],
  smith:["The forge is ready.","Steel needs patience, not anger.","Hear that? The hammer's still ringing."],
+ showroom:["The display models are ready.","Take your time viewing the mount designs.","These are previews, not animals for sale."],
 });
 export function makeTownDialogueBrain(seed=1){
  let state=(Math.floor(seed)>>>0)||1;

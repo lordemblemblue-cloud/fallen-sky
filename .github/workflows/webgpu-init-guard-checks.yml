@@ -1,0 +1,33 @@
+name: WebGPU renderer init guard focused checks
+on:
+  push:
+    branches:
+      - 'feature/webgpu-init-guard-*'
+  pull_request:
+    paths:
+      - 'src/lib/rendererInitGuard.mjs'
+      - 'tests/rendererInitGuard.test.mjs'
+      - '.github/workflows/webgpu-init-guard-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  renderer-init-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test renderer lifecycle guard
+        run: node --test tests/rendererInitGuard.test.mjs
+      - name: Lint guard and tests
+        run: npx eslint src/lib/rendererInitGuard.mjs tests/rendererInitGuard.test.mjs
+      - name: Build application
+        run: npm run build

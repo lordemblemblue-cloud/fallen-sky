@@ -49,7 +49,7 @@ test('three slots retain per-character assignments while only the selected owned
   assert.ok(roles.assignAXEHUDWeaponRole('offensive',sword.instanceId).ok);
   assert.ok(roles.assignAXEHUDWeaponRole('defensive',shield.instanceId).ok);
   assert.ok(roles.assignAXEHUDWeaponRole('ranged',bow.instanceId).ok);
-  assert.equal(roles.assignAXEHUDWeaponRole('defensive',bow.instanceId).reason,'WEAPON_NOT_OWNED_OR_WRONG_ROLE');
+  assert.equal(roles.assignAXEHUDWeaponRole('defensive','not-owned').reason,'WEAPON_NOT_OWNED_OR_WRONG_ROLE');
   assert.equal(roles.getAXEHUDWeaponRoles().ranged,bow.instanceId);
   assert.equal(roles.getAXERoleWeapon('ranged').instanceId,bow.instanceId);
 
@@ -66,8 +66,8 @@ test('three slots retain per-character assignments while only the selected owned
   assert.ok(guard.ok);assert.equal(inv.getActiveEquippedAXEWeapon().instanceId,shield.instanceId);
   assert.equal(identity.getActiveAXEWeaponIdentity().role,'defensive');
   assert.equal(buffs.getActiveWeaponPath(),'defense');
-  assert.ok(inv.getEquippedAXEItemsByCategory('weapon').length<=2,
-    'weapon swapping must never stack the bonuses of all three role slots');
+  assert.equal(inv.getEquippedAXEItemsByCategory('weapon').length,3,
+    'all three loadout weapons remain equipped after every HUD switch');
 
   storage.setStorageUser('role-qa-other');
   assert.deepEqual(roles.getAXEHUDWeaponRoles(),{offensive:null,defensive:null,ranged:null});

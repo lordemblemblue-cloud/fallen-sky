@@ -229,6 +229,12 @@ export function clearTarget() {
 
 export function updateTargetHP(id, hp) {
   if (state.target?.id === id) {
+    // The target is gone as soon as its combat HP hits zero. Do not keep a
+    // defeated actor's health tag waiting for the next scheduled HUD refresh.
+    if (state.target.kind !== 'player' && Number.isFinite(hp) && hp <= 0) {
+      clearTarget();
+      return;
+    }
     state = { ...state, target: { ...state.target, hp } };
     notify();
   }

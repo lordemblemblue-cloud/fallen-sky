@@ -1,0 +1,1371 @@
+{
+ "baseline": {
+  "t": 93573,
+  "heapMB": 1380.1,
+  "geometries": 1248,
+  "textures": 330,
+  "programs": 251,
+  "objects": 5915,
+  "active": "surface",
+  "loaded": "surface",
+  "zoneLedger": {},
+  "runtimes": {
+   "created": 5,
+   "disposed": 4,
+   "finalized": 0,
+   "live": 1
+  },
+  "released": 3,
+  "reachable": 3,
+  "groundMeshes": null
+ },
+ "before": {
+  "t": 46851,
+  "heapMB": 1244.2,
+  "geometries": 777,
+  "textures": 264,
+  "programs": 163,
+  "objects": 5823,
+  "active": "surface",
+  "loaded": "surface",
+  "zoneLedger": {},
+  "runtimes": {
+   "created": 2,
+   "disposed": 1,
+   "finalized": 0,
+   "live": 1
+  },
+  "released": 0,
+  "reachable": 0,
+  "groundMeshes": null
+ },
+ "rows": [
+  {
+   "i": 0,
+   "ok": true,
+   "ms": 17212,
+   "tEnter": 2636,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1268,
+   "inTex": 331,
+   "inProg": 256,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1345.9,
+   "fin": 0,
+   "disp": 4,
+   "reach": 3
+  },
+  {
+   "i": 1,
+   "ok": true,
+   "ms": 4173,
+   "tEnter": 536,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1403.6,
+   "fin": 0,
+   "disp": 7,
+   "reach": 6
+  },
+  {
+   "i": 2,
+   "ok": true,
+   "ms": 4264,
+   "tEnter": 628,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1391.7,
+   "fin": 0,
+   "disp": 10,
+   "reach": 9
+  },
+  {
+   "i": 3,
+   "ok": true,
+   "ms": 4183,
+   "tEnter": 504,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1415.8,
+   "fin": 0,
+   "disp": 13,
+   "reach": 12
+  },
+  {
+   "i": 4,
+   "ok": true,
+   "ms": 4418,
+   "tEnter": 635,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1430.5,
+   "fin": 0,
+   "disp": 16,
+   "reach": 15
+  },
+  {
+   "i": 5,
+   "ok": true,
+   "ms": 4130,
+   "tEnter": 571,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1439.2,
+   "fin": 0,
+   "disp": 19,
+   "reach": 18
+  },
+  {
+   "i": 6,
+   "ok": true,
+   "ms": 4105,
+   "tEnter": 524,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1435.2,
+   "fin": 0,
+   "disp": 22,
+   "reach": 21
+  },
+  {
+   "i": 7,
+   "ok": true,
+   "ms": 4236,
+   "tEnter": 566,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1446.6,
+   "fin": 0,
+   "disp": 25,
+   "reach": 24
+  },
+  {
+   "i": 8,
+   "ok": true,
+   "ms": 4356,
+   "tEnter": 529,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5911,
+   "heap": 1102.9,
+   "fin": 24,
+   "disp": 28,
+   "reach": 3
+  },
+  {
+   "i": 9,
+   "ok": true,
+   "ms": 4662,
+   "tEnter": 874,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5911,
+   "heap": 1132.1,
+   "fin": 27,
+   "disp": 31,
+   "reach": 3
+  },
+  {
+   "i": 10,
+   "ok": true,
+   "ms": 4212,
+   "tEnter": 587,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1117.5,
+   "fin": 27,
+   "disp": 34,
+   "reach": 6
+  },
+  {
+   "i": 11,
+   "ok": true,
+   "ms": 4474,
+   "tEnter": 580,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5911,
+   "heap": 1123.4,
+   "fin": 27,
+   "disp": 37,
+   "reach": 9
+  },
+  {
+   "i": 12,
+   "ok": true,
+   "ms": 4571,
+   "tEnter": 653,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1162.2,
+   "fin": 27,
+   "disp": 40,
+   "reach": 12
+  },
+  {
+   "i": 13,
+   "ok": true,
+   "ms": 4201,
+   "tEnter": 634,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1148.8,
+   "fin": 27,
+   "disp": 43,
+   "reach": 15
+  },
+  {
+   "i": 14,
+   "ok": true,
+   "ms": 4185,
+   "tEnter": 580,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1153.3,
+   "fin": 27,
+   "disp": 46,
+   "reach": 18
+  },
+  {
+   "i": 15,
+   "ok": true,
+   "ms": 4323,
+   "tEnter": 609,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1180,
+   "fin": 27,
+   "disp": 49,
+   "reach": 21
+  },
+  {
+   "i": 16,
+   "ok": true,
+   "ms": 4316,
+   "tEnter": 685,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 1182.1,
+   "fin": 27,
+   "disp": 52,
+   "reach": 24
+  },
+  {
+   "i": 17,
+   "ok": true,
+   "ms": 4520,
+   "tEnter": 592,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5911,
+   "heap": 1090.7,
+   "fin": 27,
+   "disp": 55,
+   "reach": 1
+  },
+  {
+   "i": 18,
+   "ok": true,
+   "ms": 4780,
+   "tEnter": 467,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5909,
+   "heap": 1102.1,
+   "fin": 55,
+   "disp": 58,
+   "reach": 2
+  },
+  {
+   "i": 19,
+   "ok": true,
+   "ms": 5129,
+   "tEnter": 725,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5911,
+   "heap": 1178.2,
+   "fin": 57,
+   "disp": 61,
+   "reach": 3
+  },
+  {
+   "i": 20,
+   "ok": true,
+   "ms": 4675,
+   "tEnter": 556,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 1096.7,
+   "fin": 61,
+   "disp": 64,
+   "reach": 2
+  },
+  {
+   "i": 21,
+   "ok": true,
+   "ms": 4235,
+   "tEnter": 548,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5913,
+   "heap": 662.3,
+   "fin": 63,
+   "disp": 67,
+   "reach": 3
+  },
+  {
+   "i": 22,
+   "ok": true,
+   "ms": 4202,
+   "tEnter": 528,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 692.3,
+   "fin": 63,
+   "disp": 70,
+   "reach": 6
+  },
+  {
+   "i": 23,
+   "ok": true,
+   "ms": 4232,
+   "tEnter": 540,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 694.2,
+   "fin": 63,
+   "disp": 73,
+   "reach": 9
+  },
+  {
+   "i": 24,
+   "ok": true,
+   "ms": 4082,
+   "tEnter": 516,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 255,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 251,
+   "obj": 5915,
+   "heap": 718.8,
+   "fin": 63,
+   "disp": 76,
+   "reach": 12
+  },
+  {
+   "i": 25,
+   "ok": true,
+   "ms": 4226,
+   "tEnter": 503,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 256,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 252,
+   "obj": 5915,
+   "heap": 660.1,
+   "fin": 76,
+   "disp": 79,
+   "reach": 2
+  },
+  {
+   "i": 26,
+   "ok": true,
+   "ms": 4114,
+   "tEnter": 521,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 256,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 252,
+   "obj": 5911,
+   "heap": 664.7,
+   "fin": 76,
+   "disp": 82,
+   "reach": 5
+  },
+  {
+   "i": 27,
+   "ok": true,
+   "ms": 4196,
+   "tEnter": 581,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 256,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 253,
+   "obj": 5915,
+   "heap": 701.7,
+   "fin": 76,
+   "disp": 85,
+   "reach": 8
+  },
+  {
+   "i": 28,
+   "ok": true,
+   "ms": 4247,
+   "tEnter": 591,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 257,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 253,
+   "obj": 5915,
+   "heap": 693.5,
+   "fin": 76,
+   "disp": 88,
+   "reach": 11
+  },
+  {
+   "i": 29,
+   "ok": true,
+   "ms": 4247,
+   "tEnter": 516,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 257,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 253,
+   "obj": 5915,
+   "heap": 652.7,
+   "fin": 88,
+   "disp": 91,
+   "reach": 2
+  },
+  {
+   "i": 30,
+   "ok": true,
+   "ms": 4137,
+   "tEnter": 479,
+   "overlap": "grotto_hall+grotto_chamber",
+   "inGeo": 1266,
+   "inTex": 331,
+   "inProg": 257,
+   "inObj": 5948,
+   "inLedger": {
+    "grotto_chamber": {
+     "objects": 36,
+     "geometry": 27,
+     "material": 20,
+     "texture": 1,
+     "bvh": 2,
+     "audio": 0,
+     "timers": 0
+    }
+   },
+   "geo": 1248,
+   "tex": 330,
+   "prog": 253,
+   "obj": 5915,
+   "heap": 685.7,
+   "fin": 88,
+   "disp": 94,
+   "reach": 5
+  }
+ ],
+ "stats": {
+  "enabled": true,
+  "state": "APPROACH_GATE",
+  "active": "surface",
+  "inside": false,
+  "transition": {
+   "doorway": "grotto_mouth:in",
+   "state": "APPROACH_GATE",
+   "t": 17.59439999997617
+  },
+  "loaded": [
+   "surface"
+  ],
+  "zones": {},
+  "facade": {
+   "id": "facade:grotto_mouth",
+   "disposed": false,
+   "objects": 17,
+   "geometry": 14,
+   "material": 3,
+   "texture": 0,
+   "renderTarget": 0,
+   "bvh": 0,
+   "audio": 0,
+   "disposable": 0,
+   "shared": 0,
+   "timers": 0,
+   "listeners": 0,
+   "updates": 0,
+   "cleanups": 0
+  },
+  "counters": {
+   "transitions": 124,
+   "aborts": 0,
+   "failures": 0,
+   "evictions": 0,
+   "loads": 124,
+   "unloads": 124
+  },
+  "released": 93,
+  "releasedStillReachable": 5,
+  "lastReport": {
+   "id": "grotto_hall",
+   "objects": 34,
+   "bvh": 3,
+   "geometry": 24,
+   "texture": 1,
+   "material": 19,
+   "renderTarget": 0,
+   "audio": 0,
+   "disposable": 0,
+   "timers": 0,
+   "listeners": 0,
+   "cleanups": 1,
+   "errors": [],
+   "residentMs": 1671
+  },
+  "loadMs": [
+   {
+    "id": "grotto_hall",
+    "ms": 7.6
+   },
+   {
+    "id": "grotto_chamber",
+    "ms": 6.7
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 6.8
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 7.1
+   },
+   {
+    "id": "grotto_chamber",
+    "ms": 6.9
+   },
+   {
+    "id": "grotto_hall",
+    "ms": 10
+   }
+  ],
+  "prefetch": {
+   "entries": 2,
+   "bytes": 125004
+  },
+  "runtimes": {
+   "created": 95,
+   "disposed": 94,
+   "finalized": 88,
+   "live": 1
+  },
+  "position": {
+   "a": -4.5000000000000115,
+   "l": -3.9968028886505635e-15,
+   "y": 14.310635574499429
+  }
+ },
+ "history": [
+  {
+   "type": "state",
+   "t": 188.308,
+   "state": "COMMIT",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:in",
+   "to": "COMMIT"
+  },
+  {
+   "type": "door-open",
+   "t": 188.308,
+   "state": "COMMIT",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:in",
+   "door": "grotto_inner"
+  },
+  {
+   "type": "door-close",
+   "t": 188.868,
+   "state": "COMMIT",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:in",
+   "door": "grotto_inner"
+  },
+  {
+   "type": "commit",
+   "t": 189.422,
+   "state": "COMMIT",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:in",
+   "from": "grotto_hall",
+   "to": "grotto_chamber"
+  },
+  {
+   "type": "state",
+   "t": 189.422,
+   "state": "UNLOAD",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:in",
+   "to": "UNLOAD"
+  },
+  {
+   "type": "unload",
+   "t": 189.422,
+   "state": "UNLOAD",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:in",
+   "zone": "grotto_hall",
+   "reason": "transition",
+   "report": {
+    "id": "grotto_hall",
+    "objects": 34,
+    "bvh": 3,
+    "geometry": 24,
+    "texture": 1,
+    "material": 19,
+    "renderTarget": 0,
+    "audio": 0,
+    "disposable": 0,
+    "timers": 0,
+    "listeners": 0,
+    "cleanups": 1,
+    "errors": [],
+    "residentMs": 1639
+   }
+  },
+  {
+   "type": "active",
+   "t": 189.441,
+   "state": "ACTIVE",
+   "active": "grotto_chamber",
+   "doorway": null,
+   "zone": "grotto_chamber"
+  },
+  {
+   "type": "state",
+   "t": 189.458,
+   "state": "APPROACH_GATE",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "to": "APPROACH_GATE"
+  },
+  {
+   "type": "state",
+   "t": 189.478,
+   "state": "OCCLUDE",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "to": "OCCLUDE"
+  },
+  {
+   "type": "state",
+   "t": 189.773,
+   "state": "LOAD",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "to": "LOAD"
+  },
+  {
+   "type": "load-start",
+   "t": 189.773,
+   "state": "LOAD",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "zone": "grotto_hall"
+  },
+  {
+   "type": "load-done",
+   "t": 189.773,
+   "state": "LOAD",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "zone": "grotto_hall",
+   "ms": 0
+  },
+  {
+   "type": "state",
+   "t": 189.804,
+   "state": "COMMIT",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "to": "COMMIT"
+  },
+  {
+   "type": "door-open",
+   "t": 189.804,
+   "state": "COMMIT",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "door": "grotto_inner"
+  },
+  {
+   "type": "door-close",
+   "t": 190.402,
+   "state": "COMMIT",
+   "active": "grotto_chamber",
+   "doorway": "grotto_inner:out",
+   "door": "grotto_inner"
+  },
+  {
+   "type": "commit",
+   "t": 190.974,
+   "state": "COMMIT",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:out",
+   "from": "grotto_chamber",
+   "to": "grotto_hall"
+  },
+  {
+   "type": "state",
+   "t": 190.974,
+   "state": "UNLOAD",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:out",
+   "to": "UNLOAD"
+  },
+  {
+   "type": "unload",
+   "t": 190.974,
+   "state": "UNLOAD",
+   "active": "grotto_hall",
+   "doorway": "grotto_inner:out",
+   "zone": "grotto_chamber",
+   "reason": "transition",
+   "report": {
+    "id": "grotto_chamber",
+    "objects": 36,
+    "bvh": 2,
+    "geometry": 27,
+    "texture": 1,
+    "material": 20,
+    "renderTarget": 0,
+    "audio": 0,
+    "disposable": 0,
+    "timers": 0,
+    "listeners": 0,
+    "cleanups": 1,
+    "errors": [],
+    "residentMs": 2689
+   }
+  },
+  {
+   "type": "active",
+   "t": 191.05,
+   "state": "ACTIVE",
+   "active": "grotto_hall",
+   "doorway": null,
+   "zone": "grotto_hall"
+  },
+  {
+   "type": "state",
+   "t": 191.096,
+   "state": "APPROACH_GATE",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "to": "APPROACH_GATE"
+  },
+  {
+   "type": "state",
+   "t": 191.135,
+   "state": "OCCLUDE",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "to": "OCCLUDE"
+  },
+  {
+   "type": "state",
+   "t": 191.423,
+   "state": "LOAD",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "to": "LOAD"
+  },
+  {
+   "type": "load-start",
+   "t": 191.423,
+   "state": "LOAD",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "zone": "surface"
+  },
+  {
+   "type": "load-done",
+   "t": 191.423,
+   "state": "LOAD",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "zone": "surface",
+   "ms": 0
+  },
+  {
+   "type": "state",
+   "t": 191.443,
+   "state": "COMMIT",
+   "active": "grotto_hall",
+   "doorway": "grotto_mouth:out",
+   "to": "COMMIT"
+  },
+  {
+   "type": "commit",
+   "t": 191.443,
+   "state": "COMMIT",
+   "active": "surface",
+   "doorway": "grotto_mouth:out",
+   "from": "grotto_hall",
+   "to": "surface"
+  },
+  {
+   "type": "state",
+   "t": 191.443,
+   "state": "UNLOAD",
+   "active": "surface",
+   "doorway": "grotto_mouth:out",
+   "to": "UNLOAD"
+  },
+  {
+   "type": "unload",
+   "t": 191.443,
+   "state": "UNLOAD",
+   "active": "surface",
+   "doorway": "grotto_mouth:out",
+   "zone": "grotto_hall",
+   "reason": "transition",
+   "report": {
+    "id": "grotto_hall",
+    "objects": 34,
+    "bvh": 3,
+    "geometry": 24,
+    "texture": 1,
+    "material": 19,
+    "renderTarget": 0,
+    "audio": 0,
+    "disposable": 0,
+    "timers": 0,
+    "listeners": 0,
+    "cleanups": 1,
+    "errors": [],
+    "residentMs": 1671
+   }
+  },
+  {
+   "type": "active",
+   "t": 191.566,
+   "state": "ACTIVE",
+   "active": "surface",
+   "doorway": null,
+   "zone": "surface"
+  },
+  {
+   "type": "state",
+   "t": 191.596,
+   "state": "APPROACH_GATE",
+   "active": "surface",
+   "doorway": "grotto_mouth:in",
+   "to": "APPROACH_GATE"
+  }
+ ]
+}

@@ -11,12 +11,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#05070c" },
       { title: "Game 3D / Book · Atom × Eve" },
       { name: "description", content: "The living 3D world of Adam and Eve, with factions, companions, characters, and quests." },
     ],
     // No icon link: the platform adds the app's logo when serving.
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   errorComponent: DefaultCatchBoundary,

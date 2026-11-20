@@ -2,18 +2,17 @@
 // The canonical transaction gateway remains the ONLY writer. This controller
 // never invents a success roll, pays materials, or modifies equipment itself.
 const validId = id => typeof id === 'string' && id.length > 0;
-const itemLevel = item => Number(item?.itemLevel ?? item?.level ?? 1);
-const rarity = item => String(item?.rarity ?? item?.tier ?? '').trim().toLowerCase();
-const template = item => String(item?.templateId ?? item?.id ?? '');
+// Blacksmith v2 (docs/game3d/BLACKSMITH_V2_20261118.md): the shared Combine rule decides the
+// match (same rarity, item level, slot and subtype); this adds the player's protections.
+const AUTO_MODES = Object.freeze(['combine', 'reinforcement', 'enchant', 'over_enchant']);
+// modes whose failures a Stabilizer can protect (Enchant %, Over-Enchant)
+const PROTECTABLE = new Set(['reinforcement', 'over_enchant']);
 
 export function isSafeCombineDonor(target, donor, compatible) {
   return Boolean(target && donor && validId(target.instanceId) && validId(donor.instanceId)
     && target.instanceId !== donor.instanceId
     && !donor.equipped && !donor.locked && !donor.favorite && !donor.favorited
     && !donor.isFavorite && !donor.vanityOnly
-    && Number.isFinite(itemLevel(target)) && itemLevel(target) === itemLevel(donor)
-    && rarity(target) && rarity(target) === rarity(donor)
-    && template(target) && template(target) === template(donor)
     && typeof compatible === 'function' && compatible(target, donor));
 }
 
@@ -22,7 +21,7 @@ export function filterForgeInventory({ mode, target, items = [], materialStacks 
   const all = [...items, ...materialStacks];
   if (!target || showAll) return all;
   if (mode === 'combine') return items.filter(item => isSafeCombineDonor(target, item, compatible));
-  if (mode === 'enchant' || mode === 'over_enchant') {
+  if (mode === 'reinforcement' || mode === 'enchant' || mode === 'over_enchant') {
     const keys = new Set(Object.keys(required));
     return materialStacks.filter(item => keys.has(item.id ?? item.templateId)
       && (!item.resourceCategory || item.resourceCategory === resourceCategory(item.id ?? item.templateId)));
@@ -34,12 +33,14 @@ export async function runBlacksmithAutoBatch({
   mode, targetId, getTarget, getDonors, getPreview, compatible, getResourceCount,
   transact, getIdentity, cancelled = () => false, onAttempt = () => {},
   allowProtection = false, minSuccess = 0.90, maxAttempts = 12,
+  targetProgress = null, getProgress = null,
 } = {}) {
-  if (!['combine', 'enchant', 'over_enchant'].includes(mode) || !validId(targetId)
+  if (!AUTO_MODES.includes(mode) || !validId(targetId)
     || [getTarget, getDonors, getPreview, getResourceCount, transact, getIdentity,
       cancelled, onAttempt].some(fn => typeof fn !== 'function')
     || !Number.isFinite(minSuccess) || minSuccess < 0 || minSuccess > 1
-    || !Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 24) {
+    || !Number.isSafeInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 24
+    || (targetProgress !== null && (!Number.isFinite(targetProgress) || targetProgress <= 0 || typeof getProgress !== 'function'))) {
     return { ok: false, attempts: 0, successes: 0, reason: 'invalid_auto_configuration' };
   }
   const identity = getIdentity();
@@ -49,6 +50,11 @@ export async function runBlacksmithAutoBatch({
   while (attempts < maxAttempts) {
     if (cancelled()) { reason = 'stopped'; break; }
     if (getIdentity() !== identity) { reason = 'character_changed'; break; }
+    // Stop before spending another stone/donor once the selected, live item
+    // reaches the requested value. Never use a cached/optimistic animation.
+    if (targetProgress !== null && Number(getProgress(mode, targetId)) >= targetProgress) {
+      reason = 'target_reached'; break;
+    }
     const target = getTarget(targetId);
     if (!target || target.instanceId !== targetId || target.locked || target.vanityOnly) {
       reason = 'target_unavailable'; break;
@@ -66,7 +72,7 @@ export async function runBlacksmithAutoBatch({
     }
     let useProtection = false;
     if (mode !== 'combine' && chance < minSuccess) {
-      if (mode !== 'over_enchant' || !allowProtection) { reason = 'risk_threshold'; break; }
+      if (!PROTECTABLE.has(mode) || !allowProtection) { reason = 'risk_threshold'; break; }
       const protectedPreview = getPreview(mode, target, donor, true);
       // A protected high-risk attempt MUST consume a genuine Stabilizer.
       if (!protectedPreview?.canAdvance || Number(protectedPreview.cost?.mat_protection) < 1) {

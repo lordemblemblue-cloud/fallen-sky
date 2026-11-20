@@ -73,7 +73,7 @@ const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 test('a dropped player keeps the seat: a bot plays it meanwhile, and the key sits the player back down with the score', async () => {
   const { server, url } = await start();
   const a = await signIn(url, 'ann');
-  a.send({ t: 'join', mode: 'ffa' });
+  a.send({ t: 'join', mode: 'tdm' });
   const joined = await a.next((m) => m.t === 'joined');
   assert.match(joined.key, /^[\w-]{24}$/, 'a key comes with the seat');
   await a.next((m) => m.t === 'snap' && m.view?.phase === 'live', 6000);
@@ -83,7 +83,7 @@ test('a dropped player keeps the seat: a bot plays it meanwhile, and the key sit
   a.ws.terminate(); // the network goes, without a word
   assert.ok(await until(() => room.clients.get('ann')?.away), 'the seat waits for its player');
   assert.equal(room.match.seats.get('ann').kind, 'player');
-  assert.equal([...room.match.seats.values()].filter((s) => s.kind === 'bot').length, 5, 'no bot took the seat');
+  assert.equal([...room.match.seats.values()].filter((s) => s.kind === 'bot').length, 7, 'no bot took the seat');
   await pause(600); // 2.4 s of the match
   const f = room.match.world.fighters.get('ann');
   const now = room.match.world.bodies.get('ann');
@@ -193,7 +193,7 @@ test('in a crew, a dropped member is played by the autopilot while the others ca
 test('a connection that stops answering is noticed, and its seat waits for the player', async () => {
   const { server, url } = await start({ heartbeatMs: 60 });
   const a = await signIn(url, 'ann', { socket: { autoPong: false } }); // alive, but deaf to pings: a dead network
-  a.send({ t: 'join', mode: 'ffa' });
+  a.send({ t: 'join', mode: 'tdm' });
   const joined = await a.next((m) => m.t === 'joined');
   const room = server.rooms.get(joined.match);
   assert.ok(await until(() => room.clients.get('ann')?.away, 2000), 'cut after unanswered pings; the seat waits');
@@ -208,7 +208,7 @@ test('the browser\'s source reconnects by itself and sits back down; after a rel
   const statuses = [];
   const source = createOnlineSource({ url, token: 'ann', name: 'Ann', body: 'huntress', mode: 'story', room: 'new', storage, onChange: (s) => statuses.push(s) });
   assert.ok(await until(() => source.status === 'ready'));
-  const [roomId] = [...server.rooms.keys()];
+  const roomId = [...server.rooms.values()].find(r => r.mission)?.id;
   const { code } = source;
   assert.match(code, /^[A-HJ-NP-Z]{5}$/);
   // the network goes: the server's end of the socket is cut
@@ -217,14 +217,14 @@ test('the browser\'s source reconnects by itself and sits back down; after a rel
   assert.ok(await until(() => source.status === 'ready' && server.rooms.get(roomId).clients.get('ann')?.away === false, 4000), 'and sits back down by itself');
   assert.equal(source.code, code, 'in the same crew');
   assert.equal(source.meId, 'ann');
-  assert.equal(server.rooms.size, 1, 'no new room');
+  assert.equal(server.rooms.size, 6, 'no new room beyond five official arenas and this crew');
   // a reload: the page goes without leaving; the new page finds the key in the tab's storage
   source.dispose({ keepSeat: true });
   assert.ok(kept.get('duelist.resume'), 'the key is kept in the tab');
   const reloaded = createOnlineSource({ url, token: 'ann', name: 'Ann', body: 'huntress', mode: 'story', room: 'new', storage });
   assert.ok(await until(() => reloaded.status === 'ready'));
   assert.equal(reloaded.code, code, 'the same crew, not a new room');
-  assert.equal(server.rooms.size, 1);
+  assert.equal(server.rooms.size, 6);
   assert.equal(server.rooms.get(roomId).clients.get('ann').away, false);
   // back to the menu: the seat is given up and the key forgotten
   reloaded.dispose();

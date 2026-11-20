@@ -19,7 +19,11 @@ import '@/components/onboarding/creator-viewport-fix.css';
 // main avatar, which only the account creator and first-login setup change.
 export default function AvatarAppearanceDialog({onClose,onSaved,create=false,localOnly=false,initialAvatar,embedded=false,title}) {
  const saved=useCompanionIdentity(),catalog=useCustomizationCatalog();
- const [config,setConfig]=useState(()=>playerAppearance(initialAvatar||(localOnly?{gender:'male',creator_body:'fused-male-v1'}:saved))),[caps,setCaps]=useState({});
+ const [config,setConfig]=useState(()=>{
+  const initial=playerAppearance(initialAvatar||(localOnly?{gender:'male',creator_body:'fused-male-v1'}:saved));
+  // New characters always start on an available fused body, not a legacy model.
+  return create&&!creatorBody(initial)?{...initial,creator_body:initial.gender==='female'?'fused-female-v1':'fused-male-v1'}:initial;
+ }),[caps,setCaps]=useState({});
  const [section,setSection]=useState('body'),[name,setName]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [layers,setLayers]=useState({loading:false,error:''}),[workshop,setWorkshop]=useState(false);
  const [expression,setExpression]=useState({preset:'neutral',values:{},morphs:{}});
@@ -45,7 +49,8 @@ export default function AvatarAppearanceDialog({onClose,onSaved,create=false,loc
  const onCapabilities=value=>{loadedBody.current=bodyKey(config);setCaps(value);};
  const save=async()=>{
   if(busy||layers.loading||layers.error)return;
-  if(create){const check=validateAXECharacterName(name);if(!check.ok){setError(check.reason==='invalid-characters'?"Use letters, numbers, spaces, apostrophes or hyphens.":'Choose a name between 2 and 24 characters.');return;}}
+  if(create){const check=validateAXECharacterName(name);if(!check.ok){setError(check.reason==='invalid-characters'?"Use letters, numbers, spaces, apostrophes or hyphens.":'Choose a name between 2 and 24 characters.');return;}
+   if(!creatorBody(config)){setError('This model is unavailable for new characters. Choose Eve or Adam.');return;}}
   setBusy(true);setError('');
   try{
    const appearance={...config,...(create?{name:name.trim()}:{})};
@@ -70,7 +75,7 @@ export default function AvatarAppearanceDialog({onClose,onSaved,create=false,loc
    kicker={title||(create?(localOnly?'New Game 3D character':'Create your AI counterpart'):'Make it yours')}
    topTools={<>{catalog.data?.canManage&&<button type="button" className="creator-tool" disabled={busy||!ready} onClick={()=>setWorkshop(true)} title="Import layers" aria-label="Import layers"><Layers3 size={16} strokeWidth={1.4}/></button>}<button type="button" className="creator-tool creator-close" disabled={busy} onClick={onClose} aria-label="Close character creator"><X size={17} strokeWidth={1.4}/></button></>}
    title={workshop?'Layers':undefined}
-   panel={workshop?<CustomizationAssetManager gender={config.gender} capabilities={caps} onClose={()=>setWorkshop(false)}/>:<fieldset disabled={busy}><CharacterAppearanceEditor config={config} setConfig={changeConfig} capabilities={ready?caps:{}} section={section} expression={expression} onExpressionChange={setExpression}/></fieldset>}
+   panel={workshop?<CustomizationAssetManager gender={config.gender} capabilities={caps} onClose={()=>setWorkshop(false)}/>:<fieldset disabled={busy}><CharacterAppearanceEditor config={config} setConfig={changeConfig} capabilities={ready?caps:{}} section={section} expression={expression} onExpressionChange={setExpression} createMode={create}/></fieldset>}
    footer={<>
     {create&&<label className="creator-name" htmlFor="creator-name"><span>Name</span><input id="creator-name" maxLength={24} value={name} disabled={busy} onChange={e=>{setName(e.target.value);setError('');}} placeholder={localOnly?'Character name':'Give your companion a name'}/></label>}
     {fusedAccountNote&&<p className="creator-microcopy">Eve and Adam are preview bodies for now. Saving keeps your colors and shape values; your account shows the animated body until their animations ship.</p>}

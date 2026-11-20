@@ -44,11 +44,12 @@ test('missing items, invalid values and companion stat previews are safe', () =>
 });
 
 test('Appearance equipment listens to Blacksmith advancement and shows both upgraded and base values',()=>{
+  // Blacksmith v2: the viewer shows the one per-item breakdown (original roll, increase, total)
   const code=fs.readFileSync('src/components/game3d/axe/services/AXEGlassLoadoutPane.jsx','utf8');
   assert.match(code,/useLive\(subscribeEnchantments/);
-  assert.match(code,/enhancements\?\.reinforcement\?\.\[selectedInstanceId\]/);
-  assert.match(code,/getAXEEnhancementStatMultiplier/);
-  assert.match(code,/getAXEEquipmentDisplayStats\(selected, enhancementMultiplier\)/);
-  assert.match(code,/itemStats\.map/);
-  assert.match(code,/Base \+\{fmt\(base\)\}/);
+  assert.match(code,/enhancements\?\.reinforcement\?\.\[item\.instanceId\]/);
+  assert.match(code,/advancements\?\.state\?\.\[item\.instanceId\]/);
+  assert.match(code,/getAXEEquipmentDisplayStats\(selected, selectedRecords\)/);
+  assert.match(code,/computeAXEItemStatBreakdown\(item,/);
+  assert.match(code,/<AXEItemStatBreakdownList rows=\{selectedBreakdown\?\.rows/);
 });

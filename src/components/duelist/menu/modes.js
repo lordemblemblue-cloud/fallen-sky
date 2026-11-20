@@ -1,7 +1,12 @@
 // What the menus say about each way to play (the rules themselves live in sim/match.mjs).
-import { Swords, Users, Shield, Flag, Target } from 'lucide-react';
+import { Swords, Users, Shield, Flag, Target, Shuffle } from 'lucide-react';
 
 export const MENU_MODES = Object.freeze({
+  online: {
+    title: 'Online', icon: Shuffle, accent: '#e6c78f', online: true,
+    blurb: 'Instantly join a random Team Deathmatch, Capture the Flag or Three-Point Control match.',
+    rules: ['The server chooses the mode randomly.', 'Open seats are filled with bots until more players join.'],
+  },
   practice: {
     title: 'Practice', icon: Target, accent: '#9fe8ff', online: false,
     blurb: 'You and up to three bots. No score, no clock.',
@@ -17,10 +22,20 @@ export const MENU_MODES = Object.freeze({
     blurb: 'Six fighters, everyone for themselves.',
     rules: ['First to 15 defeats wins, or the most when 8 minutes end.', 'You come back 3 seconds after a fall, protected for a moment.', 'Bots fill the empty places and step out when players join.'],
   },
+  football: {
+    title: 'Football', icon: Target, accent: '#f6cd82', online: true,
+    blurb: 'Team goal scoring with a live ball and bot-filled teams.',
+    rules: ['Move toward the ball to dribble or press F to kick it farther.', 'Five goals wins, or lead at the end of eight minutes.', 'Bots fill open slots and step out as humans join.'],
+  },
   tdm: {
     title: 'Team deathmatch', icon: Shield, accent: '#5fb4ff', online: true,
     blurb: 'Red against blue, four a side.',
     rules: ['First team to 30 defeats, or the most at 8 minutes.', 'Teams stay even: a joining player takes a bot\'s place on the side that needs one.'],
+  },
+  control: {
+    title: 'Three-Point Control', icon: Shield, accent: '#c8aeff', online: true,
+    blurb: 'Capture A, B and C. Control at least two points to earn progress toward 100%.',
+    rules: ['Hold a point uncontested for four seconds to capture it.', 'Two points earn 1% per second; all three earn 2% per second.', 'A contested point cannot change hands while both teams stand on it.'],
   },
   ctf: {
     title: 'Capture the flag', icon: Flag, accent: '#7dffb0', online: true,
@@ -29,5 +44,5 @@ export const MENU_MODES = Object.freeze({
   },
 });
 
-export const MODE_ORDER = Object.freeze(['duel', 'ffa', 'tdm', 'ctf', 'practice']);
+export const MODE_ORDER = Object.freeze(['online', 'duel', 'ctf', 'football', 'tdm', 'control', 'practice']);
 export const LEVELS = Object.freeze([['trainee', 'Trainee'], ['duelist', 'Duelist'], ['master', 'Master']]);

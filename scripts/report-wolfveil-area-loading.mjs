@@ -74,8 +74,14 @@ export function installHeadlessStubs(){
     matchMedia:()=>({matches:false,addEventListener(){},removeEventListener(){}}),
     devicePixelRatio:1,innerWidth:1920,innerHeight:1080,location:{search:'',href:'http://localhost/'},
   }))g.window[key]??=value;
-  g.requestAnimationFrame??=()=>0;
+  // Deterministic frame scheduler: queue browser-only callbacks and advance
+  // them once per simulated report frame. Terrain swaps must actually run.
+  const queuedFrames=[];
+  g.requestAnimationFrame??=(callback)=>{queuedFrames.push(callback);return queuedFrames.length;};
   g.cancelAnimationFrame??=()=>{};
+  g.__wolfveilFlushFrame=()=>{
+    for(const callback of queuedFrames.splice(0))callback(performance.now());
+  };
   // Three.js loaders report download progress with this browser event.
   g.ProgressEvent??=class ProgressEvent extends g.Event{
     constructor(type,init={}){
@@ -215,6 +221,7 @@ export async function runWolfveilAreaLoadingReport({
     catch(error){noteOnce('village.update needs a renderer here: '+(error?.message||error));}
     try{town?.update?.(dt,position);}
     catch(error){noteOnce('the town update stops headless: '+String(error?.message||error).slice(0,120));}
+    globalThis.__wolfveilFlushFrame?.();
     scene.updateMatrixWorld();
   };
   const run=seconds=>{for(let i=0;i<Math.round(seconds*10);i++)frame(.1);};
@@ -272,8 +279,15 @@ export async function runWolfveilAreaLoadingReport({
   log('whole valley: '+baseline.drawCalls+' draw calls, '+baseline.triangles+' triangles');
 
   // ---- mount the loader and portals as GameWorld3D does ------------------------
-  let groundDisposed=false;
-  village.ground.geometry.addEventListener('dispose',()=>{groundDisposed=true;});
+  // The streamed valley ground is now a Group of area meshes rather than
+  // one persistent Geometry. Verify the active area's drawable mesh instead.
+  const activeGroundVisible=()=>{
+    let visible=false;
+    village.ground.traverse(node=>{
+      if(node.isMesh&&node.visible&&node.geometry?.attributes?.position)visible=true;
+    });
+    return visible;
+  };
   started=performance.now();
   // The outline builder GameWorld3D uses, timed: a bake happens while playing.
   const farOutline=createWolfveilFarOutline({scene});
@@ -474,7 +488,7 @@ export async function runWolfveilAreaLoadingReport({
   loader.setOptions({releaseGpuMemory:true,releaseDelaySeconds:1});
   moveTo(...spots.east);run(4);
   const release=loader.getStats().gpuRelease;
-  check(!groundDisposed,'the terrain geometry must never be released');
+  check(activeGroundVisible(),'active streamed terrain must remain drawable after GPU release');
   check(loader.getStats().failed===null,'loader failed open during GPU release: '+loader.getStats().failed);
   moveTo(...spots.town);run(2);
   check(!loader.getStats().gpuRelease.areas.includes('town'),'a reloaded area must not stay marked as released');

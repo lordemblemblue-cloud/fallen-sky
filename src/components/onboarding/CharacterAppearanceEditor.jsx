@@ -47,7 +47,6 @@ const percent=v=>Math.round(v*100)+'';
 // Every body the creator offers: the two v5 bodies plus the fused creator bodies.
 export const CREATOR_BODY_CHOICES=[
  ...Object.values(CREATOR_BODIES).sort((a,b)=>a.gender==='female'?-1:b.gender==='female'?1:0).map(b=>({key:b.id,gender:b.gender,creator_body:b.id,label:b.label,detail:b.detail+' · full sculpt'})),
- {key:'male',gender:'male',creator_body:'',label:'Getsuga',detail:'Legacy male · animated'},
  {key:'female',gender:'female',creator_body:'',label:'Artemis',detail:'Legacy female · animated'},
 ];
 export function chooseCreatorBody(current,gender,creator_body='') {
@@ -95,7 +94,7 @@ function Group({title,aside,children}) {
  return <section className="creator-group">{title&&<h3>{title}{aside&&<span>{aside}</span>}</h3>}{children}</section>;
 }
 
-export default function CharacterAppearanceEditor({config,setConfig,capabilities={},section='body',expression={},onExpressionChange}) {
+export default function CharacterAppearanceEditor({config,setConfig,capabilities={},section='body',expression={},onExpressionChange,createMode=false}) {
  const catalog=useCustomizationCatalog();
  const builtin=useBuiltinLayers(config);
  const caps=capabilities.customization||{},supported=new Set(caps.shapes||[]);
@@ -126,7 +125,7 @@ export default function CharacterAppearanceEditor({config,setConfig,capabilities
  return <div className="character-appearance-editor" data-section={section}>
   {catalog.isError&&!fused&&<p className="creator-notice" role="alert">Extra layers could not load. <button type="button" onClick={()=>catalog.refetch()}>Retry</button></p>}
   {section==='body'&&<>
-   <Group title="Base"><div className="creator-base-grid">{CREATOR_BODY_CHOICES.map(b=><button type="button" key={b.key} aria-pressed={config.gender===b.gender&&(config.creator_body||'')===b.creator_body} onClick={()=>setConfig(c=>chooseCreatorBody(c,b.gender,b.creator_body))}><strong>{b.label}</strong><small>{b.detail}</small></button>)}</div></Group>
+   <Group title="Base"><div className="creator-base-grid">{CREATOR_BODY_CHOICES.map(b=><button type="button" key={b.key} disabled={createMode&&b.key==='female'} title={createMode&&b.key==='female'?'Temporarily unavailable while Artemis is being repaired':undefined} aria-pressed={config.gender===b.gender&&(config.creator_body||'')===b.creator_body} onClick={()=>setConfig(c=>chooseCreatorBody(c,b.gender,b.creator_body))}><strong>{b.label}</strong><small>{createMode&&b.key==='female'?'Temporarily unavailable · model repairs in progress':b.detail}</small></button>)}</div></Group>
    {fused&&<Group title="Physique presets" aside="Works with the actual body morphs"><div className="creator-physique-presets" role="group" aria-label="Physique presets">{CREATOR_BODY_PRESETS.map(p=><button type="button" key={p.id} disabled={!supported.has('body_weight')||!supported.has('belly')} title={p.description} aria-pressed={supported.has('body_weight')&&supported.has('belly')&&CREATOR_BODY_SHAPE_IDS.filter(id=>supported.has(id)).every(id=>Math.abs((config.shape_controls?.[id]||0)-(p.values[id]||0))<.001)} onClick={()=>setConfig(c=>applyCreatorBodyPreset(c,p.id,capabilities.customization?.shapes||[]))}><strong>{p.label}</strong><small>{p.description}</small></button>)}</div><p className="creator-hint">Full figure and Heavyset expand the waist, sides and upper abdomen as well as the belly; shape sliders below remain adjustable.</p></Group>}
   {shapes('body')}{!fused&&layer('body','Body presets')}
   </>}

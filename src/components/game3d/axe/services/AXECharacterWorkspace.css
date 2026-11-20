@@ -138,22 +138,33 @@
   color:#f9e5c6;
   background:#1a2939bb;
 }
-/* Equip positions are actual slots, not stretchable tiles. Both lists can
-   scroll through all supported slots without flattening the avatar model. */
+/* The three role-specific weapon tiles flank the top of the avatar (Damage
+   left, Defense/Range right). All tiles are 15% taller, with tighter gaps.
+   Independent scrolling prevents the model from shrinking on small screens. */
 .axe-char-root .axe-app-viewer-gear {
   justify-content:flex-start;
   align-items:stretch;
-  gap:6px;
+  gap:4px;
   padding:2px;
   min-height:0;
   overflow-x:hidden;
   overflow-y:auto;
 }
 .axe-char-root .axe-char-viewer-slot {
-  flex:0 0 66px;
-  min-height:66px;
+  flex:0 0 76px;
+  min-height:76px;
   max-height:none;
-  padding:4px 2px;
+  padding:5px 2px;
+}
+.axe-char-root .axe-char-weapon-slot {
+  width:100%;
+  cursor:pointer;
+  border-color:rgba(248,213,156,.94);
+  background:linear-gradient(145deg,rgba(64,74,83,.67),rgba(22,42,62,.59));
+}
+.axe-char-root .axe-char-weapon-slot:focus-visible {
+  outline:2px solid #ffe4a8;
+  outline-offset:-2px;
 }
 .axe-char-root .axe-char-viewer-slot-art {
   max-height:25px;
@@ -167,7 +178,7 @@
 @media(max-width:830px) {
   .axe-service-workspace--character .axe-service-progression {height:100%;}
   .axe-char-root .axe-char-model-stage {min-height:420px;}
-  .axe-char-root .axe-char-viewer-slot {flex-basis:62px;min-height:62px;}
+  .axe-char-root .axe-char-viewer-slot {flex-basis:71px;min-height:71px;}
 }
 
 /* Right-side point spending replaces the old Final Attributes readout. */

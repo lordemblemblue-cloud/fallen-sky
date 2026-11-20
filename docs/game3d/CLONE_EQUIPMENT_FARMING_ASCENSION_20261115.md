@@ -1,5 +1,9 @@
 # Game 3D clone — Rare / Elite / Legendary farming and feeding Ascension
 
+> **Superseded (2026-11-18):** Blacksmith v2 replaced the feeding (1/2/3/4 donors per rank, level
+> skips) with one donor per attempt and fixed odds, and removed the +4 virtual skill levels. See
+> [BLACKSMITH_V2_20261118.md](BLACKSMITH_V2_20261118.md). The farming tiers and prestige names are unchanged.
+
 ## Owner's final rarity map
 
 | Grade | World-enemy unlock | Actual generated item-level milestones |

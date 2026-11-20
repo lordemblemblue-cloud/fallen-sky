@@ -1,0 +1,39 @@
+name: Duelist Adventure gameplay, co-op and menu verification
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/duelist-adventure-check.yml'
+      - 'src/components/duelist/**'
+      - 'src/components/game2/Game2Menu.jsx'
+      - 'src/components/game2/Duelist*.jsx'
+      - 'src/components/game2/duelist-menu-refresh.css'
+      - 'src/components/game2/Game2Duel.jsx'
+      - 'src/pages/DuelistNext.jsx'
+      - 'src/routes/duelist*'
+      - 'server/duelist/**'
+      - 'tests/duelist-*.test.mjs'
+      - 'scripts/verify-duelist-ui.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  duelist:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install app and match-server dependencies
+        run: |
+          npm ci
+          npm install --prefix server/duelist --no-package-lock --ignore-scripts
+      - name: Verify match rules, bot fill, co-op and room admission
+        run: node --test tests/duelist-core.test.mjs tests/duelist-match.test.mjs tests/duelist-control.test.mjs tests/duelist-football.test.mjs tests/duelist-server.test.mjs tests/duelist-reconnect.test.mjs tests/duelist-predict.test.mjs tests/duelist-mission.test.mjs
+      - name: Parse Duelist UI and verify local module imports
+        run: node scripts/verify-duelist-ui.mjs
+      # The full application build is checked by the separate Game 3D workflow.
+      # Do not let unrelated Game 3D module export failures hide Duelist failures.

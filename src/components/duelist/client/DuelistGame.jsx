@@ -26,10 +26,13 @@ import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
+import { createFootballProps } from './footballProps.mjs';
+import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
 import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
+import GlassHud from './GlassHud.jsx';
 import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
@@ -86,8 +89,8 @@ async function createActor(scene, seat, weaponColor) {
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
-  online = false, serverUrl = null, sensitivity = 1, room = null, mission = 'contraband', onLeave = null, onNext = null, onMission = null,
-  keys = null, voicesOn = true }) {
+  online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
+  onMission = null, keys = null, voicesOn = true }) {
   const bound = keysFrom(keys || {});
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
@@ -124,7 +127,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, onChange: (s, detail) => setNet({ status: s, detail }) })
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, onChange: (s, detail) => setNet({ status: s, detail }) })
         : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
     const { world } = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
@@ -168,6 +171,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const director = createDirector({ world, vfx, audio, actors, playerId: me });
     const tags = createNameTags(scene);
     let ctf = null;
+    let football = null;
+    let control = null;
     let lockId = null;
     let clock = 0;
     const lookDir = new THREE.Vector3();
@@ -335,6 +340,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       if (e.type === 'fight') { fightTimer = 0.9; setFightFlash(true); }
       else if (e.type === 'captured') audio.play(e.team === myTeam ? 'resist' : 'breach');
       else if (e.type === 'flagTaken') audio.play('gripStart', actors[e.by]?.chest() || null);
+      else if (e.type === 'pointCaptured') audio.play('objective');
       else if (e.type === 'over') {
         const won = e.winner === me() || (myTeam && e.winner === myTeam);
         audio.play(e.winner === 'draw' ? 'loss' : won ? 'victory' : 'loss');
@@ -415,6 +421,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
+        if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
+        if (!control && source.mode === 'control') control = createControlProps(scene);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
@@ -423,6 +431,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           return controls.read({ faceYaw, strafe: !!target });
         };
         const { effects, events } = source.step(dt, readInput);
+        football?.update(source.ball?.(), dt);
         director.step(effects);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
@@ -523,6 +532,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const shown = shownId ? world.fighters.get(shownId) : null;
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           const view = source.view();
+          control?.update(view?.controlPoints);
           if (level) lastView = view;
           const line = view?.comms || null;
           const said = line ? `${line.speaker}\n${line.text}` : null;
@@ -571,6 +581,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       audio.dispose();
       tags.dispose();
       ctf?.dispose();
+      football?.dispose();
+      control?.dispose();
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
@@ -580,7 +592,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       renderer.domElement.remove();
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, mission, keysKey, voicesOn]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's
@@ -589,7 +601,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const again = () => setGeneration((g) => g + 1);
   return (
     <div className="duelist-game" ref={mountRef}>
-      {hud?.you && <DuelHud hud={hud} onPower={(id) => pressRef.current?.(id)} />}
+      {hud?.you && <GlassHud hud={hud} fighter={youBody} onPower={(id) => pressRef.current?.(id)} />}
       {match && <ScoreLine view={match} />}
       {match && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
@@ -625,54 +637,9 @@ const share = (value, max) => (max > 0 ? value / max : 0); // an ordinary person
 function snapshot(f, now) {
   const v = f.vitals;
   return {
-    hp: share(v.hp, v.max.hp), stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
+    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, special: Number.isFinite(f.special) ? f.special : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
     veil: fighterVeil(f), noVeil: v.max.will <= 0, winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
     dead: v.dead,
   };
 }
 
-function Bar({ value, kind }) {
-  return <div className={`duelist-bar duelist-bar-${kind}`}><div style={{ width: `${Math.max(0, Math.min(1, value)) * 100}%` }} /></div>;
-}
-
-function Vitals({ title, v, align, color = null }) {
-  const veil = v.dead ? 'Fallen' : v.noVeil ? 'No Veil' : v.veil === 'collapsed' ? 'Veil collapsed' : v.veil === 'unstable' ? 'Veil unstable' : 'Veil stable';
-  return (
-    <div className={`duelist-vitals duelist-vitals-${align}`}>
-      <div className="duelist-vitals-title" style={color ? { color } : undefined}>{title} <span className={`duelist-veil duelist-veil-${v.veil}`}>{veil}</span></div>
-      <Bar value={v.shield} kind="shield" />
-      {!v.noVeil && <Bar value={v.will} kind="will" />}
-      <Bar value={v.hp} kind="hp" />
-      <Bar value={v.stamina} kind="stamina" />
-      <div className="duelist-tags">
-        {v.winded && <span>winded</span>}{v.stunned && !v.dead && <span>staggered</span>}{v.held && <span>held</span>}{v.breached && <span>breached</span>}
-      </div>
-    </div>
-  );
-}
-
-// Telekinesis's hold is a press and a release: a tap on the button grips, a second tap throws.
-function DuelHud({ hud, onPower }) {
-  const gripping = useRef(false);
-  const tap = (id) => {
-    if (id === 'grip') { onPower(gripping.current ? 'release' : 'grip'); gripping.current = !gripping.current; return; }
-    onPower(id);
-  };
-  const teamColor = hud.targetTeam === 'red' ? '#ff6f61' : hud.targetTeam === 'blue' ? '#5fb4ff' : null;
-  return (
-    <>
-      <Vitals title="You" v={hud.you} align="left" />
-      {hud.target && <Vitals title={hud.targetName} v={hud.target} align="right" color={teamColor} />}
-      <div className="duelist-powers">
-        {hud.powers.map((p) => (
-          <button type="button" key={p.id} className={`duelist-power ${p.ready > 0 ? 'is-cooling' : ''}`} onClick={() => tap(p.id)}>
-            <span className="duelist-power-key">{p.key}</span>
-            <span className="duelist-power-name">{p.id === 'grip' ? 'telekinesis' : p.id}</span>
-            {p.ready > 0 && <span className="duelist-power-cd">{p.ready.toFixed(1)}</span>}
-          </button>
-        ))}
-      </div>
-      {hud.lockOn && <div className="duelist-lock">Locked on</div>}
-    </>
-  );
-}

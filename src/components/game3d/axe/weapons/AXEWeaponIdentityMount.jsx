@@ -33,15 +33,15 @@ function syncFromEquipment() {
 
   currentIdentity = next;
 
-  if (next.masteryWeaponId) {
-    const mastery = getMasteryState();
-    if (mastery.activeWeaponId !== next.masteryWeaponId) {
-      setActiveWeapon(next.masteryWeaponId);
-    }
+  // Clearing the last weapon must also clear stale bow mastery/aim mode.
+  // The neutral damage path remains the compatibility unarmed combat fallback.
+  const mastery = getMasteryState();
+  if (mastery.activeWeaponId !== next.masteryWeaponId) {
+    setActiveWeapon(next.masteryWeaponId);
   }
-
-  if (next.role && getActiveAXEWeaponRole() !== next.role) {
-    setActiveAXEWeaponRole(next.role);
+  const role = next.role || 'offensive';
+  if (getActiveAXEWeaponRole() !== role) {
+    setActiveAXEWeaponRole(role);
   }
 
   const snapshot = getActiveAXEWeaponIdentity();

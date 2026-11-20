@@ -3,11 +3,14 @@ import { Check, Compass, Crown, Gem, Package, Search, Shield, Shirt, Star, Sword
 import {
   getAllAXEEquipmentItems, subscribeAXEEquipmentInventory,
   equipAXEInventoryItem, unequipAXEInventoryItem,
+  getAXEEquipmentInventoryState, getActiveEquippedAXEWeapon, saveAXEEquipmentPreset, activateAXEEquipmentPreset,
 } from '../equipment/AXEEquipmentInventoryStore';
 import { AXE_EQUIPMENT_SLOT_DEFS, getAXEEquipmentSetState } from '../equipment/AXEEquipmentSystem';
 import { getAXESetDefinition } from '../equipment/AXESetBonusSystem';
-import { getAXEEnhancementStatMultiplier } from '../equipment/AXEItemEnhancementSystem';
 import { getAXEEquipmentDisplayStats } from '../equipment/AXEEquipmentDisplayStats.mjs';
+import { computeAXEItemStatBreakdown, formatAXEItemStatTooltip } from '../equipment/AXEItemStatBreakdown.mjs';
+import AXEItemStatBreakdownList from '../equipment/AXEItemStatBreakdownList';
+import { getAXEWeaponLegacyDamageMultiplier } from '../equipment/AXEWeaponLegacyForge';
 import {getAXEFarmingAscendedIdentity} from '../loot/AXEFarmingGearTiers.mjs';
 import { filterInventoryWithSearch } from './AXEInventorySearch.mjs';
 import { subscribeEnchantments } from '../../equipment/enchantmentStore';
@@ -20,6 +23,9 @@ import { getAXEMountState, subscribeAXEMounts, activateAXEMount, registerAXEMoun
 import { AXE_MOUNT_GEAR_SLOTS, AXE_MOUNT_FUSION_CONFIG } from '../progression/AXEMountFusionSystem';
 import { getAXEMountDefinition } from '../progression/AXEMountSystem';
 import { getPlayerHUD } from '../../playerHUDStore';
+import {getAXERoleWeapon,assignAXEHUDWeaponRole,subscribeAXEHUDWeaponRoles} from '../weapons/AXEWeaponRoleSlots.js';
+import {AXE_HUD_WEAPON_ROLES} from '../weapons/AXEWeaponRoleSlots.mjs';
+import {inferAXEWeaponRole} from '../weapons/AXEWeaponIdentity';
 import './AXEGlassLoadoutPane.css';
 import './AXEAppearanceWorkspace.css';
 import AXECompanionFusionButton from './AXECompanionFusionButton';
@@ -29,11 +35,11 @@ import AXECompanionMountCircleRail from './AXECompanionMountCircleRail';
 const PlayerModel = lazy(() => import('../../equipment/EquipmentPreview3D'));
 const CompanionModel = lazy(() => import('../../equipment/CompanionPreview3D'));
 
-// Two visible rows of five. The source slots, item IDs and permitted counts
-// come from the canonical equipment contract; this is a VIEW, not a second loadout.
+// Armor/jewelry stays in its original viewer rails. The 3 weapons now sit
+// together in the separate, real loadout rack above the character model.
 export const PLAYER_DISPLAY_SLOTS = Object.freeze([
-  ['weapon', 0], ['helm', 0], ['chest', 0], ['gloves', 0], ['legs', 0],
-  ['boots', 0], ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
+  ['helm', 0], ['chest', 0], ['gloves', 0], ['legs', 0], ['boots', 0],
+  ['ring', 0], ['ring', 1], ['necklace', 0], ['cape', 0],
 ]);
 const fmt = value => Number(value || 0).toLocaleString('en-US',{maximumFractionDigits:2});
 const caption = value => String(value || '').replaceAll('_',' ').split(' ').map(word => word ? word[0].toUpperCase() + word.slice(1) : '').join(' ');
@@ -56,9 +62,11 @@ function IconFor({ item, size=28 }) {
     key === 'ring' || key === 'necklace' || key === 'charm' ? <Gem size={size}/> :
       key === 'helm' ? <Crown size={size}/> : <Shield size={size}/>;
 }
-export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} }) {
+export default function AXEGlassLoadoutPane({ actor='player', initialWeaponRole='', onNotice=()=>{} }) {
   const isPlayer = actor === 'player';
   const [items,setItems] = useState(getAllAXEEquipmentItems);
+  const [gearPresets,setGearPresets] = useState(() => getAXEEquipmentInventoryState().gearPresets);
+  const [selectedGearPreset,setSelectedGearPreset] = useState(0);
   const companion = useLive(subscribeCompanion,getCompanionState);
   const mounts = useLive(subscribeAXEMounts,getAXEMountState);
   // This snapshot notifies Appearance immediately when Blacksmith finishes an
@@ -75,7 +83,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const [selectedMountId,setSelectedMountId] = useState(null);
   const [filter,setFilter] = useState('All');
   const [search,setSearch] = useState('');
-  const [focusedSlot,setFocusedSlot] = useState('');
+  const [focusedSlot,setFocusedSlot] = useState(initialWeaponRole?'weapon':'');
+  const [focusedWeaponRole,setFocusedWeaponRole]=useState(initialWeaponRole);
+  const [,refreshWeaponRoles]=useState(0);
+  useEffect(()=>subscribeAXEHUDWeaponRoles(()=>refreshWeaponRoles(n=>n+1)),[]);
+  useEffect(()=>{if(initialWeaponRole){setFocusedWeaponRole(initialWeaponRole);setFocusedSlot('weapon');setFilter('All');}},[initialWeaponRole]);
   // Equipment belongs to the actual active owned mount, not the legacy pet
   // default (which previously showed a baby wolf irrespective of faction).
   const ownedMounts = (mounts.mounts || []).filter(m=>m?.instanceId);
@@ -113,7 +125,10 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     }
     setRefineReview({slotId:slot.id,stage,cost:preview.cost.gold});
   };
-  useEffect(() => subscribeAXEEquipmentInventory(state => setItems(state.items)), []);
+  useEffect(() => subscribeAXEEquipmentInventory(state => {
+    setItems(state.items);
+    setGearPresets(state.gearPresets);
+  }), []);
   useEffect(() => { setSelectedId(null); setFocusedSlot(''); setFilter('All'); setSearch(''); }, [actor,companion.activeCompanionId,activeModelId]);
 
   const list = useMemo(() => isPlayer
@@ -132,13 +147,27 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const isEquipped = selected && (isPlayer ? !!selected.equipped
     : companion.gear?.[activeCompanion?.id]?.[selected.slot] === selected.id);
   const selectedInstanceId = selected?.instanceId;
-  const enhancementMultiplier = isPlayer && selectedInstanceId
-    ? getAXEEnhancementStatMultiplier({
-      reinforcement: enhancements?.reinforcement?.[selectedInstanceId],
-      enchantments: enhancements?.enchantments?.[selectedInstanceId],
-      overEnchant: enhancements?.overEnchant?.[selectedInstanceId],
-    }) : 1;
-  const itemStats = getAXEEquipmentDisplayStats(selected, enhancementMultiplier);
+  // The item's records from the live stores (this pane re-renders on every Blacksmith change);
+  // its stats come from the same per-item breakdown as combat (Blacksmith v2).
+  const recordsFor = item => item?.instanceId ? {
+    reinforcement: enhancements?.reinforcement?.[item.instanceId],
+    enchantments: enhancements?.enchantments?.[item.instanceId],
+    overEnchant: enhancements?.overEnchant?.[item.instanceId],
+    advancement: advancements?.state?.[item.instanceId] || getAXEAdvancementState(item.instanceId),
+    legacyDamageMultiplier: getAXEWeaponLegacyDamageMultiplier(item),
+  } : 1;
+  const selectedRecords = isPlayer && selectedInstanceId ? recordsFor(selected) : 1;
+  const itemStats = getAXEEquipmentDisplayStats(selected, selectedRecords);
+  const breakdownOf = item => computeAXEItemStatBreakdown(item,
+    isPlayer && item?.instanceId ? recordsFor(item) : { enhancementMultiplier: 1 });
+  const selectedBreakdown = selected ? breakdownOf(selected) : null;
+  // compare with what is worn in the same slot (the selected item's own stats vs the worn one)
+  const wornInSlot = isPlayer && selected && !selected.equipped
+    ? selected.slot==='weapon'
+      ? (focusedWeaponRole ? getAXERoleWeapon(focusedWeaponRole) : equipped.find(item=>item.slot==='weapon')) || null
+      : items.find(item => item.equipped && item.slot === selected.slot && item.instanceId !== selected.instanceId) || null
+    : null;
+  const wornBreakdown = wornInSlot ? breakdownOf(wornInSlot) : null;
   const prestigeFor=item=>isPlayer&&item
     ? getAXEFarmingAscendedIdentity(item,
       (advancements?.state?.[item.instanceId]||getAXEAdvancementState(item.instanceId))?.stage?.rank)
@@ -147,7 +176,12 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
   const displaySlots = isPlayer ? PLAYER_DISPLAY_SLOTS :
     (activeCompanion?.gearSlots || []).map(slot => [slot,0]);
   const slotItem = (slot,index) => equipped.filter(item=>item.slot === slot)[index] || null;
+  const weaponInRole = role => getAXERoleWeapon(role);
+  const chooseWeaponSlot=role=>{
+    setFocusedWeaponRole(role);setFocusedSlot('weapon');setFilter('All');setSelectedId(null);
+  };
   const chooseSlot = slot => {
+    setFocusedWeaponRole('');
     if (isPlayer) {
       setFocusedSlot(value=>value===slot?'':slot);
       setFilter('All');
@@ -164,6 +198,20 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
     // Resolve against item itself, not a selected state which may be stale.
     const worn = isPlayer ? !!item.equipped
       : companion.gear?.[activeCompanion?.id]?.[item.slot] === item.id;
+    if(isPlayer && item.slot==='weapon' && !worn){
+      const role=focusedWeaponRole||inferAXEWeaponRole(item);
+      const result=role
+        ? assignAXEHUDWeaponRole(role,item.instanceId,{level:getPlayerHUD().level})
+        : equipAXEInventoryItem(item.instanceId,{level:getPlayerHUD().level});
+      onNotice(result.ok ? 'Weapon equipped to '+(AXE_HUD_WEAPON_ROLES.find(x=>x.role===role)?.label||'loadout')+'. Switch from the main HUD.'
+        : result.message|| (result.reason==='WEAPON_SLOTS_FULL'?'All three weapon slots are full. Select a slot beside the 3D viewer to replace it.':caption(result.reason||'Unable to equip')));
+      return;
+    }
+    if(isPlayer && item.slot==='weapon' && worn && !allowUnequip && focusedWeaponRole){
+      const result=assignAXEHUDWeaponRole(focusedWeaponRole,item.instanceId,{level:getPlayerHUD().level});
+      onNotice(result.ok?'Weapon moved to '+(AXE_HUD_WEAPON_ROLES.find(x=>x.role===focusedWeaponRole)?.label||'slot')+'.':result.message||caption(result.reason));
+      return;
+    }
     if (worn && !allowUnequip) {
       onNotice('Already equipped.');
       return;
@@ -178,7 +226,11 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
       (result.message || caption(result.reason) || 'Unable to equip') :
       (worn ? 'Equipment removed.' : 'Equipment equipped.'));
   };
-  const setState = isPlayer ? getAXEEquipmentSetState(items.map(item => ({
+  // Three weapons occupy the loadout, but only the drawn weapon counts toward
+  // active combat set bonuses (the other two remain ready for HUD switching).
+  const activeWeaponId=getActiveEquippedAXEWeapon()?.instanceId;
+  const setState = isPlayer ? getAXEEquipmentSetState(items.filter(item =>
+    item.slot!=='weapon'||item.instanceId===activeWeaponId).map(item => ({
     ...item,
     advancement: advancements?.state?.[item.instanceId] ||
       getAXEAdvancementState(item.instanceId),
@@ -235,6 +287,21 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         <Star size={20} fill={insightsOpen?'currentColor':'none'}/>
         <span>{insightsOpen?'Equipment':'Stats & Growth'}</span>
       </button>}
+      {isPlayer&&<div className="axe-weapon-loadout-rack" aria-label="Three simultaneously equipped weapon slots">
+        {AXE_HUD_WEAPON_ROLES.map(({role,label})=>{
+          const weapon=weaponInRole(role);
+          const drawn=weapon?.instanceId===getActiveEquippedAXEWeapon()?.instanceId;
+          return <button key={role} type="button"
+            className={'axe-app-viewer-slot axe-weapon-rack-slot'+(drawn?' is-active':'')}
+            aria-pressed={focusedWeaponRole===role}
+            aria-label={label+' weapon slot: '+(weapon?.name||'Empty')+'. Select to equip a weapon'}
+            title={(weapon?.name||label+' slot empty')+' · Select to equip from inventory'}
+            onClick={()=>chooseWeaponSlot(role)}>
+            <span className="axe-app-viewer-slot-art"><IconFor item={weapon||{slot:'weapon'}} size={24}/></span>
+            <small>{label}</small><span className="axe-app-viewer-item-name">{weapon?.name||'—'}</span>
+          </button>;
+        })}
+      </div>}
       {isPlayer && ['left','right'].map((side) => <div key={side}
         className={'axe-app-viewer-gear axe-app-viewer-gear--'+side}>
         {displaySlots.filter((_,i)=>side==='left' ? i < Math.ceil(displaySlots.length/2)
@@ -300,6 +367,27 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
         <div className="axe-app-card-content">
           <div className="axe-app-inventory-browser">
           {isPlayer && inventoryToolbar}
+          {isPlayer && <div className="axe-gear-presets" role="group"
+            aria-label="Three character-specific saved equipment sets">
+            <label>Gear Set
+              <select value={selectedGearPreset} onChange={e=>setSelectedGearPreset(Number(e.target.value))}
+                aria-label="Choose equipment set preference">
+                {[0,1,2].map(index=><option key={index} value={index}>
+                  Set {index+1}{gearPresets?.[index] ? ' · Saved' : ' · Empty'}
+                </option>)}
+              </select>
+            </label>
+            <button type="button" onClick={()=>{
+              const result=saveAXEEquipmentPreset(selectedGearPreset);
+              onNotice(result.ok ? 'Current equipment saved to Gear Set '+(selectedGearPreset+1)+'.'
+                : (result.message || caption(result.reason || 'Could not save gear set')));
+            }}>Save Current Gear</button>
+            <button type="button" disabled={!gearPresets?.[selectedGearPreset]} onClick={()=>{
+              const result=activateAXEEquipmentPreset(selectedGearPreset,{level:getPlayerHUD().level});
+              onNotice(result.ok ? 'Equipped Gear Set '+(selectedGearPreset+1)+'. All previous pieces returned to inventory.'
+                : (result.message || caption(result.reason || 'Could not equip gear set')));
+            }}>Equip Set</button>
+          </div>}
           <div className="axe-app-inventory-grid" role="list">
             {visible.map(item=><button type="button" role="listitem"
               className={'axe-app-inventory-tile'+(prestigeFor(item)?' axe-inventory-prestige':'')}
@@ -309,7 +397,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
               aria-pressed={selected?.instanceId===item.instanceId}
               onClick={()=>setSelectedId(item.instanceId || item.id)}
               onDoubleClick={()=>{setSelectedId(item.instanceId || item.id);performItem(item);}}
-              title={'Double-click to equip '+item.name}>
+              title={formatAXEItemStatTooltip(breakdownOf(item), { title: item.name })+'\nDouble-click to equip'}>
               <span className="axe-app-inventory-art"><IconFor item={item}/></span>
               <span className="axe-app-inventory-name">{prestigeFor(item)?.displayName||item.name}</span>
               <small>{caption(item.slot)}</small>
@@ -340,10 +428,10 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             </p>}
             {isPlayer && selected.instanceId && getAXEAdvancementState(selected.instanceId)?.stage?.rank > 0 &&
               <p className="axe-app-description">
-                Ascension +{getAXEAdvancementState(selected.instanceId).stage.rank}/4 ·
+                Ascension +{Math.min(4,getAXEAdvancementState(selected.instanceId).stage.rank)}/4 ·
                 {getAXEAdvancementState(selected.instanceId).stage.rank>=4
-                  ?' Prestige aura and enhanced item bonuses unlocked.'
-                  :' Additional sacrifices strengthen this equipment and its matching set.'}
+                  ?' Prestige name and aura unlocked; this item’s own stats are raised.'
+                  :' Each Ascension raises this item’s own stats (set bonuses are unchanged).'}
               </p>}
             {selected.evolutionPath && <p className="axe-app-description">
               Evolution potential: {caption(selected.evolutionPath)} · future Blacksmith recipe required.
@@ -351,20 +439,27 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
             {selected.visualPending && <p className="axe-app-description">
               3D model pending · equipment stats, ownership and set progress are active.
             </p>}
-            <h4>Item Stats <small>{isPlayer ? 'Reinforcement + enchantments' : 'Base stats'}</small></h4>
-            {itemStats.map(({stat,base,current,difference})=><div className="axe-app-bonus-row" key={stat}>
-              <span>{caption(stat)}</span><b>+{fmt(current)}
-                {difference !== 0 && <small className="axe-glass-base-stat" title="Value before reinforcement, enchantment and over-enchant">Base +{fmt(base)}</small>}
-              </b>
-            </div>)}
-            {!itemStats.length && <p className="axe-app-description">No stat modifiers on this piece.</p>}
-            {isPlayer && enhancementMultiplier > 1 && <p className="axe-app-description axe-glass-upgrade-preview">
-              Equipment enhancement ×{fmt(enhancementMultiplier)} applied to flat item stats.
-              Other bonuses (gems, soul, sets and advancement) are calculated separately in combat.
+            <h4>Item Stats <small>{isPlayer ? 'Original roll (+ Combine, Enchant, Ascend)' : 'Base stats'}</small></h4>
+            {/* One breakdown for every screen: `Attack 1,000 (+150)`, the effective total and its parts. */}
+            <AXEItemStatBreakdownList rows={selectedBreakdown?.rows || []}
+              compare={wornBreakdown?.rows || null} compareLabel="Equipped"
+              label={'Item stats of '+(selected.name||'equipment')} />
+            {itemStats.some(row => row.difference !== 0) && <p className="axe-app-description axe-glass-upgrade-preview">
+              Each upgrade adds a share of the original roll; nothing multiplies another.
+              Gems, soul, sets and auras are added separately in combat.
             </p>}
+            {wornInSlot && <p className="axe-app-description">Compared with {wornInSlot.name} (equipped in this slot).</p>}
             {isPlayer && <div className="axe-glass-set-display">
               <h4>Equipment Set <small>{equipped.length} equipped</small></h4>
               <div className="axe-glass-ten-slots">
+                {AXE_HUD_WEAPON_ROLES.map(({role,label})=>{
+                  const weapon=weaponInRole(role);
+                  return <button key={role} type="button" title={weapon?.name||label+' empty'}
+                    onClick={()=>chooseWeaponSlot(role)} aria-label={label+' weapon: '+(weapon?.name||'Empty')}>
+                    <IconFor item={weapon||{slot:'weapon'}} size={22}/><small>{label}</small>
+                    {weapon&&<Check size={13}/>}
+                  </button>;
+                })}
                 {PLAYER_DISPLAY_SLOTS.map(([slot,index])=>{
                   const wearing=slotItem(slot,index);
                   return <button type="button" key={slot+index} title={wearing?.name || caption(slot)+' empty'}
@@ -377,7 +472,7 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                 })}
               </div>
               <div className="axe-app-bonus-row"><span>Equipped display slots</span>
-                <b>{PLAYER_DISPLAY_SLOTS.filter(([slot,index])=>!!slotItem(slot,index)).length} / 10</b></div>
+                <b>{PLAYER_DISPLAY_SLOTS.filter(([slot,index])=>!!slotItem(slot,index)).length+AXE_HUD_WEAPON_ROLES.filter(({role})=>!!weaponInRole(role)).length} / 12</b></div>
               {(setState?.activeSets || []).map(set => <div key={set.setId+set.grade}
                 className="axe-glass-set-progress">
                 <strong>{set.setName}</strong>
@@ -386,12 +481,6 @@ export default function AXEGlassLoadoutPane({ actor='player', onNotice=()=>{} })
                   {set.nextThreshold ? ' · Next at '+set.nextThreshold+' pieces' : ''}</span>
                 {Object.keys(set.conditionalBonuses || {}).length > 0 &&
                   <small className="axe-glass-set-special">{setEffectCaption(set.conditionalBonuses)}</small>}
-                {set.setId !== AXE_CHOSEN_SET_ID && (set.activeThresholds || []).map(threshold => {
-                  const tier = set.ascensionByThreshold?.[threshold];
-                  return tier ? <small key={threshold} className="axe-glass-set-special">
-                    {threshold}-piece set bonus: Ascension +{tier.rank}/4 · +{tier.bonusPct}% of its original value
-                  </small> : null;
-                })}
                 {set.fullAuraRank > 0 && <small className="axe-glass-set-special">
                   Spiritual full-set aura unlocked · Ascension +{set.fullAuraRank}
                 </small>}

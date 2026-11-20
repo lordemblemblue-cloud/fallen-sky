@@ -54,7 +54,9 @@ test('clone-only V3 starter migration seeds six items and retains old upgrade co
  assert.match(store,/previousCatalogVersion < Number\(starter.introducedVersion/);
  assert.match(equip,/useArmoredAppearance\(/);
  assert.match(read('src/components/game3d/equipment/enchantmentStore.jsx'),/export const reinforceItem = /);
- assert.match(read('src/components/game3d/axe/equipment/AXEEquipmentRuntimeStats.js'),/getAXEEnhancementStatMultiplier/);
+ // Blacksmith v2: combat reads the one per-item breakdown, which applies the same enhancement share
+ assert.match(read('src/components/game3d/axe/equipment/AXEEquipmentRuntimeStats.js'),/computeAXEItemStatBreakdown/);
+ assert.match(read('src/components/game3d/axe/equipment/AXEItemStatBreakdown.mjs'),/getAXEEnhancementStatMultiplier/);
 });
 
 test('real upgrade algorithm increases ordinary armor piece stats after success',async()=>{
@@ -63,7 +65,7 @@ test('real upgrade algorithm increases ordinary armor piece stats after success'
  const code='data:text/javascript;base64,'+Buffer.from(js).toString('base64');
  const rules=await import(code);
  const item=makeAXEDevArmorItems().find(x=>x.appearance.armorSlot==='chest');
- assert.equal(rules.getAXEReinforcementCap(item),120);
+ assert.equal(rules.getAXEReinforcementCap(item),200); // Blacksmith v2: every rarity reaches Enchant 200 %
  const initial=rules.getAXEEnhancementStatMultiplier({reinforcement:{percent:0}});
  const upgrade=rules.resolveReinforcement({percent:0},{item,roll:0});
  assert.equal(upgrade.ok,true);

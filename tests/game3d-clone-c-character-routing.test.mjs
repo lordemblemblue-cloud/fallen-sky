@@ -26,11 +26,11 @@ test('C opens the modern Character subpage when closed, regardless of old hub hi
   }),'open');
 });
 
-test('C changes Equipment/Vanity/Aura back to Character, then C again closes',()=>{
+test('C closes Character immediately from Equipment, Vanity, Aura or Character',()=>{
   for(const activeTab of ['Equipment','Vanity','Aura'])
     assert.equal(getAXECharacterShortcutAction({
       activeGroupId:'character',activeTab,
-    }),'focus',activeTab);
+    }),'close',activeTab);
   assert.equal(getAXECharacterShortcutAction({
     activeGroupId:'character',activeTab:'Character',
   }),'close');
@@ -38,17 +38,17 @@ test('C changes Equipment/Vanity/Aura back to Character, then C again closes',()
 
 test('GameView C no longer renders the old AttributesTab CharacterProgressionMenu',()=>{
   const game=source('src/pages/GameView.jsx');
-  assert.match(game,/const action = getAXECharacterShortcutAction\(\{/);
+  assert.match(game,/const toggle = resolveGame3DMenuToggle\(destination/);
   assert.match(game,/void services\.controller\.open\('character', \{ serviceId: 'character' \}\)/);
   assert.match(game,/setProgressionOpen\(false\)/);
-  assert.match(game,/setFocusCharacterRequest\(value => value \+ 1\)/);
-  assert.match(game,/onCharacterTabChange=\{setActiveCharacterSubview\}/);
+  assert.match(game,/The second C closes Character from ANY of its subpages/);
+  assert.doesNotMatch(game,/setFocusCharacterRequest\(value => value \+ 1\)/);
   assert.doesNotMatch(game,/setRequestedCharacterTab\(closingCharacter \? null : 'attributes'\)/);
   assert.match(game,/<CharacterProgressionMenu[\s\S]*?isOpen=\{progressionOpen\}/,
     'legacy inventory events retain their separate route rather than breaking callers');
 });
 
-test('modern services host forwards visible-tab tracking and C-key focus request',()=>{
+test('modern Character retains its internal tabs and complete close functionality',()=>{
   const host=source('src/components/game3d/axe/services/AXEServiceWorkspace.jsx');
   const appearance=source('src/components/game3d/axe/services/AXEAppearanceWorkspace.jsx');
   assert.match(host,/onActiveTabChange=\{onCharacterTabChange\}/);
@@ -56,7 +56,7 @@ test('modern services host forwards visible-tab tracking and C-key focus request
   assert.match(appearance,/onActiveTabChange\?\.\(tab\)/);
   assert.match(appearance,/if \(focusCharacterRequest > 0\) setTab\('Character'\)/);
   assert.match(appearance,/const TAB_NAMES = \['Character', 'Equipment', 'Vanity', 'Aura'\]/);
-  assert.match(appearance,/<CharacterWorkspace embedded\s*\/>/);
+  assert.match(appearance,/<CharacterWorkspace embedded onOpenEquipment=/);
   assert.match(appearance,/<AXEGlassLoadoutPane actor="player"/);
 });
 

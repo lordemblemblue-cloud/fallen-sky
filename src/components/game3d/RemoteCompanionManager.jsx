@@ -51,7 +51,8 @@ const loadCompanionAssets = async (companionDef) => {
       console.warn('Remote faction pet GLB unavailable; using its previous rig',error);
       effectiveDefinition={
         ...companionDef,modelUrl:companionDef.previousModelUrl,
-        previousModelUrl:null,animationRigProfile:null,
+        previousModelUrl:null,animationRigProfile:companionDef.previousAnimationRigProfile??null,
+        animationSource:companionDef.previousAnimationSource||companionDef.animationSource,
       };
       asset=await loadGLB(effectiveDefinition.modelUrl);
     }
@@ -136,13 +137,15 @@ export function createRemoteCompanionManager(scene, {
     const idleClip = findClip(def.idleClipName) || assets.clips[0];
     const walkClip = findClip(def.walkClipName) || assets.clips[1] || assets.clips[0];
     const runClip  = findClip(def.runClipName)  || assets.clips[2] || null;
+    const flyClip  = findClip('fly'); // ridden flight (character/mountFlight.mjs), when the rig has one
     const idleAction = idleClip ? mixer.clipAction(idleClip) : null;
     const walkAction = (walkClip && walkClip !== idleClip) ? mixer.clipAction(walkClip) : null;
     const runAction  = (runClip && runClip !== idleClip && runClip !== walkClip) ? mixer.clipAction(runClip) : null;
+    const flyAction  = (flyClip && flyClip !== idleClip && flyClip !== walkClip && flyClip !== runClip) ? mixer.clipAction(flyClip) : null;
     if (idleAction) idleAction.reset().fadeIn(0.2).play();
 
     return {
-      group, mixer, idleAction, walkAction, runAction, secondaryRig, definition: renderDefinition, ring,
+      group, mixer, idleAction, walkAction, runAction, flyAction, secondaryRig, definition: renderDefinition, ring,
       current: 'idle',
       hasNetworkPosition: false,
       lastMovingAt: -Infinity,
@@ -207,11 +210,13 @@ export function createRemoteCompanionManager(scene, {
     return slot.promise;
   };
 
+  const actionFor = (inst, name) => name === 'fly' ? inst.flyAction : name === 'run' ? inst.runAction : name === 'walk' ? inst.walkAction : inst.idleAction;
   const setAnim = (inst, target) => {
+    if (target === 'fly' && !inst.flyAction) target = 'run';
     if (inst.current === target) return;
-    const next = target === 'run' ? inst.runAction : target === 'walk' ? inst.walkAction : inst.idleAction;
+    const next = actionFor(inst, target);
     if (!next) return;
-    const prev = inst.current === 'run' ? inst.runAction : inst.current === 'walk' ? inst.walkAction : inst.idleAction;
+    const prev = actionFor(inst, inst.current);
     next.reset().fadeIn(0.2).play();
     if (prev && prev !== next) prev.fadeOut(0.2);
     inst.current = target;
@@ -253,7 +258,8 @@ export function createRemoteCompanionManager(scene, {
       if (hasPosition) inst.hasNetworkPosition=true;
       const holdFollowMotion=isFactionThreeMount(inst.definition) &&
         !inst.mounted && now-inst.lastMovingAt<240;
-      setAnim(inst,moving || holdFollowMotion ? 'run' : 'idle');
+      // The rider's packet says when the mount is flying (companion payload `flying`); older packets run.
+      setAnim(inst,inst.mounted && d.flying === true ? 'fly' : moving || holdFollowMotion ? 'run' : 'idle');
     });
   };
 
@@ -288,7 +294,7 @@ export function createRemoteCompanionManager(scene, {
         factionThree ? 1-Math.exp(-12*step) : .5);
       const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),inst.targetYaw);
       inst.group.quaternion.slerp(q,factionThree ? 1-Math.exp(-14*step) : .4);
-      inst.secondaryRig?.update(delta); // post-network, post-mixer mount-space only
+      inst.secondaryRig?.update(delta, { flying: inst.current === 'fly' }); // post-network, post-mixer mount-space only
     });
   };
 

@@ -1,18 +1,27 @@
 // Server-rolled item upgrades (docs/game3d/SERVER_UPGRADES.md), shared by the itemUpgrade
 // function, the Character Vault and the game.
 //
-// Reinforcement, over-enchant, refine and ultimate can fail, downgrade, fracture, seal or
-// destroy an item. The server rolls them, keeps each item's result (Game3DItemUpgrade), and
-// the Character Vault puts that result back into any save that says otherwise, so a reloaded
-// browser save can't undo a bad roll and an edited one can't add levels.
+// Reinforcement (Enchant %), over-enchant, refine, ultimate, Combine and Ascension (service
+// 'stage') can fail, downgrade, fracture, seal, destroy an item or consume a donor. The server
+// rolls them, keeps each item's result (Game3DItemUpgrade), and the Character Vault puts that
+// result back into any save that says otherwise, so a reloaded browser save can't undo a bad
+// roll, an edited one can't add levels, and a donor used up by Combine or Ascension stays gone
+// (docs/game3d/BLACKSMITH_V2_20261118.md). The gear-tier tier-up (service 'tier_up';
+// docs/game3d/GEAR_TIERS_20261119.md) moves an item to its next step: its record is the item's
+// own level, stats and look in the inventory, and a save that undoes it gets it back.
 import { resolveReinforcement, resolveOverEnchant } from './axeItemEnhancement.ts';
-import { resolveRefine, resolveUltimate } from './axeItemAdvancement.ts';
-import { getAXEOverEnchantCost, getAXEReinforcementCost, getAXEServiceInventoryCost } from './axeServiceEconomy.ts';
+import { resolveAscensionRecord, resolveCombineRecord, resolveRefine, resolveUltimate } from './axeItemAdvancement.ts';
+import { getAXEAscensionCost, getAXECombineCost, getAXEOverEnchantCost, getAXEReinforcementCost, getAXEServiceInventoryCost } from './axeServiceEconomy.ts';
+import { applyAXEGearTierRecord, getAXEGearTierUpCost, previewAXEGearTierUp, readAXEGearTierRecord } from './axeGearTiers.ts';
 
 type Rec = Record<string, any>;
 type Save = Record<string, string>;
 
-export const SERVER_ROLLED_UPGRADES = Object.freeze(['reinforcement', 'over_enchant', 'refine', 'ultimate']);
+export const SERVER_ROLLED_UPGRADES = Object.freeze(['reinforcement', 'over_enchant', 'refine', 'ultimate', 'combine', 'stage', 'tier_up']);
+// an upgrade whose record is the inventory item itself (level, stats, look), not a separate entry
+export const ITEM_RECORD_UPGRADES = Object.freeze(['tier_up']);
+// upgrades that take a second item (the donor), consumed on success
+export const DONOR_UPGRADES = Object.freeze(['combine', 'stage']);
 
 // an item's whole advancement entry, as the game's advancement store starts it
 export const DEFAULT_ADVANCEMENT = Object.freeze({
@@ -29,9 +38,20 @@ const PLACES: Record<string, { key: string; field: string | null; base: Rec }> =
   over_enchant: { key: 'axe_over_enchant_v1', field: null, base: { level: 0, fractured: false } },
   refine: { key: 'axe_item_advancement_v2', field: 'refine', base: { level: 0 } },
   ultimate: { key: 'axe_item_advancement_v2', field: 'ultimate', base: { level: 0, sealed: false } },
+  combine: { key: 'axe_item_advancement_v2', field: 'combine', base: { count: 0 } },
+  stage: { key: 'axe_item_advancement_v2', field: 'stage', base: { rank: 0, id: 'stage_0', label: 'Base' } },
+  // the inventory item's own tier fields (readAXEGearTierRecord)
+  tier_up: { key: 'axe_equipment_inventory_v2', field: null, base: {} },
 };
 const INVENTORY_KEY = 'axe_equipment_inventory_v2';
 const LOOT_KEY = 'game_loot_inventory_v2';
+const PROGRESSION_KEY = 'wwm_player_progression_v1';
+
+// the hero's level in a save (the server checks a tier-up against it)
+export function heroLevelOf(save: Save | null | undefined): number | null {
+  const level = Number(parse(save?.[PROGRESSION_KEY])?.level);
+  return Number.isFinite(level) && level >= 1 ? Math.floor(level) : null;
+}
 
 export const upgradeBase = (service: string): Rec => ({ ...(PLACES[service]?.base || {}) });
 
@@ -39,6 +59,7 @@ const parse = (raw: unknown): any => { try { return typeof raw === 'string' ? JS
 const sorted = (rec: Rec): string => JSON.stringify(Object.keys(rec).sort().map((k) => [k, rec[k]]));
 const same = (service: string, a: Rec | null | undefined, b: Rec | null | undefined) =>
   sorted({ ...PLACES[service].base, ...(a || {}) }) === sorted({ ...PLACES[service].base, ...(b || {}) });
+const idOf = (item: Rec | null | undefined) => String(item?.instanceId || item?.id || '');
 
 export function inventoryItems(save: Save | null | undefined): Rec[] {
   const items = parse(save?.[INVENTORY_KEY])?.items;
@@ -51,6 +72,7 @@ export function findItem(save: Save | null | undefined, itemId: string): Rec | n
 
 // the item's record for one upgrade, or null when it has never had one
 export function readUpgrade(save: Save | null | undefined, service: string, itemId: string): Rec | null {
+  if (ITEM_RECORD_UPGRADES.includes(service)) return readAXEGearTierRecord(findItem(save, itemId));
   const place = PLACES[service];
   const entry = parse(save?.[place.key])?.[itemId];
   if (!entry) return null;
@@ -58,34 +80,68 @@ export function readUpgrade(save: Save | null | undefined, service: string, item
 }
 
 function writeUpgrade(save: Save, service: string, itemId: string, record: Rec): Save {
+  if (ITEM_RECORD_UPGRADES.includes(service)) {
+    const inv = parse(save[INVENTORY_KEY]) || {};
+    const items = (inv.items || []).map((i: Rec) => (idOf(i) === itemId ? applyAXEGearTierRecord(i, record) : i));
+    return { ...save, [INVENTORY_KEY]: JSON.stringify({ ...inv, items }) };
+  }
   const place = PLACES[service];
   const map = parse(save[place.key]) || {};
   const entry = place.field ? { ...DEFAULT_ADVANCEMENT, ...(map[itemId] || {}), [place.field]: record } : record;
   return { ...save, [place.key]: JSON.stringify({ ...map, [itemId]: entry }) };
 }
 
-// the game's own rules, with the server's roll; `after` is the record the item keeps
-export function rollUpgrade(service: string, before: Rec, { roll, protectedAttempt = false, item = null }: { roll: number; protectedAttempt?: boolean; item?: Rec | null }) {
+// every item the server used up as a Combine or Ascension donor (rows of any upgrade)
+export function consumedItemIds(rows: Array<{ consumed?: string[] }> = []): Set<string> {
+  const ids = new Set<string>();
+  for (const row of rows || []) for (const id of row?.consumed || []) if (id) ids.add(String(id));
+  return ids;
+}
+
+// A gear-tier tier-up as a roll: the item with its current tier record, moved one step.
+function resolveTierUp(before: Rec, item: Rec | null, heroLevel: number | null, roll: number) {
+  if (!item) return { ok: false, reason: 'ITEM_MISSING', record: before };
+  const preview = previewAXEGearTierUp(applyAXEGearTierRecord(item, before), { heroLevel });
+  if (!preview.ok) return { ok: false, reason: preview.reason, record: before };
+  if (roll > preview.chance) return { ok: false, outcome: 'failure', chance: preview.chance, record: before };
+  return { ok: true, outcome: 'success', chance: preview.chance, record: { ...before, ...preview.record } };
+}
+
+// the game's own rules, with the server's roll; `after` is the record the item keeps.
+// Combine and Ascension also take the donor, as the server's copy of the save holds it; a tier-up
+// checks the hero's level in that save.
+export function rollUpgrade(service: string, before: Rec, { roll, protectedAttempt = false, item = null, donor = null, heroLevel = null }: { roll: number; protectedAttempt?: boolean; item?: Rec | null; donor?: Rec | null; heroLevel?: number | null }) {
   const opts = { roll, protectedAttempt };
   let result: Rec;
   if (service === 'reinforcement') result = resolveReinforcement(before, { ...opts, item });
   else if (service === 'over_enchant') result = resolveOverEnchant(before, opts);
   else if (service === 'refine') result = resolveRefine(before, opts);
   else if (service === 'ultimate') result = resolveUltimate(item, before, opts);
+  else if (service === 'combine') result = resolveCombineRecord(before, item, donor, { roll });
+  else if (service === 'stage') result = resolveAscensionRecord(before, item, donor, { roll });
+  else if (service === 'tier_up') result = resolveTierUp(before, item, heroLevel, roll);
   else return { ok: false, reason: 'not_a_server_rolled_upgrade' };
-  // at the cap, or an item that can't take it: nothing rolled, nothing changes
+  // at the cap, an item that can't take it, or a donor that doesn't match: nothing rolled, nothing changes
   if (result.reason) return { ok: false, reason: result.reason, before, after: before };
   const after = result.destroyed ? { ...before, destroyed: true } : result.record;
-  return { ok: !!result.ok, outcome: result.outcome, chance: result.chance ?? null, destroyed: !!result.destroyed, before, after };
+  const donorConsumed = DONOR_UPGRADES.includes(service) && !!result.donorConsumed;
+  return {
+    ok: !!result.ok, outcome: result.outcome, chance: result.chance ?? null, destroyed: !!result.destroyed, before, after,
+    ...(DONOR_UPGRADES.includes(service) ? { donorId: donor ? idOf(donor) : null, donorConsumed } : {}),
+  };
 }
 
 // ---- costs: the server pays each attempt from its copy of the save ----
 
-// what one attempt costs at the item's record before the roll (the game charges the same)
-export function upgradeCost(service: string, before: Rec, { protectedAttempt = false }: { protectedAttempt?: boolean } = {}): Record<string, number> {
+// What one attempt costs at the item's record before the roll (the game charges the same).
+// Ascension's catalyst depends on the result: `success` left out gives the most it can cost.
+export function upgradeCost(service: string, before: Rec, { protectedAttempt = false, item = null, success }: { protectedAttempt?: boolean; item?: Rec | null; success?: boolean } = {}): Record<string, number> {
   if (service === 'reinforcement') return getAXEReinforcementCost(before?.percent, { protectedAttempt });
   if (service === 'over_enchant') return getAXEOverEnchantCost(before?.level, { protectedAttempt });
   if (service === 'refine' || service === 'ultimate') return getAXEServiceInventoryCost(service, { advancement: { [service]: before }, protectedAttempt });
+  if (service === 'combine') return getAXECombineCost();
+  if (service === 'stage') return getAXEAscensionCost({ success, item, advancement: { stage: before } });
+  if (service === 'tier_up') return item ? getAXEGearTierUpCost(applyAXEGearTierRecord(item, before)) : {};
   return {};
 }
 
@@ -135,34 +191,50 @@ function removeSpentUnits(save: Save, spent: Map<string, number>) {
   return removed ? { data: { ...save, [LOOT_KEY]: JSON.stringify(next) }, removed } : { data: save, removed: 0 };
 }
 
-export type LedgerRow = { item_id: string; service: string; record: Rec; spent?: string[] };
+// a save without the given items (destroyed by refine or used up as a donor)
+function withoutItems(save: Save, gone: Set<string>): Save {
+  const inv = parse(save[INVENTORY_KEY]) || {};
+  const items = (inv.items || []).filter((i: Rec) => !gone.has(idOf(i)));
+  const active = gone.has(String(inv.activeWeaponInstanceId || '')) ? null : inv.activeWeaponInstanceId ?? null;
+  return { ...save, [INVENTORY_KEY]: JSON.stringify({ ...inv, items, activeWeaponInstanceId: active }) };
+}
+
+// The server's copy of a save as the server knows it now: donors it used up are gone even
+// before the next save from the device arrives (itemUpgrade rolls on this copy).
+export function saveAsServerKnows(save: Save, rows: Array<{ consumed?: string[] }> = []): Save {
+  const consumed = consumedItemIds(rows);
+  if (!consumed.size || !inventoryItems(save).some((i) => consumed.has(idOf(i)))) return save;
+  return withoutItems(save, consumed);
+}
+
+export type LedgerRow = { item_id: string; service: string; record: Rec; spent?: string[]; consumed?: string[] };
 
 // The Vault's rule: for every item the save owns, each server-rolled upgrade is the server's.
 // With a ledger row, the record must be that row's. Without one, it may not change from the
 // previous server save (the first save is the starting point). An item the server destroyed
-// leaves the inventory. Returns the save to keep and what was put back.
+// or used up as a donor leaves the inventory. Returns the save to keep and what was put back.
 export function enforceUpgradeLedger(save: Save, previous: Save | null, ledger: LedgerRow[] = []) {
   const corrections: string[] = [];
   // materials the server spent on its rolls stay spent
   const paid = removeSpentUnits(save, spentCounts(ledger));
   if (paid.removed) corrections.push(`${paid.removed} spent material(s) removed`);
   save = paid.data;
-  const owned = new Set(inventoryItems(save).map((i) => String(i?.instanceId || i?.id || '')).filter(Boolean));
+  const owned = new Set(inventoryItems(save).map((i) => idOf(i)).filter(Boolean));
   if (!owned.size) return { data: save, corrections };
   const byKey = new Map(ledger.filter((r) => r && SERVER_ROLLED_UPGRADES.includes(r.service)).map((r) => [`${r.item_id}::${r.service}`, r.record || {}]));
   let data = save;
 
+  const consumed = consumedItemIds(ledger);
   const destroyed = [...owned].filter((id) => byKey.get(`${id}::refine`)?.destroyed);
-  if (destroyed.length) {
-    const inv = parse(data[INVENTORY_KEY]) || {};
-    const gone = new Set(destroyed);
-    const items = (inv.items || []).filter((i: Rec) => !gone.has(String(i?.instanceId || i?.id || '')));
-    const active = gone.has(String(inv.activeWeaponInstanceId || '')) ? null : inv.activeWeaponInstanceId ?? null;
-    data = { ...data, [INVENTORY_KEY]: JSON.stringify({ ...inv, items, activeWeaponInstanceId: active }) };
+  const usedUp = [...owned].filter((id) => consumed.has(id) && !destroyed.includes(id));
+  if (destroyed.length || usedUp.length) {
+    data = withoutItems(data, new Set([...destroyed, ...usedUp]));
     destroyed.forEach((id) => { owned.delete(id); corrections.push(`${id}: destroyed by refine`); });
+    usedUp.forEach((id) => { owned.delete(id); corrections.push(`${id}: used up as a donor`); });
   }
 
   for (const service of SERVER_ROLLED_UPGRADES) {
+    if (ITEM_RECORD_UPGRADES.includes(service)) continue; // below
     // a record deleted from the save counts too (deleting a fracture or a seal is a change)
     const ids = [...owned].filter((id) => byKey.has(`${id}::${service}`) || readUpgrade(data, service, id) || readUpgrade(previous, service, id));
     for (const id of ids) {
@@ -173,21 +245,37 @@ export function enforceUpgradeLedger(save: Save, previous: Save | null, ledger: 
       corrections.push(`${id}: ${service} ${JSON.stringify(current)} -> ${JSON.stringify(allowed || PLACES[service].base)}`);
     }
   }
+
+  // Tier-ups live on the item itself, which other systems may also change (Weapon Legacy raises a
+  // level): only a server tier-up is enforced, and only when a save went back below it (a reloaded
+  // save) or kept its level with other stats (an edited one).
+  for (const id of owned) {
+    const allowed = byKey.get(`${id}::tier_up`);
+    if (!allowed) continue;
+    const current = readUpgrade(data, 'tier_up', id);
+    if (!current) continue;
+    const below = Number(current.level) < Number(allowed.level);
+    if (!below && (Number(current.level) !== Number(allowed.level) || same('tier_up', current, allowed))) continue;
+    data = writeUpgrade(data, 'tier_up', id, allowed);
+    corrections.push(`${id}: tier_up Lv ${current.level} -> Lv ${allowed.level}`);
+  }
   return { data, corrections };
 }
 
-// a restore brings back its own item records and materials; the ledger follows it, so the
-// restored items are not put back to what the ledger held before, and the restored materials
-// are no longer counted as spent
+// a restore brings back its own item records, materials and donors; the ledger follows it, so
+// the restored items are not put back to what the ledger held before, the restored materials
+// are no longer counted as spent and the restored donors no longer count as used up
 export function ledgerRecordsFor(save: Save, rows: LedgerRow[]) {
   const restored = new Map<string, number>();
   for (const u of lootUnits(save)) restored.set(u.dropId, (restored.get(u.dropId) || 0) + 1);
+  const held = new Set(inventoryItems(save).map((i) => idOf(i)).filter(Boolean));
   return rows.map((r) => {
     const spent = (r.spent || []).filter((id) => {
       const n = restored.get(id) || 0;
       if (n > 0) { restored.set(id, n - 1); return false; }
       return true;
     });
-    return { row: r, record: { ...PLACES[r.service]?.base, ...(readUpgrade(save, r.service, r.item_id) || {}) }, spent };
+    const consumed = (r.consumed || []).filter((id) => !held.has(String(id)));
+    return { row: r, record: { ...PLACES[r.service]?.base, ...(readUpgrade(save, r.service, r.item_id) || {}) }, spent, consumed };
   });
 }

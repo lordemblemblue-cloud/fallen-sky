@@ -33,7 +33,7 @@ import { createMission, stepMission, joinMission, leaveMission, missionView, nex
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -49,7 +49,7 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 // missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  missionAgainSeconds = MISSION_AGAIN_AFTER } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -133,13 +133,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       ? { id: r.id, mode: STORY_MODE, mission: r.mission.id, name: r.mission.def.title, players: humansIn(r), bots: 0, seats: CREW_SIZE,
         phase: r.mission.phase === 'complete' ? 'over' : 'live', open: hasRoom(r) }
       : { id: r.id, mode: r.mode, name: MODES[r.mode].name, players: humansIn(r), bots: r.match.seats.size - humansIn(r),
-        seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r) }))
+        seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r), publicRoom: !!r.publicRoom }))
     .sort((a, b) => b.players - a.players || a.id.localeCompare(b.id, undefined, { numeric: true }));
 
-  function openRoom(mode) {
+  function openRoom(mode, { permanent = false } = {}) {
     const id = `m${nextRoom++}`;
-    const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel });
-    const room = { id, mode, match, mission: null, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
+    const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel,
+      controlLayout: mode === 'control' ? controlLayout : null });
+    const room = { id, mode, match, mission: null, publicRoom: permanent, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
     let k = 0;
     for (const s of match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
     rooms.set(id, room);
@@ -166,16 +167,34 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     return room;
   }
 
+  // One always-open, bot-filled public server per competitive mode. Extra rooms open only when needed.
+  for (const mode of ONLINE_MODES) openRoom(mode, { permanent: true });
+
   function pickRoom(mode) {
     // the Join button ('any') looks for a match; crews are joined from the story page
     const pool = [...rooms.values()].filter((r) => hasRoom(r) && (mode === 'any' ? !r.mission && humansIn(r) > 0 : r.mode === mode));
     pool.sort(byPlayers);
-    return pool[0] || openRoom(mode === 'any' ? 'ffa' : mode);
+    return pool[0] || openRoom(mode === 'any' ? 'duel' : mode);
   }
 
-  function enter(client, mode) {
+  function ensureSpareRoom(mode) {
+    if (!ONLINE_MODES.includes(mode)) return;
+    // Exactly one bot-filled open room is kept ready while this mode fills;
+    // unused overflow rooms still expire after the normal idle timeout.
+    const ready = [...rooms.values()].some(r => !r.mission && r.mode === mode && hasRoom(r));
+    if (!ready) openRoom(mode);
+  }
+
+  function enter(client, mode, requestedMatchId = null) {
+    // Select the exact advertised match when joining from the server browser.
+    // A stale or forged id must not silently send the player into a different arena.
+    const selected = requestedMatchId ? rooms.get(requestedMatchId) : null;
+    if (requestedMatchId && (!selected || selected.mission || selected.mode !== mode || !hasRoom(selected))) {
+      send(client, { t: 'error', code: 'room', message: 'That server is no longer available. Return to Online and refresh.' });
+      return;
+    }
     if (client.room) leave(client);
-    const room = pickRoom(mode);
+    const room = selected || pickRoom(mode);
     const result = joinMatch(room.match, { id: client.id, name: client.name });
     if (!result.ok) { send(client, { t: 'error', code: 'full', message: 'That match is full.' }); return; }
     room.bodies.set(client.id, client.body);
@@ -190,18 +209,27 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     client.key = newKey();
     send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key });
     for (const other of room.clients.values()) if (other !== client) send(other, { t: 'seats', seats: seatsOf(room) });
+    ensureSpareRoom(room.mode);
     log('join', client.id, room.id, result.replaced ? `replacing ${result.replaced}` : '');
   }
 
   const crewJoined = (room, client, extra = {}) => ({ t: 'joined', match: room.id, mode: STORY_MODE, mission: room.mission.id, code: room.code, you: client.id, team: 'crew',
     seats: seatsOf(room), key: client.key, ...extra });
 
-  // code: a friend's crew (whatever it plays); create: a room of your own (not listed); neither: any open crew
-  // playing the mission asked for, or a new open one
-  function enterCrew(client, { code = null, create = false, mission = 'contraband' } = {}) {
+  // matchId: an open crew listed in the lobby; code: a friend's crew (whatever it plays); create: a room of your own
+  // (listed only with open); none of these: any open crew playing the mission asked for, or a new open one
+  function enterCrew(client, { code = null, create = false, open = false, matchId = null, mission = 'contraband' } = {}) {
     const now = clock();
     let room = null;
-    if (code) {
+    if (matchId) {
+      // An open crew may be joined by the exact ID advertised in /lobby.
+      // Never allow private rooms to be enumerated or joined by guessed IDs.
+      room = rooms.get(matchId);
+      if (!room?.mission || !room.open || !hasRoom(room)) {
+        send(client, { t: 'error', code: 'room', message: 'That public crew is no longer available.' });
+        return;
+      }
+    } else if (code) {
       if (client.wrongCodes.until > now) { send(client, { t: 'error', code: 'wait', message: 'Too many wrong codes. Try again in a moment.' }); return; }
       room = [...rooms.values()].find((r) => r.mission && r.code === code) || null;
       if (!room) {
@@ -216,7 +244,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     if (client.room) leave(client);
     if (room) joinMission(room.mission, { id: client.id, name: client.name });
-    else room = openCrew(client, { open: !create, mission });
+    else room = openCrew(client, { open: open || !create, mission });
     room.bodies.set(client.id, client.body);
     room.clients.set(client.id, client);
     client.room = room;
@@ -248,7 +276,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
 
   function rematch(room) {
     const players = [...room.clients.values()];
-    room.match = createMatch({ mode: room.mode, seed: Math.floor(clock() * 1000) % 1000003, botLevel });
+    room.match = createMatch({ mode: room.mode, seed: Math.floor(clock() * 1000) % 1000003, botLevel,
+      controlLayout: room.mode === 'control' ? controlLayout : null });
     room.bodies = new Map();
     let k = 0;
     for (const s of room.match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
@@ -385,11 +414,12 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     const { match } = room;
     const flags = match.flags ? Object.fromEntries(Object.entries(match.flags).map(([t, f]) => [t, { state: f.state, carrier: f.carrier, x: f.x, z: f.z }])) : null;
+    const ball = match.ball ? { x: match.ball.x, z: match.ball.z } : null;
     for (const client of room.clients.values()) {
       if (client.away) continue;
       const fighters = [];
       for (const f of world.fighters.values()) fighters.push(encodeFighter(f, world.bodies.get(f.id), { own: f.id === client.id }));
-      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, effects, events, own: ownOf(world, client, match.phase === 'live'),
+      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, ball, effects, events, own: ownOf(world, client, match.phase === 'live'),
         view: withView ? { ...matchView(match, client.id), away } : undefined });
     }
   }
@@ -405,6 +435,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       carry -= STEP;
       for (const room of rooms.values()) {
         if (room.mission && !connected(room)) continue; // nobody here (or everyone dropped): the mission waits
+        if (!room.mission && !room.clients.size) continue; // advertised bot-filled rooms sleep until the first human joins
         const inputs = {};
         for (const client of room.clients.values()) {
           let input;
@@ -446,14 +477,23 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         if (room.ticks % SNAPSHOT_EVERY === 0) snapshot(room);
         if (room.match.phase === 'over' && room.overAt === null) room.overAt = now;
-        if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && room.clients.size) rematch(room);
+        if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && (room.clients.size || room.publicRoom)) rematch(room);
       }
     }
     // a dropped player who has not come back in time: the seat goes back to a bot (a match) or leaves the crew
     for (const room of rooms.values()) {
       for (const client of [...room.clients.values()]) if (client.away && now - client.awaySince > reconnectSeconds) { log('gone', client.id, room.id); leave(client); }
     }
-    for (const [id, room] of rooms) if (!room.clients.size && now - room.emptySince > IDLE_ROOM_SECONDS) { rooms.delete(id); log('room closed', id); }
+    for (const [id, room] of rooms) {
+      if (room.publicRoom || room.clients.size || now - room.emptySince <= IDLE_ROOM_SECONDS) continue;
+      // Do not expire the last spare server while all the other servers of
+      // that mode are full. A newcomer must always see an available room.
+      const anotherOpen = [...rooms.values()].some(other => other !== room && !other.mission &&
+        other.mode === room.mode && hasRoom(other));
+      if (!room.mission && ONLINE_MODES.includes(room.mode) && !anotherOpen) continue;
+      rooms.delete(id);
+      log('room closed', id);
+    }
     for (const client of clients) if (client.room && now - client.lastInputAt > IDLE_PLAYER_SECONDS) { leave(client); send(client, { t: 'error', code: 'idle', message: 'Left the match after a long time without input.' }); }
   }, 4);
 
@@ -518,12 +558,26 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         if (msg.mode === STORY_MODE) {
           const coded = msg.code !== undefined && msg.code !== null;
           if (coded && (typeof msg.code !== 'string' || !ROOM_CODE.test(msg.code))) { send(client, { t: 'error', code: 'code', message: 'That is not a crew code.' }); return; }
-          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, mission: MISSIONS[msg.mission] ? msg.mission : 'contraband' });
+          const matchId = msg.matchId === undefined ? null : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;
+          if (matchId === false || (matchId && (coded || msg.create))) {
+            send(client, { t: 'error', code: 'room', message: 'Invalid public crew selection.' }); return;
+          }
+          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, open: msg.open === true, matchId,
+            mission: MISSIONS[msg.mission] ? msg.mission : 'contraband' });
           return;
         }
-        const mode = msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
+        const quickplay = msg.mode === 'online';
+        const mode = quickplay ? QUICKPLAY_MODES[randomInt(QUICKPLAY_MODES.length)]
+          : msg.mode === 'any' || ONLINE_MODES.includes(msg.mode) ? msg.mode : null;
         if (!mode) { send(client, { t: 'error', code: 'mode', message: 'Unknown mode.' }); return; }
-        enter(client, mode);
+        const matchId = msg.matchId === undefined ? null
+          : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;
+        if (matchId === false || (quickplay && matchId)) {
+          send(client, { t: 'error', code: 'room', message: 'Invalid server selection.' }); return;
+        }
+        // Server chooses a random supported battle mode. The client receives
+        // the actual mode in 'joined' and uses that ruleset for its arena.
+        enter(client, mode, matchId);
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {

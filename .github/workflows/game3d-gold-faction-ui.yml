@@ -1,0 +1,73 @@
+name: Game 3D Gold Escape and Faction UI
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/PauseMenu.jsx'
+      - 'src/components/game3d/FactionCommandModal.jsx'
+      - 'src/components/game3d/FactionCommandModal.css'
+      - 'src/components/game3d/hud/game3dCommunityHUDSettings.mjs'
+      - 'src/components/game3d/PauseMenuGold.css'
+      - 'src/components/game3d/player/Game3DKeybinds.mjs'
+      - 'src/components/game3d/player/Game3DMovementInput.mjs'
+      - 'src/components/game3d/axe/services/game3dMenuHotkeys.mjs'
+      - 'src/components/game3d/axe/factions/**'
+      - 'src/components/game3d/social/WorldChatPanel.jsx'
+      - 'src/components/game3d/social/Game3DChatChannels.css'
+      - 'src/components/game3d/combat/Game3DCombatLog.mjs'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/pages/GameView.jsx'
+      - 'tests/game3d-*-keybinds.test.mjs'
+      - 'tests/game3d-faction-*.test.mjs'
+      - 'tests/game3d-combat-log.test.mjs'
+      - 'tests/game3d-gold-faction-menu-layout.test.mjs'
+      - 'tests/game3d-chat-faction-modal-20261120.test.mjs'
+      - '.github/workflows/game3d-gold-faction-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: game3d-gold-faction-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Gold menu, keybinding, faction and combat log unit tests
+        run: >-
+          node --test
+          tests/game3d-player-keybinds.test.mjs
+          tests/game3d-faction-overview.test.mjs
+          tests/game3d-faction-announcement.test.mjs
+          tests/game3d-combat-log.test.mjs
+          tests/game3d-gold-faction-menu-layout.test.mjs
+          tests/game3d-chat-faction-modal-20261120.test.mjs
+          tests/game3d-escape-services-drawer-20261120.test.mjs
+      - name: Lint changed menu, faction and chat code
+        run: >-
+          npx eslint --quiet
+          src/components/game3d/PauseMenu.jsx
+          src/components/game3d/FactionCommandModal.jsx
+          src/components/game3d/player/Game3DKeybinds.mjs
+          src/components/game3d/player/Game3DMovementInput.mjs
+          src/components/game3d/axe/services/game3dMenuHotkeys.mjs
+          src/components/game3d/axe/factions/factionOverviewModel.mjs
+          src/components/game3d/axe/factions/FactionOverview.jsx
+          src/components/game3d/axe/factions/factionAnnouncementModel.mjs
+          src/components/game3d/axe/factions/FactionAnnouncementTicker.jsx
+          src/components/game3d/combat/Game3DCombatLog.mjs
+          src/components/game3d/social/WorldChatPanel.jsx
+          src/components/game3d/hud/game3dCommunityHUDSettings.mjs
+          src/pages/GameView.jsx
+      - name: Build the app
+        run: npm run build

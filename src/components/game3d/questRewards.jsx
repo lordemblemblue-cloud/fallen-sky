@@ -8,6 +8,9 @@
 // Dispatches 'questRewardUnlock' so the toast layer can announce it.
 // ─────────────────────────────────────────────
 import { getAbilityState, equipAbility, ABILITY_DEFINITIONS } from './abilityStore';
+import { grantLearnedSkillId, LOOT_TABLE } from './lootStore';
+import { SKILLS_DATABASE } from './equipment/skillData';
+import { getSkillById } from './skills/skillRegistry';
 import { unlockClass, selectAdvancedClass } from './talents/advancedClassStore';
 import { addContribution } from './progression/contributionStore';
 import { getActiveCharacter } from './characterStore';
@@ -40,13 +43,25 @@ export function grantQuestReward(quest) {
   if (unlock) {
     const detail = { ...unlock };
 
-    if (unlock.type === 'ability') {
+    if (unlock.type === 'ability' || unlock.type === 'skill') {
       const ab = ABILITY_DEFINITIONS.find((a) => a.id === unlock.id);
-      const slots = getAbilityState().equipped || [];
-      const empty = slots.findIndex((s) => !s);
-      if (ab && empty !== -1) {
-        equipAbility(empty, ab.id);
-        detail.equippedSlot = empty + 1;
+      const registered = ab || getSkillById(unlock.id) ||
+        SKILLS_DATABASE.find((skill) => skill.id === unlock.id) ||
+        LOOT_TABLE.find((item) => item.category === 'skill' && item.id === unlock.id);
+      if (registered) {
+        // Quest abilities were previously equipped without ever being saved as
+        // learned. The Skill Book must use the same real ownership as combat.
+        detail.learned = grantLearnedSkillId(unlock.id);
+      }
+      // Preserve the existing special Q/E/R/F abilities; never auto-equip
+      // an unregistered skill or bypass the weapon skill point requirements.
+      if (ab && detail.learned) {
+        const slots = getAbilityState().equipped || [];
+        const empty = slots.findIndex((s) => !s);
+        if (empty !== -1 && !slots.includes(ab.id)) {
+          equipAbility(empty, ab.id);
+          detail.equippedSlot = empty + 1;
+        }
       }
     } else if (unlock.type === 'class') {
       unlockClass(unlock.id);

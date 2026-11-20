@@ -1,7 +1,9 @@
 # Duelist Adventure match server
 
-The authoritative server for online Duelist Adventure (duel, free for all, team deathmatch, capture the
-flag) and for the co-op story mission played with a crew. Practice and the solo mission stay in the browser.
+The authoritative server for Duelist Adventure's five public modes (Duel, Capture the Flag,
+Football, Team Deathmatch and Three-Point Control) plus the Contraband co-op story mission.
+The **Online** quick-match tile chooses randomly between Team Deathmatch, Capture the Flag and
+Three-Point Control (Football and Duel are excluded). Practice and solo campaign play remain available in the browser.
 
 - **One Node process, many matches.** Every match is `src/components/duelist/sim/match.mjs`, the same rules
   the browser practises with, stepped at 60 Hz. The server decides every hit, every cooldown and every
@@ -16,18 +18,24 @@ flag) and for the co-op story mission played with a crew. Practice and the solo 
   player's own fighter in full (`own`, only ever to that player); the browser replays the inputs not used
   yet on top of it (`src/components/duelist/net/predict.mjs`). A page from before an update (an older
   `PROTOCOL`) is told to reload.
-- **Join.** `join { mode }` puts the player in the busiest match of that mode that has room, taking a bot's
-  seat (the lowest-scoring bot of the team that needs a player), or starts a match filled with bots.
-  `join { mode: 'any' }` picks the busiest match of any mode that has players in it. A leaving player's
-  seat goes back to a bot. A finished match starts again 12 s later with the same players.
-- **Crews (the story missions).** `join { mode: 'story', mission, create: true }` opens a room of your own
-  and returns its five-letter code; friends send `join { mode: 'story', code }` (whatever mission the crew
-  plays); `join { mode: 'story', mission }` joins an open crew playing that mission or starts an open one.
-  Up to four in a crew. The missions are `src/components/duelist/sim/mission.mjs` (`MISSIONS`: Contraband,
-  Saltmarch), stepped like a match (the depot's people and the crew's allies are run here too); the
-  `input` message carries the interact key. A room of your own is not in the lobby; an open crew is (with
-  its mission). The mission waits while its room is empty (the room closes after a minute); 20 s after it
-  is completed the crew goes on to the next mission in the story (the last one plays again). Wrong codes are slowed down (five, then a 30 s wait). The Join button (`any`) looks for a
+- **Public matches and auto-overflow.** At startup, one permanent bot-filled room is created for each
+  of the four competitive modes. `join { mode, matchId? }` joins the selected live server, replacing
+  one bot (the lowest-scoring bot of the team that needs a player). The server rejects invalid/stale/wrong-mode
+  room IDs. When a room becomes full of humans, it immediately opens an additional bot-filled room. The last
+  spare room is retained until another has space. A leaving player's seat goes back to a bot; an idle extra room
+  is eventually cleaned up. A finished match restarts 12 s later with the same players. `join { mode: 'any' }`
+  chooses the busiest room with people.
+- **Crews (the story missions).** `join { mode: 'story', mission, create: true }` opens a private room and
+  returns its five-letter code; `join { mode: 'story', mission, create: true, open: true }` hosts a new public
+  crew, while `join { mode: 'story', matchId }` joins a selected publicly listed crew (private IDs cannot be
+  joined this way). Friends join private rooms with `join { mode: 'story', code }` (whatever mission the crew
+  plays), and `join { mode: 'story', mission }` finds an open crew playing that mission or starts one. Up to four
+  people in a crew. The missions are `src/components/duelist/sim/mission.mjs` (`MISSIONS`: Contraband,
+  Saltmarch), stepped like a match (the depot's people and the crew's allies are run here too); the `input`
+  message carries the interact key. A room of your own is not in the lobby; an open crew is (with its mission).
+  The mission waits while its room is empty (the room closes after a minute); 20 s after it is completed the
+  crew goes on to the next mission in the story (the last one plays again). Wrong codes are slowed down (five,
+  then a 30 s wait). The Join button (`any`) looks for a
   match, not a mission.
 - **Reconnecting.** A dropped connection keeps its seat for 30 s (`RECONNECT_SECONDS`): meanwhile a bot plays
   it in a match, the mission's autopilot in a crew (a crew with nobody connected waits). Every `joined` carries a
@@ -72,4 +80,15 @@ one replica (matches live in memory), with `BASE44_APP_ID` and `DUELIST_ALLOWED_
 - A crew member who joins mid-mission meets the people already in the depot as they were manned for the
   smaller crew (later rooms are manned for the new size).
 
-Tests: `node --test tests/duelist-server.test.mjs tests/duelist-predict.test.mjs tests/duelist-reconnect.test.mjs` (from the repository root).
+Tests: `node --test tests/duelist-server.test.mjs tests/duelist-football.test.mjs tests/duelist-predict.test.mjs tests/duelist-reconnect.test.mjs` from the repository root after installing the match server's dependencies. The `.github/workflows/duelist-adventure-check.yml` CI runs these alongside the combat/mission checks and the web build.
+
+## Three-Point Control (backend ready; maps next)
+
+Points A, B and C are neutral at round start. Stand uncontested in a point's four-metre radius
+for four seconds to capture it; a contested point freezes capture progress. Ownership lasts until
+another team completes a takeover. Zero or one points earn no score, **two points earn 1% per second**, and
+**three points earn 2% per second**. First to 100% wins. Eliminations do not award capture score.
+The server determines capture, ownership, percentages, and winner; clients only render the HUD and
+placeholder markers. Future map layouts may pass `controlLayout: [{x,z},{x,z},{x,z}]` to
+`createDuelistServer()` or `createMatch()`, with rematch persistence already supported. See
+`docs/duelist/THREE_POINT_CONTROL_QUICKPLAY.md` for the full contract. Multiplayer protocol version is 3.

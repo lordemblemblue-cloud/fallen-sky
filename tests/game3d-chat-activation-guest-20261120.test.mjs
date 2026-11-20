@@ -1,0 +1,75 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {nextChatEnterState,isIncomingChatMessage}
+  from '../src/components/game3d/social/chatVisibilityModel.mjs';
+
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+
+test('one Enter reveals and focuses the existing translucent chat for guest players',()=>{
+  const first=nextChatEnterState({expanded:false,typing:false});
+  assert.deepEqual(first,{expanded:true,typing:true,tab:'world'});
+  // A second Enter while the composer owns input must not reopen anything.
+  assert.equal(nextChatEnterState(first),null);
+  assert.deepEqual(nextChatEnterState({expanded:true,typing:false}),first);
+});
+test('Enter does not steal input from other overlays, form fields or repeats',()=>{
+  for(const field of ['suppressed','editable','composing','repeat','typing'])
+    assert.equal(nextChatEnterState({[field]:true}),null,field);
+  assert.equal(nextChatEnterState({tab:'combat'}).tab,'world');
+});
+test('remote messages reveal chat even without a signed-in account, never deleted or own messages',()=>{
+  const m={sender_id:'someone-else',channel_id:'game3d_world'};
+  assert.equal(isIncomingChatMessage(m,null),true);
+  assert.equal(isIncomingChatMessage(m,'self'),true);
+  assert.equal(isIncomingChatMessage({...m,sender_id:'self'},'self'),false);
+  assert.equal(isIncomingChatMessage({...m,is_deleted:true},'self'),false);
+  assert.equal(isIncomingChatMessage(null,null),false);
+});
+test('real mounted world chat keeps a faded idle panel instead of a Chat Enter button',()=>{
+  const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
+  const css=read('src/components/game3d/social/Game3DChatChannels.css');
+  const game=read('src/pages/GameView.jsx');
+  assert.match(chat,/nextChatEnterState\(/);
+  assert.match(chat,/addEventListener\('keydown', onKey, true\)/);
+  assert.doesNotMatch(chat,/\|\| !userId\) return;/);
+  assert.doesNotMatch(chat,/game3d-chat-awaken|game3d-chat-channel-hint|Enter again to type|Enter to open/);
+  assert.match(chat,/typing&&tab!=='combat'/);
+  assert.match(chat,/isIncomingChatMessage\(message,userId\)/);
+  assert.match(chat,/setExpanded\(true\)/);
+  assert.doesNotMatch(css,/\.game3d-chat-awaken/);
+  assert.match(css,/\.game3d-world-chat\.is-idle:not\(\.is-pinned\) \{\s*opacity:\.24;visibility:visible;/);
+  assert.match(css,/\.game3d-world-chat:focus-within/);
+  assert.doesNotMatch(css,/max-height:min\(250px,max\(0px,calc\(100dvh/);
+  assert.match(game,/<WorldChatPanel userId=\{user\?\.id\}/);
+});
+test('unauthenticated guest sending remains server-authorized, never reports fake success',()=>{
+  const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
+  const server=read('base44/functions/worldChat/entry.ts');
+  assert.match(chat,/if \(!userId\) \{/);
+  assert.match(chat,/needs server support for guest characters/);
+  assert.match(server,/if \(!user\) return json\(\{ error: 'Unauthorized' \}, 401\)/);
+});
+
+test('successful sends re-reveal actual chat and fade only after activity timeout',()=>{
+  const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
+  assert.match(chat,/if \(message\) addLines\(tab, \[message\]\);[\s\S]*?setDraft\(''\);[\s\S]*?setTyping\(false\);[\s\S]*?setExpanded\(true\);[\s\S]*?setActivity\(value => value \+ 1\);/);
+  assert.match(chat,/setTimeout\(\(\) => setExpanded\(false\), 9000\)/);
+  assert.match(chat,/isIncomingChatMessage\(message,userId\)/);
+});
+
+test('actual world chat uses a slim, restrained surface without changing chat activation',()=>{
+  const css=read('src/components/game3d/social/Game3DChatChannels.css');
+  const chat=read('src/components/game3d/social/WorldChatPanel.jsx');
+  assert.match(css,/width:clamp\(225px,23vw,315px\)/);
+  assert.match(css,/max-height:88px;overflow-y:auto/);
+  assert.match(css,/border:1px solid rgba\(216,192,147,\.18\);border-radius:5px/);
+  assert.match(css,/backdrop-filter:blur\(3px\)/);
+  assert.match(css,/min-height:26px;padding:3px 6px/);
+  assert.match(css,/background:transparent;font-size:10px;font-weight:500/);
+  assert.doesNotMatch(css,/backdrop-filter:blur\(13px\)|box-shadow:0 12px 28px/);
+  assert.match(chat,/showDock&&combatEvents.length>0&&<aside/);
+  assert.match(chat,/combatEvents.slice\(-1\)/);
+  assert.match(chat,/max-h-\[88px\]/);
+  assert.doesNotMatch(chat,/MessageSquare|Misses, dealt and received damage will appear here/);
+});

@@ -20,11 +20,13 @@ export const CLONE_TOWN_HOUSES=Object.freeze([
   building('east_03','Ironleaf Smith','shop',39,8,14,12,'right'),
   building('east_04','Orchid Cottage','home',39,29,14,12,'right'),
 ]);
+// Exactly two opposite-direction patrols down the open capital avenue.
+// Keep their lanes 11m off center to avoid the plaza fountain/tree.
 export const CLONE_TOWN_GUARDS=Object.freeze([
-  {id:'guard_sera',name:'Sera',role:'guard',side:'left',route:[[-21,-51],[-21,35]],speed:1.12,phase:0},
-  {id:'guard_ren',name:'Ren',role:'guard',side:'left',route:[[-26,30],[-26,-47]],speed:1.04,phase:.46},
-  {id:'guard_daro',name:'Daro',role:'guard',side:'right',route:[[21,-51],[21,35]],speed:1.07,phase:.12},
-  {id:'guard_mira',name:'Mira',role:'guard',side:'right',route:[[26,29],[26,-48]],speed:1.14,phase:.69},
+  Object.freeze({id:'guard_sera',name:'Sera',role:'guard',side:'left',
+    variant:'blue',route:[[-11,-46],[-11,38]],speed:1.10,phase:0}),
+  Object.freeze({id:'guard_ren',name:'Ren',role:'guard',side:'right',
+    variant:'warden',route:[[11,38],[11,-46]],speed:1.10,phase:0}),
 ]);
 export const CLONE_TOWN_CITIZENS=Object.freeze([
   ['nami','Nami','tea','west_01','archer_lyra'],

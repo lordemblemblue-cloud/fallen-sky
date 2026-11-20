@@ -1,0 +1,44 @@
+name: Duelist Cinematic Hub Preview
+on:
+  push:
+    branches:
+      - 'feature/duelist-cinematic-*'
+      - 'fix/duelist-home-entry-*'
+      - 'feature/duelist-actual-menu-*'
+  pull_request:
+    paths:
+      - 'src/components/duelist/menu/**'
+      - 'tests/duelistCinematicHub.test.mjs'
+      - 'tests/duelistHomeEntry.test.mjs'
+      - 'tests/duelistPlayDrawer.test.mjs'
+      - 'src/routes/duelist.jsx'
+      - 'src/routes/duelist-classic.jsx'
+      - 'src/pages/GamesHub.jsx'
+      - '.github/workflows/duelist-hub-preview-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duelist-hub-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Check mode catalog and game entry routing
+        run: node --test tests/duelistCinematicHub.test.mjs tests/duelistHomeEntry.test.mjs tests/duelistPlayDrawer.test.mjs
+      - name: Lint changed UI
+        run: npx eslint src/components/duelist/menu/MenuPages.jsx src/components/duelist/menu/DuelistHangarStage.jsx src/components/duelist/menu/hubModeCatalog.mjs src/routes/duelist.jsx src/routes/duelist-classic.jsx
+      - name: Build preview application
+        run: npm run build

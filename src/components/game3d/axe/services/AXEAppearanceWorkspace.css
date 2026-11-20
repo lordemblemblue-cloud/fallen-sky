@@ -871,3 +871,70 @@
     flex:1 1 100%;max-width:none;
   }
 }
+
+
+/* Three persistent combat weapon slots above every Character/Equipment/Appearance 3D viewer. */
+.axe-glass-loadout-stage,
+.axe-char-root .axe-char-model-stage,
+.axe-app-appearance-model-stage {
+  grid-template-rows:auto minmax(0,1fr) auto;
+  row-gap:5px;
+}
+.axe-app-model-stage > .axe-weapon-loadout-rack {
+  grid-column:1 / -1;
+  grid-row:1;
+  z-index:4;
+  min-width:0;
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:clamp(3px,.6vw,9px);
+  align-items:stretch;
+}
+.axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot {
+  flex:0 0 auto;
+  width:100%;
+  min-height:clamp(57px,7vh,76px);
+  max-height:none;
+  min-width:0;
+  padding:3px 5px;
+  border-radius:8px;
+  cursor:pointer;
+  overflow:hidden;
+  background:linear-gradient(145deg,rgba(61,73,87,.79),rgba(24,42,64,.8));
+}
+.axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot-art {
+  max-height:25px;
+}
+.axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot-art img {
+  height:24px;
+  max-width:100%;
+  object-fit:contain;
+}
+.axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot[aria-pressed="true"],
+.axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot.is-active {
+  border-color:#f9dda2;
+  box-shadow:0 0 10px rgba(248,208,138,.48),inset 0 0 12px rgba(250,221,161,.17);
+}
+.axe-glass-loadout-stage > .axe-app-viewer-gear,
+.axe-glass-loadout-stage > .axe-app-model-center,
+.axe-char-model-stage > .axe-app-viewer-gear,
+.axe-char-model-stage > .axe-app-model-center,
+.axe-app-appearance-model-stage > .axe-app-viewer-gear,
+.axe-app-appearance-model-stage > .axe-app-model-center {
+  grid-row:2;
+}
+.axe-glass-loadout-stage > .axe-app-model-caption,
+.axe-char-model-stage > .axe-app-model-caption,
+.axe-app-appearance-model-stage > .axe-app-model-caption {
+  grid-row:3;
+}
+@media (max-width:650px) {
+  .axe-app-model-stage > .axe-weapon-loadout-rack {gap:3px;}
+  .axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot {
+    min-height:54px;
+    padding:3px 2px;
+  }
+  .axe-app-model-stage .axe-weapon-loadout-rack .axe-app-viewer-slot small {
+    font-size:9px;
+  }
+}

@@ -1,4 +1,6 @@
 // Navigation groups only: all rules and transactions still use registry IDs.
+import { isGearTiersEnabled } from '../loot/AXEGearTierFlag.mjs';
+
 const group = (id, label, serviceIds, presentation = 'world') => Object.freeze({
   id,
   label,
@@ -16,7 +18,9 @@ export const AXE_SERVICE_GROUPS = Object.freeze([
   group('blacksmith', 'Blacksmith', [
     'enchant', 'reinforcement', 'over_enchant', 'combine', 'stage',
     'refine', 'ultimate', 'runes', 'sockets', 'core',
-  ]),
+    // gear tiers (setting, off by default): Tier Up exists only while the setting is on
+    ...(isGearTiersEnabled() ? ['tier_up'] : []),
+  ], 'panel'),
   // Character now owns the former Appearance pages. Keep its original menu
   // position and all legacy service IDs so world/service requests still work.
   // The default Character subpage replaces Overview; the outfit rail remains.

@@ -16,7 +16,7 @@ const owned=[
 ];
 const role=item=>item.axeWeaponRole;
 
-test('exactly three identity slots, without invented weapons or simultaneous equips',()=>{
+test('exactly three HUD weapon slots, with no invented weapons',()=>{
   assert.deepEqual(AXE_HUD_WEAPON_ROLES.map(x=>x.role),['offensive','defensive','ranged']);
   assert.deepEqual(AXE_HUD_WEAPON_ROLES.map(x=>x.label),['Damage','Defense','Ranged']);
   assert.deepEqual(AXE_HUD_WEAPON_ROLES.map(x=>x.icon),['sword','shield','crosshair']);
@@ -26,12 +26,12 @@ test('exactly three identity slots, without invented weapons or simultaneous equ
   assert.equal(selectRoleWeapon([], 'ranged',null,null,role),null);
 });
 
-test('assignment always respects identity and ownership, with active and one-owned fallback',()=>{
+test('explicit assignments respect ownership and active weapon fallback',()=>{
   assert.equal(selectRoleWeapon(owned,'ranged','bow-2','bow-1',role).instanceId,'bow-2');
   assert.equal(selectRoleWeapon(owned,'ranged',null,'bow-1',role).instanceId,'bow-1');
   assert.equal(selectRoleWeapon(owned,'ranged',null,null,role),null);
   assert.equal(selectRoleWeapon(owned,'offensive',null,null,role).instanceId,'sword-1');
-  assert.equal(selectRoleWeapon(owned,'defensive','bow-2',null,role).instanceId,'shield-1');
+  assert.equal(selectRoleWeapon(owned,'defensive','bow-2',null,role).instanceId,'bow-2');
   assert.equal(selectRoleWeapon(owned,'offensive','cape-1',null,role).instanceId,'sword-1');
   assert.equal(eligibleRoleWeapons([weapon('fake','Fake Bow','offensive')],'ranged',role).length,0);
 });

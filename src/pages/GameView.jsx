@@ -5,6 +5,7 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
+import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   getGame3DUIScale,game3DViewportClass}
@@ -12,6 +13,8 @@ import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
 import '../components/game3d/performance/Game3DResponsiveDisplay.css';
 import {game3dCharacterModel} from '../components/game3d/game3dCharacterModel';
 import GameHUD from '../components/game3d/hud/GameHUD';
+import WorldAnnouncementFeed from '../components/game3d/notifications/WorldAnnouncementFeed';
+import WorldPvpControl from '../components/game3d/pvp/WorldPvpControl';
 import Game3DHudLayoutEditor from '../components/game3d/hud/Game3DHudLayoutEditor';
 import {readGame3DCommunityHUD,GAME3D_COMMUNITY_HUD_EVENT}
   from '../components/game3d/hud/game3dCommunityHUDSettings.mjs';
@@ -23,8 +26,7 @@ import CharacterProgressionMenu from '../components/game3d/CharacterProgressionM
 import useAXEServiceMode from '../components/game3d/axe/services/useAXEServiceMode';
 import AXEServiceWorkspace from '../components/game3d/axe/services/AXEServiceWorkspace';
 import { getAXEServiceGroupForService } from '../components/game3d/axe/services/AXEServiceGroups.js';
-import { getGame3DMenuShortcut } from '../components/game3d/axe/services/game3dMenuHotkeys.mjs';
-import { getAXECharacterShortcutAction } from '../components/game3d/axe/services/AXECharacterShortcutRouting.mjs';
+import { getGame3DMenuShortcut, resolveGame3DMenuToggle } from '../components/game3d/axe/services/game3dMenuHotkeys.mjs';
 import { normalizeAXEServiceRequest } from '../components/game3d/axe/services/AXEServiceRegistry';
 import MultiplayerSystem from '../components/game/MultiplayerSystem';
 import GameWorldServerManager from '../components/game3d/GameWorldServerManager';
@@ -38,6 +40,7 @@ import TradePanel from '../components/game3d/social/TradePanel';
 import TradeSessionWatcher from '../components/game3d/social/TradeSessionWatcher';
 import IncomingRequestToast from '../components/game3d/social/IncomingRequestToast';
 import WorldChatPanel from '../components/game3d/social/WorldChatPanel';
+import FactionAnnouncementTicker from '../components/game3d/axe/factions/FactionAnnouncementTicker';
 import EchoChronicleOverlay from '../components/game3d/social/EchoChronicleOverlay';
 import ChronicleBlueprintLibrary from '../components/game3d/chronicle/ChronicleBlueprintLibrary';
 import MiniGamesHub from '../components/game3d/minigames/MiniGamesHub';
@@ -79,8 +82,10 @@ import { getLearnedSkillIds, subscribeLearnedSkills } from '../components/game3d
 import { runOneTimeProgressionReset } from '../components/game3d/progression/oneTimeReset';
 import SlashEffectLayer from '../components/game3d/SlashEffect';
 import PauseMenu from '../components/game3d/PauseMenu';
+import FactionCommandModal from '../components/game3d/FactionCommandModal';
 import WindRunEffect from '../components/game3d/WindRunEffect';
 import SkillActivationToastListener from '../components/game3d/SkillActivationToastListener';
+import LevelUpToastListener from '../components/game3d/LevelUpToastListener.jsx';
 import Game3DAreaNotice from '../components/game3d/Game3DAreaNotice';
 import GameStateProvider from '../components/game3d/state/GameStateProvider';
 import CombatMusicTrigger from '../components/game3d/CombatMusicTrigger';
@@ -109,6 +114,10 @@ export default function GameView() {
   const [playIntroCamera,setPlayIntroCamera]=useState(false);
   const [creatorOnLogin, setCreatorOnLogin] = useState(false);
   const [worldRegion,setWorldRegion]=useState('wolfveil');
+  // A five-area gate swaps to a new GameWorld3D scene, just like a dungeon portal.
+  const [worldArea,setWorldArea]=useState('town');
+  const [portalLanding,setPortalLanding]=useState(null);
+  const lastWolfveilAreaRef=useRef('town');
   const [portalReturn,setPortalReturn]=useState(false);
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
@@ -120,14 +129,11 @@ export default function GameView() {
   const [requestedService, setRequestedService] = useState(null);
   const [requestedServiceItemId, setRequestedServiceItemId] = useState(null);
   const [requestedCharacterTab, setRequestedCharacterTab] = useState(null);
-  // Modern Character/Appearance workspace owns C. Track its actual tab so
-  // pressing C from Equipment returns to Character before closing the panel.
-  const [activeCharacterSubview, setActiveCharacterSubview] = useState('Character');
-  const [focusCharacterRequest, setFocusCharacterRequest] = useState(0);
   const [friendsListOpen, setFriendsListOpen] = useState(false);
   const [clanOverlayOpen, setClanOverlayOpen] = useState(false);
   const [learnedSkillIds, setLearnedSkillIds] = useState(() => getLearnedSkillIds());
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
+  const [factionOpen,setFactionOpen]=useState(false);
   const [hudEditing,setHudEditing]=useState(false);
   const [communityHUD,setCommunityHUD]=useState(()=>readGame3DCommunityHUD());
   const [displaySettings,setDisplaySettings]=useState(()=>readGame3DDisplaySettings());
@@ -249,6 +255,7 @@ export default function GameView() {
     if(phase!=='login')return;
     services.controller.close();
     setPauseMenuOpen(false);
+    setFactionOpen(false);
     setStoreOpen(false);
     setProgressionOpen(false);
     setRequestedService(null);
@@ -268,8 +275,15 @@ export default function GameView() {
   useEffect(()=>{
     if(phase!=='world')return;
     const onPortalTravel=(event)=>{
-      const target=event.detail?.target;
-      if(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||target===worldRegion)return;
+      const detail=event.detail||{};
+      const target=detail.target;
+      const landing=detail.landing;
+      const areaTravel=target==='wolfveil-area'&&worldRegion==='wolfveil'&&
+        WOLFVEIL_AREA_IDS.includes(detail.area)&&detail.area!==worldArea&&
+        landing&&[landing.x,landing.y,landing.z].every(Number.isFinite)&&
+        wolfveilAreaAtWorld(landing)===detail.area;
+      if(!areaTravel&&(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||
+        target===worldRegion))return;
       services.controller.close();
       setPauseMenuOpen(false);
       setStoreOpen(false);
@@ -281,23 +295,55 @@ export default function GameView() {
       worldReadyRef.current=false;
       setWorldReady(false);
       setWorldEntryStatus('loading');
-      setPortalSpawnAtGate(target==='wolfveil-caves'&&event.detail?.spawnAtGate===true);
+      if(detail.source==='death-respawn'&&target==='wolfveil'&&landing&&
+        [landing.x,landing.y,landing.z].every(Number.isFinite)){
+        // Unlike a normal dungeon return, a death choice explicitly names
+        // the desired spawn. Load only its world area and validate ground at
+        // the new scene's existing portalLanding entry point.
+        const area=wolfveilAreaAtWorld(landing)||'town';
+        setPortalReturn(false);
+        setPortalSpawnAtGate(false);
+        setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+        lastWolfveilAreaRef.current=area;
+        setWorldArea(area);
+        vortexOriginRef.current=null;
+        setWorldRegion('wolfveil');
+        return;
+      }
+      if(areaTravel){
+        // The old region's WebGL scene is torn down by the keyed remount.
+        // Do not keep it mounted invisibly behind the destination area.
+        setPortalReturn(false);
+        setPortalSpawnAtGate(false);
+        setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+        lastWolfveilAreaRef.current=detail.area;
+        setWorldArea(detail.area);
+        return;
+      }
+      setPortalLanding(null);
+      setPortalSpawnAtGate(target==='wolfveil-caves'&&detail.spawnAtGate===true);
       if(target!=='wolfveil'){
-        vortexOriginRef.current=event.detail?.sourcePortal==='vortex'?'vortex':null;
+        if(worldRegion==='wolfveil')lastWolfveilAreaRef.current=worldArea;
+        vortexOriginRef.current=detail.sourcePortal==='vortex'?'vortex':null;
         setPortalReturn(false);
       }else{
         const fromVortex=vortexOriginRef.current==='vortex';
         setPortalReturn(fromVortex?'vortex':
-          event.detail?.returnToGate==='astral'?'astral':
-          event.detail?.returnToGate==='sumi'?'sumi':
-          event.detail?.returnToGate===true);
+          detail.returnToGate==='astral'?'astral':
+          detail.returnToGate==='sumi'?'sumi':
+          detail.returnToGate===true);
+        // Returning from a cave/dungeon must restore the map containing
+        // its entrance, not construct the whole valley or default to town.
+        setWorldArea(lastWolfveilAreaRef.current);
         vortexOriginRef.current=null;
       }
       setWorldRegion(target);
     };
     window.addEventListener('game3dPortalTravel',onPortalTravel);
     return ()=>window.removeEventListener('game3dPortalTravel',onPortalTravel);
-  },[phase,worldRegion,services.controller]);
+  },[phase,worldRegion,worldArea,services.controller]);
 
   // World server join is handled by GameWorldServerManager — it enforces the
   // 20-player cap and dispatches joinMultiplayerChannel only when capacity allows.
@@ -483,12 +529,15 @@ export default function GameView() {
     if (phase !== 'world') return undefined;
     const onServiceKey = (event) => {
       const destination = getGame3DMenuShortcut(event);
-      if (!destination || pauseMenuOpen || window.__axeDialogueOpen ||
+      if (!destination || pauseMenuOpen || factionOpen || window.__axeDialogueOpen ||
         window.__axeTileInspectionEditing) return;
       event.preventDefault();
       event.stopImmediatePropagation?.();
       const currentGroup = services.controller.getSnapshot().groupId;
       const mapWasOpen = !!window.__axeWorldMapOpen;
+      const toggle = resolveGame3DMenuToggle(destination, {
+        groupId: currentGroup, mapOpen: mapWasOpen,
+      });
       // The map is a separate HUD portal, not a station workspace.
       window.dispatchEvent(new Event('axeCloseWorldMap'));
       setStoreOpen(false);
@@ -501,32 +550,24 @@ export default function GameView() {
         setRequestedService(null);
         setRequestedServiceItemId(null);
         setRequestedCharacterTab(null);
-        if (!mapWasOpen) {
+        if (toggle.action === 'open') {
           window.dispatchEvent(new CustomEvent('axeOpenWorldMap', { detail: { force: true } }));
         }
         return;
       }
 
       if (destination === 'character') {
-        const action = getAXECharacterShortcutAction({
-          activeGroupId: currentGroup,
-          legacyHubOpen: progressionOpen,
-          activeTab: activeCharacterSubview,
-        });
         // The former Attributes/Inventory/Companion CharacterProgressionMenu
         // is not the new C page. Always close it rather than reopening it.
         setProgressionOpen(false);
         setRequestedService(null);
         setRequestedServiceItemId(null);
         setRequestedCharacterTab(null);
-        if (action === 'close') {
+        if (toggle.action === 'close') {
+          // The second C closes Character from ANY of its subpages.
           services.controller.close();
-        } else if (action === 'focus') {
-          setFocusCharacterRequest(value => value + 1);
         } else {
-          setActiveCharacterSubview('Character');
-          // Reuse the already-registered unified Character + Appearance
-          // workspace, including its current 3D model and live stats.
+          // Reuse the same live Character/Appearance workspace.
           void services.controller.open('character', { serviceId: 'character' });
         }
         return;
@@ -536,12 +577,12 @@ export default function GameView() {
       setRequestedService(null);
       setRequestedServiceItemId(null);
       setRequestedCharacterTab(null);
-      if (currentGroup === destination) services.controller.close();
-      else void services.controller.open(destination);
+      if (toggle.action === 'close') services.controller.close();
+      else void services.controller.open(toggle.groupId);
     };
     window.addEventListener('keydown', onServiceKey, true);
     return () => window.removeEventListener('keydown', onServiceKey, true);
-  }, [phase, pauseMenuOpen, progressionOpen, activeCharacterSubview, services.controller]);
+  }, [phase, pauseMenuOpen, factionOpen, services.controller]);
 
   // Other in-world controls: TAB = Soul Emporium, G = Clan,
   // Shift+L = Friends, ESC = close overlay / pause.
@@ -553,6 +594,7 @@ export default function GameView() {
       // The MMO Escape menu owns its captured ESC/Tab keys. Do not open
       // stores, clans or other HUD overlays behind its settings panels.
       if (pauseMenuOpen) return;
+      if (factionOpen) { if(e.key==='Escape'){e.preventDefault();setFactionOpen(false);} return; }
       if (services.active) {
         if (e.key === 'Escape') { e.preventDefault(); services.controller.close(); }
         return; // Tab stays focus navigation; service clicks/keys never open combat overlays.
@@ -587,12 +629,16 @@ export default function GameView() {
         }
         else if (friendsListOpen) setFriendsListOpen(false);
         else if (clanOverlayOpen) setClanOverlayOpen(false);
-        else setPauseMenuOpen((v) => !v);
+        else {
+          // Always discard any old expanded service strip before opening ESC.
+          services.controller.close();
+          setPauseMenuOpen((v) => !v);
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [phase, storeOpen, progressionOpen, friendsListOpen, clanOverlayOpen, pauseMenuOpen, services.active, services.controller]);
+  }, [phase, storeOpen, progressionOpen, friendsListOpen, clanOverlayOpen, pauseMenuOpen, factionOpen, services.active, services.controller]);
 
 
   const gameUIScale=getGame3DUIScale({...cssViewport,uiScale:displaySettings.uiScale});
@@ -608,7 +654,8 @@ export default function GameView() {
           GameWorld3D is becoming a renderer that reads from this. */}
       <GameStateProvider showDebugHUD={false}>
       {user?.id ? <CharacterVaultSync showStatus={false} /> : <GuestCharacterCloudSync showStatus={phase==='world'} />}
-       <GameWorld3D key={worldRegion+':'+worldEntryCycle} region={worldRegion}
+       <GameWorld3D key={worldRegion+':'+(worldRegion==='wolfveil'?worldArea:'')+':'+worldEntryCycle} region={worldRegion}
+        worldArea={worldArea} portalLanding={portalLanding}
         entryMode={phase==='login'} entryPreviewMode={entryPreviewMode}
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
@@ -656,12 +703,17 @@ export default function GameView() {
                const resume = requestedRegion==='wolfveil' && !target ? worldCheckpointStore.read() : null;
                const nextRegion = resume?.region || requestedRegion;
                setResumeCheckpoint(resume);
+               const nextArea=nextRegion==='wolfveil'?(wolfveilAreaAtWorld(resume)||'town'):'town';
+               const switchingArea=nextRegion==='wolfveil'&&nextArea!==worldArea;
+               setWorldArea(nextArea);
+               lastWolfveilAreaRef.current=nextArea;
+               setPortalLanding(null);
               // Wolfveil is ALREADY rendered below this menu; do not remount it.
               // Loading curtain applies only if a model or another region is pending.
-              setWorldEntryStatus(nextRegion==='wolfveil'&&worldReadyRef.current?'idle':'loading');
+              setWorldEntryStatus(nextRegion==='wolfveil'&&!switchingArea&&worldReadyRef.current?'idle':'loading');
               setPlayIntroCamera(false); // The gateway fades directly into gameplay, without an orbit cinematic.
               setPortalReturn(false);
-              if(nextRegion!=='wolfveil'){
+              if(nextRegion!=='wolfveil'||switchingArea){
                 worldReadyRef.current=false;
                 setWorldReady(false);
               }
@@ -676,16 +728,22 @@ export default function GameView() {
         <>
       <AXEVerifiedQuestbookMount172 />
       <AXEQuestTrailMount region={worldRegion} enabled={!services.active && !services.expanded} />
+      {/* Service group/subpage selector is visible only while a workspace is active;
+           it disappears entirely after C, K or Escape closes the workspace. */}
       <GameHUD region={worldRegion} serviceMode={services.active} servicesExpanded={services.expanded}
-        activeServiceGroup={services.groupId} onToggleServices={() => services.controller.toggle()}
+        showServicesNavigation={services.active} activeServiceGroup={services.groupId}
+        onToggleServices={() => services.controller.toggle()}
         onSelectServiceGroup={groupId => {
           setProgressionOpen(false); setStoreOpen(false); setPauseMenuOpen(false);
           setFriendsListOpen(false); setClanOverlayOpen(false);
           services.controller.open(groupId);
         }} />
-      {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()}
-        onCharacterTabChange={setActiveCharacterSubview}
-        focusCharacterRequest={focusCharacterRequest} />}
+      {/* Server-verified faction call-to-arms below the live minimap. Disabled
+          until rank-authorized faction announcements are available. */}
+      <WorldAnnouncementFeed suppressed={services.active || services.expanded} />
+      <WorldPvpControl region={worldRegion} suppressed={services.active || services.expanded} />
+      <FactionAnnouncementTicker />
+      {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
       {/* World boss UI removed in the systems/animation test scene. */}
       <MultiplayerSystem envUrl="game_world_lowpoly" surface="game-world" />
@@ -745,7 +803,9 @@ export default function GameView() {
       <TradePanel />
       <TradeSessionWatcher userId={user?.id} />
       <IncomingRequestToast userId={user?.id} />
-      <WorldChatPanel userId={user?.id} suppressed={services.active} showDock={communityHUD.chat} />
+      <WorldChatPanel userId={user?.id} suppressed={services.active || pauseMenuOpen || factionOpen}
+        showDock={communityHUD.chat} alwaysVisible={communityHUD.chatAlwaysVisible}
+        onOpenClan={()=>{setPauseMenuOpen(false);setClanOverlayOpen(true);}} />
        <EchoChronicleOverlay suppressed={services.active || services.expanded} showLauncher={communityHUD.echo}
         onOpenQuestLogbook={() => {
           setProgressionOpen(false);setStoreOpen(false);setPauseMenuOpen(false);
@@ -808,6 +868,7 @@ export default function GameView() {
 
       {/* Toast feedback when self-cast skills (Shield, Focus, Haste, etc.) activate */}
       <SkillActivationToastListener />
+      <LevelUpToastListener />
       {/* Names the Wolfveil area the player has just walked into */}
       {phase==='world' && <Game3DAreaNotice />}
 
@@ -831,6 +892,32 @@ export default function GameView() {
       {/* Pause menu — opened by ESC */}
       <PauseMenu
         open={pauseMenuOpen}
+        onOpenFaction={()=>{
+          // Faction is a standalone screen, never a drawer inside Escape.
+          services.controller.close();
+          setPauseMenuOpen(false);
+          setStoreOpen(false);setProgressionOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          window.dispatchEvent(new Event('axeCloseWorldMap'));
+          setFactionOpen(true);
+        }}
+        onOpenService={(groupId, serviceId = null) => {
+          // Escape is a launcher, never a second menu layered behind a
+          // service. The page opens directly with no floating Services strip.
+          setPauseMenuOpen(false);
+          window.dispatchEvent(new Event('axeCloseWorldMap'));
+          setProgressionOpen(false);setStoreOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          setRequestedService(null);setRequestedServiceItemId(null);setRequestedCharacterTab(null);
+          void services.controller.open(groupId, serviceId ? { serviceId } : {});
+        }}
+        onOpenMap={() => {
+          setPauseMenuOpen(false);
+          services.controller.close();
+          setProgressionOpen(false);setStoreOpen(false);
+          setFriendsListOpen(false);setClanOverlayOpen(false);
+          window.dispatchEvent(new CustomEvent('axeOpenWorldMap', { detail: { force: true } }));
+        }}
         onEditHUD={()=>{setPauseMenuOpen(false);setHudEditing(true);}}
         onClose={() => setPauseMenuOpen(false)}
         onCreateCharacter={() => { window.dispatchEvent(new Event('game3dCheckpointFlush')); setResumeCheckpoint(null); setPauseMenuOpen(false); setWorldEntryStatus('idle'); setPlayIntroCamera(false); setCreatorOnLogin(true); setPhase('login'); }}
@@ -846,6 +933,7 @@ export default function GameView() {
           setPhase('login');
         }}
       />
+      {factionOpen && <FactionCommandModal onClose={()=>setFactionOpen(false)}/>}
       {worldEntryStatus!=='idle' && <WorldEntryCurtain
         status={worldEntryStatus}
         error={worldEntryError}

@@ -162,10 +162,10 @@ test('no new physics colliders or edits to skin weights; local, remote and previ
  assert.doesNotMatch(module,/skinIndex\.set|skinWeight\.set|boneInverses\.push|createRigidBody|collider\.add|player\.position|camera\.position/);
  const world=source('GameWorld3D.jsx');
  assert.match(world,/companionSecondaryRig=createFactionThreeMountRig\(companionModel,companionDef\)/);
- assert.match(world,/companionSecondaryRig\?\.update\(delta\)/);
+ assert.match(world,/companionSecondaryRig\?\.update\(delta, \{ flying: /);
  const remote=source('RemoteCompanionManager.jsx');
  assert.match(remote,/createFactionThreeMountRig\(group,def\)/);
- assert.match(remote,/inst\.secondaryRig\?\.update\(delta\)/);
+ assert.match(remote,/inst\.secondaryRig\?\.update\(delta, \{ flying: inst\.current === 'fly' \}\)/);
  const preview=source('equipment/CompanionPreview3D.jsx');
  assert.match(preview,/createFactionThreeMountRig\(root,companion\)/);
  assert.match(preview,/sanitizeFactionThreeNativeClips\(root,clips,companion\)/);

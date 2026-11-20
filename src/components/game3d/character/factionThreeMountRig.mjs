@@ -254,7 +254,9 @@ export function createFactionThreeMountRig(root,definition={}) {
   let speed=0,sway=0,velocity=0,elapsed=0,disposed=false;
   return {
     active:true,
-    update(dt){
+    // flying: the ridden flight clip owns the wing beat (character/mountFlight.mjs), so the wing clamp and
+    // flutter below stand aside while the mount is airborne.
+    update(dt,{flying=false}={}){
       if(disposed)return;
       const step=clamp(Number(dt)||0,0,.08);
       if(step<=0)return;
@@ -293,7 +295,7 @@ export function createFactionThreeMountRig(root,definition={}) {
         bone.quaternion.multiply(new THREE.Quaternion()
           .setFromAxisAngle(axis,sway*(1+index*.13))).normalize();
       });
-      wings.forEach((bone,index)=>{
+      if(!flying)wings.forEach((bone,index)=>{
         const rest=wingRest[index];
         const angle=rest.angleTo(bone.quaternion);
         if(angle>.28)bone.quaternion.slerpQuaternions(

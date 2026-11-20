@@ -1754,3 +1754,556 @@
 @media (prefers-reduced-motion:reduce) {
   .axe-blacksmith-center-preview .axe-forge-ascended-art {animation:none;}
 }
+
+
+/* 2026-11-20: icon-only service rail, two-slot upgrade work area. These rules
+ * appear AFTER the legacy layout so the previous absolute panels cannot
+ * overlap the actual equipment + material/donor interaction. */
+.axe-service-workspace--blacksmith .axe-service-operations,
+.axe-service-workspace--blacksmith .axe-service-operation-help,
+.axe-service-workspace--blacksmith .axe-service-operation-select {
+  display:none !important; /* one source of navigation: the accessible icon rail */
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  position:absolute;
+  z-index:7;
+  left:34%;
+  top:15%;
+  width:4.8%;
+  height:81%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  padding:4px 0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:last-child {
+  display:grid;
+  flex:none;
+  place-items:center;
+  gap:0;
+  width:clamp(42px,3.9cqw,58px);
+  height:clamp(42px,3.9cqw,58px);
+  min-width:0;
+  min-height:0;
+  max-height:none;
+  aspect-ratio:1;
+  padding:0;
+  color:#e7d6b3;
+  background:rgba(17,32,45,.84);
+  border:1px solid rgba(227,191,137,.48);
+  border-radius:10px;
+  font-size:0;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:0 3px 14px rgba(0,0,0,.2);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button svg {
+  display:block;
+  width:clamp(21px,1.9cqw,29px);
+  height:clamp(21px,1.9cqw,29px);
+  color:inherit;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:hover,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:focus-visible {
+  border-color:#b6e8f3;
+  background:#2d4b62;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button[aria-pressed="true"] {
+  color:#ffe9ae;
+  border-color:#f2d297;
+  background:rgba(140,97,51,.72);
+  box-shadow:0 0 13px rgba(229,181,102,.32);
+}
+.axe-blacksmith-visually-hidden {
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-inventory-shell {
+  left:3.4%;
+  width:28.8%;
+  height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:40%;
+  top:15%;
+  width:31%;
+  height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-combine-slots {
+  display:none!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-operation-panel {
+  left:73%;
+  top:15%;
+  width:24.4%;
+  height:81%;
+  overflow-y:auto;
+}
+@media(max-width:860px) {
+  .axe-service-workspace--blacksmith .axe-blacksmith-image-stage {
+    min-width:1180px;
+  }
+}
+
+
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced {
+  flex:none;
+  margin:6px 0;
+  padding:7px 8px;
+  border:1px solid rgba(228,191,134,.3);
+  border-radius:8px;
+  background:rgba(18,35,50,.32);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced > summary {
+  cursor:pointer;
+  color:#e5d2ad;
+  font:600 11px/1.35 system-ui,sans-serif;
+  list-style:revert;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced[open] > summary {margin-bottom:8px}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced .axe-blacksmith-extra-details {
+  border-top:0;
+  padding-top:2px;
+}
+
+
+/* 2026-11-20 refinement: preserve Inventory; compact input squares occupy the
+ * left of the original result circle, and the rightmost information card is
+ * replaced with a fading history of REAL server/gateway attempts. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:39.4%;
+  top:16.5%;
+  width:32%;
+  height:auto;
+  max-height:48%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;
+  left:43%;
+  top:63%;
+  width:24%;
+  aspect-ratio:1;
+  opacity:.72;
+  border-color:rgba(233,189,119,.52);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;
+  z-index:3;
+  left:43.3%;
+  top:66%;
+  width:23.4%;
+  height:26%;
+  overflow:hidden;
+}
+.axe-blacksmith-circle-result {
+  width:90%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  text-align:center;
+  padding:8px;
+  overflow:hidden;
+  color:#f1dfbd;
+  text-shadow:0 1px 7px rgba(0,0,0,.8);
+}
+.axe-blacksmith-circle-result strong {
+  font:700 clamp(12px,1.2cqw,18px) Georgia,serif;
+  letter-spacing:.13em;
+  color:#edd09a;
+}
+.axe-blacksmith-circle-result span {
+  max-width:100%;
+  max-height:50%;
+  overflow:auto;
+  scrollbar-width:thin;
+  font:clamp(9px,.85cqw,12px)/1.35 system-ui,sans-serif;
+  color:#d7e5e5;
+}
+.axe-blacksmith-circle-result small {
+  font:11px/1.2 system-ui,sans-serif;
+  color:#c7dcda;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-attempt-feed {
+  position:absolute;
+  z-index:3;
+  left:74%;
+  top:15%;
+  width:22.5%;
+  height:81%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:15px 12px;
+  min-height:0;
+  color:#e8e1d3;
+  border-left:1px solid rgba(225,191,133,.47);
+  border-radius:3px 12px 12px 3px;
+  background:linear-gradient(to bottom,rgba(16,28,40,.78),rgba(18,31,43,.57) 65%,rgba(18,31,43,.13));
+  mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  backdrop-filter:blur(9px);
+}
+.axe-blacksmith-attempt-feed h3 {
+  flex:none;
+  margin:0;
+  font:600 clamp(16px,1.3cqw,22px)/1.1 Georgia,serif;
+  color:#f4d9a4;
+}
+.axe-blacksmith-attempt-feed > p {
+  flex:none;
+  margin:0 0 6px;
+  color:#c2bbad;
+  font:10px/1.35 system-ui,sans-serif;
+}
+.axe-blacksmith-attempt {
+  flex:none;
+  display:grid;
+  gap:5px;
+  padding:9px 8px;
+  border-left:2px solid rgba(227,194,140,.5);
+  background:rgba(43,57,69,.32);
+  font:11px/1.35 system-ui,sans-serif;
+}
+.axe-blacksmith-attempt b {font:700 11px system-ui,sans-serif;color:#e4d3b7}
+.axe-blacksmith-attempt.is-success {border-left-color:#90dcae}
+.axe-blacksmith-attempt.is-success b {color:#a3efc2}
+.axe-blacksmith-attempt.is-failure {border-left-color:#e2a19a}
+.axe-blacksmith-attempt.is-failure b {color:#f5b9b0}
+.axe-blacksmith-attempt.is-idle {color:#b9c3c8}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-operation-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel {
+  display:none!important;
+}
+
+
+/* Advanced safety/legacy controls live in the right drawer, never inside
+ * either equipment/material square. All are closed until explicitly opened. */
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-safety,
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-extra {
+  flex:none;
+  padding:7px 8px;
+  border:1px solid rgba(225,190,136,.38);
+  border-radius:7px;
+  background:rgba(25,42,56,.68);
+  font:11px/1.4 system-ui,sans-serif;
+  color:#e7d8ba;
+}
+.axe-blacksmith-feed-safety summary,
+.axe-blacksmith-feed-extra summary {cursor:pointer;font-weight:600}
+.axe-blacksmith-feed-safety[open],
+.axe-blacksmith-feed-extra[open] {display:grid;gap:9px}
+.axe-blacksmith-feed-safety label {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding-top:6px;
+}
+.axe-blacksmith-feed-safety select {
+  background:#253d51;
+  color:#f2e2c3;
+  border:1px solid rgba(229,194,137,.59);
+  border-radius:5px;
+  padding:4px;
+  max-width:100px;
+}
+.axe-blacksmith-feed-safety input {accent-color:#dcbf81}
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-stop {
+  flex:none;
+  border:1px solid #e1a596;
+  border-radius:7px;
+  padding:7px 8px;
+  background:rgba(108,53,44,.72);
+  color:#ffe1d9;
+  font:600 11px system-ui,sans-serif;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-attempt-feed:has(
+  .axe-blacksmith-feed-extra[open],.axe-blacksmith-feed-safety[open]
+) {
+  -webkit-mask-image:none;
+  mask-image:none;
+  background:rgba(19,33,48,.94);
+}
+
+/* 2026-11-20 corrective layout: the previous inventory and right-hand
+ * Forge Results remain untouched. Only the center forge becomes unboxed,
+ * with exactly two ingredient slots above the existing result circle. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:38%;
+  top:19%;
+  width:34%;
+  max-height:38%;
+  height:auto;
+  padding:0;
+  overflow:visible;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+  backdrop-filter:none;
+}
+
+/* 2026-11-20 screenshot restoration. The earlier inventory and workstation
+ * are independent left-side panels; seven operations run horizontally.
+ * Two plus-marked ingredients occupy the gap above a 25%-smaller ritual ring.
+ * The original right information and lower Equipment Progression are visible. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-inventory-shell {
+  display:flex!important;left:18.5%!important;top:15%;width:28.8%!important;height:81%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  left:49%!important;top:15%!important;width:48%!important;height:8.8%!important;
+  display:grid!important;grid-template-columns:repeat(7,minmax(0,1fr));
+  flex-direction:row!important;align-items:stretch;gap:4px;padding:0;
+  overflow:visible!important;scrollbar-width:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button:last-child {
+  width:100%;height:100%;min-width:0;min-height:65px;max-height:none;
+  aspect-ratio:auto;padding:4px 2px;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;gap:4px;
+  border:1px solid transparent;border-radius:8px;background:transparent;
+  box-shadow:none;color:#ead4ad;font:600 clamp(9px,.79cqw,13px)/1.1 Georgia,serif;
+  white-space:normal;text-align:center;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button svg {
+  width:clamp(18px,1.9cqw,29px);height:clamp(18px,1.9cqw,29px);flex:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button span {
+  display:block;position:static;clip:auto;width:auto;height:auto;margin:0;padding:0;
+  overflow:visible;white-space:normal;font:inherit;line-height:1.05;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs button[aria-pressed="true"] {
+  border-color:#f2d297;color:#36271b;background:linear-gradient(145deg,#ffe8b2,#cda56b);
+  box-shadow:0 0 13px rgba(229,181,102,.32);
+}
+/* The whole workstation goes back left. Only two ingredient slots stay central. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:52.1%!important;top:27.5%!important;width:16.8%!important;
+  height:auto!important;max-height:9.5%!important;
+  padding:0!important;border:0!important;background:none!important;
+  box-shadow:none!important;overflow:visible!important;backdrop-filter:none!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow {
+  width:100%;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:5px;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow-slot {
+  width:min(100%,70px);min-height:60px;max-height:70px;
+  justify-self:center;aspect-ratio:1;border-radius:8px;
+}
+/* Reduce the original circle diameter by exactly 25%: 21.5% -> 16.125%.
+ * Preserve its center X coordinate: 49.8 + 21.5/2 = 60.55%. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;left:52.4875%!important;top:37%!important;
+  width:16.125%!important;aspect-ratio:1;opacity:.92;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;left:52.4875%!important;top:37.25%!important;
+  width:16.125%!important;height:29%!important;z-index:4;
+  box-sizing:border-box;padding:5px;gap:2px;justify-content:flex-start;overflow:hidden;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-center-preview .axe-blacksmith-item-rarity {
+  flex:none;font-size:clamp(9px,.73cqw,12px);padding:2px 7px;max-width:94%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-center-preview h3 {
+  flex:none;max-width:100%;margin:1px 0;
+  font:600 clamp(11px,1.14cqw,19px)/1.1 Georgia,serif;
+  white-space:normal;overflow-wrap:anywhere;text-overflow:clip;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-center-preview .axe-blacksmith-item-level {
+  flex:none;font:clamp(9px,.76cqw,13px)/1.1 Georgia,serif;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-center-preview .axe-blacksmith-center-art {
+  flex:1 1 auto;min-height:0;height:55%;width:85%;margin-top:0;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-center-preview .axe-blacksmith-center-art img {
+  display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;
+}
+/* The success chance is no longer a green bar over the right-hand statistics. */
+.axe-service-workspace--blacksmith .axe-blacksmith-center-success {
+  position:absolute;left:52.4875%;top:68%;width:16.125%;z-index:5;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  color:#f7deab;text-shadow:0 2px 5px #000d;
+  font:600 clamp(9px,.8cqw,13px)/1.25 Georgia,serif;
+}
+.axe-blacksmith-center-success small{color:#addfc5;font:10px/1.1 Georgia,serif}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel {
+  display:flex!important;left:49%!important;top:74.6%!important;
+  width:22.3%!important;max-height:20%!important;
+}
+/* Display the original right-hand equipment information, rather than hiding
+ * it underneath a second results/history panel. Fit essentials without wheel. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-operation-panel {
+  display:flex!important;left:73%!important;top:26.3%!important;
+  width:24.4%!important;height:68.5%!important;gap:5px;
+  overflow:hidden!important;scrollbar-width:none;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-attempt-feed {display:none!important}
+.axe-service-workspace--blacksmith .axe-blacksmith-operation-heading {
+  flex:0 0 auto;max-height:22%;overflow:hidden;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-operation-heading p {
+  max-height:none;overflow:hidden;font-size:clamp(9px,.72cqw,12px);line-height:1.2;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-projected-block {
+  flex:0 0 auto;max-height:33%;overflow:hidden;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-materials-block {
+  flex:0 0 auto;max-height:18%;overflow:hidden;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-operation-panel .axe-blacksmith-success {
+  display:none;
+}
+
+
+/* 2026-11-20 final correction: the left Inventory Forge CARD was deleted
+ * in JSX, not merely hidden. Give the vacated left column to Inventory.
+ * Enchant/Combine ingredient squares now sit BETWEEN Inventory and the
+ * circular weapon preview, aligned with the circle's top edge; Auto and
+ * the primary action remain below them.
+ * Do not touch the right-hand statistics/Forge Results or their handlers. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-inventory-shell {
+  display:flex!important;
+  left:3.4%!important;
+  top:15%!important;
+  width:31.05%!important; /* 10% narrower than the previous 34.5% */
+  height:81%!important;
+}
+/* The existing seven operation subpages shift left to fill the space
+ * without duplicating Enchant / Over-Enchant / Combine as separate cards. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage .axe-blacksmith-image-tabs {
+  left:39.3%!important;
+  top:15%!important;
+  width:57.7%!important;
+  height:8.8%!important;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+}
+/* Shift the entire circular equipment preview to the RIGHT of the ingredient slots. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;
+  left:55.1%!important;
+  top:37%!important;
+  width:16.125%!important;
+  aspect-ratio:1;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;
+  left:55.1%!important;
+  top:37%!important;
+  width:16.125%!important;
+  height:29%!important;
+}
+/* The equipment/material boxes take the gap RIGHT OF INVENTORY and LEFT OF
+ * the circle. Align the top of the first row of boxes to the circle at 37%. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:36%!important;
+  top:37%!important;
+  width:17.3%!important;
+  height:56%!important;
+  max-height:none!important;
+  padding:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border:0!important;
+  background:none!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow {
+  width:100%;
+  grid-template-columns:minmax(0,1fr) clamp(17px,1.6cqw,25px) minmax(0,1fr);
+  gap:4px;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-workflow .axe-forge-flow-slot {
+  box-sizing:border-box;
+  width:100%;
+  min-height:clamp(85px,7.2cqw,114px);
+  max-height:none;
+  aspect-ratio:auto;
+  padding:7px 3px;
+}
+/* Keep success chance and progression tied to the moved preview circle. */
+.axe-service-workspace--blacksmith .axe-blacksmith-center-success {
+  left:55.1%;
+  top:68%;
+  width:16.125%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel {
+  display:flex!important;
+  left:55.1%!important;
+  top:74.6%!important;
+  width:16.125%!important;
+  max-height:20%!important;
+}
