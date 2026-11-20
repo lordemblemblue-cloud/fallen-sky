@@ -19,6 +19,11 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
     const next=resolveWorldPvpZone({region,position});
     setZone(before=>before.id===next.id?before:next);
   }),[region]);
+  // Keep zone text current when changing streamed regions without walking.
+  useEffect(()=>{
+    const next=resolveWorldPvpZone({region,position:getPlayerPosition()});
+    setZone(before=>before.id===next.id?before:next);
+  },[region]);
   useEffect(()=>{
     if(previousZone.current&&previousZone.current!==zone.id){
       window.dispatchEvent(new CustomEvent('game3dLocalWorldNotice',{detail:{
@@ -64,17 +69,37 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
   if(suppressed)return null;
   const pending=requested!==confirmed;
   const safeZone=zone.kind===WORLD_PVP_ZONE.SAFE;
-  return <section className="game3d-pvp-control" aria-label="World player combat preference">
-    <div className="game3d-pvp-control-title">WORLD COMBAT <span>{safeZone?'SAFE ZONE':'OPT-IN ZONE'}</span></div>
-    <div className="game3d-pvp-control-switch" role="group" aria-label="PvE or PvP preference">
-      <button type="button" aria-pressed={requested==='pve'} onClick={()=>request('pve')}
-        className={requested==='pve'?'is-selected':''}>PvE</button>
-      <button type="button" aria-pressed={requested==='pvp'} onClick={()=>request('pvp')}
-        className={requested==='pvp'?'is-selected is-danger':''}>PvP</button>
+  const wantsPvp=requested===WORLD_PVP_MODE.PVP;
+  const effectivePvp=!safeZone && !pending && confirmed===WORLD_PVP_MODE.PVP;
+  const toggleTitle=safeZone
+    ? 'Safe Zone: players cannot damage each other here, even with PvP preference enabled.'
+    : pending ? 'Waiting for the world server to confirm the requested PvP preference.'
+      : 'PvP combat requires both players to opt in and world-server authorization.';
+  return <section className="game3d-pvp-control" data-safe-zone={safeZone}
+    aria-label="World combat and safe zone status">
+    <div className="game3d-pvp-control-title">
+      <span>WORLD COMBAT</span>
+      <strong role="status">{safeZone?'SAFE ZONE':'OPT-IN ZONE'}</strong>
     </div>
-    <p>{safeZone?'Players cannot damage each other here.':
-      pending?(requested==='pvp'?'PvP request pending · damage disabled':'PvE request pending · confirm protection on server'):
-      confirmed==='pvp'?'PvP opt-in · server confirmed':'PvE protected · no open-world PvP'}</p>
-    <small>{zone.label}</small>
+    <div className="game3d-pvp-control-row">
+      <span className="game3d-pvp-control-hint" title={zone.label}>
+        {safeZone?'Combat protected':pending?'Awaiting server':effectivePvp?'PvP authorized':'Mutual opt-in'}
+      </span>
+      <button type="button" className="game3d-pvp-control-toggle"
+        role="switch" aria-label="PvP preference" aria-checked={wantsPvp}
+        aria-describedby="game3d-pvp-zone-note"
+        data-pending={pending} data-requested={requested} disabled={pending}
+        title={toggleTitle}
+        onClick={()=>request(wantsPvp?WORLD_PVP_MODE.PVE:WORLD_PVP_MODE.PVP)}>
+        <span>PvP</span>
+        <span className="game3d-pvp-control-track" aria-hidden="true"><i /></span>
+        <span className="game3d-pvp-control-state">{pending?'…':wantsPvp?'ON':'OFF'}</span>
+      </button>
+    </div>
+    <span id="game3d-pvp-zone-note" className="game3d-pvp-control-sr-only">
+      {safeZone?'Safe Zone. Player damage is always disabled here.':
+        'Optional world combat. Both players must opt in, and the server must authorize damage.'}
+      {pending?' The PvP preference change is pending server confirmation.':''}
+    </span>
   </section>;
 }
