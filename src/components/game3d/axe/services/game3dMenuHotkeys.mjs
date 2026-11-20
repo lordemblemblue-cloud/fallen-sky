@@ -13,14 +13,13 @@ export const GAME3D_MENU_HOTKEYS = Object.freeze({
 
 // Appearance and Character share the same unified service group. Every menu
 // shortcut toggles its page, and a second press collapses the entire menu.
-export function resolveGame3DMenuToggle(destination, { groupId = null, mapOpen = false, characterTab = 'Character' } = {}) {
+export function resolveGame3DMenuToggle(destination, { groupId = null, mapOpen = false } = {}) {
   if (!destination) return null;
   if (destination === 'map') return { action: mapOpen ? 'close' : 'open', groupId: null };
   const canonicalGroupId = destination === 'appearance' ? 'character' : destination;
-  // C first returns from Equipment/Vanity/Aura to the actual Character tab.
-  // Only a second C, already on Character, closes the entire workspace.
-  if (destination === 'character' && groupId === 'character' && characterTab !== 'Character')
-    return { action: 'focus', groupId: 'character' };
+  // The direct key is a true full-workspace toggle regardless of the current
+  // Character/Equipment/Vanity/Aura or Skill Book subpage. C/K/Escape must
+  // remove both the page and its Services navigation in one action.
   return { action: groupId === canonicalGroupId ? 'close' : 'open', groupId: canonicalGroupId };
 }
 

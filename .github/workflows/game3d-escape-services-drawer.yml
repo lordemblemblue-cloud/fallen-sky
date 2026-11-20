@@ -9,6 +9,8 @@ on:
       - 'src/components/game3d/game3dPauseMenuModel.mjs'
       - 'src/components/game3d/hud/JadeSoulHUD.jsx'
       - 'src/components/game3d/axe/services/game3dMenuHotkeys.mjs'
+      - 'src/components/game3d/axe/services/AXECharacterShortcutRouting.mjs'
+      - 'tests/game3d-clone-c-character-routing.test.mjs'
       - 'tests/game3d-escape-services-drawer-20261120.test.mjs'
       - '.github/workflows/game3d-escape-services-drawer.yml'
   workflow_dispatch:
@@ -29,6 +31,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Validate menu contracts and C/K toggle
-        run: node --test tests/game3d-escape-services-drawer-20261120.test.mjs tests/game3d-skillbook-acquired-and-service-shortcuts-20261119.test.mjs
+        run: node --test tests/game3d-escape-services-drawer-20261120.test.mjs tests/game3d-skillbook-acquired-and-service-shortcuts-20261119.test.mjs tests/game3d-clone-c-character-routing.test.mjs
       - name: Compile app
         run: npm run build

@@ -1,10 +1,10 @@
-// Shared C-key navigation decision. C belongs to the modern Character tab
-// inside Appearance, never the old AXE Character Hub / AttributesTab shell.
+// Shared C-key decision for any caller still using this legacy helper.
+// The live GameView uses resolveGame3DMenuToggle with the same rule:
+// C opens Character directly, then C closes the WHOLE workspace regardless
+// of whether the player is in Character, Equipment, Vanity or Aura.
 export function getAXECharacterShortcutAction({
-  activeGroupId = null, legacyHubOpen = false, activeTab = 'Character',
+  activeGroupId = null, legacyHubOpen = false,
 } = {}) {
   if (legacyHubOpen || activeGroupId !== 'character') return 'open';
-  // If the player's editing Equipment, Vanity or Aura, the first C returns
-  // to Character rather than abruptly closing the entire workspace.
-  return activeTab === 'Character' ? 'close' : 'focus';
+  return 'close';
 }
