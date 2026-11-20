@@ -9,7 +9,7 @@ import { evaluateAXEAuxiliaryBonuses } from './AXEAuxiliaryGearSystem';
 // equipmentStore/inventoryData files to remain as presentation adapters.
 
 export const AXE_EQUIPMENT_SLOT_DEFS = Object.freeze({
-  weapon:     Object.freeze({ id: 'weapon', label: 'Weapon', maxEquipped: 1, layer: 'combat' }),
+  weapon:     Object.freeze({ id: 'weapon', label: 'Weapon', maxEquipped: 3, layer: 'combat' }),
   helm:       Object.freeze({ id: 'helm', label: 'Helm', maxEquipped: 1, layer: 'combat' }),
   chest:      Object.freeze({ id: 'chest', label: 'Chest', maxEquipped: 1, layer: 'combat' }),
   gloves:     Object.freeze({ id: 'gloves', label: 'Gloves', maxEquipped: 1, layer: 'combat' }),
