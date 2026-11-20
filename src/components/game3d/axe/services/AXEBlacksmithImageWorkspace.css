@@ -1875,3 +1875,24 @@
     min-width:1180px;
   }
 }
+
+
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced {
+  flex:none;
+  margin:6px 0;
+  padding:7px 8px;
+  border:1px solid rgba(228,191,134,.3);
+  border-radius:8px;
+  background:rgba(18,35,50,.32);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced > summary {
+  cursor:pointer;
+  color:#e5d2ad;
+  font:600 11px/1.35 system-ui,sans-serif;
+  list-style:revert;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced[open] > summary {margin-bottom:8px}
+.axe-service-workspace--blacksmith .axe-blacksmith-advanced .axe-blacksmith-extra-details {
+  border-top:0;
+  padding-top:2px;
+}
