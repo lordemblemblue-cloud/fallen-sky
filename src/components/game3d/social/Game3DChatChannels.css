@@ -32,7 +32,6 @@
   border-color:rgba(244,208,134,.7);color:#fff0c9;background:rgba(217,186,119,.22);
 }
 .game3d-chat-channel-row button:disabled{opacity:.43;cursor:not-allowed}
-.game3d-chat-channel-hint{font-size:9px;color:#a9b9b7;white-space:nowrap}
 .game3d-chat-combat-event{white-space:normal;border-bottom:1px solid rgba(230,193,130,.08);padding:3px 0}
 .game3d-chat-messages{scrollbar-width:none;overscroll-behavior:contain}
 .game3d-chat-messages::-webkit-scrollbar{display:none}
@@ -61,30 +60,14 @@
 }
 .game3d-world-chat .game3d-chat-messages{min-height:30px;overflow-y:auto;flex:1 1 auto}
 .game3d-world-chat .game3d-chat-channel-row{flex:0 0 auto;justify-content:flex-start;pointer-events:auto}
+/* Never replace the real chat with a launcher. Keep its messages, frame and
+   channel controls mounted and softly translucent until typing or activity.
+   Existing HUD settings can still hide or pin the dock explicitly. */
 .game3d-view .game3d-world-chat.is-idle:not(.is-pinned) {
-  opacity:1;visibility:visible;pointer-events:none;
+  opacity:.24;visibility:visible;pointer-events:auto;
 }
-.game3d-world-chat.is-idle:not(.is-pinned) .game3d-chat-channel-row,
-.game3d-world-chat.is-idle:not(.is-pinned) .game3d-chat-surface{
-  opacity:0;visibility:hidden;pointer-events:none;
-  max-height:0;min-height:0;overflow:hidden;padding:0;border:0;
-}
-.game3d-chat-awaken {
-  display:inline-flex;align-items:center;align-self:flex-start;gap:7px;
-  min-height:30px;padding:5px 10px;border-radius:9px;
-  border:1px solid rgba(215,187,127,.48);
-  background:rgba(7,22,32,.65);
-  color:rgba(241,227,199,.82);
-  font:600 11px/1.2 system-ui,sans-serif;
-  backdrop-filter:blur(10px);
-  box-shadow:0 3px 11px rgba(0,0,0,.2);
-  pointer-events:auto;cursor:pointer;
-}
-.game3d-chat-awaken kbd{
-  color:rgba(196,225,235,.8);font:500 10px/1.2 system-ui,sans-serif;
-}
-.game3d-chat-awaken:hover,.game3d-chat-awaken:focus-visible{
-  color:#fff;border-color:#f3dab0;outline:2px solid rgba(200,228,241,.42);
+.game3d-view .game3d-world-chat:focus-within {
+  opacity:1;visibility:visible;pointer-events:auto;
 }
 .game3d-view .game3d-world-chat.is-expanded,
 .game3d-view .game3d-world-chat.is-typing,
