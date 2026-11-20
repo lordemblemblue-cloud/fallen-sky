@@ -151,7 +151,7 @@ export default function PauseMenu({
   const updateMotion=next=>{
     const enabled=!!next;
     setMenuMotion(enabled);
-    try{localStorage.setItem('game3d_menu_motion',String(enabled));}catch{}
+    try{localStorage.setItem('game3d_menu_motion',String(enabled));}catch{/* Browser storage may be unavailable in private mode. */}
     onMotionChange?.(enabled);
   };
   useEffect(()=>{
@@ -339,7 +339,7 @@ export default function PauseMenu({
   const changeGpuStats=next=>{
     const enabled=!!next;
     setGpuStats(enabled);
-    try{localStorage.setItem(RENDER_STATS_STORAGE_KEY,enabled?'1':'0');}catch{}
+    try{localStorage.setItem(RENDER_STATS_STORAGE_KEY,enabled?'1':'0');}catch{/* Browser storage may be unavailable in private mode. */}
     window.dispatchEvent(new CustomEvent('game3dRenderStatsChanged',{detail:{enabled}}));
   };
   const changeDisplay=next=>{
@@ -355,7 +355,7 @@ export default function PauseMenu({
   const changeGpuProfile=next=>{
     const profile=normalizeCloneGPUProfile(next);
     setGpuProfile(profile);
-    try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{}
+    try{localStorage.setItem(CLONE_GPU_PROFILE_KEY,profile);}catch{/* Browser storage may be unavailable in private mode. */}
     rememberGame3DPlatformSetting({gpuProfile:profile});
     window.__axe3dCloneGovernor?.setProfile?.(profile);
     window.dispatchEvent(new CustomEvent('game3dCloneGPUProfileChanged',{detail:{profile}}));
@@ -375,7 +375,7 @@ export default function PauseMenu({
     setBridgeReport(report);
     setBridgeError('');
     window.__gw3dGpuBridge=report;
-    try{sessionStorage.setItem(GAME3D_GPU_BRIDGE_SESSION_KEY,JSON.stringify(report));}catch{}
+    try{sessionStorage.setItem(GAME3D_GPU_BRIDGE_SESSION_KEY,JSON.stringify(report));}catch{/* Browser storage may be unavailable in private mode. */}
   };
   const connectGpuBridge=async()=>{
     setBridgeError('');
