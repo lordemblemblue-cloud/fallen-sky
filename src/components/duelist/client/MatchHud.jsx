@@ -1,6 +1,7 @@
 // The match HUD (simple on purpose): the score line at the top, the countdown and "Fight!", the respawn
 // note, the feed of what happened, and the result with the scoreboard.
 import { TEAM_COLORS } from './matchProps.mjs';
+import { captureText, pointState } from './glassHud.mjs';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 const clock = (s) => (s === null || s === undefined ? '' : `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`);
@@ -53,25 +54,43 @@ export function ScoreLine({ view }) {
     );
   }
   return (
-    <div className="duelist-scoreline">
-      <div className="duelist-scoreline-mode">{view.name}{view.clockLeft !== null ? ` · ${clock(view.clockLeft)}` : ''}</div>
-      {middle && <div className="duelist-scoreline-score">{middle}</div>}
-      {view.controlPoints && (
-        <div className="duelist-scoreline-flags" aria-label="Three-Point Control objectives">
-          {view.controlPoints.map(point => (
-            <span key={point.id}
-              title={point.contested ? `${point.id}: contested` : point.capturing ? `${point.id}: ${point.capturing} capturing ${Math.round(point.progress * 100)}%` : `${point.id}: ${point.owner || 'neutral'}`}
-              style={{ color: point.owner === 'red' ? hex(TEAM_COLORS.red) : point.owner === 'blue' ? hex(TEAM_COLORS.blue) : '#d6e1eb', fontWeight: 800 }}>
-              {point.id}{point.contested ? ' ⚔' : point.capturing ? ` ${Math.round(point.progress * 100)}%` : ''}
-            </span>
-          ))}
+    <div className={view.controlPoints ? 'duelist-scoreline duelist-scoreline--control' : 'duelist-scoreline'}>
+      {view.controlPoints ? (
+        <div className="duelist-control-rail" role="group" aria-label="Three-Point Control score and objectives">
+          <div className="duelist-control-team duelist-control-team--red">
+            <strong>{Math.floor(view.teamScores.red)}%</strong>
+            <span>RED TEAM</span>
+          </div>
+          <div className="duelist-control-centre">
+            <div className="duelist-control-points">
+              {view.controlPoints.map(point => (
+                <div key={point.id} className="duelist-control-point" data-state={pointState(point)}
+                  data-owner={point.owner || 'neutral'}
+                  title={captureText(point)} aria-label={captureText(point)}>
+                  <strong>{point.id}</strong>
+                  {point.contested && <small aria-hidden="true">!</small>}
+                  {!point.contested && point.capturing && <small aria-hidden="true">{Math.round(Math.min(1, Math.max(0, point.progress || 0)) * 100)}%</small>}
+                </div>
+              ))}
+            </div>
+            <span className="duelist-control-caption">CAPTURE · {view.clockLeft !== null ? clock(view.clockLeft) : 'FIRST TO 100%'}</span>
+          </div>
+          <div className="duelist-control-team duelist-control-team--blue">
+            <strong>{Math.floor(view.teamScores.blue)}%</strong>
+            <span>BLUE TEAM</span>
+          </div>
         </div>
-      )}
-      {view.flags && (
-        <div className="duelist-scoreline-flags">
-          <FlagMark team="red" flag={view.flags.red} />
-          <FlagMark team="blue" flag={view.flags.blue} />
-        </div>
+      ) : (
+        <>
+          <div className="duelist-scoreline-mode">{view.name}{view.clockLeft !== null ? ` · ${clock(view.clockLeft)}` : ''}</div>
+          {middle && <div className="duelist-scoreline-score">{middle}</div>}
+          {view.flags && (
+            <div className="duelist-scoreline-flags">
+              <FlagMark team="red" flag={view.flags.red} />
+              <FlagMark team="blue" flag={view.flags.blue} />
+            </div>
+          )}
+        </>
       )}
     </div>
   );
