@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { TEAM_COLORS } from './matchProps.mjs';
 import './glassVictory.css';
+import { resultOutcome, resultsScoreText, VICTORY_HOLD_MS } from './resultPresentation.mjs';
 import { captureText, pointState } from './glassHud.mjs';
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
@@ -183,17 +184,15 @@ export function Result({ view, myTeam, onAgain, online = false }) {
       return undefined;
     }
     setShowBoard(false);
-    const timer = setTimeout(() => setShowBoard(true), 2300);
+    const timer = setTimeout(() => setShowBoard(true), VICTORY_HOLD_MS);
     return () => clearTimeout(timer);
   }, [view.phase, view.winner]);
   if (view.phase !== 'over') return null;
   const w = view.winner;
-  const won = w === meOf(view) || (myTeam && w === myTeam);
-  const outcome = w === 'draw' ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT';
-  const teams = view.mode === 'tdm' || view.mode === 'ctf' || view.mode === 'football' || view.mode === 'control';
-  const score = view.teamScores || { red: 0, blue: 0 };
-  const scoreText = teams ? 'Red ' + (view.mode === 'control' ? Math.floor(score.red) + '%' : score.red)
-    + '   •   ' + (view.mode === 'control' ? Math.floor(score.blue) + '%' : score.blue) + ' Blue' : '';
+  const outcome = resultOutcome(view, myTeam);
+  const won = outcome === 'VICTORY';
+  const scoreText = resultsScoreText(view);
+  const teams = Boolean(scoreText);
   return (
     <div className={'duelist-win-layer ' + (showBoard ? 'is-revealed ' : '') + (won ? 'is-victory' : w === 'draw' ? 'is-draw' : 'is-defeat')} data-testid="duelist-result-layer" role="status" aria-live="polite">
       <div className="duelist-win-burst" aria-hidden="true" />
