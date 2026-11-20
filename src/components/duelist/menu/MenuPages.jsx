@@ -102,6 +102,7 @@ export function DuelistHub() {
           <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-hub-brief"><BookOpen size={20} /> STORY CAMPAIGN</Link>
           <Link to="/duelist-next/$page" params={{ page: 'join' }} className="duelist-hub-brief"><Globe2 size={20} /> LIVE MATCHES {lobby.online ? `· ${lobby.players}` : ''}</Link>
           <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-hub-brief"><User size={20} /> SELECT FIGHTER</Link>
+          <Link to="/duelist-classic" className="duelist-hub-brief"><Swords size={20} /> CLASSIC ARENA</Link>
         </div>
 
         <nav className="duelist-hub-nav" aria-label="Home actions">
