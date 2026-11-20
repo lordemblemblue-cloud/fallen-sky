@@ -1,0 +1,82 @@
+/* Compact acquired collection shared by the live and classic Skill Book views.
+ * Read-only ownership badges do not bypass combat, mastery or slot validation. */
+.axe-acquired-skills {
+  flex:0 0 auto;
+  min-width:0;
+  margin:4px 12px 0;
+  padding:7px 12px 8px;
+  border:1px solid rgba(227,191,127,.48);
+  border-radius:11px;
+  background:linear-gradient(110deg,rgba(19,36,50,.78),rgba(27,29,49,.64));
+  color:#f4dfb8;
+  font:12px/1.3 Georgia,'Times New Roman',serif;
+}
+.axe-acquired-heading {
+  display:flex;
+  align-items:center;
+  min-height:22px;
+  flex-wrap:wrap;
+  gap:7px;
+}
+.axe-acquired-heading > strong {font-weight:600;white-space:nowrap}
+.axe-acquired-heading > small {color:#d0dfd8;white-space:nowrap}
+.axe-acquired-heading button {
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  margin-left:auto;
+  padding:3px 7px;
+  border:1px solid #dfc28a80;
+  border-radius:5px;
+  color:#f5e2be;
+  background:rgba(26,40,54,.68);
+  cursor:pointer;
+}
+.axe-acquired-heading button:focus-visible {
+  outline:2px solid #ffdc9c;
+  outline-offset:2px;
+}
+.axe-acquired-items {
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:5px;
+  max-height:82px;
+  overflow-y:auto;
+  scrollbar-width:thin;
+}
+.axe-acquired-item {
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  max-width:100%;
+  min-height:24px;
+  padding:3px 7px;
+  border:1px solid rgba(207,171,112,.36);
+  border-radius:7px;
+  background:rgba(12,26,39,.5);
+}
+.axe-acquired-item > strong {
+  max-width:165px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:500;
+}
+.axe-acquired-item > small {
+  color:#b4e4bf;
+  white-space:nowrap;
+}
+.axe-acquired-item[title^='Collected'] > small {color:#ffdd98}
+.axe-acquired-empty {
+  color:#c7c3b8;
+  margin:4px 0 0;
+  font-size:11px;
+}
+@media (max-width:620px) {
+  .axe-acquired-skills {margin:3px 6px 0;padding:5px 7px}
+  .axe-acquired-heading {gap:4px}
+  .axe-acquired-heading > strong {font-size:11px}
+  .axe-acquired-items {max-height:56px;overflow-x:auto;flex-wrap:nowrap}
+}
