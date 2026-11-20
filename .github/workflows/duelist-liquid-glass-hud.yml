@@ -1,0 +1,50 @@
+name: Duelist Liquid Glass HUD Validation
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/GlassHud.jsx'
+      - 'src/components/duelist/client/MatchHud.jsx'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'src/components/duelist/client/glassHud.mjs'
+      - 'src/components/duelist/client/resultPresentation.mjs'
+      - 'src/components/duelist/client/glassVictory.css'
+      - 'src/components/duelist/client/duelist.css'
+      - 'public/ui/duelist/**'
+      - 'tests/duelist-glass-*.test.mjs'
+      - '.github/workflows/duelist-liquid-glass-hud.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duelist-glass-hud-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  template-and-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run original glass HUD and victory contract tests
+        run: node --test tests/duelist-glass-hud.test.mjs tests/duelist-glass-victory.test.mjs
+  ui-parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify Duelist UI parsing and module imports
+        run: node scripts/verify-duelist-ui.mjs
+      - name: Lint HUD components
+        run: npx eslint src/components/duelist/client/DuelistGame.jsx src/components/duelist/client/GlassHud.jsx src/components/duelist/client/MatchHud.jsx src/components/duelist/client/glassHud.mjs src/components/duelist/client/resultPresentation.mjs
