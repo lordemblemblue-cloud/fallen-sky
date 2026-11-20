@@ -130,6 +130,7 @@ export function awardSpecialCharge(meter, event) {
   if (!validMeter(meter) || typeof event !== 'string' || !Object.hasOwn(SPECIAL_CHARGE, event)) return null;
   return clamp(meter + SPECIAL_CHARGE[event], 0, SPECIAL_MAX);
 }
+const finitePoint = p => p && Number.isFinite(p.x) && Number.isFinite(p.z);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 function behindTarget(attacker, target) {
   const dx = attacker.x - target.x;
@@ -146,10 +147,12 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
   if (!validMeter(meter)) return { allowed: false, reason: 'invalid-meter' };
-  if (!actor || !Number.isFinite(actor.hp) || actor.hp <= 0 || !actor.position) return { allowed: false, reason: 'actor-defeated' };
+  if (!actor || !Number.isFinite(actor.hp) || actor.hp <= 0) return { allowed: false, reason: 'actor-defeated' };
+  if (!finitePoint(actor.position) || !Number.isFinite(now)) return { allowed: false, reason: 'invalid-context' };
   if (meter + 1e-8 < def.special.cost) return { allowed: false, reason: 'not-charged' };
   if (def.special.target === 'enemy') {
     if (!target?.position || !Number.isFinite(target.hp) || !Number.isFinite(target.maxHp) || target.maxHp <= 0) return { allowed: false, reason: 'target-required' };
+    if (!finitePoint(target.position)) return { allowed: false, reason: 'invalid-context' };
     if (target.hp <= 0) return { allowed: false, reason: 'target-defeated' };
     if (actor.id && target.id && actor.id === target.id) return { allowed: false, reason: 'self-target' };
     if (actor.team != null && target.team === actor.team) return { allowed: false, reason: 'friendly-target' };
