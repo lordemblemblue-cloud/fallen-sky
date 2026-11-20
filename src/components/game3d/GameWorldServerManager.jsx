@@ -85,7 +85,40 @@ export default function GameWorldServerManager({ showHud = false }) {
     return () => { cancelled = true; clearInterval(interval); cancelAnimationFrame(retryHandle); };
   }, [user?.id]);
 
-  // Status pill — bottom-left, liquid-glass style
+
+  // Follow the actual chat bottom rather than the minimap. Never reposition
+  // the chat itself, and leave combat/PvP and the server presence logic alone.
+  const pillRef = useRef(null);
+  const [chatAnchor, setChatAnchor] = useState(null);
+  useEffect(() => {
+    if (!showHud) return;
+    const chat = document.querySelector('.game3d-view .game3d-world-chat');
+    if (!chat) return; // The original minimap-area fallback still applies.
+    const update = () => {
+      const bounds = chat.getBoundingClientRect();
+      const pill = pillRef.current?.getBoundingClientRect();
+      const pillWidth = pill?.width || 150;
+      const pillHeight = pill?.height || 25;
+      const left = Math.max(5, Math.min(bounds.left, window.innerWidth - pillWidth - 5));
+      const below = bounds.bottom + Math.min(6, Math.max(1, window.innerHeight - bounds.bottom - pillHeight - 4));
+      const top = Math.max(4, Math.min(below, window.innerHeight - pillHeight - 3));
+      setChatAnchor(previous => previous?.left === left && previous?.top === top
+        ? previous : {left, top});
+    };
+    const resize = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(update) : null;
+    resize?.observe(chat);
+    const changes = typeof MutationObserver !== 'undefined' ? new MutationObserver(update) : null;
+    changes?.observe(chat, {attributes:true, attributeFilter:['class','style']});
+    window.addEventListener('resize', update);
+    update();
+    return () => {
+      resize?.disconnect();
+      changes?.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [showHud]);
+
+  // Connection pill follows chat without affecting chat position
   const statusConfig = {
     connecting: { color: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-400/30', label: 'Connecting...' },
     connected: { color: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-400/30', label: 'Online' },
@@ -98,8 +131,13 @@ export default function GameWorldServerManager({ showHud = false }) {
   if(!showHud)return null; // presence polling continues; Settings owns the normal presentation.
   return (
     <div
+      ref={pillRef}
       className="game3d-online-pill fixed z-40 pointer-events-none flex items-center gap-2 px-2 py-1 rounded-full text-[10px] font-medium tracking-wide backdrop-blur-md"
       style={{
+        ...(chatAnchor ? {
+          '--axe-connection-top': chatAnchor.top + 'px',
+          '--axe-connection-left': chatAnchor.left + 'px',
+        } : {}),
         background: 'rgba(10, 14, 20, 0.6)',
         border: `1px solid ${cfg.border.replace('border-', '').replace('/30', '')}`,
       }}

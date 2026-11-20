@@ -19,12 +19,13 @@
   width: max(120px, calc(100% - var(--axe-map-left) - var(--axe-map-size) - 22px - clamp(215px, 19vw, 306px) - var(--axe-map-left) - 16px)) !important;
 }
 .game3d-view .game3d-online-pill {
-  top: calc(var(--axe-map-bottom) + 8px) !important;
-  left: calc(var(--axe-map-left) + var(--axe-map-size) / 2) !important;
+  /* Chat is measured by GameWorldServerManager; fallback is the old HUD area. */
+  top: var(--axe-connection-top, calc(var(--axe-map-bottom) + 8px)) !important;
+  left: var(--axe-connection-left, var(--axe-map-left)) !important;
   right: auto !important;
   bottom: auto !important;
-  transform: translateX(-50%) scale(var(--game3d-community-scale, 1)) !important;
-  transform-origin: center top !important;
+  transform: scale(var(--game3d-community-scale, 1)) !important;
+  transform-origin: left top !important;
 }
 /* Quest tracker now takes the space beneath the left map vacated by the old
    boxed PvP card. Preserve space for Online status, target HP and the brief
