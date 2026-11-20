@@ -716,7 +716,11 @@ export default function GameView() {
       <AXEVerifiedQuestbookMount172 />
       <AXEQuestTrailMount region={worldRegion} enabled={!services.active && !services.expanded} />
       <GameHUD region={worldRegion} serviceMode={services.active} servicesExpanded={services.expanded}
-        showServicesNavigation={false} activeServiceGroup={services.groupId}
+        // Restore the original Services/subpage selector only while an actual
+        // workspace is open. In gameplay (including after C/K/Esc closes)
+        // no Services button or orphaned subpages remain.
+        showServicesNavigation={services.active} activeServiceGroup={services.groupId}
+        onToggleServices={() => services.controller.toggle()}
         onSelectServiceGroup={groupId => {
           setProgressionOpen(false); setStoreOpen(false); setPauseMenuOpen(false);
           setFriendsListOpen(false); setClanOverlayOpen(false);
@@ -871,7 +875,7 @@ export default function GameView() {
       {/* Pause menu — opened by ESC */}
       <PauseMenu
         open={pauseMenuOpen}
-        onOpenService={groupId => {
+        onOpenService={(groupId, serviceId = null) => {
           // Escape is a launcher, never a second menu layered behind a
           // service. The page opens directly with no floating Services strip.
           setPauseMenuOpen(false);
@@ -879,7 +883,7 @@ export default function GameView() {
           setProgressionOpen(false);setStoreOpen(false);
           setFriendsListOpen(false);setClanOverlayOpen(false);
           setRequestedService(null);setRequestedServiceItemId(null);setRequestedCharacterTab(null);
-          void services.controller.open(groupId);
+          void services.controller.open(groupId, serviceId ? { serviceId } : {});
         }}
         onOpenMap={() => {
           setPauseMenuOpen(false);
