@@ -249,6 +249,9 @@ export default function PauseMenu({
       if(event.key!=='Escape'||event.repeat)return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      // A world drawer closes completely with one Escape from ANY section;
+      // only dangerous exit confirmation gets its own cancel step.
+      if (!entry && !confirmAction) { onClose(); return; }
       const next=game3dPauseEscape(view,confirmAction);
       setConfirmAction(next.confirmAction);
       if(next.close)onClose();
