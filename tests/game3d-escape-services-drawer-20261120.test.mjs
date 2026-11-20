@@ -25,17 +25,17 @@ test('K toggles Skill Book and switches from Character',()=>{
   assert.equal(getGame3DMenuShortcut({code:'KeyC',target:{closest:()=>null}}),'character');
   assert.equal(getGame3DMenuShortcut({code:'KeyK',target:{closest:()=>null}}),'skills');
 });
-test('Escape sections now offer Services and Scoreboard, while retaining Settings pages',()=>{
-  const ids = GAME3D_PAUSE_SECTIONS.map(section=>section.id);
-  for(const id of ['services','scoreboard','audio','controls','graphics','ui','community','session'])
+test('Launcher owns Services and Scoreboard; settings shows only option categories',()=>{
+  const ids=GAME3D_PAUSE_SECTIONS.map(section=>section.id);
+  for(const id of ['services','scoreboard','audio','controls','graphics','ui','community'])
     assert.ok(ids.includes(id),id);
   const pause=read('src/components/game3d/PauseMenu.jsx');
-  assert.match(pause,/\['session','services','scoreboard'\]\.includes\(section\.id\)/);
-  assert.match(pause,/AXE_SERVICE_GROUPS\.filter\(group=>group\.id!=='character'\)/);
-  assert.match(pause,/onOpenService\?\.\(group\.id\)/);
+  assert.match(pause,/!\['overview','session','services','scoreboard'\]\.includes\(section\.id\)/);
+  assert.match(pause,/axe3d-pause__launcher-page-grid/);
+  assert.match(pause,/onOpenService\?\.\(group\.id,serviceId\)/);
   assert.match(pause,/presence\.count/);
   assert.match(pause,/if \(!entry && !confirmAction\) \{ onClose\(\); return; \}/);
-  assert.match(pause,/onClick=\{\(\)=>selectView\('graphics'\)\}/);
+  assert.doesNotMatch(pause,/className="axe3d-pause__settings-back"/);
 });
 test('Services/subpages appear only while an active workspace is open, and Escape clears overlays',()=>{
   const hud=read('src/components/game3d/hud/JadeSoulHUD.jsx');
@@ -69,20 +69,18 @@ test('Escape initially shows a compact square-tile launcher, not the full settin
   assert.match(pause,/data-menu-surface=\{launcher\?'launcher':'settings'\}/);
 });
 
-test('Each service is a real clickable tile; gear alone shows existing Settings',()=>{
+test('Services and Faction are real accessible tiles with no redundant settings back button',()=>{
   const pause=read('src/components/game3d/PauseMenu.jsx');
-  for(const key of ["id:'character'","id:'skills'","id:'quest_logbook'","id:'companion'","id:'spiritual'","id:'blacksmith'"])
+  for(const key of ["id:'character'","id:'skills'","id:'quest_logbook'","id:'companion'","id:'spiritual'","id:'blacksmith'","id:'faction'"])
     assert.ok(pause.includes(key),key);
-  assert.match(pause,/QUICK_SERVICE_TILES\.filter\(tile=>AXE_SERVICE_GROUPS\.some/);
-  assert.match(pause,/onClick=\{\(\)=>onOpenService\?\.\(tile\.id\)\}/);
+  assert.match(pause,/QUICK_SERVICE_TILES\.map/);
+  assert.match(pause,/setLauncherGroup\(previous=>previous===tile\.id\?null:tile\.id\)/);
   assert.match(pause,/aria-label="Open game settings" title="Settings" onClick=\{openSettings\}/);
-  assert.match(pause,/const openSettings=\(\)=>\{selectView\('graphics'\);setSurface\('settings'\);\}/);
-  assert.match(pause,/className="axe3d-pause__settings-back"/);
-  assert.match(pause,/onClick=\{\(\)=>setSurface\('launcher'\)\}/);
+  assert.match(pause,/const openSettings=\(\)=>\{selectView\('graphics'\);setSurface\('settings'\);setLauncherGroup\(null\);\}/);
+  assert.doesNotMatch(pause,/className="axe3d-pause__settings-back"/);
   assert.match(pause,/onClick=\{openScoreboard\}/);
   assert.match(pause,/onClick=\{\(\)=>onOpenMap\?\.\(\)\}/);
 });
-
 test('Letter hotkeys work even while launcher is open, and input remains guarded',()=>{
   const pause=read('src/components/game3d/PauseMenu.jsx');
   const game=read('src/pages/GameView.jsx');
@@ -94,23 +92,21 @@ test('Letter hotkeys work even while launcher is open, and input remains guarded
   assert.match(pause,/event\.key!=='Escape'\|\|event\.repeat/);
 });
 
-test('Escape launcher shows every real Service group and exposes its registered subpages',()=>{
+test('Service subpages are mobile-size tiles on demand rather than a stacked accordion',()=>{
   const pause=read('src/components/game3d/PauseMenu.jsx');
-  const css=read('src/components/game3d/PauseMenu.css');
+  const gold=read('src/components/game3d/PauseMenuGold.css');
   const appearance=read('src/components/game3d/axe/services/AXEAppearanceWorkspace.jsx');
   assert.match(pause,/label:'Spirituality',hotkey:'J'/);
-  assert.match(pause,/className="axe3d-pause__launcher-subpages" aria-label="All service subpages"/);
-  assert.match(pause,/AXE_SERVICE_GROUPS\.map\(group=>\{/);
-  assert.match(pause,/group\.visibleServiceIds \|\| group\.serviceIds/);
-  assert.match(pause,/<details className="axe3d-pause__launcher-subpage-group" key=\{group\.id\}>/);
+  assert.match(pause,/AXE_SERVICE_GROUPS\.find\(item=>item\.id===launcherGroup\)/);
+  assert.match(pause,/group\.visibleServiceIds\|\|group\.serviceIds/);
+  assert.match(pause,/className="axe3d-pause__launcher-page-grid"/);
+  assert.doesNotMatch(pause,/<details className="axe3d-pause__launcher-subpage-group"/);
   assert.match(pause,/onOpenService\?\.\(group\.id,serviceId\)/);
   assert.match(pause,/getAXEService\(serviceId\)\?\.label/);
-  assert.match(css,/\.axe3d-pause__launcher-subpage-buttons/);
-  // A direct Cape choice must open Cape content, not silently return to Character.
+  assert.match(gold,/\.axe3d-pause__launcher-page-grid button/);
   assert.match(appearance,/serviceId === 'cape' \? 'Vanity' : 'Character'/);
   assert.match(appearance,/setDetail\(serviceId === 'cape' \? 'cape' : ''\)/);
 });
-
 test('C/K/Escape close both the active workspace and the expanded Services row',()=>{
   const game=read('src/pages/GameView.jsx');
   const controller=read('src/components/game3d/axe/services/AXEServiceModeController.js');

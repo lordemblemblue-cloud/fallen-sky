@@ -1,3 +1,4 @@
+import {game3dActionForCode} from '../../player/Game3DKeybinds.mjs';
 // Single source of truth for Game 3D's unmodified service/menu hotkeys.
 // World and clone load this same table; combat shortcuts with modifiers remain separate.
 export const GAME3D_MENU_HOTKEYS = Object.freeze({
@@ -30,5 +31,6 @@ export function getGame3DMenuShortcut(event) {
     event.ctrlKey || event.altKey || event.metaKey || event.shiftKey || event.isComposing) return null;
   const target = event.target;
   if (target?.isContentEditable || target?.closest?.(EDITABLE_TARGETS)) return null;
-  return GAME3D_MENU_HOTKEYS[event.code] || null;
+  const binding=game3dActionForCode(event.code);
+  return binding?.kind==='menu'?binding.id:null;
 }
