@@ -3,11 +3,11 @@ import { Activity, Check, Crown, Eye, Feather, Gem, HeartPulse, Shield, Shirt, S
 import { getPlayerHUD, subscribePlayerHUD, applyAttributeAllocationPlan } from '../../playerHUDStore';
 import { computeDerivedStats, migrateBaseStats } from '../../statsSystem';
 import { getBaseAttributeGrowthPreview, formatAttributeGrowth } from './AXEAttributeGrowthPreview.mjs';
-import { getAllAXEEquipmentItems, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
+import { getAllAXEEquipmentItems, getActiveEquippedAXEWeapon, subscribeAXEEquipmentInventory } from '../equipment/AXEEquipmentInventoryStore';
 import { subscribeCharacterChange } from '../../characterStorage';
 import { getActiveCharacter, subscribeCharacters } from '../../characterStore';
 import { AXE_EQUIPMENT_SLOT_DEFS } from '../equipment/AXEEquipmentSystem';
-import { inferAXEWeaponRole } from '../weapons/AXEWeaponIdentity';
+import { getAXERoleWeapon, subscribeAXEHUDWeaponRoles } from '../weapons/AXEWeaponRoleSlots';
 import { getWingsState, subscribeWings } from '../../progression/wingsStore';
 import { getAXECapeState, subscribeAXECapes } from '../progression/AXECapeStore';
 import { getAXECapeDefinition } from '../progression/AXECapeSystem';
@@ -25,9 +25,8 @@ const ATTRIBUTES = Object.freeze([
   { key:'strength', name:'Strength', Icon:Shield, info:'Improves physical damage and attack accuracy.' },
   { key:'focus', name:'Spirit', Icon:Sparkles, info:'Improves Chi, spirit damage and recovery.' },
 ]);
-// Display the three weapon identities as dedicated positions beside the model.
-// The inventory still decides which owned weapons can be equipped; these tiles
-// never grant an extra equipped weapon or duplicate its stats.
+// Three real equipped weapon positions share the same instances as the HUD.
+// Only the currently drawn weapon contributes combat stats.
 const WEAPON_ROLE_SLOTS = Object.freeze([
   { role:'offensive', label:'Damage' },
   { role:'defensive', label:'Defense' },
@@ -72,6 +71,7 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
   const [hud,setHud]=useState(getPlayerHUD);
   const [activeCharacter,setActiveCharacter]=useState(getActiveCharacter);
   const [equipment,setEquipment]=useState(getAllAXEEquipmentItems);
+  const [,setWeaponSlotsVersion]=useState(0);
   const [wings,setWings]=useState(getWingsState);
   const [capes,setCapes]=useState(getAXECapeState);
   const [vanity,setVanity]=useState(getAXEVanityState);
@@ -84,6 +84,7 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
   useEffect(()=>subscribeCharacters(state=>setActiveCharacter(
     state.roster.find(character=>character.id===state.activeId)||null)),[]);
   useEffect(()=>subscribeAXEEquipmentInventory(state=>setEquipment(state.items)),[]);
+  useEffect(()=>subscribeAXEHUDWeaponRoles(()=>setWeaponSlotsVersion(n=>n+1)),[]);
   useEffect(()=>subscribeWings(setWings),[]);
   useEffect(()=>subscribeAXECapes(setCapes),[]);
   useEffect(()=>subscribeAXEVanity(setVanity),[]);
@@ -121,8 +122,8 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
     }
     return null;
   };
-  const roleWeapon = role => liveEquipment.find(item =>
-    item.slot === 'weapon' && inferAXEWeaponRole(item) === role) || null;
+  const roleWeapon = role => getAXERoleWeapon(role);
+  const activeWeaponId = getActiveEquippedAXEWeapon()?.instanceId;
   const equippedDisplayCount = CHARACTER_DISPLAY_SLOTS.filter(([slot,index]) =>
     slotItem(slot,index)).length + WEAPON_ROLE_SLOTS.filter(({role}) => roleWeapon(role)).length;
   const derived=hud.derived||{};
@@ -158,9 +159,10 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
     const gear=roleWeapon(role);
     return <button key={role} type="button"
       className="axe-app-viewer-slot axe-char-viewer-slot axe-char-weapon-slot"
-      title={(gear?.name || label+' weapon empty')+' · Open Equipment to change weapons'}
-      aria-label={label+' weapon: '+(gear?.name||'Empty')+'. Open Equipment'}
-      onClick={onOpenEquipment}>
+      aria-pressed={!!gear&&gear.instanceId===activeWeaponId}
+      title={(gear?.name || label+' slot empty')+' · Open Equipment to equip this slot'}
+      aria-label={label+' weapon: '+(gear?.name||'Empty')+'. Open Equipment to equip'}
+      onClick={()=>onOpenEquipment?.(role)}>
       <span className="axe-app-viewer-slot-art"><GearIcon item={gear || {slot:'weapon'}} /></span>
       <small>{label}</small><span className="axe-app-viewer-item-name">{gear?.name||'—'}</span>
     </button>;
@@ -184,8 +186,10 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
     <div className="axe-char-layout">
       <section className="axe-app-model-stage axe-char-model-stage" aria-label="Player 3D viewer with all supported equipment slots">
         <div className="axe-app-model-glow" aria-hidden="true"/>
-        <div className="axe-app-viewer-gear axe-app-viewer-gear--left" aria-label="Damage weapon and equipped left-side gear">
-          {weaponRoleSlot(WEAPON_ROLE_SLOTS[0])}
+        <div className="axe-weapon-loadout-rack" aria-label="Three equipped weapon slots">
+          {WEAPON_ROLE_SLOTS.map(weaponRoleSlot)}
+        </div>
+        <div className="axe-app-viewer-gear axe-app-viewer-gear--left" aria-label="Equipped left-side gear">
           {CHARACTER_DISPLAY_SLOTS.slice(0,SLOT_SPLIT).map(equippedSlot)}
         </div>
         <div className="axe-app-model-center axe-char-model-center">
@@ -193,8 +197,7 @@ export default function AXECharacterWorkspace({ embedded=false, onOpenEquipment 
             <div className="axe-app-model-host"><PlayerModel/></div>
           </Suspense>
         </div>
-        <div className="axe-app-viewer-gear axe-app-viewer-gear--right" aria-label="Defense and Range weapons and equipped right-side gear">
-          {WEAPON_ROLE_SLOTS.slice(1).map(weaponRoleSlot)}
+        <div className="axe-app-viewer-gear axe-app-viewer-gear--right" aria-label="Equipped right-side gear">
           {CHARACTER_DISPLAY_SLOTS.slice(SLOT_SPLIT).map(equippedSlot)}
         </div>
         <div className="axe-app-model-caption">
