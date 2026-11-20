@@ -107,9 +107,10 @@ void main(){
   #include <fog_fragment>
 }`;
 
-function buildVeilGeometry(heightAt){
+function buildVeilGeometry(heightAt,area=null){
   const pos=[],sheet=[],base=[],side=[],colA=[],colB=[],index=[];
   for(const line of WOLFVEIL_AREA_VEIL_LINES){
+    if(area&&!line.areas.includes(area))continue;
     const samples=[];
     for(let i=0;i<line.points.length-1;i++){
       const [ax,az]=line.points[i],[bx,bz]=line.points[i+1];
@@ -243,13 +244,13 @@ function labelTexture(title,subtitle,color){
 }
 
 export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeight,
-  labels=typeof document!=='undefined'}={}){
+  labels=typeof document!=='undefined',area=null}={}){
   if(!world?.group)throw new TypeError('Wolfveil area gates require the authoritative WolfveilBuilder');
   const root=new THREE.Group();
   root.name='WV_Portal_AreaVeilsAndToriiGates';
   root.userData={wolfveilAreaShared:true,decorativeOnly:true};
   world.group.add(root);
-  const gates=wolfveilAreaGates().map(gate=>{
+  const gates=wolfveilAreaGates().filter(gate=>!area||gate.areas.includes(area)).map(gate=>{
     const posts=wolfveilAreaGatePosts(gate);
     // Bridge gates' posts run past the deck down to the ground below.
     const postBottoms=posts.map(([x,z])=>Math.min(heightAt(x,z),gate.baseY)-.6);
@@ -268,7 +269,7 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     return material;
   };
   const veilMaterial=makeShader('WV_SpiritVeil',VEIL_VERTEX,VEIL_FRAGMENT);
-  const veil=new THREE.Mesh(buildVeilGeometry(heightAt),veilMaterial);
+  const veil=new THREE.Mesh(buildVeilGeometry(heightAt,area),veilMaterial);
   veil.name='WV_SpiritVeil_AreaBorders';
   veil.frustumCulled=false;veil.renderOrder=3;
   const materials={

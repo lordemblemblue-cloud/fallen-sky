@@ -820,7 +820,14 @@ test('the live game world mounts the five-area loader, portals and platform sett
   const world=source('src/components/game3d/GameWorld3D.jsx');
   assert.match(world,/createWolfveilAreaLoader\(\{\s*world:wolfveilVillage\.world/);
   assert.match(world,/portals:WOLFVEIL_AREA_PORTALS/);
-  assert.match(world,/mode:areaPlatform\.profile\.areaLoading/);
+  assert.match(world,/mode:'single',preloadMeters:0/,'portal-only play cannot preload neighboring maps');
+  assert.match(world,/farScenery:false,farProxy:null/,'missing areas must not have far-area proxies');
+  assert.match(world,/setOptions\(\{mode:'single',preloadMeters:0/,'graphics presets cannot re-enable other maps');
+  assert.match(world,/target:'wolfveil-area',area:detail\.to/,'gate crossing must remount destination area');
+  assert.match(world,/initialArea:worldArea/,'terrain starts at the intended destination');
+  assert.match(source('src/pages/GameView.jsx'),/setWorldArea\(detail\.area\)/,'host switches to another scene on entry');
+  assert.match(source('src/components/game3d/wolfveil/WolfveilTerrainAreaStream.mjs'),
+    /active=WOLFVEIL_AREA_IDS\.includes\(initialArea\)\?initialArea:'town'/);
   assert.doesNotMatch(world,/createWolfveilFourRegionRuntime/);
   // Platform settings are copied in before the renderer reads any of them.
   assert.ok(world.indexOf('bootGame3DPlatformGraphics(window)')<world.indexOf('const bootProfile = readCloneGPUProfile(window)'));
