@@ -1896,3 +1896,179 @@
   border-top:0;
   padding-top:2px;
 }
+
+
+/* 2026-11-20 refinement: preserve Inventory; compact input squares occupy the
+ * left of the original result circle, and the rightmost information card is
+ * replaced with a fading history of REAL server/gateway attempts. */
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-workflow {
+  left:39.4%;
+  top:16.5%;
+  width:32%;
+  height:auto;
+  max-height:48%;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-forge-ring {
+  display:block!important;
+  left:43%;
+  top:63%;
+  width:24%;
+  aspect-ratio:1;
+  opacity:.72;
+  border-color:rgba(233,189,119,.52);
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-center-preview {
+  display:flex!important;
+  z-index:3;
+  left:43.3%;
+  top:66%;
+  width:23.4%;
+  height:26%;
+  overflow:hidden;
+}
+.axe-blacksmith-circle-result {
+  width:90%;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  text-align:center;
+  padding:8px;
+  overflow:hidden;
+  color:#f1dfbd;
+  text-shadow:0 1px 7px rgba(0,0,0,.8);
+}
+.axe-blacksmith-circle-result strong {
+  font:700 clamp(12px,1.2cqw,18px) Georgia,serif;
+  letter-spacing:.13em;
+  color:#edd09a;
+}
+.axe-blacksmith-circle-result span {
+  max-width:100%;
+  max-height:50%;
+  overflow:auto;
+  scrollbar-width:thin;
+  font:clamp(9px,.85cqw,12px)/1.35 system-ui,sans-serif;
+  color:#d7e5e5;
+}
+.axe-blacksmith-circle-result small {
+  font:11px/1.2 system-ui,sans-serif;
+  color:#c7dcda;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-attempt-feed {
+  position:absolute;
+  z-index:3;
+  left:74%;
+  top:15%;
+  width:22.5%;
+  height:81%;
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  padding:15px 12px;
+  min-height:0;
+  color:#e8e1d3;
+  border-left:1px solid rgba(225,191,133,.47);
+  border-radius:3px 12px 12px 3px;
+  background:linear-gradient(to bottom,rgba(16,28,40,.78),rgba(18,31,43,.57) 65%,rgba(18,31,43,.13));
+  mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 72%,transparent 100%);
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  backdrop-filter:blur(9px);
+}
+.axe-blacksmith-attempt-feed h3 {
+  flex:none;
+  margin:0;
+  font:600 clamp(16px,1.3cqw,22px)/1.1 Georgia,serif;
+  color:#f4d9a4;
+}
+.axe-blacksmith-attempt-feed > p {
+  flex:none;
+  margin:0 0 6px;
+  color:#c2bbad;
+  font:10px/1.35 system-ui,sans-serif;
+}
+.axe-blacksmith-attempt {
+  flex:none;
+  display:grid;
+  gap:5px;
+  padding:9px 8px;
+  border-left:2px solid rgba(227,194,140,.5);
+  background:rgba(43,57,69,.32);
+  font:11px/1.35 system-ui,sans-serif;
+}
+.axe-blacksmith-attempt b {font:700 11px system-ui,sans-serif;color:#e4d3b7}
+.axe-blacksmith-attempt.is-success {border-left-color:#90dcae}
+.axe-blacksmith-attempt.is-success b {color:#a3efc2}
+.axe-blacksmith-attempt.is-failure {border-left-color:#e2a19a}
+.axe-blacksmith-attempt.is-failure b {color:#f5b9b0}
+.axe-blacksmith-attempt.is-idle {color:#b9c3c8}
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-operation-panel,
+.axe-service-workspace--blacksmith .axe-blacksmith-image-stage:is(
+  [data-forge-tab="enchant"],[data-forge-tab="over_enchant"],[data-forge-tab="combine"]
+) .axe-blacksmith-progression-panel {
+  display:none!important;
+}
+
+
+/* Advanced safety/legacy controls live in the right drawer, never inside
+ * either equipment/material square. All are closed until explicitly opened. */
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-safety,
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-extra {
+  flex:none;
+  padding:7px 8px;
+  border:1px solid rgba(225,190,136,.38);
+  border-radius:7px;
+  background:rgba(25,42,56,.68);
+  font:11px/1.4 system-ui,sans-serif;
+  color:#e7d8ba;
+}
+.axe-blacksmith-feed-safety summary,
+.axe-blacksmith-feed-extra summary {cursor:pointer;font-weight:600}
+.axe-blacksmith-feed-safety[open],
+.axe-blacksmith-feed-extra[open] {display:grid;gap:9px}
+.axe-blacksmith-feed-safety label {
+  display:flex;
+  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  padding-top:6px;
+}
+.axe-blacksmith-feed-safety select {
+  background:#253d51;
+  color:#f2e2c3;
+  border:1px solid rgba(229,194,137,.59);
+  border-radius:5px;
+  padding:4px;
+  max-width:100px;
+}
+.axe-blacksmith-feed-safety input {accent-color:#dcbf81}
+.axe-service-workspace--blacksmith .axe-blacksmith-feed-stop {
+  flex:none;
+  border:1px solid #e1a596;
+  border-radius:7px;
+  padding:7px 8px;
+  background:rgba(108,53,44,.72);
+  color:#ffe1d9;
+  font:600 11px system-ui,sans-serif;
+}
+.axe-service-workspace--blacksmith .axe-blacksmith-attempt-feed:has(
+  .axe-blacksmith-feed-extra[open],.axe-blacksmith-feed-safety[open]
+) {
+  -webkit-mask-image:none;
+  mask-image:none;
+  background:rgba(19,33,48,.94);
+}

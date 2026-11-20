@@ -149,9 +149,12 @@ const localHandlers = {
     enchantSlot(item.instanceId, payload.slotIndex ?? 0)
   , 'enchant'),
 
-  over_enchant: (payload) => withOwnedItem(payload, (item) =>
-    overEnchantItem(item.instanceId, payload.options || {})
-  , 'over_enchant'),
+  over_enchant: (payload) => withOwnedItem(payload, (item) => {
+    const current = Number(getItemReinforcement(item.instanceId)?.percent || 0);
+    const required = getAXEReinforcementCap(item);
+    if (current < required) return { ok:false, reason:'ENCHANT_CAP_REQUIRED', requiredPercent:required, currentPercent:current };
+    return overEnchantItem(item.instanceId, payload.options || {});
+  }, 'over_enchant'),
 
   // Combine (Blacksmith v2): a donor of the same rarity, item level, slot and subtype. The fee
   // (free for now) is paid on every attempt; a success uses up the donor, a failure keeps it.
@@ -361,6 +364,10 @@ function checkBeforeServerRoll(serviceId, payload) {
     cost = getReinforcementCost(id, { protectedAttempt });
     affordable = canAffordMaterials(cost);
   } else if (serviceId === 'over_enchant') {
+    const required = getAXEReinforcementCap(check.item);
+    if (Number(getItemReinforcement(id)?.percent || 0) < required) {
+      return { ok:false, reason:'ENCHANT_CAP_REQUIRED', requiredPercent:required };
+    }
     if (Number(getItemOverEnchant(id).level || 0) >= AXE_OVER_ENCHANT_CONFIG.maxLevel) return { ok: false, reason: 'max_over_enchant' };
     cost = getOverEnchantCost(id, { protectedAttempt });
     affordable = canAffordMaterials(cost);
