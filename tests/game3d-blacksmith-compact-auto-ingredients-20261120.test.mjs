@@ -37,7 +37,7 @@ test('Compact forge shows just two small ingredient squares and a single plus',(
   const source=flow();
   assert.match(source,/data-blacksmith-two-slot="true"/);
   assert.match(source,/className="axe-forge-ingredient-plus"/);
-  assert.match(source,/data-ingredient="target"/);
+  assert.match(source,/ingredient\('target',target,'Equipment'/);
   assert.match(source,/data-ingredient="materials"/);
   assert.doesNotMatch(source,/axe-forge-flow-result/);
   assert.doesNotMatch(source,/axe-forge-enchant-modes/);
