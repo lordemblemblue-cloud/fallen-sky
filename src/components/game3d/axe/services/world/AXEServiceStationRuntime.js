@@ -106,7 +106,7 @@ export function createAXEServiceStationRuntime({ scene, camera, renderer, contex
   function clearPreview() { previewGroup?.parent?.remove(previewGroup); previewGroup = null; }
   function refreshVisibleStations() {
     const c = context(), { activeStationId } = getAXEServiceStationClientState();
-    renderedStations = stationRecords.filter(s => s.region === c.region && stationDistance(s.position, c.player) <= AXE_STATION_CONFIG.visibilityRadius)
+    renderedStations = stationRecords.filter(s => s.groupId !== 'blacksmith' && s.region === c.region && stationDistance(s.position, c.player) <= AXE_STATION_CONFIG.visibilityRadius)
       .sort((a, b) => Number(b.id === activeStationId) - Number(a.id === activeStationId) || stationDistance(a.position, c.player) - stationDistance(b.position, c.player))
       .slice(0, AXE_STATION_CONFIG.renderCap);
     const ids = new Set(renderedStations.map(s => s.id));
