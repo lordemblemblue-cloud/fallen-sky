@@ -89,9 +89,16 @@ export function validateAXEEquip(item, context = {}) {
   return { ok: true, reason: null };
 }
 
-export function collectAXEEquipmentStats(items = []) {
+export function collectAXEEquipmentStats(items = [], activeWeaponInstanceId = null) {
   const total = {};
-  for (const raw of items) {
+  // Pure fallback for callers without the inventory store: count one drawn
+  // weapon, never triple weapon stats because three are equipped for swapping.
+  const drawnWeapon = items.find(item => item?.equipped && item.slot === 'weapon' &&
+    item.instanceId === activeWeaponInstanceId) ||
+    items.find(item => item?.equipped && item.slot === 'weapon');
+  const effectiveItems = items.filter(item => item?.slot !== 'weapon' ||
+    item?.instanceId === drawnWeapon?.instanceId);
+  for (const raw of effectiveItems) {
     if (!raw) continue;
     const item = raw.instanceId ? raw : makeAXEItemInstance(raw);
     if (!item.equipped) continue;
@@ -104,7 +111,7 @@ export function collectAXEEquipmentStats(items = []) {
       }
     }
   }
-  const setResult = evaluateAXESetBonuses(items.map((raw) => raw?.instanceId ? raw : makeAXEItemInstance(raw || {})).filter(Boolean));
+  const setResult = evaluateAXESetBonuses(effectiveItems.map((raw) => raw?.instanceId ? raw : makeAXEItemInstance(raw || {})).filter(Boolean));
   for (const [key, value] of Object.entries(setResult.stats || {})) {
     total[key] = (total[key] || 0) + Number(value || 0);
   }
