@@ -472,50 +472,56 @@ export default function PauseMenu({
         initial={{opacity:0,x:90}} animate={{opacity:1,x:0}} exit={{opacity:0,x:90}}
         transition={{duration:shouldAnimate?.2:0}}>
         <header className="axe3d-pause__launcher-header">
-          <div><small>FALLEN SKY / WORLD</small><h2>Game Menu</h2>
-            <p>Select a service or use its hotkey.</p></div>
+          <div><small>FALLEN SKY / WORLD</small><h2>Services</h2>
+            <p>Select a category to browse its pages.</p></div>
           <button type="button" aria-label="Resume game" title="Resume game" onClick={onClose}>
             <X size={21} aria-hidden="true"/>
           </button>
         </header>
         <div className="axe3d-pause__launcher-main axe3d-pause__scroller">
-          <div className="axe3d-pause__launcher-grid" role="group" aria-label="Services">
-            {QUICK_SERVICE_TILES.filter(tile=>AXE_SERVICE_GROUPS.some(group=>group.id===tile.id))
-              .map((tile,index)=>{
-                const Icon=tile.icon;
-                return <button key={tile.id} type="button"
-                  ref={index===0?resumeRef:undefined} className="axe3d-pause__launcher-tile"
-                  aria-label={`${tile.label} (${tile.hotkey})`} onClick={()=>onOpenService?.(tile.id)}>
-                  <Icon size={29} strokeWidth={1.7} aria-hidden="true"/>
-                  <span className="axe3d-pause__launcher-tile-label">{tile.label}</span>
-                  <kbd>{tile.hotkey}</kbd>
-                </button>;
-              })}
+          <div className="axe3d-pause__launcher-grid" role="group" aria-label="Services and faction">
+            {QUICK_SERVICE_TILES.map((tile,index)=>{
+              const Icon=tile.icon;
+              const group=AXE_SERVICE_GROUPS.find(item=>item.id===tile.id);
+              if(!group&&tile.id!=='faction')return null;
+              const code=keybinds[tile.id];
+              return <button key={tile.id} type="button" ref={index===0?resumeRef:undefined}
+                aria-pressed={launcherGroup===tile.id}
+                className={'axe3d-pause__launcher-tile'+(launcherGroup===tile.id?' is-selected':'')}
+                aria-label={tile.label+(code?' ('+game3dBindingLabel(code)+')':'')}
+                onClick={()=>{
+                  const operations=group?.visibleServiceIds||group?.serviceIds||[];
+                  if(operations.length===1){onOpenService?.(group.id,operations[0]);return;}
+                  setLauncherGroup(previous=>previous===tile.id?null:tile.id);
+                }}>
+                <Icon size={28} strokeWidth={1.7} aria-hidden="true"/>
+                <span className="axe3d-pause__launcher-tile-label">{tile.label}</span>
+                {code&&<kbd>{game3dBindingLabel(code)}</kbd>}
+              </button>;
+            })}
           </div>
-          <section className="axe3d-pause__launcher-subpages" aria-label="All service subpages">
-            <div className="axe3d-pause__launcher-subpages-heading">
-              <strong>Service subpages</strong>
-              <small>Expand a category to open a specific page</small>
-            </div>
-            {AXE_SERVICE_GROUPS.map(group=>{
-              const tile=QUICK_SERVICE_TILES.find(item=>item.id===group.id);
-              const operations=group.visibleServiceIds || group.serviceIds;
-              return <details className="axe3d-pause__launcher-subpage-group" key={group.id}>
-                <summary>
-                  <span>{tile?.label||group.label}</span>
-                  <small>{operations.length} {operations.length===1?'page':'pages'}</small>
-                  <ChevronRight size={15} aria-hidden="true"/>
-                </summary>
-                <div className="axe3d-pause__launcher-subpage-buttons">
+          {launcherGroup&&<section className="axe3d-pause__launcher-detail"
+            aria-label={launcherGroup==='faction'?'Faction overview':'Service pages'}>
+            {launcherGroup==='faction'?<FactionOverview/>:(()=>{
+              const group=AXE_SERVICE_GROUPS.find(item=>item.id===launcherGroup);
+              if(!group)return null;
+              const operations=group.visibleServiceIds||group.serviceIds;
+              return <>
+                <div className="axe3d-pause__launcher-detail-header">
+                  <h3>{group.label}</h3>
+                  <span>Choose a page</span>
+                </div>
+                <div className="axe3d-pause__launcher-page-grid">
                   {operations.map(serviceId=><button type="button" key={serviceId}
-                    title={getAXEService(serviceId)?.description||'Open service subpage'}
+                    title={getAXEService(serviceId)?.description||'Open service'}
                     onClick={()=>onOpenService?.(group.id,serviceId)}>
-                    {getAXEService(serviceId)?.label || serviceId.replaceAll('_',' ')}
+                    <span>{getAXEService(serviceId)?.label||serviceId.replaceAll('_',' ')}</span>
+                    <ChevronRight size={17} aria-hidden="true"/>
                   </button>)}
                 </div>
-              </details>;
-            })}
-          </section>
+              </>;
+            })()}
+          </section>}
           <div className="axe3d-pause__launcher-online" aria-live="polite">
             <span className="axe3d-pause__launcher-online-dot"/>
             {presence.status==='connected'?'Online world':presence.status==='connecting'?'Connecting to world':
@@ -549,15 +555,11 @@ export default function PauseMenu({
             <div className="axe3d-pause__crest"><Gamepad2 aria-hidden="true" size={23}/></div>
             <div>
               <span className="axe3d-pause__eyebrow">ATOM X EVE / GAME 3D</span>
-              <h2>{entry?'SETTINGS':'WORLD MENU'}</h2>
+              <h2>SETTINGS</h2>
             </div>
           </div>
           <div className="axe3d-pause__header-end">
-            {!entry&&<button type="button" className="axe3d-pause__settings-back"
-              onClick={()=>setSurface('launcher')}><ArrowLeft size={16}/> Game Menu</button>}
             <span className="axe3d-pause__online"><span/> {entry?'TITLE SCREEN':'WORLD ACTIVE'}</span>
-            <button type="button" className="axe3d-pause__icon-button" aria-label="Open settings"
-              title="Settings" onClick={()=>selectView('graphics')}><Settings2 size={20}/></button>
             <button type="button" className="axe3d-pause__icon-button"
               onClick={onClose} aria-label={entry?"Close settings":"Resume game"} title={entry?"Close settings":"Resume game"}><X size={20}/></button>
           </div>
@@ -933,7 +935,7 @@ export default function PauseMenu({
         </div>
         <footer className="axe3d-pause__footer">
           <span><span className="axe3d-pause__footer-spark"/> GAME 3D · {entry?'TITLE SETTINGS':'ONLINE WORLD'}</span>
-          <span><kbd>ESC</kbd> {confirmAction?'Cancel':view==='overview'?(entry?'Close':'Resume'):'Back to main menu'}</span>
+          <span><kbd>ESC</kbd> {confirmAction?'Cancel':entry?'Close settings':'Resume game'}</span>
         </footer>
       </motion.section>}
     </motion.div>}
