@@ -793,9 +793,15 @@ export default function AXEBlacksmithImageWorkspace({
             <b>{fmtStat(readout?.projectedAttack)}</b>
           </div>
           <p className="axe-blacksmith-operation-hint" role="status">{forgeNotice || status}</p>
-          {selectedItem && <AXEItemStatBreakdownList rows={readout?.statRows || []}
-            projected={readout?.projectedRows} label="Item stats now and after a success"
-            className="axe-blacksmith-stat-breakdown" />}
+          {selectedItem && (workflowMode
+            ? <details className="axe-blacksmith-advanced"><summary>Full stat breakdown</summary>
+                <AXEItemStatBreakdownList rows={readout?.statRows || []}
+                  projected={readout?.projectedRows} label="Item stats now and after a success"
+                  className="axe-blacksmith-stat-breakdown" />
+              </details>
+            : <AXEItemStatBreakdownList rows={readout?.statRows || []}
+                projected={readout?.projectedRows} label="Item stats now and after a success"
+                className="axe-blacksmith-stat-breakdown" />)}
         </div>
         <div className="axe-blacksmith-materials-block">
           <strong>Required Materials</strong>
@@ -866,8 +872,9 @@ export default function AXEBlacksmithImageWorkspace({
             ? 'Chosen keeps its own stage path for the Chosen set (Evolution Stones, no donor, no item-stat change).'
             : 'Ascension is for Rare, Elite and Legendary equipment. Common and Unique ascension is off; Mythical is not available yet.'}</p>}
         </div>}
-        {workflowMode && <div className="axe-blacksmith-extra-details" aria-label="Detailed upgrade information">
-          <h4>Equipment &amp; Forge Details</h4>
+        {workflowMode && <details className="axe-blacksmith-advanced" aria-label="Detailed upgrade information">
+          <summary>Advanced Equipment &amp; Forge Details</summary>
+          <div className="axe-blacksmith-extra-details">
           <div><span>Rarity</span><b>{selectedItem?.rarity || selectedItem?.tier || '—'}</b></div>
           <div><span>Item level</span><b>{selectedItem ? fmt(selectedItem.itemLevel ?? selectedItem.level ?? 1) : '—'}</b></div>
           <div><span>Ascension</span><b>{selectedItem ? '+' + fmt(readout?.stageRank ?? 0) : '—'}</b></div>
@@ -893,7 +900,8 @@ export default function AXEBlacksmithImageWorkspace({
           <p className={tab === 'over_enchant' ? 'axe-forge-detail-warning' : ''}>
             {readout?.preview?.risk || 'Choose an item to see the actual result and requirements.'}
           </p>
-        </div>}
+          </div>
+        </details>}
         {tab === 'combine' && <AXEWeaponLegacyForgePane
           target={selectedItem}
           items={items}
@@ -903,8 +911,11 @@ export default function AXEBlacksmithImageWorkspace({
             setRevision(value => value + 1);
             onTransaction?.(result);
           }} />}
-        {/* Client-only test station: no permanent forge or server writes. */}
-        <AXETestWeaponTuner item={selectedItem} />
+        {/* Optional test tools no longer compete with the two primary slots. */}
+        <details className="axe-blacksmith-advanced">
+          <summary>Test weapon settings</summary>
+          <AXETestWeaponTuner item={selectedItem} />
+        </details>
       </section>
 
       <section className="axe-blacksmith-progression-panel" aria-label="Equipment progression">
