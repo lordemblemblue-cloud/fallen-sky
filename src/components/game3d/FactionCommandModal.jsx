@@ -9,6 +9,9 @@ export default function FactionCommandModal({onClose}) {
   const closeRef=useRef(null);
   useEffect(()=>{
     const previous=document.activeElement;
+    const previousModal=window.__axeUiModalOpen;
+    // Reuse the world's existing input guard so movement and attacks pause.
+    window.__axeUiModalOpen=true;
     closeRef.current?.focus();
     const onKey=event=>{
       if(event.key==='Escape'){
@@ -26,6 +29,7 @@ export default function FactionCommandModal({onClose}) {
     window.addEventListener('keydown',onKey,true);
     return ()=>{
       window.removeEventListener('keydown',onKey,true);
+      window.__axeUiModalOpen=previousModal;
       previous?.isConnected&&previous?.focus?.();
     };
   },[onClose]);
