@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router';
+import InstallAppButton from '@/components/games/InstallAppButton';
 
 // Adam X Eve Games: the first page. Left half opens Fallen Sky Online
 // (the Game 3D world at /gameview); right half opens Duelist Adventure (/duelist).
@@ -58,7 +59,7 @@ export default function GamesHub() {
   const navigate = useNavigate();
   const [left, right] = GAMES;
   return (
-    <main className="flex h-screen min-h-0 flex-col bg-[#05070c] text-white">
+    <main className="relative flex h-screen min-h-0 flex-col bg-[#05070c] text-white">
       <style>{`
         @media (min-width: 768px) {
           .games-hub-left  { clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); margin-right: -6%; }
@@ -67,7 +68,8 @@ export default function GamesHub() {
           .games-hub-right .games-hub-copy { padding-left: 16%; }
         }
       `}</style>
-      <header className="shrink-0 py-5 text-center">
+      <InstallAppButton />
+      <header className="shrink-0 pb-5 pt-16 text-center md:py-5">
         <h1 className="text-2xl font-black uppercase tracking-[0.35em] sm:text-4xl">Adam X Eve Games</h1>
         <p className="mt-1 text-xs uppercase tracking-[0.3em] text-white/45">Choose your game</p>
       </header>
