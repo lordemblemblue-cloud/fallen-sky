@@ -5,7 +5,7 @@ import {
   Keyboard, LogOut, Monitor, MousePointerClick, Play, Settings2, Users, MessageSquare, BookOpen,
   LayoutDashboard, Move, RotateCcw,
   ShieldAlert, UserPlus, Volume2, VolumeX, X, Hammer, Trophy,
-  UserRound, ScrollText, PawPrint, Sparkles, Map as MapIcon, ArrowLeft,
+  UserRound, ScrollText, PawPrint, Sparkles, Map as MapIcon, Flag,
 } from 'lucide-react';
 import {base44} from '@/api/base44Client';
 import {inkPaletteFor} from './render/inkWashLook';
@@ -41,6 +41,10 @@ import {
 import { AXE_SERVICE_GROUPS } from './axe/services/AXEServiceGroups.js';
 import { getAXEService } from './axe/services/AXEServiceRegistry';
 import { getGame3DMenuShortcut } from './axe/services/game3dMenuHotkeys.mjs';
+import {GAME3D_BINDING_DEFINITIONS, GAME3D_DEFAULT_KEYBINDS,
+  readGame3DKeybinds,saveGame3DKeybinds,rebindGame3DAction,game3dBindingLabel}
+  from './player/Game3DKeybinds.mjs';
+import FactionOverview from './axe/factions/FactionOverview';
 import './PauseMenu.css';
 
 const MENU_ICONS={overview:Gamepad2,services:Hammer,scoreboard:Trophy,audio:AudioLines,controls:Keyboard,
@@ -53,6 +57,7 @@ const QUICK_SERVICE_TILES=Object.freeze([
   {id:'companion',label:'Companion',hotkey:'P',icon:PawPrint},
   {id:'spiritual',label:'Spirituality',hotkey:'J',icon:Sparkles},
   {id:'blacksmith',label:'Blacksmith',hotkey:'=',icon:Hammer},
+  {id:'faction',label:'Faction',hotkey:null,icon:Flag},
 ]);
 const PRESET_QUALITY=['low','medium','high','ultra'];
 const FPS_CAPS=[30,60,120,144];
@@ -106,6 +111,10 @@ export default function PauseMenu({
   // the existing full settings panel; title-screen settings are unchanged.
   const [surface,setSurface]=useState(context==='entry'?'settings':'launcher');
   const launcher=!entry&&surface==='launcher';
+  const [launcherGroup,setLauncherGroup]=useState(null);
+  const [keybinds,setKeybinds]=useState(readGame3DKeybinds);
+  const [rebinding,setRebinding]=useState(null);
+  const [bindingMessage,setBindingMessage]=useState('');
   const [confirmAction,setConfirmAction]=useState(null);
   const [error,setError]=useState('');
   const [controls,setControls]=useState(getAXEControlSettings);
@@ -150,9 +159,10 @@ export default function PauseMenu({
     catch{return true;}
   });
   const shouldAnimate=menuMotion&&!reduceMotion;
-  const availableSections=entry
-    ?GAME3D_PAUSE_SECTIONS.filter(section=>!['session','services','scoreboard'].includes(section.id))
-    :GAME3D_PAUSE_SECTIONS.filter(section=>!['services','scoreboard'].includes(section.id));
+  // World and entry settings are options only; the launcher's tiles already
+  // cover services and scoreboard. Never offer a redundant Main/Menu page.
+  const availableSections=GAME3D_PAUSE_SECTIONS.filter(section=>
+    !['overview','session','services','scoreboard'].includes(section.id));
   const updateMotion=next=>{
     const enabled=!!next;
     setMenuMotion(enabled);
@@ -207,7 +217,12 @@ export default function PauseMenu({
     return ()=>window.removeEventListener('game3dWorldPresence',onPresence);
   },[]);
   useEffect(()=>{
-    if(!open){setView('overview');setSurface(entry?'settings':'launcher');setConfirmAction(null);setError('');return;}
+    if(!open){
+      setView('overview');setSurface(entry?'settings':'launcher');
+      setLauncherGroup(null);setRebinding(null);setBindingMessage('');
+      setConfirmAction(null);setError('');return;
+    }
+    setKeybinds(readGame3DKeybinds());
     // A true MMO menu keeps the shared world running. It only blocks local
     // combat/movement input, so the hero never attacks behind the controls.
     window.__axePauseMenuOpen=true;
@@ -232,6 +247,24 @@ export default function PauseMenu({
     // Capture before GameView/GameWorld's bubbling hotkeys, including when
     // focus is on a range input. ESC first backs out of nested pages.
     const onEscape=event=>{
+      // Binding capture must run before service/menu handlers; never let a
+      // captured key open a workspace or trigger gameplay behind the overlay.
+      if(rebinding){
+        event.preventDefault();event.stopImmediatePropagation?.();
+        if(event.key==='Escape'){setRebinding(null);setBindingMessage('');return;}
+        if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||event.shiftKey)return;
+        const result=rebindGame3DAction(keybinds,rebinding,event.code);
+        if(!result.ok){
+          setBindingMessage(result.reason==='in-use'
+            ?'That key is already assigned. Change its other binding first.'
+            :'This key is reserved for combat or system controls.');
+          return;
+        }
+        const saved=saveGame3DKeybinds(result.bindings);
+        setKeybinds(saved);setRebinding(null);
+        setBindingMessage('Key saved. You can reset all keys below.');
+        return;
+      }
       // While the right drawer is up, letter shortcuts retain their direct
       // meaning. They never expose the old floating Services navigation.
       const destination=!entry&&!confirmAction?getGame3DMenuShortcut(event):null;
@@ -284,10 +317,10 @@ export default function PauseMenu({
     };
     window.addEventListener('keydown',onEscape,true);
     return ()=>window.removeEventListener('keydown',onEscape,true);
-  },[open,view,confirmAction,onClose,entry,onOpenService,onOpenMap]);
+  },[open,view,confirmAction,onClose,entry,onOpenService,onOpenMap,rebinding,keybinds]);
 
   const selectView=id=>{setConfirmAction(null);setError('');setView(id);};
-  const openSettings=()=>{selectView('graphics');setSurface('settings');};
+  const openSettings=()=>{selectView('graphics');setSurface('settings');setLauncherGroup(null);};
   const openScoreboard=()=>{selectView('scoreboard');setSurface('settings');};
   const changeGraphics=next=>{
     const sanitized=game3dPauseGraphicsDefaults(next);
