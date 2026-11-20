@@ -8,6 +8,10 @@ export function selectRendererBackend({
   sceneWebGPUReady = false,
   requested = 'auto',
 } = {}) {
+  // Reject malformed/unknown preferences rather than enabling a GPU backend implicitly.
+  if (!['auto', 'webgl', 'webgpu'].includes(requested)) {
+    return { backend: 'webgl', reason: 'invalid-renderer-request' };
+  }
   if (requested === 'webgl') return { backend: 'webgl', reason: 'user-selected-webgl' };
   if (!sceneWebGPUReady) return { backend: 'webgl', reason: 'scene-not-migrated' };
   if (!webgpuAvailable) return { backend: 'webgl', reason: 'webgpu-unavailable' };
