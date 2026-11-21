@@ -133,7 +133,27 @@ A scan of the Town area found no other walkable surface more than 2.4 m above th
 
 **What changed.** `WolfveilPavedRoads.js` paves no strip within 26 m of the river, which is the top of the bank. The dirt trail still runs down to the water, and the border cut removes the east part in the Town scene.
 
-### 5.4 Not handled here
+### 5.4 Does the area flip every frame at a gate?
+
+The WebGPU session read the two banners as the area flipping every frame. This was measured frame by frame with classic WebGL, the owner's renderer. Signals sampled: the loader's area, world status, crossing-mist opacity, fog, sun and ambient light, exposure, and the camera's side of the gate.
+
+- **Owner's build (`main` d8817383), riding.**
+  - Standing in the Market Stone torii for 3 s (0.2–0.4 m short of the plane): the area, world status, fog, lights and exposure never changed. The mist held near-white at 0.78–0.86, bobbing slightly with the mount.
+  - Riding back and forth across the line four times: the area never changed (the loader needs 12 m), and nothing travelled. The world status changed once per crossing, which posted four banners (East Wilds, Town, East Wilds, Town). That is why both banners were on screen.
+  - So the white comes from the steady crossing mist. Whole-frame white, pink and dark alternation, also seen in Town far from any gate, is the renderer, composited under that steady mist.
+- **This branch.** Standing 0.71 m before the torii on foot (95 frames) and 1.38 m before it riding (97 frames), then going through:
+  - The area, world status, fog, sky, lights, exposure and camera side showed 0 changes and 0 frame-to-frame flips.
+  - The mist rose smoothly and held (0.73 and 0.57).
+  - Going through gave exactly one area change, one travel and one banner.
+- **Floating rocks and grass.** They do not come from what the area loader loads. They are scenery the loader never manages, standing over areas whose ground is not loaded:
+  - instanced baked grass, flower, fern and reed cards;
+  - the baked rock field (in the Town scene, 194 of 269 boulder instances stood outside Town);
+  - the streaming living meadow;
+  - the reused trees, bamboo and rocks group.
+
+  The area scope in 5.1 now cuts or hides them.
+
+### 5.5 Not handled here
 
 - **Swimming:** the Game 3D animations session.
 - **Black or dark frames at 3.9, 15.8, 31.7 and 39.6 s:** the WebGPU session.
