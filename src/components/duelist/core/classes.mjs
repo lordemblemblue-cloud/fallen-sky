@@ -185,6 +185,8 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 
     if (target.hp <= 0) return { allowed: false, reason: 'target-defeated' };
     if (actor.id && target.id && actor.id === target.id) return { allowed: false, reason: 'self-target' };
     if (actor.team != null && target.team === actor.team) return { allowed: false, reason: 'friendly-target' };
+    // Invalid protection timestamps must not silently bypass spawn immunity.
+    if (target.protectedUntil != null && !Number.isFinite(target.protectedUntil)) return { allowed: false, reason: 'invalid-context' };
     if ((target.protectedUntil ?? -Infinity) > now || target.invulnerable) return { allowed: false, reason: 'target-protected' };
     if (distance(actor.position, target.position) > def.special.reach) return { allowed: false, reason: 'out-of-range' };
     if (def.special.rule === 'threshold' && target.hp / target.maxHp > SPECIAL_BALANCE.duelistExecuteThreshold) return { allowed: false, reason: 'target-too-healthy' };
