@@ -77,6 +77,15 @@ export function resolveNodeTwin(material, renderer = null) {
   return entry.twin;
 }
 
+/** Rebuild the twin on its next draw (after the classic material swapped a uniform object for another). */
+export function resetNodeTwin(material) {
+  const entry = twins.get(material);
+  if (!entry) return;
+  entry.twin?.dispose?.();
+  entry.twin = null;
+  entry.failed = false;
+}
+
 /** Dispose a classic material's twin together with it (call from the owner's dispose). */
 export function disposeNodeTwin(material) {
   const entry = twins.get(material);

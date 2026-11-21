@@ -10,6 +10,11 @@
 // valley group. The area loader never manages it (wolfveilAreaShared).
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import {NodeMaterial} from 'three/webgpu';
+import {Fn,If,Loop,Break,attribute,positionLocal,vec2,vec3,vec4,float,int,fract,sin,dot,floor,mix,length,abs,
+  max,smoothstep,pow,atan2,select,uniformArray} from 'three/tsl';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {uniformOf} from '../../../lib/webgpuNodeKit.js';
 import {wolfveilHeight} from './WolfveilLayout.js';
 import {
   WOLFVEIL_AREA_VEIL_LINES,wolfveilAreaGates,wolfveilAreaGatePosts,wolfveilAreaGateDestination,
@@ -106,6 +111,66 @@ void main(){
   #include <colorspace_fragment>
   #include <fog_fragment>
 }`;
+
+// ---- WebGPURenderer: TSL twins of the veil and membrane (same noise, gates, colours; scene fog by three) ----
+const tslHash=Fn(([p])=>fract(sin(dot(p,vec2(127.1,311.7))).mul(43758.5453)));
+const tslNoise=Fn(([p])=>{
+  const i=floor(p).toVar();const f=fract(p).toVar();f.assign(f.mul(f).mul(float(3).sub(f.mul(2))));
+  return mix(mix(tslHash(i),tslHash(i.add(vec2(1,0))),f.x),mix(tslHash(i.add(vec2(0,1))),tslHash(i.add(vec2(1,1))),f.x),f.y);
+});
+const tslFbm=Fn(([p0])=>{
+  const p=vec2(p0).toVar();const a=float(.5).toVar();const s=float(0).toVar();
+  Loop(4,()=>{s.addAssign(a.mul(tslNoise(p)));p.assign(p.mul(2.03).add(vec2(17.1,9.2)));a.mulAssign(.5);});
+  return s;
+});
+function veilTwin(classic){
+  const u=classic.uniforms;
+  const time=uniformOf(u.uTime,'float'),cam=uniformOf(u.uCam,'vec3'),count=uniformOf(u.uGateCount,'int');
+  const gatesArr=uniformArray(u.uGates.value,'vec4');
+  const m=new NodeMaterial();
+  m.fragmentNode=Fn(()=>{
+    const local=positionLocal.toVar();
+    const sheet=attribute('aSheet','vec2').toVar();
+    const h=local.y.sub(attribute('aBase','float')).toVar();
+    const beyond=select(dot(cam.xz.sub(local.xz),attribute('aSide','vec2')).greaterThan(0),attribute('aColB','vec3'),attribute('aColA','vec3')).toVar();
+    const flow=vec2(sheet.x.add(sheet.y.mul(3.7)),h.mul(.07).sub(time.mul(.035))).toVar();
+    const n=tslFbm(flow.add(vec2(time.mul(.02),0))).toVar();
+    const n2=tslFbm(flow.mul(2.3).add(vec2(time.mul(-.05),time.mul(.01))));
+    const density=float(1).sub(smoothstep(5,34,h.add(n.sub(.5).mul(12))));
+    const alpha=density.mul(mix(.6,.98,smoothstep(.25,.75,n))).mul(select(sheet.y.greaterThan(.5),float(.78),float(.9))).toVar();
+    Loop(24,({i})=>{
+      If(int(i).greaterThanEqual(count),()=>{Break();});
+      const g=gatesArr.element(i);
+      const d=length(local.xz.sub(g.xy));
+      alpha.mulAssign(float(1).sub(float(1).sub(smoothstep(g.z.sub(.2),g.z.add(1.5),d)).mul(float(1).sub(smoothstep(g.w.sub(.6),g.w.add(.9),local.y)))));
+    });
+    alpha.mulAssign(smoothstep(.8,7,length(cam.sub(local))));
+    const mist=mix(vec3(.84,.89,.97),beyond,.36).mul(n2.mul(.32).add(.82)).toVar();
+    mist.addAssign(beyond.mul(.28).mul(float(1).sub(smoothstep(0,9,h))));
+    return vec4(mist,alpha);
+  })();
+  return m;
+}
+function membraneTwin(classic){
+  const u=classic.uniforms;
+  const time=uniformOf(u.uTime,'float'),cam=uniformOf(u.uCam,'vec3');
+  const m=new NodeMaterial();
+  m.fragmentNode=Fn(()=>{
+    const uvP=attribute('aPortalUv','vec2').toVar();
+    const gate=attribute('aGate','vec4').toVar();
+    const ahead=dot(cam.xz.sub(gate.xy),gate.zw).greaterThan(0);
+    const target=select(ahead,attribute('aColBehind','vec3'),attribute('aColAhead','vec3')).toVar();
+    const c=uvP.sub(.5).mul(vec2(attribute('aAspect','float'),1)).toVar();
+    const r=length(c).toVar();const a=atan2(c.y,c.x);
+    const swirl=tslFbm(vec2(a.mul(1.6).add(r.mul(7)).sub(time.mul(.9)),r.mul(4).sub(time.mul(.35)))).toVar();
+    const rim=smoothstep(.5,.36,max(abs(uvP.x.sub(.5)),abs(uvP.y.sub(.5)).mul(.92)));
+    const col=mix(target.mul(.55),vec3(1),pow(swirl,2.6)).add(target.mul(float(1).sub(smoothstep(0,.6,r))).mul(.55)).toVar();
+    col.addAssign(vec3(1).mul(pow(float(1).sub(smoothstep(0,.08,abs(swirl.sub(.55)))),3)).mul(.35));
+    const fade=smoothstep(.6,3,length(cam.sub(positionLocal)));
+    return vec4(col,rim.mul(.93).mul(mix(.35,1,fade)));
+  })();
+  return m;
+}
 
 function buildVeilGeometry(heightAt,area=null){
   const pos=[],sheet=[],base=[],side=[],colA=[],colB=[],index=[];
@@ -269,6 +334,7 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     return material;
   };
   const veilMaterial=makeShader('WV_SpiritVeil',VEIL_VERTEX,VEIL_FRAGMENT);
+  setNodeTwin(veilMaterial,veilTwin);
   const veil=new THREE.Mesh(buildVeilGeometry(heightAt,area),veilMaterial);
   veil.name='WV_SpiritVeil_AreaBorders';
   veil.frustumCulled=false;veil.renderOrder=3;
@@ -287,6 +353,7 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     meshes.push(mesh);
   }
   const membraneMaterial=makeShader('WV_GateMembrane',MEMBRANE_VERTEX,MEMBRANE_FRAGMENT);
+  setNodeTwin(membraneMaterial,membraneTwin);
   const membranes=new THREE.Mesh(buildMembranes(gates),membraneMaterial);
   membranes.name='WV_ToriiGate_Membranes';
   membranes.frustumCulled=false;membranes.renderOrder=4;

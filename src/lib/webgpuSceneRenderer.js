@@ -19,6 +19,8 @@
 import { WebGPURenderer, ShadowNode } from 'three/webgpu';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
 import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
+import { pointSpriteFor } from './webgpuPointSprites.js';
+import { applyNodeSetups } from './webgpuNodeKit.js';
 
 export const WEBGPU_DEFAULT_MAX_TEXTURE = 8192;
 
@@ -122,10 +124,74 @@ function installCompat(renderer) {
     }
   };
 
+  // A pipeline that fails to compile voids the whole WebGPU command buffer (a black frame). Watch each pipeline's
+  // creation and stop drawing a material whose pipeline failed (one console note each), so one bad shader costs one
+  // object, not the picture. (WebGL2 backend: a failed program only loses its own draws already.)
+  const broken = new WeakSet();
+  const backend = renderer.backend;
+  // r171's WebGPU backend also drops material.polygonOffset (decal layers: paved roads, trails, the town's ground
+  // sealing would lose to the surface under them). It becomes the pipeline's depthBias / depthBiasSlopeScale, the
+  // same formula as glPolygonOffset, and part of the pipeline cache key.
+  let pipelineMaterial = null;
+  const patchedDevices = new WeakSet();
+  const withPolygonOffset = (descriptor) => {
+    const m = pipelineMaterial;
+    const topology = descriptor?.primitive?.topology;
+    if (m?.polygonOffset && descriptor.depthStencil && (topology === 'triangle-list' || topology === 'triangle-strip' || !topology)) {
+      descriptor.depthStencil.depthBias = Math.round(m.polygonOffsetUnits || 0);
+      descriptor.depthStencil.depthBiasSlopeScale = m.polygonOffsetFactor || 0;
+    }
+    return descriptor;
+  };
+  const patchDevice = (device) => {
+    if (!device || patchedDevices.has(device)) return;
+    patchedDevices.add(device);
+    const create = device.createRenderPipeline.bind(device);
+    const createAsync = device.createRenderPipelineAsync.bind(device);
+    device.createRenderPipeline = (descriptor) => create(withPolygonOffset(descriptor));
+    device.createRenderPipelineAsync = (descriptor) => createAsync(withPolygonOffset(descriptor));
+  };
+  if (typeof backend.getRenderCacheKey === 'function' && backend.isWebGPUBackend) {
+    const getRenderCacheKey = backend.getRenderCacheKey.bind(backend);
+    backend.getRenderCacheKey = (renderObject) => {
+      const m = renderObject.material;
+      const key = getRenderCacheKey(renderObject);
+      return m?.polygonOffset ? `${key},po${m.polygonOffsetFactor}/${m.polygonOffsetUnits}` : key;
+    };
+  }
+  if (typeof backend.createRenderPipeline === 'function' && backend.isWebGPUBackend) {
+    const createRenderPipeline = backend.createRenderPipeline.bind(backend);
+    backend.createRenderPipeline = (renderObject, promises) => {
+      const device = backend.device;
+      patchDevice(device);
+      pipelineMaterial = renderObject.material;
+      device?.pushErrorScope('validation');
+      try { return createRenderPipeline(renderObject, promises); }
+      finally {
+        pipelineMaterial = null;
+        device?.popErrorScope().then((error) => {
+          if (!error) return;
+          // the object is skipped in every pass (a shadow pass draws it with a shared override material)
+          const material = renderObject.material;
+          broken.add(renderObject.object);
+          const classic = material?.userData?.classicMaterial || material;
+          console.warn(`[webgpu] pipeline for "${classic?.name || classic?.type}" (${renderObject.object?.name || renderObject.object?.type}) failed; it is not drawn:`, error.message);
+        }, () => {});
+      }
+    };
+  }
+
   // GLSL materials: draw the registered node twin; skip one without a twin instead of a blank NodeMaterial.
   const renderObject = renderer.renderObject;
   const reported = new Set();
   renderer.renderObject = function sceneRenderObject(object, scene, camera, geometry, material, ...rest) {
+    if (broken.has(object)) return;
+    // Points with a size: instanced quads (WebGPU points are one pixel)
+    if (object?.isPoints && material?.isPointsMaterial) {
+      const sprite = pointSpriteFor(object, material, this);
+      if (sprite && !broken.has(sprite.mesh)) return renderObject.call(this, sprite.mesh, scene, camera, sprite.geometry, sprite.material, ...rest);
+      if (sprite) return;
+    }
     if (material?.isShaderMaterial) {
       const twin = resolveNodeTwin(material, this);
       if (!twin) {
@@ -140,6 +206,12 @@ function installCompat(renderer) {
     }
     return renderObject.call(this, object, scene, camera, geometry, material, ...rest);
   };
+
+  // Classic materials with TSL nodes attached (webgpuNodeKit.js attachNodes): run their node setups on the node
+  // material three converts them into, so composed patches keep their GLSL order.
+  const library = renderer.library;
+  const fromMaterial = library.fromMaterial.bind(library);
+  library.fromMaterial = (material) => applyNodeSetups(material, fromMaterial(material));
 
   // Device loss: three's handler logs it; listeners stop their loop and fall back.
   const onDeviceLost = renderer.onDeviceLost;
