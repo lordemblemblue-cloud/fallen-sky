@@ -116,6 +116,9 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shown.matchBoost = fighter.matchBoost;
       shown.items = fighter.items;
       shown.shopStats = fighter.shopStats;
+      shown.activeRelicUntil = fighter.activeRelicUntil + shift;
+      shown.activeRelicCooldownUntil = fighter.activeRelicCooldownUntil + shift;
+      shown.activeAnchorAt = fighter.activeAnchorAt ? { ...fighter.activeAnchorAt, until: fighter.activeAnchorAt.until + shift } : null;
       shown.cooldowns = Object.fromEntries(Object.entries(fighter.cooldowns).map(([move, until]) => [move, until + shift]));
       shown.guard = fighter.guard ? { since: fighter.guard.since + shift } : null;
       shown.stunnedUntil = fighter.stunnedUntil + shift;

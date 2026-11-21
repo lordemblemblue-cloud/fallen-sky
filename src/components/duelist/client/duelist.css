@@ -495,3 +495,8 @@
 .duelist-shop-slot small{display:none;}
 .duelist-shop-slot .duelist-item-art{width:35px;height:35px;}
 .duelist-shop-slot{height:42px;}}
+
+.duelist-active-relic {position:absolute;top:12px;left:calc(50% + 96px);z-index:24;padding:7px 12px;
+border:1px solid rgba(219,227,236,.32);border-radius:9px;background:rgba(37,39,48,.9);
+color:#f0e7d7;font:600 12px/1.3 inherit;cursor:pointer;}
+@media(max-width:480px){.duelist-active-relic{top:49px;left:50%;transform:translateX(-50%);}}

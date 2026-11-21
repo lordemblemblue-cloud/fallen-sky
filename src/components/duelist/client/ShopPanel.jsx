@@ -16,6 +16,7 @@ const names = Object.freeze({
   'invalid-loadout': 'Invalid item loadout', 'fully-upgraded': 'This item is already Tier III',
   'inventory-full': 'All six equipment slots are filled', 'not-enough-gold': 'Not enough gold',
   'not-available': 'Shop is closed', 'no-match': 'Join a match to buy items',
+  'active-relic-slot-full': 'Only one active relic can be equipped at a time',
 });
 export default function ShopPanel({ me, answer, onBuy, onClose }) {
   const [category, setCategory] = useState('all');

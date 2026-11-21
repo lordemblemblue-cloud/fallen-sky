@@ -514,7 +514,7 @@ function flagsStep(match) {
     }
     if (flag.state === 'dropped' && now - flag.droppedAt > CTF.autoReturn) { goHome(flag); event(match, { type: 'flagReturned', team, by: null }); continue; }
     for (const f of world.fighters.values()) {
-      if (f.vitals.dead || isDown(f, now) || f.heldBy || !f.team) continue;
+      if (f.vitals.dead || isDown(f, now) || f.heldBy || now < (f.activeRelicUntil ?? -Infinity) || !f.team) continue;
       const b = bodyOf(world, f.id);
       if (dist(b, flag) > CTF.pickup) continue;
       if (f.team !== team && !carrying(match, f.id)) {

@@ -6,6 +6,7 @@ on:
       - 'server/duelist/**'
       - 'tests/duelist-shop.test.mjs'
       - 'tests/duelist-air-dash.test.mjs'
+      - 'tests/duelist-relics.test.mjs'
       - 'public/duelist/items/**'
       - '.github/workflows/duelist-shop-inventory.yml'
   workflow_dispatch:
@@ -21,4 +22,4 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Shop tiers, gold, item snapshots, and air dash tests
-        run: node --test tests/duelist-shop.test.mjs tests/duelist-air-dash.test.mjs
+        run: node --test tests/duelist-shop.test.mjs tests/duelist-air-dash.test.mjs tests/duelist-relics.test.mjs
