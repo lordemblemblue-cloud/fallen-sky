@@ -10,9 +10,11 @@ const request = (protectedUntil, now = 2) => evaluateSpecial({
 });
 
 test('malformed spawn-protection deadlines fail closed for execution requests', () => {
-  for (const deadline of [NaN, Infinity, -Infinity, '3', {}, false]) {
+  for (const deadline of [NaN, Infinity, '3', {}, false]) {
     assert.deepEqual(request(deadline), { allowed: false, reason: 'invalid-context' });
   }
+  // -Infinity is what a fighter that was never protected carries (core/fighter.mjs): not malformed
+  assert.equal(request(-Infinity).allowed, true);
 });
 
 test('finite protection deadlines retain inclusive expiration behavior', () => {

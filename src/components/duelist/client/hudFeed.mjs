@@ -115,6 +115,12 @@ export function createHudFeed() {
         }
         break;
       case 'round': matchPoint = null; break;
+      case 'levelUp': // the class reached a level; every fifth one improves its abilities, 10 and 20 its special
+        if (e.id === ctx.me) {
+          const what = e.level % 10 === 0 ? 'ABILITIES AND SPECIAL IMPROVE' : e.level % 5 === 0 ? 'ABILITIES IMPROVE' : null;
+          banner('event', 'gold', what ? `LEVEL ${e.level}: ${what} AT YOUR NEXT SPAWN` : `LEVEL ${e.level}`, now, what ? BANNER_SECONDS + 1.2 : BANNER_SECONDS);
+        }
+        break;
       default: break;
     }
   }

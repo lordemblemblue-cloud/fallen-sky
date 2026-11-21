@@ -80,6 +80,8 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   let reaction = { until: -Infinity, clip: null, start: 0, length: 0 };
   let flinchToggle = false;
   let deathStart = null;
+  let wasAirborne = false;
+  let landedAt = -Infinity;
 
   const evasionClip = (body) => {
     const dir = body.motion?.dir;
@@ -100,6 +102,11 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       return library.death ? { clip: 'death', time: Math.min(library.death.duration - 1e-3, elapsed - deathStart), fade: 0.08 } : null;
     }
     deathStart = null;
+    // Class leaps keep their own authored clips. A regular jump followed by airDash
+    // uses its airborne loop until the feet actually land, not just until dash recovery.
+    const airborne = body.y > 0.08 && !fighter.effects?.levitate;
+    if (airborne) wasAirborne = true;
+    else if (wasAirborne) { wasAirborne = false; landedAt = elapsed; }
     // knocked down: thrown back and lying, then getting up
     if (now < fighter.riseUntil) {
       settle = null;
@@ -145,6 +152,15 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       const at = clipAt(a.id, a.t);
       if (at && library[at.clip]) return { clip: at.clip, time: at.time, fade: a.chainedFrom ? 0.06 : FADE.in };
       if (library[a.id]) return { clip: a.id, time: Math.min(library[a.id].duration - 1e-3, a.t) };
+    }
+    if (!a && airborne && library.jumpLoop) {
+      settle = null;
+      return { clip: 'jumpLoop', time: elapsed % library.jumpLoop.duration, fade: 0.09 };
+    }
+    if (!a && !airborne && elapsed - landedAt < 0.22 && library.jumpLand) {
+      settle = null;
+      return { clip: 'jumpLand', time: Math.min(library.jumpLand.duration - 1e-3,
+        Math.max(0, (elapsed - landedAt) / 0.22) * library.jumpLand.duration), fade: 0.08 };
     }
     // the move just ended: its motion settles unless the fighter moves on
     if (!a && lastAction && !fighter.guard) {

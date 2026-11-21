@@ -106,7 +106,6 @@ test('only a server-confirmed CTF capture awards objective charge to a classed h
   ], seats: 2 });
   assert.equal(queueMatchClass(m, 'redPlayer', 'healer').accepted, true);
   advance(m, COUNTDOWN + 0.1);
-  const red = m.world.fighters.get('redPlayer');
   // Client claims, including fabricated objective/meter fields, are not trusted.
   stepMatch(m, STEP, { redPlayer: { objective: true, specialMeter: 100 } });
   assert.equal(m.seats.get('redPlayer').specialMeter, 0);

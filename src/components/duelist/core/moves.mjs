@@ -16,6 +16,8 @@
 //     by their clip's own travel instead: moveMotion.mjs).
 //   channel: the active phase lasts while the button is held, up to `active` seconds, paying willPerSec.
 
+import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId } from './cuts.mjs';
+
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
   stamina: 0, will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
@@ -31,6 +33,8 @@ export const WEAPONS = Object.freeze(['sword', 'dualBlades', 'staff', 'bow']);
 export const CONTRABAND = Object.freeze(['sidearm']);
 
 export const MOVES = Object.freeze({
+  // ---- the sword's cuts by direction, in three modes: nine lines each (core/cuts.mjs)
+  ...Object.fromEntries(Object.entries(CUT_SPECS).map(([id, spec]) => [id, move(spec)])),
   // ---- sword: precise, heavy finishers that punish a weakened defense
   swordLight1: move({ weapon: 'sword', startup: 0.11, active: 0.08, recovery: 0.2, stamina: 6, damage: 10,
     chain: { next: 'swordLight2', from: 0.17, to: 0.42 }, cancelInto: ['movement', 'power'], cancelFrom: 0.22 }),
@@ -117,6 +121,14 @@ export const MOVES = Object.freeze({
     rootMotion: 3.6, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
+  // In-air evasion: second Dash press within AIR_DASH.doubleTapSeconds while in a player jump.
+  // One use per jump; no extra stamina/Will cost. The world validates height and the two presses.
+  airDash: move({ kind: 'movement', startup: 0, active: 0.22, recovery: 0.06, stamina: 0, will: 0,
+    damage: 0, range: 0, rootMotion: 4.5, iframes: [0.04, 0.16], cancelInto: [], cancelFrom: Infinity }),
+  // a jump: the body arcs over the active phase (leap: its height, metres) and keeps the speed it had on the ground
+  // (air: sim/world.mjs sets how far that carries it; from a standstill it goes straight up)
+  jump: move({ kind: 'movement', startup: 0, active: 0.56, recovery: 0.08, stamina: 8, damage: 0, range: 0, leap: 1.1, air: true,
+    cancelInto: ['attack', 'power'], cancelFrom: 0.5 }),
 
   // ---- class abilities (core/classes.mjs gives each class four of these and the powers above, and a special).
   //   effect: what the move does instead of (or besides) a hit, applied by sim/world.mjs through core/abilities.mjs;
@@ -166,8 +178,16 @@ export const MOVES = Object.freeze({
 // as the form's own (the sword's three, the twin blades' four, the staff's three).
 export const STRIKE_DIRECTIONS = Object.freeze(['forward', 'side', 'back']);
 const flow = (chain, turns) => Object.freeze({ chain: Object.freeze(chain), ...turns, strikes: new Set([...chain, ...Object.values(turns)]) });
+// The sword cuts by direction in three modes (core/cuts.mjs): each mode has its own table of nine. With no
+// direction its chain is the standing cut, the cut back along that line, then the cut down the middle.
+const SWORD_MODES = Object.freeze(Object.fromEntries(CUT_MODES.map((mode) => [mode, Object.freeze({
+  chain: Object.freeze([cutId('stand', mode), cutId('right', mode), cutId('forward', mode)]),
+  ...Object.fromEntries(CUT_DIRECTIONS.map((d) => [d, cutId(d, mode)])),
+})])));
 export const FLOW = Object.freeze({
-  sword: flow(['swordLight1', 'swordLight2', 'swordLight3'], { forward: 'swordAdvance', side: 'swordSweep', back: 'swordTurn' }),
+  sword: Object.freeze({ chain: SWORD_MODES.balanced.chain, modes: SWORD_MODES,
+    // the older strikes still count as the sword's (the rules' own callers start them by name)
+    strikes: new Set([...CUT_IDS, 'swordLight1', 'swordLight2', 'swordLight3', 'swordAdvance', 'swordSweep', 'swordTurn']) }),
   dualBlades: flow(['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4'], { forward: 'bladesAdvance', side: 'bladesSweep', back: 'bladesTurn' }),
   // the staff's turn is its chain's second link: a direction takes it out of its turn
   staff: flow(['staffLight1', 'staffLight2', 'staffLight3'], { forward: 'staffLeap', side: 'staffSweep', back: 'staffLight2' }),
@@ -181,6 +201,6 @@ export const BINDINGS = Object.freeze({
   bow: Object.freeze({ light: 'bowShot', heavy: 'sniperShot' }),
   sidearm: Object.freeze({ light: 'sidearmShot', heavy: 'sidearmBurst' }),
 });
-export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash' });
+export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash', jump: 'jump' });
 
 export const moveById = (id) => MOVES[id] || null;

@@ -17,6 +17,7 @@ export function createVitals(overrides = {}) {
     lastStaminaSpend: -Infinity,
     lastWillSpend: -Infinity,
     lastShieldHit: -Infinity,
+    lastHurt: -Infinity, // when the body last lost HP
     dead: false,
   };
 }

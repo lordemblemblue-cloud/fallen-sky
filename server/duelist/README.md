@@ -67,6 +67,7 @@ The browser connects to `ws://localhost:5321/ws/duelist` when it runs on localho
 | `DUELIST_ALLOWED_ORIGINS` | comma-separated exact origins allowed to connect |
 | `DUELIST_ALLOW_GUESTS` | `1` lets people in without an account: local testing only, never in production |
 | `DUELIST_BOT_LEVEL` | `trainee`, `duelist` (default) or `master` |
+| `DUELIST_PROGRESS_FILE` | Where each account's class EXP is kept: a JSON file on a disk that survives restarts. Without it, class levels last only while the server runs. |
 
 ## Deploying (not done; needs the owner's go-ahead)
 

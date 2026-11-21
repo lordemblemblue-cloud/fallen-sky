@@ -3,6 +3,8 @@
 // crystal form (weapon) and colour, a passive, four abilities (moves in core/moves.mjs, on keys 1-4; the HUD
 // shows three at a time and rotates to the fourth) and a special paid for by the server-owned meter.
 // A client never changes its class mid-fight, never charges the meter and never decides what a special does.
+import { tierValue } from './progression.mjs';
+
 export const SPECIAL_MAX = 100;
 export const ABILITY_SLOTS = 3;
 export const CLASS_IDS = Object.freeze(['warrior', 'duelist', 'assassin', 'healer']);
@@ -31,16 +33,24 @@ export const SPECIAL_BALANCE = Object.freeze({
   sanctuaryHealPerSecond: 5,
 });
 
-// what a class's passive changes (core/abilities.mjs applies them)
+// What a class's passive changes (core/abilities.mjs applies them). A list of five is the value at each ability
+// rank (core/progression.mjs: a rank every fifth level), so a passive grows with its class; `text` is the short form
+// (core/ranks.mjs kitAt() writes it out with the numbers of a level).
+const five = (...values) => Object.freeze(values);
 const PASSIVES = Object.freeze({
-  warrior: Object.freeze({ id: 'heavyStance', name: 'Heavy Stance', strikeDamage: 1.15, knockbackTaken: 0.85, attackRate: 0.92,
-    text: 'Strikes hit 15% harder and break guards faster; knockback moves you less; swings are a little slower.' }),
-  duelist: Object.freeze({ id: 'twinRhythm', name: 'Twin Rhythm',
-    text: 'A four-hit light chain; every strike drains the Veil faster.' }),
-  assassin: Object.freeze({ id: 'shadowStep', name: 'Shadow Step', rollDistance: 1.25, backstab: 1.1,
-    text: 'Longer rolls; strikes from behind hit 10% harder.' }),
-  healer: Object.freeze({ id: 'swiftStance', name: 'Swift Stance', strikeDamage: 0.9, attackRate: 1.15,
-    text: 'Faster, lighter swings; healing an ally charges your special.' }),
+  // the Warrior hits harder and stands firmer the further it has come
+  warrior: Object.freeze({ id: 'heavyStance', name: 'Heavy Stance', strikeDamage: five(1.15, 1.17, 1.19, 1.21, 1.24),
+    knockbackTaken: five(0.85, 0.8, 0.75, 0.7, 0.65), attackRate: 0.92,
+    text: 'Strikes hit harder and knockback moves you less; swings are a little slower.' }),
+  // the Duelist is rewarded for keeping a chain going: each link hits harder than the one before
+  duelist: Object.freeze({ id: 'twinRhythm', name: 'Twin Rhythm', chainDamage: five(0.03, 0.04, 0.05, 0.06, 0.07),
+    text: 'A four-hit chain whose every link hits harder than the last; every strike drains the Veil faster.' }),
+  // the Assassin gets in and out: longer rolls, and more from a strike in the back
+  assassin: Object.freeze({ id: 'shadowStep', name: 'Shadow Step', rollDistance: five(1.25, 1.28, 1.31, 1.34, 1.38),
+    backstab: five(1.1, 1.14, 1.18, 1.22, 1.26), text: 'Longer rolls; strikes from behind hit harder.' }),
+  // the Healer stays in the fight: left alone for a moment, it mends itself
+  healer: Object.freeze({ id: 'swiftStance', name: 'Swift Stance', strikeDamage: 0.9, attackRate: 1.15, regen: five(1, 1.25, 1.5, 1.75, 2),
+    regenAfter: 4, text: 'Faster, lighter swings; unhurt for a moment, you mend yourself; healing an ally charges your special.' }),
 });
 
 const ability = (id, name, text) => Object.freeze({ id, name, text, animation: 'class.power.' + id, implemented: true });
@@ -158,21 +168,21 @@ export function awardSpecialCharge(meter, event) {
 const finitePoint = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.z);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 /** Is `attacker` within the rear arc of a target facing `target.yaw`? */
-export function behindTarget(attacker, target) {
+export function behindTarget(attacker, target, arcDegrees = SPECIAL_BALANCE.assassinRearArcDegrees) {
   const dx = attacker.x - target.x;
   const dz = attacker.z - target.z;
   const len = Math.hypot(dx, dz);
   if (len < 1e-6 || !Number.isFinite(target.yaw)) return false;
   const dot = (dx * Math.sin(target.yaw) + dz * Math.cos(target.yaw)) / len;
-  return dot <= -Math.cos(SPECIAL_BALANCE.assassinRearArcDegrees / 2 * Math.PI / 180);
+  return dot <= -Math.cos(arcDegrees / 2 * Math.PI / 180) + 1e-9;
 }
 
 /**
  * Validates a special's request and meter cost without applying it (sim/world.mjs applies it).
  * actor: { id, team, hp, position: { x, z } }; target (executions): { id, team, hp, maxHp, position: { x, z, yaw },
- * protectedUntil, invulnerable }.
+ * protectedUntil, invulnerable }. level: the class's level (the special's tier: core/progression.mjs).
  */
-export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 } = {}) {
+export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0 } = {}) {
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
   if (!validMeter(meter)) return { allowed: false, reason: 'invalid-meter' };
@@ -187,12 +197,14 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 
     if (target.hp <= 0) return { allowed: false, reason: 'target-defeated' };
     if (actor.id && target.id && actor.id === target.id) return { allowed: false, reason: 'self-target' };
     if (actor.team != null && target.team === actor.team) return { allowed: false, reason: 'friendly-target' };
-    // Invalid protection timestamps must not silently bypass spawn immunity.
-    if (target.protectedUntil != null && !Number.isFinite(target.protectedUntil)) return { allowed: false, reason: 'invalid-context' };
+    // Invalid protection timestamps must not silently bypass spawn immunity. -Infinity is not one of them: it is
+    // what a fighter that is not protected carries (core/fighter.mjs), and refusing it refused every execution.
+    if (target.protectedUntil != null && target.protectedUntil !== -Infinity && !Number.isFinite(target.protectedUntil)) return { allowed: false, reason: 'invalid-context' };
     if ((target.protectedUntil ?? -Infinity) > now || target.invulnerable) return { allowed: false, reason: 'target-protected' };
-    if (distance(actor.position, target.position) > def.special.reach) return { allowed: false, reason: 'out-of-range' };
-    if (def.special.rule === 'threshold' && target.hp / target.maxHp > SPECIAL_BALANCE.duelistExecuteThreshold) return { allowed: false, reason: 'target-too-healthy' };
-    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position)) return { allowed: false, reason: 'not-behind' };
+    const id = def.special.id;
+    if (distance(actor.position, target.position) > tierValue(id, 'reach', matchBoost, def.special.reach)) return { allowed: false, reason: 'out-of-range' };
+    if (def.special.rule === 'threshold' && target.hp / target.maxHp > tierValue(id, 'threshold', matchBoost, SPECIAL_BALANCE.duelistExecuteThreshold)) return { allowed: false, reason: 'target-too-healthy' };
+    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', matchBoost, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
   }
   return { allowed: true, effect: def.special.id, cost: def.special.cost, meterAfter: clamp(meter - def.special.cost, 0, SPECIAL_MAX), animation: def.special.animation };
 }

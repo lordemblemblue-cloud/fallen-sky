@@ -11,6 +11,10 @@ import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState
 import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
+import { moveFor } from './ranks.mjs';
+import { CUT_MODES, DEFAULT_MODE, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection } from './cuts.mjs';
+import { cleanBoost } from './progression.mjs';
+import { equipItems } from './shop.mjs';
 
 // Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
 const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
@@ -26,12 +30,16 @@ const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id ===
  * effects: lasting effects (core/abilities.mjs); meter: the special meter as the match last gave it (the match's
  * seat owns it; sim/world.mjs reads it to allow a special and reports what one spent).
  */
-export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null } = {}) {
-  return {
+// level: the class's level (core/progression.mjs), which sets its abilities' rank and its special's tier
+export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1, matchBoost = 0, items = [] } = {}) {
+  const fighter = {
     id,
     team,
     weapon,
+    mode: DEFAULT_MODE, // swift | balanced | heavy: how the sword's cuts are made (core/cuts.mjs)
     classId: classById(classId) ? classId : null,
+    level: Math.max(1, Math.floor(level) || 1),
+    matchBoost: cleanBoost(matchBoost),
     effects: {},
     meter: 0,
     vitals: createVitals(vitals || {}),
@@ -46,7 +54,14 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     heldBy: null, // the fighter holding this one with Telekinesis
     breaches: {}, // attacker id -> until: whose hits reach this fighter through its Veil
     events: [],
+    healReduction: 0, healReducedUntil: -Infinity,
+    shopSpeedUntil: -Infinity, shopProcAt: -Infinity, shopHealProcAt: -Infinity,
+    shopCloakAt: -Infinity, shopGripBreakAt: -Infinity,
+    activeRelicUntil: -Infinity, activeRelicCooldownUntil: -Infinity,
+    activeAnchorAt: null,
   };
+  equipItems(fighter, items);
+  return fighter;
 }
 
 const busy = (f) => !!f.action;
@@ -71,7 +86,15 @@ function lightStrike(f, direction) {
   if (!flow) return open ? a.move.chain.next : BINDINGS[f.weapon]?.light || null;
   const from = open ? a.id : null;
   const link = open ? (a.link || 1) : 0; // strikes made so far in this chain
-  const turned = direction ? flow[direction] : null;
+  if (flow.modes) { // cuts by direction (core/cuts.mjs): the stick's eight ways, in the fighter's mode
+    const table = flow.modes[f.mode] || flow.modes[DEFAULT_MODE];
+    const way = direction === 'side' ? 'left' : CUT_DIRECTIONS.includes(direction) ? direction : null;
+    // the same cut twice running comes straight back along its own line instead (the return cut)
+    if (way) return table[way] !== from ? table[way] : table[REVERSE_LINE[way]];
+    const next = table.chain[link % table.chain.length];
+    return next !== from ? next : table.chain[(link + 1) % table.chain.length];
+  }
+  const turned = direction ? flow[flowDirection(direction)] : null;
   if (turned && turned !== from) return turned;
   const next = flow.chain[link % flow.chain.length];
   return next !== from ? next : flow.chain[(link + 1) % flow.chain.length];
@@ -102,11 +125,15 @@ function moveForCommand(f, command, direction = null) {
 
 // Why a move cannot start now (null = it can).
 export function blockedReason(f, id, now) {
-  const move = moveById(id);
+  const move = moveFor(f, id);
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
+  if (now < (f.activeRelicUntil ?? -Infinity)) return 'stasis';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
+  // a class fights with its own kit and its own special, however the move was asked for
   if (CLASS_ABILITIES.has(id) && !kitHas(f, id)) return 'class';
+  if (f.classId && LEGACY_POWERS.has(id) && !kitHas(f, id)) return 'class';
+  if (move.special && classById(f.classId)?.special.id !== id) return 'class';
   if (isDown(f, now)) return 'down';
   const restrained = isStunned(f, now) || f.heldBy;
   if (restrained && id !== 'resist') return f.heldBy ? 'held' : 'stunned';
@@ -116,15 +143,16 @@ export function blockedReason(f, id, now) {
   return null;
 }
 
-function startMove(f, id, now, chainedFrom = null, link = 1) {
-  const move = moveById(id);
+// lead: seconds of the move already behind it as it starts (a cut that carries on from another: core/cuts.mjs)
+function startMove(f, id, now, chainedFrom = null, link = 1, lead = 0) {
+  const move = moveFor(f, id); // an ability at its rank, the special at its tier
   if (move.kind === 'attack' || move.kind === 'power') f.protectedUntil = -Infinity; // acting ends spawn protection
   spendStamina(f.vitals, move.stamina, now);
   spendWill(f.vitals, move.will, now);
   if (move.cooldown > 0) f.cooldowns[id] = now + move.cooldown;
   f.guard = null;
-  f.action = { id, move, t: 0, nextHit: 0, held: move.channel, chainedFrom, link };
-  f.events.push({ type: 'start', id, at: now, chainedFrom });
+  f.action = { id, move, t: lead, nextHit: 0, held: move.channel, chainedFrom, link };
+  f.events.push({ type: 'start', id, at: now, chainedFrom, ...(lead ? { lead } : {}) });
   if (id === 'resist') { // throws off a grip and every breach at once
     if (f.heldBy) f.events.push({ type: 'freed', at: now, from: f.heldBy });
     f.heldBy = null;
@@ -138,6 +166,9 @@ function startMove(f, id, now, chainedFrom = null, link = 1) {
 function canInterrupt(f, id) {
   const a = f.action;
   if (!a) return true;
+  // Only the server-authorized aerial follow-up interrupts an ongoing jump.
+  // The client can send only 'dash' presses; the world verifies the double-tap.
+  if (id === 'airDash' && a.id === 'jump') return true;
   const move = moveById(id);
   if (!move) return false; // a buffered guard waits for the action to end
   if (chainsInto(f, id)) return true;
@@ -152,6 +183,7 @@ function canInterrupt(f, id) {
 // direction: forward | side | back | null, the way the stick is held relative to the facing (a light strike takes it)
 export function press(f, command, now, { fromBuffer = false, direction = null } = {}) {
   if (command === 'blockUp') { f.guard = null; return { accepted: true }; }
+  if (now < (f.activeRelicUntil ?? -Infinity)) return { accepted: false, reason: 'stasis' };
   if (command === 'blockDown') {
     if (f.vitals.dead || isStunned(f, now) || f.heldBy) return { accepted: false, reason: 'restrained' };
     if (busy(f)) return bufferPress(f, command, now, fromBuffer, null);
@@ -163,6 +195,11 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
     if (a?.move.channel && a.held) { a.held = false; return { accepted: true }; }
     return { accepted: false, reason: 'nothing-held' };
   }
+  if (command === 'mode') { // the next of the three modes (the sword's cuts: core/cuts.mjs); it takes the next strike
+    f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
+    f.events.push({ type: 'mode', mode: f.mode, at: now });
+    return { accepted: true, mode: f.mode };
+  }
   const id = moveForCommand(f, command, direction);
   if (!id) return { accepted: false, reason: 'unknown' };
   const reason = blockedReason(f, id, now);
@@ -172,9 +209,10 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   if (busy(f) && !canInterrupt(f, id)) return bufferPress(f, command, now, fromBuffer, direction);
   const chainedFrom = chainsInto(f, id) ? f.action.id : null;
   const link = chainedFrom ? (f.action.link || 1) + 1 : 1;
+  const lead = chainedFrom ? cutLead(f.action.move, moveFor(f, id)) : 0; // the blade carries on from where it is
   if (f.action) f.events.push({ type: 'interrupt', id: f.action.id, by: id, at: now });
   f.action = null;
-  return startMove(f, id, now, chainedFrom, link);
+  return startMove(f, id, now, chainedFrom, link, lead);
 }
 
 function bufferPress(f, command, now, fromBuffer, direction) {
@@ -190,12 +228,12 @@ export function stagger(f, seconds, now) {
   f.action = null;
   f.guard = null;
   f.buffer = null;
-  f.stunnedUntil = Math.max(f.stunnedUntil, now + seconds);
+  f.stunnedUntil = Math.max(f.stunnedUntil, now + seconds * (1 - (f.shopStats?.tenacity || 0)));
 }
 
 // i-frames of a roll, or knocked down and not yet standing (now omitted: only the move's i-frames count)
 export const isInvulnerable = (f, now) => {
-  if (now !== undefined && (isDown(f, now) || now < f.protectedUntil)) return true;
+  if (now !== undefined && (isDown(f, now) || now < f.protectedUntil || now < (f.activeRelicUntil ?? -Infinity))) return true;
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };
@@ -203,8 +241,9 @@ export const isInvulnerable = (f, now) => {
 /** Knocked off the feet by a hard push or throw: lies for KNOCKDOWN.lie, rises for KNOCKDOWN.rise. */
 export function knockDown(f, now) {
   stagger(f, KNOCKDOWN.lie + KNOCKDOWN.rise, now);
-  f.downUntil = now + KNOCKDOWN.lie;
-  f.riseUntil = f.downUntil + KNOCKDOWN.rise;
+  const resistance = 1 - (f.shopStats?.tenacity || 0);
+  f.downUntil = now + KNOCKDOWN.lie * resistance;
+  f.riseUntil = f.downUntil + KNOCKDOWN.rise * resistance;
   f.events.push({ type: 'knockdown', at: now });
 }
 

@@ -156,11 +156,11 @@ test('what only the server knows (a hit) reaches the picture eased, and the two 
 });
 
 test('a shown action stays one action through every correction; the next one is a new action', () => {
-  const script = (tick) => ({ move: { x: 0, z: 0 }, run: true, face: 0, presses: tick === 40 || tick === 54 || tick === 140 ? ['light'] : [] });
+  const script = (tick) => ({ move: { x: 0, z: 0 }, run: true, face: 0, presses: tick === 40 || tick === 62 || tick === 140 ? ['light'] : [] });
   const { frames } = session({ ticks: 240, up: 5, down: 4, script });
   const seen = [];
   for (const f of frames) if (f.action && !seen.includes(f.action)) seen.push(f.action);
-  assert.deepEqual(seen.map((a) => a.id), ['swordLight1', 'swordLight2', 'swordLight1'], 'two strikes of a chain, then a fresh one: three actions, three objects');
+  assert.deepEqual(seen.map((a) => a.id), ['swordCutStandBalanced', 'swordCutRightBalanced', 'swordCutStandBalanced'], 'two strikes of a chain, then a fresh one: three actions, three objects');
   // it shows in the frame of the press, not when the server gets to it
   assert.equal(frames.find((f) => f.action)?.tick, 40);
   assert.ok(PREDICTION.sameActionSeconds < 0.2);
