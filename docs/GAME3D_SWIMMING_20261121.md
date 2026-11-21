@@ -70,17 +70,21 @@ bridge (world x 103-122, z 90; water about 8.6 m, bed down to 6.7 m):
 - A simulated remote player (the live movement event the multiplayer layer sends, at the river) played the
   retargeted loops on the hosted archer. Its neck sat at the water line and its feet 1.29 m down while treading
   water.
+- After merging main c64e39d9 (now on the WebGPU renderer), the same river walk was checked again. The hero swam
+  from 1.52 m with the cross-fade, floated 4 cm under the surface and trod water when stopped. They were still
+  swimming at 1.26 m and stood at 1.15 m on the way out, and F was refused in the water.
 
 ## Tests
 
-`node --test --test-reporter=tap tests/`, compared by failing test name with unmodified `origin/main` (d8817383):
+`node --test --test-reporter=tap tests/`, compared by failing test name with unmodified `origin/main`:
 
 | | tests | pass | fail |
 | --- | --- | --- | --- |
-| origin/main | 1648 | 1539 | 109 |
-| this branch | 1659 | 1550 | 109 |
+| origin/main c64e39d9 | 1696 | 1578 | 118 |
+| this branch (with c64e39d9 merged) | 1707 | 1589 | 118 |
 
-The same 109 tests fail on both. The 11 new tests are in `tests/game3d-swimming.test.mjs`:
+The same 118 tests fail on both, and the same held against main d8817383 before the merge (109 on both). The 11
+new tests are in `tests/game3d-swimming.test.mjs`:
 
 - the swim state: entry, exit band, bridge decks, teleports;
 - the water index on the real river mesh;
