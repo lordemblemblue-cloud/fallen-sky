@@ -17,15 +17,15 @@ function memoryStorage(initial = {}) {
   };
 }
 
-test('live scenes are ready, yet default to WebGPU only where this device measured it at least as fast', () => {
+test('ready live scenes prefer WebGPU even before a benchmark, while retaining accelerated WebGL fallback', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
     assert.equal(isSceneWebGPUReady(sceneId), true);
-    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgl', reason: 'device-not-measured' });
+    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
     assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: false } }),
       { kind: 'webgl', reason: 'webgpu-slower-on-this-device' });
     assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true } }),
       { kind: 'webgpu', reason: 'scene-ready' });
-    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: 'yes' } }).kind, 'webgl');
+    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: 'yes' } }).kind, 'webgpu');
     assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true }, previousFailure: true }).kind, 'webgl');
   }
 });
@@ -51,7 +51,7 @@ test('a ready scene uses WebGPURenderer by default where WebGPU is the faster re
   const scenes = { 'fallen-sky': { ready: true } };
   const faster = { webgpuAtLeastAsFast: true };
   assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster }), { kind: 'webgpu', reason: 'scene-ready' });
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgl', reason: 'device-not-measured' });
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
   assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, previousFailure: true }).kind, 'webgl');
   assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, override: 'webgl' }).kind, 'webgl');
   assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: 'yes' } }, deviceVerdict: faster }).kind, 'webgl');
@@ -61,10 +61,10 @@ test('a ready scene uses WebGPURenderer by default where WebGPU is the faster re
 
 test('the browser helper reads this browser build\'s stored verdict', () => {
   const verdict = JSON.stringify({ webgpuAtLeastAsFast: true, fingerprint: 'UA-1', measuredAt: Date.now() });
-  const host = (userAgent) => ({ location: { search: '' }, navigator: { userAgent },
+  const host = (userAgent) => ({ location: { search: '' }, navigator: { userAgent, gpu: {} },
     localStorage: memoryStorage({ [DEVICE_VERDICT_KEY]: verdict }), sessionStorage: memoryStorage() });
   assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-1')), { kind: 'webgpu', reason: 'scene-ready' });
-  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-2')), { kind: 'webgl', reason: 'device-not-measured' });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-2')), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
   const failed = host('UA-1');
   rememberRendererFailure(failed);
   assert.equal(chooseSceneRendererFor('fallen-sky', failed).kind, 'webgl');
@@ -91,4 +91,9 @@ test('browser helper combines location, localStorage and the per-tab failure fla
   assert.equal(host.sessionStorage.getItem(RENDERER_FAILED_KEY), '1');
   assert.equal(chooseSceneRendererFor('fallen-sky', host).kind, 'webgl');
   assert.equal(chooseSceneRendererFor('fallen-sky', {}).kind, 'webgl');
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', { navigator: {}, location: { search: '' } }),
+    { kind: 'webgl', reason: 'webgpu-api-unavailable' });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', { isSecureContext: false,
+    navigator: { gpu: {} }, location: { search: '' } }),
+    { kind: 'webgl', reason: 'webgpu-api-unavailable' });
 });

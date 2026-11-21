@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { humanGraphicsStatus, readGraphicsRuntimeStatus } from '@/lib/graphicsRuntimeStatus.mjs';
+import { probeBrowserGPU, browserGPUStatusMessage } from '@/lib/browserGPUDetection.mjs';
 
 const panelStyle = { border: '1px solid rgba(165,195,226,.20)', borderRadius: 14,
   background: 'rgba(8,17,30,.55)', color: '#e4efff', padding: '14px', fontSize: 13 };
@@ -16,21 +17,13 @@ function Metric({ title, value }) {
  */
 export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
   const [live, setLive] = useState(() => readGraphicsRuntimeStatus(sceneId));
-  const [browser, setBrowser] = useState({ state: 'checking', name: null });
-  const checkBrowser = useCallback(async () => {
-    setBrowser({ state: 'checking', name: null });
-    try {
-      const gpu = window.navigator?.gpu;
-      if (!gpu?.requestAdapter) { setBrowser({ state: 'unsupported', name: null }); return; }
-      const adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
-      if (!adapter) { setBrowser({ state: 'unavailable', name: null }); return; }
-      const info = adapter.info;
-      const name = info && [info.vendor, info.architecture, info.device, info.description]
-        .filter(v => typeof v === 'string' && v.trim()).join(' ');
-      setBrowser({ state: 'available', name: name || null });
-    } catch {
-      setBrowser({ state: 'blocked', name: null });
-    }
+  const [browser, setBrowser] = useState({ status: 'checking', name: null });
+  // The device is detected in the user's browser, not on the remote multiplayer server.
+  // Requests are shared between the two games and never uploaded or persisted.
+  const checkBrowser = useCallback(async (refresh = false) => {
+    setBrowser({ status: 'checking', name: null });
+    const result = await probeBrowserGPU(window, { refresh });
+    setBrowser(result);
   }, []);
   useEffect(() => {
     if (!enabled) return undefined;
@@ -39,15 +32,17 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
     return () => window.clearInterval(timer);
   }, [enabled, sceneId]);
   useEffect(() => {
-    if (enabled) { void checkBrowser(); }
+    if (enabled) { void checkBrowser(false); }
   }, [enabled, checkBrowser]);
   if (!enabled) return null;
 
   const backend = { webgpu: 'WebGPU', 'webgl2-fallback': 'WebGL2 fallback',
     'classic-webgl': 'Classic WebGL', initializing: 'Initializing', none: 'No live game' }[live.backend] || live.backend;
   const browserText = { checking: 'Checking…', available: 'Adapter available',
+    'software-fallback': 'Software fallback only',
+    'insecure-context': 'HTTPS or localhost required',
     unsupported: 'WebGPU API not exposed', unavailable: 'No usable adapter',
-    blocked: 'Browser adapter check blocked' }[browser.state] || browser.state;
+    blocked: 'Browser adapter check blocked' }[browser.status] || browser.status;
 
   return <div style={panelStyle} data-testid={`graphics-runtime-${sceneId}`} aria-label="Graphics diagnostics">
     <h3 style={{ margin: '0 0 5px', fontSize: 16, fontWeight: 650 }}>Graphics diagnostics</h3>
@@ -56,6 +51,9 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
     </p>
     <dl style={{ margin: 0 }}>
       <Metric title="Game renderer" value={backend}/>
+      <Metric title="Rendering & shader path" value={live.webgpuActive
+        ? 'GPU via WebGPU' : live.backend === 'classic-webgl' || live.backend === 'webgl2-fallback'
+          ? 'WebGL (hardware depends on browser)' : 'Not verified'}/>
       <Metric title="Verified WebGPU" value={live.webgpuActive ? 'Yes' : 'No'}/>
       <Metric title="GPU device" value={live.deviceConfirmed ? 'Initialized' : 'Not confirmed'}/>
       <Metric title="Render calls" value={live.frameCount.toLocaleString()}/>
@@ -64,17 +62,19 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
       {live.webglRendererName && <Metric title="WebGL renderer (browser-reported)" value={live.webglRendererName}/>}
       {live.selectionReason && <Metric title="Renderer selection reason" value={live.selectionReason}/>}
       <Metric title="Browser WebGPU adapter" value={browserText}/>
-      {browser.name && <Metric title="Available adapter (not necessarily active)" value={browser.name}/>}
+      {browser.name && <Metric title="Detected graphics card (browser-reported)" value={browser.name}/>}
+      <p role="status" style={{ margin: '9px 0 4px', opacity: .84, fontSize: 12 }}>{browserGPUStatusMessage(browser)}</p>
     </dl>
-    <button type="button" onClick={() => void checkBrowser()}
+    <button type="button" onClick={() => void checkBrowser(true)}
       style={{ marginTop: 10, padding: '5px 10px', borderRadius: 8,
         border: '1px solid rgba(210,226,245,.4)', color: 'inherit', background: 'transparent' }}>
       Recheck browser GPU
     </button>
     <p style={{ margin: '10px 0 0', opacity: .72, fontSize: 12 }}>
-      Browser adapter support does not prove the game uses WebGPU. The active renderer
-      is verified only while gameplay is running; its model name may be hidden by Edge.
-      Render calls are not GPU utilization measurements.
+      Graphics card detection runs automatically in your browser. It may be hidden by Edge
+      and the detected available GPU may differ from the live game adapter. The game renderer
+      reports WebGPU separately and only while gameplay is running. WebGPU and WebGL both use
+      GPU shaders; a frame-call counter is not a GPU utilization measurement.
     </p>
   </div>;
 }

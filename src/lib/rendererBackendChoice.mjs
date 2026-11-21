@@ -6,9 +6,10 @@
  *   'webgl2' - WebGPURenderer forced onto that WebGL2 backend (forceWebGL), to test the fallback.
  *   'webgl'  - the classic WebGLRenderer with the original GLSL materials.
  *
- * The default: a scene marked ready in webgpuSceneReadiness.mjs uses 'webgpu' on a device where WebGPU measured at
- * least as fast as the classic renderer (webgpuDeviceVerdict.mjs, measured once by webgpuDeviceProbe.js); without
- * such a verdict, on a slower device, for any other scene, or after WebGPU failed in this tab, the classic renderer.
+ * The default: ready scenes start with WebGPU when the browser exposes navigator.gpu. A measured slower
+ * WebGPU verdict (webgpuDeviceVerdict.mjs) may select accelerated classic WebGL instead. Unsupported browsers,
+ * unready scenes, and earlier WebGPU failures keep classic WebGL. WebGPURenderer itself falls back to WebGL2
+ * when it cannot obtain a WebGPU adapter. Both WebGPU and WebGL execute drawing/shaders on the GPU.
  * A developer can choose explicitly with `?renderer=webgpu|webgl2|webgl`, which is remembered on this device until
  * `?renderer=auto`; WebGPU kinds are honoured only for scenes marked ready or preview, so an unknown scene can never
  * opt in.
@@ -58,10 +59,11 @@ export function chooseSceneRenderer({ sceneId, override = null, previousFailure 
   }
   if (!isSceneWebGPUReady(sceneId, scenes)) return { kind: 'webgl', reason: 'scene-not-ready' };
   if (previousFailure) return { kind: 'webgl', reason: 'webgpu-failed-earlier' };
-  if (deviceVerdict?.webgpuAtLeastAsFast !== true) {
-    return { kind: 'webgl', reason: deviceVerdict ? 'webgpu-slower-on-this-device' : 'device-not-measured' };
+  if (deviceVerdict?.webgpuAtLeastAsFast === false) {
+    return { kind: 'webgl', reason: 'webgpu-slower-on-this-device' };
   }
-  return { kind: 'webgpu', reason: 'scene-ready' };
+  return { kind: 'webgpu', reason: deviceVerdict?.webgpuAtLeastAsFast === true
+    ? 'scene-ready' : 'webgpu-first-unmeasured' };
 }
 
 /** Browser convenience: the choice for a scene from window.location and localStorage / sessionStorage. */
@@ -81,6 +83,11 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
     return { kind: 'webgl', reason: 'browser-host-unavailable' };
   }
   const override = readRendererOverride({ search, storage });
+  // The graphics API is exposed only in supported, secure browser contexts.
+  // Do not default to WebGPU on SSR, insecure pages or browsers without it.
+  if (!override && (!host?.navigator?.gpu || host?.isSecureContext === false)) {
+    return { kind: 'webgl', reason: 'webgpu-api-unavailable' };
+  }
   const deviceVerdict = readDeviceVerdict({ storage, fingerprint });
   return chooseSceneRenderer({ sceneId, override, previousFailure, deviceVerdict });
 }
