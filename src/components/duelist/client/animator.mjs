@@ -14,24 +14,35 @@ export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
 const NATURAL = Object.freeze({ walk: 1.5, packWalk: 0.9, jog: 4.95, sprint: 7.63 });
 const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7.2 });
-const GRIP_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
+// each stance: the idle everything blends over, the guard, and whose fingers keep hold of a weapon
+const RIGHT_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
+const BOTH_FINGERS = /(Right|Left)Hand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
+export const STANCES = Object.freeze({
+  sword: { idle: 'swordIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
+  sidearm: { idle: 'pistolIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
+  dualBlades: { idle: 'bladesIdle', guard: 'bladesGuard', grip: BOTH_FINGERS },
+  staff: { idle: 'staffIdle', guard: 'staffGuard', grip: RIGHT_FINGERS },
+});
 
 /**
  * clips: { pack: {name: clip} (motion pack, retargeted), walk: the body's own walk, dodges: {Front_Roll, ...},
  *          baked: {held, ...} (posed fallbacks) }
  */
-// stance: 'sword' (a duelist) or 'sidearm' (a smuggler: the pistol stance is the idle, and the hand's grip)
+// stance: 'sword', 'dualBlades' or 'staff' (a duelist's crystal form) or 'sidearm' (a smuggler: the pistol stance
+// is the idle, and the hand's grip)
 export function createFighterAnimator({ model, clips, stance = 'sword' }) {
-  const idleName = stance === 'sidearm' ? 'pistolIdle' : 'swordIdle';
   const mixer = new THREE.AnimationMixer(model);
   const pack = clips.pack || {};
+  const form = STANCES[stance] || STANCES.sword;
+  const idleName = pack[form.idle] ? form.idle : 'swordIdle'; // a pack built without the class clips still stands
+  const guardName = pack[form.guard] ? form.guard : 'swordBlock';
   const library = {
     ...(clips.baked || {}), ...(clips.dodges || {}), ...pack,
     walkBase: clips.walk || pack.walk,
   };
   // bodies without a walk of their own take the pack's (a slower stride)
   const naturalWalk = clips.walk ? NATURAL.walk : NATURAL.packWalk;
-  const loops = new Set(['swordIdle', 'pistolIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
+  const loops = new Set(['swordIdle', 'bladesIdle', 'staffIdle', 'pistolIdle', 'walkBase', 'jog', 'sprint', 'castHold', 'held', 'shieldIdle']);
   const actions = new Map(); // clip name -> { action, weight, name }
   const actionFor = (name) => {
     if (actions.has(name)) return actions.get(name);
@@ -49,7 +60,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword' }) {
   };
   // the sword hand's grip, always on
   if (pack[idleName]) {
-    const fingers = pack[idleName].tracks.filter((t) => GRIP_FINGERS.test(t.name));
+    const fingers = pack[idleName].tracks.filter((t) => form.grip.test(t.name));
     if (fingers.length) {
       const grip = mixer.clipAction(new THREE.AnimationClip('weaponGrip', pack[idleName].duration, fingers));
       grip.play();
@@ -144,9 +155,9 @@ export function createFighterAnimator({ model, clips, stance = 'sword' }) {
       if (fighter.guard || (body.speed || 0) > 0.6 || !clip || settle.time >= clip.duration - 1e-3) settle = null;
       else return { clip: settle.clip, time: settle.time, fade: FADE.in, out: FADE.settleOut };
     }
-    if (fighter.guard && library.swordBlock) {
+    if (fighter.guard && library[guardName]) {
       // hold the block, breathing a little
-      return { clip: 'swordBlock', time: 0.36 + 0.1 * (0.5 - 0.5 * Math.cos(elapsed * 2.4)), fade: 0.06 };
+      return { clip: guardName, time: 0.36 + 0.1 * (0.5 - 0.5 * Math.cos(elapsed * 2.4)), fade: 0.06 };
     }
     return null;
   }

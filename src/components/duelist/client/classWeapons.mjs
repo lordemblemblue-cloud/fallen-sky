@@ -36,7 +36,8 @@ export function createClassWeapon(classId, { color = null } = {}) {
   if (def?.weapon === 'dualBlades') {
     return { kind: 'dualBlades', main: createCrystalSword({ color: tint, length: 0.78 }), off: createCrystalSword({ color: tint, length: 0.78 }), color: tint };
   }
-  return { kind: 'sword', main: createCrystalSword({ color: tint, length: classId === 'warrior' ? 1.08 : 0.98 }), off: null, color: tint };
+  const length = classId === 'warrior' ? 1.08 : 0.98;
+  return { kind: 'sword', main: createCrystalSword({ color: tint, length }), off: null, color: tint, length };
 }
 
 // the right hand's grip mirrored for the left hand (the rig's left bones mirror the right ones across x)
@@ -45,6 +46,13 @@ export const mirrorGrip = (grip) => grip && {
   quaternion: [grip.quaternion[0], -grip.quaternion[1], -grip.quaternion[2], grip.quaternion[3]],
   scale: grip.scale,
 };
+
+/** Where a class weapon's blades run, each in its own group's frame (blade along +Y): [{ group, base, tip }]. */
+export function weaponBlades(weapon) {
+  if (weapon.kind === 'staff') return [{ group: weapon.main.group, base: 0.62, tip: 1.02 }, { group: weapon.main.group, base: -0.62, tip: -1.02 }];
+  if (weapon.kind === 'dualBlades') return [weapon.main, weapon.off].map((w) => ({ group: w.group, base: 0.4, tip: 0.78 }));
+  return [{ group: weapon.main.group, base: 0.5, tip: weapon.length ?? 0.98 }];
+}
 
 /** Put a class weapon in the hands: the main at the solved grip, an off-hand blade at its mirror. */
 export function equipClassWeapon(weapon, { rightHand, leftHand, grip }) {

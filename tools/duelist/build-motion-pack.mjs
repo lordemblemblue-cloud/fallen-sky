@@ -1,6 +1,6 @@
 // Builds Duelist Adventure's motion pack from the owner's clip pack (ActionForge, 80 clips on the fused
 // female rig, 2026-11-18):
-//   node tools/duelist/build-motion-pack.mjs <source.glb> [--keep-source]
+//   node tools/duelist/build-motion-pack.mjs <source.glb> [--keep-source] [--class-clips=<blender export.glb>]
 // Writes
 //   public/models/animations/duelist/duelist-motion.glb   skeleton + the clips the game uses, in place
 //   src/components/duelist/core/motionPack.data.mjs     durations, strike timings, travel, natural speeds
@@ -11,7 +11,7 @@
 // a one-shot that travels (lunges, dashes, knockback) is pinned where it starts. What was removed is
 // recorded (natural speed, travel curve) so the game can move the body to match.
 /* global process, console, URL, TextDecoder, TextEncoder, Buffer */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 globalThis.self ??= globalThis;
@@ -258,6 +258,78 @@ function writeGlb(rootObject, clips, extras) {
   return out;
 }
 
+// ---------- the class weapons' clips, made in Blender (tools/duelist/blender/weapon_clips.py) ----------
+// The Blender export has a skeleton of its own: the same bones, at Blender's rest pose and bone axes. Both
+// skeletons are put in the same known pose of the pack (the first frame of the sword stance, exported as
+// `__ref`), so a bone's turn from there in one is the same turn in the other. `__check` is a clip of the pack
+// sent through Blender and back: it is compared with the original here, bone by bone.
+const CLASS_SOURCE = resolve(ROOT, 'tools/duelist/source/class-weapons.anim.glb');
+const CLASS_LOOPS = new Set(['bladesIdle', 'staffIdle']);
+const CLASS_STANCES = new Set(['bladesIdle', 'staffIdle', 'bladesGuard', 'staffGuard']); // no strike to time
+
+function posed(root, clip, time, read) {
+  const mixer = new THREE.AnimationMixer(root);
+  const action = mixer.clipAction(clip);
+  action.setLoop(THREE.LoopOnce, 1);
+  action.clampWhenFinished = true;
+  action.play();
+  mixer.setTime(Math.min(time, clip.duration - 1e-4));
+  root.updateMatrixWorld(true);
+  const out = read();
+  mixer.stopAllAction();
+  mixer.uncacheRoot(root);
+  root.updateMatrixWorld(true);
+  return out;
+}
+
+// a bone that holds one pose through a clip needs two keys, not sixty a second
+function thin(track) {
+  const size = track.getValueSize();
+  const v = track.values;
+  for (let i = size; i < v.length; i++) if (Math.abs(v[i] - v[i % size]) > 1e-6) return track;
+  const Track = track.constructor;
+  return new Track(track.name, [track.times[0], track.times[track.times.length - 1]], [...v.slice(0, size), ...v.slice(0, size)]);
+}
+
+async function loadClassClips(path) {
+  const { describeRig, retargetClip } = await import('../../src/components/duelist/client/motionLibrary.mjs');
+  const file = readFileSync(path);
+  const other = await loader.parseAsync(file.buffer.slice(file.byteOffset, file.byteOffset + file.byteLength), '');
+  const theirs = new Map(other.animations.map((c) => [c.name, c]));
+  const ref = theirs.get('__ref');
+  const check = theirs.get('__check');
+  if (!ref || !check) throw new Error('class clips: __ref and __check are missing (export with weapon_clips.py)');
+  const from = posed(other.scene, ref, 0, () => describeRig(other.scene));
+  const to = posed(scene, byName.get('sword_idle_fit'), 0, () => describeRig(scene));
+  const original = byName.get('sword_regular_a_fit');
+  const back = retargetClip(check, from, to, '__check');
+  const bones = [];
+  scene.traverse((n) => { if (back.tracks.some((t) => t.name === `${n.name}.quaternion`)) bones.push(n); });
+  const read = () => ({ q: bones.map((b) => b.getWorldQuaternion(new THREE.Quaternion())), hips: hips.getWorldPosition(new THREE.Vector3()) });
+  let worst = 0;
+  let worstBone = '';
+  let worstHips = 0;
+  for (let k = 0; k / 12 <= original.duration + 1e-6; k++) { // every other key of the pack: a frame of the export
+    const a = posed(scene, original, k / 12, read);
+    const b = posed(scene, back, k / 12, read);
+    a.q.forEach((q, i) => {
+      const angle = THREE.MathUtils.radToDeg(q.angleTo(b.q[i]));
+      if (angle > worst) { worst = angle; worstBone = bones[i].name; }
+    });
+    worstHips = Math.max(worstHips, a.hips.distanceTo(b.hips) * unit);
+  }
+  console.log(`class clips: through Blender and back, the worst bone is ${worst.toFixed(2)} degrees off (${worstBone}), the hips ${(worstHips * 100).toFixed(1)} cm (${bones.length} bones)`);
+  if (worst > 2 || worstHips > 0.02) throw new Error('class clips: the Blender export does not line up with the pack');
+  const out = new Map();
+  for (const [name, clip] of theirs) {
+    if (name.startsWith('__')) continue;
+    const fitted = retargetClip(clip, from, to, name);
+    fitted.tracks = fitted.tracks.filter((t) => /^mixamorig/.test(t.name)); // the wig's bones are not the clips' to move
+    out.set(name, fitted);
+  }
+  return out;
+}
+
 // ---------- build ----------
 const byName = new Map(gltf.animations.map((c) => [c.name, c]));
 if (args.includes('--keep-source')) {
@@ -282,6 +354,25 @@ for (const [key, sourceName] of Object.entries(SELECTION)) {
     naturalSpeed ? `speed ${naturalSpeed}` : '', travel ? `travel ${travel.distance}` : '',
     peaks.length ? 'peaks ' + peaks.map((p) => `${p.hand[0]}@${p.t}(${p.speed})`).join(' ') : '', `tracks ${processed.tracks.length}/${clip.tracks.length}`);
 }
+// the class weapons' clips (a Blender export beside the source, or --class-clips=<glb>)
+const classArg = args.find((a) => a.startsWith('--class-clips='));
+const classPath = classArg ? classArg.slice('--class-clips='.length) : (existsSync(CLASS_SOURCE) ? CLASS_SOURCE : null);
+if (classPath) {
+  for (const [key, clip] of await loadClassClips(classPath)) {
+    const loop = CLASS_LOOPS.has(key);
+    const peaks = CLASS_STANCES.has(key) ? [] : analyse(clip);
+    const { clip: processed, travel, naturalSpeed } = processClip(key, clip, loop);
+    processed.tracks = processed.tracks.map(thin);
+    built.push(processed);
+    data[key] = {
+      source: 'blender', duration: +clip.duration.toFixed(3), loop,
+      ...(naturalSpeed ? { naturalSpeed } : {}), ...(travel ? { travel } : {}), ...(peaks.length ? { peaks } : {}),
+    };
+    console.log(key.padEnd(16), 'made in Blender'.padEnd(30), clip.duration.toFixed(2) + 's', loop ? 'loop' : '    ',
+      travel ? `travel ${travel.distance}` : '', peaks.length ? 'peaks ' + peaks.map((p) => `${p.hand[0]}@${p.t}(${p.speed})`).join(' ') : '',
+      `tracks ${processed.tracks.length}/${clip.tracks.length}`);
+  }
+} else console.warn('no class clips: the twin blades and the staff will have none of their own');
 mkdirSync(dirname(OUT_GLB), { recursive: true });
 writeFileSync(OUT_GLB, writeGlb(scene, built, { duelistUnit: unit }));
 const header = `// Generated by tools/duelist/build-motion-pack.mjs from the owner's ActionForge clip pack. Do not edit by hand.

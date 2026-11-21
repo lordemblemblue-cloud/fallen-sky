@@ -1,0 +1,71 @@
+{
+ "fps": 60,
+ "source": "actionforge_80_clips_fit.glb",
+ "clips": {
+  "bladesIdle": {
+   "seconds": 1.6667,
+   "loop": true,
+   "note": "the sword stance, a blade low at either side"
+  },
+  "bladesGuard": {
+   "seconds": 1.25,
+   "loop": false,
+   "note": "the sword block with both blades"
+  },
+  "bladesA": {
+   "seconds": 1.3333,
+   "loop": false,
+   "note": "left rising slash (the sword slash in a mirror), contact about 0.19 s"
+  },
+  "bladesB": {
+   "seconds": 1.3333,
+   "loop": false,
+   "note": "right rising slash, contact about 0.19 s"
+  },
+  "bladesC": {
+   "seconds": 1.5833,
+   "loop": false,
+   "note": "right cut down into a lunge, contact about 0.27 s"
+  },
+  "bladesD": {
+   "seconds": 2.0,
+   "loop": false,
+   "note": "turn in the air with both blades out, contact about 0.64 s"
+  },
+  "bladesHeavy": {
+   "seconds": 1.5333,
+   "loop": false,
+   "note": "both blades chop down, the right about 0.39 s, the left 0.1 s later"
+  },
+  "staffIdle": {
+   "seconds": 1.6667,
+   "loop": true,
+   "note": "the sword stance"
+  },
+  "staffGuard": {
+   "seconds": 1.25,
+   "loop": false,
+   "note": "the sword block"
+  },
+  "staffA": {
+   "seconds": 0.9833,
+   "loop": false,
+   "note": "level sweep into a low lunge, contact about 0.32 s"
+  },
+  "staffB": {
+   "seconds": 0.9,
+   "loop": false,
+   "note": "turning backhand sweep, contact from 0.1 to 0.3 s"
+  },
+  "staffC": {
+   "seconds": 0.8667,
+   "loop": false,
+   "note": "rising diagonal sweep, contact about 0.17 s"
+  },
+  "staffHeavy": {
+   "seconds": 2.0,
+   "loop": false,
+   "note": "turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)"
+  }
+ }
+}

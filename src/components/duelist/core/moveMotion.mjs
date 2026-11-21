@@ -55,17 +55,22 @@ export const MOVE_MOTION = Object.freeze({
   // the Will dash: the rules move the body (6 m), the clip only lends the lunge
   dash: { segments: [seg('swordDash', 0, end('dash'), 0.22, 0.5, { travel: false })], settle: { clip: 'swordDash', from: 0.5 } },
 
-  // ---- the classes' crystal forms (from the sword's clips until their own are made in Blender): the twin blades
-  // cut quick and close, a hook between; the staff sweeps wide and spins
-  bladesLight1: { segments: phases('bladesLight1', 'swordA', [0.08, 0.2, 0.26, 0.38]), settle: { clip: 'swordARec', from: 0 } },
-  bladesLight2: { segments: phases('bladesLight2', 'swordB', [0.06, 0.2, 0.28, 0.42]), settle: { clip: 'swordBRec', from: 0 } },
-  bladesLight3: { segments: phases('bladesLight3', 'hook', [0, 0.07, 0.16, 0.36]), settle: { clip: 'hookRec', from: 0 } },
-  bladesLight4: { segments: phases('bladesLight4', 'swordC', [0.4, 0.62, 0.72, 1.0]), settle: { clip: 'swordC', from: 1.0 } },
-  bladesHeavy: { segments: phases('bladesHeavy', 'swordHeavyCombo', [0.1, 0.4, 0.7, 1.1]), settle: { clip: 'swordHeavyCombo', from: 1.1 } },
-  staffLight1: { segments: phases('staffLight1', 'swordB', [0, 0.2, 0.32, 0.5]), settle: { clip: 'swordBRec', from: 0 } },
-  staffLight2: { segments: phases('staffLight2', 'swordA', [0.05, 0.2, 0.3, 0.42]), settle: { clip: 'swordARec', from: 0 } },
-  staffLight3: { segments: phases('staffLight3', 'swordC', [0.08, 0.58, 0.72, 1.05]), settle: { clip: 'swordC', from: 1.05 } },
-  staffHeavy: { segments: phases('staffHeavy', 'swordHeavyCombo', [0.1, 0.4, 1.0, 1.4]), settle: { clip: 'swordHeavyCombo', from: 1.4 } },
+  // ---- the classes' crystal forms: clips made in Blender from the pack's sword work
+  // (tools/duelist/blender/weapon_clips.py). Each runs on into its own recovery, which is its settle.
+  // Twin blades: the left blade's rising slash, the right's, the right's cut down into a lunge, then a turn in the
+  // air with a blade out either side; each link starts from where the one before leaves the body.
+  bladesLight1: { segments: phases('bladesLight1', 'bladesA', [0, 0.15, 0.23, 0.37]), settle: { clip: 'bladesA', from: 0.37 } },
+  bladesLight2: { segments: phases('bladesLight2', 'bladesB', [0, 0.15, 0.23, 0.37]), settle: { clip: 'bladesB', from: 0.37 } },
+  bladesLight3: { segments: phases('bladesLight3', 'bladesC', [0, 0.2, 0.3, 0.48]), settle: { clip: 'bladesC', from: 0.48 } },
+  bladesLight4: { segments: phases('bladesLight4', 'bladesD', [0.25, 0.58, 0.72, 1.05]), settle: { clip: 'bladesD', from: 1.05 } },
+  // both blades chop down, the left a beat behind the right
+  bladesHeavy: { segments: phases('bladesHeavy', 'bladesHeavy', [0.05, 0.34, 0.52, 0.9]), settle: { clip: 'bladesHeavy', from: 0.9 } },
+  // The staff: a level sweep into a low lunge, a turning backhand sweep, a rising diagonal (one continuous chain);
+  // the heavy is a turn in the air with the staff level, so both ends pass before the landing cut
+  staffLight1: { segments: phases('staffLight1', 'staffA', [0.02, 0.26, 0.4, 0.54]), settle: { clip: 'staffA', from: 0.54 } },
+  staffLight2: { segments: phases('staffLight2', 'staffB', [0, 0.1, 0.3, 0.45]), settle: { clip: 'staffB', from: 0.45 } },
+  staffLight3: { segments: phases('staffLight3', 'staffC', [0, 0.1, 0.26, 0.42]), settle: { clip: 'staffC', from: 0.42 } },
+  staffHeavy: { segments: phases('staffHeavy', 'staffHeavy', [0, 0.3, 0.72, 1.05]), settle: { clip: 'staffHeavy', from: 1.05 } },
 
   // ---- class abilities and specials (the rules move the body where it travels: the leap's arc, the throw)
   leapStrike: { segments: [seg('leapStart', 0, MOVES.leapStrike.startup, 0.35, 0.6, { travel: false }),
@@ -75,16 +80,17 @@ export const MOVE_MOTION = Object.freeze({
   bladeThrow: { segments: phases('bladeThrow', 'throw', [0.05, 0.3, 0.36, 0.8], { travel: false }), settle: { clip: 'throw', from: 0.8 } },
   quickstep: { segments: [seg('castShoot', 0, end('quickstep'), 0, 0.3)] },
   quickstepAura: { segments: [seg('castShoot', 0, end('quickstepAura'), 0, 0.4)] },
-  counter: { segments: [seg('swordBlock', 0, activeEnd('counter'), 0.1, 0.5, { travel: false }),
-    seg('swordBlock', activeEnd('counter'), end('counter'), 0.5, 0.7, { travel: false })] },
-  counterStrike: { segments: phases('counterStrike', 'swordB', [0.1, 0.2, 0.29, 0.5]), settle: { clip: 'swordBRec', from: 0 } },
+  // the Duelist's parry stance (both blades up) and its answer (the lunge cut)
+  counter: { segments: [seg('bladesGuard', 0, activeEnd('counter'), 0.1, 0.5, { travel: false }),
+    seg('bladesGuard', activeEnd('counter'), end('counter'), 0.5, 0.7, { travel: false })] },
+  counterStrike: { segments: phases('counterStrike', 'bladesC', [0.08, 0.2, 0.3, 0.48]), settle: { clip: 'bladesC', from: 0.48 } },
   cloak: { segments: [seg('castEnter', 0, activeEnd('cloak'), 0, 0.4), seg('castExit', activeEnd('cloak'), end('cloak'), 0, 0.3)] },
   empower: { segments: [seg('castEnter', 0, activeEnd('empower'), 0.1, 0.45), seg('castExit', activeEnd('empower'), end('empower'), 0, 0.3)] },
   misdirect: { segments: [seg('castShoot', 0, end('misdirect'), 0, 0.5)] },
   mend: { segments: [seg('castEnter', 0, MOVES.mend.startup, 0, 0.45), seg('castShoot', MOVES.mend.startup, end('mend'), 0.1, 0.5)] },
   levitate: { segments: [seg('jumpLoop', 0, end('levitate'), 0, 0.3, { travel: false })] },
   rage: { segments: [seg('castEnter', 0, MOVES.rage.startup, 0, 0.5), seg('shieldBurst', MOVES.rage.startup, end('rage'), 0.05, 0.5)] },
-  execution: { segments: phases('execution', 'swordHeavy', [0.15, 0.33, 0.46, 0.95], { travel: false }), settle: { clip: 'swordHeavy', from: 0.95 } },
+  execution: { segments: phases('execution', 'bladesHeavy', [0.12, 0.34, 0.52, 0.9], { travel: false }), settle: { clip: 'bladesHeavy', from: 0.9 } },
   shadowExecution: { segments: phases('shadowExecution', 'swordHeavy', [0.15, 0.33, 0.46, 0.95], { travel: false }), settle: { clip: 'swordHeavy', from: 0.95 } },
   sanctuary: { segments: [seg('castEnter', 0, MOVES.sanctuary.startup, 0, 0.5), seg('castShoot', MOVES.sanctuary.startup, activeEnd('sanctuary'), 0.1, 0.3),
     seg('castExit', activeEnd('sanctuary'), end('sanctuary'), 0, 0.4)] },

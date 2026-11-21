@@ -37,7 +37,7 @@ import { createHudFeed } from './hudFeed.mjs';
 import { levelFrom, xpForEvent } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
-import { createClassWeapon, equipClassWeapon, wholeWeapon } from './classWeapons.mjs';
+import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades } from './classWeapons.mjs';
 import { CLASSES, classById, hiddenFrom, effectOn } from '../core/index.mjs';
 
 // A cloaked fighter you can still see (your own, an ally's, an enemy's up close) is a ghost of itself. The body's
@@ -96,25 +96,31 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   const leftHand = model.getObjectByName('mixamorigLeftHand');
   const classDef = gun ? null : classById(classId);
   let sword;
+  let blades = []; // what leaves a trail: { group, base, tip } along each blade
   if (classDef) {
     // the class's crystal form: one blade, twin blades (one in each hand) or the double-bladed staff
     const weapon = createClassWeapon(classId);
     equipClassWeapon(weapon, { rightHand, leftHand, grip });
     sword = wholeWeapon(weapon);
+    blades = weaponBlades(weapon);
   } else {
     sword = gun ? createSidearm({ color: weaponColor }) : createCrystalSword({ color: weaponColor });
     attachToHand(sword, rightHand, grip);
+    if (!gun) blades = [{ group: sword.group, base: 0.5, tip: 0.98 }];
   }
-  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance: gun ? 'sidearm' : 'sword' });
-  const trail = gun ? null : createSwordTrail(scene, { color: classDef ? classDef.color : weaponColor });
+  // the stance (idle, guard, which hands grip) goes with the crystal form
+  const stance = gun ? 'sidearm' : classDef?.weapon === 'dualBlades' || classDef?.weapon === 'staff' ? classDef.weapon : 'sword';
+  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance });
+  const trailColor = classDef ? classDef.color : weaponColor;
+  const trails = blades.map((b) => ({ group: b.group, trail: createSwordTrail(scene, { color: trailColor, base: b.base, tip: b.tip }) }));
   const aim = gun ? createAimLine(scene, { color: weaponColor }) : null;
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   return {
-    group, model, sword, animator, trail, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
+    group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
-    dispose() { animator.dispose(); sword.dispose(); trail?.dispose(); aim?.dispose(); group.removeFromParent(); },
+    dispose() { animator.dispose(); sword.dispose(); for (const t of trails) t.trail.dispose(); aim?.dispose(); group.removeFromParent(); },
   };
 }
 
@@ -558,7 +564,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             } else actor.aim.hide();
           }
           actor.sword.update(show);
-          actor.trail?.update(show, actor.sword.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, a?.move?.kind === 'attack');
+          for (const t of actor.trails) t.trail.update(show, t.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, a?.move?.kind === 'attack');
           // a mission's fallen lie a while, then are cleared away
           if (actor.kind === 'enemy' && fighter.vitals.dead) {
             actor.fallen += dt;
