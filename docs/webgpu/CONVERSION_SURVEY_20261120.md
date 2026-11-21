@@ -290,3 +290,32 @@ wilds, where its GPU time doubles). The Duelist practice match measured faster o
 `duelist-adventure` to `ready: true` in `webgpuSceneReadiness.mjs` is a one-line owner decision after repeated runs
 (story mission and menus included). Next speed-ups worth measuring: WebGPU render bundles for static scenery
 (`BundleGroup`, 3-5x cheaper per draw in the micro-benchmark) and the western wilds' GPU time.
+
+### Stage 5, where the time goes + fixes (`claude/webgpu-5-performance-20261121`, stage 4 with `main` f4a9ee58)
+- Profiled per pass (WebGPU timestamp queries) and per r171 render step. Town: the scene pass is 19.0 ms of GPU, the
+  ink pass 1.5 ms, and no shadow map is redrawn per frame; the extra GPU time is spread thinly over all object groups
+  (instanced plants and grass the only clearly heavier one). Western wilds: render CPU 10.2 ms vs 6.9 ms classic,
+  mostly r171's per-object uniform / binding refresh (~3 ms); the splat terrain is ~3 ms of GPU.
+- Fixes: the living meadow and ground-cover grass bend away from footsteps on WebGPU again (r171 silently drops a TSL
+  `Loop` built outside a `Fn`); lit materials on geometry without a normal attribute draw black as on WebGL (r171
+  substituted an up normal, so the meadow tufts came out pale); splat terrain lookups use implicit derivatives where
+  r171 turns WGSL's derivative-uniformity check off (Chrome / Edge; explicit gradients stay for Firefox): ~3.2 ->
+  ~2.6 ms in the western view, close to noise.
+- Render bundles (`BundleGroup`) not built: in r171 a bundle holds opaque objects only, keeps the set culled when it
+  was recorded, and still refreshes every object's nodes and bindings each frame, the cost measured above.
+- Repeated A/B, same method as "After" (town and west measured before this stage's fixes):
+
+| Place | Classic frame ms (p95) | WebGPU frame ms (p95) | Classic CPU / GPU | WebGPU CPU / GPU | Draws (C / W) |
+|---|---|---|---|---|---|
+| Wolfveil town | 32.4 (43.8) | 32.0 (48.4) | 28.7 / 16.0 | 21.4 / 18.1 | 1,476 / 1,479 |
+| Western cedar wilds | 13.3 (20.0) | 18.1 (28.2) | 9.1 / 7.1 | 11.8 / 9.7 | 186 / 194 |
+| Duelist practice match | 2.8 (5.4) | 4.6 (8.5) | 1.2 / 1.3 | 2.3 / 1.1 | 77 / 76 |
+
+- Decision update: the town is now even, the western wilds still slower on WebGPU, and the Duelist practice match,
+  faster on WebGPU in the first run (5.2 vs 7.6 ms), was slower in this one. **Classic stays the default everywhere**;
+  WebGPU stays opt-in with `?renderer=webgpu` (`?renderer=auto` forgets it). No readiness flag was changed.
+- Checked live on WebGPU this round: creator stage, lunar cave (portal swirl), astral dungeon (matches classic),
+  Duelist motion lab. Not checked live: Meshy / companion / mini-game previews, vortex lake, forest fallback region.
+- Known difference: cedar and pine trees in the western wilds draw slightly lighter on WebGPU (cause not found).
+- Tests: `node --test tests/` 1569 tests / 100 failing (3 new in `webgpuClassicOutput.test.mjs`); `main` f4a9ee58
+  has 1566 / 102: the same failures plus the 2 the key fix repairs.

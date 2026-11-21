@@ -17,9 +17,9 @@ import { uniformOf, sinValueNoise2, geometryNormalWorld } from '../../../lib/web
 const liveTexture = (u) => texture(u.value).onRenderUpdate(() => u.value);
 
 // Lookups inside the per-pixel layer branches. r171 turns WGSL's derivative-uniformity check off (except in Firefox
-// and Deno), so there they sample with implicit derivatives like the GLSL; explicit gradients cost several ms of GPU
-// on wide terrain views (measured on this PC's Radeon 780M). Where the check stays on, explicit gradients (taken in
-// uniform control flow) keep the shader valid.
+// and Deno), so there they sample with implicit derivatives like the GLSL (western wilds view, Radeon 780M: terrain
+// ~2.6 ms of GPU instead of ~3.2 ms with explicit gradients, close to run-to-run noise). Where the check stays on,
+// explicit gradients (taken in uniform control flow) keep the shader valid.
 const IMPLICIT_DERIVATIVES = !(typeof globalThis.navigator !== 'undefined' && /Firefox|Deno/.test(globalThis.navigator.userAgent || ''));
 const sampleAt = (tex, uvNode, gx, gy) => (IMPLICIT_DERIVATIVES ? tex.uv(uvNode) : tex.uv(uvNode).grad(gx, gy));
 
