@@ -5,7 +5,7 @@
 // decides what happens to them.
 import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
-  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
+  createFighter, press, update, takeEvents, isStunned, strike, insideArc, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
 } from '../core/index.mjs';
@@ -447,10 +447,8 @@ function moveBody(world, fighter, body, dt, now) {
     const len = Math.hypot(body.intent.x, body.intent.z);
     if (free && len > 0.01) {
       let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
-      if (body.sprint && !fighter.vitals.winded && len > 0.5) {
-        drainStamina(fighter.vitals, SPRINT.staminaPerSec * dt, now);
-        speed = SPRINT.speed;
-      }
+      // Sprinting is free, including when a fighter has zero stamina or is winded.
+      if (body.sprint && len > 0.5) speed = SPRINT.speed;
       // a raised guard and a channelled grip slow you to a walk
       if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
       speed *= moveRate(fighter, now);

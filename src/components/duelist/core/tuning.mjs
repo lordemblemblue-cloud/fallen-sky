@@ -6,8 +6,8 @@ export const VITALS = Object.freeze({
   stamina: 100,
   will: 100,
   shield: 40,
-  // Stamina pays for movement and swordsmanship. Running dry ("winded") blocks rolls and heavy attacks
-  // until it has recovered to staminaRecoverAt.
+  // Stamina is reserved for defensive maneuvers and guard endurance; attacks and sprinting are free.
+  // Running dry ("winded") still blocks stamina-based evasions until recovery.
   staminaRegenPerSec: 28,
   staminaRegenDelay: 0.8,
   staminaRecoverAt: 25,
@@ -53,5 +53,8 @@ export const INPUT = Object.freeze({
 // until it stands again (a fallen fighter cannot be juggled or held down).
 export const KNOCKDOWN = Object.freeze({ distance: 3, lie: 0.7, rise: 0.95 });
 
-export const SPRINT = Object.freeze({ staminaPerSec: 14, speed: 7.2 });
+// Sprint is unrestricted by stamina; the zero cost is kept for consumers of the tuning object.
+export const SPRINT = Object.freeze({ staminaPerSec: 0, speed: 7.2 });
+// Three damaging, unblocked hits in one short exchange grant a window to fight back.
+export const STAGGER_IMMUNITY = Object.freeze({ hits: 3, comboWindowSeconds: 2, seconds: 1 });
 export const MOVE_SPEED = Object.freeze({ walk: 2.2, run: 4.6 });
