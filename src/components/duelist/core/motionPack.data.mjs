@@ -3305,13 +3305,8 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "left",
-        "t": 0.025,
-        "speed": 3.15
-      },
-      {
-        "hand": "left",
-        "t": 0.15,
-        "speed": 4.99
+        "t": 0.042,
+        "speed": 7.52
       },
       {
         "hand": "right",
@@ -3332,13 +3327,18 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "left",
-        "t": 0.125,
-        "speed": 2.92
+        "t": 0.05,
+        "speed": 5.25
       },
       {
         "hand": "right",
         "t": 0.158,
         "speed": 10.98
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 3.4
       }
     ]
   },
@@ -3348,19 +3348,14 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.025,
-        "speed": 2.8
-      },
-      {
         "hand": "right",
         "t": 0.042,
         "speed": 7.77
       },
       {
         "hand": "left",
-        "t": 0.15,
-        "speed": 3.48
+        "t": 0.042,
+        "speed": 4.68
       },
       {
         "hand": "right",
@@ -3371,6 +3366,11 @@ export const MOTION_CLIPS = Object.freeze({
         "hand": "right",
         "t": 0.367,
         "speed": 7.16
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 3.5
       }
     ]
   },
@@ -3381,13 +3381,8 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "left",
-        "t": 0.025,
-        "speed": 3.7
-      },
-      {
-        "hand": "left",
-        "t": 0.15,
-        "speed": 5.89
+        "t": 0.042,
+        "speed": 8.04
       },
       {
         "hand": "right",
@@ -3402,11 +3397,6 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.025,
-        "speed": 4.26
-      },
-      {
         "hand": "right",
         "t": 0.042,
         "speed": 9.72
@@ -3414,12 +3404,17 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "left",
         "t": 0.15,
-        "speed": 6.02
+        "speed": 4.86
       },
       {
         "hand": "right",
         "t": 0.175,
         "speed": 13.68
+      },
+      {
+        "hand": "left",
+        "t": 0.333,
+        "speed": 4.17
       }
     ]
   },
@@ -3435,8 +3430,8 @@ export const MOTION_CLIPS = Object.freeze({
       },
       {
         "hand": "left",
-        "t": 0.142,
-        "speed": 5.19
+        "t": 0.042,
+        "speed": 7.08
       },
       {
         "hand": "right",
@@ -3453,12 +3448,17 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "left",
         "t": 0.142,
-        "speed": 4.3
+        "speed": 3.69
       },
       {
         "hand": "right",
         "t": 0.158,
         "speed": 12.42
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 3.94
       }
     ]
   },
@@ -3469,13 +3469,8 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "left",
-        "t": 0.025,
-        "speed": 2.93
-      },
-      {
-        "hand": "left",
-        "t": 0.15,
-        "speed": 4.14
+        "t": 0.042,
+        "speed": 7.31
       },
       {
         "hand": "right",
@@ -3497,7 +3492,7 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "left",
         "t": 0.025,
-        "speed": 4.17
+        "speed": 3.89
       },
       {
         "hand": "right",
@@ -3507,12 +3502,17 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "left",
         "t": 0.15,
-        "speed": 5.41
+        "speed": 3.7
       },
       {
         "hand": "right",
         "t": 0.192,
         "speed": 11.45
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 3.89
       }
     ]
   },
@@ -4001,66 +4001,12 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "left",
         "t": 0.15,
-        "speed": 8.2
+        "speed": 7.6
       },
       {
         "hand": "left",
-        "t": 0.367,
-        "speed": 5.46
-      }
-    ]
-  },
-  "bladesCutDown": {
-    "source": "blender",
-    "duration": 0.433,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "right",
-        "t": 0.158,
-        "speed": 11.84
-      },
-      {
-        "hand": "left",
-        "t": 0.208,
-        "speed": 11.05
-      }
-    ]
-  },
-  "bladesCutUp": {
-    "source": "blender",
-    "duration": 0.433,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "right",
-        "t": 0.042,
-        "speed": 8.45
-      },
-      {
-        "hand": "left",
-        "t": 0.092,
-        "speed": 8.48
-      },
-      {
-        "hand": "right",
-        "t": 0.175,
-        "speed": 11.63
-      },
-      {
-        "hand": "left",
-        "t": 0.225,
-        "speed": 11.18
-      },
-      {
-        "hand": "right",
-        "t": 0.367,
-        "speed": 6.51
-      },
-      {
-        "hand": "left",
-        "t": 0.417,
-        "speed": 6.93
+        "t": 0.383,
+        "speed": 5.25
       }
     ]
   },
@@ -4070,46 +4016,19 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
+        "hand": "left",
+        "t": 0.142,
+        "speed": 9.17
+      },
+      {
         "hand": "right",
         "t": 0.15,
         "speed": 12.96
       },
       {
         "hand": "left",
-        "t": 0.15,
-        "speed": 9.84
-      },
-      {
-        "hand": "left",
-        "t": 0.367,
-        "speed": 5.52
-      }
-    ]
-  },
-  "bladesCutRight": {
-    "source": "blender",
-    "duration": 0.433,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "right",
-        "t": 0.025,
-        "speed": 10.76
-      },
-      {
-        "hand": "left",
-        "t": 0.092,
-        "speed": 10.5
-      },
-      {
-        "hand": "right",
-        "t": 0.175,
-        "speed": 16.89
-      },
-      {
-        "hand": "left",
-        "t": 0.225,
-        "speed": 16.82
+        "t": 0.383,
+        "speed": 5.36
       }
     ]
   },
@@ -4124,19 +4043,80 @@ export const MOTION_CLIPS = Object.freeze({
         "speed": 8.93
       },
       {
-        "hand": "left",
-        "t": 0.075,
-        "speed": 10.12
-      },
-      {
         "hand": "right",
         "t": 0.167,
         "speed": 12.74
       },
       {
         "hand": "left",
-        "t": 0.208,
-        "speed": 10.9
+        "t": 0.225,
+        "speed": 10.83
+      }
+    ]
+  },
+  "bladesCutUpLeft": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.167,
+        "speed": 9.96
+      },
+      {
+        "hand": "left",
+        "t": 0.233,
+        "speed": 7.75
+      },
+      {
+        "hand": "right",
+        "t": 0.367,
+        "speed": 8.26
+      },
+      {
+        "hand": "left",
+        "t": 0.417,
+        "speed": 6.79
+      }
+    ]
+  },
+  "bladesCutDown": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.108,
+        "speed": 8.26
+      },
+      {
+        "hand": "right",
+        "t": 0.158,
+        "speed": 11.84
+      },
+      {
+        "hand": "left",
+        "t": 0.242,
+        "speed": 10.3
+      }
+    ]
+  },
+  "bladesCutRight": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.133,
+        "speed": 9.55
+      },
+      {
+        "hand": "left",
+        "t": 0.15,
+        "speed": 14.76
       }
     ]
   },
@@ -4147,45 +4127,18 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "right",
-        "t": 0.142,
-        "speed": 24.37
+        "t": 0.108,
+        "speed": 8.33
       },
       {
         "hand": "left",
-        "t": 0.192,
-        "speed": 21.28
-      }
-    ]
-  },
-  "bladesCutUpLeft": {
-    "source": "blender",
-    "duration": 0.433,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "left",
-        "t": 0.075,
-        "speed": 7.08
+        "t": 0.15,
+        "speed": 13.33
       },
       {
         "hand": "right",
-        "t": 0.167,
-        "speed": 9.96
-      },
-      {
-        "hand": "left",
         "t": 0.233,
-        "speed": 8.38
-      },
-      {
-        "hand": "right",
-        "t": 0.367,
-        "speed": 8.26
-      },
-      {
-        "hand": "left",
-        "t": 0.417,
-        "speed": 7.35
+        "speed": 8.85
       }
     ]
   },
@@ -4195,19 +4148,51 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "right",
-        "t": 0.025,
-        "speed": 9.48
+        "hand": "left",
+        "t": 0.167,
+        "speed": 10.96
       },
       {
         "hand": "right",
-        "t": 0.183,
-        "speed": 12.33
+        "t": 0.225,
+        "speed": 7.27
       },
       {
         "hand": "left",
-        "t": 0.225,
-        "speed": 12.19
+        "t": 0.367,
+        "speed": 7
+      },
+      {
+        "hand": "right",
+        "t": 0.417,
+        "speed": 5.57
+      }
+    ]
+  },
+  "bladesCutUp": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.108,
+        "speed": 5.54
+      },
+      {
+        "hand": "left",
+        "t": 0.167,
+        "speed": 11.49
+      },
+      {
+        "hand": "right",
+        "t": 0.242,
+        "speed": 8.07
+      },
+      {
+        "hand": "right",
+        "t": 0.417,
+        "speed": 4.94
       }
     ]
   },
@@ -4218,30 +4203,40 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 10.07
+        "t": 0.042,
+        "speed": 2.59
+      },
+      {
+        "hand": "right",
+        "t": 0.183,
+        "speed": 2.23
       },
       {
         "hand": "left",
-        "t": 0.333,
-        "speed": 16.23
+        "t": 0.308,
+        "speed": 10.58
+      },
+      {
+        "hand": "right",
+        "t": 0.483,
+        "speed": 2.95
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.52,
+        1,
+        0.83,
+        0.01,
         0,
         0,
         0,
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        0.02,
+        0.44,
+        1,
         1,
         1,
         1,
@@ -4258,39 +4253,49 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "right",
-        "t": 0.067,
-        "speed": 8.17
+        "t": 0.058,
+        "speed": 3.55
       },
       {
         "hand": "left",
-        "t": 0.158,
-        "speed": 2.04
+        "t": 0.083,
+        "speed": 6.34
       },
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 10.98
+        "t": 0.217,
+        "speed": 2.47
+      },
+      {
+        "hand": "left",
+        "t": 0.217,
+        "speed": 10.48
+      },
+      {
+        "hand": "right",
+        "t": 0.5,
+        "speed": 2.38
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.45,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.01,
-        0.09,
-        0.33,
-        0.6,
-        0.99,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0.95,
+        0.57,
+        0.24,
+        0.24,
+        0.42,
+        0.51,
+        0.62,
+        0.79,
+        1,
         1,
         1
       ]
@@ -4304,43 +4309,38 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "right",
         "t": 0.042,
-        "speed": 5.83
-      },
-      {
-        "hand": "left",
-        "t": 0.042,
-        "speed": 2.32
-      },
-      {
-        "hand": "left",
-        "t": 0.183,
-        "speed": 2.43
+        "speed": 4.66
       },
       {
         "hand": "right",
-        "t": 0.217,
-        "speed": 10.14
+        "t": 0.225,
+        "speed": 2.75
+      },
+      {
+        "hand": "left",
+        "t": 0.225,
+        "speed": 12
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
+        0.82,
+        0.14,
+        0.14,
+        0.17,
+        0.29,
         0.71,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.75,
+        0.85,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         1
       ]
@@ -4352,21 +4352,32 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.158,
-        "speed": 4.65
+        "hand": "right",
+        "t": 0.05,
+        "speed": 2.49
       },
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 11.67
+        "t": 0.183,
+        "speed": 2.57
+      },
+      {
+        "hand": "left",
+        "t": 0.35,
+        "speed": 13.9
+      },
+      {
+        "hand": "right",
+        "t": 0.483,
+        "speed": 3.13
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.46,
+        1,
+        0.57,
         0,
         0,
         0,
@@ -4375,12 +4386,11 @@ export const MOTION_CLIPS = Object.freeze({
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.79,
+        0.95,
+        1,
+        1,
+        1,
+        1,
         1,
         1
       ]
@@ -4393,18 +4403,13 @@ export const MOTION_CLIPS = Object.freeze({
     "peaks": [
       {
         "hand": "right",
-        "t": 0.058,
-        "speed": 8.36
+        "t": 0.042,
+        "speed": 5.73
       },
       {
         "hand": "left",
-        "t": 0.1,
-        "speed": 10.24
-      },
-      {
-        "hand": "right",
-        "t": 0.225,
-        "speed": 14.99
+        "t": 0.2,
+        "speed": 19.65
       }
     ],
     "secondHand": {
@@ -4412,20 +4417,20 @@ export const MOTION_CLIPS = Object.freeze({
       "on": [
         1,
         1,
-        0.03,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.7,
+        1,
+        1,
+        1,
+        1,
+        0.91,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         1
       ]
@@ -4437,45 +4442,45 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.05,
-        "speed": 2.7
-      },
-      {
         "hand": "right",
-        "t": 0.067,
-        "speed": 7.12
+        "t": 0.058,
+        "speed": 3.06
       },
       {
         "hand": "left",
-        "t": 0.175,
-        "speed": 3.76
+        "t": 0.108,
+        "speed": 4.84
       },
       {
         "hand": "right",
-        "t": 0.217,
-        "speed": 10.97
+        "t": 0.233,
+        "speed": 2.75
+      },
+      {
+        "hand": "right",
+        "t": 0.5,
+        "speed": 2.38
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.49,
+        1,
+        0.96,
+        0,
+        0,
+        0,
+        0,
+        0.1,
         0,
         0,
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.73,
+        0.06,
+        0.67,
+        0.95,
         1,
         1
       ]
@@ -4487,40 +4492,40 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.042,
-        "speed": 2.56
+        "hand": "right",
+        "t": 0.058,
+        "speed": 4.83
       },
       {
         "hand": "left",
-        "t": 0.183,
-        "speed": 3.81
+        "t": 0.2,
+        "speed": 13.97
       },
       {
         "hand": "right",
-        "t": 0.192,
-        "speed": 25.38
+        "t": 0.217,
+        "speed": 3.04
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.39,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.02,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.05,
-        0.85,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0.92,
+        0.76,
+        0.65,
+        0.69,
+        0.64,
+        0.47,
+        0.6,
+        0.86,
+        1,
         1,
         1
       ]
@@ -4532,40 +4537,45 @@ export const MOTION_CLIPS = Object.freeze({
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.158,
-        "speed": 3.73
+        "hand": "right",
+        "t": 0.042,
+        "speed": 2.92
       },
       {
         "hand": "right",
-        "t": 0.217,
-        "speed": 8.62
+        "t": 0.225,
+        "speed": 2.42
+      },
+      {
+        "hand": "left",
+        "t": 0.308,
+        "speed": 8.39
       },
       {
         "hand": "right",
         "t": 0.483,
-        "speed": 5.81
+        "speed": 2.81
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.71,
+        1,
+        0.63,
+        0.35,
+        0.53,
+        0.39,
+        0.04,
         0,
         0,
         0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.91,
+        0.6,
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         1
       ]
@@ -4579,43 +4589,43 @@ export const MOTION_CLIPS = Object.freeze({
       {
         "hand": "right",
         "t": 0.042,
-        "speed": 7.67
+        "speed": 5.71
       },
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 3.35
-      },
-      {
-        "hand": "left",
-        "t": 0.167,
-        "speed": 3.72
+        "t": 0.125,
+        "speed": 12.72
       },
       {
         "hand": "right",
         "t": 0.242,
-        "speed": 11.15
+        "speed": 3.28
+      },
+      {
+        "hand": "left",
+        "t": 0.25,
+        "speed": 15.46
       }
     ],
     "secondHand": {
       "step": 0.0333,
       "on": [
         1,
-        0.29,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.73,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
         1,
         1
       ]

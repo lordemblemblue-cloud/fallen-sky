@@ -449,115 +449,124 @@
   "bladesCutStand": {
    "seconds": 0.4333,
    "loop": false,
-   "note": "Stand cut with the blades: from R to L",
+   "note": "Stand cut with the twin blades: the right blade leads from R to L, the other follows in the mirror",
    "marks": [
     0.13,
     0.175,
     0.23
    ],
    "from": "R",
-   "to": "L"
-  },
-  "bladesCutDown": {
-   "seconds": 0.4333,
-   "loop": false,
-   "note": "Down cut with the blades: from T to B",
-   "marks": [
-    0.13,
-    0.175,
-    0.23
-   ],
-   "from": "T",
-   "to": "B"
-  },
-  "bladesCutUp": {
-   "seconds": 0.4333,
-   "loop": false,
-   "note": "Up cut with the blades: from B to T",
-   "marks": [
-    0.13,
-    0.175,
-    0.23
-   ],
-   "from": "B",
-   "to": "T"
+   "to": "L",
+   "lead": "Right"
   },
   "bladesCutLeft": {
    "seconds": 0.4333,
    "loop": false,
-   "note": "Left cut with the blades: from R to L",
+   "note": "Left cut with the twin blades: the right blade leads from R to L, the other follows in the mirror",
    "marks": [
     0.13,
     0.175,
     0.23
    ],
    "from": "R",
-   "to": "L"
-  },
-  "bladesCutRight": {
-   "seconds": 0.4333,
-   "loop": false,
-   "note": "Right cut with the blades: from L to R",
-   "marks": [
-    0.13,
-    0.175,
-    0.23
-   ],
-   "from": "L",
-   "to": "R"
+   "to": "L",
+   "lead": "Right"
   },
   "bladesCutDownLeft": {
    "seconds": 0.4333,
    "loop": false,
-   "note": "DownLeft cut with the blades: from TR to BL",
+   "note": "DownLeft cut with the twin blades: the right blade leads from TR to BL, the other follows in the mirror",
    "marks": [
     0.13,
     0.175,
     0.23
    ],
    "from": "TR",
-   "to": "BL"
-  },
-  "bladesCutDownRight": {
-   "seconds": 0.4333,
-   "loop": false,
-   "note": "DownRight cut with the blades: from TL to BR",
-   "marks": [
-    0.13,
-    0.175,
-    0.23
-   ],
-   "from": "TL",
-   "to": "BR"
+   "to": "BL",
+   "lead": "Right"
   },
   "bladesCutUpLeft": {
    "seconds": 0.4333,
    "loop": false,
-   "note": "UpLeft cut with the blades: from BR to TL",
+   "note": "UpLeft cut with the twin blades: the right blade leads from BR to TL, the other follows in the mirror",
    "marks": [
     0.13,
     0.175,
     0.23
    ],
    "from": "BR",
-   "to": "TL"
+   "to": "TL",
+   "lead": "Right"
+  },
+  "bladesCutDown": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Down cut with the twin blades: the right blade leads from T to B, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "T",
+   "to": "B",
+   "lead": "Right"
+  },
+  "bladesCutRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Right cut with the twin blades: the left blade leads from L to R, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "L",
+   "to": "R",
+   "lead": "Left"
+  },
+  "bladesCutDownRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "DownRight cut with the twin blades: the left blade leads from TL to BR, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "TL",
+   "to": "BR",
+   "lead": "Left"
   },
   "bladesCutUpRight": {
    "seconds": 0.4333,
    "loop": false,
-   "note": "UpRight cut with the blades: from BL to TR",
+   "note": "UpRight cut with the twin blades: the left blade leads from BL to TR, the other follows in the mirror",
    "marks": [
     0.13,
     0.175,
     0.23
    ],
    "from": "BL",
-   "to": "TR"
+   "to": "TR",
+   "lead": "Left"
+  },
+  "bladesCutUp": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Up cut with the twin blades: the left blade leads from B to T, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "B",
+   "to": "T",
+   "lead": "Left"
   },
   "staffCutStand": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "Stand cut with the staff: from R to L",
+   "note": "Stand cut with the staff in both hands: the far end from R to L",
    "marks": [
     0.169,
     0.2275,
@@ -569,7 +578,7 @@
   "staffCutDown": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "Down cut with the staff: from T to B",
+   "note": "Down cut with the staff in both hands: the far end from T to B",
    "marks": [
     0.169,
     0.2275,
@@ -581,7 +590,7 @@
   "staffCutUp": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "Up cut with the staff: from B to T",
+   "note": "Up cut with the staff in both hands: the far end from B to T",
    "marks": [
     0.169,
     0.2275,
@@ -593,7 +602,7 @@
   "staffCutLeft": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "Left cut with the staff: from R to L",
+   "note": "Left cut with the staff in both hands: the far end from R to L",
    "marks": [
     0.169,
     0.2275,
@@ -605,7 +614,7 @@
   "staffCutRight": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "Right cut with the staff: from L to R",
+   "note": "Right cut with the staff in both hands: the far end from L to R",
    "marks": [
     0.169,
     0.2275,
@@ -617,7 +626,7 @@
   "staffCutDownLeft": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "DownLeft cut with the staff: from TR to BL",
+   "note": "DownLeft cut with the staff in both hands: the far end from TR to BL",
    "marks": [
     0.169,
     0.2275,
@@ -629,7 +638,7 @@
   "staffCutDownRight": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "DownRight cut with the staff: from TL to BR",
+   "note": "DownRight cut with the staff in both hands: the far end from TL to BR",
    "marks": [
     0.169,
     0.2275,
@@ -641,7 +650,7 @@
   "staffCutUpLeft": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "UpLeft cut with the staff: from BR to TL",
+   "note": "UpLeft cut with the staff in both hands: the far end from BR to TL",
    "marks": [
     0.169,
     0.2275,
@@ -653,7 +662,7 @@
   "staffCutUpRight": {
    "seconds": 0.5667,
    "loop": false,
-   "note": "UpRight cut with the staff: from BL to TR",
+   "note": "UpRight cut with the staff in both hands: the far end from BL to TR",
    "marks": [
     0.169,
     0.2275,

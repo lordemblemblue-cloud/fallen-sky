@@ -246,9 +246,10 @@ def join(a, b):
             'loc': [v.copy() for v in a['loc']] + [v + shift for v in b['loc'][1:]]}
 
 
-def mirror_arm(clip, delay=0.0, weight=1.0, source=None):
+def mirror_arm(clip, delay=0.0, weight=1.0, source=None, to='Left'):
     """The left arm does what the right arm does (in `source`, `delay` seconds later), mirrored across the chest.
-    weight: how much (a number, or a function of the time in seconds)."""
+    weight: how much (a number, or a function of the time in seconds). to='Right': the right arm follows the left."""
+    chain = ARM_R if to == 'Right' else ARM_L
     source = source or clip
     rest_chest_inv = rig.rest_inv[CHEST]
     out = copy_clip(clip)
@@ -264,7 +265,7 @@ def mirror_arm(clip, delay=0.0, weight=1.0, source=None):
         src_pose = rig.fk(sq, source['loc'][g0])
         dst_pose = rig.fk(q, clip['loc'][f])
         src_chest_inv = src_pose[CHEST].inverted()
-        for i in ARM_L:
+        for i in chain:
             m = rig.mirror[i]
             delta = (src_chest_inv @ src_pose[m]) @ (rest_chest_inv @ rig.rest[m]).inverted()
             target = dst_pose[CHEST] @ SC @ delta @ SC @ (rest_chest_inv @ rig.rest[i])

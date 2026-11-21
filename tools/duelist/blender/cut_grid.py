@@ -30,7 +30,8 @@ def spec(yaw, pitch, roll, shift, arm, blade):
     return {'yaw': yaw, 'pitch': pitch, 'roll': roll, 'shift': Vector(shift), 'arm': aim_dir(arm[0], arm[1]), 'reach': arm[2], 'blade': aim_dir(*blade)}
 
 
-def bend_trunk(q, loc, yaw, pitch, roll):
+def bend_trunk(q, loc, yaw, pitch, roll, free=None):  # free: the arm that hangs back (the left unless told)
+    free = FREE_ARM if free is None else free
     for bone, share in zip(SPINE, SPINE_SHARE):
         pose = rig.fk(q, loc)
         turn = Matrix.Rotation(math.radians(yaw) * share, 3, UP0) @ Matrix.Rotation(math.radians(pitch) * share, 3, LEFT0) @ Matrix.Rotation(-math.radians(roll) * share, 3, FORWARD0)
@@ -47,9 +48,9 @@ def bend_trunk(q, loc, yaw, pitch, roll):
         pose = rig.fk(q, loc)
     # the free arm hangs back from the trunk's turn, as a counterweight does
     turn = Matrix.Rotation(-math.radians(yaw) * 0.45, 3, UP0) @ Matrix.Rotation(math.radians(pitch) * 0.3, 3, LEFT0)
-    m = (turn @ pose[FREE_ARM].to_3x3()).to_4x4()
-    m.translation = pose[FREE_ARM].translation
-    q[FREE_ARM] = rig.local(m, FREE_ARM, pose[rig.parent[FREE_ARM]])[0]
+    m = (turn @ pose[free].to_3x3()).to_4x4()
+    m.translation = pose[free].translation
+    q[free] = rig.local(m, free, pose[rig.parent[free]])[0]
 
 
 class Leg:
@@ -134,27 +135,37 @@ def arc3(p, c, q):
 WRIST = math.radians(42)  # as far as a wrist bends before the pose reads as broken
 
 
-def easy_hold(pose, q, point, axis, near):
-    """The sword hand at a point with the blade along `axis`, or as near that as the wrist allows: past WRIST the
-    bend is held there and the blade gives way instead."""
-    arm, bend, _, miss = RIGHT.hold(pose, q, point, axis, near)
+def easy_hold(pose, q, point, axis, near, arm=None):
+    """A weapon hand at a point with the blade along `axis`, or as near that as the wrist allows: past WRIST the
+    bend is held there and the blade gives way instead. arm: which arm (the right one unless told)."""
+    side = arm or RIGHT
+    solved, bend, _, miss = side.hold(pose, q, point, axis, near)
     for _ in range(3):
         if bend <= WRIST:
             break
-        straight = (arm[RIGHT.fore] @ rig.rel[RIGHT.hand]).to_3x3()
-        d = (straight.inverted() @ arm[RIGHT.hand].to_3x3()).to_quaternion()
-        twist = 2 * math.atan2(Vector((d.x, d.y, d.z)).dot(RIGHT.palm), d.w)
+        straight = (solved[side.fore] @ rig.rel[side.hand]).to_3x3()
+        d = (straight.inverted() @ solved[side.hand].to_3x3()).to_quaternion()
+        twist = 2 * math.atan2(Vector((d.x, d.y, d.z)).dot(side.palm), d.w)
         twist = (twist + math.pi) % (2 * math.pi) - math.pi
-        turn = Quaternion(RIGHT.palm, twist)
+        turn = Quaternion(side.palm, twist)
         over = d @ turn.inverted()
         if over.w < 0:
             over = -over
         ax = Vector((over.x, over.y, over.z))
         hand3 = straight @ (Quaternion(ax.normalized(), WRIST) @ turn).to_matrix()
-        arm = RIGHT.reach(pose, q, point - hand3 @ RIGHT.grip.translation, hand3)
-        bend, _ = RIGHT.wrist(arm)
-        miss = ((arm[RIGHT.hand] @ RIGHT.grip).translation - point).length
-    return arm, bend, miss
+        solved = side.reach(pose, q, point - hand3 @ side.grip.translation, hand3)
+        bend, _ = side.wrist(solved)
+        miss = ((solved[side.hand] @ side.grip).translation - point).length
+    return solved, bend, miss
+
+
+def flip(v):  # a direction as the body's mirror shows it (left for right)
+    return v - LEFT0 * (2 * v.dot(LEFT0))
+
+
+def mirror_spec(s):  # a pose for the other hand: the same pose in the mirror
+    return {'yaw': -s['yaw'], 'pitch': s['pitch'], 'roll': -s['roll'], 'shift': Vector((s['shift'].x, -s['shift'].y, s['shift'].z)),
+            'arm': flip(s['arm']), 'reach': s['reach'], 'blade': flip(s['blade'])}
 
 
 # The eight points for a blade in the right hand, and the centre the three modes measure them from.
@@ -184,7 +195,7 @@ CUTS = {
 # How far out a mode's points are, its seconds of wind-up, cut, hold and recovery, and how much of the step it
 # takes. KEEP IN STEP with src/components/duelist/core/cuts.mjs (a test compares the clips with it).
 CUT_MODES = {
-    'Swift': dict(amp=0.72, wind=0.11, cut=0.10, hold=0.03, rec=0.18, step=0.6),
+    'Swift': dict(amp=0.72, wind=0.11, cut=0.10, hold=0.03, rec=0.18, step=0.6, guard=1.0),  # the free hand guards the chest
     'Balanced': dict(amp=0.88, wind=0.13, cut=0.12, hold=0.04, rec=0.24, step=1.0),
     'Heavy': dict(amp=1.0, wind=0.21, cut=0.16, hold=0.08, rec=0.34, step=1.3),
 }
@@ -199,43 +210,68 @@ BACKHAND_MODES = {
 sharp = lambda x: smoothstep(smoothstep(x))  # slow, then through the middle at more than twice the average, then slow
 
 
-def ready_spec(q, loc):  # the stance itself as a spec: where its sword arm and blade are
+def ready_spec(q, loc, arm=None):  # the stance itself as a spec: where its weapon arm and blade are
+    side = arm or RIGHT
     pose = rig.fk(q, loc)
-    grip = pose[RIGHT.hand] @ RIGHT.grip
-    to = grip.translation - pose[RIGHT.upper].translation
-    return {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0, 'shift': Vector((0.0, 0.0, 0.0)), 'arm': to.normalized(), 'reach': to.length / ARM_LEN,
+    grip = pose[side.hand] @ side.grip
+    to = grip.translation - pose[side.upper].translation
+    return {'yaw': 0.0, 'pitch': 0.0, 'roll': 0.0, 'shift': Vector((0.0, 0.0, 0.0)), 'arm': to.normalized(), 'reach': to.length / (side.len1 + side.len2),
             'blade': grip.to_3x3().col[1].normalized()}
 
 
-def pose_frame(base_q, base_loc, s, travel, feet, state):
-    """One frame: the stance bent, shifted and reaching as a spec says, with the feet where they are told."""
+def pose_frame(base_q, base_loc, s, travel, feet, state, arm=None, guard=0.0):
+    """One frame: the stance bent, shifted and reaching as a spec says, with the feet where they are told.
+    arm: the arm that cuts (the right unless told); guard: how far the other hand is up in front of the chest."""
     unit = scale_of()
+    side = arm or RIGHT
+    other = LEFT if side is RIGHT else RIGHT
     q = [x.copy() for x in base_q]
     loc = base_loc + HIPS_REST_INV @ (travel + (FORWARD0 * s['shift'].x + LEFT0 * s['shift'].y + UP0 * s['shift'].z) / unit)
-    bend_trunk(q, loc, s['yaw'], s['pitch'], s['roll'])
+    bend_trunk(q, loc, s['yaw'], s['pitch'], s['roll'], other.upper)
     pose = rig.fk(q, loc)
     leg_miss = max(leg.plant(q, pose, *foot) for leg, foot in zip(LEGS, feet))
     pose = rig.fk(q, loc)
-    point = pose[RIGHT.upper].translation + s['arm'] * (min(s['reach'], 0.985) * ARM_LEN)
-    arm, bend, miss = easy_hold(pose, q, point, s['blade'], state.get('near'))
-    RIGHT.take(q, pose, arm)
-    state['near'] = arm[RIGHT.hand].to_3x3()
+    point = pose[side.upper].translation + s['arm'] * (min(s['reach'], 0.985) * (side.len1 + side.len2))
+    solved, bend, miss = easy_hold(pose, q, point, s['blade'], state.get('near'), side)
+    side.take(q, pose, solved)
+    state['near'] = solved[side.hand].to_3x3()
+    if guard > 0:  # the free hand comes up in front of the chest, the forearm across it; the wrist stays as it was
+        pose = rig.fk(q, loc)
+        forward, left, up = chest_axes(pose)
+        sign = 1 if other is LEFT else -1
+        wrist = pose[CHEST].translation + (forward * 0.27 + left * (0.06 * sign) + up * 0.05) / unit
+        held = other.reach(pose, q, wrist, pose[other.hand].to_3x3())
+        for i in (other.upper, other.fore):
+            p = rig.parent[i]
+            q[i] = q[i].slerp(rig.local(held[i], i, held.get(p, pose[p]))[0], guard)
     state['worst'] = [max(a, b) for a, b in zip(state.get('worst', [0, 0, 0]), (miss * unit, math.degrees(bend), leg_miss * unit))]
     return q, loc
 
 
-def make_cut(cut, mode, base_q, base_loc, line=None, modes=None):
+def make_cut(cut, mode, base_q, base_loc, line=None, modes=None, hand='Right', ring=None):
     """One cut in one mode: wind up to the point it leaves, cut through to the point it ends at, hold, come back.
-    line, modes: a line and a table of modes of its own (the backhand's)."""
+    line, modes: a line and a table of modes of its own (the backhand's, the forms'). hand: the hand that cuts; the
+    left cuts the same line in the mirror. ring: points of its own (the staff's)."""
     p_name, q_name, step = line or CUTS[cut]
     m = (modes or CUT_MODES)[mode]
     unit = scale_of()
     amp = m['amp'] * (0.85 if cut == 'Stand' else 1.0)
-    ready = ready_spec(base_q, base_loc)
-    P, Q = mix(CENTRE, RING[p_name], amp), mix(CENTRE, RING[q_name], amp)
-    c_arm = (FORWARD0 + (P['arm'] + Q['arm']) * 0.25 + UP0 * 0.05).normalized()  # the reach in front of the chest
-    c_blade = (c_arm + P['blade'] * 0.2).normalized()  # the blade still trails a little as it passes
-    r_ctrl = 2 * (0.84 + 0.06 * m['amp']) - (P['reach'] + Q['reach']) / 2  # the elbow keeps a bend: the blade is the reach
+    side = LEFT if hand == 'Left' else RIGHT
+    table = ring or RING
+    turn = mirror_spec if hand == 'Left' else (lambda s: s)
+    ready = ready_spec(base_q, base_loc, side)
+    centre = turn(m.get('centre', CENTRE))
+    P, Q = mix(centre, turn(table[p_name]), amp), mix(centre, turn(table[q_name]), amp)
+    if m.get('close'):  # both hands stay on the weapon: the hand keeps near the body and the far end does the reaching
+        between = P['arm'] + Q['arm']
+        c_arm = between.normalized() if between.length > 1e-3 else FORWARD0.copy()
+        c_blade = (FORWARD0 + (P['blade'] + Q['blade']) * 0.35).normalized()
+        c_reach = m['close']
+    else:
+        c_arm = (FORWARD0 + (P['arm'] + Q['arm']) * 0.25 + UP0 * 0.05).normalized()  # the reach in front of the chest
+        c_blade = (c_arm + P['blade'] * 0.2).normalized()  # the blade still trails a little as it passes
+        c_reach = 0.84 + 0.06 * m['amp']  # the elbow keeps a bend: the blade is the reach
+    r_ctrl = 2 * c_reach - (P['reach'] + Q['reach']) / 2
     arm_way, blade_way = arc3(P['arm'], c_arm, Q['arm']), arc3(P['blade'], c_blade, Q['blade'])
     Tw, Tc, Th, Tr = m['wind'], m['cut'], m['hold'], m['rec']
     V = (FORWARD0 * step[0] + LEFT0 * step[1]) * (m['step'] / unit)
@@ -281,7 +317,8 @@ def make_cut(cut, mode, base_q, base_loc, line=None, modes=None):
         for k in ('yaw', 'pitch', 'roll', 'shift'):
             s[k] = trunk[k]
         gone = 0.75 * smoothstep((t - t1a) / (t1b - t1a)) + 0.25 * smoothstep((t - t2a) / (t2b - t2a))
-        q, loc = pose_frame(base_q, base_loc, s, V * gone, [foot(0, t), foot(1, t)], state)
+        guard = m.get('guard', 0.0) * smoothstep(t / Tw) * (1 - smoothstep((t - Tw - Tc - Th) / Tr))
+        q, loc = pose_frame(base_q, base_loc, s, V * gone, [foot(0, t), foot(1, t)], state, side, guard)
         k = (t - Tw - Tc - Th) / Tr
         if k > 0.6:  # the last of the recovery closes on the stance itself
             w = smoothstep((k - 0.6) / 0.4)
@@ -315,7 +352,31 @@ def build_cuts(add, notes, idle, only=None):
 # KEEP IN STEP with src/components/duelist/core/cuts.mjs FORM_TIMING.
 FORM_MODES = {
     'blades': dict(amp=0.82, wind=0.10, cut=0.10, hold=0.03, rec=0.20, step=0.0),
-    'staff': dict(amp=0.9, wind=0.13, cut=0.13, hold=0.05, rec=0.25, step=0.0),
+    # the staff is held in both hands: the right hand keeps near the hip and the far end does the reaching
+    'staff': dict(amp=0.92, wind=0.13, cut=0.13, hold=0.05, rec=0.25, step=0.0, close=0.56,
+                  centre=spec(0, 3, 0, (0.0, 0.0, -0.01), (8, -45, 0.5), (20, 40))),
+}
+# The twin blades: each cut has a hand that leads it (the line that hand cuts, which hand, and how far behind the
+# other blade follows). The right hand leads what travels to the left, the left hand what travels to the right; the
+# other blade cuts the same line in the mirror a beat behind, so the two cross and uncross.
+BLADES = {
+    'Stand': ('Stand', 'Right', 0.06), 'Left': ('Left', 'Right', 0.06), 'DownLeft': ('DownLeft', 'Right', 0.06), 'UpLeft': ('UpLeft', 'Right', 0.06),
+    'Down': ('Down', 'Right', 0.08),
+    'Right': ('Left', 'Left', 0.06), 'DownRight': ('DownLeft', 'Left', 0.06), 'UpRight': ('UpLeft', 'Left', 0.06),
+    'Up': ('Up', 'Left', 0.08),
+}
+# The staff's own points: where the right hand is (near the hip: both hands stay on the shaft) and where the far end
+# points. The far end can point anywhere ahead, up, down or to the left, and only a little to the right: the left
+# hand holds the shaft beyond the right hand and cannot follow it far across the body.
+STAFF_RING = {
+    'T': spec(-6, -6, 0, (-0.02, 0.0, 0.01), (5, -20, 0.5), (0, 75)),
+    'TR': spec(-22, -4, -4, (-0.02, -0.03, 0.0), (-15, -25, 0.5), (-25, 55)),
+    'R': spec(-28, 2, -5, (-0.01, -0.04, -0.02), (-25, -40, 0.5), (-30, 8)),
+    'BR': spec(-20, 12, -6, (0.02, -0.03, -0.06), (-20, -55, 0.52), (-25, -35)),
+    'B': spec(6, 16, 0, (0.04, 0.0, -0.07), (5, -55, 0.55), (0, -42)),
+    'BL': spec(24, 14, 6, (0.03, 0.04, -0.07), (20, -55, 0.52), (60, -35)),
+    'L': spec(32, 5, 5, (0.02, 0.05, -0.03), (25, -40, 0.5), (80, 8)),
+    'TL': spec(26, -3, 4, (-0.01, 0.04, 0.0), (20, -25, 0.5), (60, 55)),
 }
 
 
@@ -353,19 +414,25 @@ def on_shaft(clip):
 
 
 def build_form_cuts(add, notes, blades_idle, staff_idle, only=None):
-    for form, idle, prefix in (('blades', blades_idle, 'bladesCut'), ('staff', staff_idle, 'staffCut')):
-        base_q, base_loc = pose_of(idle, 0)
-        for cut in CUTS:
-            name = prefix + cut
-            if only and name not in only:
-                continue
-            clip, marks, worst = make_cut(cut, form, base_q, base_loc, modes=FORM_MODES)
-            extra = ''
-            if form == 'blades':  # the left blade cuts the same line in a mirror, a beat behind the right
-                clip = mirror_arm(clip, delay=0.05)
-            else:
-                clip, share = on_shaft(clip)
-                extra = ', second hand on the shaft %d%% of the time' % round(share * 100)
-            add(name, inertial_in(clip, idle, 0, 0.1), f'{cut} cut with the {form}: from {CUTS[cut][0]} to {CUTS[cut][1]}', sigma=0.5)
-            notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1]})
-            print('CUT', name, 'seconds', notes[name]['seconds'], 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst) + extra)
+    report = 'arm miss %.3f m, wrist %d deg, foot miss %.3f m'
+    base_q, base_loc = pose_of(blades_idle, 0)
+    for cut, (line, hand, delay) in BLADES.items():
+        name = 'bladesCut' + cut
+        if only and name not in only:
+            continue
+        clip, marks, worst = make_cut(line, 'blades', base_q, base_loc, modes=FORM_MODES, hand=hand)
+        clip = mirror_arm(clip, delay=delay, to='Left' if hand == 'Right' else 'Right')
+        add(name, inertial_in(clip, blades_idle, 0, 0.1),
+            f'{cut} cut with the twin blades: the {hand.lower()} blade leads from {CUTS[cut][0]} to {CUTS[cut][1]}, the other follows in the mirror', sigma=0.5)
+        notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1], 'lead': hand})
+        print('CUT', name, 'seconds', notes[name]['seconds'], report % tuple(worst), '| led by the', hand.lower(), 'blade')
+    base_q, base_loc = pose_of(staff_idle, 0)
+    for cut in CUTS:
+        name = 'staffCut' + cut
+        if only and name not in only:
+            continue
+        clip, marks, worst = make_cut(cut, 'staff', base_q, base_loc, modes=FORM_MODES, ring=STAFF_RING)
+        clip, share = on_shaft(clip)
+        add(name, inertial_in(clip, staff_idle, 0, 0.1), f'{cut} cut with the staff in both hands: the far end from {CUTS[cut][0]} to {CUTS[cut][1]}', sigma=0.5)
+        notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1]})
+        print('CUT', name, 'seconds', notes[name]['seconds'], report % tuple(worst), '| second hand on the shaft %d%% of the time' % round(share * 100))
