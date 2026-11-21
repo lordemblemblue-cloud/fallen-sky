@@ -9,6 +9,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { FLOOR_VERTEX, WAVE_GLSL, createFloorWaves } from './arena.mjs';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { depotOverlayTwin, depotCeilingTwin } from './duelistNodes.mjs';
 
 export const DEPOT = Object.freeze({ height: 4.2, cover: 1.5 });
 const H = DEPOT.height;
@@ -215,11 +217,11 @@ export function createDepot({ level, def, scene = null, lights = null }) {
   deck.receiveShadow = true;
   group.add(deck);
   const overlayUniforms = { uTime: { value: 0 }, uLift: { value: new THREE.Vector4(0, 0, 4.5, 0) }, uLiftFill: { value: 0 }, uAlarm: { value: 0 }, ...waves.uniforms };
-  const overlay = new THREE.Mesh(flat(0.006), keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: OVERLAY_FRAGMENT, uniforms: overlayUniforms,
-    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })));
+  const overlay = new THREE.Mesh(flat(0.006), keep(setNodeTwin(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: OVERLAY_FRAGMENT, uniforms: overlayUniforms,
+    transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), depotOverlayTwin)));
   group.add(overlay);
   const ceilingUniforms = { uTime: { value: 0 }, uAlarm: { value: 0 }, uBase: { value: new THREE.Vector3(...theme.ceiling) }, uLamp: { value: new THREE.Vector3(...theme.lamp) } };
-  group.add(new THREE.Mesh(flat(H, false), keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: CEILING_FRAGMENT, uniforms: ceilingUniforms }))));
+  group.add(new THREE.Mesh(flat(H, false), keep(setNodeTwin(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: CEILING_FRAGMENT, uniforms: ceilingUniforms }), depotCeilingTwin))));
 
   // ---- walls, with a line of light at chest height; the vault's pillars
   const wallMaterial = keep(new THREE.MeshStandardMaterial({ map: tex[theme.wall], ...theme.walls }));

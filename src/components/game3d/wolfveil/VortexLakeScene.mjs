@@ -4,7 +4,7 @@
 // liquid-glass whirlpool and energy ribbons without scene-wide bloom.
 import * as THREE from 'three';
 import {NodeMaterial} from 'three/webgpu';
-import {Fn,uv,positionGeometry,positionLocal,vec3,vec4,length,sin,atan,mix,smoothstep,pow,varying} from 'three/tsl';
+import {Fn,uv,positionGeometry,positionLocal,vec3,vec4,length,sin,atan2,mix,smoothstep,pow,varying} from 'three/tsl';
 import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
 import {uniformOf} from '../../../lib/webgpuNodeKit.js';
 
@@ -13,7 +13,7 @@ function basinWaterTwin(classic){
   const time=uniformOf(classic.uniforms.uTime,'float');
   const p=positionGeometry;
   const r=length(p.xz);
-  const lift=sin(r.mul(.23).sub(time.mul(1.25)).add(atan(p.z,p.x).mul(4))).mul(.12).mul(smoothstep(6,35,r));
+  const lift=sin(r.mul(.23).sub(time.mul(1.25)).add(atan2(p.z,p.x).mul(4))).mul(.12).mul(smoothstep(6,35,r));
   const m=new NodeMaterial();
   m.positionNode=positionLocal.add(vec3(0,lift,0));
   const basinUv=varying(uv(),'v_basinUv');

@@ -8,6 +8,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { createWarpField, MAX_WARP_EFFECTS } from './warpField.mjs';
+import { createWarpWebGPU } from './warpNodes.mjs';
 
 const MAX = MAX_WARP_EFFECTS;
 
@@ -68,6 +69,7 @@ const WarpShader = {
 };
 
 export function createWarp(renderer, scene, camera) {
+  if (renderer?.isWebGPURenderer) return createWarpForWebGPU(renderer, scene, camera);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
   const pass = new ShaderPass(WarpShader);
@@ -106,5 +108,27 @@ export function createWarp(renderer, scene, camera) {
     },
     setSize(width, height) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(width, height); },
     dispose() { composer.dispose(); pass.material.dispose(); },
+  };
+}
+
+// WebGPURenderer: the same pass as node post-processing (warpNodes.mjs), behind the same interface
+function createWarpForWebGPU(renderer, scene, camera) {
+  const warp = createWarpWebGPU(renderer, scene, camera);
+  const ndc = new THREE.Vector3();
+  const toCamera = new THREE.Vector3();
+  const project = (at) => {
+    ndc.copy(at).project(camera);
+    if (ndc.z > 1 || ndc.z < -1) return null;
+    const distance = toCamera.copy(at).sub(camera.position).length();
+    const perMetre = 1 / (2 * Math.max(0.1, distance) * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    return { x: (ndc.x + 1) / 2, y: (ndc.y + 1) / 2, perMetre };
+  };
+  return {
+    ring(options) { warp.field.ring(options); },
+    hold(list) { warp.field.hold(list); },
+    update(dt) { warp.field.update(dt); },
+    render() { warp.write(project); warp.render(); },
+    setSize() { /* the scene pass follows the renderer's size */ },
+    dispose() { warp.dispose(); },
   };
 }

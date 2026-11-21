@@ -11,6 +11,8 @@
 // About two extra GPU passes and no extra CPU draw work beyond one triangle (the frame is CPU-bound by draw calls:
 // RENDERING_BASELINE.md). Level 0 draws exactly as before. The level follows the pause menu's Graphics settings.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { createInkWashTwin } from './inkWashNodes.mjs';
 
 // what the pause menu's Quality preset means for the ink: low = tones, mist and paper; medium = + ink lines from depth;
 // high = + lines where the brightness turns; ultra = + multisampled (2x) edges, which cost the most
@@ -214,23 +216,25 @@ export function createInkWashLook({ renderer, guard, level = 0, palette = 'vibra
     vertexShader: VERTEX, fragmentShader: FRAGMENT,
     depthTest: false, depthWrite: false, toneMapped: true, // toneMapped: the renderer's toneMapping() is defined for the shader (it applies it itself)
   });
+  setNodeTwin(material, createInkWashTwin); // WebGPURenderer: the same pass in TSL (inkWashNodes.mjs)
   const geometry = new THREE.BufferGeometry(); // one triangle over the whole screen
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 3, -1, 0, -1, 3, 0], 3));
   const quad = new THREE.Mesh(geometry, material); quad.frustumCulled = false;
   const quadScene = new THREE.Scene(); quadScene.add(quad);
   const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   let target = null, current = 0, samples = -1, currentPalette = 'vibrant'; const mistRgb = [0, 0, 0];
-  // This GLSL pass cannot run on WebGPURenderer: there the world is drawn plainly (level 0) until the pass has its
-  // TSL version (docs/webgpu/CONVERSION_SURVEY_20261120.md, stage 3).
-  const glslOnly = !!renderer.isWebGPURenderer;
+  // WebGPURenderer: no multisampled target (a multisampled depth texture cannot be read back as a plain depth
+  // texture there), so ultra draws like high; and a plain RenderTarget.
+  const webgpu = !!renderer.isWebGPURenderer;
+  const Target = webgpu ? THREE.RenderTarget : THREE.WebGLRenderTarget;
 
   function makeTarget() {
     renderer.getDrawingBufferSize(size);
-    const w = Math.max(1, Math.floor(size.x)), h = Math.max(1, Math.floor(size.y)), want = current >= 4 ? 2 : 0;
+    const w = Math.max(1, Math.floor(size.x)), h = Math.max(1, Math.floor(size.y)), want = current >= 4 && !webgpu ? 2 : 0;
     if (target && target.width === w && target.height === h && samples === want) return;
     target?.dispose();
     const depthTexture = new THREE.DepthTexture(w, h); depthTexture.type = THREE.UnsignedIntType;
-    target = new THREE.WebGLRenderTarget(w, h, { type: halfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: true, depthTexture, samples: want });
+    target = new Target(w, h, { type: halfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: true, depthTexture, samples: want });
     target.texture.name = 'InkWashLook.color'; samples = want;
     material.uniforms.tColor.value = target.texture; material.uniforms.tDepth.value = depthTexture; material.uniforms.uResolution.value.set(w, h);
   }
@@ -248,10 +252,12 @@ export function createInkWashLook({ renderer, guard, level = 0, palette = 'vibra
       }
     },
     setLevel(next) {
-      current = glslOnly ? 0 : Math.max(0, Math.min(4, Number(next) || 0)); material.uniforms.uLevel.value = current;
+      current = Math.max(0, Math.min(4, Number(next) || 0)); material.uniforms.uLevel.value = current;
       if (current === 0) { target?.dispose(); target = null; samples = -1; if (renderer.info) renderer.info.autoReset = true; }
     },
     setSize() { if (current > 0) makeTarget(); },
+    // the render target the scene is drawn into (null: the screen), e.g. to compile its shaders ahead of time
+    sceneTarget() { if (current === 0) return null; makeTarget(); return target; },
     // draws one frame: the scene, then (above level 0) the ink pass over it. renderer.info then counts both passes
     render(scene, camera) {
       if (current === 0) return guard.render(scene, camera);

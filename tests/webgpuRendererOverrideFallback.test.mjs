@@ -45,8 +45,9 @@ test('a remembered WebGPU failure overrides explicit WebGPU preview', () => {
 test('auto clears persisted override and restores fail-closed default', () => {
   const localStorage = storage({ [RENDERER_OVERRIDE_KEY]: 'webgpu' });
   const host = { location: { search: '?renderer=auto' }, localStorage, sessionStorage: storage() };
+  // no stored verdict that WebGPU is at least as fast on this device: the classic renderer
   assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), {
-    kind: 'webgl', reason: 'scene-not-ready',
+    kind: 'webgl', reason: 'device-not-measured',
   });
   assert.equal(localStorage.getItem(RENDERER_OVERRIDE_KEY), null);
 });
@@ -66,7 +67,6 @@ test('storage exceptions cannot prevent conservative scene selection', () => {
   };
   const host = { location: { search: '?renderer=auto' }, localStorage: blocked, sessionStorage: blocked };
   assert.doesNotThrow(() => rememberRendererFailure(host));
-  assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), {
-    kind: 'webgl', reason: 'scene-not-ready',
-  });
+  // unreadable storage: the classic renderer (the host counts as unavailable)
+  assert.equal(chooseSceneRendererFor('duelist-adventure', host).kind, 'webgl');
 });

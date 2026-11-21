@@ -80,6 +80,9 @@ import { AXE_AOE_CHANNEL, isAOEChannelUnlocked } from './combat/ContinuousAOERul
 import { pickForwardCombatTargets } from './combat/FreeAimCombatTargets';
 import { BOW_PVE_RANGE, selectCameraBowTarget, selectLockedBowAbilityTarget, cameraBowImpactPoint } from './combat/BowCameraAim.mjs';
 import { getBowChargeStatus, applyBowImpactDamage } from './combat/ArcheryChargeRules.mjs';
+import { holdChargeMultiplier, holdChargeStatus, isChargePassiveMaxed } from './combat/HoldChargeRules.mjs';
+import { getWeaponLevel } from './progression/weaponMasteryStore';
+import { MASTERY_MAX_LEVEL } from './progression/weaponSynergyData';
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { tickActiveEffects, disposeActiveEffects } from './vfx/activeEffects.mjs';
@@ -109,6 +112,7 @@ import { createCombatImpactFeedback } from './vfx/CombatImpactFeedback';
 import { createDuelDefenseFeedback } from './vfx/DuelDefenseFeedback';
 import { createCombatWeaponTrails } from './vfx/CombatWeaponTrails';
 import { createWeaponComboBinder } from './weapons/weaponComboBinder.js';
+import { loadWeaponClipPack } from './weapons/weaponClipPack.mjs';
 import { swordSkillComboKind } from './weapons/weaponComboClips.js';
 import { canSpendCombatResource, spendCombatResource, tickCombatResources, resetCombatResources, getCombatResources } from './combat/combatResourcesStore';
 import { selectCombatSwingSound, selectCombatImpactSound, AUTHORED_SKILL_SOUNDS } from './combat/CombatSoundRouter';
@@ -160,7 +164,7 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
-import {createWebGPUSceneRenderer,onSceneDeviceLost} from '@/lib/webgpuSceneRenderer.js';
+import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,holdSceneFrames,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -525,6 +529,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // WebGPU: no frames until the player is ready and the area's shaders are compiled (markAvatarReady below)
+    let releaseInitialFrames = () => {};
     // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
     // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
     // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
@@ -552,6 +558,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           powerPreference: 'high-performance', forceWebGL: rendererChoice.kind === 'webgl2' });
         const gpuRenderer = created.renderer;
         renderer = gpuRenderer;
+        // drawing before then would compile every new shader synchronously, one frame at a time (seconds each)
+        releaseInitialFrames = holdSceneFrames(gpuRenderer);
+        setTimeout(() => releaseInitialFrames(), 60000); // never left held (e.g. a character that never loads)
         window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'WebGPU');
         // Nothing is drawn until init resolves (webglContextGuard); then the GPU class is known and the
         // graphics budget is worked out again, as WebGL does at once from the context.
@@ -2018,9 +2027,27 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Basic melee strikes waiting for their swing's contact frame: [{ serial, at, land }]
     const pendingMeleeContacts=[];
     let pendingBowShotCharge=null;
+    // Hold to charge a melee swing (combat/HoldChargeRules.mjs): the left button held down, since when.
+    const meleeHold={active:false,at:0};
+    let meleeChargeShown=false;
+    const releaseMeleeHold=()=>{
+      if(!meleeHold.active)return;
+      meleeHold.active=false;
+      playerAnim?.releaseCharge?.();
+    };
+    // A landed basic swing's charge: double damage for a full charge with the weapon's mastery passive maxed
+    // (PvE; duels resolve damage on the server).
+    const meleeChargeMultiplier=(serial)=>{
+      const charge=playerAnim?.getSwingCharge?.(serial);
+      if(!charge?.engaged||window.__activeDuel)return 1;
+      return holdChargeMultiplier({heldMs:charge.heldMs,engaged:charge.engaged,
+        passiveMaxed:isChargePassiveMaxed(inferAXEMasteryWeaponId(getActiveEquippedAXEWeapon()),
+          {levelOf:getWeaponLevel,maxLevel:MASTERY_MAX_LEVEL})});
+    };
     const cancelBowCharge=()=>{
       heldBow.active=false;pendingBowShotCharge=null;
       bowVisuals.setCharge?.(null);
+      releaseMeleeHold();
     };
     const heldAOEKeys = new Map();
     const killFlowCounter = createKillFlowCounter();
@@ -2229,6 +2256,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       try { weaponCombos = createWeaponComboBinder({ model: fbx, controller: playerAnim, runtime: weaponRuntime,
         bodyHeight: window.__gw3dPlayerHeight || 1.7 }); }
       catch (error) { console.warn('[Game 3D clone] weapon combo rig bake unavailable', error); weaponCombos = null; }
+      // The weapon clips the owner edited in Blender (public/models/animations/weapons, weapons/weaponClipPack.mjs)
+      // replace their baked ones once loaded; without that pack every weapon keeps its baked clips.
+      if (weaponCombos) {
+        const binder = weaponCombos;
+        loadWeaponClipPack(fbx).then((clips) => {
+          if (weaponCombos === binder && Object.keys(clips).length) binder.setAuthoredClips(clips);
+        }).catch(() => {});
+      }
       // The held weapon's enchantment light (enchantVfx/weaponEnchantVfx.js): visual only.
       enchantPercentCache = createEnchantPercentCache();
       weaponEnchantVfx = createWeaponEnchantVfx({ getPercent: (item) => enchantPercentCache?.get(item) || 0 });
@@ -2314,11 +2349,23 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       const markAvatarReady = () => {
         if (avatarLoadDisposed || modelRef.current !== fbx || avatarReadyReported) return;
         avatarReadyReported = true;
-        setLoading(false);
-        entryCameraReleased = true;
-        window.dispatchEvent(new CustomEvent('game3dWorldAvatarReady', {
-          detail: { modelUrl: appearanceRef.current.model_url, characterId: getActiveCharacter()?.id || null },
-        }));
+        const announce = () => {
+          if (avatarLoadDisposed || modelRef.current !== fbx) return;
+          setLoading(false);
+          entryCameraReleased = true;
+          window.dispatchEvent(new CustomEvent('game3dWorldAvatarReady', {
+            detail: { modelUrl: appearanceRef.current.model_url, characterId: getActiveCharacter()?.id || null },
+          }));
+        };
+        // WebGPU: compile the area's shaders in the background while the loading screen is still up, instead of
+        // one by one at each object's first draw (webgpuSceneRenderer.js precompileSceneObjects); then draw a few
+        // frames behind it (the shadow map and the ink pass compile there) before the world is shown
+        if (renderer.isWebGPURenderer) {
+          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
+            .then((result) => { window.__gw3dPrecompile = result; }, () => {})
+            .then(() => { releaseInitialFrames(); return waitForSceneRenders(renderer, 6); })
+            .then(announce, announce);
+        } else announce();
       };
       if (playerAnim.has('idle')) markAvatarReady();
       loadPlayerAnimationClips(loader,fbx, { onMontageReady: clips => {
@@ -2358,6 +2405,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         });
     }).catch((err) => {
       console.error('Player model load error:', err);
+      releaseInitialFrames();
       setLoading(false);
       if(!avatarLoadDisposed)window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{
         detail:{message:err?.message || 'Character model could not load. Try again or return to Character Select.'}}));
@@ -2885,6 +2933,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         }else{
           rangedClickAttackPressed.current=false;
           attackPressed.current=true;
+          // held down, the swing charges (released on mouse up)
+          meleeHold.active=true;meleeHold.at=performance.now();
         }
         // Like Luna's Game 2 exploration: a click in the 3D viewport locks
         // free-look. Keep left attack and optional click-to-move intact.
@@ -2949,6 +2999,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         cancelBowCharge();drag.current.active=false;rightDragMoved.current=false;
         otsAim.current.endHold(performance.now());swordStance.cancel();rightClickAction=null;return;
       }
+      if(e.button===0)releaseMeleeHold(); // a held swing strikes
       if(e.button===0&&heldBow.active){
         const status=getBowChargeStatus(Math.max(0,performance.now()-heldBow.startedAt));
         heldBow.active=false;
@@ -3490,7 +3541,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         // a basic melee click's strike lands on its own swing's contact frame (owner handoff 2026-11-18)
         if (cue.type === 'hit' && BASIC_MELEE_COMBOS.has(cue.kind)) {
           const waiting = pendingMeleeContacts.findIndex((contact) => contact.serial === cue.serial);
-          if (waiting >= 0) pendingMeleeContacts.splice(waiting, 1)[0].land();
+          if (waiting >= 0) pendingMeleeContacts.splice(waiting, 1)[0].land(meleeChargeMultiplier(cue.serial));
         }
         if (/^(sword|dagger)/.test(cue.kind || '') && cue.type === 'sweep') {
           // the ribbon follows the summoned blade itself (base -> tip) over its cutting arc
@@ -4081,7 +4132,28 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
             skillChargeFill.style.width=charge.percent+'%';
           }
           skillChargeHud.style.opacity='1';
-        } else hideSkillCharge();
+          meleeChargeShown=false;
+        } else {
+          // a melee swing held into a charge: its meter (double damage once full with the mastery passive maxed)
+          const melee=playerAnim?.getHoldCharge?.();
+          if(melee?.held&&melee.engaged){
+            const status=holdChargeStatus(melee.heldMs);
+            const doubled=status.full&&isChargePassiveMaxed(inferAXEMasteryWeaponId(getActiveEquippedAXEWeapon()),
+              {levelOf:getWeaponLevel,maxLevel:MASTERY_MAX_LEVEL});
+            const label=status.full?(doubled?'CHARGED · DOUBLE DAMAGE':'CHARGED'):'CHARGE · '+status.percent+'%';
+            if(skillChargeLabel.textContent!==label){
+              skillChargeHud.setAttribute('aria-valuenow',String(status.percent));
+              skillChargeLabel.textContent=label;
+              skillChargeFill.style.width=status.percent+'%';
+            }
+            skillChargeHud.style.opacity='1';
+            meleeChargeShown=true;
+          }else{
+            if(meleeChargeShown)skillChargeHud.setAttribute('aria-valuenow','');
+            meleeChargeShown=false;
+            hideSkillCharge();
+          }
+        }
         bowVisuals.update(delta,{
           active:getActiveWeaponPath()==='ranged'&&!isMountedRef.current,
           blocked:entryModeRef.current||window.__axeUiModalOpen||
@@ -4721,6 +4793,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
                 combo: isSkillStrike, speed: getAXEAttackSpeedMult(getPlayerHUD().derived),
                 hitIndex: comboKind && !isSkillStrike ? undefined : pendingSkillStrike?.hitIndex ?? 0,
                 heavy: /heavy_strike|crushing_blow/.test(pendingSkillStrike?.skillId || ''),
+                // a basic swing whose button is still down may be held into a charge (combat/HoldChargeRules.mjs)
+                ...(!isSkillStrike && comboKind && comboKind === basicMeleeKind && meleeHold.active
+                  ? { hold: true, pressedAt: meleeHold.at / 1000 } : {}),
               });
             } else {
               playOneShot(montage, 1.4);
@@ -4735,7 +4810,11 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
             // hitbox; a second independent raycast must not select another AI. A bow's strike resolves
             // right AFTER the shot tracer exists, so a same-frame boss/rogue hit paints that exact tracer
             // green; a basic melee swing's strike waits for that swing's contact frame (below).
-            const landStrike = () => {
+            // charge: a held swing's multiplier, known when it lands (meleeChargeMultiplier); it multiplies this
+            // strike only, so inside landStrike strikeMultiplier is the swing's multiplier times its charge
+            const swingMultiplier = strikeMultiplier;
+            const landStrike = (charge = 1) => {
+            const strikeMultiplier = swingMultiplier * Math.max(1, Number(charge) || 1);
             let attackConsumedByPriorityTarget = activeWeaponPath==='ranged'
               ? false : dispatchRogueAttack(playerDerivedRef, strikeMultiplier, bowAimTarget);
             if(activeWeaponPath==='ranged'){
@@ -5782,7 +5861,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       <div ref={containerRef} className="w-full h-full" />
       {/* Download links are presented in a separate modal after capture;
           each needs a real user click to satisfy browser download policy. */}
-      {!entryMode && !loading && (
+      {!entryMode && !loading && import.meta.env.DEV && (
         <div className="absolute bottom-4 right-4 z-[80] max-w-[min(300px,85vw)]"
           onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
           <button type="button" disabled={mapExportState==='exporting'}

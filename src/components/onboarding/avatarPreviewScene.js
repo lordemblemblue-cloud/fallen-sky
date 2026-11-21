@@ -2,6 +2,7 @@
 // portrait and the equipment preview all mount the same scene so the character
 // looks identical wherever it appears.
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../lib/webgpuSceneRenderer.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { applyPlayerAppearance, disposeAvatarModel, loadAvatarModel } from './avatarAssetRuntime';
 import { creatorBody } from './avatarCustomization';
@@ -21,7 +22,7 @@ export function createAvatarScene(mount, options = {}) {
   const { url, config = {}, portrait = false, orbit = true, onReady, onError } = options;
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(portrait ? 26 : 38, 1, 0.05, 60);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = createSceneRenderer('fallen-sky', { antialias: true, alpha: true }).renderer;
   // Compact Game 3D viewers may coexist on phones. Keep the draw buffer
   // smaller than the full world and avoid multiple 2x offscreen canvases.
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 1.5));

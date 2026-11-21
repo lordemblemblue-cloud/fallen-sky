@@ -4,6 +4,7 @@
 // with the same shape; this view draws whichever it is given.
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
 import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
@@ -37,6 +38,7 @@ import { createHudFeed } from './hudFeed.mjs';
 import { levelFrom, xpForEvent } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
+import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
 import { createSecondHand } from './secondHand.mjs';
 import { CLASSES, classById, hiddenFrom, effectOn } from '../core/index.mjs';
@@ -158,6 +160,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const xpRef = useRef(xp); // the player's EXP as this match began; what it earns is added on top
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
+  const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -166,7 +169,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setStatus('loading');
     setHud(null);
     setNet(null);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    const selectedRenderer = createSceneRenderer('duelist-adventure', { antialias: true, powerPreference: 'high-performance' });
+    const renderer = selectedRenderer.renderer;
+    window.__duelistGameRenderer = renderer;
+    window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -706,6 +712,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       for (const actor of Object.values(actors)) actor.dispose();
       renderer.dispose();
       renderer.domElement.remove();
+      if (window.__duelistGameRenderer === renderer) {
+        delete window.__duelistGameRenderer;
+        delete window.__duelistGameRendererChoice;
+      }
       if (window.__duelist?.world === world) delete window.__duelist;
     };
   }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn]);
@@ -739,6 +749,19 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {quest && <Comms view={quest} />}
       {quest && <DownNote view={quest} />}
       {quest && <MissionEnd view={quest} onAgain={online ? null : again} onLeave={onLeave} onNext={online ? null : onNext} />}
+      <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 60,
+        maxWidth: 'min(340px, calc(100vw - 24px))', color: '#e4efff' }}>
+        <button type="button" aria-expanded={showGpuDiagnostics}
+          aria-controls="duelist-live-gpu-panel"
+          onClick={() => setShowGpuDiagnostics(open => !open)}
+          style={{ padding: '5px 10px', borderRadius: 10, color: 'inherit',
+            background: 'rgba(8,17,30,.82)', border: '1px solid rgba(190,220,250,.35)', fontSize: 12 }}>
+          GPU status
+        </button>
+        {showGpuDiagnostics && <div id="duelist-live-gpu-panel" style={{ marginTop: 7 }}>
+          <GraphicsRuntimePanel sceneId="duelist-adventure"/>
+        </div>}
+      </div>
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); if (a.muted) voicesRef.current?.stop(); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
