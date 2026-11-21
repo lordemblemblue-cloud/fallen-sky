@@ -622,7 +622,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         const from = source ? source.chest() : chest.clone().add(new THREE.Vector3(0, 0, 1));
         const origin = tmp.copy(from).sub(chest).normalize().clone();
         const contact = chest.clone().addScaledVector(origin, 0.32);
-        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow';
+        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || /^swordCutw+Heavy$/.test(e.move);
         if (e.shield > 0.01) {
           shells.flash({ follow: target.root, hex: COLORS.shield, hexPattern: true, origin, ttl: 0.32 });
           burst(contact, 10, 4, { hex: COLORS.shield, size: 0.04, ttl: 0.3, damping: 4 });

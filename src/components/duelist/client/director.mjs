@@ -49,7 +49,7 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
           if (a.move.damageKind === 'projectile') {
             // a shot is heard as each round leaves (the 'projectile' effect, below)
           } else if (a.move.kind === 'attack') {
-            audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' });
+            audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' || a.move?.cut?.mode === 'heavy' });
           } else {
             const kind = a.id === 'gripThrow' ? 'throw' : a.id;
             const held = kind === 'throw' ? heldBy(id) : null;
