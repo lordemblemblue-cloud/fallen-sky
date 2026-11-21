@@ -40,6 +40,7 @@ import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import ShopPanel from './ShopPanel.jsx';
+import MatchLoadingScreen from './MatchLoadingScreen.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
 import { createSecondHand } from './secondHand.mjs';
 import { CLASSES, classById, hiddenFrom, effectOn, moveFor, abilityRank, specialTier } from '../core/index.mjs';
@@ -796,17 +797,24 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); if (a.muted) voicesRef.current?.stop(); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
-      {waiting && (net.status === 'connecting' || net.status === 'joining') && <div className="duelist-center">{(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]}</div>}
-      {waiting && (net.status === 'error' || net.status === 'closed') && <div className="duelist-center">{net.detail || 'Not connected.'}</div>}
-      {waiting && net.status === 'reconnecting' && (
-        <div className="duelist-center duelist-reconnecting">
-          <span>{net.detail || 'Connection lost. Reconnecting…'}</span>
-          <small>{mode !== 'story' ? 'A bot keeps your seat until you are back.'
-            : (quest?.people?.length || 1) > 1 ? 'The autopilot plays your fighter until you are back.' : 'The mission waits for you.'}</small>
-        </div>
+      {online && !net && status === 'loading' && (
+        <MatchLoadingScreen mode={mode} message="Preparing match connection…" />
       )}
-      {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
-      {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
+      {waiting && (net.status === 'connecting' || net.status === 'joining') && (
+        <MatchLoadingScreen mode={mode} message={(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]} />
+      )}
+      {waiting && (net.status === 'error' || net.status === 'closed') && (
+        <MatchLoadingScreen mode={mode} variant="error" message={net.detail || 'Not connected.'} />
+      )}
+      {waiting && net.status === 'reconnecting' && (
+        <MatchLoadingScreen mode={mode} message={net.detail || 'Connection lost. Reconnecting…'}
+          note={mode !== 'story' ? 'A bot keeps your seat until you are back.'
+            : (quest?.people?.length || 1) > 1 ? 'The autopilot plays your fighter until you are back.' : 'The mission waits for you.'} />
+      )}
+      {!online && status === 'loading' && (
+        <MatchLoadingScreen mode={mode} message={mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'} />
+      )}
+      {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
