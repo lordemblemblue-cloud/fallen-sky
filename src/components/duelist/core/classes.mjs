@@ -182,7 +182,7 @@ export function behindTarget(attacker, target, arcDegrees = SPECIAL_BALANCE.assa
  * actor: { id, team, hp, position: { x, z } }; target (executions): { id, team, hp, maxHp, position: { x, z, yaw },
  * protectedUntil, invulnerable }. level: the class's level (the special's tier: core/progression.mjs).
  */
-export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, level = 1 } = {}) {
+export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0 } = {}) {
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
   if (!validMeter(meter)) return { allowed: false, reason: 'invalid-meter' };
@@ -202,9 +202,9 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0,
     if (target.protectedUntil != null && target.protectedUntil !== -Infinity && !Number.isFinite(target.protectedUntil)) return { allowed: false, reason: 'invalid-context' };
     if ((target.protectedUntil ?? -Infinity) > now || target.invulnerable) return { allowed: false, reason: 'target-protected' };
     const id = def.special.id;
-    if (distance(actor.position, target.position) > tierValue(id, 'reach', level, def.special.reach)) return { allowed: false, reason: 'out-of-range' };
-    if (def.special.rule === 'threshold' && target.hp / target.maxHp > tierValue(id, 'threshold', level, SPECIAL_BALANCE.duelistExecuteThreshold)) return { allowed: false, reason: 'target-too-healthy' };
-    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', level, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
+    if (distance(actor.position, target.position) > tierValue(id, 'reach', matchBoost, def.special.reach)) return { allowed: false, reason: 'out-of-range' };
+    if (def.special.rule === 'threshold' && target.hp / target.maxHp > tierValue(id, 'threshold', matchBoost, SPECIAL_BALANCE.duelistExecuteThreshold)) return { allowed: false, reason: 'target-too-healthy' };
+    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', matchBoost, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
   }
   return { allowed: true, effect: def.special.id, cost: def.special.cost, meterAfter: clamp(meter - def.special.cost, 0, SPECIAL_MAX), animation: def.special.animation };
 }

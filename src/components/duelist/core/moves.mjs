@@ -121,6 +121,10 @@ export const MOVES = Object.freeze({
     rootMotion: 3.6, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
+  // In-air evasion: second Dash press within AIR_DASH.doubleTapSeconds while in a player jump.
+  // One use per jump; no extra stamina/Will cost. The world validates height and the two presses.
+  airDash: move({ kind: 'movement', startup: 0, active: 0.22, recovery: 0.06, stamina: 0, will: 0,
+    damage: 0, range: 0, rootMotion: 4.5, iframes: [0.04, 0.16], cancelInto: [], cancelFrom: Infinity }),
   // a jump: the body arcs over the active phase (leap: its height, metres) and keeps the speed it had on the ground
   // (air: sim/world.mjs sets how far that carries it; from a standstill it goes straight up)
   jump: move({ kind: 'movement', startup: 0, active: 0.56, recovery: 0.08, stamina: 8, damage: 0, range: 0, leap: 1.1, air: true,

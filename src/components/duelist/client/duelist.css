@@ -442,3 +442,61 @@
 .duelist-classcard em { margin-left: auto; font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f2d28b; }
 .duelist-classcard-next { font-size: 10.5px; color: rgba(242, 210, 139, 0.75); text-align: left; }
 .duelist-classpick-note { margin: 10px 0 0; font-size: 12px; color: rgba(230, 237, 246, 0.6); text-align: center; }
+
+/* Match-only inventory: clean, subdued glass panels and functional two-dimensional item art. */
+.duelist-shop-toggle { position:absolute; z-index:23; top:12px; left:50%; transform:translateX(-50%); padding:7px 13px;
+  border:1px solid rgba(220,224,230,.3);border-radius:9px;background:rgba(25,27,35,.86);color:#ebebee;font:600 12px/1.3 inherit;cursor:pointer; }
+.duelist-shop { position:absolute; z-index:90; top:7%; left:50%; transform:translateX(-50%);
+  width:min(1030px,calc(100% - 20px)); height:min(84%,750px); background:rgba(18,22,30,.96);
+  border:1px solid rgba(233,237,245,.16);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.5);
+  display:flex;flex-direction:column;overflow:hidden;backdrop-filter:blur(15px);color:#edf1f7;pointer-events:auto; }
+.duelist-shop-head { display:flex;gap:16px;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.duelist-shop-head > div:first-child {display:flex;flex-direction:column;gap:3px;flex:1;}
+.duelist-shop-head strong {font-size:16px;font-weight:650;}
+.duelist-shop-head small {font-size:11px;color:#abb9ca;}
+.duelist-shop-balance {font:650 13px/1 inherit;color:#e7c17e;}
+.duelist-shop-close {border:0;background:transparent;font-size:25px;cursor:pointer;color:#e8eef9;}
+.duelist-shop-slots {display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.07);}
+.duelist-shop-slot {height:54px;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:5px;
+  border:1px solid rgba(230,235,245,.16);background:rgba(240,240,240,.04);position:relative;overflow:hidden;}
+.duelist-shop-slot .duelist-item-art {width:46px;height:46px;flex:none;}
+.duelist-shop-slot small {font-size:10px;color:#b6c5d5;}
+.duelist-shop-empty {color:#788491;font-size:20px;}
+.duelist-slot-tier {position:absolute;bottom:2px;left:4px;color:#e9cb8f;font-size:9px;}
+.duelist-shop-filter {padding:8px 16px;display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
+.duelist-shop-categories {flex:1;display:flex;gap:5px;flex-wrap:wrap;}
+.duelist-shop-categories button {border:1px solid rgba(240,245,252,.14);border-radius:7px;padding:5px 7px;
+  font-size:10px;color:#b8c4d3;background:transparent;text-transform:capitalize;cursor:pointer;}
+.duelist-shop-categories button[aria-pressed="true"] {background:#2d3847;color:#fff;border-color:#718296;}
+.duelist-shop-filter input {border:1px solid rgba(240,245,252,.16);background:#161c26;color:#fff;border-radius:8px;
+  padding:7px 10px;font-size:12px;width:min(235px,100%);}
+.duelist-shop-grid {overflow:auto;padding:0 16px 12px;display:grid;align-content:start;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;flex:1;}
+.duelist-shop-item {border:1px solid rgba(230,235,245,.1);background:rgba(240,245,255,.035);
+  border-radius:9px;padding:9px;display:flex;flex-direction:column;gap:6px;min-width:0;}
+.duelist-shop-item-top {display:flex;align-items:center;gap:9px;}
+.duelist-shop-item-top > div:last-child {display:flex;flex-direction:column;gap:4px;min-width:0;}
+.duelist-shop-item-top strong {font-size:12px;font-weight:650;}
+.duelist-shop-item-top small {font-size:10px;color:#aab7c8;text-transform:capitalize;}
+.duelist-item-art {height:62px;width:62px;border-radius:7px;flex:none;}
+.duelist-shop-stats {display:flex;flex-wrap:wrap;gap:4px;}
+.duelist-shop-stats span {font-size:10px;background:rgba(255,255,255,.07);padding:3px 5px;border-radius:4px;color:#d8e7f0;}
+.duelist-shop-item p {font-size:11px;line-height:1.4;color:#bdc6d2;margin:0;flex:1;}
+.duelist-shop-item button {border:1px solid #5e6c7c;background:#303e50;color:#f4f7fa;border-radius:7px;padding:7px;
+  font-size:11px;cursor:pointer;}
+.duelist-shop-item button:disabled {opacity:.48;cursor:not-allowed;}
+.duelist-shop-note {padding:10px 16px;border-top:1px solid rgba(255,255,255,.09);font-size:11px;color:#bac6d4;}
+@media(max-width:740px){.duelist-shop-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+.duelist-shop-item-top .duelist-item-art{width:49px;height:49px;}
+.duelist-shop-head{padding:9px 11px;}
+.duelist-shop-slots{padding:7px 10px;}
+.duelist-shop-filter{padding:7px 10px;}
+}
+@media(max-width:460px){.duelist-shop-grid{grid-template-columns:1fr;}
+.duelist-shop-slot small{display:none;}
+.duelist-shop-slot .duelist-item-art{width:35px;height:35px;}
+.duelist-shop-slot{height:42px;}}
+
+.duelist-active-relic {position:absolute;top:12px;left:calc(50% + 96px);z-index:24;padding:7px 12px;
+border:1px solid rgba(219,227,236,.32);border-radius:9px;background:rgba(37,39,48,.9);
+color:#f0e7d7;font:600 12px/1.3 inherit;cursor:pointer;}
+@media(max-width:480px){.duelist-active-relic{top:49px;left:50%;transform:translateX(-50%);}}

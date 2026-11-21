@@ -49,6 +49,7 @@ export function moveRate(f, now) {
   if (effectOn(f, 'quick', now)) rate *= EFFECTS.quick.move;
   if (effectOn(f, 'rage', now)) rate *= EFFECTS.rage.move;
   if (effectOn(f, 'levitate', now)) rate *= EFFECTS.levitate.move;
+  if (f.shopSpeedUntil > now) rate *= 1 + (f.shopStats?.passive?.onAllyHealHaste || 0);
   return rate;
 }
 
@@ -69,6 +70,7 @@ export function damageFor(attacker, move, base, { now, behind = false, sheltered
   if (strike && passive?.chainDamage && attacker.action?.link > 1) damage *= 1 + passive.chainDamage * (attacker.action.link - 1);
   if (effectOn(attacker, 'rage', now)) damage *= EFFECTS.rage.damage;
   if (strike && effectOn(attacker, 'empower', now)) damage *= EFFECTS.empower.damage;
+  if (attacker.shopStats?.power) damage *= 1 + attacker.shopStats.power;
   if (sheltered) {
     damage *= move.damageKind === 'telekinesis' || move.damageKind === 'breach'
       ? 1 - SPECIAL_BALANCE.sanctuaryPowerResistance
@@ -80,16 +82,17 @@ export function damageFor(attacker, move, base, { now, behind = false, sheltered
 /** HP a second a fighter mends on its own right now (the Healer's Swift Stance, once it has gone unhurt a while). */
 export function selfMend(f, now) {
   const passive = passiveOf(f);
-  if (!passive?.regen) return 0;
   const since = now - Math.max(f.vitals.lastShieldHit ?? -Infinity, f.vitals.lastHurt ?? -Infinity);
-  return since >= passive.regenAfter ? passive.regen : 0;
+  const classRegen = passive?.regen && since >= passive.regenAfter ? passive.regen : 0;
+  const itemRegen = since >= 5 ? (f.shopStats?.passive?.regen || 0) : 0;
+  return classRegen + itemRegen;
 }
 
 /** Rage: nothing staggers, grips or knocks this fighter down. */
 export const controlImmune = (f, now) => !!effectOn(f, 'rage', now);
 
 /** How much of a knockback moves this fighter (the Warrior's Heavy Stance stands firmer). */
-export const knockbackTaken = (f) => passiveOf(f)?.knockbackTaken ?? 1;
+export const knockbackTaken = (f) => (passiveOf(f)?.knockbackTaken ?? 1) * (1 - (f.shopStats?.passive?.knockbackResist || 0));
 
 /** A landed strike spends one Empowered charge and drains the target's Will. */
 export function spendEmpower(attacker, now) {
@@ -104,7 +107,8 @@ export function spendEmpower(attacker, now) {
 export function hiddenFrom(f, fBody, viewer, viewerBody, now) {
   if (!effectOn(f, 'cloak', now) || !viewer || viewer === f) return false;
   if (f.team !== null && f.team === viewer.team) return false;
-  return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > EFFECTS.cloak.seenWithin;
+  const revealRadius = Math.max(EFFECTS.cloak.seenWithin, viewer.shopStats?.passive?.trueSight || 0);
+  return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > revealRadius;
 }
 
 /** May `viewer` lock on to (or a bot target) `f`? Not while hidden from it, nor while `f` misdirected it. */

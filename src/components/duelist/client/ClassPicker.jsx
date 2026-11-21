@@ -1,6 +1,6 @@
 // Choose a class (core/classes.mjs): before the fight, between rounds or while down. The match applies the choice
-// at the next spawn; in the middle of a fight it waits until then. Each class shows its own level (levels 1 to 20:
-// core/progression.mjs), its abilities at the rank that level gives, its special at its tier, and its passive.
+// at the next spawn; in the middle of a fight it waits until then. Each class shows its own level (levels 1 to 25:
+// core/progression.mjs), the current match's ability ranks, special tiers and passives, separate from mastery.
 import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
 import { levelFromXp, RANK_MAX, TIER_MAX, LEVEL_CAP } from '../core/progression.mjs';
 import { kitAt } from '../core/ranks.mjs';
@@ -10,9 +10,9 @@ const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 // what the next level worth waiting for brings
 function nextGain(level) {
-  if (level >= LEVEL_CAP) return 'Every ability and the special are at their highest.';
+  if (level >= LEVEL_CAP) return 'Mastery complete. Combat boosts still reset each match.';
   const next = Math.min(LEVEL_CAP, (Math.floor(level / 5) + 1) * 5);
-  return `Level ${next}: every ability gains a rank${next % 10 === 0 ? ', and the special improves' : ''}.`;
+  return `Level ${next}: next mastery milestone (no permanent combat advantage).`;
 }
 
 /**
@@ -20,7 +20,7 @@ function nextGain(level) {
  * keys for abilities 1-4 and the special; live: the fight is on and you are standing (a choice waits);
  * progress: your EXP for each class ({ warrior, duelist, assassin, healer }).
  */
-export default function ClassPicker({ current, pending = null, keys, live = false, onPick, onClose = null, progress = null }) {
+export default function ClassPicker({ current, pending = null, keys, live = false, onPick, onClose = null, progress = null, matchBoost = 0 }) {
   const chosen = pending || current;
   const note = pending && pending !== current
     ? `You will fight as the ${CLASSES[pending].name} from your next spawn.`
@@ -35,7 +35,7 @@ export default function ClassPicker({ current, pending = null, keys, live = fals
         {CLASS_IDS.map((id) => {
           const c = CLASSES[id];
           const at = levelFromXp(progress?.[id] ?? 0);
-          const kit = kitAt(id, at.level);
+          const kit = kitAt(id, at.level, matchBoost);
           return (
             <button key={id} type="button" className="duelist-classcard" data-chosen={chosen === id} data-testid={`duelist-class-${id}`}
               style={{ '--class': hex(c.color) }} onClick={() => onPick(id)} aria-pressed={chosen === id}>
@@ -62,7 +62,7 @@ export default function ClassPicker({ current, pending = null, keys, live = fals
           );
         })}
       </div>
-      <p className="duelist-classpick-note">{note}</p>
+      <p className="duelist-classpick-note">{note} Permanent class mastery stays; temporary boosts reset for each new match.</p>
     </div>
   );
 }

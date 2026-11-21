@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="runeweaver">
+<defs><radialGradient id="bg"><stop stop-color="#7441ae" stop-opacity=".25"/><stop offset="1" stop-color="#090d14"/></radialGradient>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d6b3fa"/><stop offset=".55" stop-color="#f5f1e6"/><stop offset="1" stop-color="#7441ae"/></linearGradient></defs>
+<rect width="72" height="72" rx="8" fill="#111821"/>
+<rect x="3" y="3" width="66" height="66" rx="9" fill="url(#bg)" stroke="#7441ae" stroke-opacity=".55"/>
+<g transform="rotate(36 36 36)" fill="none" stroke="#d6b3fa" stroke-opacity=".33"><circle cx="36" cy="36" r="29" stroke-dasharray="2 8"/><path d="M36 7V13 M36 59V65 M7 36H13 M59 36H65"/></g>
+<g fill="url(#metal)" stroke="#7441ae" stroke-width="1.2" stroke-linejoin="round"><path d="m34 10 18 17-8 27-11 11-17-28 10-23Z"/><path d="m34 10-2 53" stroke="#243344" fill="none"/></g>
+<text x="11" y="20" font-size="10" fill="#d6b3fa" fill-opacity=".7">◇</text></svg>

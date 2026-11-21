@@ -39,6 +39,7 @@ import { levelFrom } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
+import ShopPanel from './ShopPanel.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
 import { createSecondHand } from './secondHand.mjs';
 import { CLASSES, classById, hiddenFrom, effectOn, moveFor, abilityRank, specialTier } from '../core/index.mjs';
@@ -145,6 +146,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const voicesRef = useRef(null);
   const sourceRef = useRef(null);
   const [picking, setPicking] = useState(false); // the class picker, opened by hand
+  const [shopOpen, setShopOpen] = useState(false);
+  const controlsRef = useRef(null);
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -163,6 +166,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
   const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
+  useEffect(() => { controlsRef.current?.setPaused(shopOpen); }, [shopOpen]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -220,6 +224,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     audioRef.current = audio;
     setMuted(audio.muted);
     const controls = createControls(renderer.domElement, { keys: bound, sensitivity });
+    controlsRef.current = controls;
+    controls.setPaused(shopOpen);
     // the comms lines, spoken as they appear on screen (and the radio's click)
     const voices = createVoices({ audio, enabled: voicesOn });
     voicesRef.current = voices;
@@ -652,8 +658,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             classId: mine?.classId || null,
             abilities: mine?.classId ? CLASSES[mine.classId].abilities.map((ab, i) => ({ id: ab.id, name: ab.name, slot: i + 1,
               key: keyLabel(controls.keys[`ability${i + 1}`], { short: true }), ready: Math.max(0, (mine.cooldowns[ab.id] ?? 0) - world.time),
-              cost: MOVES[ab.id].will, total: moveFor(mine, ab.id).cooldown, rank: abilityRank(mine.level) })) : null,
-            specialTier: mine?.classId ? specialTier(mine.level) : null,
+              cost: MOVES[ab.id].will, total: moveFor(mine, ab.id).cooldown, rank: abilityRank(mine.matchBoost) })) : null,
+            specialTier: mine?.classId ? specialTier(mine.matchBoost) : null,
+            matchBoost: mine?.matchBoost ?? 0,
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
@@ -765,6 +772,19 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           <GraphicsRuntimePanel sceneId="duelist-adventure"/>
         </div>}
       </div>
+      {match?.me?.items?.some((it) => it.tier === 3 && ['thundermirror', 'siphonmirror'].includes(it.id)) && (
+        <button type="button" className="duelist-active-relic" onClick={() => pressRef.current?.('itemActive')}>
+          {bound.itemActive ? keyLabel(bound.itemActive, {short:true}) + ' · ' : ''}Use relic
+        </button>
+      )}
+      {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
+        if (document.pointerLockElement) document.exitPointerLock?.();
+        setShopOpen(true);
+      }}>Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
+      {shopOpen && match && match.phase !== 'over' && <ShopPanel
+        me={match.me} answer={sourceRef.current?.shopAnswer || null}
+        onBuy={(id) => sourceRef.current?.buyItem?.(id)}
+        onClose={() => setShopOpen(false)} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); if (a.muted) voicesRef.current?.stop(); }}>
         {muted ? 'Sound off' : 'Sound on'}
       </button>
@@ -780,7 +800,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       {showPicker && (
-        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current}
+        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
       )}
     </div>

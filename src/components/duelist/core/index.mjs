@@ -4,6 +4,7 @@ export * from './moves.mjs';
 export * from './cuts.mjs';
 export * from './classes.mjs';
 export * from './progression.mjs';
+export * from './shop.mjs';
 export * from './ranks.mjs';
 export * from './abilities.mjs';
 export * from './vitals.mjs';

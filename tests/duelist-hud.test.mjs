@@ -142,7 +142,7 @@ test('level and EXP: earned from what the match reports, and a level is never lo
   assert.equal(levelFrom(-5).level, 1);
   assert.equal(levelFrom(NaN).level, 1);
   assert.equal(xpToNext(3), 220);
-  assert.deepEqual(levelFrom(1e9), { level: 20, into: 0, need: 0, progress: 1, capped: true }, 'a class stops at level 20');
+  assert.deepEqual(levelFrom(1e9), { level: 25, into: 0, need: 0, progress: 1, capped: true }, 'a class stops at level 25');
   const who = { me: 'you', myTeam: 'blue' };
   assert.equal(xpForEvent({ type: 'defeat', by: 'you', who: 'foe' }, who), XP.elimination);
   assert.equal(xpForEvent({ type: 'defeat', by: 'foe', who: 'you' }, who), 0);

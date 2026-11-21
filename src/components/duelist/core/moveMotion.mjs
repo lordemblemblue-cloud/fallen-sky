@@ -65,6 +65,8 @@ export const MOVE_MOTION = Object.freeze({
     settle: { clip: 'jumpLand', from: 0.2 } },
   // the Will dash: the rules move the body (6 m), the clip only lends the lunge
   dash: { segments: [seg('swordDash', 0, end('dash'), 0.22, 0.5, { travel: false })], settle: { clip: 'swordDash', from: 0.5 } },
+  // Use the authored dash pose as an aerial glide; root motion stays in the deterministic world.
+  airDash: { segments: [seg('swordDash', 0, end('airDash'), 0.22, 0.5, { travel: false })] },
 
   // ---- the classes' crystal forms: clips made in Blender from the pack's sword work
   // (tools/duelist/blender/weapon_clips.py). Each runs on into its own recovery, which is its settle.

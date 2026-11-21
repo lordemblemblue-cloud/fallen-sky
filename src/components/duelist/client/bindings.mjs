@@ -22,7 +22,8 @@ export const ACTIONS = Object.freeze([
   { id: 'guard', label: 'Guard (a fresh guard parries)', kind: 'guard' },
   { id: 'jump', label: 'Jump', kind: 'press' },
   { id: 'roll', label: 'Roll (into a power or a strike)', kind: 'press' },
-  { id: 'dash', label: 'Dash', kind: 'press' },
+  { id: 'dash', label: 'Dash (double-tap during jump for air dash)', kind: 'press' },
+  { id: 'itemActive', label: 'Use active relic', kind: 'press' },
   { id: 'ability1', label: 'Ability 1', kind: 'ability' },
   { id: 'ability2', label: 'Ability 2', kind: 'ability' },
   { id: 'ability3', label: 'Ability 3', kind: 'ability' },
@@ -37,7 +38,7 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
-  jump: 'Space', roll: 'KeyC', dash: 'AltLeft', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
+  jump: 'Space', roll: 'KeyC', dash: 'AltLeft', itemActive: 'KeyG', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
   breach: 'KeyR', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
 });
 // bindings saved before the classes: the old power keys become the ability keys
@@ -133,7 +134,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash`,
+    `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (double-tap in air)`, `${k('itemActive')} relic`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
   parts.push(`${k('resist')} resist`, `${k('lock')} lock on`);

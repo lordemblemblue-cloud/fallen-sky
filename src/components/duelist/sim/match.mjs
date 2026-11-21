@@ -16,9 +16,9 @@
 // they arrive.
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
-import { isDown, MOVES } from '../core/index.mjs';
+import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
-import { levelFromXp, xpForEvent, cleanProgress, XP_CAP } from '../core/progression.mjs';
+import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -50,8 +50,8 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     mode: def.id, def, world, seed, botLevel, random: createRandom(seed * 7919 + 13),
     capacity: Math.max(players.length, seats ?? def.seats),
     phase: 'countdown', phaseUntil: COUNTDOWN, clock: 0,
-    round: 1, roundWins: {}, roundClock: 0, roundWinner: null,
-    seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 },
+    round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
+    seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
     flags: def.flags ? makeFlags(def) : null,
     ball: def.football ? makeBall() : null,
     controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
@@ -125,11 +125,13 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const spot = spawnFor(match, seatId, seatTeam);
   const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
   const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0,
-    progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0 };
+    progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
+    matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
+    goldFraction: 0, classXpFraction: 0, items: [] };
   entry.level = levelOf(match, entry);
-  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, ...spot });
+  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spot });
   match.seats.set(seatId, entry);
-  match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
+  match.scores[seatId] = { defeats: 0, assists: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
 }
 
@@ -139,6 +141,8 @@ function unseat(match, id) {
   match.seats.delete(id);
   match.order = match.order.filter((x) => x !== id);
   delete match.scores[id];
+  match.damageLog.delete(id);
+  for (const log of match.damageLog.values()) log.delete(id);
 }
 
 const event = (match, e) => {
@@ -146,7 +150,41 @@ const event = (match, e) => {
   match.events.push(full);
   if (e.feed !== false) { match.feed.push(full); if (match.feed.length > 12) match.feed.shift(); }
   awardXp(match, full);
+  if ((e.type === 'captured' || e.type === 'flagReturned') && e.by)
+    grantGold(match, e.by, SHOP_RULES.objectiveGold, e.type);
 };
+function grantGold(match, playerId, amount, reason) {
+  const s = match.seats.get(playerId);
+  if (!s || s.kind !== 'player' || !Number.isFinite(amount) || amount <= 0) return 0;
+  const earned = Math.max(0, Math.min(Math.floor(amount), SHOP_RULES.goldCap - s.gold));
+  if (!earned) return 0;
+  s.gold += earned;
+  match.events.push({ type: 'gold', id: playerId, amount: earned, reason, at: match.world.time });
+  return earned;
+}
+/**
+ * An actual match-only purchase, authoritatively validated by the server/sim.
+ * The client supplies only the item ID; price, inventory, team, tier and shop
+ * eligibility are read from current match state.
+ */
+export function purchaseMatchItem(match, playerId, itemId) {
+  const seat = match.seats.get(playerId);
+  if (!seat || seat.kind !== 'player' || match.phase === 'over') return { ok: false, reason: 'not-available' };
+  const fighter = match.world.fighters.get(playerId);
+  const body = bodyOf(match.world, playerId);
+  const spawn = spawnFor(match, playerId, seat.team);
+  const atSpawn = body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+  const allowed = match.phase !== 'live' || !!fighter?.vitals.dead || atSpawn;
+  const result = purchaseRule({ gold: seat.gold, items: seat.items, id: itemId, allowed });
+  if (!result.ok) return { ok: false, reason: result.reason, cost: result.cost || 0 };
+  seat.gold -= result.cost;
+  seat.items = result.items;
+  if (fighter) equipItems(fighter, seat.items);
+  match.events.push({ type: 'itemBought', id: playerId, itemId, tier: result.tier,
+    cost: result.cost, at: match.world.time });
+  return { ok: true, id: itemId, tier: result.tier, cost: result.cost,
+    gold: seat.gold, items: seat.items.map((item) => ({ ...item })) };
+}
 
 // EXP for what the match itself saw happen (core/progression.mjs), to the class each player is fighting as. An
 // `xp` event says what was earned (for whoever keeps the player's progress); a `levelUp` when a level is reached.
@@ -248,7 +286,8 @@ function spawnSeat(match, seat, protectSeconds = 0) {
   const weapon = chosen?.weapon ?? old?.weapon ?? 'sword';
   seat.level = levelOf(match, seat, chosen ? chosen.classId : seat.classId); // the class's level, with what it has earned so far
   respawnFighter(match.world, seat.id, {
-    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, level: seat.level, ...(chosen ? { classId: chosen.classId } : {}),
+    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, level: seat.level, matchBoost: seat.matchBoost,
+    ...(chosen ? { classId: chosen.classId } : {}),
   });
   if (chosen) {
     // Charge is earned for the active class; switching classes cannot bank
@@ -334,6 +373,37 @@ export function stepMatch(match, dt, inputs = {}) {
   }
   match.clock += dt;
   match.roundClock += dt;
+  for (const seat of match.seats.values()) {
+    if (seat.kind !== 'player') continue;
+    seat.goldFraction += dt * SHOP_RULES.passiveGoldPerSecond;
+    if (seat.goldFraction >= 1) {
+      const whole = Math.floor(seat.goldFraction);
+      seat.goldFraction -= whole;
+      grantGold(match, seat.id, whole, 'time');
+    }
+    const f = world.fighters.get(seat.id);
+    // Permanent class XP accrues to the class actually used over time, independently
+    // of shared per-match combat ranks or gold; switching preserves both class totals.
+    if (seat.classId && f && !f.vitals.dead) {
+      seat.classXpFraction += dt * XP.participationPerSecond;
+      if (seat.classXpFraction >= 1) {
+        const amount = Math.floor(seat.classXpFraction);
+        seat.classXpFraction -= amount;
+        awardXp(match, { type: 'participation', by: seat.id, amount });
+      }
+    }
+  }
+  // An equal opportunity boost: live match seconds only. Never award combat power from saved XP.
+  const nextBoost = boostAt(match.clock);
+  if (match.boostTier !== nextBoost) {
+    match.boostTier = nextBoost;
+    for (const seat of match.seats.values()) {
+      seat.matchBoost = nextBoost;
+      const fighter = world.fighters.get(seat.id);
+      if (fighter) fighter.matchBoost = nextBoost;
+    }
+    event(match, { type: 'matchBoost', tier: nextBoost, feed: false });
+  }
   const all = {};
   for (const s of match.seats.values()) {
     const f = world.fighters.get(s.id);
@@ -363,6 +433,15 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
+  // Assists are awarded only for server-verified impacts from the last eight seconds.
+  for (const e of effects) {
+    if (e.type !== 'impact' || !(e.hp > 0 || e.shield > 0 || e.will > 0) || !e.attacker || !e.defender) continue;
+    const from = world.fighters.get(e.attacker);
+    const to = world.fighters.get(e.defender);
+    if (!from || !to || !hostile(world, from, to)) continue;
+    if (!match.damageLog.has(e.defender)) match.damageLog.set(e.defender, new Map());
+    match.damageLog.get(e.defender).set(e.attacker, world.time);
+  }
   chargeSpecials(match, effects);
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
@@ -402,12 +481,24 @@ function onDefeat(match, e) {
   const counted = by && by.id !== who.id && hostile(world, world.fighters.get(by.id) || {}, world.fighters.get(who.id) || {});
   if (counted) {
     match.scores[by.id].defeats += 1;
+    grantGold(match, by.id, SHOP_RULES.eliminationGold, 'elimination');
     // Only the authoritative world defeat event can grant elimination charge.
     // A client press, score display or unverified hit claim never awards meter.
     if (by.kind === 'player' && by.classId) {
       by.specialMeter = awardSpecialCharge(by.specialMeter, 'elimination') ?? by.specialMeter;
     }
     if (def.id === 'tdm' && by.team) match.teamScores[by.team] += 1;
+  }
+  const assists = match.damageLog.get(who.id) || new Map();
+  match.damageLog.delete(who.id);
+  if (counted) for (const [id, at] of assists) {
+    if (id === by.id || world.time - at > 8) continue;
+    const helper = match.seats.get(id);
+    if (!helper || helper.kind !== 'player' ||
+        !hostile(world, world.fighters.get(id) || {}, world.fighters.get(who.id) || {})) continue;
+    match.scores[id].assists += 1;
+    grantGold(match, id, SHOP_RULES.assistGold, 'assist');
+    event(match, { type: 'assist', by: id, who: who.id, feed: false });
   }
   dropFlagOf(match, who.id, bodyOf(world, who.id));
   event(match, { type: 'defeat', by: counted ? by.id : null, who: who.id });
@@ -456,7 +547,7 @@ function flagsStep(match) {
     }
     if (flag.state === 'dropped' && now - flag.droppedAt > CTF.autoReturn) { goHome(flag); event(match, { type: 'flagReturned', team, by: null }); continue; }
     for (const f of world.fighters.values()) {
-      if (f.vitals.dead || isDown(f, now) || f.heldBy || !f.team) continue;
+      if (f.vitals.dead || isDown(f, now) || f.heldBy || now < (f.activeRelicUntil ?? -Infinity) || !f.team) continue;
       const b = bodyOf(world, f.id);
       if (dist(b, flag) > CTF.pickup) continue;
       if (f.team !== team && !carrying(match, f.id)) {
@@ -543,13 +634,14 @@ function finish(match, winner) {
 export function matchView(match, forId = null) {
   const { def, world } = match;
   const people = [...match.seats.values()].map((s) => ({
-    id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, level: s.level, ...match.scores[s.id],
+    id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, level: s.level,
+    matchBoost: s.matchBoost, ...match.scores[s.id],
     dead: !!world.fighters.get(s.id)?.vitals.dead, respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time),
     roundWins: match.roundWins[s.id] || 0,
   }));
   people.sort((a, b) => (b.defeats - a.defeats) || (b.captures - a.captures) || (a.falls - b.falls));
   return {
-    mode: def.id, name: def.name, phase: match.phase, winner: match.winner,
+    mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
     clockLeft: def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
@@ -560,6 +652,15 @@ export function matchView(match, forId = null) {
     zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
       specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null,
+      gold: match.seats.get(forId).gold, items: match.seats.get(forId).items.map((item) => ({ ...item })),
+      canShop: match.phase !== 'over' && (match.phase !== 'live' ||
+        world.fighters.get(forId)?.vitals.dead ||
+        (() => {
+          const body = bodyOf(world, forId);
+          const seat = match.seats.get(forId);
+          const spawn = spawnFor(match, forId, seat.team);
+          return !!body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+        })()),
       // the class's EXP so far (what the match began with plus what was earned in it), and every class's
       xp: match.seats.get(forId).progress?.[match.seats.get(forId).classId] ?? 0,
       progress: match.seats.get(forId).progress ? { ...match.seats.get(forId).progress } : null } : null,
