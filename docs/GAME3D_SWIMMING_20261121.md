@@ -73,6 +73,27 @@ bridge (world x 103-122, z 90; water about 8.6 m, bed down to 6.7 m):
 - After merging main c64e39d9 (now on the WebGPU renderer), the same river walk was checked again. The hero swam
   from 1.52 m with the cross-fade, floated 4 cm under the surface and trod water when stopped. They were still
   swimming at 1.26 m and stood at 1.15 m on the way out, and F was refused in the water.
+- After merging main 4c212c2e (gate travel, each area its own scene, WebGPU by default), checked again live:
+  - The town scene's water index holds 135 triangles: the river as the area clip leaves it, so exactly what is drawn
+    in this area.
+  - The hero swam from 1.52 m, floated 4 cm under the surface, and at the town's east border (x 122) was held as at a
+    wall, still afloat.
+  - The ridden tiger stopped at the bank at 1.45 m with its notice.
+  - Riding east on the Residential Timber Bridge deck still went through the gate: the town to east travel started at
+    x 121.9, and the rider arrived mounted at x 128.
+  - The east scene built its own index from its part of the river (227 triangles).
+
+## Areas and water
+
+Each area builds the water index from the water meshes it has when the world starts. With the area clip (one area
+per scene) that is the part of the river drawn there; with `?wholeWorld=1` it is the whole river. An area with no
+water mesh loaded has an empty index: the hero never swims there and walks on the ground as before.
+
+## Merging with the gate work
+
+In GameWorld3D's movement block the area gate push (`pushAreaGate`) runs first. The mount's deep-water stop follows
+it and is skipped once a gate crossing has started (`areaTravelStarted`), so riding through a gate over the river
+still travels. The swimming test pins that order.
 
 ## Tests
 
@@ -80,11 +101,12 @@ bridge (world x 103-122, z 90; water about 8.6 m, bed down to 6.7 m):
 
 | | tests | pass | fail |
 | --- | --- | --- | --- |
-| origin/main c64e39d9 | 1696 | 1578 | 118 |
-| this branch (with c64e39d9 merged) | 1707 | 1589 | 118 |
+| origin/main 4c212c2e | 1787 | 1683 | 104 |
+| this branch (with 4c212c2e merged) | 1798 | 1694 | 104 |
 
-The same 118 tests fail on both, and the same held against main d8817383 before the merge (109 on both). The 11
-new tests are in `tests/game3d-swimming.test.mjs`:
+The same 104 tests fail on both. The same held at each earlier merge: main c64e39d9 (118 on both) and main d8817383
+(109 on both). The gate tests (`game3d-wolfveil-gate-travel`, `game3d-wolfveil-area-edge`) pass. The 11 new tests are
+in `tests/game3d-swimming.test.mjs`:
 
 - the swim state: entry, exit band, bridge decks, teleports;
 - the water index on the real river mesh;
