@@ -5,7 +5,9 @@ import {
   RENDERER_OVERRIDE_KEY, RENDERER_FAILED_KEY,
 } from '../src/lib/rendererBackendChoice.mjs';
 import { isSceneWebGPUPreviewable, isSceneWebGPUReady } from '../src/lib/webgpuSceneReadiness.mjs';
-import { DEVICE_VERDICT_KEY } from '../src/lib/webgpuDeviceVerdict.mjs';
+
+// What builds before 2026-11-21 stored after their WebGPU speed test (removed): it must no longer matter.
+const OLD_SPEED_VERDICT_KEY = 'fallen_sky_webgpu_verdict_v1';
 
 function memoryStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -17,16 +19,14 @@ function memoryStorage(initial = {}) {
   };
 }
 
-test('ready live scenes prefer WebGPU even before a benchmark, while retaining accelerated WebGL fallback', () => {
+test('ready live scenes run on WebGPU by default, with no speed test, and fall back after a WebGPU failure', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
     assert.equal(isSceneWebGPUReady(sceneId), true);
-    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
+    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgpu', reason: 'scene-ready' });
+    // an old "WebGPU is slower here" verdict passed by a stale caller changes nothing
     assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: false } }),
-      { kind: 'webgl', reason: 'webgpu-slower-on-this-device' });
-    assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true } }),
       { kind: 'webgpu', reason: 'scene-ready' });
-    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: 'yes' } }).kind, 'webgpu');
-    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true }, previousFailure: true }).kind, 'webgl');
+    assert.deepEqual(chooseSceneRenderer({ sceneId, previousFailure: true }), { kind: 'webgl', reason: 'webgpu-failed-earlier' });
   }
 });
 
@@ -47,27 +47,27 @@ test('the classic renderer can always be chosen, and a failure earlier in the ta
   assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', override: 'webgl2', previousFailure: true }).kind, 'webgl2');
 });
 
-test('a ready scene uses WebGPURenderer by default where WebGPU is the faster renderer', () => {
+test('a ready scene uses WebGPURenderer by default; unready scenes, failures and ?renderer=webgl keep classic', () => {
   const scenes = { 'fallen-sky': { ready: true } };
-  const faster = { webgpuAtLeastAsFast: true };
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster }), { kind: 'webgpu', reason: 'scene-ready' });
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, previousFailure: true }).kind, 'webgl');
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, override: 'webgl' }).kind, 'webgl');
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: 'yes' } }, deviceVerdict: faster }).kind, 'webgl');
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: false, preview: true } }, deviceVerdict: faster }),
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgpu', reason: 'scene-ready' });
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, previousFailure: true }).kind, 'webgl');
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, override: 'webgl' }).kind, 'webgl');
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: 'yes' } } }).kind, 'webgl');
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: false, preview: true } } }),
     { kind: 'webgl', reason: 'scene-not-ready' });
 });
 
-test('the browser helper reads this browser build\'s stored verdict', () => {
-  const verdict = JSON.stringify({ webgpuAtLeastAsFast: true, fingerprint: 'UA-1', measuredAt: Date.now() });
-  const host = (userAgent) => ({ location: { search: '' }, navigator: { userAgent, gpu: {} },
-    localStorage: memoryStorage({ [DEVICE_VERDICT_KEY]: verdict }), sessionStorage: memoryStorage() });
-  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-1')), { kind: 'webgpu', reason: 'scene-ready' });
-  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-2')), { kind: 'webgpu', reason: 'webgpu-first-unmeasured' });
-  const failed = host('UA-1');
-  rememberRendererFailure(failed);
-  assert.equal(chooseSceneRendererFor('fallen-sky', failed).kind, 'webgl');
+test('the browser helper picks WebGPU wherever the browser offers it, whatever an old speed verdict says', () => {
+  for (const webgpuAtLeastAsFast of [false, true]) {
+    const verdict = JSON.stringify({ webgpuAtLeastAsFast, fingerprint: 'UA-1', measuredAt: Date.now() });
+    const host = () => ({ location: { search: '' }, navigator: { userAgent: 'UA-1', gpu: {} },
+      localStorage: memoryStorage({ [OLD_SPEED_VERDICT_KEY]: verdict }), sessionStorage: memoryStorage() });
+    assert.deepEqual(chooseSceneRendererFor('fallen-sky', host()), { kind: 'webgpu', reason: 'scene-ready' });
+    assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host()), { kind: 'webgpu', reason: 'scene-ready' });
+    const failed = host();
+    rememberRendererFailure(failed);
+    assert.equal(chooseSceneRendererFor('fallen-sky', failed).kind, 'webgl');
+  }
 });
 
 test('the URL override is remembered until ?renderer=auto, and junk is ignored', () => {

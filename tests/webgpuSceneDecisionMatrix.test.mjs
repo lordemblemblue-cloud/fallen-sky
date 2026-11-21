@@ -6,17 +6,12 @@ import { WEBGPU_SCENES, getSceneWebGPUBlocker, isSceneWebGPUReady } from '../src
 const scenes = ['fallen-sky', 'duelist-adventure'];
 const overrides = [null, 'webgpu', 'webgl2', 'webgl', 'auto', 'invalid'];
 
-test('both live scenes stay WebGL by default without a faster-WebGPU verdict, and after any GPU failure', () => {
-  const faster = { webgpuAtLeastAsFast: true };
+test('both live scenes run on WebGPU by default, and on WebGL after any GPU failure', () => {
   for (const sceneId of scenes) {
     assert.equal(isSceneWebGPUReady(sceneId), true, sceneId);
     assert.equal(getSceneWebGPUBlocker(sceneId), null, sceneId);
-    for (const previousFailure of [false, true]) {
-      assert.equal(chooseSceneRenderer({ sceneId, previousFailure }).kind, 'webgl', sceneId);
-      assert.equal(chooseSceneRenderer({ sceneId, previousFailure, deviceVerdict: { webgpuAtLeastAsFast: false } }).kind, 'webgl', sceneId);
-    }
-    assert.equal(chooseSceneRenderer({ sceneId, previousFailure: true, deviceVerdict: faster }).kind, 'webgl', sceneId);
-    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: faster }).kind, 'webgpu', sceneId);
+    assert.equal(chooseSceneRenderer({ sceneId }).kind, 'webgpu', sceneId);
+    assert.equal(chooseSceneRenderer({ sceneId, previousFailure: true }).kind, 'webgl', sceneId);
   }
 });
 
@@ -31,28 +26,24 @@ test('unknown and prototype-key scenes fail closed for every override and failur
   }
 });
 
-test('explicit previews keep working and never change the measured default', () => {
+test('explicit choices keep working next to the WebGPU default', () => {
   for (const sceneId of scenes) {
     assert.equal(chooseSceneRenderer({ sceneId, override: 'webgpu' }).kind, 'webgpu');
     assert.equal(chooseSceneRenderer({ sceneId, override: 'webgl2' }).kind, 'webgl2');
     assert.equal(chooseSceneRenderer({ sceneId, override: 'webgpu', previousFailure: true }).kind, 'webgl');
     assert.equal(chooseSceneRenderer({ sceneId, override: 'webgl2', previousFailure: true }).kind, 'webgl2');
-    assert.equal(chooseSceneRenderer({ sceneId, override: 'webgl', deviceVerdict: { webgpuAtLeastAsFast: true } }).kind, 'webgl');
-    assert.equal(chooseSceneRenderer({ sceneId }).kind, 'webgl');
+    assert.equal(chooseSceneRenderer({ sceneId, override: 'webgl' }).kind, 'webgl');
+    assert.equal(chooseSceneRenderer({ sceneId }).kind, 'webgpu');
     assert.equal(WEBGPU_SCENES[sceneId].ready, true);
   }
 });
 
-test('a ready custom scene follows the device verdict and respects a previous failure', () => {
+test('a ready custom scene runs on WebGPU and respects a previous failure', () => {
   const customScenes = { 'test-scene': { ready: true, preview: true } };
-  const faster = { webgpuAtLeastAsFast: true };
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes, deviceVerdict: faster }), {
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes }), {
     kind: 'webgpu', reason: 'scene-ready',
   });
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes }), {
-    kind: 'webgl', reason: 'device-not-measured',
-  });
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes, deviceVerdict: faster, previousFailure: true }), {
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes, previousFailure: true }), {
     kind: 'webgl', reason: 'webgpu-failed-earlier',
   });
 });

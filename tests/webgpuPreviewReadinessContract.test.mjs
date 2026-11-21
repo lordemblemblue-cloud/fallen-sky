@@ -8,20 +8,19 @@ import {
 } from '../src/lib/webgpuSceneReadiness.mjs';
 import { selectSceneRendererBackend } from '../src/lib/webgpuSceneDecision.mjs';
 
-test('the live games are ready, but WebGPU is automatic only with a faster-WebGPU device verdict', () => {
+test('the live games are ready, and WebGPU is automatic wherever the browser offers it', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
     assert.equal(WEBGPU_SCENES[sceneId].ready, true);
     assert.equal(isSceneWebGPUPreviewable(sceneId), true);
     assert.equal(isSceneWebGPUReady(sceneId), true);
     assert.equal(getSceneWebGPUBlocker(sceneId), null);
     const auto = selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true });
-    assert.equal(auto.backend, 'webgl');
-    assert.equal(auto.reason, 'device-not-measured');
-    const slower = selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true, deviceVerdict: { webgpuAtLeastAsFast: false } });
-    assert.equal(slower.reason, 'webgpu-slower-on-this-device');
-    const faster = selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true, deviceVerdict: { webgpuAtLeastAsFast: true } });
-    assert.equal(faster.backend, 'webgpu');
-    assert.equal(selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: false, deviceVerdict: { webgpuAtLeastAsFast: true } }).backend, 'webgl');
+    assert.equal(auto.backend, 'webgpu');
+    assert.equal(auto.reason, 'auto-webgpu');
+    // an old speed verdict passed by a stale caller changes nothing
+    const stale = selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true, deviceVerdict: { webgpuAtLeastAsFast: false } });
+    assert.equal(stale.backend, 'webgpu');
+    assert.equal(selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: false }).backend, 'webgl');
   }
 });
 
