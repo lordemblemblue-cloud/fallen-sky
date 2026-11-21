@@ -1,0 +1,121 @@
+/* Home screen overlays. Overrides old left-drawer layout after unified theme imports.
+   Keep the hangar stage rendered only once and blur it with a CSS scrim. */
+.duelist-hub { --dui-rail: clamp(215px,20vw,278px); }
+.duelist-hub-body {
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 0;
+  padding: 28px clamp(18px,3vw,52px) 40px;
+}
+.duelist-hub-nav { width: var(--dui-rail); position: relative; z-index: 15; }
+.duelist-hub-scrim {
+  position: absolute; z-index: 8; inset: 73px 0 57px;
+  width: 100%; padding: 0; border: 0;
+  background: rgba(3,9,18,.33); backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px); cursor: default;
+}
+.duelist-hub-overlay,
+.duelist-hub--panel-open .duelist-hub-overlay {
+  position: absolute; z-index: 12;
+  inset: 91px clamp(16px,2.8vw,45px) 72px calc(var(--dui-rail) + clamp(44px,5.5vw,100px));
+  width: auto; max-width: none; max-height: none; min-height: 0;
+  margin: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: clamp(16px,1.6vw,25px);
+  border: 1px solid rgba(231,200,151,.53); border-top: 2px solid var(--dui-gold);
+  border-radius: 2px; clip-path: none;
+  background: linear-gradient(145deg,rgba(8,22,36,.9),rgba(9,24,39,.79) 64%,rgba(8,17,29,.92));
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.35);
+}
+.duelist-hub-footer { justify-content: flex-end; }
+.duelist-hub-footer-item { flex: 0 0 190px; border-left: 1px solid rgba(150,206,236,.14); cursor:pointer; }
+.duelist-hub-footer-item[data-active='true'] { color: var(--dui-gold); background: rgba(229,191,131,.1); }
+.duelist-hub-panel-content.duelist-menu-page {
+  min-height: 0; padding: 0; margin: 0; overflow: visible;
+  background: transparent; isolation: auto;
+}
+.duelist-hub-panel-content.duelist-menu-page::before,
+.duelist-hub-panel-content.duelist-menu-page::after { display: none; }
+.duelist-hub-panel-content .duelist-menu-panel { padding: clamp(12px,1.5vw,20px); }
+.duelist-hub-panel-content .duelist-menu-panel,
+.duelist-hub-panel-content .duelist-menu-card { box-shadow: none; border-radius: 2px; }
+.duelist-hub-overlay--settings .duelist-settings-columns { gap: 12px; }
+.duelist-hub-overlay--settings .duelist-settings-stack { gap: 12px; }
+.duelist-hub-overlay--settings .duelist-setting-row { margin-top: 11px; padding-top: 11px; }
+.duelist-hub-overlay--character .duelist-fighter-current { margin: 0; }
+.duelist-character-progress {
+  padding: clamp(13px,1.7vw,23px); margin-top: 15px;
+  background: linear-gradient(120deg,rgba(17,37,53,.67),rgba(8,20,33,.6));
+  border: 1px solid rgba(230,195,137,.34); border-top: 2px solid var(--dui-gold);
+}
+.duelist-character-progress-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
+.duelist-character-progress-head h3 {
+  font-size: clamp(22px,2.3vw,30px); color:#f6ead4; letter-spacing:.05em; font-weight:800;
+}
+.duelist-character-progress-head h3 span { color:var(--dui-gold); font-size:14px; white-space:nowrap; }
+.duelist-character-class-choice { flex:0 0 180px; color:#b9cbd2; font-size:12px; text-transform:uppercase; letter-spacing:.08em; }
+.duelist-character-class-choice select {
+  display:block; width:100%; margin-top:5px; padding:8px;
+  color:#f6f1e8; border:1px solid rgba(230,195,137,.46); background:#112435;
+}
+.duelist-character-xp-values { margin-top:20px; display:flex; justify-content:space-between; gap:12px; font-size:11px; color:#ccd6d9; letter-spacing:.05em; }
+.duelist-character-xp-values strong { color:var(--dui-gold); white-space:nowrap; }
+.duelist-character-xp-track { height:9px; margin:8px 0 22px; overflow:hidden; background:rgba(225,235,240,.16); border:1px solid rgba(230,195,137,.25); }
+.duelist-character-xp-track span { display:block; height:100%; background:linear-gradient(90deg,#9e794c,#f5d5a0); }
+.duelist-character-progress h4 { margin-bottom:10px; font-size:12px; color:var(--dui-gold); font-weight:800; text-transform:uppercase; letter-spacing:.16em; }
+.duelist-character-milestones { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; margin-bottom:11px; }
+.duelist-character-milestone {
+  min-height:91px; padding:11px 8px; display:flex; flex-direction:column; align-items:flex-start; gap:7px;
+  border:1px solid rgba(172,187,194,.23); border-top:2px solid rgba(172,187,194,.25);
+  background:rgba(21,40,53,.48); color:#b6c4cb;
+}
+.duelist-character-milestone[data-earned='true'] { color:#fff2d8; border-top-color:var(--dui-gold); background:rgba(132,98,54,.18); }
+.duelist-character-milestone strong { font-size:18px; font-weight:850; }
+.duelist-character-milestone span { font-size:11px; font-weight:800; }
+.duelist-character-milestone small { margin-top:auto; font-size:9px; letter-spacing:.1em; }
+.duelist-hub-panel-content .duelist-fighter-grid { gap:8px; }
+.duelist-hub-panel-content .duelist-fighter-option { min-height:170px; padding:11px; }
+.duelist-hub-panel-content .duelist-fighter-option-visual { height:65px; }
+@media(max-width:1100px) {
+  .duelist-hub { --dui-rail:210px; }
+  .duelist-hub-overlay,.duelist-hub--panel-open .duelist-hub-overlay { left:250px; right:14px; }
+  .duelist-hub-play-layout { grid-template-columns:minmax(0,1fr); gap:13px; }
+  .duelist-hub-playlists,.duelist-hub-mode-list,.duelist-hub-mode-detail { grid-column:1; grid-row:auto; }
+  .duelist-hub-mode-detail { padding:14px 0 0; border-left:0; border-top:1px solid var(--dui-line); }
+  .duelist-hub-modes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media(max-width:780px) {
+  .duelist-hub { overflow-y:auto; min-height:100svh; }
+  .duelist-hub--panel-open .duelist-hub-body { flex:0 0 auto; min-height:0; padding:14px; }
+  .duelist-hub--panel-open .duelist-hub-nav {
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:100%; gap:6px; margin:0;
+  }
+  .duelist-hub--panel-open .duelist-hub-nav-intro { grid-column:1 / -1; margin-bottom:0; padding:0 0 7px 12px; }
+  .duelist-hub--panel-open .duelist-hub-nav-action { padding:9px 7px; gap:6px; font-size:11px; justify-content:center; text-align:center; min-height:43px; }
+  .duelist-hub--panel-open .duelist-hub-nav-action svg { width:14px; height:14px; flex-shrink:0; }
+  .duelist-hub-overlay,.duelist-hub--panel-open .duelist-hub-overlay {
+    position:relative; inset:auto; width:calc(100% - 28px); max-width:none; max-height:none;
+    margin:0 14px 22px; overflow:visible;
+  }
+  .duelist-hub-scrim { inset:73px 0 57px; }
+  .duelist-hub-play-layout,.duelist-hub--panel-open .duelist-hub-play-layout { grid-template-columns:1fr; }
+  .duelist-hub-playlists { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelist-hub-modes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .duelist-hub-overlay--settings .duelist-settings-columns { grid-template-columns:1fr; }
+  .duelist-hub-footer { margin-top:auto; }
+}
+@media(max-width:520px) {
+  .duelist-hub-overlay,.duelist-hub--panel-open .duelist-hub-overlay { width:calc(100% - 16px); margin:0 8px 16px; padding:13px 11px; }
+  .duelist-hub-modes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelist-hub-playlists { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelist-hub--panel-open .duelist-hub-nav-action { flex-direction:column; font-size:10px; }
+  .duelist-character-progress-head { flex-direction:column; }
+  .duelist-character-class-choice { flex:0 0 auto; width:100%; }
+  .duelist-character-milestones { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .duelist-character-xp-values { flex-wrap:wrap; }
+  .duelist-hub-panel-content .duelist-fighter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelist-hub-overlay--settings .duelist-settings-keymap { grid-template-columns:1fr; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .duelist-hub-scrim { backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(3,9,18,.68); }
+}
