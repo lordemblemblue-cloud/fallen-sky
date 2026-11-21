@@ -232,6 +232,15 @@
 }
 @media(prefers-reduced-motion:reduce) { .dxr-art * { scroll-behavior:auto; animation:none!important; transition:none!important; } }
 
+/* Narrow layouts use their own stacked, accessible cards instead of displaying
+ * screenshot-embedded desktop rectangles behind those cards. This prevents the
+ * same double-frame effect on phones and narrow tablets. */
+@media (max-width:800px) {
+  .dxt-page--reference .dxr-art {
+    background-image:linear-gradient(140deg,#152f50 0%,#0b213c 45%,#07162c 100%);
+    background-size:cover;
+  }
+}
 /* SINGLE-FRAME FIX: the reference images already contain the panel edges,
  * tab plates, row cards, and gold action silhouettes. Keep the live DOM as
  * actual controls but don't paint those same frames a second time.
