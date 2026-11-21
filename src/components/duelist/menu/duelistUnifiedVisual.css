@@ -241,6 +241,9 @@
 @media(max-width:960px), (max-height:720px) {
   .duelist-hub--play-open { overflow:visible; }
   .duelist-hub--play-open .duelist-hub-body { min-height:330px; }
+  .duelist-hub--play-open .duelist-hub-play-layout {
+    grid-template-columns:minmax(0,1.75fr) minmax(255px,.9fr);
+  }
   .duelist-hub--play-open .duelist-hub-overlay {
     position:relative; inset:auto; width:calc(100% - 28px); max-width:1160px;
     max-height:none; overflow:visible; margin:0 auto 24px;
