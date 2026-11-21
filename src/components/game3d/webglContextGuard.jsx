@@ -8,6 +8,10 @@
 // gl.getShaderSource() returns null on a lost context, and Three.js calls
 // .trim() on that null value when compiling depth materials.
 //
+// A WebGPURenderer made by src/lib/webgpuSceneRenderer.js is guarded the same
+// way: nothing is drawn until its asynchronous init has finished, and a lost
+// GPU device (permanent, unlike a WebGL context) stops drawing for good.
+//
 // Usage:
 //   const guard = attachContextGuard(renderer);   // call once after creating renderer
 //   guard.render(scene, camera);                   // use instead of renderer.render
@@ -26,10 +30,13 @@ export function attachContextGuard(renderer) {
     canvas.addEventListener('webglcontextlost', onLost, false);
     canvas.addEventListener('webglcontextrestored', onRestored, false);
   }
+  // WebGPURenderer: state kept by webgpuSceneRenderer.js (ready after init, lost after a device loss).
+  const gpuState = renderer?.isWebGPURenderer ? renderer.__sceneState || null : null;
+  const notReady = () => !!gpuState && (gpuState.ready !== true || gpuState.lost != null);
 
   return {
     render(scene, camera) {
-      if (disposed || contextLost || !renderer) return false;
+      if (disposed || contextLost || !renderer || notReady()) return false;
       try {
         renderer.render(scene, camera);
         return true;
@@ -40,7 +47,7 @@ export function attachContextGuard(renderer) {
         return false;
       }
     },
-    isAlive() { return !disposed && !contextLost; },
+    isAlive() { return !disposed && !contextLost && !notReady(); },
     markDisposed() { disposed = true; },
     dispose() {
       disposed = true;

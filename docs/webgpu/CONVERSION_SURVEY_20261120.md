@@ -212,3 +212,23 @@ runs. The town is CPU-bound by draw calls; the caves spend ~9 ms of CPU outside 
    WebGPU-only speed-ups (render bundles for static scenery) are measured here.
 
 Classic `WebGLRenderer` + GLSL stay selectable with `?renderer=webgl` until the owner removes them.
+
+## 9. Stage status
+
+### Stage 1, renderer core (`claude/webgpu-1-renderer-core-20261120`)
+- `?renderer=webgpu` (or `webgl2` for WebGPURenderer's WebGL2 backend) runs Game 3D on WebGPURenderer; the default
+  stays the classic renderer (`webgpuSceneReadiness.mjs`: `ready:false, preview:true`). `?renderer=auto` forgets the choice.
+- What draws on WebGPU after stage 1: every built-in material (buildings, characters, props, terrain geometry). Not
+  yet: `ShaderMaterial` effects (skipped, one console note each), `onBeforeCompile` patches (ignored: e.g. the splat
+  terrain shows its palette tint only, no sumi-e pigment), the ink look (level 0), the horizon scout picture, sized points.
+- Fixed in three r171 at runtime (`webgpuThreeFixes.js`): morph targets were read for every shape key at weight 0;
+  25 fused-character meshes cost ~30 ms of GPU in the town (40.3 ms scene pass -> 10.8 ms without them; with the fix
+  the whole frame's GPU time fell from 54-71 ms to 13-22 ms).
+- First comparison, town view, one game tab, two frames in flight (not final: stages 2-3 change both sides):
+  classic WebGL frame 24.2 ms, CPU 21.6 (render 19.8), GPU 15.8 (ink on); WebGPU frame 34.7, CPU 21.7 (render 19.9),
+  GPU 18.7 (ink off, 4x MSAA frame target). The ~10 ms gap beyond CPU and GPU time is spent outside the page's own
+  JavaScript (WebGPU command submission in Chrome's GPU process: ~1,550 draws, 2,500 bind groups, 2,800 vertex
+  buffers, 630 uniform writes a frame). Plain WebGPURenderer is not cheaper per draw than WebGLRenderer in r171, nor in
+  three 0.187 (micro-benchmark: 1,305 draws, render() 3.5 / 4.5 ms vs WebGL 1.7 ms); WebGPU render bundles are
+  (0.6-0.9 ms). In the town ~700 of ~1,240 drawn items are characters (one character group alone issues 393 draws).
+- Tests: `node --test tests/` main 1462 / 100 failing, stage 1 1471 / 100 failing, the same 100.
