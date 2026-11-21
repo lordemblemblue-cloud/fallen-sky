@@ -32,7 +32,12 @@ export function coordinateWebGPUDeviceLoss({ device, observe, classify, fallback
     }
   };
   let subscription;
-  try { subscription = observe(device, onLost); } catch {
+  try {
+    subscription = observe(device, onLost);
+    // A failed observer probe must not leave a WebGPU host running without
+    // device-loss monitoring. Reuse the same one-shot fallback path.
+    if (subscription?.attached !== true) onLost({ info: null });
+  } catch {
     onLost({ info: null });
   }
   return Object.freeze({
