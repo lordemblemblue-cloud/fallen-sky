@@ -51,6 +51,9 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
     </p>
     <dl style={{ margin: 0 }}>
       <Metric title="Game renderer" value={backend}/>
+      <Metric title="Rendering & shader path" value={live.webgpuActive
+        ? 'GPU via WebGPU' : live.backend === 'classic-webgl' || live.backend === 'webgl2-fallback'
+          ? 'WebGL (hardware depends on browser)' : 'Not verified'}/>
       <Metric title="Verified WebGPU" value={live.webgpuActive ? 'Yes' : 'No'}/>
       <Metric title="GPU device" value={live.deviceConfirmed ? 'Initialized' : 'Not confirmed'}/>
       <Metric title="Render calls" value={live.frameCount.toLocaleString()}/>
