@@ -232,3 +232,61 @@ Classic `WebGLRenderer` + GLSL stay selectable with `?renderer=webgl` until the 
   three 0.187 (micro-benchmark: 1,305 draws, render() 3.5 / 4.5 ms vs WebGL 1.7 ms); WebGPU render bundles are
   (0.6-0.9 ms). In the town ~700 of ~1,240 drawn items are characters (one character group alone issues 393 draws).
 - Tests: `node --test tests/` main 1462 / 100 failing, stage 1 1471 / 100 failing, the same 100.
+
+### Stage 2, Game 3D materials and shaders (`claude/webgpu-2-game3d-materials-20261120`, merged as #170)
+- Every live `onBeforeCompile` patch has TSL nodes on the same material (`webgpuNodeKit.js` attachNodes, node setups,
+  addMapStageColor for patches after the base texture) and every live `ShaderMaterial` a node twin
+  (`webgpuMaterialTwins.js`): sky, splat terrain, living sumi-e pigment, rivers / canals / cistern / lakes, wakes,
+  veils, gates, waterfalls, canopy / meadow / blade / tile / card / square grass wind, owner trees and elms, birds,
+  guards, character hair / makeup / neck tone / body regions, weapon construct + droplets, enchant surface light,
+  weapon aura + sparks, west hillside, caves, lunar / vortex / astral dungeons, the forest fallback environment.
+  Not ported because the game never loads them: `WolfveilSouthGateBlueFire` (unmounted), `BlazeOfGrassWorld` /
+  `BlazeGrassStream` (`atomicUltraSumiMode` is not imported).
+- Look fixes that make WebGPU match WebGL (`webgpuClassicOutput.js`, `webgpuSceneRenderer.js`): r171 tone-mapped and
+  sRGB-encoded every pixel in a final pass and fogged in linear space (pale sky, white fog band); each material now
+  finishes the classic way (raw-colour shaders like the sky stay raw, fog in output space). Shadow maps now draw
+  single-sided materials' back faces and colour-map alpha cut-outs as `WebGLShadowMap` does (r171 drew front faces:
+  shadow acne over every lit surface), and the shared shadow material is keyed by the vertex nodes it carries.
+- Known r171 behaviours worked around: a material reference stored on the material it references makes the node
+  graph contain itself (hashing recursed forever; use the kit's `materialValue` or an object reference); one failing
+  draw no longer aborts the frame; the Game 3D render guard no longer stops for good on a WebGPU exception.
+
+### Stage 3, post-processing (`claude/webgpu-3-postprocessing-20261120`)
+- The ink wash (the default look) runs on WebGPU: same colour + depth target and full-screen triangle, a TSL twin with
+  the same maths (`inkWashNodes.mjs`). Render-target lookups use three's node uv convention (v down). Ultra draws like
+  high on WebGPU (no multisampled depth texture to read there).
+- Horizon scout: async readback (320 px wide for r171's 256-byte rows, squeezed back), row order per backend.
+- Duelist warp: node `PostProcessing` + scene pass with the same bent-space maths (`warpNodes.mjs`).
+
+### Stage 4, other pages (`claude/webgpu-4-other-pages-20261120`)
+- `createSceneRenderer(sceneId, options)` gives every page the same choice as the world (classic by default,
+  `?renderer=webgpu|webgl2|webgl`): creator (node PMREM), avatar / Meshy / companion / mini-game previews, Duelist
+  match + story, hangar menus, motion lab. All Duelist `ShaderMaterial`s have twins (`duelistNodes.mjs`).
+- r171 fixes: TSL `atan(y, x)` emits invalid WGSL (use `atan2`); `ShadowMaterial` multiplied by the missing shadow of a
+  light that casts none; WGSL compile errors are reported with the line.
+- Node graph ids now key WebGPURenderer's own render objects instead of the classic `customProgramCacheKey` (stage 2
+  had made WebGLRenderer compile one identical program per patched material; two tests caught it). Also on its own
+  branch from `main`: `claude/webgpu-fix-classic-program-key-20261121`.
+- Checked live on WebGPU: Game 3D town (ink high), west wilds, caves, Duelist practice match, Duelist hangar.
+  Not checked live: creator stage, Meshy / companion / mini-game previews, motion lab, dungeons, forest fallback.
+- Tests: `node --test tests/`: stage 4 1471 tests / 100 failing, the same 100 as `main` 18dfa286; on current `main`
+  3e9f2f1f (1519 tests) the fix branch removes the 2 failures stage 2 had added.
+
+### After (2026-11-21): the same build, classic vs WebGPU
+Same method as section 7 but two frames in flight, one game tab, 200 frames after 40 warm-up, ink high, midday,
+stage 4 build served once and switched with `?renderer=`. Single runs on a busy machine: read differences under
+~10% as noise.
+
+| Place | Classic frame ms (p95) | WebGPU frame ms (p95) | Classic CPU / render / GPU | WebGPU CPU / render / GPU | Draws (C / W) |
+|---|---|---|---|---|---|
+| Wolfveil town | 31.7 (41.2) | 35.0 (51.2) | 28.4 / 26.3 / 15.7 | 25.2 / 23.4 / 21.1 | 1,471 / 1,483 |
+| South fields | 10.5 (18.0) | 14.3 (24.3) | 7.2 / 5.3 / 5.2 | 9.3 / 7.7 / 7.0 | 138 / 146 |
+| Western cedar wilds | 15.9 (23.4) | 27.1 (44.0) | 11.2 / 7.9 / 8.2 | 17.9 / 15.2 / 17.0 | 188 / 189 |
+| Wolfveil caves | 22.3 (26.7) | 21.2 (30.7) | 19.5 / 3.7 / 5.3 | 17.0 / 4.7 / 8.1 | 86 / 82 |
+| Duelist practice match | 7.6 (13.3) | 5.2 (10.1) | 1.2 / 0.8 / 1.3 | 2.0 / 3.3 / 1.0 | 52 / 53 |
+
+Decision: **classic stays the default for Game 3D** (WebGPU is slower in three of four places, most in the western
+wilds, where its GPU time doubles). The Duelist practice match measured faster on WebGPU in this one run; flipping
+`duelist-adventure` to `ready: true` in `webgpuSceneReadiness.mjs` is a one-line owner decision after repeated runs
+(story mission and menus included). Next speed-ups worth measuring: WebGPU render bundles for static scenery
+(`BundleGroup`, 3-5x cheaper per draw in the micro-benchmark) and the western wilds' GPU time.
