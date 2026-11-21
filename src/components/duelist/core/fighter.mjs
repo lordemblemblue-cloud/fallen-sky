@@ -26,6 +26,7 @@ export const CLASS_ABILITIES = new Set(['leapStrike', 'repulse', 'bladeThrow', '
 const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
 // The class determines the original one-blade stance: red/strong or blue/fast.
 const CLASS_SWORD_MODES = Object.freeze({ warrior: 'heavy', healer: 'swift' });
+const classSwordMode = (id) => Object.hasOwn(CLASS_SWORD_MODES, id) ? CLASS_SWORD_MODES[id] : null;
 
 /**
  * classId: one of core/classes.mjs CLASS_IDS, or null (no class: the six powers of the first build).
@@ -38,7 +39,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     id,
     team,
     weapon,
-    mode: CLASS_SWORD_MODES[classId] || DEFAULT_MODE, // warrior heavy, healer swift, unclassed balanced
+    mode: classSwordMode(classId) || DEFAULT_MODE, // warrior heavy, healer swift, unclassed balanced
     classId: classById(classId) ? classId : null,
     level: Math.max(1, Math.floor(level) || 1),
     matchBoost: cleanBoost(matchBoost),
@@ -201,7 +202,7 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
     return { accepted: false, reason: 'nothing-held' };
   }
   if (command === 'mode') { // free-form fighters may cycle; class-locked sword styles retain their combat identity
-    if (CLASS_SWORD_MODES[f.classId]) return { accepted: false, reason: 'class-stance' };
+    if (classSwordMode(f.classId)) return { accepted: false, reason: 'class-stance' };
     f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
     f.events.push({ type: 'mode', mode: f.mode, at: now });
     return { accepted: true, mode: f.mode };
