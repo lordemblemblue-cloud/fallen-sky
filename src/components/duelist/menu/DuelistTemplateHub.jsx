@@ -5,7 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import {
   Home, Play, UserRound, BookOpen, ShoppingCart, Settings, X, Swords, Flag, Truck,
   Users, Target, Zap, CircleDot, Shield, Trophy, Search, Eye, LockKeyhole, Check,
-  ArrowLeft, ArrowRight, SlidersHorizontal, Sparkles, Volume2
+  ArrowRight, Sparkles
 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs, classProgressOf } from '../client/prefs.mjs';
