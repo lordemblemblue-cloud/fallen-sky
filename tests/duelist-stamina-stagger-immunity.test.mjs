@@ -51,7 +51,7 @@ test('sprinting works at zero stamina without spending any stamina', () => {
   assert.ok(b.z > 2, 'the runner moved at sprint speed');
 });
 
-test('Warrior's red style is heavy; Healer's blue style is swift and cannot be cycled off', () => {
+test("Warrior's red style is heavy; Healer's blue style is swift and cannot be cycled off", () => {
   for (const [classId, expectedMode, expectedCut] of [
     ['warrior', 'heavy', 'swordCutDownHeavy'],
     ['healer', 'swift', 'swordCutDownSwift'],

@@ -12,7 +12,7 @@ import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
-import { CUT_MODES, DEFAULT_MODE, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection } from './cuts.mjs';
+import { CUT_MODES, DEFAULT_MODE, CLASS_MODE, modeOf, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection, SNAP, SNAP_COOLDOWN, snapSet, snapFor } from './cuts.mjs';
 import { cleanBoost } from './progression.mjs';
 import { equipItems } from './shop.mjs';
 
@@ -25,7 +25,7 @@ export const CLASS_ABILITIES = new Set(['leapStrike', 'repulse', 'bladeThrow', '
   'empower', 'misdirect', 'mend', 'levitate']);
 const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
 // The class determines the original one-blade stance: red/strong or blue/fast.
-const CLASS_SWORD_MODES = Object.freeze({ warrior: 'heavy', healer: 'swift' });
+const CLASS_SWORD_MODES = CLASS_MODE; // one table for both: core/cuts.mjs
 const classSwordMode = (id) => Object.hasOwn(CLASS_SWORD_MODES, id) ? CLASS_SWORD_MODES[id] : null;
 
 /**
@@ -93,7 +93,7 @@ function lightStrike(f, direction) {
   const from = open ? a.id : null;
   const link = open ? (a.link || 1) : 0; // strikes made so far in this chain
   if (flow.modes) { // cuts by direction (core/cuts.mjs): the stick's eight ways, in the fighter's mode
-    const table = flow.modes[f.mode] || flow.modes[DEFAULT_MODE];
+    const table = flow.modes[modeOf(f)] || flow.modes[DEFAULT_MODE];
     const way = direction === 'side' ? 'left' : CUT_DIRECTIONS.includes(direction) ? direction : null;
     // the same cut twice running comes straight back along its own line instead (the return cut)
     if (way) return table[way] !== from ? table[way] : table[REVERSE_LINE[way]];
@@ -157,7 +157,7 @@ function startMove(f, id, now, chainedFrom = null, link = 1, lead = 0) {
   spendWill(f.vitals, move.will, now);
   if (move.cooldown > 0) f.cooldowns[id] = now + move.cooldown;
   f.guard = null;
-  f.action = { id, move, t: lead, nextHit: 0, held: move.channel, chainedFrom, link };
+  f.action = { id, move, t: lead, from: lead, nextHit: 0, held: move.channel, chainedFrom, link }; // from: where its time began
   f.events.push({ type: 'start', id, at: now, chainedFrom, ...(lead ? { lead } : {}) });
   if (id === 'resist') { // throws off a grip and every breach at once
     if (f.heldBy) f.events.push({ type: 'freed', at: now, from: f.heldBy });
@@ -203,9 +203,21 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   }
   if (command === 'mode') { // free-form fighters may cycle; class-locked sword styles retain their combat identity
     if (classSwordMode(f.classId)) return { accepted: false, reason: 'class-stance' };
+    if (Object.keys(FLOW[f.weapon]?.modes || {}).length < 2) return { accepted: false, reason: 'weapon' }; // one mode only
     f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
     f.events.push({ type: 'mode', mode: f.mode, at: now });
     return { accepted: true, mode: f.mode };
+  }
+  // a second press hard on the first turns the cut into the whirl, the cross or the backhand (core/cuts.mjs)
+  const a = f.action;
+  if (command === 'light' && !fromBuffer && a?.move.cut && a.t - (a.from || 0) <= SNAP) {
+    const snap = snapFor(f.weapon, a.move.cut.direction, direction, modeOf(f));
+    if (!blockedReason(f, snap, now)) {
+      f.events.push({ type: 'interrupt', id: a.id, by: snap, at: now });
+      f.action = null;
+      for (const other of snapSet(f.weapon)) f.cooldowns[other] = now + SNAP_COOLDOWN; // one cooldown for all of them
+      return startMove(f, snap, now, a.id, a.link || 1);
+    }
   }
   const id = moveForCommand(f, command, direction);
   if (!id) return { accepted: false, reason: 'unknown' };

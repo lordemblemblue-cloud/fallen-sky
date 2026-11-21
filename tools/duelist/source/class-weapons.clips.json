@@ -108,328 +108,588 @@
    "note": "wide swing from behind the shoulders, contact about 0.41 s"
   },
   "swordCutStandSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Stand cut, swift: from R to L",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Down cut, swift: from T to B",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Up cut, swift: from B to T",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Left cut, swift: from R to L",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Right cut, swift: from L to R",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "DownLeft cut, swift: from TR to BL",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "DownRight cut, swift: from TL to BR",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "UpLeft cut, swift: from BR to TL",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "UpRight cut, swift: from BL to TR",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "BL",
    "to": "TR"
   },
+  "swordBackhandSwift": {
+   "seconds": 0.4833,
+   "loop": false,
+   "note": "backhand, swift: from the left side round to behind the body"
+  },
   "swordCutStandBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Stand cut, balanced: from R to L",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Down cut, balanced: from T to B",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Up cut, balanced: from B to T",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Left cut, balanced: from R to L",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Right cut, balanced: from L to R",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "DownLeft cut, balanced: from TR to BL",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "DownRight cut, balanced: from TL to BR",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "UpLeft cut, balanced: from BR to TL",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "UpRight cut, balanced: from BL to TR",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "BL",
    "to": "TR"
   },
+  "swordBackhandBalanced": {
+   "seconds": 0.6167,
+   "loop": false,
+   "note": "backhand, balanced: from the left side round to behind the body"
+  },
   "swordCutStandHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Stand cut, heavy: from R to L",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Down cut, heavy: from T to B",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Up cut, heavy: from B to T",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Left cut, heavy: from R to L",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Right cut, heavy: from L to R",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "DownLeft cut, heavy: from TR to BL",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "DownRight cut, heavy: from TL to BR",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "UpLeft cut, heavy: from BR to TL",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "UpRight cut, heavy: from BL to TR",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "BL",
    "to": "TR"
+  },
+  "swordBackhandHeavy": {
+   "seconds": 0.8833,
+   "loop": false,
+   "note": "backhand, heavy: from the left side round to behind the body"
+  },
+  "bladesCutStand": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Stand cut with the twin blades: the right blade leads from R to L, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "R",
+   "to": "L",
+   "lead": "Right"
+  },
+  "bladesCutLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Left cut with the twin blades: the right blade leads from R to L, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "R",
+   "to": "L",
+   "lead": "Right"
+  },
+  "bladesCutDownLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "DownLeft cut with the twin blades: the right blade leads from TR to BL, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "TR",
+   "to": "BL",
+   "lead": "Right"
+  },
+  "bladesCutUpLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "UpLeft cut with the twin blades: the right blade leads from BR to TL, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "BR",
+   "to": "TL",
+   "lead": "Right"
+  },
+  "bladesCutDown": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Down cut with the twin blades: the right blade leads from T to B, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "T",
+   "to": "B",
+   "lead": "Right"
+  },
+  "bladesCutRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Right cut with the twin blades: the left blade leads from L to R, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "L",
+   "to": "R",
+   "lead": "Left"
+  },
+  "bladesCutDownRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "DownRight cut with the twin blades: the left blade leads from TL to BR, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "TL",
+   "to": "BR",
+   "lead": "Left"
+  },
+  "bladesCutUpRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "UpRight cut with the twin blades: the left blade leads from BL to TR, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "BL",
+   "to": "TR",
+   "lead": "Left"
+  },
+  "bladesCutUp": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Up cut with the twin blades: the left blade leads from B to T, the other follows in the mirror",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "B",
+   "to": "T",
+   "lead": "Left"
+  },
+  "staffCutStand": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Stand cut with the staff in both hands: the far end from R to L",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "staffCutDown": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Down cut with the staff in both hands: the far end from T to B",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "T",
+   "to": "B"
+  },
+  "staffCutUp": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Up cut with the staff in both hands: the far end from B to T",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "B",
+   "to": "T"
+  },
+  "staffCutLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Left cut with the staff in both hands: the far end from R to L",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "staffCutRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Right cut with the staff in both hands: the far end from L to R",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "L",
+   "to": "R"
+  },
+  "staffCutDownLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "DownLeft cut with the staff in both hands: the far end from TR to BL",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "TR",
+   "to": "BL"
+  },
+  "staffCutDownRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "DownRight cut with the staff in both hands: the far end from TL to BR",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "TL",
+   "to": "BR"
+  },
+  "staffCutUpLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "UpLeft cut with the staff in both hands: the far end from BR to TL",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "BR",
+   "to": "TL"
+  },
+  "staffCutUpRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "UpRight cut with the staff in both hands: the far end from BL to TR",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "BL",
+   "to": "TR"
+  },
+  "swordRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried: the blade thrown back, the trunk rocked, then the stance"
+  },
+  "bladesRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried with the twin blades: both thrown back"
+  },
+  "staffRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried with the staff: the far end thrown up and back"
+  },
+  "pushThrust": {
+   "seconds": 0.4667,
+   "loop": false,
+   "note": "the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it"
   }
  }
 }

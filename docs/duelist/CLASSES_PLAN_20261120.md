@@ -118,6 +118,30 @@ Built and tested (213 Duelist tests; checked in the browser in practice and Capt
   `DUELIST_PROGRESS_FILE` names one on a disk that lasts; without it, online levels last only while the server
   runs. Offline and online levels are separate until the account's own store holds them.
 
+- **The sword cuts by direction, in three modes** (2026-11-21, the owner's design; `core/cuts.mjs`, clips from
+  `tools/duelist/blender/cut_grid.py`). The keys held as the strike is pressed pick the cut, and the blade travels
+  toward the key: W straight down the middle, S the same line upward, A and D flat cuts, W+A and W+D diagonals
+  downward, S+A and S+D diagonals upward; standing still is a flat cut to the left. Three modes share those nine
+  lines (X goes round them; three pips under the weapon's name): **swift** is quick and light, **balanced**,
+  **heavy** winds all the way out, takes longer and hits hardest.
+  - *One motion out of several.* Eight points round the body each have one pose of the whole body, and a cut is
+    the way from one to another, so the pose a cut ends in is the pose another starts from. A cut that follows in
+    the chain window carries on from where the blade is: the nearer the last cut's end to this one's start, the
+    more of the wind-up it skips, and straight back along the line lands about one and a half times sooner. The
+    same key twice running comes back along its own line. A chain is three cuts.
+  - *A second press hard on the first* (within 0.16 s) turns the cut into a move of its own, by where the stick
+    points then: the same way, the **whirl** (a turn that cuts all round); to one side, the **cross** (a turning
+    cut that sweeps wide); back the way it came, the **backhand** (it carries on round behind the body). One
+    cooldown of 2.5 s covers all three.
+  - *No spam.* One press, one cut; a press too early in a cut is dropped, one in the cut waits its turn (a quarter
+    of a second at most); the same cut is free again once it has run out.
+  - *New clips*: 27 cuts and 3 backhands made in Blender from the stance alone (planted feet, a step with the
+    cut, wrists kept inside their bend); the whirl and the cross play the pack's spinning cut and turning
+    backhand. These are this game's own rules and motions; nothing is taken from another game.
+  - *Not yet*: the twin blades and the staff still read the stick as forward, side or back; bots cut by direction
+    but stay in the balanced mode; the old sword strikes (`swordLight1-3`, `swordAdvance`, `swordSweep`) are no
+    longer on a key.
+
 Still to do:
 
 1. **Tuning.** The strikes by direction and every rank's numbers are first proposals; heavy strikes do not take a

@@ -246,9 +246,10 @@ def join(a, b):
             'loc': [v.copy() for v in a['loc']] + [v + shift for v in b['loc'][1:]]}
 
 
-def mirror_arm(clip, delay=0.0, weight=1.0, source=None):
+def mirror_arm(clip, delay=0.0, weight=1.0, source=None, to='Left'):
     """The left arm does what the right arm does (in `source`, `delay` seconds later), mirrored across the chest.
-    weight: how much (a number, or a function of the time in seconds)."""
+    weight: how much (a number, or a function of the time in seconds). to='Right': the right arm follows the left."""
+    chain = ARM_R if to == 'Right' else ARM_L
     source = source or clip
     rest_chest_inv = rig.rest_inv[CHEST]
     out = copy_clip(clip)
@@ -264,7 +265,7 @@ def mirror_arm(clip, delay=0.0, weight=1.0, source=None):
         src_pose = rig.fk(sq, source['loc'][g0])
         dst_pose = rig.fk(q, clip['loc'][f])
         src_chest_inv = src_pose[CHEST].inverted()
-        for i in ARM_L:
+        for i in chain:
             m = rig.mirror[i]
             delta = (src_chest_inv @ src_pose[m]) @ (rest_chest_inv @ rig.rest[m]).inverted()
             target = dst_pose[CHEST] @ SC @ delta @ SC @ (rest_chest_inv @ rig.rest[i])
@@ -753,7 +754,12 @@ exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[sys.argv
 
 def build():
     if '--cuts-only' in argv:  # a quick look at the cuts alone (not for the pack: the other clips are left out)
-        build_cuts(add, notes, source('sword_idle'), (opt('--only') or '').split(',') if opt('--only') else None)
+        chosen = (opt('--only') or '').split(',') if opt('--only') else None
+        plain = source('sword_idle')
+        build_cuts(add, notes, plain, chosen)
+        twin, staff = mirror_arm(plain), staff_hold(plain, lambda t: STANCE)
+        build_form_cuts(add, notes, twin, staff, chosen)
+        build_extras(add, notes, plain, twin, staff, chosen)
         return
     slash, slash_back = source('sword_regular_a', 0.05), source('sword_regular_a_rec')
     lunge, lunge_back = source('sword_regular_b'), source('sword_regular_b_rec')
@@ -817,6 +823,8 @@ def build():
     add('staffSweep', directional(1.40, 2.05, stance, stance_q, stance_loc), 'wide swing from behind the shoulders, contact about 0.41 s')
 
     build_cuts(add, notes, idle)
+    build_form_cuts(add, notes, clips['bladesIdle'], clips['staffIdle'])
+    build_extras(add, notes, idle, clips['bladesIdle'], clips['staffIdle'])
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')

@@ -49,7 +49,7 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
           if (a.move.damageKind === 'projectile') {
             // a shot is heard as each round leaves (the 'projectile' effect, below)
           } else if (a.move.kind === 'attack') {
-            audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' });
+            audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' || a.move?.cut?.mode === 'heavy' });
           } else {
             const kind = a.id === 'gripThrow' ? 'throw' : a.id;
             const held = kind === 'throw' ? heldBy(id) : null;
@@ -59,6 +59,8 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         }
       }
       for (const e of effects) {
+        // a cut parried: the blades met, and the one who cut is thrown back (its animator shows the recoil)
+        if (e.type === 'parry' && actors[e.attacker]) actors[e.attacker].clashAt = world.time;
         const feel = vfx.effect(e, actors);
         // a class ability lands: its own sound
         if (e.type === 'effect' || e.type === 'zone') audio.play(e.effect === 'rage' || e.type === 'zone' ? 'breach' : 'resist', actors[e.target || e.owner]?.chest() || null);

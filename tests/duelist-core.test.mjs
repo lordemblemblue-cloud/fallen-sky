@@ -148,7 +148,7 @@ test('sword chains in its window; a late press starts the chain over after the r
   press(blades, 'light', u);
   for (let i = 0; i < 3; i++) { ({ t: u } = run(blades, u, blades.action.move.chain.from + 0.01)); ids.push(blades.action.id); press(blades, 'light', u); }
   ids.push(blades.action.id);
-  assert.deepEqual(ids, ['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4']);
+  assert.deepEqual(ids, ['bladesCutStand', 'bladesCutRight', 'bladesCutDown', 'bladesCutUp']);
   assert.ok(MOVES.bladesLight1.veilMultiplier > MOVES.swordLight1.veilMultiplier);
 });
 

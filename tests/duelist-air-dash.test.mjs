@@ -23,7 +23,7 @@ test('ground Dash is still a single press and the air-only move cannot be invoke
   tick(ground, ['dash'], { x: 1, z: 0 });
   assert.equal(fighter.action.id, 'dash');
   assert.equal(bodyOf(ground, 'hero').y, 0);
-  assert.equal(PROTOCOL, 11);
+  assert.equal(PROTOCOL, 12);
   assert.deepEqual(sanitizeInput({ s: 1, p: ['#airDash', 'airDash', 'dash'], m: [1, 0] }).presses, ['dash']);
 });
 

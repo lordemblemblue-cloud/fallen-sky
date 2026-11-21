@@ -507,6 +507,26 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   };
   let time = 0;
   const thrown = new Map(); // actor -> seconds of trail left
+  // A defeated body comes apart: light lifts off it, more and more of it, and the body flickers out as it falls. It
+  // stays unseen until the fighter stands again (revive()).
+  const DISSOLVE = Object.freeze({ from: 0.45, to: 1.6, hex: 0xbfe6ff });
+  const DISSOLVE_BONES = ['Hips', 'Spine2', 'Head', 'LeftForeArm', 'RightForeArm', 'LeftHand', 'RightHand', 'LeftLeg', 'RightLeg', 'LeftFoot', 'RightFoot'];
+  const dissolving = new Map(); // actor -> { t, bones }
+  const dissolveAt = new THREE.Vector3();
+  const stepDissolves = (dt) => {
+    for (const [actor, d] of dissolving) {
+      d.t += dt;
+      if (d.t < DISSOLVE.from || !actor.model) continue;
+      const k = Math.min(1, (d.t - DISSOLVE.from) / (DISSOLVE.to - DISSOLVE.from));
+      if (k >= 1) { actor.model.visible = false; continue; }
+      for (let i = Math.ceil(dt * 70 * (1 + 3 * k)); i > 0 && d.bones.length; i--) {
+        d.bones[(Math.random() * d.bones.length) | 0].getWorldPosition(dissolveAt);
+        particles.spawn(dissolveAt.x + rand(0.1), dissolveAt.y + rand(0.1), dissolveAt.z + rand(0.1), rand(0.35), 0.5 + Math.random() * 1.3, rand(0.35),
+          { hex: Math.random() < 0.25 ? 0xffffff : DISSOLVE.hex, size: 0.045 + Math.random() * 0.04, ttl: 0.6 + Math.random() * 0.6, damping: 1.2, fall: -1.4 });
+      }
+      actor.model.visible = Math.random() > k * k * 1.1; // seen less and less
+    }
+  };
   // Sanctuary domes: zone id -> { group, left, ttl, materials }
   const zones = new Map();
   const bladeGeometry = new THREE.BoxGeometry(0.07, 0.02, 1.0);
@@ -538,6 +558,12 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   };
 
   return {
+    /** A fighter stands again: its body is whole and seen. */
+    revive(actor) {
+      dissolving.delete(actor);
+      actor.gone = false;
+      if (actor.model) actor.model.visible = true;
+    },
     /** A power's wind-up: the free hand gathers light. kind: push | pull | grip | breach */
     charge(kind, actor, seconds = 0.15) {
       const hex = kind === 'breach' ? COLORS.breach : COLORS.telekinesis;
@@ -622,7 +648,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         const from = source ? source.chest() : chest.clone().add(new THREE.Vector3(0, 0, 1));
         const origin = tmp.copy(from).sub(chest).normalize().clone();
         const contact = chest.clone().addScaledVector(origin, 0.32);
-        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow';
+        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || /^swordCutw+Heavy$/.test(e.move);
         if (e.shield > 0.01) {
           shells.flash({ follow: target.root, hex: COLORS.shield, hexPattern: true, origin, ttl: 0.32 });
           burst(contact, 10, 4, { hex: COLORS.shield, size: 0.04, ttl: 0.3, damping: 4 });
@@ -680,6 +706,9 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       if (e.type === 'defeat' && target) {
         burst(target.chest(), 60, 3, { hex: 0x8fa0b8, size: 0.06, ttl: 1.3, damping: 1.5, fall: 3 });
         feel.shake = 0.4; feel.stop = 0.12;
+        // and the body comes apart as it falls
+        dissolving.set(target, { t: 0, bones: DISSOLVE_BONES.map((n) => target.model?.getObjectByName(`mixamorig${n}`)).filter(Boolean) });
+        target.gone = true;
       }
       // ---- the classes' abilities
       if (e.type === 'effect') {
@@ -745,6 +774,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
     /** Every frame. grips: [{ holder, held }] (actors) being held right now. */
     update(dt, { grips = [] } = {}) {
       time += dt;
+      stepDissolves(dt);
       particles.update(dt);
       shells.update(dt);
       cones.update(dt);

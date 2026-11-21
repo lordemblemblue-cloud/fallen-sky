@@ -56,6 +56,8 @@ test('the twin blades and the staff play clips of their own, not the sword\'s', 
   for (const id of Object.keys(MOVES).filter((m) => /^(blades|staff)/.test(m))) {
     const { segments, settle } = MOVE_MOTION[id];
     for (const s of segments) assert.equal(MOTION_CLIPS[s.clip].source, 'blender', `${id} plays ${s.clip}`);
+    // a cut by direction has a clip of its own name that runs all the way back to the stance
+    if (MOVES[id].cut) { assert.equal(segments[0].clip, id); continue; }
     assert.equal(settle.clip, segments[0].clip, `${id} settles in its own clip`);
     assert.ok(MOTION_CLIPS[settle.clip].duration - settle.from > 0.3, `${id}: the clip runs on into a recovery`);
   }

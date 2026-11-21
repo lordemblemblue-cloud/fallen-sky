@@ -91,6 +91,8 @@ export function strikeDirection(body) {
   return stickDirection(ahead, right);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+// a move whose arc is not centred on the facing (the backhand reaches the sword side and behind): radians to the left
+const arcTurn = (move) => (move.arcTurn || 0) * Math.PI / 180;
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
 
 /**
@@ -227,7 +229,7 @@ function trySpecial(world, fighter, body, now, effects) {
     const near = [...world.fighters.values()]
       .filter((o) => hostile(world, fighter, o) && !o.vitals.dead)
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
-      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw, b, move.arc)
+      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw + arcTurn(move), b, move.arc)
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
@@ -256,7 +258,7 @@ function alliesInReach(world, fighter, body, move) {
     if (other === fighter || other.vitals.dead || hostile(world, fighter, other)) continue;
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
-    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
     if (world.level && !clearLine(world.level, body, ob)) continue;
     found.push({ fighter: other, d });
   }
@@ -383,7 +385,7 @@ function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
   if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
-  if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
+  if (hasClipTravel(id) && !move?.mobile) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
   // rolls and dashes go where the stick points (or straight ahead); strikes lunge forward
   const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
@@ -442,15 +444,18 @@ function moveBody(world, fighter, body, dt, now) {
   } else {
     body.motion = null;
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
-    const planted = a && a.move.kind !== 'movement' && !a.move.channel && a.t < a.move.startup + a.move.active;
+    // (a cut by direction does not plant them: the legs keep going under it, at a share of the running speed)
+    const planted = a && a.move.kind !== 'movement' && !a.move.channel && !a.move.mobile && a.t < a.move.startup + a.move.active;
     const free = !fighter.vitals.dead && !isStunned(fighter, now) && !planted;
     const len = Math.hypot(body.intent.x, body.intent.z);
     if (free && len > 0.01) {
       let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
       // Sprinting is free, including when a fighter has zero stamina or is winded.
-      if (body.sprint && len > 0.5) speed = SPRINT.speed;
+      // (not under a cut by direction: the legs keep going at the cut's own pace)
+      if (body.sprint && !a?.move.mobile && len > 0.5) speed = SPRINT.speed;
       // a raised guard and a channelled grip slow you to a walk
       if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
+      if (a?.move.mobile) speed = Math.min(speed, MOVE_SPEED.run * a.move.mobile);
       speed *= moveRate(fighter, now);
       vx += body.intent.x * speed;
       vz += body.intent.z * speed;
@@ -536,7 +541,7 @@ export function targetsInReach(world, attacker, body, move, single) {
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
-    if (!insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (!insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
     if (world.level && !clearLine(world.level, body, ob)) continue; // nothing reaches through a wall
     found.push({ fighter: other, d });
   }

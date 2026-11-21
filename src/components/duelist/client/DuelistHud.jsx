@@ -159,6 +159,12 @@ function Skills({ hud, onPower }) {
         <div className="dh-bar dh-bar-stamina" data-winded={!!you.winded} style={{ top: 44 }}><span>Stamina</span><b style={{ width: `${Math.max(0, Math.min(1, you.stamina)) * 100}%` }} /></div>
         <div className="dh-bar dh-bar-shield" style={{ top: 66 }}><span>Shield</span><b style={{ width: `${Math.max(0, Math.min(1, you.shield)) * 100}%` }} /></div>
         <span className="dh-weapon">{weapon}{hud.classId ? ` · Boost ${hud.matchBoost ?? 0}/3` : ''}</span>
+        {hud.mode && (
+          <span className="dh-mode" data-mode={hud.mode} title="Sword mode: swift, balanced or heavy">
+            {['swift', 'balanced', 'heavy'].map((m) => <i key={m} data-on={m === hud.mode || undefined} />)}
+            <b>{hud.mode}</b>{hud.modeKey ? <kbd>{hud.modeKey}</kbd> : null}
+          </span>
+        )}
       </div>
     </section>
   );
