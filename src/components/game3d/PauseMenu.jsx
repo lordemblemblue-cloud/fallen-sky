@@ -22,6 +22,7 @@ import {readGame3DDesktopInstall,saveGame3DDesktopInstall}
   from './performance/Game3DDesktopInstall.mjs';
 import {rememberGame3DPlatformSetting} from './performance/Game3DPlatformGraphics.mjs';
 import Game3DPlatformGraphicsPanel from './performance/Game3DPlatformGraphicsPanel';
+import GraphicsRuntimePanel from '../shared/GraphicsRuntimePanel';
 import {GAME3D_GPU_BRIDGE_DOWNLOAD,GAME3D_GPU_BRIDGE_SESSION_KEY,
   describeGame3DGpuReport,fetchGame3DGpuBridge,parseGame3DGpuReport}
   from './performance/Game3DGpuBridge.mjs';
@@ -817,6 +818,9 @@ export default function PauseMenu({
               </div>}
               {view==='graphics'&&<div className="axe3d-pause__settings-grid">
                 <Game3DPlatformGraphicsPanel open={open} onProfileApplied={showPlatformProfile}/>
+                <div className="axe3d-pause__surface" data-testid="game3d-gpu-runtime-settings">
+                  <GraphicsRuntimePanel sceneId="fallen-sky" enabled={open}/>
+                </div>
                 <div className="axe3d-pause__surface" data-testid="game3d-display-resolution-settings">
                   <div className="axe3d-pause__surface-heading"><Monitor size={22}/><div>
                     <strong>Display Resolution &amp; Interface Fit</strong>

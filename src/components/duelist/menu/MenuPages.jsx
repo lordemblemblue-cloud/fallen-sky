@@ -11,6 +11,7 @@ import { MENU_MODES, LEVELS } from './modes.js';
 import { STORY_MISSIONS } from './missions.js';
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
+import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
 import './duelistHub.css';
 import './duelistMenuTheme.css';
@@ -474,6 +475,9 @@ export function SettingsPage() {
   };
   return (
     <MenuShell title="Settings" subtitle="Adjust how Duelist Adventure sounds, responds and plays with bots." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <section className="duelist-menu-panel mb-5" aria-label="Graphics diagnostics">
+        <GraphicsRuntimePanel sceneId="duelist-adventure"/>
+      </section>
       <div className="duelist-settings-columns">
         <div className="duelist-settings-stack">
           <section className="duelist-menu-panel">

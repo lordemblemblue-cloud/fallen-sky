@@ -1,6 +1,7 @@
 /**
- * Is WebGPU at least as fast as the classic WebGL renderer on THIS device? WebGPU-ready scenes use it by default only
- * then (rendererBackendChoice.mjs). Pure: no DOM, no three.js; webgpuDeviceProbe.js measures and stores the verdict.
+ * Is WebGPU at least as fast as the classic WebGL renderer on THIS device? WebGPU-ready scenes start WebGPU-first,
+ * then prefer accelerated classic WebGL if WebGPU measures slower (rendererBackendChoice.mjs).
+ * Pure: no DOM, no three.js; webgpuDeviceProbe.js measures and stores the verdict.
  *
  * Why per device: the same three.js node material can cost very different GPU time per browser + GPU. On the
  * development PC (Chrome, Windows, Radeon 780M) a lit material costs about twice the GPU time through WebGPU as the

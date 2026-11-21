@@ -181,6 +181,8 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0 
   if (meter + 1e-8 < def.special.cost) return { allowed: false, reason: 'not-charged' };
   if (def.special.target === 'enemy') {
     if (!target?.position || !Number.isFinite(target.hp) || !Number.isFinite(target.maxHp) || target.maxHp <= 0) return { allowed: false, reason: 'target-required' };
+    // Authoritative fighter HP cannot exceed its maximum. Reject corrupt state rather than executing against it.
+    if (target.hp > target.maxHp) return { allowed: false, reason: 'invalid-context' };
     if (!finitePoint(target.position)) return { allowed: false, reason: 'invalid-context' };
     if (target.hp <= 0) return { allowed: false, reason: 'target-defeated' };
     if (actor.id && target.id && actor.id === target.id) return { allowed: false, reason: 'self-target' };
