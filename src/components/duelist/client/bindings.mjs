@@ -3,22 +3,30 @@
 // "Mouse1" middle, "Mouse2" right, "Mouse3" and "Mouse4" the side buttons). A player's own choices are kept in
 // their preferences (client/prefs.mjs `keys`) and changed on the Settings page; anything missing or broken
 // falls back to the defaults. Pure: no window, no document.
+//
+// Abilities 1-4 are the class's four (core/classes.mjs); without a class (the story crews) they are the first
+// build's push, pull, grip (hold, let go to throw) and Veil Breach. The special goes off when the meter allows.
 
-/** kind: 'hold' read while held · 'press' a command on press · 'guard' raised while held · 'grip' grips, and throws on letting go */
+/**
+ * kind: 'hold' read while held · 'press' a command on press · 'guard' raised while held · 'ability' a class
+ * ability: its command on press, and a release on letting go (a held grip throws)
+ */
 export const ACTIONS = Object.freeze([
   { id: 'forward', label: 'Move forward', kind: 'hold' },
   { id: 'back', label: 'Move back', kind: 'hold' },
   { id: 'left', label: 'Move left', kind: 'hold' },
   { id: 'right', label: 'Move right', kind: 'hold' },
   { id: 'sprint', label: 'Sprint', kind: 'hold' },
-  { id: 'light', label: 'Light strike (chain three)', kind: 'press' },
+  { id: 'light', label: 'Light strike (chain)', kind: 'press' },
   { id: 'heavy', label: 'Heavy strike', kind: 'press' },
   { id: 'guard', label: 'Guard (a fresh guard parries)', kind: 'guard' },
-  { id: 'roll', label: 'Roll (into a push or a strike)', kind: 'press' },
+  { id: 'roll', label: 'Roll (into a power or a strike)', kind: 'press' },
   { id: 'dash', label: 'Dash', kind: 'press' },
-  { id: 'push', label: 'Push', kind: 'press' },
-  { id: 'pull', label: 'Pull', kind: 'press' },
-  { id: 'grip', label: 'Telekinesis grip (let go to throw)', kind: 'grip' },
+  { id: 'ability1', label: 'Ability 1', kind: 'ability' },
+  { id: 'ability2', label: 'Ability 2', kind: 'ability' },
+  { id: 'ability3', label: 'Ability 3', kind: 'ability' },
+  { id: 'ability4', label: 'Ability 4', kind: 'ability' },
+  { id: 'special', label: 'Special (when charged)', kind: 'press' },
   { id: 'breach', label: 'Veil Breach', kind: 'press' },
   { id: 'resist', label: 'Resist (break a grip)', kind: 'press' },
   { id: 'lock', label: 'Lock on', kind: 'press' },
@@ -28,8 +36,11 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
-  roll: 'Space', dash: 'ControlLeft', push: 'Digit1', pull: 'Digit2', grip: 'Digit3', breach: 'Digit4', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
+  roll: 'Space', dash: 'ControlLeft', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
+  breach: 'KeyR', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
 });
+// bindings saved before the classes: the old power keys become the ability keys
+const LEGACY = Object.freeze({ ability1: 'push', ability2: 'pull', ability3: 'grip' });
 
 // never bound: Escape lets go of the mouse; the browser's and the system's own keys
 export const RESERVED = Object.freeze(new Set(['Escape', 'F5', 'F11', 'F12', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight', 'ContextMenu']));
@@ -50,7 +61,8 @@ export const inputOf = (code) => (typeof code === 'string' && SIDED.test(code) ?
 export function keysFrom(saved = {}) {
   const keys = {};
   const used = new Map(); // input -> action
-  const wanted = (id) => (saved && bindable(saved[id]) ? saved[id] : DEFAULT_KEYS[id]);
+  const wanted = (id) => (saved && bindable(saved[id]) ? saved[id]
+    : saved && LEGACY[id] && bindable(saved[LEGACY[id]]) ? saved[LEGACY[id]] : DEFAULT_KEYS[id]);
   for (const { id } of ACTIONS) {
     const code = wanted(id);
     if (!used.has(inputOf(code))) { keys[id] = code; used.set(inputOf(code), id); }
@@ -106,13 +118,19 @@ export function keyLabel(code, { short = false } = {}) {
   return NAMES[code] || code;
 }
 
-/** The keys line at the bottom of the screen, from the bindings. */
-export function helpLine(keys, { story = false } = {}) {
+/**
+ * The keys line at the bottom of the screen, from the bindings. abilityNames: the class's four ability names
+ * (else the first build's push, pull, grip, breach: the story crews).
+ */
+export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const k = (id) => keyLabel(keys[id], { short: true });
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
+  const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`, `${k('push')} push`, `${k('pull')} pull`,
-    `${k('grip')} grip`, `${k('breach')} breach`, `${k('resist')} resist`, `${k('lock')} lock on`];
+    `${k('light')} light`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`,
+    ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
+  if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
+  parts.push(`${k('resist')} resist`, `${k('lock')} lock on`);
   if (story) parts.push(`${k('interact')} (hold) use`);
   return `Click to fight · ${parts.join(' · ')}`;
 }

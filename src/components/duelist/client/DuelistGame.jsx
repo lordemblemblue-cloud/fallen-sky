@@ -33,6 +33,9 @@ import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
 import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
 import GlassHud from './GlassHud.jsx';
+import ClassPicker from './ClassPicker.jsx';
+import { createClassWeapon, equipClassWeapon, wholeWeapon } from './classWeapons.mjs';
+import { CLASSES, classById, hiddenFrom } from '../core/index.mjs';
 import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
@@ -48,8 +51,9 @@ const KNEEL = Object.freeze({ clip: 'crouchIdle', loop: true, progress: 0 }); //
 const HEAD = 1.45; // metres: where the camera looks, and where its line to the fighter starts
 const BODY_REMAINS = 7; // seconds a fallen guard lies before it is cleared away
 
-// seat: { body, weapon ('sword' | 'sidearm'), kit (a guard's uniform), kind }
-async function createActor(scene, seat, weaponColor) {
+// seat: { body, weapon ('sword' | 'sidearm'), kit (a guard's uniform), kind }; classId: the fighter's class (its
+// crystal form and colour), or null
+async function createActor(scene, seat, weaponColor, classId = null) {
   const bodyId = seat.body;
   const { model, clips } = await loadFighterBody(bodyId);
   if (seat.kit) dressGuard(model, seat.kit); // fitted at rest, before anything poses the body
@@ -64,15 +68,25 @@ async function createActor(scene, seat, weaponColor) {
   // held in Telekinesis has no clip in the pack: an authored pose
   const { clips: baked, grip, handBone } = bakeDuelMoves(model, ['held']);
   const gun = seat.weapon === 'sidearm';
-  const sword = gun ? createSidearm({ color: weaponColor }) : createCrystalSword({ color: weaponColor });
-  attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(handBone || 'mixamorig:RightHand')), grip);
+  const rightHand = model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(handBone || 'mixamorig:RightHand'));
+  const leftHand = model.getObjectByName('mixamorigLeftHand');
+  const classDef = gun ? null : classById(classId);
+  let sword;
+  if (classDef) {
+    // the class's crystal form: one blade, twin blades (one in each hand) or the double-bladed staff
+    const weapon = createClassWeapon(classId);
+    equipClassWeapon(weapon, { rightHand, leftHand, grip });
+    sword = wholeWeapon(weapon);
+  } else {
+    sword = gun ? createSidearm({ color: weaponColor }) : createCrystalSword({ color: weaponColor });
+    attachToHand(sword, rightHand, grip);
+  }
   const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance: gun ? 'sidearm' : 'sword' });
-  const trail = gun ? null : createSwordTrail(scene, { color: weaponColor });
+  const trail = gun ? null : createSwordTrail(scene, { color: classDef ? classDef.color : weaponColor });
   const aim = gun ? createAimLine(scene, { color: weaponColor }) : null;
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
-  const leftHand = model.getObjectByName('mixamorigLeftHand');
   return {
-    group, model, sword, animator, trail, aim, gun, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
+    group, model, sword, animator, trail, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
     root: group,
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
@@ -90,10 +104,12 @@ async function createActor(scene, seat, weaponColor) {
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
-  onMission = null, keys = null, voicesOn = true }) {
+  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null }) {
   const bound = keysFrom(keys || {});
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
+  const sourceRef = useRef(null);
+  const [picking, setPicking] = useState(false); // the class picker, opened by hand
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
   const [status, setStatus] = useState('loading');
@@ -127,9 +143,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, onChange: (s, detail) => setNet({ status: s, detail }) })
-        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody });
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, onChange: (s, detail) => setNet({ status: s, detail }) })
+        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody, classId });
     const { world } = source;
+    sourceRef.current = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
     let level = source.level || null;
     let generationSeen = source.generation || 0;
@@ -211,16 +228,16 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       seatList.forEach((s, i) => {
         if (actors[s.id] || pending.has(s.id) || retired.has(s.id)) return;
         pending.add(s.id);
-        queue.push({ seat: s, color: colorOf(s, i) });
+        queue.push({ seat: s, color: colorOf(s, i), classId: world.fighters.get(s.id)?.classId || null });
       });
     };
     const buildNext = () => {
       if (building || !queue.length) return;
-      const { seat: s, color } = queue.shift();
+      const { seat: s, color, classId: cls } = queue.shift();
       if (!source.seats().some((x) => x.id === s.id)) { pending.delete(s.id); return; }
       building = true;
       const gen = generationSeen;
-      createActor(scene, s, color).then((actor) => {
+      createActor(scene, s, color, cls).then((actor) => {
         if (disposed || gen !== generationSeen || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
         actors[s.id] = actor;
         // in a mission only people with a name wear it
@@ -450,6 +467,17 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const fighter = world.fighters.get(id);
           const body = bodyOf(world, id);
           if (!fighter || !body) { actor.group.visible = false; actor.aim?.hide(); continue; }
+          // a fighter that came back as another class is rebuilt with its new crystal form
+          if (!actor.gun && actor.kind !== 'enemy' && actor.kind !== 'ally' && (fighter.classId || null) !== actor.classId) {
+            actor.dispose();
+            delete actors[id];
+            tags.remove(id);
+            seatsSeen = -1;
+            continue;
+          }
+          // a Veil Cloak hides an enemy farther than its shimmer
+          const viewer = world.fighters.get(mineId);
+          if (viewer && id !== mineId && hiddenFrom(fighter, body, viewer, bodyOf(world, mineId), world.time)) { actor.group.visible = false; continue; }
           if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
             actor.group.visible = false;
             actor.aim?.hide();
@@ -548,7 +576,18 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             lockOn: !!lockId,
             view,
             myTeam: seatList.find((s) => s.id === mineId)?.team || null,
-            powers: mine ? POWERS.map((id) => ({ id, key: keyLabel(controls.keys[id], { short: true }), ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will })) : [],
+            powers: mine ? POWERS.map((id, i) => {
+              const key = i < 4 ? controls.keys[`ability${i + 1}`] : controls.keys[id];
+              return { id, key: keyLabel(key, { short: true }), ready: Math.max(0, (mine.cooldowns[id] ?? 0) - world.time), cost: MOVES[id].will };
+            }) : [],
+            // the class: its four abilities (keys 1-4) and the special meter (owned by the match's seat)
+            classId: mine?.classId || null,
+            abilities: mine?.classId ? CLASSES[mine.classId].abilities.map((ab, i) => ({ id: ab.id, name: ab.name, slot: i + 1,
+              key: keyLabel(controls.keys[`ability${i + 1}`], { short: true }), ready: Math.max(0, (mine.cooldowns[ab.id] ?? 0) - world.time),
+              cost: MOVES[ab.id].will, total: MOVES[ab.id].cooldown })) : null,
+            specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
+            specialKey: keyLabel(controls.keys.special, { short: true }),
+            dead: !!mine?.vitals.dead,
           });
           setStatus('ready');
         }
@@ -599,6 +638,16 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const match = view && !quest ? view : null;
   const waiting = online && net && net.status !== 'ready';
   const again = () => setGeneration((g) => g + 1);
+  // the class picker: by hand, or on its own before the fight, between rounds and while down
+  const current = hud?.classId || classId;
+  const classAnswer = sourceRef.current?.classAnswer || null;
+  const between = match && (match.phase === 'countdown' || match.phase === 'roundOver');
+  const showPicker = !quest && !!match && match.phase !== 'over' && (picking || between || hud?.dead);
+  const pickClass = (id) => {
+    sourceRef.current?.chooseClass?.(id);
+    onClassChange?.(id);
+  };
+  const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
       {hud?.you && <GlassHud hud={hud} fighter={youBody} onPower={(id) => pressRef.current?.(id)} />}
@@ -627,7 +676,16 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       )}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
-      <div className="duelist-help">{helpLine(bound, { story: mode === 'story' })}</div>
+      {match && !showPicker && (
+        <button type="button" className="duelist-class-button" onClick={() => setPicking(true)} style={{ '--class': `#${(CLASSES[current]?.color ?? 0x9fe8ff).toString(16).padStart(6, '0')}` }}>
+          {CLASSES[current]?.name || 'Class'}
+        </button>
+      )}
+      {showPicker && (
+        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys}
+          live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
+      )}
+      <div className="duelist-help">{helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })}</div>
     </div>
   );
 }
@@ -637,7 +695,7 @@ const share = (value, max) => (max > 0 ? value / max : 0); // an ordinary person
 function snapshot(f, now) {
   const v = f.vitals;
   return {
-    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, special: Number.isFinite(f.special) ? f.special : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
+    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, special: f.classId ? (Number.isFinite(f.meter) ? f.meter : 0) : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
     veil: fighterVeil(f), noVeil: v.max.will <= 0, winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
     dead: v.dead,
   };

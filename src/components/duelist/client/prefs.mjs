@@ -4,7 +4,8 @@
 import { useCallback, useState } from 'react';
 
 const KEY = 'duelist.prefs';
-export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true });
+// classId: the class the player fights as (core/classes.mjs), kept between matches
+export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist' });
 
 export function readPrefs() {
   try {

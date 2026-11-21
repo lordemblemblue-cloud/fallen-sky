@@ -1,14 +1,14 @@
 // Keyboard and mouse for Duelist Adventure, and the follow camera.
 // What each key and mouse button does is the player's own choice (client/bindings.mjs; Settings). The
 // defaults: WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard
-// parries) · Space roll · Ctrl dash · 1 push · 2 pull · 3 grip (hold, let go to throw) · 4 Veil Breach ·
-// Z resist · Tab lock on · F (hold) use what is in front of you. Mouse look: click to capture the mouse, Esc
-// releases it.
+// parries) · Space roll · Ctrl dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
+// go to throw), Veil Breach) · Q the special · R Veil Breach · Z resist · Tab lock on · F (hold) use what is in
+// front of you. Mouse look: click to capture the mouse, Esc releases it.
 /* global window, document */
 import * as THREE from 'three';
 import { DEFAULT_KEYS, KIND, keysFrom, actionFor } from './bindings.mjs';
 
-const AIMED = new Set(['light', 'heavy', 'push', 'pull', 'grip', 'breach']);
+const AIMED = new Set(['light', 'heavy', 'ability1', 'ability2', 'ability3', 'ability4', 'special', 'breach']);
 
 /** keys: the player's bindings ({ action: code }; anything missing is a default). */
 export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } = {}) {
@@ -26,9 +26,8 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     held.add(action);
     const kind = KIND[action];
     if (action === 'lock') lockRequested = true;
-    else if (kind === 'press') presses.push(action);
+    else if (kind === 'press' || kind === 'ability') presses.push(action);
     else if (kind === 'guard') presses.push('blockDown');
-    else if (kind === 'grip') presses.push('grip');
     return true;
   };
   const up = (code) => {
@@ -36,7 +35,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     if (!action || !held.has(action)) return;
     held.delete(action);
     if (KIND[action] === 'guard') presses.push('blockUp');
-    if (KIND[action] === 'grip') presses.push('release');
+    if (KIND[action] === 'ability') presses.push('release');
   };
   const onKeyDown = (e) => {
     const mine = actionFor(bound, e.code);
@@ -58,7 +57,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
   const onContext = (e) => e.preventDefault();
   // the window lost focus: whatever was held is let go (a raised guard drops, a held grip throws)
   const onBlur = () => {
-    if (held.has('grip')) presses.push('release');
+    if (['ability1', 'ability2', 'ability3', 'ability4'].some((a) => held.has(a))) presses.push('release');
     held.clear();
     presses.push('blockUp');
   };

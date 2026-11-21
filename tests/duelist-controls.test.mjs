@@ -17,13 +17,15 @@ test('the default bindings: every action has its own input', () => {
 });
 
 test('rebinding: a free key just moves; a taken one swaps; Shift, Ctrl and Alt count either side', () => {
-  let { keys, swapped } = rebind(DEFAULT_KEYS, 'heavy', 'KeyQ');
-  assert.equal(keys.heavy, 'KeyQ');
+  let { keys, swapped } = rebind(DEFAULT_KEYS, 'heavy', 'KeyG');
+  assert.equal(keys.heavy, 'KeyG');
   assert.equal(swapped, null);
   assert.equal(actionFor(keys, 'KeyE'), null, 'the old key is free');
   ({ keys, swapped } = rebind(keys, 'heavy', 'Digit1'));
-  assert.equal(swapped, 'push');
-  assert.deepEqual([keys.heavy, keys.push], ['Digit1', 'KeyQ'], 'push took heavy\'s old key');
+  assert.equal(swapped, 'ability1');
+  assert.deepEqual([keys.heavy, keys.ability1], ['Digit1', 'KeyG'], 'ability 1 took heavy\'s old key');
+  // bindings saved before the classes: the old power keys become the ability keys
+  assert.equal(keysFrom({ push: 'KeyB' }).ability1, 'KeyB');
   assert.equal(actionFor(DEFAULT_KEYS, 'ShiftRight'), 'sprint', 'either Shift sprints');
   ({ keys, swapped } = rebind(DEFAULT_KEYS, 'dash', 'ShiftRight'));
   assert.equal(swapped, 'sprint');
@@ -81,18 +83,18 @@ function fakeBrowser() {
 test('the controls follow the player\'s bindings: presses, held keys, guard and grip, mouse buttons, letting go on blur', async () => {
   const b = fakeBrowser();
   const { createControls } = await import('../src/components/duelist/client/controls.mjs');
-  const mine = rebind(rebind(DEFAULT_KEYS, 'heavy', 'KeyQ').keys, 'guard', 'KeyR').keys;
+  const mine = rebind(rebind(DEFAULT_KEYS, 'heavy', 'KeyG').keys, 'guard', 'KeyV').keys;
   const controls = createControls(b.canvas, { keys: mine });
-  b.key('keydown', 'KeyQ');
+  b.key('keydown', 'KeyG');
   b.key('keydown', 'KeyE'); // no longer anything
   assert.deepEqual(controls.read().presses, ['heavy']);
-  b.key('keydown', 'KeyR');
-  b.key('keydown', 'KeyR', { repeat: true }); // a held key repeats: nothing more
-  b.key('keyup', 'KeyR');
+  b.key('keydown', 'KeyV');
+  b.key('keydown', 'KeyV', { repeat: true }); // a held key repeats: nothing more
+  b.key('keyup', 'KeyV');
   assert.deepEqual(controls.read().presses, ['blockDown', 'blockUp'], 'the guard is held while the key is');
   b.key('keydown', 'Digit3');
   b.key('keyup', 'Digit3');
-  assert.deepEqual(controls.read().presses, ['grip', 'release'], 'a grip throws when let go');
+  assert.deepEqual(controls.read().presses, ['ability3', 'release'], 'an ability key lets go when released (a held grip throws)');
   b.key('keydown', 'KeyW');
   b.key('keydown', 'KeyF');
   b.key('keydown', 'ShiftRight');
@@ -110,7 +112,7 @@ test('the controls follow the player\'s bindings: presses, held keys, guard and 
   assert.equal(controls.takeLockToggle(), true);
   b.key('keydown', 'Digit3');
   b.blur();
-  assert.deepEqual(controls.read().presses, ['grip', 'release', 'blockUp'], 'leaving the window lets go of everything');
+  assert.deepEqual(controls.read().presses, ['ability3', 'release', 'blockUp'], 'leaving the window lets go of everything');
   assert.equal(controls.read().move.z, 0);
   controls.dispose();
   b.done();

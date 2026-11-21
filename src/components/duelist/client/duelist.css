@@ -405,3 +405,39 @@
   .duelist-game .duelist-feed > div { font-size:9px;padding:4px 6px; }
   .duelist-game .duelist-comms { width:min(420px,88vw);bottom:149px;font-size:11px; }
 }
+
+/* ---- class picker and the class button (the four classes: core/classes.mjs). Quiet: dark translucent panels,
+   thin borders, the class colour only as an accent. */
+.duelist-classpick {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 30; width: min(920px, calc(100% - 32px));
+  padding: 14px 16px 12px; border-radius: 14px; background: rgba(12, 17, 26, 0.86); border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px); color: #e6edf6; font-size: 13px; pointer-events: auto;
+}
+.duelist-classpick-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;
+  font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(230, 237, 246, 0.7); }
+.duelist-classpick-head button { background: none; border: 0; color: rgba(230, 237, 246, 0.6); font-size: 20px; line-height: 1; cursor: pointer; }
+.duelist-classpick-head button:hover { color: #fff; }
+.duelist-classpick-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) { .duelist-classpick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.duelist-classcard {
+  display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 12px; border-radius: 10px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-top: 2px solid var(--class);
+  color: inherit; transition: background 0.15s, border-color 0.15s;
+}
+.duelist-classcard:hover { background: rgba(255, 255, 255, 0.06); }
+.duelist-classcard[data-chosen='true'] { background: color-mix(in srgb, var(--class) 12%, transparent); border-color: color-mix(in srgb, var(--class) 55%, transparent); }
+.duelist-classcard-name { font-size: 16px; font-weight: 600; color: var(--class); }
+.duelist-classcard-role { font-size: 11px; color: rgba(230, 237, 246, 0.55); }
+.duelist-classcard-abilities { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.duelist-classcard-abilities li, .duelist-classcard-special { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.duelist-classcard kbd { min-width: 18px; padding: 0 4px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.16);
+  font: 600 10px/16px ui-monospace, monospace; text-align: center; color: rgba(230, 237, 246, 0.85); }
+.duelist-classcard-special { color: #f2d28b; }
+.duelist-classcard-passive { font-size: 11px; color: rgba(230, 237, 246, 0.45); }
+.duelist-classpick-note { margin: 10px 0 0; font-size: 12px; color: rgba(230, 237, 246, 0.6); text-align: center; }
+.duelist-class-button {
+  position: absolute; right: 12px; top: 48px; z-index: 12; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  background: rgba(12, 17, 26, 0.7); border: 1px solid color-mix(in srgb, var(--class) 50%, transparent); color: var(--class);
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.duelist-class-button:hover { background: rgba(12, 17, 26, 0.9); }
