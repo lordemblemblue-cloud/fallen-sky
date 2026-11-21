@@ -184,17 +184,17 @@ CUTS = {
 # How far out a mode's points are, its seconds of wind-up, cut, hold and recovery, and how much of the step it
 # takes. KEEP IN STEP with src/components/duelist/core/cuts.mjs (a test compares the clips with it).
 CUT_MODES = {
-    'Swift': dict(amp=0.72, wind=0.12, cut=0.12, hold=0.04, rec=0.24, step=0.6),
-    'Balanced': dict(amp=0.88, wind=0.17, cut=0.15, hold=0.06, rec=0.30, step=1.0),
-    'Heavy': dict(amp=1.0, wind=0.27, cut=0.19, hold=0.10, rec=0.42, step=1.3),
+    'Swift': dict(amp=0.72, wind=0.11, cut=0.10, hold=0.03, rec=0.18, step=0.6),
+    'Balanced': dict(amp=0.88, wind=0.13, cut=0.12, hold=0.04, rec=0.24, step=1.0),
+    'Heavy': dict(amp=1.0, wind=0.21, cut=0.16, hold=0.08, rec=0.34, step=1.3),
 }
 # The backhand (one of the three moves a second press hard on the first turns a cut into): from the left side
 # round by the front and the sword side to behind the body. Its own seconds: KEEP IN STEP with core/cuts.mjs.
 BACKHAND_LINE = ('L', 'BACK', (0.0, 0.0))
 BACKHAND_MODES = {
-    'Swift': dict(amp=0.85, wind=0.12, cut=0.16, hold=0.06, rec=0.26, step=0.6),
-    'Balanced': dict(amp=0.95, wind=0.16, cut=0.2, hold=0.08, rec=0.34, step=1.0),
-    'Heavy': dict(amp=1.0, wind=0.24, cut=0.26, hold=0.12, rec=0.46, step=1.3),
+    'Swift': dict(amp=0.85, wind=0.10, cut=0.13, hold=0.05, rec=0.20, step=0.6),
+    'Balanced': dict(amp=0.95, wind=0.13, cut=0.16, hold=0.06, rec=0.27, step=1.0),
+    'Heavy': dict(amp=1.0, wind=0.20, cut=0.21, hold=0.10, rec=0.37, step=1.3),
 }
 sharp = lambda x: smoothstep(smoothstep(x))  # slow, then through the middle at more than twice the average, then slow
 
@@ -309,3 +309,63 @@ def build_cuts(add, notes, idle, only=None):
         clip, _, worst = make_cut('Backhand', mode, base_q, base_loc, BACKHAND_LINE, BACKHAND_MODES)
         add(name, inertial_in(clip, idle, 0, 0.1), f'backhand, {mode.lower()}: from the left side round to behind the body', sigma=0.5)
         print('CUT', name, 'seconds', notes[name]['seconds'], 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst))
+
+
+# ---- The twin blades and the staff cut the same nine lines, each in its own time (one mode a form).
+# KEEP IN STEP with src/components/duelist/core/cuts.mjs FORM_TIMING.
+FORM_MODES = {
+    'blades': dict(amp=0.82, wind=0.10, cut=0.10, hold=0.03, rec=0.20, step=0.0),
+    'staff': dict(amp=0.9, wind=0.13, cut=0.13, hold=0.05, rec=0.25, step=0.0),
+}
+
+
+def on_shaft(clip):
+    """The left hand closed on the staff wherever it can reach it (STAFF_HANDS along from the right hand's grip);
+    where it cannot, the arm is left as it was, and the change between the two is eased over a few frames."""
+    unit = scale_of()
+    out = copy_clip(clip)
+    n = len(out['q'])
+    solved, w = [], []
+    last = None
+    for f in range(n):
+        q = out['q'][f]
+        pose = rig.fk(q, out['loc'][f])
+        grip = pose[RIGHT.hand] @ RIGHT.grip
+        axis = grip.to_3x3().col[1].normalized()
+        arm, bend, _, miss = LEFT.hold(pose, q, grip.translation + axis * (STAFF_HANDS / unit), axis * STAFF_THUMB, last)
+        good = miss * unit < 0.03 and bend < math.radians(55)
+        last = arm[LEFT.hand].to_3x3() if good else None
+        held = [x.copy() for x in q]
+        if good:
+            LEFT.take(held, pose, arm)
+        solved.append(held)
+        w.append(good)
+    # on the shaft only well inside a stretch where it can be held: nothing at all within a few frames of where it
+    # cannot, rising smoothly from there (so the hand never jumps on or off)
+    reach = 6
+    w = [1.0 if all(w[max(0, i - reach):min(n, i + reach + 1)]) else 0.0 for i in range(n)]
+    for _ in range(reach - 1):
+        w = [(w[max(0, i - 1)] + w[i] + w[min(n - 1, i + 1)]) / 3 for i in range(n)]
+    for f in range(n):
+        for i in (LEFT.upper, LEFT.fore, LEFT.hand):
+            out['q'][f][i] = out['q'][f][i].slerp(solved[f][i], w[f])
+    return out, sum(w) / n
+
+
+def build_form_cuts(add, notes, blades_idle, staff_idle, only=None):
+    for form, idle, prefix in (('blades', blades_idle, 'bladesCut'), ('staff', staff_idle, 'staffCut')):
+        base_q, base_loc = pose_of(idle, 0)
+        for cut in CUTS:
+            name = prefix + cut
+            if only and name not in only:
+                continue
+            clip, marks, worst = make_cut(cut, form, base_q, base_loc, modes=FORM_MODES)
+            extra = ''
+            if form == 'blades':  # the left blade cuts the same line in a mirror, a beat behind the right
+                clip = mirror_arm(clip, delay=0.05)
+            else:
+                clip, share = on_shaft(clip)
+                extra = ', second hand on the shaft %d%% of the time' % round(share * 100)
+            add(name, inertial_in(clip, idle, 0, 0.1), f'{cut} cut with the {form}: from {CUTS[cut][0]} to {CUTS[cut][1]}', sigma=0.5)
+            notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1]})
+            print('CUT', name, 'seconds', notes[name]['seconds'], 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst) + extra)

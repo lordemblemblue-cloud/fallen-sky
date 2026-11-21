@@ -753,7 +753,10 @@ exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[sys.argv
 
 def build():
     if '--cuts-only' in argv:  # a quick look at the cuts alone (not for the pack: the other clips are left out)
-        build_cuts(add, notes, source('sword_idle'), (opt('--only') or '').split(',') if opt('--only') else None)
+        chosen = (opt('--only') or '').split(',') if opt('--only') else None
+        plain = source('sword_idle')
+        build_cuts(add, notes, plain, chosen)
+        build_form_cuts(add, notes, mirror_arm(plain), staff_hold(plain, lambda t: STANCE), chosen)
         return
     slash, slash_back = source('sword_regular_a', 0.05), source('sword_regular_a_rec')
     lunge, lunge_back = source('sword_regular_b'), source('sword_regular_b_rec')
@@ -817,6 +820,7 @@ def build():
     add('staffSweep', directional(1.40, 2.05, stance, stance_q, stance_loc), 'wide swing from behind the shoulders, contact about 0.41 s')
 
     build_cuts(add, notes, idle)
+    build_form_cuts(add, notes, clips['bladesIdle'], clips['staffIdle'])
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')

@@ -10,7 +10,7 @@
 // (travel: false keeps a segment's travel out, for moves whose distance the rules set themselves).
 import { MOVES } from './moves.mjs';
 import { MOTION_CLIPS } from './motionPack.data.mjs';
-import { CUT_IDS, CUT_TIMING, CONTACT, SNAP_IDS, snapMotion } from './cuts.mjs';
+import { CUT_IDS, FORM_CUT_IDS, cutMarks, SNAP_IDS, snapMotion } from './cuts.mjs';
 
 const seg = (clip, moveFrom, moveTo, clipFrom, clipTo, extra = {}) => ({ clip, from: [moveFrom, clipFrom], to: [moveTo, clipTo], ...extra });
 // wind-up -> startup, contact -> active, follow-through -> recovery
@@ -26,10 +26,9 @@ const activeEnd = (id) => MOVES[id].startup + MOVES[id].active;
 export const MOVE_MOTION = Object.freeze({
   // the sword's cuts by direction (core/cuts.mjs): each has its own clip of the same name, made to the same
   // seconds (tools/duelist/blender/cut_grid.py), so the clip runs at its own speed from the wind-up to the stance
-  ...Object.fromEntries(CUT_IDS.map((id) => {
-    const t = CUT_TIMING[MOVES[id].cut.mode];
-    const last = Math.min(t.wind + t.cut + t.hold + t.rec, MOTION_CLIPS[id]?.duration ?? Infinity); // a clip ends on a whole frame
-    return [id, { segments: phases(id, id, [0, t.wind + CONTACT[0] * t.cut, t.wind + CONTACT[1] * t.cut, last]) }];
+  ...Object.fromEntries([...CUT_IDS, ...FORM_CUT_IDS].map((id) => { // the sword's in three modes, the twin blades', the staff's
+    const [c0, c1, c2, c3] = cutMarks(MOVES[id]);
+    return [id, { segments: phases(id, id, [c0, c1, c2, Math.min(c3, MOTION_CLIPS[id]?.duration ?? Infinity)]) }]; // a clip ends on a whole frame
   })),
   // the whirl and the cross play the pack's spinning cut and turning backhand at the mode's speed; the backhand
   // has a clip of its own in each mode

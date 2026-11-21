@@ -16,7 +16,7 @@
 //     by their clip's own travel instead: moveMotion.mjs).
 //   channel: the active phase lasts while the button is held, up to `active` seconds, paying willPerSec.
 
-import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_IDS } from './cuts.mjs';
+import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_IDS, FORM_CUT_SPECS, FORM_CUT_IDS, formCutId } from './cuts.mjs';
 
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
@@ -37,6 +37,8 @@ export const MOVES = Object.freeze({
   ...Object.fromEntries(Object.entries(CUT_SPECS).map(([id, spec]) => [id, move(spec)])),
   // the whirl, the cross and the backhand: what a second press hard on the first turns a cut into
   ...Object.fromEntries(Object.entries(SNAP_SPECS).map(([id, spec]) => [id, move(spec)])),
+  // the twin blades' and the staff's nine lines
+  ...Object.fromEntries(Object.entries(FORM_CUT_SPECS).map(([id, spec]) => [id, move(spec)])),
   // ---- sword: precise, heavy finishers that punish a weakened defense
   swordLight1: move({ weapon: 'sword', startup: 0.11, active: 0.08, recovery: 0.2, stamina: 6, damage: 10,
     chain: { next: 'swordLight2', from: 0.17, to: 0.42 }, cancelInto: ['movement', 'power'], cancelFrom: 0.22 }),
@@ -179,7 +181,14 @@ export const MOVES = Object.freeze({
 // chain window any light strike of the form may follow, never the same one twice running, and a chain is as long
 // as the form's own (the sword's three, the twin blades' four, the staff's three).
 export const STRIKE_DIRECTIONS = Object.freeze(['forward', 'side', 'back']);
-const flow = (chain, turns) => Object.freeze({ chain: Object.freeze(chain), ...turns, strikes: new Set([...chain, ...Object.values(turns)]) });
+// A form whose nine cuts are in one mode. With no direction its chain runs these lines in turn; `old`: the strikes
+// it had before, still its own (the rules' own callers start them by name, and a second press hard on the first
+// turns a cut into three of them: core/cuts.mjs).
+const formFlow = (weapon, chain, old) => {
+  const table = Object.freeze({ chain: Object.freeze(chain.map((d) => formCutId(weapon, d))), ...Object.fromEntries(CUT_DIRECTIONS.map((d) => [d, formCutId(weapon, d)])) });
+  return Object.freeze({ chain: table.chain, modes: Object.freeze({ balanced: table }),
+    strikes: new Set([...FORM_CUT_IDS.filter((id) => FORM_CUT_SPECS[id].weapon === weapon), ...old]) });
+};
 // The sword cuts by direction in three modes (core/cuts.mjs): each mode has its own table of nine. With no
 // direction its chain is the standing cut, the cut back along that line, then the cut down the middle.
 const SWORD_MODES = Object.freeze(Object.fromEntries(CUT_MODES.map((mode) => [mode, Object.freeze({
@@ -190,9 +199,10 @@ export const FLOW = Object.freeze({
   sword: Object.freeze({ chain: SWORD_MODES.balanced.chain, modes: SWORD_MODES,
     // the older strikes still count as the sword's (the rules' own callers start them by name)
     strikes: new Set([...CUT_IDS, ...SNAP_IDS, 'swordLight1', 'swordLight2', 'swordLight3', 'swordAdvance', 'swordSweep', 'swordTurn']) }),
-  dualBlades: flow(['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4'], { forward: 'bladesAdvance', side: 'bladesSweep', back: 'bladesTurn' }),
+  // the twin blades and the staff cut the same nine lines in one mode each; the blades' chain is four long
+  dualBlades: formFlow('dualBlades', ['stand', 'right', 'forward', 'back'], ['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4', 'bladesAdvance', 'bladesSweep', 'bladesTurn']),
   // the staff's turn is its chain's second link: a direction takes it out of its turn
-  staff: flow(['staffLight1', 'staffLight2', 'staffLight3'], { forward: 'staffLeap', side: 'staffSweep', back: 'staffLight2' }),
+  staff: formFlow('staff', ['stand', 'right', 'forward'], ['staffLight1', 'staffLight2', 'staffLight3', 'staffLeap', 'staffSweep']),
 });
 
 // Which move a button starts with each crystal form (the first of a chain).

@@ -36,7 +36,7 @@ export const STANCES = Object.freeze({
 // fighter during one: core/cuts.mjs). Such a clip, and each walking loop, is two actions: the legs (hips and down)
 // and the rest. Standing still, the cut's own legs show; moving, the walk's.
 const LEGS = /mixamorig(Hips|(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End))./;
-export const LAYERED = /^sword(Cut|Backhand)/;
+export const LAYERED = /^(sword(Cut|Backhand)|bladesCut|staffCut)/;
 const part = (clip, legs) => new THREE.AnimationClip(`${clip.name}:${legs ? 'legs' : 'body'}`, clip.duration, clip.tracks.filter((t) => LEGS.test(t.name) === legs));
 const WALKING = 1.2; // metres a second at which the legs are wholly the walk's
 

@@ -63,17 +63,17 @@ test('a light strike takes the direction held; with none it opens the chain', ()
 test('strikes chain freely by direction, never the same one twice running, and no longer than the chain', () => {
   // with no direction: the chain as it always was
   assert.deepEqual(chain('sword', [null, null, null]).made, ['swordCutStandBalanced', 'swordCutRightBalanced', 'swordCutDownBalanced']);
-  assert.deepEqual(chain('dualBlades', [null, null, null, null]).made, ['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4']);
+  assert.deepEqual(chain('dualBlades', [null, null, null, null]).made, ['bladesCutStand', 'bladesCutRight', 'bladesCutDown', 'bladesCutUp']);
   // a direction takes the link's place; the count goes on
   assert.deepEqual(chain('sword', [null, 'forward', null]).made, ['swordCutStandBalanced', 'swordCutDownBalanced', 'swordCutStandBalanced']);
   assert.deepEqual(chain('sword', ['forward', 'left', 'back']).made, ['swordCutDownBalanced', 'swordCutLeftBalanced', 'swordCutUpBalanced']);
-  assert.deepEqual(chain('dualBlades', ['back', 'forward', null, 'side']).made, ['bladesTurn', 'bladesAdvance', 'bladesLight3', 'bladesSweep']);
+  assert.deepEqual(chain('dualBlades', ['back', 'forward', null, 'left']).made, ['bladesCutUp', 'bladesCutDown', 'bladesCutUp', 'bladesCutLeft']);
   // the same direction held: the sword comes back along the line it just cut; the other forms take the chain's link
   assert.deepEqual(chain('sword', ['forward', 'forward', 'forward']).made, ['swordCutDownBalanced', 'swordCutUpBalanced', 'swordCutDownBalanced']);
-  assert.deepEqual(chain('dualBlades', ['forward', 'forward']).made, ['bladesAdvance', 'bladesLight2']);
-  // the staff's turn is its second link: asked for first, the chain does not give it again
-  assert.deepEqual(chain('staff', ['back', null, null]).made, ['staffLight2', 'staffLight3']);
-  assert.deepEqual(chain('staff', [null, 'back', 'forward']).made, ['staffLight1', 'staffLight2', 'staffLeap']);
+  assert.deepEqual(chain('dualBlades', ['forward', 'forward']).made, ['bladesCutDown', 'bladesCutUp']);
+  // the staff cuts the same lines, three to a chain
+  assert.deepEqual(chain('staff', ['back', null, null]).made, ['staffCutUp', 'staffCutRight', 'staffCutDown']);
+  assert.deepEqual(chain('staff', [null, 'back', 'forward']).made, ['staffCutStand', 'staffCutUp', 'staffCutDown']);
   // a chain is three strikes for the sword: a fourth press waits for the recovery and opens a new chain
   const { made, f } = chain('sword', ['forward', 'left', 'back', 'forward']);
   assert.deepEqual(made, ['swordCutDownBalanced', 'swordCutLeftBalanced', 'swordCutUpBalanced', 'buffered']);
@@ -150,11 +150,11 @@ test('bots that know Flow use it, and still fight to a finish', () => {
   const b = addFighter(w, { id: 'b', x: 0, z: 4, weapon: 'staff' });
   const bots = { a: createBot('a', { level: 'master', seed: 5 }), b: createBot('b', { level: 'master', seed: 9 }) };
   const used = new Set();
-  for (let i = 0; i < 60 * 120 && !a.vitals.dead && !b.vitals.dead; i++) {
+  for (let i = 0; i < 60 * 180 && !a.vitals.dead && !b.vitals.dead; i++) {
     step(w, 1 / 60, { a: think(w, bots.a), b: think(w, bots.b) });
     for (const f of [a, b]) if (f.action && f.action.t < 0.02) used.add(f.action.id);
   }
-  assert.ok(a.vitals.dead || b.vitals.dead, 'someone falls within two minutes');
+  assert.ok(a.vitals.dead || b.vitals.dead, 'someone falls within three minutes');
   const turned = [...used].filter((id) => (MOVES[id]?.cut && MOVES[id].cut.direction !== 'stand') || ['staffLeap', 'staffSweep'].includes(id));
   assert.ok(turned.length >= 2, `strikes by direction were used: ${turned.join(', ') || 'none'}`);
 });

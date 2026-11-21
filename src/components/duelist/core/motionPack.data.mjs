@@ -3300,702 +3300,1325 @@ export const MOTION_CLIPS = Object.freeze({
   },
   "swordCutStandSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 2.99
+        "t": 0.025,
+        "speed": 3.15
       },
       {
         "hand": "left",
-        "t": 0.167,
-        "speed": 4.27
+        "t": 0.15,
+        "speed": 4.99
       },
       {
         "hand": "right",
-        "t": 0.183,
-        "speed": 8.96
+        "t": 0.167,
+        "speed": 10.19
+      },
+      {
+        "hand": "right",
+        "t": 0.317,
+        "speed": 6.34
       }
     ]
   },
   "swordCutDownSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
-        "hand": "right",
-        "t": 0.058,
-        "speed": 8.79
-      },
-      {
         "hand": "left",
-        "t": 0.142,
-        "speed": 2.46
+        "t": 0.125,
+        "speed": 2.92
       },
       {
         "hand": "right",
-        "t": 0.183,
-        "speed": 9.4
+        "t": 0.158,
+        "speed": 10.98
       }
     ]
   },
   "swordCutUpSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
+        "hand": "left",
+        "t": 0.025,
+        "speed": 2.8
+      },
+      {
         "hand": "right",
         "t": 0.042,
-        "speed": 7.08
+        "speed": 7.77
       },
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 2.59
-      },
-      {
-        "hand": "left",
-        "t": 0.167,
-        "speed": 2.89
+        "t": 0.15,
+        "speed": 3.48
       },
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 8.3
+        "t": 0.183,
+        "speed": 10.41
       },
       {
         "hand": "right",
-        "t": 0.45,
-        "speed": 5.48
+        "t": 0.367,
+        "speed": 7.16
       }
     ]
   },
   "swordCutLeftSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 3.51
+        "t": 0.025,
+        "speed": 3.7
       },
       {
         "hand": "left",
-        "t": 0.167,
-        "speed": 5.04
+        "t": 0.15,
+        "speed": 5.89
       },
       {
         "hand": "right",
-        "t": 0.183,
-        "speed": 10.25
+        "t": 0.167,
+        "speed": 11.76
       }
     ]
   },
   "swordCutRightSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
-        "hand": "right",
-        "t": 0.042,
-        "speed": 9.01
-      },
-      {
         "hand": "left",
-        "t": 0.042,
-        "speed": 4.08
-      },
-      {
-        "hand": "left",
-        "t": 0.167,
-        "speed": 5.15
+        "t": 0.025,
+        "speed": 4.26
       },
       {
         "hand": "right",
-        "t": 0.208,
-        "speed": 13.2
+        "t": 0.042,
+        "speed": 9.72
+      },
+      {
+        "hand": "left",
+        "t": 0.15,
+        "speed": 6.02
+      },
+      {
+        "hand": "right",
+        "t": 0.175,
+        "speed": 13.68
       }
     ]
   },
   "swordCutDownLeftSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
         "hand": "right",
-        "t": 0.058,
-        "speed": 7.3
+        "t": 0.042,
+        "speed": 7.7
       },
       {
         "hand": "left",
-        "t": 0.158,
-        "speed": 4.42
+        "t": 0.142,
+        "speed": 5.19
       },
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 9.5
+        "t": 0.167,
+        "speed": 10.74
       }
     ]
   },
   "swordCutDownRightSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
-        "hand": "right",
-        "t": 0.042,
-        "speed": 11.13
-      },
-      {
         "hand": "left",
-        "t": 0.158,
-        "speed": 3.64
+        "t": 0.142,
+        "speed": 4.3
       },
       {
         "hand": "right",
-        "t": 0.175,
-        "speed": 12.05
+        "t": 0.158,
+        "speed": 12.42
       }
     ]
   },
   "swordCutUpLeftSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 2.86
+        "t": 0.025,
+        "speed": 2.93
       },
       {
         "hand": "left",
+        "t": 0.15,
+        "speed": 4.14
+      },
+      {
+        "hand": "right",
         "t": 0.167,
-        "speed": 3.56
+        "speed": 8.49
       },
       {
         "hand": "right",
-        "t": 0.2,
-        "speed": 7.67
-      },
-      {
-        "hand": "right",
-        "t": 0.45,
-        "speed": 6.23
+        "t": 0.367,
+        "speed": 8.67
       }
     ]
   },
   "swordCutUpRightSwift": {
     "source": "blender",
-    "duration": 0.517,
+    "duration": 0.417,
     "loop": false,
     "peaks": [
       {
-        "hand": "right",
-        "t": 0.042,
-        "speed": 7.65
-      },
-      {
         "hand": "left",
-        "t": 0.042,
-        "speed": 4
-      },
-      {
-        "hand": "left",
-        "t": 0.167,
-        "speed": 4.62
+        "t": 0.025,
+        "speed": 4.17
       },
       {
         "hand": "right",
-        "t": 0.225,
-        "speed": 9.24
+        "t": 0.042,
+        "speed": 8.05
+      },
+      {
+        "hand": "left",
+        "t": 0.15,
+        "speed": 5.41
+      },
+      {
+        "hand": "right",
+        "t": 0.192,
+        "speed": 11.45
       }
     ]
   },
   "swordBackhandSwift": {
     "source": "blender",
-    "duration": 0.6,
+    "duration": 0.483,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 4.79
+        "t": 0.025,
+        "speed": 5.64
       },
       {
         "hand": "left",
-        "t": 0.183,
-        "speed": 7.59
+        "t": 0.15,
+        "speed": 9.2
       },
       {
         "hand": "right",
-        "t": 0.25,
-        "speed": 18.45
+        "t": 0.208,
+        "speed": 23.25
       }
     ]
   },
   "swordCutStandBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
         "t": 0.042,
-        "speed": 2.77
+        "speed": 3.56
       },
       {
         "hand": "left",
-        "t": 0.217,
-        "speed": 4.26
+        "t": 0.167,
+        "speed": 5.22
       },
       {
         "hand": "right",
-        "t": 0.25,
-        "speed": 8.59
+        "t": 0.2,
+        "speed": 10.47
       }
     ]
   },
   "swordCutDownBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
         "hand": "right",
-        "t": 0.075,
-        "speed": 6.3
+        "t": 0.058,
+        "speed": 8.57
       },
       {
         "hand": "left",
-        "t": 0.192,
-        "speed": 2.42
+        "t": 0.158,
+        "speed": 3
       },
       {
         "hand": "right",
-        "t": 0.242,
-        "speed": 9.58
+        "t": 0.192,
+        "speed": 11.69
       }
     ]
   },
   "swordCutUpBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 6.52
+      },
+      {
         "hand": "left",
         "t": 0.042,
-        "speed": 2.36
-      },
-      {
-        "hand": "right",
-        "t": 0.058,
-        "speed": 5.09
+        "speed": 2.98
       },
       {
         "hand": "left",
-        "t": 0.233,
-        "speed": 2.93
+        "t": 0.183,
+        "speed": 3.62
       },
       {
         "hand": "right",
-        "t": 0.283,
-        "speed": 9.03
+        "t": 0.217,
+        "speed": 11.6
       }
     ]
   },
   "swordCutLeftBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
         "t": 0.042,
-        "speed": 3.26
+        "speed": 4.18
       },
       {
         "hand": "left",
-        "t": 0.217,
-        "speed": 5.02
+        "t": 0.167,
+        "speed": 6.14
       },
       {
         "hand": "right",
-        "t": 0.25,
-        "speed": 9.91
+        "t": 0.2,
+        "speed": 12.28
       }
     ]
   },
   "swordCutRightBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
+        "hand": "right",
         "t": 0.042,
-        "speed": 3.73
+        "speed": 8.72
       },
       {
         "hand": "left",
-        "t": 0.217,
-        "speed": 5.11
+        "t": 0.158,
+        "speed": 6.25
       },
       {
         "hand": "right",
-        "t": 0.275,
-        "speed": 13.29
+        "t": 0.225,
+        "speed": 14.98
       }
     ]
   },
   "swordCutDownLeftBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
-        "hand": "left",
-        "t": 0.05,
-        "speed": 2.65
+        "hand": "right",
+        "t": 0.058,
+        "speed": 6.93
       },
       {
         "hand": "left",
-        "t": 0.208,
-        "speed": 4.4
+        "t": 0.158,
+        "speed": 5.35
       },
       {
         "hand": "right",
-        "t": 0.267,
-        "speed": 9.47
+        "t": 0.2,
+        "speed": 11.51
       }
     ]
   },
   "swordCutDownRightBalanced": {
     "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
         "t": 0.042,
-        "speed": 2.64
-      },
-      {
-        "hand": "left",
-        "t": 0.208,
-        "speed": 3.59
+        "speed": 3.36
       },
       {
         "hand": "right",
-        "t": 0.242,
-        "speed": 19.78
+        "t": 0.175,
+        "speed": 24.7
+      },
+      {
+        "hand": "left",
+        "t": 0.175,
+        "speed": 4.38
       }
     ]
   },
   "swordCutUpLeftBalanced": {
     "source": "blender",
-    "duration": 0.683,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "left",
-        "t": 0.058,
-        "speed": 2.61
-      },
-      {
-        "hand": "left",
-        "t": 0.217,
-        "speed": 3.54
-      },
-      {
-        "hand": "right",
-        "t": 0.267,
-        "speed": 7.37
-      },
-      {
-        "hand": "right",
-        "t": 0.583,
-        "speed": 5.5
-      }
-    ]
-  },
-  "swordCutUpRightBalanced": {
-    "source": "blender",
-    "duration": 0.683,
+    "duration": 0.533,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
         "t": 0.042,
-        "speed": 3.63
-      },
-      {
-        "hand": "right",
-        "t": 0.058,
-        "speed": 6.43
+        "speed": 3.4
       },
       {
         "hand": "left",
-        "t": 0.217,
-        "speed": 4.58
+        "t": 0.167,
+        "speed": 4.41
       },
       {
         "hand": "right",
-        "t": 0.292,
-        "speed": 11.39
+        "t": 0.217,
+        "speed": 8.71
+      },
+      {
+        "hand": "right",
+        "t": 0.45,
+        "speed": 6.83
+      }
+    ]
+  },
+  "swordCutUpRightBalanced": {
+    "source": "blender",
+    "duration": 0.533,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 8.26
+      },
+      {
+        "hand": "left",
+        "t": 0.042,
+        "speed": 4.72
+      },
+      {
+        "hand": "left",
+        "t": 0.167,
+        "speed": 5.62
+      },
+      {
+        "hand": "right",
+        "t": 0.225,
+        "speed": 12.94
       }
     ]
   },
   "swordBackhandBalanced": {
+    "source": "blender",
+    "duration": 0.617,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.042,
+        "speed": 5.2
+      },
+      {
+        "hand": "left",
+        "t": 0.2,
+        "speed": 8.36
+      },
+      {
+        "hand": "right",
+        "t": 0.258,
+        "speed": 23.21
+      }
+    ]
+  },
+  "swordCutStandHeavy": {
     "source": "blender",
     "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.042,
-        "speed": 4.35
+        "t": 0.058,
+        "speed": 2.7
       },
       {
         "hand": "left",
-        "t": 0.233,
-        "speed": 6.84
+        "t": 0.25,
+        "speed": 4.57
       },
       {
         "hand": "right",
-        "t": 0.325,
-        "speed": 17.8
-      }
-    ]
-  },
-  "swordCutStandHeavy": {
-    "source": "blender",
-    "duration": 0.983,
-    "loop": false,
-    "peaks": [
-      {
-        "hand": "left",
-        "t": 0.075,
-        "speed": 2.13
-      },
-      {
-        "hand": "left",
-        "t": 0.317,
-        "speed": 3.85
-      },
-      {
-        "hand": "right",
-        "t": 0.383,
-        "speed": 7.28
+        "t": 0.3,
+        "speed": 8.75
       }
     ]
   },
   "swordCutDownHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.292,
-        "speed": 2.19
+        "t": 0.225,
+        "speed": 2.59
       },
       {
         "hand": "right",
-        "t": 0.375,
-        "speed": 8.49
+        "t": 0.292,
+        "speed": 10.32
       }
     ]
   },
   "swordCutUpHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 1.76
+        "t": 0.058,
+        "speed": 2.22
       },
       {
         "hand": "left",
-        "t": 0.333,
-        "speed": 2.65
+        "t": 0.267,
+        "speed": 3.14
       },
       {
         "hand": "right",
-        "t": 0.4,
-        "speed": 8.52
+        "t": 0.333,
+        "speed": 10.62
       }
     ]
   },
   "swordCutLeftHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 2.5
+        "t": 0.058,
+        "speed": 3.17
       },
       {
         "hand": "left",
-        "t": 0.317,
-        "speed": 4.55
+        "t": 0.25,
+        "speed": 5.38
       },
       {
         "hand": "right",
-        "t": 0.383,
-        "speed": 8.86
+        "t": 0.317,
+        "speed": 10.4
       }
     ]
   },
   "swordCutRightHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 2.87
+        "t": 0.058,
+        "speed": 3.63
       },
       {
         "hand": "left",
-        "t": 0.317,
-        "speed": 4.62
+        "t": 0.25,
+        "speed": 5.48
       },
       {
         "hand": "right",
-        "t": 0.408,
-        "speed": 12.4
+        "t": 0.325,
+        "speed": 14.37
       }
     ]
   },
   "swordCutDownLeftHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.308,
-        "speed": 4.02
+        "t": 0.242,
+        "speed": 4.71
       },
       {
         "hand": "right",
-        "t": 0.383,
-        "speed": 8.3
+        "t": 0.308,
+        "speed": 9.79
       }
     ]
   },
   "swordCutDownRightHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 2.01
-      },
-      {
-        "hand": "right",
-        "t": 0.108,
-        "speed": 5.84
+        "t": 0.058,
+        "speed": 2.54
       },
       {
         "hand": "left",
-        "t": 0.308,
-        "speed": 3.31
+        "t": 0.258,
+        "speed": 3.85
       },
       {
         "hand": "right",
-        "t": 0.367,
-        "speed": 10.24
+        "t": 0.283,
+        "speed": 15.61
       }
     ]
   },
   "swordCutUpLeftHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 2
+        "t": 0.058,
+        "speed": 2.53
       },
       {
         "hand": "left",
-        "t": 0.3,
-        "speed": 3.22
+        "t": 0.25,
+        "speed": 3.79
       },
       {
         "hand": "right",
-        "t": 0.433,
-        "speed": 6.9
+        "t": 0.35,
+        "speed": 7.76
       },
       {
         "hand": "right",
-        "t": 0.85,
-        "speed": 4.25
+        "t": 0.683,
+        "speed": 5.24
       }
     ]
   },
   "swordCutUpRightHeavy": {
     "source": "blender",
-    "duration": 0.983,
+    "duration": 0.783,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
-        "t": 0.075,
-        "speed": 2.79
+        "t": 0.058,
+        "speed": 3.54
       },
       {
         "hand": "left",
-        "t": 0.317,
-        "speed": 4.11
+        "t": 0.25,
+        "speed": 4.89
       },
       {
         "hand": "right",
-        "t": 0.425,
-        "speed": 19.73
+        "t": 0.342,
+        "speed": 20.79
       }
     ]
   },
   "swordBackhandHeavy": {
     "source": "blender",
-    "duration": 1.083,
+    "duration": 0.883,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.058,
+        "speed": 3.81
+      },
+      {
+        "hand": "left",
+        "t": 0.267,
+        "speed": 6.86
+      },
+      {
+        "hand": "right",
+        "t": 0.375,
+        "speed": 17.34
+      }
+    ]
+  },
+  "bladesCutStand": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.15,
+        "speed": 11.38
+      },
+      {
+        "hand": "left",
+        "t": 0.15,
+        "speed": 8.2
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 5.46
+      }
+    ]
+  },
+  "bladesCutDown": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.158,
+        "speed": 11.84
+      },
+      {
+        "hand": "left",
+        "t": 0.208,
+        "speed": 11.05
+      }
+    ]
+  },
+  "bladesCutUp": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 8.45
+      },
+      {
+        "hand": "left",
+        "t": 0.092,
+        "speed": 8.48
+      },
+      {
+        "hand": "right",
+        "t": 0.175,
+        "speed": 11.63
+      },
+      {
+        "hand": "left",
+        "t": 0.225,
+        "speed": 11.18
+      },
+      {
+        "hand": "right",
+        "t": 0.367,
+        "speed": 6.51
+      },
+      {
+        "hand": "left",
+        "t": 0.417,
+        "speed": 6.93
+      }
+    ]
+  },
+  "bladesCutLeft": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.15,
+        "speed": 12.96
+      },
+      {
+        "hand": "left",
+        "t": 0.15,
+        "speed": 9.84
+      },
+      {
+        "hand": "left",
+        "t": 0.367,
+        "speed": 5.52
+      }
+    ]
+  },
+  "bladesCutRight": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.025,
+        "speed": 10.76
+      },
+      {
+        "hand": "left",
+        "t": 0.092,
+        "speed": 10.5
+      },
+      {
+        "hand": "right",
+        "t": 0.175,
+        "speed": 16.89
+      },
+      {
+        "hand": "left",
+        "t": 0.225,
+        "speed": 16.82
+      }
+    ]
+  },
+  "bladesCutDownLeft": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 8.93
+      },
+      {
+        "hand": "left",
+        "t": 0.075,
+        "speed": 10.12
+      },
+      {
+        "hand": "right",
+        "t": 0.167,
+        "speed": 12.74
+      },
+      {
+        "hand": "left",
+        "t": 0.208,
+        "speed": 10.9
+      }
+    ]
+  },
+  "bladesCutDownRight": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.142,
+        "speed": 24.37
+      },
+      {
+        "hand": "left",
+        "t": 0.192,
+        "speed": 21.28
+      }
+    ]
+  },
+  "bladesCutUpLeft": {
+    "source": "blender",
+    "duration": 0.433,
     "loop": false,
     "peaks": [
       {
         "hand": "left",
         "t": 0.075,
-        "speed": 3.18
+        "speed": 7.08
+      },
+      {
+        "hand": "right",
+        "t": 0.167,
+        "speed": 9.96
+      },
+      {
+        "hand": "left",
+        "t": 0.233,
+        "speed": 8.38
+      },
+      {
+        "hand": "right",
+        "t": 0.367,
+        "speed": 8.26
+      },
+      {
+        "hand": "left",
+        "t": 0.417,
+        "speed": 7.35
+      }
+    ]
+  },
+  "bladesCutUpRight": {
+    "source": "blender",
+    "duration": 0.433,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.025,
+        "speed": 9.48
+      },
+      {
+        "hand": "right",
+        "t": 0.183,
+        "speed": 12.33
+      },
+      {
+        "hand": "left",
+        "t": 0.225,
+        "speed": 12.19
+      }
+    ]
+  },
+  "staffCutStand": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.2,
+        "speed": 10.07
       },
       {
         "hand": "left",
         "t": 0.333,
-        "speed": 5.55
+        "speed": 16.23
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.52,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.02,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutDown": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.067,
+        "speed": 8.17
+      },
+      {
+        "hand": "left",
+        "t": 0.158,
+        "speed": 2.04
       },
       {
         "hand": "right",
-        "t": 0.45,
-        "speed": 13.92
+        "t": 0.2,
+        "speed": 10.98
       }
-    ]
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.45,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.01,
+        0.09,
+        0.33,
+        0.6,
+        0.99,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutUp": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 5.83
+      },
+      {
+        "hand": "left",
+        "t": 0.042,
+        "speed": 2.32
+      },
+      {
+        "hand": "left",
+        "t": 0.183,
+        "speed": 2.43
+      },
+      {
+        "hand": "right",
+        "t": 0.217,
+        "speed": 10.14
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.71,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.75,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutLeft": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.158,
+        "speed": 4.65
+      },
+      {
+        "hand": "right",
+        "t": 0.2,
+        "speed": 11.67
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.46,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.79,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutRight": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.058,
+        "speed": 8.36
+      },
+      {
+        "hand": "left",
+        "t": 0.1,
+        "speed": 10.24
+      },
+      {
+        "hand": "right",
+        "t": 0.225,
+        "speed": 14.99
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        1,
+        0.03,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.7,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutDownLeft": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.05,
+        "speed": 2.7
+      },
+      {
+        "hand": "right",
+        "t": 0.067,
+        "speed": 7.12
+      },
+      {
+        "hand": "left",
+        "t": 0.175,
+        "speed": 3.76
+      },
+      {
+        "hand": "right",
+        "t": 0.217,
+        "speed": 10.97
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.49,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.73,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutDownRight": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.042,
+        "speed": 2.56
+      },
+      {
+        "hand": "left",
+        "t": 0.183,
+        "speed": 3.81
+      },
+      {
+        "hand": "right",
+        "t": 0.192,
+        "speed": 25.38
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.39,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.02,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.05,
+        0.85,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutUpLeft": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.158,
+        "speed": 3.73
+      },
+      {
+        "hand": "right",
+        "t": 0.217,
+        "speed": 8.62
+      },
+      {
+        "hand": "right",
+        "t": 0.483,
+        "speed": 5.81
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.71,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.91,
+        1,
+        1
+      ]
+    }
+  },
+  "staffCutUpRight": {
+    "source": "blender",
+    "duration": 0.567,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.042,
+        "speed": 7.67
+      },
+      {
+        "hand": "left",
+        "t": 0.042,
+        "speed": 3.35
+      },
+      {
+        "hand": "left",
+        "t": 0.167,
+        "speed": 3.72
+      },
+      {
+        "hand": "right",
+        "t": 0.242,
+        "speed": 11.15
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        0.29,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.73,
+        1,
+        1
+      ]
+    }
   }
 });

@@ -108,343 +108,559 @@
    "note": "wide swing from behind the shoulders, contact about 0.41 s"
   },
   "swordCutStandSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Stand cut, swift: from R to L",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Down cut, swift: from T to B",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Up cut, swift: from B to T",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Left cut, swift: from R to L",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "Right cut, swift: from L to R",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "DownLeft cut, swift: from TR to BL",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "DownRight cut, swift: from TL to BR",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "UpLeft cut, swift: from BR to TL",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightSwift": {
-   "seconds": 0.5167,
+   "seconds": 0.4167,
    "loop": false,
    "note": "UpRight cut, swift: from BL to TR",
    "marks": [
-    0.156,
-    0.21,
-    0.28
+    0.14,
+    0.185,
+    0.24
    ],
    "from": "BL",
    "to": "TR"
   },
   "swordBackhandSwift": {
-   "seconds": 0.6,
+   "seconds": 0.4833,
    "loop": false,
    "note": "backhand, swift: from the left side round to behind the body"
   },
   "swordCutStandBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Stand cut, balanced: from R to L",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Down cut, balanced: from T to B",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Up cut, balanced: from B to T",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Left cut, balanced: from R to L",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "Right cut, balanced: from L to R",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "DownLeft cut, balanced: from TR to BL",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "DownRight cut, balanced: from TL to BR",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "UpLeft cut, balanced: from BR to TL",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightBalanced": {
-   "seconds": 0.6833,
+   "seconds": 0.5333,
    "loop": false,
    "note": "UpRight cut, balanced: from BL to TR",
    "marks": [
-    0.215,
-    0.2825,
-    0.38
+    0.166,
+    0.22,
+    0.29
    ],
    "from": "BL",
    "to": "TR"
   },
   "swordBackhandBalanced": {
-   "seconds": 0.7833,
+   "seconds": 0.6167,
    "loop": false,
    "note": "backhand, balanced: from the left side round to behind the body"
   },
   "swordCutStandHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Stand cut, heavy: from R to L",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutDownHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Down cut, heavy: from T to B",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "T",
    "to": "B"
   },
   "swordCutUpHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Up cut, heavy: from B to T",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "B",
    "to": "T"
   },
   "swordCutLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Left cut, heavy: from R to L",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "R",
    "to": "L"
   },
   "swordCutRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "Right cut, heavy: from L to R",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "L",
    "to": "R"
   },
   "swordCutDownLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "DownLeft cut, heavy: from TR to BL",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "TR",
    "to": "BL"
   },
   "swordCutDownRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "DownRight cut, heavy: from TL to BR",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "TL",
    "to": "BR"
   },
   "swordCutUpLeftHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "UpLeft cut, heavy: from BR to TL",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "BR",
    "to": "TL"
   },
   "swordCutUpRightHeavy": {
-   "seconds": 0.9833,
+   "seconds": 0.7833,
    "loop": false,
    "note": "UpRight cut, heavy: from BL to TR",
    "marks": [
-    0.327,
-    0.4125,
-    0.56
+    0.258,
+    0.33,
+    0.45
    ],
    "from": "BL",
    "to": "TR"
   },
   "swordBackhandHeavy": {
-   "seconds": 1.0833,
+   "seconds": 0.8833,
    "loop": false,
    "note": "backhand, heavy: from the left side round to behind the body"
+  },
+  "bladesCutStand": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Stand cut with the blades: from R to L",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "bladesCutDown": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Down cut with the blades: from T to B",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "T",
+   "to": "B"
+  },
+  "bladesCutUp": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Up cut with the blades: from B to T",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "B",
+   "to": "T"
+  },
+  "bladesCutLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Left cut with the blades: from R to L",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "bladesCutRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "Right cut with the blades: from L to R",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "L",
+   "to": "R"
+  },
+  "bladesCutDownLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "DownLeft cut with the blades: from TR to BL",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "TR",
+   "to": "BL"
+  },
+  "bladesCutDownRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "DownRight cut with the blades: from TL to BR",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "TL",
+   "to": "BR"
+  },
+  "bladesCutUpLeft": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "UpLeft cut with the blades: from BR to TL",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "BR",
+   "to": "TL"
+  },
+  "bladesCutUpRight": {
+   "seconds": 0.4333,
+   "loop": false,
+   "note": "UpRight cut with the blades: from BL to TR",
+   "marks": [
+    0.13,
+    0.175,
+    0.23
+   ],
+   "from": "BL",
+   "to": "TR"
+  },
+  "staffCutStand": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Stand cut with the staff: from R to L",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "staffCutDown": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Down cut with the staff: from T to B",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "T",
+   "to": "B"
+  },
+  "staffCutUp": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Up cut with the staff: from B to T",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "B",
+   "to": "T"
+  },
+  "staffCutLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Left cut with the staff: from R to L",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "R",
+   "to": "L"
+  },
+  "staffCutRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "Right cut with the staff: from L to R",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "L",
+   "to": "R"
+  },
+  "staffCutDownLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "DownLeft cut with the staff: from TR to BL",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "TR",
+   "to": "BL"
+  },
+  "staffCutDownRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "DownRight cut with the staff: from TL to BR",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "TL",
+   "to": "BR"
+  },
+  "staffCutUpLeft": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "UpLeft cut with the staff: from BR to TL",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "BR",
+   "to": "TL"
+  },
+  "staffCutUpRight": {
+   "seconds": 0.5667,
+   "loop": false,
+   "note": "UpRight cut with the staff: from BL to TR",
+   "marks": [
+    0.169,
+    0.2275,
+    0.31
+   ],
+   "from": "BL",
+   "to": "TR"
   }
  }
 }

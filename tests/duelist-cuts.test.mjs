@@ -27,7 +27,8 @@ test('nine lines in each of three modes, each a sword strike with a clip of its 
       assert.ok(Math.abs(clip.duration - total) < 1 / 60 + 1e-6, `${id}: the clip is as long as the move (${clip.duration} s, ${total.toFixed(3)} s)`);
       assert.equal(MOVE_MOTION[id].segments[0].clip, id);
       // the sword hand is fastest while the blade is in front: inside the move's active part, give or take a frame
-      const peak = clip.peaks.filter((p) => p.hand[0] === 'r').sort((a, b) => b.speed - a.speed)[0];
+      // (up to the end of the follow-through: a quick mode may come back to its stance faster still)
+      const peak = clip.peaks.filter((p) => p.hand[0] === 'r' && p.t < move.startup + move.active + 0.06).sort((a, b) => b.speed - a.speed)[0];
       assert.ok(peak.t > move.startup - 1 / 30 && peak.t < move.startup + move.active + 1 / 30, `${id}: the hand peaks at ${peak.t} s, contact from ${move.startup} s`);
     }
   }
@@ -108,10 +109,10 @@ test('one click is one cut: a press too early is dropped, a press in the strike 
   press(f, 'light', 0);
   // pressed again early in the wind-up (but not hard on the first: that is the whirl, below): it waits a moment
   // only, and is gone before the window opens
-  let t = run(f, 0, 0.2);
+  let t = run(f, 0, 0.18);
   assert.equal(press(f, 'light', t).reason, 'buffered');
-  f.buffer.at -= 0.2; // as if it had been waiting that much longer
-  t = run(f, t, f.action.move.chain.from - 0.21);
+  f.buffer.at = t - 0.26; // as if it had been waiting longer than a press is kept
+  t = run(f, t, 1 / 60);
   assert.equal(f.buffer, null, 'dropped: the press came too early to count');
   assert.equal(f.action.id, 'swordCutStandBalanced');
   // let alone, the cut runs out into the stance and the same cut may be made again
@@ -227,4 +228,37 @@ test('a cut does not root the fighter: it moves on under it at the mode\'s share
   // (it follows its own clip, which leans a little; running would have carried it half a metre to the side)
   assert.equal(bodyOf(w, 'a').speed, 0, 'the stick does not move it through its wind-up');
   assert.ok(Math.abs(bodyOf(w, 'a').x) < 0.15, `it went ${bodyOf(w, 'a').x.toFixed(2)} m to the side`);
+});
+
+test('the twin blades and the staff cut the same nine lines, each in one mode, with clips of their own', async () => {
+  const { FORM_CUT_IDS, FORM_TIMING, formCutId, snapFor } = await import('../src/components/duelist/core/index.mjs');
+  assert.equal(FORM_CUT_IDS.length, 18);
+  for (const [weapon, links] of [['dualBlades', 4], ['staff', 3]]) {
+    const t = FORM_TIMING[weapon];
+    const total = t.wind + t.cut + t.hold + t.rec;
+    assert.equal(FLOW[weapon].chain.length, links);
+    for (const direction of ['stand', ...CUT_DIRECTIONS]) {
+      const id = formCutId(weapon, direction);
+      const move = MOVES[id];
+      assert.equal(move?.weapon, weapon, id);
+      assert.deepEqual([move.cut.from, move.cut.to], [CUT_LINES[direction].from, CUT_LINES[direction].to]);
+      assert.ok(move.mobile > 0, `${id}: the legs keep going under it`);
+      assert.equal(MOTION_CLIPS[id]?.source, 'blender', `${id}: a clip of that name`);
+      assert.ok(Math.abs(MOTION_CLIPS[id].duration - total) < 1 / 60 + 1e-6, `${id}: as long as the move`);
+      const f = createFighter({ id: 'a', weapon });
+      assert.equal(press(f, 'light', 0, { direction: direction === 'stand' ? null : direction }).id, id);
+    }
+    // the cut back along the line starts part-way in, as the sword's does
+    assert.ok(cutLead(MOVES[formCutId(weapon, 'left')], MOVES[formCutId(weapon, 'right')]) > 0);
+    // a second press hard on the first: three moves the form already had, one cooldown for all
+    const f = createFighter({ id: 'a', weapon });
+    press(f, 'light', 0, { direction: 'forward' });
+    const snap = press(f, 'light', run(f, 0, 0.05), { direction: 'forward' });
+    assert.equal(snap.id, snapFor(weapon, 'forward', 'forward'));
+    assert.equal(MOVES[snap.id].weapon, weapon);
+    assert.deepEqual(press(createFighter({ id: 'b', weapon }), 'mode', 0), { accepted: false, reason: 'weapon' }, 'one mode only: no mode key');
+  }
+  assert.ok(MOVES.bladesCutLeft.startup < MOVES.swordCutLeftBalanced.startup, 'the blades are quicker than the sword');
+  assert.ok(MOVES.staffCutLeft.range > MOVES.swordCutLeftBalanced.range, 'the staff reaches farther');
+  assert.ok(MOVES.bladesCutLeft.veilMultiplier > 1, 'the blades are hard on the Veil');
 });

@@ -12,7 +12,7 @@ import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
-import { CUT_MODES, DEFAULT_MODE, CLASS_MODE, modeOf, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection, SNAP, SNAP_COOLDOWN, SNAP_IDS, snapMove } from './cuts.mjs';
+import { CUT_MODES, DEFAULT_MODE, CLASS_MODE, modeOf, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection, SNAP, SNAP_COOLDOWN, snapSet, snapFor } from './cuts.mjs';
 import { cleanBoost } from './progression.mjs';
 import { equipItems } from './shop.mjs';
 
@@ -197,6 +197,7 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   }
   if (command === 'mode') { // the next of the three modes (the sword's cuts: core/cuts.mjs); it takes the next strike
     if (CLASS_MODE[f.classId]) return { accepted: false, reason: 'class' }; // a class fights in its own mode
+    if (Object.keys(FLOW[f.weapon]?.modes || {}).length < 2) return { accepted: false, reason: 'weapon' }; // one mode only
     f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
     f.events.push({ type: 'mode', mode: f.mode, at: now });
     return { accepted: true, mode: f.mode };
@@ -204,11 +205,11 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   // a second press hard on the first turns the cut into the whirl, the cross or the backhand (core/cuts.mjs)
   const a = f.action;
   if (command === 'light' && !fromBuffer && a?.move.cut && a.t - (a.from || 0) <= SNAP) {
-    const snap = snapMove(a.move.cut.direction, direction, modeOf(f));
+    const snap = snapFor(f.weapon, a.move.cut.direction, direction, modeOf(f));
     if (!blockedReason(f, snap, now)) {
       f.events.push({ type: 'interrupt', id: a.id, by: snap, at: now });
       f.action = null;
-      for (const other of SNAP_IDS) f.cooldowns[other] = now + SNAP_COOLDOWN; // one cooldown for all of them
+      for (const other of snapSet(f.weapon)) f.cooldowns[other] = now + SNAP_COOLDOWN; // one cooldown for all of them
       return startMove(f, snap, now, a.id, a.link || 1);
     }
   }

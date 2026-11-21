@@ -26,9 +26,9 @@ export const CUT_PACE = Object.freeze({ swift: 0.85, balanced: 0.7, heavy: 0.5 }
 // Seconds of wind-up, cut, hold and recovery. KEEP IN STEP with tools/duelist/blender/cut_grid.py CUT_MODES
 // (tests/duelist-cuts.test.mjs compares the clips with these).
 export const CUT_TIMING = Object.freeze({
-  swift: Object.freeze({ wind: 0.12, cut: 0.12, hold: 0.04, rec: 0.24 }),
-  balanced: Object.freeze({ wind: 0.17, cut: 0.15, hold: 0.06, rec: 0.3 }),
-  heavy: Object.freeze({ wind: 0.27, cut: 0.19, hold: 0.1, rec: 0.42 }),
+  swift: Object.freeze({ wind: 0.11, cut: 0.1, hold: 0.03, rec: 0.18 }),
+  balanced: Object.freeze({ wind: 0.13, cut: 0.12, hold: 0.04, rec: 0.24 }),
+  heavy: Object.freeze({ wind: 0.21, cut: 0.16, hold: 0.08, rec: 0.34 }),
 });
 // The blade meets what is in front between these shares of the cut (the clip's contact, the move's active part).
 export const CONTACT = Object.freeze([0.3, 0.75]);
@@ -88,7 +88,8 @@ export const LEAD_SHARE = 0.45;
 /** Seconds of its wind-up a cut skips when it follows `prev` in a chain (both are moves; 0 unless both are cuts). */
 export function cutLead(prev, next) {
   if (!prev?.cut || !next?.cut) return 0;
-  return round(CUT_TIMING[next.cut.mode].wind * LEAD_SHARE * (1 - steps(prev.cut.to, next.cut.from) / 4));
+  const wind = (next.cut.form ? FORM_TIMING[next.cut.form] : CUT_TIMING[next.cut.mode]).wind;
+  return round(wind * LEAD_SHARE * (1 - steps(prev.cut.to, next.cut.from) / 4));
 }
 /** The stick's way for a form without cuts of its own (twin blades, staff): forward | side | back. */
 export const flowDirection = (d) => (!d ? null : d === 'left' || d === 'right' || d === 'side' ? 'side' : d.startsWith('back') ? 'back' : 'forward');
@@ -111,9 +112,9 @@ const WAY = Object.freeze({ forward: 0, forwardRight: 45, right: 90, backRight: 
 const SNAP_MODE = Object.freeze({ swift: { time: 0.85, damage: 0.75, stamina: 8 }, balanced: { time: 1, damage: 1, stamina: 10 }, heavy: { time: 1.25, damage: 1.4, stamina: 13 } });
 // The backhand's own seconds. KEEP IN STEP with tools/duelist/blender/cut_grid.py BACKHAND_MODES.
 export const BACKHAND_TIMING = Object.freeze({
-  swift: Object.freeze({ wind: 0.12, cut: 0.16, hold: 0.06, rec: 0.26 }),
-  balanced: Object.freeze({ wind: 0.16, cut: 0.2, hold: 0.08, rec: 0.34 }),
-  heavy: Object.freeze({ wind: 0.24, cut: 0.26, hold: 0.12, rec: 0.46 }),
+  swift: Object.freeze({ wind: 0.1, cut: 0.13, hold: 0.05, rec: 0.2 }),
+  balanced: Object.freeze({ wind: 0.13, cut: 0.16, hold: 0.06, rec: 0.27 }),
+  heavy: Object.freeze({ wind: 0.2, cut: 0.21, hold: 0.1, rec: 0.37 }),
 });
 export const BACKHAND_CONTACT = Object.freeze([0.5, 0.95]); // the blade is past the sword side and going round behind
 const SNAP_KINDS = Object.freeze({
@@ -153,4 +154,48 @@ export function snapMove(first, second, mode = DEFAULT_MODE) {
   if (to === undefined) return snapId('whirl', mode);
   const turn = Math.abs(((to - from + 540) % 360) - 180); // degrees between the two ways, 0 to 180
   return snapId(turn < 45 ? 'whirl' : turn >= 135 ? 'backhand' : 'cross', mode);
+}
+
+// ---- The twin blades and the staff cut the same nine lines, each in one mode of its own: the blades rapid and
+// light and hard on the Veil (the second blade cuts the line in a mirror, a beat behind), the staff long and wide.
+// Seconds: KEEP IN STEP with tools/duelist/blender/cut_grid.py FORM_MODES.
+export const FORM_TIMING = Object.freeze({
+  dualBlades: Object.freeze({ wind: 0.1, cut: 0.1, hold: 0.03, rec: 0.2 }),
+  staff: Object.freeze({ wind: 0.13, cut: 0.13, hold: 0.05, rec: 0.25 }),
+});
+const FORM = Object.freeze({
+  dualBlades: { prefix: 'bladesCut', damage: 0.62, stamina: 4, range: -0.25, arc: 0, veil: 1.35, stagger: 0.8, pace: 0.85 },
+  staff: { prefix: 'staffCut', damage: 0.9, stamina: 6, range: 0.3, arc: 20, veil: 1, stagger: 1, pace: 0.7 },
+});
+export const formCutId = (weapon, direction) => `${FORM[weapon].prefix}${CUT_LINES[direction || 'stand'].name}`;
+export const FORM_CUT_SPECS = Object.freeze(Object.fromEntries(Object.entries(FORM).flatMap(([weapon, k]) => Object.entries(CUT_LINES).map(([direction, line]) => {
+  const t = FORM_TIMING[weapon];
+  const frames = { startup: round(t.wind + CONTACT[0] * t.cut), active: round((CONTACT[1] - CONTACT[0]) * t.cut), recovery: round((1 - CONTACT[1]) * t.cut + t.hold + t.rec) };
+  const hitEnd = round(frames.startup + frames.active);
+  return [formCutId(weapon, direction), {
+    weapon, ...frames, stamina: k.stamina, damage: Math.max(3, Math.round(line.damage * k.damage)), range: round(line.range + k.range), arc: Math.min(360, line.arc + k.arc),
+    knockback: line.knockback || 0, stagger: round(Math.max(0.2, (line.stagger || 0.25) * k.stagger)),
+    shieldMultiplier: line.shieldMultiplier || 1, veilMultiplier: round((line.veilMultiplier || 1) * k.veil),
+    chain: { from: round(hitEnd + 0.02), to: round(hitEnd + frames.recovery - 0.03) }, cancelInto: ['movement', 'power'], cancelFrom: round(hitEnd + 0.06),
+    mobile: k.pace, cut: Object.freeze({ direction, form: weapon, from: line.from, to: line.to }),
+  }];
+}))));
+export const FORM_CUT_IDS = Object.freeze(Object.keys(FORM_CUT_SPECS));
+/** A cut's clip times (seconds): its start, the contact's start and end, and its end. Sword and forms alike. */
+export function cutMarks(spec) {
+  const t = spec.cut.form ? FORM_TIMING[spec.cut.form] : CUT_TIMING[spec.cut.mode];
+  return [0, t.wind + CONTACT[0] * t.cut, t.wind + CONTACT[1] * t.cut, t.wind + t.cut + t.hold + t.rec];
+}
+// What a second press hard on the first turns a cut into with these forms: moves they already had (the blades'
+// turn in the air, wide sweep and turn; the staff's turning sweep, wide swing and leap).
+const FORM_SNAPS = Object.freeze({
+  dualBlades: Object.freeze({ whirl: 'bladesLight4', cross: 'bladesSweep', backhand: 'bladesTurn' }),
+  staff: Object.freeze({ whirl: 'staffLight2', cross: 'staffSweep', backhand: 'staffLeap' }),
+});
+/** The moves that share the one cooldown, for a weapon. */
+export const snapSet = (weapon) => (FORM_SNAPS[weapon] ? Object.values(FORM_SNAPS[weapon]) : SNAP_IDS);
+/** snapMove for any weapon that cuts by direction. */
+export function snapFor(weapon, first, second, mode = DEFAULT_MODE) {
+  const id = snapMove(first, second, mode);
+  return FORM_SNAPS[weapon] ? FORM_SNAPS[weapon][SNAP_SPECS[id].snap.kind] : id;
 }

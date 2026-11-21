@@ -662,7 +662,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             specialTier: mine?.classId ? specialTier(mine.matchBoost) : null,
             matchBoost: mine?.matchBoost ?? 0,
             // the sword's mode (swift, balanced, heavy): only a form that cuts by direction has one
-            mode: mine && FLOW[mine.weapon]?.modes ? modeOf(mine) : null,
+            mode: mine && Object.keys(FLOW[mine.weapon]?.modes || {}).length > 1 ? modeOf(mine) : null, // the twin blades and the staff have one
             modeKey: mine && CLASS_MODE[mine.classId] ? null : keyLabel(controls.keys.mode, { short: true }), // a class has one mode: no key
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
