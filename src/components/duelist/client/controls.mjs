@@ -2,7 +2,7 @@
 // What each key and mouse button does is the player's own choice (client/bindings.mjs; Settings). The
 // defaults: WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard
 // parries) · Space jump · C roll · Alt dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
-// go to throw), Veil Breach) · Q the special · R Veil Breach · Z resist · Tab lock on · F (hold) use what is in
+// go to throw), Veil Breach) · Q the special · R Veil Breach · Z resist · Tab shop · middle click lock on · F (hold) use what is in
 // front of you. Mouse look: click to capture the mouse, Esc releases it.
 /* global window, document */
 import * as THREE from 'three';
@@ -11,7 +11,7 @@ import { DEFAULT_KEYS, KIND, keysFrom, actionFor } from './bindings.mjs';
 const AIMED = new Set(['light', 'heavy', 'ability1', 'ability2', 'ability3', 'ability4', 'special', 'breach']);
 
 /** keys: the player's bindings ({ action: code }; anything missing is a default). */
-export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } = {}) {
+export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, onShopToggle = null } = {}) {
   const bound = keysFrom(keys);
   const held = new Set(); // actions held down right now
   const presses = [];
@@ -40,9 +40,15 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     if (KIND[action] === 'ability') presses.push('release');
   };
   const onKeyDown = (e) => {
-    if (paused) return;
     const mine = actionFor(bound, e.code);
-    if (mine) e.preventDefault(); // Tab, Space and the like do nothing else while playing
+    // The shop's toggle must work while movement/combat controls are paused by an open shop.
+    if (mine === 'shop') {
+      e.preventDefault();
+      if (!e.repeat) onShopToggle?.();
+      return;
+    }
+    if (paused) return;
+    if (mine) e.preventDefault(); // Space and other bound game keys do not trigger browser actions
     if (!e.repeat) down(e.code);
   };
   const onKeyUp = (e) => {
@@ -50,9 +56,15 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     up(e.code);
   };
   const onMouseDown = (e) => {
+    const code = `Mouse${e.button}`;
+    const action = actionFor(bound, code);
+    if (action === 'shop') { e.preventDefault(); onShopToggle?.(); return; }
     if (paused) return;
+    // A middle click must lock the nearest target even when this is the first click on the canvas.
+    // Do not require an earlier click solely to capture the pointer.
+    if (action === 'lock') { down(code); e.preventDefault(); return; }
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock?.()?.catch?.(() => {}); return; }
-    down(`Mouse${e.button}`);
+    down(code);
     e.preventDefault();
   };
   const onMouseUp = (e) => up(`Mouse${e.button}`);
@@ -62,6 +74,8 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     pitch = THREE.MathUtils.clamp(pitch + e.movementY * 0.0022 * sensitivity, -0.2, 1.1);
   };
   const onContext = (e) => e.preventDefault();
+  // Middle-click target lock must not activate the browser's auto-scroll behavior.
+  const onAuxClick = (e) => { if (e.button === 1) e.preventDefault(); };
   // the window lost focus: whatever was held is let go (a raised guard drops, a held grip throws)
   const onBlur = () => {
     if (['ability1', 'ability2', 'ability3', 'ability4'].some((a) => held.has(a))) presses.push('release');
@@ -74,6 +88,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
   window.addEventListener('mouseup', onMouseUp);
   window.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('contextmenu', onContext);
+  canvas.addEventListener('auxclick', onAuxClick);
   window.addEventListener('blur', onBlur);
 
   return {
@@ -121,6 +136,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
       window.removeEventListener('mouseup', onMouseUp);
       window.removeEventListener('mousemove', onMouseMove);
       canvas.removeEventListener('contextmenu', onContext);
+      canvas.removeEventListener('auxclick', onAuxClick);
       window.removeEventListener('blur', onBlur);
       if (document.pointerLockElement === canvas) document.exitPointerLock?.();
     },
