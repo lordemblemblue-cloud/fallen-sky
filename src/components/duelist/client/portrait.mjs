@@ -47,7 +47,9 @@ export function takePortrait(renderer, scene, actor, { size = 192 } = {}) {
     const out = document.createElement('canvas');
     out.width = px;
     out.height = px;
-    out.getContext('2d').drawImage(canvas, 0, canvas.height - px, px, px, 0, 0, px, px); // the viewport's corner is the canvas's bottom left
+    const pen = out.getContext('2d');
+    pen.filter = 'brightness(1.7) contrast(1.05) saturate(1.1)'; // the arena is dark: a portrait wants a lit face
+    pen.drawImage(canvas, 0, canvas.height - px, px, px, 0, 0, px, px); // the viewport's corner is the canvas's bottom left
     url = out.toDataURL('image/jpeg', 0.88);
   } catch {
     url = null;

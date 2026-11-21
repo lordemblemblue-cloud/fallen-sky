@@ -8,7 +8,6 @@ export function createFootballProps(scene, radius) {
   const resources = [];
   const use = (resource) => { resources.push(resource); return resource; };
   const white = use(new THREE.MeshBasicMaterial({ color: 0xbfe4e6, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
-  const dark = use(new THREE.MeshStandardMaterial({ color: 0x182e37, metalness: 0.25, roughness: 0.46 }));
   const ballMat = use(new THREE.MeshStandardMaterial({ color: 0xf7f1d4, roughness: 0.4, metalness: 0.08, emissive: 0x33413d }));
   const line = (width, length, x, z) => {
     const floor = new THREE.Mesh(use(new THREE.PlaneGeometry(width, length)), white);

@@ -9,6 +9,10 @@
 // flash their hexes, wounds spark red, blocks and parries spark white; a collapsing Veil shatters.
 // Pooled; nothing is allocated per frame except short-lived vectors.
 import * as THREE from 'three';
+import { CLASSES, SPECIAL_BALANCE } from '../core/classes.mjs';
+
+// the colour of each lasting effect (core/abilities.mjs)
+export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, misdirected: 0xb779ff, mend: 0x6dffb0, levitate: 0xcfe9ff });
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
   wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });
@@ -497,6 +501,35 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   };
   let time = 0;
   const thrown = new Map(); // actor -> seconds of trail left
+  // Sanctuary domes: zone id -> { group, left, ttl, materials }
+  const zones = new Map();
+  const bladeGeometry = new THREE.BoxGeometry(0.07, 0.02, 1.0);
+  const addZone = (e) => {
+    if (zones.has(e.id)) return;
+    const hex = CLASSES.healer.color;
+    const dome = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    const rim = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(new THREE.SphereGeometry(e.radius, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2), dome));
+    const ring = new THREE.Mesh(new THREE.RingGeometry(e.radius - 0.09, e.radius, 72), rim);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.04;
+    group.add(ring);
+    group.position.set(e.x, 0, e.z);
+    scene.add(group);
+    const ttl = SPECIAL_BALANCE.sanctuaryDurationSeconds;
+    zones.set(e.id, { group, left: ttl, ttl, dome, rim });
+    warp?.ring({ at: new THREE.Vector3(e.x, 0.6, e.z), kind: 'out', r0: 0.3, r1: e.radius, strength: 0.04, ttl: 0.5 });
+    arena?.arc({ x: e.x, z: e.z, arc: 360, from: 0.4, to: e.radius, width: 0.7, strength: 1.1, ttl: 0.6 });
+  };
+  const dropZone = (id) => {
+    const z = zones.get(id);
+    if (!z) return;
+    z.group.removeFromParent();
+    z.group.traverse((o) => o.geometry?.dispose());
+    z.dome.dispose(); z.rim.dispose();
+    zones.delete(id);
+  };
 
   return {
     /** A power's wind-up: the free hand gathers light. kind: push | pull | grip | breach */
@@ -642,13 +675,47 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         burst(target.chest(), 60, 3, { hex: 0x8fa0b8, size: 0.06, ttl: 1.3, damping: 1.5, fall: 3 });
         feel.shake = 0.4; feel.stop = 0.12;
       }
+      // ---- the classes' abilities
+      if (e.type === 'effect') {
+        const who = actors[e.target];
+        const hex = EFFECT_COLORS[e.effect];
+        if (who && hex) {
+          const chest = who.chest();
+          const rage = e.effect === 'rage';
+          shells.flash({ follow: who.root, hex, ripple: false, ttl: rage ? 0.7 : 0.5, grow: rage ? 1.2 : 0.6 });
+          burst(chest, rage ? 70 : 30, rage ? 6 : 3, { hex, size: 0.05, ttl: 0.6, damping: 2 });
+          flashes.flash(chest, hex, rage ? 12 : 6, 0.3);
+          if (rage) { warp?.ring({ at: chest, kind: 'out', r0: 0.3, r1: 5, strength: 0.05, ttl: 0.5 }); feel.shake = 0.4; }
+        }
+      }
+      if (e.type === 'heal' && actors[e.target]) burst(actors[e.target].chest(), 34, 1.6, { hex: EFFECT_COLORS.mend, size: 0.05, ttl: 0.9, damping: 1.2, fall: -1.6 });
+      if (e.type === 'zone') addZone(e);
+      if (e.type === 'uncloak' && actors[e.fighter]) burst(actors[e.fighter].chest(), 24, 2.5, { hex: EFFECT_COLORS.cloak, size: 0.05, ttl: 0.5, damping: 2 });
+      if (e.type === 'counter' && target) {
+        const at = target.hand();
+        burst(at, 30, 6, { hex: COLORS.parry, size: 0.05, ttl: 0.35, damping: 5 });
+        flashes.flash(at, COLORS.parry, 10, 0.2);
+        feel.shake = 0.35; feel.stop = 0.06;
+      }
+      if (e.type === 'execution' && target) {
+        const chest = target.chest();
+        const hex = CLASSES[source?.classId]?.color ?? COLORS.core;
+        shardBurst(chest, 26, 6, hex, { fall: 8 });
+        burst(chest, 60, 6, { hex, size: 0.06, ttl: 0.7, damping: 2.5 });
+        warp?.ring({ at: chest, kind: 'out', r0: 0.2, r1: 3.5, strength: 0.05, ttl: 0.45 });
+        flashes.flash(chest, hex, 14, 0.35);
+        feel.shake = 0.7; feel.stop = 0.12;
+      }
       if (e.type === 'projectile' && source) {
         const sidearm = String(e.move).startsWith('sidearm');
-        const hex = sidearm ? COLORS.round : 0xbfefff;
-        const mesh = new THREE.Mesh(boltGeometry, sidearm ? roundMaterial : boltMaterial);
+        const blade = e.move === 'bladeThrow';
+        const hex = sidearm ? COLORS.round : blade ? CLASSES[source.classId]?.color ?? 0xbfefff : 0xbfefff;
+        const mesh = blade
+          ? new THREE.Mesh(bladeGeometry, new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending }))
+          : new THREE.Mesh(boltGeometry, sidearm ? roundMaterial : boltMaterial);
         mesh.position.set(e.x, 1.35, e.z);
         mesh.lookAt(e.x + e.dir.x, 1.35, e.z + e.dir.z);
-        mesh.userData = { dir: e.dir, speed: e.speed || (e.move === 'sniperShot' ? 140 : 60), hex };
+        mesh.userData = { dir: e.dir, speed: e.speed || (e.move === 'sniperShot' ? 140 : 60), hex, spin: blade ? 22 : 0, own: blade };
         scene.add(mesh);
         bolts.set(e.id, mesh);
         // the muzzle
@@ -660,7 +727,12 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       }
       if (e.type === 'projectileEnd') {
         const mesh = bolts.get(e.id);
-        if (mesh) { burst(mesh.position, 12, 3, { hex: mesh.userData.hex, size: 0.04, ttl: 0.3 }); mesh.removeFromParent(); bolts.delete(e.id); }
+        if (mesh) {
+          burst(mesh.position, 12, 3, { hex: mesh.userData.hex, size: 0.04, ttl: 0.3 });
+          mesh.removeFromParent();
+          if (mesh.userData.own) mesh.material.dispose();
+          bolts.delete(e.id);
+        }
       }
       return feel;
     },
@@ -673,7 +745,18 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       shards.update(dt);
       tears.update(dt);
       flashes.update(dt);
-      for (const mesh of bolts.values()) mesh.position.addScaledVector(new THREE.Vector3(mesh.userData.dir.x, 0, mesh.userData.dir.z), mesh.userData.speed * dt);
+      for (const mesh of bolts.values()) {
+        mesh.position.addScaledVector(new THREE.Vector3(mesh.userData.dir.x, 0, mesh.userData.dir.z), mesh.userData.speed * dt);
+        if (mesh.userData.spin) mesh.rotateY(mesh.userData.spin * dt); // a thrown blade turns end over end
+      }
+      // a Sanctuary breathes while it stands and thins out as it ends
+      for (const [id, z] of zones) {
+        z.left -= dt;
+        if (z.left <= 0) { dropZone(id); continue; }
+        const k = Math.min(1, z.left / 0.6) * Math.min(1, (z.ttl - z.left) / 0.3);
+        z.dome.opacity = (0.08 + 0.03 * Math.sin(time * 3)) * k;
+        z.rim.opacity = 0.7 * k;
+      }
       // the grip: ribbons, the warped lens around the held body, motes swirling round it
       const lenses = [];
       if (grips.length && camera) {
@@ -702,9 +785,21 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         for (let i = 0; i < 3; i++) particles.spawn(c.x + rand(0.25), c.y + rand(0.4), c.z + rand(0.25), 0, 0.2, 0, { hex: i ? COLORS.telekinesis : COLORS.core, size: 0.06, ttl: 0.35, damping: 1 });
       }
     },
+    /** While an effect lasts, motes in its colour rise round the body. kinds: the fighter's effects right now. */
+    aura(actor, kinds, dt) {
+      for (const kind of kinds) {
+        const hex = EFFECT_COLORS[kind];
+        if (!hex || Math.random() > dt * (kind === 'rage' ? 40 : 16)) continue;
+        const c = actor.chest();
+        particles.spawn(c.x + rand(0.35), c.y + rand(0.6) - 0.2, c.z + rand(0.35), rand(0.3), 0.6 + Math.random() * 0.8, rand(0.3),
+          { hex, size: kind === 'rage' ? 0.06 : 0.04, ttl: 0.6, damping: 1.2 });
+      }
+    },
     dispose() {
       particles.dispose(); shells.dispose(); cones.dispose(); tether.dispose(); shards.dispose(); tears.dispose(); flashes.dispose();
-      for (const mesh of bolts.values()) mesh.removeFromParent();
+      for (const mesh of bolts.values()) { mesh.removeFromParent(); if (mesh.userData.own) mesh.material.dispose(); }
+      for (const id of [...zones.keys()]) dropZone(id);
+      bladeGeometry.dispose();
       boltGeometry.dispose(); boltMaterial.dispose(); roundMaterial.dispose();
     },
   };

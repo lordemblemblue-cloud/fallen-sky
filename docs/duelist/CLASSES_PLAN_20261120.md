@@ -57,14 +57,32 @@ Changes from the first contract, and why:
 Balance numbers are first proposals for playtesting (`SPECIAL_BALANCE` and the class table in
 `core/classes.mjs`).
 
-## Order of work
+## Status (2026-11-20, branch `claude/duelist-rebuild-20261118`)
 
-1. Class kits in the shared rules, server-authoritative: class picker before a match and on respawn, the class
-   request on the wire, the HUD's ability bank and special ring wired to real values.
-2. Class weapons and move sets: red and blue blades, twin blades, the double-bladed staff; twin-blade clips made
-   from the sword clips (mirrored for the left hand), staff clips keyed for two hands, all smoothed in Blender.
-3. Transport (escort): a payload that moves while attackers walk with it and no defender contests it,
-   checkpoints that add time, defenders win when time runs out.
-4. The match HUD layout the owner described.
-5. The home screen: a starport dock scene with the chosen fighter idling, looking around and at the camera.
-6. Bots that play each class; a balance pass.
+Built and tested (138 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
+
+- **The four kits, server-authoritative** (`core/classes.mjs`, `core/abilities.mjs`, `core/moves.mjs`,
+  `sim/world.mjs`, `core/combat.mjs`, `sim/match.mjs`): every ability and special in the table above, the
+  passives, the seat-owned special meter (charged by a player's landed hits, heals on allies, eliminations and
+  objectives; spent by the special). Keys 1-4 are the class's abilities, Q the special, R Veil Breach.
+- **On the wire** (protocol 4): `join` carries the class, a `class` message queues a change for the next spawn,
+  snapshots carry each fighter's class and effects. Bots take the four classes in turn and use their kits.
+- **In the browser**: the class picker (before the fight, between rounds, while down, or from the class symbol by
+  the HP bar), class weapons (red blade, blue blade, gold twin blades, violet double-bladed staff), effects for
+  every ability (bursts, lasting motes, the Sanctuary dome, a thrown blade that spins, a cloaked fighter as a
+  ghost of itself), and the owner's HUD (`client/DuelistHud.jsx`, `public/ui/duelist/hud/README.md`).
+
+Still to do:
+
+1. **Animations made for each weapon, in Blender.** Today the twin blades and the staff play the sword's clips
+   (the owner's pack has sword clips only); the twin blades' left hand and the staff's two-handed grip need clips
+   of their own, and every chain wants the smoothing pass.
+2. **Transport** (escort a payload; the other team stops it): still a "Planned" entry in the play drawer. The
+   HUD has no scoreboard for it yet. **A single rotating control point** has its scoreboard ready
+   (`view.singlePoint`) but no mode behind it.
+3. **The home screen's starport dock** with the chosen fighter idling and looking around.
+4. **Balance.** Every number in `core/classes.mjs`, `core/moves.mjs` and `core/abilities.mjs` is a first
+   proposal. Bots do not use specials yet (their seats do not charge a meter).
+5. **Level and EXP** are kept in the browser (`client/progress.mjs`): an account-wide level needs the match server
+   to keep it.
+6. Story missions are still played without a class (the first build's push, pull, grip and breach on keys 1-4).

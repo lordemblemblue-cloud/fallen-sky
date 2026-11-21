@@ -38,7 +38,28 @@ import { levelFrom, xpForEvent } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon } from './classWeapons.mjs';
-import { CLASSES, classById, hiddenFrom } from '../core/index.mjs';
+import { CLASSES, classById, hiddenFrom, effectOn } from '../core/index.mjs';
+
+// A cloaked fighter you can still see (your own, an ally's, an enemy's up close) is a ghost of itself. The body's
+// materials become the actor's own the first time, so no other fighter with the same body fades with it.
+function setGhost(actor, on) {
+  if (!!actor.ghost === on) return;
+  actor.ghost = on;
+  actor.model.traverse((o) => {
+    if (!o.isMesh || !o.material) return;
+    if (!o.userData.ownMaterial) {
+      o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone();
+      o.userData.ownMaterial = true;
+    }
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (on) {
+        m.userData.solid = { transparent: m.transparent, opacity: m.opacity, depthWrite: m.depthWrite };
+        m.transparent = true; m.opacity = Math.min(m.opacity, 0.3); m.depthWrite = false;
+      } else if (m.userData.solid) { Object.assign(m, m.userData.solid); delete m.userData.solid; }
+      m.needsUpdate = true;
+    }
+  });
+}
 import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
@@ -502,6 +523,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           // a Veil Cloak hides an enemy farther than its shimmer
           const viewer = world.fighters.get(mineId);
           if (viewer && id !== mineId && hiddenFrom(fighter, body, viewer, bodyOf(world, mineId), world.time)) { actor.group.visible = false; continue; }
+          if (fighter.effects) {
+            setGhost(actor, !!effectOn(fighter, 'cloak', world.time));
+            const lasting = Object.keys(fighter.effects).filter((kind) => kind !== 'cloak' && effectOn(fighter, kind, world.time));
+            if (lasting.length && drawing) vfx.aura(actor, lasting, show);
+          }
           if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
             actor.group.visible = false;
             actor.aim?.hide();
