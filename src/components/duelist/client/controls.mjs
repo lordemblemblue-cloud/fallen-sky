@@ -18,8 +18,10 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
   let yaw = 0;
   let pitch = 0.32;
   let lockRequested = false;
+  let paused = false;
   // an input went down: what its action does on pressing (held actions are read each step)
   const down = (code) => {
+    if (paused) return false;
     const action = actionFor(bound, code);
     if (!action) return false;
     if (held.has(action)) return true;
@@ -38,6 +40,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     if (KIND[action] === 'ability') presses.push('release');
   };
   const onKeyDown = (e) => {
+    if (paused) return;
     const mine = actionFor(bound, e.code);
     if (mine) e.preventDefault(); // Tab, Space and the like do nothing else while playing
     if (!e.repeat) down(e.code);
@@ -47,6 +50,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     up(e.code);
   };
   const onMouseDown = (e) => {
+    if (paused) return;
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock?.()?.catch?.(() => {}); return; }
     down(`Mouse${e.button}`);
     e.preventDefault();
@@ -74,8 +78,14 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
 
   return {
     keys: bound,
+    setPaused(value) {
+      paused = !!value;
+      if (paused) { held.clear(); presses.length = 0; presses.push('blockUp'); }
+    },
     // This frame's input for the player's fighter (world-space move from the camera's yaw).
     read({ faceYaw = null, strafe = false } = {}) {
+      if (paused) return { move: { x: 0, z: 0 }, run: false, sprint: false,
+        interact: false, face: null, strafe, presses: presses.splice(0) };
       const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0);
       const s = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
       const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };

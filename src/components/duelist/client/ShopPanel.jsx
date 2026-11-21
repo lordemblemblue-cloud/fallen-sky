@@ -73,7 +73,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
       {slots.map((entry, i) => {
         const item = entry && SHOP_ITEMS.find((x) => x.id === entry.id);
         return <div className="duelist-shop-slot" key={i} title={item?.name || 'Empty item slot'}>
-          {item ? <><ItemIcon item={item}/><span className="duelist-slot-tier">III</span><small>Tier {entry.tier}</small></> : <span className="duelist-shop-empty">+</span>}
+          {item ? <><ItemIcon item={item}/><span className="duelist-slot-tier">{entry.tier}</span><small>Tier {entry.tier}</small></> : <span className="duelist-shop-empty">+</span>}
         </div>;
       })}
     </div>
