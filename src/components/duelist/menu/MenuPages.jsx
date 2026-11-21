@@ -20,6 +20,7 @@ import './duelistMenuTheme.css';
 import './duelistOpenGlass.css';
 import './duelistUnifiedVisual.css';
 import './duelistMenuOverlays.css';
+import './duelistTemplateUI.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
