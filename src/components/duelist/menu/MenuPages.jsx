@@ -260,7 +260,7 @@ export function DuelistHub({ initialPanel = null }) {
               <p className="duelist-menu-note">Graphics, audio, controls and local match options.</p></div>
             <button type="button" className="duelist-hub-small-button" onClick={closePanel} aria-label="Close settings"><X size={18} /></button>
           </div>
-          <div className="duelist-menu-page duelist-hub-panel-content"><SettingsContent /></div>
+          <div className="duelist-menu-page duelist-hub-panel-content"><SettingsContent sharedPrefs={prefs} sharedUpdate={updatePrefs} /></div>
         </section>
       )}
 
@@ -551,8 +551,10 @@ function KeyBindings({ keys, onChange }) {
   );
 }
 
-export function SettingsContent() {
-  const [prefs, update] = usePrefs();
+export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
+  const [localPrefs, localUpdate] = usePrefs();
+  const prefs = sharedPrefs || localPrefs;
+  const update = sharedUpdate || localUpdate;
   const [audio, setAudio] = useState(readAudio);
   const saveAudio = (patch) => {
     const next = { ...audio, ...patch };
