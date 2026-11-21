@@ -10,7 +10,7 @@ import {
   createFighter, moveFor, kitAt, passiveFor, evaluateSpecial, SPECIAL_MAX,
 } from '../src/components/duelist/core/index.mjs';
 import { createWorld, addFighter, bodyOf } from '../src/components/duelist/sim/world.mjs';
-import { createMatch, stepMatch, matchView } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, matchView, joinMatch } from '../src/components/duelist/sim/match.mjs';
 import { encodeOwn, applyOwn, PROTOCOL } from '../src/components/duelist/net/protocol.mjs';
 import { createProgressStore } from '../server/duelist/progress.mjs';
 
@@ -72,13 +72,19 @@ test('live match awards boost to all seats at the same time and new matches rese
   assert.equal(moveFor(nextMatch.world.fighters.get('player'), 'mend'), MOVES.mend);
 });
 
-test('joining mid-match inherits the current match tier without importing permanent combat buffs', () => {
-  const match = createMatch({ mode: 'practice', seats: 1, players: [{ id: 'one', classId: 'warrior' }] });
+test('joining mid-match inherits the current match tier but saved mastery gives no power', () => {
+  const match = createMatch({ mode: 'practice', seats: 2, players: [{ id: 'one', classId: 'warrior' }] });
   while (match.phase !== 'live') stepMatch(match, DT, {});
   for (let i = 0; i < 151 * 60; i++) stepMatch(match, DT, {});
   assert.equal(match.boostTier, 2);
-  const other = createMatch({ mode: 'practice', players: [{ id: 'two', classId: 'warrior' }], seats: 1 });
-  assert.equal(other.boostTier, 0);
+  const joined = joinMatch(match, { id: 'late', classId: 'healer', progress: { healer: XP_CAP } });
+  assert.equal(joined.ok, true);
+  assert.deepEqual([match.seats.get('late').level, match.seats.get('late').matchBoost], [25, 2]);
+  assert.equal(match.world.fighters.get('late').matchBoost, 2);
+  assert.equal(moveFor(match.world.fighters.get('late'), 'mend').rank, 3);
+  const fresh = createMatch({ mode: 'practice', players: [{ id: 'late', classId: 'healer', progress: { healer: XP_CAP } }], seats: 1 });
+  assert.equal(fresh.boostTier, 0);
+  assert.equal(moveFor(fresh.world.fighters.get('late'), 'mend'), MOVES.mend);
 });
 
 test('execution threshold is a match-only special boost; fake saved level is ignored', () => {
