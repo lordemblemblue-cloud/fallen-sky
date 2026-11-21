@@ -151,7 +151,8 @@ for (const [rigId, bodyName] of [['fused-male-v1', 'Male'], ['fused-female-v1', 
   test(`${bodyName}: the mobility pack's sidestep, back roll and sprint bind to the real body with their extras`, async () => {
     const root = await body(bodyName);
     const names = mobilityClipPackEntries(manifest, rigId).map((e) => e.name);
-    assert.deepEqual(names.sort(), ['Back_Roll', 'Dodge_Forward', 'Sprint']);
+    // ... plus the two swim loops of deep water (tests/game3d-swimming.test.mjs checks those)
+    assert.deepEqual(names.sort(), ['Back_Roll', 'Dodge_Forward', 'Sprint', 'Swim_Forward', 'Swim_Idle']);
     const pack = {};
     for (const name of names) {
       const clip = await packClip(rigId, name);
@@ -447,7 +448,8 @@ test('GameWorld3D routes double taps, Space-while-riding, flight, skill casts an
   assert.match(world, /mountFlight\.toggle\(\)==='takeoff'/);
   assert.match(world, /else if\(!e\.repeat && !isMountedRef\.current\)\{/, 'on foot Space stays the Air Jump chain');
   assert.match(world, /const flight = mountFlight\.update\(delta, \{ mounted: true, moving: mountMoved \}\)/);
-  assert.match(world, /compGroup\.position\.y = gy \+ flight\.altitude;\s*model\.position\.y = gy \+ flight\.altitude;/);
+  // (over water the flight counts from the water line: tests/game3d-swimming.test.mjs)
+  assert.match(world, /compGroup\.position\.y = gy \+ waterLift \+ flight\.altitude;\s*model\.position\.y = gy \+ waterLift \+ flight\.altitude;/);
   assert.match(world, /playCompanionAnimation\(flight\.airborne \? 'fly' : mountMoved \? 'run' : 'idle'\)/);
   assert.match(world, /mountFlight\.speedMultiplier\(\)/);
   assert.match(world, /companionFlyActionRef\.current = fly;/);
