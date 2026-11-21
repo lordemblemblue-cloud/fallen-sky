@@ -47,7 +47,7 @@ import { applyAXEWeaponAffinityToDerived } from './axe/weapons/AXEWeaponArchetyp
 import { getAXEAscensionFlatBonuses, getAXEAscensionProfile, subscribeAXEAscension } from './axe/progression/AXEAscensionStore';
 import { applyAXEAscensionToDerived } from './axe/progression/AXEAscensionSystem';
 import { applyAXEBuildEffectsToDerived, getAXEBuildCombatEffects } from './axe/balance/AXEBuildEffects';
-import { AXE_BUILD_CAPS } from './axe/balance/AXEPowerBudget';
+import { AXE_BUILD_CAPS, AXE_LEVEL_CAP } from './axe/balance/AXEPowerBudget';
 import { subscribeMastery } from './progression/weaponMasteryStore';
 import { subscribeWeaponBuffs } from './weaponClassBuffStore';
 import { subscribeMasteryTree } from './progression/weaponMastery/weaponMasteryTreeStore';
@@ -277,19 +277,22 @@ const loadState = () => {
     const saved = storage.get();
     if (saved) {
       const parsed = JSON.parse(saved);
+      const level = Math.max(1, Math.min(AXE_LEVEL_CAP, Math.floor(Number(parsed.level) || 1)));
       // Migrate legacy stat keys (hp/spirit/elemental) → new NW keys.
       const base = migrateBaseStats(parsed.baseStats);
       const b = getBonuses();
       const derived = computeDerivedWithVanity(base, b);
       return {
-        level: parsed.level || 1,
-        xp: parsed.xp || 0,
-        xpForNext: parsed.xpForNext || xpForLevel(parsed.level || 1), // Infinity is saved as null at the cap
+        level,
+        xp: level >= AXE_LEVEL_CAP ? 0 : Math.max(0, Number(parsed.xp) || 0),
+        // Always recompute: old level-100 capped saves serialized Infinity as null.
+        // After expanding the cap, those players must be able to earn level 101.
+        xpForNext: xpForLevel(level),
         baseStats: base,
         unspentPoints: parsed.unspentPoints || 0,
         maxHP: derived.maxHP,
         hp: Math.min(derived.maxHP, parsed.hp ?? derived.maxHP),
-        derived: withCombatLevel(derived, parsed.level || 1),
+        derived: withCombatLevel(derived, level),
         powerProgression: normalizeAXEPowerProgression(parsed.powerProgression),
       };
     }
@@ -367,9 +370,9 @@ export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints 
     ? consumeRestedForGain(xpGained, state.xpForNext || xpForNext)
     : 0;
 
-  let level = newLevel;
-  let xp = newXP;
-  let next = xpForNext;
+  let level = Math.max(1, Math.min(AXE_LEVEL_CAP, Math.floor(Number(newLevel) || state.level)));
+  let xp = Math.max(0, Number(newXP) || 0);
+  let next = xpForLevel(level);
   let extraLevels = 0;
 
   if (restedBonus > 0) {
@@ -385,6 +388,12 @@ export function awardXP({ newLevel, newXP, xpForNext, levelsGained, bonusPoints 
     }
   }
 
+  // Once a character reaches 155, extra XP must not silently accumulate
+  // in a saved progress bar with an impossible Infinity requirement.
+  if (level >= AXE_LEVEL_CAP) {
+    xp = 0;
+    next = Infinity;
+  }
   const totalLevels = Math.max(0, levelsGained || 0) + extraLevels;
   const points = totalLevels * STAT_POINTS_PER_LEVEL + Math.max(0, bonusPoints);
 
