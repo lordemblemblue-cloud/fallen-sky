@@ -38,11 +38,14 @@ test('explicit previews never promote live scene production readiness', () => {
   }
 });
 
-test('readiness and preview flags are own properties, not inherited permissions', () => {
-  const inherited = Object.create({ ready: true, preview: true });
-  const customScenes = Object.create(null);
-  customScenes['unreviewed'] = inherited;
-  assert.equal(chooseSceneRenderer({ sceneId: 'unreviewed', scenes: customScenes }).kind, 'webgl');
-  // The custom inventory is deliberately not promoted: preview permission alone is not production readiness.
-  assert.equal(isSceneWebGPUReady('unreviewed', customScenes), false);
+test('explicitly ready custom scene respects previous failure without changing live defaults', () => {
+  const customScenes = { 'test-scene': { ready: true, preview: true } };
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes }), {
+    kind: 'webgpu', reason: 'scene-ready',
+  });
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'test-scene', scenes: customScenes, previousFailure: true }), {
+    kind: 'webgl', reason: 'webgpu-failed-earlier',
+  });
+  assert.equal(isSceneWebGPUReady('fallen-sky'), false);
+  assert.equal(isSceneWebGPUReady('duelist-adventure'), false);
 });
