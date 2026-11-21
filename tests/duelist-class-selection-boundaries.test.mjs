@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, joinMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
 
 const tick = (match, seconds) => {
   const dt = 1 / 60;
@@ -73,4 +73,25 @@ test('countdown re-selection is last valid choice per seat and never changes ano
   assert.equal(match.world.fighters.get('beta').weapon, 'sword');
   assert.equal(match.seats.get('alpha').specialMeter, 0);
   assert.equal(match.seats.get('beta').specialMeter, 0);
+});
+
+test('idempotent seat reconnect preserves pending class and private special meter', () => {
+  const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'beta' }] });
+  assert.equal(queueMatchClass(match, 'alpha', 'juggernaut').accepted, true);
+  const original = match.seats.get('alpha');
+  assert.equal(joinMatch(match, { id: 'alpha', name: 'spoof', team: 'blue', classId: 'healer' }).ok, true);
+  assert.strictEqual(match.seats.get('alpha'), original);
+  assert.equal(original.pendingClass, 'juggernaut');
+  assert.equal(matchView(match, 'beta').me.pendingClass, null);
+  assert.equal(matchView(match, 'beta').people.find(p => p.id === 'alpha').classId, null);
+  tick(match, COUNTDOWN + 0.1);
+  assert.equal(original.classId, 'juggernaut');
+  original.specialMeter = 65; // simulated trusted server-side reward
+  assert.equal(joinMatch(match, { id: 'alpha', classId: 'assassin' }).ok, true);
+  assert.strictEqual(match.seats.get('alpha'), original);
+  assert.equal(original.classId, 'juggernaut');
+  assert.equal(original.specialMeter, 65);
+  assert.equal(matchView(match, 'alpha').me.specialMeter, 65);
+  assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
+  assert.equal(matchView(match, 'beta').me.specialMeter, null);
 });
