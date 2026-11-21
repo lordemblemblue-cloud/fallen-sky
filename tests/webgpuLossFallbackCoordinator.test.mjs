@@ -84,3 +84,33 @@ test('synchronous fallback exceptions do not escape loss notification', () => {
   });
   assert.doesNotThrow(() => notify({ reason: 'device-lost', info: { reason: 'unknown' } }));
 });
+
+test('observer returning unattached subscription triggers conservative fallback once', () => {
+  const actions = [];
+  let notify;
+  const controller = coordinateWebGPUDeviceLoss({
+    device: {},
+    observe: (_device, callback) => {
+      notify = callback;
+      return { attached: false, stop() {} };
+    },
+    classify: () => ({ action: 'fallback-webgl' }),
+    fallback: (action) => actions.push(action),
+  });
+  assert.equal(controller.attached, false);
+  assert.equal(actions.length, 1);
+  notify({ reason: 'device-lost', info: { reason: 'unknown' } });
+  assert.equal(actions.length, 1);
+});
+
+test('missing observer subscription also fails closed', () => {
+  const actions = [];
+  const controller = coordinateWebGPUDeviceLoss({
+    device: {},
+    observe: () => undefined,
+    classify: () => ({ action: 'fallback-webgl' }),
+    fallback: (action) => actions.push(action),
+  });
+  assert.equal(controller.attached, false);
+  assert.equal(actions.length, 1);
+});
