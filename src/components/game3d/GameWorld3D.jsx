@@ -528,6 +528,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // Draws the frame again after a resize (assigned next to handleResize below; until then a no-op)
+    let redrawAfterResize = () => {};
     // WebGPU: no frames until the player is ready and the area's shaders are compiled (markAvatarReady below)
     let releaseInitialFrames = () => {};
     // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
@@ -701,9 +703,10 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       });
       try {
         if(renderer.getContext?.()?.isContextLost?.())return;
-        if(Math.abs((renderer.getPixelRatio?.()||1)-target.ratio)>=.001)
-          renderer.setPixelRatio(target.ratio);
+        const resized=Math.abs((renderer.getPixelRatio?.()||1)-target.ratio)>=.001;
+        if(resized)renderer.setPixelRatio(target.ratio);
         inkLook.setSize();
+        if(resized)redrawAfterResize();
         publishGame3DActualFramebuffer({
           renderer,host:window,resolution:saved.resolution,limited:target.limited,
         });
@@ -5582,6 +5585,19 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Actual canvas container dimensions, not the screen's physical pixel
     // resolution. Keeping camera aspect in CSS space prevents stretching and
     // ensures mouse aiming and projected HUD positions stay aligned.
+    // A resize clears the canvas, and every resize path runs after this frame was drawn: the
+    // ResizeObserver below, display-setting events and the resolution governor's own animation-frame
+    // tick (AdaptiveGraphics.mjs, via window.__gw3dRedraw). The browser would then show the cleared
+    // canvas, a black frame. Draw the frame again at the new size instead.
+    redrawAfterResize = () => {
+      try {
+        const activeCamera=window.__axeTileInspectionCamera?.worldId === 'game3d'
+          ? window.__axeTileInspectionCamera.camera : camera;
+        inkLook.render(scene,activeCamera);
+      } catch { /* the next frame draws as usual */ }
+    };
+    const redrawHook = () => redrawAfterResize();
+    window.__gw3dRedraw = redrawHook;
     let lastCSSWidth=w0,lastCSSHeight=h0;
     const handleResize = () => {
       const width=Math.round(container.clientWidth);
@@ -5595,6 +5611,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         window.__axe3dCloneGovernor.syncViewport();
       else onDisplayResolution();
       inkLook.setSize();
+      redrawAfterResize();
     };
     const canvasResizeObserver=typeof ResizeObserver!=='undefined'
       ?new ResizeObserver(handleResize):null;
@@ -5603,6 +5620,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     handleResize();
 
     return () => {
+      if (window.__gw3dRedraw === redrawHook) window.__gw3dRedraw = null;
+      redrawAfterResize = () => {};
       flushCheckpoint();
       window.removeEventListener('pagehide', flushCheckpoint);
       window.removeEventListener('game3dCheckpointFlush', flushCheckpoint);
