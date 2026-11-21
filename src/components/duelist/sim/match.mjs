@@ -18,6 +18,7 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection } from '../core/classes.mjs';
+import { filterClassPresses } from '../core/classCommands.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -317,6 +318,11 @@ export function stepMatch(match, dt, inputs = {}) {
       }
     }
     if (carrying(match, s.id)) input = { ...input, sprint: false };
+    // The authenticated seat, not the packet, decides which Force commands
+    // may reach the shared combat engine. Legacy unselected seats are unchanged.
+    if (s.kind === 'player' && s.classId) {
+      input = { ...input, presses: filterClassPresses(s.classId, input.presses) };
+    }
     all[s.id] = input;
   }
   const effects = step(world, dt, all);
