@@ -54,3 +54,23 @@ test('legal respawn class change never applies early and cannot carry another cl
   assert.equal(seat.specialMeter, 0);
   assert.equal(seat.pendingClass, null);
 });
+
+test('countdown re-selection is last valid choice per seat and never changes another player', () => {
+  const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'beta' }] });
+  assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
+  assert.equal(queueMatchClass(match, 'beta', 'healer').accepted, true);
+  assert.equal(queueMatchClass(match, 'alpha', 'duelist').accepted, true);
+  assert.equal(queueMatchClass(match, 'alpha', 'not-a-class').accepted, false);
+  assert.equal(match.seats.get('alpha').pendingClass, 'duelist');
+  assert.equal(match.seats.get('beta').pendingClass, 'healer');
+  assert.equal(matchView(match, 'alpha').me.pendingClass, 'duelist');
+  assert.equal(matchView(match, 'beta').me.pendingClass, 'healer');
+  assert.equal(matchView(match, 'alpha').people.some(p => Object.hasOwn(p, 'pendingClass')), false);
+  tick(match, COUNTDOWN + 0.1);
+  assert.equal(match.seats.get('alpha').classId, 'duelist');
+  assert.equal(match.seats.get('beta').classId, 'healer');
+  assert.equal(match.world.fighters.get('alpha').weapon, 'dualBlades');
+  assert.equal(match.world.fighters.get('beta').weapon, 'sword');
+  assert.equal(match.seats.get('alpha').specialMeter, 0);
+  assert.equal(match.seats.get('beta').specialMeter, 0);
+});
