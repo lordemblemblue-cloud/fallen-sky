@@ -22,7 +22,7 @@ test('verified human seat reaches existing fail-closed ability gate', () => {
   const leases = createVerifiedSeatLeaseRegistry();
   const socket = {};
   assert.equal(leases.bindVerifiedConnection(socket, 'p1').accepted, true);
-  assert.deepEqual(request(leases, socket), { accepted: false, reason: 'not-implemented' });
+  assert.deepEqual(request(leases, socket), { accepted: false, reason: 'ability-execution-not-wired' });
 });
 
 test('reconnect invalidates old connection immediately and preserves new seat', () => {
@@ -31,9 +31,9 @@ test('reconnect invalidates old connection immediately and preserves new seat', 
   leases.bindVerifiedConnection(oldSocket, 'p1');
   leases.bindVerifiedConnection(newSocket, 'p1');
   assert.equal(request(leases, oldSocket).reason, 'unauthenticated-seat');
-  assert.equal(request(leases, newSocket).reason, 'not-implemented');
+  assert.equal(request(leases, newSocket).reason, 'ability-execution-not-wired');
   assert.equal(leases.releaseConnection(oldSocket), false);
-  assert.equal(request(leases, newSocket).reason, 'not-implemented');
+  assert.equal(request(leases, newSocket).reason, 'ability-execution-not-wired');
 });
 
 test('packet cannot spoof identity, animation, damage, class or meter', () => {
