@@ -13,6 +13,7 @@ const files = [
   'src/components/duelist/menu/MenuPages.jsx',
   'src/components/duelist/menu/modes.js',
   'src/components/duelist/client/DuelistGame.jsx',
+  'src/components/duelist/client/MatchLoadingScreen.jsx',
   'src/components/duelist/client/MatchHud.jsx',
   'src/components/duelist/client/DuelistHud.jsx',
   'src/components/duelist/client/ClassPicker.jsx',
