@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 860" preserveAspectRatio="none">
+ <defs>
+  <linearGradient id="panel" x1="0" x2="0.85" y1="0" y2="1"><stop stop-color="#355777" stop-opacity=".78"/><stop offset=".48" stop-color="#0e2e48" stop-opacity=".88"/><stop offset="1" stop-color="#102f4a" stop-opacity=".94"/></linearGradient>
+  <linearGradient id="edge"><stop stop-color="#71c3f0" stop-opacity=".86"/><stop offset=".6" stop-color="#d2e9fa" stop-opacity=".35"/><stop offset="1" stop-color="#72c2e8" stop-opacity=".78"/></linearGradient>
+  <linearGradient id="luster" x1="0" x2="1"><stop stop-color="#9bbfdf" stop-opacity=".25"/><stop offset=".7" stop-color="#bfddff" stop-opacity=".02"/><stop offset="1" stop-color="#90bfdf" stop-opacity=".1"/></linearGradient>
+  <pattern id="dots" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M0 60L60 0" stroke="#b8daf4" stroke-opacity=".04"/></pattern>
+ </defs>
+ <path d="M45 12H1540L1586 58V808L1558 848H40L8 812V62Z" fill="url(#panel)" stroke="url(#edge)" stroke-width="2"/>
+ <path d="M45 12H1540L1586 58V808L1558 848H40L8 812V62Z" fill="url(#dots)"/>
+ <path d="M55 16H305L202 122H14Z" fill="url(#luster)"/>
+ <path d="M1320 14H1482L1350 167H1192Z" fill="#9dbdde" fill-opacity=".11"/>
+ <path d="M1390 15H1496L1390 142H1284Z" fill="#d4edff" fill-opacity=".09"/>
+ <path d="M345 57V815M1037 57V815" stroke="#a7d5f5" stroke-opacity=".28" stroke-width="1.5"/>
+ <path d="M46 824H1555" stroke="#7dc7f0" stroke-opacity=".18"/>
+</svg>

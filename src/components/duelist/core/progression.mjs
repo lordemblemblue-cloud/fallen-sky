@@ -1,7 +1,8 @@
 // Duelist Adventure: independent permanent class mastery 1-25 and ephemeral match combat boosts.
 // The class XP is retained between matches; the match boosts reset at every new match and never persist.
 // Only server-owned elapsed live match time improves ability/passive ranks and special tiers.
-// Permanent mastery unlock rewards may be layered on top, but MUST NOT increase combat strength.
+// Permanent mastery now grants server-derived ability and Ultimate ranks at earned XP milestones.
+// An independent match boost still resets every match and cannot be client-forged.
 export const LEVEL_CAP = 25;
 export const RANK_MAX = 4;
 export const TIER_MAX = 3;
@@ -19,6 +20,45 @@ export const specialTier = (matchBoost = 0) => cleanBoost(matchBoost) >= 3 ? 3 :
 export const MILESTONES = Object.freeze({
   5: 'mastery I', 10: 'mastery II', 15: 'mastery III', 20: 'mastery IV', 25: 'mastery V',
 });
+
+// User-approved permanent mastery schedule: levels 2-4 and 6-9 etc earn one
+// ability point in round-robin order; every fifth level earns +1 Ultimate rank.
+// This is computed from the server-owned class EXP / level, never a client-submitted
+// allocation or spendable token. Match-time boosts remain a separate tier system.
+export const MASTERY_ABILITY_COUNT = 4;
+export const MASTERY_ABILITY_MAX = 6;
+export const MASTERY_ULTIMATE_MAX = 6;
+const earnedAbilitySteps = level => {
+  let steps = 0;
+  for (let n = 2; n <= level; n++) if (n % 5 !== 0) steps++;
+  return steps;
+};
+/** Describes the automatically earned upgrade at a single level. */
+export function masteryReward(level) {
+  const lv = whole(level);
+  if (lv === 1) return Object.freeze({ level: 1, kind: 'starting' });
+  if (lv % 5 === 0) return Object.freeze({ level: lv, kind: 'ultimate', bonus: 1 });
+  return Object.freeze({ level: lv, kind: 'ability',
+    abilityIndex: (earnedAbilitySteps(lv) - 1) % MASTERY_ABILITY_COUNT, bonus: 1 });
+}
+/** The four ability ranks and one ultimate rank after reaching a level (all capped by LEVEL_CAP). */
+export function masteryAt(level) {
+  const lv = whole(level);
+  const abilityPoints = Array(MASTERY_ABILITY_COUNT).fill(0);
+  let ultimatePoints = 0;
+  for (let n = 2; n <= lv; n++) {
+    const reward = masteryReward(n);
+    if (reward.kind === 'ultimate') ultimatePoints += 1;
+    else abilityPoints[reward.abilityIndex] += 1;
+  }
+  return {
+    level: lv,
+    abilityPoints,
+    abilityRanks: abilityPoints.map(points => Math.min(MASTERY_ABILITY_MAX, points + 1)),
+    ultimatePoints,
+    ultimateRank: Math.min(MASTERY_ULTIMATE_MAX, 1 + ultimatePoints),
+  };
+}
 
 /** EXP needed to go from `level` to the next (nothing past the cap). */
 export const xpToNext = (level) => (whole(level) >= LEVEL_CAP ? 0 : 100 + (whole(level) - 1) * 60);

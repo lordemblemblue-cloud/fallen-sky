@@ -3,7 +3,7 @@
 // crystal form (weapon) and colour, a passive, four abilities (moves in core/moves.mjs, on keys 1-4; the HUD
 // shows three at a time and rotates to the fourth) and a special paid for by the server-owned meter.
 // A client never changes its class mid-fight, never charges the meter and never decides what a special does.
-import { tierValue } from './progression.mjs';
+import { tierValue, masteryAt } from './progression.mjs';
 
 export const SPECIAL_MAX = 100;
 export const ABILITY_SLOTS = 3;
@@ -180,9 +180,9 @@ export function behindTarget(attacker, target, arcDegrees = SPECIAL_BALANCE.assa
 /**
  * Validates a special's request and meter cost without applying it (sim/world.mjs applies it).
  * actor: { id, team, hp, position: { x, z } }; target (executions): { id, team, hp, maxHp, position: { x, z, yaw },
- * protectedUntil, invulnerable }. level: the class's level (the special's tier: core/progression.mjs).
+ * protectedUntil, invulnerable }. level: trusted server-owned 1–25 class mastery; matchBoost: temporary match tier.
  */
-export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0 } = {}) {
+export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0, level = 1 } = {}) {
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
   if (!validMeter(meter)) return { allowed: false, reason: 'invalid-meter' };
@@ -202,7 +202,9 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0,
     if (target.protectedUntil != null && target.protectedUntil !== -Infinity && !Number.isFinite(target.protectedUntil)) return { allowed: false, reason: 'invalid-context' };
     if ((target.protectedUntil ?? -Infinity) > now || target.invulnerable) return { allowed: false, reason: 'target-protected' };
     const id = def.special.id;
-    if (distance(actor.position, target.position) > tierValue(id, 'reach', matchBoost, def.special.reach)) return { allowed: false, reason: 'out-of-range' };
+    // An earned ultimate mastery point expands trusted execution reach, not the charge meter.
+    const masteryReach = 1 + 0.04 * masteryAt(level).ultimatePoints;
+    if (distance(actor.position, target.position) > tierValue(id, 'reach', matchBoost, def.special.reach) * masteryReach) return { allowed: false, reason: 'out-of-range' };
     if (def.special.rule === 'threshold' && target.hp / target.maxHp > tierValue(id, 'threshold', matchBoost, SPECIAL_BALANCE.duelistExecuteThreshold)) return { allowed: false, reason: 'target-too-healthy' };
     if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', matchBoost, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
   }

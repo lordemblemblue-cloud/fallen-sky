@@ -22,14 +22,15 @@ test('Play, Character and Settings share the home hangar overlay', () => {
   assert.match(menu, /<FighterContent sharedPrefs=/);
   assert.match(menu, /<SettingsContent sharedPrefs=/);
   assert.match(menu, /className="duelist-hub-scrim"/);
-  assert.match(routes, /<DuelistHub initialPanel=/);
+  assert.match(routes, /<DuelistTemplateHub initialPanel=/);
   assert.match(css, /backdrop-filter: blur\(7px\)/);
 });
 
-test('Settings secondary header keeps only HOME navigation', () => {
-  const header = menu.split('<nav className="duelist-menu-quicknav"')[1].split('</nav>')[0];
-  assert.match(header, />HOME<\/Link>/);
-  assert.doesNotMatch(header, /CHARACTER|SETTINGS/);
+test('routed menus use the bottom header for navigation', () => {
+  const header = menu.split('<header className="duelist-menu-topbar"')[1].split('</header>')[0];
+  assert.doesNotMatch(header, /CHARACTER|SETTINGS|BATTLE PASS|PLUS/);
+  assert.match(menu, /duelist-menu-bottom-nav/);
+  assert.match(menu, /params=\{\{ page: 'settings' \}\}/);
 });
 
 test('character milestones reflect actual class XP and never paid-pass placeholders', () => {

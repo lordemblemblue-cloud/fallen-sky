@@ -11,6 +11,8 @@ const files = [
   'src/components/game2/DuelistCampaignPanel.jsx',
   'src/components/game2/DuelistPracticePanel.jsx',
   'src/components/duelist/menu/MenuPages.jsx',
+  'src/components/duelist/menu/DuelistTemplateHub.jsx',
+  'src/components/duelist/menu/templateCatalog.mjs',
   'src/components/duelist/menu/modes.js',
   'src/components/duelist/client/DuelistGame.jsx',
   'src/components/duelist/client/MatchLoadingScreen.jsx',
