@@ -16,7 +16,7 @@
 // they arrive.
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
-import { isDown, MOVES } from '../core/index.mjs';
+import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
 import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
@@ -126,7 +126,8 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
   const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0,
     progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
-    matchBoost: boostAt(match.clock) };
+    matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
+    goldFraction: 0, items: [] };
   entry.level = levelOf(match, entry);
   addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spot });
   match.seats.set(seatId, entry);
@@ -147,7 +148,41 @@ const event = (match, e) => {
   match.events.push(full);
   if (e.feed !== false) { match.feed.push(full); if (match.feed.length > 12) match.feed.shift(); }
   awardXp(match, full);
+  if ((e.type === 'captured' || e.type === 'flagReturned') && e.by)
+    grantGold(match, e.by, SHOP_RULES.objectiveGold, e.type);
 };
+function grantGold(match, playerId, amount, reason) {
+  const s = match.seats.get(playerId);
+  if (!s || s.kind !== 'player' || !Number.isFinite(amount) || amount <= 0) return 0;
+  const earned = Math.max(0, Math.min(Math.floor(amount), SHOP_RULES.goldCap - s.gold));
+  if (!earned) return 0;
+  s.gold += earned;
+  match.events.push({ type: 'gold', id: playerId, amount: earned, reason, at: match.world.time });
+  return earned;
+}
+/**
+ * An actual match-only purchase, authoritatively validated by the server/sim.
+ * The client supplies only the item ID; price, inventory, team, tier and shop
+ * eligibility are read from current match state.
+ */
+export function purchaseMatchItem(match, playerId, itemId) {
+  const seat = match.seats.get(playerId);
+  if (!seat || seat.kind !== 'player' || match.phase === 'over') return { ok: false, reason: 'not-available' };
+  const fighter = match.world.fighters.get(playerId);
+  const body = bodyOf(match.world, playerId);
+  const spawn = spawnFor(match, playerId, seat.team);
+  const atSpawn = body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+  const allowed = match.phase !== 'live' || !!fighter?.vitals.dead || atSpawn;
+  const result = purchaseRule({ gold: seat.gold, items: seat.items, id: itemId, allowed });
+  if (!result.ok) return { ok: false, reason: result.reason, cost: result.cost || 0 };
+  seat.gold -= result.cost;
+  seat.items = result.items;
+  if (fighter) equipItems(fighter, seat.items);
+  match.events.push({ type: 'itemBought', id: playerId, itemId, tier: result.tier,
+    cost: result.cost, at: match.world.time });
+  return { ok: true, id: itemId, tier: result.tier, cost: result.cost,
+    gold: seat.gold, items: seat.items.map((item) => ({ ...item })) };
+}
 
 // EXP for what the match itself saw happen (core/progression.mjs), to the class each player is fighting as. An
 // `xp` event says what was earned (for whoever keeps the player's progress); a `levelUp` when a level is reached.
@@ -336,6 +371,15 @@ export function stepMatch(match, dt, inputs = {}) {
   }
   match.clock += dt;
   match.roundClock += dt;
+  for (const seat of match.seats.values()) {
+    if (seat.kind !== 'player') continue;
+    seat.goldFraction += dt * SHOP_RULES.passiveGoldPerSecond;
+    if (seat.goldFraction >= 1) {
+      const whole = Math.floor(seat.goldFraction);
+      seat.goldFraction -= whole;
+      grantGold(match, seat.id, whole, 'time');
+    }
+  }
   // An equal opportunity boost: live match seconds only. Never award combat power from saved XP.
   const nextBoost = boostAt(match.clock);
   if (match.boostTier !== nextBoost) {
@@ -415,6 +459,7 @@ function onDefeat(match, e) {
   const counted = by && by.id !== who.id && hostile(world, world.fighters.get(by.id) || {}, world.fighters.get(who.id) || {});
   if (counted) {
     match.scores[by.id].defeats += 1;
+    grantGold(match, by.id, SHOP_RULES.eliminationGold, 'elimination');
     // Only the authoritative world defeat event can grant elimination charge.
     // A client press, score display or unverified hit claim never awards meter.
     if (by.kind === 'player' && by.classId) {
@@ -574,6 +619,15 @@ export function matchView(match, forId = null) {
     zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
       specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null,
+      gold: match.seats.get(forId).gold, items: match.seats.get(forId).items.map((item) => ({ ...item })),
+      canShop: match.phase !== 'over' && (match.phase !== 'live' ||
+        world.fighters.get(forId)?.vitals.dead ||
+        (() => {
+          const body = bodyOf(world, forId);
+          const seat = match.seats.get(forId);
+          const spawn = spawnFor(match, forId, seat.team);
+          return !!body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+        })()),
       // the class's EXP so far (what the match began with plus what was earned in it), and every class's
       xp: match.seats.get(forId).progress?.[match.seats.get(forId).classId] ?? 0,
       progress: match.seats.get(forId).progress ? { ...match.seats.get(forId).progress } : null } : null,
