@@ -75,9 +75,12 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
   }
   const override = readRendererOverride({ search, storage });
   // The graphics API is exposed only in supported, secure browser contexts.
-  // Do not default to WebGPU on SSR, insecure pages or browsers without it.
-  if (!override && (!host?.navigator?.gpu || host?.isSecureContext === false)) {
-    return { kind: 'webgl', reason: 'webgpu-api-unavailable' };
+  // Do not default to WebGPU on SSR, insecure pages or browsers without it. Privacy wrappers can also throw
+  // on reading navigator.gpu (tests/webgpuNavigatorGpuGetterRegression.test.mjs): that counts as no WebGPU.
+  if (!override) {
+    let available = false;
+    try { available = Boolean(host?.navigator?.gpu) && host?.isSecureContext !== false; } catch { available = false; }
+    if (!available) return { kind: 'webgl', reason: 'webgpu-api-unavailable' };
   }
   return chooseSceneRenderer({ sceneId, override, previousFailure });
 }
