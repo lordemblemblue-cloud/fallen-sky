@@ -72,8 +72,8 @@ export const SHOP_ITEMS = Object.freeze([
   // Reactive and sustain cross-builds. Echo Idol returns up to half the HP damage taken
   // and heals for 25% of the returned damage; hard 2 s proc cooldown and 18-damage cap.
   item('echoidol', 'Echo Idol', 'relic', 680, { defense: 0.05, health: 22 }, Object.freeze({ type: 'retaliation', amount: 0.50, healRatio: 0.25, cooldown: 2, cap: 18, text: 'Summon an echo after a hit: return 50% of HP damage (max 18) and heal 25% of that, once per 2 seconds' })),
-  item('thundermirror', 'Thunder Mirror', 'relic', 520, { defense: 0.07 }, Object.freeze({ type: 'retaliation', amount: 0.30, healRatio: 0, cooldown: 1.5, cap: 12, text: 'Return 30% of HP damage (max 12), once per 1.5 seconds' })),
-  item('siphonmirror', 'Siphon Mirror', 'relic', 600, { health: 24, tenacity: 0.04 }, Object.freeze({ type: 'retaliation', amount: 0.24, healRatio: 0.5, cooldown: 2, cap: 14, text: 'Return 24% of HP damage and heal 50% of returned damage, once per 2 seconds' })),
+  item('thundermirror', 'Phase Mirror', 'relic', 520, { defense: 0.06 }, passive('activeAnchor', 1, 'Active relic: mark your location, then press again within 12 s to teleport back. 28 s cooldown after recall')),
+  item('siphonmirror', 'Stasis Mirror', 'relic', 600, { health: 24, tenacity: 0.04 }, passive('activeStasis', 1.5, 'Active relic: invulnerable and rooted for 1.5 s. Cannot attack or capture objectives. 35 s cooldown')),
   item('wraithfang', 'Wraithfang', 'relic', 560, { power: 0.07, tenacity: 0.03 }, passive('lifesteal', 0.11, 'Restore HP equal to 11% of HP damage dealt')),
   item('graspbreaker', 'Graspbreaker Charm', 'relic', 560, { health: 24, tenacity: 0.06 }, passive('gripEscape', 36, 'Negate one Telekinetic Grip every 36 s; the next grip can still hold you')),
 ]);
@@ -90,7 +90,7 @@ const passivesZero = () => ({
   lifesteal: 0, onKillShield: 0, haste: 0, regen: 0, knockbackResist: 0,
   onAllyHealHaste: 0, healAmp: 0, onAllyHealShield: 0, onAllyHealWill: 0, onAllyHealPulse: 0,
   antiHeal: 0, onHitAntiHeal: 0, retaliation: null,
-  trueSight: 0, emergencyCloak: 0, gripEscape: 0,
+  trueSight: 0, emergencyCloak: 0, gripEscape: 0, activeAnchor: 0, activeStasis: 0,
 });
 /** Ignore invalid ids, so user-supplied item strings never create fake stats. */
 export function itemBonuses(itemIds = []) {
@@ -132,6 +132,17 @@ export function itemBonuses(itemIds = []) {
   passive.trueSight = Math.min(7, passive.trueSight);
   passive.emergencyCloak = Math.min(1.6, passive.emergencyCloak);
   passive.gripEscape = Math.max(0, passive.gripEscape);
+  // One active relic slot: the first equipped completed active item wins.
+  let firstActive = null;
+  for (const raw of itemIds) {
+    const owned = ownedItem(raw);
+    if (owned?.tier === 3 && (owned.id === 'thundermirror' || owned.id === 'siphonmirror')) {
+      firstActive = owned.id; break;
+    }
+  }
+  if (firstActive === 'thundermirror') passive.activeStasis = 0;
+  if (firstActive === 'siphonmirror') passive.activeAnchor = 0;
+  passive.activeItemId = firstActive;
   return { ...stats, passive };
 }
 /** Server-owned equip operation; health stays healthy when the maximum grows. */
@@ -160,6 +171,12 @@ export function purchaseRule({ gold, items, id, allowed = true } = {}) {
   if (!Array.isArray(items)) return { ok: false, reason: 'invalid-loadout' };
   const previous = items.map(ownedItem).find((x) => x?.id === id);
   if (previous?.tier === 3) return { ok: false, reason: 'fully-upgraded' };
+  // A player may own only one active relic. Everything else remains a free build choice.
+  const isActive = id === 'thundermirror' || id === 'siphonmirror';
+  if (isActive && !previous && items.some((raw) => {
+    const owned = ownedItem(raw);
+    return owned && owned.id !== id && (owned.id === 'thundermirror' || owned.id === 'siphonmirror');
+  })) return { ok: false, reason: 'active-relic-slot-full' };
   if (!previous && items.length >= SHOP_RULES.slots) return { ok: false, reason: 'inventory-full' };
   const tier = previous ? previous.tier + 1 : 1;
   const cost = tierPrice(found, tier) - (previous ? tierPrice(found, previous.tier) : 0);

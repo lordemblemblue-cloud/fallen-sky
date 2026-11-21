@@ -43,7 +43,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 9; // 9: authoritative match-item equipment replicated with owner prediction
+export const PROTOCOL = 10; // 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -115,7 +115,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
     pu: finite(f.protectedUntil) ? r3(f.protectedUntil) : -1,
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
-    c: f.classId || 0, mb: f.matchBoost || 0, it: f.items || [],
+    c: f.classId || 0, mb: f.matchBoost || 0, it: f.items || [], st: Number.isFinite(f.activeRelicUntil) ? r3(f.activeRelicUntil) : null,
     fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
@@ -145,6 +145,7 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.matchBoost = Math.max(0, Math.min(3, Math.floor(data.mb) || 0));
   f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
   f.shopStats = itemBonuses(f.items);
+  f.activeRelicUntil = Number.isFinite(data.st) ? data.st : -Infinity;
   f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
@@ -194,7 +195,10 @@ export function encodeOwn(f, body, time) {
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
       Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
-    cl: f.classId || 0, lv: f.level || 1, mb: f.matchBoost || 0, it: f.items || [], mt: f.meter || 0, sg: f.specialTarget || 0,
+    cl: f.classId || 0, lv: f.level || 1, mb: f.matchBoost || 0, it: f.items || [],
+    re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
+      f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
+    mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
@@ -214,6 +218,9 @@ export function applyOwn(f, body, data) {
   f.matchBoost = Math.max(0, Math.min(3, Math.floor(data.mb) || 0)); // authoritative per-match combat rank
   f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
   f.shopStats = itemBonuses(f.items); // exact item bonuses match server before reconstructing moves
+  f.activeRelicUntil = then(data.re?.[0]);
+  f.activeRelicCooldownUntil = then(data.re?.[1]);
+  f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2] } : null;
   f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
   f.cooldowns = untimes(data.cd);
   f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;

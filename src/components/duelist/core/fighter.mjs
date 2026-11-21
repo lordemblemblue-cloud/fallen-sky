@@ -55,6 +55,8 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     healReduction: 0, healReducedUntil: -Infinity,
     shopSpeedUntil: -Infinity, shopProcAt: -Infinity, shopHealProcAt: -Infinity,
     shopCloakAt: -Infinity, shopGripBreakAt: -Infinity,
+    activeRelicUntil: -Infinity, activeRelicCooldownUntil: -Infinity,
+    activeAnchorAt: null,
   };
   equipItems(fighter, items);
   return fighter;
@@ -116,6 +118,7 @@ export function blockedReason(f, id, now) {
   const move = moveFor(f, id);
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
+  if (now < (f.activeRelicUntil ?? -Infinity)) return 'stasis';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
   // a class fights with its own kit and its own special, however the move was asked for
   if (CLASS_ABILITIES.has(id) && !kitHas(f, id)) return 'class';
@@ -169,6 +172,7 @@ function canInterrupt(f, id) {
 // direction: forward | side | back | null, the way the stick is held relative to the facing (a light strike takes it)
 export function press(f, command, now, { fromBuffer = false, direction = null } = {}) {
   if (command === 'blockUp') { f.guard = null; return { accepted: true }; }
+  if (now < (f.activeRelicUntil ?? -Infinity)) return { accepted: false, reason: 'stasis' };
   if (command === 'blockDown') {
     if (f.vitals.dead || isStunned(f, now) || f.heldBy) return { accepted: false, reason: 'restrained' };
     if (busy(f)) return bufferPress(f, command, now, fromBuffer, null);
@@ -212,7 +216,7 @@ export function stagger(f, seconds, now) {
 
 // i-frames of a roll, or knocked down and not yet standing (now omitted: only the move's i-frames count)
 export const isInvulnerable = (f, now) => {
-  if (now !== undefined && (isDown(f, now) || now < f.protectedUntil)) return true;
+  if (now !== undefined && (isDown(f, now) || now < f.protectedUntil || now < (f.activeRelicUntil ?? -Infinity))) return true;
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };

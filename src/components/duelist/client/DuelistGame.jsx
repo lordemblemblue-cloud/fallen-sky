@@ -749,6 +749,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {quest && <Comms view={quest} />}
       {quest && <DownNote view={quest} />}
       {quest && <MissionEnd view={quest} onAgain={online ? null : again} onLeave={onLeave} onNext={online ? null : onNext} />}
+      {match?.me?.items?.some((it) => it.tier === 3 && ['thundermirror', 'siphonmirror'].includes(it.id)) && (
+        <button type="button" className="duelist-active-relic" onClick={() => pressRef.current?.('itemActive')}>
+          {bound.itemActive ? keyLabel(bound.itemActive, {short:true}) + ' · ' : ''}Use relic
+        </button>
+      )}
       {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
         if (document.pointerLockElement) document.exitPointerLock?.();
         setShopOpen(true);
