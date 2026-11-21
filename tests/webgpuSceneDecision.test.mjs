@@ -2,14 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { selectSceneRendererBackend } from '../src/lib/webgpuSceneDecision.mjs';
 
-test('both live scenes stay on WebGL automatically unless this device measured WebGPU at least as fast', () => {
+test('both live scenes run on WebGPU automatically wherever it is available', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
     const auto = selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true });
-    assert.equal(auto.backend, 'webgl');
-    assert.equal(auto.reason, 'device-not-measured');
+    assert.equal(auto.backend, 'webgpu');
+    assert.equal(auto.reason, 'auto-webgpu');
     assert.equal(auto.blocker, null);
-    assert.equal(selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: true,
-      deviceVerdict: { webgpuAtLeastAsFast: true } }).backend, 'webgpu');
+    assert.equal(selectSceneRendererBackend({ sceneId, requested: 'auto', webgpuAvailable: false }).backend, 'webgl');
     // an explicit request for a ready scene is honoured where WebGPU exists
     assert.equal(selectSceneRendererBackend({ sceneId, requested: 'webgpu', webgpuAvailable: true }).backend, 'webgpu');
     assert.equal(selectSceneRendererBackend({ sceneId, requested: 'webgpu', webgpuAvailable: false }).backend, 'webgl');

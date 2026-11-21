@@ -355,6 +355,14 @@ whole gap: in the western wilds the GPU time with every material replaced by one
 vs 3.1 ms (classic), with the real materials 12.6 vs 9.0 ms. Render bundles (static meshes in r171 `BundleGroup`s,
 tried in the western wilds) cut direct draws from 190 to 106 but not the render CPU (8.0 vs 8.3 ms): not kept.
 
+**Superseded 2026-11-21 (owner):** the speed test and its verdict are gone (`webgpuDeviceProbe.js`,
+`webgpuDeviceVerdict.mjs` deleted). Both ready scenes run on WebGPU wherever the browser offers it (`navigator.gpu`
+on a secure page), whatever a speed test would say; the owner found the game drawing correctly on WebGPU where the
+classic renderer showed problems. Classic WebGL stays for browsers without WebGPU, a WebGPU failure earlier in the
+tab, and `?renderer=webgl`. Earlier in the day another session's PR #200 had already made unmeasured devices start
+on WebGPU; on this PC the speed test then switched them back to classic. Verdicts stored by older builds
+(`fallen_sky_webgpu_verdict_v1`) are ignored. What follows is the history of the per-device rule.
+
 **The default is decided per device.** Other GPUs and browsers can run the WebGPU path as fast or faster, so:
 - Both scenes are marked ready (`webgpuSceneReadiness.mjs`): every live shader and effect has its WebGPU version,
   each view was checked against the classic renderer in the browser, and a lost device falls back to classic.
