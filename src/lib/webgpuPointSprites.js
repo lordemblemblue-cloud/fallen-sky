@@ -15,8 +15,9 @@ import { InstancedBufferAttribute, InstancedBufferGeometry, BufferAttribute, Mes
 import { NodeMaterial } from 'three/webgpu';
 import {
   attribute, positionGeometry, modelViewMatrix, cameraProjectionMatrix, vec2, vec4, uniform, texture, uv, select,
-  materialReference,
+  materialReference, output, varying,
 } from 'three/tsl';
+import { classicOutput, classicOutputPolicyForMaterial } from './webgpuClassicOutput.js';
 
 const proxies = new WeakMap(); // Points -> stand-in
 const drawingSize = new Vector2();
@@ -58,6 +59,10 @@ function buildMaterial(classic, hasColor, viewport, attenuation) {
   if (classic.map) color = color.mul(texture(classic.map, uv()));
   if (classic.alphaMap) color = vec4(color.rgb, color.a.mul(texture(classic.alphaMap, uv()).g));
   m.colorNode = color; // alpha already carries the classic opacity
+  // PointsMaterial's own output order (webgpuClassicOutput.js), fogged at the point's centre
+  m.fog = false;
+  m.outputNode = classicOutput(output, { ...classicOutputPolicyForMaterial(classic),
+    fogDepth: varying(modelViewMatrix.mul(vec4(center, 1)).z.negate(), 'v_scenePointFogDepth') });
   return m;
 }
 
@@ -69,11 +74,12 @@ export function pointSpriteFor(points, material, renderer) {
   if (!position) return null;
   const hasColor = material.vertexColors === true && !!source.getAttribute('color');
   let proxy = proxies.get(points);
-  if (proxy && (proxy.classic !== material || proxy.hasColor !== hasColor || proxy.map !== material.map || proxy.alphaMap !== material.alphaMap)) {
+  if (proxy && (proxy.classic !== material || proxy.hasColor !== hasColor || proxy.map !== material.map || proxy.alphaMap !== material.alphaMap
+    || proxy.toneMapped !== material.toneMapped || proxy.fog !== material.fog)) {
     proxy.material.dispose();
     proxy.material = buildMaterial(material, hasColor, proxy.viewport, proxy.attenuation);
     proxy.mesh.material = proxy.material;
-    Object.assign(proxy, { classic: material, hasColor, map: material.map, alphaMap: material.alphaMap });
+    Object.assign(proxy, { classic: material, hasColor, map: material.map, alphaMap: material.alphaMap, toneMapped: material.toneMapped, fog: material.fog });
   }
   if (!proxy) {
     const geometry = baseQuad();
@@ -82,7 +88,7 @@ export function pointSpriteFor(points, material, renderer) {
     const viewport = uniform(new Vector2(1, 1));
     const attenuation = uniform(1);
     proxy = { geometry, positionAttr, colorAttr: null, viewport, attenuation, classic: material, hasColor,
-      map: material.map, alphaMap: material.alphaMap };
+      map: material.map, alphaMap: material.alphaMap, toneMapped: material.toneMapped, fog: material.fog };
     proxy.material = buildMaterial(material, hasColor, viewport, attenuation);
     proxy.mesh = new Mesh(geometry, proxy.material);
     proxy.mesh.frustumCulled = false;
@@ -107,7 +113,7 @@ export function pointSpriteFor(points, material, renderer) {
   proxy.geometry.instanceCount = Math.max(0, Math.min(position.count, source.drawRange?.count ?? Infinity));
   proxy.mesh.matrixWorld.copy(points.matrixWorld);
   proxy.mesh.renderOrder = points.renderOrder;
-  for (const key of ['transparent', 'depthWrite', 'depthTest', 'blending', 'alphaTest', 'fog', 'toneMapped', 'premultipliedAlpha', 'visible']) {
+  for (const key of ['transparent', 'depthWrite', 'depthTest', 'blending', 'alphaTest', 'premultipliedAlpha', 'visible']) {
     if (proxy.material[key] !== material[key]) {
       proxy.material[key] = material[key];
       if (key !== 'visible') proxy.material.needsUpdate = true;

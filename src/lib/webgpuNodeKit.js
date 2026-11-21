@@ -23,7 +23,7 @@
 import { Node } from 'three/webgpu';
 import {
   reference, renderGroup, nodeObject, mat4, float, vec2, vec4, Fn, fract, sin, dot, floor, mix, varying,
-  modelWorldMatrix, normalLocal, positionLocal,
+  modelWorldMatrix, normalLocal, positionLocal, materialColor,
 } from 'three/tsl';
 
 // ---- the current object's instance matrix --------------------------------------------------------------------
@@ -102,6 +102,33 @@ export function attachNodes(material, nodes = {}, { nodesStatic = true, setup = 
   }
   material.needsUpdate = true;
   return material;
+}
+
+/**
+ * A colour change made right after the base texture (GLSL `#include <map_fragment>` + block). `transform(color)`
+ * gets and returns the vec4 diffuse colour (colour * map), before vertex colours. Chained GLSL hooks that insert their
+ * block right after map_fragment run NEWEST FIRST (each insertion lands above the earlier ones), so the transforms
+ * are composed in that order: oldest(...(newest(color))).
+ */
+export function addMapStageColor(material, transform, options = {}) {
+  if (!material || typeof transform !== 'function') return material;
+  material.__mapStageColor = [...(material.__mapStageColor || []), transform];
+  let color = materialColor;
+  for (let i = material.__mapStageColor.length - 1; i >= 0; i--) color = material.__mapStageColor[i](color);
+  return attachNodes(material, { colorNode: color }, options);
+}
+
+/**
+ * Give `target` the same TSL nodes and setups as `source` (code that copies a GLSL hook from one material to another
+ * - `target.onBeforeCompile = source.onBeforeCompile` - copies the WebGPU half with this).
+ */
+export function copyNodes(source, target) {
+  if (!source || !target) return target;
+  const nodes = {};
+  for (const key of NODE_KEYS) if (source[key]?.isNode) nodes[key] = source[key];
+  if (source.__mapStageColor) target.__mapStageColor = [...source.__mapStageColor];
+  for (const setup of source.nodeSetups || []) attachNodes(target, {}, { setup, nodesStatic: source.nodesStatic !== false });
+  return attachNodes(target, nodes, { nodesStatic: source.nodesStatic !== false });
 }
 
 /** Remove what attachNodes added (a decorator's dispose); the remaining setups/nodes keep their key. */

@@ -1,6 +1,8 @@
 // Maintain light and dark strands when recoloring a textured GLB hairstyle.
 // A plain material.color multiplier cannot make dark painted hair blonde.
 import * as THREE from 'three';
+import {vec3,vec4,dot,mix,smoothstep} from 'three/tsl';
+import {addMapStageColor,uniformOf} from '../../lib/webgpuNodeKit.js';
 const HEX=/^#[a-f0-9]{6}$/i;
 
 export function bindCreatorHairColor(material,hex,enabled=true){
@@ -27,6 +29,13 @@ diffuseColor.rgb=mix(diffuseColor.rgb,creatorHairTarget*creatorHairDetail,creato
    );
   };
   material.customProgramCacheKey=()=>String(key?.()||'')+'|creator-hair-pigment-v1';
+  // WebGPURenderer: the same strand-preserving tint in TSL
+  const target=uniformOf(uniforms.creatorHairTarget,'color'),on=uniformOf(uniforms.creatorHairTintOn,'float');
+  addMapStageColor(material,(color)=>{
+   const luma=dot(color.rgb,vec3(.2126,.7152,.0722));
+   const detail=mix(.62,1.24,smoothstep(.012,.7,luma));
+   return vec4(mix(color.rgb,target.mul(detail),on),color.a);
+  });
   state={uniforms};
   material.userData.creatorHairColor=state;
   material.needsUpdate=true;

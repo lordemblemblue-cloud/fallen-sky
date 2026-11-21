@@ -10,6 +10,20 @@ import {
  chooseWolfveilOwnerAssetAnchors,
 } from './WolfveilOwnerLandscapeAssets.mjs';
 import {decimateGeometry} from '../render/decimateGeometry.js';
+import {vec2,vec3,float,sin,dot,max,clamp,mix,normalize,smoothstep,positionGeometry,diffuseColor} from 'three/tsl';
+import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the blue-foliage correction (after vertex colours, as the GLSL after color_fragment).
+function ownerTreeColourSetup(nodeMaterial){
+  const setupDiffuseColor=nodeMaterial.setupDiffuseColor;
+  nodeMaterial.setupDiffuseColor=function(builder){
+    setupDiffuseColor.call(this,builder);
+    const s=diffuseColor.rgb;
+    const blue=clamp(s.b.sub(max(s.r,s.g).mul(.92)).mul(2.2),0,1);
+    const value=dot(s,vec3(.2126,.7152,.0722));
+    diffuseColor.rgb.assign(mix(s,vec3(value.mul(.67),value.mul(.98),value.mul(.48)),blue.mul(.85)));
+  };
+}
 
 function acceptableSource(mesh){
  return mesh?.isMesh===true && mesh.geometry?.isBufferGeometry===true &&
@@ -89,6 +103,16 @@ transformed.xz+=normalize(uOwnerWind+vec2(.001))*
   };
   base.customProgramCacheKey=()=> 'wolfveil-owner-uploaded-natural-wood-foliage-'+kind+
     '-'+safeHeight.toFixed(4)+'-'+(original?.name||'material')+'-v2';
+  {
+    // WebGPURenderer: the same sway in TSL.
+    const root=instanceRootWorld();
+    const flex=smoothstep(.18,.91,positionGeometry.y.div(safeHeight));
+    const t=uniformOf(wind.time,'float');
+    const wave=sin(t.mul(root.x.mul(.001).add(.9)).add(root.x.mul(.14)).add(root.z.mul(.11)));
+    const push=normalize(uniformOf(wind.dir,'vec2').add(vec2(.001))).mul(wave).mul(uniformOf(wind.gust,'float').mul(.095).add(.014)).mul(flex);
+    attachNodes(base,{positionNode:offsetBeforeInstancing(vec3(push.x,float(0),push.y))},
+      kind==='tree'?{setup:ownerTreeColourSetup}:{});
+  }
   base.name='SWV_Uploaded_'+kind+'_'+(original?.name||'Plant');
   return base;
  };

@@ -1,6 +1,8 @@
 // Wolfveil reference-driven close-range 3D grass and weathered path edge stones.
 // Pure decoration: the original terrain remains the only walkable/collision mesh.
 import * as THREE from 'three';
+import {Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,uniformArray,renderGroup} from 'three/tsl';
+import {attachNodes,copyNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {WOLFVEIL_ROUTES,WOLFVEIL_SITES,wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
 import {clearOf,wolfveilTreePlacements} from './WolfveilForestLayout.js';
@@ -427,6 +429,25 @@ for(int j=0;j<6;j++){
   transformed.y-=press*inkTip*.22;
 }`);
   };
+  {
+    // WebGPURenderer: the same rooted sway and footstep parting in TSL.
+    const root=instanceRootWorld().toVar();
+    const tip=smoothstep(.08,.76,positionGeometry.y).toVar();
+    const t=uniformOf(inkTime,'float');
+    const dance=sin(t.mul(1.6).add(root.x.mul(.17)).add(root.z.mul(.12))).mul(.62)
+      .add(sin(t.mul(.94).add(root.z.mul(.27)).sub(root.x.mul(.08))).mul(.38));
+    const lean=normalize(uniformOf(inkWind,'vec2').add(vec2(.001))).mul(dance).mul(uniformOf(inkGust,'float').mul(.16).add(.035)).mul(tip);
+    const offset=vec3(lean.x,0,lean.y).toVar();
+    const touches=uniformArray(inkContacts.value,'vec4').setGroup(renderGroup);
+    Loop(inkContacts.value.length,({i})=>{
+      const touch=touches.element(i);
+      const away=root.xz.sub(touch.xy).toVar();
+      const press=float(1).sub(smoothstep(0,max(.001,touch.z),length(away))).mul(touch.w).toVar();
+      const push=normalize(away.add(vec2(.001))).mul(press).mul(tip).mul(.36);
+      offset.addAssign(vec3(push.x,press.mul(tip).mul(-.22),push.y));
+    });
+    attachNodes(grassMat,{positionNode:offsetBeforeInstancing(offset)});
+  }
   rockMat.name='Wolfveil_WeatheredPathEdgeStone';
   world.ownedMaterials.push(grassMat,rockMat);
   const grassTints=grassPalette.map(hex=>new THREE.Color(hex)),
@@ -534,6 +555,7 @@ for(int j=0;j<6;j++){
     // The existing rooted tip shader also bends the upper portions of shrubs.
     shrubMaterial.onBeforeCompile=grassMat.onBeforeCompile;
     shrubMaterial.customProgramCacheKey=grassMat.customProgramCacheKey;
+    copyNodes(grassMat,shrubMaterial);
     world.ownedMaterials.push(shrubMaterial);
     const colors=[0x294e65,0x376e8d,0x4384a5,0x64a6c8].map(c=>new THREE.Color(c));
     const westColors=[0x496b45,0x637654,0x789064,0x536a4a].map(c=>new THREE.Color(c));

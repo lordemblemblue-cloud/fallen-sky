@@ -17,7 +17,8 @@ const twins = new WeakMap();
 const STATE = ['visible', 'transparent', 'opacity', 'side', 'blending', 'blendSrc', 'blendDst', 'blendEquation',
   'blendSrcAlpha', 'blendDstAlpha', 'blendEquationAlpha', 'premultipliedAlpha', 'depthTest', 'depthWrite',
   'depthFunc', 'colorWrite', 'alphaTest', 'wireframe', 'polygonOffset', 'polygonOffsetFactor',
-  'polygonOffsetUnits', 'forceSinglePass', 'toneMapped', 'fog', 'alphaToCoverage', 'stencilWrite'];
+  'polygonOffsetUnits', 'forceSinglePass', 'alphaToCoverage', 'stencilWrite'];
+// (toneMapped / fog: the twin's output follows its classic GLSL, see webgpuClassicOutput.js)
 
 /**
  * Register a NodeMaterial factory for a classic (GLSL) material. The factory runs once, the first time a

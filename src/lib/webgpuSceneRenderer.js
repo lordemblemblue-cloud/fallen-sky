@@ -16,13 +16,17 @@
  * Rendering must wait for `ready` (or check `isSceneRendererReady`): before init, three only warns and renders
  * asynchronously.
  */
-import { WebGPURenderer, ShadowNode } from 'three/webgpu';
+import { WebGPURenderer, ShadowNode, NoToneMapping, LinearSRGBColorSpace, SRGBColorSpace, Color, FrontSide, BackSide, DoubleSide } from 'three/webgpu';
+import { texture, vec4 } from 'three/tsl';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
 import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
 import { pointSpriteFor } from './webgpuPointSprites.js';
 import { applyNodeSetups } from './webgpuNodeKit.js';
+import { applyClassicOutput, applyClassicShaderOutput, classicOutputKey } from './webgpuClassicOutput.js';
 
 export const WEBGPU_DEFAULT_MAX_TEXTURE = 8192;
+// WebGLShadowMap's side for a material with shadowSide = null
+const CLASSIC_SHADOW_SIDE = { [FrontSide]: BackSide, [BackSide]: FrontSide, [DoubleSide]: DoubleSide };
 
 /** Draw calls of the last frame for either renderer kind (WebGPU counts render() calls in `render.calls`). */
 export function drawCallsOf(renderer) {
@@ -181,6 +185,32 @@ function installCompat(renderer) {
     };
   }
 
+  // The colour-map alpha cut-out a classic depth material tests (plain uv, map alpha, the material's alphaTest), as
+  // the castShadowNode r171 copies into the shadow material. A texture node, not a material reference: the node is
+  // stored on that same material, and a reference to it would make the graph contain itself.
+  const cutouts = new WeakMap();
+  function shadowCutout(material) {
+    const cached = cutouts.get(material);
+    if (cached && cached.map === material.map && material.castShadowNode === cached.node) return;
+    if (!cached && material.castShadowNode) return; // the game's own
+    const node = vec4(0, 0, 0, texture(material.map).a);
+    cutouts.set(material, { map: material.map, node });
+    material.castShadowNode = node;
+    if (material.nodesStatic === undefined) material.nodesStatic = true; // only a texture: no per-frame refresh
+  }
+
+  // r171 draws shadow maps with one shared override material and copies each drawn material's positionNode (and
+  // castShadowNode, into colorNode) onto it, but keys the override's shader by its plain properties, where every node
+  // reads as "{}": every object with its own vertex movement (wind, walk cycles) would get the shadow shader built
+  // for the first one. Key the override by the node ids it carries.
+  function keyOverrideByNodes(override) {
+    const prior = override.customProgramCacheKey;
+    override.customProgramCacheKey = function sceneOverrideNodeKey() {
+      return `${prior.call(this)}|pos:${this.positionNode?.id ?? ''}|color:${this.colorNode?.id ?? ''}|depth:${this.depthNode?.id ?? ''}`;
+    };
+    override.__sceneNodeKeyed = true;
+  }
+
   // GLSL materials: draw the registered node twin; skip one without a twin instead of a blank NodeMaterial.
   const renderObject = renderer.renderObject;
   const reported = new Set();
@@ -202,7 +232,22 @@ function installCompat(renderer) {
         }
         return;
       }
-      material = twin;
+      material = applyClassicShaderOutput(material, twin);
+    }
+    const override = scene?.overrideMaterial;
+    if (override) {
+      if (!override.__sceneNodeKeyed) keyOverrideByNodes(override);
+      if (override.isShadowNodeMaterial && material) {
+        // WebGLShadowMap draws a material's colour-map alpha cut-outs into the shadow map; r171 only its alphaMap.
+        if (material.alphaTest > 0 && material.map && !material.alphaMap && !material.isNodeMaterial) shadowCutout(material);
+        // ...and draws single-sided materials' back faces (shadowSide null = the opposite side), which keeps lit
+        // surfaces from shadowing themselves (acne); r171 draws the same side as the material.
+        if (material.shadowSide == null) {
+          material.shadowSide = CLASSIC_SHADOW_SIDE[material.side] ?? material.side;
+          try { return renderObject.call(this, object, scene, camera, geometry, material, ...rest); }
+          finally { material.shadowSide = null; }
+        }
+      }
     }
     return renderObject.call(this, object, scene, camera, geometry, material, ...rest);
   };
@@ -211,7 +256,45 @@ function installCompat(renderer) {
   // material three converts them into, so composed patches keep their GLSL order.
   const library = renderer.library;
   const fromMaterial = library.fromMaterial.bind(library);
-  library.fromMaterial = (material) => applyNodeSetups(material, fromMaterial(material));
+  library.fromMaterial = (material) => {
+    const nodeMaterial = applyNodeSetups(material, fromMaterial(material));
+    // the classic output order for converted classic materials (webgpuClassicOutput.js)
+    return material?.isNodeMaterial ? nodeMaterial : applyClassicOutput(material, nodeMaterial);
+  };
+
+  // No final tone-mapping / colour-space pass (r171 draws the frame into a linear target and converts every pixel
+  // at the end): each material finishes itself as in WebGL (webgpuClassicOutput.js). The renderer's toneMapping and
+  // outputColorSpace stay what the game set; only the final pass reads these two.
+  Object.defineProperty(renderer, 'currentToneMapping', { configurable: true, get: () => NoToneMapping });
+  Object.defineProperty(renderer, 'currentColorSpace', { configurable: true, get: () => LinearSRGBColorSpace });
+  // ...so the clear colour goes to the screen in the output colour space, as WebGL clears it.
+  const clearColor = new Color();
+  const toOutputSpace = (c) => {
+    if (renderer.getRenderTarget() !== null || renderer.outputColorSpace !== SRGBColorSpace || !c) return c;
+    const a = c.a > 0 ? c.a : 1;
+    clearColor.setRGB(c.r / a, c.g / a, c.b / a).convertLinearToSRGB();
+    c.r = clearColor.r * a; c.g = clearColor.g * a; c.b = clearColor.b * a;
+    return c;
+  };
+  const getClearColor = backend.getClearColor.bind(backend);
+  backend.getClearColor = () => toOutputSpace(getClearColor());
+  state.afterInit = () => {
+    const background = renderer._background;
+    if (background?.update) {
+      const update = background.update.bind(background);
+      background.update = (scene, renderList, renderContext) => {
+        const result = update(scene, renderList, renderContext);
+        if (renderContext?.clearColorValue) toOutputSpace(renderContext.clearColorValue);
+        return result;
+      };
+    }
+    // a built shader depends on screen / render target and the tone mapping + colour space it was built for
+    const nodes = renderer._nodes;
+    if (nodes?.getForRenderCacheKey) {
+      const key = nodes.getForRenderCacheKey.bind(nodes);
+      nodes.getForRenderCacheKey = (renderObject) => key(renderObject) + classicOutputKey(renderer);
+    }
+  };
 
   // Device loss: three's handler logs it; listeners stop their loop and fall back.
   const onDeviceLost = renderer.onDeviceLost;
@@ -243,6 +326,7 @@ export function createWebGPUSceneRenderer({ canvas, antialias = true, alpha = fa
     error: null, disposed: false };
   installCompat(renderer);
   const ready = renderer.init().then(() => {
+    state.afterInit?.();
     state.ready = true;
     return { api: sceneRendererApi(renderer), adapter: describeAdapter(renderer) };
   }, (error) => {

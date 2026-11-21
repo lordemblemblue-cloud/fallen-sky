@@ -4,6 +4,18 @@
 // procedural walk deformation (not a retargeted skeletal animation).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { abs, float, positionGeometry, positionLocal, reference, select, sin, smoothstep, vec3 } from 'three/tsl';
+import { attachNodes } from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same gait in TSL, one graph for every guard mesh, each reading its own guard's values from
+// mesh.userData.guardGait (a reference to the drawn object: a material reference would make the node graph refer
+// to itself through the material that holds it, which r171's node hashing follows forever)
+const gaitStep = reference('userData.guardGait.step.value', 'float');
+const gaitStride = reference('userData.guardGait.stride.value', 'float');
+const gaitLeg = smoothstep(0.29, 0.60, positionGeometry.y).oneMinus();
+const gaitSwing = sin(gaitStep.add(select(positionGeometry.x.lessThan(0), float(-1), float(1)).mul(1.5707963)));
+const GUARD_GAIT_POSITION = positionLocal.add(vec3(0, gaitLeg.mul(0.018).mul(abs(gaitSwing)).mul(gaitStride),
+  gaitLeg.mul(0.075).mul(gaitSwing).mul(gaitStride)));
 
 export const WOLFVEIL_GUARD_MODELS = Object.freeze({
   blue: 'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/18d7c6281_falling_sky_guard_blue_optimized.glb',
@@ -40,6 +52,7 @@ function animatedMaterial(source, uniforms) {
       `);
   };
   mat.customProgramCacheKey = () => 'wolfveil-guard-gait-v1';
+  attachNodes(mat, { positionNode: GUARD_GAIT_POSITION });
   return mat;
 }
 
@@ -63,6 +76,7 @@ export function attachWolfveilGuardVisual(parent, variant = 'blue', { onAttached
       if (!node.isMesh) return;
       node.castShadow = true;
       node.receiveShadow = false;
+      node.userData.guardGait = uniforms; // read by GUARD_GAIT_POSITION
       const shared = Array.isArray(node.material) ? node.material : [node.material];
       const unique = shared.filter(Boolean).map(mat => animatedMaterial(mat,uniforms));
       materials.push(...unique);

@@ -3,6 +3,8 @@
 // skin paint just above and below the seam and feather only the head-neck
 // albedo in the existing PBR shader. If sampling fails, leave art untouched.
 import * as THREE from 'three';
+import {vec3,vec4,dot,max,mix,length,smoothstep,varying,positionGeometry} from 'three/tsl';
+import {addMapStageColor,uniformOf} from '../../lib/webgpuNodeKit.js';
 import {neckToneFeather} from './creatorBodyQuality.mjs';
 
 const fixed=new WeakSet();
@@ -135,6 +137,18 @@ uniform vec3 creatorNeckRatio;`)
 diffuseColor.rgb*=mix(vec3(1.0),creatorNeckRatio,vCreatorNeckFeather*0.72);`);
   };
   material.customProgramCacheKey=()=>String(previousKey?.()||'')+'|creator-fused-neck-feather-v1';
+  {
+   // WebGPURenderer: the same feathered tone ratio in TSL
+   const base=uniformOf(uniforms.creatorNeckBase,'vec3'),dir=uniformOf(uniforms.creatorNeckDir,'vec3');
+   const off=positionGeometry.sub(base);
+   const along=dot(off,dir);
+   const h=along.div(max(uniformOf(uniforms.creatorNeckHeight,'float'),.001));
+   const radial=length(off.sub(dir.mul(along))).div(max(uniformOf(uniforms.creatorNeckRadius,'float'),.001));
+   // per vertex, interpolated, as the GLSL varying
+   const feather=varying(smoothstep(-.1,.27,h).mul(smoothstep(.64,1.07,h).oneMinus()).mul(smoothstep(.75,1.4,radial).oneMinus()),'v_creatorNeckFeather');
+   const ratio=uniformOf(uniforms.creatorNeckRatio,'vec3');
+   addMapStageColor(material,(color)=>vec4(color.rgb.mul(mix(vec3(1),ratio,feather.mul(.72))),color.a));
+  }
   material.needsUpdate=true;
   mesh.userData.creatorNeckToneRepair={samples:scan.counts,ratio:ratio.map(v=>+v.toFixed(3)),softMask:neckToneFeather(.4,.5)};
   fixed.add(mesh);done=true;
