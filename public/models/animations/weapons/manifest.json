@@ -37,6 +37,19 @@
             0.1,
             0.3
           ]
+        },
+        "swordCharge": {
+          "file": "swordCharge.glb",
+          "duration": 1.0,
+          "windUp": 0.1167,
+          "chargeFrom": 0.1167,
+          "charge": 0.4167,
+          "hit": 0.5,
+          "cancel": 0.7167,
+          "sweep": [
+            0.4333,
+            0.6167
+          ]
         }
       }
     },
@@ -74,6 +87,19 @@
           "sweep": [
             0.1,
             0.3
+          ]
+        },
+        "swordCharge": {
+          "file": "female/swordCharge.glb",
+          "duration": 1.0,
+          "windUp": 0.1167,
+          "chargeFrom": 0.1167,
+          "charge": 0.4167,
+          "hit": 0.5,
+          "cancel": 0.7167,
+          "sweep": [
+            0.4333,
+            0.6167
           ]
         }
       }
