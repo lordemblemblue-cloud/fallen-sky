@@ -27,7 +27,7 @@ test('a sword strike reaches a duelist in front and in range, not one behind or 
   assert.ok(front.vitals.will < VITALS.will || front.vitals.shield < VITALS.shield, 'its protection took the hit');
   assert.equal(behind.vitals.shield, VITALS.shield);
   assert.equal(far.vitals.shield, VITALS.shield);
-  assert.equal(a.vitals.stamina < VITALS.stamina, true);
+  assert.equal(a.vitals.stamina, VITALS.stamina, 'a sword strike no longer costs stamina');
 });
 
 test('a roll carries the body its full distance in the stick direction; a heavy strike lunges as its clip does', () => {
