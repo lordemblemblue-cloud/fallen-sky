@@ -646,8 +646,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             classId: mine?.classId || null,
             abilities: mine?.classId ? CLASSES[mine.classId].abilities.map((ab, i) => ({ id: ab.id, name: ab.name, slot: i + 1,
               key: keyLabel(controls.keys[`ability${i + 1}`], { short: true }), ready: Math.max(0, (mine.cooldowns[ab.id] ?? 0) - world.time),
-              cost: MOVES[ab.id].will, total: moveFor(mine, ab.id).cooldown, rank: abilityRank(mine.level) })) : null,
-            specialTier: mine?.classId ? specialTier(mine.level) : null,
+              cost: MOVES[ab.id].will, total: moveFor(mine, ab.id).cooldown, rank: abilityRank(mine.matchBoost) })) : null,
+            specialTier: mine?.classId ? specialTier(mine.matchBoost) : null,
+            matchBoost: mine?.matchBoost ?? 0,
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
@@ -757,7 +758,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       {showPicker && (
-        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current}
+        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
       )}
     </div>

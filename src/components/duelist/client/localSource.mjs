@@ -1,6 +1,6 @@
 // A match played in the browser (practice, or any mode against bots) as a "source" for the game view: the
 // same shape as an online match (net/client.mjs createOnlineSource), so one renderer draws both.
-import { createMatch, stepMatch, matchView, queueMatchClass, MODES } from '../sim/match.mjs';
+import { createMatch, stepMatch, matchView, queueMatchClass, purchaseMatchItem, MODES } from '../sim/match.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
 
 const STEP = 1 / 60;
@@ -11,6 +11,7 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
   const def = MODES[mode] || MODES.practice;
   const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId, progress }], seats: def.id === 'practice' ? 1 + bots : null });
   let classAnswer = null;
+  let shopAnswer = null;
   // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
   const others = BODY_IDS.filter((b) => b !== youBody);
   let k = 0;
@@ -31,6 +32,8 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
     seatsVersion: 1,
     seats: () => seats,
     get classAnswer() { return classAnswer; },
+    get shopAnswer() { return shopAnswer; },
+    buyItem(id) { shopAnswer = purchaseMatchItem(match, 'you', id); },
     /** Change class: queued for the next spawn (before the fight, between rounds or while down). */
     chooseClass(id) {
       const res = queueMatchClass(match, 'you', id);

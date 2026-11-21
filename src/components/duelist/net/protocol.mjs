@@ -41,9 +41,9 @@
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
 // 4426 a page from before an update, 4429 too many messages
-import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor } from '../core/index.mjs';
+import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 6; // 6: class levels (a fighter's level travels with it; abilities have ranks); the jump // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
+export const PROTOCOL = 9; // 9: authoritative match-item equipment replicated with owner prediction
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -115,7 +115,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
     pu: finite(f.protectedUntil) ? r3(f.protectedUntil) : -1,
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
-    c: f.classId || 0,
+    c: f.classId || 0, mb: f.matchBoost || 0, it: f.items || [],
     fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
@@ -142,6 +142,9 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.guard = data.g >= 0 ? { since: data.g } : null;
   f.breaches = Object.fromEntries((data.br || []).map((id) => [id, Infinity]));
   f.classId = data.c || null;
+  f.matchBoost = Math.max(0, Math.min(3, Math.floor(data.mb) || 0));
+  f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
+  f.shopStats = itemBonuses(f.items);
   f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
@@ -189,7 +192,9 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
-    cl: f.classId || 0, lv: f.level || 1, mt: f.meter || 0, sg: f.specialTarget || 0,
+    ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
+      Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
+    cl: f.classId || 0, lv: f.level || 1, mb: f.matchBoost || 0, it: f.items || [], mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
@@ -205,7 +210,10 @@ export function applyOwn(f, body, data) {
   v.max = { hp: data.mx[0], stamina: data.mx[1], will: data.mx[2], shield: data.mx[3] };
   f.weapon = data.w;
   f.classId = data.cl || null;
-  f.level = data.lv || 1; // before the action: its move is read at the fighter's rank
+  f.level = data.lv || 1; // saved mastery, never controls combat
+  f.matchBoost = Math.max(0, Math.min(3, Math.floor(data.mb) || 0)); // authoritative per-match combat rank
+  f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
+  f.shopStats = itemBonuses(f.items); // exact item bonuses match server before reconstructing moves
   f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
   f.cooldowns = untimes(data.cd);
   f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
@@ -219,7 +227,9 @@ export function applyOwn(f, body, data) {
   f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
-  Object.assign(body, { x, y, z, yaw, vy, kx, kz });
+  Object.assign(body, { x, y, z, yaw, vy, kx, kz,
+    jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
+    airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };

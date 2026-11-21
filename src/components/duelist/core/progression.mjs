@@ -1,20 +1,24 @@
-// Duelist Adventure: class levels. Each class has a level of its own, 1 to 20, earned with EXP from matches.
-//   Abilities have ranks 1 to 5. Every fifth level adds a rank to all four of the class's abilities (levels 5, 10,
-//   15 and 20), so a class is maxed out at level 20. The passive grows with the same rank.
-//   The special has three tiers: as learned, improved at level 10, and final at level 20.
-// What a rank or a tier changes is in core/ranks.mjs. Pure, and shared by the browser and the match server: the
-// server decides the level an online fighter has (server/duelist/progress.mjs); the browser never does.
-export const LEVEL_CAP = 20;
-export const RANK_MAX = 5;
+// Duelist Adventure: independent permanent class mastery 1-25 and ephemeral match combat boosts.
+// The class XP is retained between matches; the match boosts reset at every new match and never persist.
+// Only server-owned elapsed live match time improves ability/passive ranks and special tiers.
+// Permanent mastery unlock rewards may be layered on top, but MUST NOT increase combat strength.
+export const LEVEL_CAP = 25;
+export const RANK_MAX = 4;
 export const TIER_MAX = 3;
+export const MATCH_BOOST = Object.freeze({ cap: 3, atSeconds: Object.freeze([60, 150, 240]) });
+export const cleanBoost = (n) => Number.isFinite(n) ? Math.max(0, Math.min(MATCH_BOOST.cap, Math.floor(n))) : 0;
+export const boostAt = (seconds) => Number.isFinite(seconds) && seconds >= 0 ?
+  MATCH_BOOST.atSeconds.filter((t) => seconds + 1e-7 >= t).length : 0;
 
 const whole = (level) => Math.max(1, Math.min(LEVEL_CAP, Math.floor(Number.isFinite(level) ? level : 1)));
-/** The rank (1-5) of every ability of a class at this level. */
-export const abilityRank = (level) => 1 + Math.floor(whole(level) / 5);
-/** The tier (1-3) of the class's special at this level. */
-export const specialTier = (level) => (whole(level) >= 20 ? 3 : whole(level) >= 10 ? 2 : 1);
-/** The levels at which something improves, and what: { 5: 'abilities', 10: 'abilities and special', ... }. */
-export const MILESTONES = Object.freeze({ 5: 'abilities', 10: 'abilities and special', 15: 'abilities', 20: 'abilities and special' });
+/** Rank 1-4 is based on the temporary match boost, never saved mastery. */
+export const abilityRank = (matchBoost = 0) => 1 + cleanBoost(matchBoost);
+/** Tier 1-3 is based on the temporary match boost, never saved mastery. */
+export const specialTier = (matchBoost = 0) => cleanBoost(matchBoost) >= 3 ? 3 : cleanBoost(matchBoost) >= 2 ? 2 : 1;
+/** Permanent mastery milestones are recognition, not power increases. */
+export const MILESTONES = Object.freeze({
+  5: 'mastery I', 10: 'mastery II', 15: 'mastery III', 20: 'mastery IV', 25: 'mastery V',
+});
 
 /** EXP needed to go from `level` to the next (nothing past the cap). */
 export const xpToNext = (level) => (whole(level) >= LEVEL_CAP ? 0 : 100 + (whole(level) - 1) * 60);
@@ -65,7 +69,7 @@ export function cleanProgress(raw, classIds) {
   return out;
 }
 
-// The specials' three tiers (tier 1 is as learned): what improves at level 10 and again at level 20.
+// The specials' three temporary tiers: improved only during this match.
 export const SPECIAL_TIERS = Object.freeze({
   rage: Object.freeze({ effectSeconds: Object.freeze([5, 6, 7]) }),
   execution: Object.freeze({ threshold: Object.freeze([0.25, 0.3, 0.35]) }), // the target's HP, as a share of its most
@@ -73,4 +77,4 @@ export const SPECIAL_TIERS = Object.freeze({
   sanctuary: Object.freeze({ effectSeconds: Object.freeze([5, 6, 7]), radius: Object.freeze([6, 7, 8]), healPerSecond: Object.freeze([5, 6, 7]) }),
 });
 /** A special's value at a level (e.g. the Execution's threshold), or the fallback where it has no tiers. */
-export const tierValue = (specialId, field, level, fallback = null) => SPECIAL_TIERS[specialId]?.[field]?.[specialTier(level) - 1] ?? fallback;
+export const tierValue = (specialId, field, matchBoost, fallback = null) => SPECIAL_TIERS[specialId]?.[field]?.[specialTier(matchBoost) - 1] ?? fallback;

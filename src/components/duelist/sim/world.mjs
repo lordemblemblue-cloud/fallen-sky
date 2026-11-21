@@ -21,6 +21,7 @@ export const PROJECTILE_HEIGHT = 1.35;
 // Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
 const GRAVITY = 18;
+export const AIR_DASH = Object.freeze({ doubleTapSeconds: 0.32, minTapSeconds: 0.055, minHeight: 0.12, distance: 4.5 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
 export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
@@ -32,8 +33,8 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false, level = nu
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1 } = {}) {
-  const fighter = createFighter({ id, team, weapon, vitals, classId, level });
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
+  const fighter = createFighter({ id, team, weapon, vitals, classId, level, matchBoost });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
@@ -41,11 +42,12 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined } = {}) {
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
   const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
-    level: level === undefined ? old.level : level });
+    level: level === undefined ? old.level : level,
+    matchBoost: matchBoost === undefined ? old.matchBoost : matchBoost, items: old.items || [] });
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
@@ -65,6 +67,8 @@ export function removeFighter(world, id) {
 function newBody(x, z, yaw) {
   return {
     x, z, y: 0, yaw, vy: 0,
+    // Client prediction and the match server share this transient state. It resets on landing.
+    jumped: false, airDashUsed: false, airDashTapAt: -Infinity,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
@@ -113,6 +117,28 @@ export function step(world, dt, inputs = {}) {
     const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
+      // An airborne Dash keypress is armed once; only a second, separate press within the
+      // window can activate airDash. Packets cannot directly request '#airDash'.
+      if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
+        if (!restrained && body.jumped && !body.airDashUsed && body.y > AIR_DASH.minHeight &&
+            (!fighter.action || fighter.action.id === 'jump')) {
+          const gap = now - body.airDashTapAt;
+          if (gap >= AIR_DASH.minTapSeconds && gap <= AIR_DASH.doubleTapSeconds) {
+            const result = press(fighter, '#airDash', now);
+            if (result.accepted) {
+              body.airDashUsed = true;
+              body.airDashTapAt = -Infinity;
+              body.vy = 0; // hang briefly at current height; gravity resumes after the burst
+              startMotion(body, fighter, 'airDash');
+              effects.push({ type: 'airDash', by: id, distance: AIR_DASH.distance });
+            }
+          } else if (gap >= AIR_DASH.minTapSeconds || !Number.isFinite(gap)) {
+            body.airDashTapAt = now;
+          }
+        }
+        continue; // never turn an airborne tap into a normal ground dash
+      }
+      if (command === 'jump' && (body.jumped || body.y > 0.01)) continue; // no double jump
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
@@ -181,7 +207,7 @@ function trySpecial(world, fighter, body, now, effects) {
   const special = def.special;
   const move = moveFor(fighter, special.id); // at the tier the fighter's level gives it
   const reach = move.reach ?? special.reach;
-  const level = fighter.level;
+  const matchBoost = fighter.matchBoost;
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
   let target = null;
@@ -193,12 +219,12 @@ function trySpecial(world, fighter, body, now, effects) {
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
-      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level, target: { id: o.id, team: o.team,
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, target: { id: o.id, team: o.team,
         hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
       if (verdict.allowed) { target = o; break; }
     }
-    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
-  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
+  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
   const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
   if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
   if (fighter.action) { fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: special.id, at: now }); fighter.action = null; }
@@ -258,8 +284,21 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
     }
     case 'mend': {
       const ally = alliesInReach(world, fighter, body, move)[0] || fighter;
-      give(ally, 'mend', { perSec: move.heal / move.effectSeconds, by: fighter.id });
-      effects.push({ type: 'heal', by: fighter.id, target: ally.id, amount: move.heal });
+      const passives = fighter.shopStats?.passive || {};
+      const healAmount = move.heal * (1 + (passives.healAmp || 0));
+      give(ally, 'mend', { perSec: healAmount / move.effectSeconds, by: fighter.id });
+      effects.push({ type: 'heal', by: fighter.id, target: ally.id, amount: healAmount });
+      // Support procs only for an ally who actually needs healing.
+      if (ally !== fighter && ally.vitals.hp < ally.vitals.max.hp) {
+        if (passives.onAllyHealHaste) fighter.shopSpeedUntil = Math.max(fighter.shopSpeedUntil, now + 3);
+        if ((fighter.shopHealProcAt ?? -Infinity) + 8 <= now) {
+          fighter.shopHealProcAt = now;
+          if (passives.onAllyHealShield) ally.vitals.shield = Math.min(ally.vitals.max.shield, ally.vitals.shield + passives.onAllyHealShield);
+          if (passives.onAllyHealWill) fighter.vitals.will = Math.min(fighter.vitals.max.will, fighter.vitals.will + passives.onAllyHealWill);
+          if (passives.onAllyHealPulse) fighter.vitals.hp = Math.min(fighter.vitals.max.hp, fighter.vitals.hp + passives.onAllyHealPulse *
+            (fighter.healReducedUntil > now ? 1 - fighter.healReduction : 1));
+        }
+      }
       break;
     }
     case 'sanctuary': {
@@ -290,13 +329,14 @@ function stepHeals(world, dt, now) {
     const dome = world.zones.length ? shelterOf(world, f, now) : null;
     if (dome) perSec += dome.heal ?? SPECIAL_BALANCE.sanctuaryHealPerSecond;
     perSec += selfMend(f, now); // the Healer's passive
-    if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt);
+    if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt * (f.healReducedUntil > now ? 1 - f.healReduction : 1));
   }
   if (world.zones.length) world.zones = world.zones.filter((z) => z.until > now);
 }
 
 function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
+  if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -397,10 +437,18 @@ function moveBody(world, fighter, body, dt, now) {
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
+  } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
+    // Pause vertical movement during the short horizontal burst, then resume normal gravity.
+    body.vy = 0;
   } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
     body.y = Math.max(0, body.y + body.vy * dt);
     if (body.y === 0) body.vy = 0;
+  }
+  if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
+    body.jumped = false;
+    body.airDashUsed = false;
+    body.airDashTapAt = -Infinity;
   }
   keepInside(world, body);
 }

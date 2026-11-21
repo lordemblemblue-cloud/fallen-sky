@@ -4,7 +4,7 @@
 // the reach, how long an effect lasts and how soon the ability is ready again.
 import { MOVES } from './moves.mjs';
 import { classById } from './classes.mjs';
-import { abilityRank, specialTier, RANK_MAX, SPECIAL_TIERS } from './progression.mjs';
+import { abilityRank, specialTier, RANK_MAX, TIER_MAX, SPECIAL_TIERS } from './progression.mjs';
 
 // Per rank above the first: a number is a share of the first rank's value added each rank (negative: taken off);
 // a list is the value at each rank.
@@ -53,7 +53,7 @@ export function rankedMove(id, rank = 1) {
 export function tieredMove(id, tier = 1) {
   const base = MOVES[id];
   const fields = TIER_FIELDS[id];
-  const t = Math.max(1, Math.min(3, Math.floor(tier) || 1));
+  const t = Math.max(1, Math.min(TIER_MAX, Math.floor(tier) || 1));
   if (!base || !fields) return base || null;
   const key = `${id}@${t}`;
   if (!cache.has(key)) {
@@ -66,6 +66,24 @@ export function tieredMove(id, tier = 1) {
 }
 
 const inKit = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
+// Item Ability stat amplifies class ability damage/healing and effect duration, while passive
+// haste shortens cooldowns. Normal attacks, blocks and movement animations are unchanged.
+function itemTuned(f, move) {
+  if (!move) return move;
+  const ability = f.shopStats?.ability || 0;
+  const haste = f.shopStats?.passive?.haste || 0;
+  if (!ability && !haste) return move;
+  const tuned = { ...move };
+  if (ability) {
+    for (const field of ['damage', 'heal', 'effectSeconds']) {
+      if (Number.isFinite(tuned[field]) && tuned[field] > 0) tuned[field] = Math.round(tuned[field] * (1 + ability) * 1000) / 1000;
+    }
+  }
+  if (haste && Number.isFinite(tuned.cooldown) && tuned.cooldown > 0) {
+    tuned.cooldown = Math.round(tuned.cooldown * (1 - haste) * 1000) / 1000;
+  }
+  return Object.freeze(tuned);
+}
 
 /**
  * The move as this fighter does it: an ability of its class at the rank its level gives, its special at its tier,
@@ -74,8 +92,9 @@ const inKit = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === 
 export function moveFor(f, id) {
   const base = MOVES[id] || null;
   if (!base || !f?.classId) return base;
-  if (base.special) return classById(f.classId)?.special.id === id ? tieredMove(id, specialTier(f.level)) : base;
-  return GROWTH[id] && inKit(f, FROM[id] || id) ? rankedMove(id, abilityRank(f.level)) : base;
+  if (base.special) return classById(f.classId)?.special.id === id
+    ? itemTuned(f, tieredMove(id, specialTier(f.matchBoost))) : base;
+  return GROWTH[id] && inKit(f, FROM[id] || id) ? itemTuned(f, rankedMove(id, abilityRank(f.matchBoost))) : base;
 }
 
 /** A passive's value at a rank: the passives' numbers are lists of five (core/classes.mjs), or plain numbers. */
@@ -84,7 +103,7 @@ export const atRank = (value, rank) => (Array.isArray(value) ? value[Math.max(1,
 export function passiveFor(f) {
   const passive = classById(f?.classId)?.passive;
   if (!passive) return null;
-  const rank = abilityRank(f.level);
+  const rank = abilityRank(f.matchBoost);
   const out = { id: passive.id, name: passive.name, rank };
   for (const [key, value] of Object.entries(passive)) if (typeof value === 'number' || Array.isArray(value)) out[key] = atRank(value, rank);
   return out;
@@ -126,12 +145,12 @@ const PASSIVE_TEXT = {
  * A class's kit in words at a level:
  * { level, rank, tier, passive: { id, name, rank, text }, abilities: [{ id, name, rank, text, cooldown }], special }.
  */
-export function kitAt(classId, level = 1) {
+export function kitAt(classId, level = 1, matchBoost = 0) {
   const def = classById(classId);
   if (!def) return null;
-  const f = { classId, level };
-  const rank = abilityRank(level);
-  const tier = specialTier(level);
+  const f = { classId, level, matchBoost };
+  const rank = abilityRank(matchBoost);
+  const tier = specialTier(matchBoost);
   const passive = passiveFor(f);
   const tierOf = Object.fromEntries(Object.entries(SPECIAL_TIERS[def.special.id] || {}).map(([k, v]) => [k, v[tier - 1]]));
   return {
