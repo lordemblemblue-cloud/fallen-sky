@@ -56,7 +56,7 @@ export function spendWill(v, amount, now) {
   return true;
 }
 
-// Drains Will without a check (the Veil stopping a hit, holding a grip): may collapse the Veil.
+// Drains Will without a check for abilities/channels (e.g. maintaining a grip); damage never invokes this.
 export function drainWill(v, amount, now) {
   if (amount <= 0 || v.collapsed) return 0;
   const paid = Math.min(v.will, amount);
