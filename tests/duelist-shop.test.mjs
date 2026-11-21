@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { SHOP_ITEMS, SHOP_RULES, shopItem, purchaseRule, itemBonuses, tierPrice, equipItems } from '../src/components/duelist/core/shop.mjs';
 import { createMatch, matchView, stepMatch, purchaseMatchItem } from '../src/components/duelist/sim/match.mjs';
 import { createFighter } from '../src/components/duelist/core/fighter.mjs';
