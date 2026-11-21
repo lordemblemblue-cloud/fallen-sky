@@ -2,6 +2,8 @@
 // Will (bright when the Veil is stable, flickering when unstable, dark when it has collapsed).
 // Weapon frame: the grip at the origin, the blade along +Y, the edge along +Z, metres.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { crystalShellTwin } from './duelistNodes.mjs';
 
 const SHELL_VERTEX = /* glsl */`
   varying vec3 vN; varying vec3 vV; varying float vY;
@@ -49,6 +51,7 @@ export function createCrystalSword({ color = 0x9fe8ff, length = 0.98 } = {}) {
     vertexShader: SHELL_VERTEX, fragmentShader: SHELL_FRAGMENT, transparent: true, depthWrite: false,
     blending: THREE.AdditiveBlending, uniforms: { uColor: { value: tint.clone() }, uIntensity: { value: 1 }, uTime: { value: 0 }, uFlicker: { value: 0 } },
   });
+  setNodeTwin(shellMaterial, crystalShellTwin);
   const geometries = [];
   const add = (geometry, material, y = 0) => {
     geometries.push(geometry);

@@ -2,6 +2,10 @@
 // Every chamber, ramp, and winding tunnel shares exact geometry with
 // WolfveilCaveLayout.mjs so walkable floors, overhead ceilings, and swept walls
 // match 1:1. Includes unique themed interiors and a 6-light proximity pool.
+import { NodeMaterial } from 'three/webgpu';
+import { Fn, uv, positionWorld, vec3, vec4, length, sin, cos, mix, smoothstep } from 'three/tsl';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { uniformOf } from '../../../lib/webgpuNodeKit.js';
 import * as THREE from 'three';
 import {
   WOLFVEIL_EXPLORABLE_CAVES,
@@ -170,6 +174,26 @@ export function createWolfveilCaveSystem(world, { offsetZ = 0, startActiveCaveId
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
+  });
+
+  // WebGPURenderer: the same cistern water in TSL
+  setNodeTwin(cisternWaterMat, () => {
+    const time = uniformOf(cisternUniforms.uTime, 'float');
+    const m = new NodeMaterial();
+    m.fragmentNode = Fn(() => {
+      const p = uv().mul(2).sub(1);
+      const r = length(p).toVar();
+      r.greaterThan(1).discard();
+      const w = positionWorld;
+      const rippleA = sin(r.mul(22).sub(time.mul(2.2)).add(sin(w.x.mul(0.7)).mul(1.4)));
+      const rippleB = cos(w.x.mul(1.6).add(w.z.mul(1.5)).add(time.mul(1.5)));
+      const caustic = smoothstep(0.35, 0.95, rippleA.mul(0.3).add(0.5).add(rippleB.mul(0.2)));
+      const col = mix(vec3(0.05, 0.18, 0.26), vec3(0.18, 0.58, 0.66), r.oneMinus().mul(0.45).add(0.35)).toVar();
+      col.addAssign(vec3(0.28, 0.68, 0.75).mul(caustic).mul(0.35));
+      col.assign(mix(col, vec3(0.78, 0.93, 0.96), smoothstep(0.84, 0.99, r).mul(0.55)));
+      return vec4(col, 0.86);
+    })();
+    return m;
   });
 
   world.ownedMaterials.push(

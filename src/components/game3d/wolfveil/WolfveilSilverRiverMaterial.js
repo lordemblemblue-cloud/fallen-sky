@@ -5,6 +5,8 @@
 // Fresnel sky / sun specular reflections. Preserves all uniform & contact contracts.
 import * as THREE from 'three';
 import {resolveWolfveilRiverWeather} from './WolfveilSilverRiverFlow.mjs';
+import {setNodeTwin,resetNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {createWolfveilRiverTwin} from './WolfveilSilverRiverNodes.mjs';
 // Natural river surface (2026-11-16): flow-mapped ripples replace the former
 // evenly spaced "glass ripple" crest train (WolfveilGlassRippleProfile.mjs
 // stays available for reference).
@@ -184,6 +186,7 @@ export function createWolfveilSilverRiverMaterial(){
     side:THREE.DoubleSide,transparent:true,depthWrite:false,depthTest:true,
     blending:THREE.NormalBlending,
   });
+  setNodeTwin(material,createWolfveilRiverTwin); // WebGPURenderer: the same water in TSL
   return {
     material,uniforms,
     updateAppearance(weather={},sunLight=null,fog=null){
@@ -214,6 +217,7 @@ export function createWolfveilSilverRiverMaterial(){
          !contact.uniforms.uTime)return false;
       uniforms.uContactRipples=contact.uniforms.uRipples;
       uniforms.uContactTime=contact.uniforms.uTime;
+      resetNodeTwin(material);
       return true;
     },
   };

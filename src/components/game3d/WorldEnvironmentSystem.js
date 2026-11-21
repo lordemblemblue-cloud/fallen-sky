@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { NodeMaterial } from 'three/webgpu';
+import { normalize, positionLocal, vec3, vec4, max, pow, mix } from 'three/tsl';
+import { setNodeTwin } from '../../lib/webgpuMaterialTwins.js';
+import { uniformOf } from '../../lib/webgpuNodeKit.js';
 import { createHailLayer } from './weather/hailLayer';
 import { WORLD_SKY_RADIUS, WORLD_STAR_RADIUS, WORLD_CELESTIAL_RADIUS, WORLD_STAR_SIZE_SCALE, WORLD_CELESTIAL_SIZE_SCALE, worldSkyAnchor } from './sky/worldSkyCoverage.mjs';
 import { CLIMATE_PROFILES, CLIMATE_LIST, MONTH_LABELS, moonPhaseLabel } from './worldClimateData';
@@ -348,6 +352,14 @@ export function createWorldEnvironmentSystem({
         gl_FragColor = vec4(mix(bottomColor, topColor, t), 1.0);
       }
     `,
+  });
+  // WebGPURenderer draws this TSL twin of the gradient (same uniforms; display colours written as they are).
+  setNodeTwin(skyMat, () => {
+    const m = new NodeMaterial();
+    const h = normalize(positionLocal.add(vec3(0, uniformOf(skyUniforms.offset, 'float'), 0))).y;
+    const t = max(pow(max(h, 0), uniformOf(skyUniforms.exponent, 'float')), 0);
+    m.fragmentNode = vec4(mix(uniformOf(skyUniforms.bottomColor, 'color'), uniformOf(skyUniforms.topColor, 'color'), t), 1);
+    return m;
   });
   // One large, camera-following sphere: the full Wolfveil terrain always stays
   // inside a seamless gradient sky without cloning/tiling any star assets.

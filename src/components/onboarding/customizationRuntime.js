@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { SHAPE_CONTROLS, RIG_IDS, ARMOR_SLOTS } from '@/components/onboarding/avatarCustomization';
 import { applyRegionAppearance, bindBodyRegions, regionCapabilities } from './bodyRegions.js';
 import { clearFusedHairFromEyes } from './creatorModelQuality';
+import { copyNodes } from '../../lib/webgpuNodeKit.js';
 import { bindFusedMakeup } from './creatorMakeup.js';
 import { bindCreatorHairColor } from './creatorHairColor.js';
 import { ensureHairSprings, disposeHairSprings } from './hairSprings.js';
@@ -106,6 +107,7 @@ export function applyCustomizationAppearance(root,appearance={}) {
      THREE.MeshStandardMaterial.prototype.copy.call(physical,material);
      physical.onBeforeCompile=material.onBeforeCompile;
      physical.customProgramCacheKey=material.customProgramCacheKey;
+     copyNodes(material,physical);
      physical.userData=material.userData;
      material.dispose();material=physical;
     }

@@ -3,6 +3,10 @@
  * No geometry, collision, heightfield, character model, extra mesh or
  * detached glowing VFX is created. Game 1's renderer stays unchanged.
  */
+import {Vector2} from 'three';
+import {Fn,normalize,vec2,vec3,float,sin,dot,smoothstep,clamp,floor,positionWorld,positionGeometry,
+  cameraPosition,min,mix,pow,abs,uniform,renderGroup,diffuseColor} from 'three/tsl';
+import {attachNodes,detachSetup,uniformOf,sinHash21,geometryNormalWorld} from '../../../lib/webgpuNodeKit.js';
 const FAMILY_STRENGTH=Object.freeze({
   bark:.78,foliage:.52,grass:.69,stone:.37,
   terrain:.25,architecture:.19,material:.16,
@@ -112,6 +116,55 @@ const makeFragment=kind=>{
   return code;
 };
 
+// ---- WebGPURenderer: the same pigment in TSL (webgpuNodeKit.js attachNodes setup) --------------------------------
+// It wraps the node material's setupDiffuseColor, so it runs after vertex/instance colours exactly where the GLSL
+// replaces `#include <color_fragment>`. One setup per kind per decorator, shared by all its materials.
+const inkStroke=Fn(([p,wind,clock])=>{
+  const w=normalize(wind.add(vec2(.001)));
+  const drift=clock.mul(.045);
+  const grain=sin(p.y.mul(4.2).add(p.x.mul(2.1)).add(sin(p.z.mul(.65).add(p.y.mul(.83))).mul(2.6))
+    .add(dot(p.xz,w).mul(.8)).sub(drift));
+  const finer=sin(p.y.mul(11.9).add(p.z.mul(3.8)).add(sin(p.x.mul(2.8)).mul(1.5)).sub(drift.mul(.46)));
+  const dry=sin(p.x.mul(2.45).add(p.z.mul(3.7)).add(sin(p.y.mul(1.55)).mul(1.4)));
+  const stroke=smoothstep(.49,.9,grain.mul(.5).add(.5)).mul(smoothstep(.2,.8,finer.mul(.5).add(.5)).mul(.43).add(.57));
+  return clamp(stroke.mul(dry.mul(.5).add(.5).mul(.3).add(.7)),0,1);
+});
+const inkDryBrush=Fn(([p])=>smoothstep(.5,.93,sinHash21(floor(p.xz.mul(vec2(1.14,1.63)).add(p.y.mul(.31)).mul(2)))));
+
+function livingInkSetup(kind,{clock,level,wind}){
+  const strength=FAMILY_STRENGTH[kind]??FAMILY_STRENGTH.material;
+  const bark=kind==='bark';
+  const organic=bark||kind==='foliage'||kind==='grass';
+  const ink=Fn(([base])=>{
+    const p=positionWorld;
+    const pressure=inkStroke(p,wind,clock).toVar();
+    const granulation=inkDryBrush(p).toVar();
+    const painted=smoothstep(.18,.87,pressure.mul(granulation.mul(.16).add(.84))).toVar();
+    const darkInk=base.mul(granulation.mul(.16).add(.66));
+    const dilutedInk=min(vec3(1),base.mul(painted.mul(.17).add(1.09)));
+    const materialInk=mix(darkInk,dilutedInk,painted).toVar();
+    if(bark){
+      const heartwood=pow(painted,4).mul(granulation.mul(.6).add(.4));
+      materialInk.assign(mix(materialInk,mix(base.mul(1.23),vec3(.89,.67,.62),.24),heartwood.mul(.42)));
+    }
+    if(organic){
+      const tip=smoothstep(.23,.89,positionGeometry.y);
+      materialInk.assign(mix(materialInk,base.mul(painted.mul(.28).add(.72)),tip.mul(.12).mul(granulation)));
+    }
+    const viewVec=normalize(cameraPosition.sub(p));
+    const rim=pow(float(1).sub(clamp(abs(dot(normalize(geometryNormalWorld),viewVec)),0,1)),3.2);
+    materialInk.assign(mix(materialInk,base.mul(.52),rim.mul(.34).mul(granulation.mul(.45).add(.55))));
+    return mix(base,materialInk,clamp(level.mul(strength).mul(pressure.mul(.44).add(.56)),0,.88));
+  });
+  return (nodeMaterial)=>{
+    const setupDiffuseColor=nodeMaterial.setupDiffuseColor;
+    nodeMaterial.setupDiffuseColor=function(builder){
+      setupDiffuseColor.call(this,builder);
+      diffuseColor.rgb.assign(ink(diffuseColor.rgb));
+    };
+  };
+}
+
 /**
  * Wrap an environment mesh's existing material shader without replacing its
  * wind/texture hooks. New streamed tiles reuse the shared already-decorated
@@ -122,6 +175,15 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
   const uniforms={
     clock:{value:0},level:{value:Math.max(0,Math.min(1,Number(level||0)/4))},
     wind:{value:{x:.6,y:.8}},
+  };
+  // WebGPURenderer: shared node uniforms and one setup per kind (see livingInkSetup)
+  const windVector=new Vector2(uniforms.wind.value.x,uniforms.wind.value.y);
+  const nodeUniforms={clock:uniformOf(uniforms.clock,'float'),level:uniformOf(uniforms.level,'float'),
+    wind:uniform(windVector).setGroup(renderGroup)};
+  const setups=new Map();
+  const setupFor=kind=>{
+    if(!setups.has(kind))setups.set(kind,livingInkSetup(kind,nodeUniforms));
+    return setups.get(kind);
   };
   const rootList=(Array.isArray(roots)?roots:[roots]).filter(Boolean);
   let age=0,scannedAt=-99,disposed=false;
@@ -158,6 +220,7 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
     treated.add(material);
     material.onBeforeCompile=hook;
     material.customProgramCacheKey=cacheKey;
+    attachNodes(material,{},{setup:setupFor(kind)}); // WebGPURenderer
     material.needsUpdate=true;
     return true;
   }
@@ -188,6 +251,7 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
       const bearing={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315}[weather?.windDir]??225;
       uniforms.wind.value.x=-Math.sin(bearing*Math.PI/180);
       uniforms.wind.value.y=-Math.cos(bearing*Math.PI/180);
+      windVector.set(uniforms.wind.value.x,uniforms.wind.value.y);
       if(age-scannedAt>=3.5){scannedAt=age;refresh();}
     },
     getStats(){
@@ -204,6 +268,7 @@ export function createWolfveilLivingSumiEMaterials({roots=[],level=3}={}){
         else delete material.onBeforeCompile;
         if(entry.ownKey)material.customProgramCacheKey=entry.priorKey;
         else delete material.customProgramCacheKey;
+        detachSetup(material,setupFor(entry.kind));
         material.needsUpdate=true;
       }
       original.clear();

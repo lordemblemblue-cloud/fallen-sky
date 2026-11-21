@@ -33,7 +33,7 @@ function captureWorld(canvas, pose) {
   const scene = window.__gw3dScene;
   const liveCamera = window.__gw3dCamera;
   if (!canvas || !pose || !renderer || !scene || !liveCamera ||
-      renderer.getContext?.().isContextLost?.()) return false;
+      (!renderer.isWebGPURenderer && renderer.getContext?.()?.isContextLost?.())) return false;
   const camera = liveCamera.clone();
   const playerY = Number(window.__localPlayerPos?.y);
   const baseY = Number.isFinite(playerY) ? playerY : pose.y;
@@ -61,6 +61,7 @@ function captureWorld(canvas, pose) {
     camera.updateProjectionMatrix();
   }
   camera.updateMatrixWorld();
+  if (renderer.isWebGPURenderer) return captureWorldAsync(renderer, scene, camera, canvas);
   const target = new THREE.WebGLRenderTarget(WIDTH, HEIGHT, {
     minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true,
   });
@@ -92,6 +93,48 @@ function captureWorld(canvas, pose) {
     frame.data.set(buffer.subarray(start, start + WIDTH * 4), (HEIGHT - 1 - row) * WIDTH * 4);
   }
   context.putImageData(frame, 0, 0);
+  return true;
+}
+
+// WebGPURenderer reads pixels back only asynchronously: the picture appears a few frames later. r171's readback
+// copies whole 256-byte rows only, so the feed is drawn 320 px wide (the same camera aspect) and squeezed back to
+// WIDTH. Rows come back top-down from WebGPU, bottom-up from its WebGL2 backend.
+function captureWorldAsync(renderer, scene, camera, canvas) {
+  if (renderer.__sceneState && (renderer.__sceneState.ready !== true || renderer.__sceneState.lost)) return false;
+  const width = Math.ceil(WIDTH / 64) * 64;
+  const target = new THREE.RenderTarget(width, HEIGHT, {
+    minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, depthBuffer: true,
+  });
+  const previousTarget = renderer.getRenderTarget();
+  let readback;
+  try {
+    renderer.setRenderTarget(target);
+    renderer.clear(true, true, true);
+    renderer.render(scene, camera);
+    readback = renderer.readRenderTargetPixelsAsync(target, 0, 0, width, HEIGHT);
+  } catch (error) {
+    target.dispose();
+    throw error;
+  } finally {
+    renderer.setRenderTarget(previousTarget);
+  }
+  const topDown = !!renderer.backend?.isWebGPUBackend;
+  Promise.resolve(readback).then((pixels) => {
+    const context = canvas?.getContext?.('2d');
+    if (!context || !pixels) return;
+    const feed = document.createElement('canvas');
+    feed.width = width; feed.height = HEIGHT;
+    const feedContext = feed.getContext('2d');
+    const frame = feedContext.createImageData(width, HEIGHT);
+    const bytes = new Uint8Array(pixels.buffer, pixels.byteOffset, Math.min(pixels.byteLength, width * HEIGHT * 4));
+    for (let row = 0; row < HEIGHT; row++) {
+      const start = row * width * 4;
+      frame.data.set(bytes.subarray(start, start + width * 4), (topDown ? row : HEIGHT - 1 - row) * width * 4);
+    }
+    feedContext.putImageData(frame, 0, 0);
+    context.drawImage(feed, 0, 0, width, HEIGHT, 0, 0, WIDTH, HEIGHT);
+  }).catch(() => { /* a lost device or a closed panel: the next scan tries again */ })
+    .finally(() => target.dispose());
   return true;
 }
 

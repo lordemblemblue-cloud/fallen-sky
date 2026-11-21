@@ -15,6 +15,8 @@ import * as THREE from 'three';
 import {LIVE_WIND_SHEET_GLSL} from '../render/liveWind.mjs';
 import {WOLFVEIL_PLANT_ATLAS,wolfveilPlantCell} from './WolfveilPlantCardAtlas.mjs';
 import {byRegion} from './WolfveilTrailLandscaping.js';
+import {createWolfveilPlantCardNodes} from './WolfveilPlantCardNodes.mjs';
+import {attachNodes} from '../../../lib/webgpuNodeKit.js';
 
 /** Three vertical quads at 0/60/120 degrees; x,z in [-.5,.5], y in [0,1]. */
 export function createWolfveilPlantCardGeometry(){
@@ -105,6 +107,7 @@ export function createWolfveilPlantCardKit({textures=typeof document!=='undefine
       .replace('#include <normal_fragment_maps>',
         '#include <normal_fragment_maps>\n  normal=normalize(mix(normal,normalize(vNormal),.5));');
   };
+  attachNodes(material,createWolfveilPlantCardNodes(uniforms)); // WebGPURenderer: the same cards in TSL
   const geometry=createWolfveilPlantCardGeometry();
   const layers=[],owned=[geometry,material];
   const state={ready:false,failed:false,disposed:false};

@@ -3,6 +3,11 @@
 // Locally procedural vegetation provides the broader mountains; the owner's
 // original textured elm GLB supplies foreground deciduous trees.
 import * as THREE from 'three';
+import {NodeMaterial} from 'three/webgpu';
+import {Fn,If,Discard,uv,vec2,vec3,vec4,float,fract,sin,dot,floor,mix,abs,smoothstep,clamp,exp,pow,length,atan2,
+  normalize,positionGeometry} from 'three/tsl';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {uniformOf,attachNodes,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 import {WOLFVEIL_BUILDINGS,WOLFVEIL_HOUSING_PLOTS,
   WOLFVEIL_ROUTES,WOLFVEIL_PALETTE,wolfveilHeight,wolfveilDistanceToRiver,
   WOLFVEIL_SITES,WOLFVEIL_RIVER} from './WolfveilLayout.js';
@@ -121,6 +126,15 @@ transformed.xz+=normalize(uCanopyWind+vec2(.001))*
  canopySway*(.015+.11*uCanopyGust)*canopyTip;`);
     };
   }
+  if(blueCanopy){
+    // WebGPURenderer: the same sway in TSL, shared by both canopy materials.
+    const root=instanceRootWorld();
+    const tip=smoothstep(-.45,.85,positionGeometry.y);
+    const sway=sin(uniformOf(canopyTime,'float').mul(.73).add(root.x.mul(.08)).add(root.z.mul(.12)));
+    const push=normalize(uniformOf(canopyWind,'vec2').add(vec2(.001))).mul(sway).mul(uniformOf(canopyGust,'float').mul(.11).add(.015)).mul(tip);
+    const positionNode=offsetBeforeInstancing(vec3(push.x,0,push.y));
+    for(const canopyMat of [needle,maple])attachNodes(canopyMat,{positionNode});
+  }
   const bambooMat=material(0x426d3a,.91);
   world.ownedMaterials.push(bark,needle,maple,bambooMat);
   inst(trunkGeometry,bark,trunks,world,'SWV_CedarPineMaple_Trunks',false,
@@ -190,6 +204,47 @@ transformed.xz+=normalize(uCanopyWind+vec2(.001))*
     dispose(){native.dispose();},
   };
 }
+// WebGPURenderer: TSL twins of the waterfall sheet and its landing foam (same noise, colours and alpha).
+const wfHash=Fn(([p])=>fract(sin(dot(p,vec2(127.1,311.7))).mul(43758.5453)));
+const wfNoise=Fn(([p])=>{
+  const i=floor(p).toVar();const f=fract(p).toVar();f.assign(f.mul(f).mul(float(3).sub(f.mul(2))));
+  return mix(mix(wfHash(i),wfHash(i.add(vec2(1,0))),f.x),mix(wfHash(i.add(vec2(0,1))),wfHash(i.add(vec2(1,1))),f.x),f.y);
+});
+function waterfallSheetTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float'),storm=uniformOf(classic.uniforms.uStorm,'float');
+  const m=new NodeMaterial();
+  m.fragmentNode=Fn(()=>{
+    const v=uv().toVar();
+    const edge=float(1).sub(smoothstep(.36,.5,abs(v.x.sub(.5))));
+    const streamA=wfNoise(vec2(v.x.mul(16),v.y.mul(7).sub(time.mul(4.2)))).toVar();
+    const streamB=wfNoise(vec2(v.x.mul(38).add(sin(v.y.mul(6)).mul(.4)),v.y.mul(13).sub(time.mul(6.8))));
+    const crest=smoothstep(0,.14,v.y).mul(float(1).sub(smoothstep(0,.06,v.y))).mul(.35);
+    const plungeMist=smoothstep(.76,1,v.y).toVar();
+    const threads=smoothstep(.42,.88,streamA.mul(.55).add(streamB.mul(.52))).toVar();
+    const col=mix(vec3(.07,.31,.42),vec3(.22,.58,.68),streamA.mul(.55).add(.35)).toVar();
+    col.assign(mix(col,vec3(.92,.97,.99),clamp(threads.mul(storm.mul(.18).add(.58)).add(plungeMist.mul(.55)).add(crest),0,.96)));
+    const opacity=clamp(threads.mul(.36).add(.58).add(plungeMist.mul(.22)).mul(edge.mul(.45).add(.55)),0,.95);
+    return vec4(col,opacity);
+  })();
+  return m;
+}
+function waterfallFoamTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float');
+  const m=new NodeMaterial();
+  m.fragmentNode=Fn(()=>{
+    const p=uv().mul(2).sub(1).toVar();
+    const r=length(p).toVar();
+    If(r.greaterThan(1),()=>{Discard();});
+    const ang=atan2(p.y,p.x);
+    const ringA=exp(pow(r.sub(fract(time.mul(.35)).mul(.18).add(.42)).div(.16),2).negate());
+    const ringB=exp(pow(r.sub(fract(time.mul(.35).add(.5)).mul(.22).add(.62)).div(.18),2).negate());
+    const swirl=sin(ang.mul(7).sub(time.mul(2.4)).add(r.mul(9))).mul(.35).add(.65);
+    const alpha=clamp(float(1).sub(r).mul(.38).add(ringA.add(ringB).mul(.34)).mul(swirl),0,.72);
+    return vec4(vec3(.88,.95,.98),alpha);
+  })();
+  return m;
+}
+
 export function buildWolfveilWaterfall(world){
   const waterMat=new THREE.ShaderMaterial({
     transparent:true,side:THREE.DoubleSide,depthWrite:false,
@@ -247,6 +302,7 @@ export function buildWolfveilWaterfall(world){
         #include <colorspace_fragment>
       }`,
   });
+  setNodeTwin(waterMat,waterfallSheetTwin);setNodeTwin(mistMat,waterfallFoamTwin);
   world.ownedMaterials.push(waterMat,mistMat);
   const {waterfallRange}=WOLFVEIL_RIVER;
   const pts=WOLFVEIL_RIVER.points.filter(p=>p[1]>=waterfallRange[0]-1&&p[1]<=waterfallRange[1]+1);

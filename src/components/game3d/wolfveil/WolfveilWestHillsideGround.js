@@ -2,6 +2,8 @@
 // Wolfveil hillside. This is a soft, decorative material layer, not a second
 // physical floor: original terrain vertices/BVH and server height stay primary.
 import * as THREE from 'three';
+import {vec2,vec3,vec4,sin,cos,mix,clamp,smoothstep,uv,attribute,texture} from 'three/tsl';
+import {addMapStageColor} from '../../../lib/webgpuNodeKit.js';
 import {WOLFVEIL_WEST_HILLSIDE} from './WolfveilWestHillside.mjs';
 import {wolfveilRockSideBlend} from './WolfveilWestRockGrassPockets.mjs';
 import {wolfveilLandscapeSurface,wolfveilNoise2} from './WolfveilLandscapeDesign.mjs';
@@ -39,6 +41,8 @@ export const WOLFVEIL_WEST_LANDSCAPE_TEXTURES=Object.freeze({
 function flatTexture(r,g,b){
   const t=new THREE.DataTexture(new Uint8Array([r,g,b,255]),1,1,THREE.RGBAFormat);
   t.colorSpace=THREE.SRGBColorSpace;
+  // linear (a 1-texel map looks the same): WebGPURenderer declares no sampler for a nearest placeholder
+  t.minFilter=t.magFilter=THREE.LinearFilter;
   t.needsUpdate=true;
   return t;
 }
@@ -104,6 +108,7 @@ export function addWolfveilWestHillsideLandscaping(world,baseGeometry,{span=1100
       tex.anisotropy=4;tex.needsUpdate=true;
       textures.add(tex);
       holder.value=tex;
+      mat.nodeVersion=(mat.nodeVersion||0)+1; // WebGPURenderer: rebind the loaded texture
     },undefined,()=>{/* Retain safe color fallback and original ground. */});
   };
   // Use the game's real physically based lights and normal response.
@@ -152,6 +157,19 @@ vec3 ownerColor=mix(ownerSoil,ownerRock,grit*.80);
 diffuseColor.rgb*=mix(ownerColor,ownerColor*vec3(.82,.92,.94),.13);
 diffuseColor.a*=clamp(vLandMask*.98,0.,.98);`);
   };
+  // WebGPURenderer: the same owner dirt / stone blend in TSL (the textures follow their holders)
+  addMapStageColor(mat,(color)=>{
+    const live=(holder)=>texture(holder.value).onRenderUpdate(()=>holder.value);
+    const tDirt=live(dirt),tStone=live(stone);
+    const soilUV=uv();
+    const tone=sin(soilUV.x.mul(2.37).add(cos(soilUV.y.mul(1.8)))).mul(sin(soilUV.y.mul(2.81).sub(soilUV.x.mul(.63))));
+    const grit=smoothstep(.1,.82,tone.mul(.39).add(.48).add(attribute('aWestUpright','float').oneMinus().mul(.35)));
+    const soil=mix(tDirt.uv(soilUV).rgb,tDirt.uv(soilUV.mul(.29).add(vec2(.37,.11))).rgb,.5);
+    const rock=mix(tStone.uv(soilUV.mul(1.13)).rgb,tStone.uv(soilUV.mul(.33).add(vec2(.21,.63))).rgb,.5);
+    const owner=mix(soil,rock,grit.mul(.8));
+    return vec4(color.rgb.mul(mix(owner,owner.mul(vec3(.82,.92,.94)),.13)),
+      color.a.mul(clamp(attribute('aWestMask','float').mul(.98),0,.98)));
+  });
   mat.name='WV_West_Owner_Dirt_WeatheredStone_Blend_NoCollision';
   world.ownedMaterials.push(mat);
   const mesh=new THREE.Mesh(geom,mat);

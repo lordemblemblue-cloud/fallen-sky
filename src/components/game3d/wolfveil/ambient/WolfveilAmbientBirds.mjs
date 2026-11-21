@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {clone as cloneSkinned} from 'three/examples/jsm/utils/SkeletonUtils.js';
+import {vec3,float,sin,abs,positionGeometry} from 'three/tsl';
+import {attachNodes,uniformOf,instanceMatrix,offsetBeforeInstancing} from '../../../../lib/webgpuNodeKit.js';
 import {createWolfveilTerrainSurfaceSampler} from '../WolfveilTerrainSurfaceSampler.mjs';
 import {wolfveilDistanceToRiver,wolfveilRouteClearance} from '../WolfveilLayout.js';
 import {clearOf} from '../WolfveilForestLayout.js';
@@ -142,6 +144,13 @@ export function createWolfveilAmbientBirds({
         transformed.y += abs(position.x)*.16*
           sin(uWolfveilBirdTime*16.0+birdPhase);`);
   };
+  {
+    // WebGPURenderer: the same flap in TSL (phase from the instance's translation column).
+    const column=instanceMatrix().element(3);
+    const phase=column.x.mul(.17).add(column.z.mul(.23));
+    const lift=abs(positionGeometry.x).mul(.16).mul(sin(uniformOf(farWingClock,'float').mul(16).add(phase)));
+    attachNodes(farMaterial,{positionNode:offsetBeforeInstancing(vec3(float(0),lift,float(0)))});
+  }
   const farGeometry=makeFarGeometry();
   const farMesh=new THREE.InstancedMesh(farGeometry,farMaterial,MAX_FAR);
   farMesh.name='DistantAmbientBirds_Instanced';

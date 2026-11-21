@@ -8,6 +8,8 @@
 // One shader program serves every patched material (customProgramCacheKey), and everything that
 // changes with equipment or enchanting is a uniform: an enchant change never recompiles shaders.
 import * as THREE from 'three';
+import { attachNodes, addMapStageColor } from '../../../lib/webgpuNodeKit.js';
+import { enchantGlowNodes } from './enchantGlowNodes.mjs';
 
 export const ENCHANT_GLOW_VERSION = 'axe-enchant-glow-v2';
 export const ENCHANT_TRIM_ATTRIBUTE = 'axeEnchTrim';
@@ -193,6 +195,9 @@ export function ensureEnchantGlowMaterial(material, { mask = null } = {}) {
       state.mask = null;
     });
     material.defines = { ...(material.defines || {}) };
+    // WebGPURenderer: the same light in TSL, its values read from this material
+    material.__axeEnchantUniforms = uniforms;
+    attachEnchantNodes(material, false);
     material.needsUpdate = true;
   }
   if (mask && state.mask !== mask) {
@@ -200,9 +205,22 @@ export function ensureEnchantGlowMaterial(material, { mask = null } = {}) {
     state.mask = mask;
     state.uniforms.uAxeMask.value = mask;
     material.defines.AXE_ENCHANT_MASK = '';
+    attachEnchantNodes(material, true);
     material.needsUpdate = true;
   }
   return state;
+}
+
+// The TSL light: map stage (inlay) + emissive. The mask variant replaces the plain one; the material's other
+// emissive nodes (if any) stay underneath.
+function attachEnchantNodes(material, withMask) {
+  const nodes = enchantGlowNodes({ time: ENCHANT_TIME, trimAttribute: ENCHANT_TRIM_ATTRIBUTE, flowAttribute: ENCHANT_FLOW_ATTRIBUTE, withMask });
+  if (material.__axeEnchantMapStage) material.__mapStageColor = (material.__mapStageColor || []).filter((fn) => fn !== material.__axeEnchantMapStage);
+  material.__axeEnchantMapStage = nodes.mapStage;
+  if (!('__axeEnchantBaseEmissive' in material)) material.__axeEnchantBaseEmissive = material.emissiveNode || null;
+  const base = material.__axeEnchantBaseEmissive;
+  attachNodes(material, { emissiveNode: base ? base.add(nodes.emissive) : nodes.emissiveNode });
+  addMapStageColor(material, nodes.mapStage);
 }
 
 const setColor = (uniform, hex, fallback) => uniform.value.set(hex || fallback || '#ffffff');

@@ -1,0 +1,211 @@
+/**
+ * Helpers for the TSL versions of the game's GLSL materials (WebGPURenderer, either backend).
+ *
+ * Two ways a GLSL material gets its node version:
+ *  - `onBeforeCompile` patches on built-in materials: `attachNodes(material, {positionNode, colorNode, ...})` puts
+ *    the nodes on the SAME material. The classic WebGLRenderer ignores them and keeps running the GLSL patch;
+ *    WebGPURenderer ignores the patch and builds from the nodes (it copies a classic material's properties into a
+ *    node material when it builds the shader).
+ *  - `ShaderMaterial`: a separate NodeMaterial twin (webgpuMaterialTwins.js).
+ *
+ * Rules that keep WebGPURenderer (three r171) both correct and cheap:
+ *  - r171 keys a converted classic material's shader by `customProgramCacheKey()` plus property values, not by node
+ *    identity. attachNodes records the graph's node ids in `material.__sceneNodeKey`, which webgpuSceneRenderer.js
+ *    adds to WebGPURenderer's own key (the classic program key is left as it was: WebGLRenderer keeps sharing one
+ *    program per GLSL variant). Share one graph between the materials of a variant: one shader, one pipeline.
+ *  - Per-material values go through `materialReference(...)` (read from whichever material is drawn), global ones
+ *    through `uniformOf(...)` / `sharedUniform(...)`, which live in the per-render uniform group, so one upload
+ *    serves every object.
+ *  - Materials whose nodes hold only such uniforms are marked `nodesStatic`: r171 otherwise re-uploads every
+ *    object's uniforms every frame as soon as a material has any node (see webgpuThreeFixes.js).
+ *
+ * No browser globals at import: node tests can load modules that use this.
+ */
+import { Node, ReferenceNode } from 'three/webgpu';
+import {
+  reference, renderGroup, nodeObject, mat4, float, vec2, vec4, Fn, fract, sin, dot, floor, mix, varying, attribute,
+  modelWorldMatrix, normalLocal, positionLocal, materialColor,
+} from 'three/tsl';
+
+// ---- the current object's instance matrix --------------------------------------------------------------------
+// r171's InstanceNode applies the instance matrix to positionLocal before a material's positionNode runs, but does
+// not expose it. webgpuThreeFixes.js records it on the node builder; this node reads it back (identity for meshes
+// that are not instanced). GLSL patches that move `transformed` before instancing do the same with:
+//   positionLocal + instanceMatrix * vec4(offset, 0)
+class InstanceMatrixAccessNode extends Node {
+  static get type() { return 'InstanceMatrixAccessNode'; }
+  constructor() { super('mat4'); }
+  setup(builder) {
+    return builder.__sceneInstanceMatrixNode || mat4(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+  }
+}
+export const instanceMatrix = () => nodeObject(new InstanceMatrixAccessNode());
+
+// ---- per-material values ---------------------------------------------------------------------------------------
+// Like three's materialReference(): a uniform read from whichever material is drawn, so one node graph can serve
+// every material of a shader variant (one pipeline, as the GLSL had one program). But three's version keeps the
+// material in a public property, and three's node hashing walks public properties: stored on that same material, the
+// graph would contain itself (r171 then recurses forever). This one keeps it private. A missing value (or the
+// shadow pass's override material) reads as `fallback`.
+class MaterialValueNode extends ReferenceNode {
+  static get type() { return 'MaterialValueNode'; }
+  constructor(property, uniformType, fallback = null) {
+    super(property, uniformType, null);
+    this._fallback = fallback;
+    this._material = null;
+  }
+  updateReference(state) {
+    this._material = state?.material ?? null;
+    this.reference = null;
+    return this._material;
+  }
+  getValueFromReference(object = this._material) {
+    let value = object;
+    for (const key of this.properties) { if (value == null) break; value = value[key]; }
+    return value ?? this._fallback;
+  }
+}
+/** `path`: a dotted property path on the drawn material (e.g. '__myUniforms.uGain.value'). */
+export const materialValue = (path, type, fallback = null) => nodeObject(new MaterialValueNode(path, type, fallback));
+
+/** An attribute that may be missing on some geometries (then `fallback`), without three's per-build warning. */
+export const optionalAttribute = (name, type = 'float', fallback = 0) =>
+  Fn((builder) => (builder.geometry?.getAttribute?.(name) ? attribute(name, type) : float(fallback)))();
+
+/** World position of the instance's origin: GLSL `(modelMatrix * instanceMatrix * vec4(0,0,0,1)).xyz`. */
+export const instanceRootWorld = () => modelWorldMatrix.mul(instanceMatrix().mul(vec4(0, 0, 0, 1))).xyz;
+
+/**
+ * A positionNode that moves the vertex by `offset` given in the instance's own space, as GLSL patches that add to
+ * `transformed` before `project_vertex` applies instanceMatrix (`offset` may use positionGeometry for the
+ * un-instanced position).
+ */
+export const offsetBeforeInstancing = (offset) => positionLocal.add(instanceMatrix().mul(vec4(offset, 0)).xyz);
+
+// ---- uniforms -----------------------------------------------------------------------------------------------------
+/** A classic `{ value }` uniform object as a live node in the shared per-render group (one upload per frame). */
+export function uniformOf(uniformObject, type) {
+  return reference('value', type, uniformObject).setGroup(renderGroup);
+}
+/** A property of any object (e.g. a Color, a Vector2 or a plain number field) as a shared live uniform. */
+export function sharedUniform(object, property, type) {
+  return reference(property, type, object).setGroup(renderGroup);
+}
+
+// ---- attaching nodes to a classic material ---------------------------------------------------------------------
+const NODE_KEYS = ['positionNode', 'colorNode', 'normalNode', 'roughnessNode', 'metalnessNode', 'emissiveNode',
+  'opacityNode', 'aoNode', 'alphaTestNode', 'outputNode', 'fragmentNode', 'vertexNode', 'castShadowNode',
+  'receivedShadowNode', 'lightsNode', 'envNode', 'backdropNode', 'depthNode', 'mrtNode'];
+
+const setupIds = new WeakMap();
+let nextSetupId = 1;
+
+/**
+ * Put TSL nodes on a classic material (see the header). `nodesStatic` (default true) declares that the nodes only
+ * use shared uniforms, materialReference() values and textures.
+ *
+ * `setup(nodeMaterial)` runs on the node material WebGPURenderer converts the classic one into, before it is
+ * built, and may wrap its setup methods: e.g. a pigment that must come after vertex colours (GLSL after
+ * `#include <color_fragment>`) wraps `setupDiffuseColor` and reassigns `diffuseColor`. Setups run in the order
+ * they were attached, so patches compose as their GLSL hooks did. Share one setup function between all materials
+ * of a shader variant.
+ */
+export function attachNodes(material, nodes = {}, { nodesStatic = true, setup = null } = {}) {
+  if (!material) return material;
+  for (const [key, node] of Object.entries(nodes)) {
+    if (!NODE_KEYS.includes(key)) throw new Error(`attachNodes: unknown node slot ${key}`);
+    material[key] = node ?? null;
+  }
+  if (typeof setup === 'function') {
+    if (!setupIds.has(setup)) setupIds.set(setup, nextSetupId++);
+    const setups = Array.isArray(material.nodeSetups) ? material.nodeSetups.filter((s) => s !== setup) : [];
+    material.nodeSetups = [...setups, setup];
+  }
+  const ids = NODE_KEYS.filter((k) => material[k]?.isNode).map((k) => `${k}=${material[k].id}`);
+  for (const s of material.nodeSetups || []) ids.push(`setup=${setupIds.get(s)}`);
+  material.__sceneNodeKey = ids.length ? `|nodes:${ids.join(',')}` : ''; // WebGPURenderer's key (see the header)
+  material.nodesStatic = nodesStatic === true && material.nodesStatic !== false;
+  material.needsUpdate = true;
+  return material;
+}
+
+/**
+ * A colour change made right after the base texture (GLSL `#include <map_fragment>` + block). `transform(color)`
+ * gets and returns the vec4 diffuse colour (colour * map), before vertex colours. Chained GLSL hooks that insert their
+ * block right after map_fragment run NEWEST FIRST (each insertion lands above the earlier ones), so the transforms
+ * are composed in that order: oldest(...(newest(color))).
+ */
+export function addMapStageColor(material, transform, options = {}) {
+  if (!material || typeof transform !== 'function') return material;
+  material.__mapStageColor = [...(material.__mapStageColor || []), transform];
+  return attachNodes(material, { colorNode: composeMapStage(material.__mapStageColor) }, options);
+}
+
+// One composed node per chain of transforms (by function identity): materials patched the same way share one graph,
+// hence one pipeline, as their GLSL shared one program.
+const composedMapStages = new WeakMap(); // transform -> { node, next }
+function composeMapStage(transforms) {
+  let level = composedMapStages;
+  let color = materialColor;
+  for (let i = transforms.length - 1; i >= 0; i--) {
+    let entry = level.get(transforms[i]);
+    if (!entry) {
+      entry = { node: transforms[i](color), next: new WeakMap() };
+      level.set(transforms[i], entry);
+    }
+    color = entry.node;
+    level = entry.next;
+  }
+  return color;
+}
+
+/**
+ * Give `target` the same TSL nodes and setups as `source` (code that copies a GLSL hook from one material to another
+ * - `target.onBeforeCompile = source.onBeforeCompile` - copies the WebGPU half with this).
+ */
+export function copyNodes(source, target) {
+  if (!source || !target) return target;
+  const nodes = {};
+  for (const key of NODE_KEYS) if (source[key]?.isNode) nodes[key] = source[key];
+  if (source.__mapStageColor) target.__mapStageColor = [...source.__mapStageColor];
+  for (const setup of source.nodeSetups || []) attachNodes(target, {}, { setup, nodesStatic: source.nodesStatic !== false });
+  return attachNodes(target, nodes, { nodesStatic: source.nodesStatic !== false });
+}
+
+/** Remove what attachNodes added (a decorator's dispose); the remaining setups/nodes keep their key. */
+export function detachSetup(material, setup) {
+  if (!material || !Array.isArray(material.nodeSetups)) return;
+  material.nodeSetups = material.nodeSetups.filter((s) => s !== setup);
+  attachNodes(material, {}, { nodesStatic: material.nodesStatic !== false });
+}
+
+/** Used by webgpuSceneRenderer.js on every classic material WebGPURenderer converts. */
+export function applyNodeSetups(classic, nodeMaterial) {
+  const setups = classic?.nodeSetups;
+  if (!nodeMaterial || !Array.isArray(setups)) return nodeMaterial;
+  for (const setup of setups) setup(nodeMaterial, classic);
+  return nodeMaterial;
+}
+
+// ---- world-space geometry normal ---------------------------------------------------------------------------------
+// The GLSL patches use normalize(mat3(modelMatrix) * objectNormal) (after instancing / skinning). three's
+// `normalWorld` is not safe for that: it is a varying of normalView, which for `flatShading` materials is built
+// from screen derivatives, invalid in the vertex stage (WGSL rejects it and, in WebGPU, one invalid pipeline
+// voids the whole frame). Normalize it where it is read.
+export const geometryNormalWorld = varying(modelWorldMatrix.mul(vec4(normalLocal, 0)).xyz, 'v_sceneGeometryNormalWorld');
+
+// ---- small shared functions -----------------------------------------------------------------------------------
+/** fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453) - the classic GLSL hash used by several patches. */
+export const sinHash21 = Fn(([p]) => fract(sin(dot(p, vec2(127.1, 311.7))).mul(43758.5453)));
+
+/** 2D value noise over sinHash21 (smoothstep interpolation), as `wvSplatNoise` / `livingInkNoise` in the GLSL. */
+export const sinValueNoise2 = Fn(([p]) => {
+  const i = floor(p).toVar();
+  const f = fract(p).toVar();
+  const u = f.mul(f).mul(float(3).sub(f.mul(2))).toVar();
+  const a = sinHash21(i);
+  const b = sinHash21(i.add(vec2(1, 0)));
+  const c = sinHash21(i.add(vec2(0, 1)));
+  const d = sinHash21(i.add(vec2(1, 1)));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+});

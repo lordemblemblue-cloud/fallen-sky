@@ -21,19 +21,26 @@ test('clean static source never grants runtime WebGPU readiness', () => {
   });
 });
 
-test('Duelist warp legacy shader/composer remains gated', () => {
+// The legacy passes stay for the classic renderer; WebGPURenderer draws their TSL versions (warpNodes.mjs,
+// inkWashNodes.mjs). The static inventory still finds the legacy markers and never grants readiness itself: the
+// audited inventory (webgpuSceneReadiness.mjs) does, after browser parity checks.
+test('Duelist warp keeps its legacy shader/composer for WebGL and a node version for WebGPU', () => {
   const source = readSource('../src/components/duelist/client/warp.mjs');
   const report = describePostprocessMigration('duelist-adventure', source);
   assert.ok(report.blockers.includes('effect-composer'));
   assert.ok(report.blockers.includes('shader-pass'));
   assert.ok(report.blockers.includes('glsl-texture-sampling'));
-  assert.equal(isSceneWebGPUReady(report.sceneId), false);
+  assert.equal(report.webgpuReady, false);
+  assert.match(source, /createWarpWebGPU/);
+  assert.equal(isSceneWebGPUReady(report.sceneId), true);
 });
 
-test('Fallen Sky ink pass render target and GLSL remain gated', () => {
+test('Fallen Sky ink pass keeps its WebGL render target and GLSL, and a node version for WebGPU', () => {
   const source = readSource('../src/components/game3d/render/inkWashLook.js');
   const report = describePostprocessMigration('fallen-sky', source);
   assert.ok(report.blockers.includes('webgl-render-target'));
   assert.ok(report.blockers.includes('glsl-fragment-output'));
-  assert.equal(isSceneWebGPUReady(report.sceneId), false);
+  assert.equal(report.webgpuReady, false);
+  assert.match(source, /createInkWashTwin/);
+  assert.equal(isSceneWebGPUReady(report.sceneId), true);
 });

@@ -21,6 +21,24 @@ test('efficiency uses the high-performance GPU without inventing a VRAM size', (
   assert.equal(readGame3DGpuHints({}).deviceMemoryGb, null);
 });
 
+
+test('GPU class detection supports multiple vendors without assuming all Radeon or Intel chips are alike', () => {
+  assert.equal(classifyGame3DGpu('NVIDIA Ada Lovelace GeForce RTX 4070'), 'discrete');
+  assert.equal(classifyGame3DGpu('AMD Radeon RX 7800 XT'), 'discrete');
+  assert.equal(classifyGame3DGpu('AMD Radeon 780M Graphics'), 'integrated');
+  assert.equal(classifyGame3DGpu('AMD Radeon 890M'), 'integrated');
+  assert.equal(classifyGame3DGpu('Intel Iris Xe Graphics'), 'integrated');
+  assert.equal(classifyGame3DGpu('Intel Arc A770 Graphics'), 'discrete');
+  assert.equal(classifyGame3DGpu('Intel Arc 140V'), 'integrated');
+  assert.equal(classifyGame3DGpu('Apple M3 GPU'), 'integrated');
+  assert.equal(classifyGame3DGpu('Adreno 740'), 'integrated');
+  assert.equal(classifyGame3DGpu('AMD Radeon Graphics'), 'unknown');
+  assert.equal(classifyGame3DGpu('GPU not reported by this browser'), 'unknown');
+  assert.equal(classifyGame3DGpu('Google SwiftShader'), 'software');
+  assert.equal(game3dEfficiencyTighten({ profile: 'auto', gpuClass: classifyGame3DGpu('AMD Radeon 780M') }), 'balanced');
+  assert.equal(game3dEfficiencyTighten({ profile: 'auto', gpuClass: classifyGame3DGpu('Intel Arc A770') }), 'none');
+});
+
 test('performance profile cuts world work harder than the quality preset alone', () => {
   const plain = game3dWorldGraphicsBudget({ quality: 'ultra', shadows: true });
   const efficient = game3dWorldGraphicsBudget(

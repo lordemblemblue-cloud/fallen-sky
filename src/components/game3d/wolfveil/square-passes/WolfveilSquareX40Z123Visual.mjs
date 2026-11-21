@@ -6,6 +6,17 @@ import {
   WOLFVEIL_X40_Z123_ART_STYLE as ART,
   auditWolfveilSquareX40Z123,
 } from './WolfveilSquareX40Z123.mjs';
+import {vec2,vec3,sin,normalize,smoothstep,positionGeometry} from 'three/tsl';
+import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same anchored-tip dance in TSL (one graph for both blade kinds, like their one GLSL program)
+function anchoredTipNodes({waveTime,waveGust,waveWind}){
+  const root=instanceRootWorld();
+  const tip=smoothstep(.12,.91,positionGeometry.y);
+  const dance=sin(uniformOf(waveTime,'float').mul(1.2).add(root.x.mul(.19)).add(root.z.mul(.17)));
+  const push=normalize(uniformOf(waveWind,'vec2').add(vec2(.001))).mul(dance.mul(uniformOf(waveGust,'float')).mul(tip).mul(.035));
+  return {positionNode:offsetBeforeInstancing(vec3(push.x,0,push.y))};
+}
 
 const TAU=Math.PI*2;
 const mounted=new WeakSet();
@@ -94,6 +105,7 @@ export function mountWolfveilSquareX40Z123Visual({
   const dummy=new THREE.Object3D(),meshes=[];
   const waveTime={value:0},waveGust={value:.22};
   const waveWind={value:new THREE.Vector2(.6,.8)};
+  let tipNodes=null;
   for(const spec of specs){
     const roots=byKind[spec.kind];
     if(!roots.length)continue;
@@ -113,6 +125,8 @@ export function mountWolfveilSquareX40Z123Visual({
           .replace('#include <common>',`#include <common>\nuniform float uWS04Time,uWS04Gust;\nuniform vec2 uWS04Wind;`)
           .replace('#include <begin_vertex>',`#include <begin_vertex>\n#ifdef USE_INSTANCING\nvec3 ws04Root=(modelMatrix*instanceMatrix*vec4(0.,0.,0.,1.)).xyz;\n#else\nvec3 ws04Root=(modelMatrix*vec4(0.,0.,0.,1.)).xyz;\n#endif\nfloat ws04Tip=smoothstep(.12,.91,position.y);\nfloat ws04Dance=sin(uWS04Time*1.2+ws04Root.x*.19+ws04Root.z*.17);\ntransformed.xz+=normalize(uWS04Wind+vec2(.001))*.035*ws04Dance*uWS04Gust*ws04Tip;`);
       };
+      tipNodes??=anchoredTipNodes({waveTime,waveGust,waveWind});
+      attachNodes(material,tipNodes); // WebGPURenderer
     }
     const geometry=spec.geometry();
     const mesh=new THREE.InstancedMesh(geometry,material,roots.length);

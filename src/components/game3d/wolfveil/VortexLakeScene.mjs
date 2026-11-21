@@ -3,6 +3,43 @@
 // by VortexLakeLayout; this renderer supplies water, walkable bridge, arch,
 // liquid-glass whirlpool and energy ribbons without scene-wide bloom.
 import * as THREE from 'three';
+import {NodeMaterial} from 'three/webgpu';
+import {Fn,uv,positionGeometry,positionLocal,vec3,vec4,length,sin,atan2,mix,smoothstep,pow,varying} from 'three/tsl';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {uniformOf} from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the basin water and the passage stream in TSL
+function basinWaterTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float');
+  const p=positionGeometry;
+  const r=length(p.xz);
+  const lift=sin(r.mul(.23).sub(time.mul(1.25)).add(atan2(p.z,p.x).mul(4))).mul(.12).mul(smoothstep(6,35,r));
+  const m=new NodeMaterial();
+  m.positionNode=positionLocal.add(vec3(0,lift,0));
+  const basinUv=varying(uv(),'v_basinUv');
+  m.fragmentNode=Fn(()=>{
+    const angle=basinUv.x.mul(6.283185),radius=basinUv.y;
+    const spiral=sin(angle.mul(7).sub(radius.mul(27)).sub(time.mul(2.35)));
+    const ripple=sin(radius.mul(80).sub(time.mul(4.4)).add(angle.mul(3)));
+    const glow=spiral.mul(.5).add(.5).toVar();
+    const col=mix(vec3(.012,.063,.124),vec3(.045,.49,.66),glow.mul(.35).add(.30).add(ripple.mul(.14))).toVar();
+    col.assign(mix(col,vec3(.19,.12,.46),smoothstep(.42,.95,glow).mul(.30)));
+    col.addAssign(vec3(.10,.19,.22).mul(pow(radius.oneMinus(),2.5)).mul(glow.mul(.55).add(.45)));
+    return vec4(col,.88);
+  })();
+  return m;
+}
+function streamTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float');
+  const m=new NodeMaterial();
+  m.fragmentNode=Fn(()=>{
+    const v=uv();
+    const r=sin(v.y.mul(44).sub(time.mul(3.8)).add(v.x.mul(13))).mul(.5).add(.5).toVar();
+    const col=mix(vec3(.02,.11,.18),vec3(.035,.32,.47),r.mul(.42).add(.42)).add(vec3(.06,.13,.15).mul(pow(r,7)));
+    return vec4(col,.83);
+  })();
+  return m;
+}
 import {VORTEX_LAKE,vortexLakePortalCrossing} from './VortexLakeLayout.mjs';
 
 const TAU=Math.PI*2;
@@ -151,6 +188,7 @@ function addCavern(root){
         #include <colorspace_fragment>
       }`,
   });
+  setNodeTwin(streamMat,streamTwin);
   const stream=new THREE.Mesh(new THREE.PlaneGeometry(26,67,18,28),streamMat);
   stream.rotation.x=-Math.PI/2;stream.position.set(-2,-.05,15);
   passage.add(stream);
@@ -233,6 +271,7 @@ export function createVortexLakeLandmark(scene,{addGroundMesh,removeGroundMesh,s
     vertexShader:waterVertex,fragmentShader:waterFragment,
     side:THREE.DoubleSide,transparent:true,depthWrite:false,
   });
+  setNodeTwin(mat,basinWaterTwin);
   const water=new THREE.Mesh(basinGeometry(),mat);
   water.name='Wolfveil_ExpandedRiverMountainBasin';
   water.userData.blazeProcedural=true;

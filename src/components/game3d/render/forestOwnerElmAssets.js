@@ -6,6 +6,29 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {classifyTreeMaterialPart} from './LivingTreeWindPhysics.mjs';
+import {vec2,vec3,sin,abs,clamp,mix,normalize,positionGeometry,diffuseColor} from 'three/tsl';
+import {attachNodes,uniformOf,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same leaf wind and rain darkening in TSL, one graph per uniform set.
+const elmNodes=new WeakMap();
+function elmNodesFor(uniform){
+  if(elmNodes.has(uniform))return elmNodes.get(uniform);
+  const p=positionGeometry;
+  const t=uniformOf(uniform.uNativeTime,'float'),gust=uniformOf(uniform.uNativeGust,'float'),rain=uniformOf(uniform.uNativeRain,'float');
+  const tip=clamp(abs(p.x).add(abs(p.y)).mul(.006),0,1);
+  const sway=sin(t.mul(1.63).add(p.x.mul(.08)).add(p.y.mul(.03))).mul(.57).add(sin(t.mul(2.4).add(p.y.mul(.09))).mul(.21));
+  const push=normalize(uniformOf(uniform.uNativeWind,'vec2').add(vec2(.0001))).mul(tip).mul(sway.mul(gust).mul(1.7));
+  const setup=(nodeMaterial)=>{
+    const setupDiffuseColor=nodeMaterial.setupDiffuseColor;
+    nodeMaterial.setupDiffuseColor=function(builder){
+      setupDiffuseColor.call(this,builder);
+      diffuseColor.rgb.mulAssign(mix(1,.76,rain));
+    };
+  };
+  const entry={nodes:{positionNode:offsetBeforeInstancing(vec3(push.x,push.y,tip.mul(rain).mul(-.9)))},setup};
+  elmNodes.set(uniform,entry);
+  return entry;
+}
 
 // Only foreground deciduous trees get the heavyweight original model.
 // Unmodified procedural pine/trees provide a safe fallback when the asset is
@@ -45,6 +68,8 @@ uniform float uNativeRain;`)
       .replace('#include <color_fragment>',`#include <color_fragment>
 diffuseColor.rgb*=mix(1.0,.76,uNativeRain);`);
   };
+  const elm=elmNodesFor(uniform);
+  attachNodes(material,elm.nodes,{setup:elm.setup});
 }
 export function installGame1OwnerElms(scene,trees,onReady,selection=selectOwnerElmTrees){
   const selected=selection(trees);

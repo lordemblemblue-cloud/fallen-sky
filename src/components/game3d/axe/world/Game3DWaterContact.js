@@ -1,7 +1,13 @@
 // Game 3D-only visual layer for the existing Wolfveil river. The shared river
 // geometry and Game 1 material are left untouched.
 import * as THREE from 'three';
+import {NodeMaterial} from 'three/webgpu';
+import {Fn,If,Loop,Discard,varying,modelWorldMatrix,positionGeometry,cameraProjectionMatrix,cameraViewMatrix,
+  cameraPosition,uv,vec2,vec3,vec4,float,fract,sin,dot,floor,mix,abs,smoothstep,clamp,exp,pow,length,
+  uniformArray} from 'three/tsl';
 import {WOLFVEIL_RIVER} from '../../wolfveil/WolfveilLayout.js';
+import {setNodeTwin} from '../../../../lib/webgpuMaterialTwins.js';
+import {uniformOf} from '../../../../lib/webgpuNodeKit.js';
 
 const RIPPLE_SLOTS=4;
 const WIND_DEGREES={N:0,NE:45,E:90,SE:135,S:180,SW:225,W:270,NW:315};
@@ -85,6 +91,50 @@ void main(){
   #include <colorspace_fragment>
 }`;
 
+// WebGPURenderer: the same wakes and lace in TSL.
+const contactHash=Fn(([p])=>fract(sin(dot(p,vec2(127.1,311.7))).mul(43758.5453)));
+const contactNoise=Fn(([p])=>{
+  const i=floor(p).toVar();const f=fract(p).toVar();f.assign(f.mul(f).mul(float(3).sub(f.mul(2))));
+  return mix(mix(contactHash(i),contactHash(i.add(vec2(1,0))),f.x),
+    mix(contactHash(i.add(vec2(0,1))),contactHash(i.add(vec2(1,1))),f.x),f.y);
+});
+function createWaterContactTwin(classic){
+  const u=classic.uniforms;
+  const time=uniformOf(u.uTime,'float'),rain=uniformOf(u.uRain,'float'),night=uniformOf(u.uNight,'float');
+  const wind=uniformOf(u.uWind,'vec2'),fogNearFar=uniformOf(u.uFogNearFar,'vec2');
+  const ripples=uniformArray(u.uRipples.value,'vec4');
+  const worldRaised=modelWorldMatrix.mul(vec4(positionGeometry,1)).xyz.add(vec3(0,.035,0));
+  const vWorld=varying(worldRaised,'v_contactWorld');
+  const m=new NodeMaterial();
+  m.vertexNode=cameraProjectionMatrix.mul(cameraViewMatrix).mul(vec4(worldRaised,1));
+  m.fragmentNode=Fn(()=>{
+    const world=vWorld.toVar();
+    const bank=smoothstep(.86,.99,abs(uv().x.mul(2).sub(1)));
+    const lace=contactNoise(world.xz.mul(.9).add(vec2(time.mul(.35),time.mul(-.22))).add(wind.mul(time).mul(.2))).mul(.65)
+      .add(contactNoise(world.xz.mul(2.3).sub(vec2(time.mul(.5),0))).mul(.35));
+    const foam=bank.mul(smoothstep(.58,.86,lace)).mul(rain.mul(.55).add(.45));
+    const rings=float(0).toVar();
+    Loop(RIPPLE_SLOTS,({i})=>{
+      const r=ripples.element(i);
+      const age=time.sub(r.z).toVar();
+      If(age.greaterThanEqual(0).and(age.lessThan(1.6)),()=>{
+        const d=length(world.xz.sub(r.xy));
+        const radius=age.mul(2.45).add(.16);
+        const width=age.mul(.065).add(.065);
+        const outer=exp(pow(d.sub(radius).div(width),2).negate());
+        const inner=exp(pow(d.sub(radius.mul(.57)).div(width.mul(1.6)),2).negate()).mul(.32);
+        rings.addAssign(r.w.mul(outer.add(inner)).mul(exp(age.mul(-1.25))));
+      });
+    });
+    const alpha=clamp(foam.mul(.2).add(rings.mul(.48)),0,.63).toVar();
+    alpha.mulAssign(float(1).sub(smoothstep(fogNearFar.x,fogNearFar.y,length(cameraPosition.sub(world)))));
+    If(alpha.lessThan(.005),()=>{Discard();});
+    const color=mix(vec3(.73,.76,.77),vec3(.86,.89,.91),clamp(rings.mul(1.8),0,1)).mul(mix(1,.55,night));
+    return vec4(color,alpha);
+  })();
+  return m;
+}
+
 export function createGame3DWaterContact(riverMesh,{originZ=0,fog=null}={}){
   if(!riverMesh?.geometry||!riverMesh.parent)throw Error('Game 3D river mesh must be attached');
   const ripples=Array.from({length:RIPPLE_SLOTS},()=>new THREE.Vector4(0,0,-10,0));
@@ -99,6 +149,7 @@ export function createGame3DWaterContact(riverMesh,{originZ=0,fog=null}={}){
     uniforms,vertexShader,fragmentShader,side:THREE.DoubleSide,
     transparent:true,depthWrite:false,
   });
+  setNodeTwin(material,createWaterContactTwin);
   const mesh=new THREE.Mesh(riverMesh.geometry,material);
   mesh.name='Game3D_WolfveilWaterContact';
   mesh.renderOrder=riverMesh.renderOrder+1;

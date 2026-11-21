@@ -3,12 +3,17 @@ import assert from 'node:assert/strict';
 import { WEBGPU_SCENES, isSceneWebGPUReady, getSceneWebGPUBlocker } from '../src/lib/webgpuSceneReadiness.mjs';
 import { selectRendererBackend } from '../src/lib/rendererSelection.mjs';
 
-test('both live games remain WebGL-only until explicitly validated', () => {
+test('both live games are validated for WebGPU (their default still depends on the device, rendererBackendChoice)', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
-    assert.equal(isSceneWebGPUReady(sceneId), false);
-    assert.equal(typeof getSceneWebGPUBlocker(sceneId), 'string');
+    assert.equal(isSceneWebGPUReady(sceneId), true);
+    assert.equal(getSceneWebGPUBlocker(sceneId), null);
     assert.equal(selectRendererBackend({
       webgpuAvailable: true,
+      requested: 'webgpu',
+      sceneWebGPUReady: isSceneWebGPUReady(sceneId),
+    }).backend, 'webgpu');
+    assert.equal(selectRendererBackend({
+      webgpuAvailable: false,
       requested: 'webgpu',
       sceneWebGPUReady: isSceneWebGPUReady(sceneId),
     }).backend, 'webgl');

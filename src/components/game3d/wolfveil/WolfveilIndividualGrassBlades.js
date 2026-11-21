@@ -3,6 +3,8 @@
 // spatial chunks across the valley meadows, trail verges, riverbanks, and the
 // imported town's green park lawns. Pure visual decoration: zero colliders.
 import * as THREE from 'three';
+import {vec2,vec3,sin,dot,abs,length,normalize,smoothstep,positionGeometry,normalView,faceDirection} from 'three/tsl';
+import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRouteClearance } from './WolfveilLayout.js';
 import { wolfveilFrontierTrailClearance } from './WolfveilLandscapeDesign.mjs';
 import { insideWolfveilImportedTown } from './WolfveilImportedTownLayout.mjs';
@@ -90,6 +92,25 @@ const TOWN_PARK_PALETTE = [
   0x5a8848, 0x689652, 0x4f7c42, 0x749e59,
 ].map(h => new THREE.Color(h));
 
+const bladeNodes=new WeakMap();
+function bladeNodesFor(uniforms){
+  if(bladeNodes.has(uniforms))return bladeNodes.get(uniforms);
+  const t=uniformOf(uniforms.time,'float'),gust=uniformOf(uniforms.gust,'float'),player=uniformOf(uniforms.player,'vec4');
+  const root=instanceRootWorld().toVar();
+  const flex=smoothstep(.02,.58,positionGeometry.y).toVar();
+  const windDir=normalize(uniformOf(uniforms.wind,'vec2').add(vec2(.0001))).toVar();
+  const macro=sin(dot(root.xz,windDir).mul(.11).sub(t.mul(2.15)));
+  const micro=sin(t.mul(3.4).add(root.x.mul(1.9)).add(root.z.mul(2.3)));
+  const bend=gust.mul(.19).add(.065).mul(macro.mul(.62).add(micro.mul(.38))).mul(flex).toVar();
+  const fromActor=root.xz.sub(player.xy).toVar();
+  const trample=smoothstep(0,1.65,length(fromActor)).oneMinus().mul(player.w).toVar();
+  const part=normalize(fromActor.add(vec2(.0001))).mul(trample).mul(flex).mul(.44);
+  const offset=vec3(windDir.x.mul(bend).add(part.x),abs(bend).mul(-.22).mul(flex).sub(trample.mul(flex).mul(.28)),windDir.y.mul(bend).add(part.y));
+  const nodes={positionNode:offsetBeforeInstancing(offset),normalNode:normalView.mul(faceDirection)};
+  bladeNodes.set(uniforms,nodes);
+  return nodes;
+}
+
 export function createSumiEBladeMaterial(uniforms) {
   const mat = new THREE.MeshStandardMaterial({
     color: 0xffffff,
@@ -135,6 +156,7 @@ float trample = (1.0 - smoothstep(0.0, 1.65, actorDist)) * uBladePlayer.w;
 transformed.xz += normalize(fromActor + vec2(0.0001)) * trample * bladeFlex * 0.44;
 transformed.y -= trample * bladeFlex * 0.28;`);
   };
+  attachNodes(mat,bladeNodesFor(uniforms)); // WebGPURenderer: the same blades in TSL
   return mat;
 }
 
