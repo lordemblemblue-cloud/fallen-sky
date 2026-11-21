@@ -19,11 +19,12 @@ export const VITALS = Object.freeze({
   shieldRegenDelay: 4,
 });
 
-// The Dimensional Veil: spends Will to keep the body out of reach.
+// The Dimensional Veil follows the ability-powered Will resource, but attacks no longer consume it.
+// The legacy hit-cost fields remain for compatibility with older balancing tools; damage.mjs no longer reads them.
 export const VEIL = Object.freeze({
-  willPerDamage: 1, // Will spent for each point of damage the Veil stops
+  willPerDamage: 1, // legacy tuning only; incoming damage does not spend Will
   unstableBelow: 0.35, // share of max Will under which the Veil is unstable
-  unstableLeak: 0.25, // share of each hit that slips through an unstable Veil to the body
+  unstableLeak: 0.25, // legacy tuning only; incoming damage instead reaches shield then HP
   // Veil Collapse: at zero Will the body is tangible until Will has recovered this far, and Will only
   // starts recovering after collapseRecoverDelay.
   collapseRestoreAt: 35,

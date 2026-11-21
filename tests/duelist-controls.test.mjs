@@ -47,7 +47,9 @@ test('some inputs are never bound, and broken or clashing saved bindings repair 
   assert.equal(repaired.back, 'KeyS');
   assert.equal(repaired.heavy, 'KeyE', 'the first action keeps a clashing key');
   assert.equal(repaired.roll, 'KeyC', 'the other goes back to its own default');
-  assert.equal(repaired.lock, 'Tab');
+  assert.equal(repaired.lock, 'Mouse1');
+  assert.equal(repaired.shop, 'Tab');
+  assert.equal(keysFrom({ lock: 'Tab' }).lock, 'Mouse1', 'old saved Tab lock is migrated to middle click');
 });
 
 test('keys are written the way people say them; the help line and HUD follow the bindings', () => {
@@ -56,7 +58,7 @@ test('keys are written the way people say them; the help line and HUD follow the
   for (const [code, label] of cases) assert.equal(keyLabel(code), label, String(code));
   assert.equal(keyLabel('Mouse2', { short: true }), 'RMB');
   const line = helpLine(DEFAULT_KEYS);
-  for (const part of ['WASD move', 'Shift sprint', 'LMB light', 'E heavy', 'RMB guard', 'Space jump', 'C roll', 'Alt dash', '1 push', 'Tab lock on']) assert.ok(line.includes(part), part);
+  for (const part of ['WASD move', 'Shift sprint', 'LMB light', 'E heavy', 'RMB guard', 'Space jump', 'C roll', 'Alt dash', '1 push', 'Tab shop', 'MMB lock on']) assert.ok(line.includes(part), part);
   assert.ok(!line.includes('use'), 'using things only in the story');
   assert.ok(helpLine(DEFAULT_KEYS, { story: true }).includes('F (hold) use'));
   const arrows = rebind(rebind(rebind(rebind(DEFAULT_KEYS, 'forward', 'ArrowUp').keys, 'left', 'ArrowLeft').keys, 'back', 'ArrowDown').keys, 'right', 'ArrowRight').keys;
@@ -84,7 +86,8 @@ test('the controls follow the player\'s bindings: presses, held keys, guard and 
   const b = fakeBrowser();
   const { createControls } = await import('../src/components/duelist/client/controls.mjs');
   const mine = rebind(rebind(DEFAULT_KEYS, 'heavy', 'KeyH').keys, 'guard', 'KeyV').keys;
-  const controls = createControls(b.canvas, { keys: mine });
+  let shopToggles = 0;
+  const controls = createControls(b.canvas, { keys: mine, onShopToggle: () => { shopToggles += 1; } });
   b.key('keydown', 'KeyH');
   b.key('keydown', 'KeyE'); // no longer anything
   assert.deepEqual(controls.read().presses, ['heavy']);
@@ -109,7 +112,18 @@ test('the controls follow the player\'s bindings: presses, held keys, guard and 
   b.mouse('mouseup', 0);
   assert.deepEqual(controls.read().presses, ['light']);
   b.key('keydown', 'Tab');
-  assert.equal(controls.takeLockToggle(), true);
+  assert.equal(shopToggles, 1, 'Tab toggles the Battle Shop');
+  controls.setPaused(true);
+  b.key('keyup', 'Tab');
+  b.key('keydown', 'Tab');
+  assert.equal(shopToggles, 2, 'Tab also closes the shop while gameplay is paused');
+  controls.setPaused(false);
+  globalThis.document.pointerLockElement = null;
+  b.mouse('mousedown', 1);
+  b.mouse('mouseup', 1);
+  assert.equal(controls.takeLockToggle(), true, 'middle mouse locks a target without prior pointer capture');
+  assert.equal(controls.takeLockToggle(), false, 'one middle click produces one toggle');
+  globalThis.document.pointerLockElement = b.canvas;
   b.key('keydown', 'Digit3');
   b.blur();
   assert.deepEqual(controls.read().presses, ['ability3', 'release', 'blockUp'], 'leaving the window lets go of everything');

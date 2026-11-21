@@ -6,7 +6,6 @@
 // Veil Cloak, and an execution finishes its target outright.
 import { BLOCK, KNOCKDOWN } from './tuning.mjs';
 import { resolveHit } from './damage.mjs';
-import { drainWill } from './vitals.mjs';
 import { stagger, registerStaggerHit, isInvulnerable, isBreachedBy, grantBreach, knockDown, press } from './fighter.mjs';
 import { damageFor, controlImmune, knockbackTaken, spendEmpower, effectOn, endEffect, addEffect } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
@@ -120,11 +119,8 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   if (critical && extraCritical > 0) effects.push({ type: 'critical', by: attacker.id, target: defender.id, multiplier: 1 + extraCritical });
   if (moveId === 'gripThrow' && defender.heldBy === attacker.id) defender.heldBy = null;
 
-  // a strike that met its target spends an Empowered charge, draining Will; any hit ends a Veil Cloak
-  if (move.kind === 'attack') {
-    const drain = spendEmpower(attacker, now);
-    if (drain > 0 && !defender.vitals.dead) drainWill(defender.vitals, drain, now);
-  }
+  // Empowered strikes still spend one damage-boost charge; hits never siphon the victim's Force/Will.
+  if (move.kind === 'attack') spendEmpower(attacker, now);
   if (effectOn(defender, 'cloak', now) && (result.hpDamage > 0 || result.willSpent > 0 || result.shieldDamage > 0)) {
     endEffect(defender, 'cloak');
     effects.push({ type: 'uncloak', fighter: defender.id });

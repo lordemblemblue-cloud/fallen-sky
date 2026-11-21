@@ -103,7 +103,7 @@ export const CLASSES = Object.freeze({
     abilities: [
       ['cloak', 'Veil Cloak', 'Unseen for 4 s (a shimmer up close). Striking or being hit ends it.'],
       ['push', 'Telekinetic Push', 'Throw everyone in front of you back.'],
-      ['empower', 'Empowered Strikes', 'Your next 3 strikes hit 40% harder and drain the target\'s Will.'],
+      ['empower', 'Empowered Strikes', 'Your next 3 strikes hit 40% harder without draining the target\'s Will.'],
       ['misdirect', 'Misdirect', 'One enemy loses its lock on you and cannot target you for 3 s.'],
     ],
     special: { id: 'shadowExecution', name: 'Shadow Execution', cost: SPECIAL_MAX, target: 'enemy', reach: SPECIAL_BALANCE.assassinExecuteRange,

@@ -9,7 +9,7 @@ import { passiveFor } from './ranks.mjs';
 export const EFFECTS = Object.freeze({
   quick: Object.freeze({ move: 1.4, rate: 1.2 }),
   rage: Object.freeze({ damage: SPECIAL_BALANCE.rageDamageMultiplier, move: SPECIAL_BALANCE.rageMoveMultiplier, rate: SPECIAL_BALANCE.rageAttackSpeedMultiplier }),
-  empower: Object.freeze({ damage: 1.4, willDrain: 6 }),
+  empower: Object.freeze({ damage: 1.4 }),
   levitate: Object.freeze({ height: 2.1, move: 0.6 }),
   cloak: Object.freeze({ seenWithin: 3 }), // metres: closer than this, a cloaked fighter shimmers into view
 });
@@ -94,13 +94,13 @@ export const controlImmune = (f, now) => !!effectOn(f, 'rage', now);
 /** How much of a knockback moves this fighter (the Warrior's Heavy Stance stands firmer). */
 export const knockbackTaken = (f) => (passiveOf(f)?.knockbackTaken ?? 1) * (1 - (f.shopStats?.passive?.knockbackResist || 0));
 
-/** A landed strike spends one Empowered charge and drains the target's Will. */
+/** A landed strike spends one Empowered damage-boost charge, never the target's Force/Will. */
 export function spendEmpower(attacker, now) {
   const e = effectOn(attacker, 'empower', now);
-  if (!e) return 0;
+  if (!e) return false;
   e.charges = (e.charges ?? 1) - 1;
   if (e.charges <= 0) endEffect(attacker, 'empower');
-  return EFFECTS.empower.willDrain;
+  return true;
 }
 
 /** Is `f` hidden from `viewer` (a Veil Cloak, farther than its shimmer)? Teammates always see each other. */

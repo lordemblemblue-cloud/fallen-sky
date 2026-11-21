@@ -20,14 +20,15 @@ function run(f, from, seconds, step = 1 / 120) {
   return { t, events };
 }
 
-test('a hit meets the shield first, then the Veil spends Will; the body is untouched while the Veil holds', () => {
+test('damage reduces shield and then HP without spending the victim\'s Force/Will', () => {
   const v = createVitals();
   const r = resolveHit(bare(v), { damage: 50 }, 0);
   assert.equal(r.outcome, 'hit');
   assert.ok(near(r.shieldDamage, VITALS.shield));
-  assert.ok(near(r.willSpent, 50 - VITALS.shield));
-  assert.equal(r.hpDamage, 0);
-  assert.equal(v.hp, VITALS.hp);
+  assert.equal(r.willSpent, 0);
+  assert.equal(r.hpDamage, 50 - VITALS.shield);
+  assert.equal(v.hp, VITALS.hp - (50 - VITALS.shield));
+  assert.equal(v.will, VITALS.will);
   assert.equal(veilState(v), 'stable');
   // shield-breaking weapons count for more against shields
   const w = createVitals();
@@ -35,20 +36,21 @@ test('a hit meets the shield first, then the Veil spends Will; the body is untou
   assert.ok(near(sniper.shieldDamage, 40) && near(sniper.willSpent, 0), 'a 20-point sniper hit takes the whole 40-point shield');
 });
 
-test('an unstable Veil leaks part of each hit; at zero Will it collapses and the body takes the rest', () => {
+test('low Will remains unstable for visuals, but incoming hits cannot collapse it', () => {
   const v = createVitals({ shield: 0 });
-  v.will = 30; // below 35 %: unstable
+  v.will = 30; // below 35%: unstable due to earlier ability usage
   assert.equal(veilState(v), 'unstable');
-  const r = resolveHit(bare(v), { damage: 20 }, 0);
-  assert.ok(near(r.hpDamage, 20 * VEIL.unstableLeak), `leak ${r.hpDamage}`);
-  assert.ok(near(r.willSpent, 20 * (1 - VEIL.unstableLeak)));
-  const big = resolveHit(bare(v), { damage: 40 }, 0.1); // 15 Will left
-  assert.equal(big.collapsed, true);
-  assert.equal(veilState(v), 'collapsed');
-  assert.ok(near(v.hp, 100 - 5 - (40 - 15)), `hp ${v.hp}`); // 25 % leak of 40 = 10, Will stops 15 of 30, 15 through
+  const hit = resolveHit(bare(v), { damage: 20 }, 0);
+  assert.equal(hit.hpDamage, 20);
+  assert.equal(hit.willSpent, 0);
+  const next = resolveHit(bare(v), { damage: 40 }, 0.1);
+  assert.equal(next.collapsed, false);
+  assert.equal(v.hp, 40);
+  assert.equal(v.will, 30);
+  assert.equal(veilState(v), 'unstable');
   const after = resolveHit(bare(v), { damage: 10 }, 0.2);
-  assert.equal(after.willSpent, 0);
-  assert.equal(after.hpDamage, 10, 'collapsed: straight to the body');
+  assert.equal(after.hpDamage, 10);
+  assert.equal(v.will, 30);
 });
 
 test('the Veil re-forms only after its delay and enough Will; stamina and Will recover separately', () => {
@@ -74,7 +76,8 @@ test('a guard parries when fresh, blocks while it has stamina, and breaks when i
   const blocked = resolveHit({ ...bare(v), guard: { since: 0, facing: true } }, { damage: 20 }, 1);
   assert.equal(blocked.outcome, 'blocked');
   assert.ok(near(blocked.staminaSpent, 20 * BLOCK.staminaPerDamage));
-  assert.ok(near(blocked.willSpent, 20 * BLOCK.chip), 'only the chip reaches the Veil');
+  assert.equal(blocked.willSpent, 0, 'blocking never drains Force/Will');
+  assert.ok(near(blocked.hpDamage, 20 * BLOCK.chip), 'shieldless guard takes only chip HP damage');
   const tired = createVitals({ shield: 0 });
   tired.stamina = 5;
   const broke = resolveHit({ ...bare(tired), guard: { since: 0, facing: true } }, { damage: 20 }, 1);
@@ -91,15 +94,18 @@ test('Veil Breach lets one attacker reach the body for a moment; Resist throws i
   const a = createFighter({ id: 'a' });
   const b = createFighter({ id: 'b' });
   const c = createFighter({ id: 'c' });
-  b.vitals.shield = 0;
   assert.equal(press(a, 'breach', 0).accepted, true);
   assert.equal(a.vitals.will, VITALS.will - MOVES.breach.will);
   strike(a, b, 'breach', { now: 0.2 });
   assert.ok(isBreachedBy(b, 'a', 0.3) && !isBreachedBy(b, 'c', 0.3));
+  const shieldBefore = b.vitals.shield;
   const through = strike(a, b, 'swordLight1', { now: 0.4 });
-  assert.equal(through.result.hpDamage, MOVES.swordLight1.damage, "the breaching attacker's hit reaches the body");
+  assert.equal(through.result.hpDamage, MOVES.swordLight1.damage, "breach bypasses armor to damage HP, not Will");
+  assert.equal(b.vitals.shield, shieldBefore, 'breach does not consume armor');
+  assert.equal(b.vitals.will, VITALS.will, 'breach does not drain the victim');
   const stopped = strike(c, b, 'swordLight1', { now: 0.5 });
-  assert.equal(stopped.result.hpDamage, 0, "others still meet the Veil");
+  assert.equal(stopped.result.hpDamage, 0, "others still meet the remaining shield");
+  assert.ok(stopped.result.shieldDamage > 0);
   assert.ok(!isBreachedBy(b, 'a', 0.2 + BREACH.seconds + 0.01), 'the breach ends');
   strike(a, b, 'breach', { now: 9 });
   assert.equal(press(b, 'resist', 9.1).accepted, true);

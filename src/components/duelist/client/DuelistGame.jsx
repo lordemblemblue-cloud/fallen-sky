@@ -223,7 +223,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const audio = createDuelAudio();
     audioRef.current = audio;
     setMuted(audio.muted);
-    const controls = createControls(renderer.domElement, { keys: bound, sensitivity });
+    const toggleBattleShop = () => {
+      const currentView = source.view?.();
+      if (!currentView || currentView.mission || currentView.phase === 'over') return;
+      // The cursor must be free to interact with the shop. Closing leaves it free until the
+      // player clicks the arena to recapture it, avoiding a surprise mouse lock.
+      if (document.pointerLockElement === renderer.domElement) document.exitPointerLock?.();
+      setShopOpen((open) => !open);
+    };
+    const controls = createControls(renderer.domElement, { keys: bound, sensitivity, onShopToggle: toggleBattleShop });
     controlsRef.current = controls;
     controls.setPaused(shopOpen);
     // the comms lines, spoken as they appear on screen (and the radio's click)
@@ -780,7 +788,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
         if (document.pointerLockElement) document.exitPointerLock?.();
         setShopOpen(true);
-      }}>Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
+      }}>{keyLabel(bound.shop, { short: true })} · Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
         onBuy={(id) => sourceRef.current?.buyItem?.(id)}

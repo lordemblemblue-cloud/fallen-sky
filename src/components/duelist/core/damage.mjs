@@ -1,13 +1,13 @@
-// One hit through the defender's protection, in order: evade (roll), guard (parry / block / guard break),
-// shield and armor plating, the Dimensional Veil (Will), and finally the body (HP).
+// One hit through the defender's protection: evade, guard, shield/armor, then HP.
+// Incoming damage NEVER spends Force/Will. Will is reserved for using powers and abilities.
 import { BLOCK, VEIL } from './tuning.mjs';
-import { drainStamina, drainWill } from './vitals.mjs';
+import { drainStamina } from './vitals.mjs';
 
 /**
  * @param {object} defender  { vitals, invulnerable, guard: null | { since, facing: boolean }, breached }
  *   invulnerable: inside a roll or dash's i-frames. guard.since: when the guard went up (seconds).
  *   guard.facing: the attacker is inside the guard's front arc. breached: this attacker holds a Veil Breach
- *   on the defender, so the Veil does not stop their hits.
+ *   on the defender, allowing the attacker to pierce their shield/armor directly.
  * @param {object} hit  { damage, blockable, shieldMultiplier, veilMultiplier, kind }
  * @param {number} now  seconds
  * @returns {{ outcome, shieldDamage, willSpent, hpDamage, staminaSpent, veil, collapsed, killed, stagger }}
@@ -38,9 +38,9 @@ export function resolveHit(defender, hit, now) {
     }
   }
 
-  // Shield and armor plating take the hit first. Weapons that break shields count for more against them.
+  // Shield and armor plating take the hit first. Breach directly exposes the body without touching Will.
   const shieldMul = Math.max(0.01, Number(hit.shieldMultiplier) || 1);
-  if (damage > 0 && v.shield > 0) {
+  if (damage > 0 && v.shield > 0 && !defender.breached) {
     const absorbed = Math.min(v.shield, damage * shieldMul);
     v.shield -= absorbed;
     v.lastShieldHit = now;
@@ -48,19 +48,8 @@ export function resolveHit(defender, hit, now) {
     damage -= absorbed / shieldMul;
   }
 
-  // The Veil spends Will to stop what is left; an unstable Veil leaks part of it; a collapsed or breached
-  // Veil stops nothing.
-  if (damage > 0 && !v.collapsed && !defender.breached) {
-    const wasUnstable = v.will < v.max.will * VEIL.unstableBelow;
-    const leak = wasUnstable ? damage * VEIL.unstableLeak : 0;
-    const toVeil = damage - leak;
-    const cost = toVeil * VEIL.willPerDamage * Math.max(0.01, Number(hit.veilMultiplier) || 1);
-    const paid = drainWill(v, cost, now);
-    result.willSpent = paid;
-    const stopped = cost > 0 ? toVeil * (paid / cost) : toVeil;
-    damage = leak + (toVeil - stopped);
-    if (v.collapsed) result.collapsed = true;
-  }
+  // Do NOT divert the incoming hit to Force/Will. After shielding, the remaining damage reaches HP.
+  // Veil stability still follows Will spent on abilities, but never drains from receiving damage.
 
   // The body.
   if (damage > 0) {
