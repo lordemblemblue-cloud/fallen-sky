@@ -308,8 +308,11 @@ function labelTexture(title,subtitle,color){
   return texture;
 }
 
+// `veil:false` draws no spirit-veil wall. Portal scenes cut what is past the
+// border away instead (WolfveilAreaClip.mjs); the veils still block crossing
+// anywhere but a gate (resolveCollision), they are just not drawn.
 export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeight,
-  labels=typeof document!=='undefined',area=null}={}){
+  labels=typeof document!=='undefined',area=null,veil:drawVeil=true}={}){
   if(!world?.group)throw new TypeError('Wolfveil area gates require the authoritative WolfveilBuilder');
   const root=new THREE.Group();
   root.name='WV_Portal_AreaVeilsAndToriiGates';
@@ -333,18 +336,17 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     Object.assign(material.uniforms,uniforms);
     return material;
   };
-  const veilMaterial=makeShader('WV_SpiritVeil',VEIL_VERTEX,VEIL_FRAGMENT);
-  setNodeTwin(veilMaterial,veilTwin);
-  const veil=new THREE.Mesh(buildVeilGeometry(heightAt,area),veilMaterial);
-  veil.name='WV_SpiritVeil_AreaBorders';
-  veil.frustumCulled=false;veil.renderOrder=3;
+  const veilMaterial=drawVeil?makeShader('WV_SpiritVeil',VEIL_VERTEX,VEIL_FRAGMENT):null;
+  if(veilMaterial)setNodeTwin(veilMaterial,veilTwin);
+  const veil=drawVeil?new THREE.Mesh(buildVeilGeometry(heightAt,area),veilMaterial):null;
+  if(veil){veil.name='WV_SpiritVeil_AreaBorders';veil.frustumCulled=false;veil.renderOrder=3;}
   const materials={
     lacquer:new THREE.MeshStandardMaterial({color:0xa63a24,roughness:.48,metalness:0,name:'WV_ToriiGate_Lacquer'}),
     ink:new THREE.MeshStandardMaterial({color:0x1b181d,roughness:.62,metalness:0,name:'WV_ToriiGate_Kasagi'}),
     stone:new THREE.MeshStandardMaterial({color:0x6d6b66,roughness:.92,metalness:0,name:'WV_ToriiGate_Stone'}),
     glow:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,name:'WV_ToriiGate_Runes'}),
   };
-  const meshes=[veil];
+  const meshes=veil?[veil]:[];
   for(const [kind,geometry] of Object.entries(buildToriiGeometry(gates))){
     if(!geometry)continue;
     const mesh=new THREE.Mesh(geometry,materials[kind]);
@@ -363,9 +365,10 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     mesh.userData={decorativeOnly:true,nonCollider:true,wolfveilAreaShared:true};
     root.add(mesh);
   }
-  // Camera position (local) for the shaders and labels, taken as the veil draws.
+  // Camera position (local) for the shaders and labels, taken as the veil
+  // draws (the membranes when no veil is drawn).
   const inverse=new THREE.Matrix4(),camWorld=new THREE.Vector3();
-  veil.onBeforeRender=(renderer,scene,camera)=>{
+  (veil||membranes).onBeforeRender=(renderer,scene,camera)=>{
     camWorld.setFromMatrixPosition(camera.matrixWorld);
     inverse.copy(root.matrixWorld).invert();
     uniforms.uCam.value.copy(camWorld).applyMatrix4(inverse);
@@ -450,7 +453,7 @@ export function createWolfveilAreaGates(world,{offsetZ=70,heightAt=wolfveilHeigh
     for(const entry of gates){dropLabel(entry,0);dropLabel(entry,1);}
     root.parent?.remove(root);
     for(const mesh of meshes)mesh.geometry.dispose();
-    for(const material of [veilMaterial,membraneMaterial,...Object.values(materials)])material.dispose();
+    for(const material of [veilMaterial,membraneMaterial,...Object.values(materials)])material?.dispose();
   }
   return {
     root,count:gates.length,gates:gates.map(entry=>entry.gate),update,resolveCollision,dispose,

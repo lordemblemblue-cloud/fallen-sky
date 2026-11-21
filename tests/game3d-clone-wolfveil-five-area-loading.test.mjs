@@ -824,7 +824,8 @@ test('the live game world mounts the five-area loader, portals and platform sett
   assert.match(world,/farScenery:false,farProxy:null/,'missing areas must not have far-area proxies');
   assert.match(world,/setOptions\(\{mode:'single',preloadMeters:0/,'graphics presets cannot re-enable other maps');
   assert.match(world,/target:'wolfveil-area',area:detail\.to/,'gate crossing must remount destination area');
-  assert.match(world,/initialArea:worldArea/,'terrain starts at the intended destination');
+  // (?wholeWorld=1 builds the whole valley's ground instead: WolfveilAreaScenes.mjs.)
+  assert.match(world,/initialArea:areaScenes\?worldArea:WOLFVEIL_WHOLE_TERRAIN/,'terrain starts at the intended destination');
   assert.match(source('src/pages/GameView.jsx'),/setWorldArea\(detail\.area\)/,'host switches to another scene on entry');
   assert.match(source('src/components/game3d/wolfveil/WolfveilTerrainAreaStream.mjs'),
     /active=WOLFVEIL_AREA_IDS\.includes\(initialArea\)\?initialArea:'town'/);

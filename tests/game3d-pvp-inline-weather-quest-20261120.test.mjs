@@ -33,7 +33,8 @@ test('World Combat aligns with weather on the map right instead of taking the qu
   assert.doesNotMatch(rule,/left:var\(--axe-map-left/);
   assert.match(css,/@media \(max-width: 620px\)/);
   assert.match(css,/@media \(max-width: 420px\)/);
-  assert.match(gameView,/<WorldPvpControl region=\{worldRegion\} suppressed=\{services.active \|\| services.expanded\} \/>/);
+  // `area`: the loaded Wolfveil area scene (gate travel, 2026-11-21).
+  assert.match(gameView,/<WorldPvpControl region=\{worldRegion\}(?: area=\{[^}]+\})?\s+suppressed=\{services.active \|\| services.expanded\} \/>/);
 });
 
 test('quest tracker takes released space below map and never covers online or level-up notice',()=>{

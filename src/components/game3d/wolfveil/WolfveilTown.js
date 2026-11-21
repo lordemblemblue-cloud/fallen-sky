@@ -334,10 +334,14 @@ function bridges(world,{terrainSpan=1100,terrainSegments=310}={}){
   world.ownedMaterials.push(plankMat,stoneDeckMat,ropeMat,floorProbeMat);
   world.walkableSurfaces??=[];
 
+  // Deck plans stay with the world: the railing guard needs the deck height
+  // to tell a walker on a bridge from one passing under it.
+  world.bridgeDecks??={};
   for(const b of BRIDGES){
     const isStone=b.kind==='stone';
     const isRope=b.kind==='rope';
     const deck=planWolfveilBridgeDeck(b,surface);
+    world.bridgeDecks[b.id]=deck;
     const visual=new WolfveilTriangles(),footing=new WolfveilTriangles();
     const ropeTris=new WolfveilTriangles();
     const plankStep=isStone?1.35:(isRope?.46:.58);
