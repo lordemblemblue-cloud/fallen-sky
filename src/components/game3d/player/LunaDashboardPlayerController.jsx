@@ -6,6 +6,7 @@ import {GAME3D_MOBILITY_SECONDS,fitGame3DMobilityTiming} from './game3dMobilityT
 import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './game3dEightWayDodge.mjs';
 import {dodgeTravelStep} from './dodgeMoves.js';
 import {DODGE_VARIANT_MOVES,dodgeMoveCandidates,pickDodgeMove} from './game3dDodgeProfiles.mjs';
+import {SWIM,SWIM_STATES} from './playerSwimState.mjs';
 import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, BOW_POSE_STATES, weaponIdleState, findComboBones } from '../weapons/weaponComboClips.js';
 import { createLocomotionUnderlay } from './locomotionUnderlay.js';
 import {
@@ -79,6 +80,7 @@ const LOOP_STATES = new Set([
   STATES.AIM_WALK_RIGHT, STATES.AIM_WALK_LEFT, STATES.AIM_WALK_FORWARD, STATES.AIM_WALK_BACKWARD,
   'fallLoop', // regular falling still uses its existing pose
   'wingGlide','airWalkLoop', // real rig-local flight motions
+  SWIM_STATES.idle, SWIM_STATES.forward, // deep water (player/playerSwimState.mjs)
   ...WEAPON_IDLE_STATES, BOW_HOLD,
   ...UPLOADED_PLAYER_ACTIONS.filter(action => action.loop).map(action => action.key),
 ]);
@@ -137,6 +139,9 @@ export function createLunaDashboardPlayerController({
   let blendTransition = null;
   let isDead = false;
   let isMounted = false;
+  // Deep water (setSwimming from GameWorld3D, player/playerSwimState.mjs): the swim loops replace the walk and idle,
+  // and jumps, dodges, rolls, strikes and hit reactions are refused until the hero stands again.
+  let isSwimming = false;
   let idleStartedAt = null;
   let busyResetAt = 0;
   let specialMoveVelocity = null;
@@ -237,7 +242,7 @@ export function createLunaDashboardPlayerController({
   const requestWeaponCombo = (kind, config) => {
     const states = WEAPON_COMBO_STATES[kind];
     if (!states || !states.every(hasAction)) return null;
-    if (isDead || isMounted) return false;
+    if (isDead || isMounted || isSwimming) return false;
     const at = now();
     if (isBusy) {
       const swing = comboAction();
@@ -414,7 +419,11 @@ export function createLunaDashboardPlayerController({
   // The bow's own draw: a bow in hand and its draw clips baked.
   const bowStatesReady = () => equipment.family === 'bow' && equipment.equipped && hasAction(BOW_DRAW) && hasAction(BOW_HOLD);
   const bowLowering = () => bowLowerAt !== null && (currentState === BOW_DRAW || currentState === BOW_HOLD);
+  // Swimming: forward while moving, treading water standing still; a body without the clips keeps its walk / idle.
+  const swimmingState = (moving) => (moving && hasAction(SWIM_STATES.forward) ? SWIM_STATES.forward
+    : hasAction(SWIM_STATES.idle) ? SWIM_STATES.idle : null);
   const movementStateFor = ({ moving, running, sprinting, direction, aiming, blocking }) => {
+    if (isSwimming) { const swim = swimmingState(moving); if (swim) return swim; }
     if (blocking && hasAction('block')) return 'block';
     if (blocking && hasAction(STATES.COMBAT_IDLE)) return STATES.COMBAT_IDLE;
     if (externallyAirborne && hasAction('fallLoop')) return 'fallLoop';
@@ -626,7 +635,7 @@ export function createLunaDashboardPlayerController({
   };
 
   const startSpecialMove = (state, directionVector, speed, duration = ONE_SHOT_DURATION[state]) => {
-    if (isDead || isMounted || isBusy || !hasAction(state)) return false;
+    if (isDead || isMounted || isSwimming || isBusy || !hasAction(state)) return false;
     const dir = directionVector?.clone?.() || new THREE.Vector3(0, 0, -1);
     if (dir.lengthSq() === 0) dir.set(0, 0, -1);
     dir.y = 0;
@@ -680,7 +689,7 @@ export function createLunaDashboardPlayerController({
   }; 
 
   const requestJump=({haloPercent=0,directionVector=null}={})=>{
-    if(isDead || isMounted || isBusy || jumpPhase || jumpOffset>0 || !hasAction(STATES.JUMP_START))return false;
+    if(isDead || isMounted || isSwimming || isBusy || jumpPhase || jumpOffset>0 || !hasAction(STATES.JUMP_START))return false;
     jumpOffset=0;
     jumpVelocity=JUMP_SPEED;
     jumpPhase='takeoff';
@@ -705,7 +714,7 @@ export function createLunaDashboardPlayerController({
   // kicks, hold for continuous sky-run, double-tap the kick for the finishing
   // forward dash. All charges use the canonical character stamina ledger.
   const requestAirWalkAction=({haloPercent,directionVector,doubleTap=false}={})=>{
-    if(isDead||isMounted)return {ok:false,reason:'unavailable'};
+    if(isDead||isMounted||isSwimming)return {ok:false,reason:'unavailable'};
     if((airWalk.mode==='boost'||airWalk.mode==='walk')&&doubleTap){
       const planned=beginAirWalkFinisher(airWalk,{stamina:getAirWalkStamina()});
       if(!planned.ok)return planned;
@@ -815,7 +824,7 @@ export function createLunaDashboardPlayerController({
     const state = melee
       ? (hasAction(kind) ? kind : hasAction(preferred) ? preferred : hasAction('punch') ? 'punch' : hasAction(STATES.MELEE_ATTACK) ? STATES.MELEE_ATTACK : STATES.DRAW_ARROW)
       : hasAction('aimRecoil') ? 'aimRecoil' : STATES.DRAW_ARROW;
-    if (isDead || isMounted || !hasAction(state)) return false;
+    if (isDead || isMounted || isSwimming || !hasAction(state)) return false;
     const instant = now();
     if (isBusy && (!config.combo || !ATTACK_STATES.has(currentState) || instant - lastAttackAt < 0.09)) return false;
     const speed = Math.max(0.7, Math.min(2.2, Number(config.speed) || 1));
@@ -833,7 +842,7 @@ export function createLunaDashboardPlayerController({
 
   const requestHitReact = (kind = 'front') => {
     const state = /head/i.test(kind) && hasAction('headshotReact') ? 'headshotReact' : STATES.HIT_REACT;
-    if (isDead || isMounted || !hasAction(state)) return false;
+    if (isDead || isMounted || isSwimming || !hasAction(state)) return false;
     // Do not cancel a dodge or other mobility move for a cosmetic hit reaction.
     if (isBusy && !ATTACK_STATES.has(currentState)) return false;
     if (!playState(state, { force: true, fade: 0.06, timeScale: 1.05 })) return false;
@@ -1067,6 +1076,27 @@ export function createLunaDashboardPlayerController({
     return false;
   };
 
+  // Into the water: whatever was playing (a jump, a dodge, a swing, the glide) ends and the swim loop cross-fades
+  // in over SWIM.blendSeconds while GameWorld3D floats the body up at the same pace; out again, the walk / idle.
+  const setSwimming = (enabled) => {
+    const next = !!enabled;
+    if (isSwimming === next) return isSwimming;
+    if (next && (isDead || isMounted)) return false;
+    isSwimming = next;
+    if (next) {
+      isBusy = false; bowAttackAllowsMovement = false; busyResetAt = 0;
+      jumpOffset = 0; jumpVelocity = 0; jumpPhase = null; jumpPhaseSeconds = 0;
+      specialMoveTimer = 0; specialMoveVelocity = null; travelMove = null;
+      externallyAirborne = false; resetAirWalk();
+      queuedCombo = null; activeCombo = null;
+      if (oneShotRef) oneShotRef.current = false;
+    }
+    previousMoving = false;
+    idleStartedAt = null;
+    if (!isDead && !isMounted) playState(movementStateFor(lastMovement), { force: true, fade: SWIM.blendSeconds });
+    return isSwimming;
+  };
+
   // Riding is posed by the mount's seat/grip runtime. Foot locomotion must
   // release its bone bindings before that runtime seats the rider.
   const setMounted = (enabled) => {
@@ -1150,6 +1180,8 @@ export function createLunaDashboardPlayerController({
     setEquipmentContext,
     setAirborneState,
     setMounted,
+    setSwimming,
+    getIsSwimming: () => isSwimming,
     updateActionState: handleMovement,
     updateMotion,
     updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
