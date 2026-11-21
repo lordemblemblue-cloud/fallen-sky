@@ -212,8 +212,23 @@ function installCompat(renderer) {
   }
 
   // GLSL materials: draw the registered node twin; skip one without a twin instead of a blank NodeMaterial.
-  const renderObject = renderer.renderObject;
+  const renderObjectRaw = renderer.renderObject;
   const reported = new Set();
+  // One object's draw must never take the frame down: r171 can throw mid-draw (e.g. an index buffer it lost
+  // track of after a geometry was disposed and drawn again). Skip that draw (one console note per message): the
+  // pass and the rest of the frame stay valid, and the next frame tries the object again.
+  const failedDraws = new Set();
+  const renderObject = { call(self, object, ...args) {
+    try { return renderObjectRaw.call(self, object, ...args); }
+    catch (error) {
+      const message = String(error?.message || error);
+      if (!failedDraws.has(message)) {
+        failedDraws.add(message);
+        console.warn(`[webgpu] draw skipped (${object?.name || object?.type}): ${message}`);
+      }
+      return undefined;
+    }
+  } };
   renderer.renderObject = function sceneRenderObject(object, scene, camera, geometry, material, ...rest) {
     if (broken.has(object)) return;
     // Points with a size: instanced quads (WebGPU points are one pixel)

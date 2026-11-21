@@ -21,6 +21,7 @@
 export function attachContextGuard(renderer) {
   let contextLost = false;
   let disposed = false;
+  let lastError = null;
 
   const onLost = (e) => { e.preventDefault?.(); contextLost = true; };
   const onRestored = () => { contextLost = false; };
@@ -42,8 +43,11 @@ export function attachContextGuard(renderer) {
         return true;
       } catch (err) {
         // Swallow the shader-trim crash so it doesn't blow up the React tree.
-        console.warn('[GW3D] render skipped (context invalid):', err?.message || err);
-        contextLost = true;
+        const message = String(err?.message || err);
+        if (message !== lastError) console.warn('[GW3D] render skipped (context invalid):', message);
+        lastError = message;
+        // WebGPURenderer: an exception is not a lost device (gpuState.lost tracks that): skip this frame only
+        if (!gpuState) contextLost = true;
         return false;
       }
     },
