@@ -57,6 +57,20 @@ test('story uses actual operation content and real play routes with offline/onli
   assert.match(ui, /room\.length!==5/);
 });
 
+test('reference menus render one visible frame instead of stacked template and CSS boxes', () => {
+  assert.match(css, /SINGLE-FRAME FIX/);
+  assert.match(css, /@media \(min-width:801px\)/);
+  assert.match(css, /\.dxr-character-details,\.dxr-story-details,\.dxr-settings-controls/);
+  assert.match(css, /\.dxr-story-timeline,\.dxr-story-timeline button/);
+  assert.match(css, /\.dxr-settings-rows label/);
+  assert.match(css, /background:transparent; border:0; border-radius:0; box-shadow:none/);
+  assert.match(css, /@media \(max-width:800px\)/);
+  assert.match(css, /background-image:linear-gradient\(140deg/);
+  assert.match(hub, /<CharacterReferenceMenu/);
+  assert.match(hub, /<StoryReferenceMenu/);
+  assert.match(hub, /<SettingsReferenceMenu/);
+});
+
 test('settings remains functional with a draft, Apply, Revert and persisted audio/prefs', () => {
   assert.match(ui, /GraphicsRuntimePanel sceneId="duelist-adventure"/);
   assert.match(ui, /KeyBindings keys=\{draft\.keys\|\|\{\}\}/);
