@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MOVES, SPRINT, STAGGER_IMMUNITY, VITALS,
+  MOVES, SPRINT, STAGGER_IMMUNITY,
   createVitals, createFighter, press, strike, resolveHit, isStunned,
 } from '../src/components/duelist/core/index.mjs';
 import { createWorld, addFighter, bodyOf, step } from '../src/components/duelist/sim/world.mjs';
