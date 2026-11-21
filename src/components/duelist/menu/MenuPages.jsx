@@ -272,7 +272,7 @@ export function DuelistHub({ initialPanel = null }) {
               <p className="duelist-menu-note">Select a fighter, view class levels and follow mastery milestones.</p></div>
             <button type="button" className="duelist-hub-small-button" onClick={closePanel} aria-label="Close character"><X size={18} /></button>
           </div>
-          <div className="duelist-menu-page duelist-hub-panel-content"><FighterContent /></div>
+          <div className="duelist-menu-page duelist-hub-panel-content"><FighterContent sharedPrefs={prefs} sharedUpdate={updatePrefs} /></div>
         </section>
       )}
 
@@ -406,8 +406,10 @@ export function JoinPage() {
   );
 }
 
-export function FighterContent() {
-  const [prefs, update] = usePrefs();
+export function FighterContent({ sharedPrefs, sharedUpdate } = {}) {
+  const [localPrefs, localUpdate] = usePrefs();
+  const prefs = sharedPrefs || localPrefs;
+  const update = sharedUpdate || localUpdate;
   const selected = BODIES[prefs.fighter] || BODIES.maskedWarrior || Object.values(BODIES)[0];
   const selectedClassId = CLASS_IDS.includes(prefs.classId) ? prefs.classId : 'duelist';
   const classXp = classProgressOf(prefs);
