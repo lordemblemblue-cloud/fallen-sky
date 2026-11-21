@@ -43,7 +43,8 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 11; // 11: the sword's cuts by direction in three modes (a fighter's mode travels with it; a cut may start part-way in) // 10: active relic commands and timed stasis/anchor state
+export const PROTOCOL = 12; // 12: stagger-immunity window and hit streak sync; attacks and sprint no longer spend stamina
+// 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -110,6 +111,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
     v: [r2(v.hp), r2(v.will), r2(v.stamina), r2(v.shield), (v.collapsed ? FLAG_BITS.collapsed : 0) | (v.winded ? FLAG_BITS.winded : 0) | (v.dead ? FLAG_BITS.dead : 0)],
     g: f.guard ? r3(f.guard.since) : -1,
     su: finite(f.stunnedUntil) ? r3(f.stunnedUntil) : -1,
+    si: finite(f.staggerImmuneUntil) ? r3(f.staggerImmuneUntil) : -1,
     du: finite(f.downUntil) ? r3(f.downUntil) : -1,
     ru: finite(f.riseUntil) ? r3(f.riseUntil) : -1,
     pu: finite(f.protectedUntil) ? r3(f.protectedUntil) : -1,
@@ -135,6 +137,7 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   Object.assign(f.vitals, { hp, will, stamina, shield, collapsed: !!(bits & FLAG_BITS.collapsed), winded: !!(bits & FLAG_BITS.winded), dead: !!(bits & FLAG_BITS.dead) });
   const t = (n) => (n < 0 ? -Infinity : n);
   f.stunnedUntil = t(data.su);
+  f.staggerImmuneUntil = finite(data.si) ? t(data.si) : -Infinity;
   f.downUntil = t(data.du);
   f.riseUntil = t(data.ru);
   f.protectedUntil = t(data.pu);
@@ -190,6 +193,7 @@ export function encodeOwn(f, body, time) {
     bf: f.buffer ? [f.buffer.command, f.buffer.at, f.buffer.direction || 0] : 0,
     g: f.guard ? f.guard.since : null,
     t: [when(f.stunnedUntil), when(f.protectedUntil), when(f.downUntil), when(f.riseUntil)],
+    hi: [f.recentStaggerHits, when(f.lastStaggerHitAt), when(f.staggerImmuneUntil)],
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
@@ -227,6 +231,9 @@ export function applyOwn(f, body, data) {
   f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
   f.guard = data.g === null || data.g === undefined ? null : { since: data.g };
   [f.stunnedUntil, f.protectedUntil, f.downUntil, f.riseUntil] = data.t.map(then);
+  f.recentStaggerHits = Math.max(0, Math.min(2, Math.floor(data.hi?.[0]) || 0));
+  f.lastStaggerHitAt = then(data.hi?.[1]);
+  f.staggerImmuneUntil = then(data.hi?.[2]);
   f.heldBy = data.hb || null;
   f.breaches = untimes(data.br);
   f.classId = data.cl || null;
