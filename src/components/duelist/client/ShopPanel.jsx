@@ -2,47 +2,11 @@ import { useMemo, useState } from 'react';
 import { SHOP_ITEMS, SHOP_RULES, tierPrice } from '../core/shop.mjs';
 
 const CATEGORIES = ['all', 'power', 'defense', 'ability', 'health', 'tenacity', 'hybrid', 'support', 'counter', 'relic'];
-const GLYPHS = {
-  power: 'blade', defense: 'shield', ability: 'crystal', health: 'heart',
-  tenacity: 'crest', hybrid: 'ring', support: 'lantern', counter: 'eye', relic: 'relic',
-};
-const COL = {
-  power: ['#d76335','#f6d18b'], defense: ['#4b83a6','#bfdcf5'], ability: ['#7b60ca','#d5bbff'],
-  health: ['#428e70','#aee9b9'], tenacity: ['#ac8852','#f4daa5'],
-  hybrid: ['#567da8','#e2b979'], support: ['#44a2af','#a9e8ec'],
-  counter: ['#944a85','#f1b1ce'], relic: ['#a46d54','#eed1a0'],
-};
-// Lightweight, consistently framed 2D placeholder art: no 3D item asset is required.
-// A future illustrated icon can replace this component without changing an item's logic.
+// Every item has its own 2D picture in public/duelist/items/<id>.svg.
+// The separate illustrated WebP pack can replace these lightweight icons later.
 export function ItemIcon({ item }) {
-  const color = COL[item.category] || COL.relic;
-  const seed = [...item.id].reduce((n, c) => (n * 33 + c.charCodeAt(0)) % 360, 17);
-  const gid = 'di-' + item.id;
-  const glyph = GLYPHS[item.category] || 'relic';
-  return <svg viewBox="0 0 72 72" className="duelist-item-art" role="img" aria-label={item.name + ' icon'}>
-    <defs>
-      <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stopColor={color[1]} /><stop offset="1" stopColor={color[0]} />
-      </linearGradient>
-    </defs>
-    <rect width="72" height="72" rx="10" fill="#151923"/>
-    <circle cx="36" cy="34" r="27" fill={color[0]} fillOpacity=".14" stroke={color[0]} strokeOpacity=".45"/>
-    <g fill={'url(#'+gid+')'} stroke={color[1]} strokeWidth="1.2" strokeLinejoin="round">
-      {glyph === 'blade' && <><path d="M17 57 L29 43 L49 12 L58 9 L55 20 L39 44 L27 54 Z"/><path d="M19 45 L38 59 L42 54 L24 41 Z" fill="#262b35"/></>}
-      {glyph === 'shield' && <path d="M36 9 L58 19 L55 40 Q50 56 36 63 Q22 56 17 40 L14 19 Z"/>}
-      {glyph === 'crystal' && <path d="M35 8 L51 25 L45 54 L33 63 L20 38 L23 21 Z"/>}
-      {glyph === 'heart' && <path d="M36 57 Q10 39 13 26 Q15 10 29 16 L36 24 Q49 8 59 21 Q70 41 36 57 Z"/>}
-      {glyph === 'crest' && <><path d="M36 8 L57 26 L55 52 L36 63 L16 52 L15 27 Z"/><path d="M36 14 L36 57" stroke="#1c2030"/></>}
-      {glyph === 'ring' && <><circle cx="36" cy="35" r="20" fill="none" strokeWidth="7"/><path d="M36 9 L44 25 L36 33 L28 25 Z"/></>}
-      {glyph === 'lantern' && <><path d="M29 10 H44 L49 18 L43 25 H30 L24 18 Z"/><path d="M23 26 L29 20 H43 L49 26 L50 55 L44 62 H28 L22 55 Z"/><path d="M30 30 H43 V53 H30 Z" fill="#e1f3d1"/></>}
-      {glyph === 'eye' && <><path d="M7 35 Q36 5 65 35 Q36 64 7 35 Z"/><circle cx="36" cy="35" r="12" fill="#171b29"/><circle cx="36" cy="35" r="5"/></>}
-      {glyph === 'relic' && <><path d="M35 9 L44 25 L61 35 L44 45 L35 62 L26 45 L10 35 L26 25 Z"/><circle cx="35" cy="35" r="8" fill="#1c2030"/></>}
-    </g>
-    <g stroke={color[1]} strokeOpacity=".7" fill="none" transform={'rotate('+seed+' 36 36)'}>
-      <circle cx="36" cy="36" r="31" strokeDasharray="2 12"/>
-      <path d="M36 3 V9 M36 63 V69"/>
-    </g>
-  </svg>;
+  return <img className="duelist-item-art" alt={item.name + ' item'} loading="lazy"
+    src={'/duelist/items/' + item.id + '.svg'} draggable={false} />;
 }
 
 const formatStat = (key, value) => key === 'health' ? '+' + Math.round(value) + ' HP'
