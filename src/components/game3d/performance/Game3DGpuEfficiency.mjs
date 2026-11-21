@@ -20,12 +20,12 @@ export function classifyGame3DGpu(name = '') {
 
   // Do not infer a dedicated GPU solely from the vendor: AMD and Intel both ship
   // integrated and discrete graphics. A generic or privacy-masked name stays unknown.
-  if (/nvidia|geforce|quadro|(?:^|\\W)rtx(?:\\W|$)/.test(text)) return 'discrete';
-  if (/intel.*(?:arc\\s+(?:a|b)\\d{3}|arc\\s+pro\\s+[ab]\\d{2,3})/.test(text)) return 'discrete';
-  if (/intel.*(?:uhd|iris|hd graphics|arc\\s+(?:1[34]0[vt]|graphics))/.test(text)) return 'integrated';
-  if (/radeon.*(?:rx\\s*\\d|pro\\s+(?:wx|w\\d|\\d{4}))/i.test(text)) return 'discrete';
-  if (/radeon.*(?:\\b(?:6[168]0|7[468]0|8[89]0)m\\b|vega\\s*(?:[3-9]|1[01])\\b)/.test(text)) return 'integrated';
-  if (/apple gpu|apple m\\d|adreno|mali|powervr|immortalis/.test(text)) return 'integrated';
+  if (/nvidia|geforce|quadro|(?:^|\W)rtx(?:\W|$)/.test(text)) return 'discrete';
+  if (/intel.*(?:arc\s+(?:a|b)\d{3}|arc\s+pro\s+[ab]\d{2,3})/.test(text)) return 'discrete';
+  if (/intel.*(?:uhd|iris|hd graphics|arc\s+(?:1[34]0[vt]|graphics))/.test(text)) return 'integrated';
+  if (/radeon.*(?:rx\s*\d|pro\s+(?:wx|w\d|\d{4}))/i.test(text)) return 'discrete';
+  if (/radeon.*(?:\b(?:6[168]0|7[468]0|8[89]0)m\b|vega\s*(?:[3-9]|1[01])\b)/.test(text)) return 'integrated';
+  if (/apple gpu|apple m\d|adreno|mali|powervr|immortalis/.test(text)) return 'integrated';
   return 'unknown';
 }
 
