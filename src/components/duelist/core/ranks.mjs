@@ -4,7 +4,7 @@
 // the reach, how long an effect lasts and how soon the ability is ready again.
 import { MOVES } from './moves.mjs';
 import { classById } from './classes.mjs';
-import { abilityRank, specialTier, RANK_MAX, TIER_MAX, SPECIAL_TIERS } from './progression.mjs';
+import { abilityRank, specialTier, masteryAt, RANK_MAX, TIER_MAX, SPECIAL_TIERS } from './progression.mjs';
 
 // Per rank above the first: a number is a share of the first rank's value added each rank (negative: taken off);
 // a list is the value at each rank.
@@ -86,15 +86,35 @@ function itemTuned(f, move) {
 }
 
 /**
- * The move as this fighter does it: an ability of its class at the rank its level gives, its special at its tier,
- * anything else as written (a fighter without a class is always at the first rank).
+ * XP-backed mastery is derived from the server's seat level, independently of temporary
+ * match boost ranks (1-4). +1 ability at non-milestone levels, +1 Ultimate every 5.
+ * The percent modifiers are intentionally modest and deterministic, never user-supplied.
  */
+function masteryTuned(move, points = 0) {
+  if (!move || !points) return move;
+  const tuned = { ...move };
+  for (const field of ['damage', 'heal', 'effectSeconds', 'range', 'radius', 'reach', 'healPerSecond']) {
+    if (Number.isFinite(tuned[field]) && tuned[field] > 0)
+      tuned[field] = Math.round(tuned[field] * (1 + 0.04 * points) * 1000) / 1000;
+  }
+  if (Number.isFinite(tuned.cooldown) && tuned.cooldown > 0)
+    tuned.cooldown = Math.round(tuned.cooldown * Math.max(0.7, 1 - 0.02 * points) * 1000) / 1000;
+  return Object.freeze(tuned);
+}
+
+/** Class moves apply trusted mastery, temporary match boosts, and match-only items. */
 export function moveFor(f, id) {
   const base = MOVES[id] || null;
-  if (!base || !f?.classId) return base;
-  if (base.special) return classById(f.classId)?.special.id === id
-    ? itemTuned(f, tieredMove(id, specialTier(f.matchBoost))) : base;
-  return GROWTH[id] && inKit(f, FROM[id] || id) ? itemTuned(f, rankedMove(id, abilityRank(f.matchBoost))) : base;
+  const def = classById(f?.classId);
+  if (!base || !def) return base;
+  const mastery = masteryAt(f.level);
+  if (base.special) return def.special.id === id
+    ? masteryTuned(itemTuned(f, tieredMove(id, specialTier(f.matchBoost))), mastery.ultimatePoints) : base;
+  const originalId = FROM[id] || id;
+  const abilitySlot = def.abilities.findIndex(a => a.id === originalId);
+  return GROWTH[id] && abilitySlot >= 0
+    ? masteryTuned(itemTuned(f, rankedMove(id, abilityRank(f.matchBoost))), mastery.abilityPoints[abilitySlot])
+    : base;
 }
 
 /** A passive's value at a rank: the passives' numbers are lists of five (core/classes.mjs), or plain numbers. */
