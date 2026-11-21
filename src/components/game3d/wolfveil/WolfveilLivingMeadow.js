@@ -19,7 +19,10 @@ import {wolfveilLandscapeSurface,wolfveilLandscapeAllowsTallGrass} from './Wolfv
 import {wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
 import {createWolfveilTerrainSplatMaterial,wolfveilSplatWeights,wolfveilSplatTint} from './WolfveilTerrainSplat.js';
 import {wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
-import {createLiveWind,LIVE_WIND_SHEET_GLSL} from '../render/liveWind.mjs';
+import {createLiveWind,LIVE_WIND_SHEET_GLSL,liveWindSheetNode} from '../render/liveWind.mjs';
+import {Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,normalView,faceDirection,
+  uniformArray,renderGroup} from 'three/tsl';
+import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 
 const MAX_CONTACTS = 8;
 const TILE_KEY = (ix, iz) => ix + ':' + iz;
@@ -192,7 +195,40 @@ for (int j=0;j<8;j++){
   transformed.y -= press * flex * .26;
 }`);
   };
+  attachNodes(material,meadowGrassNodes(windTime,wind,gust,contacts,sheet));
   return material;
+}
+
+// WebGPURenderer: the same root-anchored sway, gust fronts and footstep parting in TSL (one graph per uniform set).
+const meadowNodeCache=new WeakMap();
+function meadowGrassNodes(windTime,wind,gust,contacts,sheet){
+  if(meadowNodeCache.has(contacts))return meadowNodeCache.get(contacts);
+  const time=uniformOf(windTime,'float'),gustN=uniformOf(gust,'float');
+  const windN=uniformOf(wind,'vec2'),sheetN=uniformOf(sheet,'vec2');
+  const contactsN=uniformArray(contacts.value,'vec4').setGroup(renderGroup);
+  const root=instanceRootWorld().toVar();
+  const flex=smoothstep(.04,.78,positionGeometry.y).toVar();
+  const sway=sin(time.mul(2.2).add(root.x.mul(.18)).add(root.z.mul(.12))).mul(.5)
+    .add(sin(time.mul(1.43).add(root.z.mul(.31)).sub(root.x.mul(.07))).mul(.5));
+  const windDir=normalize(windN.add(vec2(.0001))).toVar();
+  const front=liveWindSheetNode(root.xz,windDir,sheetN.x).mul(sheetN.y.mul(.65).add(.35)).toVar();
+  const lean=sway.mul(gustN.mul(.21).add(.07)).add(front.mul(gustN.mul(.2).add(.16))).mul(flex);
+  const offset=vec3(windDir.x.mul(lean),front.mul(-.06).mul(flex),windDir.y.mul(lean)).toVar();
+  Loop(contacts.value.length,({i})=>{
+    const contact=contactsN.element(i);
+    const away=root.xz.sub(contact.xy).toVar();
+    const radius=max(.001,contact.z);
+    const press=float(1).sub(smoothstep(0,radius,length(away))).mul(contact.w).toVar();
+    const push=normalize(away.add(vec2(.001))).mul(press).mul(flex).mul(.42);
+    offset.addAssign(vec3(push.x,press.mul(flex).mul(-.26),push.y));
+  });
+  const nodes={
+    positionNode:offsetBeforeInstancing(offset),
+    // double-sided clumps keep their normal on back faces (no black blades)
+    normalNode:normalView.mul(faceDirection),
+  };
+  meadowNodeCache.set(contacts,nodes);
+  return nodes;
 }
 
 function createGrassTile(ix, iz, count, geometry, material, ownerTile=false) {

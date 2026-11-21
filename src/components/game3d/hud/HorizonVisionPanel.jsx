@@ -32,8 +32,10 @@ function captureWorld(canvas, pose) {
   const renderer = window.__gw3dRenderer;
   const scene = window.__gw3dScene;
   const liveCamera = window.__gw3dCamera;
-  if (!canvas || !pose || !renderer || !scene || !liveCamera ||
-      renderer.getContext?.().isContextLost?.()) return false;
+  // WebGPURenderer reads pixels back only asynchronously: no scout picture there until that path exists
+  // (docs/webgpu/CONVERSION_SURVEY_20261120.md, stage 3).
+  if (!canvas || !pose || !renderer || !scene || !liveCamera || renderer.isWebGPURenderer ||
+      renderer.getContext?.()?.isContextLost?.()) return false;
   const camera = liveCamera.clone();
   const playerY = Number(window.__localPlayerPos?.y);
   const baseY = Number.isFinite(playerY) ? playerY : pose.y;

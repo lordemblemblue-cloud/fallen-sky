@@ -220,6 +220,9 @@ export function createInkWashLook({ renderer, guard, level = 0, palette = 'vibra
   const quadScene = new THREE.Scene(); quadScene.add(quad);
   const quadCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
   let target = null, current = 0, samples = -1, currentPalette = 'vibrant'; const mistRgb = [0, 0, 0];
+  // This GLSL pass cannot run on WebGPURenderer: there the world is drawn plainly (level 0) until the pass has its
+  // TSL version (docs/webgpu/CONVERSION_SURVEY_20261120.md, stage 3).
+  const glslOnly = !!renderer.isWebGPURenderer;
 
   function makeTarget() {
     renderer.getDrawingBufferSize(size);
@@ -245,7 +248,7 @@ export function createInkWashLook({ renderer, guard, level = 0, palette = 'vibra
       }
     },
     setLevel(next) {
-      current = Math.max(0, Math.min(4, Number(next) || 0)); material.uniforms.uLevel.value = current;
+      current = glslOnly ? 0 : Math.max(0, Math.min(4, Number(next) || 0)); material.uniforms.uLevel.value = current;
       if (current === 0) { target?.dispose(); target = null; samples = -1; if (renderer.info) renderer.info.autoReset = true; }
     },
     setSize() { if (current > 0) makeTarget(); },

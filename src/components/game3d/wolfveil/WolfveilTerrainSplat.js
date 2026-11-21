@@ -20,6 +20,8 @@
 // rock/snow/scree boundaries and valley occlusion. Off until both load.
 import * as THREE from 'three';
 import {WOLFVEIL_TERRAIN_MACRO} from './WolfveilTerrainMacro.mjs';
+import {createWolfveilSplatNodes} from './WolfveilTerrainSplatNodes.mjs';
+import {attachNodes} from '../../../lib/webgpuNodeKit.js';
 
 const ROOT='/game3d/landscape/';
 // sRGB means printed by the baker; used to turn palette colours into tints.
@@ -79,6 +81,9 @@ function placeholder(r,g,b,a,srgb){
   const t=new THREE.DataTexture(new Uint8Array([r,g,b,a]),1,1,THREE.RGBAFormat);
   if(srgb)t.colorSpace=THREE.SRGBColorSpace;
   t.wrapS=t.wrapT=THREE.RepeatWrapping;
+  // Filterable like the textures that replace it: WebGPURenderer builds the shader against the placeholder
+  // (a nearest-filtered texture gets no sampler there). Same pixels for a 1x1 texture.
+  t.magFilter=THREE.LinearFilter;t.minFilter=THREE.LinearMipmapLinearFilter;
   t.needsUpdate=true;
   return t;
 }
@@ -276,6 +281,8 @@ export function createWolfveilTerrainSplatMaterial({textures=typeof document!=='
       .replace('#include <normal_fragment_maps>',
         '#include <normal_fragment_maps>\nnormal=normalize((viewMatrix*vec4(wvSplatNormalWorld,0.)).xyz)*faceDirection;');
   };
+  // WebGPURenderer: the same surface in TSL (WolfveilTerrainSplatNodes.mjs); the classic renderer keeps the patch.
+  attachNodes(material,createWolfveilSplatNodes(uniforms));
   let loaded=0;
   if(textures){
     const tl=loader||new THREE.TextureLoader();
@@ -289,6 +296,7 @@ export function createWolfveilTerrainSplatMaterial({textures=typeof document!=='
           t.needsUpdate=true;
           owned.push(t);
           uniforms['tSplat'+kind+i].value=t;
+          material.nodeVersion=(material.nodeVersion||0)+1; // WebGPURenderer: rebind on every tile
           loaded++;
           onStatus?.({loaded,total:WOLFVEIL_SPLAT_LAYERS.length*2});
         },undefined,()=>onStatus?.({failed:url}));
@@ -306,6 +314,7 @@ export function createWolfveilTerrainSplatMaterial({textures=typeof document!=='
           t.needsUpdate=true;
           owned.push(t);
           uniforms[key].value=t;
+          material.nodeVersion=(material.nodeVersion||0)+1;
           if(++macroLoaded===2){uniforms.uMacroOn.value=1;onStatus?.({macro:'loaded'});}
         },undefined,()=>onStatus?.({failed:url}));
       }

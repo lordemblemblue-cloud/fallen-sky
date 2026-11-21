@@ -4,6 +4,8 @@
 import * as THREE from 'three';
 import {WOLFVEIL_IMPORTED_TOWN,WOLFVEIL_IMPORTED_TOWN_WATER_SOURCE_Y}
   from './WolfveilImportedTownLayout.mjs';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {createWolfveilTownWaterTwin} from './WolfveilImportedTownWaterNodes.mjs';
 
 const BOX_VERTICES=24;
 // The canal boxes were authored ~5cm ABOVE the town paving, so every surface
@@ -109,6 +111,8 @@ export function createWolfveilTownWater(){
     polygonOffsetUnits:-2,
   });
   const water=makeMat(false),foam=makeMat(true);
+  // WebGPURenderer: the same water in TSL
+  setNodeTwin(water,createWolfveilTownWaterTwin);setNodeTwin(foam,createWolfveilTownWaterTwin);
   return {
     apply(mesh){
       const isFoam=/foam/i.test(mesh.name);

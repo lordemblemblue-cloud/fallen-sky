@@ -2,6 +2,8 @@
 // Bounds are measured from the material's actual triangles, not a guessed
 // whole-body bounding box. No changes to original GLB UVs or topology.
 import * as THREE from 'three';
+import {vec2,vec3,vec4,max,mix,length,smoothstep,positionGeometry} from 'three/tsl';
+import {addMapStageColor,uniformOf} from '../../lib/webgpuNodeKit.js';
 
 const HEX=/^#[a-f0-9]{6}$/i;
 export const MAKEUP_COLORS={
@@ -110,6 +112,23 @@ vec3(${size.x},${size.y},${size.z});`);
     .replace('#include <map_fragment>','#include <map_fragment>\n'+colorBlock);
   };
   material.customProgramCacheKey=()=>String(previousKey?.()||'')+'|fused-makeup-v1';
+  // WebGPURenderer: the same masks and pigments in TSL
+  {
+   const lip=uniformOf(uniforms.creatorLipPigment,'color'),blush=uniformOf(uniforms.creatorBlushPigment,'color');
+   const eye=uniformOf(uniforms.creatorEyePigment,'color'),opacity=uniformOf(uniforms.creatorMakeupOpacity,'float');
+   const rest=positionGeometry.sub(vec3(min.x,min.y,min.z)).div(vec3(size.x,size.y,size.z));
+   const ellipse=(c,r)=>smoothstep(.7,1,length(rest.xy.sub(vec2(...c)).div(vec2(...r)))).oneMinus();
+   addMapStageColor(material,(color)=>{
+    const front=smoothstep(.6,.83,rest.z).mul(opacity);
+    const lipMask=ellipse([.5,.31],[.17,.055]);
+    const blushMask=max(ellipse([.27,.48],[.17,.11]),ellipse([.73,.48],[.17,.11]));
+    const eyeMask=max(ellipse([.33,.7],[.16,.065]),ellipse([.67,.7],[.16,.065]));
+    let rgb=mix(color.rgb,blush,front.mul(blushMask).mul(.38));
+    rgb=mix(rgb,eye,front.mul(eyeMask).mul(.55));
+    rgb=mix(rgb,lip,front.mul(lipMask).mul(.75));
+    return vec4(rgb,color.a);
+   });
+  }
   state={uniforms};
   material.userData.creatorMakeup=state;
   material.needsUpdate=true;

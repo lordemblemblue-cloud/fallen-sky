@@ -78,3 +78,7 @@ float liveWindSheet(vec2 p,vec2 dir,float phase){
   return clamp(broad*.75+fine*.35,0.,1.);
 }
 `;
+
+// The same gust sheet as a TSL function, for the grass node materials on WebGPURenderer (three/tsl is loaded
+// lazily by the caller's module graph; this file stays importable without a renderer).
+export {liveWindSheetNode} from './liveWindNodes.mjs';

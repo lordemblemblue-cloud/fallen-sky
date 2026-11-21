@@ -67,6 +67,21 @@ export function createGame3DWebGLContext(canvas, attributes) {
   return attempt(attributes) || attempt({ ...attributes, desynchronized: false });
 }
 
+// The same description for WebGPURenderer, from its adapter (src/lib/webgpuSceneRenderer.js describeAdapter).
+// `api` is 'WebGPU' or 'WebGL2' (WebGPURenderer's fallback backend).
+export function describeGame3DGpuAdapter(adapter, hints = {}, api = 'WebGPU') {
+  const renderer = String(adapter?.name || '');
+  return Object.freeze({
+    renderer: renderer || 'GPU not reported by this browser',
+    gpuClass: classifyGame3DGpu(renderer),
+    deviceMemoryGb: hints.deviceMemoryGb ?? null,
+    cpuCores: hints.cpuCores ?? null,
+    powerPreference: 'high-performance',
+    vramBytes: null,
+    api,
+  });
+}
+
 export function describeGame3DGpu(gl, hints = {}) {
   let renderer = '';
   try {

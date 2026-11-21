@@ -1,4 +1,25 @@
 import * as THREE from 'three';
+import {NodeMaterial} from 'three/webgpu';
+import * as T from 'three/tsl';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {uniformOf} from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same flowing boundary energy in TSL
+function boundaryEnergyTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float');
+  const m=new NodeMaterial();
+  m.fragmentNode=T.Fn(()=>{
+    const u=T.uv().x,v=T.uv().y;
+    const flowing=T.pow(T.max(0,T.sin(u.mul(63).add(v.mul(24)).sub(time.mul(4.5)))),12).toVar();
+    const wave=T.sin(v.mul(23).add(u.mul(16)).sub(time.mul(2.7))).mul(.5).add(.5).toVar();
+    const sparks=T.pow(T.max(0,T.sin(v.mul(48).sub(u.mul(32)).add(time.mul(6)))),18).toVar();
+    const fade=T.pow(v.oneMinus(),1.25).mul(.58).add(.42);
+    const alpha=wave.mul(.18).add(.075).add(flowing.mul(.32)).add(sparks.mul(.19)).mul(fade);
+    const blue=T.mix(T.vec3(.12,.31,.95),T.vec3(.56,.90,1),T.min(1,flowing.mul(.8).add(sparks.mul(.5)).add(wave.mul(.25))));
+    return T.vec4(blue,alpha);
+  })();
+  return m;
+}
 import {
   ASTRAL_DUNGEON_ENTRANCE,ASTRAL_PADS,ASTRAL_BRIDGES,
   ASTRAL_PAD_RADIUS,ASTRAL_BRIDGE_HALF_WIDTH,ASTRAL_RETURN_PORTAL,
@@ -177,6 +198,7 @@ function createBoundaryEnergy(root){
     transparent:true,depthWrite:false,side:THREE.DoubleSide,
     blending:THREE.AdditiveBlending,fog:false,
   });
+  setNodeTwin(material,boundaryEnergyTwin);
   const halfGap=Math.asin(Math.min(0.95,
     (ASTRAL_BRIDGE_HALF_WIDTH+1.6)/ASTRAL_PAD_RADIUS));
   for(const pad of ASTRAL_PADS){

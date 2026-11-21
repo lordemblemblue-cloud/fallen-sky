@@ -38,13 +38,16 @@ export function summarizeFrameTimes(deltasMs) {
 }
 
 // renderer.info resets every render() call, so this reads the last frame drawn.
+// WebGPURenderer counts draw calls in render.drawCalls (its render.calls counts render() calls) and has no
+// drawingBuffer* on its context: the canvas size is the drawing buffer there.
 export function readRendererInfo(renderer) {
   const info = renderer?.info;
   if (!info) return null;
+  const gpu = !!renderer.isWebGPURenderer;
   let gl = null;
-  try { gl = renderer.getContext?.() || null; } catch { gl = null; }
+  try { gl = gpu ? null : renderer.getContext?.() || null; } catch { gl = null; }
   return {
-    calls: info.render?.calls ?? 0,
+    calls: (gpu ? info.render?.drawCalls : info.render?.calls) ?? 0,
     triangles: info.render?.triangles ?? 0,
     points: info.render?.points ?? 0,
     lines: info.render?.lines ?? 0,
@@ -52,8 +55,8 @@ export function readRendererInfo(renderer) {
     textures: info.memory?.textures ?? 0,
     programs: info.programs?.length ?? 0,
     pixelRatio: renderer.getPixelRatio?.() ?? 1,
-    bufferWidth: gl?.drawingBufferWidth ?? 0,
-    bufferHeight: gl?.drawingBufferHeight ?? 0,
+    bufferWidth: (gpu ? renderer.domElement?.width : gl?.drawingBufferWidth) ?? 0,
+    bufferHeight: (gpu ? renderer.domElement?.height : gl?.drawingBufferHeight) ?? 0,
   };
 }
 

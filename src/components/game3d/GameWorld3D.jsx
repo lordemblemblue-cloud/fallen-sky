@@ -158,7 +158,9 @@ import { createInkWashLook, resolveInkLevel, resolveInkPalette, readGraphicsSett
 import {createGame3DRenderFramePacer} from './performance/Game3DFramePacing.mjs';
 import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/AdaptiveGraphics.mjs';
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
-  createGame3DWebGLContext,describeGame3DGpu} from './performance/Game3DGpuEfficiency.mjs';
+  createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
+import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
+import {createWebGPUSceneRenderer,onSceneDeviceLost} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -522,15 +524,52 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
+    // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
+    // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
+    const rendererChoice = chooseSceneRendererFor('fallen-sky', window);
+    window.__gw3dRendererChoice = rendererChoice;
+    const showWorldUnavailable = (detail) => {
+      const msg = document.createElement('div');
+      msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;text-align:center;padding:24px;z-index:5;';
+      msg.innerHTML = '<div><div style="font-size:18px;font-weight:600;margin-bottom:8px">3D world unavailable</div><div style="opacity:0.6;font-size:14px"></div></div>';
+      msg.querySelector('div > div:last-child').textContent = detail;
+      container.appendChild(msg);
+    };
     try {
       const gpuHints = readGame3DGpuHints(window);
       const bootProfile = readCloneGPUProfile(window);
       const attributes = game3dGpuContextAttributes({ profile: bootProfile, hints: gpuHints });
-      const gl = createGame3DWebGLContext(canvas, attributes);
-      renderer = gl
-        ? new THREE.WebGLRenderer({ canvas, context: gl })
-        : new THREE.WebGLRenderer({ canvas, antialias: attributes.antialias, powerPreference: 'high-performance' });
-      window.__gw3dGpuInfo = describeGame3DGpu(renderer.getContext(), gpuHints);
+      if (rendererChoice.kind === 'webgl') {
+        const gl = createGame3DWebGLContext(canvas, attributes);
+        renderer = gl
+          ? new THREE.WebGLRenderer({ canvas, context: gl })
+          : new THREE.WebGLRenderer({ canvas, antialias: attributes.antialias, powerPreference: 'high-performance' });
+        window.__gw3dGpuInfo = describeGame3DGpu(renderer.getContext(), gpuHints);
+      } else {
+        const created = createWebGPUSceneRenderer({ canvas, antialias: attributes.antialias,
+          powerPreference: 'high-performance', forceWebGL: rendererChoice.kind === 'webgl2' });
+        const gpuRenderer = created.renderer;
+        renderer = gpuRenderer;
+        window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'WebGPU');
+        // Nothing is drawn until init resolves (webglContextGuard); then the GPU class is known and the
+        // graphics budget is worked out again, as WebGL does at once from the context.
+        created.ready.then(({ api, adapter }) => {
+          if (window.__gw3dRenderer !== gpuRenderer) return;
+          window.__gw3dGpuInfo = describeGame3DGpuAdapter(adapter, gpuHints, api);
+          applyWorldGraphicsBudget();
+        }, (error) => {
+          console.error('GameWorld3D: WebGPURenderer could not start —', error);
+          rememberRendererFailure(window); // the next start in this tab uses the classic renderer
+          if (window.__gw3dRenderer === gpuRenderer)
+            showWorldUnavailable('The graphics renderer could not start. Reload to use the classic renderer.');
+        });
+        onSceneDeviceLost(gpuRenderer, () => {
+          rememberRendererFailure(window);
+          if (window.__gw3dRenderer === gpuRenderer)
+            showWorldUnavailable('The graphics device was reset. Reload to continue.');
+        });
+      }
     } catch (e) {
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
@@ -2105,7 +2144,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       playerDeathAsh?.dispose();
       playerDeathAsh = createPlayerDeathAsh({ scene, model: fbx });
       // The skipped effect meshes are never drawn at load, so compile their shaders now, as the first frame did.
-      try { renderer.compile(fbx, camera, scene); } catch { /* a lost context: they compile on first draw */ }
+      // (WebGPURenderer compiles asynchronously: its promise must not reject unhandled.)
+      try { renderer.compile(fbx, camera, scene)?.catch?.(() => {}); } catch { /* a lost context: they compile on first draw */ }
       haloVisualRuntime = createAXEHaloVisualRuntime({ model: fbx, initialState: getHaloState() });
       fusionVisualRuntime = createAXEMountFusionVisualRuntime({ model: fbx, initialState: getAXEMountFusionState() });
       ascensionVisualRuntime = createAXEAscensionVisualRuntime({ model: fbx, initialState: getAXEAscensionProfile() });

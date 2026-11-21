@@ -7,6 +7,7 @@
 // spatially sampled to 192/72 blades to keep the GPU budget bounded.
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
+import {copyNodes} from '../../../lib/webgpuNodeKit.js';
 import {clearOf} from './WolfveilForestLayout.js';
 import {WOLFVEIL_SITES} from './WolfveilLayout.js';
 
@@ -144,6 +145,7 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
         if(typeof sourceWind?.onBeforeCompile==='function'){
           material.onBeforeCompile=sourceWind.onBeforeCompile;
           material.customProgramCacheKey=sourceWind.customProgramCacheKey;
+          copyNodes(sourceWind,material);
         }
         world.ownedMaterials.push(material);
         return material;

@@ -1,4 +1,9 @@
 import * as THREE from 'three';
+import {
+  Fn, texture as tslTexture, uv, vec3, vec4, float, dot, pow, max, clamp, sqrt, length, exp, select, mix, reference,
+  renderGroup, materialRoughness,
+} from 'three/tsl';
+import { addMapStageColor, attachNodes, uniformOf } from '../../lib/webgpuNodeKit.js';
 
 // Recolour regions for the character bodies, whose skin, hair and clothes share one painted texture atlas.
 // tools/avatar-regions/bake-regions.mjs bakes, per body, mask textures (one region per channel) and a manifest with
@@ -36,6 +41,44 @@ vec3 avatarRecolor(vec3 c, vec3 ref, vec3 target) {
  return avatarFromYcc(o);
 }
 `;
+
+// The same transfer in TSL (WebGPURenderer)
+const toYcc = (lin) => {
+  const g = pow(max(lin, vec3(0)), vec3(1 / 2.2));
+  return vec3(dot(g, vec3(0.299, 0.587, 0.114)), dot(g, vec3(-0.168736, -0.331264, 0.5)), dot(g, vec3(0.5, -0.418688, -0.081312)));
+};
+const fromYcc = (y) => pow(max(vec3(y.x.add(y.z.mul(1.402)), y.x.sub(y.y.mul(0.344136)).sub(y.z.mul(0.714136)), y.x.add(y.y.mul(1.772))), vec3(0)), vec3(2.2));
+const recolorNode = Fn(([c, ref, target]) => {
+  const yc = toYcc(c).toVar(), yr = toYcc(ref).toVar(), yt = toYcc(target).toVar();
+  const ty = select(yt.x.lessThan(0.55), yt.x, yt.x.sub(0.55).mul(0.45).add(0.55)).toVar();
+  const contrast = clamp(sqrt(max(ty, 0.02).div(max(yr.x, 0.02))), 0.55, 2.6);
+  const saturation = clamp(length(yt.yz).div(max(length(yr.yz), 0.02)), 0.65, 1.3);
+  const oy = ty.add(yc.x.sub(yr.x).mul(contrast)).toVar();
+  const rolled = select(oy.lessThan(0.8), oy, exp(oy.sub(0.8).div(0.2).negate()).oneMinus().mul(0.2).add(0.8));
+  return fromYcc(vec3(rolled, yt.yz.add(yc.yz.sub(yr.yz).mul(saturation))));
+}).setLayout({ name: 'avatarRecolor', type: 'vec3', inputs: [
+  { name: 'c', type: 'vec3' }, { name: 'ref', type: 'vec3' }, { name: 'target', type: 'vec3' },
+] });
+
+// TSL for a manifest: the colour transform (right after the base texture) and the skin roughness
+export function regionNodes(manifest, uniforms, textures) {
+  const mapUv = Fn((builder) => uv(builder.material?.map?.channel ?? 0))(); // vMapUv
+  const masks = textures.map((t) => tslTexture(t, mapUv));
+  const element = (list, i, type) => reference(String(i), type, list).setGroup(renderGroup);
+  const transform = (color) => {
+    let rgb = color.rgb;
+    manifest.regions.forEach((r, i) => {
+      const recolored = recolorNode(rgb, element(uniforms.avatarRegionReference.value, i, 'vec3'), element(uniforms.avatarRegionTarget.value, i, 'vec3'));
+      rgb = mix(rgb, recolored, masks[r.texture][r.channel].mul(element(uniforms.avatarRegionOn.value, i, 'float'))).toVar();
+    });
+    return vec4(rgb, color.a);
+  };
+  const skin = manifest.regions.find((r) => r.id === 'skin');
+  const skinWeight = skin ? masks[skin.texture][skin.channel] : float(0);
+  const roughnessNode = mix(materialRoughness, uniformOf(uniforms.avatarSkinRoughness, 'float'),
+    skinWeight.mul(uniformOf(uniforms.avatarSkinRoughnessOn, 'float')));
+  return { transform, roughnessNode };
+}
 
 // GLSL for a manifest: declarations and the block that runs right after the base colour texture is applied
 export function regionShader(manifest) {
@@ -83,6 +126,10 @@ export function patchRegionMaterial(material, manifest, textures) {
       .replace('#include <map_fragment>', '#include <map_fragment>\n' + body)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor, avatarSkinRoughness, avatarSkinWeight * avatarSkinRoughnessOn);');
   };
+  // WebGPURenderer: the same recolour and skin finish in TSL
+  const nodes = regionNodes(manifest, uniforms, textures);
+  addMapStageColor(material, nodes.transform);
+  attachNodes(material, { roughnessNode: nodes.roughnessNode });
   material.needsUpdate = true;
   return material.userData.avatarRegions;
 }
