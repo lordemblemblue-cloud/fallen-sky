@@ -106,7 +106,10 @@ export function blockedReason(f, id, now) {
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
+  // a class fights with its own kit and its own special, however the move was asked for
   if (CLASS_ABILITIES.has(id) && !kitHas(f, id)) return 'class';
+  if (f.classId && LEGACY_POWERS.has(id) && !kitHas(f, id)) return 'class';
+  if (move.special && classById(f.classId)?.special.id !== id) return 'class';
   if (isDown(f, now)) return 'down';
   const restrained = isStunned(f, now) || f.heldBy;
   if (restrained && id !== 'resist') return f.heldBy ? 'held' : 'stunned';

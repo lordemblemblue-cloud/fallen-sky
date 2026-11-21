@@ -29,7 +29,7 @@ test('rebinding: a free key just moves; a taken one swaps; Shift, Ctrl and Alt c
   assert.equal(actionFor(DEFAULT_KEYS, 'ShiftRight'), 'sprint', 'either Shift sprints');
   ({ keys, swapped } = rebind(DEFAULT_KEYS, 'dash', 'ShiftRight'));
   assert.equal(swapped, 'sprint');
-  assert.equal(keys.sprint, 'ControlLeft');
+  assert.equal(keys.sprint, 'AltLeft');
   ({ keys, swapped } = rebind(DEFAULT_KEYS, 'guard', 'Mouse4'));
   assert.equal(keys.guard, 'Mouse4', 'mouse buttons can be bound');
 });
@@ -39,14 +39,14 @@ test('some inputs are never bound, and broken or clashing saved bindings repair 
     assert.equal(bindable(code), false, String(code));
     const { keys, refused } = rebind(DEFAULT_KEYS, 'roll', code);
     assert.equal(refused, true);
-    assert.equal(keys.roll, 'Space');
+    assert.equal(keys.roll, 'KeyC');
   }
   assert.equal(rebind(DEFAULT_KEYS, 'fly', 'KeyQ').refused, true, 'no such action');
   const repaired = keysFrom({ forward: 42, back: '<b>', roll: 'KeyE', lock: 'Escape' });
   assert.equal(repaired.forward, 'KeyW');
   assert.equal(repaired.back, 'KeyS');
   assert.equal(repaired.heavy, 'KeyE', 'the first action keeps a clashing key');
-  assert.equal(repaired.roll, 'Space', 'the other goes back to its own default');
+  assert.equal(repaired.roll, 'KeyC', 'the other goes back to its own default');
   assert.equal(repaired.lock, 'Tab');
 });
 
@@ -56,7 +56,7 @@ test('keys are written the way people say them; the help line and HUD follow the
   for (const [code, label] of cases) assert.equal(keyLabel(code), label, String(code));
   assert.equal(keyLabel('Mouse2', { short: true }), 'RMB');
   const line = helpLine(DEFAULT_KEYS);
-  for (const part of ['WASD move', 'Shift sprint', 'LMB light', 'E heavy', 'RMB guard', 'Space roll', '1 push', 'Tab lock on']) assert.ok(line.includes(part), part);
+  for (const part of ['WASD move', 'Shift sprint', 'LMB light', 'E heavy', 'RMB guard', 'Space jump', 'C roll', 'Alt dash', '1 push', 'Tab lock on']) assert.ok(line.includes(part), part);
   assert.ok(!line.includes('use'), 'using things only in the story');
   assert.ok(helpLine(DEFAULT_KEYS, { story: true }).includes('F (hold) use'));
   const arrows = rebind(rebind(rebind(rebind(DEFAULT_KEYS, 'forward', 'ArrowUp').keys, 'left', 'ArrowLeft').keys, 'back', 'ArrowDown').keys, 'right', 'ArrowRight').keys;

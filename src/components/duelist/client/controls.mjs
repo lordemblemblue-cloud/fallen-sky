@@ -1,7 +1,7 @@
 // Keyboard and mouse for Duelist Adventure, and the follow camera.
 // What each key and mouse button does is the player's own choice (client/bindings.mjs; Settings). The
 // defaults: WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard
-// parries) · Space roll · Ctrl dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
+// parries) · Space jump · C roll · Alt dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
 // go to throw), Veil Breach) · Q the special · R Veil Breach · Z resist · Tab lock on · F (hold) use what is in
 // front of you. Mouse look: click to capture the mouse, Esc releases it.
 /* global window, document */
@@ -42,7 +42,10 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1 } 
     if (mine) e.preventDefault(); // Tab, Space and the like do nothing else while playing
     if (!e.repeat) down(e.code);
   };
-  const onKeyUp = (e) => up(e.code);
+  const onKeyUp = (e) => {
+    if (actionFor(bound, e.code)) e.preventDefault(); // Alt let go would otherwise open the browser's menu
+    up(e.code);
+  };
   const onMouseDown = (e) => {
     if (document.pointerLockElement !== canvas) { canvas.requestPointerLock?.()?.catch?.(() => {}); return; }
     down(`Mouse${e.button}`);

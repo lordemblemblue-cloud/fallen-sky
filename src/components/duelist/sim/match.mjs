@@ -315,7 +315,7 @@ export function stepMatch(match, dt, inputs = {}) {
         input = { move: { x: dx / length, z: dz / length }, face: Math.atan2(dx, dz), run: true,
           sprint: length > 5, interact: length < 2.2, presses: [] };
       } else {
-        input = { ...input, presses: (input.presses || []).filter(cmd => cmd === 'roll' || cmd === 'dash') };
+        input = { ...input, presses: (input.presses || []).filter(cmd => cmd === 'roll' || cmd === 'dash' || cmd === 'jump') };
       }
     }
     if (carrying(match, s.id)) input = { ...input, sprint: false };

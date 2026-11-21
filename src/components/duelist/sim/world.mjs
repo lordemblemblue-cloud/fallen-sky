@@ -292,14 +292,16 @@ function startMotion(body, fighter, id) {
   const move = moveById(id);
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
-  if (!move?.rootMotion) { body.motion = null; return; }
+  if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
   // rolls and dashes go where the stick points (or straight ahead); strikes lunge forward
   const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
     ? { x: body.intent.x / Math.hypot(body.intent.x, body.intent.z), z: body.intent.z / Math.hypot(body.intent.x, body.intent.z) }
     : forwardOf(body.yaw);
   if (move.kind === 'movement' && !body.strafe) body.yaw = Math.atan2(dir.x, dir.z);
   const from = move.kind === 'movement' ? 0 : move.startup;
-  body.motion = { id, dir, from, to: from + move.active, distance: move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1), done: 0 };
+  // a jump keeps the speed the body had as it left the ground; a roll or a dash covers its own distance
+  const distance = move.air ? (body.speed || 0) * move.active : move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1);
+  body.motion = { id, dir, from, to: from + move.active, distance, done: 0 };
 }
 
 function moveBody(world, fighter, body, dt, now) {

@@ -117,6 +117,10 @@ export const MOVES = Object.freeze({
     rootMotion: 3.6, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
+  // a jump: the body arcs over the active phase (leap: its height, metres) and keeps the speed it had on the ground
+  // (air: sim/world.mjs sets how far that carries it; from a standstill it goes straight up)
+  jump: move({ kind: 'movement', startup: 0, active: 0.56, recovery: 0.08, stamina: 8, damage: 0, range: 0, leap: 1.1, air: true,
+    cancelInto: ['attack', 'power'], cancelFrom: 0.5 }),
 
   // ---- class abilities (core/classes.mjs gives each class four of these and the powers above, and a special).
   //   effect: what the move does instead of (or besides) a hit, applied by sim/world.mjs through core/abilities.mjs;
@@ -181,6 +185,6 @@ export const BINDINGS = Object.freeze({
   bow: Object.freeze({ light: 'bowShot', heavy: 'sniperShot' }),
   sidearm: Object.freeze({ light: 'sidearmShot', heavy: 'sidearmBurst' }),
 });
-export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash' });
+export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash', jump: 'jump' });
 
 export const moveById = (id) => MOVES[id] || null;

@@ -52,6 +52,9 @@ export const MOVE_MOTION = Object.freeze({
     seg('pistolShoot', activeEnd('sidearmBurst'), end('sidearmBurst'), 0.2, 0.6),
   ] },
   sidearmWhip: { segments: phases('sidearmWhip', 'punchCross', [0.02, 0.14, 0.22, 0.6]) },
+  // a jump: in the air for the move's active part (the rules lift the body), then the landing
+  jump: { segments: [seg('jumpLoop', 0, activeEnd('jump'), 0, 0.5, { travel: false }), seg('jumpLand', activeEnd('jump'), end('jump'), 0.05, 0.2, { travel: false })],
+    settle: { clip: 'jumpLand', from: 0.2 } },
   // the Will dash: the rules move the body (6 m), the clip only lends the lunge
   dash: { segments: [seg('swordDash', 0, end('dash'), 0.22, 0.5, { travel: false })], settle: { clip: 'swordDash', from: 0.5 } },
 
