@@ -15,14 +15,19 @@ const DEG = Math.PI / 180;
 // tilt = degrees the handle leans from the knuckle line towards the fingers, so with the arm hanging the tip
 // points down along the forearm (carry) or forward for a cut (combat). A bow in combat runs through the fist
 // with the arrow along the forearm; carried, it lies along the forearm with the string towards the body.
-// A dagger is held in a reverse grip (owner 2026-11-19): the blade leaves the fist on the little-finger side
-// and runs back along the forearm (tilt = degrees from the knuckle line towards the wrist), the edge facing
-// away from the forearm and the pommel on the thumb side, under the thumb (solveThumbCap).
+// A dagger is held in a reverse grip (owner 2026-11-19): the handle's line leaves the fist on the little-finger
+// side and runs back along the forearm (tilt = degrees from the knuckle line towards the wrist); the hands are
+// posed for that line (weaponComboClips.js). The blade sits in the fist at the owner's seat (2026-11-20, placed by
+// hand in the Weapon Animation Studio, the right an exact mirror of the left): out of the little-finger side, turned
+// towards the back of the hand, so it stands off the forearm clear of the arm instead of lying in it. blade / edge:
+// where the blade's tip and edge point, as [knuckle line k, fingers d, out of the palm n] (the palm frame below).
+// The pommel stays under the thumb (solveThumbCap).
+export const DAGGER_SEAT = Object.freeze({ blade: Object.freeze([-0.6087, -0.4184, -0.6741]), edge: Object.freeze([0.7931, -0.2959, -0.5324]) });
 export const WEAPON_GRIP_RULES = Object.freeze({
   sword: Object.freeze({ combat: Object.freeze({ tilt: 18 }), carry: Object.freeze({ tilt: 34 }) }),
   greatsword: Object.freeze({ combat: Object.freeze({ tilt: 8 }), carry: Object.freeze({ tilt: 12 }) }),
   bow: Object.freeze({ combat: Object.freeze({ tilt: 0 }), carry: Object.freeze({ lean: 25 }) }),
-  dagger: Object.freeze({ combat: Object.freeze({ reverse: true, tilt: 55 }), carry: Object.freeze({ reverse: true, tilt: 58 }) }),
+  dagger: Object.freeze({ combat: Object.freeze({ reverse: true, tilt: 55, seat: DAGGER_SEAT }), carry: Object.freeze({ reverse: true, tilt: 58, seat: DAGGER_SEAT }) }),
 });
 // How far the pommel's end sits from a dagger's grip origin, metres (the pair's model and the modelled blades).
 export const DAGGER_POMMEL_DEPTH = 0.072;
@@ -60,12 +65,17 @@ export function gripPoint(palm, radiusBind, tune = {}) {
     .addScaledVector(palm.k, (tune.across ?? 0) * palm.h);
 }
 
+// tune.unseated: a reverse grip's handle line without its seat (what the hands are posed for)
 export function weaponBasis(palm, cls, stance, tune = {}) {
   const rules = WEAPON_GRIP_RULES[cls] || WEAPON_GRIP_RULES.sword;
   const rule = rules[stance] || rules.combat;
   let Y;
   let Z;
-  if (cls === 'bow' && stance === 'carry') {
+  const inPalm = (v) => palm.k.clone().multiplyScalar(v[0]).addScaledVector(palm.d, v[1]).addScaledVector(palm.n, v[2]);
+  if (rule.seat && !tune.unseated) {
+    Y = inPalm(rule.seat.blade).normalize();
+    Z = inPalm(rule.seat.edge);
+  } else if (cls === 'bow' && stance === 'carry') {
     const lean = (rule.lean + (tune.lean || 0)) * DEG;
     Y = palm.d.clone().multiplyScalar(-Math.cos(lean)).addScaledVector(palm.k, Math.sin(lean)).normalize();
     Z = palm.n.clone().negate();
@@ -82,6 +92,15 @@ export function weaponBasis(palm, cls, stance, tune = {}) {
   if (tune.twist) Z.applyAxisAngle(Y, tune.twist * DEG);
   const X = new THREE.Vector3().crossVectors(Y, Z).normalize();
   return new THREE.Matrix4().makeBasis(X, Y, Z);
+}
+
+// The seat as a turn of the weapon frame from the handle's line (both in the hand's space): grip = line x seat.
+// The same for every rig, mirrored between the hands (the left palm frame is the right one mirrored).
+export function daggerSeatQuaternion(side = 'right') {
+  const palm = { wrist: new THREE.Vector3(), d: new THREE.Vector3(0, 1, 0), k: new THREE.Vector3(1, 0, 0),
+    n: new THREE.Vector3(0, 0, side === 'left' ? -1 : 1), h: 1, side };
+  const q = (m) => new THREE.Quaternion().setFromRotationMatrix(m);
+  return q(weaponBasis(palm, 'dagger', 'combat', { unseated: true })).invert().multiply(q(weaponBasis(palm, 'dagger', 'combat'))).normalize();
 }
 
 const round = (a, p = 6) => a.map((v) => Number(v.toFixed(p)));
