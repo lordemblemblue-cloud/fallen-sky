@@ -151,6 +151,9 @@ function startMove(f, id, now, chainedFrom = null, link = 1) {
 function canInterrupt(f, id) {
   const a = f.action;
   if (!a) return true;
+  // Only the server-authorized aerial follow-up interrupts an ongoing jump.
+  // The client can send only 'dash' presses; the world verifies the double-tap.
+  if (id === 'airDash' && a.id === 'jump') return true;
   const move = moveById(id);
   if (!move) return false; // a buffered guard waits for the action to end
   if (chainsInto(f, id)) return true;

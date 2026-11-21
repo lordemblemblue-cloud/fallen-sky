@@ -43,7 +43,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor } from '../core/index.mjs';
 
-export const PROTOCOL = 7; // 7: persistent mastery level and temporary match boost are distinct
+export const PROTOCOL = 8; // 8: server-authorized double-tap air dash and predicted per-jump charge
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -190,6 +190,8 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
+    ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
+      Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
     cl: f.classId || 0, lv: f.level || 1, mb: f.matchBoost || 0, mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
@@ -221,7 +223,9 @@ export function applyOwn(f, body, data) {
   f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
-  Object.assign(body, { x, y, z, yaw, vy, kx, kz });
+  Object.assign(body, { x, y, z, yaw, vy, kx, kz,
+    jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
+    airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };

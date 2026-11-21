@@ -21,6 +21,7 @@ export const PROJECTILE_HEIGHT = 1.35;
 // Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
 const GRAVITY = 18;
+export const AIR_DASH = Object.freeze({ doubleTapSeconds: 0.32, minTapSeconds: 0.055, minHeight: 0.12, distance: 4.5 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
 export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
@@ -66,6 +67,8 @@ export function removeFighter(world, id) {
 function newBody(x, z, yaw) {
   return {
     x, z, y: 0, yaw, vy: 0,
+    // Client prediction and the match server share this transient state. It resets on landing.
+    jumped: false, airDashUsed: false, airDashTapAt: -Infinity,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
@@ -114,6 +117,28 @@ export function step(world, dt, inputs = {}) {
     const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
+      // An airborne Dash keypress is armed once; only a second, separate press within the
+      // window can activate airDash. Packets cannot directly request '#airDash'.
+      if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
+        if (!restrained && body.jumped && !body.airDashUsed && body.y > AIR_DASH.minHeight &&
+            (!fighter.action || fighter.action.id === 'jump')) {
+          const gap = now - body.airDashTapAt;
+          if (gap >= AIR_DASH.minTapSeconds && gap <= AIR_DASH.doubleTapSeconds) {
+            const result = press(fighter, '#airDash', now);
+            if (result.accepted) {
+              body.airDashUsed = true;
+              body.airDashTapAt = -Infinity;
+              body.vy = 0; // hang briefly at current height; gravity resumes after the burst
+              startMotion(body, fighter, 'airDash');
+              effects.push({ type: 'airDash', by: id, distance: AIR_DASH.distance });
+            }
+          } else if (gap >= AIR_DASH.minTapSeconds || !Number.isFinite(gap)) {
+            body.airDashTapAt = now;
+          }
+        }
+        continue; // never turn an airborne tap into a normal ground dash
+      }
+      if (command === 'jump' && (body.jumped || body.y > 0.01)) continue; // no double jump
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
@@ -311,6 +336,7 @@ function stepHeals(world, dt, now) {
 
 function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
+  if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -411,10 +437,18 @@ function moveBody(world, fighter, body, dt, now) {
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
+  } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
+    // Pause vertical movement during the short horizontal burst, then resume normal gravity.
+    body.vy = 0;
   } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
     body.y = Math.max(0, body.y + body.vy * dt);
     if (body.y === 0) body.vy = 0;
+  }
+  if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
+    body.jumped = false;
+    body.airDashUsed = false;
+    body.airDashTapAt = -Infinity;
   }
   keepInside(world, body);
 }
