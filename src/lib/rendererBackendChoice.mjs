@@ -58,9 +58,19 @@ export function chooseSceneRenderer({ sceneId, override = null, previousFailure 
 
 /** Browser convenience: the choice for a scene from window.location and localStorage / sessionStorage. */
 export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
+  // Browser privacy wrappers and embedded hosts can throw while reading properties,
+  // not just while invoking storage methods. Treat an unreadable host as WebGL-only.
   let previousFailure = false;
-  try { previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY) === '1'; } catch { previousFailure = false; }
-  const override = readRendererOverride({ search: host?.location?.search || '', storage: host?.localStorage || null });
+  let search = '';
+  let storage = null;
+  try {
+    previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY) === '1';
+    search = host?.location?.search || '';
+    storage = host?.localStorage || null;
+  } catch {
+    return { kind: 'webgl', reason: 'browser-host-unavailable' };
+  }
+  const override = readRendererOverride({ search, storage });
   return chooseSceneRenderer({ sceneId, override, previousFailure });
 }
 
