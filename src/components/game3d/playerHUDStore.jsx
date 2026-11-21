@@ -296,7 +296,7 @@ const loadState = () => {
         powerProgression: normalizeAXEPowerProgression(parsed.powerProgression),
       };
     }
-  } catch {}
+  } catch { /* Malformed or unavailable character save: initialize default progression. */ }
   return buildDefault();
 };
 
