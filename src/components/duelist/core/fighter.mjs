@@ -52,6 +52,8 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     heldBy: null, // the fighter holding this one with Telekinesis
     breaches: {}, // attacker id -> until: whose hits reach this fighter through its Veil
     events: [],
+    healReduction: 0, healReducedUntil: -Infinity,
+    shopSpeedUntil: -Infinity, shopProcAt: -Infinity, shopHealProcAt: -Infinity,
   };
   equipItems(fighter, items);
   return fighter;

@@ -125,9 +125,38 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   }
   if (result.collapsed) effects.push({ type: 'veilCollapse', defender: defender.id });
   // The item's HP-only sustain happens in the deterministic combat rules, never from a client claim.
+  const applyAntiHeal = (target, amount) => {
+    if (!target || target.vitals.dead || amount <= 0) return;
+    if (target.healReducedUntil <= now) target.healReduction = 0;
+    target.healReduction = Math.max(target.healReduction, Math.min(0.4, amount));
+    target.healReducedUntil = now + 3;
+    effects.push({ type: 'healingReduced', target: target.id, by: target === defender ? attacker.id : defender.id, amount: target.healReduction });
+  };
+  const hitLanded = result.outcome === 'hit' || result.outcome === 'guardBreak';
+  if (hitLanded) {
+    applyAntiHeal(defender, attacker.shopStats?.passive?.antiHeal || 0);
+    applyAntiHeal(attacker, defender.shopStats?.passive?.onHitAntiHeal || 0);
+  }
+  const antiHealMultiplier = attacker.healReducedUntil > now ? 1 - attacker.healReduction : 1;
   const lifesteal = attacker.shopStats?.passive?.lifesteal || 0;
   if (result.hpDamage > 0 && lifesteal && !attacker.vitals.dead) {
-    attacker.vitals.hp = Math.min(attacker.vitals.max.hp, attacker.vitals.hp + result.hpDamage * lifesteal);
+    attacker.vitals.hp = Math.min(attacker.vitals.max.hp, attacker.vitals.hp + result.hpDamage * lifesteal * antiHealMultiplier);
+  }
+  // Echo relic retaliation is direct HP damage; it never chains another item proc.
+  const relic = defender.shopStats?.passive?.retaliation;
+  if (result.hpDamage > 0 && relic && !defender.vitals.dead && !attacker.vitals.dead &&
+      (defender.shopProcAt ?? -Infinity) + relic.cooldown <= now && !isInvulnerable(attacker, now)) {
+    defender.shopProcAt = now;
+    const reflected = Math.min(relic.cap, result.hpDamage * relic.amount, attacker.vitals.hp);
+    attacker.vitals.hp = Math.max(0, attacker.vitals.hp - reflected);
+    const heal = Math.min(defender.vitals.max.hp - defender.vitals.hp,
+      reflected * relic.healRatio * (defender.healReducedUntil > now ? 1 - defender.healReduction : 1));
+    defender.vitals.hp += heal;
+    effects.push({ type: 'retaliation', by: defender.id, target: attacker.id, amount: reflected, healed: heal });
+    if (attacker.vitals.hp <= 0 && !attacker.vitals.dead) {
+      attacker.vitals.dead = true;
+      effects.push({ type: 'defeat', defender: attacker.id, by: defender.id });
+    }
   }
   if (result.killed) {
     const shield = attacker.shopStats?.passive?.onKillShield || 0;

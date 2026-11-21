@@ -49,6 +49,7 @@ export function moveRate(f, now) {
   if (effectOn(f, 'quick', now)) rate *= EFFECTS.quick.move;
   if (effectOn(f, 'rage', now)) rate *= EFFECTS.rage.move;
   if (effectOn(f, 'levitate', now)) rate *= EFFECTS.levitate.move;
+  if (f.shopSpeedUntil > now) rate *= 1 + (f.shopStats?.passive?.onAllyHealHaste || 0);
   return rate;
 }
 

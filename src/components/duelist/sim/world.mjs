@@ -259,8 +259,21 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
     }
     case 'mend': {
       const ally = alliesInReach(world, fighter, body, move)[0] || fighter;
-      give(ally, 'mend', { perSec: move.heal / move.effectSeconds, by: fighter.id });
-      effects.push({ type: 'heal', by: fighter.id, target: ally.id, amount: move.heal });
+      const passives = fighter.shopStats?.passive || {};
+      const healAmount = move.heal * (1 + (passives.healAmp || 0));
+      give(ally, 'mend', { perSec: healAmount / move.effectSeconds, by: fighter.id });
+      effects.push({ type: 'heal', by: fighter.id, target: ally.id, amount: healAmount });
+      // Support procs only for an ally who actually needs healing.
+      if (ally !== fighter && ally.vitals.hp < ally.vitals.max.hp) {
+        if (passives.onAllyHealHaste) fighter.shopSpeedUntil = Math.max(fighter.shopSpeedUntil, now + 3);
+        if ((fighter.shopHealProcAt ?? -Infinity) + 8 <= now) {
+          fighter.shopHealProcAt = now;
+          if (passives.onAllyHealShield) ally.vitals.shield = Math.min(ally.vitals.max.shield, ally.vitals.shield + passives.onAllyHealShield);
+          if (passives.onAllyHealWill) fighter.vitals.will = Math.min(fighter.vitals.max.will, fighter.vitals.will + passives.onAllyHealWill);
+          if (passives.onAllyHealPulse) fighter.vitals.hp = Math.min(fighter.vitals.max.hp, fighter.vitals.hp + passives.onAllyHealPulse *
+            (fighter.healReducedUntil > now ? 1 - fighter.healReduction : 1));
+        }
+      }
       break;
     }
     case 'sanctuary': {
@@ -291,7 +304,7 @@ function stepHeals(world, dt, now) {
     const dome = world.zones.length ? shelterOf(world, f, now) : null;
     if (dome) perSec += dome.heal ?? SPECIAL_BALANCE.sanctuaryHealPerSecond;
     perSec += selfMend(f, now); // the Healer's passive
-    if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt);
+    if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt * (f.healReducedUntil > now ? 1 - f.healReduction : 1));
   }
   if (world.zones.length) world.zones = world.zones.filter((z) => z.until > now);
 }
