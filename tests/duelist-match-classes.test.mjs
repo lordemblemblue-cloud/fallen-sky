@@ -127,3 +127,28 @@ test('only a server-confirmed CTF capture awards objective charge to a classed h
   stepMatch(m, STEP);
   assert.equal(m.seats.get('redPlayer').specialMeter, 10, 'a returned flag cannot award twice');
 });
+
+
+test('switching class at a legal respawn resets old special charge, but same-class respawn retains it', () => {
+  const m = createMatch({ mode: 'practice', players: [{ id: 'me' }], seats: 2 });
+  assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
+  advance(m, COUNTDOWN + 0.1);
+  const seat = m.seats.get('me');
+  seat.specialMeter = 75;
+  let fighter = m.world.fighters.get('me');
+  fighter.vitals.dead = true;
+  seat.respawnAt = m.world.time + 0.05;
+  assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
+  advance(m, 0.15);
+  assert.equal(seat.classId, 'assassin');
+  assert.equal(seat.specialMeter, 75, 'same-class respawn must not erase charge');
+  fighter = m.world.fighters.get('me');
+  fighter.vitals.dead = true;
+  seat.respawnAt = m.world.time + 0.05;
+  assert.equal(queueMatchClass(m, 'me', 'healer').accepted, true);
+  assert.equal(seat.specialMeter, 75, 'queued class cannot alter meter before respawn');
+  advance(m, 0.15);
+  assert.equal(seat.classId, 'healer');
+  assert.equal(seat.specialMeter, 0, 'new class cannot inherit previous special charge');
+  assert.equal(matchView(m, 'me').me.specialMeter, 0);
+});

@@ -3,7 +3,7 @@
 // and offers one obvious button.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot } from 'lucide-react';
+import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
@@ -11,6 +11,8 @@ import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
 import './duelistHub.css';
+import './duelistMenuTheme.css';
+import './duelistOpenGlass.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
@@ -21,18 +23,32 @@ const FIGHTER_NOTES = {
 
 export function MenuShell({ title, subtitle = '', back = null, children }) {
   return (
-    <main className="min-h-screen bg-[#05080d] text-white" style={{ backgroundImage: 'radial-gradient(1200px 600px at 15% -10%, rgba(80,160,255,0.16), transparent 60%), radial-gradient(900px 500px at 110% 10%, rgba(160,110,255,0.12), transparent 60%)' }}>
-      <header className="mx-auto flex max-w-5xl items-center gap-3 px-4 pt-5">
-        {back && (
-          <Link to={back.to} className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/55 transition hover:bg-white/5 hover:text-white">
-            <ArrowLeft className="h-4 w-4" /> {back.label}
-          </Link>
-        )}
+    <main className="duelist-menu-page">
+      <header className="duelist-menu-topbar">
+        <Link to="/duelist-next" className="duelist-menu-brand" aria-label="Duelist Adventure home">
+          <span>EMBLEM BLUE</span>
+          <strong>DUELIST ADVENTURE</strong>
+        </Link>
+        <nav className="duelist-menu-quicknav" aria-label="Game menu navigation">
+          <Link to="/duelist-next" className="duelist-menu-quicklink">HOME</Link>
+          <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-menu-quicklink">CHARACTER</Link>
+          <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-quicklink">SETTINGS</Link>
+        </nav>
       </header>
-      <section className="mx-auto max-w-5xl px-4 pb-16 pt-4">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{title}</h1>
-        {subtitle && <p className="mt-1.5 text-sm text-white/55">{subtitle}</p>}
-        <div className="mt-6">{children}</div>
+      <section className="duelist-menu-content">
+        <div className="duelist-menu-breadcrumb">
+          {back ? (
+            <Link to={back.to}><ArrowLeft aria-hidden="true" /> {back.label}</Link>
+          ) : <span>DUELIST ADVENTURE</span>}
+          <span aria-hidden="true">/</span>
+          <span className="duelist-menu-breadcrumb-current">{title}</span>
+        </div>
+        <div className="duelist-menu-hero">
+          <span className="duelist-menu-eyebrow">EMBLEM BLUE · OPERATIONS</span>
+          <h1>{title}</h1>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+        <div className="duelist-menu-page-body">{children}</div>
       </section>
     </main>
   );
@@ -82,7 +98,7 @@ export function DuelistHub() {
   }, [playOpen]);
 
   return (
-    <main className="duelist-hub">
+    <main className={playOpen ? 'duelist-hub duelist-hub--play-open' : 'duelist-hub'}>
       <DuelistHangarStage fighter={prefs.fighter} />
 
       <header className="duelist-hub-header">
@@ -101,7 +117,11 @@ export function DuelistHub() {
 
       <section className="duelist-hub-body" aria-label="Duelist home">
         <nav className="duelist-hub-nav" aria-label="Home actions">
-          <button type="button" onClick={() => setPlayOpen(current => !current)}
+          <div className="duelist-hub-nav-intro">
+            <span>ENTER THE ARENA</span>
+            <p>Master the blade. Shape the Veil.</p>
+          </div>
+          <button type="button" data-primary="true" onClick={() => setPlayOpen(current => !current)}
             className="duelist-hub-nav-action" data-active={playOpen} aria-expanded={playOpen}
             aria-controls="duelist-play-drawer"><Play fill="currentColor" /> PLAY</button>
           <Link to="/duelist-next/$page" params={{ page: 'story' }}
@@ -117,6 +137,7 @@ export function DuelistHub() {
             <div>
               <span className="duelist-hub-eyebrow">PLAY</span>
               <h2>Select mode</h2>
+              <p className="duelist-menu-note">Choose a battle, then enter practice or an available online match.</p>
             </div>
             <button type="button" className="duelist-hub-small-button"
               onClick={() => setPlayOpen(false)} aria-label="Close play menu"><X size={18} /></button>
@@ -224,8 +245,7 @@ export function DuelistHub() {
 function Button({ children, onClick, primary = false, disabled = false, title = undefined }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title}
-      className={`inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${primary
-        ? 'bg-cyan-300/90 text-[#05121c] hover:bg-cyan-200' : 'border border-white/15 text-white/85 hover:border-white/35 hover:text-white'}`}>
+      className={`duelist-menu-button${primary ? ' is-primary' : ''}`}>
       {children}
     </button>
   );
@@ -233,10 +253,9 @@ function Button({ children, onClick, primary = false, disabled = false, title = 
 
 function Choice({ label, value, onChange, options }) {
   return (
-    <label className="flex items-center gap-2 text-xs text-white/55">
+    <label className="duelist-menu-choice">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-white/10 bg-[#0c1622] px-2 py-1.5 text-sm text-white/90 outline-none focus:border-cyan-300/40">
+      <select value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
       </select>
     </label>
@@ -246,9 +265,9 @@ function Choice({ label, value, onChange, options }) {
 function MatchRows({ matches, onJoin }) {
   if (!matches?.length) return <p className="text-sm text-white/45">No matches running right now.</p>;
   return (
-    <div className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10">
+    <div className="duelist-menu-match-list">
       {matches.map((m) => (
-        <div key={m.id} className="flex items-center gap-3 bg-white/[0.02] px-4 py-2.5 text-sm">
+        <div key={m.id} className="duelist-menu-match-row flex items-center gap-3 px-4 py-2.5 text-sm">
           <Radio className="h-4 w-4" style={{ color: MENU_MODES[m.mode]?.accent }} />
           <span className="min-w-[8rem] font-medium">{MENU_MODES[m.mode]?.title || m.name}</span>
           <span className="text-white/55">{m.players} {m.players === 1 ? 'player' : 'players'} · {m.bots} {m.bots === 1 ? 'bot' : 'bots'}</span>
@@ -283,7 +302,7 @@ export function ModePage({ mode }) {
             </div>
           )}
         </div>
-        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <div className="duelist-menu-panel space-y-4">
           {mode === 'online' ? (
             <>
               <p className="text-sm text-white/60">The match server selects Team Deathmatch, Capture the Flag or Three-Point Control at random.</p>
@@ -345,21 +364,38 @@ export function JoinPage() {
 
 export function FighterPage() {
   const [prefs, update] = usePrefs();
+  const selected = BODIES[prefs.fighter] || BODIES.maskedWarrior || Object.values(BODIES)[0];
   return (
-    <MenuShell title="Fighter" subtitle="Who you fight as, in every mode." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {Object.entries(BODIES).map(([id, b]) => {
-          const on = prefs.fighter === id;
-          return (
-            <button key={id} type="button" onClick={() => update({ fighter: id })}
-              className={`flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition ${on ? 'border-cyan-300/60 bg-cyan-400/10' : 'border-white/10 bg-white/[0.03] hover:border-white/25'}`}>
-              <span className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-semibold ${on ? 'bg-cyan-300/90 text-[#05121c]' : 'bg-white/10 text-white/80'}`}>{b.name[0]}</span>
-              <span className="text-base font-semibold">{b.name}</span>
-              <span className="text-xs text-white/55">{FIGHTER_NOTES[id] || ''}</span>
-              {on && <span className="text-[11px] text-cyan-200">Selected</span>}
-            </button>
-          );
-        })}
+    <MenuShell title="Character" subtitle="Choose the fighter you want to take into Duelist Adventure." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <section className="duelist-menu-panel duelist-fighter-current" aria-label="Current character">
+        <div>
+          <span className="duelist-menu-eyebrow-text">CURRENTLY SELECTED</span>
+          <h2>{selected?.name || 'Fighter'}</h2>
+          <p className="duelist-menu-helper">{FIGHTER_NOTES[prefs.fighter] || 'Your chosen fighter for every game mode.'}</p>
+          <p className="duelist-menu-note">Your choice is remembered on this browser and used in practice and matches.</p>
+        </div>
+        <div className="duelist-fighter-mark" aria-hidden="true">{selected?.name?.[0] || 'D'}</div>
+      </section>
+      <div className="mt-7">
+        <h3 className="duelist-menu-section-heading">Select your fighter</h3>
+        <p className="duelist-menu-helper mt-1 mb-4">Choose a character below. The selection updates immediately; it does not change the combat class.</p>
+        <div className="duelist-fighter-grid">
+          {Object.entries(BODIES).map(([id, fighter]) => {
+            const on = prefs.fighter === id;
+            return (
+              <button key={id} type="button" aria-pressed={on} onClick={() => update({ fighter: id })}
+                className="duelist-menu-card duelist-fighter-option" data-selected={on}>
+                <div className="duelist-fighter-option-visual" aria-hidden="true"><span>{fighter.name[0]}</span></div>
+                <div className="duelist-fighter-option-name">
+                  <span>{fighter.name}</span>
+                  {on && <CheckCircle2 aria-label="Selected" />}
+                </div>
+                <p className="duelist-menu-helper">{FIGHTER_NOTES[id] || 'Select this fighter.'}</p>
+                <span className="duelist-menu-eyebrow-text">{on ? 'SELECTED' : 'SELECT FIGHTER'}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </MenuShell>
   );
@@ -384,30 +420,71 @@ export function SettingsPage() {
     try { window.localStorage.setItem('duelist.audio', JSON.stringify(next)); } catch { /* this visit only */ }
   };
   return (
-    <MenuShell title="Settings" back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <label className="block space-y-2 text-sm">
-            <span className="flex justify-between text-white/70"><span>Sound volume</span><span>{Math.round(audio.volume * 100)}%</span></span>
-            <input type="range" min="0" max="1" step="0.05" value={audio.volume} onChange={(e) => saveAudio({ volume: Number(e.target.value) })} className="w-full" />
-          </label>
-          <label className="flex items-center gap-2 text-sm text-white/70">
-            <input type="checkbox" checked={!audio.muted} onChange={(e) => saveAudio({ muted: !e.target.checked })} /> Sound on
-          </label>
-          <label className="block space-y-2 text-sm">
-            <span className="flex justify-between text-white/70"><span>Mouse sensitivity</span><span>{prefs.sensitivity.toFixed(2)}×</span></span>
-            <input type="range" min="0.3" max="2.5" step="0.05" value={prefs.sensitivity} onChange={(e) => update({ sensitivity: Number(e.target.value) })} className="w-full" />
-          </label>
+    <MenuShell title="Settings" subtitle="Adjust how Duelist Adventure sounds, responds and plays with bots." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <div className="duelist-settings-columns">
+        <div className="duelist-settings-stack">
+          <section className="duelist-menu-panel">
+            <h2 className="duelist-menu-section-heading"><Volume2 aria-hidden="true" /> Audio</h2>
+            <p className="duelist-menu-helper mt-2">Change the volume of in-game sounds, impacts and effects.</p>
+            <label className="duelist-setting-row block">
+              <span className="duelist-setting-label"><span>Master volume</span><span className="duelist-setting-value">{Math.round(audio.volume * 100)}%</span></span>
+              <span className="duelist-menu-note">The overall level of game audio.</span>
+              <input type="range" aria-label="Master volume" min="0" max="1" step="0.05" value={audio.volume}
+                onChange={(event) => saveAudio({ volume: Number(event.target.value) })} />
+            </label>
+            <label className="duelist-setting-row duelist-setting-toggle">
+              <input type="checkbox" checked={!audio.muted} onChange={(event) => saveAudio({ muted: !event.target.checked })} />
+              <span><span className="duelist-setting-label">Sound enabled</span><span className="duelist-menu-note">Turn all game audio on or off without changing your saved volume.</span></span>
+            </label>
+          </section>
+          <section className="duelist-menu-panel">
+            <h2 className="duelist-menu-section-heading"><MousePointer2 aria-hidden="true" /> Controls</h2>
+            <p className="duelist-menu-helper mt-2">Fine-tune how quickly the camera responds to mouse movement.</p>
+            <label className="duelist-setting-row block">
+              <span className="duelist-setting-label"><span>Mouse sensitivity</span><span className="duelist-setting-value">{prefs.sensitivity.toFixed(2)}×</span></span>
+              <span className="duelist-menu-note">Lower for precision, higher for faster camera movement.</span>
+              <input type="range" aria-label="Mouse sensitivity" min="0.3" max="2.5" step="0.05" value={prefs.sensitivity}
+                onChange={(event) => update({ sensitivity: Number(event.target.value) })} />
+            </label>
+          </section>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-          <div className="mb-3 text-xs uppercase tracking-wider text-white/40">Controls</div>
-          <table className="w-full text-sm">
-            <tbody>
-              {CONTROLS.map(([what, key]) => <tr key={what} className="border-t border-white/5"><td className="py-1.5 text-white/70">{what}</td><td className="py-1.5 text-right text-cyan-100/90">{key}</td></tr>)}
-            </tbody>
-          </table>
+        <div className="duelist-settings-stack">
+          <section className="duelist-menu-panel">
+            <h2 className="duelist-menu-section-heading"><Gamepad2 aria-hidden="true" /> Bot matches</h2>
+            <p className="duelist-menu-helper mt-2">These options apply when you start a local match against computer-controlled opponents.</p>
+            <label className="duelist-setting-row block">
+              <span className="duelist-setting-label">AI difficulty</span>
+              <span className="duelist-menu-note">Trainee is the easiest opponent; Master is the most challenging.</span>
+              <select value={prefs.level} onChange={(event) => update({ level: event.target.value })}>
+                {LEVELS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </label>
+            <label className="duelist-setting-row block">
+              <span className="duelist-setting-label">Practice bots</span>
+              <span className="duelist-menu-note">Number of computer-controlled fighters when using Practice mode.</span>
+              <select value={String(prefs.bots)} onChange={(event) => update({ bots: Number(event.target.value) })}>
+                {[1, 2, 3].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'bot' : 'bots'}</option>)}
+              </select>
+            </label>
+          </section>
+          <div className="duelist-menu-panel">
+            <span className="duelist-menu-eyebrow-text">SAVED PREFERENCES</span>
+            <p className="duelist-menu-helper mt-2">Changes take effect for new actions and matches and are saved in this browser. Audio and mouse settings do not alter multiplayer combat rules.</p>
+          </div>
         </div>
       </div>
+      <section className="duelist-menu-panel mt-5" aria-label="Keyboard and mouse controls">
+        <h2 className="duelist-menu-section-heading">Keyboard &amp; mouse reference</h2>
+        <p className="duelist-menu-helper mt-2">These are the current controls. This page shows the bindings but does not remap them.</p>
+        <div className="duelist-settings-keymap">
+          {CONTROLS.map(([action, key]) => (
+            <div key={action} className="duelist-settings-keymap-row">
+              <span>{action}</span>
+              <kbd>{key}</kbd>
+            </div>
+          ))}
+        </div>
+      </section>
     </MenuShell>
   );
 }
@@ -426,46 +503,62 @@ export function StoryPage() {
   const [typed, setTyped] = useState('');
   const code = typed.toUpperCase().replace(/[^A-HJ-NP-Z]/g, '').slice(0, 5);
   const play = (search) => navigate({ to: '/duelist-next/play', search: { mode: 'story', ...search } });
-  const crews = (lobby.matches || []).filter((m) => m.mode === 'story' && m.open);
+  const crews = (lobby.matches || []).filter((match) => match.mode === 'story' && match.open);
   const offline = lobby.serverUrl ? 'The match server is not answering.' : 'Online play is not set up yet.';
   return (
-    <MenuShell title="Contraband" subtitle="A story mission for 1 to 4 players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-        <div className="space-y-5">
-          <ol className="grid gap-3 sm:grid-cols-2">
-            {ACTS.map(([title, line], i) => (
-              <li key={title} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                <div className="text-xs uppercase tracking-wider text-violet-200/70">Part {i + 1}</div>
-                <div className="mt-1 text-base font-semibold">{title}</div>
-                <div className="mt-1 text-sm text-white/60">{line}</div>
+    <MenuShell title="Story Campaign" subtitle="Contraband — a cooperative operation for one to four players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+      <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(255px,330px)]">
+        <div>
+          <div className="duelist-story-brief">
+            <span className="duelist-menu-eyebrow-text">OPERATION 01 / CONTRABAND</span>
+            <h2>The cargo is not what it seems.</h2>
+            <p className="duelist-menu-helper">Infiltrate the freight depot, trace an illicit shipment, recover the evidence and uncover the person behind it.</p>
+          </div>
+          <h3 className="duelist-menu-section-heading">Mission briefing</h3>
+          <ol className="duelist-story-milestones">
+            {ACTS.map(([title, line], index) => (
+              <li key={title} className="duelist-story-milestone">
+                <span className="duelist-story-step" aria-label={'Stage ' + (index + 1)}>{String(index + 1).padStart(2, '0')}</span>
+                <div className="duelist-story-milestone-copy">
+                  <h3>{title}</h3>
+                  <p>{line}</p>
+                </div>
               </li>
             ))}
           </ol>
-          <ul className="space-y-1.5 text-xs text-white/55">
-            <li>About ten minutes. If the whole crew falls, the stage starts again from its checkpoint.</li>
-            <li>The guards have no Veil but carry sidearms: a line of light shows where a shot will go. Roll or guard.</li>
-            <li>Hold F to open crates, use consoles and take ledger cores. The depot is manned for the size of your crew.</li>
-          </ul>
+          <p className="duelist-menu-note mt-2">About ten minutes. If the crew falls, play resumes from the mission checkpoint. Hold F to use crates and consoles.</p>
         </div>
-        <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+        <aside className="duelist-menu-panel duelist-story-crew-actions" aria-label="Campaign launch options">
+          <span className="duelist-menu-eyebrow-text">CHOOSE HOW TO ENTER</span>
+          <div>
+            <h2 className="duelist-menu-section-heading">Begin operation</h2>
+            <p className="duelist-menu-helper mt-2">Explore alone, or enter with up to three friends when the online server is available.</p>
+          </div>
+          <div className="duelist-story-summary">
+            <Users size={16} aria-hidden="true" />
+            <span>1–4 fighters · Co-op mission</span>
+          </div>
           <Button primary onClick={() => play({ online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
           <div className="h-px bg-white/10" />
-          <div className="text-xs uppercase tracking-wider text-white/40">With a crew</div>
+          <span className="duelist-menu-eyebrow-text">PLAY WITH A CREW</span>
           <Button onClick={() => play({ online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <Users className="h-4 w-4" /> Start a crew room
+            <Users className="h-4 w-4" /> Create private crew
           </Button>
-          <p className="text-xs text-white/40">You get a code to give to up to three friends.</p>
-          <div className="flex items-center gap-2">
-            <input value={code} onChange={(e) => setTyped(e.target.value)} placeholder="CODE" maxLength={5} aria-label="Crew code"
-              className="w-24 rounded-lg border border-white/10 bg-[#0c1622] px-3 py-2 text-sm uppercase tracking-[0.25em] text-white/90 outline-none placeholder:text-white/25 focus:border-cyan-300/40" />
-            <Button onClick={() => play({ online: 1, room: code })} disabled={!lobby.online || code.length !== 5}><LogIn className="h-4 w-4" /> Join with a code</Button>
+          <p className="duelist-menu-note">You receive a room code to share with up to three friends.</p>
+          <div className="duelist-story-code-row">
+            <input type="text" value={code} onChange={(event) => setTyped(event.target.value)}
+              placeholder="CODE" maxLength={5} aria-label="Five-character crew code"
+              className="text-sm uppercase tracking-widest" />
+            <Button onClick={() => play({ online: 1, room: code })} disabled={!lobby.online || code.length !== 5}>
+              <LogIn className="h-4 w-4" /> Join by code
+            </Button>
           </div>
           <Button onClick={() => play({ online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <LogIn className="h-4 w-4" /> {crews.length ? `Join an open crew (${crews.length})` : 'Start an open crew'}
+            <LogIn className="h-4 w-4" /> {crews.length ? 'Join an open crew (' + crews.length + ')' : 'Start an open crew'}
           </Button>
-          {!lobby.online && <p className="text-xs text-white/40">{offline}</p>}
-          <p className="text-xs text-white/40">Fighter: {BODIES[prefs.fighter]?.name}. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200/80 hover:underline">Change</Link></p>
-        </div>
+          {!lobby.online && <p className="duelist-menu-note" role="status">{offline} Solo play is still available.</p>}
+          <p className="duelist-menu-note">Current fighter: <strong>{BODIES[prefs.fighter]?.name}</strong>. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200 hover:underline">Change fighter</Link></p>
+        </aside>
       </div>
     </MenuShell>
   );
