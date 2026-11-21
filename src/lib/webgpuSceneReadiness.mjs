@@ -16,21 +16,38 @@ export const WEBGPU_SCENES = Object.freeze({
 });
 
 /**
- * Unknown scene IDs must never silently inherit another scene's readiness.
- * Returns a boolean suitable for selectRendererBackend({ sceneWebGPUReady }).
+ * Readiness inventories can be supplied by browser integrations and tests.
+ * A Proxy or accessor may throw even after an own-property check; fail closed.
  */
-export function isSceneWebGPUReady(sceneId, scenes = WEBGPU_SCENES) {
-  if (typeof sceneId !== 'string' || !scenes || (typeof scenes !== 'object' && typeof scenes !== 'function') || !Object.prototype.hasOwnProperty.call(scenes, sceneId)) return false;
-  return scenes[sceneId]?.ready === true;
+function readScenePolicy(sceneId, scenes) {
+  if (typeof sceneId !== 'string' || !scenes || (typeof scenes !== 'object' && typeof scenes !== 'function')) return null;
+  try {
+    if (!Object.prototype.hasOwnProperty.call(scenes, sceneId)) return null;
+    const policy = scenes[sceneId];
+    return policy && (typeof policy === 'object' || typeof policy === 'function') ? policy : null;
+  } catch {
+    return null;
+  }
 }
 
-/** True when a developer may explicitly select WebGPU for this scene (ready scenes always may). */
+function readPolicyFlag(policy, key) {
+  try { return policy?.[key] === true; } catch { return false; }
+}
+
+/** Unknown or inaccessible scene IDs must fail closed. */
+export function isSceneWebGPUReady(sceneId, scenes = WEBGPU_SCENES) {
+  return readPolicyFlag(readScenePolicy(sceneId, scenes), 'ready');
+}
+
+/** True when a developer may explicitly select WebGPU for this scene. */
 export function isSceneWebGPUPreviewable(sceneId, scenes = WEBGPU_SCENES) {
-  if (typeof sceneId !== 'string' || !scenes || (typeof scenes !== 'object' && typeof scenes !== 'function') || !Object.prototype.hasOwnProperty.call(scenes, sceneId)) return false;
-  return scenes[sceneId]?.ready === true || scenes[sceneId]?.preview === true;
+  const policy = readScenePolicy(sceneId, scenes);
+  return readPolicyFlag(policy, 'ready') || readPolicyFlag(policy, 'preview');
 }
 
 export function getSceneWebGPUBlocker(sceneId, scenes = WEBGPU_SCENES) {
-  if (typeof sceneId !== 'string' || !scenes || (typeof scenes !== 'object' && typeof scenes !== 'function') || !Object.prototype.hasOwnProperty.call(scenes, sceneId)) return 'unknown-scene';
-  return isSceneWebGPUReady(sceneId, scenes) ? null : (scenes[sceneId]?.blocker || 'not-validated');
+  const policy = readScenePolicy(sceneId, scenes);
+  if (!policy) return 'unknown-scene';
+  if (readPolicyFlag(policy, 'ready')) return null;
+  try { return policy.blocker || 'not-validated'; } catch { return 'not-validated'; }
 }
