@@ -5804,7 +5804,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       <div ref={containerRef} className="w-full h-full" />
       {/* Download links are presented in a separate modal after capture;
           each needs a real user click to satisfy browser download policy. */}
-      {!entryMode && !loading && (
+      {!entryMode && !loading && import.meta.env.DEV && (
         <div className="absolute bottom-4 right-4 z-[80] max-w-[min(300px,85vw)]"
           onPointerDown={e=>e.stopPropagation()} onClick={e=>e.stopPropagation()}>
           <button type="button" disabled={mapExportState==='exporting'}
