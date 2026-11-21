@@ -8,8 +8,25 @@
 // no travel between areas):
 //   - this tab:   add ?wholeWorld=1 to the game URL (?wholeWorld=0 forces portal scenes);
 //   - this device: localStorage.setItem('game3d.wolfveilWholeWorld','1').
+import {wolfveilAreaRect} from './WolfveilFiveAreaPlan.mjs';
+
 export const WOLFVEIL_WHOLE_WORLD_STORAGE_KEY='game3d.wolfveilWholeWorld';
 export const WOLFVEIL_WHOLE_WORLD_QUERY='wholeWorld';
+
+/**
+ * A portal scene holds exactly one area, so its area loader must never leave
+ * it: the position it is given is kept `inset` metres inside the area
+ * (WORLD x/z, local z + offsetZ). A stray position (a teleport, a model briefly
+ * somewhere else) can then not switch the loader and hide the scene's own
+ * ground and town; only going through a gate changes the area (a new scene).
+ */
+export function keepInWolfveilArea(position,area,{offsetZ=70,inset=1}={}){
+  const rect=wolfveilAreaRect(area);
+  const x=Number(position?.x),z=Number(position?.z);
+  if(!rect||!Number.isFinite(x)||!Number.isFinite(z))return position;
+  const clamp=(v,lo,hi)=>Math.min(hi-inset,Math.max(lo+inset,v));
+  return {x:clamp(x,rect.minX,rect.maxX),y:Number(position.y)||0,z:clamp(z-offsetZ,rect.minZ,rect.maxZ)+offsetZ};
+}
 
 export function wolfveilAreaScenesEnabled(win=globalThis.window){
   try{

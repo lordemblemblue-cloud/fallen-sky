@@ -179,7 +179,7 @@ import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
 import {wolfveilAreaAtWorld,wolfveilAreaInfo} from './wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {wolfveilGateTravel,wolfveilGatePush} from './wolfveil/streaming/WolfveilGateTravel.mjs';
-import {wolfveilAreaScenesEnabled} from './wolfveil/streaming/WolfveilAreaScenes.mjs';
+import {wolfveilAreaScenesEnabled,keepInWolfveilArea} from './wolfveil/streaming/WolfveilAreaScenes.mjs';
 import {createWolfveilAreaScope} from './wolfveil/streaming/WolfveilAreaClip.mjs';
 import {WOLFVEIL_WHOLE_TERRAIN} from './wolfveil/WolfveilTerrainAreaStream.mjs';
 import {MeshBVH} from 'three-mesh-bvh';
@@ -986,6 +986,13 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       // The whole valley in one scene: the loader draws everything as built.
       if(!areaScenes)regionStream.setEnabled(false);
     }
+    // A portal scene holds one area: its loader never leaves it, so a stray
+    // position (a teleport, the model briefly elsewhere) cannot hide this
+    // scene's own ground and town for a frame. Only a gate changes the area.
+    const loaderPosition=()=>{
+      const position=modelRef.current?.position||initialAreaPosition;
+      return areaScenes?keepInWolfveilArea(position,worldArea):position;
+    };
     // Gateways: torii gates at every area portal, joined by spirit-veil
     // walls that let the player (and AI) cross a border only through a gate.
     // The veil walls are not drawn: what is past the border is cut away below.
@@ -3431,7 +3438,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
-        regionStream?.update(modelRef.current?.position||initialAreaPosition,
+        regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||initialAreaPosition,regionStream?.getArea());
         areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
@@ -3477,7 +3484,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
-      regionStream?.update(modelRef.current?.position||initialAreaPosition,
+      regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||initialAreaPosition,regionStream?.getArea());
         passAreaGate();

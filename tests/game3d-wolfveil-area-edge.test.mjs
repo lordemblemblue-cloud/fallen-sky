@@ -9,11 +9,11 @@ import {URL} from 'node:url';
 import * as THREE from 'three';
 import {clipGeometryToWolfveilArea,clipWolfveilSceneToArea,createWolfveilAreaScope,wolfveilAreaClipPlanes}
   from '../src/components/game3d/wolfveil/streaming/WolfveilAreaClip.mjs';
-import {wolfveilAreaScenesEnabled,WOLFVEIL_WHOLE_WORLD_STORAGE_KEY}
+import {wolfveilAreaScenesEnabled,keepInWolfveilArea,WOLFVEIL_WHOLE_WORLD_STORAGE_KEY}
   from '../src/components/game3d/wolfveil/streaming/WolfveilAreaScenes.mjs';
 import {createWolfveilTerrainAreaStream,WOLFVEIL_WHOLE_TERRAIN,WOLFVEIL_AREA_EDGE_SKIRT}
   from '../src/components/game3d/wolfveil/WolfveilTerrainAreaStream.mjs';
-import {WOLFVEIL_AREA_IDS,wolfveilAreaRect}
+import {WOLFVEIL_AREA_IDS,wolfveilAreaRect,wolfveilAreaAtWorld}
   from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {resolveWolfveilBridgeRailing,WOLFVEIL_BRIDGE_UNDER_METERS}
   from '../src/components/game3d/wolfveil/WolfveilBridgeProfile.mjs';
@@ -229,6 +229,22 @@ test('paving stops at the top of a river bank (the brick lane beside the Market 
   }
   assert.equal(collector.add(lane,strip(60,-101.5),1.4),true,'paved on the town terrace');
   assert.equal(wolfveilPavingNearRiver([[0,-70]]),false);
+});
+
+test('a portal scene\'s loader never leaves the scene\'s area, whatever position it is handed',()=>{
+  // The WebGPU session forced the loader to another area for one frame: the
+  // town and its ground vanished, like the owner's pink/green frames.
+  const inTown=keepInWolfveilArea({x:200,y:5,z:-28},'town');
+  assert.ok(inTown.x<=122-1&&inTown.z===-28,'held 1 m inside the town');
+  assert.equal(wolfveilAreaAtWorld(inTown),'town');
+  assert.deepEqual(keepInWolfveilArea({x:0,y:2,z:70},'town'),{x:0,y:2,z:70},'inside: unchanged');
+  for(const area of WOLFVEIL_AREA_IDS)
+    for(const p of [{x:0,z:70},{x:-500,z:-400},{x:500,z:700},{x:300,z:-200}])
+      assert.equal(wolfveilAreaAtWorld(keepInWolfveilArea(p,area)),area,area+' '+JSON.stringify(p));
+  assert.equal(keepInWolfveilArea(null,'town'),null);
+  const world=source('src/components/game3d/GameWorld3D.jsx');
+  assert.equal(world.match(/regionStream\?\.update\(loaderPosition\(\),/g).length,2);
+  assert.match(world,/return areaScenes\?keepInWolfveilArea\(position,worldArea\):position;/);
 });
 
 test('the live world: portal scenes cut to the area, no veil, and a switch back to the whole valley',()=>{

@@ -1,7 +1,7 @@
 # Wolfveil gates, unloaded far side, bridges and the brick lane
 
 **Date:** 2026-11-21
-**Repository:** lordemblemblue-cloud/fallen-sky, branch `claude/wolfveil-gate-travel-20261121` (from `main` d8817383, `main` c64e39d9 merged in)
+**Repository:** lordemblemblue-cloud/fallen-sky, branch `claude/wolfveil-gate-travel-20261121` (from `main` d8817383; `main` c64e39d9 and then b79cb242 — WebGPU by default, the resize redraw — merged in)
 **Owner report 1 (recording `2026-11-21 09-51-34.mp4`):** "You can also see that you can't go through the portals, and that's a problem." Level 38, riding the Fantasy Bear, held at the red torii on the Market Stone Bridge between Wolfveil Town and East Wilds (16–33 s). Both "East Wilds · Optional PvP" and "Wolfveil Town · PvE" banners on screen; sky and fog flicker on alternate frames.
 **Owner report 2 (recording `2026-11-21 09-52-59.mp4`):**
 - "a pathway that's not supposed to be there ... it's kind of sticking out";
@@ -152,6 +152,10 @@ The WebGPU session read the two banners as the area flipping every frame. This w
   - the reused trees, bamboo and rocks group.
 
   The area scope in 5.1 now cuts or hides them.
+- **A loader switch inside a scene.** The WebGPU session forced the loader to another area for one frame on `main`. The town and its ground vanished (the terrain section swaps and single mode hides the scene's units), which looks like the owner's pink and green frames. The same happens on `main` if a player stands 12 m past a border in a scene, which is the owner's 23 s frame: East's ground isn't there, the sky shows through and grass floats. Now a portal scene's loader is given the player position held 1 m inside the scene's area (`keepInWolfveilArea`), so it can never leave that area; only a gate changes it.
+  - Checked in the Town scene: the player was put in East for 1 frame, then for 40 frames.
+  - Throughout, the loader area, the 49 loaded units, the ground section and the artisan town stayed unchanged, with no area change and no travel.
+  - Market Stone still travels both ways.
 
 ### 5.5 Not handled here
 
