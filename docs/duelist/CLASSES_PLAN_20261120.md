@@ -59,7 +59,7 @@ Balance numbers are first proposals for playtesting (`SPECIAL_BALANCE` and the c
 
 ## Status (2026-11-20, branch `claude/duelist-rebuild-20261118`)
 
-Built and tested (153 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
+Built and tested (213 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
 
 - **The four kits, server-authoritative** (`core/classes.mjs`, `core/abilities.mjs`, `core/moves.mjs`,
   `sim/world.mjs`, `core/combat.mjs`, `sim/match.mjs`): every ability and special in the table above, the
@@ -87,11 +87,42 @@ Built and tested (153 Duelist tests; checked in the browser in practice and Capt
   `staffSweep`; the staff's turn is its chain's second link). A press that waits keeps its direction; the link
   count travels with the fighter (protocol 5); duelist and master bots use the advance, the sweep and the turn.
   These are this game's own rules, written from its own frame data and clips.
+- **What everyone shares, and what only a class has** (2026-11-21). Shared by every fighter: strikes, guard, run
+  (Shift), dash (Alt), roll (C), jump (Space), Veil Breach (R) and Resist (Z). Only its class has: its four
+  abilities (keys 1-4) and its special (Q). The rules refuse another class's ability, a Telekinesis power the kit
+  lacks or another class's special however it is asked for (`core/fighter.mjs` `blockedReason`), and a browser can
+  only ever send the key, never a move's name (`tests/duelist-kit-and-keys.test.mjs` checks every class against
+  every ability).
+- **Class levels** (2026-11-21; `core/progression.mjs`, `core/ranks.mjs`). Each class has its own level, 1 to 20,
+  from EXP earned in matches with that class (12,160 EXP to the top). Abilities have five ranks: every fifth level
+  (5, 10, 15, 20) adds a rank to all four, so they are maxed at level 20. The special has three tiers: as learned,
+  improved at level 10, final at level 20. A rank changes damage, reach, how long an effect lasts and how soon the
+  ability is ready again; timings and costs never change. A level reached in a match fights from the next spawn.
+  Bots fight at the players' average level.
+
+  | Special | Level 1 | Level 10 | Level 20 |
+  |---|---|---|---|
+  | Rage | 5 s | 6 s | 7 s |
+  | Execution (target's HP at most) | 25% | 30% | 35% |
+  | Shadow Execution (angle behind, reach) | 120 degrees, 2.3 m | 150 degrees, 2.5 m | 180 degrees, 2.7 m |
+  | Sanctuary (radius, time, healing) | 6 m, 5 s, 5 HP/s | 7 m, 6 s, 6 HP/s | 8 m, 7 s, 7 HP/s |
+
+- **Passives that grow with the class** (rank 1 to rank 5): Warrior, *Heavy Stance*: strikes 15% to 24% harder,
+  knockback moves it 15% to 35% less, swings a little slower. Duelist, *Twin Rhythm*: each link of a chain hits 3%
+  to 7% harder than the one before it; strikes drain the Veil faster. Assassin, *Shadow Step*: rolls 25% to 38%
+  farther, strikes from behind 10% to 26% harder. Healer, *Swift Stance*: faster, lighter swings; unhurt for 4 s it
+  mends itself 1 to 2 HP a second; healing an ally charges its special.
+- **Who keeps a level.** The match awards the EXP (`sim/match.mjs`). Offline, this browser keeps each class's EXP
+  (`client/prefs.mjs` `classXp`). Online, the match server keeps it per account and decides the level
+  (`server/duelist/progress.mjs`): a browser's claim is never read. It is kept in a JSON file when
+  `DUELIST_PROGRESS_FILE` names one on a disk that lasts; without it, online levels last only while the server
+  runs. Offline and online levels are separate until the account's own store holds them.
 
 Still to do:
 
-1. **Tuning Flow.** The strikes by direction (above) carry first-proposal numbers; heavy strikes do not take a
-   direction yet, and the bots use Flow only a little.
+1. **Tuning.** The strikes by direction and every rank's numbers are first proposals; heavy strikes do not take a
+   direction yet, the bots use Flow only a little, and nobody has played a level-20 class against a level-1 one.
+   An online player's level is not yet in the account's own store (it is in the match server's file).
 2. **Transport** (escort a payload; the other team stops it): still a "Planned" entry in the play drawer. The
    HUD has no scoreboard for it yet. **A single rotating control point** has its scoreboard ready
    (`view.singlePoint`) but no mode behind it.
