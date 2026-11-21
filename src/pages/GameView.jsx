@@ -6,6 +6,7 @@ import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import {wolfveilAreaScenesEnabled} from '../components/game3d/wolfveil/streaming/WolfveilAreaScenes.mjs';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   getGame3DUIScale,game3DViewportClass}
@@ -747,7 +748,7 @@ export default function GameView() {
       {/* Server-verified faction call-to-arms below the live minimap. Disabled
           until rank-authorized faction announcements are available. */}
       <WorldAnnouncementFeed suppressed={services.active || services.expanded} />
-      <WorldPvpControl region={worldRegion} area={worldRegion==='wolfveil'?worldArea:null}
+      <WorldPvpControl region={worldRegion} area={worldRegion==='wolfveil'&&wolfveilAreaScenesEnabled()?worldArea:null}
         suppressed={services.active || services.expanded} />
       <FactionAnnouncementTicker />
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}

@@ -169,7 +169,7 @@ test('the world status follows the loaded area scene, so a gate cannot flip it e
   const control=source('src/components/game3d/pvp/WorldPvpControl.jsx');
   assert.equal(control.match(/resolveWorldPvpSceneZone\(\{\s*region,area,/g).length,3);
   assert.doesNotMatch(control,/resolveWorldPvpZone\(/);
-  assert.match(source('src/pages/GameView.jsx'),/<WorldPvpControl region=\{worldRegion\} area=\{worldRegion==='wolfveil'\?worldArea:null\}/);
+  assert.match(source('src/pages/GameView.jsx'),/<WorldPvpControl region=\{worldRegion\} area=\{worldRegion==='wolfveil'&&wolfveilAreaScenesEnabled\(\)\?worldArea:null\}/);
 });
 
 test('the live world travels through a gate, rides on after a ridden crossing and keeps its arrival area while loading',()=>{
