@@ -78,7 +78,7 @@
   padding: 8px 9px;
   border: 1px solid var(--dui-line); border-bottom: 2px solid transparent;
   border-radius: 2px; background: rgba(29,50,65,.35);
-  color: #b8cbd5; font-size: clamp(10px,.85vw,13px); letter-spacing: .045em; white-space: nowrap;
+  color: #b8cbd5; font-size: clamp(10px,.85vw,13px); letter-spacing: .045em; white-space: nowrap; text-decoration:none;
 }
 .duelist-hub-category svg { width: 16px; height: 16px; }
 .duelist-hub-category small { font-size: 9px; color: var(--dui-gold); }
