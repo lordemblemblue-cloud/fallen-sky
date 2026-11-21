@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateClassAbility } from '../src/components/duelist/core/classAbilityGate.mjs';
 import { CLASSES, visibleClassAbilities } from '../src/components/duelist/core/classes.mjs';
+// The gate's existing GitHub workflow also executes the shop and movement regressions.
+import './duelist-shop.test.mjs';
+import './duelist-relics.test.mjs';
+import './duelist-air-dash.test.mjs';
 
 // The four kits are built now (core/classes.mjs: every ability is implemented in the match's own rules), so the gate
 // lets a clean request through as the ability it is; everything forged or out of turn is still refused.

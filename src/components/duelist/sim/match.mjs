@@ -18,7 +18,7 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
-import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt } from '../core/progression.mjs';
+import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -51,7 +51,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     capacity: Math.max(players.length, seats ?? def.seats),
     phase: 'countdown', phaseUntil: COUNTDOWN, clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
-    seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 },
+    seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
     flags: def.flags ? makeFlags(def) : null,
     ball: def.football ? makeBall() : null,
     controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
@@ -127,11 +127,11 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0,
     progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
     matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
-    goldFraction: 0, items: [] };
+    goldFraction: 0, classXpFraction: 0, items: [] };
   entry.level = levelOf(match, entry);
   addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spot });
   match.seats.set(seatId, entry);
-  match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
+  match.scores[seatId] = { defeats: 0, assists: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
 }
 
@@ -141,6 +141,8 @@ function unseat(match, id) {
   match.seats.delete(id);
   match.order = match.order.filter((x) => x !== id);
   delete match.scores[id];
+  match.damageLog.delete(id);
+  for (const log of match.damageLog.values()) log.delete(id);
 }
 
 const event = (match, e) => {
@@ -379,6 +381,17 @@ export function stepMatch(match, dt, inputs = {}) {
       seat.goldFraction -= whole;
       grantGold(match, seat.id, whole, 'time');
     }
+    const f = world.fighters.get(seat.id);
+    // Permanent class XP accrues to the class actually used over time, independently
+    // of shared per-match combat ranks or gold; switching preserves both class totals.
+    if (seat.classId && f && !f.vitals.dead) {
+      seat.classXpFraction += dt * XP.participationPerSecond;
+      if (seat.classXpFraction >= 1) {
+        const amount = Math.floor(seat.classXpFraction);
+        seat.classXpFraction -= amount;
+        awardXp(match, { type: 'participation', by: seat.id, amount });
+      }
+    }
   }
   // An equal opportunity boost: live match seconds only. Never award combat power from saved XP.
   const nextBoost = boostAt(match.clock);
@@ -420,6 +433,15 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
+  // Assists are awarded only for server-verified impacts from the last eight seconds.
+  for (const e of effects) {
+    if (e.type !== 'impact' || !(e.hp > 0 || e.shield > 0 || e.will > 0) || !e.attacker || !e.defender) continue;
+    const from = world.fighters.get(e.attacker);
+    const to = world.fighters.get(e.defender);
+    if (!from || !to || !hostile(world, from, to)) continue;
+    if (!match.damageLog.has(e.defender)) match.damageLog.set(e.defender, new Map());
+    match.damageLog.get(e.defender).set(e.attacker, world.time);
+  }
   chargeSpecials(match, effects);
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
@@ -466,6 +488,17 @@ function onDefeat(match, e) {
       by.specialMeter = awardSpecialCharge(by.specialMeter, 'elimination') ?? by.specialMeter;
     }
     if (def.id === 'tdm' && by.team) match.teamScores[by.team] += 1;
+  }
+  const assists = match.damageLog.get(who.id) || new Map();
+  match.damageLog.delete(who.id);
+  if (counted) for (const [id, at] of assists) {
+    if (id === by.id || world.time - at > 8) continue;
+    const helper = match.seats.get(id);
+    if (!helper || helper.kind !== 'player' ||
+        !hostile(world, world.fighters.get(id) || {}, world.fighters.get(who.id) || {})) continue;
+    match.scores[id].assists += 1;
+    grantGold(match, id, SHOP_RULES.assistGold, 'assist');
+    event(match, { type: 'assist', by: id, who: who.id, feed: false });
   }
   dropFlagOf(match, who.id, bodyOf(world, who.id));
   event(match, { type: 'defeat', by: counted ? by.id : null, who: who.id });
@@ -514,7 +547,7 @@ function flagsStep(match) {
     }
     if (flag.state === 'dropped' && now - flag.droppedAt > CTF.autoReturn) { goHome(flag); event(match, { type: 'flagReturned', team, by: null }); continue; }
     for (const f of world.fighters.values()) {
-      if (f.vitals.dead || isDown(f, now) || f.heldBy || !f.team) continue;
+      if (f.vitals.dead || isDown(f, now) || f.heldBy || now < (f.activeRelicUntil ?? -Infinity) || !f.team) continue;
       const b = bodyOf(world, f.id);
       if (dist(b, flag) > CTF.pickup) continue;
       if (f.team !== team && !carrying(match, f.id)) {

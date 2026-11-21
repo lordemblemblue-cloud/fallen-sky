@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="siphonmirror">
+<defs><radialGradient id="bg"><stop stop-color="#7460a1" stop-opacity=".25"/><stop offset="1" stop-color="#090d14"/></radialGradient>
+<linearGradient id="metal" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e9be85"/><stop offset=".55" stop-color="#f5f1e6"/><stop offset="1" stop-color="#7460a1"/></linearGradient></defs>
+<rect width="72" height="72" rx="8" fill="#111821"/>
+<rect x="3" y="3" width="66" height="66" rx="9" fill="url(#bg)" stroke="#7460a1" stroke-opacity=".55"/>
+<g transform="rotate(-18 36 36)" fill="none" stroke="#e9be85" stroke-opacity=".33"><circle cx="36" cy="36" r="29" stroke-dasharray="2 8"/><path d="M36 7V13 M36 59V65 M7 36H13 M59 36H65"/></g>
+<g fill="url(#metal)" stroke="#7460a1" stroke-width="1.2" stroke-linejoin="round"><path d="m36 8 10 19 18 9-18 10-10 19-10-19-18-10 18-9Z"/><circle cx="36" cy="36" r="7" fill="#2a263d"/></g>
+<text x="13" y="22" font-size="10" fill="#e9be85" fill-opacity=".7">✺</text></svg>

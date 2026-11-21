@@ -89,7 +89,19 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   }
 
   const base = moveId === 'grip' ? move.damage * dt : move.damage;
-  const damage = damageFor(attacker, move, base, { now, behind, sheltered }) * (1 - (defender.shopStats?.defense || 0));
+  // Deterministic critical rolls: server and prediction use identical ids, move and
+  // simulation time. There is no client-provided critical-hit flag or random seed.
+  let critical = false;
+  const chance = attacker.shopStats?.critChance || 0;
+  if (chance > 0 && (move.kind === 'attack' || move.kind === 'power') && base > 0) {
+    const salt = String(attacker.id) + '|' + String(defender.id) + '|' + moveId + '|' + Math.floor((now || 0) * 60 + 0.00001);
+    let hash = 2166136261;
+    for (let i = 0; i < salt.length; i++) hash = Math.imul(hash ^ salt.charCodeAt(i), 16777619) >>> 0;
+    critical = hash / 0x100000000 < chance;
+  }
+  const extraCritical = critical ? Math.max(0, .5 + (attacker.shopStats?.critSeverity || 0) - (defender.shopStats?.critDefense || 0)) : 0;
+  const defenseRate = (1 - (defender.shopStats?.defense || 0)) * (1 - (defender.shopStats?.tenacity || 0) * .25);
+  const damage = damageFor(attacker, move, base, { now, behind, sheltered }) * defenseRate * (1 + extraCritical);
   const defense = {
     vitals: defender.vitals,
     invulnerable: isInvulnerable(defender, now),
@@ -105,6 +117,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
     return { result, effects };
   }
   if (result.outcome === 'evaded' || result.outcome === 'ignored') return { result, effects };
+  if (critical && extraCritical > 0) effects.push({ type: 'critical', by: attacker.id, target: defender.id, multiplier: 1 + extraCritical });
   if (moveId === 'gripThrow' && defender.heldBy === attacker.id) defender.heldBy = null;
 
   // a strike that met its target spends an Empowered charge, draining Will; any hit ends a Veil Cloak

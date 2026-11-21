@@ -22,6 +22,7 @@ export const PROJECTILE_HEIGHT = 1.35;
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
 const GRAVITY = 18;
 export const AIR_DASH = Object.freeze({ doubleTapSeconds: 0.32, minTapSeconds: 0.055, minHeight: 0.12, distance: 4.5 });
+export const ACTIVE_RELIC = Object.freeze({ anchorWindow: 12, teleportCooldown: 28, stasisSeconds: 1.5, stasisCooldown: 35 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
 export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
@@ -100,6 +101,11 @@ export function step(world, dt, inputs = {}) {
   world.time += dt;
   const now = world.time;
   const effects = [];
+  // Expired anchors cannot be retrieved for free after their twelve-second window.
+  for (const f of world.fighters.values()) if (f.activeAnchorAt && f.activeAnchorAt.until <= now) {
+    f.activeAnchorAt = null;
+    f.activeRelicCooldownUntil = now + ACTIVE_RELIC.teleportCooldown;
+  }
   // 1. intent, facing and presses
   for (const [id, fighter] of world.fighters) {
     const body = world.bodies.get(id);
@@ -117,6 +123,11 @@ export function step(world, dt, inputs = {}) {
     const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
+      if (command === 'itemActive') {
+        activateItemRelic(world, fighter, body, now, effects);
+        continue;
+      }
+      if (now < (fighter.activeRelicUntil ?? -Infinity)) continue; // Stasis cannot attack, dodge or capture
       // An airborne Dash keypress is armed once; only a second, separate press within the
       // window can activate airDash. Packets cannot directly request '#airDash'.
       if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
@@ -334,6 +345,39 @@ function stepHeals(world, dt, now) {
   if (world.zones.length) world.zones = world.zones.filter((z) => z.until > now);
 }
 
+/** In-match only, item-gated, shared by the authoritative server and client prediction. */
+export function activateItemRelic(world, fighter, body, now, effects = []) {
+  if (!fighter || !body || fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy ||
+      now < (fighter.activeRelicUntil ?? -Infinity)) return { ok: false, reason: 'unavailable' };
+  const passive = fighter.shopStats?.passive || {};
+  if (passive.activeAnchor) {
+    if (fighter.activeAnchorAt && fighter.activeAnchorAt.until > now) {
+      const mark = fighter.activeAnchorAt;
+      body.x = mark.x; body.z = mark.z; body.y = 0; body.vy = 0; body.motion = null;
+      fighter.action = null; fighter.buffer = null;
+      fighter.activeAnchorAt = null;
+      fighter.activeRelicCooldownUntil = now + ACTIVE_RELIC.teleportCooldown;
+      effects.push({ type: 'relicTeleport', by: fighter.id, x: body.x, z: body.z });
+      return { ok: true, effect: 'teleport' };
+    }
+    if (now < (fighter.activeRelicCooldownUntil ?? -Infinity)) return { ok: false, reason: 'cooldown' };
+    if (fighter.action) return { ok: false, reason: 'busy' };
+    fighter.activeAnchorAt = { x: body.x, z: body.z, until: now + ACTIVE_RELIC.anchorWindow };
+    effects.push({ type: 'relicAnchor', by: fighter.id, until: fighter.activeAnchorAt.until });
+    return { ok: true, effect: 'anchor' };
+  }
+  if (passive.activeStasis) {
+    if (now < (fighter.activeRelicCooldownUntil ?? -Infinity)) return { ok: false, reason: 'cooldown' };
+    if (fighter.action) return { ok: false, reason: 'busy' };
+    fighter.guard = null;
+    fighter.activeRelicUntil = now + ACTIVE_RELIC.stasisSeconds;
+    fighter.activeRelicCooldownUntil = now + ACTIVE_RELIC.stasisCooldown;
+    effects.push({ type: 'relicStasis', by: fighter.id, until: fighter.activeRelicUntil });
+    return { ok: true, effect: 'stasis' };
+  }
+  return { ok: false, reason: 'no-active-relic' };
+}
+
 function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
   if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
@@ -352,6 +396,11 @@ function startMotion(body, fighter, id) {
 }
 
 function moveBody(world, fighter, body, dt, now) {
+  if (now < (fighter.activeRelicUntil ?? -Infinity)) {
+    body.speed = 0; body.moving = false; body.motion = null;
+    body.kx = 0; body.kz = 0; body.vy = 0;
+    return; // rooted and invulnerable until the relic ends
+  }
   let vx = 0;
   let vz = 0;
   const a = fighter.action;
