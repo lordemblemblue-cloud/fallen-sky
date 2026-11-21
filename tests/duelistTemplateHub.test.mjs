@@ -81,7 +81,7 @@ test('shared combat rules apply server-owned mastery to class abilities and ulti
   const f = (classId,level) => ({classId,level,matchBoost:0});
   assert.ok(moveFor(f('duelist',2),'pull').range > moveFor(f('duelist',1),'pull').range);
   assert.ok(moveFor(f('warrior',5),'rage').effectSeconds > moveFor(f('warrior',1),'rage').effectSeconds);
-  assert.ok(moveFor(f('duelist',5),'execution').reach > moveFor(f('duelist',1),'execution').reach);
+  assert.ok(moveFor(f('duelist',5),'execution').range > moveFor(f('duelist',1),'execution').range);
   const world = source('src/components/duelist/sim/world.mjs');
   assert.match(world, /evaluateSpecial\(\{ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level/);
   assert.match(source('src/components/duelist/sim/match.mjs'), /levelFromXp\(s.progress\?\.\[classId\]\)/);
