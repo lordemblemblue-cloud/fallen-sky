@@ -94,3 +94,43 @@ test('six distinct completed items contribute capped stats; all tiers refuse dup
   assert.ok(f.shopStats.power <= SHOP_RULES.statCaps.power);
   assert.ok(f.shopStats.passive.lifesteal <= .22);
 });
+
+import { equippedHudSlots, HUD_EQUIPMENT_SLOTS } from '../src/components/duelist/client/equippedHudItems.mjs';
+
+test('equipped item HUD always shows six horizontal slots, including placeholders', () => {
+  assert.equal(HUD_EQUIPMENT_SLOTS, 6);
+  assert.deepEqual(equippedHudSlots([]), [null, null, null, null, null, null]);
+  const owned = equippedHudSlots([{ id: 'heartseed', tier: 1 }, { id: 'windblossom', tier: 3 }]);
+  assert.equal(owned.length, 6);
+  assert.equal(owned[0].name, 'Heartseed');
+  assert.equal(owned[0].tier, 1);
+  assert.equal(owned[0].passive, null, 'a Tier I item does not advertise its locked passive as active');
+  assert.equal(owned[1].art, '/duelist/items/windblossom.svg');
+  assert.equal(owned[1].tier, 3);
+  assert.ok(owned[1].passive.includes('movement speed'));
+  assert.ok(owned.slice(2).every((slot) => slot === null));
+});
+
+test('equipped HUD rejects unknown or duplicated IDs and never constructs an untrusted art URL', () => {
+  const raw = [
+    { id: '../unsafe', tier: 3 }, { id: 'ironfang', tier: 2 },
+    { id: 'ironfang', tier: 3 }, { id: 'sentrylens', tier: 6 },
+    ...SHOP_ITEMS.slice(0, 8).map((item) => ({ id: item.id, tier: 3 })),
+  ];
+  const slots = equippedHudSlots(raw);
+  assert.equal(slots.length, 6);
+  assert.equal(slots[0].id, 'ironfang');
+  assert.equal(slots[0].tier, 2);
+  assert.equal(new Set(slots.filter(Boolean).map((slot) => slot.id)).size, 6);
+  assert.ok(slots.filter(Boolean).every((item) => item.art.startsWith('/duelist/items/') && !item.art.includes('..')));
+});
+
+test('battle HUD item row lives over the existing HP panel and keeps the responsive scale', () => {
+  const hud = readFileSync(new URL('../src/components/duelist/client/DuelistHud.jsx', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../src/components/duelist/client/duelistHud.css', import.meta.url), 'utf8');
+  assert.match(hud, /data-testid="duelist-equipped-items"/);
+  assert.match(hud, /items=\{view \? view\.me\?\.items \|\| \[\] : null\}/);
+  assert.match(css, /\.dh-equipped\s*\{[^}]*top:\s*-53px;[^}]*grid-template-columns:\s*repeat\(6,/);
+  assert.match(css, /\.dh-bl\s*\{[^}]*transform:\s*scale\(var\(--dh-s,/);
+  assert.match(css, /\.duelist-game\[data-hud='compact'\] \.dh-equipped/);
+});

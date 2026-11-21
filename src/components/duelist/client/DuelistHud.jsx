@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { BODIES } from './assets.mjs';
 import { CLASSES } from '../core/classes.mjs';
+import { equippedHudSlots } from './equippedHudItems.mjs';
 import { canPressAbility, healthNumbers, pointState, specialPercent } from './glassHud.mjs';
 import { FLAG_STATE_TEXT } from './hudFeed.mjs';
 import './duelistHud.css';
@@ -44,11 +45,12 @@ export function hudScale(width, height) {
 
 // ---- the universal HUD
 
-function Vitals({ you, fighter, classId, portrait, level, onClass }) {
+function Vitals({ you, fighter, classId, portrait, level, onClass, items = null }) {
   const cls = CLASSES[classId] || null;
   const ClassIcon = CLASS_ICONS[classId] || Sparkles;
   const hp = Math.max(0, Math.min(1, you.hp));
   const tone = you.dead ? 'dead' : hp > 0.5 ? 'high' : hp > 0.25 ? 'mid' : 'low';
+  const equipped = items === null ? null : equippedHudSlots(items);
   return (
     <section className="dh-anchor dh-bl" aria-label="Your fighter">
       <div className="dh-part dh-portrait">
@@ -57,6 +59,18 @@ function Vitals({ you, fighter, classId, portrait, level, onClass }) {
           title={level.capped ? `Level ${level.level}: this class is at its highest` : `Level ${level.level}: ${level.into} / ${level.need} EXP`}>{level.level}</span>
       </div>
       <div className="dh-part dh-vitals">
+        {equipped && <div className="dh-equipped" role="list" aria-label="Equipped items" data-testid="duelist-equipped-items">
+          {equipped.map((item, slot) => <div
+            key={slot} role="listitem" className="dh-equipped-slot"
+            data-filled={!!item} data-tier={item?.tier ?? 0}
+            aria-label={item ? `Slot ${slot + 1}: ${item.name}, Tier ${item.tier}` : `Slot ${slot + 1}: Empty`}
+            title={item ? `${item.name} · Tier ${item.tier}${item.passive ? ` · ${item.passive}` : ''}` : 'Empty item slot'}>
+            {item && <>
+              <img src={item.art} alt="" loading="lazy" draggable={false} />
+              <span className="dh-equipped-tier" aria-hidden="true">{item.tier}</span>
+            </>}
+          </div>)}
+        </div>}
         <button type="button" className="dh-class" onClick={onClass || undefined} disabled={!onClass} data-class={classId || 'none'}
           title={cls ? `${cls.name}: change class` : 'No class'} aria-label={cls ? `${cls.name}. Change class` : 'No class'}>
           <ClassIcon aria-hidden="true" />
@@ -330,7 +344,8 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
   const level = hud.level || { level: 1, into: 0, need: 100, progress: 0 };
   return (
     <div className="dh-root" ref={rootRef} data-testid="duelist-hud" data-mode={view?.mode || (story ? 'story' : 'none')}>
-      <Vitals you={hud.you} fighter={fighter} classId={hud.classId} portrait={portrait} level={level} onClass={onClass} />
+      <Vitals you={hud.you} fighter={fighter} classId={hud.classId} portrait={portrait} level={level} onClass={onClass}
+        items={view ? view.me?.items || [] : null} />
       <Special hud={hud} onPower={onPower} />
       <Skills hud={hud} onPower={onPower} />
       {view && !story && <Kills rows={hud.kills} count={view.me?.defeats ?? view.people?.find((p) => p.id === hud.meId)?.defeats} />}
