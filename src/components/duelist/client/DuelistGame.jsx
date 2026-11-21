@@ -4,6 +4,7 @@
 // with the same shape; this view draws whichever it is given.
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOVES, fighterVeil, isStunned } from '../core/index.mjs';
 import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
@@ -102,7 +103,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setStatus('loading');
     setHud(null);
     setNet(null);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+    const renderer = createSceneRenderer('duelist-adventure', { antialias: true, powerPreference: 'high-performance' }).renderer;
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;

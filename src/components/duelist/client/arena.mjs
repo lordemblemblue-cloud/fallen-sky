@@ -2,6 +2,8 @@
 // crystal pylons around it and a far skyline. Original; procedural (no textures to load).
 // Waves of Telekinesis light the floor's hex lines as they pass: arc(), from a body outward or inward.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { arenaFloorTwin } from './duelistNodes.mjs';
 
 export const FLOOR_VERTEX = /* glsl */`
   varying vec2 vXZ;
@@ -91,7 +93,7 @@ export function createArena({ radius = 18 } = {}) {
   const floorUniforms = { uRadius: { value: radius }, uTime: { value: 0 }, uBase: { value: new THREE.Color(0x0d1420) },
     uLine: { value: new THREE.Color(0x3fa7ff) }, uEdge: { value: new THREE.Color(0x7fe9ff) }, ...waves.uniforms };
   const floor = new THREE.Mesh(keep(new THREE.CircleGeometry(radius + 0.3, 96)),
-    keep(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: FLOOR_FRAGMENT, uniforms: floorUniforms })));
+    keep(setNodeTwin(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: FLOOR_FRAGMENT, uniforms: floorUniforms }), arenaFloorTwin)));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   group.add(floor);

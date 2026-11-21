@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 
 /**
@@ -15,7 +16,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
     if (!mount || typeof window === 'undefined') return undefined;
     let renderer;
     try {
-      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
+      renderer = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }).renderer;
     } catch {
       return undefined;
     }

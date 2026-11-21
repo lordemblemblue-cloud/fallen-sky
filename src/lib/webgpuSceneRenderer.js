@@ -18,6 +18,8 @@
  */
 import { WebGPURenderer, ShadowNode, NoToneMapping, LinearSRGBColorSpace, SRGBColorSpace, Color, FrontSide, BackSide, DoubleSide } from 'three/webgpu';
 import { texture, vec4 } from 'three/tsl';
+import { WebGLRenderer } from 'three';
+import { chooseSceneRendererFor, rememberRendererFailure } from './rendererBackendChoice.mjs';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
 import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
 import { pointSpriteFor, pointSpriteForTwin } from './webgpuPointSprites.js';
@@ -118,6 +120,8 @@ function installCompat(renderer) {
   const render = renderer.render;
   renderer.info.render.frame = 0;
   renderer.render = function sceneRender(scene, camera) {
+    // before init three only warns and renders later, a frame at a time: skip until it is ready
+    if (state.ready !== true) return undefined;
     state.shadowRefresh = needsUpdate;
     try {
       return render.call(this, scene, camera);
@@ -154,6 +158,22 @@ function installCompat(renderer) {
     const createAsync = device.createRenderPipelineAsync.bind(device);
     device.createRenderPipeline = (descriptor) => create(withPolygonOffset(descriptor));
     device.createRenderPipelineAsync = (descriptor) => createAsync(withPolygonOffset(descriptor));
+    // a shader that does not compile: say where (once per message); the pipeline note below names the material
+    const createShaderModule = device.createShaderModule.bind(device);
+    const reportedShaderErrors = new Set();
+    device.createShaderModule = (descriptor) => {
+      const module = createShaderModule(descriptor);
+      module.getCompilationInfo?.().then((info) => {
+        const errors = (info?.messages || []).filter((m) => m.type === 'error');
+        if (!errors.length) return;
+        const lines = String(descriptor?.code || '').split('\n');
+        const text = errors.slice(0, 3).map((e) => `${e.lineNum}:${e.linePos} ${e.message}\n    ${(lines[e.lineNum - 1] || '').trim()}`).join('\n');
+        if (reportedShaderErrors.has(text)) return;
+        reportedShaderErrors.add(text);
+        console.warn(`[webgpu] WGSL does not compile:\n${text}`);
+      }, () => {});
+      return module;
+    };
   };
   if (typeof backend.getRenderCacheKey === 'function' && backend.isWebGPUBackend) {
     const getRenderCacheKey = backend.getRenderCacheKey.bind(backend);
@@ -280,8 +300,21 @@ function installCompat(renderer) {
   library.fromMaterial = (material) => {
     const nodeMaterial = applyNodeSetups(material, fromMaterial(material));
     // the classic output order for converted classic materials (webgpuClassicOutput.js)
+    if (material?.isShadowMaterial && nodeMaterial) patchShadowMask(nodeMaterial);
     return material?.isNodeMaterial ? nodeMaterial : applyClassicOutput(material, nodeMaterial);
   };
+
+  // r171's ShadowMaterial multiplies its mask by every light's shadow, also by the missing one of a light that casts
+  // none (WGSL "shadowMask * null"): such a light leaves the mask as it is.
+  function patchShadowMask(nodeMaterial) {
+    const setupLightingModel = nodeMaterial.setupLightingModel.bind(nodeMaterial);
+    nodeMaterial.setupLightingModel = (builder) => {
+      const model = setupLightingModel(builder);
+      const direct = model?.direct?.bind(model);
+      if (direct) model.direct = (input, ...rest) => (input?.shadowMask == null ? undefined : direct(input, ...rest));
+      return model;
+    };
+  }
 
   // No final tone-mapping / colour-space pass (r171 draws the frame into a linear target and converts every pixel
   // at the end): each material finishes itself as in WebGL (webgpuClassicOutput.js). The renderer's toneMapping and
@@ -300,6 +333,7 @@ function installCompat(renderer) {
   const getClearColor = backend.getClearColor.bind(backend);
   backend.getClearColor = () => toOutputSpace(getClearColor());
   state.afterInit = () => {
+    if (backend.isWebGPUBackend) patchDevice(backend.device); // before any shader module or pipeline
     const background = renderer._background;
     if (background?.update) {
       const update = background.update.bind(background);
@@ -366,6 +400,27 @@ export function createWebGPUSceneRenderer({ canvas, antialias = true, alpha = fa
     else ready.then(run, () => {});
   };
   return { renderer, ready };
+}
+
+/**
+ * A page's renderer, by the same choice as the Game 3D world (rendererBackendChoice.mjs: the scene's readiness and the
+ * developer opt-in `?renderer=webgpu|webgl2|webgl`): the classic WebGLRenderer, or WebGPURenderer with this
+ * compatibility layer. `ready` resolves once it can draw (at once for WebGL); render() calls before that are
+ * skipped. A WebGPU start that fails is remembered for this tab, so the next start uses WebGL.
+ * @param {string} sceneId an id from webgpuSceneReadiness.mjs WEBGPU_SCENES
+ * @param {object} options WebGLRenderer options (canvas, antialias, alpha, powerPreference, preserveDrawingBuffer...)
+ */
+export function createSceneRenderer(sceneId, options = {}, host = globalThis.window) {
+  const choice = chooseSceneRendererFor(sceneId, host);
+  if (choice.kind === 'webgl') {
+    return { renderer: new WebGLRenderer(options), ready: Promise.resolve({ api: 'WebGL (classic)' }), kind: 'webgl', reason: choice.reason };
+  }
+  const { renderer, ready } = createWebGPUSceneRenderer({
+    canvas: options.canvas, antialias: options.antialias ?? true, alpha: options.alpha ?? false,
+    powerPreference: options.powerPreference ?? 'high-performance', forceWebGL: choice.kind === 'webgl2',
+  });
+  ready.catch((error) => { console.warn('[webgpu] renderer failed to start; WebGL next time:', error); rememberRendererFailure(host); });
+  return { renderer, ready, kind: choice.kind, reason: choice.reason };
 }
 
 /** What the GPU says about itself (WebGPU adapter info, or the WebGL2 fallback's unmasked renderer). */

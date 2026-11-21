@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import {buildMiniGameArena,disposeMiniGameArena} from './miniGameArena.mjs';
 
 // Separate lightweight preview canvas. Never modifies GameWorld3D's scene,
@@ -27,7 +28,7 @@ export default function MiniGameArenaPreview({gameId}){
       const canvas=document.createElement('canvas');
       canvas.setAttribute('aria-hidden','true');
       host.appendChild(canvas);
-      renderer=new THREE.WebGLRenderer({canvas,antialias:false,alpha:false});
+      renderer=createSceneRenderer('fallen-sky',{canvas,antialias:false,alpha:false}).renderer;
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
       renderer.setClearColor(0x081422,1);

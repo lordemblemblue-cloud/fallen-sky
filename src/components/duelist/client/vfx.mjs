@@ -9,6 +9,8 @@
 // flash their hexes, wounds spark red, blocks and parries spark white; a collapsing Veil shatters.
 // Pooled; nothing is allocated per frame except short-lived vectors.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { particlesTwin, vfxShellTwin, coneTwin, ribbonTwin } from './duelistNodes.mjs';
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
   wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });
@@ -49,6 +51,7 @@ function createParticles(scene, capacity = 2600) {
   geometry.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
   geometry.setAttribute('aAlpha', new THREE.BufferAttribute(alphas, 1));
   const material = new THREE.ShaderMaterial({ vertexShader: P_VERTEX, fragmentShader: P_FRAGMENT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  setNodeTwin(material, particlesTwin);
   const points = new THREE.Points(geometry, material);
   points.frustumCulled = false;
   scene.add(points);
@@ -122,6 +125,7 @@ function createShellPool(scene, size = 20) {
     const material = new THREE.ShaderMaterial({ vertexShader: SHELL_VERTEX, fragmentShader: SHELL_FRAGMENT, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending, uniforms: { uColor: { value: new THREE.Color() }, uAge: { value: 1 }, uOrigin: { value: new THREE.Vector3(0, 0, 1) },
         uRipple: { value: 0 }, uHex: { value: 0 }, uCore: { value: 0 } } });
+    setNodeTwin(material, vfxShellTwin);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.visible = false;
     mesh.frustumCulled = false;
@@ -194,6 +198,7 @@ function createConePool(scene, size = 4) {
     const material = new THREE.ShaderMaterial({ vertexShader: CONE_VERTEX, fragmentShader: CONE_FRAGMENT, transparent: true, depthWrite: false,
       side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
       uniforms: { uColor: { value: new THREE.Color(COLORS.telekinesis) }, uAge: { value: 1 }, uPull: { value: 0 }, uSeed: { value: 0 } } });
+    setNodeTwin(material, coneTwin);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.visible = false;
     mesh.frustumCulled = false;
@@ -264,6 +269,7 @@ function createTether(scene) {
     const material = new THREE.ShaderMaterial({ vertexShader: RIBBON_VERTEX, fragmentShader: RIBBON_FRAGMENT, transparent: true, depthWrite: false,
       side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
       uniforms: { uColor: { value: new THREE.Color(COLORS.telekinesis) }, uTime: { value: 0 }, uAlpha: { value: 1 } } });
+    setNodeTwin(material, ribbonTwin);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.visible = false;

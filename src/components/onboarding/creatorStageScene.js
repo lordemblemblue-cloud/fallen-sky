@@ -4,8 +4,10 @@
 // Customization (CC_ shapes, skin, hair and tattoo layers) goes through the shared
 // AvatarCustomizationRuntime, exactly as on every other body.
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../lib/webgpuSceneRenderer.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { PMREMGenerator as NodePMREMGenerator } from 'three/webgpu';
 import { AvatarCustomizationRuntime, inspectCustomization } from './customizationRuntime';
 import { prepareFusedCreatorGeometry } from './creatorModelQuality';
 import { featherFusedNeckTone } from './creatorNeckTone';
@@ -82,7 +84,7 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
   // The user can change this preference while the creator remains open.
   // Keep the stage's idle, blink and gaze behavior aligned immediately.
   let reduced = Boolean(motionQuery?.matches);
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+  const renderer = createSceneRenderer('fallen-sky', { antialias: true, alpha: true, powerPreference: 'high-performance' }).renderer;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -93,7 +95,8 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
+  // WebGPURenderer: three's node PMREM (it renders once the renderer has started)
+  const pmrem = renderer.isWebGPURenderer ? new NodePMREMGenerator(renderer) : new THREE.PMREMGenerator(renderer);
   const room = new RoomEnvironment();
   scene.environment = pmrem.fromScene(room, 0.04).texture;
   scene.environmentIntensity = 0.55;
@@ -292,7 +295,7 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     frame = requestAnimationFrame(tick);
     // A lost WebGL context (too many live canvases, a GPU reset) cannot draw until the browser restores it:
     // skip the frame rather than throw on every one of them.
-    if (renderer.getContext().isContextLost?.()) return;
+    if (renderer.getContext?.()?.isContextLost?.()) return;
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     const t = now / 1000;
     // framing

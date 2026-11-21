@@ -3,6 +3,8 @@
 // bases (a ring of light and a crystal plinth) and the flags (a crystal standard with a waving banner)
 // that sit at home, lie where they were dropped, or ride on the carrier's back.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { bannerTwin } from './duelistNodes.mjs';
 
 export const TEAM_COLORS = Object.freeze({ red: 0xff6f61, blue: 0x5fb4ff });
 const FFA_COLORS = [0xff8a7a, 0xffd36a, 0xa48bff, 0x7dffb0, 0xff7ad9, 0xc4ff6a, 0xffffff, 0x9fe8ff];
@@ -114,6 +116,7 @@ export function createCtfProps(scene, flags) {
     standard.add(cap);
     const bannerMaterial = keep(new THREE.ShaderMaterial({ vertexShader: BANNER_VERTEX, fragmentShader: BANNER_FRAGMENT, side: THREE.DoubleSide, transparent: true,
       uniforms: { uColor: { value: color.clone() }, uTime: { value: 0 } } }));
+    setNodeTwin(bannerMaterial, bannerTwin);
     const banner = new THREE.Mesh(keep(new THREE.PlaneGeometry(0.95, 0.6, 16, 4).translate(0.475, 0, 0)), bannerMaterial);
     banner.position.set(0.03, 1.95, 0);
     standard.add(banner);

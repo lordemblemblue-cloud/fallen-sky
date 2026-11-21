@@ -3,6 +3,7 @@
 // and foot sliding before they go into the game (and for previewing new bodies later).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOTION_CLIPS } from '../core/motionPack.data.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL, BODIES } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
@@ -31,7 +32,7 @@ export default function MotionLab() {
     const mount = mountRef.current;
     if (!mount) return undefined;
     let disposed = false;
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = createSceneRenderer('duelist-adventure', { antialias: true }).renderer;
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
