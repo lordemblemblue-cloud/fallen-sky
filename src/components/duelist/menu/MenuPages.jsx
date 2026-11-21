@@ -159,7 +159,7 @@ export function DuelistHub() {
                 data-selected={playlist === 'ranked'} aria-pressed={playlist === 'ranked'}
                 onClick={() => setPlaylist('ranked')}>
                 <Trophy aria-hidden="true" />
-                <span>RANKED</span>
+                <span>RANKED PLAY</span>
                 <small>Planned</small>
               </button>
               <Link to="/duelist-next/$page" params={{ page: 'practice' }} className="duelist-hub-category">
