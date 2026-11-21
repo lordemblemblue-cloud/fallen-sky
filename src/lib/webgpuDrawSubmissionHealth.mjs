@@ -4,13 +4,19 @@
  * Capture immediately after a render call, before any info.reset().
  */
 export function sampleDrawSubmission(renderer) {
-  const render = renderer?.info?.render;
+  // A renderer may be disposed or wrapped by a browser/diagnostics Proxy.
+  // Diagnostics must never turn a recoverable renderer failure into a crash.
   const read = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
-  return Object.freeze({
-    frame: read(render?.frame),
-    calls: read(render?.calls),
-    triangles: read(render?.triangles),
-  });
+  try {
+    const render = renderer?.info?.render;
+    return Object.freeze({
+      frame: read(render?.frame),
+      calls: read(render?.calls),
+      triangles: read(render?.triangles),
+    });
+  } catch {
+    return Object.freeze({ frame: null, calls: null, triangles: null });
+  }
 }
 
 /**
