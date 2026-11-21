@@ -12,6 +12,7 @@ import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
+import { cleanBoost } from './progression.mjs';
 
 // Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
 const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
@@ -28,13 +29,14 @@ const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id ===
  * seat owns it; sim/world.mjs reads it to allow a special and reports what one spent).
  */
 // level: the class's level (core/progression.mjs), which sets its abilities' rank and its special's tier
-export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1 } = {}) {
+export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
   return {
     id,
     team,
     weapon,
     classId: classById(classId) ? classId : null,
     level: Math.max(1, Math.floor(level) || 1),
+    matchBoost: cleanBoost(matchBoost),
     effects: {},
     meter: 0,
     vitals: createVitals(vitals || {}),

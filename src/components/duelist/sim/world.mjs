@@ -32,8 +32,8 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false, level = nu
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1 } = {}) {
-  const fighter = createFighter({ id, team, weapon, vitals, classId, level });
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
+  const fighter = createFighter({ id, team, weapon, vitals, classId, level, matchBoost });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
@@ -41,11 +41,12 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined } = {}) {
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
   const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
-    level: level === undefined ? old.level : level });
+    level: level === undefined ? old.level : level,
+    matchBoost: matchBoost === undefined ? old.matchBoost : matchBoost });
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
@@ -181,7 +182,7 @@ function trySpecial(world, fighter, body, now, effects) {
   const special = def.special;
   const move = moveFor(fighter, special.id); // at the tier the fighter's level gives it
   const reach = move.reach ?? special.reach;
-  const level = fighter.level;
+  const matchBoost = fighter.matchBoost;
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
   let target = null;
@@ -193,12 +194,12 @@ function trySpecial(world, fighter, body, now, effects) {
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
-      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level, target: { id: o.id, team: o.team,
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, target: { id: o.id, team: o.team,
         hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
       if (verdict.allowed) { target = o; break; }
     }
-    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
-  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
+  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
   const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
   if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
   if (fighter.action) { fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: special.id, at: now }); fighter.action = null; }

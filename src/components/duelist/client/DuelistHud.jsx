@@ -144,7 +144,7 @@ function Skills({ hud, onPower }) {
         <div className="dh-bar dh-bar-will" data-veil={veil} style={{ top: 22 }}><span>Will</span><b style={{ width: `${Math.max(0, Math.min(1, you.will)) * 100}%` }} /></div>
         <div className="dh-bar dh-bar-stamina" data-winded={!!you.winded} style={{ top: 44 }}><span>Stamina</span><b style={{ width: `${Math.max(0, Math.min(1, you.stamina)) * 100}%` }} /></div>
         <div className="dh-bar dh-bar-shield" style={{ top: 66 }}><span>Shield</span><b style={{ width: `${Math.max(0, Math.min(1, you.shield)) * 100}%` }} /></div>
-        <span className="dh-weapon">{weapon}</span>
+        <span className="dh-weapon">{weapon}{hud.classId ? ` · Boost ${hud.matchBoost ?? 0}/3` : ''}</span>
       </div>
     </section>
   );
