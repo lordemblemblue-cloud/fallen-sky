@@ -15,7 +15,7 @@ test('nearby auto-target is disabled by default and an explicit persisted user c
 
 test('camera releases automatic targets when the user disables nearby auto-lock', () => {
   const camera = read('src/components/game3d/player/PlayerCameraSystem.jsx');
-  assert.match(camera, /const disabled=!global\|\|!isAXEAutoTargetNearbyEnabled\(\)\|\|/);
+  assert.match(camera, /const disabled=!global\|\|[\s\S]*?!isAXEAutoTargetNearbyEnabled\(\)\|\|/);
   assert.match(camera, /if\(disabled\)\{[\s\S]*?if\(current\?\.autoAcquired\)release\(current\)/);
   assert.match(camera, /else if\(current\)\{[\s\S]*?user-selected enemy or player/);
 });
@@ -26,5 +26,5 @@ test('controls allow explicit opt-in and preserve manual middle-click lock-on', 
   assert.match(menu, /label="Automatically lock nearby enemies" checked=\{controls\.autoTargetNearby\}/);
   assert.match(menu, /setAXEAutoTargetNearbyEnabled\(!controls\.autoTargetNearby\)/);
   assert.match(world, /handleMiddleClick\(\{ event: e, renderer, camera/);
-  assert.match(world, /lockOnTargetRef\.current = target/);
+  assert.match(world, /lockOnTargetRef\.current=toggledOff\?null:target/);
 });
