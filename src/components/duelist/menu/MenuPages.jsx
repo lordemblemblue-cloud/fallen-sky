@@ -16,6 +16,7 @@ import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
 import './duelistHub.css';
 import './duelistMenuTheme.css';
 import './duelistOpenGlass.css';
+import './duelistUnifiedVisual.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
@@ -139,7 +140,7 @@ export function DuelistHub() {
           <div className="duelist-hub-overlay-head">
             <div>
               <span className="duelist-hub-eyebrow">PLAY</span>
-              <h2>Select mode</h2>
+              <h2>Choose your game mode</h2>
               <p className="duelist-menu-note">Choose a battle, then enter practice or an available online match.</p>
             </div>
             <button type="button" className="duelist-hub-small-button"
@@ -152,14 +153,20 @@ export function DuelistHub() {
                 data-selected={playlist === 'normal'} aria-pressed={playlist === 'normal'}
                 onClick={() => setPlaylist('normal')}>
                 <Users aria-hidden="true" />
-                <span>NORMAL PLAY</span>
+                <span>CASUAL</span>
               </button>
               <button type="button" className="duelist-hub-category"
                 data-selected={playlist === 'ranked'} aria-pressed={playlist === 'ranked'}
                 onClick={() => setPlaylist('ranked')}>
                 <Trophy aria-hidden="true" />
-                <span>RANKED PLAY</span>
+                <span>RANKED</span>
                 <small>Planned</small>
+              </button>
+              <Link to="/duelist-next/$page" params={{ page: 'practice' }} className="duelist-hub-category">
+                <Shield aria-hidden="true" /><span>TRAINING</span>
+              </Link>
+              <button type="button" className="duelist-hub-category" disabled title="Custom lobbies are planned">
+                <Settings aria-hidden="true" /><span>CUSTOM</span><small>Planned</small>
               </button>
             </div>
 
@@ -169,7 +176,7 @@ export function DuelistHub() {
                 {visibleModes.map(mode => {
                   const Icon = HUB_GLYPHS[mode.symbol] || Target;
                   return (
-                    <button key={mode.id} type="button" className="duelist-hub-mode"
+                    <button key={mode.id} type="button" className="duelist-hub-mode" data-mode={mode.id}
                       data-selected={selectedMode === mode.id} aria-pressed={selectedMode === mode.id}
                       onClick={() => setSelectedMode(mode.id)}>
                       <Icon aria-hidden="true" />
