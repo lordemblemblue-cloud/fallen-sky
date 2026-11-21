@@ -12,12 +12,25 @@ export function resolveWorldPvpZone({region,position,privateArea=false}={}){
   // their surrounding wilderness allows opt-in combat.
   if(privateArea)return safe('private-home','Private residence · PvE');
   if(region!=='wolfveil')return safe('instanced-adventure','Protected adventure · PvE');
-  const area=wolfveilAreaAtWorld(position);
+  return wolfveilAreaZone(wolfveilAreaAtWorld(position));
+}
+function wolfveilAreaZone(area){
   if(!area)return safe('unknown-position','Protected · PvE');
   if(area==='town')return safe('wolfveil-town','Wolfveil Town · PvE');
   if(WOLFVEIL_PVP_AREAS.includes(area))
     return optIn('wolfveil-'+area,area[0].toUpperCase()+area.slice(1)+' Wilds · Optional PvP');
   return safe('unmapped-area','Protected · PvE');
+}
+/**
+ * Client HUD only (the server keeps resolving trusted positions above): in
+ * portal-scene play the player is in the Wolfveil area scene that is loaded,
+ * `area`, until they go through a gate. Its status is shown, so standing at a
+ * gate cannot flip it on every step across the border line.
+ */
+export function resolveWorldPvpSceneZone({region,area=null,position,privateArea=false}={}){
+  const known=area==='town'||WOLFVEIL_PVP_AREAS.includes(area);
+  if(privateArea||region!=='wolfveil'||!known)return resolveWorldPvpZone({region,position,privateArea});
+  return wolfveilAreaZone(area);
 }
 
 export function canWorldPvpAttack({attacker,defender,attackerZone,defenderZone}={}){

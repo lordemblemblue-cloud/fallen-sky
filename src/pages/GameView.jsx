@@ -316,8 +316,11 @@ export default function GameView() {
         // Do not keep it mounted invisibly behind the destination area.
         setPortalReturn(false);
         setPortalSpawnAtGate(false);
+        // A rider who went through a gate arrives riding, facing on.
         setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
-          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0,
+          heading:Number.isFinite(landing.heading)?landing.heading:null,
+          mounted:landing.mounted===true});
         lastWolfveilAreaRef.current=detail.area;
         setWorldArea(detail.area);
         return;
@@ -741,7 +744,8 @@ export default function GameView() {
       {/* Server-verified faction call-to-arms below the live minimap. Disabled
           until rank-authorized faction announcements are available. */}
       <WorldAnnouncementFeed suppressed={services.active || services.expanded} />
-      <WorldPvpControl region={worldRegion} suppressed={services.active || services.expanded} />
+      <WorldPvpControl region={worldRegion} area={worldRegion==='wolfveil'?worldArea:null}
+        suppressed={services.active || services.expanded} />
       <FactionAnnouncementTicker />
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
