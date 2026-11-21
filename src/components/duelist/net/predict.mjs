@@ -114,6 +114,8 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shown.weapon = fighter.weapon;
       shown.level = fighter.level;
       shown.matchBoost = fighter.matchBoost;
+      shown.items = fighter.items;
+      shown.shopStats = fighter.shopStats;
       shown.cooldowns = Object.fromEntries(Object.entries(fighter.cooldowns).map(([move, until]) => [move, until + shift]));
       shown.guard = fighter.guard ? { since: fighter.guard.since + shift } : null;
       shown.stunnedUntil = fighter.stunnedUntil + shift;

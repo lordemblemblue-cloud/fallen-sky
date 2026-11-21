@@ -99,6 +99,7 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
 export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   let wantedClass = classId;
   let classAnswer = null; // the server's last answer: { ok, pending, reason }
+  let shopAnswer = null;
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
@@ -260,6 +261,10 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     } else if (msg.t === 'class') {
       classAnswer = { ok: !!msg.ok, pending: msg.pending || null, reason: msg.reason || null };
       onChange(status, null);
+    } else if (msg.t === 'shop') {
+      shopAnswer = msg;
+      if (msg.ok && view?.me) view = { ...view, me: { ...view.me, gold: msg.gold, items: msg.items } };
+      onChange(status, null);
     } else if (msg.t === 'error') setStatus('error', msg.message);
     else if (msg.t === 'left') { seat = null; forget(); setStatus('closed', 'You left the match.'); }
   }
@@ -318,11 +323,16 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     get seatsVersion() { return seatsVersion; },
     /** The server's answer to the last class change: { ok, pending, reason } or null. */
     get classAnswer() { return classAnswer; },
+    get shopAnswer() { return shopAnswer; },
     /** Change class: the server queues it for the next spawn (before the fight, between rounds or while down). */
     chooseClass(id) {
       wantedClass = id;
       classAnswer = null;
       if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'class', id }));
+    },
+    buyItem(id) {
+      shopAnswer = null;
+      if (!story && typeof id === 'string' && ws?.readyState === 1) send({ t: 'shop', id });
     },
     seats: () => seats,
     view: () => view,

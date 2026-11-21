@@ -28,7 +28,7 @@
 import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass } from '../../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass, purchaseMatchItem } from '../../src/components/duelist/sim/match.mjs';
 import { createProgressStore } from './progress.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
@@ -590,6 +590,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         const res = queueMatchClass(client.room.match, client.id, msg.id);
         if (res.accepted) client.classId = msg.id;
         send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
+      } else if (msg.t === 'shop') {
+        // The client can only request an item ID. Match rules validate every coin,
+        // tier, loadout slot and eligibility; story missions have no item shop.
+        if (!client.room?.match || typeof msg.id !== 'string' || msg.id.length > 48) {
+          send(client, { t: 'shop', ok: false, reason: 'no-match' }); return;
+        }
+        const result = purchaseMatchItem(client.room.match, client.id, msg.id);
+        send(client, { t: 'shop', ...result });
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {
