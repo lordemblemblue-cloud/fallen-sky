@@ -16,7 +16,7 @@ function memoryStorage() {
   };
 }
 
-test('explicit preview choice persists across both games, but does not change default readiness', () => {
+test('explicit preview choice persists across both games, but does not change the measured default', () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();
   const host = { location: { search: '?renderer=webgpu' }, localStorage, sessionStorage };
@@ -25,11 +25,12 @@ test('explicit preview choice persists across both games, but does not change de
 
   host.location.search = '';
   assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgpu', reason: 'override' });
+  // back to the default: without this device's faster-WebGPU verdict, the classic renderer
   host.location.search = '?renderer=auto';
-  assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgl', reason: 'scene-not-ready' });
+  assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgl', reason: 'device-not-measured' });
   assert.equal(localStorage.getItem(RENDERER_OVERRIDE_KEY), null);
   host.location.search = '';
-  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), { kind: 'webgl', reason: 'scene-not-ready' });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), { kind: 'webgl', reason: 'device-not-measured' });
 });
 
 test('a failed WebGPU device overrides persisted preview preference in either scene', () => {

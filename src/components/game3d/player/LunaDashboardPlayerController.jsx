@@ -7,8 +7,9 @@ import {EIGHT_WAY_DODGE_MOVES,SIDE_ROLL_VARIANTS,getEightWayDodgeMove} from './g
 import {dodgeTravelStep} from './dodgeMoves.js';
 import {DODGE_VARIANT_MOVES,dodgeMoveCandidates,pickDodgeMove} from './game3dDodgeProfiles.mjs';
 import {SWIM,SWIM_STATES} from './playerSwimState.mjs';
-import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, BOW_POSE_STATES, weaponIdleState, findComboBones } from '../weapons/weaponComboClips.js';
+import { WEAPON_COMBO_STATES, WEAPON_IDLE_STATES, BOW_POSE_STATES, CHARGE_STATE_FOR_KIND, weaponIdleState, findComboBones } from '../weapons/weaponComboClips.js';
 import { createLocomotionUnderlay } from './locomotionUnderlay.js';
+import { HOLD_CHARGE, chargeWindUpSpeed } from '../combat/HoldChargeRules.mjs';
 import {
   createAirWalkState,deployAirWalkGlide,beginAirWalkBoost,
   beginAirWalkFinisher,setAirWalkKickHeld,
@@ -186,6 +187,17 @@ export function createLunaDashboardPlayerController({
   let bowDrawn = false; // the draw reached full draw since the aim began (or since the last shot)
   let bowLowerAt = null; // the aim was let go while drawn: the draw waits until then for the shot
   let pendingShots = 0; // further arrows waiting behind the queued shot: each plays its own shot
+  // Hold to charge (owner 2026-11-19, combat/HoldChargeRules.mjs): a basic swing whose button is still down at its
+  // wind-up waits there; held past HOLD_CHARGE.engageMs it turns into its family's charge move, whose wind-up plays
+  // in slow motion until the button is let go, then the strike plays faster. Presentation only: the world decides
+  // the damage from getSwingCharge(serial) when the swing lands.
+  let hold = null; // { serial, pressedAt, releasedAt, engaged } of the swing on screen
+  let bowDrawStartedAt = null; // when the bow's draw on screen started (its slow, charging draw)
+  const swingCharges = new Map(); // serial -> { heldMs, engaged }: how each held swing ended (the latest few)
+  const noteSwingCharge = (serial, heldMs, engaged) => {
+    swingCharges.set(serial, { heldMs, engaged });
+    while (swingCharges.size > 8) swingCharges.delete(swingCharges.keys().next().value);
+  };
 
   const ATTACK_STATES = new Set([
     STATES.DRAW_ARROW, STATES.MELEE_ATTACK, STATES.MELEE_COMBO_2,
@@ -234,9 +246,72 @@ export function createLunaDashboardPlayerController({
     busyResetAt = at + duration;
     if (oneShotRef) oneShotRef.current = true;
     comboChain = { kind, index, until: at + duration + WEAPON_COMBO_CHAIN_GRACE_SECONDS };
-    activeCombo = { state, kind, index, sweepSent: false, hitSent: false, serial };
+    activeCombo = { state, kind, index, sweepSent: false, hitSent: false, serial, speed };
     lastSwingSerial = serial;
+    // a press still held: the swing may become a charge (only basic swings with a charge move of their own)
+    hold = config.hold && hasAction(CHARGE_STATE_FOR_KIND[kind]) && Number.isFinite(actions[state].getClip().userData?.windUp)
+      ? { serial, pressedAt: Number.isFinite(config.pressedAt) ? config.pressedAt : at,
+        releasedAt: Number.isFinite(config.releasedAt) ? config.releasedAt : null, engaged: false }
+      : null;
+    if (hold && hold.releasedAt !== null) { noteSwingCharge(serial, (hold.releasedAt - hold.pressedAt) * 1000, false); hold = null; }
     return true;
+  };
+  // The held swing turns into its family's charge move, from where that move's slow wind-up starts.
+  const engageCharge = () => {
+    const chargeState = CHARGE_STATE_FOR_KIND[activeCombo.kind];
+    const from = actions[chargeState]?.getClip().userData?.chargeFrom ?? 0;
+    const { kind, index, serial, speed } = activeCombo;
+    if (!playState(chargeState, { force: true, fade: 0.12, timeScale: speed, startAt: from })) { hold = null; return; }
+    activeCombo = { state: chargeState, kind, index, sweepSent: false, hitSent: false, serial, speed };
+    hold.engaged = true;
+    busyResetAt = 0; // a charge lasts as long as it is held: it ends with its clip
+    comboChain = { kind: null, index: -1, until: -Infinity }; // a charged strike ends the chain
+  };
+  // Once a frame, before the mixer: the held swing's speed (see `hold`).
+  // delta: the frame the mixer is about to play. While the button is down no frame, however long (the game's delta is
+  // not clamped: a first swing that loads its effects can take a second), carries the swing past its wind-up or the
+  // coil past its peak.
+  const updateHoldCharge = (delta = 0) => {
+    const swing = comboAction();
+    if (!hold) return;
+    if (!swing || activeCombo.serial !== hold.serial) { hold = null; return; } // cut short (dodge, hit, death)
+    const userData = swing.getClip().userData || {};
+    const speed = activeCombo.speed || 1;
+    const held = hold.releasedAt === null;
+    const heldMs = ((held ? now() : hold.releasedAt) - hold.pressedAt) * 1000;
+    const t = swing.time;
+    const hit = Number.isFinite(userData.hit) ? userData.hit : swing.getClip().duration;
+    const upTo = (stop, scale) => (held && delta > 0 ? Math.min(scale, Math.max(0, stop - t) / (delta * speed)) : scale);
+    if (!hold.engaged) {
+      if (held && heldMs >= HOLD_CHARGE.engageMs && t < hit) { // the charge, coiling from this very frame
+        engageCharge();
+        if (hold?.engaged) updateHoldCharge(delta);
+        return;
+      }
+      // still deciding: the swing waits at its wind-up while the button is down; a click plays straight through
+      const waiting = held && t >= userData.windUp - 1e-4;
+      swing.setEffectiveTimeScale(waiting ? 0 : speed * upTo(userData.windUp, 1));
+      busyResetAt = waiting ? 0 : busyResetAt || now() + Math.max(0.01, swing.getClip().duration - t) / speed;
+      if (!held) hold = null;
+      return;
+    }
+    const from = userData.chargeFrom ?? 0;
+    const peak = Number.isFinite(userData.charge) ? userData.charge : hit;
+    let scale = 1;
+    if (held) scale = upTo(peak, t < from ? 1 : t < peak - 1e-4 ? chargeWindUpSpeed(peak - t, heldMs) : 0); // coil slowly, then hold it
+    else if (t < hit) scale = HOLD_CHARGE.releaseSpeed; // let go: the strike, faster
+    swing.setEffectiveTimeScale(speed * scale);
+    if (!held && t >= hit) hold = null; // landed: the recovery plays at its own speed
+  };
+  // The attack button let go: ends the hold on the swing on screen (or on the press still waiting to swing).
+  const releaseCharge = () => {
+    const at = now();
+    if (queuedCombo?.config?.hold && !Number.isFinite(queuedCombo.config.releasedAt)) queuedCombo.config.releasedAt = at;
+    if (!hold || hold.releasedAt !== null) return null;
+    hold.releasedAt = at;
+    const heldMs = (at - hold.pressedAt) * 1000;
+    noteSwingCharge(hold.serial, heldMs, hold.engaged);
+    return { serial: hold.serial, heldMs, engaged: hold.engaged };
   };
   // null: no combo clips for this kind (the caller falls back to the regular attack montage)
   const requestWeaponCombo = (kind, config) => {
@@ -253,7 +328,7 @@ export function createLunaDashboardPlayerController({
           lastSwingSerial = ++swingSerial;
           return true;
         }
-        queuedCombo = { kind, config, at, from: currentState, serial: ++swingSerial };
+        queuedCombo = { kind, config: { ...config }, at, from: currentState, serial: ++swingSerial };
         lastSwingSerial = queuedCombo.serial;
         return true;
       }
@@ -344,6 +419,7 @@ export function createLunaDashboardPlayerController({
       if (Number.isFinite(nock)) startAt = nock;
     }
     if (UPPER_BODY_STATES.has(state)) lastMontageClip = nextAction.getClip();
+    if (state === BOW_DRAW) bowDrawStartedAt = now(); // the bow's charge starts with the draw
     if (![STATES.IDLE, STATES.AFK, 'idleArmed', ...WEAPON_IDLE_STATES, ...PLAYER_IDLE_VARIANTS].includes(state)) idleStartedAt = null;
     // Two semantic states can share a fallback clip. Changing the state must
     // not rewind that action or crossfade it against itself.
@@ -578,6 +654,7 @@ export function createLunaDashboardPlayerController({
     const available = hasAction(state) ? state : PLAYER_DEATH_ACTIONS.find(hasAction);
     queuedCombo = null;
     pendingShots = 0;
+    hold = null;
     isBusy = false;
     bowAttackAllowsMovement = false;
     busyResetAt = 0;
@@ -628,13 +705,17 @@ export function createLunaDashboardPlayerController({
     queuedCombo = null;
     activeCombo = null;
     comboChain = { kind: null, index: -1, until: -Infinity };
-    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0;
+    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0; hold = null;
     if (oneShotRef) oneShotRef.current = false;
     handleMovement({ moving: false, running: false, aiming: false, blocking: false });
     return true;
   };
 
   const startSpecialMove = (state, directionVector, speed, duration = ONE_SHOT_DURATION[state]) => {
+    // a dodge cancels a swing whose button is still held (a charge, or a press waiting at its wind-up): it lands nothing
+    if (isBusy && hold && hold.releasedAt === null && comboAction() && hasAction(state) && !isDead && !isMounted) {
+      hold = null; activeCombo = null; queuedCombo = null; isBusy = false; busyResetAt = 0;
+    }
     if (isDead || isMounted || isSwimming || isBusy || !hasAction(state)) return false;
     const dir = directionVector?.clone?.() || new THREE.Vector3(0, 0, -1);
     if (dir.lengthSq() === 0) dir.set(0, 0, -1);
@@ -996,6 +1077,14 @@ export function createLunaDashboardPlayerController({
       bowDrawn = true;
       if (!isBusy) handleMovement(lastMovement);
     }
+    // the charge (owner 2026-11-19): past the nock the string comes back slowly, reaching full draw just as the shot
+    // is fully charged (HOLD_CHARGE.fullMs, the bow's 100 %); a draw that had already started stays where it is
+    if (currentState === BOW_DRAW && draw && bowDrawStartedAt !== null && !bowDrawn) {
+      const userData = draw.getClip().userData || {};
+      const full = Number.isFinite(userData.full) ? userData.full : draw.getClip().duration;
+      draw.setEffectiveTimeScale(draw.time < (userData.nock ?? 0) ? 1
+        : chargeWindUpSpeed(full - draw.time, (now() - bowDrawStartedAt) * 1000));
+    }
     if (bowLowerAt !== null && now() >= bowLowerAt) {
       bowLowerAt = null;
       if (currentState === BOW_DRAW || currentState === BOW_HOLD) { bowDrawn = false; if (!isBusy) handleMovement(lastMovement); }
@@ -1088,7 +1177,7 @@ export function createLunaDashboardPlayerController({
       jumpOffset = 0; jumpVelocity = 0; jumpPhase = null; jumpPhaseSeconds = 0;
       specialMoveTimer = 0; specialMoveVelocity = null; travelMove = null;
       externallyAirborne = false; resetAirWalk();
-      queuedCombo = null; activeCombo = null;
+      queuedCombo = null; activeCombo = null; hold = null; // a charge held into the water lands nothing
       if (oneShotRef) oneShotRef.current = false;
     }
     previousMoving = false;
@@ -1123,7 +1212,7 @@ export function createLunaDashboardPlayerController({
     idleStartedAt = null;
     queuedCombo = null;
     activeCombo = null;
-    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0;
+    bowDrawn = false; bowLowerAt = null; legsBlend = 0; bowCarry = 0; pendingShots = 0; hold = null;
     if (oneShotRef) oneShotRef.current = false;
     if (!isMounted) handleMovement(lastMovement);
   };
@@ -1184,7 +1273,7 @@ export function createLunaDashboardPlayerController({
     getIsSwimming: () => isSwimming,
     updateActionState: handleMovement,
     updateMotion,
-    updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
+    updateAnimation: (delta = 0) => { pumpWeaponCombo(); updateHoldCharge(Math.max(0, Number(delta) || 0)); updateBowDraw(); advanceBlend(mixer.time + Math.max(0, Number(delta) || 0)); },
     // after mixer.update: the legs under a montage and the bow carried while running
     lateUpdate,
     // true while the bow is drawn (the arrow nocked and the string pulled), false otherwise; null without a bow
@@ -1208,6 +1297,12 @@ export function createLunaDashboardPlayerController({
     pollComboEvents,
     // the number of the swing the latest accepted combo press will play (started now or buffered)
     getLastSwingSerial: () => lastSwingSerial,
+    // hold to charge: the attack button let go; how a held swing ended (the world lands its damage with it); the
+    // charge on screen (for the HUD)
+    releaseCharge,
+    getSwingCharge: (serial) => swingCharges.get(serial) || null,
+    getHoldCharge: () => (hold ? { serial: hold.serial, held: hold.releasedAt === null, engaged: hold.engaged,
+      heldMs: ((hold.releasedAt ?? now()) - hold.pressedAt) * 1000 } : null),
     getCurrent: () => isMounted ? 'mounted' : currentState || STATES.IDLE,
     getIsAiming: () => isAiming,
     getIsBlocking: () => isBlocking,

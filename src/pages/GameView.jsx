@@ -99,6 +99,7 @@ import {
 } from '../components/game3d/combatMusicController';
 import {createGame3DEntryAudio}
   from '../components/game3d/audio/Game3DEntryAudio.mjs';
+import { scheduleRendererProbe } from '@/lib/webgpuDeviceProbe.js';
 
 export default function GameView() {
   const navigate = useNavigate();
@@ -247,6 +248,8 @@ export default function GameView() {
   },[phase]);
   useEffect(()=>{entryAudioRef.current?.setRegion(worldRegion);},[worldRegion]);
   useEffect(()=>{if(phase==='login')teardownCombatMusic();},[phase]);
+  // once per browser build: is WebGPU at least as fast as WebGL here? (the renderer default from the next start)
+  useEffect(()=>{scheduleRendererProbe(window);},[]);
   // Returning to character selection must not carry an open in-world panel back
   // into the next world entry. Services, Character, the store, friends, clan and
   // the pause menu all keep the game's input flags set, so the re-entered world

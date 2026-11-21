@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import { COMPANION_GEAR, getCompanionById, createCompanionLoadingManager } from '../companionData';
@@ -30,7 +31,7 @@ export default function CompanionPreview3D({ companionId = null }) {
     const scene = new THREE.Scene();
     scene.background = null;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = createSceneRenderer('fallen-sky', { antialias: true, alpha: true }).renderer;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
