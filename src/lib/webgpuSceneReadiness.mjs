@@ -1,8 +1,7 @@
 /**
  * Fail-closed readiness policy for the two live games.
- * A scene may be marked ready only after shader/effects parity and browser QA. Ready is still not "WebGPU for
- * everyone": a ready scene defaults to WebGPU only on a device where it measured at least as fast as the classic
- * renderer (rendererBackendChoice.mjs + webgpuDeviceVerdict.mjs); everywhere else the classic renderer stays.
+ * A scene may be marked ready only after shader/effects parity and browser QA. A ready scene runs on WebGPU
+ * wherever the browser offers it (rendererBackendChoice.mjs); browsers without WebGPU keep the classic renderer.
  *
  * `preview: true` lets a developer opt a scene in explicitly (`?renderer=webgpu`, see
  * rendererBackendChoice.mjs); it never changes the default.
