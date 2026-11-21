@@ -4,6 +4,9 @@
 export const SHOP_STATS = Object.freeze(['power', 'defense', 'ability', 'health', 'tenacity']);
 export const SHOP_RULES = Object.freeze({
   slots: 6, startingGold: 300, passiveGoldPerSecond: 5, eliminationGold: 100,
+  // Each item's listed cost is its total Tier III price. Buying an upgrade pays only
+  // the delta. Tier I: 25%, Tier II: 60%, Tier III: 100% and unlocks its passive.
+  tierShares: Object.freeze([0, 0.25, 0.60, 1]),
   assistGold: 50, objectiveGold: 120, goldCap: 9999,
   statCaps: Object.freeze({ power: 0.45, defense: 0.32, ability: 0.42, health: 160, tenacity: 0.45 }),
 });
@@ -77,6 +80,11 @@ export const SHOP_ITEMS = Object.freeze([
 
 const byId = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
 export const shopItem = (id) => typeof id === 'string' ? byId.get(id) || null : null;
+export const ownedItem = (entry) => typeof entry === 'string' ? { id: entry, tier: 3 }
+  : entry && typeof entry.id === 'string' && Number.isInteger(entry.tier) && entry.tier >= 1 && entry.tier <= 3
+    ? { id: entry.id, tier: entry.tier } : null;
+export const tierPrice = (item, tier) => item && Number.isInteger(tier) && tier >= 1 && tier <= 3
+  ? Math.round(item.cost * SHOP_RULES.tierShares[tier]) : 0;
 const zero = () => ({ power: 0, defense: 0, ability: 0, health: 0, tenacity: 0 });
 const passivesZero = () => ({
   lifesteal: 0, onKillShield: 0, haste: 0, regen: 0, knockbackResist: 0,
@@ -89,11 +97,15 @@ export function itemBonuses(itemIds = []) {
   const stats = zero();
   const passive = passivesZero();
   const unique = new Set();
-  for (const id of Array.isArray(itemIds) ? itemIds.slice(0, SHOP_RULES.slots) : []) {
-    const item = shopItem(id);
-    if (!item || unique.has(id)) continue;
-    unique.add(id);
-    for (const stat of SHOP_STATS) stats[stat] += item.stats[stat] || 0;
+  for (const raw of Array.isArray(itemIds) ? itemIds.slice(0, SHOP_RULES.slots) : []) {
+    const owned = ownedItem(raw);
+    const item = owned && shopItem(owned.id);
+    if (!item || unique.has(owned.id)) continue;
+    unique.add(owned.id);
+    const share = SHOP_RULES.tierShares[owned.tier];
+    for (const stat of SHOP_STATS) stats[stat] += (item.stats[stat] || 0) * share;
+    // Passives activate at Tier III only. Neither shop perks nor gold are persistent.
+    if (owned.tier < 3) continue;
     if (item.passive.type === 'retaliation') {
       // Retaliation relics do not stack: equip the strongest one only.
       if (!passive.retaliation || item.passive.amount > passive.retaliation.amount)
@@ -124,7 +136,12 @@ export function itemBonuses(itemIds = []) {
 }
 /** Server-owned equip operation; health stays healthy when the maximum grows. */
 export function equipItems(fighter, ids) {
-  const nextIds = Array.isArray(ids) ? ids.filter((id, i, a) => shopItem(id) && a.indexOf(id) === i).slice(0, SHOP_RULES.slots) : [];
+  const nextIds = [];
+  for (const entry of Array.isArray(ids) ? ids : []) {
+    const owned = ownedItem(entry);
+    if (owned && shopItem(owned.id) && !nextIds.some((x) => x.id === owned.id)) nextIds.push(owned);
+    if (nextIds.length >= SHOP_RULES.slots) break;
+  }
   const next = itemBonuses(nextIds);
   const previousHealth = fighter.shopStats?.health || 0;
   fighter.items = nextIds;
@@ -141,8 +158,13 @@ export function purchaseRule({ gold, items, id, allowed = true } = {}) {
   if (!found) return { ok: false, reason: 'unknown-item' };
   if (!allowed) return { ok: false, reason: 'shop-at-spawn' };
   if (!Array.isArray(items)) return { ok: false, reason: 'invalid-loadout' };
-  if (items.includes(id)) return { ok: false, reason: 'already-owned' };
-  if (items.length >= SHOP_RULES.slots) return { ok: false, reason: 'inventory-full' };
-  if (!Number.isFinite(gold) || gold < found.cost - 1e-7) return { ok: false, reason: 'not-enough-gold' };
-  return { ok: true, item: found };
+  const previous = items.map(ownedItem).find((x) => x?.id === id);
+  if (previous?.tier === 3) return { ok: false, reason: 'fully-upgraded' };
+  if (!previous && items.length >= SHOP_RULES.slots) return { ok: false, reason: 'inventory-full' };
+  const tier = previous ? previous.tier + 1 : 1;
+  const cost = tierPrice(found, tier) - (previous ? tierPrice(found, previous.tier) : 0);
+  if (!Number.isFinite(gold) || gold < cost - 1e-7) return { ok: false, reason: 'not-enough-gold', cost };
+  return { ok: true, item: found, tier, cost,
+    items: previous ? items.map((raw) => ownedItem(raw)?.id === id ? { id, tier } : ownedItem(raw)).filter(Boolean)
+      : [...items.map(ownedItem).filter(Boolean), { id, tier }] };
 }
