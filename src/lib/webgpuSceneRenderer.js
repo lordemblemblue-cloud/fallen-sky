@@ -285,6 +285,27 @@ function installCompat(renderer) {
   const getClearColor = backend.getClearColor.bind(backend);
   backend.getClearColor = () => toOutputSpace(getClearColor());
   state.afterInit = () => {
+    // a converted classic material's shader is keyed by its classic program key + properties; add the node graph it
+    // carries (webgpuNodeKit.js attachNodes), so another graph gets another shader and a swapped graph a rebuild
+    const objects = renderer._objects;
+    if (objects?.createRenderObject) {
+      const createRenderObject = objects.createRenderObject.bind(objects);
+      objects.createRenderObject = (...args) => {
+        const renderObject = createRenderObject(...args);
+        const proto = Object.getPrototypeOf(renderObject);
+        if (proto && !proto.__sceneNodeKeyed) {
+          const getMaterialCacheKey = proto.getMaterialCacheKey;
+          proto.getMaterialCacheKey = function sceneMaterialCacheKey() {
+            const key = getMaterialCacheKey.call(this);
+            const nodes = this.material?.__sceneNodeKey;
+            return nodes ? key + nodes : key;
+          };
+          proto.__sceneNodeKeyed = true;
+          renderObject.initialCacheKey = renderObject.getCacheKey(); // (this first one was keyed before the patch)
+        }
+        return renderObject;
+      };
+    }
     const background = renderer._background;
     if (background?.update) {
       const update = background.update.bind(background);

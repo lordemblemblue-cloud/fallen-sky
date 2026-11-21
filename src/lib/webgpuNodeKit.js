@@ -9,9 +9,10 @@
  *  - `ShaderMaterial`: a separate NodeMaterial twin (webgpuMaterialTwins.js).
  *
  * Rules that keep WebGPURenderer (three r171) both correct and cheap:
- *  - A node graph must be shared by every material that shares the classic program key (r171 keys a classic
- *    material's pipeline by `customProgramCacheKey()` plus property values, not by node identity). attachNodes
- *    appends the graph's node ids to the key, so a material with a different graph gets its own pipeline either way.
+ *  - r171 keys a converted classic material's shader by `customProgramCacheKey()` plus property values, not by node
+ *    identity. attachNodes records the graph's node ids in `material.__sceneNodeKey`, which webgpuSceneRenderer.js
+ *    adds to WebGPURenderer's own key (the classic program key is left as it was: WebGLRenderer keeps sharing one
+ *    program per GLSL variant). Share one graph between the materials of a variant: one shader, one pipeline.
  *  - Per-material values go through `materialReference(...)` (read from whichever material is drawn), global ones
  *    through `uniformOf(...)` / `sharedUniform(...)`, which live in the per-render uniform group, so one upload
  *    serves every object.
@@ -122,15 +123,8 @@ export function attachNodes(material, nodes = {}, { nodesStatic = true, setup = 
   }
   const ids = NODE_KEYS.filter((k) => material[k]?.isNode).map((k) => `${k}=${material[k].id}`);
   for (const s of material.nodeSetups || []) ids.push(`setup=${setupIds.get(s)}`);
-  material.__sceneNodeKey = ids.length ? `|nodes:${ids.join(',')}` : '';
+  material.__sceneNodeKey = ids.length ? `|nodes:${ids.join(',')}` : ''; // WebGPURenderer's key (see the header)
   material.nodesStatic = nodesStatic === true && material.nodesStatic !== false;
-  if (!material.__sceneNodeKeyWrapped) {
-    const prior = material.customProgramCacheKey;
-    material.customProgramCacheKey = function sceneNodeProgramKey() {
-      return String(prior.call(this)) + (this.__sceneNodeKey || '');
-    };
-    material.__sceneNodeKeyWrapped = true;
-  }
   material.needsUpdate = true;
   return material;
 }
@@ -144,9 +138,25 @@ export function attachNodes(material, nodes = {}, { nodesStatic = true, setup = 
 export function addMapStageColor(material, transform, options = {}) {
   if (!material || typeof transform !== 'function') return material;
   material.__mapStageColor = [...(material.__mapStageColor || []), transform];
+  return attachNodes(material, { colorNode: composeMapStage(material.__mapStageColor) }, options);
+}
+
+// One composed node per chain of transforms (by function identity): materials patched the same way share one graph,
+// hence one pipeline, as their GLSL shared one program.
+const composedMapStages = new WeakMap(); // transform -> { node, next }
+function composeMapStage(transforms) {
+  let level = composedMapStages;
   let color = materialColor;
-  for (let i = material.__mapStageColor.length - 1; i >= 0; i--) color = material.__mapStageColor[i](color);
-  return attachNodes(material, { colorNode: color }, options);
+  for (let i = transforms.length - 1; i >= 0; i--) {
+    let entry = level.get(transforms[i]);
+    if (!entry) {
+      entry = { node: transforms[i](color), next: new WeakMap() };
+      level.set(transforms[i], entry);
+    }
+    color = entry.node;
+    level = entry.next;
+  }
+  return color;
 }
 
 /**
