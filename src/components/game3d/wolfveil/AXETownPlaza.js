@@ -1,5 +1,5 @@
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { resolveTownQuality, townLODState } from './WolfveilTownPerformancePolicy.mjs';
+import { resolveTownQuality, townLODState, townLODDisabledFromSearch } from './WolfveilTownPerformancePolicy.mjs';
 
 /**
  * AXE / Wolfveil - Japanese-Egyptian Grand Town Plaza (Three.js)
@@ -23,7 +23,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     // It disables ONLY the town's distance-driven visual proxy/culling system;
     // ground, grass, terrain, collision and graphics quality remain unchanged.
     const townLODDisabled = typeof window !== 'undefined' &&
-        new URLSearchParams(window.location?.search || '').get('townLod') === 'off';
+        townLODDisabledFromSearch(window.location?.search);
     if (!THREE) throw new Error('createAXETownPlaza: Three.js namespace (THREE) is required');
     if (typeof document === 'undefined') throw new Error('createAXETownPlaza: browser canvas API is required for procedural textures');
 
