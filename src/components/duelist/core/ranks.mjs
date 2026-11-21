@@ -66,6 +66,24 @@ export function tieredMove(id, tier = 1) {
 }
 
 const inKit = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
+// Item Ability stat amplifies class ability damage/healing and effect duration, while passive
+// haste shortens cooldowns. Normal attacks, blocks and movement animations are unchanged.
+function itemTuned(f, move) {
+  if (!move) return move;
+  const ability = f.shopStats?.ability || 0;
+  const haste = f.shopStats?.passive?.haste || 0;
+  if (!ability && !haste) return move;
+  const tuned = { ...move };
+  if (ability) {
+    for (const field of ['damage', 'heal', 'effectSeconds']) {
+      if (Number.isFinite(tuned[field]) && tuned[field] > 0) tuned[field] = Math.round(tuned[field] * (1 + ability) * 1000) / 1000;
+    }
+  }
+  if (haste && Number.isFinite(tuned.cooldown) && tuned.cooldown > 0) {
+    tuned.cooldown = Math.round(tuned.cooldown * (1 - haste) * 1000) / 1000;
+  }
+  return Object.freeze(tuned);
+}
 
 /**
  * The move as this fighter does it: an ability of its class at the rank its level gives, its special at its tier,
@@ -74,8 +92,9 @@ const inKit = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === 
 export function moveFor(f, id) {
   const base = MOVES[id] || null;
   if (!base || !f?.classId) return base;
-  if (base.special) return classById(f.classId)?.special.id === id ? tieredMove(id, specialTier(f.matchBoost)) : base;
-  return GROWTH[id] && inKit(f, FROM[id] || id) ? rankedMove(id, abilityRank(f.matchBoost)) : base;
+  if (base.special) return classById(f.classId)?.special.id === id
+    ? itemTuned(f, tieredMove(id, specialTier(f.matchBoost))) : base;
+  return GROWTH[id] && inKit(f, FROM[id] || id) ? itemTuned(f, rankedMove(id, abilityRank(f.matchBoost))) : base;
 }
 
 /** A passive's value at a rank: the passives' numbers are lists of five (core/classes.mjs), or plain numbers. */

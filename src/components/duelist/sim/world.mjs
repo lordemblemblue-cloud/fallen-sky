@@ -46,7 +46,7 @@ export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, 
   if (!old) return null;
   const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
     level: level === undefined ? old.level : level,
-    matchBoost: matchBoost === undefined ? old.matchBoost : matchBoost });
+    matchBoost: matchBoost === undefined ? old.matchBoost : matchBoost, items: old.items || [] });
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);

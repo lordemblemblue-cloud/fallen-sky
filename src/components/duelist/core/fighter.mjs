@@ -13,6 +13,7 @@ import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
 import { cleanBoost } from './progression.mjs';
+import { equipItems } from './shop.mjs';
 
 // Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
 const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
@@ -29,8 +30,8 @@ const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id ===
  * seat owns it; sim/world.mjs reads it to allow a special and reports what one spent).
  */
 // level: the class's level (core/progression.mjs), which sets its abilities' rank and its special's tier
-export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
-  return {
+export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1, matchBoost = 0, items = [] } = {}) {
+  const fighter = {
     id,
     team,
     weapon,
@@ -52,6 +53,8 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     breaches: {}, // attacker id -> until: whose hits reach this fighter through its Veil
     events: [],
   };
+  equipItems(fighter, items);
+  return fighter;
 }
 
 const busy = (f) => !!f.action;
@@ -198,7 +201,7 @@ export function stagger(f, seconds, now) {
   f.action = null;
   f.guard = null;
   f.buffer = null;
-  f.stunnedUntil = Math.max(f.stunnedUntil, now + seconds);
+  f.stunnedUntil = Math.max(f.stunnedUntil, now + seconds * (1 - (f.shopStats?.tenacity || 0)));
 }
 
 // i-frames of a roll, or knocked down and not yet standing (now omitted: only the move's i-frames count)
@@ -211,8 +214,9 @@ export const isInvulnerable = (f, now) => {
 /** Knocked off the feet by a hard push or throw: lies for KNOCKDOWN.lie, rises for KNOCKDOWN.rise. */
 export function knockDown(f, now) {
   stagger(f, KNOCKDOWN.lie + KNOCKDOWN.rise, now);
-  f.downUntil = now + KNOCKDOWN.lie;
-  f.riseUntil = f.downUntil + KNOCKDOWN.rise;
+  const resistance = 1 - (f.shopStats?.tenacity || 0);
+  f.downUntil = now + KNOCKDOWN.lie * resistance;
+  f.riseUntil = f.downUntil + KNOCKDOWN.rise * resistance;
   f.events.push({ type: 'knockdown', at: now });
 }
 

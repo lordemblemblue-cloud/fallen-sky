@@ -82,7 +82,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   }
 
   const base = moveId === 'grip' ? move.damage * dt : move.damage;
-  const damage = damageFor(attacker, move, base, { now, behind, sheltered });
+  const damage = damageFor(attacker, move, base, { now, behind, sheltered }) * (1 - (defender.shopStats?.defense || 0));
   const defense = {
     vitals: defender.vitals,
     invulnerable: isInvulnerable(defender, now),
@@ -124,7 +124,16 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
     effects.push({ type: 'knockdown', defender: defender.id, by: attacker.id });
   }
   if (result.collapsed) effects.push({ type: 'veilCollapse', defender: defender.id });
-  if (result.killed) effects.push({ type: 'defeat', defender: defender.id, by: attacker.id });
+  // The item's HP-only sustain happens in the deterministic combat rules, never from a client claim.
+  const lifesteal = attacker.shopStats?.passive?.lifesteal || 0;
+  if (result.hpDamage > 0 && lifesteal && !attacker.vitals.dead) {
+    attacker.vitals.hp = Math.min(attacker.vitals.max.hp, attacker.vitals.hp + result.hpDamage * lifesteal);
+  }
+  if (result.killed) {
+    const shield = attacker.shopStats?.passive?.onKillShield || 0;
+    if (shield) attacker.vitals.shield = Math.min(attacker.vitals.max.shield, attacker.vitals.shield + shield);
+    effects.push({ type: 'defeat', defender: defender.id, by: attacker.id });
+  }
   effects.push({ type: 'impact', outcome: result.outcome, move: moveId, attacker: attacker.id, defender: defender.id, veil: result.veil,
     shield: result.shieldDamage, will: result.willSpent, hp: result.hpDamage });
   return { result, effects };
