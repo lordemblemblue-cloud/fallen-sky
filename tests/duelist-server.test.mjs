@@ -543,3 +543,35 @@ test('Saltmarch\'s ally is a seat: the teacher is sent as an ally, in the teache
   a.ws.close();
   await server.close();
 });
+
+test('classes over the wire: join as a class, snapshots carry it, a change waits for the next spawn, a bad one is refused', async () => {
+  const { server, url } = await start();
+  const a = await player(url, 'ann');
+  a.send({ t: 'join', mode: 'tdm', cls: 'healer' });
+  await a.next((m) => m.t === 'joined');
+  const first = await a.next((m) => m.t === 'snap' && m.fighters.some((f) => f.id === 'ann'));
+  assert.equal(first.fighters.find((f) => f.id === 'ann').c, 'healer', 'the class asked for at the join');
+  assert.ok(first.fighters.every((f) => ['warrior', 'duelist', 'assassin', 'healer'].includes(f.c)), 'the bots have classes too');
+  // before the fight a change is taken, and applied as the fight starts; an unknown class is refused
+  a.send({ t: 'class', id: 'assassin' });
+  const taken = await a.next((m) => m.t === 'class' && m.pending === 'assassin'); // (an answered message stays in the inbox: ask for each by what it says)
+  assert.deepEqual([taken.ok, taken.pending], [true, 'assassin']);
+  a.send({ t: 'class', id: 'wizard' });
+  const refused = await a.next((m) => m.t === 'class' && m.reason === 'unknown-class');
+  assert.deepEqual([refused.ok, refused.reason], [false, 'unknown-class']);
+  let seq = 0;
+  const inputs = setInterval(() => a.send({ t: 'input', s: ++seq, m: [0, 0] }), 20);
+  try {
+    const live = await a.next((m) => m.t === 'snap' && m.view?.phase === 'live' && m.own && m.fighters.find((f) => f.id === 'ann')?.c === 'assassin', 15000);
+    assert.equal(live.own.cl, 'assassin', 'the player\'s own state says so');
+    assert.equal(live.own.w, 'staff', 'with the class\'s weapon');
+    assert.deepEqual([live.view.me.classId, live.view.me.specialMeter], ['assassin', 0], 'and the view carries the class and its meter');
+    // standing in the fight, a change has to wait for a fall
+    a.send({ t: 'class', id: 'warrior' });
+    const later = await a.next((m) => m.t === 'class' && m.reason === 'alive-in-match');
+    assert.deepEqual([later.ok, later.reason], [false, 'alive-in-match']);
+  } finally {
+    clearInterval(inputs);
+  }
+  await server.close();
+});
