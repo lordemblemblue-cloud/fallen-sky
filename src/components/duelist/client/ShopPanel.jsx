@@ -10,7 +10,8 @@ export function ItemIcon({ item }) {
 }
 
 const formatStat = (key, value) => key === 'health' ? '+' + Math.round(value) + ' HP'
-  : '+' + Math.round(value * 1000) / 10 + '% ' + ({ ability: 'Ability', defense: 'Defense', power: 'Power', tenacity: 'Tenacity' }[key] || key);
+  : '+' + Math.round(value * 1000) / 10 + '% ' + ({ ability: 'Ability', defense: 'Defense', power: 'Power', tenacity: 'Tenacity',
+      critChance: 'Crit Chance', critSeverity: 'Crit Severity', critDefense: 'Crit Defense' }[key] || key);
 const names = Object.freeze({
   'unknown-item': 'That item is not available', 'shop-at-spawn': 'Buy at spawn or while waiting to respawn',
   'invalid-loadout': 'Invalid item loadout', 'fully-upgraded': 'This item is already Tier III',

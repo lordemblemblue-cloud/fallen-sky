@@ -1,14 +1,15 @@
 // Duelist Adventure in-match shop. Neither gold nor equipment persists to another match.
 // Five items per primary stat, ten dual-stat hybrids; every item has a functional passive.
 // Costs and bonuses are balance starting points, not a claim about another game's exact numbers.
-export const SHOP_STATS = Object.freeze(['power', 'defense', 'ability', 'health', 'tenacity']);
+export const SHOP_STATS = Object.freeze(['power', 'defense', 'ability', 'health', 'tenacity', 'critChance', 'critSeverity', 'critDefense']);
 export const SHOP_RULES = Object.freeze({
   slots: 6, startingGold: 300, passiveGoldPerSecond: 5, eliminationGold: 100,
   // Each item's listed cost is its total Tier III price. Buying an upgrade pays only
   // the delta. Tier I: 25%, Tier II: 60%, Tier III: 100% and unlocks its passive.
   tierShares: Object.freeze([0, 0.25, 0.60, 1]),
   assistGold: 50, objectiveGold: 120, goldCap: 9999,
-  statCaps: Object.freeze({ power: 0.45, defense: 0.32, ability: 0.42, health: 160, tenacity: 0.45 }),
+  statCaps: Object.freeze({ power: 0.45, defense: 0.32, ability: 0.42, health: 160, tenacity: 0.45,
+    critChance: 0.30, critSeverity: 0.60, critDefense: 0.40 }),
 });
 const item = (id, name, category, cost, stats, passive) =>
   Object.freeze({ id, name, category, cost, stats: Object.freeze(stats), passive: Object.freeze(passive) });
@@ -16,14 +17,14 @@ const passive = (type, amount, text) => ({ type, amount, text });
 
 export const SHOP_ITEMS = Object.freeze([
   // Power: offensive stat, including deliberately defensive passives.
-  item('ironfang', 'Ironfang Blade', 'power', 300, { power: 0.06 }, passive('lifesteal', 0.06, 'Restore HP equal to 6% of HP damage dealt')),
-  item('warbanner', 'War Banner', 'power', 360, { power: 0.07 }, passive('onKillShield', 12, 'Recover 12 shield after an elimination')),
-  item('eclipseedge', 'Eclipse Edge', 'power', 420, { power: 0.09 }, passive('haste', 0.04, 'Class ability cooldowns 4% shorter')),
+  item('ironfang', 'Ironfang Blade', 'power', 300, { power: 0.06, critChance: 0.04 }, passive('lifesteal', 0.06, 'Restore HP equal to 6% of HP damage dealt')),
+  item('warbanner', 'War Banner', 'power', 360, { power: 0.07, critDefense: 0.05 }, passive('onKillShield', 12, 'Recover 12 shield after an elimination')),
+  item('eclipseedge', 'Eclipse Edge', 'power', 420, { power: 0.09, critSeverity: 0.08 }, passive('haste', 0.04, 'Class ability cooldowns 4% shorter')),
   item('bloodrite', 'Blood Rite', 'power', 500, { power: 0.10 }, passive('lifesteal', 0.08, 'Restore HP equal to 8% of HP damage dealt')),
   item('starbreaker', 'Starbreaker', 'power', 620, { power: 0.12 }, passive('onKillShield', 18, 'Recover 18 shield after an elimination')),
   // Defense: damage reduction, with offensive and support passives available.
-  item('stoneguard', 'Stoneguard Plate', 'defense', 300, { defense: 0.06 }, passive('regen', 0.8, 'Restore 0.8 HP/s after 5 seconds unharmed')),
-  item('mirrorward', 'Mirror Ward', 'defense', 360, { defense: 0.07 }, passive('onKillShield', 10, 'Recover 10 shield after an elimination')),
+  item('stoneguard', 'Stoneguard Plate', 'defense', 300, { defense: 0.06, critDefense: 0.06 }, passive('regen', 0.8, 'Restore 0.8 HP/s after 5 seconds unharmed')),
+  item('mirrorward', 'Mirror Ward', 'defense', 360, { defense: 0.07, critDefense: 0.05 }, passive('onKillShield', 10, 'Recover 10 shield after an elimination')),
   item('duskplate', 'Dusk Plate', 'defense', 420, { defense: 0.08 }, passive('haste', 0.04, 'Class ability cooldowns 4% shorter')),
   item('oathwall', 'Oathwall', 'defense', 500, { defense: 0.09 }, passive('knockbackResist', 0.08, 'Take 8% less knockback')),
   item('eternalbulwark', 'Eternal Bulwark', 'defense', 620, { defense: 0.11 }, passive('lifesteal', 0.05, 'Restore HP equal to 5% of HP damage dealt')),
@@ -46,16 +47,16 @@ export const SHOP_ITEMS = Object.freeze([
   item('stubbornmantle', 'Stubborn Mantle', 'tenacity', 500, { tenacity: 0.10 }, passive('lifesteal', 0.07, 'Restore HP equal to 7% of HP damage dealt')),
   item('adamantcore', 'Adamant Core', 'tenacity', 620, { tenacity: 0.12 }, passive('haste', 0.06, 'Class ability cooldowns 6% shorter')),
   // All ten unique pairings of the five stats: two-stat hybrid items.
-  item('vanguardfang', 'Vanguard Fang', 'hybrid', 600, { power: 0.05, defense: 0.05 }, passive('onKillShield', 18, 'Attack power that also restores 18 shield on eliminations')),
-  item('stormcarver', 'Stormcarver', 'hybrid', 600, { power: 0.05, ability: 0.06 }, passive('haste', 0.06, 'Class ability cooldowns 6% shorter')),
-  item('huntersheart', "Hunter's Heart", 'hybrid', 600, { power: 0.05, health: 20 }, passive('lifesteal', 0.07, 'Restore HP equal to 7% of HP damage dealt')),
+  item('vanguardfang', 'Vanguard Fang', 'hybrid', 600, { power: 0.05, defense: 0.05, critDefense: 0.03 }, passive('onKillShield', 18, 'Attack power that also restores 18 shield on eliminations')),
+  item('stormcarver', 'Stormcarver', 'hybrid', 600, { power: 0.05, ability: 0.06, critChance: 0.04 }, passive('haste', 0.06, 'Class ability cooldowns 6% shorter')),
+  item('huntersheart', "Hunter's Heart", 'hybrid', 600, { power: 0.05, health: 20, critSeverity: 0.06 }, passive('lifesteal', 0.07, 'Restore HP equal to 7% of HP damage dealt')),
   item('riftslayer', 'Riftslayer', 'hybrid', 600, { power: 0.05, tenacity: 0.06 }, passive('regen', 1, 'Restore 1 HP/s after 5 seconds unharmed')),
   item('spellguard', 'Spellguard', 'hybrid', 600, { defense: 0.05, ability: 0.05 }, passive('knockbackResist', 0.08, 'Take 8% less knockback')),
   item('bastionseed', 'Bastion Seed', 'hybrid', 600, { defense: 0.05, health: 24 }, passive('regen', 1.1, 'Restore 1.1 HP/s after 5 seconds unharmed')),
   item('steadfastplate', 'Steadfast Plate', 'hybrid', 600, { defense: 0.05, tenacity: 0.06 }, passive('onKillShield', 14, 'Recover 14 shield after an elimination')),
   item('sanctuaryglyph', 'Sanctuary Glyph', 'hybrid', 600, { ability: 0.05, health: 22 }, passive('haste', 0.06, 'Class ability cooldowns 6% shorter')),
-  item('runebinder', 'Runebinder', 'hybrid', 600, { ability: 0.05, tenacity: 0.06 }, passive('regen', 1, 'Restore 1 HP/s after 5 seconds unharmed')),
-  item('laststand', 'Last Stand', 'hybrid', 600, { health: 26, tenacity: 0.06 }, passive('lifesteal', 0.08, 'Restore HP equal to 8% of HP damage dealt')),
+  item('runebinder', 'Runebinder', 'hybrid', 600, { ability: 0.05, tenacity: 0.06, critSeverity: 0.05 }, passive('regen', 1, 'Restore 1 HP/s after 5 seconds unharmed')),
+  item('laststand', 'Last Stand', 'hybrid', 600, { health: 26, tenacity: 0.06, critDefense: 0.05 }, passive('lifesteal', 0.08, 'Restore HP equal to 8% of HP damage dealt')),
 
   // Healer-oriented support: all four classes can equip them for build flexibility.
   item('windblossom', 'Windblossom Boots', 'support', 380, { ability: 0.05, health: 10 }, passive('onAllyHealHaste', 0.12, 'Healing a wounded ally grants 12% movement speed for 3 seconds')),
@@ -67,14 +68,14 @@ export const SHOP_ITEMS = Object.freeze([
   item('blightglass', 'Blightglass Shard', 'counter', 350, { power: 0.05 }, passive('antiHeal', 0.25, 'Damaging a foe reduces their healing by 25% for 3 seconds')),
   item('gravecinder', 'Gravecinder Mark', 'counter', 440, { ability: 0.07 }, passive('antiHeal', 0.30, 'Damaging a foe reduces their healing by 30% for 3 seconds')),
   item('dreadthorn', 'Dreadthorn Plate', 'counter', 510, { defense: 0.07, tenacity: 0.04 }, passive('antiHeal', 0.28, 'Taking an attack applies 28% reduced healing to the attacker for 3 seconds')),
-  item('sentrylens', 'Sentry Lens', 'counter', 540, { ability: 0.04, tenacity: 0.05 }, passive('trueSight', 6.5, 'Spot cloaked foes within 6.5 m (normal reveal is 3 m)')),
+  item('sentrylens', 'Sentry Lens', 'counter', 540, { ability: 0.04, tenacity: 0.05, critDefense: 0.04 }, passive('trueSight', 6.5, 'Spot cloaked foes within 6.5 m (normal reveal is 3 m)')),
   item('mistveil', 'Mistveil Mantle', 'counter', 560, { defense: 0.04, health: 18 }, passive('emergencyCloak', 1.4, 'When a hit leaves you at 35% HP or less, cloak for 1.4 s (40 s cooldown); attacks or damage reveal you')),
   // Reactive and sustain cross-builds. Echo Idol returns up to half the HP damage taken
   // and heals for 25% of the returned damage; hard 2 s proc cooldown and 18-damage cap.
   item('echoidol', 'Echo Idol', 'relic', 680, { defense: 0.05, health: 22 }, Object.freeze({ type: 'retaliation', amount: 0.50, healRatio: 0.25, cooldown: 2, cap: 18, text: 'Summon an echo after a hit: return 50% of HP damage (max 18) and heal 25% of that, once per 2 seconds' })),
   item('thundermirror', 'Phase Mirror', 'relic', 520, { defense: 0.06 }, passive('activeAnchor', 1, 'Active relic: mark your location, then press again within 12 s to teleport back. 28 s cooldown after recall')),
   item('siphonmirror', 'Stasis Mirror', 'relic', 600, { health: 24, tenacity: 0.04 }, passive('activeStasis', 1.5, 'Active relic: invulnerable and rooted for 1.5 s. Cannot attack or capture objectives. 35 s cooldown')),
-  item('wraithfang', 'Wraithfang', 'relic', 560, { power: 0.07, tenacity: 0.03 }, passive('lifesteal', 0.11, 'Restore HP equal to 11% of HP damage dealt')),
+  item('wraithfang', 'Wraithfang', 'relic', 560, { power: 0.07, tenacity: 0.03, critChance: 0.06 }, passive('lifesteal', 0.11, 'Restore HP equal to 11% of HP damage dealt')),
   item('graspbreaker', 'Graspbreaker Charm', 'relic', 560, { health: 24, tenacity: 0.06 }, passive('gripEscape', 36, 'Negate one Telekinetic Grip every 36 s; the next grip can still hold you')),
 ]);
 
@@ -85,7 +86,8 @@ export const ownedItem = (entry) => typeof entry === 'string' ? { id: entry, tie
     ? { id: entry.id, tier: entry.tier } : null;
 export const tierPrice = (item, tier) => item && Number.isInteger(tier) && tier >= 1 && tier <= 3
   ? Math.round(item.cost * SHOP_RULES.tierShares[tier]) : 0;
-const zero = () => ({ power: 0, defense: 0, ability: 0, health: 0, tenacity: 0 });
+const zero = () => ({ power: 0, defense: 0, ability: 0, health: 0, tenacity: 0,
+  critChance: 0, critSeverity: 0, critDefense: 0 });
 const passivesZero = () => ({
   lifesteal: 0, onKillShield: 0, haste: 0, regen: 0, knockbackResist: 0,
   onAllyHealHaste: 0, healAmp: 0, onAllyHealShield: 0, onAllyHealWill: 0, onAllyHealPulse: 0,

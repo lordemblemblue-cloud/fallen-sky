@@ -40,7 +40,8 @@ export function levelFromXp(total) {
 }
 
 // what a match's events are worth, to the class being played when they happen
-export const XP = Object.freeze({ elimination: 20, capture: 60, flagReturn: 20, point: 15, roundWin: 40, win: 120, played: 30 });
+export const XP = Object.freeze({ elimination: 20, assist: 12, capture: 60, flagReturn: 20, point: 15, roundWin: 40,
+  win: 120, played: 30, participationPerSecond: 2 });
 
 /**
  * The EXP a match event is worth to one player. ctx: { me, myTeam }. A point is worth its EXP to everyone on the
@@ -50,6 +51,8 @@ export function xpForEvent(e, { me = null, myTeam = null } = {}) {
   if (!e || !me) return 0;
   switch (e.type) {
     case 'defeat': return e.by === me && e.who !== me ? XP.elimination : 0;
+    case 'assist': return e.by === me ? XP.assist : 0;
+    case 'participation': return e.by === me ? Math.max(0, Math.min(10, Math.floor(e.amount) || 0)) : 0;
     case 'captured': return e.by === me ? XP.capture : 0;
     case 'flagReturned': return e.by === me ? XP.flagReturn : 0;
     case 'pointCaptured': return myTeam && e.team === myTeam ? XP.point : 0;
