@@ -12,6 +12,7 @@ import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
+import { CUT_MODES, DEFAULT_MODE, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection } from './cuts.mjs';
 
 // Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
 const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
@@ -33,6 +34,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     id,
     team,
     weapon,
+    mode: DEFAULT_MODE, // swift | balanced | heavy: how the sword's cuts are made (core/cuts.mjs)
     classId: classById(classId) ? classId : null,
     level: Math.max(1, Math.floor(level) || 1),
     effects: {},
@@ -74,7 +76,15 @@ function lightStrike(f, direction) {
   if (!flow) return open ? a.move.chain.next : BINDINGS[f.weapon]?.light || null;
   const from = open ? a.id : null;
   const link = open ? (a.link || 1) : 0; // strikes made so far in this chain
-  const turned = direction ? flow[direction] : null;
+  if (flow.modes) { // cuts by direction (core/cuts.mjs): the stick's eight ways, in the fighter's mode
+    const table = flow.modes[f.mode] || flow.modes[DEFAULT_MODE];
+    const way = direction === 'side' ? 'left' : CUT_DIRECTIONS.includes(direction) ? direction : null;
+    // the same cut twice running comes straight back along its own line instead (the return cut)
+    if (way) return table[way] !== from ? table[way] : table[REVERSE_LINE[way]];
+    const next = table.chain[link % table.chain.length];
+    return next !== from ? next : table.chain[(link + 1) % table.chain.length];
+  }
+  const turned = direction ? flow[flowDirection(direction)] : null;
   if (turned && turned !== from) return turned;
   const next = flow.chain[link % flow.chain.length];
   return next !== from ? next : flow.chain[(link + 1) % flow.chain.length];
@@ -122,15 +132,16 @@ export function blockedReason(f, id, now) {
   return null;
 }
 
-function startMove(f, id, now, chainedFrom = null, link = 1) {
+// lead: seconds of the move already behind it as it starts (a cut that carries on from another: core/cuts.mjs)
+function startMove(f, id, now, chainedFrom = null, link = 1, lead = 0) {
   const move = moveFor(f, id); // an ability at its rank, the special at its tier
   if (move.kind === 'attack' || move.kind === 'power') f.protectedUntil = -Infinity; // acting ends spawn protection
   spendStamina(f.vitals, move.stamina, now);
   spendWill(f.vitals, move.will, now);
   if (move.cooldown > 0) f.cooldowns[id] = now + move.cooldown;
   f.guard = null;
-  f.action = { id, move, t: 0, nextHit: 0, held: move.channel, chainedFrom, link };
-  f.events.push({ type: 'start', id, at: now, chainedFrom });
+  f.action = { id, move, t: lead, nextHit: 0, held: move.channel, chainedFrom, link };
+  f.events.push({ type: 'start', id, at: now, chainedFrom, ...(lead ? { lead } : {}) });
   if (id === 'resist') { // throws off a grip and every breach at once
     if (f.heldBy) f.events.push({ type: 'freed', at: now, from: f.heldBy });
     f.heldBy = null;
@@ -169,6 +180,11 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
     if (a?.move.channel && a.held) { a.held = false; return { accepted: true }; }
     return { accepted: false, reason: 'nothing-held' };
   }
+  if (command === 'mode') { // the next of the three modes (the sword's cuts: core/cuts.mjs); it takes the next strike
+    f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
+    f.events.push({ type: 'mode', mode: f.mode, at: now });
+    return { accepted: true, mode: f.mode };
+  }
   const id = moveForCommand(f, command, direction);
   if (!id) return { accepted: false, reason: 'unknown' };
   const reason = blockedReason(f, id, now);
@@ -178,9 +194,10 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   if (busy(f) && !canInterrupt(f, id)) return bufferPress(f, command, now, fromBuffer, direction);
   const chainedFrom = chainsInto(f, id) ? f.action.id : null;
   const link = chainedFrom ? (f.action.link || 1) + 1 : 1;
+  const lead = chainedFrom ? cutLead(f.action.move, moveFor(f, id)) : 0; // the blade carries on from where it is
   if (f.action) f.events.push({ type: 'interrupt', id: f.action.id, by: id, at: now });
   f.action = null;
-  return startMove(f, id, now, chainedFrom, link);
+  return startMove(f, id, now, chainedFrom, link, lead);
 }
 
 function bufferPress(f, command, now, fromBuffer, direction) {

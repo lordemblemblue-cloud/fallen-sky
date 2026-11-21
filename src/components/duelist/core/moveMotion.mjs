@@ -10,6 +10,7 @@
 // (travel: false keeps a segment's travel out, for moves whose distance the rules set themselves).
 import { MOVES } from './moves.mjs';
 import { MOTION_CLIPS } from './motionPack.data.mjs';
+import { CUT_IDS, CUT_TIMING, CONTACT } from './cuts.mjs';
 
 const seg = (clip, moveFrom, moveTo, clipFrom, clipTo, extra = {}) => ({ clip, from: [moveFrom, clipFrom], to: [moveTo, clipTo], ...extra });
 // wind-up -> startup, contact -> active, follow-through -> recovery
@@ -23,6 +24,13 @@ const end = (id) => MOVES[id].duration;
 const activeEnd = (id) => MOVES[id].startup + MOVES[id].active;
 
 export const MOVE_MOTION = Object.freeze({
+  // the sword's cuts by direction (core/cuts.mjs): each has its own clip of the same name, made to the same
+  // seconds (tools/duelist/blender/cut_grid.py), so the clip runs at its own speed from the wind-up to the stance
+  ...Object.fromEntries(CUT_IDS.map((id) => {
+    const t = CUT_TIMING[MOVES[id].cut.mode];
+    const last = Math.min(t.wind + t.cut + t.hold + t.rec, MOTION_CLIPS[id]?.duration ?? Infinity); // a clip ends on a whole frame
+    return [id, { segments: phases(id, id, [0, t.wind + CONTACT[0] * t.cut, t.wind + CONTACT[1] * t.cut, last]) }];
+  })),
   // sword: a rising slash, a diagonal cut into a low lunge, a spinning cut (one continuous chain in the pack)
   swordLight1: { segments: phases('swordLight1', 'swordA', [0.05, 0.2, 0.28, 0.42]), settle: { clip: 'swordARec', from: 0 } },
   swordLight2: { segments: phases('swordLight2', 'swordB', [0, 0.2, 0.29, 0.5]), settle: { clip: 'swordBRec', from: 0 } },

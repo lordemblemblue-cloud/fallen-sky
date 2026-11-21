@@ -9,6 +9,8 @@ import { createBot, think, BOT_LEVELS } from '../src/components/duelist/sim/bots
 import { encodeOwn, applyOwn } from '../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / 120;
+// the forms that read the stick as forward, side or back (the sword cuts eight ways: duelist-cuts.test.mjs)
+const PLAIN = Object.entries(FLOW).filter(([, flow]) => !flow.modes);
 // run a fighter on until its strike's chain window has just opened
 function toWindow(f, t) {
   const until = f.action.move.chain.from + 0.01;
@@ -33,7 +35,7 @@ function chain(weapon, directions) {
 }
 
 test('every form has a strike for each direction, with frame data and a clip of its own', () => {
-  for (const [weapon, flow] of Object.entries(FLOW)) {
+  for (const [weapon, flow] of PLAIN) {
     for (const id of [...flow.chain, ...STRIKE_DIRECTIONS.map((d) => flow[d])]) {
       assert.equal(MOVES[id]?.weapon, weapon, `${id} is a ${weapon} strike`);
       assert.ok(MOVE_MOTION[id], `${id} has a clip`);
@@ -50,29 +52,31 @@ test('every form has a strike for each direction, with frame data and a clip of 
 });
 
 test('a light strike takes the direction held; with none it opens the chain', () => {
-  for (const [weapon, flow] of Object.entries(FLOW)) {
+  for (const [weapon, flow] of PLAIN) {
     assert.deepEqual(chain(weapon, [null]).made, [flow.chain[0]]);
     for (const d of STRIKE_DIRECTIONS) assert.deepEqual(chain(weapon, [d]).made, [flow[d]], `${weapon} ${d}`);
   }
+  assert.deepEqual(chain('sword', [null]).made, ['swordCutStandBalanced'], 'the sword standing still: its flat cut');
   assert.deepEqual(chain('bow', ['forward']).made, ['bowShot'], 'a form without Flow is as it was');
 });
 
 test('strikes chain freely by direction, never the same one twice running, and no longer than the chain', () => {
   // with no direction: the chain as it always was
-  assert.deepEqual(chain('sword', [null, null, null]).made, ['swordLight1', 'swordLight2', 'swordLight3']);
+  assert.deepEqual(chain('sword', [null, null, null]).made, ['swordCutStandBalanced', 'swordCutRightBalanced', 'swordCutDownBalanced']);
   assert.deepEqual(chain('dualBlades', [null, null, null, null]).made, ['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4']);
   // a direction takes the link's place; the count goes on
-  assert.deepEqual(chain('sword', [null, 'forward', null]).made, ['swordLight1', 'swordAdvance', 'swordLight3']);
-  assert.deepEqual(chain('sword', ['forward', 'side', 'back']).made, ['swordAdvance', 'swordSweep', 'swordTurn']);
+  assert.deepEqual(chain('sword', [null, 'forward', null]).made, ['swordCutStandBalanced', 'swordCutDownBalanced', 'swordCutStandBalanced']);
+  assert.deepEqual(chain('sword', ['forward', 'left', 'back']).made, ['swordCutDownBalanced', 'swordCutLeftBalanced', 'swordCutUpBalanced']);
   assert.deepEqual(chain('dualBlades', ['back', 'forward', null, 'side']).made, ['bladesTurn', 'bladesAdvance', 'bladesLight3', 'bladesSweep']);
-  // the same direction held: the strike is not repeated, the chain's own link comes instead
-  assert.deepEqual(chain('sword', ['forward', 'forward', 'forward']).made, ['swordAdvance', 'swordLight2', 'swordAdvance']);
+  // the same direction held: the sword comes back along the line it just cut; the other forms take the chain's link
+  assert.deepEqual(chain('sword', ['forward', 'forward', 'forward']).made, ['swordCutDownBalanced', 'swordCutUpBalanced', 'swordCutDownBalanced']);
+  assert.deepEqual(chain('dualBlades', ['forward', 'forward']).made, ['bladesAdvance', 'bladesLight2']);
   // the staff's turn is its second link: asked for first, the chain does not give it again
   assert.deepEqual(chain('staff', ['back', null, null]).made, ['staffLight2', 'staffLight3']);
   assert.deepEqual(chain('staff', [null, 'back', 'forward']).made, ['staffLight1', 'staffLight2', 'staffLeap']);
   // a chain is three strikes for the sword: a fourth press waits for the recovery and opens a new chain
-  const { made, f } = chain('sword', ['forward', 'side', 'back', 'forward']);
-  assert.deepEqual(made, ['swordAdvance', 'swordSweep', 'swordTurn', 'buffered']);
+  const { made, f } = chain('sword', ['forward', 'left', 'back', 'forward']);
+  assert.deepEqual(made, ['swordCutDownBalanced', 'swordCutLeftBalanced', 'swordCutUpBalanced', 'buffered']);
   assert.equal(f.action.link, 3);
   assert.equal(f.buffer.direction, 'forward');
 });
@@ -82,21 +86,24 @@ test('each link knows its place in the chain, and a press that waits keeps its d
   press(f, 'light', 0, { direction: null });
   assert.equal(f.action.link, 1);
   assert.equal(f.action.chainedFrom, null);
-  // pressed in the wind-up, before the chain window: it waits, and starts the sweep when the window opens
-  assert.equal(press(f, 'light', 0.02, { direction: 'side' }).reason, 'buffered');
-  let t = 0.02;
-  while (f.action.id === 'swordLight1' && t < 1) { t += STEP; update(f, STEP, t); }
-  assert.equal(f.action.id, 'swordSweep');
-  assert.equal(f.action.chainedFrom, 'swordLight1');
+  // pressed in the wind-up, before the chain window: it waits, and starts the cut back when the window opens
+  let t = 0;
+  while (t < 0.1) { t += STEP; update(f, STEP, t); }
+  assert.equal(press(f, 'light', t, { direction: 'right' }).reason, 'buffered');
+  while (f.action.id === 'swordCutStandBalanced' && t < 1) { t += STEP; update(f, STEP, t); }
+  assert.equal(f.action.id, 'swordCutRightBalanced');
+  assert.equal(f.action.chainedFrom, 'swordCutStandBalanced');
   assert.equal(f.action.link, 2);
-  assert.ok(Math.abs(t - MOVES.swordLight1.chain.from) < 0.03, `at the window's opening (${t.toFixed(3)} s)`);
+  assert.ok(Math.abs(t - MOVES.swordCutStandBalanced.chain.from) < 0.03, `at the window's opening (${t.toFixed(3)} s)`);
 });
 
 test('the direction is where the stick points relative to the facing; a light touch is none', () => {
   assert.equal(strikeDirection({ yaw: 0, intent: { x: 0, z: 1 } }), 'forward');
   assert.equal(strikeDirection({ yaw: 0, intent: { x: 0, z: -1 } }), 'back');
-  assert.equal(strikeDirection({ yaw: 0, intent: { x: 1, z: 0 } }), 'side');
-  assert.equal(strikeDirection({ yaw: 0, intent: { x: -1, z: 0 } }), 'side');
+  assert.equal(strikeDirection({ yaw: 0, intent: { x: 1, z: 0 } }), 'left', 'facing +z, +x is the left hand side');
+  assert.equal(strikeDirection({ yaw: 0, intent: { x: -1, z: 0 } }), 'right');
+  assert.equal(strikeDirection({ yaw: 0, intent: { x: -0.7, z: 0.7 } }), 'forwardRight');
+  assert.equal(strikeDirection({ yaw: 0, intent: { x: 0.7, z: -0.7 } }), 'backLeft');
   assert.equal(strikeDirection({ yaw: Math.PI / 2, intent: { x: 1, z: 0 } }), 'forward', 'forward is where the fighter faces');
   assert.equal(strikeDirection({ yaw: Math.PI / 2, intent: { x: -1, z: 0 } }), 'back');
   assert.equal(strikeDirection({ yaw: 0, intent: { x: 0.3, z: 0.3 } }), null);
@@ -105,12 +112,12 @@ test('the direction is where the stick points relative to the facing; a light to
   const w = createWorld();
   const a = addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
   step(w, 1 / 60, { a: { move: { x: 0, z: 1 }, face: 0, presses: ['light'] } });
-  assert.equal(a.action.id, 'swordAdvance');
+  assert.equal(a.action.id, 'swordCutDownBalanced');
   for (let i = 0; i < 40; i++) step(w, 1 / 60, { a: { move: { x: 0, z: 0 }, face: 0, presses: [] } });
-  assert.ok(bodyOf(w, 'a').z > 0.9, `the advance closed ${bodyOf(w, 'a').z.toFixed(2)} m`);
+  assert.ok(bodyOf(w, 'a').z > 0.2, `the cut down the middle steps in: ${bodyOf(w, 'a').z.toFixed(2)} m`);
   const b = addFighter(w, { id: 'b', x: 6, z: 0, yaw: 0 });
   step(w, 1 / 60, { b: { move: { x: 0.4, z: 0 }, face: 0, presses: ['light'] } });
-  assert.equal(b.action.id, 'swordLight1', 'circling slowly is no direction');
+  assert.equal(b.action.id, 'swordCutStandBalanced', 'circling slowly is no direction');
 });
 
 test('the link and the direction of a waiting press travel with the fighter over the wire', () => {
@@ -119,12 +126,13 @@ test('the link and the direction of a waiting press travel with the fighter over
   press(a, 'light', 0, { direction: 'forward' });
   let t = 0;
   while (a.action.t < a.action.move.chain.from + 0.01) { t += STEP; update(a, STEP, t); }
-  press(a, 'light', t, { direction: 'side' });
-  press(a, 'light', t + 0.01, { direction: 'back' }); // too early for the sweep's own window: it waits
+  press(a, 'light', t, { direction: 'left' });
+  press(a, 'light', t + 0.01, { direction: 'back' }); // too early for that cut's own window: it waits
   const other = createWorld();
   const copy = addFighter(other, { id: 'a' });
   applyOwn(copy, bodyOf(other, 'a'), JSON.parse(JSON.stringify(encodeOwn(a, bodyOf(w, 'a'), t))));
-  assert.equal(copy.action.id, 'swordSweep');
+  assert.equal(copy.action.id, 'swordCutLeftBalanced');
+  assert.ok(Math.abs(copy.action.t - a.action.t) < 1e-9, 'with the time the cut had already skipped');
   assert.equal(copy.action.link, 2);
   assert.deepEqual({ command: copy.buffer.command, direction: copy.buffer.direction }, { command: 'light', direction: 'back' });
 });
@@ -142,6 +150,6 @@ test('bots that know Flow use it, and still fight to a finish', () => {
     for (const f of [a, b]) if (f.action && f.action.t < 0.02) used.add(f.action.id);
   }
   assert.ok(a.vitals.dead || b.vitals.dead, 'someone falls within two minutes');
-  const turned = [...used].filter((id) => ['swordAdvance', 'swordSweep', 'swordTurn', 'staffLeap', 'staffSweep'].includes(id));
+  const turned = [...used].filter((id) => (MOVES[id]?.cut && MOVES[id].cut.direction !== 'stand') || ['staffLeap', 'staffSweep'].includes(id));
   assert.ok(turned.length >= 2, `strikes by direction were used: ${turned.join(', ') || 'none'}`);
 });

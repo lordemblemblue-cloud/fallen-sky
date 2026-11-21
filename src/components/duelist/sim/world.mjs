@@ -10,6 +10,7 @@ import {
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
+import { stickDirection } from '../core/cuts.mjs';
 
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
@@ -75,14 +76,14 @@ function newBody(x, z, yaw) {
 export const bodyOf = (world, id) => world.bodies.get(id);
 export const forwardOf = (yaw) => ({ x: Math.sin(yaw), z: Math.cos(yaw) });
 
-// The way the stick is held as a strike is pressed, relative to the facing: forward | back | side | null (the rules'
-// Flow, core/moves.mjs: a light strike takes it). A light touch of the stick counts as none.
+// The way the stick is held as a strike is pressed, relative to the facing: one of eight ways (forward, forwardRight,
+// right, ...) or null for a light touch. A light strike takes it: the sword's cuts by direction (core/cuts.mjs); the
+// other forms read it as forward, side or back (core/moves.mjs FLOW).
 export function strikeDirection(body) {
   const f = forwardOf(body.yaw);
   const ahead = body.intent.x * f.x + body.intent.z * f.z;
   const right = body.intent.z * f.x - body.intent.x * f.z;
-  if (Math.hypot(ahead, right) < 0.6) return null;
-  return Math.abs(ahead) >= Math.abs(right) ? (ahead > 0 ? 'forward' : 'back') : 'side';
+  return stickDirection(ahead, right);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
