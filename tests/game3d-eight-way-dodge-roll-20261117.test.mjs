@@ -173,7 +173,8 @@ test('world and controller implement real stamina-limited, collision-checked 360
   assert.match(controller,/getEightWayDodgeMove\(directionName\)/);
   assert.match(controller,/moveWithCollision\(specialMoveVelocity.x\*step,specialMoveVelocity.z\*step\)/);
   assert.match(controller,/specialMoveTimer = Math.min\(\.68,timing.duration\)/);
-  assert.match(controller,/isDead \|\| isMounted \|\| isBusy/);
+  // (swimming refuses the dodge as well: player/playerSwimState.mjs)
+  assert.match(controller,/isDead \|\| isMounted \|\| isSwimming \|\| isBusy/);
   assert.match(library,/^.*createPlayerMovementFallbackClips\(target\)/m);
   assert.match(library,/!\/\^dodge\(\?:Roll\|Step\)\//);
   assert.doesNotMatch(world,/dodgeVanish\.active[^\n]*model\.visible=false/);

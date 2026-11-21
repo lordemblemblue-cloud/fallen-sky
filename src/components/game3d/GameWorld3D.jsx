@@ -229,9 +229,11 @@ import { AXE_CLICK_TO_MOVE_CONFIG, classifyAXEClick, createAXEClickToMove, direc
 import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/player/AXEClickToMoveScene';
 import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
 import { createDoubleTapDetector, dodgeMoveCandidates, pickDodgeMove, screenForwardFacingYaw } from './player/game3dDodgeProfiles.mjs';
+import { createPlayerSwimState, createSwimNotice, SWIM } from './player/playerSwimState.mjs';
+import { createWaterSurfaceIndex } from './axe/world/game3dWaterSurface.mjs';
 import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
 import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
-import { createMountFlightController } from './character/mountFlight.mjs';
+import { createMountFlightController, MOUNT_FLIGHT } from './character/mountFlight.mjs';
 import WorldEnvironmentHUD from './WorldEnvironmentHUD';
 import { getDetroitWeather } from '@/functions/getDetroitWeather';
 import { createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
@@ -2062,6 +2064,21 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Winged mount flight (character/mountFlight.mjs): Space while riding takes off and lands; the mount follows
     // the terrain a few metres up and the seated rider rides along.
     const mountFlight = createMountFlightController();
+    // Deep water (player/playerSwimState.mjs): the river's and the Vortex Lake's own surfaces. The hero floats and swims
+    // there, the camera keeps above the water line, and a mount stops at the edge unless it is flying.
+    const waterSurface = createWaterSurfaceIndex();
+    if (wolfveilVillage?.river?.water) waterSurface.addMesh(wolfveilVillage.river.water);
+    if (vortexLake?.water) waterSurface.addMesh(vortexLake.water);
+    window.__gw3dWater = waterSurface;
+    const playerSwim = createPlayerSwimState();
+    const swimNotice = createSwimNotice((text) => showCombatNotice(text));
+    playerCameraSystem.waterSurfaceAt = (x, z, nearY) => waterSurface.surfaceAt(x, z, nearY);
+    const waterDepthAt = (x, z, nearY) => {
+      const surface = waterSurface.surfaceAt(x, z, nearY);
+      if (surface === null) return -Infinity;
+      const bed = sampleGroundY(x, z, nearY);
+      return Number.isFinite(bed) ? surface - bed : -Infinity;
+    };
     const mountTargetQuat = new THREE.Quaternion(), mountPitchQuat = new THREE.Quaternion();
     const MOUNT_PITCH_AXIS = new THREE.Vector3(1, 0, 0);
     const DODGE_FACING_AXIS = new THREE.Vector3(0, 1, 0);
@@ -2726,11 +2743,15 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
         if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
           weaponSummon.dismiss();
+        // Swimming: no jump, glide or Skywalk from the water (player/playerSwimState.mjs).
+        else if(!e.repeat && !isMountedRef.current && playerSwim.isSwimming()){ /* treading water */ }
         else if(!e.repeat && isMountedRef.current){
           // Riding: Space takes off with the mount and lands it again (character/mountFlight.mjs). On foot
           // Space stays the Air Jump -> wing glide -> Skywalk chain below.
-          if(companionFlyActionRef.current)showCombatNotice(mountFlight.toggle()==='takeoff'?'Taking off':'Landing');
-          else showCombatNotice('This mount cannot fly');
+          if(!companionFlyActionRef.current)showCombatNotice('This mount cannot fly');
+          else if(mountFlight.isAirborne()&&waterDepthAt(model.position.x,model.position.z,model.position.y)>=SWIM.enterDepth)
+            swimNotice("Your mount can't land on deep water");
+          else showCombatNotice(mountFlight.toggle()==='takeoff'?'Taking off':'Landing');
         }
         else if(!e.repeat && !isMountedRef.current){
           const allowAirWalk=!dedicatedMode && !window.__activeDuel &&
@@ -2789,7 +2810,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       // riding, F mounts / dismounts instead: the kick rebinding (6a64a744) had left mounting unreachable.
       if (k === 'e') interactPressed.current = true;
       if (k === 'f') {
-        if (nearbyCompanionRef.current || isMountedRef.current) { if (!e.repeat) mountToggleRef.current = true; }
+        if (!isMountedRef.current && playerSwim.isSwimming()) { if (!e.repeat) swimNotice("You can't mount while swimming"); }
+        else if (nearbyCompanionRef.current || isMountedRef.current) { if (!e.repeat) mountToggleRef.current = true; }
         else if (playerAnim?.requestAttack('kick', 1.0)) setTimeout(() => { attackPressed.current = true; }, 260);
         e.preventDefault();
       }
@@ -3839,8 +3861,10 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         }
         const isMoving = move.lengthSq() > 0;
         weaponPlayerMoving = isMoving;
-        const isRunning = !!keys.current['shift'] && isMoving;
-        const isSprinting = !!keys.current['control'] && isMoving;
+        // Deep water has one pace (player/playerSwimState.mjs): no Shift run or Ctrl sprint while swimming.
+        const swimmingNow = playerSwim.isSwimming() && !mounted;
+        const isRunning = !!keys.current['shift'] && isMoving && !swimmingNow;
+        const isSprinting = !!keys.current['control'] && isMoving && !swimmingNow;
         // A held LEFT click is also a drawn-bow aim state. Walk, strafe,
         // sprint and camera motion remain independent of its charge timer.
         const bowDrawAiming = shouldUseBowAimingLocomotion({
@@ -3865,7 +3889,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         // on-foot locomotion only; preserve the separate Shift run upgrade.
         const airMode=playerAnim?.getAirWalkState?.()?.mode||'idle';
         const airTravel=airMode!=='idle';
-        const baseMoveSpeed=airTravel
+        const baseMoveSpeed=swimmingNow?SWIM.speed:airTravel
           ?WALK_SPEED*1.24 // limited steerable forward glide, never sprint XP
           :isSprinting
             ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
@@ -3883,6 +3907,15 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           const fromX=model.position.x,fromZ=model.position.z;
           moveWorldActor(model,move.x*speed*delta,move.z*speed*delta,mounted);
           pushAreaGate(model,fromX,fromZ,move.x*speed*delta,move.z*speed*delta);
+          // A mount does not swim: riding stops at deep water unless the mount is flying (Space takes off) or a gate
+          // crossing has just started (the area travel owns the rider from here).
+          if(mounted && !mountFlight.isAirborne() && !areaTravelStarted){
+            const depth=waterDepthAt(model.position.x,model.position.z,model.position.y);
+            if(depth>=SWIM.enterDepth && depth>waterDepthAt(fromX,fromZ,model.position.y)+.01){
+              model.position.x=fromX; model.position.z=fromZ;
+              swimNotice("Your mount can't swim. Take off with Space to cross the water");
+            }
+          }
           if(mounted){
             tickAXEMountRideActivity(delta,{moving:true,distanceMeters:
               Math.hypot(model.position.x-fromX,model.position.z-fromZ)});
@@ -3922,6 +3955,21 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
             return (naturalZones?.playerGroundY(model.position)??(suigenActive?null:wolfveilVillage?.playerPalaceGroundY(model.position)))
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
           },footY=>sampleAirWalkCeilingY(model,footY));
+        }
+        // Deep water (player/playerSwimState.mjs): the glue above put the feet on the bed; water up to the neck
+        // floats the hero with the neck at the surface and the controller swims. The ground code is unchanged.
+        {
+          const jumpOffset = playerAnim?.getJumpOffset?.() || 0;
+          const swim = playerSwim.update({
+            dt: delta,
+            surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
+            bedY: model.position.y - jumpOffset,
+            currentY: model.position.y,
+            allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0,
+          });
+          if (swim.entered || swim.left) playerAnim?.setSwimming?.(swim.swimming);
+          if (swim.rootY !== null) model.position.y = swim.rootY;
+          window.__localSwimming = swim.swimming;
         }
         // The world physics remains the single source of truth for grounded
         // status; no new rigid body or secondary jump/gravity loop is created.
@@ -3997,8 +4045,13 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           if (mapReady) {
             const gy = sampleGroundY(compGroup.position.x, compGroup.position.z);
             if (gy !== null) {
-              compGroup.position.y = gy + flight.altitude;
-              model.position.y = gy + flight.altitude;
+              // Over water the flight height counts from the water line (the river is ~2 m deep, the Vortex Lake 4-5
+              // m): the depth is added as the mount climbs, so it still stands on the bed in the shallows.
+              const waterY = flight.altitude > 0 ? waterSurface.surfaceAt(compGroup.position.x, compGroup.position.z, gy + flight.altitude) : null;
+              const waterLift = waterY !== null && waterY > gy
+                ? (waterY - gy) * Math.min(1, flight.altitude / MOUNT_FLIGHT.cruiseAltitude) : 0;
+              compGroup.position.y = gy + waterLift + flight.altitude;
+              model.position.y = gy + waterLift + flight.altitude;
             }
           }
           playCompanionAnimation(flight.airborne ? 'fly' : mountMoved ? 'run' : 'idle');
@@ -4694,6 +4747,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         // Tick player cooldowns + player attack
         if (playerAttackCooldown.current > 0) playerAttackCooldown.current -= delta;
         if (playerInvulTimer.current > 0) playerInvulTimer.current -= delta;
+        // Swimming (player/playerSwimState.mjs): no strikes or skills in deep water; the click or the key is dropped.
+        if (playerSwim.isSwimming() && (attackPressed.current || abilityKeyPressed.current !== -1)) {
+          attackPressed.current = false;
+          rangedClickAttackPressed.current = false;
+          abilityKeyPressed.current = -1;
+          castInputMeta.current = null;
+          swimNotice("You can't fight while swimming");
+        }
         const pendingSkillStrike = skillStrikeQueue.nextSkillStrike();
         // A click during cooldown should not abort the animation frame.
         const canProcessBasicStrike = attackPressed.current && playerAttackCooldown.current <= 0;
@@ -5868,6 +5929,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       lakeStormDragon?.dispose();
       vortexLake?.dispose();
       if(window.__gw3dVortexLake===vortexLake)window.__gw3dVortexLake=null;
+      if(window.__gw3dWater===waterSurface)window.__gw3dWater=null;
       livingInkWorld?.dispose();
       livingMeadow?.dispose();
       zombieCamps?.dispose();
