@@ -324,3 +324,30 @@
   .dxt-page *, .dxt-page *::before,.dxt-page *::after { transition:none!important; animation:none!important; }
   .dxt-stage-scrim { backdrop-filter:none; -webkit-backdrop-filter:none; background:rgba(5,15,32,.83); }
 }
+
+/* Routed story/mode pages share the same fixed lower navigation strip.
+   Inner text and content stay dynamic; there are no labels baked into the SVG art. */
+.duelist-menu-page:not(.dxt-settings-content):not(.duelist-hub-panel-content) {
+  display:flex; flex-direction:column; min-height:100svh;
+}
+.duelist-menu-header-status { margin-left:auto; color:#b8cde0; font-size:11px; letter-spacing:.16em; }
+.duelist-menu-page:not(.dxt-settings-content):not(.duelist-hub-panel-content)>.duelist-menu-content {
+  flex:1; min-height:0; width:min(100%,1240px); padding-bottom:28px;
+}
+.duelist-menu-bottom-nav {
+  z-index:8; position:sticky; bottom:0; display:flex; justify-content:center;
+  align-items:stretch; min-height:67px; background:rgba(6,23,43,.98);
+  border-top:1px solid rgba(160,211,235,.54); padding:0 clamp(10px,2vw,37px);
+}
+.duelist-menu-bottom-link { flex:1; max-width:225px; min-width:0; display:flex; align-items:center;
+  justify-content:center; gap:11px; color:#d2e2ed; text-decoration:none;
+  font:850 clamp(11px,.89vw,14px) 'Rajdhani',sans-serif; letter-spacing:.08em;
+  padding:9px; border-bottom:3px solid transparent; }
+.duelist-menu-bottom-link:hover,.duelist-menu-bottom-link:focus-visible {
+  color:#ffe0ac; border-bottom-color:#ffa73b; background:rgba(226,145,56,.12); }
+.duelist-menu-bottom-link:last-child { margin-left:auto; }
+@media(max-width:760px) {
+  .duelist-menu-bottom-nav { min-height:56px; }
+  .duelist-menu-bottom-link { flex-direction:column; gap:3px; font-size:9px; padding:7px 3px; }
+  .duelist-menu-bottom-link svg { width:16px; height:16px; }
+}
