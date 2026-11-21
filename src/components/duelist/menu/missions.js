@@ -1,7 +1,8 @@
-// What the Story page says about each mission (the missions themselves live in sim/missions/*.mjs).
+// What the Story page says about each mission: its headline (tagline), what the crew is sent to do (line) and the
+// stages of its timeline (parts). The missions themselves live in sim/missions/*.mjs.
 export const STORY_MISSIONS = Object.freeze([
   {
-    id: 'contraband', number: 1, title: 'Contraband',
+    id: 'contraband', number: 1, title: 'Contraband', tagline: 'The cargo is not what it seems.',
     line: 'Break into a smugglers\' freight depot and find who is behind it.',
     parts: [
       ['Infiltration', 'Get into the Halvane Logistics freight depot and open the crates its manifest calls medical supplies.'],
@@ -11,7 +12,7 @@ export const STORY_MISSIONS = Object.freeze([
     ],
   },
   {
-    id: 'saltmarch', number: 2, title: 'Saltmarch',
+    id: 'saltmarch', number: 2, title: 'Saltmarch', tagline: 'The ledger reached the wrong hands.',
     line: 'The ledger led the Houses to a refuge of the unbound. Get there before their wardens do.',
     parts: [
       ['The Lock', 'The refuge\'s defenders take you for wardens. Get inside; beaten, they stand down.'],

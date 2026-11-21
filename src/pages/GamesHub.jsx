@@ -1,5 +1,8 @@
 import { useNavigate } from '@tanstack/react-router';
+import { useEffect, useRef, useState } from 'react';
 import InstallAppButton from '@/components/games/InstallAppButton';
+import LiveAppIntro from '@/components/games/LiveAppIntro';
+import { shouldShowLiveIntro } from '@/components/games/liveIntroEnvironment';
 
 // Adam X Eve Games: the first page. Left half opens Fallen Sky Online
 // (the Game 3D world at /gameview); right half opens Duelist Adventure (/duelist).
@@ -55,9 +58,40 @@ function GamePanel({ game, side, onPlay }) {
   );
 }
 
+// A return from either game goes straight to the hub; a fresh page load plays
+// the cinematic again only on the published site.
+let cinematicPlayedOnThisPageLoad = false;
+
 export default function GamesHub() {
   const navigate = useNavigate();
+  const checkedIntroRef = useRef(false);
+  const [introPhase, setIntroPhase] = useState('checking');
   const [left, right] = GAMES;
+
+  useEffect(() => {
+    if (checkedIntroRef.current) return;
+    checkedIntroRef.current = true;
+    const eligible = shouldShowLiveIntro({
+      hostname: window.location.hostname,
+      search: window.location.search,
+      embedded: window.parent !== window,
+      isDevelopment: import.meta.env.DEV,
+    });
+    if (eligible && !cinematicPlayedOnThisPageLoad) {
+      cinematicPlayedOnThisPageLoad = true;
+      setIntroPhase('playing');
+    } else {
+      setIntroPhase('complete');
+    }
+  }, []);
+
+  if (introPhase === 'checking') {
+    return <main className="h-screen bg-black" aria-label="Loading Adam X Eve Games" />;
+  }
+  if (introPhase === 'playing') {
+    return <LiveAppIntro onComplete={() => setIntroPhase('complete')} />;
+  }
+
   return (
     <main className="relative flex h-screen min-h-0 flex-col bg-[#05070c] text-white">
       <style>{`
