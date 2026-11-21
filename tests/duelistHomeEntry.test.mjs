@@ -11,7 +11,7 @@ test('Games Hub still navigates into the public Duelist entry route', () => {
 test('main Duelist entry renders the cinematic hub, not the old Game 2 wrapper', () => {
   const route = source('src/routes/duelist.jsx');
   assert.match(route, /createFileRoute\(['"]\/duelist['"]\)/);
-  assert.match(route, /component:\s*DuelistHub/);
+  assert.match(route, /component:\s*DuelistTemplateHub/);
   assert.doesNotMatch(route, /component:\s*DuelistAdventure/);
 });
 
@@ -31,6 +31,6 @@ test('Duelist hub removes Classic Arena from its visible home navigation without
 });
 
 test('existing new-build game and mode routes remain intact', () => {
-  assert.match(source('src/routes/duelist-next.index.jsx'), /component:\s*DuelistHub/);
+  assert.match(source('src/routes/duelist-next.index.jsx'), /component:\s*DuelistTemplateHub/);
   assert.match(source('src/routes/duelist-next.\$page.jsx'), /ModePage/);
 });
