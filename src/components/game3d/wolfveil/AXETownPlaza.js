@@ -1,5 +1,5 @@
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { resolveTownQuality, townLODState } from './WolfveilTownPerformancePolicy.mjs';
+import { resolveTownQuality, townLODState, townLODDisabledFromSearch } from './WolfveilTownPerformancePolicy.mjs';
 
 /**
  * AXE / Wolfveil - Japanese-Egyptian Grand Town Plaza (Three.js)
@@ -19,6 +19,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     const activeQuality = resolveTownQuality(quality, coarsePointer);
     const lowDetail = activeQuality === 'low' || activeQuality === 'ultra-low';
     const ultraLow = activeQuality === 'ultra-low';
+    // Reversible A/B test: ?townLod=off keeps every original house/shop visible.
+    // It disables ONLY the town's distance-driven visual proxy/culling system;
+    // ground, grass, terrain, collision and graphics quality remain unchanged.
+    const townLODDisabled = typeof window !== 'undefined' &&
+        townLODDisabledFromSearch(window.location?.search);
     if (!THREE) throw new Error('createAXETownPlaza: Three.js namespace (THREE) is required');
     if (typeof document === 'undefined') throw new Error('createAXETownPlaza: browser canvas API is required for procedural textures');
 
@@ -2693,8 +2698,11 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
                 room.group.parent.add(proxy);
                 roomProxies.set(room.id, proxy);
             }
-            shopInteriors.forEach(room => makeDistantProxy(room, true));
-            houseEntries.forEach(room => makeDistantProxy(room, false));
+            // No proxy geometry is needed for a fixed-detail A/B test.
+            if (!townLODDisabled) {
+                shopInteriors.forEach(room => makeDistantProxy(room, true));
+                houseEntries.forEach(room => makeDistantProxy(room, false));
+            }
 
             // ============================================================================
             // 8. SCENE LIGHTING
@@ -2855,6 +2863,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     townGroup.scale.setScalar(worldScale);
     townGroup.name = 'AXE_Wolfveil_Town_Plaza_Replacement';
     townGroup.userData.axeTownReplacement = true;
+    townGroup.userData.townLODDisabled = townLODDisabled; // console inspection
     fountainGroup.name = 'TwinWolfWaterfallFountain';
     innerShopsGroup.name = 'ArtisanShops';
     outerRingGroup.name = 'ResidentialRing';
@@ -2882,7 +2891,15 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         // Hysteresis prevents popping/flickering near storefront thresholds.
         visibilityTimer += dt;
         let visualLODChanged = false;
-        if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
+        if (townLODDisabled) {
+            // Explicitly restore original geometry when the test is requested.
+            // Parent group flags and interior roof cutaway remain authoritative.
+            for (const room of [...houseEntries, ...shopInteriors]) {
+                if (!room.group.visible) visualLODChanged = true;
+                room.group.visible = true;
+                room.group.userData.axeLODState = 'detail';
+            }
+        } else if (visibilityTimer >= .25 && playerPosition && Number.isFinite(playerPosition.x) && Number.isFinite(playerPosition.z)) {
             visibilityTimer = 0;
             const localX = playerPosition.x - townGroup.position.x;
             const localZ = playerPosition.z - townGroup.position.z;
