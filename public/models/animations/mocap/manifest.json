@@ -7,7 +7,9 @@
       "clips": [
         "Back_Roll",
         "Dodge_Forward",
-        "Sprint"
+        "Sprint",
+        "Swim_Forward",
+        "Swim_Idle"
       ]
     },
     "fused-female-v1": {
@@ -15,7 +17,9 @@
       "clips": [
         "Back_Roll",
         "Dodge_Forward",
-        "Sprint"
+        "Sprint",
+        "Swim_Forward",
+        "Swim_Idle"
       ]
     }
   }
