@@ -107,7 +107,8 @@ export function spendEmpower(attacker, now) {
 export function hiddenFrom(f, fBody, viewer, viewerBody, now) {
   if (!effectOn(f, 'cloak', now) || !viewer || viewer === f) return false;
   if (f.team !== null && f.team === viewer.team) return false;
-  return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > EFFECTS.cloak.seenWithin;
+  const revealRadius = Math.max(EFFECTS.cloak.seenWithin, viewer.shopStats?.passive?.trueSight || 0);
+  return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > revealRadius;
 }
 
 /** May `viewer` lock on to (or a bot target) `f`? Not while hidden from it, nor while `f` misdirected it. */

@@ -54,6 +54,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     events: [],
     healReduction: 0, healReducedUntil: -Infinity,
     shopSpeedUntil: -Infinity, shopProcAt: -Infinity, shopHealProcAt: -Infinity,
+    shopCloakAt: -Infinity, shopGripBreakAt: -Infinity,
   };
   equipItems(fighter, items);
   return fighter;

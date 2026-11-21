@@ -55,7 +55,7 @@ export const SHOP_ITEMS = Object.freeze([
   item('laststand', 'Last Stand', 'hybrid', 600, { health: 26, tenacity: 0.06 }, passive('lifesteal', 0.08, 'Restore HP equal to 8% of HP damage dealt')),
 
   // Healer-oriented support: all four classes can equip them for build flexibility.
-  item('windblossom', 'Windblossom Pin', 'support', 380, { ability: 0.05, health: 10 }, passive('onAllyHealHaste', 0.12, 'Healing an ally gives 12% movement speed for 3 seconds')),
+  item('windblossom', 'Windblossom Boots', 'support', 380, { ability: 0.05, health: 10 }, passive('onAllyHealHaste', 0.12, 'Healing a wounded ally grants 12% movement speed for 3 seconds')),
   item('dawnchalice', 'Dawn Chalice', 'support', 450, { ability: 0.07, health: 12 }, passive('healAmp', 0.12, 'Your healing on allies is 12% stronger')),
   item('harborlantern', 'Harbor Lantern', 'support', 480, { defense: 0.04, ability: 0.04 }, passive('onAllyHealShield', 12, 'Healing an ally grants them 12 shield (8-second cooldown)')),
   item('mercythread', 'Mercy Thread', 'support', 360, { ability: 0.05, tenacity: 0.04 }, passive('onAllyHealWill', 8, 'Healing an ally restores 8 of your Will (8-second cooldown)')),
@@ -64,15 +64,15 @@ export const SHOP_ITEMS = Object.freeze([
   item('blightglass', 'Blightglass Shard', 'counter', 350, { power: 0.05 }, passive('antiHeal', 0.25, 'Damaging a foe reduces their healing by 25% for 3 seconds')),
   item('gravecinder', 'Gravecinder Mark', 'counter', 440, { ability: 0.07 }, passive('antiHeal', 0.30, 'Damaging a foe reduces their healing by 30% for 3 seconds')),
   item('dreadthorn', 'Dreadthorn Plate', 'counter', 510, { defense: 0.07, tenacity: 0.04 }, passive('antiHeal', 0.28, 'Taking an attack applies 28% reduced healing to the attacker for 3 seconds')),
-  item('pestilentseal', 'Pestilent Seal', 'counter', 590, { power: 0.06, health: 20 }, passive('antiHeal', 0.35, 'Damaging a foe reduces their healing by 35% for 3 seconds')),
-  item('nightmire', 'Nightmire Oath', 'counter', 620, { ability: 0.05, defense: 0.05 }, passive('antiHeal', 0.32, 'Damaging a foe reduces their healing by 32% for 3 seconds')),
+  item('sentrylens', 'Sentry Lens', 'counter', 540, { ability: 0.04, tenacity: 0.05 }, passive('trueSight', 6.5, 'Spot cloaked foes within 6.5 m (normal reveal is 3 m)')),
+  item('mistveil', 'Mistveil Mantle', 'counter', 560, { defense: 0.04, health: 18 }, passive('emergencyCloak', 1.4, 'When a hit leaves you at 35% HP or less, cloak for 1.4 s (40 s cooldown); attacks or damage reveal you')),
   // Reactive and sustain cross-builds. Echo Idol returns up to half the HP damage taken
   // and heals for 25% of the returned damage; hard 2 s proc cooldown and 18-damage cap.
   item('echoidol', 'Echo Idol', 'relic', 680, { defense: 0.05, health: 22 }, Object.freeze({ type: 'retaliation', amount: 0.50, healRatio: 0.25, cooldown: 2, cap: 18, text: 'Summon an echo after a hit: return 50% of HP damage (max 18) and heal 25% of that, once per 2 seconds' })),
   item('thundermirror', 'Thunder Mirror', 'relic', 520, { defense: 0.07 }, Object.freeze({ type: 'retaliation', amount: 0.30, healRatio: 0, cooldown: 1.5, cap: 12, text: 'Return 30% of HP damage (max 12), once per 1.5 seconds' })),
   item('siphonmirror', 'Siphon Mirror', 'relic', 600, { health: 24, tenacity: 0.04 }, Object.freeze({ type: 'retaliation', amount: 0.24, healRatio: 0.5, cooldown: 2, cap: 14, text: 'Return 24% of HP damage and heal 50% of returned damage, once per 2 seconds' })),
   item('wraithfang', 'Wraithfang', 'relic', 560, { power: 0.07, tenacity: 0.03 }, passive('lifesteal', 0.11, 'Restore HP equal to 11% of HP damage dealt')),
-  item('vigilanchor', 'Vigil Anchor', 'relic', 500, { health: 26, power: 0.03 }, passive('onKillShield', 24, 'Recover 24 shield after an elimination')),
+  item('graspbreaker', 'Graspbreaker Charm', 'relic', 560, { health: 24, tenacity: 0.06 }, passive('gripEscape', 36, 'Negate one Telekinetic Grip every 36 s; the next grip can still hold you')),
 ]);
 
 const byId = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
@@ -82,6 +82,7 @@ const passivesZero = () => ({
   lifesteal: 0, onKillShield: 0, haste: 0, regen: 0, knockbackResist: 0,
   onAllyHealHaste: 0, healAmp: 0, onAllyHealShield: 0, onAllyHealWill: 0, onAllyHealPulse: 0,
   antiHeal: 0, onHitAntiHeal: 0, retaliation: null,
+  trueSight: 0, emergencyCloak: 0, gripEscape: 0,
 });
 /** Ignore invalid ids, so user-supplied item strings never create fake stats. */
 export function itemBonuses(itemIds = []) {
@@ -116,6 +117,9 @@ export function itemBonuses(itemIds = []) {
   passive.onAllyHealWill = Math.min(12, passive.onAllyHealWill);
   passive.onAllyHealPulse = Math.min(12, passive.onAllyHealPulse);
   passive.antiHeal = Math.min(0.4, passive.antiHeal);
+  passive.trueSight = Math.min(7, passive.trueSight);
+  passive.emergencyCloak = Math.min(1.6, passive.emergencyCloak);
+  passive.gripEscape = Math.max(0, passive.gripEscape);
   return { ...stats, passive };
 }
 /** Server-owned equip operation; health stays healthy when the maximum grows. */

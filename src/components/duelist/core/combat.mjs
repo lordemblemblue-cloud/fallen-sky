@@ -8,7 +8,7 @@ import { BLOCK, KNOCKDOWN } from './tuning.mjs';
 import { resolveHit } from './damage.mjs';
 import { drainWill } from './vitals.mjs';
 import { stagger, isInvulnerable, isBreachedBy, grantBreach, knockDown, press } from './fighter.mjs';
-import { damageFor, controlImmune, knockbackTaken, spendEmpower, effectOn, endEffect } from './abilities.mjs';
+import { damageFor, controlImmune, knockbackTaken, spendEmpower, effectOn, endEffect, addEffect } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
 
 // Is `attackerPos` inside the defender's guard arc? Positions { x, z }; facing = the defender's yaw
@@ -65,6 +65,13 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
   // The grip takes hold of the defender (who can Resist), then crushes it while held. Rage cannot be held.
   if (moveId === 'grip' && dt === null) {
     if (isInvulnerable(defender, now)) return { result: { outcome: 'evaded' }, effects };
+    // A cross-class anti-grip choice; never permanent immunity to Warrior control.
+    const gripEscape = defender.shopStats?.passive?.gripEscape || 0;
+    if (gripEscape && now >= (defender.shopGripBreakAt ?? -Infinity) + gripEscape) {
+      defender.shopGripBreakAt = now;
+      effects.push({ type: 'itemGripBreak', by: defender.id, from: attacker.id });
+      return { result: { outcome: 'resisted' }, effects };
+    }
     if (controlImmune(defender, now)) { effects.push({ type: 'resisted', attacker: attacker.id, defender: defender.id }); return { result: { outcome: 'resisted' }, effects }; }
     defender.heldBy = attacker.id;
     effects.push({ type: 'held', attacker: attacker.id, defender: defender.id });
@@ -138,6 +145,16 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
     applyAntiHeal(attacker, defender.shopStats?.passive?.onHitAntiHeal || 0);
   }
   const antiHealMultiplier = attacker.healReducedUntil > now ? 1 - attacker.healReduction : 1;
+  // Emergency cloak is short and has a long cooldown. It is not triggered by a killing blow,
+  // does not prevent an execution, and existing cloak reveal rules still apply.
+  const cloakSeconds = defender.shopStats?.passive?.emergencyCloak || 0;
+  if (cloakSeconds && result.hpDamage > 0 && !defender.vitals.dead &&
+      defender.vitals.hp > 0 && defender.vitals.hp / defender.vitals.max.hp <= 0.35 &&
+      now >= (defender.shopCloakAt ?? -Infinity) + 40 && !effectOn(defender, 'cloak', now)) {
+    defender.shopCloakAt = now;
+    addEffect(defender, 'cloak', now + cloakSeconds);
+    effects.push({ type: 'itemCloak', by: defender.id, until: now + cloakSeconds });
+  }
   const lifesteal = attacker.shopStats?.passive?.lifesteal || 0;
   if (result.hpDamage > 0 && lifesteal && !attacker.vitals.dead) {
     attacker.vitals.hp = Math.min(attacker.vitals.max.hp, attacker.vitals.hp + result.hpDamage * lifesteal * antiHealMultiplier);
