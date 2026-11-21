@@ -61,6 +61,7 @@ function LabelledAction({ children, onClick, Icon, primary = false, disabled = f
 
 export function CharacterReferenceMenu({ prefs, onPrefs, close }) {
   const [tab, setTab] = useState('progression');
+  const [classFilter, setClassFilter] = useState('all');
   const fighter = BODIES[prefs.fighter] || BODIES.maskedWarrior;
   const classId = CLASS_IDS.includes(prefs.classId) ? prefs.classId : 'duelist';
   const combat = CLASSES[classId];
@@ -73,10 +74,10 @@ export function CharacterReferenceMenu({ prefs, onPrefs, close }) {
     <CloseControl onClose={close} name="Character"/>
     <aside className="dxr-character-left" aria-label="Character roster">
       <nav className="dxr-character-filters" aria-label="Combat classes">
-        <button type="button" className={classId === 'duelist' ? 'dxr-on' : ''} onClick={() => onPrefs({ classId: 'duelist' })} aria-label="Duelist class">ALL</button>
-        {CLASS_IDS.map(id => { const Icon=CLASS_ICONS[id]; return <button type="button" key={id} className={classId === id ? 'dxr-on' : ''}
-          title={CLASSES[id].name} aria-label={'Choose ' + CLASSES[id].name + ' class'} aria-pressed={classId === id}
-          onClick={() => onPrefs({classId:id})}><Icon aria-hidden="true" size={18}/></button>; })}
+        <button type="button" className={classFilter === 'all' ? 'dxr-on' : ''} onClick={() => setClassFilter('all')} aria-pressed={classFilter === 'all'} aria-label="Show all fighters">ALL</button>
+        {CLASS_IDS.map(id => { const Icon=CLASS_ICONS[id]; return <button type="button" key={id} className={classFilter === id ? 'dxr-on' : ''}
+          title={CLASSES[id].name} aria-label={'Choose ' + CLASSES[id].name + ' class'} aria-pressed={classFilter === id}
+          onClick={() => { setClassFilter(id); onPrefs({classId:id}); }}><Icon aria-hidden="true" size={18}/></button>; })}
       </nav>
       <div className="dxr-character-roster" role="group" aria-label="Available 3D fighters">
         {Array.from({length:15},(_,i)=>{
