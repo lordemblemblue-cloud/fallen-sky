@@ -12,7 +12,7 @@
 // nothing here raycasts or collides.
 import * as THREE from 'three';
 import {createWolfveilPathSurface} from './WolfveilPathSurface.mjs';
-import {wolfveilHeight} from './WolfveilLayout.js';
+import {wolfveilHeight,wolfveilDistanceToRiver} from './WolfveilLayout.js';
 
 export const WOLFVEIL_PAVING=Object.freeze({
   primary:Object.freeze({surface:'cobble',meters:2.34,fallback:0x8b8781,roughness:.74}),
@@ -97,6 +97,15 @@ function loadSurfaceMaps(material,id,meters,loader){
   return maps;
 }
 
+// Paving stops at the top of a river bank; the packed-dirt trail runs on down
+// to the water. The residential lane that fords the river beside the Market
+// Stone Bridge (and again by the Timber Bridge) was paved down a 26 m bank
+// into the water (owner, 2026-11-21: a pathway "kind of sticking out").
+export const WOLFVEIL_PAVING_RIVER_CLEARANCE=26;
+export function wolfveilPavingNearRiver(points,clearance=WOLFVEIL_PAVING_RIVER_CLEARANCE){
+  return points.some(([x,z])=>wolfveilDistanceToRiver(x,z)<clearance);
+}
+
 export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=310,surfaceAt=null}={}){
   const project=createWolfveilPathSurface({heightAt:wolfveilHeight,span:terrainSpan,
     segments:terrainSegments,lift:.13});
@@ -105,7 +114,7 @@ export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=
     /** corners: the finished dirt strip; route: its route (kind, width). */
     add(route,corners,verge){
       const paving=wolfveilPavingFor(route);
-      if(!paving)return false;
+      if(!paving||wolfveilPavingNearRiver(corners))return false;
       const paved=narrowWolfveilStrip(corners,route.width/(route.width+verge));
       const tris=project(paved);
       if(!tris)return false;
@@ -123,7 +132,7 @@ export function createWolfveilPavingCollector({terrainSpan=1100,terrainSegments=
      */
     addBevel(route,bevel,verge){
       const paving=wolfveilPavingFor(route);
-      if(!paving)return false;
+      if(!paving||wolfveilPavingNearRiver(bevel))return false;
       const k=route.width/(route.width+verge),[b,p1,p2]=bevel;
       const pull=p=>[b[0]+(p[0]-b[0])*k,b[1]+(p[1]-b[1])*k];
       const tris=project([b,pull(p1),pull(p2)]);

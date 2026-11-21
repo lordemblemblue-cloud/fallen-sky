@@ -83,13 +83,21 @@ export function wolfveilRockOverlapsBridgeLane(rock,bridges,{margin=1.4}={}){
   return false;
 }
 
+// How far below a deck the feet must be to count as passing under the bridge.
+export const WOLFVEIL_BRIDGE_UNDER_METERS=1.2;
 // Client-side last-step railing guard; a trusted multiplayer movement
 // equivalent still requires an independent server-side implementation.
-export function resolveWolfveilBridgeRailing(position,previous,bridges,radius=.62,viewerOffsetZ=0){
+// `deckHeightAt(bridge,t,lateral)` (optional) lets a walker whose feet
+// (`position.y`) are well below the deck pass under the bridge freely.
+export function resolveWolfveilBridgeRailing(position,previous,bridges,radius=.62,viewerOffsetZ=0,{deckHeightAt=null}={}){
   if(!position||!previous||!(radius>0))return false;
   for(const bridge of bridges){
     const prev=projectWolfveilBridgePoint(bridge,previous.x,previous.z-viewerOffsetZ);
     const now=projectWolfveilBridgePoint(bridge,position.x,position.z-viewerOffsetZ);
+    if(deckHeightAt&&Number.isFinite(position.y)){
+      const deckY=deckHeightAt(bridge,now.t,now.lateral);
+      if(Number.isFinite(deckY)&&position.y<deckY-WOLFVEIL_BRIDGE_UNDER_METERS)continue;
+    }
     const half=bridge.width/2;
     if(prev.t<.03||prev.t>.97||now.t<.03||now.t>.97||
        Math.abs(prev.lateral)>half-radius*.35)continue;

@@ -177,7 +177,12 @@ import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/Wo
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
-import {wolfveilAreaAtWorld} from './wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import {wolfveilAreaAtWorld,wolfveilAreaInfo} from './wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import {wolfveilGateTravel,wolfveilGatePush} from './wolfveil/streaming/WolfveilGateTravel.mjs';
+import {wolfveilAreaScenesEnabled,keepInWolfveilArea} from './wolfveil/streaming/WolfveilAreaScenes.mjs';
+import {createWolfveilAreaScope} from './wolfveil/streaming/WolfveilAreaClip.mjs';
+import {WOLFVEIL_WHOLE_TERRAIN} from './wolfveil/WolfveilTerrainAreaStream.mjs';
+import {MeshBVH} from 'three-mesh-bvh';
 // Torii gates + gate-only veils replace the decorative light arches of
 // ./wolfveil/WolfveilAreaPortals (kept: swap the constructor back to undo).
 import {createWolfveilAreaGates} from './wolfveil/WolfveilAreaGates';
@@ -847,7 +852,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       ?suigenGroundMeshes:groundMeshes;
     const groundRaycaster = new THREE.Raycaster();
     const downVec = new THREE.Vector3(0, -1, 0);
-    /** Returns terrain Y at (x,z), or null if no hit. */
+    // The tallest step up the player's feet take onto a floor (deck ends, stair treads).
+    const WOLFVEIL_FLOOR_STEP_UP = 1.1;
+    /** Returns terrain Y at (x,z), or null if no hit. `referenceY`: the feet (see below). */
     const sampleGroundY = (x, z, referenceY=null) => {
       const terrain=activeGroundMeshes();
       if (terrain.length === 0) return null;
@@ -866,10 +873,18 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         // is blocked by the seven-foot cave edge movement guard instead.
         if(nearSuigenCaveGround(x,z,.85))return null;
       }
+      // Classic Wolfveil, given the feet (`referenceY`): the highest floor
+      // within one step of them, so walking under a bridge deck (or an upper
+      // house floor) keeps the player under it, while a deck end at step
+      // height still takes them onto it. Nothing in reach (a tall ledge, feet
+      // below the ground): the nearest floor above. No feet: the highest, as before.
+      let floorY=hits[0].point.y;
+      if(!suigenActive&&Number.isFinite(referenceY))
+        floorY=(hits.find(hit=>hit.point.y<=referenceY+WOLFVEIL_FLOOR_STEP_UP)??hits[hits.length-1]).point.y;
       // The old town's analytic floor belongs ONLY to the Classic map; it
       // would otherwise make the new import's roads float above the ground.
       return suigenActive?hits[0].point.y:
-        Math.max(hits[0].point.y, importedSpawnTown?.groundY(x, z) ?? -Infinity);
+        Math.max(floorY, importedSpawnTown?.groundY(x, z) ?? -Infinity);
     };
     // Aerial reports sample from above the highest peaks rather than the
     // regular player-foot 50m ray origin; this preserves mountain elevations.
@@ -899,9 +914,12 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     const initialAreaPosition=portalLanding||(
       resumeCheckpoint?.region==='wolfveil'&&wolfveilAreaAtWorld(resumeCheckpoint)===worldArea
         ?resumeCheckpoint:null)||areaFallback||{x:0,z:70};
+    // Portal scenes (default): only this area exists until a gate is passed.
+    // ?wholeWorld=1 loads the whole valley in one scene (WolfveilAreaScenes.mjs).
+    const areaScenes=region==='wolfveil'&&wolfveilAreaScenesEnabled(window);
     const wolfveilVillage=region==='wolfveil'
       ?createWolfveilVillage(scene,{
-          initialArea:worldArea,
+          initialArea:areaScenes?worldArea:WOLFVEIL_WHOLE_TERRAIN,
           originAtMarket:true,
           loadCaves:false,
           // Game 3D-only silver river; default Game 1 material stays unchanged.
@@ -941,7 +959,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       groundHeightAt:(x,z)=>wolfveilVillage.worldHeight(x,z),
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
-        if(entryModeRef.current||areaTravelStarted||!detail.gateway||
+        if(!areaScenes||entryModeRef.current||areaTravelStarted||!detail.gateway||
           detail.to===worldArea||!modelRef.current)return;
         const actor=modelRef.current;
         const landing={x:actor.position.x,y:actor.position.y,z:actor.position.z,
@@ -965,13 +983,43 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     if(regionStream){
       window.__gw3dRegionStreamer=regionStream; // name kept for existing console checks
       window.__gw3dAreaLoader=regionStream;
+      // The whole valley in one scene: the loader draws everything as built.
+      if(!areaScenes)regionStream.setEnabled(false);
     }
+    // A portal scene holds one area: its loader never leaves it, so a stray
+    // position (a teleport, the model briefly elsewhere) cannot hide this
+    // scene's own ground and town for a frame. Only a gate changes the area.
+    const loaderPosition=()=>{
+      const position=modelRef.current?.position||initialAreaPosition;
+      return areaScenes?keepInWolfveilArea(position,worldArea):position;
+    };
     // Gateways: torii gates at every area portal, joined by spirit-veil
     // walls that let the player (and AI) cross a border only through a gate.
+    // The veil walls are not drawn: what is past the border is cut away below.
     // If they cannot be built the world still starts, with open borders.
     let areaPortals=null;
-    try{areaPortals=wolfveilVillage?createWolfveilAreaGates(wolfveilVillage.world,{area:worldArea}):null;}
+    try{areaPortals=wolfveilVillage?createWolfveilAreaGates(wolfveilVillage.world,{area:areaScenes?worldArea:null,veil:false}):null;}
     catch(error){console.warn('Wolfveil area gates unavailable:',error);}
+    // Portal scenes: whatever reaches past this area's border (trails, paved
+    // roads, the river, the far half of a bridge, scattered grass, flowers,
+    // rocks and trees) is cut off at the border, also as it streams in, so
+    // nothing past a gate is drawn until the player goes through it.
+    let areaScope=null;
+    if(wolfveilVillage&&areaScenes){
+      try{
+        areaScope=createWolfveilAreaScope({area:worldArea,
+          roots:()=>[wolfveilVillage.world.group,scene.getObjectByName('WV_4MileRadius_StreamingSolidMeadow'),
+            scene.getObjectByName('Wolfveil_Classic_Reused_Suigen_Trees_Bamboo_Rocks')],
+          exclude:()=>[areaPortals?.root,wolfveilVillage.world.group.getObjectByName('SWV_Streamed_OverworldFloor')],
+          rebuildBoundsTree:geometry=>{geometry.boundsTree=new MeshBVH(geometry,{maxLeafTris:16});},
+        });
+        window.__gw3dAreaClip=areaScope?.report;
+      }catch(error){console.warn('Wolfveil area border could not be cut:',error);}
+    }
+    const keepToArea=()=>{
+      try{areaScope?.update();}
+      catch(error){console.warn('Wolfveil area border stopped:',error);areaScope=null;}
+    };
     // Walking through a gate thickens a screen mist; an area change flashes it.
     const areaMist=areaPortals?createWolfveilAreaCrossingMist(container):null;
     // Natural zones (flag, default OFF): the Jade Lantern Grotto loads as two
@@ -998,9 +1046,49 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Veils are client presentation collision like buildings: never in a
     // server-owned duel body, never underground (cave tunnels pass under).
     const resolveAreaVeils=(position,from,radius)=>{
-      if(!areaPortals?.resolveCollision||dedicatedMode||region!=='wolfveil'||
+      if(!areaScenes||!areaPortals?.resolveCollision||dedicatedMode||region!=='wolfveil'||
         wolfveilVillage?.caveSystem?.isActive?.()||naturalZones?.isInside())return false;
       return areaPortals.resolveCollision(position,from,radius);
+    };
+    // Going through a gate, on foot or riding, travels to the area beyond it
+    // at once (WolfveilGateTravel.mjs). Only this area's ground exists, so the
+    // loader's switch 12 m past the border is out of reach: a bridge deck ends
+    // there, a trail at the border. Teleports, caves and duels never travel.
+    let lastGatePosition=null,arrivalMount=null;
+    const gateTravelOpen=actor=>Boolean(areaScenes&&actor&&areaPortals?.gates?.length&&!(areaTravelStarted||dedicatedMode||region!=='wolfveil'||
+        entryModeRef.current||wolfveilVillage?.caveSystem?.isActive?.()||naturalZones?.isInside()));
+    // Crossing the gate's plane (a bridge deck runs on through the gate), or
+    // standing in its opening past the plane after a long frame.
+    const passAreaGate=()=>{
+      const actor=modelRef.current;
+      if(!gateTravelOpen(actor)){lastGatePosition=null;return;}
+      const here={x:actor.position.x,z:actor.position.z};
+      const pass=wolfveilGateTravel(lastGatePosition,here,{area:worldArea,gates:areaPortals.gates});
+      lastGatePosition=here;
+      if(pass)travelThroughGate(pass,actor);
+    };
+    // Walking or riding into the opening and being held up short of it (a
+    // trail's ground ends at the border here): `dx`/`dz` is the step asked for.
+    const pushAreaGate=(actor,fromX,fromZ,dx,dz)=>{
+      if(!gateTravelOpen(actor))return;
+      const pass=wolfveilGatePush({x:fromX,z:fromZ},actor.position,{x:dx,z:dz},
+        {area:worldArea,gates:areaPortals.gates});
+      if(pass)travelThroughGate(pass,actor);
+    };
+    const travelThroughGate=(pass,actor)=>{
+      // A bridge landing is on the deck (in both scenes); elsewhere the
+      // destination scene puts the player on its own ground.
+      const deckY=sampleGroundY(pass.landing.x,pass.landing.z,actor.position.y);
+      const landing={x:pass.landing.x,z:pass.landing.z,
+        y:Number.isFinite(deckY)&&Math.abs(deckY-actor.position.y)<4?deckY:actor.position.y,
+        yaw:orbit.current.yaw,heading:pass.heading,mounted:isMountedRef.current===true};
+      areaTravelStarted=true;
+      const info=wolfveilAreaInfo(pass.to);
+      window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail:{
+        from:worldArea,to:pass.to,label:info?.label||pass.to,side:info?.side||null,
+        detail:info?.description||null,gateway:pass.gate.id,gatewayLabel:pass.gate.label}}));
+      window.dispatchEvent(new CustomEvent('game3dPortalTravel',
+        {detail:{target:'wolfveil-area',area:pass.to,gateway:pass.gate.id,landing}}));
     };
     const onPlatformGraphics=()=>{
       // Graphics presets may alter resolution/FPS, never reactivate hidden maps.
@@ -2156,6 +2244,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         if(Math.abs(areaArrival.y-groundY)>1)fbx.position.y=groundY;
         if(Number.isFinite(areaArrival.yaw))orbit.current.yaw=areaArrival.yaw;
       }
+      // Rode through a gate: ride on as soon as this scene's mount has loaded.
+      if(areaArrival?.mounted===true)arrivalMount={heading:areaArrival.heading,seconds:20};
       if (initialWorkflowTarget && !workflowSpawn)
         showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
@@ -3348,11 +3438,12 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
-        regionStream?.update(modelRef.current?.position||{x:0,z:70},
+        regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
-        areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
+        areaPortals?.update(delta,modelRef.current?.position||initialAreaPosition,regionStream?.getArea());
         areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
+        keepToArea();
         ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
         if(!suigenActive)vortexLake?.update(delta,null);
         livingInkWorld?.update(delta,envSystem.getState());
@@ -3393,11 +3484,13 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
       if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
-      regionStream?.update(modelRef.current?.position||{x:0,z:70},
+      regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
-        areaPortals?.update(delta,modelRef.current?.position||{x:0,z:70},regionStream?.getArea());
+        areaPortals?.update(delta,modelRef.current?.position||initialAreaPosition,regionStream?.getArea());
+        passAreaGate();
         areaMist?.setMist(areaPortals?.mist??0);areaMist?.update(delta);
         wolfveilVillage?.update(delta,envSystem.getState(),modelRef.current?.position,regionStream?.getArea());importedSpawnTown?.update(delta,modelRef.current?.position);
+        keepToArea();
       ambientBirds?.update(delta,modelRef.current?.position,envSystem.getState());
       naturalZones?.update(delta,{player:modelRef.current,mounted:isMountedRef.current,
         airborne:(playerAnim?.getAirWalkState?.()?.mode||'idle')!=='idle'||['takeoff','airborne'].includes(playerAnim?.getDebugState?.()?.jumpPhase)});
@@ -3529,6 +3622,18 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         voiceRef.current.updateSpatialGains();
       }
 
+      // Arrived through a gate riding: put the mount under the rider and mount
+      // through the ordinary F path below (same checks, same seat pose).
+      if (arrivalMount && model) {
+        const mount = companionGroupRef.current;
+        if (isMountedRef.current) arrivalMount = null;
+        else if (mount) {
+          mount.position.copy(model.position);
+          if (Number.isFinite(arrivalMount.heading)) mount.rotation.y = arrivalMount.heading;
+          mountToggleRef.current = true;
+          arrivalMount = null;
+        } else if ((arrivalMount.seconds -= delta) <= 0) arrivalMount = null;
+      }
       // ─── Companion mount toggle (F) — runs once per key press ───
       if (mountToggleRef.current && model) {
         mountToggleRef.current = false;
@@ -3777,6 +3882,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           move.normalize();
           const fromX=model.position.x,fromZ=model.position.z;
           moveWorldActor(model,move.x*speed*delta,move.z*speed*delta,mounted);
+          pushAreaGate(model,fromX,fromZ,move.x*speed*delta,move.z*speed*delta);
           if(mounted){
             tickAXEMountRideActivity(delta,{moving:true,distanceMeters:
               Math.hypot(model.position.x-fromX,model.position.z-fromZ)});
