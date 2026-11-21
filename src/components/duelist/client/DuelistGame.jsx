@@ -37,7 +37,8 @@ import { createHudFeed } from './hudFeed.mjs';
 import { levelFrom, xpForEvent } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
-import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades } from './classWeapons.mjs';
+import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
+import { createSecondHand } from './secondHand.mjs';
 import { CLASSES, classById, hiddenFrom, effectOn } from '../core/index.mjs';
 
 // A cloaked fighter you can still see (your own, an ally's, an enemy's up close) is a ghost of itself. The body's
@@ -110,7 +111,9 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   }
   // the stance (idle, guard, which hands grip) goes with the crystal form
   const stance = gun ? 'sidearm' : classDef?.weapon === 'dualBlades' || classDef?.weapon === 'staff' ? classDef.weapon : 'sword';
-  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance });
+  // the staff is held in both hands: the left one is kept on the shaft whatever the body's proportions
+  const secondHand = stance === 'staff' ? createSecondHand({ model, weapon: sword.group, grip: mirrorGrip(grip), along: STAFF_HANDS }) : null;
+  const animator = createFighterAnimator({ model, clips: { pack, dodges, walk: clips.walk, baked }, stance, secondHand });
   const trailColor = classDef ? classDef.color : weaponColor;
   const trails = blades.map((b) => ({ group: b.group, trail: createSwordTrail(scene, { color: trailColor, base: b.base, tip: b.tip }) }));
   const aim = gun ? createAimLine(scene, { color: weaponColor }) : null;

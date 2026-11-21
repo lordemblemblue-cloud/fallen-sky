@@ -9,6 +9,7 @@
 // The sword hand always grips (its fingers come from the sword stance, whatever the base clip does).
 import * as THREE from 'three';
 import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
+import { secondHandAt } from './secondHand.mjs';
 
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
@@ -21,7 +22,7 @@ export const STANCES = Object.freeze({
   sword: { idle: 'swordIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
   sidearm: { idle: 'pistolIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
   dualBlades: { idle: 'bladesIdle', guard: 'bladesGuard', grip: BOTH_FINGERS },
-  staff: { idle: 'staffIdle', guard: 'staffGuard', grip: RIGHT_FINGERS },
+  staff: { idle: 'staffIdle', guard: 'staffGuard', grip: BOTH_FINGERS }, // both hands hold it in the stance
 });
 
 /**
@@ -30,7 +31,8 @@ export const STANCES = Object.freeze({
  */
 // stance: 'sword', 'dualBlades' or 'staff' (a duelist's crystal form) or 'sidearm' (a smuggler: the pistol stance
 // is the idle, and the hand's grip)
-export function createFighterAnimator({ model, clips, stance = 'sword' }) {
+// secondHand: the staff's (client/secondHand.mjs), kept on the shaft after the clips have posed the body
+export function createFighterAnimator({ model, clips, stance = 'sword', secondHand = null }) {
   const mixer = new THREE.AnimationMixer(model);
   const pack = clips.pack || {};
   const form = STANCES[stance] || STANCES.sword;
@@ -214,6 +216,15 @@ export function createFighterAnimator({ model, clips, stance = 'sword' }) {
       entry.action.setEffectiveWeight(overlay > 1e-6 ? (entry.weight / overlay) * overlayShare : 0);
     }
     mixer.update(0);
+    if (secondHand) {
+      // on the shaft as much as the clips now showing say (the stance and the guard: wholly; a sweep: not at all)
+      let on = 0;
+      for (const entry of actions.values()) {
+        const w = entry.action.getEffectiveWeight();
+        if (w > 0.001) on += w * secondHandAt(entry.name, entry.action.time);
+      }
+      secondHand.apply(Math.min(1, on));
+    }
   }
 
   return {

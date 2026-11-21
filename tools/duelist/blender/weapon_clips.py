@@ -1,20 +1,27 @@
 # Duelist Adventure: the class weapons' clips, made in Blender from the owner's own clip pack (ActionForge, 80 clips
-# on the fused female rig). The twin blades get a strike for the left hand (the sword's, in a mirror) and both blades
-# working together; the staff gets the heavy combo's sweeps, one strike a clip. Every clip is rebuilt at 60 frames a
-# second on a smooth curve through the pack's keys (the pack is keyed at 24), smoothed lightly, and each link of a
-# chain starts from where the one before leaves the body, keeping the speed it had (inertial blending).
+# on the fused female rig).
+#   Twin blades: a strike for the left hand (the sword's, in a mirror) and both blades working together.
+#   Staff: a stance and a guard posed here with both hands on the shaft (the pack has no two-handed clips: each arm
+#   is solved onto the staff, the wrists kept easy), and the heavy combo's sweeps with one hand, each leaving from
+#   the stance and settling back into it.
+# Every clip is rebuilt at 60 frames a second on a smooth curve through the pack's keys (the pack is keyed at 24),
+# smoothed lightly, and each link of a chain starts from where the one before leaves the body, keeping the speed it
+# had (inertial blending).
 #
 #   blender -b --factory-startup -P tools/duelist/blender/weapon_clips.py -- <actionforge.glb with its meshes> <out dir> [options]
 #     --sheet a:12,b:8        pictures of source clips (name:frames) into <out dir>/sheets, then stop
 #     --weapon sword|blades|staff   what the body holds in those pictures
 #     --pictures a:10/0.6,b   pictures of the new clips with their weapons (name:frames/first seconds)
+#     --turn 0.6              the angle those pictures are taken from (radians round the body)
 #     --only a,b              build only these clips
+#     --tune                  search for staff holds that are easy on the wrists, print the best, then stop
 #     --studio <file.blend>   also save the scene (the body, the blades, every new clip on its own track)
 #     --info                  what was imported, then stop
 #
 # Writes <out dir>/class-weapons.anim.glb (the armature and the new clips, plus `__ref` and `__check` for the pack
 # builder) and class-weapons.clips.json (what each clip is). Copy both to tools/duelist/source/ and run
-# tools/duelist/build-motion-pack.mjs: it puts the clips on the pack's skeleton and checks the round trip.
+# tools/duelist/build-motion-pack.mjs: it puts the clips on the pack's skeleton, checks the round trip, and records
+# when the staff's second hand is on the shaft (the game keeps it there on every body: client/secondHand.mjs).
 # Strike timings live in src/components/duelist/core/moveMotion.mjs; the builder prints each clip's hand speed peaks.
 import bpy, sys, os, json, math
 from mathutils import Matrix, Quaternion, Vector
@@ -519,7 +526,7 @@ def add_weapon(kind):
     return [add_blade('Blade', 'Right', 0.98)]
 
 
-STAFF_SHIFT = 0.0  # metres: how far above its middle the right hand holds the staff
+STAFF_SHIFT = STAFF_MIDDLE = 0.19  # metres: the right hand holds the staff this far below its middle (the left hand as far above)
 
 
 if '--info' in argv:
@@ -548,6 +555,142 @@ if '--sheet' in argv:
     sys.exit(0)
 
 
+# ---------------------------------------------------------------- hands on a shaft (the staff's stance and guard)
+FORWARD0 = Vector((0, 0, 1)).cross(rig.side).normalized()  # the way the body faces at rest
+STAFF_HANDS = 0.38  # metres between the hands along the shaft (the staff's middle is halfway)
+STAFF_THUMB = 1  # the left thumb points up the shaft, away from the right hand (the easier hold in both stances)
+
+
+def swing(m3, direction, toward):  # the smallest turn that takes one direction to another, applied to a 3x3
+    return direction.rotation_difference(toward).to_matrix() @ m3
+
+
+def chest_axes(pose):  # the way the chest faces, its left, and its up
+    turn = pose[CHEST].to_3x3() @ rig.rest[CHEST].to_3x3().inverted()
+    forward, left = (turn @ FORWARD0).normalized(), (turn @ -rig.side).normalized()
+    return forward, left, forward.cross(left)
+
+
+class Arm:
+    def __init__(self, side):
+        at = lambda part: rig.index[f'mixamorig:{side}{part}']
+        self.upper, self.fore, self.hand = at('Arm'), at('ForeArm'), at('Hand')
+        self.len1, self.len2 = rig.rel[self.fore].translation.length, rig.rel[self.hand].translation.length
+        self.to_elbow, self.to_wrist = rig.rel[self.fore].translation.normalized(), rig.rel[self.hand].translation.normalized()
+        self.grip = rig.rest_inv[self.hand] @ grip_matrix(rig.rest, side)  # the grip in the hand's own space
+        self.palm = (rig.rest_inv[self.hand] @ rig.rest[at('HandMiddle1')].translation).normalized()  # along the hand
+        self.out = 1 if side == 'Left' else -1
+        self.fingers = [i for i in rig.chain(f'mixamorig:{side}Shoulder') if rig.names[i].startswith(f'mixamorig:{side}Hand') and i != self.hand]
+
+    def reach(self, pose, q, wrist, hand3):
+        """Upper arm, forearm and hand (armature space) with the wrist at a point and the hand turned as given; the
+        elbow bends down and out, as a relaxed arm's does."""
+        shoulder = pose[self.upper].translation
+        to = wrist - shoulder
+        d = min(max(to.length, abs(self.len1 - self.len2) + 1e-4), (self.len1 + self.len2) * 0.999)
+        n = to.normalized()
+        forward, left, _ = chest_axes(pose)
+        want = Vector((0, 0, -1)) * 0.75 + left * (0.5 * self.out) - forward * 0.35
+        pole = want - n * want.dot(n)
+        pole = pole.normalized() if pole.length > 1e-5 else left * self.out
+        c = min(max((self.len1 ** 2 + d * d - self.len2 ** 2) / (2 * self.len1 * d), -1.0), 1.0)
+        elbow = shoulder + n * (self.len1 * c) + pole * (self.len1 * math.sqrt(max(0.0, 1 - c * c)))
+        up3 = pose[self.upper].to_3x3()
+        up3 = swing(up3, (up3 @ self.to_elbow).normalized(), (elbow - shoulder).normalized())
+        upper = up3.to_4x4()
+        upper.translation = shoulder
+        fore = upper @ rig.rel[self.fore] @ q[self.fore].to_matrix().to_4x4()
+        f3 = fore.to_3x3()
+        f3 = swing(f3, (f3 @ self.to_wrist).normalized(), (shoulder + n * d - fore.translation).normalized())
+        lower = f3.to_4x4()
+        lower.translation = fore.translation
+        hand = hand3.to_4x4()
+        hand.translation = (lower @ rig.rel[self.hand]).translation
+        return {self.upper: upper, self.fore: lower, self.hand: hand}
+
+    def wrist(self, arm):  # how the wrist is turned: bent (radians, the hard part) and twisted along the forearm
+        straight = (arm[self.fore] @ rig.rel[self.hand]).to_3x3()
+        d = (straight.inverted() @ arm[self.hand].to_3x3()).to_quaternion()
+        twist = 2 * math.atan2(Vector((d.x, d.y, d.z)).dot(self.palm), d.w)
+        twist = (twist + math.pi) % (2 * math.pi) - math.pi
+        return (d @ Quaternion(self.palm, -twist)).angle, twist
+
+    def hold(self, pose, q, point, axis, near=None):
+        """The hand closed on a shaft at a point, its thumb toward `axis`. A grip leaves the hand free to turn about
+        the shaft: it takes the turn that is easiest on the wrist (near: the hand a frame earlier, to stay close to).
+        Returns the arm, the wrist's bend and twist, and how far the grip misses the point."""
+        g3, g_off = self.grip.to_3x3(), self.grip.translation
+        start = near if near is not None else pose[self.hand].to_3x3()
+        base = swing(start, (start @ g3.col[1]).normalized(), axis)
+
+        def tried(turn):
+            hand3 = Matrix.Rotation(turn, 3, axis) @ base
+            arm = self.reach(pose, q, point - hand3 @ g_off, hand3)
+            bend, twist = self.wrist(arm)
+            return bend + 0.3 * abs(twist), turn, arm, bend, twist
+
+        best = min((tried(k * math.pi / 12) for k in range(24)), key=lambda t: t[0]) if near is None else tried(0.0)
+        span = math.pi / 24
+        while span > 0.01:
+            best = min((best, tried(best[1] - span), tried(best[1] + span)), key=lambda t: t[0])
+            span /= 2
+        _, _, arm, bend, twist = best
+        return arm, bend, twist, ((arm[self.hand] @ self.grip).translation - point).length
+
+    def take(self, q, pose, arm):  # the solved arm as the bones' own rotations
+        for i in (self.upper, self.fore, self.hand):
+            p = rig.parent[i]
+            q[i] = rig.local(arm[i], i, arm.get(p, pose[p]))[0]
+
+
+LEFT, RIGHT = Arm('Left'), Arm('Right')
+HAND_MIRROR = rig.rest_inv[LEFT.hand] @ rig.S @ rig.rest[RIGHT.hand]  # the right hand's space seen in the left hand's
+
+
+def staff_hold(clip, where):
+    """Both hands on the staff. where(t): where the right hand's grip is and where the shaft runs to from there, in the
+    chest's own frame (metres forward, to the left, up): the left hand closes on it STAFF_HANDS along."""
+    unit = scale_of()
+    out = copy_clip(clip)
+    worst = [0.0, 0.0, 0.0, 0.0]  # the right wrist's bend, the left's, the worst twist, the worst miss (metres)
+    last = [None, None]
+    for f, q in enumerate(out['q']):
+        pose = rig.fk(q, clip['loc'][f])
+        forward, left, up = chest_axes(pose)
+        place = lambda c: pose[CHEST].translation + (forward * c[0] + left * c[1] + up * c[2]) / unit
+        right_at, toward = (place(c) for c in where(f / FPS))
+        axis = (toward - right_at).normalized()
+        arm, bend_r, twist_r, miss_r = RIGHT.hold(pose, q, right_at, axis, last[0])
+        RIGHT.take(q, pose, arm)
+        last[0] = arm[RIGHT.hand].to_3x3()
+        held = (arm[RIGHT.hand] @ RIGHT.grip).translation  # where the staff really is
+        arm, bend_l, twist_l, miss_l = LEFT.hold(pose, q, held + axis * (STAFF_HANDS / unit), axis * STAFF_THUMB, last[1])
+        LEFT.take(q, pose, arm)
+        last[1] = arm[LEFT.hand].to_3x3()
+        from_right = pose[RIGHT.hand].inverted()
+        done = dict(arm)
+        for i in LEFT.fingers:  # the left fingers close as the right hand's do, in a mirror
+            m = rig.mirror[i]
+            delta = (from_right @ pose[m]) @ (rig.rest_inv[RIGHT.hand] @ rig.rest[m]).inverted()
+            done[i] = arm[LEFT.hand] @ (HAND_MIRROR @ delta @ HAND_MIRROR.inverted()) @ (rig.rest_inv[LEFT.hand] @ rig.rest[i])
+            q[i] = rig.local(done[i], i, done[rig.parent[i]])[0]
+        worst = [max(worst[0], bend_r), max(worst[1], bend_l), max(worst[2], abs(twist_r), abs(twist_l)), max(worst[3], miss_r * unit, miss_l * unit)]
+    print('STAFF HOLD wrists bend up to', round(math.degrees(worst[0])), 'and', round(math.degrees(worst[1])), 'degrees, twist up to',
+          round(math.degrees(worst[2])), '; the worst miss', round(worst[3], 3), 'm')
+    return out
+
+
+# the stance: the right hand by the right hip, the staff running forward and up past the left hand (found with --tune:
+# the holds below are the easiest on the wrists near the ones in mind)
+STANCE = ((0.18, -0.14, -0.16), (0.36, 0.0, 0.12))
+# the guard: the staff raised steeply across the body, the left hand high
+GUARD = ((0.24, -0.16, -0.11), (0.34, 0.12, 0.36))
+
+
+def between(a, b, w):  # two holds mixed
+    return tuple(tuple(x + (y - x) * w for x, y in zip(p, r)) for p, r in zip(a, b))
+
+
 # ---------------------------------------------------------------- the clips
 def source(name, t0=0.0, t1=None):  # a clip of the pack on a smooth curve at FPS (seconds t0..t1 of it)
     data = keys(name + '_fit')
@@ -561,6 +704,45 @@ clips, notes = {}, {}
 def add(name, clip, note, loop=False, sigma=1.0):
     clips[name] = smoothed(clip, sigma, loop=loop)
     notes[name] = {'seconds': round(seconds_of(clip), 4), 'loop': loop, 'note': note}
+
+
+def hold_cost(q, loc, where, thumb):
+    """How hard a two-handed hold is: the worse wrist's bend plus a share of its twist (radians), and the miss (metres)."""
+    unit = scale_of()
+    q = [x.copy() for x in q]
+    pose = rig.fk(q, loc)
+    forward, left, up = chest_axes(pose)
+    place = lambda c: pose[CHEST].translation + (forward * c[0] + left * c[1] + up * c[2]) / unit
+    right_at, toward = place(where[0]), place(where[1])
+    axis = (toward - right_at).normalized()
+    arm, bend_r, twist_r, miss_r = RIGHT.hold(pose, q, right_at, axis)
+    held = (arm[RIGHT.hand] @ RIGHT.grip).translation
+    _, bend_l, twist_l, miss_l = LEFT.hold(pose, q, held + axis * (STAFF_HANDS / unit), axis * thumb)
+    return max(bend_r + 0.3 * abs(twist_r), bend_l + 0.3 * abs(twist_l)), max(miss_r, miss_l) * unit, (bend_r, twist_r, bend_l, twist_l)
+
+
+if '--tune' in argv:  # look for easy holds near the ones in mind: prints the best few for the stance and the guard
+    grid = lambda a, b, n: [a + (b - a) * k / (n - 1) for k in range(n)]
+    idle_q, idle_loc = pose_of(source('sword_idle'), 0)
+    block_clip = source('sword_block')
+    block_q, block_loc = pose_of(block_clip, frame_at(block_clip, 0.4))
+    for label, q, loc, rights, lefts in (
+        ('STANCE', idle_q, idle_loc, [(f, s, u) for f in grid(0.18, 0.3, 3) for s in grid(-0.2, -0.08, 3) for u in grid(-0.32, -0.16, 3)],
+         [(f, s, u) for f in grid(0.2, 0.36, 3) for s in grid(0.0, 0.2, 3) for u in grid(-0.1, 0.12, 3)]),
+        ('GUARD', block_q, block_loc, [(f, s, u) for f in grid(0.24, 0.4, 3) for s in grid(-0.16, 0.0, 3) for u in grid(-0.22, 0.0, 3)],
+         [(f, s, u) for f in grid(0.26, 0.5, 4) for s in grid(0.0, 0.24, 3) for u in grid(0.0, 0.36, 4)]),
+    ):
+        found = []
+        for r in rights:
+            for l in lefts:
+                for thumb in (1, -1):
+                    cost, miss, detail = hold_cost(q, loc, (r, l), thumb)
+                    if miss < 0.005:
+                        found.append((cost, thumb, tuple(round(v, 2) for v in r), tuple(round(v, 2) for v in l), tuple(round(math.degrees(v)) for v in detail)))
+        found.sort()
+        for thumb in (1, -1):
+            print('TUNE', label, 'thumb', thumb, 'of', len(found), [(round(b[0], 2), b[2], b[3], b[4]) for b in [x for x in found if x[1] == thumb][:5]])
+    sys.exit(0)
 
 
 def build():
@@ -593,14 +775,18 @@ def build():
     # heavy: both blades chop down, the left a beat after the right
     add('bladesHeavy', mirror_arm(chop, delay=0.1), 'both blades chop down, the right about 0.39 s, the left 0.1 s later')
 
-    # ---- the staff: the heavy combo's sweeps, one strike a clip, each settling into the stance on its own
-    stance_q, stance_loc = pose_of(combo, 0)
-    add('staffIdle', idle, 'the sword stance', loop=True, sigma=1.5)
-    add('staffGuard', block, 'the sword block', sigma=1.2)
-    add('staffA', settle_to(part(combo, 0.08, 0.62), stance_q, stance_loc), 'level sweep into a low lunge, contact about 0.32 s')
+    # ---- the staff: a stance and a guard with both hands on it (posed here: the pack has no two-handed clips), and
+    # the heavy combo's sweeps with one hand, each leaving from the stance and settling back into it
+    stance = staff_hold(idle, lambda t: STANCE)
+    stance_q, stance_loc = pose_of(stance, 0)
+    add('staffIdle', stance, 'the sword stance, the staff held low in both hands and pointing ahead', loop=True, sigma=1.5)
+    raised = lambda t: smoothstep(t / 0.2) * (1 - smoothstep((t - 0.85) / 0.3))
+    add('staffGuard', staff_hold(block, lambda t: between(STANCE, GUARD, raised(t))), 'the staff raised steeply across the body in both hands', sigma=1.2)
+    sweep = inertial_in(part(combo, 0.08, 0.62), stance, 0, 0.14, ARM_L + ARM_R)
+    add('staffA', settle_to(sweep, stance_q, stance_loc), 'level sweep into a low lunge, contact about 0.32 s')
     add('staffB', settle_to(part(combo, 0.55, 1.0), stance_q, stance_loc), 'turning backhand sweep, contact from 0.1 to 0.3 s')
     add('staffC', settle_to(part(combo, 1.0, 1.42), stance_q, stance_loc), 'rising diagonal sweep, contact about 0.17 s')
-    add('staffHeavy', spin, 'turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)')
+    add('staffHeavy', settle_to(part(spin, 0, 1.3), stance_q, stance_loc, 0.6), 'turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)')
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')

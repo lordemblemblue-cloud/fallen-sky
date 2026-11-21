@@ -12,17 +12,26 @@ const together = (parts) => ({
   update(dt) { for (const p of parts) p.update(dt); },
 });
 
+// The staff: 2.04 m, a long hilt between two blades. The right hand holds it STAFF_MIDDLE below its middle and the
+// left hand as far above (tools/duelist/blender/weapon_clips.py poses both hands on it), so the weapon's own frame
+// (the right hand's grip) is not its middle.
+export const STAFF_MIDDLE = 0.19;
+export const STAFF_HANDS = STAFF_MIDDLE * 2; // metres between the hands on the shaft
+const STAFF_HILT = 0.84;
+const STAFF_BLADE = 0.6;
+
 function staff(color) {
-  const upper = createCrystalSword({ color, length: 0.72 });
-  const lower = createCrystalSword({ color, length: 0.72 });
+  const upper = createCrystalSword({ color, length: STAFF_BLADE });
+  const lower = createCrystalSword({ color, length: STAFF_BLADE });
   const group = new THREE.Group();
   group.name = 'CrystalStaff';
   const material = new THREE.MeshStandardMaterial({ color: 0x1b2230, metalness: 0.7, roughness: 0.35 });
-  const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 0.6, 10), material);
+  const hilt = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, STAFF_HILT, 10), material);
+  hilt.position.y = STAFF_MIDDLE;
   hilt.castShadow = true;
   group.add(hilt);
-  upper.group.position.y = 0.3;
-  lower.group.position.y = -0.3;
+  upper.group.position.y = STAFF_MIDDLE + STAFF_HILT / 2;
+  lower.group.position.y = STAFF_MIDDLE - STAFF_HILT / 2;
   lower.group.rotation.x = Math.PI; // the second blade points the other way
   group.add(upper.group, lower.group);
   return { group, ...together([upper, lower]), dispose() { upper.dispose(); lower.dispose(); hilt.geometry.dispose(); material.dispose(); } };
@@ -49,7 +58,10 @@ export const mirrorGrip = (grip) => grip && {
 
 /** Where a class weapon's blades run, each in its own group's frame (blade along +Y): [{ group, base, tip }]. */
 export function weaponBlades(weapon) {
-  if (weapon.kind === 'staff') return [{ group: weapon.main.group, base: 0.62, tip: 1.02 }, { group: weapon.main.group, base: -0.62, tip: -1.02 }];
+  if (weapon.kind === 'staff') {
+    const reach = STAFF_HILT / 2 + STAFF_BLADE;
+    return [1, -1].map((end) => ({ group: weapon.main.group, base: STAFF_MIDDLE + end * (reach - STAFF_BLADE * 0.55), tip: STAFF_MIDDLE + end * reach }));
+  }
   if (weapon.kind === 'dualBlades') return [weapon.main, weapon.off].map((w) => ({ group: w.group, base: 0.4, tip: 0.78 }));
   return [{ group: weapon.main.group, base: 0.5, tip: weapon.length ?? 0.98 }];
 }

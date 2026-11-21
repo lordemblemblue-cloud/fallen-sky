@@ -59,7 +59,7 @@ Balance numbers are first proposals for playtesting (`SPECIAL_BALANCE` and the c
 
 ## Status (2026-11-20, branch `claude/duelist-rebuild-20261118`)
 
-Built and tested (138 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
+Built and tested (145 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
 
 - **The four kits, server-authoritative** (`core/classes.mjs`, `core/abilities.mjs`, `core/moves.mjs`,
   `sim/world.mjs`, `core/combat.mjs`, `sim/match.mjs`): every ability and special in the table above, the
@@ -71,12 +71,18 @@ Built and tested (138 Duelist tests; checked in the browser in practice and Capt
   the HP bar), class weapons (red blade, blue blade, gold twin blades, violet double-bladed staff), effects for
   every ability (bursts, lasting motes, the Sanctuary dome, a thrown blade that spins, a cloaked fighter as a
   ghost of itself), and the owner's HUD (`client/DuelistHud.jsx`, `public/ui/duelist/hud/README.md`).
+- **Clips of their own for the twin blades and the staff, made in Blender** (2026-11-21;
+  `tools/duelist/blender/weapon_clips.py`, from the owner's clip pack): rebuilt at 60 frames a second on a smooth
+  curve, each link of a chain starting from the pose and speed the one before leaves. Twin blades: a left-hand
+  slash, a right-hand slash, a cut into a lunge, a turn in the air with both blades, a double chop, a stance and a
+  guard. Staff: a two-handed stance and guard, three sweeps and an air turn that leave from the stance and settle
+  back into it; the second hand is kept on the shaft on every body (`client/secondHand.mjs`). Every blade leaves
+  its own trail. The motion lab (`/duelist-lab`) shows the clips with their weapons.
 
 Still to do:
 
-1. **Animations made for each weapon, in Blender.** Today the twin blades and the staff play the sword's clips
-   (the owner's pack has sword clips only); the twin blades' left hand and the staff's two-handed grip need clips
-   of their own, and every chain wants the smoothing pass.
+1. **New combos.** The class weapons now have clips of their own (above); strikes by direction that chain freely
+   are still to be designed and written, as rules of this game's own.
 2. **Transport** (escort a payload; the other team stops it): still a "Planned" entry in the play drawer. The
    HUD has no scoreboard for it yet. **A single rotating control point** has its scoreboard ready
    (`view.singlePoint`) but no mode behind it.

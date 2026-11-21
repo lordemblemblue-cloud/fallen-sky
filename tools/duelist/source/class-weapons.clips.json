@@ -40,12 +40,12 @@
   "staffIdle": {
    "seconds": 1.6667,
    "loop": true,
-   "note": "the sword stance"
+   "note": "the sword stance, the staff held low in both hands and pointing ahead"
   },
   "staffGuard": {
    "seconds": 1.25,
    "loop": false,
-   "note": "the sword block"
+   "note": "the staff raised steeply across the body in both hands"
   },
   "staffA": {
    "seconds": 0.9833,
@@ -63,7 +63,7 @@
    "note": "rising diagonal sweep, contact about 0.17 s"
   },
   "staffHeavy": {
-   "seconds": 2.0,
+   "seconds": 1.9,
    "loop": false,
    "note": "turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)"
   }

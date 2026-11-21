@@ -291,6 +291,39 @@ function thin(track) {
   return new Track(track.name, [track.times[0], track.times[track.times.length - 1]], [...v.slice(0, size), ...v.slice(0, size)]);
 }
 
+// How much the left hand is on the staff through a clip (1: its grip sits on the shaft). The game keeps it there on
+// every body, whatever its proportions (client/secondHand.mjs). Both grips are placed as the game solves them, from
+// the knuckles.
+const STAFF_HANDS = 0.38; // metres between the hands on the staff (client/classWeapons.mjs)
+function secondHand(clip) {
+  const at = (name) => bone(name).getWorldPosition(new THREE.Vector3());
+  const grip = (side) => {
+    const wrist = at(`${side}Hand`);
+    const x = at(`${side}HandMiddle1`).sub(wrist);
+    const palm = x.length();
+    x.normalize();
+    const across = at(`${side}HandIndex1`).sub(at(`${side}HandPinky1`));
+    const y = across.addScaledVector(x, -across.dot(x)).normalize();
+    const z = new THREE.Vector3().crossVectors(x, y);
+    return {
+      origin: wrist.addScaledVector(x, 0.8 * palm).addScaledVector(z, -0.29 * palm * (side === 'Right' ? 1 : -1)),
+      axis: x.clone().multiplyScalar(0.309).addScaledVector(y, 0.9511).normalize(),
+    };
+  };
+  const step = 1 / 30;
+  const on = [];
+  for (let t = 0; t <= clip.duration + 1e-6; t += step) {
+    on.push(posed(scene, clip, t, () => {
+      const right = grip('Right');
+      const reach = grip('Left').origin.sub(right.origin);
+      const along = reach.dot(right.axis) * unit;
+      const off = Math.hypot(reach.addScaledVector(right.axis, -reach.dot(right.axis)).length() * unit, along - STAFF_HANDS);
+      return +(1 - THREE.MathUtils.smoothstep(off, 0.03, 0.3)).toFixed(2); // it reaches for the shaft from a forearm away
+    }));
+  }
+  return Math.max(...on) > 0.5 ? { step: +step.toFixed(4), on } : null;
+}
+
 async function loadClassClips(path) {
   const { describeRig, retargetClip } = await import('../../src/components/duelist/client/motionLibrary.mjs');
   const file = readFileSync(path);
@@ -361,16 +394,18 @@ if (classPath) {
   for (const [key, clip] of await loadClassClips(classPath)) {
     const loop = CLASS_LOOPS.has(key);
     const peaks = CLASS_STANCES.has(key) ? [] : analyse(clip);
+    const held = /^staff/.test(key) ? secondHand(clip) : null;
     const { clip: processed, travel, naturalSpeed } = processClip(key, clip, loop);
     processed.tracks = processed.tracks.map(thin);
     built.push(processed);
     data[key] = {
       source: 'blender', duration: +clip.duration.toFixed(3), loop,
       ...(naturalSpeed ? { naturalSpeed } : {}), ...(travel ? { travel } : {}), ...(peaks.length ? { peaks } : {}),
+      ...(held ? { secondHand: held } : {}),
     };
     console.log(key.padEnd(16), 'made in Blender'.padEnd(30), clip.duration.toFixed(2) + 's', loop ? 'loop' : '    ',
       travel ? `travel ${travel.distance}` : '', peaks.length ? 'peaks ' + peaks.map((p) => `${p.hand[0]}@${p.t}(${p.speed})`).join(' ') : '',
-      `tracks ${processed.tracks.length}/${clip.tracks.length}`);
+      `tracks ${processed.tracks.length}/${clip.tracks.length}`, held ? `second hand on ${(held.on.reduce((a, b) => a + b, 0) * held.step).toFixed(2)}s` : '');
   }
 } else console.warn('no class clips: the twin blades and the staff will have none of their own');
 mkdirSync(dirname(OUT_GLB), { recursive: true });

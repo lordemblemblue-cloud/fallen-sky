@@ -7,7 +7,8 @@ import { MOTION_CLIPS } from '../core/motionPack.data.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL, BODIES } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
-import { createClassWeapon, equipClassWeapon } from './classWeapons.mjs';
+import { createClassWeapon, equipClassWeapon, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
+import { createSecondHand, secondHandAt } from './secondHand.mjs';
 import { CRYSTAL_SWORD } from './duelMoves.mjs';
 import { solveFallbackGrip } from '../../game3d/weapons/playerWeaponRuntime.js';
 import { createArena, createSceneLighting } from './arena.mjs';
@@ -79,7 +80,8 @@ export default function MotionLab() {
         if (solved) for (const kit of Object.values(kits)) equipClassWeapon(kit, { rightHand, leftHand: model.getObjectByName('mixamorigLeftHand'), grip: solved.grips.combat });
         const clips = { ...(await clipsForBody(model, { rigKey: bodyId })), ...(await clipsForBody(model, { rigKey: bodyId, url: MOVEMENT_PACK_URL, names: DODGES })) };
         const mixer = new THREE.AnimationMixer(model);
-        bodies.push({ bodyId, group, model, x, mixer, clips, action: null, sword, kits });
+        const secondHand = solved ? createSecondHand({ model, weapon: kits.staff.main.group, grip: mirrorGrip(solved.grips.combat), along: STAFF_HANDS }) : null;
+        bodies.push({ bodyId, group, model, x, mixer, clips, action: null, sword, kits, secondHand });
       }
       if (!disposed) setNames(Object.keys(bodies[0].clips));
     })().catch((error) => console.error('[motion lab]', error));
@@ -100,6 +102,7 @@ export default function MotionLab() {
         b.action.paused = true;
         b.action.time = state.time;
         b.mixer.update(0);
+        if (!state.rawHands) b.secondHand?.apply(secondHandAt(state.clip, state.time)); // the staff's second hand, as in the game
         // the travel the pack took out of the clip, put back on the body
         const t = MOTION_CLIPS[state.clip]?.travel;
         let forward = 0;
