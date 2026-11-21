@@ -1,7 +1,8 @@
 // Owner feedback 2026-11-19 (after playing main ab603e4), checked on both fused bodies:
 // 1. Attacks and the bow are animation montages over locomotion: the upper body plays the swing / shot / draw
 //    while the legs keep the walk / run under it (player/locomotionUnderlay.js), and the player keeps moving.
-// 2. Daggers sit in a reverse grip in both hands: the blade back down along the forearm, the thumb on the pommel.
+// 2. Daggers sit in a reverse grip in both hands: the handle's line back down along the forearm, the thumb on the
+//    pommel; the blade seated off that line so it stands clear of the arm, the right the left's mirror (2026-11-20).
 // 3. Running with the bow: the bow arm carries it low and a little out from the hip, never through the body.
 // 4. The bow: holding the aim draws and holds at full draw; letting go plays the shot from there; every further
 //    shot plays its own shot.
@@ -17,7 +18,7 @@ import {
 } from '../src/components/game3d/weapons/weaponComboClips.js';
 import { movesForFamily, createWeaponComboBinder } from '../src/components/game3d/weapons/weaponComboBinder.js';
 import { solveFallbackGrip, COMBAT_STATES } from '../src/components/game3d/weapons/playerWeaponRuntime.js';
-import { WEAPON_GRIP_RULES, DAGGER_POMMEL_DEPTH } from '../src/components/game3d/weapons/weaponGripMath.js';
+import { WEAPON_GRIP_RULES, DAGGER_POMMEL_DEPTH, daggerSeatQuaternion } from '../src/components/game3d/weapons/weaponGripMath.js';
 import { createLocomotionUnderlay, CHEST_FOLLOWS_HIPS } from '../src/components/game3d/player/locomotionUnderlay.js';
 import { syncFusedLocomotion } from '../src/components/game3d/player/fusedLocomotionSync.js';
 import { createPlayerMovementFallbackClips } from '../src/components/game3d/player/playerMovementFallbackClips.js';
@@ -115,26 +116,32 @@ test.before(async () => {
 });
 
 for (const rigId of Object.keys(RIGS)) {
-  test(`${rigId} daggers: a reverse grip in both hands, the thumb on the pommel, the blades along the forearms`, () => {
+  test(`${rigId} daggers: a reverse grip in both hands, the thumb on the pommel, the blades seated clear of the forearms`, () => {
     const model = bodies[rigId];
     assert.ok(WEAPON_GRIP_RULES.dagger.combat.reverse && WEAPON_GRIP_RULES.dagger.carry.reverse);
     const solved = {};
     const grips = {};
+    const inPalm = {};
     for (const side of ['right', 'left']) {
       solved[side] = solveFallbackGrip(model, { hand: side, class: 'dagger', handleRadius: 0.0155 }, ['carry', 'combat'], 1.7);
       grips[side] = new THREE.Quaternion().fromArray(solved[side].grips.combat.quaternion);
       const S = side === 'right' ? 'Right' : 'Left';
       for (const stance of ['carry', 'combat']) {
-        // in the hand at rest: the blade leaves the fist on the little-finger side, back towards the wrist
+        // in the hand at rest: the blade leaves the fist on the little-finger side, back towards the wrist and
+        // turned towards the back of the hand (the owner's seat, 2026-11-20)
         const held = holdAt(model, side, solved[side].grips[stance], { tip: [0, 0.37, 0] });
         model.updateMatrixWorld(true);
         const blade = W(held.marks.tip).sub(W(held.root)).normalize();
         const wrist = W(bone(model, `${S}Hand`));
         const fingers = W(bone(model, `${S}HandMiddle1`)).sub(wrist).normalize();
         const pinkySide = W(bone(model, `${S}HandPinky1`)).sub(W(bone(model, `${S}HandIndex1`))).normalize();
+        const palm = new THREE.Vector3().crossVectors(pinkySide.clone().negate().addScaledVector(fingers, pinkySide.dot(fingers)).normalize(), fingers)
+          .multiplyScalar(side === 'left' ? -1 : 1).normalize(); // out of the palm (weaponGripMath.palmFromKnuckles)
         held.release();
-        assert.ok(blade.dot(fingers) < -0.5, `${side} ${stance}: the blade runs back towards the wrist (${blade.dot(fingers).toFixed(2)})`);
-        assert.ok(blade.dot(pinkySide) > 0.3, `${side} ${stance}: the blade leaves the little-finger side (${blade.dot(pinkySide).toFixed(2)})`);
+        assert.ok(blade.dot(fingers) < -0.25, `${side} ${stance}: the blade runs back towards the wrist (${blade.dot(fingers).toFixed(2)})`);
+        assert.ok(blade.dot(pinkySide) > 0.4, `${side} ${stance}: the blade leaves the little-finger side (${blade.dot(pinkySide).toFixed(2)})`);
+        assert.ok(blade.dot(palm) < -0.5, `${side} ${stance}: the blade turns towards the back of the hand (${blade.dot(palm).toFixed(2)})`);
+        if (stance === 'combat') inPalm[side] = [blade.dot(pinkySide), blade.dot(fingers), blade.dot(palm)];
       }
       // the closed hand: the thumb's tip rests on the pommel's end
       const restore = applyFist(model, solved[side].fist);
@@ -146,21 +153,36 @@ for (const rigId of Object.keys(RIGS)) {
       held.release(); restore();
       assert.ok(miss < 0.025, `${side}: the thumb rests on the pommel (${(miss * 100).toFixed(1)} cm away)`);
     }
-    // the stance and every swing: the blades lie back along the forearms in the guard
+    // the right hand holds its dagger as the left's mirror
+    inPalm.right.forEach((v, i) => assert.ok(Math.abs(v - inPalm.left[i]) < 0.02, `the right seat mirrors the left (${inPalm.right.map((x) => x.toFixed(2))} vs ${inPalm.left.map((x) => x.toFixed(2))})`));
+    // the guard: the hands lay the handle's line back along the forearms (as the owner posed them), and the
+    // seated blades stand off the forearms, clear of the arm
     const clips = bakeWeaponComboClips(model, 'dagger', grips, { rest: captureRestPose(model), moves: movesForFamily('daggerCombo') });
-    const held = ['right', 'left'].map((side) => holdAt(model, side, solved[side].grips.combat, { tip: [0, 0.37, 0] }));
+    const held = ['right', 'left'].map((side) => holdAt(model, side, solved[side].grips.combat, { grip: [0, 0, 0], tip: [0, 0.37, 0] }));
+    const lines = ['right', 'left'].map((side) => {
+      const line = grips[side].clone().multiply(daggerSeatQuaternion(side).invert());
+      return holdAt(model, side, { ...solved[side].grips.combat, quaternion: line.toArray() }, { tip: [0, 0.37, 0] });
+    });
     try {
       for (const t of [0, 0.5, 1, 1.5]) {
         const done = pose(model, clips.idleDaggers, t);
         ['Right', 'Left'].forEach((S, i) => {
-          const back = W(bone(model, `${S}ForeArm`)).sub(W(bone(model, `${S}Hand`))).normalize();
-          const blade = W(held[i].marks.tip).sub(W(held[i].root)).normalize();
-          assert.ok(blade.angleTo(back) * DEG < 25, `guard at ${t}s: the ${S} blade lies along the forearm (${(blade.angleTo(back) * DEG).toFixed(0)} deg off)`);
+          const elbow = W(bone(model, `${S}ForeArm`)), wrist = W(bone(model, `${S}Hand`));
+          const back = elbow.clone().sub(wrist).normalize();
+          const line = W(lines[i].marks.tip).sub(W(lines[i].root)).normalize();
+          assert.ok(line.angleTo(back) * DEG < 25, `guard at ${t}s: the ${S} handle's line lies along the forearm (${(line.angleTo(back) * DEG).toFixed(0)} deg off)`);
+          const base = W(held[i].marks.grip), tip = W(held[i].marks.tip);
+          const off = tip.clone().sub(base).normalize().angleTo(back) * DEG;
+          assert.ok(off > 40 && off < 60, `guard at ${t}s: the ${S} blade stands ${off.toFixed(0)} deg off the forearm`);
+          let clear = Infinity;
+          for (let k = 0; k <= 10; k++) clear = Math.min(clear, segmentDistance(base.clone().lerp(tip, k / 10), elbow, wrist));
+          assert.ok(clear > 0.07, `guard at ${t}s: the ${S} blade clears the forearm (${(clear * 100).toFixed(1)} cm from its axis)`);
         });
         done();
       }
     } finally {
       held.forEach((h) => h.release());
+      lines.forEach((h) => h.release());
     }
   });
 

@@ -145,21 +145,28 @@ for (const rigId of Object.keys(RIGS)) {
         assert.ok(clip.userData.hit < clip.userData.cancel && clip.userData.cancel < clip.duration, `${name} cancels after the contact`);
         const { at } = checkMotion(model, clip, held);
         const [a, b] = clip.userData.sweep.map(at);
-        // hooks: the fist sweeps across, the blade along its forearm cutting behind it
+        // hooks: the fist sweeps across, the blade behind it cutting
         if (name === 'daggerLight1') assert.ok(right(a.hands[1]) - right(b.hands[1]) > 0.35, `right fist hooks right to left: ${right(a.hands[1]).toFixed(2)} -> ${right(b.hands[1]).toFixed(2)}`);
         if (name === 'daggerLight2') assert.ok(right(b.hands[0]) - right(a.hands[0]) > 0.35, `left fist hooks left to right: ${right(a.hands[0]).toFixed(2)} -> ${right(b.hands[0]).toFixed(2)}`);
         if (name === 'daggerStab') {
-          // a reverse grip stabs like a hammer: the point down, the fist driven out ahead of the hips
+          // a reverse grip stabs like a hammer: the point down (and out, from the blade's seat: owner 2026-11-20),
+          // the fist driven out ahead of the hips
           const c = at(hit);
-          assert.ok(c.blades[0].y < -0.85, `the stab points down: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
+          assert.ok(c.blades[0].y < -0.6, `the stab points down: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
           assert.ok(c.hands[1].z - c.hips.z > 0.45, `the stabbing hand reaches ${(c.hands[1].z - c.hips.z).toFixed(2)} m ahead of the hips`);
         }
       }
       const idle = clips.idleDaggers;
       assert.ok(idle.userData.idle && idle.userData.loop && Math.abs(idle.duration - 2) < 1e-6);
       const { frames } = checkMotion(model, idle, held);
-      // the guard: both blades hang down (along the forearms: game3d-weapon-montage.test.mjs measures that)
-      for (const f of frames) f.blades.forEach((blade, i) => assert.ok(blade.y < -0.5, `idle: blade ${i} hangs down (${blade.y.toFixed(2)})`));
+      // the guard: both blades stand out of the fists back and out to their own side, not up into the face
+      // (clear of the forearms: game3d-weapon-montage.test.mjs measures that)
+      for (const f of frames) {
+        f.blades.forEach((blade, i) => {
+          const out = i === 0 ? right(blade) : -right(blade); // blade 0 is the right hand's
+          assert.ok(out > 0.5 && blade.z < -0.3 && blade.y < 0.25, `idle: blade ${i} back and out (${blade.toArray().map((x) => x.toFixed(2))})`);
+        });
+      }
     } finally {
       held.forEach((h) => h.release());
     }

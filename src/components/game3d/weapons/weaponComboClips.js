@@ -9,8 +9,9 @@
 //   sword:   swordCombo1 flat slash, swordCombo2 rising diagonal, swordCombo3 forward thrust (owner handoff
 //            2026-11-18: 0.50 / 0.54 / 0.48 s, contact at 0.22 / 0.24 / 0.21 s)
 //   two-hand: swordTwoHand1-3, both hands on the hilt while the right button is held (owner 2026-11-18)
-//   daggers: held in a reverse grip in both hands (owner 2026-11-19: blade down along the forearm, thumb on the
-//            pommel): daggerLight1 right hook slash and daggerLight2 left hook slash (left click, the fastest),
+//   daggers: held in a reverse grip in both hands (owner 2026-11-19: the handle's line back down along the forearm,
+//            thumb on the pommel; 2026-11-20: the blade seated off that line, clear of the arm, weaponGripMath.js):
+//            daggerLight1 right hook slash and daggerLight2 left hook slash (left click, the fastest),
 //            daggerStab (right click): 0.33 / 0.37 / 0.43 s, contact at 0.12 / 0.15 / 0.18 s
 //   bow:     bowCombo1 quick shot, bowCombo2 fast shot with a sidestep lean, bowCombo3 overdrawn power shot (other
 //            players' avatars); the player's own shots (owner 2026-11-19): bowDraw draws while the aim is held,
@@ -22,6 +23,7 @@
 // the bow's draws also say when the arrow is nocked (nock) and the string fully drawn (full).
 import * as THREE from 'three';
 import { solveMountedLimb } from '../player/mountedRiderPose.mjs';
+import { daggerSeatQuaternion } from './weaponGripMath.js';
 
 export const WEAPON_COMBO_STATES = Object.freeze({
   swordCombo: Object.freeze(['swordCombo1', 'swordCombo2', 'swordCombo3']),
@@ -486,8 +488,13 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       setWorldQ(bone, new THREE.Quaternion().setFromAxisAngle(axis, angle).multiply(bone.getWorldQuaternion(new THREE.Quaternion())));
     };
     // The hand's long axis (wrist -> middle knuckle) in its own frame, and seen from the held weapon's frame.
+    // Daggers: the hands are posed for the handle's line, and the blade sits off it at its seat (the owner's
+    // placement, weaponGripMath.js), so every key below aims that line.
     const handInfo = new Map();
-    for (const [side, hand, grip] of [['r', b.rHand, grips.right], ['l', b.lHand, grips.left]]) {
+    const lineOf = (grip, side) => (grip && comboKind === 'daggerCombo'
+      ? grip.clone().multiply(daggerSeatQuaternion(side === 'r' ? 'right' : 'left').invert()) : grip);
+    for (const [side, hand, held] of [['r', b.rHand, grips.right], ['l', b.lHand, grips.left]]) {
+      const grip = lineOf(held, side);
       const S = side === 'r' ? 'Right' : 'Left';
       const knuckle = [`mixamorig:${S}HandMiddle1`, `fingers_${side}`].map((n) => model.getObjectByName(sanitize(n))).find((c) => c?.parent === hand)
         || hand.children.find((c) => c.isBone && c.position.lengthSq() > 1e-12);
