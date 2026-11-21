@@ -4,8 +4,9 @@
 import { useCallback, useState } from 'react';
 
 const KEY = 'duelist.prefs';
-// classId: the class the player fights as (core/classes.mjs), kept between matches
-export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist' });
+// classId: the class the player fights as (core/classes.mjs), kept between matches; xp: the EXP earned in matches
+// (client/progress.mjs: the level under the portrait)
+export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist', xp: 0 });
 
 export function readPrefs() {
   try {

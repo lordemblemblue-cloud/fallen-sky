@@ -435,9 +435,3 @@
 .duelist-classcard-special { color: #f2d28b; }
 .duelist-classcard-passive { font-size: 11px; color: rgba(230, 237, 246, 0.45); }
 .duelist-classpick-note { margin: 10px 0 0; font-size: 12px; color: rgba(230, 237, 246, 0.6); text-align: center; }
-.duelist-class-button {
-  position: absolute; right: 12px; top: 48px; z-index: 12; padding: 4px 10px; border-radius: 999px; cursor: pointer;
-  background: rgba(12, 17, 26, 0.7); border: 1px solid color-mix(in srgb, var(--class) 50%, transparent); color: var(--class);
-  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
-}
-.duelist-class-button:hover { background: rgba(12, 17, 26, 0.9); }

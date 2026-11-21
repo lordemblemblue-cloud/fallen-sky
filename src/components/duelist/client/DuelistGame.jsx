@@ -31,8 +31,11 @@ import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
 import { createOnlineSource } from '../net/client.mjs';
-import { ScoreLine, Countdown, RespawnNote, Feed, Result } from './MatchHud.jsx';
-import GlassHud from './GlassHud.jsx';
+import { Countdown, RespawnNote, Result } from './MatchHud.jsx';
+import DuelistHud from './DuelistHud.jsx';
+import { createHudFeed } from './hudFeed.mjs';
+import { levelFrom, xpForEvent } from './progress.mjs';
+import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon } from './classWeapons.mjs';
 import { CLASSES, classById, hiddenFrom } from '../core/index.mjs';
@@ -104,7 +107,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
-  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null }) {
+  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, xp = 0, onXp = null }) {
   const bound = keysFrom(keys || {});
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
@@ -120,6 +123,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const audioRef = useRef(null);
   const onMissionRef = useRef(onMission);
   onMissionRef.current = onMission;
+  const onXpRef = useRef(onXp);
+  onXpRef.current = onXp;
+  const xpRef = useRef(xp); // the player's EXP as this match began; what it earns is added on top
+  const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
 
   useEffect(() => {
@@ -192,6 +199,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let control = null;
     let lockId = null;
     let clock = 0;
+    // the HUD's kill feed and banners, and the EXP this match has earned
+    const feed = createHudFeed();
+    let earned = 0;
+    let portraitOf = null; // the actor the portrait was taken of (retaken when the fighter is rebuilt)
+    let portraitWait = 0;
     const lookDir = new THREE.Vector3();
     let last = performance.now();
     let hudClock = 0;
@@ -352,8 +364,20 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
     };
 
+    const hudContext = () => ({
+      me: me(), myTeam: seatList.find((s) => s.id === me())?.team || null,
+      nameOf: (id) => seatList.find((s) => s.id === id)?.name || null,
+      teamOf: (id) => seatList.find((s) => s.id === id)?.team || null,
+      classOf: (id) => world.fighters.get(id)?.classId || null,
+    });
     const onMatchEvent = (e) => {
       const myTeam = seatList.find((s) => s.id === me())?.team || null;
+      if (!source.mission && source.kind !== 'mission') {
+        const ctx = hudContext();
+        feed.event(e, clock, ctx);
+        const gained = xpForEvent(e, ctx);
+        if (gained > 0) { earned += gained; onXpRef.current?.(gained); }
+      }
       if (e.type === 'fight') { fightTimer = 0.9; setFightFlash(true); }
       else if (e.type === 'captured') audio.play(e.team === myTeam ? 'resist' : 'breach');
       else if (e.type === 'flagTaken') audio.play('gripStart', actors[e.by]?.chest() || null);
@@ -560,6 +584,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const shown = shownId ? world.fighters.get(shownId) : null;
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           const view = source.view();
+          const inMatch = !!view && !view.mission;
+          if (inMatch) feed.view(view, clock, hudContext());
           control?.update(view?.controlPoints);
           if (level) lastView = view;
           const line = view?.comms || null;
@@ -588,6 +614,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
             dead: !!mine?.vitals.dead,
+            meId: mineId,
+            kills: inMatch ? feed.kills(clock).slice() : null,
+            banners: inMatch ? feed.banners(clock) : null,
+            flagStates: inMatch && view.flags ? { blue: feed.flagState('blue', view.flags.blue?.state, clock), red: feed.flagState('red', view.flags.red?.state, clock) } : null,
+            level: levelFrom(xpRef.current + earned),
           });
           setStatus('ready');
         }
@@ -598,6 +629,17 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       arena.update(dt, { view: lastView });
       warp.update(dt);
+      // the HUD's portrait: a picture of the player's fighter, once it has stood a moment (again if it is rebuilt)
+      const mineActor = actors[me()];
+      if (drawing && mineActor && mineActor !== portraitOf && mineActor.group.visible) {
+        portraitWait += dt;
+        if (portraitWait > 0.5) {
+          portraitOf = mineActor;
+          portraitWait = 0;
+          const picture = takePortrait(renderer, scene, mineActor);
+          if (picture) setPortrait(picture);
+        }
+      }
       if (drawing) warp.render();
       if (film) filmFrame(dt);
     };
@@ -650,11 +692,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
-      {hud?.you && <GlassHud hud={hud} fighter={youBody} onPower={(id) => pressRef.current?.(id)} />}
-      {match && <ScoreLine view={match} />}
+      <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} onPower={(id) => pressRef.current?.(id)}
+        onClass={match && match.phase !== 'over' ? () => setPicking(true) : null}
+        help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
       {match && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
-      {match && <Feed view={match} />}
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}
       {quest && <Crew view={quest} />}
@@ -676,16 +718,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       )}
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
-      {match && !showPicker && (
-        <button type="button" className="duelist-class-button" onClick={() => setPicking(true)} style={{ '--class': `#${(CLASSES[current]?.color ?? 0x9fe8ff).toString(16).padStart(6, '0')}` }}>
-          {CLASSES[current]?.name || 'Class'}
-        </button>
-      )}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
       )}
-      <div className="duelist-help">{helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })}</div>
     </div>
   );
 }
@@ -695,7 +731,7 @@ const share = (value, max) => (max > 0 ? value / max : 0); // an ordinary person
 function snapshot(f, now) {
   const v = f.vitals;
   return {
-    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, special: f.classId ? (Number.isFinite(f.meter) ? f.meter : 0) : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
+    hp: share(v.hp, v.max.hp), hpValue: v.hp, hpMax: v.max.hp, willValue: v.will, special: f.classId ? (Number.isFinite(f.meter) ? f.meter : 0) : null, stamina: share(v.stamina, v.max.stamina), will: share(v.will, v.max.will), shield: share(v.shield, v.max.shield),
     veil: fighterVeil(f), noVeil: v.max.will <= 0, winded: v.winded, stunned: isStunned(f, now), held: !!f.heldBy, breached: Object.keys(f.breaches).length > 0,
     dead: v.dead,
   };

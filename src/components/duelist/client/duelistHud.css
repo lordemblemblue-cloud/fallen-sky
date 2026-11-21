@@ -1,0 +1,199 @@
+/* Duelist Adventure's match HUD (client/DuelistHud.jsx). The frames are the transparent templates in
+   public/ui/duelist/hud/parts; sizes are reference pixels (a 1920 x 1080 screen). Each cluster is anchored to its
+   corner and scaled by --dh-s (set on .duelist-game from the screen's size); data-hud="compact" (narrow screens)
+   stacks the bottom clusters. Quiet by design: dark glass, thin lines, colour only where it says something. */
+.dh-root { position: absolute; inset: 0; z-index: 11; pointer-events: none; color: #e6edf6; font-variant-numeric: tabular-nums; line-height: 1; user-select: none; }
+.dh-root button { font: inherit; color: inherit; pointer-events: auto; cursor: pointer; background: none; border: 0; padding: 0; }
+.dh-root button:disabled { cursor: default; }
+.dh-root kbd { font: 600 12px/16px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.dh-anchor { position: absolute; display: flex; }
+.dh-part { position: relative; flex: none; background-repeat: no-repeat; background-size: 100% 100%; }
+
+.dh-bl { left: calc(env(safe-area-inset-left, 0px) + 18px); bottom: calc(env(safe-area-inset-bottom, 0px) + 22px); align-items: flex-end; transform-origin: left bottom; transform: scale(var(--dh-s, 1)); }
+.dh-bc { left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 26px); flex-direction: column; align-items: center; transform-origin: center bottom; transform: translateX(-50%) scale(var(--dh-s, 1)); }
+.dh-br { right: calc(env(safe-area-inset-right, 0px) + 22px); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform-origin: right bottom; transform: scale(var(--dh-s, 1)); }
+.dh-tr { right: calc(env(safe-area-inset-right, 0px) + 18px); top: calc(env(safe-area-inset-top, 0px) + 18px); transform-origin: right top; transform: scale(var(--dh-s, 1)); }
+.dh-tc { left: 50%; top: calc(env(safe-area-inset-top, 0px) + 14px); flex-direction: column; align-items: center; gap: 4px; transform-origin: center top; transform: translateX(-50%) scale(var(--dh-s, 1)); }
+
+/* ---- bottom left: portrait, level, class, HP, EXP */
+.dh-portrait { width: 150px; height: 178px; background-image: url('/ui/duelist/hud/parts/portrait.svg'); }
+.dh-portrait-img { position: absolute; left: 18px; top: 15px; width: 114px; height: 114px; object-fit: cover; clip-path: polygon(50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%); }
+.dh-portrait-icon { position: absolute; left: 47px; top: 44px; width: 56px; height: 56px; color: rgba(214, 179, 109, 0.7); stroke-width: 1.3; }
+.dh-level { position: absolute; left: 42px; top: 148px; width: 66px; height: 24px; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #f1ddb0; pointer-events: auto; }
+.dh-vitals { width: 470px; height: 98px; margin: 0 0 18px -4px; background-image: url('/ui/duelist/hud/parts/vitals.svg'); }
+.dh-class { position: absolute; left: 6px; top: 6px; width: 44px; height: 44px; display: grid; place-items: center; color: #f1ddb0; }
+.dh-class svg { width: 22px; height: 22px; stroke-width: 1.8; transition: transform 0.12s; }
+.dh-class:not(:disabled):hover svg { transform: scale(1.15); }
+.dh-class[data-class='warrior'] { color: #ff8a7d; }
+.dh-class[data-class='duelist'] { color: #ffd98a; }
+.dh-class[data-class='assassin'] { color: #c9a0ff; }
+.dh-class[data-class='healer'] { color: #8fd6ff; }
+.dh-hp-text { position: absolute; left: 70px; top: 10px; height: 34px; display: flex; align-items: center; gap: 7px; font-size: 14px; letter-spacing: 0.08em; color: rgba(230, 237, 246, 0.7); white-space: nowrap; }
+.dh-hp-text b { font-size: 19px; font-weight: 700; letter-spacing: 0.02em; color: #f4f8fc; }
+.dh-who { position: absolute; left: 318px; top: 10px; height: 34px; display: flex; align-items: center; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(230, 237, 246, 0.55); white-space: nowrap; }
+.dh-hp { position: absolute; left: 60px; top: 55px; width: 382px; height: 16px; display: flex; gap: 3px; transform: skewX(-24deg); --dh-hp: #3ecf8e; }
+.dh-hp[data-tone='mid'] { --dh-hp: #e8b34b; }
+.dh-hp[data-tone='low'] { --dh-hp: #ef5a5a; }
+.dh-hp[data-tone='dead'] { --dh-hp: #5b6573; }
+.dh-hp i { flex: 1; display: block; overflow: hidden; background: rgba(8, 12, 18, 0.6); }
+.dh-hp i b { display: block; height: 100%; background: var(--dh-hp); transition: width 0.12s linear; }
+.dh-exp-label { position: absolute; left: 16px; top: 81px; font-size: 10px; letter-spacing: 0.16em; color: rgba(230, 237, 246, 0.5); }
+.dh-exp { position: absolute; left: 58px; top: 83px; width: 364px; height: 6px; overflow: hidden; transform: skewX(-26deg); background: rgba(8, 12, 18, 0.5); }
+.dh-exp b { display: block; height: 100%; background: #8f7be8; transition: width 0.3s ease-out; }
+
+/* ---- bottom centre: the special */
+.dh-lock { margin-bottom: 6px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #8fd6ff; }
+.dh-special { width: 470px; height: 86px; background-image: url('/ui/duelist/hud/parts/special.svg'); }
+.dh-special-emblem { position: absolute; left: 9px; top: 9px; width: 68px; height: 68px; border-radius: 50%; display: grid; place-items: center; color: rgba(214, 179, 109, 0.55); }
+.dh-special-emblem svg { width: 30px; height: 30px; stroke-width: 1.6; }
+.dh-special-name { position: absolute; left: 92px; top: 15px; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(230, 237, 246, 0.72); white-space: nowrap; }
+.dh-special-pct { position: absolute; right: 26px; top: 9px; font-size: 20px; font-weight: 700; color: #f1ddb0; }
+.dh-special-meter { position: absolute; left: 88px; top: 39px; width: 352px; height: 10px; overflow: hidden; transform: skewX(-33deg); background: rgba(8, 12, 18, 0.55); }
+.dh-special-meter b { display: block; height: 100%; background: linear-gradient(90deg, #a98646, #e3c27c); transition: width 0.2s linear; }
+.dh-special-meter i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(10, 14, 20, 0.85); }
+.dh-special-key { position: absolute; left: 92px; top: 60px; display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: #f1ddb0; }
+.dh-special-key kbd { min-width: 18px; padding: 0 5px; border-radius: 4px; border: 1px solid rgba(214, 179, 109, 0.5); color: #e6edf6; text-align: center; }
+.dh-special[data-ready='true'] .dh-special-emblem { color: #ffe6ad; animation: dh-ready 1.6s ease-in-out infinite; }
+.dh-special[data-ready='true'] .dh-special-meter b { background: linear-gradient(90deg, #e3c27c, #fff1c9); }
+.dh-special[data-ready='true'] .dh-special-pct { color: #fff1c9; }
+
+/* ---- bottom right: skills, Will / stamina / shield, weapon */
+.dh-skills { width: 540px; height: 124px; background-image: url('/ui/duelist/hud/parts/skills.svg'); }
+.dh-slot { position: absolute; top: 8px; width: 84px; }
+.dh-skill { position: relative; display: grid; place-items: center; width: 84px; height: 84px; overflow: hidden; color: #bfe6f7; clip-path: polygon(12px 0, 100% 0, 100% 72px, 72px 100%, 0 100%, 0 12px); }
+.dh-skill:not(:disabled):hover { background: rgba(94, 200, 239, 0.09); }
+.dh-skill svg { width: 34px; height: 34px; stroke-width: 1.5; }
+.dh-skill kbd { position: absolute; left: 6px; bottom: 5px; min-width: 18px; padding: 0 4px; border-radius: 4px; border: 1px solid rgba(183, 198, 217, 0.35); background: rgba(8, 12, 18, 0.72); color: #e6edf6; text-align: center; }
+.dh-skill[data-cooling='true'] svg, .dh-skill[data-short='true'] svg { opacity: 0.32; }
+.dh-skill[data-short='true'] { color: #7f8ea3; }
+.dh-skill-sweep { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(8, 12, 18, 0.6); }
+.dh-skill-cd { position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85); }
+.dh-skill-name { display: block; margin-top: 15px; width: 84px; text-align: center; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(230, 237, 246, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-bar { position: absolute; left: 402px; width: 128px; height: 6px; }
+.dh-bar span { position: absolute; left: 2px; top: -12px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(230, 237, 246, 0.5); }
+.dh-bar b { position: absolute; left: 0; top: 0; height: 6px; transform: skewX(-33deg); transition: width 0.15s linear; }
+.dh-bar-will b { background: #5ec8ef; }
+.dh-bar-will[data-veil='unstable'] b { background: #e8b34b; animation: dh-flicker 0.5s steps(2) infinite; }
+.dh-bar-will[data-veil='collapsed'] b, .dh-bar-will[data-veil='none'] b { background: #a8545a; }
+.dh-bar-stamina b { background: #d9e2ee; }
+.dh-bar-stamina[data-winded='true'] b { background: #e8b34b; }
+.dh-bar-shield b { background: #7f9bc4; }
+.dh-weapon { position: absolute; left: 400px; top: 82px; width: 124px; height: 26px; display: grid; place-items: center; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(230, 237, 246, 0.7); white-space: nowrap; }
+
+/* ---- top right: kill count and kill feed */
+.dh-kills { width: 360px; height: 214px; background-image: url('/ui/duelist/hud/parts/kills.svg'); }
+.dh-kills-label { position: absolute; left: 26px; top: 4px; height: 32px; display: flex; align-items: center; font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(230, 237, 246, 0.75); }
+.dh-kills-count { position: absolute; left: 270px; top: 10px; width: 64px; height: 20px; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #f1ddb0; }
+.dh-kill { position: absolute; left: 14px; width: 332px; height: 26px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12px; animation: dh-kill-in 0.25s ease-out; }
+.dh-kill svg { flex: none; width: 13px; height: 13px; opacity: 0.7; }
+.dh-kill b { max-width: 112px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dh-kill b[data-team='blue'] { color: #8fd6ff; }
+.dh-kill b[data-team='red'] { color: #ff9f9f; }
+.dh-kill-mark { color: rgba(230, 237, 246, 0.55); }
+.dh-kill[data-mine='true'] { background: linear-gradient(90deg, transparent, rgba(214, 179, 109, 0.16), transparent); }
+
+/* ---- top centre: the mode's scoreboard */
+.dh-timer { position: absolute; left: 50%; top: 4px; width: 116px; height: 26px; margin-left: -58px; display: grid; place-items: center; font-size: 15px; font-weight: 600; letter-spacing: 0.06em; color: #f1ddb0; }
+.dh-timer-plain { top: 6px; font-size: 13px; color: rgba(230, 237, 246, 0.7); }
+.dh-side { position: absolute; display: flex; align-items: center; justify-content: space-between; }
+.dh-side-blue { flex-direction: row; padding: 0 16px 0 26px; color: #9fdcff; }
+.dh-side-red { flex-direction: row-reverse; padding: 0 26px 0 16px; color: #ffb3b3; }
+.dh-side-name { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap; max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+.dh-side[data-mine='true'] .dh-side-name { color: #f1ddb0; }
+.dh-score { font-size: 32px; font-weight: 800; }
+.dh-score small { margin-left: 6px; font-size: 15px; font-weight: 600; opacity: 0.6; }
+
+.dh-ctf { width: 620px; height: 124px; background-image: url('/ui/duelist/hud/parts/ctf.svg'); }
+.dh-ctf .dh-side { top: 38px; width: 234px; height: 46px; }
+.dh-ctf .dh-side-blue { left: 60px; }
+.dh-ctf .dh-side-red { left: 326px; }
+.dh-flag { position: absolute; top: 95px; width: 18px; height: 18px; display: grid; place-items: center; }
+.dh-flag svg { width: 11px; height: 11px; stroke-width: 2.2; }
+.dh-flag small { position: absolute; top: 19px; left: 50%; transform: translateX(-50%); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; color: rgba(230, 237, 246, 0.6); }
+.dh-flag-blue { left: 181px; color: #6fcaf2; }
+.dh-flag-red { left: 421px; color: #f07a7a; }
+.dh-flag[data-state='taken'] svg { animation: dh-pulse 0.9s ease-in-out infinite; }
+.dh-flag[data-state='taken'] small { color: #f1c26b; }
+.dh-flag[data-state='dropped'] svg { opacity: 0.5; }
+.dh-flag[data-state='dropped'] small { color: #f0a36b; }
+.dh-flag[data-state='returned'] small, .dh-flag[data-state='captured'] small { color: #f4f8fc; }
+
+.dh-control3 { width: 660px; height: 124px; background-image: url('/ui/duelist/hud/parts/control3.svg'); }
+.dh-control3 .dh-side { top: 30px; width: 184px; height: 46px; }
+.dh-control3 .dh-side-blue { left: 52px; }
+.dh-control3 .dh-side-red { left: 424px; }
+.dh-progress { position: absolute; top: 56px; width: 166px; height: 4px; overflow: hidden; background: rgba(8, 12, 18, 0.5); }
+.dh-progress b { display: block; height: 100%; transition: width 0.3s linear; }
+.dh-side-blue .dh-progress { left: 18px; }
+.dh-side-blue .dh-progress b { background: #5ec8ef; }
+.dh-side-red .dh-progress { left: 0; }
+.dh-side-red .dh-progress b { margin-left: auto; background: #e5585e; }
+.dh-point { position: absolute; top: 33px; width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; background: rgba(24, 33, 46, 0.55); clip-path: polygon(50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%); }
+.dh-point b { position: relative; font-size: 17px; font-weight: 800; color: #d5dde8; }
+.dh-point i { position: absolute; left: 0; right: 0; bottom: 0; }
+.dh-point[data-owner='blue'] { background: rgba(94, 200, 239, 0.45); }
+.dh-point[data-owner='red'] { background: rgba(229, 88, 94, 0.45); }
+.dh-point[data-owner='blue'] b, .dh-point[data-owner='red'] b { color: #f4f8fc; }
+.dh-point[data-capturing='blue'] i { background: rgba(94, 200, 239, 0.7); }
+.dh-point[data-capturing='red'] i { background: rgba(229, 88, 94, 0.7); }
+.dh-point[data-state='contested'] { animation: dh-contest 0.7s ease-in-out infinite alternate; }
+
+.dh-control1 { width: 440px; height: 92px; background-image: url('/ui/duelist/hud/parts/control1.svg'); }
+.dh-control1 .dh-side { top: 22px; width: 154px; height: 40px; }
+.dh-control1 .dh-side-blue { left: 42px; }
+.dh-control1 .dh-side-red { left: 244px; }
+.dh-control1 .dh-score { font-size: 26px; }
+.dh-point-single { left: 200px; top: 22px; clip-path: circle(50%); }
+
+.dh-tdm { width: 520px; height: 112px; background-image: url('/ui/duelist/hud/parts/tdm.svg'); }
+.dh-tdm .dh-side { top: 38px; width: 202px; height: 46px; }
+.dh-tdm .dh-side-blue { left: 42px; }
+.dh-tdm .dh-side-red { left: 276px; }
+.dh-target { position: absolute; left: 200px; top: 90px; width: 120px; height: 18px; display: grid; place-items: center; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(230, 237, 246, 0.7); white-space: nowrap; }
+
+.dh-duel { width: 440px; height: 104px; background-image: url('/ui/duelist/hud/parts/duel.svg'); }
+.dh-duel .dh-side { top: 30px; width: 150px; height: 42px; }
+.dh-duel .dh-side-blue { left: 40px; }
+.dh-duel .dh-side-red { left: 250px; }
+.dh-duel .dh-score { font-size: 28px; }
+.dh-round { position: absolute; left: 196px; top: 27px; width: 48px; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 19px; font-weight: 800; color: #f1ddb0; }
+.dh-round small { font-size: 7px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(230, 237, 246, 0.6); }
+.dh-pips { position: absolute; top: 53px; left: 47px; display: flex; gap: 8px; }
+.dh-side-red .dh-pips { left: 57px; }
+.dh-pips i { width: 10px; height: 10px; transform: rotate(45deg) scale(0.72); }
+.dh-pips i[data-won='true'] { background: currentColor; }
+
+/* ---- the banners under the scoreboard */
+.dh-banner { display: grid; place-items: center; animation: dh-banner var(--dh-life, 3.4s) linear both; }
+.dh-banner span { text-transform: uppercase; white-space: nowrap; }
+.dh-banner-objective { width: 640px; height: 58px; background-image: url('/ui/duelist/hud/parts/bannerObjective.svg'); font-size: 17px; letter-spacing: 0.22em; }
+.dh-banner-event { width: 700px; height: 70px; background-image: url('/ui/duelist/hud/parts/bannerEvent.svg'); font-size: 22px; font-weight: 700; letter-spacing: 0.2em; }
+.dh-banner[data-tone='good'] { color: #a9e3ff; }
+.dh-banner[data-tone='bad'] { color: #ffadad; }
+.dh-banner[data-tone='neutral'] { color: #dfe6ef; }
+.dh-banner[data-tone='gold'] { color: #ffe6ad; }
+
+.dh-help { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 30px + 100px * var(--dh-s, 1)); transform: translateX(-50%); width: min(900px, 92%); text-align: center; font-size: 11px; line-height: 1.5; color: rgba(220, 235, 255, 0.6); }
+
+/* ---- narrow screens: the bottom clusters stack, the kill feed sits under the scoreboard */
+.duelist-game[data-hud='compact'] .dh-bl { left: calc(env(safe-area-inset-left, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); }
+.duelist-game[data-hud='compact'] .dh-br { right: calc(env(safe-area-inset-right, 0px) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 186px * var(--dh-s, 1)); }
+.duelist-game[data-hud='compact'] .dh-bc { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px + 318px * var(--dh-s, 1)); }
+.duelist-game[data-hud='compact'] .dh-tr { right: calc(env(safe-area-inset-right, 0px) + 8px); top: calc(env(safe-area-inset-top, 0px) + 14px + 270px * var(--dh-s, 1)); }
+.duelist-game[data-hud='compact'] .dh-help { display: none; }
+
+/* ---- the game's other overlays keep clear of the HUD */
+.duelist-game[data-hud] .duelist-sound { top: 12px; left: 12px; right: auto; bottom: auto; transform: none; }
+.duelist-game[data-hud] .duelist-comms { bottom: calc(22px + 196px * var(--dh-s, 1)); }
+.duelist-game[data-hud] .duelist-help { display: none; }
+
+@keyframes dh-ready { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+@keyframes dh-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes dh-flicker { 0% { opacity: 1; } 100% { opacity: 0.55; } }
+@keyframes dh-contest { from { background: rgba(214, 179, 109, 0.25); } to { background: rgba(214, 179, 109, 0.7); } }
+@keyframes dh-kill-in { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: none; } }
+@keyframes dh-banner { 0% { opacity: 0; transform: translateY(-6px); } 7% { opacity: 1; transform: none; } 86% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .dh-special[data-ready='true'] .dh-special-emblem, .dh-flag[data-state='taken'] svg, .dh-bar-will[data-veil='unstable'] b, .dh-point[data-state='contested'], .dh-kill { animation: none; }
+  @keyframes dh-banner { 0% { opacity: 0; } 7% { opacity: 1; } 86% { opacity: 1; } 100% { opacity: 0; } }
+}
