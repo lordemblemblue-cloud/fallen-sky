@@ -505,7 +505,7 @@ function readAudio() {
 const ACTION_NAME = Object.fromEntries(ACTIONS.map((a) => [a.id, a.label.replace(/\s*\(.*\)$/, '')]));
 
 /** Change what a key does: pick an action, then press the key or mouse button for it (Esc to cancel). */
-function KeyBindings({ keys, onChange }) {
+export function KeyBindings({ keys, onChange }) {
   const [waiting, setWaiting] = useState(null); // the action waiting for its new input
   const [note, setNote] = useState('');
   const bound = keysFrom(keys);

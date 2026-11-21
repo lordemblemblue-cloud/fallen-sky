@@ -17,6 +17,7 @@ import { MODE_TABS, TEMPLATE_MODES, templateTab, templateMode, firstTemplateMode
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { SettingsContent } from './MenuPages.jsx';
+import { CharacterReferenceMenu, StoryReferenceMenu, SettingsReferenceMenu } from './DuelistReferenceMenus.jsx';
 import './duelistTemplateUI.css';
 
 const MODE_ICONS = { swords: Swords, flag: Flag, truck: Truck, users: Users, target: Target,
@@ -263,10 +264,10 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   const [category, setCategory] = useState('normal');
   const [mode, setMode] = useState(firstTemplateMode('normal'));
   const fighter = BODIES[prefs.fighter]?.name || 'Duelist';
+  const isReferencePanel = ['character', 'story', 'settings'].includes(panel);
   const close = () => { setPanel(null); if (initialPanel) navigate({ to: '/duelist-next', replace: true }); };
   const navigatePanel = id => {
     if (id === 'home') return close();
-    if (id === 'story') return navigate({ to: '/duelist-next/$page', params: { page: 'story' } });
     setPanel(id);
   };
   const changeCategory = id => { setCategory(id); setMode(firstTemplateMode(id)); };
@@ -287,15 +288,15 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     return () => window.removeEventListener('keydown', keydown);
   }, [panel, initialPanel, navigate]);
   return (
-    <main className="dxt-page">
-      {panel !== 'character' && <DuelistHangarStage fighter={prefs.fighter}/>}
-      {panel && <button type="button" className="dxt-stage-scrim" tabIndex={-1} onClick={close} aria-label="Close menu"/>}
-      <header className="dxt-header">
+    <main className={'dxt-page' + (isReferencePanel ? ' dxt-page--reference' : '')}>
+      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter}/>}
+      {panel && !isReferencePanel && <button type="button" className="dxt-stage-scrim" tabIndex={-1} onClick={close} aria-label="Close menu"/>}
+      {!isReferencePanel && <header className="dxt-header">
         <div className="dxt-header-player"><span className="dxt-player-symbol"><UserRound size={20}/></span>
           <div><strong>GUEST DUELIST</strong><small>{fighter}</small></div></div>
         <h1><span>EMBLEM BLUE</span> DUELIST ADVENTURE</h1>
         <span className="dxt-header-network">{lobby.online ? String(lobby.players) + ' PLAYING' : 'OFFLINE / SOLO'}</span>
-      </header>
+      </header>}
       {!panel && <section className="dxt-home" aria-label="Duelist Adventure home">
         <div className="dxt-home-intro"><span>ENTER THE ARENA</span><h2>MASTER THE BLADE. SHAPE THE VEIL.</h2>
           <p>Choose a character and enter a match.</p>
@@ -306,11 +307,9 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
       </section>}
       {panel === 'play' && <ModeSelector category={category} selected={mode} onCategory={changeCategory}
         onSelect={setMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} close={close}/>}
-      {panel === 'character' && <CharacterSelector prefs={prefs} onPrefs={onPrefs} close={close}/>}
-      {panel === 'settings' && <TemplateSurface id="duelist-settings-panel" kind="settings" title="Settings"
-        eyebrow="PREFERENCES" subtitle="Graphics, audio, controls and offline practice." close={close}>
-        <div className="duelist-menu-page dxt-settings-content"><SettingsContent sharedPrefs={prefs} sharedUpdate={onPrefs}/></div>
-      </TemplateSurface>}
+      {panel === 'character' && <CharacterReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
+      {panel === 'story' && <StoryReferenceMenu lobby={lobby} prefs={prefs} close={close}/>}
+      {panel === 'settings' && <SettingsReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'store' && <StoreBrowser close={close}/>}
       <footer className="dxt-footer" aria-label="Duelist main navigation">
         {NAV.map(({ id, label, Icon }) => <button type="button" key={id}
