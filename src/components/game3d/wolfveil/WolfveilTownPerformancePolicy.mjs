@@ -20,3 +20,8 @@ export function townLODState(distanceMeters, type = 'home', previous = 'proxy', 
   if (distanceMeters <= (previous === 'detail' ? exit : enter)) return 'detail';
   return distanceMeters <= distant ? 'proxy' : 'hidden';
 }
+
+/** Browser-only A/B switch. Never disable town LOD for ordinary players. */
+export function townLODDisabledFromSearch(search = '') {
+  return new URLSearchParams(String(search || '')).get('townLod') === 'off';
+}
