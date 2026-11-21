@@ -6,12 +6,15 @@
  *   'webgl2' - WebGPURenderer forced onto that WebGL2 backend (forceWebGL), to test the fallback.
  *   'webgl'  - the classic WebGLRenderer with the original GLSL materials.
  *
- * The scene's entry in webgpuSceneReadiness.mjs decides the default: a ready scene uses 'webgpu', any other
- * scene the classic renderer. A developer can choose explicitly with `?renderer=webgpu|webgl2|webgl`, which is
- * remembered on this device until `?renderer=auto`; WebGPU kinds are honoured only for scenes marked ready or
- * preview, so an unknown scene can never opt in.
+ * The default: a scene marked ready in webgpuSceneReadiness.mjs uses 'webgpu' on a device where WebGPU measured at
+ * least as fast as the classic renderer (webgpuDeviceVerdict.mjs, measured once by webgpuDeviceProbe.js); without
+ * such a verdict, on a slower device, for any other scene, or after WebGPU failed in this tab, the classic renderer.
+ * A developer can choose explicitly with `?renderer=webgpu|webgl2|webgl`, which is remembered on this device until
+ * `?renderer=auto`; WebGPU kinds are honoured only for scenes marked ready or preview, so an unknown scene can never
+ * opt in.
  */
 import { WEBGPU_SCENES, isSceneWebGPUPreviewable, isSceneWebGPUReady } from './webgpuSceneReadiness.mjs';
+import { readDeviceVerdict } from './webgpuDeviceVerdict.mjs';
 
 export const RENDERER_OVERRIDE_KEY = 'fallen_sky_renderer_v1';
 export const RENDERER_KINDS = Object.freeze(['webgpu', 'webgl2', 'webgl']);
@@ -41,9 +44,11 @@ export function readRendererOverride({ search = '', storage = null } = {}) {
  * @param {string|null} o.override     readRendererOverride()
  * @param {boolean} o.previousFailure  WebGPURenderer failed earlier in this tab
  * @param {object} [o.scenes]          readiness inventory (tests)
+ * @param {object|null} [o.deviceVerdict] readDeviceVerdict(): WebGPU measured at least as fast on this device?
  * @returns {{kind:'webgpu'|'webgl2'|'webgl', reason:string}}
  */
-export function chooseSceneRenderer({ sceneId, override = null, previousFailure = false, scenes = WEBGPU_SCENES } = {}) {
+export function chooseSceneRenderer({ sceneId, override = null, previousFailure = false, scenes = WEBGPU_SCENES,
+  deviceVerdict = null } = {}) {
   if (override === 'webgl') return { kind: 'webgl', reason: 'override' };
   const previewable = isSceneWebGPUPreviewable(sceneId, scenes);
   if (override === 'webgpu' || override === 'webgl2') {
@@ -53,6 +58,9 @@ export function chooseSceneRenderer({ sceneId, override = null, previousFailure 
   }
   if (!isSceneWebGPUReady(sceneId, scenes)) return { kind: 'webgl', reason: 'scene-not-ready' };
   if (previousFailure) return { kind: 'webgl', reason: 'webgpu-failed-earlier' };
+  if (deviceVerdict?.webgpuAtLeastAsFast !== true) {
+    return { kind: 'webgl', reason: deviceVerdict ? 'webgpu-slower-on-this-device' : 'device-not-measured' };
+  }
   return { kind: 'webgpu', reason: 'scene-ready' };
 }
 
@@ -63,15 +71,18 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
   let previousFailure = false;
   let search = '';
   let storage = null;
+  let fingerprint = '';
   try {
     previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY) === '1';
     search = host?.location?.search || '';
     storage = host?.localStorage || null;
+    fingerprint = String(host?.navigator?.userAgent || '');
   } catch {
     return { kind: 'webgl', reason: 'browser-host-unavailable' };
   }
   const override = readRendererOverride({ search, storage });
-  return chooseSceneRenderer({ sceneId, override, previousFailure });
+  const deviceVerdict = readDeviceVerdict({ storage, fingerprint });
+  return chooseSceneRenderer({ sceneId, override, previousFailure, deviceVerdict });
 }
 
 /** Remember for this tab that WebGPURenderer could not run (init failure or device loss). */

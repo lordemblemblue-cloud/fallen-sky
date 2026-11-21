@@ -5,6 +5,7 @@ import {
   RENDERER_OVERRIDE_KEY, RENDERER_FAILED_KEY,
 } from '../src/lib/rendererBackendChoice.mjs';
 import { isSceneWebGPUPreviewable, isSceneWebGPUReady } from '../src/lib/webgpuSceneReadiness.mjs';
+import { DEVICE_VERDICT_KEY } from '../src/lib/webgpuDeviceVerdict.mjs';
 
 function memoryStorage(initial = {}) {
   const map = new Map(Object.entries(initial));
@@ -16,10 +17,16 @@ function memoryStorage(initial = {}) {
   };
 }
 
-test('live scenes default to the classic renderer while they are not marked ready', () => {
+test('live scenes are ready, yet default to WebGPU only where this device measured it at least as fast', () => {
   for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
-    assert.equal(isSceneWebGPUReady(sceneId), false);
-    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgl', reason: 'scene-not-ready' });
+    assert.equal(isSceneWebGPUReady(sceneId), true);
+    assert.deepEqual(chooseSceneRenderer({ sceneId }), { kind: 'webgl', reason: 'device-not-measured' });
+    assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: false } }),
+      { kind: 'webgl', reason: 'webgpu-slower-on-this-device' });
+    assert.deepEqual(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true } }),
+      { kind: 'webgpu', reason: 'scene-ready' });
+    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: 'yes' } }).kind, 'webgl');
+    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true }, previousFailure: true }).kind, 'webgl');
   }
 });
 
@@ -40,12 +47,27 @@ test('the classic renderer can always be chosen, and a failure earlier in the ta
   assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', override: 'webgl2', previousFailure: true }).kind, 'webgl2');
 });
 
-test('a ready scene uses WebGPURenderer by default (its own WebGL2 backend covers browsers without WebGPU)', () => {
+test('a ready scene uses WebGPURenderer by default where WebGPU is the faster renderer', () => {
   const scenes = { 'fallen-sky': { ready: true } };
-  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgpu', reason: 'scene-ready' });
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, previousFailure: true }).kind, 'webgl');
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, override: 'webgl' }).kind, 'webgl');
-  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: 'yes' } } }).kind, 'webgl');
+  const faster = { webgpuAtLeastAsFast: true };
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster }), { kind: 'webgpu', reason: 'scene-ready' });
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes }), { kind: 'webgl', reason: 'device-not-measured' });
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, previousFailure: true }).kind, 'webgl');
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes, deviceVerdict: faster, override: 'webgl' }).kind, 'webgl');
+  assert.equal(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: 'yes' } }, deviceVerdict: faster }).kind, 'webgl');
+  assert.deepEqual(chooseSceneRenderer({ sceneId: 'fallen-sky', scenes: { 'fallen-sky': { ready: false, preview: true } }, deviceVerdict: faster }),
+    { kind: 'webgl', reason: 'scene-not-ready' });
+});
+
+test('the browser helper reads this browser build\'s stored verdict', () => {
+  const verdict = JSON.stringify({ webgpuAtLeastAsFast: true, fingerprint: 'UA-1', measuredAt: Date.now() });
+  const host = (userAgent) => ({ location: { search: '' }, navigator: { userAgent },
+    localStorage: memoryStorage({ [DEVICE_VERDICT_KEY]: verdict }), sessionStorage: memoryStorage() });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-1')), { kind: 'webgpu', reason: 'scene-ready' });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host('UA-2')), { kind: 'webgl', reason: 'device-not-measured' });
+  const failed = host('UA-1');
+  rememberRendererFailure(failed);
+  assert.equal(chooseSceneRendererFor('fallen-sky', failed).kind, 'webgl');
 });
 
 test('the URL override is remembered until ?renderer=auto, and junk is ignored', () => {

@@ -164,7 +164,7 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
-import {createWebGPUSceneRenderer,onSceneDeviceLost} from '@/lib/webgpuSceneRenderer.js';
+import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,holdSceneFrames,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -528,6 +528,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // WebGPU: no frames until the player is ready and the area's shaders are compiled (markAvatarReady below)
+    let releaseInitialFrames = () => {};
     // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
     // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
     // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
@@ -555,6 +557,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           powerPreference: 'high-performance', forceWebGL: rendererChoice.kind === 'webgl2' });
         const gpuRenderer = created.renderer;
         renderer = gpuRenderer;
+        // drawing before then would compile every new shader synchronously, one frame at a time (seconds each)
+        releaseInitialFrames = holdSceneFrames(gpuRenderer);
+        setTimeout(() => releaseInitialFrames(), 60000); // never left held (e.g. a character that never loads)
         window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'WebGPU');
         // Nothing is drawn until init resolves (webglContextGuard); then the GPU class is known and the
         // graphics budget is worked out again, as WebGL does at once from the context.
@@ -2301,11 +2306,23 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       const markAvatarReady = () => {
         if (avatarLoadDisposed || modelRef.current !== fbx || avatarReadyReported) return;
         avatarReadyReported = true;
-        setLoading(false);
-        entryCameraReleased = true;
-        window.dispatchEvent(new CustomEvent('game3dWorldAvatarReady', {
-          detail: { modelUrl: appearanceRef.current.model_url, characterId: getActiveCharacter()?.id || null },
-        }));
+        const announce = () => {
+          if (avatarLoadDisposed || modelRef.current !== fbx) return;
+          setLoading(false);
+          entryCameraReleased = true;
+          window.dispatchEvent(new CustomEvent('game3dWorldAvatarReady', {
+            detail: { modelUrl: appearanceRef.current.model_url, characterId: getActiveCharacter()?.id || null },
+          }));
+        };
+        // WebGPU: compile the area's shaders in the background while the loading screen is still up, instead of
+        // one by one at each object's first draw (webgpuSceneRenderer.js precompileSceneObjects); then draw a few
+        // frames behind it (the shadow map and the ink pass compile there) before the world is shown
+        if (renderer.isWebGPURenderer) {
+          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
+            .then((result) => { window.__gw3dPrecompile = result; }, () => {})
+            .then(() => { releaseInitialFrames(); return waitForSceneRenders(renderer, 6); })
+            .then(announce, announce);
+        } else announce();
       };
       if (playerAnim.has('idle')) markAvatarReady();
       loadPlayerAnimationClips(loader,fbx, { onMontageReady: clips => {
@@ -2345,6 +2362,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         });
     }).catch((err) => {
       console.error('Player model load error:', err);
+      releaseInitialFrames();
       setLoading(false);
       if(!avatarLoadDisposed)window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{
         detail:{message:err?.message || 'Character model could not load. Try again or return to Character Select.'}}));

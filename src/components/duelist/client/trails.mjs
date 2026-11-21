@@ -1,6 +1,8 @@
 // Crystal sword trails: while the blade moves fast, a ribbon of light follows its edge and fades within a
 // tenth of a second, so a swing reads as one clean arc. Samples are smoothed (Catmull-Rom) between frames.
 import * as THREE from 'three';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { trailTwin } from './duelistNodes.mjs';
 
 const VERTEX = /* glsl */`
   attribute float aAlpha; attribute float aEdge;
@@ -36,6 +38,7 @@ export function createSwordTrail(scene, { color = 0x9fe8ff, base = 0.5, tip = 0.
   geometry.setIndex(index);
   const material = new THREE.ShaderMaterial({ vertexShader: VERTEX, fragmentShader: FRAGMENT, transparent: true, depthWrite: false,
     side: THREE.DoubleSide, blending: THREE.AdditiveBlending, uniforms: { uColor: { value: new THREE.Color(color) }, uStrength: { value: 1 } } });
+  setNodeTwin(material, trailTwin);
   const mesh = new THREE.Mesh(geometry, material);
   mesh.frustumCulled = false;
   scene.add(mesh);

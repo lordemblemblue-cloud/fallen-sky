@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import * as THREE from 'three';
+import { createSceneRenderer } from '../../lib/webgpuSceneRenderer.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -14,7 +15,7 @@ export default function MeshyFaceDraftPreview({url}) {
     let alive=true,frame=0,model=null;
     const scene=new THREE.Scene();
     const camera=new THREE.PerspectiveCamera(36,1,.02,100);
-    const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true});
+    const renderer=createSceneRenderer('fallen-sky',{alpha:true,antialias:true}).renderer;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     renderer.outputColorSpace=THREE.SRGBColorSpace;
     renderer.setClearColor(0x000000,0);

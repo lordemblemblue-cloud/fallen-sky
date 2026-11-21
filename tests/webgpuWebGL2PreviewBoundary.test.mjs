@@ -5,15 +5,17 @@ import { WEBGPU_SCENES } from '../src/lib/webgpuSceneReadiness.mjs';
 
 const games = ['fallen-sky', 'duelist-adventure'];
 
-test('forced WebGL2 is a developer preview, not production readiness', () => {
+test('forced WebGL2 is a developer preview; the default stays classic without a faster-WebGPU verdict', () => {
   for (const sceneId of games) {
-    assert.equal(WEBGPU_SCENES[sceneId].ready, false);
+    assert.equal(WEBGPU_SCENES[sceneId].ready, true);
     assert.deepEqual(chooseSceneRenderer({ sceneId, override: 'webgl2' }), {
       kind: 'webgl2', reason: 'override',
     });
     assert.deepEqual(chooseSceneRenderer({ sceneId }), {
-      kind: 'webgl', reason: 'scene-not-ready',
+      kind: 'webgl', reason: 'device-not-measured',
     });
+    // a verdict never selects the forced WebGL2 backend: the default is WebGPU or the classic renderer
+    assert.equal(chooseSceneRenderer({ sceneId, deviceVerdict: { webgpuAtLeastAsFast: true } }).kind, 'webgpu');
   }
 });
 

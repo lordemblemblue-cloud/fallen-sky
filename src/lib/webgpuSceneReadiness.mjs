@@ -1,14 +1,19 @@
 /**
  * Fail-closed readiness policy for the two live games.
- * This is an inventory, NOT a runtime WebGPU opt-in.
- * A scene may be enabled only after shader/effects parity and browser QA.
+ * A scene may be marked ready only after shader/effects parity and browser QA. Ready is still not "WebGPU for
+ * everyone": a ready scene defaults to WebGPU only on a device where it measured at least as fast as the classic
+ * renderer (rendererBackendChoice.mjs + webgpuDeviceVerdict.mjs); everywhere else the classic renderer stays.
  *
  * `preview: true` lets a developer opt a scene in explicitly (`?renderer=webgpu`, see
- * rendererBackendChoice.mjs) while the conversion is under review; it never changes the default.
+ * rendererBackendChoice.mjs); it never changes the default.
+ *
+ * Both scenes: every live shader and effect has a WebGPU (TSL) version, checked against the classic renderer in
+ * the browser view by view, and a lost GPU device falls back to the classic renderer
+ * (docs/webgpu/CONVERSION_SURVEY_20261120.md, stages 2-5). The GLSL versions stay for that classic renderer.
  */
 export const WEBGPU_SCENES = Object.freeze({
-  'fallen-sky': Object.freeze({ ready: false, preview: true, blocker: 'GameWorld3D shader, render-target and device-loss audit pending' }),
-  'duelist-adventure': Object.freeze({ ready: false, preview: true, blocker: 'Legacy EffectComposer/ShaderPass warp effects require WebGPU parity' }),
+  'fallen-sky': Object.freeze({ ready: true, preview: true, blocker: null }),
+  'duelist-adventure': Object.freeze({ ready: true, preview: true, blocker: null }),
 });
 
 /**
