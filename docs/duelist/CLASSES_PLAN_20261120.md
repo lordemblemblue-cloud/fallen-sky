@@ -138,9 +138,33 @@ Built and tested (213 Duelist tests; checked in the browser in practice and Capt
   - *New clips*: 27 cuts and 3 backhands made in Blender from the stance alone (planted feet, a step with the
     cut, wrists kept inside their bend); the whirl and the cross play the pack's spinning cut and turning
     backhand. These are this game's own rules and motions; nothing is taken from another game.
-  - *Not yet*: the twin blades and the staff still read the stick as forward, side or back; bots cut by direction
-    but stay in the balanced mode; the old sword strikes (`swordLight1-3`, `swordAdvance`, `swordSweep`) are no
-    longer on a key.
+  - *Move while you cut.* A cut by direction does not root the fighter: the stick still moves the body through it, at
+    a share of the running speed (swift 85%, balanced and the staff 70%, the twin blades 85%, heavy 50%). The
+    animator plays the cut on the trunk and arms while the legs keep walking; standing still, the cut's own legs show.
+  - *A class has its own style* (the owner, 2026-11-21): the Healer cuts swift with a guarding free hand, the Warrior
+    heavy, the Duelist with twin blades, the Assassin with the double-ended staff. The mode key is only for a fighter
+    with no class.
+  - *Twin blades and staff cut the same nine lines*, each in one mode of its own (18 clips). Every twin-blade cut
+    has a leading hand: the right blade leads what travels to the left and the cut down, the left blade what travels
+    to the right and the cut up, and the other blade follows the same line in the mirror, so the two cross and
+    uncross. The staff has points of its own: the right hand keeps near the hip and the far end does the reaching, so
+    both hands are on the shaft through 23% to 100% of each cut. A second press hard on the first gives each form
+    three moves it already had (the blades' turn in the air, sweep and turn; the staff's turning sweep, swing and
+    leap).
+  - *Quicker.* Every cut is about a fifth quicker than it first was; a master sword duel between bots is back to
+    about a minute.
+  - *When blades meet, and when a fighter falls* (clips `swordRecoil`, `bladesRecoil`, `staffRecoil`, `pushThrust`):
+    a parried cut is thrown back over the weapon shoulder with the trunk rocked; the push and the pull have a clip
+    of their own (the free hand drawn back to the ribs and shot straight out, open); a defeated body sheds light and
+    flickers out as it falls, and is whole again when the fighter stands.
+  - *Checked* (2026-11-21): in the rules, all four classes' four abilities and specials start and do their work
+    (20 of 20); in a practice match, the Warrior, the Healer, the Duelist and the Assassin each start the right cut
+    for the direction held; the Warrior covers ground through a heavy cut.
+  - *Not yet*: two real players online; the whirl and the cross still play clips from the pack (only the backhand is
+    made for them); bots stay in their class's mode and do not pick modes; the old strikes (`swordLight1-3`,
+    `bladesLight1-4`, `staffLight1-3` and the advance, sweep and turn) are off the light key; nobody but the Masked
+    Warrior and the Huntress has been watched in motion; five Duelist tests fail on main itself and here (controls on
+    blur, three on mastery and match boost, one special contract).
 
 Still to do:
 
