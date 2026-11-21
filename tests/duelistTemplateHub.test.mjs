@@ -46,7 +46,7 @@ test('bottom navigation is actionable and Settings is last, without Pass or Plus
   assert.doesNotMatch(ids, /battlePass|plus/i);
   assert.match(menu, /navigatePanel\(id\)/);
   assert.match(menu, /to: '\/duelist-next\/play'/);
-  assert.match(menu, /SettingsContent sharedPrefs=\{prefs\}/);
+  assert.match(menu, /<SettingsReferenceMenu prefs=\{prefs\} onPrefs=\{onPrefs\}/);
   assert.match(source('src/routes/duelist.jsx'), /component: DuelistTemplateHub/);
   assert.match(source('src/routes/duelist-next.index.jsx'), /component: DuelistTemplateHub/);
   assert.match(source('src/routes/duelist-next.$page.jsx'), /<DuelistTemplateHub initialPanel=/);
@@ -55,7 +55,7 @@ test('bottom navigation is actionable and Settings is last, without Pass or Plus
 
 test('selected fighter renders an existing live model, not stock character pictures', () => {
   assert.match(menu, /Object.entries\(BODIES\)/);
-  assert.match(menu, /<DuelistHangarStage fighter=\{prefs.fighter\}/);
+  assert.match(source('src/components/duelist/menu/DuelistReferenceMenus.jsx'), /<DuelistHangarStage fighter=\{prefs.fighter\}/);
   assert.match(menu, /classProgressOf\(prefs\)/);
   assert.match(menu, /masteryAt\(mastery.level\)/);
   assert.match(menu, /role="progressbar"/);
