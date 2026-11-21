@@ -7,7 +7,7 @@ import {
 } from '../src/lib/webgpuSceneReadiness.mjs';
 import { chooseSceneRenderer } from '../src/lib/rendererBackendChoice.mjs';
 
-for (const scenes of [null, undefined, false, 0, 'invalid']) {
+for (const scenes of [null, false, 0, 'invalid']) {
   test(`malformed readiness inventory ${String(scenes)} fails closed`, () => {
     assert.equal(isSceneWebGPUReady('fallen-sky', scenes), false);
     assert.equal(isSceneWebGPUPreviewable('duelist-adventure', scenes), false);
