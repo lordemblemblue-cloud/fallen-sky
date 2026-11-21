@@ -59,6 +59,8 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         }
       }
       for (const e of effects) {
+        // a cut parried: the blades met, and the one who cut is thrown back (its animator shows the recoil)
+        if (e.type === 'parry' && actors[e.attacker]) actors[e.attacker].clashAt = world.time;
         const feel = vfx.effect(e, actors);
         // a class ability lands: its own sound
         if (e.type === 'effect' || e.type === 'zone') audio.play(e.effect === 'rage' || e.type === 'zone' ? 'breach' : 'resist', actors[e.target || e.owner]?.chest() || null);

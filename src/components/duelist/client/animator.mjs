@@ -19,10 +19,10 @@ const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7.2 });
 const RIGHT_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
 const BOTH_FINGERS = /(Right|Left)Hand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
 export const STANCES = Object.freeze({
-  sword: { idle: 'swordIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
+  sword: { idle: 'swordIdle', guard: 'swordBlock', grip: RIGHT_FINGERS, recoil: 'swordRecoil' },
   sidearm: { idle: 'pistolIdle', guard: 'swordBlock', grip: RIGHT_FINGERS },
-  dualBlades: { idle: 'bladesIdle', guard: 'bladesGuard', grip: BOTH_FINGERS },
-  staff: { idle: 'staffIdle', guard: 'staffGuard', grip: BOTH_FINGERS }, // both hands hold it in the stance
+  dualBlades: { idle: 'bladesIdle', guard: 'bladesGuard', grip: BOTH_FINGERS, recoil: 'bladesRecoil' },
+  staff: { idle: 'staffIdle', guard: 'staffGuard', grip: BOTH_FINGERS, recoil: 'staffRecoil' }, // both hands hold it in the stance
 });
 
 /**
@@ -36,7 +36,11 @@ export const STANCES = Object.freeze({
 // fighter during one: core/cuts.mjs). Such a clip, and each walking loop, is two actions: the legs (hips and down)
 // and the rest. Standing still, the cut's own legs show; moving, the walk's.
 const LEGS = /mixamorig(Hips|(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End))./;
-export const LAYERED = /^(sword(Cut|Backhand)|bladesCut|staffCut)/;
+export const LAYERED = /^(sword(Cut|Backhand|Recoil)|blades(Cut|Recoil)|staff(Cut|Recoil)|pushThrust)/;
+// A parried cut is thrown back: the recoil clip is shown from where the blade is already in front (the seconds of
+// its lead-in: tools/duelist/blender/cut_grid.py RECOIL_MODE wind), for a parry within CLASH seconds of the stagger.
+const RECOIL_FROM = 0.07;
+const CLASH = 0.15;
 const part = (clip, legs) => new THREE.AnimationClip(`${clip.name}:${legs ? 'legs' : 'body'}`, clip.duration, clip.tracks.filter((t) => LEGS.test(t.name) === legs));
 const WALKING = 1.2; // metres a second at which the legs are wholly the walk's
 
@@ -107,7 +111,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   };
 
   // What shows over the base now: { clip, time, fade, out } or null.
-  function choose(fighter, body, now, dt, working) {
+  function choose(fighter, body, now, dt, working, clash) {
     const a = fighter.action;
     if (fighter.vitals.dead) {
       if (deathStart === null) deathStart = elapsed;
@@ -138,10 +142,13 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       if (reaction.until !== fighter.stunnedUntil) {
         const length = fighter.stunnedUntil - now;
         flinchToggle = !flinchToggle;
-        const clip = length >= 0.6 && library.guardBreak ? 'guardBreak' : flinchToggle ? 'hitChest' : 'hitHead';
-        reaction = { until: fighter.stunnedUntil, clip, start: now, length };
+        // its own cut was parried (the blades met): the blade is thrown back; else a flinch, or a guard break
+        const thrown = clash != null && now - clash < CLASH && form.recoil && library[form.recoil] ? form.recoil : null;
+        const clip = thrown || (length >= 0.6 && library.guardBreak ? 'guardBreak' : flinchToggle ? 'hitChest' : 'hitHead');
+        reaction = { until: fighter.stunnedUntil, clip, start: now, length, thrown: !!thrown };
       }
       const clip = library[reaction.clip];
+      if (clip && reaction.thrown) return { clip: reaction.clip, time: Math.min(clip.duration - 1e-3, RECOIL_FROM + (now - reaction.start)), fade: 0.04 };
       if (clip) {
         const u = Math.min(1, (now - reaction.start) / Math.max(0.05, reaction.length));
         const span = reaction.clip === 'guardBreak' ? clip.duration : Math.min(clip.duration, reaction.length * 1.2);
@@ -194,9 +201,10 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   }
 
   // working: { clip, progress (0..1), loop } while the fighter is using something, else null
-  function update(dt, { fighter, body, now, working = null }) {
+  // clash: when (the rules' time) this fighter's cut was last parried, or null
+  function update(dt, { fighter, body, now, working = null, clash = null }) {
     elapsed += dt;
-    const want = choose(fighter, body, now, dt, working);
+    const want = choose(fighter, body, now, dt, working, clash);
     lastAction = fighter.action;
     let outRate = 1 / FADE.out;
     if (want) {

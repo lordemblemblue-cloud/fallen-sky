@@ -670,6 +670,26 @@
    ],
    "from": "BL",
    "to": "TR"
+  },
+  "swordRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried: the blade thrown back, the trunk rocked, then the stance"
+  },
+  "bladesRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried with the twin blades: both thrown back"
+  },
+  "staffRecoil": {
+   "seconds": 0.55,
+   "loop": false,
+   "note": "a cut parried with the staff: the far end thrown up and back"
+  },
+  "pushThrust": {
+   "seconds": 0.4667,
+   "loop": false,
+   "note": "the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it"
   }
  }
 }

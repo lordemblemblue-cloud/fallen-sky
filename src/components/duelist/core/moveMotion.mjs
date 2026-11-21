@@ -44,10 +44,11 @@ export const MOVE_MOTION = Object.freeze({
   // overhead chop that drives into a lunge
   swordHeavy: { segments: phases('swordHeavy', 'swordHeavy', [0.05, 0.33, 0.46, 0.95]), settle: { clip: 'swordHeavy', from: 0.95 } },
   // Telekinesis: the free hand reaches out (push and pull), holds (grip), lowers
-  push: { segments: [seg('castEnter', 0, MOVES.push.startup, 0.1, 0.4), seg('castEnter', MOVES.push.startup, activeEnd('push'), 0.4, 0.52),
-    seg('castExit', activeEnd('push'), end('push'), 0, 0.43)] },
-  pull: { segments: [seg('castEnter', 0, MOVES.pull.startup, 0.1, 0.4), seg('castEnter', MOVES.pull.startup, activeEnd('pull'), 0.4, 0.52),
-    seg('castExit', activeEnd('pull'), end('pull'), 0, 0.43)] },
+  // a clip made for them (tools/duelist/blender/cut_grid.py): the free hand is drawn back to the ribs and shot straight
+  // out, open, with the trunk behind it; made to the push's own seconds, so it runs at its own speed (the pull draws
+  // the same hand back)
+  push: { segments: [seg('pushThrust', 0, end('push'), 0, end('push'))] },
+  pull: { segments: [seg('pushThrust', 0, end('pull'), 0, end('pull'))] },
   grip: { segments: [seg('castEnter', 0, MOVES.grip.startup, 0.05, 0.5), seg('castHold', MOVES.grip.startup, activeEnd('grip'), 0, 2.1, { loop: true }),
     seg('castExit', activeEnd('grip'), end('grip'), 0, 0.43)] },
   // the held body is flung: the throw starts at its release

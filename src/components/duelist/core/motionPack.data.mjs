@@ -4630,5 +4630,95 @@ export const MOTION_CLIPS = Object.freeze({
         1
       ]
     }
+  },
+  "swordRecoil": {
+    "source": "blender",
+    "duration": 0.55,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.025,
+        "speed": 15
+      },
+      {
+        "hand": "left",
+        "t": 0.117,
+        "speed": 4.99
+      }
+    ]
+  },
+  "bladesRecoil": {
+    "source": "blender",
+    "duration": 0.55,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.025,
+        "speed": 15
+      },
+      {
+        "hand": "left",
+        "t": 0.058,
+        "speed": 12.61
+      }
+    ]
+  },
+  "staffRecoil": {
+    "source": "blender",
+    "duration": 0.55,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.025,
+        "speed": 7.98
+      },
+      {
+        "hand": "left",
+        "t": 0.05,
+        "speed": 9.24
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "pushThrust": {
+    "source": "blender",
+    "duration": 0.467,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.033,
+        "speed": 8.47
+      },
+      {
+        "hand": "right",
+        "t": 0.1,
+        "speed": 4.53
+      }
+    ]
   }
 });

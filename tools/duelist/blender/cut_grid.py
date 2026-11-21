@@ -273,6 +273,9 @@ def make_cut(cut, mode, base_q, base_loc, line=None, modes=None, hand='Right', r
         c_reach = 0.84 + 0.06 * m['amp']  # the elbow keeps a bend: the blade is the reach
     r_ctrl = 2 * c_reach - (P['reach'] + Q['reach']) / 2
     arm_way, blade_way = arc3(P['arm'], c_arm, Q['arm']), arc3(P['blade'], c_blade, Q['blade'])
+    if m.get('direct'):  # straight from the one pose to the other: no reach through the front (the recoil, the push)
+        arm_way, blade_way = (lambda u: slerp(P['arm'], Q['arm'], u)), (lambda u: slerp(P['blade'], Q['blade'], u))
+        r_ctrl = (P['reach'] + Q['reach']) / 2
     Tw, Tc, Th, Tr = m['wind'], m['cut'], m['hold'], m['rec']
     V = (FORWARD0 * step[0] + LEFT0 * step[1]) * (m['step'] / unit)
     stand = [leg.stand(base_q, base_loc) for leg in LEGS]
@@ -317,8 +320,12 @@ def make_cut(cut, mode, base_q, base_loc, line=None, modes=None, hand='Right', r
         for k in ('yaw', 'pitch', 'roll', 'shift'):
             s[k] = trunk[k]
         gone = 0.75 * smoothstep((t - t1a) / (t1b - t1a)) + 0.25 * smoothstep((t - t2a) / (t2b - t2a))
-        guard = m.get('guard', 0.0) * smoothstep(t / Tw) * (1 - smoothstep((t - Tw - Tc - Th) / Tr))
+        out_and_back = smoothstep(t / Tw) * (1 - smoothstep((t - Tw - Tc - Th) / Tr))
+        guard = m.get('guard', 0.0) * out_and_back
         q, loc = pose_frame(base_q, base_loc, s, V * gone, [foot(0, t), foot(1, t)], state, side, guard)
+        if m.get('open'):  # the hand opens as it goes out (its fingers toward their rest)
+            for i in side.fingers:
+                q[i] = q[i].slerp(Quaternion(), m['open'] * out_and_back)
         k = (t - Tw - Tc - Th) / Tr
         if k > 0.6:  # the last of the recovery closes on the stance itself
             w = smoothstep((k - 0.6) / 0.4)
@@ -436,3 +443,53 @@ def build_form_cuts(add, notes, blades_idle, staff_idle, only=None):
         add(name, inertial_in(clip, staff_idle, 0, 0.1), f'{cut} cut with the staff in both hands: the far end from {CUTS[cut][0]} to {CUTS[cut][1]}', sigma=0.5)
         notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1]})
         print('CUT', name, 'seconds', notes[name]['seconds'], report % tuple(worst), '| second hand on the shaft %d%% of the time' % round(share * 100))
+
+# ---- Two more moves made the same way.
+# The recoil: what a cut does when it is parried (the blades meet). The blade is where it met the other, in front of
+# the chest; it is thrown back over the weapon shoulder and the trunk rocks back with it, then the stance returns.
+# The game shows it from `wind` seconds in (the blade already in front): client/animator.mjs RECOIL_FROM.
+RECOIL_MODE = {'recoil': dict(amp=1.0, wind=0.07, cut=0.08, hold=0.10, rec=0.30, step=0.0, direct=True)}
+RECOIL_RING = {
+    'MEET': spec(8, 8, 0, (0.03, 0.0, -0.02), (-5, 5, 0.9), (-25, 35)),
+    'THROWN': spec(-22, -14, -3, (-0.08, -0.02, 0.0), (-55, 38, 0.66), (-150, 62)),
+}
+STAFF_RECOIL_RING = {
+    'MEET': spec(6, 8, 0, (0.03, 0.0, -0.02), (5, -35, 0.56), (0, 28)),
+    'THROWN': spec(-14, -12, -2, (-0.07, 0.0, 0.0), (-10, -22, 0.5), (-20, 78)),
+}
+# The push: the free hand is drawn back to the ribs as the trunk turns away, then shot straight out with the trunk
+# behind it, the hand open. Written for the right hand; the left does it in the mirror. Its seconds are the push's
+# own (core/moves.mjs: 0.12 to the push, 0.46 in all).
+PUSH_MODE = {'push': dict(amp=1.0, wind=0.07, cut=0.09, hold=0.08, rec=0.22, step=0.0, direct=True, open=1.0)}
+PUSH_RING = {
+    'COIL': spec(-32, -4, 0, (-0.05, 0.0, -0.02), (-35, -18, 0.42), (90, 5)),
+    'THRUST': spec(30, 12, 0, (0.09, 0.0, -0.04), (4, 6, 0.97), (90, 0)),
+}
+
+
+def build_extras(add, notes, idle, blades_idle, staff_idle, only=None):
+    want = lambda name: not only or name in only
+    report = 'arm miss %.3f m, wrist %d deg, foot miss %.3f m'
+    line = ('MEET', 'THROWN', (0.0, 0.0))
+    if want('swordRecoil'):
+        base_q, base_loc = pose_of(idle, 0)
+        clip, _, worst = make_cut('Recoil', 'recoil', base_q, base_loc, line, RECOIL_MODE, ring=RECOIL_RING)
+        add('swordRecoil', inertial_in(clip, idle, 0, 0.06), 'a cut parried: the blade thrown back, the trunk rocked, then the stance', sigma=0.5)
+        print('CUT swordRecoil seconds', notes['swordRecoil']['seconds'], report % tuple(worst))
+    if want('bladesRecoil'):
+        base_q, base_loc = pose_of(blades_idle, 0)
+        clip, _, worst = make_cut('Recoil', 'recoil', base_q, base_loc, line, RECOIL_MODE, ring=RECOIL_RING)
+        add('bladesRecoil', inertial_in(mirror_arm(clip, delay=0.02), blades_idle, 0, 0.06), 'a cut parried with the twin blades: both thrown back', sigma=0.5)
+        print('CUT bladesRecoil seconds', notes['bladesRecoil']['seconds'], report % tuple(worst))
+    if want('staffRecoil'):
+        base_q, base_loc = pose_of(staff_idle, 0)
+        modes = {'recoil': dict(RECOIL_MODE['recoil'], centre=FORM_MODES['staff']['centre'])}
+        clip, _, worst = make_cut('Recoil', 'recoil', base_q, base_loc, line, modes, ring=STAFF_RECOIL_RING)
+        clip, share = on_shaft(clip)
+        add('staffRecoil', inertial_in(clip, staff_idle, 0, 0.06), 'a cut parried with the staff: the far end thrown up and back', sigma=0.5)
+        print('CUT staffRecoil seconds', notes['staffRecoil']['seconds'], report % tuple(worst), '| second hand on the shaft %d%%' % round(share * 100))
+    if want('pushThrust'):
+        base_q, base_loc = pose_of(idle, 0)
+        clip, _, worst = make_cut('Push', 'push', base_q, base_loc, ('COIL', 'THRUST', (0.0, 0.0)), PUSH_MODE, hand='Left', ring=PUSH_RING)
+        add('pushThrust', inertial_in(clip, idle, 0, 0.05), 'the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it', sigma=0.5)
+        print('CUT pushThrust seconds', notes['pushThrust']['seconds'], report % tuple(worst))
