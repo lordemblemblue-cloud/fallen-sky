@@ -20,9 +20,9 @@
  *
  * No browser globals at import: node tests can load modules that use this.
  */
-import { Node } from 'three/webgpu';
+import { Node, ReferenceNode } from 'three/webgpu';
 import {
-  reference, renderGroup, nodeObject, mat4, float, vec2, vec4, Fn, fract, sin, dot, floor, mix, varying,
+  reference, renderGroup, nodeObject, mat4, float, vec2, vec4, Fn, fract, sin, dot, floor, mix, varying, attribute,
   modelWorldMatrix, normalLocal, positionLocal, materialColor,
 } from 'three/tsl';
 
@@ -39,6 +39,37 @@ class InstanceMatrixAccessNode extends Node {
   }
 }
 export const instanceMatrix = () => nodeObject(new InstanceMatrixAccessNode());
+
+// ---- per-material values ---------------------------------------------------------------------------------------
+// Like three's materialReference(): a uniform read from whichever material is drawn, so one node graph can serve
+// every material of a shader variant (one pipeline, as the GLSL had one program). But three's version keeps the
+// material in a public property, and three's node hashing walks public properties: stored on that same material, the
+// graph would contain itself (r171 then recurses forever). This one keeps it private. A missing value (or the
+// shadow pass's override material) reads as `fallback`.
+class MaterialValueNode extends ReferenceNode {
+  static get type() { return 'MaterialValueNode'; }
+  constructor(property, uniformType, fallback = null) {
+    super(property, uniformType, null);
+    this._fallback = fallback;
+    this._material = null;
+  }
+  updateReference(state) {
+    this._material = state?.material ?? null;
+    this.reference = null;
+    return this._material;
+  }
+  getValueFromReference(object = this._material) {
+    let value = object;
+    for (const key of this.properties) { if (value == null) break; value = value[key]; }
+    return value ?? this._fallback;
+  }
+}
+/** `path`: a dotted property path on the drawn material (e.g. '__myUniforms.uGain.value'). */
+export const materialValue = (path, type, fallback = null) => nodeObject(new MaterialValueNode(path, type, fallback));
+
+/** An attribute that may be missing on some geometries (then `fallback`), without three's per-build warning. */
+export const optionalAttribute = (name, type = 'float', fallback = 0) =>
+  Fn((builder) => (builder.geometry?.getAttribute?.(name) ? attribute(name, type) : float(fallback)))();
 
 /** World position of the instance's origin: GLSL `(modelMatrix * instanceMatrix * vec4(0,0,0,1)).xyz`. */
 export const instanceRootWorld = () => modelWorldMatrix.mul(instanceMatrix().mul(vec4(0, 0, 0, 1))).xyz;

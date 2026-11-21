@@ -20,7 +20,7 @@ import { WebGPURenderer, ShadowNode, NoToneMapping, LinearSRGBColorSpace, SRGBCo
 import { texture, vec4 } from 'three/tsl';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
 import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
-import { pointSpriteFor } from './webgpuPointSprites.js';
+import { pointSpriteFor, pointSpriteForTwin } from './webgpuPointSprites.js';
 import { applyNodeSetups } from './webgpuNodeKit.js';
 import { applyClassicOutput, applyClassicShaderOutput, classicOutputKey } from './webgpuClassicOutput.js';
 
@@ -233,6 +233,12 @@ function installCompat(renderer) {
         return;
       }
       material = applyClassicShaderOutput(material, twin);
+      // gl_PointSize points: the twin is drawn on instanced quads
+      if (object?.isPoints && twin.isPointSpriteTwin) {
+        const sprite = pointSpriteForTwin(object, twin, this);
+        if (!sprite || broken.has(sprite.mesh)) return;
+        return renderObject.call(this, sprite.mesh, scene, camera, sprite.geometry, twin, ...rest);
+      }
     }
     const override = scene?.overrideMaterial;
     if (override) {

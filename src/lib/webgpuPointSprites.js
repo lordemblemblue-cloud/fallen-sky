@@ -125,3 +125,54 @@ export function pointSpriteFor(points, material, renderer) {
   proxy.viewport.value.set(drawingSize.x / ratio, drawingSize.y / ratio);
   return proxy;
 }
+
+// ---- Points drawn with a ShaderMaterial (gl_PointSize / gl_PointCoord) -----------------------------------------
+// The material's node twin (webgpuMaterialTwins.js) marks itself `isPointSpriteTwin` and is drawn on an instanced
+// quad that carries every attribute of the points geometry per instance (`position` as `instancePosition`). Helpers
+// for such twins:
+/** The drawing buffer size in pixels (gl_PointSize units), shared by every sprite twin. */
+export const pointSpriteViewport = uniform(new Vector2(1, 1));
+/** gl_PointCoord: (0,0) top left, (1,1) bottom right of the sprite. */
+export const pointCoord = () => vec2(uv().x, uv().y.oneMinus());
+/** Clip position of the sprite corner for the point at `center` (object space) with a size in pixels. */
+export function pointSpriteClip(center, sizePixels) {
+  const clip = cameraProjectionMatrix.mul(modelViewMatrix.mul(vec4(center, 1))).toVar();
+  const offset = positionGeometry.xy.mul(sizePixels).mul(2).div(pointSpriteViewport).mul(clip.w);
+  return vec4(clip.xy.add(offset), clip.zw);
+}
+
+const twinProxies = new WeakMap(); // Points -> stand-in for a sprite twin
+export function pointSpriteForTwin(points, twin, renderer) {
+  const source = points?.geometry;
+  const position = source?.getAttribute?.('position');
+  if (!position) return null;
+  let proxy = twinProxies.get(points);
+  if (proxy && proxy.twin !== twin) { proxy.geometry.dispose(); proxy = null; }
+  if (!proxy) {
+    const geometry = baseQuad();
+    const mirrors = [];
+    for (const [name, attribute] of Object.entries(source.attributes)) {
+      const as = name === 'position' ? 'instancePosition' : name === 'uv' ? 'instanceUv' : name;
+      const mirror = new InstancedBufferAttribute(attribute.array, attribute.itemSize, attribute.normalized);
+      geometry.setAttribute(as, mirror);
+      mirrors.push([name, mirror]);
+    }
+    const mesh = new Mesh(geometry, twin);
+    mesh.frustumCulled = false;
+    mesh.matrixAutoUpdate = false;
+    mesh.name = (points.name || 'Points') + ' (sprites)';
+    proxy = { geometry, mirrors, twin, mesh };
+    twinProxies.set(points, proxy);
+    source.addEventListener('dispose', () => { geometry.dispose(); twinProxies.delete(points); });
+  }
+  for (const [name, mirror] of proxy.mirrors) {
+    const attribute = source.getAttribute(name);
+    if (attribute) syncAttribute(attribute, mirror);
+  }
+  proxy.geometry.instanceCount = Math.max(0, Math.min(position.count, source.drawRange?.count ?? Infinity));
+  proxy.mesh.matrixWorld.copy(points.matrixWorld);
+  proxy.mesh.renderOrder = points.renderOrder;
+  renderer.getDrawingBufferSize(drawingSize);
+  pointSpriteViewport.value.set(drawingSize.x, drawingSize.y);
+  return { mesh: proxy.mesh, geometry: proxy.geometry, material: twin };
+}

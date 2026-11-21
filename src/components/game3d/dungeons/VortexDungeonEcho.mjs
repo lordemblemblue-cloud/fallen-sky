@@ -2,6 +2,24 @@
 // Lunar Cave dungeon. Light follows paths; no new combat arena, collision,
 // loot grants, AI authority, level change or replacement floor.
 import * as THREE from 'three';
+import {NodeMaterial} from 'three/webgpu';
+import * as T from 'three/tsl';
+import {setNodeTwin} from '../../../lib/webgpuMaterialTwins.js';
+import {uniformOf} from '../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same memory light in TSL
+function echoTwin(classic){
+  const time=uniformOf(classic.uniforms.uTime,'float');
+  const m=new NodeMaterial();
+  m.fragmentNode=T.Fn(()=>{
+    const v=T.uv();
+    const pulse=T.sin(v.x.mul(46).sub(time.mul(2.2))).mul(.5).add(.5).toVar();
+    const ink=T.sin(v.x.mul(65).add(time.mul(.64))).mul(.10);
+    const color=T.mix(T.vec3(.02,.48,.49),T.vec3(.23,.14,.53),pulse.mul(.72)).add(T.vec3(.09,.15,.17).mul(ink));
+    return T.vec4(color,pulse.mul(.47).add(.28));
+  })();
+  return m;
+}
 import {LUNAR_CAVE_CHAMBERS,LUNAR_CAVE_PASSAGES}
   from './LunarCaveLayout.mjs';
 const TAU=Math.PI*2;
@@ -30,6 +48,7 @@ export function addVortexDungeonEcho(dungeonRoot){
         #include <colorspace_fragment>
       }`,
   });
+  setNodeTwin(shader,echoTwin);
   const roots=[];
   for(let i=0;i<LUNAR_CAVE_PASSAGES.length;i++){
     const p=LUNAR_CAVE_PASSAGES[i];

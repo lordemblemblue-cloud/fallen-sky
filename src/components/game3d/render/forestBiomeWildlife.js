@@ -3,6 +3,7 @@
 // InstancedMesh draw per species rather than many tiny Game 2 style boxes.
 // Wildlife never changes server combat, quests, rewards or hitpoints.
 import * as THREE from 'three';
+import { attachForestAnimalGaitNodes } from './forestBiomeNodes.mjs';
 import { ForestMeshWriter } from './forestBiomeMeshes.js';
 import { game1ForestHeight,game1ForestTrees,forestStreamDistance,seededRandom } from './forestBiomeData.js';
 
@@ -97,6 +98,7 @@ export class Game1ForestWildlife {
         .replace('#include <common>',`#include <common>\nattribute float aFlex;\nuniform float uAnimalTime;`)
         .replace('#include <begin_vertex>',`#include <begin_vertex>\nif(aFlex>.5){\n  float ankle=1.0-smoothstep(.14,1.2,position.y);\n  float phase=aFlex*1.570796+position.x*.6;\n  transformed.z+=sin(uAnimalTime*5.1+phase)*ankle*.10;\n  transformed.y+=max(0.0,sin(uAnimalTime*5.1+phase))*ankle*.055;\n}`);
     };
+    attachForestAnimalGaitNodes(this.material,this.gaitUniform); // WebGPURenderer
     this.animals=game1ForestWildlifeSites(trees).map((p,i)=>({
       ...p,yaw:i*.73,nextTurn:.5+this.random()*2,
       walkSpeed:.35+this.random()*.42,phase:i*.53,state:'wander',

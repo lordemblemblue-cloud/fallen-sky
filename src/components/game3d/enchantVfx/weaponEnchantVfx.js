@@ -15,6 +15,8 @@ import {
 } from './enchantGlowMaterial.js';
 import { enchantMaskDataForMaterial } from './armorEnchantGlow.js';
 import { getEnchantQuality } from './enchantQuality.js';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { createWeaponAuraTwin, createWeaponSparkTwin } from './weaponEnchantVfxNodes.mjs';
 
 export const WEAPON_ENCHANT_EXPOSURE = 2.0;
 export const WEAPON_COVERAGE_SCALE = 1.25;
@@ -100,7 +102,7 @@ void main() {
 }`;
 
 function auraMaterial(layer) {
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     name: `AXE_WeaponEnchantAura_${layer}`,
     vertexShader: AURA_VERTEX,
     fragmentShader: AURA_FRAGMENT,
@@ -116,10 +118,12 @@ function auraMaterial(layer) {
     side: THREE.FrontSide,
     fog: false,
   });
+  setNodeTwin(material, (classic) => createWeaponAuraTwin(classic, ENCHANT_FLOW_ATTRIBUTE)); // WebGPURenderer
+  return material;
 }
 
 function sparkMaterial() {
-  return new THREE.ShaderMaterial({
+  const material = new THREE.ShaderMaterial({
     name: 'AXE_WeaponEnchantSparks',
     vertexShader: SPARK_VERTEX,
     fragmentShader: SPARK_FRAGMENT,
@@ -128,6 +132,8 @@ function sparkMaterial() {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   });
+  setNodeTwin(material, createWeaponSparkTwin); // WebGPURenderer: instanced sprite quads
+  return material;
 }
 
 /** The weapon frame like the construct effect measures it: longest axis, grip at the root origin. */

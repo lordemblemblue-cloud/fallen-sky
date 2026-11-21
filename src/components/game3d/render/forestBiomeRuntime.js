@@ -15,6 +15,10 @@ import { buildGame1ForestDressing } from './forestBiomeDressing.js';
 import { Game1ForestWeather } from './forestBiomeWeather.js';
 import { Game1ForestWildlife } from './forestBiomeWildlife.js';
 import { installGame1OwnerElms } from './forestOwnerElmAssets.js';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import {
+  attachForestWetNodes, attachForestWindNodes, createForestWaterTwin,
+} from './forestBiomeNodes.mjs';
 
 const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
 const makeUniforms=()=>({
@@ -40,6 +44,7 @@ function wetShader(material,uniforms,mode='soil'){
           clamp(uForestWetness*.84,0.0,1.0));
       `);
   };
+  attachForestWetNodes(material,uniforms,mode); // WebGPURenderer
   return material;
 }
 function windShader(material,uniforms,mode){
@@ -70,6 +75,7 @@ transformed.y-=proximity*bend*.10;`}`);
       .replace('#include <color_fragment>',`#include <color_fragment>
 diffuseColor.rgb *= mix(1.0, ${canopy?'.77':'.66'}, clamp(uForestWetness*.70+uForestRain*.30,0.0,1.0));`);
   };
+  attachForestWindNodes(material,uniforms,mode); // WebGPURenderer
   return material;
 }
 const WATER_VERT=`
@@ -153,6 +159,7 @@ function waterMaterial(isPuddle=false){
     side:THREE.DoubleSide,transparent:true,depthWrite:false,
   });
   material.name=isPuddle?'Game 1 muddy rain puddles':'Game 1 reflective flowing stream';
+  setNodeTwin(material,createForestWaterTwin); // WebGPURenderer
   return material;
 }
 export function buildGame1ForestStream(){

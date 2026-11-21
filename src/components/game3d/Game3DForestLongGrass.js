@@ -2,6 +2,7 @@
 // This *Game 3D wrapper only* replaces its visual grass, never the ground or
 // tree/forest collision. The same optimized blades come from the user's 2m GLB.
 import * as THREE from 'three';
+import { attachForestTileGrassNodes } from './render/forestBiomeNodes.mjs';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {game1ForestGrassPositions} from './render/forestBiomeData.js';
 import {WOLFVEIL_OWNER_GRASS_TILE} from './wolfveil/WolfveilGrassTileReplacement.js';
@@ -76,6 +77,7 @@ transformed.xz+=(normalize(uForestTileWind+vec2(.001))*
  swing*(.03+.15*uForestTileGust)+normalize(away+vec2(.001))*stepBend*.10)*tip;`);
     };
     material.customProgramCacheKey=()=> 'game3d-owner-2m-grass-forest-v1';
+    attachForestTileGrassNodes(material,{time,wind,gust,player}); // WebGPURenderer
     const cells=new Map();
     for(const spot of game1ForestGrassPositions(biome.trees,14000)){
       const key=Math.floor(spot.x/2.4)+':'+Math.floor(spot.z/2.4);

@@ -4,6 +4,27 @@
  * these authored-local meshes here or use worldZ audit fields.
  */
 import {prepareX46Z116VisualBatches} from './WolfveilSquareX46Z116Visual.mjs';
+import {Fn,If,vec3,vec4,max,min,length} from 'three/tsl';
+import {attachNodes,copyNodes,instanceMatrix} from '../../../../lib/webgpuNodeKit.js';
+
+// WebGPURenderer: the same seam clamp in TSL, after the source grass positionNode (wind + contacts). Scaling the
+// instance-local xz by k scales the instanced offset from the root by k (yaw + scale instance matrices).
+const x46Clamp=new WeakMap();
+function seamSafePosition(base){
+  if(!x46Clamp.has(base))x46Clamp.set(base,Fn(()=>{
+    const p=vec3(base).toVar();
+    const root=instanceMatrix().mul(vec4(0,0,0,1)).xyz.toVar();
+    const offset=p.xz.sub(root.xz).toVar();
+    const limit=max(0,min(min(root.x.add(320),root.x.negate().sub(315)),min(root.z.sub(30),root.z.negate().add(35))).sub(.005));
+    const span=length(offset);
+    If(span.greaterThan(limit).and(span.greaterThan(.00001)),()=>{
+      const k=limit.div(span);
+      p.assign(vec3(root.x.add(offset.x.mul(k)),p.y,root.z.add(offset.y.mul(k))));
+    });
+    return p;
+  })());
+  return x46Clamp.get(base);
+}
 
 // Limit X46 vertices AFTER the shared wind/contact deformation but BEFORE
 // projection. This standalone grass material clone never alters other squares.
@@ -39,6 +60,10 @@ if(x46Span>x46Limit && x46Span>.00001)
     const prior=typeof sourceKey==='function'?sourceKey.call(grassMaterial):'';
     return String(prior)+'|wolfveil-x46-seam-safe-6-contact-v1';
   };
+  // WebGPURenderer: the source grass nodes (clone() does not copy them) + the clamp
+  copyNodes(grassMaterial,tileMaterial);
+  if(tileMaterial.positionNode)attachNodes(tileMaterial,{positionNode:seamSafePosition(tileMaterial.positionNode)},
+    {nodesStatic:tileMaterial.nodesStatic!==false});
   tileMaterial.needsUpdate=true;
   return tileMaterial;
 }

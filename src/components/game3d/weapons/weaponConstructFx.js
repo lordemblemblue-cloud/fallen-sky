@@ -7,6 +7,10 @@
 // grip, the string last). Presentation only: no combat, input or network state.
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { PMREMGenerator as NodePMREMGenerator } from 'three/webgpu';
+import { attachNodes, addMapStageColor } from '../../../lib/webgpuNodeKit.js';
+import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
+import { constructNodes, createDropletTwin } from './weaponConstructFxNodes.mjs';
 
 export const WEAPON_CONSTRUCT_SECONDS = Object.freeze({ build: 1.05, melt: 0.8, settle: 0.45 });
 const MAX_DROPLETS = 220;
@@ -80,6 +84,10 @@ function patchMaterial(material, shared, meshToRoot) {
         }`);
   };
   m.customProgramCacheKey = () => 'weapon-construct-fx-v1';
+  // WebGPURenderer: the same front in TSL (values from mesh.userData.cfUniforms, set by play())
+  const { nodes, mapStage } = constructNodes();
+  attachNodes(m, nodes);
+  addMapStageColor(m, mapStage);
   return m;
 }
 
@@ -114,6 +122,7 @@ function createDroplets(scene) {
         gl_FragColor = vec4(col, vAlpha * (0.75 + 0.25 * n.z));
       }`,
   });
+  setNodeTwin(material, createDropletTwin); // WebGPURenderer: instanced sprite quads
   const points = new THREE.Points(geometry, material);
   points.name = 'WeaponConstructDroplets';
   points.frustumCulled = false;
@@ -216,7 +225,7 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
   const ensureEnvironment = () => {
     if (envTexture || !renderer) return;
     try {
-      const pmrem = new THREE.PMREMGenerator(renderer);
+      const pmrem = renderer.isWebGPURenderer ? new NodePMREMGenerator(renderer) : new THREE.PMREMGenerator(renderer);
       const room = new RoomEnvironment();
       envTexture = pmrem.fromScene(room, 0.04).texture;
       room.dispose?.();
@@ -299,6 +308,7 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
       const material = Array.isArray(original) ? original.map((mat) => patchMaterial(mat, shared, meshToRoot)) : patchMaterial(original, shared, meshToRoot);
       patched.push({ mesh, original, material: Array.isArray(material) ? { dispose: () => material.forEach((x) => x.dispose()) } : material, castShadow: mesh.castShadow });
       mesh.material = material;
+      mesh.userData.cfUniforms = { ...shared, uCF_meshToRoot: { value: meshToRoot } }; // read by the TSL front
       mesh.castShadow = false; // the shadow pass has no reveal front
     }
     const string = [];
