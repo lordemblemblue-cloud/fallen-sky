@@ -21,8 +21,13 @@ export function coordinateWebGPUDeviceLoss({ device, observe, classify, fallback
       decision = { action: 'fallback-webgl' };
     }
     if (decision?.action !== 'ignore') {
-      try { fallback({ reason: 'device-loss', decision }); } catch {
-        // A host callback must not create an unhandled promise rejection.
+      try {
+        const result = fallback({ reason: 'device-loss', decision });
+        // Hosts may restart their renderer asynchronously. Consume failures so
+        // GPU loss cannot cause an unhandled rejection during teardown.
+        Promise.resolve(result).catch(() => {});
+      } catch {
+        // Synchronous host failures are also contained.
       }
     }
   };
