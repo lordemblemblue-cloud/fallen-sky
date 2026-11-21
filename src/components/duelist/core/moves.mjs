@@ -3,7 +3,8 @@
 //
 //   startup / active / recovery: the three phases; a hit lands in the active phase (hitAt: offsets inside
 //     it for multi-hit moves).
-//   stamina / will: paid when the move starts. cooldown: before the same move may start again.
+//   stamina / will: stamina is paid only for non-attack moves; attacks are free. Will and
+//   cooldowns are unchanged.
 //   damage, range (m), arc (deg), knockback (m: how far the hit drives the body; negative pulls it in),
 //     stagger (s): what a landed hit does.
 //   shieldMultiplier: how hard it hits shields and armor; veilMultiplier: how much Will it costs to stop.
@@ -24,6 +25,9 @@ const move = (spec) => Object.freeze({
   shieldMultiplier: 1, veilMultiplier: 1, hitAt: [0], blockable: true, chain: null, cancelInto: [], cancelFrom: Infinity,
   iframes: null, channel: false, willPerSec: 0, rootMotion: 0, damageKind: 'melee',
   ...spec,
+  // Attack stamina costs were removed. Keep former spec values temporarily for reference only;
+  // all consumers (combat, HUD, predictions) see the same zero-cost attack definition.
+  stamina: (spec.kind ?? 'attack') === 'attack' ? 0 : (spec.stamina ?? 0),
   duration: (spec.startup ?? 0.1) + (spec.active ?? 0.08) + (spec.recovery ?? 0.2),
 });
 

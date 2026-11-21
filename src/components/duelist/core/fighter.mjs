@@ -6,7 +6,7 @@
 // in its window, or waits (one buffered press, for INPUT.bufferSeconds); cooldowns per move; costs paid up
 // front; stagger and grips lock out everything but Resist.
 import { BINDINGS, POWER_BINDINGS, FLOW, moveById } from './moves.mjs';
-import { INPUT, BREACH } from './tuning.mjs';
+import { INPUT, BREACH, STAGGER_IMMUNITY } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
 import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
@@ -24,6 +24,9 @@ const LEGACY_POWERS = new Set(['push', 'pull', 'grip']);
 export const CLASS_ABILITIES = new Set(['leapStrike', 'repulse', 'bladeThrow', 'quickstep', 'quickstepAura', 'counter', 'cloak',
   'empower', 'misdirect', 'mend', 'levitate']);
 const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
+// The class determines the original one-blade stance: red/strong or blue/fast.
+const CLASS_SWORD_MODES = Object.freeze({ warrior: 'heavy', healer: 'swift' });
+const classSwordMode = (id) => Object.hasOwn(CLASS_SWORD_MODES, id) ? CLASS_SWORD_MODES[id] : null;
 
 /**
  * classId: one of core/classes.mjs CLASS_IDS, or null (no class: the six powers of the first build).
@@ -36,7 +39,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     id,
     team,
     weapon,
-    mode: DEFAULT_MODE, // swift | balanced | heavy: how the sword's cuts are made (core/cuts.mjs)
+    mode: classSwordMode(classId) || DEFAULT_MODE, // warrior heavy, healer swift, unclassed balanced
     classId: classById(classId) ? classId : null,
     level: Math.max(1, Math.floor(level) || 1),
     matchBoost: cleanBoost(matchBoost),
@@ -48,6 +51,9 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     buffer: null, // { command, at }
     guard: null, // { since }
     stunnedUntil: -Infinity, // stagger, guard break, parried
+    recentStaggerHits: 0, // consecutive unblocked, damaging hits in the combo window
+    lastStaggerHitAt: -Infinity,
+    staggerImmuneUntil: -Infinity, // after three hits, one second to fight back
     protectedUntil: -Infinity, // just respawned: nothing reaches it until then, or until it acts
     downUntil: -Infinity, // knocked down: lying until then, then rising until riseUntil
     riseUntil: -Infinity,
@@ -195,7 +201,8 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
     if (a?.move.channel && a.held) { a.held = false; return { accepted: true }; }
     return { accepted: false, reason: 'nothing-held' };
   }
-  if (command === 'mode') { // the next of the three modes (the sword's cuts: core/cuts.mjs); it takes the next strike
+  if (command === 'mode') { // free-form fighters may cycle; class-locked sword styles retain their combat identity
+    if (classSwordMode(f.classId)) return { accepted: false, reason: 'class-stance' };
     f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
     f.events.push({ type: 'mode', mode: f.mode, at: now });
     return { accepted: true, mode: f.mode };
@@ -237,6 +244,22 @@ export const isInvulnerable = (f, now) => {
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };
+
+/** Record a confirmed damaging hit. On hit three, clear existing hit-stagger and grant a 1s response window.
+ * A missed/blocked strike must never call this; the authoritative strike resolver owns hit accounting.
+ */
+export function registerStaggerHit(f, now) {
+  if (!Number.isFinite(now) || f.vitals.dead || now < f.staggerImmuneUntil) return false;
+  if (now - f.lastStaggerHitAt > STAGGER_IMMUNITY.comboWindowSeconds) f.recentStaggerHits = 0;
+  f.recentStaggerHits += 1;
+  f.lastStaggerHitAt = now;
+  if (f.recentStaggerHits < STAGGER_IMMUNITY.hits) return false;
+  f.recentStaggerHits = 0;
+  f.lastStaggerHitAt = -Infinity;
+  f.staggerImmuneUntil = now + STAGGER_IMMUNITY.seconds;
+  f.stunnedUntil = Math.min(f.stunnedUntil, now);
+  return true;
+}
 
 /** Knocked off the feet by a hard push or throw: lies for KNOCKDOWN.lie, rises for KNOCKDOWN.rise. */
 export function knockDown(f, now) {
