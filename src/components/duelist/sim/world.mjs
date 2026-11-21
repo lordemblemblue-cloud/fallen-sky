@@ -218,7 +218,7 @@ function trySpecial(world, fighter, body, now, effects) {
   if (!def || fighter.vitals.dead) return;
   const special = def.special;
   const move = moveFor(fighter, special.id); // applies trusted class mastery and current match boost
-  const reach = move.reach ?? special.reach;
+  const reach = move.reach ?? move.range ?? special.reach;
   const matchBoost = fighter.matchBoost;
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
