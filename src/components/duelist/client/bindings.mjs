@@ -20,8 +20,10 @@ export const ACTIONS = Object.freeze([
   { id: 'light', label: 'Light strike (chain)', kind: 'press' },
   { id: 'heavy', label: 'Heavy strike', kind: 'press' },
   { id: 'guard', label: 'Guard (a fresh guard parries)', kind: 'guard' },
+  { id: 'jump', label: 'Jump', kind: 'press' },
   { id: 'roll', label: 'Roll (into a power or a strike)', kind: 'press' },
-  { id: 'dash', label: 'Dash', kind: 'press' },
+  { id: 'dash', label: 'Dash (double-tap during jump for air dash)', kind: 'press' },
+  { id: 'itemActive', label: 'Use active relic', kind: 'press' },
   { id: 'ability1', label: 'Ability 1', kind: 'ability' },
   { id: 'ability2', label: 'Ability 2', kind: 'ability' },
   { id: 'ability3', label: 'Ability 3', kind: 'ability' },
@@ -36,11 +38,14 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
-  roll: 'Space', dash: 'ControlLeft', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
+  jump: 'Space', roll: 'KeyC', dash: 'AltLeft', itemActive: 'KeyG', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
   breach: 'KeyR', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
 });
 // bindings saved before the classes: the old power keys become the ability keys
 const LEGACY = Object.freeze({ ability1: 'push', ability2: 'pull', ability3: 'grip' });
+// bindings saved before the jump (2026-11-21) have no `jump`: a roll still on Space or a dash still on Ctrl was
+// never the player's own choice, so they move to their new keys (C and Alt) and Space becomes the jump
+const BEFORE_JUMP = Object.freeze({ roll: 'Space', dash: 'ControlLeft' });
 
 // never bound: Escape lets go of the mouse; the browser's and the system's own keys
 export const RESERVED = Object.freeze(new Set(['Escape', 'F5', 'F11', 'F12', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight', 'ContextMenu']));
@@ -61,7 +66,9 @@ export const inputOf = (code) => (typeof code === 'string' && SIDED.test(code) ?
 export function keysFrom(saved = {}) {
   const keys = {};
   const used = new Map(); // input -> action
-  const wanted = (id) => (saved && bindable(saved[id]) ? saved[id]
+  const old = !saved || !Object.hasOwn(saved, 'jump');
+  const wanted = (id) => (old && saved && BEFORE_JUMP[id] && saved[id] === BEFORE_JUMP[id] ? DEFAULT_KEYS[id]
+    : saved && bindable(saved[id]) ? saved[id]
     : saved && LEGACY[id] && bindable(saved[LEGACY[id]]) ? saved[LEGACY[id]] : DEFAULT_KEYS[id]);
   for (const { id } of ACTIONS) {
     const code = wanted(id);
@@ -127,7 +134,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`,
+    `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (double-tap in air)`, `${k('itemActive')} relic`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
   parts.push(`${k('resist')} resist`, `${k('lock')} lock on`);

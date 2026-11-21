@@ -4,9 +4,16 @@
 import { useCallback, useState } from 'react';
 
 const KEY = 'duelist.prefs';
-// classId: the class the player fights as (core/classes.mjs), kept between matches; xp: the EXP earned in matches
-// (client/progress.mjs: the level under the portrait)
-export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist', xp: 0 });
+// classId: the class the player fights as (core/classes.mjs), kept between matches; classXp: the EXP each class has
+// earned in offline matches ({ warrior, duelist, assassin, healer }: core/progression.mjs; online, the match server
+// keeps it); xp: the single EXP of before the classes had levels, which goes to the class in use the first time
+export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist', xp: 0, classXp: null });
+
+/** The EXP of each class from the preferences (the EXP of before class levels goes to the class in use). */
+export function classProgressOf(prefs) {
+  if (prefs?.classXp && typeof prefs.classXp === 'object') return { ...prefs.classXp };
+  return prefs?.xp > 0 && prefs.classId ? { [prefs.classId]: prefs.xp } : {};
+}
 
 export function readPrefs() {
   try {

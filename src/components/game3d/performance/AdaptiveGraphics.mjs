@@ -154,10 +154,16 @@ export function createCloneAdaptiveGraphics({
       // before this governor listener runs. Read the renderer, not the cached
       // ratio, so we never report an unapplied resolution.
       const current=Number(renderer.getPixelRatio?.())||ratio;
-      if(Math.abs(next-current)>=0.001)
+      const resized=Math.abs(next-current)>=0.001;
+      if(resized)
         renderer.setPixelRatio(next); // Updates Three.js canvas.width/height.
       ratio=Number(renderer.getPixelRatio?.())||next;
-      if(host.__gw3dRenderer===renderer)host.__gw3dInkLook?.setSize?.();
+      if(host.__gw3dRenderer===renderer){
+        host.__gw3dInkLook?.setSize?.();
+        // The resize cleared the canvas, and this tick runs after the game drew the frame: without a
+        // redraw the browser shows the empty canvas, one black frame per resolution change.
+        if(resized)host.__gw3dRedraw?.();
+      }
     } catch {
       // Rendering must continue if the WebGL context is temporarily lost.
     }
@@ -183,7 +189,10 @@ export function createCloneAdaptiveGraphics({
         }).ratio;
         if (Math.abs((Number(renderer.getPixelRatio?.())||ratio)-safeOriginal) >= .001) {
           renderer.setPixelRatio(safeOriginal);
-          if (host.__gw3dRenderer === renderer) host.__gw3dInkLook?.setSize?.();
+          if (host.__gw3dRenderer === renderer) {
+            host.__gw3dInkLook?.setSize?.();
+            host.__gw3dRedraw?.(); // the resize cleared the canvas (see applyRatio)
+          }
         }
         ratio=Number(renderer.getPixelRatio?.())||safeOriginal;
       } catch { /* Context may already be lost. */ }

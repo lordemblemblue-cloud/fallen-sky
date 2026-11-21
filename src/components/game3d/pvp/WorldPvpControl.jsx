@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {getPlayerPosition,subscribePlayerPosition} from '../playerPositionStore';
-import {resolveWorldPvpZone,WORLD_PVP_MODE,WORLD_PVP_ZONE} from './WorldPvpRules.mjs';
+import {resolveWorldPvpSceneZone,WORLD_PVP_MODE,WORLD_PVP_ZONE} from './WorldPvpRules.mjs';
 import './WorldPvpControl.css';
 
 const MODE_REQUEST='game3dWorldPvpFlagRequested';
@@ -8,9 +8,11 @@ const MODE_CONFIRMED='game3dWorldPvpFlagCommitted';
 
 // User preference UI, not a damage authority. A verified world server must
 // acknowledge the request before this screen calls the PvP flag "active".
-export default function WorldPvpControl({region='wolfveil',suppressed=false}){
-  const [zone,setZone]=useState(()=>resolveWorldPvpZone({
-    region,position:getPlayerPosition(),
+// `area`: the Wolfveil area scene that is loaded; its status holds until the
+// player goes through a gate (WorldPvpRules resolveWorldPvpSceneZone).
+export default function WorldPvpControl({region='wolfveil',area=null,suppressed=false}){
+  const [zone,setZone]=useState(()=>resolveWorldPvpSceneZone({
+    region,area,position:getPlayerPosition(),
   }));
   const [requested,setRequested]=useState(WORLD_PVP_MODE.PVE);
   const [confirmed,setConfirmed]=useState(WORLD_PVP_MODE.PVE);
@@ -54,14 +56,14 @@ export default function WorldPvpControl({region='wolfveil',suppressed=false}){
     };
   },[region,suppressed]);
   useEffect(()=>subscribePlayerPosition(position=>{
-    const next=resolveWorldPvpZone({region,position});
+    const next=resolveWorldPvpSceneZone({region,area,position});
     setZone(before=>before.id===next.id?before:next);
-  }),[region]);
+  }),[region,area]);
   // Keep zone text current when changing streamed regions without walking.
   useEffect(()=>{
-    const next=resolveWorldPvpZone({region,position:getPlayerPosition()});
+    const next=resolveWorldPvpSceneZone({region,area,position:getPlayerPosition()});
     setZone(before=>before.id===next.id?before:next);
-  },[region]);
+  },[region,area]);
   useEffect(()=>{
     if(previousZone.current&&previousZone.current!==zone.id){
       window.dispatchEvent(new CustomEvent('game3dLocalWorldNotice',{detail:{

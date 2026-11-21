@@ -21,6 +21,25 @@
 .dh-portrait-icon { position: absolute; left: 47px; top: 44px; width: 56px; height: 56px; color: rgba(214, 179, 109, 0.7); stroke-width: 1.3; }
 .dh-level { position: absolute; left: 42px; top: 148px; width: 66px; height: 24px; display: grid; place-items: center; font-size: 15px; font-weight: 700; color: #f1ddb0; pointer-events: auto; }
 .dh-vitals { width: 470px; height: 98px; margin: 0 0 18px -4px; background-image: url('/ui/duelist/hud/parts/vitals.svg'); }
+/* Six real inventory slots sit immediately above the left HP frame.
+   The whole bottom-left HUD, including this row, already uses --dh-s on mobile. */
+.dh-equipped { position: absolute; left: 60px; top: -53px; width: 382px; height: 45px;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px;
+  box-sizing: border-box; pointer-events: none; }
+.dh-equipped-slot { position: relative; min-width: 0; height: 45px; overflow: hidden;
+  display: grid; place-items: center; border: 1px solid rgba(210, 222, 233, 0.24); border-radius: 6px;
+  background: rgba(17, 23, 31, 0.74); box-shadow: 0 1px 5px rgba(0, 0, 0, 0.15); }
+.dh-equipped-slot[data-filled='false'] { border-style: dashed; border-color: rgba(210, 222, 233, 0.16);
+  background: rgba(17, 23, 31, 0.33); }
+.dh-equipped-slot img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.dh-equipped-tier { position: absolute; right: 2px; bottom: 2px; min-width: 12px; height: 13px;
+  display: grid; place-items: center; font-size: 10px; line-height: 1; font-weight: 700;
+  border-radius: 3px; color: #f5e1b3; background: rgba(14, 19, 27, 0.88); }
+.dh-equipped-slot[data-tier='3'] { border-color: rgba(219, 178, 96, 0.54); }
+@media (max-width: 520px) {
+  .duelist-game[data-hud='compact'] .dh-equipped { height: 40px; top: -47px; gap: 5px; }
+  .duelist-game[data-hud='compact'] .dh-equipped-slot { height: 40px; }
+}
 .dh-class { position: absolute; left: 6px; top: 6px; width: 44px; height: 44px; display: grid; place-items: center; color: #f1ddb0; }
 .dh-class svg { width: 22px; height: 22px; stroke-width: 1.8; transition: transform 0.12s; }
 .dh-class:not(:disabled):hover svg { transform: scale(1.15); }
@@ -67,6 +86,8 @@
 .dh-skill[data-cooling='true'] svg, .dh-skill[data-short='true'] svg { opacity: 0.32; }
 .dh-skill[data-short='true'] { color: #7f8ea3; }
 .dh-skill-sweep { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(8, 12, 18, 0.6); }
+.dh-skill-rank { position: absolute; right: 5px; top: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f2d28b; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.dh-level[data-max] { color: #f2d28b; }
 .dh-skill-cd { position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85); }
 .dh-skill-name { display: block; margin-top: 15px; width: 84px; text-align: center; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(230, 237, 246, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-bar { position: absolute; left: 402px; width: 128px; height: 6px; }

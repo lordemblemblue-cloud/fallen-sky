@@ -394,8 +394,10 @@ export function createWolfveilVillage(scene,options={}){
     worldHeight:(x,z)=>wolfveilHeight(x,z-offsetZ),
     // Preserve existing client ground-ray registration and render offset.
     resolveBridgeRailCollision(position,radius=.62,previous=position){
+      // Feet well below a deck pass under the bridge: no rails down there.
       return resolveWolfveilBridgeRailing(
-        position,previous,WOLFVEIL_BRIDGES,radius,offsetZ);
+        position,previous,WOLFVEIL_BRIDGES,radius,offsetZ,
+        {deckHeightAt:(bridge,t,lateral)=>world.bridgeDecks?.[bridge.id]?.heightAt(t,lateral)});
     },
     playerPalaceGroundY(position){
       return palace.playerGroundY(position)

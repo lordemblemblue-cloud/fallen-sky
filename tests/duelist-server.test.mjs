@@ -9,7 +9,8 @@ import { WebSocket } from 'ws';
 import { createDuelistServer } from '../server/duelist/server.mjs';
 import { PROTOCOL, WS_PATH, MAX_WAITING_INPUTS, QUICKPLAY_MODES, encodeInput, sanitizeInput } from '../src/components/duelist/net/protocol.mjs';
 import { createPredictor } from '../src/components/duelist/net/predict.mjs';
-import { INPUT } from '../src/components/duelist/core/index.mjs';
+import { INPUT, xpForLevel } from '../src/components/duelist/core/index.mjs';
+import { createProgressStore } from '../server/duelist/progress.mjs';
 
 const SPEED = 4;
 // every server a test starts is closed at the end, even when the test fails (an open one keeps node running)
@@ -574,4 +575,27 @@ test('classes over the wire: join as a class, snapshots carry it, a change waits
     clearInterval(inputs);
   }
   await server.close();
+});
+
+test('online, a class level is what the server keeps for the account, whatever the browser says', async () => {
+  const progress = createProgressStore();
+  progress.add('ann', 'assassin', xpForLevel(10));
+  const { url } = await start({ progress });
+  const a = await player(url, 'ann');
+  // a browser that claims a level, EXP or progress of its own is simply not listened to
+  a.send({ t: 'join', mode: 'tdm', cls: 'assassin', level: 20, lv: 20, xp: 999999, progress: { assassin: 999999 } });
+  await a.next((m) => m.t === 'joined');
+  const b = await player(url, 'bob');
+  b.send({ t: 'join', mode: 'tdm', cls: 'assassin' });
+  await b.next((m) => m.t === 'joined');
+  let seq = 0;
+  const inputs = setInterval(() => { seq += 1; a.send({ t: 'input', s: seq, m: [0, 0], lv: 20 }); b.send({ t: 'input', s: seq, m: [0, 0] }); }, 20);
+  try {
+    const mine = await a.next((m) => m.t === 'snap' && m.own && m.view?.me, 15000);
+    assert.equal(mine.own.lv, 10, 'the fighter is at the level the server has');
+    assert.deepEqual([mine.view.me.level, mine.view.me.xp, mine.view.me.progress.assassin], [10, xpForLevel(10), xpForLevel(10)]);
+    const theirs = await b.next((m) => m.t === 'snap' && m.own && m.view?.me, 15000);
+    assert.deepEqual([theirs.own.lv, theirs.view.me.level, theirs.view.me.xp], [1, 1, 0], 'someone new starts at level 1');
+    assert.ok(!a.inbox.some((m) => m.t === 'snap' && (m.events || []).some((e) => e.type === 'xp')), 'what others earn is not broadcast');
+  } finally { clearInterval(inputs); }
 });

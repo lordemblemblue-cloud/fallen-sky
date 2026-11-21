@@ -3,7 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import DuelistGame from '@/components/duelist/client/DuelistGame';
 import { BODIES } from '@/components/duelist/client/assets.mjs';
-import { readPrefs, writePrefs } from '@/components/duelist/client/prefs.mjs';
+import { readPrefs, writePrefs, classProgressOf } from '@/components/duelist/client/prefs.mjs';
 import { duelistServerUrl } from '@/components/duelist/net/client.mjs';
 import { MENU_MODES } from '@/components/duelist/menu/modes';
 import { missionTitle } from '@/components/duelist/menu/missions';
@@ -44,7 +44,8 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
             bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} matchId={matchId}
             classId={prefs.classId} onClassChange={(id) => writePrefs({ classId: id })}
-            xp={prefs.xp || 0} onXp={(gained) => writePrefs({ xp: (readPrefs().xp || 0) + gained })}
+            progress={classProgressOf(prefs)}
+            onProgress={(classId, total) => writePrefs({ classXp: { ...classProgressOf(readPrefs()), [classId]: total } })}
             mission={mission} onMission={setPlaying} onLeave={leave}
             onNext={(id) => navigate({ to: '/duelist-next/play', search: { mode: 'story', mission: id, online: 0, ...(from ? { from } : {}) } })} />
         )}

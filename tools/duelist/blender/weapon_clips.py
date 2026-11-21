@@ -747,7 +747,14 @@ if '--tune' in argv:  # look for easy holds near the ones in mind: prints the be
     sys.exit(0)
 
 
+# the sword's cuts by direction (eight points round the body, three modes): made from the stance alone
+exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[sys.argv.index('-P') + 1])), 'cut_grid.py')).read(), 'cut_grid.py', 'exec'), globals())
+
+
 def build():
+    if '--cuts-only' in argv:  # a quick look at the cuts alone (not for the pack: the other clips are left out)
+        build_cuts(add, notes, source('sword_idle'), (opt('--only') or '').split(',') if opt('--only') else None)
+        return
     slash, slash_back = source('sword_regular_a', 0.05), source('sword_regular_a_rec')
     lunge, lunge_back = source('sword_regular_b'), source('sword_regular_b_rec')
     spin, chop, block, idle = source('sword_regular_c'), source('sword_attack'), source('sword_block'), source('sword_idle')
@@ -809,6 +816,8 @@ def build():
     add('staffLeap', directional(2.15, 2.95, stance, stance_q, stance_loc), 'a leap and an overhead chop, contact about 0.41 s')
     add('staffSweep', directional(1.40, 2.05, stance, stance_q, stance_loc), 'wide swing from behind the shoulders, contact about 0.41 s')
 
+    build_cuts(add, notes, idle)
+
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')
     clips['__ref'] = {'q': [ref['q'][0], ref['q'][0]], 'loc': [ref['loc'][0], ref['loc'][0]]}
@@ -858,7 +867,7 @@ print('BUILT', json.dumps({n: notes[n]['seconds'] for n in names if n in notes})
 
 if '--pictures' in argv:  # the new clips with their weapons, for a look before they go to the game
     cam = setup_view()
-    weapons = {'blades': add_weapon('blades'), 'staff': add_weapon('staff')}
+    weapons = {'blades': add_weapon('blades'), 'staff': add_weapon('staff'), 'sword': add_weapon('sword')}
     listing = {}
     for item in opt('--pictures').split(','):
         name, _, n = item.partition(':')

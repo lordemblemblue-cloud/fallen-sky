@@ -153,7 +153,10 @@ test('crossing mist: approach and flash drive one overlay, then clear',()=>{
 
 test('the live world mounts the gates, veil collision for player and AI, and the mist',()=>{
   const world=source('src/components/game3d/GameWorld3D.jsx');
-  assert.match(world,/areaPortals=wolfveilVillage\?createWolfveilAreaGates\(wolfveilVillage\.world\):null/);
+  // Each portal scene builds only its own area's gates and veils (63c3e582);
+  // the veil walls are not drawn (the far side is cut away instead), and the
+  // whole-world switch builds every gate.
+  assert.match(world,/areaPortals=wolfveilVillage\?createWolfveilAreaGates\(wolfveilVillage\.world,\{area:areaScenes\?worldArea:null,veil:false\}\):null/);
   assert.doesNotMatch(world,/createWolfveilAreaPortals\(/);
   assert.match(world,/const resolveAreaVeils=\(position,from,radius\)=>/);
   assert.equal(world.match(/resolveAreaVeils\(/g).length,3,'player + two AI paths');

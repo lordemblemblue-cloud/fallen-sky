@@ -126,15 +126,15 @@ test('roll: invulnerable frames, then it flows straight into a push (roll into p
 test('sword chains in its window; a late press starts the chain over after the recovery', () => {
   const f = createFighter({ id: 'f', weapon: 'sword' });
   press(f, 'light', 0);
-  let { t } = run(f, 0, MOVES.swordLight1.chain.from + 0.02);
+  let { t } = run(f, 0, MOVES.swordCutStandBalanced.chain.from + 0.02);
   press(f, 'light', t);
-  assert.equal(f.action.id, 'swordLight2');
-  ({ t } = run(f, t, MOVES.swordLight2.chain.from + 0.02));
+  assert.equal(f.action.id, 'swordCutRightBalanced');
+  ({ t } = run(f, t, MOVES.swordCutRightBalanced.chain.from + 0.02));
   press(f, 'light', t);
-  assert.equal(f.action.id, 'swordLight3');
-  ({ t } = run(f, t, MOVES.swordLight3.duration + 0.05));
+  assert.equal(f.action.id, 'swordCutDownBalanced');
+  ({ t } = run(f, t, MOVES.swordCutDownBalanced.duration + 0.05));
   press(f, 'light', t);
-  assert.equal(f.action.id, 'swordLight1');
+  assert.equal(f.action.id, 'swordCutStandBalanced');
   // dual blades: four quick hits, each draining Will harder than the sword
   const blades = createFighter({ id: 'b', weapon: 'dualBlades' });
   const ids = [];

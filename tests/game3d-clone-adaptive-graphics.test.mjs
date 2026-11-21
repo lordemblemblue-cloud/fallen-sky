@@ -121,3 +121,34 @@ test('browser requestAnimationFrame alone is not treated as game rendering', () 
   assert.equal(h.ratio(), 1.5);
   c.dispose();
 });
+
+test('a resolution change redraws the game frame at once (no black frame after the resize)', () => {
+  const h = makeHarness();
+  const redraws = [];
+  h.host.__gw3dRenderer = h.renderer;
+  h.host.__gw3dRedraw = () => redraws.push(h.ratio());
+  const c = createCloneAdaptiveGraphics({ renderer: h.renderer, host: h.host, documentRef: h.doc });
+  const before = h.setRatios.length;
+  h.step(280, 34); // slow frames: the governor lowers the ratio from its animation-frame tick
+  const changes = h.setRatios.slice(before);
+  assert.ok(changes.length >= 1);
+  // one redraw per change, each after the new ratio was applied
+  assert.deepEqual(redraws, changes);
+  c.setProfile('off'); // back to the original ratio: redrawn too
+  assert.equal(redraws[redraws.length - 1], 1.5);
+  c.dispose();
+});
+
+test('another renderer\'s governor never redraws the game; an unchanged ratio redraws nothing', () => {
+  const h = makeHarness();
+  let redraws = 0;
+  h.host.__gw3dRenderer = { other: true };
+  h.host.__gw3dRedraw = () => { redraws++; };
+  const c = createCloneAdaptiveGraphics({ renderer: h.renderer, host: h.host, documentRef: h.doc });
+  h.step(280, 34);
+  assert.equal(redraws, 0);
+  h.host.__gw3dRenderer = h.renderer;
+  c.setProfile('auto'); // same ceiling, no resize
+  assert.equal(redraws, 0);
+  c.dispose();
+});

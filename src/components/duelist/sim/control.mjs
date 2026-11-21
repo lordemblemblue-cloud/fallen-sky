@@ -58,7 +58,7 @@ export function stepControlPoints(match, dt) {
     for (const seat of match.seats.values()) {
       if (seat.team !== 'red' && seat.team !== 'blue') continue;
       const fighter = world.fighters.get(seat.id);
-      if (!fighter || fighter.vitals.dead || isDown(fighter, world.time) || fighter.heldBy) continue;
+      if (!fighter || fighter.vitals.dead || isDown(fighter, world.time) || fighter.heldBy || world.time < (fighter.activeRelicUntil ?? -Infinity)) continue;
       const body = bodyOf(world, seat.id);
       if (!body || Math.hypot(body.x - point.x, body.z - point.z) > CONTROL.radius) continue;
       inside[seat.team]++;

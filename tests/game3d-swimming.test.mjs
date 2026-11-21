@@ -338,6 +338,8 @@ test('the camera keeps above the water line and the world wires the swim around 
   assert.ok(world.indexOf('if (playerSwim.isSwimming() && (attackPressed.current') < world.indexOf('if (abilityKeyPressed.current !== -1 && model) {'),
     'the skill key is dropped before the skills fire');
   assert.match(world, /if\(depth>=SWIM\.enterDepth && depth>waterDepthAt\(fromX,fromZ,model\.position\.y\)\+\.01\)\{/);
+  // the area gate goes first (WolfveilGateTravel); once a crossing has started the water does not hold the mount back
+  assert.match(world, /pushAreaGate\(model,fromX,fromZ,move\.x\*speed\*delta,move\.z\*speed\*delta\);\s*(\/\/[^\n]*\n\s*)*if\(mounted && !mountFlight\.isAirborne\(\) && !areaTravelStarted\)\{/);
   assert.match(world, /else if\(mountFlight\.isAirborne\(\)&&waterDepthAt\(model\.position\.x,model\.position\.z,model\.position\.y\)>=SWIM\.enterDepth\)/);
   // a flying mount keeps its height over the water line, not the bed, and the depth comes in as it climbs
   assert.match(world, /const waterLift = waterY !== null && waterY > gy\s*\? \(waterY - gy\) \* Math\.min\(1, flight\.altitude \/ MOUNT_FLIGHT\.cruiseAltitude\) : 0;/);

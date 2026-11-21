@@ -6,6 +6,7 @@ import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import {wolfveilAreaScenesEnabled} from '../components/game3d/wolfveil/streaming/WolfveilAreaScenes.mjs';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   getGame3DUIScale,game3DViewportClass}
@@ -99,7 +100,6 @@ import {
 } from '../components/game3d/combatMusicController';
 import {createGame3DEntryAudio}
   from '../components/game3d/audio/Game3DEntryAudio.mjs';
-import { scheduleRendererProbe } from '@/lib/webgpuDeviceProbe.js';
 
 export default function GameView() {
   const navigate = useNavigate();
@@ -248,8 +248,6 @@ export default function GameView() {
   },[phase]);
   useEffect(()=>{entryAudioRef.current?.setRegion(worldRegion);},[worldRegion]);
   useEffect(()=>{if(phase==='login')teardownCombatMusic();},[phase]);
-  // once per browser build: is WebGPU at least as fast as WebGL here? (the renderer default from the next start)
-  useEffect(()=>{scheduleRendererProbe(window);},[]);
   // Returning to character selection must not carry an open in-world panel back
   // into the next world entry. Services, Character, the store, friends, clan and
   // the pause menu all keep the game's input flags set, so the re-entered world
@@ -319,8 +317,11 @@ export default function GameView() {
         // Do not keep it mounted invisibly behind the destination area.
         setPortalReturn(false);
         setPortalSpawnAtGate(false);
+        // A rider who went through a gate arrives riding, facing on.
         setPortalLanding({x:landing.x,y:landing.y,z:landing.z,
-          yaw:Number.isFinite(landing.yaw)?landing.yaw:0});
+          yaw:Number.isFinite(landing.yaw)?landing.yaw:0,
+          heading:Number.isFinite(landing.heading)?landing.heading:null,
+          mounted:landing.mounted===true});
         lastWolfveilAreaRef.current=detail.area;
         setWorldArea(detail.area);
         return;
@@ -744,7 +745,8 @@ export default function GameView() {
       {/* Server-verified faction call-to-arms below the live minimap. Disabled
           until rank-authorized faction announcements are available. */}
       <WorldAnnouncementFeed suppressed={services.active || services.expanded} />
-      <WorldPvpControl region={worldRegion} suppressed={services.active || services.expanded} />
+      <WorldPvpControl region={worldRegion} area={worldRegion==='wolfveil'&&wolfveilAreaScenesEnabled()?worldArea:null}
+        suppressed={services.active || services.expanded} />
       <FactionAnnouncementTicker />
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}

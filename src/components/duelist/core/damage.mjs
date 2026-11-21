@@ -66,6 +66,7 @@ export function resolveHit(defender, hit, now) {
   if (damage > 0) {
     const taken = Math.min(v.hp, damage);
     v.hp -= taken;
+    v.lastHurt = now;
     result.hpDamage = taken;
     if (v.hp <= 1e-9) { v.hp = 0; v.dead = true; result.killed = true; }
   }
