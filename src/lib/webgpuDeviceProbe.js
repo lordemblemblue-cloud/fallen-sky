@@ -1,7 +1,7 @@
 /**
  * Measures once whether WebGPU is at least as fast as the classic WebGL renderer on this device, and stores the
- * verdict (webgpuDeviceVerdict.mjs) that makes WebGPU the default for WebGPU-ready scenes on this device
- * (rendererBackendChoice.mjs). Until a verdict exists, and wherever WebGPU measured slower, the classic renderer stays.
+ * verdict (webgpuDeviceVerdict.mjs) that can choose classic WebGL for slower measured devices
+ * (rendererBackendChoice.mjs). Ready scenes otherwise start WebGPU-first, including before the first probe.
  *
  * A small scene shaped like the game's load (a few hundred lit meshes in front of full-screen lit layers, fog, ACES
  * tone mapping, sRGB output) is drawn by each renderer into its own off-screen canvas, in alternating rounds; the
