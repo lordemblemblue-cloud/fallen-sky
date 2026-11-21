@@ -6,13 +6,18 @@
 //   { t: 'hello', v, token, name, body, resume? }  sign in (token checked by the server) and pick a fighter;
 //                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
-//   { t: 'join', mode }                          'duel' | 'ctf' | 'football' | 'tdm' | 'control'
+//   { t: 'join', mode }                          'duel' | 'ffa' | 'ctf' | 'football' | 'tdm' | 'control'
 //                                                or 'online' (random TDM, CTF or Three-Point Control)
 //                                                or legacy 'any' (busiest occupied match)
-//   { t: 'join', mode: 'story', code?, create? } the co-op mission: a crew room by its code, a new room of your
-//                                                own (create), or neither: any open crew
+//   { t: 'join', mode: 'story', mission?, code?, create?, open?, matchId? } a story mission (sim/mission.mjs
+//                                                MISSIONS; default Contraband): a crew room by its code (whatever it
+//                                                plays), a new room of your own (create; open: listed for others), a
+//                                                listed crew (matchId), or none of these: any open crew playing it
+//   { t: 'join', ..., cls? }                      cls: the class to fight as (core/classes.mjs CLASS_IDS)
+//   { t: 'class', id }                           change class: queued for the next spawn (allowed before the fight,
+//                                                between rounds or while down; answered { t: 'class', ok, pending, reason })
 //   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
-//                                                interact held (story), presses
+//                                                interact held (story), presses (ability1-4 and special too)
 //   { t: 'leave' }
 // server -> client
 //   { t: 'welcome', id, name, resumed }          resumed: back in the seat (its 'joined', resumed: true, follows)
@@ -20,6 +25,8 @@
 //   { t: 'joined', match, mode, you, seats, replaced, key }   seats: [{ id, name, team, kind, body, away? }];
 //       key: comes back to this seat after a dropped connection (a fresh one each time), for RECONNECT_SECONDS
 //       a story room adds: mission, code, and seats for the depot's people { id, name, kind: 'enemy', type, tag, named }
+//       and the crew's allies { id, name, kind: 'ally', type, tag }; a finished mission's crew is sent the next
+//       mission's 'joined' (rematch: true, mission: the next one)
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
 //       view.controlPoints: [{ id, x, z, owner, capturing, progress, contested }] in Three-Point Control;
@@ -34,9 +41,9 @@
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
 // 4426 a page from before an update, 4429 too many messages
-import { CLIENT_COMMANDS, MOVES } from '../core/index.mjs';
+import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits } from '../core/index.mjs';
 
-export const PROTOCOL = 3;
+export const PROTOCOL = 5; // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -88,6 +95,8 @@ export function encodeInput(seq, input) {
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };
+// which lasting effects a fighter has (core/abilities.mjs EFFECT_BITS), from its effects
+const effectFlags = (f) => Object.keys(f.effects || {}).reduce((bits, kind) => bits | (EFFECT_BITS[kind] || 0), 0);
 
 /** One fighter in a snapshot (own: the receiving player's, with cooldowns). */
 export function encodeFighter(f, body, { own = false } = {}) {
@@ -106,6 +115,8 @@ export function encodeFighter(f, body, { own = false } = {}) {
     pu: finite(f.protectedUntil) ? r3(f.protectedUntil) : -1,
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
+    c: f.classId || 0,
+    fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
 }
@@ -130,6 +141,8 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.heldBy = data.hb || null;
   f.guard = data.g >= 0 ? { since: data.g } : null;
   f.breaches = Object.fromEntries((data.br || []).map((id) => [id, Infinity]));
+  f.classId = data.c || null;
+  f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
     const [id, at, chained, held] = data.a;
@@ -168,14 +181,16 @@ export function encodeOwn(f, body, time) {
     v: [r5(v.hp), r5(v.stamina), r5(v.will), r5(v.shield), v.collapsed ? 1 : 0, v.winded ? 1 : 0, v.dead ? 1 : 0,
       when(v.collapsedAt), when(v.lastStaminaSpend), when(v.lastWillSpend), when(v.lastShieldHit)],
     mx: [v.max.hp, v.max.stamina, v.max.will, v.max.shield],
-    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0] : 0,
+    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0, a.link || 1] : 0,
     cd: times(f.cooldowns),
-    bf: f.buffer ? [f.buffer.command, f.buffer.at] : 0,
+    bf: f.buffer ? [f.buffer.command, f.buffer.at, f.buffer.direction || 0] : 0,
     g: f.guard ? f.guard.since : null,
     t: [when(f.stunnedUntil), when(f.protectedUntil), when(f.downUntil), when(f.riseUntil)],
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
+    cl: f.classId || 0, mt: f.meter || 0, sg: f.specialTarget || 0,
+    fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
   };
@@ -189,13 +204,17 @@ export function applyOwn(f, body, data) {
     lastStaminaSpend: then(lastStaminaSpend), lastWillSpend: then(lastWillSpend), lastShieldHit: then(lastShieldHit) });
   v.max = { hp: data.mx[0], stamina: data.mx[1], will: data.mx[2], shield: data.mx[3] };
   f.weapon = data.w;
-  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null } : null;
+  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
   f.cooldowns = untimes(data.cd);
-  f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1] } : null;
+  f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
   f.guard = data.g === null || data.g === undefined ? null : { since: data.g };
   [f.stunnedUntil, f.protectedUntil, f.downUntil, f.riseUntil] = data.t.map(then);
   f.heldBy = data.hb || null;
   f.breaches = untimes(data.br);
+  f.classId = data.cl || null;
+  f.meter = data.mt || 0;
+  f.specialTarget = data.sg || null;
+  f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz });

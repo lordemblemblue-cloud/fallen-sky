@@ -1,13 +1,15 @@
 // A match played in the browser (practice, or any mode against bots) as a "source" for the game view: the
 // same shape as an online match (net/client.mjs createOnlineSource), so one renderer draws both.
-import { createMatch, stepMatch, matchView, MODES } from '../sim/match.mjs';
+import { createMatch, stepMatch, matchView, queueMatchClass, MODES } from '../sim/match.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
 
 const STEP = 1 / 60;
 
-export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1] } = {}) {
+// classId: the class the player fights as (core/classes.mjs); chooseClass changes it for the next spawn
+export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You' }], seats: def.id === 'practice' ? 1 + bots : null });
+  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId }], seats: def.id === 'practice' ? 1 + bots : null });
+  let classAnswer = null;
   // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
   const others = BODY_IDS.filter((b) => b !== youBody);
   let k = 0;
@@ -27,6 +29,12 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
     status: 'ready',
     seatsVersion: 1,
     seats: () => seats,
+    get classAnswer() { return classAnswer; },
+    /** Change class: queued for the next spawn (before the fight, between rounds or while down). */
+    chooseClass(id) {
+      const res = queueMatchClass(match, 'you', id);
+      classAnswer = { ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null };
+    },
     view: () => matchView(match, 'you'),
     flags: () => match.flags,
     ball: () => match.ball,

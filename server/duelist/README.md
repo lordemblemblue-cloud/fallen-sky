@@ -20,19 +20,22 @@ Three-Point Control (Football and Duel are excluded). Practice and solo campaign
   `PROTOCOL`) is told to reload.
 - **Public matches and auto-overflow.** At startup, one permanent bot-filled room is created for each
   of the four competitive modes. `join { mode, matchId? }` joins the selected live server, replacing
-  one bot. The server rejects invalid/stale/wrong-mode room IDs. When a room becomes full of humans,
-  it immediately opens an additional bot-filled room. The last spare room is retained until another
-  has space. A leaving player's seat goes back to a bot; an idle extra room is eventually cleaned up.
-  A finished match restarts 12 s later. `join { mode: 'any' }` chooses the busiest room with people.
-- **Crews (the story mission).** `join { mode: 'story', create: true }` opens a private room and
-  returns its five-letter code. `join { mode: 'story', create: true, open: true }` hosts a new public crew,
-  while `join { mode: 'story', matchId }` joins a selected publicly listed crew; private IDs cannot be
-  joined this way. Friends can join private rooms using `join { mode: 'story', code }`, and
-  `join { mode: 'story' }` finds any open crew or starts one. Up to four people can join a crew. The mission is
-  `src/components/duelist/sim/mission.mjs`, stepped like a match (the depot's people are run here too); the
-  `input` message carries the interact key. A room of your own is not in the lobby; an open crew is. The
-  mission waits while its room is empty (the room closes after a minute) and starts again 20 s after it is
-  completed. Wrong codes are slowed down (five, then a 30 s wait). The Join button (`any`) looks for a
+  one bot (the lowest-scoring bot of the team that needs a player). The server rejects invalid/stale/wrong-mode
+  room IDs. When a room becomes full of humans, it immediately opens an additional bot-filled room. The last
+  spare room is retained until another has space. A leaving player's seat goes back to a bot; an idle extra room
+  is eventually cleaned up. A finished match restarts 12 s later with the same players. `join { mode: 'any' }`
+  chooses the busiest room with people.
+- **Crews (the story missions).** `join { mode: 'story', mission, create: true }` opens a private room and
+  returns its five-letter code; `join { mode: 'story', mission, create: true, open: true }` hosts a new public
+  crew, while `join { mode: 'story', matchId }` joins a selected publicly listed crew (private IDs cannot be
+  joined this way). Friends join private rooms with `join { mode: 'story', code }` (whatever mission the crew
+  plays), and `join { mode: 'story', mission }` finds an open crew playing that mission or starts one. Up to four
+  people in a crew. The missions are `src/components/duelist/sim/mission.mjs` (`MISSIONS`: Contraband,
+  Saltmarch), stepped like a match (the depot's people and the crew's allies are run here too); the `input`
+  message carries the interact key. A room of your own is not in the lobby; an open crew is (with its mission).
+  The mission waits while its room is empty (the room closes after a minute); 20 s after it is completed the
+  crew goes on to the next mission in the story (the last one plays again). Wrong codes are slowed down (five,
+  then a 30 s wait). The Join button (`any`) looks for a
   match, not a mission.
 - **Reconnecting.** A dropped connection keeps its seat for 30 s (`RECONNECT_SECONDS`): meanwhile a bot plays
   it in a match, the mission's autopilot in a crew (a crew with nobody connected waits). Every `joined` carries a

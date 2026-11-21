@@ -6,7 +6,9 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs } from '../client/prefs.mjs';
+import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
+import { STORY_MISSIONS } from './missions.js';
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
@@ -401,14 +403,65 @@ export function FighterPage() {
   );
 }
 
-const CONTROLS = [
-  ['Move', 'W A S D'], ['Sprint', 'Shift'], ['Light strike (chain three)', 'Left mouse'], ['Heavy strike', 'E'], ['Guard (a fresh guard parries)', 'Right mouse, hold'],
-  ['Roll (into a push or a strike)', 'Space'], ['Dash', 'Ctrl'], ['Push', '1'], ['Pull', '2'], ['Telekinesis grip (let go to throw)', '3, hold'],
-  ['Veil Breach', '4'], ['Resist (break a grip)', 'Z'], ['Lock on', 'Tab'], ['Use (story: crates, consoles, cores)', 'F, hold'],
-];
-
 function readAudio() {
   try { return { volume: 0.8, muted: false, ...JSON.parse(window.localStorage.getItem('duelist.audio') || '{}') }; } catch { return { volume: 0.8, muted: false }; }
+}
+
+// an action's name without its hint ("Roll (into a push or a strike)" -> "Roll")
+const ACTION_NAME = Object.fromEntries(ACTIONS.map((a) => [a.id, a.label.replace(/\s*\(.*\)$/, '')]));
+
+/** Change what a key does: pick an action, then press the key or mouse button for it (Esc to cancel). */
+function KeyBindings({ keys, onChange }) {
+  const [waiting, setWaiting] = useState(null); // the action waiting for its new input
+  const [note, setNote] = useState('');
+  const bound = keysFrom(keys);
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const take = (code, e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (code === 'Escape') { setWaiting(null); setNote(''); return; }
+      if (!bindable(code)) { setNote(`${keyLabel(code)} cannot be used. Pick another, or Esc to cancel.`); return; }
+      const result = rebind(bound, waiting, code);
+      onChange(result.keys);
+      setNote(result.swapped ? `${keyLabel(code)} was ${ACTION_NAME[result.swapped]}: the two swapped.` : '');
+      setWaiting(null);
+    };
+    const onKey = (e) => take(e.code, e);
+    const onMouse = (e) => take(`Mouse${e.button}`, e);
+    const onContext = (e) => e.preventDefault();
+    // listening starts once the click that asked for a key is over (its mousedown came before it), so that click
+    // is never taken as the key; and at once, so a key pressed straight after it is not missed
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('mousedown', onMouse, true);
+    window.addEventListener('contextmenu', onContext, true);
+    return () => {
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mousedown', onMouse, true);
+      window.removeEventListener('contextmenu', onContext, true);
+    };
+  }, [waiting, keys]);
+  const changed = ACTIONS.some(({ id }) => bound[id] !== DEFAULT_KEYS[id]);
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-end gap-2">
+        <button type="button" onClick={() => { onChange({ ...DEFAULT_KEYS }); setNote('Back to the default keys.'); setWaiting(null); }} disabled={!changed}
+          className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70 transition hover:border-white/35 hover:text-white disabled:opacity-40">Reset to defaults</button>
+      </div>
+      <div className="duelist-settings-keymap">
+        {ACTIONS.map(({ id, label }) => (
+          <div key={id} className="duelist-settings-keymap-row">
+            <span>{label}</span>
+                <button type="button" onClick={() => { setWaiting(waiting === id ? null : id); setNote(''); }} aria-label={`Change the key for ${label}`}
+                  className={`min-w-[7.5rem] flex-none rounded-lg border px-2.5 py-1 text-xs transition ${waiting === id ? 'border-amber-300/70 bg-amber-300/10 text-amber-100' : 'border-white/10 text-cyan-100/90 hover:border-white/30'}`}>
+                  {waiting === id ? 'Press a key…' : keyLabel(bound[id])}
+                </button>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 min-h-[1rem] text-xs text-white/50">{waiting ? `Press the key or mouse button for “${ACTION_NAME[waiting]}”. Esc cancels.` : note}</p>
+    </div>
+  );
 }
 
 export function SettingsPage() {
@@ -435,6 +488,10 @@ export function SettingsPage() {
             <label className="duelist-setting-row duelist-setting-toggle">
               <input type="checkbox" checked={!audio.muted} onChange={(event) => saveAudio({ muted: !event.target.checked })} />
               <span><span className="duelist-setting-label">Sound enabled</span><span className="duelist-menu-note">Turn all game audio on or off without changing your saved volume.</span></span>
+            </label>
+            <label className="duelist-setting-row duelist-setting-toggle">
+              <input type="checkbox" checked={prefs.voices !== false} onChange={(event) => update({ voices: event.target.checked })} />
+              <span><span className="duelist-setting-label">Spoken comms</span><span className="duelist-menu-note">The story missions&apos; radio lines are read aloud, each speaker in a voice of their own. The words stay on screen either way.</span></span>
             </label>
           </section>
           <section className="duelist-menu-panel">
@@ -474,28 +531,15 @@ export function SettingsPage() {
         </div>
       </div>
       <section className="duelist-menu-panel mt-5" aria-label="Keyboard and mouse controls">
-        <h2 className="duelist-menu-section-heading">Keyboard &amp; mouse reference</h2>
-        <p className="duelist-menu-helper mt-2">These are the current controls. This page shows the bindings but does not remap them.</p>
-        <div className="duelist-settings-keymap">
-          {CONTROLS.map(([action, key]) => (
-            <div key={action} className="duelist-settings-keymap-row">
-              <span>{action}</span>
-              <kbd>{key}</kbd>
-            </div>
-          ))}
-        </div>
+        <h2 className="duelist-menu-section-heading">Keyboard &amp; mouse</h2>
+        <p className="duelist-menu-helper mt-2">Choose a control, then press the key or mouse button you want for it. Two controls never share one: the control that had it takes the one you gave up.</p>
+        <KeyBindings keys={prefs.keys || {}} onChange={(next) => update({ keys: next })} />
       </section>
     </MenuShell>
   );
 }
 
-const ACTS = [
-  ['Infiltration', 'Get into the Halvane Logistics freight depot and open the crates its manifest calls medical supplies.'],
-  ['The Ledger', 'Three people sign every transfer: the quartermaster, the broker and the security chief. Find them and take their ledger cores.'],
-  ['The Evidence', 'The depot locks down. Carry the cores to the cargo lift and hold it until it arrives.'],
-  ['The Name', 'The buyer paid in Will-forged crystal. A recorded message plays in a voice you know.'],
-];
-
+/** The story: each mission with its parts and its buttons; one box joins a friend's crew, whatever it plays. */
 export function StoryPage() {
   const navigate = useNavigate();
   const lobby = useLobby();
@@ -503,48 +547,20 @@ export function StoryPage() {
   const [typed, setTyped] = useState('');
   const code = typed.toUpperCase().replace(/[^A-HJ-NP-Z]/g, '').slice(0, 5);
   const play = (search) => navigate({ to: '/duelist-next/play', search: { mode: 'story', ...search } });
-  const crews = (lobby.matches || []).filter((match) => match.mode === 'story' && match.open);
   const offline = lobby.serverUrl ? 'The match server is not answering.' : 'Online play is not set up yet.';
   return (
-    <MenuShell title="Story Campaign" subtitle="Contraband — a cooperative operation for one to four players." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <MenuShell title="Story Campaign" subtitle="Cooperative operations for one to four players, in order. A crew that finishes one goes on to the next." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_minmax(255px,330px)]">
-        <div>
-          <div className="duelist-story-brief">
-            <span className="duelist-menu-eyebrow-text">OPERATION 01 / CONTRABAND</span>
-            <h2>The cargo is not what it seems.</h2>
-            <p className="duelist-menu-helper">Infiltrate the freight depot, trace an illicit shipment, recover the evidence and uncover the person behind it.</p>
-          </div>
-          <h3 className="duelist-menu-section-heading">Mission briefing</h3>
-          <ol className="duelist-story-milestones">
-            {ACTS.map(([title, line], index) => (
-              <li key={title} className="duelist-story-milestone">
-                <span className="duelist-story-step" aria-label={'Stage ' + (index + 1)}>{String(index + 1).padStart(2, '0')}</span>
-                <div className="duelist-story-milestone-copy">
-                  <h3>{title}</h3>
-                  <p>{line}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p className="duelist-menu-note mt-2">About ten minutes. If the crew falls, play resumes from the mission checkpoint. Hold F to use crates and consoles.</p>
+        <div className="space-y-10">
+          {STORY_MISSIONS.map((m) => <MissionCard key={m.id} mission={m} lobby={lobby} offline={offline} play={play} />)}
+          <p className="duelist-menu-note">About ten minutes each. If the crew falls, play resumes from the stage&apos;s checkpoint. A line of light shows where a shot will go: roll or guard. Hold F to use crates, consoles, cores and bells.</p>
         </div>
-        <aside className="duelist-menu-panel duelist-story-crew-actions" aria-label="Campaign launch options">
-          <span className="duelist-menu-eyebrow-text">CHOOSE HOW TO ENTER</span>
-          <div>
-            <h2 className="duelist-menu-section-heading">Begin operation</h2>
-            <p className="duelist-menu-helper mt-2">Explore alone, or enter with up to three friends when the online server is available.</p>
-          </div>
-          <div className="duelist-story-summary">
-            <Users size={16} aria-hidden="true" />
-            <span>1–4 fighters · Co-op mission</span>
-          </div>
-          <Button primary onClick={() => play({ online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
-          <div className="h-px bg-white/10" />
+        <aside className="duelist-menu-panel duelist-story-crew-actions" aria-label="Join a crew">
           <span className="duelist-menu-eyebrow-text">PLAY WITH A CREW</span>
-          <Button onClick={() => play({ online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <Users className="h-4 w-4" /> Create private crew
-          </Button>
-          <p className="duelist-menu-note">You receive a room code to share with up to three friends.</p>
+          <div>
+            <h2 className="duelist-menu-section-heading">Join a friend&apos;s crew</h2>
+            <p className="duelist-menu-helper mt-2">Their room code takes you to their crew, whichever operation it is playing.</p>
+          </div>
           <div className="duelist-story-code-row">
             <input type="text" value={code} onChange={(event) => setTyped(event.target.value)}
               placeholder="CODE" maxLength={5} aria-label="Five-character crew code"
@@ -553,13 +569,49 @@ export function StoryPage() {
               <LogIn className="h-4 w-4" /> Join by code
             </Button>
           </div>
-          <Button onClick={() => play({ online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
-            <LogIn className="h-4 w-4" /> {crews.length ? 'Join an open crew (' + crews.length + ')' : 'Start an open crew'}
-          </Button>
           {!lobby.online && <p className="duelist-menu-note" role="status">{offline} Solo play is still available.</p>}
+          <div className="h-px bg-white/10" />
+          <div className="duelist-story-summary">
+            <Users size={16} aria-hidden="true" />
+            <span>1–4 fighters · each operation is manned for the size of your crew</span>
+          </div>
           <p className="duelist-menu-note">Current fighter: <strong>{BODIES[prefs.fighter]?.name}</strong>. <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="text-cyan-200 hover:underline">Change fighter</Link></p>
         </aside>
       </div>
     </MenuShell>
+  );
+}
+
+// One operation of the campaign: its brief, its stages as a timeline, and its own ways in.
+function MissionCard({ mission, lobby, offline, play }) {
+  const crews = (lobby.matches || []).filter((x) => x.mode === 'story' && x.mission === mission.id && x.open);
+  return (
+    <section aria-label={`Operation ${mission.number}: ${mission.title}`}>
+      <div className="duelist-story-brief">
+        <span className="duelist-menu-eyebrow-text">OPERATION {String(mission.number).padStart(2, '0')} / {mission.title.toUpperCase()}</span>
+        <h2>{mission.tagline}</h2>
+        <p className="duelist-menu-helper">{mission.line}</p>
+      </div>
+      <ol className="duelist-story-milestones">
+        {mission.parts.map(([title, line], index) => (
+          <li key={title} className="duelist-story-milestone">
+            <span className="duelist-story-step" aria-label={'Stage ' + (index + 1)}>{String(index + 1).padStart(2, '0')}</span>
+            <div className="duelist-story-milestone-copy">
+              <h3>{title}</h3>
+              <p>{line}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 flex flex-wrap gap-2">
+        <Button primary onClick={() => play({ mission: mission.id, online: 0 })}><Play className="h-4 w-4" /> Play solo</Button>
+        <Button onClick={() => play({ mission: mission.id, online: 1, room: 'new' })} disabled={!lobby.online} title={lobby.online ? 'You receive a room code to share with up to three friends' : offline}>
+          <Users className="h-4 w-4" /> Create private crew
+        </Button>
+        <Button onClick={() => play({ mission: mission.id, online: 1 })} disabled={!lobby.online} title={lobby.online ? undefined : offline}>
+          <LogIn className="h-4 w-4" /> {crews.length ? `Join an open crew (${crews.length})` : 'Start an open crew'}
+        </Button>
+      </div>
+    </section>
   );
 }

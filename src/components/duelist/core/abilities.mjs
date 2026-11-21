@@ -1,0 +1,115 @@
+// The lasting effects of the class abilities (Quickstep, Rage, Veil Cloak, Empowered Strikes, Misdirect, Mend,
+// Levitate) and the class passives, as the rules core and the world apply them. Pure: callers pass the time.
+//
+// A fighter's effects live in f.effects: { [kind]: { until, ...data } }. Sanctuary is a place, not an effect on
+// a fighter: sim/world.mjs keeps its domes in world.zones.
+import { classById, SPECIAL_BALANCE } from './classes.mjs';
+
+export const EFFECTS = Object.freeze({
+  quick: Object.freeze({ move: 1.4, rate: 1.2 }),
+  rage: Object.freeze({ damage: SPECIAL_BALANCE.rageDamageMultiplier, move: SPECIAL_BALANCE.rageMoveMultiplier, rate: SPECIAL_BALANCE.rageAttackSpeedMultiplier }),
+  empower: Object.freeze({ damage: 1.4, willDrain: 6 }),
+  levitate: Object.freeze({ height: 2.1, move: 0.6 }),
+  cloak: Object.freeze({ seenWithin: 3 }), // metres: closer than this, a cloaked fighter shimmers into view
+});
+// effect kinds as bits, for snapshots (net/protocol.mjs)
+export const EFFECT_BITS = Object.freeze({ quick: 1, rage: 2, cloak: 4, levitate: 8, mend: 16, empower: 32, misdirected: 64 });
+
+export function addEffect(f, kind, until, data = {}) {
+  if (!f.effects) f.effects = {};
+  f.effects[kind] = { until, ...data };
+}
+export const effectOn = (f, kind, now) => {
+  const e = f.effects?.[kind];
+  return e && e.until > now ? e : null;
+};
+export function endEffect(f, kind) {
+  if (f.effects) delete f.effects[kind];
+}
+export function expireEffects(f, now) {
+  if (!f.effects) return;
+  for (const [kind, e] of Object.entries(f.effects)) if (!(e.until > now)) delete f.effects[kind];
+}
+
+const passiveOf = (f) => classById(f.classId)?.passive || null;
+
+/** How fast a fighter's actions play (1 = as written): class stance, Quickstep, Rage. */
+export function actionRate(f, now) {
+  let rate = passiveOf(f)?.attackRate ?? 1;
+  if (effectOn(f, 'quick', now)) rate *= EFFECTS.quick.rate;
+  if (effectOn(f, 'rage', now)) rate *= EFFECTS.rage.rate;
+  return rate;
+}
+
+/** How fast a fighter walks and runs: Quickstep and Rage speed it up; floating slows it. */
+export function moveRate(f, now) {
+  let rate = 1;
+  if (effectOn(f, 'quick', now)) rate *= EFFECTS.quick.move;
+  if (effectOn(f, 'rage', now)) rate *= EFFECTS.rage.move;
+  if (effectOn(f, 'levitate', now)) rate *= EFFECTS.levitate.move;
+  return rate;
+}
+
+/** How far a roll carries this fighter (the Assassin's Shadow Step rolls further). */
+export const rollReach = (f) => passiveOf(f)?.rollDistance ?? 1;
+
+/**
+ * The damage a landed move does before the defender's protection: the attacker's stance, a strike from behind
+ * (the Assassin), Rage, Empowered Strikes. sheltered: the defender stands in an allied Sanctuary.
+ */
+export function damageFor(attacker, move, base, { now, behind = false, sheltered = false } = {}) {
+  let damage = base;
+  const passive = passiveOf(attacker);
+  const strike = move.kind === 'attack';
+  if (strike && passive?.strikeDamage) damage *= passive.strikeDamage;
+  if (strike && behind && passive?.backstab) damage *= passive.backstab;
+  if (effectOn(attacker, 'rage', now)) damage *= EFFECTS.rage.damage;
+  if (strike && effectOn(attacker, 'empower', now)) damage *= EFFECTS.empower.damage;
+  if (sheltered) {
+    damage *= move.damageKind === 'telekinesis' || move.damageKind === 'breach'
+      ? 1 - SPECIAL_BALANCE.sanctuaryPowerResistance
+      : 1 - SPECIAL_BALANCE.sanctuaryStrikeResistance;
+  }
+  return damage;
+}
+
+/** Rage: nothing staggers, grips or knocks this fighter down. */
+export const controlImmune = (f, now) => !!effectOn(f, 'rage', now);
+
+/** How much of a knockback moves this fighter (the Warrior's Heavy Stance stands firmer). */
+export const knockbackTaken = (f) => passiveOf(f)?.knockbackTaken ?? 1;
+
+/** A landed strike spends one Empowered charge and drains the target's Will. */
+export function spendEmpower(attacker, now) {
+  const e = effectOn(attacker, 'empower', now);
+  if (!e) return 0;
+  e.charges = (e.charges ?? 1) - 1;
+  if (e.charges <= 0) endEffect(attacker, 'empower');
+  return EFFECTS.empower.willDrain;
+}
+
+/** Is `f` hidden from `viewer` (a Veil Cloak, farther than its shimmer)? Teammates always see each other. */
+export function hiddenFrom(f, fBody, viewer, viewerBody, now) {
+  if (!effectOn(f, 'cloak', now) || !viewer || viewer === f) return false;
+  if (f.team !== null && f.team === viewer.team) return false;
+  return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > EFFECTS.cloak.seenWithin;
+}
+
+/** May `viewer` lock on to (or a bot target) `f`? Not while hidden from it, nor while `f` misdirected it. */
+export function targetable(f, fBody, viewer, viewerBody, now) {
+  if (hiddenFrom(f, fBody, viewer, viewerBody, now)) return false;
+  const m = effectOn(viewer, 'misdirected', now);
+  return !(m && m.by === f.id);
+}
+
+/** The effects as snapshot bits, and back (the browser only needs which are on). */
+export function effectBits(f, now) {
+  let bits = 0;
+  for (const [kind, bit] of Object.entries(EFFECT_BITS)) if (effectOn(f, kind, now)) bits |= bit;
+  return bits;
+}
+export function effectsFromBits(bits) {
+  const out = {};
+  for (const [kind, bit] of Object.entries(EFFECT_BITS)) if (bits & bit) out[kind] = { until: Infinity };
+  return out;
+}

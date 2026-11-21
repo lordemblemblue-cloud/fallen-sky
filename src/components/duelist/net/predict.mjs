@@ -127,7 +127,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
         const cur = shown.action;
         if (cur && cur.id === a.id && cur.startedAt !== undefined && Math.abs(cur.startedAt - startedAt) < PREDICTION.sameActionSeconds) {
           cur.t = a.t; cur.nextHit = a.nextHit; cur.held = a.held; cur.startedAt = startedAt;
-        } else shown.action = { id: a.id, move: a.move, t: a.t, nextHit: a.nextHit, held: a.held, chainedFrom: a.chainedFrom, startedAt };
+        } else shown.action = { id: a.id, move: a.move, t: a.t, nextHit: a.nextHit, held: a.held, chainedFrom: a.chainedFrom, link: a.link, startedAt };
       }
       shownBody.x = body.x + ex;
       shownBody.y = Math.max(0, body.y + ey);

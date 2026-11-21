@@ -194,8 +194,13 @@ mechanic; mysteries open gradually.
     sensitivity, the controls), `/duelist-next/story` (the mission: play solo, start a crew room, join by
     code, join an open crew)
   - [x] `/duelist-next/play?mode=…&online=…`: the arena with a Menu button back to where you came from
-  - [ ] Key rebinding; touch controls; a fighter preview (3D) on the Fighter page
-- [ ] Phase 7: the story mission, "Contraband" (in progress)
+  - [x] Key rebinding (`client/bindings.mjs`, Settings → Controls): any action to any key or mouse button
+    (click it, press the new one; Esc cancels; a taken key swaps the two; Reset to defaults); either Shift,
+    Ctrl or Alt counts; Esc, F5, F11, F12 and the system keys are never bound; saved per browser and repaired
+    if broken. The game, the power bar, the help line and the "hold to use" prompt follow the bindings.
+    Tests: `tests/duelist-controls.test.mjs`
+  - [ ] Touch controls; a fighter preview (3D) on the Fighter page
+- [ ] Phase 7: the story missions, "Contraband" and "Saltmarch" (in progress)
   - [x] Rooms (`sim/level.mjs`): walls, doors and cover as boxes; bodies slide along them; strikes, shots and
     Telekinesis need a clear line; a graph of waypoints for finding a way between rooms
   - [x] The depot's people (`sim/enemies.mjs`): no Will and so no Veil; gunners and marksmen with
@@ -219,7 +224,37 @@ mechanic; mysteries open gradually.
   - [x] With a crew (`server/duelist/`, `net/client.mjs`): crew rooms on the match server (a room of your own
     with a code, join by code, or any open crew), the mission run by the server, the interact key in the
     input message; two browser tabs verified in one crew
-  - [ ] Guards' models: today a procedural kit (helmet, plates) over the base bodies; the owner's own guard
-    characters would replace it
-  - [ ] Voices or text-to-speech for the comms lines; a second mission
+  - [x] Saltmarch (`sim/missions/saltmarch.mjs`), the second mission (an original story, names mine, for the
+    owner's review): the ledger led the Houses to a refuge of unbound Will users; get inside before their
+    wardens (the defenders take you for wardens and, beaten, stand down); make the keeper stand down and hear
+    that Ione filed the ledger with the House court; ring three warning bells while the first wardens come;
+    hold the tunnel door for 40 s beside Arden while the refuge empties; face Warden-Captain Crane, another
+    of Arden's students, who yields. Solo about 5 minutes on autopilot, 0 to 3 wipes across seeds
+  - [x] What it brought to the engine: people who stand down when beaten (a type's `yields`: they kneel, out
+    of the fight, nothing reaches them, no bot targets them); allies on the crew's side (driven by the duel
+    bot, holding a post; driven back, they catch their breath, never fall); House wardens (duelists) and
+    the refuge's defenders (thin Veils, sidearms); the missions in order (`MISSION_ORDER`, `nextMission`)
+  - [x] In the browser: the refuge theme (salt-stone walls, flagstones, an iron-bound gate, lamplight; bunks,
+    tables with sacks, record stacks), warning bells that swing and glow, a bell's sound; civilians in a
+    hood and a cloak, wardens in pale armour with gold-lit crystal blades; kneeling; Arden with a name tag
+  - [x] Two missions: the Story page lists both (Play solo, Start a crew room, Join an open crew; one code box
+    for a friend's crew, whichever mission it plays); `play?mode=story&mission=…`; "Next: Saltmarch" after
+    Contraband; a crew on the server goes on to the next mission together (the page swaps the rooms in place
+    and its title follows). Tests: `tests/duelist-saltmarch.test.mjs` (3), server tests (+3)
+  - [ ] Guards' models: today a procedural kit (helmet, plates; a hood and cloak for civilians) over the base
+    bodies; the owner's own characters would replace it
+  - [x] Spoken comms (`client/voices.mjs`; Settings → Spoken comms, on by default): each line read aloud as it
+    appears. Follows the game's volume and mute. A line the browser holds back until the player first clicks
+    (after a reload) is said then. A line with a recording plays it; any other is read by the browser's own
+    voices, one cast per speaker (women and men as written, the better voices to the bigger parts; with only
+    a few voices on a system, speakers who share one are told apart by pitch)
+  - [x] Recorded voices (`public/audio/duelist/voices/`): all 50 lines, made with ElevenLabs (model Eleven v4,
+    its premade voices), 3 min 46 s of speech, 2 MB of MP3 at 64 kbps. Cast: Ione Sarah, Arden River (a
+    neutral voice: the story gives Arden no pronoun), Hask George, Crane Lily, Dask Callum, Perrin Matilda,
+    Rooke Adam, the defender Harry. `node tools/duelist/comms-lines.mjs` lists the lines (`lines.json`, by id:
+    played through with the autopilot, the lines said as a mission starts, and every line written in a
+    mission's file); `tools/duelist/record-comms.mjs` records only those without a recording (key from a
+    git-ignored .env file; `--dry` shows the cost). A line stays up until its voice is done
+    (`commsSeconds`, 0.07 s a character); the tests check that every recording ends before its line goes
+  - [ ] A third mission
 - [ ] Phase 8: `/duelist` switches to the new build (needs the owner's go-ahead)

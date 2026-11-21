@@ -1,6 +1,7 @@
 // Simple test markers for Three-Point Control. These are NOT an authored map:
 // positions come from the server match rules and can later be supplied by the
 // finished maps without changing the scoring or capture code.
+/* global document */
 import * as THREE from 'three';
 import { CONTROL } from '../sim/control.mjs';
 

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseClassAbilityPacket, validateAuthenticatedAbilityRequest } from '../src/components/duelist/sim/classAbilityBoundary.mjs';
+import { visibleClassAbilities } from '../src/components/duelist/core/classes.mjs';
 
 const matchFor = classId => ({
   phase: 'live',
@@ -27,13 +28,14 @@ test('rejects identity, meter, class, page, damage and animation spoofing', () =
   assert.equal(parseClassAbilityPacket({ type: 'class.ability', slot: 0, __proto__: null, foo: 1 }).ok, false);
   assert.equal(parseClassAbilityPacket([]).ok, false);
 });
-test('all four classes deny unimplemented abilities without mutating match', () => {
-  for (const id of ['assassin', 'duelist', 'juggernaut', 'healer']) {
+// The kits are built, and abilities run through the match's own input (ability1-4): this packet path stays closed.
+test('all four classes: this boundary executes nothing and never mutates the match', () => {
+  for (const id of ['assassin', 'duelist', 'warrior', 'healer']) {
     const match = matchFor(id);
     const before = JSON.stringify([...match.seats]);
     for (const slot of [0, 1, 2]) {
       assert.deepEqual(request(match, { type: 'class.ability', slot }), {
-        accepted: false, reason: 'not-implemented',
+        accepted: false, reason: 'ability-execution-not-wired',
       });
     }
     assert.equal(JSON.stringify([...match.seats]), before);
@@ -51,7 +53,7 @@ test('server identity, match phase, life and cooldown are enforced', () => {
   match.world.fighters.get('owner').vitals.dead = false;
   assert.equal(validateAuthenticatedAbilityRequest({
     match, verifiedSeatId: 'owner', packet: { type: 'class.ability', slot: 0 },
-    first: 0, now: 20, cooldowns: { stealth: 30 },
+    first: 0, now: 20, cooldowns: { [visibleClassAbilities('assassin', 0)[0].id]: 30 },
   }).reason, 'cooldown');
 });
 test('missing authoritative page, time or cooldown state fails closed', () => {

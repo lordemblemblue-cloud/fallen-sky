@@ -1,10 +1,12 @@
 // A player's Duelist preferences, kept in this browser: the fighter, the bots' level and number, the practice
-// opponent, mouse sensitivity. Missing or unreadable storage (a private window) falls back to the defaults.
+// opponent, mouse sensitivity, their own key bindings (client/bindings.mjs) and whether the comms are spoken. Missing or unreadable storage (a private window) falls back to the defaults.
 /* global window */
 import { useCallback, useState } from 'react';
 
 const KEY = 'duelist.prefs';
-export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1 });
+// classId: the class the player fights as (core/classes.mjs), kept between matches; xp: the EXP earned in matches
+// (client/progress.mjs: the level under the portrait)
+export const DEFAULT_PREFS = Object.freeze({ fighter: 'maskedWarrior', foe: 'huntress', level: 'duelist', bots: 1, sensitivity: 1, keys: {}, voices: true, classId: 'duelist', xp: 0 });
 
 export function readPrefs() {
   try {

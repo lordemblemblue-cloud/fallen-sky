@@ -6,16 +6,16 @@
 // guard a blow it has seen coming (a master raises its guard just as the blow lands: a parry); punish a foe
 // that swung and missed; escape when badly hurt; use Telekinesis and the Breach; go after the mode's
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
-import { MOVES, BLOCK, isStunned, isDown, fighterVeil } from '../core/index.mjs';
+import { MOVES, BLOCK, CLASSES, FLOW, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 
 export const BOT_LEVELS = Object.freeze({
   trainee: Object.freeze({ reaction: 0.45, guardChance: 0.25, rollChance: 0.1, powerChance: 0.15, comboLength: 2, aggression: 0.5,
-    parry: 0.05, punish: 0.2, breach: 0.1, escape: 0.2 }),
+    parry: 0.05, punish: 0.2, breach: 0.1, escape: 0.2, flow: 0 }),
   duelist: Object.freeze({ reaction: 0.28, guardChance: 0.5, rollChance: 0.25, powerChance: 0.3, comboLength: 3, aggression: 0.7,
-    parry: 0.25, punish: 0.55, breach: 0.35, escape: 0.45 }),
+    parry: 0.25, punish: 0.55, breach: 0.35, escape: 0.45, flow: 0.25 }),
   master: Object.freeze({ reaction: 0.16, guardChance: 0.72, rollChance: 0.4, powerChance: 0.45, comboLength: 4, aggression: 0.85,
-    parry: 0.55, punish: 0.85, breach: 0.6, escape: 0.7 }),
+    parry: 0.55, punish: 0.85, breach: 0.6, escape: 0.7, flow: 0.45 }),
 });
 
 // A small deterministic random source, so a bot plays the same way for the same seed (tests, replays).
@@ -44,7 +44,8 @@ function pickTarget(world, bot, prefer = null) {
   }
   let best = null;
   for (const other of world.fighters.values()) {
-    if (other.id === bot.id || other.vitals.dead || (me.team !== null && other.team === me.team)) continue;
+    // someone who stood down is out of the fight
+    if (other.id === bot.id || other.vitals.dead || other.yielded || (me.team !== null && other.team === me.team)) continue;
     const d = dist(mine, bodyOf(world, other.id)) + (isDown(other, world.time) ? 6 : 0);
     if (!best || d < best.d) best = { id: other.id, d };
   }
@@ -55,6 +56,37 @@ function pickTarget(world, bot, prefer = null) {
  * This step's input for the bot, in the same shape a player's client sends.
  * goal: { x, z, urgent?, hunt? } from the match (the flag to take, the base to run to, the thief to catch).
  */
+// Which of its class's abilities a bot uses now, if any: 'ability1'-'ability4' or null.
+function classKitPress(me, foe, d, now, rnd, lvl) {
+  const ready = (id) => now >= (me.cooldowns[id] ?? 0) && me.vitals.will >= (MOVES[id]?.will ?? 0) && !me.vitals.collapsed;
+  const slot = (id) => 'ability' + (CLASSES[me.classId].abilities.findIndex((a) => a.id === id) + 1);
+  const hurt = me.vitals.hp / me.vitals.max.hp;
+  const chance = (p) => rnd() < p * (lvl.powerChance + 0.25);
+  switch (me.classId) {
+    case 'warrior':
+      if (d > 5 && d < 9 && ready('leapStrike') && chance(0.7)) return slot('leapStrike');
+      if (d < 3 && hurt < 0.6 && ready('repulse') && chance(0.6)) return slot('repulse');
+      if (d > 7 && d < 15 && ready('bladeThrow') && chance(0.4)) return slot('bladeThrow');
+      return null;
+    case 'duelist':
+      if (d > 3 && d < 8 && ready('quickstep') && chance(0.5)) return slot('quickstep');
+      if (d > 7 && d < 15 && ready('bladeThrow') && chance(0.4)) return slot('bladeThrow');
+      if (foe.action?.move.kind === 'attack' && foe.action.t < foe.action.move.startup && d < 2.6 && ready('counter') && chance(0.5)) return slot('counter');
+      return null;
+    case 'assassin':
+      if (d > 8 && ready('cloak') && chance(0.4)) return slot('cloak');
+      if (d < 4 && ready('empower') && chance(0.5)) return slot('empower');
+      if (d < 10 && ready('misdirect') && chance(0.15)) return slot('misdirect');
+      return null;
+    case 'healer':
+      if (hurt < 0.55 && ready('mend') && chance(0.8)) return slot('mend');
+      if (d > 3 && d < 8 && ready('quickstepAura') && chance(0.4)) return slot('quickstepAura');
+      if (hurt < 0.3 && d < 3 && ready('levitate') && chance(0.5)) return slot('levitate');
+      return null;
+    default: return null;
+  }
+}
+
 export function think(world, bot, { goal = null } = {}) {
   const now = world.time;
   const me = world.fighters.get(bot.id);
@@ -148,8 +180,15 @@ export function think(world, bot, { goal = null } = {}) {
     if (presses.length) return input;
   }
 
+  // the class kit: each class's abilities where they fit (core/classes.mjs)
+  if (me.classId && now >= (bot.nextKitAt ?? 0) && !me.action) {
+    bot.nextKitAt = now + 0.6;
+    const kit = classKitPress(me, foe, d, now, rnd, lvl);
+    if (kit) { presses.push(kit); return input; }
+  }
+
   // Telekinesis and the Breach, now and then: grip a collapsed Veil, push someone crowding, pull someone
-  // hanging back, open a strong Veil with a Breach before a heavy.
+  // hanging back, open a strong Veil with a Breach before a heavy. (A class only has the Telekinesis in its kit.)
   if (now >= bot.nextThinkAt && !me.action) {
     bot.nextThinkAt = now + 1.0;
     const strongVeil = foe.vitals.will > 60 && fighterVeil(foe) === 'stable';
@@ -169,13 +208,21 @@ export function think(world, bot, { goal = null } = {}) {
   if (d > reach + 0.4) {
     input.move = { x: toward.x, z: toward.z };
     input.sprint = d > 8 && me.vitals.stamina > 50;
+    // strikes by direction (flow: how often this level uses them): an advance covers the last of the distance,
+    // pressed while moving in
+    if (FLOW[me.weapon] && d < reach + 1.4 && !me.action && rnd() < lvl.flow * 0.2) { presses.push('light'); bot.combo = 1; }
   } else {
     if (rnd() < 0.02) bot.strafe = -bot.strafe;
     input.move = { x: toward.z * bot.strafe * 0.5, z: -toward.x * bot.strafe * 0.5 };
     input.run = false;
     if (!me.action || me.action.move.chain) {
       if (bot.combo === -1 && !me.action) { presses.push('heavy'); bot.combo = 0; }
-      else if (bot.combo >= 0 && bot.combo < lvl.comboLength && rnd() < lvl.aggression * 0.25) { presses.push('light'); bot.combo += 1; }
+      else if (bot.combo >= 0 && bot.combo < lvl.comboLength && rnd() < lvl.aggression * 0.25) {
+        presses.push('light');
+        bot.combo += 1;
+        // now and then with a direction: a sweep as it circles, or a turn stepping back
+        if (FLOW[me.weapon] && rnd() < lvl.flow) input.move = rnd() < 0.75 ? { x: toward.z * bot.strafe, z: -toward.x * bot.strafe } : { x: -toward.x, z: -toward.z };
+      }
       else if (bot.combo >= lvl.comboLength) {
         bot.combo = 0;
         if (rnd() < 0.35 && !me.vitals.winded) presses.push('heavy');

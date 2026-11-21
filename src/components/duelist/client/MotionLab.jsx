@@ -7,6 +7,8 @@ import { MOTION_CLIPS } from '../core/motionPack.data.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL, BODIES } from './assets.mjs';
 import { clipsForBody } from './motionLibrary.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
+import { createClassWeapon, equipClassWeapon, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
+import { createSecondHand, secondHandAt } from './secondHand.mjs';
 import { CRYSTAL_SWORD } from './duelMoves.mjs';
 import { solveFallbackGrip } from '../../game3d/weapons/playerWeaponRuntime.js';
 import { createArena, createSceneLighting } from './arena.mjs';
@@ -71,10 +73,15 @@ export default function MotionLab() {
         scene.add(group);
         const solved = solveFallbackGrip(model, CRYSTAL_SWORD, ['combat'], 1.7);
         const sword = createCrystalSword();
-        if (solved) attachToHand(sword, model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(solved.bone)), solved.grips.combat);
+        const rightHand = solved && model.getObjectByName(THREE.PropertyBinding.sanitizeNodeName(solved.bone));
+        if (solved) attachToHand(sword, rightHand, solved.grips.combat);
+        // the class forms, shown with their own clips (blades*, staff*)
+        const kits = { blades: createClassWeapon('duelist'), staff: createClassWeapon('assassin') };
+        if (solved) for (const kit of Object.values(kits)) equipClassWeapon(kit, { rightHand, leftHand: model.getObjectByName('mixamorigLeftHand'), grip: solved.grips.combat });
         const clips = { ...(await clipsForBody(model, { rigKey: bodyId })), ...(await clipsForBody(model, { rigKey: bodyId, url: MOVEMENT_PACK_URL, names: DODGES })) };
         const mixer = new THREE.AnimationMixer(model);
-        bodies.push({ bodyId, group, model, x, mixer, clips, action: null, sword });
+        const secondHand = solved ? createSecondHand({ model, weapon: kits.staff.main.group, grip: mirrorGrip(solved.grips.combat), along: STAFF_HANDS }) : null;
+        bodies.push({ bodyId, group, model, x, mixer, clips, action: null, sword, kits, secondHand });
       }
       if (!disposed) setNames(Object.keys(bodies[0].clips));
     })().catch((error) => console.error('[motion lab]', error));
@@ -95,6 +102,7 @@ export default function MotionLab() {
         b.action.paused = true;
         b.action.time = state.time;
         b.mixer.update(0);
+        if (!state.rawHands) b.secondHand?.apply(secondHandAt(state.clip, state.time)); // the staff's second hand, as in the game
         // the travel the pack took out of the clip, put back on the body
         const t = MOTION_CLIPS[state.clip]?.travel;
         let forward = 0;
@@ -108,6 +116,9 @@ export default function MotionLab() {
         }
         b.group.position.set(b.x - right, 0, forward);
         b.sword.update(dt);
+        const form = /^blades/.test(state.clip) ? 'blades' : /^staff/.test(state.clip) ? 'staff' : 'sword';
+        b.sword.group.visible = form === 'sword';
+        for (const [name, kit] of Object.entries(b.kits)) for (const part of [kit.main, kit.off]) if (part) part.group.visible = form === name;
       }
       if (state.view !== state.shownView && VIEWS[state.view]) {
         state.shownView = state.view;
@@ -185,7 +196,7 @@ export default function MotionLab() {
       disposed = true;
       cancelAnimationFrame(frame);
       observer.disconnect();
-      for (const b of bodies) { b.mixer.stopAllAction(); b.sword.dispose(); }
+      for (const b of bodies) { b.mixer.stopAllAction(); b.sword.dispose(); for (const kit of Object.values(b.kits)) for (const part of [kit.main, kit.off]) part?.dispose(); }
       arena.dispose();
       renderer.dispose();
       renderer.domElement.remove();
@@ -195,9 +206,11 @@ export default function MotionLab() {
 
   useEffect(() => { if (labRef.current) Object.assign(labRef.current, { clip: current, speed, playing, travel, view }); }, [current, speed, playing, travel, view]);
   const groups = useMemo(() => {
-    const out = { Sword: [], 'Being hit': [], Casting: [], Moving: [], Story: [], Other: [] };
+    const out = { Sword: [], 'Twin blades': [], Staff: [], 'Being hit': [], Casting: [], Moving: [], Story: [], Other: [] };
     for (const n of names) {
       if (/^sword/.test(n)) out.Sword.push(n);
+      else if (/^blades/.test(n)) out['Twin blades'].push(n);
+      else if (/^staff/.test(n)) out.Staff.push(n);
       else if (/hit|knock|getUp|death|guardBreak/.test(n)) out['Being hit'].push(n);
       else if (/cast|throw|shield/.test(n)) out.Casting.push(n);
       else if (/idle$|walk|jog|sprint|crouch|jump|leap|slide|climb|Roll|Flip/.test(n)) out.Moving.push(n);
