@@ -56,7 +56,7 @@ test('server identity, match phase, life and cooldown are enforced', () => {
 });
 test('missing authoritative page, time or cooldown state fails closed', () => {
   const match = matchFor('healer');
-  for (const options of [{ first: undefined, now: 20, cooldowns: {} },
+  for (const options of [{ first: -1, now: 20, cooldowns: {} },
     { first: 0, now: undefined, cooldowns: {} },
     { first: 0, now: 20, cooldowns: undefined }]) {
     assert.equal(validateAuthenticatedAbilityRequest({
