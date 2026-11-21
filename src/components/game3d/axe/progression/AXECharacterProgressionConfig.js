@@ -1,5 +1,6 @@
 // AXE Prompt 011 — character level, stats and power progression.
-// Exact legacy caps/formulas intentionally remain configurable until verified.
+// Player XP and combat share the canonical 155-level cap. Power tiers retain their own ranks.
+import { AXE_LEVEL_CAP } from '../balance/AXEPowerBudget';
 
 export const AXE_PRIMARY_STATS = Object.freeze({
   Strength: 'strength',
@@ -20,7 +21,7 @@ export const AXE_POWER_TIERS = Object.freeze([
 
 export const AXE_CHARACTER_PROGRESSION_CONFIG = Object.freeze({
   statPointsPerLevel: 3,
-  normalLevelCap: null, // unresolved: leave uncapped until verified/balanced.
+  normalLevelCap: AXE_LEVEL_CAP, // match the character HUD, XP curve and server duel limit.
   godRealmUnlock: Object.freeze({
     tierId: 'AXE_Power_God',
     minimumTierLevel: 1,

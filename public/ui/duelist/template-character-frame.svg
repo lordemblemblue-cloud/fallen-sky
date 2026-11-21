@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 860" preserveAspectRatio="none">
+ <defs>
+  <linearGradient id="c" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#101d34" stop-opacity=".96"/><stop offset=".55" stop-color="#141f36" stop-opacity=".83"/><stop offset="1" stop-color="#10172b" stop-opacity=".96"/></linearGradient>
+  <linearGradient id="rim" x1="0" x2="1"><stop stop-color="#c7a56b"/><stop offset=".4" stop-color="#91bde4" stop-opacity=".65"/><stop offset="1" stop-color="#c7a56b"/></linearGradient>
+  <radialGradient id="spot"><stop stop-color="#cea566" stop-opacity=".22"/><stop offset="1" stop-color="#273448" stop-opacity="0"/></radialGradient>
+ </defs>
+ <path d="M40 10H1552L1590 50V816L1560 850H32L8 823V52Z" fill="url(#c)" stroke="url(#rim)" stroke-opacity=".65" stroke-width="2"/>
+ <path d="M342 22V835M1046 22V835" stroke="#b5c8dd" stroke-opacity=".29" stroke-width="2"/>
+ <ellipse cx="700" cy="600" rx="360" ry="240" fill="url(#spot)"/>
+ <path d="M360 778H1034" stroke="#d5af7a" stroke-opacity=".53" stroke-width="2"/>
+ <path d="M45 12H245L145 119H13Z" fill="#bed5ea" fill-opacity=".09"/>
+ <path d="M1400 12H1544L1471 120H1325Z" fill="#b5d6ec" fill-opacity=".08"/>
+ <path d="M385 52L490 52M1106 52L1203 52" stroke="#dab576" stroke-opacity=".55" stroke-width="3"/>
+</svg>

@@ -1,0 +1,276 @@
+/* Duelist Adventure unified visual system — mode gallery, shared menus, match transition.
+   Original minimal arena UI informed by the owner's Hunters reference: slim angular rails,
+   restrained metallic gold, subdued blue for meaning, no copied game assets. */
+.duelist-hub, .duelist-menu-page, .duelist-arena-page, .duelist-game {
+  --dui-gold: #e6c389;
+  --dui-gold-edge: rgba(230,195,137,.62);
+  --dui-ink: #f4f2e9;
+  --dui-muted: #aebdc8;
+  --dui-line: rgba(194,214,225,.17);
+  --dui-surface: rgba(7,20,33,.76);
+  font-family: 'Rajdhani','Arial Narrow',system-ui,sans-serif;
+}
+.duelist-hub-header,.duelist-menu-topbar,.duelist-arena-header {
+  border-bottom: 1px solid var(--dui-gold-edge);
+  background: linear-gradient(90deg,rgba(5,13,24,.93),rgba(9,25,38,.88));
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 -3px 0 rgba(230,195,137,.045);
+}
+.duelist-hub-title small,.duelist-menu-brand span,.duelist-menu-eyebrow,.duelist-hub-eyebrow {
+  color: var(--dui-gold); letter-spacing: .19em;
+}
+.duelist-hub-title,.duelist-menu-brand strong,.duelist-menu-hero h1 { color: var(--dui-ink); }
+.duelist-hub-avatar { border-radius: 3px; border-color: var(--dui-gold-edge); color: var(--dui-gold); }
+.duelist-hub-nav-action,.duelist-menu-quicklink,.duelist-menu-button,.duelist-hub-footer-item {
+  border-radius: 3px; letter-spacing: .09em;
+}
+.duelist-hub-nav-action {
+  background: linear-gradient(90deg,rgba(6,19,31,.84),rgba(15,33,47,.54));
+  border: 1px solid var(--dui-line); border-left: 2px solid rgba(223,188,129,.45);
+  box-shadow: none;
+}
+.duelist-hub-nav-action:hover,.duelist-hub-nav-action[data-active='true'] {
+  transform: translateX(-3px);
+  border-color: var(--dui-gold-edge); color: #ffedc8;
+  background: rgba(75,65,49,.65);
+}
+.duelist-hub-footer,.duelist-arena-footer {
+  border-top: 1px solid var(--dui-gold-edge);
+  background: rgba(5,15,26,.89);
+}
+.duelist-hub-footer-item { color: #bac6cf; }
+.duelist-hub-footer-item:hover:not(:disabled) { color: var(--dui-gold); background: rgba(229,191,131,.06); }
+
+/* Wide game-mode gallery replaces the balloon drawer and repeated vertical buttons. */
+.duelist-hub-overlay {
+  width: min(1220px,calc(100% - 315px));
+  left: clamp(14px,2.4vw,38px);
+  bottom: 72px;
+  max-height: calc(100svh - 156px);
+  overflow-y: auto;
+  padding: clamp(16px,1.6vw,25px);
+  border: 1px solid rgba(231,200,151,.53);
+  border-top: 2px solid var(--dui-gold);
+  border-radius: 2px;
+  clip-path: none;
+  background: linear-gradient(145deg,rgba(8,22,36,.94),rgba(9,24,39,.85) 64%,rgba(8,17,29,.94));
+  box-shadow: 0 20px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(250,230,196,.08);
+  backdrop-filter: blur(18px);
+}
+.duelist-hub-overlay::before {
+  border-radius: 0;
+  background: linear-gradient(125deg,rgba(230,195,137,.055),transparent 42%);
+}
+.duelist-hub-overlay-head { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--dui-line); }
+.duelist-hub-overlay-head h2 { color: var(--dui-ink); font-size: clamp(22px,2.2vw,29px); text-transform: uppercase; letter-spacing: .08em; }
+.duelist-hub-small-button { border-radius: 2px; border-color: var(--dui-line); color: var(--dui-gold); background: rgba(17,33,45,.85); }
+.duelist-hub-play-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1.75fr) minmax(255px,.9fr);
+  grid-template-rows: auto minmax(0,1fr);
+  align-items: start;
+  gap: 14px 20px;
+}
+.duelist-hub-playlists { grid-column: 1; grid-row: 1; display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); grid-template-rows: auto; gap: 7px; }
+.duelist-hub-category {
+  min-height: 45px;
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid var(--dui-line); border-bottom: 2px solid transparent;
+  border-radius: 2px; background: rgba(29,50,65,.35);
+  color: #b8cbd5; font-size: clamp(10px,.85vw,13px); letter-spacing: .045em; white-space: nowrap; text-decoration:none;
+}
+.duelist-hub-category svg { width: 16px; height: 16px; }
+.duelist-hub-category small { font-size: 9px; color: var(--dui-gold); }
+.duelist-hub-category:hover:not(:disabled),.duelist-hub-category[data-selected='true'] {
+  color: #ffe9c3; border-color: var(--dui-gold-edge); border-bottom-color: var(--dui-gold);
+  background: linear-gradient(140deg,rgba(108,83,49,.36),rgba(17,39,53,.4));
+}
+.duelist-hub-category:disabled { opacity: .46; cursor: not-allowed; }
+.duelist-hub-mode-list { grid-column: 1; grid-row: 2; }
+.duelist-hub-mode-list h3 {
+  margin: 0 0 11px; font-size: 12px; color: var(--dui-gold);
+  font-weight: 750; letter-spacing: .14em; text-transform: uppercase;
+}
+.duelist-hub-modes { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; }
+.duelist-hub-mode {
+  position: relative; isolation: isolate;
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between;
+  min-height: clamp(116px,11vw,158px); width: 100%;
+  padding: 13px 11px 12px;
+  border-radius: 2px; border: 1px solid rgba(198,214,222,.19);
+  border-bottom: 3px solid rgba(142,171,185,.5);
+  background: radial-gradient(circle at 70% 29%,var(--mode-wash,rgba(78,125,155,.25)),transparent 67%),
+    linear-gradient(140deg,rgba(34,63,81,.55),rgba(7,20,33,.85));
+  text-align: left; font-size: 12px; letter-spacing: .035em; font-weight: 800;
+  transition: border-color .16s,background-color .16s,transform .16s;
+}
+.duelist-hub-mode::before {
+  content: ''; position: absolute; z-index: -1; inset: 10px;
+  border-top: 1px solid rgba(241,232,210,.12);
+  transform: skewX(-14deg); pointer-events: none;
+}
+.duelist-hub-mode[data-mode='ctf'] { --mode-wash: rgba(89,137,118,.35); }
+.duelist-hub-mode[data-mode='tdm'] { --mode-wash: rgba(132,73,79,.38); }
+.duelist-hub-mode[data-mode='control'] { --mode-wash: rgba(89,110,167,.4); }
+.duelist-hub-mode[data-mode='football'] { --mode-wash: rgba(120,103,157,.35); }
+.duelist-hub-mode[data-mode='ffa'] { --mode-wash: rgba(163,103,75,.32); }
+.duelist-hub-mode[data-mode='transport'] { --mode-wash: rgba(114,125,120,.22); }
+.duelist-hub-mode svg { width: 35px; height: 35px; color: #f0cf9b; stroke-width: 1.2; }
+.duelist-hub-mode span { flex: 0; color: #f0f4f5; line-height: 1.12; }
+.duelist-hub-mode small { color: #e4bd79; font-size: 10px; }
+.duelist-hub-mode:hover { transform: translateY(-2px); border-color: rgba(240,208,160,.75); background-color: rgba(121,100,74,.22); }
+.duelist-hub-mode[data-selected='true'] {
+  border: 1px solid var(--dui-gold); border-bottom: 3px solid var(--dui-gold);
+  background-color: rgba(122,90,54,.3);
+}
+.duelist-hub-mode-detail {
+  grid-column: 2; grid-row: 1 / span 2; padding: 0 0 0 20px;
+  border-left: 1px solid rgba(224,197,158,.3);
+}
+.duelist-hub-mode-art {
+  min-height: 164px; border: 1px solid var(--dui-line); border-radius: 2px;
+  background: radial-gradient(ellipse at 50% 82%,rgba(181,142,87,.25),transparent 65%),
+    repeating-linear-gradient(135deg,transparent 0 31px,rgba(224,191,138,.04) 32px 33px),
+    linear-gradient(145deg,rgba(20,47,65,.9),rgba(9,22,37,.94));
+}
+.duelist-hub-mode-art::before,.duelist-hub-mode-art::after { background: rgba(229,197,148,.15); opacity: .5; }
+.duelist-hub-mode-art-glow { border-color: rgba(226,192,140,.2); opacity: .5; }
+.duelist-hub-mode-art svg { width: 51px; height: 51px; color: var(--dui-gold); }
+.duelist-hub-mode-content h3 { margin: 13px 0 7px; color: var(--dui-ink); font-size: clamp(18px,1.6vw,23px); letter-spacing: .06em; }
+.duelist-hub-mode-content p { font-size: 13px; color: #b9c9d2; }
+.duelist-hub-mode-status { border-radius: 2px; border-left: 2px solid var(--dui-gold-edge); background: rgba(46,47,49,.38); }
+.duelist-hub-match-actions button {
+  border: 1px solid var(--dui-gold-edge); border-radius: 2px;
+  background: rgba(25,44,53,.75); color: var(--dui-ink);
+}
+.duelist-hub-match-actions button[data-primary='true'] { border-color: var(--dui-gold); background: #e8c38b; color: #241c14; }
+.duelist-hub-match-settings select {
+  border-radius: 2px; border-color: var(--dui-line); background: #112435;
+}
+.duelist-hub-action-footnote a { color: var(--dui-gold); }
+
+/* Every secondary menu shares the same size, rails and finish — no balloon cards. */
+.duelist-menu-page { --dm-gold: var(--dui-gold); --dm-accent: var(--dui-gold); --dm-line: var(--dui-line); --dm-muted: var(--dui-muted); }
+.duelist-menu-topbar { min-height: 73px; }
+.duelist-menu-content { max-width: 1240px; }
+.duelist-menu-hero { border-left: 2px solid var(--dui-gold); }
+.duelist-menu-hero h1 { text-transform: uppercase; letter-spacing: .07em; }
+.duelist-menu-quicklink { border-radius: 2px; }
+.duelist-menu-quicklink:hover,.duelist-menu-quicklink:focus-visible { border-color: var(--dui-gold-edge); color: var(--dui-gold); }
+.duelist-menu-page .duelist-menu-panel,.duelist-menu-page .duelist-menu-card {
+  border: 1px solid var(--dui-line); border-top: 1px solid var(--dui-gold-edge);
+  border-radius: 2px;
+  background: linear-gradient(145deg,rgba(27,48,64,.66),rgba(7,21,35,.72));
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+.duelist-menu-page button.duelist-menu-card[data-selected='true'] {
+  border-color: var(--dui-gold); background: rgba(105,79,46,.3);
+}
+.duelist-menu-button { border-radius: 2px; border-color: var(--dui-gold-edge); }
+.duelist-menu-button.is-primary { color: #292018; background: #e8c38b; border-color: var(--dui-gold); }
+.duelist-menu-choice select,.duelist-menu-page input[type='text'],.duelist-setting-row select {
+  border-radius: 2px; border-color: var(--dui-line); background: #112435;
+}
+.duelist-menu-match-list { border-radius: 2px; }
+.duelist-fighter-mark,.duelist-fighter-option-visual { border-radius: 2px; }
+.duelist-hub :is(button,a,select):focus-visible,.duelist-menu-page :is(button,a,input,select):focus-visible {
+  outline: 2px solid var(--dui-gold); outline-offset: 3px;
+}
+
+/* Shared match header and loading/queue brief; UI only, no fake percent or timer. */
+.duelist-arena-page {
+  display:flex; flex-direction:column; height:100vh; min-height:0; background:#050c16; color:var(--dui-ink);
+}
+.duelist-arena-header {
+  display:flex; align-items:center; min-height:60px; flex-shrink:0;
+  gap:16px; padding:8px clamp(13px,2vw,30px);
+}
+.duelist-arena-back {
+  display:inline-flex; align-items:center; gap:6px; padding:7px 11px;
+  border:1px solid var(--dui-gold-edge); background:rgba(22,40,54,.6);
+  border-radius:2px; color:var(--dui-gold); font-size:12px; font-weight:750; letter-spacing:.09em;
+}
+.duelist-arena-back:hover { background:rgba(99,77,49,.4); }
+.duelist-arena-brand {
+  display:flex; flex-direction:column; gap:1px; padding-left:16px;
+  border-left:1px solid var(--dui-line); white-space:nowrap; color:var(--dui-muted);
+  font-size:9px; letter-spacing:.2em;
+}
+.duelist-arena-brand strong { font-size:14px; color:var(--dui-ink); letter-spacing:.1em; }
+.duelist-arena-title { font-size:15px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.duelist-arena-meta { margin-left:auto; font-size:11px; color:var(--dui-muted); text-align:right; }
+.duelist-arena-section { position:relative; flex:1; min-height:0; }
+.duelist-match-loading {
+  position:absolute; inset:0; z-index:50; display:flex; justify-content:center; align-items:center;
+  padding:clamp(18px,4vw,42px);
+  background:radial-gradient(ellipse at 48% 24%,rgba(31,57,75,.75),rgba(4,12,23,.97) 77%);
+  pointer-events:none; color:var(--dui-ink);
+}
+.duelist-match-loading__panel {
+  width:min(650px,100%); padding:clamp(22px,3vw,42px);
+  border-top:2px solid var(--dui-gold); border-bottom:1px solid var(--dui-gold-edge);
+  background:linear-gradient(110deg,rgba(8,23,38,.7),rgba(24,43,54,.3));
+  text-align:center;
+}
+.duelist-match-loading__eyebrow { display:block; font-size:11px; letter-spacing:.24em; color:var(--dui-gold); font-weight:800; }
+.duelist-match-loading__mode { margin:9px 0 4px; font-size:clamp(25px,4vw,43px); line-height:1.1; letter-spacing:.085em; font-weight:850; }
+.duelist-match-loading__rule { margin:0 auto 21px; max-width:520px; font-size:14px; color:#b7cad5; line-height:1.45; }
+.duelist-match-loading__states { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; margin:24px 0; padding:0; list-style:none; text-align:left; }
+.duelist-match-loading__states li {
+  min-height:57px; padding:10px 9px; border:1px solid rgba(183,207,215,.17);
+  border-top:2px solid rgba(222,190,136,.22);
+  color:#a3bbc7; background:rgba(24,46,63,.38);
+  font-size:10px; font-weight:760; letter-spacing:.07em;
+}
+.duelist-match-loading__states li:first-child { color:#f7e0bb; border-top-color:var(--dui-gold); }
+.duelist-match-loading__states b { display:block; font-size:11px; color:var(--dui-gold); margin-bottom:4px; }
+.duelist-match-loading__message { color:#f1d5a4; font-size:14px; font-weight:750; letter-spacing:.06em; }
+.duelist-match-loading__rail { height:3px; margin:13px auto 0; width:100%; overflow:hidden; background:rgba(210,227,237,.15); }
+.duelist-match-loading__rail::after {
+  content:''; display:block; height:100%; width:32%; background:var(--dui-gold);
+  animation:duelist-load-indeterminate 1.8s ease-in-out infinite alternate;
+}
+.duelist-match-loading--error .duelist-match-loading__rail::after { animation:none; width:100%; background:#b87973; }
+@keyframes duelist-load-indeterminate { from { transform:translateX(-100%); } to { transform:translateX(310%); } }
+@media(max-width:1240px) {
+  .duelist-hub-overlay { width:calc(100% - 275px); }
+  .duelist-hub-modes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media(max-width:960px), (max-height:720px) {
+  .duelist-hub--play-open { overflow:visible; }
+  .duelist-hub--play-open .duelist-hub-body { min-height:330px; }
+  .duelist-hub--play-open .duelist-hub-play-layout {
+    grid-template-columns:minmax(0,1.75fr) minmax(255px,.9fr);
+  }
+  .duelist-hub--play-open .duelist-hub-overlay {
+    position:relative; inset:auto; width:calc(100% - 28px); max-width:1160px;
+    max-height:none; overflow:visible; margin:0 auto 24px;
+  }
+}
+@media(max-width:740px) {
+  .duelist-hub-play-layout,.duelist-hub--play-open .duelist-hub-play-layout { grid-template-columns:1fr; gap:14px; }
+  .duelist-hub-playlists { grid-column:1; grid-row:1; }
+  .duelist-hub-mode-list { grid-column:1; grid-row:2; }
+  .duelist-hub-mode-detail { grid-column:1; grid-row:3; padding:14px 0 0; border-left:0; border-top:1px solid var(--dui-gold-edge); }
+  .duelist-hub-modes { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .duelist-hub-mode { min-height:116px; }
+  .duelist-hub-category { white-space:normal; min-height:50px; text-align:center; }
+  .duelist-hub-category svg { display:none; }
+  .duelist-arena-brand { display:none; }
+  .duelist-arena-header { flex-wrap:wrap; row-gap:5px; }
+  .duelist-arena-title { font-size:13px; }
+  .duelist-arena-meta { font-size:10px; }
+}
+@media(max-width:500px) {
+  .duelist-hub-modes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelist-hub-mode { min-height:111px; }
+  .duelist-hub-category { font-size:10px; padding:7px 3px; }
+  .duelist-hub-category small { display:none; }
+  .duelist-match-loading__states { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .duelist-match-loading__rail::after { animation:none; width:100%; transform:none; }
+  .duelist-hub-mode { transition:none; }
+}

@@ -3,9 +3,9 @@
 // and offers one obvious button.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
+import { Home, ShoppingCart, ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
-import { usePrefs } from '../client/prefs.mjs';
+import { usePrefs, classProgressOf } from '../client/prefs.mjs';
 import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
 import { STORY_MISSIONS } from './missions.js';
@@ -13,9 +13,14 @@ import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
+import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
+import { LEVEL_CAP, MILESTONES, levelFromXp, xpForLevel } from '../core/progression.mjs';
 import './duelistHub.css';
 import './duelistMenuTheme.css';
 import './duelistOpenGlass.css';
+import './duelistUnifiedVisual.css';
+import './duelistMenuOverlays.css';
+import './duelistTemplateUI.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
@@ -32,11 +37,7 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
           <span>EMBLEM BLUE</span>
           <strong>DUELIST ADVENTURE</strong>
         </Link>
-        <nav className="duelist-menu-quicknav" aria-label="Game menu navigation">
-          <Link to="/duelist-next" className="duelist-menu-quicklink">HOME</Link>
-          <Link to="/duelist-next/$page" params={{ page: 'fighter' }} className="duelist-menu-quicklink">CHARACTER</Link>
-          <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-quicklink">SETTINGS</Link>
-        </nav>
+        <span className="duelist-menu-header-status">DUELIST ADVENTURE</span>
       </header>
       <section className="duelist-menu-content">
         <div className="duelist-menu-breadcrumb">
@@ -53,6 +54,14 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
         </div>
         <div className="duelist-menu-page-body">{children}</div>
       </section>
+      <footer className="duelist-menu-bottom-nav" aria-label="Duelist menu navigation">
+        <Link to="/duelist-next" className="duelist-menu-bottom-link"><Home size={17}/> HOME</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'play-menu' }} className="duelist-menu-bottom-link"><Swords size={17}/> PLAY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'character' }} className="duelist-menu-bottom-link"><User size={17}/> CHARACTER</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-menu-bottom-link"><BookOpen size={17}/> STORY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'store' }} className="duelist-menu-bottom-link"><ShoppingCart size={17}/> STORE</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-bottom-link"><Settings size={17}/> SETTINGS</Link>
+      </footer>
     </main>
   );
 }
@@ -68,11 +77,16 @@ const HUB_GLYPHS = {
  * The existing route pages remain responsible for match configuration,
  * matchmaking and gameplay: this home screen never bypasses those checks.
  */
-export function DuelistHub() {
+export function DuelistHub({ initialPanel = null }) {
   const navigate = useNavigate();
   const lobby = useLobby();
   const [prefs, updatePrefs] = usePrefs();
-  const [playOpen, setPlayOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState(initialPanel);
+  const closePanel = () => {
+    setActivePanel(null);
+    if (initialPanel) navigate({ to: '/duelist-next', replace: true });
+  };
+  const togglePanel = name => activePanel === name ? closePanel() : setActivePanel(name);
   const [playlist, setPlaylist] = useState('normal');
   const [selectedMode, setSelectedMode] = useState('duel');
   const selected = findHubMode(selectedMode);
@@ -92,16 +106,19 @@ export function DuelistHub() {
   };
 
   useEffect(() => {
-    if (!playOpen) return undefined;
+    if (!activePanel) return undefined;
     const onKeyDown = event => {
-      if (event.key === 'Escape') setPlayOpen(false);
+      if (event.key === 'Escape') {
+        setActivePanel(null);
+        if (initialPanel) navigate({ to: '/duelist-next', replace: true });
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [playOpen]);
+  }, [activePanel, initialPanel, navigate]);
 
   return (
-    <main className={playOpen ? 'duelist-hub duelist-hub--play-open' : 'duelist-hub'}>
+    <main className={activePanel ? 'duelist-hub duelist-hub--panel-open' : 'duelist-hub'}>
       <DuelistHangarStage fighter={prefs.fighter} />
 
       <header className="duelist-hub-header">
@@ -118,32 +135,35 @@ export function DuelistHub() {
         </div>
       </header>
 
+      {activePanel && <button type="button" className="duelist-hub-scrim" onClick={closePanel} aria-label="Close the open menu" tabIndex={-1} />}
+
       <section className="duelist-hub-body" aria-label="Duelist home">
         <nav className="duelist-hub-nav" aria-label="Home actions">
           <div className="duelist-hub-nav-intro">
             <span>ENTER THE ARENA</span>
             <p>Master the blade. Shape the Veil.</p>
           </div>
-          <button type="button" data-primary="true" onClick={() => setPlayOpen(current => !current)}
-            className="duelist-hub-nav-action" data-active={playOpen} aria-expanded={playOpen}
+          <button type="button" data-primary="true" onClick={() => togglePanel('play')}
+            className="duelist-hub-nav-action" data-active={activePanel === 'play'} aria-expanded={activePanel === 'play'}
             aria-controls="duelist-play-drawer"><Play fill="currentColor" /> PLAY</button>
           <Link to="/duelist-next/$page" params={{ page: 'story' }}
             className="duelist-hub-nav-action"><BookOpen /> STORY CAMPAIGN</Link>
-          <Link to="/duelist-next/$page" params={{ page: 'fighter' }}
-            className="duelist-hub-nav-action"><User /> CHARACTER</Link>
+          <button type="button" onClick={() => togglePanel('character')}
+            className="duelist-hub-nav-action" data-active={activePanel === 'character'} aria-expanded={activePanel === 'character'}
+            aria-controls="duelist-character-panel"><User /> CHARACTER</button>
         </nav>
       </section>
 
-      {playOpen && (
+      {activePanel === 'play' && (
         <section id="duelist-play-drawer" className="duelist-hub-overlay" aria-label="Play mode selection">
           <div className="duelist-hub-overlay-head">
             <div>
               <span className="duelist-hub-eyebrow">PLAY</span>
-              <h2>Select mode</h2>
+              <h2>Choose your game mode</h2>
               <p className="duelist-menu-note">Choose a battle, then enter practice or an available online match.</p>
             </div>
             <button type="button" className="duelist-hub-small-button"
-              onClick={() => setPlayOpen(false)} aria-label="Close play menu"><X size={18} /></button>
+              onClick={closePanel} aria-label="Close play menu"><X size={18} /></button>
           </div>
 
           <div className="duelist-hub-play-layout">
@@ -152,7 +172,7 @@ export function DuelistHub() {
                 data-selected={playlist === 'normal'} aria-pressed={playlist === 'normal'}
                 onClick={() => setPlaylist('normal')}>
                 <Users aria-hidden="true" />
-                <span>NORMAL PLAY</span>
+                <span>CASUAL</span>
               </button>
               <button type="button" className="duelist-hub-category"
                 data-selected={playlist === 'ranked'} aria-pressed={playlist === 'ranked'}
@@ -160,6 +180,12 @@ export function DuelistHub() {
                 <Trophy aria-hidden="true" />
                 <span>RANKED PLAY</span>
                 <small>Planned</small>
+              </button>
+              <Link to="/duelist-next/$page" params={{ page: 'practice' }} className="duelist-hub-category">
+                <Shield aria-hidden="true" /><span>TRAINING</span>
+              </Link>
+              <button type="button" className="duelist-hub-category" disabled title="Custom lobbies are planned">
+                <Settings aria-hidden="true" /><span>CUSTOM</span><small>Planned</small>
               </button>
             </div>
 
@@ -169,7 +195,7 @@ export function DuelistHub() {
                 {visibleModes.map(mode => {
                   const Icon = HUB_GLYPHS[mode.symbol] || Target;
                   return (
-                    <button key={mode.id} type="button" className="duelist-hub-mode"
+                    <button key={mode.id} type="button" className="duelist-hub-mode" data-mode={mode.id}
                       data-selected={selectedMode === mode.id} aria-pressed={selectedMode === mode.id}
                       onClick={() => setSelectedMode(mode.id)}>
                       <Icon aria-hidden="true" />
@@ -233,13 +259,35 @@ export function DuelistHub() {
         </section>
       )}
 
+      {activePanel === 'settings' && (
+        <section id="duelist-settings-panel" className="duelist-hub-overlay duelist-hub-overlay--settings"
+          role="region" aria-label="Settings overlay">
+          <div className="duelist-hub-overlay-head">
+            <div><span className="duelist-hub-eyebrow">PREFERENCES</span><h2>Settings</h2>
+              <p className="duelist-menu-note">Graphics, audio, controls and local match options.</p></div>
+            <button type="button" className="duelist-hub-small-button" onClick={closePanel} aria-label="Close settings"><X size={18} /></button>
+          </div>
+          <div className="duelist-menu-page duelist-hub-panel-content"><SettingsContent sharedPrefs={prefs} sharedUpdate={updatePrefs} /></div>
+        </section>
+      )}
+
+      {activePanel === 'character' && (
+        <section id="duelist-character-panel" className="duelist-hub-overlay duelist-hub-overlay--character"
+          role="region" aria-label="Character progression overlay">
+          <div className="duelist-hub-overlay-head">
+            <div><span className="duelist-hub-eyebrow">CHARACTER</span><h2>Fighter &amp; progression</h2>
+              <p className="duelist-menu-note">Select a fighter, view class levels and follow mastery milestones.</p></div>
+            <button type="button" className="duelist-hub-small-button" onClick={closePanel} aria-label="Close character"><X size={18} /></button>
+          </div>
+          <div className="duelist-menu-page duelist-hub-panel-content"><FighterContent sharedPrefs={prefs} sharedUpdate={updatePrefs} /></div>
+        </section>
+      )}
+
       <footer className="duelist-hub-footer" aria-label="Quick navigation">
-        <Link to="/duelist-next/$page" params={{ page: 'settings' }}
-          className="duelist-hub-footer-item"><Settings /> SETTINGS</Link>
-        <button type="button" disabled className="duelist-hub-footer-item"
-          title="Battle Pass is planned"><Trophy /> BATTLE PASS <small>PLANNED</small></button>
-        <button type="button" disabled className="duelist-hub-footer-item"
-          title="Plus is planned"><Zap /> PLUS</button>
+        <button type="button" onClick={() => togglePanel('settings')} className="duelist-hub-footer-item"
+          data-active={activePanel === 'settings'} aria-expanded={activePanel === 'settings'} aria-controls="duelist-settings-panel">
+          <Settings /> SETTINGS
+        </button>
       </footer>
     </main>
   );
@@ -365,11 +413,18 @@ export function JoinPage() {
   );
 }
 
-export function FighterPage() {
-  const [prefs, update] = usePrefs();
+export function FighterContent({ sharedPrefs, sharedUpdate } = {}) {
+  const [localPrefs, localUpdate] = usePrefs();
+  const prefs = sharedPrefs || localPrefs;
+  const update = sharedUpdate || localUpdate;
   const selected = BODIES[prefs.fighter] || BODIES.maskedWarrior || Object.values(BODIES)[0];
+  const selectedClassId = CLASS_IDS.includes(prefs.classId) ? prefs.classId : 'duelist';
+  const classXp = classProgressOf(prefs);
+  const totalXp = classXp[selectedClassId] || 0;
+  const mastery = levelFromXp(totalXp);
+  const selectedClass = CLASSES[selectedClassId];
   return (
-    <MenuShell title="Character" subtitle="Choose the fighter you want to take into Duelist Adventure." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <>
       <section className="duelist-menu-panel duelist-fighter-current" aria-label="Current character">
         <div>
           <span className="duelist-menu-eyebrow-text">CURRENTLY SELECTED</span>
@@ -378,6 +433,40 @@ export function FighterPage() {
           <p className="duelist-menu-note">Your choice is remembered on this browser and used in practice and matches.</p>
         </div>
         <div className="duelist-fighter-mark" aria-hidden="true">{selected?.name?.[0] || 'D'}</div>
+      </section>
+      <section className="duelist-character-progress" aria-label="Class mastery progression">
+        <div className="duelist-character-progress-head">
+          <div>
+            <span className="duelist-menu-eyebrow-text">CLASS MASTERY</span>
+            <h3>{selectedClass.name} <span>LEVEL {mastery.level} / {LEVEL_CAP}</span></h3>
+            <p className="duelist-menu-helper">Class mastery persists across matches. Changing the appearance does not reset EXP.</p>
+          </div>
+          <label className="duelist-character-class-choice">Combat class
+            <select value={selectedClassId} onChange={event => update({ classId: event.target.value })}>
+              {CLASS_IDS.map(id => <option key={id} value={id}>{CLASSES[id].name}</option>)}
+            </select>
+          </label>
+        </div>
+        <div className="duelist-character-xp-values">
+          <span>{mastery.capped ? 'MAX LEVEL REACHED' : `${mastery.into.toLocaleString()} / ${mastery.need.toLocaleString()} EXP TO NEXT LEVEL`}</span>
+          <strong>{Math.min(Math.max(0, totalXp), xpForLevel(LEVEL_CAP)).toLocaleString()} TOTAL EXP</strong>
+        </div>
+        <div className="duelist-character-xp-track" role="progressbar" aria-label="Progress to next class level"
+          aria-valuemin={0} aria-valuemax={mastery.need || 1} aria-valuenow={mastery.capped ? 1 : mastery.into}
+          aria-valuetext={mastery.capped ? 'Maximum level reached' : `Level ${mastery.level}, ${Math.round(mastery.progress * 100)}% to next level`}>
+          <span style={{ width: `${Math.round(mastery.progress * 100)}%` }} />
+        </div>
+        <h4>Mastery milestones</h4>
+        <div className="duelist-character-milestones" role="list">
+          {Object.entries(MILESTONES).map(([level, reward]) => (
+            <div key={level} role="listitem" className="duelist-character-milestone" data-earned={mastery.level >= Number(level)}>
+              <strong>LV {level}</strong>
+              <span>{reward.toUpperCase()}</span>
+              <small>{mastery.level >= Number(level) ? 'REACHED' : 'LOCKED'}</small>
+            </div>
+          ))}
+        </div>
+        <p className="duelist-menu-note">Milestones recognize class mastery; no paid pass or claimable items are active.</p>
       </section>
       <div className="mt-7">
         <h3 className="duelist-menu-section-heading">Select your fighter</h3>
@@ -400,8 +489,12 @@ export function FighterPage() {
           })}
         </div>
       </div>
-    </MenuShell>
+    </>
   );
+}
+
+export function FighterPage() {
+  return <MenuShell title="Character" subtitle="Your fighter and class mastery." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}><FighterContent /></MenuShell>;
 }
 
 function readAudio() {
@@ -465,8 +558,10 @@ function KeyBindings({ keys, onChange }) {
   );
 }
 
-export function SettingsPage() {
-  const [prefs, update] = usePrefs();
+export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
+  const [localPrefs, localUpdate] = usePrefs();
+  const prefs = sharedPrefs || localPrefs;
+  const update = sharedUpdate || localUpdate;
   const [audio, setAudio] = useState(readAudio);
   const saveAudio = (patch) => {
     const next = { ...audio, ...patch };
@@ -474,7 +569,7 @@ export function SettingsPage() {
     try { window.localStorage.setItem('duelist.audio', JSON.stringify(next)); } catch { /* this visit only */ }
   };
   return (
-    <MenuShell title="Settings" subtitle="Adjust how Duelist Adventure sounds, responds and plays with bots." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <>
       <section className="duelist-menu-panel mb-5" aria-label="Graphics diagnostics">
         <GraphicsRuntimePanel sceneId="duelist-adventure"/>
       </section>
@@ -539,8 +634,12 @@ export function SettingsPage() {
         <p className="duelist-menu-helper mt-2">Choose a control, then press the key or mouse button you want for it. Two controls never share one: the control that had it takes the one you gave up.</p>
         <KeyBindings keys={prefs.keys || {}} onChange={(next) => update({ keys: next })} />
       </section>
-    </MenuShell>
+    </>
   );
+}
+
+export function SettingsPage() {
+  return <MenuShell title="Settings" subtitle="Audio, controls, graphics and practice." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}><SettingsContent /></MenuShell>;
 }
 
 /** The story: each mission with its parts and its buttons; one box joins a friend's crew, whatever it plays. */

@@ -8,7 +8,7 @@
 
 type Stats = Record<string, any>;
 
-export const AXE_LEVEL_CAP = 100;
+export const AXE_LEVEL_CAP = 155; // Fallen Sky player progression and world-combat cap (level-155 boss/gear tier).
 
 export const AXE_COMBAT_RULES = Object.freeze({
   critChanceCapPct: 50,
@@ -45,10 +45,10 @@ export const AXE_POWER_BUDGET = Object.freeze({
   ascension: Object.freeze({ target: 0.08, min: 0.04, max: 0.12 }),
 });
 
-// The par hero: the live stats of a hero whose systems have advanced in step with their
-// level (progress = (level - 1) / (cap - 1); see buildAXEHero). Generated from the real
-// stores by `node tools/game3d/stat-report.mjs --write-par`; the power-budget test fails when
-// the systems drift from it, so regenerate it after changing any system's numbers.
+// The calibrated par-hero table is sourced from pre-extension level 1–100 builds.
+// For levels 101–155, keep the 90→100 progression slope instead of freezing
+// post-100 enemy defenses/HP at level-100 stats. A fully regenerated 155 table
+// should replace this bounded extrapolation after the endgame tuning pass.
 // [level, damage, maxHP, defense, attackSuccess, attackBlock, critChance, attributionAttack, attributionDefense,
 //  criticalDamage, criticalDefense, armorPenPct, hitBonusPct, avoidPct, blockPct, damageReductionPct]
 // (the whole combat sheet, so enemies are calibrated against what heroes really bring)
@@ -77,6 +77,18 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 export function getAXEParHero(level: number = 1): Stats {
   const L = Math.max(1, Math.min(AXE_LEVEL_CAP, Number(level) || 1));
   const rows = AXE_PAR_HERO_TABLE;
+  const last = rows[rows.length - 1], previous = rows[rows.length - 2];
+  if (L > last[0]) {
+    const steps = (L - last[0]) / (last[0] - previous[0]);
+    return Object.fromEntries(PAR_KEYS.map((key, index) => {
+      if (index === 0) return [key, L];
+      const value = Math.max(0, last[index] + (last[index] - previous[index]) * steps);
+      // Percent-like combat fields retain their existing hard balance limits.
+      return [key, key === 'critChance' ? Math.min(value, AXE_COMBAT_RULES.critChanceCapPct)
+        : key === 'criticalDamage' ? Math.min(value, 1)
+        : key === 'criticalDefense' ? Math.min(value, .6) : value];
+    }));
+  }
   let i = 0;
   while (i < rows.length - 2 && rows[i + 1][0] < L) i++;
   const a = rows[i], b = rows[Math.min(rows.length - 1, i + 1)];
@@ -303,9 +315,10 @@ export function getAXEEnemyStats(level: number = 1, tier: string = 'normal'): St
 // ---- duels -----------------------------------------------------------------------------
 // The combat stats a duelist brings, as the server keeps them. Progression still lives in
 // each player's browser, so these are reported by the client; every field is clamped to
-// what a fully built level-100 hero can have (with headroom), so a tampered client cannot
+// what a fully built level-cap hero can have (with headroom), so a tampered client cannot
 // bring absurd numbers. Making progression server-owned is what makes them trustworthy.
-const MAX_HERO = AXE_PAR_HERO_TABLE[AXE_PAR_HERO_TABLE.length - 1];
+const MAX_HERO_STATS = getAXEParHero(AXE_LEVEL_CAP);
+const MAX_HERO = PAR_KEYS.map(key => MAX_HERO_STATS[key]);
 export const AXE_DUEL_STAT_LIMITS: Readonly<Record<string, number>> = Object.freeze({
   level: AXE_LEVEL_CAP,
   damage: MAX_HERO[1] * 1.5,

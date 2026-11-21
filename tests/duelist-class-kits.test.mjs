@@ -83,20 +83,22 @@ test('Duelist: Quickstep speeds the feet; Guard and Counter answers a strike wit
   assert.ok(effects.some((e) => e.type === 'impact' && e.move === 'counterStrike' && e.defender === 'foe'), 'the riposte lands');
 });
 
-test('Assassin: Veil Cloak hides until a strike; Empowered Strikes hit harder and drain Will; Misdirect marks one enemy', () => {
+test('Assassin: Veil Cloak hides until a strike; Empowered Strikes hit harder without draining Will; Misdirect marks one enemy', () => {
   const { world, you } = duel('assassin', { distance: 2 });
   run(world, 0.2, once('you', 'ability1'));
   assert.ok(effectOn(you, 'cloak', world.time), 'cloaked');
   const effects = run(world, 0.3, once('you', 'light'));
   assert.ok(!effectOn(you, 'cloak', world.time) && effects.some((e) => e.type === 'uncloak'), 'a strike ends it');
-  // empowered against a plain strike: more of the target's Will gone
+  // Empowerment increases damage, never drains the target's Force/Will.
   const plain = duel('assassin', { foeClass: 'healer' });
   run(plain.world, 0.6, once('you', 'light'));
   const power = duel('assassin', { foeClass: 'healer' });
   run(power.world, 0.2, once('you', 'ability3'));
   assert.ok(effectOn(power.you, 'empower', power.world.time));
   run(power.world, 0.6, once('you', 'light'));
-  assert.ok(power.foe.vitals.will < plain.foe.vitals.will - 4, `empowered (${power.foe.vitals.will.toFixed(1)} vs ${plain.foe.vitals.will.toFixed(1)})`);
+  assert.ok(power.foe.vitals.shield + power.foe.vitals.hp < plain.foe.vitals.shield + plain.foe.vitals.hp,
+    'empowerment causes more defense/HP damage');
+  assert.equal(power.foe.vitals.will, plain.foe.vitals.will, 'empowerment cannot drain the victim\'s Force/Will');
   assert.equal(effectOn(power.you, 'empower', power.world.time).charges, 2, 'one charge spent');
   const m = duel('assassin', { distance: 6 });
   run(m.world, 0.3, once('you', 'ability4'));

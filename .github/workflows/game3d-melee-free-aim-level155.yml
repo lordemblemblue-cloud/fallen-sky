@@ -1,0 +1,30 @@
+name: Fallen Sky Melee Free Aim and Level 155
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/playerHUDStore.jsx'
+      - 'src/components/game3d/axe/progression/AXECharacterProgressionConfig.js'
+      - 'base44/shared/axePowerBudget.ts'
+      - 'tests/game3d-melee-free-aim-level-155.test.mjs'
+      - '.github/workflows/game3d-melee-free-aim-level155.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  guard-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify free-aim, explicit lock, death release, level cap
+        run: node --test tests/game3d-melee-free-aim-level-155.test.mjs tests/game3d-auto-lock-opt-in.test.mjs tests/game3d-locked-target-lifecycle.test.mjs
+      - name: Lint touched game runtime and progression files
+        run: npx eslint src/components/game3d/GameWorld3D.jsx src/components/game3d/playerHUDStore.jsx src/components/game3d/axe/progression/AXECharacterProgressionConfig.js tests/game3d-melee-free-aim-level-155.test.mjs
+      - name: Build application
+        run: npm run build

@@ -6,8 +6,8 @@ export const VITALS = Object.freeze({
   stamina: 100,
   will: 100,
   shield: 40,
-  // Stamina pays for movement and swordsmanship. Running dry ("winded") blocks rolls and heavy attacks
-  // until it has recovered to staminaRecoverAt.
+  // Stamina is reserved for defensive maneuvers and guard endurance; attacks and sprinting are free.
+  // Running dry ("winded") still blocks stamina-based evasions until recovery.
   staminaRegenPerSec: 28,
   staminaRegenDelay: 0.8,
   staminaRecoverAt: 25,
@@ -19,11 +19,12 @@ export const VITALS = Object.freeze({
   shieldRegenDelay: 4,
 });
 
-// The Dimensional Veil: spends Will to keep the body out of reach.
+// The Dimensional Veil follows the ability-powered Will resource, but attacks no longer consume it.
+// The legacy hit-cost fields remain for compatibility with older balancing tools; damage.mjs no longer reads them.
 export const VEIL = Object.freeze({
-  willPerDamage: 1, // Will spent for each point of damage the Veil stops
+  willPerDamage: 1, // legacy tuning only; incoming damage does not spend Will
   unstableBelow: 0.35, // share of max Will under which the Veil is unstable
-  unstableLeak: 0.25, // share of each hit that slips through an unstable Veil to the body
+  unstableLeak: 0.25, // legacy tuning only; incoming damage instead reaches shield then HP
   // Veil Collapse: at zero Will the body is tangible until Will has recovered this far, and Will only
   // starts recovering after collapseRecoverDelay.
   collapseRestoreAt: 35,
@@ -53,5 +54,8 @@ export const INPUT = Object.freeze({
 // until it stands again (a fallen fighter cannot be juggled or held down).
 export const KNOCKDOWN = Object.freeze({ distance: 3, lie: 0.7, rise: 0.95 });
 
-export const SPRINT = Object.freeze({ staminaPerSec: 14, speed: 7.2 });
+// Sprint is unrestricted by stamina; the zero cost is kept for consumers of the tuning object.
+export const SPRINT = Object.freeze({ staminaPerSec: 0, speed: 7.2 });
+// Three damaging, unblocked hits in one short exchange grant a window to fight back.
+export const STAGGER_IMMUNITY = Object.freeze({ hits: 3, comboWindowSeconds: 2, seconds: 1 });
 export const MOVE_SPEED = Object.freeze({ walk: 2.2, run: 4.6 });

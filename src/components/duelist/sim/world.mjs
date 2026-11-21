@@ -5,7 +5,7 @@
 // decides what happens to them.
 import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
-  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
+  createFighter, press, update, takeEvents, isStunned, strike, insideArc, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
 } from '../core/index.mjs';
@@ -219,8 +219,8 @@ function trySpecial(world, fighter, body, now, effects) {
   const def = classById(fighter.classId);
   if (!def || fighter.vitals.dead) return;
   const special = def.special;
-  const move = moveFor(fighter, special.id); // at the tier the fighter's level gives it
-  const reach = move.reach ?? special.reach;
+  const move = moveFor(fighter, special.id); // applies trusted class mastery and current match boost
+  const reach = move.reach ?? move.range ?? special.reach;
   const matchBoost = fighter.matchBoost;
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
@@ -233,12 +233,12 @@ function trySpecial(world, fighter, body, now, effects) {
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
-      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, target: { id: o.id, team: o.team,
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level, target: { id: o.id, team: o.team,
         hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
       if (verdict.allowed) { target = o; break; }
     }
-    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
-  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost });
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level });
+  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level });
   const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
   if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
   if (fighter.action) { fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: special.id, at: now }); fighter.action = null; }
@@ -450,10 +450,9 @@ function moveBody(world, fighter, body, dt, now) {
     const len = Math.hypot(body.intent.x, body.intent.z);
     if (free && len > 0.01) {
       let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
-      if (body.sprint && !a?.move.mobile && !fighter.vitals.winded && len > 0.5) {
-        drainStamina(fighter.vitals, SPRINT.staminaPerSec * dt, now);
-        speed = SPRINT.speed;
-      }
+      // Sprinting is free, including when a fighter has zero stamina or is winded.
+      // (not under a cut by direction: the legs keep going at the cut's own pace)
+      if (body.sprint && !a?.move.mobile && len > 0.5) speed = SPRINT.speed;
       // a raised guard and a channelled grip slow you to a walk
       if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
       if (a?.move.mobile) speed = Math.min(speed, MOVE_SPEED.run * a.move.mobile);

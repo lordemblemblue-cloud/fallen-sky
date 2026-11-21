@@ -7,6 +7,7 @@ import { readPrefs, writePrefs, classProgressOf } from '@/components/duelist/cli
 import { duelistServerUrl } from '@/components/duelist/net/client.mjs';
 import { MENU_MODES } from '@/components/duelist/menu/modes';
 import { missionTitle } from '@/components/duelist/menu/missions';
+import '@/components/duelist/menu/duelistUnifiedVisual.css';
 
 // Duelist Adventure's arena (the new build): the match the menus chose, with your saved fighter and settings.
 // mode: practice | duel | ffa | tdm | ctf | football | control | online | any (Join) | story (mission: which);
@@ -24,17 +25,16 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
   const where = mode === 'story' ? (online ? 'story mission, with a crew' : 'story mission, solo') : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
   const unavailable = online && !serverUrl;
   return (
-    <main className="flex h-screen min-h-0 flex-col bg-[#05080d] text-white">
-      <header className="flex h-11 shrink-0 items-center gap-3 border-b border-white/10 bg-[#08111b] px-3">
-        <button type="button" onClick={leave}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs text-white/60 transition hover:bg-white/5 hover:text-white">
-          <ArrowLeft className="h-4 w-4" /> Menu
+    <main className="duelist-arena-page">
+      <header className="duelist-arena-header">
+        <button type="button" onClick={leave} className="duelist-arena-back">
+          <ArrowLeft className="h-4 w-4" /> MENU
         </button>
-        <div className="h-5 w-px bg-white/10" />
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="text-[11px] text-white/40">{where} · {BODIES[prefs.fighter]?.name}</div>
+        <div className="duelist-arena-brand"><span>EMBLEM BLUE</span><strong>DUELIST ADVENTURE</strong></div>
+        <div className="duelist-arena-title">{title}</div>
+        <div className="duelist-arena-meta">{where} · {BODIES[prefs.fighter]?.name}</div>
       </header>
-      <section className="relative min-h-0 flex-1">
+      <section className="duelist-arena-section">
         {unavailable ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-white/60">
             Online play is not set up yet: the match server is not deployed.

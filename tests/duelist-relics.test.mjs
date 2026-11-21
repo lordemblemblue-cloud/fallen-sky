@@ -50,7 +50,7 @@ test('Active relics require Tier III, and only one active relic may be purchased
   assert.equal(purchaseRule({gold:1000,items:[{id:'thundermirror',tier:1}],id:'siphonmirror'}).reason,'active-relic-slot-full');
   const valid=sanitizeInput({s:1,p:['itemActive','#itemActive','relicTeleport'],m:[0,0]});
   assert.deepEqual(valid.presses,['itemActive']);
-  assert.equal(PROTOCOL,11);
+  assert.equal(PROTOCOL,12);
 });
 
 test('Relic cooldowns and teleport anchor synchronize with client prediction snapshots', () => {

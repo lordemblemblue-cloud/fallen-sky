@@ -36,7 +36,9 @@ test('nine lines in each of three modes, each a sword strike with a clip of its 
   const [swift, balanced, heavy] = CUT_MODES.map((mode) => MOVES[cutId('forward', mode)]);
   assert.ok(swift.startup < balanced.startup && balanced.startup < heavy.startup);
   assert.ok(swift.damage < balanced.damage && balanced.damage < heavy.damage);
-  assert.ok(heavy.stamina > balanced.stamina && heavy.knockback > balanced.knockback);
+  assert.equal(heavy.stamina, 0, 'even heavy attacks cost no stamina');
+  assert.equal(balanced.stamina, 0, 'balanced attacks cost no stamina');
+  assert.ok(heavy.knockback > balanced.knockback);
 });
 
 test('the stick has eight ways; each is a line between two points and the blade travels toward the key', () => {
@@ -195,7 +197,7 @@ test('a class fights in one mode: the Healer swift, the Warrior heavy; a fighter
   const warrior = createFighter({ id: 'w', weapon: 'sword', classId: 'warrior' });
   assert.equal(press(healer, 'light', 0, { direction: 'forward' }).id, 'swordCutDownSwift');
   assert.equal(press(warrior, 'light', 0, { direction: 'left' }).id, 'swordCutLeftHeavy');
-  assert.deepEqual(press(warrior, 'mode', 0), { accepted: false, reason: 'class' });
+  assert.deepEqual(press(warrior, 'mode', 0), { accepted: false, reason: 'class-stance' });
   assert.equal(modeOf(warrior), 'heavy');
   // the second press hard on the first is made in the class's mode as well
   const t = run(warrior, 0, 0.05);

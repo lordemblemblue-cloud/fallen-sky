@@ -32,6 +32,7 @@ export const ACTIONS = Object.freeze([
   { id: 'special', label: 'Special (when charged)', kind: 'press' },
   { id: 'breach', label: 'Veil Breach', kind: 'press' },
   { id: 'resist', label: 'Resist (break a grip)', kind: 'press' },
+  { id: 'shop', label: 'Battle Shop', kind: 'press' },
   { id: 'lock', label: 'Lock on', kind: 'press' },
   { id: 'interact', label: 'Use (crates, consoles, cores, bells)', kind: 'hold' },
 ]);
@@ -40,7 +41,7 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
   jump: 'Space', roll: 'KeyC', dash: 'AltLeft', itemActive: 'KeyG', mode: 'KeyX', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
-  breach: 'KeyR', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
+  breach: 'KeyR', resist: 'KeyZ', shop: 'Tab', lock: 'Mouse1', interact: 'KeyF',
 });
 // bindings saved before the classes: the old power keys become the ability keys
 const LEGACY = Object.freeze({ ability1: 'push', ability2: 'pull', ability3: 'grip' });
@@ -138,7 +139,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
     `${k('light')} light (with a direction: a cut that way)`, `${k('mode')} sword mode`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (double-tap in air)`, `${k('itemActive')} relic`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
-  parts.push(`${k('resist')} resist`, `${k('lock')} lock on`);
+  parts.push(`${k('resist')} resist`, `${k('shop')} shop`, `${k('lock')} lock on`);
   if (story) parts.push(`${k('interact')} (hold) use`);
   return `Click to fight · ${parts.join(' · ')}`;
 }

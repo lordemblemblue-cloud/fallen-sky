@@ -14,7 +14,10 @@
 // The pack fills what dodgeMoves.js (Flip_Left / Flip_Right / Back_Flip / Front_Roll) does not have:
 //  - Dodge_Forward: the owner's Mixamo Pro Longbow Pack "standing dodge forward" (the double-tap W sidestep),
 //  - Sprint: the pack's "standing run forward", trimmed to one cycle (Ctrl sprint),
-//  - Back_Roll: a backward shoulder roll authored here on each fused rig (the "Roll dodges" S and R alone).
+//  - Back_Roll: a backward shoulder roll authored here on each fused rig (the "Roll dodges" S and R alone),
+//  - Swim_Idle / Swim_Forward: the owner's ActionForge pack loops (tools/duelist/source/actionforge-80.anim.glb, on
+//    the fused female rig), for deep water (player/playerSwimState.mjs). They carry the neck's height above the
+//    feet (waterline), so the game can float the body with the water at the neck, and Swim_Forward its speed.
 // FBX goes through Blender in the background (tools/mocap/blender/fbx_to_glb.py) and onto the fused rig with
 // src/lib/mocap/retarget.js. Authored clips key joint angles in degrees about the character's own axes, solved with
 // forward kinematics; grounded frames keep the lowest foot on the floor. All clips are in place (the game moves the
@@ -44,6 +47,14 @@ const AUTHOR = 'tools/avatar-motion/mobility-clips.mjs';
 export const LONGBOW_CLIPS = Object.freeze([
   { name: 'Dodge_Forward', file: 'standing dodge forward.fbx', kind: 'dodge' },
   { name: 'Sprint', file: 'standing run forward.fbx', kind: 'gait', gait: 'sprint' },
+]);
+
+// The owner's ActionForge pack (80 clips on the fused female rig, 2026-11-18; the Duelist bakes its own selection
+// from the same file). It is in the repository, so these clips rebuild without anything from Downloads.
+export const OWNER_PACK_FILE = 'tools/duelist/source/actionforge-80.anim.glb';
+export const OWNER_PACK_CLIPS = Object.freeze([
+  { name: 'Swim_Idle', clip: 'swim_idle_loop_fit', kind: 'swim', swim: 'idle' },
+  { name: 'Swim_Forward', clip: 'swim_fwd_loop_fit', kind: 'swim', swim: 'forward' },
 ]);
 
 // ------------------------------------------------------------------------------------------- sources and bodies
@@ -184,6 +195,31 @@ export function solvedFrameWorld(rig, solved, frame) {
   return world;
 }
 const positionOf = (world, i) => new THREE.Vector3().setFromMatrixPosition(world.get(i));
+
+/** Swim metrics of a solved clip, model space (the origin is where the game puts the ground): the neck's mean height (where the
+ *  water line goes), the lowest and highest point of the body chain, and the hips' forward travel speed (before the
+ *  clip is made in place; 0 for a loop that stays put). */
+export function swimMetrics(rig, solved) {
+  const n = solved.times.length, fwd = restBasis(rig).fwd;
+  const chain = ['Hips', 'Spine2', 'Neck', 'Head', 'LeftFoot', 'RightFoot', 'LeftHand', 'RightHand'].map((name) => rig.bone(name)).filter((i) => i !== undefined);
+  const neck = rig.bone('Neck');
+  const floor = 0; // the model's origin: the game puts it on the ground (or, swimming, below the water line)
+  let neckSum = 0, low = Infinity, high = -Infinity;
+  for (let f = 0; f < n; f++) {
+    const world = solvedFrameWorld(rig, solved, f);
+    neckSum += positionOf(world, neck).y - floor;
+    for (const i of chain) { const y = positionOf(world, i).y - floor; low = Math.min(low, y); high = Math.max(high, y); }
+  }
+  const seconds = solved.times[n - 1] - solved.times[0];
+  const t = solved.hips.translations;
+  const travel = new THREE.Vector3(t[(n - 1) * 3] - t[0], 0, t[(n - 1) * 3 + 2] - t[2]);
+  // the hips translation is in the hips' parent space; take it to model space for the forward axis
+  const parentRot = new THREE.Quaternion(); rig.world[rig.parent[rig.hipsIndex]].decompose(new THREE.Vector3(), parentRot, new THREE.Vector3());
+  const parentScale = new THREE.Vector3(); rig.world[rig.parent[rig.hipsIndex]].decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+  travel.multiply(parentScale).applyQuaternion(parentRot);
+  const speed = seconds > 0 ? Math.max(0, travel.dot(fwd) / seconds) : 0;
+  return { waterline: +(neckSum / n).toFixed(4), low: +low.toFixed(4), high: +high.toFixed(4), speed: +speed.toFixed(4) };
+}
 
 /** Planted-foot speed of a gait cycle (m/s in the character's forward axis), measured relative to the hips. */
 export function gaitSpeed(rig, solved) {
@@ -396,6 +432,22 @@ export function buildPack({ packDir = DEFAULT_LONGBOW_DIR, body = 'both', only =
   const bodies = bodiesOf(body), report = [];
   const wanted = (name) => !only || only.includes(name);
   if (!authoredOnly) {
+    for (const entry of OWNER_PACK_CLIPS) {
+      if (!wanted(entry.name)) continue;
+      const file = path.join(ROOT, OWNER_PACK_FILE);
+      if (!fs.existsSync(file)) { report.push({ clip: entry.name, error: `missing ${file}` }); continue; }
+      const source = gltfSource(file, entry.clip);
+      for (const b of bodies) {
+        const { rig } = loadBody(b);
+        const solved = retargetToRig(rig, source, { fps: 30, rootMotion: true });
+        const metrics = swimMetrics(rig, solved);
+        const extras = { author: AUTHOR, sourceFile: OWNER_PACK_FILE, sourceClip: entry.clip, sourcePack: 'ActionForge 80 (owner)',
+          kind: entry.kind, swim: entry.swim, loop: true, waterline: metrics.waterline, bodyLow: metrics.low, bodyHigh: metrics.high,
+          ...(entry.swim === 'forward' && metrics.speed > 0.05 ? { speed: metrics.speed } : {}) };
+        const out = writeGameClip(solved, { name: entry.name, body: b, inPlace: true, source: 'owner-glb', extras });
+        report.push({ clip: entry.name, body: b, seconds: out.seconds, frames: out.frames, bones: out.bones, speed: extras.speed, waterline: metrics.waterline, low: metrics.low, high: metrics.high, bytes: out.bytes });
+      }
+    }
     for (const entry of LONGBOW_CLIPS) {
       if (!wanted(entry.name)) continue;
       const file = path.join(packDir, entry.file);

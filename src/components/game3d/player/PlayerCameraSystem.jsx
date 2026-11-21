@@ -5,6 +5,8 @@ import {
   manorGame2EaseCameraClip,
 } from '../../dashboard/lakesideManor/manorGame2Controls.mjs';
 import {GAME3D_GAME2_CAMERA,game3dToGame2Yaw} from './Game3DGame2Camera.mjs';
+// Over the river or a lake the eye stays above the water line (GameWorld3D sets waterSurfaceAt).
+import {keepEyeAboveWater} from '../axe/world/game3dWaterSurface.mjs';
 import {OTS_AIM,computeOTSAimPose,clipAimBoom} from './otsAim.mjs';
 import {getActiveCharacter} from '../characterStore';
 import {isAXEAutoTargetNearbyEnabled} from '../axe/player/AXEControlSettingsStore';
@@ -30,6 +32,7 @@ export class PlayerCameraSystem {
     aim=null,cameraColliders=null}){
     this.camera=camera;
     this.orbit=orbit;
+    this.waterSurfaceAt=null; // (x, z, nearY) => water height or null; GameWorld3D sets it (keepEyeAboveWater)
     this.modelRef=modelRef;
     this.lockOnTargetRef=lockOnTargetRef;
     // Over-the-shoulder aiming. `aim` is createOTSAimState(); the pose blends
@@ -255,7 +258,8 @@ export class PlayerCameraSystem {
       const safe=this.clipAgainstTerrain({
         target:{x:tmpTarget.x,y:tmpTarget.y,z:tmpTarget.z},
         eye:{x:tmpCamera.x,y:tmpCamera.y,z:tmpCamera.z}});
-      tmpCamera.set(safe.eye.x,safe.eye.y,safe.eye.z);
+      const dry=keepEyeAboveWater(safe.eye,this.waterSurfaceAt);
+      tmpCamera.set(dry.x,dry.y,dry.z);
       this.camera.position.lerp(tmpCamera,1-Math.exp(-10*dt));
       tmpFromPlayer.subVectors(this.camera.position,model.position);
       if(tmpFromPlayer.lengthSq()<
@@ -318,6 +322,7 @@ export class PlayerCameraSystem {
       target=lerpV(target,aimPose.target,t);
       fov=this.baseFov+(OTS_AIM.fov-this.baseFov)*t;
     }
+    eye=keepEyeAboveWater(eye,this.waterSurfaceAt);
     this.camera.position.set(eye.x,eye.y,eye.z);
     this.camera.lookAt(target.x,target.y,target.z);
     this.applyFov(fov,dt);
