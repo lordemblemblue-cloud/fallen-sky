@@ -1,8 +1,8 @@
 // TSL version of the splat terrain patch in WolfveilTerrainSplat.js, for WebGPURenderer (either backend).
 // Same layers, scales, anti-tiling, triplanar rock, macro normal / cavity / AO / flow / scree maps, height blend,
 // meadow tone, roughness, AO and normal as the GLSL. Differences, both invisible in practice:
-//  - layers are still skipped when their weight is ~0, but sampled with explicit gradients (`grad`), because WGSL
-//    forbids implicit-derivative sampling inside branches that depend on per-pixel values;
+//  - layers are still skipped when their weight is ~0; their lookups use implicit derivatives where r171 has WGSL's
+//    derivative-uniformity check off (Chrome), explicit gradients where it does not (Firefox), see sampleAt;
 //  - the macro AO is applied as three's aoNode, which also dims indirect specular a little (terrain roughness ~0.9).
 // Uniforms sit in the shared render group; textures keep their default group (r171 declares no sampler for a
 // texture in a shared group) and the material bumps nodeVersion when one is swapped (webgpuThreeFixes.js).
@@ -15,6 +15,13 @@ import { uniformOf, sinValueNoise2, geometryNormalWorld } from '../../../lib/web
 
 // a texture uniform `{ value }` as a shared texture node that follows its value (placeholder -> loaded texture)
 const liveTexture = (u) => texture(u.value).onRenderUpdate(() => u.value);
+
+// Lookups inside the per-pixel layer branches. r171 turns WGSL's derivative-uniformity check off (except in Firefox
+// and Deno), so there they sample with implicit derivatives like the GLSL; explicit gradients cost several ms of GPU
+// on wide terrain views (measured on this PC's Radeon 780M). Where the check stays on, explicit gradients (taken in
+// uniform control flow) keep the shader valid.
+const IMPLICIT_DERIVATIVES = !(typeof globalThis.navigator !== 'undefined' && /Firefox|Deno/.test(globalThis.navigator.userAgent || ''));
+const sampleAt = (tex, uvNode, gx, gy) => (IMPLICIT_DERIVATIVES ? tex.uv(uvNode) : tex.uv(uvNode).grad(gx, gy));
 
 export function createWolfveilSplatNodes(uniforms) {
   const tA = [0, 1, 2, 3].map((i) => liveTexture(uniforms['tSplatA' + i]));
@@ -48,8 +55,8 @@ export function createWolfveilSplatNodes(uniforms) {
       const edge = min(muv, vec2(1).sub(muv)).div(macroRect.zw);
       mIn.assign(smoothstep(0, macroFade, min(edge.x, edge.y)));
       const gx = dX.xz.mul(macroRect.zw); const gy = dY.xz.mul(macroRect.zw);
-      const mn = tMacroN.uv(muv).grad(gx, gy).toVar();
-      const mm = tMacroM.uv(muv).grad(gx, gy).toVar();
+      const mn = sampleAt(tMacroN, muv, gx, gy).toVar();
+      const mm = sampleAt(tMacroM, muv, gx, gy).toVar();
       If(mIn.greaterThan(0), () => {
         const nxz = mn.rg.mul(2).sub(1).toVar();
         const mN = vec3(nxz.x, sqrt(max(0.0001, float(1).sub(dot(nxz, nxz)))), nxz.y);
@@ -83,9 +90,9 @@ export function createWolfveilSplatNodes(uniforms) {
       const uvB = xz.mul(s).mul(0.37).add(vec2(0.31, 0.67));
       const gAx = dX.xz.mul(s); const gAy = dY.xz.mul(s);
       const gBx = gAx.mul(0.37); const gBy = gAy.mul(0.37);
-      const nA = tn.uv(uvA).grad(gAx, gAy); const nB = tn.uv(uvB).grad(gBx, gBy);
+      const nA = sampleAt(tn, uvA, gAx, gAy); const nB = sampleAt(tn, uvB, gBx, gBy);
       const k = clamp(macro.mul(0.5).add(0.25), 0, 1);
-      outA.assign(mix(ta.uv(uvA).grad(gAx, gAy).rgb, ta.uv(uvB).grad(gBx, gBy).rgb, k));
+      outA.assign(mix(sampleAt(ta, uvA, gAx, gAy).rgb, sampleAt(ta, uvB, gBx, gBy).rgb, k));
       const n = mix(nA, nB, k).toVar();
       const t3 = n.xyz.mul(2).sub(1).toVar();
       const b = vec3(t3.xy.add(nW.xz), abs(t3.z).mul(nW.y));
@@ -104,8 +111,8 @@ export function createWolfveilSplatNodes(uniforms) {
       const gX = [vec2(px.z.mul(sg.x), px.y), vec2(py.z.mul(sg.x), py.y)];
       const gY = [vec2(px.x, px.z.mul(sg.y)), vec2(py.x, py.z.mul(sg.y))];
       const gZ = [vec2(px.x.negate().mul(sg.z), px.y), vec2(py.x.negate().mul(sg.z), py.y)];
-      const nX = tn.uv(uvX).grad(...gX).toVar(); const nY = tn.uv(uvY).grad(...gY).toVar(); const nZ = tn.uv(uvZ).grad(...gZ).toVar();
-      outA.assign(ta.uv(uvX).grad(...gX).rgb.mul(wt.x).add(ta.uv(uvY).grad(...gY).rgb.mul(wt.y)).add(ta.uv(uvZ).grad(...gZ).rgb.mul(wt.z)));
+      const nX = sampleAt(tn, uvX, ...gX).toVar(); const nY = sampleAt(tn, uvY, ...gY).toVar(); const nZ = sampleAt(tn, uvZ, ...gZ).toVar();
+      outA.assign(sampleAt(ta, uvX, ...gX).rgb.mul(wt.x).add(sampleAt(ta, uvY, ...gY).rgb.mul(wt.y)).add(sampleAt(ta, uvZ, ...gZ).rgb.mul(wt.z)));
       const tX = nX.xyz.mul(2).sub(1).toVar(); const tY = nY.xyz.mul(2).sub(1).toVar(); const tZ = nZ.xyz.mul(2).sub(1).toVar();
       tX.x.mulAssign(sg.x); tZ.x.mulAssign(sg.z.negate());
       const bX = vec3(tX.xy.add(nW.zy), abs(tX.z).mul(nW.x));

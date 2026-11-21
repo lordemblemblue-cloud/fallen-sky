@@ -1,7 +1,7 @@
 // Wolfveil reference-driven close-range 3D grass and weathered path edge stones.
 // Pure decoration: the original terrain remains the only walkable/collision mesh.
 import * as THREE from 'three';
-import {Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,uniformArray,renderGroup} from 'three/tsl';
+import {Fn,Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,uniformArray,renderGroup} from 'three/tsl';
 import {attachNodes,copyNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 import {insideWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {WOLFVEIL_ROUTES,WOLFVEIL_SITES,wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.js';
@@ -437,15 +437,19 @@ for(int j=0;j<6;j++){
     const dance=sin(t.mul(1.6).add(root.x.mul(.17)).add(root.z.mul(.12))).mul(.62)
       .add(sin(t.mul(.94).add(root.z.mul(.27)).sub(root.x.mul(.08))).mul(.38));
     const lean=normalize(uniformOf(inkWind,'vec2').add(vec2(.001))).mul(dance).mul(uniformOf(inkGust,'float').mul(.16).add(.035)).mul(tip);
-    const offset=vec3(lean.x,0,lean.y).toVar();
     const touches=uniformArray(inkContacts.value,'vec4').setGroup(renderGroup);
-    Loop(inkContacts.value.length,({i})=>{
-      const touch=touches.element(i);
-      const away=root.xz.sub(touch.xy).toVar();
-      const press=float(1).sub(smoothstep(0,max(.001,touch.z),length(away))).mul(touch.w).toVar();
-      const push=normalize(away.add(vec2(.001))).mul(press).mul(tip).mul(.36);
-      offset.addAssign(vec3(push.x,press.mul(tip).mul(-.22),push.y));
-    });
+    // Built inside a TSL function: three r171 silently drops a Loop built outside one (and the footstep parting).
+    const offset=Fn(()=>{
+      const moved=vec3(lean.x,0,lean.y).toVar();
+      Loop(inkContacts.value.length,({i})=>{
+        const touch=touches.element(i);
+        const away=root.xz.sub(touch.xy).toVar();
+        const press=float(1).sub(smoothstep(0,max(.001,touch.z),length(away))).mul(touch.w).toVar();
+        const push=normalize(away.add(vec2(.001))).mul(press).mul(tip).mul(.36);
+        moved.addAssign(vec3(push.x,press.mul(tip).mul(-.22),push.y));
+      });
+      return moved;
+    })();
     attachNodes(grassMat,{positionNode:offsetBeforeInstancing(offset)});
   }
   rockMat.name='Wolfveil_WeatheredPathEdgeStone';

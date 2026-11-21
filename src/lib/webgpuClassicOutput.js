@@ -19,7 +19,12 @@ import {
 
 /** What a classic built-in material (MeshStandardMaterial, SpriteMaterial, PointsMaterial...) does. */
 export function classicOutputPolicyForMaterial(material) {
-  return { toneMap: material?.toneMapped !== false, encode: true, fog: material?.fog !== false };
+  // A lit material drawn on a geometry without a normal attribute: WebGL reads the missing attribute as (0, 0, 0),
+  // normalize() makes it NaN and the lit colour comes out black (some grass meshes, e.g. the meadow tufts, draw as
+  // dark strokes on WebGL this way). r171 substitutes an up normal instead (lit, pale): keep the classic result.
+  const lit = !!(material && !material.flatShading && (material.isMeshStandardMaterial || material.isMeshLambertMaterial
+    || material.isMeshPhongMaterial || material.isMeshToonMaterial || material.isMeshMatcapMaterial));
+  return { toneMap: material?.toneMapped !== false, encode: true, fog: material?.fog !== false, litNeedsNormals: lit };
 }
 
 /** What a ShaderMaterial does: only the steps its fragment shader includes. */
@@ -52,6 +57,7 @@ export function classicOutput(colorNode, policy) {
   return Fn((builder) => {
     const renderer = builder.renderer;
     const toScreen = renderer.getRenderTarget() === null;
+    if (policy.litNeedsNormals && builder.geometry?.hasAttribute?.('normal') === false) return vec4(0, 0, 0, vec4(colorNode).a);
     let color = vec4(colorNode);
     if (toScreen) {
       const toneMapping = policy.toneMap ? renderer.toneMapping : NoToneMapping;

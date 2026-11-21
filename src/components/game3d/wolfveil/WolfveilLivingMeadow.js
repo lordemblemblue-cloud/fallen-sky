@@ -20,7 +20,7 @@ import {wolfveilDistanceToRiver,wolfveilRouteClearance} from './WolfveilLayout.j
 import {createWolfveilTerrainSplatMaterial,wolfveilSplatWeights,wolfveilSplatTint} from './WolfveilTerrainSplat.js';
 import {wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
 import {createLiveWind,LIVE_WIND_SHEET_GLSL,liveWindSheetNode} from '../render/liveWind.mjs';
-import {Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,normalView,faceDirection,
+import {Fn,Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,normalView,faceDirection,
   uniformArray,renderGroup} from 'three/tsl';
 import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
 
@@ -213,15 +213,19 @@ function meadowGrassNodes(windTime,wind,gust,contacts,sheet){
   const windDir=normalize(windN.add(vec2(.0001))).toVar();
   const front=liveWindSheetNode(root.xz,windDir,sheetN.x).mul(sheetN.y.mul(.65).add(.35)).toVar();
   const lean=sway.mul(gustN.mul(.21).add(.07)).add(front.mul(gustN.mul(.2).add(.16))).mul(flex);
-  const offset=vec3(windDir.x.mul(lean),front.mul(-.06).mul(flex),windDir.y.mul(lean)).toVar();
-  Loop(contacts.value.length,({i})=>{
-    const contact=contactsN.element(i);
-    const away=root.xz.sub(contact.xy).toVar();
-    const radius=max(.001,contact.z);
-    const press=float(1).sub(smoothstep(0,radius,length(away))).mul(contact.w).toVar();
-    const push=normalize(away.add(vec2(.001))).mul(press).mul(flex).mul(.42);
-    offset.addAssign(vec3(push.x,press.mul(flex).mul(-.26),push.y));
-  });
+  // Built inside a TSL function: three r171 silently drops a Loop built outside one (and the footstep bend).
+  const offset=Fn(()=>{
+    const moved=vec3(windDir.x.mul(lean),front.mul(-.06).mul(flex),windDir.y.mul(lean)).toVar();
+    Loop(contacts.value.length,({i})=>{
+      const contact=contactsN.element(i);
+      const away=root.xz.sub(contact.xy).toVar();
+      const radius=max(.001,contact.z);
+      const press=float(1).sub(smoothstep(0,radius,length(away))).mul(contact.w).toVar();
+      const push=normalize(away.add(vec2(.001))).mul(press).mul(flex).mul(.42);
+      moved.addAssign(vec3(push.x,press.mul(flex).mul(-.26),push.y));
+    });
+    return moved;
+  })();
   const nodes={
     positionNode:offsetBeforeInstancing(offset),
     // double-sided clumps keep their normal on back faces (no black blades)
