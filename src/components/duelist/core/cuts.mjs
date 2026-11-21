@@ -17,6 +17,12 @@
 export const CUT_POINTS = Object.freeze(['T', 'TR', 'R', 'BR', 'B', 'BL', 'L', 'TL']); // round the body, by its own right
 export const CUT_MODES = Object.freeze(['swift', 'balanced', 'heavy']);
 export const DEFAULT_MODE = 'balanced';
+// A class fights in one mode (the owner's choice, 2026-11-21): the Healer swift, the Warrior heavy. A fighter with
+// no class keeps the mode key and starts balanced.
+export const CLASS_MODE = Object.freeze({ healer: 'swift', warrior: 'heavy' });
+export const modeOf = (f) => CLASS_MODE[f?.classId] || f?.mode || DEFAULT_MODE;
+// A cut does not root the fighter: the legs keep going under it, at this share of the running speed.
+export const CUT_PACE = Object.freeze({ swift: 0.85, balanced: 0.7, heavy: 0.5 });
 // Seconds of wind-up, cut, hold and recovery. KEEP IN STEP with tools/duelist/blender/cut_grid.py CUT_MODES
 // (tests/duelist-cuts.test.mjs compares the clips with these).
 export const CUT_TIMING = Object.freeze({
@@ -70,7 +76,7 @@ export const CUT_SPECS = Object.freeze(Object.fromEntries(CUT_MODES.flatMap((mod
     shieldMultiplier: round((line.shieldMultiplier || 1) * m.shield), veilMultiplier: line.veilMultiplier || 1,
     // any cut may follow from the end of the contact to just before the stance is back
     chain: { from: round(hitEnd + 0.02), to: round(frames.startup + frames.active + frames.recovery - 0.03) },
-    cancelInto: ['movement', 'power'], cancelFrom: round(hitEnd + 0.06),
+    cancelInto: ['movement', 'power'], cancelFrom: round(hitEnd + 0.06), mobile: CUT_PACE[mode],
     cut: Object.freeze({ direction, mode, from: line.from, to: line.to }),
   }];
 }))));

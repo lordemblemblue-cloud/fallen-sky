@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
-import { MOVES, FLOW, fighterVeil, isStunned } from '../core/index.mjs';
+import { MOVES, FLOW, CLASS_MODE, modeOf, fighterVeil, isStunned } from '../core/index.mjs';
 import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
@@ -662,8 +662,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             specialTier: mine?.classId ? specialTier(mine.matchBoost) : null,
             matchBoost: mine?.matchBoost ?? 0,
             // the sword's mode (swift, balanced, heavy): only a form that cuts by direction has one
-            mode: mine && FLOW[mine.weapon]?.modes ? mine.mode : null,
-            modeKey: keyLabel(controls.keys.mode, { short: true }),
+            mode: mine && FLOW[mine.weapon]?.modes ? modeOf(mine) : null,
+            modeKey: mine && CLASS_MODE[mine.classId] ? null : keyLabel(controls.keys.mode, { short: true }), // a class has one mode: no key
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),

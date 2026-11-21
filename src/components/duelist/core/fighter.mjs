@@ -12,7 +12,7 @@ import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
 import { moveFor } from './ranks.mjs';
-import { CUT_MODES, DEFAULT_MODE, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection, SNAP, SNAP_COOLDOWN, SNAP_IDS, snapMove } from './cuts.mjs';
+import { CUT_MODES, DEFAULT_MODE, CLASS_MODE, modeOf, CUT_DIRECTIONS, REVERSE_LINE, cutLead, flowDirection, SNAP, SNAP_COOLDOWN, SNAP_IDS, snapMove } from './cuts.mjs';
 import { cleanBoost } from './progression.mjs';
 import { equipItems } from './shop.mjs';
 
@@ -87,7 +87,7 @@ function lightStrike(f, direction) {
   const from = open ? a.id : null;
   const link = open ? (a.link || 1) : 0; // strikes made so far in this chain
   if (flow.modes) { // cuts by direction (core/cuts.mjs): the stick's eight ways, in the fighter's mode
-    const table = flow.modes[f.mode] || flow.modes[DEFAULT_MODE];
+    const table = flow.modes[modeOf(f)] || flow.modes[DEFAULT_MODE];
     const way = direction === 'side' ? 'left' : CUT_DIRECTIONS.includes(direction) ? direction : null;
     // the same cut twice running comes straight back along its own line instead (the return cut)
     if (way) return table[way] !== from ? table[way] : table[REVERSE_LINE[way]];
@@ -196,6 +196,7 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
     return { accepted: false, reason: 'nothing-held' };
   }
   if (command === 'mode') { // the next of the three modes (the sword's cuts: core/cuts.mjs); it takes the next strike
+    if (CLASS_MODE[f.classId]) return { accepted: false, reason: 'class' }; // a class fights in its own mode
     f.mode = CUT_MODES[(CUT_MODES.indexOf(f.mode) + 1) % CUT_MODES.length];
     f.events.push({ type: 'mode', mode: f.mode, at: now });
     return { accepted: true, mode: f.mode };
@@ -203,7 +204,7 @@ export function press(f, command, now, { fromBuffer = false, direction = null } 
   // a second press hard on the first turns the cut into the whirl, the cross or the backhand (core/cuts.mjs)
   const a = f.action;
   if (command === 'light' && !fromBuffer && a?.move.cut && a.t - (a.from || 0) <= SNAP) {
-    const snap = snapMove(a.move.cut.direction, direction, f.mode);
+    const snap = snapMove(a.move.cut.direction, direction, modeOf(f));
     if (!blockedReason(f, snap, now)) {
       f.events.push({ type: 'interrupt', id: a.id, by: snap, at: now });
       f.action = null;

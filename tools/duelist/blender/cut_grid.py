@@ -174,10 +174,12 @@ CENTRE = spec(0, 4, 0, (0.0, 0.0, -0.01), (-25, -5, 0.6), (-10, 55))
 # Each cut: the point it leaves, the point it ends at, and the step it takes (forward, to the left; metres).
 CUTS = {
     'Stand': ('R', 'L', (0.0, 0.0)),
-    'Down': ('T', 'B', (0.30, 0.0)), 'Up': ('B', 'T', (-0.22, 0.0)),
-    'Left': ('R', 'L', (0.0, 0.25)), 'Right': ('L', 'R', (0.0, -0.25)),
-    'DownLeft': ('TR', 'BL', (0.22, 0.12)), 'DownRight': ('TL', 'BR', (0.22, -0.12)),
-    'UpLeft': ('BR', 'TL', (-0.15, 0.12)), 'UpRight': ('BL', 'TR', (-0.15, -0.12)),
+    # no step of their own: in the game the legs keep walking under a cut (the fighter is not rooted), and standing
+    # still the feet stay where they are
+    'Down': ('T', 'B', (0.0, 0.0)), 'Up': ('B', 'T', (0.0, 0.0)),
+    'Left': ('R', 'L', (0.0, 0.0)), 'Right': ('L', 'R', (0.0, 0.0)),
+    'DownLeft': ('TR', 'BL', (0.0, 0.0)), 'DownRight': ('TL', 'BR', (0.0, 0.0)),
+    'UpLeft': ('BR', 'TL', (0.0, 0.0)), 'UpRight': ('BL', 'TR', (0.0, 0.0)),
 }
 # How far out a mode's points are, its seconds of wind-up, cut, hold and recovery, and how much of the step it
 # takes. KEEP IN STEP with src/components/duelist/core/cuts.mjs (a test compares the clips with it).
@@ -188,7 +190,7 @@ CUT_MODES = {
 }
 # The backhand (one of the three moves a second press hard on the first turns a cut into): from the left side
 # round by the front and the sword side to behind the body. Its own seconds: KEEP IN STEP with core/cuts.mjs.
-BACKHAND_LINE = ('L', 'BACK', (-0.1, -0.12))
+BACKHAND_LINE = ('L', 'BACK', (0.0, 0.0))
 BACKHAND_MODES = {
     'Swift': dict(amp=0.85, wind=0.12, cut=0.16, hold=0.06, rec=0.26, step=0.6),
     'Balanced': dict(amp=0.95, wind=0.16, cut=0.2, hold=0.08, rec=0.34, step=1.0),
@@ -249,25 +251,35 @@ def make_cut(cut, mode, base_q, base_loc, line=None, modes=None):
         ankle, foot3, knee = stand[i]
         return ankle + V * smoothstep(k) + UP0 * (lift * math.sin(math.pi * k)), foot3, knee
 
-    out_q, out_loc, state = [], [], {}
-    for f in range(int(round((Tw + Tc + Th + Tr) * FPS)) + 1):
-        t = f / FPS
+    total = Tw + Tc + Th + Tr
+
+    def at(t):  # the pose asked for at a time: out to the point it leaves, through to the other, held, back
         if t < Tw:
-            s = mix(ready, P, smoothstep(t / Tw))
-        elif t < Tw + Tc:
+            return mix(ready, P, smoothstep(t / Tw))
+        if t < Tw + Tc:
             x = (t - Tw) / Tc
-            body, hand = sharp(min(1.0, x * 1.18)), sharp(max(0.0, (x - 0.1) / 0.9))  # the body leads, the arm whips after it
-            s = mix(P, Q, body)
+            u = smoothstep(x ** 1.25)  # gathering speed into the contact, easing out past it
+            s = mix(P, Q, u)
             bump = math.sin(math.pi * x)
             s['pitch'] += 6 * bump * m['amp']
             s['shift'] = s['shift'] + Vector((0.02 * bump, 0.0, -0.03 * bump))
-            s['arm'] = arm_way(hand)
-            s['reach'] = (1 - hand) ** 2 * P['reach'] + 2 * hand * (1 - hand) * r_ctrl + hand ** 2 * Q['reach']
-            s['blade'] = blade_way(hand)
-        elif t < Tw + Tc + Th:
-            s = Q
-        else:
-            s = mix(Q, ready, smoothstep((t - Tw - Tc - Th) / Tr))
+            s['arm'] = arm_way(u)
+            s['reach'] = (1 - u) ** 2 * P['reach'] + 2 * u * (1 - u) * r_ctrl + u ** 2 * Q['reach']
+            s['blade'] = blade_way(u)
+            return s
+        if t < Tw + Tc + Th:
+            return dict(Q)
+        return mix(Q, ready, smoothstep((t - Tw - Tc - Th) / Tr))
+
+    out_q, out_loc, state = [], [], {}
+    for f in range(int(round(total * FPS)) + 1):
+        t = f / FPS
+        # The trunk leads the arm: it has already turned back toward the cut while the blade is still going out, so
+        # the motion never stops at the top of the wind-up (the lead grows in from nothing at the start).
+        ahead = 0.3 * Tw * smoothstep(t / (0.5 * Tw))
+        s, trunk = dict(at(t)), at(min(total, t + ahead))
+        for k in ('yaw', 'pitch', 'roll', 'shift'):
+            s[k] = trunk[k]
         gone = 0.75 * smoothstep((t - t1a) / (t1b - t1a)) + 0.25 * smoothstep((t - t2a) / (t2b - t2a))
         q, loc = pose_frame(base_q, base_loc, s, V * gone, [foot(0, t), foot(1, t)], state)
         k = (t - Tw - Tc - Th) / Tr

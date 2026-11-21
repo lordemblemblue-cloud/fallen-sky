@@ -113,8 +113,12 @@ test('the direction is where the stick points relative to the facing; a light to
   const a = addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
   step(w, 1 / 60, { a: { move: { x: 0, z: 1 }, face: 0, presses: ['light'] } });
   assert.equal(a.action.id, 'swordCutDownBalanced');
-  for (let i = 0; i < 40; i++) step(w, 1 / 60, { a: { move: { x: 0, z: 0 }, face: 0, presses: [] } });
-  assert.ok(bodyOf(w, 'a').z > 0.2, `the cut down the middle steps in: ${bodyOf(w, 'a').z.toFixed(2)} m`);
+  // a cut does not root the fighter: with the stick held it walks on under the cut; let go, it stands
+  for (let i = 0; i < 20; i++) step(w, 1 / 60, { a: { move: { x: 0, z: 1 }, face: 0, presses: [] } });
+  const walked = bodyOf(w, 'a').z;
+  assert.ok(walked > 0.5, `it walked on under the cut: ${walked.toFixed(2)} m`);
+  for (let i = 0; i < 20; i++) step(w, 1 / 60, { a: { move: { x: 0, z: 0 }, face: 0, presses: [] } });
+  assert.ok(Math.abs(bodyOf(w, 'a').z - walked) < 0.05, 'and stands when the stick is let go');
   const b = addFighter(w, { id: 'b', x: 6, z: 0, yaw: 0 });
   step(w, 1 / 60, { b: { move: { x: 0.4, z: 0 }, face: 0, presses: ['light'] } });
   assert.equal(b.action.id, 'swordCutStandBalanced', 'circling slowly is no direction');
