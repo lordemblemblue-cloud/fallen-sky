@@ -231,3 +231,77 @@
   .dxr-settings-keys .duelist-settings-keymap-row { display:flex; }
 }
 @media(prefers-reduced-motion:reduce) { .dxr-art * { scroll-behavior:auto; animation:none!important; transition:none!important; } }
+
+/* SINGLE-FRAME FIX: the reference images already contain the panel edges,
+ * tab plates, row cards, and gold action silhouettes. Keep the live DOM as
+ * actual controls but don't paint those same frames a second time.
+ * Mobile keeps its independent stacked card layout for legibility. */
+@media (min-width:801px) {
+  .dxt-page--reference .dxr-art { border:0; outline:0; box-shadow:none; }
+  .dxt-page--reference :is(
+    .dxr-character-details,.dxr-story-details,.dxr-settings-controls,
+    .dxr-settings-preview-text,.dxr-settings-diagnostics .duelist-menu-panel,
+    .dxr-character-skins button,.dxr-character-tabs button,
+    .dxr-character-filters button,.dxr-next,.dxr-milestones div,
+    .dxr-abilities div,.dxr-story-timeline,.dxr-story-timeline button,
+    .dxr-story-tabs button,.dxr-story-mission-list button,
+    .dxr-settings-tabs button,.dxr-settings-rows label,
+    .dxr-settings-rows>p,.dxr-settings-keys .duelist-settings-keymap-row,
+    .dxr-character-avatar
+  ) {
+    background:transparent; border:0; border-radius:0; box-shadow:none;
+  }
+  .dxt-page--reference :is(.dxr-character-details,.dxr-story-details,.dxr-settings-controls) {
+    text-shadow:0 1px 3px rgba(2,9,24,.85);
+  }
+  .dxt-page--reference .dxr-story-timeline { padding:0; }
+  .dxt-page--reference .dxr-character-avatar {
+    background:linear-gradient(0deg,rgba(2,9,24,.72),transparent 55%);
+  }
+  .dxt-page--reference .dxr-character-avatar[data-active='true'] {
+    background:linear-gradient(0deg,rgba(120,81,37,.65),rgba(255,184,89,.08) 85%);
+  }
+  .dxt-page--reference :is(
+    .dxr-character-filters button.dxr-on,
+    .dxr-character-tabs button[data-selected='true'],
+    .dxr-story-tabs button[data-selected='true'],
+    .dxr-story-mission-list button[data-selected='true'],
+    .dxr-settings-tabs button[data-selected='true'],
+    .dxr-milestones div[data-earned='true']
+  ) {
+    border:0; background:rgba(238,156,63,.19); color:#ffebc6;
+    text-shadow:0 0 8px rgba(245,165,71,.48);
+  }
+  .dxt-page--reference :is(
+    .dxr-character-filters button:first-child:not(.dxr-on),
+    .dxr-character-tabs button:first-child:not([data-selected='true']),
+    .dxr-story-tabs button:first-child:not([data-selected='true']),
+    .dxr-settings-tabs button:first-child:not([data-selected='true'])
+  ) { background:rgba(5,17,38,.74); }
+  .dxt-page--reference .dxr-character-skins button {
+    color:#ffe9ba; text-shadow:0 1px 4px #050f23;
+  }
+  .dxt-page--reference :is(.dxr-settings-rows label,.dxr-settings-keys .duelist-settings-keymap-row) {
+    border-bottom:1px solid rgba(176,207,238,.15);
+  }
+  .dxt-page--reference :is(
+    .dxr-story-actions .dxr-action,.dxr-settings-actions .dxr-action,
+    .dxr-character-confirm .dxr-action
+  ) {
+    border:0; border-radius:0; box-shadow:none; background:transparent;
+    text-shadow:0 2px 4px #081426;
+  }
+  .dxt-page--reference :is(
+    .dxr-story-actions .dxr-action--gold,
+    .dxr-settings-actions .dxr-action--gold,
+    .dxr-character-confirm .dxr-action--gold
+  ) { background:rgba(255,183,81,.07); color:#fff0cf; }
+  .dxt-page--reference :is(.dxr-story-actions,.dxr-settings-actions) .dxr-action svg {
+    display:none; /* these particular button icons are already in the reference art */
+  }
+  .dxt-page--reference .dxr-art button:not(:disabled):hover { filter:brightness(1.14); }
+  .dxt-page--reference .dxr-art button:focus-visible {
+    outline:2px solid #ffe1ab; outline-offset:-3px;
+  }
+}
+
