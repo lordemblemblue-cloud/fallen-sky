@@ -19,5 +19,11 @@ export function selectRendererBackend({
 }
 
 export function detectWebGPUAvailability(host = typeof navigator === 'undefined' ? undefined : navigator) {
-  return Boolean(host?.gpu);
+  // Browser extensions and test hosts may expose throwing navigator.gpu getters.
+  // Treat an unreadable adapter surface as unavailable rather than crashing SSR/boot.
+  try {
+    return Boolean(host?.gpu);
+  } catch {
+    return false;
+  }
 }
