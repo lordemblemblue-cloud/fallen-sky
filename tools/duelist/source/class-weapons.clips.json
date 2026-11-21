@@ -215,6 +215,11 @@
    "from": "BL",
    "to": "TR"
   },
+  "swordBackhandSwift": {
+   "seconds": 0.6,
+   "loop": false,
+   "note": "backhand, swift: from the left side round to behind the body"
+  },
   "swordCutStandBalanced": {
    "seconds": 0.6833,
    "loop": false,
@@ -323,6 +328,11 @@
    "from": "BL",
    "to": "TR"
   },
+  "swordBackhandBalanced": {
+   "seconds": 0.7833,
+   "loop": false,
+   "note": "backhand, balanced: from the left side round to behind the body"
+  },
   "swordCutStandHeavy": {
    "seconds": 0.9833,
    "loop": false,
@@ -430,6 +440,11 @@
    ],
    "from": "BL",
    "to": "TR"
+  },
+  "swordBackhandHeavy": {
+   "seconds": 1.0833,
+   "loop": false,
+   "note": "backhand, heavy: from the left side round to behind the body"
   }
  }
 }

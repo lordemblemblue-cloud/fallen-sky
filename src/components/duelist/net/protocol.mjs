@@ -185,7 +185,7 @@ export function encodeOwn(f, body, time) {
     v: [r5(v.hp), r5(v.stamina), r5(v.will), r5(v.shield), v.collapsed ? 1 : 0, v.winded ? 1 : 0, v.dead ? 1 : 0,
       when(v.collapsedAt), when(v.lastStaminaSpend), when(v.lastWillSpend), when(v.lastShieldHit)],
     mx: [v.max.hp, v.max.stamina, v.max.will, v.max.shield],
-    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0, a.link || 1] : 0,
+    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0, a.link || 1, a.from || 0] : 0,
     cd: times(f.cooldowns),
     bf: f.buffer ? [f.buffer.command, f.buffer.at, f.buffer.direction || 0] : 0,
     g: f.guard ? f.guard.since : null,
@@ -222,7 +222,7 @@ export function applyOwn(f, body, data) {
   f.activeRelicCooldownUntil = then(data.re?.[1]);
   f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2] } : null;
   f.mode = data.md || 'balanced';
-  f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
+  f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1, from: data.a[6] || 0 } : null;
   f.cooldowns = untimes(data.cd);
   f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
   f.guard = data.g === null || data.g === undefined ? null : { since: data.g };

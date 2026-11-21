@@ -6,7 +6,7 @@
 // guard a blow it has seen coming (a master raises its guard just as the blow lands: a parry); punish a foe
 // that swung and missed; escape when badly hurt; use Telekinesis and the Breach; go after the mode's
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
-import { MOVES, BLOCK, CLASSES, FLOW, isStunned, isDown, fighterVeil } from '../core/index.mjs';
+import { MOVES, BLOCK, CLASSES, FLOW, SNAP, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 
 export const BOT_LEVELS = Object.freeze({
@@ -164,10 +164,13 @@ export function think(world, bot, { goal = null } = {}) {
   }
   if (me.guard) presses.push('blockUp');
 
+  // A second press hard on a cut's start turns it into another move (core/cuts.mjs): a bot waits that moment out,
+  // so it never does one by accident (a bot that knows Flow means it now and then, below)
+  const early = !!me.action?.move.cut && me.action.t - (me.action.from || 0) <= SNAP + 0.03;
   // A foe that swung and missed is open until it recovers: strike now.
   const reach = me.weapon === 'bow' ? 14 : 2.1;
   if (foeAction && foeAction.move.kind === 'attack' && foeAction.t > foeAction.move.startup + foeAction.move.active && d <= reach + 0.3
-      && (!me.action || me.action.move.chain) && rnd() < lvl.punish * 0.25) {
+      && (!me.action || me.action.move.chain) && !early && rnd() < lvl.punish * 0.25) {
     presses.push('light');
     return input;
   }
@@ -215,7 +218,9 @@ export function think(world, bot, { goal = null } = {}) {
     if (rnd() < 0.02) bot.strafe = -bot.strafe;
     input.move = { x: toward.z * bot.strafe * 0.5, z: -toward.x * bot.strafe * 0.5 };
     input.run = false;
-    if (!me.action || me.action.move.chain) {
+    if (early) { // the whirl, the cross or the backhand, by the way it is moving: only on purpose
+      if (rnd() < lvl.flow * 0.06) presses.push('light');
+    } else if (!me.action || me.action.move.chain) {
       if (bot.combo === -1 && !me.action) { presses.push('heavy'); bot.combo = 0; }
       else if (bot.combo >= 0 && bot.combo < lvl.comboLength && rnd() < lvl.aggression * 0.25) {
         presses.push('light');

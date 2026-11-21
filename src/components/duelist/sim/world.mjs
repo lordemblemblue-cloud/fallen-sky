@@ -91,6 +91,8 @@ export function strikeDirection(body) {
   return stickDirection(ahead, right);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+// a move whose arc is not centred on the facing (the backhand reaches the sword side and behind): radians to the left
+const arcTurn = (move) => (move.arcTurn || 0) * Math.PI / 180;
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
 
 /**
@@ -227,7 +229,7 @@ function trySpecial(world, fighter, body, now, effects) {
     const near = [...world.fighters.values()]
       .filter((o) => hostile(world, fighter, o) && !o.vitals.dead)
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
-      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw, b, move.arc)
+      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw + arcTurn(move), b, move.arc)
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
@@ -256,7 +258,7 @@ function alliesInReach(world, fighter, body, move) {
     if (other === fighter || other.vitals.dead || hostile(world, fighter, other)) continue;
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
-    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
     if (world.level && !clearLine(world.level, body, ob)) continue;
     found.push({ fighter: other, d });
   }
@@ -538,7 +540,7 @@ export function targetsInReach(world, attacker, body, move, single) {
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
-    if (!insideArc(body, body.yaw, ob, move.arc)) continue;
+    if (!insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
     if (world.level && !clearLine(world.level, body, ob)) continue; // nothing reaches through a wall
     found.push({ fighter: other, d });
   }

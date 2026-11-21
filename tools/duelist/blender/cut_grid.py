@@ -167,6 +167,8 @@ RING = {
     'BL': spec(34, 20, 8, (0.04, 0.05, -0.08), (55, -42, 0.70), (145, -34)),
     'L': spec(50, 6, 6, (0.02, 0.07, -0.03), (72, 2, 0.70), (150, 12)),
     'TL': spec(40, -4, 5, (-0.02, 0.05, 0.01), (50, 55, 0.64), (150, 48)),
+    # behind the sword shoulder: where the backhand ends, the trunk turned to look over it
+    'BACK': spec(-115, 2, -4, (-0.04, -0.06, -0.02), (-150, 10, 0.86), (-178, 6)),
 }
 CENTRE = spec(0, 4, 0, (0.0, 0.0, -0.01), (-25, -5, 0.6), (-10, 55))
 # Each cut: the point it leaves, the point it ends at, and the step it takes (forward, to the left; metres).
@@ -183,6 +185,14 @@ CUT_MODES = {
     'Swift': dict(amp=0.72, wind=0.12, cut=0.12, hold=0.04, rec=0.24, step=0.6),
     'Balanced': dict(amp=0.88, wind=0.17, cut=0.15, hold=0.06, rec=0.30, step=1.0),
     'Heavy': dict(amp=1.0, wind=0.27, cut=0.19, hold=0.10, rec=0.42, step=1.3),
+}
+# The backhand (one of the three moves a second press hard on the first turns a cut into): from the left side
+# round by the front and the sword side to behind the body. Its own seconds: KEEP IN STEP with core/cuts.mjs.
+BACKHAND_LINE = ('L', 'BACK', (-0.1, -0.12))
+BACKHAND_MODES = {
+    'Swift': dict(amp=0.85, wind=0.12, cut=0.16, hold=0.06, rec=0.26, step=0.6),
+    'Balanced': dict(amp=0.95, wind=0.16, cut=0.2, hold=0.08, rec=0.34, step=1.0),
+    'Heavy': dict(amp=1.0, wind=0.24, cut=0.26, hold=0.12, rec=0.46, step=1.3),
 }
 sharp = lambda x: smoothstep(smoothstep(x))  # slow, then through the middle at more than twice the average, then slow
 
@@ -212,10 +222,11 @@ def pose_frame(base_q, base_loc, s, travel, feet, state):
     return q, loc
 
 
-def make_cut(cut, mode, base_q, base_loc):
-    """One cut in one mode: wind up to the point it leaves, cut through to the point it ends at, hold, come back."""
-    p_name, q_name, step = CUTS[cut]
-    m = CUT_MODES[mode]
+def make_cut(cut, mode, base_q, base_loc, line=None, modes=None):
+    """One cut in one mode: wind up to the point it leaves, cut through to the point it ends at, hold, come back.
+    line, modes: a line and a table of modes of its own (the backhand's)."""
+    p_name, q_name, step = line or CUTS[cut]
+    m = (modes or CUT_MODES)[mode]
     unit = scale_of()
     amp = m['amp'] * (0.85 if cut == 'Stand' else 1.0)
     ready = ready_spec(base_q, base_loc)
@@ -280,3 +291,9 @@ def build_cuts(add, notes, idle, only=None):
             add(name, inertial_in(clip, idle, 0, 0.1), f'{cut} cut, {mode.lower()}: from {CUTS[cut][0]} to {CUTS[cut][1]}', sigma=0.5)
             notes[name].update({'marks': marks, 'from': CUTS[cut][0], 'to': CUTS[cut][1]})
             print('CUT', name, 'seconds', notes[name]['seconds'], 'marks', marks, 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst))
+        name = f'swordBackhand{mode}'
+        if only and name not in only:
+            continue
+        clip, _, worst = make_cut('Backhand', mode, base_q, base_loc, BACKHAND_LINE, BACKHAND_MODES)
+        add(name, inertial_in(clip, idle, 0, 0.1), f'backhand, {mode.lower()}: from the left side round to behind the body', sigma=0.5)
+        print('CUT', name, 'seconds', notes[name]['seconds'], 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst))

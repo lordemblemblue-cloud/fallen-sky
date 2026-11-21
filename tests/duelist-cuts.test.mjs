@@ -106,9 +106,12 @@ test('the mode key goes round swift, balanced, heavy; the next strike is made in
 test('one click is one cut: a press too early is dropped, a press in the strike waits its turn, and a chain ends', () => {
   const f = createFighter({ id: 'a', weapon: 'sword' });
   press(f, 'light', 0);
-  // mashed at once: it waits a moment only, and is gone before the window opens
-  assert.equal(press(f, 'light', 0.01).reason, 'buffered');
-  let t = run(f, 0, f.action.move.chain.from - 0.01);
+  // pressed again early in the wind-up (but not hard on the first: that is the whirl, below): it waits a moment
+  // only, and is gone before the window opens
+  let t = run(f, 0, 0.2);
+  assert.equal(press(f, 'light', t).reason, 'buffered');
+  f.buffer.at -= 0.2; // as if it had been waiting that much longer
+  t = run(f, t, f.action.move.chain.from - 0.21);
   assert.equal(f.buffer, null, 'dropped: the press came too early to count');
   assert.equal(f.action.id, 'swordCutStandBalanced');
   // let alone, the cut runs out into the stance and the same cut may be made again
@@ -123,4 +126,63 @@ test('one click is one cut: a press too early is dropped, a press in the strike 
   assert.equal(f.action.link, 3);
   t = run(f, t, f.action.move.chain.from + 0.02);
   assert.equal(press(f, 'light', t, { direction: 'right' }).reason, 'buffered');
+});
+
+test('a second press hard on the first turns the cut into the whirl, the cross or the backhand; one cooldown for all three', async () => {
+  const { SNAP, SNAP_COOLDOWN, SNAP_IDS } = await import('../src/components/duelist/core/index.mjs');
+  const start = (first, second, at = 0.05, mode = null) => {
+    const f = createFighter({ id: 'a', weapon: 'sword' });
+    while (mode && f.mode !== mode) press(f, 'mode', 0);
+    press(f, 'light', 0, { direction: first });
+    const t = run(f, 0, at);
+    return { f, t, res: press(f, 'light', t, { direction: second }) };
+  };
+  assert.equal(start(null, null).res.id, 'swordWhirlBalanced', 'a double click standing still: the whirl');
+  assert.equal(start('forward', 'forward').res.id, 'swordWhirlBalanced', 'the same way again');
+  assert.equal(start('forward', 'left').res.id, 'swordCrossBalanced', 'to one side of the cut');
+  assert.equal(start('forward', 'back').res.id, 'swordBackhandBalanced', 'back the way it came');
+  assert.equal(start('left', 'right', 0.05, 'heavy').res.id, 'swordBackhandHeavy', 'in the fighter\'s mode');
+  assert.equal(start('forward', 'left', SNAP + 0.03).res.reason, 'buffered', 'too late for it: the press waits its turn');
+  // it takes the cut's place in the chain, and one cooldown covers all three
+  const { f, t } = start('forward', 'left');
+  assert.deepEqual([f.action.id, f.action.chainedFrom, f.action.link], ['swordCrossBalanced', 'swordCutDownBalanced', 1]);
+  let now = run(f, t, 1.2);
+  assert.equal(f.action, null);
+  press(f, 'light', now, { direction: 'forward' });
+  now = run(f, now, 0.05);
+  assert.equal(press(f, 'light', now, { direction: 'forward' }).reason, 'buffered', 'no second one inside the cooldown: an ordinary press');
+  now = run(f, now, SNAP_COOLDOWN);
+  press(f, 'light', now);
+  now = run(f, now, 0.05);
+  assert.equal(press(f, 'light', now).id, 'swordWhirlBalanced', 'ready again');
+  // each is a sword strike with frame data, a chain window and a clip in the pack
+  assert.equal(SNAP_IDS.length, 9);
+  for (const id of SNAP_IDS) {
+    const move = MOVES[id];
+    assert.equal(move.weapon, 'sword', id);
+    assert.ok(FLOW.sword.strikes.has(id) && move.chain.from > move.startup && move.cooldown === SNAP_COOLDOWN, id);
+    const first = MOVE_MOTION[id].segments[0];
+    assert.ok(MOTION_CLIPS[first.clip], `${id}: its clip ${first.clip} is in the pack`);
+    assert.ok(MOVE_MOTION[id].segments.at(-1).to[1] <= MOTION_CLIPS[first.clip].duration + 1e-6, `${id}: inside its clip`);
+  }
+  assert.equal(MOVES.swordWhirlBalanced.arc, 360, 'the whirl cuts all round');
+  assert.equal(MOTION_CLIPS.swordBackhandBalanced.source, 'blender', 'the backhand has a clip made for it');
+});
+
+test('the backhand reaches a foe behind the sword shoulder, and not one in front on the other side', async () => {
+  const { step } = await import('../src/components/duelist/sim/world.mjs');
+  const w = createWorld();
+  addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 }); // faces +z: its right hand side is -x
+  const behind = addFighter(w, { id: 'b', x: -1.1, z: -1.0, yaw: 0 });
+  const front = addFighter(w, { id: 'c', x: 1.3, z: 0.9, yaw: Math.PI });
+  const left = (f) => f.vitals.hp + f.vitals.will + f.vitals.shield;
+  const before = { b: left(behind), c: left(front) };
+  const idle = { move: { x: 0, z: 0 }, face: 0, presses: [] };
+  step(w, 1 / 60, { a: { move: { x: 0, z: 1 }, face: 0, presses: ['light'] } });
+  step(w, 1 / 60, { a: idle });
+  step(w, 1 / 60, { a: { move: { x: 0, z: -1 }, face: 0, presses: ['light'] } });
+  assert.equal(w.fighters.get('a').action.id, 'swordBackhandBalanced');
+  for (let i = 0; i < 50; i++) step(w, 1 / 60, { a: idle });
+  assert.ok(left(behind) < before.b - 1, `the one behind is hit (${before.b} to ${left(behind).toFixed(1)})`);
+  assert.ok(left(front) >= before.c - 1e-6, 'the one in front on the other side is not');
 });

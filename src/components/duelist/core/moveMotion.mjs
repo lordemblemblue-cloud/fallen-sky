@@ -10,7 +10,7 @@
 // (travel: false keeps a segment's travel out, for moves whose distance the rules set themselves).
 import { MOVES } from './moves.mjs';
 import { MOTION_CLIPS } from './motionPack.data.mjs';
-import { CUT_IDS, CUT_TIMING, CONTACT } from './cuts.mjs';
+import { CUT_IDS, CUT_TIMING, CONTACT, SNAP_IDS, snapMotion } from './cuts.mjs';
 
 const seg = (clip, moveFrom, moveTo, clipFrom, clipTo, extra = {}) => ({ clip, from: [moveFrom, clipFrom], to: [moveTo, clipTo], ...extra });
 // wind-up -> startup, contact -> active, follow-through -> recovery
@@ -30,6 +30,13 @@ export const MOVE_MOTION = Object.freeze({
     const t = CUT_TIMING[MOVES[id].cut.mode];
     const last = Math.min(t.wind + t.cut + t.hold + t.rec, MOTION_CLIPS[id]?.duration ?? Infinity); // a clip ends on a whole frame
     return [id, { segments: phases(id, id, [0, t.wind + CONTACT[0] * t.cut, t.wind + CONTACT[1] * t.cut, last]) }];
+  })),
+  // the whirl and the cross play the pack's spinning cut and turning backhand at the mode's speed; the backhand
+  // has a clip of its own in each mode
+  ...Object.fromEntries(SNAP_IDS.map((id) => {
+    const { clip, marks, settle } = snapMotion(id);
+    const last = Math.min(marks[3], MOTION_CLIPS[clip]?.duration ?? Infinity);
+    return [id, { segments: phases(id, clip, [marks[0], marks[1], marks[2], last]), ...(settle ? { settle: { clip, from: last } } : {}) }];
   })),
   // sword: a rising slash, a diagonal cut into a low lunge, a spinning cut (one continuous chain in the pack)
   swordLight1: { segments: phases('swordLight1', 'swordA', [0.05, 0.2, 0.28, 0.42]), settle: { clip: 'swordARec', from: 0 } },

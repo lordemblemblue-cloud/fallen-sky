@@ -16,7 +16,7 @@
 //     by their clip's own travel instead: moveMotion.mjs).
 //   channel: the active phase lasts while the button is held, up to `active` seconds, paying willPerSec.
 
-import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId } from './cuts.mjs';
+import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_IDS } from './cuts.mjs';
 
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
@@ -35,6 +35,8 @@ export const CONTRABAND = Object.freeze(['sidearm']);
 export const MOVES = Object.freeze({
   // ---- the sword's cuts by direction, in three modes: nine lines each (core/cuts.mjs)
   ...Object.fromEntries(Object.entries(CUT_SPECS).map(([id, spec]) => [id, move(spec)])),
+  // the whirl, the cross and the backhand: what a second press hard on the first turns a cut into
+  ...Object.fromEntries(Object.entries(SNAP_SPECS).map(([id, spec]) => [id, move(spec)])),
   // ---- sword: precise, heavy finishers that punish a weakened defense
   swordLight1: move({ weapon: 'sword', startup: 0.11, active: 0.08, recovery: 0.2, stamina: 6, damage: 10,
     chain: { next: 'swordLight2', from: 0.17, to: 0.42 }, cancelInto: ['movement', 'power'], cancelFrom: 0.22 }),
@@ -187,7 +189,7 @@ const SWORD_MODES = Object.freeze(Object.fromEntries(CUT_MODES.map((mode) => [mo
 export const FLOW = Object.freeze({
   sword: Object.freeze({ chain: SWORD_MODES.balanced.chain, modes: SWORD_MODES,
     // the older strikes still count as the sword's (the rules' own callers start them by name)
-    strikes: new Set([...CUT_IDS, 'swordLight1', 'swordLight2', 'swordLight3', 'swordAdvance', 'swordSweep', 'swordTurn']) }),
+    strikes: new Set([...CUT_IDS, ...SNAP_IDS, 'swordLight1', 'swordLight2', 'swordLight3', 'swordAdvance', 'swordSweep', 'swordTurn']) }),
   dualBlades: flow(['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4'], { forward: 'bladesAdvance', side: 'bladesSweep', back: 'bladesTurn' }),
   // the staff's turn is its chain's second link: a direction takes it out of its turn
   staff: flow(['staffLight1', 'staffLight2', 'staffLight3'], { forward: 'staffLeap', side: 'staffSweep', back: 'staffLight2' }),

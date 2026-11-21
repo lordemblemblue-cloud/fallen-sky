@@ -88,7 +88,7 @@ test('each link knows its place in the chain, and a press that waits keeps its d
   assert.equal(f.action.chainedFrom, null);
   // pressed in the wind-up, before the chain window: it waits, and starts the cut back when the window opens
   let t = 0;
-  while (t < 0.1) { t += STEP; update(f, STEP, t); }
+  while (t < 0.2) { t += STEP; update(f, STEP, t); } // past the moment a second press would turn the cut into another move
   assert.equal(press(f, 'light', t, { direction: 'right' }).reason, 'buffered');
   while (f.action.id === 'swordCutStandBalanced' && t < 1) { t += STEP; update(f, STEP, t); }
   assert.equal(f.action.id, 'swordCutRightBalanced');
@@ -127,7 +127,8 @@ test('the link and the direction of a waiting press travel with the fighter over
   let t = 0;
   while (a.action.t < a.action.move.chain.from + 0.01) { t += STEP; update(a, STEP, t); }
   press(a, 'light', t, { direction: 'left' });
-  press(a, 'light', t + 0.01, { direction: 'back' }); // too early for that cut's own window: it waits
+  for (let i = 0; i < 24; i++) { t += STEP; update(a, STEP, t); } // past the moment a second press would change the cut
+  press(a, 'light', t, { direction: 'back' }); // too early for that cut's own window: it waits
   const other = createWorld();
   const copy = addFighter(other, { id: 'a' });
   applyOwn(copy, bodyOf(other, 'a'), JSON.parse(JSON.stringify(encodeOwn(a, bodyOf(w, 'a'), t))));
