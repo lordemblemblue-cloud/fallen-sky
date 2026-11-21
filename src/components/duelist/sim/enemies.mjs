@@ -7,6 +7,9 @@
 //   enforcer            closes in and fights hand to hand (the duel bot's brain, at trainee or duelist level)
 //   named people        tougher versions with a name (the mission says who)
 //   a Will user         a full duelist (the duel bot at master level) with a deep Veil
+//   refuge defenders    unbound Will users with Arden's sidearms (a thin Veil); beaten, they stand down
+//   House wardens       Will users sworn to the Houses: duelists with crystal blades; their captain stands down
+// yields: the share of health at which someone stands down instead of falling (the mission spares them).
 // Nobody acts until alerted: by seeing an intruder, being hit, or an alerted ally nearby.
 import { isStunned, isDown } from '../core/index.mjs';
 import { bodyOf } from './world.mjs';
@@ -26,6 +29,14 @@ export const ENEMY_TYPES = Object.freeze({
     sight: 20, keep: [6, 12], aim: 0.055, cadence: [0.9, 1.5], burst: 0.5 }),
   willUser: Object.freeze({ kind: 'duelist', title: 'Will user', weapon: 'sword', vitals: { hp: 190, will: 170, shield: 50, stamina: 140 },
     sight: 30, botLevel: 'master', willRegenScale: 1.7 }),
+  refugee: Object.freeze({ kind: 'gunner', title: 'Refuge defender', weapon: 'sidearm', vitals: { hp: 40, will: 30, shield: 0, stamina: 60 },
+    sight: 15, keep: [6, 11], aim: 0.12, cadence: [1.6, 2.6], burst: 0, yields: 0.3 }),
+  keeper: Object.freeze({ kind: 'gunner', title: 'Keeper', weapon: 'sidearm', vitals: { hp: 80, will: 60, shield: 10, stamina: 80 },
+    sight: 18, keep: [6, 12], aim: 0.08, cadence: [1.3, 2.1], burst: 0.35, yields: 0.3 }),
+  warden: Object.freeze({ kind: 'duelist', title: 'House warden', weapon: 'sword', vitals: { hp: 95, will: 60, shield: 30, stamina: 110 },
+    sight: 22, botLevel: 'duelist' }),
+  wardenCaptain: Object.freeze({ kind: 'duelist', title: 'Warden-Captain', weapon: 'sword', vitals: { hp: 200, will: 140, shield: 60, stamina: 140 },
+    sight: 30, botLevel: 'master', willRegenScale: 1.4, yields: 0.2 }),
 });
 
 const FOV_COS = Math.cos((75 * Math.PI) / 180); // an unalerted guard sees 75 degrees either side of its facing
@@ -150,7 +161,7 @@ export function thinkEnemy(world, enemy, playerIds, ctx = {}) {
  * anyone else only within a few metres and in plain sight.
  */
 export function spreadAlarm(world, enemies, now, radius = 8) {
-  const awake = [...enemies.values()].filter((e) => e.alerted && !world.fighters.get(e.id)?.vitals.dead && now - e.alertedAt > 0.6);
+  const awake = [...enemies.values()].filter((e) => e.alerted && !e.yielded && !world.fighters.get(e.id)?.vitals.dead && now - e.alertedAt > 0.6);
   if (!awake.length) return;
   for (const e of enemies.values()) {
     if (e.alerted) continue;

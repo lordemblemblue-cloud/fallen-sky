@@ -16,9 +16,10 @@
 // free for all). The joining player takes a bot's place; a leaving player's seat goes back to a bot. A
 // finished match starts again after a short pause with the same players.
 //
-// The story mission (sim/mission.mjs) runs in crew rooms of up to four: a room of your own with a code to
-// give to friends, a room joined by its code, or any open crew. A crew room is not listed unless it is open.
-// The mission waits while nobody is in the room, and starts again a little after it is completed.
+// The story missions (sim/mission.mjs) run in crew rooms of up to four: a room of your own with a code to give
+// to friends, a room joined by its code (whatever mission it plays), or any open crew playing the mission
+// asked for. A crew room is not listed unless it is open. The mission waits while nobody is in the room; a
+// little after it is completed the crew goes on to the next one in the story (the last one plays again).
 //
 // A dropped connection does not lose its seat: for RECONNECT_SECONDS a bot plays it (a match) or the
 // mission's autopilot does (a crew; with nobody connected the mission waits), and the player sits back down
@@ -27,10 +28,10 @@
 import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES } from '../../src/components/duelist/sim/match.mjs';
-import { createMission, stepMission, joinMission, leaveMission, missionView } from '../../src/components/duelist/sim/mission.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass } from '../../src/components/duelist/sim/match.mjs';
+import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
-import { createInputRateLimiter } from '../../src/components/duelist/core/index.mjs';
+import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
   ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
@@ -41,14 +42,14 @@ const FALLEN_SHOWN_SECONDS = 9; // a mission's fallen stay in the snapshots this
 const FULL_EVERY = 20; // snapshots: once a second everyone in a mission is sent in full
 const IDLE_ROOM_SECONDS = 60; // a match with no players closes after this
 const IDLE_PLAYER_SECONDS = 180; // no input for this long: out of the match
-const MISSION = 'contraband';
 const CODE_LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I or O
 const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing crew codes is slowed down
 
-// reconnectSeconds: how long a dropped seat waits (server clock); heartbeatMs: how often connections are pinged
+// reconnectSeconds: how long a dropped seat waits (server clock); heartbeatMs: how often connections are pinged;
+// missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  controlLayout = null } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -99,7 +100,9 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       return world.time - room.fallenAt.get(e.id) < FALLEN_SHOWN_SECONDS;
     });
   };
-  // the teacher looks like neither of the owner's two fighters the crew plays, if one is free (decided once)
+  // the teacher (Arden: an enemy in Contraband, an ally in Saltmarch) wears whichever of the owner's two
+  // fighters the crew does not play, if one is free (decided once)
+  const isTeacher = (person) => person.tag === 'arden' || person.typeId === 'willUser';
   const teacherBody = (room, id) => {
     if (!room.enemyBodies.has(id)) {
       const used = new Set(room.bodies.values());
@@ -111,18 +114,24 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     ? [
       ...[...room.mission.seats.values()].map((s) => ({ id: s.id, name: s.name, team: 'crew', kind: 'player', body: room.bodies.get(s.id) || BODY_IDS[0], away: isAway(room, s.id) })),
       // max: the person's full health, Will, stamina and armor (the depot's people are not built like duelists)
+      ...[...room.mission.allies.values()].map((a) => {
+        const { max } = room.mission.world.fighters.get(a.id).vitals;
+        return { id: a.id, name: a.name, kind: 'ally', type: a.typeId, tag: a.tag || undefined, named: true,
+          max: [max.hp, max.will, max.stamina, max.shield], body: isTeacher(a) ? teacherBody(room, a.id) : undefined };
+      }),
       ...shownEnemies(room).map((e) => {
         const { max } = room.mission.world.fighters.get(e.id).vitals;
         return { id: e.id, name: e.name, kind: 'enemy', type: e.typeId, tag: e.tag || undefined, named: e.named || undefined,
-          max: [max.hp, max.will, max.stamina, max.shield], body: e.type.kind === 'duelist' ? teacherBody(room, e.id) : undefined };
+          max: [max.hp, max.will, max.stamina, max.shield], body: isTeacher(e) ? teacherBody(room, e.id) : undefined };
       }),
     ]
     : [...room.match.seats.values()].map((s) => ({ id: s.id, name: s.name, team: s.team, kind: s.kind, body: room.bodies.get(s.id) || BODY_IDS[0], away: isAway(room, s.id) })));
-  const seatKey = (room) => [...room.mission.seats.keys(), '|', ...shownEnemies(room).map((e) => e.id)].join(',');
+  const seatKey = (room) => [...room.mission.seats.keys(), '|', ...room.mission.allies.keys(), '|', ...shownEnemies(room).map((e) => e.id)].join(',');
   // live matches and open crews, busiest first: mode, players, bots, seats, phase (no names or ids beyond the room's)
   const lobby = () => [...rooms.values()].filter((r) => !r.mission || r.open)
     .map((r) => (r.mission
-      ? { id: r.id, mode: STORY_MODE, name: r.mission.def.title, players: humansIn(r), bots: 0, seats: CREW_SIZE, phase: r.mission.phase === 'complete' ? 'over' : 'live', open: hasRoom(r) }
+      ? { id: r.id, mode: STORY_MODE, mission: r.mission.id, name: r.mission.def.title, players: humansIn(r), bots: 0, seats: CREW_SIZE,
+        phase: r.mission.phase === 'complete' ? 'over' : 'live', open: hasRoom(r) }
       : { id: r.id, mode: r.mode, name: MODES[r.mode].name, players: humansIn(r), bots: r.match.seats.size - humansIn(r),
         seats: r.match.capacity, phase: r.match.phase, open: hasRoom(r), publicRoom: !!r.publicRoom }))
     .sort((a, b) => b.players - a.players || a.id.localeCompare(b.id, undefined, { numeric: true }));
@@ -147,10 +156,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
   };
 
-  // a crew room starts with its first member in it (the depot is manned for the crew's size)
-  function openCrew(client, { open }) {
+  // a crew room starts with its first member in it (the mission is manned for the crew's size)
+  function openCrew(client, { open, mission: missionId }) {
     const id = `m${nextRoom++}`;
-    const mission = createMission({ id: MISSION, players: [{ id: client.id, name: client.name }], seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000 });
+    const mission = createMission({ id: missionId, players: [{ id: client.id, name: client.name }], seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000 });
     const room = { id, mode: STORY_MODE, match: null, mission, code: newCode(), open, clients: new Map(), bodies: new Map(), enemyBodies: new Map(), fallenAt: new Map(),
       ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null, seatKey: '', fullNext: true };
     rooms.set(id, room);
@@ -176,7 +185,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     if (!ready) openRoom(mode);
   }
 
-  function enter(client, mode, requestedMatchId = null) {
+  // classId: the class the player fights as (a seat they already have keeps its own)
+  function enter(client, mode, requestedMatchId = null, classId = null) {
     // Select the exact advertised match when joining from the server browser.
     // A stale or forged id must not silently send the player into a different arena.
     const selected = requestedMatchId ? rooms.get(requestedMatchId) : null;
@@ -186,7 +196,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     if (client.room) leave(client);
     const room = selected || pickRoom(mode);
-    const result = joinMatch(room.match, { id: client.id, name: client.name });
+    if (classId) client.classId = classId; // remembered for rematches
+    const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
     if (!result.ok) { send(client, { t: 'error', code: 'full', message: 'That match is full.' }); return; }
     room.bodies.set(client.id, client.body);
     if (result.replaced) room.bodies.delete(result.replaced);
@@ -207,8 +218,9 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   const crewJoined = (room, client, extra = {}) => ({ t: 'joined', match: room.id, mode: STORY_MODE, mission: room.mission.id, code: room.code, you: client.id, team: 'crew',
     seats: seatsOf(room), key: client.key, ...extra });
 
-  // code: a friend's crew; create: a room of your own (not listed); neither: any open crew, or a new open one
-  function enterCrew(client, { code = null, create = false, open = false, matchId = null } = {}) {
+  // matchId: an open crew listed in the lobby; code: a friend's crew (whatever it plays); create: a room of your own
+  // (listed only with open); none of these: any open crew playing the mission asked for, or a new open one
+  function enterCrew(client, { code = null, create = false, open = false, matchId = null, mission = 'contraband' } = {}) {
     const now = clock();
     let room = null;
     if (matchId) {
@@ -230,11 +242,11 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       }
       if (room.mission.seats.size >= CREW_SIZE && !room.mission.seats.has(client.id)) { send(client, { t: 'error', code: 'full', message: 'That crew is full.' }); return; }
     } else if (!create) {
-      room = [...rooms.values()].filter((r) => r.mission && hasRoom(r)).sort(byPlayers)[0] || null;
+      room = [...rooms.values()].filter((r) => r.mission && hasRoom(r) && r.mission.id === mission).sort(byPlayers)[0] || null;
     }
     if (client.room) leave(client);
     if (room) joinMission(room.mission, { id: client.id, name: client.name });
-    else room = openCrew(client, { open: open || !create });
+    else room = openCrew(client, { open: open || !create, mission });
     room.bodies.set(client.id, client.body);
     room.clients.set(client.id, client);
     client.room = room;
@@ -275,17 +287,17 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.effects = [];
     room.events = [];
     for (const client of players) {
-      const result = joinMatch(room.match, { id: client.id, name: client.name });
+      const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
       room.bodies.set(client.id, client.body);
       if (result.replaced) room.bodies.delete(result.replaced);
       send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key, rematch: true });
     }
   }
 
-  // the mission again, from the start, with whoever is still in the room
+  // the story goes on: the next mission (or this one again, the last), with whoever is still in the room
   function restartMission(room) {
     const players = [...room.clients.values()];
-    room.mission = createMission({ id: room.mission.id, players: players.map((c) => ({ id: c.id, name: c.name })), seed: Math.floor(clock() * 1000) % 1000003 });
+    room.mission = createMission({ id: nextMission(room.mission.id), players: players.map((c) => ({ id: c.id, name: c.name })), seed: Math.floor(clock() * 1000) % 1000003 });
     room.overAt = null;
     room.effects = [];
     room.events = [];
@@ -383,7 +395,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       // People who have noticed nobody stand still: between full snapshots they are sent by id only (idle).
       const encoded = new Map();
       const idle = [];
-      for (const id of [...mission.seats.keys(), ...shownEnemies(room).map((e) => e.id)]) {
+      for (const id of [...mission.seats.keys(), ...mission.allies.keys(), ...shownEnemies(room).map((e) => e.id)]) {
         const f = world.fighters.get(id);
         if (!f) continue;
         const e = mission.enemies.get(id);
@@ -391,7 +403,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         else encoded.set(id, encodeFighter(f, world.bodies.get(id)));
       }
       const uses = [...mission.interactables.values()].filter((it) => it.by).map((it) => [it.id, it.by, Math.round(Math.min(1, it.progress / it.seconds) * 100) / 100]);
-      const againIn = room.overAt === null ? null : Math.max(0, Math.ceil(MISSION_AGAIN_AFTER - (clock() - room.overAt)));
+      const againIn = room.overAt === null ? null : Math.max(0, Math.ceil(missionAgainSeconds - (clock() - room.overAt)));
       for (const client of room.clients.values()) {
         if (client.away) continue;
         const fighters = [];
@@ -462,7 +474,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
             snapshot(room);
           }
           if (room.mission.phase === 'complete' && room.overAt === null) room.overAt = now;
-          if (room.overAt !== null && now - room.overAt > MISSION_AGAIN_AFTER && room.clients.size) restartMission(room);
+          if (room.overAt !== null && now - room.overAt > missionAgainSeconds && room.clients.size) restartMission(room);
           continue;
         }
         if (room.ticks % SNAPSHOT_EVERY === 0) snapshot(room);
@@ -552,7 +564,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
           if (matchId === false || (matchId && (coded || msg.create))) {
             send(client, { t: 'error', code: 'room', message: 'Invalid public crew selection.' }); return;
           }
-          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, open: msg.open === true, matchId });
+          enterCrew(client, { code: coded ? msg.code : null, create: msg.create === true, open: msg.open === true, matchId,
+            mission: MISSIONS[msg.mission] ? msg.mission : 'contraband' });
           return;
         }
         const quickplay = msg.mode === 'online';
@@ -566,7 +579,13 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         // Server chooses a random supported battle mode. The client receives
         // the actual mode in 'joined' and uses that ruleset for its arena.
-        enter(client, mode, matchId);
+        enter(client, mode, matchId, typeof msg.cls === 'string' && classById(msg.cls) ? msg.cls : null);
+      } else if (msg.t === 'class') {
+        // a class change: queued for the player's next spawn; the match decides when that may be
+        if (!client.room?.match || typeof msg.id !== 'string') { send(client, { t: 'class', ok: false, pending: null, reason: 'no-match' }); return; }
+        const res = queueMatchClass(client.room.match, client.id, msg.id);
+        if (res.accepted) client.classId = msg.id;
+        send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {

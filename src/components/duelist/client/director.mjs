@@ -60,6 +60,10 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
       }
       for (const e of effects) {
         const feel = vfx.effect(e, actors);
+        // a class ability lands: its own sound
+        if (e.type === 'effect' || e.type === 'zone') audio.play(e.effect === 'rage' || e.type === 'zone' ? 'breach' : 'resist', actors[e.target || e.owner]?.chest() || null);
+        else if (e.type === 'execution') audio.play('collapse', actors[e.defender]?.chest() || null);
+        else if (e.type === 'counter') audio.play('parry', actors[e.defender]?.hand() || null);
         const weight = involvesPlayer(e) ? 1 : 0.55;
         shake = Math.max(shake, feel.shake * weight);
         stop = Math.max(stop, feel.stop * weight);

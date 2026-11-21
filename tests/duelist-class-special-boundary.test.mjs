@@ -25,7 +25,7 @@ test('unverified seats and bots cannot request specials', () => {
 test('all four classes fail closed even with full meter; never mutate charge', () => {
   const match = createMatch({ mode: 'duel', players: [{ id: 'p1' }, { id: 'p2' }] });
   match.phase = 'live';
-  for (const classId of ['assassin', 'duelist', 'juggernaut', 'healer']) {
+  for (const classId of ['assassin', 'duelist', 'warrior', 'healer']) { // the Juggernaut is the Warrior now
     const seat = match.seats.get('p1');
     seat.classId = classId;
     seat.specialMeter = 100;

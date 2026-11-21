@@ -14,6 +14,8 @@ const files = [
   'src/components/duelist/menu/modes.js',
   'src/components/duelist/client/DuelistGame.jsx',
   'src/components/duelist/client/MatchHud.jsx',
+  'src/components/duelist/client/DuelistHud.jsx',
+  'src/components/duelist/client/ClassPicker.jsx',
   'src/components/duelist/client/controlProps.mjs',
   'src/components/duelist/sim/control.mjs',
   'src/components/duelist/sim/match.mjs',

@@ -32,7 +32,7 @@ jobs:
           npm ci
           npm install --prefix server/duelist --no-package-lock --ignore-scripts
       - name: Verify match rules, bot fill, co-op and room admission
-        run: node --test tests/duelist-core.test.mjs tests/duelist-match.test.mjs tests/duelist-control.test.mjs tests/duelist-football.test.mjs tests/duelist-server.test.mjs tests/duelist-reconnect.test.mjs tests/duelist-predict.test.mjs tests/duelist-mission.test.mjs
+        run: node --test tests/duelist-*.test.mjs
       - name: Parse Duelist UI and verify local module imports
         run: node scripts/verify-duelist-ui.mjs
       # The full application build is checked by the separate Game 3D workflow.

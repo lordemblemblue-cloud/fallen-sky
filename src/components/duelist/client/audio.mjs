@@ -212,6 +212,11 @@ export function createDuelAudio() {
       tone(d, t, { type: 'sawtooth', f0: 70, f1: 46, peak: 0.12, attack: 0.05, decay: 0.7 });
       tone(d, t + 0.7, { f0: 90, f1: 40, peak: 0.5, attack: 0.002, decay: 0.2 });
     },
+    bell(t, d) {
+      // a bronze warning bell: one low strike and its long partials
+      chime(d, t, jitter(392, 0.03), { peak: 0.22, decay: 2.4, partials: [1, 2.0, 2.4, 3.0, 4.2] });
+      tone(d, t, { f0: 196, f1: 190, peak: 0.12, attack: 0.004, decay: 1.6 });
+    },
     alarm(t, d) {
       for (let i = 0; i < 3; i++) tone(d, t + i * 0.7, { type: 'sawtooth', f0: 440, f1: 660, peak: 0.06, attack: 0.3, decay: 0.3 });
     },

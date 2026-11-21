@@ -98,13 +98,14 @@ export function depotOverlayTwin(classic) {
 export function depotCeilingTwin(classic) {
   const u = classic.uniforms;
   const time = R(u, 'uTime', 'float'); const alarm = R(u, 'uAlarm', 'float');
+  const base = R(u, 'uBase', 'vec3'); const lampColor = R(u, 'uLamp', 'vec3'); // the mission's theme
   return nodeMaterial(Fn(() => {
     const xz = positionWorld.xz.toVar();
     const f = abs(fract(xz.div(4)).sub(0.5));
-    const c = vec3(0.022, 0.028, 0.04).add(vec3(0.02, 0.026, 0.036).mul(smoothstep(0.44, 0.5, max(f.x, f.y))));
+    const c = base.add(base.mul(0.9).mul(smoothstep(0.44, 0.5, max(f.x, f.y)))); // beams
     const row = abs(fract(xz.y.div(8)).sub(0.5));
     const strip = smoothstep(0.02, 0.035, row).oneMinus().mul(step(0.25, fract(xz.x.div(4))));
-    const lamp = mix(vec3(0.75, 0.9, 1), vec3(1, 0.12, 0.08).mul(sin(time.mul(6)).mul(0.5).add(0.5).mul(0.65).add(0.35)), alarm);
+    const lamp = mix(lampColor, vec3(1, 0.12, 0.08).mul(sin(time.mul(6)).mul(0.5).add(0.5).mul(0.65).add(0.35)), alarm);
     return vec4(c.add(lamp.mul(strip).mul(1.5)), 1);
   })());
 }

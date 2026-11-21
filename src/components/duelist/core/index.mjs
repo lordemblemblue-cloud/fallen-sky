@@ -2,6 +2,7 @@
 export * from './tuning.mjs';
 export * from './moves.mjs';
 export * from './classes.mjs';
+export * from './abilities.mjs';
 export * from './vitals.mjs';
 export * from './damage.mjs';
 export * from './fighter.mjs';

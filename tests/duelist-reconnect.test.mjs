@@ -4,13 +4,16 @@
 // back down with everything kept; a crew's mission waits while nobody is connected; a key opens only its own
 // seat; a connection that stops answering is noticed; the browser's source reconnects by itself and after a
 // reload. Real WebSockets; the server's clock runs 4x fast unless a test says otherwise.
-import test from 'node:test';
+import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createDuelistServer } from '../server/duelist/server.mjs';
 import { PROTOCOL, WS_PATH } from '../src/components/duelist/net/protocol.mjs';
 import { createOnlineSource } from '../src/components/duelist/net/client.mjs';
 
+// every server a test starts is closed at the end, even when the test fails (an open one keeps node running)
+const started = [];
+after(async () => { for (const s of started) await s.close(); });
 async function start({ speed = 4, ...options } = {}) {
   const server = createDuelistServer({
     host: '127.0.0.1', port: 0, clock: () => (performance.now() / 1000) * speed, ...options,
@@ -18,6 +21,10 @@ async function start({ speed = 4, ...options } = {}) {
     authenticate: async (token, hello) => (token === 'guest' ? { id: `guest-${Math.random().toString(36).slice(2, 8)}`, name: 'Guest', guest: true }
       : token ? { id: token, name: hello.name } : null),
   });
+  const close = server.close;
+  let closed = false;
+  server.close = async () => { if (closed) return; closed = true; await close(); };
+  started.push(server);
   const address = await server.listen();
   return { server, url: `ws://127.0.0.1:${address.port}${WS_PATH}` };
 }

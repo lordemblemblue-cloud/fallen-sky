@@ -14,7 +14,7 @@ const enemy = (hp = 25, x = 0, z = 1.5) => ({
 });
 
 test('four distinct classes share weapons recognized by the combat core', () => {
-  assert.deepEqual(CLASS_IDS, ['assassin', 'duelist', 'juggernaut', 'healer']);
+  assert.deepEqual(CLASS_IDS, ['warrior', 'duelist', 'assassin', 'healer']);
   for (const id of CLASS_IDS) {
     const def = classById(id);
     assert.equal(def?.id, id);
@@ -28,7 +28,7 @@ test('four distinct classes share weapons recognized by the combat core', () => 
   }
   assert.equal(CLASSES.assassin.weapon, 'staff');
   assert.equal(CLASSES.duelist.weapon, 'dualBlades');
-  assert.equal(CLASSES.juggernaut.weapon, 'sword');
+  assert.equal(CLASSES.warrior.weapon, 'sword');
   assert.equal(CLASSES.healer.weapon, 'sword');
   assert.equal(classById('constructor'), null, 'prototype property must not be interpreted as a class');
   assert.equal(classById('__proto__'), null);
@@ -103,13 +103,13 @@ test('an execution never passes spawn protection or targets allies or fallen ene
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: null }).reason, 'target-required');
 });
 
-test('Rage and healer field register distinct, server-resolved effects', () => {
-  assert.deepEqual(evaluateSpecial({ classId: 'juggernaut', meter: 100, actor }), {
+test('Rage and the Sanctuary dome register distinct, server-resolved effects', () => {
+  assert.deepEqual(evaluateSpecial({ classId: 'warrior', meter: 100, actor }), {
     allowed: true, effect: 'rage', cost: 100, meterAfter: 0,
-    animation: CLASSES.juggernaut.special.animation,
+    animation: CLASSES.warrior.special.animation,
   });
   assert.deepEqual(evaluateSpecial({ classId: 'healer', meter: 100, actor }), {
-    allowed: true, effect: 'wardField', cost: 100, meterAfter: 0,
+    allowed: true, effect: 'sanctuary', cost: 100, meterAfter: 0,
     animation: CLASSES.healer.special.animation,
   });
   assert.equal(evaluateSpecial({ classId: 'healer', meter: 100, actor: { ...actor, hp: 0 } }).reason, 'actor-defeated');

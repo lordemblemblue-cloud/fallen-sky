@@ -7,14 +7,21 @@
 // interactions (stand close and hold the interact key), comms lines, defeats and respawns:
 //   - a fallen player comes back at the stage's checkpoint after a few seconds while someone still stands;
 //   - if the whole crew is down, the stage starts again from its checkpoint.
+// Some people stand down when beaten instead of falling (their type's `yields`): they kneel, stop fighting
+// and nothing reaches them. A mission may bring in allies on the crew's side (its `allies`, a stage's
+// h.ally): driven by the duel bot, holding a post; driven back, they catch their breath, they never fall.
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf } from './world.mjs';
 import { createLevel, setDoor } from './level.mjs';
 import { createEnemy, thinkEnemy, alert, spreadAlarm, ENEMY_TYPES } from './enemies.mjs';
-import { createRandom } from './bots.mjs';
-import { isStunned, isDown } from '../core/index.mjs';
+import { createRandom, createBot, think } from './bots.mjs';
+import { isStunned, isDown, stagger } from '../core/index.mjs';
 import { CONTRABAND } from './missions/contraband.mjs';
+import { SALTMARCH } from './missions/saltmarch.mjs';
 
-export const MISSIONS = Object.freeze({ contraband: CONTRABAND });
+export const MISSIONS = Object.freeze({ contraband: CONTRABAND, saltmarch: SALTMARCH });
+// the story in order: a crew that finishes one goes on to the next (the last one plays again)
+export const MISSION_ORDER = Object.freeze(['contraband', 'saltmarch']);
+export const nextMission = (id) => MISSION_ORDER[MISSION_ORDER.indexOf(id) + 1] || id;
 export const CREW = 'crew';
 export const RESPAWN_SECONDS = 6;
 export const RETRY_SECONDS = 4;
@@ -36,8 +43,8 @@ export function createMission({ id = 'contraband', players = [{ id: 'you', name:
     id: def.id, def, world, level, seed, random: createRandom(seed * 7919 + 101),
     phase: 'live', // live | failed | complete
     phaseUntil: 0, stageIndex: -1, stageClock: 0, clock: 0,
-    seats: new Map(), enemies: new Map(), interactables: new Map(), flags: {}, counters: {},
-    comms: [], events: [], checkpoint: def.start, nextEnemy: 1, capacity: 4,
+    seats: new Map(), enemies: new Map(), allies: new Map(), interactables: new Map(), flags: {}, counters: {},
+    comms: [], events: [], checkpoint: def.start, nextEnemy: 1, nextAlly: 1, capacity: 4,
   };
   for (const it of def.interactables) mission.interactables.set(it.id, { ...it, enabled: false, done: false, progress: 0, by: null });
   for (const p of players.slice(0, 4)) joinMission(mission, p);
@@ -71,9 +78,15 @@ export function leaveMission(mission, id) {
   return true;
 }
 
+/**
+ * How long a comms line stays up (and holds the next one back): long enough for its recorded voice
+ * (public/audio/duelist/voices; the slowest speaker takes about 0.067 s a character) and a beat after it.
+ */
+export const commsSeconds = (text) => Math.max(3.2, 1.6 + text.length * 0.07);
+
 // ---- what a stage's hooks may call
 const say = (mission, speaker, text, seconds = null) => {
-  const line = { speaker, text, seconds: seconds ?? Math.max(3.2, 1.6 + text.length * 0.055) };
+  const line = { speaker, text, seconds: seconds ?? commsSeconds(text) };
   mission.comms.push(line);
   mission.events.push({ type: 'comms', speaker, text, at: mission.world.time });
 };
@@ -98,6 +111,49 @@ function spawn(mission, groupId) {
   }
   return made;
 }
+// still in the fight: not fallen, not stood down
+const standing = (mission, e) => !e.yielded && !mission.world.fighters.get(e.id)?.vitals.dead;
+
+// someone stands down: they stop fighting, kneel, and nothing reaches them any more
+function yieldPerson(mission, enemy) {
+  if (enemy.yielded) return;
+  enemy.yielded = true;
+  const f = mission.world.fighters.get(enemy.id);
+  if (f) {
+    f.yielded = true;
+    f.vitals.dead = false;
+    f.vitals.hp = Math.max(1, f.vitals.hp);
+    f.action = null;
+    f.guard = null;
+    f.buffer = null;
+    f.protectedUntil = Infinity;
+  }
+  mission.events.push({ type: 'yielded', id: enemy.id, name: enemy.name, named: enemy.named, at: mission.world.time });
+}
+
+// an ally of the crew's (the mission's `allies`), at its spawn, or (after a wipe) back at its post
+function placeAlly(mission, ally, at) {
+  const type = ENEMY_TYPES[ally.typeId] || ENEMY_TYPES.willUser;
+  removeFighter(mission.world, ally.id);
+  const f = addFighter(mission.world, { id: ally.id, team: CREW, weapon: type.weapon, x: at.x, z: at.z, yaw: at.yaw ?? ally.spawn.yaw, vitals: { ...type.vitals } });
+  if (type.willRegenScale) f.vitals.willRegenScale = type.willRegenScale;
+  return f;
+}
+function spawnAlly(mission, key) {
+  const spec = mission.def.allies?.[key];
+  if (!spec) return null;
+  const known = [...mission.allies.values()].find((a) => a.key === key);
+  if (known) return known;
+  const type = ENEMY_TYPES[spec.type] || ENEMY_TYPES.willUser;
+  const id = `a${mission.nextAlly++}`;
+  const ally = { id, key, name: spec.name || type.title, tag: spec.tag || null, typeId: spec.type, spawn: { x: spec.x, z: spec.z, yaw: spec.yaw || 0 },
+    post: spec.post || null, bot: createBot(id, { level: type.botLevel || 'master', seed: mission.seed * 53 + mission.nextAlly * 7 }) };
+  mission.allies.set(id, ally);
+  placeAlly(mission, ally, ally.spawn);
+  mission.events.push({ type: 'ally', id, name: ally.name, at: mission.world.time });
+  return ally;
+}
+
 const helpers = (mission) => ({
   say: (speaker, text, seconds) => say(mission, speaker, text, seconds),
   spawn: (group) => spawn(mission, group),
@@ -110,7 +166,15 @@ const helpers = (mission) => ({
   flag: (name, value = true) => { mission.flags[name] = value; },
   alarm: () => { for (const e of mission.enemies.values()) alert(e, mission.world.time, mission.checkpoint); },
   tagged: (tag) => [...mission.enemies.values()].find((e) => e.tag === tag) || null,
-  alive: (group) => [...mission.enemies.values()].filter((e) => e.group === group && !mission.world.fighters.get(e.id)?.vitals.dead).length,
+  alive: (group) => [...mission.enemies.values()].filter((e) => e.group === group && standing(mission, e)).length,
+  alerted: (group) => [...mission.enemies.values()].some((e) => e.group === group && e.alerted),
+  yieldedIn: (group) => [...mission.enemies.values()].filter((e) => e.group === group && e.yielded).length,
+  // everyone (of a group) stands down
+  yieldAll: (group = null) => { for (const e of mission.enemies.values()) if (!group || e.group === group) yieldPerson(mission, e); },
+  // whoever stood down leaves (out of the picture: into a tunnel, out of the door)
+  evacuate: () => { for (const [id, e] of [...mission.enemies]) if (e.yielded) { removeFighter(mission.world, id); mission.enemies.delete(id); } },
+  ally: (key) => spawnAlly(mission, key),
+  allyPost: (tag, at) => { for (const a of mission.allies.values()) if (a.tag === tag) a.post = at; },
   crewNear: (at, radius) => crewAlive(mission).filter((s) => dist(bodyOf(mission.world, s.id), at) <= radius).length,
   crewAlive: () => crewAlive(mission).length,
 });
@@ -142,6 +206,7 @@ export function stepMission(mission, dt, inputs = {}) {
   mission.clock += dt;
   mission.stageClock += dt;
   const playerIds = [...mission.seats.keys()];
+  const targets = [...playerIds, ...mission.allies.keys()]; // whom the depot's people go after
   const all = {};
   for (const s of mission.seats.values()) {
     const f = world.fighters.get(s.id);
@@ -157,9 +222,30 @@ export function stepMission(mission, dt, inputs = {}) {
   const ctx = { grant: () => (shooting < limit ? ((shooting += 1), true) : false) };
   for (const e of mission.enemies.values()) {
     const f = world.fighters.get(e.id);
-    if (f && !f.vitals.dead && !e.yielded) all[e.id] = thinkEnemy(world, e, playerIds, ctx);
+    if (f && !f.vitals.dead && !e.yielded) all[e.id] = thinkEnemy(world, e, targets, ctx);
   }
-  const effects = step(world, dt, all);
+  for (const a of mission.allies.values()) {
+    const f = world.fighters.get(a.id);
+    if (f && !f.vitals.dead) all[a.id] = think(world, a.bot, { goal: a.post });
+  }
+  let effects = step(world, dt, all);
+  // people who stand down when beaten do so instead of falling; an ally driven back catches their breath
+  const spared = new Set();
+  for (const e of mission.enemies.values()) {
+    const f = world.fighters.get(e.id);
+    if (e.yielded || !e.type.yields || !f) continue;
+    if (f.vitals.dead || f.vitals.hp <= f.vitals.max.hp * e.type.yields) { yieldPerson(mission, e); spared.add(e.id); }
+  }
+  for (const a of mission.allies.values()) {
+    const f = world.fighters.get(a.id);
+    if (!f || !(f.vitals.dead || f.vitals.hp < f.vitals.max.hp * 0.2)) continue;
+    f.vitals.dead = false;
+    f.vitals.hp = Math.max(f.vitals.hp, f.vitals.max.hp * 0.5);
+    f.protectedUntil = world.time + 2.5;
+    stagger(f, 0.8, world.time);
+    spared.add(a.id);
+  }
+  if (spared.size) effects = effects.filter((fx) => !(fx.type === 'defeat' && spared.has(fx.defender)));
   // hits wake whoever they land on; the fallen are counted
   for (const fx of effects) {
     if (fx.type === 'impact') {
@@ -175,7 +261,7 @@ export function stepMission(mission, dt, inputs = {}) {
   }
   // a squad with nobody left standing is cleared for good (a wipe does not bring it back)
   for (const g of new Set([...mission.enemies.values()].map((e) => e.group))) {
-    if (!mission.flags[`cleared:${g}`] && ![...mission.enemies.values()].some((e) => e.group === g && !world.fighters.get(e.id)?.vitals.dead)) mission.flags[`cleared:${g}`] = true;
+    if (!mission.flags[`cleared:${g}`] && ![...mission.enemies.values()].some((e) => e.group === g && standing(mission, e))) mission.flags[`cleared:${g}`] = true;
   }
   spreadAlarm(world, mission.enemies, now);
   interactions(mission, dt, inputs);
@@ -241,6 +327,7 @@ function retryStage(mission) {
   world.projectiles.length = 0;
   let i = 0;
   for (const s of mission.seats.values()) { s.respawnAt = null; s.hurtAt = -Infinity; respawnFighter(world, s.id, { ...spawnPoint(mission, i++), protect: 2 }); }
+  for (const a of mission.allies.values()) placeAlly(mission, a, a.post || a.spawn).protectedUntil = world.time + 2;
   mission.phase = 'live';
   mission.stageClock = 0;
   mission.comms.length = 0;
@@ -314,5 +401,8 @@ export function missionView(mission, forId = null) {
       kind: it.kind || 'use', progress: Math.min(1, it.progress / it.seconds), by: it.by })),
     done: [...mission.interactables.values()].filter((it) => it.done).map((it) => it.id),
     doors: [...mission.level.doors.values()].map((d) => ({ id: d.id, open: d.open })),
+    yielded: [...mission.enemies.values()].filter((e) => e.yielded).map((e) => e.id), // kneeling, out of the fight
+    // finished: the story's next mission (a crew goes on to it)
+    next: mission.phase === 'complete' && nextMission(def.id) !== def.id ? { id: nextMission(def.id), title: MISSIONS[nextMission(def.id)].title } : null,
   };
 }

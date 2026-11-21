@@ -3,20 +3,24 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import DuelistGame from '@/components/duelist/client/DuelistGame';
 import { BODIES } from '@/components/duelist/client/assets.mjs';
-import { readPrefs } from '@/components/duelist/client/prefs.mjs';
+import { readPrefs, writePrefs } from '@/components/duelist/client/prefs.mjs';
 import { duelistServerUrl } from '@/components/duelist/net/client.mjs';
 import { MENU_MODES } from '@/components/duelist/menu/modes';
+import { missionTitle } from '@/components/duelist/menu/missions';
 
 // Duelist Adventure's arena (the new build): the match the menus chose, with your saved fighter and settings.
-// mode: practice | duel | ffa | tdm | ctf | any (Join) | story (the mission); online: on the match server, else against bots here.
-export default function DuelistArena({ mode = 'practice', online = false, room = null, matchId = null, from = null }) {
+// mode: practice | duel | ffa | tdm | ctf | football | control | online | any (Join) | story (mission: which);
+// online: on the match server, else against bots here. matchId: a listed match to join. from: 'duelist' when the
+// /duelist menu sent the player here (Menu goes back there).
+export default function DuelistArena({ mode = 'practice', online = false, room = null, mission = 'contraband', matchId = null, from = null }) {
   const [prefs] = useState(readPrefs);
+  const [playing, setPlaying] = useState(mission); // a crew may play another mission (a friend's code, the next one)
   const navigate = useNavigate();
   const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
   const back = mode === 'any' ? 'join' : mode;
   const backToMenu = from === 'duelist' ? '/duelist' : null;
-  const leave = () => backToMenu ? navigate({ to: backToMenu }) : navigate({ to: '/duelist-next/$page', params: { page: back } });
-  const title = mode === 'any' ? 'Join' : mode === 'story' ? 'Contraband' : MENU_MODES[mode]?.title || 'Practice';
+  const leave = () => (backToMenu ? navigate({ to: backToMenu }) : navigate({ to: '/duelist-next/$page', params: { page: back } }));
+  const title = mode === 'any' ? 'Join' : mode === 'story' ? missionTitle(playing) : MENU_MODES[mode]?.title || 'Practice';
   const where = mode === 'story' ? (online ? 'story mission, with a crew' : 'story mission, solo') : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
   const unavailable = online && !serverUrl;
   return (
@@ -38,7 +42,11 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            bots={prefs.bots} sensitivity={prefs.sensitivity} room={room} matchId={matchId} onLeave={leave} />
+            bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} matchId={matchId}
+            classId={prefs.classId} onClassChange={(id) => writePrefs({ classId: id })}
+            xp={prefs.xp || 0} onXp={(gained) => writePrefs({ xp: (readPrefs().xp || 0) + gained })}
+            mission={mission} onMission={setPlaying} onLeave={leave}
+            onNext={(id) => navigate({ to: '/duelist-next/play', search: { mode: 'story', mission: id, online: 0, ...(from ? { from } : {}) } })} />
         )}
       </section>
     </main>
