@@ -1,0 +1,24 @@
+name: Duelist Match Shop and Air Dash
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/**'
+      - 'server/duelist/**'
+      - 'tests/duelist-shop.test.mjs'
+      - 'tests/duelist-air-dash.test.mjs'
+      - 'public/duelist/items/**'
+      - '.github/workflows/duelist-shop-inventory.yml'
+  workflow_dispatch:
+jobs:
+  shop-and-movement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Shop tiers, gold, item snapshots, and air dash tests
+        run: node --test tests/duelist-shop.test.mjs tests/duelist-air-dash.test.mjs
