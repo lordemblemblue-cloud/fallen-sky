@@ -19,8 +19,8 @@ test('Play, Character and Settings share the home hangar overlay', () => {
   assert.match(menu, /activePanel === 'play'/);
   assert.match(menu, /activePanel === 'character'/);
   assert.match(menu, /activePanel === 'settings'/);
-  assert.match(menu, /<FighterContent \/>/);
-  assert.match(menu, /<SettingsContent \/>/);
+  assert.match(menu, /<FighterContent sharedPrefs=/);
+  assert.match(menu, /<SettingsContent sharedPrefs=/);
   assert.match(menu, /className="duelist-hub-scrim"/);
   assert.match(routes, /<DuelistHub initialPanel=/);
   assert.match(css, /backdrop-filter: blur\(7px\)/);
