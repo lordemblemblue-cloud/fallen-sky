@@ -186,7 +186,7 @@ import {createWolfveilAreaCrossingMist} from './wolfveil/streaming/WolfveilAreaC
 // localStorage game3d.naturalZones=1; the five-area loader stays the rollback.
 import {createWolfveilNaturalZones,collectWolfveilSurfaceRoots} from './wolfveil/zones/WolfveilNaturalZones.js';
 import {wolfveilNaturalZonesEnabled} from './wolfveil/zones/WolfveilNaturalZoneFlag.mjs';
-import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics} from './performance/Game3DPlatformGraphics.mjs';
+import {GAME3D_PLATFORM_GRAPHICS_EVENT,bootGame3DPlatformGraphics,readGame3DPlatformGraphics} from './performance/Game3DPlatformGraphics.mjs';
 import {createWolfveilAmbientBirds} from './wolfveil/ambient/WolfveilAmbientBirds.mjs';
 import {createVortexLakeLandmark} from './wolfveil/VortexLakeScene.mjs';
 import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAssets.mjs';
@@ -929,12 +929,23 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Distant-area skyline silhouettes are intentionally excluded from portal-only play.
     const farOutline=null;
     let areaTravelStarted=false;
+    // The previous hardcoded 0 m preload / immediate GPU disposal overrode each
+    // platform's settings. Preparing the next area before a portal and retaining
+    // recently used GPU resources prevents repeated uploads while moving.
+    // Keep distinct profiles for browser, installed desktop and lower-memory mobile.
+    const areaStreamingOptions=()=>{
+      const profile=readGame3DPlatformGraphics(window).profile;
+      return {
+        mode:profile.areaLoading,preloadMeters:profile.preloadMeters,
+        releaseGpuMemory:profile.releaseGpuMemory,releaseDelaySeconds:20,
+        farScenery:profile.farScenery,
+      };
+    };
     const regionStream=wolfveilVillage?createWolfveilAreaLoader({
       world:wolfveilVillage.world,position:initialAreaPosition,portals:WOLFVEIL_AREA_PORTALS,
-      // Competition-safe portal mode: never pre-draw the neighboring four maps.
-      mode:'single',preloadMeters:0,batchesPerFrame:12,settleSeconds:0,
-      releaseGpuMemory:true,releaseDelaySeconds:0,
-      farScenery:false,farProxy:null,
+      ...areaStreamingOptions(),
+      // Spread the per-area instance rebuild over frames, including WebGPU.
+      batchesPerFrame:4,settleSeconds:0,farProxy:null,
       groundHeightAt:(x,z)=>wolfveilVillage.worldHeight(x,z),
       onTransition(detail){
         window.dispatchEvent(new CustomEvent('game3dWorldRegionChange',{detail}));
@@ -1000,9 +1011,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       return areaPortals.resolveCollision(position,from,radius);
     };
     const onPlatformGraphics=()=>{
-      // Graphics presets may alter resolution/FPS, never reactivate hidden maps.
-      regionStream?.setOptions({mode:'single',preloadMeters:0,
-        releaseGpuMemory:true,releaseDelaySeconds:0,farScenery:false});
+      // Apply the active platform's loading preferences without throwing away
+      // already prepared neighboring scenery after changing graphics settings.
+      regionStream?.setOptions(areaStreamingOptions());
     };
     window.addEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
     // In an explicitly E-entered cave session, movement's ground-step guard
