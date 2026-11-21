@@ -59,3 +59,28 @@ test('observer attachment failures fail closed without throwing', () => {
 test('reject missing dependencies', () => {
   assert.throws(() => coordinateWebGPUDeviceLoss({}), TypeError);
 });
+
+test('asynchronous fallback rejection is consumed', async () => {
+  const rejected = Promise.reject(new Error('renderer restart failed'));
+  let notify;
+  coordinateWebGPUDeviceLoss({
+    device: {},
+    observe: (_device, callback) => { notify = callback; return { attached: true, stop() {} }; },
+    classify: () => ({ action: 'fallback-webgl' }),
+    fallback: () => rejected,
+  });
+  notify({ reason: 'device-lost', info: { reason: 'unknown' } });
+  // Give the Promise rejection handler an opportunity to run.
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
+test('synchronous fallback exceptions do not escape loss notification', () => {
+  let notify;
+  coordinateWebGPUDeviceLoss({
+    device: {},
+    observe: (_device, callback) => { notify = callback; return { attached: true, stop() {} }; },
+    classify: () => ({ action: 'fallback-webgl' }),
+    fallback: () => { throw new Error('renderer restart failed'); },
+  });
+  assert.doesNotThrow(() => notify({ reason: 'device-lost', info: { reason: 'unknown' } }));
+});
