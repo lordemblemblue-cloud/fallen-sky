@@ -12,6 +12,8 @@ on:
       - 'tests/duelistHomeEntry.test.mjs'
       - 'tests/duelistPlayDrawer.test.mjs'
       - 'tests/duelistUnifiedUi.test.mjs'
+      - 'tests/duelistHomeOverlays.test.mjs'
+      - 'src/routes/duelist-next.$page.jsx'
       - 'src/components/duelist/client/MatchLoadingScreen.jsx'
       - 'src/components/duelist/client/DuelistGame.jsx'
       - 'src/pages/DuelistNext.jsx'
@@ -41,7 +43,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Check mode catalog and game entry routing
-        run: node --test tests/duelistCinematicHub.test.mjs tests/duelistHomeEntry.test.mjs tests/duelistPlayDrawer.test.mjs tests/duelistUnifiedUi.test.mjs
+        run: node --test tests/duelistCinematicHub.test.mjs tests/duelistHomeEntry.test.mjs tests/duelistPlayDrawer.test.mjs tests/duelistUnifiedUi.test.mjs tests/duelistHomeOverlays.test.mjs
       - name: Lint changed UI
         run: npx eslint src/components/duelist/menu/MenuPages.jsx src/components/duelist/menu/DuelistHangarStage.jsx src/components/duelist/menu/hubModeCatalog.mjs src/routes/duelist.jsx src/routes/duelist-classic.jsx src/components/duelist/client/MatchLoadingScreen.jsx src/components/duelist/client/DuelistGame.jsx src/pages/DuelistNext.jsx
       - name: Build preview application
