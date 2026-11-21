@@ -25,20 +25,24 @@ export function sampleDrawSubmission(renderer) {
  * frames indicates an empty submission, not necessarily a black screen.
  */
 export function assessDrawSubmission(previous, current) {
-  if (!previous || !current || previous.frame === null || current.frame === null ||
-      !Number.isFinite(previous.frame) || !Number.isFinite(current.frame) ||
-      current.frame < previous.frame) {
+  // Reject fabricated or corrupt counters rather than reporting GPU activity.
+  const valid = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+  try {
+    if (!previous || !current || !valid(previous.frame) || !valid(current.frame) ||
+        current.frame < previous.frame) {
+      return Object.freeze({ status: 'insufficient-evidence', suspicious: false });
+    }
+    if (current.frame === previous.frame) {
+      return Object.freeze({ status: 'frame-not-advancing', suspicious: true });
+    }
+    if (!valid(previous.calls) || !valid(current.calls)) {
+      return Object.freeze({ status: 'insufficient-evidence', suspicious: false });
+    }
+    if (previous.calls === 0 && current.calls === 0) {
+      return Object.freeze({ status: 'zero-draw-submissions', suspicious: true });
+    }
+    return Object.freeze({ status: 'draws-observed', suspicious: false });
+  } catch {
     return Object.freeze({ status: 'insufficient-evidence', suspicious: false });
   }
-  if (current.frame === previous.frame) {
-    return Object.freeze({ status: 'frame-not-advancing', suspicious: true });
-  }
-  if (previous.calls === null || current.calls === null ||
-      !Number.isFinite(previous.calls) || !Number.isFinite(current.calls)) {
-    return Object.freeze({ status: 'insufficient-evidence', suspicious: false });
-  }
-  if (previous.calls === 0 && current.calls === 0) {
-    return Object.freeze({ status: 'zero-draw-submissions', suspicious: true });
-  }
-  return Object.freeze({ status: 'draws-observed', suspicious: false });
 }
