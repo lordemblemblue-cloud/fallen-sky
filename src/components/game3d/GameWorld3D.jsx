@@ -2992,12 +2992,10 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           e.preventDefault();return;
         }
         if (getActiveWeaponPath()!=='ranged' && isAXEClickToMoveEnabled() && tryClickToMove(e)) { e.preventDefault(); return; }
-        // A click directly on a hostile chooses it for the NEXT ability.
-        // Basic click damage remains a separate explicit action.
-        const selected=handleMiddleClick({event:e,renderer,camera,enemies,
-          remoteManager:remoteManagerRef.current,setPlayerMenu,
-          rogues:window.__gw3dRogues||[],bosses:bossEntities,clearOnMiss:false});
-        if(selected){lockOnTargetRef.current=selected;pendingAbilityApproach=null;}
+        // Basic left-click attacks are FREE-AIM for sword and dagger (and
+        // remain reticle-driven for bows). Never invoke the selection handler
+        // or modify lockOnTargetRef here: only explicit Alt+click or middle
+        // click may create a manual lock. Existing manual selections survive.
         // Melee clicks never borrow the bow's 12m range or attack montage.
         // The clone's existing over-the-shoulder reticle stays independent.
         if(getActiveWeaponPath()==='ranged'){
