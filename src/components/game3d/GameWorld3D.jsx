@@ -164,6 +164,7 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
+import {resolveFallenSkyLiveRendererChoice} from './render/liveRendererRecovery.mjs';
 import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,holdSceneFrames,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
@@ -542,7 +543,11 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
     // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
     // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
-    const rendererChoice = chooseSceneRendererFor('fallen-sky', window);
+    // Emergency safety gate: the Windows live shell has reported a fully loaded but all-black
+    // WebGPU scene with zero draws. Until device-level visual QA passes, use classic WebGL
+    // unless a developer explicitly requests a WebGPU/WebGL2 preview in the current URL.
+    const rendererChoice = resolveFallenSkyLiveRendererChoice(
+      chooseSceneRendererFor('fallen-sky', window), { search: window.location.search });
     window.__gw3dRendererChoice = rendererChoice;
     const showWorldUnavailable = (detail) => {
       const msg = document.createElement('div');
