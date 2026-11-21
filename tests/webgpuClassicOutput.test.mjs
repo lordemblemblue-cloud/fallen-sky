@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { classicOutputPolicyForMaterial } from '../src/lib/webgpuClassicOutput.js';
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { classicOutputPolicyForMaterial, materialReadsNormals } from '../src/lib/webgpuClassicOutput.js';
 
-// WebGL reads a missing normal attribute as (0, 0, 0); a lit material then normalizes it to NaN and draws black.
-// r171's WebGPURenderer substitutes an up normal instead, so the policy flags the materials whose look depends on it.
+// WebGL reads a missing normal attribute as (0, 0, 0); r171's WebGPURenderer substitutes an up normal instead, so the
+// scene renderer gives the geometry of the materials flagged here a zero normal, as WebGL reads it.
 test('lit smooth-shaded classic materials keep the WebGL result on geometry without normals', () => {
   for (const Material of [THREE.MeshStandardMaterial, THREE.MeshPhysicalMaterial, THREE.MeshLambertMaterial,
     THREE.MeshPhongMaterial, THREE.MeshToonMaterial, THREE.MeshMatcapMaterial]) {
@@ -17,6 +18,13 @@ test('unlit and flat-shaded materials do not depend on a normal attribute', () =
   assert.equal(classicOutputPolicyForMaterial(new THREE.SpriteMaterial()).litNeedsNormals, false);
   assert.equal(classicOutputPolicyForMaterial(new THREE.PointsMaterial()).litNeedsNormals, false);
   assert.equal(classicOutputPolicyForMaterial(new THREE.MeshStandardMaterial({ flatShading: true })).litNeedsNormals, false);
+});
+
+test('only classic lit materials get the zero normal; node materials keep their own', () => {
+  assert.equal(materialReadsNormals(new THREE.MeshStandardMaterial()), true);
+  assert.equal(materialReadsNormals(new MeshStandardNodeMaterial()), false);
+  assert.equal(materialReadsNormals(new THREE.MeshLambertMaterial({ flatShading: true })), false);
+  assert.equal(materialReadsNormals(null), false);
 });
 
 test('tone mapping and fog follow the material flags', () => {

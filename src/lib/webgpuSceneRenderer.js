@@ -16,15 +16,15 @@
  * Rendering must wait for `ready` (or check `isSceneRendererReady`): before init, three only warns and renders
  * asynchronously.
  */
-import { WebGPURenderer, ShadowNode, NoToneMapping, LinearSRGBColorSpace, SRGBColorSpace, Color, FrontSide, BackSide, DoubleSide } from 'three/webgpu';
-import { texture, vec4 } from 'three/tsl';
+import { WebGPURenderer, ShadowNode, NoToneMapping, LinearSRGBColorSpace, SRGBColorSpace, Color, FrontSide, BackSide, DoubleSide, BufferAttribute } from 'three/webgpu';
+import { texture, vec4, normalFlat, faceDirection } from 'three/tsl';
 import { WebGLRenderer } from 'three';
 import { chooseSceneRendererFor, rememberRendererFailure } from './rendererBackendChoice.mjs';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
 import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
 import { pointSpriteFor, pointSpriteForTwin } from './webgpuPointSprites.js';
 import { applyNodeSetups } from './webgpuNodeKit.js';
-import { applyClassicOutput, applyClassicShaderOutput, classicOutputKey } from './webgpuClassicOutput.js';
+import { applyClassicOutput, applyClassicShaderOutput, classicOutputKey, materialReadsNormals } from './webgpuClassicOutput.js';
 
 export const WEBGPU_DEFAULT_MAX_TEXTURE = 8192;
 // WebGLShadowMap's side for a material with shadowSide = null
@@ -275,6 +275,12 @@ function installCompat(renderer) {
         return renderObject.call(this, sprite.mesh, scene, camera, sprite.geometry, twin, ...rest);
       }
     }
+    // A lit classic material on a geometry without normals: the zero normal WebGL reads (webgpuClassicOutput.js
+    // materialReadsNormals), not r171's up normal. Added before the geometry's first WebGPU draw (shadow pass first).
+    if (geometry && !geometry.attributes.normal && geometry.attributes.position && materialReadsNormals(material)) {
+      geometry.setAttribute('normal', new BufferAttribute(new Float32Array(geometry.attributes.position.count * 3), 3));
+      geometry.userData.webgpuZeroNormals = true;
+    }
     const override = scene?.overrideMaterial;
     if (override) {
       if (!override.__sceneNodeKeyed) keyOverrideByNodes(override);
@@ -299,6 +305,14 @@ function installCompat(renderer) {
   const fromMaterial = library.fromMaterial.bind(library);
   library.fromMaterial = (material) => {
     const nodeMaterial = applyNodeSetups(material, fromMaterial(material));
+    // r171 multiplies every normal by the face direction, also a flat-shaded material's (screen-derivative) normal,
+    // which already faces the camera: the back faces of double-sided flat-shaded meshes (grass cards, low-poly
+    // foliage) were lit as if facing away. Classic GLSL leaves FLAT_SHADED normals as they are; pre-multiplying by
+    // the face direction (+-1) cancels r171's.
+    if (nodeMaterial && !material?.isNodeMaterial && material?.flatShading && material.side !== FrontSide
+      && !nodeMaterial.normalNode && !material.normalMap && !material.bumpMap) {
+      nodeMaterial.normalNode = normalFlat.mul(faceDirection);
+    }
     // the classic output order for converted classic materials (webgpuClassicOutput.js)
     if (material?.isShadowMaterial && nodeMaterial) patchShadowMask(nodeMaterial);
     return material?.isNodeMaterial ? nodeMaterial : applyClassicOutput(material, nodeMaterial);

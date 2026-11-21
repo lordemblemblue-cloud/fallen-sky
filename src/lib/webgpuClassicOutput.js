@@ -17,14 +17,23 @@ import {
   Fn, output, vec4, float, mix, smoothstep, exp, positionView, reference, renderGroup, renderOutput,
 } from 'three/tsl';
 
+/**
+ * Whether a classic built-in material reads the geometry's normal attribute (lit, smooth-shaded). Drawn on a
+ * geometry without one, WebGL reads the missing attribute as (0, 0, 0), and what the lighting makes of that depends
+ * on the GPU and the lights (normalize(0) is NaN on D3D: the Wolfveil long-grass tiles draw as black strokes). r171
+ * substitutes an up normal instead (fully lit, pale), so webgpuSceneRenderer.js gives such a geometry the same zero
+ * normal WebGL reads and leaves the rest to the same lighting maths.
+ */
+export function materialReadsNormals(material) {
+  return !!(material && !material.flatShading && !material.isNodeMaterial && (material.isMeshStandardMaterial
+    || material.isMeshLambertMaterial || material.isMeshPhongMaterial || material.isMeshToonMaterial
+    || material.isMeshMatcapMaterial));
+}
+
 /** What a classic built-in material (MeshStandardMaterial, SpriteMaterial, PointsMaterial...) does. */
 export function classicOutputPolicyForMaterial(material) {
-  // A lit material drawn on a geometry without a normal attribute: WebGL reads the missing attribute as (0, 0, 0),
-  // normalize() makes it NaN and the lit colour comes out black (some grass meshes, e.g. the meadow tufts, draw as
-  // dark strokes on WebGL this way). r171 substitutes an up normal instead (lit, pale): keep the classic result.
-  const lit = !!(material && !material.flatShading && (material.isMeshStandardMaterial || material.isMeshLambertMaterial
-    || material.isMeshPhongMaterial || material.isMeshToonMaterial || material.isMeshMatcapMaterial));
-  return { toneMap: material?.toneMapped !== false, encode: true, fog: material?.fog !== false, litNeedsNormals: lit };
+  return { toneMap: material?.toneMapped !== false, encode: true, fog: material?.fog !== false,
+    litNeedsNormals: materialReadsNormals(material) };
 }
 
 /** What a ShaderMaterial does: only the steps its fragment shader includes. */
@@ -57,7 +66,6 @@ export function classicOutput(colorNode, policy) {
   return Fn((builder) => {
     const renderer = builder.renderer;
     const toScreen = renderer.getRenderTarget() === null;
-    if (policy.litNeedsNormals && builder.geometry?.hasAttribute?.('normal') === false) return vec4(0, 0, 0, vec4(colorNode).a);
     let color = vec4(colorNode);
     if (toScreen) {
       const toneMapping = policy.toneMap ? renderer.toneMapping : NoToneMapping;

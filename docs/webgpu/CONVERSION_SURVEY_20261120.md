@@ -297,8 +297,11 @@ wilds, where its GPU time doubles). The Duelist practice match measured faster o
   (instanced plants and grass the only clearly heavier one). Western wilds: render CPU 10.2 ms vs 6.9 ms classic,
   mostly r171's per-object uniform / binding refresh (~3 ms); the splat terrain is ~3 ms of GPU.
 - Fixes: the living meadow and ground-cover grass bend away from footsteps on WebGPU again (r171 silently drops a TSL
-  `Loop` built outside a `Fn`); lit materials on geometry without a normal attribute draw black as on WebGL (r171
-  substituted an up normal, so the meadow tufts came out pale); splat terrain lookups use implicit derivatives where
+  `Loop` built outside a `Fn`); lit materials on geometry without a normal attribute get the zero normal WebGL reads
+  (r171 substituted an up normal, so the Wolfveil long-grass tiles came out pale instead of dark strokes); flat-shaded
+  materials that show back faces are lit like WebGL's (r171 multiplied their screen-derivative normal, which already
+  faces the camera, by the face direction: back faces were lit as if facing away, so the forest long grass came out
+  blue-black and the western pines paler); splat terrain lookups use implicit derivatives where
   r171 turns WGSL's derivative-uniformity check off (Chrome / Edge; explicit gradients stay for Firefox): ~3.2 ->
   ~2.6 ms in the western view, close to noise.
 - Render bundles (`BundleGroup`) not built: in r171 a bundle holds opaque objects only, keeps the set culled when it
@@ -314,8 +317,20 @@ wilds, where its GPU time doubles). The Duelist practice match measured faster o
 - Decision update: the town is now even, the western wilds still slower on WebGPU, and the Duelist practice match,
   faster on WebGPU in the first run (5.2 vs 7.6 ms), was slower in this one. **Classic stays the default everywhere**;
   WebGPU stays opt-in with `?renderer=webgpu` (`?renderer=auto` forgets it). No readiness flag was changed.
-- Checked live on WebGPU this round: creator stage, lunar cave (portal swirl), astral dungeon (matches classic),
-  Duelist motion lab. Not checked live: Meshy / companion / mini-game previews, vortex lake, forest fallback region.
-- Known difference: cedar and pine trees in the western wilds draw slightly lighter on WebGPU (cause not found).
-- Tests: `node --test tests/` 1569 tests / 100 failing (3 new in `webgpuClassicOutput.test.mjs`); `main` f4a9ee58
+- Checked live on WebGPU, each against classic: creator stage, lunar cave (portal swirl), astral dungeon, Duelist
+  motion lab, companion preview (the shadow wolf mount), vortex lake (north area), the forest region, Wolfveil town
+  and western wilds (ink off). The Meshy face-draft and mini-game arena previews were mounted directly on the dev
+  server (the real flows need the backend: a Meshy draft, a signed-in user) and render on WebGPU; the forest region
+  has no button in the game today and was opened through the login screen's own play handler.
+- The western pines' lighter tone (listed as unexplained in an earlier note) was the flat-shading bug above: fixed.
+- Once, the first WebGPU trip from the town to the north area froze the page for over 10 minutes (the tab had to be
+  closed); no GPU driver reset was logged, and seven later WebGPU trips between the town and the north (one of them
+  the same sequence) took 24-40 s. Cause unknown; a first-visit shader compile is the main suspect: a warm WebGPU
+  area trip builds ~560 node shaders (6.5 s of script) and creates ~250 GPU pipelines synchronously, in main-thread
+  tasks of up to 7.5 s (classic also goes up to 16 s without a frame on the same trip). Worth watching before WebGPU
+  becomes a default.
+- Expected console note on WebGPU world loads: `[webgpu] draw skipped (Mesh): ... setPipeline ...`, once: the game's
+  scene warm-up compiles pipelines asynchronously while frames are drawn, and r171 hands a frame a pipeline that is
+  still compiling. That draw is skipped for one frame (0 bad pipelines in the 117 frames measured after it).
+- Tests: `node --test tests/` 1570 tests / 100 failing (4 new in `webgpuClassicOutput.test.mjs`); `main` f4a9ee58
   has 1566 / 102: the same failures plus the 2 the key fix repairs.
