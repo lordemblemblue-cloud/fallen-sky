@@ -34,12 +34,12 @@ import { createOnlineSource } from '../net/client.mjs';
 import { Countdown, RespawnNote, Result } from './MatchHud.jsx';
 import DuelistHud from './DuelistHud.jsx';
 import { createHudFeed } from './hudFeed.mjs';
-import { levelFrom, xpForEvent } from './progress.mjs';
+import { levelFrom } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
 import { createSecondHand } from './secondHand.mjs';
-import { CLASSES, classById, hiddenFrom, effectOn } from '../core/index.mjs';
+import { CLASSES, classById, hiddenFrom, effectOn, moveFor, abilityRank, specialTier } from '../core/index.mjs';
 
 // A cloaked fighter you can still see (your own, an ally's, an enemy's up close) is a ghost of itself. The body's
 // materials become the actor's own the first time, so no other fighter with the same body fades with it.
@@ -137,7 +137,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
-  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, xp = 0, onXp = null }) {
+  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
@@ -153,9 +153,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const audioRef = useRef(null);
   const onMissionRef = useRef(onMission);
   onMissionRef.current = onMission;
-  const onXpRef = useRef(onXp);
-  onXpRef.current = onXp;
-  const xpRef = useRef(xp); // the player's EXP as this match began; what it earns is added on top
+  // class levels (core/progression.mjs): offline, this browser keeps each class's EXP (progress in, onProgress out);
+  // online, the match server does
+  const onProgressRef = useRef(onProgress);
+  onProgressRef.current = onProgress;
+  const progressRef = useRef(progress);
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
 
@@ -181,7 +183,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
       : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, onChange: (s, detail) => setNet({ status: s, detail }) })
-        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody, classId });
+        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody, classId, progress: progressRef.current });
     const { world } = source;
     sourceRef.current = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
@@ -229,9 +231,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let control = null;
     let lockId = null;
     let clock = 0;
-    // the HUD's kill feed and banners, and the EXP this match has earned
+    // the HUD's kill feed and banners
     const feed = createHudFeed();
-    let earned = 0;
     let portraitOf = null; // the actor the portrait was taken of (retaken when the fighter is rebuilt)
     let portraitWait = 0;
     const lookDir = new THREE.Vector3();
@@ -405,8 +406,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       if (!source.mission && source.kind !== 'mission') {
         const ctx = hudContext();
         feed.event(e, clock, ctx);
-        const gained = xpForEvent(e, ctx);
-        if (gained > 0) { earned += gained; onXpRef.current?.(gained); }
+        // an offline match's EXP is this browser's to keep (the match server keeps an online player's)
+        if (e.type === 'xp' && e.id === ctx.me && !online) onProgressRef.current?.(e.classId, e.total);
       }
       if (e.type === 'fight') { fightTimer = 0.9; setFightFlash(true); }
       else if (e.type === 'captured') audio.play(e.team === myTeam ? 'resist' : 'breach');
@@ -645,7 +646,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             classId: mine?.classId || null,
             abilities: mine?.classId ? CLASSES[mine.classId].abilities.map((ab, i) => ({ id: ab.id, name: ab.name, slot: i + 1,
               key: keyLabel(controls.keys[`ability${i + 1}`], { short: true }), ready: Math.max(0, (mine.cooldowns[ab.id] ?? 0) - world.time),
-              cost: MOVES[ab.id].will, total: MOVES[ab.id].cooldown })) : null,
+              cost: MOVES[ab.id].will, total: moveFor(mine, ab.id).cooldown, rank: abilityRank(mine.level) })) : null,
+            specialTier: mine?.classId ? specialTier(mine.level) : null,
+            classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
             dead: !!mine?.vitals.dead,
@@ -653,7 +656,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             kills: inMatch ? feed.kills(clock).slice() : null,
             banners: inMatch ? feed.banners(clock) : null,
             flagStates: inMatch && view.flags ? { blue: feed.flagState('blue', view.flags.blue?.state, clock), red: feed.flagState('red', view.flags.red?.state, clock) } : null,
-            level: levelFrom(xpRef.current + earned),
+            level: levelFrom(view?.me?.xp ?? 0), // the class's EXP, as the match has it
           });
           setStatus('ready');
         }
@@ -754,7 +757,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {!online && status === 'loading' && <div className="duelist-center">{mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'}</div>}
       {status === 'error' && <div className="duelist-center">The fighters could not be loaded.</div>}
       {showPicker && (
-        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys}
+        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
       )}
     </div>

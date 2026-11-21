@@ -135,13 +135,14 @@ test('a real Capture the Flag match feeds the HUD: its own events and view produ
 });
 
 test('level and EXP: earned from what the match reports, and a level is never lost', () => {
-  assert.deepEqual(levelFrom(0), { level: 1, into: 0, need: 100, progress: 0 });
-  assert.deepEqual(levelFrom(99), { level: 1, into: 99, need: 100, progress: 0.99 });
-  assert.deepEqual(levelFrom(100), { level: 2, into: 0, need: 150, progress: 0 });
-  assert.equal(levelFrom(100 + 150 + 200 + 10).level, 4);
+  assert.deepEqual(levelFrom(0), { level: 1, into: 0, need: 100, progress: 0, capped: false });
+  assert.deepEqual(levelFrom(99), { level: 1, into: 99, need: 100, progress: 0.99, capped: false });
+  assert.deepEqual(levelFrom(100), { level: 2, into: 0, need: 160, progress: 0, capped: false });
+  assert.equal(levelFrom(100 + 160 + 220 + 10).level, 4);
   assert.equal(levelFrom(-5).level, 1);
   assert.equal(levelFrom(NaN).level, 1);
-  assert.equal(xpToNext(3), 200);
+  assert.equal(xpToNext(3), 220);
+  assert.deepEqual(levelFrom(1e9), { level: 20, into: 0, need: 0, progress: 1, capped: true }, 'a class stops at level 20');
   const who = { me: 'you', myTeam: 'blue' };
   assert.equal(xpForEvent({ type: 'defeat', by: 'you', who: 'foe' }, who), XP.elimination);
   assert.equal(xpForEvent({ type: 'defeat', by: 'foe', who: 'you' }, who), 0);

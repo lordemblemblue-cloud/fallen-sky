@@ -29,6 +29,7 @@ import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass } from '../../src/components/duelist/sim/match.mjs';
+import { createProgressStore } from './progress.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
@@ -49,7 +50,7 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 // missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore() } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -197,7 +198,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     if (client.room) leave(client);
     const room = selected || pickRoom(mode);
     if (classId) client.classId = classId; // remembered for rematches
-    const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
+    // the account's EXP per class: the match works out the level from it, never from the browser
+    const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null, progress: progress.get(client.id) });
     if (!result.ok) { send(client, { t: 'error', code: 'full', message: 'That match is full.' }); return; }
     room.bodies.set(client.id, client.body);
     if (result.replaced) room.bodies.delete(result.replaced);
@@ -287,7 +289,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     room.effects = [];
     room.events = [];
     for (const client of players) {
-      const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null });
+      const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null, progress: progress.get(client.id) });
       room.bodies.set(client.id, client.body);
       if (result.replaced) room.bodies.delete(result.replaced);
       send(client, { t: 'joined', match: room.id, mode: room.mode, you: client.id, team: result.team, replaced: result.replaced, seats: seatsOf(room), key: client.key, rematch: true });
@@ -458,7 +460,9 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         const { effects, events } = room.mission ? stepMission(room.mission, STEP, inputs) : stepMatch(room.match, STEP, inputs);
         if (effects.length) room.effects.push(...effects);
-        if (events.length) room.events.push(...events);
+        // what a player earned goes to the account (each browser sees its own total in its view, not in the events)
+        for (const e of events) if (e.type === 'xp') progress.add(e.id, e.classId, e.amount);
+        if (events.length) room.events.push(...events.filter((e) => e.type !== 'xp'));
         room.ticks += 1;
         if (room.mission) {
           for (const e of events) if (e.type === 'enemyDown') room.fallenAt.set(e.id, e.at);
@@ -617,6 +621,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     rooms, clients,
     listen() { return new Promise((resolve) => http.listen(port, host, () => resolve(http.address()))); },
     async close() {
+      progress.flush();
       clearInterval(timer);
       clearInterval(heartbeat);
       for (const client of clients) client.ws.terminate();

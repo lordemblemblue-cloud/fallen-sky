@@ -8,9 +8,12 @@
 //   DUELIST_ALLOWED_ORIGINS  comma-separated exact origins allowed to connect (default: any)
 //   DUELIST_ALLOW_GUESTS     1 lets players without an account in as guests: local testing only
 //   DUELIST_BOT_LEVEL        trainee | duelist | master (default duelist)
+//   DUELIST_PROGRESS_FILE    where each account's class EXP is kept (a JSON file on a disk that lasts); without
+//                            it, levels last only while the server runs
 /* global process, console */
 import { createClient } from '@base44/sdk';
 import { createDuelistServer } from './server.mjs';
+import { createProgressStore } from './progress.mjs';
 
 const appId = String(process.env.BASE44_APP_ID || '');
 const allowGuests = process.env.DUELIST_ALLOW_GUESTS === '1';
@@ -32,9 +35,11 @@ async function authenticate(token, hello) {
   return null;
 }
 
+const log = (...a) => console.log('[duelist]', ...a);
+const progress = createProgressStore({ file: process.env.DUELIST_PROGRESS_FILE || null, log });
 const server = createDuelistServer({
-  authenticate, port, allowedOrigins, botLevel: process.env.DUELIST_BOT_LEVEL || 'duelist',
-  log: (...a) => console.log('[duelist]', ...a),
+  authenticate, port, allowedOrigins, botLevel: process.env.DUELIST_BOT_LEVEL || 'duelist', progress,
+  log,
 });
 const address = await server.listen();
 console.log('[duelist] match server on port', address.port, allowGuests ? '(guests allowed: local testing only)' : '', allowedOrigins ? `origins ${allowedOrigins.join(', ')}` : '');

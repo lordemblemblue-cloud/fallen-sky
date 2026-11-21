@@ -11,6 +11,7 @@ import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState
 import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
 import { expireEffects } from './abilities.mjs';
+import { moveFor } from './ranks.mjs';
 
 // Without a class, ability keys 1-4 are the Telekinesis of the first build (story crews, old matches).
 const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
@@ -26,12 +27,14 @@ const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id ===
  * effects: lasting effects (core/abilities.mjs); meter: the special meter as the match last gave it (the match's
  * seat owns it; sim/world.mjs reads it to allow a special and reports what one spent).
  */
-export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null } = {}) {
+// level: the class's level (core/progression.mjs), which sets its abilities' rank and its special's tier
+export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1 } = {}) {
   return {
     id,
     team,
     weapon,
     classId: classById(classId) ? classId : null,
+    level: Math.max(1, Math.floor(level) || 1),
     effects: {},
     meter: 0,
     vitals: createVitals(vitals || {}),
@@ -102,7 +105,7 @@ function moveForCommand(f, command, direction = null) {
 
 // Why a move cannot start now (null = it can).
 export function blockedReason(f, id, now) {
-  const move = moveById(id);
+  const move = moveFor(f, id);
   if (!move) return 'unknown';
   if (f.vitals.dead) return 'dead';
   if (move.weapon && move.weapon !== f.weapon) return 'weapon';
@@ -120,7 +123,7 @@ export function blockedReason(f, id, now) {
 }
 
 function startMove(f, id, now, chainedFrom = null, link = 1) {
-  const move = moveById(id);
+  const move = moveFor(f, id); // an ability at its rank, the special at its tier
   if (move.kind === 'attack' || move.kind === 'power') f.protectedUntil = -Infinity; // acting ends spawn protection
   spendStamina(f.vitals, move.stamina, now);
   spendWill(f.vitals, move.will, now);

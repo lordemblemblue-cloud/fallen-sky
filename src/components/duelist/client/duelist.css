@@ -433,5 +433,12 @@
 .duelist-classcard kbd { min-width: 18px; padding: 0 4px; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.16);
   font: 600 10px/16px ui-monospace, monospace; text-align: center; color: rgba(230, 237, 246, 0.85); }
 .duelist-classcard-special { color: #f2d28b; }
-.duelist-classcard-passive { font-size: 11px; color: rgba(230, 237, 246, 0.45); }
+.duelist-classcard-passive { font-size: 11px; line-height: 1.35; color: rgba(230, 237, 246, 0.6); text-align: left; }
+.duelist-classcard-passive strong { color: rgba(230, 237, 246, 0.85); font-weight: 600; }
+.duelist-classcard-name { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.duelist-classcard-level { font-size: 11px; font-weight: 600; color: rgba(230, 237, 246, 0.8); }
+.duelist-classcard-xp { display: block; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.duelist-classcard-xp b { display: block; height: 100%; background: var(--class); }
+.duelist-classcard em { margin-left: auto; font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f2d28b; }
+.duelist-classcard-next { font-size: 10.5px; color: rgba(242, 210, 139, 0.75); text-align: left; }
 .duelist-classpick-note { margin: 10px 0 0; font-size: 12px; color: rgba(230, 237, 246, 0.6); text-align: center; }

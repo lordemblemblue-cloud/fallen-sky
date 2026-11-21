@@ -67,6 +67,8 @@
 .dh-skill[data-cooling='true'] svg, .dh-skill[data-short='true'] svg { opacity: 0.32; }
 .dh-skill[data-short='true'] { color: #7f8ea3; }
 .dh-skill-sweep { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(8, 12, 18, 0.6); }
+.dh-skill-rank { position: absolute; right: 5px; top: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: #f2d28b; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.dh-level[data-max] { color: #f2d28b; }
 .dh-skill-cd { position: absolute; inset: 0; display: grid; place-items: center; font-size: 24px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85); }
 .dh-skill-name { display: block; margin-top: 15px; width: 84px; text-align: center; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(230, 237, 246, 0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dh-bar { position: absolute; left: 402px; width: 128px; height: 6px; }

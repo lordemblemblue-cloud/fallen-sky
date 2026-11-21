@@ -3,7 +3,8 @@
 //
 // A fighter's effects live in f.effects: { [kind]: { until, ...data } }. Sanctuary is a place, not an effect on
 // a fighter: sim/world.mjs keeps its domes in world.zones.
-import { classById, SPECIAL_BALANCE } from './classes.mjs';
+import { SPECIAL_BALANCE } from './classes.mjs';
+import { passiveFor } from './ranks.mjs';
 
 export const EFFECTS = Object.freeze({
   quick: Object.freeze({ move: 1.4, rate: 1.2 }),
@@ -31,7 +32,8 @@ export function expireEffects(f, now) {
   for (const [kind, e] of Object.entries(f.effects)) if (!(e.until > now)) delete f.effects[kind];
 }
 
-const passiveOf = (f) => classById(f.classId)?.passive || null;
+// the class's passive, with its numbers at the fighter's ability rank (core/ranks.mjs)
+const passiveOf = (f) => passiveFor(f);
 
 /** How fast a fighter's actions play (1 = as written): class stance, Quickstep, Rage. */
 export function actionRate(f, now) {
@@ -63,6 +65,8 @@ export function damageFor(attacker, move, base, { now, behind = false, sheltered
   const strike = move.kind === 'attack';
   if (strike && passive?.strikeDamage) damage *= passive.strikeDamage;
   if (strike && behind && passive?.backstab) damage *= passive.backstab;
+  // Twin Rhythm: each link of a chain hits harder than the one before it
+  if (strike && passive?.chainDamage && attacker.action?.link > 1) damage *= 1 + passive.chainDamage * (attacker.action.link - 1);
   if (effectOn(attacker, 'rage', now)) damage *= EFFECTS.rage.damage;
   if (strike && effectOn(attacker, 'empower', now)) damage *= EFFECTS.empower.damage;
   if (sheltered) {
@@ -71,6 +75,14 @@ export function damageFor(attacker, move, base, { now, behind = false, sheltered
       : 1 - SPECIAL_BALANCE.sanctuaryStrikeResistance;
   }
   return damage;
+}
+
+/** HP a second a fighter mends on its own right now (the Healer's Swift Stance, once it has gone unhurt a while). */
+export function selfMend(f, now) {
+  const passive = passiveOf(f);
+  if (!passive?.regen) return 0;
+  const since = now - Math.max(f.vitals.lastShieldHit ?? -Infinity, f.vitals.lastHurt ?? -Infinity);
+  return since >= passive.regenAfter ? passive.regen : 0;
 }
 
 /** Rage: nothing staggers, grips or knocks this fighter down. */

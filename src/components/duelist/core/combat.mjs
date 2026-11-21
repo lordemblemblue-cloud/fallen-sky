@@ -4,12 +4,12 @@
 // Class abilities change it here too (core/abilities.mjs): stances and Rage scale damage, a Sanctuary shelters,
 // Rage shrugs off control, Guard and Counter answers a strike, Empowered Strikes spend a charge, a hit ends a
 // Veil Cloak, and an execution finishes its target outright.
-import { moveById } from './moves.mjs';
 import { BLOCK, KNOCKDOWN } from './tuning.mjs';
 import { resolveHit } from './damage.mjs';
 import { drainWill } from './vitals.mjs';
 import { stagger, isInvulnerable, isBreachedBy, grantBreach, knockDown, press } from './fighter.mjs';
 import { damageFor, controlImmune, knockbackTaken, spendEmpower, effectOn, endEffect } from './abilities.mjs';
+import { moveFor } from './ranks.mjs';
 
 // Is `attackerPos` inside the defender's guard arc? Positions { x, z }; facing = the defender's yaw
 // (radians, 0 = +Z).
@@ -37,7 +37,7 @@ const countering = (defender, move, facing) => {
  * @returns { result (damage.mjs), effects: [{ type, ... }] } for presentation and the server's broadcast.
  */
 export function strike(attacker, defender, moveId, { now, defenderFacesAttacker = true, dt = null, behind = false, sheltered = false } = {}) {
-  const move = moveById(moveId);
+  const move = moveFor(attacker, moveId); // at the attacker's rank
   const effects = [];
   if (!move || defender.vitals.dead || defender === attacker) return { result: null, effects };
 

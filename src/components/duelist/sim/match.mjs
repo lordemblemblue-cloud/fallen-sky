@@ -18,6 +18,7 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
+import { levelFromXp, xpForEvent, cleanProgress, XP_CAP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
@@ -103,8 +104,18 @@ function spawnFor(match, id, team) {
   return { x: best.x, z: best.z, yaw: Math.atan2(-best.x, -best.z) };
 }
 
-// classId: a player's class from the start (their choice when they join); bots take the four classes in turn
-function seat(match, { id = null, name = null, kind, team = null, classId = null }) {
+// The level a seat fights at: a player's is its class's own (from the EXP the match was given for it, plus what it
+// has earned here); a bot's is the players' average, so it is a fair fight at any level.
+function levelOf(match, s, classId = s.classId) {
+  if (s.kind === 'player') return classId ? levelFromXp(s.progress?.[classId]).level : 1;
+  const humans = [...match.seats.values()].filter((o) => o.kind === 'player');
+  return humans.length ? Math.max(1, Math.round(humans.reduce((sum, o) => sum + (o.level || 1), 0) / humans.length)) : 1;
+}
+
+// classId: a player's class from the start (their choice when they join); bots take the four classes in turn.
+// progress: a player's EXP per class as the match begins ({ warrior, duelist, assassin, healer }), from whoever keeps
+// it (the match server for an online player, the browser for an offline one); never from a client's packet.
+function seat(match, { id = null, name = null, kind, team = null, classId = null, progress = null }) {
   const { def } = match;
   const seatTeam = def.teams ? (TEAMS.includes(team) ? team : lighterTeam(match)) : null;
   const n = kind === 'bot' ? match.nextBot++ : 0;
@@ -113,8 +124,10 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
   const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
-  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, ...spot });
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0 };
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0,
+    progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0 };
+  entry.level = levelOf(match, entry);
+  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, ...spot });
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
@@ -128,17 +141,39 @@ function unseat(match, id) {
   delete match.scores[id];
 }
 
-const event = (match, e) => { const full = { ...e, at: match.world.time }; match.events.push(full); if (e.feed !== false) { match.feed.push(full); if (match.feed.length > 12) match.feed.shift(); } };
+const event = (match, e) => {
+  const full = { ...e, at: match.world.time };
+  match.events.push(full);
+  if (e.feed !== false) { match.feed.push(full); if (match.feed.length > 12) match.feed.shift(); }
+  awardXp(match, full);
+};
+
+// EXP for what the match itself saw happen (core/progression.mjs), to the class each player is fighting as. An
+// `xp` event says what was earned (for whoever keeps the player's progress); a `levelUp` when a level is reached.
+// The new level's ranks come with the next spawn.
+function awardXp(match, e) {
+  for (const s of match.seats.values()) {
+    if (s.kind !== 'player' || !s.classId || !s.progress) continue;
+    const amount = xpForEvent(e, { me: s.id, myTeam: s.team });
+    if (!amount) continue;
+    const before = levelFromXp(s.progress[s.classId]).level;
+    s.progress[s.classId] = Math.min(XP_CAP, s.progress[s.classId] + amount);
+    s.xpGained += amount;
+    const level = levelFromXp(s.progress[s.classId]).level;
+    match.events.push({ type: 'xp', id: s.id, classId: s.classId, amount, total: s.progress[s.classId], level, at: match.world.time });
+    if (level > before) match.events.push({ type: 'levelUp', id: s.id, classId: s.classId, level, at: match.world.time });
+  }
+}
 
 /**
  * A player joins: a free seat, or a bot's (the lowest-scoring bot on the team with fewer players).
  * Returns { ok, id, team, replaced } or { ok: false, reason: 'full' } when every seat is a player's.
  */
-export function joinMatch(match, { id, name = id, team = null, classId = null } = {}) {
+export function joinMatch(match, { id, name = id, team = null, classId = null, progress = null } = {}) {
   const current = match.seats.get(id);
   if (current) return { ok: true, id, team: current.team, replaced: null };
   if (match.seats.size < match.capacity) {
-    const s = seat(match, { id, name, kind: 'player', team, classId });
+    const s = seat(match, { id, name, kind: 'player', team, classId, progress });
     protect(match, id);
     event(match, { type: 'joined', id, name });
     return { ok: true, id, team: s.team, replaced: null };
@@ -157,7 +192,7 @@ export function joinMatch(match, { id, name = id, team = null, classId = null } 
   const seatTeam = out.team;
   unseat(match, out.id);
   match.capacity = Math.max(match.capacity, match.seats.size + 1);
-  seat(match, { id, name, kind: 'player', team: seatTeam, classId });
+  seat(match, { id, name, kind: 'player', team: seatTeam, classId, progress });
   protect(match, id);
   event(match, { type: 'joined', id, name, replaced: out.id });
   return { ok: true, id, team: seatTeam, replaced: out.id };
@@ -211,8 +246,9 @@ function spawnSeat(match, seat, protectSeconds = 0) {
   const old = match.world.fighters.get(seat.id);
   const chosen = seat.pendingClass ? classAtSpawn({ currentClass: seat.classId || 'duelist', pendingClass: seat.pendingClass }) : null;
   const weapon = chosen?.weapon ?? old?.weapon ?? 'sword';
+  seat.level = levelOf(match, seat, chosen ? chosen.classId : seat.classId); // the class's level, with what it has earned so far
   respawnFighter(match.world, seat.id, {
-    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, ...(chosen ? { classId: chosen.classId } : {}),
+    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, level: seat.level, ...(chosen ? { classId: chosen.classId } : {}),
   });
   if (chosen) {
     // Charge is earned for the active class; switching classes cannot bank
@@ -507,7 +543,7 @@ function finish(match, winner) {
 export function matchView(match, forId = null) {
   const { def, world } = match;
   const people = [...match.seats.values()].map((s) => ({
-    id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, ...match.scores[s.id],
+    id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, level: s.level, ...match.scores[s.id],
     dead: !!world.fighters.get(s.id)?.vitals.dead, respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time),
     roundWins: match.roundWins[s.id] || 0,
   }));
@@ -523,7 +559,10 @@ export function matchView(match, forId = null) {
     controlPoints: controlPointView(match.controlPoints),
     zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
-      specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null } : null,
+      specialMeter: match.seats.get(forId).classId ? match.seats.get(forId).specialMeter : null,
+      // the class's EXP so far (what the match began with plus what was earned in it), and every class's
+      xp: match.seats.get(forId).progress?.[match.seats.get(forId).classId] ?? 0,
+      progress: match.seats.get(forId).progress ? { ...match.seats.get(forId).progress } : null } : null,
     feed: match.feed.slice(-5),
   };
 }

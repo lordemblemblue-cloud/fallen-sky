@@ -7,7 +7,7 @@ import {
   MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
   createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
-  EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach,
+  EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 
@@ -32,8 +32,8 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false, level = nu
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null } = {}) {
-  const fighter = createFighter({ id, team, weapon, vitals, classId });
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1 } = {}) {
+  const fighter = createFighter({ id, team, weapon, vitals, classId, level });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
@@ -41,10 +41,11 @@ export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z 
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined } = {}) {
+export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
-  const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId });
+  const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
+    level: level === undefined ? old.level : level });
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
@@ -178,7 +179,9 @@ function trySpecial(world, fighter, body, now, effects) {
   const def = classById(fighter.classId);
   if (!def || fighter.vitals.dead) return;
   const special = def.special;
-  const move = moveById(special.id);
+  const move = moveFor(fighter, special.id); // at the tier the fighter's level gives it
+  const reach = move.reach ?? special.reach;
+  const level = fighter.level;
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
   let target = null;
@@ -186,16 +189,16 @@ function trySpecial(world, fighter, body, now, effects) {
     const near = [...world.fighters.values()]
       .filter((o) => hostile(world, fighter, o) && !o.vitals.dead)
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
-      .filter(({ b }) => distance(b, body) <= special.reach + BODY_RADIUS && insideArc(body, body.yaw, b, move.arc)
+      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw, b, move.arc)
         && (!world.level || clearLine(world.level, body, b)))
       .sort((p, q) => distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
-      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, target: { id: o.id, team: o.team,
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level, target: { id: o.id, team: o.team,
         hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
       if (verdict.allowed) { target = o; break; }
     }
-    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now });
-  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now });
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
+  } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, level });
   const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
   if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
   if (fighter.action) { fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: special.id, at: now }); fighter.action = null; }
@@ -224,7 +227,7 @@ function alliesInReach(world, fighter, body, move) {
 
 /** An ability whose work is an effect (core/abilities.mjs), applied as it lands. */
 function applyEffectMove(world, fighter, body, id, effects, now) {
-  const move = moveById(id);
+  const move = moveFor(fighter, id);
   const until = now + (move.effectSeconds || 0);
   const give = (f, kind, data = {}) => {
     addEffect(f, kind, until, data);
@@ -261,7 +264,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
     }
     case 'sanctuary': {
       const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
-        radius: SPECIAL_BALANCE.sanctuaryRadius, until };
+        radius: move.radius ?? SPECIAL_BALANCE.sanctuaryRadius, heal: move.healPerSecond ?? SPECIAL_BALANCE.sanctuaryHealPerSecond, until };
       world.zones.push(zone);
       effects.push({ type: 'zone', ...zone });
       break;
@@ -270,26 +273,30 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
   }
 }
 
-/** Does an allied Sanctuary shelter this fighter right now? */
-export function shelteredAt(world, fighter, now = world.time) {
+/** The allied Sanctuary this fighter stands in right now, or null. */
+export function shelterOf(world, fighter, now = world.time) {
   const b = world.bodies.get(fighter.id);
-  if (!b) return false;
-  return world.zones.some((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius
-    && (z.team !== null && z.team !== undefined ? z.team === fighter.team : z.owner === fighter.id));
+  if (!b) return null;
+  return world.zones.find((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius
+    && (z.team !== null && z.team !== undefined ? z.team === fighter.team : z.owner === fighter.id)) || null;
 }
+/** Does an allied Sanctuary shelter this fighter right now? */
+export const shelteredAt = (world, fighter, now = world.time) => !!shelterOf(world, fighter, now);
 
 function stepHeals(world, dt, now) {
   for (const f of world.fighters.values()) {
     if (f.vitals.dead) continue;
     let perSec = effectOn(f, 'mend', now)?.perSec || 0;
-    if (world.zones.length && shelteredAt(world, f, now)) perSec += SPECIAL_BALANCE.sanctuaryHealPerSecond;
+    const dome = world.zones.length ? shelterOf(world, f, now) : null;
+    if (dome) perSec += dome.heal ?? SPECIAL_BALANCE.sanctuaryHealPerSecond;
+    perSec += selfMend(f, now); // the Healer's passive
     if (perSec > 0) f.vitals.hp = Math.min(f.vitals.max.hp, f.vitals.hp + perSec * dt);
   }
   if (world.zones.length) world.zones = world.zones.filter((z) => z.until > now);
 }
 
 function startMotion(body, fighter, id) {
-  const move = moveById(id);
+  const move = moveFor(fighter, id);
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id)) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -442,7 +449,7 @@ export function targetsInReach(world, attacker, body, move, single) {
 }
 
 function resolveReach(world, attacker, body, id, effects, now) {
-  const move = moveById(id);
+  const move = moveFor(attacker, id);
   // the throw reaches the one being held, wherever it hangs
   if (id === 'gripThrow') {
     const held = [...world.fighters.values()].find((f) => f.heldBy === attacker.id);
@@ -487,7 +494,7 @@ function releaseHeld(world, holder) {
 }
 
 function spawnProjectile(world, fighter, body, id, effects) {
-  const move = moveById(id);
+  const move = moveFor(fighter, id);
   const dir = forwardOf(body.yaw);
   const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
     dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };

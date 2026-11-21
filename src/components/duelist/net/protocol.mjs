@@ -41,9 +41,9 @@
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
 // 4426 a page from before an update, 4429 too many messages
-import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits } from '../core/index.mjs';
+import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor } from '../core/index.mjs';
 
-export const PROTOCOL = 5; // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
+export const PROTOCOL = 6; // 6: class levels (a fighter's level travels with it; abilities have ranks); the jump // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -189,7 +189,7 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
-    cl: f.classId || 0, mt: f.meter || 0, sg: f.specialTarget || 0,
+    cl: f.classId || 0, lv: f.level || 1, mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
@@ -204,7 +204,9 @@ export function applyOwn(f, body, data) {
     lastStaminaSpend: then(lastStaminaSpend), lastWillSpend: then(lastWillSpend), lastShieldHit: then(lastShieldHit) });
   v.max = { hp: data.mx[0], stamina: data.mx[1], will: data.mx[2], shield: data.mx[3] };
   f.weapon = data.w;
-  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
+  f.classId = data.cl || null;
+  f.level = data.lv || 1; // before the action: its move is read at the fighter's rank
+  f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
   f.cooldowns = untimes(data.cd);
   f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
   f.guard = data.g === null || data.g === undefined ? null : { since: data.g };

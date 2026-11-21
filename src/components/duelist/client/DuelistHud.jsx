@@ -53,7 +53,8 @@ function Vitals({ you, fighter, classId, portrait, level, onClass }) {
     <section className="dh-anchor dh-bl" aria-label="Your fighter">
       <div className="dh-part dh-portrait">
         {portrait ? <img className="dh-portrait-img" src={portrait} alt="" /> : <ClassIcon className="dh-portrait-icon" aria-hidden="true" />}
-        <span className="dh-level" title={`Level ${level.level}: ${level.into} / ${level.need} EXP`}>{level.level}</span>
+        <span className="dh-level" data-max={level.capped || undefined}
+          title={level.capped ? `Level ${level.level}: this class is at its highest` : `Level ${level.level}: ${level.into} / ${level.need} EXP`}>{level.level}</span>
       </div>
       <div className="dh-part dh-vitals">
         <button type="button" className="dh-class" onClick={onClass || undefined} disabled={!onClass} data-class={classId || 'none'}
@@ -134,6 +135,7 @@ function Skills({ hud, onPower }) {
                 {cooling && a.total > 0 && <span className="dh-skill-sweep" style={{ height: `${Math.min(1, a.ready / a.total) * 100}%` }} />}
                 {cooling && <span className="dh-skill-cd">{a.ready >= 10 ? Math.ceil(a.ready) : a.ready.toFixed(1)}</span>}
                 <kbd>{a.key}</kbd>
+                {a.rank > 0 && <span className="dh-skill-rank" title={`Rank ${a.rank} of 5`} aria-label={`Rank ${a.rank} of 5`}>{'I II III IV V'.split(' ')[a.rank - 1]}</span>}
               </button>
               <span className="dh-skill-name" title={a.name}>{SHORT_NAMES[a.id] || a.name}</span>
             </div>

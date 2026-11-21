@@ -5,10 +5,11 @@ import { BODY_IDS } from '../net/protocol.mjs';
 
 const STEP = 1 / 60;
 
-// classId: the class the player fights as (core/classes.mjs); chooseClass changes it for the next spawn
-export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null } = {}) {
+// classId: the class the player fights as (core/classes.mjs); chooseClass changes it for the next spawn.
+// progress: the player's EXP per class from this browser (client/prefs.mjs): offline, the browser keeps the levels
+export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null, progress = null } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId }], seats: def.id === 'practice' ? 1 + bots : null });
+  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId, progress }], seats: def.id === 'practice' ? 1 + bots : null });
   let classAnswer = null;
   // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
   const others = BODY_IDS.filter((b) => b !== youBody);
