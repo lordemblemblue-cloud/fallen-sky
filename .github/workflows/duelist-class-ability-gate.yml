@@ -1,0 +1,22 @@
+name: Duelist class ability gate
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/core/classAbilityGate.mjs'
+      - 'src/components/duelist/core/classes.mjs'
+      - 'tests/duelist-class-ability-gate.test.mjs'
+      - '.github/workflows/duelist-class-ability-gate.yml'
+  workflow_dispatch:
+jobs:
+  gate-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-class-ability-gate.test.mjs tests/duelist-classes.test.mjs
+      - run: npm run lint
+      - run: npm run build
