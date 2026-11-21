@@ -149,13 +149,17 @@ for (const rigId of Object.keys(RIGS)) {
         if (name === 'daggerLight1') assert.ok(right(a.hands[1]) - right(b.hands[1]) > 0.35, `right fist hooks right to left: ${right(a.hands[1]).toFixed(2)} -> ${right(b.hands[1]).toFixed(2)}`);
         if (name === 'daggerLight2') assert.ok(right(b.hands[0]) - right(a.hands[0]) > 0.35, `left fist hooks left to right: ${right(a.hands[0]).toFixed(2)} -> ${right(b.hands[0]).toFixed(2)}`);
         if (name === 'daggerStab') {
-          // a reverse grip stabs like a hammer: the point down (and out, from the blade's seat: owner 2026-11-20),
-          // the fist driven out ahead of the hips
+          // a reverse grip stabs like a hammer: the point straight down (the wrist turns the seated blade there:
+          // owner 2026-11-21), the fist driven out ahead of the hips
           const c = at(hit);
-          assert.ok(c.blades[0].y < -0.6, `the stab points down: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
+          assert.ok(c.blades[0].y < -0.85, `the stab points down: ${c.blades[0].toArray().map((x) => x.toFixed(2))}`);
           assert.ok(c.hands[1].z - c.hips.z > 0.45, `the stabbing hand reaches ${(c.hands[1].z - c.hips.z).toFixed(2)} m ahead of the hips`);
         }
       }
+      // the charge's strike: both fists drive down, both points straight down (owner 2026-11-21)
+      const charge = clips.daggerCharge;
+      const strike = checkMotion(model, charge, held).at(charge.userData.hit);
+      strike.blades.forEach((blade, i) => assert.ok(blade.y < -0.85, `the charge strike's blade ${i} points down: ${blade.toArray().map((x) => x.toFixed(2))}`));
       const idle = clips.idleDaggers;
       assert.ok(idle.userData.idle && idle.userData.loop && Math.abs(idle.duration - 2) < 1e-6);
       const { frames } = checkMotion(model, idle, held);

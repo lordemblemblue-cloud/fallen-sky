@@ -488,19 +488,23 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
       setWorldQ(bone, new THREE.Quaternion().setFromAxisAngle(axis, angle).multiply(bone.getWorldQuaternion(new THREE.Quaternion())));
     };
     // The hand's long axis (wrist -> middle knuckle) in its own frame, and seen from the held weapon's frame.
-    // Daggers: the hands are posed for the handle's line, and the blade sits off it at its seat (the owner's
-    // placement, weaponGripMath.js), so every key below aims that line.
+    // Daggers: a key that lays the blade along the forearm poses the hand for the handle's line, and the blade
+    // sits off it at its seat (the owner's placement, weaponGripMath.js: line); a key that points the blade (the
+    // stab, the charge's strike) aims the seated blade itself (owner 2026-11-21: the point straight down).
     const handInfo = new Map();
-    const lineOf = (grip, side) => (grip && comboKind === 'daggerCombo'
-      ? grip.clone().multiply(daggerSeatQuaternion(side === 'r' ? 'right' : 'left').invert()) : grip);
-    for (const [side, hand, held] of [['r', b.rHand, grips.right], ['l', b.lHand, grips.left]]) {
-      const grip = lineOf(held, side);
+    const lineOf = (grip, side) => grip.clone().multiply(daggerSeatQuaternion(side === 'r' ? 'right' : 'left').invert());
+    for (const [side, hand, grip] of [['r', b.rHand, grips.right], ['l', b.lHand, grips.left]]) {
       const S = side === 'r' ? 'Right' : 'Left';
       const knuckle = [`mixamorig:${S}HandMiddle1`, `fingers_${side}`].map((n) => model.getObjectByName(sanitize(n))).find((c) => c?.parent === hand)
         || hand.children.find((c) => c.isBone && c.position.lengthSq() > 1e-12);
       const axis = knuckle ? knuckle.position.clone().normalize() : new THREE.Vector3(0, 1, 0);
-      const inWeapon = grip ? axis.clone().applyQuaternion(grip.clone().invert()) : null;
-      handInfo.set(hand, { axis, grip, ay: inWeapon ? THREE.MathUtils.clamp(inWeapon.y, -1, 1) : 0, beta: inWeapon ? Math.atan2(inWeapon.x, inWeapon.z) : 0 });
+      const infoFor = (q) => {
+        const inWeapon = q ? axis.clone().applyQuaternion(q.clone().invert()) : null;
+        return { axis, grip: q, ay: inWeapon ? THREE.MathUtils.clamp(inWeapon.y, -1, 1) : 0, beta: inWeapon ? Math.atan2(inWeapon.x, inWeapon.z) : 0 };
+      };
+      const info = infoFor(grip || null);
+      info.line = grip && comboKind === 'daggerCombo' ? infoFor(lineOf(grip, side)) : info;
+      handInfo.set(hand, info);
     }
     // Wrist bend (degrees) with the best roll about the blade, for a forearm pointing along f.
     const bestBend = (info, B, f) => {
@@ -531,10 +535,10 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
     // the elbow stays near where it was, and the forearm's turn fades out before it would flip over.
     let flowing = null;
     // keepElbow: the elbow stays where the pole puts it and the wrist alone turns the blade (a reverse grip
-    // laying its blade along the forearm placed first)
-    const placeArm = (arm, fore, hand, target, pole, B, sideAxis, keepElbow = false) => {
+    // laying its blade along the forearm placed first); aimLine: B is for a dagger's handle line, not its blade
+    const placeArm = (arm, fore, hand, target, pole, B, sideAxis, keepElbow = false, aimLine = false) => {
       const ab = armRest.get(arm);
-      const info = handInfo.get(hand);
+      const info = aimLine ? handInfo.get(hand)?.line : handInfo.get(hand);
       const held = !!(B && info?.grip);
       const S = arm.getWorldPosition(new THREE.Vector3());
       const toTarget = target.clone().sub(S);
@@ -673,13 +677,14 @@ export function bakeWeaponComboClips(model, kind = 'sword', grips = {}, { rest =
         let B = spec.blade ? body(spec.blade).normalize() : null;
         const alongForearm = !!(spec.forearm && handInfo.get(hand)?.grip);
         if (alongForearm) {
-          // a reverse grip: the blade runs back along the forearm as the arm is placed on this body, bent off it
-          // towards `forearm` ([forward, up, out to this arm's side]) so it clears the arm
+          // a reverse grip: the handle's line runs back along the forearm as the arm is placed on this body, bent
+          // off it towards `forearm` ([forward, up, out to this arm's side]); a dagger's blade then sits off that
+          // line at its seat, clear of the arm
           placeArm(arm, fore, hand, target, pole, null, R.clone().multiplyScalar(sideSign));
           B = fore.getWorldPosition(new THREE.Vector3()).sub(hand.getWorldPosition(new THREE.Vector3())).normalize();
           if (Array.isArray(spec.forearm)) B.add(body([spec.forearm[0], spec.forearm[1], spec.forearm[2] * sideSign])).normalize();
         }
-        placeArm(arm, fore, hand, target, pole, B, R.clone().multiplyScalar(sideSign), alongForearm);
+        placeArm(arm, fore, hand, target, pole, B, R.clone().multiplyScalar(sideSign), alongForearm, alongForearm);
         const info = handInfo.get(hand);
         if (B && comboKind === 'swordCombo' && info?.grip) {
           // A long blade (the odachi) would cut into the ground: the hands stop higher instead, keeping the
