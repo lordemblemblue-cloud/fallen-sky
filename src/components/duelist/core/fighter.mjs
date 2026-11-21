@@ -6,7 +6,7 @@
 // in its window, or waits (one buffered press, for INPUT.bufferSeconds); cooldowns per move; costs paid up
 // front; stagger and grips lock out everything but Resist.
 import { BINDINGS, POWER_BINDINGS, FLOW, moveById } from './moves.mjs';
-import { INPUT, BREACH } from './tuning.mjs';
+import { INPUT, BREACH, STAGGER_IMMUNITY } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
 import { KNOCKDOWN } from './tuning.mjs';
 import { classAbilityMove, classById } from './classes.mjs';
@@ -48,6 +48,9 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     buffer: null, // { command, at }
     guard: null, // { since }
     stunnedUntil: -Infinity, // stagger, guard break, parried
+    recentStaggerHits: 0, // consecutive unblocked, damaging hits in the combo window
+    lastStaggerHitAt: -Infinity,
+    staggerImmuneUntil: -Infinity, // after three hits, one second to fight back
     protectedUntil: -Infinity, // just respawned: nothing reaches it until then, or until it acts
     downUntil: -Infinity, // knocked down: lying until then, then rising until riseUntil
     riseUntil: -Infinity,
@@ -237,6 +240,22 @@ export const isInvulnerable = (f, now) => {
   const a = f.action;
   return !!(a?.move.iframes && a.t >= a.move.iframes[0] && a.t <= a.move.iframes[1]);
 };
+
+/** Record a confirmed damaging hit. On hit three, clear existing hit-stagger and grant a 1s response window.
+ * A missed/blocked strike must never call this; the authoritative strike resolver owns hit accounting.
+ */
+export function registerStaggerHit(f, now) {
+  if (!Number.isFinite(now) || f.vitals.dead || now < f.staggerImmuneUntil) return false;
+  if (now - f.lastStaggerHitAt > STAGGER_IMMUNITY.comboWindowSeconds) f.recentStaggerHits = 0;
+  f.recentStaggerHits += 1;
+  f.lastStaggerHitAt = now;
+  if (f.recentStaggerHits < STAGGER_IMMUNITY.hits) return false;
+  f.recentStaggerHits = 0;
+  f.lastStaggerHitAt = -Infinity;
+  f.staggerImmuneUntil = now + STAGGER_IMMUNITY.seconds;
+  f.stunnedUntil = Math.min(f.stunnedUntil, now);
+  return true;
+}
 
 /** Knocked off the feet by a hard push or throw: lies for KNOCKDOWN.lie, rises for KNOCKDOWN.rise. */
 export function knockDown(f, now) {
