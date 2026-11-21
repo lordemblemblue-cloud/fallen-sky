@@ -75,23 +75,45 @@ test('countdown re-selection is last valid choice per seat and never changes ano
   assert.equal(match.seats.get('beta').specialMeter, 0);
 });
 
-test('idempotent seat reconnect preserves pending class and private special meter', () => {
+test('warrior seat reconnect preserves pending class and private special meter', () => {
   const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'beta' }] });
-  assert.equal(queueMatchClass(match, 'alpha', 'juggernaut').accepted, true);
+  assert.equal(queueMatchClass(match, 'alpha', 'warrior').accepted, true);
   const original = match.seats.get('alpha');
   assert.equal(joinMatch(match, { id: 'alpha', name: 'spoof', team: 'blue', classId: 'healer' }).ok, true);
   assert.strictEqual(match.seats.get('alpha'), original);
-  assert.equal(original.pendingClass, 'juggernaut');
+  assert.equal(original.pendingClass, 'warrior');
   assert.equal(matchView(match, 'beta').me.pendingClass, null);
   assert.equal(matchView(match, 'beta').people.find(p => p.id === 'alpha').classId, null);
   tick(match, COUNTDOWN + 0.1);
-  assert.equal(original.classId, 'juggernaut');
+  assert.equal(original.classId, 'warrior');
   original.specialMeter = 65; // simulated trusted server-side reward
   assert.equal(joinMatch(match, { id: 'alpha', classId: 'assassin' }).ok, true);
   assert.strictEqual(match.seats.get('alpha'), original);
-  assert.equal(original.classId, 'juggernaut');
+  assert.equal(original.classId, 'warrior');
   assert.equal(original.specialMeter, 65);
   assert.equal(matchView(match, 'alpha').me.specialMeter, 65);
   assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
   assert.equal(matchView(match, 'beta').me.specialMeter, null);
+});
+
+test('all four canonical classes keep their own weapon and private meter across reconnect', () => {
+  const weapons = { warrior: 'sword', duelist: 'dualBlades', assassin: 'staff', healer: 'sword' };
+  for (const [classId, weapon] of Object.entries(weapons)) {
+    const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'beta' }] });
+    assert.equal(queueMatchClass(match, 'alpha', classId).accepted, true, classId);
+    assert.equal(joinMatch(match, { id: 'alpha', classId: 'invalid', specialMeter: 100 }).ok, true);
+    assert.equal(match.seats.get('alpha').pendingClass, classId);
+    tick(match, COUNTDOWN + 0.1);
+    const seat = match.seats.get('alpha');
+    assert.equal(seat.classId, classId);
+    assert.equal(match.world.fighters.get('alpha').weapon, weapon);
+    assert.equal(seat.specialMeter, 0);
+    seat.specialMeter = 42; // trusted simulation fixture, not a client packet
+    assert.equal(joinMatch(match, { id: 'alpha', classId: 'healer', specialMeter: 100 }).ok, true);
+    assert.equal(match.seats.get('alpha'), seat);
+    assert.equal(seat.classId, classId);
+    assert.equal(seat.specialMeter, 42);
+    assert.equal(matchView(match, 'alpha').me.specialMeter, 42);
+    assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
+  }
 });
