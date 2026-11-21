@@ -43,7 +43,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits } from '../core/index.mjs';
 
-export const PROTOCOL = 5; // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
+export const PROTOCOL = 6; // 6: server-authoritative jump press and held jump charge with prediction state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -82,7 +82,8 @@ export function sanitizeInput(raw) {
   if (len > 1) { x /= len; z /= len; }
   const presses = Array.isArray(raw.p) ? raw.p.slice(0, 8).filter((c) => typeof c === 'string' && CLIENT_COMMANDS.has(c)) : [];
   return {
-    seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, strafe: !!raw.st, interact: raw.i === 1 || raw.i === true,
+    seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, jumpHeld: raw.jh === 1 || raw.jh === true,
+    strafe: !!raw.st, interact: raw.i === 1 || raw.i === true,
     face: finite(raw.f) ? Math.atan2(Math.sin(raw.f), Math.cos(raw.f)) : null,
     presses,
   };
@@ -91,7 +92,7 @@ export function sanitizeInput(raw) {
 /** The browser's input object as an input message. */
 export function encodeInput(seq, input) {
   return { t: 'input', s: seq, m: [r3(input.move?.x || 0), r3(input.move?.z || 0)], r: input.run !== false, sp: !!input.sprint,
-    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined };
+    jh: input.jumpHeld ? 1 : undefined, f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined };
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };
@@ -189,6 +190,7 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
+    j: [r5(body.jumpBoostLeft || 0), body.jumpHeld ? 1 : 0],
     cl: f.classId || 0, mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
@@ -217,7 +219,8 @@ export function applyOwn(f, body, data) {
   f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
-  Object.assign(body, { x, y, z, yaw, vy, kx, kz });
+  Object.assign(body, { x, y, z, yaw, vy, kx, kz,
+    jumpBoostLeft: data.j?.[0] || 0, jumpHeld: !!data.j?.[1] });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };

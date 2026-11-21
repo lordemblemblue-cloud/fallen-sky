@@ -134,6 +134,8 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shownBody.z = body.z + ez;
       shownBody.yaw = body.yaw;
       shownBody.vy = body.vy;
+      shownBody.jumpBoostLeft = body.jumpBoostLeft;
+      shownBody.jumpHeld = body.jumpHeld;
       shownBody.speed = body.speed;
       shownBody.moving = body.moving;
       shownBody.motion = body.motion;

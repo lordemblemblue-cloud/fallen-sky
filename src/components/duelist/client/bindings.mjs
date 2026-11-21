@@ -17,6 +17,7 @@ export const ACTIONS = Object.freeze([
   { id: 'left', label: 'Move left', kind: 'hold' },
   { id: 'right', label: 'Move right', kind: 'hold' },
   { id: 'sprint', label: 'Sprint', kind: 'hold' },
+  { id: 'jump', label: 'Jump (hold for higher jump)', kind: 'hold' },
   { id: 'light', label: 'Light strike (chain)', kind: 'press' },
   { id: 'heavy', label: 'Heavy strike', kind: 'press' },
   { id: 'guard', label: 'Guard (a fresh guard parries)', kind: 'guard' },
@@ -36,7 +37,7 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
-  roll: 'Space', dash: 'ControlLeft', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
+  jump: 'Space', roll: 'AltLeft', dash: 'ControlLeft', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
   breach: 'KeyR', resist: 'KeyZ', lock: 'Tab', interact: 'KeyF',
 });
 // bindings saved before the classes: the old power keys become the ability keys
@@ -44,7 +45,7 @@ const LEGACY = Object.freeze({ ability1: 'push', ability2: 'pull', ability3: 'gr
 
 // never bound: Escape lets go of the mouse; the browser's and the system's own keys
 export const RESERVED = Object.freeze(new Set(['Escape', 'F5', 'F11', 'F12', 'MetaLeft', 'MetaRight', 'OSLeft', 'OSRight', 'ContextMenu']));
-const VALID = /^(Key[A-Z]|Digit\d|Numpad\w+|F\d{1,2}|Mouse[0-4]|Arrow(Up|Down|Left|Right)|Shift(Left|Right)|Control(Left|Right)|Alt(Left|Right)|Space|Tab|Enter|Backspace|CapsLock|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|Semicolon|Quote|Comma|Period|Slash|Insert|Delete|Home|End|PageUp|PageDown|IntlBackslash)$/;
+const VALID = /^(Key[A-Z]|Digit\d|Numpad\w+|F\d{1,2}|Mouse[0-9]|Arrow(Up|Down|Left|Right)|Shift(Left|Right)|Control(Left|Right)|Alt(Left|Right)|Space|Tab|Enter|Backspace|CapsLock|Backquote|Minus|Equal|BracketLeft|BracketRight|Backslash|Semicolon|Quote|Comma|Period|Slash|Insert|Delete|Home|End|PageUp|PageDown|IntlBackslash)$/;
 
 /** May this input be bound at all? */
 export const bindable = (code) => typeof code === 'string' && VALID.test(code) && !RESERVED.has(code);
@@ -102,12 +103,15 @@ const NAMES = {
   ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Insert: 'Insert', Delete: 'Delete', Home: 'Home', End: 'End',
   PageUp: 'Page Up', PageDown: 'Page Down',
 };
-const MOUSE = { long: ['Left mouse', 'Middle mouse', 'Right mouse', 'Mouse 4', 'Mouse 5'], short: ['LMB', 'MMB', 'RMB', 'M4', 'M5'] };
+const MOUSE = {
+  long: ['Left mouse', 'Middle mouse', 'Right mouse', ...Array.from({ length: 7 }, (_, i) => `Mouse ${i + 4}`)],
+  short: ['LMB', 'MMB', 'RMB', ...Array.from({ length: 7 }, (_, i) => `M${i + 4}`)],
+};
 
 /** How an input is written for people: 'E', '1', 'Shift', 'Right mouse' (short: 'RMB', for the HUD). */
 export function keyLabel(code, { short = false } = {}) {
   if (!code) return 'unbound';
-  const mouse = /^Mouse([0-4])$/.exec(code);
+  const mouse = /^Mouse([0-9])$/.exec(code);
   if (mouse) return (short ? MOUSE.short : MOUSE.long)[Number(mouse[1])];
   const input = inputOf(code);
   if (input === 'Shift' || input === 'Alt') return input;
@@ -126,7 +130,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const k = (id) => keyLabel(keys[id], { short: true });
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
-  const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
+  const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`, `${k('jump')} jump (hold higher)`,
     `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);

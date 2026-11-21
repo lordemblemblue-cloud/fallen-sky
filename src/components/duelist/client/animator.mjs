@@ -14,7 +14,7 @@ import { secondHandAt } from './secondHand.mjs';
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
 const NATURAL = Object.freeze({ walk: 1.5, packWalk: 0.9, jog: 4.95, sprint: 7.63 });
-const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7.2 });
+const SPEED = Object.freeze({ walk: 2.2, run: 4.6, sprint: 7 });
 // each stance: the idle everything blends over, the guard, and whose fingers keep hold of a weapon
 const RIGHT_FINGERS = /RightHand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
 const BOTH_FINGERS = /(Right|Left)Hand(Thumb|Index|Middle|Ring|Pinky)\d\.quaternion$/;
@@ -80,6 +80,8 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   let reaction = { until: -Infinity, clip: null, start: 0, length: 0 };
   let flinchToggle = false;
   let deathStart = null;
+  let airborneSince = null;
+  let landedAt = null;
 
   const evasionClip = (body) => {
     const dir = body.motion?.dir;
@@ -134,6 +136,27 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       const clip = library[working.clip];
       const time = working.loop ? elapsed % clip.duration : Math.min(clip.duration - 1e-3, working.progress * clip.duration);
       return { clip: working.clip, time, fade: 0.12 };
+    }
+    // Play our authored jumpStart/jumpLoop/jumpLand clips; class attacks and leaps remain higher priority.
+    const inAir = body.y > 0.08 && !fighter.effects?.levitate;
+    if (inAir) {
+      if (airborneSince === null) airborneSince = elapsed;
+      landedAt = null;
+    } else if (airborneSince !== null) {
+      airborneSince = null;
+      landedAt = elapsed;
+    }
+    if (!a && inAir) {
+      settle = null;
+      if (elapsed - airborneSince < 0.2 && library.jumpStart) {
+        const clip = library.jumpStart;
+        return { clip: 'jumpStart', time: Math.min(clip.duration - 1e-3, (elapsed - airborneSince) * 2.5), fade: 0.08 };
+      }
+      if (library.jumpLoop) return { clip: 'jumpLoop', time: (elapsed - airborneSince) % library.jumpLoop.duration, fade: 0.1 };
+    }
+    if (!a && landedAt !== null && elapsed - landedAt < 0.24 && library.jumpLand) {
+      const clip = library.jumpLand;
+      return { clip: 'jumpLand', time: Math.min(clip.duration - 1e-3, (elapsed - landedAt) / 0.24 * clip.duration), fade: 0.08 };
     }
     if (a) {
       settle = null;

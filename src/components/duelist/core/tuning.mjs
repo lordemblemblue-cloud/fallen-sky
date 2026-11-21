@@ -53,5 +53,8 @@ export const INPUT = Object.freeze({
 // until it stands again (a fallen fighter cannot be juggled or held down).
 export const KNOCKDOWN = Object.freeze({ distance: 3, lie: 0.7, rise: 0.95 });
 
-export const SPRINT = Object.freeze({ staminaPerSec: 14, speed: 7.2 });
+// The project's Jedi Academy references inform the charge-to-rise principle; this is our own
+// deterministic, server-run jump, not copied gameplay code. Future class progression can tune it here.
+export const JUMP = Object.freeze({ gravity: 18, launchSpeed: 6.2, holdAcceleration: 23, maxHoldSeconds: 0.24, airControl: 0.85 });
+export const SPRINT = Object.freeze({ staminaPerSec: 0, speed: 7 });
 export const MOVE_SPEED = Object.freeze({ walk: 2.2, run: 4.6 });

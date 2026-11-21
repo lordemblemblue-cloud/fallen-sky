@@ -4,8 +4,8 @@
 // browser runs it for practice and for prediction. It decides who each landed move reaches; the core
 // decides what happens to them.
 import {
-  MOVES, BLOCK, MOVE_SPEED, SPRINT, moveById,
-  createFighter, press, update, takeEvents, isStunned, strike, insideArc, drainStamina, travelAt, hasClipTravel,
+  MOVES, BLOCK, MOVE_SPEED, SPRINT, JUMP, moveById,
+  createFighter, press, update, takeEvents, isStunned, strike, insideArc, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach,
 } from '../core/index.mjs';
@@ -20,7 +20,7 @@ export const PROJECTILE_SPEED = Object.freeze({ bowShot: 60, sniperShot: 140 });
 export const PROJECTILE_HEIGHT = 1.35;
 // Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
-const GRAVITY = 18;
+const GRAVITY = JUMP.gravity;
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
 export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
@@ -65,6 +65,7 @@ function newBody(x, z, yaw) {
   return {
     x, z, y: 0, yaw, vy: 0,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
+    jumpHeld: false, jumpBoostLeft: 0,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
     moving: false, speed: 0,
@@ -104,6 +105,7 @@ export function step(world, dt, inputs = {}) {
     body.intent = len > 1 ? { x: m.x / len, z: m.z / len } : { x: m.x || 0, z: m.z || 0 };
     body.run = !!input.run;
     body.sprint = !!input.sprint;
+    body.jumpHeld = !!input.jumpHeld;
     body.strafe = !!input.strafe; // locked on: rolls keep facing the target (side and back evasions)
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
     // the body turns to face where the player aims, except while committed to a roll or dash, or to a
@@ -112,6 +114,15 @@ export function step(world, dt, inputs = {}) {
     const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
     if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
     for (const command of input.presses || []) {
+      // Jump is a grounded movement press, not an attack or a combat-action cancel.
+      if (command === 'jump') {
+        if (!restrained && now >= fighter.riseUntil && !fighter.action && !fighter.guard &&
+            body.y <= 0.001 && body.vy === 0 && !effectOn(fighter, 'levitate', now)) {
+          body.vy = JUMP.launchSpeed;
+          body.jumpBoostLeft = JUMP.maxHoldSeconds;
+        }
+        continue;
+      }
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
@@ -348,10 +359,8 @@ function moveBody(world, fighter, body, dt, now) {
     const len = Math.hypot(body.intent.x, body.intent.z);
     if (free && len > 0.01) {
       let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
-      if (body.sprint && !fighter.vitals.winded && len > 0.5) {
-        drainStamina(fighter.vitals, SPRINT.staminaPerSec * dt, now);
-        speed = SPRINT.speed;
-      }
+      if (body.sprint && len > 0.5) speed = SPRINT.speed; // unlimited sprint: no stamina spend
+      if (body.y > 0.001) speed *= JUMP.airControl;
       // a raised guard and a channelled grip slow you to a walk
       if (fighter.guard || a?.move.channel) speed = Math.min(speed, MOVE_SPEED.walk * 0.8);
       speed *= moveRate(fighter, now);
@@ -388,10 +397,18 @@ function moveBody(world, fighter, body, dt, now) {
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
-  } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
+  } else if (body.y > 0 || body.vy > 0) { // ordinary jump, or falling after a throw / release
+    // Only the rising portion responds to holding the button. Releasing ends the boost.
+    if (body.jumpBoostLeft > 0) {
+      if (body.jumpHeld && body.vy > 0) {
+        const heldDt = Math.min(dt, body.jumpBoostLeft);
+        body.vy += JUMP.holdAcceleration * heldDt;
+        body.jumpBoostLeft -= heldDt;
+      } else body.jumpBoostLeft = 0;
+    }
     body.vy -= GRAVITY * dt;
     body.y = Math.max(0, body.y + body.vy * dt);
-    if (body.y === 0) body.vy = 0;
+    if (body.y === 0) { body.vy = 0; body.jumpBoostLeft = 0; }
   }
   keepInside(world, body);
 }
