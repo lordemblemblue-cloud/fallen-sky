@@ -1,0 +1,226 @@
+/* Duelist Adventure's shared menu language. Scoped to menus, not gameplay HUD. */
+.duelist-menu-page {
+  --dm-ink: #e5f1fa;
+  --dm-muted: #b2c6d5;
+  --dm-line: rgba(149, 204, 229, .2);
+  --dm-accent: #9bdcea;
+  --dm-gold: #edc48a;
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow-x: hidden;
+  color: var(--dm-ink);
+  font-family: 'Rajdhani', 'Arial Narrow', system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at 81% 4%, rgba(52, 106, 140, .29), transparent 48%),
+    radial-gradient(ellipse at -8% 90%, rgba(20, 76, 111, .19), transparent 48%),
+    linear-gradient(145deg, #0c2032 0%, #071525 52%, #050d19 100%);
+}
+.duelist-menu-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .14;
+  background-image:
+    linear-gradient(rgba(160, 216, 237, .3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(160, 216, 237, .3) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.7), transparent 83%);
+}
+.duelist-menu-page::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,rgba(3,9,20,.24),transparent 35%,rgba(3,9,20,.18));
+}
+.duelist-menu-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  min-height: 75px;
+  padding: 10px clamp(18px,3vw,40px);
+  border-bottom: 1px solid var(--dm-line);
+  background: rgba(5,18,31,.74);
+  backdrop-filter: blur(14px);
+}
+.duelist-menu-brand {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  text-decoration: none;
+  line-height: 1.08;
+  color: #fff1dc;
+}
+.duelist-menu-brand span {
+  font-size: 10px;
+  color: var(--dm-accent);
+  font-weight: 700;
+  letter-spacing: .28em;
+}
+.duelist-menu-brand strong {
+  margin-top: 5px;
+  font-size: clamp(17px,1.9vw,24px);
+  letter-spacing: .1em;
+  font-weight: 800;
+}
+.duelist-menu-quicknav { display: flex; align-items: center; gap: 9px; }
+.duelist-menu-quicklink {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #c4d9e7;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  transition: color .15s, border-color .15s, background-color .15s;
+}
+.duelist-menu-quicklink:hover, .duelist-menu-quicklink:focus-visible {
+  color: #fff;
+  border-color: var(--dm-line);
+  background: rgba(61,123,155,.23);
+}
+.duelist-menu-content {
+  width: min(100%, 1160px);
+  margin: 0 auto;
+  padding: clamp(22px,3vw,39px) clamp(18px,3vw,36px) 70px;
+}
+.duelist-menu-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #89abba;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.duelist-menu-breadcrumb a { display: inline-flex; align-items: center; gap: 5px; color: #a3d8e8; text-decoration: none; }
+.duelist-menu-breadcrumb a:hover { color: #fff; }
+.duelist-menu-breadcrumb svg { width: 14px; height: 14px; }
+.duelist-menu-breadcrumb-current { color: #e5eff4; }
+.duelist-menu-hero {
+  position: relative;
+  margin-top: 30px;
+  padding: 0 0 24px 21px;
+  border-left: 2px solid rgba(237,196,138,.78);
+  border-bottom: 1px solid rgba(160,207,226,.17);
+}
+.duelist-menu-eyebrow {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--dm-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .2em;
+}
+.duelist-menu-hero h1 {
+  margin: 0;
+  color: #fff3df;
+  font-size: clamp(28px,3.7vw,43px);
+  font-weight: 800;
+  letter-spacing: .035em;
+  line-height: 1.07;
+}
+.duelist-menu-hero p { margin: 9px 0 0; color: var(--dm-muted); font-size: 15px; }
+.duelist-menu-page-body { margin-top: 25px; }
+.duelist-menu-panel, .duelist-menu-card {
+  border: 1px solid var(--dm-line);
+  border-radius: 12px;
+  background: linear-gradient(145deg,rgba(19,48,67,.81),rgba(7,27,42,.75));
+  box-shadow: 0 12px 30px rgba(0,7,16,.17);
+  backdrop-filter: blur(10px);
+}
+.duelist-menu-panel { padding: 21px; }
+.duelist-menu-card { padding: 18px; }
+button.duelist-menu-card {
+  text-align: left;
+  transition: border-color .16s, background-color .16s, transform .16s;
+}
+button.duelist-menu-card:hover {
+  border-color: rgba(155,220,234,.7);
+  background: rgba(35,86,111,.48);
+  transform: translateY(-2px);
+}
+button.duelist-menu-card[data-selected='true'] {
+  border-color: rgba(237,196,138,.85);
+  background: rgba(99,76,46,.27);
+}
+.duelist-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 19px;
+  border: 1px solid rgba(161,211,231,.37);
+  border-radius: 9px;
+  background: rgba(18,53,73,.64);
+  color: #e5f3fa;
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.2;
+  transition: border-color .15s, background-color .15s;
+}
+.duelist-menu-button:hover:not(:disabled) { border-color: rgba(164,225,242,.8); background: rgba(41,92,120,.68); }
+.duelist-menu-button.is-primary {
+  border-color: rgba(246,209,153,.85);
+  background: linear-gradient(110deg,#e8b979,#f2d19d);
+  color: #251b10;
+}
+.duelist-menu-button.is-primary:hover:not(:disabled) { background: #f7dba9; }
+.duelist-menu-button:disabled { opacity: .42; cursor: not-allowed; }
+.duelist-menu-choice { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; color: #bfd3df; font-size: 13px; }
+.duelist-menu-choice select, .duelist-menu-page input[type='text'] {
+  max-width: 100%;
+  border: 1px solid rgba(149,204,229,.28);
+  border-radius: 8px;
+  background: #0b2639;
+  color: #eef9ff;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.duelist-menu-page input[type='range'], .duelist-menu-page input[type='checkbox'] { accent-color: #d9af76; }
+.duelist-menu-match-list { overflow: hidden; border: 1px solid var(--dm-line); border-radius: 11px; }
+.duelist-menu-match-row { background: rgba(13,43,59,.4); }
+.duelist-menu-match-row + .duelist-menu-match-row { border-top: 1px solid var(--dm-line); }
+.duelist-menu-page :is(button, a, input, select):focus-visible, 
+.duelist-hub :is(button, a, input, select):focus-visible {
+  outline: 2px solid #f2d19d;
+  outline-offset: 3px;
+}
+/* The main hangar remains uncluttered; visual emphasis is on the Play route. */
+.duelist-hub-nav-intro {
+  margin-bottom: 5px;
+  padding: 0 0 15px 13px;
+  border-left: 2px solid rgba(236,193,131,.76);
+  text-shadow: 0 2px 18px rgba(1,7,14,.8);
+}
+.duelist-hub-nav-intro span { color: #a4deeb; font-size: 10px; font-weight: 800; letter-spacing: .17em; }
+.duelist-hub-nav-intro p { margin: 7px 0 0; color: #fff1dc; font-size: 16px; font-weight: 750; line-height: 1.2; }
+.duelist-hub-nav-action[data-primary='true'] {
+  color: #fff1dd;
+  border-color: rgba(237,196,138,.75);
+  background: linear-gradient(90deg,rgba(90,71,43,.77),rgba(17,49,65,.83));
+}
+.duelist-hub-nav-action[data-primary='true']:hover { background: linear-gradient(90deg,rgba(112,86,52,.85),rgba(31,80,101,.9)); }
+
+@media(max-width: 700px) {
+  .duelist-menu-topbar { align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
+  .duelist-menu-quicknav { width: 100%; gap: 4px; justify-content: space-between; }
+  .duelist-menu-quicklink { min-height: 34px; padding: 5px 8px; font-size: 11px; }
+  .duelist-menu-hero { margin-top: 24px; padding-left: 15px; }
+  .duelist-menu-panel { padding: 16px; }
+  .duelist-hub-nav-intro p { font-size: 14px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .duelist-menu-page *, .duelist-hub-nav-action { transition: none !important; }
+}

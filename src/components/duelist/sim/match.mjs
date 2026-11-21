@@ -213,6 +213,9 @@ function spawnSeat(match, seat, protectSeconds = 0) {
     ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon,
   });
   if (chosen) {
+    // Charge is earned for the active class; switching classes cannot bank
+    // an old class's special for a different kit. Same-class respawns retain it.
+    if (seat.classId !== chosen.classId) seat.specialMeter = 0;
     seat.classId = chosen.classId;
     seat.pendingClass = null;
     event(match, { type: 'classSelected', id: seat.id, classId: chosen.classId, feed: false });
