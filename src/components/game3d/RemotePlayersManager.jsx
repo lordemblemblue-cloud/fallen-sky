@@ -4,6 +4,7 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import { reconcileNetworkPosition } from '../network/remote/positionCorrection';
 import { bakeRemoteComboClips, createRemoteComboWeapon, remoteComboKind } from './weapons/remoteWeaponCombos.js';
+import { loadRemoteSwimClips, REMOTE_SWIM_STATES } from './remoteSwimClips.mjs';
 
 /**
  * RemotePlayersManager — renders other players in the shared game world.
@@ -19,6 +20,9 @@ import { bakeRemoteComboClips, createRemoteComboWeapon, remoteComboKind } from '
  * bowCombo1..3), their avatar plays that swing, baked on the avatar's own
  * skeleton, with a stand-in weapon of that family in hand
  * (weapons/remoteWeaponCombos.js). Presentation only.
+ * Swimming: an \`anim\` of swimIdle / swimForward plays the owner's swim loops retargeted onto the avatar
+ * (remoteSwimClips.mjs); the packet's height already floats the avatar at the water line. Until those
+ * clips are ready, swimForward shows the run and swimIdle the idle.
  */
 
 const REMOTE_ARCHER_URL =
@@ -76,12 +80,27 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
     .then((loaded) => {
       if (disposed) return;
       // Right after the avatar loads, before any mixer poses it: both combos from its rest pose.
-      assets = { ...loaded, comboClips: bakeRemoteComboClips(loaded.model) };
+      assets = { ...loaded, comboClips: bakeRemoteComboClips(loaded.model), swimClips: null };
       assetsReady = true;
       pending.forEach((fn) => fn());
       pending.length = 0;
+      // The swim loops from the model's rest pose as well (no mixer ever poses the cached model, only its clones).
+      loadRemoteSwimClips(loaded.model)
+        .then((clips) => {
+          if (disposed) return;
+          assets.swimClips = clips;
+          remotes.forEach(attachSwim);
+        })
+        .catch((e) => console.warn('Remote-player swim clips unavailable; swimmers show the run / idle:', e));
     })
     .catch((e) => console.error('Remote-player asset load error:', e));
+
+  // Give a remote its swim actions once the clips exist; a player already swimming switches over at once.
+  const attachSwim = (r) => {
+    if (!assets?.swimClips || r.swimActions) return;
+    r.swimActions = Object.fromEntries(REMOTE_SWIM_STATES.map((state) => [state, r.mixer.clipAction(assets.swimClips[state])]));
+    if (REMOTE_SWIM_STATES.includes(r.lastAnim)) { r.current = null; setAnim(r, r.lastAnim, true); }
+  };
 
   const spawnRemote = (player) => {
     if (!assetsReady) {
@@ -149,7 +168,10 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
       targetYaw: player.yaw || 0,
       lastUpdate: Date.now(),
       name: player.display_name || 'Player',
+      swimActions: null,
+      lastAnim: null,
     });
+    attachSwim(remotes.get(player.player_id));
   };
 
   const removeRemote = (playerId) => {
@@ -161,7 +183,10 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
     remotes.delete(playerId);
   };
 
-  const actionOf = (r, state) => (state === 'run' ? r.runAction : state === 'idle' ? r.idleAction : r.comboAction);
+  const actionOf = (r, state) => (state === 'run' ? r.runAction : state === 'idle' ? r.idleAction
+    : REMOTE_SWIM_STATES.includes(state) ? r.swimActions?.[state] : r.comboAction);
+  // swimIdle / swimForward when the clips are there, else the idle / run they stand in for
+  const swimTarget = (r, anim) => (r.swimActions?.[anim] ? anim : anim === 'swimForward' ? 'run' : 'idle');
   // false once it has finished (held on its last frame) or was stopped (a rider pose stops every action)
   const swingPlaying = (r) => !!r.comboAction?.isRunning();
 
@@ -174,12 +199,14 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
       if (stamp < r.liveStamp && r.liveStamp - stamp < LIVE_REORDER_WINDOW_MS) return;
       if (live) r.liveStamp = stamp;
     }
+    r.lastAnim = anim;
     const comboClip = remoteComboKind(anim) ? r.comboClips[anim] || null : null;
-    const target = comboClip ? anim : anim === 'run' || anim === 'walk' ? 'run' : 'idle';
+    const target = comboClip ? anim : REMOTE_SWIM_STATES.includes(anim) ? swimTarget(r, anim)
+      : anim === 'run' || anim === 'walk' ? 'run' : 'idle';
     if (r.current === target) return;
     if (!live && (comboClip || swingPlaying(r))) return;
     const prev = actionOf(r, r.current);
-    let next = target === 'run' ? r.runAction : r.idleAction;
+    let next = target === 'run' ? r.runAction : REMOTE_SWIM_STATES.includes(target) ? r.swimActions[target] : r.idleAction;
     if (comboClip) {
       next = r.mixer.clipAction(comboClip);
       next.setLoop(THREE.LoopOnce, 1);
