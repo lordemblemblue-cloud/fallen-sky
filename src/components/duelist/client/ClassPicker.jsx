@@ -1,18 +1,19 @@
 // Choose a class (core/classes.mjs): before the fight, between rounds or while down. The match applies the choice
 // at the next spawn; in the middle of a fight it waits until then. Each class shows its own level (levels 1 to 25:
-// core/progression.mjs), the current match's ability ranks, special tiers and passives, separate from mastery.
+// core/progression.mjs), earned class mastery plus separate match-time ability boosts.
 import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
-import { levelFromXp, RANK_MAX, TIER_MAX, LEVEL_CAP } from '../core/progression.mjs';
+import { levelFromXp, masteryAt, masteryReward, RANK_MAX, TIER_MAX, LEVEL_CAP } from '../core/progression.mjs';
 import { kitAt } from '../core/ranks.mjs';
 
 const WEAPON_NAMES = { sword: 'Crystal blade', dualBlades: 'Twin crystal blades', staff: 'Double-bladed staff' };
 const hex = (n) => `#${n.toString(16).padStart(6, '0')}`;
 const NUMERALS = ['I', 'II', 'III', 'IV', 'V'];
 // what the next level worth waiting for brings
-function nextGain(level) {
-  if (level >= LEVEL_CAP) return 'Mastery complete. Combat boosts still reset each match.';
-  const next = Math.min(LEVEL_CAP, (Math.floor(level / 5) + 1) * 5);
-  return `Level ${next}: next mastery milestone (no permanent combat advantage).`;
+function nextGain(level, abilities) {
+  if (level >= LEVEL_CAP) return 'Maximum mastery reached. Match boosts still reset each match.';
+  const next = masteryReward(level + 1);
+  if (next.kind === 'ultimate') return `Level ${next.level}: Ultimate +1.`;
+  return `Level ${next.level}: ${abilities[next.abilityIndex]?.name || 'Ability'} +1.`;
 }
 
 /**
@@ -36,6 +37,7 @@ export default function ClassPicker({ current, pending = null, keys, live = fals
           const c = CLASSES[id];
           const at = levelFromXp(progress?.[id] ?? 0);
           const kit = kitAt(id, at.level, matchBoost);
+          const mastery = masteryAt(at.level);
           return (
             <button key={id} type="button" className="duelist-classcard" data-chosen={chosen === id} data-testid={`duelist-class-${id}`}
               style={{ '--class': hex(c.color) }} onClick={() => onPick(id)} aria-pressed={chosen === id}>
@@ -57,7 +59,7 @@ export default function ClassPicker({ current, pending = null, keys, live = fals
                 <kbd>{keys?.[4] ?? 'Q'}</kbd>{kit.special.name}<em title={`Tier ${kit.special.tier} of ${TIER_MAX}`}>{NUMERALS[kit.special.tier - 1]}</em>
               </span>
               <span className="duelist-classcard-passive"><strong>{kit.passive.name}</strong> {kit.passive.text}</span>
-              <span className="duelist-classcard-next">{nextGain(at.level)}</span>
+              <span className="duelist-classcard-next">{nextGain(at.level, c.abilities)} Mastery ULT {mastery.ultimateRank} · Ability ranks {mastery.abilityRanks.join(' / ')}.</span>
             </button>
           );
         })}
