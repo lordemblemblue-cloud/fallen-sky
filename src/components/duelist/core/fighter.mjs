@@ -5,7 +5,7 @@
 // Fair play is built in: one action at a time; a press during an action either continues a chain or cancels
 // in its window, or waits (one buffered press, for INPUT.bufferSeconds); cooldowns per move; costs paid up
 // front; stagger and grips lock out everything but Resist.
-import { BINDINGS, POWER_BINDINGS, moveById } from './moves.mjs';
+import { BINDINGS, POWER_BINDINGS, FLOW, moveById } from './moves.mjs';
 import { INPUT, BREACH } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
 import { KNOCKDOWN } from './tuning.mjs';
@@ -35,7 +35,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     effects: {},
     meter: 0,
     vitals: createVitals(vitals || {}),
-    action: null, // { id, move, t, nextHit, held, chainedFrom }
+    action: null, // { id, move, t, nextHit, held, chainedFrom, link }
     cooldowns: {}, // move id -> seconds when it may start again
     buffer: null, // { command, at }
     guard: null, // { since }
@@ -53,14 +53,43 @@ const busy = (f) => !!f.action;
 export const isStunned = (f, now) => now < f.stunnedUntil;
 export const isDown = (f, now) => now < f.riseUntil;
 
-// Which move a command starts right now (a chain continues the current move's chain).
-function moveForCommand(f, command) {
-  if (command === 'light' || command === 'heavy') {
-    const first = BINDINGS[f.weapon]?.[command] || null;
-    const a = f.action;
-    if (command === 'light' && a?.move.chain && a.t >= a.move.chain.from && a.t <= a.move.chain.to) return a.move.chain.next;
-    return first;
-  }
+// Is the current strike's chain window open, and with links left in the chain?
+function chaining(f) {
+  const a = f.action;
+  const c = a?.move.chain;
+  if (!c || a.t < c.from || a.t > c.to) return false;
+  const flow = FLOW[f.weapon];
+  return !flow || !flow.strikes.has(a.id) || (a.link || 1) < flow.chain.length;
+}
+
+// Which light strike a press starts (moves.mjs FLOW): the one for the direction held, else the next link of the
+// chain; never the strike being chained out of.
+function lightStrike(f, direction) {
+  const a = f.action;
+  const open = chaining(f);
+  const flow = FLOW[f.weapon];
+  if (!flow) return open ? a.move.chain.next : BINDINGS[f.weapon]?.light || null;
+  const from = open ? a.id : null;
+  const link = open ? (a.link || 1) : 0; // strikes made so far in this chain
+  const turned = direction ? flow[direction] : null;
+  if (turned && turned !== from) return turned;
+  const next = flow.chain[link % flow.chain.length];
+  return next !== from ? next : flow.chain[(link + 1) % flow.chain.length];
+}
+
+// Does the current strike chain into `id` right now?
+function chainsInto(f, id) {
+  if (!chaining(f)) return false;
+  const a = f.action;
+  const flow = FLOW[f.weapon];
+  if (!flow || !flow.strikes.has(a.id)) return a.move.chain.next === id;
+  return id !== a.id && flow.strikes.has(id);
+}
+
+// Which move a command starts right now (direction: the way the stick is held, for a light strike).
+function moveForCommand(f, command, direction = null) {
+  if (command === 'light') return lightStrike(f, direction);
+  if (command === 'heavy') return BINDINGS[f.weapon]?.heavy || null;
   // '#move': a move by its id, for the rules' own callers (guards' AI, specials); never accepted from a client
   if (command[0] === '#') return moveById(command.slice(1)) ? command.slice(1) : null;
   const slot = /^ability([1-4])$/.exec(command);
@@ -87,14 +116,14 @@ export function blockedReason(f, id, now) {
   return null;
 }
 
-function startMove(f, id, now, chainedFrom = null) {
+function startMove(f, id, now, chainedFrom = null, link = 1) {
   const move = moveById(id);
   if (move.kind === 'attack' || move.kind === 'power') f.protectedUntil = -Infinity; // acting ends spawn protection
   spendStamina(f.vitals, move.stamina, now);
   spendWill(f.vitals, move.will, now);
   if (move.cooldown > 0) f.cooldowns[id] = now + move.cooldown;
   f.guard = null;
-  f.action = { id, move, t: 0, nextHit: 0, held: move.channel, chainedFrom };
+  f.action = { id, move, t: 0, nextHit: 0, held: move.channel, chainedFrom, link };
   f.events.push({ type: 'start', id, at: now, chainedFrom });
   if (id === 'resist') { // throws off a grip and every breach at once
     if (f.heldBy) f.events.push({ type: 'freed', at: now, from: f.heldBy });
@@ -111,7 +140,7 @@ function canInterrupt(f, id) {
   if (!a) return true;
   const move = moveById(id);
   if (!move) return false; // a buffered guard waits for the action to end
-  if (a.move.chain?.next === id && a.t >= a.move.chain.from && a.t <= a.move.chain.to) return true;
+  if (chainsInto(f, id)) return true;
   return a.t >= a.move.cancelFrom && a.move.cancelInto.includes(move.kind);
 }
 
@@ -120,11 +149,12 @@ function canInterrupt(f, id) {
  * blockDown | blockUp | release (lets go of a held grip, throwing the target).
  * Returns { accepted, id?, reason? }; reason 'buffered' means it will start when the current action allows.
  */
-export function press(f, command, now, { fromBuffer = false } = {}) {
+// direction: forward | side | back | null, the way the stick is held relative to the facing (a light strike takes it)
+export function press(f, command, now, { fromBuffer = false, direction = null } = {}) {
   if (command === 'blockUp') { f.guard = null; return { accepted: true }; }
   if (command === 'blockDown') {
     if (f.vitals.dead || isStunned(f, now) || f.heldBy) return { accepted: false, reason: 'restrained' };
-    if (busy(f)) return bufferPress(f, command, now, fromBuffer);
+    if (busy(f)) return bufferPress(f, command, now, fromBuffer, null);
     if (!f.guard) f.guard = { since: now };
     return { accepted: true };
   }
@@ -133,22 +163,23 @@ export function press(f, command, now, { fromBuffer = false } = {}) {
     if (a?.move.channel && a.held) { a.held = false; return { accepted: true }; }
     return { accepted: false, reason: 'nothing-held' };
   }
-  const id = moveForCommand(f, command);
+  const id = moveForCommand(f, command, direction);
   if (!id) return { accepted: false, reason: 'unknown' };
   const reason = blockedReason(f, id, now);
   // resist is the one move that breaks into anything, including an action of one's own
   if (!reason && id === 'resist') { f.action = null; return startMove(f, id, now); }
   if (reason) return { accepted: false, reason };
-  if (busy(f) && !canInterrupt(f, id)) return bufferPress(f, command, now, fromBuffer);
-  const chainedFrom = f.action?.move.chain?.next === id ? f.action.id : null;
+  if (busy(f) && !canInterrupt(f, id)) return bufferPress(f, command, now, fromBuffer, direction);
+  const chainedFrom = chainsInto(f, id) ? f.action.id : null;
+  const link = chainedFrom ? (f.action.link || 1) + 1 : 1;
   if (f.action) f.events.push({ type: 'interrupt', id: f.action.id, by: id, at: now });
   f.action = null;
-  return startMove(f, id, now, chainedFrom);
+  return startMove(f, id, now, chainedFrom, link);
 }
 
-function bufferPress(f, command, now, fromBuffer) {
+function bufferPress(f, command, now, fromBuffer, direction) {
   if (fromBuffer) return { accepted: false, reason: 'busy' }; // a buffered press never re-buffers itself
-  f.buffer = { command, at: now };
+  f.buffer = { command, at: now, direction: direction || null };
   return { accepted: false, reason: 'buffered' };
 }
 
@@ -232,10 +263,10 @@ export function update(f, dt, now, rate = 1) {
   // a buffered press starts as soon as it may, or is dropped once it is too old
   if (f.buffer) {
     if (now - f.buffer.at > INPUT.bufferSeconds) f.buffer = null;
-    else if (!f.action || canInterrupt(f, moveForCommand(f, f.buffer.command) || '')) {
-      const { command } = f.buffer;
+    else if (!f.action || canInterrupt(f, moveForCommand(f, f.buffer.command, f.buffer.direction) || '')) {
+      const { command, direction } = f.buffer;
       f.buffer = null;
-      press(f, command, now, { fromBuffer: true });
+      press(f, command, now, { fromBuffer: true, direction });
     }
   }
   return true;

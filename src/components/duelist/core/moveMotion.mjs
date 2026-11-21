@@ -71,6 +71,17 @@ export const MOVE_MOTION = Object.freeze({
   staffLight2: { segments: phases('staffLight2', 'staffB', [0, 0.1, 0.3, 0.45]), settle: { clip: 'staffB', from: 0.45 } },
   staffLight3: { segments: phases('staffLight3', 'staffC', [0, 0.1, 0.26, 0.42]), settle: { clip: 'staffC', from: 0.42 } },
   staffHeavy: { segments: phases('staffHeavy', 'staffHeavy', [0, 0.3, 0.72, 1.05]), settle: { clip: 'staffHeavy', from: 1.05 } },
+  // ---- strikes by direction (core/moves.mjs FLOW): forward an advance, sideways a wide sweep, back a turn that
+  // cuts all round. Each leaves from its form's stance and settles back into it, so it may open a chain or follow
+  // any other strike.
+  swordAdvance: { segments: phases('swordAdvance', 'swordAdvance', [0.02, 0.26, 0.4, 0.54]), settle: { clip: 'swordAdvance', from: 0.54 } },
+  swordSweep: { segments: phases('swordSweep', 'swordSweep', [0.05, 0.34, 0.5, 0.65]), settle: { clip: 'swordSweep', from: 0.65 } },
+  swordTurn: { segments: phases('swordTurn', 'swordTurn', [0, 0.1, 0.3, 0.45]), settle: { clip: 'swordTurn', from: 0.45 } },
+  bladesAdvance: { segments: phases('bladesAdvance', 'bladesAdvance', [0.05, 0.26, 0.4, 0.54]), settle: { clip: 'bladesAdvance', from: 0.54 } },
+  bladesSweep: { segments: phases('bladesSweep', 'bladesSweep', [0.1, 0.34, 0.5, 0.65]), settle: { clip: 'bladesSweep', from: 0.65 } },
+  bladesTurn: { segments: phases('bladesTurn', 'bladesTurn', [0, 0.1, 0.3, 0.45]), settle: { clip: 'bladesTurn', from: 0.45 } },
+  staffLeap: { segments: phases('staffLeap', 'staffLeap', [0, 0.34, 0.48, 0.7]), settle: { clip: 'staffLeap', from: 0.7 } },
+  staffSweep: { segments: phases('staffSweep', 'staffSweep', [0.05, 0.34, 0.5, 0.65]), settle: { clip: 'staffSweep', from: 0.65 } },
 
   // ---- class abilities and specials (the rules move the body where it travels: the leap's arc, the throw)
   leapStrike: { segments: [seg('leapStart', 0, MOVES.leapStrike.startup, 0.35, 0.6, { travel: false }),

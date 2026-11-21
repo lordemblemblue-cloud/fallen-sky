@@ -66,6 +66,46 @@
    "seconds": 1.9,
    "loop": false,
    "note": "turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)"
+  },
+  "swordAdvance": {
+   "seconds": 0.9833,
+   "loop": false,
+   "note": "level sweep driving forward into a low lunge, contact about 0.32 s"
+  },
+  "swordTurn": {
+   "seconds": 0.9,
+   "loop": false,
+   "note": "turning backhand cut, all round, contact from 0.1 to 0.3 s"
+  },
+  "swordSweep": {
+   "seconds": 1.1,
+   "loop": false,
+   "note": "wide swing from behind the shoulders, contact about 0.41 s"
+  },
+  "bladesAdvance": {
+   "seconds": 0.9833,
+   "loop": false,
+   "note": "both blades sweep level, driving forward, contact about 0.32 s"
+  },
+  "bladesTurn": {
+   "seconds": 0.9,
+   "loop": false,
+   "note": "a turn with a blade out either side, all round, contact from 0.1 to 0.3 s"
+  },
+  "bladesSweep": {
+   "seconds": 1.1,
+   "loop": false,
+   "note": "both blades swing wide, the left behind the right, contact about 0.41 s"
+  },
+  "staffLeap": {
+   "seconds": 1.25,
+   "loop": false,
+   "note": "a leap and an overhead chop, contact about 0.41 s"
+  },
+  "staffSweep": {
+   "seconds": 1.1,
+   "loop": false,
+   "note": "wide swing from behind the shoulders, contact about 0.41 s"
   }
  }
 }

@@ -59,7 +59,7 @@ Balance numbers are first proposals for playtesting (`SPECIAL_BALANCE` and the c
 
 ## Status (2026-11-20, branch `claude/duelist-rebuild-20261118`)
 
-Built and tested (145 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
+Built and tested (153 Duelist tests; checked in the browser in practice and Capture the Flag against bots):
 
 - **The four kits, server-authoritative** (`core/classes.mjs`, `core/abilities.mjs`, `core/moves.mjs`,
   `sim/world.mjs`, `core/combat.mjs`, `sim/match.mjs`): every ability and special in the table above, the
@@ -78,11 +78,20 @@ Built and tested (145 Duelist tests; checked in the browser in practice and Capt
   guard. Staff: a two-handed stance and guard, three sweeps and an air turn that leave from the stance and settle
   back into it; the second hand is kept on the shaft on every body (`client/secondHand.mjs`). Every blade leaves
   its own trail. The motion lab (`/duelist-lab`) shows the clips with their weapons.
+- **Flow: strikes by direction that chain freely** (2026-11-21; `core/moves.mjs` FLOW, `core/fighter.mjs`). A light
+  strike takes the way the stick is held as it is pressed, relative to the facing: forward an **advance** that
+  closes more than a metre, sideways a wide **sweep**, back a **turn** that cuts all round; with no direction it is
+  the next link of the form's chain. Inside a strike's chain window any light strike of the form may follow, never
+  the same one twice running, and a chain is as long as the form's own (sword three, twin blades four, staff
+  three). Eight new clips (`swordAdvance`, `swordSweep`, `swordTurn`, the twin blades' three, `staffLeap`,
+  `staffSweep`; the staff's turn is its chain's second link). A press that waits keeps its direction; the link
+  count travels with the fighter (protocol 5); duelist and master bots use the advance, the sweep and the turn.
+  These are this game's own rules, written from its own frame data and clips.
 
 Still to do:
 
-1. **New combos.** The class weapons now have clips of their own (above); strikes by direction that chain freely
-   are still to be designed and written, as rules of this game's own.
+1. **Tuning Flow.** The strikes by direction (above) carry first-proposal numbers; heavy strikes do not take a
+   direction yet, and the bots use Flow only a little.
 2. **Transport** (escort a payload; the other team stops it): still a "Planned" entry in the play drawer. The
    HUD has no scoreboard for it yet. **A single rotating control point** has its scoreboard ready
    (`view.singlePoint`) but no mode behind it.

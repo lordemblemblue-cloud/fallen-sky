@@ -6,16 +6,16 @@
 // guard a blow it has seen coming (a master raises its guard just as the blow lands: a parry); punish a foe
 // that swung and missed; escape when badly hurt; use Telekinesis and the Breach; go after the mode's
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
-import { MOVES, BLOCK, CLASSES, isStunned, isDown, fighterVeil } from '../core/index.mjs';
+import { MOVES, BLOCK, CLASSES, FLOW, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 
 export const BOT_LEVELS = Object.freeze({
   trainee: Object.freeze({ reaction: 0.45, guardChance: 0.25, rollChance: 0.1, powerChance: 0.15, comboLength: 2, aggression: 0.5,
-    parry: 0.05, punish: 0.2, breach: 0.1, escape: 0.2 }),
+    parry: 0.05, punish: 0.2, breach: 0.1, escape: 0.2, flow: 0 }),
   duelist: Object.freeze({ reaction: 0.28, guardChance: 0.5, rollChance: 0.25, powerChance: 0.3, comboLength: 3, aggression: 0.7,
-    parry: 0.25, punish: 0.55, breach: 0.35, escape: 0.45 }),
+    parry: 0.25, punish: 0.55, breach: 0.35, escape: 0.45, flow: 0.25 }),
   master: Object.freeze({ reaction: 0.16, guardChance: 0.72, rollChance: 0.4, powerChance: 0.45, comboLength: 4, aggression: 0.85,
-    parry: 0.55, punish: 0.85, breach: 0.6, escape: 0.7 }),
+    parry: 0.55, punish: 0.85, breach: 0.6, escape: 0.7, flow: 0.45 }),
 });
 
 // A small deterministic random source, so a bot plays the same way for the same seed (tests, replays).
@@ -208,13 +208,21 @@ export function think(world, bot, { goal = null } = {}) {
   if (d > reach + 0.4) {
     input.move = { x: toward.x, z: toward.z };
     input.sprint = d > 8 && me.vitals.stamina > 50;
+    // strikes by direction (flow: how often this level uses them): an advance covers the last of the distance,
+    // pressed while moving in
+    if (FLOW[me.weapon] && d < reach + 1.4 && !me.action && rnd() < lvl.flow * 0.2) { presses.push('light'); bot.combo = 1; }
   } else {
     if (rnd() < 0.02) bot.strafe = -bot.strafe;
     input.move = { x: toward.z * bot.strafe * 0.5, z: -toward.x * bot.strafe * 0.5 };
     input.run = false;
     if (!me.action || me.action.move.chain) {
       if (bot.combo === -1 && !me.action) { presses.push('heavy'); bot.combo = 0; }
-      else if (bot.combo >= 0 && bot.combo < lvl.comboLength && rnd() < lvl.aggression * 0.25) { presses.push('light'); bot.combo += 1; }
+      else if (bot.combo >= 0 && bot.combo < lvl.comboLength && rnd() < lvl.aggression * 0.25) {
+        presses.push('light');
+        bot.combo += 1;
+        // now and then with a direction: a sweep as it circles, or a turn stepping back
+        if (FLOW[me.weapon] && rnd() < lvl.flow) input.move = rnd() < 0.75 ? { x: toward.z * bot.strafe, z: -toward.x * bot.strafe } : { x: -toward.x, z: -toward.z };
+      }
       else if (bot.combo >= lvl.comboLength) {
         bot.combo = 0;
         if (rnd() < 0.35 && !me.vitals.winded) presses.push('heavy');

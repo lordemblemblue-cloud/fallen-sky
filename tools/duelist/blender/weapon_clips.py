@@ -4,6 +4,8 @@
 #   Staff: a stance and a guard posed here with both hands on the shaft (the pack has no two-handed clips: each arm
 #   is solved onto the staff, the wrists kept easy), and the heavy combo's sweeps with one hand, each leaving from
 #   the stance and settling back into it.
+#   Strikes by direction for every form (the rules' Flow: forward an advance, sideways a wide sweep, back a turn
+#   that cuts all round), also from the heavy combo, each leaving from its form's stance and settling back into it.
 # Every clip is rebuilt at 60 frames a second on a smooth curve through the pack's keys (the pack is keyed at 24),
 # smoothed lightly, and each link of a chain starts from where the one before leaves the body, keeping the speed it
 # had (inertial blending).
@@ -749,7 +751,7 @@ def build():
     slash, slash_back = source('sword_regular_a', 0.05), source('sword_regular_a_rec')
     lunge, lunge_back = source('sword_regular_b'), source('sword_regular_b_rec')
     spin, chop, block, idle = source('sword_regular_c'), source('sword_attack'), source('sword_block'), source('sword_idle')
-    combo = source('sword_heavy_combo', 0, 2.2)
+    combo = source('sword_heavy_combo', 0, 3.0)
 
     # ---- twin blades: the left arm is the right arm in a mirror wherever both blades work together
     ready_q, ready_loc = pose_of(mirror_arm(part(block, 0, 0.02)), 0)  # standing, a blade either side
@@ -787,6 +789,25 @@ def build():
     add('staffB', settle_to(part(combo, 0.55, 1.0), stance_q, stance_loc), 'turning backhand sweep, contact from 0.1 to 0.3 s')
     add('staffC', settle_to(part(combo, 1.0, 1.42), stance_q, stance_loc), 'rising diagonal sweep, contact about 0.17 s')
     add('staffHeavy', settle_to(part(spin, 0, 1.3), stance_q, stance_loc, 0.6), 'turn in the air with the staff level: both ends pass, then the landing cut (0.3 to 0.7 s)')
+
+    # ---- strikes by direction, from the heavy combo: forward an advance, sideways a wide sweep, back a turn that
+    # cuts all round. Any of them may open a chain or follow any other strike, so each leaves from its weapon's
+    # stance and settles back into it.
+    def directional(t0, t1, leave, to_q, to_loc, shape=lambda c: c):
+        return settle_to(inertial_in(shape(part(combo, t0, t1)), leave, 0, 0.2), to_q, to_loc)  # a wind-up, not a snap
+
+    one_q, one_loc = pose_of(combo, 0)
+    ready1 = part(block, 0, 0.05)  # the sword's standing ready
+    add('swordAdvance', directional(0.08, 0.62, ready1, one_q, one_loc), 'level sweep driving forward into a low lunge, contact about 0.32 s')
+    add('swordTurn', directional(0.55, 1.0, ready1, one_q, one_loc), 'turning backhand cut, all round, contact from 0.1 to 0.3 s')
+    add('swordSweep', directional(1.40, 2.05, ready1, one_q, one_loc), 'wide swing from behind the shoulders, contact about 0.41 s')
+    ready2 = mirror_arm(part(block, 0, 0.05))
+    twin = lambda delay: (lambda c: mirror_arm(c, delay=delay))
+    add('bladesAdvance', directional(0.08, 0.62, ready2, ready_q, ready_loc, twin(0.05)), 'both blades sweep level, driving forward, contact about 0.32 s')
+    add('bladesTurn', directional(0.55, 1.0, ready2, ready_q, ready_loc, twin(0.0)), 'a turn with a blade out either side, all round, contact from 0.1 to 0.3 s')
+    add('bladesSweep', directional(1.40, 2.05, ready2, ready_q, ready_loc, twin(0.06)), 'both blades swing wide, the left behind the right, contact about 0.41 s')
+    add('staffLeap', directional(2.15, 2.95, stance, stance_q, stance_loc), 'a leap and an overhead chop, contact about 0.41 s')
+    add('staffSweep', directional(1.40, 2.05, stance, stance_q, stance_loc), 'wide swing from behind the shoulders, contact about 0.41 s')
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')

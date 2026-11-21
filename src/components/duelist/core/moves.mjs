@@ -8,7 +8,8 @@
 //     stagger (s): what a landed hit does.
 //   shieldMultiplier: how hard it hits shields and armor; veilMultiplier: how much Will it costs to stop.
 //   chain: { next, from, to }: pressing the same button between from and to (seconds into the move) starts
-//     `next` without waiting for the recovery.
+//     `next` without waiting for the recovery (light strikes: FLOW below says what follows, by direction).
+//   link (on the action, not here): how many strikes of a chain have been made, this one included.
 //   cancelInto + cancelFrom: kinds of moves that may interrupt this one from that time on (roll into push).
 //   iframes: [from, to] during which nothing can touch the fighter.
 //   rootMotion: metres a roll or dash carries the body over its active phase (strikes and powers move the body
@@ -56,12 +57,32 @@ export const MOVES = Object.freeze({
   // ---- double-bladed staff: continuous offense and area control
   staffLight1: move({ weapon: 'staff', startup: 0.12, active: 0.12, recovery: 0.22, stamina: 6, damage: 8, arc: 220, range: 2.6,
     chain: { next: 'staffLight2', from: 0.2, to: 0.46 }, cancelInto: ['movement', 'power'], cancelFrom: 0.28 }),
-  staffLight2: move({ weapon: 'staff', startup: 0.11, active: 0.12, recovery: 0.22, stamina: 6, damage: 8, arc: 220, range: 2.6,
+  staffLight2: move({ weapon: 'staff', startup: 0.11, active: 0.12, recovery: 0.22, stamina: 6, damage: 8, arc: 360, range: 2.6,
     chain: { next: 'staffLight3', from: 0.2, to: 0.46 }, cancelInto: ['movement', 'power'], cancelFrom: 0.28 }),
   staffLight3: move({ weapon: 'staff', startup: 0.13, active: 0.14, recovery: 0.3, stamina: 8, damage: 11, arc: 260, range: 2.8,
     knockback: 0.9, stagger: 0.45, cancelInto: ['movement'], cancelFrom: 0.4 }),
   staffHeavy: move({ weapon: 'staff', startup: 0.22, active: 0.4, recovery: 0.3, stamina: 14, damage: 7, hitAt: [0, 0.15, 0.3],
     arc: 360, range: 2.8, knockback: 0.5, stagger: 0.35, cancelInto: ['movement'], cancelFrom: 0.72 }),
+
+  // ---- strikes by direction (FLOW below): forward an advance that closes the distance, sideways a wide sweep,
+  // back a turn that cuts all round. Their clips are made from the pack's heavy combo
+  // (tools/duelist/blender/weapon_clips.py). chain has no `next`: FLOW says what may follow.
+  swordAdvance: move({ weapon: 'sword', startup: 0.16, active: 0.1, recovery: 0.26, stamina: 7, damage: 10, range: 2.4, arc: 100,
+    chain: { from: 0.24, to: 0.5 }, cancelInto: ['movement', 'power'], cancelFrom: 0.3 }),
+  swordSweep: move({ weapon: 'sword', startup: 0.2, active: 0.12, recovery: 0.3, stamina: 8, damage: 11, range: 2.3, arc: 220,
+    knockback: 0.5, stagger: 0.35, chain: { from: 0.3, to: 0.6 }, cancelInto: ['movement'], cancelFrom: 0.38 }),
+  swordTurn: move({ weapon: 'sword', startup: 0.12, active: 0.16, recovery: 0.22, stamina: 6, damage: 7, range: 1.9, arc: 360,
+    chain: { from: 0.24, to: 0.48 }, cancelInto: ['movement', 'power'], cancelFrom: 0.3 }),
+  bladesAdvance: move({ weapon: 'dualBlades', startup: 0.1, active: 0.1, recovery: 0.16, stamina: 5, damage: 6, veilMultiplier: 1.35,
+    range: 2.1, arc: 100, chain: { from: 0.16, to: 0.36 }, cancelInto: ['movement', 'power'], cancelFrom: 0.22 }),
+  bladesSweep: move({ weapon: 'dualBlades', startup: 0.12, active: 0.1, recovery: 0.18, stamina: 5, damage: 6, veilMultiplier: 1.35,
+    range: 1.9, arc: 220, stagger: 0.3, chain: { from: 0.18, to: 0.4 }, cancelInto: ['movement'], cancelFrom: 0.24 }),
+  bladesTurn: move({ weapon: 'dualBlades', startup: 0.08, active: 0.12, recovery: 0.14, stamina: 4, damage: 4, veilMultiplier: 1.35,
+    range: 1.7, arc: 360, chain: { from: 0.14, to: 0.32 }, cancelInto: ['movement', 'power'], cancelFrom: 0.2 }),
+  staffLeap: move({ weapon: 'staff', startup: 0.24, active: 0.12, recovery: 0.3, stamina: 9, damage: 12, range: 2.8, arc: 120,
+    knockback: 0.7, stagger: 0.4, chain: { from: 0.4, to: 0.64 }, cancelInto: ['movement'], cancelFrom: 0.46 }),
+  staffSweep: move({ weapon: 'staff', startup: 0.2, active: 0.14, recovery: 0.3, stamina: 8, damage: 9, range: 2.8, arc: 300,
+    knockback: 0.6, stagger: 0.4, chain: { from: 0.32, to: 0.62 }, cancelInto: ['movement'], cancelFrom: 0.4 }),
 
   // ---- bow / sniper: range, breaks shields. The active phase is the release; startup is the draw.
   bowShot: move({ weapon: 'bow', startup: 0.18, active: 0.04, recovery: 0.22, stamina: 4, damage: 12, range: 45, arc: 4,
@@ -137,6 +158,19 @@ export const MOVES = Object.freeze({
     execute: true, iframes: [0, 0.58], damageKind: 'execution' }),
   sanctuary: move({ kind: 'power', startup: 0.3, active: 0.05, recovery: 0.25, range: 0, blockable: false, special: true,
     effect: 'sanctuary', effectSeconds: 5, iframes: [0, 0.35], damageKind: 'effect' }),
+});
+
+// Flow: a light strike takes the direction the stick is held in as it is pressed, relative to where the fighter
+// faces: forward, back or to a side. With no direction it is the next link of the form's chain. Inside a strike's
+// chain window any light strike of the form may follow, never the same one twice running, and a chain is as long
+// as the form's own (the sword's three, the twin blades' four, the staff's three).
+export const STRIKE_DIRECTIONS = Object.freeze(['forward', 'side', 'back']);
+const flow = (chain, turns) => Object.freeze({ chain: Object.freeze(chain), ...turns, strikes: new Set([...chain, ...Object.values(turns)]) });
+export const FLOW = Object.freeze({
+  sword: flow(['swordLight1', 'swordLight2', 'swordLight3'], { forward: 'swordAdvance', side: 'swordSweep', back: 'swordTurn' }),
+  dualBlades: flow(['bladesLight1', 'bladesLight2', 'bladesLight3', 'bladesLight4'], { forward: 'bladesAdvance', side: 'bladesSweep', back: 'bladesTurn' }),
+  // the staff's turn is its chain's second link: a direction takes it out of its turn
+  staff: flow(['staffLight1', 'staffLight2', 'staffLight3'], { forward: 'staffLeap', side: 'staffSweep', back: 'staffLight2' }),
 });
 
 // Which move a button starts with each crystal form (the first of a chain).

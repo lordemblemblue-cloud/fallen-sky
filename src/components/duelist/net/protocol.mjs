@@ -43,7 +43,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits } from '../core/index.mjs';
 
-export const PROTOCOL = 4;
+export const PROTOCOL = 5; // 5: strikes by direction (a chain's link count and a waiting press's direction travel with a fighter)
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
 // A player's inputs wait for their tick in order, one used a tick. More than this many waiting (a burst after
@@ -181,9 +181,9 @@ export function encodeOwn(f, body, time) {
     v: [r5(v.hp), r5(v.stamina), r5(v.will), r5(v.shield), v.collapsed ? 1 : 0, v.winded ? 1 : 0, v.dead ? 1 : 0,
       when(v.collapsedAt), when(v.lastStaminaSpend), when(v.lastWillSpend), when(v.lastShieldHit)],
     mx: [v.max.hp, v.max.stamina, v.max.will, v.max.shield],
-    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0] : 0,
+    a: a ? [a.id, a.t, a.nextHit, a.held ? 1 : 0, a.chainedFrom || 0, a.link || 1] : 0,
     cd: times(f.cooldowns),
-    bf: f.buffer ? [f.buffer.command, f.buffer.at] : 0,
+    bf: f.buffer ? [f.buffer.command, f.buffer.at, f.buffer.direction || 0] : 0,
     g: f.guard ? f.guard.since : null,
     t: [when(f.stunnedUntil), when(f.protectedUntil), when(f.downUntil), when(f.riseUntil)],
     hb: f.heldBy || 0,
@@ -204,9 +204,9 @@ export function applyOwn(f, body, data) {
     lastStaminaSpend: then(lastStaminaSpend), lastWillSpend: then(lastWillSpend), lastShieldHit: then(lastShieldHit) });
   v.max = { hp: data.mx[0], stamina: data.mx[1], will: data.mx[2], shield: data.mx[3] };
   f.weapon = data.w;
-  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null } : null;
+  f.action = data.a ? { id: data.a[0], move: MOVES[data.a[0]], t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1 } : null;
   f.cooldowns = untimes(data.cd);
-  f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1] } : null;
+  f.buffer = data.bf ? { command: data.bf[0], at: data.bf[1], direction: data.bf[2] || null } : null;
   f.guard = data.g === null || data.g === undefined ? null : { since: data.g };
   [f.stunnedUntil, f.protectedUntil, f.downUntil, f.riseUntil] = data.t.map(then);
   f.heldBy = data.hb || null;

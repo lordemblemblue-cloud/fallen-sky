@@ -73,6 +73,16 @@ function newBody(x, z, yaw) {
 
 export const bodyOf = (world, id) => world.bodies.get(id);
 export const forwardOf = (yaw) => ({ x: Math.sin(yaw), z: Math.cos(yaw) });
+
+// The way the stick is held as a strike is pressed, relative to the facing: forward | back | side | null (the rules'
+// Flow, core/moves.mjs: a light strike takes it). A light touch of the stick counts as none.
+export function strikeDirection(body) {
+  const f = forwardOf(body.yaw);
+  const ahead = body.intent.x * f.x + body.intent.z * f.z;
+  const right = body.intent.z * f.x - body.intent.x * f.z;
+  if (Math.hypot(ahead, right) < 0.6) return null;
+  return Math.abs(ahead) >= Math.abs(right) ? (ahead > 0 ? 'forward' : 'back') : 'side';
+}
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
 
@@ -104,7 +114,7 @@ export function step(world, dt, inputs = {}) {
     for (const command of input.presses || []) {
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
-      const res = press(fighter, command, now);
+      const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
       if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id);
     }
   }

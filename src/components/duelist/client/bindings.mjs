@@ -127,7 +127,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`,
+    `${k('light')} light (with a direction: advance, sweep, turn)`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('roll')} roll`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
   parts.push(`${k('resist')} resist`, `${k('lock')} lock on`);

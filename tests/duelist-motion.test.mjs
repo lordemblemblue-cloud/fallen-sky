@@ -85,3 +85,18 @@ test('every stance has its idle and its guard in the pack', async () => {
     assert.ok(MOTION_CLIPS[form.guard].duration > 0.5, `${name}: the guard is held at 0.36 s and breathes`);
   }
 });
+
+test("a strike by direction lands in its active window too (the advances, the sweeps, the staff's leap)", () => {
+  for (const id of ['swordAdvance', 'swordSweep', 'bladesAdvance', 'bladesSweep', 'staffLeap', 'staffSweep']) {
+    const move = MOVES[id];
+    const { clip } = clipAt(id, 0);
+    // the fastest swing after the wind-up (a strike leaves its stance quickly: that is not the cut)
+    const peak = MOTION_CLIPS[clip].peaks.filter((p) => p.hand === 'right' && p.t > 0.15).sort((a, b) => b.speed - a.speed)[0];
+    assert.ok(peak, `${id}: ${clip} has a swing`);
+    const atStart = clipAt(id, move.startup - 0.02).time;
+    const atEnd = clipAt(id, move.startup + move.active + 0.02).time;
+    assert.ok(peak.t >= atStart && peak.t <= atEnd, `${id}: swing at ${peak.t}s of ${clip}, active shows ${atStart.toFixed(2)}-${atEnd.toFixed(2)}`);
+  }
+  assert.ok(travelAt('swordAdvance', MOVES.swordAdvance.duration).forward > 1, 'the advance closes more than a metre');
+  assert.ok(Math.abs(travelAt('swordTurn', MOVES.swordTurn.duration).forward) < 0.1, 'the turn stays where it stands');
+});
