@@ -51,6 +51,20 @@ test('sprinting works at zero stamina without spending any stamina', () => {
   assert.ok(b.z > 2, 'the runner moved at sprint speed');
 });
 
+test('Warrior's red style is heavy; Healer's blue style is swift and cannot be cycled off', () => {
+  for (const [classId, expectedMode, expectedCut] of [
+    ['warrior', 'heavy', 'swordCutDownHeavy'],
+    ['healer', 'swift', 'swordCutDownSwift'],
+  ]) {
+    const f = createFighter({ id: classId, classId, weapon: 'sword' });
+    assert.equal(f.mode, expectedMode);
+    assert.equal(press(f, 'mode', 0).reason, 'class-stance');
+    assert.equal(press(f, 'light', 0, { direction: 'forward' }).id, expectedCut);
+  }
+  const invalid = createFighter({ id: 'unknown', classId: 'constructor' });
+  assert.equal(invalid.mode, 'balanced', 'unknown IDs cannot acquire a prototype property as a stance');
+});
+
 test('third consecutive unblocked damaging attack immediately frees defender for one second', () => {
   assert.deepEqual([STAGGER_IMMUNITY.hits, STAGGER_IMMUNITY.seconds], [3, 1]);
   const a = createFighter({ id: 'attacker' });
