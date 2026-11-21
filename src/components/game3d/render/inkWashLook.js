@@ -256,6 +256,8 @@ export function createInkWashLook({ renderer, guard, level = 0, palette = 'vibra
       if (current === 0) { target?.dispose(); target = null; samples = -1; if (renderer.info) renderer.info.autoReset = true; }
     },
     setSize() { if (current > 0) makeTarget(); },
+    // the render target the scene is drawn into (null: the screen), e.g. to compile its shaders ahead of time
+    sceneTarget() { if (current === 0) return null; makeTarget(); return target; },
     // draws one frame: the scene, then (above level 0) the ink pass over it. renderer.info then counts both passes
     render(scene, camera) {
       if (current === 0) return guard.render(scene, camera);

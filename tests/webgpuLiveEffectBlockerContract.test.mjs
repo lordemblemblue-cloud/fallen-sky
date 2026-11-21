@@ -22,17 +22,27 @@ const liveBlockers = [
   },
 ];
 
+// The legacy GLSL effects stay: they are what the classic WebGL renderer draws. Each now has a WebGPU (TSL) version
+// used by WebGPURenderer, checked against the classic picture in the browser, with a device-loss fallback to the
+// classic renderer (docs/webgpu/CONVERSION_SURVEY_20261120.md). The production default is still fail-closed: a
+// ready scene uses WebGPU only where this device measured it at least as fast (webgpuDeviceVerdict.mjs).
+const webgpuVersions = {
+  'fallen-sky': { file: 'src/components/game3d/render/inkWashLook.js', uses: /createInkWashTwin/ },
+  'duelist-adventure': { file: 'src/components/duelist/client/warp.mjs', uses: /createWarpWebGPU|createWarpForWebGPU/ },
+};
+
 for (const { id, file, signatures } of liveBlockers) {
-  test(`${id}: legacy effect signatures require a fail-closed production default`, () => {
+  test(`${id}: legacy effects keep their WebGPU version and a fail-closed production default`, () => {
     const code = source(file);
     const legacyPresent = signatures.every((pattern) => pattern.test(code));
-    // When a port removes these signatures, this test should be updated with
-    // explicit visual-parity and device-loss evidence before readiness changes.
-    assert.equal(legacyPresent, true, `Re-audit ${file} and replace this guard with browser parity evidence`);
-    assert.equal(isSceneWebGPUReady(id), false, `${id} must not be promoted by static source changes`);
-    assert.equal(WEBGPU_SCENES[id].ready, false);
+    assert.equal(legacyPresent, true, `Re-audit ${file}: the classic renderer still needs its GLSL effect`);
+    assert.match(source(webgpuVersions[id].file), webgpuVersions[id].uses, `${id} needs its WebGPU effect version`);
+    assert.equal(isSceneWebGPUReady(id), true);
+    assert.equal(WEBGPU_SCENES[id].ready, true);
     assert.equal(chooseSceneRenderer({ sceneId: id }).kind, 'webgl');
-    assert.match(WEBGPU_SCENES[id].blocker, /.+/);
+    assert.equal(chooseSceneRenderer({ sceneId: id, deviceVerdict: { webgpuAtLeastAsFast: false } }).kind, 'webgl');
+    assert.equal(chooseSceneRenderer({ sceneId: id, deviceVerdict: { webgpuAtLeastAsFast: true } }).kind, 'webgpu');
+    assert.equal(chooseSceneRenderer({ sceneId: id, deviceVerdict: { webgpuAtLeastAsFast: true }, previousFailure: true }).kind, 'webgl');
   });
 }
 

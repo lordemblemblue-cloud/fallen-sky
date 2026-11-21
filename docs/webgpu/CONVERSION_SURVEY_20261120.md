@@ -334,3 +334,62 @@ wilds, where its GPU time doubles). The Duelist practice match measured faster o
   still compiling. That draw is skipped for one frame (0 bad pipelines in the 117 frames measured after it).
 - Tests: `node --test tests/` 1570 tests / 100 failing (4 new in `webgpuClassicOutput.test.mjs`); `main` f4a9ee58
   has 1566 / 102: the same failures plus the 2 the key fix repairs.
+
+### Stage 6 (2026-11-21): WebGPU by default wherever it is the faster renderer
+Owner decision: "faster first, then default wherever it is at least as fast", WebGL staying as the fallback.
+
+**Where WebGPU's time goes on the development PC** (Chrome on Windows, Radeon 780M; synthetic tests, 1024 x 1024):
+
+| Test | Classic WebGL (GLSL) | WebGPURenderer, WebGL2 backend (same TSL) | WebGPURenderer, WebGPU (same TSL) |
+|---|---|---|---|
+| 8 full-screen lit layers, MeshStandardMaterial | 1.42 ms | 1.58 ms | 2.95 ms |
+| the same, MeshLambertMaterial | 0.43 ms | 0.85 ms | 0.92 ms |
+| the same, MeshBasicMaterial | 0.39 ms | 0.81 ms | 0.52 ms |
+| one 2-million-triangle sphere | 1.55 ms | - | 1.51 ms |
+| 1,600 separate small draws (GPU time) | - | - | 0.39 ms (0.2 us a draw) |
+
+The node materials are not the problem (through WebGL2 they cost about what the GLSL does), nor vertices or draw
+calls: Chrome's WebGPU path (WGSL compiled for D3D12) makes a lit pixel about twice as expensive on this GPU.
+three 0.187 measured the same (standard 3.08 ms), so a three.js upgrade would not change it. In the game this is the
+whole gap: in the western wilds the GPU time with every material replaced by one plain material is 5.8 ms (WebGPU)
+vs 3.1 ms (classic), with the real materials 12.6 vs 9.0 ms. Render bundles (static meshes in r171 `BundleGroup`s,
+tried in the western wilds) cut direct draws from 190 to 106 but not the render CPU (8.0 vs 8.3 ms): not kept.
+
+**The default is decided per device.** Other GPUs and browsers can run the WebGPU path as fast or faster, so:
+- Both scenes are marked ready (`webgpuSceneReadiness.mjs`): every live shader and effect has its WebGPU version,
+  each view was checked against the classic renderer in the browser, and a lost device falls back to classic.
+- A ready scene uses WebGPU by default only where `webgpuDeviceVerdict.mjs` holds a verdict that WebGPU is at least
+  as fast (up to 5% slower counts as noise). Without a verdict, on a slower device, after a WebGPU failure in the tab
+  or for an unknown scene: the classic renderer (`rendererBackendChoice.mjs`, reasons `device-not-measured`,
+  `webgpu-slower-on-this-device`). `?renderer=webgpu|webgl2|webgl` still overrides; `?renderer=auto` forgets it.
+- `webgpuDeviceProbe.js` measures once per browser build (its user agent; kept 30 days): about half a second in the
+  background (idle time, 4 s after the Game 3D page or the Duelist menu opens). A scene shaped like the game's load
+  (320 lit meshes in front of five full-screen lit layers, fog, ACES, sRGB) is drawn by both renderers into an
+  off-screen target, two alternating rounds, best mean frame time each. This PC: WebGL 0.8-1.1 ms vs WebGPU
+  2.3-3.1 ms a frame (ratio 2.4-3.0), so the classic renderer stays the default here, with a console note:
+  `[renderer] WebGPU is not the default on this device (WebGPU 3.08 ms vs WebGL 1.09 ms a frame)`.
+- Checked live: with this PC's real verdict the world starts classic (`webgpu-slower-on-this-device`); with a
+  "faster" verdict written for this browser it starts on WebGPU (`scene-ready`) and draws correctly.
+
+**Loading on WebGPU** (also for `?renderer=webgpu`): r171 compiled every new pipeline synchronously at its object's
+first draw, and the page waited for the GPU process (102 new pipelines held the page for 7.4 + 2.9 s; the one-off
+10-minute freeze above happened on such a first visit, cause not proven). Now (`webgpuSceneRenderer.js`):
+- GameWorld3D holds WebGPU frames from the renderer's creation until the player is ready, then
+  `precompileSceneObjects` compiles the whole scene in the background (r171 `compileAsync`: async pipelines, every
+  visible object whether in view or not, for the ink look's target), releases the frames, lets a few frames draw
+  behind the loading screen (shadow map, ink pass) and only then shows the world. Measured: 94-190 pipelines in
+  6-13 s per area, 369 on a first load (27 s, of which r171's shader building on the main thread is part).
+- After that, an object drawn for the first time (streamed in, an effect's first use) compiles in the background and
+  appears when ready instead of freezing the page; objects already drawn keep compiling synchronously (a variant or
+  light-count change), so nothing on screen blinks out. A town -> north trip after the change: one 0.4 s long task,
+  no render over 150 ms, nothing missing; a pipeline that fails in the background is reported and skipped.
+- Tried and dropped: compiling every first-seen pipeline in the background from the start (objects missing for
+  seconds while ~100 compiled; one took 2.4 s).
+
+**Left:** the number of distinct shader variants (300-370 pipelines for a first Game 3D load) makes a first WebGPU
+load long; fewer variants (shared node graphs) would shorten it on every device. The lit-pixel cost of Chrome's
+WebGPU path on AMD integrated GPUs is outside the game (worth a Chromium/Dawn report with the fill test above).
+
+- Tests: `node --test tests/` 1646 tests / 102 failing; `main` b915a445 has 1638 / 103: the same failures plus one
+  this stage fixes (the renderer choice's storage-exception test). The readiness contract tests now pin the new rule
+  (ready scenes, classic unless a faster-WebGPU verdict), and `webgpuDeviceVerdict.test.mjs` is new.
