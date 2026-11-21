@@ -47,6 +47,6 @@ test('home navigation only keeps Play, Story Campaign, Character and minimal foo
   assert.match(hub, /SETTINGS/);
   const footer = hub.split('<footer className="duelist-hub-footer"')[1].split('</footer>')[0];
   assert.doesNotMatch(footer, /BATTLE PASS|PLUS/);
-  assert.match(hub, /PLANNED/);
+  assert.match(hub, /Ranked matchmaking is planned/);
   assert.match(hub, /aria-expanded=\{activePanel === 'play'\}/);
 });
