@@ -3,7 +3,7 @@
 // and offers one obvious button.
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
+import { Home, ShoppingCart, ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
 import { usePrefs, classProgressOf } from '../client/prefs.mjs';
 import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
@@ -36,9 +36,7 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
           <span>EMBLEM BLUE</span>
           <strong>DUELIST ADVENTURE</strong>
         </Link>
-        <nav className="duelist-menu-quicknav" aria-label="Game menu navigation">
-          <Link to="/duelist-next" className="duelist-menu-quicklink">HOME</Link>
-        </nav>
+        <span className="duelist-menu-header-status">DUELIST ADVENTURE</span>
       </header>
       <section className="duelist-menu-content">
         <div className="duelist-menu-breadcrumb">
@@ -55,6 +53,14 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
         </div>
         <div className="duelist-menu-page-body">{children}</div>
       </section>
+      <footer className="duelist-menu-bottom-nav" aria-label="Duelist menu navigation">
+        <Link to="/duelist-next" className="duelist-menu-bottom-link"><Home size={17}/> HOME</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'play-menu' }} className="duelist-menu-bottom-link"><Swords size={17}/> PLAY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'character' }} className="duelist-menu-bottom-link"><User size={17}/> CHARACTER</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-menu-bottom-link"><BookOpen size={17}/> STORY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'store' }} className="duelist-menu-bottom-link"><ShoppingCart size={17}/> STORE</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-bottom-link"><Settings size={17}/> SETTINGS</Link>
+      </footer>
     </main>
   );
 }
