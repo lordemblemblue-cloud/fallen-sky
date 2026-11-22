@@ -127,6 +127,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   return {
     group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
+    voice: /huntress|female/i.test(seat.body || '') ? 'f' : 'm', // which recorded voice it roars and taunts in
     root: group,
     bladeNear(point) {
       let nearest = null;
