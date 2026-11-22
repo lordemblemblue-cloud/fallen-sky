@@ -99,4 +99,5 @@ export function followSpeed(gap, walk = CAST_WALK_SPEED, run = CAST_RUN_SPEED) {
 export const shouldGreet = (dist, radius = CAST_GREET_RADIUS) => Number.isFinite(dist) && dist < radius;
 
 /** Playback rate of the walk clip for a ground speed (clip authored at `clipSpeed` m/s). */
-export const walkTimeScale = (speed, clipSpeed = 3.6) => Math.max(0.45, Math.min(1.35, speed / clipSpeed));
+export const walkTimeScale = (speed, clipSpeed = 3.6, max = 1.35) =>
+  Math.max(0.45, Math.min(max, speed / (clipSpeed > 0 ? clipSpeed : 3.6)));

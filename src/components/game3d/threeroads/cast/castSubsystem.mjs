@@ -42,7 +42,9 @@ import {
   CAPTION_LINE_CHARS, CAPTION_MAX_LINES, SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES,
 } from './castCaption.mjs';
 import { createCaptionView } from './castCaptionView.mjs';
-import { CAST_MODEL_SOURCES, castModelFor, distinctColours } from './castModels.mjs';
+import {
+  castSourceDef, castModelFor, castFallbackLook, distinctColours, CAST_OWN_SOURCE_PREFIX,
+} from './castModels.mjs';
 
 // The opening's parley puts 11 people in the town (7 at home, the 3 travellers, Elder
 // Maren). BUILD_RULES allows more than 8 when measured: each drawn person costs
@@ -99,12 +101,75 @@ async function defaultLoadSource(key, def, ctx) {
     };
   }
   const gltf = await loadWith(ctx.gltfLoader, url);
+  return ownOrSharedGlb(gltf, def, url);
+}
+
+// What a loaded GLB gives the cast. A person's own file names its clips exactly
+// (`Idle`, `Talk`, `Walk`) and must carry every one in `required`, or it is
+// refused and that person wears the shared figure.
+export function ownOrSharedGlb(gltf, def, url) {
+  const scene = gltf?.scene || gltf?.scenes?.[0];
   const clips = gltf?.animations || [];
+  if (!scene) throw new Error('No scene in ' + url);
+  if (def?.clips) {
+    const named = key => clips.find(clip => clip?.name === def.clips[key] && clip.duration > 0 && clip.tracks?.length) || null;
+    const found = { idle: named('idle'), talk: named('talk'), walk: named('walk') };
+    const missing = (def.required || []).filter(key => !found[key]);
+    if (missing.length) throw new Error(url + ' has no ' + missing.map(key => def.clips[key]).join(', ') + ' clip');
+    return {
+      scene, idleClip: found.idle, talkClip: found.talk, walkClip: found.walk, format: 'glb', url,
+      own: Boolean(def.own), walkClipSpeed: def.walkClipSpeed || CAST_WALK_SPEED, tint: def.tint || 'none',
+      yaw: Number(def.yaw) || 0, extraClips: clips,
+    };
+  }
   return {
-    scene: gltf?.scene || gltf?.scenes?.[0], idleClip: pickAXEEmbeddedIdleClip(clips),
+    scene, idleClip: pickAXEEmbeddedIdleClip(clips), talkClip: null,
     walkClip: clips.find(c => /walk/i.test(c.name)) || clips.find(c => /run/i.test(c.name)) || null,
-    format: 'glb', url, walkClipSpeed: def.walkClipSpeed || CAST_WALK_SPEED, tint: def.tint || 'multiply',
+    format: 'glb', url, walkClipSpeed: def?.walkClipSpeed || CAST_WALK_SPEED, tint: def?.tint || 'multiply', yaw: Number(def?.yaw) || 0,
   };
+}
+
+/**
+ * How fast an in-place walk clip carries the body, in the model's own world units
+ * per second: the planted (lower) foot slides back at that speed. Sampled over one
+ * cycle; the model's pose is put back as it was. null when it cannot tell.
+ */
+export function measureWalkSpeed(THREE_, model, clip, samples = 48) {
+  if (!model || !clip || !(clip.duration > 0)) return null;
+  const feet = [];
+  model.traverse(node => { if ((node.isBone || node.type === 'Bone') && /foot/i.test(node.name) && !/toe|end/i.test(node.name)) feet.push(node); });
+  if (feet.length < 2) return null;
+  const saved = [];
+  model.traverse(node => saved.push([node, node.position.clone(), node.quaternion.clone(), node.scale.clone()]));
+  const mixer = new THREE_.AnimationMixer(model);
+  const action = mixer.clipAction(clip);
+  action.play();
+  const now = feet.map(() => new THREE_.Vector3());
+  const before = feet.map(() => new THREE_.Vector3());
+  const dt = clip.duration / samples;
+  let total = 0, count = 0;
+  try {
+    mixer.setTime(0);
+    model.updateMatrixWorld(true);
+    feet.forEach((foot, i) => foot.getWorldPosition(before[i]));
+    for (let k = 1; k <= samples; k++) {
+      mixer.setTime(k * dt);
+      model.updateMatrixWorld(true);
+      feet.forEach((foot, i) => foot.getWorldPosition(now[i]));
+      let low = 0;
+      for (let i = 1; i < feet.length; i++) if (now[i].y < now[low].y) low = i;
+      total += Math.hypot(now[low].x - before[low].x, now[low].z - before[low].z) / dt;
+      count++;
+      feet.forEach((_, i) => before[i].copy(now[i]));
+    }
+  } finally {
+    action.stop();
+    mixer.uncacheRoot(model);
+    for (const [node, p, q, s] of saved) { node.position.copy(p); node.quaternion.copy(q); node.scale.copy(s); }
+    model.updateMatrixWorld(true);
+  }
+  const speed = count ? total / count : null;
+  return Number.isFinite(speed) && speed > 0.05 ? speed : null;
 }
 
 // A run clip with the hips' forward travel taken out, so a person walks on the spot
@@ -231,10 +296,14 @@ export function createCastSubsystem(ctx, deps = {}) {
     if (!value?.scene) throw new Error('Cast model source gave no scene');
     value.scene.updateMatrixWorld(true);
     value.reboundMeshes = unifySkeletons(THREE, value.scene);
+    // Height from the skinned mesh's world box in its rest pose (an own file's
+    // "Armature" is scaled 0.01: the bones are in centimetres).
     const box = new THREE.Box3().setFromObject(value.scene);
     value.sourceHeight = Math.max(1e-3, box.max.y - box.min.y);
     value.footY = box.min.y;
     value.walkClip = value.format === 'fbx' ? inPlace(value.walkClip) : value.walkClip;
+    // An own walk clip's natural speed, in the file's own metres per second.
+    value.walkSpeedMeasured = value.own ? measureWalkSpeed(THREE, value.scene, value.walkClip) : null;
     value.materialCount = 0;
     const seen = new Set();
     value.scene.traverse(node => {
@@ -249,14 +318,15 @@ export function createCastSubsystem(ctx, deps = {}) {
     entry = { key: sourceKey, value: null, error: null, promise: null };
     templates.set(sourceKey, entry);
     entry.promise = Promise.resolve()
-      .then(() => loadSource(sourceKey, CAST_MODEL_SOURCES[sourceKey], ctx))
+      .then(() => loadSource(sourceKey, castSourceDef(sourceKey), ctx))
       .then(value => {
         if (disposed) { disposeObjectTree(value?.scene); return; }
         entry.value = prepareTemplate(value);
       })
       .catch(error => {
         entry.error = error;
-        warn('Three Roads cast: model source ' + sourceKey + ' could not load; its people stay out', error);
+        warn('Three Roads cast: model source ' + sourceKey + ' could not load; ' +
+          (sourceKey.startsWith(CAST_OWN_SOURCE_PREFIX) ? 'they wear the shared figure' : 'its people stay out'), error);
       });
     return entry;
   }
@@ -276,7 +346,8 @@ export function createCastSubsystem(ctx, deps = {}) {
       want: { x, z }, x, z, y: 0, facing: rest, restFacing: rest,
       state: 'waiting', placement: null, waited: 0, probeMs: 0, offset: 0,
       template: templateFor(look.source),
-      group: null, model: null, mixer: null, idleAction: null, walkAction: null, ring: null,
+      group: null, model: null, mixer: null, idleAction: null, walkAction: null, talkAction: null, ring: null,
+      anim: 'idle', walkClipSpeed: null,
       entry: null, materials: [], moving: false, groundClock: 0,
       task: null, pendingTask: null, followMoving: false, drawn: true,
     };
@@ -394,15 +465,19 @@ export function createCastSubsystem(ctx, deps = {}) {
     const s = actor.look.height / t.sourceHeight;
     model.scale.set(s * actor.look.width, s, s * actor.look.width);
     model.position.y = -t.footY * s;
+    model.rotation.y = t.yaw || 0;
     // Clone this person's materials and tint them. With `tintMeshes` the source names
     // which mesh takes which colour (others keep theirs); without it the first
     // material in the rig takes the first colour and every other one the second.
+    // An own model (tint 'none') keeps the file's material: its texture is its look,
+    // and its geometry, material and texture are freed with the template.
     const clones = new Map();
     let order = 0;
     model.traverse(node => {
       if (!node.isMesh) return;
       node.castShadow = !node.isSkinnedMesh;
       node.receiveShadow = true;
+      if (t.tint === 'none') return;
       let colourIndex = null;
       if (t.tintMeshes) {
         const rule = t.tintMeshes.find(([pattern]) => pattern.test(node.name));
@@ -443,6 +518,12 @@ export function createCastSubsystem(ctx, deps = {}) {
       idle.time = Math.random() * (t.idleClip.duration || 1); // not all breathing in step
     }
     actor.walkAction = t.walkClip ? mixer.clipAction(t.walkClip) : null;
+    actor.talkAction = t.talkClip ? mixer.clipAction(t.talkClip) : null;
+    actor.anim = 'idle';
+    // The walk's natural speed for this person: measured on the file (scaled to their
+    // height), or the source's own figure.
+    actor.walkClipSpeed = t.walkSpeedMeasured ? t.walkSpeedMeasured * s : t.walkClipSpeed;
+    actor.own = Boolean(t.own);
     actor.model = model;
     actor.group = group;
     actor.mixer = mixer;
@@ -452,7 +533,16 @@ export function createCastSubsystem(ctx, deps = {}) {
 
   function tryPlace(actor) {
     const t = actor.template;
-    if (t.error) { actor.state = 'failed'; return; }
+    if (t.error) {
+      // Their own model did not load (or lacks a clip): the shared figure, as before.
+      const fallback = castFallbackLook(actor.look);
+      if (fallback) {
+        actor.look = fallback;
+        actor.ownFailed = String(t.error?.message || t.error);
+        actor.template = templateFor(fallback.source);
+      } else actor.state = 'failed';
+      return;
+    }
     if (!t.value) return;
     const started = globalThis.performance?.now?.() ?? Date.now();
     const probe = deps.probe || makeProbe(actor.want.x, actor.want.z, 8);
@@ -501,18 +591,25 @@ export function createCastSubsystem(ctx, deps = {}) {
   }
 
   function setMoving(actor, moving, speed) {
-    const walk = actor.walkAction, idle = actor.idleAction;
-    if (moving && walk) walk.timeScale = walkTimeScale(speed, actor.template.value?.walkClipSpeed);
-    if (moving === actor.moving) return;
     actor.moving = moving;
-    if (!walk || !idle) return;
-    if (moving) {
-      walk.reset().play();
-      idle.crossFadeTo(walk, 0.25, false);
-    } else {
-      idle.reset().play();
-      walk.crossFadeTo(idle, 0.3, false);
-    }
+    // Feet that keep pace with the ground: the clip plays at the body's speed over
+    // the walk's natural speed (an own model may play faster when following at a run).
+    if (moving && actor.walkAction)
+      actor.walkAction.timeScale = walkTimeScale(speed, actor.walkClipSpeed, actor.own ? 2.5 : undefined);
+  }
+
+  // Walk while moving, else Talk while one of their lines is up, else Idle; a
+  // quarter-second crossfade between them. The shared figure has no Talk: Idle.
+  const actionOf = (actor, name) => (name === 'walk' ? actor.walkAction : name === 'talk' ? actor.talkAction : actor.idleAction);
+  function chooseAnim(actor) {
+    const talking = (captions.get(actor.id)?.seconds || 0) > 0;
+    const want = actor.moving && actor.walkAction ? 'walk' : talking && actor.talkAction ? 'talk' : 'idle';
+    if (want === actor.anim) return;
+    const from = actionOf(actor, actor.anim), to = actionOf(actor, want);
+    actor.anim = want;
+    if (!to) return;
+    to.reset().play();
+    if (from && from !== to) from.crossFadeTo(to, 0.25, false);
   }
 
   // Moves an actor toward (tx, tz); returns true when there.
@@ -599,6 +696,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     g.position.y = actor.y;
     g.position.z = actor.z;
     g.rotation.y = actor.facing;
+    chooseAnim(actor);
     // Givers' mixers are advanced by GameWorld3D's questNPCs loop; the others' here,
     // while they are drawn.
     if (!actor.entry && actor.drawn) actor.mixer?.update(dt);
@@ -809,6 +907,8 @@ export function createCastSubsystem(ctx, deps = {}) {
           facing: r(actor.facing), task: actor.task?.kind || null, moving: actor.moving,
           colours: actor.look.colours.map(c => '#' + c.toString(16).padStart(6, '0')),
           fromHome: actor.fromHome, drawn: actor.drawn,
+          model: actor.look.source, ownFailed: actor.ownFailed || null, anim: actor.anim,
+          walkClipSpeed: actor.walkClipSpeed ? r(actor.walkClipSpeed) : null,
           caption: (captions.get(actor.id)?.seconds || 0) > 0,
         })),
       };

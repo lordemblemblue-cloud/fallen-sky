@@ -24,13 +24,42 @@ export const CAST_MODEL_SOURCES = Object.freeze({
 
 export const CAST_DEFAULT_SOURCE = 'archer';
 
-// Person id -> model. `source` is a key of CAST_MODEL_SOURCES; `height` (m)
-// overrides the body's height when a person needs it.
+// A person with a model of their own (BUILD_RULES section 7, "People"): one GLB
+// named after their id, one mesh, one material, its own clips `Idle`, `Talk` and
+// `Walk` (in place). Its texture is its look: no tint, no build squeeze. If the
+// file or a clip is missing they wear the shared figure (`fallback`) instead.
+export const CAST_OWN_MODEL_FOLDER = '/game3d/threeroads/cast/';
+export const CAST_OWN_SOURCE_PREFIX = 'own:';
+export const CAST_OWN_CLIPS = Object.freeze({ idle: 'Idle', talk: 'Talk', walk: 'Walk' });
+export function castOwnModelSource(personId) {
+  return Object.freeze({
+    kind: 'glb', own: true, url: CAST_OWN_MODEL_FOLDER + personId + '.glb',
+    clips: CAST_OWN_CLIPS, required: Object.freeze(['idle', 'talk', 'walk']),
+    tint: 'none', fallback: CAST_DEFAULT_SOURCE,
+    // The walk's natural speed is measured from the clip when the file loads
+    // (castSubsystem measureWalkSpeed); this is used only if that fails.
+    walkClipSpeed: 1.2,
+    // Turn applied to the model inside the person, so `facing` means the same as
+    // for the shared figure (both look along +z at facing 0: checked live for Bram).
+    yaw: 0,
+  });
+}
+
+/** The source definition for a source key: a shared one, or `own:<person id>`. */
+export function castSourceDef(key) {
+  if (typeof key !== 'string') return null;
+  if (key.startsWith(CAST_OWN_SOURCE_PREFIX)) return castOwnModelSource(key.slice(CAST_OWN_SOURCE_PREFIX.length));
+  return CAST_MODEL_SOURCES[key] || null;
+}
+
+// Person id -> model. `source` is a key of CAST_MODEL_SOURCES; `own: true` means
+// they wear public/game3d/threeroads/cast/<id>.glb; `height` (m) overrides the
+// body's height when a person needs it.
 export const CAST_MODELS = Object.freeze({
   sable_vey: Object.freeze({ source: 'archer' }),
   elder_maren: Object.freeze({ source: 'archer' }),
   master_hesper: Object.freeze({ source: 'archer' }),
-  bram_lamplighter: Object.freeze({ source: 'archer' }),
+  bram_lamplighter: Object.freeze({ own: true, source: 'archer' }),
   watch_warden_south: Object.freeze({ source: 'archer' }),
   mizuhara_jun: Object.freeze({ source: 'archer' }),
   paneb_scribe: Object.freeze({ source: 'archer' }),
@@ -70,18 +99,32 @@ export const castBuildWidth = build => BUILD_WIDTH[build] ?? 1;
 
 const FALLBACK_COLOURS = Object.freeze([0x7a7a7a, 0xd0d0d0]);
 
-/** The model a person wears: source key, height, width, and their two colours. */
+/**
+ * The model a person wears: source key, height, width, their two colours, and
+ * (for an own model) the shared source they fall back to, with its width.
+ */
 export function castModelFor(person) {
   const chosen = CAST_MODELS[person?.id] || null;
-  const source = chosen?.source && CAST_MODEL_SOURCES[chosen.source] ? chosen.source : CAST_DEFAULT_SOURCE;
+  const shared = chosen?.source && CAST_MODEL_SOURCES[chosen.source] ? chosen.source : CAST_DEFAULT_SOURCE;
+  const own = Boolean(chosen?.own && person?.id);
   const colours = Array.isArray(person?.look?.colours) && person.look.colours.length >= 2
     ? [person.look.colours[0], person.look.colours[1]] : [...FALLBACK_COLOURS];
+  const buildWidth = castBuildWidth(person?.look?.build);
   return {
-    source,
+    source: own ? CAST_OWN_SOURCE_PREFIX + person.id : shared,
+    own,
+    fallback: own ? shared : null,
     height: Number.isFinite(chosen?.height) ? chosen.height : castBodyHeight(person?.look?.body),
-    width: castBuildWidth(person?.look?.build),
+    width: own ? 1 : buildWidth,
+    buildWidth,
     colours,
   };
+}
+
+/** The same person on the shared figure, after their own model failed. */
+export function castFallbackLook(look) {
+  if (!look?.own || !look.fallback) return null;
+  return { ...look, source: look.fallback, own: false, fallback: null, width: look.buildWidth ?? 1 };
 }
 
 const channel = (hex, shift) => (hex >> shift) & 0xff;
