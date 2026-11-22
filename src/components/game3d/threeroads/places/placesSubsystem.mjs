@@ -13,16 +13,20 @@
 //     the terrain in one mesh per build.
 // Announces `places:ready` { area } on the bus once everything of an area
 // stands on the ground. See docs/game3d/three-empires/BUILD_RULES.md.
+//
+// Places of a band still being built (layout `preview: true`: band 2's camps)
+// are built only with the preview switch (?threeRoads=1&threeRoadsPreview=1).
 import * as THREE from 'three';
 import { THREE_ROADS_Z_OFFSET } from '../coords.mjs';
-import { createValleyKit } from './valleyKit.mjs';
+import { createValleyKit, createEmpireKit } from './valleyKit.mjs';
 import { drapePaintedGround } from './paintedGround.mjs';
 import { THREE_ROADS_PLACES, placeLayout } from './layouts/index.mjs';
 import {
   placeInstances, groundUnder, instanceMatrix, lodForDistance, solidFor,
   createSolidGrid, resolveAgainstGrid,
 } from './placeMath.mjs';
-import { wolfveilHeight } from '../../wolfveil/WolfveilLayout.js';
+import { wolfveilHeight, wolfveilRiverHeightAtZ } from '../../wolfveil/WolfveilLayout.js';
+import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 import { WOLFVEIL_AREA_IDS } from '../../wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 
 const LOD_SECONDS = 0.25;
@@ -31,10 +35,13 @@ const GROUND_GIVE_UP_SECONDS = 20; // then the analytic height stands in
 const RESETTLE_AT = Object.freeze([4, 12]); // late floors (the town) re-checked
 const LIGHT_RANGE = 70; // a place's lights are on only this near
 
-export function createPlacesSubsystem(ctx) {
+export function createPlacesSubsystem(ctx, {
+  preview = threeRoadsPreviewEnabled(globalThis.window),
+  layouts = THREE_ROADS_PLACES,
+} = {}) {
   if (ctx?.region !== 'wolfveil' || !ctx.wolfveilWorld?.group) return null;
   const areas = ctx.areaScenes === false ? WOLFVEIL_AREA_IDS : [ctx.worldArea];
-  const places = THREE_ROADS_PLACES.filter(place => areas.includes(place.area));
+  const places = layouts.filter(place => areas.includes(place.area) && (preview || !place.preview));
   if (!places.length) return null;
 
   const root = new THREE.Group();
@@ -45,7 +52,21 @@ export function createPlacesSubsystem(ctx) {
   root.userData.wolfveilAreaShared = true;
   ctx.wolfveilWorld.group.add(root);
 
-  const kit = createValleyKit({ gltfLoader: ctx.gltfLoader, onSwap: () => adoptKit() });
+  // One kit object per kit the built places use: the valley's, and in band 2's
+  // camps an empire's.
+  const kits = new Map();
+  const kitFor = name => {
+    if (!kits.has(name)) {
+      const options = { gltfLoader: ctx.gltfLoader, onSwap: () => adoptKit() };
+      kits.set(name, name === 'valley' ? createValleyKit(options) : createEmpireKit(name, options));
+    }
+    return kits.get(name);
+  };
+  const pieceOf = inst => kitFor(inst.kit).get(inst.piece);
+  // The ground a piece stands on, or for a piece afloat the river's water.
+  const heightFor = (inst, heightAt) => (inst.afloat
+    ? wolfveilRiverHeightAtZ(inst.z)
+    : groundUnder(inst, heightAt));
 
   // ---- Instances, grouped into one batch per piece --------------------
   const placeState = new Map(); // id -> { place, members: [index], grounded, ... }
@@ -55,7 +76,7 @@ export function createPlacesSubsystem(ctx) {
     placeState.set(place.id, state);
     for (const inst of placeInstances(place)) {
       state.members.push(all.length);
-      all.push({ inst, ground: groundUnder(inst, wolfveilHeight) ?? 0, lod: -2 });
+      all.push({ inst, ground: heightFor(inst, wolfveilHeight) ?? 0, lod: -2 });
     }
   }
 
@@ -63,26 +84,28 @@ export function createPlacesSubsystem(ctx) {
   const spinners = [];
   for (const record of all) {
     if (record.inst.spin) { spinners.push(record); continue; }
-    const id = record.inst.piece;
-    if (!batches.has(id)) batches.set(id, { id, members: [], meshes: [null, null], dirty: true });
-    record.batch = batches.get(id);
+    const key = record.inst.kit + ':' + record.inst.piece;
+    if (!batches.has(key)) {
+      batches.set(key, { key, kit: kitFor(record.inst.kit), id: record.inst.piece, members: [], meshes: [null, null], dirty: true });
+    }
+    record.batch = batches.get(key);
     record.slot = record.batch.members.length;
     record.batch.members.push(record);
   }
 
   const colour = new THREE.Color();
   const writeColour = (batch, record, slot) => {
-    colour.setHex(kit.colourFor(batch.id, record.inst.tint));
+    colour.setHex(batch.kit.colourFor(batch.id, record.inst.tint));
     batch.colours[slot * 3] = colour.r; batch.colours[slot * 3 + 1] = colour.g; batch.colours[slot * 3 + 2] = colour.b;
   };
   for (const batch of batches.values()) {
     const n = batch.members.length;
     batch.matrices = new Float32Array(n * 16);
     batch.colours = new Float32Array(n * 3);
-    const entry = kit.get(batch.id);
+    const entry = batch.kit.get(batch.id);
     for (let lod = 0; lod < 2; lod++) {
-      const mesh = new THREE.InstancedMesh(lod ? entry.lod1 : entry.lod0, kit.materials[entry.material], n);
-      mesh.name = 'TR_Place_' + batch.id + '_LOD' + lod;
+      const mesh = new THREE.InstancedMesh(lod ? entry.lod1 : entry.lod0, batch.kit.materials[entry.material], n);
+      mesh.name = 'TR_Place_' + (batch.kit.id === 'valley' ? '' : batch.kit.id + '_') + batch.id + '_LOD' + lod;
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       // Every batch has instance colours, so all of them share one pipeline.
       mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
@@ -101,8 +124,8 @@ export function createPlacesSubsystem(ctx) {
 
   // Pieces that turn (the windmill's sails): one plain mesh each.
   for (const record of spinners) {
-    const entry = kit.get(record.inst.piece);
-    const mesh = new THREE.Mesh(entry.lod0, kit.materials[entry.material]);
+    const entry = pieceOf(record.inst);
+    const mesh = new THREE.Mesh(entry.lod0, kitFor(record.inst.kit).materials[entry.material]);
     mesh.name = 'TR_Place_' + record.inst.piece + '_spin';
     mesh.rotation.order = 'YXZ';
     mesh.position.set(record.inst.x, record.ground + record.inst.y, record.inst.z);
@@ -171,7 +194,7 @@ export function createPlacesSubsystem(ctx) {
   function settle(state, heightAt) {
     for (const index of state.members) {
       const record = all[index];
-      const y = groundUnder(record.inst, heightAt);
+      const y = heightFor(record.inst, heightAt);
       if (y === null || Math.abs(y - record.ground) < 0.02) continue;
       record.ground = y;
       if (record.batch) {
@@ -181,7 +204,7 @@ export function createPlacesSubsystem(ctx) {
         record.mesh.position.y = y + record.inst.y;
       }
       if (record.solid) {
-        record.solid.top = y + record.inst.y + kit.get(record.inst.piece).table.size[2] * record.inst.scale;
+        record.solid.top = y + record.inst.y + pieceOf(record.inst).table.size[2] * record.inst.scale;
       }
     }
     for (const light of state.lights) {
@@ -250,7 +273,7 @@ export function createPlacesSubsystem(ctx) {
       record.lod = lod;
       if (record.batch) record.batch.dirty = true;
       else if (record.mesh && lod >= 0) {
-        const entry = kit.get(record.inst.piece);
+        const entry = pieceOf(record.inst);
         record.mesh.geometry = lod === 0 ? entry.lod0 : entry.lod1;
       }
     }
@@ -261,18 +284,18 @@ export function createPlacesSubsystem(ctx) {
   function adoptKit() {
     if (disposed) return;
     for (const batch of batches.values()) {
-      const entry = kit.get(batch.id);
+      const entry = batch.kit.get(batch.id);
       batch.meshes[0].geometry = entry.lod0;
       batch.meshes[1].geometry = entry.lod1;
-      batch.meshes[0].material = batch.meshes[1].material = kit.materials[entry.material];
+      batch.meshes[0].material = batch.meshes[1].material = batch.kit.materials[entry.material];
       // The atlas carries the colour from now on, except on tinted pieces.
       batch.members.forEach((record, slot) => writeColour(batch, record, slot));
       rewrite(batch);
     }
     for (const record of spinners) {
-      const entry = kit.get(record.inst.piece);
+      const entry = pieceOf(record.inst);
       record.mesh.geometry = record.lod === 0 ? entry.lod0 : entry.lod1;
-      record.mesh.material = kit.materials[entry.material];
+      record.mesh.material = kitFor(record.inst.kit).materials[entry.material];
     }
   }
 
@@ -331,24 +354,25 @@ export function createPlacesSubsystem(ctx) {
       let drawCalls = 0, triangles = 0, instances = 0;
       const pieces = new Set();
       for (const batch of batches.values()) {
-        pieces.add(batch.id);
+        pieces.add(batch.key);
         for (const mesh of batch.meshes) {
           if (!mesh.visible || !mesh.count) continue;
           drawCalls++;
           instances += mesh.count;
-          triangles += mesh.count * kit.trianglesOf(mesh.geometry);
+          triangles += mesh.count * batch.kit.trianglesOf(mesh.geometry);
         }
       }
       for (const record of spinners) {
         pieces.add(record.inst.piece);
         if (!record.mesh.visible) continue;
         drawCalls++; instances++;
-        triangles += kit.trianglesOf(record.mesh.geometry);
+        triangles += kitFor(record.inst.kit).trianglesOf(record.mesh.geometry);
       }
       if (groundMesh) { drawCalls++; triangles += painted.triangles; }
       const states = [...placeState.values()];
       return {
-        areas: [...areas], places: places.map(place => place.id), kit: kit.source,
+        areas: [...areas], places: places.map(place => place.id), preview,
+        kit: kits.get('valley')?.source ?? null, kits: Object.fromEntries([...kits].map(([name, k]) => [name, k.source])),
         pieces: pieces.size, instancesTotal: all.length, instances, drawCalls, triangles,
         paintedTriangles: painted.triangles, solids: solids.length,
         lightsOn: states.reduce((n, s) => n + s.lights.filter(light => light.intensity > 0).length, 0),
@@ -374,7 +398,7 @@ export function createPlacesSubsystem(ctx) {
       for (const batch of batches.values()) for (const mesh of batch.meshes) mesh.dispose?.();
       for (const state of placeState.values()) for (const light of state.lights) light.dispose?.();
       if (groundMesh) { groundMesh.geometry.dispose(); groundMesh.material.dispose(); }
-      kit.dispose();
+      for (const k of kits.values()) k.dispose();
       batches.clear();
       spinners.length = 0;
     },
