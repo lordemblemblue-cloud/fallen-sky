@@ -18,6 +18,7 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
+import { settleSpecialSpend } from './specialMeterSettlement.mjs';
 import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
@@ -476,7 +477,10 @@ function chargeSpecials(match, effects) {
   for (const e of effects) {
     if (e.type === 'special') {
       const s = match.seats.get(e.by);
-      if (s) s.specialMeter = Math.max(0, s.specialMeter - e.cost);
+      if (s?.kind === 'player' && s.classId) {
+        const remaining = settleSpecialSpend(s.specialMeter, e.cost);
+        if (remaining !== null) s.specialMeter = remaining;
+      }
       continue;
     }
     const by = e.type === 'impact' ? e.attacker : e.type === 'heal' ? e.by : null;
