@@ -113,6 +113,34 @@ test('the shipped list names four subsystems and every stub is safe to create', 
   world.dispose();
 });
 
+test('collision is asked of every live subsystem and a failing one is switched off', () => {
+  const warnings = [];
+  const world = createThreeRoadsWorld({}, {
+    warn: (...args) => warnings.push(args[0]),
+    subsystems: [
+      { id: 'wall', create: () => ({
+        resolveCollision: (position, from) => {
+          if (position.x <= 5) return false;
+          position.x = from.x;
+          return true;
+        },
+      }) },
+      { id: 'broken', create: () => ({ resolveCollision: () => { throw new Error('bad'); } }) },
+      { id: 'noCollision', create: () => ({ update: () => {} }) },
+    ],
+  });
+  const free = { x: 1, z: 0 };
+  assert.equal(world.resolveCollision(free, { x: 0, z: 0 }, 0.6), false);
+  assert.equal(world.status().broken, 'failed');
+  const blocked = { x: 9, z: 0 };
+  assert.equal(world.resolveCollision(blocked, { x: 4, z: 0 }, 0.6), true);
+  assert.equal(blocked.x, 4);
+  assert.equal(warnings.length, 1);
+  world.dispose();
+  assert.equal(world.resolveCollision({ x: 9, z: 0 }, { x: 4, z: 0 }, 0.6), false);
+  assert.equal(world.resolveCollision(null, null, 0.6), false);
+});
+
 test('GameWorld3D has exactly one hook: create behind the switch, update, dispose', () => {
   const source = readFileSync(
     new globalThis.URL('../src/components/game3d/GameWorld3D.jsx', import.meta.url), 'utf8');
@@ -120,5 +148,7 @@ test('GameWorld3D has exactly one hook: create behind the switch, update, dispos
   assert.equal(count(/threeRoadsEnabled\(window\)\?createThreeRoadsWorld\(/g), 1);
   assert.equal(count(/threeRoads\?\.update\(delta,model\.position\)/g), 1);
   assert.equal(count(/threeRoads\?\.dispose\(\)/g), 1);
+  assert.equal(count(/threeRoads\?\.resolveCollision\(model\.position,/g), 1);
+  assert.equal(count(/threeRoads\b/g), 7, 'no other use of the Three Roads world in GameWorld3D');
   assert.equal(count(/from '\.\/threeroads\//g), 2, 'only the switch and the world are imported');
 });

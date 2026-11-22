@@ -4,7 +4,8 @@
 // when a subsystem is added or grows.
 //
 // A subsystem is `create(ctx)` returning null (nothing to do in this scene)
-// or `{ update(dt, playerPosition, ctx)?, dispose()? }`. One failing
+// or `{ update(dt, playerPosition, ctx)?, resolveCollision(position, from,
+// radius, ctx)?, dispose()? }`. One failing
 // subsystem is switched off and reported; it must never take the world or
 // another subsystem down with it.
 //
@@ -76,6 +77,24 @@ export function createThreeRoadsWorld(deps = {}, {
     bus,
     status: () => ({ ...status }),
     get(id) { return live.find(item => item.id === id)?.made || null; },
+    // Solid things the subsystems built (walls, wagons, standing stones). Called
+    // from the player's own collision chain after each step: `position` is
+    // moved out of whatever it entered. `from` is where the step began.
+    resolveCollision(position, from, radius) {
+      if (disposed || !position) return false;
+      let moved = false;
+      for (const item of live) {
+        if (status[item.id] !== 'on' || typeof item.made.resolveCollision !== 'function') continue;
+        try {
+          if (item.made.resolveCollision(position, from, radius, ctx)) moved = true;
+        } catch (error) {
+          status[item.id] = 'failed';
+          warn('Three Roads subsystem ' + item.id + ' stopped after a collision error', error);
+          try { item.made.dispose?.(); } catch { /* already failing */ }
+        }
+      }
+      return moved;
+    },
     update(dt, playerPosition) {
       if (disposed) return;
       for (const item of live) {

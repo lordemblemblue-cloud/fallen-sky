@@ -25,7 +25,7 @@ Everything is off unless the page is opened with `?threeRoads=1` (or `localStora
 
 ## 3. Files you do not edit
 
-- `GameWorld3D.jsx`. It has one hook for all of this: it creates `createThreeRoadsWorld(ctx)` behind the switch, calls `update(delta, playerPosition)` each frame and `dispose()` on teardown (`threeroads/ThreeRoadsWorld.mjs`; pinned by `tests/game3d-three-roads-world.test.mjs`). Your work goes inside your subsystem. If you need something the context does not give you, stop and ask the lead; it is added once, by the lead.
+- `GameWorld3D.jsx`. It has one hook for all of this: it creates `createThreeRoadsWorld(ctx)` behind the switch, calls `update(delta, playerPosition)` each frame, `resolveCollision(position, from, radius)` in the player's collision chain, and `dispose()` on teardown (`threeroads/ThreeRoadsWorld.mjs`; pinned by `tests/game3d-three-roads-world.test.mjs`). Your work goes inside your subsystem. If you need something the context does not give you, stop and ask the lead; it is added once, by the lead.
 - `threeroads/subsystems.mjs`, `ThreeRoadsWorld.mjs`, `threeRoadsFlag.mjs`, `coords.mjs`: the lead's.
 - Other sessions' ground: `wolfveil/streaming/*`, the height chain in `wolfveil/WolfveilLayout.js`, `wolfveil/WolfveilLandscapeDesign.mjs`, the area veils and gates, `server/game3d/mapCollision.mjs` (Wolfveil doorways session); `src/lib/webgpu*`, `rendererBackendChoice.mjs` (WebGPU session); the player's movement states under `player/` (animations session); `src/components/duelist` (the hub). If your piece cannot be done without one of these, say so to the lead with the exact function and lines.
 
@@ -35,7 +35,12 @@ Everything is off unless the page is opened with `?threeRoads=1` (or `localStora
 export function createPlacesSubsystem(ctx) {
   if (ctx.region !== 'wolfveil') return null;   // null = nothing to do in this scene
   // build ...
-  return { update(dt, playerPosition, ctx) {}, dispose() {} };
+  return {
+    update(dt, playerPosition, ctx) {},
+    // optional: push the player out of solid things you built; return true if you moved them
+    resolveCollision(position, from, radius, ctx) { return false; },
+    dispose() {},
+  };
 }
 ```
 

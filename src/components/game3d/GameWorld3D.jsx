@@ -3426,6 +3426,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
+    threeRoads?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     // Prevent client player/mount lateral slip through the deck rails.
     // The server has a corresponding signed-map side-rail footprint.
     wolfveilVillage?.resolveBridgeRailCollision(
