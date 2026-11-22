@@ -9,11 +9,9 @@ function inbox(socket) {
   const waiters = [];
   socket.on('message', data => {
     const message = JSON.parse(String(data));
-    messages.push(message);
-    for (const waiter of [...waiters]) if (waiter.predicate(message)) {
-      waiters.splice(waiters.indexOf(waiter), 1);
-      waiter.resolve(message);
-    }
+    const index = waiters.findIndex(waiter => waiter.predicate(message));
+    if (index < 0) messages.push(message);
+    else waiters.splice(index, 1)[0].resolve(message);
   });
   return {
     send: message => socket.send(JSON.stringify(message)),
