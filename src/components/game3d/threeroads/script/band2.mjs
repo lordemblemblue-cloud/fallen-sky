@@ -20,11 +20,11 @@ const TAMERI = 'AXE_Faction_3';
 export const BAND2_POINTS = Object.freeze({
   // West: the Camp of the Western Road (P13)
   camp_fire: Object.freeze({ x: -296, z: -134 }),
-  camp_drill: Object.freeze({ x: -302, z: -140 }),
-  camp_post_1: Object.freeze({ x: -305, z: -143 }),
-  camp_post_2: Object.freeze({ x: -302, z: -145 }),
-  camp_post_3: Object.freeze({ x: -299, z: -143 }),
-  camp_picket: Object.freeze({ x: -322, z: -150 }),
+  camp_drill: Object.freeze({ x: -283, z: -148 }),
+  camp_post_1: Object.freeze({ x: -286, z: -151 }),
+  camp_post_2: Object.freeze({ x: -283, z: -153 }),
+  camp_post_3: Object.freeze({ x: -280, z: -151 }),
+  camp_picket: Object.freeze({ x: -311, z: -166 }),
   camp_cedars: Object.freeze({ x: -340, z: -156 }),
   camp_armoury: Object.freeze({ x: -290, z: -128 }),
   // West: House Asagiri's Hall (P14) and the Wolf Stones (P18)
@@ -33,11 +33,11 @@ export const BAND2_POINTS = Object.freeze({
   stones_approach: Object.freeze({ x: -326, z: 205 }),
   stones_banner: Object.freeze({ x: -331, z: 228 }),
   // East: the Landing (P24)
-  landing_jetty: Object.freeze({ x: 241, z: -426 }),
-  landing_stack: Object.freeze({ x: 262, z: -420 }),
-  landing_tally: Object.freeze({ x: 258, z: -414 }),
-  landing_reeds: Object.freeze({ x: 246, z: -440 }),
-  landing_bowcase: Object.freeze({ x: 243, z: -422 }),
+  landing_jetty: Object.freeze({ x: 265, z: -426 }),
+  landing_stack: Object.freeze({ x: 279, z: -416 }),
+  landing_tally: Object.freeze({ x: 275, z: -409 }),
+  landing_reeds: Object.freeze({ x: 268, z: -442 }),
+  landing_bowcase: Object.freeze({ x: 266, z: -432 }),
   // East: the old battle camp and Shadow Ravine (P26)
   scarred_blade: Object.freeze({ x: 318, z: -252 }),
   ravine_gate: Object.freeze({ x: 332, z: -150 }),
@@ -55,11 +55,11 @@ export const BAND2_POINTS = Object.freeze({
   furrow_mist_w: Object.freeze({ x: -268, z: 412 }),
   furrow_mist_e: Object.freeze({ x: -214, z: 392 }),
   // North: the High Road (P43) down to Castra Lupa (P35)
-  road_top: Object.freeze({ x: 160, z: 522 }),
-  road_ambush: Object.freeze({ x: 104, z: 430 }),
-  fort_gate: Object.freeze({ x: 30, z: 312 }),
-  fort_tent: Object.freeze({ x: 32, z: 334 }),
-  fort_overhear: Object.freeze({ x: 37, z: 338 }),
+  road_top: Object.freeze({ x: 9, z: 524 }),
+  road_ambush: Object.freeze({ x: -14, z: 452 }),
+  fort_gate: Object.freeze({ x: -42, z: 415 }),
+  fort_tent: Object.freeze({ x: -57, z: 405 }),
+  fort_overhear: Object.freeze({ x: -62, z: 415 }),
 });
 
 // Which area each group of points lies in (checked by the script test).
@@ -251,11 +251,11 @@ export const BAND2_PLEDGES = Object.freeze([
       cause: "Every jar that reaches the stack is a day's bread for a village at home.",
       cost: 'From now on you will know the number, and you will not be able to stop counting.',
       steps: [
-        { id: 'jars_a', kind: 'carry', text: 'Carry two grain jars from the barge to the stack.', target: 'tr_t01_grain_jar_a', placeId: 'P24', count: 2, failsOn: 'carry_dropped' },
+        { id: 'jars_a', kind: 'carry', text: 'Carry two grain jars up from the landing stage to the stack.', target: 'tr_t01_grain_jar_a', placeId: 'P24', count: 2, failsOn: 'carry_dropped' },
         { id: 'reeds', kind: 'defeat', text: 'Drive off what comes out of the reeds.', target: 'tr_t01_reed_shades', placeId: 'P24', count: 4 },
         { id: 'jars_b', kind: 'carry', text: 'Carry the last two jars.', target: 'tr_t01_grain_jar_b', placeId: 'P24', count: 2, failsOn: 'carry_dropped' },
         { id: 'tally', kind: 'talk', text: 'Hear the count.', target: 'paneb_scribe' },
-        { id: 'case', kind: 'pick_up', text: 'A bow case on the jetty lies open and empty. Look at it.', target: 'tr_t01_empty_case', optional: true },
+        { id: 'case', kind: 'pick_up', text: 'A bow case on the landing stage lies open and empty. Look at it.', target: 'tr_t01_empty_case', optional: true },
       ],
       standings: { kept: { renown: 4 }, broken: { renown: -2 }, optional: { case: { regard: 1 } } },
       rewardPreview: { kinds: ['experience', 'renown', 'keepsake'] },
@@ -524,7 +524,7 @@ export const BAND2_STAGING = Object.freeze({
       ambush: { watch: { groupId: 'tr_r02_ambush' }, done: [{ say: 'courier_r02_02' }] },
       escort: {
         watch: { people: ['courier_dexter'], to: 'fort_gate', radius: 8 },
-        along: { every: 60, lines: ['courier_r02_03', 'courier_r02_04'] },
+        along: { every: 40, lines: ['courier_r02_03', 'courier_r02_04'] }, // the way down from the crest to the north gate is about 120 m
         done: [{ castFollow: 'courier_dexter', target: null }, { castMove: 'courier_dexter', to: 'fort_tent', speed: 1.8 }],
       },
       tent: {

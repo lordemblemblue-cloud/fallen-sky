@@ -124,9 +124,9 @@ test('the 40 m rule catches an anchor, the river, a trail and a border, and `nea
 test('preview: how the camps planned for band 2 stand against the 40 m rule today', t => {
   // Not a pass or fail: a report, so the entries can be written with the right `near` when band 2 starts.
   const planned = [
-    { id: 'north_fort_pad', area: 'north', kind: 'pad', x: 30, z: 330, radius: 45, falloff: 10, y: 'mean' },
-    { id: 'east_landing_pad', area: 'east', kind: 'pad', x: 350, z: -410, radius: 40, falloff: 10, y: 'mean' },
-    { id: 'west_camp_pad', area: 'west', kind: 'pad', x: -297, z: -136, radius: 25, falloff: 8, y: 'mean' },
+    { id: 'north_fort_tents_pad', area: 'north', kind: 'pad', x: -76, z: 386, radius: 9, falloff: 5, y: 'mean' },
+    { id: 'east_landing_yard_pad', area: 'east', kind: 'pad', x: 278, z: -420, radius: 12, falloff: 6, y: 'mean' },
+    { id: 'west_drill_yard_pad', area: 'west', kind: 'pad', x: -283, z: -150, radius: 9, falloff: 4, y: 'mean' },
     { id: 'west_hall_pad', area: 'west', kind: 'pad', x: -235, z: -60, radius: 10, falloff: 5, y: 'mean' },
     { id: 'south_barrow_mound', area: 'south', kind: 'mound', x: 20, z: -500, radius: 9, height: 4, falloff: 6 },
   ];

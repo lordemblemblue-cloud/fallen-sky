@@ -97,7 +97,7 @@ Every place follows the same few rules, taken from the land study (`research/REF
 
 | # | Place | Where | State | What it is |
 | --- | --- | --- | --- | --- |
-| P13 | Camp of the Western Road | Cedar Terraces (−297, −136) | New, on existing flat terraces | Akitsu's forward camp: blue tents, drill yard, dead telegraph poles. |
+| P13 | Camp of the Western Road | the hollow where the west trail drops off the Cedar Terraces (−297, −136) | New, astride the trail | Akitsu's forward camp on three levels: drill yard on the flat east of the trail, tent rows on the slope west of it, the command curtain and the watchtower above. Dead telegraph poles. |
 | P14 | House Asagiri's Hall | beside Moonlit Commons (−235, −60) | New | A sword school under canvas, next to the duelling field. |
 | P15 | The Wintering Shrine | Cedar Forest (−320, 65) | New, in existing forest | A small shrine among thousand-year cedars. Kohaku and the cub. |
 | P16 | Railhead and Cutting | (−250, 130) | New | Sleepers, a half-built trestle, survey stakes. |
@@ -113,8 +113,8 @@ Every place follows the same few rules, taken from the land study (`research/REF
 
 | # | Place | Where | State | What it is |
 | --- | --- | --- | --- | --- |
-| P24 | The Landing | (350, −410), 80 m of flat ground, jetty on the river | New | Tameri's forward camp: barges, grain stacks, the House of Life tent. |
-| P25 | The Pontoon Bridge | on the river near (215, −390) | New | A floating bridge. The night barge passes under it. |
+| P24 | The Landing | the east rim of the river gorge (272, −424) | New | Tameri's forward camp. The river runs 30 m down in a gorge here, so the barge moors below and a lever hoist lifts the grain to a landing stage on the rim; grain stacks and the tally in the yard, the House of Life tent above. |
+| P25 | The Pontoon Bridge | on the river near (215, −390) | New, to be re-sited | A floating bridge. The night barge passes under it. The river is in a gorge here: re-plan as a rope bridge from rim to rim before it is built. |
 | P26 | Shadow Ravine | (340, −165) | Here | Where Tameri's unrested dead walk. |
 | P27 | Ruined Watch Station | (295, −205) | Here | A Remorian watchtower four hundred years old. |
 | P28 | Quarry of the Ancestors | (350, −40) | Here | The old quarry, its dragon, and a fallen obelisk with Tameri writing. |
@@ -129,15 +129,15 @@ Every place follows the same few rules, taken from the land study (`research/REF
 
 | # | Place | Where | State | What it is |
 | --- | --- | --- | --- | --- |
-| P35 | Castra Lupa | (30, 330), 70 m of flat ground | New | Remoria's fort: palisade, gate towers, tent rows, the standard. Commands the pass to the town. |
+| P35 | Castra Lupa | across the ridge path between the hot springs and the crossroads (−62, 388) | New, astride the path | Remoria's fort: palisade, gate towers, tent rows, the standard. The path to the peak runs in at one gate and out at the other, so everyone on the pass walks through it. |
 | P36 | The First Furrow | Howling Plateau (−240, 400) | Here | The colony's first field, marked out on an open battlefield. |
 | P37 | Hot Springs and the Bellows Forge | (−105, 330) | Here | A bathhouse where all three armies soak under truce, and a forge driven by the hot water. |
 | P38 | Vortex Lake | (205, 320) | Here | Where the sky fell. The whirl, its dragon, and a fisherman's jetty. |
-| P39 | The Aqueduct Works | from the lake outflow toward the fort, (150, 300) to (80, 320) | New | A line of stone arches going up one by one. |
+| P39 | The Aqueduct Works | from the lake outflow toward the fort, (150, 300) to (80, 320) | New, line to be re-drawn | A line of stone arches going up one by one. The fort has moved west to the ridge path; draw the line again before it is built. |
 | P40 | Wolf-Ear Vigil | the peak at (2, 470) | Here | A watch-fire ring on the summit. All three camps' fires can be seen from it. |
 | P41 | The Harpy Roost | cliffs at (410, 370) | New | Nests on a steep face. |
 | P42 | The Bronze Sentinel | steep ground at (−370, 390) | New | A forge-shrine from the first war and the bronze guardian that still keeps it. |
-| P43 | The High Road | (160, 530) | New | Remoria's way home. Decoration for now. |
+| P43 | The High Road | the crest of the ridge path north of the peak (9, 524) | Here, a trail | Remoria's way home: the ridge path over the top. A milestone and a road arch. |
 
 ### Under the valley (already in the game as separate scenes)
 

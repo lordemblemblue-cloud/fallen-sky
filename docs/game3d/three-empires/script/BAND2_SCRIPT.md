@@ -101,7 +101,7 @@ Tameri's story, chapter 1. Asked by Paneb the Scribe.
 
 - **Paneb the Scribe:** You're late. The barge isn't. Four jars to the stack before the reeds wake up. Each jar is a village's bread for a day. Don't drop one. I would have to write it down.
 
-**Step 1. Carry two grain jars from the barge to the stack.** *(The Landing)*
+**Step 1. Carry two grain jars up from the landing stage to the stack.** *(The Landing)*
 
 - **Paneb the Scribe:** One.
 - **Paneb the Scribe:** Two. Mind the plank.
@@ -120,7 +120,7 @@ Tameri's story, chapter 1. Asked by Paneb the Scribe.
 
 - **Paneb the Scribe:** Forty-one days of grain at home this morning. With this barge sent back full, forty-three. Look at the board. That number is the only general I serve.
 
-**Step 5. A bow case on the jetty lies open and empty. Look at it.** *(optional)*
+**Step 5. A bow case on the landing stage lies open and empty. Look at it.** *(optional)*
 
 - **Sabu:** That's a chariot archer's bow case. Tiaa's, by the stitching. Empty. She is going to skin someone, and I'd like it not to be me.
 
