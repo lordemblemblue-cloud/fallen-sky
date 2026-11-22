@@ -571,7 +571,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           // a respawn is a cut, not a slide across the arena
           if (actor.at.distanceTo(new THREE.Vector3(body.x, body.y, body.z)) > 5) actor.yaw = body.yaw;
           const turn = Math.atan2(Math.sin(body.yaw - actor.yaw), Math.cos(body.yaw - actor.yaw));
-          actor.yaw += turn * Math.min(1, dt * 18);
+          const committedFacing = fighter.action?.id === 'roll' || fighter.action?.move?.kind === 'attack';
+          actor.yaw += committedFacing ? turn : turn * Math.min(1, dt * 18);
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
