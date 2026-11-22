@@ -72,6 +72,14 @@ export const BAND2_POINT_AREAS = Object.freeze({
 const line = (speaker, text) => Object.freeze({ speaker, text });
 
 export const BAND2_LINES = Object.freeze({
+  // ── The camps' sentries, hailing whoever comes up the road (cast.mjs names each one's line) ──
+  hail_akitsu_picket_town: line('akitsu_picket_town', "Hold there. This is the camp of the Western Road. Keep to the trail, and mind the drill yard: they are new to spears."),
+  hail_akitsu_picket_wilds: line('akitsu_picket_wilds', "Coming in from the wilds? Slowly. Out there, things have started wearing the shapes of people."),
+  hail_tameri_gate_spear_north: line('tameri_gate_spear_north', "Between the staffs, friend. The Landing counts everything that passes them, and now it has counted you."),
+  hail_tameri_gate_spear_south: line('tameri_gate_spear_south', "Mind the rim. The river keeps what it is given."),
+  hail_remoria_gate_south_left: line('remoria_gate_south_left', "Stand and be seen. The road runs through the Ninth's fort, and so do you, at a walk."),
+  hail_remoria_gate_south_right: line('remoria_gate_south_right', "Blades stay tied. The Truce comes this far up the hill; we would like it to go back down with you."),
+  hail_remoria_gate_north: line('remoria_gate_north', "The crossroads is watched. If you met anything on the High Road, tell the Legate, not me."),
   // ── A01 A Farmer's Son in a Blue Coat ───────────────────────────────
   goro_a01_01: line('goro_sergeant', "You. Ever held a spear? Good. Because that is what these are now. Powder's dead under this sky. My boys were taught to shoot. Somebody has to show them the other end."),
   goro_a01_02: line('goro_sergeant', "They're farmers. So was I. First time in their lives anyone handed them a coat and said they counted. I'd like them to live long enough to believe it."),

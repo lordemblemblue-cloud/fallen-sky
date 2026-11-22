@@ -30,7 +30,8 @@ export function threeRoadsEmpireOfFaction(factionId) {
   return 'none';
 }
 
-const person = data => Object.freeze({ giver: false, existing: false, home: null, ...data });
+// `hail` names one line (in a band's lines) the person says, unasked, to a traveller who comes near.
+const person = data => Object.freeze({ giver: false, existing: false, home: null, hail: null, ...data });
 
 export const THREE_ROADS_CAST = Object.freeze([
   // The Fountain Watch: already in the game, placed by the game.
@@ -132,25 +133,25 @@ export const THREE_ROADS_CAST = Object.freeze([
 
   // The sentries who stand in the road at each camp (land/campPlans.mjs gives the spots).
   // Each faces the way a traveller comes.
-  person({ id: 'akitsu_picket_town', name: 'Picket Guard', role: 'Akitsu picket, the town side', empire: 'akitsu',
+  person({ id: 'akitsu_picket_town', hail: 'hail_akitsu_picket_town', name: 'Picket Guard', role: 'Akitsu picket, the town side', empire: 'akitsu',
     home: { area: 'west', x: -282.5, z: -120.93, facing: 0.56 },
     look: { body: 'm', build: 'strong', colours: [0x2f4a7a, 0xdcb58a], carries: 'a spear where a rifle used to be' } }),
-  person({ id: 'akitsu_picket_wilds', name: 'Picket Guard', role: 'Akitsu picket, the wilds side', empire: 'akitsu',
+  person({ id: 'akitsu_picket_wilds', hail: 'hail_akitsu_picket_wilds', name: 'Picket Guard', role: 'Akitsu picket, the wilds side', empire: 'akitsu',
     home: { area: 'west', x: -308.29, z: -168.53, facing: 3.7 },
     look: { body: 'm', build: 'strong', colours: [0x2f4a7a, 0xdcb58a], carries: 'a spear and a signal whistle' } }),
-  person({ id: 'tameri_gate_spear_north', name: 'Spearman of the Landing', role: 'Tameri guard at the flagstaffs', empire: 'tameri',
+  person({ id: 'tameri_gate_spear_north', hail: 'hail_tameri_gate_spear_north', name: 'Spearman of the Landing', role: 'Tameri guard at the flagstaffs', empire: 'tameri',
     home: { area: 'east', x: 299.5, z: -423, facing: Math.PI * 0.5 },
     look: { body: 'm', build: 'strong', colours: [0xe8dcc0, 0xc9962e], carries: 'a spear and a hide shield' } }),
-  person({ id: 'tameri_gate_spear_south', name: 'Spearman of the Landing', role: 'Tameri guard at the flagstaffs', empire: 'tameri',
+  person({ id: 'tameri_gate_spear_south', hail: 'hail_tameri_gate_spear_south', name: 'Spearman of the Landing', role: 'Tameri guard at the flagstaffs', empire: 'tameri',
     home: { area: 'east', x: 299.5, z: -427, facing: Math.PI * 0.5 },
     look: { body: 'm', build: 'strong', colours: [0xe8dcc0, 0xc9962e], carries: 'a spear and a hide shield' } }),
-  person({ id: 'remoria_gate_south_left', name: 'Gate Sentry', role: 'Legionary of the Ninth, the south gate', empire: 'remoria',
+  person({ id: 'remoria_gate_south_left', hail: 'hail_remoria_gate_south_left', name: 'Gate Sentry', role: 'Legionary of the Ninth, the south gate', empire: 'remoria',
     home: { area: 'north', x: -85.88, z: 359.16, facing: 3.79 },
     look: { body: 'm', build: 'strong', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a javelin and a tall shield' } }),
-  person({ id: 'remoria_gate_south_right', name: 'Gate Sentry', role: 'Legionary of the Ninth, the south gate', empire: 'remoria',
+  person({ id: 'remoria_gate_south_right', hail: 'hail_remoria_gate_south_right', name: 'Gate Sentry', role: 'Legionary of the Ninth, the south gate', empire: 'remoria',
     home: { area: 'north', x: -83.32, z: 357.24, facing: 3.79 },
     look: { body: 'm', build: 'strong', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a javelin and a tall shield' } }),
-  person({ id: 'remoria_gate_north', name: 'Gate Sentry', role: 'Legionary of the Ninth, the north gate', empire: 'remoria',
+  person({ id: 'remoria_gate_north', hail: 'hail_remoria_gate_north', name: 'Gate Sentry', role: 'Legionary of the Ninth, the north gate', empire: 'remoria',
     home: { area: 'north', x: -46.12, z: 406.84, facing: 0.64 },
     look: { body: 'm', build: 'strong', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a javelin and a tall shield' } }),
 ]);

@@ -153,6 +153,8 @@ for (const band of THREE_ROADS_BANDS) {
     const used = new Set();
     for (const staging of Object.values(band.staging)) for (const id of lineIdsIn(staging)) used.add(id);
     for (const id of used) assert.ok(band.lines[id], 'missing line ' + id);
+    // A line a person hails travellers with is used by the cast table, not by a pledge.
+    for (const entry of THREE_ROADS_CAST) if (entry.hail && band.lines[entry.hail]) used.add(entry.hail);
     for (const [id, entry] of Object.entries(band.lines)) {
       assert.equal(allLineIds.has(id), false, 'line id used in two bands: ' + id);
       allLineIds.add(id);
@@ -310,5 +312,17 @@ test("the builders' preview offers every written band, and each camp has its sen
     const here = threeRoadsCastAtHome({ area, includeUnbuilt: true });
     assert.equal(here.filter(person => /_picket_|_gate_/.test(person.id)).length, sentries, area);
     assert.deepEqual(threeRoadsCastAtHome({ area }), [], area + ' stays empty without the preview');
+  }
+});
+
+test('every hail is a line its own speaker says, and every sentry has one', () => {
+  for (const entry of THREE_ROADS_CAST) {
+    if (entry.hail) {
+      const said = threeRoadsLine(entry.hail);
+      assert.ok(said, entry.id + ' hails with a line that exists');
+      assert.equal(said.speaker, entry.id, entry.hail + ' is spoken by ' + entry.id);
+      assert.ok(entry.home, entry.id + ' has a place to stand');
+    }
+    if (/_picket_|_gate_/.test(entry.id)) assert.ok(entry.hail, entry.id + ' speaks first');
   }
 });
