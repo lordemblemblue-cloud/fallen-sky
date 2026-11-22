@@ -890,11 +890,18 @@ export function createCastSubsystem(ctx, deps = {}) {
     },
     status() {
       const templateState = {};
-      for (const [key, t] of templates) templateState[key] = t.error ? 'failed' : t.value ? 'ready' : 'loading';
+      const templateInfo = {};
+      for (const [key, t] of templates) {
+        templateState[key] = t.error ? 'failed' : t.value ? 'ready' : 'loading';
+        if (t.value) templateInfo[key] = {
+          height: Math.round(t.value.sourceHeight * 1000) / 1000,
+          walkSpeedMeasured: t.value.walkSpeedMeasured ? Math.round(t.value.walkSpeedMeasured * 1000) / 1000 : null,
+        };
+      }
       const r = v => Math.round(v * 100) / 100;
       return {
         area: ctx.worldArea ?? null, areaScenes: ctx.areaScenes !== false, max: CAST_MAX_PEOPLE,
-        maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState,
+        maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState, templateInfo,
         flagsRead: flags !== null,
         subtitle: subtitleOwner && subtitleOwner.seconds > 0 ? subtitleOwner.id : null,
         people: actorList.map(actor => ({
