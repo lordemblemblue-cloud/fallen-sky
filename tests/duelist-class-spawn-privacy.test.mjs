@@ -170,7 +170,7 @@ test('live fighters cannot hot-swap any class or reset earned charge before defe
       assert.equal(match.world.fighters.get('alpha'), fighter);
       assert.equal(fighter.weapon, CLASSES[activeClass].weapon);
       assert.equal(matchView(match, 'alpha').me.specialMeter, 75);
-      assert.equal(matchView(match, 'beta').me.specialMeter, 0);
+      assert.equal(matchView(match, 'beta').me.specialMeter, null, 'unclassed opponent has no special meter');
     }
   }
 });
