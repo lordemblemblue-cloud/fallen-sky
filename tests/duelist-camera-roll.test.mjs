@@ -22,8 +22,10 @@ test('all four classes keep their passive-scaled shorter roll in their intended 
     const fighter = addFighter(world, { id: 'a', classId, weapon: CLASSES[classId].weapon, yaw: 0 });
     const expected = MOVES.roll.rootMotion * rollReach(fighter);
     step(world, DT, { a: { move: { x: 1, z: 0 }, face: Math.PI / 2, presses: ['roll'] } });
+    // Hold a new camera heading but no walking input: a swift class can finish its roll
+    // early, and subsequent ordinary walking must not count as part of the roll.
     for (let i = 0; i < Math.ceil(MOVES.roll.duration / DT) + 3; i++) {
-      step(world, DT, { a: { move: { x: 0, z: 1 }, face: 0 } });
+      step(world, DT, { a: { move: { x: 0, z: 0 }, face: 0 } });
     }
     const body = bodyOf(world, 'a');
     assert.ok(near(body.x, expected, 0.18), `${classId}: rolled ${body.x}m, expected ${expected}m`);
