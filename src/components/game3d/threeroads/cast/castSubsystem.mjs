@@ -25,6 +25,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { THREE_ROADS_CAST, threeRoadsCastAtHome, threeRoadsPerson } from '../script/cast.mjs';
+import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
 import { threeRoadsLine } from '../script/index.mjs';
 import { pickAXEEmbeddedIdleClip } from '../../npc/axeAnimatedQuestNpcGLB.mjs';
@@ -996,12 +997,14 @@ export function createCastSubsystem(ctx, deps = {}) {
 
   // ─── people at home, by the story so far ───
   const areas = ctx.areaScenes === false ? CAST_AREAS : (ctx.worldArea ? [ctx.worldArea] : []);
+  // People of an area that is still being built come home only with the builders' preview switch.
+  const preview = ctx.preview ?? threeRoadsPreviewEnabled(globalThis.window);
   function reconcile(storyFlags) {
     if (disposed) return;
     flags = storyFlags && typeof storyFlags === 'object' ? storyFlags : {};
     const wanted = new Map();
     for (const area of areas) {
-      for (const person of threeRoadsCastAtHome({ area, flags })) if (!wanted.has(person.id)) wanted.set(person.id, person);
+      for (const person of threeRoadsCastAtHome({ area, flags, includeUnbuilt: preview })) if (!wanted.has(person.id)) wanted.set(person.id, person);
     }
     // People a pledge brought in or is moving (fromHome false) are the pledge's to keep.
     for (const actor of [...actorList]) {

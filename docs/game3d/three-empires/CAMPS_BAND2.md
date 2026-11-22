@@ -89,6 +89,16 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 
 Each plan also lists where its sentries stand. They need entries in the cast table, which the lead adds when a camp is built.
 
+### The three smaller places
+
+Band 2's other three chapters happen away from the camps. Each place is dressed from kits already made, and its plan is in `BAND2_PLACE_PLANS` in the same file as the camps.
+
+- **House Asagiri's Hall (P14, west).** A sword school under canvas: the hall tent facing the door spot, the students' tent, a rack of practice swords, the house's banner pole, a curtain along the north side, and the grandson's grave stone at `hall_grave`. 10 pieces.
+- **Shadow Ravine (P26, east).** Where the Priestess speaks the rite: four fire bowls squared round `ravine_chant`, five markers for the five dead who can be named, and at the ravine's mouth an awning with the rite's stores and one flagstaff so the place is seen from the trail. 17 pieces.
+- **The First Furrow (P36, north).** The plough waiting at the furrow's start, the plough cart with the archer's case, the boundary stone ready where the furrow ends, the colony's first standard, a rack of arms and a fire. 7 pieces. The furrow had been drawn along the Hunter's Loop, which is a road; it now runs 18 m north of it and beside it, from (−262, 410) to (−218, 426).
+
+The Wind-Carved Wolf Stones (P18), where the house banner is taken back, are an existing place and get nothing new.
+
 ## 5. Gliding at the camps
 
 The glide is built (branch `claude/glide-20261122`, not in main yet). What it does, as its own session measured it:
@@ -120,10 +130,14 @@ Not while carrying a jar and not while walking the courier down: a pledge's carr
 
 ## 7. Building it
 
-| Step | Who | Needs |
+| Step | Who | Where it stands on 2026-11-22 |
 | --- | --- | --- |
-| Model the three kits, Remoria first | the kit session | `empireKitPieces.mjs` |
-| Lay out the three camps with stand-in boxes, fit each piece to the ground in the running game, then swap in the kits as they land | the places session | `campPlans.mjs` |
-| Add the sentries to the cast, mark band 2 built, play its six chapters | the lead, then the pledge-world session | both of the above |
+| Model the three kits | the kit session | Done: `remoria.glb`, `akitsu.glb`, `tameri.glb` in `public/game3d/threeroads/kits/` |
+| Lay out the three camps and fit each piece to the ground in the running game | the places session | Done with the real kits, behind the preview switch. Each camp draws in about five calls and adds 27,000 to 35,000 triangles seen from near |
+| Add the sentries to the cast, and let the preview switch bring the camps' people home and offer band 2's pledges | the lead | Done: seven sentries; `?threeRoads=1&threeRoadsPreview=1` |
+| Play the six chapters in the running game with the preview on, one character of each faction | the pledge-world session | To do |
+| Mark band 2 built, so players who turn the story on get it | the lead | After the play-through, and after the owner has seen it |
+
+Not walked yet by a real player or a mount: the path through the fort and the trail through both pickets (checked by calculation only).
 
 A piece is moved from its planned spot only where the ground says so, and the report says which.

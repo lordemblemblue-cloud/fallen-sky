@@ -37,8 +37,10 @@ export const THREE_ROADS_BANDS = Object.freeze([
   }),
 ]);
 
-// The bands whose places exist in the game.
-export const threeRoadsBuiltBands = () => THREE_ROADS_BANDS.filter(band => band.built);
+// The bands whose places exist in the game. With `preview` (the builders' switch,
+// threeRoadsFlag.mjs) every written band counts, finished or not, so it can be played
+// before players are offered it.
+export const threeRoadsBuiltBands = ({ preview = false } = {}) => THREE_ROADS_BANDS.filter(band => band.built || preview);
 
 // The area a named point of a band has to lie in, or null if the band does not say.
 export function threeRoadsPointArea(band, name) {

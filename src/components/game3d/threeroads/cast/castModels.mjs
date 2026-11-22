@@ -81,6 +81,14 @@ export const CAST_MODELS = Object.freeze({
   corvinus_legate: Object.freeze({ source: 'archer' }),
   veranius_augur: Object.freeze({ source: 'archer' }),
   courier_dexter: Object.freeze({ source: 'archer' }),
+  // The camps' sentries.
+  akitsu_picket_town: Object.freeze({ source: 'archer' }),
+  akitsu_picket_wilds: Object.freeze({ source: 'archer' }),
+  tameri_gate_spear_north: Object.freeze({ source: 'archer' }),
+  tameri_gate_spear_south: Object.freeze({ source: 'archer' }),
+  remoria_gate_south_left: Object.freeze({ source: 'archer' }),
+  remoria_gate_south_right: Object.freeze({ source: 'archer' }),
+  remoria_gate_north: Object.freeze({ source: 'archer' }),
 });
 
 /** Standing height in metres for a body from the cast table's `look.body`. */

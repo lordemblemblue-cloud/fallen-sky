@@ -2,7 +2,7 @@
 
 Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band2.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
-6 pledges, 76 spoken lines, 7,675 characters to record.
+6 pledges, 83 spoken lines, 8,307 characters to record.
 
 ## A Farmer's Son in a Blue Coat
 

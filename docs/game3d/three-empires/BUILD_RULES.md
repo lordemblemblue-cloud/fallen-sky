@@ -23,6 +23,8 @@ For every session that builds part of this plan. Read with `README.md`, `03_QUES
 
 Everything is off unless the page is opened with `?threeRoads=1` (or `localStorage['game3d.threeRoads']='1'`). `threeroads/threeRoadsFlag.mjs` is the only place that decides. The default changes only when the lead says a band is ready.
 
+A band that is still being built has a second switch on top of the first: `?threeRoads=1&threeRoadsPreview=1` (or `localStorage['game3d.threeRoadsPreview']='1'`). Only with it do an unfinished band's places draw, its people come home and its pledges get offered. Band 1 is in main, so a player who turns the story on must never meet half-built work: anything new for an unfinished band goes behind `threeRoadsPreviewEnabled`.
+
 ## 3. Files you do not edit
 
 - `GameWorld3D.jsx`. It has one hook for all of this: it creates `createThreeRoadsWorld(ctx)` behind the switch, calls `update(delta, playerPosition)` each frame, `resolveCollision(position, from, radius)` in the player's collision chain, and `dispose()` on teardown (`threeroads/ThreeRoadsWorld.mjs`; pinned by `tests/game3d-three-roads-world.test.mjs`). Your work goes inside your subsystem. If you need something the context does not give you, stop and ask the lead; it is added once, by the lead.

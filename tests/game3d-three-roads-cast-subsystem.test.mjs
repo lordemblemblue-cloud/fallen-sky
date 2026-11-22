@@ -46,7 +46,7 @@ function fakeStore(storyFlags = {}) {
   return store;
 }
 
-function makeWorld({ area = 'town', ground = true, areaScenes = true, store = fakeStore(), loadSource = async () => fakeSource() } = {}) {
+function makeWorld({ area = 'town', ground = true, areaScenes = true, preview = false, store = fakeStore(), loadSource = async () => fakeSource() } = {}) {
   const scene = new THREE.Scene();
   const bus = createThreeRoadsBus();
   const archer = { id: 'archer_lyra', name: 'Lyra the Seeker', group: new THREE.Group() };
@@ -56,7 +56,7 @@ function makeWorld({ area = 'town', ground = true, areaScenes = true, store = fa
   for (const type of ['cast:ready', 'cast:arrived']) bus.on(type, d => events.push([type, d]));
   const voices = [];
   const ctx = {
-    region: 'wolfveil', worldArea: area, areaScenes, scene, bus, questNPCs,
+    region: 'wolfveil', worldArea: area, areaScenes, preview, scene, bus, questNPCs,
     sampleGroundY: () => (state.ground ? 22.7 : null),
     camera: new THREE.PerspectiveCamera(),
   };
@@ -494,4 +494,17 @@ test('the walk speed is measured from the planted foot of an in-place walk', () 
   assert.ok(Math.abs(speed - 2) < 0.3, String(speed));
   assert.deepEqual(left.position.toArray(), [1, 2, 3], 'the rest pose is put back');
   assert.equal(measureWalkSpeed(THREE, new THREE.Group(), clip), null, 'no feet, no answer');
+});
+
+test('the people of a camp come home only with the preview switch', async () => {
+  const off = makeWorld({ area: 'west' });
+  await settle(off.cast);
+  assert.equal(off.cast.status().people.length, 0);
+  off.cast.dispose();
+  const on = makeWorld({ area: 'west', preview: true });
+  await settle(on.cast);
+  await settle(on.cast);
+  const ids = on.cast.status().people.map(person => person.id);
+  for (const id of ['goro_sergeant', 'hayasaka_colonel', 'akitsu_picket_town', 'akitsu_picket_wilds']) assert.ok(ids.includes(id), id + ' in ' + ids.join(', '));
+  on.cast.dispose();
 });
