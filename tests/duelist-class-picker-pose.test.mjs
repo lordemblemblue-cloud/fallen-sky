@@ -43,21 +43,47 @@ test('already-relaxed poses remain untouched and all four class idle sources are
   for (const classId of CLASS_IDS) assert.ok(idleCandidates(classId).length >= 1);
 });
 
-test('class picker is a compact single-detail selector rather than four full cards', () => {
+test('class selection is vertically stacked and only the central Select button submits a request', () => {
   const picker = file('client/ClassPicker.jsx');
-  const css = file('client/duelistClassPicker.css');
+  const game = file('client/DuelistGame.jsx');
   assert.match(picker, /CLASS_IDS\.map/);
+  assert.match(picker, /className="dcp-class-stack"/);
   assert.match(picker, /data-testid=\{`duelist-class-\$\{id\}`\}/);
-  assert.match(picker, /onClick=\{\(\) => onPick\(id\)\}/);
+  assert.match(picker, /onClick=\{\(\) => setPreviewId\(id\)\}/);
   assert.match(picker, /aria-pressed=\{chosen === id\}/);
-  assert.match(picker, /pending && pending !== current/);
+  assert.doesNotMatch(picker, /onClick=\{\(\) => onPick\(id\)\}/);
+  assert.match(picker, /data-testid="duelist-class-select"/);
+  assert.match(picker, /onClick=\{\(\) => onPick\?\.\(chosen\)\}/);
+  assert.equal((picker.match(/onPick\?\.\(chosen\)/g) || []).length, 1);
+  assert.match(picker, /pending === chosen && pending !== current/);
   assert.match(picker, /kitAt\(chosen, at\.level, matchBoost\)/);
   assert.match(picker, /kit\.abilities\.map/);
   assert.match(picker, /kit\.special\.name/);
-  assert.doesNotMatch(picker, /duelist-classcard/);
-  assert.match(css, /\.duelist-game \.duelist-classpick\.dcp-root/);
-  assert.match(css, /max-height: calc\(100% - 160px\)/);
-  assert.match(css, /width: min\(352px/);
+  assert.match(game, /<ClassPicker current=\{current\} pending=\{classAnswer\?\.ok \? classAnswer\.pending : null\} fighter=\{youBody\}/);
+  assert.match(game, /if \(showPicker && document\.pointerLockElement\) document\.exitPointerLock\?\.\(\)/);
+});
+
+test('the three-column screen reserves 18 percent for classes, 57 for live model, 25 for skills', () => {
+  const picker = file('client/ClassPicker.jsx');
+  const css = file('client/duelistClassPicker.css');
+  assert.match(picker, /data-layout="three-column"/);
+  assert.match(picker, /className="dcp-classes"/);
+  assert.match(picker, /className="dcp-model"/);
+  assert.match(picker, /className="dcp-details"/);
+  assert.match(picker, /className="dcp-model-view" data-testid="duelist-class-3d-preview"/);
+  assert.match(picker, /<DuelistCharacterPreview fighter=\{fighter\} classId=\{chosen\} compact \/>/);
+  assert.match(picker, /className="dcp-model-footer"/);
+  assert.match(css, /grid-template-columns: 18% minmax\(0, 57%\) minmax\(0, 25%\)/);
+  assert.match(css, /\.dcp-classes::after, \.duelist-game \.dcp-details::before/);
+  assert.match(css, /linear-gradient\(to bottom, transparent 0%, rgba\(175, 209, 237, \.5\) 50%, transparent 100%\)/);
+  assert.match(css, /\.dcp-model-footer \{ position: absolute; bottom: 16px;/);
+  assert.match(css, /\.dcp-select \{/);
+  assert.match(css, /@media \(max-width: 780px\)/);
+  const game = file('client/DuelistGame.jsx');
+  const hud = file('client/DuelistHud.jsx');
+  assert.match(hud, /pickerOpen = false/);
+  assert.match(hud, /\{!pickerOpen && \(rail/);
+  assert.match(game, /pickerOpen=\{!!showPicker\}/);
 });
 
 test('home and character match previews continue to share the corrected AFK stance', () => {

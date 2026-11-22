@@ -781,6 +781,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classAnswer = sourceRef.current?.classAnswer || null;
   const between = match && (match.phase === 'countdown' || match.phase === 'roundOver');
   const showPicker = !quest && !!match && match.phase !== 'over' && (picking || between || hud?.dead);
+  // Countdown/respawn picker must release the mouse so its class and Select controls work.
+  useEffect(() => {
+    if (showPicker && document.pointerLockElement) document.exitPointerLock?.();
+  }, [showPicker]);
   const pickClass = (id) => {
     sourceRef.current?.chooseClass?.(id);
     onClassChange?.(id);
@@ -788,8 +792,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
-      <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} onPower={(id) => pressRef.current?.(id)}
-        onClass={match && match.phase !== 'over' ? () => setPicking(true) : null}
+      <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
+        onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
       {match && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
@@ -856,7 +860,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       )}
       {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
       {showPicker && (
-        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
+        <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
       )}
     </div>

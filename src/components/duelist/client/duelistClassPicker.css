@@ -1,95 +1,146 @@
-/* In-match selector only: left-side light glass keeps the animated arena visible.
-   Overrides the former four large cards without altering home/character menus. */
+/* Duelist Adventure MATCH selection, not the permanent in-game HUD.
+   Desktop width contract: CLASS 18% | LIVE 3D 57% | SKILLS 25%.
+   The two upright separators are strongest at mid-height and fade toward both ends.
+   No opaque boxed cards; the 3D fighter owns the majority of the presentation. */
 .duelist-game .duelist-classpick.dcp-root {
   position: absolute;
-  left: max(12px, env(safe-area-inset-left, 0px));
-  right: auto;
-  top: max(72px, calc(env(safe-area-inset-top, 0px) + 56px));
-  bottom: auto;
-  transform: none;
+  z-index: 75;
   box-sizing: border-box;
-  width: min(352px, calc(100% - 24px));
-  max-height: calc(100% - 160px);
-  padding: 16px 16px 13px;
-  border: 1px solid rgba(153, 179, 210, .17);
-  border-left: 2px solid rgba(214, 177, 104, .65);
-  border-radius: 4px;
-  background: linear-gradient(110deg, rgba(9, 20, 36, .92), rgba(8, 18, 35, .78));
-  box-shadow: 12px 8px 36px rgba(0, 5, 13, .21);
-  backdrop-filter: blur(8px);
-  color: #e8eff9;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(166, 195, 217, .35) transparent;
-  font-size: 12px;
-  line-height: 1.3;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1240px, calc(100% - 24px));
+  height: min(690px, calc(100% - 38px));
+  max-height: calc(100% - 38px);
+  padding: 0;
+  display: grid;
+  grid-template-columns: 18% minmax(0, 57%) minmax(0, 25%);
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(90deg, rgba(6, 15, 30, .82) 0%, rgba(7, 18, 33, .36) 19%, rgba(7, 18, 33, .14) 68%, rgba(7, 18, 33, .8) 100%);
+  box-shadow: 0 14px 36px rgba(0, 5, 15, .28);
+  backdrop-filter: none;
+  color: #eaf0f9;
+  overflow: hidden;
   pointer-events: auto;
+  font-size: 12px;
+  line-height: 1.35;
 }
+.duelist-game .dcp-root * { box-sizing: border-box; }
 .duelist-game .dcp-root button { font: inherit; cursor: pointer; }
-.duelist-game .dcp-root button:focus-visible { outline: 2px solid #dfc286; outline-offset: 2px; }
-.duelist-game .dcp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 0 0 14px; }
-.duelist-game .dcp-head small { display: block; color: #d2ac69; font-size: 9px; letter-spacing: .22em; font-weight: 600; }
-.duelist-game .dcp-head h2 { margin: 4px 0 0; color: #f2f5fb; font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: .01em; text-transform: none; }
-.duelist-game .dcp-close { border: 0; background: transparent; color: #9daec6; font-size: 22px !important; line-height: 1; padding: 0 4px; }
-.duelist-game .dcp-close:hover { color: #fff; }
-.duelist-game .dcp-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.duelist-game .dcp-option { display: flex; gap: 8px; align-items: center; text-align: left;
-  min-width: 0; min-height: 48px; box-sizing: border-box; padding: 7px 6px;
-  border: 1px solid rgba(159, 182, 210, .12); border-radius: 4px;
-  background: rgba(28, 49, 71, .17); color: #e8eff9; transition: background .16s; }
-.duelist-game .dcp-option svg { width: 17px; height: 17px; flex: none; color: var(--class); stroke-width: 1.7; }
-.duelist-game .dcp-option:hover { background: rgba(105, 147, 192, .16); }
-.duelist-game .dcp-option[data-chosen='true'] {
-  border-color: color-mix(in srgb, var(--class), transparent 46%);
-  background: color-mix(in srgb, var(--class) 12%, rgba(9, 25, 43, .5)); }
-.duelist-game .dcp-option-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.duelist-game .dcp-option-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 650; }
-.duelist-game .dcp-option-copy small { color: #8da5bd; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.duelist-game .dcp-option-level { margin-left: auto; align-self: flex-start; flex: none; color: #a9bcce; font-size: 9px; font-weight: 600; }
-.duelist-game .dcp-detail { margin-top: 13px; padding-top: 11px; border-top: 1px solid rgba(173, 195, 216, .2); }
-.duelist-game .dcp-detail-title { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.duelist-game .dcp-detail-title div { display: flex; flex-direction: column; gap: 2px; }
-.duelist-game .dcp-detail-title small { color: #9daec1; font-size: 9px; letter-spacing: .14em; }
-.duelist-game .dcp-detail-title strong { color: var(--class); font-size: 17px; font-weight: 650; }
-.duelist-game .dcp-detail-title > span { color: #e0d0aa; font-size: 11px; font-weight: 600; white-space: nowrap; }
-.duelist-game .dcp-weapon { margin: 5px 0 8px; color: #aebfd2; font-size: 10px; }
-.duelist-game .dcp-xp { height: 3px; background: rgba(171, 196, 219, .16); overflow: hidden; }
-.duelist-game .dcp-xp span { display: block; height: 100%; background: var(--class); }
-.duelist-game .dcp-subhead { display: flex; justify-content: space-between; margin: 12px 0 6px; color: #a7b9c8; font-size: 9px; font-weight: 600; letter-spacing: .13em; }
-.duelist-game .dcp-subhead small { font-size: inherit; }
-.duelist-game .dcp-abilities { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
-.duelist-game .dcp-abilities li { display: flex; align-items: center; gap: 9px; min-height: 27px; box-sizing: border-box;
-  padding: 3px 0; border-bottom: 1px solid rgba(163, 186, 208, .08); font-size: 11px; }
-.duelist-game .dcp-abilities li > span { flex: 1; }
-.duelist-game .dcp-abilities li > small { color: #e0c18b; font-size: 10px; }
-.duelist-game .dcp-root kbd { display: inline-grid; place-items: center; flex: none; min-width: 19px; height: 19px;
-  border: 1px solid rgba(181, 199, 220, .25); border-radius: 3px; background: rgba(7, 15, 29, .4);
-  color: #bcd0e3; font: 600 10px/1.1 ui-monospace, monospace; }
-.duelist-game .dcp-special { display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 8px;
-  background: rgba(201, 159, 80, .07); border-left: 2px solid rgba(226, 189, 122, .68); }
-.duelist-game .dcp-special > div { display: flex; flex-direction: column; gap: 2px; flex: 1; }
-.duelist-game .dcp-special > div small { color: #b3a588; font-size: 9px; letter-spacing: .14em; }
-.duelist-game .dcp-special strong { color: #ead3a4; font-size: 12px; font-weight: 650; }
-.duelist-game .dcp-special > span { color: #e6ce9a; font-size: 10px; }
-.duelist-game .dcp-passive { margin: 10px 0 0; color: #b4c2d1; font-size: 10.5px; line-height: 1.4; }
-.duelist-game .dcp-passive strong { color: #d9e3ee; }
-.duelist-game .dcp-next { margin: 8px 0 0; color: #ac9a79; font-size: 10px; line-height: 1.4; }
-.duelist-game .dcp-note { margin: 12px 0 0; padding-top: 9px; border-top: 1px solid rgba(175, 193, 215, .12);
-  color: #ccd7e3; font-size: 10.5px; line-height: 1.4; }
-/* While the user is choosing a class, avoid showing the left-aligned kill feed behind the selection panel. */
-.duelist-game:has(.dcp-root) .dh-root[data-rail='true'] .dh-tr { visibility: hidden; }
-@media (max-width: 760px) {
-  .duelist-game .duelist-classpick.dcp-root {
-    top: max(52px, calc(env(safe-area-inset-top, 0px) + 40px));
-    max-height: calc(100% - 122px);
-    width: min(328px, calc(100% - 24px)); padding: 12px;
-    background: rgba(8, 20, 37, .94); }
+.duelist-game .dcp-root button:focus-visible { outline: 2px solid #e4c583; outline-offset: 3px; }
+.duelist-game .dcp-classes, .duelist-game .dcp-model, .duelist-game .dcp-details { position: relative; min-width: 0; min-height: 0; }
+.duelist-game .dcp-classes, .duelist-game .dcp-details { display: flex; flex-direction: column; justify-content: center; }
+/* Midpoint divider: rises and descends equally with soft transparent ends. */
+.duelist-game .dcp-classes::after, .duelist-game .dcp-details::before {
+  content: ''; position: absolute; z-index: 2; pointer-events: none;
+  top: 0; bottom: 0; width: 1px;
+  background: linear-gradient(to bottom, transparent 0%, rgba(175, 209, 237, .5) 50%, transparent 100%);
 }
-@media (max-height: 570px) {
-  .duelist-game .duelist-classpick.dcp-root { top: 44px; max-height: calc(100% - 72px); }
-  .duelist-game .dcp-detail { margin-top: 8px; padding-top: 6px; }
+.duelist-game .dcp-classes::after { right: 0; }
+.duelist-game .dcp-details::before { left: 0; }
+.duelist-game .dcp-classes { padding: 30px 12px 30px 16px; gap: 28px; }
+.duelist-game .dcp-classes-heading { display: flex; flex-direction: column; gap: 6px; }
+.duelist-game .dcp-classes-heading small { color: #ccae78; font-size: 9px; letter-spacing: .16em; white-space: normal; }
+.duelist-game .dcp-classes-heading strong { color: #edf4fa; font-size: 13px; font-weight: 700; letter-spacing: .2em; }
+.duelist-game .dcp-class-stack { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.duelist-game .dcp-class-choice {
+  display: flex; align-items: center; gap: 10px; position: relative;
+  padding: 11px 4px 11px 2px; min-height: 49px; width: 100%; text-align: left;
+  border: 0; border-radius: 0; color: #cbd8e8; background: transparent;
+  transition: color .16s ease, background .16s ease;
+}
+.duelist-game .dcp-class-choice::before { content: ''; position: absolute; left: -9px; top: 6px; bottom: 6px; width: 2px; background: transparent; }
+.duelist-game .dcp-class-choice[data-chosen='true'] { color: #fff; background: linear-gradient(90deg, rgba(181, 197, 221, .09), transparent); }
+.duelist-game .dcp-class-choice[data-chosen='true']::before { background: var(--class); }
+.duelist-game .dcp-class-choice:hover { color: #fff; background: rgba(147, 171, 198, .09); }
+.duelist-game .dcp-class-choice svg { width: 21px; height: 21px; flex: none; color: var(--class); stroke-width: 1.55; }
+.duelist-game .dcp-class-choice span { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.duelist-game .dcp-class-choice strong { font-size: 12px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.duelist-game .dcp-class-choice small { color: #92a6bd; font-size: 10px; letter-spacing: .07em; }
+/* Center is the largest area. The model is live and weapon-matched, not a portrait. */
+.duelist-game .dcp-model { overflow: hidden; background: radial-gradient(ellipse at center 54%, rgba(57, 101, 144, .13), transparent 71%); }
+.duelist-game .dcp-model-view { position: absolute; top: 0; bottom: 120px; left: 0; right: 0; overflow: hidden; }
+.duelist-game .dcp-model-view .dcm-avatar-stage { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+.duelist-game .dcp-model-view .dcm-avatar-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: transparent !important; }
+.duelist-game .dcp-model-view .dcm-avatar-fallback { position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; color: #e6d2aa; font-size: 11px; }
+.duelist-game .dcp-model-footer { position: absolute; bottom: 16px; left: 12px; right: 12px; display: flex; flex-direction: column; align-items: center; gap: 7px; text-align: center; }
+.duelist-game .dcp-model-identity { display: flex; flex-direction: column; gap: 3px; }
+.duelist-game .dcp-model-identity strong { font-size: 16px; font-weight: 650; letter-spacing: .05em; }
+.duelist-game .dcp-model-identity small { font-size: 11px; color: #b5c8df; }
+.duelist-game .dcp-select {
+  display: grid; place-items: center; width: min(220px, 88%); height: 37px;
+  padding: 5px 12px; border: 1px solid rgba(238, 205, 143, .8); border-radius: 3px;
+  color: #191f29; background: #e7bf76; font-size: 12px; font-weight: 750; letter-spacing: .13em;
+  box-shadow: 0 2px 18px rgba(9, 14, 24, .25);
+}
+.duelist-game .dcp-select:hover { background: #ffdc9b; }
+.duelist-game .dcp-selection-note { margin: 0; color: #c0d0e3; font-size: 10px; line-height: 1.3; }
+/* The right column can show all four real abilities, level, ultimate and passive, no fake charge values. */
+.duelist-game .dcp-details { padding: 24px 16px 24px 20px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(178, 202, 226, .3) transparent; gap: 0; }
+.duelist-game .dcp-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.duelist-game .dcp-detail-title small, .duelist-game .dcp-passive > small, .duelist-game .dcp-section-title { color: #adc0d5; font-size: 9px; letter-spacing: .14em; font-weight: 650; }
+.duelist-game .dcp-detail-title h2 { margin: 5px 0 0; color: var(--class); font-size: 21px; font-weight: 650; line-height: 1.2; }
+.duelist-game .dcp-close { padding: 0 4px; background: none; border: 0; color: #cbd5e5; font-size: 24px !important; }
+.duelist-game .dcp-close:hover { color: #fff; }
+.duelist-game .dcp-level { margin-top: 22px; }
+.duelist-game .dcp-level > span { color: #aabfd2; font-size: 10px; letter-spacing: .1em; }
+.duelist-game .dcp-level > span strong { color: #f1dcaf; font-size: 17px; }
+.duelist-game .dcp-level > span small { font-size: 10px; color: #8197b1; }
+.duelist-game .dcp-xp { margin-top: 7px; width: 100%; height: 3px; background: rgba(157, 186, 214, .19); overflow: hidden; }
+.duelist-game .dcp-xp span { display: block; height: 100%; background: var(--class); }
+.duelist-game .dcp-section-title { display: flex; justify-content: space-between; align-items: center; margin-top: 22px; margin-bottom: 8px; }
+.duelist-game .dcp-section-title small { color: #99adc3; font-size: 9px; }
+.duelist-game .dcp-abilities { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.duelist-game .dcp-abilities li { display: flex; align-items: center; min-height: 31px; gap: 8px; padding: 4px 0; border-bottom: 1px solid rgba(172, 203, 228, .1); font-size: 11px; }
+.duelist-game .dcp-abilities li > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.duelist-game .dcp-abilities li > small { color: #d3b67b; font-size: 10px; }
+.duelist-game .dcp-root kbd { display: grid; place-items: center; min-width: 22px; height: 22px; flex: none; padding: 0 3px; border: 1px solid rgba(171, 198, 224, .26); border-radius: 3px; background: rgba(9, 20, 38, .3); color: #cfdded; font: 600 10px/1 ui-monospace, monospace; }
+.duelist-game .dcp-ultimate { margin-top: 2px; }
+.duelist-game .dcp-ultimate-row { display: flex; align-items: center; gap: 8px; }
+.duelist-game .dcp-ultimate-row strong { flex: 1; min-width: 0; font-size: 12px; font-weight: 650; color: #edcf98; }
+.duelist-game .dcp-ultimate-row small { font-size: 10px; color: #edcf98; }
+.duelist-game .dcp-passive { display: flex; flex-direction: column; gap: 5px; margin-top: 21px; }
+.duelist-game .dcp-passive strong { font-size: 11px; color: #f0f5fa; }
+.duelist-game .dcp-passive p { margin: 0; color: #a9bfd3; font-size: 10px; line-height: 1.45; }
+.duelist-game .dcp-next { margin-top: 14px; font-size: 10px; color: #b7a581; line-height: 1.45; }
+.duelist-game .dcp-next span { display: block; margin-top: 4px; color: #8ea7bf; }
+.duelist-game:has(.dcp-root) .dh-root[data-rail='true'] .dh-tr { visibility: hidden; }
+/* Narrow screens keep the class list vertical while allowing the details to flow below the model. */
+@media (max-width: 780px) {
+  .duelist-game .duelist-classpick.dcp-root {
+    width: calc(100% - 12px); height: calc(100% - 16px); max-height: calc(100% - 16px);
+    grid-template-columns: 20% minmax(0, 80%);
+    grid-template-rows: minmax(290px, 60%) minmax(185px, 40%);
+    overflow-y: auto; overscroll-behavior: contain;
+    background: rgba(7, 17, 32, .94);
+  }
+  .duelist-game .dcp-classes { padding: 10px 5px; gap: 8px; }
+  .duelist-game .dcp-classes-heading small { font-size: 7px; letter-spacing: .07em; }
+  .duelist-game .dcp-classes-heading strong { font-size: 9px; }
+  .duelist-game .dcp-class-stack { gap: 3px; }
+  .duelist-game .dcp-class-choice { gap: 3px; padding: 5px 0; min-height: 37px; }
+  .duelist-game .dcp-class-choice svg { width: 13px; height: 13px; }
+  .duelist-game .dcp-class-choice strong { font-size: 9px; }
+  .duelist-game .dcp-class-choice small { font-size: 8px; }
+  .duelist-game .dcp-model-view { bottom: 104px; }
+  .duelist-game .dcp-model-identity strong { font-size: 13px; }
+  .duelist-game .dcp-select { height: 32px; }
+  .duelist-game .dcp-details { grid-column: 1 / -1; border-top: 1px solid rgba(167, 205, 232, .22); padding: 13px 16px; }
+  .duelist-game .dcp-details::before { display: none; }
+  .duelist-game .dcp-level { margin-top: 10px; }
+  .duelist-game .dcp-section-title { margin-top: 10px; }
+  .duelist-game .dcp-passive { margin-top: 10px; }
+}
+@media (max-height: 580px) and (min-width: 781px) {
+  .duelist-game .duelist-classpick.dcp-root { height: calc(100% - 12px); max-height: calc(100% - 12px); }
+  .duelist-game .dcp-classes { gap: 10px; }
+  .duelist-game .dcp-class-stack { gap: 2px; }
+  .duelist-game .dcp-class-choice { padding: 5px 3px; min-height: 37px; }
+  .duelist-game .dcp-details { padding-top: 14px; padding-bottom: 14px; }
+  .duelist-game .dcp-level, .duelist-game .dcp-passive { margin-top: 9px; }
+  .duelist-game .dcp-section-title { margin-top: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .duelist-game .dcp-option { transition: none; }
+  .duelist-game .dcp-class-choice { transition: none; }
 }
