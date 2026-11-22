@@ -69,7 +69,7 @@ export const THREE_ROADS_CAST = Object.freeze([
     look: { body: 'm', build: 'thin', colours: [0xe8dcc0, 0xc9962e], carries: 'a writing board and tally cords' } }),
   person({ id: 'aelia_sabina', name: 'Tribune Aelia Sabina', role: 'Remorian envoy', empire: 'remoria', giver: true,
     home: { area: 'town', x: 0, z: -100, facing: 0 },
-    homeAfter: { flag: 'tr_war_open', home: { area: 'north', x: -58, z: 397, facing: Math.PI } },
+    homeAfter: { flag: 'tr_war_open', home: { area: 'north', x: -62, z: 392, facing: Math.PI } },
     look: { body: 'f', build: 'strong', colours: [0x8c2f2f, 0xa5cbe9], carries: 'a short sword, tied with cord' } }),
 
   // Chapter one: the three strangers at the gate. Brought in by the pledge.
@@ -122,7 +122,7 @@ export const THREE_ROADS_CAST = Object.freeze([
 
   // Remoria: Castra Lupa and the First Furrow.
   person({ id: 'corvinus_legate', name: 'Legate Gaius Vettius Corvinus', role: 'Commander of the Ninth, the Wolf-Sworn', empire: 'remoria', giver: true,
-    home: { area: 'north', x: -57, z: 405, facing: Math.PI * 0.5 },
+    home: { area: 'north', x: -61, z: 400, facing: Math.PI * 0.5 },
     look: { body: 'm', build: 'spare', colours: [0x8c2f2f, 0xc9c9c9], carries: 'a wax tablet and a sealed order' } }),
   person({ id: 'veranius_augur', name: 'Augur Decimus Veranius', role: 'Reader of signs to the Ninth', empire: 'remoria',
     home: { area: 'north', x: -252, z: 406, facing: Math.PI * 0.5 },

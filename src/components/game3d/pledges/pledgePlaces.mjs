@@ -79,7 +79,7 @@ export const PLEDGE_PLACES = Object.freeze([
   surface('P34', 'east_home_road', 'The River Road', 'east', 238, -520, 'new'),
 
   // North, the Highlands
-  surface('P35', 'north_fort', 'Castra Lupa', 'north', -62, 388, 'new', { radius: 35 }),
+  surface('P35', 'north_fort', 'Castra Lupa', 'north', -66, 383, 'new', { radius: 35 }),
   surface('P36', 'first_furrow', 'The First Furrow', 'north', -240, 400, 'here', { radius: 52 }),
   surface('P37', 'hot_springs', 'Hot Springs and the Bellows Forge', 'north', -105, 330, 'here'),
   surface('P38', 'vortex_lake', 'Vortex Lake', 'north', 205, 320, 'here', { radius: 43 }),

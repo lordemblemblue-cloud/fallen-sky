@@ -57,9 +57,9 @@ export const BAND2_POINTS = Object.freeze({
   // North: the High Road (P43) down to Castra Lupa (P35)
   road_top: Object.freeze({ x: 9, z: 524 }),
   road_ambush: Object.freeze({ x: -14, z: 452 }),
-  fort_gate: Object.freeze({ x: -42, z: 415 }),
-  fort_tent: Object.freeze({ x: -57, z: 405 }),
-  fort_overhear: Object.freeze({ x: -62, z: 415 }),
+  fort_gate: Object.freeze({ x: -46, z: 409 }),
+  fort_tent: Object.freeze({ x: -61, z: 400 }),
+  fort_overhear: Object.freeze({ x: -66, z: 410 }),
 });
 
 // Which area each group of points lies in (checked by the script test).

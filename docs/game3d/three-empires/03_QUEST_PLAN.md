@@ -129,7 +129,7 @@ Every place follows the same few rules, taken from the land study (`research/REF
 
 | # | Place | Where | State | What it is |
 | --- | --- | --- | --- | --- |
-| P35 | Castra Lupa | across the ridge path between the hot springs and the crossroads (−62, 388) | New, astride the path | Remoria's fort: palisade, gate towers, tent rows, the standard. The path to the peak runs in at one gate and out at the other, so everyone on the pass walks through it. |
+| P35 | Castra Lupa | across the ridge path between the hot springs and the crossroads (−66, 383) | New, astride the path | Remoria's fort: palisade, gate towers, tent rows, the standard. The path to the peak runs in at one gate and out at the other, so everyone on the pass walks through it. |
 | P36 | The First Furrow | Howling Plateau (−240, 400) | Here | The colony's first field, marked out on an open battlefield. |
 | P37 | Hot Springs and the Bellows Forge | (−105, 330) | Here | A bathhouse where all three armies soak under truce, and a forge driven by the hot water. |
 | P38 | Vortex Lake | (205, 320) | Here | Where the sky fell. The whirl, its dragon, and a fisherman's jetty. |
