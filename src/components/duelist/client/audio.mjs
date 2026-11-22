@@ -1,14 +1,17 @@
-// Duelist Adventure's sound: every sound is synthesized here with WebAudio (noise, oscillators, filters and
-// envelopes), so nothing is recorded or borrowed. Sounds sit in the world (panned by where they happen
-// relative to the camera) and duck nothing; one master volume, muted or not, remembered per browser.
+// Duelist Adventure's sound. Recordings made for the game with ElevenLabs (tools/duelist/record-ability-sounds.mjs:
+// public/audio/duelist/sfx, listed in sfx.json) play where they exist; every other sound, and any recording not yet
+// loaded, is synthesized here with WebAudio (noise, oscillators, filters and envelopes). Sounds sit in the world
+// (panned by where they happen relative to the camera) and duck nothing; one master volume, muted or not, remembered
+// per browser. Recorded loops (Rage's breathing and fire) run while asked for, frame by frame (loop / stopLoop).
 //
 //   swing (crystal blade through air), hitVeil (the Veil drinks a blow: a glassy knock), hitShield (a bright
 //   hex chime), hitBody (a dull thud), block, parry, push, pull, gripStart + a held hum (gripHum loop),
 //   throw, breach (space cracking), resist (a burst), roll, dash, knockdown (body on the floor), collapse
 //   (the Veil shattering), defeat, victory / defeat stingers.
-/* global window */
+/* global window, fetch */
 
 const STORAGE = 'duelist.audio';
+const SAMPLES = '/audio/duelist/sfx/';
 
 function readSettings() {
   try { return { volume: 0.8, muted: false, ...JSON.parse(window.localStorage.getItem(STORAGE) || '{}') }; } catch { return { volume: 0.8, muted: false }; }
@@ -24,6 +27,22 @@ export function createDuelAudio() {
   let master = null;
   let noise = null; // two seconds of white noise, shared
   const loops = new Map(); // key -> { stop, set }
+  let samples = null; // name -> { gain, loop, buffers } once loaded
+  let loading = null;
+  // the recordings: listed in sfx.json, fetched and decoded once the context exists
+  function loadSamples() {
+    if (loading || !ctx || typeof fetch !== 'function') return loading;
+    loading = fetch(SAMPLES + 'sfx.json').then((r) => (r.ok ? r.json() : { sounds: {} })).then(async ({ sounds = {} }) => {
+      const loaded = {};
+      await Promise.all(Object.entries(sounds).map(async ([name, s]) => {
+        const buffers = await Promise.all((s.files || []).map((f) => fetch(SAMPLES + f).then((r) => r.arrayBuffer())
+          .then((b) => ctx.decodeAudioData(b)).catch(() => null)));
+        if (buffers.some(Boolean)) loaded[name] = { gain: s.gain ?? 1, loop: !!s.loop, buffers: buffers.filter(Boolean) };
+      }));
+      samples = loaded;
+    }).catch(() => { samples = {}; });
+    return loading;
+  }
 
   function ensure() {
     if (ctx || !Ctx) return ctx;
@@ -41,7 +60,17 @@ export function createDuelAudio() {
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    loadSamples();
     return ctx;
+  }
+  // a recording at a world point, a little faster or slower each time so repeats do not sound the same
+  function playSample(s, position, options) {
+    const src = ctx.createBufferSource();
+    src.buffer = s.buffers[(Math.random() * s.buffers.length) | 0];
+    src.playbackRate.value = options.rate ?? 1 + (Math.random() * 2 - 1) * 0.04;
+    const strength = options.strength ? Math.min(1.3, Math.max(0.5, options.strength)) : 1;
+    src.connect(out(position, (options.gain ?? 1) * s.gain * strength));
+    src.start(ctx.currentTime + 0.005);
   }
 
   // ---- building blocks
@@ -232,9 +261,53 @@ export function createDuelAudio() {
     setVolume(v) { settings.volume = Math.max(0, Math.min(1, v)); writeSettings(settings); if (master && !settings.muted) master.gain.setTargetAtTime(settings.volume, ctx.currentTime, 0.02); },
     /** Play a sound now at a world position ({x,y,z}) or flat (null). */
     play(name, position = null, options = {}) {
-      if (!ensure() || ctx.state !== 'running' || !SOUNDS[name]) return;
-      SOUNDS[name](ctx.currentTime + 0.005, out(position, options.gain ?? 1), options);
+      if (!ensure() || ctx.state !== 'running') return;
+      const key = name === 'swing' && options.heavy && samples?.swingHeavy ? 'swingHeavy' : name;
+      if (samples?.[key]) { playSample(samples[key], position, options); return; }
+      if (SOUNDS[name]) SOUNDS[name](ctx.currentTime + 0.005, out(position, options.gain ?? 1), options);
     },
+    /** Is there a recording of this name (loaded)? */
+    has(name) { return !!samples?.[name]; },
+    /**
+     * A recorded loop while `key` asks for it (call every frame with where it is; stopLoop when it should end):
+     * Rage's breathing and fire.
+     */
+    loop(key, name, position) {
+      if (!ensure() || ctx.state !== 'running' || !samples?.[name]) return;
+      const id = 'rec:' + key;
+      let loop = loops.get(id);
+      if (!loop) {
+        const s = samples[name];
+        const t = ctx.currentTime;
+        const g = out(position, 1);
+        const level = ctx.createGain();
+        level.gain.setValueAtTime(0.0001, t);
+        level.gain.exponentialRampToValueAtTime(Math.max(0.0002, s.gain), t + 0.35);
+        const src = ctx.createBufferSource();
+        src.buffer = s.buffers[0];
+        src.loop = true;
+        src.connect(level).connect(g);
+        src.start(t, Math.random() * Math.max(0, src.buffer.duration - 0.1));
+        loop = {
+          set(p) {
+            if (!p || !g.panner) return;
+            const now = ctx.currentTime;
+            g.panner.positionX.setTargetAtTime(p.x, now, 0.03);
+            g.panner.positionY.setTargetAtTime(p.y, now, 0.03);
+            g.panner.positionZ.setTargetAtTime(p.z, now, 0.03);
+          },
+          stop() {
+            const now = ctx.currentTime;
+            level.gain.cancelScheduledValues(now);
+            level.gain.setTargetAtTime(0.0001, now, 0.12);
+            src.stop(now + 0.6);
+          },
+        };
+        loops.set(id, loop);
+      }
+      loop.set(position);
+    },
+    stopLoop(key) { const loop = loops.get('rec:' + key); if (loop) { loop.stop(); loops.delete('rec:' + key); } },
     /** The camera, each frame: where the listener stands and looks. */
     listen(position, forward) {
       if (!ctx || ctx.state !== 'running') return;

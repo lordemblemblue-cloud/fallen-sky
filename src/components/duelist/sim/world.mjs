@@ -8,6 +8,7 @@ import {
   createFighter, press, update, takeEvents, isStunned, strike, insideArc, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
+  stagger, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 import { spendStamina } from '../core/vitals.mjs';
@@ -23,7 +24,12 @@ export const PROJECTILE_HEIGHT = 1.35;
 // Moves that reach one target (the nearest in their arc); the rest reach everyone in it.
 const SINGLE_TARGET = new Set(['grip', 'gripThrow', 'breach', 'pull']);
 const GRAVITY = 18;
-export const AIR_DASH = Object.freeze({ doubleTapSeconds: 0.32, minTapSeconds: 0.055, minHeight: 0.12, distance: 4.5 });
+// In the air (owner, 2026-11-22): Dash dashes, once per jump: jump, dash, jump again, dash again. As far as a roll.
+export const AIR_DASH = Object.freeze({ minHeight: 0.12, distance: 7 });
+// the second jump, in the air: as high as the first, once between the ground and the ground
+export const AIR_JUMP = Object.freeze({ minHeight: 0.08 });
+// in a mission's rooms the feet go no higher than this (the depot's 4.2 m ceiling less a body)
+export const ROOM_HEADROOM = 2.2;
 export const ACTIVE_RELIC = Object.freeze({ anchorWindow: 12, teleportCooldown: 28, stasisSeconds: 1.5, stasisCooldown: 35 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
@@ -55,13 +61,13 @@ export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, 
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
   world.bodies.set(id, newBody(x, z, yaw));
-  for (const f of world.fighters.values()) if (f.heldBy === id) f.heldBy = null;
+  for (const f of world.fighters.values()) { if (f.heldBy === id) f.heldBy = null; if (f.seizedBy === id) f.seizedBy = null; }
   return fighter;
 }
 
 /** Take a fighter out of the arena (a player who left, a bot whose seat a player took). */
 export function removeFighter(world, id) {
-  for (const f of world.fighters.values()) if (f.heldBy === id) f.heldBy = null;
+  for (const f of world.fighters.values()) { if (f.heldBy === id) f.heldBy = null; if (f.seizedBy === id) f.seizedBy = null; }
   world.fighters.delete(id);
   world.bodies.delete(id);
   for (let i = world.projectiles.length - 1; i >= 0; i--) if (world.projectiles[i].owner === id) world.projectiles.splice(i, 1);
@@ -71,7 +77,9 @@ function newBody(x, z, yaw) {
   return {
     x, z, y: 0, yaw, vy: 0,
     // Client prediction and the match server share this transient state. It resets on landing.
-    jumped: false, airJumpAt: null, airDashUsed: false, airDashTapAt: -Infinity,
+    // jumped: in the air from a jump; airJumpAt: when the second jump was made; airDashReady: a dash is left for
+    // this jump (each jump gives one)
+    jumped: false, airJumpAt: null, airDashReady: false,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
@@ -120,6 +128,14 @@ export function step(world, dt, inputs = {}) {
     body.run = !!input.run;
     body.sprint = !!input.sprint;
     body.strafe = !!input.strafe; // locked on: rolls keep facing the target (side and back evasions)
+    // the fighter the player is locked on to (an id): targeted abilities take it when it qualifies (chosenTarget).
+    // A client says it every frame (null: no lock); an input without the field leaves the last one as it was.
+    if (Object.hasOwn(input, 'target')) fighter.lock = typeof input.target === 'string' && input.target !== id ? input.target : null;
+    // a taunt is cut short by moving off
+    if (fighter.action?.move.kind === 'emote' && len > 0.2) {
+      fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: 'move', at: now });
+      fighter.action = null;
+    }
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
     // Rolls and dashes keep their chosen travel heading. Blade attacks must keep
     // tracking the camera/lock-on aim while W/A/S/D controls movement independently.
@@ -141,40 +157,47 @@ export function step(world, dt, inputs = {}) {
         continue;
       }
       if (now < (fighter.activeRelicUntil ?? -Infinity)) continue; // Stasis cannot attack, dodge or capture
-      // An airborne Dash keypress is armed once; only a second, separate press within the
-      // window can activate airDash. Packets cannot directly request '#airDash'.
+      // In the air, Dash is the air dash: one for each jump (the jump's own, then the second jump's). Packets cannot
+      // ask for '#airDash' directly; the world checks the jump and the height.
       if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
-        if (!restrained && body.jumped && !body.airDashUsed && body.y > AIR_DASH.minHeight &&
-            (!fighter.action || fighter.action.id === 'jump')) {
-          const gap = now - body.airDashTapAt;
-          if (gap >= AIR_DASH.minTapSeconds && gap <= AIR_DASH.doubleTapSeconds) {
-            const result = press(fighter, '#airDash', now);
-            if (result.accepted) {
-              body.airDashUsed = true;
-              body.airDashTapAt = -Infinity;
-              body.vy = 0; // hang briefly at current height; gravity resumes after the burst
-              startMotion(body, fighter, 'airDash');
-              effects.push({ type: 'airDash', by: id, distance: AIR_DASH.distance });
-            }
-          } else if (gap >= AIR_DASH.minTapSeconds || !Number.isFinite(gap)) {
-            body.airDashTapAt = now;
+        if (!restrained && body.jumped && body.airDashReady && body.y > AIR_DASH.minHeight && airborneAction(fighter)) {
+          if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'airDash', at: now }); fighter.action = null; }
+          const result = press(fighter, '#airDash', now);
+          if (result.accepted) {
+            body.airDashReady = false;
+            body.vy = 0; // it hangs at its height through the burst; gravity takes over again after it
+            startMotion(body, fighter, 'airDash', world);
+            effects.push({ type: 'airDash', by: id, distance: AIR_DASH.distance });
           }
         }
-        continue; // never turn an airborne tap into a normal ground dash
+        continue; // never turn an airborne press into a ground dash
       }
+      // In the air, Jump is the second jump: as high as the first, once, and it gives another dash.
       if (command === 'jump' && (body.jumped || body.y > 0.01)) {
-        if (body.jumped && body.y > 0.08 && body.airJumpAt == null && !restrained &&
-            now >= fighter.riseUntil && (!fighter.action || fighter.action.id === 'jump') &&
+        if (body.jumped && body.y > AIR_JUMP.minHeight && body.airJumpAt == null && !restrained &&
+            now >= fighter.riseUntil && airborneAction(fighter) &&
             !effectOn(fighter, 'levitate', now) && spendStamina(fighter.vitals, MOVES.jump.stamina, now)) {
+          if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'jump', at: now }); fighter.action = null; }
           body.vy = Math.sqrt(2 * GRAVITY * MOVES.jump.leap);
           body.airJumpAt = now;
+          body.airDashReady = true;
+          body.motion = null;
+          effects.push({ type: 'airJump', by: id });
         }
         continue;
       }
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
+      // an ability that works on one enemy (Levitate, Mind Dominance) is refused, not wasted, with nobody to take it
+      const slot = /^ability([1-4])$/.exec(command);
+      const abilityId = slot && fighter.classId ? classAbilityMove(fighter.classId, Number(slot[1]) - 1) : null;
+      if (abilityId && MOVES[abilityId]?.needsTarget && !blockedReason(fighter, abilityId, now) &&
+          !chosenTarget(world, fighter, body, moveFor(fighter, abilityId), 'enemy', now)) {
+        effects.push({ type: 'abilityRefused', by: id, ability: abilityId, reason: 'no-target' });
+        continue;
+      }
       const before = fighter.action?.id;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
-      if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id);
+      if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id, world);
     }
   }
   // 2. the rules advance; moves that start from the buffer get their root motion too
@@ -183,7 +206,7 @@ export function step(world, dt, inputs = {}) {
     const body = world.bodies.get(id);
     update(fighter, dt, now, actionRate(fighter, now));
     for (const event of takeEvents(fighter)) {
-      if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id);
+      if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id, world);
       if (event.type === 'start') {
         const started = moveById(event.id);
         if (started && (started.kind === 'attack' || (started.kind === 'power' && !started.effect)) && effectOn(fighter, 'cloak', now)) {
@@ -203,7 +226,7 @@ export function step(world, dt, inputs = {}) {
     if (event.type === 'hit') {
       if (moveById(event.id)?.effect) applyEffectMove(world, fighter, body, event.id, effects, now);
       else if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
-      else resolveReach(world, fighter, body, event.id, effects, now);
+      else resolveReach(world, fighter, body, event.id, effects, now, event.index || 0);
     } else if (event.type === 'tick') {
       const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
       if (held) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
@@ -243,19 +266,25 @@ function trySpecial(world, fighter, body, now, effects) {
   const actor = { id: fighter.id, team: fighter.team, hp: fighter.vitals.hp, position: body };
   let verdict = null;
   let target = null;
+  // cloaked, the Shadow Execution reaches farther (it steps to the target's back first: move.blink)
+  const cloaked = !!(move.blink && effectOn(fighter, 'cloak', now));
+  const seekReach = cloaked ? move.blink.reach : reach;
+  const seekArc = cloaked ? move.blink.arc : move.arc;
   if (special.target === 'enemy') {
     const near = [...world.fighters.values()]
-      .filter((o) => hostile(world, fighter, o) && !o.vitals.dead)
+      .filter((o) => hostile(world, fighter, o) && !o.vitals.dead && targetable(o, world.bodies.get(o.id), fighter, body, now))
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
-      .filter(({ b }) => distance(b, body) <= reach + BODY_RADIUS && insideArc(body, body.yaw + arcTurn(move), b, move.arc)
+      .filter(({ o, b }) => distance(b, body) <= seekReach + BODY_RADIUS
+        && (o.id === fighter.lock || insideArc(body, body.yaw + arcTurn(move), b, seekArc))
         && (!world.level || clearLine(world.level, body, b)))
-      .sort((p, q) => distance(p.b, body) - distance(q.b, body));
+      // the one the fighter is locked on to first, then the nearest
+      .sort((p, q) => (q.o.id === fighter.lock) - (p.o.id === fighter.lock) || distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
-      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level, target: { id: o.id, team: o.team,
+      verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level, cloaked, target: { id: o.id, team: o.team,
         hp: o.vitals.hp, maxHp: o.vitals.max.hp, position: { x: b.x, z: b.z, yaw: b.yaw }, protectedUntil: o.protectedUntil, invulnerable: isInvulnerable(o, now) } });
       if (verdict.allowed) { target = o; break; }
     }
-    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level });
+    if (!verdict) verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level, cloaked });
   } else verdict = evaluateSpecial({ classId: fighter.classId, meter: fighter.meter, actor, now, matchBoost, level: fighter.level });
   const blocked = verdict.allowed ? blockedReason(fighter, special.id, now) : null;
   if (!verdict.allowed || blocked) { effects.push({ type: 'specialRefused', by: fighter.id, reason: verdict.allowed ? blocked : verdict.reason }); return; }
@@ -263,25 +292,78 @@ function trySpecial(world, fighter, body, now, effects) {
   fighter.buffer = null;
   const res = press(fighter, '#' + special.id, now);
   if (!res.accepted || !res.id) { effects.push({ type: 'specialRefused', by: fighter.id, reason: res.reason || 'busy' }); return; }
-  startMotion(body, fighter, special.id);
   fighter.meter = verdict.meterAfter;
   fighter.specialTarget = target?.id || null;
   effects.push({ type: 'special', by: fighter.id, special: special.id, cost: verdict.cost, target: target?.id || null });
+  if (target && verdict.blink) blinkBehind(world, fighter, body, target, move, now, effects);
+  if (target) face(body, world.bodies.get(target.id));
+  startMotion(body, fighter, special.id, world);
+  // the Execution seizes its target: it is drawn in and held, helpless, until the blade goes in
+  if (target && move.seize) {
+    target.seizedBy = fighter.id;
+    target.seizedUntil = now + move.startup + move.active;
+    stagger(target, move.startup + move.active + 0.05, now);
+    if (target.heldBy) target.heldBy = null;
+    effects.push({ type: 'seized', by: fighter.id, target: target.id, until: target.seizedUntil });
+  }
 }
 
-// allies (never the fighter itself) the move reaches, nearest first
-function alliesInReach(world, fighter, body, move) {
-  const found = [];
-  for (const other of world.fighters.values()) {
-    if (other === fighter || other.vitals.dead || hostile(world, fighter, other)) continue;
-    const ob = world.bodies.get(other.id);
-    const d = distance(body, ob);
-    if (d > move.range + BODY_RADIUS || !insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
-    if (world.level && !clearLine(world.level, body, ob)) continue;
-    found.push({ fighter: other, d });
-  }
-  return found.sort((p, q) => p.d - q.d).map((t) => t.fighter);
+// turn a body to look at another
+function face(body, other) {
+  if (!other) return;
+  const dx = other.x - body.x;
+  const dz = other.z - body.z;
+  if (Math.hypot(dx, dz) > 1e-6) body.yaw = Math.atan2(dx, dz);
 }
+
+/** Cloaked, the Shadow Execution steps through the veil to its target's back (and the cloak falls away). */
+function blinkBehind(world, fighter, body, target, move, now, effects) {
+  const tb = world.bodies.get(target.id);
+  const back = forwardOf(tb.yaw);
+  const from = { x: body.x, z: body.z };
+  body.x = tb.x - back.x * move.blink.behind;
+  body.z = tb.z - back.z * move.blink.behind;
+  body.y = 0; body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+  keepInside(world, body);
+  endEffect(fighter, 'cloak');
+  effects.push({ type: 'uncloak', fighter: fighter.id });
+  effects.push({ type: 'blink', by: fighter.id, target: target.id, from, to: { x: body.x, z: body.z } });
+  // the target cannot turn round in the moment before the blade
+  stagger(target, move.startup + 0.1, now);
+}
+
+/**
+ * The one an ability works on: the fighter the player is locked on to when it qualifies (the right side, alive,
+ * within reach, in sight, not hidden by a cloak); with no lock, an enemy ability takes the nearest enemy in its arc
+ * and an ally ability nobody (Mend then heals the healer). move: the ability at its rank; side: 'enemy' | 'ally'.
+ */
+export function chosenTarget(world, fighter, body, move, side, now = world.time) {
+  const reach = (move.seek ?? move.range) + BODY_RADIUS;
+  const qualifies = (o) => {
+    if (!o || o === fighter || o.vitals.dead) return false;
+    if (side === 'enemy' ? !hostile(world, fighter, o) : hostile(world, fighter, o)) return false;
+    const ob = world.bodies.get(o.id);
+    if (!ob || distance(body, ob) > reach) return false;
+    if (world.level && !clearLine(world.level, body, ob)) return false;
+    return side === 'ally' || targetable(o, ob, fighter, body, now);
+  };
+  const locked = fighter.lock ? world.fighters.get(fighter.lock) : null;
+  if (qualifies(locked)) return locked;
+  if (side === 'ally') return null;
+  const arc = move.seekArc ?? move.arc;
+  let best = null;
+  for (const o of world.fighters.values()) {
+    if (!qualifies(o)) continue;
+    const ob = world.bodies.get(o.id);
+    if (!insideArc(body, body.yaw + arcTurn(move), ob, arc)) continue;
+    const d = distance(body, ob);
+    if (!best || d < best.d) best = { o, d };
+  }
+  return best?.o || null;
+}
+
+// a fighter in the air whose action lets it jump or dash again
+const airborneAction = (fighter) => !fighter.action || fighter.action.id === 'jump' || fighter.action.id === 'airDash';
 
 /** An ability whose work is an effect (core/abilities.mjs), applied as it lands. */
 function applyEffectMove(world, fighter, body, id, effects, now) {
@@ -303,19 +385,31 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
       break;
     case 'cloak': give(fighter, 'cloak'); break;
     case 'empower': give(fighter, 'empower', { charges: move.charges }); break;
-    case 'levitate': give(fighter, 'levitate'); body.vy = 0; break;
+    case 'levitate': case 'dominate': {
+      // Levitate lifts the enemy off its feet, Mind Dominance holds it where it stands: helpless either way
+      const target = chosenTarget(world, fighter, body, move, 'enemy', now);
+      if (!target) { effects.push({ type: 'abilityMissed', by: fighter.id, ability: id }); break; }
+      if (isInvulnerable(target, now) || controlImmune(target, now)) {
+        effects.push({ type: 'resisted', attacker: fighter.id, defender: target.id });
+        break;
+      }
+      if (move.effect === 'levitate') {
+        give(target, 'levitate', { by: fighter.id });
+        const tb = world.bodies.get(target.id);
+        tb.vy = 0; tb.kx = 0; tb.kz = 0; tb.motion = null;
+      } else give(target, 'dominated', { by: fighter.id, hits: 0, breakHits: move.breakHits || EFFECTS.dominate.breakHits });
+      stagger(target, move.effectSeconds, now);
+      if (target.heldBy) target.heldBy = null;
+      break;
+    }
     case 'rage':
       give(fighter, 'rage');
       fighter.stunnedUntil = Math.min(fighter.stunnedUntil, now);
       if (fighter.heldBy) { fighter.events.push({ type: 'freed', at: now, from: fighter.heldBy }); fighter.heldBy = null; }
       break;
-    case 'misdirect': {
-      const [target] = targetsInReach(world, fighter, body, move, true);
-      if (target) give(target, 'misdirected', { by: fighter.id });
-      break;
-    }
     case 'mend': {
-      const ally = alliesInReach(world, fighter, body, move)[0] || fighter;
+      // the ally the healer is locked on to, or the healer herself (owner, 2026-11-22: it is up to her)
+      const ally = chosenTarget(world, fighter, body, move, 'ally', now) || fighter;
       const passives = fighter.shopStats?.passive || {};
       const healAmount = move.heal * (1 + (passives.healAmp || 0));
       give(ally, 'mend', { perSec: healAmount / move.effectSeconds, by: fighter.id });
@@ -337,7 +431,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
       const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
         radius: move.radius ?? SPECIAL_BALANCE.sanctuaryRadius, heal: move.healPerSecond ?? SPECIAL_BALANCE.sanctuaryHealPerSecond, until };
       world.zones.push(zone);
-      effects.push({ type: 'zone', ...zone });
+      effects.push({ type: 'zone', ...zone, seconds: move.effectSeconds });
       break;
     }
     default: break; // counter: the stance is the move itself (core/combat.mjs answers the strike)
@@ -399,9 +493,23 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
   return { ok: false, reason: 'no-active-relic' };
 }
 
-function startMotion(body, fighter, id) {
+function startMotion(body, fighter, id, world = null) {
   const move = moveFor(fighter, id);
-  if (id === 'jump') { body.vy = Math.sqrt(2 * GRAVITY * move.leap); body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
+  if (id === 'jump') { body.vy = Math.sqrt(2 * GRAVITY * move.leap); body.jumped = true; body.airDashReady = true; body.airJumpAt = null; }
+  // Repulse: a hop over the wind-up, landing as it slams (moveBody draws the arc)
+  if (move?.hop) { body.motion = { id, dir: forwardOf(body.yaw), from: 0, to: move.startup, distance: 0, done: 0 }; return; }
+  // Leap Strike: at the enemy locked on to (or the nearest ahead), landing just short of it
+  if (move?.seek && world) {
+    const target = chosenTarget(world, fighter, body, move, 'enemy');
+    if (target) {
+      const tb = world.bodies.get(target.id);
+      const d = Math.hypot(tb.x - body.x, tb.z - body.z); // (startMotion has a local named distance)
+      face(body, tb);
+      const dir = forwardOf(body.yaw);
+      body.motion = { id, dir, from: move.startup, to: move.startup + move.active, distance: Math.max(0, Math.min(move.seek, d - move.landShort)), done: 0 };
+      return;
+    }
+  }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id) && !move?.mobile) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -425,6 +533,24 @@ function moveBody(world, fighter, body, dt, now) {
   let vx = 0;
   let vz = 0;
   const a = fighter.action;
+  if (fighter.seizedBy) {
+    // seized by an Execution: drawn in to stand in front of the one who seized it, until the blade goes in
+    const holderF = world.fighters.get(fighter.seizedBy);
+    const holder = world.bodies.get(fighter.seizedBy);
+    if (!holderF || holderF.vitals.dead || !holder || now >= fighter.seizedUntil || fighter.vitals.dead) fighter.seizedBy = null;
+    else {
+      const f = forwardOf(holder.yaw);
+      const seize = moveFor(holderF, 'execution').seize || { distance: 1.05, pull: 0.4 };
+      const k = Math.min(1, dt * (3 / Math.max(0.05, seize.pull)));
+      body.x += (holder.x + f.x * seize.distance - body.x) * k;
+      body.z += (holder.z + f.z * seize.distance - body.z) * k;
+      body.y += (0 - body.y) * k;
+      body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+      body.yaw = Math.atan2(holder.x - body.x, holder.z - body.z);
+      body.moving = false; body.speed = 0;
+      return;
+    }
+  }
   if (fighter.heldBy) {
     // hanging in the holder's grip
     const holder = world.bodies.get(fighter.heldBy);
@@ -459,6 +585,7 @@ function moveBody(world, fighter, body, dt, now) {
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
     if (a.move.leap && !a.move.air) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
+    if (a.move.hop && progress >= 1) body.motion = null; // landed: the slam
   } else {
     body.motion = null;
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
@@ -516,11 +643,11 @@ function moveBody(world, fighter, body, dt, now) {
     body.y = Math.max(0, body.y + body.vy * dt);
     if (body.y === 0) body.vy = 0;
   }
+  if (world.level && body.y > ROOM_HEADROOM) { body.y = ROOM_HEADROOM; body.vy = Math.min(body.vy, 0); }
   if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
     body.jumped = false;
     body.airJumpAt = null;
-    body.airDashUsed = false;
-    body.airDashTapAt = -Infinity;
+    body.airDashReady = false;
   }
   keepInside(world, body);
 }
@@ -568,7 +695,7 @@ export function targetsInReach(world, attacker, body, move, single) {
   return single ? found.slice(0, 1).map((t) => t.fighter) : found.map((t) => t.fighter);
 }
 
-function resolveReach(world, attacker, body, id, effects, now) {
+function resolveReach(world, attacker, body, id, effects, now, index = 0) {
   const move = moveFor(attacker, id);
   // the throw reaches the one being held, wherever it hangs
   if (id === 'gripThrow') {
@@ -578,16 +705,42 @@ function resolveReach(world, attacker, body, id, effects, now) {
   }
   if (move.execute) {
     const target = world.fighters.get(attacker.specialTarget);
-    attacker.specialTarget = null;
+    // the Execution's second hit: the blade is out, the body is pushed away
+    if (index > 0) {
+      attacker.specialTarget = null;
+      if (target && move.shove) {
+        const tb = world.bodies.get(target.id);
+        const f = forwardOf(body.yaw);
+        tb.kx += f.x * move.shove * KNOCKBACK_DECAY;
+        tb.kz += f.z * move.shove * KNOCKBACK_DECAY;
+        tb.vy = Math.max(tb.vy, 3);
+        effects.push({ type: 'shove', by: attacker.id, target: target.id, distance: move.shove });
+      }
+      return;
+    }
+    if (!move.shove) attacker.specialTarget = null;
     if (target && !target.vitals.dead && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
       collect(effects, strike(attacker, target, id, { now }), attacker, target, world);
+      target.seizedBy = null;
     }
     return;
   }
   for (const target of targetsInReach(world, attacker, body, move, SINGLE_TARGET.has(id))) {
     const tb = world.bodies.get(target.id);
-    collect(effects, strike(attacker, target, id, { now, defenderFacesAttacker: insideArc(tb, tb.yaw, body, BLOCK.frontArcDeg),
-      behind: behindTarget(body, tb), sheltered: shelteredAt(world, target, now) }), attacker, target, world);
+    const outcome = strike(attacker, target, id, { now, defenderFacesAttacker: insideArc(tb, tb.yaw, body, BLOCK.frontArcDeg),
+      behind: behindTarget(body, tb), sheltered: shelteredAt(world, target, now) });
+    collect(effects, outcome, attacker, target, world);
+    // Repulse: thrown up off its feet and drawn in toward the slam, landing on its feet
+    if (move.launch && outcome?.result?.outcome === 'hit' && !target.vitals.dead && !controlImmune(target, now)) {
+      tb.vy = Math.max(tb.vy, move.launch);
+      const d = distance(body, tb);
+      const draw = Math.max(0, d - (move.drawTo ?? 1.8));
+      if (d > 1e-6 && draw > 0) {
+        tb.kx += ((body.x - tb.x) / d) * draw * KNOCKBACK_DECAY;
+        tb.kz += ((body.z - tb.z) / d) * draw * KNOCKBACK_DECAY;
+      }
+      effects.push({ type: 'launched', by: attacker.id, target: target.id, height: move.launch * move.launch / (2 * GRAVITY) });
+    }
   }
 }
 
@@ -595,6 +748,9 @@ function collect(effects, outcome, attacker, defender, world) {
   if (!outcome) return;
   for (const effect of outcome.effects) {
     effects.push(effect);
+    if (effect.type === 'impact' && effect.outcome === 'hit' && world && hitDominated(defender, world.time)) {
+      effects.push({ type: 'dominanceBroken', target: defender.id, by: attacker.id });
+    }
     if (effect.type === 'knockback' && world) {
       const from = world.bodies.get(attacker.id);
       const to = world.bodies.get(defender.id);

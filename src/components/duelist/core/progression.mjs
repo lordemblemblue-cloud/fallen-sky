@@ -115,7 +115,7 @@ export function cleanProgress(raw, classIds) {
 // The specials' three temporary tiers: improved only during this match.
 export const SPECIAL_TIERS = Object.freeze({
   rage: Object.freeze({ effectSeconds: Object.freeze([5, 6, 7]) }),
-  execution: Object.freeze({ threshold: Object.freeze([0.25, 0.3, 0.35]) }), // the target's HP, as a share of its most
+  execution: Object.freeze({ threshold: Object.freeze([0.3, 0.35, 0.4]) }), // the target's HP, as a share of its most (owner: 30% at tier 1)
   shadowExecution: Object.freeze({ rearArc: Object.freeze([120, 150, 180]), reach: Object.freeze([2.3, 2.5, 2.7]) }),
   sanctuary: Object.freeze({ effectSeconds: Object.freeze([5, 6, 7]), radius: Object.freeze([6, 7, 8]), healPerSecond: Object.freeze([5, 6, 7]) }),
 });

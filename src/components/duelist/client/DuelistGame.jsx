@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOVES, FLOW, CLASS_MODE, modeOf, fighterVeil, isStunned } from '../core/index.mjs';
-import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
+import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT, shelterOf } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
@@ -127,6 +127,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   return {
     group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
+    voice: /huntress|female/i.test(seat.body || '') ? 'f' : 'm', // which recorded voice it roars and taunts in
     root: group,
     bladeNear(point) {
       let nearest = null;
@@ -335,7 +336,31 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
 
     // someone who stood down (kneeling) is out of the fight: no lock-on, no panel
     const outOfFight = (f) => !!f.yielded || !!lastView?.yielded?.includes(f.id);
-    // the nearest standing hostile to the player (for lock-on and the right-hand panel); in rooms, one in sight
+    // Lock-on (owner, 2026-11-22): whoever is nearest where the camera looks, within 20 m and in sight: enemies, and for
+    // a Healer her allies too (Mend heals the ally she is locked on to; Levitate lifts the enemy she is locked on to).
+    // The angle off the aim counts most, the distance a little.
+    const aimedTarget = (range = 20) => {
+      const mine = world.fighters.get(me());
+      const at = bodyOf(world, me());
+      if (!mine || !at) return null;
+      const healer = mine.classId === 'healer';
+      const aim = controls.yaw();
+      let best = null;
+      for (const f of world.fighters.values()) {
+        if (f.id === me() || f.vitals.dead || outOfFight(f)) continue;
+        if (!healer && !hostile(world, mine, f)) continue;
+        const b = bodyOf(world, f.id);
+        const dx = b.x - at.x;
+        const dz = b.z - at.z;
+        const d = Math.hypot(dx, dz);
+        if (d > range || (level && !clearLine(level, at, b))) continue;
+        const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - aim), Math.cos(Math.atan2(dx, dz) - aim)));
+        const score = off * 3 + d / range;
+        if (!best || score < best.score) best = { id: f.id, score };
+      }
+      return best?.id || null;
+    };
+    // the nearest standing hostile to the player (for the right-hand panel); in rooms, one in sight
     const nearestHostile = (range = Infinity) => {
       const mine = world.fighters.get(me());
       const at = bodyOf(world, me());
@@ -394,7 +419,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // skip ahead without drawing or animating (a mission's later stages, in a test)
         skip: (seconds, stepSize = 1 / 30) => { drawing = false; try { for (let t = 0; t < seconds - 1e-9; t += stepSize) tick(stepSize); } finally { drawing = true; } },
         slow: (v = 1) => { timeScale = Math.max(0, v); },
-        lock: (on) => { lockId = on ? nearestHostile() : null; },
+        lock: (on, id = null) => { lockId = on ? (id || aimedTarget(Infinity) || nearestHostile()) : null; },
         view: (offset = 0) => { viewOffset = offset; },
         shot: (shot = null) => { fixedShot = shot; },
         manual: (on) => { manual = !!on; },
@@ -502,7 +527,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let alarmOn = false;
     const tick = (dt) => {
       clock += dt;
-      if (controls.takeLockToggle()) lockId = lockId ? null : nearestHostile();
+      if (controls.takeLockToggle()) lockId = lockId ? null : aimedTarget();
       if (fightTimer > 0) { fightTimer -= dt; if (fightTimer <= 0) setFightFlash(false); }
       // a new mission or match on the same connection (a crew going on to the next mission): its rooms, and
       // nobody of the last one (ids repeat between missions)
@@ -549,7 +574,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           // movement keys independently strafe and backstep.
           const mine = world.fighters.get(mineId);
           const aimWhileAttacking = mine?.action?.move?.kind === 'attack';
-          return controls.read({ faceYaw, strafe: !!target, aimWhileAttacking });
+          // the lock goes with the input: targeted abilities take it (the rules check it qualifies)
+          return { ...controls.read({ faceYaw, strafe: !!target, aimWhileAttacking }), target: target ? lockId : null };
         };
         const { effects, events } = source.step(dt, readInput);
         escort?.update(source.escortDistance?.() ?? 0);
@@ -585,6 +611,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           if (fighter.effects) {
             setGhost(actor, !!effectOn(fighter, 'cloak', world.time));
             const lasting = Object.keys(fighter.effects).filter((kind) => kind !== 'cloak' && effectOn(fighter, kind, world.time));
+            // standing in an allied Sanctuary's healing mist: its light clings to the body (client/abilityFx.mjs)
+            if (world.zones?.length && !fighter.vitals.dead && shelterOf(world, fighter)) lasting.push('sanctuary');
             if (lasting.length && drawing) vfx.aura(actor, lasting, show);
           }
           if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
@@ -631,7 +659,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // Contact points now use both posed actors from this frame.
         director.step(effects);
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
-        vfx.update(show, { grips });
+        // an Execution drawing its target in: the golden tether from the Duelist's hand
+        const seizes = [...world.fighters.values()].filter((f) => f.seizedBy && actors[f.seizedBy] && actors[f.id]).map((f) => ({ holder: actors[f.seizedBy], held: actors[f.id] }));
+        vfx.update(show, { grips, seizes });
         tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
         if (ctf) {
           const z = MODES.ctf.arena - CTF.baseInset;

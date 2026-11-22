@@ -690,6 +690,41 @@
    "seconds": 0.4667,
    "loop": false,
    "note": "the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it"
+  },
+  "swordTauntWarrior": {
+   "seconds": 2.2,
+   "loop": false,
+   "note": "a moment posed key by key on the sword stance"
+  },
+  "swordTauntHealer": {
+   "seconds": 2.2,
+   "loop": false,
+   "note": "a moment posed key by key on the sword stance"
+  },
+  "bladesTaunt": {
+   "seconds": 2.2,
+   "loop": false,
+   "note": "a moment posed key by key on the blades stance"
+  },
+  "staffTaunt": {
+   "seconds": 2.2,
+   "loop": false,
+   "note": "a moment posed key by key on the staff stance"
+  },
+  "swordRoar": {
+   "seconds": 1.1,
+   "loop": false,
+   "note": "a moment posed key by key on the sword stance"
+  },
+  "bladesExecution": {
+   "seconds": 1.7,
+   "loop": false,
+   "note": "a moment posed key by key on the blades stance"
+  },
+  "staffDominate": {
+   "seconds": 0.75,
+   "loop": false,
+   "note": "a moment posed key by key on the staff stance"
   }
  }
 }
