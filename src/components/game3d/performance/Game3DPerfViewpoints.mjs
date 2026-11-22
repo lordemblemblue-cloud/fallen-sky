@@ -24,11 +24,18 @@ const point = (area, key, label, x, z, headings) => Object.freeze({ area, key, l
 
 // In order: each area's first point first.
 export const PERF_POINTS = Object.freeze([
-  point('town', 'plaza', 'Fountain plaza', 0, -70, ALL),
+  // SW from the plaza looks at the Three Roads Oath Tree (local (-11.5, -74.6))
+  point('town', 'plaza', 'Fountain plaza', 0, -70, [...ALL, 'SW']),
   point('town', 'southGate', 'Southern Wolf Gate', 0, -225, ['N']),
   point('town', 'hill', 'Hill above town', -110, 170, ['S']),
+  point('town', 'wagonYard', 'Wagon yard (Three Roads)', 70, -210, ALL),
   point('south', 'threshing', 'Threshing Floor', 25, -390, ALL),
-  point('south', 'fields', 'South fields west', -130, -350, ['E']),
+  // the briefed (-130, -350) looking east; also the Three Roads granary and mill
+  point('south', 'granary', 'Granary and mill (Three Roads)', -130, -350, ['E', 'N', 'S', 'W']),
+  // just inside the south area, 2.4 m past the Southern Fields Way gate (8.6, -265)
+  point('south', 'gateFields', 'Gate Fields from the gate (Three Roads)', 8.6, -267.4, ['S']),
+  point('south', 'graveyard', 'Graveyard (Three Roads)', -130, -450, ALL),
+  point('south', 'barrow', 'Barrow (Three Roads)', 20, -500, ALL),
   point('west', 'cedarTerraces', 'Cedar Terraces', -297, -136, ALL),
   point('west', 'wolfStones', 'Wolf Stones', -325, 235, ['S']),
   point('west', 'grotto', 'Jade Lantern Grotto mouth', -360, -400, ['NE']),

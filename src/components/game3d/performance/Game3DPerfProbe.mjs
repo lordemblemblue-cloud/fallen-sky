@@ -24,6 +24,7 @@
 import { Frustum, Matrix4 } from 'three';
 import { perfViewpoints, PERF_AREAS, PERF_EYE_HEIGHT } from './Game3DPerfViewpoints.mjs';
 import { evaluateGame3DAreaBudget, GAME3D_AREA_BUDGETS } from './Game3DAreaBudget.mjs';
+import { installRafPump } from './Game3DRafPump.mjs';
 
 export const PERF_PROBE_SCHEMA = 'game3d-perf-probe/1';
 
@@ -32,6 +33,7 @@ export const PERF_PROBE_SCHEMA = 'game3d-perf-probe/1';
 // named WV_Area_<area>_<source>; that prefix is ignored. Names come from the scene graph as built (see the
 // inventory: __gw3dPerfProbe.inventory()).
 export const PERF_TOGGLE_GROUPS = [
+  { id: 'threeRoads', label: 'War of Three Roads content (?threeRoads=1; objects named TR_*)', match: /^TR_/ },
   { id: 'farMeadow', label: 'Streamed meadow beyond the ground (WV_4MileRadius_StreamingSolidMeadow, with its grass)',
     match: /4mileradius|streamingsolidmeadow|meadow_?solidground|splat_solidmeadow/i },
   { id: 'farGrass', label: 'Owner long-grass tiles, far ring (SWV_Owner_LongGrass_Tile_*_Far)', match: /longgrass_tile_[^ ]*_far/i },
@@ -68,47 +70,7 @@ export function summarizeMs(values) {
     minMs: round(v[0]), maxMs: round(v[v.length - 1]), meanMs: round(v.reduce((s, x) => s + x, 0) / v.length) };
 }
 
-// requestAnimationFrame pump: a hidden or background pane throttles rAF (about one frame a second) while the probe
-// needs the game to keep updating its scenery around the player. Installed before the world mounts (perfPump=1),
-// it runs queued rAF callbacks from a MessageChannel at most every `intervalMs`. Always restore it.
-export function installRafPump(host = window, intervalMs = 16) {
-  if (host.__gw3dRafPump) return host.__gw3dRafPump;
-  const originalRaf = host.requestAnimationFrame;
-  const originalCancel = host.cancelAnimationFrame;
-  let queue = new Map();
-  let nextId = 1;
-  let last = 0;
-  let stopped = false;
-  const channel = new MessageChannel();
-  channel.port1.onmessage = () => {
-    if (stopped) return;
-    const now = performance.now();
-    if (now - last >= intervalMs && queue.size) {
-      last = now;
-      const run = queue; queue = new Map();
-      for (const fn of run.values()) { try { fn(now); } catch (error) { console.error(error); } }
-    }
-    channel.port2.postMessage(0);
-  };
-  host.requestAnimationFrame = (fn) => { const id = nextId++; queue.set(id, fn); return id; };
-  host.cancelAnimationFrame = (id) => { queue.delete(id); };
-  channel.port2.postMessage(0);
-  const pump = {
-    restore() {
-      if (stopped) return;
-      stopped = true;
-      host.requestAnimationFrame = originalRaf;
-      host.cancelAnimationFrame = originalCancel;
-      // hand the waiting callbacks back to the real rAF so the game loop keeps running
-      for (const fn of queue.values()) originalRaf.call(host, fn);
-      queue.clear();
-      channel.port1.onmessage = null;
-      if (host.__gw3dRafPump === pump) host.__gw3dRafPump = null;
-    },
-  };
-  host.__gw3dRafPump = pump;
-  return pump;
-}
+export { installRafPump };
 
 async function measureRafInterval(host, frames = 20, timeoutMs = 4000) {
   const raf = host.__gw3dRafPump ? null : host.requestAnimationFrame?.bind(host);
@@ -418,6 +380,7 @@ export function createGame3DPerfProbe({ host = window, groups = PERF_TOGGLE_GROU
       wholeWorld: wholeWorld(), area: currentArea(),
       pageVisible: document.visibilityState, hasFocus: document.hasFocus?.() ?? null,
       rafPump: !!host.__gw3dRafPump,
+      threeRoads: (() => { try { const w = host.__gw3dThreeRoads; return w ? { status: w.status?.() ?? null, places: w.get?.('places')?.status?.() ?? null } : null; } catch (error) { return { error: String(error?.message || error) }; } })(),
     };
   }
 

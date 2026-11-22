@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { createCloneAdaptiveGraphics } from './AdaptiveGraphics.mjs';
 import CloneHardwarePanel from './CloneHardwarePanel.jsx';
 import { createGame3DSceneWarmup } from './SceneWarmup.mjs';
+import { installRafPump } from './Game3DRafPump.mjs';
+
+// Draw-cost probe, dev server only: ?perfPump=1 must replace requestAnimationFrame before the world's loop first asks
+// for a frame, i.e. when this module is evaluated (Game3DRafPump.mjs). A production build drops this.
+if (import.meta.env?.DEV && typeof window !== 'undefined' && /[?&]perfPump=1(&|$)/.test(window.location.search))
+  installRafPump(window);
 
 // GameView is outside /game3d/, so its browser client requires a root
 // service-worker scope to cache its /game3d/ requests. Never replace another
