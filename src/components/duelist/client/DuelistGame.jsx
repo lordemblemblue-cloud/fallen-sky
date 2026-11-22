@@ -788,7 +788,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
-      <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} onPower={(id) => pressRef.current?.(id)}
+      <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
         onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
       {match && <Countdown view={match} fightFlash={fightFlash} />}
