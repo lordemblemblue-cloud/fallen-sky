@@ -167,6 +167,7 @@ import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
 import {createWorldDrawWatchdog} from './render/liveRendererRecovery.mjs';
+import {isRecoverableWebGPUPipelineError} from './render/recoverableWebGPUPipelineError.mjs';
 import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
@@ -3505,9 +3506,19 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     let uiFrameCounter = 0;
     let staminaOccludedByEnemy = false;
     const drawWorld = (activeCamera, now) => {
+      // A failed WebGPU renderer must not keep drawing while React remounts the
+      // same original Wolfveil scene on the existing safe fallback path.
+      if (recovering) return;
       const state = renderer.__sceneState;
       const before = state?.gameplayFrames || 0;
-      inkLook.render(scene, activeCamera);
+      try {
+        inkLook.render(scene, activeCamera);
+      } catch (error) {
+        if (!isRecoverableWebGPUPipelineError(error, renderer)) throw error;
+        console.error('[Game3D] Three.js WebGPU pipeline cache invalid while changing worlds', error);
+        recoverRenderer('webgpu-pipeline-refcount-invalid');
+        return;
+      }
       if (state && checkEmptyDraws(now, state.ready && !state.holdRender && !document.hidden &&
           container.clientWidth > 0 && container.clientHeight > 0 && !!modelRef.current,
           (state.gameplayFrames || 0) - before)) recoverRenderer('world-submitted-no-draws');

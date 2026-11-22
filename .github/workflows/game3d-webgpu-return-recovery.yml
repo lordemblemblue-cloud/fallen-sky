@@ -1,0 +1,29 @@
+name: Game 3D WebGPU Return Crash Recovery
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/components/game3d/render/recoverableWebGPUPipelineError.mjs'
+      - 'tests/game3d-webgpu-pipeline-return.test.mjs'
+      - '.github/workflows/game3d-webgpu-return-recovery.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  refcount-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test exact WebGPU cache-crash classification and renderer recovery
+        run: node --test tests/game3d-webgpu-pipeline-return.test.mjs tests/game3d-live-renderer-recovery.test.mjs
+      - name: Lint changed modules
+        run: npx eslint src/components/game3d/render/recoverableWebGPUPipelineError.mjs
+      - name: Verify app compilation
+        run: npm run build
