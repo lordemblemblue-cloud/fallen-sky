@@ -37,7 +37,10 @@ export const STANCES = Object.freeze({
 // fighter during one: core/cuts.mjs). Such a clip, and each walking loop, is two actions: the legs (hips and down)
 // and the rest. Standing still, the cut's own legs show; moving, the walk's.
 const LEGS = /mixamorig(Hips|(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End))./;
-export const LAYERED = /^(sword(Cut|Backhand|Recoil)|blades(Cut|Recoil)|staff(Cut|Recoil)|pushThrust)/;
+// Keep the weapon's guard on torso and arms while the legs continue the authoritative
+// locomotion pose. Standing guard retains the original clip's lower-body foot plant.
+// This is visual layering only: block angle, stamina, parry and hit checks remain server-owned.
+export const LAYERED = /^(sword(Cut|Backhand|Recoil|Block)|blades(Cut|Recoil|Guard)|staff(Cut|Recoil|Guard)|pushThrust)/;
 // A parried cut is thrown back: the recoil clip is shown from where the blade is already in front (the seconds of
 // its lead-in: tools/duelist/blender/cut_grid.py RECOIL_MODE wind), for a parry within CLASH seconds of the stagger.
 const RECOIL_FROM = 0.07;
