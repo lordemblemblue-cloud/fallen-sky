@@ -2084,6 +2084,14 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     const playerGlide = createPlayerGlide();
     const gliderProp = createGliderProp(scene);
     const glideSteer = new THREE.Vector3();
+    // The ground an open glider would meet ahead, as the glue finds it from the glider's height: playerGlide keeps
+    // the glider off faces more than 2 m above it (it slides along them or is held) instead of landing on top.
+    const glideProbe = new THREE.Vector3();
+    const glideGroundAt = (x, z, y) => {
+      glideProbe.set(x, y, z);
+      return (naturalZones?.playerGroundY(glideProbe) ?? (suigenActive ? null : wolfveilVillage?.playerPalaceGroundY(glideProbe)))
+        ?? sampleGroundY(x, z, y);
+    };
     const glideJumping = () => ['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
     const haloWingsFlying = () => (playerAnim?.getAirWalkState?.().mode || 'idle') !== 'idle';
     // Space on foot in the air; true when the glider took the press (on the ground it goes on to the jump chain).
@@ -3946,7 +3954,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           :isSprinting
             ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
             : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
-        const speed = glidingNow ? playerGlide.speed() : (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
+        const speed = glidingNow ? playerGlide.travelSpeed() : (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
           (swordStanceActive ? SWORD_STANCE.moveSpeedMultiplier : 1) *
           (skillApproaching ? 2.2 : 1);
@@ -4016,12 +4024,13 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           const air = playerGlide.update({
             dt: delta, x: model.position.x, z: model.position.z, groundY: feetGroundY, heroY: model.position.y,
             surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
-            steer: glideSteer, dive: !!keys.current['shift'], jumping: glideJumping(),
+            steer: glideSteer, dive: !!keys.current['shift'], jumping: glideJumping(), groundAt: glideGroundAt,
             allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0 &&
               !playerSwim.isSwimming() && !haloWingsFlying() && !tornadoRes.lockMovement,
           });
           if (air.changed) playerAnim?.setGliding?.(air.mode);
           if (air.y !== null) model.position.y = air.y;
+          if (air.x !== null) { model.position.x = air.x; model.position.z = air.z; } // a move into a wall, taken back
           window.__localGliding = air.mode === 'glide';
         }
         // Deep water (player/playerSwimState.mjs): the glue above put the feet on the bed; water up to the neck

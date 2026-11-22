@@ -47,7 +47,8 @@ async function packClip(rigId, name) {
 
 // One simulated hero: x/z advance with the glider's velocity (the world's movement block does that), the module
 // owns the height in the air; flat ground at `ground` unless a function of x is given.
-function fly(glide, { frames, dt = 1 / 60, ground = 0, surface = null, steer = null, dive = () => false, at = { x: 0, z: 0, y: 0 } }) {
+// probe: hand the glide the ground ahead (GameWorld3D's glideGroundAt), as the world does
+function fly(glide, { frames, dt = 1 / 60, ground = 0, surface = null, steer = null, dive = () => false, at = { x: 0, z: 0, y: 0 }, probe = false }) {
   const g = typeof ground === 'function' ? ground : () => ground;
   const trace = [];
   for (let i = 0; i < frames; i++) {
@@ -55,8 +56,10 @@ function fly(glide, { frames, dt = 1 / 60, ground = 0, surface = null, steer = n
     at.x += v.x * dt; at.z += v.z * dt;
     const groundY = g(at.x, at.z);
     const s = glide.update({ dt, x: at.x, z: at.z, groundY, heroY: glide.isAirborne() ? at.y : groundY,
-      surfaceY: typeof surface === 'function' ? surface(at.x) : surface, steer: steer?.(i), dive: dive(i) });
-    at.y = s.y ?? groundY;
+      surfaceY: typeof surface === 'function' ? surface(at.x) : surface, steer: steer?.(i), dive: dive(i),
+      groundAt: probe ? (x, z) => g(x, z) : null });
+    if (s.x !== null) { at.x = s.x; at.z = s.z; } // a move into a wall, taken back (as GameWorld3D does)
+    at.y = s.y ?? g(at.x, at.z);
     trace.push({ i, ...s, x: at.x, z: at.z, h: at.y });
     if (s.landed) break;
   }
@@ -169,6 +172,87 @@ test('touchdown hands the feet back; deep water is landed on (the swim takes ove
   const lower = glide.update({ dt: 1 / 60, x: 66, z: -20, groundY: 1, heroY: 1 });
   assert.deepEqual([lower.mode, lower.y], ['ground', null]);
   assert.ok(glide.update({ dt: 1 / 60, x: 66.07, z: -20, groundY: 1, heroY: 1 }).mode === 'ground');
+});
+
+test('ground more than 2 m above the glider is a wall: held head-on, sliding at a glancing angle, never lifted onto it', () => {
+  // off a ledge y high at (x, z), the glider open along the heading
+  const launch = (glide, { x = 0, z = 0, y, heading = 0, ground = 0 }) => {
+    glide.update({ dt: 1 / 60, x, z, groundY: y, heroY: y });
+    glide.update({ dt: 1 / 60, x, z: z + 0.07, groundY: ground, heroY: ground });
+    assert.equal(glide.toggle({ heroY: y, groundY: ground, bodyHeading: heading }).action, 'opened');
+    return { x, z: z + 0.07, y };
+  };
+  // a cliff: the valley floor at 0, a face rising 30 m between z 20 and 22 (one terrain cell), its top beyond
+  const cliff = (x, z) => (z < 20 ? 0 : z < 22 ? (z - 20) * 15 : 30);
+  const highest = (trace, from) => Math.max(from, ...trace.map((f) => f.h));
+
+  // head-on: held off the face, sinking all the while, down to the valley floor at its foot
+  let glide = createPlayerGlide();
+  let at = launch(glide, { y: 12, heading: 0 });
+  let trace = fly(glide, { frames: 60 * 20, ground: cliff, at, probe: true });
+  let end = trace.at(-1);
+  assert.ok(end.landed, 'lands');
+  assert.equal(end.y, 0, 'on the valley floor');
+  assert.ok(end.z < 20, 'at the foot of the face, not on it: z ' + end.z.toFixed(2));
+  assert.ok(highest(trace, 0) <= 12 + 1e-9, 'never lifted');
+  const held = trace.filter((f) => f.wall === 'held');
+  assert.ok(held.length > 60, 'held at the face for a while (' + held.length + ' frames)');
+  assert.ok(Math.abs(held.at(-1).z - held[0].z) < 0.05 && held.at(-1).h < held[0].h - 2, 'held in place, sinking');
+
+  // at a glancing angle (30 degrees to the face): slides along it, then lands below it
+  glide = createPlayerGlide();
+  at = launch(glide, { y: 16, heading: Math.PI / 3 });
+  trace = fly(glide, { frames: 60 * 20, ground: cliff, at, probe: true });
+  end = trace.at(-1);
+  assert.ok(end.landed && end.y === 0 && end.z < 20, 'lands at the foot of the face');
+  assert.ok(highest(trace, 0) <= 16 + 1e-9, 'never lifted');
+  const slid = trace.filter((f) => f.wall === 'slide');
+  assert.ok(slid.length > 60, 'slides along the face (' + slid.length + ' frames)');
+  assert.ok(slid.at(-1).x - slid[0].x > 10 && Math.abs(slid.at(-1).z - slid[0].z) < 0.2, 'along the face, not into it');
+  const along = Math.hypot(slid[5].velocity.x, slid[5].velocity.z);
+  assert.ok(Math.abs(along - slid[5].speed * Math.cos(Math.PI / 6)) < 0.3, 'the travel along the face: ' + along.toFixed(2));
+
+  // a low ledge (about 1 m above the glider as it gets there) is landed on; one 2.5 m above is a wall
+  const ledge = (top) => (x, z) => (z < 20 ? 0 : top);
+  glide = createPlayerGlide();
+  trace = fly(glide, { frames: 60 * 10, ground: ledge(3.8), at: launch(glide, { z: 12, y: 3.7 }), probe: true });
+  end = trace.at(-1);
+  assert.ok(end.landed && end.y === 3.8 && end.z >= 20, 'up onto the low ledge: y ' + end.y + ' z ' + end.z.toFixed(2));
+  assert.ok(3.8 - trace.at(-2).h < GLIDE.wallHeight, 'from less than 2 m below');
+  glide = createPlayerGlide();
+  trace = fly(glide, { frames: 60 * 10, ground: ledge(5.2), at: launch(glide, { z: 12, y: 3.7 }), probe: true });
+  end = trace.at(-1);
+  assert.ok(end.landed && end.y === 0 && end.z < 20, 'held at the higher ledge, landed below it');
+
+  // a slope rising toward the glider is landed on where it meets it
+  glide = createPlayerGlide();
+  const slope = (x, z) => Math.max(0, (z - 10) * 0.4);
+  trace = fly(glide, { frames: 60 * 10, ground: slope, at: launch(glide, { y: 8 }), probe: true });
+  end = trace.at(-1);
+  assert.ok(end.landed && end.z > 10 && Math.abs(end.y - slope(end.x, end.z)) < 1e-9, 'on the slope');
+  assert.ok(end.y - trace.at(-2).h < 0.1, 'met, not lifted');
+  assert.ok(trace.every((f) => f.wall === 'clear'), 'never a wall');
+
+  // a move that still ends in the face (a long frame) is taken back, gliding or falling; never lifted onto it
+  const step = (x, z) => (z < 20 ? 0 : 30);
+  glide = createPlayerGlide();
+  at = launch(glide, { z: 18, y: 10 });
+  fly(glide, { frames: 10, ground: step, at });
+  const into = glide.update({ dt: 0.1, x: at.x, z: 21, groundY: 30, heroY: 30 });
+  assert.deepEqual([into.mode, into.x, into.z, into.wall], ['glide', at.x, at.z, 'held']);
+  assert.ok(into.y < 10, 'still in the air, below the top: ' + into.y.toFixed(2));
+  // a long frame (1.3 s, about 10 m at trim: past the teleport distance) into the face: taken back too, not ended as a
+  // teleport and set down on top
+  const longer = createPlayerGlide();
+  const from = launch(longer, { z: 12, y: 10 });
+  fly(longer, { frames: 10, ground: step, at: from });
+  const hitch = longer.update({ dt: 1.3, x: from.x, z: from.z + 9.75, groundY: 30, heroY: 30 });
+  assert.deepEqual([hitch.mode, hitch.x, hitch.z, hitch.wall], ['glide', from.x, from.z, 'held']);
+  assert.ok(hitch.y < 10);
+  glide.toggle(); // closed: falling, steered at the cliff
+  const fall = glide.update({ dt: 1 / 60, x: at.x, z: 20.5, groundY: 30, heroY: 30 });
+  assert.deepEqual([fall.mode, fall.x, fall.z], ['fall', at.x, at.z]);
+  assert.ok(fall.y < 10);
 });
 
 test('the glider opens only high enough above the landing, and Space again closes it', () => {
@@ -290,7 +374,11 @@ test('the world opens the glider in the air with Space and keeps the glide besid
   assert.match(world, /if \(air\.changed\) playerAnim\?\.setGliding\?\.\(air\.mode\);\s*if \(air\.y !== null\) model\.position\.y = air\.y;/);
   // the glider carries the hero through the ordinary collision-checked move, at its own speed, no run or sprint
   assert.match(world, /glideSteer\.copy\(move\);\s*const glidingNow = playerGlide\.isGliding\(\) && !mounted;\s*if \(glidingNow\) \{ const v = playerGlide\.velocity\(\); move\.set\(v\.x, 0, v\.z\); \}/);
-  assert.match(world, /const speed = glidingNow \? playerGlide\.speed\(\) : \(baseMoveSpeed/);
+  assert.match(world, /const speed = glidingNow \? playerGlide\.travelSpeed\(\) : \(baseMoveSpeed/);
+  // ground more than 2 m above the glider is a wall: the ground ahead from the glue's own floors, a move into it taken back
+  assert.match(world, /const glideGroundAt = \(x, z, y\) => \{[\s\S]{0,260}\?\? sampleGroundY\(x, z, y\);/);
+  assert.match(world, /jumping: glideJumping\(\), groundAt: glideGroundAt,/);
+  assert.match(world, /if \(air\.x !== null\) \{ model\.position\.x = air\.x; model\.position\.z = air\.z; \}/);
   assert.match(world, /const isSprinting = !!keys\.current\['control'\] && isMoving && !swimmingNow && !glidingNow;/);
   // no strikes, skills or mounting in the air; the prop after the pose; teardown
   assert.match(world, /if \(\(playerSwim\.isSwimming\(\) \|\| playerGlide\.isGliding\(\)\) && \(attackPressed\.current/);
