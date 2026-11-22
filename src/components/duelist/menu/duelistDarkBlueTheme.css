@@ -1,0 +1,117 @@
+/* DUELIST ADVENTURE — shared dark navy visual theme (UI only).
+ * Reuses the Character screen's midnight-blue glass, silver-blue edges and
+ * restrained gold selection. This stylesheet never changes the 3D world shader,
+ * arena meshes, assets, multiplayer protocol or match stat mechanics.
+ */
+.dxt-page,.duelist-menu-page,.duelist-hub,.duelist-game,.duelist-arena-page {
+  --duelist-midnight:#08162d;
+  --duelist-navy:#0c2140;
+  --duelist-blueglass:rgba(13,31,59,.94);
+  --duelist-blueglass-soft:rgba(15,38,67,.79);
+  --duelist-ice:#bbd8f0;
+  --duelist-rim:rgba(141,191,234,.56);
+  --duelist-gold:#ffbd6b;
+  --dxt-amber:#ffb053;
+  --dxt-gold:#ffcf96;
+  --dxt-ice:#b9d9ef;
+  --dui-gold:#f3c58d;
+  --dui-gold-edge:rgba(236,185,119,.62);
+  --dui-line:rgba(155,197,227,.25);
+  --dui-surface:rgba(9,26,48,.83);
+}
+/* Home and every menu share the same deep dark blue; the home stage stays a
+ * separate optional visual layer rather than inventing another game renderer. */
+.dxt-page {
+  background:
+    radial-gradient(ellipse at 48% 36%,rgba(63,119,185,.27),transparent 58%),
+    radial-gradient(ellipse at 50% 101%,rgba(198,128,54,.14),transparent 49%),
+    linear-gradient(120deg,#08162d,#0d2543 50%,#07172e);
+  color:#f0f5fb;
+}
+.dxt-header,.dxt-footer,.duelist-menu-topbar,.duelist-menu-bottom-nav {
+  background:linear-gradient(100deg,rgba(6,19,41,.98),rgba(12,30,57,.96),rgba(6,17,37,.98));
+  border-color:rgba(138,190,236,.45);
+}
+.dxt-footer-link,.duelist-menu-bottom-link {color:#d1e0ef;}
+.dxt-footer-link[data-active='true'],.duelist-menu-bottom-link[aria-current='page'] {
+  background:linear-gradient(180deg,rgba(183,120,55,.2),rgba(13,36,64,.22));
+  border-bottom-color:var(--duelist-gold);color:#fff0d4;
+}
+.dxt-home-intro {border-left-color:var(--duelist-gold);
+  background:linear-gradient(90deg,rgba(6,18,40,.93),rgba(8,26,51,.27));}
+.dxt-surface {
+  border-color:rgba(143,199,239,.63);
+  background-color:rgba(9,27,52,.93);
+  box-shadow:0 18px 52px rgba(2,11,31,.44),inset 0 1px 12px rgba(101,163,220,.09);
+}
+.dxt-surface-top {border-color:rgba(145,190,232,.3);}
+.dxt-mode-categories,.dxt-mode-detail,.dxt-store-filters,.dxt-store-info {
+  border-color:rgba(142,189,228,.31);
+}
+.dxt-category:not([data-active='true']),.dxt-tile:not([data-active='true']),
+.dxt-store-filters button:not([data-active='true']) {
+  border-color:rgba(145,191,231,.48);
+  background:linear-gradient(130deg,rgba(42,79,115,.84),rgba(19,43,78,.86));
+  color:#e1edfb;
+}
+.dxt-category[data-active='true'],.dxt-tile[data-active='true'],
+.dxt-store-filters button[data-active='true'] {
+  border-color:#ffce8a;
+  background:linear-gradient(130deg,#915121,#be7c36,#f4ad52);
+  color:#fff9ef;
+}
+.dxt-mode-detail,.dxt-store-info {color:#e4edf9;}
+.dxt-detail-art {background:radial-gradient(ellipse at 50% 80%,rgba(223,148,70,.25),transparent 56%),
+  linear-gradient(145deg,rgba(37,75,117,.86),rgba(9,27,54,.93));}
+.dxt-detail-copy p,.dxt-store-info p {color:#ccdbeb;}
+.dxt-action:not(.dxt-action--primary) {background:linear-gradient(130deg,#244d76,#173454);border-color:#91c1e4;}
+.dxt-action--primary {background:linear-gradient(125deg,#9f5926,#d38938 75%,#ffb456);border-color:#ffd994;}
+/* Story receives the exact same palette. Only CSS and text overlays change;
+ * its authored scenic illustration and mission controls remain untouched. */
+.dsm-story {--dsm-ice:#a9d5f1;--dsm-gold:#ffb75b;--dsm-text:#f2f6fd;
+  background:radial-gradient(ellipse at 50% 80%,rgba(201,137,73,.18),transparent 44%),
+    radial-gradient(ellipse at 55% 0,rgba(56,118,185,.24),transparent 50%),
+    linear-gradient(120deg,#08162d,#102b4b 49%,#07172e);
+}
+.dsm-story .dsm-frame {background:linear-gradient(110deg,rgba(16,38,69,.81),rgba(8,26,49,.89) 55%,rgba(10,29,54,.9));}
+.dsm-story .dsm-detail {background:linear-gradient(145deg,rgba(18,42,74,.96),rgba(9,25,49,.97) 63%,rgba(18,44,77,.95));}
+/* Settings retains the user's full native template backdrop and uses the
+ * same readable dark-blue selectors, rather than overlaying another skin. */
+.dxt-page--reference .dxr-art--settings {--dxr-gold:#ffcd88;--dxr-blue:#b5d9f2;}
+.dxt-page--reference .dxr-art--settings :is(input,select) {
+  background:rgba(9,27,54,.93);color:#f2f6fc;border-color:rgba(150,191,229,.58);
+}
+/* Routed match-information pages use the Character navy instead of grey glass. */
+.duelist-menu-page {--dm-ink:#eef4fc;--dm-muted:#b9cfe3;--dm-line:rgba(145,192,229,.32);
+  --dm-accent:#b5daef;--dm-gold:#ffbd73;
+  background:radial-gradient(ellipse at 52% 11%,rgba(63,116,175,.23),transparent 46%),
+    linear-gradient(135deg,#08162d,#0d2442 54%,#07172d);
+}
+.duelist-menu-page .duelist-menu-panel,.duelist-menu-page .duelist-menu-card {
+  background:linear-gradient(150deg,rgba(22,47,78,.89),rgba(10,29,55,.91));
+  border-color:rgba(142,188,225,.43);color:#eaf2fc;
+}
+.duelist-menu-page .duelist-menu-button {
+  border-color:rgba(162,205,242,.56);
+  background:linear-gradient(125deg,rgba(36,74,113,.86),rgba(16,39,71,.86));
+}
+.duelist-menu-page .duelist-menu-button:hover {border-color:#ffcf94;}
+/* Match screens: theme only menus, HUD cards and loading/scoreboard layers,
+ * NEVER recolor HP/team semantic bars or the live 3D environment. */
+.duelist-game {color:#edf4fc;background:#08162d;}
+.duelist-game :is(.duelist-power,.duelist-comms,.duelist-board,.duelist-result button) {
+  background:rgba(9,28,54,.86);border-color:rgba(148,193,230,.38);color:#f0f5fd;
+}
+.duelist-game .duelist-power:hover,.duelist-game .duelist-result button:hover {
+  border-color:#ffd08d;background:rgba(32,71,110,.92);
+}
+.duelist-game .duelist-power-cd,.duelist-game .duelist-prompt,.duelist-game .duelist-objective-title {
+  color:#ffd18f;
+}
+.duelist-match-loading {background:radial-gradient(ellipse at 51% 42%,rgba(48,101,162,.24),transparent 55%),
+  linear-gradient(145deg,#07172e,#102944 52%,#07172c);}
+.duelist-match-loading__panel {background:linear-gradient(145deg,rgba(18,43,76,.92),rgba(7,23,46,.95));
+  border-color:rgba(157,204,238,.47);color:#f2f5fc;}
+@media(prefers-reduced-motion:reduce) {
+ .dxt-page :is(.dxt-action,.dxt-category,.dxt-tile) {transition:none;}
+}
