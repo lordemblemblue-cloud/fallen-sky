@@ -22,9 +22,15 @@ Research behind them, in [research/](research/):
 
 A piece of the Wolf Star fell into this valley. Three empires found a road here in the same year, and each needs the valley to survive: Akitsu its star-iron, Tameri its water and grain, Remoria its land. Each believes the Wolf that sleeps here is theirs, and someone in the valley wants them to fight.
 
+## Where it stands
+
+**2026-11-21: the owner answered "Yes, build it"** to the story. Building has started, band by band (see the build order in the quest plan and `BUILD_RULES.md`). Everything new is behind the switch `?threeRoads=1` until a band is ready.
+
+The other nine decisions below were not answered one by one. Until the owner says otherwise the build takes the plan's own answer for each: the faction-to-empire match and the names as written; quests are called pledges; the 32 existing quests stay beside the new ones; quest fights match the player's level; no new gates yet; nothing is granted by the browser; war pledges start on duels; the quest engine and the opening first. Each of these is cheap to change later, and each is raised again when the band it affects is shown.
+
 ## Decisions needed from the owner
 
-1. Is this the story you want? Any empire you would change?
+1. Is this the story you want? Any empire you would change? **Answered: yes.**
 2. Which existing faction is which empire: bear = Akitsu (Japan), wolf = Remoria (Rome), tiger = Tameri (Egypt). This is the one choice that touches existing characters.
 3. The names: Akitsu, Tameri, Remoria, and the people in the story.
 4. "Pledge": the code has no pledge system. I read it as the monsters, caves and quests side of the game, and named quests Pledges. If you meant something else (the clans, for example), say so.
