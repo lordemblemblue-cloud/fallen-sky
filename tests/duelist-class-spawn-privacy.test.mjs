@@ -151,3 +151,26 @@ test('all four classes apply only at a defeated player next respawn without leak
     }
   }
 });
+
+test('live fighters cannot hot-swap any class or reset earned charge before defeat', () => {
+  for (const activeClass of CLASS_IDS) {
+    const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+    assert.equal(queueMatchClass(match, 'alpha', activeClass).accepted, true);
+    advance(match, COUNTDOWN + 0.1);
+    const seat = match.seats.get('alpha');
+    const fighter = match.world.fighters.get('alpha');
+    seat.specialMeter = 75; // Arrange trusted state, not a client request.
+    for (const requestedClass of CLASS_IDS) {
+      const result = queueMatchClass(match, 'alpha', requestedClass);
+      assert.equal(result.accepted, false, activeClass + '/' + requestedClass);
+      assert.equal(result.reason, 'alive-in-match');
+      assert.equal(seat.classId, activeClass);
+      assert.equal(seat.pendingClass, null);
+      assert.equal(seat.specialMeter, 75);
+      assert.equal(match.world.fighters.get('alpha'), fighter);
+      assert.equal(fighter.weapon, CLASSES[activeClass].weapon);
+      assert.equal(matchView(match, 'alpha').me.specialMeter, 75);
+      assert.equal(matchView(match, 'beta').me.specialMeter, 0);
+    }
+  }
+});
