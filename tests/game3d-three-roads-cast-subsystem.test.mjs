@@ -220,3 +220,27 @@ test('with the whole valley loaded the cap still holds', async () => {
   assert.equal(w.cast.status().count, CAST_MAX_PEOPLE);
   w.cast.dispose();
 });
+
+test('a rig with one skeleton copy per mesh is rebound to the bones the mixer drives', async () => {
+  const { unifySkeletons } = await import('../src/components/game3d/threeroads/cast/castSubsystem.mjs');
+  const model = new THREE.Group();
+  const meshes = [];
+  for (let k = 0; k < 3; k++) {
+    const hips = new THREE.Bone(); hips.name = 'mixamorigHips';
+    const spine = new THREE.Bone(); spine.name = 'mixamorigSpine'; hips.add(spine);
+    model.add(hips);
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const count = geometry.attributes.position.count;
+    geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(new Array(count * 4).fill(0), 4));
+    geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(new Array(count * 4).fill(0).map((_, i) => (i % 4 ? 0 : 1)), 4));
+    const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+    model.add(mesh);
+    model.updateMatrixWorld(true);
+    mesh.bind(new THREE.Skeleton([hips, spine]));
+    meshes.push(mesh);
+  }
+  assert.notEqual(meshes[1].skeleton.bones[0], meshes[0].skeleton.bones[0]);
+  assert.equal(unifySkeletons(THREE, model), 2);
+  for (const mesh of meshes) assert.equal(mesh.skeleton.bones[0], meshes[0].skeleton.bones[0]);
+  assert.equal(THREE.PropertyBinding.findNode(model, 'mixamorigHips'), meshes[0].skeleton.bones[0], 'the bone the mixer animates');
+});

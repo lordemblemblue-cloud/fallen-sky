@@ -65,7 +65,10 @@ async function defaultLoadSource(key, def, ctx) {
     const [model, idleClip, walkClip] = await Promise.all([
       loadWith(ctx.fbxLoader, url), firstClip(ctx.fbxLoader, def.idle), firstClip(ctx.fbxLoader, def.walk),
     ]);
-    return { scene: model, idleClip, walkClip, format: 'fbx', url, walkClipSpeed: def.walkClipSpeed, tint: def.tint };
+    return {
+      scene: model, idleClip, walkClip, format: 'fbx', url,
+      walkClipSpeed: def.walkClipSpeed, tint: def.tint, tintMeshes: def.tintMeshes || null,
+    };
   }
   const gltf = await loadWith(ctx.gltfLoader, url);
   const clips = gltf?.animations || [];
@@ -87,6 +90,25 @@ function inPlace(clip) {
     for (let i = 0; i + 2 < v.length; i += 3) { v[i] = v[0]; v[i + 2] = v[2]; }
   }
   return copy;
+}
+
+// The archer FBX comes in with one copy of its skeleton per mesh (Body, Clothes,
+// Eyes and Eyelashes each bound to their own nested `mixamorigHips` chain). A mixer
+// on the model drives only the first bone of each name it finds, so three of the
+// four meshes would stand frozen. Rebind every mesh to those first-found bones (the
+// same depth-first search PropertyBinding uses), once, on the template.
+export function unifySkeletons(THREE_, model) {
+  const firstByName = new Map();
+  model.traverse(node => { if (node !== model && node.name && !firstByName.has(node.name)) firstByName.set(node.name, node); });
+  let rebound = 0;
+  model.traverse(node => {
+    if (!node.isSkinnedMesh || !node.skeleton) return;
+    const bones = node.skeleton.bones.map(bone => firstByName.get(bone.name) || bone);
+    if (bones.every((bone, i) => bone === node.skeleton.bones[i])) return;
+    node.bind(new THREE_.Skeleton(bones, node.skeleton.boneInverses), node.bindMatrix);
+    rebound++;
+  });
+  return rebound;
 }
 
 function disposeObjectTree(object) {
@@ -150,6 +172,7 @@ export function createCastSubsystem(ctx, deps = {}) {
   function prepareTemplate(value) {
     if (!value?.scene) throw new Error('Cast model source gave no scene');
     value.scene.updateMatrixWorld(true);
+    value.reboundMeshes = unifySkeletons(THREE, value.scene);
     const box = new THREE.Box3().setFromObject(value.scene);
     value.sourceHeight = Math.max(1e-3, box.max.y - box.min.y);
     value.footY = box.min.y;
@@ -303,7 +326,12 @@ export function createCastSubsystem(ctx, deps = {}) {
   function tint(material, colour, mode) {
     if (!material.color) return;
     material.color.setHex(colour);
-    if (mode === 'multiply') material.color.lerp(white, 0.35);
+    // Textured rigs: lighten the colour so the texture under it still reads, and add
+    // it as a faint glow so it shows even on a dark texture.
+    if (mode === 'multiply') {
+      material.color.lerp(white, 0.4);
+      material.emissive?.setHex(colour).multiplyScalar(0.3);
+    }
   }
 
   function buildVisual(actor, t, spot) {
@@ -311,24 +339,31 @@ export function createCastSubsystem(ctx, deps = {}) {
     const s = actor.look.height / t.sourceHeight;
     model.scale.set(s * actor.look.width, s, s * actor.look.width);
     model.position.y = -t.footY * s;
-    // Clone this person's materials once each and tint them: the first material in
-    // the rig takes the first colour, every other one the second. A rig with a
-    // single material takes the first colour only.
+    // Clone this person's materials and tint them. With `tintMeshes` the source names
+    // which mesh takes which colour (others keep theirs); without it the first
+    // material in the rig takes the first colour and every other one the second.
     const clones = new Map();
     let order = 0;
     model.traverse(node => {
       if (!node.isMesh) return;
       node.castShadow = !node.isSkinnedMesh;
       node.receiveShadow = true;
+      let colourIndex = null;
+      if (t.tintMeshes) {
+        const rule = t.tintMeshes.find(([pattern]) => pattern.test(node.name));
+        if (!rule) return;
+        colourIndex = rule[1];
+      }
       const swap = m => {
-        if (!clones.has(m)) {
+        const key = colourIndex === null ? m : m.uuid + ':' + colourIndex;
+        if (!clones.has(key)) {
           const copy = m.clone();
-          tint(copy, actor.look.colours[order === 0 ? 0 : 1], t.tint);
+          tint(copy, actor.look.colours[colourIndex ?? (order === 0 ? 0 : 1)], t.tint);
           order++;
-          clones.set(m, copy);
+          clones.set(key, copy);
           actor.materials.push(copy);
         }
-        return clones.get(m);
+        return clones.get(key);
       };
       node.material = Array.isArray(node.material) ? node.material.map(swap) : swap(node.material);
     });

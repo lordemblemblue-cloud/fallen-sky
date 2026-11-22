@@ -11,9 +11,14 @@ export const CAST_MODEL_SOURCES = Object.freeze({
   // The archer FBX that GameWorld3D gives Kira and Noor (and every quest giver
   // whose own GLB fails). It has no clips of its own: idle and run come from the
   // game's standard Mixamo clips, the run made in place and slowed into a walk.
+  // Its four meshes: Body (most of the figure, outfit included) takes the first
+  // colour, Clothes (wraps and trim) the second, eyes and eyelashes keep their own.
+  // The texture is a near-black outfit, so the colour is also added as a glow
+  // (castSubsystem tint) or it would not show.
   archer: Object.freeze({
     kind: 'fbx', url: 'config:ARCHER_URL',
-    idle: 'config:idle', walk: 'config:run', walkClipSpeed: 3.6, tint: 'replace',
+    idle: 'config:idle', walk: 'config:run', walkClipSpeed: 3.6, tint: 'multiply',
+    tintMeshes: Object.freeze([[/body/i, 0], [/clothes/i, 1]]),
   }),
 });
 
