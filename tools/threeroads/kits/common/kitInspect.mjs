@@ -10,6 +10,8 @@ export const FRAME_REACH = 6; // pivot 'frame': the piece reaches this far beyon
 export const MAX_DRAFT = 1.5; // pivot 'waterline': hull allowed below the water
 // Pieces that sit on another piece start at this height (the tables' comments).
 export const PIVOT_LIFT = Object.freeze({ wagon: 1.2, basket: 1.2, bowl: 1.1, brazier: 1.1, kettle: 0 });
+// Cloths whose origin is on their pole's axis and which hang beside it toward +X (the table's comments).
+export const FROM_AXIS = Object.freeze(new Set(['banner_tall_cloth', 'pennant']));
 
 export const KITS = Object.freeze({
   valley: { id: 'valley', url: VALLEY_KIT_URL, pieces: VALLEY_KIT_PIECES, limits: VALLEY_KIT_LIMITS },
@@ -62,7 +64,7 @@ export function imageSize(b) {
 export function expectedBox(entry) {
   const [w, d, h] = entry.size;
   const skirt = entry.skirt || 0;
-  const x = [-w / 2, w / 2];
+  const x = FROM_AXIS.has(entry.id) ? [0, w] : [-w / 2, w / 2];
   const z = entry.pivot === 'frame' ? [-d / 2, d / 2 + FRAME_REACH] : [-d / 2, d / 2];
   let y;
   switch (entry.pivot) {

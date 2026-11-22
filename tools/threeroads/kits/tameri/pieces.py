@@ -144,7 +144,9 @@ def flagstaff(B, r):
 
 
 def pennant(B, r):
-    """Long cloth streamer, built from y 0 (tail) to 4 (tie); hangs from its top."""
+    """Long cloth streamer, built from y 0 (tail) to 4 (tie); hangs from its top. Its origin is on
+    the staff's axis: the tie starts there and the cloth streams beside the staff toward +x."""
+    B.from_axis = True
     n = 10 if L0(B) else 4
     B.box((0, 3.92, 0), (0.48, 0.08, 0.04), 'white_dk')
     for i in range(n):
@@ -503,7 +505,7 @@ def chariot(B, r):
 
 # Companions shown with a piece on the contact sheets, at their mounted place.
 COMBO = {
-    'pennant': [('flagstaff_LOD{l}', (0, 0, 0)), ('pennant_LOD{l}', (0.28, 12.6, 0))],
+    'pennant': [('flagstaff_LOD{l}', (0, 0, 0)), ('pennant_LOD{l}', (0, 12.6, 0))],
     'brazier_flame': [('brazier_bowl_LOD{l}', (0, 0, 0)), ('brazier_flame_LOD{l}', (0, 0, 0))],
     'shield_wall': [('shield_wall_LOD{l}', (-2, 0, 0)), ('shield_wall_LOD{l}', (2, 0, 0))],
 }

@@ -99,6 +99,7 @@ class Builder:
     def __init__(self, lod, seed=7):
         self.below = 0.0
         self.reach = 0.0
+        self.from_axis = False  # x runs 0..w: hangs beside a pole whose axis is the origin
         self.bm = bmesh.new()
         self.lod = lod
         self.keys = []
@@ -336,7 +337,7 @@ class Builder:
                     warn.append(f'{name}: fitted {axis} by {s:.2f}')
         ctr = (lo + hi) / 2
         for v in bm.verts:
-            p = v.co - Vector((ctr.x, lo.y, lo.z if reach else ctr.z))
+            p = v.co - Vector((lo.x if self.from_axis else ctr.x, lo.y, lo.z if reach else ctr.z))
             v.co = Vector((p.x * sc.x, p.y * sc.y, p.z * sc.z))
         # now footprint centred (or starting at z 0 for a reaching piece), bottom at y 0
         dy = -below

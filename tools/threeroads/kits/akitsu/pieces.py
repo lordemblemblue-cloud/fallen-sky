@@ -102,11 +102,25 @@ def curtain_run(B, r):
             for y in (0.32, 1.98):
                 q += [(x, y, z - 0.012), (x, y, z + 0.012)]
         B.hull(q, col)
+    B.box((-1.96, 2.06, 0), (0.12, 0.04, 0.12), 'white_dk')
     if L0(B):
-        # the crest, a plain ring with a centre, once per run on the front
-        B.ring((0.0, 1.15, 0.065), 0.2, 0.28, 0.02, 16, 'white_dk', axis='z')
-        B.cyl((0.0, 1.15, 0.065), 0.08, 0.02, 10, 'white_dk', axis='z')
-        B.box((-1.96, 2.08, 0), (0.12, 0.04, 0.12), 'white_dk')
+        _paw(B, 0.0, 1.15, 0.09)
+
+
+def _paw(B, x, y, z):
+    """Akitsu's bear as a paw print in a ring: a broad rounded pad, four round toes in an arc above it."""
+    B.ring((x, y, z), 0.3, 0.35, 0.02, 20, 'white_dk', axis='z')
+    pad = M((x, y - 0.07, z), rx=PI / 2)
+    B.lathe([(0.0, 0.0), (0.11, 0.0), (0.11, 0.02), (0.0, 0.02)], 12, 'white_dk', m=pad, sx=1.2, sz=0.85, smooth=False)
+    for a in (150, 112, 68, 30):
+        t = math.radians(a)
+        B.cyl((x + math.cos(t) * 0.18, y - 0.02 + math.sin(t) * 0.16, z), 0.045, 0.02, 8, 'white_dk', axis='z')
+
+
+def curtain_post(B, r):
+    """The curtain's pole on its own, for the open end of a row."""
+    B.box((0, 0, 0), (0.08, 2.06, 0.08), 'white_dk')
+    B.box((0, 2.06, 0), (0.12, 0.04, 0.12), 'white_dk')
 
 
 def banner_tall_pole(B, r):
@@ -121,13 +135,15 @@ def banner_tall_pole(B, r):
 
 
 def banner_tall_cloth(B, r):
-    """Narrow upright banner, built from y 0 (hem) to 5 (its top arm)."""
+    """Narrow upright banner, built from y 0 (hem) to 5 (its top arm). Its origin is on the
+    pole's axis: the arm starts there and the cloth hangs beside the pole toward +x."""
+    B.from_axis = True
     B.cyl((-0.45, 4.97, 0), 0.025, 0.9, 6 if L0(B) else 4, 'white_dk', axis='x')
-    B.box((0, 0.0, 0), (0.86, 4.93, 0.02), 'white')
+    B.box((0.035, 0.0, 0), (0.79, 4.93, 0.02), 'white')  # the cloth clears the pole (radius about 0.06)
     B.box((0, 4.35, 0), (0.88, 0.5, 0.028), 'white_dk')  # a darker head band
     if L0(B):
         for y in (0.6, 1.6, 2.6, 3.6):  # loops that tie its side to the pole
-            B.box((-0.45, y, 0), (0.06, 0.14, 0.04), 'white_dk')
+            B.box((-0.4, y, 0), (0.12, 0.14, 0.04), 'white_dk')
         B.box((0, 0.0, 0), (0.88, 0.08, 0.026), 'white_dk')
 
 
@@ -401,7 +417,8 @@ def signal_lantern(B, r):
 
 # Companions shown with a piece on the contact sheets, at their mounted place.
 COMBO = {
-    'banner_tall_cloth': [('banner_tall_pole_LOD{l}', (0, 0, 0)), ('banner_tall_cloth_LOD{l}', (0.47, 6.3, 0))],
+    'banner_tall_cloth': [('banner_tall_pole_LOD{l}', (0, 0, 0)), ('banner_tall_cloth_LOD{l}', (0, 6.3, 0))],
+    'curtain_post': [('curtain_run_LOD{l}', (-2, 0, 0)), ('curtain_post_LOD{l}', (0, 0, 0))],
     'kettle_coals': [('rice_kettle_LOD{l}', (0, 0, 0)), ('kettle_coals_LOD{l}', (0, 0, 0))],
     'signal_lantern': [('signal_lantern_LOD{l}', (0, 1.8, 0))],
     'curtain_run': [('curtain_run_LOD{l}', (-2, 0, 0)), ('curtain_run_LOD{l}', (2, 0, 0))],

@@ -168,19 +168,19 @@ def gate_tower(B, r):
 
 def gate_span(B, r):
     """The walk over the gate, built from y 0; the table centres it (mounted at y 4.2)."""
-    B.box((0, 0.0, 0.0), (5.2, 0.3, 1.6), 'timber')
-    B.box((0, 0.3, 0.0), (5.2, 0.12, 1.5), 'timber_lt')
-    B.box((0, 0.42, 0.72), (5.2, 0.98, 0.08), 'timber_old')  # front parapet
+    B.box((0, 0.0, 0.0), (5.8, 0.3, 1.6), 'timber')
+    B.box((0, 0.3, 0.0), (5.8, 0.12, 1.5), 'timber_lt')
+    B.box((0, 0.42, 0.72), (5.8, 0.98, 0.08), 'timber_old')  # front parapet
     B.box((-0.0, 0.62, 0.79), (1.6, 0.5, 0.04), 'red')  # the fort's name board, left blank
     if L0(B):
-        for x in (-2.5, -1.25, 0.0, 1.25, 2.5):
+        for x in (-2.8, -1.4, 0.0, 1.4, 2.8):
             B.box((x, 0.42, 0.7), (0.12, 0.98, 0.12), 'timber')
             B.box((x, 0.42, -0.7), (0.1, 0.65, 0.1), 'timber')
-        B.box((0, 0.98, -0.7), (5.2, 0.08, 0.08), 'timber')
+        B.box((0, 0.98, -0.7), (5.8, 0.08, 0.08), 'timber')
         for (dx, dy, w, h) in ((0, 0.6, 1.7, 0.05), (0, 1.12, 1.7, 0.05), (-0.82, 0.6, 0.05, 0.57), (0.82, 0.6, 0.05, 0.57)):
             B.box((dx, dy, 0.82), (w, h, 0.03), 'brass')
     else:
-        B.box((0, 0.42, -0.7), (5.2, 0.62, 0.1), 'timber')
+        B.box((0, 0.42, -0.7), (5.8, 0.62, 0.1), 'timber')
 
 
 def stake_hedge(B, r):
@@ -445,6 +445,7 @@ def road_arch(B, r):
 # Companions shown with a piece on the contact sheets, at their mounted place.
 COMBO = {
     'gate_span': [('gate_tower_LOD{l}', (-4.5, 0, 0)), ('gate_tower_LOD{l}', (4.5, 0, 0)), ('gate_span_LOD{l}', (0, 4.2, 0))],
+    'palisade_corner': [('palisade_corner_LOD{l}', (0, 0, 0))],
     'brazier_fire': [('brazier_iron_LOD{l}', (0, 0, 0)), ('brazier_fire_LOD{l}', (0, 0, 0))],
 }
 
