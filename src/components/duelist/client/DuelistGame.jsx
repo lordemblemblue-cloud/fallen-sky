@@ -126,6 +126,16 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   return {
     group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
     root: group,
+    bladeNear(point) {
+      let nearest = null;
+      for (const { group: blade, base, tip } of blades) {
+        const local = blade.worldToLocal(point.clone());
+        const y = THREE.MathUtils.clamp(local.y, Math.min(base, tip), Math.max(base, tip));
+        const edge = blade.localToWorld(local.set(0, y, 0));
+        if (!nearest || edge.distanceToSquared(point) < nearest.distanceToSquared(point)) nearest = edge;
+      }
+      return nearest;
+    },
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
     dispose() { animator.dispose(); sword.dispose(); for (const t of trails) t.trail.dispose(); aim?.dispose(); group.removeFromParent(); },
@@ -526,7 +536,6 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         };
         const { effects, events } = source.step(dt, readInput);
         football?.update(source.ball?.(), dt);
-        director.step(effects);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
         const feel = director.frame(dt);
@@ -569,14 +578,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           actor.group.visible = true;
           if (actor.gone && !fighter.vitals.dead) vfx.revive(actor); // it came apart when it fell: whole again
           // a respawn is a cut, not a slide across the arena
-          if (actor.at.distanceTo(new THREE.Vector3(body.x, body.y, body.z)) > 5) actor.yaw = body.yaw;
+          if (!actor.group.userData.posed || actor.at.distanceToSquared(body) > 25) actor.yaw = body.yaw;
           const turn = Math.atan2(Math.sin(body.yaw - actor.yaw), Math.cos(body.yaw - actor.yaw));
-          const committedFacing = fighter.action?.id === 'roll' || fighter.action?.move?.kind === 'attack';
-          actor.yaw += committedFacing ? turn : turn * Math.min(1, dt * 18);
+          actor.group.userData.posed = true;
+          const turnRate = fighter.action?.id === 'roll' ? 32 : 22;
+          actor.yaw += turn * -Math.expm1(-dt * turnRate);
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
-          if (drawing) actor.animator.update(show, { fighter, body, now: world.time, working: working.get(id) || null, clash: actor.clashAt ?? null });
+          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
           const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));
           const a = fighter.action;
@@ -592,7 +602,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             } else actor.aim.hide();
           }
           actor.sword.update(show);
-          for (const t of actor.trails) t.trail.update(show, t.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, a?.move?.kind === 'attack');
+          for (const t of actor.trails) t.trail.update(dt, t.group, fighter.vitals.collapsed ? 0.25 : 0.55 + 0.45 * will, a?.move?.kind === 'attack');
           // a mission's fallen lie a while, then are cleared away
           if (actor.kind === 'enemy' && fighter.vitals.dead) {
             actor.fallen += dt;
@@ -600,6 +610,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             if (actor.fallen > BODY_REMAINS + 1.4) retire(id);
           }
         }
+        // Contact points now use both posed actors from this frame.
+        director.step(effects);
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
         vfx.update(show, { grips });
         tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
