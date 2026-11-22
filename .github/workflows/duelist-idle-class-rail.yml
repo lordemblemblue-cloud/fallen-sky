@@ -1,0 +1,39 @@
+name: Duelist AFK Stance and Class Rail
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/menu/DuelistHangarStage.jsx'
+      - 'src/components/duelist/menu/DuelistCharacterPreview.jsx'
+      - 'src/components/duelist/menu/DuelistTemplateHub.jsx'
+      - 'src/components/duelist/menu/DuelistCharacterMenu.jsx'
+      - 'src/components/duelist/menu/idlePreview.mjs'
+      - 'src/components/duelist/client/DuelistClassRail.jsx'
+      - 'src/components/duelist/client/duelistClassRail.css'
+      - 'src/components/duelist/client/DuelistHud.jsx'
+      - 'tests/duelist-idle-class-rail.test.mjs'
+      - '.github/workflows/duelist-idle-class-rail.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  idle-rail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Check idle, class and live HUD presentation contracts
+        run: node --test tests/duelist-idle-class-rail.test.mjs
+      - name: Validate Duelist UI parser
+        run: node scripts/verify-duelist-ui.mjs
+      - name: Lint the modified UI modules
+        run: npx eslint src/components/duelist/menu/idlePreview.mjs src/components/duelist/menu/DuelistHangarStage.jsx src/components/duelist/menu/DuelistCharacterPreview.jsx src/components/duelist/menu/DuelistTemplateHub.jsx src/components/duelist/menu/DuelistCharacterMenu.jsx src/components/duelist/client/DuelistClassRail.jsx src/components/duelist/client/DuelistHud.jsx
+      - name: Build application
+        run: npm run build

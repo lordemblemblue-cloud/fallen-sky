@@ -1,0 +1,36 @@
+name: Duelist Class Picker and AFK Pose
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/ClassPicker.jsx'
+      - 'src/components/duelist/client/DuelistHud.jsx'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'src/components/duelist/client/duelistClassPicker.css'
+      - 'src/components/duelist/menu/idlePreview.mjs'
+      - 'tests/duelist-class-picker-pose.test.mjs'
+      - '.github/workflows/duelist-class-picker-pose.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  picker-and-pose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify original class and corrected AFK pose
+        run: node --test tests/duelist-class-picker-pose.test.mjs tests/duelist-idle-class-rail.test.mjs
+      - name: Verify Duelist UI parser
+        run: node scripts/verify-duelist-ui.mjs
+      - name: Lint changed components
+        run: npx eslint src/components/duelist/client/ClassPicker.jsx src/components/duelist/client/DuelistHud.jsx src/components/duelist/client/DuelistGame.jsx src/components/duelist/menu/idlePreview.mjs
+      - name: Full application build
+        run: npm run build

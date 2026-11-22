@@ -77,7 +77,7 @@ export default function DuelistCharacterMenu({ prefs, onPrefs, close }) {
           <div className="dcm-showcase-scene" aria-hidden="true"/>
           <div className="dcm-showcase-top"><span className="dcm-eyebrow">{combat.role} / {className}</span>
             <h2>{selected.name}</h2><p>{FIGHTER_NOTES[prefs.fighter] || combat.description}</p></div>
-          <DuelistCharacterPreview fighter={prefs.fighter}/>
+          <DuelistCharacterPreview fighter={prefs.fighter} classId={classId}/>
           <div className="dcm-skin-tray" aria-label="Character skins">
             <button type="button" className="dcm-skin-arrow" disabled aria-label="Previous skin unavailable"><ChevronLeft size={23}/></button>
             <button type="button" className="dcm-skin-tile" data-active="true" aria-pressed="true" title="Default skin selected">

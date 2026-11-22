@@ -6,8 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
+import { prepareIdlePreview } from './idlePreview.mjs';
 
-export default function DuelistCharacterPreview({ fighter = 'maskedWarrior' }) {
+export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', classId = 'duelist', compact = false }) {
   const mountRef = useRef(null);
   const [unavailable, setUnavailable] = useState(false);
 
@@ -15,7 +16,7 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior' }) {
     const mount = mountRef.current;
     if (!mount || typeof window === 'undefined') return undefined;
     let active = true;
-    let renderer, observer, mixer = null, model = null, frame = null;
+    let renderer, observer, idlePose = null, model = null, frame = null;
     setUnavailable(false);
     try {
       renderer = createSceneRenderer('duelist-adventure', {
@@ -49,16 +50,15 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior' }) {
     rim.position.set(-3, 2, -2);
     scene.add(rim);
 
-    loadFighterBody(fighter).then(({ model: loaded, clips }) => {
+    loadFighterBody(fighter).then(async ({ model: loaded, clips }) => {
       if (!active) return;
+      const prepared = await prepareIdlePreview({ model: loaded, bodyId: fighter, classId, embeddedIdle: clips?.idle });
+      if (!active) { prepared.dispose(); return; }
       model = loaded;
       // loadFighterBody already centres each asset at x/z=0, feet at y=0.
       model.rotation.y = 0;
-      scene.add(model);
-      if (clips?.idle && clips.idle.tracks.length) {
-        mixer = new THREE.AnimationMixer(model);
-        mixer.clipAction(clips.idle).setLoop(THREE.LoopRepeat, Infinity).play();
-      }
+      idlePose = prepared;
+      scene.add(model); // no intermediate T-pose frame
     }).catch(() => { if (active) setUnavailable(true); });
 
     const resize = () => {
@@ -77,12 +77,15 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior' }) {
 
     const clock = new THREE.Clock();
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let elapsed = 0;
     const draw = () => {
       if (!active) return;
-      const dt = Math.min(.05, clock.getDelta());
-      if (!document.hidden) {
-        if (!reduceMotion) mixer?.update(dt);
+      elapsed += Math.min(.05, clock.getDelta());
+      // The in-match viewer is secondary to the world: cap its GPU draws at 24 fps.
+      if (!document.hidden && (!compact || elapsed >= 1 / 24)) {
+        if (!reduceMotion) idlePose?.update(elapsed);
         renderer.render(scene, camera);
+        elapsed = 0;
       }
       frame = window.requestAnimationFrame(draw);
     };
@@ -92,13 +95,13 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior' }) {
       if (frame != null) window.cancelAnimationFrame(frame);
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
-      mixer?.stopAllAction();
+      idlePose?.dispose();
       if (model) scene.remove(model);
       // GLB geometries and textures belong to the shared asset loader's cache.
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [fighter]);
+  }, [fighter, classId, compact]);
 
   return <div className="dcm-avatar-stage" ref={mountRef} aria-label="Live 3D character preview">
     {unavailable && <span className="dcm-avatar-fallback" role="status">3D preview unavailable</span>}
