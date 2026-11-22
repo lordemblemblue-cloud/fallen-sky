@@ -16,6 +16,9 @@ import {
   wolfveilHeight, wolfveilDistanceToRiver, wolfveilAnyTrailClearance, WOLFVEIL_RIVER,
 } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+// The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
+// run time. Without this import a check would pass on ground that is a cliff in the game.
+import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 
 const pieceOf = entry => (entry.kit === 'valley' ? valleyKitPiece(entry.piece) : empireKitPiece(entry.kit, entry.piece));
 const slopeAt = (x, z, reach = 2) => Math.atan(Math.hypot(

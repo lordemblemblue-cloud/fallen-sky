@@ -55,8 +55,8 @@ export const BAND2_POINTS = Object.freeze({
   furrow_mist_w: Object.freeze({ x: -268, z: 412 }),
   furrow_mist_e: Object.freeze({ x: -214, z: 392 }),
   // North: the High Road (P43) down to Castra Lupa (P35)
-  road_top: Object.freeze({ x: 9, z: 524 }),
-  road_ambush: Object.freeze({ x: -14, z: 452 }),
+  road_top: Object.freeze({ x: 150, z: 428 }),
+  road_ambush: Object.freeze({ x: 104, z: 430 }),
   fort_gate: Object.freeze({ x: -46, z: 409 }),
   fort_tent: Object.freeze({ x: -61, z: 400 }),
   fort_overhear: Object.freeze({ x: -66, z: 410 }),
@@ -513,7 +513,7 @@ export const BAND2_STAGING = Object.freeze({
     completeByChoice: { step: 'answer', lines: { truth: 'aelia_r02_02', nothing: 'aelia_r02_03' } },
     steps: {
       meet: {
-        start: [{ castSpawn: 'courier_dexter', at: 'road_top', facing: Math.PI }],
+        start: [{ castSpawn: 'courier_dexter', at: 'road_top', facing: Math.PI * 1.5 }],
         watch: { point: 'road_top', radius: 8 },
         done: [
           { say: 'courier_r02_01' },
@@ -524,7 +524,7 @@ export const BAND2_STAGING = Object.freeze({
       ambush: { watch: { groupId: 'tr_r02_ambush' }, done: [{ say: 'courier_r02_02' }] },
       escort: {
         watch: { people: ['courier_dexter'], to: 'fort_gate', radius: 8 },
-        along: { every: 40, lines: ['courier_r02_03', 'courier_r02_04'] }, // the way down from the crest to the north gate is about 120 m
+        along: { every: 60, lines: ['courier_r02_03', 'courier_r02_04'] }, // about 200 m along the High Road, past the crossroads and down to the north gate
         done: [{ castFollow: 'courier_dexter', target: null }, { castMove: 'courier_dexter', to: 'fort_tent', speed: 1.8 }],
       },
       tent: {

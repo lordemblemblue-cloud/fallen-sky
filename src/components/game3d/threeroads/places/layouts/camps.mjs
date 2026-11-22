@@ -36,7 +36,8 @@ const OWN_PLACE = Object.freeze({ road_arch: Object.freeze({ id: 'P43', key: 'hi
 //     10 m north of the point, so the arch's two posts would stand 11.5 m apart
 //     in height. 15 m further along the road the ground is level across it at
 //     127.5 m, the flat crest the plan describes.
-export const CAMP_GROUND_MOVES = Object.freeze({ road_arch: 15 });
+// None now: the lead moved the High Road (and its arch) onto the Hunter's Loop after this was reported.
+export const CAMP_GROUND_MOVES = Object.freeze({});
 const moved = item => {
   const ahead = CAMP_GROUND_MOVES[item.piece];
   if (!ahead) return item;

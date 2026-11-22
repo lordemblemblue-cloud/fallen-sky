@@ -26,9 +26,11 @@ The plan was first written from a map. Before drawing the camps the lead surveye
 | --- | --- | --- |
 | The Landing: 80 m of flat ground with a jetty on the river | The river runs in a gorge about 30 m deep the whole length of the valley. At the Landing the water is at −23.5 m and the east bank at +5 m | The Landing is a camp on the gorge's east rim. The barge moors below, a lever hoist lifts the grain to a stage on the lip |
 | Castra Lupa at (30, 330) "commands the pass" | That spot is a bare slope 107 m from any trail | The fort stands across the ridge path at (−66, 383), 19 m below the crossroads with the Hunter's Loop |
-| The High Road tops out at (160, 522) | That is a cliff face at 227 m | The High Road is the ridge path over its crest at (9, 524): flat, on the trail |
+| The High Road tops out at (160, 522) | That is a cliff face at 227 m. The ridge path north of the peak is no better: a cave entrance's terraces cut it with slopes of 30 to 80 degrees | The High Road is the Hunter's Loop across the highlands east of the crossroads, with its arch at (150, 428): on a trail, never steeper than 17 degrees |
 
 A test now holds every story point and every home to ground no steeper than 22 degrees and clear of the river (`tests/game3d-three-roads-script.test.mjs`).
+
+**One trap in surveying.** The game's ground is `wolfveilHeight` plus the terraces that the cave entrances install into it when `wolfveil/WolfveilCaveAccessPlan.mjs` is loaded. A script that does not import that file sees smooth hillside where the game has ledges of 10 to 14 m. The first survey made that mistake at the crest of the ridge path; the places session found it in the running game. Every check that measures ground now imports the file.
 
 The ground at each camp:
 
@@ -55,10 +57,10 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 ### Camp of the Western Road (P13, west)
 
 - **Across the road.** Two pickets of rice bales with a lifted bar close 50 m of the west trail: one toward the town, one toward the wilds. A sentry stands in the road at each and speaks first. Both ends are ways out.
-- **Three levels.** The drill yard is on the only flat ground, east of the trail (11 m). Seven tents stand in two rows up the slope west of it (12 to 14 m). Above them are the command post inside its curtain and the watchtower (15 to 17 m), looking down on everything.
+- **Three levels.** The drill yard is on the only flat ground, east of the trail (11 m). Seven tents stand in two rows up the slope west of it (12 to 14 m). Above them is the command post inside its curtain (15 m), looking down on everything.
 - **The middle** is the drill yard, about 12 by 18 m, with the three straw posts Goro's recruits are taught on.
 - **By the trail:** the cook fire and its kettle, the stores, and the armoury where one peg is empty.
-- **Seen first:** the watchtower on the slope, and before it three dead telegraph poles following the trail in from the town.
+- **Seen first:** three dead telegraph poles following the trail in from the town, then the watchtower standing over the town-side picket. It was first planned up among the cedars, where the forest hid it.
 - **Story spots:** `camp_fire`, `camp_drill`, `camp_post_1` to `_3`, `camp_picket` (the picket toward the wilds), `camp_cedars` (up the slope, where the raid comes from), `camp_armoury`.
 - **People:** Sergeant Goro at the yard, Colonel Hayasaka at the map table, Lieutenant Mizuhara once the war opens.
 - 53 pieces of 18 kinds.
@@ -81,7 +83,7 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 - **The middle** is where the cross street meets the path: the wolf standard on its plinth, the tribunal facing it, a brazier either side of the road.
 - **Rows.** Eight leather tents in two rows in the lower half; the legate's tent in the upper corner, with 3.7 m between its back wall and the palisade, which is where the player stands to overhear.
 - **Seen first:** the gate towers, from the hot springs below and from the crossroads above.
-- **Story spots:** `fort_gate` (the north gate's approach: the courier comes down from the crest), `fort_tent`, `fort_overhear`, `road_top` (the crest of the High Road), `road_ambush` (on the path below the peak).
+- **Story spots:** `fort_gate` (the north gate's approach: the courier is brought along the High Road, past the crossroads and down), `fort_tent`, `fort_overhear`, `road_top` (under the High Road's arch, 200 m east along the Hunter's Loop), `road_ambush` (halfway back along it).
 - **People:** Legate Corvinus at his tent, Tribune Aelia by the standard once the war opens.
 - 71 pieces of 14 kinds: 38 runs of palisade are one batch.
 
@@ -103,7 +105,7 @@ What that gives at the three camps:
 | From | The ground below | What happens |
 | --- | --- | --- |
 | the Landing's rim (+5 m) | a cliff: the river is 28 m down and about 30 m out | the one real leap of band 2: off the rim and down to the barge, with up to about 120 m of reach in hand. The hero lands in the river and swims, because the barge is not ground. The far rim is as high as the near one, so nobody glides across |
-| the crest of the High Road (127 m) toward the fort (103 m) | the pass falls 7 to 12 degrees | no glide: the path is gentler than the glide, and the hero touches down at once. The way down the pass is on foot |
+| the peak above the fort (119 m) toward the north gate (103 m) | the pass falls 7 to 12 degrees | no glide: the path is gentler than the glide, and the hero touches down at once. The way down the pass is on foot |
 | the command terrace of the western camp (15 m) | 8 to 16 degrees | a hop of a few metres at most |
 
 Not while carrying a jar and not while walking the courier down: a pledge's carry and escort steps stay on foot, as section 15 of the quest plan says.

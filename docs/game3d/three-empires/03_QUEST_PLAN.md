@@ -137,7 +137,7 @@ Every place follows the same few rules, taken from the land study (`research/REF
 | P40 | Wolf-Ear Vigil | the peak at (2, 470) | Here | A watch-fire ring on the summit. All three camps' fires can be seen from it. |
 | P41 | The Harpy Roost | cliffs at (410, 370) | New | Nests on a steep face. |
 | P42 | The Bronze Sentinel | steep ground at (−370, 390) | New | A forge-shrine from the first war and the bronze guardian that still keeps it. |
-| P43 | The High Road | the crest of the ridge path north of the peak (9, 524) | Here, a trail | Remoria's way home: the ridge path over the top. A milestone and a road arch. |
+| P43 | The High Road | the Hunter's Loop across the highlands, east of the crossroads above the fort (150, 428) | Here, a trail | Remoria's way home. A road arch where the courier is met, and milestones along it. The ridge path north of the peak is cut by a cave entrance's terraces and cannot be the road. |
 
 ### Under the valley (already in the game as separate scenes)
 

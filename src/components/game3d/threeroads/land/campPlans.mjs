@@ -55,7 +55,9 @@ function castraLupa() {
   items.push(f.put(R, 'tribunal', 10, 7, 0, -1));
   items.push(f.put(R, 'tent_command', 19, -12, 0, 1));
   items.push(item(R, 'milestone', -44, 418.5, 0, { outlying: true })); // at the crossroads above the north gate
-  items.push(item(R, 'road_arch', 9, 524, yawToward(0.17, 0.99), { outlying: true })); // P43: where the High Road leaves the valley
+  // P43, the High Road: the Hunter's Loop across the highlands east of the crossroads. The ridge path
+  // north of the peak is cut by the terraces of a cave's entrance, so the road home runs this way.
+  items.push(item(R, 'road_arch', 150, 428, yawToward(-46, 2), { outlying: true }));
   return Object.freeze({
     id: 'castra_lupa', place: 'P35', area: 'north', kit: R,
     centre: Object.freeze({ x: -66, z: 383 }), along: Object.freeze({ x: 0.6, z: 0.8 }),
@@ -116,7 +118,8 @@ function theLanding() {
 
 // ── Camp of the Western Road (P13): Akitsu's camp, astride the west trail ──
 // Three levels: the drill yard on the flat east of the trail, tent rows on the
-// slope west of it, the command curtain and the watchtower above.
+// slope west of it, the command curtain above. The watchtower stands over the
+// town-side picket.
 function westernRoadCamp() {
   const A = 'akitsu';
   // The trail from the end of the west road (-263, -93) down to (-330, -200).
@@ -145,8 +148,10 @@ function westernRoadCamp() {
   // Each run carries its pole at its left end, which leaves the north side's open end bare.
   items.push(item(A, 'curtain_post', cx + 4, cz + 4));
   items.push(item(A, 'map_table', cx - 1.5, cz, Math.PI / 2));
-  items.push(item(A, 'watchtower', -326, -128, Math.PI / 2));
-  items.push(item(A, 'signal_lantern', -326, -128, 0, { y: 7 }));
+  // The watchtower stands over the town-side picket, on the slope side of the trail: up among
+  // the cedars the forest hid it, and here it is what a traveller from the town sees first.
+  items.push(f.put(A, 'watchtower', 40, 13, -1, 0));
+  items.push(f.put(A, 'signal_lantern', 40, 13, -1, 0, { y: 7 }));
   // The yard, on the flat.
   items.push(item('valley', 'straw_post', -286, -151, 0, { marks: 'camp_post_1' }));
   items.push(item('valley', 'straw_post', -283, -153, 0, { marks: 'camp_post_2' }));

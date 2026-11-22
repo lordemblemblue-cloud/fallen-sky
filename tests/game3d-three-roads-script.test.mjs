@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+// The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
+// run time. Without this import a check would pass on ground that is a cliff in the game.
+import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 import { wolfveilHeight, wolfveilDistanceToRiver, WOLFVEIL_RIVER } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {
   THREE_ROADS_CAST, THREE_ROADS_EMPIRES, threeRoadsPerson, threeRoadsCastAtHome, threeRoadsHomeOf,
