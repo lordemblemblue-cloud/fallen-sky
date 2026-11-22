@@ -352,3 +352,13 @@ test('nothing loads until a pledge line is asked for', async () => {
   await getPledgeLineUrl('', { fetch: async (u) => { calls.push(u); return jsonResponse({ lines: {} }); }, createAudio: () => null });
   assert.equal(calls.length, 0, 'an empty id asks for nothing');
 });
+
+test('the shipped manifest is valid and its voice ids look like ElevenLabs ids', async () => {
+  const shipped = JSON.parse(await readFile(path.join(HERE, '../src/components/game3d/pledges/voice/voiceManifest.json'), 'utf8'));
+  const r = validateManifest(shipped);
+  assert.equal(r.ok, true, r.errors.join('\n'));
+  assert.deepEqual(r.warnings, []);
+  for (const [id, sp] of Object.entries(shipped.speakers)) {
+    assert.ok(sp.voiceId === '' || /^[A-Za-z0-9]{20}$/.test(sp.voiceId), `${id}: ${sp.voiceId}`);
+  }
+});

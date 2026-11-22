@@ -36,8 +36,12 @@ export const PUBLIC_BASE = '/game3d/voice/pledges';
 // Credits per character on ElevenLabs' self-serve plans, used when the account's
 // own /v1/models rates are not at hand (dry run without a key). --record replaces
 // these with the rates the API reports for the account.
+// (Rates as /v1/models reported them for this account on 2026-11-21.)
 export const CREDITS_PER_CHAR = Object.freeze({
+  eleven_v4: 1,
+  eleven_v4_turbo: 0.5,
   eleven_v3: 1,
+  eleven_v3_conversational: 0.5,
   eleven_multilingual_v2: 1,
   eleven_monolingual_v1: 1,
   eleven_multilingual_v1: 1,
