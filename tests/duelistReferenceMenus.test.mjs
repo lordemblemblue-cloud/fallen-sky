@@ -25,7 +25,7 @@ test('uploaded reference art maps to character story and settings separately', (
 test('visual references replace generic panels but global bottom navigation stays', () => {
   assert.match(hub, /isReferencePanel/);
   assert.match(hub, /dxt-page--reference/);
-  assert.match(hub, /<CharacterReferenceMenu prefs=\{prefs\}/);
+  assert.match(hub, /<DuelistCharacterMenu prefs=\{prefs\}/);
   assert.match(hub, /<DuelistStoryMenu lobby=\{lobby\}/);
   assert.match(hub, /<SettingsReferenceMenu prefs=\{prefs\}/);
   assert.match(css, /\.dxt-page--reference \.dxt-header \{ display:none/);
@@ -33,17 +33,24 @@ test('visual references replace generic panels but global bottom navigation stay
   assert.match(route, /\['story', 'fighter', 'character', 'settings'/);
 });
 
-test('character panel uses live fighter models and server-derived 25-level mastery', () => {
+test('character panel uses a model-only transparent stage and server-derived 25-level mastery', () => {
+  const character = source('src/components/duelist/menu/DuelistCharacterMenu.jsx');
+  const avatar = source('src/components/duelist/menu/DuelistCharacterPreview.jsx');
+  const layout = source('src/components/duelist/menu/DuelistCharacterMenu.css');
   assert.equal(LEVEL_CAP, 25);
   assert.equal(levelFromXp(xpForLevel(25)).level,25);
   assert.equal(masteryAt(25).ultimatePoints,5);
-  assert.match(ui, /Object\.entries\(BODIES\)/);
-  assert.match(ui, /<DuelistHangarStage fighter=\{prefs\.fighter\}/);
-  assert.match(ui, /classProgressOf\(prefs\)/);
-  assert.match(ui, /masteryAt\(mastery\.level\)/);
-  assert.match(ui, /role="progressbar"/);
-  assert.match(ui, /\[5,10,15,20,25\]/);
-  assert.match(ui, /aria-pressed=\{prefs\.fighter === id\}/);
+  assert.match(character, /Object\.entries\(BODIES\)/);
+  assert.match(character, /<DuelistCharacterPreview fighter=\{prefs\.fighter\}/);
+  assert.match(character, /classProgressOf\(prefs\)/);
+  assert.match(character, /masteryAt\(mastery\.level\)/);
+  assert.match(character, /role="progressbar"/);
+  assert.match(character, /\[5, 10, 15, 20, 25\]/);
+  assert.match(character, /aria-pressed=\{prefs\.fighter === id\}/);
+  assert.match(avatar, /renderer\.setClearColor\(0x08162d, 0\)/);
+  assert.doesNotMatch(avatar, /new THREE\.Mesh\(|TorusGeometry|BoxGeometry|CylinderGeometry/);
+  assert.match(layout, /duelist_character_scene_only\.webp/);
+  assert.doesNotMatch(layout, /duelist_story_template\.png|0cd1862c-b869-465a/);
 });
 
 test('story uses actual operation content and real play routes with offline/online gating', () => {
@@ -66,7 +73,7 @@ test('reference menus render one visible frame instead of stacked template and C
   assert.match(css, /background:transparent; border:0; border-radius:0; box-shadow:none/);
   assert.match(css, /@media \(max-width:800px\)/);
   assert.match(css, /background-image:linear-gradient\(140deg/);
-  assert.match(hub, /<CharacterReferenceMenu/);
+  assert.match(hub, /<DuelistCharacterMenu/);
   assert.match(hub, /<DuelistStoryMenu/);
   assert.match(hub, /<SettingsReferenceMenu/);
 });
