@@ -6,17 +6,25 @@
 export function sampleDrawSubmission(renderer) {
   // A renderer may be disposed or wrapped by a browser/diagnostics Proxy.
   // Diagnostics must never turn a recoverable renderer failure into a crash.
-  const read = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+  const read = (source, key) => {
+    try {
+      const value = source?.[key];
+      return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null;
+    } catch {
+      return null;
+    }
+  };
+  let render;
   try {
-    const render = renderer?.info?.render;
-    return Object.freeze({
-      frame: read(render?.frame),
-      calls: read(render?.calls),
-      triangles: read(render?.triangles),
-    });
+    render = renderer?.info?.render;
   } catch {
-    return Object.freeze({ frame: null, calls: null, triangles: null });
+    render = null;
   }
+  return Object.freeze({
+    frame: read(render, 'frame'),
+    calls: read(render, 'calls'),
+    triangles: read(render, 'triangles'),
+  });
 }
 
 /**
