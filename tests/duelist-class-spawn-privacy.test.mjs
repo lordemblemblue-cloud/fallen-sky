@@ -200,3 +200,23 @@ test('disconnect stand-in cannot consume or replace a queued respawn class', () 
   assert.equal(match.world.fighters.get('alpha').weapon, CLASSES.assassin.weapon);
   assert.equal(matchView(match, 'alpha').me.specialMeter, 0);
 });
+
+
+test('queued class has no active special meter until authoritative countdown spawn', () => {
+  for (const classId of CLASS_IDS) {
+    const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+    const seat = match.seats.get('alpha');
+    assert.equal(seat.classId, null);
+    assert.equal(queueMatchClass(match, 'alpha', classId).accepted, true);
+    assert.equal(matchView(match, 'alpha').me.pendingClass, classId);
+    assert.equal(matchView(match, 'alpha').me.specialMeter, null, 'pending class is not an active resource');
+    assert.equal(matchView(match, 'beta').people.some(p =>
+      Object.hasOwn(p, 'pendingClass') || Object.hasOwn(p, 'specialMeter')), false);
+    stepMatch(match, STEP, { alpha: { specialMeter: 100, classId } });
+    assert.equal(seat.classId, null, 'client input cannot activate the queued class');
+    assert.equal(matchView(match, 'alpha').me.specialMeter, null);
+    advance(match, COUNTDOWN + 0.1);
+    assert.equal(seat.classId, classId);
+    assert.equal(matchView(match, 'alpha').me.specialMeter, 0);
+  }
+});
