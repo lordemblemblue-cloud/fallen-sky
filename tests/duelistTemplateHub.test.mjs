@@ -55,7 +55,8 @@ test('bottom navigation is actionable and Settings is last, without Pass or Plus
 
 test('selected fighter renders an existing live model, not stock character pictures', () => {
   assert.match(menu, /Object.entries\(BODIES\)/);
-  assert.match(source('src/components/duelist/menu/DuelistReferenceMenus.jsx'), /<DuelistHangarStage fighter=\{prefs.fighter\}/);
+  assert.match(menu, /<DuelistCharacterMenu prefs=\{prefs\}/);
+  assert.match(source('src/components/duelist/menu/DuelistCharacterMenu.jsx'), /<DuelistCharacterPreview fighter=\{prefs.fighter\}/);
   assert.match(menu, /classProgressOf\(prefs\)/);
   assert.match(menu, /masteryAt\(mastery.level\)/);
   assert.match(menu, /role="progressbar"/);
