@@ -107,7 +107,9 @@ export const MOVE_MOTION = Object.freeze({
   leapStrike: { segments: [seg('leapStart', 0, MOVES.leapStrike.startup, 0.35, 0.6, { travel: false }),
     seg('leapLoop', MOVES.leapStrike.startup, activeEnd('leapStrike'), 0, 0.42, { travel: false }),
     seg('leapLand', activeEnd('leapStrike'), end('leapStrike'), 0.15, 0.6, { travel: false })], settle: { clip: 'leapLand', from: 0.6 } },
-  repulse: { segments: [seg('shieldBurst', 0, end('repulse'), 0, 0.6)], settle: { clip: 'shieldBurst', from: 0.6 } },
+  // the hop (the rules lift the body over the wind-up) and the slam as it lands
+  repulse: { segments: [seg('leapStart', 0, MOVES.repulse.startup, 0.3, 0.6, { travel: false }),
+    seg('leapLand', MOVES.repulse.startup, end('repulse'), 0.1, 0.6, { travel: false })], settle: { clip: 'leapLand', from: 0.6 } },
   bladeThrow: { segments: phases('bladeThrow', 'throw', [0.05, 0.3, 0.36, 0.8], { travel: false }), settle: { clip: 'throw', from: 0.8 } },
   quickstep: { segments: [seg('castShoot', 0, end('quickstep'), 0, 0.3)] },
   quickstepAura: { segments: [seg('castShoot', 0, end('quickstepAura'), 0, 0.4)] },
@@ -117,9 +119,12 @@ export const MOVE_MOTION = Object.freeze({
   counterStrike: { segments: phases('counterStrike', 'bladesC', [0.08, 0.2, 0.3, 0.48]), settle: { clip: 'bladesC', from: 0.48 } },
   cloak: { segments: [seg('castEnter', 0, activeEnd('cloak'), 0, 0.4), seg('castExit', activeEnd('cloak'), end('cloak'), 0, 0.3)] },
   empower: { segments: [seg('castEnter', 0, activeEnd('empower'), 0.1, 0.45), seg('castExit', activeEnd('empower'), end('empower'), 0, 0.3)] },
-  misdirect: { segments: [seg('castShoot', 0, end('misdirect'), 0, 0.5)] },
+  dominate: { segments: [seg('castEnter', 0, MOVES.dominate.startup, 0, 0.45), seg('castShoot', MOVES.dominate.startup, end('dominate'), 0.1, 0.5)] },
   mend: { segments: [seg('castEnter', 0, MOVES.mend.startup, 0, 0.45), seg('castShoot', MOVES.mend.startup, end('mend'), 0.1, 0.5)] },
-  levitate: { segments: [seg('jumpLoop', 0, end('levitate'), 0, 0.3, { travel: false })] },
+  // the free hand reaches out and lifts the enemy
+  levitate: { segments: [seg('castEnter', 0, MOVES.levitate.startup, 0, 0.45), seg('castShoot', MOVES.levitate.startup, end('levitate'), 0.1, 0.5)] },
+  // T: until each class has its own taunt clip, arms folded, unimpressed
+  taunt: { segments: [seg('foldArms', 0, end('taunt'), 0, Math.min(end('taunt'), 2))], settle: { clip: 'foldArms', from: 2 } },
   rage: { segments: [seg('castEnter', 0, MOVES.rage.startup, 0, 0.5), seg('shieldBurst', MOVES.rage.startup, end('rage'), 0.05, 0.5)] },
   execution: { segments: phases('execution', 'bladesHeavy', [0.12, 0.34, 0.52, 0.9], { travel: false }), settle: { clip: 'bladesHeavy', from: 0.9 } },
   shadowExecution: { segments: phases('shadowExecution', 'swordHeavy', [0.15, 0.33, 0.46, 0.95], { travel: false }), settle: { clip: 'swordHeavy', from: 0.95 } },

@@ -12,6 +12,11 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MOTION_PACK_URL } from '../core/motionPack.data.mjs';
 
 const packs = new Map();
+// metres: a clip whose hips start farther than this from the rig's own spot was authored off-centre (two of the
+// staff's Blender clips, staffB and staffLeap, start 1.3 m and 3.7 m to the side). It is moved back over the body,
+// keeping its own motion: drawn where the rules have the fighter, the Assassin no longer flies across the arena
+// when she turns in a strike (owner, 2026-11-22).
+export const OFF_CENTRE = 0.5;
 
 // { root, rig, clips: Map(name -> AnimationClip) } for a clip GLB, loaded once.
 export function loadClipSource(url = MOTION_PACK_URL) {
@@ -75,8 +80,17 @@ export function retargetClip(clip, source, target, name = clip.name) {
       const outOf = target.parentRotation(nodeName).clone().invert();
       const values = new Float32Array(track.values.length);
       const v = new THREE.Vector3();
+      // authored off-centre: the whole clip moves back over the body (OFF_CENTRE)
+      let shiftX = 0;
+      let shiftZ = 0;
+      if (track.times.length) {
+        v.fromArray(track.values, 0).sub(source.hipsRest).applyQuaternion(into).multiplyScalar(scale);
+        if (Math.hypot(v.x, v.z) > OFF_CENTRE) { shiftX = v.x; shiftZ = v.z; }
+      }
       for (let i = 0; i < track.times.length; i++) {
         v.fromArray(track.values, i * 3).sub(source.hipsRest).applyQuaternion(into).multiplyScalar(scale);
+        v.x -= shiftX;
+        v.z -= shiftZ;
         // The simulation moves the body through the arena. Keep the tumble centred on it.
         if (inPlace) { v.x = 0; v.z = 0; }
         v.applyQuaternion(outOf).add(target.hipsRest);

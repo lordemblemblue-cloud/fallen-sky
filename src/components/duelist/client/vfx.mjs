@@ -15,7 +15,7 @@ import { moveById } from '../core/moves.mjs';
 import { CLASSES, SPECIAL_BALANCE } from '../core/classes.mjs';
 
 // the colour of each lasting effect (core/abilities.mjs)
-export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, misdirected: 0xb779ff, mend: 0x6dffb0, levitate: 0xcfe9ff });
+export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, dominated: 0xb779ff,mend: 0x6dffb0, levitate: 0xcfe9ff });
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
   wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });

@@ -21,7 +21,7 @@ import { FLAG_STATE_TEXT } from './hudFeed.mjs';
 import './duelistHud.css';
 
 const ABILITY_ICONS = { leapStrike: ArrowUpRight, grip: Hand, repulse: Radar, bladeThrow: RotateCw, pull: Magnet, quickstep: Zap, quickstepAura: Zap,
-  counter: ShieldCheck, cloak: EyeOff, push: Waves, empower: Flame, misdirect: Shuffle, mend: HeartPulse, levitate: Feather, breach: Focus };
+  counter: ShieldCheck, cloak: EyeOff, push: Waves, empower: Flame, dominate: Shuffle,mend: HeartPulse, levitate: Feather, breach: Focus };
 const SPECIAL_ICONS = { rage: Flame, execution: Swords, shadowExecution: Skull, sanctuary: ShieldPlus };
 export const CLASS_ICONS = { warrior: Sword, duelist: Swords, assassin: VenetianMask, healer: Cross };
 const WEAPON_NAMES = { sword: 'Crystal blade', dualBlades: 'Twin blades', staff: 'Bladed staff' };

@@ -22,7 +22,7 @@ const LEGACY_SLOTS = Object.freeze(['push', 'pull', 'grip', 'breach']);
 const LEGACY_POWERS = new Set(['push', 'pull', 'grip']);
 // abilities only a class's kit gives (core/classes.mjs)
 export const CLASS_ABILITIES = new Set(['leapStrike', 'repulse', 'bladeThrow', 'quickstep', 'quickstepAura', 'counter', 'cloak',
-  'empower', 'misdirect', 'mend', 'levitate']);
+  'empower', 'dominate', 'mend', 'levitate']);
 const kitHas = (f, id) => !!classById(f.classId)?.abilities.some((a) => a.id === id);
 // The class determines the original one-blade stance: red/strong or blue/fast.
 const CLASS_SWORD_MODES = CLASS_MODE; // one table for both: core/cuts.mjs
