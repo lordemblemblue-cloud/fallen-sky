@@ -72,8 +72,9 @@ export function pickTarget(targets, sceneId, tabContains = '') {
     try {
       const url = new URL(target.url);
       if (!['https:', 'http:'].includes(url.protocol)) return false;
-      return tabContains ? target.url.includes(tabContains)
-        : url.pathname === expected || url.pathname.startsWith(expected + '/');
+      // A title/URL selector must narrow matching game tabs, never bypass the scene route.
+      const playableRoute = url.pathname === expected || url.pathname.startsWith(expected + '/');
+      return playableRoute && (!tabContains || target.url.includes(tabContains));
     } catch { return false; }
   });
   if (pages.length !== 1) {
