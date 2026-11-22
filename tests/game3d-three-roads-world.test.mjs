@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   threeRoadsEnabled, THREE_ROADS_DEFAULT_ON, THREE_ROADS_STORAGE_KEY,
+  threeRoadsPreviewEnabled, THREE_ROADS_PREVIEW_STORAGE_KEY,
 } from '../src/components/game3d/threeroads/threeRoadsFlag.mjs';
 import {
   createThreeRoadsWorld, createThreeRoadsBus,
@@ -23,6 +24,13 @@ test('the switch is off by default and follows the address bar, then storage', (
   assert.equal(threeRoadsEnabled(win('?threeRoads=0', '1')), false, 'the address bar wins');
   assert.equal(threeRoadsEnabled(win('?threeRoads=maybe')), false);
   assert.equal(threeRoadsEnabled(undefined), false);
+  // The builders' preview switch works only on top of the main one.
+  assert.equal(THREE_ROADS_PREVIEW_STORAGE_KEY, 'game3d.threeRoadsPreview');
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoads=1')), false);
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoads=1&threeRoadsPreview=1')), true);
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoadsPreview=1')), false, 'no preview without the story');
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoads=0&threeRoadsPreview=1', '1')), false);
+  assert.equal(threeRoadsPreviewEnabled(undefined), false);
 });
 
 test('a window whose storage or address throws still gives an answer', () => {
