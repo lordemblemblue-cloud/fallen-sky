@@ -7,11 +7,13 @@ import { useNavigate } from '@tanstack/react-router';
 import {
   BookOpen, GitBranch, Swords, Star, Film, Play, Users, List,
   ChevronLeft, ChevronRight, X, LockKeyhole, Flag, Shield, Check,
-  ArrowRight, Compass
+  ArrowRight, Compass, ShoppingBag
 } from 'lucide-react';
 import { STORY_MISSIONS } from './missions.js';
+import { STORY_SUPPLIES } from '../sim/storySupplies.mjs';
 import { BODIES } from '../client/assets.mjs';
 import './DuelistStoryMenu.css';
+import './DuelistStorySupplies.css';
 
 const SCENE_IMAGE = 'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/b88662edc_duelist_story_scene_clean.jpg';
 
@@ -19,6 +21,7 @@ const MENU_TABS = [
   { id: 'operations', title: 'Operations', Icon: BookOpen },
   { id: 'objectives', title: 'Objectives', Icon: GitBranch },
   { id: 'crew', title: 'Crew', Icon: Swords },
+  { id: 'supplies', title: 'Story Shop', Icon: ShoppingBag },
   { id: 'briefing', title: 'Briefing', Icon: Star },
   { id: 'controls', title: 'Controls', Icon: Film },
 ];
@@ -172,8 +175,34 @@ export default function DuelistStoryMenu({ lobby, prefs, close }) {
                       aria-label="Five character room code" onChange={event => setTyped(event.target.value)} />
                   </label>
                   <AccentButton icon={Users} disabled={!online || code.length !== 5}
-                    onClick={() => launch({ online: 1, room: code })}>JOIN CREW</AccentButton>
+                    onClick={() => launch({ online: 1, room: code })}>JOIN PRIVATE CREW</AccentButton>
+                  <div className="dsm-crew-match-actions">
+                    <AccentButton icon={Play} disabled={!online}
+                      onClick={() => launch({ online: 1 })}>QUICK JOIN OPEN CREW</AccentButton>
+                    <AccentButton icon={Users} disabled={!online}
+                      onClick={() => launch({ online: 1, room: 'open' })}>HOST OPEN CREW</AccentButton>
+                  </div>
                   <p className="dsm-intro">{online ? `${openCrews.length} open crews for this operation.` : 'The match server is offline. Solo play is available.'}</p>
+                  {online && openCrews.length > 0 && <div className="dsm-open-crews" aria-label="Join open story crews">
+                    {openCrews.map(item => <button type="button" key={item.id}
+                      onClick={() => launch({ online: 1, room: item.id })}>
+                      <span>{item.name || mission.title} · {item.players}/{item.seats} players</span>
+                      <ArrowRight size={16} aria-hidden="true" />
+                    </button>)}
+                  </div>}
+                </>
+              )}
+              {tab === 'supplies' && (
+                <>
+                  <h3>Story Supply Shop</h3>
+                  <p>Each crew member gets one free field supply per operation. Competitive match gold and item builds are not used here.</p>
+                  <div className="dsm-supplies" aria-label="Available story supplies">
+                    {STORY_SUPPLIES.map(item => <div key={item.id}>
+                      <strong>{item.name}</strong><small>{item.description}</small>
+                      <span>FREE · ONE USE</span>
+                    </div>)}
+                  </div>
+                  <p className="dsm-intro">Start the operation, then press Tab or choose Story Supplies in-game to use one refill after taking damage. Every player has their own allowance; the server verifies co-op uses.</p>
                 </>
               )}
               {tab === 'briefing' && (
