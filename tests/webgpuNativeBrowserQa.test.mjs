@@ -142,3 +142,22 @@ test('CDP WebSocket endpoints must stay on loopback, regardless of target metada
     assert.throws(() => requireLocalCdpWebSocket(endpoint), /DevTools/);
   }
 });
+
+test('CDP target websocket must use the exact selected debugging port', () => {
+  for (const host of ['127.0.0.1', 'localhost', '[::1]']) {
+    const url = 'ws://' + host + ':9222/devtools/page/1';
+    assert.equal(requireLocalCdpWebSocket(url, 9222), url);
+    assert.throws(() => requireLocalCdpWebSocket(
+      'ws://' + host + ':9333/devtools/page/1', 9222,
+    ), /port does not match/);
+  }
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://localhost/devtools/page/1', 9222,
+  ), /port does not match/);
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://127.0.0.1:9222/devtools/page/1', 9333,
+  ), /port does not match/);
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://example.com:9222/devtools/page/1', 9222,
+  ), /loopback host/);
+});
