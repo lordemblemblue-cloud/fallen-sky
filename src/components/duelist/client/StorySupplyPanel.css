@@ -1,0 +1,41 @@
+.duelist-story-supply {
+  position: absolute;
+  z-index: 80;
+  inset: min(7vh, 60px) max(16px, calc((100% - 940px) / 2));
+  max-height: min(750px, 88vh);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(16px, 2.5vw, 30px);
+  color: #edf4ff;
+  background: linear-gradient(145deg, rgba(12, 28, 50, .98), rgba(14, 43, 76, .98));
+  border: 1px solid rgba(218, 183, 113, .72);
+  border-radius: 12px;
+  box-shadow: 0 18px 65px rgba(0, 0, 0, .72);
+  font-family: 'Rajdhani', system-ui, sans-serif;
+}
+.duelist-story-supply__head { display: flex; align-items: start; justify-content: space-between; gap: 18px; border-bottom: 1px solid rgba(208, 174, 112, .4); padding-bottom: 15px; }
+.duelist-story-supply__eyebrow { color: #dcb67b; font-size: 12px; letter-spacing: .14em; }
+.duelist-story-supply__head h2 { margin: 2px 0 6px; font-size: clamp(24px, 2.6vw, 38px); font-weight: 850; color: #fff1d9; }
+.duelist-story-supply__head p { margin: 0; color: #bed3e5; font-size: 14px; }
+.duelist-story-supply__close { background: transparent; border: 1px solid #7896ad; border-radius: 7px; color: #fff; font-size: 24px; width: 37px; height: 37px; flex: none; }
+.duelist-story-supply__cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.duelist-story-supply__card { display: flex; flex-direction: column; gap: 12px; padding: 14px; min-width: 0; border: 1px solid rgba(144, 191, 229, .3); border-radius: 8px; background: rgba(20, 48, 80, .55); }
+.duelist-story-supply__art { color: #f5d29c; font-size: 34px; height: 56px; width: 56px; display: grid; place-items: center; border: 1px solid rgba(224, 185, 121, .6); background: rgba(225, 159, 65, .09); border-radius: 8px; }
+.duelist-story-supply__card strong { display: block; color: #fff3d6; font-size: 19px; }
+.duelist-story-supply__card p { margin: 7px 0; min-height: 54px; font-size: 14px; line-height: 1.4; color: #c4d8e9; }
+.duelist-story-supply__card small { color: #f1c384; font-size: 11px; font-weight: 750; }
+.duelist-story-supply__card button { margin-top: auto; border: 1px solid #b88a4e; padding: 9px; color: #fff1d9; background: #68421f; border-radius: 5px; font-weight: 800; }
+.duelist-story-supply__card button:disabled { opacity: .42; cursor: not-allowed; }
+.duelist-story-supply__card button:not(:disabled):hover { background: #976331; }
+.duelist-story-supply__foot { border-top: 1px solid rgba(184, 211, 236, .24); padding-top: 14px; font-size: 13px; color: #dce9f5; }
+.duelist-story-supply button:focus-visible { outline: 2px solid #ffdfa0; outline-offset: 3px; }
+@media (max-width: 700px) {
+ .duelist-story-supply { inset: 12px; max-height: calc(100% - 24px); }
+ .duelist-story-supply__cards { grid-template-columns: 1fr; }
+ .duelist-story-supply__card { flex-direction: row; flex-wrap: wrap; }
+ .duelist-story-supply__card > div:nth-child(2) { flex: 1; min-width: 160px; }
+ .duelist-story-supply__card button { width: 100%; }
+ .duelist-story-supply__card p { min-height: 0; }
+}
