@@ -39,6 +39,7 @@ import { createHudFeed } from './hudFeed.mjs';
 import { levelFrom } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
+import { classChoiceSecondsLeft, shouldShowMatchClassPicker, CLASS_CHOICE_PROMPT_SECONDS } from './matchClassEntry.mjs';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import ShopPanel from './ShopPanel.jsx';
 import StorySupplyPanel from './StorySupplyPanel.jsx';
@@ -160,7 +161,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
   const sourceRef = useRef(null);
-  const [picking, setPicking] = useState(false); // the class picker, opened by hand
+  const [picking, setPicking] = useState(false); // explicit reopen after initial confirmation
+  // Do not let the automatic match/round countdown dismiss class selection.
+  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: false });
+  const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
+  const initialChosenRef = useRef(false);
   const [shopOpen, setShopOpen] = useState(false);
   const controlsRef = useRef(null);
   const mountRef = useRef(null);
@@ -194,6 +199,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     if (!mount) return undefined;
     let disposed = false;
     setStatus('loading');
+    initialChosenRef.current = false;
+    setPicking(false);
+    setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
     setNet(null);
     const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
@@ -577,7 +585,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           // the lock goes with the input: targeted abilities take it (the rules check it qualifies)
           return { ...controls.read({ faceYaw, strafe: !!target, aimWhileAttacking }), target: target ? lockId : null };
         };
-        const { effects, events } = source.step(dt, readInput);
+        // A local match cannot begin its simulation countdown before the player
+        // actually selects a class. Online authority is still owned by the server.
+        const { effects, events } = !online && !source.mission && !initialChosenRef.current
+          ? { effects: [], events: [] }
+          : source.step(dt, readInput);
         escort?.update(source.escortDistance?.() ?? 0);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
@@ -814,14 +826,32 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   // the class picker: by hand, or on its own before the fight, between rounds and while down
   const current = hud?.classId || classId;
   const classAnswer = sourceRef.current?.classAnswer || null;
-  const between = match && (match.phase === 'countdown' || match.phase === 'roundOver');
-  const showPicker = !quest && !!match && match.phase !== 'over' && (picking || between || hud?.dead);
+  const initialConfirmed = entryClass.generation === generation && entryClass.confirmed;
+  const showPicker = shouldShowMatchClassPicker({
+    match, mission: !!quest, confirmed: initialConfirmed, manuallyOpened: picking,
+  });
+  // Five seconds tells the player to decide, but zero NEVER makes a choice or closes the menu.
+  useEffect(() => {
+    if (!match || quest || initialConfirmed || match.phase === 'over') return undefined;
+    const openedAt = Date.now();
+    setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
+    const id = window.setInterval(() => setChoiceSeconds(classChoiceSecondsLeft(openedAt, Date.now())), 200);
+    return () => window.clearInterval(id);
+  }, [!!match, !!quest, initialConfirmed, generation, match?.phase === 'over']);
   // Countdown/respawn picker must release the mouse so its class and Select controls work.
   useEffect(() => {
     if (showPicker && document.pointerLockElement) document.exitPointerLock?.();
   }, [showPicker]);
   const pickClass = (id) => {
-    sourceRef.current?.chooseClass?.(id);
+    const source = sourceRef.current;
+    if (!source?.chooseClass) return;
+    source.chooseClass(id);
+    // A rejected local selection must remain editable. Online selection is
+    // requested from authoritative server; this confirms the user's UI choice.
+    if (source.classAnswer?.ok === false) return;
+    initialChosenRef.current = true;
+    setEntryClass({ generation, confirmed: true });
+    setPicking(false);
     onClassChange?.(id);
   };
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
@@ -896,7 +926,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
-          live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
+          live={match.phase === 'live' && !hud?.dead} onPick={pickClass}
+          initialChoice={!initialConfirmed} secondsLeft={choiceSeconds}
+          onClose={initialConfirmed && picking ? () => setPicking(false) : null} />
       )}
     </div>
   );
