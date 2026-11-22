@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import {
-  Home, Play, UserRound, BookOpen, ShoppingCart, Settings, X, Swords, Flag, Truck,
+  Home, Play, UserRound, BookOpen, Settings, X, Swords, Flag, Truck,
   Users, Target, Zap, CircleDot, Shield, Trophy, Search, Eye, LockKeyhole, Check,
   ArrowRight, Sparkles
 } from 'lucide-react';
@@ -11,7 +11,6 @@ import { BODIES } from '../client/assets.mjs';
 import { usePrefs, classProgressOf } from '../client/prefs.mjs';
 import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
 import { LEVEL_CAP, XP_CAP, levelFromXp, masteryAt, masteryReward } from '../core/progression.mjs';
-import { SHOP_ITEMS } from '../core/shop.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
 import { MODE_TABS, TEMPLATE_MODES, templateTab, templateMode, firstTemplateMode, templateLaunch } from './templateCatalog.mjs';
 import { useLobby } from './useLobby.js';
@@ -29,7 +28,6 @@ const NAV = [
   { id: 'play', label: 'PLAY', Icon: Swords },
   { id: 'character', label: 'CHARACTER', Icon: UserRound },
   { id: 'story', label: 'STORY', Icon: BookOpen },
-  { id: 'store', label: 'STORE', Icon: ShoppingCart },
   { id: 'settings', label: 'SETTINGS', Icon: Settings },
 ];
 const CHARACTER_NOTES = {
@@ -38,7 +36,6 @@ const CHARACTER_NOTES = {
   female: 'Eve — original Fallen Sky fighter model.',
   male: 'Adam — original Fallen Sky fighter model.',
 };
-const SHOP_FILTERS = ['all', 'power', 'defense', 'ability', 'health', 'tenacity', 'counter', 'relic'];
 const number = n => Math.max(0, Number.isFinite(n) ? Math.floor(n) : 0).toLocaleString();
 
 function ModeIcon({ symbol, ...props }) {
@@ -226,37 +223,6 @@ function CharacterSelector({ prefs, onPrefs, close }) {
 }
 const numberValue = n => Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
 
-function StoreBrowser({ close }) {
-  const [filter, setFilter] = useState('all');
-  const [selected, setSelected] = useState(SHOP_ITEMS[0]?.id);
-  const items = SHOP_ITEMS.filter(item => filter === 'all' || item.category === filter);
-  const focus = items.find(item => item.id === selected) || items[0];
-  return (
-    <TemplateSurface id="duelist-store-panel" kind="mode" title="Match item catalog" eyebrow="STORE"
-      subtitle="Inspect equipment builds before you enter a match." close={close}>
-      <div className="dxt-store-layout">
-        <nav className="dxt-store-filters" aria-label="Item categories">
-          {SHOP_FILTERS.map(id => <button key={id} type="button" aria-pressed={filter === id}
-            data-active={filter === id} onClick={() => { setFilter(id); setSelected(null); }}>{id.toUpperCase()}</button>)}
-        </nav>
-        <div className="dxt-store-items" aria-label="Match shop items">
-          {items.map(item => <button type="button" key={item.id} className="dxt-tile"
-            data-active={focus?.id === item.id} onClick={() => setSelected(item.id)}>
-            <Shield aria-hidden="true"/><span>{item.name}</span><small>{number(item.cost)} MATCH GOLD</small>
-          </button>)}
-        </div>
-        <aside className="dxt-store-info">
-          {focus && <><h3>{focus.name}</h3><p>{focus.category.toUpperCase()} / MATCH-ONLY ITEM</p>
-            <strong>{number(focus.cost)} GOLD / FULL TIER III</strong>
-            <ul>{Object.entries(focus.stats).map(([key,value])=><li key={key}>{key}: {value}</li>)}</ul>
-            <p>{focus.passive.text}</p></>}
-          <div className="dxt-unavailable">Items can only be purchased with server-owned gold during an active match. No purchases take place on this menu.</div>
-        </aside>
-      </div>
-    </TemplateSurface>
-  );
-}
-
 export default function DuelistTemplateHub({ initialPanel = null }) {
   const navigate = useNavigate();
   const lobby = useLobby();
@@ -311,7 +277,6 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
       {panel === 'character' && <CharacterReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'story' && <DuelistStoryMenu lobby={lobby} prefs={prefs} close={close}/>}
       {panel === 'settings' && <SettingsReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
-      {panel === 'store' && <StoreBrowser close={close}/>}
       <footer className="dxt-footer" aria-label="Duelist main navigation">
         {NAV.map(({ id, label, Icon }) => <button type="button" key={id}
           className="dxt-footer-link" data-active={(panel || 'home') === id}
