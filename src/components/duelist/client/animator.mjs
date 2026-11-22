@@ -226,7 +226,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       if (baseEntries.has(entry)) continue;
       const on = !!want && entry.name === want.clip;
       const rate = on ? 1 / (want.fade || FADE.in) : outRate;
-      entry.weight += ((on ? 1 : 0) - entry.weight) * Math.min(1, dt * rate);
+      entry.weight += ((on ? 1 : 0) - entry.weight) * -Math.expm1(-dt * rate);
       if (!on && entry.weight < 1e-3) entry.weight = 0;
       overlay += entry.weight;
     }
@@ -239,7 +239,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     else { const k = Math.min(1, (speed - SPEED.run) / (SPEED.sprint - SPEED.run)); target.jog = 1 - k; target.sprint = k; }
     let baseSum = 0;
     for (const key of Object.keys(baseWeights)) {
-      baseWeights[key] += (target[key] - baseWeights[key]) * Math.min(1, dt / FADE.base);
+      baseWeights[key] += (target[key] - baseWeights[key]) * -Math.expm1(-dt / FADE.base);
       baseSum += baseWeights[key];
     }
     const pace = {

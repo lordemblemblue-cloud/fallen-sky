@@ -569,14 +569,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           actor.group.visible = true;
           if (actor.gone && !fighter.vitals.dead) vfx.revive(actor); // it came apart when it fell: whole again
           // a respawn is a cut, not a slide across the arena
-          if (actor.at.distanceTo(new THREE.Vector3(body.x, body.y, body.z)) > 5) actor.yaw = body.yaw;
+          if (!actor.group.userData.posed || actor.at.distanceToSquared(body) > 25) actor.yaw = body.yaw;
           const turn = Math.atan2(Math.sin(body.yaw - actor.yaw), Math.cos(body.yaw - actor.yaw));
-          const committedFacing = fighter.action?.id === 'roll' || fighter.action?.move?.kind === 'attack';
-          actor.yaw += committedFacing ? turn : turn * Math.min(1, dt * 18);
+          actor.group.userData.posed = true;
+          const turnRate = fighter.action?.id === 'roll' ? 32 : 22;
+          actor.yaw += turn * -Math.expm1(-dt * turnRate);
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
-          if (drawing) actor.animator.update(show, { fighter, body, now: world.time, working: working.get(id) || null, clash: actor.clashAt ?? null });
+          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, working: working.get(id) || null, clash: actor.clashAt ?? null });
           const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));
           const a = fighter.action;
