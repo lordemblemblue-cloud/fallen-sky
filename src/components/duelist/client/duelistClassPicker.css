@@ -77,6 +77,8 @@
 .duelist-game .dcp-next { margin: 8px 0 0; color: #ac9a79; font-size: 10px; line-height: 1.4; }
 .duelist-game .dcp-note { margin: 12px 0 0; padding-top: 9px; border-top: 1px solid rgba(175, 193, 215, .12);
   color: #ccd7e3; font-size: 10.5px; line-height: 1.4; }
+/* While the user is choosing a class, avoid showing the left-aligned kill feed behind the selection panel. */
+.duelist-game:has(.dcp-root) .dh-root[data-rail='true'] .dh-tr { visibility: hidden; }
 @media (max-width: 760px) {
   .duelist-game .duelist-classpick.dcp-root {
     top: max(52px, calc(env(safe-area-inset-top, 0px) + 40px));
