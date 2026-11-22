@@ -46,7 +46,7 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 
 | Kit | Drawn from | Pieces | Its tall mark | What makes it its own |
 | --- | --- | --- | --- | --- |
-| `akitsu` | a Meiji-era field camp | 16 | a timber watchtower, 10 m, with a signal drum | white bell tents on plank decks, a camp curtain with the bear crest round the command post, tall narrow banners, rice-bale breastworks, rifles stacked under oilcloth because powder is dead under this sky, dead telegraph poles |
+| `akitsu` | a Meiji-era field camp | 17 | a timber watchtower, 10 m, with a signal drum | white bell tents on plank decks, a camp curtain with the bear crest (a paw print in a ring) round the command post, tall narrow banners, rice-bale breastworks, rifles stacked under oilcloth because powder is dead under this sky, dead telegraph poles |
 | `tameri` | a New Kingdom river army | 17 | two flagstaffs, 13 m, with long pennants | a palisade of hide shields on a rail, the House of Life pavilion on a mud-brick platform, grain under nets, jars in racks, a great lever hoist, a barge and reed boats |
 | `remoria` | a marching camp | 16 | a pair of gate towers, 9 m, at each gate | an earth bank with a fence of stakes and rounded corners, leather tents in rows, the wolf standard where the two streets cross, the tribunal, a plough and a boundary stone for the colony |
 
@@ -61,7 +61,7 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 - **Seen first:** the watchtower on the slope, and before it three dead telegraph poles following the trail in from the town.
 - **Story spots:** `camp_fire`, `camp_drill`, `camp_post_1` to `_3`, `camp_picket` (the picket toward the wilds), `camp_cedars` (up the slope, where the raid comes from), `camp_armoury`.
 - **People:** Sergeant Goro at the yard, Colonel Hayasaka at the map table, Lieutenant Mizuhara once the war opens.
-- 52 pieces of 17 kinds.
+- 53 pieces of 18 kinds.
 
 ### The Landing (P24, east)
 
