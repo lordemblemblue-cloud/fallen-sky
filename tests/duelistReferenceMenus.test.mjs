@@ -16,7 +16,7 @@ test('uploaded reference art maps to character story and settings separately', (
   assert.match(css, /dxr-art--settings/);
   assert.match(css, /deb569781_0cd1862c/);
   assert.match(css, /aa2d24798_duelist_story_template/);
-  assert.match(css, /a5ba54ad4_duelist_settings_template/);
+  assert.doesNotMatch(css, /a5ba54ad4_duelist_settings_template/, 'Settings must not contain baked-in screenshot labels');
   assert.match(ui, /id="duelist-character-panel"/);
   assert.match(ui, /id="duelist-story-panel"/);
   assert.match(ui, /id="duelist-settings-panel"/);
@@ -95,6 +95,24 @@ test('Story screen is reconstructed with one DOM frame and scenery-only artwork'
   assert.match(story, /STORY_MISSIONS\[missionIndex\]/);
   assert.match(story, /mode: 'story', mission: mission\.id/);
   assert.match(story, /disabled=\{!online\}/);
+});
+
+test('Settings uses real controls within responsive dark-blue panels instead of screenshot overlays', () => {
+  const settingRules = css.split('/* SETTINGS REBUILD (2026-11-21)')[1];
+  assert.ok(settingRules, 'dedicated Settings-only layout is present');
+  assert.match(settingRules, /\.dxr-art--settings/);
+  assert.match(settingRules, /grid-template-areas:"tabs controls preview" "tabs actions preview"/);
+  assert.match(settingRules, /grid-area:tabs/);
+  assert.match(settingRules, /grid-area:controls/);
+  assert.match(settingRules, /grid-area:preview/);
+  assert.match(settingRules, /grid-area:actions/);
+  assert.match(settingRules, /@media \(min-width:801px\) and \(max-width:1120px\)/);
+  assert.match(settingRules, /@media \(max-width:800px\)/);
+  assert.match(settingRules, /background:var\(--settings-panel\)/);
+  assert.doesNotMatch(settingRules, /url\(/, 'settings controls should never sit on baked-in screenshot labels');
+  assert.match(ui, /dxr-settings-tabs/);
+  assert.match(ui, /dxr-settings-controls/);
+  assert.match(ui, /dxr-settings-actions/);
 });
 
 test('settings remains functional with a draft, Apply, Revert and persisted audio/prefs', () => {
