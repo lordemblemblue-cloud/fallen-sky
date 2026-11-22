@@ -14,14 +14,18 @@ export function installRafPump(host = globalThis.window, intervalMs = 16) {
   let nextId = 1;
   let last = 0;
   let stopped = false;
+  let paused = false;
+  const ticks = []; // [time, ms] of each tick that ran callbacks: the game loop's own CPU time per frame
   const channel = new MessageChannel();
   channel.port1.onmessage = () => {
     if (stopped) return;
     const now = performance.now();
-    if (now - last >= intervalMs && queue.size) {
+    if (!paused && now - last >= intervalMs && queue.size) {
       last = now;
       const run = queue; queue = new Map();
       for (const fn of run.values()) { try { fn(now); } catch (error) { console.error(error); } }
+      ticks.push([now, performance.now() - now]);
+      if (ticks.length > 2000) ticks.splice(0, 1000);
     }
     channel.port2.postMessage(0);
   };
@@ -30,6 +34,12 @@ export function installRafPump(host = globalThis.window, intervalMs = 16) {
   channel.port2.postMessage(0);
   const pump = {
     installedAt: performance.now(),
+    // hold every queued callback (the game loop stops: no simulation, no drawing) until resume()
+    pause() { paused = true; },
+    resume() { paused = false; },
+    get paused() { return paused; },
+    /** [time, ms] of the ticks since the given performance.now() time */
+    ticksSince(since) { return ticks.filter(([at]) => at >= since); },
     restore() {
       if (stopped) return;
       stopped = true;

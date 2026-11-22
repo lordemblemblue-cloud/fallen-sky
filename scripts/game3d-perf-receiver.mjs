@@ -19,12 +19,13 @@ const out = path.resolve(opt('out', 'docs/game3d/three-empires/research/perf-run
 const once = args.includes('--once');
 fs.mkdirSync(out, { recursive: true });
 
-let commit = null;
-let branch = null;
+function gitState() {
+  let commit = null; let branch = null; let dirty = null;
 try { commit = execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { /* not a checkout */ }
 try { branch = execFileSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { /* not a checkout */ }
-let dirty = null;
 try { dirty = execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim().length > 0; } catch { /* ignore */ }
+  return { commit, branch, dirty };
+}
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
 const server = http.createServer((req, res) => {
@@ -38,7 +39,7 @@ const server = http.createServer((req, res) => {
     try { result = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
     catch (error) { res.writeHead(400, cors); res.end(`not JSON: ${error.message}`); return; }
     if (!String(result?.schema || '').startsWith('game3d-perf-probe/')) { res.writeHead(400, cors); res.end('not a game3d perf probe result'); return; }
-    result.received = { at: new Date().toISOString(), commit, branch, dirty };
+    result.received = { at: new Date().toISOString(), ...gitState() };
     const label = String(result.label || 'run').replace(/[^A-Za-z0-9._-]+/g, '-').slice(0, 60);
     const stamp = (result.startedAt || new Date().toISOString()).replace(/[:]/g, '').replace(/\.\d+Z$/, 'Z');
     const file = path.join(out, `${stamp}-${label}.json`);

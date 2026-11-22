@@ -455,6 +455,8 @@ export function createGame3DPerfProbe({ host = window, groups = PERF_TOGGLE_GROU
     for (let i = 0; i < warmup; i++) { before?.(); drawOnce(cam); await waitForGpu(renderer, pixel); }
     const pipesAfterWarmup = pipelineCount(renderer).count;
     const timer = renderer.isWebGPURenderer && renderer.backend?.isWebGPUBackend ? createWebGPUPassTimer(renderer) : createWebGLFrameTimer(glOf(renderer));
+    // with the pump, hold the game loop while timing: otherwise its simulation runs while the probe awaits the GPU
+    const pump = host.__gw3dRafPump; pump?.pause?.();
     const wall = []; const cpu = []; const gpu = []; const span = [];
     let info = null; let passes = null;
     try {
@@ -472,8 +474,9 @@ export function createGame3DPerfProbe({ host = window, groups = PERF_TOGGLE_GROU
         if (Number.isFinite(g?.spanMs)) span.push(g.spanMs);
         if (g) passes = g.passes;
       }
-    } finally { timer?.uninstall(); }
+    } finally { timer?.uninstall(); pump?.resume?.(); }
     return {
+      gameLoopHeld: !!pump,
       counts: info,
       frame: summarizeMs(wall), cpuSubmit: summarizeMs(cpu),
       gpu: gpu.length ? { ...summarizeMs(gpu), passesPerFrame: passes, spanMedianMs: summarizeMs(span)?.medianMs ?? null, timer: timer?.kind } : null,
@@ -544,12 +547,19 @@ export function createGame3DPerfProbe({ host = window, groups = PERF_TOGGLE_GROU
     let timed;
     try { timed = await timedFrames(cam, { frames, warmup }); }
     finally { resumeGameDrawing(); }
+    // the game loop's own CPU time per frame at this spot (its camera, its drawing; player visible): pump only
+    let gameTicks = null;
+    if (host.__gw3dRafPump?.ticksSince) {
+      const since = performance.now(); await sleep(3000);
+      const t = host.__gw3dRafPump.ticksSince(since).map(([, ms]) => ms);
+      gameTicks = { ...summarizeMs(t), note: 'whole game loop callback: simulation + drawing submit, GPU not included; game camera, not the probe camera' };
+    }
     const budget = evaluateGame3DAreaBudget({ platform: 'browser', calls: timed.counts?.drawCalls, triangles: timed.counts?.triangles });
     const scenery = GAME3D_AREA_BUDGETS.browser;
     const result = {
       id: view.id, area: view.area, point: view.point, label: label || view.label, heading: view.heading,
       local: { x: view.x, z: view.z }, eye: { x: view.worldX, y: round(eyeY), z: view.worldZ, dirX: round(view.dirX, 3), dirZ: round(view.dirZ, 3) },
-      sceneArea: currentArea(), settled, ...timed,
+      sceneArea: currentArea(), settled, ...timed, gameTicks,
       budget: { drawCallShare: round(budget.drawCallShare, 3), triangleShare: round(budget.triangleShare, 3), within: budget.within, over: budget.over,
         sceneryDrawCallShare: round((timed.counts?.drawCalls ?? 0) / scenery.sceneryDrawCalls, 3),
         sceneryTriangleShare: round((timed.counts?.triangles ?? 0) / scenery.sceneryTriangles, 3) },
@@ -649,18 +659,26 @@ export function installGame3DPerfProbe(host = window) {
   const probe = createGame3DPerfProbe({ host });
   host.__gw3dPerfProbe = probe;
   console.info('[perfProbe] ready: await __gw3dPerfProbe.run({label:"before", toggles:true})');
+  // ?perfRun=1: enter the world with the saved character (ENTER SERVER, ENTER WORLD), wait for the area loader, run.
+  // Options: perfLabel, perfToggles=1, perfAreas=town,south, perfIds=town.plaza.N,..., perfFrames=90.
   const auto = params.get('perfRun');
   if (auto) {
-    const start = () => {
-      host.removeEventListener('gw3dSceneReady', start);
-      setTimeout(() => {
-        probe.run({ label: params.get('perfLabel') || 'run', toggles: params.get('perfToggles') === '1',
-          areas: params.get('perfAreas') ? params.get('perfAreas').split(',') : PERF_AREAS })
-          .then((result) => console.info('[perfProbe] finished', result.post))
-          .catch((error) => console.error('[perfProbe] failed', error));
-      }, 4000);
-    };
-    if (host.__gw3dScene && host.__gw3dWeaponDebug?.model) start(); else host.addEventListener('gw3dSceneReady', start);
+    probe.autoRun = (async () => {
+      const button = (re) => [...host.document.querySelectorAll('button')].find((b) => re.test(b.innerText || ''));
+      const status = () => host.__gw3dRegionStreamingStatus;
+      for (let i = 0; i < 180 && !button(/ENTER SERVER|ENTER WORLD|CREATE NEW CHARACTER/); i++) await sleep(1000);
+      if (!button(/ENTER SERVER|ENTER WORLD/)) throw new Error('perfProbe: no saved character on this origin; create one, then reload');
+      button(/ENTER SERVER/)?.click();
+      for (let i = 0; i < 60 && !button(/ENTER WORLD/); i++) await sleep(1000);
+      button(/ENTER WORLD/)?.click();
+      for (let i = 0; i < 240 && !(host.__localPlayerPos && (status()?.enabled === false || (status()?.batches?.split > 0 && !status()?.batches?.settling))); i++) await sleep(1000);
+      await sleep(3000);
+      return probe.run({ label: params.get('perfLabel') || 'run', toggles: params.get('perfToggles') === '1',
+        frames: Number(params.get('perfFrames')) || 90,
+        ids: params.get('perfIds') ? params.get('perfIds').split(',') : null,
+        areas: params.get('perfAreas') ? params.get('perfAreas').split(',') : PERF_AREAS });
+    })();
+    probe.autoRun.then((result) => console.info('[perfProbe] finished', result.post), (error) => console.error('[perfProbe] failed', error));
   }
   return probe;
 }

@@ -80,9 +80,9 @@ function describeRuns(side) {
 function single(side) {
   heading(`Every view (${platform} budget: ${budget.drawCalls} calls, ${budget.triangles / 1e6} M triangles; scenery share ${budget.sceneryDrawCalls} / ${budget.sceneryTriangles / 1e6} M)`);
   const views = [...side.views.values()].sort(areaOrder);
-  table(['view', 'calls', 'triangles', 'frame med', 'frame p95', 'cpu med', 'gpu med', 'gpu p95', 'calls/budget', 'tris/budget', 'pipelines +'],
-    views.map((v) => [v.id, int(v.counts?.drawCalls), mtri(v.counts?.triangles), fmt(v.frame?.medianMs), fmt(v.frame?.p95Ms), fmt(v.cpuSubmit?.medianMs),
-      fmt(v.gpu?.medianMs), fmt(v.gpu?.p95Ms), pct((v.counts?.drawCalls ?? 0) / budget.drawCalls), pct((v.counts?.triangles ?? 0) / budget.triangles),
+  table(['view', 'calls', 'triangles', 'cpu submit', 'gpu med', 'gpu p95', 'game loop', 'wall med', 'wall p95', 'calls/budget', 'tris/budget', 'pipelines +'],
+    views.map((v) => [v.id, int(v.counts?.drawCalls), mtri(v.counts?.triangles), fmt(v.cpuSubmit?.medianMs),
+      fmt(v.gpu?.medianMs), fmt(v.gpu?.p95Ms), fmt(v.gameTicks?.medianMs), fmt(v.frame?.medianMs), fmt(v.frame?.p95Ms), pct((v.counts?.drawCalls ?? 0) / budget.drawCalls), pct((v.counts?.triangles ?? 0) / budget.triangles),
       int((v.pipelines?.after ?? 0) - (v.pipelines?.before ?? 0))]));
   heading('Worst view per area and headroom to the scenery share of the budget');
   const rows = [];
@@ -110,12 +110,14 @@ function compare(a, b) {
   heading(`Before ${a.spec}  →  after ${b.spec}`);
   const ids = [...new Set([...a.views.keys(), ...b.views.keys()])].sort((x, y) => PERF_AREAS.indexOf(x.split('.')[0]) - PERF_AREAS.indexOf(y.split('.')[0]));
   const rel = (x, y) => (n(x) && n(y) ? signed(((y - x) / x) * 100, (v) => v.toFixed(0) + '%') : '-');
-  table(['view', 'calls', 'Δ', 'triangles', 'Δ', 'frame med ms', 'Δ', 'gpu med ms', 'Δ'], ids.map((id) => {
+  table(['view', 'calls', 'Δ', 'triangles', 'Δ', 'cpu submit ms', 'Δ', 'gpu ms', 'Δ', 'game loop ms', 'Δ', 'wall ms', 'Δ'], ids.map((id) => {
     const x = a.views.get(id); const y = b.views.get(id);
     return [id, `${int(x?.counts?.drawCalls)} → ${int(y?.counts?.drawCalls)}`, signed((y?.counts?.drawCalls ?? NaN) - (x?.counts?.drawCalls ?? NaN)),
       `${mtri(x?.counts?.triangles)} → ${mtri(y?.counts?.triangles)}`, signed((y?.counts?.triangles ?? NaN) - (x?.counts?.triangles ?? NaN), mtri),
-      `${fmt(x?.frame?.medianMs)} → ${fmt(y?.frame?.medianMs)}`, rel(x?.frame?.medianMs, y?.frame?.medianMs),
-      `${fmt(x?.gpu?.medianMs)} → ${fmt(y?.gpu?.medianMs)}`, rel(x?.gpu?.medianMs, y?.gpu?.medianMs)];
+      `${fmt(x?.cpuSubmit?.medianMs)} → ${fmt(y?.cpuSubmit?.medianMs)}`, rel(x?.cpuSubmit?.medianMs, y?.cpuSubmit?.medianMs),
+      `${fmt(x?.gpu?.medianMs)} → ${fmt(y?.gpu?.medianMs)}`, rel(x?.gpu?.medianMs, y?.gpu?.medianMs),
+      `${fmt(x?.gameTicks?.medianMs)} → ${fmt(y?.gameTicks?.medianMs)}`, rel(x?.gameTicks?.medianMs, y?.gameTicks?.medianMs),
+      `${fmt(x?.frame?.medianMs)} → ${fmt(y?.frame?.medianMs)}`, rel(x?.frame?.medianMs, y?.frame?.medianMs)];
   }));
 }
 
