@@ -4,7 +4,8 @@ import * as THREE from 'three';
 import { CLASSES } from '../core/classes.mjs';
 import { clipsForBody } from '../client/motionLibrary.mjs';
 import { bakeDuelMoves } from '../client/duelMoves.mjs';
-import { createClassWeapon, equipClassWeapon, wholeWeapon } from '../client/classWeapons.mjs';
+import { createClassWeapon, equipClassWeapon, wholeWeapon, mirrorGrip, STAFF_HANDS } from '../client/classWeapons.mjs';
+import { createSecondHand } from '../client/secondHand.mjs';
 
 export const IDLE_CLIP_BY_CLASS = Object.freeze({
   warrior: 'swordIdle',
@@ -41,6 +42,7 @@ function relaxedFallback(model) {
 // not to this helper, so no WebGPU lifecycle code is changed.
 export async function prepareIdlePreview({ model, bodyId, classId = 'duelist', embeddedIdle = null, armed = true }) {
   let weapon = null;
+  let secondHand = null;
   if (armed && CLASSES[classId]) {
     try {
       const { grip, handBone } = bakeDuelMoves(model, ['held']);
@@ -50,6 +52,7 @@ export async function prepareIdlePreview({ model, bodyId, classId = 'duelist', e
         const pieces = createClassWeapon(classId);
         equipClassWeapon(pieces, { rightHand, leftHand, grip });
         weapon = wholeWeapon(pieces);
+        if (pieces.kind === 'staff') secondHand = createSecondHand({ model, weapon: weapon.group, grip: mirrorGrip(grip), along: STAFF_HANDS });
       }
     } catch {
       // The model can still idle without a weapon when a skeleton is incomplete.
@@ -66,9 +69,10 @@ export async function prepareIdlePreview({ model, bodyId, classId = 'duelist', e
     mixer.clipAction(clip).setLoop(THREE.LoopRepeat, Infinity).play();
     mixer.update(1 / 60); // apply the first pose before the model can appear on screen
   } else relaxedFallback(model);
+  secondHand?.apply(1); // the Assassin's off hand meets the staff at rest, just as it does in combat
 
   return {
-    update(dt) { mixer?.update(dt); weapon?.update(dt); },
+    update(dt) { mixer?.update(dt); secondHand?.apply(1); weapon?.update(dt); },
     dispose() { mixer?.stopAllAction(); weapon?.dispose(); },
   };
 }
