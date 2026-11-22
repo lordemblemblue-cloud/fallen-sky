@@ -140,3 +140,46 @@ test('a subtitle is placed from the camera that draws it, not the one of the las
   assert.equal(view.anchor, 'world');
   view.dispose();
 });
+
+test('on WebGPU the bodies wait for the precompile, then compile in place at their own draw', async () => {
+  const sceneState = { backgroundCompile: false, holdRender: 1 };
+  const renderer = { isWebGPURenderer: true, backend: { isWebGPUBackend: true }, __sceneState: sceneState };
+  const scene = new THREE.Scene();
+  const store = { getState: () => ({ storyFlags: {} }), subscribe(fn) { fn(store.getState()); return () => {}; } };
+  const cast = createCastSubsystem({
+    region: 'wolfveil', worldArea: 'town', areaScenes: true, preview: false, scene, renderer, bus: createThreeRoadsBus(),
+    questNPCs: [], sampleGroundY: () => 22.7, camera: new THREE.PerspectiveCamera(),
+  }, { loadSource: async () => shared, probe: () => true, warn: () => {}, questStore: store, playVoice: () => null });
+  await settle(cast);
+  const body = scene.getObjectByName('ThreeRoadsCast_sable_vey').children[0];
+  assert.equal(body.visible, false, 'hidden while the load-time precompile is still to come');
+  sceneState.backgroundCompile = true; sceneState.holdRender = 0; // the precompile has ended
+  cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(body.visible, true);
+  const mesh = body.getObjectByName('Body');
+  mesh.onBeforeRender(renderer, scene, null, mesh.geometry, mesh.material, null);
+  assert.equal(sceneState.backgroundCompile, false, 'off for this body\'s draw');
+  mesh.onAfterRender(renderer, scene, null, mesh.geometry, mesh.material, null);
+  assert.equal(sceneState.backgroundCompile, true, 'back on after it');
+  mesh.onBeforeRender(renderer, scene, null, mesh.geometry, mesh.material, null); // a draw that never finished
+  cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(sceneState.backgroundCompile, true, 'never left off');
+  cast.dispose();
+});
+
+test('if the precompile never comes, the bodies show after 20 seconds anyway', async () => {
+  const sceneState = { backgroundCompile: false, holdRender: 0 };
+  const renderer = { isWebGPURenderer: true, backend: { isWebGPUBackend: true }, __sceneState: sceneState };
+  const scene = new THREE.Scene();
+  const store = { getState: () => ({ storyFlags: {} }), subscribe(fn) { fn(store.getState()); return () => {}; } };
+  const cast = createCastSubsystem({
+    region: 'wolfveil', worldArea: 'town', areaScenes: true, preview: false, scene, renderer, bus: createThreeRoadsBus(),
+    questNPCs: [], sampleGroundY: () => 22.7, camera: new THREE.PerspectiveCamera(),
+  }, { loadSource: async () => shared, probe: () => true, warn: () => {}, questStore: store, playVoice: () => null });
+  await settle(cast);
+  const body = scene.getObjectByName('ThreeRoadsCast_sable_vey').children[0];
+  assert.equal(body.visible, false);
+  for (let t = 0; t < 21; t += 0.1) cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(body.visible, true);
+  cast.dispose();
+});

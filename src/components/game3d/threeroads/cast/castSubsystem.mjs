@@ -64,6 +64,7 @@ const REGROUND_EVERY = 1;  // seconds between ground re-checks of people standin
 const WALK_GROUND_EVERY = 0.1;
 const DRAW_EVERY = 0.5;    // seconds between choosing who is drawn
 const HAIL_EVERY = 0.25;   // seconds between looking for a sentry to hail the player
+const PRECOMPILE_WAIT = 20; // seconds the bodies wait at most for the game's load-time precompile (WebGPU)
 const FOLLOW_CATCH_UP = 35; // a follower this far behind is put back behind the player
 const PERSONAL_SPACE = 0.75; // two of the cast walking never come closer than this
 const SUBTITLE_DISTANCE = 1.25;    // metres in front of the camera
@@ -624,6 +625,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       };
       node.material = Array.isArray(node.material) ? node.material.map(swap) : swap(node.material);
     });
+    model.traverse(node => { if (node.isMesh) compileInPlace(node); });
     const group = new THREE.Group();
     group.name = 'ThreeRoadsCast_' + actor.id;
     group.userData.threeRoadsCast = actor.id;
@@ -658,6 +660,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     actor.group = group;
     actor.mixer = mixer;
     actor.idleAction = idle;
+    showBody(actor); // hidden while the game's precompile is still to come (WebGPU)
     root.add(group);
   }
 
@@ -852,9 +855,57 @@ export function createCastSubsystem(ctx, deps = {}) {
       const drawn = i < CAST_MAX_DRAWN;
       if (drawn === actor.drawn) continue;
       actor.drawn = drawn;
-      if (actor.model) actor.model.visible = drawn;
-      if (actor.ring) actor.ring.visible = drawn;
+      showBody(actor);
     }
+  }
+  // A body is shown when it is among the drawn and the renderer is not holding its
+  // frames for the game's shader precompile (see compileInPlace).
+  function showBody(actor) {
+    const show = actor.drawn && !precompiling;
+    if (actor.model) actor.model.visible = show;
+    if (actor.ring) actor.ring.visible = actor.drawn;
+  }
+
+  // ─── WebGPU: bodies compile their pipelines in place ───
+  // The game's WebGPU renderer (src/lib/webgpuSceneRenderer.js) compiles the
+  // pipeline of anything drawn for the first time in the background and skips
+  // drawing it until that compile is done. On this PC, with several game tabs on
+  // the GPU, some of those background compiles never finished: the pipeline stays
+  // cached and empty, and every body of that kind was never drawn (bodies missing
+  // after entering the world or crossing a gate; WebGPU only). The cast's bodies are
+  // few and need to be there, so each one compiles synchronously at its first draw
+  // (the background compile is switched off for that object's draw only), and the
+  // bodies stay hidden while the renderer holds its frames for the load-time
+  // precompile, so they never enter that asynchronous pass either.
+  const sceneState = ctx.renderer?.__sceneState || null;
+  let precompiling = false;
+  let switchedOff = null;
+  function compileInPlace(mesh) {
+    const before = mesh.onBeforeRender, after = mesh.onAfterRender;
+    mesh.onBeforeRender = function (renderer, ...rest) {
+      const state = renderer?.__sceneState;
+      if (state && state.backgroundCompile === true) { state.backgroundCompile = false; switchedOff = state; }
+      return before.call(this, renderer, ...rest);
+    };
+    mesh.onAfterRender = function (...args) {
+      if (switchedOff) { switchedOff.backgroundCompile = true; switchedOff = null; }
+      return after.apply(this, args);
+    };
+  }
+  // On the WebGPU backend the bodies wait, hidden, until the game's load-time
+  // precompile is over (it switches backgroundCompile on when it ends); at most
+  // PRECOMPILE_WAIT seconds, in case it never runs.
+  const waitsForPrecompile = Boolean(sceneState && ctx.renderer?.isWebGPURenderer && ctx.renderer?.backend?.isWebGPUBackend);
+  let precompileWaited = 0;
+  precompiling = waitsForPrecompile && sceneState.backgroundCompile !== true;
+  function watchPrecompile(dt) {
+    // never leave the renderer's switch off (a draw that threw before onAfterRender)
+    if (switchedOff) { switchedOff.backgroundCompile = true; switchedOff = null; }
+    if (!precompiling) return;
+    precompileWaited += dt;
+    if (sceneState.backgroundCompile !== true && precompileWaited < PRECOMPILE_WAIT) return;
+    precompiling = false;
+    for (let i = 0; i < actorList.length; i++) if (actorList[i].state === 'ready') showBody(actorList[i]);
   }
 
   // ─── lines over heads, or as subtitles ───
@@ -1058,6 +1109,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     },
     update(dt, playerPosition) {
       if (disposed || !(dt >= 0)) return;
+      watchPrecompile(Math.min(dt, 0.1));
       const delta = Math.min(dt, 0.1);
       placeTimer += delta;
       if (placeTimer >= PLACE_EVERY) {
