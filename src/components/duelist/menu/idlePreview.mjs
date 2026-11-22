@@ -24,18 +24,45 @@ export function chooseIdleClip(classId, pack = {}, embedded = null) {
     || (embedded?.tracks?.length > 0 ? embedded : null);
 }
 
-// If all animation files are missing, bend the arms into a modest ready pose.
-// The model remains visible and usable instead of exposing a spread-arm rig rest pose.
-function relaxedFallback(model) {
+// A valid animation clip can still leave an imported rig in a T/A pose when its
+// bone tracks don't bind. Check the actual world-space upper-arm direction, not the
+// local Euler axes (those differ between fused, Mixamo and custom character rigs).
+// Rotate ONLY arms that point sideways; intentional relaxed/weapon poses are untouched.
+export function correctSpreadArms(model) {
+  const bones = { left: {}, right: {} };
   model.traverse((part) => {
     if (!part.isBone) return;
     const name = part.name.toLowerCase().replace(/[^a-z]/g, '');
-    if (name.endsWith('leftarm')) { part.rotation.z += 0.85; part.rotation.x -= 0.2; }
-    if (name.endsWith('rightarm')) { part.rotation.z -= 0.85; part.rotation.x += 0.2; }
-    if (name.endsWith('leftforearm')) part.rotation.y -= 0.18;
-    if (name.endsWith('rightforearm')) part.rotation.y += 0.18;
+    for (const side of ['left', 'right']) {
+      if (name.endsWith(side + 'arm')) bones[side].upper = part;
+      if (name.endsWith(side + 'forearm')) bones[side].forearm = part;
+    }
   });
   model.updateMatrixWorld(true);
+  let corrected = 0;
+  for (const side of ['left', 'right']) {
+    const { upper, forearm } = bones[side];
+    if (!upper || !forearm || !upper.parent) continue;
+    const shoulder = upper.getWorldPosition(new THREE.Vector3());
+    const elbow = forearm.getWorldPosition(new THREE.Vector3());
+    const out = elbow.sub(shoulder);
+    const length = out.length();
+    if (length < 1e-5 || Math.abs(out.y / length) > 0.45 || Math.abs(out.x / length) < 0.60) continue;
+    // Aim the upper arm mostly down, slightly away from the torso and forward.
+    const direction = new THREE.Vector3(Math.sign(out.x) * 0.28, -0.94, 0.2).normalize();
+    const turn = new THREE.Quaternion().setFromUnitVectors(out.normalize(), direction);
+    const parentWorld = upper.parent.getWorldQuaternion(new THREE.Quaternion());
+    const upperWorld = upper.getWorldQuaternion(new THREE.Quaternion());
+    upper.quaternion.copy(parentWorld.invert().multiply(turn.multiply(upperWorld)));
+    upper.updateWorldMatrix(true, true);
+    corrected += 1;
+  }
+  return corrected;
+}
+
+// A missing/corrupt motion pack must leave a ready fighter, not an exposed rig.
+function relaxedFallback(model) {
+  correctSpreadArms(model);
 }
 
 // Arms and equipment use the actual class form. The scene renderer belongs to each caller,
@@ -69,10 +96,13 @@ export async function prepareIdlePreview({ model, bodyId, classId = 'duelist', e
     mixer.clipAction(clip).setLoop(THREE.LoopRepeat, Infinity).play();
     mixer.update(1 / 60); // apply the first pose before the model can appear on screen
   } else relaxedFallback(model);
+  // Some embedded/retargeted clips include tracks but leave the shoulders in
+  // bind pose. Repair that pose after the mixer, before showing the first frame.
+  correctSpreadArms(model);
   secondHand?.apply(1); // the Assassin's off hand meets the staff at rest, just as it does in combat
 
   return {
-    update(dt) { mixer?.update(dt); secondHand?.apply(1); weapon?.update(dt); },
+    update(dt) { mixer?.update(dt); correctSpreadArms(model); secondHand?.apply(1); weapon?.update(dt); },
     dispose() { mixer?.stopAllAction(); weapon?.dispose(); },
   };
 }

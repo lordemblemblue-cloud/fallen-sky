@@ -46,7 +46,7 @@ test('full-size match rail uses live class, abilities, level and authoritative m
   assert.match(rail, /const slots = hud\.abilities/);
   assert.match(rail, /onPower\?\.\('special'\)/);
   assert.match(rail, /aria-valuetext=\{charge === null \? 'Unavailable'/);
-  assert.match(hud, /root\.clientWidth >= 1250/);
+  assert.match(hud, /root\.clientWidth >= 1080/);
   assert.match(hud, /DuelistClassRail hud=\{hud\}/);
   assert.match(css, /\.dh-rail-identity::after, \.dh-rail-actions::before/);
   assert.match(css, /linear-gradient\(to bottom, transparent,/);
