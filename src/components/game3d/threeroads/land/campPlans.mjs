@@ -199,10 +199,12 @@ function swordHall() {
 function shadowRavine() {
   const T = 'tameri';
   const items = [];
-  // Four fire bowls square the ground where the Priestess speaks the rite.
+  // Four fire bowls square the ground where the Priestess speaks the rite: at the ravine's mouth,
+  // not in it. The ravine is one of the game's own monster camps, and its four spawns stand 19 m
+  // and more from here; the dead the player frees are met inside.
   for (const [dx, dz] of [[-2.8, 2.8], [2.8, 2.8], [-2.8, -2.8], [2.8, -2.8]]) {
-    items.push(item(T, 'brazier_bowl', 340 + dx, -168 + dz));
-    items.push(item(T, 'brazier_flame', 340 + dx, -168 + dz));
+    items.push(item(T, 'brazier_bowl', 333 + dx, -152 + dz));
+    items.push(item(T, 'brazier_flame', 333 + dx, -152 + dz));
   }
   // One marker for each of the five who can be named.
   for (const [x, z] of [[345, -176.5], [347, -175], [348.6, -173], [349.2, -170.6], [346.4, -178.4]]) items.push(item('valley', 'stela', x, z, -Math.PI / 4));

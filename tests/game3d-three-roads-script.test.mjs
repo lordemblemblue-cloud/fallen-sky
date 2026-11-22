@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import { WOLFVEIL_HOSTILE_ZONES } from '../src/components/game3d/wolfveil/WolfveilEnemySpawns.mjs';
 // The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
 // run time. Without this import a check would pass on ground that is a cliff in the game.
 import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -324,5 +325,21 @@ test('every hail is a line its own speaker says, and every sentry has one', () =
       assert.ok(entry.home, entry.id + ' has a place to stand');
     }
     if (/_picket_|_gate_/.test(entry.id)) assert.ok(entry.hail, entry.id + ' speaks first');
+  }
+});
+
+// The valley already has monster camps of its own. A scene where someone stands
+// and speaks must not be set on top of one; a fight may be.
+const QUIET_SPOTS = Object.freeze(['ravine_gate', 'ravine_chant', 'ravine_sixth', 'hall_grave', 'landing_tally', 'fort_overhear', 'fort_tent']);
+test("spoken scenes keep clear of the game's own monster camps", () => {
+  const spawns = WOLFVEIL_HOSTILE_ZONES.flatMap(zone => zone.locations.map(([x, z]) => ({ zone: zone.id, x, z })));
+  assert.ok(spawns.length >= 10);
+  for (const name of QUIET_SPOTS) {
+    const point = threeRoadsPoint(name);
+    assert.ok(point, name);
+    for (const spawn of spawns) {
+      const away = Math.hypot(point.x - spawn.x, point.z - spawn.z);
+      assert.ok(away >= 18, `${name} is ${away.toFixed(1)} m from a spawn of ${spawn.zone}`);
+    }
   }
 });
