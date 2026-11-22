@@ -8,8 +8,9 @@
 // A group taken away on purpose (closeGroup) announces nothing.
 //
 // For each defeat it emits `enemies:defeated` { groupId, kind, id, tier } and
-// tells the quest store through `dispatchQuestEvent` ({ type: 'enemy_killed',
-// targetId: groupId, placeId, kind, tier, count: 1 }); when the last planned
+// tells the pledges through `dispatchQuestEvent` ({ type: 'enemy_killed',
+// targetId: groupId, placeId?, kind, tier, count: 1 }; placeId only when the
+// group was given one); when the last planned
 // monster of a group has died it emits `enemies:groupCleared` { groupId, kind }.
 export function createEnemyGroupWatcher({ emit = () => {}, dispatchQuestEvent = () => {} } = {}) {
   const groups = new Map();
@@ -76,10 +77,14 @@ export function createEnemyGroupWatcher({ emit = () => {}, dispatchQuestEvent = 
           group.counted.add(entry);
           group.defeated += 1;
           safe(emit, 'enemies:defeated', { groupId: group.groupId, kind: group.kind, id: entry.id, tier: group.tier });
-          safe(dispatchQuestEvent, {
-            type: 'enemy_killed', targetId: group.groupId, placeId: group.placeId,
-            kind: group.kind, tier: group.tier, count: 1,
-          });
+          // placeId only when the spawn request named one (PLEDGE_ENGINE.md
+          // section 3: a defeat step with a place ignores a kill with another).
+          const kill = { type: 'enemy_killed', targetId: group.groupId };
+          if (group.placeId !== null && group.placeId !== undefined) kill.placeId = group.placeId;
+          kill.kind = group.kind;
+          kill.tier = group.tier;
+          kill.count = 1;
+          safe(dispatchQuestEvent, kill);
         }
         finishIfCleared(group);
       }

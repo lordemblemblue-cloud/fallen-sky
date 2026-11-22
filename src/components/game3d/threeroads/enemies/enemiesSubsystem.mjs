@@ -29,8 +29,17 @@
 // docs/game3d/three-empires/build-notes/ENEMIES.md.
 //
 // Bus: listens for enemies:spawnGroup / enemies:despawnGroup; announces
-// enemies:defeated / enemies:groupCleared. Also tells the quest store
-// (window 'axeQuestEvent', type 'enemy_killed', targetId = groupId, placeId).
+// enemies:defeated / enemies:groupCleared. Also tells the pledges (window
+// 'axePledgeEvent', never 'axeQuestEvent': the older kill quests must not
+// count these; PLEDGE_ENGINE.md section 5) with { type: 'enemy_killed',
+// targetId: groupId, placeId (only when the request had one), kind, tier,
+// count: 1 }.
+//
+// A group asked for with `passive: true` is scenery that looks like a
+// monster: it is never put in the game's enemy list, so the AI loop, combat,
+// lock-on and health bars never see it; it stands where it is put, idles,
+// cannot be hurt, reports no deaths, and goes only on enemies:despawnGroup
+// (or dispose). It still counts against the limit of 12 animated bodies.
 import * as THREE from 'three';
 import { getAXEEnemyStats } from '../../axe/balance/AXEPowerBudget.js';
 import { createSharedSkinnedFBXSpawner } from '../../performance/SharedSkinnedFBXSpawner.mjs';
@@ -101,7 +110,7 @@ function createDefaultPlayerLevel() {
 const dispatchWindowQuestEvent = detail => {
   const win = globalThis.window;
   if (!win?.dispatchEvent || typeof globalThis.CustomEvent !== 'function') return;
-  win.dispatchEvent(new globalThis.CustomEvent('axeQuestEvent', { detail }));
+  win.dispatchEvent(new globalThis.CustomEvent('axePledgeEvent', { detail }));
 };
 
 // Scale a model so it stands kind.height × tier scale tall. A model whose
@@ -214,6 +223,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
   const pendingByGroup = new Map(); // groupId -> monsters asked for, not yet made
   const groupMeta = new Map();      // groupId -> meta of open groups
   let pending = 0;
+  let passiveCount = 0;             // passive bodies standing in the scene
   let disposed = false;
   let spawnSerial = 0;
 
@@ -221,7 +231,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     if (!sources.has(kind.id)) sources.set(kind.id, makeKindSource(kind));
     return sources.get(kind.id);
   };
-  const aliveCount = () => watcher.aliveCount() + pending;
+  const aliveCount = () => watcher.aliveCount() + pending + passiveCount;
   const resolveLevel = asked => (asked === 'player' || asked === undefined || asked === null
     ? clamp(Math.floor(playerLevel.get()), 1, ENEMY_LEVEL_CAP)
     : clamp(Math.floor(Number(asked) || 1), 1, ENEMY_LEVEL_CAP));
@@ -230,16 +240,21 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     const tier = meta.tier;
     const scale = standModel(model, kind, tier);
     const tintMaterials = dressModel(model, kind);
-    const ringGeometry = new THREE.RingGeometry(0.7 / scale, 0.9 / scale, 24);
-    const ringMaterial = new THREE.MeshBasicMaterial({
-      color: RING_COLOR[tier] || RING_COLOR.normal, side: THREE.DoubleSide,
-      transparent: true, opacity: 0.55, depthWrite: false,
-    });
-    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-    ring.name = 'ThreeRoads_Enemy_Ring';
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.02 / scale;
-    model.add(ring);
+    // The hostile ring marks something to fight; a passive figure has none.
+    let ringGeometry = null;
+    let ringMaterial = null;
+    if (!meta.passive) {
+      ringGeometry = new THREE.RingGeometry(0.7 / scale, 0.9 / scale, 24);
+      ringMaterial = new THREE.MeshBasicMaterial({
+        color: RING_COLOR[tier] || RING_COLOR.normal, side: THREE.DoubleSide,
+        transparent: true, opacity: 0.55, depthWrite: false,
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.name = 'ThreeRoads_Enemy_Ring';
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.02 / scale;
+      model.add(ring);
+    }
     model.name = 'ThreeRoads_Enemy_' + meta.groupId + '_' + index;
     model.position.set(spot.x, spot.y, spot.z);
     model.rotation.y = Math.atan2(spot.x - meta.x, spot.z - meta.z) + ((index * 1.7) % 1.2) - 0.6;
@@ -288,7 +303,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
       walkVariance: 0.8 + (index % 4) * 0.15,
       // This subsystem's own bookkeeping.
       threeRoads: {
-        groupId: meta.groupId, kind: kind.id, placeId: meta.placeId,
+        groupId: meta.groupId, kind: kind.id, placeId: meta.placeId, passive: !!meta.passive,
         finalDeathClip: kind.deathChain && clips?.dying ? clips?.death || null : null,
         ringGeometry, ringMaterial, deathSeen: false, deathChained: false, released: false,
       },
@@ -313,6 +328,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     const own = entry.threeRoads;
     if (!own || own.released) return;
     own.released = true;
+    if (own.passive) passiveCount = Math.max(0, passiveCount - 1);
     const at = enemies.indexOf(entry);
     if (at !== -1) enemies.splice(at, 1);
     const mineAt = mine.indexOf(entry);
@@ -337,7 +353,9 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     const groupId = detail?.groupId === undefined || detail?.groupId === null ? '' : String(detail.groupId);
     if (!groupId) return { ok: false, reason: 'no groupId' };
     if (!kind) return { ok: false, reason: 'unknown kind ' + detail?.kind };
-    if (watcher.isLive(groupId)) return { ok: false, reason: 'group is live' };
+    if (watcher.isLive(groupId) || groupMeta.get(groupId)?.passive)
+      return { ok: false, reason: 'group is live' };
+    const passive = detail.passive === true;
     const x = Number(detail.x), z = Number(detail.z);
     if (!Number.isFinite(x) || !Number.isFinite(z)) return { ok: false, reason: 'no point' };
     const asked = clamp(Math.floor(Number(detail.count) || 1), 1, maxAlive);
@@ -352,15 +370,19 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     });
     if (!spots.length) return { ok: false, reason: 'no standable ground' };
     // A cleared group of the same id may still have bodies fading: forget it.
-    if (groupMeta.has(groupId)) watcher.closeGroup(groupId);
+    if (groupMeta.has(groupId)) {
+      watcher.closeGroup(groupId);
+      // Its last bodies are still fading: they belong to no group now.
+      for (const entry of mine) if (entry.threeRoads.groupId === groupId) entry.threeRoads.groupId = null;
+    }
     const tier = ENEMY_TIERS.includes(detail.tier) ? detail.tier : kind.defaultTier;
     const askedLevel = detail.level ?? 'player';
     const meta = {
-      groupId, kind: kind.id, tier, placeId: detail.placeId ?? null,
+      groupId, kind: kind.id, tier, placeId: detail.placeId ?? null, passive,
       x, z, radius, askedLevel, level: resolveLevel(askedLevel),
     };
     groupMeta.set(groupId, meta);
-    watcher.openGroup(meta, spots.length);
+    if (!passive) watcher.openGroup(meta, spots.length);
     pending += spots.length;
     pendingByGroup.set(groupId, spots.length);
     const source = sourceFor(kind);
@@ -384,8 +406,9 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
             watcher.dropPlanned(groupId);
             return;
           }
-          enemies.push(entry);
           mine.push(entry);
+          if (passive) { passiveCount += 1; return; }
+          enemies.push(entry);
           watcher.addEntry(groupId, entry);
         }, error => {
           if (!current()) return;
@@ -452,10 +475,16 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
   const offDespawn = bus.on('enemies:despawnGroup', detail => { despawnGroup(detail?.groupId); });
 
   return {
-    update() {
+    update(dt) {
       if (disposed) return;
+      const step = Math.max(0, Math.min(0.1, Number(dt) || 0));
       for (let i = mine.length - 1; i >= 0; i--) {
         const entry = mine[i];
+        if (entry.threeRoads.passive) {
+          // Not in the game's list: nothing else animates it.
+          entry.mixer?.update(step);
+          continue;
+        }
         if (entry.dying) {
           entry.respawnAt = null; // never back: the kill path set 10 s
           ownDeath(entry);
@@ -472,7 +501,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
       // asked for again.
       for (const id of groupMeta.keys()) {
         const group = watcher.getGroup(id);
-        if (group && !group.cleared) continue;
+        if (groupMeta.get(id).passive || (group && !group.cleared)) continue;
         let bodies = false;
         for (let i = 0; i < mine.length && !bodies; i++) bodies = mine[i].threeRoads.groupId === id;
         if (bodies) continue;
@@ -489,13 +518,14 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
         const group = watcher.getGroup(id);
         groups.push({
           groupId: id, kind: meta.kind, tier: meta.tier, placeId: meta.placeId, level: meta.level,
+          passive: !!meta.passive,
           planned: group?.planned ?? 0, made: group?.entries.length ?? 0,
           defeated: group?.defeated ?? 0, cleared: !!group?.cleared,
           pending: pendingByGroup.get(id) || 0,
         });
       }
       return {
-        max: maxAlive, alive: watcher.aliveCount(), pending, inScene: mine.length,
+        max: maxAlive, alive: watcher.aliveCount(), passive: passiveCount, pending, inScene: mine.length,
         kinds: Object.keys(kinds), groups, ids: mine.map(e => e.id),
       };
     },
@@ -510,6 +540,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
       groupMeta.clear();
       pendingByGroup.clear();
       pending = 0;
+      passiveCount = 0;
       for (const source of sources.values()) {
         try { source.dispose?.(); } catch { /* already gone */ }
       }

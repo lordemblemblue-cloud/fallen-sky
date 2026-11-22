@@ -309,3 +309,82 @@ test('a body split into many draw groups draws once per material, sharing its ve
   one.clearGroups();
   assert.equal(collapseDrawGroups(one), one, 'nothing to do');
 });
+
+test('a kill names the place only when the request named one', () => {
+  const { watcher, quest } = watched();
+  const a = { id: 'a', dying: true };
+  watcher.openGroup({ groupId: 'tr_m02_strays', kind: 'ink_shade' }, 1);
+  watcher.addEntry('tr_m02_strays', a);
+  watcher.scan([a]);
+  assert.deepEqual(quest, [{ type: 'enemy_killed', targetId: 'tr_m02_strays', kind: 'ink_shade', tier: 'normal', count: 1 }]);
+  assert.equal('placeId' in quest[0], false);
+});
+
+test('kills go to the pledges on axePledgeEvent, never on axeQuestEvent', async () => {
+  const heard = [];
+  const saved = { window: globalThis.window, CustomEvent: globalThis.CustomEvent };
+  globalThis.CustomEvent = class { constructor(type, init) { this.type = type; this.detail = init?.detail; } };
+  globalThis.window = { dispatchEvent: e => heard.push([e.type, e.detail]) };
+  try {
+    const scene = new THREE.Scene();
+    const enemies = [];
+    const sub = createEnemiesSubsystem({ scene, enemies, sampleGroundY: () => 0 }, {
+      playerLevel: { ready: Promise.resolve(), get: () => 1 }, warn: () => {},
+      createKindSource: () => ({
+        ready: Promise.resolve({}), dispose() {},
+        spawn(onLoaded) { globalThis.setTimeout(() => onLoaded(new THREE.Group()), 0); },
+      }),
+    });
+    sub.spawnGroup({ groupId: 'tr_m01_gate_shades', kind: 'ink_shade', count: 1, x: 0, z: 0, placeId: 'P04' });
+    await flush(); await flush();
+    enemies[0].dying = true;
+    sub.update(0.016);
+    assert.deepEqual(heard, [['axePledgeEvent', {
+      type: 'enemy_killed', targetId: 'tr_m01_gate_shades', placeId: 'P04', kind: 'ink_shade', tier: 'normal', count: 1,
+    }]]);
+    sub.dispose();
+  } finally {
+    globalThis.window = saved.window;
+    globalThis.CustomEvent = saved.CustomEvent;
+  }
+});
+
+test('a single monster stands on the point it was given', async () => {
+  const { planGroupPositions } = await import('../src/components/game3d/threeroads/enemies/enemyPlacement.mjs');
+  assert.deepEqual(planGroupPositions({ x: 12, z: -40, radius: 1, count: 1, sampleGroundY: () => 2 }), [{ x: 12, y: 2, z: -40 }]);
+  // Not when the point itself is a cliff edge: then somewhere near it.
+  const edge = (x) => (x > 12.5 ? null : 2);
+  const [p] = planGroupPositions({ x: 12, z: -40, radius: 4, count: 1, sampleGroundY: edge });
+  assert.ok(p && p.x <= 11.5);
+});
+
+test('a passive group stands, idles, cannot be fought and reports nothing until despawned', async () => {
+  const w = makeWorld();
+  w.bus.emit('enemies:spawnGroup', {
+    groupId: 'tr_m02_ink_archer', kind: 'ink_shade', count: 1, x: 30, z: 10, radius: 1, tier: 'normal', passive: true,
+  });
+  await flush(); await flush();
+  assert.equal(w.enemies.length, 0, 'never in the game\'s enemy list: no AI, no combat, no lock-on, no health bar');
+  const status = w.sub.status();
+  assert.equal(status.inScene, 1);
+  assert.equal(status.passive, 1);
+  assert.equal(status.groups[0].passive, true);
+  const body = w.scene.children.find(o => o.name.startsWith('ThreeRoads_Enemy_tr_m02_ink_archer'));
+  assert.ok(body, 'it stands in the scene');
+  assert.deepEqual([body.position.x, body.position.y, body.position.z], [30, 4, 10], 'on the point it was given');
+  assert.equal(body.getObjectByName('ThreeRoads_Enemy_Ring'), undefined, 'no hostile ring');
+  // It idles: the subsystem drives its mixer itself.
+  const before = w.sub.status();
+  for (let i = 0; i < 30; i++) w.sub.update(0.1);
+  assert.equal(w.sub.status().inScene, before.inScene, 'still there');
+  assert.equal(w.events.length + w.quest.length, 0, 'no deaths reported');
+  assert.equal(w.sub.spawnGroup({ groupId: 'tr_m02_ink_archer', kind: 'ink_shade', count: 1, x: 0, z: 0 }).ok, false,
+    'asking again while it stands does nothing');
+  // It counts against the twelve.
+  assert.equal(w.sub.spawnGroup({ groupId: 'g', kind: 'echo', count: 12, x: 80, z: 0, radius: 30 }).placed, 11);
+  w.bus.emit('enemies:despawnGroup', { groupId: 'tr_m02_ink_archer' });
+  assert.equal(w.scene.children.includes(body), false);
+  assert.equal(w.sub.status().passive, 0);
+  assert.equal(w.events.length + w.quest.length, 0, 'vanishing is not a death');
+  w.sub.dispose();
+});

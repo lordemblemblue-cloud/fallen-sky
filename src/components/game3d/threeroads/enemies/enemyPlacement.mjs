@@ -50,6 +50,12 @@ export function planGroupPositions({
 } = {}) {
   const n = Math.max(0, Math.floor(Number(count) || 0));
   if (!n || !Number.isFinite(x) || !Number.isFinite(z) || typeof sampleGroundY !== 'function') return [];
+  // One monster stands on the point itself when the ground there allows it
+  // (a figure placed at a named spot).
+  if (n === 1) {
+    const y = groundIsStandable(sampleGroundY, x, z, maxRise);
+    if (y !== null) return [{ x, y, z }];
+  }
   const r = Math.min(ENEMY_PLACEMENT_DEFAULTS.maxRadius,
     Math.max(ENEMY_PLACEMENT_DEFAULTS.minRadius, Number(radius) || 0));
   const total = Math.max(12, n * ENEMY_PLACEMENT_DEFAULTS.candidatesPerMonster);

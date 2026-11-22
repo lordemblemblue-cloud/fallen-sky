@@ -43,8 +43,19 @@ Closing the 1 XP and the old-quest credit needs a guard in those two files (outs
 ## Events
 
 - Bus: `enemies:defeated` `{ groupId, kind, id, tier }` and `enemies:groupCleared` `{ groupId, kind }`.
-- Window: `axeQuestEvent` `{ type: 'enemy_killed', targetId: groupId, placeId, kind, tier, count: 1 }`, once per death.
-- **Note for the pledge engine:** the quest store passes that event to `AXE_QUESTS` too. An accepted AXE kill objective with no `targetId` (`axe_q_first_patrol`, `patrol_kills`, the Echo chapter kill steps) advances on our kills. That is progress only; I did not follow whether turn-in grants anything from the browser.
+- Window: `axePledgeEvent` `{ type: 'enemy_killed', targetId: groupId, placeId, kind, tier, count: 1 }`, once per death, as `PLEDGE_ENGINE.md` sections 3 and 5 ask. Only pledges hear it; the older AXE and Echo kill quests do not. `placeId` is passed through exactly as the spawn request gave it (`P04`) and left out when the request had none.
+- The live check below was run before this change, when the event still went out on `axeQuestEvent`; the channel is pinned by a node test.
+
+## Passive groups
+
+`enemies:spawnGroup` with `passive: true` (the opening's script uses it once, for the ink figure seen ahead of the player):
+
+- never put in the game's enemy list, so the AI loop, combat, lock-on and health bars never see it: it does not notice or attack the player and cannot be hurt;
+- stands where it is put (a group of one stands on the point itself when the ground there allows it), idles (the subsystem drives its animation), has no hostile ring;
+- reports no deaths and is removed only by `enemies:despawnGroup` or `dispose()`; vanishing is not a death;
+- counts against the limit of 12 animated bodies.
+
+Not checked live; covered by node tests.
 
 ## Limits and cleanup
 
@@ -60,7 +71,7 @@ Closing the 1 XP and the old-quest credit needs a guard in those two files (outs
 | Kind | Draw calls / triangles before → with the group | Came at the player, telegraphed, hit | Deaths | Quest events | XP / gold |
 | --- | --- | --- | --- | --- | --- |
 | `ink_shade` (first build) | 168 / 1,934,990 → 786 / 2,001,380 | yes (HP 199 → 161) | — | — | — |
-| `ink_shade` (fixed) | 126 / 1,833,059 → 143 / 1,906,277 | yes | 6 with own clip, `respawnAt` null, removed after the fade, none back after 12 s | 6, `targetId` + `placeId` | 0 → 0 / 5000 → 5000 |
+| `ink_shade` (fixed) | 126 / 1,833,059 → 143 / 1,906,277 | yes | 6 with own clip, `respawnAt` null, removed after the fade, none back after 12 s | 6 (then on `axeQuestEvent`), `targetId` + `placeId` | 0 → 0 / 5000 → 5000 |
 | `old_dead` | 158 / 1,841,978 → 181 / 1,931,606 | yes (HP 187 → 161) | 6; Dying then Death checked on the last | 6 | 0 → 0 / 5000 → 5000 |
 | `echo` | 124 / 1,839,797 → 167 / 1,963,964 | yes (a lone echo: 4 strikes, HP 199 → 172) | 6 with own clip | 6 | 0 → 0 / 5000 → 5000 |
 
