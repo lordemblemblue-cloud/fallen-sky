@@ -90,6 +90,13 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   const baseEntries = new Set(Object.values(base).filter(Boolean));
   const baseWeights = { idle: 1, walk: 0, jog: 0, sprint: 0 };
   const baseTime = { idle: 0, walk: 0, jog: 0, sprint: 0 };
+  let stridePhase = 0;
+  let legBlend = 0;
+  const chest = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine');
+  const impactRotation = new THREE.Quaternion();
+  const impactEuler = new THREE.Euler();
+  const animatedChest = new THREE.Quaternion();
+  let restoreChest = false;
   let elapsed = 0;
   let settle = null; // { clip, time }
   let lastAction = null; // the fighter.action object seen last frame
@@ -178,7 +185,13 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
         if (clip) return { clip: evasion.clip, time: Math.min(clip.duration - 1e-3, (a.t / a.move.duration) * clip.duration), fade: 0.05 };
       }
       const at = clipAt(a.id, a.t);
-      if (at && library[at.clip]) return { clip: at.clip, time: at.time, fade: a.chainedFrom ? 0.06 : FADE.in };
+      if (at && library[at.clip]) {
+        // Give a short wind-up time to take over the pose before the first contact frame.
+        const fade = a.move.kind === 'attack'
+          ? Math.min(FADE.in, Math.max(0.018, a.move.startup / 4))
+          : FADE.in;
+        return { clip: at.clip, time: at.time, fade, out: a.move.kind === 'attack' ? fade : FADE.out };
+      }
       if (library[a.id]) return { clip: a.id, time: Math.min(library[a.id].duration - 1e-3, a.t) };
     }
     if (!a && airborne && library.jumpLoop) {
@@ -210,7 +223,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
 
   // working: { clip, progress (0..1), loop } while the fighter is using something, else null
   // clash: when (the rules' time) this fighter's cut was last parried, or null
-  function update(dt, { fighter, body, now, working = null, clash = null }) {
+  function update(dt, { fighter, body, now, working = null, clash = null, impact = null }) {
     elapsed += dt;
     const want = choose(fighter, body, now, dt, working, clash);
     lastAction = fighter.action;
@@ -252,7 +265,18 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     const baseShare = 1 - overlayShare;
     // what shows over the base: wholly for the trunk and arms; for the legs, a layered clip gives way to the walk
     // as the body moves, a whole-body clip does not
-    const walking = Math.min(1, speed / WALKING);
+    legBlend += (Math.min(1, speed / WALKING) - legBlend) * -Math.expm1(-dt / 0.085);
+    const walking = legBlend;
+    // Walk, jog and sprint share a footfall phase through changes of pace.
+    let cadence = 0;
+    let movingWeight = 0;
+    for (const key of ['walk', 'jog', 'sprint']) {
+      if (!base[key]) continue;
+      const weight = baseWeights[key];
+      cadence += weight * pace[key] / base[key].action.getClip().duration;
+      movingWeight += weight;
+    }
+    if (movingWeight > 0.001 && speed > 0.05) stridePhase = (stridePhase + dt * cadence / movingWeight) % 1;
     let legsTaken = 0;
     for (const entry of actions.values()) {
       if (baseEntries.has(entry)) continue;
@@ -266,14 +290,27 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     const legsShare = Math.max(0, 1 - legsTaken);
     for (const [key, entry] of Object.entries(base)) {
       if (!entry) continue;
-      baseTime[key] = (baseTime[key] + dt * pace[key]) % entry.action.getClip().duration;
+      const duration = entry.action.getClip().duration;
+      baseTime[key] = key === 'idle' ? (baseTime[key] + dt) % duration : stridePhase * duration;
       entry.action.time = baseTime[key];
       entry.legs.time = baseTime[key];
       const share = baseSum > 1e-6 ? baseWeights[key] / baseSum : (key === 'idle' ? 1 : 0);
       entry.action.setEffectiveWeight(share * baseShare);
       entry.legs.setEffectiveWeight(share * legsShare);
     }
+    if (restoreChest) chest.quaternion.copy(animatedChest);
+    restoreChest = false;
     mixer.update(0);
+    if (chest && impact && !fighter.vitals.dead && !fighter.heldBy && now >= fighter.riseUntil) {
+      const age = now - impact.at;
+      if (age >= 0 && age < 0.22) {
+        const recoil = impact.strength * Math.sin(Math.PI * Math.min(1, age / 0.22) ** 0.6);
+        animatedChest.copy(chest.quaternion);
+        impactEuler.set(impact.pitch * recoil, 0, -impact.roll * recoil);
+        chest.quaternion.multiply(impactRotation.setFromEuler(impactEuler));
+        restoreChest = true;
+      }
+    }
     if (secondHand) {
       // on the shaft as much as the clips now showing say (the stance and the guard: wholly; a sweep: not at all)
       let on = 0;
