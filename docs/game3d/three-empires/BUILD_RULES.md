@@ -108,6 +108,8 @@ Each empire, and the valley, has one kit: a GLB at `public/game3d/threeroads/kit
 
 The reference is for craft only: how land is shaped and a kind of place laid out. None of that game's map, places, names, characters, quests, art or music is used.
 
+**Gliding.** The player will be able to jump from a height and glide (another session builds it; do not edit the player's movement files). Read section 15 of the quest plan before shaping any height or anything a player might land on. Until the glide's reach is known, fix no launch-to-landing distance; never plan a glide across an area border; give every landing one thing that shows from above; and put each area's landmarks in the drawn-from-anywhere set, because a player in the air sees past the 150 m limit.
+
 ## 9. Story and words
 
 Every name, title and spoken line comes from `threeroads/script/`, written by the lead. Do not invent story text; where you need a line that does not exist yet, use a visible placeholder (`[line: lyra_m01_offer_1]`) and list it in your report.

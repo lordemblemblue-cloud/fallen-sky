@@ -526,7 +526,38 @@ One band at a time, and inside a band one region per chat so they do not edit th
 
 Each place is built the same way: look at how that kind of place is laid out in the reference videos, shape the land, dress it from a small kit, add its low-poly version, then measure frame time in the browser before and after.
 
-## 15. Decisions for the owner
+## 15. Gliding: land shaped for jumping off
+
+Added 2026-11-22. The owner asked for the ability to "glide and fly", to "jump off hills", with combat unchanged and the glide under the player's control. Another session (the one that owns the player's movement) is building the ability. This plan's part is the land: heights worth jumping from, landings worth reaching, and a few places that are easier or only reachable from the air.
+
+**Rules until the glide's reach is known.** No distance below is fixed: how far a glide carries for each metre of height comes from the session building it, and every launch and landing is measured against that number before it is built. No glide route crosses a border between areas, because the far side of a border is not loaded. A player who is carrying something for a pledge, or walking someone home, cannot glide. Seen from the air a place is read by its outline, so each landing has one thing that shows from above: a fire, a banner, a ring of stones, pale ground.
+
+**Where the land already wants it** (heights from the game's own ground):
+
+| Area | Jump from | Toward | What it gives |
+| --- | --- | --- | --- |
+| North | Wolf-Ear Vigil and the peaks above it (119 m and up) | the fort road, the hot springs (about 85 to 90 m) | the long glide of the game; all three camps' fires in view on the way down |
+| North | the mountain mouth above the Vortex Lake | the whirl itself | the descent of chapter 10 of the main story: you leap, and spiral down into the lake |
+| North | the ridge above the Harpy Roost | the roost's ledges | a place reached only from the air (discovery X07) |
+| East | the head of the Hidden Waterfall (about 99 m) | the pool below (about 37 m) | a leap beside the falling water |
+| East | the heights by the Crystal Vault (about 99 m) | the quarry floor (about 51 m) | the fast way down to the quarry, over the obelisk |
+| West | the Cedar Spine above the Rookery | the dead cedars' nests | a place reached only from the air (discovery X03) |
+| West | the unfinished railway trestle | across the cutting | a jump the railway story can use |
+| Town | the Sanctuary and the Field of Standards (about 76 to 78 m) | down the main road toward the plaza (about 23 m) | the first glide a new player is likely to try, in safety |
+
+The Gate Fields are flat: they are where glides end, never where they begin. That suits them as the open battlefield.
+
+**In the quests.**
+- The Kite Line (V07): the kite hangs on a ledge that can only be reached by gliding from the Vigil; the way home is the glide down.
+- Wolf-Ear Vigil (V13): at dawn the player leaps from the peak and sees the three camps from the air.
+- The World Beneath the World (M10): the way down into the lake is a leap.
+- The Rookery (X03) and the Harpy Roost (X07): reached from above.
+- Signal Fires (W03): the beacons stand on the three crowns, so whoever lights one leaves by air, and whoever comes to put it out may arrive that way.
+- Each empire's camp is overlooked by one height from which it can be raided from the air: the peaks above the Remorian fort, the Cedar Spine above the Akitsu camp, the hill east of the Tameri landing. A camp has to keep a lookout on the side the sky is on.
+
+**For the builders.** A player in the air sees much further than one on the ground. The rule "nothing is drawn beyond 150 m unless it is a landmark" will show as things appearing below the glider, so each area's landmarks and each landing's marker have to be in the drawn-from-anywhere set, and frame time is measured from the air as well as from the ground.
+
+## 16. Decisions for the owner
 
 1. **The story and the three empires**: is this the story you want? Any empire you would change?
 2. **Which faction is which empire**: bear = Akitsu, wolf = Remoria, tiger = Tameri. This is the one choice that touches existing characters.
