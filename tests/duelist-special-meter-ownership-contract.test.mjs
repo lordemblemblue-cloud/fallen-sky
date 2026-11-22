@@ -50,3 +50,29 @@ test('trusted charge helper rejects malformed values and never exceeds 0–100',
     assert.equal(awardSpecialCharge(99, event), SPECIAL_MAX);
   }
 });
+
+test('a charged meter remains private between human seats, including while a class swap is pending', () => {
+  const match = createMatch({ mode: 'duel', players: [{ id: 'red' }, { id: 'blue' }] });
+  assert.equal(queueMatchClass(match, 'red', 'warrior').accepted, true);
+  assert.equal(queueMatchClass(match, 'blue', 'healer').accepted, true);
+  stepMatch(match, COUNTDOWN + 0.01, {});
+  assert.equal(match.phase, 'live');
+  const red = match.seats.get('red');
+  const blue = match.seats.get('blue');
+  // Model a server-confirmed award at the trusted seat boundary, not a client packet.
+  red.specialMeter = awardSpecialCharge(0, 'elimination');
+  blue.specialMeter = awardSpecialCharge(0, 'allyHeal');
+  assert.equal(matchView(match, 'red').me.specialMeter, SPECIAL_CHARGE.elimination);
+  assert.equal(matchView(match, 'blue').me.specialMeter, SPECIAL_CHARGE.allyHeal);
+  for (const viewer of ['red', 'blue', 'unknown']) {
+    const view = matchView(match, viewer);
+    assert.equal(view.people.some(person => Object.hasOwn(person, 'specialMeter')), false);
+  }
+  // The pending class is not allowed to reset or transfer charge before respawn.
+  match.world.fighters.get('red').vitals.dead = true;
+  assert.equal(queueMatchClass(match, 'red', 'assassin').accepted, true);
+  assert.equal(red.classId, 'warrior');
+  assert.equal(red.specialMeter, SPECIAL_CHARGE.elimination);
+  assert.equal(matchView(match, 'red').me.specialMeter, SPECIAL_CHARGE.elimination);
+  assert.equal(matchView(match, 'blue').me.specialMeter, SPECIAL_CHARGE.allyHeal);
+});
