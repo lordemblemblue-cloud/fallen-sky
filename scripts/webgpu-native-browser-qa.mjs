@@ -173,7 +173,7 @@ export async function main(argv = process.argv.slice(2)) {
       await client.send('Page.enable');
       const capture = await client.send('Page.captureScreenshot',
         { format: 'png', captureBeyondViewport: false });
-      const path = resolve(opts.out ? opts.out.replace(/\.json$/i, '.png')
+      const path = resolve(opts.out ? opts.out.replace(/(\.json)?$/i, '.png')
         : 'webgpu-native-qa-' + opts.scene + '.png');
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, Buffer.from(capture.data, 'base64'));
