@@ -192,6 +192,12 @@ export function createPledgeInterpreter({
       world: watcherWorld, point, personName, whereIs,
       groupPoint: groupId => groupSpawnPoint(rt.staging, groupId, point),
       holder: holderOf(rt, index),
+      // How far behind the player each follower walks (from the cues so far).
+      followDistance: (() => {
+        if (step.kind !== 'escort') return null;
+        const follows = standingState(rt.pledge, rt.staging, index, rt.progress).follows;
+        return id => (follows.has(id) ? Number(follows.get(id).distance) || null : null);
+      })(),
     });
   }
 
