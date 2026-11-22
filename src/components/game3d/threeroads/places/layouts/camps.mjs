@@ -110,7 +110,7 @@ function campPlaces(plan) {
   const dressing = DRESSING[plan.id]?.(centre, plan) || {};
   const places = [Object.freeze({
     id: plan.place, key: plan.id, area: plan.area, x: centre.x, z: centre.z,
-    radius: radiusFor(home, centre), preview: true, camp: plan.id,
+    radius: radiusFor(home, centre), preview: true, camp: plan.id, merge: true,
     pieces: piecesOf(plan, home, centre),
     ground: dressing.ground || [], lights: dressing.lights || [],
     anchors: Object.fromEntries(plan.sentries.map((spot, i) => [`sentry_${i + 1}`, { x: spot.x - centre.x, z: spot.z - centre.z, facing: 0 }])),
