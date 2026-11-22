@@ -80,6 +80,7 @@ test('guard blending only animates a mesh; no server ability or hit window is ch
   assert.equal(fighter.meter, old.meter);
   assert.equal(fighter.vitals.stamina, old.stamina);
   assert.equal(fighter.vitals.will, old.will);
-  assert.equal(old.guard, false);
+  assert.equal(old.guard, null, 'fighters begin out of guard');
+  assert.equal(fighter.guard, true, 'visual rendering did not cancel server-owned guard');
   animator.dispose();
 });
