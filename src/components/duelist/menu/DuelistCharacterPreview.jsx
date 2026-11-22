@@ -8,7 +8,7 @@ import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
 
-export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', classId = 'duelist' }) {
+export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', classId = 'duelist', compact = false }) {
   const mountRef = useRef(null);
   const [unavailable, setUnavailable] = useState(false);
 
