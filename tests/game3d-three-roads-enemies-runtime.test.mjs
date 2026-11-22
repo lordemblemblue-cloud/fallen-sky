@@ -290,3 +290,22 @@ test('no scene or no enemy list means nothing to do', () => {
   assert.equal(createEnemiesSubsystem({ scene: new THREE.Scene() }), null);
   assert.equal(createEnemiesSubsystem(undefined), null);
 });
+
+test('a body split into many draw groups draws once per material, sharing its vertices', async () => {
+  const { collapseDrawGroups } = await import('../src/components/game3d/threeroads/enemies/enemiesSubsystem.mjs');
+  // Non-indexed, 6 triangles in 6 groups alternating two materials (as the FBX rigs arrive).
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(18 * 3).map((_, i) => i), 3));
+  for (let t = 0; t < 6; t++) g.addGroup(t * 3, 3, t % 2);
+  const c = collapseDrawGroups(g);
+  assert.equal(c.groups.length, 2);
+  assert.deepEqual(c.groups.map(x => x.materialIndex), [0, 1]);
+  assert.equal(c.index.count, 18);
+  assert.equal(c.attributes.position, g.attributes.position, 'vertices shared, not copied');
+  assert.deepEqual([...c.index.array].slice(0, 6), [0, 1, 2, 6, 7, 8]);
+  assert.deepEqual([...c.index.array].sort((a, b) => a - b), Array.from({ length: 18 }, (_, i) => i));
+  assert.equal(collapseDrawGroups(g), c, 'built once per source geometry');
+  const one = new THREE.BoxGeometry();
+  one.clearGroups();
+  assert.equal(collapseDrawGroups(one), one, 'nothing to do');
+});

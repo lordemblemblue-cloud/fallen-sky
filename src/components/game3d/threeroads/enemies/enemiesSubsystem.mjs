@@ -117,6 +117,53 @@ function standModel(model, kind, tier) {
   return scale;
 }
 
+// Some rigs arrive split into many draw groups (the legacy creature: 101
+// groups over 2 materials, so 101 draw calls per monster). Re-index the
+// triangles material by material: one group per material, or none when the
+// whole body takes one material (the ink look). The vertex attributes are
+// shared with the source, nothing is copied but the index. Built once per
+// source geometry (every clone shares it) and never disposed while the world
+// runs, like the source geometry itself.
+const collapsedGeometries = new WeakMap();
+export function collapseDrawGroups(geometry, { single = false } = {}) {
+  const groups = geometry?.groups || [];
+  if (groups.length <= 1 && !(single && groups.length)) return geometry;
+  const key = single ? 'single' : 'byMaterial';
+  let cached = collapsedGeometries.get(geometry);
+  if (cached?.[key]) return cached[key];
+  const source = geometry.index ? geometry.index.array : null;
+  const total = groups.reduce((n, g) => n + Math.max(0, Math.min(g.count, (source ? source.length : geometry.attributes.position.count) - g.start)), 0);
+  const vertexCount = geometry.attributes.position.count;
+  const index = vertexCount > 65535 ? new Uint32Array(total) : new Uint16Array(total);
+  const ordered = [...groups].sort((a, b) => (a.materialIndex || 0) - (b.materialIndex || 0) || a.start - b.start);
+  const out = new THREE.BufferGeometry();
+  let at = 0;
+  let groupStart = 0;
+  let currentMaterial = null;
+  for (const g of ordered) {
+    const material = g.materialIndex || 0;
+    if (!single && currentMaterial !== null && material !== currentMaterial) {
+      out.addGroup(groupStart, at - groupStart, currentMaterial);
+      groupStart = at;
+    }
+    currentMaterial = material;
+    const end = Math.min(g.start + g.count, source ? source.length : vertexCount);
+    for (let i = g.start; i < end; i++) index[at++] = source ? source[i] : i;
+  }
+  if (!single && currentMaterial !== null) out.addGroup(groupStart, at - groupStart, currentMaterial);
+  out.setIndex(new THREE.BufferAttribute(index, 1));
+  for (const name of Object.keys(geometry.attributes)) out.setAttribute(name, geometry.attributes[name]);
+  out.morphAttributes = geometry.morphAttributes;
+  out.morphTargetsRelative = geometry.morphTargetsRelative;
+  if (geometry.boundingBox) out.boundingBox = geometry.boundingBox.clone();
+  if (geometry.boundingSphere) out.boundingSphere = geometry.boundingSphere.clone();
+  out.name = (geometry.name || 'geometry') + '_threeRoadsGroups';
+  cached = cached || {};
+  cached[key] = out;
+  collapsedGeometries.set(geometry, cached);
+  return out;
+}
+
 function dressModel(model, kind) {
   const tintMaterials = [];
   const ink = kind.look === 'ink' ? new THREE.MeshStandardMaterial({
@@ -131,9 +178,12 @@ function dressModel(model, kind) {
     if (node.isSkinnedMesh) node.frustumCulled = false;
     if (!node.material) return;
     if (ink) {
-      node.material = Array.isArray(node.material) ? node.material.map(() => ink) : ink;
+      // One (non-array) material draws the whole body in one call, whatever
+      // groups the geometry has.
+      node.material = ink;
       return;
     }
+    if (Array.isArray(node.material)) node.geometry = collapseDrawGroups(node.geometry);
     // Each monster fades on its own: its own copies of the materials.
     node.material = Array.isArray(node.material)
       ? node.material.map(m => m.clone()) : node.material.clone();
