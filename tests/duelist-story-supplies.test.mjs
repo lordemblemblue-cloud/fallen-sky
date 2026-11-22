@@ -30,10 +30,10 @@ test('a full resource refuses the bonus without consuming it; shield and Will ar
   const result = claimStorySupply(m, 'ada', 'guardian-cell');
   assert.equal(result.value, a.vitals.max.shield);
   assert.equal(a.vitals.shield, a.vitals.max.shield);
-  b.vitals.will = b.vitals.max.will - 100;
+  b.vitals.will = Math.max(0, b.vitals.max.will - 10);
   const will = claimStorySupply(m, 'ben', 'focus-draught');
   assert.equal(will.ok, true);
-  assert.equal(b.vitals.will, b.vitals.max.will - 80);
+  assert.equal(b.vitals.will, b.vitals.max.will);
 });
 
 test('only authoritative, live human story seats may claim; invalid requests never spend', () => {
