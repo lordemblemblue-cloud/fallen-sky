@@ -544,7 +544,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const at = bodyOf(world, mineId);
           const target = lockedBody();
           const faceYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : null;
-          return controls.read({ faceYaw, strafe: !!target });
+          // One attack animation lasts multiple simulation frames. Keep the
+          // blade and collision arc facing the camera or locked opponent while
+          // movement keys independently strafe and backstep.
+          const mine = world.fighters.get(mineId);
+          const aimWhileAttacking = mine?.action?.move?.kind === 'attack';
+          return controls.read({ faceYaw, strafe: !!target, aimWhileAttacking });
         };
         const { effects, events } = source.step(dt, readInput);
         escort?.update(source.escortDistance?.() ?? 0);

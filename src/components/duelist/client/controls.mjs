@@ -98,7 +98,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
       if (paused) { held.clear(); presses.length = 0; presses.push('blockUp'); }
     },
     // This frame's input for the player's fighter (world-space move from the camera's yaw).
-    read({ faceYaw = null, strafe = false } = {}) {
+    read({ faceYaw = null, strafe = false, aimWhileAttacking = false } = {}) {
       if (paused) return { move: { x: 0, z: 0 }, run: false, sprint: false,
         interact: false, face: null, strafe, presses: presses.splice(0) };
       const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0);
@@ -111,8 +111,11 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
       if (len > 1) { x /= len; z /= len; }
       const moving = len > 0.01;
       const pressed = presses.splice(0);
-      // strikes and powers go where the camera looks; otherwise the body turns the way it moves
-      const aiming = pressed.some((c) => AIMED.has(c)) || held.has('heavy');
+      // During a sword swing the camera/locked target stays authoritative for aim,
+      // even when a lateral/backward WASD input moves the feet elsewhere.
+      // The match simulation supplies aimWhileAttacking from the current move;
+      // plain traversal still faces the movement direction.
+      const aiming = aimWhileAttacking || pressed.some((c) => AIMED.has(c)) || held.has('heavy') || held.has('light');
       return {
         move: { x, z },
         run: true,
