@@ -1,5 +1,6 @@
 // Every band of The War of Three Roads that has been written, in order.
-// A band is { id, title, areas, points, pointAreas, lines, pledges, staging }.
+// A band is { id, built, title, areas, points, pointAreas, lines, pledges, staging }.
+// Only the pledges of a band with `built: true` are registered in the game.
 // `pointAreas` maps a point-name prefix to the area its points must lie in;
 // a band with `defaultPointArea` uses that for every other point.
 import {
@@ -12,6 +13,7 @@ import {
 export const THREE_ROADS_BANDS = Object.freeze([
   Object.freeze({
     id: 'band1',
+    built: true,
     title: 'The opening: the town and the Gate Fields',
     areas: Object.freeze(['town', 'south']),
     points: BAND1_POINTS,
@@ -23,6 +25,7 @@ export const THREE_ROADS_BANDS = Object.freeze([
   }),
   Object.freeze({
     id: 'band2',
+    built: false, // its camps are not built yet: written, checked, not offered in the game
     title: "Each empire's camp and its first two chapters",
     areas: Object.freeze(['west', 'east', 'north']),
     points: BAND2_POINTS,
@@ -33,6 +36,9 @@ export const THREE_ROADS_BANDS = Object.freeze([
     staging: BAND2_STAGING,
   }),
 ]);
+
+// The bands whose places exist in the game.
+export const threeRoadsBuiltBands = () => THREE_ROADS_BANDS.filter(band => band.built);
 
 // The area a named point of a band has to lie in, or null if the band does not say.
 export function threeRoadsPointArea(band, name) {
