@@ -6,6 +6,8 @@
 //     thing up at `from` with E, walk it to `to` on foot; one report per
 //     arrival; 'carry_dropped' if the player dies, mounts or is knocked down.
 //   watch for a `defeat` step may carry `sayEach`: one line spoken at each death.
+// An optional step is open only alongside the required step listed before
+// it, so an optional look-around is listed after the talk it may precede.
 //
 // Every person, line and event is original. Monsters named here are the kinds
 // the game can already show (ink_shade, old_dead, echo); the four-legged ink
@@ -184,8 +186,8 @@ export const BAND2_PLEDGES = Object.freeze([
         { id: 'drill', kind: 'use', text: 'Show three recruits how a rifle is held when it is a spear.', target: 'tr_a01_drill', placeId: 'P13', count: 3, seconds: 2 },
         { id: 'picket', kind: 'go_to', text: 'Take the west picket.', target: 'tr_a01_picket' },
         { id: 'raid', kind: 'defeat', text: 'Hold the picket against what comes out of the cedars.', target: 'tr_a01_raid', placeId: 'P13', count: 5 },
-        { id: 'peg', kind: 'pick_up', text: 'A quiver is missing from the armoury tent. Look at the empty peg.', target: 'tr_a01_empty_peg', optional: true },
         { id: 'report', kind: 'talk', text: 'Report to Sergeant Gorō at the fire.', target: 'goro_sergeant' },
+        { id: 'peg', kind: 'pick_up', text: 'A quiver is missing from the armoury tent. Look at the empty peg.', target: 'tr_a01_empty_peg', optional: true },
         { id: 'wagon', kind: 'choose', text: 'Answer the Sergeant.' },
       ],
       choices: {
@@ -252,8 +254,8 @@ export const BAND2_PLEDGES = Object.freeze([
         { id: 'jars_a', kind: 'carry', text: 'Carry two grain jars from the barge to the stack.', target: 'tr_t01_grain_jar_a', placeId: 'P24', count: 2, failsOn: 'carry_dropped' },
         { id: 'reeds', kind: 'defeat', text: 'Drive off what comes out of the reeds.', target: 'tr_t01_reed_shades', placeId: 'P24', count: 4 },
         { id: 'jars_b', kind: 'carry', text: 'Carry the last two jars.', target: 'tr_t01_grain_jar_b', placeId: 'P24', count: 2, failsOn: 'carry_dropped' },
-        { id: 'case', kind: 'pick_up', text: 'A bow case on the jetty lies open and empty. Look at it.', target: 'tr_t01_empty_case', optional: true },
         { id: 'tally', kind: 'talk', text: 'Hear the count.', target: 'paneb_scribe' },
+        { id: 'case', kind: 'pick_up', text: 'A bow case on the jetty lies open and empty. Look at it.', target: 'tr_t01_empty_case', optional: true },
       ],
       standings: { kept: { renown: 4 }, broken: { renown: -2 }, optional: { case: { regard: 1 } } },
       rewardPreview: { kinds: ['experience', 'renown', 'keepsake'] },
@@ -323,8 +325,8 @@ export const BAND2_PLEDGES = Object.freeze([
         { id: 'finish', kind: 'go_to', text: 'Finish the furrow.', target: 'tr_r01_furrow_end', placeId: 'P36' },
         { id: 'again', kind: 'defeat', text: 'They are back. Hold the line.', target: 'tr_r01_mist_2', placeId: 'P36', count: 4 },
         { id: 'stone', kind: 'use', text: 'Set the boundary stone.', target: 'tr_r01_boundary_stone', placeId: 'P36', seconds: 3 },
-        { id: 'case', kind: 'pick_up', text: "An archer's case on the plough cart is empty. Look at it.", target: 'tr_r01_empty_case', optional: true },
         { id: 'vine', kind: 'talk', text: 'Speak with Old Vine.', target: 'titus_oldvine' },
+        { id: 'case', kind: 'pick_up', text: "An archer's case on the plough cart is empty. Look at it.", target: 'tr_r01_empty_case', optional: true },
       ],
       standings: { kept: { renown: 4 }, broken: { renown: -2 }, optional: { case: { regard: 1 } } },
       rewardPreview: { kinds: ['experience', 'renown', 'keepsake'] },
@@ -387,8 +389,8 @@ export const BAND2_STAGING = Object.freeze({
         done: [{ spawnGroup: { groupId: 'tr_a01_raid', placeId: 'P13', kind: 'ink_shade', count: 5, at: 'camp_cedars', radius: 7, tier: 'normal' } }],
       },
       raid: { watch: { groupId: 'tr_a01_raid' }, done: [{ say: 'goro_a01_07' }] },
-      peg: { watch: { point: 'camp_armoury', radius: 3, prompt: 'Look at the empty peg', sayAt: { camp_armoury: 'goro_a01_08' } } },
       report: { watch: { npc: 'goro_sergeant' } },
+      peg: { watch: { point: 'camp_armoury', radius: 3, prompt: 'Look at the empty peg', sayAt: { camp_armoury: 'goro_a01_08' } } },
       wagon: {},
     },
   },
@@ -430,8 +432,8 @@ export const BAND2_STAGING = Object.freeze({
       jars_b: {
         watch: { from: 'landing_jetty', to: 'landing_stack', radius: 4, prompt: 'Lift a grain jar', sayEach: ['paneb_t01_04', 'paneb_t01_05'] },
       },
-      case: { watch: { point: 'landing_bowcase', radius: 3, prompt: 'Look at the bow case', sayAt: { landing_bowcase: 'sabu_t01_03' } } },
       tally: { watch: { npc: 'paneb_scribe' }, done: [{ say: 'paneb_t01_06' }] },
+      case: { watch: { point: 'landing_bowcase', radius: 3, prompt: 'Look at the bow case', sayAt: { landing_bowcase: 'sabu_t01_03' } } },
     },
   },
   tr_t02_opening_of_the_mouth: {
@@ -501,8 +503,8 @@ export const BAND2_STAGING = Object.freeze({
         watch: { point: 'furrow_stone', radius: 3, prompt: 'Set the boundary stone', sayAt: { furrow_stone: 'oldvine_r01_08' } },
         done: [{ say: 'veranius_r01_03' }, { castFollow: 'titus_oldvine', target: null }],
       },
-      case: { watch: { point: 'furrow_cart', radius: 3, prompt: "Look at the archer's case", sayAt: { furrow_cart: 'oldvine_r01_09' } } },
       vine: { watch: { npc: 'titus_oldvine' }, done: [{ say: 'oldvine_r01_10' }] },
+      case: { watch: { point: 'furrow_cart', radius: 3, prompt: "Look at the archer's case", sayAt: { furrow_cart: 'oldvine_r01_09' } } },
     },
   },
   tr_r02_the_crack: {

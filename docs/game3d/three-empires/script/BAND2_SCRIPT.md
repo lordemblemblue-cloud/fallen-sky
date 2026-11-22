@@ -30,11 +30,11 @@ Akitsu's story, chapter 1. Asked by Sergeant Gorō.
 
 - **Sergeant Gorō:** Count them. All eleven? All eleven! Put the kettle on, Kenta. We're alive.
 
-**Step 4. A quiver is missing from the armoury tent. Look at the empty peg.** *(optional)*
+**Step 4. Report to Sergeant Gorō at the fire.**
+
+**Step 5. A quiver is missing from the armoury tent. Look at the empty peg.** *(optional)*
 
 - **Sergeant Gorō:** One peg empty. Shrine bows don't walk off. Somebody has been in my armoury, and it wasn't the ink.
-
-**Step 5. Report to Sergeant Gorō at the fire.**
 
 **Step 6. Answer the Sergeant.**
 
@@ -116,13 +116,13 @@ Tameri's story, chapter 1. Asked by Paneb the Scribe.
 - **Paneb the Scribe:** Three.
 - **Paneb the Scribe:** Four. All four.
 
-**Step 4. A bow case on the jetty lies open and empty. Look at it.** *(optional)*
-
-- **Sabu:** That's a chariot archer's bow case. Tiaa's, by the stitching. Empty. She is going to skin someone, and I'd like it not to be me.
-
-**Step 5. Hear the count.**
+**Step 4. Hear the count.**
 
 - **Paneb the Scribe:** Forty-one days of grain at home this morning. With this barge sent back full, forty-three. Look at the board. That number is the only general I serve.
+
+**Step 5. A bow case on the jetty lies open and empty. Look at it.** *(optional)*
+
+- **Sabu:** That's a chariot archer's bow case. Tiaa's, by the stitching. Empty. She is going to skin someone, and I'd like it not to be me.
 
 **When it is finished**
 
@@ -217,13 +217,13 @@ Remoria's story, chapter 1. Asked by First Centurion Titus Petronius.
 - **First Centurion Titus Petronius:** Set it deep. There. First stone of the colony. Somebody ought to say something.
 - **Augur Decimus Veranius:** The Mother walked the furrow with us and tried our courage twice. It is the best omen of my life.
 
-**Step 6. An archer's case on the plough cart is empty. Look at it.** *(optional)*
-
-- **First Centurion Titus Petronius:** That's an island archer's case, and it's empty. He'll say the wolves took it. Wolves don't undo buckles.
-
-**Step 7. Speak with Old Vine.**
+**Step 6. Speak with Old Vine.**
 
 - **First Centurion Titus Petronius:** You see those roofs down the valley? People. On my twenty acres, or near enough. Nobody mentioned people when they read us the grant.
+
+**Step 7. An archer's case on the plough cart is empty. Look at it.** *(optional)*
+
+- **First Centurion Titus Petronius:** That's an island archer's case, and it's empty. He'll say the wolves took it. Wolves don't undo buckles.
 
 **When it is finished**
 

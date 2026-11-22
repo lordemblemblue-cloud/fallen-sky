@@ -59,6 +59,10 @@ export const BAND1_POINTS = Object.freeze({
   way_west: Object.freeze({ x: -180, z: -110 }),
   way_east: Object.freeze({ x: 60, z: -98 }),
   way_north: Object.freeze({ x: 0, z: 10 }),
+  // Town: where the three travellers go once they have been counted in, beside their people's lodges
+  lodge_akitsu: Object.freeze({ x: -27, z: -90 }),
+  lodge_tameri: Object.freeze({ x: 27, z: -90 }),
+  lodge_remoria: Object.freeze({ x: 3, z: -103 }),
   // Town: the Lantern Wall
   lantern_wall: Object.freeze({ x: -4, z: -41 }),
   // Town: the Southern Wolf Gate and its wagon yard (P04)
@@ -295,7 +299,7 @@ export const BAND1_STAGING = Object.freeze({
     complete: ['lyra_m01_06', 'lyra_m01_07', 'lyra_m01_08'],
     steps: {
       oath: {
-        watch: { point: 'oath_tree', radius: 3.5, prompt: 'Tie your ribbon' },
+        watch: { point: 'oath_tree', radius: 5, prompt: 'Tie your ribbon' }, // the tree is solid: 5 m reaches it from every side
         done: [{ say: 'lyra_m01_04' }, { wait: 2 }, { sound: 'gate_bell' }, { say: 'lyra_m01_05' }],
       },
       gate: {
@@ -338,6 +342,9 @@ export const BAND1_STAGING = Object.freeze({
         done: [
           { sayByEmpire: { akitsu: 'henut_m01_04', tameri: 'livilla_m01_03', remoria: 'tome_m01_04', none: 'henut_m01_04' } },
           { flagByEmpire: { akitsu: 'tr_keepsake_tameri', tameri: 'tr_keepsake_remoria', remoria: 'tr_keepsake_akitsu', none: 'tr_keepsake_tameri' } },
+          { castMove: 'traveller_tome', to: 'lodge_akitsu', speed: 1.4 },
+          { castMove: 'traveller_henut', to: 'lodge_tameri', speed: 1.4 },
+          { castMove: 'traveller_livilla', to: 'lodge_remoria', speed: 1.4 },
         ],
       },
     },
