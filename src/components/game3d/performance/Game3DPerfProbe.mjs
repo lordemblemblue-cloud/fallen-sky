@@ -631,11 +631,27 @@ export function createGame3DPerfProbe({ host = window, groups = PERF_TOGGLE_GROU
     try {
       await waitFor(rendererReady, { what: 'renderer' });
       result.env = await environment();
-      const views = perfViewpoints({ areas, ids });
+      // The game falls back to classic WebGL when WebGPU failed earlier in this tab (sessionStorage), even with
+      // ?renderer=webgpu: say so loudly rather than file WebGL numbers under a WebGPU label.
+      const asked = new URLSearchParams(host.location.search).get('renderer');
+      const isWebGpu = (b) => /^WebGPU$/.test(String(b || ''));
+      const mismatch = asked === 'webgpu' && !isWebGpu(result.env.backend);
+      if (mismatch) {
+        result.errors.push({ view: 'run', error: `asked for WebGPU, the page runs ${result.env.backend} (${result.env.rendererChoice?.reason || '?'}); no views measured` });
+        say(result.errors.at(-1).error);
+      }
+      const startBackend = result.env.backend;
+      const views = mismatch ? [] : perfViewpoints({ areas, ids });
       // the area the page is in first: saves one remount
       const here = currentArea();
       views.sort((a, b) => (a.area === here ? -1 : 0) - (b.area === here ? -1 : 0) || areas.indexOf(a.area) - areas.indexOf(b.area));
       for (const view of views) {
+        const nowBackend = backendOf(host.__gw3dRenderer);
+        if (nowBackend !== startBackend) {
+          result.errors.push({ view: view.id, error: `renderer changed from ${startBackend} to ${nowBackend} (device lost or fallback); run stopped` });
+          say(result.errors.at(-1).error);
+          break;
+        }
         try { result.views.push(await measureView(view, { frames, warmup })); }
         catch (error) { result.errors.push({ view: view.id, error: String(error?.message || error) }); say(`${view.id} failed: ${error?.message || error}`); }
         if (toggles && view === views.filter((v) => v.area === view.area).at(-1)) {
