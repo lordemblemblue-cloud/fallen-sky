@@ -1,3 +1,4 @@
+/* global EventTarget, Event */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, addFighter, bodyOf, respawnFighter, step } from '../src/components/duelist/sim/world.mjs';
