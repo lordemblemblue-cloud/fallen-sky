@@ -13,8 +13,8 @@ export function selectRendererBackend({
     return { backend: 'webgl', reason: 'invalid-renderer-request' };
   }
   if (requested === 'webgl') return { backend: 'webgl', reason: 'user-selected-webgl' };
-  if (!sceneWebGPUReady) return { backend: 'webgl', reason: 'scene-not-migrated' };
-  if (!webgpuAvailable) return { backend: 'webgl', reason: 'webgpu-unavailable' };
+  if (sceneWebGPUReady !== true) return { backend: 'webgl', reason: 'scene-not-migrated' };
+  if (webgpuAvailable !== true) return { backend: 'webgl', reason: 'webgpu-unavailable' };
   return { backend: 'webgpu', reason: requested === 'webgpu' ? 'user-selected-webgpu' : 'auto-webgpu' };
 }
 
