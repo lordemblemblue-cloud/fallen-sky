@@ -73,7 +73,7 @@ export default function ClassPicker({ current, pending = null, fighter = 'masked
           </div>
           <button type="button" className="dcp-select" data-testid="duelist-class-select"
             onClick={() => onPick?.(chosen)} aria-label={`Select ${cls.name}`}>
-            {queued ? 'SELECTED FOR NEXT SPAWN' : 'SELECT CLASS'}
+            SELECT CLASS
           </button>
           <p aria-live="polite" className="dcp-selection-note">{note}</p>
         </div>
