@@ -219,7 +219,9 @@ function shadowRavine() {
 function firstFurrow() {
   const R = 'remoria';
   // The furrow runs from (-262, 410) to (-218, 426), 18 m north of the Hunter's Loop and beside it.
-  const along = yawToward(44, 16);
+  // The plough and the cart are long along their own X (the plough pulls toward +X), so each is
+  // turned a quarter less than the furrow's heading to lie along it, pointing up the line.
+  const along = yawToward(44, 16) - Math.PI / 2;
   const items = [
     item(R, 'plough', -264.35, 409.15, along), // waiting at the furrow's start
     item('valley', 'wagon', -267, 404.5, along), // the plough cart, with the archer's case
