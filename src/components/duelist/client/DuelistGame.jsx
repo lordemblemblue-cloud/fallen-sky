@@ -68,6 +68,7 @@ function setGhost(actor, on) {
 import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionHud.jsx';
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
+import '../menu/duelistDarkBlueTheme.css';
 
 const POWERS = ['push', 'pull', 'grip', 'breach', 'dash', 'resist']; // the on-screen buttons, labelled with their keys
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
