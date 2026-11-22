@@ -51,6 +51,7 @@ export function classifySamplePair(first, last) {
   if (last.backend !== 'webgpu') return fail('not-native-webgpu:' + last.backend);
   if (first.backend !== 'webgpu') return fail('backend-changed-during-sample');
   if (!first.deviceConfirmed || !last.deviceConfirmed) return fail('gpu-device-not-confirmed');
+  if (first.canvasAttached !== true || last.canvasAttached !== true) return fail('renderer-canvas-not-attached');
   if (first.deviceLost || last.deviceLost) return fail('gpu-device-lost');
   for (const sample of [first, last]) {
     if (!Number.isSafeInteger(sample.frameCount) || sample.frameCount < 0 ||
