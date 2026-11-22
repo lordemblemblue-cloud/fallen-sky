@@ -42,6 +42,7 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
     view: () => matchView(match, 'you'),
     flags: () => match.flags,
     ball: () => match.ball,
+    escortDistance: () => match.escort?.distance,
     /** Fixed 60 Hz steps; readInput() gives the player's input (presses only count on the first step). */
     step(dt, readInput) {
       accumulator += dt;

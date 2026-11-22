@@ -300,6 +300,14 @@ function FfaBoard({ view, me }) {
 function Scoreboard({ view, me, myTeam, flagStates }) {
   if (view.singlePoint) return <SingleBoard view={view} myTeam={myTeam} />;
   switch (view.mode) {
+    case 'escort': return view.escort && <div className="dh-part dh-board dh-escort" data-testid="duelist-board-escort">
+      <strong>{myTeam === 'red' ? 'Escort the carrier' : 'Defend the gate'}</strong>
+      <span>{view.escort.overtime ? 'OVERTIME' : clock(view.clockLeft)}</span>
+      <progress aria-label="Delivery progress" value={view.escort.progress} max={100}/>
+      <span>{Math.floor(view.escort.progress)}%</span>
+      <small>{view.phase === 'over' ? view.winner === 'red' ? 'Delivered' : 'Defense held' :
+        view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped'}</small>
+    </div>;
     case 'ctf': return <CtfBoard view={view} myTeam={myTeam} flagStates={flagStates} />;
     case 'control': return <ControlBoard view={view} myTeam={myTeam} />;
     case 'tdm': return <TeamBoard view={view} myTeam={myTeam} />;

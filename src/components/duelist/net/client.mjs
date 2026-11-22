@@ -117,6 +117,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let view = null;
   let flags = null;
   let footballBall = null;
+  let escortDistance = 0;
   let status = 'connecting';
   let seq = 0;
   let stepClock = 0; // time waiting to be played in whole steps
@@ -209,7 +210,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       }
       if (fresh) {
         generation += 1;
-        world.fighters.clear(); world.bodies.clear(); flags = null;
+        world.fighters.clear(); world.bodies.clear(); flags = null; escortDistance = 0;
         // a mission from the start: its doors as they were
         if (level) { for (const d of def.level.doors) setDoor(level, d.id, !!d.open); view = null; maxOf.clear(); lastFull.clear(); }
       }
@@ -338,6 +339,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     view: () => view,
     flags: () => flags,
     ball: () => footballBall,
+    escortDistance: () => escortDistance,
     /** The connection as the player feels it: the round trip (seconds) and how the prediction is going. */
     netStats: () => ({ roundTrip, lag, ...(predictor ? predictor.stats() : { predicting: false }) }),
     /**
@@ -421,6 +423,10 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       }
       for (const id of [...world.fighters.keys()]) if (!present.has(id)) { world.fighters.delete(id); world.bodies.delete(id); }
       if (predicting && world.fighters.has(meId)) predictor.present(world.fighters.get(meId), world.bodies.get(meId), time, dt);
+      if (Number.isFinite(s1.escortDistance)) {
+        const before = s0.escortDistance ?? s1.escortDistance;
+        escortDistance = before + (s1.escortDistance - before) * k;
+      }
       if (s1.ball) {
         const prev = s0.ball || s1.ball;
         footballBall = { x: prev.x + (s1.ball.x - prev.x) * k, z: prev.z + (s1.ball.z - prev.z) * k };
