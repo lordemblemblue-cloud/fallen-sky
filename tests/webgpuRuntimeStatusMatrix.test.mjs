@@ -139,3 +139,29 @@ test('a failed initialization cannot be verified even with a device and stale dr
   assert.equal(evidence.webgpuActive, false);
   assert.equal(evidence.status, 'initializing');
 });
+
+
+test('runtime evidence is a detached immutable snapshot across renderer recovery', () => {
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    const live = renderer({ frame: 4, draws: 3 });
+    const first = getWebGPURuntimeEvidence(live, { sceneId });
+    assert.equal(first.status, 'verified');
+    live.__sceneState.lost = true;
+    live.__sceneState.gameplayFrames = 0;
+    live.info.render.frame = 0;
+    const afterLoss = getWebGPURuntimeEvidence(live, { sceneId });
+    assert.equal(afterLoss.status, 'device-lost');
+    assert.equal(afterLoss.webgpuActive, false);
+    assert.equal(first.status, 'verified');
+    assert.equal(first.frameCount, 4);
+    assert.equal(first.gameplayFrames, 3);
+    assert.equal(Object.isFrozen(first), true);
+    live.__sceneState.lost = false;
+    live.info.render.frame = 1;
+    live.__sceneState.gameplayFrames = 1;
+    const recovered = getWebGPURuntimeEvidence(live, { sceneId });
+    assert.equal(recovered.status, 'verified');
+    assert.equal(recovered.frameCount, 1);
+    assert.equal(afterLoss.status, 'device-lost');
+  }
+});
