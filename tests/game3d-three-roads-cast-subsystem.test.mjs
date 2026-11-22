@@ -434,6 +434,8 @@ for (const [why, own] of [
 ]) {
   test('Bram wears the shared figure when ' + why + ', and the rest goes on as before', async () => {
     const w = makeWorld({ loadSource: async key => (key.startsWith('own:') ? own() : fakeSource()) });
+    // Everyone in the town has a file of their own now, so every one of them falls back in turn.
+    await settle(w.cast, undefined, 5);
     await settle(w.cast, undefined, 5);
     const bram = w.cast.status().people.find(p => p.id === 'bram_lamplighter');
     assert.equal(bram.state, 'ready');
@@ -459,10 +461,12 @@ test('an own model walks while moving, talks while a line is up, else idles', as
   assert.equal(bram().anim, 'walk', 'walking wins over talking');
   for (let t = 0; t < 8; t += 0.1) w.cast.update(0.1, { x: 100, z: 100 });
   assert.equal(bram().anim, 'idle', 'arrived, line over');
-  // the shared figure has no Talk clip: it idles while it speaks
-  w.cast.say({ id: 'sable_vey', text: 'The stone stands.', seconds: 2 });
+  // the shared figure has no Talk clip: it idles while it speaks (a traveller still wears it)
+  w.bus.emit('cast:spawn', { id: 'traveller_tome', x: 0, z: -8 });
+  await settle(w.cast);
+  w.cast.say({ id: 'traveller_tome', text: 'The road was long.', seconds: 2 });
   w.cast.update(0.1, { x: 100, z: 100 });
-  assert.equal(w.cast.status().people.find(p => p.id === 'sable_vey').anim, 'idle');
+  assert.equal(w.cast.status().people.find(p => p.id === 'traveller_tome').anim, 'idle');
   w.cast.dispose();
 });
 

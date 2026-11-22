@@ -150,5 +150,5 @@ test('a person with a file of their own wears it untinted, at the table height, 
   assert.equal(shared.source, 'archer');
   assert.equal(shared.own, false);
   assert.equal(shared.width, bram.buildWidth);
-  assert.equal(castFallbackLook(castModelFor(threeRoadsPerson('sable_vey'))), null, 'the shared figure has nothing behind it');
+  assert.equal(castFallbackLook(castModelFor(threeRoadsPerson('goro_sergeant'))), null, 'the shared figure has nothing behind it');
 });

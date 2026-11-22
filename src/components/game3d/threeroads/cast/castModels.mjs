@@ -56,14 +56,14 @@ export function castSourceDef(key) {
 // they wear public/game3d/threeroads/cast/<id>.glb; `height` (m) overrides the
 // body's height when a person needs it.
 export const CAST_MODELS = Object.freeze({
-  sable_vey: Object.freeze({ source: 'archer' }),
+  sable_vey: Object.freeze({ own: true, source: 'archer', height: 1.76 }),
   elder_maren: Object.freeze({ own: true, source: 'archer' }),
-  master_hesper: Object.freeze({ source: 'archer' }),
+  master_hesper: Object.freeze({ own: true, source: 'archer' }),
   bram_lamplighter: Object.freeze({ own: true, source: 'archer' }),
-  watch_warden_south: Object.freeze({ source: 'archer' }),
-  mizuhara_jun: Object.freeze({ source: 'archer' }),
-  paneb_scribe: Object.freeze({ source: 'archer' }),
-  aelia_sabina: Object.freeze({ source: 'archer' }),
+  watch_warden_south: Object.freeze({ own: true, source: 'archer', height: 1.8 }),
+  mizuhara_jun: Object.freeze({ own: true, source: 'archer', height: 1.68 }),
+  paneb_scribe: Object.freeze({ own: true, source: 'archer' }),
+  aelia_sabina: Object.freeze({ own: true, source: 'archer' }),
   traveller_tome: Object.freeze({ source: 'archer' }),
   traveller_henut: Object.freeze({ source: 'archer' }),
   traveller_livilla: Object.freeze({ source: 'archer' }),
