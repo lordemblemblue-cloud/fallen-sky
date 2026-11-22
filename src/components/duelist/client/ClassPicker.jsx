@@ -1,5 +1,5 @@
 // Duelist Adventure match class selection. Three columns: compact vertical class
-// choices (18%), a large equipped AFK model (57%), and current class kit (25%).
+// choices (18%), a large 3D character preview (57%), and current class kit (25%).
 // Highlighting a class is PREVIEW ONLY. Only the central Select button calls onPick;
 // the existing match controller/server still decides when a class takes effect.
 import { useState } from 'react';
@@ -63,7 +63,7 @@ export default function ClassPicker({ current, pending = null, fighter = 'masked
         </div>
       </nav>
 
-      <section className="dcp-model" aria-label={`Preview ${cls.name} with equipped class weapons`}>
+      <section className="dcp-model" aria-label={`3D character preview for ${cls.name}`}>
         <div className="dcp-model-view" data-testid="duelist-class-3d-preview">
           <DuelistCharacterPreview fighter={fighter} classId={chosen} compact />
         </div>
