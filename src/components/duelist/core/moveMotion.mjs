@@ -122,7 +122,10 @@ export const MOVE_MOTION = Object.freeze({
   levitate: { segments: [seg('jumpLoop', 0, end('levitate'), 0, 0.3, { travel: false })] },
   rage: { segments: [seg('castEnter', 0, MOVES.rage.startup, 0, 0.5), seg('shieldBurst', MOVES.rage.startup, end('rage'), 0.05, 0.5)] },
   execution: { segments: phases('execution', 'bladesHeavy', [0.12, 0.34, 0.52, 0.9], { travel: false }), settle: { clip: 'bladesHeavy', from: 0.9 } },
-  shadowExecution: { segments: phases('shadowExecution', 'swordHeavy', [0.15, 0.33, 0.46, 0.95], { travel: false }), settle: { clip: 'swordHeavy', from: 0.95 } },
+  // Shadow Execution belongs to the Assassin's double-ended staff, not the one-blade sword.
+  // The staffHeavy clip is an original Blender-authored animation with its own dual-hand grip curve.
+  // Retiming is purely visual: server-owned rear-arc, range, meter and execution checks remain unchanged.
+  shadowExecution: { segments: phases('shadowExecution', 'staffHeavy', [0, 0.3, 0.72, 1.05], { travel: false }), settle: { clip: 'staffHeavy', from: 1.05 } },
   sanctuary: { segments: [seg('castEnter', 0, MOVES.sanctuary.startup, 0, 0.5), seg('castShoot', MOVES.sanctuary.startup, activeEnd('sanctuary'), 0.1, 0.3),
     seg('castExit', activeEnd('sanctuary'), end('sanctuary'), 0, 0.4)] },
 });
