@@ -121,11 +121,20 @@ export function step(world, dt, inputs = {}) {
     body.sprint = !!input.sprint;
     body.strafe = !!input.strafe; // locked on: rolls keep facing the target (side and back evasions)
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
-    // the body turns to face where the player aims, except while committed to a roll or dash, or to a
-    // strike's active part
+    // Rolls and dashes keep their chosen travel heading. Blade attacks must keep
+    // tracking the camera/lock-on aim while W/A/S/D controls movement independently.
+    // Rate-limit turns *during* a swing so a forged packet cannot teleport the hit
+    // arc 180 degrees in one simulation frame. Before the strike starts, normal
+    // facing input is applied immediately.
     const a = fighter.action;
-    const committed = !!a && (a.move.kind === 'movement' || (a.move.kind === 'attack' && a.t >= a.move.startup));
-    if (!restrained && !committed && Number.isFinite(input.face)) body.yaw = input.face;
+    const committed = !!a && a.move.kind === 'movement';
+    if (!restrained && !committed && Number.isFinite(input.face)) {
+      if (a?.move.kind === 'attack') {
+        const delta = Math.atan2(Math.sin(input.face - body.yaw), Math.cos(input.face - body.yaw));
+        const limit = 12 * dt; // radians per second, shared by server and local prediction
+        body.yaw += Math.max(-limit, Math.min(limit, delta));
+      } else body.yaw = input.face;
+    }
     for (const command of input.presses || []) {
       if (command === 'itemActive') {
         activateItemRelic(world, fighter, body, now, effects);

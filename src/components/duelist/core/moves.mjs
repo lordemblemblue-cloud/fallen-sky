@@ -21,7 +21,7 @@ import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_
 
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
-  stamina: 0, will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
+  will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
   shieldMultiplier: 1, veilMultiplier: 1, hitAt: [0], blockable: true, chain: null, cancelInto: [], cancelFrom: Infinity,
   iframes: null, channel: false, willPerSec: 0, rootMotion: 0, damageKind: 'melee',
   ...spec,
@@ -125,8 +125,9 @@ export const MOVES = Object.freeze({
   resist: move({ kind: 'defense', startup: 0, active: 0.05, recovery: 0.15, will: 15, cooldown: 3, damage: 0, range: 0 }),
 
   // ---- movement
+  // Owner correction: 35% less travel than the original 10.8m roll; class multipliers still apply.
   roll: move({ kind: 'movement', startup: 0, active: 0.42, recovery: 0.1, stamina: 20, damage: 0, range: 0, iframes: [0.06, 0.32],
-    rootMotion: 10.8, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
+    rootMotion: 7.02, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
   // In-air evasion: second Dash press within AIR_DASH.doubleTapSeconds while in a player jump.

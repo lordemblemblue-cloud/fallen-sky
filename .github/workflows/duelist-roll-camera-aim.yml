@@ -1,0 +1,37 @@
+name: Duelist Roll Distance and Camera-Facing Attacks
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/core/moves.mjs'
+      - 'src/components/duelist/sim/world.mjs'
+      - 'src/components/duelist/client/controls.mjs'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'tests/duelist-camera-roll.test.mjs'
+      - 'tests/duelist-sim.test.mjs'
+      - '.github/workflows/duelist-roll-camera-aim.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  roll-and-camera-facing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Test roll distance, camera aiming and existing world physics
+        run: node --test tests/duelist-camera-roll.test.mjs tests/duelist-sim.test.mjs
+      - name: Parse Duelist UI
+        run: node scripts/verify-duelist-ui.mjs
+      - name: Lint modified gameplay and client code
+        run: npx eslint src/components/duelist/core/moves.mjs src/components/duelist/sim/world.mjs src/components/duelist/client/controls.mjs src/components/duelist/client/DuelistGame.jsx
+      - name: Build application
+        run: npm run build
