@@ -1,0 +1,28 @@
+name: Duelist Opponent Overhead HP
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/matchProps.mjs'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'tests/duelist-opponent-overhead-hp.test.mjs'
+      - '.github/workflows/duelist-opponent-overhead-hp.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  overhead-hp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify enemy HP sprite size, live values and disposal
+        run: node --test tests/duelist-opponent-overhead-hp.test.mjs
+      - name: Lint changed modules
+        run: npx eslint src/components/duelist/client/matchProps.mjs src/components/duelist/client/DuelistGame.jsx
+      - name: Build application
+        run: npm run build
