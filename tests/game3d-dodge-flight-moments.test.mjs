@@ -152,7 +152,8 @@ for (const [rigId, bodyName] of [['fused-male-v1', 'Male'], ['fused-female-v1', 
     const root = await body(bodyName);
     const names = mobilityClipPackEntries(manifest, rigId).map((e) => e.name);
     // ... plus the two swim loops of deep water (tests/game3d-swimming.test.mjs checks those)
-    assert.deepEqual(names.sort(), ['Back_Roll', 'Dodge_Forward', 'Sprint', 'Swim_Forward', 'Swim_Idle']);
+    // (and the glider's hanging pose: tests/game3d-glide.test.mjs)
+    assert.deepEqual(names.sort(), ['Back_Roll', 'Dodge_Forward', 'Glide_Hang', 'Sprint', 'Swim_Forward', 'Swim_Idle']);
     const pack = {};
     for (const name of names) {
       const clip = await packClip(rigId, name);

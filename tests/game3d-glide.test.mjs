@@ -1,0 +1,291 @@
+/* global URL */
+// Gliding on foot (2026-11-22): the flight (player/playerGlide.mjs), the glider prop (player/gliderProp.mjs), the
+// authored Glide_Hang pose on both fused bodies, the real controller in the air, the remote avatar and the world wiring.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { buildSync } from 'esbuild';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLIDE, GLIDE_REACH, createPlayerGlide, glideLandingY } from '../src/components/game3d/player/playerGlide.mjs';
+import { createGliderMesh, createGliderProp, gliderTriangleCount } from '../src/components/game3d/player/gliderProp.mjs';
+import { mobilityClipPackEntries, clipBindsToActor } from '../src/components/game3d/player/mobilityClipPack.mjs';
+import { createPlayerMovementFallbackClips } from '../src/components/game3d/player/playerMovementFallbackClips.js';
+import { nativePlayerAnimationClips } from '../src/components/game3d/player/playerNativeAnimationClips.js';
+
+const read = (p) => readFileSync(new URL('../' + p, import.meta.url), 'utf8');
+const manifest = JSON.parse(read('public/models/animations/mocap/manifest.json'));
+globalThis.self = globalThis;
+const loader = new GLTFLoader();
+loader.register(() => ({ name: 'NO_IMAGE_DECODE', loadTexture: () => Promise.resolve(new THREE.Texture()) }));
+async function parseGlb(path) {
+  const bytes = readFileSync(path);
+  return loader.parseAsync(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), '');
+}
+const bodies = {};
+async function body(name) {
+  if (!bodies[name]) {
+    const asset = await parseGlb(`public/models/characters/fused/${name}_Fused_v2.glb`);
+    asset.scene.animations = asset.animations;
+    asset.scene.userData.rigId = asset.parser.json.extras.rigId;
+    asset.scene.userData.fusedCharacter = true;
+    bodies[name] = asset.scene;
+  }
+  return bodies[name];
+}
+async function packClip(rigId, name) {
+  const entry = mobilityClipPackEntries(manifest, rigId).find((e) => e.name === name);
+  assert.ok(entry, `${name} is listed for ${rigId}`);
+  const asset = await parseGlb('public' + entry.url);
+  const clip = asset.animations[0];
+  clip.userData = { ...(asset.parser.json.animations[0].extras || {}) };
+  return clip;
+}
+
+// ------------------------------------------------------------------------------------------------ the flight
+
+// One simulated hero: x/z advance with the glider's velocity (the world's movement block does that), the module
+// owns the height in the air; flat ground at `ground` unless a function of x is given.
+function fly(glide, { frames, dt = 1 / 60, ground = 0, surface = null, steer = null, dive = () => false, at = { x: 0, z: 0, y: 0 } }) {
+  const g = typeof ground === 'function' ? ground : () => ground;
+  const trace = [];
+  for (let i = 0; i < frames; i++) {
+    const v = glide.velocity();
+    at.x += v.x * dt; at.z += v.z * dt;
+    const groundY = g(at.x, at.z);
+    const s = glide.update({ dt, x: at.x, z: at.z, groundY, heroY: glide.isAirborne() ? at.y : groundY,
+      surfaceY: typeof surface === 'function' ? surface(at.x) : surface, steer: steer?.(i), dive: dive(i) });
+    at.y = s.y ?? groundY;
+    trace.push({ i, ...s, x: at.x, z: at.z, h: at.y });
+    if (s.landed) break;
+  }
+  return trace;
+}
+
+test('the reach: about 4 m forward per metre of height at trim, a steady sink, no cost but height', () => {
+  assert.ok(Math.abs(GLIDE_REACH - GLIDE.trimSpeed / GLIDE.trimSink) < 1e-9);
+  assert.ok(GLIDE_REACH > 3.8 && GLIDE_REACH < 4.6, `reach ${GLIDE_REACH}`);
+  const glide = createPlayerGlide();
+  const at = { x: 0, z: 0, y: 40 };
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 40, heroY: 40 }); // standing on a 40 m cliff top
+  // the ground ends: next frame the glue finds the valley floor 40 m down
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: 0, heroY: 0 });
+  assert.equal(glide.mode(), 'fall', 'running off the edge falls instead of snapping down');
+  const opened = glide.toggle({ heroY: 39.9, groundY: 0, bodyHeading: 0 });
+  assert.deepEqual(opened, { ok: true, action: 'opened' });
+  const trace = fly(glide, { frames: 60 * 40, at: { ...at, y: 39.9 } });
+  const end = trace.at(-1);
+  assert.ok(end.landed, 'lands');
+  const settled = trace.filter((f) => f.i > 120 && !f.landed);
+  for (const f of settled.slice(0, 50)) assert.ok(Math.abs(f.speed - GLIDE.trimSpeed) < 1e-6);
+  const distance = Math.hypot(end.x, end.z);
+  assert.ok(distance / 39.9 > GLIDE_REACH * 0.9 && distance / 39.9 < GLIDE_REACH * 1.02, `${distance.toFixed(1)} m from 39.9 m`);
+});
+
+test('a ledge is a steep drop, not a slope or stairs; a jump off a hillside falls on from its arc', () => {
+  const steps = (drops, run = 0.12) => {
+    const glide = createPlayerGlide();
+    let y = 10, x = 0;
+    glide.update({ dt: 1 / 60, x, z: 0, groundY: y, heroY: y });
+    for (const d of drops) { x += run; y -= d; glide.update({ dt: 1 / 60, x, z: 0, groundY: y, heroY: y }); if (glide.isAirborne()) break; }
+    return glide.mode();
+  };
+  assert.equal(steps([0.25, 0.25, 0.25, 0.25]), 'ground', 'stairs');
+  assert.equal(steps([0.15, 0.15, 0.15, 0.15], 0.12), 'ground', 'a steep slope');
+  assert.equal(steps([0.85], 0.12), 'ground', 'a step down under a metre');
+  assert.equal(steps([3.5], 0.12), 'fall', 'a ledge');
+  assert.equal(steps([1.4], 2.0), 'ground', 'a long low-framerate step down a slope');
+  // a jump whose arc crosses the edge: the fall keeps the jump's upward speed
+  const glide = createPlayerGlide();
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 20, heroY: 20.4, jumping: true });
+  glide.update({ dt: 1 / 60, x: 0.1, z: 0, groundY: 20, heroY: 20.47, jumping: true });
+  const s = glide.update({ dt: 1 / 60, x: 0.2, z: 0, groundY: 5, heroY: 5.5, jumping: true });
+  assert.equal(s.mode, 'fall');
+  assert.ok(s.y > 20.4, 'still rising from the jump, not snapped down');
+});
+
+test('steering turns the heading at a limited rate and banks; no keys fly straight on', () => {
+  const glide = createPlayerGlide();
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 0, heroY: 60 });
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: -60, heroY: -60 });
+  glide.toggle({ heroY: 60, groundY: -60, bodyHeading: 0 });
+  const right = { x: 1, z: 0 }; // heading +X is +PI/2
+  const trace = fly(glide, { frames: 30, ground: -60, steer: () => right, at: { x: 0, z: 0, y: 60 } });
+  const turned = trace.at(-1).heading;
+  assert.ok(turned > 0 && turned <= GLIDE.turnRate * 0.5 + 1e-6, `half a second turns at most ${GLIDE.turnRate * 0.5} rad (${turned})`);
+  assert.ok(trace.at(-1).bank < 0, 'banks into the turn');
+  const straight = fly(glide, { frames: 30, ground: -60, at: { x: 0, z: 0, y: 50 } });
+  assert.ok(Math.abs(straight.at(-1).heading - straight[0].heading) < 1e-9, 'holds the heading');
+  assert.ok(Math.abs(straight.at(-1).bank) < Math.abs(trace.at(-1).bank), 'levels out');
+});
+
+test('diving trades height for speed, and the speed buys a little height back', () => {
+  const glide = createPlayerGlide();
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 0, heroY: 200 });
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: -200, heroY: -200 });
+  glide.toggle({ heroY: 200, groundY: -200, bodyHeading: 0 });
+  fly(glide, { frames: 180, ground: -200, at: { x: 0, z: 0, y: 200 } }); // settle at trim
+  const dive = fly(glide, { frames: 120, ground: -200, dive: () => true, at: { x: 0, z: 0, y: 150 } });
+  assert.ok(dive.at(-1).speed > GLIDE.trimSpeed + 3, 'faster');
+  const sinkDiving = (dive.at(-60).h - dive.at(-1).h) / 1; // over the last second
+  assert.ok(sinkDiving > GLIDE.trimSink * 2, `steeper: ${sinkDiving.toFixed(2)} m/s`);
+  const after = fly(glide, { frames: 60, ground: -200, at: { x: 0, z: 0, y: 100 } });
+  const sinkAfter = (after[0].h - after.at(-1).h) / 1;
+  assert.ok(sinkAfter < GLIDE.trimSink, `pulling out sinks less than trim (${sinkAfter.toFixed(2)} m/s)`);
+});
+
+test('touchdown hands the feet back; deep water is landed on (the swim takes over), shallow water is waded into', () => {
+  assert.equal(glideLandingY(0, 2), 2, 'deep water');
+  assert.equal(glideLandingY(0, 1), 0, 'shallow water: the bed');
+  assert.equal(glideLandingY(5, null), 5);
+  const glide = createPlayerGlide();
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 12, heroY: 12 });
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: 0, heroY: 0 });
+  glide.toggle({ heroY: 12, groundY: 0, bodyHeading: 0, surfaceY: 3 });
+  const trace = fly(glide, { frames: 60 * 20, ground: 0, surface: 3, at: { x: 0, z: 0, y: 12 } });
+  const end = trace.at(-1);
+  assert.ok(end.landed && end.mode === 'ground' && end.changed);
+  assert.equal(end.y, 3, 'on the surface of 3 m of water');
+  assert.equal(glide.isAirborne(), false);
+  // (in the game the swim takes over this frame; with the surface still under it the module stays on the ground)
+  assert.equal(glide.update({ dt: 1 / 60, x: end.x, z: end.z, groundY: 0, heroY: 0, surfaceY: 3 }).y, null, 'the ground code owns the feet again');
+  // riding, swimming, dead...: out of the air at once
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 30, heroY: 30 });
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: 0, heroY: 0 });
+  assert.equal(glide.mode(), 'fall');
+  const off = glide.update({ dt: 1 / 60, x: 0.1, z: 0, groundY: 0, heroY: 0, allowed: false });
+  assert.deepEqual([off.mode, off.y, off.changed], ['ground', null, true]);
+});
+
+test('the glider opens only high enough above the landing, and Space again closes it', () => {
+  const glide = createPlayerGlide();
+  assert.equal(glide.toggle({ heroY: 0.5, groundY: 0 }).reason, 'on_ground');
+  assert.equal(glide.toggle({ heroY: 0.8, groundY: 0, jumping: true }).reason, 'too_low', 'a hop on flat ground');
+  assert.equal(glide.toggle({ heroY: 3, groundY: 0, jumping: true }).action, 'opened', 'a jump off a bank');
+  assert.equal(glide.toggle().action, 'closed');
+  assert.equal(glide.mode(), 'fall');
+  assert.equal(glide.toggle({ heroY: 2.5, groundY: 0, surfaceY: 1.5 }).reason, 'too_low', 'over deep water the landing is the surface');
+});
+
+// ------------------------------------------------------------------------------------------------ pose, prop, controller
+
+test('both fused bodies hang from the bar: hands above the head, a loop that never touches the ground', async () => {
+  for (const [name, rigId] of [['Male', 'fused-male-v1'], ['Female', 'fused-female-v1']]) {
+    const root = (await body(name)).clone(true);
+    const clip = await packClip(rigId, 'Glide_Hang');
+    assert.equal(clip.userData.loop, true);
+    assert.equal(clip.userData.airborne, true);
+    assert.ok(clipBindsToActor(clip, root), `${name} Glide_Hang binds`);
+    const mixer = new THREE.AnimationMixer(root);
+    mixer.clipAction(clip).play();
+    const find = (s) => { let b = null; root.traverse((o) => { if (!b && new RegExp(s + '$').test(o.name)) b = o; }); return b; };
+    for (const t of [0, 0.4, 0.8, 1.2]) {
+      mixer.setTime(t); root.updateMatrixWorld(true);
+      const y = (s) => find(s).getWorldPosition(new THREE.Vector3()).y;
+      assert.ok(y('LeftHand') > y('Head') && y('RightHand') > y('Head'), `${name} at ${t}s: hands up on the bar`);
+    }
+    mixer.stopAllAction(); mixer.uncacheRoot(root);
+  }
+  assert.match(read('src/components/game3d/player/playerAnimationLibrary.jsx'), /Glide_Hang: 'glideHang'/);
+});
+
+test('the glider prop is low-poly, sits between the hands, banks, and folds away', async () => {
+  const mesh = createGliderMesh();
+  assert.ok(gliderTriangleCount(mesh) <= 60, `${gliderTriangleCount(mesh)} triangles`);
+  const scene = new THREE.Scene();
+  const root = (await body('Female')).clone(true);
+  scene.add(root);
+  const prop = createGliderProp(scene);
+  prop.update({ open: true, model: root, bank: -0.4, dt: 1 });
+  assert.equal(prop.root.visible, true);
+  root.updateMatrixWorld(true);
+  const hands = ['LeftHand', 'RightHand'].map((s) => { let b = null; root.traverse((o) => { if (!b && new RegExp(s + '$').test(o.name)) b = o; }); return b.getWorldPosition(new THREE.Vector3()); });
+  assert.ok(prop.root.position.distanceTo(hands[0].clone().add(hands[1]).multiplyScalar(0.5)) < 1e-6, 'the bar in the hands');
+  const right = new THREE.Vector3(1, 0, 0).applyQuaternion(prop.root.quaternion);
+  assert.ok(Math.abs(right.y) > 0.2, 'banked');
+  for (let i = 0; i < 30; i++) prop.update({ open: false, model: root, dt: 1 / 60 });
+  assert.equal(prop.root.visible, false, 'folded away');
+  prop.dispose();
+  assert.ok(!scene.children.includes(prop.root));
+});
+
+const built = buildSync({
+  entryPoints: ['src/components/game3d/player/LunaDashboardPlayerController.jsx'],
+  bundle: true, platform: 'node', format: 'cjs', write: false, outdir: 'unused', external: ['three'],
+}).outputFiles;
+function controllerFor(root, clips, clock = { seconds: 0 }) {
+  const runtime = { exports: {} };
+  new Function('module', 'exports', 'require', 'performance', built[0].text)(
+    runtime, runtime.exports, createRequire(import.meta.url), { now: () => clock.seconds * 1000 });
+  const mixer = new THREE.AnimationMixer(root);
+  const controller = runtime.exports.createLunaDashboardPlayerController({ mixer, getAirWalkStamina: () => 100 });
+  controller.bindClips(clips);
+  return { controller, mixer, clock };
+}
+
+test('in the air the controller hangs or falls, refuses jumps, dodges and strikes, and lands into the run', async () => {
+  const root = await body('Male');
+  const base = { ...createPlayerMovementFallbackClips(root), ...nativePlayerAnimationClips(root) };
+  const { controller } = controllerFor(root, { ...base, glideHang: await packClip('fused-male-v1', 'Glide_Hang') });
+  controller.updateActionState({ moving: true, running: true });
+  assert.equal(controller.setGliding('glide'), 'glide');
+  assert.equal(controller.getIsGliding(), true);
+  assert.equal(controller.getCurrent(), 'glideHang');
+  const v = new THREE.Vector3(0, 0, 1);
+  assert.equal(controller.requestJump(), false);
+  assert.equal(controller.requestDodge(v, 'forward'), false);
+  assert.equal(controller.requestRoll(v, 'backward'), false);
+  assert.equal(controller.requestAttack('kick', 1), false);
+  assert.equal(controller.requestHitReact('front'), false);
+  assert.equal(controller.getJumpOffset(), 0, 'the world owns the height');
+  // Halo Wings: none at 0% (the glider stays), the wings' glide at 50%
+  assert.equal(controller.requestWingsFromGlide({ worldY: 30, floorY: 0, haloPercent: 0 }).ok, false);
+  const wings = controller.requestWingsFromGlide({ worldY: 30, floorY: 0, haloPercent: 50 });
+  assert.equal(wings.ok, true);
+  assert.equal(controller.getAirWalkState().mode, 'glide');
+  assert.equal(controller.getIsGliding(), false);
+  // a fall, then touchdown carries on running
+  const fresh = controllerFor(root, base).controller;
+  fresh.updateActionState({ moving: true, running: true });
+  fresh.setGliding('fall');
+  assert.equal(fresh.getIsFalling(), true);
+  assert.equal(fresh.requestJump(), false, 'no jump from mid-air');
+  fresh.setGliding('ground');
+  assert.equal(fresh.getIsFalling(), false);
+  assert.ok(['run', 'walk', 'sprint'].includes(fresh.getCurrent()) || /run/i.test(fresh.getCurrent()), `lands running (${fresh.getCurrent()})`);
+  // riding never glides
+  fresh.setMounted(true);
+  assert.equal(fresh.setGliding('glide'), 'ground');
+});
+
+// ------------------------------------------------------------------------------------------------ world and remote
+
+test('the world opens the glider in the air with Space and keeps the glide beside the ground code', () => {
+  const world = read('src/components/game3d/GameWorld3D.jsx');
+  // Space: the glider first, then the existing dismiss / jump / Halo chain
+  assert.match(world, /if\(!e\.repeat && glideSpace\(\)\)\{ \/\* the glider took it \*\/ \}\s*else if\(!e\.repeat && spaceOnGround && resolveSpaceAction/);
+  assert.match(world, /if \(wingsAllowed && playerAnim\?\.requestWingsFromGlide\?\.\(/, 'Halo Wings from an open glider');
+  assert.match(world, /swimNotice\('Too low to open the glider'\);/);
+  // the air block after the glue, before the swim, both on the same ground
+  const glue = world.indexOf('// Glue player feet to terrain');
+  const air = world.indexOf('const air = playerGlide.update({');
+  const swim = world.indexOf('const swim = playerSwim.update({');
+  assert.ok(glue > 0 && glue < air && air < swim, 'glue, then the air, then the water');
+  assert.match(world, /const feetGroundY = model\.position\.y - \(playerAnim\?\.getJumpOffset\?\.\(\) \|\| 0\);/);
+  assert.match(world, /bedY: feetGroundY,/);
+  assert.match(world, /if \(air\.changed\) playerAnim\?\.setGliding\?\.\(air\.mode\);\s*if \(air\.y !== null\) model\.position\.y = air\.y;/);
+  // the glider carries the hero through the ordinary collision-checked move, at its own speed, no run or sprint
+  assert.match(world, /glideSteer\.copy\(move\);\s*const glidingNow = playerGlide\.isGliding\(\) && !mounted;\s*if \(glidingNow\) \{ const v = playerGlide\.velocity\(\); move\.set\(v\.x, 0, v\.z\); \}/);
+  assert.match(world, /const speed = glidingNow \? playerGlide\.speed\(\) : \(baseMoveSpeed/);
+  assert.match(world, /const isSprinting = !!keys\.current\['control'\] && isMoving && !swimmingNow && !glidingNow;/);
+  // no strikes, skills or mounting in the air; the prop after the pose; teardown
+  assert.match(world, /if \(\(playerSwim\.isSwimming\(\) \|\| playerGlide\.isGliding\(\)\) && \(attackPressed\.current/);
+  assert.match(world, /else if \(!isMountedRef\.current && playerGlide\.isAirborne\(\)\) \{ if \(!e\.repeat\) swimNotice\("You can't mount in the air"\); \}/);
+  assert.match(world, /momentGestures\.update\(\);\s*gliderProp\.update\(\{ open: playerGlide\.isGliding\(\), model, bank: playerGlide\.bank\(\), dt: delta \}\);/);
+  assert.match(world, /gliderProp\.dispose\(\);/);
+  // remote players: the hang pose retargeted like the swim, and a glider in their hands
+  const remote = read('src/components/game3d/RemotePlayersManager.jsx');
+  assert.match(remote, /glideHang: '\/models\/animations\/mocap\/Glide_Hang\.glb'/);
+  assert.match(remote, /r\.glider\?\.update\(\{ open: r\.lastAnim === 'glideHang', model: r\.group, dt: delta \}\);/);
+});
