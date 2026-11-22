@@ -48,12 +48,16 @@ export const THREE_ROADS_CAST = Object.freeze([
   // they stand around the fountain.
   person({ id: 'mizuhara_jun', name: 'Lieutenant Mizuhara Jun', role: 'Akitsu envoy, engineer and surveyor', empire: 'akitsu', giver: true,
     home: { area: 'town', x: -24, z: -92, facing: Math.PI * 0.25 },
+    homeAfter: { flag: 'tr_war_open', home: null }, // back to Akitsu's camp, which a later band builds
     look: { body: 'm', build: 'slight', colours: [0x2f4a7a, 0xdcb58a], carries: 'a map case' } }),
   person({ id: 'paneb_scribe', name: 'Paneb the Scribe', role: 'Tameri envoy and quartermaster', empire: 'tameri', giver: true,
     home: { area: 'town', x: 24, z: -92, facing: Math.PI * 1.75 },
+    // Once the war is open the envoys leave the town. Paneb goes to Tameri's wagons on the Threshing Floor.
+    homeAfter: { flag: 'tr_war_open', home: { area: 'south', x: 57, z: -368, facing: Math.PI * 1.25 } },
     look: { body: 'm', build: 'thin', colours: [0xe8dcc0, 0xc9962e], carries: 'a writing board and tally cords' } }),
   person({ id: 'aelia_sabina', name: 'Tribune Aelia Sabina', role: 'Remorian envoy', empire: 'remoria', giver: true,
     home: { area: 'town', x: 0, z: -100, facing: 0 },
+    homeAfter: { flag: 'tr_war_open', home: null }, // back to Remoria's fort, which a later band builds
     look: { body: 'f', build: 'strong', colours: [0x8c2f2f, 0xa5cbe9], carries: 'a short sword, tied with cord' } }),
 
   // Chapter one: the three strangers at the gate. Brought in by the pledge.
@@ -64,7 +68,13 @@ export const THREE_ROADS_CAST = Object.freeze([
   person({ id: 'traveller_livilla', name: 'Livilla', role: 'A veteran\'s widow from Remoria', empire: 'remoria',
     look: { body: 'f', build: 'tall', colours: [0x8c2f2f, 0x6b6b6b], carries: 'a bundle and a boundary stone' } }),
 
-  // The Gate Fields.
+  // The Gate Fields. Each empire keeps a wagon line on the Threshing Floor.
+  person({ id: 'goro_sergeant', name: 'Sergeant Gorō', role: 'Akitsu sergeant, "Old Kettle", with the wagons', empire: 'akitsu', giver: true,
+    home: { area: 'south', x: -13, z: -368, facing: Math.PI * 0.75 },
+    look: { body: 'm', build: 'stocky', colours: [0x2f4a7a, 0x5a4632], carries: 'a rifle slung muzzle down, and a kettle' } }),
+  person({ id: 'titus_oldvine', name: 'First Centurion Titus Petronius', role: 'Remorian first centurion, "Old Vine", with the wagons', empire: 'remoria', giver: true,
+    home: { area: 'south', x: 28, z: -427, facing: 0 },
+    look: { body: 'elder_m', build: 'broad', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a vine staff' } }),
   person({ id: 'edda_miller', name: 'Edda', role: 'Miller of the Gate Fields', empire: 'valley', giver: true,
     home: { area: 'south', x: -124, z: -344, facing: Math.PI * 0.5 },
     look: { body: 'f', build: 'strong', colours: [0x7a6a4a, 0xe8e2d0], carries: 'a grain sack' } }),
@@ -80,8 +90,25 @@ const BY_ID = new Map(THREE_ROADS_CAST.map(entry => [entry.id, entry]));
 
 export const threeRoadsPerson = id => BY_ID.get(id) || null;
 
-// Who stands in this scene without being brought in by a pledge.
-export function threeRoadsCastAtHome({ area = null, region = null } = {}) {
-  return THREE_ROADS_CAST.filter(entry => !entry.existing && entry.home &&
-    ((area && entry.home.area === area) || (region && entry.home.region === region)));
+// Where a person stands given the story so far. `flags` are the quest store's
+// story flags; a person with `homeAfter` moves (or leaves: home null) once
+// that flag is set.
+export function threeRoadsHomeOf(entry, flags = {}) {
+  if (!entry) return null;
+  if (entry.homeAfter && flags && flags[entry.homeAfter.flag]) return entry.homeAfter.home || null;
+  return entry.home || null;
+}
+
+// Who stands in this scene without being brought in by a pledge. Each result
+// is the person with `home` already resolved for these flags.
+export function threeRoadsCastAtHome({ area = null, region = null, flags = {} } = {}) {
+  const result = [];
+  for (const entry of THREE_ROADS_CAST) {
+    if (entry.existing) continue;
+    const home = threeRoadsHomeOf(entry, flags);
+    if (!home) continue;
+    if ((area && home.area === area) || (region && home.region === region))
+      result.push(home === entry.home ? entry : Object.freeze({ ...entry, home }));
+  }
+  return result;
 }
