@@ -403,3 +403,242 @@ Each card is written generically for our valley. "Ref" timestamps point to where
 3. **The road kit + approach rules** (painted roads, bend hiders, signposts, story tablets, paired braziers at doors): it makes all three empires' land read as cultivated at almost no draw-call cost.
 4. **The camp** (fire, lean-tos, lookout, owner totems/banners): the cheapest repeatable adventure spot and the easiest place to show which empire holds which ground.
 5. **The shrine on a height** (switchback stair with tablets, shut gate, plateau with a perch): gives each area its vertical landmark and a place the story can revisit with changed light.
+
+---
+
+# Second source: the uncut walkthrough
+
+Added 2026-11-22 on request of the lead session (`three-empires`).
+
+**Source:** a local copy the owner supplied of an uncut, no-commentary longplay of the same game's main quest (YouTube id `p0I7ccItmv8`, 480p, **21 h 08 min = 76 080 s**, 30 fps). Unlike the first source it keeps every walk, ride, shop visit, crafting session and side dungeon the player did along the way, so it shows the land between places. Timestamps below are positions in *this* file (h:mm:ss). Same boundary as before: structure and craft only; reference names appear only as lookup labels; nothing is proposed as content for our game; no frames were copied into the repo (frames were rendered to the session scratchpad only, with headless Blender's sequencer, and tiled into contact sheets).
+
+**Tooling note for anyone going back:** Blender's sequencer clamps scene frames at 1 048 574 (≈9 h 42 m at 30 fps); every frame after that comes out identical. Adding a retiming key and moving the strip's last key to a quarter of the length (4× speed) puts the whole 21 h inside the limit.
+
+## 2a. Time index of the uncut walkthrough (one frame every 3 minutes)
+
+Legend as in part one: **T** travel · **V** settlement exterior · **I** interior · **D** dungeon · **M** mountain · **S** set piece/boss · **C** dialogue · **U** menus (shop, crafting, inventory, map, sleep).
+
+The player spends a large share of the run in menus (shops, smithing, alchemy, enchanting): roughly one sample in five is a menu.
+
+| Time | Kind | What is on screen |
+|---|---|---|
+| 0:00–0:21 | T, V, S, D | opening cart ride, execution square, attack, keep, cave exit |
+| 0:24–0:30 | T, C | companion talk on the forest trail; arrival in the river village |
+| 0:33–0:57 | I, C, U | relatives' house dinner, looting, night forest walk, inn |
+| 1:00–1:12 | V, U | the village lumber mill and smithy: crafting |
+| 1:15–1:39 | D | snowy tomb exterior (stone gatehouse in snow), sealed door, tomb interior |
+| 1:42–1:57 | T | night walking over dark fields and forest; a stranger on the road |
+| 2:00–2:21 | V, U | a farmhouse at night, then the town: shops, market street |
+| 2:24–2:45 | V, I, C, U | town stairs, palace, wizard, shops |
+| 2:48–2:54 | T, S | night rain fight on the road; a **burning watchtower seen from the road at night** |
+| 2:57–3:18 | I, C, U | palace reward, housecarl, town shops, inn |
+| 3:21–3:39 | T | farm by the road under the mountain; skeletons on a hillside; drystone-wall road through tundra; forest road |
+| 3:42–3:51 | V, I | autumn log-cabin village, inn |
+| 3:54–4:09 | T, M | stone bridge; climb with wolves and a troll on the pilgrim stair |
+| 4:12–4:27 | I, M, C | monastery hall, courtyard training, gate |
+| 4:30–4:33 | T | cobbled road at dusk through tundra; a camp at the roadside |
+| 4:36–5:00 | V, U | a walled snow city: shops, crafting, stable |
+| 5:03–5:12 | S, T | dragon fight in a field; horse ride over tundra and snow |
+| 5:15–5:33 | D | timber-shored mine/tomb interior |
+| 5:36–5:54 | I, C, U | inn cellar hideout, shops, sleep |
+| 5:57–6:12 | T | **ride across a stone bridge flanked by two lit braziers**; a timber platform; rocky pass; snowy forest |
+| 6:15–6:21 | S, C | burial-mound dragon, companion talk, an old man by the road |
+| 6:24–6:33 | T, S | inn, rides through forest and tundra, a fight |
+| 6:36–6:48 | M, I | pilgrim stair in snow, monastery, inn |
+| 6:54–7:09 | T, S | tundra roads; a dragon skeleton |
+| 7:12–7:21 | T | night riding; lanterns at a door |
+| 7:24–7:42 | T, V | farm with signpost, tundra, drystone-walled road, a fight, a hut, cobbled road at sunset, forest road |
+| 7:45–8:12 | V, I | the cliff-top capital, shops, night streets |
+| 8:15–8:45 | I, C | embassy party and break-out |
+| 8:48–9:03 | I, T, C | embassy files, snow road, forest road ride, inn cellar |
+| 9:06–9:39 | V, U | timber town, crafting, sleep, map table planning, palace, shops |
+| 9:42 | T | ride on a stone road at dusk |
+| 9:45–10:09 | T, U | snowy forest ride at night, blizzard; levelling and shops |
+| 10:12–10:33 | T, S, D | lockpicking; foggy tundra with rocks; dragon fight and skeleton; a night ruin fight with a mage |
+| 10:36–10:54 | V, T | town steward; night forest road; **a roadside bandit camp on a timber platform**; autumn woods |
+| 10:57–11:09 | T | autumn birch forest ride, spiders; a fenced yard with a lantern |
+| 11:12–11:36 | V, D | canal city, market well, sewer warren, underground tavern, peep-hatch door |
+| 11:39–11:57 | T, S | night marsh; a side fight at a hot-spring marsh |
+| 12:00–12:21 | T, S | riding over snowy rock and autumn hills; a dragon on a hilltop |
+| 12:24–12:27 | V, S | **hostile clan camp: standing stones and a ruined stone fort in a canyon** |
+| 12:33–12:51 | D | hidden temple: corridors, blood seal, carved wall; terrace outside in fog |
+| 12:54–13:09 | V, I | stone city carved in the cliff; palace |
+| 13:12–13:15 | S, T | dragon outside; a traveller with a dog on the road |
+| 13:18–13:33 | U, I | crafting, palace, college |
+| 13:36–14:03 | D | side dungeon (carved stone, wraiths) |
+| 14:09–14:15 | V, S | steward; night snow fight; a town at night with torches |
+| 14:18–14:51 | M, C | monastery, courtyard gate with fire, storm path, summit talk |
+| 14:54–15:00 | D, V | hidden temple base; terrace |
+| 15:03–15:21 | S, T | dragon fight in snow; riding through snowy forest |
+| 15:24–16:03 | V, I | walled snow city: market, houses, palace (side quest) |
+| 16:06–16:21 | V, I | college: the long stone bridge to the college at night; library |
+| 16:24–16:45 | T | ride over snow, ice-cave hermit, tundra and ice coast, dragon, sabre cat, **a lone watchtower on a ridge at sunset** |
+| 16:48–17:42 | D | ice cave, brass ruin, giant cavern, scroll chamber |
+| 17:45–17:51 | T, V | snowy ride; the river village in sun |
+| 17:54–18:09 | D, C | hermit's round door; a side book quest |
+| 18:12–18:27 | T, S | ice coast; the summit vision and fight |
+| 18:30–18:39 | I, M, T | temple base, summit, **a trader caravan camp in the grass** |
+| 18:42–18:51 | V, I | city, shops, palace refusal |
+| 18:57–19:03 | I | **war leaders' halls: a war room with a map table**, an ice-blue throne hall |
+| 19:06–19:24 | M, I, C | monastery, peace council |
+| 19:27–19:39 | I, S | palace, the porch trap |
+| 19:42–20:21 | D, S | high temple ruin: outside on grass among ruins, interior, top, portal |
+| 20:24–20:39 | T, I, S | afterlife path, bone bridge, hall, final valley |
+| 20:42–20:51 | S, C | summit farewell; council hall |
+| 20:54–21:08 | V, M | a town's great tree; credits over a summit walk |
+
+## 2b. Travel over open land, measured
+
+Method: 753 frames, one every 30 s, over every travel stretch in the 21 h (≈6 h of footage), plus the 3-minute index. Times are video time from leaving one place to arriving at the next and **include** whatever the player stopped for (fights, looting, a side cave), which the notes say. The player walks the first third of the game and rides a horse from ≈5:00 on (walk ≈1.4 m/s jogging ≈4 m/s; horse ≈7–9 m/s at a canter, ≈12 m/s galloping).
+
+| # | Walk or ride | Time | What happens on the way (timestamps) |
+|---|---|---|---|
+| 1 | River village → first town, on foot, at night | ≈18 min (1:41:30 → 1:59:30) | forest trail, a plank footbridge (1:44:30), a lone fisher's hut on a river (1:45:30), a stranger met on the road (1:45), cobbled road over dark tundra with a hired sword walking the other way (1:50:30), a low stone wall stub (1:52:30), **a side tomb's lit door found 40 m off the road** ("discovered", 1:53–1:55), **a roadside campfire with a bedroll and bones** (1:57:30), then a lit farm gate (1:59:30) = the town's outskirts |
+| 2 | First town → mountain-foot village, on foot | ≈33 min (3:21 → 3:54) | farm under the mountain (3:21), cobbled road along a river with a stone retaining wall (3:22), skeletons at a hill ruin (3:24), **a two-tower toll fort astride the road with a bridge between the towers, held by bandits** (3:26–3:33), pine forest road with a **cairn of stacked stones** at the verge (3:36:30), fog, then a stone bridge into the village (3:54) |
+| 3 | River village → mountain village on horseback | ≈8.5 min (6:27 → 6:35:30) | mill and stone bridge out of the village (6:28–6:28:30), a ford (6:29:30), narrow forest trail on a hillside (6:30–6:34:30) with one troll, then drystone-walled lane and a stone bridge into the village (6:35–6:35:30) |
+| 4 | Farm with signpost → cliff-top capital, horseback | ≈19 min (7:24 → 7:43) | farm and signpost (7:24), inn with a fire pit (7:25), vegetable field with wattle fence (7:26:30), **drystone walls ≈1 m high lining the road** (7:28:30), a junction (7:29), a small stone bridge (7:31), **a bandit camp with a log palisade and a spiked log ramp** right beside the road (7:31:30–7:38), cobbled road through pines (7:39–7:42), a farm with smoke, **a giant natural stone arch over the road under the city** (7:41), gate guards (7:43) |
+| 5 | Embassy escape cave → river village inn, horseback | ≈5 min (8:53 → 8:58) | snowy pine forest (8:53:30–8:55), cobbled forest road (8:55:30), a fenced farm (8:56), **a long stone bridge with parapets over a wide river** (8:56:30), village |
+| 6 | First town → snow lumber village at night, horseback | ≈15 min (9:40 → 9:55) | farms outside the town walls ("discovered" farm, 9:41:30), cobbled road at dusk (9:42–9:43:30), **ruined stone arches over the road in snow** (9:44), blizzard (9:46), a lumber mill at night (9:47), log-house village (9:51–9:55) |
+| 7 | Forest road → canal city, horseback | ≈20 min (10:52 → 11:12) | autumn birch forest, cobbled road ≈3 m (10:58–10:59:30), **a ford across a shallow river** (11:00:30), a fenced farm field (11:01:30), **a mining camp of timber shacks with lanterns** (11:02–11:05), city |
+| 8 | Stone city → hold border, horseback | ≈7 min (13:10 → 13:17) | canyon road with rocks (13:10:30), **signpost at a fork** (13:11), standing stones (13:11:30), dragon (13:12), rain over tundra (13:14–13:16) |
+| 9 | Summit village → snow city, horseback | ≈15 min (15:09 → 15:24) | snowy pass, ruined tower (15:10:30), steep snow slope (15:11), **a hunters' camp with a timber shack and a crafting bench** (15:12:30–15:13:30), snow plain, river, city |
+
+**What these numbers mean for our valley.** Even on a horse, the reference puts **a "thing" (a building, a ruin, a camp, a bridge, a person or a monster) every 30–90 s of travel**: on foot that is every 50–120 m, on horseback every 250–700 m. A walk that takes 15–30 minutes passes 8–15 such things. Our valley is a few km², so a walk from one area gate to the next (≈1 km) should pass about 8–12 things, never fewer than one per 120 m of road.
+
+### How the road is drawn (corrected from part one)
+- **Main road:** cobbles laid flat in the ground, **3–4 m wide**, with grass growing between stones at the edges; no kerb; verge of tall grass, boulders and young trees. In farmland it is lined on one or both sides by **drystone walls ≈0.8–1.2 m high** (7:28:30, 3:22) or a **wattle/split-rail fence** (6:10:30, 7:26:30). In mountains a stone **retaining wall** holds the downhill side (3:22).
+- **Trail:** bare earth 1.5–2.5 m wide, worn into the grass, with stones and roots (6:30–6:34:30, 10:55–10:57:30). Trails leave the road at a signpost or a cairn.
+- **Bends and hiders:** roads bend every 60–150 m in open tundra, every 30–60 m in forest; the next stretch is hidden by a rise of 2–5 m, a boulder group, a tree clump or a ruined wall stub.
+- **Junctions:** always marked by a **signpost** (a pole ≈2.5 m with 2–4 arms) and often by a farm or an inn standing at the fork (7:24, 13:11).
+- **Cairns:** stacked-stone markers ≈1–1.5 m on trails and on mountain paths (3:36:30, 4:02).
+- **Water crossings:** stone bridges of one to three arches with ≈0.8 m parapets, deck 4–5 m, often with **a pair of braziers on stone posts at the bridge head** (5:57); plank footbridges ≈1.5 m wide on trails (1:44:30); **fords** where a trail meets a shallow river (6:29:30, 11:00:30).
+- **Change of country:** happened at a river or bridge (5:57, 8:56:30), at a pass (9:44, 15:10:30) or at a ridge line; snow begins on rising ground, and pine gives way to birch with autumn colour at a river valley (10:52).
+- **Landmarks in view:** on open tundra a tower, a fort, a standing stone, a giant camp's smoke or a city wall is nearly always on the horizon; in forest the view closes to 50–100 m and the road itself is the guide.
+
+## 2c. Forts, camps and military places in the uncut run
+
+**Honest summary first.** The uncut main quest still does **not enter a war army's camp** (tents, standards, a command tent): those belong to the reference game's side war line, which this player skipped. What it does show, in full and on foot, is six fortified or camp places the road passes through. They are the material for the cards below. Close-up frames: every 6–10 s through each place.
+
+### 1. Two-tower toll fort astride a gorge (3:25:00–3:33:00) — *the best fort in the video*
+- **First seen** at 3:26:12 from ≈150 m: two square-ish stone towers on either side of a rocky gorge, **tied by a stone span at the top**, a timber hoarding (a wooden platform on brackets) sticking out of the near tower. The road runs along the bottom of the slope toward the near tower's foot.
+- **Last 50 m** (3:26:24–3:26:30): the road narrows between a boulder and the tower base; the tower door is **on the road**, so the road *must* pass the guards.
+- **Footprint:** each tower ≈7 × 7 m, ≈15–18 m tall, dry-laid rough stone; the gorge between them ≈20–25 m; the top bridge ≈2.5–3 m wide, **no parapet**, a long drop to a river (3:28:00–3:29:24).
+- **At the door:** 2 bandits stand in the open in front of the tower door, a cooking tripod with a pot beside them (3:26:30–3:26:54). They stop the player and demand a toll: talk first, then fight or pay.
+- **Inside:** narrow stone stairs up the tower (one room per floor, ≈4 × 4 m), a locked chest in a ground-floor room (3:27:24–3:27:42); at the top a **timber platform** with a lookout/archer and a lever; the fight moves out onto the top bridge (3:28:00–3:29:24); the far tower has more rooms, crates and a cell (3:29:30–3:32:06).
+- **Exit:** down the far tower and out onto the **same road continuing on the other side** (3:31:36 shows the bridge from the far end; 3:32:12 the road leaving into pine forest). *The fort is a gate the road passes through, not a place off to the side.*
+- **People:** ≈6 bandits: 2 at the door, 1–2 on the top platform, 1 on the bridge, 1–2 inside the far tower.
+
+### 2. Log-palisade bandit fort beside a road (7:30:30–7:38:30)
+- **First seen** at 7:31:00 from ≈60 m: a **timber gate tower over the road** (posts ≈6–7 m, a roofed lookout platform on top) built where the road squeezes between two rock outcrops. A bandit on the road at its foot asks for a toll (7:31:06–7:31:24).
+- **Plan:** past the gate tower, a **log staircase** (≈1.5 m wide, ≈15 steps) climbs a rock face to the main camp; a **plank walkway ≈1.5 m wide** runs along the cliff (7:31:42–7:31:54); the camp proper is a yard ≈30 × 20 m on a rock shelf: a palisade of **vertical logs ≈3–4 m with sharpened tops** on the open sides, **a spiked log barricade** ("cheval-de-frise", 7:33:06–7:33:30) at the entry, **2–3 timber shacks** ≈6 × 4 m with plank walls and plank roofs (7:32:30, 7:33:54), tall dry grass inside the yard, a cooking spot.
+- **Back:** behind the yard a **cave mouth** leads to the leader's room (bedroll, table, chest, a book) and a short cave with barrels and a pool (7:36:18–7:36:48). The leader stands in the back shack.
+- **People:** ≈7: 1 at the road gate, 1 on the gate tower, 2 on the stair/walkway, 2 in the yard, 1 leader at the back.
+- **Light:** daylight; no fires seen in the yard by day; lanterns in the cave.
+
+### 3. Wild clan's camp in a canyon, built on plank decks (12:21:00–12:29:30)
+- **Approach:** a red-rock canyon country; **standing stones ≈4–6 m** rise beside the trail before the camp (12:21:24–12:21:32), a dragon fight on open ground in front of it (12:21:40–12:23:16).
+- **Plan:** the camp spreads over **wooden decks and stairs built against the canyon wall and across a gully** (12:25:56–12:27:08), ≈60–80 m long; a **ruined stone fort wall** forms the back; **hide tents ≈4 m tall** (a stretched-hide frame, 12:26:36), plank tables, barrels and crates, **a stone-lined round well ≈2.5 m across** in the middle of the main deck (12:27:48, 12:28:28), work benches with tools, **sharpened stakes** set in the slope on the approach (12:25:48).
+- **People:** ≈8–10 clan fighters spread over different deck levels, so the fight climbs the decks; a few spell-casters keep back.
+- **What is at the centre:** the well and the work benches; the chests are at the edges of the decks.
+- **After:** the deck at the back of the camp is where the companion stops to point out the next place (12:28:52–12:29:08): the camp is a staging point, the temple cave opens below it (12:30:30–12:31:00).
+
+### 4. Roadside traveller camps (1:57:20–1:58:00, 15:12:30–15:13:30, 18:38:00–18:40:30)
+- **Night campfire on the open moor** (1:57:20–1:58:00): one big fire, a lean-to of hides on two poles, bones and a cooking spit, a chest by the fire; nobody home. Seen from ≈150 m **only by the fire glow**.
+- **Hunters' camp** (15:12:30–15:13:30): a timber shack ≈5 × 4 m with a plank porch, a work bench and a tanning rack, a horse tethered; one hunter who trades.
+- **Trader caravan** (18:38–18:40): wagons and a camp in tall grass outside a city gate, traders sitting on bedrolls; it is where the road meets the city, not out in the wild.
+
+### 5. Small platform camp in a dark forest (10:41:50–10:42:20)
+- A raised **plank platform on posts, ≈2 m off the ground, with a lantern and a rope rail**, a plank bridge between two platforms; bandits on it. Seen at night by its lantern.
+
+### 6. Mining and lumber camps (11:02:00–11:05:00, 9:47:00, 6:00:50–6:03:20)
+- **Mining camp:** 3–4 plank shacks with porches on a slope, lanterns on posts, a work counter where the owner trades, a mine door in the rock behind (11:02–11:05).
+- **Lumber camp / mill:** a saw-mill shed by a stream with log stacks, at night lit only by two lanterns (9:47).
+- **River hideout:** a camp in a cave mouth by a river: plank floors, tables, barrels, a skeleton in a crate, a lantern by the water (6:00:50–6:03:20).
+
+### 7. City gates as the closest thing to a fort gate (4:30:00–4:31:20, 18:40:30–18:40:38, 2:54:18)
+- **Last 300 m** (4:30:00–4:30:40): cobbled road through farm fields, **two or three farmhouses outside the wall with smoke**, a **hanging signpost** at the turn (4:30:50).
+- **Last 50 m:** a **stone stair ≈6–8 m wide, ≈12 steps** up to the gate (4:31:00), **two iron fire bowls on stands** at the top, **two guards** in house colours either side of a double timber gate ≈4 m wide, ≈5 m high, set in a stone gatehouse (4:31:20).
+- **Another wall gate** (18:40:30): a **square arch ≈4 m wide, ≈4.5 m high** through a stone wall ≈6 m high, **two cloth banners** hanging either side, **two wall lanterns** at head height, the road going straight through.
+- The snow city's gate (2:54:18): a stone gatehouse with a single guard in the snow.
+
+## 2d. Farms, mills and villages seen in passing
+
+- **Farms** stand at road forks and outside every town wall: one longhouse ≈12 × 7 m with a shingle roof, a cabbage/vegetable field ≈20 × 15 m **fenced with wattle or split rails**, a cart, a well or a water trough, a hay or wood pile, 1–3 farm hands working (7:24, 7:26:30, 9:40:30–9:41:30, 11:01:30, 3:21). From the road the **smoke from the chimney** is seen first.
+- **Mills:** a timber saw-mill with a water wheel on a stream, log stacks, a footbridge; the mill is always at the edge of a village where the river leaves it (6:28, 9:47).
+- **Villages (corrected):** the river village has **≈10–12 buildings** along one road and a river, a mill, a stone bridge at one end and a wooden one at the other (6:28–6:28:30); the snow lumber village has **≈8 log houses** on a slope with a log palisade only on the side facing the road (9:51:20–9:55:30); the mountain-foot village has **≈8–10** buildings, a stone bridge and a drystone-walled lane (6:35). None have a full wall; a short palisade or a fence covers only the road side.
+- **The inn** is the biggest building in every village (a long hall ≈20 × 10 m with a central fire pit, 7:25).
+
+## 2e. Dungeon entrances, exits and loops (shown in full this time)
+
+- **First tomb, the way out** (1:36:00–1:40:10): after the ring door, the final cavern (two thin waterfalls, sarcophagus, chests, the carved wall; 1:37:10–1:39:30); a **lever behind the wall** opens a **narrow rising stair tunnel** ≈2 m wide (1:39:40–1:39:50) that ends in a door marked as the way outside (1:40:10). The player comes out **on a hillside ≈100–200 m from and above the front entrance**, then walks down to a lakeside dock (1:41:20). Boss dead → outside: ≈2.5 min including loot.
+- **Toll fort:** in by the near tower door, out by the far tower onto the onward road (above).
+- **Palisade fort:** in by the road gate, out the same way, the cave at the back is a dead end with the leader.
+- **Embassy:** in by the front door, out through a trap door into a cave and out into the wild elsewhere (8:48–8:53).
+- **Hidden temple:** entered through a cave mouth below the clan camp (12:30:30–12:31:00), then a ruined court, a corridor, the face door, a stair (12:34:30–12:36:30); it ends in the sanctuary where the player stays (no exit run).
+- **Brass ruin and the deep cavern:** entered from an ice-cave door, and the player leaves the cavern by **a lift/elevator up to a different exit** (index 17:39–17:45).
+- **Rule:** every one of these has either **a second exit that comes out elsewhere** or **a gate on the far side**, so the player never walks back the way they came after the boss.
+
+## 2f. How each quest hands the player from one place to the next when the walk is shown
+
+- **The road is the handover.** After a quest-giver names a place, the player picks the road out of town, and within 2–5 minutes meets a **side thing on the road** (a stranger, a tomb door, a fort with a toll, a dragon) that is not the quest but is on the way. 1:42–1:59, 3:21–3:54, 7:24–7:43 all follow this pattern.
+- **Every destination is announced by something seen first:** the town by farms and smoke (1:59:30, 4:30), the capital by a giant rock arch over the road under it (7:41), the village by a mill and a bridge (6:28), the clan camp by standing stones and a fight in front of it (12:21), the ice coast by a lone watchtower on a ridge at sunset (16:45).
+- **Companions walk ahead and stop to talk at the threshold:** at the clan camp's back deck (12:28:52), at the temple door (12:35:00), at the stone city gate. The talk happens at the doorway of the next place, not in a room before leaving.
+- **Fast travel cuts the second visit, not the first.** The player walks or rides to a place the first time (3:21–3:54, 6:27–6:35:30, 7:24–7:43) and fast-travels back to it later. *For our valley: the first trip to every place must be good on foot; the return trips can be gate-to-gate.*
+
+## 2g. New and corrected pattern cards (second source)
+
+### Fort, corrected (replaces the fort card of part one)
+- **Two kinds, both astride a road:**
+  - *Tower gate fort:* 2 towers ≈7 × 7 m, 15–18 m tall, either side of a gap 20–25 m, tied by a top bridge 2.5–3 m wide; road passes at the foot of the near tower; the far tower lets out onto the onward road. ≈6 defenders. Ref 3:25:00–3:33:00.
+  - *Palisade fort:* a timber gate tower 6–7 m over the road where it squeezes between rocks; a log stair to a yard ≈30 × 20 m on a rock shelf, 3–4 m palisade of sharpened logs, a spiked barricade at the entry, 2–3 plank shacks ≈6 × 4 m, a cave behind for the leader. ≈7 defenders. Ref 7:30:30–7:38:30.
+- **Gate:** the road passes *through* or *under* it; a guard stands **in the road** and speaks before any fight (toll, warning).
+- **Sentries:** 1–2 at the road gate, 1 on the highest platform, the rest in pairs on stairs, walkways and in the yard; the leader at the back.
+- **First sight:** ≈150 m for the stone fort (towers on the skyline), ≈60 m for the palisade fort (hidden by rocks until a bend).
+- **Exit:** through the far side (stone fort) or back out the gate (palisade).
+
+### Camp, corrected (replaces the camp card of part one)
+- **Traveller camp:** 1 fire, 1 hide lean-to on two poles, a bedroll, a cooking spit, a chest. Seen by fire glow from ≈150 m at night. Ref 1:57:20.
+- **Work camp:** 3–4 plank shacks ≈5 × 4 m with porches, lanterns on posts, a work counter, a mine or mill behind; 2–4 workers. Ref 11:02–11:05, 15:12:30.
+- **War-band camp (the nearest thing to an army camp in the video):** 60–80 m long, built on **plank decks and stairs over several levels** against a cliff, the back closed by a ruined stone wall, **hide tents ≈4 m tall** (≈3–4 of them), a central **stone well ≈2.5 m**, work benches, barrels and crates along deck edges, sharpened stakes on the approach, standing stones as its far marker. 8–10 fighters spread over the levels. Ref 12:21:00–12:29:30.
+- **Spacing:** tents/shacks 4–8 m apart; the open centre ≈10–15 m across holds the fire or well.
+
+### Road, corrected
+- Cobbles 3–4 m wide; drystone walls 0.8–1.2 m or wattle fences through farmland; retaining walls on slopes; bends every 60–150 m in the open, 30–60 m in forest; a signpost at every fork; cairns ≈1–1.5 m on trails. Ref 3:22, 3:36:30, 7:28:30, 7:29, 13:11.
+
+### Bridge and ford
+- Stone bridge: 1–3 arches, deck 4–5 m, parapet ≈0.8 m, **a pair of braziers on stone posts at one or both heads**; long river bridge up to ≈60 m. Plank footbridge ≈1.5 m on trails. Ford: a shallow sandy crossing where a trail meets a river ≈15–25 m wide. Ref 5:57, 6:28:30, 8:56:30, 1:44:30, 6:29:30, 11:00:30.
+
+### Farm and village, corrected
+- Farm: longhouse 12 × 7 m, fenced field 20 × 15 m, well/trough, cart, 1–3 workers, chimney smoke. Village: 8–12 buildings along one road beside a river, a mill at the downstream end, a bridge at each end, the inn biggest, a fence or short palisade only on the road side. Ref 6:28, 7:24–7:26:30, 9:41:30, 9:51:20–9:55:30.
+
+### Dungeon exit
+- After the boss: a lever or a hidden door behind the boss's dais → a narrow rising tunnel ≈2 m wide → a one-way door that comes out **100–200 m from the front entrance and higher up**, with a view. ≈2–3 min from boss to daylight. Ref 1:39:30–1:41:20.
+
+## 2h. Earlier estimates this source changes
+
+| Part-one estimate | Second source | Change |
+|---|---|---|
+| "No proper military fort or army camp is entered" | Still no army camp of the war factions; but two forts (stone tower-gate fort, palisade fort) and a war-band deck camp are crossed in full | fort and camp cards rewritten from real places |
+| Camp: 3–8 bedrolls/lean-tos, 4–8 enemies, 30–60 m | War-band camp 60–80 m long on 2–3 deck levels, 3–4 hide tents ≈4 m tall, 8–10 fighters; traveller camp = 1 fire + 1 lean-to | numbers replaced |
+| Fort: walled compound with one gate, 4 m wall | Forts in the open sit **astride the road** and make the road pass a guard; stone towers 15–18 m, palisade 3–4 m | the fort is a road gate, not a side compound |
+| Main road ≈4 m | 3–4 m cobbles, with drystone walls 0.8–1.2 m through farmland | narrower; walls added |
+| Bends every 40–60 m | 60–150 m in open country, 30–60 m in forest | depends on country |
+| Landmark every ≈60–90 s (pilgrim stair) | Something every 30–90 s of travel, on foot or horse (every 50–120 m walking) | confirmed and generalised |
+| Village 6–10 buildings, no wall | 8–12 buildings; a fence or short palisade only on the road side | slightly larger, part-walled |
+| Dungeon shortcut "inferred, not seen" | Seen: lever behind the boss → rising tunnel → door 100–200 m from and above the entrance, ≈2–3 min | confirmed with sizes |
+| Overland walks unknown | 9 measured walks/rides, 5–33 min each | see 2b |
+
+## 2i. What this changes for our three army camps and the fort
+1. **Put the fort across the road, not beside it.** Both forts in the reference make the road pass a guard who speaks first; the onward road leaves from the far side. Our fort should sit in a pass or at a river crossing between two areas, so every trip through that gate is a scene.
+2. **Build camps on levels.** The war-band camp reads as a place because it climbs: decks, stairs and a back wall over 2–3 levels against a cliff. A flat ring of tents would read as scatter. Give each army camp at least one raised level (a platform, a terrace or a rampart walk) for an archer and the leader.
+3. **Count small:** 3–4 tents or shacks, 4–8 m apart, around an open centre 10–15 m across with one focal object (fire, well, standard); 6–10 defenders; one stair or ramp in. More pieces would cost draw calls without reading better.
+4. **Announce each camp by one tall thing:** a tower top on the skyline at ≈150 m, standing stones before the clan camp, fire glow at night. For three armies: one tall marker per army (banner pole, watch platform, standing stone), visible from the road 150 m out.
+5. **Every fortified place has a second way out** (far tower, trap door, cave behind, rising tunnel), and the walk *to* it the first time is the reward, with 8–12 things on the way.
+
+## 2j. What this video still does not show
+- **A real army camp of the war factions** (rows of tents, a command tent, a supply yard, training ground): this player skipped the reference game's war questline, so it never appears.
+- **A siege, a battle line or a fort's walls held against an attack.**
+- **Forts in daylight from above:** footprints are estimated from the ground; no overhead or map view of fort plans.
+- **The return walk from most dungeons:** fast travel still cuts most exits after the first tomb.
+- **Night stretches** (1:42–1:58, 7:06–7:22, 9:44–9:53, 10:38–10:52) stay too dark at 480p even brightened, so ground cover and spacing there are judged only from fire and lantern light.
+- **Desert, river-delta or Mediterranean country**: the reference land is northern (pine, tundra, snow, autumn birch, a red-rock canyon). Our Egypt- and Rome-inspired areas need their own references for ground cover and building forms.
