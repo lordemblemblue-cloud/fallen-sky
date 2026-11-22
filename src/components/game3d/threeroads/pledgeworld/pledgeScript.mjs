@@ -6,6 +6,7 @@ import {
   THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsLine, threeRoadsPoint,
 } from '../script/index.mjs';
 import { threeRoadsEmpireOfFaction, threeRoadsHomeOf, threeRoadsPerson } from '../script/cast.mjs';
+import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 
 // The name the pledges are registered under (pledgeRegistry.mjs).
 export const THREE_ROADS_PLEDGE_SOURCE = 'three-roads';
@@ -24,10 +25,12 @@ export function threeRoadsBandPledges(bandId) {
 // The pledges the game offers: those of the bands whose places are built
 // (script/index.mjs decides; band 1 today). Lines, points and staging are
 // read from every band that has been written.
-let defined = null;
-export function threeRoadsPledges() {
-  if (!defined) defined = Object.freeze(threeRoadsBuiltBands().flatMap(band => threeRoadsBandPledges(band.id)));
-  return defined;
+// With the builders' preview switch on, the bands still being built are offered too.
+const definedBy = new Map();
+export function threeRoadsPledges(preview = threeRoadsPreviewEnabled(globalThis.window)) {
+  const key = !!preview;
+  if (!definedBy.has(key)) definedBy.set(key, Object.freeze(threeRoadsBuiltBands({ preview: key }).flatMap(band => threeRoadsBandPledges(band.id))));
+  return definedBy.get(key);
 }
 
 export function threeRoadsPledge(pledgeId) {

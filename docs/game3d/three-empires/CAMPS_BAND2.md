@@ -120,10 +120,14 @@ Not while carrying a jar and not while walking the courier down: a pledge's carr
 
 ## 7. Building it
 
-| Step | Who | Needs |
+| Step | Who | Where it stands on 2026-11-22 |
 | --- | --- | --- |
-| Model the three kits, Remoria first | the kit session | `empireKitPieces.mjs` |
-| Lay out the three camps with stand-in boxes, fit each piece to the ground in the running game, then swap in the kits as they land | the places session | `campPlans.mjs` |
-| Add the sentries to the cast, mark band 2 built, play its six chapters | the lead, then the pledge-world session | both of the above |
+| Model the three kits | the kit session | Done: `remoria.glb`, `akitsu.glb`, `tameri.glb` in `public/game3d/threeroads/kits/` |
+| Lay out the three camps and fit each piece to the ground in the running game | the places session | Done with the real kits, behind the preview switch. Each camp draws in about five calls and adds 27,000 to 35,000 triangles seen from near |
+| Add the sentries to the cast, and let the preview switch bring the camps' people home and offer band 2's pledges | the lead | Done: seven sentries; `?threeRoads=1&threeRoadsPreview=1` |
+| Play the six chapters in the running game with the preview on, one character of each faction | the pledge-world session | To do |
+| Mark band 2 built, so players who turn the story on get it | the lead | After the play-through, and after the owner has seen it |
+
+Not walked yet by a real player or a mount: the path through the fort and the trail through both pickets (checked by calculation only).
 
 A piece is moved from its planned spot only where the ground says so, and the report says which.

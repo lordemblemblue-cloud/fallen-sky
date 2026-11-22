@@ -302,3 +302,13 @@ test('every story point and every home stands on ground a player can walk to', (
   }
   assert.deepEqual(problems, []);
 });
+
+test("the builders' preview offers every written band, and each camp has its sentries", () => {
+  assert.deepEqual(threeRoadsBuiltBands({ preview: false }).map(band => band.id), ['band1']);
+  assert.deepEqual(threeRoadsBuiltBands({ preview: true }).map(band => band.id), THREE_ROADS_BANDS.map(band => band.id));
+  for (const [area, sentries] of [['west', 2], ['east', 2], ['north', 3]]) {
+    const here = threeRoadsCastAtHome({ area, includeUnbuilt: true });
+    assert.equal(here.filter(person => /_picket_|_gate_/.test(person.id)).length, sentries, area);
+    assert.deepEqual(threeRoadsCastAtHome({ area }), [], area + ' stays empty without the preview');
+  }
+});

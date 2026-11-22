@@ -219,3 +219,14 @@ test('the fort\'s wall closes: each corner meets a run on both walls, and each g
     assert.ok(Math.abs(gap - spanWidth) < 0.05, `the gap between the towers is ${gap.toFixed(2)} m, the walk ${spanWidth} m`);
   }
 });
+
+test('each sentry spot of a plan has a person of that army standing on it', () => {
+  for (const plan of CAMP_PLANS) {
+    for (const spot of plan.sentries) {
+      const who = THREE_ROADS_CAST.find(person => person.home && person.home.area === plan.area
+        && Math.hypot(person.home.x - spot.x, person.home.z - spot.z) < 0.05);
+      assert.ok(who, `${plan.id}: nobody stands at (${spot.x}, ${spot.z})`);
+      assert.equal(who.empire, plan.kit);
+    }
+  }
+});
