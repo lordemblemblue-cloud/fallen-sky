@@ -16,6 +16,8 @@
 // eventType: the one event that advances it.
 // idField: which field of the event names the thing ('targetId' or 'itemId').
 // idFrom: where the step takes that id from, in order of preference.
+// altIdField: a second field of the event the step's id may match instead
+//   (a defeat step may name a spawn group, `targetId`, or a kind of enemy, `kind`).
 // matchPlace: the event must also carry the step's placeId.
 // seconds: the step may say how long the deed has to be kept up.
 const KIND_ROWS = [
@@ -25,7 +27,7 @@ const KIND_ROWS = [
     idField: 'targetId', idFrom: ['target', 'placeId'], idRequired: true },
   { kind: 'defeat', objectiveType: 'kill', eventType: 'enemy_killed',
     idField: 'targetId', idFrom: ['target'], idRequired: false, matchPlace: true,
-    needsTargetOrPlace: true },
+    needsTargetOrPlace: true, altIdField: 'kind' },
   { kind: 'defeat_boss', objectiveType: 'defeat_boss', eventType: 'boss_killed',
     idField: 'targetId', idFrom: ['target'], idRequired: true },
   { kind: 'pick_up', objectiveType: 'collect_item', eventType: 'item_collected',
@@ -51,6 +53,7 @@ const KIND_ROWS = [
 export const PLEDGE_STEP_KINDS = Object.freeze(Object.fromEntries(
   KIND_ROWS.map((row) => [row.kind, Object.freeze({
     matchPlace: false, needsTargetOrPlace: false, newType: false, seconds: false, choice: false,
+    altIdField: null,
     ...row, idFrom: Object.freeze([...row.idFrom]),
   })]),
 ));
@@ -437,7 +440,8 @@ export function pledgeObjectiveMatchesEvent(objective, event = {}) {
   const row = own(PLEDGE_STEP_KINDS, objective.stepKind) ? PLEDGE_STEP_KINDS[objective.stepKind] : null;
   if (!row || row.eventType !== event.type) return false;
   const wanted = objective[row.idField];
-  if (wanted !== undefined && wanted !== event[row.idField]) return false;
+  if (wanted !== undefined && wanted !== event[row.idField] &&
+      !(row.altIdField && wanted === event[row.altIdField])) return false;
   if (row.matchPlace && objective.placeId !== undefined && objective.placeId !== event.placeId) return false;
   return true;
 }
