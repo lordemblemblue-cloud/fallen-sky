@@ -431,7 +431,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
       const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
         radius: move.radius ?? SPECIAL_BALANCE.sanctuaryRadius, heal: move.healPerSecond ?? SPECIAL_BALANCE.sanctuaryHealPerSecond, until };
       world.zones.push(zone);
-      effects.push({ type: 'zone', ...zone });
+      effects.push({ type: 'zone', ...zone, seconds: move.effectSeconds });
       break;
     }
     default: break; // counter: the stance is the move itself (core/combat.mjs answers the strike)

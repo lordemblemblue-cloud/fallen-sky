@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOVES, FLOW, CLASS_MODE, modeOf, fighterVeil, isStunned } from '../core/index.mjs';
-import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
+import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT, shelterOf } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
@@ -610,6 +610,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           if (fighter.effects) {
             setGhost(actor, !!effectOn(fighter, 'cloak', world.time));
             const lasting = Object.keys(fighter.effects).filter((kind) => kind !== 'cloak' && effectOn(fighter, kind, world.time));
+            // standing in an allied Sanctuary's healing mist: its light clings to the body (client/abilityFx.mjs)
+            if (world.zones?.length && !fighter.vitals.dead && shelterOf(world, fighter)) lasting.push('sanctuary');
             if (lasting.length && drawing) vfx.aura(actor, lasting, show);
           }
           if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
@@ -656,7 +658,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // Contact points now use both posed actors from this frame.
         director.step(effects);
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
-        vfx.update(show, { grips });
+        // an Execution drawing its target in: the golden tether from the Duelist's hand
+        const seizes = [...world.fighters.values()].filter((f) => f.seizedBy && actors[f.seizedBy] && actors[f.id]).map((f) => ({ holder: actors[f.seizedBy], held: actors[f.id] }));
+        vfx.update(show, { grips, seizes });
         tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
         if (ctf) {
           const z = MODES.ctf.arena - CTF.baseInset;
