@@ -21,7 +21,7 @@ import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_
 
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
-  stamina: 0, will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
+  will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
   shieldMultiplier: 1, veilMultiplier: 1, hitAt: [0], blockable: true, chain: null, cancelInto: [], cancelFrom: Infinity,
   iframes: null, channel: false, willPerSec: 0, rootMotion: 0, damageKind: 'melee',
   ...spec,
