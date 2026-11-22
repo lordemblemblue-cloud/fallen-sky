@@ -13,13 +13,15 @@ All in `src/components/game3d/pledges/`. Every file is a `.mjs` with explicit im
 | File | What it holds |
 | --- | --- |
 | `pledgeModel.mjs` | `definePledge`, `validatePledge`, the step-kind table `PLEDGE_STEP_KINDS`, `pledgeObjectiveMatchesEvent`, `pledgePrerequisitesMet`, `isPledge`, `pledgeChoiceKey`, `pledgeOutcomeFlag` |
-| `pledgeProgress.mjs` | `applyPledgeEventProgress` (the ordered reducer), `getPledgeActiveGroup`, `getPledgeStepProgress`, `isPledgeReadyToComplete` |
+| `pledgeProgress.mjs` | `applyPledgeEventProgress` (the ordered reducer), `getPledgeActiveGroup`, `getPledgeStepProgress`, `getPledgeStepChanges`, `isPledgeReadyToComplete` |
 | `pledgeState.mjs` | What the store changes for a pledge on accept, event, complete and abandon |
 | `pledgeOutcome.mjs` | `getPledgeOutcome`, `getPledgeRecord`, `getPledgeChoices`, `resolvePledgeOutcome` |
 | `pledgeStandings.mjs` | `getPledgeStandingRequest` |
 | `pledgeClaim.mjs` | `buildPledgeCompletionClaim` |
 | `pledgeRegistry.mjs` | `registerPledges`, `getRegisteredPledge`, `listRegisteredPledges` |
 | `pledgePlaces.mjs` | The 49 places of the plan and their look-ups |
+
+The `voice/` folder beside them is the voice pipeline's (`VOICE_PIPELINE.md`), not part of the engine. Pledge data itself lives in `threeroads/script/` (`BUILD_RULES.md`).
 
 Changed: `src/components/game3d/useQuestStore.jsx` (section 6). Not touched: `GameWorld3D.jsx`, `questData.jsx`, `AXEQuestFramework.js`, `AXEQuestEventProgress.js`, every screen.
 
@@ -107,7 +109,7 @@ Every step is advanced by one event and only that event. `type` is the event's `
 | --- | --- | --- | --- | --- |
 | `talk` | `target`: the person's id | `talk` | `npc_talked` | `targetId` = the step's `target` |
 | `go_to` | `placeId`, or `target` for a spot that is not one of the 49 places | `discover_location` | `location_discovered` | `targetId` = the step's `target` if it has one, otherwise its `placeId` |
-| `defeat` | `target` (the kind of enemy), `placeId`, or both | `kill` | `enemy_killed` | `targetId` = `target` when the step has one, and `placeId` = `placeId` when the step has one |
+| `defeat` | `target` (a kind of enemy, or one spawn group), `placeId`, or both | `kill` | `enemy_killed` | When the step has a `target`: `targetId` = `target` **or** `kind` = `target`. When the step has a `placeId`: `placeId` = that place. Both, when it has both |
 | `defeat_boss` | `target`: the boss's id | `defeat_boss` | `boss_killed` | `targetId` = `target` |
 | `pick_up` | `target`: the item's id | `collect_item` | `item_collected` | `itemId` = `target` |
 | `carry` | `target`: the thing carried. `placeId` says where to | `carry` (new) | `carry_completed` (new) | `targetId` = `target` |
@@ -126,11 +128,27 @@ Fields any event may carry:
 
 Notes on the table:
 
-- `placeId` is a condition only for `defeat`. For every other kind it is a pointer for the map and for the hook (where the person stands, where the thing has to be carried); the hook is what knows the player arrived.
+- `placeId` is a condition only for `defeat` (in the code, the one kind with `matchPlace`). For every other kind it is a pointer for the map and for the hook (where the person stands, where the thing has to be carried); the hook is what knows the player arrived.
 - A `defeat` step always needs a `target` or a `placeId`. The game's own kill report (`reportEnemyKill`, an `enemy_killed` with a tier and nothing else) therefore never advances a pledge.
 - Timed kinds (`use`, `defend`, `hold_zone`) are timed by the hook: it sends the one event when the time is up. `seconds` is data for the hook and the screen; the reducer does not count time. A step that needs several rounds (three waves, three heaves) uses `count: 3` and one event per round.
 - A choice can be made in a menu or by a deed. "Spare her or finish it" is a `choose` step whose hook sends `choice_made` with `choiceId: 'spare'` when the weapon is lowered, or `'kill'` when the blow lands.
 - Four event names were already in use and are reused where they fit: `location_discovered`, `item_collected` and `world_interact` are sent today by the exploration nodes with their own ids (`ft_spirit_vein` and so on), and `boss_killed` by the paused AXE dungeons. A pledge reacts to them only when the id matches its step, so give pledge targets their own ids unless sharing is meant.
+
+### The enemies subsystem's kill event
+
+`BUILD_RULES.md` has the enemies subsystem report each death as
+
+```js
+{ type: 'enemy_killed', targetId: groupId, placeId, kind, tier, count: 1 }
+```
+
+That payload is what a `defeat` step needs, with three things to keep to:
+
+1. **`target` may be the kind or the group.** A step with `target: 'ink_stray'` counts every death whose `kind` is `ink_stray`; a step with `target: 'm01_gate_strays'` counts only deaths in the group with that `groupId`. Name the kind when any of them will do, the group when the pledge spawned its own.
+2. **`placeId` has to be the place's id from `pledgePlaces.mjs` (`P04`), and it has to be there whenever the step names a place.** A step with a `placeId` ignores a kill event that has none or has another. If the enemies subsystem cannot always know the place, pledges should name the group and leave `placeId` off the `defeat` step.
+3. **It should go out on `axePledgeEvent`, not `axeQuestEvent`.** On `axeQuestEvent` the same event also reaches the ten AXE and Echo quests, and the ones that ask for kills without naming a target (`axe_q_first_patrol`, `axe_q_first_elite` and the Echo kill chapters) will count three-roads monsters; if those monsters are also on the game's own kill path (`reportEnemyKill` in `GameWorld3D.jsx`), they count twice. On `axePledgeEvent` only pledges hear it. A test pins both behaviours.
+
+`tier` is carried but not read by pledges. A boss is not covered by this event: a `defeat_boss` step waits for `boss_killed` with `targetId` = the boss's id, so either the enemies subsystem sends that as well when a boss dies, or the pledge uses a `defeat` step with `count: 1` that names the boss's group or kind.
 
 ### Failure events
 
@@ -186,6 +204,47 @@ Which channel to use:
 - To get the `placeId` for a kill, use `pledgePlaceAtWorld(position)` from `pledgePlaces.mjs` (section 9).
 
 One update is written to storage and sent to subscribers per event that changed something, a choice and its flags included.
+
+### Announcing steps on the bus
+
+The engine does not know the three-roads bus. The pledge-world subsystem announces steps by watching the store:
+
+```js
+import { subscribeQuests } from '../../useQuestStore';
+import { listRegisteredPledges } from '../../pledges/pledgeRegistry.mjs';
+import { getPledgeActiveGroup, getPledgeStepChanges } from '../../pledges/pledgeProgress.mjs';
+
+const seen = new Map();   // pledge id -> its progress the last time we looked, while sworn
+const stop = subscribeQuests((state) => {   // called at once with the current state, then on every change
+  for (const pledge of listRegisteredPledges()) {
+    if (!state.acceptedIds.includes(pledge.id)) { seen.delete(pledge.id); continue; }
+    const now = state.objectiveProgress[pledge.id] || {};
+    const started = (stepId) => ctx.bus.emit('pledge:stepStarted', { pledgeId: pledge.id, stepId });
+    if (!seen.has(pledge.id)) {
+      // Just sworn, or this scene was just mounted: announce what is open now.
+      const open = getPledgeActiveGroup(pledge, now);
+      if (open) [open.stepId, ...open.optionalStepIds].forEach(started);
+    } else {
+      const changes = getPledgeStepChanges(pledge, seen.get(pledge.id), now);
+      changes.done.forEach((stepId) => ctx.bus.emit('pledge:stepDone', { pledgeId: pledge.id, stepId }));
+      changes.started.forEach(started);
+    }
+    seen.set(pledge.id, now);
+  }
+});
+// in dispose(): stop();
+```
+
+`getPledgeStepChanges(pledge, previousProgress, nextProgress)` returns `{ done, failed, started, ready }`: the step ids that finished, the ones sent back to zero, the ones that are open now and were not before (the next required step and its optional steps), and whether the pledge just became ready to turn in. Every area change remounts the world, so the first reading after a mount announces the open step again; that is what lets a place rebuild what the step needs.
+
+The bus events themselves (version 1) are in `BUILD_RULES.md`, section 4. The ones that touch pledges:
+
+| Bus event | Who | What it has to do with a step |
+| --- | --- | --- |
+| `pledge:stepStarted`, `pledge:stepDone` | announced by pledge-world, as above | Other subsystems spawn, move and clear things on these |
+| `enemies:spawnGroup` | asked of enemies by pledge-world when a `defeat` step starts | Its `groupId` is what a step may name as `target` |
+| `enemies:defeated`, `enemies:groupCleared` | announced by enemies | Bus only. The store hears a death through the window event above, not through the bus |
+| `cast:arrived` | announced by cast | Pledge-world turns the arrival of an escorted person into `escort_completed` |
 
 ## 6. What the store does (`useQuestStore.jsx`)
 
@@ -321,4 +380,99 @@ What the next sessions still have to do, because the existing screens and givers
 node --test tests/game3d-pledge-model.test.mjs tests/game3d-pledge-progress.test.mjs tests/game3d-pledge-store.test.mjs tests/game3d-pledge-places.test.mjs
 ```
 
-39 tests. `game3d-pledge-store.test.mjs` bundles the real `useQuestStore.jsx` and `questData.jsx` with esbuild and runs them in Node with a stand-in for `localStorage` and `window`. `tests/game3d-pledge-fixtures.mjs` holds three invented pledges used only by the tests.
+41 tests. `game3d-pledge-store.test.mjs` bundles the real `useQuestStore.jsx` and `questData.jsx` with esbuild and runs them in Node with a stand-in for `localStorage` and `window`. `tests/game3d-pledge-fixtures.mjs` holds three invented pledges used only by the tests, and `tests/game3d-pledge-worked-example.mjs` the example below.
+
+## 13. A worked example, from accept to the completion claim
+
+An invented pledge (not game content) that uses a talk, a place, kills at a place, a carry that fails once, an optional step, a choice and a delivery. The same data is in `tests/game3d-pledge-worked-example.mjs`, and a test sends exactly these events through the real store and checks every line of the table.
+
+```js
+const pledge = definePledge({
+  id: 'example_mill_sacks',
+  npcId: 'example_miller',
+  title: 'Example: the mill sacks',
+  description: 'Example pledge for the engine document.',
+  storyFlagsOnComplete: ['example_mill_done'],
+  pledge: {
+    line: 'example', chapter: 1,
+    swornTo: 'the miller',
+    cause: 'Rats are in the grain and the sacks have to reach the floor before dark.',
+    cost: 'There is one load, and two who need it.',
+    steps: [
+      { id: 'ask',        kind: 'talk',    text: 'Speak with the miller.', target: 'example_miller', placeId: 'P09' },
+      { id: 'reach_mill', kind: 'go_to',   text: 'Go to the mill.', placeId: 'P09' },
+      { id: 'clear_rats', kind: 'defeat',  text: 'Clear three rats from the mill.', target: 'example_rat', placeId: 'P09', count: 3 },
+      { id: 'haul',       kind: 'carry',   text: 'Carry two sacks to the threshing floor.', target: 'example_sack', placeId: 'P08', count: 2, failsOn: 'carry_dropped' },
+      { id: 'ring_bell',  kind: 'use',     text: 'Ring the mill bell on the way.', target: 'example_mill_bell', seconds: 3, optional: true },
+      { id: 'whose',      kind: 'choose',  text: 'Decide who gets the load.' },
+      { id: 'hand_over',  kind: 'deliver', text: 'Hand the tally to the quartermaster.', target: 'example_quartermaster', placeId: 'P08' },
+    ],
+    choices: {
+      whose: {
+        prompt: 'Who gets the load?',
+        options: [
+          { id: 'farm', text: 'The farm families.', flags: ['example_sacks_to_farm'] },
+          { id: 'camp', text: 'Your own camp.', flags: ['example_sacks_to_camp'], outcome: 'bent' },
+        ],
+      },
+    },
+    standings: {
+      kept: { trust: 3 }, bent: { renown: 3, trust: -1 }, broken: { trust: -2 },
+      optional: { ring_bell: { regard: 1 } },
+    },
+  },
+});
+registerPledges('example', [pledge]);
+```
+
+The giver's screen swears it: `acceptQuest('example_mill_sacks')` returns `{ ok: true }` and every step stands at 0. The open step is `ask`.
+
+Then the world reports what happens. Each row is one `window.dispatchEvent(new CustomEvent(<window event>, { detail }))`. The last column is each step's count afterwards, in the order ask, reach_mill, clear_rats, haul, ring_bell, whose, hand_over.
+
+| # | Window event | `detail` | What it does | Counts after |
+| --- | --- | --- | --- | --- |
+| 1 | `axeQuestEvent` | `{ type: 'npc_talked', targetId: 'example_miller' }` | `ask` done; `reach_mill` opens | 1 0 0 0 0 0 0 |
+| 2 | `axeQuestEvent` | `{ type: 'carry_completed', targetId: 'example_sack' }` | Nothing: `haul` is not open yet, and the event is not remembered | 1 0 0 0 0 0 0 |
+| 3 | `axePOIDiscovered` | `{ id: 'P09' }` | `reach_mill` done; `clear_rats` opens (pledge-world asks the enemies subsystem for the group) | 1 1 0 0 0 0 0 |
+| 4 | `axePledgeEvent` | `{ type: 'enemy_killed', targetId: 'example_mill_rats', placeId: 'P11', kind: 'example_rat', tier: 'normal', count: 1 }` | Nothing: the right kind, the wrong place | 1 1 0 0 0 0 0 |
+| 5 | `axePledgeEvent` | `{ type: 'enemy_killed', targetId: 'example_mill_rats', placeId: 'P09', kind: 'example_rat', tier: 'normal', count: 1 }` | `clear_rats` 1 of 3 (the step names the kind; `targetId` is the spawn group) | 1 1 1 0 0 0 0 |
+| 6 | `axePledgeEvent` | the same | 2 of 3 | 1 1 2 0 0 0 0 |
+| 7 | `axePledgeEvent` | the same | `clear_rats` done; `haul` opens, and with it the optional `ring_bell` | 1 1 3 0 0 0 0 |
+| 8 | `axeQuestEvent` | `{ type: 'carry_completed', targetId: 'example_sack', pledgeId: 'example_mill_sacks' }` | First sack arrives: `haul` 1 of 2 | 1 1 3 1 0 0 0 |
+| 9 | `axeQuestEvent` | `{ type: 'carry_dropped', targetId: 'example_sack', pledgeId: 'example_mill_sacks' }` | Hit on the road: `haul` goes back to 0. Earlier steps keep what they had | 1 1 3 0 0 0 0 |
+| 10 | `axeQuestEvent` | `{ type: 'world_interact', targetId: 'example_mill_bell' }` | Optional `ring_bell` done (sent by the hook after the bell was held for 3 seconds) | 1 1 3 0 1 0 0 |
+| 11 | `axeQuestEvent` | `{ type: 'carry_completed', targetId: 'example_sack', pledgeId: 'example_mill_sacks', count: 2 }` | Both sacks arrive: `haul` done; `ring_bell` closes; `whose` opens | 1 1 3 2 1 0 0 |
+| 12 | `axeQuestEvent` | `{ type: 'choice_made', pledgeId: 'example_mill_sacks', targetId: 'whose', choiceId: 'camp' }` | `whose` done. The store records `choices['example_mill_sacks:whose'] = 'camp'`, sets `example_sacks_to_camp` true and `example_sacks_to_farm` false | 1 1 3 2 1 1 0 |
+| 13 | `axeQuestEvent` | `{ type: 'item_delivered', targetId: 'example_quartermaster', pledgeId: 'example_mill_sacks' }` | `hand_over` done. Every required step is done: ready to turn in | 1 1 3 2 1 1 1 |
+
+Through `getPledgeStepChanges`, a watcher announces, in order: done ask, started reach_mill; done reach_mill, started clear_rats; done clear_rats, started haul, started ring_bell; (failed haul); done ring_bell; done haul, started whose; done whose, started hand_over; done hand_over, ready.
+
+Now `buildPledgeCompletionClaim(pledge, getQuestState())` returns:
+
+```json
+{
+  "kind": "pledge_completion_claim",
+  "version": 1,
+  "pledgeId": "example_mill_sacks",
+  "line": "example",
+  "chapter": 1,
+  "ready": true,
+  "steps": [
+    { "id": "ask",        "kind": "talk",    "count": 1, "required": 1, "optional": false, "done": true },
+    { "id": "reach_mill", "kind": "go_to",   "count": 1, "required": 1, "optional": false, "done": true },
+    { "id": "clear_rats", "kind": "defeat",  "count": 3, "required": 3, "optional": false, "done": true },
+    { "id": "haul",       "kind": "carry",   "count": 2, "required": 2, "optional": false, "done": true },
+    { "id": "ring_bell",  "kind": "use",     "count": 1, "required": 1, "optional": true,  "done": true },
+    { "id": "whose",      "kind": "choose",  "count": 1, "required": 1, "optional": false, "done": true },
+    { "id": "hand_over",  "kind": "deliver", "count": 1, "required": 1, "optional": false, "done": true }
+  ],
+  "choices": { "whose": "camp" },
+  "outcome": "bent"
+}
+```
+
+`getPledgeStandingRequest(pledge, 'bent', getQuestState())` returns `{ renown: 3, trust: -1, regard: 1 }`: the `bent` line plus the bell. It is a request; nothing is granted.
+
+The turn-in screen calls `completeQuest('example_mill_sacks')`, which returns `{ ok: true }`. Afterwards `getPledgeOutcome('example_mill_sacks', getQuestState())` is `'bent'`, and the story flags `example_mill_done` and `pledge:example_mill_sacks:bent` are true.
+
+Had the player walked away after row 12 instead (`abandonQuest('example_mill_sacks')`), the outcome would be `'broken'`, the choice record removed, `example_sacks_to_camp` set back to false, and every step at nothing; swearing it again starts from `ask`.
