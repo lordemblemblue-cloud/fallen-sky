@@ -111,11 +111,12 @@ test('steering turns the heading at a limited rate and banks; no keys fly straig
   glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: -60, heroY: -60 });
   glide.toggle({ heroY: 60, groundY: -60, bodyHeading: 0 });
   const right = { x: 1, z: 0 }; // heading +X is +PI/2
-  const trace = fly(glide, { frames: 30, ground: -60, steer: () => right, at: { x: 0, z: 0, y: 60 } });
+  const at = { x: 0, z: 0, y: 60 }; // one flight on: the position carries over (a jump across reads as a teleport)
+  const trace = fly(glide, { frames: 30, ground: -60, steer: () => right, at });
   const turned = trace.at(-1).heading;
   assert.ok(turned > 0 && turned <= GLIDE.turnRate * 0.5 + 1e-6, `half a second turns at most ${GLIDE.turnRate * 0.5} rad (${turned})`);
   assert.ok(trace.at(-1).bank < 0, 'banks into the turn');
-  const straight = fly(glide, { frames: 30, ground: -60, at: { x: 0, z: 0, y: 50 } });
+  const straight = fly(glide, { frames: 30, ground: -60, at });
   assert.ok(Math.abs(straight.at(-1).heading - straight[0].heading) < 1e-9, 'holds the heading');
   assert.ok(Math.abs(straight.at(-1).bank) < Math.abs(trace.at(-1).bank), 'levels out');
 });
@@ -125,12 +126,13 @@ test('diving trades height for speed, and the speed buys a little height back', 
   glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 0, heroY: 200 });
   glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: -200, heroY: -200 });
   glide.toggle({ heroY: 200, groundY: -200, bodyHeading: 0 });
-  fly(glide, { frames: 180, ground: -200, at: { x: 0, z: 0, y: 200 } }); // settle at trim
-  const dive = fly(glide, { frames: 120, ground: -200, dive: () => true, at: { x: 0, z: 0, y: 150 } });
+  const at = { x: 0, z: 0, y: 200 };
+  fly(glide, { frames: 180, ground: -200, at }); // settle at trim
+  const dive = fly(glide, { frames: 120, ground: -200, dive: () => true, at });
   assert.ok(dive.at(-1).speed > GLIDE.trimSpeed + 3, 'faster');
   const sinkDiving = (dive.at(-60).h - dive.at(-1).h) / 1; // over the last second
   assert.ok(sinkDiving > GLIDE.trimSink * 2, `steeper: ${sinkDiving.toFixed(2)} m/s`);
-  const after = fly(glide, { frames: 60, ground: -200, at: { x: 0, z: 0, y: 100 } });
+  const after = fly(glide, { frames: 60, ground: -200, at });
   const sinkAfter = (after[0].h - after.at(-1).h) / 1;
   assert.ok(sinkAfter < GLIDE.trimSink, `pulling out sinks less than trim (${sinkAfter.toFixed(2)} m/s)`);
 });
@@ -156,6 +158,17 @@ test('touchdown hands the feet back; deep water is landed on (the swim takes ove
   assert.equal(glide.mode(), 'fall');
   const off = glide.update({ dt: 1 / 60, x: 0.1, z: 0, groundY: 0, heroY: 0, allowed: false });
   assert.deepEqual([off.mode, off.y, off.changed], ['ground', null, true]);
+  // a teleport (a respawn, a recall) mid-glide ends it where the hero now stands; one onto lower ground is no ledge
+  glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 40, heroY: 40 });
+  glide.update({ dt: 1 / 60, x: 0.07, z: 0, groundY: 0, heroY: 0 });
+  glide.toggle({ heroY: 40, groundY: 0, bodyHeading: 0 });
+  fly(glide, { frames: 30, ground: 0, at: { x: 0.07, z: 0, y: 40 } });
+  assert.equal(glide.isGliding(), true);
+  const moved = glide.update({ dt: 1 / 60, x: 60, z: -20, groundY: 9, heroY: 9 });
+  assert.deepEqual([moved.mode, moved.y, moved.changed], ['ground', null, true]);
+  const lower = glide.update({ dt: 1 / 60, x: 66, z: -20, groundY: 1, heroY: 1 });
+  assert.deepEqual([lower.mode, lower.y], ['ground', null]);
+  assert.ok(glide.update({ dt: 1 / 60, x: 66.07, z: -20, groundY: 1, heroY: 1 }).mode === 'ground');
 });
 
 test('the glider opens only high enough above the landing, and Space again closes it', () => {

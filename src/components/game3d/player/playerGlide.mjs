@@ -27,6 +27,7 @@ export const GLIDE = Object.freeze({
   turnRate: 1.9, // rad/s at most (about 110°/s)
   maxBank: 0.5, // rad of roll at the full turn rate
   swimDepth: 1.45, // water this deep is landed on (the swim takes over); shallower water is waded into
+  teleportMeters: 8, // m across in one frame: further than any glide or run, so a teleport (respawn, recall): the air ends
 });
 export const GLIDE_REACH = GLIDE.trimSpeed / GLIDE.trimSink; // metres forward per metre of height at trim speed
 
@@ -108,6 +109,13 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
       let landed = false;
       if (!allowed) {
         if (mode !== 'ground') toGround();
+        lastY = finite(heroY) ? heroY : lastY; lastX = x; lastZ = z; lastVy = 0;
+        return result({ changed: before !== mode });
+      }
+      if (stepMeters > glide.teleportMeters) {
+        // Moved somewhere else: whatever was in the air ends, and the ground code places the hero; no ledge either.
+        if (mode !== 'ground') toGround();
+        planar = 0;
         lastY = finite(heroY) ? heroY : lastY; lastX = x; lastZ = z; lastVy = 0;
         return result({ changed: before !== mode });
       }
