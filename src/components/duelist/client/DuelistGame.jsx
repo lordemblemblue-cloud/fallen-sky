@@ -164,6 +164,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [picking, setPicking] = useState(false); // explicit reopen after initial confirmation
   // Do not let the automatic match/round countdown dismiss class selection.
   const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: false });
+  const [pendingClassPick, setPendingClassPick] = useState(null);
   const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
   const initialChosenRef = useRef(false);
   const [shopOpen, setShopOpen] = useState(false);
@@ -200,6 +201,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setStatus('loading');
     initialChosenRef.current = false;
     setEntryClass({ generation, confirmed: false });
+    setPendingClassPick(null);
     setPicking(false);
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
@@ -849,16 +851,32 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   }, [showPicker]);
   const pickClass = (id) => {
     const source = sourceRef.current;
-    if (!source?.chooseClass) return;
+    if (!source?.chooseClass || pendingClassPick) return;
     source.chooseClass(id);
-    // A rejected local selection must remain editable. Online selection is
-    // requested from authoritative server; this confirms the user's UI choice.
-    if (source.classAnswer?.ok === false) return;
+    if (online) {
+      // Do not hide the picker or persist a class until the authoritative
+      // multiplayer server accepts it. Rejected requests remain editable.
+      setPendingClassPick({ generation, id });
+      return;
+    }
+    if (source.classAnswer?.ok !== true) return;
     initialChosenRef.current = true;
     setEntryClass({ generation, confirmed: true });
     setPicking(false);
     onClassChange?.(id);
   };
+  useEffect(() => {
+    if (!online || !pendingClassPick || pendingClassPick.generation !== generation) return;
+    const answer = sourceRef.current?.classAnswer;
+    if (!answer) return; // still waiting for server response
+    if (answer.ok === true) {
+      initialChosenRef.current = true;
+      setEntryClass({ generation, confirmed: true });
+      setPicking(false);
+      onClassChange?.(pendingClassPick.id);
+    }
+    setPendingClassPick(null);
+  }, [online, pendingClassPick, generation, net, hud, onClassChange]);
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
@@ -933,6 +951,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass}
           initialChoice={!initialConfirmed} secondsLeft={choiceSeconds}
+          submitting={!!pendingClassPick} error={classAnswer?.ok === false ? classAnswer.reason : null}
           onClose={initialConfirmed && picking ? () => setPicking(false) : null} />
       )}
     </div>
