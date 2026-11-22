@@ -54,6 +54,23 @@ PALETTE = {
     'bark': (0.31, 0.27, 0.23),
     'leaf': (0.29, 0.40, 0.21),
     'leaf_dk': (0.20, 0.30, 0.17),
+    # the empire kits
+    'red': (0.56, 0.17, 0.13),
+    'red_dk': (0.38, 0.12, 0.10),
+    'leather': (0.47, 0.32, 0.20),
+    'leather_dk': (0.33, 0.22, 0.14),
+    'brass': (0.70, 0.55, 0.27),
+    'linen': (0.87, 0.83, 0.71),
+    'mudbrick': (0.63, 0.49, 0.35),
+    'reed': (0.60, 0.57, 0.33),
+    'papyrus': (0.52, 0.55, 0.30),
+    'eg_blue': (0.22, 0.42, 0.54),
+    'canvas': (0.91, 0.90, 0.86),
+    'navy': (0.16, 0.21, 0.34),
+    'khaki': (0.56, 0.51, 0.37),
+    'lacquer': (0.12, 0.10, 0.10),
+    'turf': (0.36, 0.41, 0.23),
+    'sand': (0.72, 0.64, 0.47),
 }
 PALETTE_KEYS = list(PALETTE.keys())
 
@@ -74,8 +91,14 @@ def M(t=(0, 0, 0), rx=0.0, ry=0.0, rz=0.0, s=1.0):
 GAME_TO_BLENDER = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 
 
+# Pieces that sit on another piece: the height their own geometry starts at.
+PIVOT_LIFT = {'wagon': 1.2, 'basket': 1.2, 'bowl': 1.1, 'brazier': 1.1, 'kettle': 0.0}
+
+
 class Builder:
     def __init__(self, lod, seed=7):
+        self.below = 0.0
+        self.reach = 0.0
         self.bm = bmesh.new()
         self.lod = lod
         self.keys = []
@@ -289,7 +312,15 @@ class Builder:
         return self.hull(pts, col, m)
 
     # ---- finishing -------------------------------------------------------
-    def finish(self, name, size, pivot, smooth_angle=38.0, warn=None):
+    def finish(self, name, size, pivot, smooth_angle=38.0, warn=None, skirt=0.0):
+        """Fit to the table and set the pivot.
+
+        size [w, d, h] is the part above y = 0. Extras a builder may set:
+          self.below  metres of hull under the waterline (pivot 'waterline')
+          self.reach  metres the piece reaches beyond its footprint toward +z (pivot 'frame')
+        skirt: every vertex left on the ground (y ~ 0) is pulled down to -skirt, so
+        posts, plinths and banks carry on below the ground on a slope.
+        """
         bm = self.bm
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
@@ -297,25 +328,30 @@ class Builder:
         hi = Vector((max(v.co.x for v in bm.verts), max(v.co.y for v in bm.verts), max(v.co.z for v in bm.verts)))
         ext = hi - lo
         w, d, h = size
-        sc = Vector((w / ext.x, h / ext.y, d / ext.z))
+        below, reach = self.below, self.reach
+        sc = Vector((w / ext.x, (h + below) / ext.y, (d + reach) / ext.z))
         if warn is not None:
             for axis, s in zip('xyz', sc):
                 if abs(s - 1) > 0.10:
                     warn.append(f'{name}: fitted {axis} by {s:.2f}')
         ctr = (lo + hi) / 2
         for v in bm.verts:
-            p = v.co - Vector((ctr.x, lo.y, ctr.z))
+            p = v.co - Vector((ctr.x, lo.y, lo.z if reach else ctr.z))
             v.co = Vector((p.x * sc.x, p.y * sc.y, p.z * sc.z))
-        # now footprint centred, bottom at y 0, height h
-        dy = 0.0
+        # now footprint centred (or starting at z 0 for a reaching piece), bottom at y 0
+        dy = -below
         if pivot == 'top':
             dy = -h
-        elif pivot == 'hub':
+        elif pivot in ('hub', 'centre'):
             dy = -h / 2
-        elif pivot in ('wagon', 'basket'):
-            dy = 1.2
+        elif pivot in PIVOT_LIFT:
+            dy = PIVOT_LIFT[pivot]
+        dz = -d / 2 if reach else 0.0
         for v in bm.verts:
             v.co.y += dy
+            v.co.z += dz
+            if skirt > 0 and v.co.y < 0.02:
+                v.co.y = -skirt
         bmesh.ops.transform(bm, matrix=GAME_TO_BLENDER, verts=bm.verts)
         me = bpy.data.meshes.new(name)
         bm.to_mesh(me)

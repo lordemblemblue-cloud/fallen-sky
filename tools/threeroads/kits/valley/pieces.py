@@ -890,5 +890,21 @@ def oath_tree(B, r):
         B.rock(cpos, rad, col, n=n, smooth=True, flat_bottom=False)
 
 
+# Companions shown with a piece on the contact sheets, at their mounted place.
+COMBO = {
+    'windmill_sails': [('windmill_body_LOD{l}', (0, 0, 0)), ('windmill_sails_LOD{l}', (0, 8.5, 3.25))],
+    'wagon_cover': [('wagon_LOD{l}', (0, 0, 0)), ('wagon_cover_LOD{l}', (0, 0, 0))],
+    'fire_basket_flame': [('fire_basket_LOD{l}', (0, 0, 0)), ('fire_basket_flame_LOD{l}', (0, 0, 0))],
+    'paper_lantern': [('lantern_post_LOD{l}', (0, 0, 0)), ('paper_lantern_LOD{l}', (0, 2.27, 0.15))],
+    'banner_cloth': [('banner_cloth_LOD{l}', (0, 3.5, 0))],
+    'ribbon': [('ribbon_LOD{l}', (0, 1.3, 0))],
+}
+
+# Bark is drawn from one uniform atlas tile: the tree's many narrow trunk and limb
+# strips otherwise blur into their neighbours at lower mip levels in the game.
+TILE_KEYS = ('bark',)
+# Texel density factors (1 = the kit's normal density).
+TEXEL = {'barrow_mound': 0.5, 'hedgerow_4m': 0.75}
+
 BUILDERS = {name: fn for name, fn in globals().items() if callable(fn) and name in BOX_KEYS}
 assert len(BUILDERS) == 38, sorted(set(BOX_KEYS) - set(BUILDERS))

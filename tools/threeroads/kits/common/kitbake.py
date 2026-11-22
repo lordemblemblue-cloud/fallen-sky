@@ -21,8 +21,8 @@ from kitlib import PALETTE, PALETTE_KEYS, lin
 CELLS = 16
 
 
-def flat_atlas(size):
-    img = bpy.data.images.new('valley_atlas', size, size, alpha=False)
+def flat_atlas(size, name='kit_atlas'):
+    img = bpy.data.images.new(name, size, size, alpha=False)
     c = size // CELLS
     a = np.zeros((size, size, 4), np.float32)
     a[..., 3] = 1
@@ -191,8 +191,8 @@ def colour_material(key, img):
         dark = K.scale_col(base, 0.72)
         c = K.mix(K.math('MULTIPLY', wave.outputs['Fac'], 0.55), base, dark)
         c = _jitter(K, c, 1.6, 0.12)
-    elif key in ('thatch', 'thatch_dk', 'straw', 'hedge', 'grass', 'honey', 'leaf', 'leaf_dk'):
-        streak = K.noise(1.0, K.coords((16, 16, 2.5) if key not in ('grass', 'leaf', 'leaf_dk') else (1.2, 1.2, 1.2)), detail=3, rough=0.6)
+    elif key in ('thatch', 'thatch_dk', 'straw', 'hedge', 'grass', 'honey', 'leaf', 'leaf_dk', 'reed', 'papyrus', 'turf'):
+        streak = K.noise(1.0, K.coords((16, 16, 2.5) if key not in ('grass', 'leaf', 'leaf_dk', 'turf') else (1.2, 1.2, 1.2)), detail=3, rough=0.6)
         light = K.scale_col(base, 1.18)
         dark = K.scale_col(base, 0.68)
         c = K.mix(K.ramp(streak, 0.35, 0.7), dark, light)
@@ -203,7 +203,7 @@ def colour_material(key, img):
         if key in ('hedge', 'leaf', 'leaf_dk'):
             lighttop = K.ramp(nz, 0.2, 0.9)
             c = K.mix(K.math('MULTIPLY', lighttop, 0.35), c, K.scale_col(base, 1.35))
-    elif key in ('stone', 'stone_dk', 'old_stone'):
+    elif key in ('stone', 'stone_dk', 'old_stone', 'mudbrick'):
         vor = K.node('ShaderNodeTexVoronoi', feature='DISTANCE_TO_EDGE')
         vor.inputs['Scale'].default_value = 2.6
         vor.inputs['Randomness'].default_value = 0.85
@@ -252,7 +252,7 @@ def colour_material(key, img):
             c = K.mix(K.ramp(oz, 1.32, 1.8), base, K.rgb(lin(PALETTE['flame'])))
         else:
             c = K.mix(K.ramp(oz, 1.35, 1.78), base, top)
-    elif key in ('white', 'white_dk', 'cloth', 'cloth_dk', 'paper', 'paper_glow'):
+    elif key in ('white', 'white_dk', 'cloth', 'cloth_dk', 'paper', 'paper_glow', 'linen', 'canvas'):
         c = _jitter(K, base, 1.5, 0.05)
     else:
         c = _jitter(K, base, 2.0, 0.1)
@@ -279,13 +279,10 @@ def colour_material(key, img):
 # ---------------------------------------------------------------------------
 
 def texel_factor(ob):
-    pid = ob['piece']
     size = max(ob.dimensions)
     f = 1.0
-    if pid == 'barrow_mound':
-        f = 0.5
-    elif pid == 'hedgerow_4m':
-        f = 0.75
+    if 'texel' in ob:
+        f = ob['texel']
     elif size < 1.0:
         f = 1.9
     elif size < 2.0:
@@ -340,7 +337,57 @@ def unwrap_and_pack(objs):
 # Bake
 # ---------------------------------------------------------------------------
 
-def bake_atlas(objs, size, samples=64):
+TILE_V0 = 0.885  # with tile keys, the band v > TILE_V0 holds one square tile per key
+TILE_W = 0.12
+
+
+def tile_rect(k):
+    return (k * TILE_W + 0.006, TILE_V0 + 0.006, (k + 1) * TILE_W - 0.006, 0.994)
+
+
+def map_tiles(objs, tile_keys):
+    """Squash the packed atlas below TILE_V0 and give each tile key's faces a
+    cylindrical projection into that key's own tile: a surface made of many
+    narrow strips (bark) then samples one uniform tile at every mip level."""
+    for ob in objs:
+        me = ob.data
+        uv = me.uv_layers.active.data
+        a = np.empty(len(uv) * 2, np.float32)
+        uv.foreach_get('uv', a)
+        a = a.reshape(-1, 2)
+        a[:, 1] *= TILE_V0 - 0.004
+        keys = ob['keys'].split(',')
+        zs = [v.co.z for v in me.vertices]
+        zlo, zhi = min(zs), max(zs)
+        for p in me.polygons:
+            key = keys[p.material_index]
+            if key not in tile_keys:
+                continue
+            u0, v0, u1, v1 = tile_rect(tile_keys.index(key))
+            for li in p.loop_indices:
+                co = me.vertices[me.loops[li].vertex_index].co
+                ang = (math.atan2(co.y, co.x) / (2 * math.pi)) % 1.0
+                t = (co.z - zlo) / max(1e-6, zhi - zlo)
+                a[li] = (u0 + (u1 - u0) * (0.05 + 0.9 * ang), v0 + (v1 - v0) * (0.05 + 0.9 * t))
+        uv.foreach_set('uv', a.ravel())
+
+
+def paint_tiles(out, size, tile_keys):
+    rng = np.random.RandomState(11)
+    for k, key in enumerate(tile_keys):
+        u0, v0, u1, v1 = tile_rect(k)
+        x0, x1 = int((u0 - 0.004) * size), int((u1 + 0.004) * size)
+        y0, y1 = int((v0 - 0.004) * size), min(size, int((v1 + 0.004) * size))
+        w, h = x1 - x0, y1 - y0
+        base = np.array(PALETTE[key], np.float32)
+        cols = np.convolve(rng.rand(w + 16), np.ones(5) / 5, 'same')[8:8 + w]
+        rows = np.convolve(rng.rand(h + 40), np.ones(21) / 21, 'same')[20:20 + h]
+        f = 0.78 + 0.42 * cols[None, :] + 0.12 * (rows[:, None] - 0.5) + 0.06 * rng.rand(h, w)
+        out[y0:y1, x0:x1, :3] = np.clip(base[None, None, :] * f[..., None], 0, 1)
+
+
+def bake_atlas(objs, size, samples=64, tile_keys=(), name='kit_atlas'):
+    tile_keys = list(tile_keys)
     scene = bpy.context.scene
     scene.render.engine = 'CYCLES'
     scene.cycles.device = 'CPU'
@@ -362,13 +409,15 @@ def bake_atlas(objs, size, samples=64):
         me.polygons.foreach_set('material_index', idx)
     # slots first: entering edit mode clamps face material indices to the slot count
     unwrap_and_pack(objs)
+    if tile_keys:
+        map_tiles(objs, tile_keys)
 
     # spread the pieces out over a ground plane
     homes = {}
     cols = 10
     for i, ob in enumerate(objs):
         gx, gy = i % cols, i // cols
-        lift = 30.0 if ob['pivot'] in ('top', 'hub') else 0.0
+        lift = 30.0 if ob['pivot'] in ('top', 'hub', 'centre', 'waterline') else 0.0
         ob.location = (gx * 25.0, gy * 25.0, lift)
         homes[ob.name] = ob.location.copy()
     bpy.ops.mesh.primitive_plane_add(size=1000, location=(110, 90, 0))
@@ -406,7 +455,9 @@ def bake_atlas(objs, size, samples=64):
     out = c.copy()
     out[..., :3] = c[..., :3] * (1 - strength + strength * np.clip(ao, 0, 1) ** 0.9)
     out[..., 3] = 1
-    img = bpy.data.images.new('valley_atlas', size, size, alpha=False)
+    if tile_keys:
+        paint_tiles(out, size, tile_keys)
+    img = bpy.data.images.new(name, size, size, alpha=False)
     img.pixels.foreach_set(out.ravel())
     img.pack()
 

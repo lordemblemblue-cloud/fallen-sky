@@ -1,13 +1,13 @@
-"""Render one picture per valley-kit piece for the contact sheets (Blender 5.2, headless).
+"""Render one picture per kit piece for the contact sheets (Blender 5.2, headless).
 
-  blender -b --factory-startup -P tools/threeroads/kits/valley/render_sheets.py -- GLB OUTDIR near|far
+  blender -b --factory-startup -P tools/threeroads/kits/common/render_sheets.py -- GLB OUTDIR near|far KIT
 
 near: LOD0, front three-quarter view, a 1.8 m figure beside it (pieces that sit
       on or hang from another piece are shown on it).
 far:  LOD0 (left) and LOD1 (right) seen from 60 m, rendered at the size one
       screen pixel covers at that distance (about 5.8 cm), so the composed
       sheet shows what the game can resolve there.
-Then: node tools/threeroads/kits/valley/compose_sheet.mjs OUTDIR near|far OUT.png
+Then: node tools/threeroads/kits/common/compose_sheet.mjs KIT OUTDIR near|far OUT.png
 """
 import math
 import os
@@ -19,10 +19,14 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index('--') + 1:]
 GLB, OUT, MODE = argv[0], argv[1], argv[2]
+KIT = argv[3] if len(argv) > 3 else 'valley'
 HERE = os.path.dirname(os.path.abspath(__file__))
-TABLE = os.path.normpath(os.path.join(HERE, '..', '..', '..', '..', 'src', 'components', 'game3d', 'threeroads', 'kits',
-                                      'valleyKitPieces.mjs'))
-IDS = [m.group(1) for m in re.finditer(r"piece\('(\w+)'", open(TABLE, encoding='utf-8').read())]
+sys.dont_write_bytecode = True
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, '..', KIT))
+import kitbuild  # noqa: E402
+import pieces  # noqa: E402
+IDS = [r['id'] for r in kitbuild.read_table(KIT)]
 os.makedirs(OUT, exist_ok=True)
 
 for ob in list(bpy.data.objects):
@@ -98,15 +102,8 @@ def g2b(x, y, z):  # game -> Blender
     return Vector((x, -z, y))
 
 
-# Companions shown with a piece, at their mounted place (game metres).
-COMBO = {
-    'windmill_sails': [('windmill_body_LOD{l}', (0, 0, 0)), ('windmill_sails_LOD{l}', (0, 8.5, 3.25))],
-    'wagon_cover': [('wagon_LOD{l}', (0, 0, 0)), ('wagon_cover_LOD{l}', (0, 0, 0))],
-    'fire_basket_flame': [('fire_basket_LOD{l}', (0, 0, 0)), ('fire_basket_flame_LOD{l}', (0, 0, 0))],
-    'paper_lantern': [('lantern_post_LOD{l}', (0, 0, 0)), ('paper_lantern_LOD{l}', (0, 2.27, 0.15))],
-    'banner_cloth': [('banner_cloth_LOD{l}', (0, 3.5, 0))],
-    'ribbon': [('ribbon_LOD{l}', (0, 1.3, 0))],
-}
+# Companions shown with a piece, at their mounted place (game metres): the kit's pieces.COMBO.
+COMBO = getattr(pieces, 'COMBO', {})
 
 
 def show_only(objs):
