@@ -25,7 +25,7 @@ function nextGain(level, abilities) {
 
 export default function ClassPicker({ current, pending = null, fighter = 'maskedWarrior', keys,
   live = false, onPick, onClose = null, progress = null, matchBoost = 0,
-  initialChoice = false, secondsLeft = 5 }) {
+  initialChoice = false, secondsLeft = 5, submitting = false, error = null }) {
   // Local class browsing cannot mutate match state, weapon, or authoritative meter.
   const [previewId, setPreviewId] = useState(null);
   const chosen = CLASS_IDS.includes(previewId) ? previewId
@@ -77,10 +77,12 @@ export default function ClassPicker({ current, pending = null, fighter = 'masked
             <strong>{cls.name}</strong><small>{WEAPON_NAMES[cls.weapon]} · {cls.role}</small>
           </div>
           <button type="button" className="dcp-select" data-testid="duelist-class-select"
-            onClick={() => onPick?.(chosen)} aria-label={`Select ${cls.name}`}>
-            SELECT CLASS
+            onClick={() => onPick?.(chosen)} disabled={submitting} aria-label={`Select ${cls.name}`}>
+            {submitting ? 'CONFIRMING…' : 'SELECT CLASS'}
           </button>
-          <p aria-live="polite" className="dcp-selection-note">{note}</p>
+          <p aria-live="polite" className="dcp-selection-note">
+            {error ? 'Selection unavailable. Wait for the next spawn and try again.' : submitting ? 'Waiting for match confirmation…' : note}
+          </p>
         </div>
       </section>
 
