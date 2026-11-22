@@ -23,6 +23,8 @@ For every session that builds part of this plan. Read with `README.md`, `03_QUES
 
 Everything is off unless the page is opened with `?threeRoads=1` (or `localStorage['game3d.threeRoads']='1'`). `threeroads/threeRoadsFlag.mjs` is the only place that decides. The default changes only when the lead says a band is ready.
 
+A band that is still being built has a second switch on top of the first: `?threeRoads=1&threeRoadsPreview=1` (or `localStorage['game3d.threeRoadsPreview']='1'`). Only with it do an unfinished band's places draw, its people come home and its pledges get offered. Band 1 is in main, so a player who turns the story on must never meet half-built work: anything new for an unfinished band goes behind `threeRoadsPreviewEnabled`.
+
 ## 3. Files you do not edit
 
 - `GameWorld3D.jsx`. It has one hook for all of this: it creates `createThreeRoadsWorld(ctx)` behind the switch, calls `update(delta, playerPosition)` each frame, `resolveCollision(position, from, radius)` in the player's collision chain, and `dispose()` on teardown (`threeroads/ThreeRoadsWorld.mjs`; pinned by `tests/game3d-three-roads-world.test.mjs`). Your work goes inside your subsystem. If you need something the context does not give you, stop and ask the lead; it is added once, by the lead.
@@ -118,7 +120,7 @@ A person of the story with a model of their own has one file: `public/game3d/thr
 
 The reference is for craft only: how land is shaped and a kind of place laid out. None of that game's map, places, names, characters, quests, art or music is used.
 
-**Gliding.** The player will be able to jump from a height and glide (another session builds it; do not edit the player's movement files). Read section 15 of the quest plan before shaping any height or anything a player might land on. Until the glide's reach is known, fix no launch-to-landing distance; never plan a glide across an area border; give every landing one thing that shows from above; and put each area's landmarks in the drawn-from-anywhere set, because a player in the air sees past the 150 m limit.
+**Gliding.** The player will be able to jump from a height and glide (another session builds it; do not edit the player's movement files). Read section 15 of the quest plan before shaping any height or anything a player might land on. The reach is measured: about 4.2 m forward for each metre of height (`GLIDE_REACH` in `src/components/game3d/player/playerGlide.mjs`; never copy the number), a wall wherever the ground is more than 2 m above the glider, and no carry at all over ground that falls more gently than about 13 degrees. Measure every launch against the real ground before building it; never plan a glide across an area border; give every landing one thing that shows from above; and put each area's landmarks in the drawn-from-anywhere set, because a player in the air sees past the 150 m limit.
 
 ## 9. Story and words
 

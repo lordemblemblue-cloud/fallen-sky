@@ -32,9 +32,14 @@ export const AKITSU_KIT_PIECES = Object.freeze([
   // Canvas
   piece('tent_bell', [4, 4, 3.2], { solid: { circle: 1.9 }, skirt: 1.2 }), // white bell tent on a plank deck
   piece('tent_officer', [6, 4, 3], { solid: { box: [3, 2] }, skirt: 1.2 }), // wall tent with a blue band, on a deck
-  piece('curtain_run', [4, 0.2, 2.1], { tint: true, solid: { box: [2, 0.15] }, skirt: 0.6 }), // camp curtain on poles with the bear crest; rings the command post
+  // The camp curtain that rings the command post. Its crest is Akitsu's bear as a paw print in a
+  // ring: one broad pad with four round toes in an arc above it, and no lettering. Each run has
+  // one pole, at its left end (x -2), so a row of runs has a pole every 4 m; a row's open right
+  // end gets a curtain_post.
+  piece('curtain_run', [4, 0.2, 2.1], { tint: true, solid: { box: [2, 0.15] }, skirt: 0.6 }),
+  piece('curtain_post', [0.12, 0.12, 2.1], { skirt: 0.6 }), // the same pole on its own, for the end of a row
   piece('banner_tall_pole', [0.2, 0.2, 6.5], { skirt: 0.8 }),
-  piece('banner_tall_cloth', [0.9, 0.05, 5], { tint: true, pivot: 'top' }), // narrow upright banner; hangs from y 6.3 on its pole
+  piece('banner_tall_cloth', [0.9, 0.05, 5], { tint: true, pivot: 'top' }), // narrow upright banner on its own top arm. Its origin is on the pole's axis and the cloth hangs beside the pole toward +X, so it is placed at the pole's own spot, mounted at y 6.3
   // Works
   piece('watchtower', [4, 4, 10], { solid: { box: [2, 2] }, skirt: 1.8 }), // timber tower, roofed platform at 7.5 m, a signal drum; the camp's tall mark
   piece('bale_wall', [4, 1.1, 1.3], { solid: { box: [2, 0.55] }, skirt: 0.8 }), // rice-bale breastwork, three bales high
@@ -54,7 +59,7 @@ export const TAMERI_KIT_PIECES = Object.freeze([
   // The enclosure
   piece('shield_wall', [4, 0.4, 1.7], { solid: { box: [2, 0.2] }, skirt: 0.8 }), // tall hide shields set edge to edge on a rail
   piece('flagstaff', [0.5, 0.5, 13], { solid: { circle: 0.3 }, skirt: 1.5 }), // tapered mast, bronze-capped; two of them are the camp's tall mark
-  piece('pennant', [0.5, 0.05, 4], { tint: true, pivot: 'top' }), // long cloth streamer; hangs from y 12.6 on a flagstaff
+  piece('pennant', [0.5, 0.05, 4], { tint: true, pivot: 'top' }), // long cloth streamer. Its origin is on the flagstaff's axis and the cloth streams beside the staff toward +X, so it is placed at the staff's own spot, mounted at y 12.6
   // Tents
   piece('pavilion_life', [8, 6, 4.2], { solid: { box: [4, 3] }, skirt: 2.4 }), // the House of Life: a linen pavilion on its own mud-brick platform
   piece('awning', [4, 3, 2.6], { skirt: 0.6 }), // reed mat on four poles; walk under it
@@ -78,9 +83,15 @@ export const TAMERI_KIT_PIECES = Object.freeze([
 export const REMORIA_KIT_PIECES = Object.freeze([
   // The wall
   piece('palisade_run', [4, 2.6, 3.2], { solid: { box: [2, 1.3] }, skirt: 1.6 }), // earth bank, a fence of stakes on it and a walk behind
-  piece('palisade_corner', [4, 4, 3.2], { solid: { box: [2, 2] }, skirt: 1.6 }), // the rounded corner of a marching camp
+  // The rounded corner of a marching camp: a quarter turn of the same bank, 2 m radius on its
+  // centreline, joining a run that ends 2 m short of the corner on each wall. Front (+Z) is the
+  // outward diagonal. The origin is the centre of the piece's own footprint, like every other
+  // piece: the point where the two walls' centrelines would cross lies 0.93 m in front of it
+  // (x 0, z +0.93), and the bank's centreline runs from (-1.41, -0.48) through (0, +0.10) to
+  // (+1.41, -0.48). The camp plan places the origin, not the crossing point.
+  piece('palisade_corner', [4.7, 2.8, 3.2], { solid: { box: [2.35, 1.4] }, skirt: 1.6 }),
   piece('gate_tower', [3.2, 3.2, 9], { solid: { box: [1.6, 1.6] }, skirt: 1.8 }), // timber tower with a roofed platform; a pair at each gate is the fort's tall mark
-  piece('gate_span', [5.2, 1.6, 1.4], { pivot: 'centre' }), // the walk between two gate towers with the fort's name board; mounted at y 4.2
+  piece('gate_span', [5.8, 1.6, 1.4], { pivot: 'centre' }), // the walk between two gate towers, whose inner faces stand 5.8 m apart, with the fort's name board; centred on all three axes and mounted at y 4.2
   piece('stake_hedge', [4, 1.4, 1.3], { solid: { box: [2, 0.7] }, skirt: 0.6 }), // crossed sharpened stakes
   // Tents
   piece('tent_legion', [3, 3.6, 2], { solid: { box: [1.5, 1.8] }, skirt: 1 }), // leather ridge tent for eight

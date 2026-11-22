@@ -95,6 +95,8 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   let completions = null;         // pledge id -> times completed, the last time we looked
   const claims = [];
   const linesShown = [];
+  // The last few E presses and what the pledge world did with them, for checking by hand.
+  const keyLog = [];
   const castReady = new Set();    // people the cast has announced as standing in the scene
 
   const send = (type, detail) => {
@@ -265,7 +267,10 @@ export function createPledgeWorldSubsystem(ctx = {}, {
     if (event.repeat) { if (keyHeld) swallow(event); return; }
     // 'consume': a pledge deed used the key. 'pass': a step heard it and the
     // game's own dialogue should still open (the ending, with the giver).
-    if (pressInteract() === 'consume') { keyHeld = true; swallow(event); }
+    const result = pressInteract();
+    keyLog.push({ at: Math.round(clock() * 10) / 10, result, blocked: frame.blocked, steps: interpreter.status().map(entry => entry.stepId) });
+    if (keyLog.length > 12) keyLog.shift();
+    if (result === 'consume') { keyHeld = true; swallow(event); }
   }
   function onKeyUp(event) {
     if (String(event.key || '').toLowerCase() === 'e' || event.code === 'KeyE') keyHeld = false;
@@ -350,6 +355,7 @@ export function createPledgeWorldSubsystem(ctx = {}, {
     // For checking a scene by hand: where each sworn pledge stands and what was said.
     status: () => (interpreter ? interpreter.status() : []),
     lines: () => linesShown.map(entry => ({ ...entry })),
+    keys: () => keyLog.map(entry => ({ ...entry })),
     view: () => ({ prompt: view.prompt ? { ...view.prompt } : null, choice: view.choice }),
     dispose() {
       if (disposed) return;

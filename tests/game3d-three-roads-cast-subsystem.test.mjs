@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { createCastSubsystem, CAST_MAX_PEOPLE, CAST_MAX_DRAWN } from '../src/components/game3d/threeroads/cast/castSubsystem.mjs';
+import { createCastSubsystem, CAST_MAX_PEOPLE, CAST_MAX_DRAWN, ownOrSharedGlb, measureWalkSpeed } from '../src/components/game3d/threeroads/cast/castSubsystem.mjs';
 import { createThreeRoadsBus } from '../src/components/game3d/threeroads/ThreeRoadsWorld.mjs';
 import { threeRoadsCastAtHome } from '../src/components/game3d/threeroads/script/cast.mjs';
 
@@ -46,7 +46,7 @@ function fakeStore(storyFlags = {}) {
   return store;
 }
 
-function makeWorld({ area = 'town', ground = true, areaScenes = true, store = fakeStore() } = {}) {
+function makeWorld({ area = 'town', ground = true, areaScenes = true, preview = false, store = fakeStore(), loadSource = async () => fakeSource() } = {}) {
   const scene = new THREE.Scene();
   const bus = createThreeRoadsBus();
   const archer = { id: 'archer_lyra', name: 'Lyra the Seeker', group: new THREE.Group() };
@@ -56,12 +56,12 @@ function makeWorld({ area = 'town', ground = true, areaScenes = true, store = fa
   for (const type of ['cast:ready', 'cast:arrived']) bus.on(type, d => events.push([type, d]));
   const voices = [];
   const ctx = {
-    region: 'wolfveil', worldArea: area, areaScenes, scene, bus, questNPCs,
+    region: 'wolfveil', worldArea: area, areaScenes, preview, scene, bus, questNPCs,
     sampleGroundY: () => (state.ground ? 22.7 : null),
     camera: new THREE.PerspectiveCamera(),
   };
   const cast = createCastSubsystem(ctx, {
-    loadSource: async () => fakeSource(),
+    loadSource,
     probe: () => true,
     playVoice: (lineId) => { voices.push(lineId); return { stop() {} }; },
     warn: () => {},
@@ -408,4 +408,103 @@ test('cast:locate answers with a standing person\'s current position and leaves 
   const after = { id: 'traveller_tome', x: null, z: null, found: false };
   w.bus.emit('cast:locate', after);
   assert.equal(after.found, false, 'no answer after dispose');
+});
+
+// A stand-in own file: the shared stand-in's body with Idle, Talk and Walk named as the rules say.
+function fakeOwnGltf(clipNames = ['Idle', 'Talk', 'Walk']) {
+  const source = fakeSource();
+  const animations = clipNames.map(name => { const clip = source.idleClip.clone(); clip.name = name; return clip; });
+  return { scene: source.scene, animations };
+}
+const ownDef = { kind: 'glb', own: true, clips: { idle: 'Idle', talk: 'Talk', walk: 'Walk' }, required: ['idle', 'talk', 'walk'], tint: 'none' };
+
+test('an own file must carry Idle, Talk and Walk by name', () => {
+  const ok = ownOrSharedGlb(fakeOwnGltf(), ownDef, 'bram.glb');
+  assert.equal(ok.idleClip.name, 'Idle');
+  assert.equal(ok.talkClip.name, 'Talk');
+  assert.equal(ok.walkClip.name, 'Walk');
+  assert.equal(ok.own, true);
+  assert.equal(ok.tint, 'none');
+  assert.throws(() => ownOrSharedGlb(fakeOwnGltf(['Idle', 'Walk']), ownDef, 'bram.glb'), /Talk/);
+});
+
+for (const [why, own] of [
+  ['the file fails to load', () => Promise.reject(new Error('404'))],
+  ['a clip is missing', async () => ownOrSharedGlb(fakeOwnGltf(['Idle', 'Walk']), ownDef, 'bram.glb')],
+]) {
+  test('Bram wears the shared figure when ' + why + ', and the rest goes on as before', async () => {
+    const w = makeWorld({ loadSource: async key => (key.startsWith('own:') ? own() : fakeSource()) });
+    // Everyone in the town has a file of their own now, so every one of them falls back in turn.
+    await settle(w.cast, undefined, 5);
+    await settle(w.cast, undefined, 5);
+    const bram = w.cast.status().people.find(p => p.id === 'bram_lamplighter');
+    assert.equal(bram.state, 'ready');
+    assert.equal(bram.model, 'archer');
+    assert.ok(bram.ownFailed);
+    assert.ok(w.questNPCs.some(q => q.id === 'bram_lamplighter'), 'still a quest giver');
+    assert.ok(w.cast.say({ id: 'bram_lamplighter', text: 'Lamps.' }));
+    w.cast.dispose();
+  });
+}
+
+test('an own model walks while moving, talks while a line is up, else idles', async () => {
+  const w = makeWorld({ loadSource: async key => (key.startsWith('own:') ? ownOrSharedGlb(fakeOwnGltf(), ownDef, 'bram.glb') : fakeSource()) });
+  await settle(w.cast);
+  const bram = () => w.cast.status().people.find(p => p.id === 'bram_lamplighter');
+  assert.equal(bram().model, 'own:bram_lamplighter');
+  assert.equal(bram().anim, 'idle');
+  w.cast.say({ id: 'bram_lamplighter', text: 'A Tameri carter.', seconds: 2 });
+  w.cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(bram().anim, 'talk');
+  w.cast.moveTo({ id: 'bram_lamplighter', x: bram().at.x + 4, z: bram().at.z });
+  w.cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(bram().anim, 'walk', 'walking wins over talking');
+  for (let t = 0; t < 8; t += 0.1) w.cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(bram().anim, 'idle', 'arrived, line over');
+  // the shared figure has no Talk clip: it idles while it speaks (a traveller still wears it)
+  w.bus.emit('cast:spawn', { id: 'traveller_tome', x: 0, z: -8 });
+  await settle(w.cast);
+  w.cast.say({ id: 'traveller_tome', text: 'The road was long.', seconds: 2 });
+  w.cast.update(0.1, { x: 100, z: 100 });
+  assert.equal(w.cast.status().people.find(p => p.id === 'traveller_tome').anim, 'idle');
+  w.cast.dispose();
+});
+
+test('the walk speed is measured from the planted foot of an in-place walk', () => {
+  // Two feet under the hips: each slides back 1 m in half a second while low (2 m/s),
+  // then swings forward raised by 20 cm.
+  const model = new THREE.Group();
+  const hips = new THREE.Bone(); hips.name = 'Hips'; model.add(hips);
+  const left = new THREE.Bone(); left.name = 'LeftFoot'; hips.add(left);
+  const right = new THREE.Bone(); right.name = 'RightFoot'; hips.add(right);
+  const times = [], leftValues = [], rightValues = [];
+  for (let i = 0; i <= 40; i++) {
+    const t = i / 40;
+    times.push(t);
+    const stance = p => (p < 0.5 ? [0, 0, 0.5 - 2 * p] : [0, 0.2, -0.5 + 2 * (p - 0.5)]);
+    leftValues.push(...stance(t));
+    rightValues.push(...stance((t + 0.5) % 1));
+  }
+  const clip = new THREE.AnimationClip('Walk', 1, [
+    new THREE.VectorKeyframeTrack('LeftFoot.position', times, leftValues),
+    new THREE.VectorKeyframeTrack('RightFoot.position', times, rightValues),
+  ]);
+  left.position.set(1, 2, 3);
+  const speed = measureWalkSpeed(THREE, model, clip);
+  assert.ok(Math.abs(speed - 2) < 0.3, String(speed));
+  assert.deepEqual(left.position.toArray(), [1, 2, 3], 'the rest pose is put back');
+  assert.equal(measureWalkSpeed(THREE, new THREE.Group(), clip), null, 'no feet, no answer');
+});
+
+test('the people of a camp come home only with the preview switch', async () => {
+  const off = makeWorld({ area: 'west' });
+  await settle(off.cast);
+  assert.equal(off.cast.status().people.length, 0);
+  off.cast.dispose();
+  const on = makeWorld({ area: 'west', preview: true });
+  await settle(on.cast);
+  await settle(on.cast);
+  const ids = on.cast.status().people.map(person => person.id);
+  for (const id of ['goro_sergeant', 'hayasaka_colonel', 'akitsu_picket_town', 'akitsu_picket_wilds']) assert.ok(ids.includes(id), id + ' in ' + ids.join(', '));
+  on.cast.dispose();
 });

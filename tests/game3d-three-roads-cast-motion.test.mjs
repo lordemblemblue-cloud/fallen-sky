@@ -11,6 +11,7 @@ import {
 import { THREE_ROADS_BANDS } from '../src/components/game3d/threeroads/script/index.mjs';
 import {
   castModelFor, castBodyHeight, distinctColours, CAST_MODELS, CAST_MODEL_SOURCES,
+  castSourceDef, castFallbackLook, CAST_OWN_CLIPS,
 } from '../src/components/game3d/threeroads/cast/castModels.mjs';
 import { THREE_ROADS_CAST, threeRoadsPerson } from '../src/components/game3d/threeroads/script/cast.mjs';
 
@@ -115,7 +116,8 @@ test('every person of the cast table has a model with a known source, height and
   for (const person of THREE_ROADS_CAST.filter(p => !p.existing)) {
     assert.ok(CAST_MODELS[person.id], person.id + ' is in the model table');
     const model = castModelFor(person);
-    assert.ok(CAST_MODEL_SOURCES[model.source], person.id);
+    assert.ok(castSourceDef(model.source), person.id);
+    if (model.own) assert.ok(CAST_MODEL_SOURCES[model.fallback], person.id + ' has a shared figure to fall back to');
     assert.equal(model.colours.length, 2);
   }
   assert.equal(castBodyHeight('m'), 1.7);
@@ -131,4 +133,22 @@ test('two people with the same colours are told apart (Paneb and Henut)', () => 
   const other = distinctColours(henut, [paneb]);
   assert.notDeepEqual(other, paneb);
   assert.deepEqual(distinctColours(henut, []), henut);
+});
+
+test('a person with a file of their own wears it untinted, at the table height, with the shared figure behind', () => {
+  const bram = castModelFor(threeRoadsPerson('bram_lamplighter'));
+  assert.equal(bram.own, true);
+  assert.equal(bram.source, 'own:bram_lamplighter');
+  assert.equal(bram.height, 1.6, 'elder_m');
+  assert.equal(bram.width, 1, 'no build squeeze on an own model');
+  const def = castSourceDef(bram.source);
+  assert.equal(def.url, '/game3d/threeroads/cast/bram_lamplighter.glb');
+  assert.equal(def.kind, 'glb');
+  assert.equal(def.tint, 'none');
+  assert.deepEqual({ ...def.clips }, { ...CAST_OWN_CLIPS });
+  const shared = castFallbackLook(bram);
+  assert.equal(shared.source, 'archer');
+  assert.equal(shared.own, false);
+  assert.equal(shared.width, bram.buildWidth);
+  assert.equal(castFallbackLook(castModelFor(threeRoadsPerson('goro_sergeant'))), null, 'the shared figure has nothing behind it');
 });

@@ -3,8 +3,10 @@
 // world z = local z + 70); pieces and anchors relative to that centre.
 import { TOWN_PLACES } from './town.mjs';
 import { SOUTH_PLACES } from './south.mjs';
+import { CAMP_PLACES } from './camps.mjs';
 
-export const THREE_ROADS_PLACES = Object.freeze([...TOWN_PLACES, ...SOUTH_PLACES]);
+// Band 2's camps are `preview: true`: built only with the preview switch.
+export const THREE_ROADS_PLACES = Object.freeze([...TOWN_PLACES, ...SOUTH_PLACES, ...CAMP_PLACES]);
 
 const BY_ID = new Map(THREE_ROADS_PLACES.map(place => [place.id, place]));
 export const placeLayout = id => BY_ID.get(id) || null;

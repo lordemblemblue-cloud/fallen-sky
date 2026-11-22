@@ -16,18 +16,32 @@ const asSwitch = value => {
   return null;
 };
 
-export function threeRoadsEnabled(win = globalThis.window) {
+function readSwitch(win, queryKey, storageKey) {
   let fromQuery = null;
   let fromStorage = null;
   try {
     const search = win?.location?.search;
     if (typeof search === 'string' && search)
-      fromQuery = asSwitch(new globalThis.URLSearchParams(search).get(THREE_ROADS_QUERY_KEY));
+      fromQuery = asSwitch(new globalThis.URLSearchParams(search).get(queryKey));
   } catch { /* an unreadable address bar means "no choice made" */ }
   try {
-    fromStorage = asSwitch(win?.localStorage?.getItem(THREE_ROADS_STORAGE_KEY));
+    fromStorage = asSwitch(win?.localStorage?.getItem(storageKey));
   } catch { /* storage can throw in private windows */ }
-  if (fromQuery !== null) return fromQuery;
-  if (fromStorage !== null) return fromStorage;
-  return THREE_ROADS_DEFAULT_ON;
+  return fromQuery !== null ? fromQuery : fromStorage;
+}
+
+export function threeRoadsEnabled(win = globalThis.window) {
+  return readSwitch(win, THREE_ROADS_QUERY_KEY, THREE_ROADS_STORAGE_KEY) ?? THREE_ROADS_DEFAULT_ON;
+}
+
+// A second switch, for the people building it. Places and people of a band that
+// is not finished show only with ?threeRoadsPreview=1 (or
+// localStorage['game3d.threeRoadsPreview']='1') on top of the main switch. A
+// player who turns the story on sees finished bands only.
+export const THREE_ROADS_PREVIEW_QUERY_KEY = 'threeRoadsPreview';
+export const THREE_ROADS_PREVIEW_STORAGE_KEY = 'game3d.threeRoadsPreview';
+
+export function threeRoadsPreviewEnabled(win = globalThis.window) {
+  if (!threeRoadsEnabled(win)) return false;
+  return readSwitch(win, THREE_ROADS_PREVIEW_QUERY_KEY, THREE_ROADS_PREVIEW_STORAGE_KEY) ?? false;
 }

@@ -44,8 +44,12 @@ test("A Farmer's Son: the drill, the picket, the raid with the empty peg, Goro's
     h.place('camp_picket');
     h.wait(0.3);
     assert.deepEqual(h.bus('enemies:spawnGroup').map(e => [e.groupId, e.count, e.placeId]), [['tr_a01_raid', 5, 'P13']]);
-    // The empty peg is open beside the fight, and only then.
-    assert.deepEqual(h.bus('pledge:stepStarted').map(e => e.stepId), ['drill', 'picket', 'raid', 'peg']);
+    h.place('camp_armoury');
+    assert.equal(h.view().prompt, null, 'not during the fight');
+    h.kill('tr_a01_raid', 5);
+    h.wait(4);
+    // The empty peg is listed after the report, so it is open on the way to Gorō.
+    assert.deepEqual(h.bus('pledge:stepStarted').map(e => e.stepId), ['drill', 'picket', 'raid', 'report', 'peg']);
     if (answer === 'powder') {
       h.place('camp_armoury');
       assert.equal(h.view().prompt.label, 'Look at the empty peg');
@@ -53,22 +57,21 @@ test("A Farmer's Son: the drill, the picket, the raid with the empty peg, Goro's
       assert.equal(h.progress('tr_a01_farmers_son', 'peg'), 1);
       h.wait(0.2);
     }
-    h.kill('tr_a01_raid', 5);
-    h.wait(4);
-    if (answer === 'rice') {
-      h.place('camp_armoury');
-      assert.equal(h.view().prompt, null, 'the peg is gone once the fight is over');
-    }
     h.place('goro_sergeant');
     assert.equal(h.press(), 'consume');
+    if (answer === 'rice') {
+      h.place('camp_armoury');
+      assert.equal(h.view().prompt, null, 'once Gorō has the report, the peg is passed by');
+      h.place('goro_sergeant');
+    }
     h.wait(0.5);
     assert.ok(h.view().choice, 'Goro holds out the choice');
     assert.equal(h.press(), 'consume', 'E beside him while he asks opens nothing');
     assert.equal(h.choose('tr_a01_farmers_son', answer), true);
     assert.equal(h.stepOf('tr_a01_farmers_son'), null);
     const said = lineIds(h);
-    const expected = ['goro_a01_03', 'goro_a01_04', 'goro_a01_05', 'goro_a01_06',
-      ...(answer === 'powder' ? ['goro_a01_08'] : []), 'goro_a01_07'];
+    const expected = ['goro_a01_03', 'goro_a01_04', 'goro_a01_05', 'goro_a01_06', 'goro_a01_07',
+      ...(answer === 'powder' ? ['goro_a01_08'] : [])];
     assert.deepEqual(said, expected, answer);
     assert.equal(h.state.storyFlags['tr_a01_' + answer], true);
     assert.deepEqual(pledgeDialogueLines(byId('tr_a01_farmers_son'), h.state).complete.map(l => l.lineId),
@@ -141,17 +144,19 @@ test('The Count: two jars, the reeds, a dropped jar sends the count back, the bo
   assert.deepEqual(h.bus('enemies:spawnGroup').map(e => [e.groupId, e.count, e.placeId]), [['tr_t01_reed_shades', 4, 'P24']]);
   h.kill('tr_t01_reed_shades', 4);
   h.wait(4);
-  // The bow case is open beside the last two jars.
+  h.place('landing_bowcase');
+  assert.equal(h.press(), null, 'the bow case is not open while the jars are carried');
+  jar(); jar();
+  // Listed after the count, it is open on the way back to Paneb.
   h.place('landing_bowcase');
   assert.equal(h.press(), 'consume');
-  jar(); jar();
   h.place('paneb_scribe');
   assert.equal(h.press(), 'pass');
   h.wait(4);
   assert.equal(h.stepOf('tr_t01_the_count'), null);
   assert.deepEqual(lineIds(h), [
     'paneb_t01_02', 'paneb_t01_02', 'paneb_t01_03', 'sabu_t01_01', 'sabu_t01_02',
-    'sabu_t01_03', 'paneb_t01_04', 'paneb_t01_05', 'paneb_t01_06',
+    'paneb_t01_04', 'paneb_t01_05', 'sabu_t01_03', 'paneb_t01_06',
   ]);
   assert.equal(h.progress('tr_t01_the_count', 'case'), 1);
   assert.equal(h.complete('tr_t01_the_count'), true);
@@ -224,15 +229,15 @@ test("Old Vine's Furrow: he walks the furrow with you, two mists, the stone, the
   h.wait(4);
   h.kill('tr_r01_mist_2', 4);
   h.wait(4);
-  // The archer's case is listed after the stone, so it is open while the stone is.
   h.place('furrow_cart');
-  assert.equal(h.press(), 'consume');
+  assert.equal(h.press(), null, 'the case is not open before the stone is set');
   h.place('furrow_stone');
   h.hold(3.2);
   h.wait(3);
   assert.deepEqual(h.bus('cast:follow').map(e => [e.id, e.target]), [['titus_oldvine', 'player'], ['titus_oldvine', null]]);
+  // Listed after "Speak with Old Vine", it is open on the way to him.
   h.place('furrow_cart');
-  assert.equal(h.press(), null, 'once the stone is set the case is no longer open');
+  assert.equal(h.press(), 'consume');
   h.place('titus_oldvine');
   assert.equal(h.press(), 'pass');
   h.wait(4);
@@ -241,7 +246,7 @@ test("Old Vine's Furrow: he walks the furrow with you, two mists, the stone, the
   assert.deepEqual(said.filter(id => id === 'oldvine_r01_03' || id === 'oldvine_r01_04'), ['oldvine_r01_03', 'oldvine_r01_04']);
   assert.deepEqual(said.filter(id => !['oldvine_r01_03', 'oldvine_r01_04'].includes(id)), [
     'veranius_r01_01', 'oldvine_r01_05', 'oldvine_r01_06', 'veranius_r01_02', 'oldvine_r01_07',
-    'oldvine_r01_09', 'oldvine_r01_08', 'veranius_r01_03', 'oldvine_r01_10',
+    'oldvine_r01_08', 'veranius_r01_03', 'oldvine_r01_09', 'oldvine_r01_10',
   ]);
 });
 

@@ -40,23 +40,23 @@ export const BAND2_POINTS = Object.freeze({
   landing_bowcase: Object.freeze({ x: 266, z: -432 }),
   // East: the old battle camp and Shadow Ravine (P26)
   scarred_blade: Object.freeze({ x: 318, z: -252 }),
-  ravine_gate: Object.freeze({ x: 332, z: -150 }),
-  ravine_chant: Object.freeze({ x: 340, z: -168 }),
+  ravine_gate: Object.freeze({ x: 331, z: -143.5 }),
+  ravine_chant: Object.freeze({ x: 333, z: -152 }),
   ravine_dead: Object.freeze({ x: 343, z: -173 }),
   ravine_ink: Object.freeze({ x: 352, z: -183 }),
-  ravine_sixth: Object.freeze({ x: 350, z: -160 }),
+  ravine_sixth: Object.freeze({ x: 333, z: -147.5 }),
   // North: the First Furrow on the Howling Plateau (P36)
-  furrow_cart: Object.freeze({ x: -264, z: 388 }),
-  furrow_1: Object.freeze({ x: -262, z: 392 }),
-  furrow_2: Object.freeze({ x: -247, z: 398 }),
-  furrow_3: Object.freeze({ x: -232, z: 403 }),
-  furrow_end: Object.freeze({ x: -218, z: 408 }),
-  furrow_stone: Object.freeze({ x: -216, z: 411 }),
-  furrow_mist_w: Object.freeze({ x: -268, z: 412 }),
-  furrow_mist_e: Object.freeze({ x: -214, z: 392 }),
+  furrow_cart: Object.freeze({ x: -264, z: 406 }),
+  furrow_1: Object.freeze({ x: -262, z: 410 }),
+  furrow_2: Object.freeze({ x: -247, z: 416 }),
+  furrow_3: Object.freeze({ x: -232, z: 421 }),
+  furrow_end: Object.freeze({ x: -218, z: 426 }),
+  furrow_stone: Object.freeze({ x: -216, z: 429 }),
+  furrow_mist_w: Object.freeze({ x: -268, z: 430 }),
+  furrow_mist_e: Object.freeze({ x: -214, z: 410 }),
   // North: the High Road (P43) down to Castra Lupa (P35)
-  road_top: Object.freeze({ x: 9, z: 524 }),
-  road_ambush: Object.freeze({ x: -14, z: 452 }),
+  road_top: Object.freeze({ x: 150, z: 428 }),
+  road_ambush: Object.freeze({ x: 104, z: 430 }),
   fort_gate: Object.freeze({ x: -46, z: 409 }),
   fort_tent: Object.freeze({ x: -61, z: 400 }),
   fort_overhear: Object.freeze({ x: -66, z: 410 }),
@@ -72,6 +72,14 @@ export const BAND2_POINT_AREAS = Object.freeze({
 const line = (speaker, text) => Object.freeze({ speaker, text });
 
 export const BAND2_LINES = Object.freeze({
+  // ── The camps' sentries, hailing whoever comes up the road (cast.mjs names each one's line) ──
+  hail_akitsu_picket_town: line('akitsu_picket_town', "Hold there. This is the camp of the Western Road. Keep to the trail, and mind the drill yard: they are new to spears."),
+  hail_akitsu_picket_wilds: line('akitsu_picket_wilds', "Coming in from the wilds? Slowly. Out there, things have started wearing the shapes of people."),
+  hail_tameri_gate_spear_north: line('tameri_gate_spear_north', "Between the staffs, friend. The Landing counts everything that passes them, and now it has counted you."),
+  hail_tameri_gate_spear_south: line('tameri_gate_spear_south', "Mind the rim. The river keeps what it is given."),
+  hail_remoria_gate_south_left: line('remoria_gate_south_left', "Stand and be seen. The road runs through the Ninth's fort, and so do you, at a walk."),
+  hail_remoria_gate_south_right: line('remoria_gate_south_right', "Blades stay tied. The Truce comes this far up the hill; we would like it to go back down with you."),
+  hail_remoria_gate_north: line('remoria_gate_north', "The crossroads is watched. If you met anything on the High Road, tell the Legate, not me."),
   // ── A01 A Farmer's Son in a Blue Coat ───────────────────────────────
   goro_a01_01: line('goro_sergeant', "You. Ever held a spear? Good. Because that is what these are now. Powder's dead under this sky. My boys were taught to shoot. Somebody has to show them the other end."),
   goro_a01_02: line('goro_sergeant', "They're farmers. So was I. First time in their lives anyone handed them a coat and said they counted. I'd like them to live long enough to believe it."),
@@ -513,7 +521,7 @@ export const BAND2_STAGING = Object.freeze({
     completeByChoice: { step: 'answer', lines: { truth: 'aelia_r02_02', nothing: 'aelia_r02_03' } },
     steps: {
       meet: {
-        start: [{ castSpawn: 'courier_dexter', at: 'road_top', facing: Math.PI }],
+        start: [{ castSpawn: 'courier_dexter', at: 'road_top', facing: Math.PI * 1.5 }],
         watch: { point: 'road_top', radius: 8 },
         done: [
           { say: 'courier_r02_01' },
@@ -524,7 +532,7 @@ export const BAND2_STAGING = Object.freeze({
       ambush: { watch: { groupId: 'tr_r02_ambush' }, done: [{ say: 'courier_r02_02' }] },
       escort: {
         watch: { people: ['courier_dexter'], to: 'fort_gate', radius: 8 },
-        along: { every: 40, lines: ['courier_r02_03', 'courier_r02_04'] }, // the way down from the crest to the north gate is about 120 m
+        along: { every: 60, lines: ['courier_r02_03', 'courier_r02_04'] }, // about 200 m along the High Road, past the crossroads and down to the north gate
         done: [{ castFollow: 'courier_dexter', target: null }, { castMove: 'courier_dexter', to: 'fort_tent', speed: 1.8 }],
       },
       tent: {

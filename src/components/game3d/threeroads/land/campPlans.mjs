@@ -37,7 +37,8 @@ function castraLupa() {
   for (const end of [-1, 1]) {
     for (const side of [-1, 1]) {
       items.push(f.put(R, 'gate_tower', 28 * end, 4.5 * side, end, 0));
-      items.push(f.put(R, 'palisade_corner', 28 * end, 20 * side, end, side));
+      // The walls' centrelines cross at (28, 20); the corner piece's own centre is 0.93 m inside that, on the diagonal.
+      items.push(f.put(R, 'palisade_corner', 27.34 * end, 19.34 * side, end, side));
       items.push(f.put(R, 'stake_hedge', 34 * end, 8 * side, end, 0));
       for (const t of [8, 12, 16]) items.push(f.put(R, 'palisade_run', 28 * end, t * side, end, 0));
     }
@@ -54,7 +55,9 @@ function castraLupa() {
   items.push(f.put(R, 'tribunal', 10, 7, 0, -1));
   items.push(f.put(R, 'tent_command', 19, -12, 0, 1));
   items.push(item(R, 'milestone', -44, 418.5, 0, { outlying: true })); // at the crossroads above the north gate
-  items.push(item(R, 'road_arch', 9, 524, yawToward(0.17, 0.99), { outlying: true })); // P43: where the High Road leaves the valley
+  // P43, the High Road: the Hunter's Loop across the highlands east of the crossroads. The ridge path
+  // north of the peak is cut by the terraces of a cave's entrance, so the road home runs this way.
+  items.push(item(R, 'road_arch', 150, 428, yawToward(-46, 2), { outlying: true }));
   return Object.freeze({
     id: 'castra_lupa', place: 'P35', area: 'north', kit: R,
     centre: Object.freeze({ x: -66, z: 383 }), along: Object.freeze({ x: 0.6, z: 0.8 }),
@@ -115,7 +118,8 @@ function theLanding() {
 
 // ── Camp of the Western Road (P13): Akitsu's camp, astride the west trail ──
 // Three levels: the drill yard on the flat east of the trail, tent rows on the
-// slope west of it, the command curtain and the watchtower above.
+// slope west of it, the command curtain above. The watchtower stands over the
+// town-side picket.
 function westernRoadCamp() {
   const A = 'akitsu';
   // The trail from the end of the west road (-263, -93) down to (-330, -200).
@@ -141,9 +145,13 @@ function westernRoadCamp() {
     items.push(item(A, 'curtain_run', cx + dx, cz + 4, 0));
     items.push(item(A, 'curtain_run', cx + dx, cz - 4, Math.PI));
   }
+  // Each run carries its pole at its left end, which leaves the north side's open end bare.
+  items.push(item(A, 'curtain_post', cx + 4, cz + 4));
   items.push(item(A, 'map_table', cx - 1.5, cz, Math.PI / 2));
-  items.push(item(A, 'watchtower', -326, -128, Math.PI / 2));
-  items.push(item(A, 'signal_lantern', -326, -128, 0, { y: 7 }));
+  // The watchtower stands over the town-side picket, on the slope side of the trail: up among
+  // the cedars the forest hid it, and here it is what a traveller from the town sees first.
+  items.push(f.put(A, 'watchtower', 40, 13, -1, 0));
+  items.push(f.put(A, 'signal_lantern', 40, 13, -1, 0, { y: 7 }));
   // The yard, on the flat.
   items.push(item('valley', 'straw_post', -286, -151, 0, { marks: 'camp_post_1' }));
   items.push(item('valley', 'straw_post', -283, -153, 0, { marks: 'camp_post_2' }));
@@ -169,8 +177,64 @@ function westernRoadCamp() {
   });
 }
 
+// ── Band 2's three smaller places ──────────────────────────────────────────
+// Same item format as the camps. They have no sentries and no tall mark of
+// their own unless the plan says so; each is dressed from kits already made.
+function swordHall() {
+  const A = 'akitsu';
+  const items = [
+    item(A, 'tent_officer', -229, -55, -Math.PI / 2), // the hall itself: its front faces the door spot
+    item(A, 'tent_bell', -228, -64, -Math.PI / 2), // where the students sleep
+    item(A, 'spear_rack', -239, -65, 0), // wooden practice swords
+    item(A, 'banner_tall_pole', -237.5, -57.5),
+    item(A, 'banner_tall_cloth', -237.5, -57.5, -Math.PI / 2, { y: 6.3 }),
+    item('valley', 'grave_stone', -242, -52, Math.PI / 2, { marks: 'hall_grave' }),
+  ];
+  // A curtain along the north side shuts the practice ground off from the road.
+  for (const x of [-236, -232, -228]) items.push(item(A, 'curtain_run', x, -49.5, 0));
+  items.push(item(A, 'curtain_post', -226, -49.5));
+  return Object.freeze({ id: 'sword_hall', place: 'P14', area: 'west', kit: A, centre: Object.freeze({ x: -235, z: -60 }), items: Object.freeze(items) });
+}
+
+function shadowRavine() {
+  const T = 'tameri';
+  const items = [];
+  // Four fire bowls square the ground where the Priestess speaks the rite: at the ravine's mouth,
+  // not in it. The ravine is one of the game's own monster camps, and its four spawns stand 19 m
+  // and more from here; the dead the player frees are met inside.
+  for (const [dx, dz] of [[-2.8, 2.8], [2.8, 2.8], [-2.8, -2.8], [2.8, -2.8]]) {
+    items.push(item(T, 'brazier_bowl', 333 + dx, -152 + dz));
+    items.push(item(T, 'brazier_flame', 333 + dx, -152 + dz));
+  }
+  // One marker for each of the five who can be named.
+  for (const [x, z] of [[345, -176.5], [347, -175], [348.6, -173], [349.2, -170.6], [346.4, -178.4]]) items.push(item('valley', 'stela', x, z, -Math.PI / 4));
+  // At the ravine's mouth: the rite's stores under an awning, and one staff so the place is seen from the trail.
+  items.push(item(T, 'awning', 328.5, -146.5, Math.PI));
+  items.push(item(T, 'jar_rack', 327.5, -149.8, Math.PI / 2));
+  items.push(item(T, 'flagstaff', 335, -146.8));
+  items.push(item(T, 'pennant', 335, -146.8, 0, { y: 12.6 }));
+  return Object.freeze({ id: 'shadow_ravine', place: 'P26', area: 'east', kit: T, centre: Object.freeze({ x: 340, z: -165 }), items: Object.freeze(items) });
+}
+
+function firstFurrow() {
+  const R = 'remoria';
+  // The furrow runs from (-262, 410) to (-218, 426), 18 m north of the Hunter's Loop and beside it.
+  const along = yawToward(44, 16);
+  const items = [
+    item(R, 'plough', -264.35, 409.15, along), // waiting at the furrow's start
+    item('valley', 'wagon', -267, 404.5, along), // the plough cart, with the archer's case
+    item(R, 'boundary_stone', -214.3, 430.6), // ready to be set where the furrow ends
+    item(R, 'standard_wolf', -270, 409, Math.PI / 2), // the colony's first standard
+    item(R, 'rack_arms', -268.5, 401.5, 0),
+    item(R, 'brazier_iron', -272, 405.5),
+    item(R, 'brazier_fire', -272, 405.5),
+  ];
+  return Object.freeze({ id: 'first_furrow', place: 'P36', area: 'north', kit: R, centre: Object.freeze({ x: -240, z: 400 }), road: 'hunters_loop_north', items: Object.freeze(items) });
+}
+
 export const CAMP_PLANS = Object.freeze([westernRoadCamp(), theLanding(), castraLupa()]);
-export const campPlan = id => CAMP_PLANS.find(plan => plan.id === id) || null;
+export const BAND2_PLACE_PLANS = Object.freeze([swordHall(), shadowRavine(), firstFurrow()]);
+export const campPlan = id => [...CAMP_PLANS, ...BAND2_PLACE_PLANS].find(plan => plan.id === id) || null;
 
 /** How many of each piece a plan uses: one batch (one draw call) per entry. */
 export function campPlanBatches(plan) {

@@ -25,6 +25,7 @@
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { THREE_ROADS_CAST, threeRoadsCastAtHome, threeRoadsPerson } from '../script/cast.mjs';
+import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
 import { threeRoadsLine } from '../script/index.mjs';
 import { pickAXEEmbeddedIdleClip } from '../../npc/axeAnimatedQuestNpcGLB.mjs';
@@ -37,12 +38,15 @@ import {
   stepToward, steerAround, followGoal, followSpeed, turnToward, headingTo, shouldGreet,
   walkTimeScale, CAST_WALK_SPEED, CAST_TURN_RATE, CAST_FOLLOW_DISTANCE,
 } from './castMotion.mjs';
+import { chooseHail, createHailMemory, idlePhaseOf, idleRateOf } from './castHail.mjs';
 import {
   captionSeconds, captionOpacity, captionDistanceFade, wrapCaptionText,
   CAPTION_LINE_CHARS, CAPTION_MAX_LINES, SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES,
 } from './castCaption.mjs';
 import { createCaptionView } from './castCaptionView.mjs';
-import { CAST_MODEL_SOURCES, castModelFor, distinctColours } from './castModels.mjs';
+import {
+  castSourceDef, castModelFor, castFallbackLook, distinctColours, CAST_OWN_SOURCE_PREFIX,
+} from './castModels.mjs';
 
 // The opening's parley puts 11 people in the town (7 at home, the 3 travellers, Elder
 // Maren). BUILD_RULES allows more than 8 when measured: each drawn person costs
@@ -59,6 +63,8 @@ const PLACE_EVERY = 0.25; // seconds between placement attempts (one person each
 const REGROUND_EVERY = 1;  // seconds between ground re-checks of people standing still
 const WALK_GROUND_EVERY = 0.1;
 const DRAW_EVERY = 0.5;    // seconds between choosing who is drawn
+const HAIL_EVERY = 0.25;   // seconds between looking for a sentry to hail the player
+const PRECOMPILE_WAIT = 20; // seconds the bodies wait at most for the game's load-time precompile (WebGPU)
 const FOLLOW_CATCH_UP = 35; // a follower this far behind is put back behind the player
 const PERSONAL_SPACE = 0.75; // two of the cast walking never come closer than this
 const SUBTITLE_DISTANCE = 1.25;    // metres in front of the camera
@@ -99,12 +105,118 @@ async function defaultLoadSource(key, def, ctx) {
     };
   }
   const gltf = await loadWith(ctx.gltfLoader, url);
+  return ownOrSharedGlb(gltf, def, url);
+}
+
+// What a loaded GLB gives the cast. A person's own file names its clips exactly
+// (`Idle`, `Talk`, `Walk`) and must carry every one in `required`, or it is
+// refused and that person wears the shared figure.
+export function ownOrSharedGlb(gltf, def, url) {
+  const scene = gltf?.scene || gltf?.scenes?.[0];
   const clips = gltf?.animations || [];
+  if (!scene) throw new Error('No scene in ' + url);
+  if (def?.clips) {
+    const named = key => clips.find(clip => clip?.name === def.clips[key] && clip.duration > 0 && clip.tracks?.length) || null;
+    const found = { idle: named('idle'), talk: named('talk'), walk: named('walk') };
+    const missing = (def.required || []).filter(key => !found[key]);
+    if (missing.length) throw new Error(url + ' has no ' + missing.map(key => def.clips[key]).join(', ') + ' clip');
+    return {
+      scene, idleClip: found.idle, talkClip: found.talk, walkClip: found.walk, format: 'glb', url,
+      own: Boolean(def.own), walkClipSpeed: def.walkClipSpeed || CAST_WALK_SPEED, tint: def.tint || 'none',
+      yaw: Number(def.yaw) || 0, extraClips: clips,
+    };
+  }
   return {
-    scene: gltf?.scene || gltf?.scenes?.[0], idleClip: pickAXEEmbeddedIdleClip(clips),
+    scene, idleClip: pickAXEEmbeddedIdleClip(clips), talkClip: null,
     walkClip: clips.find(c => /walk/i.test(c.name)) || clips.find(c => /run/i.test(c.name)) || null,
-    format: 'glb', url, walkClipSpeed: def.walkClipSpeed || CAST_WALK_SPEED, tint: def.tint || 'multiply',
+    format: 'glb', url, walkClipSpeed: def?.walkClipSpeed || CAST_WALK_SPEED, tint: def?.tint || 'multiply', yaw: Number(def?.yaw) || 0,
   };
+}
+
+/**
+ * The height and lowest point of a skinned model as it stands in a clip (its Idle),
+ * averaged over a few moments of the clip, in the model's own world units. The
+ * model's pose is put back as it was. null when there is no clip or no skinned mesh.
+ */
+export function measurePoseBox(THREE_, model, clip, samples = 5) {
+  if (!model || !clip || !(clip.duration > 0)) return null;
+  const skinned = [];
+  model.traverse(node => { if (node.isSkinnedMesh) skinned.push(node); });
+  if (!skinned.length) return null;
+  const saved = [];
+  model.traverse(node => saved.push([node, node.position.clone(), node.quaternion.clone(), node.scale.clone()]));
+  const mixer = new THREE_.AnimationMixer(model);
+  const action = mixer.clipAction(clip);
+  action.play();
+  const box = new THREE_.Box3(), part = new THREE_.Box3();
+  let height = 0, foot = 0, count = 0;
+  try {
+    for (let k = 0; k < samples; k++) {
+      mixer.setTime((k / samples) * clip.duration);
+      model.updateMatrixWorld(true);
+      box.makeEmpty();
+      for (const mesh of skinned) {
+        mesh.computeBoundingBox();
+        part.copy(mesh.boundingBox).applyMatrix4(mesh.matrixWorld);
+        box.union(part);
+      }
+      if (box.isEmpty()) continue;
+      height += box.max.y - box.min.y;
+      foot += box.min.y;
+      count++;
+    }
+  } finally {
+    action.stop();
+    mixer.uncacheRoot(model);
+    for (const [node, p, q, s] of saved) { node.position.copy(p); node.quaternion.copy(q); node.scale.copy(s); }
+    model.updateMatrixWorld(true);
+    for (const mesh of skinned) mesh.computeBoundingBox();
+  }
+  if (!count || !(height > 0)) return null;
+  return { height: height / count, foot: foot / count };
+}
+
+/**
+ * How fast an in-place walk clip carries the body, in the model's own world units
+ * per second: the planted (lower) foot slides back at that speed. Sampled over one
+ * cycle; the model's pose is put back as it was. null when it cannot tell.
+ */
+export function measureWalkSpeed(THREE_, model, clip, samples = 48) {
+  if (!model || !clip || !(clip.duration > 0)) return null;
+  const feet = [];
+  model.traverse(node => { if ((node.isBone || node.type === 'Bone') && /foot/i.test(node.name) && !/toe|end/i.test(node.name)) feet.push(node); });
+  if (feet.length < 2) return null;
+  const saved = [];
+  model.traverse(node => saved.push([node, node.position.clone(), node.quaternion.clone(), node.scale.clone()]));
+  const mixer = new THREE_.AnimationMixer(model);
+  const action = mixer.clipAction(clip);
+  action.play();
+  const now = feet.map(() => new THREE_.Vector3());
+  const before = feet.map(() => new THREE_.Vector3());
+  const dt = clip.duration / samples;
+  let total = 0, count = 0;
+  try {
+    mixer.setTime(0);
+    model.updateMatrixWorld(true);
+    feet.forEach((foot, i) => foot.getWorldPosition(before[i]));
+    for (let k = 1; k <= samples; k++) {
+      mixer.setTime(k * dt);
+      model.updateMatrixWorld(true);
+      feet.forEach((foot, i) => foot.getWorldPosition(now[i]));
+      let low = 0;
+      for (let i = 1; i < feet.length; i++) if (now[i].y < now[low].y) low = i;
+      total += Math.hypot(now[low].x - before[low].x, now[low].z - before[low].z) / dt;
+      count++;
+      feet.forEach((_, i) => before[i].copy(now[i]));
+    }
+  } finally {
+    action.stop();
+    mixer.uncacheRoot(model);
+    for (const [node, p, q, s] of saved) { node.position.copy(p); node.quaternion.copy(q); node.scale.copy(s); }
+    model.updateMatrixWorld(true);
+  }
+  const speed = count ? total / count : null;
+  return Number.isFinite(speed) && speed > 0.05 ? speed : null;
 }
 
 // A run clip with the hips' forward travel taken out, so a person walks on the spot
@@ -139,6 +251,40 @@ export function unifySkeletons(THREE_, model) {
   return rebound;
 }
 
+/**
+ * A copy of a loaded model whose geometries, materials and textures are this
+ * scene's own. The cast draws with and disposes only the copy; what the loader
+ * handed over is left alone, so nothing a later mount (or a loader cache, or the
+ * game) may still hold is ever disposed by this scene's teardown.
+ */
+export function ownCopy(model) {
+  const copy = cloneSkinned(model);
+  const geometries = new Map(), materials = new Map(), textures = new Map();
+  const ownTexture = t => {
+    if (!t?.isTexture) return t;
+    if (!textures.has(t)) textures.set(t, t.clone());
+    return textures.get(t);
+  };
+  const ownMaterial = m => {
+    if (!m) return m;
+    if (!materials.has(m)) {
+      const c = m.clone();
+      for (const [key, value] of Object.entries(c)) if (value?.isTexture) c[key] = ownTexture(value);
+      materials.set(m, c);
+    }
+    return materials.get(m);
+  };
+  copy.traverse(node => {
+    if (node.geometry) {
+      if (!geometries.has(node.geometry)) geometries.set(node.geometry, node.geometry.clone());
+      node.geometry = geometries.get(node.geometry);
+    }
+    if (node.material) node.material = Array.isArray(node.material) ? node.material.map(ownMaterial) : ownMaterial(node.material);
+  });
+  copy.animations = model.animations;
+  return copy;
+}
+
 function disposeObjectTree(object) {
   const geometries = new Set(), materials = new Set(), textures = new Set();
   object?.traverse?.(node => {
@@ -167,6 +313,22 @@ export function createCastSubsystem(ctx, deps = {}) {
   const scene = ctx.scene;
   const bus = ctx.bus;
 
+  // What the WebGPU device reported while this scene's cast was up: bodies went
+  // undrawn twice on WebGPU while several game tabs rendered at once (one reported a
+  // hung device), and it could not be reproduced alone. status().gpu shows the last
+  // errors and whether the device was lost, so the next time it can be pinned down.
+  const gpu = { errors: [], lost: null };
+  const device = ctx.renderer?.backend?.device;
+  const onGpuError = event => {
+    const message = String(event?.error?.message || event?.error || 'GPU error').slice(0, 200);
+    if (gpu.errors.length >= 5) gpu.errors.shift();
+    gpu.errors.push(message);
+  };
+  try {
+    device?.addEventListener?.('uncapturederror', onGpuError);
+    device?.lost?.then?.(info => { gpu.lost = String(info?.message || info?.reason || 'lost'); }, () => {});
+  } catch { /* no WebGPU device (WebGL, tests) */ }
+
   const root = new THREE.Group();
   root.name = 'ThreeRoadsCast';
   root.userData.threeRoadsCast = true;
@@ -188,6 +350,33 @@ export function createCastSubsystem(ctx, deps = {}) {
   let placeTimer = PLACE_EVERY; // first attempt on the first frame
   let regroundTimer = 0;
   let drawTimer = DRAW_EVERY;
+  let hailTimer = 0;
+  let clock = 0; // seconds since this scene's cast started
+  const hailMemory = createHailMemory();
+  const hailCandidates = [];
+  const hailPool = [];
+  // A sentry who comes near says their `hail` line (castHail.mjs has the rules).
+  function tryHail(playerPosition) {
+    hailCandidates.length = 0;
+    let busy = false;
+    for (const rec of captionList) if (rec.seconds > 0) { busy = true; break; }
+    for (const actor of actorList) {
+      if (!actor.person.hail || actor.state !== 'ready') continue;
+      const c = hailPool[hailCandidates.length] || (hailPool[hailCandidates.length] = {});
+      c.id = actor.id; c.x = actor.x; c.z = actor.z;
+      c.atHome = Boolean(actor.fromHome && actor.homeSpot &&
+        Math.hypot(actor.x - actor.homeSpot.x, actor.z - actor.homeSpot.z) < 1);
+      c.still = !actor.moving && !actor.task;
+      c.drawn = actor.drawn && actor.group?.visible !== false;
+      c.cued = Boolean(actor.task || actor.pendingTask || !actor.fromHome);
+      hailCandidates.push(c);
+    }
+    if (!hailCandidates.length) return;
+    const id = chooseHail({ now: clock, player: playerPosition, candidates: hailCandidates, busy, memory: hailMemory });
+    if (!id) return;
+    const actor = actors.get(id);
+    if (api.say({ id, lineId: actor.person.hail })) actor.hailing = true;
+  }
   let flags = null; // the quest store's story flags, once read
   const step = { x: 0, z: 0, heading: 0, remaining: 0, arrived: false };
   const steer = { x: 0, z: 0, heading: 0, blocked: false };
@@ -196,7 +385,6 @@ export function createCastSubsystem(ctx, deps = {}) {
   const captionList = [];     // the same records, for allocation-free iteration
   let subtitleOwner = null;   // the record shown as a subtitle, if any
   let lineCounter = 0;
-  const subtitleAt = new THREE.Vector3();
   const projected = new THREE.Vector3();
   // True when a point is in front of the camera and inside its view (a little
   // margin, so a head at the very edge still counts as seen). No camera: assume so.
@@ -231,10 +419,18 @@ export function createCastSubsystem(ctx, deps = {}) {
     if (!value?.scene) throw new Error('Cast model source gave no scene');
     value.scene.updateMatrixWorld(true);
     value.reboundMeshes = unifySkeletons(THREE, value.scene);
+    // Height and foot from the skinned mesh's world box as the person stands, in
+    // their Idle (an own file's "Armature" is scaled 0.01: the bones are in
+    // centimetres). The rest pose stands straighter than the idle, which drew own
+    // models about 5 % short and sank the shared figure's feet 4.5 cm into the ground.
     const box = new THREE.Box3().setFromObject(value.scene);
-    value.sourceHeight = Math.max(1e-3, box.max.y - box.min.y);
-    value.footY = box.min.y;
+    const standing = measurePoseBox(THREE, value.scene, value.idleClip);
+    value.restHeight = Math.max(1e-3, box.max.y - box.min.y);
+    value.sourceHeight = standing ? standing.height : value.restHeight;
+    value.footY = standing ? standing.foot : box.min.y;
     value.walkClip = value.format === 'fbx' ? inPlace(value.walkClip) : value.walkClip;
+    // An own walk clip's natural speed, in the file's own metres per second.
+    value.walkSpeedMeasured = value.own ? measureWalkSpeed(THREE, value.scene, value.walkClip) : null;
     value.materialCount = 0;
     const seen = new Set();
     value.scene.traverse(node => {
@@ -249,14 +445,16 @@ export function createCastSubsystem(ctx, deps = {}) {
     entry = { key: sourceKey, value: null, error: null, promise: null };
     templates.set(sourceKey, entry);
     entry.promise = Promise.resolve()
-      .then(() => loadSource(sourceKey, CAST_MODEL_SOURCES[sourceKey], ctx))
+      .then(() => loadSource(sourceKey, castSourceDef(sourceKey), ctx))
       .then(value => {
-        if (disposed) { disposeObjectTree(value?.scene); return; }
-        entry.value = prepareTemplate(value);
+        // Arrived after this scene ended: dropped, not disposed (it was never ours).
+        if (disposed || !value?.scene) { if (!disposed) throw new Error('Cast model source gave no scene'); return; }
+        entry.value = prepareTemplate({ ...value, scene: ownCopy(value.scene) });
       })
       .catch(error => {
         entry.error = error;
-        warn('Three Roads cast: model source ' + sourceKey + ' could not load; its people stay out', error);
+        warn('Three Roads cast: model source ' + sourceKey + ' could not load; ' +
+          (sourceKey.startsWith(CAST_OWN_SOURCE_PREFIX) ? 'they wear the shared figure' : 'its people stay out'), error);
       });
     return entry;
   }
@@ -276,7 +474,8 @@ export function createCastSubsystem(ctx, deps = {}) {
       want: { x, z }, x, z, y: 0, facing: rest, restFacing: rest,
       state: 'waiting', placement: null, waited: 0, probeMs: 0, offset: 0,
       template: templateFor(look.source),
-      group: null, model: null, mixer: null, idleAction: null, walkAction: null, ring: null,
+      group: null, model: null, mixer: null, idleAction: null, walkAction: null, talkAction: null, ring: null,
+      anim: 'idle', walkClipSpeed: null,
       entry: null, materials: [], moving: false, groundClock: 0,
       task: null, pendingTask: null, followMoving: false, drawn: true,
     };
@@ -394,15 +593,19 @@ export function createCastSubsystem(ctx, deps = {}) {
     const s = actor.look.height / t.sourceHeight;
     model.scale.set(s * actor.look.width, s, s * actor.look.width);
     model.position.y = -t.footY * s;
+    model.rotation.y = t.yaw || 0;
     // Clone this person's materials and tint them. With `tintMeshes` the source names
     // which mesh takes which colour (others keep theirs); without it the first
     // material in the rig takes the first colour and every other one the second.
+    // An own model (tint 'none') keeps the file's material: its texture is its look,
+    // and its geometry, material and texture are freed with the template.
     const clones = new Map();
     let order = 0;
     model.traverse(node => {
       if (!node.isMesh) return;
       node.castShadow = !node.isSkinnedMesh;
       node.receiveShadow = true;
+      if (t.tint === 'none') return;
       let colourIndex = null;
       if (t.tintMeshes) {
         const rule = t.tintMeshes.find(([pattern]) => pattern.test(node.name));
@@ -422,6 +625,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       };
       node.material = Array.isArray(node.material) ? node.material.map(swap) : swap(node.material);
     });
+    model.traverse(node => { if (node.isMesh) compileInPlace(node); });
     const group = new THREE.Group();
     group.name = 'ThreeRoadsCast_' + actor.id;
     group.userData.threeRoadsCast = actor.id;
@@ -440,19 +644,38 @@ export function createCastSubsystem(ctx, deps = {}) {
     const idle = t.idleClip ? mixer.clipAction(t.idleClip) : null;
     if (idle) {
       idle.play();
-      idle.time = Math.random() * (t.idleClip.duration || 1); // not all breathing in step
+      // Each person starts the idle at a place of their own (fixed by their id, the
+      // same every visit), so neighbours wearing the same clip do not sway in step.
+      idle.time = idlePhaseOf(actor.id) * (t.idleClip.duration || 1);
+      idle.timeScale = idleRateOf(actor.id);
     }
     actor.walkAction = t.walkClip ? mixer.clipAction(t.walkClip) : null;
+    actor.talkAction = t.talkClip ? mixer.clipAction(t.talkClip) : null;
+    actor.anim = 'idle';
+    // The walk's natural speed for this person: measured on the file (scaled to their
+    // height), or the source's own figure.
+    actor.walkClipSpeed = t.walkSpeedMeasured ? t.walkSpeedMeasured * s : t.walkClipSpeed;
+    actor.own = Boolean(t.own);
     actor.model = model;
     actor.group = group;
     actor.mixer = mixer;
     actor.idleAction = idle;
+    showBody(actor); // hidden while the game's precompile is still to come (WebGPU)
     root.add(group);
   }
 
   function tryPlace(actor) {
     const t = actor.template;
-    if (t.error) { actor.state = 'failed'; return; }
+    if (t.error) {
+      // Their own model did not load (or lacks a clip): the shared figure, as before.
+      const fallback = castFallbackLook(actor.look);
+      if (fallback) {
+        actor.look = fallback;
+        actor.ownFailed = String(t.error?.message || t.error);
+        actor.template = templateFor(fallback.source);
+      } else actor.state = 'failed';
+      return;
+    }
     if (!t.value) return;
     const started = globalThis.performance?.now?.() ?? Date.now();
     const probe = deps.probe || makeProbe(actor.want.x, actor.want.z, 8);
@@ -470,6 +693,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     actor.placement = spot.status;
     actor.x = spot.x; actor.z = spot.z; actor.y = spot.y;
     actor.offset = spot.distance;
+    actor.homeSpot = { x: spot.x, z: spot.z }; // where "at home" is, for hailing
     buildVisual(actor, t.value, spot);
     if (actor.giver && Array.isArray(ctx.questNPCs)) {
       // The shape GameWorld3D.jsx builds for its archers (the questNPCs.push in the
@@ -501,18 +725,27 @@ export function createCastSubsystem(ctx, deps = {}) {
   }
 
   function setMoving(actor, moving, speed) {
-    const walk = actor.walkAction, idle = actor.idleAction;
-    if (moving && walk) walk.timeScale = walkTimeScale(speed, actor.template.value?.walkClipSpeed);
-    if (moving === actor.moving) return;
     actor.moving = moving;
-    if (!walk || !idle) return;
-    if (moving) {
-      walk.reset().play();
-      idle.crossFadeTo(walk, 0.25, false);
-    } else {
-      idle.reset().play();
-      walk.crossFadeTo(idle, 0.3, false);
-    }
+    // Feet that keep pace with the ground: the clip plays at the body's speed over
+    // the walk's natural speed (an own model may play faster when following at a run).
+    if (moving && actor.walkAction)
+      actor.walkAction.timeScale = walkTimeScale(speed, actor.walkClipSpeed, actor.own ? 2.5 : undefined);
+  }
+
+  // Walk while moving, else Talk while one of their lines is up, else Idle; a
+  // quarter-second crossfade between them. The shared figure has no Talk: Idle.
+  const actionOf = (actor, name) => (name === 'walk' ? actor.walkAction : name === 'talk' ? actor.talkAction : actor.idleAction);
+  function chooseAnim(actor) {
+    const talking = (captions.get(actor.id)?.seconds || 0) > 0;
+    const want = actor.moving && actor.walkAction ? 'walk' : talking && actor.talkAction ? 'talk' : 'idle';
+    if (want === actor.anim) return;
+    const from = actionOf(actor, actor.anim), to = actionOf(actor, want);
+    actor.anim = want;
+    if (!to) return;
+    to.reset().play();
+    // Back to idle: from their own place in it again, not from the start in step with everyone.
+    if (want === 'idle') to.time = idlePhaseOf(actor.id) * (to.getClip().duration || 1);
+    if (from && from !== to) from.crossFadeTo(to, 0.25, false);
   }
 
   // Moves an actor toward (tx, tz); returns true when there.
@@ -591,7 +824,10 @@ export function createCastSubsystem(ctx, deps = {}) {
       } else setMoving(actor, false, 0);
     } else if (playerPosition && Number.isFinite(playerPosition.x)) {
       const d = Math.hypot(playerPosition.x - actor.x, playerPosition.z - actor.z);
-      const desired = shouldGreet(d) ? headingTo(actor.x, actor.z, playerPosition.x, playerPosition.z) : actor.restFacing;
+      // Turn to a visitor within 4 m, and to the player while hailing them.
+      const hailing = actor.hailing && (captions.get(actor.id)?.seconds || 0) > 0;
+      if (actor.hailing && !hailing) actor.hailing = false;
+      const desired = shouldGreet(d) || hailing ? headingTo(actor.x, actor.z, playerPosition.x, playerPosition.z) : actor.restFacing;
       actor.facing = turnToward(actor.facing, desired, 2.5 * dt);
     }
     const g = actor.group;
@@ -599,6 +835,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     g.position.y = actor.y;
     g.position.z = actor.z;
     g.rotation.y = actor.facing;
+    chooseAnim(actor);
     // Givers' mixers are advanced by GameWorld3D's questNPCs loop; the others' here,
     // while they are drawn.
     if (!actor.entry && actor.drawn) actor.mixer?.update(dt);
@@ -618,9 +855,57 @@ export function createCastSubsystem(ctx, deps = {}) {
       const drawn = i < CAST_MAX_DRAWN;
       if (drawn === actor.drawn) continue;
       actor.drawn = drawn;
-      if (actor.model) actor.model.visible = drawn;
-      if (actor.ring) actor.ring.visible = drawn;
+      showBody(actor);
     }
+  }
+  // A body is shown when it is among the drawn and the renderer is not holding its
+  // frames for the game's shader precompile (see compileInPlace).
+  function showBody(actor) {
+    const show = actor.drawn && !precompiling;
+    if (actor.model) actor.model.visible = show;
+    if (actor.ring) actor.ring.visible = actor.drawn;
+  }
+
+  // ─── WebGPU: bodies compile their pipelines in place ───
+  // The game's WebGPU renderer (src/lib/webgpuSceneRenderer.js) compiles the
+  // pipeline of anything drawn for the first time in the background and skips
+  // drawing it until that compile is done. On this PC, with several game tabs on
+  // the GPU, some of those background compiles never finished: the pipeline stays
+  // cached and empty, and every body of that kind was never drawn (bodies missing
+  // after entering the world or crossing a gate; WebGPU only). The cast's bodies are
+  // few and need to be there, so each one compiles synchronously at its first draw
+  // (the background compile is switched off for that object's draw only), and the
+  // bodies stay hidden while the renderer holds its frames for the load-time
+  // precompile, so they never enter that asynchronous pass either.
+  const sceneState = ctx.renderer?.__sceneState || null;
+  let precompiling = false;
+  let switchedOff = null;
+  function compileInPlace(mesh) {
+    const before = mesh.onBeforeRender, after = mesh.onAfterRender;
+    mesh.onBeforeRender = function (renderer, ...rest) {
+      const state = renderer?.__sceneState;
+      if (state && state.backgroundCompile === true) { state.backgroundCompile = false; switchedOff = state; }
+      return before.call(this, renderer, ...rest);
+    };
+    mesh.onAfterRender = function (...args) {
+      if (switchedOff) { switchedOff.backgroundCompile = true; switchedOff = null; }
+      return after.apply(this, args);
+    };
+  }
+  // On the WebGPU backend the bodies wait, hidden, until the game's load-time
+  // precompile is over (it switches backgroundCompile on when it ends); at most
+  // PRECOMPILE_WAIT seconds, in case it never runs.
+  const waitsForPrecompile = Boolean(sceneState && ctx.renderer?.isWebGPURenderer && ctx.renderer?.backend?.isWebGPUBackend);
+  let precompileWaited = 0;
+  precompiling = waitsForPrecompile && sceneState.backgroundCompile !== true;
+  function watchPrecompile(dt) {
+    // never leave the renderer's switch off (a draw that threw before onAfterRender)
+    if (switchedOff) { switchedOff.backgroundCompile = true; switchedOff = null; }
+    if (!precompiling) return;
+    precompileWaited += dt;
+    if (sceneState.backgroundCompile !== true && precompileWaited < PRECOMPILE_WAIT) return;
+    precompiling = false;
+    for (let i = 0; i < actorList.length; i++) if (actorList[i].state === 'ready') showBody(actorList[i]);
   }
 
   // ─── lines over heads, or as subtitles ───
@@ -675,12 +960,11 @@ export function createCastSubsystem(ctx, deps = {}) {
       if (!rec.far) continue;
       if (rec !== newestFar || !camera) { rec.view.hide(); continue; }
       setMode(rec, 'subtitle');
-      const viewHeight = 2 * SUBTITLE_DISTANCE * Math.tan(((camera.fov || 60) * Math.PI) / 360);
-      const height = Math.max(1, rec.lines + (rec.name ? 0.7 : 0)) * SUBTITLE_LINE_SCREEN * viewHeight;
-      const grow = height / Math.max(1e-3, rec.view.height);
-      // place() stands the caption on the point it is given: its foot sits here.
-      subtitleAt.set(0, -SUBTITLE_FOOT * viewHeight, -SUBTITLE_DISTANCE).applyQuaternion(camera.quaternion).add(camera.position);
-      rec.view.place(subtitleAt.x, subtitleAt.y, subtitleAt.z, camera, captionOpacity(rec.time, rec.seconds), grow);
+      // Placed by the view itself as it is drawn, from the camera that draws it.
+      rec.view.placeOnScreen(captionOpacity(rec.time, rec.seconds), {
+        distance: SUBTITLE_DISTANCE, foot: SUBTITLE_FOOT,
+        share: Math.max(1, rec.lines + (rec.name ? 0.7 : 0)) * SUBTITLE_LINE_SCREEN,
+      });
     }
   }
   // Over a head the line wraps narrow and tall; as a subtitle wide and low.
@@ -792,11 +1076,19 @@ export function createCastSubsystem(ctx, deps = {}) {
     },
     status() {
       const templateState = {};
-      for (const [key, t] of templates) templateState[key] = t.error ? 'failed' : t.value ? 'ready' : 'loading';
+      const templateInfo = {};
+      for (const [key, t] of templates) {
+        templateState[key] = t.error ? 'failed' : t.value ? 'ready' : 'loading';
+        if (t.value) templateInfo[key] = {
+          height: Math.round(t.value.sourceHeight * 1000) / 1000,
+          walkSpeedMeasured: t.value.walkSpeedMeasured ? Math.round(t.value.walkSpeedMeasured * 1000) / 1000 : null,
+        };
+      }
       const r = v => Math.round(v * 100) / 100;
       return {
         area: ctx.worldArea ?? null, areaScenes: ctx.areaScenes !== false, max: CAST_MAX_PEOPLE,
-        maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState,
+        maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState, templateInfo,
+        gpu: { webgpu: Boolean(ctx.renderer?.isWebGPURenderer), errors: [...gpu.errors], lost: gpu.lost },
         flagsRead: flags !== null,
         subtitle: subtitleOwner && subtitleOwner.seconds > 0 ? subtitleOwner.id : null,
         people: actorList.map(actor => ({
@@ -809,12 +1101,15 @@ export function createCastSubsystem(ctx, deps = {}) {
           facing: r(actor.facing), task: actor.task?.kind || null, moving: actor.moving,
           colours: actor.look.colours.map(c => '#' + c.toString(16).padStart(6, '0')),
           fromHome: actor.fromHome, drawn: actor.drawn,
+          model: actor.look.source, ownFailed: actor.ownFailed || null, anim: actor.anim,
+          walkClipSpeed: actor.walkClipSpeed ? r(actor.walkClipSpeed) : null,
           caption: (captions.get(actor.id)?.seconds || 0) > 0,
         })),
       };
     },
     update(dt, playerPosition) {
       if (disposed || !(dt >= 0)) return;
+      watchPrecompile(Math.min(dt, 0.1));
       const delta = Math.min(dt, 0.1);
       placeTimer += delta;
       if (placeTimer >= PLACE_EVERY) {
@@ -842,6 +1137,9 @@ export function createCastSubsystem(ctx, deps = {}) {
       }
       drawTimer += delta;
       if (drawTimer >= DRAW_EVERY) { drawTimer = 0; chooseDrawn(playerPosition); }
+      clock += delta;
+      hailTimer += delta;
+      if (hailTimer >= HAIL_EVERY) { hailTimer = 0; tryHail(playerPosition); }
       updateCaptions(delta, playerPosition);
     },
     dispose() {
@@ -859,6 +1157,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       subtitleOwner = null;
       for (const t of templates.values()) if (t.value) disposeObjectTree(t.value.scene);
       templates.clear();
+      try { device?.removeEventListener?.('uncapturederror', onGpuError); } catch { /* gone */ }
       ringGeometry.dispose();
       ringMaterial.dispose();
       captionGeometry.dispose();
@@ -889,12 +1188,14 @@ export function createCastSubsystem(ctx, deps = {}) {
 
   // ─── people at home, by the story so far ───
   const areas = ctx.areaScenes === false ? CAST_AREAS : (ctx.worldArea ? [ctx.worldArea] : []);
+  // People of an area that is still being built come home only with the builders' preview switch.
+  const preview = ctx.preview ?? threeRoadsPreviewEnabled(globalThis.window);
   function reconcile(storyFlags) {
     if (disposed) return;
     flags = storyFlags && typeof storyFlags === 'object' ? storyFlags : {};
     const wanted = new Map();
     for (const area of areas) {
-      for (const person of threeRoadsCastAtHome({ area, flags })) if (!wanted.has(person.id)) wanted.set(person.id, person);
+      for (const person of threeRoadsCastAtHome({ area, flags, includeUnbuilt: preview })) if (!wanted.has(person.id)) wanted.set(person.id, person);
     }
     // People a pledge brought in or is moving (fromHome false) are the pledge's to keep.
     for (const actor of [...actorList]) {

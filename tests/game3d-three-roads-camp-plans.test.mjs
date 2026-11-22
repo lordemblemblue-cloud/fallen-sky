@@ -8,7 +8,7 @@ import {
   AKITSU_KIT_PIECES, TAMERI_KIT_PIECES, REMORIA_KIT_PIECES, EMPIRE_KITS, EMPIRE_KIT_LIMITS, empireKitPiece,
 } from '../src/components/game3d/threeroads/kits/empireKitPieces.mjs';
 import { valleyKitPiece } from '../src/components/game3d/threeroads/kits/valleyKitPieces.mjs';
-import { CAMP_PLANS, campPlan, campPlanBatches } from '../src/components/game3d/threeroads/land/campPlans.mjs';
+import { BAND2_PLACE_PLANS, CAMP_PLANS, campPlan, campPlanBatches } from '../src/components/game3d/threeroads/land/campPlans.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { THREE_ROADS_CAST } from '../src/components/game3d/threeroads/script/cast.mjs';
 import { BAND2_POINTS } from '../src/components/game3d/threeroads/script/band2.mjs';
@@ -16,6 +16,9 @@ import {
   wolfveilHeight, wolfveilDistanceToRiver, wolfveilAnyTrailClearance, WOLFVEIL_RIVER,
 } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+// The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
+// run time. Without this import a check would pass on ground that is a cliff in the game.
+import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 
 const pieceOf = entry => (entry.kit === 'valley' ? valleyKitPiece(entry.piece) : empireKitPiece(entry.kit, entry.piece));
 const slopeAt = (x, z, reach = 2) => Math.atan(Math.hypot(
@@ -185,5 +188,87 @@ test('the camps answer what the second walkthrough taught', () => {
   for (const plan of CAMP_PLANS) {
     const grounds = plan.items.filter(entry => !entry.afloat && !entry.outlying).map(entry => wolfveilHeight(entry.x, entry.z));
     assert.ok(Math.max(...grounds) - Math.min(...grounds) >= 4, `${plan.id}: the camp spans ${(Math.max(...grounds) - Math.min(...grounds)).toFixed(1)} m of height`);
+  }
+});
+
+test('the fort\'s wall closes: each corner meets a run on both walls, and each gate\'s walk fills the gap between its towers', () => {
+  const fort = campPlan('castra_lupa');
+  const runs = fort.items.filter(entry => entry.piece === 'palisade_run');
+  const runLength = empireKitPiece('remoria', 'palisade_run').size[0];
+  // A run's two ends: half its length to either side of its centre, at right angles to its front.
+  const ends = runs.flatMap(run => [-1, 1].map(sign => ({
+    x: run.x + sign * (runLength / 2) * Math.cos(run.yaw),
+    z: run.z - sign * (runLength / 2) * Math.sin(run.yaw),
+  })));
+  const corners = fort.items.filter(entry => entry.piece === 'palisade_corner');
+  assert.equal(corners.length, 4);
+  for (const corner of corners) {
+    // The kit table: the walls' centrelines cross 0.93 m in front of the corner piece's origin,
+    // and the bank turns on a 2 m radius, so a run must end 2 m from that crossing on each wall.
+    const crossing = { x: corner.x + 0.93 * Math.sin(corner.yaw), z: corner.z + 0.93 * Math.cos(corner.yaw) };
+    const meeting = ends.filter(end => Math.abs(Math.hypot(end.x - crossing.x, end.z - crossing.z) - 2) < 0.06);
+    assert.equal(meeting.length, 2, `corner at (${corner.x}, ${corner.z}) meets ${meeting.length} run ends`);
+  }
+  const towerWidth = empireKitPiece('remoria', 'gate_tower').size[0];
+  const spanWidth = empireKitPiece('remoria', 'gate_span').size[0];
+  const towers = fort.items.filter(entry => entry.piece === 'gate_tower');
+  for (const span of fort.items.filter(entry => entry.piece === 'gate_span')) {
+    const pair = towers.filter(tower => Math.hypot(tower.x - span.x, tower.z - span.z) < 6);
+    assert.equal(pair.length, 2);
+    const gap = Math.hypot(pair[0].x - pair[1].x, pair[0].z - pair[1].z) - towerWidth;
+    assert.ok(Math.abs(gap - spanWidth) < 0.05, `the gap between the towers is ${gap.toFixed(2)} m, the walk ${spanWidth} m`);
+  }
+});
+
+test('each sentry spot of a plan has a person of that army standing on it', () => {
+  for (const plan of CAMP_PLANS) {
+    for (const spot of plan.sentries) {
+      const who = THREE_ROADS_CAST.find(person => person.home && person.home.area === plan.area
+        && Math.hypot(person.home.x - spot.x, person.home.z - spot.z) < 0.05);
+      assert.ok(who, `${plan.id}: nobody stands at (${spot.x}, ${spot.z})`);
+      assert.equal(who.empire, plan.kit);
+    }
+  }
+});
+
+test("band 2's smaller places: known pieces, on ground they can stand on, clear of the trail and of the story's spots", () => {
+  assert.deepEqual(BAND2_PLACE_PLANS.map(plan => plan.id), ['sword_hall', 'shadow_ravine', 'first_furrow']);
+  const problems = [];
+  for (const plan of BAND2_PLACE_PLANS) {
+    assert.equal(campPlan(plan.id), plan);
+    const place = pledgePlace(plan.place);
+    assert.equal(place.area, plan.area);
+    assert.ok(campPlanBatches(plan).size <= 10, plan.id + ': ' + campPlanBatches(plan).size + ' kinds of piece');
+    const solids = plan.items.filter(entry => pieceOf(entry)?.solid);
+    for (const entry of plan.items) {
+      const label = `${plan.id}: ${entry.piece} at (${entry.x}, ${entry.z})`;
+      const piece = pieceOf(entry);
+      if (!piece) { problems.push(label + ' is not a piece of its kit'); continue; }
+      if (wolfveilAreaAtLocal(entry.x, entry.z) !== plan.area) problems.push(label + ' is outside the ' + plan.area);
+      if (Math.hypot(entry.x - place.x, entry.z - place.z) > place.radius + 22) problems.push(label + ' is far from its place');
+      if (wolfveilDistanceToRiver(entry.x, entry.z) < WOLFVEIL_RIVER.width / 2 + 2) problems.push(label + ' stands in the river');
+      const span = Math.max(piece.size[0], piece.size[1]) / 2;
+      const drop = Math.tan(slopeAt(entry.x, entry.z) * Math.PI / 180) * span;
+      if (entry.y === undefined && piece.pivot === 'base' && drop > (piece.skirt ?? 0) + 0.25) problems.push(label + ': the ground falls ' + drop.toFixed(1) + ' m across it');
+    }
+    for (const entry of solids) {
+      if (wolfveilAnyTrailClearance(entry.x, entry.z) - reachOfSolid(entry) < 0.3 && clearOfTrailByShape(entry) < 0.3) problems.push(`${plan.id}: ${entry.piece} at (${entry.x}, ${entry.z}) closes a trail`);
+      for (const [name, point] of Object.entries(BAND2_POINTS)) {
+        if (entry.marks !== name && clearOfSolid(entry, point.x, point.z) < 0.7) problems.push(`${plan.id}: ${entry.piece} stands on ${name}`);
+      }
+      for (const person of THREE_ROADS_CAST) {
+        for (const spot of [person.home, person.homeAfter?.home, ...(person.alsoAt || [])].filter(Boolean)) {
+          if (spot.area === plan.area && clearOfSolid(entry, spot.x, spot.z) < 0.5) problems.push(`${plan.id}: ${person.id} stands inside ${entry.piece}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+});
+
+test('the furrow is ploughed beside the road, not along it', () => {
+  for (const name of ['furrow_1', 'furrow_2', 'furrow_3', 'furrow_end', 'furrow_stone', 'furrow_cart']) {
+    const point = BAND2_POINTS[name];
+    assert.ok(wolfveilAnyTrailClearance(point.x, point.z) >= 8, `${name} is ${wolfveilAnyTrailClearance(point.x, point.z).toFixed(1)} m from a trail`);
   }
 });

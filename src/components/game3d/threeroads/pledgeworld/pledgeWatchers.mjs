@@ -16,9 +16,11 @@ export const CHOICE_RANGE = 6;
 export const DEFAULT_HOLD_SECONDS = 1.5;
 export const ESCORT_LOST_METRES = 60;
 export const ESCORT_LOST_SECONDS = 10;
-// A follower stops some metres behind the player, so "everyone has arrived"
-// allows them that much beyond the radius the player has to be inside.
-export const ESCORT_FOLLOWER_SLACK = 6;
+// A follower stops its follow distance behind the player. It has arrived when
+// it is inside the radius, or no further out than the player plus its follow
+// distance plus this much: caught up, not still walking in.
+export const ESCORT_FOLLOWER_SLACK = 1;
+export const ESCORT_DEFAULT_FOLLOW = 3;
 export const DEFEND_AWAY_SECONDS = 8;
 export const CHOICE_REOPEN_SECONDS = 10;
 const TELEPORT_METRES = 30;
@@ -276,19 +278,25 @@ function escortWatcher(spec) {
   const along = alongLines(spec);
   let lostSince = null;
   let sent = false;
+  let waiting = false;
   return {
     update(frame) {
       along.update(frame);
       if (sent) return;
-      let arrived = within(frame.player, to, radius);
+      const playerIn = within(frame.player, to, radius);
+      let arrived = playerIn;
       let lost = false;
+      const playerOut = to ? distance(frame.player, to) : 0;
       for (const id of people) {
         // A follower nobody can place is taken to be at the player's side.
         const at = frame.locate(id);
         if (!at) continue;
-        if (!within(at, to, radius + ESCORT_FOLLOWER_SLACK)) arrived = false;
+        const out = distance(at, to);
+        const behind = spec.followDistance?.(id) ?? ESCORT_DEFAULT_FOLLOW;
+        if (out > radius && out > playerOut + behind + ESCORT_FOLLOWER_SLACK) arrived = false;
         if (distance(at, frame.player) > ESCORT_LOST_METRES) lost = true;
       }
+      waiting = playerIn && !arrived;
       if (arrived) {
         sent = true;
         spec.world.report(stepEvent(spec.pledge, spec.index));
@@ -306,7 +314,10 @@ function escortWatcher(spec) {
     },
     setProgress(count) { if (!count) sent = false; },
     interact() { return null; },
-    view() {},
+    // At the place before the others: say so, so the player knows to wait.
+    view(frame, out) {
+      if (!out.prompt && !sent && waiting) out.prompt = { key: null, hold: false, label: 'Wait for them to catch up', progress: -1 };
+    },
     target() { return to ? { x: to.x, z: to.z, label: spec.step.text } : null; },
     dispose() {},
   };

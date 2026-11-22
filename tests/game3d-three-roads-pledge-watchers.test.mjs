@@ -189,10 +189,13 @@ test('escort: everyone at the place, lines on the way, lost after ten seconds fa
   assert.deepEqual(e.log, ['say:w1', 'say:w2'], 'a hundred metres behind, but not yet for ten seconds');
   e.run(1);
   assert.deepEqual(e.log.slice(2), ['notice:escort_failed', 'escort_failed']);
-  people.f1.x = 8 + ESCORT_FOLLOWER_SLACK - 0.5; people.f2.x = 8 + ESCORT_FOLLOWER_SLACK + 0.5;
+  // The player stands 0 m from the place; a follower walks 3 m behind (no
+  // follow distance given), so it has caught up at 3 + slack.
+  people.f1.x = 3 + ESCORT_FOLLOWER_SLACK - 0.5; people.f2.x = 8 + 3 + ESCORT_FOLLOWER_SLACK + 0.5;
   e.run(0.3);
-  assert.equal(e.log.includes('escort_completed'), false, 'one follower still short');
-  people.f2.x = 5;
+  assert.equal(e.log.includes('escort_completed'), false, 'one follower still walking in');
+  assert.equal(e.view().prompt.label, 'Wait for them to catch up');
+  people.f2.x = 7.9;
   e.run(0.2);
   assert.equal(e.log.at(-1), 'escort_completed');
   e.run(1);

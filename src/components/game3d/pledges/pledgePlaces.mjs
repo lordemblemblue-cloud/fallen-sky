@@ -88,7 +88,7 @@ export const PLEDGE_PLACES = Object.freeze([
   surface('P40', 'wolf_ear_vigil', 'Wolf-Ear Vigil', 'north', 2, 470, 'here'),
   surface('P41', 'harpy_roost', 'The Harpy Roost', 'north', 410, 370, 'new'),
   surface('P42', 'bronze_sentinel', 'The Bronze Sentinel', 'north', -370, 390, 'new'),
-  surface('P43', 'north_home_road', 'The High Road', 'north', 9, 524, 'new'),
+  surface('P43', 'north_home_road', 'The High Road', 'north', 150, 428, 'new'),
 
   // Under the valley: separate scenes that are already in the game.
   under('P44', 'jade_grotto', 'Jade Lantern Grotto', 'wolfveil-caves', 'west', -360, -400),

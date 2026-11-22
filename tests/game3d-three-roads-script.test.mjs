@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import { WOLFVEIL_HOSTILE_ZONES } from '../src/components/game3d/wolfveil/WolfveilEnemySpawns.mjs';
+// The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
+// run time. Without this import a check would pass on ground that is a cliff in the game.
+import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 import { wolfveilHeight, wolfveilDistanceToRiver, WOLFVEIL_RIVER } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {
   THREE_ROADS_CAST, THREE_ROADS_EMPIRES, threeRoadsPerson, threeRoadsCastAtHome, threeRoadsHomeOf,
@@ -150,6 +154,8 @@ for (const band of THREE_ROADS_BANDS) {
     const used = new Set();
     for (const staging of Object.values(band.staging)) for (const id of lineIdsIn(staging)) used.add(id);
     for (const id of used) assert.ok(band.lines[id], 'missing line ' + id);
+    // A line a person hails travellers with is used by the cast table, not by a pledge.
+    for (const entry of THREE_ROADS_CAST) if (entry.hail && band.lines[entry.hail]) used.add(entry.hail);
     for (const [id, entry] of Object.entries(band.lines)) {
       assert.equal(allLineIds.has(id), false, 'line id used in two bands: ' + id);
       allLineIds.add(id);
@@ -298,4 +304,42 @@ test('every story point and every home stands on ground a player can walk to', (
     }
   }
   assert.deepEqual(problems, []);
+});
+
+test("the builders' preview offers every written band, and each camp has its sentries", () => {
+  assert.deepEqual(threeRoadsBuiltBands({ preview: false }).map(band => band.id), ['band1']);
+  assert.deepEqual(threeRoadsBuiltBands({ preview: true }).map(band => band.id), THREE_ROADS_BANDS.map(band => band.id));
+  for (const [area, sentries] of [['west', 2], ['east', 2], ['north', 3]]) {
+    const here = threeRoadsCastAtHome({ area, includeUnbuilt: true });
+    assert.equal(here.filter(person => /_picket_|_gate_/.test(person.id)).length, sentries, area);
+    assert.deepEqual(threeRoadsCastAtHome({ area }), [], area + ' stays empty without the preview');
+  }
+});
+
+test('every hail is a line its own speaker says, and every sentry has one', () => {
+  for (const entry of THREE_ROADS_CAST) {
+    if (entry.hail) {
+      const said = threeRoadsLine(entry.hail);
+      assert.ok(said, entry.id + ' hails with a line that exists');
+      assert.equal(said.speaker, entry.id, entry.hail + ' is spoken by ' + entry.id);
+      assert.ok(entry.home, entry.id + ' has a place to stand');
+    }
+    if (/_picket_|_gate_/.test(entry.id)) assert.ok(entry.hail, entry.id + ' speaks first');
+  }
+});
+
+// The valley already has monster camps of its own. A scene where someone stands
+// and speaks must not be set on top of one; a fight may be.
+const QUIET_SPOTS = Object.freeze(['ravine_gate', 'ravine_chant', 'ravine_sixth', 'hall_grave', 'landing_tally', 'fort_overhear', 'fort_tent']);
+test("spoken scenes keep clear of the game's own monster camps", () => {
+  const spawns = WOLFVEIL_HOSTILE_ZONES.flatMap(zone => zone.locations.map(([x, z]) => ({ zone: zone.id, x, z })));
+  assert.ok(spawns.length >= 10);
+  for (const name of QUIET_SPOTS) {
+    const point = threeRoadsPoint(name);
+    assert.ok(point, name);
+    for (const spawn of spawns) {
+      const away = Math.hypot(point.x - spawn.x, point.z - spawn.z);
+      assert.ok(away >= 18, `${name} is ${away.toFixed(1)} m from a spawn of ${spawn.zone}`);
+    }
+  }
 });

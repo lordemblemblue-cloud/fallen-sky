@@ -137,7 +137,7 @@ Every place follows the same few rules, taken from the land study (`research/REF
 | P40 | Wolf-Ear Vigil | the peak at (2, 470) | Here | A watch-fire ring on the summit. All three camps' fires can be seen from it. |
 | P41 | The Harpy Roost | cliffs at (410, 370) | New | Nests on a steep face. |
 | P42 | The Bronze Sentinel | steep ground at (−370, 390) | New | A forge-shrine from the first war and the bronze guardian that still keeps it. |
-| P43 | The High Road | the crest of the ridge path north of the peak (9, 524) | Here, a trail | Remoria's way home: the ridge path over the top. A milestone and a road arch. |
+| P43 | The High Road | the Hunter's Loop across the highlands, east of the crossroads above the fort (150, 428) | Here, a trail | Remoria's way home. A road arch where the courier is met, and milestones along it. The ridge path north of the peak is cut by a cave entrance's terraces and cannot be the road. |
 
 ### Under the valley (already in the game as separate scenes)
 
@@ -531,6 +531,8 @@ Each place is built the same way: look at how that kind of place is laid out in 
 Added 2026-11-22. The owner asked for the ability to "glide and fly", to "jump off hills", with combat unchanged and the glide under the player's control. Another session (the one that owns the player's movement) is building the ability. This plan's part is the land: heights worth jumping from, landings worth reaching, and a few places that are easier or only reachable from the air.
 
 **Rules until the glide's reach is known.** No distance below is fixed: how far a glide carries for each metre of height comes from the session building it, and every launch and landing is measured against that number before it is built. No glide route crosses a border between areas, because the far side of a border is not loaded. A player who is carrying something for a pledge, or walking someone home, cannot glide. Seen from the air a place is read by its outline, so each landing has one thing that shows from above: a fire, a banner, a ring of stones, pale ground.
+
+**Measured, 2026-11-22.** The glide is built (branch `claude/glide-20261122`). It carries about 4.2 m forward for each metre of height (read `GLIDE_REACH` in `src/components/game3d/player/playerGlide.mjs`), about 2.6 m when diving. Ground more than 2 m above the glider is a wall: a glide never lifts the hero onto a higher shelf, and it ends on ground at or below the height it arrives at. An area's border is a wall away from a gate. One consequence the table below had not counted on: the glider sinks at about 13 degrees, so over ground that falls more gently than that it lands again within a few metres. A glide carries off an edge (a cliff, a gorge rim, a ridge's side), not down a road or an even slope. **Every row of the table below has to be walked again with that in mind before it is built**: the heights are right, but a launch counts only where the land drops away faster than 1 in 4.2, and the ridge path from the Vigil to the hot springs falls at 7 to 12 degrees, which is too gentle.
 
 **Where the land already wants it** (heights from the game's own ground):
 

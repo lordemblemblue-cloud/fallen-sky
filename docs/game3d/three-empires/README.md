@@ -28,6 +28,10 @@ A piece of the Wolf Star fell into this valley. Three empires found a road here 
 
 The other nine decisions below were not answered one by one. Until the owner says otherwise the build takes the plan's own answer for each: the faction-to-empire match and the names as written; quests are called pledges; the 32 existing quests stay beside the new ones; quest fights match the player's level; no new gates yet; nothing is granted by the browser; war pledges start on duels; the quest engine and the opening first. Each of these is cheap to change later, and each is raised again when the band it affects is shown.
 
+**2026-11-22: band 1 is in main** (pull request 251), still behind `?threeRoads=1` and off unless that is added to the address. It is the town and the Gate Fields: twelve places, seven people in the town, the two opening chapters of the main story and two valley pledges. Bram the lamplighter is the first person with a model of his own (`COSTS.md`: 26 Meshy credits).
+
+**Band 2 is planned and not built**: the three army camps (`CAMPS_BAND2.md`). Its places show only with `?threeRoads=1&threeRoadsPreview=1`, so nobody who turns the story on meets a half-built camp. The plan's camps moved when the real ground was surveyed: the river runs in a gorge, so the Landing is a cliff-top camp, and the fort stands across the ridge path.
+
 ## Decisions needed from the owner
 
 1. Is this the story you want? Any empire you would change? **Answered: yes.**

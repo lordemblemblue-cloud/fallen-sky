@@ -6,6 +6,10 @@
 // order Three.js uses, the level of detail to draw each one at, and the
 // circles and boxes that push the player out of solid pieces.
 import { valleyKitPiece } from '../kits/valleyKitPieces.mjs';
+import { empireKitPiece } from '../kits/empireKitPieces.mjs';
+
+// A piece of any kit: the valley's (the default) or an empire's.
+export const kitPieceOf = (kit, id) => (!kit || kit === 'valley' ? valleyKitPiece(id) : empireKitPiece(kit, id));
 
 // Level of detail by distance from the player, in metres.
 //   nearer than `near`  : LOD0
@@ -32,10 +36,12 @@ export function lodForDistance(distance, landmark = false, previous = null, lod 
 export function placeInstances(place) {
   const out = [];
   for (const entry of place.pieces || []) {
-    const kit = valleyKitPiece(entry.piece);
+    const kitName = entry.kit || 'valley';
+    const kit = kitPieceOf(kitName, entry.piece);
     out.push(Object.freeze({
       placeId: place.id,
       area: place.area,
+      kit: kitName,
       piece: entry.piece,
       x: place.x + (entry.x || 0),
       z: place.z + (entry.z || 0),
@@ -47,6 +53,14 @@ export function placeInstances(place) {
       tint: entry.tint ?? null,
       landmark: Boolean(entry.landmark),
       spin: entry.spin || 0,
+      // On the river: y is above the water, not the ground.
+      afloat: Boolean(entry.afloat),
+      // How far the piece carries on below its base (posts, a plinth, a bank's
+      // foot): it may stand that much above the lowest ground under it.
+      skirt: kit?.skirt || 0,
+      // 'high': stands on the highest ground under it (a stage on a lip,
+      // reaching out over a drop).
+      groundMode: entry.ground || null,
       // Big pieces stand on the lowest ground under their footprint, so no
       // corner floats on a slope; small ones on the ground under their pivot,
       // and so does anything marked `ground: 'pivot'` (a mound sinks well).
@@ -69,15 +83,34 @@ export function groundSamplePoints(instance) {
   return points;
 }
 
-// Lowest of the sampled heights; null when the ground is not there yet.
+// The height a piece stands at; null when the ground is not there yet.
+// With no skirt: the lowest of the sampled heights, so no corner floats.
+// With a skirt: as high as the highest corner, but never more than the skirt
+// above the lowest one, so the skirt always reaches the ground downhill and the
+// uphill side is buried only where the slope is steeper than the skirt allows.
+// A piece on a lip ('high') stands on the highest ground under it.
 export function groundUnder(instance, heightAt) {
-  let low = Infinity;
+  let low = Infinity, high = -Infinity;
   for (const [x, z] of groundSamplePoints(instance)) {
     const y = heightAt(x, z);
     if (!Number.isFinite(y)) return null;
     if (y < low) low = y;
+    if (y > high) high = y;
   }
-  return low;
+  if (instance.groundMode === 'high') return high;
+  return Math.min(high, low + (instance.skirt || 0));
+}
+
+// How much of a piece's footprint the ground buries on its uphill side (0 when
+// its skirt covers the slope): the survey reports pieces where this is large.
+export function groundBuried(instance, heightAt) {
+  let low = Infinity, high = -Infinity;
+  for (const [x, z] of groundSamplePoints(instance)) {
+    const y = heightAt(x, z);
+    if (!Number.isFinite(y)) return null;
+    low = Math.min(low, y); high = Math.max(high, y);
+  }
+  return instance.groundMode === 'high' ? 0 : Math.max(0, high - low - (instance.skirt || 0));
 }
 
 // Column-major 4x4 (Three.js Matrix4.elements order) for
@@ -103,7 +136,7 @@ export function instanceMatrix(instance, groundY, out = new Array(16), offset = 
 // scaled like their instance; `top` is the height of the piece's top, so a
 // player standing above it (on a roof, say) is left alone.
 export function solidFor(instance, groundY = 0) {
-  const kit = valleyKitPiece(instance.piece);
+  const kit = kitPieceOf(instance.kit, instance.piece);
   if (!kit?.solid) return null;
   const k = instance.scale;
   const top = groundY + instance.y + kit.size[2] * k;
@@ -189,7 +222,7 @@ export function resolveAgainstGrid(grid, p, radius, y = -Infinity) {
 
 // ---- Checks the tests and the build share --------------------------------
 export function pieceReach(entry) {
-  const kit = valleyKitPiece(entry.piece);
+  const kit = kitPieceOf(entry.kit, entry.piece);
   if (!kit) return 0;
   return Math.hypot(kit.size[0], kit.size[1]) / 2 * (entry.scale || 1);
 }
