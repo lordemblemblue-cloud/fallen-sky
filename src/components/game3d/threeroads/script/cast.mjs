@@ -144,10 +144,17 @@ export function threeRoadsHomeOf(entry, flags = {}) {
   return entry.home || null;
 }
 
+// The areas whose places have been built. People whose home lies in an area
+// that has no camp yet are not brought in: they would stand in open country.
+// Add an area here when its band lands.
+export const THREE_ROADS_BUILT_AREAS = Object.freeze(['town', 'south']);
+
 // Who stands in this scene without being brought in by a pledge. Each result
 // is the person with `home` already resolved for these flags and this scene
-// (their main home, or the `alsoAt` entry that lies in it).
-export function threeRoadsCastAtHome({ area = null, region = null, flags = {} } = {}) {
+// (their main home, or the `alsoAt` entry that lies in it). People in areas
+// not built yet are left out unless `includeUnbuilt` is set.
+export function threeRoadsCastAtHome({ area = null, region = null, flags = {}, includeUnbuilt = false } = {}) {
+  if (area && !includeUnbuilt && !THREE_ROADS_BUILT_AREAS.includes(area)) return [];
   const here = home => !!home && ((area && home.area === area) || (region && home.region === region));
   const result = [];
   for (const entry of THREE_ROADS_CAST) {

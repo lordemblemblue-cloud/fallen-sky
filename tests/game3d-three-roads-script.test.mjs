@@ -5,9 +5,9 @@ import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {
   THREE_ROADS_CAST, THREE_ROADS_EMPIRES, threeRoadsPerson, threeRoadsCastAtHome, threeRoadsHomeOf,
-  threeRoadsEmpireOfFaction,
+  threeRoadsEmpireOfFaction, THREE_ROADS_BUILT_AREAS,
 } from '../src/components/game3d/threeroads/script/cast.mjs';
-import { THREE_ROADS_BANDS, threeRoadsPointArea, threeRoadsLine, threeRoadsPoint }
+import { THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsPointArea, threeRoadsLine, threeRoadsPoint }
   from '../src/components/game3d/threeroads/script/index.mjs';
 import { BAND1_KEEPSAKES, BAND1_LINES, BAND1_STAGING } from '../src/components/game3d/threeroads/script/band1.mjs';
 
@@ -205,7 +205,7 @@ test('the cast: unique ids, known empires, every home in the area it names, neve
   }
   for (const flags of [{}, { tr_war_open: true }])
     for (const area of ['town', 'south', 'west', 'east', 'north']) {
-      const here = threeRoadsCastAtHome({ area, flags });
+      const here = threeRoadsCastAtHome({ area, flags, includeUnbuilt: true });
       assert.ok(here.length <= 8, `${area}: ${here.length} people at home`);
       assert.equal(new Set(here.map(entry => entry.id)).size, here.length);
       for (const entry of here) assert.equal(entry.home.area, area);
@@ -213,7 +213,7 @@ test('the cast: unique ids, known empires, every home in the area it names, neve
 });
 
 test('the envoys leave the town when the war opens, and each goes where the story says', () => {
-  const ids = (area, flags) => threeRoadsCastAtHome({ area, flags }).map(entry => entry.id);
+  const ids = (area, flags) => threeRoadsCastAtHome({ area, flags, includeUnbuilt: true }).map(entry => entry.id);
   const war = { tr_war_open: true };
   for (const id of ['mizuhara_jun', 'paneb_scribe', 'aelia_sabina']) {
     assert.ok(ids('town', {}).includes(id), id + ' is in town before the war');
@@ -228,6 +228,16 @@ test('the envoys leave the town when the war opens, and each goes where the stor
   assert.ok(ids('south', {}).includes('titus_oldvine') && ids('north', {}).includes('titus_oldvine'));
   assert.ok(ids('east', {}).includes('paneb_scribe') && ids('east', war).includes('paneb_scribe'));
   assert.equal(threeRoadsHomeOf(threeRoadsPerson('aelia_sabina'), war).area, 'north');
+});
+
+test('only built areas and built bands reach the game', () => {
+  assert.deepEqual([...THREE_ROADS_BUILT_AREAS], ['town', 'south']);
+  assert.deepEqual(threeRoadsBuiltBands().map(band => band.id), ['band1']);
+  for (const band of threeRoadsBuiltBands())
+    for (const area of band.areas) assert.ok(THREE_ROADS_BUILT_AREAS.includes(area), band.id + ' needs ' + area);
+  assert.deepEqual(threeRoadsCastAtHome({ area: 'west' }), []);
+  assert.ok(threeRoadsCastAtHome({ area: 'west', includeUnbuilt: true }).length >= 3);
+  assert.ok(threeRoadsCastAtHome({ area: 'town' }).length >= 4);
 });
 
 test('factions map to empires as the story says', () => {
