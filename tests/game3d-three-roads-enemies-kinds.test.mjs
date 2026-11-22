@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import {
   ENEMY_KINDS, ENEMY_KIND_FIELDS, ENEMY_TIERS, ENEMY_TIER_SCALE, ENEMY_AI_PROFILES,
   REQUIRED_CLIP_ROLES, OPTIONAL_CLIP_ROLES, getEnemyKind,
