@@ -123,13 +123,15 @@ test('Sworn at the Gate: every cue once and in order, every line spoken', () => 
     ['traveller_tome', null], ['traveller_henut', null], ['traveller_livilla', null],
   ]);
 
-  // Speaking with Lyra finishes the last step; the key is left to the game so
-  // its own dialogue opens for the ending.
+  // Speaking with Lyra finishes the last step. The traveller's line comes
+  // first; once it has been said, the key is left to the game so its own
+  // dialogue opens for the ending.
   assert.equal(h.press(), null, 'E away from Lyra is nobody\'s business');
-  assert.equal(m01Lyra(h), 'pass');
+  assert.equal(m01Lyra(h), 'consume');
   h.wait(0.2);
   assert.equal(h.stepOf(M01), null);
   assert.equal(h.says().at(-1), 'henut_m01_04', 'a player of Akitsu is given the bead from Tameri');
+  assert.equal(m01Lyra(h), null, 'the closing line has been said: the ending is the game\'s');
   assert.deepEqual(h.log.filter(e => e.flag), [{ flag: 'tr_keepsake_tameri' }]);
 
   // The claim a server would be sent.
@@ -170,7 +172,7 @@ test('the keepsake line and flag follow the player\'s empire', () => {
   };
   for (const [empire, [lineId, flag]] of Object.entries(expected)) {
     const h = fresh({ empire });
-    assert.equal(playM01(h), 'pass');
+    assert.equal(playM01(h), 'consume');
     assert.equal(h.says().at(-1), lineId, empire);
     assert.deepEqual(h.log.filter(e => e.flag), [{ flag }], empire);
     assert.equal(h.state.storyFlags[flag], true);
@@ -590,4 +592,21 @@ test('the script holds together: every staged line and step exists, and the stan
     }
   }
   assert.ok(Object.keys(BAND1_LINES).length >= 63);
+});
+
+test('the ending waits until the closing line has been said', () => {
+  let busy = false;
+  const h = fresh({ empire: 'remoria', speechBusy: () => busy });
+  m01Oath(h); m01Gate(h); m01Shades(h); m01Free(h); m01Walk(h);
+  busy = true; // the traveller's line will still be on screen
+  assert.equal(m01Lyra(h), 'consume', 'the last step is done; its closing line comes first');
+  h.wait(0.3);
+  assert.equal(h.stepOf(M01), null);
+  assert.equal(h.says().at(-1), 'tome_m01_04');
+  assert.equal(m01Lyra(h), 'consume', 'still being said: the ending would open over it');
+  h.place({ x: -60, z: 40 });
+  assert.equal(h.press(), null, 'away from Lyra the key is nobody\'s business');
+  busy = false;
+  assert.equal(m01Lyra(h), null, 'said: the ending is the game\'s');
+  assert.equal(h.complete(M01), true);
 });
