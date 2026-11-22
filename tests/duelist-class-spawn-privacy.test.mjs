@@ -42,3 +42,19 @@ test('latest legal queued class wins at spawn; a forged input cannot overwrite t
   assert.equal(queueMatchClass(match, 'alpha', 'warrior').reason, 'alive-in-match');
   assert.equal(match.seats.get('alpha').pendingClass, null);
 });
+
+test('every match mode applies each class at countdown without exposing private resource to opponents', () => {
+  for (const mode of ['practice', 'duel', 'ffa', 'tdm', 'ctf', 'football', 'control']) {
+    for (const classId of CLASS_IDS) {
+      const match = createMatch({ mode, players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+      assert.equal(queueMatchClass(match, 'alpha', classId).accepted, true, mode + '/' + classId);
+      advance(match, COUNTDOWN + 0.1);
+      const seat = match.seats.get('alpha');
+      assert.equal(seat.classId, classId, mode + '/' + classId);
+      assert.equal(match.world.fighters.get('alpha').weapon, CLASSES[classId].weapon, mode + '/' + classId);
+      assert.equal(matchView(match, 'alpha').me.specialMeter, 0, mode + '/' + classId);
+      const opponent = matchView(match, 'beta');
+      assert.equal(opponent.people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false, mode + '/' + classId);
+    }
+  }
+});
