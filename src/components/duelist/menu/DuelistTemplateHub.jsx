@@ -158,7 +158,7 @@ function CharacterSelector({ prefs, onPrefs, close }) {
           <p className="dxt-roster-note">Appearance and class are separate choices. Your class EXP is saved independently.</p>
         </aside>
         <div className="dxt-character-showcase">
-          <div className="dxt-character-stage"><DuelistHangarStage fighter={prefs.fighter}/></div>
+          <div className="dxt-character-stage"><DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId}/></div>
           <div className="dxt-character-identity">
             <span className="dxt-eyebrow">{combat.role.toUpperCase()} / {combat.name.toUpperCase()}</span>
             <h3>{fighter.name}</h3><p>{CHARACTER_NOTES[prefs.fighter] || combat.description}</p>
@@ -258,7 +258,7 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   }, [panel, initialPanel, navigate]);
   return (
     <main className={'dxt-page' + (isReferencePanel ? ' dxt-page--reference' : '')}>
-      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter}/>}
+      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId}/>}
       {panel && !isReferencePanel && <button type="button" className="dxt-stage-scrim" tabIndex={-1} onClick={close} aria-label="Close menu"/>}
       {!isReferencePanel && <header className="dxt-header">
         <div className="dxt-header-player"><span className="dxt-player-symbol"><UserRound size={20}/></span>
