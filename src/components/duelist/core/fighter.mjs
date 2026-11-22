@@ -35,12 +35,13 @@ const classSwordMode = (id) => Object.hasOwn(CLASS_SWORD_MODES, id) ? CLASS_SWOR
  */
 // level: the class's level (core/progression.mjs), which sets its abilities' rank and its special's tier
 export function createFighter({ id, team = null, weapon = 'sword', vitals = null, classId = null, level = 1, matchBoost = 0, items = [] } = {}) {
+  const selectedClass = classById(classId);
   const fighter = {
     id,
     team,
-    weapon,
+    weapon: selectedClass?.weapon ?? weapon,
     mode: classSwordMode(classId) || DEFAULT_MODE, // warrior heavy, healer swift, unclassed balanced
-    classId: classById(classId) ? classId : null,
+    classId: selectedClass?.id ?? null,
     level: Math.max(1, Math.floor(level) || 1),
     matchBoost: cleanBoost(matchBoost),
     effects: {},
