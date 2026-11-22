@@ -119,3 +119,35 @@ test('independent player seats retain their own class and private meter across c
     assert.equal(view.people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false);
   }
 });
+
+
+test('all four classes apply only at a defeated player next respawn without leaking queued choice', () => {
+  for (const initialClass of CLASS_IDS) {
+    for (const nextClass of CLASS_IDS) {
+      const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+      assert.equal(queueMatchClass(match, 'alpha', initialClass).accepted, true);
+      advance(match, COUNTDOWN + 0.1);
+      const seat = match.seats.get('alpha');
+      const oldFighter = match.world.fighters.get('alpha');
+      seat.specialMeter = 55; // Arrange trusted match state, not a client award.
+      oldFighter.vitals.dead = true;
+      seat.respawnAt = match.world.time + 0.05;
+      assert.equal(queueMatchClass(match, 'alpha', nextClass).accepted, true);
+      assert.equal(seat.classId, initialClass, 'selection must remain queued until respawn');
+      assert.equal(oldFighter.weapon, CLASSES[initialClass].weapon);
+      assert.equal(seat.specialMeter, 55, 'queueing cannot spend or reset meter');
+      assert.equal(matchView(match, 'alpha').me.pendingClass, nextClass);
+      assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'pendingClass') || Object.hasOwn(p, 'specialMeter')), false);
+      advance(match, 0.15);
+      const fighter = match.world.fighters.get('alpha');
+      assert.notEqual(fighter, oldFighter);
+      assert.equal(seat.classId, nextClass);
+      assert.equal(seat.pendingClass, null);
+      assert.equal(fighter.weapon, CLASSES[nextClass].weapon);
+      assert.ok(fighter.protectedUntil > match.world.time);
+      assert.equal(seat.specialMeter, initialClass === nextClass ? 55 : 0,
+        'same class retains earned meter; switching class starts fresh');
+      assert.equal(matchView(match, 'alpha').me.specialMeter, seat.specialMeter);
+    }
+  }
+});
