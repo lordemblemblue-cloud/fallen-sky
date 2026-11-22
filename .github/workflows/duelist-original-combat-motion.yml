@@ -10,6 +10,7 @@ on:
       - 'src/components/duelist/client/classMotionBlend.mjs'
       - 'tests/duelist-class-motion-identity.test.mjs'
       - 'tests/duelist-class-motion-blend.test.mjs'
+      - 'tests/duelist-guard-footwork.test.mjs'
       - '.github/workflows/duelist-original-combat-motion.yml'
   workflow_dispatch:
 
@@ -29,8 +30,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Verify four forms, original clips and contact frames
-        run: node --test tests/duelist-class-motion-identity.test.mjs tests/duelist-class-motion-blend.test.mjs tests/duelist-motion.test.mjs tests/duelist-cuts.test.mjs tests/duelist-flow.test.mjs
+        run: node --test tests/duelist-class-motion-identity.test.mjs tests/duelist-class-motion-blend.test.mjs tests/duelist-guard-footwork.test.mjs tests/duelist-motion.test.mjs tests/duelist-cuts.test.mjs tests/duelist-flow.test.mjs
       - name: Lint motion mapping and regression tests
-        run: npx eslint src/components/duelist/core/moveMotion.mjs src/components/duelist/client/animator.mjs src/components/duelist/client/classMotionBlend.mjs tests/duelist-class-motion-identity.test.mjs tests/duelist-class-motion-blend.test.mjs
+        run: npx eslint src/components/duelist/core/moveMotion.mjs src/components/duelist/client/animator.mjs src/components/duelist/client/classMotionBlend.mjs tests/duelist-class-motion-identity.test.mjs tests/duelist-class-motion-blend.test.mjs tests/duelist-guard-footwork.test.mjs
       - name: Verify application compiles
         run: npm run build
