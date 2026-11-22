@@ -186,7 +186,6 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
   const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
-  useEffect(() => { controlsRef.current?.setPaused(shopOpen); }, [shopOpen]);
   useEffect(() => {
     if (!shopOpen) return undefined;
     const onEscape = event => { if (event.key === 'Escape') setShopOpen(false); };
@@ -200,6 +199,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let disposed = false;
     setStatus('loading');
     initialChosenRef.current = false;
+    setEntryClass({ generation, confirmed: false });
     setPicking(false);
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
@@ -830,6 +830,11 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const showPicker = shouldShowMatchClassPicker({
     match, mission: !!quest, confirmed: initialConfirmed, manuallyOpened: picking,
   });
+  // Inputs stay inactive while selecting a class. Explicitly reopening the
+  // picker pauses controls too, including for online matches.
+  useEffect(() => {
+    controlsRef.current?.setPaused(shopOpen || showPicker);
+  }, [shopOpen, showPicker]);
   // Five seconds tells the player to decide, but zero NEVER makes a choice or closes the menu.
   useEffect(() => {
     if (!match || quest || initialConfirmed || match.phase === 'over') return undefined;
@@ -860,7 +865,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
         onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
-      {match && <Countdown view={match} fightFlash={fightFlash} />}
+      {match && initialConfirmed && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}
