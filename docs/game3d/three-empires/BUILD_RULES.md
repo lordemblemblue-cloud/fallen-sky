@@ -51,6 +51,29 @@ export function createPlacesSubsystem(ctx) {
 - Talk to other subsystems only through `ctx.bus` (`on(type, fn)`, `emit(type, detail)`), never by importing each other's internals. Event names are listed in `docs/game3d/three-empires/PLEDGE_ENGINE.md` once the engine session has written it; add yours there.
 - No allocation per frame in `update`. Work that can wait runs every few hundred milliseconds, as the zombie camps do (`wolfveil/WolfveilZombieHordeRuntime.js`).
 
+### Bus events, version 1
+
+All positions are world metres. A subsystem that does not know an id ignores the event. `→` means "asked of", `←` means "announced by".
+
+| Event | Detail | Meaning |
+| --- | --- | --- |
+| `enemies:spawnGroup` → enemies | `{ groupId, kind, count, x, z, radius, level, tier }` | Put `count` monsters of `kind` on the ground within `radius` of the point. `level` may be `'player'`. Asking again with a live `groupId` does nothing. |
+| `enemies:despawnGroup` → enemies | `{ groupId }` | Remove what is left of the group. |
+| `enemies:defeated` ← enemies | `{ groupId, kind, id, tier }` | One of a group's monsters died, whatever killed it. |
+| `enemies:groupCleared` ← enemies | `{ groupId, kind }` | The last one died. |
+| `cast:spawn` → cast | `{ id, x, z, facing }` (the rest comes from the cast table) | Bring a person into the scene. |
+| `cast:despawn` → cast | `{ id }` | Take them out. |
+| `cast:moveTo` → cast | `{ id, x, z, speed }` | Walk there. |
+| `cast:follow` → cast | `{ id, target, distance }` | Follow the player (`target: 'player'`) or another person, or stop (`target: null`). |
+| `cast:arrived` ← cast | `{ id, x, z }` | They got there. |
+| `cast:say` → cast | `{ id, lineId, text, seconds }` | Show the line over their head for `seconds`; the voice plays if a file exists. |
+| `cast:ready` ← cast | `{ id }` | Their model has loaded and stands on the ground. |
+| `places:ready` ← places | `{ area }` | Everything in this area is built and standing on the ground. |
+| `pledge:stepStarted` ← pledges | `{ pledgeId, stepId }` | The player has reached this step. |
+| `pledge:stepDone` ← pledges | `{ pledgeId, stepId }` | It is finished. |
+
+Named points inside a place (where a wagon stands, where a person waits) are data, not events: `threeroads/places/layouts/*.mjs` exports them and any subsystem may import those files.
+
 ## 5. Coordinates
 
 Two frames (`threeroads/coords.mjs`). The places table and all layout files are in **local** Wolfveil metres. The scene, the player, enemies and people are in **world** metres: `world z = local z + 70`. Scenery added under `ctx.wolfveilWorld.group` is positioned in local metres and is managed by the area loader and cut at area borders; people and monsters go straight into `ctx.scene` in world metres. With `areaScenes` true only `worldArea` exists: build only what lies in it. Keep new things at least 30 m inside an area's border.
