@@ -217,6 +217,11 @@ test('an objective answers only its own event, with its own target', () => {
   no(o.wasps, { type: 'enemy_killed', targetId: 'fx_wasp' });
   no(o.wasps, { type: 'enemy_killed', targetId: 'fx_wasp', placeId: 'FX_ELSEWHERE' });
   no(o.wasps, { type: 'enemy_killed', tier: 'normal', count: 1 }); // the game's plain kill event
+  // The step's target may be the kind of enemy while the event's targetId is its spawn group.
+  yes(o.wasps, { type: 'enemy_killed', targetId: 'fx_orchard_group_1', kind: 'fx_wasp', placeId: 'FX_ORCHARD', tier: 'normal', count: 1 });
+  no(o.wasps, { type: 'enemy_killed', targetId: 'fx_orchard_group_1', kind: 'fx_hornet', placeId: 'FX_ORCHARD' });
+  // Only defeat reads `kind`: a boss step still needs its own targetId.
+  no(o.queen, { type: 'boss_killed', targetId: 'some_group', kind: 'fx_queen_wasp' });
   // For every other kind the place is a pointer for the map, not a condition.
   yes(o.walk_home, { type: 'escort_completed', targetId: 'fx_beekeeper' });
   yes(o.mound, { type: 'capture_completed', targetId: 'FX_HIVE_MOUND' });

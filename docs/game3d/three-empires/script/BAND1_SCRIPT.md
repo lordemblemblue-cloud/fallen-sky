@@ -1,6 +1,6 @@
-# The War of Three Roads: the opening, as written
+# The War of Three Roads, band 1: The opening: the town and the Gate Fields
 
-Every pledge of the first band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band1.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
+Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band1.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
 4 pledges, 63 spoken lines, 7,256 characters to record.
 

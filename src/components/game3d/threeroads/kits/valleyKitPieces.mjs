@@ -40,6 +40,9 @@ export const VALLEY_KIT_PIECES = Object.freeze([
   piece('wagon_cover', [4, 2, 1.4], { tint: true, pivot: 'wagon' }), // same origin as the wagon it sits on; the cloth starts at y 1.2
   piece('crate_stack', [1.6, 1.6, 1.6], { solid: { box: [0.8, 0.8] } }),
   // Town and Truce
+  // The Oath Tree: one old, broad tree on the plaza lawn that every newcomer ties a
+  // ribbon to. The town as it is drawn today has no tree there, so the kit brings it.
+  piece('oath_tree', [10, 10, 11], { solid: { circle: 0.9 } }), // the trunk is about 1.6 m across; the first branches start at 2.4 m
   piece('truce_stone', [0.9, 0.6, 1.1], { solid: { circle: 0.6 } }),
   piece('ribbon', [0.06, 0.02, 0.8], { tint: true, pivot: 'top' }),
   piece('banner_pole', [0.2, 0.2, 6]),
