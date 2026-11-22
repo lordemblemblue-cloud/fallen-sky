@@ -516,7 +516,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
-        if (!control && source.mode === 'control') control = createControlProps(scene);
+        if (!control && source.mode === 'control') control = createControlProps(scene, MODES.control.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
