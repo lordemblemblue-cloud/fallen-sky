@@ -121,6 +121,8 @@ import { ENEMY_SPAWNS } from './enemySpawnConfig';
 import {selectWolfveilGroundedEnemySpawns} from './wolfveil/WolfveilEnemySpawns.mjs';
 import {createWolfveilZombieHordeRuntime} from './wolfveil/WolfveilZombieHordeRuntime.js';
 import {zombieAttackLevel} from './wolfveil/WolfveilZombieCamps.mjs';
+import {threeRoadsEnabled} from './threeroads/threeRoadsFlag.mjs';
+import {createThreeRoadsWorld} from './threeroads/ThreeRoadsWorld.mjs';
 import {WOLFVEIL_ADMIN_C1_MODEL,WOLFVEIL_ADMIN_C1_ANIMATIONS} from './wolfveil/WolfveilEnemyAssets.mjs';
 import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
 import { broadcastEnemyKill } from './enemyRespawnManager';
@@ -1845,6 +1847,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           scene,loader,enemies,sampleGroundY,onCountChange:setEnemyCount,
         }):null;
     if(typeof window!=='undefined')window.__gw3dZombieCamps=zombieCamps;
+    // The War of Three Roads (places, cast, enemies, pledge steps). Off unless
+    // ?threeRoads=1. All of it lives under threeroads/; this is its only hook.
+    const threeRoads=threeRoadsEnabled(window)?createThreeRoadsWorld({
+      region,worldArea,areaScenes,scene,renderer,camera,enemies,questNPCs,groundMeshes,
+      wolfveilWorld:wolfveilVillage?.world||null,sampleGroundY,snapToGround,
+      fbxLoader:loader,gltfLoader:worldGltfLoader,getPlayer:()=>modelRef.current,
+    }):null;
+    if(typeof window!=='undefined')window.__gw3dThreeRoads=threeRoads;
     // C1 is already owner-assigned as an AI enemy in Admin Model3D. Do not
     // graft unrelated mutant animation tracks onto its Erika Archer skeleton.
     // The admin C1 walk field is unassigned: a slower CLONED running clip
@@ -4433,6 +4443,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         }
 
         zombieCamps?.update(delta,model.position);
+        threeRoads?.update(delta,model.position);
         // ─── Enemy AI: wander state machine (walk ~3s → idle ~5s → repeat) ───
         enemies.forEach((enemy) => {
           // Dying enemies must keep processing so the death animation, fade-out
@@ -5937,6 +5948,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       livingMeadow?.dispose();
       zombieCamps?.dispose();
       if(window.__gw3dZombieCamps===zombieCamps)window.__gw3dZombieCamps=null;
+      threeRoads?.dispose();
+      if(window.__gw3dThreeRoads===threeRoads)window.__gw3dThreeRoads=null;
       // Hand every managed object back before its owner tears it down.
       window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
       areaPortals?.dispose();
