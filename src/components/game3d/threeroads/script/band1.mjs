@@ -40,8 +40,10 @@
 
 export const BAND1_POINTS = Object.freeze({
   // Town: the Oath Tree and the fountain (the fountain basin is 6.55 m in radius at 0, -70)
-  oath_tree: Object.freeze({ x: -6.6, z: -70.2 }),
-  truce_stone: Object.freeze({ x: -9.6, z: -70.2 }),
+  // The tree and the stone stand where the places session found room on the real plaza:
+  // open paving south-west of the fountain, clear of the spawn point, Lyra and Sable Vey.
+  oath_tree: Object.freeze({ x: -11.5, z: -74.6 }),
+  truce_stone: Object.freeze({ x: -8.72, z: -73.49 }),
   ring_place: Object.freeze({ x: 0, z: -88 }),
   maren_spot: Object.freeze({ x: 0, z: -77.4 }),
   sable_ring_spot: Object.freeze({ x: 2.4, z: -77.6 }),
