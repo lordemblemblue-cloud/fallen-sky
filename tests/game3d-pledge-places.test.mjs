@@ -125,7 +125,7 @@ test('look-ups: by number, by key, by area and by position', () => {
   // World positions are 70 m further north than local ones.
   assert.equal(PLEDGE_PLACE_Z_OFFSET, WOLFVEIL_AREA_Z_OFFSET);
   assert.equal(pledgePlaceAtWorld({ x: 0, z: 0 }).id, 'P01');
-  assert.equal(pledgePlaceAtWorld({ x: 30, y: 330, z: 400 }).id, 'P35');
+  assert.equal(pledgePlaceAtWorld({ x: -66, y: 100, z: 453 }).id, 'P35');
   assert.equal(pledgePlaceAtWorld(null), null);
 });
 

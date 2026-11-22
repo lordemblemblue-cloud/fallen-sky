@@ -65,11 +65,11 @@ export const THREE_ROADS_CAST = Object.freeze([
   person({ id: 'paneb_scribe', name: 'Paneb the Scribe', role: 'Tameri envoy and quartermaster', empire: 'tameri', giver: true,
     home: { area: 'town', x: 24, z: -92, facing: Math.PI * 1.75 },
     homeAfter: { flag: 'tr_war_open', home: { area: 'south', x: 57, z: -368, facing: Math.PI * 1.25 } },
-    alsoAt: [{ area: 'east', x: 258, z: -414, facing: Math.PI * 1.5 }],
+    alsoAt: [{ area: 'east', x: 275, z: -409, facing: Math.PI * 1.5 }],
     look: { body: 'm', build: 'thin', colours: [0xe8dcc0, 0xc9962e], carries: 'a writing board and tally cords' } }),
   person({ id: 'aelia_sabina', name: 'Tribune Aelia Sabina', role: 'Remorian envoy', empire: 'remoria', giver: true,
     home: { area: 'town', x: 0, z: -100, facing: 0 },
-    homeAfter: { flag: 'tr_war_open', home: { area: 'north', x: 26, z: 326, facing: Math.PI } },
+    homeAfter: { flag: 'tr_war_open', home: { area: 'north', x: -62, z: 392, facing: Math.PI } },
     look: { body: 'f', build: 'strong', colours: [0x8c2f2f, 0xa5cbe9], carries: 'a short sword, tied with cord' } }),
 
   // Chapter one: the three strangers at the gate. Brought in by the pledge.
@@ -83,7 +83,7 @@ export const THREE_ROADS_CAST = Object.freeze([
   // The Gate Fields. Each empire keeps a wagon line on the Threshing Floor.
   person({ id: 'goro_sergeant', name: 'Sergeant Gorō', role: 'Akitsu sergeant, "Old Kettle"', empire: 'akitsu', giver: true,
     home: { area: 'south', x: -13, z: -368, facing: Math.PI * 0.75 },
-    alsoAt: [{ area: 'west', x: -298, z: -136, facing: Math.PI }],
+    alsoAt: [{ area: 'west', x: -285, z: -146, facing: Math.PI }],
     look: { body: 'm', build: 'stocky', colours: [0x2f4a7a, 0x5a4632], carries: 'a rifle slung muzzle down, and a kettle' } }),
   person({ id: 'titus_oldvine', name: 'First Centurion Titus Petronius', role: 'Remorian first centurion, "Old Vine"', empire: 'remoria', giver: true,
     home: { area: 'south', x: 28, z: -427, facing: 0 },
@@ -101,7 +101,7 @@ export const THREE_ROADS_CAST = Object.freeze([
 
   // Akitsu: the Camp of the Western Road and House Asagiri's Hall.
   person({ id: 'hayasaka_colonel', name: 'Colonel Hayasaka Sōichirō', role: 'Commander of the Western Road Regiment', empire: 'akitsu', giver: true,
-    home: { area: 'west', x: -292, z: -132, facing: Math.PI },
+    home: { area: 'west', x: -319, z: -139, facing: Math.PI * 0.5 },
     look: { body: 'm', build: 'lean', colours: [0x1f3358, 0xdcb58a], carries: 'a sabre he has not drawn here, and a folded telegram' } }),
   person({ id: 'asagiri_tomoe', name: 'Lady Asagiri Tomoe', role: 'Head of House Asagiri, mistress of the Moon-Ring school', empire: 'akitsu', giver: true,
     home: { area: 'west', x: -233, z: -58, facing: Math.PI * 1.5 },
@@ -111,18 +111,18 @@ export const THREE_ROADS_CAST = Object.freeze([
 
   // Tameri: the Landing.
   person({ id: 'nakhtamun_general', name: 'General Nakhtamun', role: 'Lord of Chariots, Division of the Sharp Star', empire: 'tameri', giver: true,
-    home: { area: 'east', x: 352, z: -404, facing: Math.PI * 1.5 },
+    home: { area: 'east', x: 286, z: -420, facing: Math.PI * 1.5 },
     look: { body: 'm', build: 'heavy', colours: [0xc9962e, 0x3b5a8c], carries: 'a khopesh and a fly-whisk' } }),
   person({ id: 'meresankh_priestess', name: 'Lector-Priestess Meresankh', role: 'Of the House of Life', empire: 'tameri', giver: true,
-    home: { area: 'east', x: 344, z: -418, facing: Math.PI * 1.5 },
+    home: { area: 'east', x: 289, z: -432, facing: Math.PI * 1.5 },
     look: { body: 'f', build: 'slender', colours: [0xf2ead8, 0x3b7a6a], carries: 'a scroll case and an empty blade sheath' } }),
   person({ id: 'sabu_tracker', name: 'Sabu', role: 'Tracker of the scouts, with a half-grown sun-cat', empire: 'tameri', giver: true,
-    home: { area: 'east', x: 250, z: -428, facing: Math.PI * 0.5 },
+    home: { area: 'east', x: 268, z: -436, facing: Math.PI * 1.5 },
     look: { body: 'm', build: 'rangy', colours: [0x8a5a2e, 0xe8dcc0], carries: 'a bow, a throwing stick' } }),
 
   // Remoria: Castra Lupa and the First Furrow.
   person({ id: 'corvinus_legate', name: 'Legate Gaius Vettius Corvinus', role: 'Commander of the Ninth, the Wolf-Sworn', empire: 'remoria', giver: true,
-    home: { area: 'north', x: 32, z: 334, facing: Math.PI },
+    home: { area: 'north', x: -61, z: 400, facing: Math.PI * 0.5 },
     look: { body: 'm', build: 'spare', colours: [0x8c2f2f, 0xc9c9c9], carries: 'a wax tablet and a sealed order' } }),
   person({ id: 'veranius_augur', name: 'Augur Decimus Veranius', role: 'Reader of signs to the Ninth', empire: 'remoria',
     home: { area: 'north', x: -252, z: 406, facing: Math.PI * 0.5 },

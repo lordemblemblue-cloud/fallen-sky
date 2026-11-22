@@ -66,7 +66,7 @@ export const PLEDGE_PLACES = Object.freeze([
   surface('P23', 'west_home_road', 'The Cedar Road', 'west', -525, 40, 'new'),
 
   // East, the Riverlands
-  surface('P24', 'east_forward_camp', 'The Landing', 'east', 350, -410, 'new', { radius: 40 }),
+  surface('P24', 'east_forward_camp', 'The Landing', 'east', 272, -424, 'new', { radius: 40 }),
   surface('P25', 'pontoon_bridge', 'The Pontoon Bridge', 'east', 215, -390, 'new'),
   surface('P26', 'shadow_ravine', 'Shadow Ravine', 'east', 340, -165, 'here', { radius: 24 }),
   surface('P27', 'ruined_watch', 'Ruined Watch Station', 'east', 295, -205, 'here', { radius: 19 }),
@@ -79,7 +79,7 @@ export const PLEDGE_PLACES = Object.freeze([
   surface('P34', 'east_home_road', 'The River Road', 'east', 238, -520, 'new'),
 
   // North, the Highlands
-  surface('P35', 'north_fort', 'Castra Lupa', 'north', 30, 330, 'new', { radius: 35 }),
+  surface('P35', 'north_fort', 'Castra Lupa', 'north', -66, 383, 'new', { radius: 35 }),
   surface('P36', 'first_furrow', 'The First Furrow', 'north', -240, 400, 'here', { radius: 52 }),
   surface('P37', 'hot_springs', 'Hot Springs and the Bellows Forge', 'north', -105, 330, 'here'),
   surface('P38', 'vortex_lake', 'Vortex Lake', 'north', 205, 320, 'here', { radius: 43 }),
@@ -88,7 +88,7 @@ export const PLEDGE_PLACES = Object.freeze([
   surface('P40', 'wolf_ear_vigil', 'Wolf-Ear Vigil', 'north', 2, 470, 'here'),
   surface('P41', 'harpy_roost', 'The Harpy Roost', 'north', 410, 370, 'new'),
   surface('P42', 'bronze_sentinel', 'The Bronze Sentinel', 'north', -370, 390, 'new'),
-  surface('P43', 'north_home_road', 'The High Road', 'north', 160, 530, 'new'),
+  surface('P43', 'north_home_road', 'The High Road', 'north', 9, 524, 'new'),
 
   // Under the valley: separate scenes that are already in the game.
   under('P44', 'jade_grotto', 'Jade Lantern Grotto', 'wolfveil-caves', 'west', -360, -400),

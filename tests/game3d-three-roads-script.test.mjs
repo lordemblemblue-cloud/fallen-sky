@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
+import { wolfveilHeight, wolfveilDistanceToRiver, WOLFVEIL_RIVER } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {
   THREE_ROADS_CAST, THREE_ROADS_EMPIRES, threeRoadsPerson, threeRoadsCastAtHome, threeRoadsHomeOf,
   threeRoadsEmpireOfFaction, THREE_ROADS_BUILT_AREAS,
@@ -262,4 +263,39 @@ test('each empire is given a keepsake by one of the other two, and all three dif
     assert.equal(BAND1_LINES[say[id]].speaker, keepsake.giver);
     assert.equal(flag[id], keepsake.flag);
   }
+});
+
+// The story was first written from a map. On the real ground the river runs in
+// a gorge and some slopes are cliffs: a point nobody can stand on stops a pledge.
+const STEEPEST_WALKABLE_DEGREES = 22;
+const GROUND_WAIVERS = Object.freeze({
+  way_north: 'a waypoint on the steps of the main road north of the plaza',
+});
+function groundProblem(x, z) {
+  const reach = 2;
+  const slope = Math.atan(Math.hypot(
+    (wolfveilHeight(x + reach, z) - wolfveilHeight(x - reach, z)) / (2 * reach),
+    (wolfveilHeight(x, z + reach) - wolfveilHeight(x, z - reach)) / (2 * reach))) * 180 / Math.PI;
+  if (slope > STEEPEST_WALKABLE_DEGREES) return 'a slope of ' + slope.toFixed(0) + ' degrees';
+  if (wolfveilDistanceToRiver(x, z) < WOLFVEIL_RIVER.width / 2 + 3) return 'in the river';
+  return null;
+}
+
+test('every story point and every home stands on ground a player can walk to', () => {
+  const problems = [];
+  for (const band of THREE_ROADS_BANDS) {
+    for (const [name, point] of Object.entries(band.points)) {
+      if (GROUND_WAIVERS[name]) continue;
+      const problem = groundProblem(point.x, point.z);
+      if (problem) problems.push(name + ' (' + point.x + ', ' + point.z + '): ' + problem);
+    }
+  }
+  for (const person of THREE_ROADS_CAST) {
+    const spots = [person.home, person.homeAfter?.home, ...(person.alsoAt || [])].filter(Boolean);
+    for (const spot of spots) {
+      const problem = groundProblem(spot.x, spot.z);
+      if (problem) problems.push(person.id + ' at (' + spot.x + ', ' + spot.z + '): ' + problem);
+    }
+  }
+  assert.deepEqual(problems, []);
 });
