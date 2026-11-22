@@ -83,7 +83,7 @@ export function pickTarget(targets, sceneId, tabContains = '') {
   return pages[0];
 }
 
-export function requireLocalCdpWebSocket(webSocketUrl) {
+export function requireLocalCdpWebSocket(webSocketUrl, expectedPort) {
   let url;
   try { url = new URL(webSocketUrl); } catch { throw new Error('Invalid DevTools WebSocket URL'); }
   if (!['ws:', 'wss:'].includes(url.protocol) ||
@@ -91,11 +91,14 @@ export function requireLocalCdpWebSocket(webSocketUrl) {
     url.username || url.password) {
     throw new Error('DevTools WebSocket must use a loopback host');
   }
+  if (expectedPort !== undefined && Number(url.port || (url.protocol === 'wss:' ? 443 : 80)) !== expectedPort) {
+    throw new Error('DevTools WebSocket port does not match the selected local CDP port');
+  }
   return url.href;
 }
 
-async function connectCdp(webSocketUrl) {
-  const socket = new WebSocket(requireLocalCdpWebSocket(webSocketUrl));
+async function connectCdp(webSocketUrl, expectedPort) {
+  const socket = new WebSocket(requireLocalCdpWebSocket(webSocketUrl, expectedPort));
   const pending = new Map();
   let nextId = 0;
   const rejectPending = (message) => {
@@ -164,7 +167,7 @@ export async function main(argv = process.argv.slice(2)) {
   const response = await fetch('http://127.0.0.1:' + opts.port + '/json/list');
   if (!response.ok) throw new Error('Local DevTools HTTP ' + response.status);
   const target = pickTarget(await response.json(), opts.scene, opts['tab-contains'] || '');
-  const client = await connectCdp(target.webSocketDebuggerUrl);
+  const client = await connectCdp(target.webSocketDebuggerUrl, opts.port);
   let report;
   try {
     await client.send('Runtime.enable');
