@@ -395,20 +395,39 @@ def boundary_stone(B, r):
 
 
 def plough(B, r):
+    """An ard left at the head of a furrow, pulling toward +x: the sole with its bronze-shod
+    share pointing forward into the soil, two handles rising at the back, the beam running
+    forward and down to the yoke. The plough itself stays just off y 0, so the table's skirt
+    carries down only the ridge of turned earth it lies in, never the share or the yoke."""
     segs = 6 if L0(B) else 4
-    B.limb((-1.15, 0.12, 0), (0.1, 0.62, 0), 0.07, 0.06, segs, 'timber')  # the beam
-    B.limb((0.1, 0.62, 0), (1.2, 0.58, 0), 0.06, 0.05, segs, 'timber')
-    B.hull([(-1.3, 0.0, -0.06), (-1.3, 0.0, 0.06), (-0.85, 0.0, -0.1), (-0.85, 0.0, 0.1), (-0.95, 0.2, -0.08),
-            (-0.95, 0.2, 0.08), (-1.3, 0.06, 0.0)], 'brass')  # the bronze-shod share
-    B.limb((-0.95, 0.15, 0), (-1.28, 1.1, 0), 0.045, 0.04, segs, 'timber_old')  # the handle
-    B.cyl((1.2, 0.62, -0.45), 0.05, 0.9, segs, 'timber_old', axis='z')  # the yoke
+    g = 0.03  # the lowest the plough's own parts go
+    # the ridge of turned earth the share is driven into
+    ridge = []
+    for (x, hw, h) in ((-1.08, 0.2, 0.0), (-0.9, 0.3, 0.1), (-0.45, 0.32, 0.13), (-0.05, 0.26, 0.1), (0.15, 0.16, 0.0)):
+        ridge += [(x, 0.0, -hw), (x, 0.0, hw), (x, h, -hw * 0.6), (x, h, hw * 0.6)]
+    B.hull(ridge, 'earth')
+    # the sole, lying in the earth, and its share
+    B.beam((-1.0, g + 0.07, 0), (-0.42, g + 0.07, 0), 0.16, 0.14, 'timber')
+    B.hull([(-0.46, g, -0.09), (-0.46, g, 0.09), (-0.46, g + 0.15, -0.08), (-0.46, g + 0.15, 0.08),
+            (-0.1, g, -0.025), (-0.1, g, 0.025), (-0.14, g + 0.05, 0.0)], 'brass')
+    # two handles rising at the back, joined by a grip
+    for sz in (-1, 1):
+        B.limb((-0.92, g + 0.1, sz * 0.06), (-1.26, 1.08, sz * 0.24), 0.04, 0.034, segs, 'timber_old', smooth=False)
+    B.cyl((-1.22, 0.98, -0.25), 0.026, 0.5, 5 if L0(B) else 4, 'timber_old', axis='z')
+    # the stilt from sole to beam
+    B.beam((-0.62, g + 0.12, 0), (-0.58, 0.5, 0), 0.07, 0.07, 'timber_old')
+    # the beam: from the handles, over the stilt, forward and down to the yoke
+    B.limb((-0.98, 0.32, 0), (-0.15, 0.56, 0), 0.06, 0.055, segs, 'timber')
+    B.limb((-0.15, 0.56, 0), (1.18, 0.24, 0), 0.055, 0.045, segs, 'timber')
+    # the yoke across the beam's end, its bows hanging short of the ground
+    B.cyl((1.18, 0.24, -0.45), 0.045, 0.9, segs, 'timber_old', axis='z')
     if L0(B):
-        B.cyl((-1.25, 1.0, -0.15), 0.025, 0.3, 5, 'timber_old', axis='z')
         for sz in (-1, 1):
-            for dx in (-0.12, 0.12):
-                B.beam((1.2 + dx, 0.62, sz * 0.3), (1.2 + dx, 0.3, sz * 0.3), 0.03, 0.03, 'timber_old')
-            B.beam((1.08, 0.3, sz * 0.3), (1.32, 0.3, sz * 0.3), 0.03, 0.03, 'timber_old')
-        B.box((0.95, 0.5, 0), (0.12, 0.2, 0.1), 'rope')
+            for dx in (-0.1, 0.1):
+                B.beam((1.18 + dx, 0.24, sz * 0.3), (1.18 + dx, g + 0.06, sz * 0.3), 0.025, 0.025, 'timber_old')
+            B.beam((1.07, g + 0.06, sz * 0.3), (1.29, g + 0.06, sz * 0.3), 0.025, 0.025, 'timber_old')
+        B.box((1.05, 0.19, 0), (0.12, 0.14, 0.1), 'rope')  # the lashing at the yoke
+        B.box((-0.6, 0.48, 0), (0.12, 0.08, 0.12), 'rope')  # the lashing at the stilt
 
 
 def milestone(B, r):
