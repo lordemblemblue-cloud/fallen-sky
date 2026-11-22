@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorld, addFighter, bodyOf, respawnFighter, step } from '../src/components/duelist/sim/world.mjs';
 import { HELD_JUMP } from '../src/components/duelist/sim/heldJump.mjs';
 import { CLASS_IDS } from '../src/components/duelist/core/classes.mjs';
+import { createLevel } from '../src/components/duelist/sim/level.mjs';
 import { encodeInput, sanitizeInput, encodeOwn, applyOwn } from '../src/components/duelist/net/protocol.mjs';
 
 const DT = 1 / 60;
@@ -81,7 +82,7 @@ test('old input packets and bots without the held-jump flag retain the original 
 });
 
 test('story rooms remain within the first-stage ceiling-safety cap until vertical collision exists', () => {
-  const world = createWorld({ level: {}, arenaRadius: 30 });
+  const world = createWorld({ level: createLevel(), arenaRadius: 30 });
   addFighter(world, { id: 'hero' });
   tick(world, ['jump'], true);
   const b = bodyOf(world, 'hero');
