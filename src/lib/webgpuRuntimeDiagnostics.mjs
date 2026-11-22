@@ -19,7 +19,12 @@ export function getWebGPURuntimeEvidence(renderer, { sceneId = null } = {}) {
   const frames = Number(renderer?.info?.render?.frame);
   const frameCount = Number.isFinite(frames) && frames >= 0 ? Math.floor(frames) : 0;
   const deviceLost = Boolean(state?.lost);
-  const gameplayFrames = state?.gameplayFrames || 0;
+  // Only completed, counted gameplay draws can verify native WebGPU. A corrupt
+  // counter (negative, fractional, infinite, string or accessor result) must not
+  // turn an otherwise initialized renderer into a false positive.
+  const reportedGameplayFrames = state?.gameplayFrames;
+  const gameplayFrames = Number.isSafeInteger(reportedGameplayFrames) && reportedGameplayFrames > 0
+    ? reportedGameplayFrames : 0;
   const active = backend === 'webgpu' && deviceConfirmed && !deviceLost && frameCount > 0 && gameplayFrames > 0;
   return Object.freeze({
     sceneId,
