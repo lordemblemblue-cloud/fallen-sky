@@ -9,6 +9,7 @@
 // The sword hand always grips (its fingers come from the sword stance, whatever the base clip does).
 import * as THREE from 'three';
 import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
+import { createDirectionalFeet } from './directionalFeet.mjs';
 import { secondHandAt } from './secondHand.mjs';
 
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
@@ -90,6 +91,18 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   const baseEntries = new Set(Object.values(base).filter(Boolean));
   const baseWeights = { idle: 1, walk: 0, jog: 0, sprint: 0 };
   const baseTime = { idle: 0, walk: 0, jog: 0, sprint: 0 };
+  // Locomotion owns the legs during a moving cut. Recover the cut's pelvis turn
+  // at the spine so the blade still travels through its authored contact pose.
+  const hips = model.getObjectByName('mixamorigHips');
+  const spine = model.getObjectByName('mixamorigSpine');
+  const pelvisTracks = new Map();
+  const strikePelvis = new THREE.Quaternion(), torsoOffset = new THREE.Quaternion();
+  const baseSpine = new THREE.Quaternion();
+  let restoreSpine = false;
+  const feet = createDirectionalFeet(model);
+  let lastX, lastZ;
+  let travelX = 0, travelZ = 1;
+  let sideStride = 0, forwardStride = 1;
   let stridePhase = 0;
   let legBlend = 0;
   const chest = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine');
@@ -99,6 +112,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   let restoreChest = false;
   let elapsed = 0;
   let settle = null; // { clip, time }
+  let previousClip = null;
   let lastAction = null; // the fighter.action object seen last frame
   let evasion = { action: null, clip: 'Front_Roll' };
   let reaction = { until: -Infinity, clip: null, start: 0, length: 0 };
@@ -230,14 +244,28 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     let outRate = 1 / FADE.out;
     if (want) {
       const entry = actionFor(want.clip);
-      if (entry) { entry.action.time = want.time; if (entry.legs) entry.legs.time = want.time; }
+      if (entry) {
+        const advanced = want.time - entry.action.time;
+        if (previousClip !== want.clip || advanced < 0) entry.followRate = 1;
+        else if (advanced > 0 && dt > 0) entry.followRate = Math.min(2.5, advanced / dt);
+        entry.coast = fighter.action?.move?.kind === 'attack' && !fighter.heldBy && now >= fighter.stunnedUntil;
+        entry.action.time = want.time;
+        if (entry.legs) entry.legs.time = want.time;
+      }
       if (want.out) outRate = 1 / want.out;
     }
+    previousClip = want?.clip ?? null;
     // the shown state fades in, the rest fade out
     let overlay = 0;
     for (const entry of actions.values()) {
       if (baseEntries.has(entry)) continue;
       const on = !!want && entry.name === want.clip;
+      if (!on && entry.coast && entry.weight > 0.001) {
+        // Let the old blade complete its follow-through under the incoming pose.
+        const end = entry.action.getClip().duration;
+        entry.action.time = Math.min(end, entry.action.time + dt * (entry.followRate ?? 1));
+        if (entry.legs) entry.legs.time = entry.action.time;
+      }
       const rate = on ? 1 / (want.fade || FADE.in) : outRate;
       entry.weight += ((on ? 1 : 0) - entry.weight) * -Math.expm1(-dt * rate);
       if (!on && entry.weight < 1e-3) entry.weight = 0;
@@ -298,9 +326,41 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       entry.action.setEffectiveWeight(share * baseShare);
       entry.legs.setEffectiveWeight(share * legsShare);
     }
+    if (restoreSpine) spine.quaternion.copy(baseSpine);
+    restoreSpine = false;
+    feet?.restore();
     if (restoreChest) chest.quaternion.copy(animatedChest);
     restoreChest = false;
     mixer.update(0);
+    if (hips && spine?.parent === hips && want && fighter.action?.move?.cut && walking > 0.01) {
+      if (!pelvisTracks.has(want.clip)) {
+        const track = library[want.clip]?.tracks.find(track => track.name === hips.name + '.quaternion');
+        pelvisTracks.set(want.clip, track?.createInterpolant() || null);
+      }
+      const track = pelvisTracks.get(want.clip);
+      if (track) {
+        strikePelvis.fromArray(track.evaluate(want.time));
+        torsoOffset.copy(hips.quaternion).invert().multiply(strikePelvis);
+        const weight = actions.get(want.clip)?.action.getEffectiveWeight() || 0;
+        baseSpine.copy(spine.quaternion);
+        spine.quaternion.premultiply(strikePelvis.identity().slerp(torsoOffset, weight * walking));
+        restoreSpine = true;
+      }
+    }
+    const dx = body.x - lastX, dz = body.z - lastZ;
+    const distance = Math.hypot(dx, dz);
+    if (distance > 0.0001 && distance < 2 && speed > 0.05) {
+      travelX = dx / distance; travelZ = dz / distance;
+    }
+    lastX = body.x; lastZ = body.z;
+    const facing = model.parent?.rotation.y ?? body.yaw ?? 0;
+    const sine = Math.sin(facing), cosine = Math.cos(facing);
+    const blend = -Math.expm1(-dt / 0.08);
+    sideStride += (travelX * cosine - travelZ * sine - sideStride) * blend;
+    forwardStride += (travelX * sine + travelZ * cosine - forwardStride) * blend;
+    if (body.y < 0.04 && !fighter.vitals.dead && !fighter.heldBy) {
+      feet?.pose(sideStride, forwardStride, legsShare * walking);
+    }
     if (chest && impact && !fighter.vitals.dead && !fighter.heldBy && now >= fighter.riseUntil) {
       const age = now - impact.at;
       if (age >= 0 && age < 0.22) {
