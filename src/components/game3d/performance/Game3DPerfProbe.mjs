@@ -55,7 +55,21 @@ export const PERF_SPECIAL_TOGGLES = Object.freeze([
   { id: 'post', label: 'Ink-wash post effect (level 0)' },
 ]);
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Waits that a hidden pane cannot stretch: after a few minutes hidden, Chrome runs chained setTimeout callbacks about
+// once a minute (measured: 0.8 s settle readings took ~60 s each), but MessageChannel messages are not throttled.
+const sleepWaiters = [];
+let sleepChannel = null;
+function sleepPoll() {
+  const now = performance.now();
+  for (let i = sleepWaiters.length - 1; i >= 0; i--) if (now >= sleepWaiters[i].at) sleepWaiters.splice(i, 1)[0].resolve();
+  if (sleepWaiters.length) sleepChannel.port2.postMessage(0);
+}
+const sleep = (ms) => new Promise((resolve) => {
+  if (typeof MessageChannel === 'undefined') { setTimeout(resolve, ms); return; }
+  if (!sleepChannel) { sleepChannel = new MessageChannel(); sleepChannel.port1.onmessage = sleepPoll; }
+  sleepWaiters.push({ at: performance.now() + ms, resolve });
+  if (sleepWaiters.length === 1) sleepChannel.port2.postMessage(0);
+});
 const round = (v, d = 2) => (Number.isFinite(v) ? Math.round(v * 10 ** d) / 10 ** d : null);
 
 function percentile(sorted, p) {
