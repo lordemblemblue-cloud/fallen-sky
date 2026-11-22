@@ -1,7 +1,7 @@
 // Keyboard and mouse for Duelist Adventure, and the follow camera.
 // What each key and mouse button does is the player's own choice (client/bindings.mjs; Settings). The
 // defaults: WASD move · Shift sprint · Left click light · E heavy · Right button (hold) guard (a fresh guard
-// parries) · Space jump · C roll · Alt dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
+// parries) · Space jump (hold for a higher Force Jump, release to fall) · C roll · Alt dash · 1-4 the class's abilities (without a class: push, pull, grip (hold, let
 // go to throw), Veil Breach) · Q the special · R Veil Breach · Z resist · Tab shop · middle click lock on · F (hold) use what is in
 // front of you. Mouse look: click to capture the mouse, Esc releases it.
 /* global window, document */
@@ -100,7 +100,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
     // This frame's input for the player's fighter (world-space move from the camera's yaw).
     read({ faceYaw = null, strafe = false } = {}) {
       if (paused) return { move: { x: 0, z: 0 }, run: false, sprint: false,
-        interact: false, face: null, strafe, presses: presses.splice(0) };
+        interact: false, jumpHeld: false, face: null, strafe, presses: presses.splice(0) };
       const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0);
       const s = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
       const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
@@ -118,6 +118,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
         run: true,
         sprint: held.has('sprint'),
         interact: held.has('interact'), // held at a crate, a console, a ledger core, a bell (story missions)
+        jumpHeld: held.has('jump'), // server owns hold duration; release cuts vertical ascent
         face: faceYaw ?? (aiming ? yaw : moving ? Math.atan2(x, z) : null),
         strafe,
         presses: pressed,

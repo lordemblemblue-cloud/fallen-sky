@@ -1,0 +1,34 @@
+name: Duelist Held Force Jump
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/sim/heldJump.mjs'
+      - 'src/components/duelist/sim/world.mjs'
+      - 'src/components/duelist/client/controls.mjs'
+      - 'src/components/duelist/net/protocol.mjs'
+      - 'tests/duelist-held-force-jump.test.mjs'
+      - '.github/workflows/duelist-held-force-jump.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  held-force-jump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Held jump, prediction, air dash, and controls
+        run: node --test tests/duelist-held-force-jump.test.mjs tests/duelist-air-dash.test.mjs
+      - name: Lint authored code and tests
+        run: npx eslint src/components/duelist/sim/heldJump.mjs src/components/duelist/sim/world.mjs src/components/duelist/client/controls.mjs src/components/duelist/net/protocol.mjs tests/duelist-held-force-jump.test.mjs
+      - name: Build application
+        run: npm run build
