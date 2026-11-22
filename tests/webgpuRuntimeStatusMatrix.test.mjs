@@ -56,3 +56,26 @@ test('classic WebGL and absent renderer are not native WebGPU', () => {
   assert.equal(absent.webgpuActive, false);
   assert.equal(formatWebGPURuntimeEvidence(null), 'WebGPU not verified (unknown; none)');
 });
+
+test('malformed or non-positive frame counts never verify native WebGPU', () => {
+  for (const frame of [-2, -0.1, 0, NaN, Infinity, -Infinity, 'not-a-frame', null]) {
+    const evidence = getWebGPURuntimeEvidence(renderer({ frame }), { sceneId: 'fallen-sky' });
+    assert.equal(evidence.frameCount, 0, String(frame));
+    assert.equal(evidence.status, 'waiting-for-first-frame', String(frame));
+    assert.equal(evidence.webgpuActive, false, String(frame));
+  }
+});
+
+test('incomplete GPUDevice and command queue cannot verify native WebGPU', () => {
+  for (const gpuDevice of [
+    {}, { queue: { submit() {} } },
+    { createCommandEncoder() {} },
+    { createCommandEncoder: true, queue: { submit() {} } },
+    { createCommandEncoder() {}, queue: { submit: true } },
+  ]) {
+    const evidence = getWebGPURuntimeEvidence(renderer({ gpuDevice }), { sceneId: 'duelist-adventure' });
+    assert.equal(evidence.deviceConfirmed, false);
+    assert.equal(evidence.status, 'device-unconfirmed');
+    assert.equal(evidence.webgpuActive, false);
+  }
+});
