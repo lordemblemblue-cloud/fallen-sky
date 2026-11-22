@@ -26,7 +26,7 @@ test('visual references replace generic panels but global bottom navigation stay
   assert.match(hub, /isReferencePanel/);
   assert.match(hub, /dxt-page--reference/);
   assert.match(hub, /<CharacterReferenceMenu prefs=\{prefs\}/);
-  assert.match(hub, /<StoryReferenceMenu lobby=\{lobby\}/);
+  assert.match(hub, /<DuelistStoryMenu lobby=\{lobby\}/);
   assert.match(hub, /<SettingsReferenceMenu prefs=\{prefs\}/);
   assert.match(css, /\.dxt-page--reference \.dxt-header \{ display:none/);
   assert.match(hub, /className="dxt-footer"/);
