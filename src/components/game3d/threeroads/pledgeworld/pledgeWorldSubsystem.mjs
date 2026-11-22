@@ -17,9 +17,12 @@
 //       the game's quest-giver list. The cast fills in x, z (world metres) and
 //       found = true, synchronously. Unanswered, a follower is taken to be at
 //       the player's side and a line is shown as a caption.
-//   cast:ready ← cast    (version 1) is also how this subsystem knows a person
-//       can show a `cast:say` line. Lines for anyone not announced ready are
-//       captions at the bottom of the screen.
+//   cast:ready ← cast    (version 1) is also how this subsystem knows a cast is
+//       alive in the scene. Once anyone has been announced, every spoken line
+//       goes out as `cast:say` and the cast shows it (over the speaker's head
+//       when they are near, as its own subtitle otherwise) and plays the voice.
+//       Until then, and in a scene with no cast, lines are this file's captions
+//       at the bottom of the screen.
 import { threeRoadsEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
 import { buildPledgeCompletionClaim } from '../../pledges/pledgeClaim.mjs';
@@ -42,8 +45,6 @@ export const PLEDGE_EVENT = 'axePledgeEvent';
 export const PLEDGE_SOUND_EVENT = 'threeRoadsSound';
 const CLAIMS_KEPT = 8;
 const LINES_KEPT = 40;
-// A speaker further off than this is heard as a caption, not over their head.
-const SPEAKER_NEAR_METRES = 30;
 const LOCATE_FRESH_SECONDS = 0.1;
 const VIEW_EVERY_SECONDS = 0.06;
 
@@ -150,19 +151,16 @@ export function createPledgeWorldSubsystem(ctx = {}, {
     onPromptUp: () => { touchHeld = false; },
   }) : createPledgeOverlays(null);
 
-  const speakerNear = id => {
-    if (!castReady.has(id)) return false;
-    const at = locate(id);
-    return !!at && Math.hypot(at.x - frame.player.x, at.z - frame.player.z) <= SPEAKER_NEAR_METRES;
-  };
   const speech = createSpeechQueue({
-    isNear: speakerNear,
+    // The cast shows a line for anyone it can name, near or far; it is asked
+    // as soon as it has shown itself to be there.
+    isNear: () => castReady.size > 0,
     present(line, seconds, mode) {
       if (!line) { overlays.setCaption(null); return; }
       linesShown.push({ lineId: line.lineId, mode });
       if (linesShown.length > LINES_KEPT) linesShown.shift();
       if (mode === 'cast') {
-        // Over the speaker's head; the cast shows it and plays the voice.
+        // The cast shows it (over the head or as its subtitle) and plays the voice.
         overlays.setCaption(null);
         bus?.emit('cast:say', { id: line.speaker, lineId: line.lineId, text: line.text, seconds });
         return;

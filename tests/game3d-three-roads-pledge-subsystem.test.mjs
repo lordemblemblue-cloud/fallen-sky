@@ -180,7 +180,10 @@ test('Sworn at the Gate through the subsystem: keys, captions, the bus, the clai
     t.key('keyup');
   }
   t.run(25);
+  // Once a cast has shown itself, every line goes to it, the warden's two
+  // still waiting in the queue included; the cast decides over-head or subtitle.
   assert.deepEqual(t.of('cast:say').map(e => [e.id, e.lineId]), [
+    ['watch_warden_south', 'warden_m01_01'], ['watch_warden_south', 'warden_m01_02'],
     ['traveller_tome', 'tome_m01_01'], ['traveller_henut', 'henut_m01_01'], ['traveller_livilla', 'livilla_m01_01'],
   ]);
   assert.ok(t.of('cast:say').every(e => e.seconds > 2 && typeof e.text === 'string'));
