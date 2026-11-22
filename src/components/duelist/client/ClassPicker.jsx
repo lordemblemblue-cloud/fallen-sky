@@ -24,7 +24,8 @@ function nextGain(level, abilities) {
 }
 
 export default function ClassPicker({ current, pending = null, fighter = 'maskedWarrior', keys,
-  live = false, onPick, onClose = null, progress = null, matchBoost = 0 }) {
+  live = false, onPick, onClose = null, progress = null, matchBoost = 0,
+  initialChoice = false, secondsLeft = 5 }) {
   // Local class browsing cannot mutate match state, weapon, or authoritative meter.
   const [previewId, setPreviewId] = useState(null);
   const chosen = CLASS_IDS.includes(previewId) ? previewId
@@ -68,6 +69,10 @@ export default function ClassPicker({ current, pending = null, fighter = 'masked
           <DuelistCharacterPreview fighter={fighter} classId={chosen} compact />
         </div>
         <div className="dcp-model-footer">
+          {initialChoice && <div className="dcp-choice-timer" role="status" aria-live="off"
+            data-testid="duelist-class-decision-timer">
+            {secondsLeft > 0 ? `CHOOSE YOUR CLASS · ${secondsLeft}s` : 'CHOOSE A CLASS TO BEGIN'}
+          </div>}
           <div className="dcp-model-identity">
             <strong>{cls.name}</strong><small>{WEAPON_NAMES[cls.weapon]} · {cls.role}</small>
           </div>
