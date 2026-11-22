@@ -37,7 +37,8 @@ function castraLupa() {
   for (const end of [-1, 1]) {
     for (const side of [-1, 1]) {
       items.push(f.put(R, 'gate_tower', 28 * end, 4.5 * side, end, 0));
-      items.push(f.put(R, 'palisade_corner', 28 * end, 20 * side, end, side));
+      // The walls' centrelines cross at (28, 20); the corner piece's own centre is 0.93 m inside that, on the diagonal.
+      items.push(f.put(R, 'palisade_corner', 27.34 * end, 19.34 * side, end, side));
       items.push(f.put(R, 'stake_hedge', 34 * end, 8 * side, end, 0));
       for (const t of [8, 12, 16]) items.push(f.put(R, 'palisade_run', 28 * end, t * side, end, 0));
     }

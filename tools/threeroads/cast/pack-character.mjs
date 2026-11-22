@@ -244,7 +244,11 @@ export function pruneRestChannels(doc) {
   return removed;
 }
 
-/** Shrinks embedded images whose longer side is above `max` pixels. */
+/**
+ * Shrinks embedded images whose longer side is above `max` pixels. A PNG with
+ * nothing see-through in it is written as a JPEG, which is about a tenth of the
+ * size for a painted skin; a PNG that really uses its transparency stays a PNG.
+ */
 export async function shrinkImages(doc, max) {
   const { default: sharp } = await import('sharp');
   const report = [];
@@ -252,15 +256,25 @@ export async function shrinkImages(doc, max) {
     if (image.bufferView === undefined) continue;
     const view = doc.views[image.bufferView];
     const meta = await sharp(view.bytes).metadata();
-    const before = { width: meta.width, height: meta.height, bytes: view.bytes.length };
-    if (Math.max(meta.width, meta.height) <= max) { report.push({ before, after: before }); continue; }
-    const resized = sharp(view.bytes).resize({ width: max, height: max, fit: 'inside' });
-    const bytes = image.mimeType === 'image/png'
-      ? await resized.png({ compressionLevel: 9 }).toBuffer()
-      : await resized.jpeg({ quality: 86, mozjpeg: true }).toBuffer();
+    const before = { width: meta.width, height: meta.height, bytes: view.bytes.length, type: image.mimeType };
+    const isPng = image.mimeType === 'image/png';
+    let opaque = !meta.hasAlpha;
+    if (isPng && meta.hasAlpha) {
+      const stats = await sharp(view.bytes).stats();
+      opaque = stats.channels[stats.channels.length - 1].min === 255;
+    }
+    const tooBig = Math.max(meta.width, meta.height) > max;
+    if (!tooBig && !(isPng && opaque)) { report.push({ before, after: before }); continue; }
+    let pipeline = sharp(view.bytes);
+    if (tooBig) pipeline = pipeline.resize({ width: max, height: max, fit: 'inside' });
+    const keepPng = isPng && !opaque;
+    const bytes = keepPng
+      ? await pipeline.png({ compressionLevel: 9 }).toBuffer()
+      : await pipeline.removeAlpha().jpeg({ quality: 86, mozjpeg: true }).toBuffer();
     view.bytes = bytes;
+    if (!keepPng) image.mimeType = 'image/jpeg';
     const after = await sharp(bytes).metadata();
-    report.push({ before, after: { width: after.width, height: after.height, bytes: bytes.length } });
+    report.push({ before, after: { width: after.width, height: after.height, bytes: bytes.length, type: image.mimeType } });
   }
   return report;
 }

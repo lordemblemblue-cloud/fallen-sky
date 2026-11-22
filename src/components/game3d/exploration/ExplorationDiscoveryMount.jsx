@@ -139,8 +139,12 @@ export default function ExplorationDiscoveryMount() {
           if (Array.isArray(node.material)) node.material.forEach((m) => m && materials.add(m));
           else if (node.material) materials.add(node.material);
         });
-        geometries.forEach((geometry) => geometry.dispose());
-        materials.forEach((material) => material.dispose());
+        // The WebGPU renderer can already have released a material's internal
+        // render node (scene teardown clears them first); its own dispose then
+        // throws while reading that node, so a failed release is simply done.
+        const release = (resource) => { try { resource.dispose(); } catch { /* already released */ } };
+        geometries.forEach(release);
+        materials.forEach(release);
       });
       markers.clear();
       scene = null;

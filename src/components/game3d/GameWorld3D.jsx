@@ -233,6 +233,8 @@ import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/play
 import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
 import { createDoubleTapDetector, dodgeMoveCandidates, pickDodgeMove, screenForwardFacingYaw } from './player/game3dDodgeProfiles.mjs';
 import { createPlayerSwimState, createSwimNotice, SWIM } from './player/playerSwimState.mjs';
+import { createPlayerGlide } from './player/playerGlide.mjs';
+import { createGliderProp } from './player/gliderProp.mjs';
 import { createWaterSurfaceIndex } from './axe/world/game3dWaterSurface.mjs';
 import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
 import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
@@ -2087,6 +2089,46 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     window.__gw3dWater = waterSurface;
     const playerSwim = createPlayerSwimState();
     const swimNotice = createSwimNotice((text) => showCombatNotice(text));
+    // Gliding (player/playerGlide.mjs): run or jump off a height and press Space in the air to open the glider; Space
+    // again closes it (with Halo Wings, it opens the wings and their air chain instead). Prop: player/gliderProp.mjs.
+    const playerGlide = createPlayerGlide();
+    const gliderProp = createGliderProp(scene);
+    const glideSteer = new THREE.Vector3();
+    // The ground an open glider would meet ahead, as the glue finds it from the glider's height: playerGlide keeps
+    // the glider off faces more than 2 m above it (it slides along them or is held) instead of landing on top.
+    const glideProbe = new THREE.Vector3();
+    const glideGroundAt = (x, z, y) => {
+      glideProbe.set(x, y, z);
+      return (naturalZones?.playerGroundY(glideProbe) ?? (suigenActive ? null : wolfveilVillage?.playerPalaceGroundY(glideProbe)))
+        ?? sampleGroundY(x, z, y);
+    };
+    const glideJumping = () => ['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
+    const haloWingsFlying = () => (playerAnim?.getAirWalkState?.().mode || 'idle') !== 'idle';
+    // Space on foot in the air; true when the glider took the press (on the ground it goes on to the jump chain).
+    const glideSpace = () => {
+      if (!model || isMountedRef.current || playerSwim.isSwimming() || haloWingsFlying()) return false;
+      const groundY = sampleGroundY(model.position.x, model.position.z, model.position.y);
+      const profile = getHaloFlightProfile({ level: getHaloState().level });
+      const wingsAllowed = profile.unlocked && !dedicatedMode && !window.__activeDuel;
+      if (playerGlide.isGliding()) {
+        if (wingsAllowed && playerAnim?.requestWingsFromGlide?.({ worldY: model.position.y, floorY: groundY,
+          haloPercent: profile.haloPercent })?.ok) { playerGlide.reset(); return true; }
+        playerGlide.toggle();
+        playerAnim?.setGliding?.('fall');
+        return true;
+      }
+      const jumping = glideJumping();
+      if (!jumping && !playerGlide.isAirborne()) return false;
+      const facing = new THREE.Vector3(0, 0, 1).applyQuaternion(model.quaternion);
+      const opened = playerGlide.toggle({ heroY: model.position.y, groundY, jumping,
+        surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
+        bodyHeading: Math.atan2(facing.x, facing.z) });
+      if (opened.ok) { playerAnim?.setGliding?.('glide'); return true; }
+      // Too low for the glider: Halo Wings still open from a short hop, as before; otherwise say why.
+      if (wingsAllowed && jumping) return false;
+      swimNotice('Too low to open the glider');
+      return true;
+    };
     playerCameraSystem.waterSurfaceAt = (x, z, nearY) => waterSurface.surfaceAt(x, z, nearY);
     const waterDepthAt = (x, z, nearY) => {
       const surface = waterSurface.surfaceAt(x, z, nearY);
@@ -2755,7 +2797,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       if(k===' '){
         const spaceOnGround=(playerAnim?.getAirWalkState?.().mode||'idle')==='idle' &&
           !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
-        if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
+        // In the air on foot: open / close the glider (player/playerGlide.mjs).
+        if(!e.repeat && glideSpace()){ /* the glider took it */ }
+        else if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
           weaponSummon.dismiss();
         // Swimming: no jump, glide or Skywalk from the water (player/playerSwimState.mjs).
         else if(!e.repeat && !isMountedRef.current && playerSwim.isSwimming()){ /* treading water */ }
@@ -2825,6 +2869,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       if (k === 'e') interactPressed.current = true;
       if (k === 'f') {
         if (!isMountedRef.current && playerSwim.isSwimming()) { if (!e.repeat) swimNotice("You can't mount while swimming"); }
+        else if (!isMountedRef.current && playerGlide.isAirborne()) { if (!e.repeat) swimNotice("You can't mount in the air"); }
         else if (nearbyCompanionRef.current || isMountedRef.current) { if (!e.repeat) mountToggleRef.current = true; }
         else if (playerAnim?.requestAttack('kick', 1.0)) setTimeout(() => { attackPressed.current = true; }, 260);
         e.preventDefault();
@@ -3880,12 +3925,17 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
             }
           }
         }
+        // Gliding (player/playerGlide.mjs): the keys steer (kept for the glide after the glue); the glider carries
+        // the hero along its heading at its own speed.
+        glideSteer.copy(move);
+        const glidingNow = playerGlide.isGliding() && !mounted;
+        if (glidingNow) { const v = playerGlide.velocity(); move.set(v.x, 0, v.z); }
         const isMoving = move.lengthSq() > 0;
         weaponPlayerMoving = isMoving;
         // Deep water has one pace (player/playerSwimState.mjs): no Shift run or Ctrl sprint while swimming.
         const swimmingNow = playerSwim.isSwimming() && !mounted;
-        const isRunning = !!keys.current['shift'] && isMoving && !swimmingNow;
-        const isSprinting = !!keys.current['control'] && isMoving && !swimmingNow;
+        const isRunning = !!keys.current['shift'] && isMoving && !swimmingNow && !glidingNow;
+        const isSprinting = !!keys.current['control'] && isMoving && !swimmingNow && !glidingNow;
         // A held LEFT click is also a drawn-bow aim state. Walk, strafe,
         // sprint and camera motion remain independent of its charge timer.
         const bowDrawAiming = shouldUseBowAimingLocomotion({
@@ -3915,7 +3965,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           :isSprinting
             ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
             : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
-        const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
+        const speed = glidingNow ? playerGlide.travelSpeed() : (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
           (swordStanceActive ? SWORD_STANCE.moveSpeedMultiplier : 1) *
           (skillApproaching ? 2.2 : 1);
@@ -3977,14 +4027,30 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
           },footY=>sampleAirWalkCeilingY(model,footY));
         }
+        // Gliding and falling (player/playerGlide.mjs): the glue above put the feet on the ground; a hero who ran or
+        // jumped off a ledge falls, and one under an open glider sinks along its heading until it touches down (on
+        // deep water the swim below takes over). The ground code is unchanged.
+        const feetGroundY = model.position.y - (playerAnim?.getJumpOffset?.() || 0);
+        {
+          const air = playerGlide.update({
+            dt: delta, x: model.position.x, z: model.position.z, groundY: feetGroundY, heroY: model.position.y,
+            surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
+            steer: glideSteer, dive: !!keys.current['shift'], jumping: glideJumping(), groundAt: glideGroundAt,
+            allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0 &&
+              !playerSwim.isSwimming() && !haloWingsFlying() && !tornadoRes.lockMovement,
+          });
+          if (air.changed) playerAnim?.setGliding?.(air.mode);
+          if (air.y !== null) model.position.y = air.y;
+          if (air.x !== null) { model.position.x = air.x; model.position.z = air.z; } // a move into a wall, taken back
+          window.__localGliding = air.mode === 'glide';
+        }
         // Deep water (player/playerSwimState.mjs): the glue above put the feet on the bed; water up to the neck
         // floats the hero with the neck at the surface and the controller swims. The ground code is unchanged.
         {
-          const jumpOffset = playerAnim?.getJumpOffset?.() || 0;
           const swim = playerSwim.update({
             dt: delta,
             surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
-            bedY: model.position.y - jumpOffset,
+            bedY: feetGroundY,
             currentY: model.position.y,
             allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0,
           });
@@ -4770,12 +4836,12 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         if (playerAttackCooldown.current > 0) playerAttackCooldown.current -= delta;
         if (playerInvulTimer.current > 0) playerInvulTimer.current -= delta;
         // Swimming (player/playerSwimState.mjs): no strikes or skills in deep water; the click or the key is dropped.
-        if (playerSwim.isSwimming() && (attackPressed.current || abilityKeyPressed.current !== -1)) {
+        if ((playerSwim.isSwimming() || playerGlide.isGliding()) && (attackPressed.current || abilityKeyPressed.current !== -1)) {
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
           abilityKeyPressed.current = -1;
           castInputMeta.current = null;
-          swimNotice("You can't fight while swimming");
+          swimNotice(playerGlide.isGliding() ? "You can't fight while gliding" : "You can't fight while swimming");
         }
         const pendingSkillStrike = skillStrikeQueue.nextSkillStrike();
         // A click during cooldown should not abort the animation frame.
@@ -5675,6 +5741,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // Light bone gestures run after the base animation pose, with no input lock.
       echoGestureRuntime.update();
       momentGestures.update();
+      gliderProp.update({ open: playerGlide.isGliding(), model, bank: playerGlide.bank(), dt: delta }); // in the hands
       // A real inventory-backed GLB bow follows the active Adam/Eve hand.
       // It yields to the existing mounted weapon renderer when riding.
       if (model && heldBowPlayer !== model) {
@@ -5952,6 +6019,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       vortexLake?.dispose();
       if(window.__gw3dVortexLake===vortexLake)window.__gw3dVortexLake=null;
       if(window.__gw3dWater===waterSurface)window.__gw3dWater=null;
+      gliderProp.dispose();
       livingInkWorld?.dispose();
       livingMeadow?.dispose();
       zombieCamps?.dispose();

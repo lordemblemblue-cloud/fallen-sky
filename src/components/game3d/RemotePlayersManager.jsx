@@ -4,7 +4,13 @@ import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import { reconcileNetworkPosition } from '../network/remote/positionCorrection';
 import { bakeRemoteComboClips, createRemoteComboWeapon, remoteComboKind } from './weapons/remoteWeaponCombos.js';
-import { loadRemoteSwimClips, REMOTE_SWIM_STATES } from './remoteSwimClips.mjs';
+import { loadRemoteSwimClips, REMOTE_SWIM_SOURCES } from './remoteSwimClips.mjs';
+import { createGliderProp } from './player/gliderProp.mjs';
+
+// The poses a packet's \`anim\` names beyond idle / run / swings: swimming, and hanging from the glider
+// (player/playerGlide.mjs), each retargeted onto the avatar from the hero's own clip, with a glider in the hands.
+const REMOTE_POSE_SOURCES = Object.freeze({ ...REMOTE_SWIM_SOURCES, glideHang: '/models/animations/mocap/Glide_Hang.glb' });
+const REMOTE_POSE_STATES = Object.freeze(Object.keys(REMOTE_POSE_SOURCES));
 
 /**
  * RemotePlayersManager — renders other players in the shared game world.
@@ -85,7 +91,7 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
       pending.forEach((fn) => fn());
       pending.length = 0;
       // The swim loops from the model's rest pose as well (no mixer ever poses the cached model, only its clones).
-      loadRemoteSwimClips(loaded.model)
+      loadRemoteSwimClips(loaded.model, { sources: REMOTE_POSE_SOURCES })
         .then((clips) => {
           if (disposed) return;
           assets.swimClips = clips;
@@ -98,8 +104,9 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
   // Give a remote its swim actions once the clips exist; a player already swimming switches over at once.
   const attachSwim = (r) => {
     if (!assets?.swimClips || r.swimActions) return;
-    r.swimActions = Object.fromEntries(REMOTE_SWIM_STATES.map((state) => [state, r.mixer.clipAction(assets.swimClips[state])]));
-    if (REMOTE_SWIM_STATES.includes(r.lastAnim)) { r.current = null; setAnim(r, r.lastAnim, true); }
+    r.swimActions = Object.fromEntries(REMOTE_POSE_STATES.filter((state) => assets.swimClips[state])
+      .map((state) => [state, r.mixer.clipAction(assets.swimClips[state])]));
+    if (REMOTE_POSE_STATES.includes(r.lastAnim)) { r.current = null; setAnim(r, r.lastAnim, true); }
   };
 
   const spawnRemote = (player) => {
@@ -170,6 +177,7 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
       name: player.display_name || 'Player',
       swimActions: null,
       lastAnim: null,
+      glider: createGliderProp(scene),
     });
     attachSwim(remotes.get(player.player_id));
   };
@@ -180,11 +188,12 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
     scene.remove(r.group);
     r.mixer.stopAllAction();
     r.comboWeapon?.dispose();
+    r.glider?.dispose();
     remotes.delete(playerId);
   };
 
   const actionOf = (r, state) => (state === 'run' ? r.runAction : state === 'idle' ? r.idleAction
-    : REMOTE_SWIM_STATES.includes(state) ? r.swimActions?.[state] : r.comboAction);
+    : REMOTE_POSE_STATES.includes(state) ? r.swimActions?.[state] : r.comboAction);
   // swimIdle / swimForward when the clips are there, else the idle / run they stand in for
   const swimTarget = (r, anim) => (r.swimActions?.[anim] ? anim : anim === 'swimForward' ? 'run' : 'idle');
   // false once it has finished (held on its last frame) or was stopped (a rider pose stops every action)
@@ -201,12 +210,12 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
     }
     r.lastAnim = anim;
     const comboClip = remoteComboKind(anim) ? r.comboClips[anim] || null : null;
-    const target = comboClip ? anim : REMOTE_SWIM_STATES.includes(anim) ? swimTarget(r, anim)
+    const target = comboClip ? anim : REMOTE_POSE_STATES.includes(anim) ? swimTarget(r, anim)
       : anim === 'run' || anim === 'walk' ? 'run' : 'idle';
     if (r.current === target) return;
     if (!live && (comboClip || swingPlaying(r))) return;
     const prev = actionOf(r, r.current);
-    let next = target === 'run' ? r.runAction : REMOTE_SWIM_STATES.includes(target) ? r.swimActions[target] : r.idleAction;
+    let next = target === 'run' ? r.runAction : REMOTE_POSE_STATES.includes(target) ? r.swimActions[target] : r.idleAction;
     if (comboClip) {
       next = r.mixer.clipAction(comboClip);
       next.setLoop(THREE.LoopOnce, 1);
@@ -257,6 +266,8 @@ export function createRemotePlayersManager(scene, { loadAssets = loadArcherAsset
         : 0.4);
       // after the pose and the placement: the stand-in's grip, the closed hand, a bow's string and arrows
       r.comboWeapon?.update(delta);
+      // the glider in the hands while the packet says they glide (it unfolds and folds away)
+      r.glider?.update({ open: r.lastAnim === 'glideHang', model: r.group, dt: delta });
     });
   };
 

@@ -187,3 +187,32 @@ test('the camps answer what the second walkthrough taught', () => {
     assert.ok(Math.max(...grounds) - Math.min(...grounds) >= 4, `${plan.id}: the camp spans ${(Math.max(...grounds) - Math.min(...grounds)).toFixed(1)} m of height`);
   }
 });
+
+test('the fort\'s wall closes: each corner meets a run on both walls, and each gate\'s walk fills the gap between its towers', () => {
+  const fort = campPlan('castra_lupa');
+  const runs = fort.items.filter(entry => entry.piece === 'palisade_run');
+  const runLength = empireKitPiece('remoria', 'palisade_run').size[0];
+  // A run's two ends: half its length to either side of its centre, at right angles to its front.
+  const ends = runs.flatMap(run => [-1, 1].map(sign => ({
+    x: run.x + sign * (runLength / 2) * Math.cos(run.yaw),
+    z: run.z - sign * (runLength / 2) * Math.sin(run.yaw),
+  })));
+  const corners = fort.items.filter(entry => entry.piece === 'palisade_corner');
+  assert.equal(corners.length, 4);
+  for (const corner of corners) {
+    // The kit table: the walls' centrelines cross 0.93 m in front of the corner piece's origin,
+    // and the bank turns on a 2 m radius, so a run must end 2 m from that crossing on each wall.
+    const crossing = { x: corner.x + 0.93 * Math.sin(corner.yaw), z: corner.z + 0.93 * Math.cos(corner.yaw) };
+    const meeting = ends.filter(end => Math.abs(Math.hypot(end.x - crossing.x, end.z - crossing.z) - 2) < 0.06);
+    assert.equal(meeting.length, 2, `corner at (${corner.x}, ${corner.z}) meets ${meeting.length} run ends`);
+  }
+  const towerWidth = empireKitPiece('remoria', 'gate_tower').size[0];
+  const spanWidth = empireKitPiece('remoria', 'gate_span').size[0];
+  const towers = fort.items.filter(entry => entry.piece === 'gate_tower');
+  for (const span of fort.items.filter(entry => entry.piece === 'gate_span')) {
+    const pair = towers.filter(tower => Math.hypot(tower.x - span.x, tower.z - span.z) < 6);
+    assert.equal(pair.length, 2);
+    const gap = Math.hypot(pair[0].x - pair[1].x, pair[0].z - pair[1].z) - towerWidth;
+    assert.ok(Math.abs(gap - spanWidth) < 0.05, `the gap between the towers is ${gap.toFixed(2)} m, the walk ${spanWidth} m`);
+  }
+});
