@@ -1,0 +1,27 @@
+name: Duelist Special Meter Ownership Contract
+
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-special-meter-ownership-contract.test.mjs'
+      - '.github/workflows/duelist-special-meter-ownership.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  meter-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Verify special-meter ownership and class regressions
+        run: node --test tests/duelist-special-meter-ownership-contract.test.mjs tests/duelist-match-classes.test.mjs tests/duelist-classes.test.mjs
+      - name: Lint meter contract
+        run: npx eslint tests/duelist-special-meter-ownership-contract.test.mjs
