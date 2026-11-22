@@ -15,6 +15,8 @@
 //  - Dodge_Forward: the owner's Mixamo Pro Longbow Pack "standing dodge forward" (the double-tap W sidestep),
 //  - Sprint: the pack's "standing run forward", trimmed to one cycle (Ctrl sprint),
 //  - Back_Roll: a backward shoulder roll authored here on each fused rig (the "Roll dodges" S and R alone),
+//  - Glide_Hang: hanging from the glider's bar, authored here (player/playerGlide.mjs): arms up on the bar, the body
+//    leaning into the flight, the legs trailing, a slow sway; it loops,
 //  - Swim_Idle / Swim_Forward: the owner's ActionForge pack loops (tools/duelist/source/actionforge-80.anim.glb, on
 //    the fused female rig), for deep water (player/playerSwimState.mjs). They carry the neck's height above the
 //    feet (waterline), so the game can float the body with the water at the neck, and Swim_Forward its speed.
@@ -292,6 +294,17 @@ export const AUTHORED_CLIPS = Object.freeze([
       { t: 0.70, pitch: -350, hipsY: -0.40, spine: 20, spine2: 12, head: 8, hip: 92, knee: 112, ankle: 26, armDown: 78, swing: 42, elbow: 32, grounded: true },
       { t: 0.80, pitch: -346, hipsY: -0.22, spine: 14, spine2: 8, head: 4, hip: 60, knee: 80, ankle: 24, armDown: 80, swing: 30, elbow: 22, grounded: true },
       { t: 0.90, ...NEUTRAL, pitch: -360, hip: 2, knee: 4, grounded: true },
+    ],
+  },
+  {
+    // Hanging from the glider's bar: hands up on the bar a little in front of the head, the body leaning into the
+    // flight, the legs together and trailing with the knees soft; a slow sway. Never grounded (the hips keep their
+    // height under the bar). Loops: the first and last keys match.
+    name: 'Glide_Hang', seconds: 1.6, extras: { airborne: true, kind: 'glide', loop: true },
+    keys: [
+      { t: 0.0, pitch: 16, spine: -4, spine2: -6, head: -14, hip: -6, knee: 26, ankle: 14, armDown: -66, swing: 22, elbow: 18 },
+      { t: 0.8, pitch: 20, spine: -6, spine2: -8, head: -16, hip: -12, knee: 36, ankle: 18, armDown: -70, swing: 18, elbow: 24 },
+      { t: 1.6, pitch: 16, spine: -4, spine2: -6, head: -14, hip: -6, knee: 26, ankle: 14, armDown: -66, swing: 22, elbow: 18 },
     ],
   },
 ]);

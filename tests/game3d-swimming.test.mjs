@@ -300,8 +300,8 @@ test('the remote avatar gets the same swim loops retargeted onto its own skeleto
     }
   }
   const remote = read('src/components/game3d/RemotePlayersManager.jsx');
-  assert.match(remote, /loadRemoteSwimClips\(loaded\.model\)/);
-  assert.match(remote, /REMOTE_SWIM_STATES\.includes\(anim\) \? swimTarget\(r, anim\)/);
+  assert.match(remote, /loadRemoteSwimClips\(loaded\.model, \{ sources: REMOTE_POSE_SOURCES \}\)/); // swim + glide poses
+  assert.match(remote, /REMOTE_POSE_STATES\.includes\(anim\) \? swimTarget\(r, anim\)/);
   assert.match(remote, /anim === 'swimForward' \? 'run' : 'idle'/, 'without the clips a swimmer shows the run / idle');
 });
 
@@ -329,13 +329,13 @@ test('the camera keeps above the water line and the world wires the swim around 
   assert.match(world, /if \(swim\.entered \|\| swim\.left\) playerAnim\?\.setSwimming\?\.\(swim\.swimming\);\s*if \(swim\.rootY !== null\) model\.position\.y = swim\.rootY;/);
   assert.match(world, /allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD\(\)\.hp > 0,/);
   // one pace: no run or sprint, the swim speed
-  assert.match(world, /const isSprinting = !!keys\.current\['control'\] && isMoving && !swimmingNow;/);
+  assert.match(world, /const isSprinting = !!keys\.current\['control'\] && isMoving && !swimmingNow( && !glidingNow)?;/); // (gliding too)
   assert.match(world, /const baseMoveSpeed=swimmingNow\?SWIM\.speed:airTravel/);
   // refused in the water: mounting (F), the jump chain (Space), strikes and skills; a mount stops at deep water
   assert.match(world, /if \(!isMountedRef\.current && playerSwim\.isSwimming\(\)\) \{ if \(!e\.repeat\) swimNotice\("You can't mount while swimming"\); \}/);
   assert.match(world, /else if\(!e\.repeat && !isMountedRef\.current && playerSwim\.isSwimming\(\)\)\{ \/\* treading water \*\/ \}/);
-  assert.match(world, /if \(playerSwim\.isSwimming\(\) && \(attackPressed\.current \|\| abilityKeyPressed\.current !== -1\)\) \{/);
-  assert.ok(world.indexOf('if (playerSwim.isSwimming() && (attackPressed.current') < world.indexOf('if (abilityKeyPressed.current !== -1 && model) {'),
+  assert.match(world, /if \(\(playerSwim\.isSwimming\(\)( \|\| playerGlide\.isGliding\(\))?\) && \(attackPressed\.current \|\| abilityKeyPressed\.current !== -1\)\) \{/); // (gliding too)
+  assert.ok(world.search(/if \(\(?playerSwim\.isSwimming\(\)[^\n]*attackPressed\.current/) > 0 && world.search(/if \(\(?playerSwim\.isSwimming\(\)[^\n]*attackPressed\.current/) < world.indexOf('if (abilityKeyPressed.current !== -1 && model) {'),
     'the skill key is dropped before the skills fire');
   assert.match(world, /if\(depth>=SWIM\.enterDepth && depth>waterDepthAt\(fromX,fromZ,model\.position\.y\)\+\.01\)\{/);
   // the area gate goes first (WolfveilGateTravel); once a crossing has started the water does not hold the mount back
