@@ -10,6 +10,16 @@ import {
   objectiveMatchesAXEQuestEvent,
 } from './axe/quests/AXEQuestFramework';
 import { applyAXEQuestEventProgress } from './axe/quests/AXEQuestEventProgress';
+// Pledges (multi-step quests). Pure .mjs modules that import no quest data, so
+// there is no import cycle with questData.jsx. See pledges/pledgeModel.mjs.
+import { isPledge } from './pledges/pledgeModel.mjs';
+import { getRegisteredPledge, listRegisteredPledges } from './pledges/pledgeRegistry.mjs';
+import {
+  pledgeStateOnAbandon,
+  pledgeStateOnAccept,
+  pledgeStateOnComplete,
+  pledgeStateOnEvent,
+} from './pledges/pledgeState.mjs';
 
 const storage = characterScopedStorage('axe_quest_state_v2');
 const LEGACY_STORAGE_KEY = 'wwm_quest_state_v1';
@@ -76,6 +86,8 @@ export function getQuestState() {
     choices: { ...state.choices },
     abandonedIds: [...state.abandonedIds],
     completionCounts: { ...state.completionCounts },
+    // Present only once a pledge has been completed or abandoned.
+    ...(state.pledgeOutcomes ? { pledgeOutcomes: { ...state.pledgeOutcomes } } : {}),
   };
 }
 
@@ -102,9 +114,14 @@ const initializeQuestObjectives = (questDef) => {
 export function acceptQuest(questId, questDef = null) {
   if (state.acceptedIds.includes(questId)) return { ok: false, reason: 'ALREADY_ACCEPTED' };
 
-  const def = questDef || AXE_QUESTS.find((q) => q.id === questId) || null;
+  const def = questDef || AXE_QUESTS.find((q) => q.id === questId) ||
+    getRegisteredPledge(questId) || null;
   const repeatable = !!def?.repeatable;
   if (def?.requires && !state.completedIds.includes(def.requires)) {
+    return { ok: false, reason: 'PREREQUISITE_REQUIRED' };
+  }
+  if (Array.isArray(def?.requiresAll) &&
+      def.requiresAll.some((id) => !state.completedIds.includes(id))) {
     return { ok: false, reason: 'PREREQUISITE_REQUIRED' };
   }
   if (state.completedIds.includes(questId) && !repeatable) {
@@ -126,6 +143,8 @@ export function acceptQuest(questId, questDef = null) {
     lastAcceptedId: questId,
     abandonedIds: state.abandonedIds.filter((id) => id !== questId),
   };
+  // A pledge is always sworn from zero, with no choice left from an earlier run.
+  if (isPledge(def)) state = { ...state, ...pledgeStateOnAccept(state, def) };
   notify();
   return { ok: true };
 }
@@ -133,7 +152,8 @@ export function acceptQuest(questId, questDef = null) {
 export function completeQuest(questId, questDef = null) {
   if (!state.acceptedIds.includes(questId)) return { ok: false, reason: 'NOT_ACCEPTED' };
 
-  const def = questDef || AXE_QUESTS.find((q) => q.id === questId) || null;
+  const def = questDef || AXE_QUESTS.find((q) => q.id === questId) ||
+    getRegisteredPledge(questId) || null;
   if (def && !isQuestComplete(def, state)) {
     return { ok: false, reason: 'OBJECTIVES_INCOMPLETE' };
   }
@@ -159,12 +179,15 @@ export function completeQuest(questId, questDef = null) {
       ? (acceptedIds[acceptedIds.length - 1] || null)
       : state.lastAcceptedId,
   };
+  // Records how the pledge ended: "kept" or "bent", read from its choices.
+  if (isPledge(def)) state = { ...state, ...pledgeStateOnComplete(state, def) };
   notify();
   return { ok: true };
 }
 
-export function abandonQuest(questId) {
+export function abandonQuest(questId, questDef = null) {
   if (!state.acceptedIds.includes(questId)) return { ok: false, reason: 'NOT_ACCEPTED' };
+  const def = questDef || getRegisteredPledge(questId) || null;
   const acceptedIds = state.acceptedIds.filter((id) => id !== questId);
   state = {
     ...state,
@@ -176,6 +199,8 @@ export function abandonQuest(questId) {
       ? (acceptedIds[acceptedIds.length - 1] || null)
       : state.lastAcceptedId,
   };
+  // A sworn pledge that is abandoned is recorded as "broken".
+  if (isPledge(def)) state = { ...state, ...pledgeStateOnAbandon(state, def) };
   notify();
   return { ok: true };
 }
@@ -189,9 +214,31 @@ export function reportQuestEvent(quests, event = {}) {
   // active quests just because a *previous* quest matched the same event.
   let nextObjectives = null;
   let nextProgress = null;
+  // Staged by pledges only: a choice that was made and the story flags it sets.
+  let nextChoices = null;
+  let nextStoryFlags = null;
   for (const questId of state.acceptedIds) {
     const quest = list.find((entry) => entry.id === questId);
     if (!quest) continue;
+
+    // Pledges (sequential quests) take their steps in order: only the first
+    // unfinished required step may advance. Every other quest keeps the
+    // parallel reducer below, unchanged.
+    if (isPledge(quest)) {
+      const staged = pledgeStateOnEvent({
+        objectiveProgress: nextObjectives || state.objectiveProgress,
+        progress: nextProgress || state.progress,
+        choices: nextChoices || state.choices,
+        storyFlags: nextStoryFlags || state.storyFlags,
+      }, quest, event);
+      if (!staged.changed) continue;
+      nextObjectives = staged.patch.objectiveProgress;
+      nextProgress = staged.patch.progress;
+      if (staged.patch.choices) nextChoices = staged.patch.choices;
+      if (staged.patch.storyFlags) nextStoryFlags = staged.patch.storyFlags;
+      continue;
+    }
+
     const previous = state.objectiveProgress[questId] || initializeQuestObjectives(quest);
     const updated = applyAXEQuestEventProgress(
       quest, previous, event, objectiveMatchesAXEQuestEvent,
@@ -211,9 +258,19 @@ export function reportQuestEvent(quests, event = {}) {
     ...state,
     objectiveProgress: nextObjectives,
     progress: nextProgress,
+    ...(nextChoices ? { choices: nextChoices } : {}),
+    ...(nextStoryFlags ? { storyFlags: nextStoryFlags } : {}),
   };
   notify(); // one persistence write / subscriber update per valid event
   return true;
+}
+
+// Report one event to the registered pledges only. World hooks use this (or
+// the window event 'axePledgeEvent') for events the 32 older quests already
+// receive another way, such as a kill, so those are never counted twice.
+export function reportPledgeEvent(event = {}) {
+  const pledges = listRegisteredPledges();
+  return pledges.length ? reportQuestEvent(pledges, event) : false;
 }
 
 // Backward-compatible kill reporter used by GameWorld3D.
@@ -286,11 +343,18 @@ export function shareQuestWithParty(questId) {
 }
 
 // World-event bridge. AXEWorldStreamingMount already emits axePOIDiscovered.
+// The bridge reaches AXE_QUESTS, as before, and every registered pledge. The
+// older quests in questData.jsx are still not reached from here.
+const bridgeQuests = () => {
+  const pledges = listRegisteredPledges();
+  return pledges.length ? [...AXE_QUESTS, ...pledges] : AXE_QUESTS;
+};
+
 if (typeof window !== 'undefined' && !window.__axeQuestEventBridgeInstalled) {
   window.__axeQuestEventBridgeInstalled = true;
 
   window.addEventListener('axePOIDiscovered', (event) => {
-    reportQuestEvent(AXE_QUESTS, {
+    reportQuestEvent(bridgeQuests(), {
       type: 'location_discovered',
       targetId: event?.detail?.id,
       count: 1,
@@ -298,6 +362,11 @@ if (typeof window !== 'undefined' && !window.__axeQuestEventBridgeInstalled) {
   });
 
   window.addEventListener('axeQuestEvent', (event) => {
-    if (event?.detail?.type) reportQuestEvent(AXE_QUESTS, event.detail);
+    if (event?.detail?.type) reportQuestEvent(bridgeQuests(), event.detail);
+  });
+
+  // Pledges only: see reportPledgeEvent.
+  window.addEventListener('axePledgeEvent', (event) => {
+    if (event?.detail?.type) reportPledgeEvent(event.detail);
   });
 }
