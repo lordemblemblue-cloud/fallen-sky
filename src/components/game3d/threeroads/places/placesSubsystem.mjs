@@ -16,7 +16,14 @@
 //
 // Places of a band still being built (layout `preview: true`: band 2's camps)
 // are built only with the preview switch (?threeRoads=1&threeRoadsPreview=1).
+//
+// A place marked `merge: true` (a camp) draws all its pieces except its
+// landmarks as ONE mesh per kit and material, built from the placed pieces,
+// switched between LOD0 and LOD1 by the player's distance from the place as a
+// whole: a few draw calls a camp instead of one per kind of piece. A camp is
+// at most about 60 m across, so drawing it whole at one level costs little.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { THREE_ROADS_Z_OFFSET } from '../coords.mjs';
 import { createValleyKit, createEmpireKit } from './valleyKit.mjs';
 import { drapePaintedGround } from './paintedGround.mjs';
@@ -80,9 +87,24 @@ export function createPlacesSubsystem(ctx, {
     }
   }
 
+  // Merged groups: per merging place, one group per kit and material.
+  const groups = new Map(); // placeId:kit:material -> group
+  for (const record of all) {
+    const place = placeState.get(record.inst.placeId).place;
+    if (!place.merge || record.inst.landmark || record.inst.spin) continue;
+    const material = pieceOf(record.inst).material;
+    const key = place.id + ':' + record.inst.kit + ':' + material;
+    if (!groups.has(key)) {
+      groups.set(key, { key, place, kit: kitFor(record.inst.kit), material, members: [], meshes: [null, null], lod: -2, dirty: true });
+    }
+    record.merged = groups.get(key);
+    record.merged.members.push(record);
+  }
+
   const batches = new Map(); // piece id -> batch
   const spinners = [];
   for (const record of all) {
+    if (record.merged) continue;
     if (record.inst.spin) { spinners.push(record); continue; }
     const key = record.inst.kit + ':' + record.inst.piece;
     if (!batches.has(key)) {
@@ -120,6 +142,63 @@ export function createPlacesSubsystem(ctx, {
       writeColour(batch, record, slot);
       instanceMatrix(record.inst, record.ground, batch.matrices, slot * 16);
     });
+  }
+
+  // A merged group's two meshes, built (again) from its members as they stand.
+  const vertexColourMaterials = new Map(); // kit material -> its vertex-coloured twin
+  const twinOf = material => {
+    if (!vertexColourMaterials.has(material)) {
+      const twin = material.clone();
+      twin.vertexColors = true;
+      twin.name = (material.name || 'TR_Kit') + '_Merged';
+      vertexColourMaterials.set(material, twin);
+    }
+    return vertexColourMaterials.get(material);
+  };
+  const scratch = new THREE.Matrix4();
+  const scratchArray = new Array(16);
+  function buildGroup(group) {
+    const material = twinOf(group.kit.materials[group.material]);
+    for (let lod = 0; lod < 2; lod++) {
+      const parts = [];
+      for (const record of group.members) {
+        const entry = pieceOf(record.inst);
+        const source = lod ? entry.lod1 : entry.lod0;
+        let part = source.index ? source.toNonIndexed() : source.clone();
+        // Only what every kit geometry has, so the parts merge.
+        for (const name of Object.keys(part.attributes))
+          if (!['position', 'normal', 'uv'].includes(name)) part.deleteAttribute(name);
+        if (!part.attributes.normal) part.computeVertexNormals();
+        if (!part.attributes.uv) part.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(part.attributes.position.count * 2), 2));
+        part.applyMatrix4(scratch.fromArray(instanceMatrix(record.inst, record.ground, scratchArray)));
+        colour.setHex(group.kit.colourFor(record.inst.piece, record.inst.tint));
+        const n = part.attributes.position.count, rgb = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { rgb[i * 3] = colour.r; rgb[i * 3 + 1] = colour.g; rgb[i * 3 + 2] = colour.b; }
+        part.setAttribute('color', new THREE.BufferAttribute(rgb, 3));
+        parts.push(part);
+      }
+      const geometry = parts.length ? mergeGeometries(parts) : new THREE.BufferGeometry();
+      for (const part of parts) part.dispose();
+      geometry.computeBoundingSphere();
+      geometry.name = 'TR_Place_' + group.key + '_LOD' + lod;
+      let mesh = group.meshes[lod];
+      if (mesh) { mesh.geometry.dispose(); mesh.geometry = geometry; mesh.material = material; } else {
+        mesh = new THREE.Mesh(geometry, material);
+        mesh.name = 'TR_Place_' + group.key.replace(/:/g, '_') + '_merged_LOD' + lod;
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        mesh.visible = false;
+        mesh.raycast = () => {}; // drawn only: collision is the solids' job
+        root.add(mesh);
+        group.meshes[lod] = mesh;
+      }
+    }
+    group.dirty = false;
+    showGroup(group);
+  }
+  function showGroup(group) {
+    const grounded = placeState.get(group.place.id).grounded;
+    group.meshes.forEach((mesh, lod) => { if (mesh) mesh.visible = grounded && group.lod === lod; });
   }
 
   // Pieces that turn (the windmill's sails): one plain mesh each.
@@ -197,7 +276,9 @@ export function createPlacesSubsystem(ctx, {
       const y = heightFor(record.inst, heightAt);
       if (y === null || Math.abs(y - record.ground) < 0.02) continue;
       record.ground = y;
-      if (record.batch) {
+      if (record.merged) {
+        record.merged.dirty = true;
+      } else if (record.batch) {
         instanceMatrix(record.inst, y, record.batch.matrices, record.slot * 16);
         record.batch.dirty = true;
       } else if (record.mesh) {
@@ -230,8 +311,12 @@ export function createPlacesSubsystem(ctx, {
       settle(state, groundOrHeight);
       state.grounded = true;
       state.groundedAt = clock;
-      for (const index of state.members) if (all[index].batch) all[index].batch.dirty = true;
+      for (const index of state.members) {
+        if (all[index].batch) all[index].batch.dirty = true;
+        if (all[index].merged) all[index].merged.dirty = true;
+      }
     }
+    for (const group of groups.values()) if (group.dirty && placeState.get(group.place.id).grounded) buildGroup(group);
     for (const area of areas) {
       if (announced.has(area)) continue;
       const mine = [...placeState.values()].filter(state => state.place.area === area);
@@ -266,7 +351,14 @@ export function createPlacesSubsystem(ctx, {
     batch.dirty = false;
   }
   function sortLod(px, pz) {
+    // A merged group by its place: the nearest edge of the place's circle.
+    for (const group of groups.values()) {
+      const d = Math.max(0, Math.hypot(group.place.x - px, group.place.z - pz) - group.place.radius * 0.5);
+      const lod = lodForDistance(d, false, group.lod < -1 ? null : group.lod);
+      if (lod !== group.lod) { group.lod = lod; showGroup(group); }
+    }
     for (const record of all) {
+      if (record.merged) continue;
       const d = Math.hypot(record.inst.x - px, record.inst.z - pz);
       const lod = lodForDistance(d, record.inst.landmark, record.lod < -1 ? null : record.lod);
       if (lod === record.lod) continue;
@@ -297,6 +389,10 @@ export function createPlacesSubsystem(ctx, {
       record.mesh.geometry = record.lod === 0 ? entry.lod0 : entry.lod1;
       record.mesh.material = kitFor(record.inst.kit).materials[entry.material];
     }
+    // The kit's own materials changed: their merged twins are made again.
+    for (const twin of vertexColourMaterials.values()) twin.dispose();
+    vertexColourMaterials.clear();
+    for (const group of groups.values()) if (placeState.get(group.place.id).grounded) buildGroup(group);
   }
 
   let disposed = false;
@@ -362,6 +458,13 @@ export function createPlacesSubsystem(ctx, {
           triangles += mesh.count * batch.kit.trianglesOf(mesh.geometry);
         }
       }
+      for (const group of groups.values()) {
+        for (const record of group.members) pieces.add(record.inst.kit + ':' + record.inst.piece);
+        const mesh = group.meshes[group.lod];
+        if (!mesh?.visible) continue;
+        drawCalls++; instances += group.members.length;
+        triangles += group.kit.trianglesOf(mesh.geometry);
+      }
       for (const record of spinners) {
         pieces.add(record.inst.piece);
         if (!record.mesh.visible) continue;
@@ -396,6 +499,8 @@ export function createPlacesSubsystem(ctx, {
       disposed = true;
       root.removeFromParent();
       for (const batch of batches.values()) for (const mesh of batch.meshes) mesh.dispose?.();
+      for (const group of groups.values()) for (const mesh of group.meshes) mesh?.geometry.dispose();
+      for (const twin of vertexColourMaterials.values()) twin.dispose();
       for (const state of placeState.values()) for (const light of state.lights) light.dispose?.();
       if (groundMesh) { groundMesh.geometry.dispose(); groundMesh.material.dispose(); }
       for (const k of kits.values()) k.dispose();

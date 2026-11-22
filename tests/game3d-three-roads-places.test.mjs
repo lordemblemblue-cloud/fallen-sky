@@ -481,3 +481,26 @@ test('every camp piece stands on ground its skirt can cover (the game\'s ground,
     }
   }
 });
+
+test('a camp draws as a few merged meshes: its landmarks instanced, the rest one mesh per kit and material', () => {
+  for (const [area, id] of [['west', 'P13'], ['east', 'P24'], ['north', 'P35']]) {
+    const { ctx } = fakeContext(area);
+    const places = createPlacesSubsystem(ctx, { preview: true });
+    const camp = placeLayout(id);
+    places.update(0.3, { x: camp.x, y: 50, z: camp.z + 70 });
+    const near = places.status();
+    // Every piece of the camp is drawn near it (the north's arch is 230 m off).
+    assert.ok(near.instances >= placeInstances(camp).length, area);
+    assert.ok(near.drawCalls <= 7, `${area}: ${near.drawCalls} draw calls near the camp`);
+    // Far away: only the landmarks (and their area's other far places) remain.
+    places.update(0.3, { x: camp.x + 400, y: 50, z: camp.z + 70 + 400 });
+    const far = places.status();
+    assert.ok(far.instances < near.instances && far.instances > 0, `${area}: landmarks stay on the skyline`);
+    const root = ctx.wolfveilWorld.group.getObjectByName('TR_Places');
+    const merged = root.children.filter(child => /_merged_LOD/.test(child.name));
+    assert.ok(merged.length >= 2, area);
+    for (const mesh of merged) assert.ok(mesh.geometry.attributes.color, 'merged meshes carry their tints as vertex colours');
+    places.dispose();
+    assert.equal(root.parent, null);
+  }
+});
