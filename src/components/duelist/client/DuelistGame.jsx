@@ -781,6 +781,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classAnswer = sourceRef.current?.classAnswer || null;
   const between = match && (match.phase === 'countdown' || match.phase === 'roundOver');
   const showPicker = !quest && !!match && match.phase !== 'over' && (picking || between || hud?.dead);
+  // Countdown/respawn picker must release the mouse so its class and Select controls work.
+  useEffect(() => {
+    if (showPicker && document.pointerLockElement) document.exitPointerLock?.();
+  }, [showPicker]);
   const pickClass = (id) => {
     sourceRef.current?.chooseClass?.(id);
     onClassChange?.(id);
