@@ -1,13 +1,14 @@
-// Band 2's three army camps as place layouts, made from the lead's plans
+// Band 2's three army camps and its three smaller places (House Asagiri's
+// Hall, Shadow Ravine, the First Furrow) as place layouts, made from the lead's plans
 // (threeroads/land/campPlans.mjs; docs/game3d/three-empires/CAMPS_BAND2.md).
 // Nothing is retyped here: every piece comes from a plan item. This file adds
 // only what the plans leave to the places session: which pieces are the
 // camp's landmark, the tints of the cloths, how a piece on a lip stands,
 // painted ground and the camps' few lights.
 //
-// All four places are `preview: true`: they are built only with
+// All of them are `preview: true`: they are built only with
 // ?threeRoads=1&threeRoadsPreview=1 until the lead marks band 2 finished.
-import { CAMP_PLANS } from '../../land/campPlans.mjs';
+import { CAMP_PLANS, BAND2_PLACE_PLANS } from '../../land/campPlans.mjs';
 import { TINT } from './layoutKit.mjs';
 
 // The cloths each camp flies.
@@ -20,6 +21,8 @@ const LANDMARK = Object.freeze({
   western_road_camp: new Set(['watchtower']),
   the_landing: new Set(['flagstaff', 'pennant']),
   castra_lupa: new Set(['gate_tower', 'gate_span']),
+  // "one staff so the place is seen from the trail"
+  shadow_ravine: new Set(['flagstaff', 'pennant']),
 });
 // Pieces that stand on the lip of the gorge and reach out over it.
 const ON_A_LIP = new Set(['landing_stage', 'hoist']);
@@ -90,6 +93,22 @@ const DRESSING = Object.freeze({
     lights: [{ x: 287 - centre.x, z: -437.5 - centre.z, y: 1.7, colour: 0xff8a3a, intensity: 4, distance: 12, flicker: true }],
   }),
   // The cross street, where it meets the path at the standard.
+  // The hall's practice yard: worn ground between the banner, the rack and the
+  // tents, south of the curtain.
+  sword_hall: centre => ({
+    ground: [{ surface: 'yard', quad: [[-243, -63], [-233, -63], [-233, -53.5], [-243, -53.5]].map(([x, z]) => [x - centre.x, z - centre.z]) }],
+    lights: [],
+  }),
+  // The four fire bowls light the rite; one real light between them.
+  shadow_ravine: centre => ({
+    ground: [],
+    lights: [{ x: 340 - centre.x, z: -168 - centre.z, y: 1.6, colour: 0xff8a3a, intensity: 4, distance: 11, flicker: true }],
+  }),
+  // The furrow's marked course, from furrow_1 to furrow_end (script/band2.mjs).
+  first_furrow: centre => ({
+    ground: [{ surface: 'field_ploughed', strip: [-262 - centre.x, 410 - centre.z, -218 - centre.x, 426 - centre.z, 1.4] }],
+    lights: [],
+  }),
   castra_lupa: (centre, plan) => {
     const [lx, lz] = rel(centre, along(plan, 8, 0));
     return {
@@ -113,7 +132,7 @@ function campPlaces(plan) {
     radius: radiusFor(home, centre), preview: true, camp: plan.id, merge: true,
     pieces: piecesOf(plan, home, centre),
     ground: dressing.ground || [], lights: dressing.lights || [],
-    anchors: Object.fromEntries(plan.sentries.map((spot, i) => [`sentry_${i + 1}`, { x: spot.x - centre.x, z: spot.z - centre.z, facing: 0 }])),
+    anchors: Object.fromEntries((plan.sentries || []).map((spot, i) => [`sentry_${i + 1}`, { x: spot.x - centre.x, z: spot.z - centre.z, facing: 0 }])),
   })];
   for (const item of own) {
     const meta = OWN_PLACE[item.piece] || { id: plan.place + '_' + item.piece, key: item.piece };
@@ -127,4 +146,4 @@ function campPlaces(plan) {
   return places;
 }
 
-export const CAMP_PLACES = Object.freeze(CAMP_PLANS.flatMap(campPlaces));
+export const CAMP_PLACES = Object.freeze([...CAMP_PLANS, ...BAND2_PLACE_PLANS].flatMap(campPlaces));

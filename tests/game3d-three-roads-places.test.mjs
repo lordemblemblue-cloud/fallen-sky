@@ -377,9 +377,9 @@ test('the camps are built only with the preview switch; the town and fields are 
 });
 
 test('the camp layouts are the lead\'s plans, piece for piece', async () => {
-  const { CAMP_PLANS } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
+  const { CAMP_PLANS, BAND2_PLACE_PLANS } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
   const { CAMP_GROUND_MOVES } = await import('../src/components/game3d/threeroads/places/layouts/camps.mjs');
-  for (const plan of CAMP_PLANS) {
+  for (const plan of [...CAMP_PLANS, ...BAND2_PLACE_PLANS]) {
     const built = THREE_ROADS_PLACES.filter(place => place.camp === plan.id).flatMap(placeInstances);
     assert.equal(built.length, plan.items.length, plan.id);
     for (const planned of plan.items) {
@@ -393,7 +393,7 @@ test('the camp layouts are the lead\'s plans, piece for piece', async () => {
       assert.equal(match.afloat, Boolean(item.afloat));
       assert.equal(match.area, plan.area);
     }
-    assert.ok(built.some(inst => inst.piece === plan.tallMark && inst.landmark), plan.id + ' tall mark is a landmark');
+    if (plan.tallMark) assert.ok(built.some(inst => inst.piece === plan.tallMark && inst.landmark), plan.id + ' tall mark is a landmark');
   }
 });
 
@@ -502,5 +502,28 @@ test('a camp draws as a few merged meshes: its landmarks instanced, the rest one
     for (const mesh of merged) assert.ok(mesh.geometry.attributes.color, 'merged meshes carry their tints as vertex colours');
     places.dispose();
     assert.equal(root.parent, null);
+  }
+});
+
+test('band 2\'s small places: preview only, merged, on their story spots, clear of the trails', async () => {
+  const { BAND2_POINTS } = await import('../src/components/game3d/threeroads/script/band2.mjs');
+  const { wolfveilFrontierTrailClearance } = await import('../src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs');
+  for (const id of ['P14', 'P26', 'P36']) {
+    const place = placeLayout(id);
+    assert.ok(place?.preview && place.merge, id);
+    for (const inst of placeInstances(place)) {
+      const kit = kitPieceOf(inst.kit, inst.piece);
+      if (!kit.solid) continue;
+      const clear = Math.min(wolfveilFrontierTrailClearance(inst.x, inst.z), wolfveilRouteClearance(inst.x, inst.z));
+      assert.ok(clear > pieceReach(inst) * 0.5 + 0.85, `${id} ${inst.piece} at (${inst.x}, ${inst.z}) is ${clear.toFixed(1)} m from a trail`);
+    }
+  }
+  // The grave stone marks hall_grave; the fire bowls square ravine_chant, which stays clear.
+  const grave = placeInstances(placeLayout('P14')).find(inst => inst.piece === 'grave_stone');
+  assert.ok(Math.hypot(grave.x - BAND2_POINTS.hall_grave.x, grave.z - BAND2_POINTS.hall_grave.z) < 0.01);
+  const grid = createSolidGrid(THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst)).filter(Boolean)));
+  for (const name of ['ravine_chant', 'furrow_1', 'furrow_2', 'furrow_3', 'furrow_end', 'furrow_stone', 'furrow_cart']) {
+    const at = BAND2_POINTS[name];
+    assert.equal(resolveAgainstGrid(grid, { x: at.x, z: at.z }, 0.6), false, name + ' is blocked');
   }
 });
