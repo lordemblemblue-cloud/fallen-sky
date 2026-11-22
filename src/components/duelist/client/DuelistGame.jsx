@@ -28,6 +28,7 @@ import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createFootballProps } from './footballProps.mjs';
+import { createEscortProps } from './escortProps.mjs';
 import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
@@ -40,6 +41,7 @@ import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import ShopPanel from './ShopPanel.jsx';
+import StorySupplyPanel from './StorySupplyPanel.jsx';
 import MatchLoadingScreen from './MatchLoadingScreen.jsx';
 import { createClassWeapon, equipClassWeapon, wholeWeapon, weaponBlades, mirrorGrip, STAFF_HANDS } from './classWeapons.mjs';
 import { createSecondHand } from './secondHand.mjs';
@@ -179,6 +181,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [muted, setMuted] = useState(false);
   const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
   useEffect(() => { controlsRef.current?.setPaused(shopOpen); }, [shopOpen]);
+  useEffect(() => {
+    if (!shopOpen) return undefined;
+    const onEscape = event => { if (event.key === 'Escape') setShopOpen(false); };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [shopOpen]);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -187,7 +195,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setStatus('loading');
     setHud(null);
     setNet(null);
-    const selectedRenderer = createSceneRenderer('duelist-adventure', { antialias: true, powerPreference: 'high-performance' });
+    const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
@@ -198,6 +206,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     renderer.toneMappingExposure = 1.1;
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
+    if (renderer.__sceneState) renderer.__sceneState.gameplayScene = scene;
     const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 400);
     const lights = createSceneLighting(scene);
     scene.add(lights.sun.target);
@@ -237,7 +246,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setMuted(audio.muted);
     const toggleBattleShop = () => {
       const currentView = source.view?.();
-      if (!currentView || currentView.mission || currentView.phase === 'over') return;
+      if (!currentView || currentView.phase === 'over' || currentView.phase === 'complete' || currentView.phase === 'failed') return;
       // The cursor must be free to interact with the shop. Closing leaves it free until the
       // player clicks the arena to recapture it, avoiding a surprise mouse lock.
       if (document.pointerLockElement === renderer.domElement) document.exitPointerLock?.();
@@ -261,6 +270,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let ctf = null;
     let football = null;
     let control = null;
+    let escort = null;
     let lockId = null;
     let clock = 0;
     // the HUD's kill feed and banners
@@ -498,6 +508,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       // nobody of the last one (ids repeat between missions)
       if ((source.generation || 0) !== generationSeen || (source.level || null) !== level) {
         generationSeen = source.generation || 0;
+        setShopOpen(false); // a new crew operation should close the previous supply screen
         if ((source.level || null) !== level) {
           level = source.level || null;
           ensureArena(source.mode || mode);
@@ -526,6 +537,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
+        if (!escort && source.mode === 'escort') escort = createEscortProps(scene);
         if (!control && source.mode === 'control') control = createControlProps(scene, MODES.control.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
@@ -535,6 +547,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           return controls.read({ faceYaw, strafe: !!target });
         };
         const { effects, events } = source.step(dt, readInput);
+        escort?.update(source.escortDistance?.() ?? 0);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
@@ -742,6 +755,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       ctf?.dispose();
       football?.dispose();
       control?.dispose();
+      escort?.dispose();
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
@@ -811,6 +825,14 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
         onBuy={(id) => sourceRef.current?.buyItem?.(id)}
+        onClose={() => setShopOpen(false)} />}
+      {quest && quest.phase === 'live' && <button type="button" className="duelist-shop-toggle"
+        onClick={() => { if (document.pointerLockElement) document.exitPointerLock?.(); setShopOpen(true); }}>
+        {keyLabel(bound.shop, { short: true })} · Story Supplies · {quest.me?.supplyUsed ? 'Used' : '1 free'}
+      </button>}
+      {shopOpen && quest && quest.phase === 'live' && <StorySupplyPanel
+        view={quest} answer={sourceRef.current?.storySupplyAnswer || null}
+        onUse={(id) => sourceRef.current?.claimStorySupply?.(id)}
         onClose={() => setShopOpen(false)} />}
       <button type="button" className="duelist-sound" onClick={() => { const a = audioRef.current; if (!a) return; a.resume(); a.setMuted(!a.muted); setMuted(a.muted); if (a.muted) voicesRef.current?.stop(); }}>
         {muted ? 'Sound off' : 'Sound on'}

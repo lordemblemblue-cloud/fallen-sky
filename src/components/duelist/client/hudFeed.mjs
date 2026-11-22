@@ -135,7 +135,8 @@ export function createHudFeed() {
     const key = `${v.mode}:${v.round || 1}`;
     if (v.phase === 'live' && hinted !== key) {
       hinted = key;
-      const hint = v.mode === 'ctf' ? 'CAPTURE THE ENEMY FLAG' : v.mode === 'control' ? 'HOLD TWO POINTS TO SCORE'
+      const hint = v.mode === 'escort' ? (ctx.myTeam === 'red' ? 'ESCORT THE CARRIER' : 'DEFEND THE DELIVERY GATE')
+        : v.mode === 'ctf' ? 'CAPTURE THE ENEMY FLAG' : v.mode === 'control' ? 'HOLD TWO POINTS TO SCORE'
         : v.mode === 'tdm' ? 'ELIMINATE THE ENEMY TEAM' : v.mode === 'football' ? 'SCORE IN THE ENEMY GOAL' : null;
       if (hint && !banners.some((b) => b.slot === 'objective' && b.until > now)) banner('objective', 'neutral', hint, now, 4);
     }

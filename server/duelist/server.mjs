@@ -30,7 +30,7 @@ import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass, purchaseMatchItem } from '../../src/components/duelist/sim/match.mjs';
 import { createProgressStore } from './progress.mjs';
-import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS } from '../../src/components/duelist/sim/mission.mjs';
+import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS, claimStorySupply } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
@@ -423,7 +423,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       if (client.away) continue;
       const fighters = [];
       for (const f of world.fighters.values()) fighters.push(encodeFighter(f, world.bodies.get(f.id), { own: f.id === client.id }));
-      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, ball, effects, events, own: ownOf(world, client, match.phase === 'live'),
+      send(client, { t: 'snap', time, ack: client.usedSeq, fighters, projectiles, flags, ball, escortDistance:match.escort?.distance, effects, events, own: ownOf(world, client, match.phase === 'live'),
         view: withView ? { ...matchView(match, client.id), away } : undefined });
     }
   }
@@ -598,6 +598,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         }
         const result = purchaseMatchItem(client.room.match, client.id, msg.id);
         send(client, { t: 'shop', ...result });
+      } else if (msg.t === 'storySupply') {
+        // Free supplies are story-only, once per authoritative human seat per operation.
+        // The client cannot set stats, choose another seat, or spend competitive gold.
+        if (!client.room?.mission || typeof msg.id !== 'string' || msg.id.length > 48) {
+          send(client, { t: 'storySupply', ok: false, reason: 'no-story' }); return;
+        }
+        const result = claimStorySupply(client.room.mission, client.id, msg.id);
+        send(client, { t: 'storySupply', ...result });
       } else if (msg.t === 'leave') {
         leave(client);
       } else if (msg.t === 'input' && client.room) {

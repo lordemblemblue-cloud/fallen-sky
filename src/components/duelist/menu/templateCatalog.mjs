@@ -13,7 +13,7 @@ export const TEMPLATE_MODES = Object.freeze({
   normal: Object.freeze([
     mode('duel', 'Duel', 'One-on-one; first fighter to win three rounds.', 'duel', 'swords', '1 v 1'),
     mode('ctf', 'Capture the Flag', 'Capture the enemy flag three times.', 'ctf', 'flag', 'Teams'),
-    mode('transport', 'Transport', 'Escort and intercept an objective carrier. Gameplay pending.', null, 'truck', 'Planned'),
+    mode('transport', 'Transport', 'Escort the freight carrier or defend the delivery gate.', 'escort', 'truck', '4 v 4'),
     mode('tdm', 'Team Deathmatch', 'Red against blue in a team elimination battle.', 'tdm', 'users', 'Teams'),
     mode('control', 'Control Point', 'Hold two of three objectives to score.', 'control', 'target', 'Teams'),
     mode('ffa', 'Free for All', 'Every fighter for themselves.', 'ffa', 'zap', 'Solo'),

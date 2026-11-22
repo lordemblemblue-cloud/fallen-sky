@@ -1,7 +1,7 @@
 // A story mission played in the browser, as a "source" for the game view (the same shape as a local match or
 // an online one). The crew is you (friends play through the match server: net/client.mjs); the depot's
 // people are seats too, so the renderer gives them bodies, kits and name tags as they appear.
-import { createMission, stepMission, missionView } from '../sim/mission.mjs';
+import { createMission, stepMission, missionView, claimStorySupply } from '../sim/mission.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
 import { enemySeat, allySeat, crewSeat, teacherBodyFor } from './missionSeats.mjs';
 
@@ -14,6 +14,7 @@ export function createMissionSource({ id = 'contraband', seed = 1, youBody = BOD
   let seats = [];
   let version = 0;
   let known = '';
+  let storySupplyAnswer = null;
   const refresh = () => {
     const key = [...mission.seats.keys(), '|', ...mission.allies.keys(), '|', ...mission.enemies.keys()].join(',');
     if (key === known) return;
@@ -38,6 +39,8 @@ export function createMissionSource({ id = 'contraband', seed = 1, youBody = BOD
     get seatsVersion() { return version; },
     seats: () => seats,
     view: () => missionView(mission, 'you'),
+    get storySupplyAnswer() { return storySupplyAnswer; },
+    claimStorySupply(id) { storySupplyAnswer = claimStorySupply(mission, 'you', id); return storySupplyAnswer; },
     flags: () => null,
     step(dt, readInput) {
       accumulator += dt;

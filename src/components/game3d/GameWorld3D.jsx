@@ -166,8 +166,8 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
-import {resolveFallenSkyLiveRendererChoice} from './render/liveRendererRecovery.mjs';
-import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,holdSceneFrames,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
+import {createWorldDrawWatchdog} from './render/liveRendererRecovery.mjs';
+import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -265,7 +265,13 @@ const showCombatNotice = (text) => {
   window.dispatchEvent(new CustomEvent('skillActivatedToast', { detail: { text } }));
 };
 
-export default function GameWorld3D({region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
+export default function GameWorld3D(props) {
+  const [recoveryReason, setRecoveryReason] = useState(null);
+  return <GameWorldScene key={recoveryReason || 'preferred'} {...props}
+    recoveryReason={recoveryReason} onRendererFailure={setRecoveryReason}/>;
+}
+
+function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
   // This flag is read by the existing WebGL loop without destroying its scene
@@ -540,23 +546,17 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     let renderer;
     // Draws the frame again after a resize (assigned next to handleResize below; until then a no-op)
     let redrawAfterResize = () => {};
-    // WebGPU: no frames until the player is ready and the area's shaders are compiled (markAvatarReady below)
-    let releaseInitialFrames = () => {};
-    // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
-    // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
-    // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
-    // Emergency safety gate: the Windows live shell has reported a fully loaded but all-black
-    // WebGPU scene with zero draws. Until device-level visual QA passes, use classic WebGL
-    // unless a developer explicitly requests a WebGPU/WebGL2 preview in the current URL.
-    const rendererChoice = resolveFallenSkyLiveRendererChoice(
-      chooseSceneRendererFor('fallen-sky', window), { search: window.location.search });
+    const rendererChoice = recoveryReason
+      ? { kind: 'webgl', reason: recoveryReason }
+      : chooseSceneRendererFor('fallen-sky', window);
     window.__gw3dRendererChoice = rendererChoice;
-    const showWorldUnavailable = (detail) => {
-      const msg = document.createElement('div');
-      msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;text-align:center;padding:24px;z-index:5;';
-      msg.innerHTML = '<div><div style="font-size:18px;font-weight:600;margin-bottom:8px">3D world unavailable</div><div style="opacity:0.6;font-size:14px"></div></div>';
-      msg.querySelector('div > div:last-child').textContent = detail;
-      container.appendChild(msg);
+    const checkEmptyDraws = createWorldDrawWatchdog();
+    let recovering = false;
+    const recoverRenderer = (reason) => {
+      if (recovering || rendererChoice.kind === 'webgl') return;
+      recovering = true;
+      rememberRendererFailure(window, 'fallen-sky');
+      onRendererFailure(reason);
     };
     try {
       const gpuHints = readGame3DGpuHints(window);
@@ -573,10 +573,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           powerPreference: 'high-performance', forceWebGL: rendererChoice.kind === 'webgl2' });
         const gpuRenderer = created.renderer;
         renderer = gpuRenderer;
-        // drawing before then would compile every new shader synchronously, one frame at a time (seconds each)
-        releaseInitialFrames = holdSceneFrames(gpuRenderer);
-        setTimeout(() => releaseInitialFrames(), 60000); // never left held (e.g. a character that never loads)
-        window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'WebGPU');
+        gpuRenderer.__sceneState.gameplayScene = scene;
+        window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'Initializing');
         // Nothing is drawn until init resolves (webglContextGuard); then the GPU class is known and the
         // graphics budget is worked out again, as WebGL does at once from the context.
         created.ready.then(({ api, adapter }) => {
@@ -585,17 +583,19 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           applyWorldGraphicsBudget();
         }, (error) => {
           console.error('GameWorld3D: WebGPURenderer could not start —', error);
-          rememberRendererFailure(window); // the next start in this tab uses the classic renderer
-          if (window.__gw3dRenderer === gpuRenderer)
-            showWorldUnavailable('The graphics renderer could not start. Reload to use the classic renderer.');
+          if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-init-failed');
         });
         onSceneDeviceLost(gpuRenderer, () => {
-          rememberRendererFailure(window);
-          if (window.__gw3dRenderer === gpuRenderer)
-            showWorldUnavailable('The graphics device was reset. Reload to continue.');
+          if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-device-lost');
         });
       }
     } catch (e) {
+      if (rendererChoice.kind !== 'webgl') {
+        canvas.remove();
+        console.error('GameWorld3D: renderer initialization failed', e);
+        recoverRenderer('webgpu-init-failed');
+        return;
+      }
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
       setLoading(false);
@@ -2445,7 +2445,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         if (renderer.isWebGPURenderer) {
           precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
             .then((result) => { window.__gw3dPrecompile = result; }, () => {})
-            .then(() => { releaseInitialFrames(); return waitForSceneRenders(renderer, 6); })
+            .then(() => waitForSceneRenders(renderer, 6))
             .then(announce, announce);
         } else announce();
       };
@@ -2487,7 +2487,6 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         });
     }).catch((err) => {
       console.error('Player model load error:', err);
-      releaseInitialFrames();
       setLoading(false);
       if(!avatarLoadDisposed)window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{
         detail:{message:err?.message || 'Character model could not load. Try again or return to Character Select.'}}));
@@ -3460,6 +3459,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     let frameId;
     let uiFrameCounter = 0;
     let staminaOccludedByEnemy = false;
+    const drawWorld = (activeCamera, now) => {
+      const state = renderer.__sceneState;
+      const before = state?.gameplayFrames || 0;
+      inkLook.render(scene, activeCamera);
+      if (state && checkEmptyDraws(now, state.ready && !state.holdRender && !document.hidden &&
+          container.clientWidth > 0 && container.clientHeight > 0 && !!modelRef.current,
+          (state.gameplayFrames || 0) - before)) recoverRenderer('world-submitted-no-draws');
+    };
     const animate = (renderNow=performance.now()) => {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -3495,7 +3502,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           entryCamera.preview(delta,{camera,model,mode:entryPreviewModeRef.current,
             clipAgainstTerrain:pose=>playerCameraSystem.clipAgainstTerrain(pose)});
         }
-        if(renderThisFrame)inkLook.render(scene,camera);
+        if(renderThisFrame)drawWorld(camera,renderNow);
         return;
       }
       if(menuCameraHeld){
@@ -5760,7 +5767,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       if(playerFace){const fighting=isInCombat();playerFace.setMood(fighting?'fierce':'neutral',fighting?.85:1);playerFace.update(Math.min(delta,.1));}
       const activeCamera=window.__axeTileInspectionCamera?.worldId === 'game3d'
         ? window.__axeTileInspectionCamera.camera : camera;
-      if(renderThisFrame)inkLook.render(scene,activeCamera);
+      if(renderThisFrame)drawWorld(activeCamera,renderNow);
     };
     animate();
 

@@ -130,7 +130,17 @@ export default function ExplorationDiscoveryMount() {
     const detach = () => {
       markers.forEach((group) => {
         group.parent?.remove(group);
-        group.traverse((node) => { node.geometry?.dispose?.(); node.material?.dispose?.(); });
+        // Several crystals share one geometry and one material: collect them first
+        // so each is disposed exactly once (a second dispose crashes the WebGPU renderer).
+        const geometries = new Set();
+        const materials = new Set();
+        group.traverse((node) => {
+          if (node.geometry) geometries.add(node.geometry);
+          if (Array.isArray(node.material)) node.material.forEach((m) => m && materials.add(m));
+          else if (node.material) materials.add(node.material);
+        });
+        geometries.forEach((geometry) => geometry.dispose());
+        materials.forEach((material) => material.dispose());
       });
       markers.clear();
       scene = null;

@@ -8,6 +8,8 @@ export function resultOutcome(view, myTeam = null) {
   return view.winner === me || (myTeam && view.winner === myTeam) ? 'VICTORY' : 'DEFEAT';
 }
 export function resultsScoreText(view) {
+  if (view?.mode === 'escort' && view.escort) return view.winner === 'red'
+    ? 'Payload delivered · 100%' : 'Defense held · ' + Math.floor(view.escort.progress) + '% of route';
   if (!TEAM_MODES.has(view?.mode)) return '';
   const scores = view.teamScores || {};
   const number = (value) => Number.isFinite(value) ? value : 0;

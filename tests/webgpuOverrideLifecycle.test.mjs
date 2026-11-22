@@ -16,7 +16,7 @@ function memoryStorage() {
   };
 }
 
-test('explicit preview choice persists across both games, but does not change the measured default', () => {
+test('explicit preview choice persists across both games, but auto restores the browser default', () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();
   const host = { location: { search: '?renderer=webgpu' }, localStorage, sessionStorage };
@@ -25,19 +25,19 @@ test('explicit preview choice persists across both games, but does not change th
 
   host.location.search = '';
   assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgpu', reason: 'override' });
-  // back to the default: without this device's faster-WebGPU verdict, the classic renderer
+  // This host exposes no browser WebGPU API.
   host.location.search = '?renderer=auto';
-  assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgl', reason: 'device-not-measured' });
+  assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), { kind: 'webgl', reason: 'webgpu-api-unavailable' });
   assert.equal(localStorage.getItem(RENDERER_OVERRIDE_KEY), null);
   host.location.search = '';
-  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), { kind: 'webgl', reason: 'device-not-measured' });
+  assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), { kind: 'webgl', reason: 'webgpu-api-unavailable' });
 });
 
 test('a failed WebGPU device overrides persisted preview preference in either scene', () => {
   const localStorage = memoryStorage();
   const sessionStorage = memoryStorage();
   localStorage.setItem(RENDERER_OVERRIDE_KEY, 'webgpu');
-  sessionStorage.setItem(RENDERER_FAILED_KEY, '1');
+  for (const scene of ['fallen-sky','duelist-adventure']) sessionStorage.setItem(RENDERER_FAILED_KEY + ':' + scene, '1');
   const host = { location: { search: '' }, localStorage, sessionStorage };
   for (const scene of ['fallen-sky', 'duelist-adventure']) {
     assert.deepEqual(chooseSceneRendererFor(scene, host), { kind: 'webgl', reason: 'webgpu-failed-earlier' });

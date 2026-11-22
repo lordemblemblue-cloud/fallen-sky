@@ -33,16 +33,17 @@ test('mode routes launch real supported modes only, never imaginary ranked or cu
   assert.equal(templateLaunch('practice','target-range'), null);
   assert.equal(templateLaunch('ranked','duel',true,true), null);
   assert.equal(templateLaunch('custom','create-lobby'), null);
-  assert.equal(templateLaunch('normal','transport'), null);
+  assert.deepEqual(templateLaunch('normal','transport'), {mode:'escort', online:0});
   assert.equal(templateLaunch('normal','unknown'), null);
   assert.equal(templateMode('ranked','duel').route, null);
 });
 
 test('bottom navigation is actionable and Settings is last, without Pass or Plus', () => {
   const ids = menu.split('const NAV = [')[1].split('];')[0];
-  for (const id of ['home', 'play', 'character', 'story', 'store', 'settings'])
+  for (const id of ['home', 'play', 'character', 'story', 'settings'])
     assert.match(ids, new RegExp("id: '" + id + "'"));
-  assert.ok(ids.lastIndexOf("id: 'settings'") > ids.indexOf("id: 'store'"));
+  assert.doesNotMatch(ids, /id: 'store'/, 'the battle shop belongs only to live matches');
+  assert.ok(ids.lastIndexOf("id: 'settings'") > ids.indexOf("id: 'story'"));
   assert.doesNotMatch(ids, /battlePass|plus/i);
   assert.match(menu, /navigatePanel\(id\)/);
   assert.match(menu, /to: '\/duelist-next\/play'/);
@@ -88,9 +89,16 @@ test('shared combat rules apply server-owned mastery to class abilities and ulti
   assert.match(source('src/components/duelist/sim/match.mjs'), /levelFromXp\(s.progress\?\.\[classId\]\)/);
 });
 
-test('store is a read-only view of in-match items, not an invented hub checkout', () => {
-  assert.match(menu, /SHOP_ITEMS\.filter/);
-  assert.match(menu, /match-only item/i);
-  assert.match(menu, /Items can only be purchased with server-owned gold during an active match/);
-  assert.doesNotMatch(menu, /purchaseItem\(|buyItem\(/);
+test('the match shop only opens during gameplay, and story supplies are in the campaign', () => {
+  assert.doesNotMatch(menu, /function StoreBrowser|const SHOP_FILTERS|<StoreBrowser/);
+  assert.doesNotMatch(source('src/routes/duelist-next.$page.jsx'), /'store'/);
+  const game = source('src/components/duelist/client/DuelistGame.jsx');
+  assert.match(game, /match && <button[^>]+className="duelist-shop-toggle"/);
+  assert.match(game, /shopOpen && match && match.phase !== 'over' && <ShopPanel/);
+  assert.match(game, /shopOpen && quest && quest.phase === 'live' && <StorySupplyPanel/);
+  const story = source('src/components/duelist/menu/DuelistStoryMenu.jsx');
+  assert.match(story, /id: 'supplies', title: 'Story Shop'/);
+  assert.match(story, /QUICK JOIN OPEN CREW/);
+  assert.match(story, /HOST OPEN CREW/);
+  assert.match(story, /JOIN PRIVATE CREW/);
 });

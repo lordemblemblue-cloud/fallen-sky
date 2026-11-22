@@ -16,6 +16,8 @@
 //   { t: 'join', ..., cls? }                      cls: the class to fight as (core/classes.mjs CLASS_IDS)
 //   { t: 'class', id }                           change class: queued for the next spawn (allowed before the fight,
 //                                                between rounds or while down; answered { t: 'class', ok, pending, reason })
+//   { t: 'storySupply', id }                     request one free recovery supply in an active story operation;
+//                                                server derives seat ID and validates missing resources (no match gold)
 //   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
 //                                                interact held (story), presses (ability1-4 and special too)
 //   { t: 'leave' }
@@ -37,6 +39,7 @@
 //       a story room's view is the mission's (sim/mission.mjs missionView) plus room: { code, open } and againIn;
 //       uses: [[id, by, progress]] for what is being used right now; idle: [id] people who have noticed nobody
 //       and stand as last sent (everyone is sent in full once a second and when someone joins or appears)
+//   { t: 'storySupply', ok, id?, reason?, stat?, value? }  result sent only to the requesting story player
 //   { t: 'left' }   { t: 'error', code, message }
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
@@ -55,7 +58,7 @@ export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control']);
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort']);
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
 export const STORY_MODE = 'story';

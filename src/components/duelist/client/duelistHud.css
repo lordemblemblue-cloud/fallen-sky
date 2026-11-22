@@ -139,6 +139,11 @@
 .dh-flag[data-state='dropped'] small { color: #f0a36b; }
 .dh-flag[data-state='returned'] small, .dh-flag[data-state='captured'] small { color: #f4f8fc; }
 
+.dh-escort { width: 390px; padding: 12px 24px; display: grid; grid-template-columns: 1fr auto;
+  gap: 4px 14px; background: rgba(9,22,40,.9); border-bottom: 2px solid #caab69; }
+.dh-escort strong, .dh-escort small { text-transform: uppercase; }
+.dh-escort progress { width: 100%; align-self: center; height: 8px; accent-color: #e1b361; }
+.dh-escort small { grid-column: 1 / -1; }
 .dh-control3 { width: 660px; height: 124px; background-image: url('/ui/duelist/hud/parts/control3.svg'); }
 .dh-control3 .dh-side { top: 30px; width: 184px; height: 46px; }
 .dh-control3 .dh-side-blue { left: 52px; }

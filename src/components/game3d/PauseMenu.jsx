@@ -181,7 +181,7 @@ export default function PauseMenu({
         old?.width===next?.width&&old?.height===next?.height&&
         old?.pixelRatio===next?.pixelRatio?old:next);
       const info=window.__gw3dGpuInfo||null;
-      setGpuInfo(old=>old?.renderer===info?.renderer&&old?.deviceMemoryGb===info?.deviceMemoryGb?old:info);
+      setGpuInfo(old=>old?.api===info?.api&&old?.renderer===info?.renderer&&old?.deviceMemoryGb===info?.deviceMemoryGb?old:info);
     };
     update();
     window.addEventListener('resize',update,{passive:true});
@@ -838,7 +838,7 @@ export default function PauseMenu({
                     Game viewport: {displayPreview.cssWidth} × {displayPreview.cssHeight} CSS pixels.
                     {' '}Requested render target: {displayPreview.width} × {displayPreview.height}.
                     {' '}{displayedPixels
-                      ? `Applied WebGL output: ${displayedPixels[0]} × ${displayedPixels[1]} physical pixels.`
+                      ? `Drawing buffer: ${displayedPixels[0]} × ${displayedPixels[1]} physical pixels.`
                       : 'Waiting for the 3D renderer to initialize; no resolution has been confirmed yet.'}
                     {displayPreview.limited?' Limited to fit this browser’s safe texture/pixel budget.':''}
                   </p>
