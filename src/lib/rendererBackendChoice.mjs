@@ -86,7 +86,7 @@ export function rememberRendererFailure(host = globalThis.window, sceneId = 'fal
 
 // Settings explicitly requests a fresh attempt, including after a device reset.
 export function retryWebGPU(sceneId, host = globalThis.window) {
-  const url = new URL(host.location.href);
+  const url = new globalThis.URL(host.location.href);
   url.searchParams.set('renderer', 'webgpu');
   try { host.sessionStorage?.removeItem?.(RENDERER_FAILED_KEY + ':' + sceneId); } catch { /* optional */ }
   if (url.href === host.location.href) host.location.reload();
