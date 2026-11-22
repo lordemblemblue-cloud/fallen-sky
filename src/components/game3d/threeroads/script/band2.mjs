@@ -40,11 +40,11 @@ export const BAND2_POINTS = Object.freeze({
   landing_bowcase: Object.freeze({ x: 266, z: -432 }),
   // East: the old battle camp and Shadow Ravine (P26)
   scarred_blade: Object.freeze({ x: 318, z: -252 }),
-  ravine_gate: Object.freeze({ x: 332, z: -150 }),
-  ravine_chant: Object.freeze({ x: 340, z: -168 }),
+  ravine_gate: Object.freeze({ x: 331, z: -143.5 }),
+  ravine_chant: Object.freeze({ x: 333, z: -152 }),
   ravine_dead: Object.freeze({ x: 343, z: -173 }),
   ravine_ink: Object.freeze({ x: 352, z: -183 }),
-  ravine_sixth: Object.freeze({ x: 350, z: -160 }),
+  ravine_sixth: Object.freeze({ x: 333, z: -147.5 }),
   // North: the First Furrow on the Howling Plateau (P36)
   furrow_cart: Object.freeze({ x: -264, z: 406 }),
   furrow_1: Object.freeze({ x: -262, z: 410 }),
