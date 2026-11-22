@@ -57,7 +57,8 @@ test('twin blades and staff use their own original directional attacks and recov
     assert.ok(flow.chain.every(moveId => moveId.startsWith(prefix) && MOVES[moveId]?.weapon === weapon),
       `${id}: chain never silently plays single-sword attacks`);
     for (const id of ['stand', 'left', 'right', 'forward', 'back']) {
-      const moveId = flow.modes.balanced[id];
+      // The neutral strike is the first chain entry; directional inputs have explicit lookups.
+      const moveId = id === 'stand' ? flow.chain[0] : flow.modes.balanced[id];
       assert.equal(MOVES[moveId].weapon, weapon);
       const { clip } = clipAt(moveId, 0);
       assert.equal(clip, moveId);
