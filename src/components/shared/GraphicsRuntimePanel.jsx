@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { humanGraphicsStatus, readGraphicsRuntimeStatus } from '@/lib/graphicsRuntimeStatus.mjs';
+import { retryWebGPU } from '@/lib/rendererBackendChoice.mjs';
 import { probeBrowserGPU, browserGPUStatusMessage } from '@/lib/browserGPUDetection.mjs';
 
 const panelStyle = { border: '1px solid rgba(165,195,226,.20)', borderRadius: 14,
@@ -57,6 +58,7 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
       <Metric title="Verified WebGPU" value={live.webgpuActive ? 'Yes' : 'No'}/>
       <Metric title="GPU device" value={live.deviceConfirmed ? 'Initialized' : 'Not confirmed'}/>
       <Metric title="Render calls" value={live.frameCount.toLocaleString()}/>
+      {live.backend === 'webgpu' && <Metric title="World renders with draws" value={live.gameplayFrames.toLocaleString()}/>}
       <Metric title="GPU lost" value={live.deviceLost ? 'Yes' : 'No'}/>
       {live.adapterName && <Metric title="Active WebGPU adapter (browser-reported)" value={live.adapterName}/>}
       {live.webglRendererName && <Metric title="WebGL renderer (browser-reported)" value={live.webglRendererName}/>}
@@ -65,6 +67,8 @@ export default function GraphicsRuntimePanel({ sceneId, enabled = true }) {
       {browser.name && <Metric title="Detected graphics card (browser-reported)" value={browser.name}/>}
       <p role="status" style={{ margin: '9px 0 4px', opacity: .84, fontSize: 12 }}>{browserGPUStatusMessage(browser)}</p>
     </dl>
+    {browser.status === 'available' && ['classic-webgl', 'webgl2-fallback'].includes(live.backend) &&
+      <button type="button" onClick={() => retryWebGPU(sceneId)}>Restart this game with WebGPU</button>}
     <button type="button" onClick={() => void checkBrowser(true)}
       style={{ marginTop: 10, padding: '5px 10px', borderRadius: 8,
         border: '1px solid rgba(210,226,245,.4)', color: 'inherit', background: 'transparent' }}>

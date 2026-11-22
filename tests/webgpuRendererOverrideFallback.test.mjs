@@ -35,8 +35,8 @@ test('a remembered WebGPU failure overrides explicit WebGPU preview', () => {
     localStorage: storage(),
     sessionStorage: storage(),
   };
-  rememberRendererFailure(host);
-  assert.equal(host.sessionStorage.getItem(RENDERER_FAILED_KEY), '1');
+  rememberRendererFailure(host,'duelist-adventure');
+  assert.equal(host.sessionStorage.getItem(RENDERER_FAILED_KEY + ':duelist-adventure'), '1');
   assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), {
     kind: 'webgl', reason: 'webgpu-failed-earlier',
   });
@@ -45,9 +45,9 @@ test('a remembered WebGPU failure overrides explicit WebGPU preview', () => {
 test('auto clears persisted override and restores fail-closed default', () => {
   const localStorage = storage({ [RENDERER_OVERRIDE_KEY]: 'webgpu' });
   const host = { location: { search: '?renderer=auto' }, localStorage, sessionStorage: storage() };
-  // no stored verdict that WebGPU is at least as fast on this device: the classic renderer
+  // This host exposes no browser WebGPU API.
   assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), {
-    kind: 'webgl', reason: 'device-not-measured',
+    kind: 'webgl', reason: 'webgpu-api-unavailable',
   });
   assert.equal(localStorage.getItem(RENDERER_OVERRIDE_KEY), null);
 });

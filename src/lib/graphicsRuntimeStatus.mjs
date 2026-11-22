@@ -36,6 +36,7 @@ export function humanGraphicsStatus(status) {
   if (status.backend === 'classic-webgl') return 'Classic WebGL is active (not WebGPU).';
   if (status.backend === 'webgl2-fallback') return 'WebGL2 compatibility backend is active (not WebGPU).';
   if (status.backend === 'initializing') return 'Renderer is initializing; WebGPU has not been verified.';
-  if (status.webgpuActive) return 'WebGPU active: live renderer initialized and frame calls recorded.';
+  if (status.status === 'waiting-for-world-draws') return 'WebGPU initialized. Waiting for the game world to draw.';
+  if (status.webgpuActive) return 'WebGPU is active. The live game world has issued draw calls.';
   return 'WebGPU has not yet been verified for this gameplay session.';
 }

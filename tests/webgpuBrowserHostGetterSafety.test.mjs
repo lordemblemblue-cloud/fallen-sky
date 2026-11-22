@@ -6,18 +6,19 @@ import {
 } from '../src/lib/rendererBackendChoice.mjs';
 
 for (const property of ['sessionStorage', 'location', 'localStorage']) {
-  test(`throwing browser ${property} getter fails closed even for previewable scenes`, () => {
+  test(`throwing browser ${property} getter does not disable a capable renderer`, () => {
     const host = {
+      navigator: { gpu: {} },
       sessionStorage: { getItem: () => null },
       location: { search: '?renderer=webgpu' },
       localStorage: { getItem: () => null },
     };
     Object.defineProperty(host, property, { get() { throw new Error('access denied'); } });
     assert.deepEqual(chooseSceneRendererFor('fallen-sky', host), {
-      kind: 'webgl', reason: 'browser-host-unavailable',
+      kind: 'webgpu', reason: property === 'location' ? 'scene-ready' : 'override',
     });
     assert.deepEqual(chooseSceneRendererFor('duelist-adventure', host), {
-      kind: 'webgl', reason: 'browser-host-unavailable',
+      kind: 'webgpu', reason: property === 'location' ? 'scene-ready' : 'override',
     });
   });
 }
@@ -35,7 +36,7 @@ test('normal explicit preview selection remains available', () => {
 
 test('previous device failure still forces WebGL for explicit WebGPU preview', () => {
   const host = {
-    sessionStorage: { getItem: (key) => key === RENDERER_FAILED_KEY ? '1' : null },
+    sessionStorage: { getItem: (key) => key === RENDERER_FAILED_KEY + ':duelist-adventure' ? '1' : null },
     location: { search: '?renderer=webgpu' },
     localStorage: { setItem: () => {} },
   };
