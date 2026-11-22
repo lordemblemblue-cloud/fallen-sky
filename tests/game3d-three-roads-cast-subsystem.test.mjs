@@ -326,8 +326,17 @@ test('a far speaker, an absent one and an archer of the game are shown as a subt
   w.cast.update(0.1, player);
   assert.equal(w.cast.status().subtitle, 'archer_lyra');
   w.archer.group.position.set(0, 22.7, -34); // now 4 m away: over her head
+  w.ctx.camera.position.set(0, 25, -27); // behind the player, looking at her
+  w.ctx.camera.lookAt(0, 24, -34);
   w.cast.update(0.1, player);
   assert.notEqual(w.cast.status().subtitle, 'archer_lyra');
+  // the camera turns south, away from her: still 4 m away, but off screen
+  w.ctx.camera.lookAt(0, 24, -10);
+  w.cast.update(0.1, player);
+  assert.equal(w.cast.status().subtitle, 'archer_lyra', 'a near speaker behind the camera is a subtitle');
+  w.ctx.camera.lookAt(0, 24, -34);
+  w.cast.update(0.1, player);
+  assert.notEqual(w.cast.status().subtitle, 'archer_lyra', 'back over her head once she is in view');
   await tick();
   assert.ok(w.voices.includes('maren_m02_01') && w.voices.includes('lyra_m01_04'), JSON.stringify(w.voices));
   w.cast.dispose();
