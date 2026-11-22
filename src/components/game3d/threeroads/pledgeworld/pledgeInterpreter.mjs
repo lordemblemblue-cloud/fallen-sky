@@ -23,7 +23,7 @@
 import { getPledgeActiveGroup } from '../../pledges/pledgeProgress.mjs';
 import { localToWorld } from '../coords.mjs';
 import { pledgePersonName, pledgePointLocal, pledgeStaging } from './pledgeScript.mjs';
-import { asList, createStepWatcher, groupDetail } from './pledgeWatchers.mjs';
+import { TALK_RANGE, asList, createStepWatcher, groupDetail } from './pledgeWatchers.mjs';
 
 // What a step remembers while it is open and the scene is rebuilt around it:
 // which of several people or points are already done, and how many of the
@@ -332,7 +332,19 @@ export function createPledgeInterpreter({
         // report() has already reached the store and sync() has run again.
         if (result.person && result.person === rt.pledge.npcId && rt.stepIndex < 0) pass = true;
       }
-      return used ? (pass ? 'pass' : 'consume') : null;
+      if (used) return pass ? 'pass' : 'consume';
+      // A giver who is in the middle of a scene for a sworn pledge, or is
+      // holding out its choice, is not free to talk: the game's own box
+      // ("Keep going") must not open over the scene or the choice.
+      for (let i = 0; i < list.length; i++) {
+        const rt = list[i];
+        if (rt.dead || rt.stepIndex < 0 || !rt.pledge.npcId) continue;
+        const busy = rt.pledge.pledge.steps[rt.stepIndex].kind === 'choose' || (!rt.watcher && rt.queue.length > 0);
+        if (!busy) continue;
+        const at = frame.locate?.(rt.pledge.npcId);
+        if (at && Math.hypot(at.x - frame.player.x, at.z - frame.player.z) <= TALK_RANGE) return 'consume';
+      }
+      return null;
     },
     // What to show: { prompt: { key, hold, label, progress } | null, choice | null }.
     view(frame, out = { prompt: null, choice: null }) {

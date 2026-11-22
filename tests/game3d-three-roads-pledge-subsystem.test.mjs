@@ -247,6 +247,8 @@ test('a choice is a dialogue: the game stops reading keys, a number answers, Esc
   assert.equal(t.win.__axeDialogueOpen, false, 'put aside: the keys are the game\'s again');
   t.run(10.5);
   assert.ok(t.subsystem.view().choice, 'with nobody to stand beside it comes back by itself');
+  assert.equal(t.key('keydown').stopped, true, 'E while the choice is up never reaches the game');
+  t.key('keyup');
   assert.equal(t.key('keydown', { key: '9', code: 'Digit9' }).stopped, false, 'there is no ninth answer');
   assert.equal(t.key('keydown', { key: '2', code: 'Digit2' }).stopped, true);
   t.run(0.2);

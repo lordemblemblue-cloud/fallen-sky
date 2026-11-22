@@ -246,6 +246,9 @@ export function createPledgeWorldSubsystem(ctx = {}, {
       } else if (key === 'escape') {
         swallow(event);
         interpreter.dismissChoice(view.choice.pledgeId, clock());
+      } else if (key === 'e' || event.code === 'KeyE') {
+        // The choice is the dialogue: the game's own box must not open over it.
+        swallow(event);
       }
       return;
     }

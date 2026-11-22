@@ -361,6 +361,10 @@ test('Three Arrows: the parley plays out before the chase, a lost trail starts a
   assert.deepEqual(h.reports('item_delivered')[0].detail, { type: 'item_delivered', pledgeId: M02, count: 1, targetId: 'sable_vey' });
   h.wait(1);
   assert.equal(h.view().choice, null, 'the choice waits for the scene');
+  assert.equal(h.press(), 'consume', "during her scene E beside Sable is not the game's (no 'Keep going' box over it)");
+  h.place({ x: 40, z: 40 });
+  assert.equal(h.press(), null, 'away from her it is');
+  h.place('sable_vey');
   h.wait(17);
   assert.deepEqual(h.says().slice(-5), ['sable_m02_05', 'aelia_m02_03', 'paneb_m02_03', 'mizuhara_m02_03', 'sable_m02_06']);
   assert.deepEqual(h.bus('cast:moveTo').slice(4).map(e => e.id), ['aelia_sabina', 'paneb_scribe', 'mizuhara_jun']);
@@ -368,6 +372,8 @@ test('Three Arrows: the parley plays out before the chase, a lost trail starts a
   // The choice.
   const shown = h.view().choice;
   assert.equal(shown.prompt, 'Sable Vey holds out the Truce Stone.');
+  assert.equal(h.press(), 'consume', 'with her choice held out, E beside her opens nothing else');
+  assert.equal(h.reports('choice_made').length, 0);
   assert.deepEqual(shown.options.map(o => o.id), ['swear', 'silent']);
   assert.equal(h.choose(M02, 'nonsense'), false);
   assert.equal(h.choose(M02, 'swear'), true);
