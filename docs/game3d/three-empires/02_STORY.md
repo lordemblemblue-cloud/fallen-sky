@@ -207,16 +207,16 @@ The main line is the same for all three empires and is given by the valley's peo
 
 ## 7. Each empire's own story
 
-Eight chapters each, on that empire's side of the valley. Each ends with the player choosing between two leaders, and neither choice is the wrong one. Chapters 3, 5 and 6 of each line are deliberately pointed at the same places as another empire's chapter, so players doing them meet as enemies.
+Eight chapters each, on that empire's side of the valley. Each ends with the player choosing between two leaders, and neither choice is the wrong one. Chapters 3 to 6 of each line are deliberately pointed at the same places as another empire's chapter, so players doing them meet as enemies.
 
 ### Akitsu: The Iron Road (Western Cedar Wilds)
 
 1. **A Farmer's Son in a Blue Coat.** Sergeant Gorō's recruits learn that a rifle is a spear now, the hard way, on the night the ink beasts come.
-2. **The Sword Mistress's Price.** Lady Asagiri will train the conscripts if someone brings back her house banner, and the boy who carried it.
+2. **The Sword Mistress's Price.** Lady Asagiri will train the conscripts if someone brings back her house banner, and the swords of the grandson who carried it.
 3. **Survey Stakes.** Mizuhara's railway survey across the west. At the shrine, Kohaku shows you which trees the line runs through. *(Remoria is sent to pull the stakes; Tameri to copy the map.)*
 4. **Moon-Ring.** A mother bear poisoned by a splinter of star-iron. The Colonel wants her shot. Kohaku wants her saved. You decide how the fight ends.
-5. **The Grey Ships' Letter.** Sixty days. Escort the first ore wagons to the Road. *(Tameri raids them; Remoria sets a toll.)*
-6. **Seven Swords at the Pass.** House Asagiri holds the pass against a Remorian cohort to buy the wagons time. Seven named swordsmen. How many live depends on you. *(Remoria is ordered to take it.)*
+5. **The Grey Ships' Letter.** Sixty days. Escort the first ore wagons to the Road. *(Tameri raids them.)*
+6. **Seven Swords at the Stones.** House Asagiri holds the frontier at the Wolf Stones against a Remorian cohort. Seven named swordsmen. How many live depends on you. *(Remoria is ordered to take it.)*
 7. **The Cedar Order.** The Colonel orders the shrine cedars felled for the railway. Lady Asagiri refuses. Kohaku stands at the trees. **You choose: the railway or the grove.**
 8. **First Train Through the Mountain** or **The Last Stand of House Asagiri.** The cost of what you chose, and what the other one says to you afterwards.
 
@@ -227,7 +227,7 @@ Eight chapters each, on that empire's side of the valley. Each ends with the pla
 3. **Eyes on the Iron Road.** Sabu takes you west to learn what Akitsu is building. *(Akitsu guards its survey; Remoria is there too.)*
 4. **The Quarry of the Ancestors.** In the old quarry lies an obelisk cut by Tameri hands four hundred years ago. Clear what nests there and raise it. *(Remoria wants the stone for its fort.)*
 5. **The Iron That Should Be Bread.** The General sends you to take Akitsu's ore. The Priestess asks what you think you are stealing. *(Akitsu escorts it.)*
-6. **The Night Barge.** Grain for home, down the river in the dark, under a bridge two other armies are fighting over. If it arrives, the count goes up nine days.
+6. **The Night Barge.** Grain for home, down the river in the dark, past a floating bridge the other armies would like to sink it from. If it arrives, the count goes up nine days.
 7. **Iron or Flood.** You are carrying a Tooth. The General wants a hundred blades. The Priestess wants it given to the river. **You choose.**
 8. **A Hundred Blades** or **The River Rises.** The forge defended, or the procession to the waterfall, and an answer from the water that the player must decide how to read.
 
@@ -237,8 +237,8 @@ Eight chapters each, on that empire's side of the valley. Each ends with the pla
 2. **The Crack.** A courier, a sealed order, and something you were not meant to overhear.
 3. **Pull the Stakes.** Akitsu's railway is aimed at the northern pass. Stop it at the survey. *(Akitsu guards it; Tameri watches.)*
 4. **The Stone Is Ours.** Kallias needs dressed stone for the fort and the aqueduct. Tameri is already in the quarry. *(Tameri is raising its obelisk.)* Kallias and the Tameri master mason turn out to like each other.
-5. **Toll the Road.** A fort on the crossing, and Akitsu's wagons due. *(Akitsu escorts; Tameri raids.)*
-6. **Take the Pass.** The cohort goes down against seven swords. *(Akitsu holds it.)*
+5. **The Water Is Ours.** An aqueduct from the whirlpool lake to the fort, raised arch by arch. Downstream, it is Tameri's river. *(Tameri is sent to break it.)*
+6. **Take the Stones.** The cohort goes against seven swords at the Wolf Stones. *(Akitsu holds them.)*
 7. **The Pledge.** The Tribune has found out about the crack and means to tell the legion. The Legate begs for thirty days. The Augur wants her silenced. **You choose: the secret or the truth.**
 8. **The Shield Made Whole** or **The Assembly of the Ninth.** The patch forged at the hot springs under attack, or the first free vote of a new colony, and the Augur's answer to it.
 
