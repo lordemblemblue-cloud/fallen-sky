@@ -216,14 +216,19 @@ function installCompat(renderer) {
   renderer.render = function sceneRender(scene, camera) {
     // before init three only warns and renders later, a frame at a time: skip until it is ready; frames are also
     // held while precompileSceneObjects() compiles the scene in the background
-    if (state.ready !== true || state.holdRender > 0) return undefined;
+    if (state.ready !== true || state.disposed || state.lost || state.holdRender > 0) return undefined;
     state.shadowRefresh = needsUpdate;
     try {
-      return render.call(this, scene, camera);
+      const before = this.info.render.drawCalls;
+      const result = render.call(this, scene, camera);
+      if (scene === state.gameplayScene && this.info.render.drawCalls > before) {
+        state.gameplayFrames = (state.gameplayFrames || 0) + 1;
+      }
+      this.info.render.frame++;
+      return result;
     } finally {
       if (state.shadowRefresh) needsUpdate = false;
       state.shadowRefresh = false;
-      this.info.render.frame++;
     }
   };
 
@@ -562,7 +567,11 @@ export function createSceneRenderer(sceneId, options = {}, host = globalThis.win
     canvas: options.canvas, antialias: options.antialias ?? true, alpha: options.alpha ?? false,
     powerPreference: options.powerPreference ?? 'high-performance', forceWebGL: choice.kind === 'webgl2',
   });
-  ready.catch((error) => { console.warn('[webgpu] renderer failed to start; WebGL next time:', error); rememberRendererFailure(host); });
+  ready.catch((error) => {
+    if (renderer.__sceneState.disposed) return;
+    console.warn('[webgpu] renderer failed to start', error);
+    if (options.gameplay) rememberRendererFailure(host, sceneId);
+  });
   return { renderer, ready, kind: choice.kind, reason: choice.reason };
 }
 

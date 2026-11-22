@@ -88,7 +88,7 @@ test('browser helper combines location, localStorage and the per-tab failure fla
   const host = { location: { search: '?renderer=webgpu' }, localStorage: memoryStorage(), sessionStorage: memoryStorage() };
   assert.equal(chooseSceneRendererFor('fallen-sky', host).kind, 'webgpu');
   rememberRendererFailure(host);
-  assert.equal(host.sessionStorage.getItem(RENDERER_FAILED_KEY), '1');
+  assert.equal(host.sessionStorage.getItem(RENDERER_FAILED_KEY + ':fallen-sky'), '1');
   assert.equal(chooseSceneRendererFor('fallen-sky', host).kind, 'webgl');
   assert.equal(chooseSceneRendererFor('fallen-sky', {}).kind, 'webgl');
   assert.deepEqual(chooseSceneRendererFor('fallen-sky', { navigator: {}, location: { search: '' } }),

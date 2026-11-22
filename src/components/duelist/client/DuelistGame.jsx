@@ -187,7 +187,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setStatus('loading');
     setHud(null);
     setNet(null);
-    const selectedRenderer = createSceneRenderer('duelist-adventure', { antialias: true, powerPreference: 'high-performance' });
+    const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
@@ -198,6 +198,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     renderer.toneMappingExposure = 1.1;
     mount.appendChild(renderer.domElement);
     const scene = new THREE.Scene();
+    if (renderer.__sceneState) renderer.__sceneState.gameplayScene = scene;
     const camera = new THREE.PerspectiveCamera(55, 1, 0.05, 400);
     const lights = createSceneLighting(scene);
     scene.add(lights.sun.target);

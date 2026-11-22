@@ -157,8 +157,8 @@ test('Game 3D canvas stays CSS-sized, FPS limit only skips GPU submissions',()=>
   assert.match(world,/camera\.aspect=width\/height/);
   assert.match(world,/canvasResizeObserver\?\.disconnect\(\)/);
   assert.match(world,/const renderThisFrame=renderPacer\.shouldRender\(renderNow\)/);
-  assert.match(world,/if\(renderThisFrame&&!atomicLook\?\.render\(camera\)\)inkLook\.render\(scene,camera\)/);
-  assert.match(world,/if\(renderThisFrame&&!atomicLook\?\.render\(activeCamera\)\)inkLook\.render\(scene,activeCamera\)/);
+  assert.match(world,/if\(renderThisFrame\)drawWorld\(camera,renderNow\)/);
+  assert.match(world,/if\(renderThisFrame\)drawWorld\(activeCamera,renderNow\)/);
   assert.match(world,/const delta = clock\.getDelta\(\)/);
   assert.match(menu,/3D render resolution/);
   assert.match(menu,/Interface size/);
@@ -265,7 +265,7 @@ test('the live menu reports measured pixels, while the world applies the saved m
   assert.match(world,/publishGame3DActualFramebuffer\(/);
   assert.match(menu,/readGame3DActualFramebuffer\(renderer\)/);
   assert.match(menu,/GAME3D_RENDER_BUFFER_APPLIED_EVENT/);
-  assert.match(menu,/Applied WebGL output:/);
+  assert.match(menu,/Drawing buffer:/);
   assert.match(menu,/Waiting for the 3D renderer to initialize/);
   assert.doesNotMatch(menu,/3D framebuffer: approximately/);
   assert.equal(readGame3DActualFramebuffer({domElement:{width:0,height:500}}),null);

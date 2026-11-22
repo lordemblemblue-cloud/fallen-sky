@@ -61,18 +61,12 @@ export function chooseSceneRenderer({ sceneId, override = null, previousFailure 
 
 /** Browser convenience: the choice for a scene from window.location and localStorage / sessionStorage. */
 export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
-  // Browser privacy wrappers and embedded hosts can throw while reading properties,
-  // not just while invoking storage methods. Treat an unreadable host as WebGL-only.
   let previousFailure = false;
   let search = '';
   let storage = null;
-  try {
-    previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY) === '1';
-    search = host?.location?.search || '';
-    storage = host?.localStorage || null;
-  } catch {
-    return { kind: 'webgl', reason: 'browser-host-unavailable' };
-  }
+  try { previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY + ':' + sceneId) === '1'; } catch { /* optional */ }
+  try { search = host?.location?.search || ''; } catch { /* optional */ }
+  try { storage = host?.localStorage || null; } catch { /* optional */ }
   const override = readRendererOverride({ search, storage });
   // The graphics API is exposed only in supported, secure browser contexts.
   // Do not default to WebGPU on SSR, insecure pages or browsers without it. Privacy wrappers can also throw
@@ -86,6 +80,15 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
 }
 
 /** Remember for this tab that WebGPURenderer could not run (init failure or device loss). */
-export function rememberRendererFailure(host = globalThis.window) {
-  try { host?.sessionStorage?.setItem?.(RENDERER_FAILED_KEY, '1'); } catch { /* storage may be blocked */ }
+export function rememberRendererFailure(host = globalThis.window, sceneId = 'fallen-sky') {
+  try { host?.sessionStorage?.setItem?.(RENDERER_FAILED_KEY + ':' + sceneId, '1'); } catch { /* storage may be blocked */ }
+}
+
+// Settings explicitly requests a fresh attempt, including after a device reset.
+export function retryWebGPU(sceneId, host = globalThis.window) {
+  const url = new URL(host.location.href);
+  url.searchParams.set('renderer', 'webgpu');
+  try { host.sessionStorage?.removeItem?.(RENDERER_FAILED_KEY + ':' + sceneId); } catch { /* optional */ }
+  if (url.href === host.location.href) host.location.reload();
+  else host.location.assign(url.href);
 }

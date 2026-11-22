@@ -19,13 +19,15 @@ export function getWebGPURuntimeEvidence(renderer, { sceneId = null } = {}) {
   const frames = Number(renderer?.info?.render?.frame);
   const frameCount = Number.isFinite(frames) && frames >= 0 ? Math.floor(frames) : 0;
   const deviceLost = Boolean(state?.lost);
-  const active = backend === 'webgpu' && deviceConfirmed && !deviceLost && frameCount > 0;
+  const gameplayFrames = state?.gameplayFrames || 0;
+  const active = backend === 'webgpu' && deviceConfirmed && !deviceLost && frameCount > 0 && gameplayFrames > 0;
   return Object.freeze({
     sceneId,
     backend,
     initialized,
     deviceConfirmed,
     frameCount,
+    gameplayFrames,
     deviceLost,
     webgpuActive: active,
     status: deviceLost ? 'device-lost'
@@ -33,6 +35,7 @@ export function getWebGPURuntimeEvidence(renderer, { sceneId = null } = {}) {
       : backend !== 'webgpu' ? 'fallback'
       : !deviceConfirmed ? 'device-unconfirmed'
       : frameCount === 0 ? 'waiting-for-first-frame'
+      : gameplayFrames === 0 ? 'waiting-for-world-draws'
       : 'verified',
   });
 }
@@ -43,5 +46,5 @@ export function formatWebGPURuntimeEvidence(evidence) {
     return 'WebGPU not verified (' + (evidence?.status || 'unknown') + '; ' +
       (evidence?.backend || 'none') + ')';
   }
-  return 'WebGPU active: initialized GPUDevice and ' + evidence.frameCount + ' rendered frame(s)';
+  return 'WebGPU active: initialized GPUDevice and ' + evidence.gameplayFrames + ' world render(s) with draws';
 }
