@@ -1,0 +1,26 @@
+name: Duelist Four-Class Leased Special Boundary
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-leased-special-four-class-matrix.test.mjs'
+      - '.github/workflows/duelist-leased-special-four-class-matrix.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  leased-special-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Four-class leased special and related boundary regressions
+        run: node --test tests/duelist-leased-special-four-class-matrix.test.mjs tests/duelist-leased-class-special.test.mjs tests/duelist-special-eligibility-matrix.test.mjs
+      - name: Lint new test
+        run: npx eslint tests/duelist-leased-special-four-class-matrix.test.mjs
+      - name: Build app
+        run: npm run build
