@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
 import {
-  buildBrowserExpression, classifySamplePair, pickTarget,
+  buildBrowserExpression, classifySamplePair, pickTarget, requireLocalCdpWebSocket,
 } from '../scripts/webgpu-native-browser-qa.mjs';
 
 const SCENES = ['fallen-sky', 'duelist-adventure'];
@@ -124,3 +124,21 @@ for (const sceneId of SCENES) {
     assert.equal(classifySamplePair(first, last).ok, true);
   });
 }
+
+test('CDP WebSocket endpoints must stay on loopback, regardless of target metadata', () => {
+  for (const host of ['127.0.0.1', 'localhost', '[::1]']) {
+    const endpoint = 'ws://' + host + ':9222/devtools/page/1';
+    assert.equal(requireLocalCdpWebSocket(endpoint), endpoint);
+  }
+  for (const endpoint of [
+    'ws://example.com:9222/devtools/page/1',
+    'wss://192.168.1.5:9222/devtools/page/1',
+    'ws://127.0.0.2:9222/devtools/page/1',
+    'ws://127.0.0.1.evil.example:9222/devtools/page/1',
+    'ws://user:password@localhost:9222/devtools/page/1',
+    'file:///devtools/page/1',
+    'not-a-websocket',
+  ]) {
+    assert.throws(() => requireLocalCdpWebSocket(endpoint), /DevTools/);
+  }
+});
