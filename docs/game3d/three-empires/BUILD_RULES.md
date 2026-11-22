@@ -98,6 +98,16 @@ Each empire, and the valley, has one kit: a GLB at `public/game3d/threeroads/kit
 - Metres, Y up, the piece standing on y = 0 with its pivot at the centre of its footprint, front toward +Z.
 - Sizes from the body: a person is 1.8 m, a door 2.2 to 2.5 m, a road 4 m, a house footprint about 8 by 6 m, a tower 15 to 18 m.
 
+### People
+
+A person of the story with a model of their own has one file: `public/game3d/threeroads/cast/<person_id>.glb`, the id from `threeroads/script/cast.mjs`.
+
+- One mesh, one material, one base-colour texture of at most 1024 px, at most 15,000 triangles, one skeleton. That is one draw call a person.
+- Clips inside the file, by these names: `Idle`, `Talk` (played while the person speaks a line) and `Walk` (in place; the cast subsystem moves the body).
+- The lead makes the file with `tools/threeroads/cast/pack-character.mjs`, which joins the generated pieces (the animated model and the walk that comes free with the skeleton), renames the clips, drops channels that never leave the rest pose and shrinks the texture. The raw generated files stay out of the repo.
+- A person with no file, or whose file fails to load, wears the shared figure as before. Nothing in the story may depend on a person having their own model.
+- What one person costs is in `COSTS.md`. A named person is made from a picture, not from words alone: the first test asked in words for an elder woman and got an old man.
+
 ## 8. Shaping a place: the loop the owner asked for
 
 1. Read the place's entry in `03_QUEST_PLAN.md` section 3 and the pattern card for its kind in `research/REFERENCE_LAND_NOTES.md`.
