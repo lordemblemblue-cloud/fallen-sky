@@ -98,3 +98,24 @@ test('temporary stand-in preserves the authenticated seat class and private mete
   assert.equal(matchView(match, 'beta').me.specialMeter, null);
   assert.equal(matchView(match, 'unknown').me, null);
 });
+
+test('independent player seats retain their own class and private meter across countdown', () => {
+  const match = createMatch({ mode: 'tdm', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+  assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
+  assert.equal(queueMatchClass(match, 'beta', 'duelist').accepted, true);
+  assert.equal(matchView(match, 'alpha').me.pendingClass, 'assassin');
+  assert.equal(matchView(match, 'beta').me.pendingClass, 'duelist');
+  advance(match, COUNTDOWN + 0.1);
+  assert.equal(match.seats.get('alpha').classId, 'assassin');
+  assert.equal(match.seats.get('beta').classId, 'duelist');
+  assert.equal(match.world.fighters.get('alpha').weapon, CLASSES.assassin.weapon);
+  assert.equal(match.world.fighters.get('beta').weapon, CLASSES.duelist.weapon);
+  match.seats.get('alpha').specialMeter = 65; // Simulate server-owned charge.
+  match.seats.get('beta').specialMeter = 20;
+  assert.equal(matchView(match, 'alpha').me.specialMeter, 65);
+  assert.equal(matchView(match, 'beta').me.specialMeter, 20);
+  for (const viewer of ['alpha', 'beta']) {
+    const view = matchView(match, viewer);
+    assert.equal(view.people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false);
+  }
+});
