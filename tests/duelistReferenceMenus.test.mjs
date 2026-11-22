@@ -71,6 +71,25 @@ test('reference menus render one visible frame instead of stacked template and C
   assert.match(hub, /<SettingsReferenceMenu/);
 });
 
+test('Story screen is reconstructed with one DOM frame and scenery-only artwork', () => {
+  const story = source('src/components/duelist/menu/DuelistStoryMenu.jsx');
+  const layout = source('src/components/duelist/menu/DuelistStoryMenu.css');
+  assert.match(hub, /<DuelistStoryMenu lobby=\\{lobby\\}/);
+  assert.match(story, /className="dsm-story"/);
+  assert.match(story, /className="dsm-frame"/);
+  assert.match(story, /className="dsm-tabs"/);
+  assert.match(story, /className="dsm-timeline"/);
+  assert.match(story, /className="dsm-detail"/);
+  assert.match(story, /className="dsm-actions"/);
+  assert.match(story, /SCENE_IMAGE = .*duelist_story_scene_clean\\.jpg/);
+  assert.doesNotMatch(layout, /duelist_story_template\\.png|aa2d24798_/);
+  assert.match(layout, /grid-template-columns:minmax\\(185px,18%\\)/);
+  assert.match(layout, /@media\\(max-width:900px\\)/);
+  assert.match(story, /STORY_MISSIONS\\[missionIndex\\]/);
+  assert.match(story, /mode: 'story', mission: mission\\.id/);
+  assert.match(story, /disabled=\\{!online\\}/);
+});
+
 test('settings remains functional with a draft, Apply, Revert and persisted audio/prefs', () => {
   assert.match(ui, /GraphicsRuntimePanel sceneId="duelist-adventure"/);
   assert.match(ui, /KeyBindings keys=\{draft\.keys\|\|\{\}\}/);
