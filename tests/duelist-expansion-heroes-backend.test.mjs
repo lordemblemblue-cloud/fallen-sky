@@ -180,6 +180,7 @@ test('Gaia roots, mitigates, touch-heals and creates concealing greenery intenti
   assert.equal(cast(fx, 'touchHeal', { targetId: 'p3' }).intents[0].allyHeal, 24);
   assert.equal(cast(fx, 'earthWall', { wallId: 'wall-12' }).intents[0].kind, 'earthWall');
   assert.equal(cast(fx, 'oneWithPlanet').intents[0].foliageConcealment, true);
+  assert.equal(cast(make('gaia'), 'oneWithPlanet').intents[0].scope, 'battlefield');
   fx.ally.position.z = 4;
   assert.equal(cast(fx, 'touchHeal', { targetId: 'p3' }, { now: 23 }).reason, 'out-of-range');
 });

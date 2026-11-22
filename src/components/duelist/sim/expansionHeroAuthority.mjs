@@ -76,7 +76,7 @@ function effectsFor(heroId, id, direction, form, enchanted, windborne, targetId,
     case 'gaia.earthShield': return [{ kind: 'earthShield', duration: 4, mitigation: 0.25 }];
     case 'gaia.touchHeal': return [{ kind: 'touchHeal', targetId, selfHeal: 16, allyHeal: 24 }];
     case 'gaia.earthWall': return [{ kind: 'earthWall', wall: 'validated', duration: 7, hp: 150 }];
-    case 'gaia.oneWithPlanet': return [{ kind: 'verdantZone', radius: 9, duration: 8, healPerSecond: 6,
+    case 'gaia.oneWithPlanet': return [{ kind: 'verdantZone', scope: 'battlefield', duration: 8, healPerSecond: 6,
       mitigation: 0.3, foliageConcealment: true }];
     case 'sniper.aimedShot': return [{ kind: 'hit', targetId, damage: 33, bonusAgainstMarked: 1.25 }];
     case 'sniper.markTarget': return [{ kind: 'mark', targetId, duration: 7 }];
