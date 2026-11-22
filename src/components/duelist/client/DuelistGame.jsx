@@ -336,9 +336,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       createActor(scene, s, color, cls).then((actor) => {
         if (disposed || gen !== generationSeen || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
         actors[s.id] = actor;
-        // in a mission only people with a name wear it
-        if (s.id !== me() && (s.kind !== 'enemy' || s.named)) {
-          tags.set(s.id, s.name, s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5);
+        // Every opponent needs readable health above their head, including
+        // unnamed story enemies. Friendly teammates retain ally-colored HP.
+        if (s.id !== me()) {
+          const mine = world.fighters.get(me());
+          const other = world.fighters.get(s.id);
+          const enemy = mine && other ? hostile(world, mine, other) : s.kind === 'enemy';
+          tags.set(s.id, s.name || (enemy ? 'Enemy' : 'Ally'),
+            s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5,
+            enemy);
         }
       }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
         .finally(() => { pending.delete(s.id); building = false; });
@@ -676,7 +682,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // an Execution drawing its target in: the golden tether from the Duelist's hand
         const seizes = [...world.fighters.values()].filter((f) => f.seizedBy && actors[f.seizedBy] && actors[f.id]).map((f) => ({ holder: actors[f.seizedBy], held: actors[f.id] }));
         vfx.update(show, { grips, seizes });
-        tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
+        tags.update(actors,
+          (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible,
+          (id) => {
+            const vitals = world.fighters.get(id)?.vitals;
+            return vitals ? { hp: vitals.hp, maxHp: vitals.max.hp } : null;
+          });
         if (ctf) {
           const z = MODES.ctf.arena - CTF.baseInset;
           const homes = { red: { x: 0, z: -z }, blue: { x: 0, z } };
