@@ -83,8 +83,19 @@ export function pickTarget(targets, sceneId, tabContains = '') {
   return pages[0];
 }
 
+export function requireLocalCdpWebSocket(webSocketUrl) {
+  let url;
+  try { url = new URL(webSocketUrl); } catch { throw new Error('Invalid DevTools WebSocket URL'); }
+  if (!['ws:', 'wss:'].includes(url.protocol) ||
+    !['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname) ||
+    url.username || url.password) {
+    throw new Error('DevTools WebSocket must use a loopback host');
+  }
+  return url.href;
+}
+
 async function connectCdp(webSocketUrl) {
-  const socket = new WebSocket(webSocketUrl);
+  const socket = new WebSocket(requireLocalCdpWebSocket(webSocketUrl));
   const pending = new Map();
   let nextId = 0;
   const rejectPending = (message) => {
