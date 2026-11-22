@@ -28,6 +28,6 @@ export function claimStorySupply(mission, playerId, supplyId) {
   if (current >= maximum) return { ok: false, reason: 'already-full' };
   vitals[supply.stat] = Math.max(0, Math.min(maximum, current + supply.amount));
   seat.supplyUsed = supply.id;
-  mission.events?.push({ type: 'storySupply', by: playerId, id: supply.id, at: mission.world.time });
+  // Do not broadcast a player's private supply choice to opposing clients or other seats.
   return { ok: true, id: supply.id, stat: supply.stat, value: vitals[supply.stat], remaining: 0 };
 }
