@@ -78,9 +78,15 @@ export const TAMERI_KIT_PIECES = Object.freeze([
 export const REMORIA_KIT_PIECES = Object.freeze([
   // The wall
   piece('palisade_run', [4, 2.6, 3.2], { solid: { box: [2, 1.3] }, skirt: 1.6 }), // earth bank, a fence of stakes on it and a walk behind
-  piece('palisade_corner', [4, 4, 3.2], { solid: { box: [2, 2] }, skirt: 1.6 }), // the rounded corner of a marching camp
+  // The rounded corner of a marching camp: a quarter turn of the same bank, 2 m radius on its
+  // centreline, joining a run that ends 2 m short of the corner on each wall. Front (+Z) is the
+  // outward diagonal. The origin is the centre of the piece's own footprint, like every other
+  // piece: the point where the two walls' centrelines would cross lies 0.93 m in front of it
+  // (x 0, z +0.93), and the bank's centreline runs from (-1.41, -0.48) through (0, +0.10) to
+  // (+1.41, -0.48). The camp plan places the origin, not the crossing point.
+  piece('palisade_corner', [4.7, 2.8, 3.2], { solid: { box: [2.35, 1.4] }, skirt: 1.6 }),
   piece('gate_tower', [3.2, 3.2, 9], { solid: { box: [1.6, 1.6] }, skirt: 1.8 }), // timber tower with a roofed platform; a pair at each gate is the fort's tall mark
-  piece('gate_span', [5.2, 1.6, 1.4], { pivot: 'centre' }), // the walk between two gate towers with the fort's name board; mounted at y 4.2
+  piece('gate_span', [5.8, 1.6, 1.4], { pivot: 'centre' }), // the walk between two gate towers, whose inner faces stand 5.8 m apart, with the fort's name board; centred on all three axes and mounted at y 4.2
   piece('stake_hedge', [4, 1.4, 1.3], { solid: { box: [2, 0.7] }, skirt: 0.6 }), // crossed sharpened stakes
   // Tents
   piece('tent_legion', [3, 3.6, 2], { solid: { box: [1.5, 1.8] }, skirt: 1 }), // leather ridge tent for eight
