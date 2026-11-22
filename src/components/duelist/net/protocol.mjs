@@ -16,8 +16,9 @@
 //   { t: 'join', ..., cls? }                      cls: the class to fight as (core/classes.mjs CLASS_IDS)
 //   { t: 'class', id }                           change class: queued for the next spawn (allowed before the fight,
 //                                                between rounds or while down; answered { t: 'class', ok, pending, reason })
-//   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
-//                                                interact held (story), presses (ability1-4 and special too)
+//   { t: 'input', s, m: [x, z], r, sp, f, st, i, jh, p }  seq, move, run, sprint, face, strafe,
+//                                                interact held (story), jh: 0/1 jump held (server derives hold tier),
+//                                                presses (ability1-4 and special too)
 //   { t: 'leave' }
 // server -> client
 //   { t: 'welcome', id, name, resumed }          resumed: back in the seat (its 'joined', resumed: true, follows)
@@ -85,6 +86,7 @@ export function sanitizeInput(raw) {
   return {
     seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, strafe: !!raw.st, interact: raw.i === 1 || raw.i === true,
     face: finite(raw.f) ? Math.atan2(Math.sin(raw.f), Math.cos(raw.f)) : null,
+    ...(raw.jh === 0 || raw.jh === 1 ? { jumpHeld: !!raw.jh } : {}),
     presses,
   };
 }
@@ -92,7 +94,9 @@ export function sanitizeInput(raw) {
 /** The browser's input object as an input message. */
 export function encodeInput(seq, input) {
   return { t: 'input', s: seq, m: [r3(input.move?.x || 0), r3(input.move?.z || 0)], r: input.run !== false, sp: !!input.sprint,
-    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined };
+    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined,
+    jh: typeof input.jumpHeld === 'boolean' ? (input.jumpHeld ? 1 : 0) : undefined,
+    p: input.presses?.length ? input.presses : undefined };
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };
@@ -199,6 +203,9 @@ export function encodeOwn(f, body, time) {
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
       Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
+    // Private prediction state. Other players only receive the visible body height.
+    jh: body.heldJump ? [body.heldJump.age, body.heldJump.stage,
+      body.heldJump.origin, body.heldJump.rising ? 1 : 0] : null,
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
@@ -244,7 +251,11 @@ export function applyOwn(f, body, data) {
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
     jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
-    airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity });
+    airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity,
+    jumpHeld: undefined,
+    heldJump: Array.isArray(data.jh) && data.jh.length === 4 &&
+      Number.isFinite(data.jh[0]) && Number.isFinite(data.jh[1]) && Number.isFinite(data.jh[2])
+      ? { age: data.jh[0], stage: data.jh[1], origin: data.jh[2], rising: !!data.jh[3] } : null });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };
