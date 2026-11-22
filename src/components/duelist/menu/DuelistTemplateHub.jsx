@@ -17,7 +17,8 @@ import { MODE_TABS, TEMPLATE_MODES, templateTab, templateMode, firstTemplateMode
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { SettingsContent } from './MenuPages.jsx';
-import { CharacterReferenceMenu, SettingsReferenceMenu } from './DuelistReferenceMenus.jsx';
+import { SettingsReferenceMenu } from './DuelistReferenceMenus.jsx';
+import DuelistCharacterMenu from './DuelistCharacterMenu.jsx';
 import DuelistStoryMenu from './DuelistStoryMenu.jsx';
 import './duelistTemplateUI.css';
 
@@ -308,7 +309,7 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
       </section>}
       {panel === 'play' && <ModeSelector category={category} selected={mode} onCategory={changeCategory}
         onSelect={setMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} close={close}/>}
-      {panel === 'character' && <CharacterReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
+      {panel === 'character' && <DuelistCharacterMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'story' && <DuelistStoryMenu lobby={lobby} prefs={prefs} close={close}/>}
       {panel === 'settings' && <SettingsReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'store' && <StoreBrowser close={close}/>}
