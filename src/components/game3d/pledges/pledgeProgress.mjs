@@ -48,6 +48,31 @@ export function getPledgeActiveGroup(pledge, objectiveProgress = {}) {
   };
 }
 
+// What changed between two readings of a pledge's progress, for whoever
+// announces steps to the world (the bus events pledge:stepStarted and
+// pledge:stepDone): the steps that finished, the steps that were sent back to
+// zero, and the steps that are open now and were not before.
+export function getPledgeStepChanges(pledge, previousProgress = {}, nextProgress = {}) {
+  const none = { done: [], failed: [], started: [], ready: false };
+  if (!isPledge(pledge)) return none;
+  const before = getPledgeStepProgress(pledge, previousProgress);
+  const after = getPledgeStepProgress(pledge, nextProgress);
+  const done = after.filter((row, i) => row.done && !before[i].done).map((row) => row.id);
+  const failed = after.filter((row, i) => row.current < before[i].current).map((row) => row.id);
+  const openIds = (progress) => {
+    const group = getPledgeActiveGroup(pledge, progress);
+    return group ? [group.stepId, ...group.optionalStepIds] : [];
+  };
+  const wasOpen = openIds(previousProgress);
+  const nowOpen = openIds(nextProgress);
+  return {
+    done,
+    failed,
+    started: nowOpen.filter((id) => !wasOpen.includes(id)),
+    ready: nowOpen.length === 0 && wasOpen.length > 0,
+  };
+}
+
 export function isPledgeReadyToComplete(pledge, objectiveProgress = {}) {
   return isPledge(pledge) && getPledgeActiveGroup(pledge, objectiveProgress) === null;
 }

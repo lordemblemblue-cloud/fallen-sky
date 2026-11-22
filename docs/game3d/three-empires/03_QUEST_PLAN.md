@@ -518,7 +518,7 @@ One band at a time, and inside a band one region per chat so they do not edit th
 | Band | What | Gives the player |
 | --- | --- | --- |
 | 0 | The pledge engine: steps, step kinds, enemies at a place, quest givers anywhere, choices, the server contract. No new land. | Nothing visible alone; everything after depends on it |
-| 1 | Town and the Gate Fields: P01 to P12, M01, M02, the lodges, V01 to V03, W06 | The opening evening |
+| 1 | Town and the Gate Fields: P01 to P12, M01, M02, the lodges, V01 and V16 (V02 and V03 wait for the town's own townsfolk to be joined to the cast; W06 waits for fighting between players) | The opening evening |
 | 2 | The three camps and each empire's chapters 1 and 2: P13, P14, P24, P26, P35, P36, with their monsters and voices | A home for each empire |
 | 3 | Caves get their monsters and bosses: M03 to M06 | The first half of the main story |
 | 4 | The contested chapters 3 to 6 and their places, W01 to W05 | The war |

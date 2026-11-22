@@ -6,19 +6,19 @@ This is what I took from the references you gave (the map site and the two walkt
 
 The detailed notes behind this page are in `research/`:
 - `REFERENCE_LAND_NOTES.md`: the main-story walkthrough studied scene by scene, with timestamps to go back to, pattern cards for each kind of place, and thirty rules for shaping land.
-- `REFERENCE_QUEST_MAP_NOTES.md`: counts and spacing from the map site and the "100% of the game" video (the chat doing this one was still working when this page was written; its numbers will replace the rounded ones below).
+- `REFERENCE_QUEST_MAP_NOTES.md`: counts taken from the map site's own marker data and checked against the "100% of the game" video. Its first part (the counts) is in and is used below; spacing and pacing are still being written.
 - `WORLD_TODAY.md`: our own game as it is in the code today.
 
 ## 1. The numbers, and what they mean for a world our size
 
-Rounded, from general knowledge of that game; the exact counts are being taken from the map site.
+Counts from the map site's marker data (see the notes); the rest rounded.
 
 | | The reference | Ours today | Our plan |
 | --- | --- | --- | --- |
 | Land | about 37 square kilometres | 1.2 square kilometres | the same 1.2, in five areas, plus separate cave scenes |
-| Regions | nine, each with a capital | five areas | five areas: a neutral town, a shared battlefield, one home side per empire |
-| Places you can discover | more than 300 | about 23 worth the name | 49 |
-| Places per square kilometre | about 9 | 19 | 40 |
+| Regions | nine, each with a capital, about 8 places to live and about 32 adventure spots | five areas | five areas: a neutral town, a shared battlefield, one home side per empire |
+| Places you can discover | about 400 (290 adventure spots, 73 places to live, the rest shrines and landmarks) | about 23 worth the name | 49 |
+| Places per square kilometre | about 11 | 19 | 40 |
 | Walk between neighbouring places | about a minute | varies; large empty stretches | about half a minute |
 | Named quests | roughly 270, plus a great many small errands and endless repeatable jobs | 32, almost all "kill N" | 100: the 32 kept, 60 new stories, 8 kinds of war pledge |
 | Quests per place | less than one | about one | two |
