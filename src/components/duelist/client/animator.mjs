@@ -162,6 +162,14 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       const time = working.loop ? elapsed % clip.duration : Math.min(clip.duration - 1e-3, working.progress * clip.duration);
       return { clip: working.clip, time, fade: 0.12 };
     }
+    if (body.jumped && airborne && (!a || a.id === 'jump')) {
+      settle = null;
+      if (body.airJumpAt != null && library.Back_Flip) {
+        const phase = Math.min(1, Math.max(0, (now - body.airJumpAt) / 0.82));
+        if (phase < 1) return { clip: 'Back_Flip', time: phase * library.Back_Flip.duration, fade: 0.045 };
+      }
+      if (library.jumpLoop) return { clip: 'jumpLoop', time: elapsed % library.jumpLoop.duration, fade: 0.07 };
+    }
     if (a) {
       settle = null;
       if (a.id === 'roll') {
