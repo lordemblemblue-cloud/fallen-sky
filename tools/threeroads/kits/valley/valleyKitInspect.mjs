@@ -1,3 +1,4 @@
+/* global Buffer */
 // Reads the valley kit GLB and checks it against the piece table
 // (src/components/game3d/threeroads/kits/valleyKitPieces.mjs). Pure: takes the
 // file's bytes, returns rows and failures. Used by check_valley_kit.mjs and by

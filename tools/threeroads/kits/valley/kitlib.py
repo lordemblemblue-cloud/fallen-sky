@@ -187,7 +187,8 @@ class Builder:
             mm = m @ mm
         return self.lathe([(r, 0), (rt, h)], segs, col, mm, smooth)
 
-    def ring(self, base, r_in, r_out, h, segs, col, m=None, axis='y', smooth=True):
+    def ring(self, base, r_in, r_out, h, segs, col, m=None, axis='y', smooth=True, cols=None, phase=0.0):
+        """A flat ring (tyre, hoop). cols: bottom, outer wall, top, inner wall."""
         mm = Matrix.Translation(Vector(base))
         if axis == 'x':
             mm = mm @ Matrix.Rotation(-math.pi / 2, 4, 'Z')
@@ -196,7 +197,7 @@ class Builder:
         if m is not None:
             mm = m @ mm
         prof = [(r_in, 0), (r_out, 0), (r_out, h), (r_in, h), (r_in, 0)]
-        return self.lathe(prof, segs, col, mm, smooth, cap=False)
+        return self.lathe(prof, segs, col, mm, smooth, cols=cols, cap=False, phase=phase)
 
     def hull(self, points, col, m=None, smooth=False):
         bm = self.bm

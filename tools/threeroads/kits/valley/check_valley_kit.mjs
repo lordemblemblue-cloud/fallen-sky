@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process, console */
 // node tools/threeroads/kits/valley/check_valley_kit.mjs [path/to/valley.glb]
 // Prints, per piece and level of detail: triangles, size against the table,
 // pivot, material; then the totals against VALLEY_KIT_LIMITS. Exits 1 on any failure.
