@@ -87,7 +87,7 @@ export const THREE_ROADS_CAST = Object.freeze([
     look: { body: 'm', build: 'stocky', colours: [0x2f4a7a, 0x5a4632], carries: 'a rifle slung muzzle down, and a kettle' } }),
   person({ id: 'titus_oldvine', name: 'First Centurion Titus Petronius', role: 'Remorian first centurion, "Old Vine"', empire: 'remoria', giver: true,
     home: { area: 'south', x: 28, z: -427, facing: 0 },
-    alsoAt: [{ area: 'north', x: -258, z: 390, facing: Math.PI * 0.5 }],
+    alsoAt: [{ area: 'north', x: -259, z: 407, facing: Math.PI * 0.5 }],
     look: { body: 'elder_m', build: 'broad', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a vine staff' } }),
   person({ id: 'edda_miller', name: 'Edda', role: 'Miller of the Gate Fields', empire: 'valley', giver: true,
     home: { area: 'south', x: -124, z: -344, facing: Math.PI * 0.5 },

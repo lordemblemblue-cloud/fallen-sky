@@ -89,6 +89,16 @@ One GLB each, one atlas, one lit and one glowing material, built like the valley
 
 Each plan also lists where its sentries stand. They need entries in the cast table, which the lead adds when a camp is built.
 
+### The three smaller places
+
+Band 2's other three chapters happen away from the camps. Each place is dressed from kits already made, and its plan is in `BAND2_PLACE_PLANS` in the same file as the camps.
+
+- **House Asagiri's Hall (P14, west).** A sword school under canvas: the hall tent facing the door spot, the students' tent, a rack of practice swords, the house's banner pole, a curtain along the north side, and the grandson's grave stone at `hall_grave`. 10 pieces.
+- **Shadow Ravine (P26, east).** Where the Priestess speaks the rite: four fire bowls squared round `ravine_chant`, five markers for the five dead who can be named, and at the ravine's mouth an awning with the rite's stores and one flagstaff so the place is seen from the trail. 17 pieces.
+- **The First Furrow (P36, north).** The plough waiting at the furrow's start, the plough cart with the archer's case, the boundary stone ready where the furrow ends, the colony's first standard, a rack of arms and a fire. 7 pieces. The furrow had been drawn along the Hunter's Loop, which is a road; it now runs 18 m north of it and beside it, from (−262, 410) to (−218, 426).
+
+The Wind-Carved Wolf Stones (P18), where the house banner is taken back, are an existing place and get nothing new.
+
 ## 5. Gliding at the camps
 
 The glide is built (branch `claude/glide-20261122`, not in main yet). What it does, as its own session measured it:

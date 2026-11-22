@@ -8,7 +8,7 @@ import {
   AKITSU_KIT_PIECES, TAMERI_KIT_PIECES, REMORIA_KIT_PIECES, EMPIRE_KITS, EMPIRE_KIT_LIMITS, empireKitPiece,
 } from '../src/components/game3d/threeroads/kits/empireKitPieces.mjs';
 import { valleyKitPiece } from '../src/components/game3d/threeroads/kits/valleyKitPieces.mjs';
-import { CAMP_PLANS, campPlan, campPlanBatches } from '../src/components/game3d/threeroads/land/campPlans.mjs';
+import { BAND2_PLACE_PLANS, CAMP_PLANS, campPlan, campPlanBatches } from '../src/components/game3d/threeroads/land/campPlans.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { THREE_ROADS_CAST } from '../src/components/game3d/threeroads/script/cast.mjs';
 import { BAND2_POINTS } from '../src/components/game3d/threeroads/script/band2.mjs';
@@ -228,5 +228,47 @@ test('each sentry spot of a plan has a person of that army standing on it', () =
       assert.ok(who, `${plan.id}: nobody stands at (${spot.x}, ${spot.z})`);
       assert.equal(who.empire, plan.kit);
     }
+  }
+});
+
+test("band 2's smaller places: known pieces, on ground they can stand on, clear of the trail and of the story's spots", () => {
+  assert.deepEqual(BAND2_PLACE_PLANS.map(plan => plan.id), ['sword_hall', 'shadow_ravine', 'first_furrow']);
+  const problems = [];
+  for (const plan of BAND2_PLACE_PLANS) {
+    assert.equal(campPlan(plan.id), plan);
+    const place = pledgePlace(plan.place);
+    assert.equal(place.area, plan.area);
+    assert.ok(campPlanBatches(plan).size <= 10, plan.id + ': ' + campPlanBatches(plan).size + ' kinds of piece');
+    const solids = plan.items.filter(entry => pieceOf(entry)?.solid);
+    for (const entry of plan.items) {
+      const label = `${plan.id}: ${entry.piece} at (${entry.x}, ${entry.z})`;
+      const piece = pieceOf(entry);
+      if (!piece) { problems.push(label + ' is not a piece of its kit'); continue; }
+      if (wolfveilAreaAtLocal(entry.x, entry.z) !== plan.area) problems.push(label + ' is outside the ' + plan.area);
+      if (Math.hypot(entry.x - place.x, entry.z - place.z) > place.radius + 22) problems.push(label + ' is far from its place');
+      if (wolfveilDistanceToRiver(entry.x, entry.z) < WOLFVEIL_RIVER.width / 2 + 2) problems.push(label + ' stands in the river');
+      const span = Math.max(piece.size[0], piece.size[1]) / 2;
+      const drop = Math.tan(slopeAt(entry.x, entry.z) * Math.PI / 180) * span;
+      if (entry.y === undefined && piece.pivot === 'base' && drop > (piece.skirt ?? 0) + 0.25) problems.push(label + ': the ground falls ' + drop.toFixed(1) + ' m across it');
+    }
+    for (const entry of solids) {
+      if (wolfveilAnyTrailClearance(entry.x, entry.z) - reachOfSolid(entry) < 0.3 && clearOfTrailByShape(entry) < 0.3) problems.push(`${plan.id}: ${entry.piece} at (${entry.x}, ${entry.z}) closes a trail`);
+      for (const [name, point] of Object.entries(BAND2_POINTS)) {
+        if (entry.marks !== name && clearOfSolid(entry, point.x, point.z) < 0.7) problems.push(`${plan.id}: ${entry.piece} stands on ${name}`);
+      }
+      for (const person of THREE_ROADS_CAST) {
+        for (const spot of [person.home, person.homeAfter?.home, ...(person.alsoAt || [])].filter(Boolean)) {
+          if (spot.area === plan.area && clearOfSolid(entry, spot.x, spot.z) < 0.5) problems.push(`${plan.id}: ${person.id} stands inside ${entry.piece}`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(problems, []);
+});
+
+test('the furrow is ploughed beside the road, not along it', () => {
+  for (const name of ['furrow_1', 'furrow_2', 'furrow_3', 'furrow_end', 'furrow_stone', 'furrow_cart']) {
+    const point = BAND2_POINTS[name];
+    assert.ok(wolfveilAnyTrailClearance(point.x, point.z) >= 8, `${name} is ${wolfveilAnyTrailClearance(point.x, point.z).toFixed(1)} m from a trail`);
   }
 });

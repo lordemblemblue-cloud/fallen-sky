@@ -177,8 +177,62 @@ function westernRoadCamp() {
   });
 }
 
+// ── Band 2's three smaller places ──────────────────────────────────────────
+// Same item format as the camps. They have no sentries and no tall mark of
+// their own unless the plan says so; each is dressed from kits already made.
+function swordHall() {
+  const A = 'akitsu';
+  const items = [
+    item(A, 'tent_officer', -229, -55, -Math.PI / 2), // the hall itself: its front faces the door spot
+    item(A, 'tent_bell', -228, -64, -Math.PI / 2), // where the students sleep
+    item(A, 'spear_rack', -239, -65, 0), // wooden practice swords
+    item(A, 'banner_tall_pole', -237.5, -57.5),
+    item(A, 'banner_tall_cloth', -237.5, -57.5, -Math.PI / 2, { y: 6.3 }),
+    item('valley', 'grave_stone', -242, -52, Math.PI / 2, { marks: 'hall_grave' }),
+  ];
+  // A curtain along the north side shuts the practice ground off from the road.
+  for (const x of [-236, -232, -228]) items.push(item(A, 'curtain_run', x, -49.5, 0));
+  items.push(item(A, 'curtain_post', -226, -49.5));
+  return Object.freeze({ id: 'sword_hall', place: 'P14', area: 'west', kit: A, centre: Object.freeze({ x: -235, z: -60 }), items: Object.freeze(items) });
+}
+
+function shadowRavine() {
+  const T = 'tameri';
+  const items = [];
+  // Four fire bowls square the ground where the Priestess speaks the rite.
+  for (const [dx, dz] of [[-2.8, 2.8], [2.8, 2.8], [-2.8, -2.8], [2.8, -2.8]]) {
+    items.push(item(T, 'brazier_bowl', 340 + dx, -168 + dz));
+    items.push(item(T, 'brazier_flame', 340 + dx, -168 + dz));
+  }
+  // One marker for each of the five who can be named.
+  for (const [x, z] of [[345, -176.5], [347, -175], [348.6, -173], [349.2, -170.6], [346.4, -178.4]]) items.push(item('valley', 'stela', x, z, -Math.PI / 4));
+  // At the ravine's mouth: the rite's stores under an awning, and one staff so the place is seen from the trail.
+  items.push(item(T, 'awning', 328.5, -146.5, Math.PI));
+  items.push(item(T, 'jar_rack', 327.5, -149.8, Math.PI / 2));
+  items.push(item(T, 'flagstaff', 335, -146.8));
+  items.push(item(T, 'pennant', 335, -146.8, 0, { y: 12.6 }));
+  return Object.freeze({ id: 'shadow_ravine', place: 'P26', area: 'east', kit: T, centre: Object.freeze({ x: 340, z: -165 }), items: Object.freeze(items) });
+}
+
+function firstFurrow() {
+  const R = 'remoria';
+  // The furrow runs from (-262, 410) to (-218, 426), 18 m north of the Hunter's Loop and beside it.
+  const along = yawToward(44, 16);
+  const items = [
+    item(R, 'plough', -264.35, 409.15, along), // waiting at the furrow's start
+    item('valley', 'wagon', -267, 404.5, along), // the plough cart, with the archer's case
+    item(R, 'boundary_stone', -214.3, 430.6), // ready to be set where the furrow ends
+    item(R, 'standard_wolf', -270, 409, Math.PI / 2), // the colony's first standard
+    item(R, 'rack_arms', -268.5, 401.5, 0),
+    item(R, 'brazier_iron', -272, 405.5),
+    item(R, 'brazier_fire', -272, 405.5),
+  ];
+  return Object.freeze({ id: 'first_furrow', place: 'P36', area: 'north', kit: R, centre: Object.freeze({ x: -240, z: 400 }), road: 'hunters_loop_north', items: Object.freeze(items) });
+}
+
 export const CAMP_PLANS = Object.freeze([westernRoadCamp(), theLanding(), castraLupa()]);
-export const campPlan = id => CAMP_PLANS.find(plan => plan.id === id) || null;
+export const BAND2_PLACE_PLANS = Object.freeze([swordHall(), shadowRavine(), firstFurrow()]);
+export const campPlan = id => [...CAMP_PLANS, ...BAND2_PLACE_PLANS].find(plan => plan.id === id) || null;
 
 /** How many of each piece a plan uses: one batch (one draw call) per entry. */
 export function campPlanBatches(plan) {
