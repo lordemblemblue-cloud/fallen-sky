@@ -8,12 +8,15 @@ import {
 } from '../src/components/game3d/threeroads/places/layouts/index.mjs';
 import {
   PLACE_LOD, lodForDistance, placeInstances, instanceMatrix, solidFor, pushOutOfSolid,
-  createSolidGrid, resolveAgainstGrid, groundUnder, pieceReach, kitPieceOf,
+  createSolidGrid, resolveAgainstGrid, groundUnder, groundBuried, pieceReach, kitPieceOf,
 } from '../src/components/game3d/threeroads/places/placeMath.mjs';
 import { drapePaintedGround, groundShapePolygons } from '../src/components/game3d/threeroads/places/paintedGround.mjs';
 import { createPlacesSubsystem } from '../src/components/game3d/threeroads/places/placesSubsystem.mjs';
 import { createThreeRoadsBus } from '../src/components/game3d/threeroads/ThreeRoadsWorld.mjs';
 import { wolfveilHeight, wolfveilDistanceToRiver, wolfveilRouteClearance } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+// The game loads the cave access plan, which installs the cave-approach benches
+// into the height chain (the High Road's crest stands on one): so do the tests.
+import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 import { wolfveilAreaAtLocal, wolfveilAreaRect } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import { insideWolfveilImportedTown } from '../src/components/game3d/wolfveil/WolfveilImportedTownLayout.mjs';
 
@@ -375,12 +378,16 @@ test('the camps are built only with the preview switch; the town and fields are 
 
 test('the camp layouts are the lead\'s plans, piece for piece', async () => {
   const { CAMP_PLANS } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
+  const { CAMP_GROUND_MOVES } = await import('../src/components/game3d/threeroads/places/layouts/camps.mjs');
   for (const plan of CAMP_PLANS) {
     const built = THREE_ROADS_PLACES.filter(place => place.camp === plan.id).flatMap(placeInstances);
     assert.equal(built.length, plan.items.length, plan.id);
-    for (const item of plan.items) {
+    for (const planned of plan.items) {
+      // A recorded ground move: the same piece, that many metres along its facing.
+      const ahead = CAMP_GROUND_MOVES[planned.piece] || 0;
+      const item = { ...planned, x: planned.x + Math.sin(planned.yaw) * ahead, z: planned.z + Math.cos(planned.yaw) * ahead };
       const match = built.find(inst => inst.kit === item.kit && inst.piece === item.piece &&
-        Math.abs(inst.x - item.x) < 1e-6 && Math.abs(inst.z - item.z) < 1e-6 && Math.abs(inst.yaw - item.yaw) < 1e-6);
+        Math.abs(inst.x - item.x) < 0.01 && Math.abs(inst.z - item.z) < 0.01 && Math.abs(inst.yaw - item.yaw) < 1e-6);
       assert.ok(match, `${plan.id}: ${item.piece} at (${item.x}, ${item.z}) is missing`);
       assert.equal(match.y, item.y || 0);
       assert.equal(match.afloat, Boolean(item.afloat));
@@ -461,6 +468,16 @@ test('the Landing\'s rim rail closes the yard and leaves no pocket between rail 
       const north = resolveAgainstGrid(grid, { x: behind.x, z: behind.z + 2.5 }, 0.62);
       const south = resolveAgainstGrid(grid, { x: behind.x, z: behind.z - 2.5 }, 0.62);
       assert.ok(!(north && south), `a pocket behind the rail at z ${rail.z}`);
+    }
+  }
+});
+
+test('every camp piece stands on ground its skirt can cover (the game\'s ground, cave benches included)', () => {
+  for (const place of THREE_ROADS_PLACES.filter(entry => entry.preview)) {
+    for (const inst of placeInstances(place)) {
+      if (inst.afloat || inst.groundMode === 'high') continue;
+      const buried = groundBuried(inst, wolfveilHeight);
+      assert.ok(buried < 1, `${place.id} ${inst.piece} at (${inst.x}, ${inst.z}) is buried ${buried.toFixed(2)} m on its uphill side`);
     }
   }
 });

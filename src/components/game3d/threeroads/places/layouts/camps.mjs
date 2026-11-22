@@ -27,6 +27,22 @@ const ON_A_LIP = new Set(['landing_stage', 'hoist']);
 const OWN_PLACE_BEYOND = 80;
 const OWN_PLACE = Object.freeze({ road_arch: Object.freeze({ id: 'P43', key: 'high_road_arch' }) });
 
+// Pieces moved off their planned spot because the game's ground says so, as
+// metres along the piece's own facing (+ forward). Each is reported to the lead,
+// whose plan keeps the original point.
+//   road_arch: at (9, 524) the High Road crosses the Inkstone Cistern's
+//     cave-approach benches (installed at runtime by WolfveilCaveAccessPlan.mjs):
+//     the ground across the road differs by 9 to 20 m between 45 m south and
+//     10 m north of the point, so the arch's two posts would stand 11.5 m apart
+//     in height. 15 m further along the road the ground is level across it at
+//     127.5 m, the flat crest the plan describes.
+export const CAMP_GROUND_MOVES = Object.freeze({ road_arch: 15 });
+const moved = item => {
+  const ahead = CAMP_GROUND_MOVES[item.piece];
+  if (!ahead) return item;
+  return { ...item, x: Math.round((item.x + Math.sin(item.yaw) * ahead) * 100) / 100, z: Math.round((item.z + Math.cos(item.yaw) * ahead) * 100) / 100 };
+};
+
 const reachOf = item => (item.piece === 'barge' ? 8 : item.piece === 'pavilion_life' ? 5 : 4);
 
 function piecesOf(plan, items, centre) {
@@ -85,7 +101,8 @@ const DRESSING = Object.freeze({
 function campPlaces(plan) {
   const centre = plan.centre;
   const own = [], home = [];
-  for (const item of plan.items) {
+  for (const planned of plan.items) {
+    const item = moved(planned);
     const far = item.outlying && Math.hypot(item.x - centre.x, item.z - centre.z) > OWN_PLACE_BEYOND;
     (far ? own : home).push(item);
   }
