@@ -17,6 +17,7 @@ import { createRandom, createBot, think } from './bots.mjs';
 import { isStunned, isDown, stagger } from '../core/index.mjs';
 import { CONTRABAND } from './missions/contraband.mjs';
 import { SALTMARCH } from './missions/saltmarch.mjs';
+export { claimStorySupply } from './storySupplies.mjs';
 
 export const MISSIONS = Object.freeze({ contraband: CONTRABAND, saltmarch: SALTMARCH });
 // the story in order: a crew that finishes one goes on to the next (the last one plays again)
@@ -65,7 +66,7 @@ export function joinMission(mission, { id, name = id } = {}) {
   if (mission.seats.size >= mission.capacity) return { ok: false, reason: 'full' };
   const at = spawnPoint(mission, mission.seats.size);
   addFighter(mission.world, { id, team: CREW, weapon: 'sword', ...at });
-  mission.seats.set(id, { id, name, kind: 'player', team: CREW, respawnAt: null, hurtAt: -Infinity });
+  mission.seats.set(id, { id, name, kind: 'player', team: CREW, respawnAt: null, hurtAt: -Infinity, supplyUsed: null });
   mission.events.push({ type: 'joined', id, name, at: mission.world.time });
   return { ok: true };
 }
@@ -396,7 +397,8 @@ export function missionView(mission, forId = null) {
     ending: mission.phase === 'complete' ? def.ending : null,
     people: [...mission.seats.values()].map((s) => ({ id: s.id, name: s.name, dead: !!world.fighters.get(s.id)?.vitals.dead,
       respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time) })),
-    me: forId ? { id: forId } : null,
+    // A supply's use belongs to its own seat. Never expose another crew member's choice here.
+    me: forId ? { id: forId, supplyUsed: mission.seats.get(forId)?.supplyUsed || null } : null,
     interactables: [...mission.interactables.values()].filter((it) => it.enabled && !it.done).map((it) => ({ id: it.id, x: it.x, z: it.z, label: it.label,
       kind: it.kind || 'use', progress: Math.min(1, it.progress / it.seconds), by: it.by })),
     done: [...mission.interactables.values()].filter((it) => it.done).map((it) => it.id),
