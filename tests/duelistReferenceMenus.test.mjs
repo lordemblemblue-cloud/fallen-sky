@@ -67,7 +67,7 @@ test('reference menus render one visible frame instead of stacked template and C
   assert.match(css, /@media \(max-width:800px\)/);
   assert.match(css, /background-image:linear-gradient\(140deg/);
   assert.match(hub, /<CharacterReferenceMenu/);
-  assert.match(hub, /<StoryReferenceMenu/);
+  assert.match(hub, /<DuelistStoryMenu/);
   assert.match(hub, /<SettingsReferenceMenu/);
 });
 
