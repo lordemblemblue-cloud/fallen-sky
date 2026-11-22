@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
 import { particlesTwin, vfxShellTwin, coneTwin, ribbonTwin } from './duelistNodes.mjs';
+import { moveById } from '../core/moves.mjs';
 import { CLASSES, SPECIAL_BALANCE } from '../core/classes.mjs';
 
 // the colour of each lasting effect (core/abilities.mjs)
@@ -646,9 +647,12 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       if (e.type === 'impact' && target) {
         const chest = target.chest();
         const from = source ? source.chest() : chest.clone().add(new THREE.Vector3(0, 0, 1));
-        const origin = tmp.copy(from).sub(chest).normalize().clone();
-        const contact = chest.clone().addScaledVector(origin, 0.32);
-        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || /^swordCutw+Heavy$/.test(e.move);
+        const move = moveById(e.move);
+        const edge = move?.damageKind === 'melee' ? source?.bladeNear?.(chest) : null;
+        const origin = tmp.copy(edge || from).sub(chest).normalize().clone();
+        const contact = edge && edge.distanceTo(chest) <= 0.4
+          ? edge : chest.clone().addScaledVector(origin, 0.32);
+        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || move?.cut?.mode === 'heavy';
         if (e.shield > 0.01) {
           shells.flash({ follow: target.root, hex: COLORS.shield, hexPattern: true, origin, ttl: 0.32 });
           burst(contact, 10, 4, { hex: COLORS.shield, size: 0.04, ttl: 0.3, damping: 4 });
@@ -668,7 +672,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         else if (e.outcome === 'blocked') feel.shake = 0.15;
       }
       if (e.type === 'parry' && target) {
-        const at = target.hand();
+        const at = target.bladeNear?.(source?.bladeNear?.(target.chest()) || target.chest()) || target.hand();
         burst(at, 36, 7, { hex: COLORS.parry, size: 0.05, ttl: 0.38, damping: 5 });
         shells.flash({ position: at, scale: [0.25, 0.25, 0.25], hex: COLORS.parry, ripple: false, core: 1, ttl: 0.22, grow: 2.5 });
         warp?.ring({ at, kind: 'out', r0: 0.1, r1: 1.8, strength: 0.03, ttl: 0.3 });

@@ -10,6 +10,7 @@ import {
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
+import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
@@ -70,7 +71,7 @@ function newBody(x, z, yaw) {
   return {
     x, z, y: 0, yaw, vy: 0,
     // Client prediction and the match server share this transient state. It resets on landing.
-    jumped: false, airDashUsed: false, airDashTapAt: -Infinity,
+    jumped: false, airJumpAt: null, airDashUsed: false, airDashTapAt: -Infinity,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
@@ -152,7 +153,15 @@ export function step(world, dt, inputs = {}) {
         }
         continue; // never turn an airborne tap into a normal ground dash
       }
-      if (command === 'jump' && (body.jumped || body.y > 0.01)) continue; // no double jump
+      if (command === 'jump' && (body.jumped || body.y > 0.01)) {
+        if (body.jumped && body.y > 0.08 && body.airJumpAt == null && !restrained &&
+            now >= fighter.riseUntil && (!fighter.action || fighter.action.id === 'jump') &&
+            !effectOn(fighter, 'levitate', now) && spendStamina(fighter.vitals, MOVES.jump.stamina, now)) {
+          body.vy = Math.sqrt(2 * GRAVITY * MOVES.jump.leap);
+          body.airJumpAt = now;
+        }
+        continue;
+      }
       if (command === 'special') { trySpecial(world, fighter, body, now, effects); continue; }
       const before = fighter.action?.id;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
@@ -383,7 +392,7 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
 
 function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
-  if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
+  if (id === 'jump') { body.vy = Math.sqrt(2 * GRAVITY * move.leap); body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id) && !move?.mobile) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -391,7 +400,7 @@ function startMotion(body, fighter, id) {
   const dir = move.kind === 'movement' && Math.hypot(body.intent.x, body.intent.z) > 0.1
     ? { x: body.intent.x / Math.hypot(body.intent.x, body.intent.z), z: body.intent.z / Math.hypot(body.intent.x, body.intent.z) }
     : forwardOf(body.yaw);
-  if (move.kind === 'movement' && !body.strafe) body.yaw = Math.atan2(dir.x, dir.z);
+  if (move.kind === 'movement' && (!body.strafe || id === 'roll')) body.yaw = Math.atan2(dir.x, dir.z);
   const from = move.kind === 'movement' ? 0 : move.startup;
   // a jump keeps the speed the body had as it left the ground; a roll or a dash covers its own distance
   const distance = move.air ? (body.speed || 0) * move.active : move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1);
@@ -440,7 +449,7 @@ function moveBody(world, fighter, body, dt, now) {
     body.motion.done = target;
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
-    if (a.move.leap) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
+    if (a.move.leap && !a.move.air) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
   } else {
     body.motion = null;
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
@@ -484,7 +493,7 @@ function moveBody(world, fighter, body, dt, now) {
     body.z += vz * dt;
   }
   body.moving = Math.hypot(vx, vz) > 0.1;
-  const leaping = !!(a?.move.leap && body.motion && !body.motion.clip && a.id === body.motion.id);
+  const leaping = !!(a?.move.leap && !a.move.air && body.motion && !body.motion.clip && a.id === body.motion.id);
   if (effectOn(fighter, 'levitate', now)) {
     body.y += (EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
     body.vy = 0;
@@ -500,6 +509,7 @@ function moveBody(world, fighter, body, dt, now) {
   }
   if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
     body.jumped = false;
+    body.airJumpAt = null;
     body.airDashUsed = false;
     body.airDashTapAt = -Infinity;
   }

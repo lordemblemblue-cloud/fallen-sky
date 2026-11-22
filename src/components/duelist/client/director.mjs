@@ -72,7 +72,22 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         const target = actors[e.defender];
         const at = target ? target.chest() : null;
         if (e.type === 'projectile') audio.play('shot', actors[e.owner]?.chest() || null);
-        if (e.type === 'impact' && at) impactSound(e, at);
+        if (e.type === 'impact' && at) {
+          impactSound(e, at);
+          const attacker = bodyOf(world, e.attacker);
+          const defender = bodyOf(world, e.defender);
+          if (attacker && defender && e.outcome === 'hit' && e.hp + e.will + e.shield > 0) {
+            const dx = defender.x - attacker.x, dz = defender.z - attacker.z;
+            const distance = Math.max(0.001, Math.hypot(dx, dz));
+            const forward = forwardOf(defender.yaw);
+            target.impactPose = {
+              at: now,
+              pitch: (dx * forward.x + dz * forward.z) / distance,
+              roll: (dx * forward.z - dz * forward.x) / distance,
+              strength: Math.min(0.26, 0.10 + (e.hp + e.shield + e.will) * 0.003),
+            };
+          }
+        }
         else if (e.type === 'parry' && target) audio.play('parry', target.hand());
         else if (e.type === 'veilCollapse' && at) audio.play('collapse', at);
         else if (e.type === 'breach' && at) audio.play('breach', at);
