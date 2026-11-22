@@ -197,6 +197,15 @@ export function createCastSubsystem(ctx, deps = {}) {
   let subtitleOwner = null;   // the record shown as a subtitle, if any
   let lineCounter = 0;
   const subtitleAt = new THREE.Vector3();
+  const projected = new THREE.Vector3();
+  // True when a point is in front of the camera and inside its view (a little
+  // margin, so a head at the very edge still counts as seen). No camera: assume so.
+  const onScreen = (camera, p) => {
+    if (!camera?.isCamera) return true;
+    camera.updateMatrixWorld?.();
+    projected.set(p.x, p.y, p.z).project(camera);
+    return projected.z > -1 && projected.z < 1 && Math.abs(projected.x) <= 1.05 && Math.abs(projected.y) <= 1.05;
+  };
   const drawOrder = [];
 
   // Steering for one walker: the town's named obstacles and the other people.
@@ -645,7 +654,9 @@ export function createCastSubsystem(ctx, deps = {}) {
       const at = speakerPose(rec.id);
       const listener = playerPosition && Number.isFinite(playerPosition.x) ? playerPosition : camera?.position;
       const d = at && listener ? Math.hypot(listener.x - at.x, listener.z - at.z) : Infinity;
-      if (at && captionDistanceFade(d) > 0) {
+      // Over the head only when that head is on screen: a speaker within 25 m but
+      // behind the camera (or off its edge) gets the subtitle, or the line is lost.
+      if (at && captionDistanceFade(d) > 0 && onScreen(camera, at)) {
         setMode(rec, 'head');
         const camD = camera ? Math.hypot(camera.position.x - at.x, camera.position.y - at.y, camera.position.z - at.z) : d;
         rec.view.place(at.x, at.y, at.z, camera, captionOpacity(rec.time, rec.seconds) * captionDistanceFade(d),
@@ -862,6 +873,18 @@ export function createCastSubsystem(ctx, deps = {}) {
     offs.push(bus.on('cast:moveTo', d => api.moveTo(d)));
     offs.push(bus.on('cast:follow', d => api.follow(d)));
     offs.push(bus.on('cast:say', d => api.say(d)));
+    // A synchronous question from the pledge world (escorts, a choice beside its
+    // giver, a trail target): query = { id, x: null, z: null, found: false }. For
+    // one of this scene's people who stands on the ground, set the current world
+    // position and found = true; for anyone else leave the query alone.
+    offs.push(bus.on('cast:locate', query => {
+      const actor = query && actors.get(query.id);
+      if (!actor || actor.state !== 'ready') return;
+      query.x = actor.x;
+      query.z = actor.z;
+      query.y = actor.y;
+      query.found = true;
+    }));
   }
 
   // ─── people at home, by the story so far ───
