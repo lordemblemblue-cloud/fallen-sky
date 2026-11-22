@@ -60,6 +60,7 @@ test('class selection is vertically stacked and only the central Select button s
   assert.match(picker, /kit\.abilities\.map/);
   assert.match(picker, /kit\.special\.name/);
   assert.match(game, /<ClassPicker current=\{current\} pending=\{classAnswer\?\.ok \? classAnswer\.pending : null\} fighter=\{youBody\}/);
+  assert.match(game, /if \(showPicker && document\.pointerLockElement\) document\.exitPointerLock\?\.\(\)/);
 });
 
 test('the three-column screen reserves 18 percent for classes, 57 for live model, 25 for skills', () => {
@@ -78,6 +79,11 @@ test('the three-column screen reserves 18 percent for classes, 57 for live model
   assert.match(css, /\.dcp-model-footer \{ position: absolute; bottom: 16px;/);
   assert.match(css, /\.dcp-select \{/);
   assert.match(css, /@media \(max-width: 780px\)/);
+  const game = file('client/DuelistGame.jsx');
+  const hud = file('client/DuelistHud.jsx');
+  assert.match(hud, /pickerOpen = false/);
+  assert.match(hud, /\{!pickerOpen && \(rail/);
+  assert.match(game, /pickerOpen=\{!!showPicker\}/);
 });
 
 test('home and character match previews continue to share the corrected AFK stance', () => {
