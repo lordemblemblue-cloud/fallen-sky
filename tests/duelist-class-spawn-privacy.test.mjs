@@ -174,3 +174,29 @@ test('live fighters cannot hot-swap any class or reset earned charge before defe
     }
   }
 });
+
+test('disconnect stand-in cannot consume or replace a queued respawn class', () => {
+  const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+  assert.equal(queueMatchClass(match, 'alpha', 'warrior').accepted, true);
+  advance(match, COUNTDOWN + 0.1);
+  const seat = match.seats.get('alpha');
+  const oldFighter = match.world.fighters.get('alpha');
+  seat.specialMeter = 35; // Trusted simulation setup, not a network request.
+  oldFighter.vitals.dead = true;
+  seat.respawnAt = match.world.time + 0.05;
+  assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
+  assert.equal(typeof standInInput(match, 'alpha'), 'object');
+  assert.equal(queueMatchClass(match, 'alpha', 'INVALID').accepted, false);
+  assert.equal(seat.pendingClass, 'assassin');
+  assert.equal(seat.classId, 'warrior');
+  assert.equal(seat.specialMeter, 35);
+  assert.equal(matchView(match, 'beta').people.some(p =>
+    Object.hasOwn(p, 'pendingClass') || Object.hasOwn(p, 'specialMeter')), false);
+  advance(match, 0.15);
+  assert.equal(seat.kind, 'player');
+  assert.equal(seat.classId, 'assassin');
+  assert.equal(seat.pendingClass, null);
+  assert.equal(seat.specialMeter, 0, 'new class resets old class charge on respawn');
+  assert.equal(match.world.fighters.get('alpha').weapon, CLASSES.assassin.weapon);
+  assert.equal(matchView(match, 'alpha').me.specialMeter, 0);
+});
