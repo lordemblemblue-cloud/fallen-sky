@@ -19,7 +19,7 @@ Nothing here is built yet. Coordinates are the game's own map metres (x east, z 
 | Kinds of monster | 22, on 5 shared skeletons |
 | Speaking parts | about 25 |
 
-The 25 quests already in the game stay as they are for now (see the decisions at the end).
+The 32 quests already in the game stay as they are for now (see the decisions at the end).
 
 **What a player's first evening looks like.** Arrive at the fountain, swear the Truce, save three strangers at the gate, see the murder at the parley, be called to your own empire's camp, do its first two chapters, and take your first war pledge at the harvest fields against real players. About two hours, eight pledges, every area seen at least from its gate.
 
@@ -61,6 +61,15 @@ The 25 quests already in the game stay as they are for now (see the decisions at
 ## 3. The places
 
 Each place is one adventure spot: something visible from a distance, a reason to go there, and one to four quests that use it. "New" means it has to be built; "Here" means the land or landmark is already in the game and gets dressed.
+
+Every place follows the same few rules, taken from the land study (`research/REFERENCE_LAND_NOTES.md`):
+
+- **It sits on a change of height**: on a knoll, in a hollow, up a stair, behind a fold in the ground. Nothing is placed on flat open grass.
+- **It can be read from far off**: smoke, a banner, a tower top or a carved front seen from about 300 m; its whole outline at 100 m; in the last 50 m, things on the ground that say who lives there.
+- **A pair of fire baskets always means "the way in is here"**, and is used for nothing else.
+- **Each area has one big shape that works as its compass**: the great cedar in the west, the obelisk and quarry cliff in the east, the fort towers and aqueduct arches in the north, the mill in the south, the Oath Tree and fountain in the town.
+- **Each kind of place looks the same wherever it is**: a camp is a fire and tents, an old battlefield is standing banners, a shrine is a pair of pale stones.
+- **Each empire's places are built from one small kit of about twelve pieces** (tent, palisade, gate, banner pole, fire basket, crate stack and so on), so that a whole area's camps and forts draw as a handful of batches.
 
 ### Town (safe)
 
@@ -255,6 +264,28 @@ Each entry: level, who asks, where, the steps, how it is staged, and the kind of
 *Staging:* the brush is offered with your empire's need spoken aloud, in the voice of the person from your own story you cared about most.
 *Reward:* experience, skill points, the title Wolf's Witness, a mark of light on the character. The ongoing war for stewardship opens.
 
+### How each chapter hands you to the next
+
+No chapter ends in a menu. The last thing in each one is a person, an object or a sight that names the next place, and each place is shown before the player is sent there.
+
+| After | What sends you on |
+| --- | --- |
+| M01 | Lyra: the parley is at the fountain at noon, and the sworn have a place in the ring. |
+| M02 | The three arrows on Sable Vey's table are wet with ink. Kira: the only ink like that is in the Jade Lantern Grotto. |
+| M03 | The token from the socket. Hesper: the Wolf Stones remember hands. |
+| M04 | The ghost points his standard at a red glow on the far ridge: Root Hollow, already burning. |
+| M05 | As the Tooth leaves the wall, the next mural lights: a koi under water. Lyra is waiting at the mouth. |
+| M06 | The ledger's last line says every war here turned at the harvest. Your quartermaster's runner is at the cistern mouth. |
+| M07 | A glass moth lands on a burnt post, far from its cave. Your commander's horn sounds. |
+| M08 | An ink handprint on the empty socket. Only one man in the valley has ink to the elbows. |
+| M09 | The child's drawing shows a wolf under the lake. Noor: the lake remembers. |
+| M10 | You surface to the Truce Bell ringing across the valley and smoke over the plateau. |
+| M11 | The host breaks and runs back down into Root Hollow. |
+
+**Places that come back changed.** The fountain square: calm, then the murder, then empty of envoys, then the dawn walk. The Gate Fields: green, burning, ash, then stubble with graves. The Wolf Stones: quiet, the echo of the old war, Seven Swords, a shrine in someone's colours. The quarry: a pit, then an obelisk on the skyline. The plateau: a furrow, a battlefield, one line of three armies. The same land with new light and new people costs far less than new land, and it is what makes a place feel lived in.
+
+**A person in every gate.** Each of the eleven gates between areas gets a warden of the Fountain Watch. Going into the town they tie your weapon with a cord; going out they cut it. The gates are loading points already; this turns each one into the Truce being kept in front of you.
+
 ## 5. Akitsu: The Iron Road (8) — west
 
 **A01 · A Farmer's Son in a Blue Coat** — level 3 · Sergeant Gorō · Camp of the Western Road
@@ -425,6 +456,8 @@ Sworn at your empire's lodge or camp. Swearing one raises your banner until it i
 
 **Rules of war.** No fighting in the town. Only bannered players can be attacked. A player performing rites can be attacked, but whoever does it carries a mark of shame for a time. Kills, captures and rewards are decided by the server, never by the player's own browser.
 
+**What this depends on.** In the published game today, open fighting between players in the wild areas is designed but not switched on: the switch waits for a reply from a world server that is not running. Duels between two players do work, and the server decides them. So war pledges can be built in two stages: first on duels (two players sworn to opposite pledges at the same place are thrown into a duel there, and the winner's side advances), then on open fighting once the world server is running. Today's rule also has no notion of sides: two players of the same empire can fight if both chose to. War pledges need "same empire cannot fight".
+
 ## 11. Where rivals are sent to the same place
 
 | Place | Akitsu | Tameri | Remoria |
@@ -469,6 +502,15 @@ For the builders. Today's system knows "kill N" and "find a place", gives quests
 - **War pledges**: a shared objective with opposing sides, a time window, and the banner raised while sworn.
 - **The server decides** acceptance, progress that matters, completion and every reward. The game has a private server path for this that the published game does not call yet; until it does, new quests can be played but must grant nothing of value from the browser.
 
+**Room on screen.** The game's own budget for one area in a browser is 500 draw calls and 1.5 million triangles, of which scenery may use 350 and 1.0 million. Measured before this work, the worst single view already uses 207 to 280 draw calls and 0.77 to 1.24 million triangles; the west is over its triangle budget and the east is at it. Grass is 55 to 70 percent of everything drawn. So:
+
+- Each new place gets at most about 10 draw calls and 15,000 triangles in view, and a low-poly version at about a third of that.
+- All of one empire's kit pieces in an area draw as instanced batches: about twelve draw calls for every camp and fort in the area together.
+- The west and the east have to give back triangles (thinner grass inside camps, on roads and on rock) before they take new ones.
+- At most 30 animated enemies exist at once today; each new kind of monster is measured against that before more are added.
+- Interiors (caves, the barrow, the shaft tomb) are separate scenes, so the open areas never draw them.
+- Every place is measured in the browser, before and after, on WebGPU.
+
 ## 14. Build order
 
 One band at a time, and inside a band one region per chat so they do not edit the same files.
@@ -490,8 +532,9 @@ Each place is built the same way: look at how that kind of place is laid out in 
 2. **Which faction is which empire**: bear = Akitsu, wolf = Remoria, tiger = Tameri. This is the one choice that touches existing characters.
 3. **The names** in the table at the end of the story document.
 4. **"Pledge"**: I read your "pledge system" as the monsters-caves-quests side of the game and named quests Pledges. Right, or did you mean something else?
-5. **The 25 quests already in the game**: keep them as they are beside the new ones, re-dress the first ten as the Watch's training, or retire them?
+5. **The 32 quests already in the game**: keep them as they are beside the new ones, re-dress the first ten as the Watch's training, or retire them?
 6. **Levels**: today the east is levels 3 to 25, the north 30 to 35 and the west 40 to 50, so Akitsu's home would be the hardest area. I plan for quest fights to match the player's level instead. Would you rather the camps were re-levelled so every side has easy and hard ground?
 7. **Two new farm tracks** from the Gate Fields into the west and the east, which also means two new gates. Without them the fields can only be reached through the town.
 8. **Rewards** need the server. Until the game's server path for quests is switched on, do you want the new quests playable with no rewards, or held back until rewards work?
-9. **Order**: band 0 and band 1 first, as above?
+9. **Fighting between players**: open fighting in the wild areas is not switched on in the published game (it needs the world server running); duels are. Build war pledges on duels first, or wait for open fighting?
+10. **Order**: band 0 and band 1 first, as above?
