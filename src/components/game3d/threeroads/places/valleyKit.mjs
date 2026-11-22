@@ -26,12 +26,24 @@ const STAND_IN = Object.freeze({
 
 // A few pieces whose box would misread their outline get a plain shape of
 // the same size instead: a dome for the mound and the haystack, a cross for
-// the sails. Still stand-ins; the kit replaces them.
+// the sails, an open frame for the studio frame. Still stand-ins; the kit replaces them.
 function shapedStandIn(piece) {
   const [w, d, h] = piece.size;
   if (piece.id === 'barrow_mound' || piece.id === 'haystack') {
     const geometry = new THREE.SphereGeometry(0.5, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     geometry.scale(w, h * 2, d);
+    return geometry;
+  }
+  if (piece.id === 'studio_frame') {
+    // Four posts and a ring of beams: a frame you can see into.
+    const parts = [];
+    const post = 0.18;
+    for (const sx of [-1, 1]) for (const sz of [-1, 1])
+      parts.push(new THREE.BoxGeometry(post, h, post).translate(sx * (w / 2 - post / 2), h / 2, sz * (d / 2 - post / 2)));
+    for (const sz of [-1, 1]) parts.push(new THREE.BoxGeometry(w, post, post).translate(0, h - post / 2, sz * (d / 2 - post / 2)));
+    for (const sx of [-1, 1]) parts.push(new THREE.BoxGeometry(post, post, d).translate(sx * (w / 2 - post / 2), h - post / 2, 0));
+    const geometry = mergeGeometries(parts);
+    for (const part of parts) part.dispose();
     return geometry;
   }
   if (piece.id === 'windmill_sails') {
