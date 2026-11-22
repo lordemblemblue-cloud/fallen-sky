@@ -103,6 +103,12 @@ test('target selection requires one local page with the requested playable route
   assert.throws(() => pickTarget([tabs[0], tabs[0]], 'fallen-sky'), /exactly one/);
   assert.throws(() => pickTarget(tabs, 'unknown'), /Unknown scene ID/);
   assert.equal(pickTarget(tabs, 'fallen-sky', '?renderer=webgpu').url, tabs[0].url);
+  // A user-supplied tab filter must not turn a different page into a game target.
+  assert.throws(() => pickTarget(tabs, 'fallen-sky', '/duelist-next/play'), /exactly one/);
+  assert.throws(() => pickTarget(tabs, 'duelist-adventure', '/gameview'), /exactly one/);
+  const wrongRoute = { ...tabs[0], url: 'https://example.com/unrelated?next=/gameview' };
+  assert.throws(() => pickTarget([wrongRoute], 'fallen-sky', '/gameview'), /exactly one/);
+  assert.equal(pickTarget([tabs[0], wrongRoute], 'fallen-sky', '/gameview').url, tabs[0].url);
 });
 
 test('unknown scene ids cannot inject executable code into the browser probe', () => {
