@@ -25,3 +25,5 @@ jobs:
         run: node --test tests/duelist-special-meter-ownership-contract.test.mjs tests/duelist-match-classes.test.mjs tests/duelist-classes.test.mjs
       - name: Lint meter contract
         run: npx eslint tests/duelist-special-meter-ownership-contract.test.mjs
+      - name: Verify production application build
+        run: npm run build
