@@ -8,7 +8,7 @@ const FONT_PX = 44;
 const LINE_PX = 54;
 const PAD_PX = 26;
 const NAME_PX = 30;
-const METRES_PER_PX = 0.0042;
+const METRES_PER_PX = 0.0034;
 
 const roundRect = (g, x, y, w, h, r) => {
   g.beginPath();
@@ -33,9 +33,9 @@ export function createCaptionView(THREE, { geometry }) {
   let texture = null;
   let aspect = 1, heightMetres = 0.3;
 
-  function setText(text, speaker = '') {
+  function setText(text, speaker = '', { maxChars, maxLines } = {}) {
     if (!doc?.createElement) return;
-    const lines = wrapCaptionText(text);
+    const lines = wrapCaptionText(text, maxChars, maxLines);
     const canvas = doc.createElement('canvas');
     const g = canvas.getContext('2d');
     if (!g) return;
@@ -97,6 +97,8 @@ export function createCaptionView(THREE, { geometry }) {
       mesh.position.set(x, y + h / 2, z);
       if (camera) mesh.quaternion.copy(camera.quaternion);
     },
+    /** The caption's height in metres at grow 1 (for sizing it on screen). */
+    get height() { return heightMetres; },
     hide() { mesh.visible = false; },
     dispose() {
       mesh.removeFromParent();

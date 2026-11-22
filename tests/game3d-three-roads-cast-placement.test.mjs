@@ -68,10 +68,13 @@ test('a spot the scene probe refuses is skipped, and the nearest layout-clear on
   assert.equal(refuseAll.distance, 0);
 });
 
-test('every person with a home finds clear ground on flat land within 6 m', () => {
+test('every home in the table (before and after the war opens, and every alsoAt) has clear ground within 6 m', () => {
   const blocked = makeBlockedTest();
-  const homes = [...threeRoadsCastAtHome({ area: 'town' }), ...threeRoadsCastAtHome({ area: 'south' })];
-  assert.equal(homes.length, 10);
+  const homes = [];
+  for (const flags of [{}, { tr_war_open: true }])
+    for (const area of ['town', 'south', 'west', 'east', 'north']) homes.push(...threeRoadsCastAtHome({ area, flags }));
+  assert.ok(homes.length >= 12);
+  assert.ok(threeRoadsCastAtHome({ area: 'south' }).some(p => p.id === 'goro_sergeant'));
   for (const person of homes) {
     const home = localToWorld(person.home.x, person.home.z);
     const spot = findStandingSpot(home, { groundY: flat, isBlocked: blocked });
@@ -79,7 +82,7 @@ test('every person with a home finds clear ground on flat land within 6 m', () =
     assert.ok(spot.distance <= 6, person.id);
     assert.ok(!inRiver(spot.x, spot.z), person.id + ' not in the river');
   }
-  assert.equal(THREE_ROADS_CAST.filter(p => p.home && !p.existing).length, 10);
+  assert.ok(THREE_ROADS_CAST.filter(p => p.home && !p.existing).length >= 12);
 });
 
 test('a destination at the fountain centre is moved to its rim', () => {

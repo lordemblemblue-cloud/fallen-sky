@@ -7,8 +7,12 @@ export const CAPTION_FADE_IN = 0.2;
 export const CAPTION_FADE_OUT = 0.4;
 export const CAPTION_MIN_SECONDS = 1;
 export const CAPTION_MAX_SECONDS = 30;
-export const CAPTION_LINE_CHARS = 34;
-export const CAPTION_MAX_LINES = 4;
+// The script's longest line is 218 characters: 7 lines of 36 over a head, or 4 of 64
+// as a subtitle, so no line is ever cut.
+export const CAPTION_LINE_CHARS = 36;
+export const CAPTION_MAX_LINES = 7;
+export const SUBTITLE_LINE_CHARS = 64;
+export const SUBTITLE_MAX_LINES = 4;
 
 /** How long a line stays up: the seconds asked for, or a reading time from its length. */
 export function captionSeconds(text, seconds) {
@@ -36,7 +40,7 @@ export function captionDistanceFade(distance, max = CAPTION_MAX_DISTANCE) {
   return (max - distance) / CAPTION_FADE_DISTANCE;
 }
 
-/** Breaks a line into at most CAPTION_MAX_LINES lines of about CAPTION_LINE_CHARS. */
+/** Breaks a line into at most maxLines lines of about maxChars (an ellipsis if it still does not fit). */
 export function wrapCaptionText(text, maxChars = CAPTION_LINE_CHARS, maxLines = CAPTION_MAX_LINES) {
   const words = String(text ?? '').trim().split(/\s+/).filter(Boolean);
   const lines = [];

@@ -3,6 +3,9 @@
 // - Everyone with a `home` in this scene's area (script/cast.mjs) is brought in and
 //   stood on clear, flat ground within 6 m of that home, once the ground has loaded
 //   (castPlacement.mjs). With ?wholeWorld=1 (ctx.areaScenes false) every area's people.
+//   Homes depend on the quest store's story flags (`homeAfter`): the store is read
+//   at start and on every change, and people are brought in or taken out without a
+//   remount.
 // - Each wears a clone of a rig the game already ships (castModels.mjs), scaled to
 //   their height, tinted with their two colours, playing an idle.
 // - People with `giver: true` are pushed into ctx.questNPCs in the shape GameWorld3D
@@ -11,14 +14,19 @@
 //   entries' mixers itself (GameWorld3D.jsx questNPCs loop), so this file does not.
 // - They act on the bus (BUILD_RULES.md section 4): cast:spawn, cast:despawn,
 //   cast:moveTo, cast:follow, cast:say; they announce cast:ready and cast:arrived.
-// - At most CAST_MAX_PEOPLE in a scene; dispose() removes and frees everything and
-//   takes this file's entries back out of ctx.questNPCs.
+// - Lines (cast:say) show over the speaker's head within 25 m of the player; a
+//   speaker who is further away, or not in this scene, or one of the game's own
+//   archers, is shown as a subtitle at the foot of the view instead.
+// - At most CAST_MAX_PEOPLE in a scene and CAST_MAX_DRAWN drawn (the nearest to the
+//   player); dispose() removes and frees everything and takes this file's entries
+//   back out of ctx.questNPCs.
 // - Test door (only exists with ?threeRoads=1): window.__gw3dThreeRoads.get('cast')
 //   has spawn, despawn, moveTo, follow, say and status().
 import * as THREE from 'three';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { THREE_ROADS_CAST, threeRoadsCastAtHome, threeRoadsPerson } from '../script/cast.mjs';
 import { localToWorld } from '../coords.mjs';
+import { threeRoadsLine } from '../script/index.mjs';
 import { pickAXEEmbeddedIdleClip } from '../../npc/axeAnimatedQuestNpcGLB.mjs';
 import { playPledgeLine } from '../../pledges/voice/pledgeVoice.mjs';
 import {
@@ -29,17 +37,37 @@ import {
   stepToward, steerAround, followGoal, followSpeed, turnToward, headingTo, shouldGreet,
   walkTimeScale, CAST_WALK_SPEED, CAST_TURN_RATE, CAST_FOLLOW_DISTANCE,
 } from './castMotion.mjs';
-import { captionSeconds, captionOpacity, captionDistanceFade } from './castCaption.mjs';
+import {
+  captionSeconds, captionOpacity, captionDistanceFade, wrapCaptionText,
+  CAPTION_LINE_CHARS, CAPTION_MAX_LINES, SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES,
+} from './castCaption.mjs';
 import { createCaptionView } from './castCaptionView.mjs';
 import { CAST_MODEL_SOURCES, castModelFor, distinctColours } from './castModels.mjs';
 
-export const CAST_MAX_PEOPLE = 8;
-export const CAST_AREAS = Object.freeze([...new Set(
-  THREE_ROADS_CAST.filter(person => person.home?.area).map(person => person.home.area))]);
+// The opening's parley puts 11 people in the town (7 at home, the 3 travellers, Elder
+// Maren). BUILD_RULES allows more than 8 when measured: each drawn person costs
+// about 4 to 5 draw calls and 20,000 triangles (the archer rig), so at most 8 are
+// drawn, the nearest to the player; the rest stand there undrawn and unanimated
+// until they are among the nearest again.
+export const CAST_MAX_PEOPLE = 12;
+export const CAST_MAX_DRAWN = 8;
+export const CAST_AREAS = Object.freeze([...new Set(THREE_ROADS_CAST.flatMap(person => [
+  person.home, person.homeAfter?.home, ...(person.alsoAt || []),
+]).filter(home => home?.area).map(home => home.area))]);
 
 const PLACE_EVERY = 0.25; // seconds between placement attempts (one person each)
 const REGROUND_EVERY = 1;  // seconds between ground re-checks of people standing still
 const WALK_GROUND_EVERY = 0.1;
+const DRAW_EVERY = 0.5;    // seconds between choosing who is drawn
+const FOLLOW_CATCH_UP = 35; // a follower this far behind is put back behind the player
+const PERSONAL_SPACE = 0.75; // two of the cast walking never come closer than this
+const SUBTITLE_DISTANCE = 1.25;    // metres in front of the camera
+const SUBTITLE_LINE_SCREEN = 0.034; // one line's share of the screen's height
+const SUBTITLE_FOOT = 0.17;         // its foot, below the centre, as a share of the screen
+
+// The quest store, read lazily so this file stays importable in node.
+const defaultQuestStore = () => import('../../useQuestStore.jsx')
+  .then(store => ({ getState: store.getQuestState, subscribe: store.subscribeQuests }));
 
 // ─── Model sources: one download and parse per source per scene ───
 let configModule = null;
@@ -159,9 +187,30 @@ export function createCastSubsystem(ctx, deps = {}) {
   let disposed = false;
   let placeTimer = PLACE_EVERY; // first attempt on the first frame
   let regroundTimer = 0;
+  let drawTimer = DRAW_EVERY;
+  let flags = null; // the quest store's story flags, once read
   const step = { x: 0, z: 0, heading: 0, remaining: 0, arrived: false };
   const steer = { x: 0, z: 0, heading: 0, blocked: false };
   const goal = { x: 0, z: 0, gap: 0 };
+  const captions = new Map(); // speaker id -> { view, name, time, seconds, voice }
+  const captionList = [];     // the same records, for allocation-free iteration
+  let subtitleOwner = null;   // the record shown as a subtitle, if any
+  let lineCounter = 0;
+  const subtitleAt = new THREE.Vector3();
+  const drawOrder = [];
+
+  // Steering for one walker: the town's named obstacles and the other people.
+  let steerSelf = null;
+  const blockedForSteer = (x, z) => {
+    if (blocked(x, z)) return true;
+    for (let i = 0; i < actorList.length; i++) {
+      const other = actorList[i];
+      if (other === steerSelf || other.state !== 'ready') continue;
+      if (Math.abs(other.x - x) < PERSONAL_SPACE && Math.abs(other.z - z) < PERSONAL_SPACE &&
+        Math.hypot(other.x - x, other.z - z) < PERSONAL_SPACE) return true;
+    }
+    return false;
+  };
 
   const groundAt = (x, z, feetY) => {
     const y = ctx.sampleGroundY?.(x, z, feetY);
@@ -205,6 +254,7 @@ export function createCastSubsystem(ctx, deps = {}) {
 
   // ─── people ───
   function addActor(person, { x, z, facing, fromHome }) {
+    if (actors.has(person.id)) return actors.get(person.id);
     if (actors.size >= CAST_MAX_PEOPLE) {
       warn('Three Roads cast: already ' + CAST_MAX_PEOPLE + ' people in this scene; ' + person.id + ' stays out');
       return null;
@@ -219,8 +269,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       template: templateFor(look.source),
       group: null, model: null, mixer: null, idleAction: null, walkAction: null, ring: null,
       entry: null, materials: [], moving: false, groundClock: 0,
-      task: null, pendingTask: null, followMoving: false,
-      caption: null, captionTime: 0, captionSeconds: 0, voice: null,
+      task: null, pendingTask: null, followMoving: false, drawn: true,
     };
     actors.set(person.id, actor);
     actorList.push(actor);
@@ -236,8 +285,6 @@ export function createCastSubsystem(ctx, deps = {}) {
       const at = ctx.questNPCs.indexOf(actor.entry);
       if (at >= 0) ctx.questNPCs.splice(at, 1);
     }
-    try { actor.voice?.stop?.(); } catch { /* already stopped */ }
-    actor.voice = null;
     if (actor.mixer) {
       actor.mixer.stopAllAction();
       if (actor.model) actor.mixer.uncacheRoot(actor.model);
@@ -246,8 +293,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     actor.group?.removeFromParent();
     for (const m of actor.materials) m.dispose();
     actor.materials.length = 0;
-    actor.caption?.dispose();
-    actor.caption = null;
+    // A line they were speaking carries on as a subtitle until its time is up.
     actor.state = 'gone';
   }
 
@@ -464,10 +510,13 @@ export function createCastSubsystem(ctx, deps = {}) {
   function walkToward(actor, tx, tz, speed, dt, arrive) {
     stepToward(step, actor.x, actor.z, tx, tz, speed, dt, arrive);
     let heading = step.heading;
-    if (!step.arrived && blocked(step.x, step.z) && !blocked(actor.x, actor.z)) {
-      steerAround(steer, actor.x, actor.z, step.heading, speed * dt, blocked);
+    // Round the named obstacles, and round each other when several walk at once.
+    steerSelf = actor;
+    if (!step.arrived && blockedForSteer(step.x, step.z) && !blockedForSteer(actor.x, actor.z)) {
+      steerAround(steer, actor.x, actor.z, step.heading, speed * dt, blockedForSteer);
       step.x = steer.x; step.z = steer.z; heading = steer.heading;
     }
+    steerSelf = null;
     actor.x = step.x; actor.z = step.z;
     actor.facing = turnToward(actor.facing, heading, CAST_TURN_RATE * dt);
     actor.groundClock -= dt;
@@ -477,6 +526,19 @@ export function createCastSubsystem(ctx, deps = {}) {
       if (y !== null && Math.abs(y - actor.y) < 3) actor.y = y;
     }
     return step.arrived;
+  }
+
+  // A follow point inside the fountain or a shop: the nearest clear point at the
+  // same distance round the target (so a follower waits beside, not in, the basin).
+  function clearFollowGoal(out, target, distance) {
+    const base = Math.atan2(out.x - target.x, out.z - target.z);
+    for (let k = 1; k <= 12; k++) {
+      const turn = Math.ceil(k / 2) * (Math.PI / 12) * (k % 2 ? 1 : -1);
+      const x = target.x + Math.sin(base + turn) * distance;
+      const z = target.z + Math.cos(base + turn) * distance;
+      if (!blocked(x, z)) { out.x = x; out.z = z; return true; }
+    }
+    return false;
   }
 
   function updateActor(actor, dt, playerPosition) {
@@ -497,6 +559,16 @@ export function createCastSubsystem(ctx, deps = {}) {
       const target = task.target === 'player' ? playerPosition : actors.get(task.target)?.group?.position;
       if (target && Number.isFinite(target.x)) {
         followGoal(goal, actor.x, actor.z, target.x, target.z, task.distance);
+        if (blocked(goal.x, goal.z) && clearFollowGoal(goal, target, task.distance))
+          goal.gap = Math.max(goal.gap, Math.hypot(actor.x - goal.x, actor.z - goal.z));
+        if (goal.gap > FOLLOW_CATCH_UP && !blocked(goal.x, goal.z)) {
+          // Left far behind (the player rode or ran off): put them back behind.
+          const y = groundAt(goal.x, goal.z, Number.isFinite(target.y) ? target.y : actor.y);
+          if (y !== null) {
+            actor.x = goal.x; actor.z = goal.z; actor.y = y;
+            followGoal(goal, actor.x, actor.z, target.x, target.z, task.distance);
+          }
+        }
         if (!actor.followMoving && goal.gap > 0.9) actor.followMoving = true;
         else if (actor.followMoving && goal.gap < 0.15) actor.followMoving = false;
         if (actor.followMoving) {
@@ -518,23 +590,98 @@ export function createCastSubsystem(ctx, deps = {}) {
     g.position.y = actor.y;
     g.position.z = actor.z;
     g.rotation.y = actor.facing;
-    // Givers' mixers are advanced by GameWorld3D's questNPCs loop; the others' here.
-    if (!actor.entry) actor.mixer?.update(dt);
+    // Givers' mixers are advanced by GameWorld3D's questNPCs loop; the others' here,
+    // while they are drawn.
+    if (!actor.entry && actor.drawn) actor.mixer?.update(dt);
+  }
 
-    if (actor.captionSeconds > 0) {
-      actor.captionTime += dt;
-      if (actor.captionTime >= actor.captionSeconds) {
-        actor.captionSeconds = 0;
-        actor.caption?.hide();
-      } else if (actor.caption) {
-        const listener = playerPosition && Number.isFinite(playerPosition.x) ? playerPosition : ctx.camera?.position;
-        const d = listener ? Math.hypot(listener.x - actor.x, listener.z - actor.z) : 0;
-        const camD = ctx.camera ? ctx.camera.position.distanceTo(g.position) : d;
-        const opacity = g.visible ? captionOpacity(actor.captionTime, actor.captionSeconds) * captionDistanceFade(d) : 0;
-        actor.caption.place(actor.x, actor.y + actor.look.height + 0.3, actor.z, ctx.camera, opacity,
+  // Who is drawn: the CAST_MAX_DRAWN nearest to the player. The others stay in
+  // place (and stay speakable) with their model hidden.
+  function chooseDrawn(playerPosition) {
+    drawOrder.length = 0;
+    for (const actor of actorList) if (actor.state === 'ready') drawOrder.push(actor);
+    if (playerPosition && Number.isFinite(playerPosition.x)) {
+      const px = playerPosition.x, pz = playerPosition.z;
+      drawOrder.sort((a, b) => Math.hypot(a.x - px, a.z - pz) - Math.hypot(b.x - px, b.z - pz));
+    }
+    for (let i = 0; i < drawOrder.length; i++) {
+      const actor = drawOrder[i];
+      const drawn = i < CAST_MAX_DRAWN;
+      if (drawn === actor.drawn) continue;
+      actor.drawn = drawn;
+      if (actor.model) actor.model.visible = drawn;
+      if (actor.ring) actor.ring.visible = drawn;
+    }
+  }
+
+  // ─── lines over heads, or as subtitles ───
+  const pose = { x: 0, y: 0, z: 0 };
+  function speakerPose(id) {
+    const actor = actors.get(id);
+    if (actor?.state === 'ready') {
+      if (!actor.drawn || actor.group.visible === false) return null;
+      pose.x = actor.x; pose.y = actor.y + actor.look.height + 0.3; pose.z = actor.z;
+      return pose;
+    }
+    // One of the game's own quest givers (the Fountain Watch archers).
+    const list = Array.isArray(ctx.questNPCs) ? ctx.questNPCs : [];
+    for (let i = 0; i < list.length; i++) {
+      const entry = list[i];
+      if (entry?.id !== id || !entry.group || entry.group.visible === false) continue;
+      pose.x = entry.group.position.x; pose.y = entry.group.position.y + 2; pose.z = entry.group.position.z;
+      return pose;
+    }
+    return null;
+  }
+  function updateCaptions(dt, playerPosition) {
+    const camera = ctx.camera;
+    let newestFar = null;
+    for (let i = 0; i < captionList.length; i++) {
+      const rec = captionList[i];
+      rec.far = false;
+      if (rec.seconds <= 0) continue;
+      rec.time += dt;
+      if (rec.time >= rec.seconds) { rec.view.hide(); rec.seconds = 0; continue; }
+      const at = speakerPose(rec.id);
+      const listener = playerPosition && Number.isFinite(playerPosition.x) ? playerPosition : camera?.position;
+      const d = at && listener ? Math.hypot(listener.x - at.x, listener.z - at.z) : Infinity;
+      if (at && captionDistanceFade(d) > 0) {
+        setMode(rec, 'head');
+        const camD = camera ? Math.hypot(camera.position.x - at.x, camera.position.y - at.y, camera.position.z - at.z) : d;
+        rec.view.place(at.x, at.y, at.z, camera, captionOpacity(rec.time, rec.seconds) * captionDistanceFade(d),
           Math.min(2.2, Math.max(1, camD / 10)));
+      } else {
+        rec.far = true;
+        if (!newestFar || rec.order > newestFar.order) newestFar = rec;
       }
     }
+    // Speakers too far to read over their heads, or not in this scene: the newest
+    // of their lines is a subtitle low in the view (above the game's own prompts),
+    // each line about SUBTITLE_LINE_SCREEN of the screen's height; the others wait.
+    subtitleOwner = newestFar;
+    for (let i = 0; i < captionList.length; i++) {
+      const rec = captionList[i];
+      if (!rec.far) continue;
+      if (rec !== newestFar || !camera) { rec.view.hide(); continue; }
+      setMode(rec, 'subtitle');
+      const viewHeight = 2 * SUBTITLE_DISTANCE * Math.tan(((camera.fov || 60) * Math.PI) / 360);
+      const height = Math.max(1, rec.lines + (rec.name ? 0.7 : 0)) * SUBTITLE_LINE_SCREEN * viewHeight;
+      const grow = height / Math.max(1e-3, rec.view.height);
+      // place() stands the caption on the point it is given: its foot sits here.
+      subtitleAt.set(0, -SUBTITLE_FOOT * viewHeight, -SUBTITLE_DISTANCE).applyQuaternion(camera.quaternion).add(camera.position);
+      rec.view.place(subtitleAt.x, subtitleAt.y, subtitleAt.z, camera, captionOpacity(rec.time, rec.seconds), grow);
+    }
+  }
+  // Over a head the line wraps narrow and tall; as a subtitle wide and low.
+  function setMode(rec, mode) {
+    if (rec.mode === mode) return;
+    rec.mode = mode;
+    const subtitle = mode === 'subtitle';
+    const wrap = subtitle
+      ? { maxChars: SUBTITLE_LINE_CHARS, maxLines: SUBTITLE_MAX_LINES }
+      : { maxChars: CAPTION_LINE_CHARS, maxLines: CAPTION_MAX_LINES };
+    rec.lines = wrapCaptionText(rec.text, wrap.maxChars, wrap.maxLines).length;
+    rec.view.setText(rec.text, rec.name, wrap);
   }
 
   // ─── commands (bus and test door) ───
@@ -594,25 +741,40 @@ export function createCastSubsystem(ctx, deps = {}) {
       };
       return true;
     },
+    // A line: `id` is the speaker (or, given only a `lineId`, the script's speaker);
+    // `text` defaults to the script's line. Anyone in the cast table or the game's
+    // quest-giver list can speak, whether or not they stand in this scene.
     say(a, b) {
+      if (disposed) return false;
       const detail = detailOf(a, b);
-      const actor = actors.get(detail.id);
-      if (!actor) return false;
-      const text = detail.text ? String(detail.text) : '[line: ' + (detail.lineId || 'unnamed') + ']';
-      if (!actor.caption) {
-        actor.caption = createCaptionView(THREE, { geometry: captionGeometry });
-        root.add(actor.caption.mesh);
+      const line = detail.lineId ? threeRoadsLine(detail.lineId) : null;
+      const id = detail.id || line?.speaker;
+      if (!id) return false;
+      const entry = Array.isArray(ctx.questNPCs) ? ctx.questNPCs.find(q => q?.id === id) : null;
+      const name = actors.get(id)?.person.name || threeRoadsPerson(id)?.name || entry?.name;
+      if (!name) return false;
+      const text = detail.text ? String(detail.text) : line?.text || '[line: ' + (detail.lineId || 'unnamed') + ']';
+      let rec = captions.get(id);
+      if (!rec) {
+        rec = { id, view: createCaptionView(THREE, { geometry: captionGeometry }), time: 0, seconds: 0, voice: null };
+        root.add(rec.view.mesh);
+        captions.set(id, rec);
+        captionList.push(rec);
       }
-      actor.caption.setText(text, actor.person.name);
-      actor.captionTime = 0;
-      actor.captionSeconds = captionSeconds(text, detail.seconds);
-      try { actor.voice?.stop?.(); } catch { /* already stopped */ }
-      actor.voice = null;
+      rec.text = text;
+      rec.name = name;
+      rec.mode = null; // drawn for over-head or subtitle on its first frame
+      rec.time = 0;
+      rec.seconds = captionSeconds(text, detail.seconds);
+      rec.order = ++lineCounter; // the newest far line takes the subtitle place
+      try { rec.voice?.stop?.(); } catch { /* already stopped */ }
+      rec.voice = null;
+      const order = rec.order;
       Promise.resolve()
         .then(() => playVoice(detail.lineId, { caption: text }))
         .then(handle => {
-          if (disposed || actors.get(actor.id) !== actor) handle?.stop?.();
-          else actor.voice = handle || null;
+          if (disposed || rec.order !== order) handle?.stop?.();
+          else rec.voice = handle || null;
         })
         .catch(() => {});
       return true;
@@ -623,7 +785,9 @@ export function createCastSubsystem(ctx, deps = {}) {
       const r = v => Math.round(v * 100) / 100;
       return {
         area: ctx.worldArea ?? null, areaScenes: ctx.areaScenes !== false, max: CAST_MAX_PEOPLE,
-        count: actors.size, templates: templateState,
+        maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState,
+        flagsRead: flags !== null,
+        subtitle: subtitleOwner && subtitleOwner.seconds > 0 ? subtitleOwner.id : null,
         people: actorList.map(actor => ({
           id: actor.id, name: actor.person.name, state: actor.state, giver: actor.giver,
           inQuestList: Boolean(actor.entry && ctx.questNPCs?.includes(actor.entry)),
@@ -633,7 +797,8 @@ export function createCastSubsystem(ctx, deps = {}) {
           placement: actor.placement, probeMs: actor.probeMs, waited: r(actor.waited),
           facing: r(actor.facing), task: actor.task?.kind || null, moving: actor.moving,
           colours: actor.look.colours.map(c => '#' + c.toString(16).padStart(6, '0')),
-          caption: actor.captionSeconds > 0,
+          fromHome: actor.fromHome, drawn: actor.drawn,
+          caption: (captions.get(actor.id)?.seconds || 0) > 0,
         })),
       };
     },
@@ -664,6 +829,9 @@ export function createCastSubsystem(ctx, deps = {}) {
         }
         updateActor(actor, delta, playerPosition);
       }
+      drawTimer += delta;
+      if (drawTimer >= DRAW_EVERY) { drawTimer = 0; chooseDrawn(playerPosition); }
+      updateCaptions(delta, playerPosition);
     },
     dispose() {
       if (disposed) return;
@@ -671,6 +839,13 @@ export function createCastSubsystem(ctx, deps = {}) {
       for (const off of offs) { try { off?.(); } catch { /* bus already cleared */ } }
       offs.length = 0;
       for (const actor of [...actorList]) removeActor(actor);
+      for (const rec of captionList) {
+        try { rec.voice?.stop?.(); } catch { /* already stopped */ }
+        rec.view.dispose();
+      }
+      captionList.length = 0;
+      captions.clear();
+      subtitleOwner = null;
       for (const t of templates.values()) if (t.value) disposeObjectTree(t.value.scene);
       templates.clear();
       ringGeometry.dispose();
@@ -689,12 +864,39 @@ export function createCastSubsystem(ctx, deps = {}) {
     offs.push(bus.on('cast:say', d => api.say(d)));
   }
 
+  // ─── people at home, by the story so far ───
   const areas = ctx.areaScenes === false ? CAST_AREAS : (ctx.worldArea ? [ctx.worldArea] : []);
-  for (const area of areas) {
-    for (const person of threeRoadsCastAtHome({ area })) {
+  function reconcile(storyFlags) {
+    if (disposed) return;
+    flags = storyFlags && typeof storyFlags === 'object' ? storyFlags : {};
+    const wanted = new Map();
+    for (const area of areas) {
+      for (const person of threeRoadsCastAtHome({ area, flags })) if (!wanted.has(person.id)) wanted.set(person.id, person);
+    }
+    // People a pledge brought in or is moving (fromHome false) are the pledge's to keep.
+    for (const actor of [...actorList]) {
+      if (!actor.fromHome) continue;
+      const person = wanted.get(actor.id);
+      const home = person ? localToWorld(person.home.x, person.home.z) : null;
+      if (!home || Math.hypot(home.x - actor.want.x, home.z - actor.want.z) > 0.01) removeActor(actor);
+    }
+    for (const person of wanted.values()) {
+      if (actors.has(person.id)) continue;
       const home = localToWorld(person.home.x, person.home.z);
       addActor(person, { x: home.x, z: home.z, facing: person.home.facing, fromHome: true });
     }
   }
+  const onStore = state => reconcile(state?.storyFlags);
+  Promise.resolve(deps.questStore || defaultQuestStore())
+    .then(store => {
+      if (disposed) return;
+      const off = store?.subscribe?.(onStore); // subscribeQuests calls back once at once
+      if (typeof off === 'function') offs.push(off);
+      if (flags === null) reconcile(store?.getState?.()?.storyFlags);
+    })
+    .catch(error => {
+      warn('Three Roads cast: the quest store could not be read; homes ignore the story flags', error);
+      if (flags === null) reconcile({});
+    });
   return api;
 }

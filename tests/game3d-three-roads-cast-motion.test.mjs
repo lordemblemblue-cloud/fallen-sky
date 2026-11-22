@@ -6,7 +6,9 @@ import {
 } from '../src/components/game3d/threeroads/cast/castMotion.mjs';
 import {
   captionSeconds, captionOpacity, captionDistanceFade, wrapCaptionText, CAPTION_MAX_DISTANCE,
+  CAPTION_LINE_CHARS, CAPTION_MAX_LINES, SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES,
 } from '../src/components/game3d/threeroads/cast/castCaption.mjs';
+import { THREE_ROADS_BANDS } from '../src/components/game3d/threeroads/script/index.mjs';
 import {
   castModelFor, castBodyHeight, distinctColours, CAST_MODELS, CAST_MODEL_SOURCES,
 } from '../src/components/game3d/threeroads/cast/castModels.mjs';
@@ -89,13 +91,24 @@ test('caption timing: given seconds, reading time, fades, and 25 m', () => {
   assert.equal(captionDistanceFade(40), 0);
 });
 
-test('captions wrap into at most four lines', () => {
+test('captions wrap to their width and only an overlong text is cut', () => {
   const lines = wrapCaptionText('The truce holds while the stone stands, and the stone stands while we keep it.');
-  assert.ok(lines.length >= 2 && lines.length <= 4);
-  for (const line of lines) assert.ok(line.length <= 40, line);
+  assert.ok(lines.length >= 2 && lines.length <= CAPTION_MAX_LINES);
+  for (const line of lines) assert.ok(line.length <= CAPTION_LINE_CHARS + 6, line);
   const long = wrapCaptionText('word '.repeat(80));
-  assert.equal(long.length, 4);
-  assert.ok(long[3].endsWith('…'));
+  assert.equal(long.length, CAPTION_MAX_LINES);
+  assert.ok(long.at(-1).endsWith('…'));
+});
+
+test('every scripted line fits whole, over a head and as a subtitle', () => {
+  const all = THREE_ROADS_BANDS.flatMap(band => Object.entries(band.lines));
+  assert.ok(all.length > 100);
+  for (const [id, line] of all) {
+    for (const [chars, max] of [[CAPTION_LINE_CHARS, CAPTION_MAX_LINES], [SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES]]) {
+      const wrapped = wrapCaptionText(line.text, chars, max);
+      assert.equal(wrapped.join(' '), line.text.trim().split(/\s+/).join(' '), id + ' is cut at ' + chars + ' x ' + max);
+    }
+  }
 });
 
 test('every person of the cast table has a model with a known source, height and two colours', () => {

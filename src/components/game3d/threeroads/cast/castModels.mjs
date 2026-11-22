@@ -38,9 +38,20 @@ export const CAST_MODELS = Object.freeze({
   traveller_tome: Object.freeze({ source: 'archer' }),
   traveller_henut: Object.freeze({ source: 'archer' }),
   traveller_livilla: Object.freeze({ source: 'archer' }),
+  goro_sergeant: Object.freeze({ source: 'archer' }),
+  titus_oldvine: Object.freeze({ source: 'archer' }),
   edda_miller: Object.freeze({ source: 'archer' }),
   dalla_gravedigger: Object.freeze({ source: 'archer' }),
   tolliver_beekeeper: Object.freeze({ source: 'archer' }),
+  hayasaka_colonel: Object.freeze({ source: 'archer' }),
+  asagiri_tomoe: Object.freeze({ source: 'archer' }),
+  ren_swordswoman: Object.freeze({ source: 'archer' }),
+  nakhtamun_general: Object.freeze({ source: 'archer' }),
+  meresankh_priestess: Object.freeze({ source: 'archer' }),
+  sabu_tracker: Object.freeze({ source: 'archer' }),
+  corvinus_legate: Object.freeze({ source: 'archer' }),
+  veranius_augur: Object.freeze({ source: 'archer' }),
+  courier_dexter: Object.freeze({ source: 'archer' }),
 });
 
 /** Standing height in metres for a body from the cast table's `look.body`. */
