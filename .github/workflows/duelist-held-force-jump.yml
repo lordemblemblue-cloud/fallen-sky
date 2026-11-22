@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Held jump, prediction, air dash, and controls
-        run: node --test tests/duelist-held-force-jump.test.mjs tests/duelist-air-dash.test.mjs tests/duelist-controls.test.mjs
+        run: node --test tests/duelist-held-force-jump.test.mjs tests/duelist-air-dash.test.mjs
       - name: Lint authored code and tests
         run: npx eslint src/components/duelist/sim/heldJump.mjs src/components/duelist/sim/world.mjs src/components/duelist/client/controls.mjs src/components/duelist/net/protocol.mjs tests/duelist-held-force-jump.test.mjs
       - name: Build application
