@@ -77,12 +77,15 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', cla
 
     const clock = new THREE.Clock();
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let elapsed = 0;
     const draw = () => {
       if (!active) return;
-      const dt = Math.min(.05, clock.getDelta());
-      if (!document.hidden) {
-        if (!reduceMotion) idlePose?.update(dt);
+      elapsed += Math.min(.05, clock.getDelta());
+      // The in-match viewer is secondary to the world: cap its GPU draws at 24 fps.
+      if (!document.hidden && (!compact || elapsed >= 1 / 24)) {
+        if (!reduceMotion) idlePose?.update(elapsed);
         renderer.render(scene, camera);
+        elapsed = 0;
       }
       frame = window.requestAnimationFrame(draw);
     };
@@ -98,7 +101,7 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', cla
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [fighter, classId]);
+  }, [fighter, classId, compact]);
 
   return <div className="dcm-avatar-stage" ref={mountRef} aria-label="Live 3D character preview">
     {unavailable && <span className="dcm-avatar-fallback" role="status">3D preview unavailable</span>}
