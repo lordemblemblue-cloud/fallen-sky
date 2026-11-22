@@ -109,17 +109,31 @@ test('teammates are never hit; bodies keep apart; nobody leaves the arena', () =
   for (const id of ['a', 'mate']) assert.ok(Math.hypot(bodyOf(w, id).x, bodyOf(w, id).z) <= 6 - BODY_RADIUS + 1e-6, `${id} stays inside`);
 });
 
-test('facing turns the body, but a strike stays committed to its direction once it lands', () => {
+test('a strike tracks the new aim while moving, with a rate limit during its active frames', () => {
   const w = createWorld();
   addFighter(w, { id: 'a', x: 0, z: 0, yaw: 0 });
   addFighter(w, { id: 't', x: 3, z: 0 });
   const target = facing(bodyOf(w, 'a'), bodyOf(w, 't'));
   step(w, DT, { a: { face: target } });
-  assert.ok(Math.abs(bodyOf(w, 'a').yaw - target) < 1e-9);
+  assert.ok(Math.abs(bodyOf(w, 'a').yaw - target) < 1e-9, 'free facing before the swing');
   step(w, DT, { a: { presses: ['heavy'] } });
-  run(w, MOVES.swordHeavy.startup + 0.02);
-  step(w, DT, { a: { face: 0 } });
-  assert.ok(Math.abs(bodyOf(w, 'a').yaw - target) < 1e-9, 'committed');
+  run(w, MOVES.swordHeavy.startup + 0.02, () => ({ a: { face: target } }));
+  step(w, DT, { a: { face: 0, move: { x: -1, z: 0 }, run: true } });
+  const turned = bodyOf(w, 'a').yaw;
+  assert.ok(turned < target && turned > target - 12 * DT - 1e-9,
+    'the attacking body starts following camera aim but cannot snap its hit arc 180 degrees');
+  run(w, 0.13, () => ({ a: { face: 0, move: { x: -1, z: 0 }, run: true } }));
+  assert.ok(bodyOf(w, 'a').yaw < turned, 'the ongoing strike keeps aiming while the feet strafe');
+});
+
+test('a committed roll still retains its travel heading despite changes to the camera aim', () => {
+  const w = createWorld({ arenaRadius: 40 });
+  addFighter(w, { id: 'a', yaw: 0 });
+  step(w, DT, { a: { presses: ['roll'], move: { x: 1, z: 0 }, face: Math.PI / 2 } });
+  const started = bodyOf(w, 'a').yaw;
+  run(w, 0.25, () => ({ a: { face: 0, move: { x: 0, z: 1 } } }));
+  assert.ok(Math.abs(bodyOf(w, 'a').yaw - started) < 1e-6,
+    'roll still faces the original movement direction rather than snapping to aim');
 });
 
 test('a hard push knocks the body down: nothing reaches it and it cannot act until it stands again', () => {
