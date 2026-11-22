@@ -345,7 +345,7 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
     if (!root || !game || typeof ResizeObserver === 'undefined') return undefined;
     const apply = () => {
       const { scale, layout } = hudScale(root.clientWidth, root.clientHeight);
-      setRail(root.clientWidth >= 1250 && root.clientHeight >= 650);
+      setRail(root.clientWidth >= 1080 && root.clientHeight >= 600);
       game.style.setProperty('--dh-s', String(scale)); // the game's other overlays keep clear of the HUD with it
       game.dataset.hud = layout;
     };
