@@ -6,7 +6,7 @@ import {
   pledgeDialogueLines, threeRoadsPledge,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeScript.mjs';
 import {
-  resetPledgeStepMemory, standingCues,
+  pledgePointWorld, resetPledgeStepMemory, standingCues,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeInterpreter.mjs';
 import { createHarness } from './game3d-three-roads-pledge-harness.mjs';
 
@@ -226,8 +226,9 @@ test('a reload in the middle of a pledge puts the scene back and repeats nothing
   // After the walk they stand at the tree, not back under the wagons.
   again = again.reload();
   again.wait(0.3);
-  assert.deepEqual(again.bus('cast:spawn').map(e => [e.id, Math.round(e.x * 10), Math.round(e.z * 10)]), [
-    ['traveller_tome', -66, -2], ['traveller_henut', -66, -2], ['traveller_livilla', -66, -2],
+  const tree = pledgePointWorld('oath_tree');
+  assert.deepEqual(again.bus('cast:spawn').map(e => [e.id, e.x, e.z]), [
+    ['traveller_tome', tree.x, tree.z], ['traveller_henut', tree.x, tree.z], ['traveller_livilla', tree.x, tree.z],
   ]);
   assert.equal(again.bus('cast:follow').length, 0);
 

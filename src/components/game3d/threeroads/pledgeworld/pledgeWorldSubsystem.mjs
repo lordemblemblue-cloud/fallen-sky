@@ -57,6 +57,7 @@ export const PLEDGE_WORLD_SOUND_FILES = Object.freeze({});
 // not story: the lead may replace it with lines of the script.
 export const PLEDGE_WORLD_NOTICES = Object.freeze({
   trail_lost: 'The trail has gone cold. Pick it up again where it began.',
+  carry_dropped: 'You have let it fall. Go back and take it up again.',
   escort_failed: 'You have left them behind. Go back for them.',
   defend_failed: 'You left the ground. Go back and hold it again.',
 });
@@ -104,7 +105,13 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   // ── Where people are ──
   const located = new Map();      // id -> { x, z, own, found, at }
   const query = { id: null, x: null, z: null, found: false };
-  const frame = { now: 0, player: { x: 0, z: 0 }, eDown: false, blocked: false, locate: null };
+  const frame = { now: 0, player: { x: 0, z: 0 }, eDown: false, blocked: false, down: false, locate: null };
+  // What drops a carried thing: riding (the mount store says so) or dying
+  // (the game's own 'playerDeathAnimation'). Being knocked down has no signal
+  // in the game yet, so it does not drop anything.
+  let riding = false;
+  let diedSince = false;
+  const onDeath = () => { diedSince = true; };
   function locate(id) {
     let entry = located.get(id);
     if (!entry) { entry = { x: 0, z: 0, own: false, found: false, at: -1 }; located.set(id, entry); }
@@ -302,11 +309,15 @@ export function createPledgeWorldSubsystem(ctx = {}, {
       win.addEventListener?.('keydown', onKeyDown, true);
       win.addEventListener?.('keyup', onKeyUp, true);
       win.addEventListener?.('blur', onBlur);
+      win.addEventListener?.('playerDeathAnimation', onDeath);
       offs.push(() => {
         win.removeEventListener?.('keydown', onKeyDown, true);
         win.removeEventListener?.('keyup', onKeyUp, true);
         win.removeEventListener?.('blur', onBlur);
+        win.removeEventListener?.('playerDeathAnimation', onDeath);
       });
+      const stopRiding = game.subscribeRiding?.(value => { riding = !!value; });
+      if (typeof stopRiding === 'function') offs.push(stopRiding);
     }
     // Called at once with the state as it is: that is the scene being entered.
     const stop = game.subscribeQuests(onQuestState);
@@ -327,6 +338,8 @@ export function createPledgeWorldSubsystem(ctx = {}, {
       if (playerPosition) { frame.player.x = playerPosition.x; frame.player.z = playerPosition.z; }
       frame.eDown = keyHeld || touchHeld;
       frame.blocked = otherModalOpen();
+      frame.down = riding || diedSince;
+      diedSince = false;
       interpreter.update(frame);
       speech.update(frame.now);
       overlays.update(frame.now);

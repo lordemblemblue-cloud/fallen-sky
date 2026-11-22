@@ -21,6 +21,7 @@ const pledge = definePledge({
       { id: 'take', kind: 'pick_up', text: 'Take.', target: 'item', count: 2 },
       { id: 'escort', kind: 'escort', text: 'Escort.', target: 'friends', failsOn: 'escort_failed' },
       { id: 'defend', kind: 'defend', text: 'Defend.', target: 'ground', seconds: 20, failsOn: 'defend_failed' },
+      { id: 'carry', kind: 'carry', text: 'Carry.', target: 'jar', count: 2, failsOn: 'carry_dropped' },
       { id: 'choose', kind: 'choose', text: 'Choose.' },
     ],
     choices: { choose: { prompt: 'Which?', options: [{ id: 'one', text: 'One.' }, { id: 'two', text: 'Two.' }] } },
@@ -220,6 +221,36 @@ test('defend: the clock starts on the ground, waves at their times, away too lon
   half.at(0); half.run(3);
   half.watcher.dispose();
   assert.deepEqual(half.log, ['enemies:spawnGroup:w1', 'enemies:despawnGroup:w1']);
+});
+
+test('carry: E at the start takes it up, the place it goes is one report, falling or riding drops it', () => {
+  const c = make('carry', { from: 'a', to: 'b', radius: 3, prompt: 'Lift a jar', sayEach: ['one', 'two'] }, { along: { every: 5, lines: ['way'] } });
+  c.at(10);
+  assert.equal(c.watcher.interact(c.frame), null, 'nothing to take up away from it');
+  assert.equal(c.view().prompt, null);
+  c.at(2.5);
+  assert.deepEqual(c.view().prompt, { key: 'E', hold: false, label: 'Lift a jar', progress: -1 });
+  c.frame.down = true;
+  assert.equal(c.watcher.interact(c.frame), null, 'not while riding');
+  c.frame.down = false;
+  assert.deepEqual(c.watcher.interact(c.frame), { point: 'a' });
+  assert.deepEqual(c.view().prompt, { key: null, hold: false, label: 'Carry.', progress: -1 });
+  assert.deepEqual(c.watcher.target({ x: 0, z: 0 }), { x: 20, z: 0, label: 'Carry.' });
+  c.at(9); c.run(0.1); c.at(16.9); c.run(0.1);
+  assert.deepEqual(c.log, ['say:way'], 'a line on the way while it is carried');
+  c.at(17.1); c.run(0.1);
+  assert.deepEqual(c.log, ['say:way', 'say:one', 'carry_completed']);
+  c.run(1);
+  assert.equal(c.log.length, 3, 'one report per arrival');
+  // The second: dropped on the way.
+  c.at(0); c.watcher.interact(c.frame); c.at(10); c.run(0.1);
+  c.frame.down = true; c.run(0.1); c.frame.down = false;
+  assert.deepEqual(c.log.slice(3), ['notice:carry_dropped', 'carry_dropped']);
+  c.at(20); c.run(0.5);
+  assert.equal(c.log.filter(entry => entry === 'carry_completed').length, 1, 'nothing reaches the stack after a fall');
+  c.watcher.setProgress(0);
+  c.at(0); c.watcher.interact(c.frame); c.at(20); c.run(0.1);
+  assert.equal(c.log.at(-2), 'say:one', 'the count starts again from the first line');
 });
 
 test('choose: shown beside the giver, only an option on offer is taken', () => {

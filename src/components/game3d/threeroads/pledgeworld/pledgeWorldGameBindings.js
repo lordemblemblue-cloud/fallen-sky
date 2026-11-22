@@ -5,6 +5,7 @@
 import { QUESTS } from '../../questData';
 import { getQuestState, setQuestStoryFlag, subscribeQuests } from '../../useQuestStore';
 import { getActiveCharacter } from '../../characterStore';
+import { subscribeAXEMounts } from '../../axe/progression/AXEMountStore';
 
 export const pledgeWorldGameBindings = Object.freeze({
   quests: QUESTS,
@@ -12,4 +13,6 @@ export const pledgeWorldGameBindings = Object.freeze({
   subscribeQuests,
   setQuestStoryFlag,
   getFactionId: () => getActiveCharacter()?.factionId || null,
+  // fn(true) while the player rides; called at once and on every change.
+  subscribeRiding: fn => subscribeAXEMounts(state => fn(!!state?.ridingMountId)),
 });

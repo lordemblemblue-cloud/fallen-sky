@@ -1,6 +1,7 @@
 // What finishes a pledge step, as small state machines. Pure: no Three.js, no
 // DOM, no store. Each watcher is fed a frame
-//   { now, player: { x, z }, eDown, blocked, locate(id) }
+//   { now, player: { x, z }, eDown, blocked, down, locate(id) }
+// (`down`: the player has just died or is riding; it drops what they carry)
 // (seconds, world metres; locate gives a person's live position or null) and
 // talks to the world through the functions it was made with:
 //   world.report(detail)  one engine event, as PLEDGE_STEP_KINDS expects it
@@ -367,6 +368,58 @@ function defendWatcher(spec) {
   };
 }
 
+// `carry`: E at `from` takes the thing up; walking it to `to` is one report.
+// Dying or mounting while carrying drops it (frame.down) and sends
+// 'carry_dropped', which takes the step back to zero when it lists it. The
+// lines spoken on the way (`along`) run only while something is carried.
+function carryWatcher(spec) {
+  const from = spec.point(spec.watch.from);
+  const to = spec.point(spec.watch.to);
+  const radius = spec.watch.radius ?? 4;
+  const label = spec.watch.prompt || spec.step.text;
+  const along = alongLines(spec);
+  let progress = spec.progress;
+  let carrying = false;
+  return {
+    update(frame) {
+      if (!carrying) return;
+      if (frame.down) {
+        carrying = false;
+        along.reset();
+        spec.world.notice('carry_dropped');
+        const fail = stepFailEvent(spec.pledge, spec.index, 'carry_dropped');
+        if (fail) spec.world.report(fail);
+        return;
+      }
+      along.update(frame);
+      if (!within(frame.player, to, radius)) return;
+      carrying = false;
+      along.reset();
+      const each = asList(spec.watch.sayEach)[progress];
+      progress++;
+      if (each) spec.world.say(each);
+      spec.world.report(stepEvent(spec.pledge, spec.index));
+    },
+    setProgress(count) { progress = count; if (!count) carrying = false; },
+    interact(frame) {
+      if (carrying || frame.down || progress >= spec.step.count || !within(frame.player, from, radius)) return null;
+      carrying = true;
+      return { point: spec.watch.from };
+    },
+    view(frame, out) {
+      if (out.prompt || progress >= spec.step.count) return;
+      if (carrying) { out.prompt = { key: null, hold: false, label: spec.step.text, progress: -1 }; return; }
+      if (within(frame.player, from, radius) && !frame.down) out.prompt = { key: 'E', hold: false, label, progress: -1 };
+    },
+    target() {
+      const at = carrying ? to : from;
+      return at ? { x: at.x, z: at.z, label: spec.step.text } : null;
+    },
+    carrying: () => carrying,
+    dispose() {},
+  };
+}
+
 function defeatWatcher(spec) {
   const at = spec.groupPoint(spec.watch.groupId);
   return {
@@ -378,7 +431,9 @@ function defeatWatcher(spec) {
 
 function chooseWatcher(spec) {
   const choice = spec.pledge.pledge.choices[spec.step.id];
-  const giver = spec.pledge.npcId;
+  // Held out by whoever the player has just been speaking with (spec.holder),
+  // or by the one who asked for the pledge.
+  const giver = spec.holder || spec.pledge.npcId;
   const shown = Object.freeze({
     pledgeId: spec.pledge.id, stepId: spec.step.id,
     prompt: choice?.prompt || spec.step.text,
@@ -437,6 +492,7 @@ export function createStepWatcher(spec) {
     case 'use': return deedWatcher(spec, true);
     case 'pick_up': return deedWatcher(spec, false);
     case 'escort': return escortWatcher(spec);
+    case 'carry': return carryWatcher(spec);
     case 'defend': return defendWatcher(spec);
     case 'choose': return chooseWatcher(spec);
     case 'defeat': return defeatWatcher(spec);

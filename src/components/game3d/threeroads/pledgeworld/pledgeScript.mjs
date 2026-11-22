@@ -2,25 +2,31 @@
 // no DOM. The script itself (script/band1.mjs, script/cast.mjs) belongs to the
 // lead session and is only read here.
 import { definePledge } from '../../pledges/pledgeModel.mjs';
-import { THREE_ROADS_BANDS, threeRoadsLine, threeRoadsPoint } from '../script/index.mjs';
+import {
+  THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsLine, threeRoadsPoint,
+} from '../script/index.mjs';
 import { threeRoadsEmpireOfFaction, threeRoadsHomeOf, threeRoadsPerson } from '../script/cast.mjs';
 
-// The bands whose pledges are playable. Lines and points are read from every
-// band that has been written; only these bands' pledges are registered. Band 2
-// (the three camps) joins this list when its places and people are built and
-// its staging has been played through.
-export const PLAYABLE_BANDS = Object.freeze(['band1']);
-const playableBands = () => THREE_ROADS_BANDS.filter(band => PLAYABLE_BANDS.includes(band.id));
+// The name the pledges are registered under (pledgeRegistry.mjs).
+export const THREE_ROADS_PLEDGE_SOURCE = 'three-roads';
 
-// The name this set of pledges is registered under (pledgeRegistry.mjs).
-export const THREE_ROADS_PLEDGE_SOURCE = 'three-roads-band1';
+// Each band's pledges, validated once. The same frozen objects are handed out
+// every time, so a remount never makes a second copy of a pledge.
+const byBand = new Map();
+export function threeRoadsBandPledges(bandId) {
+  if (!byBand.has(bandId)) {
+    const band = THREE_ROADS_BANDS.find(entry => entry.id === bandId);
+    byBand.set(bandId, Object.freeze(band ? band.pledges.map(raw => definePledge(raw)) : []));
+  }
+  return byBand.get(bandId);
+}
 
+// The pledges the game offers: those of the bands whose places are built
+// (script/index.mjs decides; band 1 today). Lines, points and staging are
+// read from every band that has been written.
 let defined = null;
-
-// The pledges of the opening, validated once. The same frozen objects are
-// handed out every time, so a remount never makes a second copy of a pledge.
 export function threeRoadsPledges() {
-  if (!defined) defined = Object.freeze(playableBands().flatMap(band => band.pledges.map(raw => definePledge(raw))));
+  if (!defined) defined = Object.freeze(threeRoadsBuiltBands().flatMap(band => threeRoadsBandPledges(band.id)));
   return defined;
 }
 
@@ -29,7 +35,7 @@ export function threeRoadsPledge(pledgeId) {
 }
 
 export function pledgeStaging(pledgeId) {
-  for (const band of playableBands()) if (band.staging[pledgeId]) return band.staging[pledgeId];
+  for (const band of THREE_ROADS_BANDS) if (band.staging[pledgeId]) return band.staging[pledgeId];
   return null;
 }
 export const pledgePointLocal = name => threeRoadsPoint(name);

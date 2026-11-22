@@ -164,6 +164,22 @@ export function createPledgeInterpreter({
     else if (cue.despawnGroup) call('bus', 'enemies:despawnGroup', { groupId: cue.despawnGroup });
   }
 
+  // Who stands for this step: the person the step before it had the player
+  // speak with (a talk or deliver step), otherwise the pledge's giver. A
+  // choice is held out by them, and they keep the E key while it is open.
+  function holderOf(rt, index) {
+    const steps = rt.pledge.pledge.steps;
+    for (let i = index - 1; i >= 0; i--) {
+      if (steps[i].optional) continue;
+      if (steps[i].kind === 'talk' || steps[i].kind === 'deliver') {
+        const npc = stagingStep(rt.staging, steps[i].id).watch?.npc;
+        if (npc) return npc;
+      }
+      break;
+    }
+    return rt.pledge.npcId || null;
+  }
+
   function makeWatcher(rt, index) {
     const step = rt.pledge.pledge.steps[index];
     const entry = stagingStep(rt.staging, step.id);
@@ -175,6 +191,7 @@ export function createPledgeInterpreter({
       memory: stepMemory(rt.pledge.id, step.id, progress),
       world: watcherWorld, point, personName, whereIs,
       groupPoint: groupId => groupSpawnPoint(rt.staging, groupId, point),
+      holder: holderOf(rt, index),
     });
   }
 
@@ -195,14 +212,57 @@ export function createPledgeInterpreter({
     const watcher = rt.watcher;
     rt.watcher = null;
     watcher?.dispose();
+    for (const extra of rt.extras.splice(0)) extra.watcher?.dispose();
+  }
+
+  // Optional steps are open together with the required step listed before
+  // them (pledgeProgress.mjs). Each gets a watcher beside the main one.
+  function openExtras(rt) {
+    const group = getPledgeActiveGroup(rt.pledge, rt.progress);
+    if (!group) return;
+    for (const i of group.optionalIndexes) {
+      const step = rt.pledge.pledge.steps[i];
+      if (Number(rt.progress?.[step.id] || 0) >= step.count || rt.extras.some(extra => extra.index === i)) continue;
+      call('bus', 'pledge:stepStarted', { pledgeId: rt.pledge.id, stepId: step.id });
+      for (const cue of asList(stagingStep(rt.staging, step.id).start)) if (cue.wait === undefined) runCue(rt, cue);
+      const watcher = makeWatcher(rt, i);
+      if (watcher) rt.extras.push({ index: i, watcher });
+    }
+  }
+  function closeFinishedExtras(rt, progress) {
+    for (let k = rt.extras.length - 1; k >= 0; k--) {
+      const extra = rt.extras[k];
+      const step = rt.pledge.pledge.steps[extra.index];
+      if (Number(progress?.[step.id] || 0) < step.count) { extra.watcher.setProgress(Number(progress?.[step.id] || 0)); continue; }
+      rt.extras.splice(k, 1);
+      extra.watcher.dispose();
+      rt.doneOptional.add(step.id);
+      enqueueDone(rt, extra.index);
+    }
+  }
+
+  // A defeat step's sayEach: one line for each death the engine counts, so a
+  // reload never repeats one and a death that does not count says nothing.
+  function speakEach(rt, progress) {
+    for (const step of rt.pledge.pledge.steps) {
+      if (step.kind !== 'defeat') continue;
+      const lines = asList(stagingStep(rt.staging, step.id).watch?.sayEach);
+      if (!lines.length) continue;
+      const now = Math.min(step.count, Number(progress?.[step.id] || 0));
+      const before = rt.counts[step.id] || 0;
+      for (let k = before; k < now; k++) if (lines[k]) call('say', lines[k]);
+      rt.counts[step.id] = now;
+    }
   }
 
   function begin(pledge, progress, index) {
+    const steps = pledge.pledge.steps;
     const rt = {
       pledge, staging: stagingOf(pledge.id), progress, stepIndex: index,
-      queue: [], waitUntil: 0, watcher: null, dead: false,
+      queue: [], waitUntil: 0, watcher: null, extras: [], dead: false,
+      doneOptional: new Set(steps.filter(step => step.optional && Number(progress?.[step.id] || 0) >= step.count).map(step => step.id)),
+      counts: Object.fromEntries(steps.map(step => [step.id, Math.min(step.count, Number(progress?.[step.id] || 0))])),
     };
-    const steps = pledge.pledge.steps;
     for (const cue of standingCues(pledge, rt.staging, index < 0 ? steps.length : index, progress)) rt.queue.push(cue);
     if (index >= 0) enqueueEnter(rt, index);
     return rt;
@@ -260,17 +320,24 @@ export function createPledgeInterpreter({
         continue;
       }
       rt.progress = progress;
+      speakEach(rt, progress);
+      closeFinishedExtras(rt, progress);
       if (to > from) {
         dropWatcher(rt);
         // Drop a watch that was queued for a step now behind us.
         rt.queue = rt.queue.filter(cue => cue._watch === undefined);
-        for (let i = from; i < to; i++) {
+        // Optional steps left behind were either finished (their done cues
+        // have run) or passed by: neither is announced again.
+        const required = [];
+        for (let i = from; i < to; i++) if (!steps[i].optional) required.push(i);
+        required.forEach((i, k) => {
           enqueueDone(rt, i);
-          if (i + 1 < to) { // a step the engine passed over in the same breath
-            rt.queue.push({ _started: steps[i + 1].id });
-            for (const cue of asList(stagingStep(rt.staging, steps[i + 1].id).start)) rt.queue.push(cue);
+          const next = required[k + 1];
+          if (next !== undefined) { // a step the engine passed over in the same breath
+            rt.queue.push({ _started: steps[next].id });
+            for (const cue of asList(stagingStep(rt.staging, steps[next].id).start)) rt.queue.push(cue);
           }
-        }
+        });
         rt.stepIndex = index;
         if (index >= 0) enqueueEnter(rt, index);
       } else if (rt.watcher && index >= 0) {
@@ -290,7 +357,7 @@ export function createPledgeInterpreter({
           // A choice waits until the line that asks for it has been said.
           if (rt.pledge.pledge.steps[cue._watch].kind === 'choose' && call('speechBusy')) break;
           rt.queue.shift();
-          if (!rt.watcher && rt.stepIndex === cue._watch) rt.watcher = makeWatcher(rt, cue._watch);
+          if (!rt.watcher && rt.stepIndex === cue._watch) { rt.watcher = makeWatcher(rt, cue._watch); openExtras(rt); }
           continue;
         }
         rt.queue.shift();
@@ -308,8 +375,10 @@ export function createPledgeInterpreter({
       tick(frame.now);
       const list = order;
       for (let i = 0; i < list.length; i++) {
-        const watcher = list[i].dead ? null : list[i].watcher;
-        if (watcher) watcher.update(frame);
+        const rt = list[i];
+        if (rt.dead) continue;
+        rt.watcher?.update(frame);
+        for (let k = 0; k < rt.extras.length; k++) rt.extras[k]?.watcher.update(frame);
       }
     },
     // The player pressed E. 'consume': a pledge deed used the key and the game
@@ -324,13 +393,16 @@ export function createPledgeInterpreter({
       const list = order;
       for (let i = 0; i < list.length; i++) {
         const rt = list[i];
-        const watcher = rt.dead ? null : rt.watcher;
-        if (!watcher) continue;
-        const result = watcher.interact(frame);
-        if (!result) continue;
-        used = true;
-        // report() has already reached the store and sync() has run again.
-        if (result.person && result.person === rt.pledge.npcId && rt.stepIndex < 0) pass = true;
+        if (rt.dead) continue;
+        for (const watcher of [rt.watcher, ...rt.extras.map(extra => extra.watcher)]) {
+          if (!watcher || rt.dead) continue;
+          const result = watcher.interact(frame);
+          if (!result) continue;
+          used = true;
+          // report() has already reached the store and sync() has run again.
+          if (result.person && result.person === rt.pledge.npcId && rt.stepIndex < 0) pass = true;
+          break; // one press, one deed per pledge
+        }
       }
       if (used) return pass ? 'pass' : 'consume';
       // A giver who is in the middle of a scene for a sworn pledge, or is
@@ -338,11 +410,13 @@ export function createPledgeInterpreter({
       // ("Keep going") must not open over the scene or the choice.
       for (let i = 0; i < list.length; i++) {
         const rt = list[i];
-        if (rt.dead || rt.stepIndex < 0 || !rt.pledge.npcId) continue;
+        if (rt.dead || rt.stepIndex < 0) continue;
         const busy = rt.pledge.pledge.steps[rt.stepIndex].kind === 'choose' || (!rt.watcher && rt.queue.length > 0);
         if (!busy) continue;
-        const at = frame.locate?.(rt.pledge.npcId);
-        if (at && Math.hypot(at.x - frame.player.x, at.z - frame.player.z) <= TALK_RANGE) return 'consume';
+        for (const who of new Set([holderOf(rt, rt.stepIndex), rt.pledge.npcId])) {
+          const at = who ? frame.locate?.(who) : null;
+          if (at && Math.hypot(at.x - frame.player.x, at.z - frame.player.z) <= TALK_RANGE) return 'consume';
+        }
       }
       return null;
     },
@@ -353,8 +427,10 @@ export function createPledgeInterpreter({
       if (frame.blocked) return out;
       const list = order;
       for (let i = 0; i < list.length; i++) {
-        const watcher = list[i].dead ? null : list[i].watcher;
-        if (watcher) watcher.view(frame, out);
+        const rt = list[i];
+        if (rt.dead) continue;
+        rt.watcher?.view(frame, out);
+        for (let k = 0; k < rt.extras.length; k++) rt.extras[k].watcher.view(frame, out);
       }
       if (out.choice) out.prompt = null;
       return out;

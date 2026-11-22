@@ -8,8 +8,8 @@ import {
   pledgeStateOnAbandon, pledgeStateOnAccept, pledgeStateOnComplete, pledgeStateOnEvent,
 } from '../src/components/game3d/pledges/pledgeState.mjs';
 import { localToWorld } from '../src/components/game3d/threeroads/coords.mjs';
-import { THREE_ROADS_CAST, threeRoadsHomeOf } from '../src/components/game3d/threeroads/script/cast.mjs';
-import { threeRoadsPledges } from '../src/components/game3d/threeroads/pledgeworld/pledgeScript.mjs';
+import { THREE_ROADS_CAST } from '../src/components/game3d/threeroads/script/cast.mjs';
+import { pledgeHome, threeRoadsPledges } from '../src/components/game3d/threeroads/pledgeworld/pledgeScript.mjs';
 import {
   createPledgeInterpreter, pledgePointWorld,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeInterpreter.mjs';
@@ -21,7 +21,9 @@ export const emptyQuestState = () => ({
   storyFlags: {}, choices: {}, abandonedIds: [], completionCounts: {}, lastAcceptedId: null,
 });
 
-export function createHarness({ empire = 'none', state = emptyQuestState(), pledges = threeRoadsPledges(), speechBusy = () => false } = {}) {
+// `area`: which of the five areas is loaded; people stand at the home they
+// have there (cast.mjs `alsoAt`) when they have one, otherwise at their main home.
+export function createHarness({ empire = 'none', state = emptyQuestState(), pledges = threeRoadsPledges(), speechBusy = () => false, area = null } = {}) {
   const log = [];
   const people = new Map();     // id -> { x, z } live positions
   const followers = new Map();  // id -> distance behind the player
@@ -29,11 +31,11 @@ export function createHarness({ empire = 'none', state = emptyQuestState(), pled
   const player = { x: 0, z: 0 };
   let now = 0;
   let current = state;
-  const frame = { now: 0, player, eDown: false, blocked: false, locate: id => people.get(id) || null };
+  const frame = { now: 0, player, eDown: false, blocked: false, down: false, locate: id => people.get(id) || null };
 
   const placeAtHome = () => {
     for (const person of THREE_ROADS_CAST) {
-      const home = threeRoadsHomeOf(person, current.storyFlags);
+      const home = pledgeHome(person.id, current.storyFlags, area);
       if (home) people.set(person.id, localToWorld(home.x, home.z));
       else if (!person.existing && person.home) people.delete(person.id);
     }
@@ -198,7 +200,7 @@ export function createHarness({ empire = 'none', state = emptyQuestState(), pled
     // The same quest state in a scene built from nothing (a reload, an area change).
     reload(options = {}) {
       interpreter.dispose();
-      const next = createHarness({ empire, pledges, speechBusy, state: current, ...options });
+      const next = createHarness({ empire, pledges, speechBusy, area, state: current, ...options });
       next.player.x = player.x; next.player.z = player.z;
       return next;
     },

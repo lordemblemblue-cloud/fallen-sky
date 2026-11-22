@@ -37,6 +37,7 @@ function makeWindow() {
 
 // The quest store, as far as a pledge needs it: it hears the window event the
 // real store hears and tells its subscribers.
+const ridingListeners = new Set();
 function makeStore(win, state = emptyQuestState()) {
   let current = state;
   const subscribers = new Set();
@@ -58,6 +59,7 @@ function makeStore(win, state = emptyQuestState()) {
       subscribeQuests(fn) { subscribers.add(fn); fn(current); return () => subscribers.delete(fn); },
       setQuestStoryFlag(flag, value = true) { current = { ...current, storyFlags: { ...current.storyFlags, [flag]: !!value } }; tell(); return true; },
       getFactionId: () => 'AXE_Faction_3',
+      subscribeRiding(fn) { ridingListeners.add(fn); fn(false); return () => ridingListeners.delete(fn); },
     },
     accept(pledgeId) {
       const pledge = threeRoadsPledge(pledgeId);
@@ -284,6 +286,15 @@ test('people and monsters are asked for only in the area that is loaded; a cave 
   assert.equal(cave.win.listenerCount('keydown'), 0);
   assert.equal(getPledgeNavigationTarget(pledge, { x: 0, z: 0 }), null);
   cave.subsystem.dispose();
+});
+
+test('riding and dying reach the frame as "down" for one carry; the listeners go at dispose', () => {
+  const t = setup();
+  assert.equal(ridingListeners.size, 1);
+  assert.equal(t.win.listenerCount('playerDeathAnimation'), 1);
+  t.subsystem.dispose();
+  assert.equal(ridingListeners.size, 0);
+  assert.equal(t.win.listenerCount('playerDeathAnimation'), 0);
 });
 
 test('a menu of the game\'s own hides the prompt and gives the key back', () => {
