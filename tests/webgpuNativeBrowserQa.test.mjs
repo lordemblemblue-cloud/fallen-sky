@@ -14,7 +14,7 @@ const KEY = {
 function sample(sceneId, overrides = {}) {
   return {
     sceneId, backend: 'webgpu', deviceConfirmed: true, deviceLost: false,
-    frameCount: 5, gameplayFrames: 3, ...overrides,
+    frameCount: 5, gameplayFrames: 3, canvasAttached: true, ...overrides,
   };
 }
 
@@ -110,3 +110,17 @@ test('unknown scene ids cannot inject executable code into the browser probe', (
   assert.throws(() => buildBrowserExpression('__proto__'), /Unknown scene ID/);
   assert.throws(() => buildBrowserExpression('fallen-sky;alert(1)'), /Unknown scene ID/);
 });
+
+for (const sceneId of SCENES) {
+  test(sceneId + ': native counters never certify a detached renderer canvas', () => {
+    const first = sample(sceneId);
+    const last = sample(sceneId, { frameCount: 8, gameplayFrames: 6 });
+    for (const invalid of [false, null, undefined, 1, 'true']) {
+      assert.equal(classifySamplePair({ ...first, canvasAttached: invalid }, last).reason,
+        'renderer-canvas-not-attached');
+      assert.equal(classifySamplePair(first, { ...last, canvasAttached: invalid }).reason,
+        'renderer-canvas-not-attached');
+    }
+    assert.equal(classifySamplePair(first, last).ok, true);
+  });
+}
