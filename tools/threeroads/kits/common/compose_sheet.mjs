@@ -1,26 +1,27 @@
 #!/usr/bin/env node
 /* global process, console, Buffer */
-// node tools/threeroads/kits/valley/compose_sheet.mjs TILEDIR near|far OUT.png
+// node tools/threeroads/kits/common/compose_sheet.mjs KIT TILEDIR near|far OUT.png
 // Lays the per-piece renders from render_sheets.py out in table order with labels.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
-import { VALLEY_KIT_PIECES } from '../../../../src/components/game3d/threeroads/kits/valleyKitPieces.mjs';
+import { KITS } from './kitInspect.mjs';
 
-const [dir, mode, out] = process.argv.slice(2);
+const [kit, dir, mode, out] = process.argv.slice(2);
+const PIECES = KITS[kit].pieces;
 const far = mode === 'far';
 const TW = far ? 420 : 300;
 const TH = far ? 260 : 320;
 const COLS = far ? 5 : 8;
 const LABEL = 22;
-const rows = Math.ceil(VALLEY_KIT_PIECES.length / COLS);
+const rows = Math.ceil(PIECES.length / COLS);
 const W = COLS * TW;
 const H = rows * (TH + LABEL) + 40;
 const layers = [];
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 let svg = `<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg"><style>text{font-family:Arial,sans-serif;font-size:15px;fill:#222}</style>`;
-svg += `<text x="10" y="26" style="font-size:20px">Valley kit: ${far ? 'LOD0 (left) and LOD1 (right) at 60 m, one block = one screen pixel' : 'LOD0, with a 1.8 m figure'}</text>`;
-for (const [i, entry] of VALLEY_KIT_PIECES.entries()) {
+svg += `<text x="10" y="26" style="font-size:20px">${kit[0].toUpperCase() + kit.slice(1)} kit: ${far ? 'LOD0 (left) and LOD1 (right) at 60 m, one block = one screen pixel' : 'LOD0, with a 1.8 m figure'}</text>`;
+for (const [i, entry] of PIECES.entries()) {
   const file = path.join(dir, `${entry.id}.png`);
   if (!existsSync(file)) continue;
   const x = (i % COLS) * TW;

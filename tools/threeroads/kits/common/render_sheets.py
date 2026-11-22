@@ -1,13 +1,13 @@
-"""Render one picture per valley-kit piece for the contact sheets (Blender 5.2, headless).
+"""Render one picture per kit piece for the contact sheets (Blender 5.2, headless).
 
-  blender -b --factory-startup -P tools/threeroads/kits/valley/render_sheets.py -- GLB OUTDIR near|far
+  blender -b --factory-startup -P tools/threeroads/kits/common/render_sheets.py -- GLB OUTDIR near|far KIT
 
 near: LOD0, front three-quarter view, a 1.8 m figure beside it (pieces that sit
       on or hang from another piece are shown on it).
 far:  LOD0 (left) and LOD1 (right) seen from 60 m, rendered at the size one
       screen pixel covers at that distance (about 5.8 cm), so the composed
       sheet shows what the game can resolve there.
-Then: node tools/threeroads/kits/valley/compose_sheet.mjs OUTDIR near|far OUT.png
+Then: node tools/threeroads/kits/common/compose_sheet.mjs KIT OUTDIR near|far OUT.png
 """
 import math
 import os
@@ -19,10 +19,14 @@ from mathutils import Vector
 
 argv = sys.argv[sys.argv.index('--') + 1:]
 GLB, OUT, MODE = argv[0], argv[1], argv[2]
+KIT = argv[3] if len(argv) > 3 else 'valley'
 HERE = os.path.dirname(os.path.abspath(__file__))
-TABLE = os.path.normpath(os.path.join(HERE, '..', '..', '..', '..', 'src', 'components', 'game3d', 'threeroads', 'kits',
-                                      'valleyKitPieces.mjs'))
-IDS = [m.group(1) for m in re.finditer(r"piece\('(\w+)'", open(TABLE, encoding='utf-8').read())]
+sys.dont_write_bytecode = True
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, '..', KIT))
+import kitbuild  # noqa: E402
+import pieces  # noqa: E402
+IDS = [r['id'] for r in kitbuild.read_table(KIT)]
 os.makedirs(OUT, exist_ok=True)
 
 for ob in list(bpy.data.objects):
@@ -98,15 +102,8 @@ def g2b(x, y, z):  # game -> Blender
     return Vector((x, -z, y))
 
 
-# Companions shown with a piece, at their mounted place (game metres).
-COMBO = {
-    'windmill_sails': [('windmill_body_LOD{l}', (0, 0, 0)), ('windmill_sails_LOD{l}', (0, 8.5, 3.25))],
-    'wagon_cover': [('wagon_LOD{l}', (0, 0, 0)), ('wagon_cover_LOD{l}', (0, 0, 0))],
-    'fire_basket_flame': [('fire_basket_LOD{l}', (0, 0, 0)), ('fire_basket_flame_LOD{l}', (0, 0, 0))],
-    'paper_lantern': [('lantern_post_LOD{l}', (0, 0, 0)), ('paper_lantern_LOD{l}', (0, 2.27, 0.15))],
-    'banner_cloth': [('banner_cloth_LOD{l}', (0, 3.5, 0))],
-    'ribbon': [('ribbon_LOD{l}', (0, 1.3, 0))],
-}
+# Companions shown with a piece, at their mounted place (game metres): the kit's pieces.COMBO.
+COMBO = getattr(pieces, 'COMBO', {})
 
 
 def show_only(objs):
@@ -140,18 +137,32 @@ AZ, EL = math.radians(35), math.radians(17)
 VIEW = g2b(math.sin(AZ) * math.cos(EL), math.sin(EL), math.cos(AZ) * math.cos(EL)).normalized()
 PIXEL_AT_60M = 2 * 60 * math.tan(math.radians(55) / 2) / 1080
 
+TEMP = []
+
+
+def place(name, loc, used):
+    """The named piece at loc; a second use in the same picture gets a copy."""
+    o = OBJ[name]
+    if name in used:
+        o = o.copy()
+        scene.collection.objects.link(o)
+        TEMP.append(o)
+    used.add(name)
+    o.location = loc
+    return o
+
+
 for pid in IDS:
+    for o in TEMP:
+        bpy.data.objects.remove(o, do_unlink=True)
+    TEMP.clear()
     for o in OBJ.values():
         o.location = (0, 0, 0)
+    parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
+    used = set()
     if MODE == 'near':
-        parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
-        objs = []
-        for name, off in parts:
-            o = OBJ[name.format(l=0)]
-            o.location = g2b(*off)
-            objs.append(o)
+        objs = [place(name.format(l=0), g2b(*off), used) for name, off in parts]
         lo, hi = bounds(objs)
-        w = hi.x - lo.x
         body.location = (lo.x - 0.45, (lo.y + hi.y) / 2, 0.725)
         head.location = (lo.x - 0.45, (lo.y + hi.y) / 2, 1.62)
         lo, hi = bounds(objs + list(FIG))
@@ -162,23 +173,14 @@ for pid in IDS:
         lens = 50
         fov = 2 * math.atan(18 / lens)
         aim(centre, VIEW, radius / math.sin(fov / 2) * 1.02, lens)
-        scene.render.filepath = os.path.join(OUT, f'{pid}.png')
-        bpy.ops.render.render(write_still=True)
     else:
-        parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
-        objs = []
-        span = 0
-        for l in (0, 1):
-            for name, off in parts:
-                o = OBJ[name.format(l=l)]
-                objs.append(o)
+        objs = [place(name.format(l=0), g2b(*off), used) for name, off in parts]
         lo, hi = bounds(objs)
         size = max(hi.x - lo.x, hi.y - lo.y, 1.0)
         shift = size * 0.62 + 0.3
-        for l in (0, 1):
-            for name, off in parts:
-                o = OBJ[name.format(l=l)]
-                o.location = g2b(*off) + Vector(((-1 if l == 0 else 1) * shift, 0, 0))
+        for o in objs:
+            o.location = o.location + Vector((-shift, 0, 0))
+        objs += [place(name.format(l=1), g2b(*off) + Vector((shift, 0, 0)), used) for name, off in parts]
         show_only(objs)
         lo, hi = bounds(objs)
         centre = (lo + hi) / 2
@@ -191,6 +193,6 @@ for pid in IDS:
         cam_data.sensor_fit = 'HORIZONTAL'
         lens = 36 * dist / span_x
         aim(centre, VIEW, dist, lens)
-        scene.render.filepath = os.path.join(OUT, f'{pid}.png')
-        bpy.ops.render.render(write_still=True)
+    scene.render.filepath = os.path.join(OUT, f'{pid}.png')
+    bpy.ops.render.render(write_still=True)
 print('RENDERED', len(IDS), MODE, scene.render.engine)
