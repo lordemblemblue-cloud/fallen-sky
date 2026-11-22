@@ -23,6 +23,10 @@ async function registerPublicGameAssetCache() {
 export default function Game3DPerformanceBootstrap({ region, showPanel = false }) {
   useEffect(() => {
     registerPublicGameAssetCache();
+    // Draw-cost probe (docs/game3d/three-empires/research/PERF_BASELINE_WEBGPU.md): dev server + ?perfProbe=1 only;
+    // a production build drops this branch and the probe module with it.
+    if (import.meta.env?.DEV && /[?&]perfProbe=1(&|$)/.test(window.location.search))
+      import('./Game3DPerfProbe.mjs').then((m) => m.installGame3DPerfProbe(window), (e) => console.warn('perfProbe unavailable', e));
     let activeScene = null;
     let activeRenderer = null;
     let warmup = null;
