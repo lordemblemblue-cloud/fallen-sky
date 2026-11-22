@@ -142,6 +142,8 @@ function westernRoadCamp() {
     items.push(item(A, 'curtain_run', cx + dx, cz + 4, 0));
     items.push(item(A, 'curtain_run', cx + dx, cz - 4, Math.PI));
   }
+  // Each run carries its pole at its left end, which leaves the north side's open end bare.
+  items.push(item(A, 'curtain_post', cx + 4, cz + 4));
   items.push(item(A, 'map_table', cx - 1.5, cz, Math.PI / 2));
   items.push(item(A, 'watchtower', -326, -128, Math.PI / 2));
   items.push(item(A, 'signal_lantern', -326, -128, 0, { y: 7 }));

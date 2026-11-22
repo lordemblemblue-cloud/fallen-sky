@@ -32,9 +32,14 @@ export const AKITSU_KIT_PIECES = Object.freeze([
   // Canvas
   piece('tent_bell', [4, 4, 3.2], { solid: { circle: 1.9 }, skirt: 1.2 }), // white bell tent on a plank deck
   piece('tent_officer', [6, 4, 3], { solid: { box: [3, 2] }, skirt: 1.2 }), // wall tent with a blue band, on a deck
-  piece('curtain_run', [4, 0.2, 2.1], { tint: true, solid: { box: [2, 0.15] }, skirt: 0.6 }), // camp curtain on poles with the bear crest; rings the command post
+  // The camp curtain that rings the command post. Its crest is Akitsu's bear as a paw print in a
+  // ring: one broad pad with four round toes in an arc above it, and no lettering. Each run has
+  // one pole, at its left end (x -2), so a row of runs has a pole every 4 m; a row's open right
+  // end gets a curtain_post.
+  piece('curtain_run', [4, 0.2, 2.1], { tint: true, solid: { box: [2, 0.15] }, skirt: 0.6 }),
+  piece('curtain_post', [0.12, 0.12, 2.1], { skirt: 0.6 }), // the same pole on its own, for the end of a row
   piece('banner_tall_pole', [0.2, 0.2, 6.5], { skirt: 0.8 }),
-  piece('banner_tall_cloth', [0.9, 0.05, 5], { tint: true, pivot: 'top' }), // narrow upright banner; hangs from y 6.3 on its pole
+  piece('banner_tall_cloth', [0.9, 0.05, 5], { tint: true, pivot: 'top' }), // narrow upright banner on its own top arm. Its origin is on the pole's axis and the cloth hangs beside the pole toward +X, so it is placed at the pole's own spot, mounted at y 6.3
   // Works
   piece('watchtower', [4, 4, 10], { solid: { box: [2, 2] }, skirt: 1.8 }), // timber tower, roofed platform at 7.5 m, a signal drum; the camp's tall mark
   piece('bale_wall', [4, 1.1, 1.3], { solid: { box: [2, 0.55] }, skirt: 0.8 }), // rice-bale breastwork, three bales high
@@ -54,7 +59,7 @@ export const TAMERI_KIT_PIECES = Object.freeze([
   // The enclosure
   piece('shield_wall', [4, 0.4, 1.7], { solid: { box: [2, 0.2] }, skirt: 0.8 }), // tall hide shields set edge to edge on a rail
   piece('flagstaff', [0.5, 0.5, 13], { solid: { circle: 0.3 }, skirt: 1.5 }), // tapered mast, bronze-capped; two of them are the camp's tall mark
-  piece('pennant', [0.5, 0.05, 4], { tint: true, pivot: 'top' }), // long cloth streamer; hangs from y 12.6 on a flagstaff
+  piece('pennant', [0.5, 0.05, 4], { tint: true, pivot: 'top' }), // long cloth streamer. Its origin is on the flagstaff's axis and the cloth streams beside the staff toward +X, so it is placed at the staff's own spot, mounted at y 12.6
   // Tents
   piece('pavilion_life', [8, 6, 4.2], { solid: { box: [4, 3] }, skirt: 2.4 }), // the House of Life: a linen pavilion on its own mud-brick platform
   piece('awning', [4, 3, 2.6], { skirt: 0.6 }), // reed mat on four poles; walk under it
