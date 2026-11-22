@@ -137,18 +137,32 @@ AZ, EL = math.radians(35), math.radians(17)
 VIEW = g2b(math.sin(AZ) * math.cos(EL), math.sin(EL), math.cos(AZ) * math.cos(EL)).normalized()
 PIXEL_AT_60M = 2 * 60 * math.tan(math.radians(55) / 2) / 1080
 
+TEMP = []
+
+
+def place(name, loc, used):
+    """The named piece at loc; a second use in the same picture gets a copy."""
+    o = OBJ[name]
+    if name in used:
+        o = o.copy()
+        scene.collection.objects.link(o)
+        TEMP.append(o)
+    used.add(name)
+    o.location = loc
+    return o
+
+
 for pid in IDS:
+    for o in TEMP:
+        bpy.data.objects.remove(o, do_unlink=True)
+    TEMP.clear()
     for o in OBJ.values():
         o.location = (0, 0, 0)
+    parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
+    used = set()
     if MODE == 'near':
-        parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
-        objs = []
-        for name, off in parts:
-            o = OBJ[name.format(l=0)]
-            o.location = g2b(*off)
-            objs.append(o)
+        objs = [place(name.format(l=0), g2b(*off), used) for name, off in parts]
         lo, hi = bounds(objs)
-        w = hi.x - lo.x
         body.location = (lo.x - 0.45, (lo.y + hi.y) / 2, 0.725)
         head.location = (lo.x - 0.45, (lo.y + hi.y) / 2, 1.62)
         lo, hi = bounds(objs + list(FIG))
@@ -159,23 +173,14 @@ for pid in IDS:
         lens = 50
         fov = 2 * math.atan(18 / lens)
         aim(centre, VIEW, radius / math.sin(fov / 2) * 1.02, lens)
-        scene.render.filepath = os.path.join(OUT, f'{pid}.png')
-        bpy.ops.render.render(write_still=True)
     else:
-        parts = COMBO.get(pid, [(pid + '_LOD{l}', (0, 0, 0))])
-        objs = []
-        span = 0
-        for l in (0, 1):
-            for name, off in parts:
-                o = OBJ[name.format(l=l)]
-                objs.append(o)
+        objs = [place(name.format(l=0), g2b(*off), used) for name, off in parts]
         lo, hi = bounds(objs)
         size = max(hi.x - lo.x, hi.y - lo.y, 1.0)
         shift = size * 0.62 + 0.3
-        for l in (0, 1):
-            for name, off in parts:
-                o = OBJ[name.format(l=l)]
-                o.location = g2b(*off) + Vector(((-1 if l == 0 else 1) * shift, 0, 0))
+        for o in objs:
+            o.location = o.location + Vector((-shift, 0, 0))
+        objs += [place(name.format(l=1), g2b(*off) + Vector((shift, 0, 0)), used) for name, off in parts]
         show_only(objs)
         lo, hi = bounds(objs)
         centre = (lo + hi) / 2
@@ -188,6 +193,6 @@ for pid in IDS:
         cam_data.sensor_fit = 'HORIZONTAL'
         lens = 36 * dist / span_x
         aim(centre, VIEW, dist, lens)
-        scene.render.filepath = os.path.join(OUT, f'{pid}.png')
-        bpy.ops.render.render(write_still=True)
+    scene.render.filepath = os.path.join(OUT, f'{pid}.png')
+    bpy.ops.render.render(write_still=True)
 print('RENDERED', len(IDS), MODE, scene.render.engine)
