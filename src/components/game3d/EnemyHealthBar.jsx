@@ -1,4 +1,3 @@
-import React from 'react';
 import { enemyHpPresentation } from './enemyHpPresentation.mjs';
 
 /**
