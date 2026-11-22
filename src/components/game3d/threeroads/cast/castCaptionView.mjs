@@ -32,6 +32,26 @@ export function createCaptionView(THREE, { geometry }) {
   mesh.userData.threeRoadsCast = true;
   let texture = null;
   let aspect = 1, heightMetres = 0.3;
+  // Placed while it is being drawn, from the camera that draws it: a subtitle
+  // placed in the update ran a frame behind the game's camera and drifted off
+  // the view (one showed at the top right, over the status panel), and a picture
+  // taken with a cloned camera saw captions turned toward the game's camera.
+  let screen = null; // { distance, foot, share } for a subtitle; null over a head
+  const offset = new THREE.Vector3();
+  mesh.frustumCulled = false;
+  mesh.onBeforeRender = (_renderer, _scene, camera) => {
+    if (!camera) return;
+    if (screen) {
+      const fov = Number.isFinite(camera.fov) ? camera.fov : 60;
+      const viewHeight = 2 * screen.distance * Math.tan((fov * Math.PI) / 360);
+      const h = screen.share * viewHeight;
+      mesh.scale.set(h * aspect, h, 1);
+      offset.set(0, -screen.foot * viewHeight + h / 2, -screen.distance).applyQuaternion(camera.quaternion);
+      camera.getWorldPosition(mesh.position).add(offset);
+    }
+    mesh.quaternion.copy(camera.quaternion);
+    mesh.updateMatrixWorld(true);
+  };
 
   function setText(text, speaker = '', { maxChars, maxLines } = {}) {
     if (!doc?.createElement) return;
@@ -88,6 +108,7 @@ export function createCaptionView(THREE, { geometry }) {
     setText,
     /** Places the caption at (x, y, z) facing the camera, `grow` >= 1 keeps far text readable. */
     place(x, y, z, camera, opacity, grow = 1) {
+      screen = null;
       const show = opacity > 0.01 && Boolean(material.map);
       mesh.visible = show;
       if (!show) return;
@@ -97,6 +118,19 @@ export function createCaptionView(THREE, { geometry }) {
       mesh.position.set(x, y + h / 2, z);
       if (camera) mesh.quaternion.copy(camera.quaternion);
     },
+    /**
+     * A subtitle: `distance` metres in front of whichever camera draws it, its foot
+     * `foot` of the view's height below the centre, `share` of the view's height tall.
+     */
+    placeOnScreen(opacity, { distance = 1.25, foot = 0.17, share = 0.1 } = {}) {
+      const show = opacity > 0.01 && Boolean(material.map);
+      mesh.visible = show;
+      if (!show) { screen = null; return; }
+      material.opacity = opacity;
+      screen = { distance, foot, share };
+    },
+    /** Where it is meant to be drawn now: 'screen' or 'world' (for tests and status). */
+    get anchor() { return screen ? 'screen' : 'world'; },
     /** The caption's height in metres at grow 1 (for sizing it on screen). */
     get height() { return heightMetres; },
     hide() { mesh.visible = false; },

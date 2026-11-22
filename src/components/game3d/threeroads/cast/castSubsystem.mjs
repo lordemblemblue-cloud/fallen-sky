@@ -133,6 +133,49 @@ export function ownOrSharedGlb(gltf, def, url) {
 }
 
 /**
+ * The height and lowest point of a skinned model as it stands in a clip (its Idle),
+ * averaged over a few moments of the clip, in the model's own world units. The
+ * model's pose is put back as it was. null when there is no clip or no skinned mesh.
+ */
+export function measurePoseBox(THREE_, model, clip, samples = 5) {
+  if (!model || !clip || !(clip.duration > 0)) return null;
+  const skinned = [];
+  model.traverse(node => { if (node.isSkinnedMesh) skinned.push(node); });
+  if (!skinned.length) return null;
+  const saved = [];
+  model.traverse(node => saved.push([node, node.position.clone(), node.quaternion.clone(), node.scale.clone()]));
+  const mixer = new THREE_.AnimationMixer(model);
+  const action = mixer.clipAction(clip);
+  action.play();
+  const box = new THREE_.Box3(), part = new THREE_.Box3();
+  let height = 0, foot = 0, count = 0;
+  try {
+    for (let k = 0; k < samples; k++) {
+      mixer.setTime((k / samples) * clip.duration);
+      model.updateMatrixWorld(true);
+      box.makeEmpty();
+      for (const mesh of skinned) {
+        mesh.computeBoundingBox();
+        part.copy(mesh.boundingBox).applyMatrix4(mesh.matrixWorld);
+        box.union(part);
+      }
+      if (box.isEmpty()) continue;
+      height += box.max.y - box.min.y;
+      foot += box.min.y;
+      count++;
+    }
+  } finally {
+    action.stop();
+    mixer.uncacheRoot(model);
+    for (const [node, p, q, s] of saved) { node.position.copy(p); node.quaternion.copy(q); node.scale.copy(s); }
+    model.updateMatrixWorld(true);
+    for (const mesh of skinned) mesh.computeBoundingBox();
+  }
+  if (!count || !(height > 0)) return null;
+  return { height: height / count, foot: foot / count };
+}
+
+/**
  * How fast an in-place walk clip carries the body, in the model's own world units
  * per second: the planted (lower) foot slides back at that speed. Sampled over one
  * cycle; the model's pose is put back as it was. null when it cannot tell.
@@ -207,6 +250,40 @@ export function unifySkeletons(THREE_, model) {
   return rebound;
 }
 
+/**
+ * A copy of a loaded model whose geometries, materials and textures are this
+ * scene's own. The cast draws with and disposes only the copy; what the loader
+ * handed over is left alone, so nothing a later mount (or a loader cache, or the
+ * game) may still hold is ever disposed by this scene's teardown.
+ */
+export function ownCopy(model) {
+  const copy = cloneSkinned(model);
+  const geometries = new Map(), materials = new Map(), textures = new Map();
+  const ownTexture = t => {
+    if (!t?.isTexture) return t;
+    if (!textures.has(t)) textures.set(t, t.clone());
+    return textures.get(t);
+  };
+  const ownMaterial = m => {
+    if (!m) return m;
+    if (!materials.has(m)) {
+      const c = m.clone();
+      for (const [key, value] of Object.entries(c)) if (value?.isTexture) c[key] = ownTexture(value);
+      materials.set(m, c);
+    }
+    return materials.get(m);
+  };
+  copy.traverse(node => {
+    if (node.geometry) {
+      if (!geometries.has(node.geometry)) geometries.set(node.geometry, node.geometry.clone());
+      node.geometry = geometries.get(node.geometry);
+    }
+    if (node.material) node.material = Array.isArray(node.material) ? node.material.map(ownMaterial) : ownMaterial(node.material);
+  });
+  copy.animations = model.animations;
+  return copy;
+}
+
 function disposeObjectTree(object) {
   const geometries = new Set(), materials = new Set(), textures = new Set();
   object?.traverse?.(node => {
@@ -234,6 +311,22 @@ export function createCastSubsystem(ctx, deps = {}) {
   const playVoice = deps.playVoice || defaultPlayVoice;
   const scene = ctx.scene;
   const bus = ctx.bus;
+
+  // What the WebGPU device reported while this scene's cast was up: bodies went
+  // undrawn twice on WebGPU while several game tabs rendered at once (one reported a
+  // hung device), and it could not be reproduced alone. status().gpu shows the last
+  // errors and whether the device was lost, so the next time it can be pinned down.
+  const gpu = { errors: [], lost: null };
+  const device = ctx.renderer?.backend?.device;
+  const onGpuError = event => {
+    const message = String(event?.error?.message || event?.error || 'GPU error').slice(0, 200);
+    if (gpu.errors.length >= 5) gpu.errors.shift();
+    gpu.errors.push(message);
+  };
+  try {
+    device?.addEventListener?.('uncapturederror', onGpuError);
+    device?.lost?.then?.(info => { gpu.lost = String(info?.message || info?.reason || 'lost'); }, () => {});
+  } catch { /* no WebGPU device (WebGL, tests) */ }
 
   const root = new THREE.Group();
   root.name = 'ThreeRoadsCast';
@@ -291,7 +384,6 @@ export function createCastSubsystem(ctx, deps = {}) {
   const captionList = [];     // the same records, for allocation-free iteration
   let subtitleOwner = null;   // the record shown as a subtitle, if any
   let lineCounter = 0;
-  const subtitleAt = new THREE.Vector3();
   const projected = new THREE.Vector3();
   // True when a point is in front of the camera and inside its view (a little
   // margin, so a head at the very edge still counts as seen). No camera: assume so.
@@ -326,11 +418,15 @@ export function createCastSubsystem(ctx, deps = {}) {
     if (!value?.scene) throw new Error('Cast model source gave no scene');
     value.scene.updateMatrixWorld(true);
     value.reboundMeshes = unifySkeletons(THREE, value.scene);
-    // Height from the skinned mesh's world box in its rest pose (an own file's
-    // "Armature" is scaled 0.01: the bones are in centimetres).
+    // Height and foot from the skinned mesh's world box as the person stands, in
+    // their Idle (an own file's "Armature" is scaled 0.01: the bones are in
+    // centimetres). The rest pose stands straighter than the idle, which drew own
+    // models about 5 % short and sank the shared figure's feet 4.5 cm into the ground.
     const box = new THREE.Box3().setFromObject(value.scene);
-    value.sourceHeight = Math.max(1e-3, box.max.y - box.min.y);
-    value.footY = box.min.y;
+    const standing = measurePoseBox(THREE, value.scene, value.idleClip);
+    value.restHeight = Math.max(1e-3, box.max.y - box.min.y);
+    value.sourceHeight = standing ? standing.height : value.restHeight;
+    value.footY = standing ? standing.foot : box.min.y;
     value.walkClip = value.format === 'fbx' ? inPlace(value.walkClip) : value.walkClip;
     // An own walk clip's natural speed, in the file's own metres per second.
     value.walkSpeedMeasured = value.own ? measureWalkSpeed(THREE, value.scene, value.walkClip) : null;
@@ -350,8 +446,9 @@ export function createCastSubsystem(ctx, deps = {}) {
     entry.promise = Promise.resolve()
       .then(() => loadSource(sourceKey, castSourceDef(sourceKey), ctx))
       .then(value => {
-        if (disposed) { disposeObjectTree(value?.scene); return; }
-        entry.value = prepareTemplate(value);
+        // Arrived after this scene ended: dropped, not disposed (it was never ours).
+        if (disposed || !value?.scene) { if (!disposed) throw new Error('Cast model source gave no scene'); return; }
+        entry.value = prepareTemplate({ ...value, scene: ownCopy(value.scene) });
       })
       .catch(error => {
         entry.error = error;
@@ -812,12 +909,11 @@ export function createCastSubsystem(ctx, deps = {}) {
       if (!rec.far) continue;
       if (rec !== newestFar || !camera) { rec.view.hide(); continue; }
       setMode(rec, 'subtitle');
-      const viewHeight = 2 * SUBTITLE_DISTANCE * Math.tan(((camera.fov || 60) * Math.PI) / 360);
-      const height = Math.max(1, rec.lines + (rec.name ? 0.7 : 0)) * SUBTITLE_LINE_SCREEN * viewHeight;
-      const grow = height / Math.max(1e-3, rec.view.height);
-      // place() stands the caption on the point it is given: its foot sits here.
-      subtitleAt.set(0, -SUBTITLE_FOOT * viewHeight, -SUBTITLE_DISTANCE).applyQuaternion(camera.quaternion).add(camera.position);
-      rec.view.place(subtitleAt.x, subtitleAt.y, subtitleAt.z, camera, captionOpacity(rec.time, rec.seconds), grow);
+      // Placed by the view itself as it is drawn, from the camera that draws it.
+      rec.view.placeOnScreen(captionOpacity(rec.time, rec.seconds), {
+        distance: SUBTITLE_DISTANCE, foot: SUBTITLE_FOOT,
+        share: Math.max(1, rec.lines + (rec.name ? 0.7 : 0)) * SUBTITLE_LINE_SCREEN,
+      });
     }
   }
   // Over a head the line wraps narrow and tall; as a subtitle wide and low.
@@ -941,6 +1037,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       return {
         area: ctx.worldArea ?? null, areaScenes: ctx.areaScenes !== false, max: CAST_MAX_PEOPLE,
         maxDrawn: CAST_MAX_DRAWN, count: actors.size, templates: templateState, templateInfo,
+        gpu: { webgpu: Boolean(ctx.renderer?.isWebGPURenderer), errors: [...gpu.errors], lost: gpu.lost },
         flagsRead: flags !== null,
         subtitle: subtitleOwner && subtitleOwner.seconds > 0 ? subtitleOwner.id : null,
         people: actorList.map(actor => ({
@@ -1008,6 +1105,7 @@ export function createCastSubsystem(ctx, deps = {}) {
       subtitleOwner = null;
       for (const t of templates.values()) if (t.value) disposeObjectTree(t.value.scene);
       templates.clear();
+      try { device?.removeEventListener?.('uncapturederror', onGpuError); } catch { /* gone */ }
       ringGeometry.dispose();
       ringMaterial.dispose();
       captionGeometry.dispose();
