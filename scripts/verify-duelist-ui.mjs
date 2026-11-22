@@ -14,6 +14,8 @@ const files = [
   'src/components/duelist/menu/DuelistTemplateHub.jsx',
   'src/components/duelist/menu/DuelistReferenceMenus.jsx',
   'src/components/duelist/menu/DuelistStoryMenu.jsx',
+  'src/components/duelist/menu/DuelistCharacterMenu.jsx',
+  'src/components/duelist/menu/DuelistCharacterPreview.jsx',
   'src/components/duelist/menu/templateCatalog.mjs',
   'src/components/duelist/menu/modes.js',
   'src/components/duelist/client/DuelistGame.jsx',
