@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CLASS_IDS, CLASSES } from '../src/components/duelist/core/classes.mjs';
-import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, queueMatchClass, stepMatch, matchView, standInInput, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
 
 const STEP = 1 / 60;
 function advance(match, seconds) {
@@ -77,4 +77,24 @@ test('untrusted seats and invalid class names cannot mutate queued choices or pr
   assert.equal(match.seats.get('alpha').specialMeter, before);
   assert.equal(matchView(match, 'alpha').me.pendingClass, 'assassin');
   assert.equal(matchView(match, botId).people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false);
+});
+
+test('temporary stand-in preserves the authenticated seat class and private meter without exposing them to peers', () => {
+  const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
+  assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
+  advance(match, COUNTDOWN + 0.1);
+  const seat = match.seats.get('alpha');
+  seat.specialMeter = 40; // Arrange server-owned state; never a client packet.
+  const fighter = match.world.fighters.get('alpha');
+  const input = standInInput(match, 'alpha');
+  assert.equal(typeof input, 'object');
+  assert.equal(match.seats.get('alpha'), seat, 'disconnect stand-in must not replace the player seat');
+  assert.equal(match.world.fighters.get('alpha'), fighter);
+  assert.equal(seat.kind, 'player');
+  assert.equal(seat.classId, 'assassin');
+  assert.equal(seat.specialMeter, 40);
+  assert.equal(matchView(match, 'alpha').me.specialMeter, 40);
+  assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false);
+  assert.equal(matchView(match, 'beta').me.specialMeter, null);
+  assert.equal(matchView(match, 'unknown').me, null);
 });
