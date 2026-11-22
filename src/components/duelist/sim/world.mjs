@@ -11,6 +11,7 @@ import {
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 import { stickDirection } from '../core/cuts.mjs';
+import { beginHeldJump, advanceHeldJump, HELD_JUMP } from './heldJump.mjs';
 
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
@@ -71,6 +72,8 @@ function newBody(x, z, yaw) {
     x, z, y: 0, yaw, vy: 0,
     // Client prediction and the match server share this transient state. It resets on landing.
     jumped: false, airDashUsed: false, airDashTapAt: -Infinity,
+    // Opt-in held-Space protocol: older clients and existing AI retain the classic jump arc.
+    jumpHeld: undefined, heldJump: null,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
@@ -119,6 +122,7 @@ export function step(world, dt, inputs = {}) {
     body.run = !!input.run;
     body.sprint = !!input.sprint;
     body.strafe = !!input.strafe; // locked on: rolls keep facing the target (side and back evasions)
+    body.jumpHeld = typeof input.jumpHeld === 'boolean' ? input.jumpHeld : undefined;
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;
     // the body turns to face where the player aims, except while committed to a roll or dash, or to a
     // strike's active part
@@ -383,7 +387,15 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
 
 function startMotion(body, fighter, id) {
   const move = moveFor(fighter, id);
-  if (id === 'jump') { body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity; }
+  if (id === 'jump') {
+    body.jumped = true; body.airDashUsed = false; body.airDashTapAt = -Infinity;
+    if (typeof body.jumpHeld === 'boolean') beginHeldJump(body);
+  } else if (body.heldJump) {
+    // A validated attack, ability, roll or air-dash ends the vertical charge.
+    // This does not override the shared horizontal root-motion authority.
+    body.heldJump = null;
+    body.vy = Math.min(0, body.vy);
+  }
   // strikes and powers whose clip travels: the body follows the clip (the facing of the moment, every step)
   if (hasClipTravel(id) && !move?.mobile) { body.motion = { id, clip: true, forward: 0, right: 0 }; return; }
   if (!move?.rootMotion && !move?.air) { body.motion = null; return; }
@@ -440,7 +452,7 @@ function moveBody(world, fighter, body, dt, now) {
     body.motion.done = target;
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
-    if (a.move.leap) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
+    if (a.move.leap && !body.heldJump) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
   } else {
     body.motion = null;
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
@@ -484,8 +496,23 @@ function moveBody(world, fighter, body, dt, now) {
     body.z += vz * dt;
   }
   body.moving = Math.hypot(vx, vz) > 0.1;
-  const leaping = !!(a?.move.leap && body.motion && !body.motion.clip && a.id === body.motion.id);
-  if (effectOn(fighter, 'levitate', now)) {
+  const leaping = !!(a?.move.leap && body.motion && !body.motion.clip && a.id === body.motion.id && !body.heldJump);
+  // The old Game 2 hold-Jump mechanic is recomputed by the match/mission server.
+  // Mission interiors have only 2-D wall collision, so until ceiling collision is
+  // added, cap their vertical boost to the first stage; arenas use all three.
+  if (body.heldJump && (fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy || effectOn(fighter, 'levitate', now))) {
+    body.heldJump = null;
+    body.vy = Math.min(0, body.vy);
+  }
+  if (body.heldJump) {
+    const landed = advanceHeldJump(body, dt, body.jumpHeld, GRAVITY,
+      world.level ? HELD_JUMP.stages[0].height : HELD_JUMP.stages[2].height);
+    if (landed) {
+      body.jumped = false; body.airDashUsed = false; body.airDashTapAt = -Infinity;
+      if (fighter.action?.id === 'jump') fighter.action = null;
+      body.motion = null;
+    }
+  } else if (effectOn(fighter, 'levitate', now)) {
     body.y += (EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
     body.vy = 0;
   } else if (leaping) {
