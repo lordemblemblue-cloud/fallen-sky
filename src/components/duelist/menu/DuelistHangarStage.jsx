@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
+import { prepareIdlePreview } from './idlePreview.mjs';
 
 /**
  * Small, optional WebGL stage for the menu only.
  * Gameplay renderer and WebGPU migration paths are deliberately untouched.
  * The CSS hangar remains visible if WebGL or a character asset fails to load.
  */
-export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
+export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId = 'duelist' }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -23,7 +24,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
 
     let active = true;
     let frameId = null;
-    let mixer = null;
+    let idlePose = null;
     let model = null;
     let observer = null;
     const clock = new THREE.Clock();
@@ -104,18 +105,15 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
     rim.position.set(-3.3, 2.5, -0.5);
     scene.add(rim);
 
-    loadFighterBody(fighter).then(({ model: next, clips }) => {
+    loadFighterBody(fighter).then(async ({ model: next, clips }) => {
       if (!active) return;
+      const prepared = await prepareIdlePreview({ model: next, bodyId: fighter, classId, embeddedIdle: clips?.idle });
+      if (!active) { prepared.dispose(); return; }
       model = next;
       model.position.x -= 1.48;
       model.rotation.y = 0; // Assets are authored facing +Z, toward the camera.
-      scene.add(model);
-      if (clips?.idle) {
-        mixer = new THREE.AnimationMixer(model);
-        const idle = mixer.clipAction(clips.idle);
-        idle.setLoop(THREE.LoopRepeat, Infinity);
-        idle.play();
-      }
+      idlePose = prepared;
+      scene.add(model); // reveal only after an authored idle or relaxed fallback was applied
     }).catch(() => {
       // A missing or damaged character GLB must not take the home menu down.
     });
@@ -140,7 +138,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
       if (!active) return;
       const dt = Math.min(0.05, clock.getDelta());
       if (!document.hidden) {
-        mixer?.update(dt);
+        idlePose?.update(dt);
         if (!reducedMotion) {
           portal.rotation.z += dt * 0.08;
           ticks.rotation.z -= dt * 0.18;
@@ -157,7 +155,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
       if (frameId != null) window.cancelAnimationFrame(frameId);
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
-      mixer?.stopAllAction();
+      idlePose?.dispose();
       if (model) scene.remove(model);
       // GLB geometry/materials are shared by the character loader's cache:
       // do not dispose them here. Only dispose geometry owned by this stage.
@@ -166,7 +164,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior' }) {
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [fighter]);
+  }, [fighter, classId]);
 
   return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" />;
 }

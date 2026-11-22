@@ -13,6 +13,7 @@ import {
   Skull, Sparkles, Sword, Swords, VenetianMask, Waves, Zap,
 } from 'lucide-react';
 import { BODIES } from './assets.mjs';
+import DuelistClassRail from './DuelistClassRail.jsx';
 import { CLASSES } from '../core/classes.mjs';
 import { equippedHudSlots } from './equippedHudItems.mjs';
 import { canPressAbility, healthNumbers, pointState, specialPercent } from './glassHud.mjs';
@@ -337,12 +338,14 @@ function Banner({ banner, slot }) {
 export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = null, story = false, help = '', onPower, onClass = null }) {
   const rootRef = useRef(null);
   const [captured, setCaptured] = useState(false);
+  const [rail, setRail] = useState(false); // full desktop match gets the animated right-side class rail
   useEffect(() => {
     const root = rootRef.current;
     const game = root?.parentElement;
     if (!root || !game || typeof ResizeObserver === 'undefined') return undefined;
     const apply = () => {
       const { scale, layout } = hudScale(root.clientWidth, root.clientHeight);
+      setRail(root.clientWidth >= 1250 && root.clientHeight >= 650);
       game.style.setProperty('--dh-s', String(scale)); // the game's other overlays keep clear of the HUD with it
       game.dataset.hud = layout;
     };
@@ -357,11 +360,15 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
   const view = hud.view && !hud.view.mission ? hud.view : null;
   const level = hud.level || { level: 1, into: 0, need: 100, progress: 0 };
   return (
-    <div className="dh-root" ref={rootRef} data-testid="duelist-hud" data-mode={view?.mode || (story ? 'story' : 'none')}>
+    <div className="dh-root" ref={rootRef} data-testid="duelist-hud" data-rail={rail} data-mode={view?.mode || (story ? 'story' : 'none')}>
       <Vitals you={hud.you} fighter={fighter} classId={hud.classId} portrait={portrait} level={level} onClass={onClass}
         items={view ? view.me?.items || [] : null} />
-      <Special hud={hud} onPower={onPower} />
-      <Skills hud={hud} onPower={onPower} />
+      {rail
+        ? <DuelistClassRail hud={hud} fighter={fighter} level={level} onPower={onPower} onClass={onClass} />
+        : <>
+          <Special hud={hud} onPower={onPower} />
+          <Skills hud={hud} onPower={onPower} />
+        </>}
       {view && !story && <Kills rows={hud.kills} count={view.me?.defeats ?? view.people?.find((p) => p.id === hud.meId)?.defeats} />}
       {view && !story && (
         <section className="dh-anchor dh-tc" aria-label={`${view.name || 'Match'} score`}>
