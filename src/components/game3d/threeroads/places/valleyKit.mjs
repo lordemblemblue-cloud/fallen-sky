@@ -21,17 +21,27 @@ const STAND_IN = Object.freeze({
   paper_lantern: 0xffd9a0, gate_bell: 0x6f6a52, straw_post: 0xc8ad66, studio_frame: 0x6d5640,
   paper_screen: 0xece3cc, old_standard: 0x5c4f45, cairn: 0x8a877e, pyre_stack: 0x6b4c33,
   stela: 0xb3ac9c, grave_stone: 0x9a968c, barrow_mound: 0x5d7445, barrow_door: 0x6e6a62,
-  fire_basket: 0x3a3632, fire_basket_flame: 0xffa040,
+  fire_basket: 0x3a3632, fire_basket_flame: 0xffa040, oath_tree: 0x5d6e3e,
 });
 
 // A few pieces whose box would misread their outline get a plain shape of
 // the same size instead: a dome for the mound and the haystack, a cross for
-// the sails, an open frame for the studio frame. Still stand-ins; the kit replaces them.
+// the sails, an open frame for the studio frame, a trunk and crown for the
+// Oath Tree. Still stand-ins; the kit replaces them.
 function shapedStandIn(piece) {
   const [w, d, h] = piece.size;
   if (piece.id === 'barrow_mound' || piece.id === 'haystack') {
     const geometry = new THREE.SphereGeometry(0.5, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     geometry.scale(w, h * 2, d);
+    return geometry;
+  }
+  if (piece.id === 'oath_tree') {
+    // A trunk 1.6 m across and a wide crown from about 2.4 m up.
+    const trunk = new THREE.CylinderGeometry(0.55, 0.8, 6, 10).translate(0, 3, 0);
+    const crown = new THREE.SphereGeometry(0.5, 14, 9).scale(w, h - 4, d).translate(0, 4 + (h - 4) / 2, 0);
+    const low = new THREE.SphereGeometry(0.5, 12, 7).scale(w * 0.62, 3.2, d * 0.62).translate(w * 0.12, 3.9, -d * 0.08);
+    const geometry = mergeGeometries([trunk.toNonIndexed(), crown.toNonIndexed(), low.toNonIndexed()]);
+    trunk.dispose(); crown.dispose(); low.dispose();
     return geometry;
   }
   if (piece.id === 'studio_frame') {

@@ -79,7 +79,8 @@ test('nothing solid or painted stands in the river, and nothing solid on a road'
     for (const inst of placeInstances(place)) {
       const kit = valleyKitPiece(inst.piece);
       assert.ok(wolfveilDistanceToRiver(inst.x, inst.z) > 25, `${place.id} ${inst.piece} by the river`);
-      if (!kit.solid) continue;
+      // The old analytic routes cross under the plaza's paving, where no road is drawn.
+      if (!kit.solid || insideWolfveilImportedTown(inst.x, inst.z)) continue;
       const clearance = wolfveilRouteClearance(inst.x, inst.z);
       assert.ok(clearance > pieceReach(inst) * 0.5, `${place.id} ${inst.piece} on a road (${clearance.toFixed(1)})`);
     }
@@ -294,4 +295,48 @@ test('every anchor is a spot a person can stand on (no solid piece there)', () =
       const at = placeAnchorLocal(place.id, name);
       assert.equal(resolveAgainstGrid(grid, { x: at.x, z: at.z }, 0.5), false, `${place.id}.${name} is inside a solid piece`);
     }
+});
+
+test('the script\'s named points and every person\'s spots keep 1.5 m clear of solid pieces', async () => {
+  const { BAND1_POINTS } = await import('../src/components/game3d/threeroads/script/band1.mjs');
+  const solids = THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst)).filter(Boolean));
+  const grid = createSolidGrid(solids);
+  const spots = Object.entries(BAND1_POINTS).map(([name, at]) => [name, at]);
+  for (const person of THREE_ROADS_CAST) {
+    for (const home of [person.home, person.homeAfter?.home, ...(person.alsoAt || [])]) {
+      if (home && 'x' in home && ['town', 'south'].includes(home.area)) spots.push([person.id, home]);
+    }
+  }
+  for (const [name, at] of spots) {
+    if (wolfveilAreaAtLocal(at.x, at.z) !== 'town' && wolfveilAreaAtLocal(at.x, at.z) !== 'south') continue;
+    if (name === 'oath_tree' || name === 'truce_stone') continue; // the tree and the stone stand there
+    assert.equal(resolveAgainstGrid(grid, { x: at.x, z: at.z }, 1.5), false, `${name} at (${at.x}, ${at.z}) is within 1.5 m of a solid piece`);
+  }
+});
+
+test('the layouts stand on the script\'s points where the script names them', async () => {
+  const { BAND1_POINTS: P } = await import('../src/components/game3d/threeroads/script/band1.mjs');
+  const same = (placeId, anchor, point) => {
+    const at = placeAnchorLocal(placeId, anchor);
+    assert.ok(Math.hypot(at.x - P[point].x, at.z - P[point].z) < 0.01, `${placeId}.${anchor} is not ${point}`);
+  };
+  same('P04', 'wagon_akitsu', 'yard_wagon_akitsu');
+  same('P04', 'wagon_tameri', 'yard_wagon_tameri');
+  same('P04', 'wagon_remoria', 'yard_wagon_remoria');
+  same('P04', 'gate_arch', 'gate_arch');
+  same('P08', 'wagon_akitsu', 'floor_wagon_akitsu');
+  same('P08', 'wagon_tameri', 'floor_wagon_tameri');
+  same('P08', 'wagon_remoria', 'floor_wagon_remoria');
+  same('P08', 'centre', 'floor_centre');
+  same('P03', 'wall', 'lantern_wall');
+  same('P04', 'bell', 'gate_bell');
+  // Each object a point names stands within its use radius (3 m) of it.
+  const near = (piece, point, reach = 3) => assert.ok(THREE_ROADS_PLACES.some(place => placeInstances(place)
+    .some(inst => inst.piece === piece && Math.hypot(inst.x - P[point].x, inst.z - P[point].z) <= reach)), `no ${piece} by ${point}`);
+  near('crate_stack', 'woodpile');
+  near('crate_stack', 'salt_store');
+  near('lantern_wall', 'lantern_wall');
+  near('gate_bell', 'gate_bell');
+  near('wagon', 'floor_wagon_akitsu');
+  near('wagon', 'yard_wagon_remoria');
 });

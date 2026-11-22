@@ -93,8 +93,9 @@ export function fencedRect(x, z, w, d, { yaw = 0, open = null, gap = 3 } = {}) {
     south: [[hw, -hd], [-hw, -hd]], west: [[-hw, -hd], [-hw, hd]],
   };
   const out = [];
+  const opens = Array.isArray(open) ? open : [open];
   for (const [name, [[a0, b0], [a1, b1]]] of Object.entries(sides)) {
-    if (name === open) {
+    if (opens.includes(name)) {
       const ma = (a0 + a1) / 2, mb = (b0 + b1) / 2;
       const len = Math.hypot(a1 - a0, b1 - b0), ua = (a1 - a0) / len, ub = (b1 - b0) / len;
       out.push(...chain('fence_3m', [at(a0, b0), at(ma - ua * hg, mb - ub * hg)], 3));

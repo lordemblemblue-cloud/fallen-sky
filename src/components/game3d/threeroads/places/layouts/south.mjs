@@ -16,18 +16,22 @@ const rel = (centre, x, z) => [x - centre.x, z - centre.z];
 // An open battlefield 85 m across: a packed-earth circle 30 m across in the
 // middle, sheaves in arcs on the stubble around it, and on the rim one wagon
 // per empire, 120 degrees apart, each with its banner. Nothing taller than a
-// sheaf within 30 m of the centre. Remoria's wagon is on the north rim, the
-// one a player sees first from the gate; Akitsu's toward the west, Tameri's
-// toward the east (their homes).
+// sheaf within 30 m of the centre. The wagons' points come from the script
+// (BAND1_POINTS floor_wagon_*, a 40 m rim): Akitsu's to the north-west and
+// Tameri's to the north-east, the two a player sees first from the gate,
+// Remoria's to the south. Each wagon stands 2.6 m from its point along the
+// rim's radius, on the side away from the person who waits there
+// (cast.mjs), so the point and the person both stay clear.
 const P08 = { x: 25, z: -390 };
-const P08_BEARINGS = { remoria: 90, akitsu: 210, tameri: 330 };
-const P08_RIM = 36;
+const P08_POINTS = { akitsu: [-10, -370], tameri: [60, -370], remoria: [25, -430] };
+const P08_WAGON_SIDE = { akitsu: -1, tameri: 1, remoria: 1 }; // +1 outward, -1 inward
+const P08_BANNER_SIDE = { akitsu: 1, tameri: -1, remoria: -1 };
 const P08_SHEAVES = [];
 for (const [ring, perSector] of [[19, 6], [24.5, 7], [30, 7]]) {
   for (let sector = 0; sector < 3; sector++) {
-    // Each sector runs between two wagon lines, leaving a 40 degree lane
-    // open toward every wagon.
-    const from = 90 + sector * 120 + 20, to = from + 80;
+    // Each sector runs between two wagon lines (bearings 30, 150 and 270
+    // degrees), leaving a 40 degree lane open toward every wagon.
+    const from = 30 + sector * 120 + 20, to = from + 80;
     for (let i = 0; i < perSector; i++) {
       const a = from + (to - from) * (i + 0.5) / perSector + (ring === 24.5 ? 5 : 0);
       const [x, z] = polar(ring, a);
@@ -39,18 +43,21 @@ for (const [ring, perSector] of [[19, 6], [24.5, 7], [30, 7]]) {
 const P08_PIECES = [...P08_SHEAVES];
 const P08_ANCHORS = { centre: { x: 0, z: 0, facing: 0 } };
 for (const empire of EMPIRE_ORDER) {
-  const bearing = P08_BEARINGS[empire];
-  const [x, z] = polar(P08_RIM, bearing);
-  // Long side to the centre (the wagon is long along its own x).
-  const yaw = Math.atan2(-x, -z);
-  const [bx, bz] = polar(P08_RIM + 1.5, bearing + 7);
+  const [px, pz] = rel(P08, ...P08_POINTS[empire]);
+  const len = Math.hypot(px, pz), ux = px / len, uz = pz / len;
+  const side = P08_WAGON_SIDE[empire];
+  const x = px + ux * 2.6 * side, z = pz + uz * 2.6 * side;
+  // Long side to the point (the wagon is long along its own x).
+  const yaw = Math.atan2(-ux * side, -uz * side);
+  // The banner at the wagon's end, along the rim, on the side away from the
+  // person waiting by the point.
+  const tx = -uz, tz = ux;
   P08_PIECES.push(...wagon(x, z, yaw, TINT[empire]));
-  P08_PIECES.push(...banner(bx, bz, yaw, TINT[empire]));
-  const [ax, az] = polar(P08_RIM - 3.2, bearing);
-  P08_ANCHORS['wagon_' + empire] = { x: ax, z: az, facing: Math.atan2(-ax, -az) };
+  P08_PIECES.push(...banner(x + tx * 3.8 * P08_BANNER_SIDE[empire], z + tz * 3.8 * P08_BANNER_SIDE[empire], yaw, TINT[empire]));
+  P08_ANCHORS['wagon_' + empire] = { x: px, z: pz, facing: Math.atan2(-ux * side, -uz * side) + Math.PI };
 }
 const P08_PLACE = {
-  id: 'P08', key: 'threshing_floor', area: 'south', ...P08, radius: 42.5,
+  id: 'P08', key: 'threshing_floor', area: 'south', ...P08, radius: 46,
   pieces: P08_PIECES,
   ground: [
     { surface: 'field_stubble', circle: [0, 0, 33] },
@@ -67,7 +74,9 @@ const P08_PLACE = {
 const P09 = { x: -128, z: -346 };
 const GATE = { x: 8.6, z: -265 };
 const MILL = { x: -118, z: -336 };
-const BARN = { x: -136, z: -351 };
+// The barn's door faces the mill and opens beside the salt store (script
+// point salt_store, -126, -352).
+const BARN = { x: -131.5, z: -356 };
 const millYaw = facing(MILL.x, MILL.z, GATE.x, GATE.z);
 const barnYaw = facing(BARN.x, BARN.z, MILL.x, MILL.z);
 const front = (o, yaw, d, side = 0) => ({
@@ -80,20 +89,21 @@ const WELL = front(BARN, barnYaw, 11.6, -1.5);
 const MILL_SCALE = 1.3;
 const sails = front(MILL, millYaw, 3.25 * MILL_SCALE);
 const P09_PLACE = {
-  id: 'P09', key: 'granary_mill', area: 'south', ...P09, radius: 25,
+  id: 'P09', key: 'granary_mill', area: 'south', ...P09, radius: 27,
   pieces: [
     p('windmill_body', ...rel(P09, MILL.x, MILL.z), { yaw: millYaw, landmark: true, scale: MILL_SCALE }),
     p('windmill_sails', ...rel(P09, sails.x, sails.z), { yaw: millYaw, y: 8.5 * MILL_SCALE, landmark: true, spin: 0.35, scale: MILL_SCALE }),
     p('barn', ...rel(P09, BARN.x, BARN.z), { yaw: barnYaw }),
     p('well', ...rel(P09, WELL.x, WELL.z)),
-    ...fencedRect(...rel(P09, yardCentre.x, yardCentre.z), 24, 12, { yaw: barnYaw, open: 'north', gap: 4 }),
+    ...fencedRect(...rel(P09, yardCentre.x, yardCentre.z), 24, 12, { yaw: barnYaw, open: ['north', 'south'], gap: 4 }),
     // Haystacks behind and beside the barn, one in the yard's corner.
     ...[[-9, -2], [-8.5, 1.5], [8.8, -1], [-3.5, -6.5]].map(([side, d], i) => {
       const at = front(BARN, barnYaw, d, side);
       return p('haystack', ...rel(P09, at.x, at.z), { yaw: i * 0.8, scale: i === 3 ? 0.85 : 1 });
     }),
     p('haystack', ...rel(P09, front(BARN, barnYaw, 15, 9.5).x, front(BARN, barnYaw, 15, 9.5).z), { scale: 0.8 }),
-    p('crate_stack', ...rel(P09, front(BARN, barnYaw, 5.8, -4.5).x, front(BARN, barnYaw, 5.8, -4.5).z), { yaw: barnYaw }),
+    // The salt store: a crate stack 2.8 m east of its point, in the yard.
+    p('crate_stack', ...rel(P09, -123.3, -352.8), { yaw: barnYaw }),
   ],
   ground: [
     {
@@ -124,9 +134,11 @@ const PLOTS = { pyres: -17, stelae: 0, graves: 17 }; // x offsets of the three p
 const P10_PIECES = [];
 for (const [, dx] of Object.entries(PLOTS)) P10_PIECES.push(...fencedRect(dx, 0, 14, 10, { open: 'north', gap: 3 }));
 for (let i = 0; i < 3; i++) for (let k = 0; k < 2; k++)
-  P10_PIECES.push(p('pyre_stack', PLOTS.pyres - 4 + i * 4, 2 - k * 4, { yaw: wobble(i * 3 + k).yaw }));
-for (let r = 0; r < 3; r++)
-  P10_PIECES.push(...row('stela', PLOTS.stelae - 5, 3 - r * 2.6, PLOTS.stelae + 5, 3 - r * 2.6, 6, { turn: -Math.PI / 2, jitter: i => wobble(r * 11 + i, 0.15) }));
+  P10_PIECES.push(p('pyre_stack', PLOTS.pyres - 4 + i * 4, 2.6 - k * 5.2, { yaw: wobble(i * 3 + k).yaw * 0.3 }));
+// Stelae in two blocks with an aisle down the middle (the script's
+// graves_centre point stays clear).
+for (let r = 0; r < 3; r++) for (const [a, b] of [[-5.5, -2.5], [2.5, 5.5]])
+  P10_PIECES.push(...row('stela', PLOTS.stelae + a, 3 - r * 2.6, PLOTS.stelae + b, 3 - r * 2.6, 3, { turn: -Math.PI / 2, jitter: i => wobble(r * 11 + i + a, 0.15) }));
 for (let r = 0; r < 3; r++)
   P10_PIECES.push(...row('grave_stone', PLOTS.graves - 5.5, 3 - r * 2.6, PLOTS.graves + 5.5, 3 - r * 2.6, 6, { turn: -Math.PI / 2, jitter: i => wobble(r * 17 + i, 0.2) }));
 P10_PIECES.push(p('hut', 31, 0.5, { yaw: -Math.PI / 2 }));
@@ -166,6 +178,8 @@ const P11_PLACE = {
     ...[[47, -330, 0.4], [55, -347, -0.3], [64, -305, 0.2], [44, -318, 1.2]].map(([x, z, yaw]) => p('scarecrow', x - P11.x, z - P11.z, { yaw })),
     p('haystack', HOUSE1.x + 6 - P11.x, HOUSE1.z + 4 - P11.z, { scale: 0.8 }),
     p('crate_stack', HOUSE2.x - 5.5 - P11.x, HOUSE2.z + 3.5 - P11.z, { scale: 0.8, yaw: 0.4 }),
+    // The woodpile (script point woodpile, 84, -336): a stack 2.3 m beside it.
+    p('crate_stack', 85.8 - P11.x, -337.4 - P11.z, { yaw: -0.3 }),
     // Hedgerows round the strips: short runs with gaps, never a closed box.
     ...chain('hedgerow_4m', [[40 - P11.x, -300 - P11.z], [40 - P11.x, -338 - P11.z]], 4),
     ...chain('hedgerow_4m', [[44 - P11.x, -354 - P11.z], [70 - P11.x, -357 - P11.z]], 4),
