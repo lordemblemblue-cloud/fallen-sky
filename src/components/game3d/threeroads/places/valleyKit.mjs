@@ -7,6 +7,7 @@
 // change remounts the world); its GPU copies are released on dispose and
 // uploaded again by Three.js when the next scene draws them.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { VALLEY_KIT_PIECES, VALLEY_KIT_URL } from '../kits/valleyKitPieces.mjs';
 
 // Stand-in colours while the pieces are boxes, so a box yard still reads:
@@ -23,8 +24,30 @@ const STAND_IN = Object.freeze({
   fire_basket: 0x3a3632, fire_basket_flame: 0xffa040,
 });
 
+// A few pieces whose box would misread their outline get a plain shape of
+// the same size instead: a dome for the mound and the haystack, a cross for
+// the sails. Still stand-ins; the kit replaces them.
+function shapedStandIn(piece) {
+  const [w, d, h] = piece.size;
+  if (piece.id === 'barrow_mound' || piece.id === 'haystack') {
+    const geometry = new THREE.SphereGeometry(0.5, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    geometry.scale(w, h * 2, d);
+    return geometry;
+  }
+  if (piece.id === 'windmill_sails') {
+    const a = new THREE.BoxGeometry(w, w * 0.12, d);
+    const b = new THREE.BoxGeometry(w * 0.12, w, d);
+    const geometry = mergeGeometries([a, b]);
+    a.dispose(); b.dispose();
+    return geometry; // pivot 'hub': centred
+  }
+  return null;
+}
+
 // Where the box sits on the piece's origin, by pivot (valleyKitPieces.mjs).
 function boxFor(piece) {
+  const shaped = shapedStandIn(piece);
+  if (shaped) { shaped.name = 'TR_Kit_' + piece.id + '_standin'; return shaped; }
   const [w, d, h] = piece.size;
   const geometry = new THREE.BoxGeometry(w, h, d);
   const lift = {

@@ -248,3 +248,50 @@ test('the whole valley in one scene builds every area\'s places', () => {
   assert.equal(events.length, areas.size);
   places.dispose();
 });
+
+test('in the Gate Fields: inside the barn is pushed out, the threshing circle is free', () => {
+  const solids = THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst)).filter(Boolean));
+  const grid = createSolidGrid(solids);
+  const barn = placeInstances(placeLayout('P09')).find(inst => inst.piece === 'barn');
+  const inBarn = { x: barn.x + 0.5, z: barn.z - 0.3 };
+  assert.equal(resolveAgainstGrid(grid, inBarn, 0.6), true);
+  const barnSolid = solidFor(barn);
+  const check = { ...inBarn };
+  assert.equal(pushOutOfSolid(barnSolid, check, 0.59), false, 'the barn let go of the point');
+  const floor = placeLayout('P08');
+  for (let r = 0; r <= 15; r += 1.5) for (let a = 0; a < 12; a++) {
+    const point = { x: floor.x + Math.cos(a / 12 * Math.PI * 2) * r, z: floor.z + Math.sin(a / 12 * Math.PI * 2) * r };
+    assert.equal(resolveAgainstGrid(grid, point, 0.6), false, `threshing circle blocked at r ${r}`);
+  }
+  // Nothing taller than a sheaf within 30 m of the floor's centre.
+  for (const inst of placeInstances(floor)) {
+    if (Math.hypot(inst.x - floor.x, inst.z - floor.z) >= 30) continue;
+    assert.ok(valleyKitPiece(inst.piece).size[2] * inst.scale <= valleyKitPiece('sheaf').size[2], inst.piece);
+  }
+  // The barrow's door can be reached: its anchor is clear of the mound.
+  const door = placeAnchorLocal('P12', 'door');
+  assert.equal(resolveAgainstGrid(grid, { x: door.x, z: door.z }, 0.6), false);
+});
+
+test('the Gate Fields hold all five places, one windmill landmark and one pair of fire baskets', () => {
+  const south = THREE_ROADS_PLACES.filter(place => place.area === 'south').map(place => place.id);
+  for (const id of ['P08', 'P09', 'P10', 'P11', 'P12']) assert.ok(south.includes(id), id);
+  const all = THREE_ROADS_PLACES.flatMap(place => placeInstances(place));
+  assert.equal(all.filter(inst => inst.piece === 'fire_basket').length, 2);
+  const landmarks = all.filter(inst => inst.landmark && inst.area === 'south').map(inst => inst.piece).sort();
+  assert.deepEqual(landmarks, ['windmill_body', 'windmill_sails']);
+  const sheaves = placeInstances(placeLayout('P08')).filter(inst => inst.piece === 'sheaf').length;
+  assert.ok(sheaves >= 55 && sheaves <= 65, `${sheaves} sheaves`);
+  assert.equal(all.filter(inst => inst.piece === 'beehive').length, 12);
+  assert.equal(all.filter(inst => inst.piece === 'scarecrow').length, 4);
+});
+
+test('every anchor is a spot a person can stand on (no solid piece there)', () => {
+  const solids = THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst)).filter(Boolean));
+  const grid = createSolidGrid(solids);
+  for (const place of THREE_ROADS_PLACES)
+    for (const name of Object.keys(place.anchors || {})) {
+      const at = placeAnchorLocal(place.id, name);
+      assert.equal(resolveAgainstGrid(grid, { x: at.x, z: at.z }, 0.5), false, `${place.id}.${name} is inside a solid piece`);
+    }
+});

@@ -29,8 +29,9 @@ const P04 = {
     ...[[-4.5, 4.6, 0.3], [-4.2, -4.4, -0.4], [4.2, 5.4, 0.1], [4.8, -3.8, 0.6], [5.6, -0.6, 1.1]]
       .map(([x, z, yaw]) => p('crate_stack', yard(x, z).x, yard(x, z).z, { yaw })),
     p('crate_stack', yard(-4.9, 6.3).x, yard(-4.9, 6.3).z, { yaw: 0.7, scale: 0.7 }),
-    // The gate bell on its frame, beside the road, facing it.
-    p('gate_bell', at(P04_CENTRE, -6.6, -222).x, at(P04_CENTRE, -6.6, -222).z, { yaw: Math.PI / 2 }),
+    // The gate bell on its frame, on the town side of the gate's roof, beside
+    // the road and facing it.
+    p('gate_bell', at(P04_CENTRE, -6.8, -213).x, at(P04_CENTRE, -6.8, -213).z, { yaw: Math.PI / 2 }),
   ],
   ground: [
     { surface: 'yard', circle: [yard(0, 0).x, yard(0, 0).z, 13] },
@@ -40,7 +41,7 @@ const P04 = {
     wagon_tameri: anchor(P04_CENTRE, YARD.x + 1 - 3.6, YARD.z, -Math.PI / 2),
     wagon_remoria: anchor(P04_CENTRE, YARD.x - 2.5 - 3.6, YARD.z - 9 - 0.8, -Math.PI / 2),
     gate_arch: anchor(P04_CENTRE, 0, -225, Math.PI),
-    bell: anchor(P04_CENTRE, -5.4, -222, -Math.PI / 2),
+    bell: anchor(P04_CENTRE, -5.4, -213, -Math.PI / 2),
   },
 };
 

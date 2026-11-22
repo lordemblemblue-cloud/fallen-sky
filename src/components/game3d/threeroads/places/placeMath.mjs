@@ -48,8 +48,9 @@ export function placeInstances(place) {
       landmark: Boolean(entry.landmark),
       spin: entry.spin || 0,
       // Big pieces stand on the lowest ground under their footprint, so no
-      // corner floats on a slope; small ones on the ground under their pivot.
-      footprint: kit && Math.max(kit.size[0], kit.size[1]) * (entry.scale || 1) > 2.5
+      // corner floats on a slope; small ones on the ground under their pivot,
+      // and so does anything marked `ground: 'pivot'` (a mound sinks well).
+      footprint: kit && entry.ground !== 'pivot' && Math.max(kit.size[0], kit.size[1]) * (entry.scale || 1) > 2.5
         ? [kit.size[0] * (entry.scale || 1) / 2, kit.size[1] * (entry.scale || 1) / 2] : null,
     }));
   }

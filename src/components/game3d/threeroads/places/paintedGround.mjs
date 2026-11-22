@@ -11,10 +11,10 @@ export const PAINTED_GROUND_LIFT = 0.06;
 // Colours of the kinds of painted ground (linear-ish sRGB hex).
 export const PAINTED_SURFACES = Object.freeze({
   packed_earth: 0x7a6449,
-  threshing: 0x9c8762,
+  threshing: 0x86755a,
   yard: 0x84704f,
   field_ploughed: 0x5b4733,
-  field_stubble: 0xa79257,
+  field_stubble: 0x8e8354,
   field_green: 0x5a7440,
   field_flax: 0x7d8a52,
   grave_soil: 0x4c3f31,
