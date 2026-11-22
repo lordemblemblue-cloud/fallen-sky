@@ -8,7 +8,7 @@ import {
 } from '../src/components/game3d/threeroads/places/layouts/index.mjs';
 import {
   PLACE_LOD, lodForDistance, placeInstances, instanceMatrix, solidFor, pushOutOfSolid,
-  createSolidGrid, resolveAgainstGrid, groundUnder, pieceReach,
+  createSolidGrid, resolveAgainstGrid, groundUnder, pieceReach, kitPieceOf,
 } from '../src/components/game3d/threeroads/places/placeMath.mjs';
 import { drapePaintedGround, groundShapePolygons } from '../src/components/game3d/threeroads/places/paintedGround.mjs';
 import { createPlacesSubsystem } from '../src/components/game3d/threeroads/places/placesSubsystem.mjs';
@@ -33,7 +33,9 @@ const REQUIRED_ANCHORS = {
 };
 
 const borderDistance = (area, x, z) => {
-  const rect = wolfveilAreaRect(area, { clamp: true });
+  // The borders between areas, where the veils and the clipping run (the
+  // outer edge of the valley is not one: the High Road's arch stands near it).
+  const rect = wolfveilAreaRect(area);
   return Math.min(x - rect.minX, rect.maxX - x, z - rect.minZ, rect.maxZ - z);
 };
 
@@ -41,7 +43,7 @@ test('every piece of every place is a piece of the valley kit', () => {
   assert.ok(THREE_ROADS_PLACES.length > 0);
   for (const place of THREE_ROADS_PLACES)
     for (const entry of place.pieces)
-      assert.ok(valleyKitPiece(entry.piece), `${place.id}: unknown piece ${entry.piece}`);
+      assert.ok(kitPieceOf(entry.kit, entry.piece), `${place.id}: unknown piece ${entry.piece}`);
 });
 
 test('every place lies inside its circle, its area, and 30 m inside the area border', () => {
@@ -75,9 +77,10 @@ test('the anchors other subsystems use exist and stand inside their place', () =
 });
 
 test('nothing solid or painted stands in the river, and nothing solid on a road', () => {
-  for (const place of THREE_ROADS_PLACES) {
+  // Band 2's camps sit across roads and on the gorge on purpose: their own test is below.
+  for (const place of THREE_ROADS_PLACES.filter(entry => !entry.preview)) {
     for (const inst of placeInstances(place)) {
-      const kit = valleyKitPiece(inst.piece);
+      const kit = kitPieceOf(inst.kit, inst.piece);
       assert.ok(wolfveilDistanceToRiver(inst.x, inst.z) > 25, `${place.id} ${inst.piece} by the river`);
       // The old analytic routes cross under the plaza's paving, where no road is drawn.
       if (!kit.solid || insideWolfveilImportedTown(inst.x, inst.z)) continue;
@@ -243,8 +246,8 @@ test('the subsystem builds the area, stands it on the ground and says so', () =>
 
 test('the whole valley in one scene builds every area\'s places', () => {
   const { ctx, events } = fakeContext('town');
-  const places = createPlacesSubsystem({ ...ctx, areaScenes: false });
-  const areas = new Set(THREE_ROADS_PLACES.map(place => place.area));
+  const places = createPlacesSubsystem({ ...ctx, areaScenes: false }, { preview: false });
+  const areas = new Set(THREE_ROADS_PLACES.filter(place => !place.preview).map(place => place.area));
   assert.deepEqual(new Set(places.status().areas.filter(area => areas.has(area))), areas);
   assert.equal(events.length, areas.size);
   places.dispose();
@@ -339,4 +342,125 @@ test('the layouts stand on the script\'s points where the script names them', as
   near('gate_bell', 'gate_bell');
   near('wagon', 'floor_wagon_akitsu');
   near('wagon', 'yard_wagon_remoria');
+});
+
+// ---- Band 2: the three army camps (preview) --------------------------------
+
+test('the camps are built only with the preview switch; the town and fields are the same either way', async () => {
+  const { threeRoadsPreviewEnabled } = await import('../src/components/game3d/threeroads/threeRoadsFlag.mjs');
+  const win = search => ({ location: { search }, localStorage: { getItem: () => null } });
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoads=1')), false);
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoads=1&threeRoadsPreview=1')), true);
+  assert.equal(threeRoadsPreviewEnabled(win('?threeRoadsPreview=1')), false, 'the preview needs the main switch');
+  for (const area of ['west', 'east', 'north']) {
+    const { ctx, events } = fakeContext(area);
+    assert.equal(createPlacesSubsystem(ctx, { preview: false }), null, area + ' builds nothing without the preview');
+    assert.deepEqual(events, []);
+    const shown = createPlacesSubsystem(ctx, { preview: true });
+    assert.ok(shown, area + ' builds with the preview');
+    assert.deepEqual(events, [{ area }]);
+    assert.ok(shown.status().places.every(id => placeLayout(id).preview));
+    shown.dispose();
+  }
+  for (const area of ['town', 'south']) {
+    const off = createPlacesSubsystem(fakeContext(area).ctx, { preview: false });
+    const on = createPlacesSubsystem(fakeContext(area).ctx, { preview: true });
+    assert.deepEqual(on.status().places, off.status().places);
+    assert.equal(on.status().instancesTotal, off.status().instancesTotal);
+    off.dispose(); on.dispose();
+  }
+  // With no window (node) the preview is off.
+  assert.equal(createPlacesSubsystem(fakeContext('north').ctx), null);
+});
+
+test('the camp layouts are the lead\'s plans, piece for piece', async () => {
+  const { CAMP_PLANS } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
+  for (const plan of CAMP_PLANS) {
+    const built = THREE_ROADS_PLACES.filter(place => place.camp === plan.id).flatMap(placeInstances);
+    assert.equal(built.length, plan.items.length, plan.id);
+    for (const item of plan.items) {
+      const match = built.find(inst => inst.kit === item.kit && inst.piece === item.piece &&
+        Math.abs(inst.x - item.x) < 1e-6 && Math.abs(inst.z - item.z) < 1e-6 && Math.abs(inst.yaw - item.yaw) < 1e-6);
+      assert.ok(match, `${plan.id}: ${item.piece} at (${item.x}, ${item.z}) is missing`);
+      assert.equal(match.y, item.y || 0);
+      assert.equal(match.afloat, Boolean(item.afloat));
+      assert.equal(match.area, plan.area);
+    }
+    assert.ok(built.some(inst => inst.piece === plan.tallMark && inst.landmark), plan.id + ' tall mark is a landmark');
+  }
+});
+
+test('the camps stand on dry ground above the gorge, and what floats floats on the river', async () => {
+  const { wolfveilRiverHeightAtZ } = await import('../src/components/game3d/wolfveil/WolfveilLayout.js');
+  for (const place of THREE_ROADS_PLACES.filter(entry => entry.preview)) {
+    for (const inst of placeInstances(place)) {
+      const water = wolfveilRiverHeightAtZ(inst.z);
+      if (inst.afloat) {
+        assert.ok(wolfveilDistanceToRiver(inst.x, inst.z) < 12, `${inst.piece} afloat off the river`);
+        assert.ok(wolfveilHeight(inst.x, inst.z) < water, `${inst.piece} afloat over dry ground`);
+        continue;
+      }
+      // Near the river (the Landing), nothing that is not afloat stands down in the gorge.
+      if (wolfveilDistanceToRiver(inst.x, inst.z) > 60) continue;
+      const y = groundUnder(inst, wolfveilHeight);
+      assert.ok(y > water + 10, `${place.id} ${inst.piece} at (${inst.x}, ${inst.z}) stands at ${y.toFixed(1)}, near the water (${water.toFixed(1)})`);
+    }
+  }
+});
+
+function campGrid() {
+  return createSolidGrid(THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst, groundUnder(inst, wolfveilHeight) ?? 0)).filter(Boolean)));
+}
+// Walks a line in half-metre steps and returns the first blocked point.
+function blockedOn(grid, from, to, radius) {
+  const n = Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.5);
+  for (let i = 0; i <= n; i++) {
+    const p = { x: from.x + (to.x - from.x) * i / n, z: from.z + (to.z - from.z) * i / n };
+    if (resolveAgainstGrid(grid, { ...p }, radius)) return p;
+  }
+  return null;
+}
+
+test('the roads stay open: the ridge path through the fort, the west trail through both pickets', async () => {
+  const { campPlan } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
+  const grid = campGrid();
+  const fort = campPlan('castra_lupa');
+  const fortRoad = s => ({ x: fort.centre.x + s * fort.along.x, z: fort.centre.z + s * fort.along.z });
+  // On foot (0.62 m) and mounted (0.85 m), from 12 m outside the south gate to the crossroads.
+  for (const radius of [0.62, 0.85]) {
+    assert.equal(blockedOn(grid, fortRoad(-40), fortRoad(46), radius), null, 'ridge path through the fort, radius ' + radius);
+  }
+  const west = campPlan('western_road_camp');
+  const trail = s => ({ x: -263 + s * west.along.x, z: -93 + s * west.along.z });
+  for (const radius of [0.62, 0.85]) {
+    assert.equal(blockedOn(grid, trail(20), trail(100), radius), null, 'west trail through both pickets, radius ' + radius);
+  }
+  // The High Road passes under its arch.
+  const arch = placeAnchorLocal('P43', 'road_arch');
+  const ux = Math.sin(arch.facing), uz = Math.cos(arch.facing);
+  assert.equal(blockedOn(grid, { x: arch.x - ux * 8, z: arch.z - uz * 8 }, { x: arch.x + ux * 8, z: arch.z + uz * 8 }, 0.85), null);
+});
+
+test('the Landing\'s rim rail closes the yard and leaves no pocket between rail and drop', async () => {
+  const { wolfveilRiverHeightAtZ } = await import('../src/components/game3d/wolfveil/WolfveilLayout.js');
+  const grid = campGrid();
+  const landing = placeLayout('P24');
+  const rails = placeInstances(landing).filter(inst => inst.piece === 'shield_wall' && Math.abs(inst.yaw + Math.PI / 2) < 0.01);
+  assert.ok(rails.length >= 10);
+  for (const rail of rails) {
+    // Between the rail and the lip (2 m west of it) the ground must already be
+    // falling away, or be wide enough to walk out along: no ledge a player can
+    // drop into and not leave. Check that a point 1.2 m west of the rail is
+    // either over the gorge (well below the rail) or reachable along the rim.
+    const behind = { x: rail.x - 1.2, z: rail.z };
+    const drop = wolfveilHeight(rail.x + 1, rail.z) - wolfveilHeight(behind.x, behind.z);
+    const water = wolfveilRiverHeightAtZ(rail.z);
+    assert.ok(wolfveilHeight(behind.x, behind.z) > water, 'rail over the water');
+    if (drop < 1.5) {
+      // A shelf: it must not be closed at both ends by rails or the stage.
+      const north = resolveAgainstGrid(grid, { x: behind.x, z: behind.z + 2.5 }, 0.62);
+      const south = resolveAgainstGrid(grid, { x: behind.x, z: behind.z - 2.5 }, 0.62);
+      assert.ok(!(north && south), `a pocket behind the rail at z ${rail.z}`);
+    }
+  }
 });
