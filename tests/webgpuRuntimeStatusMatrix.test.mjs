@@ -165,3 +165,24 @@ test('runtime evidence is a detached immutable snapshot across renderer recovery
     assert.equal(afterLoss.status, 'device-lost');
   }
 });
+
+test('recovery cannot reuse stale gameplay draw evidence before a fresh world draw', () => {
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    const live = renderer({ frame: 10, draws: 8 });
+    assert.equal(getWebGPURuntimeEvidence(live, { sceneId }).status, 'verified');
+
+    live.__sceneState.lost = true;
+    assert.equal(getWebGPURuntimeEvidence(live, { sceneId }).status, 'device-lost');
+
+    // A new backend can submit a frame before the playable world has drawn.
+    live.__sceneState.lost = false;
+    live.info.render.frame = 1;
+    live.__sceneState.gameplayFrames = 0;
+    const awaitingWorld = getWebGPURuntimeEvidence(live, { sceneId });
+    assert.equal(awaitingWorld.status, 'waiting-for-world-draws');
+    assert.equal(awaitingWorld.webgpuActive, false);
+
+    live.__sceneState.gameplayFrames = 1;
+    assert.equal(getWebGPURuntimeEvidence(live, { sceneId }).status, 'verified');
+  }
+});
