@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { CLASS_IDS } from '../src/components/duelist/core/classes.mjs';
 import { classMotionBlend, CLASS_MOTION_BLEND, DEFAULT_MOTION_BLEND } from '../src/components/duelist/client/classMotionBlend.mjs';
 
