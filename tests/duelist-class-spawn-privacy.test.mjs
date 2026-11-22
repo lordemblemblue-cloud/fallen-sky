@@ -58,3 +58,23 @@ test('every match mode applies each class at countdown without exposing private 
     }
   }
 });
+
+test('untrusted seats and invalid class names cannot mutate queued choices or private meter', () => {
+  const match = createMatch({ mode: 'tdm', players: [{ id: 'alpha' }], seats: 2 });
+  const botId = [...match.seats.values()].find(seat => seat.kind === 'bot').id;
+  assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
+  const before = match.seats.get('alpha').specialMeter;
+  for (const id of ['missing', botId]) {
+    const result = queueMatchClass(match, id, 'healer');
+    assert.equal(result.accepted, false, id);
+    assert.equal(result.reason, 'not-a-player', id);
+  }
+  for (const invalid of ['juggernaut', 'ASSASSIN', '', null, '__proto__']) {
+    assert.equal(queueMatchClass(match, 'alpha', invalid).accepted, false, String(invalid));
+    assert.equal(match.seats.get('alpha').pendingClass, 'assassin');
+  }
+  stepMatch(match, STEP, { alpha: { specialMeter: 100, classId: 'warrior' } });
+  assert.equal(match.seats.get('alpha').specialMeter, before);
+  assert.equal(matchView(match, 'alpha').me.pendingClass, 'assassin');
+  assert.equal(matchView(match, botId).people.some(p => Object.hasOwn(p, 'specialMeter') || Object.hasOwn(p, 'pendingClass')), false);
+});
