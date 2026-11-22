@@ -76,3 +76,45 @@ test('a charged meter remains private between human seats, including while a cla
   assert.equal(matchView(match, 'red').me.specialMeter, SPECIAL_CHARGE.elimination);
   assert.equal(matchView(match, 'blue').me.specialMeter, SPECIAL_CHARGE.allyHeal);
 });
+
+test('forged elimination and charge packets cannot credit either player or overwrite a rival meter', () => {
+  for (const classId of CLASS_IDS) {
+    const match = createMatch({ mode: 'duel', players: [{ id: 'alpha' }, { id: 'bravo' }] });
+    assert.equal(queueMatchClass(match, 'alpha', classId).accepted, true);
+    assert.equal(queueMatchClass(match, 'bravo', 'healer').accepted, true);
+    stepMatch(match, COUNTDOWN + 0.01, {});
+    assert.equal(match.phase, 'live');
+
+    // Only the match simulation's confirmed combat callbacks may award charge.
+    // Neither the actor's input nor a forged opponent key is a combat callback.
+    const alpha = match.seats.get('alpha');
+    const bravo = match.seats.get('bravo');
+    alpha.specialMeter = awardSpecialCharge(0, 'landedHit');
+    bravo.specialMeter = awardSpecialCharge(0, 'allyHeal');
+    const forged = {
+      alpha: {
+        specialMeter: 100, specialCharge: 100, event: 'elimination',
+        defeated: 'bravo', killer: 'alpha', targetId: 'bravo',
+        classId: 'warrior', pendingClass: 'assassin', presses: [],
+      },
+      bravo: {
+        specialMeter: 100, specialCharge: 100, event: 'objective',
+        defeated: 'alpha', killer: 'bravo', presses: [],
+      },
+      // An extra unseated identity cannot introduce a new meter or seat.
+      outsider: { specialMeter: 100, event: 'elimination', presses: [] },
+    };
+    stepMatch(match, 1 / 60, forged);
+    assert.equal(alpha.specialMeter, SPECIAL_CHARGE.landedHit, classId);
+    assert.equal(bravo.specialMeter, SPECIAL_CHARGE.allyHeal, classId);
+    assert.equal(alpha.classId, classId);
+    assert.equal(alpha.pendingClass, null);
+    assert.equal(match.seats.has('outsider'), false);
+    assert.equal(matchView(match, 'alpha').me.specialMeter, SPECIAL_CHARGE.landedHit);
+    assert.equal(matchView(match, 'bravo').me.specialMeter, SPECIAL_CHARGE.allyHeal);
+    assert.equal(matchView(match, 'outsider').me, null);
+    for (const viewer of ['alpha', 'bravo', 'outsider']) {
+      assert.equal(matchView(match, viewer).people.some(person => Object.hasOwn(person, 'specialMeter')), false);
+    }
+  }
+});
