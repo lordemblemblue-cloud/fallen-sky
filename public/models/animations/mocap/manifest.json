@@ -7,6 +7,7 @@
       "clips": [
         "Back_Roll",
         "Dodge_Forward",
+        "Glide_Hang",
         "Sprint",
         "Swim_Forward",
         "Swim_Idle"
@@ -17,6 +18,7 @@
       "clips": [
         "Back_Roll",
         "Dodge_Forward",
+        "Glide_Hang",
         "Sprint",
         "Swim_Forward",
         "Swim_Idle"
