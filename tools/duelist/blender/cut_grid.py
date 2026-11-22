@@ -493,3 +493,92 @@ def build_extras(add, notes, idle, blades_idle, staff_idle, only=None):
         clip, _, worst = make_cut('Push', 'push', base_q, base_loc, ('COIL', 'THRUST', (0.0, 0.0)), PUSH_MODE, hand='Left', ring=PUSH_RING)
         add('pushThrust', inertial_in(clip, idle, 0, 0.05), 'the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it', sigma=0.5)
         print('CUT pushThrust seconds', notes['pushThrust']['seconds'], report % tuple(worst))
+
+# ---- The whirl and the cross: one turn of the whole body on one foot, the blade carried round with it.
+# Seconds of coil, turn, hold and recovery in each mode. KEEP IN STEP with core/cuts.mjs SNAP_TIMING.
+SPIN_MODES = {
+    'Whirl': {'Swift': (0.12, 0.29, 0.03, 0.20), 'Balanced': (0.14, 0.34, 0.04, 0.24), 'Heavy': (0.18, 0.42, 0.05, 0.30)},
+    'Cross': {'Swift': (0.10, 0.26, 0.03, 0.19), 'Balanced': (0.12, 0.30, 0.04, 0.22), 'Heavy': (0.15, 0.38, 0.05, 0.27)},
+}
+# Which way it turns (+1 to the left), the foot it turns on (0 the left), and three poses in the body's own frame:
+# coiled, the blade out on the side that leads the turn, and where it ends. The whirl turns to the left with the
+# blade out to the right at shoulder height; the cross turns to the right, the blade starting low across the body
+# and ending high on the sword side (a rising sweep).
+SPINS = {
+    'Whirl': dict(turn=1, pivot=0, coil=spec(-38, 0, 0, (0.0, 0.0, -0.07), (-112, 4, 0.74), (-165, 12)),
+                  out=spec(18, 0, 0, (0.0, 0.0, -0.02), (-78, 6, 0.94), (-70, 8)),
+                  end=spec(36, 0, 0, (0.0, 0.0, -0.05), (42, 4, 0.8), (125, 10))),
+    'Cross': dict(turn=-1, pivot=1, coil=spec(34, 0, 0, (0.0, 0.0, -0.09), (62, -24, 0.72), (100, -20)),
+                  out=spec(-14, 0, 0, (0.0, 0.0, -0.03), (56, 0, 0.86), (86, 4)),
+                  end=spec(-34, 0, 0, (0.0, 0.0, -0.04), (-88, 30, 0.84), (-150, 34))),
+}
+
+
+def make_spin(kind, mode, base_q, base_loc):
+    """Coil, turn once round on one foot with the blade out, hold, come back to the stance."""
+    S = SPINS[kind]
+    Tw, Tc, Th, Tr = SPIN_MODES[kind][mode]
+    unit = scale_of()
+    total = Tw + Tc + Th + Tr
+    ready = ready_spec(base_q, base_loc)
+    pose0 = rig.fk(base_q, base_loc)
+    stand = [leg.stand(base_q, base_loc) for leg in LEGS]
+    swing = 1 - S['pivot']
+    pivot = stand[S['pivot']][0].copy()
+    pivot.z = 0.0
+    out_q, out_loc, state = [], [], {}
+    for f in range(int(round(total * FPS)) + 1):
+        t = f / FPS
+        if t < Tw:
+            s, u = mix(ready, S['coil'], smoothstep(t / Tw)), 0.0
+        elif t < Tw + Tc:
+            u = (t - Tw) / Tc
+            s = mix(S['coil'], S['out'], smoothstep(u / 0.3)) if u < 0.3 else (S['out'] if u < 0.7 else mix(S['out'], S['end'], smoothstep((u - 0.7) / 0.3)))
+        elif t < Tw + Tc + Th:
+            s, u = S['end'], 1.0
+        else:
+            s, u = mix(S['end'], ready, smoothstep((t - Tw - Tc - Th) / Tr)), 1.0
+        theta = S['turn'] * 2 * math.pi * smoothstep(u)
+        turn3 = Matrix.Rotation(theta, 3, UP0)
+        q = [x.copy() for x in base_q]
+        # the whole stance goes round the foot it turns on, and sinks or rises as the pose says
+        hips = Matrix.Translation(pivot) @ Matrix.Rotation(theta, 4, UP0) @ Matrix.Translation(-pivot) @ pose0[rig.hips]
+        hips.translation = hips.translation + UP0 * (s['shift'].z / unit)
+        q[rig.hips], loc = rig.local(hips, rig.hips, None)
+        bend_trunk(q, loc, s['yaw'], 0.0, 0.0)
+        pose = rig.fk(q, loc)
+        lift = math.sin(math.pi * u) if 0.0 < u < 1.0 else 0.0
+        leg_miss = 0.0
+        for i, leg in enumerate(LEGS):
+            ankle, foot3, knee = stand[i]
+            if i == swing:  # the other foot is carried round, lifted and drawn in a little
+                out = Vector((ankle.x - pivot.x, ankle.y - pivot.y, 0.0)) * (1 - 0.22 * lift)
+                ankle = Vector((pivot.x, pivot.y, ankle.z)) + turn3 @ out + UP0 * (0.11 * lift / unit)
+            leg_miss = max(leg_miss, leg.plant(q, pose, ankle, turn3 @ foot3, turn3 @ knee))
+        pose = rig.fk(q, loc)
+        point = pose[RIGHT.upper].translation + (turn3 @ s['arm']) * (min(s['reach'], 0.985) * ARM_LEN)
+        solved, bend, miss = easy_hold(pose, q, point, turn3 @ s['blade'], state.get('near'))
+        RIGHT.take(q, pose, solved)
+        state['near'] = solved[RIGHT.hand].to_3x3()
+        state['worst'] = [max(a, b) for a, b in zip(state.get('worst', [0, 0, 0]), (miss * unit, math.degrees(bend), leg_miss * unit))]
+        k = (t - Tw - Tc - Th) / Tr
+        if k > 0.6:  # the last of the recovery closes on the stance itself (the short way round)
+            w = smoothstep((k - 0.6) / 0.4)
+            q = [a.slerp(b if a.dot(b) >= 0 else -b, w) for a, b in zip(q, base_q)]
+            loc = loc.lerp(base_loc, w)
+        out_q.append(q)
+        out_loc.append(loc)
+    return {'q': out_q, 'loc': out_loc}, state['worst']
+
+
+def build_spins(add, notes, idle, only=None):
+    base_q, base_loc = pose_of(idle, 0)
+    for kind in SPINS:
+        for mode in SPIN_MODES[kind]:
+            name = f'sword{kind}{mode}'
+            if only and name not in only:
+                continue
+            clip, worst = make_spin(kind, mode, base_q, base_loc)
+            way = 'left' if SPINS[kind]['turn'] > 0 else 'right'
+            add(name, inertial_in(clip, idle, 0, 0.08), f'the {kind.lower()}, {mode.lower()}: one turn to the {way} on one foot, the blade carried round', sigma=0.5)
+            print('CUT', name, 'seconds', notes[name]['seconds'], 'arm miss %.3f m, wrist %d deg, foot miss %.3f m' % tuple(worst))

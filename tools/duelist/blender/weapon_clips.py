@@ -760,6 +760,7 @@ def build():
         twin, staff = mirror_arm(plain), staff_hold(plain, lambda t: STANCE)
         build_form_cuts(add, notes, twin, staff, chosen)
         build_extras(add, notes, plain, twin, staff, chosen)
+        build_spins(add, notes, plain, chosen)
         return
     slash, slash_back = source('sword_regular_a', 0.05), source('sword_regular_a_rec')
     lunge, lunge_back = source('sword_regular_b'), source('sword_regular_b_rec')
@@ -825,6 +826,7 @@ def build():
     build_cuts(add, notes, idle)
     build_form_cuts(add, notes, clips['bladesIdle'], clips['staffIdle'])
     build_extras(add, notes, idle, clips['bladesIdle'], clips['staffIdle'])
+    build_spins(add, notes, idle)
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')

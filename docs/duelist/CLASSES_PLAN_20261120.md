@@ -160,8 +160,11 @@ Built and tested (213 Duelist tests; checked in the browser in practice and Capt
   - *Checked* (2026-11-21): in the rules, all four classes' four abilities and specials start and do their work
     (20 of 20); in a practice match, the Warrior, the Healer, the Duelist and the Assassin each start the right cut
     for the direction held; the Warrior covers ground through a heavy cut.
-  - *Not yet*: two real players online; the whirl and the cross still play clips from the pack (only the backhand is
-    made for them); bots stay in their class's mode and do not pick modes; the old strikes (`swordLight1-3`,
+  - *The whirl and the cross have clips of their own* (2026-11-21, six more): each is one turn of the whole body on one
+    foot with the blade carried round, the whirl to the left with the blade level, the cross to the right and rising
+    from low across the body.
+  - *Not yet*: two real players online; the twin blades' and the staff's three quick-press moves are still older
+    clips; bots stay in their class's mode and do not pick modes; the old strikes (`swordLight1-3`,
     `bladesLight1-4`, `staffLight1-3` and the advance, sweep and turn) are off the light key; nobody but the Masked
     Warrior and the Huntress has been watched in motion; five Duelist tests fail on main itself and here (controls on
     blur, three on mastery and match boost, one special contract).
