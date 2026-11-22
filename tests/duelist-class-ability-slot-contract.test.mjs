@@ -35,3 +35,24 @@ test('rotated three-button HUD selection maps to authoritative slot indices with
     }
   }
 });
+
+test('class animation identifiers are stable, class-scoped, and immutable metadata', () => {
+  const animationIds = new Set();
+  for (const classId of CLASS_IDS) {
+    const def = CLASSES[classId];
+    assert.equal(Object.isFrozen(def), true);
+    assert.equal(Object.isFrozen(def.abilities), true);
+    assert.equal(Object.isFrozen(def.animationSlots), true);
+    assert.equal(Object.isFrozen(def.special), true);
+    for (const [slot, animation] of Object.entries(def.animationSlots)) {
+      assert.match(animation, new RegExp('^class\\.' + classId + '\\.'));
+      assert.equal(animationIds.has(animation), false, classId + ' ' + slot);
+      animationIds.add(animation);
+    }
+    assert.match(def.special.animation, new RegExp('^class\\.' + classId + '\\.special\\.'));
+    for (const ability of def.abilities) {
+      assert.equal(Object.isFrozen(ability), true);
+      assert.equal(ability.animation, 'class.power.' + ability.id);
+    }
+  }
+});
