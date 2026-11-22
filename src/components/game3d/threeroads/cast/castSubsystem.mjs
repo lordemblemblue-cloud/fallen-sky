@@ -38,6 +38,7 @@ import {
   stepToward, steerAround, followGoal, followSpeed, turnToward, headingTo, shouldGreet,
   walkTimeScale, CAST_WALK_SPEED, CAST_TURN_RATE, CAST_FOLLOW_DISTANCE,
 } from './castMotion.mjs';
+import { chooseHail, createHailMemory, idlePhaseOf, idleRateOf } from './castHail.mjs';
 import {
   captionSeconds, captionOpacity, captionDistanceFade, wrapCaptionText,
   CAPTION_LINE_CHARS, CAPTION_MAX_LINES, SUBTITLE_LINE_CHARS, SUBTITLE_MAX_LINES,
@@ -62,6 +63,7 @@ const PLACE_EVERY = 0.25; // seconds between placement attempts (one person each
 const REGROUND_EVERY = 1;  // seconds between ground re-checks of people standing still
 const WALK_GROUND_EVERY = 0.1;
 const DRAW_EVERY = 0.5;    // seconds between choosing who is drawn
+const HAIL_EVERY = 0.25;   // seconds between looking for a sentry to hail the player
 const FOLLOW_CATCH_UP = 35; // a follower this far behind is put back behind the player
 const PERSONAL_SPACE = 0.75; // two of the cast walking never come closer than this
 const SUBTITLE_DISTANCE = 1.25;    // metres in front of the camera
@@ -254,6 +256,33 @@ export function createCastSubsystem(ctx, deps = {}) {
   let placeTimer = PLACE_EVERY; // first attempt on the first frame
   let regroundTimer = 0;
   let drawTimer = DRAW_EVERY;
+  let hailTimer = 0;
+  let clock = 0; // seconds since this scene's cast started
+  const hailMemory = createHailMemory();
+  const hailCandidates = [];
+  const hailPool = [];
+  // A sentry who comes near says their `hail` line (castHail.mjs has the rules).
+  function tryHail(playerPosition) {
+    hailCandidates.length = 0;
+    let busy = false;
+    for (const rec of captionList) if (rec.seconds > 0) { busy = true; break; }
+    for (const actor of actorList) {
+      if (!actor.person.hail || actor.state !== 'ready') continue;
+      const c = hailPool[hailCandidates.length] || (hailPool[hailCandidates.length] = {});
+      c.id = actor.id; c.x = actor.x; c.z = actor.z;
+      c.atHome = Boolean(actor.fromHome && actor.homeSpot &&
+        Math.hypot(actor.x - actor.homeSpot.x, actor.z - actor.homeSpot.z) < 1);
+      c.still = !actor.moving && !actor.task;
+      c.drawn = actor.drawn && actor.group?.visible !== false;
+      c.cued = Boolean(actor.task || actor.pendingTask || !actor.fromHome);
+      hailCandidates.push(c);
+    }
+    if (!hailCandidates.length) return;
+    const id = chooseHail({ now: clock, player: playerPosition, candidates: hailCandidates, busy, memory: hailMemory });
+    if (!id) return;
+    const actor = actors.get(id);
+    if (api.say({ id, lineId: actor.person.hail })) actor.hailing = true;
+  }
   let flags = null; // the quest store's story flags, once read
   const step = { x: 0, z: 0, heading: 0, remaining: 0, arrived: false };
   const steer = { x: 0, z: 0, heading: 0, blocked: false };
@@ -516,7 +545,10 @@ export function createCastSubsystem(ctx, deps = {}) {
     const idle = t.idleClip ? mixer.clipAction(t.idleClip) : null;
     if (idle) {
       idle.play();
-      idle.time = Math.random() * (t.idleClip.duration || 1); // not all breathing in step
+      // Each person starts the idle at a place of their own (fixed by their id, the
+      // same every visit), so neighbours wearing the same clip do not sway in step.
+      idle.time = idlePhaseOf(actor.id) * (t.idleClip.duration || 1);
+      idle.timeScale = idleRateOf(actor.id);
     }
     actor.walkAction = t.walkClip ? mixer.clipAction(t.walkClip) : null;
     actor.talkAction = t.talkClip ? mixer.clipAction(t.talkClip) : null;
@@ -561,6 +593,7 @@ export function createCastSubsystem(ctx, deps = {}) {
     actor.placement = spot.status;
     actor.x = spot.x; actor.z = spot.z; actor.y = spot.y;
     actor.offset = spot.distance;
+    actor.homeSpot = { x: spot.x, z: spot.z }; // where "at home" is, for hailing
     buildVisual(actor, t.value, spot);
     if (actor.giver && Array.isArray(ctx.questNPCs)) {
       // The shape GameWorld3D.jsx builds for its archers (the questNPCs.push in the
@@ -610,6 +643,8 @@ export function createCastSubsystem(ctx, deps = {}) {
     actor.anim = want;
     if (!to) return;
     to.reset().play();
+    // Back to idle: from their own place in it again, not from the start in step with everyone.
+    if (want === 'idle') to.time = idlePhaseOf(actor.id) * (to.getClip().duration || 1);
     if (from && from !== to) from.crossFadeTo(to, 0.25, false);
   }
 
@@ -689,7 +724,10 @@ export function createCastSubsystem(ctx, deps = {}) {
       } else setMoving(actor, false, 0);
     } else if (playerPosition && Number.isFinite(playerPosition.x)) {
       const d = Math.hypot(playerPosition.x - actor.x, playerPosition.z - actor.z);
-      const desired = shouldGreet(d) ? headingTo(actor.x, actor.z, playerPosition.x, playerPosition.z) : actor.restFacing;
+      // Turn to a visitor within 4 m, and to the player while hailing them.
+      const hailing = actor.hailing && (captions.get(actor.id)?.seconds || 0) > 0;
+      if (actor.hailing && !hailing) actor.hailing = false;
+      const desired = shouldGreet(d) || hailing ? headingTo(actor.x, actor.z, playerPosition.x, playerPosition.z) : actor.restFacing;
       actor.facing = turnToward(actor.facing, desired, 2.5 * dt);
     }
     const g = actor.group;
@@ -950,6 +988,9 @@ export function createCastSubsystem(ctx, deps = {}) {
       }
       drawTimer += delta;
       if (drawTimer >= DRAW_EVERY) { drawTimer = 0; chooseDrawn(playerPosition); }
+      clock += delta;
+      hailTimer += delta;
+      if (hailTimer >= HAIL_EVERY) { hailTimer = 0; tryHail(playerPosition); }
       updateCaptions(delta, playerPosition);
     },
     dispose() {
