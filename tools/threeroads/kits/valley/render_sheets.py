@@ -183,7 +183,7 @@ for pid in IDS:
         lo, hi = bounds(objs)
         centre = (lo + hi) / 2
         span_x = (hi.x - lo.x) * 1.15 + 1
-        span_y = (hi.z - lo.z) * 1.3 + 1
+        span_y = max((hi.z - lo.z) * 1.3 + 1, (hi.y - lo.y) * 0.45 + (hi.z - lo.z) * 1.1 + 1)
         dist = 60.0
         resx = max(16, int(round(span_x / PIXEL_AT_60M)))
         resy = max(12, int(round(span_y / PIXEL_AT_60M)))

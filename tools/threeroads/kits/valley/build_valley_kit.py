@@ -28,6 +28,7 @@ import zlib
 import bpy
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.dont_write_bytecode = True
 sys.path.insert(0, HERE)
 import kitlib  # noqa: E402
 import pieces  # noqa: E402
