@@ -115,3 +115,27 @@ test('zero and valid positive boundary counters are distinguished', () => {
   assert.equal(first.gameplayFrames, 1);
   assert.equal(first.status, 'verified');
 });
+
+test('missing scene readiness never promotes a native-looking renderer', () => {
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    for (const state of [undefined, null, {}, { ready: 1 }, { ready: 'true' }]) {
+      const candidate = renderer({ frame: 25, draws: 25 });
+      candidate.__sceneState = state;
+      const evidence = getWebGPURuntimeEvidence(candidate, { sceneId });
+      assert.equal(evidence.initialized, false, sceneId);
+      assert.equal(evidence.status, 'initializing', sceneId);
+      assert.equal(evidence.webgpuActive, false, sceneId);
+      assert.match(formatWebGPURuntimeEvidence(evidence), /not verified/, sceneId);
+    }
+  }
+});
+
+test('a failed initialization cannot be verified even with a device and stale draws', () => {
+  const evidence = getWebGPURuntimeEvidence(renderer({
+    ready: false, frame: 999, draws: 999,
+  }), { sceneId: 'fallen-sky' });
+  assert.equal(evidence.backend, 'initializing');
+  assert.equal(evidence.initialized, false);
+  assert.equal(evidence.webgpuActive, false);
+  assert.equal(evidence.status, 'initializing');
+});
