@@ -57,7 +57,7 @@ export function castSourceDef(key) {
 // body's height when a person needs it.
 export const CAST_MODELS = Object.freeze({
   sable_vey: Object.freeze({ source: 'archer' }),
-  elder_maren: Object.freeze({ source: 'archer' }),
+  elder_maren: Object.freeze({ own: true, source: 'archer' }),
   master_hesper: Object.freeze({ source: 'archer' }),
   bram_lamplighter: Object.freeze({ own: true, source: 'archer' }),
   watch_warden_south: Object.freeze({ source: 'archer' }),
