@@ -38,6 +38,8 @@ export const GLIDE = Object.freeze({
   wallSample: 0.6, // m: spacing of the samples that find which way a face rises
   wallSlope: 0.8, // m up per metre across at least: a face to slide along (no face found: held)
   wallSlideMin: 0.5, // m/s: slower than this along a face is held
+  stepSeconds: 0.1, // the air is worked through in steps no longer than this, over the whole frame (the world moves
+  maxFrameSeconds: 5, // the hero by the whole frame, so a slow frame glides as far and sinks as far), up to this
 });
 export const GLIDE_REACH = GLIDE.trimSpeed / GLIDE.trimSink; // metres forward per metre of height at trim speed
 
@@ -68,7 +70,7 @@ export function glideLandingY(groundY, surfaceY, swimDepth = GLIDE.swimDepth) {
 export function createPlayerGlide({ glide = GLIDE } = {}) {
   let mode = 'ground', y = null, vy = 0, speed = 0, heading = 0, bank = 0;
   let lastY = null, lastX = null, lastZ = null, lastVy = 0, planar = 0, lastGround = null, lastSurface = null;
-  let wall = 'clear';
+  let wall = 'clear', lastFrame = 0;
   const velocity = { x: 0, z: 0 };
   const result = (patch) => ({ mode, y: mode === 'ground' ? null : y, x: null, z: null, heading, speed, bank,
     velocity: { ...velocity }, wall, changed: false, landed: false, ...patch });
@@ -85,7 +87,8 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
   const clearOfWalls = (x, z, groundAt) => {
     const travel = Math.hypot(velocity.x, velocity.z);
     if (!(travel > 0) || !finite(x) || !finite(z) || !finite(y)) return;
-    const reach = glide.wallReach + travel * glide.wallLookSeconds;
+    // as far ahead as the next frame may carry it (the last frame's time stands in for it: slow frames look further)
+    const reach = glide.wallReach + travel * Math.max(glide.wallLookSeconds, Math.min(0.5, lastFrame));
     const ground = (px, pz) => { const g = groundAt(px, pz, y); return finite(g) ? g : null; };
     const isWall = (g) => g !== null && g > y + glide.wallHeight;
     const px = x + velocity.x / travel * reach, pz = z + velocity.z / travel * reach;
@@ -148,9 +151,12 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
 
     update({ dt = 0, x = null, z = null, groundY = null, surfaceY = null, heroY = null, steer = null, dive = false,
       jumping = false, allowed = true, groundAt = null } = {}) {
-      const step = Math.max(0, Math.min(0.1, Number(dt) || 0));
+      // The frame's whole time: the world moves the hero by all of it (its frame time isn't capped), so the air is
+      // worked through all of it too, in short steps; a slow frame then glides and sinks as a fast one would.
+      const frame = Math.max(0, Math.min(glide.maxFrameSeconds, Number(dt) || 0));
+      lastFrame = frame;
       const stepMeters = finite(x) && finite(z) && finite(lastX) && finite(lastZ) ? Math.hypot(x - lastX, z - lastZ) : 0;
-      if (step > 0 && finite(lastX)) planar = stepMeters / step;
+      if (frame > 0 && finite(lastX)) planar = stepMeters / frame;
       const before = mode;
       let landed = false;
       wall = 'clear';
@@ -184,10 +190,12 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
           mode = 'fall'; y = lastY; vy = jumping ? Math.max(0, lastVy) : 0;
         }
       }
-      if (mode === 'fall') {
-        vy = Math.max(-glide.terminalFall, vy - glide.gravity * step);
-        y += vy * step;
-      } else if (mode === 'glide') {
+      const fly = (step) => {
+        if (mode === 'fall') {
+          vy = Math.max(-glide.terminalFall, vy - glide.gravity * step);
+          y += vy * step;
+          return;
+        }
         // Steering: the keys' direction pulls the heading round at a limited rate; no keys fly straight on.
         let turn = 0;
         if (steer && (steer.x || steer.z)) {
@@ -213,6 +221,11 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
         speed = Math.max(glide.minSpeed, speed);
         vy += (sinkTarget - vy) * Math.min(1, step * glide.sinkEase);
         y += vy * step;
+      };
+      for (let left = frame; mode !== 'ground' && left > 1e-9;) {
+        const step = Math.min(glide.stepSeconds, left);
+        left -= step;
+        fly(step);
       }
       setVelocity();
       if (mode === 'glide' && typeof groundAt === 'function') clearOfWalls(x, z, groundAt);
@@ -227,7 +240,7 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
         return result({ changed: true, landed: true, y: touched, mode: 'ground', ...back });
       }
       if (mode === 'ground') {
-        lastVy = finite(heroY) && finite(lastY) && step > 0 ? (heroY - lastY) / step : 0;
+        lastVy = finite(heroY) && finite(lastY) && frame > 0 ? (heroY - lastY) / frame : 0;
         lastY = heroY;
       } else {
         lastVy = vy; lastY = y;
@@ -235,6 +248,6 @@ export function createPlayerGlide({ glide = GLIDE } = {}) {
       keep();
       return result({ changed: before !== mode, landed, ...back });
     },
-    reset() { toGround(); lastY = null; lastX = null; lastZ = null; lastVy = 0; planar = 0; lastGround = null; lastSurface = null; wall = 'clear'; },
+    reset() { toGround(); lastY = null; lastX = null; lastZ = null; lastVy = 0; planar = 0; lastGround = null; lastSurface = null; wall = 'clear'; lastFrame = 0; },
   };
 }

@@ -255,6 +255,40 @@ test('ground more than 2 m above the glider is a wall: held head-on, sliding at 
   assert.ok(fall.y < 10);
 });
 
+test('any frame rate glides the same: a slow frame sinks and falls as far as the fast frames it stands for', () => {
+  // off a 40 m cliff top, the glider open straight away, flown to the valley floor at 60, 4 and 2 frames a second
+  const glideAt = (dt, ground = 0, probe = false) => {
+    const glide = createPlayerGlide();
+    glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 40, heroY: 40 });
+    glide.update({ dt: 1 / 60, x: 0, z: 0.07, groundY: 0, heroY: 0 });
+    glide.toggle({ heroY: 40, groundY: 0, bodyHeading: 0 });
+    const trace = fly(glide, { frames: Math.ceil(60 / dt), dt, ground, probe, at: { x: 0, z: 0.07, y: 40 } });
+    return { trace, end: trace.at(-1), seconds: trace.length * dt };
+  };
+  const fast = glideAt(1 / 60);
+  for (const dt of [0.25, 0.5]) {
+    const slow = glideAt(dt);
+    assert.ok(slow.end.landed, 'lands at ' + dt + ' s a frame');
+    const ratio = Math.hypot(slow.end.x, slow.end.z) / Math.hypot(fast.end.x, fast.end.z);
+    assert.ok(Math.abs(ratio - 1) < 0.03, `the same reach at ${dt} s a frame (${(ratio * 100).toFixed(1)}%)`);
+    assert.ok(Math.abs(slow.seconds - fast.seconds) <= dt + 0.05, `the same time aloft (${slow.seconds} s, ${fast.seconds.toFixed(2)} s)`);
+  }
+  // a fall: the same 40 m in the same time
+  const fallAt = (dt) => {
+    const glide = createPlayerGlide();
+    glide.update({ dt: 1 / 60, x: 0, z: 0, groundY: 40, heroY: 40 });
+    let t = 0, s = glide.update({ dt: 1 / 60, x: 0, z: 0.07, groundY: 0, heroY: 0 });
+    while (!s.landed && t < 10) { t += dt; s = glide.update({ dt, x: 0, z: 0.07, groundY: 0, heroY: 0 }); }
+    return t;
+  };
+  assert.ok(Math.abs(fallAt(0.25) - fallAt(1 / 60)) <= 0.25 + 1e-9, 'a fall takes as long at 4 frames a second');
+  // the cliff at 4 frames a second: still held off the face, never lifted onto it
+  const cliff = (x, z) => (z < 60 ? 0 : z < 62 ? (z - 60) * 15 : 30);
+  const slowWall = glideAt(0.25, cliff, true);
+  assert.ok(slowWall.end.landed && slowWall.end.y === 0 && slowWall.end.z < 60, 'lands at the foot: z ' + slowWall.end.z.toFixed(2));
+  assert.ok(Math.max(...slowWall.trace.map((f) => f.h)) <= 40 + 1e-9, 'never lifted');
+});
+
 test('the glider opens only high enough above the landing, and Space again closes it', () => {
   const glide = createPlayerGlide();
   assert.equal(glide.toggle({ heroY: 0.5, groundY: 0 }).reason, 'on_ground');

@@ -31,8 +31,22 @@ ground below. Stairs and slopes still walk down as before. A jump that carries o
 | Turn | 1.9 rad/s at most, bank up to 0.5 rad |
 | Opening height | 1.6 m above the landing |
 | Ledge | a drop of at least 0.9 m in one frame that is steeper than 1.6 m down per metre across |
-| Wall | ground more than 2 m above the hero in the air. An open glider samples the ground 0.6 m plus 0.1 s of travel ahead (1.35 m at trim, 2 m at full dive) |
+| Wall | ground more than 2 m above the hero in the air. An open glider samples the ground 0.6 m ahead, plus its travel over 0.1 s or over the last frame's time if that was longer (at most 0.5 s). That is 1.35 m at trim and 60 fps, 2 m at full dive |
 | Teleport | more than 8 m in one frame, and faster than 20 m/s over that frame's time |
+| Frame rate | the air is worked through the whole frame's time in steps of at most 0.1 s (up to 5 s a frame), so the reach is the same at any frame rate |
+
+### Slow frames (found after the merge into main ffd9f398)
+
+The first version stepped the air at most 0.1 s per frame. The world, however, moves the hero by the whole frame's
+time, because its frame time isn't capped. On slow frames the glide therefore flattened:
+
+- From a 40 m cliff it reached 168 m at 60 fps, 419 m at 4 fps and 837 m at 2 fps.
+- In the browser pane with `?threeRoads=1`, the world ran at about 17 fps with frames up to 266 ms. The glider sank
+  0.56-0.88 m/s instead of 1.8.
+
+It now works through the whole frame in steps of at most 0.1 s. The tests reach 168 m at all three rates, a fall
+takes the same time, and a cliff still holds the glider at 4 fps. Live with `?threeRoads=1` (about 27 fps, frames
+up to 561 ms), it flew 7.5 m/s forward and 1.80 m/s down, a ratio of 4.16.
 
 ## Decisions
 
