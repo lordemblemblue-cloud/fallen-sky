@@ -132,8 +132,8 @@ export function step(world, dt, inputs = {}) {
     // A client says it every frame (null: no lock); an input without the field leaves the last one as it was.
     if (Object.hasOwn(input, 'target')) fighter.lock = typeof input.target === 'string' && input.target !== id ? input.target : null;
     // a taunt is cut short by moving off
-    if (fighter.action?.id === 'taunt' && len > 0.2) {
-      fighter.events.push({ type: 'interrupt', id: 'taunt', by: 'move', at: now });
+    if (fighter.action?.move.kind === 'emote' && len > 0.2) {
+      fighter.events.push({ type: 'interrupt', id: fighter.action.id, by: 'move', at: now });
       fighter.action = null;
     }
     const restrained = fighter.vitals.dead || isStunned(fighter, now) || fighter.heldBy;

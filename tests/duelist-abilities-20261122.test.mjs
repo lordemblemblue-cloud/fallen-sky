@@ -1,10 +1,11 @@
 // The owner's 2026-11-22 kit fixes, in the shared rules (sim/world.mjs, core/moves.mjs, core/abilities.mjs):
 // targets from the lock, the Healer's Mend and Levitate, the Assassin's Mind Dominance and cloaked Shadow Execution,
-// the Warrior's Leap Strike, the Duelist's quick Counter and its seize-stab-shove Execution, the taunt.
+// the Warrior's Leap Strike, the Duelist's quick Counter and its seize-stab-shove Execution, the taunts, and the clips
+// made for them (tools/duelist/blender/moments.py).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, addFighter, step, bodyOf, chosenTarget } from '../src/components/duelist/sim/world.mjs';
-import { CLASSES, SPECIAL_MAX, effectOn, MOVES, CLIENT_COMMANDS, moveFor, isInvulnerable } from '../src/components/duelist/core/index.mjs';
+import { CLASSES, SPECIAL_MAX, effectOn, MOVES, CLIENT_COMMANDS, moveFor, isInvulnerable, TAUNTS, MOTION_CLIPS, clipAt } from '../src/components/duelist/core/index.mjs';
 import { encodeInput, sanitizeInput } from '../src/components/duelist/net/protocol.mjs';
 import { DEFAULT_KEYS } from '../src/components/duelist/client/bindings.mjs';
 
@@ -176,17 +177,44 @@ test('Duelist: Execution seizes an enemy at 30% from 6 m, draws it in, runs it t
   assert.ok(dist(world, 'you', 'foe') > 3.5, `pushed away (${dist(world, 'you', 'foe').toFixed(2)} m)`);
 });
 
-test('T taunts: a client command and a key; moving off cuts it short', () => {
+test('T taunts, each class its own: a client command and a key; moving off cuts it short', () => {
   assert.ok(CLIENT_COMMANDS.has('taunt'));
   assert.equal(DEFAULT_KEYS.taunt, 'KeyT');
   const world = createWorld({ arenaRadius: 40 });
   const you = fighter(world, 'you', 'healer', 'blue', 0, 0);
   run(world, 0.1, once('you', 'taunt'));
-  assert.equal(you.action?.id, 'taunt');
+  assert.equal(you.action?.id, 'tauntHealer');
   run(world, 0.1, () => ({ you: { move: { x: 1, z: 0 } } }));
   assert.equal(you.action, null, 'moving off ends it');
   run(world, 0.05, once('you', 'taunt'));
   assert.equal(you.action, null, 'not again so soon');
+  // every class has a taunt of its own, with a clip made for it; a fighter with no class has the plain one
+  const clips = new Set();
+  for (const [classId, id] of Object.entries(TAUNTS)) {
+    const w = createWorld({ arenaRadius: 40 });
+    const f = fighter(w, 'f', classId, 'blue', 0, 0);
+    run(w, 0.05, once('f', 'taunt'));
+    assert.equal(f.action?.id, id, classId);
+    const { clip } = clipAt(id, 1);
+    assert.equal(MOTION_CLIPS[clip].source, 'blender', `${id} plays a clip made for it`);
+    clips.add(clip);
+  }
+  assert.equal(clips.size, 4, 'four different taunts');
+  const plain = createWorld({ arenaRadius: 40 });
+  const nobody = addFighter(plain, { id: 'n', team: 'blue', weapon: 'sword', x: 0, z: 0 });
+  run(plain, 0.05, once('n', 'taunt'));
+  assert.equal(nobody.action?.id, 'taunt');
+});
+
+test("the Execution's clip drives the blade in as the rules kill, and the Rage roars over its wind-up", () => {
+  const ex = MOVES.execution;
+  const { clip } = clipAt('execution', ex.startup);
+  assert.equal(clip, 'bladesExecution');
+  const thrust = MOTION_CLIPS[clip].peaks.filter((p) => p.hand === 'right').sort((a, b) => b.speed - a.speed)[0];
+  const kill = clipAt('execution', ex.startup).time;
+  assert.ok(thrust.t <= kill && kill - thrust.t < 0.1, `the right hand drives in at ${thrust.t} s, the kill at ${kill} s`);
+  assert.equal(clipAt('rage', 0.3).clip, 'swordRoar');
+  assert.equal(clipAt('dominate', 0.1).clip, 'staffDominate');
 });
 
 test('a lock on someone who does not qualify is passed over', () => {

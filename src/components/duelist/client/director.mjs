@@ -57,7 +57,7 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
           } else if (a.move.kind === 'attack') {
             audio.play('swing', actor.chest(), { heavy: a.id === 'swordHeavy' || a.id === 'swordLight3' || a.move?.cut?.mode === 'heavy' });
           } else {
-            const kind = a.id === 'gripThrow' ? 'throw' : a.id;
+            const kind = a.id === 'gripThrow' ? 'throw' : a.move.kind === 'emote' ? 'taunt' : a.id; // every class's taunt
             const held = kind === 'throw' ? heldBy(id) : null;
             if (kind !== 'breach') vfx.release(kind, actor, dir, { target: held ? actors[held.id] : null });
             if (RELEASE_SOUND[kind]) audio.play(RELEASE_SOUND[kind], actor.chest());

@@ -5,7 +5,7 @@
 // Fair play is built in: one action at a time; a press during an action either continues a chain or cancels
 // in its window, or waits (one buffered press, for INPUT.bufferSeconds); cooldowns per move; costs paid up
 // front; stagger and grips lock out everything but Resist.
-import { BINDINGS, POWER_BINDINGS, FLOW, moveById } from './moves.mjs';
+import { BINDINGS, POWER_BINDINGS, FLOW, TAUNTS, moveById } from './moves.mjs';
 import { INPUT, BREACH, STAGGER_IMMUNITY } from './tuning.mjs';
 import { createVitals, spendStamina, spendWill, drainWill, regenerate, veilState } from './vitals.mjs';
 import { KNOCKDOWN } from './tuning.mjs';
@@ -122,6 +122,7 @@ function moveForCommand(f, command, direction = null) {
   if (command === 'heavy') return BINDINGS[f.weapon]?.heavy || null;
   // '#move': a move by its id, for the rules' own callers (guards' AI, specials); never accepted from a client
   if (command[0] === '#') return moveById(command.slice(1)) ? command.slice(1) : null;
+  if (command === 'taunt') return TAUNTS[f.classId] || 'taunt'; // each class its own
   const slot = /^ability([1-4])$/.exec(command);
   if (slot) return f.classId ? classAbilityMove(f.classId, Number(slot[1]) - 1) : LEGACY_SLOTS[Number(slot[1]) - 1];
   const id = POWER_BINDINGS[command] || null;
@@ -174,7 +175,7 @@ function canInterrupt(f, id) {
   const a = f.action;
   if (!a) return true;
   // Only the server-authorized aerial follow-up interrupts an ongoing jump.
-  // The client can send only 'dash' presses; the world verifies the double-tap.
+  // The client can send only 'dash' presses; the world checks the jump and the height.
   if (id === 'airDash' && a.id === 'jump') return true;
   const move = moveById(id);
   if (!move) return false; // a buffered guard waits for the action to end

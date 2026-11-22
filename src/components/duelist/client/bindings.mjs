@@ -137,7 +137,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light (with a direction: a cut that way)`, `${k('mode')} sword mode`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (double-tap in air)`, `${k('itemActive')} relic`,
+    `${k('light')} light (with a direction: a cut that way)`, `${k('mode')} sword mode`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (in the air too)`, `${k('taunt')} taunt`, `${k('itemActive')} relic`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
   parts.push(`${k('resist')} resist`, `${k('shop')} shop`, `${k('lock')} lock on`);

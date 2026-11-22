@@ -30,6 +30,11 @@ const move = (spec) => Object.freeze({
   stamina: (spec.kind ?? 'attack') === 'attack' ? 0 : (spec.stamina ?? 0),
   duration: (spec.startup ?? 0.1) + (spec.active ?? 0.08) + (spec.recovery ?? 0.2),
 });
+// the taunts' frame data (T): 2.2 s, picture and voice only
+const TAUNT = Object.freeze({ kind: 'emote', startup: 0, active: 0, recovery: 2.2, cooldown: 4, range: 0, blockable: false, damageKind: 'effect',
+  cancelInto: ['attack', 'power', 'movement', 'defense'], cancelFrom: 0 });
+// which taunt each class plays
+export const TAUNTS = Object.freeze({ warrior: 'tauntWarrior', duelist: 'tauntDuelist', assassin: 'tauntAssassin', healer: 'tauntHealer' });
 
 // Crystal forms: one crystal, four shapes.
 export const WEAPONS = Object.freeze(['sword', 'dualBlades', 'staff', 'bow']);
@@ -184,9 +189,10 @@ export const MOVES = Object.freeze({
   // helpless, so you can get away
   levitate: move({ kind: 'power', startup: 0.18, active: 0.05, recovery: 0.25, will: 18, cooldown: 9, range: 12, arc: 50, blockable: false,
     effect: 'levitate', effectSeconds: 2, targets: 'enemy', needsTarget: true, damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.22 }),
-  // T: a taunt, each class its own (picture and voice only). Moving or acting cuts it short.
-  taunt: move({ kind: 'emote', startup: 0, active: 0, recovery: 2.2, cooldown: 4, range: 0, blockable: false, damageKind: 'effect',
-    cancelInto: ['attack', 'power', 'movement', 'defense'], cancelFrom: 0 }),
+  // T: a taunt (picture and voice only). Moving or acting cuts it short. Each class has its own (core/fighter.mjs
+  // moveForCommand: TAUNTS), with a clip of its own (core/moveMotion.mjs); a fighter with no class has this one.
+  taunt: move(TAUNT),
+  tauntWarrior: move(TAUNT), tauntDuelist: move(TAUNT), tauntAssassin: move(TAUNT), tauntHealer: move(TAUNT),
 
   // ---- class specials: the server-owned meter pays (core/classes.mjs: cost), never Will
   // Rage: a roar (the wind-up), then the berserk (owner: he screams, then charges, breathing hard)
