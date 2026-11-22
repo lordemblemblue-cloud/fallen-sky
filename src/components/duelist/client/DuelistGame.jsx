@@ -28,6 +28,7 @@ import { createDuelAudio } from './audio.mjs';
 import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createFootballProps } from './footballProps.mjs';
+import { createEscortProps } from './escortProps.mjs';
 import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
@@ -269,6 +270,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let ctf = null;
     let football = null;
     let control = null;
+    let escort = null;
     let lockId = null;
     let clock = 0;
     // the HUD's kill feed and banners
@@ -535,6 +537,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
+        if (!escort && source.mode === 'escort') escort = createEscortProps(scene);
         if (!control && source.mode === 'control') control = createControlProps(scene, MODES.control.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
@@ -544,6 +547,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           return controls.read({ faceYaw, strafe: !!target });
         };
         const { effects, events } = source.step(dt, readInput);
+        escort?.update(source.escortDistance?.() ?? 0);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
@@ -751,6 +755,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       ctf?.dispose();
       football?.dispose();
       control?.dispose();
+      escort?.dispose();
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);

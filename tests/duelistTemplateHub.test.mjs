@@ -33,7 +33,7 @@ test('mode routes launch real supported modes only, never imaginary ranked or cu
   assert.equal(templateLaunch('practice','target-range'), null);
   assert.equal(templateLaunch('ranked','duel',true,true), null);
   assert.equal(templateLaunch('custom','create-lobby'), null);
-  assert.equal(templateLaunch('normal','transport'), null);
+  assert.deepEqual(templateLaunch('normal','transport'), {mode:'escort', online:0});
   assert.equal(templateLaunch('normal','unknown'), null);
   assert.equal(templateMode('ranked','duel').route, null);
 });

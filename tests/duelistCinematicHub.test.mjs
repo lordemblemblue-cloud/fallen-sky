@@ -22,11 +22,11 @@ test('practice, online, free-for-all and football preserve the live mode pages',
   }
 });
 
-test('Transport is displayed but cannot launch a nonexistent mode', () => {
+test('Transport launches the playable escort mode', () => {
   const transport = findHubMode('transport');
   assert.equal(transport.title, 'TRANSPORT');
-  assert.equal(transport.route, null);
-  assert.equal(canLaunchHubMode('transport'), false);
+  assert.equal(transport.route, 'escort');
+  assert.equal(canLaunchHubMode('transport'), true);
 });
 
 test('unknown mode identifiers never gain a play route', () => {
