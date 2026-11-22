@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/components/duelist/client/ClassPicker.jsx'
+      - 'src/components/duelist/client/DuelistHud.jsx'
+      - 'src/components/duelist/client/DuelistGame.jsx'
       - 'src/components/duelist/client/duelistClassPicker.css'
       - 'src/components/duelist/menu/idlePreview.mjs'
       - 'tests/duelist-class-picker-pose.test.mjs'
@@ -29,6 +31,6 @@ jobs:
       - name: Verify Duelist UI parser
         run: node scripts/verify-duelist-ui.mjs
       - name: Lint changed components
-        run: npx eslint src/components/duelist/client/ClassPicker.jsx src/components/duelist/menu/idlePreview.mjs
+        run: npx eslint src/components/duelist/client/ClassPicker.jsx src/components/duelist/client/DuelistHud.jsx src/components/duelist/client/DuelistGame.jsx src/components/duelist/menu/idlePreview.mjs
       - name: Full application build
         run: npm run build
