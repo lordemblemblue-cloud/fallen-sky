@@ -3,11 +3,16 @@
 //
 // `home` is where a person normally stands: { area | region, x, z, facing }
 // in LOCAL Wolfveil metres for the five areas (x east, z north; facing in
-// radians, 0 = looking north, +z). A person with no `home` only appears when
-// a pledge brings them in. `giver: true` people can be spoken to for pledges
-// and must be pushed into the game's quest-giver list under this `id`.
-// `existing` people are already placed by the game itself and are listed
-// here only so the script can name them: the cast subsystem does not spawn them.
+// radians, 0 = looking north, +z). `homeAfter: { flag, home }` moves them (or
+// takes them away: home null) once that story flag is set. `alsoAt` lists
+// further places the same person is found in other areas: each area is its
+// own scene, so a player only ever meets one of them at a time. A person with
+// no home at all only appears when a pledge brings them in.
+//
+// `giver: true` people can be spoken to for pledges and must be pushed into
+// the game's quest-giver list under this `id`. `existing` people are already
+// placed by the game itself and are listed here only so the script can name
+// them: the cast subsystem does not spawn them.
 //
 // `look` is a hint for the model until each person has their own:
 // body (m | f | child | elder_m | elder_f), build, colours, and what they carry.
@@ -17,6 +22,13 @@ export const THREE_ROADS_EMPIRES = Object.freeze({
   tameri: Object.freeze({ id: 'tameri', factionId: 'AXE_Faction_3', name: 'Tameri', title: 'The Radiant', colour: 0xc9962e, trim: 0xedc18a }),
   valley: Object.freeze({ id: 'valley', factionId: null, name: 'Wolfveil', title: 'The Valley', colour: 0x4a6b4f, trim: 0xe8e2d0 }),
 });
+
+// Which empire a player's faction is: 'akitsu', 'remoria', 'tameri' or 'none'.
+export function threeRoadsEmpireOfFaction(factionId) {
+  for (const empire of Object.values(THREE_ROADS_EMPIRES))
+    if (empire.factionId && empire.factionId === factionId) return empire.id;
+  return 'none';
+}
 
 const person = data => Object.freeze({ giver: false, existing: false, home: null, ...data });
 
@@ -39,21 +51,25 @@ export const THREE_ROADS_CAST = Object.freeze([
     look: { body: 'elder_m', build: 'thin', colours: [0x3b3b3b, 0xd9d2c0], carries: 'a brush; ink to the elbows' } }),
   person({ id: 'bram_lamplighter', name: 'Bram', role: 'Lamplighter', empire: 'valley', giver: true,
     home: { area: 'town', x: -4, z: -44, facing: Math.PI },
-    look: { body: 'elder_m', build: 'stooped', colours: [0x5a4632, 0xd0a040], carries: 'a lamplighter\'s pole' } }),
+    look: { body: 'elder_m', build: 'stooped', colours: [0x5a4632, 0xd0a040], carries: "a lamplighter's pole" } }),
   person({ id: 'watch_warden_south', name: 'Gate Warden', role: 'Fountain Watch, Southern Wolf Gate', empire: 'valley',
     home: { area: 'town', x: 4, z: -221, facing: 0 },
     look: { body: 'm', build: 'broad', colours: [0x4a6b4f, 0x2a2d36], carries: 'a bow and a coil of cord' } }),
 
   // The three envoys. In the town they stand at their lodges; at the parley
-  // they stand around the fountain.
+  // they stand around the fountain. Once the war is open they leave the town.
   person({ id: 'mizuhara_jun', name: 'Lieutenant Mizuhara Jun', role: 'Akitsu envoy, engineer and surveyor', empire: 'akitsu', giver: true,
     home: { area: 'town', x: -24, z: -92, facing: Math.PI * 0.25 },
+    homeAfter: { flag: 'tr_war_open', home: { area: 'west', x: -288, z: -140, facing: Math.PI * 0.5 } },
     look: { body: 'm', build: 'slight', colours: [0x2f4a7a, 0xdcb58a], carries: 'a map case' } }),
   person({ id: 'paneb_scribe', name: 'Paneb the Scribe', role: 'Tameri envoy and quartermaster', empire: 'tameri', giver: true,
     home: { area: 'town', x: 24, z: -92, facing: Math.PI * 1.75 },
+    homeAfter: { flag: 'tr_war_open', home: { area: 'south', x: 57, z: -368, facing: Math.PI * 1.25 } },
+    alsoAt: [{ area: 'east', x: 258, z: -414, facing: Math.PI * 1.5 }],
     look: { body: 'm', build: 'thin', colours: [0xe8dcc0, 0xc9962e], carries: 'a writing board and tally cords' } }),
   person({ id: 'aelia_sabina', name: 'Tribune Aelia Sabina', role: 'Remorian envoy', empire: 'remoria', giver: true,
     home: { area: 'town', x: 0, z: -100, facing: 0 },
+    homeAfter: { flag: 'tr_war_open', home: { area: 'north', x: 26, z: 326, facing: Math.PI } },
     look: { body: 'f', build: 'strong', colours: [0x8c2f2f, 0xa5cbe9], carries: 'a short sword, tied with cord' } }),
 
   // Chapter one: the three strangers at the gate. Brought in by the pledge.
@@ -61,10 +77,18 @@ export const THREE_ROADS_CAST = Object.freeze([
     look: { body: 'elder_m', build: 'round', colours: [0x2f4a7a, 0x8a7a5a], carries: 'a carrying pole' } }),
   person({ id: 'traveller_henut', name: 'Henut', role: 'Weaver from Tameri, with a water jar', empire: 'tameri',
     look: { body: 'f', build: 'slight', colours: [0xe8dcc0, 0xc9962e], carries: 'a water jar' } }),
-  person({ id: 'traveller_livilla', name: 'Livilla', role: 'A veteran\'s widow from Remoria', empire: 'remoria',
+  person({ id: 'traveller_livilla', name: 'Livilla', role: "A veteran's widow from Remoria", empire: 'remoria',
     look: { body: 'f', build: 'tall', colours: [0x8c2f2f, 0x6b6b6b], carries: 'a bundle and a boundary stone' } }),
 
-  // The Gate Fields.
+  // The Gate Fields. Each empire keeps a wagon line on the Threshing Floor.
+  person({ id: 'goro_sergeant', name: 'Sergeant Gorō', role: 'Akitsu sergeant, "Old Kettle"', empire: 'akitsu', giver: true,
+    home: { area: 'south', x: -13, z: -368, facing: Math.PI * 0.75 },
+    alsoAt: [{ area: 'west', x: -298, z: -136, facing: Math.PI }],
+    look: { body: 'm', build: 'stocky', colours: [0x2f4a7a, 0x5a4632], carries: 'a rifle slung muzzle down, and a kettle' } }),
+  person({ id: 'titus_oldvine', name: 'First Centurion Titus Petronius', role: 'Remorian first centurion, "Old Vine"', empire: 'remoria', giver: true,
+    home: { area: 'south', x: 28, z: -427, facing: 0 },
+    alsoAt: [{ area: 'north', x: -258, z: 390, facing: Math.PI * 0.5 }],
+    look: { body: 'elder_m', build: 'broad', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a vine staff' } }),
   person({ id: 'edda_miller', name: 'Edda', role: 'Miller of the Gate Fields', empire: 'valley', giver: true,
     home: { area: 'south', x: -124, z: -344, facing: Math.PI * 0.5 },
     look: { body: 'f', build: 'strong', colours: [0x7a6a4a, 0xe8e2d0], carries: 'a grain sack' } }),
@@ -74,14 +98,63 @@ export const THREE_ROADS_CAST = Object.freeze([
   person({ id: 'tolliver_beekeeper', name: 'Tolliver', role: 'Beekeeper', empire: 'valley', giver: true,
     home: { area: 'south', x: 86, z: -326, facing: Math.PI * 1.5 },
     look: { body: 'm', build: 'tall', colours: [0xd9c98a, 0x5a4632], carries: 'a smoker and a veil' } }),
+
+  // Akitsu: the Camp of the Western Road and House Asagiri's Hall.
+  person({ id: 'hayasaka_colonel', name: 'Colonel Hayasaka Sōichirō', role: 'Commander of the Western Road Regiment', empire: 'akitsu', giver: true,
+    home: { area: 'west', x: -292, z: -132, facing: Math.PI },
+    look: { body: 'm', build: 'lean', colours: [0x1f3358, 0xdcb58a], carries: 'a sabre he has not drawn here, and a folded telegram' } }),
+  person({ id: 'asagiri_tomoe', name: 'Lady Asagiri Tomoe', role: 'Head of House Asagiri, mistress of the Moon-Ring school', empire: 'akitsu', giver: true,
+    home: { area: 'west', x: -233, z: -58, facing: Math.PI * 1.5 },
+    look: { body: 'elder_f', build: 'upright', colours: [0x2a2d36, 0xe8e2d0], carries: 'two swords, worn the old way' } }),
+  person({ id: 'ren_swordswoman', name: 'Ren', role: "Lady Asagiri's last student", empire: 'akitsu',
+    look: { body: 'f', build: 'quick', colours: [0x2a2d36, 0x8c2f2f], carries: 'a practice sword and a real one' } }),
+
+  // Tameri: the Landing.
+  person({ id: 'nakhtamun_general', name: 'General Nakhtamun', role: 'Lord of Chariots, Division of the Sharp Star', empire: 'tameri', giver: true,
+    home: { area: 'east', x: 352, z: -404, facing: Math.PI * 1.5 },
+    look: { body: 'm', build: 'heavy', colours: [0xc9962e, 0x3b5a8c], carries: 'a khopesh and a fly-whisk' } }),
+  person({ id: 'meresankh_priestess', name: 'Lector-Priestess Meresankh', role: 'Of the House of Life', empire: 'tameri', giver: true,
+    home: { area: 'east', x: 344, z: -418, facing: Math.PI * 1.5 },
+    look: { body: 'f', build: 'slender', colours: [0xf2ead8, 0x3b7a6a], carries: 'a scroll case and an empty blade sheath' } }),
+  person({ id: 'sabu_tracker', name: 'Sabu', role: 'Tracker of the scouts, with a half-grown sun-cat', empire: 'tameri', giver: true,
+    home: { area: 'east', x: 250, z: -428, facing: Math.PI * 0.5 },
+    look: { body: 'm', build: 'rangy', colours: [0x8a5a2e, 0xe8dcc0], carries: 'a bow, a throwing stick' } }),
+
+  // Remoria: Castra Lupa and the First Furrow.
+  person({ id: 'corvinus_legate', name: 'Legate Gaius Vettius Corvinus', role: 'Commander of the Ninth, the Wolf-Sworn', empire: 'remoria', giver: true,
+    home: { area: 'north', x: 32, z: 334, facing: Math.PI },
+    look: { body: 'm', build: 'spare', colours: [0x8c2f2f, 0xc9c9c9], carries: 'a wax tablet and a sealed order' } }),
+  person({ id: 'veranius_augur', name: 'Augur Decimus Veranius', role: 'Reader of signs to the Ninth', empire: 'remoria',
+    home: { area: 'north', x: -252, z: 406, facing: Math.PI * 0.5 },
+    look: { body: 'elder_m', build: 'thin', colours: [0xf2f2f2, 0x6b3a8c], carries: 'a curved augur staff' } }),
+  person({ id: 'courier_dexter', name: 'Marcus Dexter', role: 'Senate courier', empire: 'remoria',
+    look: { body: 'm', build: 'wiry', colours: [0x6b4a2e, 0x8c2f2f], carries: 'a sealed case on a strap' } }),
 ]);
 
 const BY_ID = new Map(THREE_ROADS_CAST.map(entry => [entry.id, entry]));
 
 export const threeRoadsPerson = id => BY_ID.get(id) || null;
 
-// Who stands in this scene without being brought in by a pledge.
-export function threeRoadsCastAtHome({ area = null, region = null } = {}) {
-  return THREE_ROADS_CAST.filter(entry => !entry.existing && entry.home &&
-    ((area && entry.home.area === area) || (region && entry.home.region === region)));
+// Where a person's main home is given the story so far. `flags` are the quest
+// store's story flags; a person with `homeAfter` moves (or leaves: home null)
+// once that flag is set.
+export function threeRoadsHomeOf(entry, flags = {}) {
+  if (!entry) return null;
+  if (entry.homeAfter && flags && flags[entry.homeAfter.flag]) return entry.homeAfter.home || null;
+  return entry.home || null;
+}
+
+// Who stands in this scene without being brought in by a pledge. Each result
+// is the person with `home` already resolved for these flags and this scene
+// (their main home, or the `alsoAt` entry that lies in it).
+export function threeRoadsCastAtHome({ area = null, region = null, flags = {} } = {}) {
+  const here = home => !!home && ((area && home.area === area) || (region && home.region === region));
+  const result = [];
+  for (const entry of THREE_ROADS_CAST) {
+    if (entry.existing) continue;
+    const home = [threeRoadsHomeOf(entry, flags), ...(entry.alsoAt || [])].find(here);
+    if (!home) continue;
+    result.push(home === entry.home ? entry : Object.freeze({ ...entry, home }));
+  }
+  return result;
 }

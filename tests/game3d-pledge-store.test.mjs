@@ -10,6 +10,7 @@ import { applyAXEQuestEventProgress } from '../src/components/game3d/axe/quests/
 import {
   FERRY_CRATE, ORCHARD_WATCH, STRAY_CALF, ferryCrateEvents, orchardWatchEvents,
 } from './game3d-pledge-fixtures.mjs';
+import { EXAMPLE_CLAIM, EXAMPLE_EVENTS, EXAMPLE_PLEDGE } from './game3d-pledge-worked-example.mjs';
 
 // A browser-like place for the store to live in: storage, and a window that
 // carries the events world hooks dispatch.
@@ -34,6 +35,8 @@ const bundle = buildSync({
       export * as model from './pledges/pledgeModel.mjs';
       export * as outcome from './pledges/pledgeOutcome.mjs';
       export * as claim from './pledges/pledgeClaim.mjs';
+      export * as progress from './pledges/pledgeProgress.mjs';
+      export * as standings from './pledges/pledgeStandings.mjs';
       export { setStorageUser } from './characterStorage.jsx';
     `,
   },
@@ -409,4 +412,64 @@ test('the store has no import cycle with the quest data and no pledge content of
   }
   assert.doesNotMatch(read('questData.jsx'), /pledge/i);
   assert.doesNotMatch(read('GameWorld3D.jsx'), /pledges\//);
+});
+
+test('the worked example of PLEDGE_ENGINE.md: from accept to the completion claim', () => {
+  freshCharacter();
+  const pledge = model.definePledge(EXAMPLE_PLEDGE);
+  registry.registerPledges('example', [pledge]);
+  const patrol = AXE_QUESTS.find((entry) => entry.id === 'axe_q_first_patrol');
+  store.acceptQuest(patrol.id); // an older kill quest, sworn beside it
+  assert.deepEqual(store.acceptQuest(pledge.id), { ok: true });
+
+  const stepIds = pledge.pledge.steps.map((step) => step.id);
+  const announced = [];
+  let previous = store.getQuestState().objectiveProgress[pledge.id];
+  for (const { on, detail, after } of EXAMPLE_EVENTS) {
+    dispatch(on, detail);
+    const now = store.getQuestState().objectiveProgress[pledge.id];
+    assert.deepEqual(stepIds.map((id) => now[id]), after, JSON.stringify(detail));
+    const changes = game.progress.getPledgeStepChanges(pledge, previous, now);
+    announced.push(...changes.done.map((id) => 'done ' + id), ...changes.failed.map((id) => 'failed ' + id),
+      ...changes.started.map((id) => 'started ' + id), ...(changes.ready ? ['ready'] : []));
+    previous = now;
+  }
+  // What a watcher would announce on the bus, in order.
+  assert.deepEqual(announced, [
+    'done ask', 'started reach_mill',
+    'done reach_mill', 'started clear_rats',
+    'done clear_rats', 'started haul', 'started ring_bell',
+    'failed haul',
+    'done ring_bell',
+    'done haul', 'started whose',
+    'done whose', 'started hand_over',
+    'done hand_over', 'ready',
+  ]);
+  // The kills went on the pledge-only channel, so the older kill quest did not count them.
+  assert.equal(store.getQuestState().objectiveProgress[patrol.id].patrol_kills, 0);
+
+  let state = store.getQuestState();
+  assert.equal(state.choices['example_mill_sacks:whose'], 'camp');
+  assert.equal(state.storyFlags.example_sacks_to_camp, true);
+  assert.equal(state.storyFlags.example_sacks_to_farm, false);
+  assert.deepEqual(game.claim.buildPledgeCompletionClaim(pledge, state), EXAMPLE_CLAIM);
+  assert.deepEqual(game.standings.getPledgeStandingRequest(pledge, 'bent', state), { renown: 3, trust: -1, regard: 1 });
+
+  assert.deepEqual(store.completeQuest(pledge.id), { ok: true });
+  state = store.getQuestState();
+  assert.equal(game.outcome.getPledgeOutcome(pledge.id, state), 'bent');
+  assert.equal(state.storyFlags['pledge:example_mill_sacks:bent'], true);
+  assert.equal(state.storyFlags.example_mill_done, true);
+});
+
+test('the same kill sent on axeQuestEvent would also count for the older AXE kill quests', () => {
+  freshCharacter();
+  const pledge = model.definePledge(EXAMPLE_PLEDGE);
+  registry.registerPledges('example', [pledge]);
+  const patrol = AXE_QUESTS.find((entry) => entry.id === 'axe_q_first_patrol');
+  store.acceptQuest(patrol.id);
+  store.acceptQuest(pledge.id);
+  dispatch('axeQuestEvent', { type: 'enemy_killed', targetId: 'example_mill_rats', placeId: 'P09', kind: 'example_rat', tier: 'normal', count: 1 });
+  // This is how the bridge has always treated AXE quests; it is why kills belong on axePledgeEvent.
+  assert.equal(store.getQuestState().objectiveProgress[patrol.id].patrol_kills, 1);
 });
