@@ -10,6 +10,7 @@
 import * as THREE from 'three';
 import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
 import { secondHandAt } from './secondHand.mjs';
+import { classMotionBlend } from './classMotionBlend.mjs';
 
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
@@ -36,7 +37,10 @@ export const STANCES = Object.freeze({
 // fighter during one: core/cuts.mjs). Such a clip, and each walking loop, is two actions: the legs (hips and down)
 // and the rest. Standing still, the cut's own legs show; moving, the walk's.
 const LEGS = /mixamorig(Hips|(Left|Right)(UpLeg|Leg|Foot|ToeBase|Toe_End))./;
-export const LAYERED = /^(sword(Cut|Backhand|Recoil)|blades(Cut|Recoil)|staff(Cut|Recoil)|pushThrust)/;
+// Keep the weapon's guard on torso and arms while the legs continue the authoritative
+// locomotion pose. Standing guard retains the original clip's lower-body foot plant.
+// This is visual layering only: block angle, stamina, parry and hit checks remain server-owned.
+export const LAYERED = /^(sword(Cut|Backhand|Recoil|Block)|blades(Cut|Recoil|Guard)|staff(Cut|Recoil|Guard)|pushThrust)/;
 // A parried cut is thrown back: the recoil clip is shown from where the blade is already in front (the seconds of
 // its lead-in: tools/duelist/blender/cut_grid.py RECOIL_MODE wind), for a parry within CLASH seconds of the stagger.
 const RECOIL_FROM = 0.07;
@@ -113,6 +117,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   // What shows over the base now: { clip, time, fade, out } or null.
   function choose(fighter, body, now, dt, working, clash) {
     const a = fighter.action;
+    const blend = classMotionBlend(fighter.classId);
     if (fighter.vitals.dead) {
       if (deathStart === null) deathStart = elapsed;
       settle = null;
@@ -170,7 +175,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
         if (clip) return { clip: evasion.clip, time: Math.min(clip.duration - 1e-3, (a.t / a.move.duration) * clip.duration), fade: 0.05 };
       }
       const at = clipAt(a.id, a.t);
-      if (at && library[at.clip]) return { clip: at.clip, time: at.time, fade: a.chainedFrom ? 0.06 : FADE.in };
+      if (at && library[at.clip]) return { clip: at.clip, time: at.time, fade: a.chainedFrom ? blend.chain : blend.entry };
       if (library[a.id]) return { clip: a.id, time: Math.min(library[a.id].duration - 1e-3, a.t) };
     }
     if (!a && airborne && library.jumpLoop) {
@@ -191,11 +196,11 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
       const clip = library[settle.clip];
       settle.time += dt;
       if (fighter.guard || (body.speed || 0) > 0.6 || !clip || settle.time >= clip.duration - 1e-3) settle = null;
-      else return { clip: settle.clip, time: settle.time, fade: FADE.in, out: FADE.settleOut };
+      else return { clip: settle.clip, time: settle.time, fade: blend.entry, out: blend.settle };
     }
     if (fighter.guard && library[guardName]) {
       // hold the block, breathing a little
-      return { clip: guardName, time: 0.36 + 0.1 * (0.5 - 0.5 * Math.cos(elapsed * 2.4)), fade: 0.06 };
+      return { clip: guardName, time: 0.36 + 0.1 * (0.5 - 0.5 * Math.cos(elapsed * 2.4)), fade: blend.guard };
     }
     return null;
   }
@@ -206,7 +211,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     elapsed += dt;
     const want = choose(fighter, body, now, dt, working, clash);
     lastAction = fighter.action;
-    let outRate = 1 / FADE.out;
+    let outRate = 1 / classMotionBlend(fighter.classId).out;
     if (want) {
       const entry = actionFor(want.clip);
       if (entry) { entry.action.time = want.time; if (entry.legs) entry.legs.time = want.time; }
