@@ -376,3 +376,27 @@ test('three travellers follow the player 150 m up the main road and keep up', as
   }
   w.cast.dispose();
 });
+
+test('cast:locate answers with a standing person\'s current position and leaves others alone', async () => {
+  const w = makeWorld();
+  w.bus.emit('cast:spawn', { id: 'traveller_tome', x: 30, z: -40 });
+  const early = { id: 'traveller_tome', x: null, z: null, found: false };
+  w.bus.emit('cast:locate', early);
+  assert.deepEqual(early, { id: 'traveller_tome', x: null, z: null, found: false }, 'not standing yet');
+  await settle(w.cast);
+  w.bus.emit('cast:moveTo', { id: 'traveller_tome', x: 30, z: -30, speed: 2 });
+  for (let t = 0; t < 2; t += 0.1) w.cast.update(0.1, { x: 100, z: 100 });
+  const q = { id: 'traveller_tome', x: null, z: null, found: false };
+  w.bus.emit('cast:locate', q);
+  const tome = w.cast.status().people.find(p => p.id === 'traveller_tome');
+  assert.equal(q.found, true);
+  assert.ok(Math.abs(q.x - tome.at.x) < 0.01 && Math.abs(q.z - tome.at.z) < 0.01);
+  assert.ok(q.z > -40 && q.z < -30, 'mid-walk: ' + q.z);
+  const nobody = { id: 'archer_lyra', x: null, z: null, found: false };
+  w.bus.emit('cast:locate', nobody);
+  assert.deepEqual(nobody, { id: 'archer_lyra', x: null, z: null, found: false });
+  w.cast.dispose();
+  const after = { id: 'traveller_tome', x: null, z: null, found: false };
+  w.bus.emit('cast:locate', after);
+  assert.equal(after.found, false, 'no answer after dispose');
+});

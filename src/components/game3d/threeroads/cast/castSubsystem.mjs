@@ -862,6 +862,18 @@ export function createCastSubsystem(ctx, deps = {}) {
     offs.push(bus.on('cast:moveTo', d => api.moveTo(d)));
     offs.push(bus.on('cast:follow', d => api.follow(d)));
     offs.push(bus.on('cast:say', d => api.say(d)));
+    // A synchronous question from the pledge world (escorts, a choice beside its
+    // giver, a trail target): query = { id, x: null, z: null, found: false }. For
+    // one of this scene's people who stands on the ground, set the current world
+    // position and found = true; for anyone else leave the query alone.
+    offs.push(bus.on('cast:locate', query => {
+      const actor = query && actors.get(query.id);
+      if (!actor || actor.state !== 'ready') return;
+      query.x = actor.x;
+      query.z = actor.z;
+      query.y = actor.y;
+      query.found = true;
+    }));
   }
 
   // ─── people at home, by the story so far ───
