@@ -1,6 +1,6 @@
 # Valley kit (The War of Three Roads)
 
-Builds `public/game3d/threeroads/kits/valley.glb`: the 37 pieces of
+Builds `public/game3d/threeroads/kits/valley.glb`: the pieces (38 today) of
 `src/components/game3d/threeroads/kits/valleyKitPieces.mjs`, each as `<id>_LOD0` and `<id>_LOD1`,
 one 2048 WebP atlas, materials `valley_lit` and `valley_glow` (emissive, same atlas).
 Every mesh is fitted to its table size and pivot; node transforms are identity.

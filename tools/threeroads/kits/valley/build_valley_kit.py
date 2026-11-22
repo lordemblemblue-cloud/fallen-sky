@@ -117,7 +117,7 @@ def main():
     t0 = time.time()
     opt = parse_args()
     rows = read_table()
-    assert len(rows) == 37, f'expected 37 pieces in the table, found {len(rows)}'
+    assert set(r['id'] for r in rows) == set(pieces.BUILDERS), 'the piece table and pieces.py disagree'
     if opt['only']:
         rows = [r for r in rows if r['id'] in opt['only']]
     clear_scene()

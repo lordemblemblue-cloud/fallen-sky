@@ -23,7 +23,7 @@ BOX_KEYS = {
     'lantern_post': 'timber', 'paper_lantern': 'paper_glow', 'gate_bell': 'bronze', 'straw_post': 'straw',
     'studio_frame': 'timber', 'paper_screen': 'paper', 'old_standard': 'iron', 'cairn': 'stone_dk',
     'pyre_stack': 'timber_old', 'stela': 'old_stone', 'grave_stone': 'old_stone', 'barrow_mound': 'grass',
-    'barrow_door': 'old_stone', 'fire_basket': 'iron_dk', 'fire_basket_flame': 'flame',
+    'barrow_door': 'old_stone', 'fire_basket': 'iron_dk', 'fire_basket_flame': 'flame', 'oath_tree': 'leaf',
 }
 
 
@@ -833,5 +833,62 @@ def fire_basket_flame(B, r):
             B.lathe([(0.08, 0.0), (0.0, 0.4)], 4, 'flame', m=m, smooth=False)
 
 
+def oath_tree(B, r):
+    """The Oath Tree: an old broad tree, short thick trunk, limbs from 2.4 m,
+    a rope ring with paper tassels at head height, a crown of big leaf masses."""
+    hi = L0(B)
+    segs = 10 if hi else 6
+    if hi:
+        prof = [(1.0, 0.0), (0.86, 0.3), (0.78, 0.8), (0.73, 1.5), (0.72, 2.1), (0.7, 2.45), (0.56, 3.0), (0.4, 3.6),
+                (0.0, 3.75)]
+    else:
+        prof = [(0.98, 0.0), (0.74, 0.9), (0.7, 2.4), (0.42, 3.5), (0.0, 3.7)]
+    B.lathe(prof, segs, 'bark', jitter=0.07 if hi else 0.03, phase=0.2)
+    # root buttresses
+    nroot = 6 if hi else 4
+    for k in range(nroot):
+        a = TAU * k / nroot + 0.35
+        c, s = math.cos(a), -math.sin(a)
+        B.limb((c * 0.5, 0.75, s * 0.5), (c * 1.45, -0.05, s * 1.45), 0.26, 0.08, 6 if hi else 4, 'bark', smooth=False)
+    # heavy limbs from 2.4 m, then secondary branches into the crown
+    limbs = [(0.3, 3.3, 5.0), (1.85, 3.0, 5.3), (3.3, 3.2, 4.9), (4.9, 3.1, 5.2)]
+    for i, (a, rr, y) in enumerate(limbs):
+        c, s = math.cos(a), -math.sin(a)
+        start = (c * 0.35, 2.4 + 0.15 * (i % 2), s * 0.35)
+        end = (c * rr, y, s * rr)
+        B.limb(start, end, 0.42, 0.2, 8 if hi else 5, 'bark', mid=0.3)
+        if hi:
+            for da, dr, dy in ((0.35, 1.2, 1.2), (-0.4, 1.0, 1.6)):
+                c2, s2 = math.cos(a + da), -math.sin(a + da)
+                B.limb(end, (end[0] + c2 * dr, end[1] + dy, end[2] + s2 * dr), 0.18, 0.08, 6, 'bark')
+    B.limb((0, 3.4, 0), (0.2, 6.8, -0.1), 0.38, 0.14, 8 if hi else 5, 'bark')
+    # rope ring at head height with paper tassels
+    if hi:
+        B.ring((0, 1.7, 0), 0.7, 0.82, 0.12, 14, 'rope', phase=0.1)
+        for k in range(4):
+            a = TAU * k / 4 + 0.6
+            c, s = math.cos(a), -math.sin(a)
+            q = []
+            for (dy, w) in ((0.0, 0.08), (-0.18, 0.1), (-0.36, 0.08)):
+                for t in (-1, 1):
+                    q.append((c * 0.83 + s * w * t, 1.7 + dy, s * 0.83 - c * w * t))
+                    q.append((c * 0.86 + s * w * t, 1.7 + dy, s * 0.86 - c * w * t))
+            B.hull(q, 'paper')
+    else:
+        B.ring((0, 1.7, 0), 0.68, 0.8, 0.12, 6, 'rope', smooth=False)
+    # the crown: a dome of big masses, underside about 4.4 m
+    n = 60 if hi else 22
+    blobs = [((0.0, 9.0, 0.0), (3.3, 2.0, 3.3), 'leaf')]
+    for k in range(6):
+        a = TAU * k / 6 + 0.25
+        blobs.append(((math.cos(a) * 3.0, 7.4 + 0.3 * (k % 2), -math.sin(a) * 3.0), (2.15, 1.45, 2.15), 'leaf'))
+    lower = 5 if hi else 3
+    for k in range(lower):
+        a = TAU * k / lower + 0.9
+        blobs.append(((math.cos(a) * 3.5, 6.0, -math.sin(a) * 3.5), (1.55, 1.05, 1.55), 'leaf_dk'))
+    for (cpos, rad, col) in blobs:
+        B.rock(cpos, rad, col, n=n, smooth=True, flat_bottom=False)
+
+
 BUILDERS = {name: fn for name, fn in globals().items() if callable(fn) and name in BOX_KEYS}
-assert len(BUILDERS) == 37, sorted(set(BOX_KEYS) - set(BUILDERS))
+assert len(BUILDERS) == 38, sorted(set(BOX_KEYS) - set(BUILDERS))

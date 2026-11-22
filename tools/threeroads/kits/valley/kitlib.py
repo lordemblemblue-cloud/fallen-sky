@@ -51,6 +51,9 @@ PALETTE = {
     'dark': (0.10, 0.09, 0.08),
     'honey': (0.68, 0.52, 0.26),
     'rope': (0.62, 0.53, 0.38),
+    'bark': (0.31, 0.27, 0.23),
+    'leaf': (0.29, 0.40, 0.21),
+    'leaf_dk': (0.20, 0.30, 0.17),
 }
 PALETTE_KEYS = list(PALETTE.keys())
 
@@ -199,11 +202,21 @@ class Builder:
         prof = [(r_in, 0), (r_out, 0), (r_out, h), (r_in, h), (r_in, 0)]
         return self.lathe(prof, segs, col, mm, smooth, cols=cols, cap=False, phase=phase)
 
+    def limb(self, p0, p1, r0, r1, segs, col, smooth=True, mid=None):
+        """A tapered round branch from p0 to p1 (optionally bent through a mid radius)."""
+        a, b = Vector(p0), Vector(p1)
+        d = b - a
+        rot = Vector((0, 1, 0)).rotation_difference(d.normalized()).to_matrix().to_4x4()
+        m = Matrix.Translation(a) @ rot
+        L = d.length
+        prof = [(r0, 0.0), (r1, L)] if mid is None else [(r0, 0.0), (mid, L * 0.5), (r1, L)]
+        return self.lathe(prof, segs, col, m, smooth)
+
     def hull(self, points, col, m=None, smooth=False):
         bm = self.bm
         vs = [bm.verts.new((m @ Vector(p)) if m is not None else Vector(p)) for p in points]
         res = bmesh.ops.convex_hull(bm, input=vs, use_existing_faces=False)
-        drop = [g for g in res['geom_interior'] + res['geom_unused'] if isinstance(g, bmesh.types.BMVert)]
+        drop = list({g for g in res['geom_interior'] + res['geom_unused'] if isinstance(g, bmesh.types.BMVert)})
         faces = [g for g in res['geom'] if isinstance(g, bmesh.types.BMFace)]
         if drop:
             bmesh.ops.delete(bm, geom=drop, context='VERTS')

@@ -182,7 +182,7 @@ def colour_material(key, img):
     wz = K.sep(world.outputs['Position'], 2)
     nz = K.sep(world.outputs['Normal'], 2)
 
-    if key.startswith('timber'):
+    if key.startswith('timber') or key == 'bark':
         wave = K.node('ShaderNodeTexWave', wave_type='BANDS', bands_direction='Z')
         wave.inputs['Scale'].default_value = 2.2
         wave.inputs['Distortion'].default_value = 6.0
@@ -191,8 +191,8 @@ def colour_material(key, img):
         dark = K.scale_col(base, 0.72)
         c = K.mix(K.math('MULTIPLY', wave.outputs['Fac'], 0.55), base, dark)
         c = _jitter(K, c, 1.6, 0.12)
-    elif key in ('thatch', 'thatch_dk', 'straw', 'hedge', 'grass', 'honey'):
-        streak = K.noise(1.0, K.coords((16, 16, 2.5) if key != 'grass' else (1.2, 1.2, 1.2)), detail=3, rough=0.6)
+    elif key in ('thatch', 'thatch_dk', 'straw', 'hedge', 'grass', 'honey', 'leaf', 'leaf_dk'):
+        streak = K.noise(1.0, K.coords((16, 16, 2.5) if key not in ('grass', 'leaf', 'leaf_dk') else (1.2, 1.2, 1.2)), detail=3, rough=0.6)
         light = K.scale_col(base, 1.18)
         dark = K.scale_col(base, 0.68)
         c = K.mix(K.ramp(streak, 0.35, 0.7), dark, light)
@@ -200,7 +200,7 @@ def colour_material(key, img):
             dry = K.rgb(lin((0.55, 0.52, 0.32)))
             patch = K.ramp(K.noise(0.35, K.coords(), detail=2), 0.52, 0.68)
             c = K.mix(K.math('MULTIPLY', patch, 0.55), c, dry)
-        if key == 'hedge':
+        if key in ('hedge', 'leaf', 'leaf_dk'):
             lighttop = K.ramp(nz, 0.2, 0.9)
             c = K.mix(K.math('MULTIPLY', lighttop, 0.35), c, K.scale_col(base, 1.35))
     elif key in ('stone', 'stone_dk', 'old_stone'):
