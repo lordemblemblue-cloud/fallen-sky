@@ -106,6 +106,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
   return {
     id: f.id, tm: f.team || 0,
     p: [r3(body.x), r3(body.y), r3(body.z), r3(body.yaw)], sp: r2(body.speed || 0),
+    flight: body.jumped ? [body.airJumpAt ?? null] : null,
     md: body.motion?.dir ? [r3(body.motion.dir.x), r3(body.motion.dir.z)] : 0,
     a: a ? [a.id, r3(a.t), a.chainedFrom ? 1 : 0, a.held ? 1 : 0] : 0,
     v: [r2(v.hp), r2(v.will), r2(v.stamina), r2(v.shield), (v.collapsed ? FLAG_BITS.collapsed : 0) | (v.winded ? FLAG_BITS.winded : 0) | (v.dead ? FLAG_BITS.dead : 0)],
@@ -158,6 +159,8 @@ export function applyFighter(world, data, makeFighter, makeBody) {
     f.action.seenAt = data.seenAt;
   } else f.action = null;
   const [x, y, z, yaw] = data.p;
+  b.jumped = !!data.flight;
+  b.airJumpAt = data.flight?.[0] ?? null;
   b.target = { x, y, z, yaw };
   b.speed = data.sp;
   b.moving = data.sp > 0.1;
@@ -198,7 +201,7 @@ export function encodeOwn(f, body, time) {
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
-      Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
+      Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null, body.airJumpAt ?? null],
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
@@ -243,7 +246,7 @@ export function applyOwn(f, body, data) {
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
-    jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
+    airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
     airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }

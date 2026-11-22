@@ -1,8 +1,6 @@
-// Simple test markers for Three-Point Control. These are NOT an authored map:
-// positions come from the server match rules and can later be supplied by the
-// finished maps without changing the scoring or capture code.
 /* global document */
 import * as THREE from 'three';
+import { createControlObservatory } from './controlObservatory.mjs';
 import { CONTROL } from '../sim/control.mjs';
 
 const COLORS = Object.freeze({ neutral: 0xb6cad6, red: 0xff746c, blue: 0x69b9ff });
@@ -29,9 +27,18 @@ function makeLabel(letter) {
   return { sprite, texture, material };
 }
 
-export function createControlProps(scene) {
+export function createControlProps(scene, radius) {
   const group = new THREE.Group();
   const resources = [];
+  group.name = 'Meridian Observatory';
+  const layPaths = createControlObservatory(group, radius, resources);
+  const beacon = new THREE.OctahedronGeometry(0.30);
+  resources.push(beacon);
+  const plate = new THREE.CylinderGeometry(CONTROL.radius, CONTROL.radius, 0.04, 12);
+  const deck = new THREE.MeshStandardMaterial({ color: 0x243b50, metalness: 0.48, roughness: 0.58 });
+  const dial = new THREE.RingGeometry(1.06, 1.19, 12);
+  const brass = new THREE.MeshBasicMaterial({ color: 0xceb47c });
+  resources.push(plate, deck, dial, brass);
   const points = new Map();
   for (const id of CONTROL.pointIds) {
     const ringMaterial = new THREE.MeshBasicMaterial({
@@ -46,22 +53,43 @@ export function createControlProps(scene) {
     resources.push(marker.texture, marker.material);
     marker.sprite.position.y = 3.1;
     const anchor = new THREE.Group();
-    anchor.add(ring, marker.sprite);
+    const base = new THREE.Mesh(plate, deck);
+    base.position.y = 0.012;
+    const centre = new THREE.Mesh(dial, brass);
+    centre.rotation.x = -Math.PI / 2;
+    centre.position.y = 0.05;
+    const progress = new THREE.RingGeometry(CONTROL.radius - 0.48, CONTROL.radius - 0.26, 64);
+    progress.rotateX(-Math.PI / 2);
+    const fill = new THREE.MeshBasicMaterial();
+    resources.push(progress, fill);
+    const arc = new THREE.Mesh(progress, fill);
+    arc.position.y = 0.052;
+    const beaconLight = new THREE.MeshBasicMaterial({ color: COLORS.neutral });
+    resources.push(beaconLight);
+    const prism = new THREE.Mesh(beacon, beaconLight);
+    prism.scale.y = 1.55;
+    prism.position.y = 2.27;
+    anchor.add(base, centre, arc, ring, prism, marker.sprite);
     group.add(anchor);
-    points.set(id, { anchor, ringMaterial });
+    points.set(id, { anchor, ringMaterial, progress, fill, beaconLight });
   }
   scene.add(group);
   return {
     update(state = []) {
       const byId = new Map(state?.map(point => [point.id, point]) || []);
-      for (const [id, { anchor, ringMaterial }] of points) {
+      group.visible = byId.size > 0;
+      layPaths(CONTROL.pointIds.map(id => byId.get(id)));
+      for (const [id, { anchor, ringMaterial, progress, fill, beaconLight }] of points) {
         const point = byId.get(id);
         anchor.visible = !!point;
         if (!point) continue;
         anchor.position.set(point.x, 0, point.z);
         const color = point.owner === 'red' ? COLORS.red : point.owner === 'blue' ? COLORS.blue : COLORS.neutral;
-        ringMaterial.color.setHex(color);
-        ringMaterial.opacity = point.contested ? 0.35 : point.capturing ? 0.95 : 0.65;
+        ringMaterial.color.setHex(point.contested ? 0xffc65c : color);
+        beaconLight.color.copy(ringMaterial.color);
+        fill.color.setHex(COLORS[point.capturing] ?? COLORS.neutral);
+        progress.setDrawRange(0, 6 * Math.round(64 * Math.max(0, Math.min(1, point.progress || 0))));
+        ringMaterial.opacity = point.contested ? 0.95 : point.capturing ? 0.95 : 0.65;
       }
     },
     dispose() {

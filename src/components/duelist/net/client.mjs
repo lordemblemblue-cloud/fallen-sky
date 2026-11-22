@@ -401,8 +401,17 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         }
         const before = past.get(data.id) || data;
         // discrete state from the earlier snapshot (the moment shown), its action clock carried forward
-        const { f, b } = applyFighter(world, before, makeFighter, newBody);
-        if (f.action) f.action.t += Math.max(0, time - s0.time);
+        const sample = k === 1 ? data : before;
+        const { f, b } = applyFighter(world, sample, makeFighter, newBody);
+        if (f.action && k < 1 && before !== data) {
+          const next = data.a;
+          // The server clock includes stance speed, buffs and hit recovery.
+          if (next && next[0] === f.action.id && next[1] >= before.a[1]) {
+            f.action.t = before.a[1] + (next[1] - before.a[1]) * k;
+          } else {
+            f.action.t = Math.min(f.action.move.duration, before.a[1] + Math.max(0, time - s0.time));
+          }
+        }
         const [x0, y0, z0, yaw0] = before.p;
         const [x1, y1, z1, yaw1] = data.p;
         b.x = x0 + (x1 - x0) * k;

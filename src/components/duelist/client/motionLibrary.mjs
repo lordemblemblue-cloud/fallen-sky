@@ -52,6 +52,7 @@ export function describeRig(root) {
 /** The clip on the target rig (see the header). */
 export function retargetClip(clip, source, target, name = clip.name) {
   const tracks = [];
+  const inPlace = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'].includes(name);
   const scale = target.leg / Math.max(1e-6, source.leg);
   for (const track of clip.tracks) {
     const { nodeName, propertyName } = THREE.PropertyBinding.parseTrackName(track.name);
@@ -75,7 +76,10 @@ export function retargetClip(clip, source, target, name = clip.name) {
       const values = new Float32Array(track.values.length);
       const v = new THREE.Vector3();
       for (let i = 0; i < track.times.length; i++) {
-        v.fromArray(track.values, i * 3).sub(source.hipsRest).applyQuaternion(into).multiplyScalar(scale).applyQuaternion(outOf).add(target.hipsRest);
+        v.fromArray(track.values, i * 3).sub(source.hipsRest).applyQuaternion(into).multiplyScalar(scale);
+        // The simulation moves the body through the arena. Keep the tumble centred on it.
+        if (inPlace) { v.x = 0; v.z = 0; }
+        v.applyQuaternion(outOf).add(target.hipsRest);
         v.toArray(values, i * 3);
       }
       tracks.push(new THREE.VectorKeyframeTrack(`${t.node.name}.position`, track.times, values));
