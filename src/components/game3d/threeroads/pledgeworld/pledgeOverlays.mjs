@@ -50,7 +50,7 @@ export function createPledgeOverlays(win, {
 
   // ── Caption ──
   const caption = make('div', {
-    display: 'none', position: 'absolute', left: '50%', bottom: 'min(17rem, 46vh)', transform: 'translateX(-50%)',
+    display: 'none', position: 'absolute', left: '50%', bottom: 'min(17rem, 38vh)', transform: 'translateX(-50%)',
     width: 'max-content', maxWidth: 'min(680px, 92vw)', padding: '10px 18px', borderRadius: '14px',
     textAlign: 'center', background: 'rgba(10, 14, 22, 0.8)', backdropFilter: 'blur(14px) saturate(160%)',
     border: '1px solid rgba(255, 255, 255, 0.14)', boxShadow: '0 8px 28px rgba(0, 0, 0, 0.45)',
@@ -64,7 +64,7 @@ export function createPledgeOverlays(win, {
 
   // ── Prompt ──
   const prompt = make('div', {
-    display: 'none', position: 'absolute', left: '50%', bottom: 'min(13rem, 32vh)', transform: 'translateX(-50%)',
+    display: 'none', position: 'absolute', left: '50%', bottom: 'min(13rem, 27vh)', transform: 'translateX(-50%)',
     maxWidth: '92vw', padding: touch ? '14px 22px' : '10px 20px', borderRadius: '9999px', overflow: 'hidden',
     alignItems: 'center', gap: '8px', fontSize: '14px', whiteSpace: 'nowrap',
     background: 'rgba(15, 20, 30, 0.7)', backdropFilter: 'blur(14px) saturate(160%)',

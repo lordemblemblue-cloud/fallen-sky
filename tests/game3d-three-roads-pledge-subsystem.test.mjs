@@ -41,7 +41,7 @@ function makeStore(win, state = emptyQuestState()) {
   let current = state;
   const subscribers = new Set();
   const tell = () => { for (const fn of [...subscribers]) fn(current); };
-  win.addEventListener('axeQuestEvent', event => {
+  win.addEventListener('axePledgeEvent', event => {
     let changed = false;
     for (const pledge of threeRoadsPledges()) {
       if (!current.acceptedIds.includes(pledge.id)) continue;
@@ -113,7 +113,7 @@ function setup({ state, worldArea = 'town', region = 'wolfveil' } = {}) {
   };
   const kill = (groupId, placeId, times) => {
     for (let i = 0; i < times; i++)
-      win.dispatchEvent(new globalThis.CustomEvent('axeQuestEvent', { detail: { type: 'enemy_killed', targetId: groupId, placeId, kind: 'ink_shade', count: 1 } }));
+      win.dispatchEvent(new globalThis.CustomEvent('axePledgeEvent', { detail: { type: 'enemy_killed', targetId: groupId, placeId, kind: 'ink_shade', count: 1 } }));
     run(0.1);
   };
   return { win, store, bus, heard, subsystem, player, run, at, key, kill, of: type => heard.filter(entry => entry.type === type) };
@@ -144,7 +144,7 @@ test('Sworn at the Gate through the subsystem: keys, captions, the bus, the clai
   t.run(1.2);
   t.key('keyup');
   assert.equal(t.store.state.objectiveProgress[M01].oath, 1);
-  assert.equal(t.win.sent.filter(e => e.type === 'axeQuestEvent').length, 1);
+  assert.equal(t.win.sent.filter(e => e.type === 'axePledgeEvent').length, 1);
 
   // Nobody has been announced by the cast, so every line is a caption; the
   // bell has no sound file yet and is shown as a stage direction.
@@ -214,6 +214,10 @@ test('Sworn at the Gate through the subsystem: keys, captions, the bus, the clai
   assert.equal(claims[0].steps.every(step => step.done), true);
   assert.deepEqual(t.win.sent.filter(e => e.type === 'threeRoadsPledgeClaim').map(e => e.detail.pledgeId), [M01]);
   assert.equal('reward' in claims[0], false);
+
+  // Everything went to the pledges alone: the older quests hear nothing of it.
+  assert.equal(t.win.sent.filter(e => e.type === 'axeQuestEvent').length, 0);
+  assert.ok(t.win.sent.filter(e => e.type === 'axePledgeEvent').length >= 12);
 
   t.subsystem.dispose();
   assert.equal(t.win.listenerCount('keydown'), 0);

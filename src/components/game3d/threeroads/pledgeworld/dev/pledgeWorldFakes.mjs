@@ -84,7 +84,7 @@ export function installPledgeWorldFakes(threeRoads, {
         killed++;
         const detail = { type: 'enemy_killed', targetId: groupId, kind: group.kind, tier: group.tier, count: 1 };
         if (group.placeId) detail.placeId = group.placeId;
-        win.dispatchEvent(new win.CustomEvent('axeQuestEvent', { detail }));
+        win.dispatchEvent(new win.CustomEvent('axePledgeEvent', { detail }));
         bus.emit('enemies:defeated', { groupId, kind: group.kind, id: groupId + ':' + group.count, tier: group.tier });
         if (!group.count) { groups.delete(groupId); bus.emit('enemies:groupCleared', { groupId, kind: group.kind }); }
       }

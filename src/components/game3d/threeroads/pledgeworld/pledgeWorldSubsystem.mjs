@@ -22,13 +22,12 @@
 //       captions at the bottom of the screen.
 import { threeRoadsEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
-import { threeRoadsHomeOf, threeRoadsPerson } from '../script/cast.mjs';
 import { buildPledgeCompletionClaim } from '../../pledges/pledgeClaim.mjs';
 import { playPledgeLine, stopPledgeLine } from '../../pledges/voice/pledgeVoice.mjs';
 import { wolfveilAreaAtWorld } from '../../wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import { WOLFVEIL_TOWN_QUEST_NPC_SPOTS } from '../../wolfveil/WolfveilImportedTownLayout.mjs';
 import { installThreeRoadsPledges, removeThreeRoadsPledges } from './pledgeRegistration.mjs';
-import { empireOfFaction, pledgeLine, threeRoadsPledges } from './pledgeScript.mjs';
+import { empireOfFaction, pledgeHome, pledgeLine, threeRoadsPledges } from './pledgeScript.mjs';
 import { createPledgeInterpreter } from './pledgeInterpreter.mjs';
 import { createSpeechQueue } from './pledgeSpeech.mjs';
 import { createPledgeOverlays } from './pledgeOverlays.mjs';
@@ -38,6 +37,8 @@ import { setPledgeNavigationProvider } from './pledgeNavigation.mjs';
 // quest list again once the pledges are in it.
 export const PLEDGES_CHANGED_EVENT = 'threeRoadsPledgesChanged';
 export const PLEDGE_CLAIM_EVENT = 'threeRoadsPledgeClaim';
+// What the world reports to the quest store; reaches registered pledges only.
+export const PLEDGE_EVENT = 'axePledgeEvent';
 export const PLEDGE_SOUND_EVENT = 'threeRoadsSound';
 const CLAIMS_KEPT = 8;
 const LINES_KEPT = 40;
@@ -134,7 +135,7 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   function homeOf(id) {
     const spot = WOLFVEIL_TOWN_QUEST_NPC_SPOTS[id];
     if (spot) return spot;
-    const home = threeRoadsHomeOf(threeRoadsPerson(id), lastState?.storyFlags || {});
+    const home = pledgeHome(id, lastState?.storyFlags || {}, ctx.worldArea || null);
     if (!home) return null;
     const key = id + ':' + home.x + ':' + home.z;
     if (!homes.has(key)) homes.set(key, Object.freeze(localToWorld(home.x, home.z)));
@@ -195,7 +196,9 @@ export function createPledgeWorldSubsystem(ctx = {}, {
     say: lineId => speech.say(pledgeLine(lineId)),
     sound: playSound,
     setFlag: flag => { game?.setQuestStoryFlag(flag, true); },
-    report: detail => send('axeQuestEvent', detail),
+    // Pledge business only: on 'axeQuestEvent' the older kill, talk and
+    // discovery quests would hear it too (PLEDGE_ENGINE.md, section 5).
+    report: detail => send(PLEDGE_EVENT, detail),
     notice: kind => overlays.showNotice(PLEDGE_WORLD_NOTICES[kind] || '', clock()),
     speechBusy: () => speech.busy(),
   };

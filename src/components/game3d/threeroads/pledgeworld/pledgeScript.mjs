@@ -2,8 +2,15 @@
 // no DOM. The script itself (script/band1.mjs, script/cast.mjs) belongs to the
 // lead session and is only read here.
 import { definePledge } from '../../pledges/pledgeModel.mjs';
-import { BAND1_LINES, BAND1_PLEDGES, BAND1_POINTS, BAND1_STAGING } from '../script/band1.mjs';
-import { THREE_ROADS_EMPIRES, threeRoadsPerson } from '../script/cast.mjs';
+import { THREE_ROADS_BANDS, threeRoadsLine, threeRoadsPoint } from '../script/index.mjs';
+import { threeRoadsEmpireOfFaction, threeRoadsHomeOf, threeRoadsPerson } from '../script/cast.mjs';
+
+// The bands whose pledges are playable. Lines and points are read from every
+// band that has been written; only these bands' pledges are registered. Band 2
+// (the three camps) joins this list when its places and people are built and
+// its staging has been played through.
+export const PLAYABLE_BANDS = Object.freeze(['band1']);
+const playableBands = () => THREE_ROADS_BANDS.filter(band => PLAYABLE_BANDS.includes(band.id));
 
 // The name this set of pledges is registered under (pledgeRegistry.mjs).
 export const THREE_ROADS_PLEDGE_SOURCE = 'three-roads-band1';
@@ -13,7 +20,7 @@ let defined = null;
 // The pledges of the opening, validated once. The same frozen objects are
 // handed out every time, so a remount never makes a second copy of a pledge.
 export function threeRoadsPledges() {
-  if (!defined) defined = Object.freeze(BAND1_PLEDGES.map(raw => definePledge(raw)));
+  if (!defined) defined = Object.freeze(playableBands().flatMap(band => band.pledges.map(raw => definePledge(raw))));
   return defined;
 }
 
@@ -21,13 +28,16 @@ export function threeRoadsPledge(pledgeId) {
   return threeRoadsPledges().find(pledge => pledge.id === pledgeId) || null;
 }
 
-export const pledgeStaging = pledgeId => BAND1_STAGING[pledgeId] || null;
-export const pledgePointLocal = name => BAND1_POINTS[name] || null;
+export function pledgeStaging(pledgeId) {
+  for (const band of playableBands()) if (band.staging[pledgeId]) return band.staging[pledgeId];
+  return null;
+}
+export const pledgePointLocal = name => threeRoadsPoint(name);
 
 // A line ready to show: who says it (id and name) and the words. A line id the
 // script does not have comes back as a visible placeholder, never as silence.
 export function pledgeLine(lineId) {
-  const entry = BAND1_LINES[lineId];
+  const entry = threeRoadsLine(lineId);
   if (!entry) return Object.freeze({ lineId, speaker: null, speakerName: '', text: '[line: ' + lineId + ']', missing: true });
   return Object.freeze({
     lineId,
@@ -43,12 +53,20 @@ export const pledgePersonName = id => threeRoadsPerson(id)?.name || null;
 // 'akitsu' | 'remoria' | 'tameri' for a character of that faction, otherwise
 // 'none' (the mapping is the cast file's: AXE_Faction_1 is Akitsu, _2 Remoria,
 // _3 Tameri).
-export function empireOfFaction(factionId) {
-  if (!factionId) return 'none';
-  for (const empire of Object.values(THREE_ROADS_EMPIRES)) {
-    if (empire.factionId && empire.factionId === factionId) return empire.id;
+export const empireOfFaction = factionId => (factionId ? threeRoadsEmpireOfFaction(factionId) : 'none');
+
+// Where a person normally stands, in LOCAL metres: the place they have in
+// `area` if the cast table gives them one there, otherwise their main home
+// for the story so far. Null for someone only a pledge brings in.
+export function pledgeHome(id, flags = {}, area = null) {
+  const person = threeRoadsPerson(id);
+  if (!person) return null;
+  const home = threeRoadsHomeOf(person, flags);
+  if (area && home?.area !== area) {
+    const other = (person.alsoAt || []).find(entry => entry.area === area);
+    if (other) return other;
   }
-  return 'none';
+  return home;
 }
 
 // The lines of the offer and of the ending, for the dialogue box. The ending

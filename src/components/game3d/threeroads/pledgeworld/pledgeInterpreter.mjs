@@ -7,7 +7,7 @@
 //   world.say(lineId)         speak a line of the script
 //   world.sound(name)         play a named sound
 //   world.setFlag(flag)       set a story flag
-//   world.report(detail)      an engine event (the window event axeQuestEvent)
+//   world.report(detail)      an engine event (the window event axePledgeEvent)
 //   world.notice(kind)        tell the player a step has to be started again
 //   world.speechBusy()        true while a line is still being spoken
 //
