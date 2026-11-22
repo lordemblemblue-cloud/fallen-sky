@@ -140,3 +140,41 @@ test('wire accepts only boolean held state, and private snapshots carry enough f
     'client prediction replays exactly the server-owned hold clock after snapshots');
   assert.equal(bodyOf(server, 'hero').heldJump?.stage, bodyOf(mirror, 'hero').heldJump?.stage);
 });
+
+
+test('rebindable Space input holds until release, and pausing/blur never leave jump charging', async () => {
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  const browser = new EventTarget();
+  const canvas = new EventTarget();
+  globalThis.window = browser;
+  globalThis.document = { pointerLockElement: canvas, exitPointerLock() {} };
+  const { createControls } = await import('../src/components/duelist/client/controls.mjs');
+  const controls = createControls(canvas);
+  const send = (type, code, repeat = false) =>
+    browser.dispatchEvent(Object.assign(new Event(type, { cancelable: true }), { code, repeat }));
+  try {
+    send('keydown', 'Space');
+    const first = controls.read();
+    assert.equal(first.jumpHeld, true);
+    assert.deepEqual(first.presses, ['jump'], 'one press starts immediate takeoff');
+    send('keydown', 'Space', true);
+    const held = controls.read();
+    assert.equal(held.jumpHeld, true);
+    assert.ok(!held.presses.includes('jump'), 'keyboard repeats cannot double-jump');
+    send('keyup', 'Space');
+    assert.equal(controls.read().jumpHeld, false, 'release reaches the next simulation tick');
+    send('keydown', 'Space');
+    browser.dispatchEvent(new Event('blur'));
+    assert.equal(controls.read().jumpHeld, false, 'focus loss safely cuts the upward hold');
+    send('keydown', 'Space');
+    controls.setPaused(true);
+    assert.equal(controls.read().jumpHeld, false, 'opening a menu cancels held ascent');
+  } finally {
+    controls.dispose();
+    if (previousWindow === undefined) delete globalThis.window;
+    else globalThis.window = previousWindow;
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
+});
