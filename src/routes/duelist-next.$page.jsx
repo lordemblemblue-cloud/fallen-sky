@@ -1,10 +1,11 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router';
-import { ModePage, JoinPage } from '@/components/duelist/menu/MenuPages';
+import { ModePage } from '@/components/duelist/menu/MenuPages';
+import OnlinePlayPage from '@/components/duelist/menu/OnlinePlayPage';
 import DuelistTemplateHub from '@/components/duelist/menu/DuelistTemplateHub';
 import { MENU_MODES } from '@/components/duelist/menu/modes';
 
 // One page per mode (practice, duel, ffa, tdm, ctf), plus Join, fighter, settings and the story mission.
-const PAGES = { join: JoinPage };
+const PAGES = { join: OnlinePlayPage, 'online-play': OnlinePlayPage };
 
 function DuelistMenuPage() {
   const { page } = Route.useParams();
