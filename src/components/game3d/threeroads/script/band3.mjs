@@ -63,7 +63,7 @@ export const BAND3_POINTS = Object.freeze({
   // West: the path's end below the Jade Lantern Grotto (P44). Captain Arlen stands 4 m on.
   jade_gate: point(-349, -386),
   // West: the Wind-Carved Wolf Stones (P18). The game's own camp of echoes lives here
-  // (spawns at -338,230  -324,222  -314,243); the cairn stands 25 m clear of all three.
+  // (three spawns round the stones); the cairn stands 25 m clear of them, and a test keeps every spoken spot 18 m clear.
   echo_approach: point(-322, 198),
   echo_touch: point(-327, 233),
   echo_stand: point(-323, 229),
