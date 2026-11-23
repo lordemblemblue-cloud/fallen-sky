@@ -67,6 +67,9 @@ export function verifySameBrowserDocument(before, after, targetUrl) {
 
 export function classifySamplePair(first, last) {
   const fail = (reason) => ({ ok: false, reason });
+  // Imported/CDP samples are untrusted. Revoked Proxies and throwing getters
+  // must fail verification instead of crashing the entire QA report.
+  try {
   if (!first || !last || first.sceneId !== last.sceneId ||
     !Object.hasOwn(SCENE_KEYS, last.sceneId)) return fail('invalid-scene-samples');
   if (last.backend !== 'webgpu') return fail('not-native-webgpu:' + last.backend);
@@ -83,6 +86,9 @@ export function classifySamplePair(first, last) {
   if (last.frameCount <= first.frameCount) return fail('render-frame-counter-not-advancing');
   if (last.gameplayFrames <= first.gameplayFrames) return fail('gameplay-draw-counter-not-advancing');
   return { ok: true, reason: 'native-webgpu-gameplay-draws-advancing' };
+  } catch {
+    return fail('unreadable-scene-samples');
+  }
 }
 
 export function pickTarget(targets, sceneId, tabContains = '') {
