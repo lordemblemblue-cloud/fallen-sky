@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, Copy, Cpu, ExternalLink, ShieldAlert, X } from 'lucide-react';
 import './GpuLaunchPrompt.css';
 
@@ -12,16 +13,25 @@ function browserHelp() {
 /** An advisory, not a fake permission dialog. Websites cannot change browser graphics settings. */
 export default function GpuLaunchPrompt({ gameTitle, onContinue, onClose }) {
   const [state, setState] = useState('idle');
-  const [showHelp, setShowHelp] = useState(false);
+  const dialogRef = useRef(null);
+  const [showHelp, setShowHelp] = useState(true);
   const [copied, setCopied] = useState(false);
   const browser = browserHelp();
 
   useEffect(() => {
+    const prior = document.activeElement;
+    dialogRef.current?.querySelector('button')?.focus();
     const onKey = event => {
-      if (event.key === 'Escape') { event.preventDefault(); onClose?.(); }
+      if (event.key === 'Escape') { event.preventDefault(); onClose?.(); return; }
+      if (event.key !== 'Tab') return;
+      const buttons = [...(dialogRef.current?.querySelectorAll('button:not([disabled])') || [])];
+      const first = buttons[0], last = buttons[buttons.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     document.addEventListener('keydown', onKey, true);
-    return () => document.removeEventListener('keydown', onKey, true);
+    return () => { document.removeEventListener('keydown', onKey, true); prior?.focus?.(); };
   }, [onClose]);
 
   const checkGraphics = async () => {
@@ -56,12 +66,13 @@ export default function GpuLaunchPrompt({ gameTitle, onContinue, onClose }) {
     } catch { setCopied(false); }
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+  return createPortal(
     <div className="xs-gpu-overlay" role="presentation" data-hub-nodrag
       onPointerDown={event => event.stopPropagation()}
       onPointerMove={event => event.stopPropagation()}
       onPointerUp={event => event.stopPropagation()}>
-      <section role="dialog" aria-modal="true" aria-labelledby="xs-gpu-title"
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="xs-gpu-title"
         aria-describedby="xs-gpu-summary" className="xs-gpu-dialog">
         <button type="button" className="xs-gpu-close" aria-label="Close graphics setup" onClick={onClose}>
           <X size={18} aria-hidden="true" />
@@ -106,6 +117,6 @@ export default function GpuLaunchPrompt({ gameTitle, onContinue, onClose }) {
           <p>Graphics availability depends on your device, driver and browser. You can continue without enabling WebGPU.</p>
         </div>
       </section>
-    </div>
+    </div>, document.body
   );
 }
