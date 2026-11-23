@@ -141,6 +141,9 @@ test('the game uses all of it; ?hiPoly=1 keeps the earlier behaviour', () => {
   assert.match(read('src/components/game3d/npc/spawnLivingQuestNPC.jsx'), /loadSharedNpcModel\(loader, archerUrl,/);
   const zombie = read('src/components/game3d/wolfveil/WolfveilZombieHordeRuntime.js');
   assert.match(zombie, /if\(!game3dHiPolyRequested\(\)\)\{\s*state\.drawGroups=consolidateModelMaterialGroups\(root\);/);
+  // the archer enemies' shared source opts in to 1024 px textures; other spawner users (Three Roads) keep theirs
+  assert.match(read('src/components/game3d/GameWorld3D.jsx'), /createSharedSkinnedFBXSpawner\(loader,WOLFVEIL_ADMIN_C1_MODEL\.modelUrl,\{lowPolyTextures:true\}\)/);
+  assert.match(read('src/components/game3d/performance/SharedSkinnedFBXSpawner.mjs'), /lowPolyTextures = false,/);
   const view = read('src/pages/GameView.jsx');
   assert.match(view, /scene&&scene!==startScene&&performance\.now\(\)-startedAt<150000/, 'a gate hop that built its scene gets 150 s');
   assert.match(view, /timer=window\.setTimeout\(check,30000\)/, 'the first check still comes at 30 s');

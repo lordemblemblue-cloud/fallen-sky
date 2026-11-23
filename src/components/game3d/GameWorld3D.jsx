@@ -1882,7 +1882,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       ])):null;
     // C1's owner-approved rig is reused independently of the legacy creature.
     const wolfveilEnemySource=region==='wolfveil'&&enemySpawnDefinitions.length
-      ?createSharedSkinnedFBXSpawner(loader,WOLFVEIL_ADMIN_C1_MODEL.modelUrl)
+      ?createSharedSkinnedFBXSpawner(loader,WOLFVEIL_ADMIN_C1_MODEL.modelUrl,{lowPolyTextures:true})
       :null;
     const loadVisibleCreature=onLoaded=>
       (wolfveilEnemySource||creatureSource).spawn(onLoaded,
