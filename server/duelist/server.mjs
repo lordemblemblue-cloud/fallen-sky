@@ -34,7 +34,7 @@ import { createMission, stepMission, joinMission, leaveMission, missionView, nex
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, MAX_PUBLIC_MATCH_PLAYERS, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -141,6 +141,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     const id = `m${nextRoom++}`;
     const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel,
       controlLayout: mode === 'control' ? controlLayout : null });
+    // Duel stays 1v1; other modes can grow to 20 humans as they arrive.
+    // Do not instantiate 20 idle AI fighters in every always-open server.
+    match.botFloor = match.seats.size;
+    match.capacity = mode === 'duel' ? MODES.duel.seats : MAX_PUBLIC_MATCH_PLAYERS;
     const room = { id, mode, match, mission: null, publicRoom: permanent, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
     let k = 0;
     for (const s of match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
@@ -282,6 +286,8 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     const players = [...room.clients.values()];
     room.match = createMatch({ mode: room.mode, seed: Math.floor(clock() * 1000) % 1000003, botLevel,
       controlLayout: room.mode === 'control' ? controlLayout : null });
+    room.match.botFloor = room.match.seats.size;
+    room.match.capacity = room.mode === 'duel' ? MODES.duel.seats : MAX_PUBLIC_MATCH_PLAYERS;
     room.bodies = new Map();
     let k = 0;
     for (const s of room.match.seats.values()) room.bodies.set(s.id, BODY_IDS[k++ % BODY_IDS.length]);
