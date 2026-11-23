@@ -14,6 +14,9 @@ import {resolveWolfveilAreaVeilMovement,wolfveilAreaGates}
   from '../src/components/game3d/wolfveil/streaming/WolfveilAreaVeils.mjs';
 import {wolfveilGateTravel} from '../src/components/game3d/wolfveil/streaming/WolfveilGateTravel.mjs';
 import {buildLakesideManorWorld} from '../src/components/dashboard/lakesideManor/buildLakesideManor.js';
+import {wolfveilHeight,WOLFVEIL_ROUTES} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+import {WOLFVEIL_CAVE_APPROACHES,wolfveilCaveApproachTrailKeep}
+  from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 
 const W=z=>z+70; // local -> world z
 const back=WOLFVEIL_PALACE.z+WOLFVEIL_PALACE.depth/2;
@@ -61,6 +64,28 @@ test('the server map collision lets a walker out of the palace site to the north
   const blocked=walk([12,110],[12,140]);
   assert.equal(blocked.ok,false,'the back wall still holds off the road');
   assert.ok(blocked.at.z-70<back,'stopped inside the footprint');
+});
+
+test('the Ridge Path north of the peak is not cut by the Inkstone Cistern approach grading',()=>{
+  // Importing the cave plan installs its terrain grading, as in the game. Its
+  // switchbacks climb 10-36 m above the path just west of it; their fill used
+  // to cut the path with 8.7 m and 14.7 m cliffs at local z 479 and 495.
+  const ridge=WOLFVEIL_ROUTES.find(r=>r.id==='ridge_path');
+  const [a,b]=[ridge.points[3],ridge.points[4]]; // the junction (0,470) to (35,680)
+  const len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+  let prev=null,steepest=0;
+  for(let s=0;s<=len;s+=1){
+    const t=s/len,y=wolfveilHeight(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);
+    if(prev!==null)steepest=Math.max(steepest,Math.abs(y-prev));
+    prev=y;
+  }
+  assert.ok(steepest<.7,'no step over 35 degrees along the path, steepest '+steepest.toFixed(2)+' m per metre');
+  assert.equal(wolfveilCaveApproachTrailKeep(1.3,478),0,'no cave grading on the path');
+  assert.equal(wolfveilCaveApproachTrailKeep(-30,478),1,'full grading clear of it');
+  // The Cistern approach itself still sits on its graded bench.
+  const cistern=WOLFVEIL_CAVE_APPROACHES.find(c=>c.caveId==='sunken_inkstone_cistern');
+  for(const p of cistern.points)if(p.kind!=='threshold')
+    assert.ok(Math.abs(wolfveilHeight(p.x,p.z)-p.y)<.05,`approach point ${p.x.toFixed(1)},${p.z.toFixed(1)}`);
 });
 
 test('from the palace site the road reaches the Ridge Path gate, and the gate takes the walker north',()=>{
