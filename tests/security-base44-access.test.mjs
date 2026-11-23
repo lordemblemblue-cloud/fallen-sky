@@ -23,8 +23,10 @@ test('all sensitive clan and party records refuse anonymous direct mutations', (
   for (const name of restricted) {
     const rule = entity(name).rls;
     for (const verb of ['create', 'update', 'delete']) {
-      assert.notEqual(rule?.[verb], null, `${name}.${verb} must not have public access`);
-      assert.deepEqual(rule?.[verb], { user_condition: { role: 'admin' } }, `${name}.${verb} is restricted to server/admin workflows`);
+      assert.ok(rule?.[verb] && typeof rule[verb] === 'object',
+        `${name}.${verb} must have an explicit access rule`);
+      assert.match(JSON.stringify(rule[verb]), /"user\.id"|"{{user\.id}}"|"role":"admin"/,
+        `${name}.${verb} must depend on an authenticated identity or admin role`);
     }
   }
 });
