@@ -460,8 +460,17 @@ Deno.serve(async (req) => {
             if (target[0].role === 'leader') {
                  return new Response(JSON.stringify({ error: 'Cannot change leader role this way' }), { status: 400, headers: corsHeaders });
             }
+            // Never accept a caller-defined leader role, even when the actor is
+            // a verified clan leader. Officers and members are the only
+            // supported targets for this delegation action.
+            if (newRole !== 'member' && newRole !== 'officer') {
+                return new Response(JSON.stringify({ error: 'Invalid promotion role' }), { status: 400, headers: corsHeaders });
+            }
 
-            await base44.entities.ClanMember.update(target[0].id, { role: newRole });
+            // The ClanMember entity now rejects direct client role updates.
+            // This service-role operation is guarded by the verified leader
+            // membership and target's clan above.
+            await base44.asServiceRole.entities.ClanMember.update(target[0].id, { role: newRole });
 
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
