@@ -466,7 +466,7 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   const joined = await a.next((m) => m.t === 'joined');
   const { matches } = await (await fetch(http)).json();
   assert.deepEqual(matches.filter(m => m.mode === 'story').map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
-  assert.equal(matches.filter(m => m.publicRoom).length, 6, 'the public modes remain listed during story missions');
+  assert.equal(matches.filter(m => m.publicRoom).length, 7, 'all public modes, including FFA, remain listed during story missions');
   const b = await player(url, 'ben');
   b.send({ t: 'join', mode: 'story' });
   assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
