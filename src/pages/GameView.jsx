@@ -6,7 +6,7 @@ import FallenSkyBetaNotice from '../components/game3d/FallenSkyBetaNotice';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import { questTestDestination } from '../components/game3d/threeroads/questTestDestinations.mjs';
-import { setQuestTestRuntimePreview } from '../components/game3d/threeroads/questTestRuntime.mjs';
+import { setQuestTestRuntimePreview, setQuestTestCheckpointHold, endQuestTestRuntime } from '../components/game3d/threeroads/questTestRuntime.mjs';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import MobileTouchControls from '../components/mobile/MobileTouchControls';
 import { createFallenTouchBridge } from '../components/mobile/fallenMobileTouchBridge.mjs';
@@ -325,9 +325,19 @@ export default function GameView() {
       if (id === 'return') {
         const session = questTestSessionRef.current;
         if (!session) { toast.error('Previous position unavailable.'); return; }
-        if (move(session.origin, true)) {
-          setQuestTestRuntimePreview(null);
+        // Clear the preview BEFORE the destination scene builds, but keep the
+        // old test scene's cleanup from overwriting the original checkpoint.
+        setQuestTestCheckpointHold(true);
+        setQuestTestRuntimePreview(null);
+        const afterReturnReady = () => {
+          window.removeEventListener('game3dWorldAvatarReady', afterReturnReady);
+          endQuestTestRuntime();
           questTestSessionRef.current = null;
+        };
+        window.addEventListener('game3dWorldAvatarReady', afterReturnReady);
+        if (!move(session.origin, true)) {
+          window.removeEventListener('game3dWorldAvatarReady', afterReturnReady);
+          setQuestTestRuntimePreview(!!session.lastPreview);
         }
         return;
       }
@@ -346,10 +356,15 @@ export default function GameView() {
           toast.error('No safe return location saved. Enter Wolfveil and try again.');
           return;
         }
-        questTestSessionRef.current = { origin };
+        questTestSessionRef.current = { origin, lastPreview: !!destination.preview };
       }
+      const session = questTestSessionRef.current;
+      const previousPreview = session.lastPreview;
+      setQuestTestCheckpointHold(true);
       setQuestTestRuntimePreview(!!destination.preview);
-      if (!move(destination)) setQuestTestRuntimePreview(null);
+      if (!move(destination)) {
+        setQuestTestRuntimePreview(previousPreview);
+      } else session.lastPreview = !!destination.preview;
     };
     window.addEventListener('game3dQuestTestTravel', onTravel);
     return () => window.removeEventListener('game3dQuestTestTravel', onTravel);
@@ -360,10 +375,10 @@ export default function GameView() {
     if (phase === 'world' && user?.role === 'admin') return;
     if (questTestSessionRef.current) {
       questTestSessionRef.current = null;
-      setQuestTestRuntimePreview(null);
+      endQuestTestRuntime();
     }
   }, [phase, user?.role]);
-  useEffect(() => () => setQuestTestRuntimePreview(null), []);
+  useEffect(() => () => endQuestTestRuntime(), []);
 
   // Real portal crossings remount the same engine in a separate map scene.
   // The original Wolfveil terrain and its protected Luna mansion stay intact.
