@@ -3,19 +3,19 @@
 .mobile-game-controls {
   position:absolute;inset:0;z-index:85;overflow:hidden;isolation:isolate;
   pointer-events:none;touch-action:none;color:#eaf4ff;font-family:Inter,system-ui,sans-serif;
-  --mobile-button-size:clamp(44px,5.7vmin,54px);
+  --mobile-button-size:clamp(52px,7vmin,64px);
 }
-.mobile-look-zone {
-  position:absolute;left:36%;right:0;top:16%;bottom:14%;z-index:0;
+ .mobile-look-zone {
+  position:absolute;left:36%;right:0;top:14%;bottom:9%;z-index:0;
   pointer-events:auto;touch-action:none;
 }
 .mobile-control-toolbar {
-  position:absolute;left:max(8px,env(safe-area-inset-left,0px));
-  top:max(8px,env(safe-area-inset-top,0px));z-index:5;
-  display:flex;gap:6px;pointer-events:auto;
+  position:absolute;left:50%;transform:translateX(-50%);
+  top:max(6px,env(safe-area-inset-top,0px));z-index:5;
+  display:flex;gap:6px;align-items:center;pointer-events:auto;
 }
 .mobile-control-editor {
-  min-height:36px;min-width:45px;padding:6px 10px;
+  min-height:42px;min-width:52px;padding:6px 10px;
   color:#f1d4a1;background:rgba(6,16,29,.85);
   border:1px solid rgba(236,200,143,.58);border-radius:5px;
   font-size:10px;font-weight:750;letter-spacing:.05em;touch-action:manipulation;
@@ -78,17 +78,93 @@
   outline:1px dashed #f8d39d;outline-offset:3px;cursor:grab;
 }
 @media (orientation:portrait) {
-  .mobile-game-controls {--mobile-button-size:44px;}
+  .mobile-game-controls {--mobile-button-size:50px;}
   .mobile-move-stick {width:112px;height:112px;}
   .mobile-look-zone {left:39%;top:17%;bottom:12%;}
   .mobile-control-instructions {top:55px;left:8px;max-width:75%;transform:none;}
 }
 @media (orientation:landscape) and (max-height:470px) {
-  .mobile-game-controls {--mobile-button-size:44px;}
+  .mobile-game-controls {--mobile-button-size:50px;}
   .mobile-move-stick {width:105px;height:105px;}
   .mobile-move-stick-thumb {width:42px;height:42px;margin:-21px 0 0 -21px;}
   .mobile-control-editor {min-height:30px;font-size:9px;padding:3px 7px;}
 }
 @media (prefers-reduced-motion: reduce) {
   .mobile-touch-action,.mobile-move-stick-thumb {transition:none;}
+}
+
+/* Landscape action game arrangement: large bottom-right attack with 1-4
+   orbiting its left/top side in a C arc. The percent positions remain editable
+   and are saved independently for each orientation and each game. */
+.mobile-game-controls .mobile-touch-action[data-action='light'],
+.mobile-game-controls .mobile-touch-action[data-action='attack'] {
+  min-width:76px;min-height:76px;width:clamp(76px,10vmin,90px);
+  height:clamp(76px,10vmin,90px);
+  left:clamp(calc(46px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 46px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(46px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 46px - env(safe-area-inset-bottom,0px)));
+  border:2px solid rgba(255,173,105,.94);
+  background:radial-gradient(circle at 35% 30%,rgba(184,75,49,.9),rgba(60,21,22,.93));
+  box-shadow:0 0 0 4px rgba(191,67,42,.18),0 3px 15px rgba(0,0,0,.67);
+  font-size:12px;
+}
+.mobile-game-controls .mobile-touch-action[data-action^='ability'] {
+  border:2px solid rgba(231,184,123,.85);
+  background:radial-gradient(circle at 35% 24%,rgba(42,76,104,.95),rgba(6,20,35,.96));
+  font-size:17px;
+}
+.mobile-game-controls .mobile-touch-action[data-special='true'] {
+  min-width:62px;min-height:62px;
+  width:clamp(62px,8vmin,74px);
+  height:clamp(62px,8vmin,74px);
+  left:clamp(calc(38px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 38px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(38px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 38px - env(safe-area-inset-bottom,0px)));
+  border-width:2px;
+}
+.mobile-game-controls .mobile-touch-action[data-action='lock'] {
+  border:2px solid rgba(141,195,233,.8);
+  background:rgba(6,25,44,.93);
+  font-size:10px;
+}
+.mobile-game-controls .mobile-touch-action[data-active='true'] {
+  background:radial-gradient(circle at 40% 28%,rgba(74,174,222,.95),rgba(12,44,87,.94));
+  box-shadow:0 0 0 4px rgba(95,188,239,.23),0 1px 14px rgba(46,190,234,.5);
+}
+.mobile-game-controls .mobile-touch-action[data-unready='true'] {
+  filter:grayscale(.45);opacity:.57;
+}
+.mobile-game-controls .mobile-touch-action:disabled {cursor:not-allowed;}
+.mobile-action-label {display:block;max-width:100%;line-height:1.1;}
+.mobile-action-charge {display:block;color:#ffe7b0;font-size:10px;line-height:1.1;}
+.mobile-gamepad-connected {
+  border:1px solid rgba(142,217,180,.58);border-radius:4px;
+  padding:5px 7px;background:rgba(4,29,27,.85);color:#b4e9c6;
+  white-space:nowrap;font-size:9px;font-weight:750;letter-spacing:.04em;
+}
+.mobile-orientation-prompt {
+  position:absolute;inset:0;z-index:15;pointer-events:auto;touch-action:manipulation;
+  background:rgba(3,10,20,.92);display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;text-align:center;padding:20px 14px;
+  color:#f3f7fb;
+}
+.mobile-orientation-symbol {font-size:38px;color:#edc583;font-weight:900;line-height:1;}
+.mobile-orientation-prompt strong {font-size:16px;letter-spacing:.1em;}
+.mobile-orientation-prompt p {margin:0;max-width:350px;font-size:12px;line-height:1.4;color:#bdd1e3;}
+.mobile-orientation-prompt small {font-size:11px;color:#d6c29c;max-width:340px;}
+.mobile-orientation-choices {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.mobile-orientation-choices button {
+  border:1px solid rgba(237,199,132,.85);border-radius:5px;background:#16334c;color:#fff;
+  padding:10px 16px;min-height:48px;min-width:140px;font-size:12px;font-weight:800;
+}
+.mobile-orientation-choices button:first-child {background:#bd8753;color:#121a27;}
+@media (orientation:landscape) and (max-height:470px) {
+  .mobile-game-controls .mobile-touch-action[data-action='light'],
+  .mobile-game-controls .mobile-touch-action[data-action='attack'] {width:76px;height:76px;}
+  .mobile-game-controls .mobile-touch-action[data-special='true'] {width:62px;height:62px;}
+  .mobile-control-toolbar {top:max(2px,env(safe-area-inset-top,0px));}
+  .mobile-control-editor {min-height:36px;font-size:9px;padding:5px 8px;}
+}
+@media (orientation:portrait) {
+  .mobile-game-controls .mobile-touch-action[data-action='light'],
+  .mobile-game-controls .mobile-touch-action[data-action='attack'] {width:70px;height:70px;min-width:70px;min-height:70px;}
+  .mobile-look-zone {left:37%;top:14%;bottom:9%;}
 }
