@@ -6161,9 +6161,10 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         grassGround.material.dispose(); // releases the locally generated pigment texture too
       }
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
-      // A classic world frees its WebGL context now rather than at garbage collection: every remount (Retry
-      // world, gates, dungeons) otherwise left one behind until the browser refused to make another.
-      if (renderer.isWebGPURenderer) renderer.dispose(); else destroySceneRenderer(renderer);
+      // Free the world's GPU device (WebGPU) or WebGL context now rather than at garbage collection: every remount
+      // (Retry world, gates, dungeons, React's development double mount) otherwise left one behind, until the
+      // browser refused to make another WebGL context. A device destroyed on purpose is not reported as lost.
+      destroySceneRenderer(renderer);
       stopLoopSound('player_walk');
       if (remoteManagerRef.current) { remoteManagerRef.current.dispose(); remoteManagerRef.current = null; }
       remoteCompanionManager.dispose();

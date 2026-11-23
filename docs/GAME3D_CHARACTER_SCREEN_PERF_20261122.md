@@ -136,3 +136,24 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
    ms on WebGPU). Not measured in detail.
 4. A WebGPU world still leaves its GPU device to the garbage collector when it unmounts. Destroying it there would
    need care with the world's in-flight pipeline compiles.
+
+## Follow-up 2026-11-23 (branch `claude/character-entry-freeze-20261123`)
+
+- **The world is no longer rebuilt when the body changes on the character screens.** The world effect now depends
+  on a build key (`game3dWorldBuildKey.mjs`), and a new body is swapped into the running world. The new code is
+  `setupPlayerAvatar(fbx, swap)`, `releasePlayerAvatar` and `swapPlayerAvatar` in `GameWorld3D.jsx`. A body change
+  during play still rebuilds the world, as before.
+  - Live on WebGPU, creating Eve while the world showed Adam: no `gw3dSceneTeardown`, and the same renderer and scene.
+  - The new body loaded in 0.52 s and was announced ready 5.9 s after Create character. Before, a rebuild froze the
+    page for about 6 + 14 + 14 s.
+  - One 4.7 s gap is left: the main-thread shader build for the new body's ~70 pipelines.
+  - ENTER WORLD took 0.83 s, and the swapped Eve walks: 6.1 m in 1.5 s of W.
+  - Not checked live on WebGL, or for a swap while mounted or holding a bow. Those paths go through
+    `restoreMountedRider()` and the bow presentation, which rebuilds itself when `model` changes.
+- **The world's teardown now destroys its WebGPU device too.** Before, only classic contexts were freed. Live: the
+  dev double mount's device was lost with reason "destroyed", and there were no unhandled rejections or device-lost
+  logs.
+- Tests: `tests/game3d-avatar-swap-no-rebuild.test.mjs` (6 tests). The whole suite on 60b1b8aa ran 2430 tests with 107
+  failing, the same failing names as main (108).
+- Still open: the 13–23 s first-load block on WebGPU, which is mostly the precompile's synchronous shader build.
+  Slicing it is the next step; check with the WebGPU session first, since it owns that code.
