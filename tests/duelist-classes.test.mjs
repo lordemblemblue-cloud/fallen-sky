@@ -144,3 +144,17 @@ test('ability activation slots map to only the selected class kit, rejecting mal
   assert.notEqual(classAbilityMove('warrior', 0), classAbilityMove('healer', 0),
     'the same ability key must not silently activate a different class kit');
 });
+
+test('rotated three-button ability pages preserve canonical server slot identities', () => {
+  for (const classId of CLASS_IDS) {
+    for (let offset = 0; offset < 4; offset++) {
+      const visible = visibleClassAbilities(classId, offset);
+      assert.equal(visible.length, ABILITY_SLOTS);
+      for (let button = 0; button < ABILITY_SLOTS; button++) {
+        const canonicalSlot = (offset + button) % CLASSES[classId].abilities.length;
+        assert.equal(visible[button].id, classAbilityMove(classId, canonicalSlot),
+          `${classId} page ${offset} button ${button} must map to canonical slot ${canonicalSlot}`);
+      }
+    }
+  }
+});
