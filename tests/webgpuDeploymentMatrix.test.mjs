@@ -11,6 +11,7 @@ function report(sceneId, origin, patch = {}) {
     sceneId, checkedAt: '2026-11-23T03:00:00.000Z',
     tabUrl: origin + (sceneId === 'fallen-sky' ? '/gameview' : '/duelist-next/play'),
     first: sample(20, 10), last: sample(22, 12),
+    documentCheck: { ok: true, reason: 'same-browser-document' },
     ok: true, reason: 'native-webgpu-gameplay-draws-advancing',
     ...patch,
   };
@@ -75,5 +76,21 @@ test('rejects swapped or duplicated game reports in either deployment', () => {
     const reports = matrix();
     reports[b] = reports[a];
     assert.match(validateDeploymentMatrix(reports).reason, /^(preview|live):duplicate-scene-id$/);
+  }
+});
+
+test('fails closed when any browser document continuity proof is missing or failed', () => {
+  for (const index of [0, 1, 2, 3]) {
+    for (const documentCheck of [undefined, null,
+      { ok: false, reason: 'browser-tab-navigated-or-reloaded' },
+      { ok: true, reason: 'browser-tab-navigated-or-reloaded' },
+    ]) {
+      const reports = matrix();
+      reports[index] = { ...reports[index], documentCheck };
+      const result = validateDeploymentMatrix(reports);
+      assert.equal(result.ok, false);
+      assert.equal(result.reason,
+        (index < 2 ? 'preview:' : 'live:') + 'unverified-browser-document:' + reports[index].sceneId);
+    }
   }
 });
