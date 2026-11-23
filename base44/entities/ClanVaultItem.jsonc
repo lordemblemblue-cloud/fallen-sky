@@ -49,7 +49,14 @@
     },
     "note": {
       "type": "string",
-      "description": "Optional note left with the deposit"
+      "description": "Optional note left with the deposit",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [
