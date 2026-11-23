@@ -33,12 +33,16 @@
     "type"
   ],
   "rls": {
+    "create": {
+      "data.sender_id": "{{user.id}}"
+    },
     "read": {
       "$or": [
         {
-          "user_condition": {
-            "role": "user"
-          }
+          "data.sender_id": "{{user.id}}"
+        },
+        {
+          "data.target_id": "{{user.id}}"
         },
         {
           "user_condition": {
@@ -46,9 +50,6 @@
           }
         }
       ]
-    },
-    "create": {
-      "data.sender_id": "{{user.id}}"
     },
     "update": {
       "data.sender_id": "{{user.id}}"
