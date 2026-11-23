@@ -79,6 +79,6 @@ Deno.serve(async (req) => {
     return Response.json({ ok: true });
   } catch (error) {
     console.error('[clanMembershipNotifier] error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: 'Clan notification unavailable' }, { status: 500 });
   }
 });
