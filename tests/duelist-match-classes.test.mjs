@@ -151,3 +151,28 @@ test('switching class at a legal respawn resets old special charge, but same-cla
   assert.equal(seat.specialMeter, 0, 'new class cannot inherit previous special charge');
   assert.equal(matchView(m, 'me').me.specialMeter, 0);
 });
+
+
+test('each class transition spends no old-class charge and starts the next class at zero', () => {
+  const classes = ['warrior', 'duelist', 'assassin', 'healer'];
+  for (let i = 0; i < classes.length; i++) {
+    const from = classes[i];
+    const to = classes[(i + 1) % classes.length];
+    const m = createMatch({ mode: 'practice', players: [{ id: 'me' }], seats: 2 });
+    assert.equal(queueMatchClass(m, 'me', from).accepted, true);
+    advance(m, COUNTDOWN + 0.1);
+    const seat = m.seats.get('me');
+    assert.equal(seat.classId, from);
+    seat.specialMeter = 100;
+    const fighter = m.world.fighters.get('me');
+    fighter.vitals.dead = true;
+    seat.respawnAt = m.world.time + 0.05;
+    assert.equal(queueMatchClass(m, 'me', to).accepted, true);
+    assert.equal(seat.specialMeter, 100, 'queueing cannot spend or transfer meter');
+    assert.equal(seat.classId, from, 'queueing cannot change the active class');
+    advance(m, 0.15);
+    assert.equal(seat.classId, to);
+    assert.equal(seat.specialMeter, 0, from + ' charge must not transfer to ' + to);
+    assert.equal(matchView(m, 'me').me.specialMeter, 0);
+  }
+});
