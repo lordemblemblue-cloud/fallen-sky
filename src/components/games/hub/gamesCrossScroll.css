@@ -447,6 +447,30 @@
   border: 0;
 }
 
+/* The experimental label sits above the Fallen Sky card, not over its cover art.
+   It shares the exact horizontal transform used by the cross-scroll tiles. */
+.xs-tile-beta{
+  --xs-x:calc(var(--xs-rel) * (var(--xs-tile) + var(--xs-gap)) + var(--xs-after) * var(--xs-tile) * (var(--xs-scale) - 1) + var(--xs-drag));
+  position:absolute;z-index:7;left:var(--xs-anchor);top:calc(50% - 102px);
+  padding:5px 11px;border:1px solid rgba(246,202,136,.82);border-radius:999px;
+  background:rgba(25,17,13,.93);color:#ffda97;
+  box-shadow:0 5px 14px rgba(0,0,0,.56);
+  font-size:11px;font-weight:850;letter-spacing:.085em;text-transform:uppercase;
+  white-space:nowrap;pointer-events:none;user-select:none;
+  transform:translate3d(var(--xs-x),0,0);
+  transition:transform 420ms cubic-bezier(.2,.8,.2,1);
+}
+.xs-tile-beta.is-focused{top:calc(50% - 128px);}
+.xs-row.is-dragging .xs-tile-beta{transition:none;}
+@media(max-width:640px){
+  .xs-tile-beta{top:calc(50% - 80px);font-size:9px;padding:4px 8px;}
+  .xs-tile-beta.is-focused{top:calc(50% - 99px);}
+}
+@media(max-height:520px){
+  .xs-tile-beta{top:calc(50% - 66px);font-size:9px;padding:4px 8px;}
+  .xs-tile-beta.is-focused{top:calc(50% - 81px);}
+}
+
 @keyframes xs-details-in {
   from {
     opacity: 0;
