@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { QUEST_TEST_DESTINATIONS, questTestDestination } from '../src/components/game3d/threeroads/questTestDestinations.mjs';
 import { placeAnchorWorld } from '../src/components/game3d/threeroads/places/layouts/index.mjs';
+import { findQuestTestSafeLanding } from '../src/components/game3d/threeroads/questTestSafeLanding.mjs';
 import { campPlan } from '../src/components/game3d/threeroads/land/campPlans.mjs';
 import { wolfveilAreaAtWorld } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {
@@ -49,6 +50,31 @@ test('five admin Quest Test destinations match actual Wolfveil story layouts', (
     assert.equal(wolfveilAreaAtWorld(destination), destination.area);
     assert.ok(Object.isFrozen(destination));
   }
+});
+
+test('test warps probe safe ground around unfinished camp footprints', () => {
+  const destination = questTestDestination('the_landing');
+  const probes = [];
+  const safe = findQuestTestSafeLanding({ ...destination, questTest: true }, {
+    area: destination.area,
+    sampleGroundY: () => 100,
+    isBlocked: () => false,
+    findSafe: value => {
+      probes.push(value);
+      if (value.includes(`X ${destination.x + 2.5}, Z ${destination.z}`)) {
+        return { id: 'test-safe', x: destination.x + 2.5, y: 100, z: destination.z };
+      }
+      return null;
+    },
+  });
+  assert.ok(probes.length >= 3, 'centre and nearby candidates are checked');
+  assert.equal(safe?.x, destination.x + 2.5);
+  const wrongArea = findQuestTestSafeLanding({ ...destination, questTest: true }, {
+    area: 'north', sampleGroundY: () => 100, isBlocked: () => false,
+    findSafe: () => { throw Error('must not test the wrong streamed area'); },
+  });
+  assert.equal(wrongArea, null);
+  assert.equal(findQuestTestSafeLanding(null, {}), null);
 });
 
 test('preview flag is ephemeral and disabled for normal players', () => {
@@ -98,6 +124,8 @@ test('Quest Test is admin-gated, can remount same area, preserves and restores s
   assert.match(page, /endQuestTestRuntime\(\)/);
   assert.match(world, /if \(questTestCheckpointSuppressed\(\)\) return;/);
   assert.match(world, /findWorkflowSpawn\(/);
+  assert.match(world, /findQuestTestSafeLanding\(/);
+  assert.match(page, /questTest: true/);
   assert.match(world, /adminTools=\{workflowAllowed && !entryMode\}/);
   assert.doesNotMatch(page, /sessionStorage\.setItem\('game3d\.questTest\.active'/);
   assert.doesNotMatch(page, /localStorage\.setItem\('game3d\.threeRoads'/);
