@@ -68,6 +68,14 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
   try { search = host?.location?.search || ''; } catch { /* optional */ }
   try { storage = host?.localStorage || null; } catch { /* optional */ }
   const override = readRendererOverride({ search, storage });
+  // An explicit WebGPU override must not bypass the browser's secure-context
+  // requirement. Keep forced WebGL2 available to test fallback on HTTP pages.
+  // Reading this browser flag can itself throw in privacy wrappers.
+  if (override === 'webgpu') {
+    try {
+      if (host?.isSecureContext === false) return { kind: 'webgl', reason: 'webgpu-api-unavailable' };
+    } catch { return { kind: 'webgl', reason: 'webgpu-api-unavailable' }; }
+  }
   // The graphics API is exposed only in supported, secure browser contexts.
   // Do not default to WebGPU on SSR, insecure pages or browsers without it. Privacy wrappers can also throw
   // on reading navigator.gpu (tests/webgpuNavigatorGpuGetterRegression.test.mjs): that counts as no WebGPU.
