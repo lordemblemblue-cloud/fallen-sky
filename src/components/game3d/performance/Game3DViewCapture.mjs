@@ -10,7 +10,22 @@
 import { PERF_HEADINGS, PERF_WORLD_Z_OFFSET } from './Game3DPerfViewpoints.mjs';
 import { sleep } from './Game3DAreaLoadTiming.mjs';
 
-export async function captureView(host, { id, x, z, heading = 'N', eye = 1.7, pitch = -0.08, width = 960, height = 540, settleMs = 4000, quality = 0.86 }) {
+/** World position of instance `index` of the first visible InstancedMesh whose name matches `pattern`. */
+export function instanceWorldPosition(host, pattern, index = 0) {
+  let found = null;
+  host.__gw3dScene?.traverse((o) => {
+    if (found || !o.isInstancedMesh || !pattern.test(o.name || '') || o.count <= index) return;
+    for (let n = o; n; n = n.parent) if (n.visible === false) return;
+    const m = new (o.matrixWorld.constructor)();
+    o.getMatrixAt(index, m);
+    m.premultiply(o.matrixWorld);
+    found = { x: m.elements[12], y: m.elements[13], z: m.elements[14], name: o.name };
+  });
+  return found;
+}
+
+/** `lookAt` (world {x, y, z}) aims the camera at a point instead of along `heading`. */
+export async function captureView(host, { id, x, z, heading = 'N', eye = 1.7, pitch = -0.08, lookAt = null, width = 960, height = 540, settleMs = 4000, quality = 0.86 }) {
   const renderer = host.__gw3dRenderer; const scene = host.__gw3dScene; const camera = host.__gw3dCamera;
   if (!renderer || !scene || !camera) throw new Error('world not running');
   if (renderer.isWebGPURenderer) throw new Error('captures need &renderer=webgl (a WebGPU canvas reads back blank)');
@@ -23,7 +38,8 @@ export async function captureView(host, { id, x, z, heading = 'N', eye = 1.7, pi
   const [dx, dz] = PERF_HEADINGS[heading] || PERF_HEADINGS.N;
   const cam = camera.clone();
   cam.position.set(wx, gy + eye, wz);
-  cam.lookAt(wx + dx * 10, gy + eye + Math.tan(pitch) * 10, wz + dz * 10);
+  if (lookAt) cam.lookAt(lookAt.x, lookAt.y, lookAt.z);
+  else cam.lookAt(wx + dx * 10, gy + eye + Math.tan(pitch) * 10, wz + dz * 10);
   cam.aspect = width / height; cam.updateProjectionMatrix(); cam.updateMatrixWorld(true);
   const size = renderer.getSize(new (camera.position.constructor)());
   const ratio = renderer.getPixelRatio();

@@ -1,0 +1,266 @@
+{
+  "schema": "game3d-perf-probe/load-1",
+  "label": "load-before-entry-town",
+  "startedAt": "2026-11-23T01:49:05.482Z",
+  "kind": "entry",
+  "renderer": "webgpu",
+  "area": "town",
+  "shownMs": 20013,
+  "settledMs": 20024,
+  "stable": true,
+  "counted": {
+    "meshes": 1517,
+    "triangles": 2587315,
+    "drawCalls": 1510,
+    "textures": 187,
+    "textureMB": 801
+  },
+  "groups": [
+    {
+      "owner": "Game1_ShadowWolf_WolfveilValley",
+      "meshes": 281,
+      "triangles": 1494918,
+      "drawCalls": 274,
+      "texMB": 149
+    },
+    {
+      "owner": "WV_4MileRadius_StreamingSolidMeadow",
+      "meshes": 27,
+      "triangles": 541440,
+      "drawCalls": 27,
+      "texMB": 0
+    },
+    {
+      "owner": "Character",
+      "meshes": 393,
+      "triangles": 183409,
+      "drawCalls": 393,
+      "texMB": 26
+    },
+    {
+      "owner": "(scene)",
+      "meshes": 34,
+      "triangles": 101192,
+      "drawCalls": 34,
+      "texMB": 386
+    },
+    {
+      "owner": "Wolfveil_Artisan_Town_Replacement",
+      "meshes": 441,
+      "triangles": 68281,
+      "drawCalls": 441,
+      "texMB": 67
+    },
+    {
+      "owner": "Scene",
+      "meshes": 5,
+      "triangles": 65997,
+      "drawCalls": 5,
+      "texMB": 72
+    },
+    {
+      "owner": "Artemis_Body",
+      "meshes": 3,
+      "triangles": 65353,
+      "drawCalls": 3,
+      "texMB": 16
+    },
+    {
+      "owner": "Game3D_Clone_AmbientBirds_VisualOnly",
+      "meshes": 3,
+      "triangles": 13848,
+      "drawCalls": 3,
+      "texMB": 64
+    },
+    {
+      "owner": "Lunar_Anchor",
+      "meshes": 45,
+      "triangles": 13424,
+      "drawCalls": 45,
+      "texMB": 0
+    },
+    {
+      "owner": "Rain_Anchor",
+      "meshes": 77,
+      "triangles": 11420,
+      "drawCalls": 77,
+      "texMB": 0
+    },
+    {
+      "owner": "Husky_Anchor",
+      "meshes": 46,
+      "triangles": 9302,
+      "drawCalls": 46,
+      "texMB": 0
+    },
+    {
+      "owner": "root",
+      "meshes": 35,
+      "triangles": 7706,
+      "drawCalls": 35,
+      "texMB": 0
+    },
+    {
+      "owner": "node_0",
+      "meshes": 73,
+      "triangles": 6949,
+      "drawCalls": 73,
+      "texMB": 21
+    },
+    {
+      "owner": "AXE World Respawn Shrines",
+      "meshes": 36,
+      "triangles": 3168,
+      "drawCalls": 36,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_weathered_tablet",
+      "meshes": 2,
+      "triangles": 780,
+      "drawCalls": 2,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_spirit_vein",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_reinforce_outcrop",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_soul_bloom",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_hidden_divine_cache",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    }
+  ],
+  "precompile": {
+    "skipped": true
+  },
+  "downloads": {
+    "files": 16,
+    "mb": 2.7,
+    "transferMb": 2.7,
+    "largest": [
+      {
+        "file": "/game3d/weapons/fantasy_sword.glb",
+        "kb": 1560,
+        "transferKb": 1560,
+        "ms": 36
+      },
+      {
+        "file": "/game3d/maps/wolfveil-landscape-v1.png",
+        "kb": 787,
+        "transferKb": 787,
+        "ms": 19
+      },
+      {
+        "file": "/models/animations/weapons/swordCharge.glb",
+        "kb": 178,
+        "transferKb": 178,
+        "ms": 17
+      },
+      {
+        "file": "/models/animations/mocap/Swim_Idle.glb",
+        "kb": 110,
+        "transferKb": 110,
+        "ms": 7
+      },
+      {
+        "file": "/models/animations/mocap/Swim_Forward.glb",
+        "kb": 60,
+        "transferKb": 60,
+        "ms": 8
+      },
+      {
+        "file": "/models/animations/mocap/Sprint.glb",
+        "kb": 49,
+        "transferKb": 49,
+        "ms": 25
+      },
+      {
+        "file": "/models/animations/mocap/Glide_Hang.glb",
+        "kb": 31,
+        "transferKb": 31,
+        "ms": 71
+      },
+      {
+        "file": "/game3d/weapons/icons/fantasy_sword.png",
+        "kb": 28,
+        "transferKb": 28,
+        "ms": 14
+      },
+      {
+        "file": "/game3d/hud/clean-curl-splash-only.webp",
+        "kb": 4,
+        "transferKb": 4,
+        "ms": 17
+      },
+      {
+        "file": "/game3d/hud/hp-gold-trim.png",
+        "kb": 1,
+        "transferKb": 1,
+        "ms": 14
+      },
+      {
+        "file": "/game3d/hud/will-gold-trim.png",
+        "kb": 1,
+        "transferKb": 1,
+        "ms": 14
+      },
+      {
+        "file": "api/apps/6876751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/9922e6dd0_Idle.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 2762
+      },
+      {
+        "file": "/apps/6876751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/4edd51169_Running.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 2721
+      },
+      {
+        "file": "751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/d4d6d9112_standingmeleekick.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 258
+      },
+      {
+        "file": "02125f45f1861b9/files/public/6876751a602125f45f1861b9/183d60083_standingdeathforward01.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 270
+      },
+      {
+        "file": "s/6876751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/3f915913a_ErikaArcher.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 5744
+      }
+    ]
+  },
+  "audit": [],
+  "received": {
+    "at": "2026-11-23T01:49:05.559Z",
+    "commit": "51135c89",
+    "branch": "claude/low-poly-world-20261122",
+    "dirty": true
+  }
+}
