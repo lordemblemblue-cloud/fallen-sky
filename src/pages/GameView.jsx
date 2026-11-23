@@ -312,7 +312,7 @@ export default function GameView() {
       setWorldRegion('wolfveil');
       // A first-entry workflow target is validated against the loaded real
       // terrain and the occupied-footprint guard by GameWorld3D.
-      setWorkflowSpawn(returning ? null : `X ${target.x}, Z ${target.z}`);
+      setWorkflowSpawn(returning ? null : { questTest: true, x: target.x, z: target.z });
       worldReadyRef.current = false;
       setWorldReady(false);
       setWorldEntryStatus('loading');
