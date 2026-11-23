@@ -59,7 +59,7 @@ All positions are world metres. A subsystem that does not know an id ignores the
 
 | Event | Detail | Meaning |
 | --- | --- | --- |
-| `enemies:spawnGroup` → enemies | `{ groupId, kind, count, x, z, radius, level, tier }` | Put `count` monsters of `kind` on the ground within `radius` of the point. `level` may be `'player'`. Asking again with a live `groupId` does nothing. |
+| `enemies:spawnGroup` → enemies | `{ groupId, kind, count, x, z, radius, level, tier, goal? }` | Put `count` monsters of `kind` on the ground within `radius` of the point. `level` may be `'player'`. Asking again with a live `groupId` does nothing. **Addition (2026-11-22):** optional `goal: { x, z, radius }` (world metres, `radius` 3 m when left out). The group walks toward the goal from the moment it spawns, at its kind's ordinary speed, until it is within `radius` of it or notices the player, whichever comes first, and then fights as any group does. At the goal with nobody there it goes for the player within 25 m and otherwise holds at the goal. Passive groups ignore it; without it nothing changes. |
 | `enemies:despawnGroup` → enemies | `{ groupId }` | Remove what is left of the group. |
 | `enemies:defeated` ← enemies | `{ groupId, kind, id, tier }` | One of a group's monsters died, whatever killed it. |
 | `enemies:groupCleared` ← enemies | `{ groupId, kind }` | The last one died. |
