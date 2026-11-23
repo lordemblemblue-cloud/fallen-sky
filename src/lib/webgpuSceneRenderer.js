@@ -131,10 +131,31 @@ const yieldToBrowser = () => new Promise((resolve) => {
   channel.port2.postMessage(0);
 });
 
-/** Precompile batch size: the objects that fit in `sliceMs` at the running average cost, 1 to 16. */
+/** Precompile batch size: the objects that fit in `sliceMs` at the running average cost, 1 to 8. */
 export function nextSliceBatch(averageMsPerObject, sliceMs) {
   if (!(averageMsPerObject > 0)) return 4;
-  return Math.max(1, Math.min(16, Math.floor(sliceMs / averageMsPerObject)));
+  return Math.max(1, Math.min(8, Math.floor(sliceMs / averageMsPerObject)));
+}
+
+/** First-of-kind objects (a shader not built yet) a slice may take: a batch grown on cached objects otherwise ran
+ * into several new shaders at once (main-thread blocks of 2-3 s in a cold load). */
+export const MAX_NEW_KINDS_PER_SLICE = 2;
+
+/**
+ * What decides whether an object needs a shader of its own, roughly as three's render cache key does: its materials'
+ * type, textures and flags, its geometry's attribute layout, the object kind, and the geometry itself for meshes with
+ * shape keys (their node shader holds that geometry's morph texture).
+ */
+export function sliceObjectKind(o) {
+  const materials = Array.isArray(o.material) ? o.material : [o.material];
+  const mats = materials.map((m) => (!m ? '-' : m.type + ':' + Object.keys(m).filter((k) => m[k]?.isTexture).sort().join('+')
+    + (m.vertexColors ? ':vc' : '') + (m.transparent ? ':t' : '') + (m.alphaTest ? ':a' : '') + ':' + m.side)).join('|');
+  const g = o.geometry;
+  const layout = g ? Object.keys(g.attributes || {}).sort().join(',') + (g.index ? ':i' : '') : '';
+  const morphs = g?.morphAttributes?.position?.length || g?.morphAttributes?.normal?.length || 0;
+  const type = (o.isSkinnedMesh ? 's' : '') + (o.isInstancedMesh ? 'n' : '') + (o.isPoints ? 'p' : '') + (o.isLine ? 'l' : '')
+    + (o.isSprite ? 'r' : '');
+  return mats + '#' + layout + '#' + type + (morphs ? '#m' + morphs + ':' + g.id : '');
 }
 
 const isSceneRenderable = (o) => !!(o.isMesh || o.isLine || o.isPoints || o.isSprite);
@@ -176,12 +197,24 @@ export async function compileSceneInSlices(renderer, scene, camera, { target = n
   shouldStop = () => false, maxPending = 6 } = {}) {
   const { renderables, lights } = planSceneSlices(scene, camera);
   const layer = PRECOMPILE_SLICE_LAYER;
+  const kinds = new Map(renderables.map((o) => [o, sliceObjectKind(o)]));
+  const builtKinds = new Set();
   const promises = [];
   const pending = new Set();
   let batch = 1;
   let average = 0; // running cost per object, ms (shader builds cost ~75 ms each, cached objects ~0.05 ms)
   for (let i = 0; i < renderables.length && !shouldStop();) {
-    const members = renderables.slice(i, i + batch);
+    const members = [];
+    let fresh = 0;
+    for (let k = i; k < renderables.length && members.length < batch; k++) {
+      const kind = kinds.get(renderables[k]);
+      if (!builtKinds.has(kind)) {
+        if (fresh >= MAX_NEW_KINDS_PER_SLICE) break;
+        fresh++;
+        builtKinds.add(kind);
+      }
+      members.push(renderables[k]);
+    }
     const enabled = [];
     const lifted = [];
     const previous = renderer.getRenderTarget();

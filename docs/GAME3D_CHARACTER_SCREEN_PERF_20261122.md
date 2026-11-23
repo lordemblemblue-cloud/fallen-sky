@@ -251,3 +251,23 @@ world's GPU device is destroyed at teardown.
 and its influences. Examples are the companion's three Artemis body parts, or the NPC and the player when the NPC was
 built second. A general fix, keying node shaders by geometry for morph meshes in `webgpuSceneRenderer.js`, has been
 proposed to the WebGPU session.
+
+### Slice batches capped (WebGPU session's suggestion, 2026-11-23)
+
+A slice now takes at most 8 objects (was 16), and at most 2 kinds of object whose shaders are not built yet
+(`sliceObjectKind`: material type, textures and flags, attribute layout, object type, and the geometry itself for
+shape-key meshes, which matches the WebGPU session's morph node key). Before, a batch grown on already-built objects
+could run into several new shaders at once.
+
+Same method as above, one cold WebGPU load:
+
+| | Before | After |
+|---|---|---|
+| Sliced build duration | 43.5 s (early precompile 35.2 s) | 20.0 s (early precompile 17.0 s) |
+| Largest single compile slice | 1.78 s | 0.68 s |
+| 95th-percentile compile slice | 0.37 s | 0.14 s |
+| Main-thread blocks over 1 s / over 0.5 s during the build | 9 / 23 | 3 / 6 |
+| Longest block during the build | 3.2 s | 2.9 s (not a compile slice: other main-thread work in that window) |
+
+Afterwards the world was ready on WebGPU at 64 s from load, running at 46 frames per second, with no validation
+errors. Part of the shorter build may come from warmer caches, since this was the fourth load of the day on this origin.

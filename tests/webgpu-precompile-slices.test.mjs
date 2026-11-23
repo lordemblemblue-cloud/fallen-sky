@@ -3,8 +3,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { Scene, Group, Mesh, BoxGeometry, MeshStandardMaterial, DirectionalLight, PointLight, PerspectiveCamera, Points, BufferGeometry } from 'three';
-import { precompileSceneObjects, planSceneSlices, nextSliceBatch, PRECOMPILE_SLICE_LAYER } from '../src/lib/webgpuSceneRenderer.js';
+import { Scene, Group, Mesh, BoxGeometry, MeshStandardMaterial, MeshBasicMaterial, DirectionalLight, PointLight, PerspectiveCamera, Points, BufferGeometry, Texture } from 'three';
+import { precompileSceneObjects, planSceneSlices, nextSliceBatch, sliceObjectKind, MAX_NEW_KINDS_PER_SLICE, PRECOMPILE_SLICE_LAYER } from '../src/lib/webgpuSceneRenderer.js';
 
 const geometry = new BoxGeometry();
 const material = new MeshStandardMaterial();
@@ -86,7 +86,7 @@ test('a sliced precompile compiles every drawn renderable, with the full light s
     assert.equal(call.lights, 2, 'both lights in every slice (shader keys include the light set)');
     assert.equal(call.holdRender, 1, 'frames are held while slicing');
     assert.equal(call.target, target, 'compiled for the scene\'s render target');
-    assert.ok(call.seen.length >= 1 && call.seen.length <= 16, 'a slice is a batch, not the scene: ' + call.seen.length);
+    assert.ok(call.seen.length >= 1 && call.seen.length <= 8, 'a slice is a batch, not the scene: ' + call.seen.length);
   }
   assert.deepEqual(progress.at(-1), { done: 16, total: 16 });
 });
@@ -165,11 +165,46 @@ test('at most six slices compile their pipelines in the GPU process at once', as
   assert.equal(inFlight, 0);
 });
 
-test('a slice holds about sliceMs of shader builds, between 1 and 16 objects', () => {
+test('a slice holds about sliceMs of shader builds, between 1 and 8 objects', () => {
   assert.equal(nextSliceBatch(75, 40), 1, 'one ~75 ms shader build per slice');
   assert.equal(nextSliceBatch(10, 40), 4);
-  assert.equal(nextSliceBatch(0.05, 40), 16, 'cached objects: the largest batch');
+  assert.equal(nextSliceBatch(0.05, 40), 8, 'cached objects: the largest batch');
   assert.equal(nextSliceBatch(0, 40), 4);
+});
+
+test('object kinds follow what makes a new shader: material type, textures and flags, layout, shape keys', () => {
+  const plain = mesh('a');
+  const same = new Mesh(new BoxGeometry(2, 2, 2), new MeshStandardMaterial({ color: 0xff0000 }));
+  assert.equal(sliceObjectKind(plain), sliceObjectKind(same), 'another box with another colour builds the same shader');
+  const textured = new Mesh(geometry, new MeshStandardMaterial({ map: new Texture() }));
+  assert.notEqual(sliceObjectKind(plain), sliceObjectKind(textured));
+  assert.notEqual(sliceObjectKind(plain), sliceObjectKind(new Mesh(geometry, new MeshBasicMaterial())));
+  const morphA = new BoxGeometry(); morphA.morphAttributes.position = [morphA.attributes.position.clone()];
+  const morphB = new BoxGeometry(); morphB.morphAttributes.position = [morphB.attributes.position.clone()];
+  assert.notEqual(sliceObjectKind(new Mesh(morphA, material)), sliceObjectKind(new Mesh(morphB, material)),
+    'a shape-key mesh\'s shader holds its own geometry\'s morph texture');
+});
+
+test('a slice takes at most two kinds whose shaders are not built yet', async () => {
+  const scene = new Scene();
+  scene.add(new DirectionalLight());
+  const looks = [{}, { map: new Texture() }, { normalMap: new Texture() }, { transparent: true }, { vertexColors: true },
+    { alphaTest: 0.5 }];
+  // many cached-kind objects first (the batch grows), then several new kinds in a row
+  for (let i = 0; i < 30; i++) scene.add(Object.assign(new Mesh(geometry, new MeshStandardMaterial(looks[0])), { name: 'k0_' + i }));
+  for (let k = 1; k < looks.length; k++) {
+    for (let i = 0; i < 3; i++) scene.add(Object.assign(new Mesh(geometry, new MeshStandardMaterial(looks[k])), { name: 'k' + k + '_' + i }));
+  }
+  const { renderer, calls } = fakeRenderer();
+  await precompileSceneObjects(renderer, scene, new PerspectiveCamera(), { sliceMs: 40 });
+  const built = new Set();
+  for (const call of calls) {
+    const kindsHere = new Set(call.seen.map((n) => n.split('_')[0]));
+    const fresh = [...kindsHere].filter((k) => !built.has(k));
+    assert.ok(fresh.length <= MAX_NEW_KINDS_PER_SLICE, 'new kinds in one slice: ' + fresh.join(','));
+    fresh.forEach((k) => built.add(k));
+  }
+  assert.equal(built.size, looks.length, 'every kind compiled');
 });
 
 test('the world slices its cold-load and avatar precompiles and reports progress to the entry timers', () => {
