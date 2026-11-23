@@ -131,7 +131,7 @@ test('ability activation slots map to only the selected class kit, rejecting mal
     const abilities = CLASSES[classId].abilities;
     for (let slot = 0; slot < abilities.length; slot++) {
       assert.equal(classAbilityMove(classId, slot), abilities[slot].id, `${classId} slot ${slot}`);
-      assert.match(abilities[slot].animation, /^class\\.power\\./);
+      assert.match(abilities[slot].animation, /^class\.power\./);
     }
     for (const invalid of [-1, 4, 100, 1.5, NaN, Infinity, '0', '1', null, undefined, {}, []]) {
       assert.equal(classAbilityMove(classId, invalid), null, `${classId} rejected malformed slot`);
