@@ -22,7 +22,8 @@ const facing=yaw=>game3dGame2MovementBasis(yaw).forward;
 const STORY_HALLS={
   jade_lantern_grotto:[-368.8,-413.4],
   whispering_root_hollow:[-511.2,311.4],
-  sunken_inkstone_cistern:[-45.4,563.0],
+  // Moved with the Cistern's mouth (-40,548 -> -40,500) on 2026-11-23; it was (-45.4, 563.0).
+  sunken_inkstone_cistern:[-42.29,515.84],
 };
 
 test('a ring lands the player in the entry hall of the cave walked into, facing in',()=>{

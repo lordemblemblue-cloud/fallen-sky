@@ -138,7 +138,7 @@ export const WOLFVEIL_CAVES=Object.freeze([
     accessible:'explorable_interconnected_tunnel'},
   {id:'whispering_root_hollow',name:'Whispering Root Hollow',entry:[-500,300],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
-  {id:'sunken_inkstone_cistern',name:'Sunken Inkstone Cistern',entry:[-40,548],exit:[-6,24],
+  {id:'sunken_inkstone_cistern',name:'Sunken Inkstone Cistern',entry:[-40,500],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},
   {id:'echoing_crystal_vault',name:'Echoing Crystal Vault',entry:[500,-36],exit:[-6,24],
     accessible:'explorable_interconnected_tunnel'},

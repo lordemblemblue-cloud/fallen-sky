@@ -23,6 +23,10 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
     // West off the Ridge Path first, so every switchback stays >= 12.8 m from
     // it (the old bend at (-18,512) swung them to 5 m from the path, 10-36 m up).
     bend:Object.freeze([-16,470]),
+    // Then up the shelf west of the cliff band in level legs 9 m apart (free
+    // switchbacks folded onto each other there, 50-79 degrees between them),
+    // to the terrace before the mouth at (-40, 500). Story mode, 2026-11-23.
+    via:Object.freeze([[-30,457],[-68,457],[-68,466],[-30,466],[-30,475],[-66,475],[-66,484]]),
     style:'hot_spring_stone',waymark:'INKSTONE CISTERN',
   }),
   echoing_crystal_vault:Object.freeze({
@@ -76,6 +80,34 @@ function gradeLeg(from, to, endKind) {
   return pts;
 }
 
+// Designed turns at one even grade from `from` to `to`. On a hillside too
+// cramped for free switchbacks (they fold onto each other), the trail climbs
+// in long level legs joined by short turns, each leg clear of the next.
+function viaLeg(from, via, to) {
+  const corners = [from, ...via.map(([x, z]) => ({ x, z })), to];
+  let total = 0;
+  for (let i = 1; i < corners.length; i++)
+    total += Math.hypot(corners[i].x - corners[i - 1].x, corners[i].z - corners[i - 1].z);
+  const grade = (to.y - from.y) / Math.max(total, 1e-6);
+  if (Math.abs(grade) > WOLFVEIL_CAVE_APPROACH_MAX_GRADE)
+    throw new Error('Cave approach turns too close for its climb: grade ' + grade.toFixed(3));
+  const pts = [];
+  let along = 0;
+  for (let i = 1; i < corners.length; i++) {
+    const a = corners[i - 1], b = corners[i], len = Math.hypot(b.x - a.x, b.z - a.z);
+    const n = Math.max(1, Math.ceil(len / 8));
+    for (let k = 1; k <= n; k++) {
+      const t = k / n;
+      pts.push({
+        x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, y: from.y + grade * (along + len * t),
+        kind: k < n ? 'path' : i === corners.length - 1 ? 'staging' : 'turn',
+      });
+    }
+    along += len;
+  }
+  return pts;
+}
+
 export const WOLFVEIL_CAVE_APPROACHES=Object.freeze(
   WOLFVEIL_EXPLORABLE_CAVES.map(cave=>{
     const spec=WOLFVEIL_CAVE_ACCESS_TRAILS[cave.id];
@@ -85,11 +117,14 @@ export const WOLFVEIL_CAVE_APPROACHES=Object.freeze(
     const anchor={x:mx-dx*3.5,z:mz-dz*3.5,y:cave.threshold[1]};
     const junction={x:spec.junction[0],z:spec.junction[1],y:wolfveilHeight(spec.junction[0],spec.junction[1]),kind:'trail'};
     const bend={x:spec.bend[0],z:spec.bend[1],y:wolfveilHeight(spec.bend[0],spec.bend[1])};
+    // A designed trail ends level with the threshold: a terrace before the
+    // arch, even where the mouth opens high in a steep face.
+    const apron=spec.via?{...front,y:anchor.y}:front;
     const surfacePoints=[
       junction,
       ...gradeLeg(junction,bend,'turn'),
-      ...gradeLeg(bend,front,'staging'),
-      ...gradeLeg(front,{...anchor,kind:'threshold'},'threshold'),
+      ...(spec.via?viaLeg(bend,spec.via,apron):gradeLeg(bend,front,'staging')),
+      ...gradeLeg(apron,{...anchor,kind:'threshold'},'threshold'),
     ].map(p=>Object.freeze({...p,y:p.kind==='threshold'?cave.threshold[1]:p.y}));
     const entrance=Object.freeze({
       x:mx,y:cave.mouthY-.35,z:mz,heading:Math.atan2(dx,dz),

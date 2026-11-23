@@ -48,9 +48,12 @@ const RAW_ENTRANCES = [
     id: 'sunken_inkstone_cistern',
     name: 'Sunken Inkstone Cistern',
     theme: 'ink_spring',
-    mouth: [-40, 548],
-    inwardDir: [-0.34, 0.94], // north into the high peaks
-    chamberOffset: 34,
+    // The mouth was at (-40, 548), 20 m beyond the 528 m edge where nobody can
+    // stand (story mode, 2026-11-23). It now opens in the steep face at
+    // (-40, 500) and its passage runs north to the same chamber as before.
+    mouth: [-40, 500],
+    inwardDir: [-11.5646, 79.9728], // north into the high peaks, to the chamber
+    chamberOffset: 80.8,
     chamberRadius: 16.5,
     ceilingHeight: 8.8,
     lightColor: 0x6ad4e8,

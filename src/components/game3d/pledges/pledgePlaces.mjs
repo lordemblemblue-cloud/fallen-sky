@@ -93,7 +93,7 @@ export const PLEDGE_PLACES = Object.freeze([
   // Under the valley: separate scenes that are already in the game.
   under('P44', 'jade_grotto', 'Jade Lantern Grotto', 'wolfveil-caves', 'west', -360, -400),
   under('P45', 'root_hollow', 'Whispering Root Hollow', 'wolfveil-caves', 'north', -500, 300),
-  under('P46', 'inkstone_cistern', 'Sunken Inkstone Cistern', 'wolfveil-caves', 'north', -40, 548),
+  under('P46', 'inkstone_cistern', 'Sunken Inkstone Cistern', 'wolfveil-caves', 'north', -40, 500),
   under('P47', 'crystal_vault', 'Echoing Crystal Vault', 'wolfveil-caves', 'east', 500, -36),
   // No mouth of its own ("reached through the cave tunnels"): x/z is the
   // room's centre in the cave layout (WolfveilCaveLayout.mjs), not from the plan.
