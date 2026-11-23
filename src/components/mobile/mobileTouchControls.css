@@ -27,6 +27,8 @@
   text-shadow:0 2px 4px #000;max-width:50%;pointer-events:none;
 }
 .mobile-move-stick {
+  left:clamp(calc(60px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 60px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(60px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 60px - env(safe-area-inset-bottom,0px)));
   position:absolute;z-index:3;width:clamp(106px,15vmin,142px);
   height:clamp(106px,15vmin,142px);transform:translate(-50%,-50%);
   background:radial-gradient(circle,rgba(51,102,146,.18),rgba(6,17,31,.68));
@@ -47,6 +49,8 @@
   box-shadow:0 2px 14px rgba(0,5,13,.75);pointer-events:none;
 }
 .mobile-touch-action {
+  left:clamp(calc(30px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 30px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(30px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 30px - env(safe-area-inset-bottom,0px)));
   position:absolute;z-index:3;transform:translate(-50%,-50%);
   min-width:var(--mobile-button-size);min-height:var(--mobile-button-size);
   width:var(--mobile-button-size);height:var(--mobile-button-size);
