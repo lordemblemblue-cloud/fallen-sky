@@ -5,6 +5,7 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import FallenSkyBetaNotice from '../components/game3d/FallenSkyBetaNotice';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
+import { questTestDestination } from '../components/game3d/threeroads/questTestDestinations.mjs';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import MobileTouchControls from '../components/mobile/MobileTouchControls';
 import { createFallenTouchBridge } from '../components/mobile/fallenMobileTouchBridge.mjs';
@@ -104,6 +105,38 @@ import {
 import {createGame3DEntryAudio}
   from '../components/game3d/audio/Game3DEntryAudio.mjs';
 
+const QUEST_TEST_ACTIVE_KEY = 'game3d.questTest.active';
+const THREE_ROADS_FLAG_KEYS = ['threeRoads', 'threeRoadsPreview'];
+const THREE_ROADS_STORAGE_KEYS = ['game3d.threeRoads', 'game3d.threeRoadsPreview'];
+
+// Keep the owner's existing preview settings exactly as they were before testing.
+// URL overrides the two localStorage flags in the actual Three Roads runtime.
+function snapshotThreeRoadsFlags(win) {
+  const url = new URL(win.location.href);
+  return {
+    query: THREE_ROADS_FLAG_KEYS.map(key => url.searchParams.get(key)),
+    stored: THREE_ROADS_STORAGE_KEYS.map(key => {
+      try { return win.localStorage.getItem(key); } catch { return null; }
+    }),
+  };
+}
+function setThreeRoadsFlags(win, preview, previous = null) {
+  const url = new URL(win.location.href);
+  THREE_ROADS_FLAG_KEYS.forEach((key, index) => {
+    const value = previous ? previous.query[index] : (index === 0 || preview ? '1' : '0');
+    if (value === null) url.searchParams.delete(key);
+    else url.searchParams.set(key, value);
+  });
+  win.history.replaceState(win.history.state, '', url.pathname + url.search + url.hash);
+  THREE_ROADS_STORAGE_KEYS.forEach((key, index) => {
+    try {
+      const value = previous ? previous.stored[index] : (index === 0 || preview ? '1' : '0');
+      if (value === null) win.localStorage.removeItem(key);
+      else win.localStorage.setItem(key, value);
+    } catch { /* URL flags still control this visit when storage is denied */ }
+  });
+}
+
 export default function GameView() {
   const navigate = useNavigate();
   const touchBridgeRef = useRef(null);
@@ -135,6 +168,7 @@ export default function GameView() {
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
   const [workflowSpawn, setWorkflowSpawn] = useState(null);
+  const questTestSessionRef = useRef(null);
   const [resumeCheckpoint, setResumeCheckpoint] = useState(null);
   const services = useAXEServiceMode();
   const [storeOpen, setStoreOpen] = useState(false);
@@ -282,6 +316,88 @@ export default function GameView() {
   // Tear down combat audio when leaving GameView entirely.
   useEffect(() => () => teardownCombatMusic(), []);
 
+
+  // Admin-only Three Roads testing. Reuse the existing safe-ground workflow
+  // spawn and five-area scene remount; do not bypass server movement authority.
+  useEffect(() => {
+    if (phase !== 'world' || user?.role !== 'admin') return;
+    const move = target => {
+      const area = wolfveilAreaAtWorld(target);
+      if (!WOLFVEIL_AREA_IDS.includes(area)) {
+        toast.error('Quest Test location is not available in this build.');
+        return false;
+      }
+      services.controller.close();
+      setPauseMenuOpen(false);
+      setStoreOpen(false);
+      setProgressionOpen(false);
+      setPortalReturn(false);
+      setPortalSpawnAtGate(false);
+      setPortalLanding(null);
+      setResumeCheckpoint(null);
+      setWorldEntryError('');
+      setWorldArea(area);
+      lastWolfveilAreaRef.current = area;
+      setWorldRegion('wolfveil');
+      setWorkflowSpawn(`X ${target.x}, Z ${target.z}`);
+      worldReadyRef.current = false;
+      setWorldReady(false);
+      setWorldEntryStatus('loading');
+      // Required even when testing two destinations in the SAME area.
+      setWorldEntryCycle(cycle => cycle + 1);
+      return true;
+    };
+    const changed = active => {
+      try {
+        if (active) window.sessionStorage.setItem(QUEST_TEST_ACTIVE_KEY, '1');
+        else window.sessionStorage.removeItem(QUEST_TEST_ACTIVE_KEY);
+      } catch { /* No storage permission: still permit the current in-memory session */ }
+      window.dispatchEvent(new Event('game3dQuestTestSessionChanged'));
+    };
+    const onTravel = event => {
+      if (worldRegion !== 'wolfveil') {
+        toast.error('Enter the Wolfveil overworld before using Quest Test.');
+        return;
+      }
+      const id = event?.detail?.destinationId;
+      if (id === 'return') {
+        const session = questTestSessionRef.current;
+        if (!session) { changed(false); toast.error('Previous position unavailable.'); return; }
+        if (!move(session.origin)) return;
+        setThreeRoadsFlags(window, false, session.flags);
+        questTestSessionRef.current = null;
+        changed(false);
+        return;
+      }
+      const destination = questTestDestination(id);
+      if (!destination) { toast.error('Unknown Quest Test destination.'); return; }
+      if (!questTestSessionRef.current) {
+        // Flush synchronously using GameWorld3D's real checkpoint listener.
+        window.dispatchEvent(new Event('game3dCheckpointFlush'));
+        const origin = worldCheckpointStore.read();
+        if (origin?.region !== 'wolfveil') {
+          toast.error('No safe return location saved. Enter Wolfveil and try again.');
+          return;
+        }
+        questTestSessionRef.current = { origin, flags: snapshotThreeRoadsFlags(window) };
+      }
+      try { setThreeRoadsFlags(window, destination.preview); }
+      catch { toast.error('Unable to activate Three Roads preview in this browser.'); return; }
+      if (move(destination)) changed(true);
+    };
+    window.addEventListener('game3dQuestTestTravel', onTravel);
+    return () => window.removeEventListener('game3dQuestTestTravel', onTravel);
+  }, [phase, user?.role, worldRegion, services.controller]);
+
+  // Never leave an experimental Three Roads flag forced on after leaving Play.
+  useEffect(() => () => {
+    const session = questTestSessionRef.current;
+    if (session) {
+      try { setThreeRoadsFlags(window, false, session.flags); } catch { /* page leaving */ }
+      questTestSessionRef.current = null;
+    }
+    try { window.sessionStorage.removeItem(QUEST_TEST_ACTIVE_KEY); } catch { /* storage unavailable */ }
+  }, []);
 
   // Real portal crossings remount the same engine in a separate map scene.
   // The original Wolfveil terrain and its protected Luna mansion stay intact.
