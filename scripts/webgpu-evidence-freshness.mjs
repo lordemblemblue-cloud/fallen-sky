@@ -12,7 +12,7 @@ const STRICT_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 export function validateEvidenceFreshness(reports, nowMs = Date.now(), maxAgeMs = DEFAULT_MAX_AGE_MS) {
   if (!Array.isArray(reports) || reports.length === 0 ||
-      !Number.isFinite(nowMs) || !Number.isFinite(maxAgeMs) || maxAgeMs <= 0) {
+      !Number.isSafeInteger(nowMs) || !Number.isSafeInteger(maxAgeMs) || maxAgeMs <= 0) {
     return { ok: false, reason: 'invalid-freshness-input' };
   }
   for (let i = 0; i < reports.length; i++) {
