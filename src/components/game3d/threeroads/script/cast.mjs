@@ -154,11 +154,55 @@ export const THREE_ROADS_CAST = Object.freeze([
   person({ id: 'remoria_gate_north', hail: 'hail_remoria_gate_north', name: 'Gate Sentry', role: 'Legionary of the Ninth, the north gate', empire: 'remoria',
     home: { area: 'north', x: -46.12, z: 406.84, facing: 0.64 },
     look: { body: 'm', build: 'strong', colours: [0x8c2f2f, 0x8a8a8a], carries: 'a javelin and a tall shield' } }),
+
+  // The Jade Watch: already in the game, placed by the game outside the Jade Lantern Grotto.
+  person({ id: 'jade_watch_captain', name: 'Captain Arlen', role: 'Captain of the Jade Watch, at the Jade Lantern Grotto', empire: 'valley', existing: true }),
+
+  // Chapter 4: the echo at the Wolf Stones. One body; he wears the colours of the player's own
+  // empire as they were four hundred years ago (`look.byEmpire`), washed nearly grey.
+  person({ id: 'thrown_standard_bearer', name: 'The Standard-Bearer', role: 'A soldier of the last war, four hundred years dead, who put his standard down', empire: 'valley',
+    look: { body: 'm', build: 'strong', colours: [0x8a8f96, 0xd9d2c0], carries: 'a standard with no colour left in it', echo: true,
+      byEmpire: {
+        akitsu: { colours: [0x5f6f8c, 0xd9d2c0], wears: 'lacquered plates laced with cord, a banner pole at his back' },
+        tameri: { colours: [0xa8956a, 0xd9d2c0], wears: 'a quilted linen corselet and a striped headcloth, a pennant staff' },
+        remoria: { colours: [0x8c6a6a, 0xd9d2c0], wears: 'a bronze breastplate over a red tunic gone pale, a standard pole' },
+      } } }),
+
+  // The champions the other empires keep meeting (Ren, above, is Akitsu's).
+  person({ id: 'tiaa_archer', name: 'Tiaa', role: "Chariot archer of the Sharp Star, Tameri's champion", empire: 'tameri',
+    look: { body: 'f', build: 'wiry', colours: [0xe8dcc0, 0x3b5a8c], carries: 'a long bow and a nearly empty quiver' } }),
+  person({ id: 'brenna_casca', name: 'Optio Brenna Casca', role: "Optio of the Ninth, Remoria's champion", empire: 'remoria',
+    look: { body: 'f', build: 'strong', colours: [0x8c2f2f, 0xc9c9c9], carries: "an optio's staff and a short sword" } }),
 ]);
 
-const BY_ID = new Map(THREE_ROADS_CAST.map(entry => [entry.id, entry]));
+// Things that speak a line but have no body: what is written, read aloud.
+export const THREE_ROADS_VOICES = Object.freeze([
+  person({ id: 'drowned_ledger', name: 'The Drowned Ledger', role: "The Keepers' record of every war fought in the valley", empire: 'valley', voiceOnly: true }),
+]);
 
+// Roles: a name a pledge can use wherever it would name a person, standing for a different
+// person of the cast depending on the player's empire.
+//   own_commander    who the player answers to. A player of no empire answers to the Truce.
+//   rival_champion   the champion of the empire whose keepsake the player was given in chapter 1.
+export const THREE_ROADS_ROLES = Object.freeze([
+  person({ id: 'own_commander', name: 'Your commander', role: "The commander of the player's own empire", empire: 'valley',
+    standsFor: Object.freeze({ akitsu: 'hayasaka_colonel', tameri: 'nakhtamun_general', remoria: 'corvinus_legate', none: 'sable_vey' }) }),
+  person({ id: 'rival_champion', name: 'A rival champion', role: 'The champion of the empire that gave the player a keepsake', empire: 'valley',
+    standsFor: Object.freeze({ akitsu: 'tiaa_archer', tameri: 'brenna_casca', remoria: 'ren_swordswoman', none: 'tiaa_archer' }) }),
+]);
+
+const BY_ID = new Map([...THREE_ROADS_CAST, ...THREE_ROADS_VOICES, ...THREE_ROADS_ROLES].map(entry => [entry.id, entry]));
+
+// A person, a voice or a role by id.
 export const threeRoadsPerson = id => BY_ID.get(id) || null;
+
+// The id of the real person an id means for a player of this empire ('akitsu', 'tameri',
+// 'remoria' or 'none'): a role's stand-in, or the id itself.
+export function threeRoadsStandIn(id, empire = 'none') {
+  const entry = BY_ID.get(id);
+  if (!entry?.standsFor) return id;
+  return entry.standsFor[empire] || entry.standsFor.none;
+}
 
 // Where a person's main home is given the story so far. `flags` are the quest
 // store's story flags; a person with `homeAfter` moves (or leaves: home null)

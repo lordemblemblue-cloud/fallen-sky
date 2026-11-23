@@ -9,13 +9,17 @@ import { WOLFVEIL_ZOMBIE_CAMPS } from '../src/components/game3d/wolfveil/Wolfvei
 // run time. Without this import a check would pass on ground that is a cliff in the game.
 import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
 import { wolfveilHeight, wolfveilDistanceToRiver, WOLFVEIL_RIVER } from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+import { WOLFVEIL_EXPLORABLE_CAVES, sampleWolfveilCaveSpace } from '../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
 import {
-  THREE_ROADS_CAST, THREE_ROADS_EMPIRES, threeRoadsPerson, threeRoadsCastAtHome, threeRoadsHomeOf,
-  threeRoadsEmpireOfFaction, THREE_ROADS_BUILT_AREAS,
+  THREE_ROADS_CAST, THREE_ROADS_EMPIRES, THREE_ROADS_ROLES, THREE_ROADS_VOICES, threeRoadsPerson, threeRoadsCastAtHome,
+  threeRoadsHomeOf, threeRoadsEmpireOfFaction, threeRoadsStandIn, THREE_ROADS_BUILT_AREAS,
 } from '../src/components/game3d/threeroads/script/cast.mjs';
-import { THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsPointArea, threeRoadsLine, threeRoadsPoint }
-  from '../src/components/game3d/threeroads/script/index.mjs';
+import {
+  THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsPointArea, threeRoadsPointRegion, threeRoadsPointScene,
+  threeRoadsLine, threeRoadsPoint,
+} from '../src/components/game3d/threeroads/script/index.mjs';
 import { BAND1_KEEPSAKES, BAND1_LINES, BAND1_STAGING } from '../src/components/game3d/threeroads/script/band1.mjs';
+import { BAND3_KINDS, BAND3_LINES, BAND3_STAGING, BAND3_TOKENS } from '../src/components/game3d/threeroads/script/band3.mjs';
 
 // Every line id a staging block names, wherever it sits.
 function lineIdsIn(value, found = []) {
@@ -147,6 +151,15 @@ for (const band of THREE_ROADS_BANDS) {
       for (const group of spawned.values()) {
         assert.ok(['ink_shade', 'old_dead', 'echo'].includes(group.kind), `${pledge.id}: kind ${group.kind} exists today`);
         assert.ok(group.count >= 1 && group.count <= 6, `${pledge.id}: ${group.groupId} is a small group`);
+        // A monster the game cannot show yet is asked for by the kind it will become,
+        // stands in as one of today's, and is named for what the story means.
+        if (group.becomes !== undefined) {
+          const meant = BAND3_KINDS[group.becomes];
+          assert.ok(meant, `${pledge.id}: ${group.groupId} becomes a kind that is planned (${group.becomes})`);
+          assert.equal(group.kind, meant.standIn, `${pledge.id}: ${group.groupId} stands in as ${meant.standIn}`);
+          assert.equal(group.name, meant.name, `${pledge.id}: ${group.groupId} is named ${meant.name}`);
+          if (meant.boss) assert.deepEqual([group.count, group.tier], [1, 'elite'], `${pledge.id}: ${group.groupId} is one boss`);
+        }
       }
     }
   });
@@ -176,12 +189,24 @@ for (const band of THREE_ROADS_BANDS) {
     for (const [name, point] of Object.entries(band.points)) {
       assert.equal(allPointNames.has(name), false, 'point name used in two bands: ' + name);
       allPointNames.add(name);
+      assert.equal(threeRoadsPoint(name), point);
+      // A point under the valley lies in a region's own scene: inside the caves' walkable
+      // space, with room to stand. The surface rules do not apply to it.
+      const region = threeRoadsPointRegion(band, name);
+      if (region) {
+        assert.ok((band.regions || []).includes(region), name + ' is in one of the band\'s regions');
+        assert.equal(threeRoadsPointArea(band, name), null, name + ' has a region, not an area');
+        assert.deepEqual(threeRoadsPointScene(name), { area: null, region });
+        const space = sampleWolfveilCaveSpace(point.x, point.z, 0.8);
+        assert.ok(space, `${name} (${point.x}, ${point.z}) is inside the caves, 0.8 m clear of the rock`);
+        continue;
+      }
       const expected = threeRoadsPointArea(band, name);
       assert.ok(expected, name + ' has an area rule');
       assert.ok(band.areas.includes(expected), name + ' is in one of the band\'s areas');
       assert.equal(wolfveilAreaAtLocal(point.x, point.z), expected, `${name} (${point.x}, ${point.z})`);
       assert.ok(Math.abs(point.x) <= 528 && Math.abs(point.z) <= 528, name + ' is inside the playable square');
-      assert.equal(threeRoadsPoint(name), point);
+      assert.deepEqual(threeRoadsPointScene(name), { area: expected, region: null });
     }
   });
 
@@ -191,7 +216,11 @@ for (const band of THREE_ROADS_BANDS) {
         if (!step.placeId) continue;
         const place = pledgePlace(step.placeId);
         assert.ok(place, `${pledge.id}/${step.id}: unknown place ${step.placeId}`);
-        assert.ok(band.areas.includes(place.area), `${pledge.id}/${step.id}: ${step.placeId} is in ${place.area}`);
+        if (place.region) {
+          // A place under the valley: its scene is one of the band's regions and its mouth is in one of its areas.
+          assert.ok((band.regions || []).includes(place.region), `${pledge.id}/${step.id}: ${step.placeId} is in ${place.region}`);
+          assert.ok(band.areas.includes(place.mouthArea), `${pledge.id}/${step.id}: the mouth of ${step.placeId} is in ${place.mouthArea}`);
+        } else assert.ok(band.areas.includes(place.area), `${pledge.id}/${step.id}: ${step.placeId} is in ${place.area}`);
       }
     }
   });
@@ -292,7 +321,7 @@ test('every story point and every home stands on ground a player can walk to', (
   const problems = [];
   for (const band of THREE_ROADS_BANDS) {
     for (const [name, point] of Object.entries(band.points)) {
-      if (GROUND_WAIVERS[name]) continue;
+      if (GROUND_WAIVERS[name] || threeRoadsPointRegion(band, name)) continue; // a cave point is checked against the caves
       const problem = groundProblem(point.x, point.z);
       if (problem) problems.push(name + ' (' + point.x + ', ' + point.z + '): ' + problem);
     }
@@ -309,7 +338,11 @@ test('every story point and every home stands on ground a player can walk to', (
 
 test("the builders' preview offers every written band, and each camp has its sentries", () => {
   assert.deepEqual(threeRoadsBuiltBands({ preview: false }).map(band => band.id), ['band1']);
-  assert.deepEqual(threeRoadsBuiltBands({ preview: true }).map(band => band.id), THREE_ROADS_BANDS.map(band => band.id));
+  // A band the engine cannot run yet (`staged: false`) is written and checked, and offered to nobody.
+  assert.deepEqual(threeRoadsBuiltBands({ preview: true }).map(band => band.id),
+    THREE_ROADS_BANDS.filter(band => band.staged !== false).map(band => band.id));
+  assert.deepEqual(threeRoadsBuiltBands({ preview: true }).map(band => band.id), ['band1', 'band2']);
+  assert.deepEqual(THREE_ROADS_BANDS.map(band => band.id), ['band1', 'band2', 'band3']);
   for (const [area, sentries] of [['west', 2], ['east', 2], ['north', 3]]) {
     const here = threeRoadsCastAtHome({ area, includeUnbuilt: true });
     assert.equal(here.filter(person => /_picket_|_gate_/.test(person.id)).length, sentries, area);
@@ -331,7 +364,9 @@ test('every hail is a line its own speaker says, and every sentry has one', () =
 
 // The valley already has monster camps of its own. A scene where someone stands
 // and speaks must not be set on top of one; a fight may be.
-const QUIET_SPOTS = Object.freeze(['ravine_gate', 'ravine_chant', 'ravine_sixth', 'hall_grave', 'landing_tally', 'fort_overhear', 'fort_tent']);
+const QUIET_SPOTS = Object.freeze(['ravine_gate', 'ravine_chant', 'ravine_sixth', 'hall_grave', 'landing_tally', 'fort_overhear', 'fort_tent',
+  // band 3: the cairn where the standard-bearer speaks, and the muster where three commanders stand
+  'echo_cairn', 'muster_truce', 'muster_akitsu', 'muster_tameri', 'muster_remoria', 'jade_gate']);
 test("spoken scenes keep clear of the game's own monster camps", () => {
   const spawns = WOLFVEIL_HOSTILE_ZONES.flatMap(zone => zone.locations.map(([x, z]) => ({ zone: zone.id, x, z })));
   assert.ok(spawns.length >= 10);
@@ -351,7 +386,8 @@ test("spoken scenes keep clear of the game's own monster camps", () => {
 test('no story spot or home stands inside one of the zombie camps', () => {
   assert.equal(WOLFVEIL_ZOMBIE_CAMPS.length, 10);
   const spots = [];
-  for (const band of THREE_ROADS_BANDS) for (const [name, point] of Object.entries(band.points)) spots.push([name, point]);
+  for (const band of THREE_ROADS_BANDS) for (const [name, point] of Object.entries(band.points))
+    if (!threeRoadsPointRegion(band, name)) spots.push([name, point]); // a cave point is under the ground, not in a camp
   for (const person of THREE_ROADS_CAST) {
     for (const home of [person.home, person.homeAfter?.home, ...(person.alsoAt || [])].filter(Boolean)) spots.push([person.id, home]);
   }
@@ -362,4 +398,156 @@ test('no story spot or home stands inside one of the zombie camps', () => {
       if (QUIET_SPOTS.includes(name)) assert.ok(away >= camp.radius + 20, `${name}, a spoken scene, is ${away.toFixed(0)} m from ${camp.label}`);
     }
   }
+});
+
+// ── Band 3: the first half of the main story ──────────────────────────────
+
+// Every cue or watch that changes with the player's empire, anywhere in a staging block.
+function byEmpireIn(value, found = []) {
+  if (!value || typeof value !== 'object') return found;
+  if (Array.isArray(value)) { for (const entry of value) byEmpireIn(entry, found); return found; }
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === 'sayByEmpire' || key === 'flagByEmpire') found.push([key, entry]);
+    else byEmpireIn(entry, found);
+  }
+  return found;
+}
+
+test('whatever changes with the empire has an answer for all three and for a player of none', () => {
+  for (const band of THREE_ROADS_BANDS) {
+    for (const [pledgeId, staging] of Object.entries(band.staging)) {
+      for (const [key, table] of byEmpireIn(staging)) {
+        assert.deepEqual(Object.keys(table).sort(), ['akitsu', 'none', 'remoria', 'tameri'], `${pledgeId} ${key}`);
+        if (key === 'sayByEmpire') for (const id of Object.values(table)) assert.ok(threeRoadsLine(id), `${pledgeId}: ${id}`);
+      }
+    }
+  }
+});
+
+test('roles stand for a real person of the cast for every empire, and voices have no body', () => {
+  const empires = ['akitsu', 'tameri', 'remoria', 'none'];
+  assert.deepEqual(THREE_ROADS_ROLES.map(role => role.id), ['own_commander', 'rival_champion']);
+  for (const role of THREE_ROADS_ROLES) {
+    assert.equal(threeRoadsPerson(role.id), role);
+    assert.equal(role.home, null);
+    for (const empire of empires) {
+      const real = THREE_ROADS_CAST.find(person => person.id === threeRoadsStandIn(role.id, empire));
+      assert.ok(real, `${role.id} for ${empire}`);
+      assert.equal(real.standsFor, undefined, 'a role never stands for another role');
+    }
+  }
+  // A player answers to their own empire's commander; a player of none answers to the Truce.
+  for (const empire of ['akitsu', 'tameri', 'remoria'])
+    assert.equal(threeRoadsPerson(threeRoadsStandIn('own_commander', empire)).empire, empire);
+  assert.equal(threeRoadsStandIn('own_commander', 'none'), 'sable_vey');
+  // The rival who helps the player belongs to the empire whose keepsake they were given at the gate.
+  for (const empire of ['akitsu', 'tameri', 'remoria'])
+    assert.equal(threeRoadsPerson(threeRoadsStandIn('rival_champion', empire)).empire, BAND1_KEEPSAKES[empire].from);
+  assert.equal(threeRoadsStandIn('sable_vey', 'akitsu'), 'sable_vey', 'an ordinary person stands for themselves');
+  assert.equal(threeRoadsStandIn('nobody_at_all', 'akitsu'), 'nobody_at_all');
+  for (const voice of THREE_ROADS_VOICES) {
+    assert.equal(threeRoadsPerson(voice.id), voice);
+    assert.equal(voice.voiceOnly, true);
+    assert.equal(voice.home, null);
+    assert.equal(THREE_ROADS_CAST.some(person => person.id === voice.id), false, voice.id + ' is not given a body');
+  }
+});
+
+test('band 3: a line said for one empire is said by that empire\'s commander or by the right rival', () => {
+  const speakerOf = id => BAND3_LINES[id].speaker;
+  const check = (table, role) => {
+    for (const empire of ['akitsu', 'tameri', 'remoria', 'none'])
+      assert.equal(speakerOf(table[empire]), threeRoadsStandIn(role, empire), `${table[empire]} for ${empire}`);
+  };
+  const m05 = BAND3_STAGING.tr_m05_root_fire.steps;
+  check(m05.standard.done.find(cue => cue.sayByEmpire).sayByEmpire, 'own_commander');
+  check(m05.commander.done.find(cue => cue.sayByEmpire).sayByEmpire, 'own_commander');
+  const m06 = BAND3_STAGING.tr_m06_the_drowned_ledger.steps;
+  check(m06.commander.done.find(cue => cue.sayByEmpire).sayByEmpire, 'own_commander');
+  for (const step of ['climb', 'drowned', 'tooth', 'loose'])
+    check(m06[step].done.find(cue => cue.sayByEmpire).sayByEmpire, 'rival_champion');
+  // The steps that are done with a role name the role, never one empire's person.
+  assert.equal(m05.standard.watch.npc, 'own_commander');
+  assert.equal(m05.commander.watch.npc, 'own_commander');
+  assert.equal(m06.commander.watch.npc, 'own_commander');
+  assert.equal(m06.hand.watch.npc, 'rival_champion');
+});
+
+test('band 3: the thing in the socket accuses a rival, and never the empire that gave the keepsake', () => {
+  const empires = ['akitsu', 'tameri', 'remoria'];
+  assert.deepEqual(Object.keys(BAND3_TOKENS).sort(), [...empires].sort());
+  assert.equal(new Set(empires.map(id => BAND3_TOKENS[id].accuses)).size, 3, 'each empire is accused once');
+  const m03 = BAND3_STAGING.tr_m03_the_first_stroke.steps.hesper.done;
+  const said = m03.find(cue => cue.sayByEmpire).sayByEmpire;
+  const flagged = m03.find(cue => cue.flagByEmpire).flagByEmpire;
+  const stones = BAND3_STAGING.tr_m04_what_the_stones_remember.steps.wave_three.done;
+  const remembered = stones.filter(cue => cue.sayByEmpire)[1].sayByEmpire;
+  for (const empire of empires) {
+    const token = BAND3_TOKENS[empire];
+    assert.notEqual(token.accuses, empire, empire + ' does not find its own badge');
+    assert.notEqual(token.accuses, BAND1_KEEPSAKES[empire].from, empire + ' owes one rival and suspects the other');
+    assert.equal(flagged[empire], token.flag);
+    assert.equal(token.flag, 'tr_token_' + token.accuses);
+    assert.equal(said[empire], 'hesper_m03_token_' + token.accuses);
+    assert.equal(remembered[empire], 'bearer_m04_token_' + empire);
+  }
+  // A player of no empire is told the story as Akitsu's is, as in the opening.
+  assert.equal(said.none, said.akitsu);
+  assert.equal(flagged.none, flagged.akitsu);
+  assert.equal(remembered.none, remembered.akitsu);
+});
+
+test('band 3: each wave at the stones is one old army, and the bearer knows his own', () => {
+  const steps = BAND3_STAGING.tr_m04_what_the_stones_remember.steps;
+  const waves = [['wave_one', 'akitsu'], ['wave_two', 'tameri'], ['wave_three', 'remoria']];
+  const armies = [steps.touch.done, steps.wave_one.done, steps.wave_two.done].map(cues => cues.find(cue => cue.spawnGroup).spawnGroup.becomes);
+  assert.deepEqual(armies, ['old_soldier_akitsu', 'old_soldier_tameri', 'old_soldier_remoria']);
+  for (const [step, army] of waves) {
+    const table = steps[step].done.find(cue => cue.sayByEmpire).sayByEmpire;
+    assert.equal(table[army], 'bearer_m04_own_' + army, `${step}: a soldier of ${army} sees his own people`);
+    for (const other of ['akitsu', 'tameri', 'remoria'].filter(id => id !== army))
+      assert.notEqual(table[other], table[army], `${step}: ${other} is told of an enemy`);
+  }
+});
+
+test('band 3: each cave chapter keeps to its own cave, and the hall is where a player comes in', () => {
+  const cave = id => WOLFVEIL_EXPLORABLE_CAVES.find(entry => entry.id === id);
+  const band = THREE_ROADS_BANDS.find(entry => entry.id === 'band3');
+  for (const [prefix, id] of [['grotto_', 'jade_lantern_grotto'], ['hollow_', 'whispering_root_hollow'], ['cistern_', 'sunken_inkstone_cistern']]) {
+    const { chamber, mouth } = cave(id);
+    const names = Object.keys(band.points).filter(name => name.startsWith(prefix));
+    assert.ok(names.length >= 4, prefix);
+    for (const name of names) {
+      const spot = band.points[name];
+      const fromRoom = Math.hypot(spot.x - chamber.x, spot.z - chamber.z);
+      const fromMouth = Math.hypot(spot.x - mouth[0], spot.z - mouth[1]);
+      if (name.endsWith('_hall')) assert.ok(fromMouth >= 12 && fromMouth <= 22, `${name} is in the entry hall, ${fromMouth.toFixed(0)} m in`);
+      else assert.ok(fromRoom <= chamber.radius - 2.5, `${name} is ${fromRoom.toFixed(1)} m from the middle of a ${chamber.radius} m chamber`);
+    }
+  }
+  // The mural each fight lights is the mural of the cave it is fought in.
+  assert.equal(BAND3_STAGING.tr_m03_the_first_stroke.steps.hares.watch.stroke, 'jade_lantern_grotto');
+  assert.equal(BAND3_STAGING.tr_m05_root_fire.steps.embers.watch.stroke, 'whispering_root_hollow');
+  assert.equal(BAND3_STAGING.tr_m06_the_drowned_ledger.steps.koi.watch.stroke, 'sunken_inkstone_cistern');
+});
+
+test('band 3: the main story runs in order, each chapter opened by the one before', () => {
+  const band = THREE_ROADS_BANDS.find(entry => entry.id === 'band3');
+  const chapters = band.pledges.map(raw => definePledge(raw));
+  assert.deepEqual(chapters.map(pledge => pledge.pledge.chapter), [3, 4, 5, 6]);
+  let level = 0;
+  let last = 'tr_m02_three_arrows';
+  let flag = 'tr_war_open';
+  for (const pledge of chapters) {
+    assert.equal(pledge.pledge.line, 'main');
+    assert.equal(pledge.factionId ?? null, null, pledge.id + ' is walked by all three empires');
+    assert.equal(threeRoadsPerson(pledge.npcId).empire, 'valley', pledge.id + ' is asked by one of the valley\'s own');
+    assert.equal(pledge.requires, last);
+    assert.deepEqual(raw(pledge).storyFlagsRequired, [flag]);
+    assert.ok(pledge.unlockLevel > level, pledge.id + ' opens later than the chapter before');
+    level = pledge.unlockLevel;
+    last = pledge.id;
+    flag = raw(pledge).storyFlagsOnComplete[0];
+  }
+  function raw(pledge) { return band.pledges.find(entry => entry.id === pledge.id); }
 });

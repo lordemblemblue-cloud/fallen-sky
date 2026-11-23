@@ -30,7 +30,13 @@ The other nine decisions below were not answered one by one. Until the owner say
 
 **2026-11-22: band 1 is in main** (pull request 251), still behind `?threeRoads=1` and off unless that is added to the address. It is the town and the Gate Fields: twelve places, seven people in the town, the two opening chapters of the main story and two valley pledges. Bram the lamplighter is the first person with a model of his own (`COSTS.md`: 26 Meshy credits).
 
-**Band 2 is planned and not built**: the three army camps (`CAMPS_BAND2.md`). Its places show only with `?threeRoads=1&threeRoadsPreview=1`, so nobody who turns the story on meets a half-built camp. The plan's camps moved when the real ground was surveyed: the river runs in a gorge, so the Landing is a cliff-top camp, and the fort stands across the ridge path.
+**Band 2 is built behind the builders' switch and has been played from end to end**: the three army camps, three smaller places and each empire's first two chapters (`CAMPS_BAND2.md`). It shows only with `?threeRoads=1&threeRoadsPreview=1`, so nobody who turns the story on meets a camp before the owner has seen it. The plan's camps moved when the real ground was surveyed: the river runs in a gorge, so the Landing is a cliff-top camp, and the fort stands across the ridge path. Two things are still open: waves that are meant to walk in on a guarded spot stand where they appear, and a walker cannot get from the plaza up the ridge path to the north gate.
+
+**2026-11-22: band 3 is written and not built.** Chapters 3 to 6 of the main story (the Jade Lantern Grotto, the Wolf Stones, Whispering Root Hollow, the Sunken Inkstone Cistern) are in `script/BAND3_SCRIPT.md`: 79 spoken lines. Nobody is offered them yet, preview or not, because three of the four go under the valley and the pledge engine cannot follow a player into the caves. What it asks of the builders, and what the real ground said, is at the top of `src/components/game3d/threeroads/script/band3.mjs`. Three faults in the land stand in its way:
+
+- A ring at a cave's mouth puts the player in the Wolf Rotunda in the middle of the cave network, not in the cave they walked into. The Jade Grotto's painted chamber is then 580 m of tunnel away.
+- The only path to Whispering Root Hollow passes 12 m from the edge of a camp of level 35 dead. The chapter is for levels 12 to 16.
+- The Sunken Inkstone Cistern's mouth is 20 m beyond the edge of the ground a player can walk on, and its path crosses its own terraces at 50 to 79 degrees.
 
 ## Decisions needed from the owner
 
@@ -47,7 +53,7 @@ The other nine decisions below were not answered one by one. Until the owner say
 
 ## What has cost what
 
-Nothing yet: no Meshy credits, no ElevenLabs credits. Estimates come with the first models and the first recorded lines.
+236 Meshy credits so far, for the eight townspeople who have models of their own; every task is listed in `COSTS.md`. No ElevenLabs credits: nothing has been recorded. The three bands written so far hold 225 spoken lines, 27,696 characters to record.
 
 ## Rules this work keeps
 
