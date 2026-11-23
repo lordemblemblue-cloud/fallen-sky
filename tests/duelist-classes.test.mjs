@@ -200,3 +200,23 @@ test('each class has four distinct ability animations, including intentionally s
   assert.equal(CLASSES.warrior.abilities[3].animation, CLASSES.duelist.abilities[2].animation,
     'shared blade throw intentionally retains its shared animation identifier');
 });
+
+test('all four specials enforce exact server meter costs without negative balances', () => {
+  for (const classId of CLASS_IDS) {
+    const cost = CLASSES[classId].special.cost;
+    const context = { classId, actor, target: enemy(20) };
+    const insufficient = evaluateSpecial({ ...context, meter: cost - 0.01 });
+    assert.equal(insufficient.allowed, false, classId + ' must reject insufficient charge');
+    assert.equal(insufficient.reason, 'not-charged');
+
+    const exact = evaluateSpecial({ ...context, meter: cost });
+    assert.equal(exact.allowed, true, classId + ' should accept exact charge');
+    assert.equal(exact.cost, cost);
+    assert.equal(exact.meterAfter, 0, classId + ' must spend exactly its cost');
+
+    const full = evaluateSpecial({ ...context, meter: SPECIAL_MAX });
+    assert.equal(full.allowed, true);
+    assert.ok(full.meterAfter >= 0 && full.meterAfter <= SPECIAL_MAX);
+    assert.ok(Math.abs(full.meterAfter - (SPECIAL_MAX - cost)) < 1e-8);
+  }
+});
