@@ -74,6 +74,7 @@ import { Objective, Comms, Prompt, Crew, DownNote, MissionEnd } from './MissionH
 import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 import '../menu/duelistDarkBlueTheme.css';
+import '../menu/duelistMobileUI.css';
 
 const POWERS = ['push', 'pull', 'grip', 'breach', 'dash', 'resist']; // the on-screen buttons, labelled with their keys
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
@@ -892,7 +893,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   }, [online, pendingClassPick, generation, net, hud, onClassChange]);
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
-    <div className="duelist-game" ref={mountRef}>
+    <div className="duelist-game" data-mobile-ui={typeof window !== 'undefined' && isMobileTouchDevice(window) ? 'true' : undefined} ref={mountRef}>
       <MobileTouchControls game="duelist"
         specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
           hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
@@ -916,7 +917,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {quest && <Comms view={quest} />}
       {quest && <DownNote view={quest} />}
       {quest && <MissionEnd view={quest} onAgain={online ? null : again} onLeave={onLeave} onNext={online ? null : onNext} />}
-      <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 60,
+      <div className="duelist-gpu-tools" style={{ position: 'absolute', top: 12, right: 12, zIndex: 60,
         maxWidth: 'min(340px, calc(100vw - 24px))', color: '#e4efff' }}>
         <button type="button" aria-expanded={showGpuDiagnostics}
           aria-controls="duelist-live-gpu-panel"
