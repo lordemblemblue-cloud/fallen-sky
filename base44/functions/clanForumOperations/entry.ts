@@ -23,7 +23,7 @@ const safeChannel = (channel: any) => ({
   created_by_clan_id: channel.created_by_clan_id,
   description: channel.description || '',
   capacity: channel.capacity || 50,
-  requires_password: Boolean(channel.join_password),
+  requires_password: Boolean(channel.join_password_hash || channel.join_password),
 });
 
 Deno.serve(async (req) => {
