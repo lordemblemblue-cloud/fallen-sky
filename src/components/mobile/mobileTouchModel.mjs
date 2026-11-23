@@ -92,6 +92,6 @@ export function normalizeMobileTouchLayout(game, landscape, saved) {
 export function touchLayoutStorageKey(game, landscape) {
   // The approved Duelist redesign must not inherit old centered controls from
   // an earlier saved v2 preset. Fallen Sky's layout key stays unchanged.
-  const versionedGame = game === 'duelist' ? 'duelist_ergonomic_v3' : game;
+  const versionedGame = game === 'duelist' ? 'duelist_skill_art_v4' : game;
   return `${MOBILE_TOUCH_LAYOUT_KEY}:${versionedGame}:${landscape ? 'landscape' : 'portrait'}`;
 }
