@@ -170,10 +170,15 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
 
 **Changed (`e05c5ec0`):**
 - `precompileSceneObjects(…, { sliceMs, onProgress })` builds shaders in slices (`compileSceneInSlices`):
-  - Each slice hides the other renderables, keeping the batch's ancestors and every light's ancestors visible, so the
-    light set in each shader key is unchanged.
-  - `compileAsync` then builds only that batch, every object gets its visibility back in the same task, and an ordinary
-    task yields to the browser.
+  - For each slice the camera sees only layer 31 (`PRECOMPILE_SLICE_LAYER`, unused by the game), and the batch and
+    every light the camera sees are put on it, so the light set in each shader key is unchanged.
+  - `compileAsync` then builds only that batch, the camera and every object get their layers back in the same task, and
+    an ordinary task yields to the browser.
+  - It uses layers rather than `visible`, because scenery `visible` setters run the area loader's callbacks, and keeping
+    the same camera keeps the render objects shared with real frames.
+  - A sliced run ends with `shadowMap.needsUpdate = true`. Its first slice drew the static sun shadow with only that
+    batch's casters, so the next frame redraws it whole.
+  - Both changes come from the WebGPU session's review (`032aa812`).
   - The batch size follows the running cost per object (1 to 16 objects), and at most 6 slices compile pipelines in the
     GPU process at once.
   - Frames stay held. Without `sliceMs` nothing changes, and calls on one renderer run one after another.
