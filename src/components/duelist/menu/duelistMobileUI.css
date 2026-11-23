@@ -1,0 +1,322 @@
+/* Duelist Adventure mobile UI (presentation only).
+   Uses the existing midnight-blue / warm gold DOM controls; no screenshot
+   overlays, duplicated hit targets, new gameplay input or WebGPU changes.
+   Landscape combat is composed around the already-merged touch controls. */
+
+/* Phone navigation uses the same five real routes/panels, but the entire
+   button surface stays thumb-accessible instead of copying desktop spacing. */
+@media (max-width: 850px) {
+  .dxt-page .dxt-header { gap:3px 12px; padding:6px 12px; }
+  .dxt-page .dxt-home { padding:20px 14px; min-height:260px; }
+  .dxt-page .dxt-home-intro { width:min(100%,430px); padding:17px; }
+  .dxt-page .dxt-home-intro h2 { font-size:clamp(24px,5.2vw,36px); }
+  .dxt-page .dxt-footer { padding:0 max(3px,env(safe-area-inset-left,0px)) 0 max(3px,env(safe-area-inset-right,0px)); }
+  .dxt-page .dxt-footer-link { min-width:0; min-height:51px; touch-action:manipulation; }
+  .dxt-page .dxt-surface :is(.dxt-category,.dxt-tile,.dxt-action,.dxt-close) { touch-action:manipulation; }
+  .dxt-page .dxt-surface :is(.dxt-tile,.dxt-action) { min-height:46px; }
+  .dxt-page .dxt-surface :is(input,select) { font-size:16px; }
+}
+
+/* A sideways phone is a shallow viewport, not a miniaturized desktop.
+   Fixed header + footer; each interior panel scrolls independently. */
+@media (orientation:landscape) and (max-width:1100px) and (max-height:600px) {
+  .dxt-page,.dxt-page--reference {
+    height:100dvh; min-height:0; overflow:hidden;
+    overscroll-behavior:contain;
+  }
+  .dxt-page .dxt-header {
+    display:grid; grid-template-columns:1fr auto; grid-template-rows:1fr;
+    height:44px; min-height:44px; padding:3px max(10px,env(safe-area-inset-left,0px))
+      3px max(10px,env(safe-area-inset-right,0px)); gap:8px;
+  }
+  .dxt-page .dxt-header h1 {
+    grid-column:1; grid-row:1; align-self:center; text-align:left;
+    font-size:clamp(15px,2.7vw,22px); line-height:1;
+  }
+  .dxt-page .dxt-header-player { display:none; }
+  .dxt-page .dxt-header-network { grid-column:2; grid-row:1; font-size:10px; }
+  .dxt-page .dxt-footer {
+    position:relative; bottom:auto; height:52px; min-height:52px;
+    flex:none; z-index:40; padding:0 max(3px,env(safe-area-inset-left,0px))
+      0 max(3px,env(safe-area-inset-right,0px));
+  }
+  .dxt-page .dxt-footer-link {
+    flex:1 1 0; max-width:none; min-height:49px;
+    flex-direction:column; gap:2px; padding:4px 2px; font-size:9px;
+  }
+  .dxt-page .dxt-footer-link:last-child { margin-left:0; }
+  .dxt-page .dxt-footer-link svg { width:17px; height:17px; }
+  .dxt-page .dxt-stage-scrim { inset:44px 0 52px; }
+  .dxt-page .dxt-home { min-height:0; padding:16px max(16px,env(safe-area-inset-left,0px)); }
+  .dxt-page .dxt-home-intro {
+    width:min(53%,410px); padding:16px 18px;
+    background:linear-gradient(90deg,rgba(8,23,45,.94),rgba(9,25,49,.5));
+  }
+  .dxt-page .dxt-home-intro h2 { font-size:clamp(22px,3.2vw,34px); }
+  .dxt-page .dxt-home-intro p { font-size:12px; margin-bottom:12px; }
+  .dxt-page .dxt-surface {
+    position:absolute; inset:49px max(7px,env(safe-area-inset-right,0px))
+      57px max(7px,env(safe-area-inset-left,0px));
+    margin:0; padding:9px 12px; min-height:0; max-height:none;
+    display:flex; flex-direction:column; overflow:hidden;
+    border:1px solid rgba(145,192,229,.56); border-radius:6px;
+    clip-path:none; background-image:none;
+    background:linear-gradient(120deg,rgba(11,30,56,.97),rgba(6,20,40,.96));
+  }
+  .dxt-page .dxt-surface-top {
+    flex:none; margin-bottom:6px; padding:0 2px 6px; gap:10px;
+  }
+  .dxt-page .dxt-surface-top h2 { font-size:18px; }
+  .dxt-page .dxt-surface-top p,.dxt-page .dxt-eyebrow { display:none; }
+  .dxt-page .dxt-close { width:36px; height:36px; min-width:36px; }
+  .dxt-page .dxt-mode-layout {
+    display:grid; grid-template-columns:minmax(0,1.2fr) minmax(215px,.8fr);
+    grid-template-rows:auto minmax(0,1fr); gap:6px 12px;
+    min-height:0; overflow:hidden;
+  }
+  .dxt-page .dxt-mode-categories {
+    grid-column:1 / -1; grid-row:1;
+    display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px;
+    flex-direction:row; padding:0 0 5px; min-height:0;
+    border-right:0; border-bottom:1px solid rgba(155,194,231,.25);
+  }
+  .dxt-page .dxt-category {
+    min-height:38px; height:38px; padding:3px 5px;
+    flex-direction:row; gap:5px; justify-content:center;
+    font-size:11px; line-height:1.05; white-space:normal;
+  }
+  .dxt-page .dxt-category svg { width:16px; height:16px; }
+  .dxt-page .dxt-mode-center {
+    grid-column:1; grid-row:2; min-height:0; min-width:0; overflow:hidden;
+  }
+  .dxt-page .dxt-section-lead { margin:0 0 5px; border-left-width:2px; padding-left:8px; }
+  .dxt-page .dxt-section-lead h3 { font-size:15px; }
+  .dxt-page .dxt-section-lead p { display:none; }
+  .dxt-page .dxt-mode-grid {
+    flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+    grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px;
+    padding:2px 4px 8px 0;
+  }
+  .dxt-page .dxt-tile {
+    min-height:51px; padding:6px 9px; gap:6px; font-size:12px;
+  }
+  .dxt-page .dxt-tile svg { width:21px; height:21px; }
+  .dxt-page .dxt-mode-detail {
+    grid-column:2; grid-row:2; min-height:0;
+    overflow-y:auto; overscroll-behavior:contain;
+    padding:1px 0 4px 10px; border-top:0;
+    border-left:1px solid rgba(158,200,230,.29);
+  }
+  .dxt-page .dxt-detail-art { display:none; }
+  .dxt-page .dxt-detail-copy { margin:0; }
+  .dxt-page .dxt-detail-copy h3 { font-size:19px; margin:0 0 3px; }
+  .dxt-page .dxt-detail-copy p { font-size:11px; line-height:1.3; margin:3px 0; }
+  .dxt-page .dxt-detail-metadata { padding:4px 0; gap:4px; }
+  .dxt-page .dxt-detail-metadata span { font-size:10px; }
+  .dxt-page .dxt-detail-actions { gap:5px; margin:6px 0 4px; }
+  .dxt-page .dxt-action { min-height:42px; padding:6px; font-size:11px; }
+  .dxt-page .dxt-action svg { width:16px; height:16px; }
+  .dxt-page .dxt-detail-settings { gap:5px; margin-top:5px; }
+  .dxt-page .dxt-detail-settings select { padding:5px; }
+  .dxt-page .dxt-unavailable { padding:5px; margin:5px 0; font-size:10px; }
+
+  /* Character: actual scene remains center; scroll the roster and stats, not the whole app. */
+  .dxt-page--reference .dcm-root {
+    position:absolute; inset:0 0 52px; min-height:0; overflow:hidden;
+  }
+  .dxt-page--reference .dcm-frame {
+    height:calc(100% - 12px); min-height:0; margin:6px;
+    padding:7px; border-radius:8px;
+  }
+  .dxt-page--reference .dcm-layout {
+    height:100%; min-height:0;
+    grid-template-columns:minmax(150px,28%) minmax(185px,34%) minmax(0,38%);
+    grid-template-rows:minmax(0,1fr); gap:6px;
+  }
+  .dxt-page--reference .dcm-roster-panel {
+    min-height:0; overflow-y:auto; padding:5px; gap:5px; border-radius:5px;
+  }
+  .dxt-page--reference .dcm-roster-heading { font-size:11px; }
+  .dxt-page--reference .dcm-class-filters { gap:2px; }
+  .dxt-page--reference .dcm-class-filters button { height:32px; min-height:32px; font-size:9px; }
+  .dxt-page--reference .dcm-roster-grid {
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    grid-template-rows:repeat(5,minmax(39px,1fr)); gap:3px; min-height:210px;
+  }
+  .dxt-page--reference .dcm-roster-grid .dcm-fighter-slot { gap:2px; padding:2px; }
+  .dxt-page--reference .dcm-fighter-slot svg { width:18px; height:18px; }
+  .dxt-page--reference .dcm-roster-status { font-size:9px; }
+  .dxt-page--reference .dcm-showcase { min-height:0; grid-column:2; grid-row:1; }
+  .dxt-page--reference .dcm-showcase-top { top:6px; left:7px; }
+  .dxt-page--reference .dcm-showcase-top h2 { font-size:19px; }
+  .dxt-page--reference .dcm-showcase-top p { display:none; }
+  .dxt-page--reference .dcm-skin-tray {
+    height:50px; bottom:6px; padding:4px 3px; gap:2px; border-radius:5px;
+    grid-template-columns:16px repeat(5,minmax(0,1fr)) 16px;
+  }
+  .dxt-page--reference .dcm-mastery-panel {
+    grid-column:3; grid-row:1; min-height:0;
+    padding:6px; overflow-y:auto; overscroll-behavior:contain;
+  }
+  .dxt-page--reference .dcm-detail-body { max-height:none; overflow:visible; }
+  .dxt-page--reference .dcm-milestone { min-height:45px; }
+  .dxt-page--reference .dcm-confirm { min-height:42px; }
+
+  /* Story and settings use genuine content panes with scroll instead of
+     the cropped desktop illustration creating unreachable tap targets. */
+  .dxt-page--reference .dsm-story { position:absolute; inset:0 0 52px; overflow-y:auto; }
+  .dxt-page--reference .dsm-frame {
+    height:auto; min-height:calc(100% - 12px);
+    margin:6px; padding:9px; border-radius:7px;
+  }
+  .dxt-page--reference .dsm-layout { grid-template-columns:1fr; gap:8px; }
+  .dxt-page--reference .dsm-tabs {
+    display:flex; grid-row:1; flex-direction:row; overflow-x:auto; gap:4px;
+    padding:1px 0 6px; border:0; border-bottom:1px solid rgba(141,190,232,.3);
+  }
+  .dxt-page--reference .dsm-tab {
+    flex:0 0 94px; min-height:42px; max-height:none;
+    padding:4px; justify-content:center; flex-direction:column; gap:2px; font-size:9px;
+  }
+  .dxt-page--reference .dsm-tab svg { width:16px; height:16px; }
+  .dxt-page--reference .dsm-middle { grid-row:2; grid-template-rows:auto auto auto; }
+  .dxt-page--reference .dsm-scene { min-height:130px; aspect-ratio:16/7; }
+  .dxt-page--reference .dsm-detail { grid-row:3; min-height:260px; }
+
+  .dxt-page--reference .dxr-art--settings {
+    position:absolute; inset:0 0 52px;
+    display:flex; flex-direction:column; gap:10px; padding:45px 12px 16px;
+    overflow-y:auto; background:linear-gradient(145deg,#102d4e,#09203c 54%,#06172d);
+  }
+  .dxt-page--reference .dxr-art--settings :is(.dxr-settings-tabs,.dxr-settings-controls,.dxr-settings-preview,.dxr-settings-actions) {
+    position:relative; inset:auto; width:100%; height:auto;
+    margin:0; min-height:0; max-height:none;
+  }
+  .dxt-page--reference .dxr-art--settings .dxr-settings-tabs {
+    display:flex; flex-wrap:wrap; gap:5px; padding:8px;
+    border:1px solid rgba(158,196,228,.31);
+    background:rgba(11,29,53,.9); border-radius:5px;
+  }
+  .dxt-page--reference .dxr-art--settings .dxr-settings-tabs button {
+    flex:1 1 28%; min-height:43px; padding:5px;
+  }
+  .dxt-page--reference .dxr-art--settings :is(.dxr-settings-controls,.dxr-settings-preview) {
+    padding:10px; overflow:visible;
+    border:1px solid rgba(158,196,228,.31);
+    background:rgba(11,29,53,.9); border-radius:5px;
+  }
+  .dxt-page--reference .dxr-art--settings .dxr-settings-actions {
+    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px;
+  }
+  .dxt-page--reference .dxr-art--settings .dxr-settings-actions .dxr-action { min-height:44px; height:auto; }
+
+  /* In-match readability: only on touch-capable Duelist. A small desktop
+     browser window must keep keyboard skill/shop buttons available. Dock HP
+     above the left stick, keep centered live
+     match score, and use the right arc of REAL touch buttons for skills.
+     Do not display a second set of skill/special buttons behind the touch UI. */
+  .duelist-arena-page { height:100dvh; min-height:0; overflow:hidden; }
+  .duelist-arena-page .duelist-arena-header {
+    flex:none; min-height:40px; height:40px; padding:2px max(8px,env(safe-area-inset-left,0px))
+      2px max(8px,env(safe-area-inset-right,0px)); gap:8px; flex-wrap:nowrap;
+  }
+  .duelist-arena-page .duelist-arena-back { min-height:34px; font-size:11px; padding:3px 9px; }
+  .duelist-arena-page .duelist-arena-brand { display:none; }
+  .duelist-arena-page .duelist-arena-title { display:block; font-size:12px; }
+  .duelist-arena-page .duelist-arena-meta {
+    margin-left:auto; font-size:10px; max-width:31%;
+    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+  }
+  .duelist-arena-page .duelist-arena-section { flex:1; min-height:0; overflow:hidden; }
+  .duelist-game[data-mobile-ui='true'] .dh-bl {
+    left:calc(env(safe-area-inset-left,0px) + 7px);
+    top:calc(env(safe-area-inset-top,0px) + 6px);
+    bottom:auto; transform:scale(.55); transform-origin:left top;
+    z-index:12;
+  }
+  .duelist-game[data-mobile-ui='true'] .dh-portrait,.duelist-game[data-mobile-ui='true'] .dh-equipped { display:none; }
+  .duelist-game[data-mobile-ui='true'] .dh-vitals { margin:0; }
+  .duelist-game[data-mobile-ui='true'] .dh-bc,.duelist-game[data-mobile-ui='true'] .dh-br { display:none; }
+  .duelist-game[data-mobile-ui='true'] .dh-tc {
+    top:calc(env(safe-area-inset-top,0px) + 4px);
+    transform:translateX(-50%) scale(.39);
+    transform-origin:center top;
+  }
+  .duelist-game[data-mobile-ui='true'] .dh-tr {
+    top:calc(env(safe-area-inset-top,0px) + 5px);
+    right:calc(env(safe-area-inset-right,0px) + 6px);
+    transform:scale(.38); transform-origin:right top;
+  }
+  .duelist-game[data-mobile-ui='true'] .dh-help { display:none; }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-toggle,.duelist-game[data-mobile-ui='true'] .duelist-active-relic { display:none; }
+  .duelist-game[data-mobile-ui='true'] .duelist-sound {
+    left:calc(env(safe-area-inset-left,0px) + 8px);
+    top:calc(env(safe-area-inset-top,0px) + 64px);
+    right:auto; bottom:auto; transform:none; padding:3px 8px; font-size:10px;
+  }
+  .duelist-game[data-mobile-ui='true'] .duelist-gpu-tools { display:none; }
+  /* The default touch editor is centered at the top, exactly where the
+     match scoreboard sits. Dock it beside the HP stack instead. */
+  .duelist-game[data-mobile-ui='true'] .mobile-control-toolbar {
+    left:calc(env(safe-area-inset-left,0px) + 8px);
+    right:auto; top:calc(env(safe-area-inset-top,0px) + 94px);
+    transform:none; max-width:35%;
+  }
+  .duelist-game[data-mobile-ui='true'] .mobile-control-instructions {
+    left:calc(env(safe-area-inset-left,0px) + 8px);
+    top:calc(env(safe-area-inset-top,0px) + 138px);
+    transform:none; max-width:34%;
+    background:rgba(5,17,34,.66); border-radius:4px;
+  }
+
+  /* The match class picker must fit a short landscape screen without
+     cramming a 3x desktop layout or letting the Select button fall below it. */
+  .duelist-game[data-mobile-ui='true'] .duelist-classpick.dcp-root {
+    width:calc(100% - 12px); height:calc(100% - 10px); max-height:calc(100% - 10px);
+    grid-template-columns:minmax(132px,27%) minmax(170px,32%) minmax(0,41%);
+    grid-template-rows:minmax(0,1fr); overflow:hidden;
+    background:linear-gradient(90deg,rgba(6,18,37,.95),rgba(10,29,54,.83));
+  }
+  .duelist-game[data-mobile-ui='true'] .dcp-classes { gap:7px; padding:8px 6px; overflow-y:auto; }
+  .duelist-game[data-mobile-ui='true'] .dcp-classes-heading strong { font-size:11px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-class-stack { gap:2px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-class-choice { min-height:42px; padding:4px 2px; gap:5px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-class-choice svg { width:17px; height:17px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-class-choice strong { font-size:11px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-class-choice small { font-size:9px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-model { grid-column:2; grid-row:1; }
+  .duelist-game[data-mobile-ui='true'] .dcp-model-view { bottom:104px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-model-footer { bottom:7px; gap:4px; left:4px; right:4px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-model-identity strong { font-size:13px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-select { min-height:42px; height:42px; }
+  .duelist-game[data-mobile-ui='true'] .dcp-details {
+    grid-column:3; grid-row:1; border-top:0;
+    border-left:1px solid rgba(167,205,232,.22);
+    padding:10px; overflow-y:auto; overscroll-behavior:contain;
+  }
+  .duelist-game[data-mobile-ui='true'] .dcp-details::before { display:none; }
+  .duelist-game[data-mobile-ui='true'] .dcp-level,.duelist-game[data-mobile-ui='true'] .dcp-section-title,.duelist-game[data-mobile-ui='true'] .dcp-passive { margin-top:8px; }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop {
+    top:2%; height:96%; width:calc(100% - 10px); border-radius:7px;
+  }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-head { padding:6px 10px; }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-slot { height:35px; }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-slot .duelist-item-art { width:30px; height:30px; }
+  .duelist-game[data-mobile-ui='true'] .duelist-shop-filter { padding:4px 7px; }
+}
+
+/* Portrait is a browse/select surface; the already-implemented Duelist
+   orientation gate asks for landscape before enabling match touch input. */
+@media (orientation:portrait) and (max-width:600px) {
+  .dxt-page .dxt-header { min-height:61px; padding:6px 11px; }
+  .dxt-page .dxt-header h1 { font-size:16px; }
+  .dxt-page .dxt-surface { margin:9px 5px; min-height:0; padding:12px 9px; }
+  .dxt-page .dxt-mode-categories { gap:4px; }
+  .dxt-page .dxt-category { min-height:48px; padding:4px; font-size:10px; }
+  .dxt-page .dxt-mode-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .dxt-page .dxt-surface-top h2 { font-size:21px; }
+  .dxt-page .dxt-footer-link { min-height:56px; }
+  .dxt-page--reference .dcm-frame { margin:8px 5px; padding:9px; border-radius:9px; }
+  .dxt-page--reference .dsm-frame { margin:8px 5px; padding:9px; border-radius:9px; }
+}
