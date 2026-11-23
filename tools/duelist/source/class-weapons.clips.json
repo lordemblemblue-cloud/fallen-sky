@@ -691,6 +691,36 @@
    "loop": false,
    "note": "the push: the free hand drawn back to the ribs and shot straight out, open, the trunk behind it"
   },
+  "swordWhirlSwift": {
+   "seconds": 0.6333,
+   "loop": false,
+   "note": "the whirl, swift: one turn to the left on one foot, the blade carried round"
+  },
+  "swordWhirlBalanced": {
+   "seconds": 0.7667,
+   "loop": false,
+   "note": "the whirl, balanced: one turn to the left on one foot, the blade carried round"
+  },
+  "swordWhirlHeavy": {
+   "seconds": 0.95,
+   "loop": false,
+   "note": "the whirl, heavy: one turn to the left on one foot, the blade carried round"
+  },
+  "swordCrossSwift": {
+   "seconds": 0.5833,
+   "loop": false,
+   "note": "the cross, swift: one turn to the right on one foot, the blade carried round"
+  },
+  "swordCrossBalanced": {
+   "seconds": 0.6833,
+   "loop": false,
+   "note": "the cross, balanced: one turn to the right on one foot, the blade carried round"
+  },
+  "swordCrossHeavy": {
+   "seconds": 0.85,
+   "loop": false,
+   "note": "the cross, heavy: one turn to the right on one foot, the blade carried round"
+  },
   "swordTauntWarrior": {
    "seconds": 2.2,
    "loop": false,

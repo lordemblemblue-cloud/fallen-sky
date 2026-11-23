@@ -132,7 +132,7 @@ test('one click is one cut: a press too early is dropped, a press in the strike 
 });
 
 test('a second press hard on the first turns the cut into the whirl, the cross or the backhand; one cooldown for all three', async () => {
-  const { SNAP, SNAP_COOLDOWN, SNAP_IDS } = await import('../src/components/duelist/core/index.mjs');
+  const { SNAP, SNAP_COOLDOWN, SNAP_IDS, SNAP_TIMING } = await import('../src/components/duelist/core/index.mjs');
   const start = (first, second, at = 0.05, mode = null) => {
     const f = createFighter({ id: 'a', weapon: 'sword' });
     while (mode && f.mode !== mode) press(f, 'mode', 0);
@@ -166,10 +166,15 @@ test('a second press hard on the first turns the cut into the whirl, the cross o
     assert.ok(FLOW.sword.strikes.has(id) && move.chain.from > move.startup && move.cooldown === SNAP_COOLDOWN, id);
     const first = MOVE_MOTION[id].segments[0];
     assert.ok(MOTION_CLIPS[first.clip], `${id}: its clip ${first.clip} is in the pack`);
+    // each has a clip of its own name, made for it to the rules' seconds (the whirl and the cross as well)
+    const t = SNAP_TIMING[move.snap.kind][move.snap.mode];
+    assert.equal(first.clip, id);
+    assert.equal(MOTION_CLIPS[id].source, 'blender', `${id}: made for it`);
+    assert.ok(Math.abs(MOTION_CLIPS[id].duration - (t.wind + t.cut + t.hold + t.rec)) < 1 / 60 + 1e-6, `${id}: as long as the move`);
+    assert.ok(Math.abs(move.duration - (t.wind + t.cut + t.hold + t.rec)) < 1e-6);
     assert.ok(MOVE_MOTION[id].segments.at(-1).to[1] <= MOTION_CLIPS[first.clip].duration + 1e-6, `${id}: inside its clip`);
   }
   assert.equal(MOVES.swordWhirlBalanced.arc, 360, 'the whirl cuts all round');
-  assert.equal(MOTION_CLIPS.swordBackhandBalanced.source, 'blender', 'the backhand has a clip made for it');
 });
 
 test('the backhand reaches a foe behind the sword shoulder, and not one in front on the other side', async () => {

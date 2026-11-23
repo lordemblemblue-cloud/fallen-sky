@@ -202,6 +202,7 @@ export function createDepot({ level, def, scene = null, lights = null }) {
     lights.sun.intensity = theme.sun;
     lights.sun.color.setHex(theme.sunColor);
     lights.rimLight.intensity = theme.rim;
+    for (const fill of lights.fills || []) fill.intensity = theme.rim * 0.6; // the soft fills keep to the place's mood
   }
 
   // ---- the deck, its lit overlay, the ceiling

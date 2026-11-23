@@ -117,20 +117,32 @@ export const BACKHAND_TIMING = Object.freeze({
   heavy: Object.freeze({ wind: 0.2, cut: 0.21, hold: 0.1, rec: 0.37 }),
 });
 export const BACKHAND_CONTACT = Object.freeze([0.5, 0.95]); // the blade is past the sword side and going round behind
+// Seconds of each of the three in each mode: for the whirl and the cross, the coil, the turn, the hold and the
+// recovery; for the backhand, its wind-up, cut, hold and recovery. KEEP IN STEP with tools/duelist/blender/cut_grid.py
+// SPIN_MODES and BACKHAND_MODES.
+export const SNAP_TIMING = Object.freeze({
+  whirl: Object.freeze({ swift: { wind: 0.12, cut: 0.29, hold: 0.03, rec: 0.2 }, balanced: { wind: 0.14, cut: 0.34, hold: 0.04, rec: 0.24 }, heavy: { wind: 0.18, cut: 0.42, hold: 0.05, rec: 0.3 } }),
+  cross: Object.freeze({ swift: { wind: 0.1, cut: 0.26, hold: 0.03, rec: 0.19 }, balanced: { wind: 0.12, cut: 0.3, hold: 0.04, rec: 0.22 }, heavy: { wind: 0.15, cut: 0.38, hold: 0.05, rec: 0.27 } }),
+  backhand: BACKHAND_TIMING,
+});
+// The shares of the turn (or the cut) through which the blade is doing its work: the whirl and the cross cut nearly
+// all the way round.
+export const SNAP_CONTACT = Object.freeze({ whirl: Object.freeze([0.15, 0.9]), cross: Object.freeze([0.2, 0.85]), backhand: BACKHAND_CONTACT });
+// Each has a clip of its own in each mode, made in Blender (cut_grid.py). The whirl and the cross are one turn of the
+// whole body on one foot with the blade carried round (the whirl to the left with the blade level, the cross to the
+// right, rising from low across the body); the backhand's arc is turned to the sword side and behind (degrees to
+// the left).
 const SNAP_KINDS = Object.freeze({
-  // the pack's spinning cut and its turning backhand, each at the mode's speed; marks: the clip's wind-up, contact and end
-  whirl: { clip: 'swordC', marks: [0.2, 0.58, 0.7, 1.05], startup: 0.26, active: 0.16, recovery: 0.34, damage: 12, range: 2.2, arc: 360, knockback: 0.6, stagger: 0.35 },
-  cross: { clip: 'swordTurn', marks: [0, 0.1, 0.3, 0.45], startup: 0.2, active: 0.18, recovery: 0.3, damage: 11, range: 2.3, arc: 260, knockback: 0.9, stagger: 0.4 },
-  // its own clip in each mode (cut_grid.py); the arc is turned to the sword side and behind (degrees to the left)
+  whirl: { damage: 12, range: 2.2, arc: 360, knockback: 0.6, stagger: 0.35 },
+  cross: { damage: 11, range: 2.3, arc: 260, knockback: 0.9, stagger: 0.4 },
   backhand: { damage: 12, range: 2.2, arc: 200, arcTurn: -120, knockback: 0.5, stagger: 0.35 },
 });
 export const snapId = (kind, mode = DEFAULT_MODE) => `sword${capital(kind)}${capital(mode)}`;
 export const SNAP_SPECS = Object.freeze(Object.fromEntries(CUT_MODES.flatMap((mode) => Object.entries(SNAP_KINDS).map(([kind, k]) => {
   const m = SNAP_MODE[mode];
-  const b = BACKHAND_TIMING[mode];
-  const frames = kind === 'backhand'
-    ? { startup: round(b.wind + BACKHAND_CONTACT[0] * b.cut), active: round((BACKHAND_CONTACT[1] - BACKHAND_CONTACT[0]) * b.cut), recovery: round((1 - BACKHAND_CONTACT[1]) * b.cut + b.hold + b.rec) }
-    : { startup: round(k.startup * m.time), active: round(k.active * m.time), recovery: round(k.recovery * m.time) };
+  const t = SNAP_TIMING[kind][mode];
+  const c = SNAP_CONTACT[kind];
+  const frames = { startup: round(t.wind + c[0] * t.cut), active: round((c[1] - c[0]) * t.cut), recovery: round((1 - c[1]) * t.cut + t.hold + t.rec) };
   const hitEnd = round(frames.startup + frames.active);
   return [snapId(kind, mode), {
     weapon: 'sword', ...frames, stamina: m.stamina, cooldown: SNAP_COOLDOWN, damage: Math.round(k.damage * m.damage), range: k.range, arc: k.arc,
@@ -140,12 +152,12 @@ export const SNAP_SPECS = Object.freeze(Object.fromEntries(CUT_MODES.flatMap((mo
   }];
 }))));
 export const SNAP_IDS = Object.freeze(Object.keys(SNAP_SPECS));
-/** Which clip a snap move plays and the clip's times for its wind-up, contact and end (core/moveMotion.mjs). */
+/** Which clip a snap move plays (its own, of the same name) and the clip's times for its wind-up, contact and end. */
 export function snapMotion(id) {
   const { kind, mode } = SNAP_SPECS[id].snap;
-  if (kind !== 'backhand') return { clip: SNAP_KINDS[kind].clip, marks: SNAP_KINDS[kind].marks, settle: true };
-  const b = BACKHAND_TIMING[mode];
-  return { clip: id, marks: [0, b.wind + BACKHAND_CONTACT[0] * b.cut, b.wind + BACKHAND_CONTACT[1] * b.cut, b.wind + b.cut + b.hold + b.rec], settle: false };
+  const t = SNAP_TIMING[kind][mode];
+  const c = SNAP_CONTACT[kind];
+  return { clip: id, marks: [0, t.wind + c[0] * t.cut, t.wind + c[1] * t.cut, t.wind + t.cut + t.hold + t.rec], settle: false };
 }
 /** The move a second press turns a cut into: `first` the cut's own way (or 'stand'), `second` the stick's way now. */
 export function snapMove(first, second, mode = DEFAULT_MODE) {

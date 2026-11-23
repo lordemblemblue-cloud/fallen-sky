@@ -146,7 +146,7 @@ export function createArena({ radius = 18 } = {}) {
 export function createSceneLighting(scene) {
   scene.background = new THREE.Color(0x070b14);
   scene.fog = new THREE.Fog(0x070b14, 40, 140);
-  const hemi = new THREE.HemisphereLight(0x8fb8ff, 0x10141c, 0.9);
+  const hemi = new THREE.HemisphereLight(0x8fb8ff, 0x1a2130, 1.2);
   scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe2c4, 2.2);
   sun.position.set(12, 22, 8);
@@ -159,5 +159,13 @@ export function createSceneLighting(scene) {
   const rimLight = new THREE.DirectionalLight(0x6fd0ff, 1.1);
   rimLight.position.set(-14, 10, -16);
   scene.add(rimLight);
-  return { hemi, sun, rimLight };
+  // Two soft fills from the other two quarters: the camera is mostly behind the player's own fighter, and with only
+  // the sun and the rim a body seen from the wrong side was almost black. No shadows from these.
+  const fills = [[-12, 9, 14], [14, 9, -12]].map(([x, y, z]) => {
+    const fill = new THREE.DirectionalLight(0xb9d4ff, 0.75);
+    fill.position.set(x, y, z);
+    scene.add(fill);
+    return fill;
+  });
+  return { hemi, sun, rimLight, fills };
 }
