@@ -1,0 +1,142 @@
+// The foot route north from the town plaza (story mode, 2026-11-22): the main
+// road climbs to the Luna palace site, whose authored house is not in this
+// build (lakesideManor sources), so its footprint is an empty, invisible box.
+// Its back wall (local z 131.5 = world z 201.5) had no opening: a straight,
+// invisible dead end on the road to the Wolf Sanctuary and the Ridge Path
+// gate. The back wall now has the same opening as the south door, on the
+// road axis, on the client and in the server's map collision.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {WOLFVEIL_PALACE,palaceWallCrosses}
+  from '../src/components/game3d/wolfveil/WolfveilPalaceLayout.mjs';
+import {createWolfveilMapCollision} from '../server/game3d/mapCollision.mjs';
+import {resolveWolfveilAreaVeilMovement,wolfveilAreaGates}
+  from '../src/components/game3d/wolfveil/streaming/WolfveilAreaVeils.mjs';
+import {wolfveilGateTravel} from '../src/components/game3d/wolfveil/streaming/WolfveilGateTravel.mjs';
+import {buildLakesideManorWorld} from '../src/components/dashboard/lakesideManor/buildLakesideManor.js';
+import {wolfveilHeight,WOLFVEIL_ROUTES} from '../src/components/game3d/wolfveil/WolfveilLayout.js';
+import {WOLFVEIL_CAVE_APPROACHES,wolfveilCaveApproachTrailKeep}
+  from '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
+
+const W=z=>z+70; // local -> world z
+const back=WOLFVEIL_PALACE.z+WOLFVEIL_PALACE.depth/2;
+const front=WOLFVEIL_PALACE.z-WOLFVEIL_PALACE.depth/2;
+const ON_FOOT=.62,MOUNTED=.9;
+
+test('the palace is an empty footprint in this build, and its back wall is at world z 201.5',()=>{
+  assert.throws(()=>buildLakesideManorWorld(),/not available in this build/);
+  assert.equal(back,131.5);
+  assert.equal(W(back),201.5,'the "straight barrier at 201.5" the story session met');
+});
+
+test('walking or riding along the road passes the palace through both doors; its walls still hold',()=>{
+  for(const radius of [ON_FOOT,MOUNTED]){
+    const step=(x,z0,z1)=>palaceWallCrosses({x,z:W(z0)},{x,z:W(z1)},radius);
+    // North out through the back opening and back in, on the road axis.
+    assert.equal(step(0,back-.4,back+.4),false,'north opening, radius '+radius);
+    assert.equal(step(1.5,back+.4,back-.4),false,'north opening inwards');
+    // The south door is unchanged.
+    assert.equal(step(0,front-.4,front+.4),false,'south door');
+    // Off the road the walls hold, front and back.
+    for(const x of [-20,-10,10,20]){
+      assert.equal(step(x,back-.4,back+.4),true,'back wall at x '+x);
+      assert.equal(step(x,front-.4,front+.4),true,'front wall at x '+x);
+    }
+    // The side walls are unchanged.
+    const side=WOLFVEIL_PALACE.x+WOLFVEIL_PALACE.width/2;
+    assert.equal(palaceWallCrosses({x:side-.4,z:W(115)},{x:side+.4,z:W(115)},radius),true);
+  }
+});
+
+test('the server map collision lets a walker out of the palace site to the north, and nowhere else',()=>{
+  const map=createWolfveilMapCollision(),origin={x:0,z:0};
+  const walk=(from,to)=>{
+    let at={x:from[0],z:W(from[1])};const goal={x:to[0],z:W(to[1])};
+    for(let i=0;i<600;i++){
+      const d=Math.hypot(goal.x-at.x,goal.z-at.z);if(d<.3)return {ok:true,at};
+      const s=Math.min(.5,d),next=map.move(at,{x:at.x+(goal.x-at.x)/d*s,z:at.z+(goal.z-at.z)/d*s},origin);
+      if(Math.hypot(next.x-at.x,next.z-at.z)<1e-4)return {ok:false,at};
+      at=next;
+    }
+    return {ok:false,at};
+  };
+  assert.equal(walk([0,110],[0,140]).ok,true,'out through the north opening');
+  const blocked=walk([12,110],[12,140]);
+  assert.equal(blocked.ok,false,'the back wall still holds off the road');
+  assert.ok(blocked.at.z-70<back,'stopped inside the footprint');
+});
+
+test('the Ridge Path north of the peak is not cut by the Inkstone Cistern approach grading',()=>{
+  // Importing the cave plan installs its terrain grading, as in the game. Its
+  // switchbacks climb 10-36 m above the path just west of it; their fill used
+  // to cut the path with 8.7 m and 14.7 m cliffs at local z 479 and 495.
+  const ridge=WOLFVEIL_ROUTES.find(r=>r.id==='ridge_path');
+  const [a,b]=[ridge.points[3],ridge.points[4]]; // the junction (0,470) to (35,680)
+  const len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+  let prev=null,steepest=0;
+  for(let s=0;s<=len;s+=1){
+    const t=s/len,y=wolfveilHeight(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);
+    if(prev!==null)steepest=Math.max(steepest,Math.abs(y-prev));
+    prev=y;
+  }
+  assert.ok(steepest<.7,'no step over 35 degrees along the path, steepest '+steepest.toFixed(2)+' m per metre');
+  // The rendered ground: the terrain mesh is a 1100 m, 310-segment grid
+  // (buildWolfveilTerrain), so each triangle spans ~3.55 m and fill just beside
+  // the path still tilts it. The old bend at (-18,512) left 1.2 m per metre
+  // steps at z 508 on the mesh with a clean height function.
+  const g=1100/310,H=wolfveilHeight;
+  const mesh=(x,z)=>{
+    const gx=Math.floor(x/g)*g,gz=Math.floor(z/g)*g,fx=(x-gx)/g,fz=(z-gz)/g;
+    const a=H(gx,gz),b2=H(gx+g,gz),c=H(gx,gz+g),d=H(gx+g,gz+g);
+    return fx+fz<=1?a+(b2-a)*fx+(c-a)*fz:d+(c-d)*(1-fx)+(b2-d)*(1-fz);
+  };
+  let meshPrev=null,meshSteepest=0;
+  for(let s=0;s<=len;s+=1){
+    const t=s/len,y=mesh(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);
+    if(meshPrev!==null)meshSteepest=Math.max(meshSteepest,Math.abs(y-meshPrev));
+    meshPrev=y;
+  }
+  assert.ok(meshSteepest<.7,'rendered ground along the path, steepest '+meshSteepest.toFixed(2)+' m per metre');
+  // Every Cistern switchback stays clear of the path.
+  const ridgeSegs=ridge.points.slice(1).map((p,i)=>[ridge.points[i],p]);
+  const fromRidge=(x,z)=>Math.min(...ridgeSegs.map(([p,q])=>{
+    const dx=q[0]-p[0],dz=q[1]-p[1],u=Math.max(0,Math.min(1,((x-p[0])*dx+(z-p[1])*dz)/(dx*dx+dz*dz)));
+    return Math.hypot(x-p[0]-dx*u,z-p[1]-dz*u);
+  }));
+  const trail=WOLFVEIL_CAVE_APPROACHES.find(c=>c.caveId==='sunken_inkstone_cistern').points;
+  let along=0;
+  for(let i=1;i<trail.length;i++){
+    along+=Math.hypot(trail[i].x-trail[i-1].x,trail[i].z-trail[i-1].z);
+    if(along>9)assert.ok(fromRidge(trail[i].x,trail[i].z)>12,`switchback ${i} ${fromRidge(trail[i].x,trail[i].z).toFixed(1)} m from the path`);
+  }
+  assert.equal(wolfveilCaveApproachTrailKeep(1.3,478),0,'no cave grading on the path');
+  assert.equal(wolfveilCaveApproachTrailKeep(-30,478),1,'full grading clear of it');
+  // The Cistern approach itself still sits on its graded bench.
+  const cistern=WOLFVEIL_CAVE_APPROACHES.find(c=>c.caveId==='sunken_inkstone_cistern');
+  for(const p of cistern.points)if(p.kind!=='threshold')
+    assert.ok(Math.abs(wolfveilHeight(p.x,p.z)-p.y)<.05,`approach point ${p.x.toFixed(1)},${p.z.toFixed(1)}`);
+});
+
+test('from the palace site the road reaches the Ridge Path gate, and the gate takes the walker north',()=>{
+  // Client rules on the way: the palace walls and the area veils (border at z 240).
+  const road=[[0,110],[0,136],[2,175],[-6,215],[-22,236],[-22.5,239.2]];
+  for(const radius of [ON_FOOT,MOUNTED]){
+    let at={x:road[0][0],z:W(road[0][1])};
+    for(const [x,z] of road.slice(1)){
+      const goal={x,z:W(z)};
+      for(let i=0;i<400;i++){
+        const d=Math.hypot(goal.x-at.x,goal.z-at.z);if(d<.05)break;
+        const s=Math.min(.4,d),next={x:at.x+(goal.x-at.x)/d*s,z:at.z+(goal.z-at.z)/d*s};
+        assert.equal(palaceWallCrosses(at,next,radius),false,`palace wall at ${next.x.toFixed(1)},${(next.z-70).toFixed(1)}`);
+        const local={x:next.x,z:next.z-70};
+        assert.equal(resolveWolfveilAreaVeilMovement(local,{x:at.x,z:at.z-70}).blocked,false,'veil');
+        at=next;
+      }
+    }
+    // Into the Ridge Path gate's opening: travel to the north area.
+    const gate=wolfveilAreaGates().find(g=>g.id==='town_north_ridge_path');
+    const into={x:gate.x+gate.facing[0]*.6,z:W(gate.z+gate.facing[1]*.6)};
+    const pass=wolfveilGateTravel(at,into,{area:'town'});
+    assert.equal(pass?.to,'north','radius '+radius);
+  }
+});

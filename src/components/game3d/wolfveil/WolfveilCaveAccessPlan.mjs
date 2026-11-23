@@ -2,7 +2,7 @@
 // to the four existing cave mouths. The final threshold, underground ramp,
 // chambers and existing exit belong to WolfveilCaveLayout.mjs.
 import { WOLFVEIL_EXPLORABLE_CAVES } from './WolfveilCaveLayout.mjs';
-import { wolfveilHeight, setWolfveilCaveApproachTerrainGrade } from './WolfveilLayout.js';
+import { wolfveilHeight, setWolfveilCaveApproachTerrainGrade, WOLFVEIL_ROUTES } from './WolfveilLayout.js';
 
 export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   jade_lantern_grotto:Object.freeze({
@@ -20,7 +20,9 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   sunken_inkstone_cistern:Object.freeze({
     trailName:'Northern Ridge Path',
     junction:Object.freeze([0,470]),
-    bend:Object.freeze([-18,512]),
+    // West off the Ridge Path first, so every switchback stays >= 12.8 m from
+    // it (the old bend at (-18,512) swung them to 5 m from the path, 10-36 m up).
+    bend:Object.freeze([-16,470]),
     style:'hot_spring_stone',waymark:'INKSTONE CISTERN',
   }),
   echoing_crystal_vault:Object.freeze({
@@ -127,6 +129,31 @@ const approachSegments=WOLFVEIL_CAVE_APPROACHES.flatMap(approach=>{
   return segs;
 });
 
+// Trails a cave approach runs beside but must not bury. The Inkstone Cistern
+// switchbacks used to climb the hill 5 m west of the Ridge Path, 10-36 m above
+// it; their fill and feather spread over the path and cut it with 8-15 m
+// cliffs between benches (story mode, 2026-11-22). Inside these trails'
+// corridors the ground stays natural, fading back to the grading over 3 m.
+export const WOLFVEIL_CAVE_APPROACH_PROTECTED_TRAILS=Object.freeze(['ridge_path']);
+// Natural to 1.5 m beyond the path's edge, full grading 3 m further out. The
+// Cistern trail leaves the path at its junction, so a wider corridor would lift
+// its first bench off the ground; its switchbacks now stay >= 12.8 m away.
+const TRAIL_KEEP_MARGIN=1.5,TRAIL_KEEP_BAND=3;
+const protectedTrailSegments=WOLFVEIL_ROUTES
+  .filter(route=>WOLFVEIL_CAVE_APPROACH_PROTECTED_TRAILS.includes(route.id))
+  .flatMap(route=>route.points.slice(1).map((p,i)=>({
+    a:{x:route.points[i][0],z:route.points[i][1]},b:{x:p[0],z:p[1]},half:route.width/2,
+  })));
+/** 0 on a protected trail, 1 once clear of it: how much cave grading applies here. */
+export function wolfveilCaveApproachTrailKeep(x,z){
+  let keep=1;
+  for(const s of protectedTrailSegments){
+    const d=distanceToSegment(x,z,s.a,s.b);
+    keep=Math.min(keep,smooth01((d-s.half-TRAIL_KEEP_MARGIN)/TRAIL_KEEP_BAND));
+  }
+  return keep;
+}
+
 // The hillside itself becomes the trail bench, then feathers back to the
 // natural slope. The mouth is left alone so the arch stays where it was.
 export function gradeWolfveilCaveApproachTerrain(x,z,y){
@@ -147,7 +174,7 @@ export function gradeWolfveilCaveApproachTerrain(x,z,y){
   if(!best)return y;
   const inner=2.15;
   const w=best.d<=inner?1:1-smooth01((best.d-inner)/Math.max(0.001,best.feather-inner));
-  return y+(best.py-y)*w;
+  return y+(best.py-y)*w*wolfveilCaveApproachTrailKeep(x,z);
 }
 setWolfveilCaveApproachTerrainGrade(gradeWolfveilCaveApproachTerrain);
 

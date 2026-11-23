@@ -46,6 +46,8 @@ for(const b of WOLFVEIL_ACTIVE_TOWN_BUILDINGS){
 // The archived village houses no longer exist in this active map.
  // The only new building is the real Luna-palace shell, with a 6.5m
  // SOUTH-facing entrance; walls share the rendered 53m x 33m footprint.
+ // The main road runs on north through the site (WOLFVEIL_PALACE.rearHalfDoor):
+ // the back wall has the same opening, the same as the client's palaceWallCrosses.
 {
   const b=WOLFVEIL_PALACE,thickness=.32;
   const x0=b.x-b.width/2,x1=b.x+b.width/2;
@@ -53,7 +55,8 @@ for(const b of WOLFVEIL_ACTIVE_TOWN_BUILDINGS){
   const z1=b.z+b.depth/2+WOLFVEIL_RENDER_OFFSET_Z;
   obstacles.push(rect(x0,x0+thickness,z0,z1));
   obstacles.push(rect(x1-thickness,x1,z0,z1));
-  obstacles.push(rect(x0,x1,z1-thickness,z1));
+  obstacles.push(rect(x0,b.x-b.rearHalfDoor,z1-thickness,z1));
+  obstacles.push(rect(b.x+b.rearHalfDoor,x1,z1-thickness,z1));
   obstacles.push(rect(x0,b.x-b.halfDoor,z0,z0+thickness));
   obstacles.push(rect(b.x+b.halfDoor,x1,z0,z0+thickness));
 }
