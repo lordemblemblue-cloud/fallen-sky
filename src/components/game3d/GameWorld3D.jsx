@@ -166,7 +166,7 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
-import {createWorldDrawWatchdog} from './render/liveRendererRecovery.mjs';
+import {createWorldDrawWatchdog,nextWebGLRecoveryStep,recoveryAttemptOf,withRecoveryAttempt} from './render/liveRendererRecovery.mjs';
 import {isRecoverableWebGPUPipelineError} from './render/recoverableWebGPUPipelineError.mjs';
 import {createWebGPUSceneRenderer,destroySceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
@@ -610,6 +610,25 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         return;
       }
       console.error('GameWorld3D: WebGL unavailable —', e);
+      // Recovering from a lost WebGPU device (in this mount, or before a reload): the GPU process may still be
+      // restarting. Try again after a short wait, then reload once (WebGL stays chosen for this tab), and only then
+      // give up (liveRendererRecovery.mjs).
+      const recoveringFrom = recoveryReason || (rendererChoice.reason === 'webgpu-failed-earlier' ? rendererChoice.reason : null);
+      const step = recoveringFrom
+        ? nextWebGLRecoveryStep({ attempt: recoveryAttemptOf(recoveringFrom), storage: window.sessionStorage })
+        : { action: 'give-up' };
+      if (step.action !== 'give-up') {
+        canvas.remove();
+        const note = document.createElement('div');
+        note.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;font-size:16px;';
+        note.textContent = 'Restarting graphics…';
+        container.appendChild(note);
+        const timer = setTimeout(() => {
+          if (step.action === 'reload') window.location.reload();
+          else onRendererFailure(withRecoveryAttempt(recoveringFrom, step.attempt));
+        }, step.action === 'reload' ? 0 : step.delayMs);
+        return () => { clearTimeout(timer); note.remove(); };
+      }
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
       setLoading(false);
       canvas.remove();
