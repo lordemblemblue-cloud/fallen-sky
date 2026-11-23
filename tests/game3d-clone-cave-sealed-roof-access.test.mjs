@@ -18,6 +18,16 @@ import {WOLFVEIL_ROUTES,WOLFVEIL_BRIDGES,wolfveilHeight}
   from '../src/components/game3d/wolfveil/WolfveilLayout.js';
 import {CAVE_RIM_BUFFER_METRES,shouldRejectCaveGroundStep}
   from '../src/components/game3d/dungeons/CaveRimSafety.mjs';
+import {WOLFVEIL_FRONTIER_TRAILS}
+  from '../src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs';
+
+// On a graded frontier trail (the Hunter's Loop): Root Hollow's trail starts
+// where the loop leaves the Cedar Spine Gate into the north (2026-11-23).
+const onFrontierTrail=(x,z)=>WOLFVEIL_FRONTIER_TRAILS.some(trail=>trail.points.slice(1).some((b,i)=>{
+  const a=trail.points[i],dx=b[0]-a[0],dz=b[1]-a[1];
+  const t=Math.max(0,Math.min(1,((x-a[0])*dx+(z-a[1])*dz)/(dx*dx+dz*dz)));
+  return Math.hypot(x-a[0]-dx*t,z-a[1]-dz*t)<=trail.width/2;
+}));
 
 const triangles=[];
 const floor={
@@ -35,7 +45,8 @@ test('four physical cave approach tracks meet the original trails, with differen
     junctions.add(bridge.from.join(','));junctions.add(bridge.to.join(','));
   }
   for(const a of WOLFVEIL_CAVE_APPROACHES){
-    assert.ok(junctions.has([a.points[0].x,a.points[0].z].join(',')),
+    assert.ok(junctions.has([a.points[0].x,a.points[0].z].join(','))||
+      onFrontierTrail(a.points[0].x,a.points[0].z),
       'approach must connect to a real path, '+a.id);
     assert.ok(a.points.length>=4);
     let worst=0;

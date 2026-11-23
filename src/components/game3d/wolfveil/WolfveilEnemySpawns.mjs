@@ -28,7 +28,9 @@ export const WOLFVEIL_HOSTILE_ZONES=Object.freeze([
     id:'wolfveil_wolfstone_outskirts',
     sourceCenter:[-325,235],radius:18,levels:[5,8],
     fixedTier:null,
-    locations:[[-338,230],[-324,222],[-314,243]],
+    // The third spawn stood at (-314,243), across the west/north border (z 240)
+    // from its camp; it now stands on the west side (story mode, 2026-11-23).
+    locations:[[-338,230],[-324,222],[-316,235]],
   }),
 ]);
 

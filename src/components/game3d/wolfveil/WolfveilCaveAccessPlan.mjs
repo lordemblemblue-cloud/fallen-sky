@@ -12,9 +12,16 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
     style:'cedar_lantern',waymark:'JADE GROTTO',
   }),
   whispering_root_hollow:Object.freeze({
-    trailName:'Western Woodland Fork',
-    junction:Object.freeze([-325,235]),
-    bend:Object.freeze([-410,268]),
+    // From where the Cedar Spine Gate lands a traveller in the north (story
+    // mode, 2026-11-23). The trail used to leave the Wolf Stones, cross the
+    // west/north border where there is no gate and pass 36 m from the middle
+    // of Wolfstone Reach (level 35 dead): its bend stood within their reach.
+    // Now every metre is at least 54 m from it, and the trail climbs the west
+    // face in level legs along the slope instead of folded switchbacks.
+    trailName:'Cedar Spine Trail',
+    junction:Object.freeze([-406.5,245.2]),
+    bend:Object.freeze([-432,258]),
+    via:Object.freeze([[-432,280],[-444,280],[-444,258],[-456,258],[-456,280],[-468,280],[-468,258],[-480,258]]),
     style:'root_steps',waymark:'ROOT HOLLOW',
   }),
   sunken_inkstone_cistern:Object.freeze({
@@ -190,11 +197,15 @@ export function wolfveilCaveApproachTrailKeep(x,z){
 }
 
 // The hillside itself becomes the trail bench, then feathers back to the
-// natural slope. The mouth is left alone so the arch stays where it was.
+// natural slope. The mouth is left alone so the arch stays where it was. A
+// designed trail's level terrace reaches right up to its threshold (3.5 m
+// out, where it meets the natural height): left 6.5 m short, it stood above
+// the face there in a step (50-85 degrees in the last metres).
+const mouthKeepRadius=cave=>WOLFVEIL_CAVE_ACCESS_TRAILS[cave.id]?.via?3.5:6.5;
 export function gradeWolfveilCaveApproachTerrain(x,z,y){
   if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(y))return y;
   for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
-    if(Math.hypot(x-cave.mouth[0],z-cave.mouth[1])<6.5)return y;
+    if(Math.hypot(x-cave.mouth[0],z-cave.mouth[1])<mouthKeepRadius(cave))return y;
   }
   let best=null;
   for(const s of approachSegments){
