@@ -248,7 +248,10 @@ export function leaveMatch(match, id) {
   const team = s.team;
   unseat(match, id);
   event(match, { type: 'left', id, name: s.name });
-  if (match.phase !== 'over') seat(match, { kind: 'bot', team });
+  // Public online arenas can admit 20 humans without simulating 20 idle bots.
+  // Preserve the initial bot-filled floor only; surplus seats become available
+  // to humans again when a player leaves.
+  if (match.phase !== 'over' && match.seats.size < (match.botFloor ?? match.capacity)) seat(match, { kind: 'bot', team });
   return true;
 }
 
