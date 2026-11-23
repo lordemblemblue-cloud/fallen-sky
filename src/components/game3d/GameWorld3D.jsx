@@ -615,7 +615,15 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       canvas.remove();
       const msg = document.createElement('div');
       msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;text-align:center;padding:24px;';
-      msg.innerHTML = '<div><div style="font-size:18px;font-weight:600;margin-bottom:8px">3D world unavailable</div><div style="opacity:0.6;font-size:14px">Your browser couldn\'t allocate a WebGL context. Close other tabs and reload.</div></div>';
+      const content = document.createElement('div');
+      const heading = document.createElement('div');
+      heading.style.cssText = 'font-size:18px;font-weight:600;margin-bottom:8px';
+      heading.textContent = '3D world unavailable';
+      const guidance = document.createElement('div');
+      guidance.style.cssText = 'opacity:0.6;font-size:14px';
+      guidance.textContent = "Your browser couldn't allocate a WebGL context. Close other tabs and reload.";
+      content.append(heading, guidance);
+      msg.appendChild(content);
       container.appendChild(msg);
       return;
     }
