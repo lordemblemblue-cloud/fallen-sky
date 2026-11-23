@@ -1,0 +1,20 @@
+name: WebGPU fresh deployment evidence gate
+on:
+  pull_request:
+    paths:
+      - 'scripts/webgpu-fresh-deployment-matrix.mjs'
+      - 'tests/webgpuFreshDeploymentMatrix.test.mjs'
+      - '.github/workflows/webgpu-fresh-deployment-matrix.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/webgpuFreshDeploymentMatrix.test.mjs tests/webgpuDeploymentMatrix.test.mjs tests/webgpuEvidenceFreshness.test.mjs
