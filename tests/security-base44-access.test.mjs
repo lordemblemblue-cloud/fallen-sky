@@ -52,3 +52,45 @@ test('party cleanup requires a valid server-side signature before service-role a
   assert.ok(source.indexOf('sameSignature(signature, expected)') < source.indexOf('base44.asServiceRole'),
     'privileged data access must occur only after signature verification');
 });
+test('clan officers cannot be self-appointed through direct entity mutations', () => {
+  const member = entity('ClanMember');
+  assert.deepEqual(member.rls.update, { user_condition: { role: 'admin' } });
+  const source = readFileSync(new URL('../base44/functions/clanSystem/entry.ts', import.meta.url), 'utf8');
+  assert.match(source, /newRole !== 'member' && newRole !== 'officer'/);
+  assert.match(source, /base44\.asServiceRole\.entities\.ClanMember\.update\(target\[0\]\.id/);
+});
+
+test('avatars cannot directly change owner, equipment, level, XP or unlocks', () => {
+  const avatar = entity('Avatar');
+  const admin = { user_condition: { role: 'admin' } };
+  assert.deepEqual(avatar.properties.user_id.rls.update, admin);
+  for (const field of [
+    'level', 'experience', 'social_influence', 'reputation_badges',
+    'equipped_items', 'unlocked_abilities', 'active_companions',
+  ]) {
+    assert.deepEqual(avatar.properties[field].rls.update, admin, `${field}.update`);
+    assert.deepEqual(avatar.properties[field].rls.create, admin, `${field}.create`);
+  }
+  const code = readFileSync(new URL('../base44/functions/avatarSystem/entry.ts', import.meta.url), 'utf8');
+  assert.match(code, /base44\.asServiceRole\.entities\.Avatar\.create\(/);
+  assert.match(code, /base44\.asServiceRole\.entities\.Avatar\.update\(avatar\.id, \{\s*equipped_items/);
+});
+
+test('ownership and authorship fields cannot be rewritten by their owners', () => {
+  const admin = { user_condition: { role: 'admin' } };
+  for (const field of ['user_id', 'avatar_id']) {
+    assert.deepEqual(entity('AvatarObservationSettings').properties[field].rls.update, admin);
+  }
+  for (const field of ['user_id', 'clan_id', 'topic_id', 'channel_id', 'username']) {
+    assert.deepEqual(entity('ClanFormMessage').properties[field].rls.update, admin);
+  }
+});
+
+test('clan notification handler verifies HMAC before touching privileged data', () => {
+  const code = readFileSync(new URL('../base44/functions/clanMembershipNotifier/entry.ts', import.meta.url), 'utf8');
+  assert.match(code, /CLAN_MEMBERSHIP_EVENT_SECRET/);
+  assert.match(code, /sameHash\(signature, expected\)/);
+  assert.match(code, /Math\.abs\(Date\.now\(\) - Number\(stamp\)\) > 120_000/);
+  assert.ok(code.indexOf('sameHash(signature, expected)') < code.indexOf('base44.asServiceRole'),
+    'unverified clan events must never reach the admin entity client');
+});
