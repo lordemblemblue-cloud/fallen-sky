@@ -1,0 +1,282 @@
+{
+  "id": "silverArcher",
+  "name": "Silver Archer",
+  "imageBase": "/fantasybattle/archer/",
+  "note": "Pivots are sheet px on the owner's parts sheet; pos is character space (x right, y up, feet at 0).",
+  "bones": [
+    {
+      "id": "root",
+      "pos": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "pelvis",
+      "parent": "root",
+      "pos": [
+        0,
+        300
+      ]
+    },
+    {
+      "id": "spine",
+      "parent": "pelvis",
+      "pos": [
+        -6,
+        360
+      ]
+    },
+    {
+      "id": "neck",
+      "parent": "spine",
+      "pos": [
+        -17,
+        486
+      ]
+    },
+    {
+      "id": "head",
+      "parent": "neck",
+      "pos": [
+        -18,
+        516
+      ]
+    },
+    {
+      "id": "drawArm",
+      "parent": "spine",
+      "pos": [
+        -67,
+        455
+      ]
+    },
+    {
+      "id": "drawForearm",
+      "parent": "drawArm",
+      "pos": [
+        -97.2,
+        375.8
+      ]
+    },
+    {
+      "id": "drawHand",
+      "parent": "drawForearm",
+      "pos": [
+        -95,
+        307.2
+      ]
+    },
+    {
+      "id": "bowArm",
+      "parent": "spine",
+      "pos": [
+        38,
+        462
+      ]
+    },
+    {
+      "id": "bowForearm",
+      "parent": "bowArm",
+      "pos": [
+        70.5,
+        402.6
+      ]
+    },
+    {
+      "id": "bowHand",
+      "parent": "bowForearm",
+      "pos": [
+        73.9,
+        331.3
+      ]
+    },
+    {
+      "id": "bowSocket",
+      "parent": "bowHand",
+      "pos": [
+        67,
+        287.6
+      ],
+      "inheritRotation": false
+    }
+  ],
+  "layers": [
+    {"id": "quiver", "part": "quiver", "bone": "spine", "pivot": [998,362], "pos": [-60,468], "rot": 28, "scale": 0.85, "z": 0, "grid": [1,3], "depth": -0.2},
+    {"id": "hairBack", "part": "hair_back", "bone": "head", "pivot": [530,12], "pos": [-17,590], "z": 2, "grid": [4,8], "depth": -0.5, "spring": {"axis": [[530,12],[530,268]], "stiffness": 45, "damping": 6, "inertia": 1, "gravity": 0.1, "limit": 12, "power": 1.6}},
+    {"id": "sandalBack", "part": "sandal_b", "bone": "root", "pivot": [971,745], "pos": [28,0], "scale": 0.72, "z": 4},
+    {"id": "sandalFront", "part": "sandal_a", "bone": "root", "pivot": [891,745], "pos": [-30,0], "scale": 0.72, "z": 4},
+    {"id": "drawUpperArm", "part": "upperarm_wrap", "bone": "drawArm", "pivot": [594,256], "z": 10, "grid": [1,3], "scale": [1.12,1.32]},
+    {"id": "bowUpperArm", "part": "upperarm_band", "bone": "bowArm", "pivot": [690,258], "flipX": true, "z": 11, "grid": [1,3], "scale": [1.12,1.32]},
+    {"id": "neck", "part": "neck", "bone": "neck", "pivot": [379,224], "pos": [-17,484], "z": 20, "grid": [1,2], "depth": 0.5},
+    {"id": "torso", "part": "torso_front", "bone": "spine", "pivot": [351,427], "pos": [0,300], "z": 25, "grid": [4,6], "depth": 0.3},
+    {"id": "skirt", "part": "skirt_slit", "bone": "pelvis", "pivot": [184,464], "pos": [-6,362], "scale": 1.25, "z": 30, "grid": [4,8], "depth": 0.15, "spring": {"axis": [[184,464],[184,746]], "stiffness": 90, "damping": 10, "inertia": 0.6, "limit": 6, "power": 1.8}},
+    {"id": "bow", "part": "bow", "bone": "bowSocket", "pivot": [1092,428], "scale": 0.9, "z": 40, "grid": [1,4]},
+    {"id": "bowHand", "part": "hand_curl", "bone": "bowHand", "pivot": [800,377], "rot": 180, "z": 41, "scale": [1.15,1.25]},
+    {"id": "bowForearm", "part": "bracer_curl", "bone": "bowForearm", "pivot": [803,431], "rot": 180, "z": 42, "grid": [1,2], "scale": [1.12,1.32]},
+    {"id": "drawHand", "part": "hand_pinch", "bone": "drawHand", "pivot": [864,379], "rot": 180, "z": 43, "scale": [1.15,1.25]},
+    {"id": "drawForearm", "part": "bracer_pinch", "bone": "drawForearm", "pivot": [866,431], "rot": 180, "z": 44, "grid": [1,2], "scale": [1.12,1.32]},
+    {"id": "face", "part": "face_smile", "bone": "head", "pivot": [320,83], "pos": [-19,511], "z": 50, "grid": [4,4], "depth": 1, "role": "face"},
+    {"id": "faceFade", "part": "face_smile", "bone": "head", "pivot": [320,83], "pos": [-19,511], "z": 51, "grid": [4,4], "depth": 1, "role": "faceFade"},
+    {"id": "eyesClosed", "part": "face_eyes_closed", "bone": "head", "pivot": [320,83], "pos": [-19,511], "z": 52, "grid": [4,4], "depth": 1, "role": "blink"},
+    {"id": "lockLeft", "part": "hair_strand_a", "bone": "head", "pivot": [718,72], "pos": [-54,562], "scale": 0.8, "z": 55, "grid": [1,5], "depth": 1.35, "spring": {"stiffness": 50, "damping": 5, "inertia": 1.2, "gravity": 0.2, "limit": 18}},
+    {"id": "lockRight", "part": "hair_strand_b", "bone": "head", "pivot": [760,72], "pos": [17,562], "scale": 0.8, "z": 55, "grid": [1,5], "depth": 1.35, "spring": {"stiffness": 50, "damping": 5, "inertia": 1.2, "gravity": 0.2, "limit": 18}}
+  ],
+  "expressions": {
+    "neutral": "face_smile",
+    "focused": "face_focused",
+    "attackShout": "face_shout",
+    "hurt": "face_hurt",
+    "wink": "face_wink",
+    "pout": "face_pout"
+  },
+  "sockets": {
+    "bowGrip": {
+      "layer": "bow",
+      "px": [
+        1092,
+        428
+      ]
+    },
+    "bowTop": {
+      "layer": "bow",
+      "px": [
+        1029,
+        201
+      ]
+    },
+    "bowBottom": {
+      "layer": "bow",
+      "px": [
+        1046,
+        632
+      ]
+    },
+    "nock": {
+      "layer": "drawHand",
+      "px": [
+        849,
+        334
+      ]
+    },
+    "chest": {
+      "bone": "spine",
+      "pos": [
+        -8,
+        420
+      ]
+    },
+    "headTop": {
+      "bone": "head",
+      "pos": [
+        -18,
+        596
+      ]
+    }
+  },
+  "hurtbox": {
+    "socket": "chest",
+    "radius": 70
+  },
+  "stances": {
+    "relaxed": {
+      "bowSocket": {
+        "rotation": -4
+      }
+    },
+    "combat": {
+      "pelvis": {
+        "offset": [
+          0,
+          -4
+        ]
+      },
+      "spine": {
+        "rotation": -2.5
+      },
+      "head": {
+        "rotation": -2
+      },
+      "bowArm": {
+        "rotation": 20
+      },
+      "bowForearm": {
+        "rotation": 32
+      },
+      "bowSocket": {
+        "rotation": -24
+      },
+      "drawArm": {
+        "rotation": -8
+      },
+      "drawForearm": {
+        "rotation": 22
+      }
+    }
+  },
+  "breathing": {
+    "relaxed": {
+      "period": 4.2,
+      "amplitude": 1
+    },
+    "combat": {
+      "period": 2.5,
+      "amplitude": 0.6
+    },
+    "bones": {
+      "spine": {
+        "scale": [
+          0.004,
+          0.011
+        ],
+        "offset": [
+          0,
+          0.4
+        ]
+      },
+      "head": {
+        "offset": [
+          0,
+          0.8
+        ]
+      },
+      "drawArm": {
+        "offset": [
+          0,
+          0.9
+        ]
+      },
+      "bowArm": {
+        "offset": [
+          0,
+          0.9
+        ]
+      }
+    }
+  },
+  "look": {
+    "range": 320,
+    "warp": [
+      10,
+      6
+    ],
+    "bones": {
+      "head": {
+        "rotation": [
+          -2.5,
+          0
+        ],
+        "offset": [
+          1.5,
+          1
+        ]
+      },
+      "spine": {
+        "rotation": [
+          -1,
+          0
+        ]
+      }
+    }
+  }
+}

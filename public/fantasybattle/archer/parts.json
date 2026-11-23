@@ -1,0 +1,1048 @@
+{
+ "source": "archer-parts-sheet.webp",
+ "sheetSize": [
+  1125,
+  750
+ ],
+ "alphaMin": 128,
+ "parts": {
+  "portrait_long_hair": {
+   "kind": "head",
+   "origin": [
+    1,
+    2
+   ],
+   "size": [
+    179,
+    285
+   ]
+  },
+  "hair_back": {
+   "kind": "hair",
+   "origin": [
+    456,
+    2
+   ],
+   "size": [
+    150,
+    273
+   ]
+  },
+  "hair_top": {
+   "kind": "hair",
+   "origin": [
+    591,
+    3
+   ],
+   "size": [
+    114,
+    121
+   ]
+  },
+  "hair_ponytail": {
+   "kind": "hair",
+   "origin": [
+    723,
+    3
+   ],
+   "size": [
+    126,
+    231
+   ]
+  },
+  "hair_strand_a": {
+   "kind": "hair",
+   "origin": [
+    698,
+    65
+   ],
+   "size": [
+    40,
+    119
+   ]
+  },
+  "hair_strand_b": {
+   "kind": "hair",
+   "origin": [
+    739,
+    68
+   ],
+   "size": [
+    43,
+    154
+   ]
+  },
+  "hair_strand_c": {
+   "kind": "hair",
+   "origin": [
+    610,
+    128
+   ],
+   "size": [
+    34,
+    108
+   ]
+  },
+  "hair_strand_d": {
+   "kind": "hair",
+   "origin": [
+    631,
+    127
+   ],
+   "size": [
+    44,
+    119
+   ]
+  },
+  "hair_braid": {
+   "kind": "hair",
+   "origin": [
+    668,
+    115
+   ],
+   "size": [
+    29,
+    122
+   ]
+  },
+  "neck_shoulders": {
+   "kind": "body",
+   "origin": [
+    172,
+    183
+   ],
+   "size": [
+    127,
+    62
+   ]
+  },
+  "neck": {
+   "kind": "body",
+   "origin": [
+    346,
+    182
+   ],
+   "size": [
+    65,
+    53
+   ]
+  },
+  "earring_a": {
+   "kind": "jewellery",
+   "origin": [
+    866,
+    210
+   ],
+   "size": [
+    35,
+    82
+   ]
+  },
+  "earring_b": {
+   "kind": "jewellery",
+   "origin": [
+    912,
+    214
+   ],
+   "size": [
+    38,
+    79
+   ]
+  },
+  "collar_pendant": {
+   "kind": "jewellery",
+   "origin": [
+    954,
+    215
+   ],
+   "size": [
+    64,
+    55
+   ]
+  },
+  "laurel_left": {
+   "kind": "jewellery",
+   "origin": [
+    730,
+    228
+   ],
+   "size": [
+    54,
+    78
+   ]
+  },
+  "laurel_right": {
+   "kind": "jewellery",
+   "origin": [
+    795,
+    228
+   ],
+   "size": [
+    53,
+    77
+   ]
+  },
+  "laurel_crescent": {
+   "kind": "jewellery",
+   "origin": [
+    764,
+    273
+   ],
+   "size": [
+    52,
+    46
+   ]
+  },
+  "quiver": {
+   "kind": "weapon",
+   "origin": [
+    961,
+    274
+   ],
+   "size": [
+    76,
+    180
+   ]
+  },
+  "bow": {
+   "kind": "weapon",
+   "origin": [
+    1016,
+    195
+   ],
+   "size": [
+    111,
+    444
+   ]
+  },
+  "wolf_head": {
+   "kind": "extra",
+   "origin": [
+    967,
+    474
+   ],
+   "size": [
+    127,
+    151
+   ]
+  },
+  "torso_front": {
+   "kind": "body",
+   "origin": [
+    261,
+    229
+   ],
+   "size": [
+    155,
+    207
+   ]
+  },
+  "torso_back": {
+   "kind": "body",
+   "origin": [
+    402,
+    233
+   ],
+   "size": [
+    128,
+    201
+   ]
+  },
+  "upperarm_wrap": {
+   "kind": "arm",
+   "origin": [
+    540,
+    234
+   ],
+   "size": [
+    78,
+    99
+   ]
+  },
+  "upperarm_band": {
+   "kind": "arm",
+   "origin": [
+    640,
+    236
+   ],
+   "size": [
+    77,
+    80
+   ]
+  },
+  "sleeve_drape_a": {
+   "kind": "arm",
+   "origin": [
+    134,
+    245
+   ],
+   "size": [
+    72,
+    205
+   ]
+  },
+  "sleeve_drape_b": {
+   "kind": "arm",
+   "origin": [
+    194,
+    245
+   ],
+   "size": [
+    82,
+    204
+   ]
+  },
+  "forearm_hand_open": {
+   "kind": "arm",
+   "origin": [
+    534,
+    329
+   ],
+   "size": [
+    48,
+    161
+   ]
+  },
+  "forearm_hand_relaxed": {
+   "kind": "arm",
+   "origin": [
+    612,
+    294
+   ],
+   "size": [
+    56,
+    171
+   ]
+  },
+  "arm_bent": {
+   "kind": "arm",
+   "origin": [
+    670,
+    312
+   ],
+   "size": [
+    104,
+    137
+   ]
+  },
+  "hand_curl": {
+   "kind": "arm",
+   "origin": [
+    781,
+    316
+   ],
+   "size": [
+    46,
+    68
+   ]
+  },
+  "bracer_curl": {
+   "kind": "arm",
+   "origin": [
+    781,
+    370
+   ],
+   "size": [
+    44,
+    69
+   ]
+  },
+  "hand_pinch": {
+   "kind": "arm",
+   "origin": [
+    838,
+    321
+   ],
+   "size": [
+    50,
+    65
+   ]
+  },
+  "bracer_pinch": {
+   "kind": "arm",
+   "origin": [
+    843,
+    372
+   ],
+   "size": [
+    45,
+    68
+   ]
+  },
+  "bracer_hand_open": {
+   "kind": "arm",
+   "origin": [
+    887,
+    315
+   ],
+   "size": [
+    64,
+    124
+   ]
+  },
+  "hips_front": {
+   "kind": "body",
+   "origin": [
+    255,
+    434
+   ],
+   "size": [
+    152,
+    171
+   ]
+  },
+  "hips_back": {
+   "kind": "body",
+   "origin": [
+    409,
+    438
+   ],
+   "size": [
+    133,
+    169
+   ]
+  },
+  "skirt_side_long": {
+   "kind": "cloth",
+   "origin": [
+    -1,
+    285
+   ],
+   "size": [
+    147,
+    464
+   ]
+  },
+  "skirt_slit": {
+   "kind": "cloth",
+   "origin": [
+    67,
+    454
+   ],
+   "size": [
+    205,
+    296
+   ]
+  },
+  "belt_drape": {
+   "kind": "cloth",
+   "origin": [
+    657,
+    442
+   ],
+   "size": [
+    116,
+    147
+   ]
+  },
+  "tabard_laurel": {
+   "kind": "cloth",
+   "origin": [
+    767,
+    442
+   ],
+   "size": [
+    102,
+    244
+   ]
+  },
+  "cape_short": {
+   "kind": "cloth",
+   "origin": [
+    866,
+    449
+   ],
+   "size": [
+    111,
+    168
+   ]
+  },
+  "skirt_laurel": {
+   "kind": "cloth",
+   "origin": [
+    550,
+    479
+   ],
+   "size": [
+    123,
+    272
+   ]
+  },
+  "drape_layered": {
+   "kind": "cloth",
+   "origin": [
+    666,
+    526
+   ],
+   "size": [
+    122,
+    220
+   ]
+  },
+  "drape_side": {
+   "kind": "cloth",
+   "origin": [
+    486,
+    538
+   ],
+   "size": [
+    77,
+    209
+   ]
+  },
+  "drape_narrow": {
+   "kind": "cloth",
+   "origin": [
+    347,
+    602
+   ],
+   "size": [
+    48,
+    148
+   ]
+  },
+  "drape_short_a": {
+   "kind": "cloth",
+   "origin": [
+    257,
+    610
+   ],
+   "size": [
+    97,
+    138
+   ]
+  },
+  "drape_short_b": {
+   "kind": "cloth",
+   "origin": [
+    389,
+    612
+   ],
+   "size": [
+    98,
+    139
+   ]
+  },
+  "sandal_a": {
+   "kind": "feet",
+   "origin": [
+    859,
+    607
+   ],
+   "size": [
+    66,
+    144
+   ]
+  },
+  "sandal_b": {
+   "kind": "feet",
+   "origin": [
+    932,
+    605
+   ],
+   "size": [
+    79,
+    145
+   ]
+  },
+  "face_pout": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    -88,
+    0
+   ]
+  },
+  "face_smile": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    0,
+    0
+   ]
+  },
+  "face_wink": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    91,
+    0
+   ]
+  },
+  "face_shout": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    -90,
+    90
+   ]
+  },
+  "face_focused": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    -1,
+    91
+   ]
+  },
+  "face_hurt": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "sheetShift": [
+    91,
+    90
+   ]
+  },
+  "face_eyes_closed": {
+   "kind": "face",
+   "origin": [
+    272,
+    -2
+   ],
+   "size": [
+    92,
+    97
+   ],
+   "alignedTo": "face_smile",
+   "madeFrom": "face_hurt"
+  },
+  "eye_1_3": {
+   "kind": "face-shape",
+   "origin": [
+    934,
+    8
+   ],
+   "size": [
+    26,
+    14
+   ]
+  },
+  "eye_1_5": {
+   "kind": "face-shape",
+   "origin": [
+    1025,
+    7
+   ],
+   "size": [
+    33,
+    17
+   ]
+  },
+  "eye_1_4": {
+   "kind": "face-shape",
+   "origin": [
+    980,
+    9
+   ],
+   "size": [
+    29,
+    14
+   ]
+  },
+  "eye_1_1": {
+   "kind": "face-shape",
+   "origin": [
+    839,
+    7
+   ],
+   "size": [
+    32,
+    19
+   ]
+  },
+  "eye_1_2": {
+   "kind": "face-shape",
+   "origin": [
+    884,
+    7
+   ],
+   "size": [
+    33,
+    19
+   ]
+  },
+  "eye_2_5": {
+   "kind": "face-shape",
+   "origin": [
+    1028,
+    33
+   ],
+   "size": [
+    27,
+    12
+   ]
+  },
+  "eye_2_3": {
+   "kind": "face-shape",
+   "origin": [
+    934,
+    33
+   ],
+   "size": [
+    27,
+    12
+   ]
+  },
+  "eye_2_2": {
+   "kind": "face-shape",
+   "origin": [
+    884,
+    31
+   ],
+   "size": [
+    32,
+    17
+   ]
+  },
+  "eye_2_1": {
+   "kind": "face-shape",
+   "origin": [
+    840,
+    31
+   ],
+   "size": [
+    31,
+    18
+   ]
+  },
+  "eye_2_4": {
+   "kind": "face-shape",
+   "origin": [
+    981,
+    34
+   ],
+   "size": [
+    27,
+    11
+   ]
+  },
+  "eye_3_3": {
+   "kind": "face-shape",
+   "origin": [
+    934,
+    56
+   ],
+   "size": [
+    28,
+    12
+   ]
+  },
+  "eye_3_5": {
+   "kind": "face-shape",
+   "origin": [
+    1028,
+    56
+   ],
+   "size": [
+    28,
+    12
+   ]
+  },
+  "eye_3_4": {
+   "kind": "face-shape",
+   "origin": [
+    981,
+    56
+   ],
+   "size": [
+    27,
+    12
+   ]
+  },
+  "eye_3_2": {
+   "kind": "face-shape",
+   "origin": [
+    884,
+    54
+   ],
+   "size": [
+    33,
+    19
+   ]
+  },
+  "eye_3_1": {
+   "kind": "face-shape",
+   "origin": [
+    839,
+    55
+   ],
+   "size": [
+    32,
+    18
+   ]
+  },
+  "eye_4_2": {
+   "kind": "face-shape",
+   "origin": [
+    885,
+    76
+   ],
+   "size": [
+    31,
+    19
+   ]
+  },
+  "eye_4_1": {
+   "kind": "face-shape",
+   "origin": [
+    840,
+    77
+   ],
+   "size": [
+    31,
+    18
+   ]
+  },
+  "eye_4_4": {
+   "kind": "face-shape",
+   "origin": [
+    979,
+    81
+   ],
+   "size": [
+    29,
+    13
+   ]
+  },
+  "eye_4_3": {
+   "kind": "face-shape",
+   "origin": [
+    933,
+    82
+   ],
+   "size": [
+    29,
+    12
+   ]
+  },
+  "eye_4_5": {
+   "kind": "face-shape",
+   "origin": [
+    1026,
+    82
+   ],
+   "size": [
+    29,
+    13
+   ]
+  },
+  "mouth_1_4": {
+   "kind": "face-shape",
+   "origin": [
+    1023,
+    102
+   ],
+   "size": [
+    30,
+    26
+   ]
+  },
+  "mouth_1_1": {
+   "kind": "face-shape",
+   "origin": [
+    866,
+    107
+   ],
+   "size": [
+    38,
+    19
+   ]
+  },
+  "mouth_1_2": {
+   "kind": "face-shape",
+   "origin": [
+    920,
+    108
+   ],
+   "size": [
+    33,
+    18
+   ]
+  },
+  "mouth_1_3": {
+   "kind": "face-shape",
+   "origin": [
+    966,
+    108
+   ],
+   "size": [
+    34,
+    18
+   ]
+  },
+  "mouth_2_4": {
+   "kind": "face-shape",
+   "origin": [
+    1025,
+    133
+   ],
+   "size": [
+    27,
+    26
+   ]
+  },
+  "mouth_2_2": {
+   "kind": "face-shape",
+   "origin": [
+    921,
+    140
+   ],
+   "size": [
+    34,
+    17
+   ]
+  },
+  "mouth_2_3": {
+   "kind": "face-shape",
+   "origin": [
+    974,
+    137
+   ],
+   "size": [
+    21,
+    24
+   ]
+  },
+  "mouth_2_1": {
+   "kind": "face-shape",
+   "origin": [
+    867,
+    140
+   ],
+   "size": [
+    37,
+    19
+   ]
+  },
+  "blush_1_1": {
+   "kind": "face-shape",
+   "origin": [
+    870,
+    173
+   ],
+   "size": [
+    34,
+    20
+   ]
+  },
+  "blush_1_2": {
+   "kind": "face-shape",
+   "origin": [
+    918,
+    174
+   ],
+   "size": [
+    35,
+    19
+   ]
+  },
+  "blush_1_3": {
+   "kind": "face-shape",
+   "origin": [
+    968,
+    174
+   ],
+   "size": [
+    34,
+    19
+   ]
+  },
+  "blush_1_4": {
+   "kind": "face-shape",
+   "origin": [
+    1021,
+    175
+   ],
+   "size": [
+    32,
+    18
+   ]
+  },
+  "arrow": {
+   "kind": "weapon",
+   "origin": [
+    0,
+    0
+   ],
+   "size": [
+    168,
+    18
+   ],
+   "procedural": true
+  }
+ },
+ "faceShifts": {
+  "face_pout": [
+   -88,
+   0
+  ],
+  "face_smile": [
+   0,
+   0
+  ],
+  "face_wink": [
+   91,
+   0
+  ],
+  "face_shout": [
+   -90,
+   90
+  ],
+  "face_focused": [
+   -1,
+   91
+  ],
+  "face_hurt": [
+   91,
+   90
+  ]
+ }
+}
