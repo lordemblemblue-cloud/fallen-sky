@@ -76,6 +76,13 @@ test('Fantasy Battle stays coming soon even when its route is registered', () =>
   assert.equal(isTilePlayable({ id: 'x', to: 'gameview' }, ROUTES_WITH_FANTASY), false, 'relative routes are refused');
 });
 
+test('direct Fantasy Battle URL renders Coming Soon instead of the unfinished game', () => {
+  const route = source('src/routes/fantasy-battle.jsx');
+  assert.match(route, /component: FANTASY_BATTLE_RELEASED \? FantasyBattlePage : FantasyBattleComingSoon/);
+  assert.match(route, /Fantasy Battle is still in development/);
+  assert.match(route, /href="\/"/);
+});
+
 test('choosing: a playable game launches its route, the coming-soon tile goes nowhere', () => {
   const [fallen, duelist, fantasy] = GAMES_HUB_TILES;
   assert.deepEqual(resolveHubChoice(fallen, true), { launch: '/gameview', blocked: null });
