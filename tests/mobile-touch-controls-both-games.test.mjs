@@ -171,7 +171,7 @@ test('mobile touch hit targets respect iPhone safe areas without forcing 16:9', 
   assert.match(css, /env\(safe-area-inset-right/);
   assert.match(css, /env\(safe-area-inset-bottom/);
   assert.match(css, /min-width:var\(--mobile-button-size\)/);
-  assert.match(css, /--mobile-button-size:44px/);
+  assert.match(css, /--mobile-button-size:50px/);
   assert.match(jsx, /'--touch-x'/);
   assert.match(jsx, /'--touch-y'/);
   assert.match(jsx, /MOVE CONTROLS/);
