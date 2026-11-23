@@ -9,6 +9,7 @@ import {
   WOLFVEIL_IMPORTED_TOWN_FLOOR_Y,
 } from './WolfveilImportedTownLayout.mjs';
 import { buildWolfveilTownLivingQuarter } from './WolfveilTownLivingQuarterScene.mjs';
+import { game3dHiPolyRequested } from '../render/lowPolyWorld.mjs';
 
 export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, onReady, quality = 'auto' } = {}) {
   if (!scene?.add) throw new Error('Artisan town requires an active Game 3D scene');
@@ -26,6 +27,8 @@ export function installWolfveilArtisanTown(scene, { renderer = null, onStatus, o
     town = createAXETownPlaza({
       THREE, renderer, quality, includeLighting: false,
       showOuterHomes: true, showInnerShops: true, worldScale: 1,
+      // low-poly world: merge the unchanging town meshes per material (?hiPoly=1 keeps the earlier batches)
+      deepStaticMerge: !game3dHiPolyRequested(),
     });
     town.group.position.set(layout.x, WOLFVEIL_IMPORTED_TOWN_FLOOR_Y + .025, layout.z + 70);
     root.add(town.group);

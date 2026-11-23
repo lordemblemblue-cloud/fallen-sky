@@ -2,6 +2,12 @@ import { useEffect } from 'react';
 import { createCloneAdaptiveGraphics } from './AdaptiveGraphics.mjs';
 import CloneHardwarePanel from './CloneHardwarePanel.jsx';
 import { createGame3DSceneWarmup } from './SceneWarmup.mjs';
+import { installRafPump } from './Game3DRafPump.mjs';
+
+// Draw-cost probe, dev server only: ?perfPump=1 must replace requestAnimationFrame before the world's loop first asks
+// for a frame, i.e. when this module is evaluated (Game3DRafPump.mjs). A production build drops this.
+if (import.meta.env?.DEV && typeof window !== 'undefined' && /[?&]perfPump=1(&|$)/.test(window.location.search))
+  installRafPump(window);
 
 // GameView is outside /game3d/, so its browser client requires a root
 // service-worker scope to cache its /game3d/ requests. Never replace another
@@ -23,6 +29,10 @@ async function registerPublicGameAssetCache() {
 export default function Game3DPerformanceBootstrap({ region, showPanel = false }) {
   useEffect(() => {
     registerPublicGameAssetCache();
+    // Draw-cost probe (docs/game3d/three-empires/research/PERF_BASELINE_WEBGPU.md): dev server + ?perfProbe=1 only;
+    // a production build drops this branch and the probe module with it.
+    if (import.meta.env?.DEV && /[?&]perfProbe=1(&|$)/.test(window.location.search))
+      import('./Game3DPerfProbe.mjs').then((m) => m.installGame3DPerfProbe(window), (e) => console.warn('perfProbe unavailable', e));
     let activeScene = null;
     let activeRenderer = null;
     let warmup = null;

@@ -8,6 +8,7 @@ import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {classifyTreeMaterialPart} from './LivingTreeWindPhysics.mjs';
 import {vec2,vec3,sin,abs,clamp,mix,normalize,positionGeometry,diffuseColor} from 'three/tsl';
 import {attachNodes,uniformOf,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
+import {worldModelUrl} from './lowPolyWorld.mjs';
 
 // WebGPURenderer: the same leaf wind and rain darkening in TSL, one graph per uniform set.
 const elmNodes=new WeakMap();
@@ -112,7 +113,9 @@ export function installGame1OwnerElms(scene,trees,onReady,selection=selectOwnerE
     return state;
   }
   const loader=new GLTFLoader();
-  loader.load('/game3d/elm-owner-optimized.glb',gltf=>{
+  // Low-poly elms by default (?hiPoly=1: the earlier 88k-triangle /game3d/elm-owner-optimized.glb); same names,
+  // transforms and maps (render/lowPolyWorld.mjs).
+  loader.load(worldModelUrl('elm'),gltf=>{
     asset=gltf.scene;
     if(disposed){state.dispose();return;}
     asset.updateMatrixWorld(true);

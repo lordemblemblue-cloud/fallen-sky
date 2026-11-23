@@ -1,0 +1,312 @@
+{
+  "schema": "game3d-perf-probe/load-1",
+  "label": "load-before-south",
+  "startedAt": "2026-11-23T01:49:57.668Z",
+  "kind": "travel",
+  "to": "south",
+  "landing": "south.threshing",
+  "sceneMs": 11751,
+  "curtainError": true,
+  "renderer": "webgpu",
+  "area": "south",
+  "shownMs": 47999,
+  "settledMs": 49156,
+  "stable": true,
+  "counted": {
+    "meshes": 833,
+    "triangles": 2283328,
+    "drawCalls": 827,
+    "textures": 113,
+    "textureMB": 273
+  },
+  "groups": [
+    {
+      "owner": "WV_4MileRadius_StreamingSolidMeadow",
+      "meshes": 59,
+      "triangles": 1738196,
+      "drawCalls": 59,
+      "texMB": 0
+    },
+    {
+      "owner": "Character",
+      "meshes": 393,
+      "triangles": 183409,
+      "drawCalls": 393,
+      "texMB": 26
+    },
+    {
+      "owner": "Game1_ShadowWolf_WolfveilValley",
+      "meshes": 62,
+      "triangles": 147974,
+      "drawCalls": 56,
+      "texMB": 72
+    },
+    {
+      "owner": "Scene",
+      "meshes": 5,
+      "triangles": 65997,
+      "drawCalls": 5,
+      "texMB": 72
+    },
+    {
+      "owner": "Artemis_Body",
+      "meshes": 3,
+      "triangles": 65353,
+      "drawCalls": 3,
+      "texMB": 16
+    },
+    {
+      "owner": "(scene)",
+      "meshes": 14,
+      "triangles": 18840,
+      "drawCalls": 14,
+      "texMB": 2
+    },
+    {
+      "owner": "Game3D_Clone_AmbientBirds_VisualOnly",
+      "meshes": 3,
+      "triangles": 13850,
+      "drawCalls": 3,
+      "texMB": 64
+    },
+    {
+      "owner": "Lunar_Anchor",
+      "meshes": 45,
+      "triangles": 13424,
+      "drawCalls": 45,
+      "texMB": 0
+    },
+    {
+      "owner": "Rain_Anchor",
+      "meshes": 77,
+      "triangles": 11420,
+      "drawCalls": 77,
+      "texMB": 0
+    },
+    {
+      "owner": "Husky_Anchor",
+      "meshes": 46,
+      "triangles": 9302,
+      "drawCalls": 46,
+      "texMB": 0
+    },
+    {
+      "owner": "root",
+      "meshes": 35,
+      "triangles": 7706,
+      "drawCalls": 35,
+      "texMB": 0
+    },
+    {
+      "owner": "node_0",
+      "meshes": 73,
+      "triangles": 6949,
+      "drawCalls": 73,
+      "texMB": 21
+    },
+    {
+      "owner": "Discovery_ft_weathered_tablet",
+      "meshes": 2,
+      "triangles": 780,
+      "drawCalls": 2,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_spirit_vein",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_reinforce_outcrop",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_soul_bloom",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_hidden_divine_cache",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    }
+  ],
+  "precompile": {
+    "pipelines": 40,
+    "ms": 6305,
+    "timedOut": false
+  },
+  "downloads": {
+    "files": 42,
+    "mb": 81.4,
+    "transferMb": 81.3,
+    "largest": [
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/6d6cedc97_Vampire_A_Lusth_Zombie_Attack.fbx",
+        "kb": 16230,
+        "transferKb": 16230,
+        "ms": 7323
+      },
+      {
+        "file": "/models/characters/fused/Male_Fused_v2.glb",
+        "kb": 11668,
+        "transferKb": 11668,
+        "ms": 7280
+      },
+      {
+        "file": "/models/characters/Artemis_Character_v5.glb",
+        "kb": 11535,
+        "transferKb": 11535,
+        "ms": 7107
+      },
+      {
+        "file": "/models/characters/Getsuga_Tensho_Character_v5.glb",
+        "kb": 9087,
+        "transferKb": 9087,
+        "ms": 7133
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/42cb63080_stylized_plant_pack_1_.glb",
+        "kb": 6853,
+        "transferKb": 6853,
+        "ms": 7805
+      },
+      {
+        "file": "/game3d/elm-owner-optimized.glb",
+        "kb": 6613,
+        "transferKb": 6614,
+        "ms": 9293
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/3f9132732_wolfveil_garden_leaves_optimized.glb",
+        "kb": 5575,
+        "transferKb": 5576,
+        "ms": 7583
+      },
+      {
+        "file": "/models/mounts/faction_bear.glb",
+        "kb": 3377,
+        "transferKb": 3377,
+        "ms": 6052
+      },
+      {
+        "file": "/6ab42219a52fd34656a53b37/d9fad7809_tripo_convert_bdd73c28-af44-45e3-b758-1d783314f872.glb",
+        "kb": 2187,
+        "transferKb": 2188,
+        "ms": 7341
+      },
+      {
+        "file": "/game3d/landscape/wv_rocks.glb",
+        "kb": 1682,
+        "transferKb": 1682,
+        "ms": 19
+      },
+      {
+        "file": "/game3d/weapons/fantasy_sword.glb",
+        "kb": 1560,
+        "transferKb": 1560,
+        "ms": 9
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/d97bbac41_Vampire_A_Lusth_Zombie_Idle.fbx",
+        "kb": 856,
+        "transferKb": 856,
+        "ms": 6112
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/95eb37294_Vampire_A_Lusth_Zombie_Dying.fbx",
+        "kb": 813,
+        "transferKb": 814,
+        "ms": 6120
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/9e5d105d2_Vampire_A_Lusth_Zombie_Idle__1_.fbx",
+        "kb": 773,
+        "transferKb": 773,
+        "ms": 6120
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/0cf13edbb_Vampire_A_Lusth_Zombie_Death.fbx",
+        "kb": 764,
+        "transferKb": 764,
+        "ms": 6114
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/096472554_Vampire_A_Lusth_Zombie_Attack__1_.fbx",
+        "kb": 711,
+        "transferKb": 711,
+        "ms": 6108
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/f5e95a78a_realistics_grass_06_1_.glb",
+        "kb": 703,
+        "transferKb": 704,
+        "ms": 75
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/9c1d64bdb_Vampire_A_Lusth_Zombie_Running.fbx",
+        "kb": 450,
+        "transferKb": 451,
+        "ms": 6037
+      },
+      {
+        "file": "/files/public/6ab42219a52fd34656a53b37/1c09c2eb8_wolfveil_suigen_selective_assets.glb",
+        "kb": 397,
+        "transferKb": 397,
+        "ms": 6036
+      },
+      {
+        "file": "/files/public/6876751a602125f45f1861b9/3522223cf_ancient_tree_3d_model_1_.fbx",
+        "kb": 397,
+        "transferKb": 397,
+        "ms": 158
+      },
+      {
+        "file": "/models/animations/weapons/swordCharge.glb",
+        "kb": 178,
+        "transferKb": 178,
+        "ms": 6
+      },
+      {
+        "file": "/models/animations/weapons/swordCombo2.glb",
+        "kb": 119,
+        "transferKb": 119,
+        "ms": 21
+      },
+      {
+        "file": "/models/animations/weapons/swordCombo1.glb",
+        "kb": 114,
+        "transferKb": 115,
+        "ms": 6
+      },
+      {
+        "file": "/models/animations/weapons/swordCombo3.glb",
+        "kb": 112,
+        "transferKb": 113,
+        "ms": 6
+      },
+      {
+        "file": "/models/animations/mocap/Swim_Idle.glb",
+        "kb": 110,
+        "transferKb": 0,
+        "ms": 9
+      }
+    ]
+  },
+  "audit": [],
+  "received": {
+    "at": "2026-11-23T01:49:57.681Z",
+    "commit": "51135c89",
+    "branch": "claude/low-poly-world-20261122",
+    "dirty": true
+  }
+}

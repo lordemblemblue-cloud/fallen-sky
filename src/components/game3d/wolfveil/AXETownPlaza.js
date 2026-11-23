@@ -1,4 +1,5 @@
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeStaticTownTree } from './AXETownStaticMerge.mjs';
 import { resolveTownQuality, townLODState } from './WolfveilTownPerformancePolicy.mjs';
 
 /**
@@ -12,7 +13,7 @@ import { resolveTownQuality, townLODState } from './WolfveilTownPerformancePolic
  * The host must supply its own Three.js instance, render loop, collision engine and lighting.
  * Do not call renderer.render() from this module.
  */
-export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1, quality = 'auto' } = {}) {
+export function createAXETownPlaza({ THREE, renderer = null, includeLighting = false, showOuterHomes = true, showInnerShops = true, worldScale = 1, quality = 'auto', deepStaticMerge = true } = {}) {
     // Desktop defaults to low poly; touch/mobile uses an even lighter tier.
     // Both tiers keep the actual walk-in houses, shops and water fountain.
     const coarsePointer = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)')?.matches;
@@ -2826,6 +2827,17 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
     batchRoofs(fountainGroup);
     batchRoofs(innerShopsGroup);
     batchRoofs(outerRingGroup);
+    // Low-poly world (docs/GAME3D_LOW_POLY_20261122.md): one mesh per material inside each part the town moves,
+    // hides or animates (AXETownStaticMerge.mjs); deepStaticMerge false (?hiPoly=1) keeps the per-group batches only.
+    const deepMergeStats = deepStaticMerge ? mergeStaticTownTree(townGroup, {
+        THREE, mergeGeometries, skip: dynamicTownMeshes, sharedGeometries: sharedBoxGeometries,
+        boundaries: [fountainGroup, innerShopsGroup, outerRingGroup,
+            ...shopInteriors.map(room => room.group), ...houseEntries.map(room => room.group),
+            ...houseEntries.map(room => room.group.userData.interiorUpperShell), ...roomProxies.values(), ...allRoofs,
+            smithUpperFacadeGroup, ...allAnimatedMounts.flatMap(m => [m.root, m.neck, m.tail]), ...allStallGates,
+            ...allLanterns.map(l => l.group), ...allNorenPanels.map(n => n.pivot), augmentCoreAssembly,
+            mountSuspendedBarding, ...dynamicTownMeshes],
+    }) : null;
     const afterOptimization = geometryStats();
     function visibleGeometryStats() {
         let meshes = 0, triangles = 0;
@@ -2844,6 +2856,7 @@ export function createAXETownPlaza({ THREE, renderer = null, includeLighting = f
         quality: activeQuality,
         before: beforeOptimization, after: afterOptimization,
         savedDrawCalls: Math.max(0, beforeOptimization.meshes - afterOptimization.meshes),
+        deepStaticMerge: deepMergeStats,
     });
 
     // Host controls replace standalone demo HTML buttons.
