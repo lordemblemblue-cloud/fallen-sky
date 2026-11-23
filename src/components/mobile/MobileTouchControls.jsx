@@ -247,7 +247,13 @@ export default function MobileTouchControls({
     if (disabled || portraitBlocked) return;
     event.preventDefault();
     event.stopPropagation();
-    if (pointer.current && pointer.current.id !== event.pointerId) return;
+    // An interrupted gesture can lose its pointerup without a usable cancel.
+    // A new finger must be able to reclaim the joystick if the old capture
+    // is already gone; never strand the player until a page reload.
+    if (pointer.current && pointer.current.id !== event.pointerId) {
+      if (event.currentTarget.hasPointerCapture?.(pointer.current.id)) return;
+      callbacks.current.onMove?.({ x: 0, y: 0 });
+    }
     capture(event);
     pointer.current = { kind: 'move', id: event.pointerId };
     joystickMove(event);
