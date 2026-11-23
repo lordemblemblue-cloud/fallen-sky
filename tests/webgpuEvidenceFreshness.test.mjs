@@ -25,3 +25,15 @@ test('rejects empty or invalid input and invalid time configuration', () => {
   assert.equal(validateEvidenceFreshness([report(now)], Infinity).reason, 'invalid-freshness-input');
   assert.equal(validateEvidenceFreshness([report(now)], now, 0).reason, 'invalid-freshness-input');
 });
+
+test('checks every report and fails closed when later evidence is malformed', () => {
+  const good = report(now - 1000);
+  assert.deepEqual(
+    validateEvidenceFreshness([good, good, { checkedAt: 'not-a-date' }], now),
+    { ok: false, reason: 'invalid-check-time', reportIndex: 2 },
+  );
+  assert.deepEqual(
+    validateEvidenceFreshness([good, null], now),
+    { ok: false, reason: 'invalid-check-time', reportIndex: 1 },
+  );
+});
