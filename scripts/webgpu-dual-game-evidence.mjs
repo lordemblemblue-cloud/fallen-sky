@@ -1,0 +1,75 @@
+/**
+ * Offline evidence gate for BOTH current Emblem Blue games. This does not run
+ * a browser or certify visible pixels: it validates saved browser QA reports.
+ * Usage: node scripts/webgpu-dual-game-evidence.mjs fallen.json duelist.json
+ */
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { classifySamplePair, SCENE_KEYS } from './webgpu-native-browser-qa.mjs';
+
+const ROUTES = Object.freeze({
+  'fallen-sky': '/gameview',
+  'duelist-adventure': '/duelist-next/play',
+});
+const MAX_REPORT_GAP_MS = 60 * 60 * 1000;
+
+function fail(reason) { return { ok: false, reason }; }
+
+export function validateDualGameEvidence(reports) {
+  if (!Array.isArray(reports) || reports.length !== 2) return fail('exactly-two-reports-required');
+  const seen = new Set();
+  const dates = [];
+  for (const report of reports) {
+    if (!report || typeof report !== 'object' || !Object.hasOwn(SCENE_KEYS, report.sceneId)) {
+      return fail('invalid-scene-id');
+    }
+    if (seen.has(report.sceneId)) return fail('duplicate-scene-id');
+    seen.add(report.sceneId);
+    let url;
+    try { url = new URL(report.tabUrl); } catch { return fail('invalid-tab-url:' + report.sceneId); }
+    const route = ROUTES[report.sceneId];
+    if (!['https:', 'http:'].includes(url.protocol) ||
+      (url.pathname !== route && !url.pathname.startsWith(route + '/'))) {
+      return fail('wrong-playable-route:' + report.sceneId);
+    }
+    const checkedAt = report.checkedAt;
+    if (typeof checkedAt !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(checkedAt)) {
+      return fail('invalid-check-time:' + report.sceneId);
+    }
+    const timestamp = Date.parse(checkedAt);
+    if (!Number.isFinite(timestamp) || new Date(timestamp).toISOString() !== checkedAt) {
+      return fail('invalid-check-time:' + report.sceneId);
+    }
+    dates.push(timestamp);
+    if (report.first?.sceneId !== report.sceneId || report.last?.sceneId !== report.sceneId) {
+      return fail('sample-scene-mismatch:' + report.sceneId);
+    }
+    const decision = classifySamplePair(report.first, report.last);
+    if (!decision.ok || report.ok !== true || report.reason !== decision.reason) {
+      return fail('unverified-native-evidence:' + report.sceneId + ':' + decision.reason);
+    }
+    // These files are evidence of renderer counters, not visible world pixels.
+    // A screenshot path is not proof that someone visually inspected it.
+  }
+  if (dates[0] > dates[1] + MAX_REPORT_GAP_MS || dates[1] > dates[0] + MAX_REPORT_GAP_MS) {
+    return fail('reports-not-from-same-qa-window');
+  }
+  return { ok: true, reason: 'both-games-have-native-counter-evidence',
+    warning: 'Physical screenshots, gameplay visibility, recovery and benchmarks still require human verification.' };
+}
+
+export async function main(paths = process.argv.slice(2)) {
+  if (paths.length !== 2) throw new Error('Supply Fallen Sky and Duelist Adventure JSON report paths');
+  const reports = await Promise.all(paths.map(async (path) => JSON.parse(await readFile(resolve(path), 'utf8'))));
+  const result = validateDualGameEvidence(reports);
+  console.log(JSON.stringify(result, null, 2));
+  if (!result.ok) process.exitCode = 1;
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    console.error('Dual-game WebGPU QA evidence error: ' + error.message);
+    process.exitCode = 1;
+  });
+}
