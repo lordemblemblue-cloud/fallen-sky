@@ -223,3 +223,10 @@ test('hub page keeps the install button, intro and landscape gate, and the menu 
   assert.match(css, /\.xs-pager-button \{[^}]*width: 48px;[^}]*height: 48px/);
   assert.match(css, /@media \(max-height: 520px\)[\s\S]*min-height: 46px/);
 });
+
+test('the shared sideways gate does not count the games', () => {
+  const gate = source('src/components/mobile/MobileTouchControls.jsx');
+  assert.match(gate, /TURN YOUR PHONE SIDEWAYS/);
+  assert.match(gate, /Rotate your phone 90° to play\. Games need a sideways screen on mobile\./);
+  assert.doesNotMatch(gate, /\b(both|two|three) games\b/i);
+});
