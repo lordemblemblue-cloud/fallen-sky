@@ -211,19 +211,26 @@ export default function GameView() {
     if(worldEntryStatus!=='loading')return undefined;
     // A scene constructor can fail before the avatar loader fires. Never leave
     // the owner staring at an indefinite blank/blocked Game 3D entry.
-    // A gate hop remounts the world as a new scene: once that new scene exists it is loading, not stuck, so it gets
-    // up to 150 s (slow devices take longer than 30 s to build an area and compile its WebGPU shaders). A first entry
-    // keeps the 30 s rule (its scene was already built behind character selection). Load errors still show at once.
+    // While the world builds its shaders it reports progress (game3dWorldCompileProgress): only 30 s without any
+    // counts as stuck. A gate hop remounts the world as a new scene: once that new scene exists it is loading, not
+    // stuck, so after 30 s without progress it is rechecked every 15 s and gets up to 150 s from the hop in all (slow
+    // devices take longer than 30 s to build an area and compile its WebGPU shaders). A first entry keeps 30 s without
+    // progress (its scene was already built behind character selection). Load errors still show at once.
     const startScene=window.__gw3dScene,startedAt=performance.now();
+    const giveUp=()=>{
+      setWorldEntryError('Game 3D did not finish loading. Retry, or return to character selection and check the browser console.');
+      setWorldEntryStatus(current=>current==='loading'?'error':current);
+    };
     let timer=0;
     const check=()=>{
       const scene=window.__gw3dScene;
       if(scene&&scene!==startScene&&performance.now()-startedAt<150000){timer=window.setTimeout(check,15000);return;}
-      setWorldEntryError('Game 3D did not finish loading. Retry, or return to character selection and check the browser console.');
-      setWorldEntryStatus(current=>current==='loading'?'error':current);
+      giveUp();
     };
     timer=window.setTimeout(check,30000);
-    return ()=>window.clearTimeout(timer);
+    const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(check,30000);};
+    window.addEventListener('game3dWorldCompileProgress',progress);
+    return ()=>{window.clearTimeout(timer);window.removeEventListener('game3dWorldCompileProgress',progress);};
   },[worldEntryStatus]);
 
   // One-time wipe: reset Halo + Title progression to zero so the player can
@@ -710,15 +717,20 @@ export default function GameView() {
                   window.clearTimeout(timer);
                   window.removeEventListener('game3dWorldAvatarReady',ready);
                   window.removeEventListener('game3dWorldAvatarLoadError',failed);
+                  window.removeEventListener('game3dWorldCompileProgress',progress);
                 };
                 const ready=event=>{
                   if(event?.detail?.modelUrl!==expected)return;
                   cleanup();resolve();
                 };
                 const failed=event=>{cleanup();reject(new Error(event?.detail?.message||'Character model could not load.'));};
+                const giveUp=()=>{cleanup();reject(new Error('Your character took too long to load. Retry world.'));};
+                // The world reports progress while it builds its shaders: only 30 s without any counts as stuck.
+                const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(giveUp,30000);};
                 window.addEventListener('game3dWorldAvatarReady',ready);
                 window.addEventListener('game3dWorldAvatarLoadError',failed);
-                timer=window.setTimeout(()=>{cleanup();reject(new Error('Your character took too long to load. Retry world.'));},30000);
+                window.addEventListener('game3dWorldCompileProgress',progress);
+                timer=window.setTimeout(giveUp,30000);
                 // Close the mount/listener race if the actor arrived meanwhile.
                 if(worldReadyRef.current && readyModelUrlRef.current===expected){cleanup();resolve();}
               });

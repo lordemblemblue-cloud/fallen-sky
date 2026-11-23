@@ -135,6 +135,64 @@ test('NPC textures are scaled to 1024 px when the image arrives, before any uplo
   assert.equal(texture.image.height, 512);
 });
 
+// Runs GameView's own world-entry watchdog effect (taken from the source) on a fake clock.
+function runWatchdog({ hop }) {
+  const src = read('src/pages/GameView.jsx').replace(/\r\n/g, '\n');
+  const head = "useEffect(()=>{\n    if(worldEntryStatus!=='loading')return undefined;\n    // A scene constructor can fail";
+  const at = src.indexOf(head);
+  assert.ok(at >= 0, 'watchdog effect found');
+  const bodyStart = src.indexOf('\n', src.indexOf('return undefined;', at)) + 1;
+  const bodyEnd = src.indexOf('},[worldEntryStatus]);', at);
+  const body = src.slice(bodyStart, bodyEnd);
+  let now = 0; let nextId = 1; const timers = new Map(); const listeners = new Map();
+  const fakeWindow = {
+    __gw3dScene: { name: 'scene before' },
+    setTimeout: (fn, ms) => { const id = nextId++; timers.set(id, { fn, at: now + ms }); return id; },
+    clearTimeout: (id) => { timers.delete(id); },
+    addEventListener: (type, fn) => { listeners.set(type, fn); },
+    removeEventListener: (type, fn) => { if (listeners.get(type) === fn) listeners.delete(type); },
+  };
+  const state = { error: null, status: 'loading' };
+  const cleanup = new Function('window', 'performance', 'setWorldEntryError', 'setWorldEntryStatus', body)(
+    fakeWindow, { now: () => now }, (e) => { state.error = e; }, (fn) => { state.status = typeof fn === 'function' ? fn(state.status) : fn; });
+  if (hop) fakeWindow.__gw3dScene = { name: 'the next area' }; // the gate hop's remount builds a new scene
+  const advanceTo = (t) => {
+    for (;;) {
+      const due = [...timers.entries()].filter(([, v]) => v.at <= t).sort((a, b) => a[1].at - b[1].at)[0];
+      if (!due) break;
+      now = due[1].at; timers.delete(due[0]); due[1].fn();
+    }
+    now = t;
+  };
+  const progress = () => listeners.get('game3dWorldCompileProgress')?.();
+  return { state, advanceTo, progress, cleanup, listeners, timers };
+}
+
+test('world-entry watchdog: progress resets 30 s; a gate hop with its new scene may run to 150 s; first entry keeps 30 s', () => {
+  // first entry, no progress: interrupted at 30 s
+  let w = runWatchdog({ hop: false });
+  w.advanceTo(29999); assert.equal(w.state.status, 'loading');
+  w.advanceTo(30000); assert.equal(w.state.status, 'error');
+  // first entry with progress every 20 s: alive; stuck 30 s after the last progress
+  w = runWatchdog({ hop: false });
+  for (let t = 20000; t <= 100000; t += 20000) { w.advanceTo(t); w.progress(); }
+  w.advanceTo(129999); assert.equal(w.state.status, 'loading');
+  w.advanceTo(130000); assert.equal(w.state.status, 'error');
+  // gate hop whose new scene exists, no progress at all: still loading at 149 s, interrupted at 150 s
+  w = runWatchdog({ hop: true });
+  w.advanceTo(149000); assert.equal(w.state.status, 'loading');
+  w.advanceTo(150000); assert.equal(w.state.status, 'error');
+  // gate hop with progress past 150 s: alive while progress comes, interrupted 30 s after it stops
+  w = runWatchdog({ hop: true });
+  for (let t = 20000; t <= 200000; t += 20000) { w.advanceTo(t); w.progress(); }
+  w.advanceTo(229999); assert.equal(w.state.status, 'loading');
+  w.advanceTo(230000); assert.equal(w.state.status, 'error');
+  // the effect's cleanup removes its listener and timer
+  w = runWatchdog({ hop: true });
+  w.cleanup();
+  assert.equal(w.listeners.size, 0); assert.equal(w.timers.size, 0);
+});
+
 test('the game uses all of it; ?hiPoly=1 keeps the earlier behaviour', () => {
   assert.match(read('src/components/game3d/performance/Game3DPerformanceBootstrap.jsx'), /installGame3DModelCache\(\)/);
   assert.match(read('src/components/game3d/npc/axeAnimatedQuestNpcGLB.mjs'), /loadSharedNpcModel\(fbxLoader,fallbackUrl,/);
