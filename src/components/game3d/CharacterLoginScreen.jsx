@@ -25,6 +25,7 @@ import { getLivingChronicleIdentity } from './character/livingChronicleIdentity.
 import { getVisibleCrosslineSlots } from './character/characterCrossline.mjs';
 import { computeDerivedStats } from './statsSystem';
 import CharacterCreationModal from './CharacterCreationModal';
+import FallenSkyBetaNotice from './FallenSkyBetaNotice';
 import PauseMenu from './PauseMenu';
 import WorkflowTeleportPanel from './workflow/WorkflowTeleportPanel';
 import './CharacterLoginScreen.css';
@@ -355,6 +356,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
   return (
     <main className={'axe-login axe-login--live-entry axe-login--arcane'+(entering?' axe-login--entering':'')} aria-label="Game 3D character selection" data-entry-step={step} data-live-world={liveWorld?'true':'false'} data-world-ready={worldReady?'true':'false'} data-motion={motionEnabled?'on':'off'} data-info-tab={infoTab} style={chronicle.css}>
       <div className="axe-login-scene" aria-hidden="true"><div className="axe-login-glyph"/><div className="axe-login-scrim" /></div>
+      {step !== 'start' && <FallenSkyBetaNotice context="creation" />}
       {step==='start' && <button type="button" className="axe-login-entrance-settings"
         aria-label="Game 3D settings" aria-expanded={settingsOpen}
         onClick={() => setSettingsOpen(open => !open)}><Settings size={24}/></button>}
