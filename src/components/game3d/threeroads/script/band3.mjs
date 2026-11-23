@@ -37,7 +37,11 @@
 //     of the Cedar Spine Gate, 45 m clear of both camps beside it.
 //   The Sunken Inkstone Cistern's mouth lies 20 m beyond the edge a player can
 //     walk to, and its path crosses its own terraces at 50 to 79 degrees. The
-//     surface points of chapter 6 stop at the last level ledge below it.
+//     doorways session is moving that path's bend (branch
+//     claude/wolfveil-north-route-20261122), which turns the ledge it used to
+//     reach into a cliff; the mouth stays beyond the edge either way. So the
+//     surface points of chapter 6 stop at the Wolf-Ear Vigil, where the trail
+//     leaves the ridge path: ground measured walkable on both versions.
 
 const line = (speaker, text) => Object.freeze({ speaker, text });
 const point = (x, z) => Object.freeze({ x, z });
@@ -62,9 +66,10 @@ export const BAND3_POINTS = Object.freeze({
   muster_trail: point(-402, 236),
   // North: the bench in front of Whispering Root Hollow's mouth (P45)
   hollowpath_mouth: point(-492.6, 292.5),
-  // North: the last level ledge below the Sunken Inkstone Cistern (P46)
-  peaks_ledge: point(-18, 512),
-  peaks_rival: point(-33.9, 511.1),
+  // North: the Wolf-Ear Vigil (P40), where the trail to the Sunken Inkstone Cistern (P46)
+  // leaves the ridge path, and a spot 18 m along that trail
+  peaks_vigil: point(2, 470),
+  peaks_rival: point(-16, 470),
   // Under the valley: Jade Lantern Grotto (hall, then a chamber 15 m in radius round -376.4, -425.1)
   grotto_hall: point(-368.8, -413.4),
   grotto_hares: point(-374.2, -421.8),
@@ -186,7 +191,7 @@ export const BAND3_LINES = Object.freeze({
 
   // ── M06 The Drowned Ledger ───────────────────────────────────────────
   lyra_m06_01: line('archer_lyra', "Four hundred and twelve. I've moved you up my count, onto the short list of people I'd miss. When the second Tooth left its wall, a mural lit under the northern peaks. A koi, under water."),
-  lyra_m06_02: line('archer_lyra', "That is the Sunken Inkstone Cistern. The Keepers kept their records there before the spring drowned it. If this has happened before, somebody wrote it down. Climb past the Wolf-Ears and read me what is left."),
+  lyra_m06_02: line('archer_lyra', "That is the Sunken Inkstone Cistern. The Keepers kept their records there before the spring drowned it. If this has happened before, somebody wrote it down. Climb to the Wolf-Ear Vigil, take the trail up from there, and read me what is left."),
   tiaa_m06_01: line('tiaa_archer', "A blue coat. Of course. I'm here for the same thing you are, and I have the longer legs. Try to keep up."),
   casca_m06_01: line('brenna_casca', "River soldier. You're late. The Ninth sent one optio for this, and she is already at the door. Stay out of my way down there."),
   ren_m06_01: line('ren_swordswoman', "A red cloak. My mistress says your people march well and climb badly. Race you to the bottom."),
@@ -342,7 +347,7 @@ export const BAND3_PLEDGES = Object.freeze([
       cause: 'If the Roads have opened before, the Keepers wrote down how it ended, and nobody alive has read it.',
       cost: 'Somebody you are at war with will hold your arm in the dark, and neither of you may ever say so.',
       steps: [
-        { id: 'climb', kind: 'go_to', text: "Climb past the Wolf-Ear peaks to the ledge below the cistern's mouth.", target: 'tr_m06_ledge', placeId: 'P46' },
+        { id: 'climb', kind: 'go_to', text: "Climb the ridge path to the Wolf-Ear Vigil, where the cistern's trail begins.", target: 'tr_m06_vigil', placeId: 'P40' },
         { id: 'enter', kind: 'go_to', text: 'Go down into the Sunken Inkstone Cistern.', target: 'tr_m06_cistern_hall', placeId: 'P46' },
         { id: 'koi', kind: 'defeat', text: 'Fight down through the Ink Koi to the flooded archive.', target: 'tr_m06_ink_koi', placeId: 'P46', count: 6 },
         { id: 'pages', kind: 'use', text: 'Read two pages of the drowned ledger.', target: 'tr_m06_ledger_pages', placeId: 'P46', count: 2, seconds: 3 },
@@ -519,9 +524,9 @@ export const BAND3_STAGING = Object.freeze({
     complete: ['lyra_m06_03', 'lyra_m06_04'],
     steps: {
       climb: {
-        // The rival is already on the path ahead, looking back down it.
+        // The rival is already on the cistern's trail ahead, looking back down it.
         start: [{ castSpawn: 'rival_champion', at: 'peaks_rival', facing: Math.PI * 0.5 }],
-        watch: { point: 'peaks_ledge', radius: 6 },
+        watch: { point: 'peaks_vigil', radius: 6 },
         done: [
           { sayByEmpire: { akitsu: 'tiaa_m06_01', tameri: 'casca_m06_01', remoria: 'ren_m06_01', none: 'tiaa_m06_01' } },
           { wait: 6 }, { castDespawn: 'rival_champion' },

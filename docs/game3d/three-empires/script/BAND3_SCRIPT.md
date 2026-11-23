@@ -2,7 +2,7 @@
 
 Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band3.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
-4 pledges, 79 spoken lines, 12,133 characters to record.
+4 pledges, 79 spoken lines, 12,167 characters to record.
 
 ## The First Stroke
 
@@ -184,9 +184,9 @@ Main story, chapter 6. Asked by Lyra the Seeker.
 **When it is offered**
 
 - **Lyra the Seeker:** Four hundred and twelve. I've moved you up my count, onto the short list of people I'd miss. When the second Tooth left its wall, a mural lit under the northern peaks. A koi, under water.
-- **Lyra the Seeker:** That is the Sunken Inkstone Cistern. The Keepers kept their records there before the spring drowned it. If this has happened before, somebody wrote it down. Climb past the Wolf-Ears and read me what is left.
+- **Lyra the Seeker:** That is the Sunken Inkstone Cistern. The Keepers kept their records there before the spring drowned it. If this has happened before, somebody wrote it down. Climb to the Wolf-Ear Vigil, take the trail up from there, and read me what is left.
 
-**Step 1. Climb past the Wolf-Ear peaks to the ledge below the cistern's mouth.** *(Sunken Inkstone Cistern)*
+**Step 1. Climb the ridge path to the Wolf-Ear Vigil, where the cistern's trail begins.** *(Wolf-Ear Vigil)*
 
 - **Tiaa:** A blue coat. Of course. I'm here for the same thing you are, and I have the longer legs. Try to keep up. *(to a player of Akitsu)*
 - **Optio Brenna Casca:** River soldier. You're late. The Ninth sent one optio for this, and she is already at the door. Stay out of my way down there. *(to a player of Tameri)*

@@ -36,7 +36,7 @@ The other nine decisions below were not answered one by one. Until the owner say
 
 - A ring at a cave's mouth puts the player in the Wolf Rotunda in the middle of the cave network, not in the cave they walked into. The Jade Grotto's painted chamber is then 580 m of tunnel away.
 - The only path to Whispering Root Hollow passes 12 m from the edge of a camp of level 35 dead. The chapter is for levels 12 to 16.
-- The Sunken Inkstone Cistern's mouth is 20 m beyond the edge of the ground a player can walk on, and its path crosses its own terraces at 50 to 79 degrees.
+- The Sunken Inkstone Cistern's mouth is 20 m beyond the edge of the ground a player can walk on, and its path crosses its own terraces at 50 to 79 degrees. The doorways session's branch `claude/wolfveil-north-route-20261122` moves that path so it no longer cuts the ridge path; measured on that branch the mouth is still beyond the edge. Chapter 6's surface spots stand at the Wolf-Ear Vigil, on ground that is walkable on both versions.
 
 ## Decisions needed from the owner
 
@@ -53,7 +53,7 @@ The other nine decisions below were not answered one by one. Until the owner say
 
 ## What has cost what
 
-236 Meshy credits so far, for the eight townspeople who have models of their own; every task is listed in `COSTS.md`. No ElevenLabs credits: nothing has been recorded. The three bands written so far hold 225 spoken lines, 27,696 characters to record.
+236 Meshy credits so far, for the eight townspeople who have models of their own; every task is listed in `COSTS.md`. No ElevenLabs credits: nothing has been recorded. The three bands written so far hold 225 spoken lines, 27,730 characters to record.
 
 ## Rules this work keeps
 
