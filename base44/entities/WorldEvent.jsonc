@@ -22,11 +22,39 @@
     },
     "latitude": {
       "type": "number",
-      "description": "Map latitude location"
+      "description": "Map latitude location",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "longitude": {
       "type": "number",
-      "description": "Map longitude location"
+      "description": "Map longitude location",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "level": {
       "type": "number",

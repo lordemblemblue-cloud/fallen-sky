@@ -1,39 +1,71 @@
 // Entity automation handler for ClanMember create/delete events.
 // Posts a system message into the clan's default chat channel whenever a member
-// joins or leaves the guild. Triggered automatically by base44 automations.
+// joins or leaves the guild.
+//
+// Server functions are publicly reachable, so the body is not trusted as an
+// event. The membership row is re-read from the database and the clan, the
+// user and the role all come from that stored record; a caller can no longer
+// name an arbitrary clan and user to forge an announcement. Repeat deliveries
+// for the same membership are ignored.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const payload = await req.json();
-    const { event, data, old_data } = payload;
+    const svc = base44.asServiceRole.entities;
+    const payload = await req.json().catch(() => ({}));
+    const event = payload?.event || {};
+    const type = String(event.type || '');
+    if (!['create', 'delete'].includes(type)) {
+      return Response.json({ ok: true, skipped: 'not a membership event' });
+    }
 
-    const row = data || old_data;
-    if (!row?.clan_id) return Response.json({ ok: true, skipped: 'no clan_id' });
+    const rowId = String(payload?.data?.id || payload?.old_data?.id || event.entity_id || '').trim();
+    if (!rowId) return Response.json({ ok: true, skipped: 'no membership row' });
 
-    // Resolve the user's display name
-    let userName = 'A player';
-    try {
-      const users = await base44.asServiceRole.entities.User.filter({ id: row.user_id });
-      if (users[0]) userName = users[0].full_name || users[0].username || users[0].email?.split('@')[0] || 'A player';
-    } catch {}
+    // Authoritative membership row. A create is announced only while the row
+    // exists; a delete only once the row is actually gone.
+    const stored = await svc.ClanMember.get(rowId).catch(() => null);
+    const row = type === 'create' ? stored : (stored ? null : payload?.old_data);
+    if (!row?.clan_id || !row?.user_id) {
+      return Response.json({ ok: true, skipped: 'membership row does not match event' });
+    }
 
-    // Find the default channel for this clan
-    const channels = await base44.asServiceRole.entities.ClanChannel.filter({ divisionId: row.clan_id });
+    const clanId = String(row.clan_id);
+    const memberUserId = String(row.user_id);
+
+    // The clan must exist and the player must be a real account.
+    const [division, users] = await Promise.all([
+      svc.Division.get(clanId).catch(() => null),
+      svc.User.filter({ id: memberUserId }).catch(() => []),
+    ]);
+    if (!division || !users?.[0]) {
+      return Response.json({ ok: true, skipped: 'unknown clan or player' });
+    }
+    const userName = users[0].full_name || users[0].username || users[0].email?.split('@')[0] || 'A player';
+
+    // Find the default channel for this clan.
+    const channels = await svc.ClanChannel.filter({ divisionId: clanId });
     const ch = channels[0];
     if (!ch) return Response.json({ ok: true, skipped: 'no channel' });
 
-    const verb = event.type === 'create' ? 'joined the guild' : 'left the guild';
+    const verb = type === 'create' ? 'joined the guild' : 'left the guild';
+    const content = `${userName} has ${verb}.`;
 
-    await base44.asServiceRole.entities.ClanMessage.create({
-      divisionId: row.clan_id,
+    // One announcement per membership change, so replays cannot flood a channel.
+    const existing = await svc.ClanMessage.filter(
+      { divisionId: clanId, channelId: ch.id, content }, '-created_date', 1,
+    );
+    if (existing?.length) return Response.json({ ok: true, skipped: 'already announced' });
+
+    await svc.ClanMessage.create({
+      divisionId: clanId,
       channelId: ch.id,
       author: 'System',
       authorAvatar: '',
-      content: `${userName} has ${verb}.`,
-      userId: row.user_id,
+      content,
+      userId: memberUserId,
       role: row.role || 'member',
       isAnnouncement: true,
       isPinned: false,

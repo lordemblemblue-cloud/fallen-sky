@@ -27,9 +27,10 @@ Deno.serve(async (req) => {
     const { operation, entityType, divisionId, entityId, entityData, filter, limit } = body;
     
     // Validate clan membership for all operations
+    let membership = null;
     if (divisionId && operation !== 'listPublic') {
-      const membership = await checkClanMembership(base44, user.id, divisionId);
-      
+      membership = await checkClanMembership(base44, user.id, divisionId);
+
       if (!membership) {
         return Response.json({ error: 'Forbidden: Not a clan member' }, { status: 403 });
       }
@@ -70,11 +71,31 @@ Deno.serve(async (req) => {
           return Response.json({ error: 'Division ID required' }, { status: 400 });
         }
         
-        result = await base44.asServiceRole.entities.ClanMessage.create({
-          ...entityData,
-          divisionId,
-          author: user.id
-        });
+        // Built from server-verified values only: the author, the user id and
+        // the role come from the authenticated caller and their ClanMember row,
+        // and announcements/pins stay officer-only. Client-supplied identity
+        // fields are never spread into the message.
+        {
+          const content = typeof entityData?.content === 'string' ? entityData.content.trim() : '';
+          if (!content) {
+            return Response.json({ error: 'Message is required' }, { status: 400 });
+          }
+          if (content.length > 4000) {
+            return Response.json({ error: 'Message is too long' }, { status: 400 });
+          }
+          const officer = ['leader', 'officer'].includes(membership?.role);
+          result = await base44.asServiceRole.entities.ClanMessage.create({
+            divisionId,
+            channelId: typeof entityData?.channelId === 'string' ? entityData.channelId : 'clan_global',
+            author: user.full_name || user.username || user.email?.split('@')?.[0] || 'Player',
+            authorAvatar: user.avatar_url || '',
+            content,
+            userId: user.id,
+            role: membership?.role || 'member',
+            isAnnouncement: officer ? Boolean(entityData?.isAnnouncement) : false,
+            isPinned: officer ? Boolean(entityData?.isPinned) : false,
+          });
+        }
         break;
         
       case 'deleteMessage':

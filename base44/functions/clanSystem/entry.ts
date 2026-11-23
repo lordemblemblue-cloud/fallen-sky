@@ -522,16 +522,24 @@ Deno.serve(async (req) => {
         if (action === 'deposit_vault') {
             const { divisionId, item } = data;
             const member = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: user.id });
-            if (!member.length) {
-                return new Response(JSON.stringify({ error: 'Not a member' }), { status: 403, headers: corsHeaders });
+            // The vault records real guild contributions. There is no
+            // server-side personal inventory to debit yet, so recording stays
+            // with leadership and every stack is bounded.
+            if (!member.length || !['leader', 'officer'].includes(member[0].role)) {
+                return new Response(JSON.stringify({ error: 'Leader or officer permission required' }), { status: 403, headers: corsHeaders });
             }
+            const name = typeof item?.item_name === 'string' ? item.item_name.trim() : '';
+            if (!name || name.length > 80) {
+                return new Response(JSON.stringify({ error: 'Item name is required' }), { status: 400, headers: corsHeaders });
+            }
+            const quantity = Math.min(99, Math.max(1, Math.floor(Number(item.quantity || 1)) || 1));
             await base44.asServiceRole.entities.ClanVaultItem.create({
                 clan_id: divisionId,
                 item_id: item.item_id || '',
-                item_name: item.item_name,
+                item_name: name,
                 item_icon: item.item_icon || '',
                 rarity: item.rarity || 'common',
-                quantity: item.quantity || 1,
+                quantity,
                 stash_tab: item.stash_tab || 0,
                 deposited_by: user.id,
                 deposited_at: new Date().toISOString(),

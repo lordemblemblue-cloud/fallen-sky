@@ -304,16 +304,22 @@ Deno.serve(async (req) => {
 
     if (action === 'deposit_inventory') {
       const { clanId, item = {} } = data;
-      await requireMember(clanId);
-      if (!item.item_name) return json({ success: false, error: 'Item name is required' }, 400);
+      // The vault records real guild contributions. There is no server-side
+      // personal inventory to debit yet, so recording stays with leadership and
+      // every stack is bounded: an ordinary member cannot mint vault stock.
+      await requireOfficer(clanId);
+      const name = typeof item.item_name === 'string' ? item.item_name.trim() : '';
+      if (!name) return json({ success: false, error: 'Item name is required' }, 400);
+      if (name.length > 80) return json({ success: false, error: 'Item name is too long' }, 400);
+      const quantity = Math.min(99, Math.max(1, Math.floor(Number(item.quantity || 1)) || 1));
       const row = await base44.asServiceRole.entities.ClanVaultItem.create({
         clan_id: clanId,
         item_id: item.item_id || '',
-        item_name: item.item_name,
+        item_name: name,
         item_icon: item.item_icon || '',
         rarity: item.rarity || 'common',
         category: item.category || 'material',
-        quantity: Math.max(1, Number(item.quantity || 1)),
+        quantity,
         stash_tab: Number(item.stash_tab || 0),
         deposited_by: user.id,
         deposited_at: new Date().toISOString(),

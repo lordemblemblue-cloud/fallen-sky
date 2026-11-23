@@ -55,7 +55,21 @@
     },
     "join_password": {
       "type": "string",
-      "description": "Optional password required to join"
+      "description": "Optional password required to join",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "channel_type": {
       "type": "string",

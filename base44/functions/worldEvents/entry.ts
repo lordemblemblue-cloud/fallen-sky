@@ -1,57 +1,52 @@
-import { createClient } from 'npm:@base44/sdk@0.1.0';
-
-const base44 = createClient({
-    appId: Deno.env.get('BASE44_APP_ID'),
-});
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
-        const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-            return new Response('Unauthorized', { status: 401 });
-        }
-        
-        const token = authHeader.split(' ')[1];
-        base44.auth.setToken(token);
+        const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
-        
+
         if (!user) {
             return new Response('Unauthorized', { status: 401 });
         }
 
-        const { action } = await req.json();
+        // The body is read exactly once. The previous handler consumed the
+        // request stream again inside each case, so every action after the
+        // first threw before reaching its logic.
+        const body = await req.json().catch(() => ({}));
+        const { action, eventId, questId } = body || {};
 
         switch (action) {
-            case 'getCurrentEvent':
+            case 'getCurrentEvent': {
                 const event = await getCurrentWorldEvent();
                 return new Response(JSON.stringify(event), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
+            }
 
-            case 'joinEvent':
-                const { eventId } = await req.json();
+            case 'joinEvent': {
                 const participation = await joinWorldEvent(user.id, eventId);
                 return new Response(JSON.stringify(participation), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
+            }
 
-            case 'getEventProgress':
-                const { eventId: progressEventId } = await req.json();
-                const progress = await getEventProgress(user.id, progressEventId);
+            case 'getEventProgress': {
+                const progress = await getEventProgress(user.id, eventId);
                 return new Response(JSON.stringify(progress), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
+            }
 
-            case 'completeEventQuest':
-                const { questId } = await req.json();
-                const completion = await completeEventQuest(user.id, questId);
+            case 'completeEventQuest': {
+                const completion = await completeEventQuest(base44, user, questId);
                 return new Response(JSON.stringify(completion), {
                     status: 200,
                     headers: { 'Content-Type': 'application/json' }
                 });
+            }
 
             default:
                 return new Response('Invalid action', { status: 400 });
@@ -145,24 +140,52 @@ async function getEventProgress(userId, eventId) {
     };
 }
 
-async function completeEventQuest(userId, questId) {
+async function completeEventQuest(base44, user, questId) {
     const questRewards = {
         'damage_leviathan': { agp: 500, experience: 1000 },
         'find_cache': { item: 'Legendary Treasure Chest', agp: 300 }
     };
 
-    const reward = questRewards[questId];
+    const reward = questRewards[String(questId || '')];
     if (!reward) {
         throw new Error('Quest not found');
     }
 
-    // Update user rewards
-    const user = await base44.auth.me();
+    // A world-event quest pays out at most once per account. The claim is a
+    // server-side RewardGrant row keyed by the quest, written before any
+    // currency moves, so replaying the request cannot mint AGP again.
+    const svc = base44.asServiceRole.entities;
+    const grantKey = `world_event_quest:${questId}`;
+    const claimed = await svc.RewardGrant.filter({ user_id: user.id, grant_key: grantKey }, '-created_date', 5);
+    if (claimed.length) {
+        throw new Error('This quest reward has already been claimed');
+    }
+
+    const grant = await svc.RewardGrant.create({
+        user_id: user.id,
+        grant_key: grantKey,
+        status: 'pending',
+        payload: { source: 'world_event_quest', quest_id: String(questId), ...reward }
+    });
+
+    // Two racing requests can both create a claim; only the oldest may pay.
+    const settled = await svc.RewardGrant.filter({ user_id: user.id, grant_key: grantKey }, 'created_date', 5);
+    if (settled.length !== 1 || settled[0].id !== grant.id) {
+        await svc.RewardGrant.delete(grant.id).catch(() => {});
+        throw new Error('This quest reward has already been claimed');
+    }
+
     if (reward.agp) {
+        const fresh = await base44.auth.me();
         await base44.entities.User.updateMyUserData({
-            avatar_gamer_points: (user.avatar_gamer_points || 0) + reward.agp
+            avatar_gamer_points: (Number(fresh?.avatar_gamer_points) || 0) + reward.agp
         });
     }
+
+    await svc.RewardGrant.update(grant.id, {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+    }).catch(() => {});
 
     return {
         success: true,

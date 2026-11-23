@@ -145,14 +145,26 @@ Deno.serve(async (req) => {
         const available = (byType.get(type) || []).reduce((sum, row) => sum + Number(row.quantity || 0), 0);
         if (available < qty) throw new Error(`Need ${qty} ${type.replaceAll('_', ' ')}; you have ${available}`);
       }
+      // Deduct with a compare-and-swap: the write only lands while the stack
+      // still holds the quantity just read, so two racing upgrades cannot both
+      // spend the same materials.
       for (const [type, qtyValue] of Object.entries(requirements)) {
         let remaining = Number(qtyValue);
         for (const row of (byType.get(type) || [])) {
           if (remaining <= 0) break;
-          const use = Math.min(remaining, Number(row.quantity || 0));
-          await base44.asServiceRole.entities.UserMaterial.update(row.id, { quantity: Math.max(0, Number(row.quantity || 0) - use) });
+          const current = Number(row.quantity || 0);
+          const use = Math.min(remaining, current);
+          if (use <= 0) continue;
+          const next = Math.max(0, current - use);
+          await base44.asServiceRole.entities.UserMaterial.updateMany(
+            { id: row.id, user_id: user.id, quantity: current },
+            { $set: { quantity: next } },
+          );
+          const check = await base44.asServiceRole.entities.UserMaterial.get(row.id).catch(() => null);
+          if (!check || Number(check.quantity) !== next) throw new Error('Your materials changed while upgrading. Try again.');
           remaining -= use;
         }
+        if (remaining > 0) throw new Error(`Need more ${type.replaceAll('_', ' ')}`);
       }
     };
 
@@ -204,7 +216,7 @@ Deno.serve(async (req) => {
         await spend({ wildcard: 1 });
       } else {
         const targetRarity = rarityRank[userCard.card_rarity] || 0;
-        const validatedIds: string[] = [];
+        const validated: { id: string; name: string; previous: any }[] = [];
         for (const id of sacrificeIds.slice(0, needed)) {
           if (id === userCard.id) throw new Error('The active card cannot consume itself');
           const sacrifice = await base44.asServiceRole.entities.UserCard.get(id).catch(() => null);
@@ -217,11 +229,34 @@ Deno.serve(async (req) => {
           if (sacrifice.is_equipped || sacrifice.trade_status === 'locked_in_trade') throw new Error(`${sacrifice.card_name} is equipped or locked in a trade`);
           const compatible = sacrifice.card_name === userCard.card_name || (sacrifice.game_name === userCard.game_name && (rarityRank[sacrifice.card_rarity] || 0) >= Math.max(0, targetRarity - 1));
           if (!compatible) throw new Error(`${sacrifice.card_name} is not compatible with this stage fusion`);
-          consumed.push(sacrifice.card_name);
-          validatedIds.push(id);
+          validated.push({ id, name: sacrifice.card_name, previous: sacrifice.trade_status ?? '' });
         }
-        // Validate the complete selection before consuming the first owned card.
-        for (const id of validatedIds) await base44.asServiceRole.entities.UserCard.delete(id);
+        // Validate the whole selection, then claim every donor with a
+        // conditional lock before consuming any of them. A racing fusion that
+        // already claimed a donor fails its check instead of reusing the card.
+        const claimed: typeof validated = [];
+        try {
+          for (const entry of validated) {
+            await base44.asServiceRole.entities.UserCard.updateMany(
+              { id: entry.id, user_id: user.id, trade_status: { $ne: 'locked_in_trade' } },
+              { $set: { trade_status: 'locked_in_trade' } },
+            );
+            const locked = await base44.asServiceRole.entities.UserCard.get(entry.id).catch(() => null);
+            if (!locked || locked.user_id !== user.id || locked.trade_status !== 'locked_in_trade') {
+              throw new Error('One selected fusion card changed while fusing. Try again.');
+            }
+            claimed.push(entry);
+          }
+        } catch (error) {
+          for (const entry of claimed) {
+            await base44.asServiceRole.entities.UserCard.update(entry.id, { trade_status: entry.previous }).catch(() => {});
+          }
+          throw error;
+        }
+        for (const entry of claimed) {
+          await base44.asServiceRole.entities.UserCard.delete(entry.id);
+          consumed.push(entry.name);
+        }
       }
       const newStage = Number(progression.stage || 1) + 1;
       await commit({ stage: newStage, stars: Math.min(5, Number(progression.stars || 1) + 1), skill_points: Number(progression.skill_points || 0) + 1 }, 'combine', `Card advanced to Stage ${newStage}`, { consumed, wildcard: Boolean(payload?.useWildcard) });

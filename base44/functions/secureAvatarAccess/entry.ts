@@ -1,5 +1,32 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Only appearance and identity fields may come from the browser. Progression
+// (level, experience, equipped_items, unlocked_abilities, reputation…) and the
+// record owner are server-owned and never taken from the request body.
+const APPEARANCE_FIELDS = [
+  'name', 'gender', 'model_url', 'skin_tone', 'eye_color', 'hair_color',
+  'eyelash_style', 'style_preset', 'cultural_inspirations', 'genre_direction',
+  'hood_enabled', 'weapon_visible', 'body_proportions', 'face_shape',
+  'face_fit_source', 'skin_tint_enabled', 'hair_tint_enabled', 'eye_tint_enabled',
+  'complexion', 'facial_hair', 'facial_hair_color', 'tattoo_style',
+  'tattoo_placement', 'tattoo_color', 'tattoo_opacity', 'hair_style',
+  'hair_length', 'hair_volume', 'female_model_variant', 'base_body_gender',
+  'base_body_model_url', 'face_scan_generated', 'face_model_url',
+  'tripo_model_id', 'appearance_version', 'height_scale', 'material_colors',
+  'selected_assets', 'customization_assets', 'shape_controls', 'skin_finish',
+  'skin_finish_enabled', 'skin_highlight_color', 'skin_highlight_enabled',
+  'layer_colors', 'layer_opacity', 'morph_targets', 'voice', 'personality',
+  'setup_status', 'setup_version', 'customization_version', 'current_mode',
+  'active_memory_id',
+];
+
+function pickAppearance(input: any) {
+  const source = input && typeof input === 'object' ? input : {};
+  return Object.fromEntries(
+    APPEARANCE_FIELDS.filter((key) => source[key] !== undefined).map((key) => [key, source[key]]),
+  );
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -50,7 +77,7 @@ Deno.serve(async (req) => {
         }
         
         const newAvatar = await base44.asServiceRole.entities.Avatar.create({
-          ...avatarData,
+          ...pickAppearance(avatarData),
           user_id: user.id
         });
         
@@ -67,7 +94,12 @@ Deno.serve(async (req) => {
           return Response.json({ error: 'Forbidden: Not your avatar' }, { status: 403 });
         }
         
-        const updated = await base44.asServiceRole.entities.Avatar.update(avatarId, avatarData);
+        // Whitelisted appearance fields only, and ownership is re-asserted so a
+        // client can never hand its avatar to another account or forge stats.
+        const updated = await base44.asServiceRole.entities.Avatar.update(avatarId, {
+          ...pickAppearance(avatarData),
+          user_id: user.id
+        });
         return Response.json({ success: true, data: updated });
         
       default:

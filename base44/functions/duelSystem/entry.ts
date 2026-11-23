@@ -2,8 +2,11 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import {
   axeStrikeOutcomes,
   clampAXEDuelStats,
+  getAXEParHero,
   rollAXEStrike,
 } from '../../shared/axePowerBudget.ts';
+import { readAvatarProgression } from '../../shared/combatProfile.ts';
+import { avatarLevel } from '../../shared/combatStats.ts';
 import { duelSkillProfile, validateDuelCastStart, validateDuelCastHit, MAX_ACTIVE_DUEL_CASTS } from '../../shared/duelComboPolicy.mjs';
 import {
   validateServerChargeBegin, verifyServerChargeRelease, verifyServerFinisherChain,
@@ -31,8 +34,9 @@ import {inspectStoredCharacterEvidence} from '../../shared/duelCharacterProvenan
 // result all go through here. Each hit is rolled and resolved with the same combat rules
 // the game uses (base44/shared/axePowerBudget.ts), against each duelist's stats.
 //
-// Duelist stats still come from the player's browser, because progression is not
-// server-owned yet; they are clamped to what a fully built hero can have.
+// Duelist stats are server-owned: each side fights with the par hero block for
+// the level on their stored AvatarProgression, so a modified client cannot
+// declare endgame combat power.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,6 +90,21 @@ Deno.serve(async (req) => {
         },'-created_date',2);
       }catch{return {ok:false,code:'character_save_unavailable'};}
       return inspectStoredCharacterEvidence({ownerId:me,characterId,rows});
+    };
+
+    // The combat block a duelist brings is derived here, from their stored
+    // progression level, never from the request body.
+    const duelStatsFor = async (userId: string) => {
+      let level = 1;
+      try {
+        const progression = await readAvatarProgression(svc, userId);
+        level = avatarLevel(progression || {});
+      } catch (error) {
+        // Ambiguous progression falls back to the level-1 baseline rather than
+        // trusting browser-reported stats.
+        console.error('[duelSystem] avatar level read', error);
+      }
+      return clampAXEDuelStats(getAXEParHero(level));
     };
 
     const duelsFor = async (userId: string, status: string) => {
@@ -274,7 +293,7 @@ Deno.serve(async (req) => {
         challenger_id: me, challenger_name: nameOf(user),
         ...(provenanceEnabled?{challenger_character_id:bound.characterId}:{}),
         opponent_id: opponentId, opponent_name: String(data.opponentName || 'Player').slice(0, 80),
-        status: 'pending', challenger_stats: clampAXEDuelStats(data.stats), expires_at: isoIn(DUEL_RULES.challengeLifeMs),
+        status: 'pending', challenger_stats: await duelStatsFor(me), expires_at: isoIn(DUEL_RULES.challengeLifeMs),
       });
       await notify(opponentId, duel);
       return json({ success: true, duel });
@@ -295,7 +314,7 @@ Deno.serve(async (req) => {
       if(!bound.ok)return json({error:'An unambiguous server-saved character is required',
         code:bound.code},409);
       const challenger = clampAXEDuelStats(duel.challenger_stats);
-      const opponent = clampAXEDuelStats(data.stats);
+      const opponent = await duelStatsFor(me);
       const updated = await save(duel, {
         status: 'active', opponent_stats: opponent, opponent_name: nameOf(user),
         ...(provenanceEnabled?{opponent_character_id:bound.characterId}:{}),
