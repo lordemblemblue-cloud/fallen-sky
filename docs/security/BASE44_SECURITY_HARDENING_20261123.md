@@ -1,35 +1,43 @@
-# Base44 security hardening — 2026-11-23
+# Base44 security hardening — consolidated report
+Date: November 23, 2026
+Scope: AtomxEveGames / Fallen Sky / Duelist Adventure (shared Base44 app).
 
-## Scope
-App: `AtomxEveGames` (`fallen-sky` repository). Covers the shared site, Fallen Sky, and Duelist Adventure code. This is **not** a full penetration test and does not establish that the published app has zero vulnerabilities.
+## What was fixed
 
-## Confirmed issues addressed
-1. Eight Base44 clan/party entity schemas previously contained nine operations with `rls: null` for create, update, or delete. Those public direct writes now require admin authority while previously restricted owner rules remain intact.
-   - `ClanFormMessage`: create
-   - `ClanInvite`: create
-   - `ClanChannel`: create and delete
-   - `ClanFormTopic`: create
-   - `Party`: update
-   - `PartyEvent`: create
-   - `ClanFormChannel`: create
-   - `ClanEvent`: update
-2. `ClanInvite.read` is limited to inviter, invitee, or admin. `PartyEvent.read` is limited to target user or admin.
-3. `clanMembershipNotifier` accepted unverified caller-provided `old_data` for deleted membership rows, enabling forged member-leaving announcements. Deleted-member announcements now fail closed until a signed automation event can be verified. Successful join announcements must correspond to a current stored membership. Internal errors are not returned to callers.
-4. `partyLifecycle` is publicly callable and previously allowed anyone to request service-role deletion of a stored party if it was empty. The cleanup action now requires a HMAC-SHA256 signature over `timestamp.body`; default behavior fails closed without an automation secret. It checks `x-party-event-time` (epoch milliseconds, within two minutes), `x-party-event-signature` (lowercase SHA-256 hex), `PARTY_LIFECYCLE_EVENT_SECRET` (minimum 32 characters), and the stored Party membership. **Existing unsigned automation calls will stop deleting empty parties.** Wire a trusted signing producer before re-enabling this cleanup; do not expose the secret in frontend code.
-5. Production dependency audit initially found 7 advisories (1 high, 3 moderate, 3 low). Updated locked transitive versions: `follow-redirects` 1.16.3, `seroval` 1.8.2, `dompurify` 3.5.0. Removed unused `react-quill-new` (and its Quill dependency). The remaining two entries are moderate in `react-router@6.30.6` and `react-router-dom@6.30.6`; upgrading to v7 needs compatibility work for legacy Game3DHost/MemoryRouter and must not be forced blindly.
+### Database access control
+- Replaced nine anonymous create/update/delete permissions with authenticated/admin restrictions across eight clan/party entity types.
+- Restricted invitations and party-event reads to the intended participants or admins.
+- Prevented direct promotion/self-escalation: ClanMember updates are admin-only. The clan leader's authenticated backend promotion operation accepts only the 'member' and 'officer' targets, performs a verified clan lookup and uses a server-only update.
+- Avatar progression fields (level, experience, influence, badges, equipment, unlocked abilities, companions) require a privileged create/update. Avatar ownership is immutable by regular users. The authenticated appearance server can initialize the level/experience, and the authenticated equip server handles equipment mutations. No direct browser progression update should succeed.
+- Prevented clients from changing author/user/clan/topic/channel identity fields of ClanFormMessage and user/avatar identity fields in AvatarObservationSettings.
+- Restricted ClanMessage, ClanFormMessage, ClanFormTopic, and ClanFormChannel reads to service-role/admin backend flows. The chat API validates the caller's clan membership and channel role; the frontend no longer reads/subscribes to sensitive chat records directly. Chat now refreshes approximately every 10 seconds rather than through an unrestricted realtime subscription. Clan membership's underlying entity keys are 'clan_id' and 'user_id'.
+- Protected AvatarHomeState.activityLog/preferences, Party.voiceRoomId, ClanVaultItem.note and GuildResource.note from public reads, while retaining their other public fields for game discovery. Removed public read on the unused AvatarRuntimeModel_TEMP_CHECK entity.
 
-## Verification
-- `npm ci` and `npm run build` completed successfully.
-- `node --test tests/security-base44-access.test.mjs`: 4/4 tests passed.
-- `npm audit --omit=dev --audit-level=high`: exit 0, **zero high and zero critical advisories**; two moderate advisories remain.
-- New `.github/workflows/base44-security-check.yml` runs the RLS/event tests and fails on new high/critical production dependency advisories.
-- A targeted local search found no common hardcoded provider key/JWT signatures in the checked application code; absence of pattern matches is not proof of absence of secrets.
-- Base44 `prevent_iframe_embedding` was already on. `restrict_browser_features` was off; evaluate it against camera/microphone/game controls before enabling.
-- The Base44 Security Scan API returned a truncated result while inspecting this large app. Detailed current scanner findings require review in Base44's Security tab; do not claim the scan is clean.
+### Privileged backend functions
+- Both partyLifecycle and clanMembershipNotifier automation endpoints require distinct 32+-character server-side HMAC secrets and timestamp-bound signatures before using the service role.
+- Unverified deleted-member events cannot impersonate a clan member and generate forged chat announcements.
+- Without signed automation producers and configured secrets, the affected maintenance/announcement tasks intentionally fail closed. Their producers must be configured before those tasks resume.
+- secureClanAccess now performs real clan member lookups, checks the selected channel belongs to the claimed clan and that the caller has the required role, limits message page sizes, restricts public directory output, verifies message deletion ownership, and allowlists leader-editable clan profile fields.
+- Removed an attempted frontend asServiceRole call to User.
 
-## Follow-ups / accepted limitations
-- Two moderate React Router advisories require a separately tested upgrade or mitigations.
-- Review public read access to clan chats/topics, roster details, party voiceRoomId, clan vault notes and any private-world data; these entities may be public by design, and blanket restrictions could break intended public browsing and multiplayer.
-- Finish server-verified public guest multiplayer admission; do not re-enable deleted account login screens, do not grant service-role privileges to guests.
-- Public `guestCharacterVault` uses a high-entropy recovery code and restricted entity writes, but production should apply durable rate limits and abuse monitoring to guest registration/recovery.
-- Review the platform's detailed Security Scan findings after each deploy, and run independent authenticated/untrusted-user authorization tests before a public launch.
+### Dependencies and build
+- Resolved all production dependency advisories: updated follow-redirects to 1.16.3, seroval to 1.8.2, dompurify to 3.5.0, and React Router DOM to 7.18.6. Removed unused react-quill-new and vulnerable Quill dependency.
+- 'npm audit --omit=dev --audit-level=low' reports zero known production vulnerabilities.
+- 'npm run build' passes.
+- Ten automated security invariants pass in tests/security-base44-access.test.mjs. The GitHub security workflow checks production audit, security tests and build on changes.
+
+## Checks still required to claim complete Base44 approval
+
+1. The Base44 platform's Security Scan API returned a truncated result for this large app. A fresh full scan in Base44 Security Center and its raw findings are still required. Do not claim 'Base44 approved' from npm audit alone.
+2. Browser header setting 'prevent_iframe_embedding' was already enabled. The stricter Permissions-Policy setting remains off because the character creator intentionally accesses the camera; enabling it without a camera exception would break Genesis face scanning. Review a precise self-origin camera policy with Base44 support if Security Center recommends it.
+3. React Router 7 compiled, but an end-to-end browser smoke test of Game3DHost's nested MemoryRouter and the actual deployed pages is still necessary before declaring the upgrade fully regression-free.
+4. 'npm run lint' still fails across legacy scripts/shared modules due to existing undeclared Node globals / no-unused-vars; this was not used as a passing security test. It is separate from the production vulnerability audit.
+5. Signed automation producers for PARTY_LIFECYCLE_EVENT_SECRET and CLAN_MEMBERSHIP_EVENT_SECRET have not been configured. Unsigned automated callbacks will be denied rather than performing privileged writes.
+6. Production account/guest two-person multiplayer, consented camera flow, clan membership and chat role behavior should be tested with actual low-privilege and privileged accounts.
+7. Remaining public catalog/community read entities need product-specific review. They are not automatically vulnerabilities solely because their read operation is public.
+
+## Rules for follow-up
+- Do not re-enable the removed login/MFA/GitSync routes or grant service-role privileges to guests.
+- Do not mark unresolved scan findings as ignored simply to obtain a green badge.
+- Never store HMAC secrets in client-side VITE_ variables.
+- Restore point created before this round; use Base44 version history if compatibility issues emerge.
