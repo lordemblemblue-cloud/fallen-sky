@@ -190,7 +190,7 @@ export default function MobileTouchControls({
       </div>
       {editing && <div className="mobile-control-instructions">Drag each control to reposition it · Done saves the layout</div>}
       <div className="mobile-move-stick" role="group" aria-label="Virtual movement joystick"
-        style={{ left: `${locate('joystick').x}%`, top: `${locate('joystick').y}%` }}
+        style={{ '--touch-x': `${locate('joystick').x}%`, '--touch-y': `${locate('joystick').y}%` }}
         onPointerDown={joystickStart}
         onPointerMove={event => editing ? onEditMove('joystick', event) : pointer.current?.id === event.pointerId ? joystickMove(event) : null}
         onPointerUp={joystickEnd} onPointerCancel={joystickEnd}>
@@ -202,7 +202,7 @@ export default function MobileTouchControls({
         return <button key={id} type="button"
           data-testid={`mobile-action-${id}`} data-action={id}
           className="mobile-touch-action" data-special={id === 'special' || id === 'ultimate'}
-          style={{ left: `${position.x}%`, top: `${position.y}%` }}
+          style={{ '--touch-x': `${position.x}%`, '--touch-y': `${position.y}%` }}
           disabled={disabled && !editing} aria-label={label === 'ULT' ? 'Ultimate ability' : label}
           onPointerDown={event => actStart(id, event)}
           onPointerMove={event => editing && onEditMove(id, event)}
