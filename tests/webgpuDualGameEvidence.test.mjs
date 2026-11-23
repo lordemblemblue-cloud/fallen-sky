@@ -81,7 +81,6 @@ test('successful evidence is still explicitly not a visible-pixel or performance
 test('requires both games to be verified on the same deployment origin', () => {
   const cases = [
     'https://preview.example.test/duelist-next/play',
-    'http://example.test/duelist-next/play',
     'https://example.test:8443/duelist-next/play',
     'http://localhost:3000/duelist-next/play',
   ];
@@ -91,6 +90,32 @@ test('requires both games to be verified on the same deployment origin', () => {
     ]);
     assert.equal(decision.ok, false, tabUrl);
     assert.equal(decision.reason, 'reports-from-different-origins', tabUrl);
+  }
+});
+
+test('requires HTTPS for remote WebGPU evidence but permits local loopback QA', () => {
+  for (const host of ['example.test', 'preview.example.test', '192.0.2.20']) {
+    for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+      const path = sceneId === 'fallen-sky' ? '/gameview' : '/duelist-next/play';
+      const reports = pair().map((item) => item.sceneId === sceneId
+        ? { ...item, tabUrl: 'http://' + host + path } : item);
+      assert.equal(validateDualGameEvidence(reports).reason,
+        'insecure-evidence-origin:' + sceneId);
+    }
+  }
+  for (const host of ['localhost:3000', '127.0.0.1:3000', '[::1]:3000']) {
+    const reports = [
+      report('fallen-sky', { tabUrl: 'http://' + host + '/gameview' }),
+      report('duelist-adventure', { tabUrl: 'http://' + host + '/duelist-next/play' }),
+    ];
+    assert.equal(validateDualGameEvidence(reports).ok, true, host);
+  }
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    const path = sceneId === 'fallen-sky' ? '/gameview' : '/duelist-next/play';
+    const reports = pair().map((item) => item.sceneId === sceneId
+      ? { ...item, tabUrl: 'https://user:secret@example.test' + path } : item);
+    assert.equal(validateDualGameEvidence(reports).reason,
+      'insecure-evidence-origin:' + sceneId);
   }
 });
 
