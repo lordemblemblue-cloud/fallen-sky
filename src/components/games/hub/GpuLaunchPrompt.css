@@ -1,5 +1,5 @@
 /* GPU advisory for the two playable 3D games; never impersonate a browser permission prompt. */
-.xs-gpu-overlay{position:absolute;inset:0;z-index:100;display:grid;place-items:center;padding:20px;
+.xs-gpu-overlay{position:fixed;inset:0;z-index:2147482000;display:grid;place-items:center;padding:20px;
   background:rgba(2,8,19,.87);backdrop-filter:blur(10px);pointer-events:auto;touch-action:pan-y;user-select:text;}
 .xs-gpu-dialog{position:relative;max-width:600px;width:min(100%,600px);max-height:min(88dvh,780px);overflow-y:auto;
   border:1px solid rgba(143,192,226,.65);border-radius:20px;padding:clamp(20px,3vw,32px);
