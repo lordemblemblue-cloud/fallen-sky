@@ -4,6 +4,7 @@ on:
     paths:
       - 'scripts/webgpu-fresh-deployment-matrix.mjs'
       - 'tests/webgpuFreshDeploymentMatrix.test.mjs'
+      - 'tests/webgpuFreshDeploymentMatrixCli.test.mjs'
       - '.github/workflows/webgpu-fresh-deployment-matrix.yml'
   workflow_dispatch:
 permissions:
@@ -17,4 +18,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/webgpuFreshDeploymentMatrix.test.mjs tests/webgpuDeploymentMatrix.test.mjs tests/webgpuEvidenceFreshness.test.mjs
+      - run: node --test tests/webgpuFreshDeploymentMatrix.test.mjs tests/webgpuFreshDeploymentMatrixCli.test.mjs tests/webgpuDeploymentMatrix.test.mjs tests/webgpuEvidenceFreshness.test.mjs
