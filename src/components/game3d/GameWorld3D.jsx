@@ -3199,6 +3199,19 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       } else return;
       applyGame3DGame2MouseLook(orbit.current, dx, dy);
     };
+    // Native touch camera look: the on-screen drag surface provides CSS-pixel
+    // deltas. Reuse exactly the desktop camera math, not a second camera rig.
+    const onMobileLook = event => {
+      if (entryModeRef.current || entryCamera.isActive() ||
+          window.__axeUiModalOpen || window.__axeServiceModeOpen ||
+          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
+      const dx = Number(event.detail?.dx);
+      const dy = Number(event.detail?.dy);
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+      applyGame3DGame2MouseLook(orbit.current,
+        THREE.MathUtils.clamp(dx, -100, 100),
+        THREE.MathUtils.clamp(dy, -100, 100));
+    };
     const onWheel = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
@@ -3322,6 +3335,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     renderer.domElement.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('game3dMobileLook', onMobileLook);
     renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
     renderer.domElement.addEventListener('contextmenu', onContext);
     // Prevent middle-click scroll/autoscroll on the canvas
@@ -5988,6 +6002,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       if (document.pointerLockElement === renderer.domElement)
         document.exitPointerLock?.();
       window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('resize', handleResize);
+      window.removeEventListener('game3dMobileLook', onMobileLook);
       window.removeEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution);
       canvasResizeObserver?.disconnect();
       window.removeEventListener('playerSkillStrike', handlePlayerSkillStrike);
