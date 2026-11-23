@@ -5,6 +5,8 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
+import MobileTouchControls from '../components/mobile/MobileTouchControls';
+import { createFallenTouchBridge } from '../components/mobile/fallenMobileTouchBridge.mjs';
 import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import {wolfveilAreaScenesEnabled} from '../components/game3d/wolfveil/streaming/WolfveilAreaScenes.mjs';
 import Game3DPerformanceBootstrap from '../components/game3d/performance/Game3DPerformanceBootstrap';
@@ -103,6 +105,15 @@ import {createGame3DEntryAudio}
 
 export default function GameView() {
   const navigate = useNavigate();
+  const touchBridgeRef = useRef(null);
+  useEffect(() => {
+    const bridge = createFallenTouchBridge(window);
+    touchBridgeRef.current = bridge;
+    return () => {
+      bridge.dispose();
+      if (touchBridgeRef.current === bridge) touchBridgeRef.current = null;
+    };
+  }, []);
   const { user } = useAuth();
   const [phase, setPhase] = useState('login'); // 'login' | 'world'
   const [worldEntryStatus,setWorldEntryStatus]=useState('idle'); // idle | loading | revealing | error
@@ -666,6 +677,14 @@ export default function GameView() {
         resumeCheckpoint={resumeCheckpoint} />
       {/* Keep GPU governor/warmup, but relocate its floating GPU/FPS button to native Graphics settings. */}
       <Game3DPerformanceBootstrap region={worldRegion} showPanel={false} />
+      <MobileTouchControls game="fallen"
+        disabled={phase !== 'world' || !worldReady || services.active || services.expanded ||
+          pauseMenuOpen || factionOpen || storeOpen || progressionOpen || hudEditing ||
+          friendsListOpen || clanOverlayOpen}
+        onMove={move => touchBridgeRef.current?.move(move)}
+        onLook={(dx, dy) => touchBridgeRef.current?.look(dx, dy)}
+        onActionDown={action => touchBridgeRef.current?.down(action)}
+        onActionUp={action => touchBridgeRef.current?.up(action)} />
       {phase==='login' ? (
         <>
           <CharacterLoginScreen liveWorld worldReady={worldReady} worldError={worldEntryError}
