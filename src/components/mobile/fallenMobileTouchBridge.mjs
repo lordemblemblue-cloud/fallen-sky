@@ -24,10 +24,16 @@ export function createFallenTouchBridge(host = globalThis.window) {
   };
   const canvas = () => host.document?.querySelector('.game3d-view canvas') || null;
   const dispatchMouse = (type, button) => {
-    const target = type === 'mousedown' ? canvas() : host;
+    const worldCanvas = canvas();
+    const target = type === 'mousedown' ? worldCanvas : host;
+    // Existing middle-click lock uses a reticle ray, so send its center
+    // coordinates rather than the deliberately offscreen attack coordinate.
+    const bounds = worldCanvas?.getBoundingClientRect?.();
+    const aimX = button === 1 && bounds ? bounds.left + bounds.width / 2 : -200;
+    const aimY = button === 1 && bounds ? bounds.top + bounds.height / 2 : -200;
     target?.dispatchEvent(new host.MouseEvent(type, {
-      button, buttons: type === 'mousedown' ? (button === 2 ? 2 : 1) : 0,
-      bubbles: true, cancelable: true, clientX: -200, clientY: -200,
+      button, buttons: type === 'mousedown' ? (button === 2 ? 2 : button === 1 ? 4 : 1) : 0,
+      bubbles: true, cancelable: true, clientX: aimX, clientY: aimY,
     }));
   };
   const keyDown = (id, pair) => {
@@ -76,6 +82,7 @@ export function createFallenTouchBridge(host = globalThis.window) {
     },
     down(action) {
       if (action === 'dodge') { dodge(); return; }
+      if (action === 'lock') { dispatchMouse('mousedown', 1); return; }
       if (action === 'attack' || action === 'guard') {
         if (held.has(action)) return;
         held.add(action);
