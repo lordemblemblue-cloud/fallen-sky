@@ -180,8 +180,8 @@
    "cancelWindowStart": 1.4,
    "keyframes": [
     {"time":0,"phase":"active","easing":"linear","expression":"hurt"},
-    {"time":0.25,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-14,-18]},"spine":{"rotation":14},"head":{"rotation":20},"bowArm":{"rotation":-15},"bowForearm":{"rotation":-10},"drawArm":{"rotation":10},"bowSocket":{"rotation":35}}},
-    {"time":1.4,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[-22,-38]},"spine":{"rotation":22},"head":{"rotation":28},"bowArm":{"rotation":-20},"bowForearm":{"rotation":-14},"drawArm":{"rotation":14},"bowSocket":{"rotation":62}}}
+    {"time":0.25,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-12,-10]},"spine":{"rotation":14},"head":{"rotation":20},"bowArm":{"rotation":-15},"bowForearm":{"rotation":-10},"drawArm":{"rotation":10},"bowSocket":{"rotation":35}}},
+    {"time":1.4,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[-18,-16]},"spine":{"rotation":22},"head":{"rotation":28},"bowArm":{"rotation":-20},"bowForearm":{"rotation":-14},"drawArm":{"rotation":14},"bowSocket":{"rotation":62}}}
    ],
    "events": [
     {"time":0.1,"type":"playSFX","sfxId":"defeat"}

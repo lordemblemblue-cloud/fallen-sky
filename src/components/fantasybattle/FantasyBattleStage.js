@@ -355,6 +355,7 @@ export class FantasyBattleStage {
         target.skills.stop();
         target.playSkill('defeat');
         target.state.life.combatTarget = 0;
+        this.fadeOut(target, 0.6, 1.2);
         this.koPending = { winner: attacker, loser: target };
         this.onAudioEvent?.('defeat', target.id);
       }
@@ -369,6 +370,16 @@ export class FantasyBattleStage {
       target.triggerExpression(r.guarded ? 'focused' : 'hurt', 0.5);
     }
     run.onHit?.({ attacker: attacker.id, target: target.id, ...r });
+  }
+
+  fadeOut(fighter, to, seconds) {
+    const from = fighter.view.opacity;
+    const start = this.time;
+    this.waitUntil(() => {
+      const u = Math.min(1, (this.time - start) / seconds);
+      fighter.view.opacity = from + (to - from) * u;
+      return u >= 1;
+    });
   }
 
   checkMisses() {
@@ -419,6 +430,7 @@ export class FantasyBattleStage {
     this.roundGuards = new Set();
     for (const f of Object.values(this.fighters)) {
       f.skills.stop();
+      f.view.opacity = 1;
       f.state.life.combatTarget = this.mode === 'battle' ? 1 : 0.6;
       this.fx.clearWard(f.id);
     }
@@ -525,7 +537,7 @@ export class FantasyBattleStage {
       ? this.round.order.map((id) => ({ id, name: unitById(this.battle, id).name, action: ACTIONS[this.round.choices[id]].name, active: this.activeActor === id }))
       : [...units].sort((a, b) => b.spd - a.spd).map((u) => ({ id: u.id, name: u.name, action: null, active: false }));
     return {
-      mode: this.mode, phase: this.phase, round: this.round?.number ?? this.battle?.round ?? 1, units, order,
+      mode: this.mode, phase: this.phase, round: this.round?.number ?? (this.phase === 'over' ? this.battle.round - 1 : this.battle?.round ?? 1), units, order,
       legal: this.legal(), log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
       skills: this.fighters ? [...this.fighters.hero.skills.library.values()].map((s) => ({ id: s.id, name: s.name, hotkey: s.hotkey })) : [],
     };
