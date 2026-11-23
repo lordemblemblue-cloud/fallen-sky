@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { base44 } from '@/api/base44Client';
 import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
+import FallenSkyBetaNotice from '../components/game3d/FallenSkyBetaNotice';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
 import GameWorld3D from '../components/game3d/GameWorld3D';
@@ -675,6 +676,7 @@ export default function GameView() {
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
         resumeCheckpoint={resumeCheckpoint} />
+      {phase === 'world' && <FallenSkyBetaNotice context="world" />}
       {/* Keep GPU governor/warmup, but relocate its floating GPU/FPS button to native Graphics settings. */}
       <Game3DPerformanceBootstrap region={worldRegion} showPanel={false} />
       <MobileTouchControls game="fallen"
