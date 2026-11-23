@@ -58,7 +58,9 @@ export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort']);
+export const ONLINE_MODES = Object.freeze(['duel', 'ffa', 'ctf', 'football', 'tdm', 'control', 'escort']);
+// Maximum human seats in a public server. The 1v1 Duel rules retain two seats; private story crews retain four.
+export const MAX_PUBLIC_MATCH_PLAYERS = 20;
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
 export const STORY_MODE = 'story';
