@@ -895,6 +895,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   return (
     <div className="duelist-game" data-mobile-ui={typeof window !== 'undefined' && isMobileTouchDevice(window) ? 'true' : undefined} ref={mountRef}>
       <MobileTouchControls game="duelist"
+        classId={hud?.classId}
+        abilityStatus={hud?.abilities}
+        willValue={hud?.you?.willValue}
         specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
           hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
         specialCharge={hud?.specialMeter}
