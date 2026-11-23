@@ -219,6 +219,7 @@ import { CoreAnimationController } from './player/CoreAnimationController';
 import { PlayerCameraSystem } from './player/PlayerCameraSystem'; import { OTS_AIM, createOTSAimState, applyOTSAimFacing } from './player/otsAim.mjs'; import { createOTSCameraColliders } from './player/otsCameraColliders.mjs'; import { updateOTSAimFrame } from './player/otsAimRuntime'; import OTSAimReticle from './hud/OTSAimReticle';
 import { createGame3DWorldEntryCamera } from './player/Game3DWorldEntryCamera.mjs';
 import { createEntryBackdropHold } from './player/game3dEntryBackdropHold.mjs';
+import { nextWorldBuild } from './player/game3dWorldBuildKey.mjs';
 import {
   GAME3D_GAME2_CAMERA,applyGame3DGame2MouseLook,
   applyGame3DGame2ArrowLook,game3dGame2Zoom,
@@ -278,6 +279,14 @@ export default function GameWorld3D(props) {
 function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
+  // The world is built once per mount. A new body chosen on the character screens is swapped into the running
+  // world (swapPlayerAvatarRef, set by the world effect) instead of rebuilding the whole world around it, which
+  // froze WebGPU pages for about 34 s after Create character. A body change during play rebuilds as before.
+  const swapPlayerAvatarRef=useRef(null);
+  const worldBuildRef=useRef({key:0,url:avatarConfig.model_url});
+  worldBuildRef.current=nextWorldBuild(worldBuildRef.current,avatarConfig.model_url,
+    {entryMode,canSwap:!!swapPlayerAvatarRef.current});
+  const worldBuildKey=worldBuildRef.current.key;
   // This flag is read by the existing WebGL loop without destroying its scene
   // when character selection gives way to playable world control.
   const entryModeRef=useRef(entryMode);entryModeRef.current=entryMode;
@@ -2282,7 +2291,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     };
     checkpointTeleporterRef.current = tryResumeCheckpoint;
 
-    loadAvatarModel(appearanceRef.current,1.7,appearanceRef.current.model_url).then((fbx) => {
+    // Sets up a loaded player model. `swap` (a body change on the character screens, swapPlayerAvatar below) keeps
+    // the actor where the old one stood and skips the world's one-time spawn, NPC and quest setup.
+    const setupPlayerAvatar = (fbx, swap = null) => {
       if(avatarLoadDisposed){disposeAvatarModel(fbx);return;}
       model = fbx;
       modelRef.current = fbx;
@@ -2295,24 +2306,25 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // A chosen workflow location replaces only this character's initial Play spawn.
       // The real terrain raycast and existing tree/building/river guard reject unsafe spots.
       // It never changes remote players, collision meshes, or server-authoritative duels.
-      const workflowSpawn = region === 'wolfveil' && workflowAllowed && initialWorkflowTarget && !dedicatedMode
+      const workflowSpawn = !swap && region === 'wolfveil' && workflowAllowed && initialWorkflowTarget && !dedicatedMode
         ? findWorkflowSpawn(initialWorkflowTarget, {
             sampleGroundY,
             isBlocked: (x,z) => isRuntimeFootprintBlocked({x,y:sampleGroundY(x,z) ?? 0,z},.75),
           }) : null;
-      const areaArrival=region==='wolfveil'&&portalLanding&&
+      const areaArrival=!swap&&region==='wolfveil'&&portalLanding&&
         wolfveilAreaAtWorld(portalLanding)===worldArea&&
         [portalLanding.x,portalLanding.y,portalLanding.z].every(Number.isFinite)
           ?portalLanding:null;
       const returnSite=portalReturn==='astral'?ASTRAL_DUNGEON_ENTRANCE:LUNAR_CAVE_ENTRANCE;
       const vortexReturn=portalReturn==='vortex'?VORTEX_LAKE.safeReturn:null;
       const sumiReturn=portalReturn==='sumi'?{x:-360,z:-400+70}:null;
-      const returnPosition=region==='wolfveil'&&portalReturn ? {
+      const returnPosition=!swap&&region==='wolfveil'&&portalReturn ? {
         x:vortexReturn?.x??sumiReturn?.x??returnSite.approachX,
         z:vortexReturn?.z??sumiReturn?.z??returnSite.approachZ,
         y:vortexReturn?.y??sampleGroundY(sumiReturn?.x??returnSite.approachX,sumiReturn?.z??returnSite.approachZ)??0.3,
       }:null;
-      fbx.position.set(areaArrival?.x ?? returnPosition?.x ?? workflowSpawn?.x ??
+      if(swap){fbx.position.copy(swap.position);fbx.quaternion.copy(swap.quaternion);}
+      else fbx.position.set(areaArrival?.x ?? returnPosition?.x ?? workflowSpawn?.x ??
           (region==='wolfveil'?(areaFallback?.x??WOLFVEIL_PLAYER_TOWN_SPAWN.x):region===WOLFVEIL_CAVES_REGION?-6:0),
         areaArrival?.y ?? returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
         areaArrival?.z ?? returnPosition?.z ?? workflowSpawn?.z ??
@@ -2324,7 +2336,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       }
       // Rode through a gate: ride on as soon as this scene's mount has loaded.
       if(areaArrival?.mounted===true)arrivalMount={heading:areaArrival.heading,seconds:20};
-      if (initialWorkflowTarget && !workflowSpawn)
+      if (!swap && initialWorkflowTarget && !workflowSpawn)
         showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
       fbx.traverse((node) => {
@@ -2351,8 +2363,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // After the avatar loads, so the armor bridge (mounted with the page) hears the start-up equips.
       armorEquipSync = createAXEArmorEquipSync();
       // Workflow already uses the live ground height; normal Play keeps its market snap.
-      if (!workflowSpawn&&!returnPosition&&!areaArrival) snapToGround(fbx, 0);
-      if (!entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition&&!areaArrival)
+      if (!swap&&!workflowSpawn&&!returnPosition&&!areaArrival) snapToGround(fbx, 0);
+      if (!swap && !entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition&&!areaArrival)
         tryResumeCheckpoint(resumeCheckpoint);
       if (workflowSpawn) window.dispatchEvent(new CustomEvent('axeWorkflowArrived', {
         detail: { id: workflowSpawn.id, x: workflowSpawn.x, y: workflowSpawn.y, z: workflowSpawn.z },
@@ -2404,7 +2416,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // Preserve the original quest IDs, positions, dialogues and player XP.
       // Only use an authored GLB if it actually contains a playable idle clip.
       let questNpcSharedIdle=null;
-      if(region!==LUNAR_CAVE_REGION&&region!==ASTRAL_DUNGEON_REGION) QUEST_NPCS.forEach((npcDef) => {
+      if(!swap&&region!==LUNAR_CAVE_REGION&&region!==ASTRAL_DUNGEON_REGION) QUEST_NPCS.forEach((npcDef) => {
         loadAXEQuestNPCVisual({
           npcId:npcDef.id,gltfLoader:worldGltfLoader,
           fbxLoader:loader,fallbackUrl:ARCHER_URL,
@@ -2469,7 +2481,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       });
 
       // Wire up the quest enemy spawner — set on the ref so the React layer can call it
-      spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource });
+      if (!swap) spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource });
       window.__gw3dSpawnQuestEnemies = spawnQuestEnemiesRef.current;
 
       // Load player animation clips once — bind to player AND reuse for quest NPC idle
@@ -2517,8 +2529,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
               }
             });
           }
-          // Spawn the oversized Living Quest NPC away from the cluster
-          spawnLivingQuestNPC({
+          // Spawn the oversized Living Quest NPC away from the cluster (once: not again for a swapped body)
+          if (!swap) spawnLivingQuestNPC({
             scene, loader, archerUrl: ARCHER_URL, snapToGround,
             idleClip: sourceClips['idle'] || null,
             onReady: (h) => { livingQuestEntity = h; window.__gw3dLivingQuestNPC = h?.group || null; },
@@ -2531,12 +2543,74 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           // Missing optional animation clips must not strand a rendered actor.
           markAvatarReady();
         });
-    }).catch((err) => {
+      // A body chosen while this one was loading is swapped in now.
+      if (!swap && appearanceRef.current.model_url !== avatarUrl) swapPlayerAvatar(appearanceRef.current.model_url);
+    };
+    // The body the actor shows (shownAvatarUrl) and the one it shows or is loading (avatarUrl).
+    let shownAvatarUrl = appearanceRef.current.model_url;
+    let avatarUrl = shownAvatarUrl;
+    let avatarSwapSeq = 0;
+    let avatarSwapPending = false; // the old actor stays hidden in the select backdrop while the new body loads
+    loadAvatarModel(appearanceRef.current,1.7,appearanceRef.current.model_url).then((fbx) => setupPlayerAvatar(fbx)).catch((err) => {
       console.error('Player model load error:', err);
       setLoading(false);
       if(!avatarLoadDisposed)window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{
         detail:{message:err?.message || 'Character model could not load. Try again or return to Character Select.'}}));
     });
+    // Everything the actor carries, released before a swapped body takes its place (the set the teardown releases).
+    // World systems that pose or follow the actor read `model` or modelRef each frame; the held bow and the
+    // mounted rider rebuild themselves when `model` changes.
+    const releasePlayerAvatar = (old) => {
+      restoreMountedRider();
+      heldBowPresentation?.dispose(); heldBowPresentation = null; heldBowPlayer = null;
+      weaponEnchantVfx?.dispose(); weaponEnchantVfx = null;
+      enchantPercentCache?.dispose(); enchantPercentCache = null;
+      weaponSummon?.dispose(); weaponSummon = null;
+      weaponCombos = null;
+      weaponRuntime?.dispose(); weaponRuntime = null;
+      lastMountedWeaponObject = null;
+      haloVisualRuntime?.dispose?.(); haloVisualRuntime = null;
+      fusionVisualRuntime?.dispose?.(); fusionVisualRuntime = null;
+      ascensionVisualRuntime?.dispose?.(); ascensionVisualRuntime = null;
+      ascendedGearVisualRuntime?.dispose?.(); ascendedGearVisualRuntime = null;
+      armorEquipSync?.dispose(); armorEquipSync = null;
+      avatarDrawCalls?.dispose();
+      if (window.__gw3dAvatarDrawCalls === avatarDrawCalls) window.__gw3dAvatarDrawCalls = null;
+      avatarDrawCalls = null;
+      playerDeathAsh?.dispose(); playerDeathAsh = null;
+      if (mixer) { mixer.stopAllAction(); if (old) mixer.uncacheRoot(old); }
+      mixer = null; playerAnim = null; coreAnimationController = null;
+      if (old) { old.parent?.remove(old); disposeAvatarModel(old); }
+      model = null; modelRef.current = null; playerModelRef.current = null;
+    };
+    // A new body on the character screens (GameWorldScene's swapPlayerAvatarRef): load it, then stand it where the
+    // old actor stood, without rebuilding the world. It is announced like the first body (game3dWorldAvatarReady).
+    const swapPlayerAvatar = (url) => {
+      if (avatarLoadDisposed || !url || url === avatarUrl || !model) return; // no actor yet: setupPlayerAvatar swaps
+      avatarUrl = url;
+      avatarSwapPending = true;
+      const seq = ++avatarSwapSeq;
+      const started = performance.now();
+      loadAvatarModel(appearanceRef.current, 1.7, url).then((fbx) => {
+        if (avatarLoadDisposed || seq !== avatarSwapSeq) { disposeAvatarModel(fbx); return; }
+        const old = model;
+        const swap = { position: old.position.clone(), quaternion: old.quaternion.clone() };
+        releasePlayerAvatar(old);
+        avatarSwapPending = false;
+        shownAvatarUrl = url;
+        window.__gw3dAvatarSwaps = (window.__gw3dAvatarSwaps || 0) + 1; // QA: swaps without a world rebuild
+        window.__gw3dLastAvatarSwapMs = Math.round(performance.now() - started);
+        setupPlayerAvatar(fbx, swap);
+      }).catch((err) => {
+        if (avatarLoadDisposed || seq !== avatarSwapSeq) return;
+        console.error('Player model swap error:', err);
+        avatarSwapPending = false;
+        avatarUrl = shownAvatarUrl; // the old body stays; choosing the new one again retries
+        window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError', {
+          detail: { message: err?.message || 'Character model could not load. Try again or return to Character Select.' } }));
+      });
+    };
+    swapPlayerAvatarRef.current = swapPlayerAvatar;
 
     // Controls
     const playOneShot = (name, timeScale = 1) => {
@@ -3572,7 +3646,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           // The loaded world is the backdrop throughout the entry flow. Hide its
           // old actor under Start/Faction and while the creator studio draws the
           // unsaved candidate; show only the selected playable actor in Select.
-          model.visible=entryPreviewModeRef.current==='select';
+          model.visible=entryPreviewModeRef.current==='select'&&!avatarSwapPending;
           playerAnim?.updateActionState({moving:false,running:false,direction:'forward',aiming:false});
           charLights.update(delta,envSystem.getState,modelRef.current,camera);
           entryCamera.preview(delta,{camera,model,mode:entryPreviewModeRef.current,
@@ -5957,6 +6031,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       weaponTrails.dispose();
       enemyTelegraphs.dispose();
       avatarLoadDisposed=true;
+      avatarSwapSeq++;
+      if (swapPlayerAvatarRef.current === swapPlayerAvatar) swapPlayerAvatarRef.current = null;
       creatureSource.dispose();
       wolfveilEnemySource?.dispose();
       haloVisualRuntime?.dispose?.();
@@ -6103,7 +6179,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       clearWolfveilLiveMap();
       window.dispatchEvent(new CustomEvent('gw3dSceneTeardown'));
     };
-  }, [avatarConfig.model_url]);
+  }, [worldBuildKey]);
+  // A new body chosen on the character screens is swapped into the running world (see worldBuildRef above).
+  useEffect(() => { swapPlayerAvatarRef.current?.(avatarConfig.model_url); }, [avatarConfig.model_url]);
 
   // Wolfveil is already mounted behind character select; Play does not remount
   // the renderer. Apply the chosen checkpoint on that existing world as well.
