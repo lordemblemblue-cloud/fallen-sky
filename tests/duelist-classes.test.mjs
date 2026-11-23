@@ -220,3 +220,19 @@ test('all four specials enforce exact server meter costs without negative balanc
     assert.ok(Math.abs(full.meterAfter - (SPECIAL_MAX - cost)) < 1e-8);
   }
 });
+
+test('execution specials fail closed on corrupt target health and protection state', () => {
+  for (const classId of ['duelist', 'assassin']) {
+    const context = { classId, meter: SPECIAL_MAX, actor, target: enemy(20), now: 10 };
+    for (const protectedUntil of [NaN, Infinity]) {
+      assert.equal(evaluateSpecial({ ...context, target: { ...context.target, protectedUntil } }).reason,
+        'invalid-context', classId + ' must reject corrupt spawn-protection timestamps');
+    }
+    assert.equal(evaluateSpecial({ ...context, target: { ...context.target, hp: 101 } }).reason,
+      'invalid-context', classId + ' must reject health exceeding maximum');
+    assert.equal(evaluateSpecial({ ...context, target: { ...context.target, invulnerable: true } }).reason,
+      'target-protected', classId + ' must respect invulnerability');
+    assert.equal(evaluateSpecial({ ...context, actor: { ...actor, hp: 0 } }).reason,
+      'actor-defeated', classId + ' must not execute while defeated');
+  }
+});
