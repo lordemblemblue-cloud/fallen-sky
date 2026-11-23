@@ -15,7 +15,7 @@ const flush = () => new Promise(resolve => globalThis.setTimeout(resolve, 0));
 // The parts of GameWorld3D's enemy loop (GameWorld3D.jsx 4541-4707) that
 // decide engagement and movement, with the game's own decision functions.
 // No attacks: an engaged monster that reaches the player just stands there.
-function gameLoopStep(enemy, player, dt) {
+function gameLoopStep(enemy, player, dt, solids = []) {
   if (!enemy.alive || enemy.dying) return;
   const profile = combatEnemyProfile(enemy);
   const distToPlayer = horizontalDistance(enemy.group.position, player);
@@ -38,7 +38,9 @@ function gameLoopStep(enemy, player, dt) {
     const step = Math.min(destinationDistance, profile.speed * dt);
     const nextX = p.x + direction.x * step, nextZ = p.z + direction.z * step;
     const fromHome = horizontalDistance({ x: nextX, z: nextZ }, { x: enemy.home[0], z: enemy.home[2] });
-    if (returning || fromHome <= profile.leashRange) { p.x = nextX; p.z = nextZ; }
+    // Solid boxes stand in for the game's building/fence collision: a step into one is undone.
+    const blocked = solids.some(b => nextX > b.minX && nextX < b.maxX && nextZ > b.minZ && nextZ < b.maxZ);
+    if (!blocked && (returning || fromHome <= profile.leashRange)) { p.x = nextX; p.z = nextZ; }
     // The walk action the loop would play while moving.
     enemy.playingWhileMoving = enemy.aiEngaged && !returning && enemy.runAction ? enemy.runAction : enemy.walkAction;
   }
@@ -63,18 +65,19 @@ function makeWorld() {
     }),
   });
   const player = { x: 0, z: 0 };
+  const solids = [];
   let time = 0;
   // One frame as GameWorld3D runs it: Three Roads update first, then the loop.
   const frame = (dt = 0.05) => {
     time += dt;
     sub.update(dt, player);
-    for (const e of enemies) gameLoopStep(e, player, dt);
+    for (const e of enemies) gameLoopStep(e, player, dt, solids);
   };
   const run = (seconds, until = () => false, dt = 0.05) => {
     for (let t = 0; t < seconds; t += dt) { frame(dt); if (until()) return Math.round(t * 100) / 100; }
     return null;
   };
-  return { scene, enemies, bus, sub, player, frame, run, clips, time: () => time };
+  return { scene, enemies, bus, sub, player, solids, frame, run, clips, time: () => time };
 }
 
 const near = (e, x, z, r) => Math.hypot(e.group.position.x - x, e.group.position.z - z) <= r;
@@ -199,5 +202,55 @@ test('a passive group ignores a goal', async () => {
   const body = w.scene.children.find(o => o.name.startsWith('ThreeRoads_Enemy_p_'));
   assert.deepEqual([body.position.x, body.position.z], [5, 5]);
   assert.equal(w.sub.status().groups[0].march, null);
+  w.sub.dispose();
+});
+
+test('a marcher stopped by something solid steps round it and still arrives', async () => {
+  const w = makeWorld();
+  w.player.x = 400; w.player.z = 400;
+  // A 4 m wide wall straight across its road, as at (62, -131) in the town.
+  w.solids.push({ minX: -2, maxX: 2, minZ: 17, maxZ: 18 });
+  w.sub.spawnGroup({ groupId: 'g', kind: 'ink_shade', count: 1, x: 0, z: 0, goal: { x: 0, z: 36 } });
+  await flush(); await flush();
+  const e = w.enemies[0];
+  assert.ok(Math.abs(e.group.position.x) < 0.01, 'starts on the wall\'s line');
+  const arrived = w.run(40, () => e.threeRoads.march.state === 'hold');
+  assert.ok(arrived !== null, 'gets there');
+  assert.ok(near(e, 0, 36, 3.01));
+  assert.ok(e.threeRoads.march.detours >= 1 && !e.threeRoads.march.gaveUp);
+  assert.ok(arrived < 25, 'without wasting long: ' + arrived + ' s');
+  w.sub.dispose();
+});
+
+test('a marcher walled off gives up and holds instead of spinning, and still fights', async () => {
+  const w = makeWorld();
+  w.player.x = 400; w.player.z = 400;
+  w.solids.push({ minX: -200, maxX: 200, minZ: 17, maxZ: 18 });
+  w.sub.spawnGroup({ groupId: 'g', kind: 'ink_shade', count: 1, x: 0, z: 0, goal: { x: 0, z: 36 } });
+  await flush(); await flush();
+  const e = w.enemies[0];
+  const settled = w.run(120, () => e.threeRoads.march.state === 'hold');
+  assert.ok(settled !== null, 'it stops trying');
+  assert.equal(e.threeRoads.march.gaveUp, true);
+  const at = [e.group.position.x, e.group.position.z];
+  w.run(10);
+  assert.ok(Math.hypot(e.group.position.x - at[0], e.group.position.z - at[1]) < 0.01, 'and stays put');
+  assert.ok(e.group.position.z < 17, 'on its own side of the wall');
+  // The player comes within 25 m on the same side: it goes for them.
+  w.player.x = e.group.position.x + 15; w.player.z = e.group.position.z;
+  const engaged = w.run(15, () => e.aiEngaged);
+  assert.ok(engaged !== null);
+  w.sub.dispose();
+});
+
+test('if the first side is blocked too, it tries the other', async () => {
+  const w = makeWorld();
+  w.player.x = 400; w.player.z = 400;
+  w.solids.push({ minX: -10, maxX: 2, minZ: 17, maxZ: 18 });
+  w.sub.spawnGroup({ groupId: 'g', kind: 'ink_shade', count: 1, x: 0, z: 0, goal: { x: 0, z: 36 } });
+  await flush(); await flush();
+  const e = w.enemies[0];
+  const arrived = w.run(60, () => e.threeRoads.march.state === 'hold');
+  assert.ok(arrived !== null && !e.threeRoads.march.gaveUp && near(e, 0, 36, 3.01), 'arrived in ' + arrived + ' s');
   w.sub.dispose();
 });

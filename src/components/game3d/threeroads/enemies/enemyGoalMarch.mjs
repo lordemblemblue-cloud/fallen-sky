@@ -91,6 +91,9 @@ export function startGoalMarch(entry, goal, point) {
   if (!entry?.group?.position || !Array.isArray(entry.home)) return null;
   const march = {
     state: 'march', goal, point, lastHp: entry.hp, walkSaved: undefined, arrivedAt: null,
+    // Getting round things (see advance()).
+    waypoint: null, waypointAt: 0, best: Infinity, bestAt: 0, detours: 0, blockedUntil: 0,
+    anchor: null,
   };
   entry.threeRoads = entry.threeRoads || {};
   entry.threeRoads.march = march;
@@ -109,8 +112,70 @@ function noticed(entry, march, player, profile) {
   return !!player && distance(entry.group.position, player.x, player.z) <= profile.aggroRange;
 }
 
+// Something solid the game's collision knows about (a building footprint, a
+// fence, a tree) can stop a walker dead while it still "returns" toward its
+// home. If the distance to the target has not shrunk by PROGRESS_STEP in
+// STUCK_SECONDS, step round it: a waypoint out to one side,
+// alternating sides and wider each time. After MAX_DETOURS it gives up.
+export const STUCK_SECONDS = 1.2;
+export const PROGRESS_STEP = 0.3;
+export const MAX_DETOURS = 8;
+const WAYPOINT_SECONDS = 3;
+
+function resetProgress(march, now) {
+  march.waypoint = null;
+  march.anchor = null;
+  march.best = Infinity;
+  march.bestAt = now;
+}
+function changeState(march, state, now) {
+  march.state = state;
+  resetProgress(march, now);
+}
+
+// Walk toward (tx, tz), round anything in the way. Returns false once it has
+// given up on this target.
+function advance(entry, march, tx, tz, now) {
+  const pos = entry.group.position;
+  const d = distance(pos, tx, tz);
+  if (march.waypoint && (distance(pos, march.waypoint.x, march.waypoint.z) < 0.8
+      || !entry.aiReturning || now - march.waypointAt > WAYPOINT_SECONDS)) {
+    march.waypoint = null;
+    march.best = d;
+    march.bestAt = now;
+  }
+  if (d < march.best - PROGRESS_STEP) {
+    march.best = d;
+    march.bestAt = now;
+    // Well past the place it got stuck: the next obstacle gets a fresh start.
+    if (march.anchor && d < march.anchor.d - 2) march.anchor = null;
+  } else if (!march.waypoint && now - march.bestAt > STUCK_SECONDS) {
+    if (march.detours >= MAX_DETOURS) return false;
+    // Every detour round one obstacle is measured from where it first got
+    // stuck, so the sides alternate +2.5, -2.5, +5, -5 ... instead of drifting.
+    if (!march.anchor) {
+      const ux = d > 1e-6 ? (tx - pos.x) / d : 1, uz = d > 1e-6 ? (tz - pos.z) / d : 0;
+      march.anchor = { x: pos.x, z: pos.z, d, ux, uz, tries: 0 };
+    }
+    const a = march.anchor;
+    march.detours += 1;
+    a.tries += 1;
+    const side = a.tries % 2 ? 1 : -1;
+    const width = 2.5 * Math.ceil(a.tries / 2);
+    // Straight out to the side and half a metre back: a point "ahead" would
+    // put the wall back on the line to it.
+    march.waypoint = { x: a.x - a.uz * width * side - a.ux * 0.5, z: a.z + a.ux * width * side - a.uz * 0.5 };
+    march.waypointAt = now;
+    march.bestAt = now;
+  }
+  if (march.waypoint) headFor(entry, march, march.waypoint.x, march.waypoint.z);
+  else headFor(entry, march, tx, tz);
+  return true;
+}
+
 // One frame for one monster. `player` is the player's position or null;
-// `now` (seconds) is only recorded for the arrival time.
+// `now` is a clock in seconds (any origin) for the arrival time and for
+// noticing that it is stuck.
 export function stepGoalMarch(entry, player, now = 0) {
   const march = entry?.threeRoads?.march;
   if (!march || entry.dying || entry.alive === false || !entry.group?.position) return null;
@@ -122,45 +187,64 @@ export function stepGoalMarch(entry, player, now = 0) {
     case 'march': {
       if (noticed(entry, march, player, profile)) {
         stopHere(entry, march);
-        march.state = 'fight';
+        changeState(march, 'fight', now);
         break;
       }
-      if (distance(pos, march.goal.x, march.goal.z) <= march.goal.radius || !entry.aiReturning) {
+      // Arrived: inside the goal, or the loop says it reached its own point
+      // (not a detour waypoint).
+      const atGoal = distance(pos, march.goal.x, march.goal.z) <= march.goal.radius;
+      if (atGoal || (!entry.aiReturning && !march.waypoint)) {
         stopHere(entry, march);
-        march.state = 'hold';
+        changeState(march, 'hold', now);
         if (march.arrivedAt === null) march.arrivedAt = now;
+        break;
+      }
+      if (!advance(entry, march, march.point.x, march.point.z, now)) {
+        // Walled off: hold here. It still goes for a player within range.
+        stopHere(entry, march);
+        changeState(march, 'hold', now);
+        march.gaveUp = true;
       }
       break;
     }
     case 'hold': {
-      if (entry.aiEngaged) { march.state = 'fight'; break; }
-      if (toPlayer <= SEEK_RANGE) {
-        headFor(entry, march, player.x, player.z);
-        march.state = 'seek';
+      if (entry.aiEngaged) { changeState(march, 'fight', now); break; }
+      if (toPlayer <= SEEK_RANGE && now >= march.blockedUntil) {
+        changeState(march, 'seek', now);
+        advance(entry, march, player.x, player.z, now);
       }
       break;
     }
     case 'seek': {
       if (noticed(entry, march, player, profile)) {
         stopHere(entry, march);
-        march.state = 'fight';
+        changeState(march, 'fight', now);
       } else if (toPlayer > SEEK_RELEASE) {
-        headFor(entry, march, march.point.x, march.point.z);
-        march.state = 'march';
-      } else {
-        headFor(entry, march, player.x, player.z);
+        changeState(march, 'march', now);
+        if (!march.gaveUp) advance(entry, march, march.point.x, march.point.z, now);
+        else { stopHere(entry, march); changeState(march, 'hold', now); }
+      } else if (!advance(entry, march, player.x, player.z, now)) {
+        // Cannot get to the player from here: wait a while before trying again.
+        stopHere(entry, march);
+        changeState(march, 'hold', now);
+        march.blockedUntil = now + 5;
+        march.detours = 0;
       }
       break;
     }
     case 'fight': {
       if (entry.aiEngaged) break;
       // The loop gave up the chase (the player outran its leash).
+      march.detours = 0;
       if (toPlayer <= SEEK_RANGE) {
-        headFor(entry, march, player.x, player.z);
-        march.state = 'seek';
+        changeState(march, 'seek', now);
+        advance(entry, march, player.x, player.z, now);
+      } else if (march.gaveUp) {
+        stopHere(entry, march);
+        changeState(march, 'hold', now);
       } else {
-        headFor(entry, march, march.point.x, march.point.z);
-        march.state = 'march';
+        changeState(march, 'march', now);
+        advance(entry, march, march.point.x, march.point.z, now);
       }
       break;
     }
