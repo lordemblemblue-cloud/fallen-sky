@@ -18,7 +18,7 @@ function stand(m,id,inside) {
 }
 
 test('both menu and authoritative online queue accept Escort',()=>{
-  assert.deepEqual(templateLaunch('normal','transport',true,true),{mode:'escort',online:1});
+  assert.equal(templateLaunch('normal','transport',true,true), null, 'Transport online entry must use server selection');
   assert.ok(ONLINE_MODES.includes('escort'));
   const m=start();
   assert.equal(m.escort.distance,0);
