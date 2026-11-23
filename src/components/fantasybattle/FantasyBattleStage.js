@@ -398,8 +398,16 @@ export class FantasyBattleStage {
   // ---- damage numbers (DOM overlay) ----
   number(x, y, text, kind, tag) {
     const el = document.createElement('div');
-    el.className = `fb-number fb-number-${kind}`;
-    el.innerHTML = tag ? `<small>${tag}</small>${text}` : text;
+    // Never parse combat events as HTML. Server-delivered combat labels and
+    // damage values must remain plain text, even if future modes add names.
+    const safeKind = ['crit', 'guarded', 'hit', 'miss'].includes(kind) ? kind : 'hit';
+    el.className = `fb-number fb-number-${safeKind}`;
+    if (tag) {
+      const tagElement = document.createElement('small');
+      tagElement.textContent = String(tag);
+      el.appendChild(tagElement);
+    }
+    el.appendChild(document.createTextNode(String(text)));
     this.overlay.appendChild(el);
     // numbers close together in time stack upward instead of covering each other
     const near = this.numbers.filter((n) => n.age < 0.6 && Math.abs(n.x - x) < 160).length;
