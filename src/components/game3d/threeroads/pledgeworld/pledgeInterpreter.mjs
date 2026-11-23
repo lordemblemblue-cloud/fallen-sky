@@ -261,6 +261,14 @@ export function createPledgeInterpreter({
     }
   }
 
+  // After the last step: cues that still speak or pause, a pause running, or
+  // a line still being said. Flags and moves alone are no scene.
+  function inClosingScene(rt, frame) {
+    if (rt.queue.some(cue => cue.say || cue.sayByEmpire || cue.sound || cue.wait !== undefined)) return true;
+    const now = frame?.now ?? lastFrame?.now ?? 0;
+    return now < rt.waitUntil || !!call('speechBusy');
+  }
+
   function begin(pledge, progress, index) {
     const steps = pledge.pledge.steps;
     const rt = {
@@ -406,20 +414,27 @@ export function createPledgeInterpreter({
           if (!result) continue;
           used = true;
           // report() has already reached the store and sync() has run again.
-          if (result.person && result.person === rt.pledge.npcId && rt.stepIndex < 0) pass = true;
+          // The game's ending box opens on this press only when the last
+          // talk has no closing scene to play first; otherwise the scene
+          // plays and the next press opens it.
+          if (result.person && result.person === rt.pledge.npcId && rt.stepIndex < 0 && !inClosingScene(rt, frame)) pass = true;
           break; // one press, one deed per pledge
         }
       }
       if (used) return pass ? 'pass' : 'consume';
       // A giver who is in the middle of a scene for a sworn pledge, or is
-      // holding out its choice, is not free to talk: the game's own box
-      // ("Keep going") must not open over the scene or the choice.
+      // holding out its choice, or is still playing the scene after the last
+      // step, is not free to talk: the game's own box ("Keep going", or the
+      // ending) must not open over the scene or the choice.
       for (let i = 0; i < list.length; i++) {
         const rt = list[i];
-        if (rt.dead || rt.stepIndex < 0) continue;
-        const busy = rt.pledge.pledge.steps[rt.stepIndex].kind === 'choose' || (!rt.watcher && rt.queue.length > 0);
+        if (rt.dead) continue;
+        const busy = rt.stepIndex < 0
+          ? inClosingScene(rt, frame)
+          : rt.pledge.pledge.steps[rt.stepIndex].kind === 'choose' || (!rt.watcher && rt.queue.length > 0);
         if (!busy) continue;
-        for (const who of new Set([holderOf(rt, rt.stepIndex), rt.pledge.npcId])) {
+        const at = rt.stepIndex < 0 ? rt.pledge.pledge.steps.length : rt.stepIndex;
+        for (const who of new Set([holderOf(rt, at), rt.pledge.npcId])) {
           const at = who ? frame.locate?.(who) : null;
           if (at && Math.hypot(at.x - frame.player.x, at.z - frame.player.z) <= TALK_RANGE) return 'consume';
         }

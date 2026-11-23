@@ -116,8 +116,11 @@ test("The Sword Mistress's Price: the echo, the banner carried home on foot, a d
   h.place('hall_grave');
   h.hold(3.2);
   h.place('asagiri_tomoe');
-  assert.equal(h.press(), 'pass', 'the last step is speaking with the giver: the game opens the ending');
+  assert.equal(h.press(), 'consume', 'the last step is done; her closing scene plays before the ending');
+  h.wait(1);
+  assert.equal(h.press(), 'consume', 'E beside her during the scene does not open the ending over it');
   h.wait(8);
+  assert.equal(h.press(), null, 'after the scene the key is the game\'s: it opens the ending');
   assert.equal(h.stepOf('tr_a02_sword_mistress_price'), null);
   const said = lineIds(h);
   assert.deepEqual(said.slice(0, 2), ['ren_a02_01', 'ren_a02_02']);
@@ -151,8 +154,9 @@ test('The Count: two jars, the reeds, a dropped jar sends the count back, the bo
   h.place('landing_bowcase');
   assert.equal(h.press(), 'consume');
   h.place('paneb_scribe');
-  assert.equal(h.press(), 'pass');
+  assert.equal(h.press(), 'consume', 'his tally line comes before the ending');
   h.wait(4);
+  assert.equal(h.press(), null);
   assert.equal(h.stepOf('tr_t01_the_count'), null);
   assert.deepEqual(lineIds(h), [
     'paneb_t01_02', 'paneb_t01_02', 'paneb_t01_03', 'sabu_t01_01', 'sabu_t01_02',
@@ -239,8 +243,9 @@ test("Old Vine's Furrow: he walks the furrow with you, two mists, the stone, the
   h.place('furrow_cart');
   assert.equal(h.press(), 'consume');
   h.place('titus_oldvine');
-  assert.equal(h.press(), 'pass');
+  assert.equal(h.press(), 'consume');
   h.wait(4);
+  assert.equal(h.press(), null);
   assert.equal(h.stepOf('tr_r01_old_vines_furrow'), null);
   const said = lineIds(h);
   assert.deepEqual(said.filter(id => id === 'oldvine_r01_03' || id === 'oldvine_r01_04'), ['oldvine_r01_03', 'oldvine_r01_04']);
