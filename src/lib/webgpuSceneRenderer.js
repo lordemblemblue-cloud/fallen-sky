@@ -158,18 +158,37 @@ export function waitForSceneRenders(renderer, renders = 4, timeoutMs = 6000) {
   });
 }
 
+/**
+ * How a background pipeline compile ends (r171 sets the pipeline only on success, with no catch): a pipeline the GPU
+ * rejects as invalid resolves as null, reported once and never drawn (drawing it would void the whole frame); any
+ * other failure (the GPU process busy or restarting) makes the pipeline directly, as r171 does without a background
+ * compile.
+ */
+export function settleBackgroundPipeline(compiling, createNow, reportInvalid) {
+  return Promise.resolve(compiling).catch((error) => {
+    if (error?.reason === 'validation') { reportInvalid(error); return null; }
+    try { return createNow(); } catch (directError) { reportInvalid(directError); return null; }
+  });
+}
+
 // After precompileSceneObjects (state.backgroundCompile), the pipeline of an object drawn for the first time (streamed
 // in, an effect's first use) is compiled in the background and the object appears when it is ready, a few frames
 // later, instead of the page waiting for the GPU process (r171 compiles synchronously at first draw: a frame of a
 // second or more for a handful of new shaders). Objects already drawn keep compiling synchronously (a material variant
 // or light-count change), so nothing on screen blinks out; full-screen passes and render bundles too.
-function compileLateObjectsInBackground(renderer) {
+// A background compile that never finishes (seen with several game tabs on one GPU: no error, no device loss) would
+// leave every object of that shader undrawn for the session, the pipeline being cached under the shader's key: one
+// still missing LATE_COMPILE_WAIT_MS after its first skipped draw is made directly, as r171 does without this. A
+// pipeline the GPU rejected as invalid (null, settleBackgroundPipeline) is never drawn.
+export const LATE_COMPILE_WAIT_MS = 500;
+export function compileLateObjectsInBackground(renderer, { waitMs = LATE_COMPILE_WAIT_MS, now = () => performance.now() } = {}) {
   const state = renderer.__sceneState;
   const pipelines = renderer._pipelines;
   const backend = renderer.backend;
   if (!state || !pipelines?.getForRender || typeof backend?.draw !== 'function' || pipelines.__sceneLateCompile) return;
   pipelines.__sceneLateCompile = true;
   const drawn = new WeakSet();
+  const waitingSince = new WeakMap(); // pipeline -> time of its first skipped draw
   const getForRender = pipelines.getForRender.bind(pipelines);
   pipelines.getForRender = (renderObject, promises = null) => {
     const object = renderObject?.object;
@@ -179,7 +198,18 @@ function compileLateObjectsInBackground(renderer) {
   };
   const draw = backend.draw.bind(backend);
   backend.draw = (renderObject, info) => {
-    if (backend.get(renderObject.pipeline).pipeline === undefined) return; // still compiling
+    const pipeline = renderObject.pipeline;
+    let gpuPipeline = backend.get(pipeline).pipeline;
+    if (gpuPipeline === null) return; // rejected as invalid: never drawn
+    if (gpuPipeline === undefined) { // still compiling in the background
+      const t = now();
+      const since = waitingSince.get(pipeline);
+      if (since === undefined) { waitingSince.set(pipeline, t); return; }
+      if (t - since < waitMs) return;
+      backend.createRenderPipeline(renderObject, null); // stuck: make it now (every object of this shader shares it)
+      gpuPipeline = backend.get(pipeline).pipeline;
+      if (!gpuPipeline) return;
+    }
     if (renderObject.object) drawn.add(renderObject.object);
     return draw(renderObject, info);
   };
@@ -293,14 +323,12 @@ function installCompat(renderer) {
     const create = device.createRenderPipeline.bind(device);
     const createAsync = device.createRenderPipelineAsync.bind(device);
     device.createRenderPipeline = (descriptor) => create(withPolygonOffset(descriptor));
-    // a pipeline compiled in the background that fails: report it once and resolve without one (r171 then never
-    // draws the object), instead of an unhandled rejection
+    // a pipeline compiled in the background that fails: rejected as invalid, report it once and never draw it (null);
+    // otherwise make it directly (settleBackgroundPipeline), instead of an unhandled rejection
     device.createRenderPipelineAsync = (descriptor) => {
       const object = pipelineObject, material = pipelineMaterial;
-      return createAsync(withPolygonOffset(descriptor)).catch((error) => {
-        reportPipelineFailure(object, material, error);
-        return undefined;
-      });
+      return settleBackgroundPipeline(createAsync(withPolygonOffset(descriptor)), () => create(descriptor),
+        (error) => reportPipelineFailure(object, material, error));
     };
     // a shader that does not compile: say where (once per message); the pipeline note below names the material
     const createShaderModule = device.createShaderModule.bind(device);
