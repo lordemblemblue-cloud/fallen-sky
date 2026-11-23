@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/webgpu-native-browser-qa.mjs'
       - 'tests/webgpuNativeBrowserQa.test.mjs'
+      - 'tests/webgpuBrowserQaNavigationIdentity.test.mjs'
       - '.github/workflows/webgpu-native-browser-qa.yml'
   workflow_dispatch:
 
@@ -23,4 +24,4 @@ jobs:
       # This helper and its tests use only Node built-ins. Run the focused
       # contract independently of any pre-existing full-suite/lint failures.
       - name: Verify native-backend and live-draw QA contract
-        run: node --test tests/webgpuNativeBrowserQa.test.mjs
+        run: node --test tests/webgpuNativeBrowserQa.test.mjs tests/webgpuBrowserQaNavigationIdentity.test.mjs

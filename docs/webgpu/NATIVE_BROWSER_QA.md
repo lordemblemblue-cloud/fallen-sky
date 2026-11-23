@@ -25,6 +25,8 @@ node scripts/webgpu-native-browser-qa.mjs --scene=duelist-adventure --cdp-port=9
 
 Keep exactly one matching game tab open when running each command. If multiple tabs match (or the game runs at the root URL), select a unique URL substring with --tab-contains=YOUR_SUBSTRING. Save screenshots and JSON locally; never commit private player information to GitHub.
 
+The probe also checks that the sampled browser document remains on the same URL with the same document startup timestamp. A navigation, reload or renderer-query change between samples fails closed rather than combining two unrelated rendering sessions. The JSON report includes `documentCheck` with this result. A tab reload with an unchanged URL must still be rejected. This check is a guard, not proof that every browser/device transition is observable.
+
 A passing JSON report requires the **actual initialized native WebGPU backend**, an available GPUDevice/queue, no recorded device loss, advancing renderer frames, and advancing gameplay frames with draws between two samples. A WebGL2 fallback or classic WebGL session never passes.
 
 **Nonzero counters alone cannot prove visible pixels.** Visually inspect the captured screenshot for Wolfveil terrain, player, sky, ink-wash effects; and Duelist arena, character and warp effects. Record tested commit, browser build, OS, graphics adapter, pixel screenshots, warm-up duration, scene transitions, resizing, fallback and device-loss behavior. Compare performance with WebGL on identical hardware and scenes rather than interpreting draw counts as FPS.
@@ -37,13 +39,16 @@ A passing JSON report requires the **actual initialized native WebGPU backend**,
 - gameplay-draw-counter-not-advancing: gameplay may be paused, black/stalled, or still warming up.
 - render-frame-counter-not-advancing: renderer loop may have stalled.
 - invalid-render-counters: insufficient trustworthy runtime evidence.
+- browser-tab-navigated-or-reloaded: the page navigated, changed renderer URL, or reloaded during sampling; wait for stable gameplay and retry.
+- initial-browser-tab-url-changed: the selected tab navigated before the first document identity check.
+- invalid-browser-document-identity: document URL or startup timestamp could not be verified.
 
 A nonzero exit code means the check failed or is inconclusive. Do not disable safe WebGL fallback on unsupported browsers. Do not merge or deploy solely because this probe passes.
 
 ## 4. Automated regression tests
 
 ~~~bash
-node --test tests/webgpuNativeBrowserQa.test.mjs
+node --test tests/webgpuNativeBrowserQa.test.mjs tests/webgpuBrowserQaNavigationIdentity.test.mjs
 npm run lint
 npm run build
 ~~~
