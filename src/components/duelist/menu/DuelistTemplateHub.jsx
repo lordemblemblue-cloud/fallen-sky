@@ -67,7 +67,7 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
 
   return (
     <TemplateSurface id="duelist-play-drawer" kind="mode" title="Choose your game mode"
-      eyebrow="DUELIST ADVENTURE" subtitle="Select a category, then choose a battle." close={close}>
+      eyebrow="DUELIST ADVENTURE" subtitle={category === 'normal' && lobby.online ? "Tap a mode to join its live match. Other players can join the same room." : "Select a category, then choose a battle."} close={close}>
       <div className="dxt-mode-layout">
         <nav className="dxt-mode-categories" aria-label="Play category">
           {MODE_TABS.map(item => {
@@ -246,6 +246,17 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     if (!search || (online && !MENU_MODES[search.mode]?.online)) return;
     navigate({ to: '/duelist-next/play', search: { ...search, from: 'duelist' } });
   };
+  // Normal public modes are one-tap quick joins. Keep the existing server-owned
+  // room allocation (including bot replacement); only the menu entry changes.
+  // Without a reachable match server, selecting a card still shows its details
+  // and leaves offline Practice available, never a fake online match.
+  const chooseMode = id => {
+    setMode(id);
+    const selected = templateMode(category, id);
+    if (category === 'normal' && lobby.online && selected?.route && MENU_MODES[selected.route]?.online) {
+      launch(id, true);
+    }
+  };
   useEffect(() => {
     if (!panel) return undefined;
     const keydown = event => {
@@ -276,7 +287,7 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
         </div>
       </section>}
       {panel === 'play' && <ModeSelector category={category} selected={mode} onCategory={changeCategory}
-        onSelect={setMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} close={close}/>}
+        onSelect={chooseMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} close={close}/>}
       {panel === 'character' && <DuelistCharacterMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'story' && <DuelistStoryMenu lobby={lobby} prefs={prefs} close={close}/>}
       {panel === 'settings' && <SettingsReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
