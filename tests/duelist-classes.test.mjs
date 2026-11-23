@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { WEAPONS } from '../src/components/duelist/core/moves.mjs';
 import {
   ABILITY_SLOTS, CLASS_IDS, CLASSES, SPECIAL_MAX, SPECIAL_BALANCE,
-  awardSpecialCharge, classAtSpawn, classById, evaluateSpecial,
+  awardSpecialCharge, classAbilityMove, classAtSpawn, classById, evaluateSpecial,
   requestClassSelection, visibleClassAbilities,
 } from '../src/components/duelist/core/classes.mjs';
 
@@ -124,4 +124,99 @@ test('execution checks reject non-finite coordinates or time rather than accepti
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor: { ...actor, position: { x: NaN, z: 0 } }, target: enemy() }).reason, 'invalid-context');
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: { ...enemy(), position: { x: Infinity, z: -1 } } }).reason, 'invalid-context');
   assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(), now: NaN }).reason, 'invalid-context');
+});
+
+test('ability activation slots map to only the selected class kit, rejecting malformed slot indices', () => {
+  for (const classId of CLASS_IDS) {
+    const abilities = CLASSES[classId].abilities;
+    for (let slot = 0; slot < abilities.length; slot++) {
+      assert.equal(classAbilityMove(classId, slot), abilities[slot].id, `${classId} slot ${slot}`);
+      assert.match(abilities[slot].animation, /^class\.power\./);
+    }
+    for (const invalid of [-1, 4, 100, 1.5, NaN, Infinity, '0', '1', null, undefined, {}, []]) {
+      assert.equal(classAbilityMove(classId, invalid), null, `${classId} rejected malformed slot`);
+    }
+    assert.equal(classAbilityMove(classId, 0), abilities[0].id, 'rejected input must not change mapping');
+  }
+  for (const invalidClass of ['__proto__', 'constructor', 'unknown', null, undefined, {}]) {
+    assert.equal(classAbilityMove(invalidClass, 0), null);
+  }
+  assert.notEqual(classAbilityMove('warrior', 0), classAbilityMove('healer', 0),
+    'the same ability key must not silently activate a different class kit');
+});
+
+test('rotated three-button ability pages preserve canonical server slot identities', () => {
+  for (const classId of CLASS_IDS) {
+    for (let offset = 0; offset < 4; offset++) {
+      const visible = visibleClassAbilities(classId, offset);
+      assert.equal(visible.length, ABILITY_SLOTS);
+      for (let button = 0; button < ABILITY_SLOTS; button++) {
+        const canonicalSlot = (offset + button) % CLASSES[classId].abilities.length;
+        assert.equal(visible[button].id, classAbilityMove(classId, canonicalSlot),
+          `${classId} page ${offset} button ${button} must map to canonical slot ${canonicalSlot}`);
+      }
+    }
+  }
+});
+
+test('queued respawn selection survives invalid requests and cannot change a living fighter', () => {
+  for (const currentClass of CLASS_IDS) {
+    const queued = requestClassSelection({
+      currentClass, pendingClass: null, requestedClass: 'assassin', phase: 'live', dead: true,
+    });
+    assert.equal(queued.accepted, true);
+    assert.equal(queued.currentClass, currentClass);
+    assert.equal(queued.pendingClass, 'assassin');
+
+    const invalid = requestClassSelection({
+      ...queued, requestedClass: '__proto__', phase: 'live', dead: true,
+    });
+    assert.equal(invalid.accepted, false);
+    assert.equal(invalid.pendingClass, 'assassin', 'invalid request must not erase a valid queue');
+
+    const denied = requestClassSelection({
+      ...queued, requestedClass: 'healer', phase: 'live', dead: false,
+    });
+    assert.equal(denied.accepted, false);
+    assert.equal(denied.currentClass, currentClass);
+    assert.equal(denied.pendingClass, 'assassin', 'live request must not overwrite queued choice');
+
+    assert.deepEqual(classAtSpawn(denied), {
+      classId: 'assassin', weapon: 'staff', pendingClass: null,
+    });
+  }
+});
+
+test('each class has four distinct ability animations, including intentionally shared moves', () => {
+  for (const classId of CLASS_IDS) {
+    const abilities = CLASSES[classId].abilities;
+    const animations = abilities.map(ability => ability.animation);
+    assert.equal(new Set(animations).size, abilities.length, classId + ' must not reuse an animation slot');
+    for (const ability of abilities) {
+      assert.equal(ability.animation, 'class.power.' + ability.id);
+      assert.match(ability.animation, /^class\.power\./);
+    }
+  }
+  assert.equal(CLASSES.warrior.abilities[3].animation, CLASSES.duelist.abilities[2].animation,
+    'shared blade throw intentionally retains its shared animation identifier');
+});
+
+test('all four specials enforce exact server meter costs without negative balances', () => {
+  for (const classId of CLASS_IDS) {
+    const cost = CLASSES[classId].special.cost;
+    const context = { classId, actor, target: enemy(20) };
+    const insufficient = evaluateSpecial({ ...context, meter: cost - 0.01 });
+    assert.equal(insufficient.allowed, false, classId + ' must reject insufficient charge');
+    assert.equal(insufficient.reason, 'not-charged');
+
+    const exact = evaluateSpecial({ ...context, meter: cost });
+    assert.equal(exact.allowed, true, classId + ' should accept exact charge');
+    assert.equal(exact.cost, cost);
+    assert.equal(exact.meterAfter, 0, classId + ' must spend exactly its cost');
+
+    const full = evaluateSpecial({ ...context, meter: SPECIAL_MAX });
+    assert.equal(full.allowed, true);
+    assert.ok(full.meterAfter >= 0 && full.meterAfter <= SPECIAL_MAX);
+    assert.ok(Math.abs(full.meterAfter - (SPECIAL_MAX - cost)) < 1e-8);
+  }
 });
