@@ -107,6 +107,8 @@ export default function GpuLaunchPrompt({ gameTitle, onContinue, onClose }) {
             <p>Go to <strong>System</strong>, turn on <strong>Use graphics acceleration when available</strong>, then relaunch your browser.
               Check <code>{browser.diagnostics}</code> for the browser's GPU feature status.</p>
           </> : <p>Open your browser settings and search for <strong>graphics acceleration</strong> or <strong>hardware acceleration</strong>. Enable it if available, then restart your browser. Mobile browsers may not offer this switch.</p>}
+          {/Windows/i.test(typeof navigator === 'undefined' ? '' : navigator.userAgent) &&
+            <p><strong>Windows 11 (optional):</strong> Open <strong>Settings → System → Display → Graphics</strong>, select your browser under app graphics options and choose <strong>High performance</strong> when your computer has more than one GPU.</p>}
           <p>For improved performance, use an up-to-date browser and graphics driver, close demanding background tabs, and reduce the game's resolution or effects if the frame rate is still low.</p>
           <p className="xs-gpu-safety"><ShieldAlert size={15} aria-hidden="true"/> For security reasons, websites cannot turn browser graphics acceleration on or change your device's system settings for you. We can only check GPU support and use what your browser permits.</p>
         </div>}
