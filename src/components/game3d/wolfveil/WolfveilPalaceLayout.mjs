@@ -8,6 +8,13 @@ export const WOLFVEIL_PALACE=Object.freeze({
   label:'Wolfveil Mountain Palace',
   x:0,z:115,width:53,depth:33,entranceSide:'south',
   halfDoor:3.25,frontStepsStartZ:24,
+  // The main road (Southern Gate - Market - Sanctuary) runs on north through
+  // the palace site to the Wolf Sanctuary and the Ridge Path gate, the only
+  // safe foot route to the north. The palace's authored house is not in this
+  // build (lakesideManor sources), so its footprint is an empty, invisible box;
+  // without this opening its back wall (world z 201.5) was a dead end on the
+  // road (2026-11-22). Same 6.5 m opening as the south door, on the road axis.
+  rearHalfDoor:3.25,
   // Visible preview boundary; the old 30+ buildings are not part of this town.
   townBuildingBounds:Object.freeze({minX:-100,maxX:100,minZ:-165,maxZ:30}),
 });
@@ -34,7 +41,7 @@ export function isInsideVillageBuildLimit(x,z){
   const b=WOLFVEIL_PALACE.townBuildingBounds;
   return Number.isFinite(x)&&Number.isFinite(z)&&x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ;
 }
-/** True when moving across a wall; the southern main entrance stays open. */
+/** True when moving across a wall; the south entrance and the north road opening stay open. */
 export function palaceWallCrosses(from,to,radius=.65,offsetZ=70){
   if(!from||!to||![from.x,from.z,to.x,to.z,radius].every(Number.isFinite))return true;
   const b=WOLFVEIL_PALACE,front=b.z-b.depth/2+offsetZ,back=b.z+b.depth/2+offsetZ;
@@ -47,7 +54,8 @@ export function palaceWallCrosses(from,to,radius=.65,offsetZ=70){
   }
   if(intersects(from.z,to.z,back)){
     const x=crossAt(from.z,to.z,from.x,to.x,back);
-    if(x>=left-radius&&x<=right+radius)return true;
+    if(x>=left-radius&&x<=right+radius &&
+       Math.abs(x-b.x)>Math.max(0,(b.rearHalfDoor??0)-radius))return true;
   }
   if(intersects(from.z,to.z,front)){
     const x=crossAt(from.z,to.z,from.x,to.x,front);
