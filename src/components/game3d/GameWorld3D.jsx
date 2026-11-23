@@ -557,6 +557,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // WebGPU builds the area's shaders in slices of about this many ms, with the browser getting a turn between them
+    // (webgpuSceneRenderer.js precompileSceneObjects sliceMs): one synchronous build froze cold loads for 22 s.
+    const WORLD_PRECOMPILE_SLICE_MS = 40;
+    // GameView's entry timers count 30 s without progress, not 30 s in all, while the shaders build.
+    const reportCompileProgress = (progress) => window.dispatchEvent(new CustomEvent('game3dWorldCompileProgress', { detail: progress }));
     // Draws the frame again after a resize (assigned next to handleResize below; until then a no-op)
     let redrawAfterResize = () => {};
     const rendererChoice = recoveryReason
@@ -594,6 +599,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           if (window.__gw3dRenderer !== gpuRenderer) return;
           window.__gw3dGpuInfo = describeGame3DGpuAdapter(adapter, gpuHints, api);
           applyWorldGraphicsBudget();
+          // Build the area's shaders in slices behind the menus before the world's first frame: that frame built
+          // them all in one go (267 shaders, 22 s with the page frozen). Frames are held until this is done.
+          precompileSceneObjects(gpuRenderer, scene, camera, { target: inkLook.sceneTarget(),
+            sliceMs: WORLD_PRECOMPILE_SLICE_MS, onProgress: reportCompileProgress })
+            .then((result) => { window.__gw3dEarlyPrecompile = result; }, () => {});
         }, (error) => {
           console.error('GameWorld3D: WebGPURenderer could not start —', error);
           if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-init-failed');
@@ -2501,7 +2511,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         // one by one at each object's first draw (webgpuSceneRenderer.js precompileSceneObjects); then draw a few
         // frames behind it (the shadow map and the ink pass compile there) before the world is shown
         if (renderer.isWebGPURenderer) {
-          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
+          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget(),
+            sliceMs: WORLD_PRECOMPILE_SLICE_MS, onProgress: reportCompileProgress })
             .then((result) => { window.__gw3dPrecompile = result; }, () => {})
             .then(() => waitForSceneRenders(renderer, 6))
             .then(announce, announce);

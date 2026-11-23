@@ -101,11 +101,112 @@ export function sceneRendererApi(renderer) {
  * is drawn into (null: the canvas). r171 first builds every object's shader on the main thread (seconds for a whole
  * area: the page waits for that part), then waits at most `timeoutMs` for the background compiles. Never rejects.
  * Resolves with { pipelines, ms, timedOut } ({ skipped: true } for other renderers).
+ *
+ * `sliceMs` (> 0) builds the shaders in slices instead of one synchronous block (compileSceneInSlices below): a
+ * Game 3D cold load spent 22 s in one first frame and 6.5 s in one precompile call building them
+ * (docs/GAME3D_CHARACTER_SCREEN_PERF_20261122.md). `onProgress({ done, total })` hears each slice. Calls on one
+ * renderer run one after another; a later one finds the earlier one's shaders cached.
  */
-export async function precompileSceneObjects(renderer, scene, camera, { target = null, timeoutMs = 15000 } = {}) {
+export async function precompileSceneObjects(renderer, scene, camera, { target = null, timeoutMs = 15000, sliceMs = 0,
+  onProgress = null } = {}) {
   const state = renderer?.__sceneState;
   if (!renderer?.isWebGPURenderer || !renderer.backend?.isWebGPUBackend || state?.ready !== true || !scene || !camera
     || typeof renderer.compileAsync !== 'function') return { skipped: true };
+  const earlier = state.precompiling;
+  const run = (async () => {
+    if (earlier) await earlier.catch(() => {});
+    if (state.disposed || state.lost) return { skipped: true };
+    return precompileNow(renderer, state, scene, camera, { target, timeoutMs, sliceMs, onProgress });
+  })();
+  state.precompiling = run;
+  try { return await run; } finally { if (state.precompiling === run) state.precompiling = null; }
+}
+
+// Yields to the browser between precompile slices with an ordinary task, so everything already queued runs first:
+// input, the menus' frames, React's scheduler, finished downloads. (scheduler.yield() resumes ahead of queued tasks
+// and starved them for the whole build: one 25.6 s block in a cold load.)
+const yieldToBrowser = () => new Promise((resolve) => {
+  const channel = new MessageChannel();
+  channel.port1.onmessage = () => { channel.port1.close(); resolve(); };
+  channel.port2.postMessage(0);
+});
+
+/** Precompile batch size: the objects that fit in `sliceMs` at the running average cost, 1 to 16. */
+export function nextSliceBatch(averageMsPerObject, sliceMs) {
+  if (!(averageMsPerObject > 0)) return 4;
+  return Math.max(1, Math.min(16, Math.floor(sliceMs / averageMsPerObject)));
+}
+
+const isSceneRenderable = (o) => !!(o.isMesh || o.isLine || o.isPoints || o.isSprite);
+
+/**
+ * The renderables `scene` draws now (every ancestor visible), and the objects that stay visible in every slice: the
+ * ancestors of lights, so each slice sees the scene's full light set (it is part of every lit shader's key).
+ */
+export function planSceneSlices(scene) {
+  const renderables = [];
+  const keepAlways = new Set();
+  const walk = (o) => {
+    if (o.visible === false) return;
+    if (o !== scene && isSceneRenderable(o)) renderables.push(o);
+    if (o.isLight) for (let p = o.parent; p && p !== scene; p = p.parent) keepAlways.add(p);
+    for (const child of o.children) walk(child);
+  };
+  walk(scene);
+  return { renderables, keepAlways };
+}
+
+/**
+ * Builds the shaders of `scene`'s renderables a batch at a time. For each slice every other renderable is hidden (a
+ * batch member's ancestors and the lights' ancestors stay visible), compileAsync builds the batch's shaders in its
+ * synchronous part and starts their pipelines, every object gets its visibility back in the same task, then the
+ * browser gets a turn. The batch grows or shrinks to stay near `sliceMs`. At most `maxPending` slices compile their
+ * pipelines in the GPU process at once (a whole area is ~380 pipelines). Frames are held by the caller. Objects added
+ * later (streamed in) compile at their first draw as before. Returns the compile promises.
+ */
+export async function compileSceneInSlices(renderer, scene, camera, { target = null, sliceMs = 40, onProgress = null,
+  shouldStop = () => false, maxPending = 6 } = {}) {
+  const { renderables, keepAlways } = planSceneSlices(scene);
+  const promises = [];
+  const pending = new Set();
+  let batch = 1;
+  let average = 0; // running cost per object, ms (shader builds cost ~75 ms each, cached objects ~0.05 ms)
+  for (let i = 0; i < renderables.length && !shouldStop();) {
+    const members = renderables.slice(i, i + batch);
+    const keep = new Set(keepAlways);
+    for (const m of members) for (let o = m; o && o !== scene; o = o.parent) keep.add(o);
+    const hidden = [];
+    const lifted = [];
+    const previous = renderer.getRenderTarget();
+    const t0 = performance.now();
+    try {
+      for (const o of renderables) if (!keep.has(o) && o.visible) { o.visible = false; hidden.push(o); }
+      for (const o of keep) if (o.frustumCulled) { o.frustumCulled = false; lifted.push(o); }
+      renderer.setRenderTarget(target);
+      const compiling = Promise.resolve(renderer.compileAsync(scene, camera)).catch(() => {});
+      promises.push(compiling);
+      pending.add(compiling);
+      compiling.then(() => pending.delete(compiling));
+    } catch { /* this batch compiles at its first draw */ } finally {
+      for (const o of hidden) o.visible = true;
+      for (const o of lifted) o.frustumCulled = true;
+      if (renderer.getRenderTarget() !== previous) renderer.setRenderTarget(previous);
+    }
+    i += members.length;
+    const perObject = (performance.now() - t0) / members.length;
+    average = average ? average * 0.7 + perObject * 0.3 : perObject;
+    batch = nextSliceBatch(Math.max(average, perObject), sliceMs);
+    try { onProgress?.({ done: i, total: renderables.length }); } catch { /* a listener problem never stops the build */ }
+    // backpressure: wait for a slice's pipelines (or 2 s) while too many are compiling
+    if (pending.size >= maxPending) {
+      await Promise.race([...pending, new Promise((resolve) => { setTimeout(resolve, 2000); })]);
+    }
+    await yieldToBrowser();
+  }
+  return promises;
+}
+
+async function precompileNow(renderer, state, scene, camera, { target, timeoutMs, sliceMs, onProgress }) {
   const started = performance.now();
   const before = renderer._pipelines?.caches?.size ?? 0;
   const lifted = [];
@@ -114,13 +215,19 @@ export async function precompileSceneObjects(renderer, scene, camera, { target =
   let timer = null;
   state.holdRender = (state.holdRender || 0) + 1;
   try {
-    scene.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; lifted.push(o); } });
-    renderer.setRenderTarget(target);
-    // compileAsync projects the scene, builds the shaders and starts the pipelines before its first await
-    const compiling = renderer.compileAsync(scene, camera);
-    renderer.setRenderTarget(previous);
-    for (const o of lifted) o.frustumCulled = true;
-    lifted.length = 0;
+    let compiling;
+    if (sliceMs > 0) {
+      const stop = () => state.disposed || state.lost != null;
+      compiling = Promise.all(await compileSceneInSlices(renderer, scene, camera, { target, sliceMs, onProgress, shouldStop: stop }));
+    } else {
+      scene.traverse((o) => { if (o.frustumCulled) { o.frustumCulled = false; lifted.push(o); } });
+      renderer.setRenderTarget(target);
+      // compileAsync projects the scene, builds the shaders and starts the pipelines before its first await
+      compiling = renderer.compileAsync(scene, camera);
+      renderer.setRenderTarget(previous);
+      for (const o of lifted) o.frustumCulled = true;
+      lifted.length = 0;
+    }
     await Promise.race([compiling, new Promise((resolve) => { timer = setTimeout(() => { timedOut = true; resolve(); }, timeoutMs); })]);
   } catch { /* best effort: the remaining pipelines compile at first draw */ } finally {
     clearTimeout(timer);
