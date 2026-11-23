@@ -220,6 +220,7 @@ import { PlayerCameraSystem } from './player/PlayerCameraSystem'; import { OTS_A
 import { createGame3DWorldEntryCamera } from './player/Game3DWorldEntryCamera.mjs';
 import { createEntryBackdropHold } from './player/game3dEntryBackdropHold.mjs';
 import { nextWorldBuild } from './player/game3dWorldBuildKey.mjs';
+import { keepSharedMorphGeometry } from './player/sharedMorphGeometry.mjs';
 import {
   GAME3D_GAME2_CAMERA,applyGame3DGame2MouseLook,
   applyGame3DGame2ArrowLook,game3dGame2Zoom,
@@ -2591,7 +2592,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       playerDeathAsh?.dispose(); playerDeathAsh = null;
       if (mixer) { mixer.stopAllAction(); if (old) mixer.uncacheRoot(old); }
       mixer = null; playerAnim = null; coreAnimationController = null;
-      if (old) { old.parent?.remove(old); disposeAvatarModel(old); }
+      // A live mesh with the same layout (a fused-body NPC) may be drawing with this body's morph textures: keep
+      // those geometries (sharedMorphGeometry.mjs; disposing them blacked out the world on WebGPU).
+      if (old) { old.parent?.remove(old); disposeAvatarModel(old, { keepGeometry: keepSharedMorphGeometry(scene) }); }
       model = null; modelRef.current = null; playerModelRef.current = null;
     };
     // A new character never inherits the old one's ride: dismount the way F does (the old body is set down beside

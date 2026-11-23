@@ -221,3 +221,33 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
 - **Holding a bow:** a new character has its own loadout (a sword), so the old character's bow is rightly not carried over. Equipping the Training Bow on the swapped body puts it in that body's left hand. Before the swap, the bow was also put away while riding, as designed.
 
 The test origin's stored renderer choice and failure flag were removed afterwards.
+
+### Black world after a body swap (WebGPU session's report, fixed in this branch)
+
+**Report:** the WebGPU session's live run on f5b5e851 went black after ENTER WORLD in 1 run of 2. Every frame was
+rejected with "Destroyed texture [257x1 px, 14 layer, RGBA32Float] used in a submit": the shape-key (morph) texture
+of an `EYE_Iris` mesh.
+
+**Cause:** in three r171, meshes share one node shader per cache key. That key covers the attribute layout and morph
+count, not which geometry it is (`RenderObject.getMaterialCacheKey`/`getGeometryCacheKey`), and `MorphNode.setup` bakes
+the morph texture of the first geometry built into the shared shader.
+- The town has a fused-body NPC ("Character") with the default Eve body's exact meshes.
+- If the player's Eve was built first, the NPC draws with the player's morph textures. When a swap disposed the old
+  body, those textures were destroyed, and every frame was rejected.
+- Whether it happens depends on which mesh was built first, which is why only some runs went black.
+- The torn-down world's leftover avatar load that the report pointed at only disposes its own freshly parsed copy.
+  Instrumented, none of its geometries was used by any mesh in the live world.
+
+**Fix:** `releasePlayerAvatar` now passes `keepGeometry: keepSharedMorphGeometry(scene)` to `disposeAvatarModel`. Any
+morph geometry whose layout a live mesh shares is kept; everything else is freed. The kept memory is reclaimed when the
+world's GPU device is destroyed at teardown.
+
+**Live check:** on a fresh origin I swapped Adam to Eve, then Eve to Adam.
+- The second swap kept Eve's body (40,997 and 272 vertices, 45 keys) and her irises, the layouts the NPC shares, and
+  freed only two hair meshes.
+- In the world afterwards: no validation errors, 45 frames per second, and Adam walked 5.1 m.
+
+**Still open:** the same three behaviour means any two morph meshes with the same layout share one shape-key texture
+and its influences. Examples are the companion's three Artemis body parts, or the NPC and the player when the NPC was
+built second. A general fix, keying node shaders by geometry for morph meshes in `webgpuSceneRenderer.js`, has been
+proposed to the WebGPU session.

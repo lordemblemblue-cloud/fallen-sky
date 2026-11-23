@@ -66,7 +66,7 @@ test('the old body releases everything the world teardown releases for the actor
   }
   assert.match(release, /restoreMountedRider\(\);/);
   assert.match(release, /mixer\.uncacheRoot\(old\)/);
-  assert.match(release, /disposeAvatarModel\(old\)/);
+  assert.match(release, /disposeAvatarModel\(old, \{ keepGeometry: keepSharedMorphGeometry\(scene\) \}\)/);
   assert.match(release, /model = null; modelRef\.current = null; playerModelRef\.current = null;/);
 });
 
