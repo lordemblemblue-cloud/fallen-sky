@@ -73,7 +73,9 @@ test('avatars cannot directly change owner, equipment, level, XP or unlocks', ()
   }
   const code = readFileSync(new URL('../base44/functions/avatarSystem/entry.ts', import.meta.url), 'utf8');
   assert.match(code, /base44\.asServiceRole\.entities\.Avatar\.create\(/);
-  assert.match(code, /base44\.asServiceRole\.entities\.Avatar\.update\(avatar\.id, \{\s*equipped_items/);
+  assert.match(code, /use_equipment_loadout/);
+  const loadout = readFileSync(new URL('../base44/functions/equipmentLoadout/entry.ts', import.meta.url), 'utf8');
+  assert.match(loadout, /snapshotOwnedEquipment\(svc, user\.id, userCardId\)/);
 });
 
 test('ownership and authorship fields cannot be rewritten by their owners', () => {

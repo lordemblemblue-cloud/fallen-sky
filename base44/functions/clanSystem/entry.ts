@@ -211,7 +211,12 @@ Deno.serve(async (req) => {
                  return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
             }
 
-            await base44.entities.Division.update(divisionId, updates);
+            const profile = {};
+            for (const key of ['name', 'description', 'emblem_url', 'banner_url']) {
+                if (typeof updates?.[key] === 'string' && updates[key].length <= 1000) profile[key] = updates[key].trim();
+            }
+            if (!Object.keys(profile).length) return Response.json({ error: 'No supported profile updates' }, { status: 400, headers: corsHeaders });
+            await base44.entities.Division.update(divisionId, profile);
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 

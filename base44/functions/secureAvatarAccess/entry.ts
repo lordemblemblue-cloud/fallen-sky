@@ -16,7 +16,7 @@ const APPEARANCE_FIELDS = [
   'selected_assets', 'customization_assets', 'shape_controls', 'skin_finish',
   'skin_finish_enabled', 'skin_highlight_color', 'skin_highlight_enabled',
   'layer_colors', 'layer_opacity', 'morph_targets', 'voice', 'personality',
-  'setup_status', 'setup_version', 'customization_version', 'current_mode',
+  'customization_version', 'current_mode',
   'active_memory_id',
 ];
 

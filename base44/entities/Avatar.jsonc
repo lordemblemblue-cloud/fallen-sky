@@ -394,10 +394,34 @@
       "enum": [
         "pending",
         "complete"
-      ]
+      ],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "setup_version": {
-      "type": "number"
+      "type": "number",
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "personality": {
       "type": "string",

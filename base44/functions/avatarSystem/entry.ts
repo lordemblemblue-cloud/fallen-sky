@@ -61,7 +61,7 @@ export default async function(req) {
                 let savedProfile = rows[0] ? await base44.entities.OnboardingProfile.update(rows[0].id,values) : await base44.entities.OnboardingProfile.create(values);
                 if (environment === 'preview') return Response.json({success:true,preview:true,profile:savedProfile,avatar:companion});
                 const initialized = await initializeAvatar(base44,user,{...companion,setup:true});
-                await base44.entities.Avatar.update(initialized.avatar.id,{...companion,setup_status:'pending'});
+                await base44.asServiceRole.entities.Avatar.update(initialized.avatar.id,{...companion,setup_status:'pending'});
                 // Appearance/personality choices in Genesis do not pre-write the AI's mind.
                 // Every avatar begins from the same neutral seed and earns its identity from
                 // gameplay, conversations, reflection answers and opt-in observation.
@@ -75,7 +75,7 @@ export default async function(req) {
                 });
                 await base44.auth.updateMe({username:profile.username,onboarding_complete:true,is_first_time:false});
                 savedProfile = await base44.entities.OnboardingProfile.update(savedProfile.id,{completed:true,avatar_id:initialized.avatar.id});
-                const avatar = await base44.entities.Avatar.update(initialized.avatar.id,{setup_status:'complete',setup_version:companion.setup_version || 1});
+                const avatar = await base44.asServiceRole.entities.Avatar.update(initialized.avatar.id,{setup_status:'complete',setup_version:companion.setup_version || 1});
                 return Response.json({success:true,avatar,profile:savedProfile});
             }
             case 'initializeAvatar': {
@@ -102,9 +102,9 @@ export default async function(req) {
             }
 
             case 'equipItem': {
-                const { itemId, slot } = requestBody;
-                const equipped = await equipItemToAvatar(base44, user.id, itemId, slot);
-                return Response.json(equipped);
+                // Legacy Equipment catalog IDs carry no ownership information.
+                // Current clients equip verified UserCards through equipmentLoadout.
+                return Response.json({ error: 'Choose an owned equipment card in your loadout.', code: 'use_equipment_loadout' }, { status: 409 });
             }
 
             case 'unequipItem': {
@@ -242,7 +242,6 @@ async function initializeAvatar(base44, user, requestBody) {
     }
 
     await base44.asServiceRole.entities.User.update(user.id, {
-        onboarding_complete: true,
         avatar_id: avatar.id,
         avatar_archetype: gender === 'female' ? 'eve' : 'atum'
     });
@@ -308,38 +307,6 @@ async function loadUserAvatar(base44, userId) {
     return {
         ...avatar,
         equipment
-    };
-}
-
-async function equipItemToAvatar(base44, userId, itemId, slot) {
-    const avatars = await base44.entities.Avatar.filter({ user_id: userId });
-    if (avatars.length === 0) {
-        throw new Error('Avatar not found');
-    }
-
-    const avatar = avatars[0];
-    const currentEquipment = avatar.equipped_items || [];
-    
-    const items = await base44.entities.Equipment.filter({ id: itemId });
-    if (items.length === 0) {
-        throw new Error('Equipment item not found');
-    }
-
-    const item = items[0];
-    
-    const filteredEquipment = currentEquipment.filter(id => id !== itemId);
-    filteredEquipment.push(itemId);
-
-    // Equipment is a privileged progression field: only the authenticated
-    // server path may modify it after resolving the player's avatar.
-    const updatedAvatar = await base44.asServiceRole.entities.Avatar.update(avatar.id, {
-        equipped_items: filteredEquipment
-    });
-
-    return {
-        success: true,
-        avatar: updatedAvatar,
-        message: `${item.name} equipped successfully!`
     };
 }
 
