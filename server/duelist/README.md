@@ -1,7 +1,7 @@
 # Duelist Adventure match server
 
-The authoritative server for Duelist Adventure's five public modes (Duel, Capture the Flag,
-Football, Team Deathmatch and Three-Point Control) plus the Contraband co-op story mission.
+The authoritative server for Duelist Adventure's seven public modes (Duel, Free-for-All, Capture the Flag,
+Football, Team Deathmatch, Three-Point Control and Escort Transport) plus co-op story missions.
 The **Online** quick-match tile chooses randomly between Team Deathmatch, Capture the Flag and
 Three-Point Control (Football and Duel are excluded). Practice and solo campaign play remain available in the browser.
 
@@ -19,9 +19,13 @@ Three-Point Control (Football and Duel are excluded). Practice and solo campaign
   yet on top of it (`src/components/duelist/net/predict.mjs`). A page from before an update (an older
   `PROTOCOL`) is told to reload.
 - **Public matches and auto-overflow.** At startup, one permanent bot-filled room is created for each
-  of the four competitive modes. `join { mode, matchId? }` joins the selected live server, replacing
+  of the seven public modes. `join { mode, matchId? }` joins the selected live server, replacing
   one bot (the lowest-scoring bot of the team that needs a player). The server rejects invalid/stale/wrong-mode
-  room IDs. When a room becomes full of humans, it immediately opens an additional bot-filled room. The last
+  room IDs. Duel stays 1v1 (two human seats); the other public modes have a hard cap of **20 humans per room**. To avoid
+  simulating 20 idle bots, a newly created public room starts with its original six/eight AI fillers, which humans
+  replace first, then admits additional humans to the remaining open seats up to 20. A player leaving only replaces
+  bots up to the initial bot floor. The server rejects explicit joins to full/stale IDs instead of silently queuing
+  or redirecting them. When a room becomes full of humans, it opens an additional bot-ready room. The last
   spare room is retained until another has space. A leaving player's seat goes back to a bot; an idle extra room
   is eventually cleaned up. A finished match restarts 12 s later with the same players. `join { mode: 'any' }`
   chooses the busiest room with people.
@@ -68,6 +72,19 @@ The browser connects to `ws://localhost:5321/ws/duelist` when it runs on localho
 | `DUELIST_ALLOW_GUESTS` | `1` lets people in without an account: local testing only, never in production |
 | `DUELIST_BOT_LEVEL` | `trainee`, `duelist` (default) or `master` |
 | `DUELIST_PROGRESS_FILE` | Where each account's class EXP is kept: a JSON file on a disk that survives restarts. Without it, class levels last only while the server runs. |
+
+## Direct-join Online Play UI
+
+The browser's `/duelist-next/online-play` page reads the public `GET /lobby` listing, with a validated room ID,
+mode, phase, human/bot counts, and advertised capacity. Its Join Server action connects using an exact
+`{ t:'join', mode, matchId }` packet. No waiting queue is involved. The server remains authoritative
+for seats and overcapacity rejection; an unavailable host shows no fabricated rooms. The old `'online'`
+quickplay packet remains supported for older clients, but is not used by the new browser page.
+
+**Production guest-auth blocker:** this server requires a validated Base44 account token by default;
+`DUELIST_ALLOW_GUESTS=1` is development-only and must not be used on a public host. Since the app's
+current entry is guest-only, public anonymous online matches need a separate secure server-issued guest
+identity/ticket flow before release. Do not disable validation or rely on client-controlled guest IDs.
 
 ## Deploying (not done; needs the owner's go-ahead)
 
