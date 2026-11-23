@@ -43,8 +43,21 @@
 //     surface points of chapter 6 stop at the Wolf-Ear Vigil, where the trail
 //     leaves the ridge path: ground measured walkable on both versions.
 
+import { WOLFVEIL_EXPLORABLE_CAVES } from '../../wolfveil/WolfveilCaveLayout.mjs';
+
 const line = (speaker, text) => Object.freeze({ speaker, text });
 const point = (x, z) => Object.freeze({ x, z });
+
+// Where a cave's ring sets a player down: this far in from the mouth, along the cave's own
+// direction. Taken from the cave layout rather than written out, so that a hall follows
+// its mouth when the caves' owner moves one (the Cistern's mouth is being moved inside
+// the edge of the walkable ground).
+export const BAND3_HALL_METRES_IN = 16;
+const hall = caveId => {
+  const cave = WOLFVEIL_EXPLORABLE_CAVES.find(entry => entry.id === caveId);
+  const at = axis => Math.round((cave.mouth[axis] + cave.dir[axis] * BAND3_HALL_METRES_IN) * 100) / 100;
+  return point(at(0), at(1));
+};
 
 export const BAND3_POINTS = Object.freeze({
   // West: the path's end below the Jade Lantern Grotto (P44). Captain Arlen stands 4 m on.
@@ -71,19 +84,19 @@ export const BAND3_POINTS = Object.freeze({
   peaks_vigil: point(2, 470),
   peaks_rival: point(-16, 470),
   // Under the valley: Jade Lantern Grotto (hall, then a chamber 15 m in radius round -376.4, -425.1)
-  grotto_hall: point(-368.8, -413.4),
+  grotto_hall: hall('jade_lantern_grotto'), // (-368.76, -413.39) today
   grotto_hares: point(-374.2, -421.8),
   grotto_mural: point(-384, -420.2),
   grotto_stag: point(-379.7, -430.1),
   grotto_socket: point(-382.5, -434.3),
   grotto_brush: point(-378.8, -434.3),
   // Under the valley: Whispering Root Hollow (chamber 16 m in radius round -522.5, 322.8)
-  hollow_hall: point(-511.2, 311.4),
+  hollow_hall: hall('whispering_root_hollow'), // (-511.23, 311.39) today
   hollow_embers: point(-518.2, 318.5),
   hollow_pyre: point(-526.7, 327.1),
   hollow_mural: point(-530.2, 330.6),
   // Under the valley: Sunken Inkstone Cistern (chamber 16.5 m in radius round -51.6, 580)
-  cistern_hall: point(-45.4, 563),
+  cistern_hall: hall('sunken_inkstone_cistern'), // (-45.44, 563.04) today; (-42.29, 515.84) once the mouth moves to (-40, 500)
   cistern_koi: point(-50.2, 576.2),
   cistern_page_1: point(-60, 576.9),
   cistern_page_2: point(-43.1, 583),
