@@ -6,6 +6,7 @@ import {
 import WeatherTestPanel from './weather/WeatherTestPanel';
 import {isGame3DEditorPreview} from './weather/editorPreviewPolicy.mjs';
 import { QUEST_TEST_DESTINATIONS } from './threeroads/questTestDestinations.mjs';
+import { questTestRuntimeActive } from './threeroads/questTestRuntime.mjs';
 
 /**
  * Glass HUD for the WorldEnvironmentSystem. Shows the world clock, season, the
@@ -34,16 +35,10 @@ export default function WorldEnvironmentHUD({ system, adminTools = false }) {
   const [snap, setSnap] = useState(null);
   const [weatherEditorOpen, setWeatherEditorOpen] = useState(false);
   const [questTestOpen, setQuestTestOpen] = useState(false);
-  const [questTestActive, setQuestTestActive] = useState(() => {
-    try { return window.sessionStorage.getItem('game3d.questTest.active') === '1'; }
-    catch { return false; }
-  });
+  const [questTestActive, setQuestTestActive] = useState(questTestRuntimeActive);
 
   useEffect(() => {
-    const refresh = () => {
-      try { setQuestTestActive(window.sessionStorage.getItem('game3d.questTest.active') === '1'); }
-      catch { setQuestTestActive(false); }
-    };
+    const refresh = () => setQuestTestActive(questTestRuntimeActive());
     window.addEventListener('game3dQuestTestSessionChanged', refresh);
     return () => window.removeEventListener('game3dQuestTestSessionChanged', refresh);
   }, []);
