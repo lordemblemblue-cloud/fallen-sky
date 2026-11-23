@@ -279,7 +279,21 @@
     "face_model_url": {
       "type": "string",
       "default": "",
-      "description": "Generated personal face/head model layered onto the selected base body."
+      "description": "Generated personal face/head model layered onto the selected base body.",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "base_body_gender": {
       "type": "string",

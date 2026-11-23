@@ -41,3 +41,37 @@ Scope: AtomxEveGames / Fallen Sky / Duelist Adventure (shared Base44 app).
 - Do not mark unresolved scan findings as ignored simply to obtain a green badge.
 - Never store HMAC secrets in client-side VITE_ variables.
 - Restore point created before this round; use Base44 version history if compatibility issues emerge.
+
+## Follow-up security pass — November 23, 2026
+
+A direct, credit-free code audit and Base44 platform inspection was completed after the
+previous consolidation. The result is **partial remediation, not proof of Base44
+Security Center approval**, because its full scan response is still truncated.
+
+- Ran a fresh Base44 security scan. The full result was returned as truncated by
+  the platform API, so the exact 12–18 alleged findings could not be enumerated.
+- Invoked Base44's automatic RLS recommendation fix for all 77 named entity
+  schemas, with `record_security_fix_chat: false` to avoid builder-credit usage.
+  The API reported `no_recommendation` on all 77 and changed no RLS rules.
+  This is not evidence of zero code-level security findings.
+- Verified platform browser protections: `prevent_iframe_embedding=true` and
+  `restrict_browser_features=true`. No header change was necessary.
+- Patched the four high-severity **development dependency** advisories in
+  Cloudflare Vite tooling and transitive dependencies via the lockfile.
+  `npm audit --audit-level=low` now reports zero vulnerabilities (including
+  development tools).
+- Removed `innerHTML` sinks from FantasyBattleStage's combat-number overlay
+  and GameWorld3D's WebGL failure panel. Combat values are always rendered as
+  DOM text nodes, and the combat-label CSS class is allowlisted.
+- Added tests/security-dom-sinks.test.mjs and enhanced the security CI workflow
+  to audit both runtime and development dependencies and to check the HTML sinks.
+- `node --test tests/security-base44-access.test.mjs tests/security-dom-sinks.test.mjs`
+  reports 12 passes. `npm run build` passes.
+
+### Still outstanding
+Obtain the specific full Security Center report (screenshot or export of each
+finding including file path and severity) to review static-code findings and
+backend function warnings; the platform's API still truncates the complete
+report. No security findings have been ignored or dismissed. Guest cloud saves,
+clan/chat, multiplayer, personal-avatar flows, and signed worker callbacks
+still require a live role-based test to claim production security approval.
