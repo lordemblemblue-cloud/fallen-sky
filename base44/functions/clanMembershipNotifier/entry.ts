@@ -1,6 +1,6 @@
 // Entity automation handler for ClanMember create/delete events.
-// Posts a system message into the clan's default chat channel whenever a member
-// joins or leaves the guild.
+// Posts a system message into the clan's default chat channel when a
+// verifiable membership creation is seen. Unsigned deletion events are ignored.
 //
 // Server functions are publicly reachable, so the body is not trusted as an
 // event. The membership row is re-read from the database and the clan, the
@@ -21,13 +21,18 @@ Deno.serve(async (req) => {
       return Response.json({ ok: true, skipped: 'not a membership event' });
     }
 
-    const rowId = String(payload?.data?.id || payload?.old_data?.id || event.entity_id || '').trim();
+    // This function is publicly callable. After a membership is deleted we
+    // cannot prove caller-supplied old_data ever existed, so unsigned delete
+    // notifications must not be trusted as evidence of a player leaving.
+    if (type === 'delete') {
+      return Response.json({ ok: true, skipped: 'unverified membership deletion event' });
+    }
+
+    const rowId = String(payload?.data?.id || event.entity_id || '').trim();
     if (!rowId) return Response.json({ ok: true, skipped: 'no membership row' });
 
-    // Authoritative membership row. A create is announced only while the row
-    // exists; a delete only once the row is actually gone.
-    const stored = await svc.ClanMember.get(rowId).catch(() => null);
-    const row = type === 'create' ? stored : (stored ? null : payload?.old_data);
+    // A join announcement requires a current server-stored membership row.
+    const row = await svc.ClanMember.get(rowId).catch(() => null);
     if (!row?.clan_id || !row?.user_id) {
       return Response.json({ ok: true, skipped: 'membership row does not match event' });
     }
