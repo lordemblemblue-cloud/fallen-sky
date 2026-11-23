@@ -1,0 +1,45 @@
+name: Duelist Assassin Execution Safety
+
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-cloaked-execution-safety.test.mjs'
+      - 'src/components/duelist/core/classes.mjs'
+      - '.github/workflows/duelist-assassin-execution-safety.yml'
+  push:
+    branches:
+      - 'test/duelist-cloaked-execution-safety-*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duelist-assassin-safety-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assassin execution and four-class rules regression
+        run: node --test tests/duelist-cloaked-execution-safety.test.mjs tests/duelist-classes.test.mjs
+  lint-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Lint Assassin safety test and class rules
+        run: npx eslint tests/duelist-cloaked-execution-safety.test.mjs src/components/duelist/core/classes.mjs
+      - name: Build application
+        run: npm run build
