@@ -139,56 +139,69 @@ export function nextSliceBatch(averageMsPerObject, sliceMs) {
 
 const isSceneRenderable = (o) => !!(o.isMesh || o.isLine || o.isPoints || o.isSprite);
 
+/** While a slice compiles, the camera sees only this layer (no game code uses it). */
+export const PRECOMPILE_SLICE_LAYER = 31;
+
 /**
- * The renderables `scene` draws now (every ancestor visible), and the objects that stay visible in every slice: the
- * ancestors of lights, so each slice sees the scene's full light set (it is part of every lit shader's key).
+ * What `camera` draws of `scene` now: its renderables and its lights (every ancestor visible, on one of the camera's
+ * layers). Each slice puts its batch and all these lights on PRECOMPILE_SLICE_LAYER, so every lit shader is built
+ * with the scene's full light set, part of its key.
  */
-export function planSceneSlices(scene) {
+export function planSceneSlices(scene, camera = null) {
   const renderables = [];
-  const keepAlways = new Set();
+  const lights = [];
   const walk = (o) => {
     if (o.visible === false) return;
-    if (o !== scene && isSceneRenderable(o)) renderables.push(o);
-    if (o.isLight) for (let p = o.parent; p && p !== scene; p = p.parent) keepAlways.add(p);
+    if (o !== scene && (!camera || o.layers.test(camera.layers))) {
+      if (o.isLight) lights.push(o);
+      else if (isSceneRenderable(o)) renderables.push(o);
+    }
     for (const child of o.children) walk(child);
   };
   walk(scene);
-  return { renderables, keepAlways };
+  return { renderables, lights };
 }
 
 /**
- * Builds the shaders of `scene`'s renderables a batch at a time. For each slice every other renderable is hidden (a
- * batch member's ancestors and the lights' ancestors stay visible), compileAsync builds the batch's shaders in its
- * synchronous part and starts their pipelines, every object gets its visibility back in the same task, then the
- * browser gets a turn. The batch grows or shrinks to stay near `sliceMs`. At most `maxPending` slices compile their
+ * Builds the shaders of `scene`'s renderables a batch at a time. For each slice the camera sees only
+ * PRECOMPILE_SLICE_LAYER, on which the batch and the lights are put; compileAsync builds the batch's shaders in its
+ * synchronous part and starts their pipelines; the camera and every object get their layers back in the same task;
+ * then the browser gets a turn. Layers, not `visible`: scenery `visible` setters run the area loader's callbacks
+ * (WolfveilAreaLoader installGate), which can hide other objects; and the same camera keeps the render objects
+ * shared with real frames. The batch grows or shrinks to stay near `sliceMs`. At most `maxPending` slices compile their
  * pipelines in the GPU process at once (a whole area is ~380 pipelines). Frames are held by the caller. Objects added
  * later (streamed in) compile at their first draw as before. Returns the compile promises.
  */
 export async function compileSceneInSlices(renderer, scene, camera, { target = null, sliceMs = 40, onProgress = null,
   shouldStop = () => false, maxPending = 6 } = {}) {
-  const { renderables, keepAlways } = planSceneSlices(scene);
+  const { renderables, lights } = planSceneSlices(scene, camera);
+  const layer = PRECOMPILE_SLICE_LAYER;
   const promises = [];
   const pending = new Set();
   let batch = 1;
   let average = 0; // running cost per object, ms (shader builds cost ~75 ms each, cached objects ~0.05 ms)
   for (let i = 0; i < renderables.length && !shouldStop();) {
     const members = renderables.slice(i, i + batch);
-    const keep = new Set(keepAlways);
-    for (const m of members) for (let o = m; o && o !== scene; o = o.parent) keep.add(o);
-    const hidden = [];
+    const enabled = [];
     const lifted = [];
     const previous = renderer.getRenderTarget();
+    const cameraMask = camera.layers.mask;
     const t0 = performance.now();
     try {
-      for (const o of renderables) if (!keep.has(o) && o.visible) { o.visible = false; hidden.push(o); }
-      for (const o of keep) if (o.frustumCulled) { o.frustumCulled = false; lifted.push(o); }
+      for (const o of lights) if (!o.layers.isEnabled(layer)) { o.layers.enable(layer); enabled.push(o); }
+      for (const o of members) {
+        if (!o.layers.isEnabled(layer)) { o.layers.enable(layer); enabled.push(o); }
+        if (o.frustumCulled) { o.frustumCulled = false; lifted.push(o); }
+      }
+      camera.layers.set(layer);
       renderer.setRenderTarget(target);
       const compiling = Promise.resolve(renderer.compileAsync(scene, camera)).catch(() => {});
       promises.push(compiling);
       pending.add(compiling);
       compiling.then(() => pending.delete(compiling));
     } catch { /* this batch compiles at its first draw */ } finally {
-      for (const o of hidden) o.visible = true;
+      camera.layers.mask = cameraMask;
+      for (let k = enabled.length - 1; k >= 0; k--) enabled[k].layers.disable(layer);
       for (const o of lifted) o.frustumCulled = true;
       if (renderer.getRenderTarget() !== previous) renderer.setRenderTarget(previous);
     }
@@ -236,6 +249,9 @@ async function precompileNow(renderer, state, scene, camera, { target, timeoutMs
     state.holdRender = Math.max(0, state.holdRender - 1);
     // from now on an object drawn for the first time compiles in the background (compileLateObjectsInBackground)
     state.backgroundCompile = true;
+    // compileAsync runs each light's ShadowNode: the static sun shadow is drawn the first time one runs, then only
+    // on request (patchShadowRefresh). In a slice that first draw held only the batch's casters: redraw it whole.
+    if (sliceMs > 0 && renderer.shadowMap) renderer.shadowMap.needsUpdate = true;
   }
   return { pipelines: (renderer._pipelines?.caches?.size ?? 0) - before, ms: Math.round(performance.now() - started), timedOut };
 }
