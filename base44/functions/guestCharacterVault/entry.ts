@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.63';
 import { checkCharacterSave, fingerprintCharacterSave } from '../../shared/characterSaveRules.ts';
 
 // Deliberately passwordless guest play: no Base44 auth.me() and no user entity.
@@ -51,6 +51,27 @@ const metadata = (row: RecordData) => ({
 });
 const fullSave = (row: RecordData) => row.revision > 0 ? { ...metadata(row), data: row.data || {} } : null;
 
+// Shared quotas bound unauthenticated work across all function instances. The
+// single-id predicate is rechecked by Base44 in the same write as the change.
+const quotaIds = new Map<string, string>();
+async function admitGuestAttempt(quotas: any, action: 'register' | 'recover') {
+  let id = quotaIds.get(action);
+  if (!id) {
+    const rows = await quotas.filter({ action }, 'created_date', 2);
+    if (rows.length !== 1) throw new Error('Guest quota is unavailable');
+    id = String(rows[0].id);
+    quotaIds.set(action, id);
+  }
+  const minute = Math.floor(Date.now() / 60_000) * 60_000;
+  const limit = action === 'register' ? 30 : 120;
+  const reset = await quotas.updateMany({ id, window_start: { $lt: minute } },
+    { $set: { window_start: minute, used: 1 } });
+  if (reset.updated === 1) return true;
+  const claim = await quotas.updateMany({ id, window_start: minute, used: { $lt: limit } },
+    { $inc: { used: 1 } });
+  return claim.updated === 1;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -63,6 +84,11 @@ Deno.serve(async (req) => {
     if (!['register', 'recover', 'get', 'put', 'delete'].includes(action)) return json({ error: 'Unknown action' }, 400);
 
     const base44 = createClientFromRequest(req);
+    if (action === 'register' || action === 'recover') {
+      if (!await admitGuestAttempt(base44.asServiceRole.entities.GuestVaultQuota, action)) {
+        return json({ error: 'Too many guest save attempts. Try again in a minute.' }, 429);
+      }
+    }
     const collection = base44.asServiceRole.entities.Game3DGuestCharacterSave;
 
     if (action === 'register') {
