@@ -56,13 +56,13 @@ function TemplateSurface({ kind = 'mode', id, title, eyebrow, subtitle, close, c
     </section>
   );
 }
-function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, onPrefs, launch, close }) {
+function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, onPrefs, launch, openServers, close }) {
   const tab = templateTab(category);
   const options = TEMPLATE_MODES[category];
   const mode = templateMode(category, selected);
   const supported = Boolean(mode.route && MENU_MODES[mode.route]);
   const startSolo = templateLaunch(category, mode.id);
-  const canOnline = category === 'normal' && supported && MENU_MODES[mode.route]?.online && lobby.online;
+  const canOnline = category === 'normal' && supported && MENU_MODES[mode.route]?.online;
   const selectedIcon = mode.symbol;
 
   return (
@@ -113,9 +113,9 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
               {startSolo ? <button type="button" className="dxt-action dxt-action--secondary"
                 onClick={() => launch(mode.id, false)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PRACTICE'}</button>
                 : <button type="button" className="dxt-action dxt-action--secondary" disabled><LockKeyhole aria-hidden="true"/> UNAVAILABLE</button>}
-              <button type="button" className="dxt-action dxt-action--primary" onClick={() => launch(mode.id, true)}
-                disabled={!canOnline} title={!canOnline ? 'No active online matchmaking for this category' : 'Join online'}>
-                <Play aria-hidden="true"/> {category === 'custom' ? 'CREATE' : category === 'practice' ? 'ONLINE OFF' : 'QUEUE'}
+              <button type="button" className="dxt-action dxt-action--primary" onClick={() => openServers(mode.route)}
+                disabled={!canOnline} title={!canOnline ? 'Choose a supported casual mode' : 'Browse live servers for this mode'}>
+                <Users aria-hidden="true"/> BROWSE SERVERS
               </button>
             </div>
             {supported && category === 'normal' &&
@@ -246,16 +246,12 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     if (!search || (online && !MENU_MODES[search.mode]?.online)) return;
     navigate({ to: '/duelist-next/play', search: { ...search, from: 'duelist' } });
   };
-  // Normal public modes are one-tap quick joins. Keep the existing server-owned
-  // room allocation (including bot replacement); only the menu entry changes.
-  // Without a reachable match server, selecting a card still shows its details
-  // and leaves offline Practice available, never a fake online match.
-  const chooseMode = id => {
-    setMode(id);
-    const selected = templateMode(category, id);
-    if (category === 'normal' && lobby.online && selected?.route && MENU_MODES[selected.route]?.online) {
-      launch(id, true);
-    }
+  // Selecting a mode only changes its details. Online play always goes through
+  // the real server browser, where a player chooses an exact room ID.
+  const chooseMode = id => setMode(id);
+  const openServers = modeId => {
+    if (!MENU_MODES[modeId]?.online) return;
+    navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode: modeId } });
   };
   useEffect(() => {
     if (!panel) return undefined;
@@ -284,6 +280,10 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
           <button type="button" className="dxt-action dxt-action--primary" onClick={() => setPanel('play')}>
             <Play aria-hidden="true"/> CHOOSE GAME MODE
           </button>
+          <Link to="/duelist-next/$page" params={{ page: 'online-play' }}
+            className="dxt-action dxt-action--secondary" style={{ marginTop: 12 }}>
+            <Users aria-hidden="true"/> ONLINE PLAY · SERVER LIST
+          </Link>
         </div>
       </section>}
       {panel === 'play' && <ModeSelector category={category} selected={mode} onCategory={changeCategory}
