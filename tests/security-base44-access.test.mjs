@@ -43,3 +43,12 @@ test('clan membership notifications never trust an unsigned deleted row payload'
   assert.match(source, /if \(type === 'delete'\)\s*\{\s*return Response\.json\(\{ ok: true, skipped: 'unverified membership deletion event' \}\)/);
   assert.match(source, /const row = await svc\.ClanMember\.get\(rowId\)/);
 });
+
+test('party cleanup requires a valid server-side signature before service-role access', () => {
+  const source = readFileSync(new URL('../base44/functions/partyLifecycle/entry.ts', import.meta.url), 'utf8');
+  assert.match(source, /PARTY_LIFECYCLE_EVENT_SECRET/);
+  assert.match(source, /sameSignature\(signature, expected\)/);
+  assert.match(source, /Math\.abs\(Date\.now\(\) - Number\(stamp\)\) > 120_000/);
+  assert.ok(source.indexOf('sameSignature(signature, expected)') < source.indexOf('base44.asServiceRole'),
+    'privileged data access must occur only after signature verification');
+});
