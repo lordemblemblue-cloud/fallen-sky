@@ -22,7 +22,7 @@ test('F11/resize only recalculates HUD scaling, never the retired right-side pre
 test('HP, portrait, actual health values and EXP stay mounted across window/fullscreen layouts', () => {
   assert.match(hud, /<Vitals you=\{hud\.you\}/);
   assert.match(hud, /healthNumbers\(you\.hpValue, you\.hpMax\)/);
-  assert.match(hud, /className="dh-portrait"/);
+  assert.match(hud, /className="dh-part dh-portrait"/);
   assert.match(hud, /className="dh-hp" data-tone=\{tone\} role="progressbar"/);
   assert.match(hud, /className="dh-exp" role="progressbar"/);
   assert.match(css, /\.dh-bl \{[^}]*scale\(var\(--dh-s, 1\)\)/);
