@@ -6,7 +6,7 @@
 // existing does not mean its game is ready for players. Explicitly flip the
 // release switch after QA/review; do not auto-release the third game.
 
-export const GAMES_HUB_FOCUS_STORAGE_KEY = 'adamXEve.gamesHub.focusedGame';
+export const GAMES_HUB_FOCUS_STORAGE_KEY = 'adamXEve.gamesHub.focusedGame.v2';
 
 // Fantasy Battle (game #3) is under development. Keep the public launcher and
 // direct route unavailable until the game is reviewed and ready.
@@ -16,18 +16,8 @@ const BASE44_MEDIA = 'https://media.base44.com/images/public/6af625cd654fa5b8954
 
 export const GAMES_HUB_TILES = Object.freeze([
   Object.freeze({
-    id: 'fallen-sky',
-    to: '/gameview',
-    title: 'Fallen Sky Online',
-    tagline: 'The living world of Adam and Eve: factions, companions, mounts and quests.',
-    details: Object.freeze(['Open world', '3D', 'Online']),
-    art: `${BASE44_MEDIA}/371ca9e0d_fallen_sky_riftbound_hero.png`,
-    backdrop: null,
-    fallback: 'linear-gradient(135deg,#0b1f3a 0%,#1d4f7a 55%,#7cc4e8 100%)',
-    accent: '#7cc4e8',
-  }),
-  Object.freeze({
     id: 'duelist',
+    gpuPrompt: true,
     to: '/duelist',
     title: 'Duelist Adventure',
     tagline: 'Blade-to-blade duels: real-time combat, powers and story missions.',
@@ -36,6 +26,19 @@ export const GAMES_HUB_TILES = Object.freeze([
     backdrop: null,
     fallback: 'linear-gradient(225deg,#2a0b0b 0%,#7a1d1d 55%,#f0a050 100%)',
     accent: '#f0a050',
+  }),
+  Object.freeze({
+    id: 'fallen-sky',
+    releaseStatus: 'beta-experimental',
+    gpuPrompt: true,
+    to: '/gameview',
+    title: 'Fallen Sky Online',
+    tagline: 'The living world of Adam and Eve: factions, companions, mounts and quests.',
+    details: Object.freeze(['Open world', '3D', 'Online']),
+    art: `${BASE44_MEDIA}/371ca9e0d_fallen_sky_riftbound_hero.png`,
+    backdrop: null,
+    fallback: 'linear-gradient(135deg,#0b1f3a 0%,#1d4f7a 55%,#7cc4e8 100%)',
+    accent: '#7cc4e8',
   }),
   Object.freeze({
     id: 'fantasy-battle',
