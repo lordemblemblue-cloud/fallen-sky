@@ -1,0 +1,24 @@
+name: WebGPU dual-game evidence validation
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/webgpu-dual-game-evidence.mjs'
+      - 'tests/webgpuDualGameEvidence.test.mjs'
+      - '.github/workflows/webgpu-dual-game-evidence.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-reports:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test offline dual-game evidence gate
+        run: node --test tests/webgpuDualGameEvidence.test.mjs
