@@ -123,6 +123,26 @@ test('players join (taking bots\' seats), Join finds the match with players, the
   await server.close();
 });
 
+test('two Capture the Flag players join the same public match and share the updated roster', async () => {
+  const { server, url } = await start();
+  const firstPlayer = await player(url, 'ctf-one');
+  const secondPlayer = await player(url, 'ctf-two');
+  firstPlayer.send({ t: 'join', mode: 'ctf' });
+  const first = await firstPlayer.next(m => m.t === 'joined');
+  assert.equal(first.mode, 'ctf');
+  assert.ok(first.replaced, 'the first player takes a bot seat');
+  secondPlayer.send({ t: 'join', mode: 'ctf' });
+  const second = await secondPlayer.next(m => m.t === 'joined');
+  assert.equal(second.match, first.match, 'the second CTF player joins the existing human-occupied room');
+  assert.equal(second.seats.filter(s => s.kind === 'player').length, 2);
+  assert.equal(second.seats.filter(s => s.kind === 'bot').length, 6);
+  const roster = await firstPlayer.next(m => m.t === 'seats' && m.seats.filter(s => s.kind === 'player').length === 2);
+  assert.deepEqual(roster.seats.filter(s => s.kind === 'player').map(s => s.id).sort(), ['ctf-one', 'ctf-two']);
+  firstPlayer.ws.close();
+  secondPlayer.ws.close();
+  await server.close();
+});
+
 test('presses beyond the budget are dropped; leaving gives the seat back to a bot', async () => {
   const { server, url } = await start();
   const a = await player(url, 'cat');
