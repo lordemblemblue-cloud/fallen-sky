@@ -1,0 +1,24 @@
+name: WebGPU preview and live matrix evidence
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/webgpu-deployment-matrix.mjs'
+      - 'tests/webgpuDeploymentMatrix.test.mjs'
+      - '.github/workflows/webgpu-deployment-matrix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify preview/live matrix and existing dual-game gate
+        run: node --test tests/webgpuDeploymentMatrix.test.mjs tests/webgpuDualGameEvidence.test.mjs
