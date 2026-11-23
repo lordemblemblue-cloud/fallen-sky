@@ -270,14 +270,15 @@ export default function MobileTouchControls({
       </div>}
       <div className="mobile-look-zone" data-testid="mobile-look-zone" aria-label="Swipe to look around"
         onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp}/>
-      <div className="mobile-control-toolbar">
-        {controllerConnected && <span className="mobile-gamepad-connected">CONTROLLER CONNECTED</span>}
-        <button type="button" aria-pressed={editing} onClick={() => { releaseAll(); setEditing(v => !v); }}
-          className="mobile-control-editor">{editing ? 'DONE' : 'MOVE CONTROLS'}</button>
-        {editing && <button type="button" className="mobile-control-editor" onClick={() => {
-          setLayout({ key: layoutKey, positions: defaultMobileTouchLayout(game, landscape) });
-        }}>RESET</button>}
-      </div>
+      {(game !== 'duelist' || expanded || editing || controllerConnected) &&
+        <div className="mobile-control-toolbar">
+          {controllerConnected && <span className="mobile-gamepad-connected">CONTROLLER CONNECTED</span>}
+          {(game !== 'duelist' || expanded || editing) && <button type="button" aria-pressed={editing} onClick={() => { releaseAll(); setEditing(v => !v); }}
+            className="mobile-control-editor">{editing ? 'DONE' : 'MOVE CONTROLS'}</button>}
+          {editing && <button type="button" className="mobile-control-editor" onClick={() => {
+            setLayout({ key: layoutKey, positions: defaultMobileTouchLayout(game, landscape) });
+          }}>RESET</button>}
+        </div>}
       {editing && <div className="mobile-control-instructions">Drag each control to reposition it · Done saves the layout</div>}
       <div className="mobile-move-stick" role="group" aria-label="Virtual movement joystick"
         style={{ '--touch-x': `${locate('joystick').x}%`, '--touch-y': `${locate('joystick').y}%` }}
