@@ -14,6 +14,42 @@ showed the world 0.5-36 s sooner in this test setting (single runs). GPU time pe
 13-16 % back to back on the same server. The town looks the same (pictures below; a test proves the merged town draws
 identical triangles). Everything the world draws runs on WebGPU.
 
+## Part 2 (2026-11-23, branch `claude/low-poly-world-2-20261123`): downloads, archers, zombies
+
+Part 1 below was merged as PR #290. Part 2 takes the biggest costs part 1 found outside the scenery:
+
+| What | Before (part 1) | After (part 2) | How |
+|---|---|---|---|
+| Model files on each gate hop | ~67 MB downloaded again on every hop | **0 MB**: every model comes from memory | `performance/Game3DModelCache.mjs`, installed by `Game3DPerformanceBootstrap.jsx`: three.js's loader cache for model files only (`.glb/.gltf/.fbx/.bin` bytes, http(s) or same-origin), capped at 192 MB (64 MB on phones and devices reporting ≤ 4 GB), least recently used out first. Images, bitmaps and parsed models are never kept across a teardown (each mount still parses its own copy). The tour held 49 files, 123 MB. |
+| "World entry interrupted" after a slow gate hop | on every hop over 30 s | **never** in the tour (0 of 5) | `pages/GameView.jsx` watchdog: once a hop has built its new scene it gets up to 150 s; the first entry keeps 30 s; load errors still show at once. |
+| Archer quest givers (town) | 4 separate parses, 24 textures of 2048 px (384 MB) | **1 shared parse, 6 textures of 1024 px (24 MB)** | `npc/sharedNpcModel.mjs`: one parse per world mount, each NPC a skeleton clone with its own bones and materials (they tint them) and shared geometry and textures; images scaled to 1024 px as they arrive, before any upload. Used by `npc/axeAnimatedQuestNpcGLB.mjs` and `npc/spawnLivingQuestNPC.jsx`. |
+| Archer enemies (camp enemies on the archer rig) | already one shared parse, 6 textures of 2048 px (96 MB) | **6 of 1024 px (24 MB)** | opt-in `lowPolyTextures` in `performance/SharedSkinnedFBXSpawner.mjs` (default off: the Three Roads enemies keep theirs), passed by `GameWorld3D.jsx` line 1885 only. |
+| Zombies (west) | 205 draw groups per zombie (2 materials), textures 2048 px | **2 draw groups**, textures 1024 px | `render/consolidateMaterialGroups.mjs`: the triangles are reordered so each material's are contiguous (same vertices, skinning and animation); `wolfveil/WolfveilZombieHordeRuntime.js` applies it and the texture cap once to the shared source. |
+
+`?hiPoly=1` keeps the earlier behaviour for all of it except the model cache and the watchdog (they change no picture).
+
+**Gate hops, part 1 → part 2** (WebGPU, hidden test pane, one run each, same method as below):
+
+| area | draw calls | texture memory | models loaded | shown | settled |
+|---|---:|---:|---:|---:|---:|
+| town | 1,248 → 1,248 | 737 → **377 MB** | 67.1 → **0 MB** | 58.4 → **40.7 s** | 67.9 → **43.5 s** |
+| south | 849 → 849 | 594 → **234 MB** | 67.1 → **0 MB** | 38.5 → 39.2 s | 41.5 → 44.2 s |
+| west | 3,338 → **1,106** | 849 → **417 MB** | 67.1 → **0 MB** | 57.5 → **35.2 s** | 61.1 → **40.8 s** |
+| east | 1,179 → 1,180 | 764 → **404 MB** | 67.1 → **0 MB** | 63.1 → **32.0 s** | 64.2 → **32.8 s** |
+| north | 1,174 → 1,175 | 695 → **335 MB** | 67.1 → **0 MB** | 52.1 → **34.7 s** | 55.4 → **37.4 s** |
+
+- Measured before the archer-enemy texture cap was added: with it, the areas with archer enemies hold about 72 MB less
+  (checked live: every archer texture in the east is now 1024 px; the totals were not measured again).
+- Texture memory still depends on spawn timing (which NPCs had loaded when counted); the archer and zombie numbers in
+  the table above it were counted directly.
+- Checked live on WebGPU: the 11 west zombies draw 2 groups each with 1024 px textures and their bones animate; the town's
+  four archer quest givers share one set of six 1024 px textures; no page errors; the WebGPU material audit stays clean.
+- Raw: `docs/game3d/low-poly/perf-runs/*load-after2-*.json`.
+- Pictures (classic renderer, 13:00, clear): `docs/game3d/low-poly/pictures/side-by-side/npc.archer-closeup.jpg` (an archer quest
+  giver, 2048 px textures against the shared 1024 px set) and `west.zombie-closeup.jpg` (205 draw groups and 2048 px
+  against 2 groups and 1024 px; the zombies walk, so their places differ). The archer stands in a T-pose in both: that
+  is how the old build shows it too, not a change here.
+
 ## The numbers, per area (WebGPU, before = main `51135c89`, after = this branch)
 
 Each row is one gate hop into that area: the game's own `game3dPortalTravel` event remounts the world as that area's
