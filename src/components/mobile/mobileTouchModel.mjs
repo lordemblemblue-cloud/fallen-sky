@@ -4,7 +4,7 @@ export const MOBILE_TOUCH_LAYOUT_KEY = 'axe_mobile_touch_layout_v2';
 export const MOBILE_TOUCH_GAMES = Object.freeze(['fallen', 'duelist']);
 export const MOBILE_TOUCH_ACTIONS = Object.freeze({
   duelist: Object.freeze([
-    ['light','ATTACK'],['heavy','HEAVY'],['guard','GUARD'],['jump','JUMP'],
+    ['light','ATTACK'],['guard','GUARD'],['jump','JUMP'],
     ['roll','ROLL'],['dash','DASH'],['ability1','1'],['ability2','2'],
     ['ability3','3'],['ability4','4'],['special','ULT'],['lock','LOCK'],
     ['more','MORE'],['interact','USE'],['sprint','RUN'],['mode','MODE'],
@@ -53,6 +53,17 @@ const LANDSCAPE = Object.freeze({
   mount:[45,44],crouch:[45,62],
   skill5:[44,24],skill6:[44,42],skill7:[34,24],skill8:[34,43],skill9:[27,65],
 });
+// Duelist's landscape combat controls follow the approved two-thumb HUD mockup.
+// Fallen Sky keeps its own existing layout; heavy remains a keyboard/gamepad
+// action, but has no dedicated mobile button in Duelist Adventure.
+const DUELIST_LANDSCAPE = Object.freeze({
+  ...LANDSCAPE,
+  joystick:[13,77],
+  roll:[9,53],dash:[17,49],jump:[25,60],guard:[26,79],
+  light:[88,79],
+  ability1:[75,64],ability2:[80,54],ability3:[87,47],ability4:[93,54],
+  special:[74,83],lock:[86,17],more:[93,17],
+});
 const PORTRAIT = Object.freeze({
   joystick:[20,80],
   light:[87,78],attack:[87,78],
@@ -65,7 +76,7 @@ const PORTRAIT = Object.freeze({
   skill5:[52,18],skill6:[52,28],skill7:[52,38],skill8:[52,48],skill9:[52,58],
 });
 export function defaultMobileTouchLayout(game, landscape) {
-  const presets = landscape ? LANDSCAPE : PORTRAIT;
+  const presets = landscape ? (game === 'duelist' ? DUELIST_LANDSCAPE : LANDSCAPE) : PORTRAIT;
   const ids = ['joystick', ...(MOBILE_TOUCH_ACTIONS[game] || MOBILE_TOUCH_ACTIONS.duelist).map(([id]) => id)];
   return Object.fromEntries(ids.map(id => [id, { x: pct(presets[id]?.[0]), y: pct(presets[id]?.[1]) }]));
 }
@@ -79,5 +90,8 @@ export function normalizeMobileTouchLayout(game, landscape, saved) {
   }));
 }
 export function touchLayoutStorageKey(game, landscape) {
-  return `${MOBILE_TOUCH_LAYOUT_KEY}:${game}:${landscape ? 'landscape' : 'portrait'}`;
+  // The approved Duelist redesign must not inherit old centered controls from
+  // an earlier saved v2 preset. Fallen Sky's layout key stays unchanged.
+  const versionedGame = game === 'duelist' ? 'duelist_ergonomic_v3' : game;
+  return `${MOBILE_TOUCH_LAYOUT_KEY}:${versionedGame}:${landscape ? 'landscape' : 'portrait'}`;
 }
