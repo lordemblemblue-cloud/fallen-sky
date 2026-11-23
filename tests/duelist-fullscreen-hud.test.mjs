@@ -2,6 +2,7 @@
 // the match back to its retired character-preview rail or hide live HP.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { URL } from 'node:url';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
