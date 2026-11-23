@@ -1,0 +1,43 @@
+name: Duelist Expansion Hero Backend (Draft)
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/sim/expansionHeroKits.mjs'
+      - 'src/components/duelist/sim/expansionHeroAuthority.mjs'
+      - 'tests/duelist-expansion-heroes-backend.test.mjs'
+      - '.github/workflows/duelist-expansion-heroes.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hero-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Future hero contract regression tests
+        run: node --test tests/duelist-expansion-heroes-backend.test.mjs
+      - name: Module syntax
+        run: |
+          node --check src/components/duelist/sim/expansionHeroKits.mjs
+          node --check src/components/duelist/sim/expansionHeroAuthority.mjs
+  lint-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Lint touched backend files and tests
+        run: npx eslint src/components/duelist/sim/expansionHeroKits.mjs src/components/duelist/sim/expansionHeroAuthority.mjs tests/duelist-expansion-heroes-backend.test.mjs
+      - name: Build application (does not deploy)
+        run: npm run build

@@ -18,10 +18,11 @@ export const SPECIAL_CHARGE = Object.freeze({
 });
 // Tunable playtest proposals; not a statement of finalized balance.
 export const SPECIAL_BALANCE = Object.freeze({
-  duelistExecuteThreshold: 0.25, // target at or below 25% body HP
+  duelistExecuteThreshold: 0.3, // target at or below 30% body HP (owner, 2026-11-22)
   assassinRearArcDegrees: 120,
   assassinExecuteRange: 2.3, // metres
-  duelistExecuteRange: 2.1,
+  assassinBlinkReach: 12, // metres: cloaked, the Shadow Execution steps to the back of an enemy this far away
+  duelistExecuteRange: 7, // the Execution seizes its target and draws it in from this far (owner, 2026-11-22)
   rageDurationSeconds: 5,
   rageDamageMultiplier: 2,
   rageMoveMultiplier: 1.3,
@@ -77,13 +78,13 @@ export const CLASSES = Object.freeze({
     id: 'warrior', name: 'Warrior', role: 'Front line', weapon: 'sword', color: 0xff4a3d, stance: 'heavy',
     description: 'One red crystal blade, heavy strikes, and Rage.',
     abilities: [
-      ['leapStrike', 'Leap Strike', 'Jump up to 8 m ahead and slam down, staggering everyone around the landing.'],
+      ['leapStrike', 'Leap Strike', 'Leap at the enemy you are locked on to and slam down on it, staggering everyone around the landing.'],
       ['grip', 'Telekinetic Grip', 'Lift an enemy, crush it while you hold, throw it when you let go.'],
-      ['repulse', 'Repulse', 'Throw everyone around you back and off their feet.'],
+      ['repulse', 'Repulse', 'Hop and slam: everyone around you is thrown up off its feet and drawn in toward you, stunned.'],
       ['bladeThrow', 'Blade Throw', 'Your blade flies out and back, cutting whoever it meets.'],
     ],
     special: { id: 'rage', name: 'Rage', cost: SPECIAL_MAX, target: 'self',
-      text: 'For 5 s: double damage, 30% faster, and nothing staggers, grips or knocks you down.' },
+      text: 'A roar, then 5 s of berserk: double damage, 30% faster, and nothing staggers, grips or knocks you down.' },
   }),
   duelist: entry({
     id: 'duelist', name: 'Duelist', role: 'Duel specialist', weapon: 'dualBlades', color: 0xffcf6a, stance: 'twin',
@@ -92,10 +93,10 @@ export const CLASSES = Object.freeze({
       ['pull', 'Telekinetic Pull', 'Drag an enemy into reach.'],
       ['quickstep', 'Quickstep', 'For 3 s: 40% faster on your feet and 20% faster strikes.'],
       ['bladeThrow', 'Blade Throw', 'One blade flies out and back, cutting whoever it meets.'],
-      ['counter', 'Guard and Counter', 'A short parry stance: a strike that meets it is answered with a free riposte.'],
+      ['counter', 'Guard and Counter', 'A short parry stance, ready again in 1.5 s: a strike that meets it is answered with a free riposte.'],
     ],
     special: { id: 'execution', name: 'Execution', cost: SPECIAL_MAX / 3, target: 'enemy', reach: SPECIAL_BALANCE.duelistExecuteRange,
-      rule: 'threshold', text: 'Finish an enemy at 25% HP or less within reach. Costs a third of the meter.' },
+      rule: 'threshold', text: 'Seize an enemy at 30% HP or less, draw it in, run it through and push the body away. Costs a third of the meter.' },
   }),
   assassin: entry({
     id: 'assassin', name: 'Assassin', role: 'Flanker', weapon: 'staff', color: 0xb779ff, stance: 'staff',
@@ -104,22 +105,22 @@ export const CLASSES = Object.freeze({
       ['cloak', 'Veil Cloak', 'Unseen for 4 s (a shimmer up close). Striking or being hit ends it.'],
       ['push', 'Telekinetic Push', 'Throw everyone in front of you back.'],
       ['empower', 'Empowered Strikes', 'Your next 3 strikes hit 40% harder without draining the target\'s Will.'],
-      ['misdirect', 'Misdirect', 'One enemy loses its lock on you and cannot target you for 3 s.'],
+      ['dominate', 'Mind Dominance', 'The enemy you are locked on to stands dominated for 2 s; the second hit it takes breaks it.'],
     ],
     special: { id: 'shadowExecution', name: 'Shadow Execution', cost: SPECIAL_MAX, target: 'enemy', reach: SPECIAL_BALANCE.assassinExecuteRange,
-      rule: 'behind', text: 'Finish any enemy from behind, whatever its health.' },
+      rule: 'behind', text: 'Finish any enemy from behind, whatever its health. Cloaked, you step to its back from up to 12 m first.' },
   }),
   healer: entry({
     id: 'healer', name: 'Healer', role: 'Support', weapon: 'sword', color: 0x6cc8ff, stance: 'swift',
     description: 'One blue crystal blade, healing, and a dome that shelters allies.',
     abilities: [
-      ['mend', 'Mend', 'Heal the ally in front of you (or yourself) 30 HP over 3 s.'],
+      ['mend', 'Mend', 'Heal the ally you are locked on to, or yourself, 30 HP over 3 s.'],
       ['quickstepAura', 'Quickstep', 'You and allies within 6 m: 40% faster on your feet and 20% faster strikes for 3 s.'],
-      ['levitate', 'Levitate', 'Rise and float for 2 s.'],
+      ['levitate', 'Levitate', 'Lift the enemy you are locked on to off its feet, helpless for 2 s, and get away.'],
       ['push', 'Telekinetic Push', 'Throw everyone in front of you back.'],
     ],
     special: { id: 'sanctuary', name: 'Sanctuary', cost: SPECIAL_MAX, target: 'allies',
-      text: 'A 6 m dome for 5 s: allies inside take 80% less from powers and 35% less from strikes, and heal.' },
+      text: 'A healing mist 6 m across for 5 s: allies in it take 80% less from powers and 35% less from strikes, and heal.' },
   }),
 });
 
@@ -182,7 +183,7 @@ export function behindTarget(attacker, target, arcDegrees = SPECIAL_BALANCE.assa
  * actor: { id, team, hp, position: { x, z } }; target (executions): { id, team, hp, maxHp, position: { x, z, yaw },
  * protectedUntil, invulnerable }. level: trusted server-owned 1–25 class mastery; matchBoost: temporary match tier.
  */
-export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0, level = 1 } = {}) {
+export function evaluateSpecial({ classId, meter, actor, target = null, now = 0, matchBoost = 0, level = 1, cloaked = false } = {}) {
   const def = classById(classId);
   if (!def) return { allowed: false, reason: 'unknown-class' };
   if (!validMeter(meter)) return { allowed: false, reason: 'invalid-meter' };
@@ -204,9 +205,13 @@ export function evaluateSpecial({ classId, meter, actor, target = null, now = 0,
     const id = def.special.id;
     // An earned ultimate mastery point expands trusted execution reach, not the charge meter.
     const masteryReach = 1 + 0.04 * masteryAt(level).ultimatePoints;
-    if (distance(actor.position, target.position) > tierValue(id, 'reach', matchBoost, def.special.reach) * masteryReach) return { allowed: false, reason: 'out-of-range' };
+    // cloaked, the Shadow Execution steps through the veil to the target's back from farther away
+    const blink = def.special.rule === 'behind' && cloaked;
+    const reach = blink ? SPECIAL_BALANCE.assassinBlinkReach : tierValue(id, 'reach', matchBoost, def.special.reach);
+    if (distance(actor.position, target.position) > reach * masteryReach) return { allowed: false, reason: 'out-of-range' };
     if (def.special.rule === 'threshold' && target.hp / target.maxHp > tierValue(id, 'threshold', matchBoost, SPECIAL_BALANCE.duelistExecuteThreshold)) return { allowed: false, reason: 'target-too-healthy' };
-    if (def.special.rule === 'behind' && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', matchBoost, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
+    if (def.special.rule === 'behind' && !blink && !behindTarget(actor.position, target.position, tierValue(id, 'rearArc', matchBoost, SPECIAL_BALANCE.assassinRearArcDegrees))) return { allowed: false, reason: 'not-behind' };
+    if (blink) return { allowed: true, effect: id, cost: def.special.cost, meterAfter: clamp(meter - def.special.cost, 0, SPECIAL_MAX), animation: def.special.animation, blink: true };
   }
   return { allowed: true, effect: def.special.id, cost: def.special.cost, meterAfter: clamp(meter - def.special.cost, 0, SPECIAL_MAX), animation: def.special.animation };
 }

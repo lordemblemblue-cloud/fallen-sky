@@ -1,0 +1,31 @@
+name: Duelist match-entry class picker
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'src/components/duelist/client/ClassPicker.jsx'
+      - 'src/components/duelist/client/matchClassEntry.mjs'
+      - 'src/components/duelist/client/duelistClassPicker.css'
+      - 'tests/duelistMatchClassEntry.test.mjs'
+      - '.github/workflows/duelist-match-class-entry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-entry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify class selection menu and timer rules
+        run: node --test tests/duelistMatchClassEntry.test.mjs
+      - name: Build Duelist app for JSX integration verification
+        run: npm run build

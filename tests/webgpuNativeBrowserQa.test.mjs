@@ -103,6 +103,12 @@ test('target selection requires one local page with the requested playable route
   assert.throws(() => pickTarget([tabs[0], tabs[0]], 'fallen-sky'), /exactly one/);
   assert.throws(() => pickTarget(tabs, 'unknown'), /Unknown scene ID/);
   assert.equal(pickTarget(tabs, 'fallen-sky', '?renderer=webgpu').url, tabs[0].url);
+  // A user-supplied tab filter must not turn a different page into a game target.
+  assert.throws(() => pickTarget(tabs, 'fallen-sky', '/duelist-next/play'), /exactly one/);
+  assert.throws(() => pickTarget(tabs, 'duelist-adventure', '/gameview'), /exactly one/);
+  const wrongRoute = { ...tabs[0], url: 'https://example.com/unrelated?next=/gameview' };
+  assert.throws(() => pickTarget([wrongRoute], 'fallen-sky', '/gameview'), /exactly one/);
+  assert.equal(pickTarget([tabs[0], wrongRoute], 'fallen-sky', '/gameview').url, tabs[0].url);
 });
 
 test('unknown scene ids cannot inject executable code into the browser probe', () => {
@@ -141,4 +147,23 @@ test('CDP WebSocket endpoints must stay on loopback, regardless of target metada
   ]) {
     assert.throws(() => requireLocalCdpWebSocket(endpoint), /DevTools/);
   }
+});
+
+test('CDP target websocket must use the exact selected debugging port', () => {
+  for (const host of ['127.0.0.1', 'localhost', '[::1]']) {
+    const url = 'ws://' + host + ':9222/devtools/page/1';
+    assert.equal(requireLocalCdpWebSocket(url, 9222), url);
+    assert.throws(() => requireLocalCdpWebSocket(
+      'ws://' + host + ':9333/devtools/page/1', 9222,
+    ), /port does not match/);
+  }
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://localhost/devtools/page/1', 9222,
+  ), /port does not match/);
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://127.0.0.1:9222/devtools/page/1', 9333,
+  ), /port does not match/);
+  assert.throws(() => requireLocalCdpWebSocket(
+    'ws://example.com:9222/devtools/page/1', 9222,
+  ), /loopback host/);
 });

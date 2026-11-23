@@ -1,5 +1,7 @@
-// The lasting effects of the class abilities (Quickstep, Rage, Veil Cloak, Empowered Strikes, Misdirect, Mend,
+// The lasting effects of the class abilities (Quickstep, Rage, Veil Cloak, Empowered Strikes, Mind Dominance, Mend,
 // Levitate) and the class passives, as the rules core and the world apply them. Pure: callers pass the time.
+// Levitate and Mind Dominance are put on an enemy (sim/world.mjs): it floats or stands helpless; a dominated
+// fighter is freed by the hits it takes (EFFECTS.dominate.breakHits).
 //
 // A fighter's effects live in f.effects: { [kind]: { until, ...data } }. Sanctuary is a place, not an effect on
 // a fighter: sim/world.mjs keeps its domes in world.zones.
@@ -12,9 +14,10 @@ export const EFFECTS = Object.freeze({
   empower: Object.freeze({ damage: 1.4 }),
   levitate: Object.freeze({ height: 2.1, move: 0.6 }),
   cloak: Object.freeze({ seenWithin: 3 }), // metres: closer than this, a cloaked fighter shimmers into view
+  dominate: Object.freeze({ breakHits: 2 }), // a dominated fighter is freed by its second hit
 });
 // effect kinds as bits, for snapshots (net/protocol.mjs)
-export const EFFECT_BITS = Object.freeze({ quick: 1, rage: 2, cloak: 4, levitate: 8, mend: 16, empower: 32, misdirected: 64 });
+export const EFFECT_BITS = Object.freeze({ quick: 1, rage: 2, cloak: 4, levitate: 8, mend: 16, empower: 32, dominated: 64 });
 
 export function addEffect(f, kind, until, data = {}) {
   if (!f.effects) f.effects = {};
@@ -111,11 +114,23 @@ export function hiddenFrom(f, fBody, viewer, viewerBody, now) {
   return Math.hypot(fBody.x - viewerBody.x, fBody.z - viewerBody.z) > revealRadius;
 }
 
-/** May `viewer` lock on to (or a bot target) `f`? Not while hidden from it, nor while `f` misdirected it. */
+/** May `viewer` lock on to (or a bot target) `f`? Not while hidden from it. */
 export function targetable(f, fBody, viewer, viewerBody, now) {
-  if (hiddenFrom(f, fBody, viewer, viewerBody, now)) return false;
-  const m = effectOn(viewer, 'misdirected', now);
-  return !(m && m.by === f.id);
+  return !hiddenFrom(f, fBody, viewer, viewerBody, now);
+}
+
+/**
+ * A landed hit on a dominated fighter: counts toward its freedom. Returns true when this hit broke it (the
+ * domination ends and so does the stand-still, but for the hit's own moment).
+ */
+export function hitDominated(f, now) {
+  const d = effectOn(f, 'dominated', now);
+  if (!d) return false;
+  d.hits = (d.hits || 0) + 1;
+  if (d.hits < (d.breakHits || EFFECTS.dominate.breakHits)) return false;
+  endEffect(f, 'dominated');
+  f.stunnedUntil = Math.min(f.stunnedUntil, now + 0.25);
+  return true;
 }
 
 /** The effects as snapshot bits, and back (the browser only needs which are on). */

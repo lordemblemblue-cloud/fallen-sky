@@ -76,7 +76,7 @@ function classKitPress(me, foe, d, now, rnd, lvl) {
     case 'assassin':
       if (d > 8 && ready('cloak') && chance(0.4)) return slot('cloak');
       if (d < 4 && ready('empower') && chance(0.5)) return slot('empower');
-      if (d < 10 && ready('misdirect') && chance(0.15)) return slot('misdirect');
+      if (d < 6 && foe.action?.move.kind === 'attack' && ready('dominate') && chance(0.3)) return slot('dominate');
       return null;
     case 'healer':
       if (hurt < 0.55 && ready('mend') && chance(0.8)) return slot('mend');
@@ -103,6 +103,8 @@ export function think(world, bot, { goal = null } = {}) {
 
   bot.targetId = pickTarget(world, bot, goal?.hunt || null);
   const foe = bot.targetId ? world.fighters.get(bot.targetId) : null;
+  // a bot is locked on to the one it fights (targeted abilities take it)
+input.target = foe?.id || null;
   const theirs = foe ? bodyOf(world, foe.id) : null;
   const d = theirs ? dist(mine, theirs) : Infinity;
 

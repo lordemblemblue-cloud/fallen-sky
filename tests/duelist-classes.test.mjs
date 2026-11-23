@@ -81,9 +81,11 @@ test('duelist execution consumes roughly a third at or below a tunable HP thresh
   assert.equal(ready.allowed, true);
   assert.ok(Math.abs(ready.meterAfter - (SPECIAL_MAX - cost)) < 1e-6);
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 20, actor, target: enemy(20) }).reason, 'not-charged');
-  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(26) }).reason, 'target-too-healthy');
-  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(20, 0, 4) }).reason, 'out-of-range');
-  assert.equal(SPECIAL_BALANCE.duelistExecuteThreshold, .25);
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(30) }).allowed, true, '30% is in (owner, 2026-11-22)');
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(31) }).reason, 'target-too-healthy');
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(20, 0, 6) }).allowed, true, 'the pull reaches 7 m');
+  assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: enemy(20, 0, 8) }).reason, 'out-of-range');
+  assert.equal(SPECIAL_BALANCE.duelistExecuteThreshold, .3);
 });
 
 test('assassin execution costs the entire meter and requires striking from behind', () => {

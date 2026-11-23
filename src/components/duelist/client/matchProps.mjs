@@ -10,10 +10,10 @@ export const TEAM_COLORS = Object.freeze({ red: 0xff6f61, blue: 0x5fb4ff });
 const FFA_COLORS = [0xff8a7a, 0xffd36a, 0xa48bff, 0x7dffb0, 0xff7ad9, 0xc4ff6a, 0xffffff, 0x9fe8ff];
 export const fighterColor = (team, index) => (team ? TEAM_COLORS[team] : FFA_COLORS[index % FFA_COLORS.length]);
 
-/** Name tags over fighters: tags.set(id, name, hex), tags.update(actors), tags.dispose(). */
+/** Opponent name tags and readable overhead health tanks; no new world UI panels. */
 export function createNameTags(scene) {
   const tags = new Map();
-  const make = (name, hex) => {
+  const make = (name, hex, enemy) => {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 64;
@@ -30,34 +30,105 @@ export function createNameTags(scene) {
     texture.colorSpace = THREE.SRGBColorSpace;
     const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(1.1, 0.275, 1);
+    sprite.scale.set(1.35, 0.34, 1);
     sprite.renderOrder = 10;
     scene.add(sprite);
-    return { sprite, texture, material };
+
+    // One extra sprite follows the same fighter. Repaint its texture only when
+    // rounded HP changes, not on every rendered frame or network snapshot.
+    const healthCanvas = document.createElement('canvas');
+    healthCanvas.width = 512;
+    healthCanvas.height = 104;
+    const healthCtx = healthCanvas.getContext('2d');
+    const healthTexture = new THREE.CanvasTexture(healthCanvas);
+    healthTexture.colorSpace = THREE.SRGBColorSpace;
+    const healthMaterial = new THREE.SpriteMaterial({
+      map: healthTexture, depthTest: false, transparent: true, depthWrite: false,
+    });
+    const healthSprite = new THREE.Sprite(healthMaterial);
+    healthSprite.scale.set(1.85, 0.38, 1); // substantial at real combat distances
+    healthSprite.renderOrder = 11;
+    healthSprite.visible = false;
+    scene.add(healthSprite);
+    return {
+      sprite, texture, material, healthCtx, healthTexture, healthMaterial,
+      healthSprite, lastHealth: null, enemy,
+    };
   };
+
+  const paintHealth = (tag, hp, maxHp) => {
+    if (!Number.isFinite(hp) || !Number.isFinite(maxHp) || maxHp <= 0) {
+      tag.healthSprite.visible = false;
+      return;
+    }
+    const current = Math.max(0, Math.min(maxHp, hp));
+    const percent = current / maxHp;
+    const roundedHp = Math.ceil(current);
+    const roundedMax = Math.ceil(maxHp);
+    const key = `${roundedHp}:${roundedMax}`;
+    tag.healthSprite.visible = true;
+    if (tag.lastHealth === key) return;
+    tag.lastHealth = key;
+    const ctx = tag.healthCtx;
+    ctx.clearRect(0, 0, 512, 104);
+    ctx.fillStyle = 'rgba(6,14,26,.9)';
+    ctx.fillRect(8, 12, 496, 76);
+    ctx.strokeStyle = tag.enemy ? '#ff9898' : '#82d9bb';
+    ctx.lineWidth = 5;
+    ctx.strokeRect(10, 14, 492, 72);
+    ctx.fillStyle = tag.enemy ? '#cf253f' : '#249c77';
+    ctx.fillRect(14, 18, 484 * percent, 64);
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.fillRect(14, 18, 484 * percent, 10);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = 'bold 40px Inter, system-ui, sans-serif';
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#071019';
+    const label = `${roundedHp.toLocaleString()} / ${roundedMax.toLocaleString()}`;
+    ctx.strokeText(label, 256, 52);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, 256, 52);
+    tag.healthTexture.needsUpdate = true;
+  };
+
+  const disposeTag = (tag) => {
+    tag.texture.dispose();
+    tag.material.dispose();
+    tag.sprite.removeFromParent();
+    tag.healthTexture.dispose();
+    tag.healthMaterial.dispose();
+    tag.healthSprite.removeFromParent();
+  };
+
   return {
-    set(id, name, hex) {
+    set(id, name, hex, enemy = true) {
       if (tags.has(id)) return;
-      tags.set(id, make(name, hex));
+      tags.set(id, make(name, hex, enemy));
     },
     remove(id) {
       const tag = tags.get(id);
       if (!tag) return;
-      tag.texture.dispose(); tag.material.dispose(); tag.sprite.removeFromParent();
+      disposeTag(tag);
       tags.delete(id);
     },
-    // actors: { [id]: { root, chest() } }; dead: (id) => bool hides a fallen fighter's tag
-    update(actors, hidden = () => false) {
+    // getHealth(id) returns only public match HP from the current server snapshot.
+    update(actors, hidden = () => false, getHealth = () => null) {
       for (const [id, tag] of tags) {
         const actor = actors[id];
         tag.sprite.visible = !!actor && !hidden(id);
+        tag.healthSprite.visible = tag.sprite.visible;
         if (!tag.sprite.visible) continue;
         const head = actor.chest();
-        tag.sprite.position.set(head.x, head.y + 0.85, head.z);
+        tag.sprite.position.set(head.x, head.y + 1.14, head.z);
+        tag.healthSprite.position.set(head.x, head.y + 0.86, head.z);
+        const hp = getHealth(id);
+        if (hp) paintHealth(tag, hp.hp, hp.maxHp);
+        else tag.healthSprite.visible = false;
       }
     },
     dispose() {
-      for (const tag of tags.values()) { tag.texture.dispose(); tag.material.dispose(); tag.sprite.removeFromParent(); }
+      for (const tag of tags.values()) disposeTag(tag);
       tags.clear();
     },
   };

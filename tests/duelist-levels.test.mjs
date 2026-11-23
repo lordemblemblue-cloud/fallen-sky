@@ -89,13 +89,13 @@ test('joining mid-match inherits the current match tier but saved mastery gives 
 
 test('execution threshold is a match-only special boost; fake saved level is ignored', () => {
   const actor = { id: 'player', team: 'blue', hp: 100, position: { x: 0, z: 0 } };
-  const target = { id: 'enemy', team: 'red', hp: 30, maxHp: 100, position: { x: 0, z: 1.5, yaw: 0 } };
+  const target = { id: 'enemy', team: 'red', hp: 33, maxHp: 100, position: { x: 0, z: 1.5, yaw: 0 } };
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: SPECIAL_MAX, actor, target, level: 25 }).allowed, false);
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: SPECIAL_MAX, actor, target, matchBoost: 3 }).allowed, true);
 });
 
 test('authoritative reconciliation keeps mastery and boost in separate fields', () => {
-  assert.equal(PROTOCOL, 12);
+  assert.equal(PROTOCOL, 13);
   const world = createWorld();
   const f = addFighter(world, { id: 'player', classId: 'healer', level: 25, matchBoost: 2 });
   const own = JSON.parse(JSON.stringify(encodeOwn(f, bodyOf(world, 'player'), world.time)));

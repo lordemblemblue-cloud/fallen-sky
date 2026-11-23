@@ -36,8 +36,8 @@ test('a jump lifts the body and sets it down again, keeping the speed it had', (
   assert.equal(a.action.id, 'jump');
   assert.ok(a.vitals.stamina < stamina, 'a jump costs stamina');
   let top = 0;
-  for (let i = 0; i < 60; i++) { step(w, DT, { a: idle }); top = Math.max(top, bodyOf(w, 'a').y); }
-  assert.ok(top > 0.95 && top < 1.2, `rose ${top.toFixed(2)} m`);
+  for (let i = 0; i < 75; i++) { step(w, DT, { a: idle }); top = Math.max(top, bodyOf(w, 'a').y); } // about 1.07 s in the air
+  assert.ok(top > 2.4 && top < 2.8, `rose ${top.toFixed(2)} m (owner, 2026-11-22: 2.6 m a jump)`);
   assert.equal(bodyOf(w, 'a').y, 0, 'back on the ground');
   assert.ok(Math.hypot(bodyOf(w, 'a').x, bodyOf(w, 'a').z) < 0.05, 'from a standstill it goes straight up');
   // at a run: the jump carries on the way the fighter was going

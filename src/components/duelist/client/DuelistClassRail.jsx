@@ -14,7 +14,7 @@ import './duelistClassRail.css';
 const CLASS_ICONS = { warrior: Sword, duelist: Swords, assassin: VenetianMask, healer: Cross };
 const ABILITY_ICONS = { leapStrike: ArrowUpRight, grip: Hand, repulse: Radar, bladeThrow: RotateCw,
   pull: Magnet, quickstep: Zap, quickstepAura: Zap, counter: ShieldCheck, cloak: EyeOff, push: Waves,
-  empower: Flame, misdirect: Shuffle, mend: HeartPulse, levitate: Feather, breach: Focus };
+  empower: Flame, dominate: Shuffle,mend: HeartPulse, levitate: Feather, breach: Focus };
 const SPECIAL_ICONS = { rage: Flame, execution: Swords, shadowExecution: Skull, sanctuary: ShieldPlus };
 const WEAPONS = { sword: 'Crystal blade', dualBlades: 'Twin blades', staff: 'Double-bladed staff' };
 const LEGACY_NAMES = { push: 'Push', pull: 'Pull', grip: 'Grip', breach: 'Veil Breach' };

@@ -82,7 +82,8 @@ test('the three-column screen reserves 18 percent for classes, 57 for live model
   const game = file('client/DuelistGame.jsx');
   const hud = file('client/DuelistHud.jsx');
   assert.match(hud, /pickerOpen = false/);
-  assert.match(hud, /\{!pickerOpen && \(rail/);
+  assert.match(hud, /\{!pickerOpen && <>/);
+  assert.doesNotMatch(hud, /<DuelistClassRail/);
   assert.match(game, /pickerOpen=\{!!showPicker\}/);
 });
 

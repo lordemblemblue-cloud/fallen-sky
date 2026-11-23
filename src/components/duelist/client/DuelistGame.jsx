@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { MOVES, FLOW, CLASS_MODE, modeOf, fighterVeil, isStunned } from '../core/index.mjs';
-import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT } from '../sim/world.mjs';
+import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT, shelterOf } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
 import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
@@ -20,6 +20,8 @@ import { createArena, createSceneLighting } from './arena.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import MobileTouchControls from '../../mobile/MobileTouchControls.jsx';
+import { isMobileTouchDevice } from '../../mobile/mobileTouchModel.mjs';
 import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
 import { createVoices } from './voices.mjs';
 import { createWarp } from './warp.mjs';
@@ -39,6 +41,7 @@ import { createHudFeed } from './hudFeed.mjs';
 import { levelFrom } from './progress.mjs';
 import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
+import { classChoiceSecondsLeft, shouldShowMatchClassPicker, CLASS_CHOICE_PROMPT_SECONDS } from './matchClassEntry.mjs';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import ShopPanel from './ShopPanel.jsx';
 import StorySupplyPanel from './StorySupplyPanel.jsx';
@@ -127,6 +130,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
   const chestBone = model.getObjectByName('mixamorigSpine2') || model.getObjectByName('mixamorigSpine1');
   return {
     group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
+    voice: /huntress|female/i.test(seat.body || '') ? 'f' : 'm', // which recorded voice it roars and taunts in
     root: group,
     bladeNear(point) {
       let nearest = null;
@@ -159,7 +163,12 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
   const sourceRef = useRef(null);
-  const [picking, setPicking] = useState(false); // the class picker, opened by hand
+  const [picking, setPicking] = useState(false); // explicit reopen after initial confirmation
+  // Do not let the automatic match/round countdown dismiss class selection.
+  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: false });
+  const [pendingClassPick, setPendingClassPick] = useState(null);
+  const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
+  const initialChosenRef = useRef(false);
   const [shopOpen, setShopOpen] = useState(false);
   const controlsRef = useRef(null);
   const mountRef = useRef(null);
@@ -180,7 +189,6 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
   const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
-  useEffect(() => { controlsRef.current?.setPaused(shopOpen); }, [shopOpen]);
   useEffect(() => {
     if (!shopOpen) return undefined;
     const onEscape = event => { if (event.key === 'Escape') setShopOpen(false); };
@@ -193,13 +201,18 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     if (!mount) return undefined;
     let disposed = false;
     setStatus('loading');
+    initialChosenRef.current = false;
+    setEntryClass({ generation, confirmed: false });
+    setPendingClassPick(null);
+    setPicking(false);
+    setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
     setNet(null);
     const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(isMobileTouchDevice(window) ? 1.25 : 2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -325,9 +338,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       createActor(scene, s, color, cls).then((actor) => {
         if (disposed || gen !== generationSeen || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
         actors[s.id] = actor;
-        // in a mission only people with a name wear it
-        if (s.id !== me() && (s.kind !== 'enemy' || s.named)) {
-          tags.set(s.id, s.name, s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5);
+        // Every opponent needs readable health above their head, including
+        // unnamed story enemies. Friendly teammates retain ally-colored HP.
+        if (s.id !== me()) {
+          const mine = world.fighters.get(me());
+          const other = world.fighters.get(s.id);
+          const enemy = mine && other ? hostile(world, mine, other) : s.kind === 'enemy';
+          tags.set(s.id, s.name || (enemy ? 'Enemy' : 'Ally'),
+            s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5,
+            enemy);
         }
       }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
         .finally(() => { pending.delete(s.id); building = false; });
@@ -335,7 +354,31 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
 
     // someone who stood down (kneeling) is out of the fight: no lock-on, no panel
     const outOfFight = (f) => !!f.yielded || !!lastView?.yielded?.includes(f.id);
-    // the nearest standing hostile to the player (for lock-on and the right-hand panel); in rooms, one in sight
+    // Lock-on (owner, 2026-11-22): whoever is nearest where the camera looks, within 20 m and in sight: enemies, and for
+    // a Healer her allies too (Mend heals the ally she is locked on to; Levitate lifts the enemy she is locked on to).
+    // The angle off the aim counts most, the distance a little.
+    const aimedTarget = (range = 20) => {
+      const mine = world.fighters.get(me());
+      const at = bodyOf(world, me());
+      if (!mine || !at) return null;
+      const healer = mine.classId === 'healer';
+      const aim = controls.yaw();
+      let best = null;
+      for (const f of world.fighters.values()) {
+        if (f.id === me() || f.vitals.dead || outOfFight(f)) continue;
+        if (!healer && !hostile(world, mine, f)) continue;
+        const b = bodyOf(world, f.id);
+        const dx = b.x - at.x;
+        const dz = b.z - at.z;
+        const d = Math.hypot(dx, dz);
+        if (d > range || (level && !clearLine(level, at, b))) continue;
+        const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - aim), Math.cos(Math.atan2(dx, dz) - aim)));
+        const score = off * 3 + d / range;
+        if (!best || score < best.score) best = { id: f.id, score };
+      }
+      return best?.id || null;
+    };
+    // the nearest standing hostile to the player (for the right-hand panel); in rooms, one in sight
     const nearestHostile = (range = Infinity) => {
       const mine = world.fighters.get(me());
       const at = bodyOf(world, me());
@@ -394,7 +437,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // skip ahead without drawing or animating (a mission's later stages, in a test)
         skip: (seconds, stepSize = 1 / 30) => { drawing = false; try { for (let t = 0; t < seconds - 1e-9; t += stepSize) tick(stepSize); } finally { drawing = true; } },
         slow: (v = 1) => { timeScale = Math.max(0, v); },
-        lock: (on) => { lockId = on ? nearestHostile() : null; },
+        lock: (on, id = null) => { lockId = on ? (id || aimedTarget(Infinity) || nearestHostile()) : null; },
         view: (offset = 0) => { viewOffset = offset; },
         shot: (shot = null) => { fixedShot = shot; },
         manual: (on) => { manual = !!on; },
@@ -502,7 +545,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     let alarmOn = false;
     const tick = (dt) => {
       clock += dt;
-      if (controls.takeLockToggle()) lockId = lockId ? null : nearestHostile();
+      if (controls.takeLockToggle()) lockId = lockId ? null : aimedTarget();
       if (fightTimer > 0) { fightTimer -= dt; if (fightTimer <= 0) setFightFlash(false); }
       // a new mission or match on the same connection (a crew going on to the next mission): its rooms, and
       // nobody of the last one (ids repeat between missions)
@@ -549,9 +592,14 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           // movement keys independently strafe and backstep.
           const mine = world.fighters.get(mineId);
           const aimWhileAttacking = mine?.action?.move?.kind === 'attack';
-          return controls.read({ faceYaw, strafe: !!target, aimWhileAttacking });
+          // the lock goes with the input: targeted abilities take it (the rules check it qualifies)
+          return { ...controls.read({ faceYaw, strafe: !!target, aimWhileAttacking }), target: target ? lockId : null };
         };
-        const { effects, events } = source.step(dt, readInput);
+        // A local match cannot begin its simulation countdown before the player
+        // actually selects a class. Online authority is still owned by the server.
+        const { effects, events } = !online && !source.mission && !initialChosenRef.current
+          ? { effects: [], events: [] }
+          : source.step(dt, readInput);
         escort?.update(source.escortDistance?.() ?? 0);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
@@ -585,6 +633,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           if (fighter.effects) {
             setGhost(actor, !!effectOn(fighter, 'cloak', world.time));
             const lasting = Object.keys(fighter.effects).filter((kind) => kind !== 'cloak' && effectOn(fighter, kind, world.time));
+            // standing in an allied Sanctuary's healing mist: its light clings to the body (client/abilityFx.mjs)
+            if (world.zones?.length && !fighter.vitals.dead && shelterOf(world, fighter)) lasting.push('sanctuary');
             if (lasting.length && drawing) vfx.aura(actor, lasting, show);
           }
           if (level && actor.kind === 'enemy' && !inSight(actor, body, dt)) {
@@ -631,8 +681,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         // Contact points now use both posed actors from this frame.
         director.step(effects);
         const grips = [...world.fighters.values()].filter((f) => f.heldBy && actors[f.heldBy] && actors[f.id]).map((f) => ({ holder: actors[f.heldBy], held: actors[f.id] }));
-        vfx.update(show, { grips });
-        tags.update(actors, (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible);
+        // an Execution drawing its target in: the golden tether from the Duelist's hand
+        const seizes = [...world.fighters.values()].filter((f) => f.seizedBy && actors[f.seizedBy] && actors[f.id]).map((f) => ({ holder: actors[f.seizedBy], held: actors[f.id] }));
+        vfx.update(show, { grips, seizes });
+        tags.update(actors,
+          (id) => !!world.fighters.get(id)?.vitals.dead || !actors[id].group.visible,
+          (id) => {
+            const vitals = world.fighters.get(id)?.vitals;
+            return vitals ? { hp: vitals.hp, maxHp: vitals.max.hp } : null;
+          });
         if (ctf) {
           const z = MODES.ctf.arena - CTF.baseInset;
           const homes = { red: { x: 0, z: -z }, blue: { x: 0, z } };
@@ -784,23 +841,73 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   // the class picker: by hand, or on its own before the fight, between rounds and while down
   const current = hud?.classId || classId;
   const classAnswer = sourceRef.current?.classAnswer || null;
-  const between = match && (match.phase === 'countdown' || match.phase === 'roundOver');
-  const showPicker = !quest && !!match && match.phase !== 'over' && (picking || between || hud?.dead);
+  const initialConfirmed = entryClass.generation === generation && entryClass.confirmed;
+  const showPicker = shouldShowMatchClassPicker({
+    match, mission: !!quest, confirmed: initialConfirmed, manuallyOpened: picking,
+  });
+  // Inputs stay inactive while selecting a class. Explicitly reopening the
+  // picker pauses controls too, including for online matches.
+  useEffect(() => {
+    controlsRef.current?.setPaused(shopOpen || showPicker);
+  }, [shopOpen, showPicker]);
+  // Five seconds tells the player to decide, but zero NEVER makes a choice or closes the menu.
+  useEffect(() => {
+    if (!match || quest || initialConfirmed || match.phase === 'over') return undefined;
+    const openedAt = Date.now();
+    setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
+    const id = window.setInterval(() => setChoiceSeconds(classChoiceSecondsLeft(openedAt, Date.now())), 200);
+    return () => window.clearInterval(id);
+  }, [!!match, !!quest, initialConfirmed, generation, match?.phase === 'over']);
   // Countdown/respawn picker must release the mouse so its class and Select controls work.
   useEffect(() => {
     if (showPicker && document.pointerLockElement) document.exitPointerLock?.();
   }, [showPicker]);
   const pickClass = (id) => {
-    sourceRef.current?.chooseClass?.(id);
+    const source = sourceRef.current;
+    if (!source?.chooseClass || pendingClassPick) return;
+    source.chooseClass(id);
+    if (online) {
+      // Do not hide the picker or persist a class until the authoritative
+      // multiplayer server accepts it. Rejected requests remain editable.
+      setPendingClassPick({ generation, id });
+      return;
+    }
+    if (source.classAnswer?.ok !== true) return;
+    initialChosenRef.current = true;
+    setEntryClass({ generation, confirmed: true });
+    setPicking(false);
     onClassChange?.(id);
   };
+  useEffect(() => {
+    if (!online || !pendingClassPick || pendingClassPick.generation !== generation) return;
+    const answer = sourceRef.current?.classAnswer;
+    if (!answer) return; // still waiting for server response
+    if (answer.ok === true) {
+      initialChosenRef.current = true;
+      setEntryClass({ generation, confirmed: true });
+      setPicking(false);
+      onClassChange?.(pendingClassPick.id);
+    }
+    setPendingClassPick(null);
+  }, [online, pendingClassPick, generation, net, hud, onClassChange]);
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
+      <MobileTouchControls game="duelist"
+        specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
+          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
+        specialCharge={hud?.specialMeter}
+        lockActive={!!hud?.lockOn}
+        disabled={!hud || !!showPicker || shopOpen || waiting || hud.dead ||
+          match?.phase === 'over' || quest?.phase === 'complete' || quest?.phase === 'failed'}
+        onMove={move => controlsRef.current?.setTouchMove(move)}
+        onLook={(dx, dy) => controlsRef.current?.look(dx, dy)}
+        onActionDown={action => controlsRef.current?.touchActionDown(action)}
+        onActionUp={action => controlsRef.current?.touchActionUp(action)} />
       <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
         onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
-      {match && <Countdown view={match} fightFlash={fightFlash} />}
+      {match && initialConfirmed && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}
@@ -866,7 +973,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
-          live={match.phase === 'live' && !hud?.dead} onPick={pickClass} onClose={picking ? () => setPicking(false) : null} />
+          live={match.phase === 'live' && !hud?.dead} onPick={pickClass}
+          initialChoice={!initialConfirmed} secondsLeft={choiceSeconds}
+          submitting={!!pendingClassPick} error={classAnswer?.ok === false ? classAnswer.reason : null}
+          onClose={initialConfirmed && picking ? () => setPicking(false) : null} />
       )}
     </div>
   );

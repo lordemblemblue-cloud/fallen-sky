@@ -1,0 +1,201 @@
+/* Overlay is local to each 3D game viewport. CSS pixels (not device pixels or a
+   forced 16:9 canvas), with native iPhone safe-area and a landscape phone preset. */
+.mobile-game-controls {
+  position:absolute;inset:0;z-index:85;overflow:hidden;isolation:isolate;
+  pointer-events:none;touch-action:none;color:#eaf4ff;font-family:Inter,system-ui,sans-serif;
+  --mobile-button-size:clamp(52px,7vmin,64px);
+}
+ .mobile-look-zone {
+  position:absolute;left:36%;right:0;top:14%;bottom:9%;z-index:0;
+  pointer-events:auto;touch-action:none;
+}
+.mobile-control-toolbar {
+  position:absolute;left:50%;transform:translateX(-50%);
+  top:max(6px,env(safe-area-inset-top,0px));z-index:5;
+  display:flex;gap:6px;align-items:center;pointer-events:auto;
+}
+.mobile-control-editor {
+  min-height:42px;min-width:52px;padding:6px 10px;
+  color:#f1d4a1;background:rgba(6,16,29,.85);
+  border:1px solid rgba(236,200,143,.58);border-radius:5px;
+  font-size:10px;font-weight:750;letter-spacing:.05em;touch-action:manipulation;
+}
+.mobile-control-editor:focus-visible,.mobile-touch-action:focus-visible {outline:2px solid #fff;outline-offset:2px;}
+.mobile-control-instructions {
+  position:absolute;z-index:4;left:50%;top:max(9px,env(safe-area-inset-top,0px));
+  transform:translateX(-30%);font-size:11px;padding:8px;color:#fff;
+  text-shadow:0 2px 4px #000;max-width:50%;pointer-events:none;
+}
+.mobile-move-stick {
+  left:clamp(calc(60px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 60px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(60px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 60px - env(safe-area-inset-bottom,0px)));
+  position:absolute;z-index:3;width:clamp(106px,15vmin,142px);
+  height:clamp(106px,15vmin,142px);transform:translate(-50%,-50%);
+  background:radial-gradient(circle,rgba(51,102,146,.18),rgba(6,17,31,.68));
+  border:2px solid rgba(179,211,237,.58);border-radius:50%;
+  pointer-events:auto;touch-action:none;user-select:none;
+  box-shadow:0 0 0 5px rgba(7,16,29,.16),inset 0 0 21px rgba(12,36,62,.5);
+}
+.mobile-move-stick::before {
+  content:'MOVE';position:absolute;top:13px;left:0;right:0;
+  font-size:10px;font-weight:800;letter-spacing:.1em;text-align:center;
+  color:rgba(235,245,255,.8);pointer-events:none;
+}
+.mobile-move-stick-thumb {
+  position:absolute;left:50%;top:50%;width:48px;height:48px;
+  margin:-24px 0 0 -24px;border-radius:50%;
+  border:1px solid rgba(217,232,248,.8);
+  background:radial-gradient(circle at 30% 30%,rgba(131,186,235,.95),rgba(31,66,105,.87));
+  box-shadow:0 2px 14px rgba(0,5,13,.75);pointer-events:none;
+}
+.mobile-touch-action {
+  left:clamp(calc(30px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 30px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(30px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 30px - env(safe-area-inset-bottom,0px)));
+  position:absolute;z-index:3;transform:translate(-50%,-50%);
+  min-width:var(--mobile-button-size);min-height:var(--mobile-button-size);
+  width:var(--mobile-button-size);height:var(--mobile-button-size);
+  display:grid;place-items:center;padding:3px;text-align:center;
+  border:1px solid rgba(176,205,232,.66);border-radius:50%;
+  background:linear-gradient(150deg,rgba(31,57,82,.83),rgba(5,17,32,.89));
+  color:#f2f6ff;font-size:clamp(9px,1.35vmin,12px);font-weight:800;
+  letter-spacing:.025em;line-height:1;user-select:none;
+  pointer-events:auto;touch-action:none;
+  box-shadow:0 2px 9px rgba(0,0,0,.5),inset 0 1px rgba(237,246,255,.13);
+  -webkit-tap-highlight-color:transparent;
+}
+.mobile-touch-action[data-special='true'] {
+  width:calc(var(--mobile-button-size) + 7px);
+  height:calc(var(--mobile-button-size) + 7px);
+  background:linear-gradient(145deg,rgba(159,105,41,.91),rgba(42,25,19,.95));
+  border-color:rgba(255,208,135,.9);color:#fff5de;
+}
+.mobile-touch-action:active {
+  background:rgba(79,141,190,.95);transform:translate(-50%,-50%) scale(.94);
+}
+.mobile-game-controls[data-editing='true'] .mobile-look-zone {pointer-events:none;}
+.mobile-game-controls[data-editing='true'] .mobile-touch-action,
+.mobile-game-controls[data-editing='true'] .mobile-move-stick {
+  outline:1px dashed #f8d39d;outline-offset:3px;cursor:grab;
+}
+@media (orientation:portrait) {
+  .mobile-game-controls {--mobile-button-size:50px;}
+  .mobile-move-stick {width:112px;height:112px;}
+  .mobile-look-zone {left:39%;top:17%;bottom:12%;}
+  .mobile-control-instructions {top:55px;left:8px;max-width:75%;transform:none;}
+}
+@media (orientation:landscape) and (max-height:470px) {
+  .mobile-game-controls {--mobile-button-size:50px;}
+  .mobile-move-stick {width:105px;height:105px;}
+  .mobile-move-stick-thumb {width:42px;height:42px;margin:-21px 0 0 -21px;}
+  .mobile-control-editor {min-height:30px;font-size:9px;padding:3px 7px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .mobile-touch-action,.mobile-move-stick-thumb {transition:none;}
+}
+
+/* Landscape action game arrangement: large bottom-right attack with 1-4
+   orbiting its left/top side in a C arc. The percent positions remain editable
+   and are saved independently for each orientation and each game. */
+.mobile-game-controls .mobile-touch-action[data-action='light'],
+.mobile-game-controls .mobile-touch-action[data-action='attack'] {
+  min-width:76px;min-height:76px;width:clamp(76px,10vmin,90px);
+  height:clamp(76px,10vmin,90px);
+  left:clamp(calc(46px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 46px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(46px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 46px - env(safe-area-inset-bottom,0px)));
+  border:2px solid rgba(255,173,105,.94);
+  background:radial-gradient(circle at 35% 30%,rgba(184,75,49,.9),rgba(60,21,22,.93));
+  box-shadow:0 0 0 4px rgba(191,67,42,.18),0 3px 15px rgba(0,0,0,.67);
+  font-size:12px;
+}
+.mobile-game-controls .mobile-touch-action[data-action^='ability'] {
+  border:2px solid rgba(231,184,123,.85);
+  background:radial-gradient(circle at 35% 24%,rgba(42,76,104,.95),rgba(6,20,35,.96));
+  font-size:17px;
+}
+.mobile-game-controls .mobile-touch-action[data-special='true'] {
+  min-width:62px;min-height:62px;
+  width:clamp(62px,8vmin,74px);
+  height:clamp(62px,8vmin,74px);
+  left:clamp(calc(38px + env(safe-area-inset-left,0px)),var(--touch-x),calc(100% - 38px - env(safe-area-inset-right,0px)));
+  top:clamp(calc(38px + env(safe-area-inset-top,0px)),var(--touch-y),calc(100% - 38px - env(safe-area-inset-bottom,0px)));
+  border-width:2px;
+}
+.mobile-game-controls .mobile-touch-action[data-action='lock'] {
+  border:2px solid rgba(141,195,233,.8);
+  background:rgba(6,25,44,.93);
+  font-size:10px;
+}
+.mobile-game-controls .mobile-touch-action[data-active='true'] {
+  background:radial-gradient(circle at 40% 28%,rgba(74,174,222,.95),rgba(12,44,87,.94));
+  box-shadow:0 0 0 4px rgba(95,188,239,.23),0 1px 14px rgba(46,190,234,.5);
+}
+.mobile-game-controls .mobile-touch-action[data-unready='true'] {
+  filter:grayscale(.45);opacity:.57;
+}
+.mobile-game-controls .mobile-touch-action:disabled {cursor:not-allowed;}
+.mobile-action-label {display:block;max-width:100%;line-height:1.1;}
+.mobile-action-charge {display:block;color:#ffe7b0;font-size:10px;line-height:1.1;}
+.mobile-gamepad-connected {
+  border:1px solid rgba(142,217,180,.58);border-radius:4px;
+  padding:5px 7px;background:rgba(4,29,27,.85);color:#b4e9c6;
+  white-space:nowrap;font-size:9px;font-weight:750;letter-spacing:.04em;
+}
+.mobile-orientation-prompt {
+  position:absolute;inset:0;z-index:15;pointer-events:auto;touch-action:manipulation;
+  background:rgba(3,10,20,.92);display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:10px;text-align:center;padding:20px 14px;
+  color:#f3f7fb;
+}
+.mobile-orientation-symbol {font-size:38px;color:#edc583;font-weight:900;line-height:1;}
+.mobile-orientation-prompt strong {font-size:16px;letter-spacing:.1em;}
+.mobile-orientation-prompt p {margin:0;max-width:350px;font-size:12px;line-height:1.4;color:#bdd1e3;}
+.mobile-orientation-prompt small {font-size:11px;color:#d6c29c;max-width:340px;}
+.mobile-orientation-choices {display:flex;flex-wrap:wrap;justify-content:center;gap:10px;}
+.mobile-orientation-choices button {
+  border:1px solid rgba(237,199,132,.85);border-radius:5px;background:#16334c;color:#fff;
+  padding:10px 16px;min-height:48px;min-width:140px;font-size:12px;font-weight:800;
+}
+.mobile-orientation-choices button:first-child {background:#bd8753;color:#121a27;}
+@media (orientation:landscape) and (max-height:470px) {
+  .mobile-game-controls .mobile-touch-action[data-action='light'],
+  .mobile-game-controls .mobile-touch-action[data-action='attack'] {width:76px;height:76px;}
+  .mobile-game-controls .mobile-touch-action[data-special='true'] {width:62px;height:62px;}
+  .mobile-control-toolbar {top:max(2px,env(safe-area-inset-top,0px));}
+  .mobile-control-editor {min-height:36px;font-size:9px;padding:5px 8px;}
+}
+@media (orientation:portrait) {
+  .mobile-game-controls .mobile-touch-action[data-action='light'],
+  .mobile-game-controls .mobile-touch-action[data-action='attack'] {width:70px;height:70px;min-width:70px;min-height:70px;}
+  .mobile-look-zone {left:37%;top:14%;bottom:9%;}
+}
+
+/* Mandatory landscape while playing either current game on a touch device.
+   Cover all game controls and HUD even if the class picker temporarily disables
+   touch input; do not show a bypass to a squashed portrait combat viewport. */
+.mobile-game-controls[data-landscape-required='true'] {
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100dvh;
+  z-index:2147483000;
+  background:#030a14;
+  overflow:hidden;
+  touch-action:none;
+}
+.mobile-game-controls[data-landscape-required='true'] > :not(.mobile-orientation-prompt) {
+  visibility:hidden;
+  pointer-events:none;
+}
+.mobile-game-controls[data-landscape-required='true'] .mobile-orientation-prompt {
+  visibility:visible;
+  position:absolute;
+  inset:0;
+  z-index:20;
+  display:flex;
+  pointer-events:auto;
+  padding:
+    max(20px,env(safe-area-inset-top,0px))
+    max(18px,env(safe-area-inset-right,0px))
+    max(20px,env(safe-area-inset-bottom,0px))
+    max(18px,env(safe-area-inset-left,0px));
+}

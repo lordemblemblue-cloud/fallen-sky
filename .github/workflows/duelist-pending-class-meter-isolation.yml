@@ -1,0 +1,30 @@
+name: Duelist Pending-Class Meter Isolation
+
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-pending-class-meter-isolation.test.mjs'
+      - '.github/workflows/duelist-pending-class-meter-isolation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  class-meter-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Verify pending class meter isolation and existing class tests
+        run: node --test tests/duelist-pending-class-meter-isolation.test.mjs tests/duelist-match-classes.test.mjs tests/duelist-classes.test.mjs
+      - name: Lint new regression
+        run: npx eslint tests/duelist-pending-class-meter-isolation.test.mjs
+      - name: Build app
+        run: npm run build

@@ -52,13 +52,23 @@ test('Warrior: Leap Strike carries the body up and 8 m ahead and staggers those 
   assert.equal(body.y, 0, 'back on the ground');
 });
 
-test('Warrior: Repulse throws everyone around back; Blade Throw flies and cuts', () => {
+test('Warrior: Repulse hops, slams, throws everyone around up and draws them in; Blade Throw flies and cuts', () => {
   const world = createWorld({ arenaRadius: 40 });
   addFighter(world, { id: 'you', team: 'blue', classId: 'warrior', x: 0, z: 0, yaw: 0 });
-  addFighter(world, { id: 'a', team: 'red', classId: 'duelist', weapon: 'dualBlades', x: 0, z: 2 });
-  addFighter(world, { id: 'b', team: 'red', classId: 'duelist', weapon: 'dualBlades', x: 0, z: -2 });
-  run(world, 0.8, once('you', 'ability3'));
-  assert.ok(bodyOf(world, 'a').z > 3.5 && bodyOf(world, 'b').z < -3.5, 'both sides thrown back');
+  const a = addFighter(world, { id: 'a', team: 'red', classId: 'duelist', weapon: 'dualBlades', x: 0, z: 4.5 });
+  const b = addFighter(world, { id: 'b', team: 'red', classId: 'duelist', weapon: 'dualBlades', x: 0, z: -4.5 });
+  let hop = 0;
+  let lift = 0;
+  run(world, 1.6, (t) => {
+    hop = Math.max(hop, bodyOf(world, 'you').y);
+    lift = Math.max(lift, bodyOf(world, 'a').y, bodyOf(world, 'b').y);
+    return t < DT ? { you: { presses: ['ability3'] } } : {};
+  });
+  assert.ok(hop > 0.8, `the Warrior hops (${hop.toFixed(2)} m)`);
+  assert.ok(lift > 0.8, `they are thrown up (${lift.toFixed(2)} m)`);
+  assert.ok(bodyOf(world, 'a').z < 3.2 && bodyOf(world, 'b').z > -3.2, `both sides drawn in (${bodyOf(world, 'a').z.toFixed(2)}, ${bodyOf(world, 'b').z.toFixed(2)})`);
+  assert.ok(a.downUntil === -Infinity && b.downUntil === -Infinity, 'they land on their feet');
+  assert.ok(bodyOf(world, 'a').y === 0 && bodyOf(world, 'b').y === 0, 'back on the ground');
   const t = duel('warrior', { distance: 10 });
   const effects = run(t.world, 1, once('you', 'ability4'));
   assert.ok(effects.some((e) => e.type === 'projectile' && e.move === 'bladeThrow'));
@@ -83,7 +93,7 @@ test('Duelist: Quickstep speeds the feet; Guard and Counter answers a strike wit
   assert.ok(effects.some((e) => e.type === 'impact' && e.move === 'counterStrike' && e.defender === 'foe'), 'the riposte lands');
 });
 
-test('Assassin: Veil Cloak hides until a strike; Empowered Strikes hit harder without draining Will; Misdirect marks one enemy', () => {
+test('Assassin: Veil Cloak hides until a strike; Empowered Strikes hit harder without draining Will; Mind Dominance holds one enemy', () => {
   const { world, you } = duel('assassin', { distance: 2 });
   run(world, 0.2, once('you', 'ability1'));
   assert.ok(effectOn(you, 'cloak', world.time), 'cloaked');
@@ -102,23 +112,28 @@ test('Assassin: Veil Cloak hides until a strike; Empowered Strikes hit harder wi
   assert.equal(effectOn(power.you, 'empower', power.world.time).charges, 2, 'one charge spent');
   const m = duel('assassin', { distance: 6 });
   run(m.world, 0.3, once('you', 'ability4'));
-  assert.equal(effectOn(m.foe, 'misdirected', m.world.time)?.by, 'you');
+  assert.equal(effectOn(m.foe, 'dominated', m.world.time)?.by, 'you');
+  assert.ok(m.foe.stunnedUntil > m.world.time + 1.5, 'it stands helpless');
 });
 
-test('Healer: Mend heals the ally in front 30 HP over 3 s; Levitate floats; allies share Quickstep', () => {
+test('Healer: Mend heals the ally she is locked on to 30 HP over 3 s; Levitate lifts the enemy; allies share Quickstep', () => {
   const world = createWorld({ arenaRadius: 40 });
   const healer = addFighter(world, { id: 'you', team: 'blue', classId: 'healer', x: 0, z: 0, yaw: 0 });
   const ally = addFighter(world, { id: 'ally', team: 'blue', classId: 'warrior', x: 0, z: 4 });
   ally.vitals.hp = 40;
-  const effects = run(world, 3.4, once('you', 'ability1'));
+  const effects = run(world, 3.4, once('you', 'ability1', { target: 'ally' }));
   assert.ok(effects.some((e) => e.type === 'heal' && e.target === 'ally' && e.amount === 30));
   assert.ok(Math.abs(ally.vitals.hp - 70) < 0.6, `healed to ${ally.vitals.hp.toFixed(1)}`);
   run(world, 0.2, once('you', 'ability2'));
   assert.ok(effectOn(ally, 'quick', world.time) && effectOn(healer, 'quick', world.time), 'Quickstep shared');
-  run(world, 1, once('you', 'ability3'));
-  assert.ok(bodyOf(world, 'you').y > 1.5, 'floating');
+  const foe = addFighter(world, { id: 'foe', team: 'red', classId: 'warrior', x: 0, z: -5, yaw: 0 });
+  bodyOf(world, 'you').yaw = Math.PI;
+  run(world, 1, once('you', 'ability3', { target: 'foe' }));
+  assert.ok(bodyOf(world, 'foe').y > 1.5, 'the enemy floats');
+  assert.equal(bodyOf(world, 'you').y, 0, 'the Healer stays on her feet');
+  assert.ok(foe.stunnedUntil > world.time, 'helpless while it floats');
   run(world, 2);
-  assert.equal(bodyOf(world, 'you').y, 0, 'down again');
+  assert.equal(bodyOf(world, 'foe').y, 0, 'down again');
 });
 
 test('specials: the meter must be full (a third for the Duelist), and each does its work', () => {
@@ -132,13 +147,13 @@ test('specials: the meter must be full (a third for the Duelist), and each does 
   assert.ok(effects.some((e) => e.type === 'special' && e.special === 'rage' && e.cost === SPECIAL_MAX));
   assert.equal(r.you.meter, 0);
   assert.ok(effectOn(r.you, 'rage', r.world.time));
-  // Execution: only a target at 25% HP or less, for a third of the meter
+  // Execution: only a target at 30% HP or less, for a third of the meter (seized, drawn in, run through)
   const x = duel('duelist', { distance: 1.6 });
   x.you.meter = SPECIAL_MAX;
   effects = run(x.world, 0.1, once('you', 'special'));
   assert.ok(effects.some((e) => e.type === 'specialRefused' && e.reason === 'target-too-healthy'));
   x.foe.vitals.hp = 20;
-  effects = run(x.world, 0.5, once('you', 'special'));
+  effects = run(x.world, 1, once('you', 'special'));
   assert.ok(effects.some((e) => e.type === 'execution' && e.defender === 'foe'));
   assert.ok(x.foe.vitals.dead);
   assert.ok(Math.abs(x.you.meter - SPECIAL_MAX * 2 / 3) < 1e-6);
