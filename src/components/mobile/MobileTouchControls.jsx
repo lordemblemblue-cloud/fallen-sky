@@ -262,7 +262,7 @@ export default function MobileTouchControls({
         aria-label="Landscape required for mobile gameplay">
         <div className="mobile-orientation-symbol" aria-hidden="true">↻</div>
         <strong>TURN YOUR PHONE SIDEWAYS</strong>
-        <p>Rotate your phone 90° to play. Both games require a sideways screen during mobile gameplay.</p>
+        <p>Rotate your phone 90° to play. Games need a sideways screen on mobile.</p>
         <div className="mobile-orientation-choices">
           <button type="button" onClick={askLandscape}>TRY LANDSCAPE</button>
         </div>
