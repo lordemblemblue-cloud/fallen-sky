@@ -31,8 +31,8 @@ const ROUTES_WITHOUT_FANTASY = { '/': {}, '/gameview': {}, '/duelist': {}, '/due
 const ROUTES_WITH_FANTASY = { ...ROUTES_WITHOUT_FANTASY, '/fantasy-battle': {} };
 
 test('hub catalog lists the three games in menu order, each a single data entry', () => {
-  assert.deepEqual(GAMES_HUB_TILES.map((tile) => tile.id), ['fallen-sky', 'duelist', 'fantasy-battle']);
-  assert.deepEqual(GAMES_HUB_TILES.map((tile) => tile.to), ['/gameview', '/duelist', '/fantasy-battle']);
+  assert.deepEqual(GAMES_HUB_TILES.map((tile) => tile.id), ['duelist', 'fallen-sky', 'fantasy-battle']);
+  assert.deepEqual(GAMES_HUB_TILES.map((tile) => tile.to), ['/duelist', '/gameview', '/fantasy-battle']);
   assert.equal(new Set(GAMES_HUB_TILES.map((tile) => tile.id)).size, GAMES_HUB_TILES.length, 'ids are unique');
   for (const tile of GAMES_HUB_TILES) {
     assert.ok(Object.isFrozen(tile), `${tile.id} is frozen data`);
@@ -44,7 +44,7 @@ test('hub catalog lists the three games in menu order, each a single data entry'
     assert.ok(tileBackdrop(tile), `${tile.id} has a background`);
   }
   assert.equal(GAMES_HUB_TILES[2].title, 'Fantasy Battle');
-  assert.equal(GAMES_HUB_FOCUS_STORAGE_KEY, 'adamXEve.gamesHub.focusedGame');
+  assert.equal(GAMES_HUB_FOCUS_STORAGE_KEY, 'adamXEve.gamesHub.focusedGame.v2');
 });
 
 test('Fantasy Battle art ships as small WebP files in public/hub', () => {
@@ -62,7 +62,7 @@ test('Fantasy Battle art ships as small WebP files in public/hub', () => {
 });
 
 test('Fantasy Battle stays coming soon even when its route is registered', () => {
-  const [fallen, duelist, fantasy] = GAMES_HUB_TILES;
+  const [duelist, fallen, fantasy] = GAMES_HUB_TILES;
   assert.equal(isTilePlayable(fallen, ROUTES_WITHOUT_FANTASY), true);
   assert.equal(isTilePlayable(duelist, ROUTES_WITHOUT_FANTASY), true);
   assert.equal(isTilePlayable(fantasy, ROUTES_WITHOUT_FANTASY), false, 'coming soon until the route exists');
@@ -84,7 +84,7 @@ test('direct Fantasy Battle URL renders Coming Soon instead of the unfinished ga
 });
 
 test('choosing: a playable game launches its route, the coming-soon tile goes nowhere', () => {
-  const [fallen, duelist, fantasy] = GAMES_HUB_TILES;
+  const [duelist, fallen, fantasy] = GAMES_HUB_TILES;
   assert.deepEqual(resolveHubChoice(fallen, true), { launch: '/gameview', blocked: null });
   assert.deepEqual(resolveHubChoice(duelist, true), { launch: '/duelist', blocked: null });
   assert.deepEqual(resolveHubChoice(fantasy, false), { launch: null, blocked: 'coming-soon' });
@@ -119,7 +119,8 @@ test('left and right move one game and stop clearly at both ends', () => {
 
 test('the last focused game is remembered, and storage failures are harmless', () => {
   assert.equal(focusIndexForId(GAMES_HUB_TILES, 'fantasy-battle'), 2);
-  assert.equal(focusIndexForId(GAMES_HUB_TILES, 'duelist'), 1);
+  assert.equal(focusIndexForId(GAMES_HUB_TILES, 'duelist'), 0);
+  assert.equal(focusIndexForId(GAMES_HUB_TILES, 'fallen-sky'), 1);
   assert.equal(focusIndexForId(GAMES_HUB_TILES, 'removed-game'), 0, 'unknown id falls back to the first game');
   assert.equal(focusIndexForId(GAMES_HUB_TILES, null), 0);
 
