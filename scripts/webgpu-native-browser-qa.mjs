@@ -44,6 +44,27 @@ export function buildBrowserExpression(sceneId) {
     + JSON.stringify(SCENE_KEYS[sceneId]) + ',' + JSON.stringify(sceneId) + ')';
 }
 
+/** CDP can remain connected while the tab navigates or reloads. Capture a
+ * document identity alongside renderer evidence so two unrelated documents
+ * cannot be mistaken for one continuously rendering game session. */
+export function buildDocumentIdentityExpression() {
+  return '({url: location.href, startedAt: performance.timeOrigin})';
+}
+
+export function verifySameBrowserDocument(before, after, targetUrl) {
+  const fail = (reason) => ({ ok: false, reason });
+  if (!before || !after || typeof targetUrl !== 'string' ||
+    typeof before.url !== 'string' || typeof after.url !== 'string' ||
+    !Number.isFinite(before.startedAt) || !Number.isFinite(after.startedAt)) {
+    return fail('invalid-browser-document-identity');
+  }
+  if (before.url !== targetUrl) return fail('initial-browser-tab-url-changed');
+  if (after.url !== before.url || after.startedAt !== before.startedAt) {
+    return fail('browser-tab-navigated-or-reloaded');
+  }
+  return { ok: true, reason: 'same-browser-document' };
+}
+
 export function classifySamplePair(first, last) {
   const fail = (reason) => ({ ok: false, reason });
   if (!first || !last || first.sceneId !== last.sceneId ||
@@ -179,11 +200,22 @@ export async function main(argv = process.argv.slice(2)) {
       if (response.exceptionDetails) throw new Error('Browser evaluation failed');
       return response.result?.value;
     };
+    const identity = async () => {
+      const response = await client.send('Runtime.evaluate', {
+        expression: buildDocumentIdentityExpression(), returnByValue: true,
+      });
+      if (response.exceptionDetails) throw new Error('Browser document identity evaluation failed');
+      return response.result?.value;
+    };
+    const beforeDocument = await identity();
     const first = await sample();
     await new Promise((done) => setTimeout(done, opts.wait));
     const last = await sample();
+    const afterDocument = await identity();
+    const documentCheck = verifySameBrowserDocument(beforeDocument, afterDocument, target.url);
     report = { checkedAt: new Date().toISOString(), sceneId: opts.scene,
-      tabUrl: target.url, ...classifySamplePair(first, last), first, last,
+      tabUrl: target.url, ...(documentCheck.ok ? classifySamplePair(first, last) : documentCheck),
+      first, last, documentCheck,
       screenshot: null, screenshotNote: 'Draws are not proof of visible pixels; inspect a screenshot.' };
     if (opts.screenshot) {
       await client.send('Page.enable');
