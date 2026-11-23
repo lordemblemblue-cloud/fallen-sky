@@ -6,6 +6,7 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/clanMembershipNotifier/**'
+      - 'base44/functions/partyLifecycle/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tests/security-base44-access.test.mjs'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/clanMembershipNotifier/**'
+      - 'base44/functions/partyLifecycle/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tests/security-base44-access.test.mjs'
