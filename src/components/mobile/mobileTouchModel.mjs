@@ -61,8 +61,8 @@ const DUELIST_LANDSCAPE = Object.freeze({
   joystick:[13,77],
   roll:[9,53],dash:[17,49],jump:[25,60],guard:[26,79],
   light:[88,79],
-  ability1:[75,64],ability2:[80,54],ability3:[87,47],ability4:[93,54],
-  special:[74,83],lock:[86,17],more:[93,17],
+  ability1:[73,64],ability2:[79,52],ability3:[86,43],ability4:[93,54],
+  special:[67,83],lock:[86,17],more:[93,17],
 });
 const PORTRAIT = Object.freeze({
   joystick:[20,80],
