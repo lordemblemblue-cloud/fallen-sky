@@ -267,14 +267,16 @@ async function saveAvatarAppearance(base44, userId, appearance = {}) {
     }
 
     if (avatars.length === 0) {
-        return base44.entities.Avatar.create({
+        // The validated, server-only appearance flow creates the initial
+        // level/XP. Direct client writes to those progression fields are
+        // blocked by Avatar field-level security rules.
+        return base44.asServiceRole.entities.Avatar.create({
             user_id: userId,
-            name: appearance.name || 'Player Avatar',
+            name: typeof appearance.name === 'string' ? appearance.name.trim().slice(0, 40) : 'Player Avatar',
             gender,
+            ...normalized,
             level: 1,
             experience: 0,
-            model_url: gender === 'female' ? FEMALE_ARTEMIS_MODEL : (normalized.model_url || GLOBAL_AVATAR_MODEL),
-            ...normalized,
         });
     }
     return base44.entities.Avatar.update(avatars[0].id, normalized);
@@ -328,7 +330,9 @@ async function equipItemToAvatar(base44, userId, itemId, slot) {
     const filteredEquipment = currentEquipment.filter(id => id !== itemId);
     filteredEquipment.push(itemId);
 
-    const updatedAvatar = await base44.entities.Avatar.update(avatar.id, {
+    // Equipment is a privileged progression field: only the authenticated
+    // server path may modify it after resolving the player's avatar.
+    const updatedAvatar = await base44.asServiceRole.entities.Avatar.update(avatar.id, {
         equipped_items: filteredEquipment
     });
 
