@@ -39,6 +39,7 @@ export default function MobileTouchControls({
   const [supported, setSupported] = useState(() => typeof window !== 'undefined' && isMobileTouchDevice(window));
   const [size, setSize] = useState(() => typeof window !== 'undefined' ? viewport() : { width: 390, height: 844 });
   const landscape = touchLandscape(size.width, size.height);
+  const portraitBlocked = supported && !landscape;
   const layoutKey = touchLayoutStorageKey(game, landscape);
   const [layout, setLayout] = useState(() => ({ key: layoutKey, positions: typeof window !== 'undefined'
     ? readPositions(game, landscape) : defaultMobileTouchLayout(game, landscape) }));
@@ -46,14 +47,13 @@ export default function MobileTouchControls({
   const [expanded, setExpanded] = useState(false);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const [dragged, setDragged] = useState(null);
-  const [portraitDismissed, setPortraitDismissed] = useState(false);
   const [rotateFailed, setRotateFailed] = useState(false);
   const [controllerConnected, setControllerConnected] = useState(false);
 
   // Touch and gamepad may hold the same button simultaneously. Release a
   // gameplay command only once ALL input sources have released that button.
   function sourceAction(id, source, down) {
-    if (down && !callbacks.current.canUse(id)) return;
+    if (down && (disabled || portraitBlocked || !callbacks.current.canUse(id))) return;
     const current = actionSources.current.get(id) || new Set();
     const wasDown = current.size > 0;
     if (down) current.add(source);
@@ -89,10 +89,7 @@ export default function MobileTouchControls({
     setExpanded(false);
   }, [game, landscape, layoutKey]);
   useEffect(() => {
-    if (landscape) {
-      setPortraitDismissed(false);
-      setRotateFailed(false);
-    }
+    if (landscape) setRotateFailed(false);
   }, [landscape]);
   useEffect(() => {
     if (!supported || landscape) return;
@@ -116,9 +113,9 @@ export default function MobileTouchControls({
     let frame = 0;
     let lastConnected = false;
     const poll = () => {
-      const connected = !disabled && !editing &&
+      const connected = !disabled && !editing && !portraitBlocked &&
         gamepad.update(window.navigator?.getGamepads?.());
-      if (!connected && (disabled || editing)) gamepad.release();
+      if (!connected && (disabled || editing || portraitBlocked)) gamepad.release();
       if (connected !== lastConnected) {
         lastConnected = connected;
         setControllerConnected(connected);
@@ -131,7 +128,7 @@ export default function MobileTouchControls({
       gamepad.release();
       setControllerConnected(false);
     };
-  }, [game, disabled, editing]);
+  }, [game, disabled, editing, portraitBlocked]);
   useEffect(() => {
     if (layout.key !== layoutKey) return;
     try { localStorage.setItem(layoutKey, JSON.stringify(layout.positions)); }
@@ -147,13 +144,13 @@ export default function MobileTouchControls({
     setStick({ x: 0, y: 0 });
   };
   useEffect(() => {
-    if (disabled || !supported || editing) {
+    if (disabled || !supported || editing || portraitBlocked) {
       for (const action of held.current) sourceAction(action, 'touch', false);
       held.current.clear();
       callbacks.current.onMove?.({ x: 0, y: 0 });
       pointer.current = null;
     }
-  }, [disabled, supported, editing]);
+  }, [disabled, supported, editing, portraitBlocked]);
   useEffect(() => () => {
     for (const [id] of actionSources.current) callbacks.current.onActionUp?.(id);
     actionSources.current.clear();
@@ -161,7 +158,9 @@ export default function MobileTouchControls({
     callbacks.current.onMove?.({ x: 0, y: 0 });
   }, []);
 
-  if (!supported || disabled) return null;
+  // Even when a match/class-picker disables actions, keep the required
+  // landscape screen above the game: players must rotate before gameplay.
+  if (!supported || (disabled && !portraitBlocked)) return null;
 
   const locate = id => layout.positions[id] || defaultMobileTouchLayout(game, landscape)[id];
   const moveEdited = (id, event) => {
@@ -194,7 +193,7 @@ export default function MobileTouchControls({
   };
   const joystickStart = event => {
     if (editing) return startDrag('joystick', event);
-    if (disabled) return;
+    if (disabled || portraitBlocked) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -211,7 +210,7 @@ export default function MobileTouchControls({
   };
   const actStart = (id, event) => {
     if (editing) return startDrag(id, event);
-    if (disabled) return;
+    if (disabled || portraitBlocked) return;
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -227,7 +226,7 @@ export default function MobileTouchControls({
     event.stopPropagation();
   };
   const lookDown = event => {
-    if (disabled || editing || lookPointer.current) return;
+    if (disabled || portraitBlocked || editing || lookPointer.current) return;
     if (event.pointerType === 'mouse') return;
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
@@ -251,22 +250,23 @@ export default function MobileTouchControls({
   };
   const showRotate = showLandscapeSuggestion({
     touch: supported, width: size.width, height: size.height,
-  }) && !portraitDismissed;
+  });
   const items = MOBILE_TOUCH_ACTIONS[game] || MOBILE_TOUCH_ACTIONS.duelist;
   const secondary = MOBILE_TOUCH_SECONDARY[game] || MOBILE_TOUCH_SECONDARY.duelist;
   return (
     <div ref={root} className="mobile-game-controls" data-testid="mobile-game-controls"
       data-game={game} data-orientation={landscape ? 'landscape' : 'portrait'}
-      data-editing={editing} aria-label="Mobile game touch controls">
-      {showRotate && <div className="mobile-orientation-prompt" role="dialog" aria-label="Landscape mobile gameplay">
+      data-editing={editing} data-landscape-required={showRotate ? 'true' : undefined}
+      aria-label="Mobile game touch controls">
+      {showRotate && <div className="mobile-orientation-prompt" role="dialog" aria-modal="true"
+        aria-label="Landscape required for mobile gameplay">
         <div className="mobile-orientation-symbol" aria-hidden="true">↻</div>
         <strong>TURN YOUR PHONE SIDEWAYS</strong>
-        <p>Landscape gives you more room to move, aim and use your abilities.</p>
+        <p>Rotate your phone 90° to play. Both games require a sideways screen during mobile gameplay.</p>
         <div className="mobile-orientation-choices">
           <button type="button" onClick={askLandscape}>TRY LANDSCAPE</button>
-          <button type="button" onClick={() => setPortraitDismissed(true)}>CONTINUE PORTRAIT</button>
         </div>
-        {rotateFailed && <small>Your browser cannot rotate the screen automatically. Turn the phone sideways to switch layouts.</small>}
+        <small>{rotateFailed ? 'Your browser cannot rotate automatically. Turn the phone sideways and disable Portrait Orientation Lock if needed.' : 'If the game does not rotate, turn off your phone’s portrait orientation lock.'}</small>
       </div>}
       <div className="mobile-look-zone" data-testid="mobile-look-zone" aria-label="Swipe to look around"
         onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp}/>
