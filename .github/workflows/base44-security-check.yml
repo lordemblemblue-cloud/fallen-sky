@@ -1,12 +1,12 @@
-name: Base44 security access rules and high-risk dependency audit
+name: Base44 security access and dependency gate
 
 on:
   push:
     branches: [main]
     paths:
       - 'base44/entities/**'
-      - 'base44/functions/clanMembershipNotifier/**'
-      - 'base44/functions/partyLifecycle/**'
+      - 'base44/functions/**'
+      - 'src/components/game3d/clan/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tests/security-base44-access.test.mjs'
@@ -14,8 +14,8 @@ on:
   pull_request:
     paths:
       - 'base44/entities/**'
-      - 'base44/functions/clanMembershipNotifier/**'
-      - 'base44/functions/partyLifecycle/**'
+      - 'base44/functions/**'
+      - 'src/components/game3d/clan/**'
       - 'package.json'
       - 'package-lock.json'
       - 'tests/security-base44-access.test.mjs'
@@ -28,14 +28,18 @@ permissions:
 jobs:
   security:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
-      - name: Verify entity RLS and forged event safeguards
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-fund
+      - name: Verify entity RLS and privileged endpoints
         run: node --test tests/security-base44-access.test.mjs
-      - name: Fail if production dependencies have known high or critical vulnerabilities
-        run: npm audit --omit=dev --audit-level=high
+      - name: Fail if any known production dependency vulnerability exists
+        run: npm audit --omit=dev --audit-level=low
+      - name: Verify application builds with secure dependencies
+        run: npm run build
