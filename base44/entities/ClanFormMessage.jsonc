@@ -47,7 +47,11 @@
     "content"
   ],
   "rls": {
-    "create": null,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "read": null,
     "update": {
       "$or": [
