@@ -37,3 +37,34 @@ test('checks every report and fails closed when later evidence is malformed', ()
     { ok: false, reason: 'invalid-check-time', reportIndex: 1 },
   );
 });
+
+test('CLI fails closed on stale, malformed, and missing report files', async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const script = fileURLToPath(new URL('../scripts/webgpu-evidence-freshness.mjs', import.meta.url));
+  const dir = await mkdtemp(join(tmpdir(), 'webgpu-freshness-'));
+  try {
+    const valid = join(dir, 'valid.json');
+    const stale = join(dir, 'stale.json');
+    const malformed = join(dir, 'malformed.json');
+    await writeFile(valid, JSON.stringify(report(Date.now() - 1000)));
+    await writeFile(stale, JSON.stringify(report(Date.now() - DEFAULT_MAX_AGE_MS - 60000)));
+    await writeFile(malformed, '{broken json');
+    const run = (...paths) => spawnSync(process.execPath, [script, ...paths], { encoding: 'utf8' });
+    const good = run(valid);
+    assert.equal(good.status, 0, good.stderr);
+    assert.equal(JSON.parse(good.stdout).ok, true);
+    const bad = run(valid, stale);
+    assert.equal(bad.status, 1);
+    assert.equal(JSON.parse(bad.stdout).reason, 'stale-check-time');
+    assert.equal(JSON.parse(bad.stdout).reportIndex, 1);
+    assert.equal(run(malformed).status, 1);
+    assert.equal(run(join(dir, 'missing.json')).status, 1);
+    assert.equal(run().status, 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
