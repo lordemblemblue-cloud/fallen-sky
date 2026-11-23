@@ -163,3 +163,17 @@ test('Duelist touch stick, guard, powers and camera work together without pointe
     globalThis.document = previousDocument;
   }
 });
+
+test('mobile touch hit targets respect iPhone safe areas without forcing 16:9', () => {
+  const css = readFileSync(new URL('../src/components/mobile/mobileTouchControls.css', import.meta.url), 'utf8');
+  const jsx = readFileSync(new URL('../src/components/mobile/MobileTouchControls.jsx', import.meta.url), 'utf8');
+  assert.match(css, /env\(safe-area-inset-left/);
+  assert.match(css, /env\(safe-area-inset-right/);
+  assert.match(css, /env\(safe-area-inset-bottom/);
+  assert.match(css, /min-width:var\(--mobile-button-size\)/);
+  assert.match(css, /--mobile-button-size:44px/);
+  assert.match(jsx, /'--touch-x'/);
+  assert.match(jsx, /'--touch-y'/);
+  assert.match(jsx, /MOVE CONTROLS/);
+  assert.match(jsx, /RESET/);
+});
