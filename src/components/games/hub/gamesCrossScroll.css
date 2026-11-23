@@ -215,6 +215,15 @@
   pointer-events: none;
 }
 
+/* Unreleased game stays visible in the gallery but reads as unavailable. */
+.xs-tile.is-soon img {
+  filter: brightness(0.52) saturate(0.55);
+}
+
+.xs-tile.is-soon {
+  cursor: not-allowed;
+}
+
 .xs-tile-soon {
   position: absolute;
   top: 7%;
