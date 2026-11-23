@@ -186,3 +186,18 @@ test('queued respawn selection survives invalid requests and cannot change a liv
     });
   }
 });
+
+test('each class owns four distinct original ability animation identifiers', () => {
+  const allAnimations = new Set();
+  for (const classId of CLASS_IDS) {
+    const abilities = CLASSES[classId].abilities;
+    const animations = abilities.map(ability => ability.animation);
+    assert.equal(new Set(animations).size, abilities.length, classId + ' must not reuse an animation slot');
+    for (const animation of animations) {
+      assert.match(animation, /^class\\.power\\./);
+      assert.equal(allAnimations.has(animation), false, animation + ' must not activate another class animation');
+      allAnimations.add(animation);
+    }
+  }
+  assert.equal(allAnimations.size, CLASS_IDS.length * 4);
+});
