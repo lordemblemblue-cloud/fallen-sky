@@ -4,6 +4,7 @@ import { readFileSync, statSync } from 'node:fs';
 import { URL } from 'node:url';
 import {
   GAMES_HUB_FOCUS_STORAGE_KEY,
+  FANTASY_BATTLE_RELEASED,
   GAMES_HUB_TILES,
   isTilePlayable,
   tileBackdrop,
@@ -25,7 +26,7 @@ import {
 
 const source = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
-// The router's table as main has it today: no Fantasy Battle route yet.
+// Verify availability even if the unfinished Fantasy Battle route is registered.
 const ROUTES_WITHOUT_FANTASY = { '/': {}, '/gameview': {}, '/duelist': {}, '/duelist-next': {}, '/duelist-classic': {} };
 const ROUTES_WITH_FANTASY = { ...ROUTES_WITHOUT_FANTASY, '/fantasy-battle': {} };
 
@@ -60,14 +61,17 @@ test('Fantasy Battle art ships as small WebP files in public/hub', () => {
   assert.equal(tileBackdrop(GAMES_HUB_TILES[0]), GAMES_HUB_TILES[0].art, 'without a backdrop the tile art is the background');
 });
 
-test('a tile plays only once its route is registered: Fantasy Battle goes live by itself', () => {
+test('Fantasy Battle stays coming soon even when its route is registered', () => {
   const [fallen, duelist, fantasy] = GAMES_HUB_TILES;
   assert.equal(isTilePlayable(fallen, ROUTES_WITHOUT_FANTASY), true);
   assert.equal(isTilePlayable(duelist, ROUTES_WITHOUT_FANTASY), true);
   assert.equal(isTilePlayable(fantasy, ROUTES_WITHOUT_FANTASY), false, 'coming soon until the route exists');
-  assert.equal(isTilePlayable(fantasy, ROUTES_WITH_FANTASY), true, 'live as soon as the route file lands');
-  assert.equal(isTilePlayable({ ...fantasy, to: '/fantasy-battle/' }, ROUTES_WITH_FANTASY), true, 'trailing slash');
-  assert.equal(isTilePlayable(fantasy, undefined), true, 'no router table: trust the catalog');
+  assert.equal(FANTASY_BATTLE_RELEASED, false, 'third game stays disabled pending review');
+  assert.equal(fantasy.releaseStatus, 'coming-soon');
+  assert.equal(isTilePlayable(fantasy, ROUTES_WITH_FANTASY), false, 'registered routes do not auto-release games');
+  assert.equal(isTilePlayable({ ...fantasy, to: '/fantasy-battle/' }, ROUTES_WITH_FANTASY), false, 'trailing slash cannot bypass');
+  assert.equal(isTilePlayable(fantasy, undefined), false, 'missing router table cannot bypass explicit release gate');
+  assert.equal(isTilePlayable({ ...fantasy, releaseStatus: 'ready' }, ROUTES_WITH_FANTASY), true, 'ready flag and route both required');
   assert.equal(isTilePlayable(null, ROUTES_WITH_FANTASY), false);
   assert.equal(isTilePlayable({ id: 'x', to: 'gameview' }, ROUTES_WITH_FANTASY), false, 'relative routes are refused');
 });
@@ -85,7 +89,7 @@ test('choosing: a playable game launches its route, the coming-soon tile goes no
   const tile = GAMES_HUB_TILES[index];
   assert.equal(tile.id, 'fantasy-battle');
   assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITHOUT_FANTASY)).launch, null);
-  assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITH_FANTASY)).launch, '/fantasy-battle');
+  assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITH_FANTASY)).launch, null);
 });
 
 test('left and right move one game and stop clearly at both ends', () => {
