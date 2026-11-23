@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { WEAPONS } from '../src/components/duelist/core/moves.mjs';
 import {
   ABILITY_SLOTS, CLASS_IDS, CLASSES, SPECIAL_MAX, SPECIAL_BALANCE,
-  awardSpecialCharge, classAtSpawn, classById, evaluateSpecial,
+  awardSpecialCharge, classAbilityMove, classAtSpawn, classById, evaluateSpecial,
   requestClassSelection, visibleClassAbilities,
 } from '../src/components/duelist/core/classes.mjs';
 
@@ -124,4 +124,23 @@ test('execution checks reject non-finite coordinates or time rather than accepti
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor: { ...actor, position: { x: NaN, z: 0 } }, target: enemy() }).reason, 'invalid-context');
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor, target: { ...enemy(), position: { x: Infinity, z: -1 } } }).reason, 'invalid-context');
   assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor, target: enemy(), now: NaN }).reason, 'invalid-context');
+});
+
+test('ability activation slots map to only the selected class kit, rejecting malformed slot indices', () => {
+  for (const classId of CLASS_IDS) {
+    const abilities = CLASSES[classId].abilities;
+    for (let slot = 0; slot < abilities.length; slot++) {
+      assert.equal(classAbilityMove(classId, slot), abilities[slot].id, `${classId} slot ${slot}`);
+      assert.match(abilities[slot].animation, /^class\\.power\\./);
+    }
+    for (const invalid of [-1, 4, 100, 1.5, NaN, Infinity, '0', '1', null, undefined, {}, []]) {
+      assert.equal(classAbilityMove(classId, invalid), null, `${classId} rejected malformed slot`);
+    }
+    assert.equal(classAbilityMove(classId, 0), abilities[0].id, 'rejected input must not change mapping');
+  }
+  for (const invalidClass of ['__proto__', 'constructor', 'unknown', null, undefined, {}]) {
+    assert.equal(classAbilityMove(invalidClass, 0), null);
+  }
+  assert.notEqual(classAbilityMove('warrior', 0), classAbilityMove('healer', 0),
+    'the same ability key must not silently activate a different class kit');
 });
