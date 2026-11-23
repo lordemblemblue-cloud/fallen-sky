@@ -157,3 +157,45 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
   failing, the same failing names as main (108).
 - Still open: the 13–23 s first-load block on WebGPU, which is mostly the precompile's synchronous shader build.
   Slicing it is the next step; check with the WebGPU session first, since it owns that code.
+
+## Follow-up 2026-11-23: cold WebGPU load (branch `claude/webgpu-first-load-slices-20261123`)
+
+**Measured** on main 96c0c70a: cold load of `/gameview`, dev build, hidden pane, with the world renderer instrumented.
+- The world never held its frames. Its **first frame at renderer ready built 267 shaders in one 22.2 s
+  `render()` call**.
+- Later first-draw frames took 0.5–2.9 s.
+- The avatar-ready precompile added 84 builds, in blocks of 6.5 s and 3.4 s.
+- 489 node-shader builds took **36.9 s of main thread** (about 75 ms each; terrain, grass cards and the river cost
+  150–256 ms each).
+
+**Changed (`e05c5ec0`):**
+- `precompileSceneObjects(…, { sliceMs, onProgress })` builds shaders in slices (`compileSceneInSlices`):
+  - Each slice hides the other renderables, keeping the batch's ancestors and every light's ancestors visible, so the
+    light set in each shader key is unchanged.
+  - `compileAsync` then builds only that batch, every object gets its visibility back in the same task, and an ordinary
+    task yields to the browser.
+  - The batch size follows the running cost per object (1 to 16 objects), and at most 6 slices compile pipelines in the
+    GPU process at once.
+  - Frames stay held. Without `sliceMs` nothing changes, and calls on one renderer run one after another.
+- GameWorld3D runs a sliced precompile of the constructed scene as soon as the WebGPU renderer is ready, before the
+  first frame. The avatar-ready precompile is sliced too.
+- Both report `game3dWorldCompileProgress`. GameView's two 30 s entry timers count 30 s without progress rather than
+  30 s in total.
+
+**Live:** one cold WebGPU load ran with the early precompile.
+- It built 963 renderables (382 pipelines) in 25.8 s, and the world came up on WebGPU.
+- The first frames after it peaked at 1.1–1.4 s, instead of 22 s.
+- That run yielded with `scheduler.yield()`, which resumes ahead of queued tasks, so the page still showed as one
+  25.6 s block. The ordinary-task yield and the in-flight cap that replaced it are **checked by tests only**:
+  - After the next runs, the browser pane had **no GPU at all** (no WebGPU adapter, no WebGL2 context, on any
+    origin). Chrome does that after GPU process crashes, and it lasts until the app restarts.
+  - The run before that block used classic WebGL, which never reaches the sliced code. So it looks like the pane's GPU
+    process giving out under many heavy reloads, but I can't rule out the sliced build's burst of about 380
+    pipeline compiles in the first run. That is why at most 6 slices now compile at once.
+- **Before merging:** reload a cold WebGPU load once the app has restarted, and check that the start screen answers
+  clicks while the shaders build and that the world appears without errors.
+
+**Tests:** `tests/webgpu-precompile-slices.test.mjs` (8 tests) uses three's own scene objects. Whole suite: main
+96c0c70a ran 2499 tests with 109 failing; this branch ran 2507 tests with the same 109 failing names.
+
+**Not checked live:** a body swap on WebGL, while mounted, or while holding a bow. The pane had no GPU.
