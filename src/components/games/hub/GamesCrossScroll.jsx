@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
+import GpuLaunchPrompt from './GpuLaunchPrompt';
 import { GAMES_HUB_FOCUS_STORAGE_KEY, GAMES_HUB_TILES, isTilePlayable, tileBackdrop } from './gamesHubCatalog.mjs';
 import {
   createHubGamepadNavigator,
@@ -55,6 +56,7 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
   const [focus, setFocus] = useState(() =>
     focusIndexForId(tiles, readStoredHubFocus(hubStorage(), GAMES_HUB_FOCUS_STORAGE_KEY)));
   const [notice, setNotice] = useState('');
+  const [pendingLaunch, setPendingLaunch] = useState(null);
   const focusRef = useRef(focus);
   const surfaceRef = useRef(null);
   const rowRef = useRef(null);
@@ -91,11 +93,13 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
   }, [count, focusTo, nudge]);
 
   const choose = useCallback(() => {
+    if (pendingLaunch) return;
     const index = focusRef.current;
     const tile = tiles[index];
     const { launch, blocked } = resolveHubChoice(tile, playable[index]);
     if (launch) {
-      onLaunch?.(launch, tile);
+      if (tile.gpuPrompt) setPendingLaunch({ to: launch, tile });
+      else onLaunch?.(launch, tile);
       return;
     }
     if (blocked === 'coming-soon') {
@@ -107,15 +111,16 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
         );
       }
     }
-  }, [tiles, playable, onLaunch]);
+  }, [tiles, playable, onLaunch, pendingLaunch]);
 
   const act = useCallback((action) => {
+    if (pendingLaunch) return;
     if (action === 'left') move(-1);
     else if (action === 'right') move(1);
     else if (action === 'first') { if (focusRef.current !== 0) focusTo(0); else nudge('start'); }
     else if (action === 'last') { if (focusRef.current !== count - 1) focusTo(count - 1); else nudge('end'); }
     else if (action === 'choose') choose();
-  }, [move, focusTo, nudge, choose, count]);
+  }, [move, focusTo, nudge, choose, count, pendingLaunch]);
 
   useEffect(() => { actRef.current = act; }, [act]);
 
@@ -187,6 +192,7 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
   // Swipe or drag: the row follows the finger (rubber band at the ends) and
   // settles on the nearest tile.
   const onPointerDown = (event) => {
+    if (pendingLaunch) return;
     if (event.pointerType === 'mouse' && event.button !== 0) return;
     if (event.target instanceof Element && event.target.closest('[data-hub-nodrag]')) return;
     suppressClickRef.current = false;
@@ -267,6 +273,7 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
               const { rel, after, focused } = tilePlacement(index, focus);
               const live = playable[index];
               return (
+                <Fragment key={tile.id}>
                 <button
                   key={tile.id}
                   ref={(element) => { tileRefs.current[index] = element; }}
@@ -294,6 +301,10 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
                     </span>
                   )}
                 </button>
+                {tile.releaseStatus === 'beta-experimental' &&
+                  <span className={`xs-tile-beta${focused ? ' is-focused' : ''}`}
+                    style={{ '--xs-rel': rel, '--xs-after': after }} aria-hidden="true">Beta Experimental</span>}
+                </Fragment>
               );
             })}
           </div>
@@ -336,6 +347,9 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
         </nav>
       </div>
 
+      {pendingLaunch && <GpuLaunchPrompt gameTitle={pendingLaunch.tile.title}
+        onClose={() => setPendingLaunch(null)}
+        onContinue={() => { const choice = pendingLaunch; setPendingLaunch(null); onLaunch?.(choice.to, choice.tile); }} />}
       <p className="xs-sr-only" aria-live="polite">
         {notice || `${current.title}${currentPlayable ? '' : ', coming soon'}, game ${focus + 1} of ${count}`}
       </p>
