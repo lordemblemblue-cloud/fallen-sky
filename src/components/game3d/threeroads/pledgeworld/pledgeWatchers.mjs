@@ -22,6 +22,9 @@ export const ESCORT_LOST_SECONDS = 10;
 export const ESCORT_FOLLOWER_SLACK = 1;
 export const ESCORT_DEFAULT_FOLLOW = 3;
 export const DEFEND_AWAY_SECONDS = 8;
+// A wave comes for what is guarded: wherever it appears, it walks in to within
+// this far of the guarded spot (the enemies' `goal`), then fights whoever is there.
+export const DEFEND_WAVE_GOAL_RADIUS = 4;
 export const CHOICE_REOPEN_SECONDS = 10;
 const TELEPORT_METRES = 30;
 
@@ -348,7 +351,10 @@ function defendWatcher(spec) {
       }
       const elapsed = frame.now - started;
       while (nextWave < waves.length && elapsed >= waves[nextWave].at) {
-        spec.world.bus('enemies:spawnGroup', groupDetail(waves[nextWave].group, spec.point));
+        const detail = groupDetail(waves[nextWave].group, spec.point);
+        // Without a goal a wave stands where it appears, out of sight of the ground it is meant to take.
+        if (centre) detail.goal = { x: centre.x, z: centre.z, radius: DEFEND_WAVE_GOAL_RADIUS };
+        spec.world.bus('enemies:spawnGroup', detail);
         nextWave++;
       }
       if (inside) awaySince = null;
