@@ -20,6 +20,7 @@ export function validateDualGameEvidence(reports) {
   if (!Array.isArray(reports) || reports.length !== 2) return fail('exactly-two-reports-required');
   const seen = new Set();
   const dates = [];
+  const origins = new Set();
   for (const report of reports) {
     if (!report || typeof report !== 'object' || !Object.hasOwn(SCENE_KEYS, report.sceneId)) {
       return fail('invalid-scene-id');
@@ -29,6 +30,11 @@ export function validateDualGameEvidence(reports) {
     let url;
     try { url = new URL(report.tabUrl); } catch { return fail('invalid-tab-url:' + report.sceneId); }
     const route = ROUTES[report.sceneId];
+    // Two passing sessions on different deployments (e.g. preview and live)
+    // are not evidence that either deployment runs both games natively.
+    // Origin includes the scheme, host and port, so localhost and HTTPS
+    // production reports cannot be silently combined.
+    origins.add(url.origin);
     if (!['https:', 'http:'].includes(url.protocol) ||
       (url.pathname !== route && !url.pathname.startsWith(route + '/'))) {
       return fail('wrong-playable-route:' + report.sceneId);
@@ -52,6 +58,7 @@ export function validateDualGameEvidence(reports) {
     // These files are evidence of renderer counters, not visible world pixels.
     // A screenshot path is not proof that someone visually inspected it.
   }
+  if (origins.size !== 1) return fail('reports-from-different-origins');
   if (dates[0] > dates[1] + MAX_REPORT_GAP_MS || dates[1] > dates[0] + MAX_REPORT_GAP_MS) {
     return fail('reports-not-from-same-qa-window');
   }
