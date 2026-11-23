@@ -158,3 +158,31 @@ test('rotated three-button ability pages preserve canonical server slot identiti
     }
   }
 });
+
+test('queued respawn selection survives invalid requests and cannot change a living fighter', () => {
+  for (const currentClass of CLASS_IDS) {
+    const queued = requestClassSelection({
+      currentClass, pendingClass: null, requestedClass: 'assassin', phase: 'live', dead: true,
+    });
+    assert.equal(queued.accepted, true);
+    assert.equal(queued.currentClass, currentClass);
+    assert.equal(queued.pendingClass, 'assassin');
+
+    const invalid = requestClassSelection({
+      ...queued, requestedClass: '__proto__', phase: 'live', dead: true,
+    });
+    assert.equal(invalid.accepted, false);
+    assert.equal(invalid.pendingClass, 'assassin', 'invalid request must not erase a valid queue');
+
+    const denied = requestClassSelection({
+      ...queued, requestedClass: 'healer', phase: 'live', dead: false,
+    });
+    assert.equal(denied.accepted, false);
+    assert.equal(denied.currentClass, currentClass);
+    assert.equal(denied.pendingClass, 'assassin', 'live request must not overwrite queued choice');
+
+    assert.deepEqual(classAtSpawn(denied), {
+      classId: 'assassin', weapon: 'staff', pendingClass: null,
+    });
+  }
+});
