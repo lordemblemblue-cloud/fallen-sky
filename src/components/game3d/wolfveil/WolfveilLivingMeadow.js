@@ -23,6 +23,8 @@ import {createLiveWind,LIVE_WIND_SHEET_GLSL,liveWindSheetNode} from '../render/l
 import {Fn,Loop,vec2,vec3,float,sin,normalize,smoothstep,max,length,positionGeometry,normalView,faceDirection,
   uniformArray,renderGroup} from 'three/tsl';
 import {attachNodes,uniformOf,instanceRootWorld,offsetBeforeInstancing} from '../../../lib/webgpuNodeKit.js';
+import {createMeadowClumpLods} from './WolfveilGrassClumpLod.mjs';
+import {game3dHiPolyRequested} from '../render/lowPolyWorld.mjs';
 
 const MAX_CONTACTS = 8;
 const TILE_KEY = (ix, iz) => ix + ':' + iz;
@@ -341,6 +343,8 @@ export function createWolfveilLivingMeadow({
   const terrainTiles=new Map(),grassTiles=new Map();
   let lastGroundTile='',lastGrassTile='',tileCount=0,clumpCount=0;
   let ownerTileActive=false;
+  // Low-poly world: middle and far meadow squares draw the owner clump with fewer, wider blades (?hiPoly=1: all 720)
+  const clumpLods=game3dHiPolyRequested()?null:createMeadowClumpLods();
   // On successful GLB decode, discard only the *visual* procedural batches.
   // Streaming terrain, collision BVHs, roots and other scene objects persist.
   const unsubscribeTile=grassTileReplacement?.onReady?.(()=>{
@@ -424,8 +428,9 @@ export function createWolfveilLivingMeadow({
     }
     for(const [key,entry] of wanted){
       if(grassTiles.has(key))continue;
+      const level=entry.count>=180?'near':entry.count>=96?'mid':'far';
       const mesh=createGrassTile(entry.ix,entry.iz,entry.count,
-        useOwnerTile?ownerGeometry:grassGeometry,grassMaterial,useOwnerTile);
+        useOwnerTile?(clumpLods?.get(ownerGeometry,level)??ownerGeometry):grassGeometry,grassMaterial,useOwnerTile);
       if(!mesh)continue;
       root.add(mesh);
       grassTiles.set(key,{mesh,count:entry.count});
@@ -490,6 +495,7 @@ export function createWolfveilLivingMeadow({
     // Owner GLB geometry is shared with the village and freed there after
     // meadow teardown, never here (would break every other tile instance).
     grassGeometry.dispose();
+    clumpLods?.dispose();
     grassMaterial.dispose();
     terrainMaterial.dispose();
     scene.remove(root);

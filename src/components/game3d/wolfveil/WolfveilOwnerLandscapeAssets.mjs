@@ -1,6 +1,9 @@
 // Asset URLs were returned by the connected Atom x Eve OS Base44 media library
 // on 2026-11-08. Public URL != browser/GPU load verified. Preserve procedural
 // Wolfveil if any upload is unavailable, slow, or rejected by the client.
+import {worldModelUrl} from '../render/lowPolyWorld.mjs';
+// Low-poly world: the plant pack and garden leaves load as copies with WebP textures (same 1024 px textures and
+// geometry, ~4x smaller files); ?hiPoly=1 loads the uploads below (render/lowPolyWorld.mjs).
 export const WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS=Object.freeze({
  grass:Object.freeze({
   url:'https://media.base44.com/files/public/6876751a602125f45f1861b9/f5e95a78a_realistics_grass_06_1_.glb',
@@ -10,12 +13,12 @@ export const WOLFVEIL_UPLOADED_LANDSCAPE_ASSETS=Object.freeze({
   maxTriangles:1400,maxTrailCopies:44,
  }),
  plants:Object.freeze({
-  url:'https://media.base44.com/files/public/6876751a602125f45f1861b9/42cb63080_stylized_plant_pack_1_.glb',
+  url:worldModelUrl('plantPack'),
   type:'glb',maxCopies:12,maxWidth:1.6,maxHeight:1.05,
   maxTriangles:1800,maxTrailCopies:30,
  }),
  garden:Object.freeze({
-  url:'https://media.base44.com/files/public/6876751a602125f45f1861b9/3f9132732_wolfveil_garden_leaves_optimized.glb',
+  url:worldModelUrl('gardenLeaves'),
   type:'glb',maxCopies:8,maxWidth:1.8,maxHeight:.48,
   maxTriangles:1300,maxTrailCopies:16,
  }),

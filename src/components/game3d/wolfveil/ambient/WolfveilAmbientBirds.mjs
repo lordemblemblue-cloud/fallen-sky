@@ -15,6 +15,7 @@ import {birdRandom,birdBudget,makeBird,findBirdLanding,advanceBird,
   BIRD_QUALITY} from './WolfveilBirdFlightPlan.mjs';
 import {classifyWolfveilBirdBone,sampleWolfveilBirdPose}
   from './WolfveilBirdRigAnimation.mjs';
+import {worldModelUrl} from '../../render/lowPolyWorld.mjs';
 
 export const WOLFVEIL_OWNER_BIRD_ASSET=
   'https://media.base44.com/files/public/6ab42219a52fd34656a53b37/d9fad7809_tripo_convert_bdd73c28-af44-45e3-b758-1d783314f872.glb';
@@ -105,7 +106,8 @@ function updateRig(actor,bird){
  * Distant flocks are one instanced silhouette batch, not extra skinned models.
  */
 export function createWolfveilAmbientBirds({
-  scene,quality='medium',mobile=false,modelUrl=WOLFVEIL_OWNER_BIRD_ASSET,
+  // low-poly world: the same bird with a 512 px texture instead of 4096 px (?hiPoly=1: WOLFVEIL_OWNER_BIRD_ASSET)
+  scene,quality='medium',mobile=false,modelUrl=worldModelUrl('ambientBird'),
   originZ=70,seed=0xB1D05,loader=new GLTFLoader(),
 }={}){
   if(!scene?.add)throw Error('Ambient birds require existing Game 3D scene');
