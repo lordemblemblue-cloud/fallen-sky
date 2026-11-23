@@ -8,12 +8,48 @@ Every converted model keeps its earlier version one switch away: **`?hiPoly=1`**
 models (and turns the town merge and the meadow thinning off) so the two can be compared. Nothing is deployed and
 nothing is merged.
 
-**Status (2026-11-22, stopped at the shared usage limit): draft.** Main's numbers for all five areas are in
-`docs/game3d/low-poly/perf-runs/*load-before-*.json`; this branch's gate-hop run was in progress (south done:
-827 → 828 draw calls, 2.28 M → 1.42 M triangles, 273 → 210 MB textures, 81.4 → 67.1 MB loaded). Still to do: the other
-four areas' after numbers, probe frame times, pictures, the whole-suite comparison.
+## The numbers, per area (WebGPU, before = main `51135c89`, after = this branch)
 
-<!-- NUMBERS -->
+Each row is one gate hop into that area: the game's own `game3dPortalTravel` event remounts the world as that area's
+scene (as a gate does), and the area is counted once it has settled. Counts are of everything visible in the area's
+scene, not one camera view.
+
+| area (gate hop) | draw calls | triangles | models + textures loaded | shown | settled |
+|---|---:|---:|---:|---:|---:|
+| town | 1,334 → **1,248** | 2.59 M → **1.88 M** (−27 %) | 81.4 → **67.1 MB** | 73.0 → **58.4 s** | 75.4 → **67.9 s** |
+| south | 827 → 849 | 2.28 M → **1.51 M** (−34 %) | 81.4 → **67.1 MB** | 48.0 → **38.5 s** | 49.2 → **41.5 s** |
+| west | 3,333 → 3,338 | 2.84 M → **2.49 M** (−12 %) | 81.4 → **67.1 MB** | 58.0 → **57.5 s** | 71.3 → **61.1 s** |
+| east | 1,174 → 1,179 | 4.32 M → **3.39 M** (−22 %) | 81.4 → **67.1 MB** | 99.5 → **63.1 s** | 100.4 → **64.2 s** |
+| north | 1,169 → 1,174 | 3.74 M → **2.99 M** (−20 %) | 81.3 → **67.1 MB** | 66.6 → **52.1 s** | 68.2 → **55.4 s** |
+
+- **shown** = from the gate event until the game lifts its loading curtain (`game3dWorldAvatarReady`, after the new
+  scene's WebGPU shaders are compiled); **settled** = until the counted scene stops changing. Measured in a hidden
+  browser pane that downloads every file again on each hop, so absolute times are far slower than a player's machine
+  with a browser cache; read them as before against after. One run each; the south "after" hop was repeated from a
+  settled town (the first one overlapped the world entry), as the "before" one was.
+- The draw calls outside the town and the texture memory differ by spawn timing, not by this branch: archer NPCs
+  (≈290–386 MB of textures, about 5 meshes each) and birds were counted when they had finished loading. The scenery
+  this branch changed, counted alone:
+
+| area | piece | draw calls | triangles | textures (MB, uncompressed) |
+|---|---|---:|---:|---:|
+| town | valley scenery (elms, grass tiles, rocks, bridges) | 261 → 261 | 1.48 M → **1.12 M** | 149 → 149 |
+| town | meadow grass | 27 → 27 | 586k → **208k** | 0 |
+| town | town plaza (buildings) + guards | 282 → **190** | 55k → 55k | 66 → 66 |
+| town | ambient birds | 4 → 5 | 21k → 28k | 64 → **1** |
+| south | meadow grass | 59 → 59 | 1.74 M → **0.86 M** | 0 |
+| west | valley scenery | 153 → 153 | 1.16 M → **1.11 M** | 128 → 128 |
+| west | meadow grass | 140 → 140 | 985k → **668k** | 0 |
+| east | valley scenery | 152 → 152 | 797k → **748k** | 141 → 141 |
+| east | meadow grass | 152 → 152 | 2.89 M → **1.98 M** | 0 |
+| north | valley scenery | 122 → 122 | 556k → **510k** | 73 → 73 |
+| north | meadow grass | 209 → 209 | 2.64 M → **1.92 M** | 0 |
+| every area | ambient birds | — | — | 64 → **1** |
+
+Raw results: `docs/game3d/low-poly/perf-runs/*load-before-*.json` and `*load-after-*.json`
+(`node scripts/game3d-load-compare.mjs docs/game3d/low-poly/perf-runs --md`).
+
+<!-- FRAMES -->
 
 ## What the town and the land were made of (measured before any change)
 
