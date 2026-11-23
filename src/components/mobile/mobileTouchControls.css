@@ -168,3 +168,34 @@
   .mobile-game-controls .mobile-touch-action[data-action='attack'] {width:70px;height:70px;min-width:70px;min-height:70px;}
   .mobile-look-zone {left:37%;top:14%;bottom:9%;}
 }
+
+/* Mandatory landscape while playing either current game on a touch device.
+   Cover all game controls and HUD even if the class picker temporarily disables
+   touch input; do not show a bypass to a squashed portrait combat viewport. */
+.mobile-game-controls[data-landscape-required='true'] {
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100dvh;
+  z-index:2147483000;
+  background:#030a14;
+  overflow:hidden;
+  touch-action:none;
+}
+.mobile-game-controls[data-landscape-required='true'] > :not(.mobile-orientation-prompt) {
+  visibility:hidden;
+  pointer-events:none;
+}
+.mobile-game-controls[data-landscape-required='true'] .mobile-orientation-prompt {
+  visibility:visible;
+  position:absolute;
+  inset:0;
+  z-index:20;
+  display:flex;
+  pointer-events:auto;
+  padding:
+    max(20px,env(safe-area-inset-top,0px))
+    max(18px,env(safe-area-inset-right,0px))
+    max(20px,env(safe-area-inset-bottom,0px))
+    max(18px,env(safe-area-inset-left,0px));
+}
