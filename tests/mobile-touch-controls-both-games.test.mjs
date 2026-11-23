@@ -6,6 +6,7 @@ import {
   normalizeMobileTouchLayout, touchLandscape, touchLayoutStorageKey,
 } from '../src/components/mobile/mobileTouchModel.mjs';
 import { createFallenTouchBridge } from '../src/components/mobile/fallenMobileTouchBridge.mjs';
+import { createControls } from '../src/components/duelist/client/controls.mjs';
 
 test('touch devices are detected by pointer capability, not a hard-coded iPhone aspect ratio', () => {
   const host = (coarse, touches, search = '') => ({
@@ -118,4 +119,47 @@ test('both games wire touch to their existing simulation inputs and camera math'
   assert.match(game, /game3dMobileLook/);
   assert.match(root, /viewport-fit=cover/);
   assert.match(arena, /height:100dvh/);
+});
+
+test('Duelist touch stick, guard, powers and camera work together without pointer lock', () => {
+  const previousWindow = globalThis.window;
+  const previousDocument = globalThis.document;
+  const host = new EventTarget();
+  globalThis.window = host;
+  globalThis.document = { pointerLockElement: null };
+  const canvas = new EventTarget();
+  let shops = 0;
+  const controls = createControls(canvas, { onShopToggle: () => { shops += 1; } });
+  try {
+    controls.setTouchMove({ x: 0.7, y: 0.7 });
+    controls.touchActionDown('light');
+    controls.touchActionDown('special');
+    controls.touchActionDown('guard');
+    controls.look(40, -15);
+    const input = controls.read({ aimWhileAttacking: true });
+    assert.ok(Math.hypot(input.move.x, input.move.z) > 0.95);
+    assert.ok(Math.hypot(input.move.x, input.move.z) <= 1.00001, 'analog movement normalized');
+    assert.ok(input.presses.includes('light'));
+    assert.ok(input.presses.includes('special'));
+    assert.ok(input.presses.includes('blockDown'));
+    assert.equal(input.face, controls.yaw(), 'blade stays aimed with the swipe camera');
+    controls.touchActionUp('guard');
+    controls.touchActionUp('light');
+    controls.touchActionDown('ability2');
+    controls.touchActionUp('ability2');
+    const next = controls.read();
+    assert.ok(next.presses.includes('blockUp'));
+    assert.ok(next.presses.includes('ability2'));
+    assert.ok(next.presses.includes('release'));
+    controls.touchActionDown('shop');
+    assert.equal(shops, 1);
+    controls.setPaused(true);
+    const stopped = controls.read();
+    assert.deepEqual(stopped.move, { x: 0, z: 0 });
+    assert.ok(stopped.presses.includes('blockUp'));
+  } finally {
+    controls.dispose();
+    globalThis.window = previousWindow;
+    globalThis.document = previousDocument;
+  }
 });
