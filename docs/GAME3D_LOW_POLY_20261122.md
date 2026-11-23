@@ -6,7 +6,13 @@ sure everything is on WebGPU.
 
 Every converted model keeps its earlier version one switch away: **`?hiPoly=1`** in the page URL loads the earlier
 models (and turns the town merge and the meadow thinning off) so the two can be compared. Nothing is deployed and
-nothing is merged.
+nothing is merged. `GameWorld3D.jsx` is not changed by this branch.
+
+**In short:** every area draws 0.35-0.93 M fewer triangles (−12 % to −34 %), the town draws ~90 fewer meshes, each
+gate hop loads 14 MB less (81 → 67 MB), and the four converted model files went from 20.7 MB to 6.5 MB (elm, bird, plant pack, garden leaves). Gate hops
+showed the world 0.5-36 s sooner in this test setting (single runs). GPU time per frame at the town plaza fell
+13-16 % back to back on the same server. The town looks the same (pictures below; a test proves the merged town draws
+identical triangles). Everything the world draws runs on WebGPU.
 
 ## The numbers, per area (WebGPU, before = main `51135c89`, after = this branch)
 
@@ -49,7 +55,34 @@ scene, not one camera view.
 Raw results: `docs/game3d/low-poly/perf-runs/*load-before-*.json` and `*load-after-*.json`
 (`node scripts/game3d-load-compare.mjs docs/game3d/low-poly/perf-runs --md`).
 
-<!-- FRAMES -->
+### Frame time (WebGPU, probe from the perf-baseline session)
+
+Canvas 960×720 at pixel ratio 0.9375, resolution governor pinned, the probe drawing 90 timed frames per view from a
+camera at eye height (player hidden). GPU = WebGPU timestamp queries summed over the frame's passes.
+
+**Back to back on the same server (this branch), `?hiPoly=1` then the default, two minutes apart:**
+
+| view | draw calls | triangles | GPU per frame | CPU submit | game loop |
+|---|---:|---:|---:|---:|---:|
+| town.plaza.N | 648 → 638 | 1.51 M → **1.07 M** | 12.8 → **10.7 ms** (−16 %) | 11.8 → 13.9 ms | 20.6 → 15.1 ms |
+| town.plaza.S | 673 → 673 | 1.36 M → **0.92 M** | 11.3 → **9.8 ms** (−13 %) | 11.7 → 12.6 ms | 13.9 → 15.0 ms |
+
+**Main (port 5198) against this branch (port 5197), single runs ~15 minutes apart:**
+
+| view | draw calls | triangles | GPU per frame | CPU submit |
+|---|---:|---:|---:|---:|
+| town.plaza.N | 645 → 628 | 1.48 M → **1.05 M** | 9.0 → 10.9 ms | 15.6 → 16.8 ms |
+| town.plaza.S | 667 → 670 | 1.35 M → **0.90 M** | 8.4 → 10.3 ms | 15.3 → 18.3 ms |
+| town.hill.S | 1,281 → **1,201** | 2.42 M → **1.95 M** | 9.2 → 9.3 ms | 20.3 → 22.3 ms |
+| east.flats.N | 299 → 298 | 1.98 M → **1.75 M** | 9.2 → **8.8 ms** | 12.3 → 17.9 ms |
+
+How to read these: the triangle cuts are exact and repeatable; the times are not, in this setting. Main and the
+branch with `?hiPoly=1` draw practically the same scene, yet their GPU times at the plaza differed by about 40 % (9.0
+against 12.8 ms) in runs half an hour apart, in a hidden browser pane on a shared machine. The back-to-back pair is the
+fairest comparison: about 13-16 % less GPU time per frame at the plaza. This machine's GPU (Radeon 780M) is
+fill-bound on WebGPU (lit pixels cost about twice WebGL's), so triangle cuts show up less in the time than in the
+counts; a GPU that is vertex-bound (phones, older laptops) gains more. CPU submit and the game loop moved by amounts
+within their own run-to-run spread. Raw: `docs/game3d/low-poly/perf-runs/*frames-*.json` and `*ab-*.json`.
 
 ## What the town and the land were made of (measured before any change)
 
@@ -113,7 +146,25 @@ the switch is `src/components/game3d/render/lowPolyWorld.mjs`.
   "atomic-ultra-sumi" art style): nothing imports it any more and the pause menu migrates players off that style.
 - The new models load on WebGPU: the WebP textures go through three.js's `EXT_texture_webp` support.
 
-<!-- PICTURES -->
+## Pictures (same camera spots, before and after)
+
+`docs/game3d/low-poly/pictures/side-by-side/*.jpg` puts each pair next to each other; the single pictures are in
+`pictures-hipoly/` (before: `?hiPoly=1`) and `pictures-lowpoly/` (after: the default). Taken on this branch's dev
+server, classic renderer (a WebGPU canvas reads back blank), clock fixed at 13:00 and clear weather
+(`__worldEnv.setTime(13)`, `setWeather('clear')`), camera 1.7 m above the ground, player hidden.
+
+| picture | what it shows |
+|---|---|
+| `town.plaza.from-south` | the fountain plaza from the south boardwalk: fountain, lanterns, houses, elms on the hill |
+| `town.plaza.to-blacksmith` | from the spawn side toward the blacksmith's house and the Oath Tree spot |
+| `town.plaza.to-east` | across the plaza to the east houses |
+| `town.hill.S` | the hill above the town, looking south |
+| `town.elm-closeup` | one owner elm from 16 m: the low-poly elm against the 88k-triangle one |
+
+The moving mist puffs and birds differ between shots. The first "after" shot on the hill had a grey band on the far
+horizon; a second shot at the same spot a few minutes later had none, with the meadow grass shown or hidden, so the
+band was a passing streaming or fog moment; the picture used is the second shot.
+
 
 ## Not converted (found while measuring)
 
@@ -124,7 +175,7 @@ the switch is `src/components/game3d/render/lowPolyWorld.mjs`.
 - **Downloads on every gate hop:** each hop downloads ~81 MB again in the test pane (the CDN sends
   `max-age=31536000, immutable`, so a normal browser cache keeps them; the test pane did not). The largest are
   characters and enemies: the zombie attack FBX 16 MB, `Male_Fused_v2.glb` 11.7 MB, `Artemis_Character_v5.glb`
-  11.5 MB, `Getsuga_Tensho_Character_v5.glb` 9.1 MB. This branch cut the world's own models from 22.3 MB to 6.5 MB.
+  11.5 MB, `Getsuga_Tensho_Character_v5.glb` 9.1 MB. This branch cut the four world model files it converted from 20.7 MB to 6.5 MB.
 - Loading curtain: after a gate hop the game lifts the curtain on `game3dWorldAvatarReady`; when that takes over 30 s
   (it did in the hidden test pane every time, before and after) GameView shows "World entry interrupted" while the
   world finishes loading behind it.
@@ -157,4 +208,20 @@ the switch is `src/components/game3d/render/lowPolyWorld.mjs`.
   every visible triangle (per material and 2 m cell) identical in eight states, and the draw-call budget at the
   fountain (290).
 
-<!-- SUITE -->
+- **Whole suite** (`node --test --test-reporter=tap tests/`, 2026-11-23): main `51135c89` 2,389 tests, 107 failing;
+  this branch 2,395 tests (the 6 new ones pass), 107 failing. The 107 failing test names are identical: no new
+  failures.
+
+## Seen while measuring (not changed here)
+
+- **WebGPU device lost on area remounts, twice, on this machine.** Once `DXGI_ERROR_DEVICE_HUNG` during a gate hop
+  while a second game tab was rendering on the same iGPU; once "A valid external Instance reference no longer exists"
+  during a hop right after the test pane's viewport emulation changed. After each, the game's fallback to classic WebGL
+  also failed in that tab ("World entry interrupted / WebGL could not start"), and the tab remembered the WebGPU failure
+  (sessionStorage `fallen_sky_renderer_failed_v1:fallen-sky`). Runs with one game tab and a fixed viewport went through
+  every hop. The WebGPU session is working on `src/lib/webgpuSceneRenderer.js`; this branch does not touch it.
+- **"World entry interrupted" after gate hops that take over 30 s**: GameView's watchdog fires while the world is
+  still loading (seen on main and on this branch in the hidden test pane).
+- **Entering the world**: a click on ENTER WORLD while the character screen still says "ENTERING…" is ignored; the
+  player stays on the character screen and gate events do nothing.
+
