@@ -85,7 +85,7 @@ test('CLI rejects future and noncanonical timestamps across multiple reports', a
       writeFile(paths[0], JSON.stringify(report(time - 2000))),
       writeFile(paths[1], JSON.stringify(report(time - 1000))),
       writeFile(paths[2], JSON.stringify(report(time + MAX_FUTURE_SKEW_MS + 60000))),
-      writeFile(paths[3], JSON.stringify({ checkedAt: new Date(time).toISOString().replace('.000Z', 'Z').replace(/\\.\\d{3}Z$/, 'Z') })),
+      writeFile(paths[3], JSON.stringify({ checkedAt: new Date(time).toISOString().replace(/\.\d{3}Z$/, 'Z') })),
     ]);
     const run = (...files) => spawnSync(process.execPath, [script, ...files], { encoding: 'utf8' });
     const valid = run(paths[0], paths[1]);
