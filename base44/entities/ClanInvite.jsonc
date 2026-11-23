@@ -40,9 +40,6 @@
     "read": {
       "$or": [
         {
-          "data.inviterId": "{{user.id}}"
-        },
-        {
           "data.inviteeId": "{{user.id}}"
         },
         {

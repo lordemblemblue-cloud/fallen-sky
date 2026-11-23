@@ -12,7 +12,19 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 
 const PARTY_MAX = 5;
 const launchRoutes = new Set(['/', '/gameview', '/duelist', '/duelist-next', '/duelist-next/play']);
-const safeLaunchRoute = (value: unknown) => typeof value === 'string' && launchRoutes.has(value) ? value : '';
+function safeLaunchRoute(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 512) return '';
+  const [path, query] = value.split('?', 2);
+  if (!launchRoutes.has(path)) return '';
+  if (!query) return path;
+  if (path !== '/duelist-next/play') return '';
+  const params = new URLSearchParams(query);
+  for (const [key, val] of params) {
+    if (!['mode', 'online', 'mission', 'room', 'matchId', 'from'].includes(key) ||
+        !/^[A-Za-z0-9_-]{1,64}$/.test(val)) return '';
+  }
+  return path + '?' + params.toString();
+}
 const ACTIVE_STATUSES = new Set(['forming', 'full', 'active']);
 const displayName = (user: any) => user?.full_name || user?.username || 'Player';
 const avatarUrl = (user: any) => user?.avatar_url || user?.profile_image || '';
@@ -118,7 +130,7 @@ Deno.serve(async (req) => {
       for (const invite of launchInvites || []) {
         if (isExpired(invite.expires_at)) {
           await svc.PartyLaunchInvite.update(invite.id, { status: 'expired' });
-        } else if (safeLaunchRoute(invite.launch_url)) activeLaunchInvites.push(invite);
+        } else if (safeLaunchRoute(invite.launch_url)) activeLaunchInvites.push({ ...invite, launch_url: safeLaunchRoute(invite.launch_url) });
       }
 
       return json({
