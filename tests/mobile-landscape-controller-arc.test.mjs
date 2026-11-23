@@ -8,22 +8,36 @@ import { createFallenTouchBridge } from '../src/components/mobile/fallenMobileTo
 
 const file = path => readFileSync(new URL('../src/' + path, import.meta.url), 'utf8');
 
-test('sideways mobile layout places large attack at bottom right with four skill buttons in a C arc', () => {
-  for (const game of ['duelist', 'fallen']) {
-    const positions = defaultMobileTouchLayout(game, true);
-    const attack = positions[game === 'duelist' ? 'light' : 'attack'];
-    const special = positions[game === 'duelist' ? 'special' : 'ultimate'];
-    const skills = [1, 2, 3, 4].map(n => positions['ability' + n]);
-    assert.ok(positions.joystick.x <= 25, game + ': joystick remains left');
-    assert.ok(attack.x >= 85 && attack.y >= 75, game + ': attack bottom right');
-    assert.ok(skills[0].y > skills[1].y && skills[1].y > skills[2].y && skills[2].y > skills[3].y,
-      game + ': arc ascends around attack');
-    assert.ok(skills[1].x < skills[0].x && skills[1].x < skills[2].x && skills[3].x > skills[2].x,
-      game + ': C arc wraps round the attack control');
-    assert.ok(Math.abs(special.x - 50) <= 3, game + ': ultimate is a separate center-screen button');
-    assert.ok(positions.lock.x > 40 && positions.lock.x < 70, game + ': lock-on is not hidden');
-    assert.ok(MOBILE_TOUCH_ACTIONS[game].some(([id]) => id === 'lock'));
+test('Duelist landscape matches the ergonomic HUD: mobility left, combat right, no Heavy button', () => {
+  const p = defaultMobileTouchLayout('duelist', true);
+  const skills = [1, 2, 3, 4].map(n => p['ability' + n]);
+  assert.ok(p.joystick.x < 20 && p.joystick.y >= 75);
+  for (const id of ['roll', 'dash', 'jump', 'guard']) {
+    assert.ok(p[id].x <= 30, id + ' stays by the left joystick');
   }
+  assert.ok(p.roll.y < p.joystick.y && p.dash.y < p.joystick.y &&
+    p.jump.y < p.joystick.y, 'movement controls sit above the stick');
+  assert.ok(p.light.x >= 85 && p.light.y >= 75, 'ATTACK is at bottom-right');
+  assert.ok(skills.every(s => s.x >= 70), 'all four skills are on the right');
+  assert.ok(skills[0].y > skills[1].y && skills[1].y > skills[2].y &&
+    skills[3].y > skills[2].y, 'four skills form the mockup upward curved arc');
+  assert.ok(p.special.x > 65 && p.special.y > 75, 'ULT sits left of ATTACK');
+  assert.ok(p.lock.x > 80 && p.lock.y < 25, 'LOCK is tucked into upper-right');
+  assert.ok(p.more.x > p.lock.x, 'MORE sits to the right of LOCK');
+  assert.ok(!MOBILE_TOUCH_ACTIONS.duelist.some(([id]) => id === 'heavy'),
+    'Heavy attack is removed from the mobile HUD, not from game logic');
+  assert.equal(p.heavy, undefined);
+});
+
+test('Fallen Sky preserves its existing mobile layout', () => {
+  const p = defaultMobileTouchLayout('fallen', true);
+  const skills = [1, 2, 3, 4].map(n => p['ability' + n]);
+  assert.ok(p.joystick.x <= 25);
+  assert.ok(p.attack.x >= 85 && p.attack.y >= 75);
+  assert.ok(skills[0].y > skills[1].y && skills[1].y > skills[2].y && skills[2].y > skills[3].y);
+  assert.ok(skills[1].x < skills[0].x && skills[1].x < skills[2].x && skills[3].x > skills[2].x);
+  assert.ok(Math.abs(p.ultimate.x - 50) <= 3);
+  assert.ok(p.lock.x > 40 && p.lock.x < 70);
 });
 
 test('landscape auto-detection respects the actual phone orientation and never forcibly rotates unsupported Safari', async () => {
