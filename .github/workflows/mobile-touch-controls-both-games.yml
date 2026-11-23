@@ -1,0 +1,35 @@
+name: Both Games Mobile Touch Controls
+on:
+  pull_request:
+    paths:
+      - 'src/components/mobile/**'
+      - 'src/components/duelist/client/controls.mjs'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'src/components/duelist/menu/duelistUnifiedVisual.css'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'src/pages/GameView.jsx'
+      - 'src/pages/GamesHub.jsx'
+      - 'src/routes/__root.jsx'
+      - 'tests/mobile-touch-controls-both-games.test.mjs'
+      - '.github/workflows/mobile-touch-controls-both-games.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  touch-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test touch detection, input bridges, and both-game integration
+        run: node --test tests/mobile-touch-controls-both-games.test.mjs
+      - name: Lint shared touch controls and game input wiring
+        run: npx eslint src/components/mobile/*.jsx src/components/mobile/*.mjs src/pages/GameView.jsx src/components/duelist/client/controls.mjs src/components/duelist/client/DuelistGame.jsx
+      - name: Build both games
+        run: npm run build
