@@ -34,7 +34,7 @@ export function validateDualGameEvidence(reports) {
       return fail('wrong-playable-route:' + report.sceneId);
     }
     const checkedAt = report.checkedAt;
-    if (typeof checkedAt !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(checkedAt)) {
+    if (typeof checkedAt !== 'string' || !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$/.test(checkedAt)) {
       return fail('invalid-check-time:' + report.sceneId);
     }
     const timestamp = Date.parse(checkedAt);
