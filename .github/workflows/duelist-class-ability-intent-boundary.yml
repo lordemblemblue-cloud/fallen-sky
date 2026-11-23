@@ -1,0 +1,22 @@
+name: Duelist Class Ability Intent Boundary
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/sim/classAbilityIntentBoundary.mjs'
+      - 'src/components/duelist/core/classes.mjs'
+      - 'tests/duelist-class-ability-intent-boundary.test.mjs'
+      - '.github/workflows/duelist-class-ability-intent-boundary.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-class-ability-intent-boundary.test.mjs tests/duelist-classes.test.mjs
+      - run: npx eslint src/components/duelist/sim/classAbilityIntentBoundary.mjs tests/duelist-class-ability-intent-boundary.test.mjs
+      - run: npm run build
