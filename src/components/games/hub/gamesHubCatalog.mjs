@@ -2,11 +2,15 @@
 // Adding a game is one more entry here: the cross-scroll menu, its keys,
 // swipes and background all read this list.
 //
-// A tile can be chosen only once its route is registered in the router, so a
-// game that is still being built shows "Coming soon" and goes live by itself
-// the day its route file lands in main (no constant to flip).
+// A tile launches only if it is released AND its route is available. A route
+// existing does not mean its game is ready for players. Explicitly flip the
+// release switch after QA/review; do not auto-release the third game.
 
 export const GAMES_HUB_FOCUS_STORAGE_KEY = 'adamXEve.gamesHub.focusedGame';
+
+// Fantasy Battle (game #3) is under development. Keep the public launcher and
+// direct route unavailable until the game is reviewed and ready.
+export const FANTASY_BATTLE_RELEASED = false;
 
 const BASE44_MEDIA = 'https://media.base44.com/images/public/6af625cd654fa5b8954442ce';
 
@@ -36,6 +40,7 @@ export const GAMES_HUB_TILES = Object.freeze([
   Object.freeze({
     id: 'fantasy-battle',
     to: '/fantasy-battle',
+    releaseStatus: FANTASY_BATTLE_RELEASED ? 'ready' : 'coming-soon',
     title: 'Fantasy Battle',
     tagline: 'A turn-based archer battle, played out on a 2D field.',
     details: Object.freeze(['Turn-based', '2D', 'Archers']),
@@ -50,6 +55,7 @@ export const GAMES_HUB_TILES = Object.freeze([
 // keyed by full path). Without a table, trust the catalog and let every tile play.
 export function isTilePlayable(tile, routesByPath) {
   if (!tile || typeof tile.to !== 'string' || !tile.to.startsWith('/')) return false;
+  if (tile.releaseStatus === 'coming-soon') return false;
   if (!routesByPath || typeof routesByPath !== 'object') return true;
   const path = tile.to.length > 1 ? tile.to.replace(/\/+$/, '') : tile.to;
   return Boolean(routesByPath[path]);
