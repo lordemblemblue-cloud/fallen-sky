@@ -263,6 +263,7 @@ Deno.serve(async (req) => {
 
     if (action === 'set_assignment_status') {
       const { clanId, assignmentId, status } = data;
+      if (!['pending','accepted','declined','completed'].includes(status)) return json({ error:'Invalid assignment status' }, 400);
       const member = await requireMember(clanId);
       const row = await base44.asServiceRole.entities.ClanAssignment.get(assignmentId);
       if (!row || (row.clanId !== clanId && row.divisionId !== clanId)) return json({ success: false, error: 'Assignment not found' }, 404);
