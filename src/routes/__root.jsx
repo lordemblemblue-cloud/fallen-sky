@@ -10,7 +10,7 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#05070c" },
       { title: "Game 3D / Book · Atom × Eve" },
       { name: "description", content: "The living 3D world of Adam and Eve, with factions, companions, characters, and quests." },
