@@ -76,3 +76,27 @@ test('successful evidence is still explicitly not a visible-pixel or performance
   assert.equal(decision.ok, true);
   assert.match(decision.warning, /Physical screenshots/);
 });
+
+test('requires both games to be verified on the same deployment origin', () => {
+  const cases = [
+    'https://preview.example.test/duelist-next/play',
+    'http://example.test/duelist-next/play',
+    'https://example.test:8443/duelist-next/play',
+    'http://localhost:3000/duelist-next/play',
+  ];
+  for (const tabUrl of cases) {
+    const decision = validateDualGameEvidence([
+      report('fallen-sky'), report('duelist-adventure', { tabUrl }),
+    ]);
+    assert.equal(decision.ok, false, tabUrl);
+    assert.equal(decision.reason, 'reports-from-different-origins', tabUrl);
+  }
+});
+
+test('different playable paths on the same origin remain valid', () => {
+  const decision = validateDualGameEvidence([
+    report('fallen-sky', { tabUrl: 'https://example.test/gameview/arena?renderer=webgpu' }),
+    report('duelist-adventure', { tabUrl: 'https://example.test/duelist-next/play?renderer=webgpu' }),
+  ]);
+  assert.equal(decision.ok, true);
+});
