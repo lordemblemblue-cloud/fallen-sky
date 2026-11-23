@@ -1,0 +1,38 @@
+/* GPU advisory for the two playable 3D games; never impersonate a browser permission prompt. */
+.xs-gpu-overlay{position:absolute;inset:0;z-index:100;display:grid;place-items:center;padding:20px;
+  background:rgba(2,8,19,.87);backdrop-filter:blur(10px);pointer-events:auto;touch-action:pan-y;user-select:text;}
+.xs-gpu-dialog{position:relative;max-width:600px;width:min(100%,600px);max-height:min(88dvh,780px);overflow-y:auto;
+  border:1px solid rgba(143,192,226,.65);border-radius:20px;padding:clamp(20px,3vw,32px);
+  color:#e8f3ff;background:linear-gradient(145deg,#122744,#071322 75%);box-shadow:0 24px 85px rgba(0,0,0,.68);}
+.xs-gpu-close{position:absolute;right:10px;top:10px;border:1px solid #63809a;background:#17314a;
+  border-radius:10px;color:white;padding:8px;cursor:pointer;}
+.xs-gpu-eyebrow{display:flex;align-items:center;gap:8px;color:#f3c781;font-size:11px;
+  text-transform:uppercase;letter-spacing:.15em;font-weight:800;margin:0 30px 10px 0;}
+.xs-gpu-dialog h2{font-size:clamp(21px,2.7vw,30px);line-height:1.15;font-weight:850;margin:0 0 12px;}
+.xs-gpu-lead{font-size:13px;line-height:1.6;color:#ccdfec;margin:0 0 16px;}
+.xs-gpu-status{display:flex;align-items:center;gap:10px;min-height:43px;padding:10px 12px;border-radius:12px;
+  background:#0b1c31;border:1px solid #35516d;color:#d5e9f5;font-size:12px;line-height:1.45;}
+.xs-gpu-status[data-status=ready]{color:#b9f7d2;border-color:#548e78;}
+.xs-gpu-status[data-status=unavailable]{color:#ffe0b5;border-color:#947553;}
+.xs-gpu-actions{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;}
+.xs-gpu-dialog button{min-height:38px;font-weight:800;cursor:pointer;}
+.xs-gpu-dialog button:focus-visible{outline:3px solid #fff;outline-offset:3px;}
+.xs-gpu-check,.xs-gpu-guide-toggle{padding:8px 16px;border-radius:11px;font-size:12px;}
+.xs-gpu-check{background:#e1b977;color:#121827;}
+.xs-gpu-guide-toggle{border:1px solid #7d98b0;color:#e8f4fb;background:#183450;}
+.xs-gpu-check:disabled{opacity:.6;cursor:wait;}
+.xs-gpu-guide{margin:12px 0;padding:12px 14px;border:1px solid #35556f;border-radius:12px;
+  background:rgba(4,16,30,.75);font-size:12px;line-height:1.6;color:#cbdfea;}
+.xs-gpu-guide p{margin:0 0 10px;}
+.xs-gpu-guide p:last-child{margin-bottom:0;}
+.xs-gpu-address{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:7px 0 12px;
+  padding:8px 10px;border-radius:9px;background:#0b1424;}
+.xs-gpu-address code{font-size:13px;color:#f5d6a3;word-break:break-word;}
+.xs-gpu-address button{display:inline-flex;align-items:center;gap:4px;background:#24415c;color:white;border-radius:7px;padding:4px 10px;}
+.xs-gpu-safety{display:flex;gap:8px;align-items:flex-start;color:#f4d6aa;}
+.xs-gpu-safety svg{flex:none;margin-top:3px;}
+.xs-gpu-footer{margin-top:16px;border-top:1px solid rgba(148,186,212,.3);padding-top:15px;}
+.xs-gpu-continue{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-width:min(100%,210px);padding:11px 16px;border-radius:12px;background:#8ecdf5;color:#061323;font-size:13px;}
+.xs-gpu-footer p{margin:8px 0 0;font-size:11px;color:#9ebdd2;line-height:1.5;}
+@media(max-height:510px){.xs-gpu-overlay{padding:6px 14px;}.xs-gpu-dialog{padding:16px;max-width:700px;max-height:94dvh;}.xs-gpu-lead{line-height:1.45;}.xs-gpu-dialog h2{font-size:21px;}}
