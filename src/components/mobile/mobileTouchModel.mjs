@@ -1,6 +1,6 @@
 // Screen geometry is based on actual CSS viewport size, not assumed 16:9 pixels.
 // Layouts are independent in portrait/landscape and for each of the two games.
-export const MOBILE_TOUCH_LAYOUT_KEY = 'axe_mobile_touch_layout_v1';
+export const MOBILE_TOUCH_LAYOUT_KEY = 'axe_mobile_touch_layout_v2';
 export const MOBILE_TOUCH_GAMES = Object.freeze(['fallen', 'duelist']);
 export const MOBILE_TOUCH_ACTIONS = Object.freeze({
   duelist: Object.freeze([
@@ -14,7 +14,7 @@ export const MOBILE_TOUCH_ACTIONS = Object.freeze({
   fallen: Object.freeze([
     ['attack','ATTACK'],['guard','GUARD'],['jump','JUMP'],['roll','ROLL'],
     ['dodge','DODGE'],['ability1','1'],['ability2','2'],['ability3','3'],
-    ['ability4','4'],['ultimate','ULT'],['more','MORE'],
+    ['ability4','4'],['ultimate','ULT'],['lock','LOCK'],['more','MORE'],
     ['interact','USE'],['mount','MOUNT'],['crouch','CROUCH'],
     ['skill5','5'],['skill6','6'],['skill7','7'],['skill8','8'],['skill9','9'],
   ]),
@@ -40,22 +40,25 @@ export function touchLandscape(width, height) {
   return Number(width) > Number(height);
 }
 const LANDSCAPE = Object.freeze({
-  joystick:[18,75],
-  light:[89,82],heavy:[80,82],guard:[70,82],
-  attack:[89,82],jump:[91,62],roll:[80,62],dash:[69,62],dodge:[69,62],
-  ability1:[68,41],ability2:[77,41],ability3:[86,41],ability4:[93,41],
-  special:[84,20],ultimate:[84,20],lock:[68,20],more:[94,20],
-  interact:[55,28],sprint:[55,48],mode:[55,68],breach:[45,28],
-  resist:[45,48],itemActive:[45,68],shop:[35,28],
-  mount:[55,48],crouch:[55,68],
-  skill5:[55,26],skill6:[55,45],skill7:[45,26],skill8:[45,45],skill9:[35,26],
+  joystick:[16,74],
+  // Arc-shaped four-skill cluster wrapping the attack circle from below-left
+  // to above-right. Thumb sizes and min safe areas are handled in CSS.
+  light:[89,79],attack:[89,79],
+  ability1:[76,86],ability2:[70,68],ability3:[77,50],ability4:[89,45],
+  heavy:[92,62],guard:[59,53],jump:[60,69],roll:[57,86],
+  dash:[52,60],dodge:[52,60],
+  special:[51,78],ultimate:[51,78],lock:[59,33],more:[94,19],
+  interact:[45,27],sprint:[45,44],mode:[45,62],breach:[35,28],
+  resist:[35,48],itemActive:[35,66],shop:[27,28],
+  mount:[45,44],crouch:[45,62],
+  skill5:[44,24],skill6:[44,42],skill7:[34,24],skill8:[34,43],skill9:[27,65],
 });
 const PORTRAIT = Object.freeze({
-  joystick:[21,79],
-  light:[86,72],heavy:[69,72],guard:[69,61],
-  attack:[86,72],jump:[86,61],roll:[86,50],dash:[69,50],dodge:[69,50],
-  ability1:[69,39],ability2:[86,39],ability3:[69,30],ability4:[86,30],
-  special:[86,20],ultimate:[86,20],lock:[69,20],more:[86,83],
+  joystick:[20,80],
+  light:[87,78],attack:[87,78],
+  ability1:[71,85],ability2:[64,70],ability3:[71,55],ability4:[87,49],
+  heavy:[90,65],guard:[51,48],jump:[53,62],roll:[51,83],dash:[52,73],dodge:[52,73],
+  special:[52,27],ultimate:[52,27],lock:[52,14],more:[88,94],
   interact:[52,18],sprint:[52,28],mode:[52,38],breach:[52,48],
   resist:[52,58],itemActive:[52,68],shop:[52,78],
   mount:[52,28],crouch:[52,38],
