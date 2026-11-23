@@ -17,7 +17,7 @@ export const Route = createFileRoute('/duelist-next/play')({
     const asked = typeof search.room === 'string' ? search.room.trim() : '';
     const room = mode !== 'story' || !online ? null : ['new', 'open'].includes(asked) ? asked : /^m[0-9]+$/.test(asked) ? asked : /^[A-HJ-NP-Z]{5}$/.test(asked.toUpperCase()) ? asked.toUpperCase() : null;
     const mission = mode === 'story' ? (MISSION_ORDER.includes(search.mission) ? search.mission : MISSION_ORDER[0]) : null;
-    const from = search.from === 'duelist' ? 'duelist' : null;
+    const from = ['duelist', 'online-play'].includes(search.from) ? search.from : null;
     const matchId = online && !['story', 'any', 'online'].includes(mode) && /^m[0-9]+$/.test(String(search.matchId || '')) ? String(search.matchId) : null;
     return { mode, online: online ? 1 : 0, ...(mission ? { mission } : {}), ...(room ? { room } : {}), ...(matchId ? { matchId } : {}), ...(from ? { from } : {}) };
   },
