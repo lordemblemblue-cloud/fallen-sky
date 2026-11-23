@@ -176,3 +176,25 @@ test('each class transition spends no old-class charge and starts the next class
     assert.equal(matchView(m, 'me').me.specialMeter, 0);
   }
 });
+
+
+test('duel round class change cannot carry special meter into the new class', () => {
+  const m = createMatch({ mode: 'duel', players: [{ id: 'me' }, { id: 'foe' }] });
+  assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
+  advance(m, COUNTDOWN + 0.1);
+  const seat = m.seats.get('me');
+  assert.equal(seat.classId, 'assassin');
+  seat.specialMeter = 100;
+  m.phase = 'roundOver';
+  m.phaseUntil = m.world.time + 0.05;
+  assert.equal(queueMatchClass(m, 'me', 'healer').accepted, true);
+  assert.equal(seat.classId, 'assassin', 'round break cannot switch the active class early');
+  assert.equal(seat.specialMeter, 100, 'queued class cannot spend the previous meter');
+  advance(m, 0.15);
+  assert.equal(m.round, 2);
+  assert.equal(seat.classId, 'healer');
+  assert.equal(seat.pendingClass, null);
+  assert.equal(seat.specialMeter, 0, 'new round cannot inherit another class special');
+  assert.equal(matchView(m, 'me').me.specialMeter, 0);
+  assert.equal(m.world.fighters.get('me').weapon, 'sword');
+});
