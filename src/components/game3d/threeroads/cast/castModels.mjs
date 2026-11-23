@@ -89,6 +89,10 @@ export const CAST_MODELS = Object.freeze({
   remoria_gate_south_left: Object.freeze({ source: 'archer' }),
   remoria_gate_south_right: Object.freeze({ source: 'archer' }),
   remoria_gate_north: Object.freeze({ source: 'archer' }),
+  // Band 3: the echo at the Wolf Stones, and the two champions who have not been met yet.
+  thrown_standard_bearer: Object.freeze({ source: 'archer' }),
+  tiaa_archer: Object.freeze({ source: 'archer' }),
+  brenna_casca: Object.freeze({ source: 'archer' }),
 });
 
 /** Standing height in metres for a body from the cast table's `look.body`. */

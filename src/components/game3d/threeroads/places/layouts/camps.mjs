@@ -99,10 +99,10 @@ const DRESSING = Object.freeze({
     ground: [{ surface: 'yard', quad: [[-243, -63], [-233, -63], [-233, -53.5], [-243, -53.5]].map(([x, z]) => [x - centre.x, z - centre.z]) }],
     lights: [],
   }),
-  // The four fire bowls light the rite; one real light between them.
+  // The four fire bowls light the rite at the ravine's mouth; one real light between them.
   shadow_ravine: centre => ({
     ground: [],
-    lights: [{ x: 340 - centre.x, z: -168 - centre.z, y: 1.6, colour: 0xff8a3a, intensity: 4, distance: 11, flicker: true }],
+    lights: [{ x: 333 - centre.x, z: -152 - centre.z, y: 1.6, colour: 0xff8a3a, intensity: 4, distance: 11, flicker: true }],
   }),
   // The furrow's marked course, from furrow_1 to furrow_end (script/band2.mjs).
   first_furrow: centre => ({

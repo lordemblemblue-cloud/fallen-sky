@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PLEDGE_STEP_KINDS, definePledge, pledgeObjectiveMatchesEvent } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import {
-  CHOICE_RANGE, DEFEND_AWAY_SECONDS, ESCORT_FOLLOWER_SLACK, TALK_RANGE,
+  CHOICE_RANGE, DEFEND_AWAY_SECONDS, DEFEND_WAVE_GOAL_RADIUS, ESCORT_FOLLOWER_SLACK, TALK_RANGE,
   createStepWatcher, groupDetail, stepEvent, stepFailEvent,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeWatchers.mjs';
 import { createSpeechQueue, lineSeconds } from '../src/components/game3d/threeroads/pledgeworld/pledgeSpeech.mjs';
@@ -224,6 +224,27 @@ test('defend: the clock starts on the ground, waves at their times, away too lon
   half.at(0); half.run(3);
   half.watcher.dispose();
   assert.deepEqual(half.log, ['enemies:spawnGroup:w1', 'enemies:despawnGroup:w1']);
+});
+
+test('defend: every wave is sent walking to the guarded spot, wherever it appears', () => {
+  const sent = [];
+  const index = indexOf('defend');
+  const frame = { now: 0, player: { x: 2, z: 0 }, eDown: false, blocked: false, locate: () => null };
+  const watcher = createStepWatcher({
+    pledge, index, step: pledge.pledge.steps[index], progress: 0, along: null,
+    watch: { point: 'a', radius: 10, waves: [{ at: 1, group: { groupId: 'w1', kind: 'k', count: 3, at: 'c', radius: 5, placeId: 'P10' } }] },
+    memory: { done: new Set(), alongSpoken: 0 },
+    world: { report: () => {}, say: () => {}, notice: () => {}, bus: (type, detail) => sent.push([type, detail]) },
+    point: name => POINTS[name] || null,
+    personName: id => id, whereIs: () => null, groupPoint: () => POINTS.c,
+  });
+  for (let i = 0; i < 15; i++) { frame.now += 0.1; watcher.update(frame); }
+  assert.deepEqual(sent, [['enemies:spawnGroup', {
+    groupId: 'w1', kind: 'k', count: 3, x: 40, z: 0, radius: 5, level: 'player', tier: 'normal', placeId: 'P10',
+    goal: { x: 0, z: 0, radius: DEFEND_WAVE_GOAL_RADIUS },
+  }]]);
+  // A group asked for by a cue (a fight the player walks to) is given no goal.
+  assert.equal('goal' in groupDetail({ groupId: 'g', kind: 'k', count: 1, at: 'b' }, n => POINTS[n]), false);
 });
 
 test('carry: E at the start takes it up, the place it goes is one report, falling or riding drops it', () => {

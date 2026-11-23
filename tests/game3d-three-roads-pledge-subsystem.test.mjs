@@ -196,16 +196,22 @@ test('Sworn at the Gate through the subsystem: keys, captions, the bus, the clai
   t.run(0.3);
   assert.equal(t.subsystem.status()[0].stepId, 'lyra');
 
-  // Lyra is in the game's own list. The step hears the press and the key is
-  // left to the game, which opens its dialogue for the ending.
+  // Lyra is in the game's own list. The step hears the press; the
+  // traveller's closing line is said first, so the game does not see it.
   t.at(LYRA_SPOT);
   const press = t.key('keydown');
-  assert.equal(press.stopped, false, 'the game must see this E');
+  assert.equal(press.stopped, true, 'the closing line comes before the ending');
   t.key('keyup');
   assert.equal(t.store.state.objectiveProgress[M01].lyra, 1);
   t.run(0.3);
   assert.equal(t.store.state.storyFlags.tr_keepsake_remoria, true, 'a player of Tameri is given the pebble from Remoria');
   assert.deepEqual(getPledgeNavigationTarget(threeRoadsPledge(M01), t.player), { ...LYRA_SPOT, label: 'Lyra the Seeker' });
+  // Once it has been said, the key is left to the game, which opens its
+  // dialogue for the ending.
+  t.run(12);
+  const again = t.key('keydown');
+  assert.equal(again.stopped, false, 'the game must see this E');
+  t.key('keyup');
 
   // The game's dialogue completes the pledge; the claim is sent, nothing else.
   assert.deepEqual(t.subsystem.claims(), []);
