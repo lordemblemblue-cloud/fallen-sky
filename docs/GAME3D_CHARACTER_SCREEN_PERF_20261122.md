@@ -204,3 +204,20 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
 96c0c70a ran 2499 tests with 109 failing; this branch ran 2507 tests with the same 109 failing names.
 
 **Not checked live:** a body swap on WebGL, while mounted, or while holding a bow. The pane had no GPU.
+
+### Live checks 2026-11-23, after the app restart (head before this section: `f5b5e851`)
+
+**Cold WebGPU load on this branch** (dev build, hidden pane, 60 Hz frame pump):
+- The sliced build ran 1,125 objects for about 43 s between the first and last slice; the early precompile reported 35 s and 106 pipelines.
+- **Longest main-thread block during the build: 3.2 s.** 9 blocks were over 1 s and 23 over 0.5 s; the single slowest shader build was 1.8 s. Before: one 22.2 s block, then 6.5 s and 3.4 s.
+- **The start screen answered a click** (ENTER SERVER) 1.5 s into the build, in 1.28 s.
+- The world appeared and announced ready at 81 s from load, about the same total as before. No errors, no device loss, no failure flag.
+
+**Body swap checks:**
+- **WebGL:** swapping Adam to Eve kept the world (no teardown, same renderer and scene). The new body loaded in 0.89 s, the ready event came 2.1 s after Create character, ENTER WORLD took 0.70 s, and Eve walked 5.7 m in 1.5 s.
+- **While mounted (bug found and fixed):** swapping while riding left the world's riding state set, and the new character could not walk in any direction, even after mounting and dismounting again.
+  - `dismountForSwap` now dismounts the way F does before the new body takes the old one's place.
+  - After the fix, swapping while riding on WebGL leaves the companion store not mounted, ENTER WORLD takes 0.72 s, and Adam walks 6.1 m.
+- **Holding a bow:** a new character has its own loadout (a sword), so the old character's bow is rightly not carried over. Equipping the Training Bow on the swapped body puts it in that body's left hand. Before the swap, the bow was also put away while riding, as designed.
+
+The test origin's stored renderer choice and failure flag were removed afterwards.

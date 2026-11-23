@@ -2594,6 +2594,23 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       if (old) { old.parent?.remove(old); disposeAvatarModel(old); }
       model = null; modelRef.current = null; playerModelRef.current = null;
     };
+    // A new character never inherits the old one's ride: dismount the way F does (the old body is set down beside
+    // the mount), so the world's riding state (isMountedRef, the companion and mount stores) is cleared. Left set, the
+    // swapped body stood still in the world: live, swapping while mounted gave a character that could not walk.
+    const dismountForSwap = (old) => {
+      if (!isMountedRef.current) return;
+      restoreMountedRider();
+      const compGroup = companionGroupRef.current;
+      if (old && compGroup) {
+        moveWorldActor(old, Math.cos(compGroup.rotation.y) * 1.2, -Math.sin(compGroup.rotation.y) * 1.2, false);
+        const groundY = sampleGroundY(old.position.x, old.position.z);
+        if (groundY !== null) old.position.y = groundY;
+      }
+      isMountedRef.current = false;
+      setIsMounted(false);
+      setMounted(false);
+      setAXEMountRiding(false);
+    };
     // A new body on the character screens (GameWorldScene's swapPlayerAvatarRef): load it, then stand it where the
     // old actor stood, without rebuilding the world. It is announced like the first body (game3dWorldAvatarReady).
     const swapPlayerAvatar = (url) => {
@@ -2605,6 +2622,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       loadAvatarModel(appearanceRef.current, 1.7, url).then((fbx) => {
         if (avatarLoadDisposed || seq !== avatarSwapSeq) { disposeAvatarModel(fbx); return; }
         const old = model;
+        dismountForSwap(old);
         const swap = { position: old.position.clone(), quaternion: old.quaternion.clone() };
         releasePlayerAvatar(old);
         avatarSwapPending = false;
