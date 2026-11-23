@@ -2,6 +2,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import InstallAppButton from '@/components/games/InstallAppButton';
 import LiveAppIntro from '@/components/games/LiveAppIntro';
+import MobileTouchControls from '@/components/mobile/MobileTouchControls';
 import { shouldShowLiveIntro } from '@/components/games/liveIntroEnvironment';
 
 // Adam X Eve Games: the first page. Left half opens Fallen Sky Online
@@ -86,14 +87,24 @@ export default function GamesHub() {
   }, []);
 
   if (introPhase === 'checking') {
-    return <main className="h-[100dvh] bg-black" aria-label="Loading Adam X Eve Games" />;
+    return <>
+      <MobileTouchControls game="duelist" disabled />
+      <main className="h-[100dvh] bg-black" aria-label="Loading Adam X Eve Games" />
+    </>;
   }
   if (introPhase === 'playing') {
-    return <LiveAppIntro onComplete={() => setIntroPhase('complete')} />;
+    return <>
+      <MobileTouchControls game="duelist" disabled />
+      <LiveAppIntro onComplete={() => setIntroPhase('complete')} />
+    </>;
   }
 
   return (
-    <main className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#05070c] text-white">
+    <>
+      {/* No gameplay controls on the hub; on touch portrait the shared component
+          shows the same mandatory sideways screen before either game launches. */}
+      <MobileTouchControls game="duelist" disabled />
+      <main className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#05070c] text-white">
       <style>{`
         @media (min-width: 768px) {
           .games-hub-left  { clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); margin-right: -6%; }
@@ -111,6 +122,7 @@ export default function GamesHub() {
         <GamePanel game={left} side="left" onPlay={() => navigate({ to: left.to })} />
         <GamePanel game={right} side="right" onPlay={() => navigate({ to: right.to })} />
       </div>
-    </main>
+      </main>
+    </>
   );
 }
