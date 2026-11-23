@@ -51,6 +51,14 @@ export function validateDualGameEvidence(reports) {
     if (report.first?.sceneId !== report.sceneId || report.last?.sceneId !== report.sceneId) {
       return fail('sample-scene-mismatch:' + report.sceneId);
     }
+    // The browser probe verifies that both counter samples came from the same
+    // document (URL and navigation start). Reclassifying counters alone would
+    // otherwise accept a report whose tab navigated/reloaded between samples.
+    // Fail closed for old reports that lack this required identity evidence.
+    if (report.documentCheck?.ok !== true ||
+      report.documentCheck.reason !== 'same-browser-document') {
+      return fail('unverified-browser-document:' + report.sceneId);
+    }
     const decision = classifySamplePair(report.first, report.last);
     if (!decision.ok || report.ok !== true || report.reason !== decision.reason) {
       return fail('unverified-native-evidence:' + report.sceneId + ':' + decision.reason);
