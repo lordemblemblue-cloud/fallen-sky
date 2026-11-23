@@ -1,0 +1,36 @@
+name: Duelist Special Meter Boundary Regression
+
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-special-meter-boundaries.test.mjs'
+      - 'src/components/duelist/core/classes.mjs'
+      - '.github/workflows/duelist-special-meter-boundaries.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  meter-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run special meter and class rules tests
+        run: node --test tests/duelist-special-meter-boundaries.test.mjs tests/duelist-classes.test.mjs
+  lint-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx eslint tests/duelist-special-meter-boundaries.test.mjs src/components/duelist/core/classes.mjs
+      - run: npm run build
