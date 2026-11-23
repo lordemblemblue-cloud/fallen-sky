@@ -194,7 +194,7 @@ test('each class has four distinct ability animations, including intentionally s
     assert.equal(new Set(animations).size, abilities.length, classId + ' must not reuse an animation slot');
     for (const ability of abilities) {
       assert.equal(ability.animation, 'class.power.' + ability.id);
-      assert.match(ability.animation, /^class\\.power\\./);
+      assert.match(ability.animation, /^class\.power\./);
     }
   }
   assert.equal(CLASSES.warrior.abilities[3].animation, CLASSES.duelist.abilities[2].animation,
