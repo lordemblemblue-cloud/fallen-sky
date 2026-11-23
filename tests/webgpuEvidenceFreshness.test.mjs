@@ -115,3 +115,14 @@ test('CLI rejects future and noncanonical timestamps across multiple reports', a
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('rejects fractional and unsafe clock inputs rather than rounding freshness boundaries', () => {
+  const valid = [report(now)];
+  for (const invalidNow of [now + 0.5, Number.MAX_SAFE_INTEGER + 1, Number.NaN]) {
+    assert.equal(validateEvidenceFreshness(valid, invalidNow).reason, 'invalid-freshness-input');
+  }
+  for (const invalidWindow of [0.5, 1000.5, Number.MAX_SAFE_INTEGER + 1]) {
+    assert.equal(validateEvidenceFreshness(valid, now, invalidWindow).reason, 'invalid-freshness-input');
+  }
+  assert.equal(validateEvidenceFreshness(valid, now, 1).ok, true);
+});
