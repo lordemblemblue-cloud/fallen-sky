@@ -133,9 +133,9 @@
    "cancelWindowStart": 0.3,
    "keyframes": [
     {"time":0,"phase":"active","easing":"linear","expression":"hurt"},
-    {"time":0.06,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-9,-2]},"spine":{"rotation":9,"smearStretch":0.25},"head":{"rotation":14},"drawArm":{"rotation":-18},"drawForearm":{"rotation":10},"bowArm":{"rotation":-12},"bowForearm":{"rotation":-15},"bowSocket":{"rotation":10}}},
-    {"time":0.25,"phase":"recovery","easing":"easeOutQuad","bones":{"pelvis":{"offset":[-4,-1]},"spine":{"rotation":4,"smearStretch":0},"head":{"rotation":6},"drawArm":{"rotation":-8},"drawForearm":{"rotation":5},"bowArm":{"rotation":-5},"bowForearm":{"rotation":-6},"bowSocket":{"rotation":4}}},
-    {"time":0.6,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[0,0]},"spine":{"rotation":0},"head":{"rotation":0},"drawArm":{"rotation":0},"drawForearm":{"rotation":0},"bowArm":{"rotation":0},"bowForearm":{"rotation":0},"bowSocket":{"rotation":-4}}}
+    {"time":0.06,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-9,-7]},"spine":{"rotation":6.5,"smearStretch":0.25},"head":{"rotation":12},"drawArm":{"rotation":-18},"drawForearm":{"rotation":14},"bowArm":{"rotation":12},"bowForearm":{"rotation":20},"bowSocket":{"rotation":-15}}},
+    {"time":0.25,"phase":"recovery","easing":"easeOutQuad","bones":{"pelvis":{"offset":[-4,-5]},"spine":{"rotation":1.5,"smearStretch":0},"head":{"rotation":4},"drawArm":{"rotation":-12},"drawForearm":{"rotation":18},"bowArm":{"rotation":17},"bowForearm":{"rotation":27},"bowSocket":{"rotation":-20}}},
+    {"time":0.6,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[0,-4]},"spine":{"rotation":-2.5},"head":{"rotation":-2},"drawArm":{"rotation":-8},"drawForearm":{"rotation":22},"bowArm":{"rotation":20},"bowForearm":{"rotation":32},"bowSocket":{"rotation":-24}}}
    ],
    "events": []
   },
