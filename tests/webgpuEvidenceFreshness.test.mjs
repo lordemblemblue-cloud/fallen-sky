@@ -26,6 +26,17 @@ test('rejects empty or invalid input and invalid time configuration', () => {
   assert.equal(validateEvidenceFreshness([report(now)], now, 0).reason, 'invalid-freshness-input');
 });
 
+test('custom freshness windows reject stale reports without changing the default window', () => {
+  const recent = report(now - 30 * 60 * 1000);
+  assert.equal(validateEvidenceFreshness([recent], now).ok, true);
+  assert.deepEqual(validateEvidenceFreshness([recent], now, 15 * 60 * 1000),
+    { ok: false, reason: 'stale-check-time', reportIndex: 0 });
+  assert.equal(validateEvidenceFreshness([recent], now, 30 * 60 * 1000).ok, true);
+  for (const invalid of [-1, Number.NaN, Infinity]) {
+    assert.equal(validateEvidenceFreshness([recent], now, invalid).reason, 'invalid-freshness-input');
+  }
+});
+
 test('checks every report and fails closed when later evidence is malformed', () => {
   const good = report(now - 1000);
   assert.deepEqual(
