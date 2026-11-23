@@ -283,7 +283,7 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
                   style={{ '--xs-rel': rel, '--xs-after': after, '--xs-accent': tile.accent, backgroundImage: tile.fallback }}
                   tabIndex={focused ? 0 : -1}
                   aria-current={focused ? 'true' : undefined}
-                  aria-label={live ? tile.title : `${tile.title}, coming soon`}
+                  aria-label={live ? `${tile.title}${tile.releaseStatus === 'beta-experimental' ? ', beta experimental' : ''}` : `${tile.title}, coming soon`}
                   onClick={() => onTileClick(index)}
                 >
                   <img
