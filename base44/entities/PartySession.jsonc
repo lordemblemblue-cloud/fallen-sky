@@ -40,15 +40,29 @@
     "member_ids"
   ],
   "rls": {
-    "read": {
-      "member_ids": {
+    "create": {
+      "data.member_ids": {
         "$in": [
           "{{user.id}}"
         ]
       }
     },
-    "write": {
-      "member_ids": {
+    "read": {
+      "data.member_ids": {
+        "$in": [
+          "{{user.id}}"
+        ]
+      }
+    },
+    "update": {
+      "data.member_ids": {
+        "$in": [
+          "{{user.id}}"
+        ]
+      }
+    },
+    "delete": {
+      "data.member_ids": {
         "$in": [
           "{{user.id}}"
         ]

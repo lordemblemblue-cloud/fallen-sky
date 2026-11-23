@@ -166,7 +166,15 @@
       "description": "Optional mixable visual art references. Not ethnicity, nationality, ancestry or gameplay modifiers.",
       "items": {
         "type": "string",
-        "enum": ["egyptian", "greek", "roman", "american", "korean", "japanese", "spiritual"]
+        "enum": [
+          "egyptian",
+          "greek",
+          "roman",
+          "american",
+          "korean",
+          "japanese",
+          "spiritual"
+        ]
       },
       "maxItems": 7,
       "uniqueItems": true,
@@ -175,7 +183,13 @@
     "genre_direction": {
       "type": "string",
       "description": "Independent art-world genre; does not affect body options or character stats.",
-      "enum": ["fantasy", "historical", "modern", "science_fiction", "mythic"],
+      "enum": [
+        "fantasy",
+        "historical",
+        "modern",
+        "science_fiction",
+        "mythic"
+      ],
       "default": "fantasy"
     },
     "hood_enabled": {
@@ -339,5 +353,35 @@
     "user_id",
     "name",
     "gender"
-  ]
+  ],
+  "rls": {
+    "create": {
+      "data.user_id": "{{user.id}}"
+    },
+    "read": null,
+    "update": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    }
+  }
 }

@@ -65,11 +65,6 @@
     "last_update"
   ],
   "rls": {
-    "read": {
-      "user_condition": {
-        "id": "{{user.id}}"
-      }
-    },
     "create": {
       "$or": [
         {
@@ -81,6 +76,9 @@
           }
         }
       ]
+    },
+    "read": {
+      "data.player_id": "{{user.id}}"
     },
     "update": {
       "$or": [
