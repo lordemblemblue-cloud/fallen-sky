@@ -8,6 +8,8 @@
  * rather than rendering motionless mannequins or trying to play animations
  * authored for an incompatible skeleton.
  */
+import {loadSharedNpcModel} from './sharedNpcModel.mjs';
+
 export const AXE_QUEST_NPC_GLBS=Object.freeze({
   archer_lyra:Object.freeze({
     url:'/models/characters/Artemis_Character_v5.glb',
@@ -46,11 +48,12 @@ export function loadAXEQuestNPCVisual({
   const visual=getAXEQuestNPCVisual(npcId);
   const fallback=()=>{
     if(!fbxLoader?.load||!fallbackUrl)return onError(new Error('Missing NPC FBX fallback'));
-    fbxLoader.load(fallbackUrl,model=>{
+    // one shared parse of the archer FBX per world mount (sharedNpcModel.mjs); each NPC gets its own clone
+    loadSharedNpcModel(fbxLoader,fallbackUrl,model=>{
       if(!model)return onError(new Error('Empty NPC FBX'));
       onLoaded({model,embeddedIdleClip:null,isEmbeddedGLB:false,
         sourceUrl:fallbackUrl});
-    },undefined,onError);
+    },onError);
   };
   if(!visual)return fallback();
   if(!gltfLoader?.load)return fallback();

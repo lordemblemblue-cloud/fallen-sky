@@ -211,10 +211,18 @@ export default function GameView() {
     if(worldEntryStatus!=='loading')return undefined;
     // A scene constructor can fail before the avatar loader fires. Never leave
     // the owner staring at an indefinite blank/blocked Game 3D entry.
-    const timer=window.setTimeout(()=>{
+    // A gate hop remounts the world as a new scene: once that new scene exists it is loading, not stuck, so it gets
+    // up to 150 s (slow devices take longer than 30 s to build an area and compile its WebGPU shaders). A first entry
+    // keeps the 30 s rule (its scene was already built behind character selection). Load errors still show at once.
+    const startScene=window.__gw3dScene,startedAt=performance.now();
+    let timer=0;
+    const check=()=>{
+      const scene=window.__gw3dScene;
+      if(scene&&scene!==startScene&&performance.now()-startedAt<150000){timer=window.setTimeout(check,15000);return;}
       setWorldEntryError('Game 3D did not finish loading. Retry, or return to character selection and check the browser console.');
       setWorldEntryStatus(current=>current==='loading'?'error':current);
-    },30000);
+    };
+    timer=window.setTimeout(check,30000);
     return ()=>window.clearTimeout(timer);
   },[worldEntryStatus]);
 

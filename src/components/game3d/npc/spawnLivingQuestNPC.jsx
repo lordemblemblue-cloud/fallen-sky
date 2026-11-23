@@ -3,6 +3,7 @@
 // proximity detection, head-label projection, and idle animation.
 
 import * as THREE from 'three';
+import { loadSharedNpcModel } from './sharedNpcModel.mjs';
 
 export const LIVING_QUEST_POS = [16, 5, -14];
 
@@ -16,7 +17,8 @@ export const LIVING_QUEST_POS = [16, 5, -14];
  * @param {(handle:object)=>void} o.onReady — called once the model is in the scene
  */
 export function spawnLivingQuestNPC({ scene, loader, archerUrl, snapToGround, idleClip, onReady }) {
-  loader.load(archerUrl, (fbx) => {
+  // Shares the quest givers' archer parse (sharedNpcModel.mjs): own bones and materials, shared geometry and textures.
+  loadSharedNpcModel(loader, archerUrl, (fbx) => {
     const box = new THREE.Box3().setFromObject(fbx);
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
