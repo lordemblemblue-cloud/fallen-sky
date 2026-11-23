@@ -178,10 +178,16 @@ export function settleBackgroundPipeline(compiling, createNow, reportInvalid) {
 // or light-count change), so nothing on screen blinks out; full-screen passes and render bundles too.
 // A background compile that never finishes (seen with several game tabs on one GPU: no error, no device loss) would
 // leave every object of that shader undrawn for the session, the pipeline being cached under the shader's key: one
-// still missing LATE_COMPILE_WAIT_MS after its first skipped draw is made directly, as r171 does without this. A
-// pipeline the GPU rejected as invalid (null, settleBackgroundPipeline) is never drawn.
+// still missing LATE_COMPILE_WAIT_MS after its first skipped draw is made directly, as r171 does without this, but
+// only once the GPU process is stuck rather than busy: no background compile has finished for LATE_COMPILE_STUCK_MS
+// (state.backgroundPipelineAt, set as each one finishes). A busy one keeps finishing them, and making one directly
+// then stalls the frame for nothing (a precompile that timed out can leave hundreds queued). At most
+// LATE_COMPILE_MAX_FORCED are made per frame. A pipeline the GPU rejected as invalid (null) is never drawn.
 export const LATE_COMPILE_WAIT_MS = 500;
-export function compileLateObjectsInBackground(renderer, { waitMs = LATE_COMPILE_WAIT_MS, now = () => performance.now() } = {}) {
+export const LATE_COMPILE_STUCK_MS = 1000;
+export const LATE_COMPILE_MAX_FORCED = 2;
+export function compileLateObjectsInBackground(renderer, { waitMs = LATE_COMPILE_WAIT_MS, stuckMs = LATE_COMPILE_STUCK_MS,
+  maxForced = LATE_COMPILE_MAX_FORCED, now = () => performance.now() } = {}) {
   const state = renderer.__sceneState;
   const pipelines = renderer._pipelines;
   const backend = renderer.backend;
@@ -189,6 +195,7 @@ export function compileLateObjectsInBackground(renderer, { waitMs = LATE_COMPILE
   pipelines.__sceneLateCompile = true;
   const drawn = new WeakSet();
   const waitingSince = new WeakMap(); // pipeline -> time of its first skipped draw
+  let forcedFrame = -1, forcedCount = 0;
   const getForRender = pipelines.getForRender.bind(pipelines);
   pipelines.getForRender = (renderObject, promises = null) => {
     const object = renderObject?.object;
@@ -205,7 +212,11 @@ export function compileLateObjectsInBackground(renderer, { waitMs = LATE_COMPILE
       const t = now();
       const since = waitingSince.get(pipeline);
       if (since === undefined) { waitingSince.set(pipeline, t); return; }
-      if (t - since < waitMs) return;
+      if (t - since < waitMs || t - (state.backgroundPipelineAt ?? -Infinity) < stuckMs) return; // busy, not stuck
+      const frame = renderer.info?.render?.frame ?? 0;
+      if (frame !== forcedFrame) { forcedFrame = frame; forcedCount = 0; }
+      if (forcedCount >= maxForced) return;
+      forcedCount++;
       backend.createRenderPipeline(renderObject, null); // stuck: make it now (every object of this shader shares it)
       gpuPipeline = backend.get(pipeline).pipeline;
       if (!gpuPipeline) return;
@@ -324,11 +335,15 @@ function installCompat(renderer) {
     const createAsync = device.createRenderPipelineAsync.bind(device);
     device.createRenderPipeline = (descriptor) => create(withPolygonOffset(descriptor));
     // a pipeline compiled in the background that fails: rejected as invalid, report it once and never draw it (null);
-    // otherwise make it directly (settleBackgroundPipeline), instead of an unhandled rejection
+    // otherwise make it directly (settleBackgroundPipeline), instead of an unhandled rejection. Each one that finishes
+    // is noted (state.backgroundPipelineAt): compileLateObjectsInBackground forces nothing while they keep finishing.
     device.createRenderPipelineAsync = (descriptor) => {
       const object = pipelineObject, material = pipelineMaterial;
       return settleBackgroundPipeline(createAsync(withPolygonOffset(descriptor)), () => create(descriptor),
-        (error) => reportPipelineFailure(object, material, error));
+        (error) => reportPipelineFailure(object, material, error)).then((pipeline) => {
+        if (pipeline) state.backgroundPipelineAt = performance.now();
+        return pipeline;
+      });
     };
     // a shader that does not compile: say where (once per message); the pipeline note below names the material
     const createShaderModule = device.createShaderModule.bind(device);
