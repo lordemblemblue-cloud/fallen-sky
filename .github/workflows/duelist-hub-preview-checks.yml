@@ -15,6 +15,7 @@ on:
       - 'tests/duelistHomeOverlays.test.mjs'
       - 'tests/duelistTemplateHub.test.mjs'
       - 'tests/duelistReferenceMenus.test.mjs'
+      - 'tests/duelistCharacterTheme.test.mjs'
       - 'src/components/duelist/core/progression.mjs'
       - 'src/components/duelist/core/ranks.mjs'
       - 'src/components/duelist/core/classes.mjs'
@@ -49,8 +50,8 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Check mode catalog and game entry routing
-        run: node --test tests/duelistCinematicHub.test.mjs tests/duelistHomeEntry.test.mjs tests/duelistPlayDrawer.test.mjs tests/duelistUnifiedUi.test.mjs tests/duelistHomeOverlays.test.mjs tests/duelistTemplateHub.test.mjs tests/duelistReferenceMenus.test.mjs
+        run: node --test tests/duelistCinematicHub.test.mjs tests/duelistHomeEntry.test.mjs tests/duelistPlayDrawer.test.mjs tests/duelistUnifiedUi.test.mjs tests/duelistHomeOverlays.test.mjs tests/duelistTemplateHub.test.mjs tests/duelistReferenceMenus.test.mjs tests/duelistCharacterTheme.test.mjs
       - name: Lint changed UI
-        run: npx eslint src/components/duelist/menu/DuelistReferenceMenus.jsx src/components/duelist/menu/DuelistTemplateHub.jsx src/components/duelist/menu/templateCatalog.mjs src/components/duelist/client/ClassPicker.jsx src/components/duelist/menu/MenuPages.jsx src/components/duelist/menu/DuelistHangarStage.jsx src/components/duelist/menu/hubModeCatalog.mjs src/routes/duelist.jsx src/routes/duelist-classic.jsx src/components/duelist/client/MatchLoadingScreen.jsx src/components/duelist/client/DuelistGame.jsx src/pages/DuelistNext.jsx
+        run: npx eslint src/components/duelist/menu/DuelistCharacterMenu.jsx src/components/duelist/menu/DuelistCharacterPreview.jsx src/components/duelist/menu/DuelistReferenceMenus.jsx src/components/duelist/menu/DuelistTemplateHub.jsx src/components/duelist/menu/templateCatalog.mjs src/components/duelist/client/ClassPicker.jsx src/components/duelist/menu/MenuPages.jsx src/components/duelist/menu/DuelistHangarStage.jsx src/components/duelist/menu/hubModeCatalog.mjs src/routes/duelist.jsx src/routes/duelist-classic.jsx src/components/duelist/client/MatchLoadingScreen.jsx src/components/duelist/client/DuelistGame.jsx src/pages/DuelistNext.jsx
       - name: Build preview application
         run: npm run build

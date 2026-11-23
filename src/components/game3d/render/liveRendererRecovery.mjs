@@ -1,27 +1,25 @@
-/**
- * Temporary Fallen Sky live-world safety gate after the 2026-11-21 all-black-world report.
- *
- * The world graph can be fully populated (HUD, actors, geography, lights) while a
- * WebGPU renderer submits zero draws. Until that GPU pipeline has been verified
- * in the actual Windows live shell, do not select WebGPU automatically for this
- * PARTICULAR 3D world. Keep Duelist Adventure and the shared selection policy
- * unchanged. This does not remove WebGPU support: an explicit URL preview
- * (?renderer=webgpu or ?renderer=webgl2) still opts in for engineers.
- *
- * IMPORTANT: A previously saved renderer override is NOT an explicit opt-in
- * to a possibly black live world. The URL must carry the preview request.
- */
-export const FALLEN_SKY_BLACK_SCENE_FALLBACK = 'fallen-sky-black-scene-safety';
-
-export function resolveFallenSkyLiveRendererChoice(choice, { search = '' } = {}) {
-  if (!choice || choice.kind === 'webgl') return choice;
-  let requested = null;
-  try { requested = new URLSearchParams(search).get('renderer'); }
-  catch { /* cannot safely infer a developer opt-in */ }
-
-  if ((requested === 'webgpu' || requested === 'webgl2') && choice.kind === requested) {
-    return choice;
-  }
-
-  return { kind: 'webgl', reason: FALLEN_SKY_BLACK_SCENE_FALLBACK };
+// Count visible, unpaused rendering time. Startup, background tabs and shader warmup
+// can legitimately produce no geometry. Only consecutive, trustworthy empty-world
+// observations count: missing or malformed GPU diagnostics are not proof of zero draws.
+export function createWorldDrawWatchdog() {
+  let last = null;
+  let emptySeconds = 0;
+  const reset = () => {
+    last = null;
+    emptySeconds = 0;
+  };
+  return function check(now, eligible, worldDraws) {
+    // An unavailable/invalid counter (for example NaN during device loss)
+    // must not trigger a false WebGL fallback or poison the elapsed-time clock.
+    if (eligible !== true || !Number.isFinite(now) || now < 0
+      || !Number.isSafeInteger(worldDraws) || worldDraws < 0 || worldDraws > 0) {
+      reset();
+      return false;
+    }
+    // Monotonic browser time may reset when a document or device restarts.
+    if (last !== null && now < last) reset();
+    if (last !== null) emptySeconds += Math.min(0.25, Math.max(0, (now - last) / 1000));
+    last = now;
+    return emptySeconds >= 8;
+  };
 }

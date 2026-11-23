@@ -1,0 +1,86 @@
+/* In-match right edge: no opaque cards or heavy outlines. Two fade-out centre lines,
+   with the equipped animated fighter between class identity and live abilities. */
+.dh-class-rail {
+  position: absolute; right: calc(env(safe-area-inset-right, 0px) + 16px);
+  top: 50%; width: 422px; height: 408px; transform: translateY(-50%);
+  display: grid; grid-template-columns: 68px 168px minmax(0, 186px);
+  align-items: stretch; z-index: 12; pointer-events: none;
+  color: #e5eefc; text-shadow: 0 1px 6px rgba(3, 8, 20, .6);
+}
+.dh-class-rail button { pointer-events: auto; }
+.dh-rail-identity { position: relative; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 20px; }
+.dh-rail-identity::after, .dh-rail-actions::before {
+  content: ''; position: absolute; width: 1px; height: 100%; top: 0;
+  background: linear-gradient(to bottom, transparent, rgba(178, 207, 239, .56) 50%, transparent);
+  pointer-events: none;
+}
+.dh-rail-identity::after { right: 0; }
+.dh-rail-actions::before { left: 0; }
+.dh-rail-class { display: flex; align-items: center; flex-direction: column; gap: 12px;
+  max-height: 265px; color: #dbe9fb; }
+.dh-rail-class svg { width: 22px; height: 22px; stroke-width: 1.5; color: #e1c37e; }
+.dh-rail-class span { writing-mode: vertical-rl; text-orientation: mixed; text-transform: uppercase;
+  letter-spacing: .25em; font-size: 13px; font-weight: 600; }
+.dh-rail-class:not(:disabled):hover { color: #ffe6a0; }
+.dh-rail-level { display: flex; flex-direction: column; align-items: center; gap: 3px;
+  letter-spacing: .12em; }
+.dh-rail-level small { font-size: 9px; color: #9bb1ce; }
+.dh-rail-level strong { font-size: 22px; font-weight: 600; color: #f4dca5; }
+.dh-rail-fighter { position: relative; min-width: 0; display: flex; align-items: stretch;
+  justify-content: center; }
+.dh-rail-preview { position: absolute; inset: 8px 0 25px; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 64%, rgba(34, 75, 111, .2), transparent 69%); }
+.dh-rail-preview .dcm-avatar-stage { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.dh-rail-preview .dcm-avatar-canvas { display: block; width: 100%; height: 100%; }
+.dh-rail-preview .dcm-avatar-fallback { position: absolute; left: 0; bottom: 42px; width: 100%;
+  color: #96acc9; text-align: center; font-size: 10px; line-height: 1.4; }
+.dh-rail-weapon { position: absolute; bottom: 6px; left: 0; right: 0;
+  font-size: 10px; font-weight: 500; letter-spacing: .11em; text-align: center;
+  text-transform: uppercase; color: #d3c29d; }
+.dh-rail-actions { position: relative; min-width: 0; display: flex; flex-direction: column;
+  justify-content: center; gap: 7px; padding: 12px 1px 12px 16px;
+  box-sizing: border-box; background: linear-gradient(to right, rgba(9, 19, 37, .24), transparent 100%); }
+.dh-rail-caption { font-size: 10px; letter-spacing: .18em; font-weight: 600; color: #b2c5dc; }
+.dh-rail-abilities { display: flex; flex-direction: column; gap: 5px; }
+.dh-rail-ability, .dh-rail-ultimate-button { display: grid; width: 100%; min-width: 0; text-align: left;
+  grid-template-columns: 34px minmax(0, 1fr) 20px; align-items: center; gap: 6px;
+  padding: 4px 2px !important; border: none; background: transparent; border-radius: 3px;
+  font-size: 11px; line-height: 1.15; }
+.dh-rail-ability:hover:not(:disabled), .dh-rail-ultimate-button:hover:not(:disabled) {
+  background: rgba(136, 191, 231, .1); }
+.dh-rail-ability:focus-visible, .dh-rail-ultimate-button:focus-visible, .dh-rail-class:focus-visible {
+  outline: 2px solid #e8ca8a; outline-offset: 2px; }
+.dh-rail-ability:disabled { opacity: .5; }
+.dh-rail-ability-icon, .dh-rail-ultimate-button > svg {
+  width: 31px; height: 31px; display: grid; place-items: center; border: 1px solid rgba(154, 187, 217, .28);
+  border-radius: 50%; color: #acd9f8; background: rgba(11, 26, 48, .36); }
+.dh-rail-ability-icon svg { width: 17px; height: 17px; stroke-width: 1.6; }
+.dh-rail-ultimate-button > svg { padding: 6px; box-sizing: border-box; color: #f7d88f; }
+.dh-rail-ability-name, .dh-rail-ultimate-button > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dh-rail-ability-name small, .dh-rail-ultimate-button small { display: block;
+  margin-top: 3px; color: #88a2bf; font-size: 9px; letter-spacing: .08em; }
+.dh-rail-ability kbd, .dh-rail-ultimate-button kbd { font-size: 11px; color: #d9d3bc;
+  text-align: right; border: none; background: none; }
+.dh-rail-ultimate { display: flex; flex-direction: column; gap: 8px;
+  margin-top: 6px; padding-top: 12px; border-top: 1px solid rgba(158, 194, 223, .12); }
+.dh-rail-ultimate .dh-rail-caption { display: flex; justify-content: space-between; }
+.dh-rail-ultimate .dh-rail-caption span { font-size: 9px; color: #b2c5dc; }
+.dh-rail-ultimate-button:disabled { opacity: .66; }
+.dh-rail-charge { height: 3px; width: 100%; background: rgba(165, 194, 218, .14); overflow: hidden; }
+.dh-rail-charge span { display: block; height: 100%; background: #e2c17a; transition: width .14s ease-out; }
+
+/* The full-size view owns class identity; keep only a compact HP/EXP readout at lower left.
+   Existing mode scoreboards and action buttons stay fully functional. */
+.dh-root[data-rail='true'] .dh-portrait { display: none; }
+.dh-root[data-rail='true'] .dh-vitals { margin-left: 0; }
+.dh-root[data-rail='true'] .dh-tr { left: calc(env(safe-area-inset-left, 0px) + 18px); right: auto; }
+@media (min-width: 1080px) and (max-width: 1279px) {
+  .dh-class-rail { transform: translateY(-50%) scale(.84); transform-origin: right center; }
+}
+@media (max-height: 700px) {
+  .dh-class-rail { transform: translateY(-50%) scale(.84); transform-origin: right center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dh-rail-charge span { transition: none; }
+}

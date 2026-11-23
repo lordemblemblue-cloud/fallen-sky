@@ -17,6 +17,7 @@ export const MOBILITY_PACK_SLOTS = Object.freeze({
   Sprint: 'sprint',
   Swim_Idle: 'swimIdle',
   Swim_Forward: 'swimForward',
+  Glide_Hang: 'glideHang', // hanging from the glider (player/playerGlide.mjs)
 });
 
 const norm = (value = '') => value.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();

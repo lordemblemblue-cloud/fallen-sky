@@ -16,7 +16,9 @@
 //   { t: 'join', ..., cls? }                      cls: the class to fight as (core/classes.mjs CLASS_IDS)
 //   { t: 'class', id }                           change class: queued for the next spawn (allowed before the fight,
 //                                                between rounds or while down; answered { t: 'class', ok, pending, reason })
-//   { t: 'input', s, m: [x, z], r, sp, f, st, i, p }  seq, move, run, sprint, face (yaw or null), strafe,
+//   { t: 'storySupply', id }                     request one free recovery supply in an active story operation;
+//                                                server derives seat ID and validates missing resources (no match gold)
+//   { t: 'input', s, m: [x, z], r, sp, f, st, i, p, tg }  seq, move, run, sprint, face (yaw or null), strafe,
 //                                                interact held (story), presses (ability1-4 and special too)
 //   { t: 'leave' }
 // server -> client
@@ -37,13 +39,14 @@
 //       a story room's view is the mission's (sim/mission.mjs missionView) plus room: { code, open } and againIn;
 //       uses: [[id, by, progress]] for what is being used right now; idle: [id] people who have noticed nobody
 //       and stand as last sent (everyone is sent in full once a second and when someone joins or appears)
+//   { t: 'storySupply', ok, id?, reason?, stat?, value? }  result sent only to the requesting story player
 //   { t: 'left' }   { t: 'error', code, message }
 //   every view adds away: [ids] (players whose connection dropped: a bot or the autopilot plays their seat)
 // close codes: 4401 not signed in, 4409 signed in elsewhere, 4410 the seat went on in a newer connection,
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 12; // 12: stagger-immunity window and hit streak sync; attacks and sprint no longer spend stamina
+export const PROTOCOL = 13; // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
@@ -55,7 +58,7 @@ export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control']);
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort']);
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
 export const STORY_MODE = 'story';
@@ -86,13 +89,16 @@ export function sanitizeInput(raw) {
     seq, move: { x, z }, run: raw.r !== false, sprint: !!raw.sp, strafe: !!raw.st, interact: raw.i === 1 || raw.i === true,
     face: finite(raw.f) ? Math.atan2(Math.sin(raw.f), Math.cos(raw.f)) : null,
     presses,
+    // the fighter the player is locked on to (an id; the world checks it qualifies before an ability takes it)
+    target: typeof raw.tg === 'string' && raw.tg.length > 0 && raw.tg.length <= 64 ? raw.tg : null,
   };
 }
 
 /** The browser's input object as an input message. */
 export function encodeInput(seq, input) {
   return { t: 'input', s: seq, m: [r3(input.move?.x || 0), r3(input.move?.z || 0)], r: input.run !== false, sp: !!input.sprint,
-    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined };
+    f: finite(input.face) ? r3(input.face) : null, st: !!input.strafe, i: input.interact ? 1 : undefined, p: input.presses?.length ? input.presses : undefined,
+    tg: typeof input.target === 'string' && input.target ? input.target : undefined };
 }
 
 const FLAG_BITS = { collapsed: 1, winded: 2, dead: 4 };
@@ -106,6 +112,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
   return {
     id: f.id, tm: f.team || 0,
     p: [r3(body.x), r3(body.y), r3(body.z), r3(body.yaw)], sp: r2(body.speed || 0),
+    flight: body.jumped ? [body.airJumpAt ?? null] : null,
     md: body.motion?.dir ? [r3(body.motion.dir.x), r3(body.motion.dir.z)] : 0,
     a: a ? [a.id, r3(a.t), a.chainedFrom ? 1 : 0, a.held ? 1 : 0] : 0,
     v: [r2(v.hp), r2(v.will), r2(v.stamina), r2(v.shield), (v.collapsed ? FLAG_BITS.collapsed : 0) | (v.winded ? FLAG_BITS.winded : 0) | (v.dead ? FLAG_BITS.dead : 0)],
@@ -158,6 +165,8 @@ export function applyFighter(world, data, makeFighter, makeBody) {
     f.action.seenAt = data.seenAt;
   } else f.action = null;
   const [x, y, z, yaw] = data.p;
+  b.jumped = !!data.flight;
+  b.airJumpAt = data.flight?.[0] ?? null;
   b.target = { x, y, z, yaw };
   b.speed = data.sp;
   b.moving = data.sp > 0.1;
@@ -197,8 +206,7 @@ export function encodeOwn(f, body, time) {
     hb: f.heldBy || 0,
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
-    ad: [body.jumped ? 1 : 0, body.airDashUsed ? 1 : 0,
-      Number.isFinite(body.airDashTapAt) ? body.airDashTapAt : null],
+    ad: [body.jumped ? 1 : 0, body.airDashReady ? 1 : 0, null, body.airJumpAt ?? null],
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
@@ -243,8 +251,7 @@ export function applyOwn(f, body, data) {
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
-    jumped: !!data.ad?.[0], airDashUsed: !!data.ad?.[1],
-    airDashTapAt: Number.isFinite(data.ad?.[2]) ? data.ad[2] : -Infinity });
+    airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashReady: !!data.ad?.[1] });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };

@@ -18,9 +18,12 @@ import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, h
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
+import { settleSpecialSpend } from './specialMeterSettlement.mjs';
 import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
+
+import { makeEscort, stepEscort, ESCORT_RADIUS } from './escort.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -29,6 +32,7 @@ export const MODES = Object.freeze({
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
+  escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, clock: 180 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
   control: Object.freeze({ id: 'control', name: 'Three-Point Control', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
@@ -53,6 +57,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
     flags: def.flags ? makeFlags(def) : null,
+    escort: def.id === 'escort' ? makeEscort() : null,
     ball: def.football ? makeBall() : null,
     controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
     feed: [], events: [], winner: null, nextBot: 1,
@@ -321,6 +326,10 @@ function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.
 
 // What a bot is after besides the nearest fight: the objective of the mode.
 function goalFor(match, s) {
+  if (match.escort && s.team) {
+    const cart = match.escort, body = bodyOf(match.world, s.id);
+    return { x: cart.x, z: cart.z, urgent: !body || dist(body, cart) > ESCORT_RADIUS - 0.8 };
+  }
   if (match.controlPoints && s.team) {
     // Send bots to the objectives which their team does not yet own.
     // Stable assignment spreads teammates over the three points.
@@ -449,7 +458,14 @@ export function stepMatch(match, dt, inputs = {}) {
     respawns(match);
     if (match.flags) flagsStep(match);
     if (match.controlPoints) stepControlPoints(match, dt);
-    checkEnd(match);
+    if (match.escort) {
+      const winner = stepEscort(match, dt);
+      if (winner) {
+        match.escort.moving = false;
+        match.teamScores[winner] = 1;
+        finish(match, winner);
+      }
+    } else checkEnd(match);
   }
   return { effects, events: match.events };
 }
@@ -461,7 +477,10 @@ function chargeSpecials(match, effects) {
   for (const e of effects) {
     if (e.type === 'special') {
       const s = match.seats.get(e.by);
-      if (s) s.specialMeter = Math.max(0, s.specialMeter - e.cost);
+      if (s?.kind === 'player' && s.classId) {
+        const remaining = settleSpecialSpend(s.specialMeter, e.cost);
+        if (remaining !== null) s.specialMeter = remaining;
+      }
       continue;
     }
     const by = e.type === 'impact' ? e.attacker : e.type === 'heal' ? e.by : null;
@@ -648,6 +667,7 @@ export function matchView(match, forId = null) {
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
+    ...(match.escort ? { escort: { ...match.escort } } : {}),
     controlPoints: controlPointView(match.controlPoints),
     zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,

@@ -4,7 +4,7 @@ import { readGraphicsRuntimeStatus, humanGraphicsStatus } from '../src/lib/graph
 
 function gpuRenderer({ backend = 'webgpu', ready = true, frame = 4, lost = null } = {}) {
   return {
-    isWebGPURenderer: true, __sceneState: { ready, lost },
+    isWebGPURenderer: true, __sceneState: { ready, lost, gameplayFrames: 1 },
     backend: { isWebGPUBackend: backend === 'webgpu', device: {
       createCommandEncoder() {}, queue: { submit() {} },
       adapterInfo: { vendor: 'NVIDIA', device: 'RTX test device' },

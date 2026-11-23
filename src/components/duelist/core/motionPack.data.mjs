@@ -5179,5 +5179,279 @@ export const MOTION_CLIPS = Object.freeze({
         "speed": 16.61
       }
     ]
+  },
+  "swordTauntWarrior": {
+    "source": "blender",
+    "duration": 2.2,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.192,
+        "speed": 1.65
+      },
+      {
+        "hand": "left",
+        "t": 0.242,
+        "speed": 1.15
+      },
+      {
+        "hand": "right",
+        "t": 0.35,
+        "speed": 1.8
+      }
+    ]
+  },
+  "swordTauntHealer": {
+    "source": "blender",
+    "duration": 2.2,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.317,
+        "speed": 4.53
+      },
+      {
+        "hand": "left",
+        "t": 0.317,
+        "speed": 0.85
+      },
+      {
+        "hand": "right",
+        "t": 1.775,
+        "speed": 3.72
+      },
+      {
+        "hand": "left",
+        "t": 1.792,
+        "speed": 0.68
+      }
+    ]
+  },
+  "bladesTaunt": {
+    "source": "blender",
+    "duration": 2.2,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.158,
+        "speed": 5.33
+      },
+      {
+        "hand": "left",
+        "t": 0.158,
+        "speed": 3.94
+      },
+      {
+        "hand": "right",
+        "t": 0.4,
+        "speed": 3.56
+      },
+      {
+        "hand": "left",
+        "t": 0.4,
+        "speed": 3.41
+      }
+    ]
+  },
+  "staffTaunt": {
+    "source": "blender",
+    "duration": 2.2,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.208,
+        "speed": 2.22
+      },
+      {
+        "hand": "right",
+        "t": 0.283,
+        "speed": 0.45
+      },
+      {
+        "hand": "right",
+        "t": 1.825,
+        "speed": 0.35
+      },
+      {
+        "hand": "left",
+        "t": 1.933,
+        "speed": 1.73
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        1,
+        1,
+        1,
+        0.9,
+        0.5,
+        0.04,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.02,
+        0.33,
+        0.72,
+        0.94,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "swordRoar": {
+    "source": "blender",
+    "duration": 1.1,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "right",
+        "t": 0.108,
+        "speed": 3.38
+      },
+      {
+        "hand": "right",
+        "t": 0.25,
+        "speed": 4.73
+      },
+      {
+        "hand": "left",
+        "t": 0.25,
+        "speed": 5.65
+      },
+      {
+        "hand": "right",
+        "t": 0.608,
+        "speed": 3.78
+      }
+    ]
+  },
+  "bladesExecution": {
+    "source": "blender",
+    "duration": 1.7,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.075,
+        "speed": 6.92
+      },
+      {
+        "hand": "right",
+        "t": 0.75,
+        "speed": 5.37
+      },
+      {
+        "hand": "right",
+        "t": 1.025,
+        "speed": 3.44
+      }
+    ]
+  },
+  "staffDominate": {
+    "source": "blender",
+    "duration": 0.75,
+    "loop": false,
+    "peaks": [
+      {
+        "hand": "left",
+        "t": 0.092,
+        "speed": 5.55
+      },
+      {
+        "hand": "right",
+        "t": 0.2,
+        "speed": 0.53
+      },
+      {
+        "hand": "left",
+        "t": 0.533,
+        "speed": 3.08
+      }
+    ],
+    "secondHand": {
+      "step": 0.0333,
+      "on": [
+        1,
+        1,
+        0.55,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0.18,
+        0.71,
+        0.97,
+        1,
+        1,
+        1
+      ]
+    }
   }
 });

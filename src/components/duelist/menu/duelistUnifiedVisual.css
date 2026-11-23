@@ -181,7 +181,7 @@
 
 /* Shared match header and loading/queue brief; UI only, no fake percent or timer. */
 .duelist-arena-page {
-  display:flex; flex-direction:column; height:100vh; min-height:0; background:#050c16; color:var(--dui-ink);
+  display:flex; flex-direction:column; height:100dvh; min-height:0; background:#050c16; color:var(--dui-ink);
 }
 .duelist-arena-header {
   display:flex; align-items:center; min-height:60px; flex-shrink:0;
@@ -273,4 +273,21 @@
 @media(prefers-reduced-motion:reduce) {
   .duelist-match-loading__rail::after { animation:none; width:100%; transform:none; }
   .duelist-hub-mode { transition:none; }
+}
+
+/* Touch devices have a short usable viewport while the browser bars show.
+   Keep the match header and its back button accessible without wasting combat space. */
+@media (pointer:coarse) and (max-height:650px) {
+  .duelist-arena-header { min-height:42px;padding:3px max(8px,env(safe-area-inset-right)) 3px max(8px,env(safe-area-inset-left));gap:9px; }
+  .duelist-arena-brand {font-size:8px;padding-left:8px;}
+  .duelist-arena-brand strong {font-size:11px;}
+  .duelist-arena-title,.duelist-arena-meta {font-size:10px;}
+  .duelist-arena-back {min-height:36px;padding:4px 9px;}
+}
+@media (pointer:coarse) and (orientation:portrait) {
+  .duelist-arena-header {min-height:44px;padding:4px max(8px,env(safe-area-inset-right)) 4px max(8px,env(safe-area-inset-left));gap:8px;}
+  .duelist-arena-brand {font-size:8px;padding-left:8px;}
+  .duelist-arena-brand strong {font-size:10px;}
+  .duelist-arena-title {display:none;}
+  .duelist-arena-meta {max-width:32%;font-size:9px;line-height:1.15;}
 }

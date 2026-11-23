@@ -130,7 +130,21 @@ export default function ExplorationDiscoveryMount() {
     const detach = () => {
       markers.forEach((group) => {
         group.parent?.remove(group);
-        group.traverse((node) => { node.geometry?.dispose?.(); node.material?.dispose?.(); });
+        // Several crystals share one geometry and one material: collect them first
+        // so each is disposed exactly once (a second dispose crashes the WebGPU renderer).
+        const geometries = new Set();
+        const materials = new Set();
+        group.traverse((node) => {
+          if (node.geometry) geometries.add(node.geometry);
+          if (Array.isArray(node.material)) node.material.forEach((m) => m && materials.add(m));
+          else if (node.material) materials.add(node.material);
+        });
+        // The WebGPU renderer can already have released a material's internal
+        // render node (scene teardown clears them first); its own dispose then
+        // throws while reading that node, so a failed release is simply done.
+        const release = (resource) => { try { resource.dispose(); } catch { /* already released */ } };
+        geometries.forEach(release);
+        materials.forEach(release);
       });
       markers.clear();
       scene = null;

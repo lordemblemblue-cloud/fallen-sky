@@ -27,9 +27,9 @@ const safePosition = (point, fallback, arena) => {
 export function makeControlPoints(arena = 25, layout = null) {
   const distance = Math.max(6, Math.min(arena - CONTROL.radius - 2, arena * 0.48));
   const defaults = [
-    { x: -distance * 0.85, z: -distance * 0.55 },
-    { x: 0, z: distance * 0.85 },
-    { x: distance * 0.85, z: -distance * 0.55 },
+    { x: -distance * 0.70, z: -distance * 0.87 },
+    { x: distance, z: 0 },
+    { x: -distance * 0.70, z: distance * 0.87 },
   ];
   const positions = Array.isArray(layout) && layout.length === 3
     ? layout.map((point, i) => safePosition(point, defaults[i], arena))

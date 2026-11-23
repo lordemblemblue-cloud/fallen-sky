@@ -1,62 +1,45 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createWorldDrawWatchdog } from '../src/components/game3d/render/liveRendererRecovery.mjs';
+import { chooseSceneRendererFor, rememberRendererFailure, retryWebGPU } from '../src/lib/rendererBackendChoice.mjs';
+import { getWebGPURuntimeEvidence } from '../src/lib/webgpuRuntimeDiagnostics.mjs';
 
-import {
-  FALLEN_SKY_BLACK_SCENE_FALLBACK,
-  resolveFallenSkyLiveRendererChoice,
-} from '../src/components/game3d/render/liveRendererRecovery.mjs';
-import { chooseSceneRendererFor } from '../src/lib/rendererBackendChoice.mjs';
-
-function storage(initial = {}) {
-  const m = new Map(Object.entries(initial));
-  return {
-    getItem: (k) => m.get(k) ?? null,
-    setItem: (k, v) => m.set(k, String(v)),
-    removeItem: (k) => m.delete(k),
-  };
-}
-const host = (search = '', saved = {}) => ({
-  location: { search },
-  navigator: { gpu: {} },
-  isSecureContext: true,
-  localStorage: storage(saved),
-  sessionStorage: storage(),
-});
-
-test('Fallen Sky live world defaults to the classic WebGL pipeline even on a WebGPU-ready browser', () => {
-  const browser = host('');
-  const proposed = chooseSceneRendererFor('fallen-sky', browser);
-  assert.equal(proposed.kind, 'webgpu');
-  assert.deepEqual(resolveFallenSkyLiveRendererChoice(proposed, browser.location),
-    { kind: 'webgl', reason: FALLEN_SKY_BLACK_SCENE_FALLBACK });
-  // Shared selection for Duelist Adventure is unaffected.
-  assert.equal(chooseSceneRendererFor('duelist-adventure', browser).kind, 'webgpu');
-});
-
-test('the saved WebGPU/WebGL2 override cannot silently keep the 3D live world black', () => {
-  for (const savedKind of ['webgpu', 'webgl2']) {
-    const browser = host('', { fallen_sky_renderer_v1: savedKind });
-    const proposed = chooseSceneRendererFor('fallen-sky', browser);
-    assert.equal(proposed.kind, savedKind);
-    assert.equal(resolveFallenSkyLiveRendererChoice(proposed, browser.location).kind, 'webgl');
+test('live and preview worlds take the shared WebGPU choice on a capable host', () => {
+  const world = readFileSync(new URL('../src/components/game3d/GameWorld3D.jsx', import.meta.url), 'utf8');
+  assert.match(world, /: chooseSceneRendererFor\('fallen-sky', window\)/);
+  for (const search of ['', '?preview=1']) for (const scene of ['fallen-sky','duelist-adventure']) {
+    assert.equal(chooseSceneRendererFor(scene, { navigator: { gpu: {} }, location: {search} }).kind, 'webgpu');
   }
 });
 
-test('engineers retain deliberate, URL-only WebGPU and WebGL2 previews', () => {
-  for (const kind of ['webgpu', 'webgl2']) {
-    const browser = host('?renderer=' + kind);
-    const selected = chooseSceneRendererFor('fallen-sky', browser);
-    assert.deepEqual(resolveFallenSkyLiveRendererChoice(selected, browser.location), selected);
-  }
+test('hidden tabs, held frames and intermittent empty submissions do not force fallback', () => {
+  const check = createWorldDrawWatchdog();
+  for (let i=0; i<120; i++) assert.equal(check(i*200, false, 0), false);
+  assert.equal(check(30000, true, 0),false);
+  assert.equal(check(120000, true, 0),false);
+  for (let i=1; i<120; i++) assert.equal(check(120000+i*200,true,i%30===0?1:0),false);
+  for (let i=0; i<50; i++) check(150000+i*200,true,0);
+  assert.equal(check(160000,true,0),true);
 });
 
-test('classic WebGL overrides and failure fallbacks are never changed', () => {
-  const browser = host('?renderer=webgl');
-  const selected = chooseSceneRendererFor('fallen-sky', browser);
-  assert.equal(selected.kind, 'webgl');
-  assert.equal(resolveFallenSkyLiveRendererChoice(selected, browser.location), selected);
-  assert.equal(resolveFallenSkyLiveRendererChoice({ kind: 'webgl', reason: 'webgpu-failed-earlier' }).kind, 'webgl');
-  assert.equal(resolveFallenSkyLiveRendererChoice({ kind: 'webgpu', reason: 'override' }, { search: '?renderer=auto' }).kind, 'webgl');
-  assert.equal(resolveFallenSkyLiveRendererChoice({ kind: 'webgpu', reason: 'override' }, { search: '???' }).kind, 'webgl');
-  assert.equal(resolveFallenSkyLiveRendererChoice(null), null);
+test('one scene can recover independently and a Settings retry preserves the play URL', () => {
+  const store = new Map();
+  let next;
+  const host = { navigator: { gpu: {} }, sessionStorage: {
+    getItem:k=>store.get(k), setItem:(k,v)=>store.set(k,v), removeItem:k=>store.delete(k),
+  }, location: { href:'https://example.com/duelist-next/play?mode=control#match', assign:url=>{next=url;} } };
+  rememberRendererFailure(host,'fallen-sky');
+  assert.equal(chooseSceneRendererFor('fallen-sky',host).kind,'webgl');
+  assert.equal(chooseSceneRendererFor('duelist-adventure',host).kind,'webgpu');
+  retryWebGPU('fallen-sky',host);
+  assert.equal(chooseSceneRendererFor('fallen-sky',host).kind,'webgpu');
+  assert.equal(next,'https://example.com/duelist-next/play?mode=control&renderer=webgpu#match');
+});
+
+test('empty renders and a full-screen pass cannot verify gameplay draws', () => {
+  const renderer = { isWebGPURenderer:true, __sceneState:{ ready:true, gameplayFrames:0 },
+    backend:{ isWebGPUBackend:true, device:{createCommandEncoder(){},queue:{submit(){}}} },
+    info:{ render:{ frame:500, drawCalls:1 } } };
+  assert.equal(getWebGPURuntimeEvidence(renderer).status,'waiting-for-world-draws');
 });

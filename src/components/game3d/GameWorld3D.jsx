@@ -121,6 +121,8 @@ import { ENEMY_SPAWNS } from './enemySpawnConfig';
 import {selectWolfveilGroundedEnemySpawns} from './wolfveil/WolfveilEnemySpawns.mjs';
 import {createWolfveilZombieHordeRuntime} from './wolfveil/WolfveilZombieHordeRuntime.js';
 import {zombieAttackLevel} from './wolfveil/WolfveilZombieCamps.mjs';
+import {threeRoadsEnabled} from './threeroads/threeRoadsFlag.mjs';
+import {createThreeRoadsWorld} from './threeroads/ThreeRoadsWorld.mjs';
 import {WOLFVEIL_ADMIN_C1_MODEL,WOLFVEIL_ADMIN_C1_ANIMATIONS} from './wolfveil/WolfveilEnemyAssets.mjs';
 import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
 import { broadcastEnemyKill } from './enemyRespawnManager';
@@ -164,8 +166,9 @@ import {readCloneGPUProfile,rendererPixelRatioLimit} from './performance/Adaptiv
 import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
   createGame3DWebGLContext,describeGame3DGpu,describeGame3DGpuAdapter} from './performance/Game3DGpuEfficiency.mjs';
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
-import {resolveFallenSkyLiveRendererChoice} from './render/liveRendererRecovery.mjs';
-import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,holdSceneFrames,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
+import {createWorldDrawWatchdog} from './render/liveRendererRecovery.mjs';
+import {isRecoverableWebGPUPipelineError} from './render/recoverableWebGPUPipelineError.mjs';
+import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -231,6 +234,8 @@ import { createAXEClickToMoveMarker, pickAXEClickToMoveGround } from './axe/play
 import { isAXEClickToMoveEnabled, isAXEDodgeRollVariantEnabled } from './axe/player/AXEControlSettingsStore';
 import { createDoubleTapDetector, dodgeMoveCandidates, pickDodgeMove, screenForwardFacingYaw } from './player/game3dDodgeProfiles.mjs';
 import { createPlayerSwimState, createSwimNotice, SWIM } from './player/playerSwimState.mjs';
+import { createPlayerGlide } from './player/playerGlide.mjs';
+import { createGliderProp } from './player/gliderProp.mjs';
 import { createWaterSurfaceIndex } from './axe/world/game3dWaterSurface.mjs';
 import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
 import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
@@ -263,7 +268,13 @@ const showCombatNotice = (text) => {
   window.dispatchEvent(new CustomEvent('skillActivatedToast', { detail: { text } }));
 };
 
-export default function GameWorld3D({region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
+export default function GameWorld3D(props) {
+  const [recoveryReason, setRecoveryReason] = useState(null);
+  return <GameWorldScene key={recoveryReason || 'preferred'} {...props}
+    recoveryReason={recoveryReason} onRendererFailure={setRecoveryReason}/>;
+}
+
+function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
   // This flag is read by the existing WebGL loop without destroying its scene
@@ -538,23 +549,17 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     let renderer;
     // Draws the frame again after a resize (assigned next to handleResize below; until then a no-op)
     let redrawAfterResize = () => {};
-    // WebGPU: no frames until the player is ready and the area's shaders are compiled (markAvatarReady below)
-    let releaseInitialFrames = () => {};
-    // Which renderer (src/lib/rendererBackendChoice.mjs): the classic WebGLRenderer until the scene is marked
-    // WebGPU-ready, three's WebGPURenderer (WebGPU, or its own WebGL2 fallback) after that, or the one chosen with
-    // ?renderer=webgpu|webgl2|webgl while the conversion is reviewed.
-    // Emergency safety gate: the Windows live shell has reported a fully loaded but all-black
-    // WebGPU scene with zero draws. Until device-level visual QA passes, use classic WebGL
-    // unless a developer explicitly requests a WebGPU/WebGL2 preview in the current URL.
-    const rendererChoice = resolveFallenSkyLiveRendererChoice(
-      chooseSceneRendererFor('fallen-sky', window), { search: window.location.search });
+    const rendererChoice = recoveryReason
+      ? { kind: 'webgl', reason: recoveryReason }
+      : chooseSceneRendererFor('fallen-sky', window);
     window.__gw3dRendererChoice = rendererChoice;
-    const showWorldUnavailable = (detail) => {
-      const msg = document.createElement('div');
-      msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;text-align:center;padding:24px;z-index:5;';
-      msg.innerHTML = '<div><div style="font-size:18px;font-weight:600;margin-bottom:8px">3D world unavailable</div><div style="opacity:0.6;font-size:14px"></div></div>';
-      msg.querySelector('div > div:last-child').textContent = detail;
-      container.appendChild(msg);
+    const checkEmptyDraws = createWorldDrawWatchdog();
+    let recovering = false;
+    const recoverRenderer = (reason) => {
+      if (recovering || rendererChoice.kind === 'webgl') return;
+      recovering = true;
+      rememberRendererFailure(window, 'fallen-sky');
+      onRendererFailure(reason);
     };
     try {
       const gpuHints = readGame3DGpuHints(window);
@@ -571,10 +576,8 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           powerPreference: 'high-performance', forceWebGL: rendererChoice.kind === 'webgl2' });
         const gpuRenderer = created.renderer;
         renderer = gpuRenderer;
-        // drawing before then would compile every new shader synchronously, one frame at a time (seconds each)
-        releaseInitialFrames = holdSceneFrames(gpuRenderer);
-        setTimeout(() => releaseInitialFrames(), 60000); // never left held (e.g. a character that never loads)
-        window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'WebGPU');
+        gpuRenderer.__sceneState.gameplayScene = scene;
+        window.__gw3dGpuInfo = describeGame3DGpuAdapter(null, gpuHints, 'Initializing');
         // Nothing is drawn until init resolves (webglContextGuard); then the GPU class is known and the
         // graphics budget is worked out again, as WebGL does at once from the context.
         created.ready.then(({ api, adapter }) => {
@@ -583,17 +586,19 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           applyWorldGraphicsBudget();
         }, (error) => {
           console.error('GameWorld3D: WebGPURenderer could not start —', error);
-          rememberRendererFailure(window); // the next start in this tab uses the classic renderer
-          if (window.__gw3dRenderer === gpuRenderer)
-            showWorldUnavailable('The graphics renderer could not start. Reload to use the classic renderer.');
+          if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-init-failed');
         });
         onSceneDeviceLost(gpuRenderer, () => {
-          rememberRendererFailure(window);
-          if (window.__gw3dRenderer === gpuRenderer)
-            showWorldUnavailable('The graphics device was reset. Reload to continue.');
+          if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-device-lost');
         });
       }
     } catch (e) {
+      if (rendererChoice.kind !== 'webgl') {
+        canvas.remove();
+        console.error('GameWorld3D: renderer initialization failed', e);
+        recoverRenderer('webgpu-init-failed');
+        return;
+      }
       console.error('GameWorld3D: WebGL unavailable —', e);
       window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{detail:{message:'WebGL could not start. Check browser graphics support and reload.'}}));
       setLoading(false);
@@ -1845,6 +1850,14 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           scene,loader,enemies,sampleGroundY,onCountChange:setEnemyCount,
         }):null;
     if(typeof window!=='undefined')window.__gw3dZombieCamps=zombieCamps;
+    // The War of Three Roads (places, cast, enemies, pledge steps). Off unless
+    // ?threeRoads=1. All of it lives under threeroads/; this is its only hook.
+    const threeRoads=threeRoadsEnabled(window)?createThreeRoadsWorld({
+      region,worldArea,areaScenes,scene,renderer,camera,enemies,questNPCs,groundMeshes,
+      wolfveilWorld:wolfveilVillage?.world||null,sampleGroundY,snapToGround,
+      fbxLoader:loader,gltfLoader:worldGltfLoader,getPlayer:()=>modelRef.current,
+    }):null;
+    if(typeof window!=='undefined')window.__gw3dThreeRoads=threeRoads;
     // C1 is already owner-assigned as an AI enemy in Admin Model3D. Do not
     // graft unrelated mutant animation tracks onto its Erika Archer skeleton.
     // The admin C1 walk field is unassigned: a slower CLONED running clip
@@ -2077,6 +2090,46 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     window.__gw3dWater = waterSurface;
     const playerSwim = createPlayerSwimState();
     const swimNotice = createSwimNotice((text) => showCombatNotice(text));
+    // Gliding (player/playerGlide.mjs): run or jump off a height and press Space in the air to open the glider; Space
+    // again closes it (with Halo Wings, it opens the wings and their air chain instead). Prop: player/gliderProp.mjs.
+    const playerGlide = createPlayerGlide();
+    const gliderProp = createGliderProp(scene);
+    const glideSteer = new THREE.Vector3();
+    // The ground an open glider would meet ahead, as the glue finds it from the glider's height: playerGlide keeps
+    // the glider off faces more than 2 m above it (it slides along them or is held) instead of landing on top.
+    const glideProbe = new THREE.Vector3();
+    const glideGroundAt = (x, z, y) => {
+      glideProbe.set(x, y, z);
+      return (naturalZones?.playerGroundY(glideProbe) ?? (suigenActive ? null : wolfveilVillage?.playerPalaceGroundY(glideProbe)))
+        ?? sampleGroundY(x, z, y);
+    };
+    const glideJumping = () => ['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
+    const haloWingsFlying = () => (playerAnim?.getAirWalkState?.().mode || 'idle') !== 'idle';
+    // Space on foot in the air; true when the glider took the press (on the ground it goes on to the jump chain).
+    const glideSpace = () => {
+      if (!model || isMountedRef.current || playerSwim.isSwimming() || haloWingsFlying()) return false;
+      const groundY = sampleGroundY(model.position.x, model.position.z, model.position.y);
+      const profile = getHaloFlightProfile({ level: getHaloState().level });
+      const wingsAllowed = profile.unlocked && !dedicatedMode && !window.__activeDuel;
+      if (playerGlide.isGliding()) {
+        if (wingsAllowed && playerAnim?.requestWingsFromGlide?.({ worldY: model.position.y, floorY: groundY,
+          haloPercent: profile.haloPercent })?.ok) { playerGlide.reset(); return true; }
+        playerGlide.toggle();
+        playerAnim?.setGliding?.('fall');
+        return true;
+      }
+      const jumping = glideJumping();
+      if (!jumping && !playerGlide.isAirborne()) return false;
+      const facing = new THREE.Vector3(0, 0, 1).applyQuaternion(model.quaternion);
+      const opened = playerGlide.toggle({ heroY: model.position.y, groundY, jumping,
+        surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
+        bodyHeading: Math.atan2(facing.x, facing.z) });
+      if (opened.ok) { playerAnim?.setGliding?.('glide'); return true; }
+      // Too low for the glider: Halo Wings still open from a short hop, as before; otherwise say why.
+      if (wingsAllowed && jumping) return false;
+      swimNotice('Too low to open the glider');
+      return true;
+    };
     playerCameraSystem.waterSurfaceAt = (x, z, nearY) => waterSurface.surfaceAt(x, z, nearY);
     const waterDepthAt = (x, z, nearY) => {
       const surface = waterSurface.surfaceAt(x, z, nearY);
@@ -2435,7 +2488,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         if (renderer.isWebGPURenderer) {
           precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
             .then((result) => { window.__gw3dPrecompile = result; }, () => {})
-            .then(() => { releaseInitialFrames(); return waitForSceneRenders(renderer, 6); })
+            .then(() => waitForSceneRenders(renderer, 6))
             .then(announce, announce);
         } else announce();
       };
@@ -2477,7 +2530,6 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         });
     }).catch((err) => {
       console.error('Player model load error:', err);
-      releaseInitialFrames();
       setLoading(false);
       if(!avatarLoadDisposed)window.dispatchEvent(new CustomEvent('game3dWorldAvatarLoadError',{
         detail:{message:err?.message || 'Character model could not load. Try again or return to Character Select.'}}));
@@ -2746,7 +2798,9 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       if(k===' '){
         const spaceOnGround=(playerAnim?.getAirWalkState?.().mode||'idle')==='idle' &&
           !['takeoff','airborne'].includes(playerAnim?.getDebugState?.().jumpPhase);
-        if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
+        // In the air on foot: open / close the glider (player/playerGlide.mjs).
+        if(!e.repeat && glideSpace()){ /* the glider took it */ }
+        else if(!e.repeat && spaceOnGround && resolveSpaceAction({ weaponOut: !!weaponSummon?.isOut(), mounted: !!isMountedRef.current }) === 'dismiss')
           weaponSummon.dismiss();
         // Swimming: no jump, glide or Skywalk from the water (player/playerSwimState.mjs).
         else if(!e.repeat && !isMountedRef.current && playerSwim.isSwimming()){ /* treading water */ }
@@ -2816,6 +2870,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       if (k === 'e') interactPressed.current = true;
       if (k === 'f') {
         if (!isMountedRef.current && playerSwim.isSwimming()) { if (!e.repeat) swimNotice("You can't mount while swimming"); }
+        else if (!isMountedRef.current && playerGlide.isAirborne()) { if (!e.repeat) swimNotice("You can't mount in the air"); }
         else if (nearbyCompanionRef.current || isMountedRef.current) { if (!e.repeat) mountToggleRef.current = true; }
         else if (playerAnim?.requestAttack('kick', 1.0)) setTimeout(() => { attackPressed.current = true; }, 260);
         e.preventDefault();
@@ -3144,6 +3199,19 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       } else return;
       applyGame3DGame2MouseLook(orbit.current, dx, dy);
     };
+    // Native touch camera look: the on-screen drag surface provides CSS-pixel
+    // deltas. Reuse exactly the desktop camera math, not a second camera rig.
+    const onMobileLook = event => {
+      if (entryModeRef.current || entryCamera.isActive() ||
+          window.__axeUiModalOpen || window.__axeServiceModeOpen ||
+          window.__axeWorldMapOpen || window.__axePauseMenuOpen || window.__axeDialogueOpen) return;
+      const dx = Number(event.detail?.dx);
+      const dy = Number(event.detail?.dy);
+      if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+      applyGame3DGame2MouseLook(orbit.current,
+        THREE.MathUtils.clamp(dx, -100, 100),
+        THREE.MathUtils.clamp(dy, -100, 100));
+    };
     const onWheel = (e) => {
       if (entryModeRef.current || entryCamera.isActive()) return;
       if (window.__axeUiModalOpen || window.__axeServiceModeOpen ||
@@ -3267,6 +3335,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     renderer.domElement.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mouseup', onMouseUp);
     window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('game3dMobileLook', onMobileLook);
     renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
     renderer.domElement.addEventListener('contextmenu', onContext);
     // Prevent middle-click scroll/autoscroll on the canvas
@@ -3416,6 +3485,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     astralDungeon?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     lunarGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     astralGate?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
+    threeRoads?.resolveCollision(model.position,{x:fromX,z:fromZ},mounted?.85:.62);
     // Prevent client player/mount lateral slip through the deck rails.
     // The server has a corresponding signed-map side-rail footprint.
     wolfveilVillage?.resolveBridgeRailCollision(
@@ -3449,6 +3519,24 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
     let frameId;
     let uiFrameCounter = 0;
     let staminaOccludedByEnemy = false;
+    const drawWorld = (activeCamera, now) => {
+      // A failed WebGPU renderer must not keep drawing while React remounts the
+      // same original Wolfveil scene on the existing safe fallback path.
+      if (recovering) return;
+      const state = renderer.__sceneState;
+      const before = state?.gameplayFrames || 0;
+      try {
+        inkLook.render(scene, activeCamera);
+      } catch (error) {
+        if (!isRecoverableWebGPUPipelineError(error, renderer)) throw error;
+        console.error('[Game3D] Three.js WebGPU pipeline cache invalid while changing worlds', error);
+        recoverRenderer('webgpu-pipeline-refcount-invalid');
+        return;
+      }
+      if (state && checkEmptyDraws(now, state.ready && !state.holdRender && !document.hidden &&
+          container.clientWidth > 0 && container.clientHeight > 0 && !!modelRef.current,
+          (state.gameplayFrames || 0) - before)) recoverRenderer('world-submitted-no-draws');
+    };
     const animate = (renderNow=performance.now()) => {
       frameId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
@@ -3484,7 +3572,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           entryCamera.preview(delta,{camera,model,mode:entryPreviewModeRef.current,
             clipAgainstTerrain:pose=>playerCameraSystem.clipAgainstTerrain(pose)});
         }
-        if(renderThisFrame)inkLook.render(scene,camera);
+        if(renderThisFrame)drawWorld(camera,renderNow);
         return;
       }
       if(menuCameraHeld){
@@ -3862,12 +3950,17 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
             }
           }
         }
+        // Gliding (player/playerGlide.mjs): the keys steer (kept for the glide after the glue); the glider carries
+        // the hero along its heading at its own speed.
+        glideSteer.copy(move);
+        const glidingNow = playerGlide.isGliding() && !mounted;
+        if (glidingNow) { const v = playerGlide.velocity(); move.set(v.x, 0, v.z); }
         const isMoving = move.lengthSq() > 0;
         weaponPlayerMoving = isMoving;
         // Deep water has one pace (player/playerSwimState.mjs): no Shift run or Ctrl sprint while swimming.
         const swimmingNow = playerSwim.isSwimming() && !mounted;
-        const isRunning = !!keys.current['shift'] && isMoving && !swimmingNow;
-        const isSprinting = !!keys.current['control'] && isMoving && !swimmingNow;
+        const isRunning = !!keys.current['shift'] && isMoving && !swimmingNow && !glidingNow;
+        const isSprinting = !!keys.current['control'] && isMoving && !swimmingNow && !glidingNow;
         // A held LEFT click is also a drawn-bow aim state. Walk, strafe,
         // sprint and camera motion remain independent of its charge timer.
         const bowDrawAiming = shouldUseBowAimingLocomotion({
@@ -3897,7 +3990,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
           :isSprinting
             ? RUN_SPEED * 1.35 * (mounted ? 1 : getSprintMultiplier())
             : isRunning ? RUN_SPEED * getRunMultiplier() : WALK_SPEED;
-        const speed = (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
+        const speed = glidingNow ? playerGlide.travelSpeed() : (baseMoveSpeed * (isCrouching ? 0.58 : 1)) *
           speedMult * getWeaponMoveSpeedMult() *
           (swordStanceActive ? SWORD_STANCE.moveSpeedMultiplier : 1) *
           (skillApproaching ? 2.2 : 1);
@@ -3959,14 +4052,30 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
               ?? sampleGroundY(model.position.x,model.position.z,model.position.y) ?? model.position.y;
           },footY=>sampleAirWalkCeilingY(model,footY));
         }
+        // Gliding and falling (player/playerGlide.mjs): the glue above put the feet on the ground; a hero who ran or
+        // jumped off a ledge falls, and one under an open glider sinks along its heading until it touches down (on
+        // deep water the swim below takes over). The ground code is unchanged.
+        const feetGroundY = model.position.y - (playerAnim?.getJumpOffset?.() || 0);
+        {
+          const air = playerGlide.update({
+            dt: delta, x: model.position.x, z: model.position.z, groundY: feetGroundY, heroY: model.position.y,
+            surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
+            steer: glideSteer, dive: !!keys.current['shift'], jumping: glideJumping(), groundAt: glideGroundAt,
+            allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0 &&
+              !playerSwim.isSwimming() && !haloWingsFlying() && !tornadoRes.lockMovement,
+          });
+          if (air.changed) playerAnim?.setGliding?.(air.mode);
+          if (air.y !== null) model.position.y = air.y;
+          if (air.x !== null) { model.position.x = air.x; model.position.z = air.z; } // a move into a wall, taken back
+          window.__localGliding = air.mode === 'glide';
+        }
         // Deep water (player/playerSwimState.mjs): the glue above put the feet on the bed; water up to the neck
         // floats the hero with the neck at the surface and the controller swims. The ground code is unchanged.
         {
-          const jumpOffset = playerAnim?.getJumpOffset?.() || 0;
           const swim = playerSwim.update({
             dt: delta,
             surfaceY: waterSurface.surfaceAt(model.position.x, model.position.z, model.position.y),
-            bedY: model.position.y - jumpOffset,
+            bedY: feetGroundY,
             currentY: model.position.y,
             allowed: !mounted && !bossFallActive && !dedicatedMode && getPlayerHUD().hp > 0,
           });
@@ -4433,6 +4542,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         }
 
         zombieCamps?.update(delta,model.position);
+        threeRoads?.update(delta,model.position);
         // ─── Enemy AI: wander state machine (walk ~3s → idle ~5s → repeat) ───
         enemies.forEach((enemy) => {
           // Dying enemies must keep processing so the death animation, fade-out
@@ -4751,12 +4861,12 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
         if (playerAttackCooldown.current > 0) playerAttackCooldown.current -= delta;
         if (playerInvulTimer.current > 0) playerInvulTimer.current -= delta;
         // Swimming (player/playerSwimState.mjs): no strikes or skills in deep water; the click or the key is dropped.
-        if (playerSwim.isSwimming() && (attackPressed.current || abilityKeyPressed.current !== -1)) {
+        if ((playerSwim.isSwimming() || playerGlide.isGliding()) && (attackPressed.current || abilityKeyPressed.current !== -1)) {
           attackPressed.current = false;
           rangedClickAttackPressed.current = false;
           abilityKeyPressed.current = -1;
           castInputMeta.current = null;
-          swimNotice("You can't fight while swimming");
+          swimNotice(playerGlide.isGliding() ? "You can't fight while gliding" : "You can't fight while swimming");
         }
         const pendingSkillStrike = skillStrikeQueue.nextSkillStrike();
         // A click during cooldown should not abort the animation frame.
@@ -5656,6 +5766,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       // Light bone gestures run after the base animation pose, with no input lock.
       echoGestureRuntime.update();
       momentGestures.update();
+      gliderProp.update({ open: playerGlide.isGliding(), model, bank: playerGlide.bank(), dt: delta }); // in the hands
       // A real inventory-backed GLB bow follows the active Adam/Eve hand.
       // It yields to the existing mounted weapon renderer when riding.
       if (model && heldBowPlayer !== model) {
@@ -5748,7 +5859,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       if(playerFace){const fighting=isInCombat();playerFace.setMood(fighting?'fierce':'neutral',fighting?.85:1);playerFace.update(Math.min(delta,.1));}
       const activeCamera=window.__axeTileInspectionCamera?.worldId === 'game3d'
         ? window.__axeTileInspectionCamera.camera : camera;
-      if(renderThisFrame)inkLook.render(scene,activeCamera);
+      if(renderThisFrame)drawWorld(activeCamera,renderNow);
     };
     animate();
 
@@ -5891,6 +6002,7 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       if (document.pointerLockElement === renderer.domElement)
         document.exitPointerLock?.();
       window.removeEventListener('mouseup', onMouseUp); window.removeEventListener('mousemove', onMouseMove); window.removeEventListener('resize', handleResize);
+      window.removeEventListener('game3dMobileLook', onMobileLook);
       window.removeEventListener(GAME3D_DISPLAY_SETTINGS_EVENT,onDisplayResolution);
       canvasResizeObserver?.disconnect();
       window.removeEventListener('playerSkillStrike', handlePlayerSkillStrike);
@@ -5933,10 +6045,13 @@ export default function GameWorld3D({region='wolfveil',worldArea='town',portalLa
       vortexLake?.dispose();
       if(window.__gw3dVortexLake===vortexLake)window.__gw3dVortexLake=null;
       if(window.__gw3dWater===waterSurface)window.__gw3dWater=null;
+      gliderProp.dispose();
       livingInkWorld?.dispose();
       livingMeadow?.dispose();
       zombieCamps?.dispose();
       if(window.__gw3dZombieCamps===zombieCamps)window.__gw3dZombieCamps=null;
+      threeRoads?.dispose();
+      if(window.__gw3dThreeRoads===threeRoads)window.__gw3dThreeRoads=null;
       // Hand every managed object back before its owner tears it down.
       window.removeEventListener(GAME3D_PLATFORM_GRAPHICS_EVENT,onPlatformGraphics);
       areaPortals?.dispose();

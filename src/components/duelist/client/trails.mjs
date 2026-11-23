@@ -76,10 +76,12 @@ export function createSwordTrail(scene, { color = 0x9fe8ff, base = 0.5, tip = 0.
         raw.unshift({ b: nowBase.clone(), t: nowTip.clone() });
         if (raw.length > 3) raw.pop();
         if (raw.length >= 2) {
-          // three in-between points on the spline from the last frame to this one, then this frame
+          // Keep a comparable length of history at different refresh rates.
           const [r0, r1] = raw;
           const r2 = raw[2] || r1;
-          for (const u of [0.25, 0.5, 0.75]) {
+          const subdivisions = Math.max(1, Math.min(SAMPLES - 1, Math.round(dt * 180)));
+          for (let j = 1; j < subdivisions; j++) {
+            const u = j / subdivisions;
             samples.unshift({ b: catmull(r2.b, r1.b, r0.b, r0.b, u, new THREE.Vector3()), t: catmull(r2.t, r1.t, r0.t, r0.t, u, new THREE.Vector3()), age: dt * (1 - u) });
           }
         }
@@ -91,7 +93,7 @@ export function createSwordTrail(scene, { color = 0x9fe8ff, base = 0.5, tip = 0.
         if (!s) { alphas[i * 2] = 0; alphas[i * 2 + 1] = 0; continue; }
         positions.set([s.b.x, s.b.y, s.b.z], i * 6);
         positions.set([s.t.x, s.t.y, s.t.z], i * 6 + 3);
-        const a = i < samples.length ? Math.max(0, 1 - s.age / LIFE) * (1 - i / SAMPLES) : 0;
+        const a = i < samples.length ? Math.max(0, 1 - s.age / LIFE) : 0;
         alphas[i * 2] = a;
         alphas[i * 2 + 1] = a;
       }

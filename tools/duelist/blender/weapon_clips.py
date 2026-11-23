@@ -750,9 +750,16 @@ if '--tune' in argv:  # look for easy holds near the ones in mind: prints the be
 
 # the sword's cuts by direction (eight points round the body, three modes): made from the stance alone
 exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[sys.argv.index('-P') + 1])), 'cut_grid.py')).read(), 'cut_grid.py', 'exec'), globals())
+# the taunts, the Rage's roar, the Execution and Mind Dominance: posed key by key on each weapon's stance
+exec(compile(open(os.path.join(os.path.dirname(os.path.abspath(sys.argv[sys.argv.index('-P') + 1])), 'moments.py')).read(), 'moments.py', 'exec'), globals())
 
 
 def build():
+    if '--moments-only' in argv:  # a quick look at the moments alone (not for the pack: the other clips are left out)
+        plain = source('sword_idle')
+        twin, staff = mirror_arm(plain), staff_hold(plain, lambda t: STANCE)
+        build_moments(add, notes, plain, twin, staff, (opt('--only') or '').split(',') if opt('--only') else None)
+        return
     if '--cuts-only' in argv:  # a quick look at the cuts alone (not for the pack: the other clips are left out)
         chosen = (opt('--only') or '').split(',') if opt('--only') else None
         plain = source('sword_idle')
@@ -827,6 +834,7 @@ def build():
     build_form_cuts(add, notes, clips['bladesIdle'], clips['staffIdle'])
     build_extras(add, notes, idle, clips['bladesIdle'], clips['staffIdle'])
     build_spins(add, notes, idle)
+    build_moments(add, notes, idle, clips['bladesIdle'], clips['staffIdle'])
 
     # for the pack builder: a known frame of the pack (it lines the two skeletons up on it) and a known clip (its check)
     ref = keys('sword_idle_fit')
@@ -893,6 +901,8 @@ if '--pictures' in argv:  # the new clips with their weapons, for a look before 
                          'files': render_frames(name, actions[name], frames, cam, os.path.join(OUT, 'sheets'), turn=float(opt('--turn', '0.6')))}
     with open(os.path.join(OUT, 'sheets', 'sheet.json'), 'w') as fh:
         json.dump(listing, fh)
+    # all of them on one sheet, a row a clip
+    print('CONTACT', contact_sheet([v['files'] for v in listing.values()], os.path.join(OUT, 'sheets', 'contact.png')))
 
 # the armature and the new clips, one animation a track, for the pack builder
 for track in list(ad.nla_tracks):

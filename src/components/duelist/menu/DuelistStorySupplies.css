@@ -1,0 +1,14 @@
+.dsm-story .dsm-crew-match-actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin: 12px 0; }
+.dsm-story .dsm-crew-match-actions .dsm-button { min-height: 40px; font-size: 13px; }
+.dsm-story .dsm-open-crews { display: grid; gap: 7px; margin: 10px 0; }
+.dsm-story .dsm-open-crews button { background: rgba(48, 92, 129, .65); color: #f0f5ff; width: 100%; padding: 11px; border: 1px solid rgba(158, 202, 230, .48); border-radius: 6px; display: flex; gap: 8px; align-items: center; justify-content: space-between; text-align: left; }
+.dsm-story .dsm-open-crews button:hover { border-color: #eec486; background: rgba(77, 111, 142, .75); }
+.dsm-story .dsm-supplies { display: grid; gap: 9px; margin: 13px 0; }
+.dsm-story .dsm-supplies > div { padding: 10px 12px; border: 1px solid rgba(147, 187, 226, .43); border-radius: 7px; background: rgba(11, 36, 67, .62); display: grid; gap: 4px; }
+.dsm-story .dsm-supplies strong { color: #fff0d5; font-size: 16px; }
+.dsm-story .dsm-supplies small { color: #bed5e6; font-size: 12px; }
+.dsm-story .dsm-supplies span { color: #efc28b; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
+@media (max-width: 900px) {
+ .dsm-story .dsm-tabs { gap: 7px; }
+ .dsm-story .dsm-tab { min-height: 50px; }
+}

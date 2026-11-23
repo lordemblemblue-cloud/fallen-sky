@@ -13,6 +13,8 @@ import { LUNAR_CAVE_CHAMBERS, LUNAR_CAVE_WATER_END } from '../dungeons/LunarCave
 import { ASTRAL_PADS,ASTRAL_RETURN_PORTAL,ASTRAL_DUNGEON_TITLE } from '../dungeons/AstralDungeonLayout.mjs';
 import { WOLFVEIL_MAP_WORLD_BOUNDS, wolfveilMapZoneAt } from '../wolfveil/WolfveilMapDesign.mjs';
 import {WOLFVEIL_CAVE_APPROACHES} from '../wolfveil/WolfveilCaveAccessPlan.mjs';
+import { isPledge } from '../pledges/pledgeModel.mjs';
+import { getPledgeNavigationTarget } from '../threeroads/pledgeworld/pledgeNavigation.mjs';
 
 const FUTURE_WORLD = createAXEInitialWorldManifest();
 const normalize = value => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
@@ -111,6 +113,14 @@ export function getQuestNavigationTarget(region, questState, player={x:0,z:0}) {
   if(region==='lunar-cave'||region==='astral-dungeon')return null; // Instance maps do not show outside-world quest objectives.
   const quest=getTrackedQuest(questState);
   if(!quest) return null;
+  // A pledge's trail leads to wherever its current step is played: a named
+  // point, the next waypoint, a person. The pledge world of the loaded scene
+  // knows; with none (another region, the switch off) there is no trail.
+  if(isPledge(quest)){
+    const at=region==='wolfveil'?getPledgeNavigationTarget(quest,player):null;
+    return at?{id:'pledge:'+quest.id,name:at.label||quest.title,type:'objective',x:at.x,z:at.z,
+      live:true,description:'Pledge',questId:quest.id,navLabel:quest.title}:null;
+  }
   const markers=getMapMarkers(region);
   const giver=markers.find(m=>m.id==='npc:'+quest.npcId);
   if(questReady(quest,questState)) return giver && {...giver,questId:quest.id,navLabel:'Turn in: '+quest.title};

@@ -22,6 +22,11 @@ export const MENU_MODES = Object.freeze({
     blurb: 'Six fighters, everyone for themselves.',
     rules: ['First to 15 defeats wins, or the most when 8 minutes end.', 'You come back 3 seconds after a fall, protected for a moment.', 'Bots fill the empty places and step out when players join.'],
   },
+  escort: {
+    title: 'Escort Transport', icon: Shield, accent: '#dfb36f', online: true,
+    blurb: 'Red escorts the freight carrier. Blue holds the delivery gate.',
+    rules: ['Stand inside the carrier ring to push or contest it.', 'Blue wins at three minutes if Red is outside the ring.', 'Red can finish in overtime while an attacker stays with the carrier.'],
+  },
   football: {
     title: 'Football', icon: Target, accent: '#f6cd82', online: true,
     blurb: 'Team goal scoring with a live ball and bot-filled teams.',
@@ -44,5 +49,5 @@ export const MENU_MODES = Object.freeze({
   },
 });
 
-export const MODE_ORDER = Object.freeze(['online', 'duel', 'ctf', 'football', 'tdm', 'control', 'practice']);
+export const MODE_ORDER = Object.freeze(['online', 'duel', 'ctf', 'football', 'tdm', 'control', 'escort', 'practice']);
 export const LEVELS = Object.freeze([['trainee', 'Trainee'], ['duelist', 'Duelist'], ['master', 'Master']]);

@@ -1,0 +1,33 @@
+name: Duelist F11 Combat HUD and HP
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/DuelistHud.jsx'
+      - 'src/components/duelist/client/duelistHud.css'
+      - 'tests/duelist-fullscreen-hud.test.mjs'
+      - 'tests/duelist-class-picker-pose.test.mjs'
+      - 'tests/duelist-idle-class-rail.test.mjs'
+      - '.github/workflows/duelist-f11-hud.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hud-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: F11, class selection, HP and HUD regression tests
+        run: node --test tests/duelist-fullscreen-hud.test.mjs tests/duelist-class-picker-pose.test.mjs tests/duelist-idle-class-rail.test.mjs tests/duelist-hud.test.mjs
+      - name: Lint changed React HUD and tests
+        run: npx eslint src/components/duelist/client/DuelistHud.jsx tests/duelist-fullscreen-hud.test.mjs tests/duelist-class-picker-pose.test.mjs tests/duelist-idle-class-rail.test.mjs
+      - name: Build application
+        run: npm run build

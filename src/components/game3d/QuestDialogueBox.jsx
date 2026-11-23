@@ -2,14 +2,25 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollText, Check, X, Volume2, VolumeX } from 'lucide-react';
 import { getQuestAudio } from './questAudioStore';
 import { getQuestDialogue } from './questDialogueStore';
+import { isPledge } from './pledges/pledgeModel.mjs';
+import PledgeDialogueBox from './threeroads/pledgeworld/PledgeDialogueBox';
 
 /**
  * QuestDialogueBox — liquid-glass dialogue panel for quest offers,
  * in-progress check-ins, and turn-ins.
  *
  * mode: 'offer' (Accept/Decline), 'in_progress' (Close), 'turn_in' (Claim)
+ *
+ * A pledge (a quest with a `pledge` block, see pledges/pledgeModel.mjs) is
+ * handed to PledgeDialogueBox: its lines one at a time, what is sworn, and a
+ * button held to swear. Every other quest is drawn by QuestDialogue below,
+ * exactly as before.
  */
-export default function QuestDialogueBox({
+export default function QuestDialogueBox(props) {
+  return isPledge(props.quest) ? <PledgeDialogueBox {...props} /> : <QuestDialogue {...props} />;
+}
+
+function QuestDialogue({
   npcName,
   quest,
   mode = 'offer',

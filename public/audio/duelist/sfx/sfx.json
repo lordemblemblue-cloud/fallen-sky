@@ -1,0 +1,306 @@
+{
+  "sounds": {
+    "swing": {
+      "files": [
+        "swing.mp3",
+        "swing-2.mp3",
+        "swing-3.mp3"
+      ],
+      "gain": 0.7
+    },
+    "swingHeavy": {
+      "files": [
+        "swingHeavy.mp3",
+        "swingHeavy-2.mp3"
+      ],
+      "gain": 0.8
+    },
+    "hitBody": {
+      "files": [
+        "hitBody.mp3",
+        "hitBody-2.mp3",
+        "hitBody-3.mp3"
+      ],
+      "gain": 0.8
+    },
+    "hitVeil": {
+      "files": [
+        "hitVeil.mp3",
+        "hitVeil-2.mp3"
+      ],
+      "gain": 0.7
+    },
+    "hitShield": {
+      "files": [
+        "hitShield.mp3",
+        "hitShield-2.mp3"
+      ],
+      "gain": 0.6
+    },
+    "block": {
+      "files": [
+        "block.mp3",
+        "block-2.mp3",
+        "block-3.mp3"
+      ],
+      "gain": 0.8
+    },
+    "parry": {
+      "files": [
+        "parry.mp3",
+        "parry-2.mp3"
+      ],
+      "gain": 0.9
+    },
+    "push": {
+      "files": [
+        "push.mp3",
+        "push-2.mp3"
+      ],
+      "gain": 0.9
+    },
+    "pull": {
+      "files": [
+        "pull.mp3"
+      ],
+      "gain": 0.85
+    },
+    "throw": {
+      "files": [
+        "throw.mp3"
+      ],
+      "gain": 0.9
+    },
+    "dash": {
+      "files": [
+        "dash.mp3"
+      ],
+      "gain": 0.7
+    },
+    "roll": {
+      "files": [
+        "roll.mp3"
+      ],
+      "gain": 0.8
+    },
+    "knockdown": {
+      "files": [
+        "knockdown.mp3"
+      ],
+      "gain": 0.8
+    },
+    "collapse": {
+      "files": [
+        "collapse.mp3"
+      ],
+      "gain": 0.8
+    },
+    "defeat": {
+      "files": [
+        "defeat.mp3"
+      ],
+      "gain": 0.7
+    },
+    "rageRoar_m": {
+      "files": [
+        "rageRoar_m.mp3"
+      ],
+      "gain": 1
+    },
+    "rageRoar_f": {
+      "files": [
+        "rageRoar_f.mp3"
+      ],
+      "gain": 1
+    },
+    "rageBreath_m": {
+      "files": [
+        "rageBreath_m.mp3"
+      ],
+      "gain": 0.55,
+      "loop": true
+    },
+    "rageBreath_f": {
+      "files": [
+        "rageBreath_f.mp3"
+      ],
+      "gain": 1.6,
+      "loop": true
+    },
+    "fireIgnite": {
+      "files": [
+        "fireIgnite.mp3"
+      ],
+      "gain": 0.9
+    },
+    "fireLoop": {
+      "files": [
+        "fireLoop.mp3"
+      ],
+      "gain": 0.35,
+      "loop": true
+    },
+    "leapWhoosh": {
+      "files": [
+        "leapWhoosh.mp3"
+      ],
+      "gain": 0.8
+    },
+    "groundSlam": {
+      "files": [
+        "groundSlam.mp3"
+      ],
+      "gain": 1
+    },
+    "repulseSlam": {
+      "files": [
+        "repulseSlam.mp3"
+      ],
+      "gain": 1
+    },
+    "mend": {
+      "files": [
+        "mend.mp3"
+      ],
+      "gain": 0.7
+    },
+    "sanctuary": {
+      "files": [
+        "sanctuary.mp3"
+      ],
+      "gain": 0.8
+    },
+    "levitate": {
+      "files": [
+        "levitate.mp3"
+      ],
+      "gain": 0.8
+    },
+    "dominate": {
+      "files": [
+        "dominate.mp3"
+      ],
+      "gain": 0.8
+    },
+    "dominanceBreak": {
+      "files": [
+        "dominanceBreak.mp3"
+      ],
+      "gain": 0.8
+    },
+    "cloak": {
+      "files": [
+        "cloak.mp3"
+      ],
+      "gain": 0.7
+    },
+    "blink": {
+      "files": [
+        "blink.mp3"
+      ],
+      "gain": 0.85
+    },
+    "executionPull": {
+      "files": [
+        "executionPull.mp3"
+      ],
+      "gain": 0.9
+    },
+    "executionStab": {
+      "files": [
+        "executionStab.mp3"
+      ],
+      "gain": 1
+    },
+    "shove": {
+      "files": [
+        "shove.mp3"
+      ],
+      "gain": 0.9
+    },
+    "airDash": {
+      "files": [
+        "airDash.mp3"
+      ],
+      "gain": 0.75
+    },
+    "airJump": {
+      "files": [
+        "airJump.mp3"
+      ],
+      "gain": 0.7
+    },
+    "counter": {
+      "files": [
+        "counter.mp3"
+      ],
+      "gain": 0.9
+    },
+    "quickstep": {
+      "files": [
+        "quickstep.mp3"
+      ],
+      "gain": 0.7
+    },
+    "empower": {
+      "files": [
+        "empower.mp3"
+      ],
+      "gain": 0.7
+    },
+    "bladeThrow": {
+      "files": [
+        "bladeThrow.mp3"
+      ],
+      "gain": 0.8
+    },
+    "taunt_warrior_m": {
+      "files": [
+        "taunt_warrior_m.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_warrior_f": {
+      "files": [
+        "taunt_warrior_f.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_duelist_m": {
+      "files": [
+        "taunt_duelist_m.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_duelist_f": {
+      "files": [
+        "taunt_duelist_f.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_assassin_m": {
+      "files": [
+        "taunt_assassin_m.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_assassin_f": {
+      "files": [
+        "taunt_assassin_f.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_healer_m": {
+      "files": [
+        "taunt_healer_m.mp3"
+      ],
+      "gain": 1
+    },
+    "taunt_healer_f": {
+      "files": [
+        "taunt_healer_f.mp3"
+      ],
+      "gain": 1
+    }
+  }
+}

@@ -11,10 +11,12 @@
 import * as THREE from 'three';
 import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
 import { particlesTwin, vfxShellTwin, coneTwin, ribbonTwin } from './duelistNodes.mjs';
+import { moveById } from '../core/moves.mjs';
 import { CLASSES, SPECIAL_BALANCE } from '../core/classes.mjs';
+import { createAbilityFx } from './abilityFx.mjs';
 
 // the colour of each lasting effect (core/abilities.mjs)
-export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, misdirected: 0xb779ff, mend: 0x6dffb0, levitate: 0xcfe9ff });
+export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, dominated: 0xb779ff,mend: 0x6dffb0, levitate: 0xcfe9ff });
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
   wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });
@@ -476,6 +478,9 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   const shards = createShards(scene);
   const tears = createTears(scene);
   const flashes = createFlashes(scene);
+  // the class abilities' fire, mist and light (client/abilityFx.mjs)
+  const fx = createAbilityFx(scene, { particles, warp, arena });
+  const facing = (actor) => ({ x: Math.sin(actor.yaw ?? 0), z: Math.cos(actor.yaw ?? 0) });
   const bolts = new Map(); // projectile id -> mesh
   const boltGeometry = new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6).rotateX(Math.PI / 2);
   const boltMaterial = new THREE.MeshBasicMaterial({ color: 0xbfefff, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending });
@@ -527,35 +532,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       actor.model.visible = Math.random() > k * k * 1.1; // seen less and less
     }
   };
-  // Sanctuary domes: zone id -> { group, left, ttl, materials }
-  const zones = new Map();
   const bladeGeometry = new THREE.BoxGeometry(0.07, 0.02, 1.0);
-  const addZone = (e) => {
-    if (zones.has(e.id)) return;
-    const hex = CLASSES.healer.color;
-    const dome = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
-    const rim = new THREE.MeshBasicMaterial({ color: hex, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
-    const group = new THREE.Group();
-    group.add(new THREE.Mesh(new THREE.SphereGeometry(e.radius, 36, 14, 0, Math.PI * 2, 0, Math.PI / 2), dome));
-    const ring = new THREE.Mesh(new THREE.RingGeometry(e.radius - 0.09, e.radius, 72), rim);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.04;
-    group.add(ring);
-    group.position.set(e.x, 0, e.z);
-    scene.add(group);
-    const ttl = SPECIAL_BALANCE.sanctuaryDurationSeconds;
-    zones.set(e.id, { group, left: ttl, ttl, dome, rim });
-    warp?.ring({ at: new THREE.Vector3(e.x, 0.6, e.z), kind: 'out', r0: 0.3, r1: e.radius, strength: 0.04, ttl: 0.5 });
-    arena?.arc({ x: e.x, z: e.z, arc: 360, from: 0.4, to: e.radius, width: 0.7, strength: 1.1, ttl: 0.6 });
-  };
-  const dropZone = (id) => {
-    const z = zones.get(id);
-    if (!z) return;
-    z.group.removeFromParent();
-    z.group.traverse((o) => o.geometry?.dispose());
-    z.dome.dispose(); z.rim.dispose();
-    zones.delete(id);
-  };
 
   return {
     /** A fighter stands again: its body is whole and seen. */
@@ -625,6 +602,14 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         }
       } else if (kind === 'roll') {
         floorDust(feet.x, feet.z, 14, 2.4);
+      } else if (kind === 'repulse') {
+        fx.slam(actor); // the hop comes down
+      } else if (kind === 'leapStrike') {
+        fx.leap(actor, 0.4);
+      } else if (kind === 'taunt') {
+        fx.taunt(actor, CLASSES[actor.classId]?.color ?? 0xbfe6ff);
+      } else if (kind === 'rage') {
+        fx.rage(actor); // the roar
       }
     },
     /** A knocked-down body hits the floor. */
@@ -646,9 +631,12 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       if (e.type === 'impact' && target) {
         const chest = target.chest();
         const from = source ? source.chest() : chest.clone().add(new THREE.Vector3(0, 0, 1));
-        const origin = tmp.copy(from).sub(chest).normalize().clone();
-        const contact = chest.clone().addScaledVector(origin, 0.32);
-        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || /^swordCutw+Heavy$/.test(e.move);
+        const move = moveById(e.move);
+        const edge = move?.damageKind === 'melee' ? source?.bladeNear?.(chest) : null;
+        const origin = tmp.copy(edge || from).sub(chest).normalize().clone();
+        const contact = edge && edge.distanceTo(chest) <= 0.4
+          ? edge : chest.clone().addScaledVector(origin, 0.32);
+        const heavy = e.move === 'swordHeavy' || e.move === 'swordLight3' || e.move === 'gripThrow' || move?.cut?.mode === 'heavy';
         if (e.shield > 0.01) {
           shells.flash({ follow: target.root, hex: COLORS.shield, hexPattern: true, origin, ttl: 0.32 });
           burst(contact, 10, 4, { hex: COLORS.shield, size: 0.04, ttl: 0.3, damping: 4 });
@@ -668,7 +656,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         else if (e.outcome === 'blocked') feel.shake = 0.15;
       }
       if (e.type === 'parry' && target) {
-        const at = target.hand();
+        const at = target.bladeNear?.(source?.bladeNear?.(target.chest()) || target.chest()) || target.hand();
         burst(at, 36, 7, { hex: COLORS.parry, size: 0.05, ttl: 0.38, damping: 5 });
         shells.flash({ position: at, scale: [0.25, 0.25, 0.25], hex: COLORS.parry, ripple: false, core: 1, ttl: 0.22, grow: 2.5 });
         warp?.ring({ at, kind: 'out', r0: 0.1, r1: 1.8, strength: 0.03, ttl: 0.3 });
@@ -720,11 +708,22 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
           shells.flash({ follow: who.root, hex, ripple: false, ttl: rage ? 0.7 : 0.5, grow: rage ? 1.2 : 0.6 });
           burst(chest, rage ? 70 : 30, rage ? 6 : 3, { hex, size: 0.05, ttl: 0.6, damping: 2 });
           flashes.flash(chest, hex, rage ? 12 : 6, 0.3);
-          if (rage) { warp?.ring({ at: chest, kind: 'out', r0: 0.3, r1: 5, strength: 0.05, ttl: 0.5 }); feel.shake = 0.4; }
+          if (rage) feel.shake = 0.5;
+          if (e.effect === 'levitate') { fx.levitate(actors[e.by] || null, who); feel.shake = 0.15; }
+          if (e.effect === 'dominated') fx.dominate(actors[e.by] || null, who);
         }
       }
-      if (e.type === 'heal' && actors[e.target]) burst(actors[e.target].chest(), 34, 1.6, { hex: EFFECT_COLORS.mend, size: 0.05, ttl: 0.9, damping: 1.2, fall: -1.6 });
-      if (e.type === 'zone') addZone(e);
+      if (e.type === 'heal' && actors[e.target]) {
+        burst(actors[e.target].chest(), 34, 1.6, { hex: EFFECT_COLORS.mend, size: 0.05, ttl: 0.9, damping: 1.2, fall: -1.6 });
+        if (actors[e.by]) fx.mend(actors[e.by], actors[e.target]);
+      }
+      if (e.type === 'zone') fx.mistField(e, e.seconds ?? SPECIAL_BALANCE.sanctuaryDurationSeconds);
+      if (e.type === 'blink' && actors[e.by]) { fx.blink(actors[e.by], e.from, e.to); feel.shake = 0.2; }
+      if (e.type === 'shove' && actors[e.target]) { fx.shove(actors[e.by] || null, actors[e.target]); feel.shake = 0.45; feel.stop = 0.05; }
+      if (e.type === 'launched' && actors[e.target]) fx.launched(actors[e.target]);
+      if (e.type === 'dominanceBroken' && actors[e.target]) fx.dominanceBroken(actors[e.target]);
+      if (e.type === 'airDash' && actors[e.by]) fx.airDash(actors[e.by], facing(actors[e.by]));
+      if (e.type === 'airJump' && actors[e.by]) fx.airJump(actors[e.by]);
       if (e.type === 'uncloak' && actors[e.fighter]) burst(actors[e.fighter].chest(), 24, 2.5, { hex: EFFECT_COLORS.cloak, size: 0.05, ttl: 0.5, damping: 2 });
       if (e.type === 'counter' && target) {
         const at = target.hand();
@@ -772,9 +771,11 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       return feel;
     },
     /** Every frame. grips: [{ holder, held }] (actors) being held right now. */
-    update(dt, { grips = [] } = {}) {
+    update(dt, { grips = [], seizes = [] } = {}) {
       time += dt;
       stepDissolves(dt);
+      for (const { holder, held } of seizes) fx.seizing(holder, held, dt); // the Execution draws its target in
+      fx.update(dt);
       particles.update(dt);
       shells.update(dt);
       cones.update(dt);
@@ -784,14 +785,6 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       for (const mesh of bolts.values()) {
         mesh.position.addScaledVector(new THREE.Vector3(mesh.userData.dir.x, 0, mesh.userData.dir.z), mesh.userData.speed * dt);
         if (mesh.userData.spin) mesh.rotateY(mesh.userData.spin * dt); // a thrown blade turns end over end
-      }
-      // a Sanctuary breathes while it stands and thins out as it ends
-      for (const [id, z] of zones) {
-        z.left -= dt;
-        if (z.left <= 0) { dropZone(id); continue; }
-        const k = Math.min(1, z.left / 0.6) * Math.min(1, (z.ttl - z.left) / 0.3);
-        z.dome.opacity = (0.08 + 0.03 * Math.sin(time * 3)) * k;
-        z.rim.opacity = 0.7 * k;
       }
       // the grip: ribbons, the warped lens around the held body, motes swirling round it
       const lenses = [];
@@ -824,6 +817,12 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
     /** While an effect lasts, motes in its colour rise round the body. kinds: the fighter's effects right now. */
     aura(actor, kinds, dt) {
       for (const kind of kinds) {
+        // the abilities with a look of their own (client/abilityFx.mjs)
+        if (kind === 'rage') { fx.burn(actor, dt); continue; }
+        if (kind === 'sanctuary') { fx.sheltered(actor, dt); continue; }
+        if (kind === 'levitate') { fx.floating(actor, dt); continue; }
+        if (kind === 'dominated') { fx.dominated(actor, dt); continue; }
+        if (kind === 'mend') fx.mending(actor, dt);
         const hex = EFFECT_COLORS[kind];
         if (!hex || Math.random() > dt * (kind === 'rage' ? 40 : 16)) continue;
         const c = actor.chest();
@@ -834,7 +833,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
     dispose() {
       particles.dispose(); shells.dispose(); cones.dispose(); tether.dispose(); shards.dispose(); tears.dispose(); flashes.dispose();
       for (const mesh of bolts.values()) { mesh.removeFromParent(); if (mesh.userData.own) mesh.material.dispose(); }
-      for (const id of [...zones.keys()]) dropZone(id);
+      fx.dispose();
       bladeGeometry.dispose();
       boltGeometry.dispose(); boltMaterial.dispose(); roundMaterial.dispose();
     },

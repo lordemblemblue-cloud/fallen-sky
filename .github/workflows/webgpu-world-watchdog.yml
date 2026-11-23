@@ -1,0 +1,24 @@
+name: WebGPU empty-world recovery regression tests
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/game3d/render/liveRendererRecovery.mjs'
+      - 'tests/webgpuWorldDrawWatchdogInvalidSamples.test.mjs'
+      - '.github/workflows/webgpu-world-watchdog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify empty-world recovery counters and clocks
+        run: node --test tests/webgpuWorldDrawWatchdogInvalidSamples.test.mjs

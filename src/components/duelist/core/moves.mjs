@@ -21,7 +21,7 @@ import { CUT_SPECS, CUT_IDS, CUT_MODES, CUT_DIRECTIONS, cutId, SNAP_SPECS, SNAP_
 
 const move = (spec) => Object.freeze({
   kind: 'attack', weapon: null, startup: 0.1, active: 0.08, recovery: 0.2,
-  stamina: 0, will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
+  will: 0, cooldown: 0, damage: 0, range: 2.2, arc: 120, knockback: 0, stagger: 0.25,
   shieldMultiplier: 1, veilMultiplier: 1, hitAt: [0], blockable: true, chain: null, cancelInto: [], cancelFrom: Infinity,
   iframes: null, channel: false, willPerSec: 0, rootMotion: 0, damageKind: 'melee',
   ...spec,
@@ -30,6 +30,11 @@ const move = (spec) => Object.freeze({
   stamina: (spec.kind ?? 'attack') === 'attack' ? 0 : (spec.stamina ?? 0),
   duration: (spec.startup ?? 0.1) + (spec.active ?? 0.08) + (spec.recovery ?? 0.2),
 });
+// the taunts' frame data (T): 2.2 s, picture and voice only
+const TAUNT = Object.freeze({ kind: 'emote', startup: 0, active: 0, recovery: 2.2, cooldown: 4, range: 0, blockable: false, damageKind: 'effect',
+  cancelInto: ['attack', 'power', 'movement', 'defense'], cancelFrom: 0 });
+// which taunt each class plays
+export const TAUNTS = Object.freeze({ warrior: 'tauntWarrior', duelist: 'tauntDuelist', assassin: 'tauntAssassin', healer: 'tauntHealer' });
 
 // Crystal forms: one crystal, four shapes.
 export const WEAPONS = Object.freeze(['sword', 'dualBlades', 'staff', 'bow']);
@@ -125,36 +130,46 @@ export const MOVES = Object.freeze({
   resist: move({ kind: 'defense', startup: 0, active: 0.05, recovery: 0.15, will: 15, cooldown: 3, damage: 0, range: 0 }),
 
   // ---- movement
+  // Owner correction: 35% less travel than the original 10.8m roll; class multipliers still apply.
   roll: move({ kind: 'movement', startup: 0, active: 0.42, recovery: 0.1, stamina: 20, damage: 0, range: 0, iframes: [0.06, 0.32],
-    rootMotion: 3.6, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
+    rootMotion: 7.02, cancelInto: ['power', 'attack'], cancelFrom: 0.3 }),
   dash: move({ kind: 'movement', startup: 0, active: 0.18, recovery: 0.08, will: 12, cooldown: 3, damage: 0, range: 0,
     iframes: [0, 0.18], rootMotion: 6, cancelInto: ['power', 'attack'], cancelFrom: 0.2 }),
-  // In-air evasion: second Dash press within AIR_DASH.doubleTapSeconds while in a player jump.
-  // One use per jump; no extra stamina/Will cost. The world validates height and the two presses.
-  airDash: move({ kind: 'movement', startup: 0, active: 0.22, recovery: 0.06, stamina: 0, will: 0,
-    damage: 0, range: 0, rootMotion: 4.5, iframes: [0.04, 0.16], cancelInto: [], cancelFrom: Infinity }),
+  // In-air dash: Dash pressed in the air after a jump (owner, 2026-11-22: jump, dash, jump again, dash again). One
+  // per jump, so two between the ground and the ground; as far as a roll carries you; no stamina or Will. The world
+  // validates the jump and the height.
+  airDash: move({ kind: 'movement', startup: 0, active: 0.24, recovery: 0.06, stamina: 0, will: 0,
+    damage: 0, range: 0, rootMotion: 7, iframes: [0.04, 0.18], cancelInto: [], cancelFrom: Infinity }),
   // a jump: the body arcs over the active phase (leap: its height, metres) and keeps the speed it had on the ground
   // (air: sim/world.mjs sets how far that carries it; from a standstill it goes straight up)
-  jump: move({ kind: 'movement', startup: 0, active: 0.56, recovery: 0.08, stamina: 8, damage: 0, range: 0, leap: 1.1, air: true,
+  // (owner, 2026-11-22: a double jump between the two games he named: 2.6 m each, about 5 m with the second)
+  jump: move({ kind: 'movement', startup: 0, active: 0.56, recovery: 0.08, stamina: 8, damage: 0, range: 0, leap: 2.6, air: true,
     cancelInto: ['attack', 'power'], cancelFrom: 0.5 }),
 
   // ---- class abilities (core/classes.mjs gives each class four of these and the powers above, and a special).
   //   effect: what the move does instead of (or besides) a hit, applied by sim/world.mjs through core/abilities.mjs;
-  //   effectSeconds: how long it lasts; targets: 'ally' / 'enemy' (one, in range and arc) or none (yourself);
+  //   effectSeconds: how long it lasts; targets: 'ally' / 'enemy' (the one the fighter is locked on to when it
+  //   qualifies, else the nearest in range and arc) or none (yourself); needsTarget: refused without one;
   //   aura: allies within that many metres share it; leap: the body arcs through the air over the active phase.
+  // Leap Strike (owner, 2026-11-22): leap at the enemy you are locked on to (else the nearest ahead within `seek`)
+  // and land on it; with nobody there, `rootMotion` metres straight ahead. The slam staggers everyone around.
   leapStrike: move({ kind: 'power', startup: 0.16, active: 0.42, recovery: 0.3, will: 20, cooldown: 7, damage: 12, range: 3, arc: 360,
-    hitAt: [0.4], knockback: 1.6, stagger: 0.7, blockable: false, rootMotion: 8, leap: 1.6, damageKind: 'telekinesis',
-    cancelInto: ['movement'], cancelFrom: 0.8 }),
-  repulse: move({ kind: 'power', startup: 0.22, active: 0.08, recovery: 0.3, will: 22, cooldown: 8, damage: 6, range: 5, arc: 360,
-    knockback: 4.5, stagger: 0.6, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.3 }),
+    hitAt: [0.4], knockback: 1.6, stagger: 0.7, blockable: false, rootMotion: 8, leap: 1.6, seek: 11, seekArc: 120, landShort: 1.2,
+    damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.8 }),
+  // Repulse (owner, 2026-11-22): a hop and a slam. Everyone within `range` is thrown up off its feet (`launch` m/s)
+  // and drawn in toward you to `drawTo` metres, landing on its feet stunned.
+  repulse: move({ kind: 'power', startup: 0.42, active: 0.08, recovery: 0.36, will: 22, cooldown: 8, damage: 6, range: 5.5, arc: 360,
+    knockback: 0, launch: 6.5, drawTo: 1.8, stagger: 0.95, leap: 1.1, hop: true, blockable: false, damageKind: 'telekinesis',
+    cancelInto: ['movement'], cancelFrom: 0.5 }),
   bladeThrow: move({ kind: 'power', startup: 0.2, active: 0.04, recovery: 0.32, will: 14, cooldown: 5, damage: 14, range: 16, arc: 4,
     stagger: 0.4, damageKind: 'projectile', projectileSpeed: 30, cancelInto: ['movement'], cancelFrom: 0.3 }),
   quickstep: move({ kind: 'power', startup: 0, active: 0.05, recovery: 0.05, will: 14, cooldown: 9, range: 0, blockable: false,
     effect: 'quick', effectSeconds: 3, damageKind: 'effect', cancelInto: ['movement', 'attack', 'power'], cancelFrom: 0 }),
   quickstepAura: move({ kind: 'power', startup: 0.05, active: 0.05, recovery: 0.1, will: 18, cooldown: 10, range: 0, blockable: false,
     effect: 'quick', effectSeconds: 3, aura: 6, damageKind: 'effect', cancelInto: ['movement', 'attack', 'power'], cancelFrom: 0.05 }),
-  // a parry stance: a strike that meets it in front is answered with counterStrike
-  counter: move({ kind: 'defense', startup: 0, active: 0.6, recovery: 0.15, will: 10, cooldown: 6, range: 0, blockable: false,
+  // a parry stance: a strike that meets it in front is answered with counterStrike. A duelist's bread and butter
+  // (owner, 2026-11-22): no Will, a little stamina, ready again in 1.5 s
+  counter: move({ kind: 'defense', startup: 0, active: 0.6, recovery: 0.15, stamina: 6, will: 0, cooldown: 1.5, range: 0, blockable: false,
     effect: 'counter', damageKind: 'effect' }),
   counterStrike: move({ kind: 'attack', startup: 0.05, active: 0.08, recovery: 0.25, damage: 16, range: 2.4, arc: 140, knockback: 1,
     stagger: 0.6, blockable: false, cancelInto: ['movement'], cancelFrom: 0.2 }),
@@ -162,20 +177,36 @@ export const MOVES = Object.freeze({
     effect: 'cloak', effectSeconds: 4, damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.1 }),
   empower: move({ kind: 'power', startup: 0.05, active: 0.05, recovery: 0.1, will: 15, cooldown: 10, range: 0, blockable: false,
     effect: 'empower', effectSeconds: 8, charges: 3, damageKind: 'effect', cancelInto: ['movement', 'attack'], cancelFrom: 0.05 }),
-  misdirect: move({ kind: 'power', startup: 0.12, active: 0.05, recovery: 0.2, will: 16, cooldown: 10, range: 12, arc: 40, blockable: false,
-    effect: 'misdirect', effectSeconds: 3, targets: 'enemy', damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.2 }),
+  // Mind Dominance (owner, 2026-11-22; replaces Misdirect): the enemy you are locked on to (else the nearest in
+  // front) stands dominated for 2 s, unable to act; the second hit it takes breaks it
+  dominate: move({ kind: 'power', startup: 0.2, active: 0.05, recovery: 0.25, will: 18, cooldown: 12, range: 12, arc: 40, blockable: false,
+    effect: 'dominate', effectSeconds: 2, breakHits: 2, targets: 'enemy', needsTarget: true, damageKind: 'effect',
+    cancelInto: ['movement'], cancelFrom: 0.25 }),
+  // Mend (owner, 2026-11-22): the ally you are locked on to, or yourself
   mend: move({ kind: 'power', startup: 0.2, active: 0.05, recovery: 0.25, will: 18, cooldown: 8, range: 18, arc: 60, blockable: false,
     effect: 'mend', effectSeconds: 3, heal: 30, targets: 'ally', damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.25 }),
-  levitate: move({ kind: 'movement', startup: 0, active: 0.1, recovery: 0.05, will: 14, cooldown: 7, range: 0, blockable: false,
-    effect: 'levitate', effectSeconds: 2, damageKind: 'effect', cancelInto: ['attack', 'power'], cancelFrom: 0.1 }),
+  // Levitate (owner, 2026-11-22): lift the enemy you are locked on to (else the nearest in front) off its feet,
+  // helpless, so you can get away
+  levitate: move({ kind: 'power', startup: 0.18, active: 0.05, recovery: 0.25, will: 18, cooldown: 9, range: 12, arc: 50, blockable: false,
+    effect: 'levitate', effectSeconds: 2, targets: 'enemy', needsTarget: true, damageKind: 'effect', cancelInto: ['movement'], cancelFrom: 0.22 }),
+  // T: a taunt (picture and voice only). Moving or acting cuts it short. Each class has its own (core/fighter.mjs
+  // moveForCommand: TAUNTS), with a clip of its own (core/moveMotion.mjs); a fighter with no class has this one.
+  taunt: move(TAUNT),
+  tauntWarrior: move(TAUNT), tauntDuelist: move(TAUNT), tauntAssassin: move(TAUNT), tauntHealer: move(TAUNT),
 
   // ---- class specials: the server-owned meter pays (core/classes.mjs: cost), never Will
-  rage: move({ kind: 'power', startup: 0.3, active: 0.05, recovery: 0.2, range: 0, blockable: false, special: true,
-    effect: 'rage', effectSeconds: 5, iframes: [0, 0.35], damageKind: 'effect' }),
-  execution: move({ kind: 'attack', startup: 0.12, active: 0.06, recovery: 0.4, range: 2.1, arc: 90, blockable: false, special: true,
-    execute: true, iframes: [0, 0.58], damageKind: 'execution' }),
-  shadowExecution: move({ kind: 'attack', startup: 0.12, active: 0.06, recovery: 0.4, range: 2.3, arc: 90, blockable: false, special: true,
-    execute: true, iframes: [0, 0.58], damageKind: 'execution' }),
+  // Rage: a roar (the wind-up), then the berserk (owner: he screams, then charges, breathing hard)
+  rage: move({ kind: 'power', startup: 0.5, active: 0.05, recovery: 0.15, range: 0, blockable: false, special: true,
+    effect: 'rage', effectSeconds: 5, iframes: [0, 0.55], damageKind: 'effect' }),
+  // Execution (owner, 2026-11-22): the enemy at 30% or less within `range` is seized and drawn in to `seize.distance`
+  // in front (`seize.pull` seconds), a blade is driven into its centre (the kill, the active phase), drawn out, and the
+  // body is pushed away (the second hit, `shove` metres)
+  execution: move({ kind: 'attack', startup: 0.78, active: 0.06, recovery: 0.86, range: 7, arc: 70, blockable: false, special: true,
+    execute: true, hitAt: [0, 0.4], seize: { distance: 1.05, pull: 0.4 }, shove: 5, iframes: [0, 1.7], damageKind: 'execution' }),
+  // Shadow Execution: from behind, whatever its health; cloaked (owner, 2026-11-22), she first steps to the back of an
+  // enemy up to `blink.reach` metres away
+  shadowExecution: move({ kind: 'attack', startup: 0.3, active: 0.06, recovery: 0.45, range: 2.3, arc: 90, blockable: false, special: true,
+    execute: true, blink: { reach: 12, arc: 140, behind: 1.0 }, iframes: [0, 0.81], damageKind: 'execution' }),
   sanctuary: move({ kind: 'power', startup: 0.3, active: 0.05, recovery: 0.25, range: 0, blockable: false, special: true,
     effect: 'sanctuary', effectSeconds: 5, iframes: [0, 0.35], damageKind: 'effect' }),
 });
@@ -217,6 +248,7 @@ export const BINDINGS = Object.freeze({
   bow: Object.freeze({ light: 'bowShot', heavy: 'sniperShot' }),
   sidearm: Object.freeze({ light: 'sidearmShot', heavy: 'sidearmBurst' }),
 });
-export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash', jump: 'jump' });
+export const POWER_BINDINGS = Object.freeze({ push: 'push', pull: 'pull', grip: 'grip', breach: 'breach', resist: 'resist', roll: 'roll', dash: 'dash', jump: 'jump',
+  taunt: 'taunt' });
 
 export const moveById = (id) => MOVES[id] || null;

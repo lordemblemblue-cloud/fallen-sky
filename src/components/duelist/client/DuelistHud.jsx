@@ -20,7 +20,7 @@ import { FLAG_STATE_TEXT } from './hudFeed.mjs';
 import './duelistHud.css';
 
 const ABILITY_ICONS = { leapStrike: ArrowUpRight, grip: Hand, repulse: Radar, bladeThrow: RotateCw, pull: Magnet, quickstep: Zap, quickstepAura: Zap,
-  counter: ShieldCheck, cloak: EyeOff, push: Waves, empower: Flame, misdirect: Shuffle, mend: HeartPulse, levitate: Feather, breach: Focus };
+  counter: ShieldCheck, cloak: EyeOff, push: Waves, empower: Flame, dominate: Shuffle,mend: HeartPulse, levitate: Feather, breach: Focus };
 const SPECIAL_ICONS = { rage: Flame, execution: Swords, shadowExecution: Skull, sanctuary: ShieldPlus };
 export const CLASS_ICONS = { warrior: Sword, duelist: Swords, assassin: VenetianMask, healer: Cross };
 const WEAPON_NAMES = { sword: 'Crystal blade', dualBlades: 'Twin blades', staff: 'Bladed staff' };
@@ -300,6 +300,14 @@ function FfaBoard({ view, me }) {
 function Scoreboard({ view, me, myTeam, flagStates }) {
   if (view.singlePoint) return <SingleBoard view={view} myTeam={myTeam} />;
   switch (view.mode) {
+    case 'escort': return view.escort && <div className="dh-part dh-board dh-escort" data-testid="duelist-board-escort">
+      <strong>{myTeam === 'red' ? 'Escort the carrier' : 'Defend the gate'}</strong>
+      <span>{view.escort.overtime ? 'OVERTIME' : clock(view.clockLeft)}</span>
+      <progress aria-label="Delivery progress" value={view.escort.progress} max={100}/>
+      <span>{Math.floor(view.escort.progress)}%</span>
+      <small>{view.phase === 'over' ? view.winner === 'red' ? 'Delivered' : 'Defense held' :
+        view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped'}</small>
+    </div>;
     case 'ctf': return <CtfBoard view={view} myTeam={myTeam} flagStates={flagStates} />;
     case 'control': return <ControlBoard view={view} myTeam={myTeam} />;
     case 'tdm': return <TeamBoard view={view} myTeam={myTeam} />;
@@ -326,7 +334,7 @@ function Banner({ banner, slot }) {
  * player's fighter (a data URL) or null. story: a story mission is being played (its own objective and crew panels
  * are up: no scoreboard, no kill feed). help: the keys line, shown until the mouse is captured.
  */
-export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = null, story = false, help = '', onPower, onClass = null }) {
+export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = null, story = false, help = '', onPower, onClass = null, pickerOpen = false }) {
   const rootRef = useRef(null);
   const [captured, setCaptured] = useState(false);
   useEffect(() => {
@@ -352,8 +360,12 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
     <div className="dh-root" ref={rootRef} data-testid="duelist-hud" data-mode={view?.mode || (story ? 'story' : 'none')}>
       <Vitals you={hud.you} fighter={fighter} classId={hud.classId} portrait={portrait} level={level} onClass={onClass}
         items={view ? view.me?.items || [] : null} />
-      <Special hud={hud} onPower={onPower} />
-      <Skills hud={hud} onPower={onPower} />
+      {/* F11 changes viewport dimensions, not the match's HUD. Never restore the pre-match
+          character/skill rail after class confirmation; retain HP and all combat controls. */}
+      {!pickerOpen && <>
+        <Special hud={hud} onPower={onPower} />
+        <Skills hud={hud} onPower={onPower} />
+      </>}
       {view && !story && <Kills rows={hud.kills} count={view.me?.defeats ?? view.people?.find((p) => p.id === hud.meId)?.defeats} />}
       {view && !story && (
         <section className="dh-anchor dh-tc" aria-label={`${view.name || 'Match'} score`}>

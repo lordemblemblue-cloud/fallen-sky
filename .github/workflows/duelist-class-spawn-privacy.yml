@@ -1,0 +1,37 @@
+name: Duelist Class Spawn Privacy Regression
+
+on:
+  pull_request:
+    paths:
+      - 'tests/duelist-class-spawn-privacy.test.mjs'
+      - '.github/workflows/duelist-class-spawn-privacy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run class spawn and private snapshot regressions
+        run: node --test tests/duelist-class-spawn-privacy.test.mjs tests/duelist-match-classes.test.mjs tests/duelist-class-selection-boundaries.test.mjs
+  lint-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Lint new regression
+        run: npx eslint tests/duelist-class-spawn-privacy.test.mjs
+      - name: Build application
+        run: npm run build

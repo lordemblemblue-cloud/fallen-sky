@@ -7,7 +7,7 @@ import { MISSION_ORDER } from '@/components/duelist/sim/mission.mjs';
 // a listed match), or ?mode=story&mission=contraband|saltmarch: a co-op mission, played here; with online=1 on the
 // match server with a crew (room=<a crew's code>, room=new for a room of your own, room=open for an open one,
 // room=m<n> for a listed crew, or no room: any open crew). from=duelist: Menu goes back to /duelist.
-const MODES = ['practice', 'duel', 'ffa', 'tdm', 'ctf', 'football', 'control', 'online', 'any', 'story'];
+const MODES = ['practice', 'duel', 'ffa', 'tdm', 'ctf', 'football', 'control', 'escort', 'online', 'any', 'story'];
 
 export const Route = createFileRoute('/duelist-next/play')({
   ssr: false,

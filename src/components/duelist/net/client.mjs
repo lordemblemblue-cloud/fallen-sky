@@ -100,6 +100,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let wantedClass = classId;
   let classAnswer = null; // the server's last answer: { ok, pending, reason }
   let shopAnswer = null;
+  let storySupplyAnswer = null;
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
@@ -117,6 +118,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let view = null;
   let flags = null;
   let footballBall = null;
+  let escortDistance = 0;
   let status = 'connecting';
   let seq = 0;
   let stepClock = 0; // time waiting to be played in whole steps
@@ -209,7 +211,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       }
       if (fresh) {
         generation += 1;
-        world.fighters.clear(); world.bodies.clear(); flags = null;
+        world.fighters.clear(); world.bodies.clear(); flags = null; escortDistance = 0;
         // a mission from the start: its doors as they were
         if (level) { for (const d of def.level.doors) setDoor(level, d.id, !!d.open); view = null; maxOf.clear(); lastFull.clear(); }
       }
@@ -264,6 +266,10 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     } else if (msg.t === 'shop') {
       shopAnswer = msg;
       if (msg.ok && view?.me) view = { ...view, me: { ...view.me, gold: msg.gold, items: msg.items } };
+      onChange(status, null);
+    } else if (msg.t === 'storySupply') {
+      storySupplyAnswer = msg;
+      if (story && msg.ok && view?.me) view = { ...view, me: { ...view.me, supplyUsed: msg.id } };
       onChange(status, null);
     } else if (msg.t === 'error') setStatus('error', msg.message);
     else if (msg.t === 'left') { seat = null; forget(); setStatus('closed', 'You left the match.'); }
@@ -324,6 +330,11 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     /** The server's answer to the last class change: { ok, pending, reason } or null. */
     get classAnswer() { return classAnswer; },
     get shopAnswer() { return shopAnswer; },
+    get storySupplyAnswer() { return storySupplyAnswer; },
+    claimStorySupply(id) {
+      storySupplyAnswer = null;
+      if (story && typeof id === 'string' && ws?.readyState === 1) send({ t: 'storySupply', id });
+    },
     /** Change class: the server queues it for the next spawn (before the fight, between rounds or while down). */
     chooseClass(id) {
       wantedClass = id;
@@ -338,6 +349,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     view: () => view,
     flags: () => flags,
     ball: () => footballBall,
+    escortDistance: () => escortDistance,
     /** The connection as the player feels it: the round trip (seconds) and how the prediction is going. */
     netStats: () => ({ roundTrip, lag, ...(predictor ? predictor.stats() : { predicting: false }) }),
     /**
@@ -401,8 +413,17 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         }
         const before = past.get(data.id) || data;
         // discrete state from the earlier snapshot (the moment shown), its action clock carried forward
-        const { f, b } = applyFighter(world, before, makeFighter, newBody);
-        if (f.action) f.action.t += Math.max(0, time - s0.time);
+        const sample = k === 1 ? data : before;
+        const { f, b } = applyFighter(world, sample, makeFighter, newBody);
+        if (f.action && k < 1 && before !== data) {
+          const next = data.a;
+          // The server clock includes stance speed, buffs and hit recovery.
+          if (next && next[0] === f.action.id && next[1] >= before.a[1]) {
+            f.action.t = before.a[1] + (next[1] - before.a[1]) * k;
+          } else {
+            f.action.t = Math.min(f.action.move.duration, before.a[1] + Math.max(0, time - s0.time));
+          }
+        }
         const [x0, y0, z0, yaw0] = before.p;
         const [x1, y1, z1, yaw1] = data.p;
         b.x = x0 + (x1 - x0) * k;
@@ -412,6 +433,10 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       }
       for (const id of [...world.fighters.keys()]) if (!present.has(id)) { world.fighters.delete(id); world.bodies.delete(id); }
       if (predicting && world.fighters.has(meId)) predictor.present(world.fighters.get(meId), world.bodies.get(meId), time, dt);
+      if (Number.isFinite(s1.escortDistance)) {
+        const before = s0.escortDistance ?? s1.escortDistance;
+        escortDistance = before + (s1.escortDistance - before) * k;
+      }
       if (s1.ball) {
         const prev = s0.ball || s1.ball;
         footballBall = { x: prev.x + (s1.ball.x - prev.x) * k, z: prev.z + (s1.ball.z - prev.z) * k };

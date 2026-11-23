@@ -33,10 +33,10 @@ test('normal mode includes practice and online per mode without pretending ranke
   assert.doesNotMatch(hub, /mode: 'ranked'/);
 });
 
-test('mode drawer preserves Transport name, planned state, and existing battle destinations', () => {
+test('mode drawer preserves Transport name, and existing battle destinations', () => {
   const ids = HUB_MODE_CARDS.map(mode => mode.id);
   assert.deepEqual(ids.filter(id => ['duel','ctf','transport','tdm'].includes(id)), ['duel','ctf','transport','tdm']);
-  assert.equal(HUB_MODE_CARDS.find(mode => mode.id === 'transport')?.route, null);
+  assert.equal(HUB_MODE_CARDS.find(mode => mode.id === 'transport')?.route, 'escort');
   assert.match(hub, /\['practice', 'online'\]/);
 });
 

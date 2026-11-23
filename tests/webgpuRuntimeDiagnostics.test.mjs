@@ -5,7 +5,7 @@ import { getWebGPURuntimeEvidence, formatWebGPURuntimeEvidence } from '../src/li
 function renderer({ backend = 'webgpu', ready = true, frames = 3, lost = null, device = true } = {}) {
   return {
     isWebGPURenderer: true,
-    __sceneState: { ready, lost },
+    __sceneState: { ready, lost, gameplayFrames: 1 },
     backend: { isWebGPUBackend: backend === 'webgpu',
       device: device ? { createCommandEncoder() {}, queue: { submit() {} } } : null },
     info: { render: { frame: frames } },

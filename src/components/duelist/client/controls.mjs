@@ -14,6 +14,8 @@ const AIMED = new Set(['light', 'heavy', 'ability1', 'ability2', 'ability3', 'ab
 export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, onShopToggle = null } = {}) {
   const bound = keysFrom(keys);
   const held = new Set(); // actions held down right now
+  const touchHeld = new Set(); // virtual controls are independent of physical keys
+  let touchMove = { x: 0, y: 0 };
   const presses = [];
   let yaw = 0;
   let pitch = 0.32;
@@ -95,14 +97,20 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
     keys: bound,
     setPaused(value) {
       paused = !!value;
-      if (paused) { held.clear(); presses.length = 0; presses.push('blockUp'); }
+      if (paused) {
+        held.clear();
+        touchHeld.clear();
+        touchMove = { x: 0, y: 0 };
+        presses.length = 0;
+        presses.push('blockUp');
+      }
     },
     // This frame's input for the player's fighter (world-space move from the camera's yaw).
-    read({ faceYaw = null, strafe = false } = {}) {
+    read({ faceYaw = null, strafe = false, aimWhileAttacking = false } = {}) {
       if (paused) return { move: { x: 0, z: 0 }, run: false, sprint: false,
         interact: false, face: null, strafe, presses: presses.splice(0) };
-      const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0);
-      const s = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0);
+      const f = (held.has('forward') ? 1 : 0) - (held.has('back') ? 1 : 0) + touchMove.y;
+      const s = (held.has('right') ? 1 : 0) - (held.has('left') ? 1 : 0) + touchMove.x;
       const forward = { x: Math.sin(yaw), z: Math.cos(yaw) };
       const right = { x: -Math.cos(yaw), z: Math.sin(yaw) };
       let x = forward.x * f + right.x * s;
@@ -111,19 +119,50 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
       if (len > 1) { x /= len; z /= len; }
       const moving = len > 0.01;
       const pressed = presses.splice(0);
-      // strikes and powers go where the camera looks; otherwise the body turns the way it moves
-      const aiming = pressed.some((c) => AIMED.has(c)) || held.has('heavy');
+      // During a sword swing the camera/locked target stays authoritative for aim,
+      // even when a lateral/backward WASD input moves the feet elsewhere.
+      // The match simulation supplies aimWhileAttacking from the current move;
+      // plain traversal still faces the movement direction.
+      const aiming = aimWhileAttacking || pressed.some((c) => AIMED.has(c)) ||
+        held.has('heavy') || held.has('light') || touchHeld.has('heavy') || touchHeld.has('light');
       return {
         move: { x, z },
         run: true,
-        sprint: held.has('sprint'),
-        interact: held.has('interact'), // held at a crate, a console, a ledger core, a bell (story missions)
+        sprint: held.has('sprint') || touchHeld.has('sprint'),
+        interact: held.has('interact') || touchHeld.has('interact'), // held at a crate, a console, a ledger core, a bell (story missions)
         face: faceYaw ?? (aiming ? yaw : moving ? Math.atan2(x, z) : null),
         strafe,
         presses: pressed,
       };
     },
-    // a command from the on-screen buttons (touch screens) or a test
+    // Mobile uses the same simulated press/hold/release semantics as keyboard.
+    // No ability is granted here; the match simulation/server validates all casts.
+    setTouchMove({ x = 0, y = 0 } = {}) {
+      touchMove = {
+        x: THREE.MathUtils.clamp(Number(x) || 0, -1, 1),
+        y: THREE.MathUtils.clamp(Number(y) || 0, -1, 1),
+      };
+    },
+    touchActionDown(action) {
+      if (paused || !KIND[action] || touchHeld.has(action)) return;
+      if (action === 'shop') { onShopToggle?.(); return; }
+      touchHeld.add(action);
+      if (action === 'lock') lockRequested = true;
+      else if (KIND[action] === 'guard') presses.push('blockDown');
+      else if (KIND[action] === 'press' || KIND[action] === 'ability') presses.push(action);
+    },
+    touchActionUp(action) {
+      if (!touchHeld.delete(action)) return;
+      if (KIND[action] === 'guard') presses.push('blockUp');
+      if (KIND[action] === 'ability') presses.push('release');
+    },
+    look(dx = 0, dy = 0) {
+      if (paused) return;
+      yaw -= THREE.MathUtils.clamp(Number(dx) || 0, -120, 120) * 0.0026 * sensitivity;
+      pitch = THREE.MathUtils.clamp(pitch +
+        THREE.MathUtils.clamp(Number(dy) || 0, -120, 120) * 0.0022 * sensitivity, -0.2, 1.1);
+    },
+    // Existing on-screen HUD and automated test compatibility.
     press(command) { if (command) presses.push(command); },
     takeLockToggle() { const r = lockRequested; lockRequested = false; return r; },
     yaw: () => yaw,

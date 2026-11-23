@@ -22,7 +22,7 @@ export const ACTIONS = Object.freeze([
   { id: 'guard', label: 'Guard (a fresh guard parries)', kind: 'guard' },
   { id: 'jump', label: 'Jump', kind: 'press' },
   { id: 'roll', label: 'Roll (into a power or a strike)', kind: 'press' },
-  { id: 'dash', label: 'Dash (double-tap during jump for air dash)', kind: 'press' },
+  { id: 'dash', label: 'Dash (in the air: an air dash, one per jump)', kind: 'press' },
   { id: 'itemActive', label: 'Use active relic', kind: 'press' },
   { id: 'mode', label: 'Sword mode (swift, balanced, heavy)', kind: 'press' },
   { id: 'ability1', label: 'Ability 1', kind: 'ability' },
@@ -33,7 +33,8 @@ export const ACTIONS = Object.freeze([
   { id: 'breach', label: 'Veil Breach', kind: 'press' },
   { id: 'resist', label: 'Resist (break a grip)', kind: 'press' },
   { id: 'shop', label: 'Battle Shop', kind: 'press' },
-  { id: 'lock', label: 'Lock on', kind: 'press' },
+  { id: 'lock', label: 'Lock on (a Healer locks on to allies too)', kind: 'press' },
+  { id: 'taunt', label: 'Taunt', kind: 'press' },
   { id: 'interact', label: 'Use (crates, consoles, cores, bells)', kind: 'hold' },
 ]);
 export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a.kind])));
@@ -41,7 +42,7 @@ export const KIND = Object.freeze(Object.fromEntries(ACTIONS.map((a) => [a.id, a
 export const DEFAULT_KEYS = Object.freeze({
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft', light: 'Mouse0', heavy: 'KeyE', guard: 'Mouse2',
   jump: 'Space', roll: 'KeyC', dash: 'AltLeft', itemActive: 'KeyG', mode: 'KeyX', ability1: 'Digit1', ability2: 'Digit2', ability3: 'Digit3', ability4: 'Digit4', special: 'KeyQ',
-  breach: 'KeyR', resist: 'KeyZ', shop: 'Tab', lock: 'Mouse1', interact: 'KeyF',
+  breach: 'KeyR', resist: 'KeyZ', shop: 'Tab', lock: 'Mouse1', interact: 'KeyF', taunt: 'KeyT',
 });
 // bindings saved before the classes: the old power keys become the ability keys
 const LEGACY = Object.freeze({ ability1: 'push', ability2: 'pull', ability3: 'grip' });
@@ -136,7 +137,7 @@ export function helpLine(keys, { story = false, abilityNames = null } = {}) {
   const move = ['forward', 'left', 'back', 'right'].map(k).join('');
   const names = abilityNames || ['push', 'pull', 'grip', 'breach'];
   const parts = [`${move.length === 4 ? move : `${k('forward')} ${k('left')} ${k('back')} ${k('right')}`} move`, `${k('sprint')} sprint`,
-    `${k('light')} light (with a direction: a cut that way)`, `${k('mode')} sword mode`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (double-tap in air)`, `${k('itemActive')} relic`,
+    `${k('light')} light (with a direction: a cut that way)`, `${k('mode')} sword mode`, `${k('heavy')} heavy`, `${k('guard')} guard`, `${k('jump')} jump`, `${k('roll')} roll`, `${k('dash')} dash (in the air too)`, `${k('taunt')} taunt`, `${k('itemActive')} relic`,
     ...names.map((name, i) => `${k(`ability${i + 1}`)} ${name.toLowerCase()}`)];
   if (abilityNames) parts.push(`${k('special')} special`, `${k('breach')} breach`);
   parts.push(`${k('resist')} resist`, `${k('shop')} shop`, `${k('lock')} lock on`);

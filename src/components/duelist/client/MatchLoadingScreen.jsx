@@ -6,6 +6,7 @@ const BRIEFS = {
   tdm: ['TEAM DEATHMATCH', 'Fight beside your team and secure the most eliminations.'],
   ctf: ['CAPTURE THE FLAG', 'Defend your base and bring the opposing flag home.'],
   control: ['CONTROL POINT', 'Hold two of three points to build your team score.'],
+  escort: ['ESCORT TRANSPORT', 'Red advances the carrier. Blue contests inside its ring.'],
   football: ['FOOTBALL', 'Dribble toward goal and press F near the ball to kick.'],
   story: ['STORY CAMPAIGN', 'Follow your mission objectives and work with your crew.'],
   online: ['ONLINE MATCH', 'Join an available battle with other fighters.'],

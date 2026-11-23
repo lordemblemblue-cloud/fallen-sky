@@ -1,0 +1,13 @@
+{
+  "model": "eleven_multilingual_v2",
+  "speakers": {
+    "test-ferrier": { "voiceId": "voice-test-aaa", "settings": { "stability": 0.5, "similarity_boost": 0.75 } },
+    "test-lamplighter": { "voiceId": "voice-test-bbb" }
+  },
+  "lines": [
+    { "id": "test-ferrier-01", "speaker": "test-ferrier", "text": "The ferry leaves at dusk. Bring your own rope." },
+    { "id": "test-ferrier-02", "speaker": "test-ferrier", "text": "Two coins. Three if the goat comes too." },
+    { "id": "test-lamplighter-01", "speaker": "test-lamplighter", "text": "Every lamp on this street, every night, for forty years." },
+    { "id": "test-lamplighter-02", "speaker": "test-lamplighter", "text": "Mind the third step." }
+  ]
+}

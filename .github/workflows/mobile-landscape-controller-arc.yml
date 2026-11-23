@@ -1,0 +1,30 @@
+name: Mobile Landscape Controller and Skill Arc
+on:
+  pull_request:
+    paths:
+      - 'src/components/mobile/**'
+      - 'src/components/duelist/client/DuelistGame.jsx'
+      - 'tests/mobile-touch-controls-both-games.test.mjs'
+      - 'tests/mobile-landscape-controller-arc.test.mjs'
+      - '.github/workflows/mobile-landscape-controller-arc.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  responsive-mobile-controls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Test orientation, curved controls, gamepad, and both existing game integrations
+        run: node --test tests/mobile-touch-controls-both-games.test.mjs tests/mobile-landscape-controller-arc.test.mjs
+      - name: Lint changed mobile and controller files
+        run: npx eslint src/components/mobile/*.jsx src/components/mobile/*.mjs src/components/duelist/client/DuelistGame.jsx
+      - name: Full application build
+        run: npm run build
