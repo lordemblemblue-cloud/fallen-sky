@@ -64,6 +64,10 @@
   z-index: 50;
   left: env(safe-area-inset-left, 0px);
   top: env(safe-area-inset-top, 0px);
+  /* Room for the button to lay out on one line; zero height so the slot
+     itself never covers the menu. */
+  width: 240px;
+  height: 0;
 }
 
 .xs-brand {
@@ -215,6 +219,7 @@
   position: absolute;
   top: 7%;
   right: 7%;
+  max-width: 86%;
   padding: 0.35em 0.7em;
   border: 1px solid rgba(255, 255, 255, 0.38);
   border-radius: 999px;
@@ -226,6 +231,10 @@
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
+}
+
+.xs-tile-soon-short {
+  display: none;
 }
 
 /* The focused game's name, line and Play, aligned under the focused tile. */
@@ -508,6 +517,13 @@
   .xs-pager-button {
     width: 46px;
     height: 46px;
+  }
+  /* Small tiles: the badge says "Soon"; the details below say "Coming soon". */
+  .xs-tile-soon-long {
+    display: none;
+  }
+  .xs-tile-soon-short {
+    display: inline;
   }
 }
 

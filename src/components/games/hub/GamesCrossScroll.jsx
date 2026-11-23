@@ -287,7 +287,12 @@ export default function GamesCrossScroll({ tiles = GAMES_HUB_TILES, routesByPath
                     onError={(event) => { event.currentTarget.style.visibility = 'hidden'; }}
                   />
                   <span className="xs-tile-name" aria-hidden="true">{tile.title}</span>
-                  {!live && <span className="xs-tile-soon" aria-hidden="true">Coming soon</span>}
+                  {!live && (
+                    <span className="xs-tile-soon" aria-hidden="true">
+                      <span className="xs-tile-soon-long">Coming soon</span>
+                      <span className="xs-tile-soon-short">Soon</span>
+                    </span>
+                  )}
                 </button>
               );
             })}
