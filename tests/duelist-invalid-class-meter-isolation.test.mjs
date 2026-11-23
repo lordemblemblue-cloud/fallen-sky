@@ -8,7 +8,7 @@ function advance(match, seconds) {
 }
 
 test('invalid class requests cannot erase a queued choice or alter another seat meter', () => {
-  const match = createMatch({ mode: 'duel', players: [{ id: 'a' }, { id: 'b' }] });
+  const match = createMatch({ mode: 'practice', players: [{ id: 'a' }, { id: 'b' }] });
   assert.equal(queueMatchClass(match, 'a', 'warrior').accepted, true);
   assert.equal(queueMatchClass(match, 'b', 'healer').accepted, true);
   advance(match, COUNTDOWN + 0.1);
