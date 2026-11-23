@@ -40,12 +40,19 @@
 // lock-on and health bars never see it; it stands where it is put, idles,
 // cannot be hurt, reports no deaths, and goes only on enemies:despawnGroup
 // (or dispose). It still counts against the limit of 12 animated bodies.
+//
+// A group asked for with `goal: { x, z, radius }` (a defend step's wave)
+// walks to the goal from the moment it spawns, and fights whoever it meets on
+// the way; at the goal it goes for the player within 25 m and otherwise holds
+// there (enemyGoalMarch.mjs). Passive groups ignore it; without it nothing
+// changes.
 import * as THREE from 'three';
 import { getAXEEnemyStats } from '../../axe/balance/AXEPowerBudget.js';
 import { createSharedSkinnedFBXSpawner } from '../../performance/SharedSkinnedFBXSpawner.mjs';
 import { ENEMY_KINDS, ENEMY_TIERS, ENEMY_TIER_SCALE, INK_LOOK } from './enemyKinds.mjs';
 import { planGroupPositions } from './enemyPlacement.mjs';
 import { createEnemyGroupWatcher } from './enemyGroupWatcher.mjs';
+import { readGoal, goalPointsFor, startGoalMarch, stepGoalMarch } from './enemyGoalMarch.mjs';
 
 export const MAX_THREE_ROADS_ENEMIES = 12;
 export const MAX_GROUP_RADIUS = 40;
@@ -224,6 +231,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
   const groupMeta = new Map();      // groupId -> meta of open groups
   let pending = 0;
   let passiveCount = 0;             // passive bodies standing in the scene
+  let clock = 0;                    // seconds of update() since the start
   let disposed = false;
   let spawnSerial = 0;
 
@@ -380,7 +388,9 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
     const meta = {
       groupId, kind: kind.id, tier, placeId: detail.placeId ?? null, passive,
       x, z, radius, askedLevel, level: resolveLevel(askedLevel),
+      goal: passive ? null : readGoal(detail.goal), spawnedAt: clock,
     };
+    const goalPoints = meta.goal ? goalPointsFor(spots, { x, z }, meta.goal) : null;
     groupMeta.set(groupId, meta);
     if (!passive) watcher.openGroup(meta, spots.length);
     pending += spots.length;
@@ -408,6 +418,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
           }
           mine.push(entry);
           if (passive) { passiveCount += 1; return; }
+          if (goalPoints) startGoalMarch(entry, meta.goal, goalPoints[index]);
           enemies.push(entry);
           watcher.addEntry(groupId, entry);
         }, error => {
@@ -475,9 +486,10 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
   const offDespawn = bus.on('enemies:despawnGroup', detail => { despawnGroup(detail?.groupId); });
 
   return {
-    update(dt) {
+    update(dt, playerPosition) {
       if (disposed) return;
       const step = Math.max(0, Math.min(0.1, Number(dt) || 0));
+      clock += step;
       for (let i = mine.length - 1; i >= 0; i--) {
         const entry = mine[i];
         if (entry.threeRoads.passive) {
@@ -485,6 +497,7 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
           entry.mixer?.update(step);
           continue;
         }
+        if (entry.threeRoads.march) stepGoalMarch(entry, playerPosition || null, clock);
         if (entry.dying) {
           entry.respawnAt = null; // never back: the kill path set 10 s
           ownDeath(entry);
@@ -516,7 +529,22 @@ export function createEnemiesSubsystem(ctx, deps = {}) {
       const groups = [];
       for (const [id, meta] of groupMeta) {
         const group = watcher.getGroup(id);
+        let march = null;
+        if (meta.goal) {
+          march = { goal: meta.goal, march: 0, hold: 0, seek: 0, fight: 0, firstArrival: null, lastArrival: null };
+          for (const entry of mine) {
+            const m = entry.threeRoads.groupId === id ? entry.threeRoads.march : null;
+            if (!m || entry.dying) continue;
+            march[m.state] += 1;
+            if (m.arrivedAt !== null) {
+              const t = Math.round((m.arrivedAt - meta.spawnedAt) * 10) / 10;
+              march.firstArrival = march.firstArrival === null ? t : Math.min(march.firstArrival, t);
+              march.lastArrival = march.lastArrival === null ? t : Math.max(march.lastArrival, t);
+            }
+          }
+        }
         groups.push({
+          march,
           groupId: id, kind: meta.kind, tier: meta.tier, placeId: meta.placeId, level: meta.level,
           passive: !!meta.passive,
           planned: group?.planned ?? 0, made: group?.entries.length ?? 0,
