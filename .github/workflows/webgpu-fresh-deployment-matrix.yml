@@ -1,0 +1,25 @@
+name: WebGPU fresh deployment evidence gate
+on:
+  pull_request:
+    paths:
+      - 'scripts/webgpu-fresh-deployment-matrix.mjs'
+      - 'tests/webgpuFreshDeploymentMatrix.test.mjs'
+      - 'tests/webgpuFreshDeploymentMatrixCli.test.mjs'
+      - '.github/workflows/webgpu-fresh-deployment-matrix.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # This PR owns only the combined gate tests. The independent deployment
+      # matrix suite currently has legacy fixtures that fail the newer
+      # same-browser-document guard; track those failures separately rather
+      # than misattribute them to the combined gate.
+      - run: node --test tests/webgpuFreshDeploymentMatrix.test.mjs tests/webgpuFreshDeploymentMatrixCli.test.mjs
