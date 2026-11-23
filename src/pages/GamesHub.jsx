@@ -44,7 +44,7 @@ function GamePanel({ game, side, onPlay }) {
         onError={(event) => { event.currentTarget.style.display = 'none'; }}
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/10 transition group-hover:from-black/70" />
-      <div className={`games-hub-copy relative mt-auto flex w-full flex-col gap-3 p-6 sm:p-10 ${side === 'right' ? 'items-end text-right' : 'items-start'}`}>
+      <div className={`games-hub-copy relative mt-auto flex w-full flex-col gap-2 p-4 sm:gap-3 sm:p-10 ${side === 'right' ? 'items-end text-right' : 'items-start'}`}>
         <h2 className="text-3xl font-black uppercase tracking-wide text-white drop-shadow-lg sm:text-5xl">{game.title}</h2>
         <p className="max-w-md text-sm text-white/75 sm:text-base">{game.tagline}</p>
         <span
@@ -86,14 +86,14 @@ export default function GamesHub() {
   }, []);
 
   if (introPhase === 'checking') {
-    return <main className="h-screen bg-black" aria-label="Loading Adam X Eve Games" />;
+    return <main className="h-[100dvh] bg-black" aria-label="Loading Adam X Eve Games" />;
   }
   if (introPhase === 'playing') {
     return <LiveAppIntro onComplete={() => setIntroPhase('complete')} />;
   }
 
   return (
-    <main className="relative flex h-screen min-h-0 flex-col bg-[#05070c] text-white">
+    <main className="relative flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-[#05070c] text-white">
       <style>{`
         @media (min-width: 768px) {
           .games-hub-left  { clip-path: polygon(0 0, 100% 0, 88% 100%, 0 100%); margin-right: -6%; }
@@ -103,8 +103,8 @@ export default function GamesHub() {
         }
       `}</style>
       <InstallAppButton />
-      <header className="shrink-0 pb-5 pt-16 text-center md:py-5">
-        <h1 className="text-2xl font-black uppercase tracking-[0.35em] sm:text-4xl">Adam X Eve Games</h1>
+      <header className="shrink-0 px-3 pb-3 pt-[max(46px,env(safe-area-inset-top))] text-center md:py-5">
+        <h1 className="text-xl font-black uppercase tracking-[0.18em] sm:text-4xl sm:tracking-[0.35em]">Adam X Eve Games</h1>
         <p className="mt-1 text-xs uppercase tracking-[0.3em] text-white/45">Choose your game</p>
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-1 md:flex-row md:gap-0">
