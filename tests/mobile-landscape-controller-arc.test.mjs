@@ -30,6 +30,8 @@ test('landscape auto-detection respects the actual phone orientation and never f
   assert.equal(showLandscapeSuggestion({ touch: true, width: 390, height: 844 }), true);
   assert.equal(showLandscapeSuggestion({ touch: true, width: 844, height: 390 }), false);
   assert.equal(showLandscapeSuggestion({ touch: false, width: 390, height: 844 }), false);
+  assert.equal(showLandscapeSuggestion({ touch: true, width: 820, height: 1180 }), true,
+    'portrait tablet also requires rotation');
   const unsupported = { document: { documentElement: {} }, screen: { orientation: {} } };
   assert.equal(await requestLandscapeOnGesture(unsupported), false);
   let fullscreen = 0, locked = 0;
@@ -112,7 +114,10 @@ test('readable ultimate button inherits actual server meter and lock-on state; e
   assert.match(game, /lockActive=\{!!hud\?\.lockOn\}/);
   assert.match(jsx, /createStandardGamepadReader/);
   assert.match(jsx, /TURN YOUR PHONE SIDEWAYS/);
-  assert.match(jsx, /CONTINUE PORTRAIT/);
+  assert.doesNotMatch(jsx, /CONTINUE PORTRAIT/);
+  assert.match(jsx, /data-landscape-required=\{showRotate \? 'true' : undefined\}/);
+  assert.match(jsx, /!disabled && !editing && !portraitBlocked/);
+  assert.match(jsx, /disabled \|\| portraitBlocked/);
   assert.match(jsx, /requestLandscapeOnGesture/);
   assert.match(jsx, /sourceAction\(id, 'gamepad', true\)/);
   assert.match(jsx, /sourceAction\(id, 'touch', true\)/);
@@ -121,4 +126,24 @@ test('readable ultimate button inherits actual server meter and lock-on state; e
   assert.match(css, /min-width:76px/);
   assert.match(css, /min-width:62px/);
   assert.match(css, /env\(safe-area-inset-bottom/);
+});
+
+test('mobile portrait blocks the entire game instead of leaving an alternate squeezed HUD', () => {
+  const ui = file('components/mobile/MobileTouchControls.jsx');
+  const style = file('components/mobile/mobileTouchControls.css');
+  const pwa = JSON.parse(readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8'));
+  assert.equal(pwa.orientation, 'landscape', 'installed app requests landscape at launch');
+  assert.match(ui, /const portraitBlocked = supported && !landscape;/);
+  assert.match(ui, /if \(!supported \|\| \(disabled && !portraitBlocked\)\) return null;/,
+    'rotation screen remains visible while the class picker disables combat controls');
+  assert.match(ui, /showLandscapeSuggestion\(\{/);
+  assert.match(ui, /aria-modal="true"/);
+  assert.match(ui, /TURN YOUR PHONE SIDEWAYS/);
+  assert.match(ui, /if \(disabled \|\| portraitBlocked\) return;/);
+  assert.match(ui, /\[game, disabled, editing, portraitBlocked\]/);
+  assert.doesNotMatch(ui, /setPortraitDismissed|portraitDismissed|CONTINUE PORTRAIT/);
+  assert.match(style, /data-landscape-required='true'/);
+  assert.match(style, /z-index:2147483000/);
+  assert.match(style, /height:100dvh/);
+  assert.match(style, /visibility:hidden/);
 });
