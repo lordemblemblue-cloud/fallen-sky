@@ -25,9 +25,10 @@ const matrix = () => [
 
 test('requires four separately labeled reports, two per deployment', () => {
   assert.equal(validateDeploymentMatrix(matrix()).ok, true);
-  for (const count of [0, 1, 2, 3, 5]) {
+  for (const count of [0, 1, 2, 3]) {
     assert.equal(validateDeploymentMatrix(matrix().slice(0, count)).reason, 'four-reports-required');
   }
+  assert.equal(validateDeploymentMatrix([...matrix(), matrix()[0]]).reason, 'four-reports-required');
 });
 
 test('accepts native counters for both games on distinct preview and live origins', () => {
