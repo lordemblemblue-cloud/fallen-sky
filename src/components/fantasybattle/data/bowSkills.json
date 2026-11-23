@@ -1,0 +1,191 @@
+{
+ "version": 1,
+ "note": "Fantasy Battle bow skills. Bone values are absolute rotations (degrees, counter-clockwise) and offsets (character units) over the rig rest pose; see core/skillTimeline.mjs for the schema.",
+ "skills": [
+  {
+   "id": "quickShot",
+   "name": "Quick Shot",
+   "hotkey": "1",
+   "description": "A fast draw and release. Light damage, acts first in the round.",
+   "totalDuration": 1.05,
+   "blendInTime": 0.14,
+   "blendOutTime": 0.3,
+   "cancelWindowStart": 0.75,
+   "keyframes": [
+    {"time":0,"phase":"anticipation","easing":"linear","expression":"focused","params":{"draw":0,"nocked":0}},
+    {"time":0.14,"phase":"anticipation","easing":"easeOutCubic","bones":{"spine":{"rotation":-2},"head":{"rotation":-2},"bowArm":{"rotation":55},"bowForearm":{"rotation":40},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":1},"drawForearm":{"rotation":120,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.32,"phase":"anticipation","easing":"easeInOutQuad","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.37,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"expression":"attackShout","params":{"draw":1,"nocked":1}},
+    {"time":0.41,"phase":"active","easing":"easeOutExpo","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":21},"bowHand":{"rotation":0},"bowSocket":{"rotation":-9},"drawArm":{"rotation":-94},"drawForearm":{"rotation":158,"zIndex":58,"smearStretch":0.9},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0.9}},"params":{"draw":0,"nocked":0}},
+    {"time":0.6,"phase":"recovery","easing":"easeOutCubic","bones":{"spine":{"rotation":-1},"head":{"rotation":-1},"bowArm":{"rotation":50},"bowForearm":{"rotation":34},"bowSocket":{"rotation":-12},"drawArm":{"rotation":-40},"drawForearm":{"rotation":90,"smearStretch":0,"zIndex":58},"drawHand":{"rotation":0,"smearStretch":0,"zIndex":59}},"expression":"focused"},
+    {"time":1.05,"phase":"recovery","easing":"easeInOutQuad","bones":{"spine":{"rotation":-2.5},"head":{"rotation":-2},"bowArm":{"rotation":20},"bowForearm":{"rotation":32},"bowSocket":{"rotation":-24},"drawArm":{"rotation":-8},"drawForearm":{"rotation":22,"zIndex":44},"drawHand":{"rotation":0,"zIndex":43}}}
+   ],
+   "events": [
+    {"time":0.1,"type":"playSFX","sfxId":"nock"},
+    {"time":0.2,"type":"playSFX","sfxId":"draw"},
+    {"time":0.38,"type":"onHitFrame","activeFor":0.9},
+    {"time":0.38,"type":"spawnArrow","arrow":{"kind":"arrow","speed":2300,"arc":0.04,"scale":1},"trail":{"style":"gold","length":0.1}},
+    {"time":0.38,"type":"playSFX","sfxId":"release"},
+    {"time":0.38,"type":"screenShake","intensity":1.5,"duration":0.1}
+   ]
+  },
+  {
+   "id": "chargedShot",
+   "name": "Radiant Shot",
+   "hotkey": "2",
+   "description": "Hold a deep draw while the arrow gathers light, then loose it with hit-stop and a heavy shake. Costs 2 Focus.",
+   "totalDuration": 1.95,
+   "blendInTime": 0.2,
+   "blendOutTime": 0.35,
+   "cancelWindowStart": 1.55,
+   "keyframes": [
+    {"time":0,"phase":"anticipation","easing":"linear","expression":"focused","params":{"draw":0,"nocked":0,"charge":0}},
+    {"time":0.2,"phase":"anticipation","easing":"easeOutCubic","bones":{"spine":{"rotation":-2},"head":{"rotation":-2},"bowArm":{"rotation":55},"bowForearm":{"rotation":40},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":1},"drawForearm":{"rotation":120,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1,"charge":0}},
+    {"time":0.6,"phase":"anticipation","easing":"easeInOutCubic","bones":{"spine":{"rotation":1.5},"head":{"rotation":-4},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-82},"drawForearm":{"rotation":178,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59},"pelvis":{"offset":[-3,-3]}},"params":{"draw":1,"nocked":1,"charge":0.55}},
+    {"time":0.9,"phase":"active","easing":"easeInOutQuad","bones":{"spine":{"rotation":1.5},"head":{"rotation":-4},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-83.5},"drawForearm":{"rotation":178,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59},"pelvis":{"offset":[-3,-3]}},"params":{"draw":1,"nocked":1,"charge":0.85}},
+    {"time":0.98,"phase":"active","easing":"linear","bones":{"spine":{"rotation":1.5},"head":{"rotation":-4},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-81.5},"drawForearm":{"rotation":178,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59},"pelvis":{"offset":[-3,-3]}},"params":{"draw":1,"nocked":1,"charge":1}},
+    {"time":1.04,"phase":"active","easing":"linear","bones":{"spine":{"rotation":1.5},"head":{"rotation":-4},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-83},"drawForearm":{"rotation":178,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59},"pelvis":{"offset":[-3,-3]}},"expression":"attackShout","params":{"draw":1,"nocked":1,"charge":1}},
+    {"time":1.08,"phase":"active","easing":"linear","bones":{"spine":{"rotation":1.5},"head":{"rotation":-4},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-82},"drawForearm":{"rotation":178,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59},"pelvis":{"offset":[-3,-3]}},"params":{"draw":1,"nocked":1,"charge":1}},
+    {"time":1.11,"phase":"hitStop","easing":"easeOutExpo","bones":{"spine":{"rotation":4},"head":{"rotation":-1},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":16},"bowHand":{"rotation":0},"bowSocket":{"rotation":-13},"drawArm":{"rotation":-102},"drawForearm":{"rotation":150,"zIndex":58,"smearStretch":1.2},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":1.2},"pelvis":{"offset":[-3,-3]}},"params":{"draw":0,"nocked":0,"charge":0}},
+    {"time":1.23,"phase":"hitStop","easing":"linear","bones":{"spine":{"rotation":4},"head":{"rotation":-1},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":16},"bowHand":{"rotation":0},"bowSocket":{"rotation":-13},"drawArm":{"rotation":-102},"drawForearm":{"rotation":150,"zIndex":58,"smearStretch":1.2},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":1.2},"pelvis":{"offset":[-3,-3]}}},
+    {"time":1.4,"phase":"recovery","easing":"easeOutCubic","bones":{"spine":{"rotation":-1},"head":{"rotation":-1},"bowArm":{"rotation":50},"bowForearm":{"rotation":34},"bowSocket":{"rotation":-12},"drawArm":{"rotation":-40},"drawForearm":{"rotation":90,"smearStretch":0,"zIndex":58},"drawHand":{"rotation":0,"smearStretch":0,"zIndex":59}},"expression":"focused"},
+    {"time":1.95,"phase":"recovery","easing":"easeInOutQuad","bones":{"spine":{"rotation":-2.5},"head":{"rotation":-2},"bowArm":{"rotation":20},"bowForearm":{"rotation":32},"bowSocket":{"rotation":-24},"drawArm":{"rotation":-8},"drawForearm":{"rotation":22,"zIndex":44},"drawHand":{"rotation":0,"zIndex":43}}}
+   ],
+   "events": [
+    {"time":0.1,"type":"playSFX","sfxId":"nock"},
+    {"time":0.25,"type":"spawnEffect","effect":"chargeAura","duration":0.85},
+    {"time":0.3,"type":"playSFX","sfxId":"charge"},
+    {"time":1.09,"type":"onHitFrame","activeFor":0.8},
+    {"time":1.09,"type":"spawnArrow","arrow":{"kind":"charged","speed":3300,"arc":0,"scale":1.25,"impactHitStop":0.14,"impactShake":7},"trail":{"style":"radiant","length":0.18}},
+    {"time":1.09,"type":"playSFX","sfxId":"heavyRelease"},
+    {"time":1.09,"type":"screenShake","intensity":4,"duration":0.2},
+    {"time":1.09,"type":"hitStop","duration":0.06}
+   ]
+  },
+  {
+   "id": "volley",
+   "name": "Triple Volley",
+   "hotkey": "3",
+   "description": "Three arrows loosed in quick succession; each rolls to hit on its own. Costs 1 Focus.",
+   "totalDuration": 1.6,
+   "blendInTime": 0.12,
+   "blendOutTime": 0.3,
+   "cancelWindowStart": 1.3,
+   "keyframes": [
+    {"time":0,"phase":"anticipation","easing":"linear","expression":"focused","params":{"draw":0,"nocked":0}},
+    {"time":0.12,"phase":"anticipation","easing":"easeOutCubic","bones":{"spine":{"rotation":-2},"head":{"rotation":-2},"bowArm":{"rotation":55},"bowForearm":{"rotation":40},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":1},"drawForearm":{"rotation":120,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.26,"phase":"anticipation","easing":"easeInOutQuad","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.29,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.32,"phase":"active","easing":"easeOutExpo","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":-86},"drawForearm":{"rotation":168,"zIndex":58,"smearStretch":0.6},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0.6}},"params":{"draw":0,"nocked":0}},
+    {"time":0.36,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":-86},"drawForearm":{"rotation":168,"zIndex":58,"smearStretch":0},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0}},"params":{"draw":0,"nocked":0}},
+    {"time":0.42,"phase":"active","easing":"easeOutCubic","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-38},"drawForearm":{"rotation":148,"zIndex":58,"smearStretch":0},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0}},"params":{"draw":1,"nocked":1}},
+    {"time":0.5,"phase":"active","easing":"easeInOutQuad","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-1},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.52,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-1},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.55,"phase":"active","easing":"easeOutExpo","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-4},"drawArm":{"rotation":-86},"drawForearm":{"rotation":168,"zIndex":58,"smearStretch":0.6},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0.6}},"params":{"draw":0,"nocked":0}},
+    {"time":0.59,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-6},"drawArm":{"rotation":-86},"drawForearm":{"rotation":168,"zIndex":58,"smearStretch":0},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0}},"params":{"draw":0,"nocked":0}},
+    {"time":0.65,"phase":"active","easing":"easeOutCubic","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":-3},"drawArm":{"rotation":-38},"drawForearm":{"rotation":148,"zIndex":58,"smearStretch":0},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0}},"params":{"draw":1,"nocked":1}},
+    {"time":0.73,"phase":"active","easing":"easeInOutQuad","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":1},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"expression":"attackShout","params":{"draw":1,"nocked":1}},
+    {"time":0.75,"phase":"active","easing":"linear","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":26},"bowHand":{"rotation":0},"bowSocket":{"rotation":1},"drawArm":{"rotation":-77.1},"drawForearm":{"rotation":175.7,"zIndex":58},"drawHand":{"rotation":0,"zIndex":59}},"params":{"draw":1,"nocked":1}},
+    {"time":0.79,"phase":"active","easing":"easeOutExpo","bones":{"spine":{"rotation":-4},"head":{"rotation":-3},"bowArm":{"rotation":71.3},"bowForearm":{"rotation":21},"bowHand":{"rotation":0},"bowSocket":{"rotation":-9},"drawArm":{"rotation":-94},"drawForearm":{"rotation":158,"zIndex":58,"smearStretch":0.9},"drawHand":{"rotation":0,"zIndex":59,"smearStretch":0.9}},"params":{"draw":0,"nocked":0}},
+    {"time":1,"phase":"recovery","easing":"easeOutCubic","bones":{"spine":{"rotation":-1},"head":{"rotation":-1},"bowArm":{"rotation":50},"bowForearm":{"rotation":34},"bowSocket":{"rotation":-12},"drawArm":{"rotation":-40},"drawForearm":{"rotation":90,"smearStretch":0,"zIndex":58},"drawHand":{"rotation":0,"smearStretch":0,"zIndex":59}},"expression":"focused"},
+    {"time":1.6,"phase":"recovery","easing":"easeInOutQuad","bones":{"spine":{"rotation":-2.5},"head":{"rotation":-2},"bowArm":{"rotation":20},"bowForearm":{"rotation":32},"bowSocket":{"rotation":-24},"drawArm":{"rotation":-8},"drawForearm":{"rotation":22,"zIndex":44},"drawHand":{"rotation":0,"zIndex":43}}}
+   ],
+   "events": [
+    {"time":0.08,"type":"playSFX","sfxId":"nock"},
+    {"time":0.3,"type":"onHitFrame","activeFor":1.2},
+    {"time":0.3,"type":"spawnArrow","arrow":{"kind":"arrow","speed":2500,"arc":0.03,"scale":0.95,"volleyIndex":0,"spread":2.5},"trail":{"style":"silver","length":0.08}},
+    {"time":0.3,"type":"playSFX","sfxId":"release"},
+    {"time":0.3,"type":"screenShake","intensity":1,"duration":0.07},
+    {"time":0.53,"type":"spawnArrow","arrow":{"kind":"arrow","speed":2500,"arc":0.03,"scale":0.95,"volleyIndex":1,"spread":0},"trail":{"style":"silver","length":0.08}},
+    {"time":0.53,"type":"playSFX","sfxId":"release"},
+    {"time":0.53,"type":"screenShake","intensity":1,"duration":0.07},
+    {"time":0.76,"type":"spawnArrow","arrow":{"kind":"arrow","speed":2500,"arc":0.03,"scale":0.95,"volleyIndex":2,"spread":-2.5},"trail":{"style":"silver","length":0.08}},
+    {"time":0.76,"type":"playSFX","sfxId":"release"},
+    {"time":0.76,"type":"screenShake","intensity":1,"duration":0.07}
+   ]
+  },
+  {
+   "id": "guard",
+   "name": "Guard",
+   "hotkey": "4",
+   "description": "Brace behind the bow and raise a ward: incoming damage is halved this round. Gains 1 extra Focus.",
+   "totalDuration": 1.1,
+   "blendInTime": 0.15,
+   "blendOutTime": 0.3,
+   "cancelWindowStart": 0.8,
+   "keyframes": [
+    {"time":0,"phase":"anticipation","easing":"linear","expression":"focused"},
+    {"time":0.15,"phase":"active","easing":"easeOutBack","bones":{"pelvis":{"offset":[0,-6]},"spine":{"rotation":3},"head":{"rotation":3},"bowArm":{"rotation":40},"bowForearm":{"rotation":95,"zIndex":64},"bowSocket":{"rotation":-55,"zIndex":62},"drawArm":{"rotation":22},"drawForearm":{"rotation":128,"zIndex":46},"bowHand":{"zIndex":63},"drawHand":{"zIndex":45}}},
+    {"time":0.8,"phase":"active","easing":"linear","bones":{"pelvis":{"offset":[0,-6]},"spine":{"rotation":3},"head":{"rotation":3},"bowArm":{"rotation":40},"bowForearm":{"rotation":95,"zIndex":64},"bowSocket":{"rotation":-55,"zIndex":62},"drawArm":{"rotation":22},"drawForearm":{"rotation":128,"zIndex":46},"bowHand":{"zIndex":63},"drawHand":{"zIndex":45}}},
+    {"time":1.1,"phase":"recovery","easing":"easeInOutQuad","bones":{"spine":{"rotation":-2.5},"head":{"rotation":-2},"bowArm":{"rotation":20},"bowForearm":{"rotation":32,"zIndex":42},"bowSocket":{"rotation":-24,"zIndex":40},"drawArm":{"rotation":-8},"drawForearm":{"rotation":22,"zIndex":44},"drawHand":{"rotation":0,"zIndex":43},"bowHand":{"zIndex":41}}}
+   ],
+   "events": [
+    {"time":0.12,"type":"spawnEffect","effect":"ward","duration":0.95},
+    {"time":0.12,"type":"playSFX","sfxId":"guard"}
+   ]
+  },
+  {
+   "id": "hitReact",
+   "name": "Hit reaction",
+   "totalDuration": 0.6,
+   "blendInTime": 0.03,
+   "blendOutTime": 0.3,
+   "cancelWindowStart": 0.3,
+   "keyframes": [
+    {"time":0,"phase":"active","easing":"linear","expression":"hurt"},
+    {"time":0.06,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-9,-2]},"spine":{"rotation":9,"smearStretch":0.25},"head":{"rotation":14},"drawArm":{"rotation":-18},"drawForearm":{"rotation":10},"bowArm":{"rotation":-12},"bowForearm":{"rotation":-15},"bowSocket":{"rotation":10}}},
+    {"time":0.25,"phase":"recovery","easing":"easeOutQuad","bones":{"pelvis":{"offset":[-4,-1]},"spine":{"rotation":4,"smearStretch":0},"head":{"rotation":6},"drawArm":{"rotation":-8},"drawForearm":{"rotation":5},"bowArm":{"rotation":-5},"bowForearm":{"rotation":-6},"bowSocket":{"rotation":4}}},
+    {"time":0.6,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[0,0]},"spine":{"rotation":0},"head":{"rotation":0},"drawArm":{"rotation":0},"drawForearm":{"rotation":0},"bowArm":{"rotation":0},"bowForearm":{"rotation":0},"bowSocket":{"rotation":-4}}}
+   ],
+   "events": []
+  },
+  {
+   "id": "guardHit",
+   "name": "Guarded hit",
+   "totalDuration": 0.45,
+   "blendInTime": 0.03,
+   "blendOutTime": 0.25,
+   "cancelWindowStart": 0.25,
+   "keyframes": [
+    {"time":0,"phase":"active","easing":"linear","bones":{"pelvis":{"offset":[0,-6]},"spine":{"rotation":3},"head":{"rotation":3},"bowArm":{"rotation":40},"bowForearm":{"rotation":95,"zIndex":64},"bowSocket":{"rotation":-55,"zIndex":62},"drawArm":{"rotation":22},"drawForearm":{"rotation":128,"zIndex":46},"bowHand":{"zIndex":63},"drawHand":{"zIndex":45}},"expression":"focused"},
+    {"time":0.05,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-5,-6]},"spine":{"rotation":6},"head":{"rotation":6},"bowArm":{"rotation":40},"bowForearm":{"rotation":95,"zIndex":64},"bowSocket":{"rotation":-55,"zIndex":62},"drawArm":{"rotation":22},"drawForearm":{"rotation":128,"zIndex":46},"bowHand":{"zIndex":63},"drawHand":{"zIndex":45}}},
+    {"time":0.45,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[0,-6]},"spine":{"rotation":3},"head":{"rotation":3},"bowArm":{"rotation":40},"bowForearm":{"rotation":95,"zIndex":64},"bowSocket":{"rotation":-55,"zIndex":62},"drawArm":{"rotation":22},"drawForearm":{"rotation":128,"zIndex":46},"bowHand":{"zIndex":63},"drawHand":{"zIndex":45}}}
+   ],
+   "events": []
+  },
+  {
+   "id": "victory",
+   "name": "Victory",
+   "hold": true,
+   "totalDuration": 1.2,
+   "blendInTime": 0.2,
+   "blendOutTime": 0,
+   "cancelWindowStart": 1.2,
+   "keyframes": [
+    {"time":0,"phase":"anticipation","easing":"linear"},
+    {"time":0.35,"phase":"active","easing":"easeOutBack","bones":{"spine":{"rotation":2},"head":{"rotation":4},"bowArm":{"rotation":128},"bowForearm":{"rotation":38},"bowSocket":{"rotation":-10},"drawArm":{"rotation":0},"drawForearm":{"rotation":0}},"expression":"wink"},
+    {"time":1.2,"phase":"recovery","easing":"easeInOutQuad","bones":{"spine":{"rotation":1.5},"head":{"rotation":3},"bowArm":{"rotation":124},"bowForearm":{"rotation":40},"bowSocket":{"rotation":-8},"drawArm":{"rotation":0},"drawForearm":{"rotation":0}}}
+   ],
+   "events": [
+    {"time":0.3,"type":"playSFX","sfxId":"victory"}
+   ]
+  },
+  {
+   "id": "defeat",
+   "name": "Defeat",
+   "hold": true,
+   "totalDuration": 1.4,
+   "blendInTime": 0.05,
+   "blendOutTime": 0,
+   "cancelWindowStart": 1.4,
+   "keyframes": [
+    {"time":0,"phase":"active","easing":"linear","expression":"hurt"},
+    {"time":0.25,"phase":"active","easing":"easeOutCubic","bones":{"pelvis":{"offset":[-14,-18]},"spine":{"rotation":14},"head":{"rotation":20},"bowArm":{"rotation":-15},"bowForearm":{"rotation":-10},"drawArm":{"rotation":10},"bowSocket":{"rotation":35}}},
+    {"time":1.4,"phase":"recovery","easing":"easeInOutQuad","bones":{"pelvis":{"offset":[-22,-38]},"spine":{"rotation":22},"head":{"rotation":28},"bowArm":{"rotation":-20},"bowForearm":{"rotation":-14},"drawArm":{"rotation":14},"bowSocket":{"rotation":62}}}
+   ],
+   "events": [
+    {"time":0.1,"type":"playSFX","sfxId":"defeat"}
+   ]
+  }
+ ]
+}

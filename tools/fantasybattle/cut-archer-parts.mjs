@@ -1,3 +1,4 @@
+/* global process, Buffer, console */
 // Cuts the owner's archer parts sheet into transparent PNG layers for Fantasy Battle.
 // Usage: node tools/fantasybattle/cut-archer-parts.mjs [sheet.webp] [out-dir] [--overview overview.png]
 //

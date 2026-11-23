@@ -1,3 +1,4 @@
+/* global process, Buffer, console */
 // Lists the alpha-connected regions of a parts sheet and writes an overview image with each region's box and id.
 // Usage: node tools/fantasybattle/analyze-sheet.mjs <sheet.webp> <out-dir> [minArea]
 import sharp from 'sharp';
