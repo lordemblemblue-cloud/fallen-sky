@@ -187,17 +187,16 @@ test('queued respawn selection survives invalid requests and cannot change a liv
   }
 });
 
-test('each class owns four distinct original ability animation identifiers', () => {
-  const allAnimations = new Set();
+test('each class has four distinct ability animations, including intentionally shared moves', () => {
   for (const classId of CLASS_IDS) {
     const abilities = CLASSES[classId].abilities;
     const animations = abilities.map(ability => ability.animation);
     assert.equal(new Set(animations).size, abilities.length, classId + ' must not reuse an animation slot');
-    for (const animation of animations) {
-      assert.match(animation, /^class\\.power\\./);
-      assert.equal(allAnimations.has(animation), false, animation + ' must not activate another class animation');
-      allAnimations.add(animation);
+    for (const ability of abilities) {
+      assert.equal(ability.animation, 'class.power.' + ability.id);
+      assert.match(ability.animation, /^class\\.power\\./);
     }
   }
-  assert.equal(allAnimations.size, CLASS_IDS.length * 4);
+  assert.equal(CLASSES.warrior.abilities[3].animation, CLASSES.duelist.abilities[2].animation,
+    'shared blade throw intentionally retains its shared animation identifier');
 });
