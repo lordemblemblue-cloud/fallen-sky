@@ -92,7 +92,11 @@ export function pickTarget(targets, sceneId, tabContains = '') {
     if (target.type !== 'page' || !target.webSocketDebuggerUrl) return false;
     try {
       const url = new URL(target.url);
-      if (!['https:', 'http:'].includes(url.protocol)) return false;
+      if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return false;
+      // Browser QA must run in a secure context: HTTPS remotely or HTTP on
+      // explicit loopback only. Remote HTTP can never certify native WebGPU.
+      const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+      if (url.protocol === 'http:' && !loopback) return false;
       // A title/URL selector must narrow matching game tabs, never bypass the scene route.
       const playableRoute = url.pathname === expected || url.pathname.startsWith(expected + '/');
       return playableRoute && (!tabContains || target.url.includes(tabContains));
