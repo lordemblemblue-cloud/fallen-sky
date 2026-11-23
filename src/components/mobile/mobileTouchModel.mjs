@@ -27,7 +27,7 @@ const pct = (x) => Math.max(7, Math.min(93, Number(x) || 50));
 export function isMobileTouchDevice(host = globalThis.window) {
   if (!host) return false;
   try {
-    const forced = new URLSearchParams(host.location?.search || '').get('touchControls');
+    const forced = new globalThis.URLSearchParams(host.location?.search || '').get('touchControls');
     if (forced === '1') return true; // explicit QA mode on a desktop
     if (forced === '0') return false;
   } catch { /* unavailable URL in a sandbox */ }
