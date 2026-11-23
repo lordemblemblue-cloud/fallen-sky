@@ -68,3 +68,39 @@ test('CLI fails closed on stale, malformed, and missing report files', async () 
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('CLI rejects future and noncanonical timestamps across multiple reports', async () => {
+  const { mkdtemp, writeFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const script = fileURLToPath(new URL('../scripts/webgpu-evidence-freshness.mjs', import.meta.url));
+  const dir = await mkdtemp(join(tmpdir(), 'webgpu-freshness-matrix-'));
+  try {
+    const paths = ['good-a.json', 'good-b.json', 'future.json', 'noncanonical.json']
+      .map(name => join(dir, name));
+    const time = Date.now();
+    await Promise.all([
+      writeFile(paths[0], JSON.stringify(report(time - 2000))),
+      writeFile(paths[1], JSON.stringify(report(time - 1000))),
+      writeFile(paths[2], JSON.stringify(report(time + MAX_FUTURE_SKEW_MS + 60000))),
+      writeFile(paths[3], JSON.stringify({ checkedAt: new Date(time).toISOString().replace('.000Z', 'Z').replace(/\\.\\d{3}Z$/, 'Z') })),
+    ]);
+    const run = (...files) => spawnSync(process.execPath, [script, ...files], { encoding: 'utf8' });
+    const valid = run(paths[0], paths[1]);
+    assert.equal(valid.status, 0, valid.stderr);
+    assert.equal(JSON.parse(valid.stdout).ok, true);
+    const future = run(paths[0], paths[2]);
+    assert.equal(future.status, 1);
+    assert.deepEqual(
+      { reason: JSON.parse(future.stdout).reason, reportIndex: JSON.parse(future.stdout).reportIndex },
+      { reason: 'future-check-time', reportIndex: 1 },
+    );
+    const malformed = run(paths[0], paths[3]);
+    assert.equal(malformed.status, 1);
+    assert.equal(JSON.parse(malformed.stdout).reason, 'invalid-check-time');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
