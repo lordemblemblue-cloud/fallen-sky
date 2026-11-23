@@ -159,6 +159,23 @@ export function waitForSceneRenders(renderer, renders = 4, timeoutMs = 6000) {
 }
 
 /**
+ * r171 shares one built shader (NodeBuilderState) among meshes whose geometries have the same attribute layout and
+ * shape-key count, and MorphNode bakes the shape-key texture of the geometry that built it into it (getEntry(geometry)
+ * in setup; an InstancedMesh's own morphTexture too). Every other such mesh then reads that geometry's shape keys, and
+ * once that geometry is disposed (a body swapped, an NPC or area unloaded) its texture is destroyed and every frame's
+ * submit is rejected: a black world. Keyed per geometry (per object too for an instanced mesh with its own morph
+ * texture), each mesh gets its own; programs and pipelines are still shared, cached by shader code. Shape-key weights
+ * are read per object already (reference('morphTargetInfluences')).
+ */
+export function morphNodeKey(renderObject) {
+  const geometry = renderObject?.geometry;
+  const morph = geometry?.morphAttributes;
+  if (!morph || !(morph.position?.length || morph.normal?.length || morph.color?.length)) return '';
+  const object = renderObject.object;
+  return object?.isInstancedMesh && object.morphTexture ? `|morph:${geometry.id}:${object.id}` : `|morph:${geometry.id}`;
+}
+
+/**
  * How a background pipeline compile ends (r171 sets the pipeline only on success, with no catch): a pipeline the GPU
  * rejects as invalid resolves as null, reported once and never drawn (drawing it would void the whole frame); any
  * other failure (the GPU process busy or restarting) makes the pipeline directly, as r171 does without a background
@@ -548,11 +565,12 @@ function installCompat(renderer) {
         return result;
       };
     }
-    // a built shader depends on screen / render target and the tone mapping + colour space it was built for
+    // a built shader depends on screen / render target and the tone mapping + colour space it was built for, and on
+    // the geometry of a mesh with shape keys (morphNodeKey)
     const nodes = renderer._nodes;
     if (nodes?.getForRenderCacheKey) {
       const key = nodes.getForRenderCacheKey.bind(nodes);
-      nodes.getForRenderCacheKey = (renderObject) => key(renderObject) + classicOutputKey(renderer);
+      nodes.getForRenderCacheKey = (renderObject) => key(renderObject) + classicOutputKey(renderer) + morphNodeKey(renderObject);
     }
     if (backend.isWebGPUBackend) compileLateObjectsInBackground(renderer);
   };
