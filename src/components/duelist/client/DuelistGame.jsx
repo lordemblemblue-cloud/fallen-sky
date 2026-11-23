@@ -894,6 +894,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   return (
     <div className="duelist-game" ref={mountRef}>
       <MobileTouchControls game="duelist"
+        specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
+          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
+        specialCharge={hud?.specialMeter}
+        lockActive={!!hud?.lockOn}
         disabled={!hud || !!showPicker || shopOpen || waiting || hud.dead ||
           match?.phase === 'over' || quest?.phase === 'complete' || quest?.phase === 'failed'}
         onMove={move => controlsRef.current?.setTouchMove(move)}
