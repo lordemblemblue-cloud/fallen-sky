@@ -20,6 +20,8 @@ import { createArena, createSceneLighting } from './arena.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import MobileTouchControls from '../../mobile/MobileTouchControls.jsx';
+import { isMobileTouchDevice } from '../../mobile/mobileTouchModel.mjs';
 import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
 import { createVoices } from './voices.mjs';
 import { createWarp } from './warp.mjs';
@@ -210,7 +212,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(isMobileTouchDevice(window) ? 1.25 : 2, window.devicePixelRatio || 1));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -891,6 +893,13 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map((a) => keyLabel(bound[a], { short: true }));
   return (
     <div className="duelist-game" ref={mountRef}>
+      <MobileTouchControls game="duelist"
+        disabled={!hud || !!showPicker || shopOpen || waiting || hud.dead ||
+          match?.phase === 'over' || quest?.phase === 'complete' || quest?.phase === 'failed'}
+        onMove={move => controlsRef.current?.setTouchMove(move)}
+        onLook={(dx, dy) => controlsRef.current?.look(dx, dy)}
+        onActionDown={action => controlsRef.current?.touchActionDown(action)}
+        onActionUp={action => controlsRef.current?.touchActionUp(action)} />
       <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
         onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
