@@ -132,7 +132,10 @@ test('mobile portrait blocks the entire game instead of leaving an alternate squ
   const ui = file('components/mobile/MobileTouchControls.jsx');
   const style = file('components/mobile/mobileTouchControls.css');
   const pwa = JSON.parse(readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8'));
+  const hub = file('pages/GamesHub.jsx');
   assert.equal(pwa.orientation, 'landscape', 'installed app requests landscape at launch');
+  assert.match(hub, /<MobileTouchControls game="duelist" disabled \/>/,
+    'landscape required before the two-game launcher, even during its intro');
   assert.match(ui, /const portraitBlocked = supported && !landscape;/);
   assert.match(ui, /if \(!supported \|\| \(disabled && !portraitBlocked\)\) return null;/,
     'rotation screen remains visible while the class picker disables combat controls');
