@@ -47,11 +47,11 @@ Deno.serve(async (req) => {
         
       case 'getByUserId':
         // Public read of another user's avatar (limited fields)
-        if (!targetUserId) {
+        if (typeof targetUserId !== 'string' || !targetUserId) {
           return Response.json({ error: 'Target user ID required' }, { status: 400 });
         }
         
-        const targetAvatars = await base44.asServiceRole.entities.Avatar.filter({ user_id: targetUserId });
+        const targetAvatars = await base44.entities.Avatar.filter({ user_id: targetUserId }, 'created_date', 1);
         if (!targetAvatars || targetAvatars.length === 0) {
           return Response.json({ success: true, data: null });
         }
