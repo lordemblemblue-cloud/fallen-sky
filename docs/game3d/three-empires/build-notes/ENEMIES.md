@@ -78,3 +78,17 @@ Not checked live; covered by node tests.
 Each monster: ink shade 1 body draw + 1 ring, about 11,000 triangles; old dead 2 + 1; echo 4 meshes + 1 ring (about 7 draws). Monsters were killed with left-click swings from the test page (the F kick did not fire from a synthetic key). Despawn returned the scene to 166 draws with no events. With 8 of ours in the scene a request for 8 more placed 4 (12 in all); `dispose()` left none of ours in the enemy list or the scene.
 
 The before/after rows are different camera views between runs (the player was moved), so compare each row with itself. Not measured on WebGPU.
+
+## Waves with a goal (2026-11-22)
+
+`enemies:spawnGroup` takes `goal: { x, z, radius }` (radius 3 m when left out); the BUILD_RULES bus table has it as an addition. Code: `enemyGoalMarch.mjs`; tests: `tests/game3d-three-roads-enemies-goal.test.mjs` (with a stand-in for the game's AI loop built from its own decision functions).
+
+- The march uses the game's own "walk back home" move: each monster's `home` is its place at the goal (the formation squeezed inside the radius) and `aiReturning` is set, so the game walks it there at the profile's speed (2.2 m/s standard, 2.7 aggressive) on the ground, through the same collision, without the leash. The run clip plays while it marches or seeks.
+- It notices the player as the game would, measured from where it stands: within the aggro range (8 m standard, 10 aggressive), hurt, or alerted. Then `home` becomes that spot and it fights as any group (leash from there).
+- At the goal: the player within 25 m, it goes for them; otherwise it holds and idles there (its wander zone is the goal). A chase that outruns the leash sends it back to the player if within 25 m, else back to the goal.
+- **Getting round things.** Live, a marcher on the x = 62 line in the town ran in place at z −131.9 against collision that has no visible mesh (ground continuous, only grass there). If a walker gains no 0.3 m in 1.2 s it now detours sideways, +2.5, −2.5, +5, −5 … m from where it got stuck; after 8 detours it holds where it is and still goes for a player within 25 m.
+- Passive groups ignore `goal`; groups without one are untouched (pinned by a test).
+
+Live, `?renderer=webgl`, town, player at world (62, −100): three `ink_shade` spawned at (62, −136), 36 m away, goal (62, −105, 3 m), 5 m from the player. Models in 0.8 s (cached; the first download on a fresh page took 23 s); two took one detour each round the blocked spot; the first noticed the player at about 14 s; all three fighting at 1.7 to 1.9 m by about 17 s; the player took hits (199 → 145). A single probe on the blocked line: stuck at 5.5 s, one detour, at the goal at about 12 s, then went for the player 22 m away.
+
+**Seen while checking, not caused by this work:** after a stall of several seconds in the hidden pane, an engaged monster sometimes stood exactly on the player. GameWorld3D does not clamp its frame time (`clock.getDelta()`, GameWorld3D.jsx:3542), so one long frame lets a chase step (`min(distance, speed × delta)`) carry it the whole way. With ordinary frames the same monster stops at 1.91 m. A clamp in GameWorld3D (for example 0.1 s) would prevent it; that file is not mine to edit.
