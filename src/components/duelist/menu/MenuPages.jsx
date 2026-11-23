@@ -58,6 +58,7 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
       <footer className="duelist-menu-bottom-nav" aria-label="Duelist menu navigation">
         <Link to="/duelist-next" className="duelist-menu-bottom-link"><Home size={17}/> HOME</Link>
         <Link to="/duelist-next/$page" params={{ page: 'play-menu' }} className="duelist-menu-bottom-link"><Swords size={17}/> PLAY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'online-play' }} className="duelist-menu-bottom-link"><Users size={17}/> ONLINE</Link>
         <Link to="/duelist-next/$page" params={{ page: 'character' }} className="duelist-menu-bottom-link"><User size={17}/> CHARACTER</Link>
         <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-menu-bottom-link"><BookOpen size={17}/> STORY</Link>
         <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-bottom-link"><Settings size={17}/> SETTINGS</Link>
@@ -336,7 +337,9 @@ export function ModePage({ mode }) {
   const navigate = useNavigate();
   const lobby = useLobby();
   const [prefs, update] = usePrefs();
-  const play = (online) => navigate({ to: '/duelist-next/play', search: { mode, online: online ? 1 : 0 } });
+  const play = (online) => online
+    ? navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode } })
+    : navigate({ to: '/duelist-next/play', search: { mode, online: 0 } });
   const Icon = m.icon;
   const here = (lobby.matches || []).filter((x) => x.mode === mode);
   return (
@@ -356,9 +359,9 @@ export function ModePage({ mode }) {
         <div className="duelist-menu-panel space-y-4">
           {mode === 'online' ? (
             <>
-              <p className="text-sm text-white/60">The match server selects Team Deathmatch, Capture the Flag or Three-Point Control at random.</p>
-              <Button primary disabled={!lobby.online} onClick={() => play(true)}>
-                <LogIn className="h-4 w-4" /> Find Random Match
+              <p className="text-sm text-white/60">Browse public servers and choose a Duel, Transport, team battle, or another available match directly.</p>
+              <Button primary onClick={() => play(true)}>
+                <Users className="h-4 w-4" /> Browse servers
               </Button>
             </>
           ) : mode === 'practice' ? (
@@ -370,8 +373,8 @@ export function ModePage({ mode }) {
             </>
           ) : (
             <>
-              <Button primary onClick={() => play(true)} disabled={!lobby.online} title={lobby.online ? undefined : 'The match server is not available'}>
-                <LogIn className="h-4 w-4" /> Play online
+              <Button primary onClick={() => play(true)}>
+                <Users className="h-4 w-4" /> Browse servers
               </Button>
               <div className="h-px bg-white/10" />
               <Choice label="Bots' level" value={prefs.level} onChange={(v) => update({ level: v })} options={LEVELS} />
