@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { startClanUpgrade } from '../../shared/startClanUpgrade.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.63';
 
 export const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -303,6 +304,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'deposit_inventory') {
+      if (user.role !== 'admin') return Response.json({ error: 'Administrator access required for manual vault credits' }, { status: 403, headers: corsHeaders });
       const { clanId, item = {} } = data;
       // The vault records real guild contributions. There is no server-side
       // personal inventory to debit yet, so recording stays with leadership and
@@ -343,27 +345,7 @@ Deno.serve(async (req) => {
       const { clanId, upgrade = {} } = data;
       await requireOfficer(clanId);
       const key = upgrade.key || upgrade.upgrade_key;
-      if (!key) return json({ success: false, error: 'Upgrade key is required' }, 400);
-      const existing = await base44.asServiceRole.entities.ClanUpgrade.filter({ clan_id: clanId, upgrade_key: key });
-      const current = existing?.[0];
-      if (current?.status === 'in_progress') return json({ success: false, error: 'Upgrade already in progress' }, 400);
-      if (current && Number(current.tier || 0) >= Number(current.max_tier || 5)) return json({ success: false, error: 'Maximum tier reached' }, 400);
-      const patch = {
-        clan_id: clanId,
-        upgrade_key: key,
-        upgrade_name: upgrade.name || upgrade.upgrade_name || key,
-        category: upgrade.category || 'operations',
-        max_tier: Number(upgrade.maxTier || upgrade.max_tier || 5),
-        status: 'in_progress',
-        progress_seconds: 0,
-        build_seconds: Math.max(5, Number(upgrade.buildSeconds || upgrade.build_seconds || 300)),
-        cost_favor: Number(upgrade.costFavor || 0),
-        cost_aetherium: Number(upgrade.costAetherium || 0),
-        started_at: new Date().toISOString(),
-      };
-      const row = current
-        ? await base44.asServiceRole.entities.ClanUpgrade.update(current.id, patch)
-        : await base44.asServiceRole.entities.ClanUpgrade.create({ ...patch, tier: 0 });
+      const row = await startClanUpgrade(base44.asServiceRole.entities, clanId, key);
       return json({ success: true, upgrade: row });
     }
 

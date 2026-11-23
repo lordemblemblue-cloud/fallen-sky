@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { startClanUpgrade } from '../../shared/startClanUpgrade.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.63';
 import { normalizeCrest, crestDataUri } from '../../shared/clanCrest.ts';
 
 export const corsHeaders = {
@@ -538,6 +539,7 @@ Deno.serve(async (req) => {
 
         // --- DEPOSIT TO VAULT ---
         if (action === 'deposit_vault') {
+      if (user.role !== 'admin') return Response.json({ error: 'Administrator access required for manual vault credits' }, { status: 403, headers: corsHeaders });
             const { divisionId, item } = data;
             const member = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: user.id });
             // The vault records real guild contributions. There is no
@@ -590,47 +592,14 @@ Deno.serve(async (req) => {
 
         // --- START UPGRADE ---
         if (action === 'start_upgrade') {
-            const { divisionId, upgradeKey, upgradeName, category, buildSeconds, costFavor, costAetherium } = data;
+            const { divisionId, upgradeKey } = data;
             const actor = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: user.id });
             if (!actor.length || (actor[0].role !== 'leader' && actor[0].role !== 'officer')) {
                 return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
             }
 
-            // Find existing upgrade row (or create one)
-            const existing = await base44.asServiceRole.entities.ClanUpgrade.filter({ clan_id: divisionId, upgrade_key: upgradeKey });
-            if (existing.length > 0) {
-                const u = existing[0];
-                if (u.status === 'in_progress') {
-                    return new Response(JSON.stringify({ error: 'Already in progress' }), { status: 400, headers: corsHeaders });
-                }
-                if (u.tier >= (u.max_tier || 5)) {
-                    return new Response(JSON.stringify({ error: 'Max tier reached' }), { status: 400, headers: corsHeaders });
-                }
-                await base44.asServiceRole.entities.ClanUpgrade.update(u.id, {
-                    status: 'in_progress',
-                    progress_seconds: 0,
-                    build_seconds: buildSeconds || 3600,
-                    cost_favor: costFavor || 0,
-                    cost_aetherium: costAetherium || 0,
-                    started_at: new Date().toISOString()
-                });
-            } else {
-                await base44.asServiceRole.entities.ClanUpgrade.create({
-                    clan_id: divisionId,
-                    upgrade_key: upgradeKey,
-                    upgrade_name: upgradeName,
-                    category: category || 'tactics',
-                    tier: 1,
-                    max_tier: 5,
-                    status: 'in_progress',
-                    progress_seconds: 0,
-                    build_seconds: buildSeconds || 3600,
-                    cost_favor: costFavor || 0,
-                    cost_aetherium: costAetherium || 0,
-                    started_at: new Date().toISOString()
-                });
-            }
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            const upgrade = await startClanUpgrade(base44.asServiceRole.entities, divisionId, upgradeKey);
+            return Response.json({ success: true, upgrade }, { headers: corsHeaders });
         }
 
         // --- CLAIM GUILD HALL ---
@@ -688,7 +657,7 @@ Deno.serve(async (req) => {
         console.error("Clan function error:", error);
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
+            status: error.status || 500,
         });
     }
 });
