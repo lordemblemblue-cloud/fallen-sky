@@ -36,7 +36,7 @@ test('the home and character stages prepare a stance before showing each model',
   assert.match(source('menu/DuelistTemplateHub.jsx'), /DuelistHangarStage fighter=\{prefs\.fighter\} classId=\{prefs\.classId\}/);
 });
 
-test('full-size match rail uses live class, abilities, level and authoritative meter', () => {
+test('the legacy rail remains a standalone component but fullscreen combat never reopens it', () => {
   const rail = source('client/DuelistClassRail.jsx');
   const hud = source('client/DuelistHud.jsx');
   const css = source('client/duelistClassRail.css');
@@ -46,8 +46,11 @@ test('full-size match rail uses live class, abilities, level and authoritative m
   assert.match(rail, /const slots = hud\.abilities/);
   assert.match(rail, /onPower\?\.\('special'\)/);
   assert.match(rail, /aria-valuetext=\{charge === null \? 'Unavailable'/);
-  assert.match(hud, /root\.clientWidth >= 1080/);
-  assert.match(hud, /DuelistClassRail hud=\{hud\}/);
+  assert.doesNotMatch(hud, /root\.clientWidth >= 1080/);
+  assert.doesNotMatch(hud, /<DuelistClassRail/);
+  assert.match(hud, /<Vitals you=\{hud\.you\}/);
+  assert.match(hud, /<Special hud=\{hud\}/);
+  assert.match(hud, /<Skills hud=\{hud\}/);
   assert.match(css, /\.dh-rail-identity::after, \.dh-rail-actions::before/);
   assert.match(css, /linear-gradient\(to bottom, transparent,/);
 });
