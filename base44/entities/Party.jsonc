@@ -48,7 +48,14 @@
     },
     "voiceRoomId": {
       "type": "string",
-      "description": "Stable WebRTC voice/data room for this party"
+      "description": "Stable WebRTC voice/data room for this party",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "activeGameId": {
       "type": "string",
