@@ -24,12 +24,17 @@ const FX = {
   // ---- the blades and the body (they replace the synthesized basics)
   swing: { text: 'fast energy sword swing whoosh, a humming crystal blade cutting through the air', seconds: 0.6, variants: 3, gain: 0.7 },
   swingHeavy: { text: 'heavy energy greatsword swing, a deep humming whoosh', seconds: 0.8, variants: 2, gain: 0.8 },
-  hitBody: { text: 'energy blade slashing into a body, a sizzling cut and a dull thud', seconds: 0.5, variants: 3, gain: 0.8 },
-  hitVeil: { text: 'an energy shield absorbing a sword strike, a glassy crystalline impact', seconds: 0.6, variants: 2, gain: 0.7 },
+  // the hits (owner, 2026-11-22: like energy blades clashing when you hit somebody): an instant crackling electric
+  // clash with a buzzing hum, not a thud
+  hitBody: { text: 'a humming plasma energy blade slicing into a body, an instant sharp crackling electric zap with a hot sizzle and a buzzing hum, punchy', seconds: 0.6, variants: 3, influence: 0.6, gain: 0.85 },
+  hitVeil: { text: 'a humming plasma energy blade striking an energy shield, an instant crackling electric impact with a deep resonant hum', seconds: 0.6, variants: 2, influence: 0.6, gain: 0.75 },
   hitShield: { text: 'a bright hexagonal energy barrier taking a hit, a ringing chime', seconds: 0.5, variants: 2, gain: 0.6 },
-  block: { text: 'two energy blades clashing, a crackling electric clang', seconds: 0.6, variants: 3, gain: 0.8 },
-  parry: { text: 'a powerful energy blade parry, a ringing crystalline clash with sparks', seconds: 0.8, variants: 2, gain: 0.9 },
-  push: { text: 'a telekinetic force blast, a deep air shockwave whoosh', seconds: 1.0, variants: 2, gain: 0.9 },
+  block: { text: 'two buzzing plasma energy blades clashing, an instant loud crackling electric crash with a humming buzz', seconds: 0.6, variants: 3, influence: 0.6, gain: 0.85 },
+  parry: { text: 'two humming plasma energy swords locking hard, an instant loud crackling electric crash with spitting sparks and a ringing buzz', seconds: 0.9, variants: 2, influence: 0.6, gain: 0.9 },
+  // the push (owner, 2026-11-22: "like wind itself pushing at you ... really devastating"), and the body it hits
+  // skidding back across the floor
+  push: { text: 'a devastating blast of wind, a deep booming air shockwave rushing outward with a roaring gust', seconds: 1.2, variants: 2, influence: 0.55, gain: 0.95 },
+  pushSlide: { text: 'a body skidding hard backward across a stone floor, a long gritty scrape with a rush of wind', seconds: 1.2, influence: 0.55, gain: 0.8 },
   pull: { text: 'a telekinetic pull, air rushing inward, a deep suction whoosh', seconds: 1.0, gain: 0.85 },
   throw: { text: 'a violent telekinetic throw, a heavy whoosh and a body slamming away', seconds: 1.0, gain: 0.9 },
   dash: { text: 'a quick energy dash, a short burst whoosh', seconds: 0.5, gain: 0.7 },
@@ -59,7 +64,7 @@ const FX = {
   shove: { text: 'a telekinetic shove, a heavy push whoosh', seconds: 0.8, gain: 0.9 },
   airDash: { text: 'a very fast dash through the air, an energy burst whoosh', seconds: 0.5, gain: 0.75 },
   airJump: { text: 'a jump off the air, a soft concussive burst', seconds: 0.5, gain: 0.7 },
-  counter: { text: 'an energy blade riposte, a sharp parry clang and a quick slash', seconds: 0.8, gain: 0.9 },
+  counter: { text: 'a plasma energy blade parry and a quick riposte, an instant crackling electric clash then a fast buzzing slash', seconds: 0.8, influence: 0.6, gain: 0.9 },
   quickstep: { text: 'a speed boost, a whoosh with a rising energy tone', seconds: 0.8, gain: 0.7 },
   empower: { text: 'an energy weapon powering up, a charged rising hum', seconds: 1, gain: 0.7 },
   bladeThrow: { text: 'a spinning energy blade thrown through the air, a rotating whoosh', seconds: 1, gain: 0.8 },

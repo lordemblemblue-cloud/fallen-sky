@@ -22,6 +22,7 @@ import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
 import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
 import { createVoices } from './voices.mjs';
+import { createAnnouncer } from './announcer.mjs';
 import { createWarp } from './warp.mjs';
 import { createSwordTrail } from './trails.mjs';
 import { createDuelAudio } from './audio.mjs';
@@ -156,7 +157,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
  */
 export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
-  onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
+  onMission = null, keys = null, voicesOn = true, announcer: announcerVoice = 'alice', classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
   const keysKey = JSON.stringify(bound);
   const voicesRef = useRef(null);
@@ -268,6 +269,13 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     controls.setPaused(shopOpen);
     // the comms lines, spoken as they appear on screen (and the radio's click)
     const voices = createVoices({ audio, enabled: voicesOn });
+    // the announcer calls a match's moments (a story mission has its comms instead): Settings, Audio, Announcer
+    const announcer = createAnnouncer({ audio, voice: source.mission || source.kind === 'mission' ? 'off' : announcerVoice, me });
+    let announcerView = null; // the match view it judges by (the HUD's, ten times a second)
+    const announcerFighters = () => [...world.fighters.values()].map((f) => {
+      const b = world.bodies.get(f.id);
+      return { id: f.id, team: f.team || null, hp: f.vitals.hp, max: f.vitals.max?.hp || 100, dead: !!f.vitals.dead, x: b?.x ?? 0, z: b?.z ?? 0 };
+    });
     voicesRef.current = voices;
     let lineShown = null;
     const follow = createFollowCamera(camera);
@@ -479,6 +487,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       classOf: (id) => world.fighters.get(id)?.classId || null,
     });
     const onMatchEvent = (e) => {
+      announcer.event(e, announcerView, world.time);
       const myTeam = seatList.find((s) => s.id === me())?.team || null;
       if (!source.mission && source.kind !== 'mission') {
         const ctx = hudContext();
@@ -595,6 +604,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         escort?.update(source.escortDistance?.() ?? 0);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
+        for (const e of effects) if (e.type === 'execution') announcer.effect(e, world.time);
+        announcer.frame(world.time, { view: announcerView, fighters: announcerFighters() });
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
         const feel = director.frame(dt);
         const show = feel.stopped ? dt * 0.1 : dt;
@@ -719,6 +730,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const seat = shownId ? seatList.find((s) => s.id === shownId) : null;
           const view = source.view();
           const inMatch = !!view && !view.mission;
+          announcerView = inMatch ? view : null;
           if (inMatch) feed.view(view, clock, hudContext());
           control?.update(view?.controlPoints);
           if (level) lastView = view;
@@ -799,6 +811,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       vfx.dispose();
       warp.dispose();
       voices.dispose();
+      announcer.dispose();
       audio.dispose();
       tags.dispose();
       ctf?.dispose();
@@ -818,7 +831,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn]);
+  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn, announcerVoice]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's

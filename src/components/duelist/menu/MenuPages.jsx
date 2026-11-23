@@ -592,6 +592,15 @@ export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
               <input type="checkbox" checked={prefs.voices !== false} onChange={(event) => update({ voices: event.target.checked })} />
               <span><span className="duelist-setting-label">Spoken comms</span><span className="duelist-menu-note">The story missions&apos; radio lines are read aloud, each speaker in a voice of their own. The words stay on screen either way.</span></span>
             </label>
+            <label className="duelist-setting-row block">
+              <span className="duelist-setting-label">Announcer</span>
+              <span className="duelist-menu-note">A voice that calls a match&apos;s big moments: first blood, kills in a row, one hit from defeat, a close call, victory.</span>
+              <select aria-label="Announcer" value={prefs.announcer || 'alice'} onChange={(event) => update({ announcer: event.target.value })}>
+                <option value="alice">Alice</option>
+                <option value="daniel">Daniel</option>
+                <option value="off">Off</option>
+              </select>
+            </label>
           </section>
           <section className="duelist-menu-panel">
             <h2 className="duelist-menu-section-heading"><MousePointer2 aria-hidden="true" /> Controls</h2>

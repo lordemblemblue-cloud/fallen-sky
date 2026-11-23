@@ -2,7 +2,10 @@
 // public/audio/duelist/sfx, listed in sfx.json) play where they exist; every other sound, and any recording not yet
 // loaded, is synthesized here with WebAudio (noise, oscillators, filters and envelopes). Sounds sit in the world
 // (panned by where they happen relative to the camera) and duck nothing; one master volume, muted or not, remembered
-// per browser. Recorded loops (Rage's breathing and fire) run while asked for, frame by frame (loop / stopLoop).
+// per browser. Recorded loops (Rage's breathing and fire) run while asked for, frame by frame (loop / stopLoop). A
+// recording starts where its sound does (a generated effect may open with a few hundredths of silence, which would
+// make a hit late). The sounds share a bus under the master; a voice over them (the announcer: voiceOver) holds the
+// bus down while it speaks.
 //
 //   swing (crystal blade through air), hitVeil (the Veil drinks a blow: a glassy knock), hitShield (a bright
 //   hex chime), hitBody (a dull thud), block, parry, push, pull, gripStart + a held hum (gripHum loop),
@@ -20,11 +23,22 @@ function writeSettings(s) {
   try { window.localStorage.setItem(STORAGE, JSON.stringify(s)); } catch { /* private window: settings last this visit */ }
 }
 
+// Where a recording's sound starts: a little before its first sample a tenth as loud as its peak.
+export function onsetOf(buffer) {
+  const data = buffer.getChannelData(0);
+  let peak = 0;
+  for (let i = 0; i < data.length; i++) { const v = Math.abs(data[i]); if (v > peak) peak = v; }
+  const floor = Math.max(0.02, peak * 0.1);
+  for (let i = 0; i < data.length; i++) if (Math.abs(data[i]) >= floor) return Math.max(0, i / buffer.sampleRate - 0.004);
+  return 0;
+}
+
 export function createDuelAudio() {
   const Ctx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
   const settings = readSettings();
   let ctx = null;
   let master = null;
+  let bus = null; // every sound but a voice over
   let noise = null; // two seconds of white noise, shared
   const loops = new Map(); // key -> { stop, set }
   let samples = null; // name -> { gain, loop, buffers } once loaded
@@ -37,7 +51,8 @@ export function createDuelAudio() {
       await Promise.all(Object.entries(sounds).map(async ([name, s]) => {
         const buffers = await Promise.all((s.files || []).map((f) => fetch(SAMPLES + f).then((r) => r.arrayBuffer())
           .then((b) => ctx.decodeAudioData(b)).catch(() => null)));
-        if (buffers.some(Boolean)) loaded[name] = { gain: s.gain ?? 1, loop: !!s.loop, buffers: buffers.filter(Boolean) };
+        const kept = buffers.filter(Boolean);
+        if (kept.length) loaded[name] = { gain: s.gain ?? 1, loop: !!s.loop, buffers: kept, offsets: kept.map((b) => (s.loop ? 0 : onsetOf(b))) };
       }));
       samples = loaded;
     }).catch(() => { samples = {}; });
@@ -57,6 +72,8 @@ export function createDuelAudio() {
     limiter.attack.value = 0.003;
     limiter.release.value = 0.15;
     master.connect(limiter).connect(ctx.destination);
+    bus = ctx.createGain();
+    bus.connect(master);
     noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = noise.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -66,11 +83,12 @@ export function createDuelAudio() {
   // a recording at a world point, a little faster or slower each time so repeats do not sound the same
   function playSample(s, position, options) {
     const src = ctx.createBufferSource();
-    src.buffer = s.buffers[(Math.random() * s.buffers.length) | 0];
+    const pick = (Math.random() * s.buffers.length) | 0;
+    src.buffer = s.buffers[pick];
     src.playbackRate.value = options.rate ?? 1 + (Math.random() * 2 - 1) * 0.04;
     const strength = options.strength ? Math.min(1.3, Math.max(0.5, options.strength)) : 1;
     src.connect(out(position, (options.gain ?? 1) * s.gain * strength));
-    src.start(ctx.currentTime + 0.005);
+    src.start(ctx.currentTime + 0.005, s.offsets?.[pick] || 0);
   }
 
   // ---- building blocks
@@ -85,9 +103,9 @@ export function createDuelAudio() {
       p.refDistance = 3;
       p.rolloffFactor = 0.9;
       p.positionX.value = position.x; p.positionY.value = position.y; p.positionZ.value = position.z;
-      g.connect(p).connect(master);
+      g.connect(p).connect(bus);
       g.panner = p; // a held sound moves it
-    } else g.connect(master);
+    } else g.connect(bus);
     return g;
   }
   function env(param, t, peak, attack, decay, from = 0.0001) {
@@ -265,6 +283,32 @@ export function createDuelAudio() {
       const key = name === 'swing' && options.heavy && samples?.swingHeavy ? 'swingHeavy' : name;
       if (samples?.[key]) { playSample(samples[key], position, options); return; }
       if (SOUNDS[name]) SOUNDS[name](ctx.currentTime + 0.005, out(position, options.gain ?? 1), options);
+    },
+    /** Decode a recording (the announcer's lines) with the game's sound. */
+    decode(data) { return ensure() ? ctx.decodeAudioData(data).catch(() => null) : Promise.resolve(null); },
+    /**
+     * A voice over everything (the announcer): flat, through the master volume, the other sounds held down to
+     * `duck` while it speaks. Returns { stop } (null when sound is not running).
+     */
+    voiceOver(buffer, { gain = 1, duck = 0.55 } = {}) {
+      if (!buffer || !ensure() || ctx.state !== 'running') return null;
+      const t = ctx.currentTime + 0.01;
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      const src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(g).connect(master);
+      bus.gain.cancelScheduledValues(t);
+      bus.gain.setTargetAtTime(duck, t, 0.04);
+      bus.gain.setTargetAtTime(1, t + buffer.duration, 0.15);
+      src.start(t);
+      return {
+        stop() {
+          try { src.stop(); } catch { /* already over */ }
+          bus.gain.cancelScheduledValues(ctx.currentTime);
+          bus.gain.setTargetAtTime(1, ctx.currentTime, 0.08);
+        },
+      };
     },
     /** Is there a recording of this name (loaded)? */
     has(name) { return !!samples?.[name]; },

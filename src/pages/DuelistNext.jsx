@@ -42,7 +42,7 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} matchId={matchId}
+            bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} announcer={prefs.announcer} room={room} matchId={matchId}
             classId={prefs.classId} onClassChange={(id) => writePrefs({ classId: id })}
             progress={classProgressOf(prefs)}
             onProgress={(classId, total) => writePrefs({ classXp: { ...classProgressOf(readPrefs()), [classId]: total } })}

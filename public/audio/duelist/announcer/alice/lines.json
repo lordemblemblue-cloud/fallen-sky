@@ -1,0 +1,100 @@
+{
+  "voice": "Alice",
+  "lines": {
+    "roundOne": [
+      "roundOne.mp3"
+    ],
+    "roundTwo": [
+      "roundTwo.mp3"
+    ],
+    "roundThree": [
+      "roundThree.mp3"
+    ],
+    "roundFour": [
+      "roundFour.mp3"
+    ],
+    "finalRound": [
+      "finalRound.mp3"
+    ],
+    "fight": [
+      "fight.mp3"
+    ],
+    "firstBlood": [
+      "firstBlood.mp3"
+    ],
+    "doubleKill": [
+      "doubleKill.mp3"
+    ],
+    "tripleKill": [
+      "tripleKill.mp3"
+    ],
+    "multiKill": [
+      "multiKill.mp3"
+    ],
+    "streak3": [
+      "streak3.mp3"
+    ],
+    "streak5": [
+      "streak5.mp3"
+    ],
+    "streak8": [
+      "streak8.mp3"
+    ],
+    "shutdown": [
+      "shutdown.mp3"
+    ],
+    "payback": [
+      "payback.mp3"
+    ],
+    "executed": [
+      "executed.mp3"
+    ],
+    "nearDeath": [
+      "nearDeath.mp3"
+    ],
+    "foeNearDeath": [
+      "foeNearDeath.mp3"
+    ],
+    "bothLow": [
+      "bothLow.mp3"
+    ],
+    "closeCall": [
+      "closeCall.mp3"
+    ],
+    "clutch": [
+      "clutch.mp3"
+    ],
+    "comeback": [
+      "comeback.mp3"
+    ],
+    "matchPoint": [
+      "matchPoint.mp3"
+    ],
+    "thirtySeconds": [
+      "thirtySeconds.mp3"
+    ],
+    "tenSeconds": [
+      "tenSeconds.mp3"
+    ],
+    "roundWon": [
+      "roundWon.mp3"
+    ],
+    "roundLost": [
+      "roundLost.mp3"
+    ],
+    "roundDraw": [
+      "roundDraw.mp3"
+    ],
+    "victory": [
+      "victory.mp3",
+      "victory-2.mp3"
+    ],
+    "defeat": [
+      "defeat.mp3",
+      "defeat-2.mp3"
+    ],
+    "draw": [
+      "draw.mp3"
+    ]
+  }
+}

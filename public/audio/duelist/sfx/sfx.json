@@ -21,14 +21,14 @@
         "hitBody-2.mp3",
         "hitBody-3.mp3"
       ],
-      "gain": 0.8
+      "gain": 0.85
     },
     "hitVeil": {
       "files": [
         "hitVeil.mp3",
         "hitVeil-2.mp3"
       ],
-      "gain": 0.7
+      "gain": 0.75
     },
     "hitShield": {
       "files": [
@@ -43,7 +43,7 @@
         "block-2.mp3",
         "block-3.mp3"
       ],
-      "gain": 0.8
+      "gain": 0.85
     },
     "parry": {
       "files": [
@@ -57,7 +57,13 @@
         "push.mp3",
         "push-2.mp3"
       ],
-      "gain": 0.9
+      "gain": 0.95
+    },
+    "pushSlide": {
+      "files": [
+        "pushSlide.mp3"
+      ],
+      "gain": 0.8
     },
     "pull": {
       "files": [
