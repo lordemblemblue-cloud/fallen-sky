@@ -54,6 +54,36 @@ export function onSceneDeviceLost(renderer, fn) {
   return () => state.lostListeners.delete(fn);
 }
 
+// Free the GPU device (or the WebGL2 fallback backend's context) at once: three's dispose() leaves it to the garbage
+// collector, which does not see GPU memory.
+function releaseGpu(renderer) {
+  const backend = renderer?.backend;
+  try {
+    if (typeof backend?.device?.destroy === 'function') backend.device.destroy();
+    else backend?.gl?.getExtension?.('WEBGL_lose_context')?.loseContext?.();
+  } catch { /* already gone */ }
+}
+
+/**
+ * Dispose a scene renderer and free its GPU device (WebGPU) or WebGL context now instead of whenever the garbage
+ * collector gets to it. three's dispose() keeps both alive, so views that open a renderer each time they mount (the
+ * character creator, the selected-character preview) piled up devices and contexts. Only for a renderer nothing
+ * draws with again.
+ */
+export function destroySceneRenderer(renderer) {
+  if (!renderer) return;
+  if (!renderer.isWebGPURenderer) {
+    renderer.dispose();
+    renderer.forceContextLoss?.();
+    return;
+  }
+  const state = renderer.__sceneState;
+  if (!state) { renderer.dispose(); return; }
+  state.destroyDevice = true;
+  if (state.disposed) { if (state.ready) releaseGpu(renderer); return; } // its dispose() already ran (or runs after init)
+  renderer.dispose();
+}
+
 /** 'WebGPU' or 'WebGL2' (WebGPURenderer's fallback backend); null before init. */
 export function sceneRendererApi(renderer) {
   if (!renderer?.isWebGPURenderer) return renderer ? 'WebGL (classic)' : null;
@@ -502,6 +532,11 @@ function installCompat(renderer) {
   // Device loss: three's handler logs it; listeners stop their loop and fall back.
   const onDeviceLost = renderer.onDeviceLost;
   renderer.onDeviceLost = function sceneDeviceLost(info) {
+    if (state.destroyDevice) { // destroyed on purpose by destroySceneRenderer(): nothing to report or recover
+      state.lost = state.lost || info || { api: 'unknown', message: 'destroyed' };
+      state.lostListeners.clear();
+      return;
+    }
     try { onDeviceLost?.call(this, info); } catch { /* logging only */ }
     if (state.lost) return;
     state.lost = info || { api: 'unknown', message: 'device lost' };
@@ -543,7 +578,10 @@ export function createWebGPUSceneRenderer({ canvas, antialias = true, alpha = fa
   renderer.dispose = function sceneDispose() {
     if (state.disposed) return;
     state.disposed = true;
-    const run = () => { try { dispose.call(renderer); } catch (error) { console.warn('[webgpu] dispose', error); } };
+    const run = () => {
+      try { dispose.call(renderer); } catch (error) { console.warn('[webgpu] dispose', error); }
+      if (state.destroyDevice) releaseGpu(renderer);
+    };
     if (state.ready) run();
     else ready.then(run, () => {});
   };

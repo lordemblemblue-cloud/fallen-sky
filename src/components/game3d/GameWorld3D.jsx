@@ -168,7 +168,7 @@ import {game3dEfficiencyTighten,readGame3DGpuHints,game3dGpuContextAttributes,
 import {chooseSceneRendererFor,rememberRendererFailure} from '@/lib/rendererBackendChoice.mjs';
 import {createWorldDrawWatchdog} from './render/liveRendererRecovery.mjs';
 import {isRecoverableWebGPUPipelineError} from './render/recoverableWebGPUPipelineError.mjs';
-import {createWebGPUSceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
+import {createWebGPUSceneRenderer,destroySceneRenderer,onSceneDeviceLost,precompileSceneObjects,waitForSceneRenders} from '@/lib/webgpuSceneRenderer.js';
 import {GAME3D_DISPLAY_SETTINGS_EVENT,readGame3DDisplaySettings,
   game3DResolutionTarget,readGame3DRendererViewport,publishGame3DActualFramebuffer}
   from './performance/Game3DDisplaySettings.mjs';
@@ -218,6 +218,7 @@ import { CorePlayerStateMachine } from './player/CorePlayerStateMachine';
 import { CoreAnimationController } from './player/CoreAnimationController';
 import { PlayerCameraSystem } from './player/PlayerCameraSystem'; import { OTS_AIM, createOTSAimState, applyOTSAimFacing } from './player/otsAim.mjs'; import { createOTSCameraColliders } from './player/otsCameraColliders.mjs'; import { updateOTSAimFrame } from './player/otsAimRuntime'; import OTSAimReticle from './hud/OTSAimReticle';
 import { createGame3DWorldEntryCamera } from './player/Game3DWorldEntryCamera.mjs';
+import { createEntryBackdropHold } from './player/game3dEntryBackdropHold.mjs';
 import {
   GAME3D_GAME2_CAMERA,applyGame3DGame2MouseLook,
   applyGame3DGame2ArrowLook,game3dGame2Zoom,
@@ -740,6 +741,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // No second preview world, alternate ground height or authority fork.
     const entryCamera=createGame3DWorldEntryCamera({enabled:entryCinematic && region==='wolfveil' && !entryMode});
     let menuCameraHeld=Boolean(entryModeRef.current);
+    // Behind the open character creator the world holds its last frame once settled (game3dEntryBackdropHold.mjs).
+    const entryBackdrop=createEntryBackdropHold();
     let entryCameraReleased=false; // only after the real player model/animation load
 
     remoteManagerRef.current = createRemotePlayersManager(scene);
@@ -3551,6 +3554,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
         if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
+        // The creator studio covers the world: keep its last frame instead of updating and redrawing
+        // the whole scene behind it every frame (a resize still redraws it: redrawAfterResize).
+        if(entryBackdrop.shouldHold(entryPreviewModeRef.current,renderNow))return;
         regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
         areaPortals?.update(delta,modelRef.current?.position||initialAreaPosition,regionStream?.getArea());
@@ -6079,7 +6085,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         grassGround.material.dispose(); // releases the locally generated pigment texture too
       }
       if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
-      renderer.dispose();
+      // A classic world frees its WebGL context now rather than at garbage collection: every remount (Retry
+      // world, gates, dungeons) otherwise left one behind until the browser refused to make another.
+      if (renderer.isWebGPURenderer) renderer.dispose(); else destroySceneRenderer(renderer);
       stopLoopSound('player_walk');
       if (remoteManagerRef.current) { remoteManagerRef.current.dispose(); remoteManagerRef.current = null; }
       remoteCompanionManager.dispose();
