@@ -39,7 +39,7 @@ export const BAND2_POINTS = Object.freeze({
   landing_reeds: Object.freeze({ x: 268, z: -442 }),
   landing_bowcase: Object.freeze({ x: 266, z: -432 }),
   // East: the old battle camp and Shadow Ravine (P26)
-  scarred_blade: Object.freeze({ x: 318, z: -252 }),
+  scarred_blade: Object.freeze({ x: 330, z: -232 }),
   ravine_gate: Object.freeze({ x: 331, z: -143.5 }),
   ravine_chant: Object.freeze({ x: 333, z: -152 }),
   ravine_dead: Object.freeze({ x: 343, z: -173 }),

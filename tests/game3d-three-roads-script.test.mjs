@@ -4,6 +4,7 @@ import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import { WOLFVEIL_HOSTILE_ZONES } from '../src/components/game3d/wolfveil/WolfveilEnemySpawns.mjs';
+import { WOLFVEIL_ZOMBIE_CAMPS } from '../src/components/game3d/wolfveil/WolfveilZombieCamps.mjs';
 // The game's ground is wolfveilHeight plus the terraces the cave entrances install into it at
 // run time. Without this import a check would pass on ground that is a cliff in the game.
 import '../src/components/game3d/wolfveil/WolfveilCaveAccessPlan.mjs';
@@ -340,6 +341,25 @@ test("spoken scenes keep clear of the game's own monster camps", () => {
     for (const spawn of spawns) {
       const away = Math.hypot(point.x - spawn.x, point.z - spawn.z);
       assert.ok(away >= 18, `${name} is ${away.toFixed(1)} m from a spawn of ${spawn.zone}`);
+    }
+  }
+});
+
+// Ten zombie camps of fifteen stand along the Hunter's Loop, level 3 in the
+// south-east rising to level 50 in the south-west. No story spot and nobody's
+// home may be inside one, and a spoken scene keeps well away.
+test('no story spot or home stands inside one of the zombie camps', () => {
+  assert.equal(WOLFVEIL_ZOMBIE_CAMPS.length, 10);
+  const spots = [];
+  for (const band of THREE_ROADS_BANDS) for (const [name, point] of Object.entries(band.points)) spots.push([name, point]);
+  for (const person of THREE_ROADS_CAST) {
+    for (const home of [person.home, person.homeAfter?.home, ...(person.alsoAt || [])].filter(Boolean)) spots.push([person.id, home]);
+  }
+  for (const [name, spot] of spots) {
+    for (const camp of WOLFVEIL_ZOMBIE_CAMPS) {
+      const away = Math.hypot(spot.x - camp.x, spot.z - camp.z);
+      assert.ok(away >= camp.radius + 8, `${name} is ${away.toFixed(0)} m from the middle of ${camp.label} (level ${camp.level})`);
+      if (QUIET_SPOTS.includes(name)) assert.ok(away >= camp.radius + 20, `${name}, a spoken scene, is ${away.toFixed(0)} m from ${camp.label}`);
     }
   }
 });
