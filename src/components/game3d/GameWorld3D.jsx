@@ -179,6 +179,7 @@ import {isInsideMeadowCircle,meadowGroundHeight}
 import { buildGrassEnvironment } from './buildGrassEnvironment';
 import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/WolfveilScene';
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
+import {wolfveilCaveRingArrival,wolfveilCaveRingReturn} from './wolfveil/WolfveilCaveRingTravel.mjs';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
 import {WOLFVEIL_AREA_PORTALS} from './wolfveil/streaming/WolfveilAreaPortalPlan.mjs';
 import {wolfveilAreaAtWorld,wolfveilAreaInfo} from './wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
@@ -276,7 +277,7 @@ export default function GameWorld3D(props) {
     recoveryReason={recoveryReason} onRendererFailure={setRecoveryReason}/>;
 }
 
-function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
+function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worldArea='town',portalLanding=null,initialWorkflowTarget=null,workflowAllowed=false,portalReturn=false,portalSpawnAtGate=false,portalCave=null,entryCinematic=false,entryMode=false,entryPreviewMode='start',resumeCheckpoint=null} = {}) {
   const avatarConfig=useGameAvatar();
   const appearanceRef=useRef(avatarConfig);appearanceRef.current=avatarConfig;
   // The world is built once per mount. A new body chosen on the character screens is swapped into the running
@@ -1171,7 +1172,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     window.__gw3dVortexLake=vortexLake;
     const wolfveilDungeonPortals=region==='wolfveil'||region===WOLFVEIL_CAVES_REGION
       ?createWolfveilDungeonPortals(scene,{mode:region==='wolfveil'?'surface':'destination',area:worldArea,
-        exclude:naturalZones?['jade_lantern_grotto']:[]}):null; // the prototype doorway replaces that ring
+        entrance:portalCave,exclude:naturalZones?['jade_lantern_grotto']:[]}):null; // the prototype doorway replaces that ring
     const lunarGate = region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:LUNAR_CAVE_ENTRANCE.approachX,z:LUNAR_CAVE_ENTRANCE.approachZ}) ? createLunarMountainEntrance(scene,{sampleGroundY}) : null;
     const astralGate = region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:ASTRAL_DUNGEON_ENTRANCE.approachX,z:ASTRAL_DUNGEON_ENTRANCE.approachZ}) ? createAstralMountainGate(scene,{sampleGroundY}) : null;
     if(wolfveilVillage?.walkableSurfaces?.length) groundMeshes.push(...wolfveilVillage.walkableSurfaces);
@@ -2317,18 +2318,24 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           ?portalLanding:null;
       const returnSite=portalReturn==='astral'?ASTRAL_DUNGEON_ENTRANCE:LUNAR_CAVE_ENTRANCE;
       const vortexReturn=portalReturn==='vortex'?VORTEX_LAKE.safeReturn:null;
-      const sumiReturn=portalReturn==='sumi'?{x:-360,z:-400+70}:null;
+      // Out of a cave by its ring: the bench outside that cave's mouth.
+      const caveReturn=portalReturn==='cave'?wolfveilCaveRingReturn(portalCave):null;
+      const sumiReturn=portalReturn==='sumi'?{x:-360,z:-400+70}:caveReturn;
       const returnPosition=!swap&&region==='wolfveil'&&portalReturn ? {
         x:vortexReturn?.x??sumiReturn?.x??returnSite.approachX,
         z:vortexReturn?.z??sumiReturn?.z??returnSite.approachZ,
-        y:vortexReturn?.y??sampleGroundY(sumiReturn?.x??returnSite.approachX,sumiReturn?.z??returnSite.approachZ)??0.3,
+        y:vortexReturn?.y??sampleGroundY(sumiReturn?.x??returnSite.approachX,sumiReturn?.z??returnSite.approachZ)??caveReturn?.y??0.3,
       }:null;
+      // In by a cave's ring: the entry hall of the cave walked into.
+      const caveArrival=!swap&&region===WOLFVEIL_CAVES_REGION?wolfveilCaveRingArrival(portalCave):null;
       if(swap){fbx.position.copy(swap.position);fbx.quaternion.copy(swap.quaternion);}
-      else fbx.position.set(areaArrival?.x ?? returnPosition?.x ?? workflowSpawn?.x ??
+      else fbx.position.set(areaArrival?.x ?? returnPosition?.x ?? workflowSpawn?.x ?? caveArrival?.x ??
           (region==='wolfveil'?(areaFallback?.x??WOLFVEIL_PLAYER_TOWN_SPAWN.x):region===WOLFVEIL_CAVES_REGION?-6:0),
-        areaArrival?.y ?? returnPosition?.y ?? workflowSpawn?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
-        areaArrival?.z ?? returnPosition?.z ?? workflowSpawn?.z ??
+        areaArrival?.y ?? returnPosition?.y ?? workflowSpawn?.y ?? caveArrival?.y ?? (region===WOLFVEIL_CAVES_REGION?-7.9:0.3),
+        areaArrival?.z ?? returnPosition?.z ?? workflowSpawn?.z ?? caveArrival?.z ??
           (region==='wolfveil'?(areaFallback?.z??WOLFVEIL_PLAYER_TOWN_SPAWN.z):region===WOLFVEIL_CAVES_REGION?(portalSpawnAtGate?124:94):0));
+      const caveFacing=caveArrival??(returnPosition&&caveReturn);
+      if(!swap&&caveFacing)orbit.current.yaw=caveFacing.yaw;
       if(areaArrival&&Number.isFinite(sampleGroundY(areaArrival.x,areaArrival.z,areaArrival.y))){
         const groundY=sampleGroundY(areaArrival.x,areaArrival.z,areaArrival.y);
         if(Math.abs(areaArrival.y-groundY)>1)fbx.position.y=groundY;
@@ -2363,8 +2370,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // After the avatar loads, so the armor bridge (mounted with the page) hears the start-up equips.
       armorEquipSync = createAXEArmorEquipSync();
       // Workflow already uses the live ground height; normal Play keeps its market snap.
-      if (!swap&&!workflowSpawn&&!returnPosition&&!areaArrival) snapToGround(fbx, 0);
-      if (!swap && !entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition&&!areaArrival)
+      if (!swap&&!workflowSpawn&&!returnPosition&&!areaArrival&&!caveArrival) snapToGround(fbx, 0);
+      if (!swap && !entryModeRef.current && resumeCheckpoint && !workflowSpawn && !returnPosition&&!areaArrival&&!caveArrival)
         tryResumeCheckpoint(resumeCheckpoint);
       if (workflowSpawn) window.dispatchEvent(new CustomEvent('axeWorkflowArrived', {
         detail: { id: workflowSpawn.id, x: workflowSpawn.x, y: workflowSpawn.y, z: workflowSpawn.z },
@@ -3448,7 +3455,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     const companionSystem = new CompanionAISystem({
       companionRef: companionGroupRef,
       ownerRef: playerModelRef,
-      sampleGroundY,
+      // On the cave map the floors are the cave system's: the mount walks the
+      // floor its owner stands on (a rider used to drop to y 0.3 under it).
+      sampleGroundY: region===WOLFVEIL_CAVES_REGION
+        ? (x,z)=>caveAwareGroundY(x,z,playerModelRef.current?.position?.y)
+        : sampleGroundY,
       playAnimation: playCompanionAnimation,
       getMounted: () => isMountedRef.current,
     });

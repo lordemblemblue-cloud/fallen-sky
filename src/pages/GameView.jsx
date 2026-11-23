@@ -132,6 +132,7 @@ export default function GameView() {
   const lastWolfveilAreaRef=useRef('town');
   const [portalReturn,setPortalReturn]=useState(false);
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
+  const [portalCave,setPortalCave]=useState(null); // the cave a ring trip goes into or comes out of
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
   const [workflowSpawn, setWorkflowSpawn] = useState(null);
   const [resumeCheckpoint, setResumeCheckpoint] = useState(null);
@@ -339,18 +340,25 @@ export default function GameView() {
       }
       setPortalLanding(null);
       setPortalSpawnAtGate(target==='wolfveil-caves'&&detail.spawnAtGate===true);
+      // A cave ring names its cave: in at its entry hall, out at its mouth.
+      const caveId=target==='wolfveil-caves'?detail.sourceEntrance:target==='wolfveil'?detail.returnToCave:null;
+      setPortalCave(typeof caveId==='string'?caveId:null);
       if(target!=='wolfveil'){
         if(worldRegion==='wolfveil')lastWolfveilAreaRef.current=worldArea;
         vortexOriginRef.current=detail.sourcePortal==='vortex'?'vortex':null;
         setPortalReturn(false);
       }else{
         const fromVortex=vortexOriginRef.current==='vortex';
+        const caveArea=typeof detail.returnToCave==='string'&&WOLFVEIL_AREA_IDS.includes(detail.area)
+          ?detail.area:null;
         setPortalReturn(fromVortex?'vortex':
+          caveArea?'cave':
           detail.returnToGate==='astral'?'astral':
           detail.returnToGate==='sumi'?'sumi':
           detail.returnToGate===true);
         // Returning from a cave/dungeon must restore the map containing
         // its entrance, not construct the whole valley or default to town.
+        if(!fromVortex&&caveArea)lastWolfveilAreaRef.current=caveArea;
         setWorldArea(lastWolfveilAreaRef.current);
         vortexOriginRef.current=null;
       }
@@ -674,7 +682,7 @@ export default function GameView() {
         entryMode={phase==='login'} entryPreviewMode={entryPreviewMode}
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
-        resumeCheckpoint={resumeCheckpoint} />
+        portalCave={portalCave} resumeCheckpoint={resumeCheckpoint} />
       {/* Keep GPU governor/warmup, but relocate its floating GPU/FPS button to native Graphics settings. */}
       <Game3DPerformanceBootstrap region={worldRegion} showPanel={false} />
       <MobileTouchControls game="fallen"

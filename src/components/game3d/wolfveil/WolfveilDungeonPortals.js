@@ -1,12 +1,18 @@
 import * as THREE from 'three';
 import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
 import {wolfveilAreaAtWorld} from './streaming/WolfveilFiveAreaPlan.mjs';
+import {
+  WOLFVEIL_CAVE_RING,wolfveilCaveById,wolfveilCaveRingExits,wolfveilCaveRingReturn,
+} from './WolfveilCaveRingTravel.mjs';
 
 export const WOLFVEIL_CAVES_REGION='wolfveil-caves';
 
 // `exclude`: cave ids whose ring is replaced by an authored doorway (the
 // natural-zone prototype); every other ring keeps its region portal.
-export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],area=null}={}){
+// Surface rings name their cave (`sourceEntrance`); on the cave map a ring
+// inside each cave's arch, and the Rotunda's ring, lead out to a cave's mouth
+// (`returnToCave`, `area`): the Rotunda's to `entrance`, the cave entered by.
+export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],area=null,entrance=null}={}){
   const root=new THREE.Group();
   root.name=mode==='surface'?'SWV_CaveDestinationPortals':'SWV_CaveDestinationReturnPortal';
   const ringGeometry=new THREE.TorusGeometry(2.05,.18,6,16);
@@ -23,7 +29,7 @@ export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],ar
       (!area||wolfveilAreaAtWorld({x:cave.mouth[0],z:cave.mouth[1]+70})===area)).map(cave=>({
       id:cave.id,x:cave.mouth[0],y:cave.mouthY+2.2,z:cave.mouth[1]+70,
     }))
-    :[{id:'cave-return',x:-6,y:-5.8,z:70+62}];
+    :[{id:'cave-return',x:-6,y:-5.8,z:70+62},...wolfveilCaveRingExits()];
   for(const portal of portals){
     const gate=new THREE.Group();
     gate.position.set(portal.x,portal.y,portal.z);
@@ -34,11 +40,15 @@ export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],ar
     core.position.z=-.04;
     gate.add(core);
     gate.userData.portalId=portal.id;
+    if(Number.isFinite(portal.floorY))gate.userData.floorY=portal.floorY;
     root.add(gate);
   }
   scene.add(root);
   let cooldown=0;
   let elapsed=0;
+  // A ring fires when walked into, never under a player who arrives standing
+  // in it (a checkpoint saved on the ring sent them straight back through).
+  let seen=false,arrivedIn=null;
   return {
     update(delta,position){
       elapsed+=Math.max(0,Math.min(delta||0,.1));
@@ -48,12 +58,19 @@ export function createWolfveilDungeonPortals(scene,{mode='surface',exclude=[],ar
       cooldown=Math.max(0,cooldown-Math.max(0,delta||0));
       if(cooldown>0||!position||!Number.isFinite(position.x)||!Number.isFinite(position.z))return null;
       const gate=root.children.find(portal=>
-        Math.hypot(position.x-portal.position.x,position.z-portal.position.z)<3.25);
+        Math.hypot(position.x-portal.position.x,position.z-portal.position.z)<WOLFVEIL_CAVE_RING.triggerRadius&&
+        (!Number.isFinite(portal.userData.floorY)||!Number.isFinite(position.y)||
+          Math.abs(position.y-portal.userData.floorY)<WOLFVEIL_CAVE_RING.exitFloorReach));
+      if(!seen){seen=true;arrivedIn=gate||null;}
+      if(arrivedIn&&gate===arrivedIn)return null;
+      arrivedIn=null;
       if(!gate)return null;
       cooldown=2;
-      return mode==='surface'
-        ?{target:WOLFVEIL_CAVES_REGION,sourceEntrance:gate.userData.portalId}
-        :{target:'wolfveil',returnToGate:'sumi'};
+      if(mode==='surface')return {target:WOLFVEIL_CAVES_REGION,sourceEntrance:gate.userData.portalId};
+      const caveId=gate.userData.portalId==='cave-return'
+        ?wolfveilCaveById(entrance)?.id??WOLFVEIL_EXPLORABLE_CAVES[0].id
+        :gate.userData.portalId;
+      return {target:'wolfveil',returnToCave:caveId,area:wolfveilCaveRingReturn(caveId)?.area??null};
     },
     dispose(){
       root.parent?.remove(root);
