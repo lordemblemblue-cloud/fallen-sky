@@ -212,6 +212,7 @@ import {createWolfveilLivingSumiEMaterials} from './wolfveil/WolfveilLivingSumiE
 import { insideWolfveilClientGround } from './wolfveil/WolfveilTravelSafety.mjs';
 import {wolfveilIsProtectedSWTile} from './wolfveil/WolfveilSWQuarterQuality.mjs';
 import { findWorkflowSpawn } from './workflow/workflowDestinations.mjs';
+import { findQuestTestSafeLanding } from './threeroads/questTestSafeLanding.mjs';
 import { initialPlayerAnimationClips, loadPlayerAnimationClips } from './player/playerAnimationLibrary';
 import { syncFusedLocomotion } from './player/fusedLocomotionSync';
 import { createLunaDashboardPlayerController as createPlayerAnimationController } from './player/LunaDashboardPlayerController';
@@ -2315,11 +2316,15 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // A chosen workflow location replaces only this character's initial Play spawn.
       // The real terrain raycast and existing tree/building/river guard reject unsafe spots.
       // It never changes remote players, collision meshes, or server-authoritative duels.
+      const workflowOptions = {
+        sampleGroundY,
+        isBlocked: (x,z) => isRuntimeFootprintBlocked({x,y:sampleGroundY(x,z) ?? 0,z},.75),
+      };
       const workflowSpawn = !swap && region === 'wolfveil' && workflowAllowed && initialWorkflowTarget && !dedicatedMode
-        ? findWorkflowSpawn(initialWorkflowTarget, {
-            sampleGroundY,
-            isBlocked: (x,z) => isRuntimeFootprintBlocked({x,y:sampleGroundY(x,z) ?? 0,z},.75),
-          }) : null;
+        ? initialWorkflowTarget?.questTest === true
+          ? findQuestTestSafeLanding(initialWorkflowTarget, { ...workflowOptions, area: worldArea })
+          : findWorkflowSpawn(initialWorkflowTarget, workflowOptions)
+        : null;
       const areaArrival=!swap&&region==='wolfveil'&&portalLanding&&
         wolfveilAreaAtWorld(portalLanding)===worldArea&&
         [portalLanding.x,portalLanding.y,portalLanding.z].every(Number.isFinite)
@@ -2346,7 +2351,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // Rode through a gate: ride on as soon as this scene's mount has loaded.
       if(areaArrival?.mounted===true)arrivalMount={heading:areaArrival.heading,seconds:20};
       if (!swap && initialWorkflowTarget && !workflowSpawn)
-        showCombatNotice('Workflow target has no safe ground. Spawned at the Wolfveil market.');
+        showCombatNotice(initialWorkflowTarget?.questTest
+          ? 'Quest Test location has no verified walkable landing in this area.'
+          : 'Workflow target has no safe ground. Spawned at the Wolfveil market.');
 
       fbx.traverse((node) => {
         if (node.isMesh) {
