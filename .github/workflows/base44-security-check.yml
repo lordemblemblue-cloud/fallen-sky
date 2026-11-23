@@ -39,7 +39,9 @@ jobs:
         run: npm ci --ignore-scripts --no-fund
       - name: Verify entity RLS and privileged endpoints
         run: node --test tests/security-base44-access.test.mjs
-      - name: Fail if any known production dependency vulnerability exists
-        run: npm audit --omit=dev --audit-level=low
+      - name: Fail if any known dependency vulnerability exists (including build tools)
+        run: npm audit --audit-level=low
+      - name: Verify client combat labels never render untrusted HTML
+        run: node --test tests/security-dom-sinks.test.mjs
       - name: Verify application builds with secure dependencies
         run: npm run build
