@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import WeatherTestPanel from './weather/WeatherTestPanel';
 import {isGame3DEditorPreview} from './weather/editorPreviewPolicy.mjs';
+import { QUEST_TEST_DESTINATIONS } from './threeroads/questTestDestinations.mjs';
+import { questTestRuntimeActive } from './threeroads/questTestRuntime.mjs';
 
 /**
  * Glass HUD for the WorldEnvironmentSystem. Shows the world clock, season, the
@@ -32,6 +34,19 @@ function MoonGlyph({ illum, eclipse }) {
 export default function WorldEnvironmentHUD({ system, adminTools = false }) {
   const [snap, setSnap] = useState(null);
   const [weatherEditorOpen, setWeatherEditorOpen] = useState(false);
+  const [questTestOpen, setQuestTestOpen] = useState(false);
+  const [questTestActive, setQuestTestActive] = useState(questTestRuntimeActive);
+
+  useEffect(() => {
+    const refresh = () => setQuestTestActive(questTestRuntimeActive());
+    window.addEventListener('game3dQuestTestSessionChanged', refresh);
+    return () => window.removeEventListener('game3dQuestTestSessionChanged', refresh);
+  }, []);
+
+  const travel = destinationId => {
+    setQuestTestOpen(false);
+    window.dispatchEvent(new CustomEvent('game3dQuestTestTravel', { detail: { destinationId } }));
+  };
   const editorPreview = typeof window !== 'undefined' && isGame3DEditorPreview({
     pathname: window.location.pathname, isDev: import.meta.env.DEV,
   });
@@ -135,17 +150,52 @@ export default function WorldEnvironmentHUD({ system, adminTools = false }) {
         </div>
       )}
       {adminTools && (
-        <button type="button"
-          className="pointer-events-auto mt-1 w-full rounded-lg border border-amber-300/30 bg-amber-500/10 px-2.5 py-1.5 text-left text-[9px] font-black tracking-wide text-amber-100 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
-          aria-label="Admin teleport to Wolfveil cave gate"
-          title="Admin shortcut: teleport inside Wolfveil caves by the return gate"
-          onClick={() => window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
-            detail: { target: 'wolfveil-caves', spawnAtGate: true },
-          }))}>
-          ADMIN · TELEPORT TO CAVE GATE
-        </button>
+        <div className="pointer-events-auto mt-1 flex flex-col gap-1">
+          <button type="button"
+            className="w-full rounded-lg border border-cyan-300/40 bg-cyan-500/15 px-2.5 py-1.5 text-left text-[10px] font-black tracking-wide text-cyan-100 hover:bg-cyan-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
+            aria-label="Open admin Quest Test teleport menu"
+            aria-expanded={questTestOpen}
+            onClick={() => setQuestTestOpen(value => !value)}>
+            QUEST TEST · TELEPORT
+          </button>
+          <button type="button"
+            className="w-full rounded-lg border border-amber-300/30 bg-amber-500/10 px-2.5 py-1.5 text-left text-[9px] font-black tracking-wide text-amber-100 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300"
+            aria-label="Admin teleport to Wolfveil cave gate"
+            title="Admin shortcut: teleport inside Wolfveil caves by the return gate"
+            onClick={() => window.dispatchEvent(new CustomEvent('game3dPortalTravel', {
+              detail: { target: 'wolfveil-caves', spawnAtGate: true },
+            }))}>
+            ADMIN · TELEPORT TO CAVE GATE
+          </button>
+        </div>
       )}
     </div>
+    {adminTools && questTestOpen && (
+      <div role="dialog" aria-label="Developer Quest Test Teleport" className="pointer-events-auto fixed right-3 top-36 z-[90] w-[min(340px,calc(100vw-24px))] max-h-[65dvh] overflow-y-auto rounded-xl border border-cyan-300/40 bg-slate-950/95 p-3 text-white shadow-2xl backdrop-blur-xl">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <strong className="text-sm text-cyan-100">Quest Test · Three Roads</strong>
+          <button type="button" aria-label="Close Quest Test menu" className="rounded px-2 py-1 text-xs text-slate-300 hover:bg-white/10" onClick={() => setQuestTestOpen(false)}>Close</button>
+        </div>
+        <p className="mb-2 text-xs text-slate-300">Admin preview. Travel to existing story locations; unfinished camps may lag or contain incomplete quests.</p>
+        <div className="flex flex-col gap-1.5">
+          {QUEST_TEST_DESTINATIONS.map(destination => (
+            <button type="button" key={destination.id}
+              className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-left hover:border-cyan-300/50 hover:bg-cyan-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
+              onClick={() => travel(destination.id)}>
+              <span className="flex items-center justify-between gap-2 text-xs font-bold">
+                {destination.name}
+                {destination.preview && <span className="text-[9px] font-semibold text-amber-300">Preview</span>}
+              </span>
+              <span className="mt-0.5 block text-[10px] text-slate-400">{destination.detail}</span>
+            </button>
+          ))}
+          {questTestActive && <button type="button"
+            className="rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-3 py-2 text-left text-xs font-bold text-emerald-200 hover:bg-emerald-500/20"
+            onClick={() => travel('return')}>Return to previous position</button>}
+        </div>
+        <p className="mt-2 text-[10px] text-amber-200/80">Travel itself gives no rewards. Interacting with unfinished quests may still affect saved quest progress; use a test character.</p>
+      </div>
+    )}
     {editorPreview && <WeatherTestPanel system={system} open={weatherEditorOpen} onClose={() => setWeatherEditorOpen(false)} />}
     </>
   );

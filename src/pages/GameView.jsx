@@ -5,6 +5,8 @@ import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
 import FallenSkyBetaNotice from '../components/game3d/FallenSkyBetaNotice';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
+import { questTestDestination } from '../components/game3d/threeroads/questTestDestinations.mjs';
+import { setQuestTestRuntimePreview } from '../components/game3d/threeroads/questTestRuntime.mjs';
 import GameWorld3D from '../components/game3d/GameWorld3D';
 import MobileTouchControls from '../components/mobile/MobileTouchControls';
 import { createFallenTouchBridge } from '../components/mobile/fallenMobileTouchBridge.mjs';
@@ -135,6 +137,7 @@ export default function GameView() {
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
   const [workflowSpawn, setWorkflowSpawn] = useState(null);
+  const questTestSessionRef = useRef(null);
   const [resumeCheckpoint, setResumeCheckpoint] = useState(null);
   const services = useAXEServiceMode();
   const [storeOpen, setStoreOpen] = useState(false);
@@ -282,6 +285,85 @@ export default function GameView() {
   // Tear down combat audio when leaving GameView entirely.
   useEffect(() => () => teardownCombatMusic(), []);
 
+
+  // Admin-only Three Roads test travel. This is an in-memory preview switch,
+  // not a persistent URL/storage override; it resets on refresh or navigation.
+  useEffect(() => {
+    if (phase !== 'world' || user?.role !== 'admin') return;
+    const move = (target, returning = false) => {
+      const area = wolfveilAreaAtWorld(target);
+      if (!WOLFVEIL_AREA_IDS.includes(area)) {
+        toast.error('Quest Test location is not available in this build.');
+        return false;
+      }
+      services.controller.close();
+      setPauseMenuOpen(false);
+      setStoreOpen(false);
+      setProgressionOpen(false);
+      setPortalReturn(false);
+      setPortalSpawnAtGate(false);
+      setPortalLanding(returning
+        ? { x: target.x, y: target.y, z: target.z, yaw: target.yaw }
+        : null);
+      setResumeCheckpoint(null);
+      setWorldEntryError('');
+      setWorldArea(area);
+      lastWolfveilAreaRef.current = area;
+      setWorldRegion('wolfveil');
+      // A first-entry workflow target is validated against the loaded real
+      // terrain and the occupied-footprint guard by GameWorld3D.
+      setWorkflowSpawn(returning ? null : `X ${target.x}, Z ${target.z}`);
+      worldReadyRef.current = false;
+      setWorldReady(false);
+      setWorldEntryStatus('loading');
+      // Also remount when teleporting between places inside the same area.
+      setWorldEntryCycle(cycle => cycle + 1);
+      return true;
+    };
+    const onTravel = event => {
+      const id = event?.detail?.destinationId;
+      if (id === 'return') {
+        const session = questTestSessionRef.current;
+        if (!session) { toast.error('Previous position unavailable.'); return; }
+        if (move(session.origin, true)) {
+          setQuestTestRuntimePreview(null);
+          questTestSessionRef.current = null;
+        }
+        return;
+      }
+      if (worldRegion !== 'wolfveil') {
+        toast.error('Enter the Wolfveil overworld before selecting a test destination.');
+        return;
+      }
+      const destination = questTestDestination(id);
+      if (!destination) { toast.error('Unknown Quest Test destination.'); return; }
+      if (!questTestSessionRef.current) {
+        // Capture the real current spot BEFORE enabling test mode, so returning
+        // never depends on a guessed location or a later test checkpoint.
+        window.dispatchEvent(new Event('game3dCheckpointFlush'));
+        const origin = worldCheckpointStore.read();
+        if (origin?.region !== 'wolfveil') {
+          toast.error('No safe return location saved. Enter Wolfveil and try again.');
+          return;
+        }
+        questTestSessionRef.current = { origin };
+      }
+      setQuestTestRuntimePreview(!!destination.preview);
+      if (!move(destination)) setQuestTestRuntimePreview(null);
+    };
+    window.addEventListener('game3dQuestTestTravel', onTravel);
+    return () => window.removeEventListener('game3dQuestTestTravel', onTravel);
+  }, [phase, user?.role, worldRegion, services.controller]);
+
+  // Login/logout and route navigation must always leave regular play intact.
+  useEffect(() => {
+    if (phase === 'world' && user?.role === 'admin') return;
+    if (questTestSessionRef.current) {
+      questTestSessionRef.current = null;
+      setQuestTestRuntimePreview(null);
+    }
+  }, [phase, user?.role]);
+  useEffect(() => () => setQuestTestRuntimePreview(null), []);
 
   // Real portal crossings remount the same engine in a separate map scene.
   // The original Wolfveil terrain and its protected Luna mansion stay intact.

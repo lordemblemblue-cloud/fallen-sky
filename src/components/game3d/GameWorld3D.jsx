@@ -122,6 +122,7 @@ import {selectWolfveilGroundedEnemySpawns} from './wolfveil/WolfveilEnemySpawns.
 import {createWolfveilZombieHordeRuntime} from './wolfveil/WolfveilZombieHordeRuntime.js';
 import {zombieAttackLevel} from './wolfveil/WolfveilZombieCamps.mjs';
 import {threeRoadsEnabled} from './threeroads/threeRoadsFlag.mjs';
+import {questTestRuntimeActive} from './threeroads/questTestRuntime.mjs';
 import {createThreeRoadsWorld} from './threeroads/ThreeRoadsWorld.mjs';
 import {WOLFVEIL_ADMIN_C1_MODEL,WOLFVEIL_ADMIN_C1_ANIMATIONS} from './wolfveil/WolfveilEnemyAssets.mjs';
 import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
@@ -3582,6 +3583,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // Save while playing, on scene handoff, and before navigation. Never save
     // the login camera's origin or a dedicated duel worker's arena position.
     const flushCheckpoint = () => {
+      // Test teleports must not replace the character's normal saved location.
+      if (questTestRuntimeActive()) return;
       const actor = modelRef.current;
       if (!actor || entryModeRef.current || dedicatedMode || getPlayerHUD().hp <= 0 ||
           checkpointOwnerRef.current !== getStorageUser() + '::' + getActiveId()) return;
@@ -6445,7 +6448,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       {!loading && <Game3DLunarNotifications environmentSystem={envSystem} />}
 
       {/* Day/night + season + weather HUD */}
-      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} adminTools={workflowAllowed} />}
+      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} adminTools={workflowAllowed && !entryMode} />}
       {!loading && region === 'wolfveil' && nearbyArtisanShop && !activeArtisanShop && !entryMode && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[30] pointer-events-none rounded-xl border border-amber-400/50 bg-slate-950/85 backdrop-blur-lg px-4 py-2 text-center text-sm text-amber-100">
           E · {nearbyArtisanShop.label}
