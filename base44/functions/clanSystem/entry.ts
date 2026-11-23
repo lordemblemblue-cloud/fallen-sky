@@ -145,21 +145,25 @@ Deno.serve(async (req) => {
                  return new Response(JSON.stringify({ error: 'Not authorized to invite' }), { status: 403, headers: corsHeaders });
             }
             
-            // Resolve email to ID
-            const users = await base44.asServiceRole.entities.User.filter({ email: inviteeEmail });
+            if (typeof inviteeEmail !== 'string' || inviteeEmail.length > 254 || typeof divisionId !== 'string') {
+                return Response.json({ error: 'Invalid invitation' }, { status: 400, headers: corsHeaders });
+            }
+            const accepted = () => Response.json({ success: true }, { headers: corsHeaders });
+            // Keep delivery private regardless of whether the destination exists.
+            const users = await base44.asServiceRole.entities.User.filter({ email: inviteeEmail.trim().toLowerCase() });
             if (users.length === 0) {
-                 return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: corsHeaders });
+                 return accepted();
             }
             const invitee = users[0];
 
             // Check if already invited or member
-            const existingInvite = await base44.entities.ClanInvite.filter({ divisionId, inviteeId: invitee.id, status: 'pending' });
+            const existingInvite = await base44.asServiceRole.entities.ClanInvite.filter({ divisionId, inviteeId: invitee.id, status: 'pending' });
             if (existingInvite.length > 0) {
-                return new Response(JSON.stringify({ error: 'Invite already pending' }), { status: 400, headers: corsHeaders });
+                return accepted();
             }
             
             // Create Invite
-            await base44.entities.ClanInvite.create({
+            await base44.asServiceRole.entities.ClanInvite.create({
                 divisionId,
                 inviterId: user.id,
                 inviteeId: invitee.id,
@@ -167,7 +171,7 @@ Deno.serve(async (req) => {
                 createdAt: new Date().toISOString()
             });
 
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return accepted();
         }
 
         // --- JOIN EVENT ---
@@ -565,10 +569,12 @@ Deno.serve(async (req) => {
                 return new Response(JSON.stringify({ error: 'Item not found' }), { status: 404, headers: corsHeaders });
             }
             const member = await base44.entities.ClanMember.filter({ clan_id: vaultItem.clan_id, user_id: user.id });
-            if (!member.length) {
-                return new Response(JSON.stringify({ error: 'Not a member' }), { status: 403, headers: corsHeaders });
+            if (!['leader', 'officer'].includes(member[0]?.role)) {
+                return new Response(JSON.stringify({ error: 'Clan officer access required' }), { status: 403, headers: corsHeaders });
             }
-            const take = Math.max(1, Math.min(quantity || 1, vaultItem.quantity));
+            const requested = quantity ?? 1;
+            if (!Number.isSafeInteger(requested) || requested < 1) return Response.json({ error: 'Invalid quantity' }, { status: 400, headers: corsHeaders });
+            const take = Math.min(requested, vaultItem.quantity);
             if (take >= vaultItem.quantity) {
                 await base44.asServiceRole.entities.ClanVaultItem.delete(vaultItemId);
             } else {
