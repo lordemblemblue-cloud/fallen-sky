@@ -4,6 +4,8 @@ import {
   MOBILE_TOUCH_SECONDARY, normalizeMobileTouchLayout, touchLandscape,
   touchLayoutStorageKey,
 } from './mobileTouchModel.mjs';
+import { createStandardGamepadReader } from './mobileGamepad.mjs';
+import { requestLandscapeOnGesture, showLandscapeSuggestion } from './mobileLandscape.mjs';
 import './mobileTouchControls.css';
 
 const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
@@ -24,13 +26,16 @@ const readPositions = (game, landscape) => {
  */
 export default function MobileTouchControls({
   game = 'duelist', disabled = false, onMove, onLook, onActionDown, onActionUp,
+  specialReady = true, specialCharge = null, lockActive = false,
 }) {
   const root = useRef(null);
   const pointer = useRef(null);
   const lookPointer = useRef(null);
   const held = useRef(new Set());
+  const actionSources = useRef(new Map());
   const callbacks = useRef({});
-  callbacks.current = { onMove, onLook, onActionDown, onActionUp };
+  callbacks.current = { onMove, onLook, onActionDown, onActionUp,
+    canUse: id => id !== 'special' || specialReady };
   const [supported, setSupported] = useState(() => typeof window !== 'undefined' && isMobileTouchDevice(window));
   const [size, setSize] = useState(() => typeof window !== 'undefined' ? viewport() : { width: 390, height: 844 });
   const landscape = touchLandscape(size.width, size.height);
@@ -41,6 +46,28 @@ export default function MobileTouchControls({
   const [expanded, setExpanded] = useState(false);
   const [stick, setStick] = useState({ x: 0, y: 0 });
   const [dragged, setDragged] = useState(null);
+  const [portraitDismissed, setPortraitDismissed] = useState(false);
+  const [rotateFailed, setRotateFailed] = useState(false);
+  const [controllerConnected, setControllerConnected] = useState(false);
+
+  // Touch and gamepad may hold the same button simultaneously. Release a
+  // gameplay command only once ALL input sources have released that button.
+  function sourceAction(id, source, down) {
+    if (down && !callbacks.current.canUse(id)) return;
+    const current = actionSources.current.get(id) || new Set();
+    const wasDown = current.size > 0;
+    if (down) current.add(source);
+    else current.delete(source);
+    if (current.size) actionSources.current.set(id, current);
+    else actionSources.current.delete(id);
+    const isDown = current.size > 0;
+    if (id === 'more') {
+      if (down && !wasDown) setExpanded(expanded => !expanded);
+      return;
+    }
+    if (!wasDown && isDown) callbacks.current.onActionDown?.(id);
+    else if (wasDown && !isDown) callbacks.current.onActionUp?.(id);
+  }
 
   useEffect(() => {
     const mq = window.matchMedia?.('(any-pointer: coarse)');
@@ -62,13 +89,57 @@ export default function MobileTouchControls({
     setExpanded(false);
   }, [game, landscape, layoutKey]);
   useEffect(() => {
+    if (landscape) {
+      setPortraitDismissed(false);
+      setRotateFailed(false);
+    }
+  }, [landscape]);
+  useEffect(() => {
+    if (!supported || landscape) return;
+    try {
+      // Installed PWAs may honor this without fullscreen; Safari in a normal
+      // tab will simply reject it and show the rotate/continue choice.
+      if (window.matchMedia?.('(display-mode: standalone)')?.matches) {
+        window.screen?.orientation?.lock?.('landscape')?.catch?.(() => {});
+      }
+    } catch { /* no orientation API */ }
+  }, [supported, landscape]);
+  useEffect(() => {
+    const gamepad = createStandardGamepadReader(game, {
+      down: id => sourceAction(id, 'gamepad', true),
+      up: id => sourceAction(id, 'gamepad', false),
+      move: move => {
+        if (!pointer.current) callbacks.current.onMove?.(move);
+      },
+      look: (dx, dy) => callbacks.current.onLook?.(dx, dy),
+    });
+    let frame = 0;
+    let lastConnected = false;
+    const poll = () => {
+      const connected = !disabled && !editing &&
+        gamepad.update(window.navigator?.getGamepads?.());
+      if (!connected && (disabled || editing)) gamepad.release();
+      if (connected !== lastConnected) {
+        lastConnected = connected;
+        setControllerConnected(connected);
+      }
+      frame = window.requestAnimationFrame(poll);
+    };
+    frame = window.requestAnimationFrame(poll);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      gamepad.release();
+      setControllerConnected(false);
+    };
+  }, [game, disabled, editing]);
+  useEffect(() => {
     if (layout.key !== layoutKey) return;
     try { localStorage.setItem(layoutKey, JSON.stringify(layout.positions)); }
     catch { /* private mode: still movable for this session */ }
   }, [layout, layoutKey]);
 
   const releaseAll = () => {
-    for (const action of held.current) callbacks.current.onActionUp?.(action);
+    for (const action of held.current) sourceAction(action, 'touch', false);
     held.current.clear();
     callbacks.current.onMove?.({ x: 0, y: 0 });
     pointer.current = null;
@@ -77,14 +148,15 @@ export default function MobileTouchControls({
   };
   useEffect(() => {
     if (disabled || !supported || editing) {
-      for (const action of held.current) callbacks.current.onActionUp?.(action);
+      for (const action of held.current) sourceAction(action, 'touch', false);
       held.current.clear();
       callbacks.current.onMove?.({ x: 0, y: 0 });
       pointer.current = null;
     }
   }, [disabled, supported, editing]);
   useEffect(() => () => {
-    for (const action of held.current) callbacks.current.onActionUp?.(action);
+    for (const [id] of actionSources.current) callbacks.current.onActionUp?.(id);
+    actionSources.current.clear();
     held.current.clear();
     callbacks.current.onMove?.({ x: 0, y: 0 });
   }, []);
@@ -143,15 +215,15 @@ export default function MobileTouchControls({
     event.preventDefault();
     event.stopPropagation();
     event.currentTarget.setPointerCapture?.(event.pointerId);
-    if (id === 'more') { setExpanded(open => !open); return; }
+    if (!callbacks.current.canUse(id)) return;
     if (!held.current.has(id)) {
       held.current.add(id);
-      callbacks.current.onActionDown?.(id);
+      sourceAction(id, 'touch', true);
     }
   };
   const actEnd = (id, event) => {
     if (editing) return endDrag();
-    if (held.current.delete(id)) callbacks.current.onActionUp?.(id);
+    if (held.current.delete(id)) sourceAction(id, 'touch', false);
     event.stopPropagation();
   };
   const lookDown = event => {
@@ -173,15 +245,33 @@ export default function MobileTouchControls({
     if (lookPointer.current?.id === event.pointerId) lookPointer.current = null;
   };
 
+  const askLandscape = async () => {
+    const locked = await requestLandscapeOnGesture(window);
+    setRotateFailed(!locked);
+  };
+  const showRotate = showLandscapeSuggestion({
+    touch: supported, width: size.width, height: size.height,
+  }) && !portraitDismissed;
   const items = MOBILE_TOUCH_ACTIONS[game] || MOBILE_TOUCH_ACTIONS.duelist;
   const secondary = MOBILE_TOUCH_SECONDARY[game] || MOBILE_TOUCH_SECONDARY.duelist;
   return (
     <div ref={root} className="mobile-game-controls" data-testid="mobile-game-controls"
       data-game={game} data-orientation={landscape ? 'landscape' : 'portrait'}
       data-editing={editing} aria-label="Mobile game touch controls">
+      {showRotate && <div className="mobile-orientation-prompt" role="dialog" aria-label="Landscape mobile gameplay">
+        <div className="mobile-orientation-symbol" aria-hidden="true">↻</div>
+        <strong>TURN YOUR PHONE SIDEWAYS</strong>
+        <p>Landscape gives you more room to move, aim and use your abilities.</p>
+        <div className="mobile-orientation-choices">
+          <button type="button" onClick={askLandscape}>TRY LANDSCAPE</button>
+          <button type="button" onClick={() => setPortraitDismissed(true)}>CONTINUE PORTRAIT</button>
+        </div>
+        {rotateFailed && <small>Your browser cannot rotate the screen automatically. Turn the phone sideways to switch layouts.</small>}
+      </div>}
       <div className="mobile-look-zone" data-testid="mobile-look-zone" aria-label="Swipe to look around"
         onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp}/>
       <div className="mobile-control-toolbar">
+        {controllerConnected && <span className="mobile-gamepad-connected">CONTROLLER CONNECTED</span>}
         <button type="button" aria-pressed={editing} onClick={() => { releaseAll(); setEditing(v => !v); }}
           className="mobile-control-editor">{editing ? 'DONE' : 'MOVE CONTROLS'}</button>
         {editing && <button type="button" className="mobile-control-editor" onClick={() => {
@@ -203,14 +293,21 @@ export default function MobileTouchControls({
           data-testid={`mobile-action-${id}`} data-action={id}
           className="mobile-touch-action" data-special={id === 'special' || id === 'ultimate'}
           style={{ '--touch-x': `${position.x}%`, '--touch-y': `${position.y}%` }}
-          disabled={disabled && !editing} aria-label={label === 'ULT' ? 'Ultimate ability' : label}
+          disabled={(disabled || (id === 'special' && !specialReady)) && !editing}
+          aria-pressed={id === 'lock' ? !!lockActive : undefined}
+          data-active={id === 'lock' && !!lockActive ? 'true' : undefined}
+          data-unready={id === 'special' && !specialReady ? 'true' : undefined}
+          aria-label={id === 'lock' ? 'Auto lock target' :
+            label === 'ULT' ? 'Ultimate ability' : label}
           onPointerDown={event => actStart(id, event)}
           onPointerMove={event => editing && onEditMove(id, event)}
           onPointerUp={event => actEnd(id, event)}
           onPointerCancel={event => actEnd(id, event)}
-          onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); if (id === 'more') setExpanded(v => !v); else callbacks.current.onActionDown?.(id); } }}
-          onKeyUp={event => { if (event.key === 'Enter' || event.key === ' ') callbacks.current.onActionUp?.(id); }}>
-          {label}
+          onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sourceAction(id, 'keyboard', true); } }}
+          onKeyUp={event => { if (event.key === 'Enter' || event.key === ' ') sourceAction(id, 'keyboard', false); }}>
+          <span className="mobile-action-label">{label}</span>
+          {((id === 'special' && game === 'duelist') || (id === 'ultimate' && game === 'fallen')) &&
+            Number.isFinite(specialCharge) && <span className="mobile-action-charge">{Math.round(specialCharge)}%</span>}
         </button>;
       })}
     </div>
