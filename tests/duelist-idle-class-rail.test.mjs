@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { URL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { CLASS_IDS, CLASSES } from '../src/components/duelist/core/classes.mjs';
