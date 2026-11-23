@@ -80,6 +80,35 @@ test('the Ridge Path north of the peak is not cut by the Inkstone Cistern approa
     prev=y;
   }
   assert.ok(steepest<.7,'no step over 35 degrees along the path, steepest '+steepest.toFixed(2)+' m per metre');
+  // The rendered ground: the terrain mesh is a 1100 m, 310-segment grid
+  // (buildWolfveilTerrain), so each triangle spans ~3.55 m and fill just beside
+  // the path still tilts it. The old bend at (-18,512) left 1.2 m per metre
+  // steps at z 508 on the mesh with a clean height function.
+  const g=1100/310,H=wolfveilHeight;
+  const mesh=(x,z)=>{
+    const gx=Math.floor(x/g)*g,gz=Math.floor(z/g)*g,fx=(x-gx)/g,fz=(z-gz)/g;
+    const a=H(gx,gz),b2=H(gx+g,gz),c=H(gx,gz+g),d=H(gx+g,gz+g);
+    return fx+fz<=1?a+(b2-a)*fx+(c-a)*fz:d+(c-d)*(1-fx)+(b2-d)*(1-fz);
+  };
+  let meshPrev=null,meshSteepest=0;
+  for(let s=0;s<=len;s+=1){
+    const t=s/len,y=mesh(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t);
+    if(meshPrev!==null)meshSteepest=Math.max(meshSteepest,Math.abs(y-meshPrev));
+    meshPrev=y;
+  }
+  assert.ok(meshSteepest<.7,'rendered ground along the path, steepest '+meshSteepest.toFixed(2)+' m per metre');
+  // Every Cistern switchback stays clear of the path.
+  const ridgeSegs=ridge.points.slice(1).map((p,i)=>[ridge.points[i],p]);
+  const fromRidge=(x,z)=>Math.min(...ridgeSegs.map(([p,q])=>{
+    const dx=q[0]-p[0],dz=q[1]-p[1],u=Math.max(0,Math.min(1,((x-p[0])*dx+(z-p[1])*dz)/(dx*dx+dz*dz)));
+    return Math.hypot(x-p[0]-dx*u,z-p[1]-dz*u);
+  }));
+  const trail=WOLFVEIL_CAVE_APPROACHES.find(c=>c.caveId==='sunken_inkstone_cistern').points;
+  let along=0;
+  for(let i=1;i<trail.length;i++){
+    along+=Math.hypot(trail[i].x-trail[i-1].x,trail[i].z-trail[i-1].z);
+    if(along>9)assert.ok(fromRidge(trail[i].x,trail[i].z)>12,`switchback ${i} ${fromRidge(trail[i].x,trail[i].z).toFixed(1)} m from the path`);
+  }
   assert.equal(wolfveilCaveApproachTrailKeep(1.3,478),0,'no cave grading on the path');
   assert.equal(wolfveilCaveApproachTrailKeep(-30,478),1,'full grading clear of it');
   // The Cistern approach itself still sits on its graded bench.

@@ -20,7 +20,9 @@ export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
   sunken_inkstone_cistern:Object.freeze({
     trailName:'Northern Ridge Path',
     junction:Object.freeze([0,470]),
-    bend:Object.freeze([-18,512]),
+    // West off the Ridge Path first, so every switchback stays >= 12.8 m from
+    // it (the old bend at (-18,512) swung them to 5 m from the path, 10-36 m up).
+    bend:Object.freeze([-16,470]),
     style:'hot_spring_stone',waymark:'INKSTONE CISTERN',
   }),
   echoing_crystal_vault:Object.freeze({
@@ -128,12 +130,15 @@ const approachSegments=WOLFVEIL_CAVE_APPROACHES.flatMap(approach=>{
 });
 
 // Trails a cave approach runs beside but must not bury. The Inkstone Cistern
-// switchbacks climb a steep hill just west of the Ridge Path, 10-36 m above
+// switchbacks used to climb the hill 5 m west of the Ridge Path, 10-36 m above
 // it; their fill and feather spread over the path and cut it with 8-15 m
 // cliffs between benches (story mode, 2026-11-22). Inside these trails'
 // corridors the ground stays natural, fading back to the grading over 3 m.
 export const WOLFVEIL_CAVE_APPROACH_PROTECTED_TRAILS=Object.freeze(['ridge_path']);
-const TRAIL_KEEP_MARGIN=.6,TRAIL_KEEP_BAND=3;
+// Natural to 1.5 m beyond the path's edge, full grading 3 m further out. The
+// Cistern trail leaves the path at its junction, so a wider corridor would lift
+// its first bench off the ground; its switchbacks now stay >= 12.8 m away.
+const TRAIL_KEEP_MARGIN=1.5,TRAIL_KEEP_BAND=3;
 const protectedTrailSegments=WOLFVEIL_ROUTES
   .filter(route=>WOLFVEIL_CAVE_APPROACH_PROTECTED_TRAILS.includes(route.id))
   .flatMap(route=>route.points.slice(1).map((p,i)=>({
