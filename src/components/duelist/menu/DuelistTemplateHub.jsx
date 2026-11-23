@@ -67,7 +67,7 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
 
   return (
     <TemplateSurface id="duelist-play-drawer" kind="mode" title="Choose your game mode"
-      eyebrow="DUELIST ADVENTURE" subtitle={category === 'normal' && lobby.online ? "Tap a mode to join its live match. Other players can join the same room." : "Select a category, then choose a battle."} close={close}>
+      eyebrow="DUELIST ADVENTURE" subtitle={category === 'normal' && lobby.online ? "Select a mode, then browse its live servers." : "Select a category, then choose a battle."} close={close}>
       <div className="dxt-mode-layout">
         <nav className="dxt-mode-categories" aria-label="Play category">
           {MODE_TABS.map(item => {
@@ -111,7 +111,7 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
               : null}
             <div className="dxt-detail-actions">
               {startSolo ? <button type="button" className="dxt-action dxt-action--secondary"
-                onClick={() => launch(mode.id, false)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PRACTICE'}</button>
+                onClick={() => launch(mode.id)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PRACTICE'}</button>
                 : <button type="button" className="dxt-action dxt-action--secondary" disabled><LockKeyhole aria-hidden="true"/> UNAVAILABLE</button>}
               <button type="button" className="dxt-action dxt-action--primary" onClick={() => openServers(mode.route)}
                 disabled={!canOnline} title={!canOnline ? 'Choose a supported casual mode' : 'Browse live servers for this mode'}>
@@ -241,9 +241,9 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     setPanel(id);
   };
   const changeCategory = id => { setCategory(id); setMode(firstTemplateMode(id)); };
-  const launch = (id, online) => {
-    const search = templateLaunch(category, id, online, lobby.online);
-    if (!search || (online && !MENU_MODES[search.mode]?.online)) return;
+  const launch = (id) => {
+    const search = templateLaunch(category, id);
+    if (!search) return;
     navigate({ to: '/duelist-next/play', search: { ...search, from: 'duelist' } });
   };
   // Selecting a mode only changes its details. Online play always goes through
