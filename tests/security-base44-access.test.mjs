@@ -94,3 +94,35 @@ test('clan notification handler verifies HMAC before touching privileged data', 
   assert.ok(code.indexOf('sameHash(signature, expected)') < code.indexOf('base44.asServiceRole'),
     'unverified clan events must never reach the admin entity client');
 });
+test('private clan chat and leader forums cannot be read directly by visitors', () => {
+  const admin = { user_condition: { role: 'admin' } };
+  for (const name of ['ClanMessage', 'ClanFormMessage', 'ClanFormTopic', 'ClanFormChannel']) {
+    assert.deepEqual(entity(name).rls.read, admin, `${name}.read`);
+  }
+  assert.deepEqual(entity('AvatarRuntimeModel_TEMP_CHECK').rls.read, admin);
+  for (const [name, fields] of [
+    ['AvatarHomeState', ['activityLog', 'preferences']],
+    ['ClanVaultItem', ['note']],
+    ['GuildResource', ['note']],
+    ['Party', ['voiceRoomId']],
+  ]) {
+    for (const field of fields) {
+      assert.deepEqual(entity(name).properties[field].rls.read, admin, `${name}.${field}.read`);
+    }
+  }
+});
+
+test('server validates clan membership and channel roles before reading chat', () => {
+  const server = readFileSync(new URL('../base44/functions/secureClanAccess/entry.ts', import.meta.url), 'utf8');
+  const client = readFileSync(new URL('../src/components/game3d/clan/clanStore.jsx', import.meta.url), 'utf8');
+  assert.match(server, /clan_id: divisionId,\s*user_id: userId/);
+  assert.match(server, /verifyChannel\(base44, divisionId, entityData\?\.channelId, membership\)/);
+  assert.match(server, /channel\.divisionId !== divisionId/);
+  assert.match(server, /channel\.role_restriction/);
+  assert.match(server, /message\[0\]\.userId === user\.id/);
+  assert.match(server, /const allowed = \{\}/);
+  assert.doesNotMatch(server, /Division\.update\(divisionId, entityData\)/);
+  assert.match(client, /functions\.invoke\('secureClanAccess'/);
+  assert.doesNotMatch(client, /entities\.ClanMessage\.(filter|list|get|subscribe)/);
+  assert.doesNotMatch(client, /base44\.asServiceRole/);
+});
