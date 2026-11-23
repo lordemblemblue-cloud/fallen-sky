@@ -27,6 +27,7 @@ export default function MobileTouchControls({
 }) {
   const root = useRef(null);
   const pointer = useRef(null);
+  const lookPointer = useRef(null);
   const held = useRef(new Set());
   const callbacks = useRef({});
   callbacks.current = { onMove, onLook, onActionDown, onActionUp };
@@ -71,6 +72,7 @@ export default function MobileTouchControls({
     held.current.clear();
     callbacks.current.onMove?.({ x: 0, y: 0 });
     pointer.current = null;
+    lookPointer.current = null;
     setStick({ x: 0, y: 0 });
   };
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function MobileTouchControls({
     callbacks.current.onMove?.({ x: 0, y: 0 });
   }, []);
 
-  if (!supported) return null;
+  if (!supported || disabled) return null;
 
   const locate = id => layout.positions[id] || defaultMobileTouchLayout(game, landscape)[id];
   const moveEdited = (id, event) => {
@@ -129,7 +131,11 @@ export default function MobileTouchControls({
   };
   const joystickEnd = event => {
     if (editing) return endDrag();
-    if (pointer.current?.kind === 'move' && pointer.current.id === event.pointerId) releaseAll();
+    if (pointer.current?.kind === 'move' && pointer.current.id === event.pointerId) {
+      pointer.current = null;
+      setStick({ x: 0, y: 0 });
+      callbacks.current.onMove?.({ x: 0, y: 0 });
+    }
   };
   const actStart = (id, event) => {
     if (editing) return startDrag(id, event);
@@ -148,7 +154,6 @@ export default function MobileTouchControls({
     if (held.current.delete(id)) callbacks.current.onActionUp?.(id);
     event.stopPropagation();
   };
-  const lookPointer = useRef(null);
   const lookDown = event => {
     if (disabled || editing || lookPointer.current) return;
     if (event.pointerType === 'mouse') return;
