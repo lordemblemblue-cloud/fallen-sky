@@ -4,7 +4,8 @@
 // Customization (CC_ shapes, skin, hair and tattoo layers) goes through the shared
 // AvatarCustomizationRuntime, exactly as on every other body.
 import * as THREE from 'three';
-import { createSceneRenderer } from '../../lib/webgpuSceneRenderer.js';
+import { createSceneRenderer, destroySceneRenderer, isSceneRendererLost, precompileSceneObjects } from '../../lib/webgpuSceneRenderer.js';
+import { createCreatorRendererPool } from './creatorRendererPool.mjs';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { PMREMGenerator as NodePMREMGenerator } from 'three/webgpu';
@@ -78,13 +79,41 @@ function floorTexture() {
   return t;
 }
 
+// One renderer, GPU device or WebGL context for every creator stage, instead of one per mount (creatorRendererPool.mjs).
+const creatorRenderers = createCreatorRendererPool({
+  create: () => createSceneRenderer('fallen-sky', { antialias: true, alpha: true, powerPreference: 'high-performance' }),
+  destroy: (created, data) => {
+    data.studio?.dispose();
+    destroySceneRenderer(created.renderer);
+  },
+  isLost: ({ renderer }) => isSceneRendererLost(renderer) || Boolean(renderer.__sceneState?.error)
+    || Boolean(renderer.getContext?.()?.isContextLost?.()),
+});
+/** Live creator renderers, for tests and the performance write-up. */
+export const creatorRendererStats = () => creatorRenderers.stats();
+if (typeof window !== 'undefined') window.__creatorRendererStats = creatorRendererStats;
+
+// The studio light (RoomEnvironment through PMREM) is made once per renderer and kept with it.
+function studioEnvironment(lease) {
+  if (!lease.data.studio) {
+    const renderer = lease.value.renderer;
+    // WebGPURenderer: three's node PMREM (it renders once the renderer has started)
+    const pmrem = renderer.isWebGPURenderer ? new NodePMREMGenerator(renderer) : new THREE.PMREMGenerator(renderer);
+    const room = new RoomEnvironment();
+    const texture = pmrem.fromScene(room, 0.04).texture;
+    lease.data.studio = { texture, dispose() { texture.dispose(); pmrem.dispose(); room.dispose?.(); } };
+  }
+  return lease.data.studio.texture;
+}
+
 export function createCreatorStage(container, { url, gender = 'male', rigId = '', ambientGaze = false, onReady = () => {}, onState = () => {}, onError = () => {}, onCapabilities = () => {} } = {}) {
   const motionQuery = typeof window !== 'undefined'
     ? window.matchMedia?.('(prefers-reduced-motion: reduce)') : null;
   // The user can change this preference while the creator remains open.
   // Keep the stage's idle, blink and gaze behavior aligned immediately.
   let reduced = Boolean(motionQuery?.matches);
-  const renderer = createSceneRenderer('fallen-sky', { antialias: true, alpha: true, powerPreference: 'high-performance' }).renderer;
+  const lease = creatorRenderers.acquire();
+  const { renderer, ready: rendererReady } = lease.value;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -95,10 +124,7 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
   container.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  // WebGPURenderer: three's node PMREM (it renders once the renderer has started)
-  const pmrem = renderer.isWebGPURenderer ? new NodePMREMGenerator(renderer) : new THREE.PMREMGenerator(renderer);
-  const room = new RoomEnvironment();
-  scene.environment = pmrem.fromScene(room, 0.04).texture;
+  scene.environment = studioEnvironment(lease);
   scene.environmentIntensity = 0.55;
   const camera = new THREE.PerspectiveCamera(26, 1, 0.02, 60);
   const key = new THREE.DirectionalLight(0xfff2e6, 2.1); key.position.set(1.6, 2.6, 2.2);
@@ -248,7 +274,7 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     });
     runtime.update(appearance);
     onCapabilities(capabilities(inspectCustomization(model)));
-    onReady();
+    compileStage().then(() => { if (!disposed) onReady(); });
     } catch(error) {
       if(!disposed) {
         console.error('[Game 3D Creator] The original character model could not be prepared for rendering:',error);
@@ -284,6 +310,22 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
     attempt(0,error);
   };
   new GLTFLoader().load(url, acceptLoadedModel, undefined, onLocalLoadError);
+
+  // Compile the stage's shaders before its first draw. WebGPU otherwise compiles every pipeline synchronously at the
+  // first frame and the page waits for the GPU process (a 3.9 s frame when the creator opened); precompiling also
+  // makes objects drawn later (a new hair) compile in the background. WebGL compiles its programs in parallel where
+  // the browser can (KHR_parallel_shader_compile). Frames are held meanwhile; the stage shows its loading line.
+  const compileStage = async () => {
+    try {
+      const timeout = new Promise((resolve) => { setTimeout(resolve, 8000); });
+      if (renderer.isWebGPURenderer) {
+        await Promise.race([rendererReady, timeout]);
+        if (!disposed) await precompileSceneObjects(renderer, scene, camera, { timeoutMs: 8000 });
+      } else if (typeof renderer.compileAsync === 'function') {
+        await Promise.race([renderer.compileAsync(scene, camera), timeout]);
+      }
+    } catch { /* whatever is left compiles at the first draw, as before */ }
+  };
 
   const capabilities = (customization) => {
     const expressions = new Set();
@@ -399,9 +441,10 @@ export function createCreatorStage(container, { url, gender = 'male', rigId = ''
         n.geometry?.dispose?.();
         (Array.isArray(n.material) ? n.material : [n.material]).forEach((m) => { if (!m) return; Object.values(m).forEach((v) => v?.isTexture && v.dispose()); m.dispose(); });
       });
-      scene.environment?.dispose(); pmrem.dispose(); room.dispose?.();
-      renderer.dispose(); renderer.forceContextLoss?.();
+      // the studio environment stays with the renderer for the next stage
+      scene.environment = null;
       canvas.remove();
+      lease.release();
     },
   };
 }
