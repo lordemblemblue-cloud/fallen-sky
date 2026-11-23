@@ -3,7 +3,9 @@
  * the UI reflows as soon as the user turns the phone.
  */
 export function showLandscapeSuggestion({ touch, width, height } = {}) {
-  return !!touch && Number(width) > 0 && width < 680 && Number(height) > width;
+  // All touch gameplay is landscape-only, including tablets and foldables.
+  // Keep portrait game controls inaccessible until the display actually turns.
+  return !!touch && Number(width) > 0 && Number(height) > Number(width);
 }
 export async function requestLandscapeOnGesture(host = globalThis.window) {
   if (!host) return false;
