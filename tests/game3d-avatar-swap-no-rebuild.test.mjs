@@ -39,7 +39,9 @@ test('a swapped body skips the world\'s one-time spawn, NPC and quest setup', ()
   const setup = between('const setupPlayerAvatar = (fbx, swap = null) => {', '    let shownAvatarUrl = ');
   for (const guard of [
     'if(swap){fbx.position.copy(swap.position);fbx.quaternion.copy(swap.quaternion);}',
-    'if (!swap&&!workflowSpawn&&!returnPosition&&!areaArrival) snapToGround(fbx, 0);',
+    // The snap is skipped for a swapped body and for every placed arrival
+    // (checked as a prefix: a cave ring's hall arrival joined the list).
+    'if (!swap&&!workflowSpawn&&!returnPosition&&!areaArrival',
     'if (!swap && !entryModeRef.current && resumeCheckpoint',
     'if(!swap&&region!==LUNAR_CAVE_REGION&&region!==ASTRAL_DUNGEON_REGION) QUEST_NPCS.forEach(',
     'if (!swap) spawnQuestEnemiesRef.current = createQuestEnemySpawner(',
@@ -47,7 +49,9 @@ test('a swapped body skips the world\'s one-time spawn, NPC and quest setup', ()
     'const workflowSpawn = !swap && ',
     'const areaArrival=!swap&&',
     'const returnPosition=!swap&&',
+    'const caveArrival=!swap&&',
   ]) assert.ok(setup.includes(guard), guard);
+  assert.match(setup, /if \(!swap&&!workflowSpawn&&!returnPosition&&!areaArrival[^)]*\) snapToGround\(fbx, 0\);/);
   // the body itself is set up again: animation, weapons, armor sync, visual runtimes, the ready announcement
   for (const again of ['mixer = new THREE.AnimationMixer(fbx);', 'weaponRuntime = createPlayerWeaponRuntime(',
     'armorEquipSync = createAXEArmorEquipSync();', 'haloVisualRuntime = createAXEHaloVisualRuntime(',
