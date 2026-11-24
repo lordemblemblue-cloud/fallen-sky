@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { QUEST_TEST_DESTINATIONS, questTestDestination } from '../src/components/game3d/threeroads/questTestDestinations.mjs';
 import { placeAnchorWorld } from '../src/components/game3d/threeroads/places/layouts/index.mjs';
 import { findQuestTestSafeLanding } from '../src/components/game3d/threeroads/questTestSafeLanding.mjs';
