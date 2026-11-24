@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/components/auth/AuthContext';
 import { Users, Wifi, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { connectGuestWorldPresence, guestWorldPresenceUrl, guestWorldScene } from './network/guestWorldPresence.mjs';
 
 // One shared world server. Every player joins this single channel.
 const WORLD_CHANNEL = 'game_world_main';
@@ -23,7 +24,7 @@ const POLL_MS = 15000;
  *  - Renders a small HUD widget showing the connection status and capacity
  *  - Bridges to the existing MultiplayerSystem for the actual presence sync
  */
-export default function GameWorldServerManager({ showHud = false }) {
+export default function GameWorldServerManager({ showHud = false, region = 'wolfveil', area = null }) {
   const { user } = useAuth();
   const [status, setStatus] = useState('connecting'); // connecting | connected | full | error
   const [onlineCount, setOnlineCount] = useState(null);
@@ -34,6 +35,29 @@ export default function GameWorldServerManager({ showHud = false }) {
     return ()=>{if(window.__game3dWorldPresence===data)window.__game3dWorldPresence=null;};
   },[status,onlineCount]);
   const joinedRef = useRef(false);
+  const guestConnection = useRef(null);
+  const guestScene = guestWorldScene(region, area);
+  const guestSceneRef = useRef(guestScene);
+  useEffect(() => {
+    guestSceneRef.current = guestScene;
+    guestConnection.current?.setScene(guestScene);
+  }, [guestScene]);
+  useEffect(() => {
+    if (user?.id) return;
+    const url = guestWorldPresenceUrl(import.meta.env.VITE_GAME3D_PRESENCE_WS_URL, window.location.hostname);
+    if (!url) { setStatus('offline'); setOnlineCount(null); return; }
+    const connection = connectGuestWorldPresence({url, initialScene: guestSceneRef.current,
+      onStatus: data => { setStatus(data.status); setOnlineCount(data.count); },
+      onPlayers: players => window.dispatchEvent(new CustomEvent('multiplayerPlayersUpdate', {detail:{players}})),
+    });
+    guestConnection.current = connection;
+    const onPose = event => connection.update(event.detail);
+    window.addEventListener('multiplayerLocalUpdate', onPose);
+    return () => {
+      window.removeEventListener('multiplayerLocalUpdate', onPose);
+      connection.close(); guestConnection.current = null;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -120,6 +144,7 @@ export default function GameWorldServerManager({ showHud = false }) {
 
   // Connection pill follows chat without affecting chat position
   const statusConfig = {
+    offline: { color: 'text-white/60', bg: 'bg-white/5', border: 'border-white/20', label: 'Offline world' },
     connecting: { color: 'text-amber-300', bg: 'bg-amber-500/10', border: 'border-amber-400/30', label: 'Connecting...' },
     connected: { color: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-400/30', label: 'Online' },
     full: { color: 'text-red-300', bg: 'bg-red-500/10', border: 'border-red-400/30', label: 'Server Full' },
