@@ -1,6 +1,6 @@
 // Procedural digital architecture, using the same dark alloy and cyan/brass
 // palette as the arena floor and observatory. No textures, new lights or shaders.
-// Opt-in: do not attach to a live arena until its shared collision is active.
+// The renderer mounts only when the simulation uses the same authored layout.
 import * as THREE from 'three';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 
@@ -31,11 +31,13 @@ export function createModeArchitecture(mode) {
     });
     mesh.instanceMatrix.needsUpdate=true;
     mesh.computeBoundingSphere();
-    mesh.receiveShadow=true;
+    mesh.receiveShadow=false; // mobile: avoid extra per-instance shadow work
+    mesh.castShadow=false;
     group.add(mesh);
   }
   return {group,layout,dispose(){
     group.removeFromParent();
+    for(const mesh of group.children)mesh.dispose();
     geometry.dispose();
     for(const material of materials) material.dispose();
   }};
