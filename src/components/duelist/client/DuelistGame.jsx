@@ -673,7 +673,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
               const dir = forwardOf(body.yaw);
               const reach = level ? Math.min(a.move.range, rayDistance(level, body, dir, a.move.range)) : a.move.range;
               const muzzle = actor.sword.muzzle();
-              actor.aim.show({ x: muzzle.x, y: PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
+              actor.aim.show({ x: muzzle.x, y: (world.arenaLayout ? body.y : 0) + PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
             } else actor.aim.hide();
           }
           actor.sword.update(show);
