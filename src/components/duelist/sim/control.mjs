@@ -60,7 +60,7 @@ export function stepControlPoints(match, dt) {
       const fighter = world.fighters.get(seat.id);
       if (!fighter || fighter.vitals.dead || isDown(fighter, world.time) || fighter.heldBy || world.time < (fighter.activeRelicUntil ?? -Infinity)) continue;
       const body = bodyOf(world, seat.id);
-      if (!body || Math.hypot(body.x - point.x, body.z - point.z) > CONTROL.radius) continue;
+      if (!body || (world.arenaLayout && body.y > 1.5) || Math.hypot(body.x - point.x, body.z - point.z) > CONTROL.radius) continue;
       inside[seat.team]++;
     }
     point.contested = inside.red > 0 && inside.blue > 0;
