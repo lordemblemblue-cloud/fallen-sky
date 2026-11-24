@@ -24,6 +24,7 @@ import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
 import { makeEscort, stepEscort, ESCORT_RADIUS } from './escort.mjs';
+import { getModeArenaLayout } from './modeArenaLayout.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -32,7 +33,7 @@ export const MODES = Object.freeze({
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
-  escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, clock: 180 }),
+  escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 28, respawn: 4, protect: 1.5, clock: 180 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
   control: Object.freeze({ id: 'control', name: 'Three-Point Control', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
@@ -49,10 +50,11 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  */
 export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const world = createWorld({ arenaRadius: def.arena });
+  const arenaLayout = getModeArenaLayout(def.id);
+  const world = createWorld({ arenaRadius: def.arena, arenaLayout });
   const match = {
     mode: def.id, def, world, seed, botLevel, random: createRandom(seed * 7919 + 13),
-    capacity: Math.max(players.length, seats ?? def.seats),
+    capacity: Math.max(players.length, arenaLayout ? Math.min(seats ?? def.seats, arenaLayout.capacity) : seats ?? def.seats),
     phase: 'countdown', phaseUntil: COUNTDOWN, clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
