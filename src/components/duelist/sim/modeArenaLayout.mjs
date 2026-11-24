@@ -150,3 +150,43 @@ export function arenaRayFraction(map,from,to,pad=0){
 export function arenaLineClear(map,a,b){
   return arenaRayFraction(map,{x:a.x,y:(a.y||0)+1.2,z:a.z},{x:b.x,y:(b.y||0)+1.2,z:b.z})>=1-EPS;
 }
+
+// Navigation anchors at building/cover corners. Ground routes intentionally
+// stay off roofs; players may use the stairs. Cache the graph per immutable map.
+const navCache=new WeakMap();
+const routeClear=(map,a,b)=>arenaRayFraction(map,{x:a.x,y:0.65,z:a.z},{x:b.x,y:0.65,z:b.z},0.42)>=1-EPS;
+function groundGraph(map){
+  if(navCache.has(map))return navCache.get(map);
+  const nodes=[];
+  for(const part of map.parts){
+    if(part.y0>0.65 || part.y1<0.4 || part.kind==='step' || part.kind==='duct')continue;
+    for(const x of [part.x0-0.75,part.x1+0.75])for(const z of [part.z0-0.75,part.z1+0.75]){
+      if(Math.hypot(x,z)>=map.radius-0.6 || arenaBodyBlockers(map,{x,y:0,z,radius:0.5,height:ARENA_BODY_HEIGHT}).length)continue;
+      nodes.push({x,z});
+    }
+  }
+  // A coarse ring adds open bypasses without building a large grid.
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI/8,x=Math.sin(a)*(map.radius-2),z=Math.cos(a)*(map.radius-2);
+    if(!arenaBodyBlockers(map,{x,y:0,z,radius:0.5,height:ARENA_BODY_HEIGHT}).length)nodes.push({x,z});
+  }
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+  const edges=nodes.map((a,i)=>nodes.flatMap((b,j)=>j!==i && routeClear(map,a,b)?[{j,d:distance(a,b)}]:[]));
+  const graph={nodes,edges};navCache.set(map,graph);return graph;
+}
+export function nextArenaGroundWaypoint(map,from,to){
+  if(routeClear(map,from,to))return to;
+  const {nodes,edges}=groundGraph(map);
+  const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+  const costs=nodes.map(p=>routeClear(map,from,p)?dist(from,p):Infinity);
+  const first=nodes.map((_,i)=>i),done=new Set();
+  let best=Infinity,way=null;
+  for(let k=0;k<nodes.length;k++){
+    let i=-1;for(let j=0;j<nodes.length;j++)if(!done.has(j)&&(i<0||costs[j]<costs[i]))i=j;
+    if(i<0||costs[i]>=best)break;
+    done.add(i);
+    if(routeClear(map,nodes[i],to)){const total=costs[i]+dist(nodes[i],to);if(total<best){best=total;way=nodes[first[i]];}}
+    for(const {j,d} of edges[i])if(costs[i]+d<costs[j]){costs[j]=costs[i]+d;first[j]=first[i];}
+  }
+  return way;
+}
