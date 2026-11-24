@@ -2,7 +2,7 @@
 // A template can describe planned content without inventing working matchmaking or private lobbies.
 export const MODE_TABS = Object.freeze([
   { id: 'normal', title: 'NORMAL', description: 'Standard battles and offline matches.' },
-  { id: 'ranked', title: 'RANKED', description: 'Competitive matchmaking is in development.' },
+  { id: 'ranked', title: 'RANKED', description: 'Ranked public servers are planned.' },
   { id: 'practice', title: 'PRACTICE', description: 'Train against bots in supported local modes.' },
   { id: 'custom', title: 'CUSTOM', description: 'Private lobbies and rulesets are in development.' },
 ]);
@@ -20,11 +20,11 @@ export const TEMPLATE_MODES = Object.freeze({
     mode('football', 'Football', 'Compete with the ball and your teammates.', 'football', 'circle', 'Teams'),
   ]),
   ranked: Object.freeze([
-    mode('duel', 'Ranked Duel', 'Competitive one-on-one. Ranked queue is not deployed.', null, 'swords', '1 v 1'),
-    mode('ctf', 'Ranked CTF', 'Competitive flag battles. Ranked queue is not deployed.', null, 'flag', 'Teams'),
-    mode('tdm', 'Ranked Deathmatch', 'Team-based competitive play. Ranked queue is not deployed.', null, 'users', 'Teams'),
-    mode('control', 'Ranked Control', 'Capture objectives for rank. Ranked queue is not deployed.', null, 'target', 'Teams'),
-    mode('ffa', 'Ranked Free for All', 'Earn rank in solo matches. Ranked queue is not deployed.', null, 'zap', 'Solo'),
+    mode('duel', 'Ranked Duel', 'Competitive one-on-one. Ranked servers are not deployed.', null, 'swords', '1 v 1'),
+    mode('ctf', 'Ranked CTF', 'Competitive flag battles. Ranked servers are not deployed.', null, 'flag', 'Teams'),
+    mode('tdm', 'Ranked Deathmatch', 'Team-based competitive play. Ranked servers are not deployed.', null, 'users', 'Teams'),
+    mode('control', 'Ranked Control', 'Capture objectives for rank. Ranked servers are not deployed.', null, 'target', 'Teams'),
+    mode('ffa', 'Ranked Free for All', 'Earn rank in solo matches. Ranked servers are not deployed.', null, 'zap', 'Solo'),
     mode('tournament', 'Tournament Duel', 'Tournament brackets are in development.', null, 'trophy', 'Planned'),
   ]),
   practice: Object.freeze([
@@ -48,10 +48,10 @@ export const templateTab = id => MODE_TABS.find(tab => tab.id === id) || MODE_TA
 export const templateModes = id => TEMPLATE_MODES[id] || TEMPLATE_MODES.normal;
 export const firstTemplateMode = id => templateModes(id)[0]?.id || 'duel';
 export const templateMode = (category, id) => templateModes(category).find(mode => mode.id === id) || templateModes(category)[0];
-export const templateLaunch = (category, id, online = false, onlineAvailable = false) => {
+// Practice starts locally; online rooms are joined only from the server browser.
+export const templateLaunch = (category, id, online = false) => {
   const found = templateMode(category, id);
-  if (found.id !== id || !found.route) return null;
+  if (found.id !== id || !found.route || online) return null;
   if (category === 'ranked' || category === 'custom') return null;
-  if (online && (category !== 'normal' || !onlineAvailable)) return null;
-  return { mode: found.route, online: online ? 1 : 0 };
+  return { mode: found.route, online: 0 };
 };

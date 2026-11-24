@@ -20,7 +20,9 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
   const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
   const back = mode === 'any' ? 'join' : mode;
   const backToMenu = from === 'duelist' ? '/duelist' : null;
-  const leave = () => (backToMenu ? navigate({ to: backToMenu }) : navigate({ to: '/duelist-next/$page', params: { page: back } }));
+  const leave = () => (from === 'online-play'
+    ? navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode } })
+    : backToMenu ? navigate({ to: backToMenu }) : navigate({ to: '/duelist-next/$page', params: { page: back } }));
   const title = mode === 'any' ? 'Join' : mode === 'story' ? missionTitle(playing) : MENU_MODES[mode]?.title || 'Practice';
   const where = mode === 'story' ? (online ? 'story mission, with a crew' : 'story mission, solo') : online ? 'online' : mode === 'practice' ? 'practice' : `against bots (${prefs.level})`;
   const unavailable = online && !serverUrl;
