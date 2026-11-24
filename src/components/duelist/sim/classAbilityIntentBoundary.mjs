@@ -12,13 +12,22 @@ const plain = value => value !== null && typeof value === 'object' &&
  * A slot is an intent, NOT a move ID or authority to apply damage, cooldowns or meter.
  */
 export function parseClassAbilityIntent(packet) {
-  if (!plain(packet) || Object.keys(packet).length !== 2 ||
+  try {
+    return parsePacket(packet);
+  } catch {
+    return { ok: false, reason: 'invalid-ability-request' };
+  }
+}
+
+function parsePacket(packet) {
+  if (!plain(packet) || Reflect.ownKeys(packet).length !== 2 ||
       !own(packet, 'type') || !own(packet, 'slot')) {
     return { ok: false, reason: 'invalid-ability-request' };
   }
   const type = Object.getOwnPropertyDescriptor(packet, 'type');
   const slot = Object.getOwnPropertyDescriptor(packet, 'slot');
-  if (!own(type, 'value') || !own(slot, 'value') ||
+  if (!type || !slot || !type.enumerable || !slot.enumerable ||
+      !own(type, 'value') || !own(slot, 'value') ||
       type.value !== 'class.ability' ||
       !Number.isInteger(slot.value) || slot.value < 0 || slot.value > 3) {
     return { ok: false, reason: 'invalid-ability-request' };
