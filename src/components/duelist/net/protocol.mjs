@@ -210,11 +210,11 @@ export function encodeOwn(f, body, time) {
     ad: [body.jumped ? 1 : 0, body.airDashReady ? 1 : 0, null, body.airJumpAt ?? null],
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
-      f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
+      f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until, f.activeAnchorAt.y ?? null] : null],
     mt: f.meter || 0, sg: f.specialTarget || 0,
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
-    m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
+    m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done), r5(m.baseY ?? 0)],
   };
 }
 
@@ -233,7 +233,7 @@ export function applyOwn(f, body, data) {
   f.shopStats = itemBonuses(f.items); // exact item bonuses match server before reconstructing moves
   f.activeRelicUntil = then(data.re?.[0]);
   f.activeRelicCooldownUntil = then(data.re?.[1]);
-  f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2] } : null;
+  f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2], ...(Number.isFinite(data.re[2][3]) ? {y:data.re[2][3]} : {}) } : null;
   f.mode = data.md || 'balanced';
   f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1, from: data.a[6] || 0 } : null;
   f.cooldowns = untimes(data.cd);
@@ -255,6 +255,6 @@ export function applyOwn(f, body, data) {
     airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashReady: !!data.ad?.[1] });
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
-    : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };
+    : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7], baseY: m[8] ?? 0 };
   return { f, body };
 }
