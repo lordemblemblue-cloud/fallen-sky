@@ -1,23 +1,24 @@
-# Duelist Adventure — original digital PvP districts (draft)
+# Duelist Adventure — low-poly digital PvP districts
 
-## Design targets
+## Implemented on draft PR #336
 
-- Control: Meridian Observatory District — two relay buildings, clear A/B/C pads, lower interior routes and raised decks; avoid capture from roof height when integrating.
-- Escort: Meridian Freight District — keep the full existing carrier route and contest circle clear, add two service/loading buildings, cover and rooftop flanking.
-- Team deathmatch: Meridian Combat District — rotationally symmetric two-station layout, center cover, two flank routes and reciprocal rooftop approaches.
-- Keep current 28 m control/escort and 22 m TDM radii for this blockout. More usable space comes from traversable height, not long empty walks. Revisit dimensions with 8- and 20-player tests, not arbitrary scale increases.
-- Original art using the existing dark alloy/cyan palette; one instanced mesh per solid kind, no additional texture loading or lights. Inspired by compact mobile objective arenas, not copying Star Wars assets or exact maps.
+| Mode | District | Diameter | Seat cap | Box instances |
+| --- | --- | --- | --- | --- |
+| Control | Meridian Observatory | 56 m | 8 (4v4) | 60 |
+| Transport | Meridian Freight | 56 m | 10 (5v5) | 60 |
+| Team Deathmatch | Meridian Combat | 44 m | 8 (4v4) | 61 |
 
-## Implementation status
+Each uses an original digital-alloy palette, two open ground-floor buildings, 3.2 m roof decks, open maintenance stair ducts and cover. At 12 triangles per box this adds 720–732 triangles, grouped into five instanced meshes; no new textures, lights or shadow-casting passes. Counts exclude existing floor/skyline/objectives/characters. Other modes retain their existing layouts and limits.
 
-The pure map layout, vertical overlap/landing helpers, instanced mesh factory and geometry tests are implemented. **Not mounted in any live match.** Existing world physics uses flat floors and 2D level blockers; mounting art now would permit clipping or invisible obstacles. The maintenance ducts are open-topped stepped passages, not yet an enclosed crouch/vent system.
+The draft now mounts architecture from the authoritative match layout in offline and online game sources. World movement, vertical landing and step climbing, collision-aware separation, attack/target occlusion, projectile height, rooftop jump state, camera clamping and ground bot detours are wired. Control ignores fighters above 1.5 m to avoid rooftop captures. Transport retains its existing ground objective logic. Protocol bumped to 14 so an old client cannot silently join the new simulation. Do not release client and server separately. No UI redesign, renderer backend conversion, or class balance changes.
 
-## Required integration sequence
+## Verification performed
 
-1. Integrate shared layout into authoritative match world and local practice without replacing mission level semantics. Coordinate with #333 (match/server), class and WebGPU owners; pin a shared map revision for online clients.
-2. Implement swept horizontal and vertical collision, step-up/step-down, grounded jumping from nonzero height, ceiling hits, fall/roof landing, ring boundaries, player separation by vertical overlap, and projectile/melee line of sight. Ground paths stay usable by all classes. Integrate height-aware capture (Control currently checks XZ only).
-3. Mount the instanced architecture in the client only when the server/shared physics map agrees. Add camera occlusion and roof/interior visibility. Avoid changes to renderer setup and HUD.
-4. Add bot navigation with distinct floor/roof links, stair traversal, payload attack/defend flanks, objective approach and spawn safety.
-5. Verify local and WebSocket matches, mobile landscape controls, low/high routes, ability targeting, objective scoring, device performance and fair team routes. Add fully enclosed vent shortcut only after headroom and crouch support exist.
+Direct execution of the exact pure geometry module confirmed all three map bounds, counts, zero capture-pad/transport-route conflicts, wall collision, tunnel traversal, stair ascent to 3.2 m, roof landing, roof line-of-sight blocking and a ground detour waypoint. These are direct geometry smoke checks, **not** full Node regression or browser results. GitHub workflow added for focused tests and build. Local repository clone failed DNS; do not claim local npm test or build.
 
-Tests added: tests/duelist-mode-arena-layout.test.mjs. No runtime/CI or mobile QA pass asserted. No merge/deploy.
+## Review gates
+
+- Run focused Node tests, lint, build and broader match regression suite. Confirm old control/escort tests and both protocol ends. 
+- Test all four classes with roof combat, knockback, grip/execute, relic, double jump, projectiles and camera occlusion. Check cross-elevation effects and reconciliation on real network. Bot navigation currently provides ground detours; roof pursuit and enclosed crawl vents remain future work.
+- Validate on physical mobile WebGPU/graphics devices; geometry budget is not an FPS guarantee.
+- Coordinate with #333 direct-join server capacity (20-human draft) and class/WebGPU agents: #336 intentionally uses 8/10/8 caps for these maps; preserve these in any integration. Shared files sim/match.mjs, server/duelist/server.mjs, net/protocol.mjs and client/DuelistGame.jsx require manual conflict review. No merge/deploy.
