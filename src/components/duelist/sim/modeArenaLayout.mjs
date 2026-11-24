@@ -1,6 +1,6 @@
 // Original, renderer-independent PvP arena blockouts. Coordinates are metres.
 // All solid geometry is explicit and shared: never mount the art without its authority collision.
-// These layouts are opt-in until vertical collision, bots and camera are integrated.
+// Layouts are shared by offline matches, server authority and client prediction.
 const box = (id, kind, x, y, z, width, height, depth) =>
   Object.freeze({ id, kind, x0:x-width/2, x1:x+width/2, y0:y, y1:y+height, z0:z-depth/2, z1:z+depth/2 });
 
@@ -26,9 +26,9 @@ function building(id, x, z, stairsSide = 1, approach = -1) {
   return parts;
 }
 const cover=(id,x,z,w=2.4,d=1.1)=>box(id,'cover',x,0,z,w,0.85,d);
-const layout=(id,radius,parts)=>Object.freeze({id,radius,parts:Object.freeze(parts)});
+const layout=(id,radius,capacity,parts)=>Object.freeze({id,radius,capacity,parts:Object.freeze(parts)});
 const MAPS=Object.freeze({
-  control:layout('meridian-observatory-district',28,[
+  control:layout('meridian-observatory-district',28,8,[
     ...building('relay',-3,0),
     ...building('east-lab',3,10,-1),
     cover('north-screen',2,-10), cover('south-screen',-1,15),
@@ -40,7 +40,7 @@ const MAPS=Object.freeze({
     cover('loading-screen',9,2), cover('defense-screen',13,12),
     cover('west-screen',-11,-7,1.1,2.4), cover('arrival-screen',-7,16),
   ]),
-  tdm:layout('meridian-combat-district',22,[
+  tdm:layout('meridian-combat-district',22,8,[
     ...building('west-station',-7,2),
     ...building('east-station',7,-2,-1,1),
     cover('north-west',-5,-12), cover('north-east',5,-12),
@@ -72,4 +72,81 @@ export function arenaLandingHeight(map,{x,z,previousY,nextY}) {
     }
   }
   return landing;
+}
+
+// Keep the support radius smaller than the horizontal body so narrow treads
+// can be traversed while still preventing a fighter's capsule from clipping.
+export const ARENA_BODY_HEIGHT=1.8;
+const EPS=1e-5;
+export function arenaGrounded(map,body,radius=0.4) {
+  return body.y<=EPS || map.parts.some(p=>Math.abs(p.y1-body.y)<EPS &&
+    overlapsArenaFootprint(p,body.x,body.z,radius*0.85));
+}
+function blocked(map,body,radius) {
+  return arenaBodyBlockers(map,{...body,radius,height:ARENA_BODY_HEIGHT});
+}
+// Swept axis-separated motion, with a bounded automatic stair step. The
+// collision interval is height-aware; rooftops do not block the ground tunnel.
+export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
+  const n=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dz),Math.abs(dy))/0.15));
+  let hit=false, landed=false, ceiling=false;
+  for(let i=0;i<n;i++){
+    for(const [axis,delta] of [['x',dx/n],['z',dz/n]]){
+      if(!delta)continue;
+      const trial={x:body.x,y:body.y,z:body.z,[axis]:body[axis]+delta};
+      const blockers=blocked(map,trial,radius);
+      if(!blockers.length){body[axis]=trial[axis];continue;}
+      if(allowStep && dy<=0 && arenaGrounded(map,body,radius)){
+        const top=Math.max(...blockers.map(p=>p.y1));
+        if(top>body.y && top-body.y<=0.41 && blockers.every(p=>p.kind==='step')){
+          trial.y=top;
+          if(!blocked(map,trial,radius).length){
+            body[axis]=trial[axis];body.y=top;landed=true;continue;
+          }
+        }
+      }
+      hit=true;
+    }
+    const next=Math.max(0,body.y+dy/n);
+    if(dy>0){
+      let limit=next;
+      for(const p of map.parts){
+        if(!overlapsArenaFootprint(p,body.x,body.z,radius))continue;
+        if(body.y+ARENA_BODY_HEIGHT<=p.y0+EPS && next+ARENA_BODY_HEIGHT>p.y0)
+          limit=Math.min(limit,p.y0-ARENA_BODY_HEIGHT);
+      }
+      if(limit<next){ceiling=true;hit=true;}
+      body.y=Math.max(0,limit);
+    }else if(dy<0){
+      let floor=0;
+      for(const p of map.parts){
+        if(p.y1<=body.y+EPS && p.y1>=next-EPS &&
+          overlapsArenaFootprint(p,body.x,body.z,radius))floor=Math.max(floor,p.y1);
+      }
+      body.y=Math.max(next,floor);
+      if(body.y<=EPS || floor>=next-EPS && floor>0)landed=true;
+    }
+  }
+  const distance=Math.hypot(body.x,body.z), limit=map.radius-radius;
+  if(distance>limit){body.x*=limit/distance;body.z*=limit/distance;hit=true;}
+  return {hit,landed,ceiling};
+}
+// 3D segment vs box, used for camera, combat and projectile occlusion.
+export function arenaRayFraction(map,from,to,pad=0){
+  let best=1;
+  for(const p of map.parts){
+    let enter=0,exit=best;
+    for(const axis of ['x','y','z']){
+      const o=from[axis],d=to[axis]-o,lo=p[axis+'0']-pad,hi=p[axis+'1']+pad;
+      if(Math.abs(d)<1e-9){if(o<lo || o>hi){enter=2;break;}continue;}
+      const a=(lo-o)/d,b=(hi-o)/d;
+      enter=Math.max(enter,Math.min(a,b));exit=Math.min(exit,Math.max(a,b));
+      if(enter>exit)break;
+    }
+    if(enter<=exit && exit>=0 && enter>=0)best=Math.min(best,enter);
+  }
+  return best;
+}
+export function arenaLineClear(map,a,b){
+  return arenaRayFraction(map,{x:a.x,y:(a.y||0)+1.2,z:a.z},{x:b.x,y:(b.y||0)+1.2,z:b.z})>=1-EPS;
 }
