@@ -8,6 +8,7 @@
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
 import { MOVES, BLOCK, CLASSES, FLOW, SNAP, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
+import { arenaLineClear, nextArenaGroundWaypoint } from './modeArenaLayout.mjs';
 
 export const BOT_LEVELS = Object.freeze({
   trainee: Object.freeze({ reaction: 0.45, guardChance: 0.25, rollChance: 0.1, powerChance: 0.15, comboLength: 2, aggression: 0.5,
@@ -108,6 +109,14 @@ input.target = foe?.id || null;
   const theirs = foe ? bodyOf(world, foe.id) : null;
   const d = theirs ? dist(mine, theirs) : Infinity;
 
+  if(world.arenaLayout && mine.y<0.2){
+    const destination=goal && (d>ENGAGE || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
+    if(destination && !arenaLineClear(world.arenaLayout,mine,destination)){
+      if(!bot.arenaPath || now>=bot.arenaPath.until){bot.arenaPath={until:now+0.6,point:nextArenaGroundWaypoint(world.arenaLayout,mine,destination)};}
+      const p=bot.arenaPath.point;
+      if(p && dist(mine,p)>0.25){const a=angleTo(mine,p);input.move={x:Math.sin(a),z:Math.cos(a)};input.face=a;input.strafe=false;return input;}
+    }
+  }
   // the mode's objective, when no fight is close (or it cannot wait)
   if (goal && (d > ENGAGE || (goal.urgent && !goal.hunt && d > 2.6))) {
     const gd = dist(mine, goal);
