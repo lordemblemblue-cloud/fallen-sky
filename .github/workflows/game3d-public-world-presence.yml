@@ -1,0 +1,24 @@
+name: Fallen Sky public world presence
+on:
+  pull_request:
+    paths:
+      - 'server/game3d/publicPresence*.mjs'
+      - 'server/game3d/tests/publicPresence.test.mjs'
+      - 'src/components/game3d/network/guestWorldPresence.mjs'
+      - 'src/components/game3d/GameWorldServerManager.jsx'
+      - 'src/pages/GameView.jsx'
+      - '.github/workflows/game3d-public-world-presence.yml'
+permissions:
+  contents: read
+jobs:
+  presence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+        working-directory: server/game3d
+      - run: node --test server/game3d/tests/publicPresence.test.mjs
