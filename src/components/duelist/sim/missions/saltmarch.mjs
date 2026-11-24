@@ -1,13 +1,8 @@
 // Saltmarch: the second co-op story mission (1 to 4 players), after Contraband. Original story, written for
 // this game.
 //
-// The ledger cores the crew carried out of the depot went to the Houses' court; within a day the Houses filed
-// a warrant on the place the last shipment of guns went: Saltmarch, an old salt works where unbound Will users
-// (people the Houses never registered) hide. Their wardens, Will users sworn to the Houses, are on the way.
-// The crew gets there first. The defenders take them for wardens and fire; beaten, they stand down. The keeper
-// tells them who handed the Houses the ledger, and asks them to ring the warning bells. Then the crew holds
-// the tunnel door beside Arden while the refuge empties, and faces the Warden-Captain: another of Arden's
-// students, who chose the Houses.
+// The crew reaches the witnesses before Crane, evacuates the refuge with Arden, and confronts
+// the captain who profited from both the drug shipments and the arms sales.
 //
 // The refuge (metres; x east, z north): the outer yard across the south behind its lock; the commons in the
 // middle, the dormitories west of it and the infirmary east; the chapel along the north, the tunnel mouth in
@@ -148,7 +143,7 @@ const STAGES = [
     enter: (m, h) => {
       h.spawn('yard');
       h.enable('lockConsole');
-      h.say('Ione', 'The ledger\'s last shipment came here: Saltmarch, an old salt works. The Houses filed a warrant on it this morning.');
+      h.say('Ione', 'Saltmarch kept the original receipts. Crane\'s on her way with a warrant to seize them. We need the witnesses alive.');
       h.say('Ione', 'Get inside before their wardens do. And go easy: whoever is in there will take you for wardens.');
     },
     retry: (m, h) => h.respawn('yard'),
@@ -176,11 +171,11 @@ const STAGES = [
         h.yieldAll('commons');
         h.yieldAll('yard');
         m.comms.length = 0;
-        h.say('Hask', 'Enough! ...You hold back. Wardens never hold back. Who sent you?');
-        h.say('Ione', 'Tell him the truth. We are here because of the ledger.');
-        h.say('Hask', 'Then you know Arden armed us. Do you know who put that ledger in the Houses\' hands?');
-        h.say('Ione', '...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants.');
-        h.say('Hask', 'Then help us leave. Ring the warning bells and the tunnel opens under the chapel. Hurry: wardens do not knock.');
+        h.say('Hask', 'You had a clear shot. Why\'d you let me get back up?');
+        h.say('Ione', 'Tell him about the blue glass. Show him Arden\'s seal.');
+        h.say('Hask', 'My daughter counted jars on the late shift. When a case broke, Crane docked her pay. Here. That\'s her handwriting.');
+        h.say('Ione', 'I... I sent her name to the court this morning. I thought they\'d protect her. Crane signed for the file.');
+        h.say('Hask', 'She\'s in the infirmary. Ring all three bells. Our people know the way out when they hear them.');
       }
     },
     markers: (m, h) => following(m, h, 'hask', 'Keeper Hask'),
@@ -212,7 +207,7 @@ const STAGES = [
       h.open('tunnel');
       h.ally('arden');
       m.comms.length = Math.min(m.comms.length, 1);
-      h.say('Arden', 'You came. I hoped you would, and hoped you would not.');
+      h.say('Arden', 'I used to make Crane empty her pockets before practice. Loose change everywhere. I should\'ve asked whose it was.');
       h.say('Arden', 'A hundred people are on those stairs. Hold this door with me.');
       h.spawn('holdA');
     },
@@ -220,7 +215,7 @@ const STAGES = [
     update: (m, h, dt) => {
       if (h.crewNear(HOLD, 6) >= 1) h.flag('hold', (m.flags.hold || 0) + dt);
       if (!m.flags.waveB && m.flags.hold >= 14) { h.flag('waveB'); h.spawn('holdB'); h.say('Ione', 'A second squad through the commons. Wardens and a marksman.'); }
-      if (!m.flags.lastOnes && m.flags.hold >= 30) { h.flag('lastOnes'); h.say('Hask', 'The last of us are in the tunnel. Thank you, whoever you are.'); }
+      if (!m.flags.lastOnes && m.flags.hold >= 30) { h.flag('lastOnes'); h.say('Hask', 'My girl\'s through. She\'s still got her book. You hear that? We\'ve got her out.'); }
     },
     timer: (m) => HOLD_SECONDS - (m.flags.hold || 0),
     markers: () => [{ ...HOLD, label: 'Hold here' }],
@@ -233,22 +228,22 @@ const STAGES = [
       h.spawn('captain');
       h.allyPost('arden', { x: 3, z: 20 });
       m.comms.length = Math.min(m.comms.length, 1);
-      h.say('Crane', 'Arden Vale. And company. I carry a warrant for the teacher, and a blank line beneath it.');
+      h.say('Crane', 'Hand over the book. You can walk out with your teacher. I\'ll even pay you what I paid the Legion.');
     },
     retry: (m, h) => { h.spawn('captain'); h.flag('craneHalf', false); },
     update: (m, h) => {
       const crane = h.tagged('crane');
       const f = crane && m.world.fighters.get(crane.id);
       if (!f || m.flags.craneYielded) return;
-      if (f.vitals.hp / f.vitals.max.hp <= 0.55 && !m.flags.craneHalf) { h.flag('craneHalf'); h.say('Crane', 'Arden taught you well. Arden taught me too, once.'); }
+      if (f.vitals.hp / f.vitals.max.hp <= 0.55 && !m.flags.craneHalf) { h.flag('craneHalf'); h.say('Crane', 'What do you think kept my garrison fed? Those little blue bottles paid us for years!'); }
       if (crane.yielded) {
         h.flag('craneYielded');
         h.yieldAll();
         m.comms.length = 0;
-        h.say('Crane', 'Go, then. All of you.');
-        h.say('Crane', 'The warrant named a teacher. By morning it will name the students.');
-        h.say('Arden', 'The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did.');
-        h.say('Ione', 'There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court.');
+        h.say('Crane', 'Call them off... please. My wardens will stand down.');
+        h.say('Crane', 'The account key\'s in my coat. Take it. Just let me stand when they come for me.');
+        h.say('Arden', 'The council put Saltmarch under your command. My company will serve here, if you\'ll have us.');
+        h.say('Ione', 'Crane\'s in custody. First supply train just called in. Our people at the bridge finally have something to defend it with.');
       }
     },
     markers: (m, h) => following(m, h, 'crane', 'Warden-Captain Crane'),
@@ -267,5 +262,5 @@ export const SALTMARCH = Object.freeze({
   interactables: INTERACTABLES,
   stages: STAGES,
   lift: Object.freeze({ ...HOLD, radius: 6 }), // the ring on the floor where the crew holds
-  ending: 'The tunnel came down behind the last of the unbound. When the Houses\' second company reached Saltmarch, it found an empty refuge and a new warrant with your names on it.',
+  ending: 'At dawn the witnesses testified. Crane lost her command and the Legion lost its supplier. Saltmarch became your base. When the first company drew weapons from its stores, you knew some of their names already.',
 });

@@ -14,7 +14,7 @@ export default function DuelistCampaignPanel({ onLaunch }) {
     <section className="g2-duelist-detail g2-duelist-campaign" aria-label="Story campaign">
       <div className="g2-duelist-detail__kicker"><BookOpen size={18} aria-hidden="true" /> Story Campaign · Chapter One</div>
       <h2>Contraband</h2>
-      <p className="g2-duelist-detail__intro">Infiltrate a freight depot, recover evidence of illegal crystal weapons and uncover the mentor behind the shipments. Complete the mission alone or with a crew of up to four.</p>
+      <p className="g2-duelist-detail__intro">Infiltrate a freight depot, trace the blue drug and uncover who is arming the Ash Legion. Complete the mission alone or with a crew of up to four.</p>
       <div className="g2-duelist-campaign__steps">
         <span>Infiltrate</span><span>Find the Ledger</span><span>Escape</span><span>Face the Mentor</span>
       </div>

@@ -176,5 +176,5 @@ test('Contraband, start to finish, by a piloted crew of two: every objective in 
   const arden = [...m.enemies.values()].find((e) => e.tag === 'arden');
   assert.equal(arden.yielded, true);
   assert.equal(m.world.fighters.get(arden.id).vitals.dead, false);
-  assert.match(missionView(m, 'a').ending, /evidence is out/);
+  assert.match(missionView(m, 'a').ending, /Every payment ended at Captain Crane/);
 });
