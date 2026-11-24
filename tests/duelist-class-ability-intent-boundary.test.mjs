@@ -45,3 +45,16 @@ test('unknown or prototype-name classes cannot resolve client intents', () => {
     assert.deepEqual(resolveClassAbilityIntent(intent(0), id), { ok: false, reason: 'unavailable-class-ability' });
   }
 });
+
+
+test('non-JSON fields and unreadable packets fail closed', () => {
+  const hidden = Object.defineProperty(intent(0), 'seatId', { value: 'victim' });
+  const symbol = { ...intent(0), [Symbol('meter')]: 100 };
+  const nonEnumerableSlot = Object.defineProperty(intent(0), 'slot', { enumerable: false });
+  const revoked = Proxy.revocable(intent(0), {});
+  revoked.revoke();
+  const hostile = new Proxy(intent(0), { ownKeys() { throw Error('unreadable'); } });
+  for (const packet of [hidden, symbol, nonEnumerableSlot, revoked.proxy, hostile]) {
+    assert.deepEqual(parseClassAbilityIntent(packet), { ok: false, reason: 'invalid-ability-request' });
+  }
+});
