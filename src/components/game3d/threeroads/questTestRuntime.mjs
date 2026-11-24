@@ -4,8 +4,8 @@ let preview = null;
 let checkpointHold = false;
 
 function changed() {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('game3dQuestTestSessionChanged'));
+  if (typeof globalThis.window !== 'undefined') {
+    globalThis.window.dispatchEvent(new globalThis.Event('game3dQuestTestSessionChanged'));
   }
 }
 
