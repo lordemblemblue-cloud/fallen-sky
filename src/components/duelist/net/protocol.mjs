@@ -46,7 +46,8 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 13; // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
+export const PROTOCOL = 14; // 14: shared multilevel PvP arena layouts; old clients must reload.
+// // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
