@@ -4,7 +4,7 @@
 const box = (id, kind, x, y, z, width, height, depth) =>
   Object.freeze({ id, kind, x0:x-width/2, x1:x+width/2, y0:y, y1:y+height, z0:z-depth/2, z1:z+depth/2 });
 
-function building(id, x, z, stairsSide = 1) {
+function building(id, x, z, stairsSide = 1, approach = -1) {
   const parts = [
     box(id+'-west', 'wall', x-3.2, 0, z, 0.4, 3.2, 5.6),
     box(id+'-east', 'wall', x+3.2, 0, z, 0.4, 3.2, 5.6),
@@ -15,7 +15,13 @@ function building(id, x, z, stairsSide = 1) {
   // maintenance duct leads to the roof independently of a fighter's jump skill.
   for (let i=0; i<8; i++) {
     const h=(i+1)*0.4;
-    parts.push(box(id+'-step-'+i, 'step', x+stairsSide*1.6, 0, z-2.8-(7-i+0.5)*0.72, 2.2, h, 0.72));
+    parts.push(box(id+'-step-'+i, 'step', x+stairsSide*1.6, 0, z+approach*(2.8+(7-i+0.5)*0.72), 2.2, h, 0.72));
+  }
+  // Low duct sidewalls make the stepped shortcut readable while leaving headroom.
+  for (const side of [-1,1]) {
+    for (let i=0; i<8; i++) {
+      parts.push(box(id+'-duct-'+side+'-'+i, 'duct', x+stairsSide*1.6+side*1.2, (i+1)*0.4, z+approach*(2.8+(7-i+0.5)*0.72), 0.2, 0.55, 0.72));
+    }
   }
   return parts;
 }
@@ -23,7 +29,7 @@ const cover=(id,x,z,w=2.4,d=1.1)=>box(id,'cover',x,0,z,w,0.85,d);
 const layout=(id,radius,parts)=>Object.freeze({id,radius,parts:Object.freeze(parts)});
 const MAPS=Object.freeze({
   control:layout('meridian-observatory-district',28,[
-    ...building('relay',-9,0),
+    ...building('relay',-3,0),
     ...building('east-lab',3,10,-1),
     cover('north-screen',2,-10), cover('south-screen',-1,15),
     cover('east-screen',15,8,1.1,2.4), cover('west-screen',-18,-3,1.1,2.4),
@@ -36,7 +42,7 @@ const MAPS=Object.freeze({
   ]),
   tdm:layout('meridian-combat-district',22,[
     ...building('west-station',-7,2),
-    ...building('east-station',7,2,-1),
+    ...building('east-station',7,-2,-1,1),
     cover('north-west',-5,-12), cover('north-east',5,-12),
     cover('south-west',-5,12), cover('south-east',5,12),
     cover('center-screen',0,0,2.2,1.0),
