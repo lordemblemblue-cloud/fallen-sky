@@ -17,6 +17,7 @@ export const CAST = Object.freeze({
   Crane: { gender: 'female', pitch: 0.9, rate: 1.0 },
   Dask: { gender: 'male', pitch: 1.0, rate: 1.06 },
   Perrin: { gender: 'female', pitch: 1.22, rate: 1.08 },
+  Halvane: { as: 'Rooke', pitch: 0.83, rate: 0.94 },
   Rooke: { gender: 'male', pitch: 0.72, rate: 1.0 },
   Defender: { gender: 'male', pitch: 1.15, rate: 1.15 },
 });

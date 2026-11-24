@@ -29,6 +29,7 @@ const CAST = {
   Crane: { voice: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily' }, // the Warden-Captain
   Dask: { voice: 'N2lVS1w4EtoT3dr4eOWO', name: 'Callum' }, // the quartermaster who builds the guns: gravelly
   Perrin: { voice: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda' }, // the broker: a cool alto
+  Halvane: { voice: 'pNInz6obpgDQGcFmaJgB', name: 'Adam' },
   Rooke: { voice: 'pNInz6obpgDQGcFmaJgB', name: 'Adam' }, // the security chief: firm
   Defender: { voice: 'SOYHLrjzK2X1ezoPC6cr', name: 'Harry' }, // a refuge defender at the lock
 };
