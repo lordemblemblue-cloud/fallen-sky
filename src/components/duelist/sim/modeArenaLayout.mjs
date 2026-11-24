@@ -34,7 +34,7 @@ const MAPS=Object.freeze({
     cover('north-screen',2,-10), cover('south-screen',-1,15),
     cover('east-screen',15,8,1.1,2.4), cover('west-screen',-18,-3,1.1,2.4),
   ]),
-  escort:layout('meridian-freight-district',28,[
+  escort:layout('meridian-freight-district',28,10,[
     ...building('loading-bay',7,-9,-1),
     ...building('service-bay',-14,10),
     cover('loading-screen',9,2), cover('defense-screen',13,12),
