@@ -17,6 +17,8 @@ import { createSidearm, createAimLine } from './sidearm.mjs';
 import { dressGuard } from './guardKit.mjs';
 import { createFighterAnimator } from './animator.mjs';
 import { createArena, createSceneLighting } from './arena.mjs';
+import { createModeArchitecture } from './modeArchitecture.mjs';
+import { arenaRayFraction, arenaLineClear } from '../sim/modeArenaLayout.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
@@ -240,16 +242,19 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     // the arena is sized by the mode (online, the mode is known once a match is found); a mission has its depot
     let arenaMode = null;
     let arena = null;
+    let architecture = null;
     let warp = null;
     const warpHolder = { ring: (...a) => warp?.ring(...a), hold: (...a) => warp?.hold(...a) };
     const arenaHolder = { arc: (...a) => arena?.arc(...a) };
     const ensureArena = (m) => {
-      const key = level ? `mission:${source.def?.id}` : m;
+      const key = level ? `mission:${source.def?.id}` : `${m}:${world.arenaLayout?.id || 'flat'}`;
       if (arenaMode === key) return;
       arenaMode = key;
+      architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
       arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18 });
       scene.add(arena.group);
+      if(!level && world.arenaLayout){architecture=createModeArchitecture(m);if(architecture?.layout.id===world.arenaLayout.id)arena.group.add(architecture.group);else {architecture?.dispose();architecture=null;}}
     };
     ensureArena(source.mode || mode);
     let markers = level ? createMarkerOverlay(mount) : null;
@@ -372,7 +377,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         const dx = b.x - at.x;
         const dz = b.z - at.z;
         const d = Math.hypot(dx, dz);
-        if (d > range || (level && !clearLine(level, at, b))) continue;
+        if (d > range || (level && !clearLine(level, at, b)) || (world.arenaLayout && !arenaLineClear(world.arenaLayout,at,b))) continue;
         const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - aim), Math.cos(Math.atan2(dx, dz) - aim)));
         const score = off * 3 + d / range;
         if (!best || score < best.score) best = { id: f.id, score };
@@ -389,7 +394,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         if (f.id === me() || f.vitals.dead || outOfFight(f) || !hostile(world, mine, f)) continue;
         const b = bodyOf(world, f.id);
         const d = Math.hypot(b.x - at.x, b.z - at.z);
-        if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b))) continue;
+        if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b)) || (world.arenaLayout && !arenaLineClear(world.arenaLayout,at,b))) continue;
         best = { id: f.id, d };
       }
       return best?.id || null;
@@ -397,8 +402,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     // indoors the camera stays in the room: pulled in front of whatever is between it and the fighter's head
     const head = new THREE.Vector3();
     const clampCamera = (target, point) => {
-      if (!level) return;
+      if (!level && !world.arenaLayout) return;
       head.set(target.x, target.y + HEAD, target.z);
+      if(world.arenaLayout && !level){const t=arenaRayFraction(world.arenaLayout,head,point,0.12);if(t<1)point.lerpVectors(head,point,Math.max(0,t-0.03));return;}
       const dx = point.x - head.x;
       const dz = point.z - head.z;
       const d = Math.hypot(dx, dz);
@@ -575,7 +581,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       // the players' bodies must be there to start; a mission's people step in as they are built
       const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy' || s.kind === 'ally');
       if (ready) {
-        if (!level && source.mode && source.mode !== arenaMode) ensureArena(source.mode);
+        if (!level && source.mode) ensureArena(source.mode);
         if (!ctf && source.mode === 'ctf') {
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
@@ -667,7 +673,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
               const dir = forwardOf(body.yaw);
               const reach = level ? Math.min(a.move.range, rayDistance(level, body, dir, a.move.range)) : a.move.range;
               const muzzle = actor.sword.muzzle();
-              actor.aim.show({ x: muzzle.x, y: PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
+              actor.aim.show({ x: muzzle.x, y: (world.arenaLayout ? body.y : 0) + PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
             } else actor.aim.hide();
           }
           actor.sword.update(show);
@@ -822,6 +828,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
+      architecture?.dispose();
       arena.dispose();
       for (const actor of Object.values(actors)) actor.dispose();
       renderer.dispose();

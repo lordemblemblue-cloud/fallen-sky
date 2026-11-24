@@ -13,6 +13,7 @@
 // shows sooner what it is about to decide.
 import { createWorld, addFighter, step, BODY_RADIUS } from '../sim/world.mjs';
 import { resolveCircle } from '../sim/level.mjs';
+import { moveArenaBody, ARENA_BODY_HEIGHT } from '../sim/modeArenaLayout.mjs';
 import { TICK_HZ, applyOwn } from './protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
@@ -43,6 +44,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   function keepApart(others) {
     const min = BODY_RADIUS * 2;
     for (const o of others) {
+      if(world.arenaLayout && Number.isFinite(o.y) && Math.abs(body.y-o.y)>=ARENA_BODY_HEIGHT)continue;
       const dx = body.x - o.x;
       const dz = body.z - o.z;
       const d = Math.hypot(dx, dz);
@@ -59,7 +61,9 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   }
   function stepOnce(input, others) {
     step(world, STEP, { [id]: input });
+    const before={x:body.x,z:body.z};
     if (!fighter.vitals.dead) keepApart(others);
+    if(world.arenaLayout){const dx=body.x-before.x,dz=body.z-before.z;Object.assign(body,before);moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);}
     keepInside();
   }
 

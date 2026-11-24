@@ -11,6 +11,7 @@ import {
   stagger, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
+import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT } from './modeArenaLayout.mjs';
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
@@ -33,8 +34,8 @@ export const ROOM_HEADROOM = 2.2;
 export const ACTIVE_RELIC = Object.freeze({ anchorWindow: 12, teleportCooldown: 28, stasisSeconds: 1.5, stasisCooldown: 35 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
-export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
-  return { time: 0, arenaRadius, friendlyFire, level, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1,
+export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null, arenaLayout = null } = {}) {
+  return { time: 0, arenaRadius, friendlyFire, level, arenaLayout, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1,
     zones: [], nextZone: 1 };
 }
 
@@ -100,6 +101,8 @@ export function strikeDirection(body) {
   return stickDirection(ahead, right);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const airborne = (world, body, min = 0.01) => world.arenaLayout ? !arenaGrounded(world.arenaLayout, body, BODY_RADIUS) : body.y > min;
+const visible = (world, a, b) => (!world.level || clearLine(world.level,a,b)) && (!world.arenaLayout || arenaLineClear(world.arenaLayout,a,b));
 // a move whose arc is not centred on the facing (the backhand reaches the sword side and behind): radians to the left
 const arcTurn = (move) => (move.arcTurn || 0) * Math.PI / 180;
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
@@ -159,8 +162,8 @@ export function step(world, dt, inputs = {}) {
       if (now < (fighter.activeRelicUntil ?? -Infinity)) continue; // Stasis cannot attack, dodge or capture
       // In the air, Dash is the air dash: one for each jump (the jump's own, then the second jump's). Packets cannot
       // ask for '#airDash' directly; the world checks the jump and the height.
-      if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
-        if (!restrained && body.jumped && body.airDashReady && body.y > AIR_DASH.minHeight && airborneAction(fighter)) {
+      if (command === 'dash' && (body.jumped || airborne(world, body, AIR_DASH.minHeight))) {
+        if (!restrained && body.jumped && body.airDashReady && airborne(world, body, AIR_DASH.minHeight) && airborneAction(fighter)) {
           if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'airDash', at: now }); fighter.action = null; }
           const result = press(fighter, '#airDash', now);
           if (result.accepted) {
@@ -173,8 +176,8 @@ export function step(world, dt, inputs = {}) {
         continue; // never turn an airborne press into a ground dash
       }
       // In the air, Jump is the second jump: as high as the first, once, and it gives another dash.
-      if (command === 'jump' && (body.jumped || body.y > 0.01)) {
-        if (body.jumped && body.y > AIR_JUMP.minHeight && body.airJumpAt == null && !restrained &&
+      if (command === 'jump' && (body.jumped || airborne(world, body))) {
+        if (body.jumped && airborne(world, body, AIR_JUMP.minHeight) && body.airJumpAt == null && !restrained &&
             now >= fighter.riseUntil && airborneAction(fighter) &&
             !effectOn(fighter, 'levitate', now) && spendStamina(fighter.vitals, MOVES.jump.stamina, now)) {
           if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'jump', at: now }); fighter.action = null; }
@@ -218,9 +221,29 @@ export function step(world, dt, inputs = {}) {
     }
   }
   // 3. bodies move
-  for (const [id, fighter] of world.fighters) moveBody(world, fighter, world.bodies.get(id), dt, now);
+  for (const [id, fighter] of world.fighters) {
+    const body=world.bodies.get(id);
+    if (!world.arenaLayout) { moveBody(world,fighter,body,dt,now); continue; }
+    const before={x:body.x,y:body.y,z:body.z};
+    moveBody(world,fighter,body,dt,now);
+    const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
+    Object.assign(body,before);
+    const result=moveArenaBody(world.arenaLayout,body,delta.x,delta.z,delta.y,BODY_RADIUS,!fighter.heldBy && !fighter.seizedBy && !body.jumped);
+    if(result.ceiling || result.landed && body.vy<0)body.vy=0;
+    if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
+      body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
+    }
+  }
+  const beforeSeparate=world.arenaLayout ? new Map([...world.bodies].map(([id,b])=>[id,{x:b.x,z:b.z}])) : null;
   separate(world);
-  for (const body of world.bodies.values()) keepInside(world, body);
+  for (const [id,body] of world.bodies) {
+    if(beforeSeparate){
+      const before=beforeSeparate.get(id),dx=body.x-before.x,dz=body.z-before.z;
+      Object.assign(body,before);
+      moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);
+    }
+    keepInside(world,body);
+  }
   // 4. landed moves reach whoever is in range and arc
   for (const { fighter, body, event } of pending) {
     if (event.type === 'hit') {
@@ -276,7 +299,7 @@ function trySpecial(world, fighter, body, now, effects) {
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
       .filter(({ o, b }) => distance(b, body) <= seekReach + BODY_RADIUS
         && (o.id === fighter.lock || insideArc(body, body.yaw + arcTurn(move), b, seekArc))
-        && (!world.level || clearLine(world.level, body, b)))
+        && visible(world,body,b) && (!world.arenaLayout || Math.abs(body.y-b.y)<2))
       // the one the fighter is locked on to first, then the nearest
       .sort((p, q) => (q.o.id === fighter.lock) - (p.o.id === fighter.lock) || distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
@@ -320,10 +343,11 @@ function face(body, other) {
 function blinkBehind(world, fighter, body, target, move, now, effects) {
   const tb = world.bodies.get(target.id);
   const back = forwardOf(tb.yaw);
-  const from = { x: body.x, z: body.z };
+  const from = { x: body.x, z: body.z }, previousY=body.y;
   body.x = tb.x - back.x * move.blink.behind;
   body.z = tb.z - back.z * move.blink.behind;
-  body.y = 0; body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+  body.y = world.arenaLayout ? tb.y : 0; body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+  if(world.arenaLayout && arenaBodyBlockers(world.arenaLayout,{...body,radius:BODY_RADIUS,height:ARENA_BODY_HEIGHT}).length){body.x=from.x;body.z=from.z;body.y=previousY;}
   keepInside(world, body);
   endEffect(fighter, 'cloak');
   effects.push({ type: 'uncloak', fighter: fighter.id });
@@ -344,7 +368,7 @@ export function chosenTarget(world, fighter, body, move, side, now = world.time)
     if (side === 'enemy' ? !hostile(world, fighter, o) : hostile(world, fighter, o)) return false;
     const ob = world.bodies.get(o.id);
     if (!ob || distance(body, ob) > reach) return false;
-    if (world.level && !clearLine(world.level, body, ob)) return false;
+    if (!visible(world, body, ob) || (world.arenaLayout && Math.abs(body.y-ob.y)>1.8)) return false;
     return side === 'ally' || targetable(o, ob, fighter, body, now);
   };
   const locked = fighter.lock ? world.fighters.get(fighter.lock) : null;
@@ -428,7 +452,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
       break;
     }
     case 'sanctuary': {
-      const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
+      const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z, ...(world.arenaLayout ? {y:body.y} : {}),
         radius: move.radius ?? SPECIAL_BALANCE.sanctuaryRadius, heal: move.healPerSecond ?? SPECIAL_BALANCE.sanctuaryHealPerSecond, until };
       world.zones.push(zone);
       effects.push({ type: 'zone', ...zone, seconds: move.effectSeconds });
@@ -442,7 +466,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
 export function shelterOf(world, fighter, now = world.time) {
   const b = world.bodies.get(fighter.id);
   if (!b) return null;
-  return world.zones.find((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius
+  return world.zones.find((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius && (!world.arenaLayout || Math.abs(b.y-(z.y??0))<1.8 && arenaLineClear(world.arenaLayout,b,z))
     && (z.team !== null && z.team !== undefined ? z.team === fighter.team : z.owner === fighter.id)) || null;
 }
 /** Does an allied Sanctuary shelter this fighter right now? */
@@ -468,7 +492,7 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
   if (passive.activeAnchor) {
     if (fighter.activeAnchorAt && fighter.activeAnchorAt.until > now) {
       const mark = fighter.activeAnchorAt;
-      body.x = mark.x; body.z = mark.z; body.y = 0; body.vy = 0; body.motion = null;
+      body.x = mark.x; body.z = mark.z; body.y = world.arenaLayout ? (mark.y ?? 0) : 0; body.vy = 0; body.motion = null;
       fighter.action = null; fighter.buffer = null;
       fighter.activeAnchorAt = null;
       fighter.activeRelicCooldownUntil = now + ACTIVE_RELIC.teleportCooldown;
@@ -477,7 +501,7 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
     }
     if (now < (fighter.activeRelicCooldownUntil ?? -Infinity)) return { ok: false, reason: 'cooldown' };
     if (fighter.action) return { ok: false, reason: 'busy' };
-    fighter.activeAnchorAt = { x: body.x, z: body.z, until: now + ACTIVE_RELIC.anchorWindow };
+    fighter.activeAnchorAt = { x: body.x, z: body.z, ...(world.arenaLayout ? {y:body.y} : {}), until: now + ACTIVE_RELIC.anchorWindow };
     effects.push({ type: 'relicAnchor', by: fighter.id, until: fighter.activeAnchorAt.until });
     return { ok: true, effect: 'anchor' };
   }
@@ -506,7 +530,7 @@ function startMotion(body, fighter, id, world = null) {
       const d = Math.hypot(tb.x - body.x, tb.z - body.z); // (startMotion has a local named distance)
       face(body, tb);
       const dir = forwardOf(body.yaw);
-      body.motion = { id, dir, from: move.startup, to: move.startup + move.active, distance: Math.max(0, Math.min(move.seek, d - move.landShort)), done: 0 };
+      body.motion = { id, dir, from: move.startup, to: move.startup + move.active, distance: Math.max(0, Math.min(move.seek, d - move.landShort)), done: 0, baseY: body.y };
       return;
     }
   }
@@ -521,7 +545,7 @@ function startMotion(body, fighter, id, world = null) {
   const from = move.kind === 'movement' ? 0 : move.startup;
   // a jump keeps the speed the body had as it left the ground; a roll or a dash covers its own distance
   const distance = move.air ? (body.speed || 0) * move.active : move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1);
-  body.motion = { id, dir, from, to: from + move.active, distance, done: 0 };
+  body.motion = { id, dir, from, to: from + move.active, distance, done: 0, baseY: body.y };
 }
 
 function moveBody(world, fighter, body, dt, now) {
@@ -544,7 +568,7 @@ function moveBody(world, fighter, body, dt, now) {
       const k = Math.min(1, dt * (3 / Math.max(0.05, seize.pull)));
       body.x += (holder.x + f.x * seize.distance - body.x) * k;
       body.z += (holder.z + f.z * seize.distance - body.z) * k;
-      body.y += (0 - body.y) * k;
+      body.y += ((world.arenaLayout ? holder.y : 0) - body.y) * k;
       body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
       body.yaw = Math.atan2(holder.x - body.x, holder.z - body.z);
       body.moving = false; body.speed = 0;
@@ -558,7 +582,7 @@ function moveBody(world, fighter, body, dt, now) {
       const f = forwardOf(holder.yaw);
       body.x = holder.x + f.x * GRIP_HOLD.distance;
       body.z = holder.z + f.z * GRIP_HOLD.distance;
-      body.y += (GRIP_HOLD.lift - body.y) * Math.min(1, dt * 10);
+      body.y += ((world.arenaLayout ? holder.y : 0) + GRIP_HOLD.lift - body.y) * Math.min(1, dt * 10);
       body.vy = 0;
       body.kx = 0; body.kz = 0;
       body.moving = false; body.speed = 0;
@@ -584,7 +608,7 @@ function moveBody(world, fighter, body, dt, now) {
     body.motion.done = target;
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
-    if (a.move.leap && !a.move.air) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
+    if (a.move.leap && !a.move.air) { body.y = (world.arenaLayout ? (body.motion.baseY ?? 0) : 0) + 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
     if (a.move.hop && progress >= 1) body.motion = null; // landed: the slam
   } else {
     body.motion = null;
@@ -631,7 +655,7 @@ function moveBody(world, fighter, body, dt, now) {
   body.moving = Math.hypot(vx, vz) > 0.1;
   const leaping = !!(a?.move.leap && !a.move.air && body.motion && !body.motion.clip && a.id === body.motion.id);
   if (effectOn(fighter, 'levitate', now)) {
-    body.y += (EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
+    body.y += ((world.arenaLayout ? Math.max(0, body.y - EFFECTS.levitate.height) : 0) + EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
@@ -644,7 +668,7 @@ function moveBody(world, fighter, body, dt, now) {
     if (body.y === 0) body.vy = 0;
   }
   if (world.level && body.y > ROOM_HEADROOM) { body.y = ROOM_HEADROOM; body.vy = Math.min(body.vy, 0); }
-  if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
+  if (!world.arenaLayout && body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
     body.jumped = false;
     body.airJumpAt = null;
     body.airDashReady = false;
@@ -667,6 +691,7 @@ function separate(world) {
     for (let j = i + 1; j < list.length; j++) {
       const a = world.bodies.get(list[i].id);
       const b = world.bodies.get(list[j].id);
+      if(world.arenaLayout && Math.abs(a.y-b.y)>=ARENA_BODY_HEIGHT)continue;
       const d = distance(a, b);
       const min = BODY_RADIUS * 2;
       if (d >= min) continue;
@@ -688,7 +713,7 @@ export function targetsInReach(world, attacker, body, move, single) {
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
     if (!insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
-    if (world.level && !clearLine(world.level, body, ob)) continue; // nothing reaches through a wall
+    if (!visible(world, body, ob) || (world.arenaLayout && Math.abs(body.y-ob.y)>1.8)) continue; // nothing reaches through a wall
     found.push({ fighter: other, d });
   }
   found.sort((p, q) => p.d - q.d);
@@ -773,9 +798,9 @@ function spawnProjectile(world, fighter, body, id, effects) {
   const move = moveFor(fighter, id);
   const dir = forwardOf(body.yaw);
   const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
-    dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
+    y: (world.arenaLayout ? body.y : 0) + PROJECTILE_HEIGHT, dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
   world.projectiles.push(p);
-  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir, speed: p.speed });
+  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, ...(world.arenaLayout ? {y:p.y} : {}), dir, speed: p.speed });
 }
 
 function stepProjectiles(world, dt, now, effects) {
@@ -785,6 +810,10 @@ function stepProjectiles(world, dt, now, effects) {
     const owner = world.fighters.get(p.owner);
     // a wall, a crate or a closed door stops it
     let wall = false;
+    if(world.arenaLayout){
+      const t=arenaRayFraction(world.arenaLayout,p,{x:p.x+p.dir.x*travel,y:p.y,z:p.z+p.dir.z*travel});
+      if(t<1){travel*=t;wall=true;}
+    }
     if (world.level) {
       const toWall = rayDistance(world.level, p, p.dir, travel);
       if (toWall < travel) { travel = toWall; wall = true; }
@@ -795,10 +824,11 @@ function stepProjectiles(world, dt, now, effects) {
     for (const other of world.fighters.values()) {
       if (!owner || !hostile(world, owner, other) || other.vitals.dead) continue;
       const b = world.bodies.get(other.id);
+      if(world.arenaLayout && (p.y<b.y || p.y>b.y+ARENA_BODY_HEIGHT))continue;
       const rx = b.x - p.x;
       const rz = b.z - p.z;
       const along = rx * p.dir.x + rz * p.dir.z;
-      if (along < -BODY_RADIUS || along > travel + BODY_RADIUS) continue;
+      if (along < -BODY_RADIUS || along > travel + (wall && world.arenaLayout ? 0 : BODY_RADIUS)) continue;
       const side = Math.abs(rx * p.dir.z - rz * p.dir.x);
       if (side <= BODY_RADIUS + 0.05 && along < best) { best = along; hit = other; }
     }

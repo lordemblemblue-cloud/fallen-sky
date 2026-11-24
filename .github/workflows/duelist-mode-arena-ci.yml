@@ -1,0 +1,24 @@
+name: Duelist mode arena validation
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/**'
+      - 'server/duelist/**'
+      - 'tests/duelist-mode-arena-layout.test.mjs'
+      - '.github/workflows/duelist-mode-arena-ci.yml'
+permissions:
+  contents: read
+jobs:
+  arena:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-mode-arena-layout.test.mjs tests/duelist-escort.test.mjs tests/duelist-server.test.mjs
+      - run: npx eslint src/components/duelist/sim/modeArenaLayout.mjs src/components/duelist/client/modeArchitecture.mjs tests/duelist-mode-arena-layout.test.mjs
+      - run: npm run build

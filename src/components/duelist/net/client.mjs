@@ -14,6 +14,7 @@
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
+import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
 import { createLevel, setDoor } from '../sim/level.mjs';
 import { enemySeat, allySeat, crewSeat } from '../client/missionSeats.mjs';
@@ -201,7 +202,8 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       joinedOnce = true;
       matchMode = msg.mode;
       world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.reset(); }
+      world.arenaLayout = getModeArenaLayout(msg.mode);
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
         def = MISSIONS[msg.mission];
@@ -249,7 +251,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       if (msg.flags) flags = msg.flags;
       if (msg.ball) footballBall = { ...msg.ball };
       // the player's own fighter: back to the server's word, the inputs it has not used yet replayed on top
-      others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], z: f.p[2] }));
+      others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], y: f.p[1], z: f.p[2] }));
       if (predictor) {
         const was = predictor.active;
         if (msg.own) predictor.reconcile(msg.own, msg.ack, others, was ? null : world.bodies.get(meId) || null);
@@ -441,7 +443,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         const prev = s0.ball || s1.ball;
         footballBall = { x: prev.x + (s1.ball.x - prev.x) * k, z: prev.z + (s1.ball.z - prev.z) * k };
       }
-      world.projectiles = s1.projectiles.map((p) => ({ id: p.id, x: p.x, z: p.z, dir: { x: p.d[0], z: p.d[1] }, move: p.move }));
+      world.projectiles = s1.projectiles.map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z, dir: { x: p.d[0], z: p.d[1] }, move: p.move }));
       while (snaps.length > 2 && snaps[1].time < time - 0.5) snaps.shift();
       return out;
     },
