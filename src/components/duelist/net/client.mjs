@@ -14,6 +14,7 @@
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
+import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
 import { createLevel, setDoor } from '../sim/level.mjs';
 import { enemySeat, allySeat, crewSeat } from '../client/missionSeats.mjs';
@@ -201,7 +202,8 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       joinedOnce = true;
       matchMode = msg.mode;
       world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.reset(); }
+      world.arenaLayout = getModeArenaLayout(msg.mode);
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
         def = MISSIONS[msg.mission];
