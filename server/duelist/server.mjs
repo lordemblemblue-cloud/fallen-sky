@@ -385,7 +385,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     const withView = room.snaps % VIEW_EVERY === 0 || room.events.length > 0 || (!!room.mission && full);
     const { world } = room.mission || room.match;
     const time = Math.round(world.time * 1000) / 1000;
-    const projectiles = world.projectiles.map((p) => ({ id: p.id, x: p.x, z: p.z, d: [p.dir.x, p.dir.z], move: p.move }));
+    const projectiles = world.projectiles.map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z, d: [p.dir.x, p.dir.z], move: p.move }));
     const effects = room.effects;
     const events = room.events;
     room.effects = [];
