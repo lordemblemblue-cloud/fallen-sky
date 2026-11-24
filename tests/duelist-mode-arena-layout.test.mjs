@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getModeArenaLayout, overlapsArenaFootprint, arenaBodyBlockers, arenaLandingHeight } from '../src/components/duelist/sim/modeArenaLayout.mjs';
+import { getModeArenaLayout, overlapsArenaFootprint, arenaBodyBlockers, arenaLandingHeight, moveArenaBody, arenaRayFraction, arenaLineClear, arenaGrounded } from '../src/components/duelist/sim/modeArenaLayout.mjs';
 import { makeControlPoints, CONTROL } from '../src/components/duelist/sim/control.mjs';
 import { ESCORT_LENGTH, ESCORT_RADIUS, payloadPose } from '../src/components/duelist/sim/escort.mjs';
-import { MODES } from '../src/components/duelist/sim/match.mjs';
+import { MODES, createMatch, joinMatch } from '../src/components/duelist/sim/match.mjs';
 
 test('three distinct layouts fit existing arena bounds and contain roofs, walls and steps',()=>{
   const ids=new Set();
@@ -67,4 +67,44 @@ test('team deathmatch architecture is rotationally symmetric',()=>{
       Math.abs(q.z0+p.z1)<1e-6 && Math.abs(q.z1+p.z0)<1e-6 &&
       Math.abs(q.y0-p.y0)<1e-6 && Math.abs(q.y1-p.y1)<1e-6),p.id);
   }
+});
+
+test('low-poly architecture stays under 65 boxes, with balanced mode capacity',()=>{
+  for(const [mode,capacity] of [['control',8],['escort',10],['tdm',8]]){
+    const map=getModeArenaLayout(mode);
+    assert.ok(map.parts.length<=65);
+    assert.equal(map.capacity,capacity);
+    const match=createMatch({mode});
+    assert.equal(match.world.arenaLayout,map);
+    assert.equal(match.capacity,capacity);
+    assert.equal(match.seats.size,capacity);
+    for(let i=0;i<capacity;i++)assert.equal(joinMatch(match,{id:'human'+i}).ok,true);
+    assert.equal(joinMatch(match,{id:'overflow'}).ok,false);
+  }
+});
+test('swept collisions stop crossing walls even on a large movement delta',()=>{
+  const map=getModeArenaLayout('control');
+  const body={x:-8,y:0,z:0};
+  moveArenaBody(map,body,6,0,0);
+  assert.ok(body.x<-6.8);
+  assert.equal(arenaBodyBlockers(map,{...body,radius:0.4,height:1.8}).length,0);
+});
+test('steps climb to roof and downward movement lands rather than clips',()=>{
+  const map=getModeArenaLayout('control');
+  const body={x:-1.4,y:0,z:-9};
+  for(let i=0;i<100;i++)moveArenaBody(map,body,0,0.09,-0.02);
+  assert.ok(body.z>-0.5,JSON.stringify(body));
+  assert.ok(Math.abs(body.y-3.2)<0.001,JSON.stringify(body));
+  assert.ok(arenaGrounded(map,body));
+  const falling={x:-3,y:5,z:0};
+  moveArenaBody(map,falling,0,0,-4);
+  assert.ok(Math.abs(falling.y-3.2)<0.001);
+});
+test('lower tunnel remains traversable while attacks through a roof or wall are obstructed',()=>{
+  const map=getModeArenaLayout('control');
+  const body={x:-3,y:0,z:3.5};
+  moveArenaBody(map,body,0,-5,0);
+  assert.ok(body.z<-1.4);
+  assert.equal(arenaLineClear(map,{x:-3,y:0,z:0},{x:-3,y:3.2,z:0}),false);
+  assert.ok(arenaRayFraction(map,{x:-8,y:1.2,z:0},{x:-3,y:1.2,z:0})<1);
 });
