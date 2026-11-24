@@ -855,7 +855,7 @@ export default function GameView() {
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
       {/* World boss UI removed in the systems/animation test scene. */}
       <MultiplayerSystem envUrl="game_world_lowpoly" surface="game-world" />
-      <GameWorldServerManager showHud={communityHUD.online && !services.active && !services.expanded} />
+      <GameWorldServerManager region={worldRegion} area={worldRegion==='wolfveil'&&wolfveilAreaScenesEnabled()?worldArea:null} showHud={communityHUD.online && !services.active && !services.expanded} />
       {/* Equipped weapon is the canonical source for mastery/class/role identity. */}
       <AXEWeaponIdentityMount />
       {/* Wuxia blueprint: Shift+1 / Shift+2 draw the two quick-slot weapons. */}
