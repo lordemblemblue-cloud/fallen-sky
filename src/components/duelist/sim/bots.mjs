@@ -1,3 +1,4 @@
+import { escortBotPath } from './escortBotNav.mjs';
 // Practice and fill-in bots: they read the same world a player sees and send the same commands a player
 // sends (no shortcuts: the rules core and its cooldowns apply to them too). Difficulty sets reaction time,
 // how often they defend and how well they time it, how hard they press, and how cleverly they use the Will.
@@ -115,7 +116,7 @@ input.target = foe?.id || null;
     if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
       const old=bot.importedPath;
       if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||(!old.path.length&&now>=old.until)){
-        bot.importedPath={target:{...destination},until:now+1,path:importedBotPath(world.arenaLayout,mine,destination)};
+        bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
       }
       const path=bot.importedPath.path;
       while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();
