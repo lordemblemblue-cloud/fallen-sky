@@ -1,0 +1,19 @@
+/* Canonical battle-shop material tokens. Scope prevents leakage into Fallen Sky RPG. */
+:is(.dxt-page,.duelist-menu-page,.duelist-arena-page,.duelist-game,.duelist-hub,.ds-campaign,.bs-shop) {
+  --ds-blue:#2989e9; --ds-ice:#a7ddff; --ds-silver:#bedaf4; --ds-gold:#e8c47a; --ds-text:#edf5ff;
+  --ds-glass:linear-gradient(110deg,rgba(9,23,42,.72),rgba(9,23,42,.84) 55%,rgba(9,23,42,.59));
+  --ds-quiet:linear-gradient(145deg,#354b6666,#09172a55);
+  --ds-selected:linear-gradient(180deg,#2989e9b0,#0b3069 65%,#156fbd);
+  --ds-divider:linear-gradient(180deg,transparent,#5d8eb766 15%,#a7ddff 50%,#5d8eb766 85%,transparent);
+  --ds-edge:#bedaf44f;
+  --ds-shadow:0 14px 46px #0005;
+  --ds-small-shadow:0 4px 18px #0005;
+  --ds-active-shadow:inset 0 0 7px #8acbff66,0 0 7px #2989e955;
+  --ds-blur:blur(5px) saturate(1.12);
+  --ds-radius:8px;
+  --ds-control-radius:5px;
+  --ds-horizontal:linear-gradient(90deg,transparent,#a7ddff,transparent);
+  --ds-heading:Georgia,serif;
+  --ds-body:system-ui,sans-serif;
+  --ds-splash:radial-gradient(ellipse at 30% 26%,#a7ddff2e,transparent 36%),linear-gradient(135deg,#2989e933,#4d8fbe09 72%);
+}
