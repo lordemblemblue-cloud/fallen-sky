@@ -141,7 +141,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
 
   function openRoom(mode, { permanent = false } = {}) {
     const id = `m${nextRoom++}`;
-    const match = createMatch({ mode, seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel,
+    const match = createMatch({ mode, practiceMode: mode === 'practice', seed: nextRoom * 7919 + Math.floor(clock() * 1000) % 100000, botLevel,
       controlLayout: mode === 'control' ? controlLayout : null });
     const room = { id, mode, match, mission: null, publicRoom: permanent, clients: new Map(), bodies: new Map(), ticks: 0, snaps: 0, effects: [], events: [], emptySince: clock(), overAt: null };
     let k = 0;
