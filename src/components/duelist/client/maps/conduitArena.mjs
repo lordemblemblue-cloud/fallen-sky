@@ -2,6 +2,7 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { createConduitAtmosphere } from './conduitAtmosphere.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -342,7 +343,7 @@ export { CFG as CONDUIT_CONFIG };
             }
         }
 export { UnifiedCollisionWorld as ConduitCollisionWorld };
-export function createConduitArena(hostScene, { quality = 'medium', enableLights = true } = {}) {
+export function createConduitArena(hostScene, { quality = 'medium', enableLights = true, enableAtmosphere = true } = {}) {
     if (!hostScene?.isObject3D) throw new TypeError('Conduit needs an existing Three.js scene or group');
     const scene = new THREE.Group(); scene.name = 'The Conduit';
     const MAT = createMaterialLibrary(quality);
@@ -963,6 +964,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             scene.add(rockInst, ribInst, overheadConduit, cavernDome);
 
             flushDetails();
+            const atmosphere=enableAtmosphere?createConduitAtmosphere(scene,upperGroup,t0Group,THREE,MAT,CFG,{quality}):null;
             // Dust particles
             let dust = null;
             const buildDust = (q) => {
@@ -1109,11 +1111,11 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             }
     hostScene.add(scene);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, atmosphere,
         spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
-        updateVisuals(elapsed){if(disposed)return;rRing1.rotation.z=elapsed*.65;rRing2.rotation.z=-elapsed*.35;padRings.forEach((r,i)=>{r.rotation.z=elapsed*2+i;});pickups.forEach((p,i)=>{p.sym.rotation.y=elapsed*1.4+i;p.sym.position.y=1.15+Math.sin(elapsed*2.5+i)*.12;});},
-        dispose(){if(disposed)return;disposed=true;scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
+        updateVisuals(elapsed){if(disposed||!Number.isFinite(elapsed)||elapsed<0)return;atmosphere?.update(elapsed);rRing1.rotation.z=elapsed*.65;rRing2.rotation.z=-elapsed*.35;padRings.forEach((r,i)=>{r.rotation.z=elapsed*2+i;});pickups.forEach((p,i)=>{p.sym.rotation.y=elapsed*1.4+i;p.sym.position.y=1.15+Math.sin(elapsed*2.5+i)*.12;});},
+        dispose(){if(disposed)return;disposed=true;atmosphere?.dispose();scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
     };
 }
