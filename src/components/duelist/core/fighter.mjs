@@ -46,6 +46,7 @@ export function createFighter({ id, team = null, weapon = 'sword', vitals = null
     matchBoost: cleanBoost(matchBoost),
     effects: {},
     meter: 0,
+    specialActiveUntil: -Infinity,
     vitals: createVitals(vitals || {}),
     action: null, // { id, move, t, nextHit, held, chainedFrom, link }
     cooldowns: {}, // move id -> seconds when it may start again

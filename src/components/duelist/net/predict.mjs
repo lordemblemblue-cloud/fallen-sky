@@ -130,6 +130,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shown.matchBoost = fighter.matchBoost;
       shown.items = fighter.items;
       shown.shopStats = fighter.shopStats;
+      shown.specialActiveUntil = (fighter.specialActiveUntil ?? -Infinity) + shift;
       shown.activeRelicUntil = fighter.activeRelicUntil + shift;
       shown.activeRelicCooldownUntil = fighter.activeRelicCooldownUntil + shift;
       shown.activeAnchorAt = fighter.activeAnchorAt ? { ...fighter.activeAnchorAt, until: fighter.activeAnchorAt.until + shift } : null;

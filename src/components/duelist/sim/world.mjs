@@ -306,9 +306,19 @@ export function step(world, dt, inputs = {}) {
  * never out of a stagger, a grip or a fall. Reports { type: 'special', by, special, cost } for the match to charge
  * the seat's meter, or { type: 'specialRefused', by, reason }.
  */
+// Meter can contain multiple charges (or refill immediately in training). It is
+// not an activation lock. A cast and its lasting effect must finish first.
+export function specialActivationLocked(fighter, now) {
+  return !!fighter && (!!fighter.action?.move?.special || (fighter.specialActiveUntil ?? -Infinity) > now);
+}
+
 function trySpecial(world, fighter, body, now, effects) {
   const def = classById(fighter.classId);
   if (!def || fighter.vitals.dead) return;
+  if (specialActivationLocked(fighter, now)) {
+    effects.push({ type: 'specialRefused', by: fighter.id, reason: 'special-active' });
+    return;
+  }
   const special = def.special;
   const move = moveFor(fighter, special.id); // applies trusted class mastery and current match boost
   const reach = move.reach ?? move.range ?? special.reach;
@@ -421,6 +431,9 @@ const airborneAction = (fighter) => !fighter.action || fighter.action.id === 'ju
 function applyEffectMove(world, fighter, body, id, effects, now) {
   const move = moveFor(fighter, id);
   const until = now + (move.effectSeconds || 0);
+  // The effect has actually landed; retain its original expiry even if the
+  // casting animation finishes or practice refills the meter.
+  if (move.special && move.effectSeconds > 0) fighter.specialActiveUntil = until;
   const give = (f, kind, data = {}) => {
     addEffect(f, kind, until, data);
     effects.push({ type: 'effect', effect: kind, by: fighter.id, target: f.id, until });
