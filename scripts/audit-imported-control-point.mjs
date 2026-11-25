@@ -314,9 +314,13 @@ const arenaMap = createDuelistControlPointArena(THREE);
           name: 'Level 1 Diagonal Pathways (L & R)',
           waypoints: [
             { x: -105, y: 0, z: 90 },
+            { x: -66, y: 0, z: 32 },
+            { x: -57, y: 0, z: 18 },
             { x: -52.5, y: 0, z: 0 },
             { x: 0, y: 0, z: -105 },
             { x: 52.5, y: 0, z: 0 },
+            { x: 57, y: 0, z: 18 },
+            { x: 66, y: 0, z: 32 },
             { x: 105, y: 0, z: 90 }
           ]
         },
@@ -325,6 +329,8 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: -104.5, y: 0, z: 85 },
             { x: -111.5, y: 4, z: 85 },
+            { x: -113.5, y: 4, z: 85 },
+            { x: -113.5, y: 4, z: 81 },
             { x: -111.5, y: 4, z: 81 },
             { x: -104.5, y: 8, z: 81 }
           ]
@@ -334,6 +340,8 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: 104.5, y: 0, z: 85 },
             { x: 111.5, y: 4, z: 85 },
+            { x: 113.5, y: 4, z: 85 },
+            { x: 113.5, y: 4, z: 81 },
             { x: 111.5, y: 4, z: 81 },
             { x: 104.5, y: 8, z: 81 }
           ]
@@ -343,6 +351,8 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: -104.5, y: 8, z: 81 },
             { x: -111.5, y: 4, z: 81 },
+            { x: -113.5, y: 4, z: 81 },
+            { x: -113.5, y: 4, z: 85 },
             { x: -111.5, y: 4, z: 85 },
             { x: -104.5, y: 0, z: 85 }
           ]
@@ -352,6 +362,8 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: 104.5, y: 8, z: 81 },
             { x: 111.5, y: 4, z: 81 },
+            { x: 113.5, y: 4, z: 81 },
+            { x: 113.5, y: 4, z: 85 },
             { x: 111.5, y: 4, z: 85 },
             { x: 104.5, y: 0, z: 85 }
           ]
@@ -380,6 +392,7 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: -7, y: 0, z: -105 },
             { x: -14, y: 4, z: -105 },
+            { x: -24, y: 4, z: -105 },
             { x: -24, y: 4, z: -103 },
             { x: -24, y: 8, z: -96 },
             { x: -24, y: 8, z: -94 },
@@ -389,6 +402,7 @@ const arenaMap = createDuelistControlPointArena(THREE);
             { x: -24, y: 8, z: -94 },
             { x: -24, y: 8, z: -96 },
             { x: -24, y: 4, z: -103 },
+            { x: -24, y: 4, z: -105 },
             { x: -14, y: 4, z: -105 },
             { x: -7, y: 0, z: -105 }
           ]
@@ -398,6 +412,7 @@ const arenaMap = createDuelistControlPointArena(THREE);
           waypoints: [
             { x: 7, y: 0, z: -105 },
             { x: 14, y: 4, z: -105 },
+            { x: 24, y: 4, z: -105 },
             { x: 24, y: 4, z: -103 },
             { x: 24, y: 8, z: -96 },
             { x: 24, y: 8, z: -94 },
@@ -407,6 +422,7 @@ const arenaMap = createDuelistControlPointArena(THREE);
             { x: 24, y: 8, z: -94 },
             { x: 24, y: 8, z: -96 },
             { x: 24, y: 4, z: -103 },
+            { x: 24, y: 4, z: -105 },
             { x: 14, y: 4, z: -105 },
             { x: 7, y: 0, z: -105 }
           ]

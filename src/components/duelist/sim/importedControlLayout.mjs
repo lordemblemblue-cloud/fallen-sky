@@ -7,7 +7,7 @@ function inside(poly,x,z){let result=false;for(let i=0,j=poly.length-1;i<poly.le
 function distanceSegment(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1),0,1);return Math.hypot(x-a.x-t*dx,z-a.z-t*dz);}
 export function importedOverlaps(p,x,z,r=0){if(x<p.x0-r||x>p.x1+r||z<p.z0-r||z>p.z1+r)return false;if(!p.polygon)return Math.hypot(x-clamp(x,p.x0,p.x1),z-clamp(z,p.z0,p.z1))<=r+1e-7;return inside(p.polygon,x,z)||p.polygon.some((a,i)=>distanceSegment(x,z,a,p.polygon[(i+1)%p.polygon.length])<=r+1e-7);}
 function surface(p,x,z){if(p.kind!=='step')return p.y1;const a=p.endpoints.ascendingStart,b=p.endpoints.ascendingEnd;const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1),0,1);return a.y+(b.y-a.y)*t;}
-export function importedSupport(map,x,z,maxY,r=0.18){let y=-Infinity;for(const p of [...map.floors,...map.ramps])if(importedOverlaps(p,x,z,r)){const h=surface(p,x,z);if(h<=maxY+1e-6)y=Math.max(y,h);}return y;}
+export function importedSupport(map,x,z,maxY,r=0.4){let y=-Infinity;for(const p of [...map.floors,...map.ramps])if(importedOverlaps(p,x,z,r)){const h=surface(p,x,z);if(h<=maxY+1e-6)y=Math.max(y,h);}return y;}
 export function importedBlockers(map,{x,y,z,radius=.4,height=1.8}){return [...map.solids,...map.floors].filter(p=>p.y1>y+.10&&p.y0<y+height-.05&&importedOverlaps(p,x,z,radius));}
 export function importedMove(map,body,dx,dz,dy,radius=.4,allowStep=true){const n=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dz),Math.abs(dy))/.15));let hit=false,landed=false,ceiling=false;for(let i=0;i<n;i++){
  const oldY=body.y;const wasGrounded=Math.abs(importedSupport(map,body.x,body.z,oldY+.06)-oldY)<.08;
