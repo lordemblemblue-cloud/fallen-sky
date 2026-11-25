@@ -36,7 +36,6 @@ import {addWolfveilLunaPalace} from './WolfveilLunaPalace.js';
 import {palaceWallCrosses} from './WolfveilPalaceLayout.mjs';
 import {createWolfveilCaveSystem} from './WolfveilCaveSystem.js';
 import {createWolfveilCaveWatch} from './WolfveilCaveWatch.mjs';
-import {WOLFVEIL_EXPLORABLE_CAVES} from './WolfveilCaveLayout.mjs';
 import {createBookCaveInterior} from '../cave/caveInterior.js';
 import {buildWolfveilIndividualGrassField} from './WolfveilIndividualGrassBlades.js';
 import {WOLFVEIL_FRONTIER_TRAILS} from './WolfveilLandscapeDesign.mjs';
@@ -48,32 +47,7 @@ import {createWolfveilPlantCardKit} from './WolfveilPlantCards.js';
 import {createWolfveilTerrainSplatMaterial,applyWolfveilSplatAttributes} from './WolfveilTerrainSplat.js';
 import {WOLFVEIL_TERRAIN_MACRO,wolfveilTerrainMacroRect} from './WolfveilTerrainMacro.mjs';
 
-export function createWolfveilCaveDestination(scene){
-  if(!scene?.add)throw Error('Wolfveil cave destination requires the existing Three.js scene');
-  const group=new THREE.Group();
-  group.name='SWV_Streamed_Cave_Destination';
-  group.position.z=70;
-  scene.add(group);
-  const world={
-    group,ownedMaterials:[],walkableSurfaces:[],
-    mesh(object){group.add(object);return object;},
-  };
-  const caveSystem=createWolfveilCaveSystem(world,{
-    offsetZ:70,startActiveCaveId:WOLFVEIL_EXPLORABLE_CAVES[0].id,
-  });
-  const caveWatch=createWolfveilCaveWatch(group,{caveSystem,offsetZ:70,mode:'inside'});
-  return {
-    caveSystem,caveWatch,
-    floor:caveSystem.floorMesh,
-    pavement:caveSystem.pavementMesh,
-    walkableSurfaces:world.walkableSurfaces,
-    dispose(){
-      caveWatch?.dispose();
-      caveSystem.dispose();
-      group.parent?.remove(group);
-    },
-  };
-}
+export function createWolfveilCaveDestination(){return null;}
 
 export function createWolfveilVillage(scene,options={}){
   if(!scene?.add)throw Error('Wolfveil requires the existing Three.js scene');
@@ -82,7 +56,7 @@ export function createWolfveilVillage(scene,options={}){
   // put the market at spawn; preserve unshifted master layout coordinates.
   const offsetZ=options.originAtMarket?70:0;
   world.group.position.z=offsetZ;
-  const enableCaves=options.loadCaves===false?false:Boolean(options.originAtMarket);
+  const enableCaves=false;
   const geometry=buildWolfveilTerrain({
     span:options.span||1100,segments:options.segments||310,
     caveCutouts:enableCaves,
@@ -358,7 +332,7 @@ export function createWolfveilVillage(scene,options={}){
       interiors:palace.sourceStatus==='luna_exact'
         ?'luna_palace_original_architecture_reused; gameplay collision QA pending'
         :'luna_palace_missing_no_placeholder; physical and worker wall boundaries remain',
-      caves:enableCaves?'four_interaction_entered_caves_plus_ashroot_hollow':'entrances_visual_interior_unbuilt',
+      caves:'removed_for_rebuild',
       waterfall:'animated_visual_sheet_not_fluid_simulation',
       enemyAi:'existing_game1_ai_only_no_new_wolfveil_spawns',
       traversal:'local_preview_exploration_only_outside_gameplay_bounds',

@@ -319,7 +319,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
       // Reduced-motion users skip camera theatrics.
       const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
       if(motionEnabled && !reduced) await new Promise(resolve=>window.setTimeout(resolve,650));
-      await onPlay?.(['forest','astral-dungeon','lunar-cave'].includes(region) ? region : 'wolfveil', region === 'wolfveil' ? workflowDestination : null);
+      await onPlay?.(region==='forest' ? region : 'wolfveil', region === 'wolfveil' ? workflowDestination : null);
       return true;
     } catch (error) {
       setEntering(false);
@@ -631,7 +631,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
       </p>}
       {workflowEnabled && workflowOpen && <WorkflowTeleportPanel
         onClose={() => setWorkflowOpen(false)}
-        onSelect={(target) => target?.region === 'astral-dungeon' ? enterWorld('astral-dungeon') : enterWorld('wolfveil', target)}
+        onSelect={(target) => enterWorld('wolfveil', target)}
         busy={starting}
       />}
       {deleteTarget && (

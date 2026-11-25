@@ -203,7 +203,7 @@ import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAsse
 import {saveWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
-import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
+import {VORTEX_LAKE} from './wolfveil/VortexLakeLayout.mjs';
 import {installWolfveilArtisanTown} from './wolfveil/WolfveilArtisanTownScene.mjs';
 import WolfveilArtisanShopPanel from './wolfveil/WolfveilArtisanShopPanel';
 import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTown} from './wolfveil/WolfveilImportedTownLayout.mjs';
@@ -259,7 +259,7 @@ import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRoute
 import { wolfveilLandscapeAllowsTallGrass } from './wolfveil/WolfveilLandscapeDesign.mjs';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
-import { shouldRejectCaveGroundStep,nearSuigenCaveGround } from './dungeons/CaveRimSafety.mjs';
+import { shouldRejectCaveGroundStep } from './dungeons/CaveRimSafety.mjs';
 import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/LunarCaveScene';
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
@@ -904,7 +904,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         // Underground cave feet must never snap UP to an overlying mountain
         // roof merely because a ray found no reachable tread. A null contact
         // is blocked by the seven-foot cave edge movement guard instead.
-        if(nearSuigenCaveGround(x,z,.85))return null;
+        
       }
       // Classic Wolfveil, given the feet (`referenceY`): the highest floor
       // within one step of them, so walking under a bridge deck (or an upper
@@ -1232,7 +1232,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         protectedTile:wolfveilIsProtectedSWTile,
         insideTown:insideWolfveilImportedTown,
         nearGameplaySite:(x,z,radius)=>
-          isVortexLakeWetSurface(x,z-70,radius+10)||
+          
           Object.values(WOLFVEIL_SITES).some(site=>
             Math.hypot(x-site.x,z-(site.z+70))<radius+18),
       }).then(layer=>{
@@ -1791,33 +1791,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // A SECOND instance of the same real GLB dragon watches the new lake
     // from the eastern mountain rim. It loads only when a player explores
     // nearby; the old quarry encounter, boss HP system and animations stay.
-    const lakeStormDragon=region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:VORTEX_LAKE.centerX+58,z:VORTEX_LAKE.centerZ+100})?createQuarryDragonBoss({
-      loader:worldGltfLoader,scene,bossEntities,setBosses,
-      sampleGroundY:sampleTileGroundY,
-      instanceId:'wolfveil_living_lake_storm_dragon',
-      encounterName:'Dragon of Living Perspectives',
-      site:'vortex_lake',
-      spawnPosition:{
-        x:VORTEX_LAKE.centerX+58,
-        z:VORTEX_LAKE.centerZ+70+30,
-      },
-      getPlayerPosition:()=>{
-        const p=modelRef.current?.position;
-        return p?{x:p.x,z:p.z,alive:getPlayerHUD().hp>0}:null;
-      },
-      applyPlayerDamage:(incoming)=>{
-        const player=getPlayerHUD();
-        if(!player||player.hp<=0)return;
-        const damage=Math.max(0,incoming-absorbShield(incoming));
-        if(damage>0)setHP(Math.max(0,player.hp-damage));
-      },
-      onEngage:boss=>{
-        if(!bossEncounter.isActive()){
-          bossEncounter.start({bossId:boss.id});
-          bossEncounter.beginCombat();
-        }
-      },
-    }):null;
+    const lakeStormDragon=null;
     const pendingAXEDungeonBossSpawns = new Set();
     window.__gw3dSpawnAXEDungeonBoss = ({
       bossDef,

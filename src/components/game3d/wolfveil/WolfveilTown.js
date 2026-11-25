@@ -599,25 +599,7 @@ function quarry(world){
   world.box('darkCedar',X+9,H+11,Z,.20,6,.20);
   return {id:'wolfveil_quarry_visual',hostileAiConnected:false};
 }
-function cavePortals(world,{explorableCaves=false}={}){
-  if(explorableCaves){
-    return {count:4,traversable:true,reason:'four_explorable_caves_with_interconnected_tunnels'};
-  }
-  const portals=[
-    {name:'waterfall',x:163,z:155,w:9,h:7},
-    {name:'western_root',x:-324,z:140,w:8,h:6},
-    {name:'discovery',x:-224,z:74,w:6,h:5},
-  ];
-  for(const site of portals){
-    const y=wolfveilHeight(site.x,site.z);
-    world.box('basalt',site.x-site.w*.5,y+site.h*.5,site.z,1.8,site.h,3);
-    world.box('basalt',site.x+site.w*.5,y+site.h*.5,site.z,1.8,site.h,3);
-    world.box('basalt',site.x,y+site.h-.35,site.z,site.w+2,1.4,3.7);
-    world.box('ink',site.x,y+site.h*.48,site.z+.04,site.w-1.9,site.h-.5,.14);
-    world.box('spirit',site.x,y+2.8,site.z+.18,.8,.7,.18);
-  }
-  return {count:portals.length,traversable:false,reason:'cave interiors and terrain cutouts not yet authored'};
-}
+function cavePortals(){return {count:0,traversable:false,reason:'removed_for_rebuild'};}
 export function buildWolfveilTown(world,terrainOptions={}){
   // All materials share the one connected world-coordinate system.
   // Home geometry lives in a separately disposable blockout. Only after the
