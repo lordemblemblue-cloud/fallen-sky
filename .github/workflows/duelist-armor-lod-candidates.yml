@@ -1,0 +1,28 @@
+name: Duelist low-poly asset candidates
+on:
+  pull_request:
+    paths:
+      - 'tools/duelist/blender/armor_lod_candidates.py'
+      - '.github/workflows/duelist-armor-lod-candidates.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install offline modeling tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender
+          blender --version
+      - name: Build and round-trip rigged candidates
+        run: blender -b -t 2 --python-exit-code 1 --python tools/duelist/blender/armor_lod_candidates.py -- --output /tmp/duelist-lod
+      - uses: actions/upload-artifact@v4
+        with:
+          name: duelist-low-poly-review-candidates
+          path: /tmp/duelist-lod/
+          if-no-files-found: error
+          retention-days: 14
