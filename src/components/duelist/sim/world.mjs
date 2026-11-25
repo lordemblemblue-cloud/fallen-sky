@@ -524,7 +524,13 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
 
 function startMotion(body, fighter, id, world = null) {
   const move = moveFor(fighter, id);
-  if (id === 'jump') { body.vy = Math.sqrt(2 * GRAVITY * move.leap); body.jumped = true; body.airDashReady = true; body.airJumpAt = null; }
+  if (id === 'jump') {
+    body.vy = Math.sqrt(2 * GRAVITY * move.leap);
+    body.jumped = true; body.airDashReady = true; body.airJumpAt = null;
+    // Steer from current input, not the previous ground speed.
+    body.motion = null;
+    return;
+  }
   // Repulse: a hop over the wind-up, landing as it slams (moveBody draws the arc)
   if (move?.hop) { body.motion = { id, dir: forwardOf(body.yaw), from: 0, to: move.startup, distance: 0, done: 0 }; return; }
   // Leap Strike: at the enemy locked on to (or the nearest ahead), landing just short of it
