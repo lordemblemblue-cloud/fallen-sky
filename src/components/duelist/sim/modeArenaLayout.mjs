@@ -48,7 +48,71 @@ const MAPS=Object.freeze({
     cover('center-screen',0,0,2.2,1.0),
   ]),
 });
-export function getModeArenaLayout(mode) { return Object.hasOwn(MAPS,mode) ? MAPS[mode] : null; }
+// Private first-floor A blockout; public arenas are unchanged until playtesting.
+const freezeRing = points => Object.freeze(points.map(p => Object.freeze(p)));
+const footprint = Object.freeze({
+  outer: freezeRing([[-4,-23],[4,-23],[18.8,13],[18.8,19.5],[8.5,19.5],[5,8],[-5,8],[-8.5,19.5],[-18.8,19.5],[-18.8,13]]),
+  holes: Object.freeze([
+    freezeRing([[2.7,-17],[6.3,-9],[2.7,-9]]), freezeRing([[-2.7,-17],[-6.3,-9],[-2.7,-9]]),
+    freezeRing([[3.5,-1],[8.5,3],[3.5,3]]), freezeRing([[-3.5,-1],[-8.5,3],[-3.5,3]])
+  ])
+});
+function aBuilding(id,x,z,fourWay=false) {
+  const parts=[box(id+'-roof','deck',x,3.1,z,6.4,0.2,5.6)];
+  for (const side of [-1,1]) {
+    for (const end of [-1,1]) {
+      parts.push(box(id+'-ns-'+side+'-'+end,'wall',x+end*2.15,0,z+side*2.6,2.1,3.1,0.35));
+      if (fourWay) parts.push(box(id+'-ew-'+side+'-'+end,'wall',x+side*3.02,0,z+end*1.95,0.35,3.1,1.35));
+    }
+    if (!fourWay) parts.push(box(id+'-side-'+side,'wall',x+side*3.02,0,z,0.35,3.1,5.6));
+  }
+  return parts;
+}
+const CONTROL_TEST = Object.freeze({
+  ...layout('control-a-private-test',28,8,[
+    ...aBuilding('west',-13.5,15), ...aBuilding('east',13.5,15),
+    ...aBuilding('center',0,-5,true),
+  ]),
+  footprint,
+  controlPoints: Object.freeze([{x:-13.5,z:15},{x:0,z:-5},{x:13.5,z:15}].map(Object.freeze)),
+});
+export function getModeArenaLayout(mode,testMode=false) {
+  return mode==='control' && testMode ? CONTROL_TEST : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
+}
+function inRing(ring,x,z) {
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const [ax,az]=ring[i], [bx,bz]=ring[j];
+    if((az>z)!==(bz>z) && x<(bx-ax)*(z-az)/(bz-az)+ax)inside=!inside;
+  }
+  return inside;
+}
+function edgeDistance(ring,x,z) {
+  let best=Infinity;
+  for(let i=0;i<ring.length;i++){
+    const [ax,az]=ring[i], [bx,bz]=ring[(i+1)%ring.length], dx=bx-ax,dz=bz-az;
+    const t=Math.max(0,Math.min(1,((x-ax)*dx+(z-az)*dz)/(dx*dx+dz*dz)));
+    best=Math.min(best,Math.hypot(x-ax-dx*t,z-az-dz*t));
+  }
+  return best;
+}
+export function arenaFloorContains(map,x,z,radius=0) {
+  const f=map.footprint;
+  if(!f)return Math.hypot(x,z)<=map.radius-radius;
+  return inRing(f.outer,x,z) && edgeDistance(f.outer,x,z)>=radius &&
+    f.holes.every(h=>!inRing(h,x,z) && edgeDistance(h,x,z)>=radius);
+}
+// Recovery for direct displacement by grab/blink/separation, not ordinary movement.
+export function recoverArenaFootprint(map,body,radius=0.4) {
+  if(!map.footprint || arenaFloorContains(map,body.x,body.z,radius))return;
+  let best=null, distance=Infinity;
+  for(let z=-22;z<=19;z+=0.5)for(let x=-18;x<=18;x+=0.5){
+    const d=(x-body.x)**2+(z-body.z)**2;
+    if(d<distance && arenaFloorContains(map,x,z,radius) &&
+      !arenaBodyBlockers(map,{...body,x,z,radius,height:1.8}).length){best={x,z};distance=d;}
+  }
+  if(best){body.x=best.x;body.z=best.z;}
+}
 
 // Query a horizontal circle against the footprint of a box. The vertical
 // interval is separately checked for a fighter's feet/head; standing exactly
@@ -94,6 +158,7 @@ export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
     for(const [axis,delta] of [['x',dx/n],['z',dz/n]]){
       if(!delta)continue;
       const trial={x:body.x,y:body.y,z:body.z,[axis]:body[axis]+delta};
+      if(map.footprint && !arenaFloorContains(map,trial.x,trial.z,radius)){hit=true;continue;}
       const blockers=blocked(map,trial,radius);
       if(!blockers.length){body[axis]=trial[axis];continue;}
       if(allowStep && dy<=0 && arenaGrounded(map,body,radius)){
@@ -154,7 +219,13 @@ export function arenaLineClear(map,a,b){
 // Navigation anchors at building/cover corners. Ground routes intentionally
 // stay off roofs; players may use the stairs. Cache the graph per immutable map.
 const navCache=new WeakMap();
-const routeClear=(map,a,b)=>arenaRayFraction(map,{x:a.x,y:0.65,z:a.z},{x:b.x,y:0.65,z:b.z},0.42)>=1-EPS;
+const routeClear=(map,a,b)=>{
+  if(map.footprint){
+    const n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/0.35));
+    for(let i=0;i<=n;i++)if(!arenaFloorContains(map,a.x+(b.x-a.x)*i/n,a.z+(b.z-a.z)*i/n,0.42))return false;
+  }
+  return arenaRayFraction(map,{x:a.x,y:0.65,z:a.z},{x:b.x,y:0.65,z:b.z},0.42)>=1-EPS;
+};
 function groundGraph(map){
   if(navCache.has(map))return navCache.get(map);
   const nodes=[];
@@ -165,11 +236,15 @@ function groundGraph(map){
       nodes.push({x,z});
     }
   }
+  if(map.footprint)for(let z=-20;z<=18;z+=3)for(let x=-16;x<=16;x+=3){
+    if(arenaFloorContains(map,x,z,0.6) && !arenaBodyBlockers(map,{x,y:0,z,radius:0.5,height:ARENA_BODY_HEIGHT}).length)nodes.push({x,z});
+  }
   // A coarse ring adds open bypasses without building a large grid.
   for(let i=0;i<16;i++){
     const a=i*Math.PI/8,x=Math.sin(a)*(map.radius-2),z=Math.cos(a)*(map.radius-2);
     if(!arenaBodyBlockers(map,{x,y:0,z,radius:0.5,height:ARENA_BODY_HEIGHT}).length)nodes.push({x,z});
   }
+  if(map.footprint)for(let i=nodes.length-1;i>=0;i--)if(!arenaFloorContains(map,nodes[i].x,nodes[i].z,0.42))nodes.splice(i,1);
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
   const edges=nodes.map((a,i)=>nodes.flatMap((b,j)=>j!==i && routeClear(map,a,b)?[{j,d:distance(a,b)}]:[]));
   const graph={nodes,edges};navCache.set(map,graph);return graph;
