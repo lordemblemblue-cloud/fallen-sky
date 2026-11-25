@@ -69,6 +69,16 @@ export function createConduitVentPlan(){
   }
   return routes;
 }
+// Replacement dimensions for each original side wall, in building-local
+// coordinates. The host must also clip overlapping facade decoration.
+export function ventPortalWallPieces(portal){
+  const base=.65,top=9.35,zmin=-5.7,zmax=5.7;
+  const lo=portal.localZ-portal.width/2,hi=portal.localZ+portal.width/2;
+  if(!(lo>zmin&&hi<zmax&&portal.bottom>base&&portal.top<top))throw new RangeError('Portal outside original side wall');
+  const piece=(suffix,z0,z1,y0,y1)=>({label:portal.building+' '+portal.side+' '+suffix,x:portal.localX,y:(y0+y1)/2-base,z:(z0+z1)/2,sx:.6,sy:y1-y0,sz:z1-z0});
+  return [piece('lower',zmin,zmax,base,portal.bottom),piece('upper',zmin,zmax,portal.top,top),
+    piece('front jamb',zmin,lo,portal.bottom,portal.top),piece('rear jamb',hi,zmax,portal.bottom,portal.top)];
+}
 export function ventBoxCorners(b){
   const out=[];
   for(const x of [-b.hx,b.hx])for(const z of [-b.hz,b.hz])out.push({x:b.cx+x*b.cos+z*b.sin,z:b.cz-x*b.sin+z*b.cos});
