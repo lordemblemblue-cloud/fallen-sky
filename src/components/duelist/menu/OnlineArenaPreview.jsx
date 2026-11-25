@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
-import { createArena } from '../client/arena.mjs';
+import { createDuelistControlPointArena } from '../client/maps/controlPointArena.mjs';
+import { applyControlPointDaylight } from '../client/maps/controlPointDaylight.mjs';
+import { createArena, createSceneLighting } from '../client/arena.mjs';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 
 // A lightweight orbiting map overview, not a spectator feed. The actual
@@ -22,7 +24,7 @@ export default function OnlineArenaPreview({ mode }) {
     const mount = mountRef.current;
     if (!mount || !visible) return;
     setFailed(false);
-    let active = true, frame = 0, renderer, observer;
+    let active = true, frame = 0, renderer, observer, imported, daylight;
     const scene = new THREE.Scene();
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const materials = new Map();
@@ -37,7 +39,9 @@ export default function OnlineArenaPreview({ mode }) {
     const layout = getModeArenaLayout(mode);
     const radius = layout?.radius || (mode === 'duel' ? 12 : 18);
     scene.background = new THREE.Color(0x081422);
+    if(layout?.imported){imported=createDuelistControlPointArena(THREE);imported.setLayerVisibility('trusses',false);scene.add(imported.root);}
     const authoredFloor = layout?.footprint ? createArena({ radius, footprint: layout.footprint }) : null;
+    if (!imported) {
     if (authoredFloor) {
       scene.add(authoredFloor.group);
       scene.add(new THREE.HemisphereLight(0xb8d9ff, 0x334455, 2));
@@ -69,6 +73,7 @@ export default function OnlineArenaPreview({ mode }) {
         const a=i*Math.PI/3;box(Math.cos(a)*7,0.1,Math.sin(a)*7,1.5,0.2,1.5,gold);
       }
     }
+    }
     const camera = new THREE.PerspectiveCamera(42,1,0.1,250);
     const resize = () => {
       if (!renderer || !active) return;
@@ -78,6 +83,7 @@ export default function OnlineArenaPreview({ mode }) {
     try {
       const created=createSceneRenderer('duelist-adventure',{antialias:false,powerPreference:'low-power'});
       renderer=created.renderer;
+      if(imported){const lights=createSceneLighting(scene);scene.add(lights.sun.target);renderer.toneMapping=THREE.ACESFilmicToneMapping;daylight=applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});}
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));
       renderer.domElement.style.cssText='display:block;width:100%;height:100%';
       renderer.domElement.setAttribute('aria-hidden','true');
@@ -91,7 +97,7 @@ export default function OnlineArenaPreview({ mode }) {
           if(!active)return;
           frame=requestAnimationFrame(draw);
           if(document.hidden || t-last<66)return;
-          last=t;
+          daylight?.update(Math.min(.1,(t-last)/1000));last=t;
           const angle=window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.7 : t*0.00012;
           camera.position.set(Math.sin(angle)*radius*2.5,radius*2.4,Math.cos(angle)*radius*2.5);
           camera.lookAt(0,0,0);
@@ -102,7 +108,7 @@ export default function OnlineArenaPreview({ mode }) {
     } catch {setFailed(true);}
     return ()=>{
       active=false;cancelAnimationFrame(frame);observer?.disconnect();
-      authoredFloor?.dispose();
+      daylight?.dispose();imported?.dispose();authoredFloor?.dispose();
       geometry.dispose();for(const m of materials.values())m.dispose();
       if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}
     };

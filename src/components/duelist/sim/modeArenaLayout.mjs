@@ -43,37 +43,9 @@ const MAPS=Object.freeze({
     cover('center-screen',0,0,2.2,1.0),
   ]),
 });
-// Shared first-floor A layout for online, offline and private Test Control Point.
-const freezeRing = points => Object.freeze(points.map(p => Object.freeze(p)));
-const footprint = Object.freeze({
-  outer: freezeRing([[-4,-23],[4,-23],[18.8,13],[18.8,19.5],[8.5,19.5],[5,8],[-5,8],[-8.5,19.5],[-18.8,19.5],[-18.8,13]]),
-  holes: Object.freeze([
-    freezeRing([[2.7,-17],[6.3,-9],[2.7,-9]]), freezeRing([[-2.7,-17],[-6.3,-9],[-2.7,-9]]),
-    freezeRing([[3.5,-1],[8.5,3],[3.5,3]]), freezeRing([[-3.5,-1],[-8.5,3],[-3.5,3]])
-  ])
-});
-function aBuilding(id,x,z,fourWay=false) {
-  const parts=[box(id+'-roof','deck',x,3.1,z,6.4,0.2,5.6)];
-  for (const side of [-1,1]) {
-    for (const end of [-1,1]) {
-      parts.push(box(id+'-ns-'+side+'-'+end,'wall',x+end*2.15,0,z+side*2.6,2.1,3.1,0.35));
-      if (fourWay) parts.push(box(id+'-ew-'+side+'-'+end,'wall',x+side*3.02,0,z+end*1.95,0.35,3.1,1.35));
-    }
-    if (!fourWay) parts.push(box(id+'-side-'+side,'wall',x+side*3.02,0,z,0.35,3.1,5.6));
-  }
-  return parts;
-}
-const CONTROL_A = Object.freeze({
-  ...layout('control-a-v1',28,8,[
-    ...aBuilding('west',-13.5,15), ...aBuilding('east',13.5,15),
-    ...aBuilding('center',0,-5,true),
-  ]),
-  footprint,
-  controlPoints: Object.freeze([{x:-13.5,z:15},{x:0,z:-5},{x:13.5,z:15}].map(Object.freeze)),
-});
-export function getModeArenaLayout(mode, testMode=false) {
-  if(mode==='control' && testMode)return IMPORTED_CONTROL;
-  return mode==='control' ? CONTROL_A : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
+// Approved two-level arena is shared by public, offline and private matches.
+export function getModeArenaLayout(mode) {
+  return mode==='control' ? IMPORTED_CONTROL : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
 }
 function inRing(ring,x,z) {
   let inside=false;

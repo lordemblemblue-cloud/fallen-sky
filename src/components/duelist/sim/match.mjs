@@ -36,7 +36,7 @@ export const MODES = Object.freeze({
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
   escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 28, respawn: 4, protect: 1.5, clock: 180 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
-  control: Object.freeze({ id: 'control', name: 'Control Point', teams: true, seats: 8, arena: 28, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
+  control: Object.freeze({ id: 'control', name: 'Control Point', teams: true, seats: 8, arena: 150, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
 export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, baseInset: 4 });
 export const COUNTDOWN = 3;
@@ -345,7 +345,7 @@ function goalFor(match, s) {
     const candidates = pending.length ? pending : match.controlPoints;
     const index = Math.max(0, match.order.indexOf(s.id));
     const target = candidates[index % candidates.length];
-    return { x: target.x, z: target.z, urgent: true };
+    return { x: target.x, y: target.y ?? 0, z: target.z, urgent: true };
   }
   if (match.ball && s.team) return { x: match.ball.x, z: match.ball.z, urgent: true };
   if (!match.flags || !s.team) return null;

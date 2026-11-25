@@ -46,7 +46,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 15; // 15: shared A-shaped Control Point arena; older clients must reload.
+export const PROTOCOL = 16; // 16: approved two-level Control Point arena; older clients must reload.
 // // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
@@ -64,7 +64,7 @@ export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'co
 export const DEFAULT_PUBLIC_ROOMS = Object.freeze(ONLINE_MODES.map((mode, index) => Object.freeze({ id: `m${index + 1}`, mode })));
 // A map revision gets a fresh native Actor instance, without changing its public room ID.
 // Retired long-lived instances may retain old geometry even after publication.
-export const actorInstanceId = roomId => roomId === 'm5' ? 'm5-control-a-v1' : roomId;
+export const actorInstanceId = roomId => roomId === 'm5' ? 'm5-control-import-v2-p16' : roomId + '-p16';
 export const actorPublicRoomId = instanceId => DEFAULT_PUBLIC_ROOMS.find(room => actorInstanceId(room.id) === instanceId)?.id ?? null;
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);

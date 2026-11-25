@@ -208,8 +208,8 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
       joinedOnce = true;
       matchMode = msg.mode;
-      world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
       world.arenaLayout = getModeArenaLayout(msg.mode);
+      world.arenaRadius = world.arenaLayout?.radius ?? (MODES[msg.mode]?.arena || world.arenaRadius);
       if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {

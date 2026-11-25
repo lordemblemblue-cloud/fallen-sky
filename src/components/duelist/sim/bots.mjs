@@ -8,6 +8,7 @@
 // objective (a flag, a thief) when no fight is close; otherwise close in, circle and strike in combos.
 import { MOVES, BLOCK, CLASSES, FLOW, SNAP, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
+import { importedBotPath } from './importedControlBotNav.mjs';
 import { arenaLineClear, nextArenaGroundWaypoint } from './modeArenaLayout.mjs';
 
 export const BOT_LEVELS = Object.freeze({
@@ -109,7 +110,19 @@ input.target = foe?.id || null;
   const theirs = foe ? bodyOf(world, foe.id) : null;
   const d = theirs ? dist(mine, theirs) : Infinity;
 
-  if(world.arenaLayout && mine.y<0.2){
+  if(world.arenaLayout?.imported){
+    const destination=goal && (d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
+    if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
+      const old=bot.importedPath;
+      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||now>=old.until){
+        bot.importedPath={target:{...destination},until:now+3,path:importedBotPath(world.arenaLayout,mine,destination)};
+      }
+      const path=bot.importedPath.path;
+      while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();
+      const p=path[0];if(p){const a=angleTo(mine,p);input.move={x:Math.sin(a),z:Math.cos(a)};input.face=a;input.strafe=false;}
+      if(me.guard)presses.push('blockUp');return input;
+    }
+  }else if(world.arenaLayout && mine.y<0.2){
     const destination=goal && (d>ENGAGE || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
     if(destination && !arenaLineClear(world.arenaLayout,mine,destination)){
       if(!bot.arenaPath || now>=bot.arenaPath.until){bot.arenaPath={until:now+0.6,point:nextArenaGroundWaypoint(world.arenaLayout,mine,destination)};}

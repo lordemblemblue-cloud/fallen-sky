@@ -55,6 +55,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   }
   function keepInside() {
     if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
+    if(world.arenaLayout?.imported)return;
     const r = Math.hypot(body.x, body.z);
     const limit = world.arenaRadius - BODY_RADIUS;
     if (r > limit) { body.x *= limit / r; body.z *= limit / r; }
@@ -141,10 +142,12 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
         } else shown.action = { id: a.id, move: a.move, t: a.t, nextHit: a.nextHit, held: a.held, chainedFrom: a.chainedFrom, link: a.link, startedAt };
       }
       shownBody.x = body.x + ex;
-      shownBody.y = Math.max(0, body.y + ey);
+      shownBody.y = world.arenaLayout?.imported ? body.y + ey : Math.max(0, body.y + ey);
       shownBody.z = body.z + ez;
       shownBody.yaw = body.yaw;
       shownBody.vy = body.vy;
+      shownBody.jumped = body.jumped;
+      shownBody.airJumpAt = body.airJumpAt;
       shownBody.speed = body.speed;
       shownBody.moving = body.moving;
       shownBody.motion = body.motion;
