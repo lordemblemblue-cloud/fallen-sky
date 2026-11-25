@@ -38,13 +38,17 @@ for(const mode of modes){
   // geometry, not the old Meridian or generic FFA map. Presentation only.
   const map=createConduitArena(scene,{quality:'low',enableLights:false,enableAtmosphere:false});
   disposals.push(()=>map.dispose());
-  // Editorial cutaway: hide only the overhead cavern shell so the arena
-  // architecture can be seen from outside; do not alter gameplay geometry.
+  // Editorial cutaway: remove the non-playable cavern shell and outer
+  // rock/rib silhouettes from this offline scene only. Keep all arena
+  // buildings, cover, bridges, stairs, machinery and the conduit ring.
   map.root.traverse(o=>{
-   if(o.geometry?.type==='SphereGeometry'&&o.geometry.parameters.radius===52)o.visible=false;
+   const g=o.geometry,p=g?.parameters;
+   if((g?.type==='SphereGeometry'&&p.radius===52)||
+      (o.isInstancedMesh&&g?.type==='DodecahedronGeometry'&&p.radius===4.8&&o.count===24)||
+      (o.isInstancedMesh&&g?.type==='BoxGeometry'&&p.width===1.4&&p.height===28&&p.depth===2.2&&o.count===12))o.visible=false;
   });
-  span=100;look=[0,2.5,0];
-  eye=mode==='tdm'?[0,112,92]:[-91,86,98];
+  span=94;look=[0,3,0];
+  eye=mode==='tdm'?[0,130,76]:[-65,100,116];
  }else if(mode==='control'){
   const map=createDuelistControlPointArena(THREE);map.setLayerVisibility('trusses',false);scene.add(map.root);disposals.push(()=>map.dispose());
   const env=createMountainLakeEnvironment();scene.add(env.environmentGroup??env.group??env.root);
@@ -105,7 +109,8 @@ for(const mode of modes){
      normal.subVectors(b,a).cross(edge.subVectors(c,a)).normalize();
      const f=mat.isMeshBasicMaterial||mat.isShaderMaterial?1:.55+.55*Math.max(0,normal.dot(sun));
      color.copy(base);if(mat.vertexColors&&vertexColors){color.r*=vertexColors.getX(ia);color.g*=vertexColors.getY(ia);color.b*=vertexColors.getZ(ia);}
-     color.multiplyScalar(f).convertLinearToSRGB();
+     // Lift the dark flat-shaded Conduit materials slightly for small cards.
+     color.multiplyScalar(f*(mode==='tdm'||mode==='ffa'?1.45:1)).convertLinearToSRGB();
      const rgb=[Math.round(clamp(color.r*255,0,255)),Math.round(clamp(color.g*255,0,255)),Math.round(clamp(color.b*255,0,255))];
      a.applyMatrix4(camera.matrixWorldInverse);b.applyMatrix4(camera.matrixWorldInverse);c.applyMatrix4(camera.matrixWorldInverse);
      clipTriangle([a,b,c],rgb);count++;
