@@ -46,3 +46,14 @@ test('registry snapshots are deeply immutable and independent of original data',
   assert.equal(w.discs[0].yMax,-5);assert.equal(Object.isFrozen(w.discs[0]),true);
   assert.throws(()=>moveConduitBody(w,{x:0,y:0,z:0},NaN,0,0),TypeError);
 });
+
+test('capsule walks across flat landing edges at both ends of a staircase',()=>{
+  const w=registry({
+    obbs:[box(0,-.25,6,2,.25,1,'upper landing',true),box(0,-5.25,-6,2,.25,1,'lower landing',true)],
+    ramps:[{cx:0,cz:0,width:3,length:10,yStart:-5,yEnd:0,cos:1,sin:0,hasUnderside:true,thickness:.3}]
+  });
+  const low={x:0,y:-5,z:-6},high={x:0,y:0,z:6};
+  assert.equal(probeConduitWalk(w,low,high).ok,true);
+  assert.equal(probeConduitWalk(w,high,low).ok,true);
+  assert.equal(auditConduitSpawn(w,{id:'unsupported-center',x:2.2,y:0,z:6}).ok,false);
+});
