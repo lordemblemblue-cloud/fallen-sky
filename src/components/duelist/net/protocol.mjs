@@ -224,6 +224,7 @@ export function encodeOwn(f, body, time) {
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashReady ? 1 : 0, null, body.airJumpAt ?? null],
+    cp:body.conduitFlight?[body.conduitFlight.vx,body.conduitFlight.vy,body.conduitFlight.vz,body.conduitFlight.left]:null,
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until, f.activeAnchorAt.y ?? null] : null],
@@ -269,6 +270,7 @@ export function applyOwn(f, body, data) {
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
     airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashReady: !!data.ad?.[1] });
+  body.conduitFlight=Array.isArray(data.cp)&&data.cp.length===4&&data.cp.every(Number.isFinite)?{vx:data.cp[0],vy:data.cp[1],vz:data.cp[2],left:data.cp[3]}:null;
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7], baseY: m[8] ?? 0 };
