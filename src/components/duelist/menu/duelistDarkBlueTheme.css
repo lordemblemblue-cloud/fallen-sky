@@ -115,3 +115,182 @@
 @media(prefers-reduced-motion:reduce) {
  .dxt-page :is(.dxt-action,.dxt-category,.dxt-tile) {transition:none;}
 }
+
+
+/* Match entry — open liquid glass, scoped to the Play drawer, match routes,
+   server browser and match transition. No blur per room, no extra canvas,
+   no changes to map assets, networking, gameplay HUD or other menu pages. */
+.dxt-page--play-reference #duelist-play-drawer,
+.duelist-menu-page.duelist-match-entry,
+.duelist-match-loading.duelist-match-loading {
+  --entry-ink:#f0f5fc;
+  --entry-muted:#bdcfdf;
+  --entry-ice:#b6ddf5;
+  --entry-gold:#ebcf9d;
+  --entry-glass:linear-gradient(145deg,rgba(177,215,244,.11),rgba(19,43,69,.19) 46%,rgba(6,20,38,.42));
+  --entry-control:linear-gradient(145deg,rgba(161,207,238,.12),rgba(19,42,67,.25));
+  --entry-selected:linear-gradient(145deg,rgba(107,169,218,.27),rgba(22,59,94,.36));
+  --entry-rim:inset 0 1px 0 rgba(216,239,255,.18);
+}
+.dxt-page--play-reference #duelist-play-drawer {
+  border:0; border-radius:18px; clip-path:none;
+  background:radial-gradient(ellipse at 48% 0%,rgba(111,165,208,.12),transparent 55%),
+    linear-gradient(145deg,rgba(7,19,35,.72),rgba(8,23,43,.54) 50%,rgba(7,18,34,.63));
+  box-shadow:0 16px 52px rgba(0,7,18,.34);
+  backdrop-filter:blur(10px) saturate(112%);
+  -webkit-backdrop-filter:blur(10px) saturate(112%);
+}
+.dxt-page--play-reference #duelist-play-drawer .dxt-surface-top {
+  border-bottom-color:rgba(169,206,232,.15);
+}
+.dxt-page--play-reference #duelist-play-drawer .dxt-surface-top::before {display:none;}
+.dxt-page--play-reference #duelist-play-drawer .dxt-surface-top::after {
+  height:1px;background:linear-gradient(90deg,transparent,rgba(183,222,249,.55),transparent);box-shadow:none;
+}
+.dxt-page--play-reference #duelist-play-drawer :is(.dxt-mode-categories,.dxt-mode-detail) {
+  border-color:rgba(169,206,232,.14);
+}
+.dxt-page--play-reference #duelist-play-drawer :is(.dxt-category,.dxt-action,.dxt-close) {
+  border:1px solid transparent;border-radius:12px;background:var(--entry-control);
+  box-shadow:var(--entry-rim);color:var(--entry-ink);filter:none;
+}
+.dxt-page--play-reference #duelist-play-drawer :is(.dxt-category small,.dxt-tile small) {
+  border-color:transparent;background:rgba(6,20,38,.48);color:var(--entry-muted);
+}
+.dxt-page--play-reference #duelist-play-drawer :is(.dxt-category[data-active="true"],.dxt-action--primary:not(:disabled)) {
+  border-color:rgba(167,214,247,.32);background:var(--entry-selected);
+  color:#f7fbff;box-shadow:var(--entry-rim),0 5px 18px rgba(15,52,91,.24);filter:none;
+}
+.dxt-page--play-reference #duelist-play-drawer :is(.dxt-tile,.dxt-detail-art) {
+  border:1px solid rgba(176,215,244,.12);border-radius:12px;box-shadow:0 6px 18px rgba(0,7,18,.25);filter:none;
+}
+.dxt-page--play-reference #duelist-play-drawer .dxt-tile[data-active="true"] {
+  border:1px solid rgba(167,214,247,.58);box-shadow:var(--entry-rim),0 4px 18px rgba(50,115,170,.26);
+}
+.dxt-page--play-reference #duelist-play-drawer .dxt-tile[data-active="true"] .dxt-tile-shade {box-shadow:none;}
+.dxt-page--play-reference #duelist-play-drawer .dxt-detail-settings select {
+  color:var(--entry-ink);background:rgba(11,29,49,.8);border-color:rgba(160,198,228,.2);border-radius:8px;
+}
+.dxt-page--play-reference #duelist-play-drawer .dxt-action:disabled {opacity:.45;cursor:not-allowed;}
+.dxt-page--play-reference #duelist-play-drawer :is(button,select,a):focus-visible {
+  outline:2px solid var(--entry-ice);outline-offset:2px;
+}
+
+/* Routed mode details and server browser: open content on a soft shadow wash. */
+.duelist-menu-page.duelist-match-entry {
+  color:var(--entry-ink);
+  background:radial-gradient(ellipse at 47% 10%,rgba(80,137,189,.24),transparent 48%),
+    radial-gradient(ellipse at 90% 75%,rgba(97,119,167,.10),transparent 44%),
+    linear-gradient(145deg,#071426,#102840 50%,#08192d);
+}
+.duelist-menu-page.duelist-match-entry :is(.duelist-menu-topbar,.duelist-menu-bottom-nav) {
+  border-color:rgba(170,207,233,.13);background:linear-gradient(100deg,rgba(6,18,34,.87),rgba(15,37,59,.75));
+  box-shadow:none;
+}
+.duelist-menu-page.duelist-match-entry .duelist-menu-hero {
+  border:0;padding-left:0;border-bottom:1px solid rgba(176,215,244,.13);
+}
+.duelist-menu-page.duelist-match-entry .duelist-menu-hero h1 {color:var(--entry-ink);font-family:Georgia,'Times New Roman',serif;letter-spacing:.035em;}
+.duelist-menu-page.duelist-match-entry :is(.duelist-menu-eyebrow,.duelist-menu-brand span) {color:var(--entry-ice);}
+.duelist-menu-page.duelist-match-entry .duelist-menu-panel {
+  border:0;border-radius:16px;background:var(--entry-glass);
+  box-shadow:0 12px 32px rgba(0,8,20,.22),var(--entry-rim);backdrop-filter:none;
+}
+.duelist-menu-page.duelist-match-entry .duelist-menu-match-list {
+  border:0;border-radius:0;overflow:visible;background:transparent;
+}
+.duelist-menu-page.duelist-match-entry .duelist-menu-match-row {
+  flex-wrap:wrap;gap:9px;background:transparent;border-color:rgba(176,215,244,.13);
+}
+.duelist-menu-page.duelist-match-entry :is(.duelist-menu-button,.duelist-entry-control) {
+  min-height:44px;border:1px solid transparent;border-radius:10px;color:var(--entry-ink);
+  background:var(--entry-control);box-shadow:var(--entry-rim);
+}
+.duelist-menu-page.duelist-match-entry :is(.duelist-menu-button.is-primary,.duelist-entry-control:hover:not(:disabled),.duelist-menu-button:hover:not(:disabled)) {
+  border-color:rgba(167,214,247,.32);color:#f7fbff;background:var(--entry-selected);
+}
+.duelist-menu-page.duelist-match-entry :is(select.duelist-entry-control,.duelist-menu-choice select) {
+  color:var(--entry-ink);background:rgba(11,29,49,.8);border-color:rgba(160,198,228,.2);border-radius:9px;min-height:44px;
+}
+.duelist-menu-page.duelist-match-entry select option {background:#10283f;color:#f0f5fc;}
+.duelist-menu-page.duelist-match-entry :is(button,a,select):focus-visible {
+  outline:2px solid var(--entry-ice);outline-offset:2px;
+}
+.duelist-match-entry .duelist-entry-room {
+  min-width:0;overflow:hidden;border:0;border-radius:13px;background:var(--entry-glass);
+  box-shadow:0 8px 26px rgba(0,7,18,.24);transition:background-color .16s,box-shadow .16s;
+}
+.duelist-match-entry .duelist-entry-room:hover,
+.duelist-match-entry .duelist-entry-room:focus-within {
+  box-shadow:0 8px 26px rgba(0,7,18,.32),inset 0 0 0 1px rgba(184,222,249,.24);
+}
+.duelist-match-entry .duelist-entry-room > button:first-child > div:first-child {
+  border:0;border-radius:0;background:rgba(7,19,35,.65);
+}
+.duelist-match-entry .duelist-entry-room :is(button,span,div) {overflow-wrap:anywhere;}
+.duelist-match-entry .duelist-entry-room button:focus-visible {outline-offset:-3px;}
+.duelist-match-entry .duelist-entry-room button:disabled {cursor:not-allowed;}
+.duelist-match-entry .duelist-entry-room-action {color:var(--entry-ice);}
+.duelist-match-entry .duelist-entry-room button:disabled .duelist-entry-room-action {color:var(--entry-muted);}
+.duelist-match-entry .duelist-entry-room-local {min-height:44px;color:var(--entry-gold);}
+.duelist-match-entry .duelist-entry-room-divider {border-color:rgba(176,215,244,.10);}
+.duelist-match-entry .duelist-entry-status {color:var(--entry-muted);}
+
+/* Match briefing: no visible rectangular panel or numbered boxes.
+   The indeterminate rail remains tied to real loading/error state. */
+.duelist-match-loading.duelist-match-loading {
+  background:radial-gradient(ellipse at 50% 42%,rgba(35,67,99,.55),rgba(5,14,27,.84) 76%);
+  color:var(--entry-ink);overflow:auto;align-items:safe center;
+  padding:clamp(12px,3vw,36px);
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__panel {
+  width:min(690px,100%);min-width:0;padding:clamp(14px,3vw,36px);border:0;border-radius:0;
+  background:radial-gradient(ellipse at center,rgba(5,17,32,.66),transparent 72%);
+  box-shadow:none;clip-path:none; text-shadow:0 2px 9px rgba(0,7,17,.55);
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__eyebrow {color:var(--entry-ice);letter-spacing:.16em;overflow-wrap:anywhere;}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__mode {
+  font-family:Georgia,'Times New Roman',serif;font-size:clamp(24px,4vw,46px);font-weight:700;letter-spacing:.04em;color:var(--entry-ink);
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__rule {color:var(--entry-muted);}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__states {
+  text-align:center;gap:8px;margin:clamp(10px,3vh,24px) 0;
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__states li {
+  min-height:0;border:0;background:transparent;color:var(--entry-muted);
+  padding:6px 4px;overflow-wrap:anywhere;box-shadow:none;
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__states li:first-child {color:var(--entry-ink);}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__states b {color:var(--entry-ice);font-size:12px;}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__message {color:var(--entry-ink);overflow-wrap:anywhere;}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__rail {
+  width:min(340px,85%);height:2px;border-radius:99px;background:rgba(179,214,240,.16);
+}
+.duelist-match-loading.duelist-match-loading .duelist-match-loading__rail::after {
+  background:linear-gradient(90deg,transparent,#b6ddf5,transparent);
+}
+.duelist-match-loading.duelist-match-loading--error .duelist-match-loading__message {color:#ffb8b3;}
+.duelist-match-loading.duelist-match-loading--error .duelist-match-loading__rail::after {background:#d18e88;animation:none;}
+.duelist-arena-page .duelist-arena-header {
+  border-color:rgba(174,209,235,.14);
+  background:linear-gradient(100deg,rgba(6,18,34,.9),rgba(17,39,62,.75));box-shadow:none;
+}
+.duelist-arena-page .duelist-arena-back {
+  border:1px solid rgba(174,209,235,.14);border-radius:9px;color:#e7f2fc;
+  background:linear-gradient(145deg,rgba(161,207,238,.12),rgba(19,42,67,.25));
+}
+.duelist-arena-page .duelist-arena-back:hover {background:rgba(86,139,185,.26);}
+.duelist-arena-page .duelist-arena-back:focus-visible {outline:2px solid #b6ddf5;outline-offset:2px;}
+@media (max-height:500px) {
+  .duelist-match-loading.duelist-match-loading .duelist-match-loading__panel {padding:10px 8px;}
+  .duelist-match-loading.duelist-match-loading .duelist-match-loading__mode {font-size:clamp(21px,3vw,30px);}
+  .duelist-match-loading.duelist-match-loading .duelist-match-loading__rule {margin-bottom:8px;font-size:12px;}
+  .duelist-match-loading.duelist-match-loading .duelist-match-loading__states {margin:8px 0;}
+}
+@media (pointer:coarse) {
+  .dxt-page--play-reference #duelist-play-drawer {backdrop-filter:none;-webkit-backdrop-filter:none;background:linear-gradient(145deg,rgba(7,19,35,.86),rgba(8,23,43,.72));}
+}
+@media (prefers-reduced-motion:reduce) {
+  .duelist-match-entry .duelist-entry-room {transition:none;}
+  .duelist-match-loading.duelist-match-loading .duelist-match-loading__rail::after {animation:none;width:100%;transform:none;}
+}
