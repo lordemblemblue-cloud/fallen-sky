@@ -5,10 +5,10 @@ const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 const valid=p=>p&&[p.x,p.y,p.z].every(Number.isFinite);
 const AMBIENCE={reactor:[54,108,216],undercroft:[40,80,120],fan:[30,120,240]};
 export function conduitCueWave(kind,sampleRate,options={}){
-  const loop=Object.hasOwn(AMBIENCE,kind),duration=loop?2:kind==='pad'?.48:.16;
+  const loop=Object.hasOwn(AMBIENCE,kind),duration=loop?2:kind==='pad' ? .48 : .16;
   const data=new Float32Array(Math.round(sampleRate*duration));
   let seed=123456789,low=0;
-  const pitch=options.vertical==='above'?1.16:options.vertical==='below'?.81:1;
+  const pitch=options.vertical==='above'?1.16:options.vertical==='below' ? .81 : 1;
   for(let i=0;i<data.length;i++){
     const t=i/sampleRate;
     seed=(Math.imul(seed,1664525)+1013904223)>>>0;
@@ -23,7 +23,7 @@ export function conduitCueWave(kind,sampleRate,options={}){
       }else{
         const metal=options.surface==='metal';
         data[i]=attack*tail*tail*(.55*low+.23*Math.sin(TAU*90*pitch*t)+
-          (metal?.16:.035)*Math.sin(TAU*760*pitch*t)*Math.exp(-t*25)+.14*noise);
+          (metal ? .16 : .035)*Math.sin(TAU*760*pitch*t)*Math.exp(-t*25)+.14*noise);
       }
     }
   }
@@ -49,14 +49,14 @@ export function createConduitAudioBank(ctx,master){
     gain.gain.value=0;
     gain.gain.setTargetAtTime(clamp(Number.isFinite(options.gain)?options.gain:.5,0,1),ctx.currentTime,.015);
     source.connect(filter).connect(gain).connect(pan).connect(master);
-    let stopped=false;
+    let stopped=false,cleaned=false;
     const v={source,gain,stop(immediate=false){
-      if(stopped)return;stopped=true;
+      if(stopped){if(immediate)cleanup();return;}stopped=true;
       if(!immediate)gain.gain.setTargetAtTime(0,ctx.currentTime,.035);
       try{source.stop(ctx.currentTime+(immediate?0:.15));}catch{/* already ended */}
       if(immediate)cleanup();
     }};
-    function cleanup(){source.disconnect();filter.disconnect();gain.disconnect();pan.disconnect();voices.delete(v);}
+    function cleanup(){if(cleaned)return;cleaned=true;source.disconnect();filter.disconnect();gain.disconnect();pan.disconnect();voices.delete(v);}
     source.onended=cleanup;voices.add(v);source.start();return v;
   }
   return {
