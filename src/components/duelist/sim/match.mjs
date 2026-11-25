@@ -217,13 +217,15 @@ function awardXp(match, e) {
 export function joinMatch(match, { id, name = id, team = null, classId = null, progress = null } = {}) {
   const current = match.seats.get(id);
   if (current) return { ok: true, id, team: current.team, replaced: null };
-  if (match.seats.size < match.capacity) {
+  const bots = [...match.seats.values()].filter((s) => s.kind === 'bot');
+  // In a 20-human public server, people replace the initial bot seats before
+  // filling the reserved human-only slots. No queue or forced bot opponents.
+  if (!bots.length && match.seats.size < match.capacity) {
     const s = seat(match, { id, name, kind: 'player', team, classId, progress });
     protect(match, id);
     event(match, { type: 'joined', id, name });
     return { ok: true, id, team: s.team, replaced: null };
   }
-  const bots = [...match.seats.values()].filter((s) => s.kind === 'bot');
   if (!bots.length) return { ok: false, reason: 'full' };
   let pool = bots;
   if (match.def.teams) {
@@ -250,7 +252,10 @@ export function leaveMatch(match, id) {
   const team = s.team;
   unseat(match, id);
   event(match, { type: 'left', id, name: s.name });
-  if (match.phase !== 'over') seat(match, { kind: 'bot', team });
+  // Public online arenas can admit 20 humans without simulating 20 idle bots.
+  // Preserve the initial bot-filled floor only; surplus seats become available
+  // to humans again when a player leaves.
+  if (match.phase !== 'over' && match.seats.size < (match.botFloor ?? match.capacity)) seat(match, { kind: 'bot', team });
   return true;
 }
 

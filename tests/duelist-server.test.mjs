@@ -196,11 +196,13 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
   const starters = (await (await fetch(http)).json()).matches;
-  assert.deepEqual(starters.map(m => m.mode).sort(), ['control', 'ctf', 'duel', 'escort', 'football', 'tdm']);
+  assert.deepEqual(starters.map(m => m.mode).sort(), ['control', 'ctf', 'duel', 'escort', 'ffa', 'football', 'tdm']);
   for (const room of starters) {
     assert.equal(room.publicRoom, true, 'every mode gets a permanent official server');
     assert.equal(room.players, 0);
-    assert.equal(room.bots, room.seats, 'all unoccupied slots initially belong to bots');
+    assert.equal(room.seats, room.mode === 'duel' ? 2 : 20, 'Duel stays 1v1; larger rooms allow 20 players');
+    assert.equal(room.bots, room.mode === 'duel' ? 2 : room.mode === 'ffa' ? 6 : 8,
+      'rooms start with the old bot count instead of simulating twenty idle bots');
   }
   const a = await player(url, 'eve-account-123');
   a.send({ t: 'join', mode: 'tdm' });
@@ -209,10 +211,10 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
   const text = await res.text();
   const { matches } = JSON.parse(text);
-  assert.equal(matches.length, 6, 'joining does not create a duplicate public server');
+  assert.equal(matches.length, 7, 'joining does not create a duplicate public server');
   const selected = matches.find(m => m.id === joined.match);
   assert.deepEqual({ id: selected.id, mode: selected.mode, players: selected.players, bots: selected.bots, seats: selected.seats, open: selected.open },
-    { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
+    { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 20, open: true });
   assert.ok(!text.includes('eve-account-123') && !text.includes('EVE-ACCOUNT'), 'no player ids or names');
   a.ws.close();
   await server.close();
@@ -273,22 +275,68 @@ test('a selected public server accepts humans, removes exactly one bot each and 
   a.send({ t: 'join', mode: 'tdm', matchId: tdm.id });
   const first = await a.next(m => m.t === 'joined');
   assert.equal(first.match, tdm.id);
-  assert.equal(first.seats.filter(s => s.kind === 'bot').length, tdm.seats - 1);
+  assert.equal(first.seats.filter(s => s.kind === 'bot').length, tdm.bots - 1);
   b.send({ t: 'join', mode: 'tdm', matchId: tdm.id });
   const second = await b.next(m => m.t === 'joined');
   assert.equal(second.match, tdm.id);
-  assert.equal(second.seats.filter(s => s.kind === 'bot').length, tdm.seats - 2);
+  assert.equal(second.seats.filter(s => s.kind === 'bot').length, tdm.bots - 2);
   const live = (await (await fetch(http)).json()).matches.find(m => m.id === tdm.id);
   assert.equal(live.players, 2);
-  assert.equal(live.bots, tdm.seats - 2);
+  assert.equal(live.bots, tdm.bots - 2);
   a.send({ t: 'leave' });
   await a.next(m => m.t === 'left');
   const back = (await (await fetch(http)).json()).matches.find(m => m.id === tdm.id);
   assert.equal(back.players, 1);
-  assert.equal(back.bots, tdm.seats - 1);
+  assert.equal(back.bots, tdm.bots - 1);
   a.ws.close();
   b.ws.close();
   await server.close();
+});
+
+test('direct joining a named TDM server admits twenty humans, rejects the twenty-first and keeps bot count bounded', async () => {
+  const { server, url } = await start({ speed: 1 });
+  const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
+  const advertised = (await (await fetch(http)).json()).matches.find(room => room.mode === 'tdm');
+  assert.equal(advertised.seats, 20);
+  assert.equal(advertised.bots, 8);
+
+  const clients = [];
+  try {
+    for (let i = 0; i < 20; i++) {
+      const client = await player(url, 'direct-tdm-' + i);
+      clients.push(client);
+      client.send({ t: 'join', mode: 'tdm', matchId: advertised.id });
+      const joined = await client.next(message => message.t === 'joined');
+      assert.equal(joined.match, advertised.id, 'every join must use the requested room');
+      assert.ok(joined.seats.length <= 20);
+    }
+    const full = (await (await fetch(http)).json()).matches.find(room => room.id === advertised.id);
+    assert.equal(full.players, 20);
+    assert.equal(full.bots, 0);
+    assert.equal(full.seats, 20);
+    assert.equal(full.open, false);
+    assert.ok((await (await fetch(http)).json()).matches.some(room =>
+      room.mode === 'tdm' && room.id !== advertised.id && room.open), 'overflow server must be listed');
+
+    const overflow = await player(url, 'direct-tdm-overflow');
+    clients.push(overflow);
+    overflow.send({ t: 'join', mode: 'tdm', matchId: advertised.id });
+    assert.equal((await overflow.next(message => message.t === 'error')).code, 'room',
+      'explicit full server must reject, not silently redirect a player or put them in a queue');
+    assert.equal(server.rooms.get(advertised.id).match.seats.size, 20);
+
+    for (let i = 0; i < 13; i++) {
+      clients[i].send({ t: 'leave' });
+      await clients[i].next(message => message.t === 'left');
+    }
+    const after = (await (await fetch(http)).json()).matches.find(room => room.id === advertised.id);
+    assert.equal(after.players, 7);
+    assert.equal(after.bots, 1, 'online rooms only refill the original eight-seat bot floor');
+    assert.equal(after.seats, 20, 'the room still accepts more humans');
+  } finally {
+    for (const client of clients) client.ws.close();
+    await server.close();
+  }
 });
 
 test('every full Duel server creates exactly one spare bot-filled server automatically', async () => {
@@ -418,7 +466,7 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   const joined = await a.next((m) => m.t === 'joined');
   const { matches } = await (await fetch(http)).json();
   assert.deepEqual(matches.filter(m => m.mode === 'story').map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
-  assert.equal(matches.filter(m => m.publicRoom).length, 6, 'the public modes remain listed during story missions');
+  assert.equal(matches.filter(m => m.publicRoom).length, 7, 'all public modes, including FFA, remain listed during story missions');
   const b = await player(url, 'ben');
   b.send({ t: 'join', mode: 'story' });
   assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
