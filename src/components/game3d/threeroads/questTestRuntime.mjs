@@ -1,14 +1,29 @@
-// In-memory admin test preview, shared by the game page, weather HUD and
-// Three Roads feature flags. Never persisted in a URL or character storage.
-// Reloading/leaving the page resets to the user's existing flag settings.
-let testPreview = null;
+// In-memory admin Quest Test controls. Never persisted in a URL, localStorage
+// or a character save. The previous normal-mode flag preferences remain intact.
+let preview = null;
+let checkpointHold = false;
 
-export function setQuestTestRuntimePreview(preview = null) {
-  testPreview = typeof preview === 'boolean' ? preview : null;
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('game3dQuestTestSessionChanged'));
+function changed() {
+  if (typeof globalThis.window !== 'undefined') {
+    globalThis.window.dispatchEvent(new globalThis.Event('game3dQuestTestSessionChanged'));
   }
 }
 
-export const questTestRuntimePreview = () => testPreview;
-export const questTestRuntimeActive = () => testPreview !== null;
+export function setQuestTestRuntimePreview(value = null) {
+  preview = typeof value === 'boolean' ? value : null;
+  changed();
+}
+export const questTestRuntimePreview = () => preview;
+
+export function setQuestTestCheckpointHold(value) {
+  checkpointHold = value === true;
+  changed();
+}
+export const questTestCheckpointSuppressed = () => checkpointHold || preview !== null;
+export const questTestRuntimeActive = () => questTestCheckpointSuppressed();
+
+export function endQuestTestRuntime() {
+  preview = null;
+  checkpointHold = false;
+  changed();
+}

@@ -1,0 +1,43 @@
+name: Game 3D Three Roads Admin Quest Test
+
+on:
+  pull_request:
+    paths:
+      - "src/components/game3d/WorldEnvironmentHUD.jsx"
+      - "src/components/game3d/GameWorld3D.jsx"
+      - "src/components/game3d/threeroads/**"
+      - "src/pages/GameView.jsx"
+      - "tests/game3d-quest-test-teleport.test.mjs"
+      - ".github/workflows/game3d-three-roads-quest-test.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/components/game3d/WorldEnvironmentHUD.jsx"
+      - "src/components/game3d/GameWorld3D.jsx"
+      - "src/components/game3d/threeroads/**"
+      - "src/pages/GameView.jsx"
+      - "tests/game3d-quest-test-teleport.test.mjs"
+      - ".github/workflows/game3d-three-roads-quest-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quest-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Validate admin test destinations and safe return
+        run: node --test tests/game3d-quest-test-teleport.test.mjs
+      - name: Lint changed runtime files
+        run: npx eslint src/components/game3d/WorldEnvironmentHUD.jsx src/components/game3d/GameWorld3D.jsx src/components/game3d/threeroads/questTestRuntime.mjs src/components/game3d/threeroads/questTestDestinations.mjs src/components/game3d/threeroads/threeRoadsFlag.mjs src/pages/GameView.jsx tests/game3d-quest-test-teleport.test.mjs --quiet
+      - name: Production Vite build
+        run: npm run build
