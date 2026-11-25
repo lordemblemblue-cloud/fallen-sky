@@ -32,9 +32,9 @@ const FIGHTER_NOTES = {
   male: 'Adam, from Fallen Sky.',
 };
 
-export function MenuShell({ title, subtitle = '', back = null, children }) {
+export function MenuShell({ title, subtitle = '', back = null, children, matchEntry = false }) {
   return (
-    <main className="duelist-menu-page">
+    <main className={matchEntry ? "duelist-menu-page duelist-match-entry" : "duelist-menu-page"}>
       <header className="duelist-menu-topbar">
         <Link to="/duelist-next" className="duelist-menu-brand" aria-label="Duelist Adventure home">
           <span>EMBLEM BLUE</span>
@@ -343,7 +343,7 @@ export function ModePage({ mode }) {
   const Icon = m.icon;
   const here = (lobby.matches || []).filter((x) => x.mode === mode);
   return (
-    <MenuShell title={m.title} subtitle={m.blurb} back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <MenuShell matchEntry title={m.title} subtitle={m.blurb} back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <ul className="space-y-2">
@@ -397,7 +397,7 @@ export function JoinPage() {
   // the busiest place with players and room: a match (the server picks it) or an open story crew
   const busiest = withPlayers.find((m) => m.open);
   return (
-    <MenuShell title="Join" subtitle="Jump into a match that has players in it. You take a bot's place." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <MenuShell matchEntry title="Join" subtitle="Jump into a match that has players in it. You take a bot's place." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       {!lobby.online ? (
         <div className="space-y-4">
           <p className="text-sm text-white/60">{lobby.serverUrl ? 'The match server is not answering right now.' : 'Online play is not set up yet: the match server is not deployed.'}</p>
