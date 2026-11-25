@@ -24,7 +24,7 @@ export function ScoreLine({ view }) {
   if (mode === 'control' && Array.isArray(view.controlPoints)) {
     return (
       <div className="duelist-scoreline duelist-scoreline--control">
-        <div className="duelist-control-rail" role="group" aria-label="Three-Point Control score and objectives">
+        <div className="duelist-control-rail" role="group" aria-label="Control Point score and objectives">
           <div className="duelist-control-team duelist-control-team--red">
             <strong>{Math.floor(view.teamScores.red)}%</strong><span>RED TEAM</span>
           </div>

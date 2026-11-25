@@ -18,7 +18,7 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
   const [testBots, setTestBots] = useState(false);
   const [playing, setPlaying] = useState(mission); // a crew may play another mission (a friend's code, the next one)
   const navigate = useNavigate();
-  const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl()));
+  const [serverUrl] = useState(() => (typeof window === 'undefined' ? null : duelistServerUrl(mode)));
   const back = mode === 'any' ? 'join' : mode;
   const backToMenu = from === 'duelist' ? '/duelist' : null;
   const leave = () => (from === 'online-play'
@@ -41,7 +41,7 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
       <section className="duelist-arena-section">
         {unavailable ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-white/60">
-            Online play is not set up yet: the match server is not deployed.
+            Online story crews are not available on this host.
             <Link to="/duelist-next/$page" params={{ page: 'practice' }} className="text-cyan-200 hover:underline">Practice instead</Link>
           </div>
         ) : (

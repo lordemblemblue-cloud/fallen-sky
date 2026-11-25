@@ -20,6 +20,7 @@ import { createLevel, setDoor } from '../sim/level.mjs';
 import { enemySeat, allySeat, crewSeat } from '../client/missionSeats.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, RECONNECT_SECONDS, encodeInput, sanitizeInput, applyFighter } from './protocol.mjs';
 import { createPredictor } from './predict.mjs';
+import { ACTOR_TRANSPORT, actorLobby, createActorSocket } from './actorTransport.mjs';
 
 const DELAY = 0.1; // seconds the picture stays behind the newest snapshot
 const STEP = 1 / TICK_HZ; // the player's inputs are read, sent and played in the server's own steps
@@ -47,11 +48,11 @@ function keptSeat(storage, mode, room, matchId = null) {
 }
 
 /** Where the match server is: VITE_DUELIST_WS_URL, or the local test server when the page runs on localhost. */
-export function duelistServerUrl() {
+export function duelistServerUrl(mode = null) {
   const configured = import.meta.env?.VITE_DUELIST_WS_URL;
   if (typeof configured === 'string' && /^wss?:\/\/[^\s/]+(?::\d+)?\/ws\/duelist$/i.test(configured.trim())) return configured.trim();
   if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return `ws://${window.location.hostname}:5321${WS_PATH}`;
-  return null;
+  return mode === 'story' ? null : ACTOR_TRANSPORT;
 }
 
 /**
@@ -60,6 +61,7 @@ export function duelistServerUrl() {
  */
 export async function fetchLobby(serverUrl = duelistServerUrl()) {
   if (!serverUrl) return null;
+  if (serverUrl === ACTOR_TRANSPORT) return actorLobby();
   const url = serverUrl.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/ws\/duelist$/i, '/lobby');
   try {
     const res = await fetch(url, { cache: 'no-store', signal: globalThis.AbortSignal.timeout(5000) });
@@ -278,7 +280,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   }
 
   function connect(resume) {
-    const socket = new WebSocket(url);
+    const socket = url === ACTOR_TRANSPORT ? createActorSocket({ mode, matchId }) : new WebSocket(url);
     ws = socket;
     socket.onopen = () => { if (ws === socket) send({ t: 'hello', v: PROTOCOL, token: token || '', name, body, ...(resume ? { resume } : {}) }); };
     socket.onmessage = (event) => {

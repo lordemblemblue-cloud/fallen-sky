@@ -14,7 +14,7 @@ export function useLobby(everyMs = 3000) {
       const matches = await fetchLobby(serverUrl);
       if (!alive) return;
       setState({ matches: matches || [], reachable: matches !== null, loaded: true });
-      timer = setTimeout(poll, everyMs);
+      timer = setTimeout(poll, serverUrl === 'base44:duelist' ? Math.max(10000, everyMs) : everyMs);
     };
     poll();
     return () => { alive = false; clearTimeout(timer); };

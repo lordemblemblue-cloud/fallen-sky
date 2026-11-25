@@ -4,7 +4,7 @@ import { Swords, Users, Shield, Flag, Target, Shuffle } from 'lucide-react';
 export const MENU_MODES = Object.freeze({
   online: {
     title: 'Online', icon: Shuffle, accent: '#e6c78f', online: true,
-    blurb: 'Instantly join a random Team Deathmatch, Capture the Flag or Three-Point Control match.',
+    blurb: 'Instantly join a random Team Deathmatch, Capture the Flag or Control Point match.',
     rules: ['The server chooses the mode randomly.', 'Open seats are filled with bots until more players join.'],
   },
   practice: {
@@ -38,7 +38,7 @@ export const MENU_MODES = Object.freeze({
     rules: ['First team to 30 defeats, or the most at 8 minutes.', 'Teams stay even: a joining player takes a bot\'s place on the side that needs one.'],
   },
   control: {
-    title: 'Three-Point Control', icon: Shield, accent: '#c8aeff', online: true,
+    title: 'Control Point', icon: Shield, accent: '#c8aeff', online: true,
     blurb: 'Capture A, B and C. Control at least two points to earn progress toward 100%.',
     rules: ['Hold a point uncontested for four seconds to capture it.', 'Two points earn 1% per second; all three earn 2% per second.', 'A contested point cannot change hands while both teams stand on it.'],
   },
