@@ -7,7 +7,7 @@ export const ATMOSPHERE_BUDGETS=Object.freeze({
 });
 const TAU=Math.PI*2;
 const wrap=x=>((x%1)+1)%1;
-export function conduitAtmosphereBudget(quality){return ATMOSPHERE_BUDGETS[quality]??ATMOSPHERE_BUDGETS.medium;}
+export function conduitAtmosphereBudget(quality){return Object.hasOwn(ATMOSPHERE_BUDGETS,quality)?ATMOSPHERE_BUDGETS[quality]:ATMOSPHERE_BUDGETS.medium;}
 export function createConduitAtmospherePlan(cfg){
   const fans=[];
   for(const b of cfg.buildings){
@@ -24,8 +24,8 @@ export function createConduitAtmospherePlan(cfg){
 export function fanAngle(f,t){return TAU*wrap(f.phase+t*.48);}
 export function pulseSample(i,count,t){
   const lane=i%3,ordinal=Math.floor(i/3),n=Math.ceil((count-lane)/3);
-  const a=TAU*wrap(ordinal/n+t*(lane===1?-.072:lane===0?.04:.052));
-  const r=[42.5,4.2,5.85][lane],y=[17.5,16.7,20.7][lane];
+  const a=TAU*wrap(ordinal/n+t*(lane===1 ? -.072 : lane===0 ? .04 : .052));
+  const r=[42.5,4.2,5.85][lane],y=[17.08,16.48,20.54][lane];
   return {x:Math.sin(a)*r,y,z:Math.cos(a)*r,angle:a};
 }
 export function steamSample(i,emitters,t){
