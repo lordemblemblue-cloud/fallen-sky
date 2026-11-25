@@ -108,6 +108,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let wantedClass = classId;
   let classAnswer = null; // the server's last answer: { ok, pending, reason }
   let shopAnswer = null;
+  let supportsShopBuild = false;
   let storySupplyAnswer = null;
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
@@ -190,6 +191,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   function receive(msg) {
     lastHeard = local();
     if (msg.t === 'welcome') {
+      supportsShopBuild = msg.shopBuild === true;
       meId = msg.id;
       if (predict && !devNoPrediction() && (!predictor || predictor.fighter.id !== meId)) predictor = createPredictor({ id: meId, level, arenaRadius: world.arenaRadius });
       if (msg.resumed) return; // back in the seat: its 'joined' follows
@@ -356,7 +358,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     },
     buyItem(id, tier, combine = false) {
       shopAnswer = null;
-      if (!story && typeof id === 'string' && ws?.readyState === 1) send(tier === undefined && !combine ? { t: 'shop', id } : { t: 'shopBuild', id, tier, combine });
+      if (story || typeof id !== 'string' || ws?.readyState !== 1) { shopAnswer = {ok:false,reason:'not-available'}; return; }
+      if (tier !== undefined && !supportsShopBuild) { shopAnswer = {ok:false,reason:'shop-build-unavailable'}; onChange(status,null); return; }
+      send(tier === undefined && !combine ? { t: 'shop', id } : { t: 'shopBuild', id, tier, combine });
     },
     seats: () => seats,
     view: () => view,
