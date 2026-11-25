@@ -22,35 +22,35 @@ export function createConduitInteriorPlan(id){
     parts.push({id:id+'-'+a.key+'-'+label,anchor:a.key,level:a.level,material,...p,depth,offset});
   }
   function display(a){
-    const put=(label,mat,u,v,w,h)=>piece(a,label,mat,u,v,w,h,.009,.015);
+    const put=(label,mat,u,v,w,h,foreground=false)=>piece(a,label,mat,u,v,w,h,.009,foreground?.026:.015);
     piece(a,'housing',theme.cabinet,0,0,a.w,a.h,.014,.001);
     put('header','brushedSteel',0,a.h/2-.11,a.w-.14,.08);
-    put('status',theme.accent,-a.w/2+.13,a.h/2-.11,.09,.06);
+    put('status',theme.accent,-a.w/2+.13,a.h/2-.11,.09,.06,true);
     if(id==='armory'){
       for(let i=0;i<4;i++){
         const x=(i-1.5)*a.w*.205;
         put('rack-'+i,'darkSteel',x,0,a.w*.16,a.h*.57);
-        put('item-'+i,'brushedSteel',x,.04,a.w*.047,a.h*.37);
+        put('item-'+i,'brushedSteel',x,.04,a.w*.047,a.h*.37,true);
         put('inventory-'+i,theme.accent,x,-a.h*.34,a.w*.12,.055);
       }
     }else if(id==='reactor'){
       for(let i=0;i<5;i++){
         const x=(i-2)*a.w*.16;
         put('gauge-bed-'+i,'gunmetal',x,-.02,a.w*.12,a.h*.55);
-        put('gauge-'+i,i===4?'purpleGlow':theme.accent,x,-a.h*.15+(i%3)*.075,a.w*.07,a.h*.15+(i%3)*.15);
+        put('gauge-'+i,i===4?'purpleGlow':theme.accent,x,-a.h*.15+(i%3)*.075,a.w*.07,a.h*.15+(i%3)*.15,true);
       }
       put('bus','copperPipe',0,-a.h*.36,a.w*.78,.06);
     }else if(id==='medbay'){
       put('cross-v',theme.accent,-a.w*.29,0,.12,a.h*.55);
-      put('cross-h',theme.accent,-a.w*.29,0,a.h*.55,.12);
+      put('cross-h',theme.accent,-a.w*.29,0,a.h*.55,.12,true);
       for(let i=0;i<5;i++)put('vital-'+i,i===2?'greenGlow':'brushedSteel',a.w*.03+i*a.w*.083,(i%2)*.13-.03,a.w*.055,.07);
       put('diagnostic',theme.accent,a.w*.19,-a.h*.30,a.w*.42,.05);
     }else{
       for(let i=0;i<3;i++){
         const x=(i-1)*a.w*.26;
         put('roster-'+i,'darkSteel',x,0,a.w*.20,a.h*.57);
-        put('portrait-'+i,'brushedSteel',x,.13,a.w*.08,.15);
-        put('ready-'+i,i===1?'cyanGlow':theme.accent,x,-a.h*.23,a.w*.12,.06);
+        put('portrait-'+i,'brushedSteel',x,.13,a.w*.08,.15,true);
+        put('ready-'+i,i===1?'cyanGlow':theme.accent,x,-a.h*.23,a.w*.12,.06,true);
       }
     }
     put('footer','brushedSteel',0,-a.h/2+.08,a.w-.18,.055);
