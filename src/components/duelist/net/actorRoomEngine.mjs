@@ -35,7 +35,7 @@ export class DuelistRoomEngine {
       body:[...this.clients.values()].find(c=>c.id===s.id)?.body||BODY_IDS[i%BODY_IDS.length]}));
   }
   broadcastSeats(){const seats=this.seats();for(const c of this.clients.values())if(c.joined)this.send(c,{t:'seats',seats});}
-  newMatch(){this.match=createMatch({mode:this.mode,seed:Math.floor(this.clock()*1000)%1000003});this.last=this.clock();this.carry=0;this.ticks=0;this.effects=[];this.events=[];this.overAt=null;}
+  newMatch(){this.match=createMatch({mode:this.mode,practiceMode:this.mode==='practice',seed:Math.floor(this.clock()*1000)%1000003});this.last=this.clock();this.carry=0;this.ticks=0;this.effects=[];this.events=[];this.overAt=null;}
   enter(c,rematch=false) {
     if(!this.match)this.newMatch();
     if(this.match.phase==='over'&&!rematch){this.send(c,{t:'error',code:'room',message:'Round resetting. Try again shortly.'});return;}
