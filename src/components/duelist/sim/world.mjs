@@ -10,7 +10,7 @@ import {
   createFighter, press, update, takeEvents, isStunned, strike, insideArc, travelAt, hasClipTravel,
   blockedReason, isInvulnerable, classById, evaluateSpecial, behindTarget, SPECIAL_BALANCE,
   EFFECTS, effectOn, addEffect, endEffect, actionRate, moveRate, rollReach, moveFor, selfMend,
-  stagger, controlImmune, hitDominated, targetable, classAbilityMove,
+  stagger, knockDown, isDown, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
 import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT, recoverArenaFootprint } from './modeArenaLayout.mjs';
@@ -111,6 +111,31 @@ const visible = (world, a, b) => (!world.level || clearLine(world.level,a,b)) &&
 const arcTurn = (move) => (move.arcTurn || 0) * Math.PI / 180;
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
 
+// Levitate is a hard movement lock, independent of the ordinary hit-stagger counter.
+const levitateLocked = (f, now) => !!(effectOn(f, 'levitate', now) || effectOn(f, 'levitateFall', now));
+function clearLiftMotion(f, b) {
+  f.action = null; f.buffer = null; f.guard = null;
+  b.motion = null; b.kx = 0; b.kz = 0; b.speed = 0; b.moving = false;
+  b.jumped = false; b.airJumpAt = null; b.airDashReady = false;
+}
+function releaseLevitate(f, b) {
+  endEffect(f, 'levitate');
+  clearLiftMotion(f, b);
+  b.vy = Math.min(0, b.vy);
+  // Persist until actual ground contact, including raised platforms. No arbitrary
+  // timer can expire mid-fall; the effect is carried in authoritative snapshots.
+  if (!f.vitals.dead) addEffect(f, 'levitateFall', Infinity);
+}
+function finishLevitateLanding(world, f, b, now) {
+  if (!effectOn(f, 'levitateFall', now) || airborne(world, b) || b.vy > 0) return;
+  endEffect(f, 'levitateFall');
+  if (!f.vitals.dead) {
+    knockDown(f, now);
+    // The old lift stun should not extend the new get-up sequence.
+    f.stunnedUntil = f.riseUntil;
+  }
+}
+
 /**
  * One step. inputs: { [fighterId]: { move: {x, z} (world direction, length <= 1), run, sprint,
  *   face: yaw | null, presses: [command] } }. Returns the step's effects (strikes, knockbacks, holds,
@@ -128,6 +153,14 @@ export function step(world, dt, inputs = {}) {
   // 1. intent, facing and presses
   for (const [id, fighter] of world.fighters) {
     const body = world.bodies.get(id);
+    // Expiry is handled before core update removes expired effects.
+    if (fighter.effects?.levitate && (!effectOn(fighter, 'levitate', now) || fighter.vitals.dead)) releaseLevitate(fighter, body);
+    if (fighter.vitals.dead && fighter.effects?.levitateFall) endEffect(fighter, 'levitateFall');
+    if (levitateLocked(fighter, now) || isDown(fighter, now)) {
+      body.intent = { x: 0, z: 0 }; body.run = false; body.sprint = false;
+      fighter.buffer = null; fighter.guard = null;
+      continue;
+    }
     const input = inputs[id] || {};
     const m = input.move || { x: 0, z: 0 };
     const len = Math.hypot(m.x, m.z);
@@ -231,7 +264,7 @@ export function step(world, dt, inputs = {}) {
   // 3. bodies move
   for (const [id, fighter] of world.fighters) {
     const body=world.bodies.get(id);
-    if (!world.arenaLayout) { moveBody(world,fighter,body,dt,now); continue; }
+    if (!world.arenaLayout) { moveBody(world,fighter,body,dt,now); finishLevitateLanding(world,fighter,body,now); continue; }
     const before={x:body.x,y:body.y,z:body.z};
     moveBody(world,fighter,body,dt,now);
     const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
@@ -240,6 +273,7 @@ export function step(world, dt, inputs = {}) {
     if(world.arenaLayout?.escortImported && (fighter.team==='red'||fighter.team==='blue') && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
     if(world.arenaLayout?.ctfImported&&ctfRestricted(fighter.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(fighter.team,before,world.ctfCarriers?.has(id))){Object.assign(body,before);body.vy=0;}
     if(result.ceiling || result.landed && body.vy<0)body.vy=0;
+    finishLevitateLanding(world,fighter,body,now);
     if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
       body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
     }
@@ -278,6 +312,13 @@ export function step(world, dt, inputs = {}) {
   }
   // 5. projectiles fly
   stepProjectiles(world, dt, now, effects);
+  // Only confirmed damaging impacts release a suspended target. Includes melee,
+  // powers, projectiles and grip ticks; blocked/evaded or zero damage do not.
+  for (const e of effects) {
+    if (e.type !== 'impact' || !['hit', 'guardBreak'].includes(e.outcome) || !(e.hp > 0 || e.will > 0 || e.shield > 0)) continue;
+    const target = world.fighters.get(e.defender);
+    if (target && effectOn(target, 'levitate', now)) releaseLevitate(target, world.bodies.get(target.id));
+  }
   // 6. Mend and Sanctuary heal; domes fade
   stepHeals(world, dt, now);
   return effects;
@@ -431,9 +472,15 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
         break;
       }
       if (move.effect === 'levitate') {
-        give(target, 'levitate', { by: fighter.id });
         const tb = world.bodies.get(target.id);
-        tb.vy = 0; tb.kx = 0; tb.kz = 0; tb.motion = null;
+        const prior = effectOn(target, 'levitate', now);
+        // A grounded target rises relative to its actual platform. An airborne
+        // target is caught at its current height, not lifted repeatedly.
+        const liftY = prior?.liftY ?? (airborne(world, tb) ? tb.y : tb.y + EFFECTS.levitate.height);
+        endEffect(target, 'levitateFall');
+        give(target, 'levitate', { by: fighter.id, liftY });
+        clearLiftMotion(target, tb);
+        tb.vy = 0;
       } else give(target, 'dominated', { by: fighter.id, hits: 0, breakHits: move.breakHits || EFFECTS.dominate.breakHits });
       stagger(target, move.effectSeconds, now);
       if (target.heldBy) target.heldBy = null;
@@ -562,6 +609,20 @@ function startMotion(body, fighter, id, world = null) {
 }
 
 function moveBody(world, fighter, body, dt, now) {
+  const lift = effectOn(fighter, 'levitate', now);
+  if (lift || effectOn(fighter, 'levitateFall', now)) {
+    clearLiftMotion(fighter, body);
+    if (lift) {
+      body.y += ((Number.isFinite(lift.liftY) ? lift.liftY : body.y) - body.y) * Math.min(1, dt * 4);
+      body.vy = 0;
+    } else {
+      body.vy -= GRAVITY * dt;
+      body.y = world.arenaLayout?.imported ? body.y + body.vy * dt : Math.max(0, body.y + body.vy * dt);
+      if (!world.arenaLayout && body.y === 0) body.vy = 0;
+    }
+    if (world.level && body.y > ROOM_HEADROOM) body.y = ROOM_HEADROOM;
+    return;
+  }
   if (now < (fighter.activeRelicUntil ?? -Infinity)) {
     body.speed = 0; body.moving = false; body.motion = null;
     body.kx = 0; body.kz = 0; body.vy = 0;
@@ -629,7 +690,7 @@ function moveBody(world, fighter, body, dt, now) {
     // feet are planted from a strike's or a power's wind-up until it lands; the recovery may walk away
     // (a cut by direction does not plant them: the legs keep going under it, at a share of the running speed)
     const planted = a && a.move.kind !== 'movement' && !a.move.channel && !a.move.mobile && a.t < a.move.startup + a.move.active;
-    const free = !fighter.vitals.dead && !isStunned(fighter, now) && !planted;
+    const free = !fighter.vitals.dead && !isStunned(fighter, now) && !isDown(fighter, now) && !planted;
     const len = Math.hypot(body.intent.x, body.intent.z);
     if (free && len > 0.01) {
       let speed = body.run ? MOVE_SPEED.run : MOVE_SPEED.walk;
@@ -668,10 +729,7 @@ function moveBody(world, fighter, body, dt, now) {
   }
   body.moving = Math.hypot(vx, vz) > 0.1;
   const leaping = !!(a?.move.leap && !a.move.air && body.motion && !body.motion.clip && a.id === body.motion.id);
-  if (effectOn(fighter, 'levitate', now)) {
-    body.y += ((world.arenaLayout ? Math.max(0, body.y - EFFECTS.levitate.height) : 0) + EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
-    body.vy = 0;
-  } else if (leaping) {
+  if (leaping) {
     // the arc is drawn by the root motion above
   } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
     // Pause vertical movement during the short horizontal burst, then resume normal gravity.
