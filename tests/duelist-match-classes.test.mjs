@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, matchView, queueMatchClass, stepMatch, COUNTDOWN, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, matchView, queueMatchClass, stepMatch, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 const STEP = 1 / 60;
 function advance(match, seconds) {
