@@ -50,6 +50,10 @@ test('independent host and prediction adapters share exact serialized map and ne
     let counter=0;
     const ffa=createConduitMatchAdapter(m,{mode:'ffa',random:()=>samples[counter++%samples.length]});
     assert.deepEqual(ffa.world,tdm.world);
+    assert.ok(ffa.modeSpawnCandidates.some(p=>p.y===-5));
+    assert.ok(ffa.modeSpawnCandidates.some(p=>p.y===0||p.y===.65));
+    assert.equal(ffa.modeSpawnCandidates.filter(p=>p.y===5).length,8);
+    assert.ok(ffa.modeSpawnCandidates.every(p=>p.team===null));
     assert.equal(ffa.reserveSpawn('team','red'),null);
     const solo=[];
     for(let i=0;i<6;i++){
