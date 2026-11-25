@@ -18,8 +18,11 @@ export function ctfHeights(x,z,r=.025){const ys=[];for(const p of near(fi,x,z,r)
 export function ctfSupport(x,z,maxY,r=.025){return ctfHeights(x,z,r).find(y=>y<=maxY+1e-6)??-Infinity;}
 export function ctfBlockers({x,y,z,radius=.4,height=1.8}){
  const hit=[];
- for(const p of near(si,x,z,radius))if(p.y1>y+.22&&p.y0<y+height-.05&&overlaps(p,x,z,radius))hit.push(p);
- for(const p of near(fi,x,z,radius))if(p.y1>y+.10&&p.y0<y+height-.05&&overlaps(p,x,z,radius))hit.push(p);
+ // At a stair/deck junction the capsule overlaps the deck edge before its
+ // centre reaches it. Permit the connected ramp within one step-height.
+ const join=top=>[...near(ri,x,z,.05)].some(r=>overlaps(r,x,z,.05)&&Math.abs(rampY(r,z)-y)<.16&&Math.abs(top-r.endY)<.02&&y>=top-.46);
+ for(const p of near(si,x,z,radius))if(p.y1>y+.22&&p.y0<y+height-.05&&overlaps(p,x,z,radius)&&!(p.category==='slab'&&join(p.y1)))hit.push(p);
+ for(const p of near(fi,x,z,radius))if(p.y1>y+.10&&p.y0<y+height-.05&&overlaps(p,x,z,radius)&&!join(p.y1))hit.push(p);
  // Sloped stairs are solid, not an invisible one-way elevation trigger.
  for(const p of near(ri,x,z,.02))if(overlaps(p,x,z,.02)){const top=rampY(p,z);if(top>y+.22&&top-.28<y+height-.05)hit.push(p);}
  return hit;
