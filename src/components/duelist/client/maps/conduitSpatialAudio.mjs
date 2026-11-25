@@ -14,7 +14,7 @@ export function conduitAcousticCue(source,listener,occluded=false){
   const level=tier(source.y),relative=source.y-listener.y;
   const vertical=relative>2.1?'above':relative< -2.1?'below':'same';
   const throughFloor=level!==tier(listener.y)&&vertical!=='same';
-  return {surface:level==='T1'?'concrete':'metal',vertical,cutoff:occluded?650:throughFloor?1100:6500,gain:occluded?.28:throughFloor?.55:1};
+  return {surface:level==='T1'?'concrete':'metal',vertical,cutoff:occluded?650:throughFloor?1100:6500,gain:occluded ? .28 : throughFloor ? .55 : 1};
 }
 export function conduitAmbienceSources(cfg){
   const sources=[{id:'reactor',kind:'reactor',x:0,y:15.8,z:0},{id:'undercroft',kind:'undercroft',x:0,y:-2.5,z:0}];
@@ -55,7 +55,7 @@ export function createConduitSpatialAudio(audio,cfg,{quality='medium',occluded=n
       tracks.set(a.id,{...copy(a),eligible,travel:step?travel%stride:travel});
       if(step&&credits>=1&&played<4){
         const cue=conduitAcousticCue(a,listener,occluded?.(listener,a)===true);
-        audio.playConduitCue('step',copy(a),{...cue,gain:cue.gain*(a.local===true?.32:.7)});
+        audio.playConduitCue('step',copy(a),{...cue,gain:cue.gain*(a.local===true ? .32 : .7)});
         credits--;played++;
       }
     }
@@ -63,7 +63,7 @@ export function createConduitSpatialAudio(audio,cfg,{quality='medium',occluded=n
     if(elapsed-lastAmbience>=.25){
       lastAmbience=elapsed;
       const nearest=sources.map(s=>({...s,d:distance(s,listener)})).filter(s=>s.d<24).sort((a,b)=>a.d-b.d||a.id.localeCompare(b.id)).slice(0,budget.ambience);
-      audio.setConduitAmbience(nearest.map(s=>({...s,gain:.035*(1-s.d/24)*(occluded?.(listener,s)===true?.35:1)})));
+      audio.setConduitAmbience(nearest.map(s=>({...s,gain:.035*(1-s.d/24)*(occluded?.(listener,s)===true ? .35 : 1)})));
     }
     return played;
   }
@@ -73,7 +73,8 @@ export function createConduitSpatialAudio(audio,cfg,{quality='medium',occluded=n
     if(!valid(pad)||distance(pad,listener)>budget.range||events.has(eventId))return false;
     if(events.size>=128)events.delete(events.keys().next().value);
     events.set(eventId,elapsed);
-    audio.playConduitCue('pad',copy(pad),{...conduitAcousticCue(pad,listener,occluded?.(listener,pad)===true),gain:.65});
+    const cue=conduitAcousticCue(pad,listener,occluded?.(listener,pad)===true);
+    audio.playConduitCue('pad',copy(pad),{...cue,gain:.65*cue.gain});
     return true;
   }
   return {budget,update,padActivated,setEnabled(value){if(disposed)return;enabled=!!value;if(!enabled)clear();},
