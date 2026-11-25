@@ -22,7 +22,7 @@ export default function OnlinePlayPage() {
   };
   const join = room => {
     const exactServer = serverJoinSearch(room);
-    if (lobby.online && exactServer) {
+    if (exactServer) {
       navigate({ to: '/duelist-next/play', search: exactServer });
     }
   };
@@ -52,11 +52,11 @@ export default function OnlinePlayPage() {
         </section>}
         <p role="status" aria-live="polite" className="text-sm text-white/70">
           {lobby.online ? `${lobby.players} players online · Permanent public rooms`
-            : !lobby.loaded ? 'Connecting to public rooms…' : !lobby.serverUrl ? 'Online host is not configured. You can enter any arena locally against bots.' : 'Connection unavailable · Refresh to reconnect, or play an arena locally.'}
+            : !lobby.serverUrl ? 'Online host is not configured. Select a room to view connection status.' : 'Select a room to connect directly.'}
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="list" aria-label="Public arena rooms">
           {rooms.map(room => {
-            const canJoin = lobby.online && room.open;
+            const canJoin = Boolean(serverJoinSearch(room));
             const title = MENU_MODES[room.mode]?.title || room.mode;
             return <article key={room.id} role="listitem" className="overflow-hidden rounded-lg border border-white/15 bg-slate-950/65">
               <button type="button" disabled={!canJoin} onClick={() => join(room)}
@@ -73,11 +73,11 @@ export default function OnlinePlayPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 py-3">
-                  <span className="text-xs text-white/65">{!room.confirmed ? 'Connecting' : room.phase === 'over' ? 'Round resetting' : room.players >= room.seats ? 'Full' : room.phase === 'live' ? 'In progress' : 'Starting round'}</span>
-                  <span className="flex items-center gap-1 text-sm font-bold text-amber-200">{canJoin ? 'Join room' : 'Join when ready'} <ArrowRight size={15} aria-hidden="true"/></span>
+                  <span className="text-xs text-white/65">{!room.confirmed ? 'Public room' : room.phase === 'over' ? 'Round resetting' : room.players >= room.seats ? 'Full' : room.phase === 'live' ? 'In progress' : 'Starting round'}</span>
+                  <span className="flex items-center gap-1 text-sm font-bold text-amber-200">{canJoin ? 'Connect' : room.phase === 'over' ? 'Round resetting' : 'Room full'} <ArrowRight size={15} aria-hidden="true"/></span>
                 </div>
               </button>
-              {!canJoin && <button type="button" onClick={() => playLocal(room)}
+              {!lobby.online && <button type="button" onClick={() => playLocal(room)}
                 className="block w-full border-t border-white/10 px-3 py-3 text-left text-sm font-bold text-cyan-200 hover:bg-white/10">
                 Play {title} locally (bots only)
               </button>}
