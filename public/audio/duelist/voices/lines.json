@@ -1,28 +1,28 @@
 {
   "lines": [
     {
-      "id": "be53fca6",
+      "id": "c7e54452",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Halvane's manifest says medical supplies. Nobody posts gunmen over bandages. Open the marked crates."
+      "text": "Free Ports dispatch. Another kid came into the clinic with blueglass in his coat. His delivery slip led us here. Check those crates."
     },
     {
-      "id": "c7a60232",
+      "id": "a0baad1e",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Packing foam. No medicine. Keep going."
+      "text": "Blueglass. Same blue thumbprint as the packets at the clinic. Bag a sample."
     },
     {
-      "id": "27e0bf8d",
+      "id": "d560cb92",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Serial plates filed off. Somebody wanted these never to be traced."
+      "text": "Wait. Put the lid down a second. Why does a drug shipment have a rifle rack?"
     },
     {
-      "id": "da9f7f3a",
+      "id": "a0e61710",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Sidearms. Crystal-forged, and the rounds are cut to tear at a Veil. Nobody builds that to hunt ordinary people. These were made for us."
+      "text": "Crystal rifles. See that split sight? The gun that punched through our ferry escort had one just like it."
     },
     {
       "id": "1f77a692",
@@ -31,16 +31,16 @@
       "text": "Three signatures on every transfer: the quartermaster who builds them, the broker who sells them, the chief who keeps it quiet. They are inside."
     },
     {
-      "id": "ebc11c49",
+      "id": "54e0faf4",
       "mission": "contraband",
       "speaker": "Perrin",
-      "text": "Whatever your people offered, the buyer offered more. In crystal."
+      "text": "Halvane used to count the till himself. Now he rings me up to ask what a moon costs."
     },
     {
-      "id": "bc6273de",
+      "id": "4ca67d7d",
       "mission": "contraband",
       "speaker": "Dask",
-      "text": "Veil-born, in my workshop. Good. I have wanted to see what these do to one of you."
+      "text": "Careful with that rack! One dent comes out of my share."
     },
     {
       "id": "6dc25f6d",
@@ -61,10 +61,10 @@
       "text": "Seal it. Nobody walks out of here with a core."
     },
     {
-      "id": "63f4367e",
+      "id": "ee08dbc6",
       "mission": "contraband",
       "speaker": "Perrin",
-      "text": "The buyer never showed a face. And never needed the guns for themselves. Think about that."
+      "text": "Read the receipts. The Crown took three Free Ports crossings. We got paid after every one."
     },
     {
       "id": "3c98a62a",
@@ -97,10 +97,10 @@
       "text": "Lift is coming. Half a minute. Do not let them pull you off it."
     },
     {
-      "id": "0e953960",
+      "id": "8300a7ef",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Perrin's records are open. The buyer paid in Will-forged crystal. Only one of us could make that."
+      "text": "Here's the payment for the fourth shipment. A deed. The Crown gave Halvane the Saltmarch garrison."
     },
     {
       "id": "e643e342",
@@ -109,10 +109,10 @@
       "text": "There is a recording on the last core. You should hear it."
     },
     {
-      "id": "17e638cf",
+      "id": "35aaae95",
       "mission": "contraband",
       "speaker": "Arden (recording)",
-      "text": "If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run."
+      "text": "Halvane, it's Arden. I signed for one load. You send those drivers back to their families. You gave me your word."
     },
     {
       "id": "29814813",
@@ -121,10 +121,10 @@
       "text": "...That is Arden. That is your teacher's voice."
     },
     {
-      "id": "58cd7b94",
+      "id": "28df8e8f",
       "mission": "contraband",
       "speaker": "Arden",
-      "text": "The Houses hunt us with a word and a warrant. I gave the hunted something to shoot back with."
+      "text": "Put the cores down. My drivers are still at Saltmarch. He hears one word of this and they disappear."
     },
     {
       "id": "a6d78719",
@@ -139,28 +139,28 @@
       "text": "Enough. You have grown past me."
     },
     {
-      "id": "83a68863",
+      "id": "f3c88554",
       "mission": "contraband",
       "speaker": "Arden",
-      "text": "Take the cores. Decide for yourself who should hold them. I did."
+      "text": "I drove the first rifles through myself. I thought he'd let my people go. I... I even made them sign the receipt."
     },
     {
-      "id": "eab529ca",
+      "id": "3e468723",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "The lift is here. Whatever you decide about Arden, decide it outside."
+      "text": "Arden, give me their names. We'll take the passenger tunnel. You get there ahead of us."
     },
     {
-      "id": "5dcec3bf",
+      "id": "924084bb",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "The ledger's last shipment came here: Saltmarch, an old salt works. The Houses filed a warrant on it this morning."
+      "text": "Saltmarch used to be a stop on my mail run. That's Halvane's flag over the station now. His latest payment just marched in."
     },
     {
-      "id": "fb14369b",
+      "id": "81a86fd7",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "Get inside before their wardens do. And go easy: whoever is in there will take you for wardens."
+      "text": "A whole Crown regiment, sworn to him personally. The drivers' families are behind that lock. Get to them first."
     },
     {
       "id": "000d6122",
@@ -181,40 +181,40 @@
       "text": "You will not take one of us. Not one."
     },
     {
-      "id": "725c99c8",
+      "id": "cee943fe",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Enough! ...You hold back. Wardens never hold back. Who sent you?"
+      "text": "Easy... You let my boy get back up. Who are you with?"
     },
     {
-      "id": "8e8500c0",
+      "id": "7401c2b5",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "Tell him the truth. We are here because of the ledger."
+      "text": "Free Ports. Arden sent us. We're looking for the freight drivers."
     },
     {
-      "id": "ac7cc96d",
+      "id": "e8cf1008",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Then you know Arden armed us. Do you know who put that ledger in the Houses' hands?"
+      "text": "My daughter drove the last load. Came home with a week's pay and a list of towns she'd never deliver to again."
     },
     {
-      "id": "1a921846",
+      "id": "8002df0d",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants."
+      "text": "Let me see. Oh. Those are the crossings we lost. I... I used to take her letters there."
     },
     {
-      "id": "fb551ee7",
+      "id": "15714654",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Then help us leave. Ring the warning bells and the tunnel opens under the chapel. Hurry: wardens do not knock."
+      "text": "She's downstairs. Ring all three bells. Some of our people work nights. They'll sleep right through the shooting."
     },
     {
-      "id": "4ee694da",
+      "id": "ec1924fe",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "Warden signatures at the outer lock. They are already in the yard."
+      "text": "Halvane's wardens just came through the yard. I'm staying on the radio."
     },
     {
       "id": "8349d457",
@@ -241,10 +241,10 @@
       "text": "That is all of them. To the chapel: the tunnel door is behind the altar."
     },
     {
-      "id": "43bbd781",
+      "id": "bf619aff",
       "mission": "saltmarch",
       "speaker": "Arden",
-      "text": "You came. I hoped you would, and hoped you would not."
+      "text": "Hask's girl is here. She still had my receipt in her pocket. I couldn't look her in the eye."
     },
     {
       "id": "27ad5c04",
@@ -265,40 +265,40 @@
       "text": "The last of us are in the tunnel. Thank you, whoever you are."
     },
     {
-      "id": "41c60eba",
+      "id": "1f0c0b34",
       "mission": "saltmarch",
-      "speaker": "Crane",
-      "text": "Arden Vale. And company. I carry a warrant for the teacher, and a blank line beneath it."
+      "speaker": "Halvane",
+      "text": "That's my freight you're walking out with. I paid those drivers all the way through Friday."
     },
     {
-      "id": "a41a1ec0",
+      "id": "d2d36413",
       "mission": "saltmarch",
-      "speaker": "Crane",
-      "text": "Arden taught you well. Arden taught me too, once."
+      "speaker": "Halvane",
+      "text": "You know what a port costs the Crown to take? I do. I put it on the invoice."
     },
     {
-      "id": "5c8c9976",
+      "id": "eed7b670",
       "mission": "saltmarch",
-      "speaker": "Crane",
-      "text": "Go, then. All of you."
+      "speaker": "Halvane",
+      "text": "Captain? Get me on the shuttle. Captain... can you hear me?"
     },
     {
-      "id": "986a8fe8",
+      "id": "8785c845",
       "mission": "saltmarch",
-      "speaker": "Crane",
-      "text": "The warrant named a teacher. By morning it will name the students."
+      "speaker": "Halvane",
+      "text": "All right. My hands are open. Don't let them take me back to the Crown."
     },
     {
-      "id": "48caa292",
+      "id": "51574703",
       "mission": "saltmarch",
       "speaker": "Arden",
-      "text": "The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did."
+      "text": "On your knees, Halvane. I'll testify about that first load. All of it. Even my signature."
     },
     {
-      "id": "291db56e",
+      "id": "f7218b0c",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court."
+      "text": "Dispatch, Halvane's in custody. Impound his freighters. Hask? Your daughter's here. I'll put her on."
     }
   ]
 }

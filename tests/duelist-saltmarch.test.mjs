@@ -42,8 +42,8 @@ test('Saltmarch, start to finish, by a piloted crew of two: the refuge stands do
   }
   assert.equal(m.phase, 'complete', `finished (reached stage ${m.stageIndex} in ${m.world.time.toFixed(0)} s)`);
   assert.deepEqual(stages, [1, 2, 3, 4], 'every objective in order');
-  assert.deepEqual(titles, ['Find who leads them', 'Warn the refuge', 'Hold the chapel', 'The warrant']);
-  for (const s of ['Ione', 'Defender', 'Hask', 'Arden', 'Crane']) assert.ok(speakers.has(s), `${s} speaks`);
+  assert.deepEqual(titles, ['Find who leads them', 'Warn the refuge', 'Hold the chapel', 'Take Halvane alive']);
+  for (const s of ['Ione', 'Defender', 'Hask', 'Arden', 'Halvane']) assert.ok(speakers.has(s), `${s} speaks`);
   assert.ok(!fallen.some((t) => t === 'refugee' || t === 'keeper'), 'nobody in the refuge falls: beaten, they stand down');
   assert.ok(yielded.size >= 4, `${yielded.size} stood down`);
   assert.ok(drivenBack, 'the teacher was put to the test');
@@ -54,7 +54,7 @@ test('Saltmarch, start to finish, by a piloted crew of two: the refuge stands do
   assert.equal(crane.yielded, true, 'the Warden-Captain yields');
   assert.equal(m.world.fighters.get(crane.id).vitals.dead, false);
   const view = missionView(m, 'a');
-  assert.match(view.ending, /new warrant with your names/);
+  assert.match(view.ending, /Halvane listened from the dock/);
   assert.equal(view.next, null, 'the last mission so far');
 });
 
