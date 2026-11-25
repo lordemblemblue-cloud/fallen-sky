@@ -35,8 +35,11 @@ export function visibleDuelistServers(matches, mode = 'all') {
 /** Exact-room join for /duelist-next/play; never silently matchmake or queue. */
 export function serverJoinSearch(room) {
   const verified = visibleDuelistServers([room])[0];
-  return verified?.open ? {
-    mode: verified.mode, online: 1, matchId: verified.id, from: 'online-play',
+  const official = DEFAULT_PUBLIC_ROOMS.some(candidate => candidate.id === room?.id && candidate.mode === room?.mode);
+  // A permanent room has a deterministic ID even before the first lobby poll.
+  const target = verified?.open ? verified : official && room?.confirmed === false ? room : null;
+  return target ? {
+    mode: target.mode, online: 1, matchId: target.id, from: 'online-play',
   } : null;
 }
 
