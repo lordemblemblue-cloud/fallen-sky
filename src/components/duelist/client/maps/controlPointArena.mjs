@@ -494,7 +494,9 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         collisionDefinitions.push(entry);
       }
 
-      function addEdgeDetails(
+      const pendingEdges = [];
+      function addEdgeDetails(...args) { pendingEdges.push(args); }
+      function buildEdgeDetails(
         group,
         points2D,
         skipEdgeIndices = new Set(),
@@ -523,13 +525,30 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
           const nz = -ux;
           const angle = -Math.atan2(dz, dx);
 
-          const gap = edgeGaps[i];
-          const segments = gap
-            ? [
-                [0, Math.max(0, gap[0])],
-                [Math.min(len, gap[1]), len]
-              ]
-            : [[0, len]];
+          // Determine actual walkable connections from the completed floor and ramp union.
+          // Keep rails at exposed edges; remove only the portion crossing a connected surface.
+          const connected = d => {
+            const x = p1.x + ux*d + nx*0.55, z = p1.y + uz*d + nz*0.55;
+            return collisionDefinitions.some(c => {
+              const b=c.bounds;
+              if(x<b.min.x-0.04||x>b.max.x+0.04||z<b.min.z-0.04||z>b.max.z+0.04)return false;
+              if(c.type==='walkable_floor')return Math.abs(b.max.y-yBase)<0.05 && (!c.polygonXZ||isPointInPolygonXZ(x,z,c.polygonXZ));
+              if(c.type!=='stair_ramp')return false;
+              const {ascendingStart:a,ascendingEnd:e}=c.endpoints;
+              const dx=e.x-a.x,dz=e.z-a.z;
+              const t=Math.max(0,Math.min(1,((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz)));
+              return Math.abs(a.y+t*(e.y-a.y)-yBase)<0.48;
+            });
+          };
+          const segments=[];
+          const samples=Math.ceil(len/0.2);let start=null;
+          for(let k=0;k<samples;k++){
+            const d=(k+0.5)*len/samples;
+            const open=connected(d);
+            if(!open&&start===null)start=k*len/samples;
+            if(open&&start!==null){segments.push([start,k*len/samples]);start=null;}
+          }
+          if(start!==null)segments.push([start,len]);
 
           segments.forEach(([s0, s1]) => {
             const segLen = s1 - s0;
@@ -951,8 +970,8 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         );
 
         // Intermediate Transfer Landing at Y = 4.0m (X = sign * 109.5..115.5, Z = 79..83)
-        const midMinX = Math.min(sign * 109.5, sign * 115.5);
-        const midMaxX = Math.max(sign * 109.5, sign * 115.5);
+        const midMinX = Math.min(sign * 111.5, sign * 115.5);
+        const midMaxX = Math.max(sign * 111.5, sign * 115.5);
         const midPts = [
           new THREE_LIB.Vector2(midMinX, 79),
           new THREE_LIB.Vector2(midMaxX, 79),
@@ -1064,8 +1083,8 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
 
       // Two Symmetrical 8m-wide Diagonal Connecting Bridges (Bravo <-> L2 <-> Charlie)
       [
-        { id: 'Level2_Bridge_Bravo', label: 'L2 Bravo Bridge (8m)', sign: -1, pA: new THREE_LIB.Vector2(-96.5, 81.0), pB: new THREE_LIB.Vector2(-30.0, 10.0) },
-        { id: 'Level2_Bridge_Charlie', label: 'L2 Charlie Bridge (8m)', sign: 1, pA: new THREE_LIB.Vector2(96.5, 81.0), pB: new THREE_LIB.Vector2(30.0, 10.0) }
+        { id: 'Level2_Bridge_Bravo', label: 'L2 Bravo Bridge (8m)', sign: -1, pA: new THREE_LIB.Vector2(-100, 81.0), pB: new THREE_LIB.Vector2(-27.0, 10.0) },
+        { id: 'Level2_Bridge_Charlie', label: 'L2 Charlie Bridge (8m)', sign: 1, pA: new THREE_LIB.Vector2(100, 81.0), pB: new THREE_LIB.Vector2(27.0, 10.0) }
       ].forEach((br) => {
         const gBr = new THREE_LIB.Group();
         const dx = br.pB.x - br.pA.x;
@@ -1247,8 +1266,8 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         const aTopMinX = Math.min(sign * 20.0, sign * 26.0);
         const aTopMaxX = Math.max(sign * 20.0, sign * 26.0);
         const aTopPts = [
-          new THREE_LIB.Vector2(aTopMinX, -107),
-          new THREE_LIB.Vector2(aTopMaxX, -107),
+          new THREE_LIB.Vector2(aTopMinX, -96),
+          new THREE_LIB.Vector2(aTopMaxX, -96),
           new THREE_LIB.Vector2(aTopMaxX, -92),
           new THREE_LIB.Vector2(aTopMinX, -92)
         ];
@@ -1257,7 +1276,7 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         addCollisionVolume(
           `Alpha_Staircase_${side}_TopDeck_Floor`,
           'walkable_floor',
-          new THREE_LIB.Vector3(aTopMinX, 7.2, -107),
+          new THREE_LIB.Vector3(aTopMinX, 7.2, -96),
           new THREE_LIB.Vector3(aTopMaxX, 8.0, -92),
           0,
           0,
@@ -1390,14 +1409,14 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
           elevationY: 0.0,
           facingYawRad: -Math.PI * 0.25,
           primarySpawns: [
-            { id: 'Red_Spawn_1', x: -116.5, y: 0.0, z: 81.5 },
-            { id: 'Red_Spawn_2', x: -113.5, y: 0.0, z: 79.0 },
+            { id: 'Red_Spawn_1', x: -115.0, y: 0.0, z: 82.0 },
+            { id: 'Red_Spawn_2', x: -112.0, y: 0.0, z: 79.0 },
             { id: 'Red_Spawn_3', x: -110.5, y: 0.0, z: 76.5 },
             { id: 'Red_Spawn_4', x: -114.5, y: 0.0, z: 83.2 }
           ],
           fallbackSpawns: [
             { id: 'Red_Fallback_1', x: -108.5, y: 0.0, z: 103.5 },
-            { id: 'Red_Fallback_2', x: -97.5, y: 0.0, z: 103.5 }
+            { id: 'Red_Fallback_2', x: -98.0, y: 0.0, z: 102.0 }
           ]
         },
         blueTeam: {
@@ -1406,14 +1425,14 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
           elevationY: 0.0,
           facingYawRad: Math.PI * 0.25,
           primarySpawns: [
-            { id: 'Blue_Spawn_1', x: 116.5, y: 0.0, z: 81.5 },
-            { id: 'Blue_Spawn_2', x: 113.5, y: 0.0, z: 79.0 },
+            { id: 'Blue_Spawn_1', x: 115.0, y: 0.0, z: 82.0 },
+            { id: 'Blue_Spawn_2', x: 112.0, y: 0.0, z: 79.0 },
             { id: 'Blue_Spawn_3', x: 110.5, y: 0.0, z: 76.5 },
             { id: 'Blue_Spawn_4', x: 114.5, y: 0.0, z: 83.2 }
           ],
           fallbackSpawns: [
             { id: 'Blue_Fallback_1', x: 108.5, y: 0.0, z: 103.5 },
-            { id: 'Blue_Fallback_2', x: 97.5, y: 0.0, z: 103.5 }
+            { id: 'Blue_Fallback_2', x: 98.0, y: 0.0, z: 102.0 }
           ]
         }
       };
@@ -1505,6 +1524,7 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
       // --------------------------------------------------------------------------
       // INSTANCED TRUSSES, BEAMS, STAIRCASE RISERS & RAILING POSTS
       // --------------------------------------------------------------------------
+      pendingEdges.forEach(args=>buildEdgeDetails(...args));
       const trussGroup = new THREE_LIB.Group();
       trussGroup.name = 'Under_Deck_Trusses';
       const beamInst = new THREE_LIB.InstancedMesh(new THREE_LIB.BoxGeometry(1, 0.65, 0.42), materials.steelBeam, Math.max(1, beamInstances.length));
