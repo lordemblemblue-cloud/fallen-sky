@@ -3,7 +3,7 @@
 // design + the authoritative encounter data), converted to Play world
 // coordinates (local Z + 70). Pure module: no THREE, no React.
 import {
-  WOLFVEIL_ROUTES,WOLFVEIL_RIVER,WOLFVEIL_BRIDGES,WOLFVEIL_SITES,WOLFVEIL_CAVES,
+  WOLFVEIL_ROUTES,WOLFVEIL_RIVER,WOLFVEIL_BRIDGES,WOLFVEIL_SITES,
 } from './WolfveilLayout.js';
 import {
   WOLFVEIL_MOUNTAIN_RANGES,WOLFVEIL_FIGHTING_GROUNDS,WOLFVEIL_MOB_AREAS,
@@ -67,13 +67,9 @@ export const WOLFVEIL_MAP_LANDMARKS=Object.freeze([
   {id:'south_gate',name:WOLFVEIL_SITES.southGate.label,type:'gate',...pt(WOLFVEIL_SITES.southGate)},
   {id:'sanctuary',name:WOLFVEIL_SITES.sanctuary.label,type:'shrine',...pt(WOLFVEIL_SITES.sanctuary)},
   {id:'waterfall',name:WOLFVEIL_SITES.waterfall.label,type:'water',...pt(WOLFVEIL_SITES.waterfall)},
-  {id:'vortex_lake',name:WOLFVEIL_SITES.vortexLake.label,type:'water',...pt(WOLFVEIL_SITES.vortexLake)},
   {id:'hot_spring',name:WOLFVEIL_SITES.hotSpring.label,type:'water',...pt(WOLFVEIL_SITES.hotSpring)},
   {id:'wolf_stones',name:WOLFVEIL_SITES.wolfStone.label,type:'stones',...pt(WOLFVEIL_SITES.wolfStone)},
   {id:'cedar_forest',name:WOLFVEIL_SITES.cedarForest.label,type:'forest',...pt(WOLFVEIL_SITES.cedarForest)},
-  {id:'lunar_gate',name:'Lunar Mountain Gate',type:'portal',x:171,z:222},
-  {id:'astral_gate',name:'Astral Gate',type:'portal',x:197,z:224},
-  ...WOLFVEIL_CAVES.map(c=>({id:'cave:'+c.id,name:c.name,type:'cave',x:c.entry[0],z:c.entry[1]+OFFSET_Z})),
 ].map(Object.freeze));
 function pt(site){return {x:site.x,z:site.z+OFFSET_Z};}
 

@@ -1,7 +1,6 @@
 import {gradeWolfveilImportedTown} from './WolfveilImportedTownLayout.mjs';
 import {gradeWolfveilPalaceTerrain,gradeWolfveilPalaceRearMountain,WOLFVEIL_PALACE_REAR_MOUNTAIN} from './WolfveilPalaceGround.mjs';
 import {gradeWolfveilRiverbank} from './WolfveilRiverBanks.mjs';
-import {gradeVortexLakeBasin} from './VortexLakeLayout.mjs';
 import {createWolfveilBridgeBankTerrainGrade} from './WolfveilBridgeBankTerrain.mjs';
 import {gradeWolfveilWestHillside} from './WolfveilWestHillside.mjs';
 import {gradeWolfveilLandscapeFeatures,gradeWolfveilRoadBeds,wolfveilMountainLift,
@@ -260,11 +259,11 @@ export function wolfveilSculptedHeight(x,z){
   // server-authoritative map all sample this exact shared elevation.
   // Unlike a Z-only approximation, the waterline follows river bends.
   y=gradeWolfveilRiverbank(x,z,y,WOLFVEIL_RIVER.points,WOLFVEIL_RIVER.width);
-  y=gradeWolfveilLunarCaveApproach(x,z,y,river);
+
   // Clone-only living-water basin and an open daylight-height mountain mouth.
   // Applied to this same analytical terrain before BVH generation and
   // walking/foot raycasts. No extra false-floor body is introduced.
-  y=gradeVortexLakeBasin(x,z,y);
+
   // Keep key public locations and village foundations predictable without
   // erasing organic terrain globally.
   for(const location of [WOLFVEIL_SITES.market,WOLFVEIL_SITES.southGate,
@@ -322,8 +321,7 @@ export const wolfveilBridgeBankTerrainGrade=createWolfveilBridgeBankTerrainGrade
   WOLFVEIL_BRIDGES,wolfveilPreBridgeHeight);
 export function wolfveilHeight(x,z){
   const y=gradeWolfveilImportedTown(x,z,wolfveilBridgeBankTerrainGrade(x,z));
-  const grade=wolfveilCaveApproachTerrainGrade;
-  return typeof grade==='function'?grade(x,z,y):y;
+  return y;
 }
 // Filled by the cave access plan once its paths exist. Kept off the import
 // graph so the cave mouths can measure the hill before the bench is applied.
