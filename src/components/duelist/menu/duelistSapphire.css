@@ -1,0 +1,113 @@
+/* Shared sapphire liquid glass — palette from duelistBattleShop.css.
+   Scoped to Duelist only; no layout changes to combat HUD or 3D canvas. */
+:is(.dxt-page,.duelist-menu-page,.duelist-arena-page,.duelist-game,.duelist-hub,.ds-campaign) {
+  --ds-blue:#2989e9; --ds-ice:#a7ddff; --ds-silver:#bedaf4; --ds-gold:#e8c47a; --ds-text:#edf5ff;
+  --ds-glass:linear-gradient(110deg,rgba(9,23,42,.72),rgba(9,23,42,.84) 55%,rgba(9,23,42,.59));
+  --ds-quiet:linear-gradient(145deg,#354b6666,#09172a55);
+  --ds-selected:linear-gradient(180deg,#2989e9b0,#0b3069 65%,#156fbd);
+  --ds-divider:linear-gradient(180deg,transparent,#5d8eb766 15%,#a7ddff 50%,#5d8eb766 85%,transparent);
+  --ds-edge:#bedaf44f;
+}
+.ds-campaign {position:absolute;inset:0 0 67px;z-index:10;overflow:auto;color:var(--ds-text);
+  background:radial-gradient(ellipse at 35% 15%,#2989e920,transparent 55%),var(--ds-glass);
+  font:400 14px/1.45 system-ui,sans-serif;padding:clamp(14px,2.5vw,36px);}
+.ds-campaign * {box-sizing:border-box;}
+.ds-campaign h2,.ds-campaign h3 {font-family:Georgia,serif;color:var(--ds-text);margin:0;}
+.ds-campaign h2 {font-size:clamp(24px,3vw,40px);letter-spacing:.025em;}
+.ds-campaign h3 {font-size:clamp(16px,1.5vw,22px);}
+.ds-campaign-head {display:flex;align-items:center;justify-content:space-between;position:relative;padding:0 0 16px;margin-bottom:20px;}
+.ds-campaign-head::after {content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ds-ice),transparent);}
+.ds-campaign-grid {display:grid;grid-template-columns:minmax(145px, .8fr) minmax(0,2.5fr) minmax(230px,1.2fr);gap:clamp(12px,2vw,30px);align-items:start;}
+.ds-campaign-grid>* {min-width:0;}
+.ds-rail {position:relative;padding-right:clamp(12px,2vw,30px);}
+.ds-rail::after {content:"";position:absolute;right:0;top:0;bottom:0;width:1px;background:var(--ds-divider);pointer-events:none;}
+.ds-missions,.ds-deploy {display:flex;flex-direction:column;gap:9px;}
+.ds-campaign button {font:inherit;cursor:pointer;color:inherit;}
+.ds-campaign button:disabled {opacity:.45;cursor:not-allowed;}
+.ds-campaign :is(button,input,summary):focus-visible {outline:2px solid var(--ds-ice);outline-offset:2px;}
+.ds-control,.ds-mission {display:flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:8px 12px;border:1px solid var(--ds-edge);border-radius:5px;background:var(--ds-quiet);text-align:left;}
+.ds-mission {justify-content:flex-start;border-color:transparent;}
+.ds-mission>span,.ds-scene small,.ds-stage-number {color:var(--ds-ice);font-weight:700;}
+.ds-campaign .ds-primary,.ds-mission[aria-pressed="true"] {background:var(--ds-selected);border-color:var(--ds-ice);box-shadow:inset 0 0 7px #8acbff66;}
+.ds-campaign button:not(:disabled):hover {border-color:var(--ds-ice);}
+.ds-scene {min-height:180px;aspect-ratio: 16/6;position:relative;overflow:hidden;border-radius:6px;background:#09172a;}
+.ds-scene img {position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mask-image:linear-gradient(#000 45%,#0009 70%,transparent);}
+.ds-scene>div {position:absolute;left:0;right:0;bottom:0;padding:20px;background:linear-gradient(transparent,#09172a);}
+.ds-scene h3 {font-size:clamp(23px,3vw,40px);}
+.ds-scene p,.ds-meta,.ds-brief-line,.ds-objectives p,.ds-disclosure p {margin:4px 0;color:var(--ds-silver);}
+.ds-brief-line {margin:14px 0 20px;color:var(--ds-text);font-size:15px;}
+.ds-objectives {list-style:none;padding:0;margin:8px 0 16px;}
+.ds-objectives li {display:flex;align-items:start;gap:13px;padding:10px 0;border-bottom:1px solid #bedaf420;}
+.ds-objectives p {font-size:13px;line-height:1.45;}
+.ds-stage-number {flex:none;font-variant-numeric:tabular-nums;}
+.ds-section-heading {margin-top:13px!important;}
+.ds-code {display:grid;gap:5px;color:var(--ds-silver);}
+.ds-code input {min-width:0;width:100%;padding:9px;border:1px solid var(--ds-edge);border-radius:5px;background:#09172a77;color:var(--ds-text);font:inherit;letter-spacing:.1em;}
+.ds-open-crews {display:grid;gap:6px;}
+.ds-disclosure {padding-top:10px;border-top:1px solid #bedaf420;}
+.ds-disclosure summary {display:flex;align-items:center;justify-content:space-between;cursor:pointer;font-weight:650;list-style:none;min-height:32px;}
+.ds-disclosure summary::-webkit-details-marker {display:none;}
+.ds-disclosure[open] summary svg {transform:rotate(180deg);}
+.ds-disclosure p {font-size:13px;}
+.ds-supply-row {padding:8px 0;border-bottom:1px solid #bedaf420;}
+.ds-supply-row strong {color:var(--ds-ice);}
+
+/* Existing home, play, online, settings, character and arena surfaces keep their
+   interaction/geometry, but no longer use competing orange selection chrome. */
+.dxt-page :is(.dxt-header,.dxt-footer), .duelist-menu-page :is(.duelist-menu-topbar,.duelist-menu-bottom-nav), .duelist-arena-page .duelist-arena-header,.duelist-hub :is(.duelist-hub-header,.duelist-hub-footer) {background:var(--ds-glass);border-color:#bedaf433;box-shadow:none;}
+.dxt-page :is(.dxt-footer-link[data-active="true"],.dxt-category[data-active="true"]),.duelist-menu-page .duelist-menu-bottom-link[aria-current="page"] {color:var(--ds-ice);border-color:var(--ds-ice);background:var(--ds-selected);}
+.dxt-page .dxt-home-intro {border-left-color:var(--ds-ice);background:linear-gradient(90deg,#09172ac9,transparent);}
+.dxt-page .dxt-surface,.dxt-page #duelist-play-drawer,.duelist-hub .duelist-hub-overlay,.duelist-menu-page .duelist-menu-panel,.duelist-menu-page .duelist-entry-room,.duelist-arena-page .duelist-match-loading__panel,.duelist-game .duelist-story-supply,.duelist-game .duelist-match-loading__panel {background:var(--ds-glass);border:0;box-shadow:0 14px 46px #0005;border-radius:8px;}
+.dxt-page #duelist-play-drawer :is(.dxt-mode-categories,.dxt-mode-detail) {border:0;position:relative;}
+.dxt-page #duelist-play-drawer .dxt-mode-categories::after,.dxt-page #duelist-play-drawer .dxt-mode-detail::before {content:"";position:absolute;top:0;bottom:0;width:1px;background:var(--ds-divider);pointer-events:none;}
+.dxt-page #duelist-play-drawer .dxt-mode-categories::after {right:0;}
+.dxt-page #duelist-play-drawer .dxt-mode-detail::before {left:0;}
+.dxt-page :is(.dxt-action--primary:not(:disabled),.dxt-category[data-active="true"]),.dxt-page #duelist-play-drawer :is(.dxt-category[data-active="true"],.dxt-action--primary:not(:disabled)),.dxt-page .dcm-root :is(.dcm-class-filters button[data-active="true"],.dcm-tabs button[data-active="true"]),.dxt-page .dxr-art--settings.dxr-settings-glass .dxr-settings-tabs button[data-selected="true"] {background:var(--ds-selected);border-color:var(--ds-ice);color:var(--ds-text);box-shadow:inset 0 0 7px #8acbff66;}
+.dxt-page .dcm-root {background:radial-gradient(ellipse at 50% 0,#2989e920,transparent 55%),var(--ds-glass);--dcm-gold:var(--ds-ice);}
+.dxt-page .dcm-root .dcm-frame {background:var(--ds-glass);border:0;box-shadow:0 14px 46px #0005;}
+.dxt-page .dcm-root .dcm-frame::after {display:none;}
+.dxt-page .dcm-root :is(.dcm-roster-panel,.dcm-mastery-panel) {background:transparent;border-color:#bedaf433;box-shadow:none;}
+.dxt-page .dcm-root .dcm-roster-grid .dcm-fighter-slot[data-active="true"] {border-color:var(--ds-ice);box-shadow:0 0 9px #2989e955;}
+html .dxt-page--reference .dxr-art--settings.dxr-settings-glass .dxr-settings-tabs button[data-selected="true"] {background:var(--ds-selected);border-color:var(--ds-ice);color:var(--ds-text);}
+.duelist-menu-page :is(.duelist-entry-control,.duelist-menu-button),.duelist-game .duelist-story-supply__close {background:var(--ds-quiet);border-color:var(--ds-edge);color:var(--ds-text);}
+.duelist-game .duelist-story-supply__card {background:transparent;border-color:#bedaf433;box-shadow:none;}
+.duelist-game .duelist-story-supply__head {border-color:#bedaf433;}
+.duelist-game :is(.duelist-story-supply__eyebrow,.duelist-match-loading__eyebrow),.duelist-arena-page .duelist-match-loading__eyebrow {color:var(--ds-ice);}
+.duelist-game .duelist-story-supply__head h2 {color:var(--ds-text);font-family:Georgia,serif;}
+@media(max-width:900px) {
+ .ds-campaign {bottom:52px;padding:12px;}
+ .ds-campaign-grid {grid-template-columns:1fr 1fr;gap:16px;}
+ .ds-missions {grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;}
+ .ds-missions .ds-mission {flex:1 1 130px;}
+ .ds-missions.ds-rail {padding-right:0;}
+ .ds-missions.ds-rail::after {display:none;}
+}
+@media(max-width:600px) {
+ .ds-campaign-grid {grid-template-columns:1fr;}
+ .ds-rail {padding-right:0;}
+ .ds-rail::after {display:none;}
+ .ds-scene {min-height:140px;}
+ .ds-deploy {padding-top:12px;border-top:1px solid #bedaf433;}
+ .ds-control,.ds-mission {min-height:44px;}
+}
+@media(max-width:900px) and (orientation:landscape) {
+ .ds-campaign {bottom:52px;}
+}
+
+/* Live practice controls, campaign HUD and field shop: preserve state colors
+   (health, damage, errors, disabled) and change only neutral UI chrome. */
+:is(.dxt-page,.duelist-menu-page,.duelist-game) .duelist-training-glass {background:var(--ds-glass);border:0;box-shadow:0 12px 36px #0005;}
+:is(.dxt-page,.duelist-menu-page,.duelist-game) :is(.duelist-training-trigger,.duelist-training-reset) {background:var(--ds-quiet);border-color:var(--ds-edge);color:var(--ds-text);}
+:is(.dxt-page,.duelist-menu-page,.duelist-game) .duelist-training-row input {accent-color:var(--ds-blue);}
+.duelist-game .duelist-story-supply__card button {background:var(--ds-selected);border-color:var(--ds-ice);color:var(--ds-text);}
+.duelist-game .duelist-story-supply__card button:not(:disabled):hover {background:var(--ds-selected);box-shadow:inset 0 0 7px #8acbff66;}
+.duelist-game .duelist-story-supply__art {background:var(--ds-quiet);color:var(--ds-ice);border-color:var(--ds-edge);}
+.duelist-game .duelist-story-supply__card strong {color:var(--ds-text);}
+.duelist-game .duelist-story-supply__card small {color:var(--ds-gold);}
+.duelist-game .duelist-comms {background:var(--ds-glass);border:0;box-shadow:0 4px 18px #0005;}
+.duelist-game :is(.duelist-comms-who,.duelist-objective-title,.duelist-prompt) {color:var(--ds-ice);}
+.duelist-game .duelist-prompt kbd {background:var(--ds-quiet);border-color:var(--ds-edge);color:var(--ds-text);}
+.duelist-game .duelist-prompt-bar>div {background:var(--ds-blue);}
+.duelist-game .duelist-result button {background:var(--ds-quiet);border-color:var(--ds-edge);border-radius:5px;}
+.duelist-game .duelist-result button:hover {background:var(--ds-selected);border-color:var(--ds-ice);}
+.duelist-game .duelist-story-supply button:focus-visible {outline-color:var(--ds-ice);}

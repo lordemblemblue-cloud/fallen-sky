@@ -84,6 +84,7 @@ import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 import '../menu/duelistDarkBlueTheme.css';
 import '../menu/duelistMobileUI.css';
+import '../menu/duelistSapphire.css';
 
 const POWERS = ['push', 'pull', 'grip', 'breach', 'dash', 'resist']; // the on-screen buttons, labelled with their keys
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];

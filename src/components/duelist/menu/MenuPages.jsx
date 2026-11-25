@@ -26,6 +26,7 @@ import './duelistUnifiedVisual.css';
 import './duelistMenuOverlays.css';
 import './duelistTemplateUI.css';
 import './duelistDarkBlueTheme.css';
+import './duelistSapphire.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
