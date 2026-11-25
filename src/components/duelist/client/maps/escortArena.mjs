@@ -695,8 +695,13 @@ import * as THREE from "three";
         if (addSideRails) {
           const minRailY = Math.min(startVec.y, endVec.y);
           const maxRailY = Math.max(startVec.y, endVec.y) + 1.05;
-          this._registerBarrierSegment(p0.x, p0.z, p2.x, p2.z, minRailY, maxRailY, `${section}_RailL`, 'Stair', parent);
-          this._registerBarrierSegment(p1.x, p1.z, p3.x, p3.z, minRailY, maxRailY, `${section}_RailR`, 'Stair', parent);
+          // Ground-level junction openings where the tactical ramps meet CP2's combat apron.
+          const trimStart=section==='P6_Flank6B_NorthRamp'?Math.min(.25,10/horizLen):0;
+          const trimEnd=section==='P6_UnderBridge_WestRamp'?Math.min(.25,10/horizLen):0;
+          for(const [a,b,suffix] of [[p0,p2,'L'],[p1,p3,'R']]){
+            const u=a.clone().lerp(b,trimStart),v=a.clone().lerp(b,1-trimEnd);
+            this._registerBarrierSegment(u.x,u.z,v.x,v.z,Math.min(u.y,v.y),Math.max(u.y,v.y)+1.05,`${section}_Rail${suffix}`,'Stair',parent);
+          }
         }
       }
 

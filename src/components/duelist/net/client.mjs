@@ -114,7 +114,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
   let level = def ? createLevel(def.level) : null;
   let generation = 0;
-  const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22 });
+  const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22, arenaLayout:story?null:getModeArenaLayout(mode) });
   const maxOf = new Map(); // the depot's people: id -> their full vitals
   const lastFull = new Map(); // a mission: fighter id -> its last full state (the unchanged come by id only)
   let code = null;
@@ -252,6 +252,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       if (snaps.length > 40) snaps.shift();
       if (msg.view) {
         view = msg.view;
+        if(msg.view.escort){world.escortStage=msg.view.escort.stage??0;if(predictor)predictor.world.escortStage=world.escortStage;}
         if (level && view.doors) for (const d of view.doors) setDoor(level, d.id, d.open);
       }
       if (story) applyUses(msg.uses);
