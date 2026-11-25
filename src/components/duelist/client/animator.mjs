@@ -164,6 +164,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
         return { clip: 'getUp', time: Math.min(library.getUp.duration - 1e-3, u * library.getUp.duration), fade: 0.1 };
       }
     }
+    if ((fighter.effects?.levitate || fighter.effects?.levitateFall) && library.held) { settle = null; return { clip: 'held', time: elapsed % library.held.duration, fade: 0.05 }; }
     if (fighter.heldBy && library.held) { settle = null; return { clip: 'held', time: elapsed % library.held.duration }; }
     if (isStunned(fighter, now)) {
       settle = null;
