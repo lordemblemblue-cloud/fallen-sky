@@ -127,7 +127,7 @@ function releaseLevitate(f, b) {
   if (!f.vitals.dead) addEffect(f, 'levitateFall', Infinity);
 }
 function finishLevitateLanding(world, f, b, now) {
-  if (!effectOn(f, 'levitateFall', now) || airborne(world, b) || b.vy > 0) return;
+  if (!effectOn(f, 'levitateFall', now) || b.vy !== 0 || (world.arenaLayout ? !arenaGrounded(world.arenaLayout, b, BODY_RADIUS) : b.y > 1e-6)) return;
   endEffect(f, 'levitateFall');
   if (!f.vitals.dead) {
     knockDown(f, now);
