@@ -11,7 +11,7 @@ import {
   stagger, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
-import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT } from './modeArenaLayout.mjs';
+import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT, recoverArenaFootprint } from './modeArenaLayout.mjs';
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
@@ -679,6 +679,7 @@ function moveBody(world, fighter, body, dt, now) {
 // the arena's edge, or the rooms' walls
 function keepInside(world, body) {
   if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
+  if(world.arenaLayout?.footprint){recoverArenaFootprint(world.arenaLayout,body,BODY_RADIUS);return;}
   const r = Math.hypot(body.x, body.z);
   const limit = world.arenaRadius - BODY_RADIUS;
   if (r > limit) { body.x *= limit / r; body.z *= limit / r; }

@@ -48,12 +48,12 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  * players: [{ id, name, team? }]. seats: the match size (default: the mode's). Returns the match; drive it
  * with stepMatch, seat people with joinMatch / leaveMatch, show it with matchView.
  */
-export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null } = {}) {
+export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null, testMode = false } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const arenaLayout = getModeArenaLayout(def.id);
+  const arenaLayout = getModeArenaLayout(def.id, testMode);
   const world = createWorld({ arenaRadius: def.arena, arenaLayout });
   const match = {
-    mode: def.id, def, world, seed, botLevel, random: createRandom(seed * 7919 + 13),
+    mode: def.id, def, world, testMode, seed, botLevel, random: createRandom(seed * 7919 + 13),
     capacity: Math.max(players.length, arenaLayout ? Math.min(seats ?? def.seats, arenaLayout.capacity) : seats ?? def.seats),
     phase: 'countdown', phaseUntil: COUNTDOWN, clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
@@ -61,7 +61,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     flags: def.flags ? makeFlags(def) : null,
     escort: def.id === 'escort' ? makeEscort() : null,
     ball: def.football ? makeBall() : null,
-    controlPoints: def.control ? makeControlPoints(def.arena, controlLayout) : null,
+    controlPoints: def.control ? makeControlPoints(def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
   for (const p of players) seat(match, { ...p, kind: 'player' });
@@ -87,6 +87,10 @@ function lighterTeam(match) {
 function spawnFor(match, id, team) {
   const { def, world } = match;
   const R = def.arena;
+  if (world.arenaLayout?.footprint && team) {
+    const side = team === 'red' ? -1 : 1;
+    return { x: side * 13.5 + (match.random() - 0.5) * 1.6, z: 18.5, yaw: Math.PI };
+  }
   if (def.id === 'duel') {
     const first = match.order.indexOf(id) % 2 === 0;
     return { x: 0, z: first ? -4 : 4, yaw: first ? 0 : Math.PI };
@@ -617,6 +621,7 @@ function nextRound(match) {
 
 function checkEnd(match) {
   const { def } = match;
+  if (match.testMode && def.id === 'duel' && match.order.length < 2) return;
   if (def.id === 'duel') {
     if (match.roundClock >= def.roundClock) {
       // time: the fighter standing better takes the round (a dead heat replays it)

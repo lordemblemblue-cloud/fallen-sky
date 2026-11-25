@@ -4,8 +4,7 @@
 import * as THREE from 'three';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 
-export function createModeArchitecture(mode) {
-  const layout=getModeArenaLayout(mode);
+export function createModeArchitecture(mode, layout=getModeArenaLayout(mode)) {
   if (!layout) return null;
   const group=new THREE.Group();
   group.name=layout.id;
