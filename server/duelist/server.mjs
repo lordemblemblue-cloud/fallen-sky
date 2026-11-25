@@ -50,7 +50,7 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 // missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore() } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore(), continuousPublicRooms = false } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -439,7 +439,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       carry -= STEP;
       for (const room of rooms.values()) {
         if (room.mission && !connected(room)) continue; // nobody here (or everyone dropped): the mission waits
-        if (!room.mission && !room.clients.size) continue; // advertised bot-filled rooms sleep until the first human joins
+        if (!room.mission && !room.clients.size && !(continuousPublicRooms && room.publicRoom)) continue; // only permanent arenas run without humans
         const inputs = {};
         for (const client of room.clients.values()) {
           let input;
@@ -481,7 +481,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
           if (room.overAt !== null && now - room.overAt > missionAgainSeconds && room.clients.size) restartMission(room);
           continue;
         }
-        if (room.ticks % SNAPSHOT_EVERY === 0) snapshot(room);
+        if (room.ticks % SNAPSHOT_EVERY === 0) {
+          if (room.clients.size) snapshot(room);
+          else { room.effects = []; room.events = []; } // no audience: discard transient effects, not the world
+        }
         if (room.match.phase === 'over' && room.overAt === null) room.overAt = now;
         if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && (room.clients.size || room.publicRoom)) rematch(room);
       }
