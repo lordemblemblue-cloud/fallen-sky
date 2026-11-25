@@ -4,6 +4,7 @@ import { RefreshCw, Server, Users, ArrowRight, Shield } from 'lucide-react';
 import { MenuShell } from './MenuPages.jsx';
 import { MENU_MODES } from './modes.js';
 import { useLobby } from './useLobby.js';
+import OnlineArenaPreview from './OnlineArenaPreview.jsx';
 import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch } from './serverBrowser.mjs';
 
 /** Real public servers, not a queue or simulated list of rooms. */
@@ -36,7 +37,7 @@ export default function OnlinePlayPage() {
           <div className="space-y-1">
             <p className="text-xs font-bold uppercase tracking-widest text-amber-200/90">Public servers</p>
             <h2 className="text-xl font-bold text-white">Choose your arena</h2>
-            <p className="text-sm text-white/60">Large battles: up to 20 players per server. Duel remains 1v1.</p>
+            <p className="text-sm text-white/60">Join a running public arena. Capacity is reported by the match service. Duel remains 1v1.</p>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/65">
@@ -55,6 +56,18 @@ export default function OnlinePlayPage() {
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Online arena modes">
+          {ONLINE_SERVER_MODES.map(id => {
+            const modeRooms = visibleDuelistServers(lobby.matches, id);
+            const ready = lobby.online && modeRooms.some(room => room.open);
+            return <button type="button" key={id} aria-pressed={mode === id} onClick={() => setMode(id)}
+              className={`rounded border px-3 py-2 text-left text-sm ${mode === id ? 'border-cyan-300 bg-cyan-950/60' : 'border-white/15 bg-slate-950/60'}`}>
+              <span className="block font-bold">{MENU_MODES[id]?.title || id}</span>
+              <span className="block text-xs text-white/60">{!lobby.online ? 'Offline' : ready ? 'Join available' : 'Full / restarting'}</span>
+            </button>;
+          })}
+        </div>
+        <OnlineArenaPreview mode={mode === 'all' ? 'duel' : mode} />
         <p className="flex items-center gap-2 text-sm text-white/70" role="status" aria-live="polite">
           <Server size={17} aria-hidden="true"/> {status}
         </p>
