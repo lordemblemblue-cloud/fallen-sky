@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getModeArenaLayout, arenaFloorContains, overlapsArenaFootprint, arenaBodyBlockers, arenaLandingHeight, moveArenaBody, arenaRayFraction, arenaLineClear, arenaGrounded } from '../src/components/duelist/sim/modeArenaLayout.mjs';
+import { getModeArenaLayout, arenaFloorContains, arenaBodyBlockers, arenaLandingHeight, moveArenaBody, arenaRayFraction, arenaLineClear, arenaGrounded } from '../src/components/duelist/sim/modeArenaLayout.mjs';
 import { makeControlPoints } from '../src/components/duelist/sim/control.mjs';
-import { ESCORT_LENGTH, ESCORT_RADIUS, payloadPose } from '../src/components/duelist/sim/escort.mjs';
+import { ESCORT_LENGTH, payloadPose } from '../src/components/duelist/sim/escort.mjs';
 import { MODES, createMatch, joinMatch } from '../src/components/duelist/sim/match.mjs';
 
 test('three distinct layouts fit existing arena bounds and contain mode-specific architecture',()=>{

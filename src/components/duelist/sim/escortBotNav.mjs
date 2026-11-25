@@ -1,4 +1,4 @@
-import {escortHeights,escortBlockers,escortMove,escortEnemyZone} from './importedEscortLayout.mjs';
+import {escortMove,escortEnemyZone} from './importedEscortLayout.mjs';
 import nav from './importedEscortNavData.mjs';
 const nodes=nav.nodes.map(([x,y,z])=>({x,y,z}));
 const edges=nav.edges,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);

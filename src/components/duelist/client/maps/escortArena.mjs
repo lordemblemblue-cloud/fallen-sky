@@ -1,7 +1,7 @@
 // Imported from docs/duelist/escort-phase9-source.html; standalone viewer UI intentionally excluded.
 import * as THREE from "three";
     function createProceduralTexture(type) {
-      const canvas = document.createElement('canvas');
+      const canvas = globalThis.document.createElement('canvas');
       canvas.width = 256;
       canvas.height = 256;
       const ctx = canvas.getContext('2d');
@@ -693,8 +693,6 @@ import * as THREE from "three";
         this._registerWalkableQuad(p0, p1, p2, p3, section);
 
         if (addSideRails) {
-          const minRailY = Math.min(startVec.y, endVec.y);
-          const maxRailY = Math.max(startVec.y, endVec.y) + 1.05;
           // Ground-level junction openings where the tactical ramps meet CP2's combat apron.
           const trimStart=section==='P6_Flank6B_NorthRamp'?Math.min(.25,10/horizLen):0;
           const trimEnd=section==='P6_UnderBridge_WestRamp'?Math.min(.25,10/horizLen):0;
@@ -1797,7 +1795,6 @@ import * as THREE from "three";
       // =====================================================================
       getWalkableHeightAt(x, z, refY = null, maxStep = 1.6) {
         let bestY = null;
-        let bestDist = Infinity;
 
         for (let i = 0; i < this.walkableTriangles.length; i++) {
           const tri = this.walkableTriangles[i];
@@ -1827,7 +1824,6 @@ import * as THREE from "three";
             } else {
               const dy = Math.abs(y - refY);
               if (dy <= maxStep && (bestY===null || y>bestY)) {
-                bestDist = dy;
                 bestY = y;
               }
             }
@@ -2301,7 +2297,7 @@ import * as THREE from "three";
         this.group.add(mesh);
       }
       _texture(w, h, paint) {
-        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const c = globalThis.document.createElement('canvas'); c.width = w; c.height = h;
         paint(c.getContext('2d'), w, h);
         const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
         return t;
@@ -2536,6 +2532,6 @@ export function applyEscortDaylight({scene,camera,renderer,lights,environment}){
  lights.hemi.color.setHex(0xd4e9ff);lights.hemi.groundColor.setHex(0xb6c6bb);lights.hemi.intensity=1.95;
  lights.sun.color.setHex(0xffe5bc);lights.sun.intensity=2.35;lights.sun.position.set(-140,175,-148);lights.sun.castShadow=false;
  lights.rimLight.intensity=.25;lights.fills.forEach(l=>l.intensity=.18);renderer.toneMappingExposure=1.15;
- environment.setQuality(typeof window!=='undefined'&&window.matchMedia?.('(pointer: coarse)').matches?'mobile':'high');
+ environment.setQuality(globalThis.window?.matchMedia?.('(pointer: coarse)').matches?'mobile':'high');
  return {update(dt){environment.update(dt);},dispose(){scene.background=saved.background;scene.fog=saved.fog;camera.far=saved.far;camera.updateProjectionMatrix();renderer.toneMappingExposure=saved.exposure;lights.hemi.color.copy(saved.hemiColor);lights.hemi.groundColor.copy(saved.ground);lights.hemi.intensity=saved.hemiIntensity;lights.sun.color.copy(saved.sunColor);lights.sun.intensity=saved.sunIntensity;lights.sun.position.copy(saved.sunPos);lights.sun.castShadow=saved.sunShadow;lights.rimLight.intensity=saved.rim;lights.fills.forEach((l,i)=>l.intensity=saved.fills[i]);}};
 }
