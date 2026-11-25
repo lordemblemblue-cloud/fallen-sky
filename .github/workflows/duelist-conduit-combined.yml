@@ -1,0 +1,27 @@
+name: Conduit combined integration
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/maps/*onduit*'
+      - 'src/components/duelist/sim/conduit*.mjs'
+      - 'src/components/duelist/client/audio.mjs'
+      - 'tests/duelist-conduit*.test.mjs'
+      - '.github/workflows/duelist-conduit-combined.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  combined:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check src/components/duelist/sim/conduitMatchAdapter.mjs
+      - run: node --test tests/duelist-conduit*.test.mjs
+      - run: npm run build
+      - run: npm run lint
