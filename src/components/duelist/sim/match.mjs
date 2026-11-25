@@ -162,7 +162,7 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   resetKillChain(entry);
   entry.level = levelOf(match, entry);
   const spawn=spot??(match.conduit?(seatTeam?match.conduit.modeSpawnCandidates[seatTeam][0]:match.conduit.modeSpawnCandidates[0]):null);
-  const fighter=addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spawn });
+  const fighter=addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...(spawn?{x:spawn.x,y:spawn.y??0,z:spawn.z,yaw:spawn.yaw??0}:{}) });
   if(match.conduit){entry.recentConduitSpawns=spot?[spot.id]:[];entry.conduitSpawn=spot??null;if(!spot){fighter.vitals.hp=0;fighter.vitals.dead=true;entry.respawnAt=match.world.time+.5;entry.respawnStartedAt=match.world.time;}}
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, assists: 0, falls: 0, captures: 0, returns: 0 };
