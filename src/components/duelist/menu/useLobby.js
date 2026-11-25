@@ -9,14 +9,15 @@ export function useLobby(everyMs = 3000) {
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     if (!serverUrl) { setState({ matches: null, reachable: false, loaded: true }); return undefined; }
-    let alive = true;
+    let alive = true, timer;
     const poll = async () => {
       const matches = await fetchLobby(serverUrl);
-      if (alive) setState({ matches: matches || [], reachable: matches !== null, loaded: true });
+      if (!alive) return;
+      setState({ matches: matches || [], reachable: matches !== null, loaded: true });
+      timer = setTimeout(poll, everyMs);
     };
     poll();
-    const timer = setInterval(poll, everyMs);
-    return () => { alive = false; clearInterval(timer); };
+    return () => { alive = false; clearTimeout(timer); };
   }, [serverUrl, everyMs, revision]);
   const byMode = {};
   let players = 0;
