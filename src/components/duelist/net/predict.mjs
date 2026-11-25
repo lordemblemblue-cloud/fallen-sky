@@ -124,6 +124,8 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       const shift = time - world.time;
       Object.assign(shown.vitals, fighter.vitals);
       shown.weapon = fighter.weapon;
+      shown.classId = fighter.classId;
+      shown.meter = fighter.meter;
       shown.level = fighter.level;
       shown.matchBoost = fighter.matchBoost;
       shown.items = fighter.items;
@@ -154,7 +156,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shownBody.yaw = body.yaw;
       shownBody.vy = body.vy;
       shownBody.jumped = body.jumped;
-      shownBody.airJumpAt = body.airJumpAt;
+      shownBody.airJumpAt = body.airJumpAt == null ? null : body.airJumpAt + shift;
       shownBody.speed = body.speed;
       shownBody.moving = body.moving;
       shownBody.motion = body.motion;
