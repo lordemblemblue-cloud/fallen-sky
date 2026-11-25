@@ -10,6 +10,8 @@
 //   (the Veil shattering), defeat, victory / defeat stingers.
 /* global window, fetch */
 
+import { createConduitAudioBank } from './maps/conduitAudioBank.mjs';
+
 const STORAGE = 'duelist.audio';
 const SAMPLES = '/audio/duelist/sfx/';
 
@@ -25,6 +27,7 @@ export function createDuelAudio() {
   const settings = readSettings();
   let ctx = null;
   let master = null;
+  let conduitBank = null; // lazy; only the Conduit host opts in
   let noise = null; // two seconds of white noise, shared
   const loops = new Map(); // key -> { stop, set }
   let samples = null; // name -> { gain, loop, buffers } once loaded
@@ -266,6 +269,21 @@ export function createDuelAudio() {
       if (samples?.[key]) { playSample(samples[key], position, options); return; }
       if (SOUNDS[name]) SOUNDS[name](ctx.currentTime + 0.005, out(position, options.gain ?? 1), options);
     },
+    // Opt-in Conduit cues share the existing context, listener, limiter and mute.
+    // Never create or resume a context from a simulation update.
+    playConduitCue(name, position, options) {
+      if (!ctx || ctx.state !== 'running' || settings.muted) return false;
+      conduitBank ??= createConduitAudioBank(ctx, master);
+      return conduitBank.play(name, position, options);
+    },
+    setConduitAmbience(sources) {
+      if (!ctx || ctx.state !== 'running' || settings.muted || !Array.isArray(sources)) {
+        conduitBank?.setAmbience([]); return;
+      }
+      if (!sources.length && !conduitBank) return;
+      conduitBank ??= createConduitAudioBank(ctx, master);
+      conduitBank.setAmbience(sources);
+    },
     /** Is there a recording of this name (loaded)? */
     has(name) { return !!samples?.[name]; },
     /**
@@ -381,6 +399,7 @@ export function createDuelAudio() {
     },
     stopHum(key) { const loop = loops.get(key); if (loop) { loop.stop(); loops.delete(key); } },
     dispose() {
+      conduitBank?.dispose(); conduitBank = null;
       for (const loop of loops.values()) loop.stop();
       loops.clear();
       if (ctx) ctx.close().catch(() => {});

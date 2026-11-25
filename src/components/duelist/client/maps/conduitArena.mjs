@@ -2,6 +2,12 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { createConduitRouteResolver } from '../../sim/conduitRouteResolver.mjs';
+import { applyConduitInteriorDetails } from './conduitInteriorDetails.mjs';
+import { createConduitCrownPlan } from './conduitCrown.mjs';
+import { createConduitAtmosphere } from './conduitAtmosphere.mjs';
+import { auditConduitPlacement, chooseConduitSpawn, resolveConduitPickupPosition } from '../../sim/conduitPlacement.mjs';
+import { createConduitBoxCache, conduitTextureResolution, batchConduitStaticBoxes, conduitSceneInventory } from './conduitRenderOptimization.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -38,10 +44,10 @@ import { createConduitLighting } from './conduitLighting.mjs';
         // =========================================================================
         // 2. PROCEDURAL PBR MATERIAL LIBRARY (DEDICATED DIAMOND-PLATE TREAD BUMP)
         // =========================================================================
-        function createMaterialLibrary(quality = 'medium') {
-            const s = quality === 'low' ? 256 : quality === 'high' ? 1024 : 512;
+        function createMaterialLibrary(quality = 'medium', optimize = true) {
             const textures = [];
             const makeTex = (drawFn, repeat = [1, 1], isColor = true) => {
+                const s = conduitTextureResolution(quality,optimize?isColor:true);
                 const c = document.createElement('canvas'); c.width = c.height = s;
                 drawFn(c.getContext('2d'), s);
                 const t = new THREE.CanvasTexture(c);
@@ -342,16 +348,18 @@ export { CFG as CONDUIT_CONFIG };
             }
         }
 export { UnifiedCollisionWorld as ConduitCollisionWorld };
-export function createConduitArena(hostScene, { quality = 'medium', enableLights = true } = {}) {
+export function createConduitArena(hostScene, { quality = 'medium', enableLights = true, optimizeRendering = true, enableInteriorDetails = true, enableCrownTactics = true, enableAtmosphere = true } = {}) {
     if (!hostScene?.isObject3D) throw new TypeError('Conduit needs an existing Three.js scene or group');
     const scene = new THREE.Group(); scene.name = 'The Conduit';
-    const MAT = createMaterialLibrary(quality);
+    const MAT = createMaterialLibrary(quality,optimizeRendering);
+    const boxCache=createConduitBoxCache(THREE),staticBoxes=[];
     const world = new UnifiedCollisionWorld();
     const upperGroup = new THREE.Group(), t0Group = new THREE.Group();
     upperGroup.name='Conduit Upper'; t0Group.name='Conduit Undercroft';
     scene.add(upperGroup,t0Group);
             function addBox(parent, sx, sy, sz, x, y, z, mat, col = null, rotY = 0) {
-                const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+                const m = new THREE.Mesh(optimizeRendering?boxCache.get(sx,sy,sz):new THREE.BoxGeometry(sx,sy,sz), mat);
+                staticBoxes.push(m);
                 m.position.set(x, y, z); m.rotation.y = rotY;
                 m.castShadow = true; m.receiveShadow = true;
                 parent.add(m);
@@ -375,7 +383,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             const detailCounts={instances:0,batches:0};
             function flushDetails(){
                 for(const [parent,mats] of detailBatches)for(const [mat,transforms] of mats){
-                    const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,transforms.length);
+                    const mesh=new THREE.InstancedMesh(optimizeRendering?boxCache.get(1,1,1):new THREE.BoxGeometry(1,1,1),mat,transforms.length);
                     transforms.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();
                     mesh.name='CON_ReferenceDetailBatch';parent.add(mesh);detailCounts.instances+=transforms.length;detailCounts.batches++;
                 }
@@ -472,6 +480,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             // 7B. FOUR TWO-STORY BUILDINGS + DISTINCT INTERIORS + 8 STAIRCASES
             // =====================================================================
             const bldgWPs = {};
+            const interiorDetails = [];
             CFG.buildings.forEach(spec => {
                 const rDist = 38.0;
                 const bg = new THREE.Group(); bg.position.set(Math.sin(spec.angle) * rDist, CFG.yT1Bldg, Math.cos(spec.angle) * rDist); bg.rotation.y = spec.angle; upperGroup.add(bg); bg.updateMatrixWorld(true);
@@ -586,8 +595,8 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                     [-0.78,0.78].forEach(dx=>{const ch=new THREE.Mesh(new THREE.CylinderGeometry(.23,.23,1.8,10),MAT.purpleGlow);ch.position.set(-1.2+dx,2.2,-.92);bg.add(ch);});
                     world.addCylinder(cPos.x, cPos.z, 1.9, CFG.yT1Bldg, CFG.yT2, 'Reactor Core Cylinder');
                 } else if (spec.id === 'medbay') {
-                    addBox(bg, 2.2, 0.85, 1.0, -3.4, 0.425, 0.6, MAT.brushedSteel, { walkable: true, label: 'Med-Bay Recovery Pod' });
-                    addBox(bg, 2.0, 0.14, 0.85, -3.4, 0.92, 0.6, MAT.greenGlow);
+                    addBox(bg, 2.2, 0.85, 1.0, -1.0, 0.425, 3.8, MAT.brushedSteel, { walkable: true, label: 'Med-Bay Recovery Pod' });
+                    addBox(bg, 2.0, 0.14, 0.85, -1.0, 0.92, 3.8, MAT.greenGlow);
                     addBox(bg, 0.9, 2.2, 3.4, -8.1, 1.1, -0.6, MAT.paintedPanel, { label: 'Med-Bay Cabinet' });
                 } else {
                     addBox(bg, 0.9, 2.2, 4.0, -8.1, 1.1, -0.6, MAT.gunmetal, { label: 'Barracks Lockers' });
@@ -675,6 +684,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                     detailBox(bsmtG,MAT.amberGlow,x,3.85,6.36,1.8,.09,.035);
                 }
 
+                if(enableInteriorDetails) interiorDetails.push(applyConduitInteriorDetails(spec.id,bg,bsmtG,MAT,detailBox));
                 bldgWPs[spec.id] = {
                     entLOut: toW(-4.8, 0, -7.2), entLIn: toW(-4.8, 0, -3.4),
                     entROut: toW( 4.8, 0, -7.2), entRIn: toW( 4.8, 0, -3.4),
@@ -743,9 +753,11 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 }
                 world.addRamp(Math.sin(a) * stairMidR, Math.cos(a) * stairMidR, stairWC, stairLenC, CFG.yT0, CFG.yT1Pit, a, `Courtyard Stair ${idx + 1}`, true);
 
+                // Widen the inner transition before the stair toe so a .8 m capsule
+                // can turn into the side bypass without squeezing between rail and wall.
                 // Enclosed Cross Tunnel Floors + Continuous Walls + Ceiling Beams
                 addBox(sg, 5.2, 0.5, 4.0, 0, CFG.yT0 - 0.25,  7.6, MAT.steelFloor, { walkable: true, label: `T0 Tun In ${idx}` });
-                addBox(sg, 8.8, 0.5, 10.0, 0, CFG.yT0 - 0.25, 13.8, MAT.steelFloor, { walkable: true, label: `T0 Bypass ${idx}` });
+                addBox(sg, 8.8, 0.5, 10.8, 0, CFG.yT0 - 0.25, 13.4, MAT.steelFloor, { walkable: true, label: `T0 Bypass ${idx}` });
                 addBox(sg, 5.2, 0.5, 9.2, 0, CFG.yT0 - 0.25, 23.0, MAT.steelFloor, { walkable: true, label: `T0 Tun Out ${idx}` });
                 addBox(sg, 5.6, 0.35, 9.4, 0, CFG.yT0Ceil, 23.0, MAT.gunmetal, { label: `T0 Tun Ceil Out ${idx}` });
                 addBox(sg, 5.6, 0.35, 4.0, 0, CFG.yT0Ceil,  7.6, MAT.gunmetal, { label: `T0 Tun Ceil In ${idx}` });
@@ -756,15 +768,15 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 // Reinforced tunnel entrance portal frame
                 addBox(sg, 5.4, 0.42, 0.55, 0, CFG.yT0 + 4.1, 18.6, MAT.brushedSteel);
                 [-2.6, 2.6].forEach(wx => {
-                    addBox(sg, 0.5, 4.4, 3.8, wx, CFG.yT0 + 2.2,  7.6, MAT.concrete, { label: `T0 Wall In ${idx}` });
+                    addBox(sg, 0.5, 4.4, 2.4, wx, CFG.yT0 + 2.2,  6.9, MAT.concrete, { label: `T0 Wall In ${idx}` });
                     addBox(sg, 0.5, 4.4, 8.6, wx, CFG.yT0 + 2.2, 22.8, MAT.concrete, { label: `T0 Wall Out ${idx}` });
                 });
                 [-4.4, 4.4].forEach(wx => {
-                    addBox(sg, 0.5, 4.4, 9.8, wx, CFG.yT0 + 2.2, 13.8, MAT.paintedPanel, { label: `T0 Hall Wall ${idx}` });
+                    addBox(sg, 0.5, 4.4, 10.6, wx, CFG.yT0 + 2.2, 13.4, MAT.paintedPanel, { label: `T0 Hall Wall ${idx}` });
                     addBox(sg, 0.1, 1.2, 1.8, wx > 0 ? wx - 0.26 : wx + 0.26, CFG.yT0 + 2.4, 13.8, MAT.ventGrille);
                 });
                 [-3.5, 3.5].forEach(wx => {
-                    addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2,  9.1, MAT.gunmetal, { label: `T0 Shoulder In ${idx}` });
+                    addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2,  8.1, MAT.gunmetal, { label: `T0 Shoulder In ${idx}` });
                     addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2, 18.6, MAT.gunmetal, { label: `T0 Shoulder Out ${idx}` });
                 });
                 const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 8.5, 8), MAT.copperPipe);
@@ -889,8 +901,13 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             world.addDisc(0, 0, CFG.crownRadius, CFG.yCrown - CFG.crownThick, CFG.yCrown, true, 'Central Crown Platform');
             world.addCylinder(0, 0, 1.75, 0, CFG.yCrown - CFG.crownThick, 'Crown Support Column');
 
+            const crownTactics = enableCrownTactics ? createConduitCrownPlan(CFG) : null;
+            if(crownTactics){
+                for(const b of crownTactics.cover)addBox(upperGroup,b.sx,b.sy,b.sz,b.x,b.y,b.z,MAT.gunmetal,{walkable:b.walkable,label:b.label},b.rotY);
+                for(const d of crownTactics.details)detailBox(upperGroup,MAT[d.material],d.x,d.y,d.z,d.sx,d.sy,d.sz,d.rotY);
+            }
             CFG.cardinals.forEach((a, idx) => {
-                addBox(upperGroup, 2.0, 0.75, 0.7, Math.sin(a) * 5.3, CFG.yCrown + 0.375, Math.cos(a) * 5.3, MAT.gunmetal, { walkable: true, label: `Crown Cover ${idx + 1}` }, a);
+                if(!crownTactics)addBox(upperGroup, 2.0, 0.75, 0.7, Math.sin(a) * 5.3, CFG.yCrown + 0.375, Math.cos(a) * 5.3, MAT.gunmetal, { walkable: true, label: `Crown Cover ${idx + 1}` }, a);
                 addBox(upperGroup, 2.2, 1.2, 0.9, Math.sin(a) * 31.1, CFG.yT2 + 0.6, Math.cos(a) * 31.1, MAT.gunmetal, { walkable: true, label: `T2 Cover ${idx + 1}` }, a);
             });
 
@@ -963,6 +980,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             scene.add(rockInst, ribInst, overheadConduit, cavernDome);
 
             flushDetails();
+            const atmosphere=enableAtmosphere?createConduitAtmosphere(scene,upperGroup,t0Group,THREE,MAT,CFG,{quality}):null;
             // Dust particles
             let dust = null;
             const buildDust = (q) => {
@@ -989,6 +1007,12 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 { id: 't0_core',  label: 'T0 Core Overcharge',  pos: [  0.0, -5.0,   0.0], respawn: 90, mat: MAT.cyanGlow,   avail: true, timer: 0, apply: s => { s.shield = Math.min(s.maxShield, s.shield + 50); s.energy = s.maxEnergy; } },
                 { id: 'crown',    label: 'Crown Offensive 1.5x (15s)',pos: [  0.0,  5.0,   0.0], respawn: 90, mat: MAT.redGlow,    avail: true, timer: 0, apply: s => { s.dmgMult = 1.5; s.dmgBuffTimer=15; } }
             ];
+            const pickupPlacement = pickups.map(pk => {
+                const original=pk.pos.slice();
+                const resolved=resolveConduitPickupPosition(world,pk.id,original);
+                if(resolved)pk.pos=resolved;
+                return {id:pk.id,original,position:pk.pos.slice(),ok:!!resolved};
+            });
             pickups.forEach(pk => {
                 const g = new THREE.Group(); g.position.set(...pk.pos); scene.add(g);
                 const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.22, 8), MAT.gunmetal); ped.position.y = 0.11; g.add(ped);
@@ -1010,24 +1034,12 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             };
             addTeamSpawns('blue', [0, 1]); addTeamSpawns('red', [2, 3]);
 
-            function selectTDMSpawn(team, enemies = [], occupants = []) {
-                const list = tdmSpawns[team] || [];
-                let best = null, bestScore = -Infinity;
-                for (const s of list) {
-                    const sup=world.getSweptSupportHeight(s.x,s.y+.2,s.y-.3,s.z,CFG.capsuleRadius,.25);
-                    if(!Number.isFinite(sup)||Math.abs(sup-s.y)>.25||world.isEmbedded(new THREE.Vector3(s.x,s.y,s.z),CFG.capsuleRadius,CFG.capsuleHeight).embedded||world.isInShaftOpening(s.x,s.y,s.z,.1))continue;
-                    if([...occupants,...enemies].some(o=>Math.abs(o.y-s.y)<CFG.capsuleHeight&&Math.hypot(o.x-s.x,o.z-s.z)<CFG.capsuleRadius*2+.2))continue;
-                    let sc = 0;
-                    for (const e of enemies) {
-                        const d = Math.hypot(s.x - e.x, s.y - e.y, s.z - e.z);
-                        sc += Math.min(d, 35);
-                        if (d < 10) sc -= 40;
-                        if (world.hasLineOfSight(new THREE.Vector3(s.x, s.y + 1.4, s.z), new THREE.Vector3(e.x, e.y + 1.4, e.z))) sc -= 25;
-                    }
-                    if (sc > bestScore) { bestScore = sc; best = s; }
-                }
-                return best;
+            function selectTDMSpawn(team, enemies = [], occupants = [], policy = {}) {
+                const list=Object.hasOwn(tdmSpawns,team)?tdmSpawns[team]:[];
+                const chosen=chooseConduitSpawn(world,list,{...policy,enemies,occupants});
+                return chosen?.spawn??null;
             }
+            const spawnPlacement=Object.values(tdmSpawns).flat().map(p=>({id:p.id,...auditConduitPlacement(world,p)}));
 
             // Genuine 3-Tier A* Navigation Graph (walk, stair, ramp, jump_pad, drop)
             const navGroup = new THREE.Group(); navGroup.visible = false; scene.add(navGroup);
@@ -1107,13 +1119,20 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 }
                 return null;
             }
+    const beforeBatch=conduitSceneInventory(scene);
+    const batchResult=optimizeRendering?batchConduitStaticBoxes(THREE,staticBoxes,{exclude:buildingRoofs}):{eligible:0,batched:0,batchCount:0,removedMeshSubmissions:0};
+    const {eligible,batched,batchCount,removedMeshSubmissions}=batchResult;
+    const batchStats={eligible,batched,batchCount,removedMeshSubmissions};
+    const renderOptimization={enabled:optimizeRendering,beforeBatch,afterBatch:conduitSceneInventory(scene),...batchStats};
+    staticBoxes.length=0;
     hostScene.add(scene);
+    const routeResolver=createConduitRouteResolver(world,navNodes);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
-        spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, renderOptimization, interiorDetails, crownTactics, atmosphere, pickupPlacement, spawnPlacement,
+        spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath,resolveEdge:routeResolver.resolveEdge,findValidatedRoute:routeResolver.findRoute},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
-        updateVisuals(elapsed){if(disposed)return;rRing1.rotation.z=elapsed*.65;rRing2.rotation.z=-elapsed*.35;padRings.forEach((r,i)=>{r.rotation.z=elapsed*2+i;});pickups.forEach((p,i)=>{p.sym.rotation.y=elapsed*1.4+i;p.sym.position.y=1.15+Math.sin(elapsed*2.5+i)*.12;});},
-        dispose(){if(disposed)return;disposed=true;scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
+        updateVisuals(elapsed){if(disposed||!Number.isFinite(elapsed)||elapsed<0)return;atmosphere?.update(elapsed);rRing1.rotation.z=elapsed*.65;rRing2.rotation.z=-elapsed*.35;padRings.forEach((r,i)=>{r.rotation.z=elapsed*2+i;});pickups.forEach((p,i)=>{p.sym.rotation.y=elapsed*1.4+i;p.sym.position.y=1.15+Math.sin(elapsed*2.5+i)*.12;});},
+        dispose(){if(disposed)return;disposed=true;atmosphere?.dispose();scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
     };
 }
