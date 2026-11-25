@@ -39,6 +39,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install dependencies
+        run: npm ci
       - name: Validate four-class rules
         run: node --test tests/duelist-classes.test.mjs tests/duelist-match-classes.test.mjs
       - name: Run existing Duelist combat core regression tests
