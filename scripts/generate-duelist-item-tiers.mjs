@@ -1,7 +1,7 @@
 // Reproducible item art: three independent SVGs per original item motif.
 import {readFileSync,readdirSync,mkdirSync,writeFileSync} from 'node:fs';
 import {join} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,URL} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const input=join(root,'public/duelist/items'),output=join(root,'public/duelist/item-tiers');
 const palette=[null,['#d5b17d','#614c38'],['#c3d8e7','#344d69'],['#a7ddff','#1252a1']];
