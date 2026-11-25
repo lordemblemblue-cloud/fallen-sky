@@ -95,7 +95,7 @@ test('execution threshold is a match-only special boost; fake saved level is ign
 });
 
 test('authoritative reconciliation keeps mastery and boost in separate fields', () => {
-  assert.equal(PROTOCOL, 15);
+  assert.equal(PROTOCOL, 16);
   const world = createWorld();
   const f = addFighter(world, { id: 'player', classId: 'healer', level: 25, matchBoost: 2 });
   const own = JSON.parse(JSON.stringify(encodeOwn(f, bodyOf(world, 'player'), world.time)));

@@ -23,6 +23,7 @@ function put(match, id, pointId) {
   const body = match.world.bodies.get(id);
   body.x = p.x;
   body.z = p.z;
+  body.y = p.y ?? 0;
 }
 
 test('Three-Point Control initializes three neutral points and a 100% objective', () => {

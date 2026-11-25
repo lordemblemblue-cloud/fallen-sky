@@ -7,7 +7,7 @@ import { MODES, createMatch, joinMatch } from '../src/components/duelist/sim/mat
 
 test('three distinct layouts fit existing arena bounds and contain mode-specific architecture',()=>{
   const ids=new Set();
-  for(const mode of ['control','escort','tdm']){
+  for(const mode of ['escort','tdm']){
     const map=getModeArenaLayout(mode);
     ids.add(map.id);
     assert.equal(map.radius,MODES[mode].arena);
@@ -22,20 +22,24 @@ test('three distinct layouts fit existing arena bounds and contain mode-specific
     assert.equal(map.parts.filter(p=>p.kind==='step').length,mode==='control'?0:16);
     assert.equal(map.parts.filter(p=>p.kind==='duct').length,mode==='control'?0:32);
   }
-  assert.equal(ids.size,3);
+  assert.equal(ids.size,2);
   for(const mode of ['duel','practice','ffa','ctf','football','story','constructor']){
     assert.equal(getModeArenaLayout(mode),null);
   }
 });
 
-test('A Control Point centers are on the foundation and inside accessible buildings',()=>{
+test('approved Control Point objectives are accessible on their correct elevation',()=>{
   const map=getModeArenaLayout('control');
   const points=makeControlPoints(map.radius,map.controlPoints);
-  assert.deepEqual(points.map(({x,z})=>({x,z})),map.controlPoints);
+  assert.equal(map.radius,150);
+  assert.deepEqual(points.map(({x,y,z})=>({x,y,z})),map.controlPoints.map(({x,y,z})=>({x,y,z})));
   for(const p of points){
-    assert.ok(arenaFloorContains(map,p.x,p.z,0.4));
-    assert.deepEqual(arenaBodyBlockers(map,{x:p.x,z:p.z,y:0,radius:0.4,height:1.8}),[]);
+    assert.deepEqual(arenaBodyBlockers(map,{x:p.x,z:p.z,y:p.y,radius:0.4,height:1.8}),[]);
   }
+  const match=createMatch({mode:'control'});
+  assert.equal(match.capacity,8);
+  assert.equal(match.world.arenaLayout,map);
+  assert.equal(match.world.arenaRadius,150);
 });
 
 test('entire transport objective corridor is clear of authored solids',()=>{
@@ -71,7 +75,7 @@ test('team deathmatch architecture is rotationally symmetric',()=>{
 });
 
 test('low-poly architecture stays under 65 boxes, with balanced mode capacity',()=>{
-  for(const [mode,capacity] of [['control',8],['escort',10],['tdm',8]]){
+  for(const [mode,capacity] of [['escort',10],['tdm',8]]){
     const map=getModeArenaLayout(mode);
     assert.ok(map.parts.length<=65);
     assert.equal(map.capacity,capacity);

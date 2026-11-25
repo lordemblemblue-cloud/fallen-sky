@@ -22,7 +22,7 @@ test('two human clients join one authoritative Control Point match, receive indi
   assert.equal(room.status().bots,6);
   const layout=getModeArenaLayout('control');
   assert.equal(room.match.world.arenaLayout,layout);
-  assert.equal(layout.id,'control-a-v1');
+  assert.equal(layout.id,'control-point-import-v2');
   for(const body of room.match.world.bodies.values()){
     assert.ok(arenaFloorContains(layout,body.x,body.z,.4));
     assert.equal(arenaBodyBlockers(layout,{...body,radius:.4,height:1.8}).length,0);
@@ -35,7 +35,7 @@ test('two human clients join one authoritative Control Point match, receive indi
   const snap=a.messages.filter(m=>m.t==='snap').at(-1);
   assert.ok(snap.fighters.some(f=>f.id===bid));
   const view=b.messages.find(m=>m.t==='snap'&&m.view?.controlPoints?.length===3).view;
-  assert.deepEqual(view.controlPoints.map(({x,z})=>({x,z})),layout.controlPoints);
+  assert.deepEqual(view.controlPoints.map(({x,y,z,radius})=>({x,y,z,radius})),layout.controlPoints.map(({x,y,z,radius})=>({x,y,z,radius})));
   room.message(a,{t:'input',s:1,m:[1,0],p:[]});tick();
   assert.ok(a.messages.some(m=>m.t==='snap'&&m.ack===1));
   room.remove(a.id);assert.equal(room.status().players,1);assert.equal(room.status().bots,7);
