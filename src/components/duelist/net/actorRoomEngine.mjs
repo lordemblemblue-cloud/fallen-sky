@@ -1,5 +1,5 @@
 // Server-authoritative room engine for Base44 realtime Actors. No browser or database access.
-import { createMatch, joinMatch, leaveMatch, stepMatch, matchView, queueMatchClass, purchaseMatchItem, MODES } from '../sim/match.mjs';
+import { createMatch, joinMatch, leaveMatch, stepMatch, matchView, queueMatchClass, purchaseMatchItem, sellPracticeItem, setPracticeOption, MODES } from '../sim/match.mjs';
 import { createInputRateLimiter, classById } from '../core/index.mjs';
 import { PROTOCOL, DEFAULT_PUBLIC_ROOMS, BODY_IDS, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND, ABUSE_MESSAGES_PER_SECOND, compactWaitingInputs, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, sanitizeInput, encodeFighter, encodeOwn } from './protocol.mjs';
 
@@ -68,7 +68,7 @@ export class DuelistRoomEngine {
     if(!c.welcomed)return;
     if(msg.t==='join'){
       if(c.joined)return;
-      if((msg.mode!==this.mode&&msg.mode!=='any'&&msg.mode!=='online')||(msg.matchId!=null&&msg.matchId!==this.roomId)){
+      if((this.mode==='practice'&&msg.mode!=='practice')||(msg.mode!==this.mode&&msg.mode!=='any'&&msg.mode!=='online')||(msg.matchId!=null&&msg.matchId!==this.roomId)){
         this.send(c,{t:'error',code:'room',message:'Invalid room selection.'});return;
       }
       c.classId=typeof msg.cls==='string'&&classById(msg.cls)?msg.cls:null;this.enter(c);return;
@@ -80,6 +80,8 @@ export class DuelistRoomEngine {
       if(r.accepted)c.classId=msg.id;
       this.send(c,{t:'class',ok:r.accepted,pending:r.pendingClass??null,reason:r.reason??null});return;
     }
+    if(msg.t==='practiceOption'){setPracticeOption(this.match,c.id,msg.option,msg.enabled);return;}
+    if(msg.t==='practiceSell'){this.send(c,{t:'shop',...sellPracticeItem(this.match,c.id,msg.id)});return;}
     if(msg.t==='shop'||msg.t==='shopBuild'){
       const r=typeof msg.id==='string'&&msg.id.length<=48?(msg.t==='shopBuild' && (!Number.isInteger(msg.tier)||typeof msg.combine!=='boolean') ? {ok:false,reason:'invalid-tier'} : purchaseMatchItem(this.match,c.id,msg.id,msg.t==='shopBuild'?msg.tier:undefined,msg.t==='shopBuild'?msg.combine:false)):{ok:false,reason:'invalid'};
       this.send(c,{t:'shop',...r});return;
