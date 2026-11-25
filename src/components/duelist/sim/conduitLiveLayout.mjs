@@ -10,7 +10,7 @@ export function createConduitLiveMatch(mode,random){return createConduitMatchAda
 export const conduitLiveSupport=(x,z,upper,lower=-Infinity,radius=0)=>conduitSupport(registry,x,z,upper,lower,radius);
 export const conduitLiveBlockers=(p)=>conduitBlockers(registry,p,p.radius??.4,p.height??1.8);
 export const conduitLiveGrounded=(p,r)=>conduitGrounded(registry,p,r);
-export function conduitLiveMove(p,dx,dz,dy,r,allowStep){return moveConduitBody(registry,p,dx,dz,dy,{radius:r,stepUp:allowStep?.41:0,stepDown:allowStep?.41:0});}
+export function conduitLiveMove(p,dx,dz,dy,r,allowStep){return moveConduitBody(registry,p,dx,dz,dy,{radius:r,stepUp:allowStep ? .41 : 0,stepDown:allowStep ? .41 : 0});}
 // Exact segment intervals for solid OBBs, cylinders, annuli, ramp slabs
 // and disc cutouts. Camera padding conservatively expands solid boundaries.
 function interval(a,b,lo,hi){
@@ -61,7 +61,7 @@ function anchor(p){
   .find(n=>probeConduitWalk(registry,p,n.pos).ok);
 }
 export function conduitBotPath(from,to){
- if(probeConduitWalk(registry,from,to).ok)return [{x:to.x,y:to.y,z:to.z}];
+ if(Math.abs(from.y-to.y)<.16&&distance(from,to)<8&&probeConduitWalk(registry,from,to).ok)return [{x:to.x,y:to.y,z:to.z}];
  const a=anchor(from),b=anchor(to);if(!a||!b)return [];
  const route=routeAdapter.findRoute(a.id,b.id);if(!route)return [];
  const points=[a.pos];for(const seg of route.segments)points.push(...seg.points.slice(1));

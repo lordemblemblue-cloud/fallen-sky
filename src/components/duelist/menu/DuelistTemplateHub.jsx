@@ -116,7 +116,7 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
               : null}
             <div className="dxt-detail-actions">
               {startSolo ? <button type="button" className={'dxt-action ' + (category === 'practice' ? 'dxt-action--primary' : 'dxt-action--secondary')}
-                onClick={() => launch(mode.id)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PRACTICE'}</button>
+                onClick={() => launch(mode.id)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PLAY OFFLINE'}</button>
                 : <button type="button" className="dxt-action dxt-action--secondary" disabled><LockKeyhole aria-hidden="true"/> UNAVAILABLE</button>}
               {category === 'normal' && <button type="button" className="dxt-action dxt-action--primary" onClick={() => openServers(mode.route)}
                 disabled={!canOnline} title={!canOnline ? 'Choose a supported casual mode' : 'Browse live servers for this mode'}>

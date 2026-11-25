@@ -293,7 +293,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
       if (!level && world.arenaLayout?.conduitImported) {
         const imported=createConduitArena(scene,{quality:'low',enableLights:true});
-        arena={group:imported.root,dispose(){imported.dispose();},arc(){},update(){imported.updateVisuals(world.time);const states=source.view()?.conduitPickups;for(const p of states??[])imported.setPickupAvailable(p.id,p.available);}};return;
+        arena={group:imported.root,dispose(){imported.dispose();},arc(){},update(dt,{view}={}){imported.updateVisuals(world.time);const states=view?.conduitPickups;for(const p of states??[])imported.setPickupAvailable(p.id,p.available);}};return;
       }
       if (!level && world.arenaLayout?.ctfImported) {
         const imported=createIndustrialCtfArena(scene,{textureResolution:1024});
@@ -801,7 +801,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           const inMatch = !!view && !view.mission;
           if (inMatch) feed.view(view, clock, hudContext());
           control?.update(view?.controlPoints);arena.updatePoints?.(view?.controlPoints);
-          if (level) lastView = view;
+          if (level || world.arenaLayout?.conduitImported) lastView = view;
           const line = view?.comms || null;
           const said = line ? `${line.speaker}\n${line.text}` : null;
           if (said !== lineShown) {
