@@ -28,14 +28,15 @@ import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from 
 
 import { makeEscort, stepEscort, ESCORT_RADIUS, defenderRespawnDelay } from './escort.mjs';
 import { importedSpawn } from './importedControlLayout.mjs';
-import { getModeArenaLayout } from './modeArenaLayout.mjs';
+import { getModeArenaLayout, arenaLineClear } from './modeArenaLayout.mjs';
+import {createConduitLiveMatch,conduitPickupDefinitions} from './conduitLiveLayout.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
   practice: Object.freeze({ id: 'practice', name: 'Practice', teams: false, seats: 2, arena: 18, respawn: 1.5, protect: 1.5, scoreToWin: 0, clock: 0 }),
   duel: Object.freeze({ id: 'duel', name: 'Duel', teams: false, seats: 2, arena: 14, rounds: 3, roundClock: 90, respawn: 0, protect: 0, scoreToWin: 0, clock: 0 }),
-  ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
-  tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
+  ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 44.8, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
+  tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 44.8, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 60, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
   escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 215, respawn: 4, protect: 1.5, clock: 300 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
@@ -71,6 +72,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     controlPoints: def.control ? makeControlPoints(arenaLayout?.radius ?? def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
+  if(arenaLayout?.conduitImported){match.conduit=createConduitLiveMatch(def.id,match.random);match.conduitPickups=conduitPickupDefinitions.map(p=>({...p,readyAt:0}));}
   for (const p of players) seat(match, { ...p, kind: 'player' });
   while (match.seats.size < match.capacity) seat(match, { kind: 'bot' });
   return match;
@@ -94,6 +96,14 @@ function lighterTeam(match) {
 function spawnFor(match, id, team) {
   const { def, world } = match;
   const R = def.arena;
+  if(match.conduit){
+    const occupants=[],enemies=[];
+    for(const f of world.fighters.values())if(f.id!==id&&!f.vitals.dead){const p=bodyOf(world,f.id);if(!p)continue;occupants.push(p);if(!team||f.team!==team)enemies.push(p);}
+    match.conduit.releaseSpawn(id);
+    const p=match.conduit.reserveSpawn(id,team,{occupants,enemies,recentIds:match.seats.get(id)?.recentConduitSpawns??[],canSee:(a,b)=>arenaLineClear(world.arenaLayout,a,b)});
+    match.conduit.releaseSpawn(id);
+    return p;
+  }
   if(world.arenaLayout?.ctfImported && team)return ctfSpawn(team,world.bodies,id);
   if(world.arenaLayout?.escortImported && team)return escortSpawn(team,match.escort?.stage??0,world.bodies,id);
   if(world.arenaLayout?.imported && team)return importedSpawn(world.arenaLayout,team,world.bodies,id);
@@ -151,7 +161,9 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
     goldFraction: 0, classXpFraction: 0, items: [] };
   resetKillChain(entry);
   entry.level = levelOf(match, entry);
-  addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spot });
+  const spawn=spot??(match.conduit?(seatTeam?match.conduit.modeSpawnCandidates[seatTeam][0]:match.conduit.modeSpawnCandidates[0]):null);
+  const fighter=addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spawn });
+  if(match.conduit){entry.recentConduitSpawns=spot?[spot.id]:[];entry.conduitSpawn=spot??null;if(!spot){fighter.vitals.hp=0;fighter.vitals.dead=true;entry.respawnAt=match.world.time+.5;entry.respawnStartedAt=match.world.time;}}
   match.seats.set(seatId, entry);
   match.scores[seatId] = { defeats: 0, assists: 0, falls: 0, captures: 0, returns: 0 };
   return entry;
@@ -194,8 +206,8 @@ export function purchaseMatchItem(match, playerId, itemId, targetTier, combine =
   if (!seat || seat.kind !== 'player' || match.phase === 'over') return { ok: false, reason: 'not-available' };
   const fighter = match.world.fighters.get(playerId);
   const body = bodyOf(match.world, playerId);
-  const spawn = spawnFor(match, playerId, seat.team);
-  const atSpawn = body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+  const spawn = match.conduit?seat.conduitSpawn:spawnFor(match, playerId, seat.team);
+  const atSpawn = body && spawn && Math.hypot(body.x - spawn.x, body.z - spawn.z,match.conduit?body.y-spawn.y:0) <= 3;
   const allowed = match.phase !== 'live' || !!fighter?.vitals.dead || atSpawn;
   const result = purchaseRule({ gold: seat.gold, items: seat.items, id: itemId, allowed, targetTier, combine });
   if (!result.ok) return { ok: false, reason: result.reason, cost: result.cost || 0 };
@@ -303,12 +315,15 @@ export function queueMatchClass(match, playerId, requestedClass) {
 
 /** Applied by rules at spawn/round start only, not by an input command. */
 function spawnSeat(match, seat, protectSeconds = 0) {
+  const spot=spawnFor(match,seat.id,seat.team);
+  if(!spot){seat.respawnAt=match.world.time+.5;return false;}
+  if(match.conduit){seat.recentConduitSpawns=[spot.id,...(seat.recentConduitSpawns??[])].slice(0,3);seat.conduitSpawn=spot;}
   const old = match.world.fighters.get(seat.id);
   const chosen = seat.pendingClass ? classAtSpawn({ currentClass: seat.classId || 'duelist', pendingClass: seat.pendingClass }) : null;
   const weapon = chosen?.weapon ?? old?.weapon ?? 'sword';
   seat.level = levelOf(match, seat, chosen ? chosen.classId : seat.classId); // the class's level, with what it has earned so far
   respawnFighter(match.world, seat.id, {
-    ...spawnFor(match, seat.id, seat.team), protect: protectSeconds, weapon, level: seat.level, matchBoost: seat.matchBoost,
+    ...spot, protect: protectSeconds, weapon, level: seat.level, matchBoost: seat.matchBoost,
     ...(chosen ? { classId: chosen.classId } : {}),
   });
   if (chosen) {
@@ -319,6 +334,7 @@ function spawnSeat(match, seat, protectSeconds = 0) {
     seat.pendingClass = null;
     event(match, { type: 'classSelected', id: seat.id, classId: chosen.classId, feed: false });
   }
+  return true;
 }
 
 function protect(match, id) {
@@ -527,7 +543,7 @@ export function stepMatch(match, dt, inputs = {}) {
   if(world.arenaLayout?.imported)for(const s of match.seats.values()){
     const b=bodyOf(world,s.id),f=world.fighters.get(s.id);
     if(!b||b.y>=(match.flags?-2:-18)||f?.vitals.dead)continue;
-    if(match.escort||match.flags){
+    if(match.escort||match.flags||match.conduit){
       // Falling off the canyon must not bypass a defender's respawn penalty.
       f.vitals.hp=0;f.vitals.dead=true;f.action=null;f.guard=null;f.buffer=null;
       b.vy=0;b.motion=null;effects.push({type:'defeat',defender:s.id,by:null});
@@ -546,6 +562,7 @@ export function stepMatch(match, dt, inputs = {}) {
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
+    if(match.conduit)stepConduitPickups(match);
     if(!match.escort)respawns(match);
     if (match.flags){flagsStep(match);syncCtfCarriers(match);}
     if (match.controlPoints) stepControlPoints(match, dt);
@@ -638,13 +655,33 @@ function onDefeat(match, e) {
   }
 }
 
+function stepConduitPickups(match){
+  const {world}=match;
+  for(const p of match.conduitPickups){
+    if(world.time<p.readyAt)continue;
+    const [x,y,z]=p.position,point={x,y,z};
+    for(const f of world.fighters.values()){
+      if(f.vitals.dead||f.heldBy||f.seizedBy||isDown(f,world.time))continue;
+      const b=bodyOf(world,f.id);if(!b||Math.abs(b.y-y)>.65||Math.hypot(b.x-x,b.z-z)>1.25||!arenaLineClear(world.arenaLayout,b,point))continue;
+      const v=f.vitals;
+      if(p.id==='armory'||p.id==='reactor')v.will=Math.min(v.max.will,v.will+(p.id==='armory'?35:40));
+      else if(p.id==='medbay')v.hp=Math.min(v.max.hp,v.hp+40);
+      else if(p.id==='barracks')v.shield=Math.min(v.max.shield,v.shield+35);
+      else if(p.id==='t0_core'){v.shield=Math.min(v.max.shield,v.shield+50);v.will=v.max.will;}
+      else if(p.id==='crown')f.conduitDamageUntil=world.time+15;
+      else continue;
+      p.readyAt=world.time+p.respawn;event(match,{type:'conduitPickup',id:p.id,by:f.id,feed:false});break;
+    }
+  }
+}
+
 function respawns(match) {
   const { world, def } = match;
   for (const s of match.seats.values()) {
     if (s.respawnAt === null || world.time < s.respawnAt) continue;
     s.respawnAt = null;
     s.respawnStartedAt = null;
-    spawnSeat(match, s, def.protect);
+    if(!spawnSeat(match, s, def.protect))continue;
     if (s.bot) s.bot.combo = 0;
     event(match, { type: 'respawn', id: s.id, feed: false });
   }
@@ -789,6 +826,7 @@ export function matchView(match, forId = null) {
     mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
     ...((match.escort||match.flags)?{preparation:match.phase==='countdown'?Math.max(0,match.phaseUntil-world.time-ESCORT_START_COUNTDOWN):0,startCountdown:ESCORT_START_COUNTDOWN}:{}),
+    ...(match.conduit?{conduitPickups:match.conduitPickups.map(p=>({id:p.id,available:world.time>=p.readyAt,remaining:Math.max(0,p.readyAt-world.time)}))}:{}),
     clockLeft: match.escort ? Math.max(0,def.clock+match.escort.bonusTime-match.clock) : def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
@@ -806,8 +844,8 @@ export function matchView(match, forId = null) {
         (() => {
           const body = bodyOf(world, forId);
           const seat = match.seats.get(forId);
-          const spawn = spawnFor(match, forId, seat.team);
-          return !!body && Math.hypot(body.x - spawn.x, body.z - spawn.z) <= 3;
+          const spawn = match.conduit?seat.conduitSpawn:spawnFor(match, forId, seat.team);
+          return !!body && !!spawn && Math.hypot(body.x - spawn.x, body.z - spawn.z,match.conduit?body.y-spawn.y:0) <= 3;
         })()),
       // the class's EXP so far (what the match began with plus what was earned in it), and every class's
       xp: match.seats.get(forId).progress?.[match.seats.get(forId).classId] ?? 0,
