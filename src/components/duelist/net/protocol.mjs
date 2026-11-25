@@ -7,7 +7,7 @@
 //                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
 //   { t: 'join', mode }                          'duel' | 'ffa' | 'ctf' | 'football' | 'tdm' | 'control'
-//                                                or 'online' (random TDM, CTF or Three-Point Control)
+//                                                or 'online' (random TDM, CTF or Control Point)
 //                                                or legacy 'any' (busiest occupied match)
 //   { t: 'join', mode: 'story', mission?, code?, create?, open?, matchId? } a story mission (sim/mission.mjs
 //                                                MISSIONS; default Contraband): a crew room by its code (whatever it
@@ -31,7 +31,7 @@
 //       mission's 'joined' (rematch: true, mission: the next one)
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
-//       view.controlPoints: [{ id, x, z, owner, capturing, progress, contested }] in Three-Point Control;
+//       view.controlPoints: [{ id, x, z, owner, capturing, progress, contested }] in Control Point;
 //       view.teamScores: authoritative percentages from 0 to 100
 //       ack: the last input the simulation has used (inputs are used one a tick, in order);
 //       own: the receiving player's fighter in full at that moment (encodeOwn), sent while the server is
@@ -46,7 +46,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 14; // 14: shared multilevel PvP arena layouts; old clients must reload.
+export const PROTOCOL = 15; // 15: shared A-shaped Control Point arena; older clients must reload.
 // // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';

@@ -11,9 +11,11 @@ test('all seven test modes start solo and can start with normal bot seats',()=>{
     assert.ok(filled.seats().some(s=>s.kind==='bot'),mode);
   }
 });
-test('A foundation is isolated from public control and has four center entrances',()=>{
+test('A foundation is shared by public and private Control Point and has four center entrances',()=>{
   const map=getModeArenaLayout('control',true);
-  assert.notEqual(map,getModeArenaLayout('control'));
+  assert.equal(map,getModeArenaLayout('control'));
+  assert.equal(createLocalSource({mode:'control',testMode:true}).world.arenaLayout,map);
+  assert.equal(createLocalSource({mode:'control'}).world.arenaLayout,map);
   assert.equal(map.parts.filter(p=>p.kind==='deck').length,3);
   assert.ok(map.parts.length<65);
   assert.equal(arenaFloorContains(map,0,15,.4),false);

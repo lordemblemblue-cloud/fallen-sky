@@ -28,12 +28,6 @@ function building(id, x, z, stairsSide = 1, approach = -1) {
 const cover=(id,x,z,w=2.4,d=1.1)=>box(id,'cover',x,0,z,w,0.85,d);
 const layout=(id,radius,capacity,parts)=>Object.freeze({id,radius,capacity,parts:Object.freeze(parts)});
 const MAPS=Object.freeze({
-  control:layout('meridian-observatory-district',28,8,[
-    ...building('relay',-3,0),
-    ...building('east-lab',3,10,-1),
-    cover('north-screen',2,-10), cover('south-screen',-1,15),
-    cover('east-screen',15,8,1.1,2.4), cover('west-screen',-18,-3,1.1,2.4),
-  ]),
   escort:layout('meridian-freight-district',28,10,[
     ...building('loading-bay',7,-9,-1),
     ...building('service-bay',-14,10),
@@ -48,7 +42,7 @@ const MAPS=Object.freeze({
     cover('center-screen',0,0,2.2,1.0),
   ]),
 });
-// Private first-floor A blockout; public arenas are unchanged until playtesting.
+// Shared first-floor A layout for online, offline and private Test Control Point.
 const freezeRing = points => Object.freeze(points.map(p => Object.freeze(p)));
 const footprint = Object.freeze({
   outer: freezeRing([[-4,-23],[4,-23],[18.8,13],[18.8,19.5],[8.5,19.5],[5,8],[-5,8],[-8.5,19.5],[-18.8,19.5],[-18.8,13]]),
@@ -68,16 +62,16 @@ function aBuilding(id,x,z,fourWay=false) {
   }
   return parts;
 }
-const CONTROL_TEST = Object.freeze({
-  ...layout('control-a-private-test',28,8,[
+const CONTROL_A = Object.freeze({
+  ...layout('control-a-v1',28,8,[
     ...aBuilding('west',-13.5,15), ...aBuilding('east',13.5,15),
     ...aBuilding('center',0,-5,true),
   ]),
   footprint,
   controlPoints: Object.freeze([{x:-13.5,z:15},{x:0,z:-5},{x:13.5,z:15}].map(Object.freeze)),
 });
-export function getModeArenaLayout(mode,testMode=false) {
-  return mode==='control' && testMode ? CONTROL_TEST : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
+export function getModeArenaLayout(mode) {
+  return mode==='control' ? CONTROL_A : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
 }
 function inRing(ring,x,z) {
   let inside=false;

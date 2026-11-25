@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getModeArenaLayout, overlapsArenaFootprint, arenaBodyBlockers, arenaLandingHeight, moveArenaBody, arenaRayFraction, arenaLineClear, arenaGrounded } from '../src/components/duelist/sim/modeArenaLayout.mjs';
-import { makeControlPoints, CONTROL } from '../src/components/duelist/sim/control.mjs';
+import { getModeArenaLayout, arenaFloorContains, overlapsArenaFootprint, arenaBodyBlockers, arenaLandingHeight, moveArenaBody, arenaRayFraction, arenaLineClear, arenaGrounded } from '../src/components/duelist/sim/modeArenaLayout.mjs';
+import { makeControlPoints } from '../src/components/duelist/sim/control.mjs';
 import { ESCORT_LENGTH, ESCORT_RADIUS, payloadPose } from '../src/components/duelist/sim/escort.mjs';
 import { MODES, createMatch, joinMatch } from '../src/components/duelist/sim/match.mjs';
 
-test('three distinct layouts fit existing arena bounds and contain roofs, walls and steps',()=>{
+test('three distinct layouts fit existing arena bounds and contain mode-specific architecture',()=>{
   const ids=new Set();
   for(const mode of ['control','escort','tdm']){
     const map=getModeArenaLayout(mode);
@@ -18,9 +18,9 @@ test('three distinct layouts fit existing arena bounds and contain roofs, walls 
         assert.ok(Math.hypot(x,z)<map.radius-0.5,p.id);
       }
     }
-    assert.equal(map.parts.filter(p=>p.kind==='deck').length,2);
-    assert.equal(map.parts.filter(p=>p.kind==='step').length,16);
-    assert.equal(map.parts.filter(p=>p.kind==='duct').length,32);
+    assert.equal(map.parts.filter(p=>p.kind==='deck').length,mode==='control'?3:2);
+    assert.equal(map.parts.filter(p=>p.kind==='step').length,mode==='control'?0:16);
+    assert.equal(map.parts.filter(p=>p.kind==='duct').length,mode==='control'?0:32);
   }
   assert.equal(ids.size,3);
   for(const mode of ['duel','practice','ffa','ctf','football','story','constructor']){
@@ -28,12 +28,13 @@ test('three distinct layouts fit existing arena bounds and contain roofs, walls 
   }
 });
 
-test('default control pads have clear footprints including capture radius',()=>{
+test('A Control Point centers are on the foundation and inside accessible buildings',()=>{
   const map=getModeArenaLayout('control');
-  for(const p of makeControlPoints(map.radius)){
-    for(const part of map.parts){
-      assert.ok(!overlapsArenaFootprint(part,p.x,p.z,CONTROL.radius),part.id+' obstructs '+p.id);
-    }
+  const points=makeControlPoints(map.radius,map.controlPoints);
+  assert.deepEqual(points.map(({x,z})=>({x,z})),map.controlPoints);
+  for(const p of points){
+    assert.ok(arenaFloorContains(map,p.x,p.z,0.4));
+    assert.deepEqual(arenaBodyBlockers(map,{x:p.x,z:p.z,y:0,radius:0.4,height:1.8}),[]);
   }
 });
 
@@ -48,15 +49,15 @@ test('entire transport objective corridor is clear of authored solids',()=>{
 });
 
 test('ground tunnel stays open; roof supports landing and has separate collision height',()=>{
-  const map=getModeArenaLayout('control');
-  const body={x:-3,y:0,z:0,radius:0.35,height:1.8};
+  const map=getModeArenaLayout('tdm');
+  const body={x:-7,y:0,z:2,radius:0.35,height:1.8};
   assert.deepEqual(arenaBodyBlockers(map,body),[]);
-  assert.ok(arenaBodyBlockers(map,{...body,x:-6.2}).some(p=>p.kind==='wall'));
+  assert.ok(arenaBodyBlockers(map,{...body,x:-10.2}).some(p=>p.kind==='wall'));
   assert.ok(arenaBodyBlockers(map,{...body,y:2}).some(p=>p.kind==='deck'));
   assert.deepEqual(arenaBodyBlockers(map,{...body,y:3.2}),[]);
-  assert.equal(arenaLandingHeight(map,{x:-3,z:0,previousY:4,nextY:2}),3.2);
-  assert.equal(arenaLandingHeight(map,{x:-3,z:0,previousY:0.1,nextY:-0.1}),0);
-  assert.equal(arenaLandingHeight(map,{x:-3,z:0,previousY:1,nextY:2}),null);
+  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:4,nextY:2}),3.2);
+  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:0.1,nextY:-0.1}),0);
+  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:1,nextY:2}),null);
 });
 
 test('team deathmatch architecture is rotationally symmetric',()=>{
@@ -83,28 +84,28 @@ test('low-poly architecture stays under 65 boxes, with balanced mode capacity',(
   }
 });
 test('swept collisions stop crossing walls even on a large movement delta',()=>{
-  const map=getModeArenaLayout('control');
-  const body={x:-8,y:0,z:0};
+  const map=getModeArenaLayout('tdm');
+  const body={x:-12,y:0,z:2};
   moveArenaBody(map,body,6,0,0);
-  assert.ok(body.x<-6.8);
+  assert.ok(body.x<-10.8);
   assert.equal(arenaBodyBlockers(map,{...body,radius:0.4,height:1.8}).length,0);
 });
 test('steps climb to roof and downward movement lands rather than clips',()=>{
-  const map=getModeArenaLayout('control');
-  const body={x:-1.4,y:0,z:-9};
+  const map=getModeArenaLayout('tdm');
+  const body={x:-5.4,y:0,z:-7};
   for(let i=0;i<100;i++)moveArenaBody(map,body,0,0.09,-0.02);
-  assert.ok(body.z>-0.5,JSON.stringify(body));
+  assert.ok(body.z>1.5,JSON.stringify(body));
   assert.ok(Math.abs(body.y-3.2)<0.001,JSON.stringify(body));
   assert.ok(arenaGrounded(map,body));
-  const falling={x:-3,y:5,z:0};
+  const falling={x:-7,y:5,z:2};
   moveArenaBody(map,falling,0,0,-4);
   assert.ok(Math.abs(falling.y-3.2)<0.001);
 });
 test('lower tunnel remains traversable while attacks through a roof or wall are obstructed',()=>{
-  const map=getModeArenaLayout('control');
-  const body={x:-3,y:0,z:3.5};
+  const map=getModeArenaLayout('tdm');
+  const body={x:-7,y:0,z:5.5};
   moveArenaBody(map,body,0,-5,0);
-  assert.ok(body.z<-1.4);
-  assert.equal(arenaLineClear(map,{x:-3,y:0,z:0},{x:-3,y:3.2,z:0}),false);
-  assert.ok(arenaRayFraction(map,{x:-8,y:1.2,z:0},{x:-3,y:1.2,z:0})<1);
+  assert.ok(body.z<0.6);
+  assert.equal(arenaLineClear(map,{x:-7,y:0,z:2},{x:-7,y:3.2,z:2}),false);
+  assert.ok(arenaRayFraction(map,{x:-12,y:1.2,z:2},{x:-7,y:1.2,z:2})<1);
 });

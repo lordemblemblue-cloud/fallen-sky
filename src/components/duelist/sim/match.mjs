@@ -50,7 +50,7 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  */
 export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null, testMode = false } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const arenaLayout = getModeArenaLayout(def.id, testMode);
+  const arenaLayout = getModeArenaLayout(def.id);
   const world = createWorld({ arenaRadius: def.arena, arenaLayout });
   const match = {
     mode: def.id, def, world, testMode, seed, botLevel, random: createRandom(seed * 7919 + 13),
